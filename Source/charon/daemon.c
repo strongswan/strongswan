@@ -36,7 +36,7 @@ int main()
 
  	tester->test_all(tester);
  	
-	if (tester->destroy(tester) == SUCCESS)
+	if (tester->destroy(tester) != SUCCESS)
 	{
 	 	return -1;
 	}

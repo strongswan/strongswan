@@ -25,6 +25,7 @@
 #include <freeswan.h>
 #include <pluto/constants.h>
 #include <pluto/defs.h>
+#include <string.h>
  
 #include "tester.h"
 #include "linked_list.h"
@@ -68,13 +69,40 @@ struct private_tester_s {
  * @brief Test function to test the linked list class
  */
 static void	test_linked_list(private_tester_t * this){
+	void *test_value = NULL;
+
 	linked_list_t *linked_list = linked_list_create();
-	linked_list->insert_first(linked_list,"aha");
-	void *value;
-	linked_list->get_first(linked_list,&value);
-	this->assert_true(this,(2 == 3), "zwei ist drei");
-	this->assert_true(this,(2 == 2), "zwei ist zwei");
+	linked_list->insert_first(linked_list,"one");
+	linked_list->insert_first(linked_list,"two");
+	linked_list->insert_first(linked_list,"three");
+	linked_list->insert_first(linked_list,"four");
+	linked_list->insert_first(linked_list,"five");
+
+	this->assert_true(this,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
+	this->assert_true(this,(strcmp((char *) test_value,"five") == 0), "get_first value check");
+
+	this->assert_true(this,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
+	this->assert_true(this,(strcmp((char *) test_value,"one") == 0), "get_last value check");	
 	
+	this->assert_true(this,(linked_list->remove_first(linked_list,&test_value) == SUCCESS), "remove_first call check");
+	this->assert_true(this,(strcmp((char *) test_value,"five") == 0), "remove_first value check");	
+
+	this->assert_true(this,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
+	this->assert_true(this,(strcmp((char *) test_value,"four") == 0), "get_first value check");
+
+	this->assert_true(this,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
+	this->assert_true(this,(strcmp((char *) test_value,"one") == 0), "get_last value check");	
+
+	this->assert_true(this,(linked_list->remove_last(linked_list,&test_value) == SUCCESS), "remove_last call check");
+	this->assert_true(this,(strcmp((char *) test_value,"one") == 0), "remove_last value check");	
+
+	this->assert_true(this,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
+	this->assert_true(this,(strcmp((char *) test_value,"two") == 0), "get_last value check");		
+
+	this->assert_true(this,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
+	this->assert_true(this,(strcmp((char *) test_value,"four") == 0), "get_first value check");
+	
+	this->assert_true(this,(linked_list->destroy(linked_list) == SUCCESS), "destroy call check");
 }
 
 /**

@@ -247,7 +247,7 @@ static status_t destroy_linked_list(linked_list_t *linked_list)
 		}
 	}
 	pfree(this);
-	return FAILED;
+	return SUCCESS;
 }
  
 
