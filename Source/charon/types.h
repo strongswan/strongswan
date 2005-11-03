@@ -26,7 +26,8 @@
 
 typedef enum status_e {
 	SUCCESS,
-	FAILED		
+	FAILED,
+	OUT_OF_RES	
 } status_t;
 
 #endif /*TYPES_H_*/
