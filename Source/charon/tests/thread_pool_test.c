@@ -24,8 +24,8 @@
 #include "../tester.h"
 #include "../thread_pool.h"
 
-/**
- * @brief Test function to test the thread pool class
+/*
+ * Description in header file
  */
 void test_thread_pool(tester_t *tester)
 {

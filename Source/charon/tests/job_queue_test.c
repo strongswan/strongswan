@@ -33,21 +33,33 @@
  
 typedef struct job_queue_test_s job_queue_test_t;
 
+/**
+ * @brief Informations for the involved test-thread used in this test
+ * 
+ */
 struct job_queue_test_s{
 	tester_t *tester;
 	job_queue_t *job_queue;
-	int max_queue_item_count;	
+	/**
+	 * number of items to be inserted in the job-queue 
+	 */
+	int insert_item_count;	
+	/**
+	 * number of items to be removed by each 
+	 * receiver thread from the job-queue 
+	 */
+	int remove_item_count;	
 };
 
 /**
  * @brief sender thread used in the the job_queue test function
+ * 
+ * @param testinfo informations for the specific thread.
  */
 static void test_job_queue_sender(job_queue_test_t * testinfo)
 {
-	
-	int i;
-	
-	for (i = 0; i < testinfo->max_queue_item_count; i++)
+	int i;	
+	for (i = 0; i < testinfo->insert_item_count; i++)
 	{
 		int *value = alloc_thing(int,"int");
 		*value = i;
@@ -58,43 +70,52 @@ static void test_job_queue_sender(job_queue_test_t * testinfo)
 
 /**
  * @brief receiver thread used in the the job_queue test function
+ * 
+ * @param testinfo informations for the specific thread.
  */
 static void test_job_queue_receiver(job_queue_test_t * testinfo)
 {
 	int i;
-	
-	for (i = 0; i < testinfo->max_queue_item_count; i++)
+	for (i = 0; i < testinfo->remove_item_count; i++)
 	{
 		job_t *job;
 		testinfo->tester->assert_true(testinfo->tester,(testinfo->job_queue->get(testinfo->job_queue,&job) == SUCCESS), "get job call check");
-		testinfo->tester->assert_true(testinfo->tester,(job->type == INCOMING_PACKET), "job type check");
-		testinfo->tester->assert_true(testinfo->tester,((*((int *) (job->assigned_data))) == i), "job value check");
-		
+		testinfo->tester->assert_true(testinfo->tester,(job->type == INCOMING_PACKET), "job type check");		
 		pfree(job->assigned_data);
 		testinfo->tester->assert_true(testinfo->tester,(job->destroy(job) == SUCCESS), "job destroy call check");
 	}
 }
 
 /*
- * 
  * description is in header file
  */
 void test_job_queue(tester_t *tester)
 {
-	int value = 1000;
-	pthread_t sender_thread, receiver_thread;
+	int value, i;
+	pthread_t sender_thread, receiver_threads[5];
 	job_queue_t *job_queue = job_queue_create();
 	job_queue_test_t test_infos;
+
 	test_infos.tester = tester;
 	test_infos.job_queue = job_queue;
-	test_infos.max_queue_item_count = 100000;
+	test_infos.insert_item_count = 50000;
+	test_infos.remove_item_count = 10000;
 	
-	pthread_create( &receiver_thread, NULL,(void*(*)(void*)) &test_job_queue_receiver, (void*) &test_infos);
+	
+	for (i = 0; i < 5;i++)
+	{
+		pthread_create( &receiver_threads[i], NULL,(void*(*)(void*)) &test_job_queue_receiver, (void*) &test_infos);
+	}
 	pthread_create( &sender_thread, NULL,(void*(*)(void*)) &test_job_queue_sender, (void*) &test_infos);
-
-	pthread_join(sender_thread, NULL);
-	pthread_join(receiver_thread, NULL);
 	
+	/* Wait for all threads */
+	pthread_join(sender_thread, NULL);	
+	for (i = 0; i < 5;i++)
+	{
+		pthread_join(receiver_threads[i], NULL);
+	}
+	
+	/* the job-queue has to be empty now! */
 	tester->assert_true(tester,(job_queue->get_count(job_queue,&value) == SUCCESS), "get count call check");
 	tester->assert_true(tester,(value == 0), "get count value check");
 	tester->assert_true(tester,(job_queue->destroy(job_queue) == SUCCESS), "destroy call check");

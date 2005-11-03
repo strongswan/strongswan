@@ -23,8 +23,16 @@
 #ifndef THREAD_POOL_TEST_H_
 #define THREAD_POOL_TEST_H_
 
+/**
+ * @brief Test function for the type thread_pool_t
+ * 
+ * @param tester tester object
+ */
 void test_thread_pool(tester_t *tester);
 
+/**
+ * Test for thread_pool_t
+ */
 test_t thread_pool_test = {test_thread_pool,"Thread Pool"};
 
 #endif /*THREAD_POOL_TEST_H_*/

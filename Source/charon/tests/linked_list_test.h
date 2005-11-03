@@ -24,13 +24,21 @@
 #define LINKED_LIST_TEST_H_
 
 /**
- * @brief Tes function for the type linked_list_t
+ * @brief Test function for the type linked_list_t
+ *
+ * Performs different kinds of assertions to check the functionality
+ * of the linked_list_t in a Single-Threaded environment. 
  * 
+ * @warning To be usable in multi-threaded software 
+ * this list has to get protected with locks.
+ *  
  * @param tester tester object
  */
 void test_linked_list(tester_t *tester);
 
-
+/**
+ * Test for linked_list_t
+ */
 test_t linked_list_test = {test_linked_list,"Linked List"};
 
 #endif /*LINKED_LIST_TEST_H_*/

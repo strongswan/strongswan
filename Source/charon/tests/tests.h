@@ -1,9 +1,9 @@
 /**
  * @file tests.h
  * 
- * @brief Lists all the tests to get performed by the tester
+ * @brief Lists all the tests to be processed by the tester object
  * 
- * New tests have to be added here
+ * New tests have to be added here!
  * 
  */
 
@@ -30,7 +30,10 @@
 #include "thread_pool_test.h"
 #include "job_queue_test.h"
 
-	
+
+/**
+ * @brief these tests are getting performed by the tester
+ */
 test_t *tests[] ={
 	&linked_list_test,
 	&thread_pool_test,

@@ -50,12 +50,8 @@ struct private_tester_s {
  	pthread_mutex_t mutex;
 };
  
-
-
-/**
- * @brief Testing of all registered tests
- * 
- * New tests have to be added in this function
+/*
+ * Implementation of function test_all
  */
 static status_t test_all(tester_t *tester,test_t **tests) 
 {
@@ -76,8 +72,7 @@ static status_t test_all(tester_t *tester,test_t **tests)
 
 
 /**
- * @brief implements the private run_test-Function
- * 
+ * Implementation of function run_test 
  */
 static void run_test(tester_t *tester, void (*test_function) (tester_t * tester), char * test_name)
 {
@@ -94,8 +89,7 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
 }
 
 /**
- * @brief implements the private assert_true-Function
- * 
+ * Implementation of function assert_true 
  */
 static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
 {
@@ -120,7 +114,6 @@ static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
 
 /**
  * Implements the destroy function
- * 
  */
 static status_t destroy(tester_t *tester) 
 {

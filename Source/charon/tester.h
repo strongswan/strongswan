@@ -36,7 +36,7 @@
 typedef struct test_s test_t;
 
 /**
- * @brief A tester object to perform tests
+ * @brief A tester object to perform tests with
  */
 typedef struct tester_s tester_t;
 
