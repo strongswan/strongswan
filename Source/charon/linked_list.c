@@ -31,18 +31,21 @@
 /**
  * @brief implements function destroy of linked_list_item_t
  */
-static status_t destroy_linked_list_element(linked_list_element_t *linked_list_element)
+static status_t linked_list_element_destroy(linked_list_element_t *linked_list_element)
 {
 	linked_list_element_t * this = 	linked_list_element;
 	pfree(this);
 	return SUCCESS;
 }
 
+/*
+ * Creates a linked list (documented in header-file)
+ */
 linked_list_element_t *linked_list_element_create(void *value)
 {
 	linked_list_element_t *this = alloc_thing(linked_list_element_t, "linked_list_element_t");
 	
-	this->destroy = destroy_linked_list_element;
+	this->destroy = linked_list_element_destroy;
 	
 	this->previous=NULL;
 	this->next=NULL;
@@ -232,7 +235,7 @@ static status_t get_last(linked_list_t *linked_list, void **item)
 /**
  * @brief implements function destroy of linked_list_t
  */
-static status_t destroy_linked_list(linked_list_t *linked_list)
+static status_t linked_list_destroy(linked_list_t *linked_list)
 {
 	linked_list_t *this = linked_list;
 
@@ -250,7 +253,10 @@ static status_t destroy_linked_list(linked_list_t *linked_list)
 	return SUCCESS;
 }
  
-
+/*
+ * 
+ * Documented in header
+ */
 linked_list_t *linked_list_create() 
 {
 	linked_list_t *this = alloc_thing(linked_list_t, "linked_list_t");
@@ -261,7 +267,7 @@ linked_list_t *linked_list_create()
 	this->insert_last = insert_last;
 	this->remove_first = remove_first;
 	this->remove_last = remove_last;
-	this->destroy = destroy_linked_list;
+	this->destroy = linked_list_destroy;
 	
 	this->count = 0;
 	this->first = NULL;

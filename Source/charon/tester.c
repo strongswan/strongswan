@@ -74,34 +74,53 @@ static void	test_linked_list(private_tester_t *this)
 	void *test_value = NULL;
 
 	linked_list_t *linked_list = linked_list_create();
+	this->assert_true(this,(linked_list->count == 0), "count check");
+	
 	linked_list->insert_first(linked_list,"one");
+	this->assert_true(this,(linked_list->count == 1), "count check");
+
 	linked_list->insert_first(linked_list,"two");
+	this->assert_true(this,(linked_list->count == 2), "count check");
+		
 	linked_list->insert_first(linked_list,"three");
+	this->assert_true(this,(linked_list->count == 3), "count check");
+
 	linked_list->insert_first(linked_list,"four");
+	this->assert_true(this,(linked_list->count == 4), "count check");
+
 	linked_list->insert_first(linked_list,"five");
+	this->assert_true(this,(linked_list->count == 5), "count check");
 
 	this->assert_true(this,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	this->assert_true(this,(strcmp((char *) test_value,"five") == 0), "get_first value check");
+	this->assert_true(this,(linked_list->count == 5), "count check");
 
 	this->assert_true(this,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
-	this->assert_true(this,(strcmp((char *) test_value,"one") == 0), "get_last value check");	
+	this->assert_true(this,(strcmp((char *) test_value,"one") == 0), "get_last value check");
+	this->assert_true(this,(linked_list->count == 5), "count check");
 	this->assert_true(this,(linked_list->remove_first(linked_list,&test_value) == SUCCESS), "remove_first call check");
 	this->assert_true(this,(strcmp((char *) test_value,"five") == 0), "remove_first value check");	
+	this->assert_true(this,(linked_list->count == 4), "count check");
 
 	this->assert_true(this,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	this->assert_true(this,(strcmp((char *) test_value,"four") == 0), "get_first value check");
+	this->assert_true(this,(linked_list->count == 4), "count check");
 
 	this->assert_true(this,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	this->assert_true(this,(strcmp((char *) test_value,"one") == 0), "get_last value check");	
+	this->assert_true(this,(linked_list->count == 4), "count check");
 
 	this->assert_true(this,(linked_list->remove_last(linked_list,&test_value) == SUCCESS), "remove_last call check");
 	this->assert_true(this,(strcmp((char *) test_value,"one") == 0), "remove_last value check");	
+	this->assert_true(this,(linked_list->count == 3), "count check");
 
 	this->assert_true(this,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	this->assert_true(this,(strcmp((char *) test_value,"two") == 0), "get_last value check");		
+	this->assert_true(this,(linked_list->count == 3), "count check");
 
 	this->assert_true(this,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	this->assert_true(this,(strcmp((char *) test_value,"four") == 0), "get_first value check");
+	this->assert_true(this,(linked_list->count == 3), "count check");
 	
 	this->assert_true(this,(linked_list->destroy(linked_list) == SUCCESS), "destroy call check");
 }
