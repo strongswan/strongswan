@@ -1,7 +1,7 @@
 /**
- * @file daemon.c
+ * @file tester.c
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Test module for automatic testing
  * 
  */
 
@@ -19,14 +19,43 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
+
+#include <stdlib.h>
+#include <freeswan.h>
+#include <pluto/constants.h>
+#include <pluto/defs.h>
  
+#include "tester.h"
  
- 
- 
- 
-int main()
-{
+typedef struct {
+ 	tester_t tester;
  	
- 	return 0;	
+ 	FILE* output;
+} private_tester_t;
+ 
+ 
+static status_t test_all(tester_t *this) 
+{
+	
+	return SUCCESS;
 }
  
+static status_t destroy(tester_t *this) 
+{
+	pfree(this);
+	return SUCCESS;
+}
+
+
+tester_t *tester_create(FILE *output) 
+{
+	private_tester_t *this = alloc_thing(private_tester_t, "private_tester_t");
+	
+	this->tester.destroy = destroy;
+	this->tester.test_all = test_all;
+	
+	this->output = output;
+	
+	return SUCCESS;
+}

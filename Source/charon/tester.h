@@ -1,7 +1,7 @@
 /**
- * @file daemon.c
+ * @file tester.h
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Test module for automatic testing
  * 
  */
 
@@ -19,14 +19,23 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
- 
- 
- 
- 
-int main()
-{
- 	
- 	return 0;	
-}
- 
+
+#ifndef TESTER_H_
+#define TESTER_H_ 
+
+#include <stdio.h>
+
+#include "types.h"
+
+
+
+typedef struct tester_s tester_t;
+
+struct tester_s {
+	status_t (*test_all) (tester_t *this);
+	status_t (*destroy) (tester_t *this);
+};
+
+tester_t *tester_create(FILE *output);
+
+#endif /*TESTER_H_*/

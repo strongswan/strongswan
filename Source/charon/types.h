@@ -1,7 +1,7 @@
 /**
- * @file daemon.c
+ * @file types.h
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Generic type definitions
  * 
  */
 
@@ -20,13 +20,13 @@
  * for more details.
  */
  
- 
- 
- 
- 
-int main()
-{
- 	
- 	return 0;	
-}
- 
+
+#ifndef TYPES_H_
+#define TYPES_H_
+
+typedef enum status_e {
+	SUCCESS,
+	FAILED		
+} status_t;
+
+#endif /*TYPES_H_*/
