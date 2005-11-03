@@ -27,13 +27,20 @@
  
 #include "types.h"
 #include "tester.h"
+#include "job_queue.h"
+
 
 /* output for test messages */
 extern FILE * stderr;
+
+job_queue_t *job_queue;
+
  
 int main()
 {
  	FILE * test_output = stderr;
+ 	
+ 	job_queue = job_queue_create();
  	
  	tester_t *tester = tester_create(test_output);
 
