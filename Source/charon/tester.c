@@ -153,7 +153,7 @@ static status_t test_all(tester_t *tester)
 	this->run_test(this,test_linked_list,"Linked List");
 	this->run_test(this,test_thread_pool,"Thread Pool");
 	
-	fprintf(this->output,"End testing. %d tests failed of %d tests\n",this->failed_tests_count,this->tests_count);
+	fprintf(this->output,"End testing. %d of %d tests succeeded\n",this->tests_count - this->failed_tests_count,this->tests_count);
 
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported in log file */
