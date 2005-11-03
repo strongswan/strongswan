@@ -25,16 +25,27 @@
 
 #include "types.h"
 
-
 /**
- * @brief Double Linked List Element type
+ * @brief Element of the linked_list.
+ * 
+ * This element holds a pointer to the value of the list item itself.
  */
 typedef struct linked_list_element_s linked_list_element_t;
 
 struct linked_list_element_s {
+	/**
+	 * previous list element 
+	 * NULL if first element in list
+	 */
 	linked_list_element_t *previous;
+	/**
+	 * next list element
+	 * NULL if last element in list
+	 */
 	linked_list_element_t *next;
-	/* value of a list item */
+	/**
+	 * value of a list item
+	 */
 	void *value;
 	
 	/**
@@ -49,7 +60,9 @@ struct linked_list_element_s {
 /**
  * @brief Creates an empty linked list object
  *
- * @param value value of item
+ * @param[in] value value of item to be set
+ * 
+ * @warning only the pointer to the value is stored
  * 
  * @return linked_list_element object
  */
@@ -57,22 +70,38 @@ linked_list_element_t *linked_list_element_create(void *value);
 
 
 /**
- * @brief Double Linked List type
+ * @brief Double Linked List (named only as linked list)
+ *
+ * @warning Access to an object of this type is not thread-save
+ * 
+ * @see job_queue_t
+ * @see event_queue_t
+ * @see send_queue_t
  */
 typedef struct linked_list_s linked_list_t;
 
 
 struct linked_list_s {
-	/* item count */
+	/**
+	 * number of items in the list
+	 */
 	int count;
+	/**
+	 * First element in list
+	 * NULL if no elements in list
+	 */
 	linked_list_element_t *first;
+	/**
+	 * Last element in list
+	 * NULL if no elements in list
+	 */
 	linked_list_element_t *last;
 	
 	/**
 	 * @brief inserts a new item at the beginning of the list
 	 * 
 	 * @param linked_list calling object
-	 * @param item value to insert in list
+	 * @param[in] item value to insert in list
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*insert_first) (linked_list_t *linked_list, void *item);
@@ -81,16 +110,16 @@ struct linked_list_s {
 	 * @brief removes the first item in the list and returns its value
 	 * 
 	 * @param linked_list calling object
-	 * @param item returned value of first item
+	 * @param[in] item returned value of first item
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*remove_first) (linked_list_t *linked_list, void **item);
 
 	/**
-	 * @brief Returns the value of the first list item without removing it
+	 * @brief returns the value of the first list item without removing it
 	 * 
 	 * @param linked_list calling object
-	 * @param item returned value of first item
+	 * @param[out] item returned value of first item
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*get_first) (linked_list_t *linked_list, void **item);
@@ -99,7 +128,7 @@ struct linked_list_s {
 	 * @brief inserts a new item at the end of the list
 	 * 
 	 * @param linked_list calling object
-	 * @param item value to insert in list
+	 * @param[in] item value to insert into list
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*insert_last) (linked_list_t *linked_list, void *item);
@@ -108,7 +137,7 @@ struct linked_list_s {
 	 * @brief removes the last item in the list and returns its value
 	 * 
 	 * @param linked_list calling object
-	 * @param item returned value of last item
+	 * @param[out] item returned value of last item
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*remove_last) (linked_list_t *linked_list, void **item);
@@ -117,13 +146,18 @@ struct linked_list_s {
 	 * @brief Returns the value of the last list item without removing it
 	 * 
 	 * @param linked_list calling object
-	 * @param item returned value of last item
+	 * @param[out] item returned value of last item
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*get_last) (linked_list_t *linked_list, void **item);
 	
 	/**
 	 * @brief Destroys a linked_list object
+	 * 
+	 * @warning all items are removed before deleting the list. The
+	 *          associated values are NOT destroyed. 
+	 * 			Destroying an list which is not empty may cause
+	 * 			memory leaks!
 	 * 
 	 * @param linked_list calling object
 	 * @returns SUCCESS if succeeded, FAILED otherwise
@@ -132,9 +166,7 @@ struct linked_list_s {
 };
 
 /**
- * @brief
- * 
- * Creates an empty linked list object
+ * @brief Creates an empty linked list object
  */
 linked_list_t *linked_list_create(void);
 

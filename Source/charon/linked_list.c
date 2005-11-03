@@ -34,16 +34,25 @@
 static status_t linked_list_element_destroy(linked_list_element_t *linked_list_element)
 {
 	linked_list_element_t * this = 	linked_list_element;
+	if (this == NULL)
+	{
+		return FAILED;
+	}
 	pfree(this);
 	return SUCCESS;
 }
 
 /*
- * Creates a linked list (documented in header-file)
+ * Creates an empty linked list (described in header-file)
  */
 linked_list_element_t *linked_list_element_create(void *value)
 {
 	linked_list_element_t *this = alloc_thing(linked_list_element_t, "linked_list_element_t");
+	
+	if (this == NULL)
+	{
+		return NULL;
+	}
 	
 	this->destroy = linked_list_element_destroy;
 	
@@ -63,6 +72,11 @@ static status_t insert_first(linked_list_t *linked_list, void *item)
 	
 	linked_list_element_t *element = linked_list_element_create(item);
 	
+	if (element == NULL)
+	{
+		return FAILED;
+	}
+	
 	if (this->count == 0)
 	{
 		/* first entry in list */
@@ -70,7 +84,8 @@ static status_t insert_first(linked_list_t *linked_list, void *item)
 		this->last = element;
 		element->previous = NULL;
 		element->next = NULL;
-	}else
+	}
+	else
 	{
 		if ((this->first == NULL) || (this->last == NULL))
 		{
@@ -118,7 +133,7 @@ static status_t remove_first(linked_list_t *linked_list, void **item)
 
 	this->count--;
 	
-	return	(element->destroy(element));
+	return	/element->destroy(element));
 }
 
 /**
@@ -151,6 +166,11 @@ static status_t insert_last(linked_list_t *linked_list, void *item)
 	linked_list_t *this = linked_list;
 	
 	linked_list_element_t *element = linked_list_element_create(item);
+	
+	if (element == NULL)
+	{
+		return FAILED;
+	}
 	
 	if (this->count == 0)
 	{
@@ -207,7 +227,7 @@ static status_t remove_last(linked_list_t *linked_list, void **item)
 
 	this->count--;
 	
-	return	element->destroy(element);
+	return	(element->destroy(element));
 }
 
 /**
@@ -239,10 +259,12 @@ static status_t linked_list_destroy(linked_list_t *linked_list)
 {
 	linked_list_t *this = linked_list;
 
-	/* Delete all list items before deleting list */
+	/* Remove all list items before destroying list */
 	while (this->count > 0)
 	{
 		void * value;
+		/* values are not destroyed so memory leaks are possible
+		 * if list is not empty when deleting */
 		if (this->remove_first(this,&value) != SUCCESS)
 		{
 			pfree(this);
@@ -254,8 +276,7 @@ static status_t linked_list_destroy(linked_list_t *linked_list)
 }
  
 /*
- * 
- * Documented in header
+ * Described in header
  */
 linked_list_t *linked_list_create() 
 {

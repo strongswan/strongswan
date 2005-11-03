@@ -26,36 +26,43 @@
 #include "linked_list.h"
 
 /**
- * Type of Jobs
+ * Type of Jobs in Job-Queue
  */
 typedef enum job_type_e job_type_t;
 
 enum job_type_e{
 	/** 
-	 * Job is to process an incoming IKEv2-Message
+	 * process an incoming IKEv2-Message
 	 */
 	INCOMING_PACKET,
 	/** 
-	 * Job is to retransmit an IKEv2-Message
+	 * retransmit an IKEv2-Message
 	 */
 	RETRANSMIT_REQUEST,
 	/** 
-	 * Job is to establish an ike sa as initiator
+	 * establish an ike sa as initiator
 	 */
 	ESTABLISH_IKE_SA
+	/* more job types have to be inserted here */
 };
 
 
 /**
- * @brief Job like it is represented in the job queue
+ * @brief Job as it is stored in the job queue
+ * 
+ * A job consists of a job-type and an assigned value
+ * 
+ * The value-type for a specific job is not discussed here
  */
 typedef struct job_s job_t;
 
-
 struct job_s{
+	/**
+	 * Type of job
+	 */
 	job_type_t type;
 	/**
-	 * Every job has its assigned_data
+	 * Every job has its assigned_data based on the job type
 	 */
 	void * assigned_data;
 
@@ -80,48 +87,55 @@ job_t *job_create(job_type_t type, void *assigned_data);
 
 /**
  * @brief Job-Queue
+ *
+ * Despite the job-queue is based on a linked_list_t 
+ * all access functions are thread-save implemented
  */
 typedef struct job_queue_s job_queue_t;
 
 struct job_queue_s {
 	
 	/**
-	 * @brief Returns number of jobs in queue
+	 * @brief returns number of jobs in queue
 	 * 
 	 * @param job_queue_t calling object
- 	 * @param count integer pointer to store the job count in
+ 	 * @param[out] count integer pointer to store the job count in
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*get_count) (job_queue_t *job_queue, int *count);
 
 	/**
-	 * @brief Get the next job from the queue
+	 * @brief get the next job from the queue
 	 * 
-	 * If the queue is empty, this function blocks until job can be returned.
+	 * If the queue is empty, this function blocks until a job can be returned.
 	 * 
-	 * After using, the returned job has to get destroyed.
+	 * After using, the returned job has to get destroyed by the caller.
 	 * 
 	 * @param job_queue_t calling object
- 	 * @param job pointer to a job pointer where to job is returned to
+ 	 * @param[out] job pointer to a job pointer where to job is returned to
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*get) (job_queue_t *job_queue, job_t **job);
 	
 	/**
-	 * @brief Adds a job to the queue
+	 * @brief adds a job to the queue
 	 * 
-	 * This function is non blocking
+	 * This function is non blocking and adds a job_t to the list.
+	 * The specific job-object has to get destroyed by the thread which 
+	 * removes the job.
 	 * 
 	 * @param job_queue_t calling object
- 	 * @param job job to add to the queue (job is not copied)
+ 	 * @param[in] job job to add to the queue (job is not copied)
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*add) (job_queue_t *job_queue, job_t *job);
 
 	/**
-	 * @brief Destroys a job_queue object
+	 * @brief destroys a job_queue object
 	 * 
-	 * @warning Has only to be called if no other thread is accessing the queue
+	 * @warning The caller of this function has to make sure
+	 * that no thread is going to add or get a job from the job_queue
+	 * after calling this function.
 	 * 
 	 * @param job_queue_t calling object
 	 * @returns SUCCESS if succeeded, FAILED otherwise
@@ -130,8 +144,8 @@ struct job_queue_s {
 };
 
 /**
- * @brief Creates a job_queue
- * * 
+ * @brief Creates an empty job_queue
+ * 
  * @return job_queue_t empty job_queue
  */
 job_queue_t *job_queue_create();
