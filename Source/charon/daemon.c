@@ -21,6 +21,9 @@
  */
  
 #include <stdio.h>
+#include <freeswan.h>
+#include <pluto/constants.h>
+#include <pluto/defs.h>
  
 #include "types.h"
 #include "tester.h"
@@ -36,10 +39,12 @@ int main()
 
  	tester->test_all(tester);
  	
-	if (tester->destroy(tester) != SUCCESS)
-	{
-	 	return -1;
-	}
+	tester->destroy(tester);
+	
+#ifdef LEAK_DETECTIVE
+	/* Leaks are reported in log file */
+	report_leaks();
+#endif
 	
 	return 0;
 }

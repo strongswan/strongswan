@@ -32,8 +32,8 @@
 typedef struct tester_s tester_t;
 
 struct tester_s {
-	status_t (*test_all) (tester_t *this);
-	status_t (*destroy) (tester_t *this);
+	status_t (*test_all) (tester_t *tester);
+	status_t (*destroy) (tester_t *tester);
 };
 
 tester_t *tester_create(FILE *output);
