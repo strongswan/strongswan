@@ -1,7 +1,7 @@
 /**
- * @file daemon.c
+ * @file linked_list_test.h
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Tests to test the Linked List type linked_list_t
  * 
  */
 
@@ -19,44 +19,18 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-#include <stdio.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
- 
-#include "types.h"
-#include "tester.h"
-#include "tests/tests.h"
-#include "job_queue.h"
+
+#ifndef LINKED_LIST_TEST_H_
+#define LINKED_LIST_TEST_H_
+
+/**
+ * @brief Tes function for the type linked_list_t
+ * 
+ * @param tester tester object
+ */
+void test_linked_list(tester_t *tester);
 
 
+test_t linked_list_test = {test_linked_list,"Linked List"};
 
-/* output for test messages */
-extern FILE * stderr;
-
-job_queue_t *job_queue;
-
- 
-int main()
-{
- 	FILE * test_output = stderr;
- 	
- 	job_queue = job_queue_create();
- 	
- 	tester_t *tester = tester_create(test_output);
-
- 	tester->test_all(tester,tests);
- 	
-	tester->destroy(tester);
-	
-	job_queue->destroy(job_queue);
-	
-#ifdef LEAK_DETECTIVE
-	/* Leaks are reported in log file */
-	report_leaks();
-#endif
-	
-	return 0;
-}
- 
+#endif /*LINKED_LIST_TEST_H_*/

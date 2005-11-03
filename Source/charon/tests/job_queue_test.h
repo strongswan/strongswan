@@ -1,7 +1,7 @@
 /**
- * @file daemon.c
+ * @file job_queue_test.h
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Tests to test the Job-Queue type job_queue_t
  * 
  */
 
@@ -19,44 +19,17 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-#include <stdio.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
- 
-#include "types.h"
-#include "tester.h"
-#include "tests/tests.h"
-#include "job_queue.h"
 
+#ifndef JOB_QUEUE_TEST_H_
+#define JOB_QUEUE_TEST_H_
 
+/**
+ * @brief Test function used to test the job_queue functionality
+ *
+ * @param tester associated tester object
+ */
+void test_job_queue(tester_t *tester);
 
-/* output for test messages */
-extern FILE * stderr;
+test_t job_queue_test1 = {test_job_queue,"Job-Queue Test1"};
 
-job_queue_t *job_queue;
-
- 
-int main()
-{
- 	FILE * test_output = stderr;
- 	
- 	job_queue = job_queue_create();
- 	
- 	tester_t *tester = tester_create(test_output);
-
- 	tester->test_all(tester,tests);
- 	
-	tester->destroy(tester);
-	
-	job_queue->destroy(job_queue);
-	
-#ifdef LEAK_DETECTIVE
-	/* Leaks are reported in log file */
-	report_leaks();
-#endif
-	
-	return 0;
-}
- 
+#endif /*JOB_QUEUE_TEST_H_*/

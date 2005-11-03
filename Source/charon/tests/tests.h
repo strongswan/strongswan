@@ -1,7 +1,9 @@
 /**
- * @file daemon.c
+ * @file tests.h
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Lists all the tests to get performed by the tester
+ * 
+ * New tests have to be added here
  * 
  */
 
@@ -19,44 +21,21 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-#include <stdio.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
- 
-#include "types.h"
-#include "tester.h"
-#include "tests/tests.h"
-#include "job_queue.h"
 
+#ifndef TESTS_H_
+#define TESTS_H_
 
+#include "../tester.h"
+#include "linked_list_test.h"
+#include "thread_pool_test.h"
+#include "job_queue_test.h"
 
-/* output for test messages */
-extern FILE * stderr;
-
-job_queue_t *job_queue;
-
- 
-int main()
-{
- 	FILE * test_output = stderr;
- 	
- 	job_queue = job_queue_create();
- 	
- 	tester_t *tester = tester_create(test_output);
-
- 	tester->test_all(tester,tests);
- 	
-	tester->destroy(tester);
 	
-	job_queue->destroy(job_queue);
-	
-#ifdef LEAK_DETECTIVE
-	/* Leaks are reported in log file */
-	report_leaks();
-#endif
-	
-	return 0;
-}
- 
+test_t *tests[] ={
+	&linked_list_test,
+	&thread_pool_test,
+	&job_queue_test1,
+	NULL
+};
+
+#endif /*TESTS_H_*/

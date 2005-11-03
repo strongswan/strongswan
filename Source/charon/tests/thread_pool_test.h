@@ -1,7 +1,7 @@
 /**
- * @file daemon.c
+ * @file thread_pool_test.h
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Tests to test the Thread-Pool type thread_pool_t
  * 
  */
 
@@ -19,44 +19,12 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-#include <stdio.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
- 
-#include "types.h"
-#include "tester.h"
-#include "tests/tests.h"
-#include "job_queue.h"
 
+#ifndef THREAD_POOL_TEST_H_
+#define THREAD_POOL_TEST_H_
 
+void test_thread_pool(tester_t *tester);
 
-/* output for test messages */
-extern FILE * stderr;
+test_t thread_pool_test = {test_thread_pool,"Thread Pool"};
 
-job_queue_t *job_queue;
-
- 
-int main()
-{
- 	FILE * test_output = stderr;
- 	
- 	job_queue = job_queue_create();
- 	
- 	tester_t *tester = tester_create(test_output);
-
- 	tester->test_all(tester,tests);
- 	
-	tester->destroy(tester);
-	
-	job_queue->destroy(job_queue);
-	
-#ifdef LEAK_DETECTIVE
-	/* Leaks are reported in log file */
-	report_leaks();
-#endif
-	
-	return 0;
-}
- 
+#endif /*THREAD_POOL_TEST_H_*/
