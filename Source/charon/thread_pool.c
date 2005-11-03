@@ -23,12 +23,17 @@
  
 #include "thread_pool.h"
 
+#include "job_queue.h"
+
 #include <stdlib.h>
 #include <freeswan.h>
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
 #include <pthread.h>
+
+extern job_queue_t *job_queue;
+
 
 /**
  * structure with private members for thread_pool
@@ -49,14 +54,19 @@ typedef struct {
 } private_thread_pool_t;
 
 
+pthread_mutex_t muti = PTHREAD_MUTEX_INITIALIZER;
 
+pthread_cond_t condi = PTHREAD_COND_INITIALIZER;
 
 void *job_processing(private_thread_pool_t *this)
 {
+	
 	for (;;) {
 		
-		sleep(1);
+		/*job_t *job;
+		job_queue->get(job_queue, &job);*/
 		
+		sleep(100);
 		/* flag for termination received ? */
 		pthread_testcancel();
 	}
@@ -77,7 +87,7 @@ static status_t get_pool_size(private_thread_pool_t *this, size_t *size)
 static status_t destroy(private_thread_pool_t *this)
 {	
 	int current;
-	
+		
 	/* flag thread for termination */
 	for (current = 0; current < this->pool_size; current++) {
 		pthread_cancel(this->threads[current]);
