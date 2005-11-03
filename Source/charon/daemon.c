@@ -20,13 +20,27 @@
  * for more details.
  */
  
+#include <stdio.h>
  
- 
- 
+#include "types.h"
+#include "tester.h"
+
+/* output for test messages */
+extern FILE * stderr;
  
 int main()
 {
+ 	FILE * test_output = stderr;
  	
- 	return 0;	
+ 	tester_t *tester = tester_create(test_output);
+
+ 	tester->test_all(tester);
+ 	
+	if (tester->destroy(tester) == SUCCESS)
+	{
+	 	return -1;
+	}
+	
+	return 0;
 }
  

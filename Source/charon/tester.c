@@ -35,9 +35,13 @@ typedef struct {
 } private_tester_t;
  
  
-static status_t test_all(tester_t *this) 
+static status_t test_all(tester_t *tester) 
 {
-	
+	private_tester_t *this =(private_tester_t*) tester;
+
+	fprintf(this->output,"Start testing\n");
+		
+	fprintf(this->output,"End testing\n");
 	return SUCCESS;
 }
  
@@ -57,5 +61,5 @@ tester_t *tester_create(FILE *output)
 	
 	this->output = output;
 	
-	return SUCCESS;
+	return &(this->tester);
 }
