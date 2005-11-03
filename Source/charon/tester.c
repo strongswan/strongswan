@@ -29,6 +29,7 @@
  
 #include "tester.h"
 #include "linked_list.h"
+#include "thread_pool.h"
 
 /**
  * @brief Private Variables and Functions of tester class
@@ -68,7 +69,8 @@ struct private_tester_s {
 /**
  * @brief Test function to test the linked list class
  */
-static void	test_linked_list(private_tester_t * this){
+static void	test_linked_list(private_tester_t *this)
+{
 	void *test_value = NULL;
 
 	linked_list_t *linked_list = linked_list_create();
@@ -83,7 +85,6 @@ static void	test_linked_list(private_tester_t * this){
 
 	this->assert_true(this,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	this->assert_true(this,(strcmp((char *) test_value,"one") == 0), "get_last value check");	
-	
 	this->assert_true(this,(linked_list->remove_first(linked_list,&test_value) == SUCCESS), "remove_first call check");
 	this->assert_true(this,(strcmp((char *) test_value,"five") == 0), "remove_first value check");	
 
@@ -106,6 +107,19 @@ static void	test_linked_list(private_tester_t * this){
 }
 
 /**
+ * @brief Test function to test the thread pool class
+ */
+static void test_thread_pool(private_tester_t *this)
+{
+	size_t pool_size;
+	size_t desired_pool_size = 10;
+	thread_pool_t *pool = thread_pool_create(desired_pool_size);
+	pool->get_pool_size(pool, &pool_size);
+	this->assert_true(this, (desired_pool_size == pool_size), "thread creation");
+	pool->destroy(pool);
+}
+
+/**
  * @brief Testing of all registered tests
  * 
  * New tests have to be added in this function
@@ -117,6 +131,7 @@ static status_t test_all(tester_t *tester)
 
 	/* Add new Tests here! */
 	this->run_test(this,test_linked_list,"Linked List");
+	this->run_test(this,test_thread_pool,"Thread Pool");
 	
 	fprintf(this->output,"End testing. %d tests failed of %d tests\n",this->failed_tests_count,this->tests_count);
 
