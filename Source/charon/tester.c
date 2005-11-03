@@ -130,8 +130,9 @@ static void	test_linked_list(private_tester_t *this)
  */
 static void test_thread_pool(private_tester_t *this)
 {
-	size_t pool_size;
 	size_t desired_pool_size = 10;
+	size_t pool_size;
+	
 	thread_pool_t *pool = thread_pool_create(desired_pool_size);
 	pool->get_pool_size(pool, &pool_size);
 	this->assert_true(this, (desired_pool_size == pool_size), "thread creation");
