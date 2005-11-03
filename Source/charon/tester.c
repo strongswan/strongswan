@@ -27,6 +27,7 @@
 #include <pluto/defs.h>
  
 #include "tester.h"
+#include "linked_list.h"
  
 typedef struct {
  	tester_t tester;
@@ -34,14 +35,28 @@ typedef struct {
  	FILE* output;
 } private_tester_t;
  
+/**
+ * @brief Test function to test the linked list class
+ */
+static status_t	test_linked_list(private_tester_t * this){
+	fprintf(this->output,"Test linked list class...\n");
+	linked_list_t * linked_list_create();
+	
+	return FAILED;
+}
  
 static status_t test_all(tester_t *tester) 
 {
 	private_tester_t *this =(private_tester_t*) tester;
+	int tests_failed = 0;
+	int test_count = 0;
 
 	fprintf(this->output,"Start testing\n");
-		
-	fprintf(this->output,"End testing\n");
+	
+	if (test_linked_list(this) != SUCCESS){	tests_failed++; } test_count++;
+	
+	fprintf(this->output,"End testing. %d tests failed of %d tests\n",tests_failed,test_count);
+	//report_leaks();
 	return SUCCESS;
 }
  
