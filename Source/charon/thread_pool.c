@@ -1,7 +1,7 @@
 /**
- * @file worker.c
+ * @file thread_pool.c
  * 
- * @brief worker thread, gets jobs form job_queue
+ * @brief Thread-pool with some threads processing the job_queue
  * 
  */
 
@@ -54,21 +54,15 @@ typedef struct {
 } private_thread_pool_t;
 
 
-pthread_mutex_t muti = PTHREAD_MUTEX_INITIALIZER;
-
-pthread_cond_t condi = PTHREAD_COND_INITIALIZER;
-
-void *job_processing(private_thread_pool_t *this)
+void job_processing(private_thread_pool_t *this)
 {
-	
 	for (;;) {
+		job_t *job;
+		job_queue->get(job_queue, &job);
 		
-		/*job_t *job;
-		job_queue->get(job_queue, &job);*/
+		/* process them here */
 		
-		sleep(100);
-		/* flag for termination received ? */
-		pthread_testcancel();
+		job->destroy(job);
 	}
 }
 
@@ -87,11 +81,10 @@ static status_t get_pool_size(private_thread_pool_t *this, size_t *size)
 static status_t destroy(private_thread_pool_t *this)
 {	
 	int current;
-		
 	/* flag thread for termination */
-	for (current = 0; current < this->pool_size; current++) {
+	for (current = 0; current < this->pool_size; current++) {		
 		pthread_cancel(this->threads[current]);
-	}	
+	}
 	
 	/* wait for all threads */
 	for (current = 0; current < this->pool_size; current++) {
