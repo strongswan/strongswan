@@ -1,7 +1,7 @@
 /**
- * @file worker.h
+ * @file thread_pool.h
  * 
- * @brief worker thread, gets jobs form job_queue
+ * @brief Thread-pool with some threads processing the job_queue
  * 
  */
 
@@ -28,21 +28,26 @@
 #include "types.h"
 
 /**
- * A thread_pool contains a pool of threads processing the job queue
+ * @brief A thread_pool contains a pool of threads processing the job queue
+ * 
+ * Current implementation uses as many threads as specified in constructor.
+ * A more improved version would dynamically increase thread count if necessary...
  */
 typedef struct thread_pool_s thread_pool_t;
 
 struct thread_pool_s {
 	/**
-	 * Stops process after processing current job
+	 * @brief return currently active threads
 	 * 
 	 * @param thread_pool	thread_pool_t object
-	 * @param size [out]	size of pool				
+	 * @param size [out]	actual size of pool				
 	 * @return				SUCCESS		Thread flagged for termination
 	 */
 	status_t (*get_pool_size) (thread_pool_t *thread_pool, size_t *pool_size);
 	/**
-	 * Destroy pool, blocks until threads cleanly terminated
+	 * @brief destroy pool
+	 * 
+	 * sends cancellation request to all threads and AWAITS their termination.
 	 * 
 	 * @param thread_pool	thread_pool_t object
 	 * @return				SUCCESS
@@ -52,7 +57,7 @@ struct thread_pool_s {
 
 /**
  * @brief Create the thread pool using using pool_size of threads
- * 
+ *  
  * @param			pool_size	desired pool size
  * @return 			NULL		when no thread could be created
  * 					thread_pool	when one ore more threads could be created
