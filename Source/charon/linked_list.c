@@ -133,7 +133,7 @@ static status_t remove_first(linked_list_t *linked_list, void **item)
 
 	this->count--;
 	
-	return	/element->destroy(element));
+	return	(element->destroy(element));
 }
 
 /**
