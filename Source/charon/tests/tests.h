@@ -29,6 +29,7 @@
 #include "linked_list_test.h"
 #include "thread_pool_test.h"
 #include "job_queue_test.h"
+#include "event_queue_test.h"
 
 
 /**
@@ -40,6 +41,7 @@ test_t *tests[] ={
 	&linked_list_insert_and_remove_test,
 	&thread_pool_test,
 	&job_queue_test1,
+	&event_queue_test,
 	NULL
 };
 

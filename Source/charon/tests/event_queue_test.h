@@ -1,7 +1,7 @@
 /**
- * @file types.h
+ * @file event_queue_test.h
  * 
- * @brief Generic type definitions
+ * @brief Tests to test the Event-Queue type event_queue_t
  * 
  */
 
@@ -20,19 +20,23 @@
  * for more details.
  */
  
+#ifndef EVENT_QUEUE_TEST_H_
+#define EVENT_QUEUE_TEST_H_
 
-#ifndef TYPES_H_
-#define TYPES_H_
+#include "../tester.h"
 
-typedef enum status_e {
-	SUCCESS,
-	FAILED,
-	OUT_OF_RES,
-	ALREADY_DONE
-} status_t;
+/**
+ * @brief Test function used to test the event_queue functionality
+ * 
+ * Tests are performed using one thread
+ *
+ * @param tester associated tester object
+ */
+void test_event_queue(tester_t *tester);
 
-typedef struct timeval timeval_t;
+/**
+ * Test for event_queue_t
+ */
+test_t event_queue_test = {test_event_queue,"Event-Queue Test"};
 
-typedef struct timespec timespec_t;
-
-#endif /*TYPES_H_*/
+#endif /*EVENT_QUEUE_TEST_H_*/
