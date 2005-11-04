@@ -56,6 +56,9 @@ typedef struct {
 
 void job_processing(private_thread_pool_t *this)
 {
+	/* cancellation disabled by default */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	
 	for (;;) {
 		job_t *job;
 		job_queue->get(job_queue, &job);
@@ -112,6 +115,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	
 	this->pool_size = pool_size;
 	this->threads = alloc_bytes(sizeof(pthread_t) * pool_size, "pthread_t[] of private_thread_pool_t");
+	
 	
 	/* try to create as many threads as possible, up tu pool_size */
 	for (current = 0; current < pool_size; current++) {

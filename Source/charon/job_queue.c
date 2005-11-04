@@ -96,19 +96,22 @@ status_t get_count(private_job_queue_t *this, int *count)
 status_t get(private_job_queue_t *this, job_t **job)
 {
 	int count;
+	int oldstate;
 	pthread_mutex_lock(&(this->mutex));
-	// add mutex unlock handler for cancellation
-	pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
-	// go to wait while no jobs available
+	/* go to wait while no jobs available */
 	this->list->get_count(this->list,&count);
 	while(count == 0)
 	{
+		/* add mutex unlock handler for cancellation, enable cancellation */
+		pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		pthread_cond_wait( &(this->condvar), &(this->mutex));
+		
+		/* reset cancellation, remove mutex-unlock handler (without executing) */
+		pthread_setcancelstate(oldstate, NULL);
+		pthread_cleanup_pop(0);
 		this->list->get_count(this->list,&count);
 	}
-	// remove mutex-unlock handler (without executing)
-	pthread_cleanup_pop(0);
-	
 	this->list->remove_first(this->list,(void **) job);
 	pthread_mutex_unlock(&(this->mutex));
 	return SUCCESS;
