@@ -82,9 +82,8 @@ struct private_job_queue_s {
 /**
  * @brief implements function get_count of job_queue_t
  */
-status_t get_count(job_queue_t *job_queue, int *count)
+status_t get_count(private_job_queue_t *this, int *count)
 {
-	private_job_queue_t *this = (private_job_queue_t *) job_queue;
 	pthread_mutex_lock(&(this->mutex));
 	*count = this->list->count;
 	pthread_mutex_unlock(&(this->mutex));
@@ -94,14 +93,19 @@ status_t get_count(job_queue_t *job_queue, int *count)
 /**
  * @brief implements function get of job_queue_t
  */
-status_t get(job_queue_t *job_queue, job_t **job)
+status_t get(private_job_queue_t *this, job_t **job)
 {
-	private_job_queue_t *this = (private_job_queue_t *) job_queue;
 	pthread_mutex_lock(&(this->mutex));
+	// add mutex unlock handler for cancellation
+	pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
+	// go to wait while no jobs available
 	while(this->list->count == 0)
 	{
 		pthread_cond_wait( &(this->condvar), &(this->mutex));
 	}
+	// remove mutex-unlock handler
+	pthread_cleanup_pop(1);
+	
 	this->list->remove_first(this->list,(void **) job);
 	pthread_mutex_unlock(&(this->mutex));
 	return SUCCESS;
@@ -110,9 +114,8 @@ status_t get(job_queue_t *job_queue, job_t **job)
 /**
  * @brief implements function add of job_queue_t
  */
-status_t add(job_queue_t *job_queue, job_t *job)
+status_t add(private_job_queue_t *this, job_t *job)
 {
-	private_job_queue_t *this = (private_job_queue_t *) job_queue;
 	pthread_mutex_lock(&(this->mutex));
 	this->list->insert_last(this->list,job);
 	pthread_cond_signal( &(this->condvar));
@@ -124,11 +127,9 @@ status_t add(job_queue_t *job_queue, job_t *job)
  * @brief implements function destroy of job_queue_t
  * 
  */
-status_t job_queue_destroy (job_queue_t *job_queue)
-{
-	private_job_queue_t *this = (private_job_queue_t *) job_queue;
-	
-	while (this->list->count > 0)
+status_t job_queue_destroy (private_job_queue_t *this)
+{	
+	while (this->list->count > 0) 
 	{
 		job_t *job;
 		if (this->list->remove_first(this->list,(void *) &job) != SUCCESS)
@@ -167,10 +168,10 @@ job_queue_t *job_queue_create()
 		return NULL;
 	}
 	
-	this->public.get_count = get_count;
-	this->public.get = get;
-	this->public.add = add;
-	this->public.destroy = job_queue_destroy;
+	this->public.get_count = (status_t(*)(job_queue_t*, int*))get_count;
+	this->public.get = (status_t(*)(job_queue_t*, job_t**))get;
+	this->public.add = (status_t(*)(job_queue_t*, job_t*))add;
+	this->public.destroy = (status_t(*)(job_queue_t*))job_queue_destroy;
 	
 	this->list = linked_list;
 	pthread_mutex_init(&(this->mutex), NULL);
