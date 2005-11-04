@@ -20,7 +20,7 @@
  * for more details.
  */
 
-//#include <stdlib.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <freeswan.h>
 #include <pluto/constants.h>
