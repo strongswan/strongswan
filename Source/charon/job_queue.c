@@ -103,8 +103,8 @@ status_t get(private_job_queue_t *this, job_t **job)
 	{
 		pthread_cond_wait( &(this->condvar), &(this->mutex));
 	}
-	// remove mutex-unlock handler
-	pthread_cleanup_pop(1);
+	// remove mutex-unlock handler (without executing)
+	pthread_cleanup_pop(0);
 	
 	this->list->remove_first(this->list,(void **) job);
 	pthread_mutex_unlock(&(this->mutex));
