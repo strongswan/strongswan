@@ -26,6 +26,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 #include <pthread.h>
+#include <unistd.h>
  
 #include "../tester.h"
 #include "../job_queue.h"
@@ -98,8 +99,8 @@ void test_job_queue(tester_t *tester)
 
 	test_infos.tester = tester;
 	test_infos.job_queue = job_queue;
-	test_infos.insert_item_count = 50000;
-	test_infos.remove_item_count = 10000;
+	test_infos.insert_item_count = 100000;
+	test_infos.remove_item_count = 20000;
 	
 	
 	for (i = 0; i < 5;i++)

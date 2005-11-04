@@ -27,6 +27,7 @@
 #include <pluto/defs.h>
 #include <string.h>
 #include <pthread.h>
+#include <sys/time.h>
  
 #include "tester.h"
 #include "linked_list.h"
@@ -47,6 +48,7 @@ struct private_tester_s {
  	int tests_count;
  	int failed_tests_count;
  	int failed_asserts_count;
+ 	bool display_succeeded_asserts;
  	pthread_mutex_t mutex;
 };
  
@@ -70,18 +72,41 @@ static status_t test_all(tester_t *tester,test_t **tests)
 	return SUCCESS;
 }
 
+/**
+ * Returns the difference of to timeval structs in microseconds
+ * 
+ * @param end_time end time
+ * @param start_time start time
+ * 
+ * @return difference in microseconds
+ */
+static long time_difference(struct timeval *end_time, struct timeval *start_time)
+{
+	long seconds, microseconds;
+	
+	seconds = (end_time->tv_sec - start_time->tv_sec);
+	microseconds = (end_time->tv_usec - start_time->tv_usec);
+	return ((seconds * 1000000) + microseconds);
+}
+
 
 /**
  * Implementation of function run_test 
  */
 static void run_test(tester_t *tester, void (*test_function) (tester_t * tester), char * test_name)
 {
+	struct timeval start_time, end_time;
+	long timediff;
 	private_tester_t *this = (private_tester_t *) tester;
 	this->tests_count++;
 	this->failed_asserts_count = 0;
 	fprintf(this->output,"Start Test '%s'\n", test_name);
+	gettimeofday(&start_time,NULL);
 	test_function(tester);
-	fprintf(this->output,"End Test '%s'\n", test_name);
+	gettimeofday(&end_time,NULL);
+	timediff = time_difference(&end_time, &start_time);
+	
+	fprintf(this->output,"End Test '%s' in %ld microseconds\n", test_name,timediff);
 	if (this->failed_asserts_count > 0)
 	{
 		this->failed_tests_count++;
@@ -107,9 +132,20 @@ static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
 		fprintf(this->output,"  Assert '%s' failed!\n", assert_name);		
 	}else
 	{
-		fprintf(this->output,"  Assert '%s' succeeded\n", assert_name);		
+		if (this->display_succeeded_asserts)
+		{
+			fprintf(this->output,"  Assert '%s' succeeded\n", assert_name);		
+		}
 	}
 	pthread_mutex_unlock(&(this->mutex));
+}
+
+/**
+ * Implementation of function assert_false
+ */
+static void assert_false(tester_t *tester, bool to_be_false,char * assert_name)
+{
+	tester->assert_true(tester,(!to_be_false),assert_name);
 }
 
 /**
@@ -123,7 +159,7 @@ static status_t destroy(tester_t *tester)
 	return SUCCESS;
 }
 
-tester_t *tester_create(FILE *output) 
+tester_t *tester_create(FILE *output, bool display_succeeded_asserts) 
 {
 	private_tester_t *this = alloc_thing(private_tester_t, "private_tester_t");
 	
@@ -131,7 +167,9 @@ tester_t *tester_create(FILE *output)
 	this->public.test_all = test_all;
 	this->public.run_test = run_test;
 	this->public.assert_true = assert_true;
-	
+	this->public.assert_false = assert_false;
+
+	this->display_succeeded_asserts = display_succeeded_asserts;	
 	this->failed_tests_count = 0;
 	this->tests_count = 0;
 	this->output = output;

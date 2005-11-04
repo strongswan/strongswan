@@ -44,7 +44,7 @@ int main()
  	
  	job_queue = job_queue_create();
  	
- 	tester_t *tester = tester_create(test_output);
+ 	tester_t *tester = tester_create(test_output, FALSE);
 
  	tester->test_all(tester,tests);
  	
