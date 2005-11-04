@@ -85,7 +85,7 @@ struct private_job_queue_s {
 status_t get_count(private_job_queue_t *this, int *count)
 {
 	pthread_mutex_lock(&(this->mutex));
-	*count = this->list->count;
+	this->list->get_count(this->list,count);
 	pthread_mutex_unlock(&(this->mutex));
 	return SUCCESS;
 }
@@ -95,13 +95,16 @@ status_t get_count(private_job_queue_t *this, int *count)
  */
 status_t get(private_job_queue_t *this, job_t **job)
 {
+	int count;
 	pthread_mutex_lock(&(this->mutex));
 	// add mutex unlock handler for cancellation
 	pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
 	// go to wait while no jobs available
-	while(this->list->count == 0)
+	this->list->get_count(this->list,&count);
+	while(count == 0)
 	{
 		pthread_cond_wait( &(this->condvar), &(this->mutex));
+		this->list->get_count(this->list,&count);
 	}
 	// remove mutex-unlock handler (without executing)
 	pthread_cleanup_pop(0);
@@ -129,7 +132,10 @@ status_t add(private_job_queue_t *this, job_t *job)
  */
 status_t job_queue_destroy (private_job_queue_t *this)
 {	
-	while (this->list->count > 0) 
+	int count;
+	this->list->get_count(this->list,&count);
+	
+	while (count > 0) 
 	{
 		job_t *job;
 		if (this->list->remove_first(this->list,(void *) &job) != SUCCESS)
@@ -138,6 +144,7 @@ status_t job_queue_destroy (private_job_queue_t *this)
 			break;
 		}
 		job->destroy(job);
+		this->list->get_count(this->list,&count);
 	}
 	this->list->destroy(this->list);
 	

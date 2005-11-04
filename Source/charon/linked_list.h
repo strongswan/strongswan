@@ -23,6 +23,10 @@
 #ifndef LINKED_LIST_H_
 #define LINKED_LIST_H_
 
+#include <freeswan.h>
+#include <pluto/constants.h>
+#include <pluto/defs.h>
+
 #include "types.h"
 
 /**
@@ -33,16 +37,7 @@
 typedef struct linked_list_element_s linked_list_element_t;
 
 struct linked_list_element_s {
-	/**
-	 * previous list element 
-	 * NULL if first element in list
-	 */
-	linked_list_element_t *previous;
-	/**
-	 * next list element
-	 * NULL if last element in list
-	 */
-	linked_list_element_t *next;
+
 	/**
 	 * value of a list item
 	 */
@@ -68,6 +63,51 @@ struct linked_list_element_s {
  */
 linked_list_element_t *linked_list_element_create(void *value);
 
+/**
+ * @brief Iterator for a linked list
+ * 
+ * This element holds a pointer to the current element in the linked list
+ * 
+ * @warning the iterator is NOT thread-save
+ */
+typedef struct linked_list_iterator_s linked_list_iterator_t;
+
+struct linked_list_iterator_s {
+
+	/**
+	 * @brief returns TRUE if more elements are available
+	 * 
+	 * @param this calling object
+	 * @param[out] has_next if more elements are avaiable TRUE is set, FALSE otherwise
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*has_next) (linked_list_iterator_t *this, bool * has_next);
+
+	/**
+	 * @brief returns the current element at the iterator position
+	 * 
+	 * @param this calling object
+	 * @param[out] element element is set to the current element in iterator
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*current) (linked_list_iterator_t *this, linked_list_element_t **element);
+
+	/**
+	 * @brief Resets a linked_list_iterator object
+	 * 
+	 * @param this calling object
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*reset) (linked_list_iterator_t *this);
+
+	/**
+	 * @brief Destroys a linked_list_iterator object
+	 * 
+	 * @param this calling object
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*destroy) (linked_list_iterator_t *this);
+};
 
 /**
  * @brief Double Linked List (named only as linked list)
@@ -82,21 +122,28 @@ typedef struct linked_list_s linked_list_t;
 
 
 struct linked_list_s {
+
 	/**
-	 * number of items in the list
+	 * @brief gets the count of items in the list
+	 * 
+	 * @param linked_list calling object
+	 * @param[in] count place where the count is written
+	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	int count;
-	/**
-	 * First element in list
-	 * NULL if no elements in list
-	 */
-	linked_list_element_t *first;
-	/**
-	 * Last element in list
-	 * NULL if no elements in list
-	 */
-	linked_list_element_t *last;
+	status_t (*get_count) (linked_list_t *linked_list, int *count);
 	
+	/**
+	 * @brief creates a iterator for the given list
+	 * 
+	 * @warning has to get destroyed
+	 * 
+	 * @param linked_list calling object
+	 * @param[out] iterator place where the iterator is written
+	 * @param[in] forward iterator direction (TRUE: front to end)
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*create_iterator) (linked_list_t *linked_list, linked_list_iterator_t **iterator,bool forward);
+
 	/**
 	 * @brief inserts a new item at the beginning of the list
 	 * 

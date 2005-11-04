@@ -36,8 +36,9 @@
  */
 test_t *tests[] ={
 	&linked_list_test,
-	&thread_pool_test,
-	&job_queue_test1,
+	&linked_list_forward_iterator_test,
+//	&thread_pool_test,
+//	&job_queue_test1,
 	NULL
 };
 

@@ -31,55 +31,124 @@
 void test_linked_list(tester_t *tester)
 {
 	void *test_value = NULL;
+	int count;
 
 	linked_list_t *linked_list = linked_list_create();
-	tester->assert_true(tester,(linked_list->count == 0), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 0), "count check");
 	
 	linked_list->insert_first(linked_list,"one");
-	tester->assert_true(tester,(linked_list->count == 1), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 1), "count check");
 
 	linked_list->insert_first(linked_list,"two");
-	tester->assert_true(tester,(linked_list->count == 2), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 2), "count check");
 		
 	linked_list->insert_first(linked_list,"three");
-	tester->assert_true(tester,(linked_list->count == 3), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 3), "count check");
 
 	linked_list->insert_first(linked_list,"four");
-	tester->assert_true(tester,(linked_list->count == 4), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 4), "count check");
 
 	linked_list->insert_first(linked_list,"five");
-	tester->assert_true(tester,(linked_list->count == 5), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 5), "count check");
 
 	tester->assert_true(tester,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"five") == 0), "get_first value check");
-	tester->assert_true(tester,(linked_list->count == 5), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 5), "count check");
 
 	tester->assert_true(tester,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "get_last value check");
-	tester->assert_true(tester,(linked_list->count == 5), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 5), "count check");
+	
 	tester->assert_true(tester,(linked_list->remove_first(linked_list,&test_value) == SUCCESS), "remove_first call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"five") == 0), "remove_first value check");	
-	tester->assert_true(tester,(linked_list->count == 4), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 4), "count check");
 
 	tester->assert_true(tester,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"four") == 0), "get_first value check");
-	tester->assert_true(tester,(linked_list->count == 4), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 4), "count check");
 
 	tester->assert_true(tester,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "get_last value check");	
-	tester->assert_true(tester,(linked_list->count == 4), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 4), "count check");
 
 	tester->assert_true(tester,(linked_list->remove_last(linked_list,&test_value) == SUCCESS), "remove_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "remove_last value check");	
-	tester->assert_true(tester,(linked_list->count == 3), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 3), "count check");
 
 	tester->assert_true(tester,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"two") == 0), "get_last value check");		
-	tester->assert_true(tester,(linked_list->count == 3), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 3), "count check");
 
 	tester->assert_true(tester,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"four") == 0), "get_first value check");
-	tester->assert_true(tester,(linked_list->count == 3), "count check");
+	linked_list->get_count(linked_list,&count);
+	tester->assert_true(tester,(count == 3), "count check");
 	
 	tester->assert_true(tester,(linked_list->destroy(linked_list) == SUCCESS), "destroy call check");
+}
+
+ /*
+ * Description in header-file
+ */
+void test_linked_list_forward_iterator(tester_t *tester)
+{
+	bool has_next;
+	linked_list_element_t * element;
+	
+	linked_list_t *linked_list = linked_list_create();
+	linked_list->insert_first(linked_list,"one");
+	linked_list->insert_first(linked_list,"two");	
+	linked_list->insert_first(linked_list,"three");
+	linked_list->insert_first(linked_list,"four");
+	linked_list->insert_first(linked_list,"five");
+
+	linked_list_iterator_t * iterator;
+	
+	
+	tester->assert_true(tester,(linked_list->create_iterator(linked_list,&iterator,TRUE) == SUCCESS), "create_iterator call check");
+	
+	iterator->has_next(iterator,&has_next);
+	tester->assert_true(tester,has_next, "has_next value check");	
+	iterator->current(iterator,&element);
+	tester->assert_true(tester,(strcmp((char *) element->value,"five") == 0), "current value check");
+	
+	iterator->has_next(iterator,&has_next);
+	tester->assert_true(tester,has_next, "has_next value check");	
+	iterator->current(iterator,&element);
+	tester->assert_true(tester,(strcmp((char *) element->value,"four") == 0), "current value check");
+
+	iterator->has_next(iterator,&has_next);
+	tester->assert_true(tester,has_next, "has_next value check");	
+	iterator->current(iterator,&element);
+	tester->assert_true(tester,(strcmp((char *) element->value,"three") == 0), "current value check");
+
+	iterator->has_next(iterator,&has_next);
+	tester->assert_true(tester,has_next, "has_next value check");	
+	iterator->current(iterator,&element);
+	tester->assert_true(tester,(strcmp((char *) element->value,"two") == 0), "current value check");
+
+	iterator->has_next(iterator,&has_next);
+	tester->assert_true(tester,has_next, "has_next value check");	
+	iterator->current(iterator,&element);
+	tester->assert_true(tester,(strcmp((char *) element->value,"one") == 0), "current value check");
+
+	iterator->has_next(iterator,&has_next);
+	tester->assert_false(tester,has_next, "has_next value check");
+
+	tester->assert_true(tester,(iterator->destroy(iterator) == SUCCESS), "destroy call check");
+	
+	linked_list->destroy(linked_list);
 }

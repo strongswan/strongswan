@@ -78,6 +78,10 @@ static status_t test_all(tester_t *tester,test_t **tests)
  * @param end_time end time
  * @param start_time start time
  * 
+ * @warning this function is also defined in the event queue
+ * 			in later improvements, this function can be added to a general
+ *          class type!
+ * 
  * @return difference in microseconds
  */
 static long time_difference(struct timeval *end_time, struct timeval *start_time)
