@@ -425,6 +425,128 @@ static status_t get_last(private_linked_list_t *this, void **item)
 }
 
 /**
+ * @brief implements function insert_before of linked_list_t
+ */
+static status_t insert_before(private_linked_list_t *this, private_linked_list_element_t * next_element, void *item)
+{
+	if (this->count == 0)
+	{
+		return FAILED;
+	}
+
+	private_linked_list_element_t *element =(private_linked_list_element_t *) linked_list_element_create(item);
+	
+	if (element == NULL)
+	{
+		return FAILED;
+	}
+	
+	if (next_element->previous == NULL)
+	{
+		if (this->first != next_element)
+		{
+			element->public.destroy(&(element->public));
+			return FAILED;
+		}
+		
+		next_element->previous = element;
+		element->next = next_element;
+		this->first = element;
+	}
+	else
+	{
+		next_element->previous->next = element;
+		element->previous = next_element->previous;
+		next_element->previous = element;
+		element->next = next_element;
+	}
+	
+	this->count++;
+
+	return SUCCESS;
+}
+
+/**
+ * @brief implements function insert_after of linked_list_t
+ */
+static status_t insert_after(private_linked_list_t *this, private_linked_list_element_t * previous_element, void *item)
+{
+	if (this->count == 0)
+	{
+		return FAILED;
+	}
+
+	private_linked_list_element_t *element =(private_linked_list_element_t *) linked_list_element_create(item);
+	
+	if (element == NULL)
+	{
+		return FAILED;
+	}
+	
+	if (previous_element->next == NULL)
+	{
+		if (this->last != previous_element)
+		{
+			element->public.destroy(&(element->public));
+			return FAILED;
+		}
+		
+		previous_element->next = element;
+		element->previous = previous_element;
+		this->last = element;
+	}
+	else
+	{
+		previous_element->next->previous = element;
+		element->next = previous_element->next;
+		previous_element->next = element;
+		element->previous = previous_element;
+	}
+	
+	this->count++;
+	return SUCCESS;
+}
+
+/**
+ * @brief implements function remove of linked_list_t
+ */
+static status_t linked_list_remove(private_linked_list_t *this, private_linked_list_element_t * element)
+{
+	if (this->count == 0)
+	{
+		return FAILED;
+	}
+	
+	if (element->previous == NULL)
+	{	
+		if (element->next == NULL)
+		{
+			this->first = NULL; 	
+		 	this->last = NULL;
+		}
+		else
+		{
+			element->next->previous = NULL;
+			this->first = element->next;
+		}
+	}
+	else if (element->next == NULL)
+	{
+		element->previous->next = NULL;
+		this->last = element->previous;
+	}
+	else
+	{
+		element->previous->next = element->next;
+		element->next->previous = element->previous;
+	}
+	
+ 	this->count--;
+ 	element->public.destroy(&(element->public));
+ 	return SUCCESS;
+}
+
+/**
  * @brief implements function destroy of linked_list_t
  */
 static status_t linked_list_destroy(private_linked_list_t *this)
@@ -456,8 +578,11 @@ linked_list_t *linked_list_create()
 	this->public.create_iterator = (status_t (*) (linked_list_t *linked_list, linked_list_iterator_t **iterator,bool forward)) create_iterator;
 	this->public.get_first = (status_t (*) (linked_list_t *linked_list, void **item)) get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *linked_list, void **item)) get_last;
-	this->public.insert_first = (status_t (*) (linked_list_t *linked_list, void *item))insert_first;
-	this->public.insert_last = (status_t (*) (linked_list_t *linked_list, void *item))insert_last;
+	this->public.insert_first = (status_t (*) (linked_list_t *linked_list, void *item)) insert_first;
+	this->public.insert_last = (status_t (*) (linked_list_t *linked_list, void *item)) insert_last;
+	this->public.insert_before = (status_t (*) (linked_list_t *linked_list, linked_list_element_t * element, void *item)) insert_before;
+	this->public.insert_after = (status_t (*) (linked_list_t *linked_list, linked_list_element_t * element, void *item)) insert_after;
+	this->public.remove = (status_t (*) (linked_list_t *linked_list, linked_list_element_t * element)) linked_list_remove;
 	this->public.remove_first = (status_t (*) (linked_list_t *linked_list, void **item)) remove_first;
 	this->public.remove_last = (status_t (*) (linked_list_t *linked_list, void **item)) remove_last;
 	this->public.destroy = (status_t (*) (linked_list_t *linked_list)) linked_list_destroy;

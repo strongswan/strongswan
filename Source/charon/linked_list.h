@@ -154,6 +154,35 @@ struct linked_list_s {
 	status_t (*insert_first) (linked_list_t *linked_list, void *item);
 	
 	/**
+	 * @brief inserts a new item before the given element
+	 * 
+	 * @param linked_list calling object
+	 * @param element new element is inserted before this element
+	 * @param[in] item value to insert in list
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*insert_before) (linked_list_t *linked_list, linked_list_element_t *element, void *item);
+
+	/**
+	 * @brief inserts a new item after the given element
+	 * 
+	 * @param linked_list calling object
+	 * @param element new element is inserted after this element
+	 * @param[in] item value to insert in list
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*insert_after) (linked_list_t *linked_list, linked_list_element_t *element, void *item);
+
+	/**
+	 * @brief removes an element from list
+	 * 
+	 * @param linked_list calling object
+	 * @param element element to remove
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*remove) (linked_list_t *linked_list, linked_list_element_t *element);
+
+	/**
 	 * @brief removes the first item in the list and returns its value
 	 * 
 	 * @param linked_list calling object
