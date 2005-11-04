@@ -62,7 +62,7 @@ static void test_job_queue_sender(job_queue_test_t * testinfo)
 	int i;	
 	for (i = 0; i < testinfo->insert_item_count; i++)
 	{
-		int *value = alloc_thing(int,"int");
+		int *value = alloc_thing(int,"int in test_job_queue_sender");
 		*value = i;
 		job_t *job = job_create(INCOMING_PACKET,value);
 		testinfo->job_queue->add(testinfo->job_queue,job);
@@ -92,32 +92,46 @@ static void test_job_queue_receiver(job_queue_test_t * testinfo)
  */
 void test_job_queue(tester_t *tester)
 {
-	int value, i;
-	pthread_t sender_thread, receiver_threads[5];
+	int value, desired_value, i;
+	int sender_count = 10;
+	int receiver_count = 2;
+	pthread_t sender_threads[sender_count];
+	pthread_t receiver_threads[receiver_count];
 	job_queue_t *job_queue = job_queue_create();
 	job_queue_test_t test_infos;
 
 	test_infos.tester = tester;
 	test_infos.job_queue = job_queue;
-	test_infos.insert_item_count = 100000;
-	test_infos.remove_item_count = 20000;
+	test_infos.insert_item_count = 10000;
+	test_infos.remove_item_count = 10000;
 	
 	
-	for (i = 0; i < 5;i++)
+	desired_value = test_infos.insert_item_count * sender_count - 
+					test_infos.remove_item_count * receiver_count;
+	
+	for (i = 0; i < receiver_count;i++)
 	{
 		pthread_create( &receiver_threads[i], NULL,(void*(*)(void*)) &test_job_queue_receiver, (void*) &test_infos);
 	}
-	pthread_create( &sender_thread, NULL,(void*(*)(void*)) &test_job_queue_sender, (void*) &test_infos);
+	for (i = 0; i < sender_count;i++)
+	{
+		pthread_create( &sender_threads[i], NULL,(void*(*)(void*)) &test_job_queue_sender, (void*) &test_infos);
+	}
+	
 	
 	/* Wait for all threads */
-	pthread_join(sender_thread, NULL);	
-	for (i = 0; i < 5;i++)
+	for (i = 0; i < sender_count;i++)
+	{
+		pthread_join(sender_threads[i], NULL);
+	}
+	for (i = 0; i < receiver_count;i++)
 	{
 		pthread_join(receiver_threads[i], NULL);
 	}
 	
+	
 	/* the job-queue has to be empty now! */
 	tester->assert_true(tester,(job_queue->get_count(job_queue,&value) == SUCCESS), "get count call check");
-	tester->assert_true(tester,(value == 0), "get count value check");
+	tester->assert_true(tester,(value == desired_value), "get count value check");
 	tester->assert_true(tester,(job_queue->destroy(job_queue) == SUCCESS), "destroy call check");
 }
