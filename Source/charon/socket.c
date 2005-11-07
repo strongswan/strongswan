@@ -24,6 +24,7 @@
 
 #include "socket.h"
 
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
@@ -54,12 +55,23 @@ struct private_socket_s{
 status_t receiver(private_socket_t *this, packet_t **packet)
 {
 	char buffer[MAX_PACKET];
-	
+	int oldstate;
 	packet_t *pkt = packet_create(AF_INET);
 	
+	
+	/* add packet destroy handler for cancellation, enable cancellation */
+	pthread_cleanup_push((void(*)(void*))pkt->destroy, (void*)pkt);
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		
 	/* do the read */
 	pkt->data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0, 
 							&(pkt->source), &(pkt->sockaddr_len));
+	
+	/* reset cancellation, remove packet destroy handler (without executing) */
+	pthread_setcancelstate(oldstate, NULL);
+	pthread_cleanup_pop(0);
+	
+	
 	/* TODO: get senders destination address, using 
 	 * IP_PKTINFO and recvmsg */
 							
