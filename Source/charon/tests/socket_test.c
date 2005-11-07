@@ -61,4 +61,7 @@ void test_socket(tester_t *tester)
 		tester->assert_false(tester, strcmp(test_string, pkt->data.ptr), "packet exchange");
 		pkt->destroy(pkt);
    	}
+   	
+	tester->assert_true(tester, (skt->destroy(skt) == SUCCESS), "socket destroy call check");
+
 }
