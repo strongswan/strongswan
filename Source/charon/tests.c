@@ -34,6 +34,7 @@
 #include "tests/event_queue_test.h"
 #include "tests/send_queue_test.h"
 #include "tests/socket_test.h"
+#include "tests/sender_test.h"
 
 
 /* output for test messages */
@@ -57,17 +58,17 @@ test_t linked_list_insert_and_remove_test = {test_linked_list_insert_and_remove,
 /**
  * Test for event_queue_t
  */
-test_t event_queue_test = {test_event_queue,"Event-Queue Test"};
+test_t event_queue_test = {test_event_queue,"Event-Queue"};
 
 /**
  * Test 1 for job_queue_t
  */
-test_t job_queue_test1 = {test_job_queue,"Job-Queue Test1"};
+test_t job_queue_test1 = {test_job_queue,"Job-Queue"};
 
 /**
  * Test 1 for linked_list_t
  */
-test_t send_queue_test = {test_send_queue,"Send-Queue Test"};
+test_t send_queue_test = {test_send_queue,"Send-Queue"};
 
 /**
  * Test for socket_t
@@ -78,6 +79,11 @@ test_t socket_test = {test_socket,"Socket"};
  * Test for thread_pool_t
  */
 test_t thread_pool_test = {test_thread_pool,"Thread Pool"};
+
+/**
+ * Test for sender_t
+ */
+test_t sender_test = {test_sender,"Sender"};
 
 
 /**
@@ -113,6 +119,7 @@ socket_t *global_socket;
 	&event_queue_test,
 	&send_queue_test,
 	&socket_test,
+	&sender_test,
 	NULL
 	};
  	
@@ -125,7 +132,7 @@ socket_t *global_socket;
  	tester_t *tester = tester_create(test_output, FALSE);
 
 	tester->perform_tests(tester,all_tests);
-// 	tester->perform_test(tester,&event_queue_test);
+/* 	tester->perform_test(tester,&sender_test); */
  	
 	tester->destroy(tester);
 
