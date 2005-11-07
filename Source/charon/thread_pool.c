@@ -32,7 +32,7 @@
 
 #include <pthread.h>
 
-extern job_queue_t *job_queue;
+extern job_queue_t *global_job_queue;
 
 
 /**
@@ -61,7 +61,7 @@ static void job_processing(private_thread_pool_t *this)
 	
 	for (;;) {
 		job_t *job;
-		job_queue->get(job_queue, &job);
+		global_job_queue->get(global_job_queue, &job);
 		
 		/* process them here */
 		
