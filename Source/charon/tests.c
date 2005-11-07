@@ -98,7 +98,7 @@ job_queue_t *job_queue;
  	
  	tester_t *tester = tester_create(test_output, TRUE);
 
- 	tester->test_all(tester,all_tests);
+ 	tester->perform_tests(tester,all_tests);
  	
 	tester->destroy(tester);
 	

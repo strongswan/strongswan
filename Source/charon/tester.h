@@ -48,14 +48,23 @@ struct test_s{
 struct tester_s {
 	
 	/**
-	 * @brief Tests all testcases of specific tester object
+	 * @brief Tests all testcases in array tests with specific tester object
 	 * 
 	 * @param tester tester object
- 	 * @param pointer to a list of tests to perform.
- 	 * 			      the last list item has to be NULL.
+ 	 * @param pointer to a array of test_t-pointers.
+ 	 * 			      the last item has to be NULL.
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
-	status_t (*test_all) (tester_t *tester,test_t **tests);
+	status_t (*perform_tests) (tester_t *tester,test_t **tests);
+	
+	/**
+	 * @brief run a specific test case
+	 * 
+	 * @param this tester object
+	 * @param test pointer to a test_t-object which will be performed
+	 * @param Name of the Test
+	 */
+ 	status_t (*perform_test) (tester_t *tester, test_t *test);
 	
 	/**
 	 * @brief is called in a testcase to check a specific situation for TRUE
@@ -82,16 +91,6 @@ struct tester_s {
 	 * @param Name of the assertion
 	 */
 	void (*assert_false) (tester_t *tester, bool to_be_false, char *assert_name); 	
-
-
-	/**
-	 * @brief run a specific test case
-	 * 
-	 * @param this tester object
-	 * @param test_function implements the test case
-	 * @param Name of the Test
-	 */
- 	void (*run_test) (tester_t *this, void (*test_function) (tester_t * tester), char * test_name);
 
 	/**
 	 * @brief Destroys a tester object

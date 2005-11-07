@@ -43,6 +43,11 @@ typedef struct private_tester_s private_tester_t;
 struct private_tester_s {
  	tester_t public;
  	
+
+	/* Private functions */
+	void (*run_test) (tester_t *tester, void (*test_function) (tester_t * tester), char * test_name);
+	
+	
 	/* Private values */
  	FILE* output;
  	int tests_count;
@@ -53,9 +58,9 @@ struct private_tester_s {
 };
  
 /*
- * Implementation of function test_all
+ * Implementation of function perform_tests
  */
-static status_t test_all(tester_t *tester,test_t **tests) 
+static status_t perform_tests(tester_t *tester,test_t **tests) 
 {
 	private_tester_t *this =(private_tester_t*) tester;
 	int current_test = 0;
@@ -63,13 +68,22 @@ static status_t test_all(tester_t *tester,test_t **tests)
 
 	while (tests[current_test] != NULL)
 	{
-		tester->run_test(tester,tests[current_test]->test_function,tests[current_test]->test_name);
+		this->run_test(tester,tests[current_test]->test_function,tests[current_test]->test_name);
 		current_test++;
 	}
 	
 	fprintf(this->output,"End testing. %d of %d tests succeeded\n",this->tests_count - this->failed_tests_count,this->tests_count);
 
 	return SUCCESS;
+}
+
+/*
+ * Implementation of function perform_test
+ */
+static status_t perform_test(tester_t *tester, test_t *test) 
+{
+	test_t *tests[] = {test, NULL};
+	return (perform_tests(tester,tests));
 }
 
 /**
@@ -168,11 +182,13 @@ tester_t *tester_create(FILE *output, bool display_succeeded_asserts)
 	private_tester_t *this = alloc_thing(private_tester_t, "private_tester_t");
 	
 	this->public.destroy = destroy;
-	this->public.test_all = test_all;
-	this->public.run_test = run_test;
+	this->public.perform_tests = perform_tests;
+	this->public.perform_test = perform_test;
 	this->public.assert_true = assert_true;
 	this->public.assert_false = assert_false;
-
+	
+	
+	this->run_test = run_test;
 	this->display_succeeded_asserts = display_succeeded_asserts;	
 	this->failed_tests_count = 0;
 	this->tests_count = 0;
