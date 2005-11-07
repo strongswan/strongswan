@@ -54,7 +54,7 @@ typedef struct {
 } private_thread_pool_t;
 
 
-void job_processing(private_thread_pool_t *this)
+static void job_processing(private_thread_pool_t *this)
 {
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
