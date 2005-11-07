@@ -34,8 +34,9 @@
 #include <pluto/defs.h>
 
 
+typedef struct private_socket_s private_socket_t;
 
-typedef struct {
+struct private_socket_s{
 	/**
 	 * public functions
 	 */
@@ -45,7 +46,7 @@ typedef struct {
 	  * currently we only have one socket, maybe more in the future ?
 	  */
 	  int socket_fd;
-} private_socket_t;
+};
 
 /**
  * implementation of socket_t.receive
@@ -111,7 +112,7 @@ status_t destroy(private_socket_t *this)
 
 socket_t *socket_create(u_int16_t port)
 {
-	private_socket_t *this = alloc_thing(socket_t, "private_socket_t");
+	private_socket_t *this = alloc_thing(private_socket_t, "private_socket_t");
 	struct sockaddr_in addr;
 	
 	/* public functions */
