@@ -61,24 +61,41 @@ struct packet_s {
 	  * message data
 	  */
 	chunk_t data;
-	
+		
+	/**
+	 * @brief 			set destination of packet, using address string
+	 *  
+	 * @param address	ip address string
+	 * @param port		port number
+	 * @return 			SUCCESS
+	 * 					NOT_SUPPORTED
+	 */
 	status_t (*set_destination) (packet_t *packet, char *address, u_int16_t port);
+		
+	/**
+	 * @brief 			set destination of packet, using address string
+	 *  
+	 * @param address	ip address string
+	 * @param port		port number
+	 * @return 			SUCCESS
+	 * 					NOT_SUPPORTED
+	 */
 	status_t (*set_source) (packet_t *packet, char *address, u_int16_t port);
 	
 	/**
-	 * @brief 
+	 * @brief 			destroy the packet, freeing contained data
 	 *  
-	 * @param 
-	 * @return  
+	 * @param packet	packet to destroy	
+	 * @return 			SUCCESS
 	 */
 	status_t (*destroy) (packet_t *packet);
 };
 
 /**
- * @brief 
+ * @brief create an empty packet
  *  
- * @param 
- * @return  
+ * @param family		address-family, such as AF_INET
+ * @return  			NULL when family not supported
  */
 packet_t *packet_create(int family);
 

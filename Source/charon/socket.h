@@ -44,41 +44,51 @@
 typedef struct socket_s socket_t;
 struct socket_s {
 	/**
-	 * @brief  
+	 * @brief receive a packet
+	 * 
+	 * reads a packet from one of the sockets.
+	 * source will be set, dest not implemented
 	 * 
 	 * 
-	 * 
-	 * @param  
-	 * @return 
+	 * @param sock			socket_t object to work on
+	 * @param packet		pinter gets address from allocated packet_t
+	 * @return 				FAILED when unable to receive
+	 * 						SUCCESS when packet successfully received
 	 */
 	status_t (*receive) (socket_t *sock, packet_t **packet);
 	
 	/**
-	 * @brief  
+	 * @brief send a packet
 	 * 
+	 * sends a packet via desired socket.
+	 * uses source and dest in packet.
 	 * 
-	 * 
-	 * @param  
-	 * @return 
+	 * @param sock			socket_t object to work on
+	 * @param packet[out]	packet_t to send
+	 * @return 				FAILED when unable to send
+	 * 						SUCCESS when packet successfully sent
 	 */
 	status_t (*send) (socket_t *sock, packet_t *packet);
 	
 	/**
-	 * @brief  
+	 * @brief destroy sockets
 	 * 
+	 * close sockets and destroy socket_t object
 	 * 
-	 * 
-	 * @param  
-	 * @return 
+	 * @param sock 			socket_t to destroy
+	 * @return 				SUCCESS
 	 */
 	status_t (*destroy) (socket_t *sock);
 };
 
 /**
- * @brief 
+ * @brief socket_t constructor
+ * 
+ * currently creates one socket, listening on all addresses
+ * on port.
  *  
- * @param 
- * @return  
+ * @param port				port to bind socket to
+ * @return  				the created socket, or NULL on error
  */
 socket_t *socket_create(u_int16_t port);
 

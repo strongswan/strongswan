@@ -47,10 +47,11 @@ typedef struct {
 	  int socket_fd;
 } private_socket_t;
 
-
+/**
+ * implementation of socket_t.receive
+ */
 status_t receiver(private_socket_t *this, packet_t **packet)
 {
-	
 	char buffer[MAX_PACKET];
 	
 	packet_t *pkt = packet_create(AF_INET);
@@ -58,10 +59,13 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	/* do the read */
 	pkt->data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0, 
 							&(pkt->source), &(pkt->sockaddr_len));
+	/* TODO: get senders destination address, using 
+	 * IP_PKTINFO and recvmsg */
 							
 	if (pkt->data.len < 0)
 	{
 		pkt->destroy(pkt);
+		/* TODO: log detailed error */
 		return FAILED;
 	}
 	
@@ -75,6 +79,9 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	return SUCCESS;	
 }
 	
+/**
+ * implementation of socket_t.send
+ */
 status_t sender(private_socket_t *this, packet_t *packet) 
 {
 	ssize_t bytes_sent;
@@ -85,13 +92,16 @@ status_t sender(private_socket_t *this, packet_t *packet)
 					
 	if (bytes_sent != packet->data.len) 
 	{
-		perror("Sendto error");
+		/* TODO: log detailed error */
 		return FAILED;
 	}
 	return SUCCESS;
 }
 	
-status_t destroyer(private_socket_t *this)
+/**
+ * implementation of socket_t.destroy
+ */
+status_t destroy(private_socket_t *this)
 {
 	close(this->socket_fd);
 	pfree(this);
@@ -107,20 +117,23 @@ socket_t *socket_create(u_int16_t port)
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
-	this->public.destroy = (status_t(*)(socket_t*))destroyer;
+	this->public.destroy = (status_t(*)(socket_t*))destroy;
 	
 	/* create default ipv4 socket */
 	this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
 	if (this->socket_fd < 0) {
 		pfree(this);
+		/* TODO: log detailed error */
 		return NULL;
 	}	
 	
+	/* bind socket to all interfaces */
 	addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(port);
     if (bind(this->socket_fd,(struct sockaddr*)&addr, sizeof(addr)) < 0) {
 		pfree(this);
+		/* TODO: log detailed error */
         return NULL;
     }
 	
