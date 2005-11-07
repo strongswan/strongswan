@@ -23,15 +23,12 @@
 #include <string.h>
 
 #include "sender_test.h"
+#include "../globals.h"
 #include "../sender.h"
 #include "../packet.h"
 #include "../socket.h"
 #include "../send_queue.h"
 #include "../job_queue.h"
-
-extern send_queue_t *global_send_queue;
-
-extern socket_t *global_socket;
 
 /**
  * Number of packets to send by sender-thread
