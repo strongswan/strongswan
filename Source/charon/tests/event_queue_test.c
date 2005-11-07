@@ -20,48 +20,122 @@
  * for more details.
  */
  
+#include <stdlib.h>
+#include <pthread.h>
  
 #include "event_queue_test.h"
 #include "../tester.h"
 #include "../event_queue.h"
 
+/**
+ * Number of different times to insert per thread
+ */
+#define EVENT_QUEUE_TIMES 10
+/**
+ * Number of entries per time per thread
+ */
+#define EVENT_QUEUE_ENTRY_PER_TIME 20
+
+/**
+ * Number of test-thread
+ */
+#define EVENT_QUEUE_INSERT_THREADS 15
+
+/**
+ * @brief Informations for the involved test-thread used in this test
+ * 
+ */
+typedef struct event_queue_test_s event_queue_test_t;
+
+struct event_queue_test_s{
+	tester_t *tester;
+	event_queue_t *event_queue;
+	
+	/**
+	 * number of different event times to be inserted in the event-queue by each thread
+	 */
+	int insert_times_count;	
+	
+	/**
+	 * number of event to insert at one time
+	 */
+	int entries_per_time;	
+};
+
+
+static void event_queue_insert_thread(event_queue_test_t * testinfos)
+{
+	timeval_t current_time;
+	tester_t *tester = testinfos->tester;
+	timeval_t time;
+	job_t * job;
+	int i,j;
+	
+	gettimeofday(&current_time,NULL);
+	for (i = 0; i < testinfos->insert_times_count;i++)
+	{
+		for (j = 0; j < testinfos->entries_per_time;j++)
+		{
+			int *value = alloc_thing(int, "value");
+			*value = i;
+			job = job_create(INCOMING_PACKET,value);
+			time.tv_usec = 0;
+			time.tv_sec = current_time.tv_sec + i;
+			
+			tester->assert_true(tester,(testinfos->event_queue->add(testinfos->event_queue,job,time) == SUCCESS), "add call check");
+		}
+	} 
+}
+
+
 void test_event_queue(tester_t *tester)
 {
 	event_queue_t * event_queue = event_queue_create();
-	timeval_t current_time;
-	timeval_t time1, time2, time3;
-	job_t * current_job;
+	event_queue_test_t testinfos;
+	pthread_t threads[EVENT_QUEUE_INSERT_THREADS];
+	int i,j, number_of_total_events;
 	int count;
-	job_t * job1 = job_create(INCOMING_PACKET,"incoming packet");
-	job_t * job2 = job_create(RETRANSMIT_REQUEST,"retransmit request");
-	job_t * job3 = job_create(ESTABLISH_IKE_SA,"establish ike sa");
+	timeval_t current_time, start_time;
 	
-	gettimeofday(&current_time,NULL);
-	time1.tv_usec = 0;
-	time1.tv_sec = current_time.tv_sec + 3;
-	time2.tv_usec = 0;
-	time2.tv_sec = current_time.tv_sec + 12;
-	time3.tv_usec = 0;
-	time3.tv_sec = current_time.tv_sec + 12;
+	testinfos.tester = tester;
+	testinfos.event_queue = event_queue;
+	testinfos.insert_times_count = EVENT_QUEUE_TIMES;
+	testinfos.entries_per_time = EVENT_QUEUE_ENTRY_PER_TIME;
+	
+	number_of_total_events = EVENT_QUEUE_ENTRY_PER_TIME * EVENT_QUEUE_TIMES * EVENT_QUEUE_INSERT_THREADS;
+	
+	gettimeofday(&start_time,NULL);
+	
+	for (i = 0; i < EVENT_QUEUE_INSERT_THREADS; i++)
+	{
+		pthread_create( &threads[i], NULL,(void*(*)(void*)) &event_queue_insert_thread, (void*) &testinfos);
+	}
+	
+	
 
-	tester->assert_true(tester,(event_queue->add(event_queue,job1,time1) == SUCCESS), "add call check");
-	tester->assert_true(tester,(event_queue->get_count(event_queue,&count) == SUCCESS), "get_count call check");
-	tester->assert_true(tester,(count == 1), "count value check");
-	
-	tester->assert_true(tester,(event_queue->add(event_queue,job2,time2) == SUCCESS), "add call check");
-	tester->assert_true(tester,(event_queue->get_count(event_queue,&count) == SUCCESS), "get_count call check");
-	tester->assert_true(tester,(count == 2), "count value check");
-	
-	tester->assert_true(tester,(event_queue->add(event_queue,job3,time3) == SUCCESS), "add call check");
-	tester->assert_true(tester,(event_queue->get_count(event_queue,&count) == SUCCESS), "get_count call check");
-	tester->assert_true(tester,(count == 3), "count value check");
+	/* wait for all threads */
+	for (i = 0; i < EVENT_QUEUE_INSERT_THREADS; i++)
+	{
+		pthread_join(threads[i], NULL);
+	}
 
-	tester->assert_true(tester,(event_queue->get(event_queue,&current_job) == SUCCESS), "get call check");
-	fprintf(stderr,"%s\n",(char *) current_job->assigned_data);
-	tester->assert_true(tester,(event_queue->get(event_queue,&current_job) == SUCCESS), "get call check");
-	fprintf(stderr,"%s\n",(char *) current_job->assigned_data);
-	tester->assert_true(tester,(event_queue->get(event_queue,&current_job) == SUCCESS), "get call check");
-	fprintf(stderr,"%s\n",(char *) current_job->assigned_data);
+	tester->assert_true(tester,(event_queue->get_count(event_queue,&count) == SUCCESS), "get_count call check");
+	tester->assert_true(tester,(count == number_of_total_events), "event count check");	
+	
+	for (i = 0; i < EVENT_QUEUE_TIMES;i++)
+	{
+		for (j = 0; j < (EVENT_QUEUE_ENTRY_PER_TIME * EVENT_QUEUE_INSERT_THREADS);j++)
+		{
+			job_t *job;
+			tester->assert_true(tester,(event_queue->get(event_queue,&job) == SUCCESS), "get call check");		
+			gettimeofday(&current_time,NULL);
+			tester->assert_true(tester,((current_time.tv_sec - start_time.tv_sec) == i), "value of entry check");		
+	
+			pfree(job->assigned_data);
+			tester->assert_true(tester,(job->destroy(job) == SUCCESS), "job destroy call check");		
+		}
+	}
+	
 
 	tester->assert_true(tester,(event_queue->destroy(event_queue) == SUCCESS), "destroy call check");
 }
