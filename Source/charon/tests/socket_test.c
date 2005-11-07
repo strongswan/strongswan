@@ -38,7 +38,9 @@ void test_socket(tester_t *tester)
 	packet_t *pkt = packet_create(AF_INET);
 	char *test_string = "Testing functionality of socket_t";
 	
-	pkt->data.ptr = test_string;
+	
+	pkt->data.ptr = alloc_bytes(strlen(test_string),"test_string");
+	memcpy(pkt->data.ptr,test_string,strlen(test_string));
 	pkt->data.len = strlen(test_string);
 	
 	/* send to previously bound socket */
