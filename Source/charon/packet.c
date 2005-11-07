@@ -23,8 +23,6 @@
 #include "packet.h"
 
 
-
-
 static status_t destroy(packet_t *this)
 {
 	pfree(this->data.ptr);
@@ -32,15 +30,59 @@ static status_t destroy(packet_t *this)
 	return SUCCESS;
 }
 
+/**
+ * @brief helper function to set address used by set_dest & set_source
+ */
+static status_t set_addr(int family, struct sockaddr *saddr, char *address, u_int16_t port)
+{
+	switch (family)
+	{
+		/* IPv4 */
+		case AF_INET:
+			{
+				struct sockaddr_in *sin = (struct sockaddr_in*)saddr;
+				sin->sin_family = AF_INET;
+				sin->sin_addr.s_addr = inet_addr("127.0.0.1");
+				sin->sin_port = htons(port);
+				return SUCCESS;;
+			}
+	}
+	return NOT_SUPPORTED;
+}
 
-packet_t *packet_create()
+status_t set_destination(packet_t *this, char *address, u_int16_t port)
+{
+	struct sockaddr *saddr = &(this->destination);
+	return set_addr(this->family, saddr, address, port);
+}
+
+status_t set_source(packet_t *this, char *address, u_int16_t port)
+{
+	struct sockaddr *saddr = &(this->source);
+	return set_addr(this->family, saddr, address, port);
+}
+
+
+packet_t *packet_create(int family)
 {
 	packet_t *this = alloc_thing(packet_t, "packet_t");
 	
 	this->destroy = destroy;
-	
+	this->set_destination = set_destination;
+	this->set_source = set_source;
+		
+	this->family = family;
+	switch (family)
+	{
+		case AF_INET:
+			this->sockaddr_len = sizeof(struct sockaddr_in);
+			break;
+		default: /* not supported */
+			pfree(this);
+			return NULL;	
+	}
+
 	this->data.len = 0;
 	this->data.ptr = NULL;	
 	return this;
-	
 }

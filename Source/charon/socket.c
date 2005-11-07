@@ -52,12 +52,13 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 {
 	
 	char buffer[MAX_PACKET];
-	packet_t *pkt = packet_create();
+	
+	packet_t *pkt = packet_create(AF_INET);
 	
 	/* do the read */
-	pkt->sender.len = sizeof(pkt->sender.addr);
 	pkt->data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0, 
-							&(pkt->sender.addr), &(pkt->sender.len));
+							&(pkt->source), &(pkt->sockaddr_len));
+							
 	if (pkt->data.len < 0)
 	{
 		pkt->destroy(pkt);
@@ -78,14 +79,13 @@ status_t sender(private_socket_t *this, packet_t *packet)
 {
 	ssize_t bytes_sent;
 	
-	printf("@%d\n", __LINE__);
 	/* send data */
 	bytes_sent = sendto(this->socket_fd, packet->data.ptr, packet->data.len, 
-						0, &(packet->receiver.addr), packet->receiver.len);
-				
-	printf("bytes: %d\n", bytes_sent);		
+						0, &(packet->destination), packet->sockaddr_len);
+					
 	if (bytes_sent != packet->data.len) 
 	{
+		perror("Sendto error");
 		return FAILED;
 	}
 	return SUCCESS;
@@ -99,7 +99,7 @@ status_t destroyer(private_socket_t *this)
 	return SUCCESS;
 }
 
-socket_t *socket_create()
+socket_t *socket_create(u_int16_t port)
 {
 	private_socket_t *this = alloc_thing(socket_t, "private_socket_t");
 	struct sockaddr_in addr;
@@ -109,7 +109,6 @@ socket_t *socket_create()
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
 	this->public.destroy = (status_t(*)(socket_t*))destroyer;
 	
-	printf("@%d\n", __LINE__);
 	/* create default ipv4 socket */
 	this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
 	if (this->socket_fd < 0) {
@@ -117,15 +116,13 @@ socket_t *socket_create()
 		return NULL;
 	}	
 	
-	printf("@%d\n", __LINE__);
 	addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = 500;
+    addr.sin_port = htons(port);
     if (bind(this->socket_fd,(struct sockaddr*)&addr, sizeof(addr)) < 0) {
 		pfree(this);
         return NULL;
     }
 	
-	printf("@%d\n", __LINE__);
 	return (socket_t*)this;
 }

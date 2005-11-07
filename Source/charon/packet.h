@@ -42,25 +42,28 @@
 typedef struct packet_s packet_t;
 struct packet_s {
 	/**
-	 * senders address and port
+	 * Address family, such as AF_INET
 	 */
-	struct {
-		struct sockaddr_in addr;
-		size_t len;
-	} sender;
+	int family;
+	size_t sockaddr_len;
+	
+	/**
+	 * source address structure
+	 */
+	struct sockaddr source;
 		
 	/**
-	 * receivers address and port
+	 * destination address structure
 	 */
-	struct {
-		struct sockaddr_in addr;
-		size_t len;
-	} receiver;
+	struct sockaddr destination;
 	 
 	 /**
 	  * message data
 	  */
 	chunk_t data;
+	
+	status_t (*set_destination) (packet_t *packet, char *address, u_int16_t port);
+	status_t (*set_source) (packet_t *packet, char *address, u_int16_t port);
 	
 	/**
 	 * @brief 
@@ -77,6 +80,6 @@ struct packet_s {
  * @param 
  * @return  
  */
-packet_t *packet_create();
+packet_t *packet_create(int family);
 
 #endif /*PACKET_H_*/

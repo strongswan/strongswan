@@ -67,7 +67,7 @@ static void test_send_queue_sender(send_queue_test_t * testinfo)
 	int i;	
 	for (i = 0; i < testinfo->insert_item_count; i++)
 	{
-		packet_t *packet = packet_create();
+		packet_t *packet = packet_create(AF_INET);
 		testinfo->tester->assert_true(testinfo->tester,(packet != NULL), "create packet call check");
 		testinfo->tester->assert_true(testinfo->tester,(testinfo->send_queue->add(testinfo->send_queue,packet) == SUCCESS), "add packet call check");
 	}

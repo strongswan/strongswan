@@ -80,7 +80,7 @@ struct socket_s {
  * @param 
  * @return  
  */
-socket_t *socket_create();
+socket_t *socket_create(u_int16_t port);
 
 
 #endif /*SOCKET_H_*/

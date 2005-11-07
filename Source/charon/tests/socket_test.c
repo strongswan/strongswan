@@ -32,20 +32,33 @@
  */
 void test_socket(tester_t *tester)
 {	
-	socket_t *skt = socket_create();
-	packet_t *pkt = packet_create();
+	int packet_count = 5;
+	int current;
+	socket_t *skt = socket_create(4500);
+	packet_t *pkt = packet_create(AF_INET);
 	char *test_string = "Testing functionality of socket_t";
 	
 	pkt->data.ptr = test_string;
 	pkt->data.len = strlen(test_string);
 	
-	pkt->receiver.addr.sin_family = AF_INET;
-    pkt->receiver.addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    pkt->receiver.addr.sin_port = htons(500);
-	
-	skt->send(skt, pkt);
+	/* send to previously bound socket */
+	pkt->set_destination(pkt, "127.0.0.1", 4500);
+
+	/* send packet_count packets */
+   	for (current = 0; current < packet_count; current++)
+   	{
+		if (skt->send(skt, pkt) == FAILED) 
+		{
+			tester->assert_true(tester, 0, "packet send");
+		}
+   	}
 	pkt->destroy(pkt);
-	skt->receive(skt, &pkt);
 	
-	tester->assert_false(tester, strcmp(test_string, pkt->data.ptr), "packet exchange");
+	/* receive packet_count packets */
+   	for (current = 0; current < packet_count; current++)
+   	{
+		skt->receive(skt, &pkt);
+		tester->assert_false(tester, strcmp(test_string, pkt->data.ptr), "packet exchange");
+		pkt->destroy(pkt);
+   	}
 }
