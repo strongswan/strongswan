@@ -59,7 +59,7 @@ struct event_queue_s {
 	status_t (*get) (event_queue_t *event_queue, job_t **job);
 	
 	/**
-	 * @brief adds a event to the queue
+	 * @brief adds a event to the queue, using a relative time
 	 * 
 	 * This function is non blocking and adds a job_t at a specific time to the list.
 	 * The specific job-object has to get destroyed by the thread which 
@@ -70,7 +70,21 @@ struct event_queue_s {
   	 * @param[in] time time, when the event has to get fired
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*add) (event_queue_t *event_queue, job_t *job, timeval_t time);
+	status_t (*add_relative) (event_queue_t *event_queue, job_t *job, u_int32_t ms);
+	
+	/**
+	 * @brief adds a event to the queue, using an absolute time
+	 * 
+	 * This function is non blocking and adds a job_t at a specific time to the list.
+	 * The specific job-object has to get destroyed by the thread which 
+	 * removes the job.
+	 * 
+	 * @param event_queue calling object
+ 	 * @param[in] job job to add to the queue (job is not copied)
+  	 * @param[in] time time, when the event has to get fired
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*add_absolute) (event_queue_t *event_queue, job_t *job, timeval_t time);
 
 	/**
 	 * @brief destroys a event_queue object

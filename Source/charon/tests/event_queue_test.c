@@ -82,7 +82,7 @@ static void event_queue_insert_thread(event_queue_test_t * testinfos)
 			time.tv_usec = 0;
 			time.tv_sec = current_time.tv_sec + i;
 			
-			tester->assert_true(tester,(testinfos->event_queue->add(testinfos->event_queue,job,time) == SUCCESS), "add call check");
+			tester->assert_true(tester,(testinfos->event_queue->add_absolute(testinfos->event_queue,job,time) == SUCCESS), "add call check");
 		}
 	} 
 }

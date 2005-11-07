@@ -221,7 +221,7 @@ static status_t get(private_event_queue_t *this, job_t **job)
 /**
  * @brief implements function add of event_queue_t
  */
-static status_t add(private_event_queue_t *this, job_t *job, timeval_t time)
+static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t time)
 {
 	event_t *event = event_create(time,job);
 	linked_list_element_t * current_list_element;
@@ -319,6 +319,23 @@ static status_t add(private_event_queue_t *this, job_t *job, timeval_t time)
 	return status;		
 }
 
+/**
+ * @brief implements function add of event_queue_t
+ */
+static status_t add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
+{
+	timeval_t current_time;
+	timeval_t time;
+	int micros = ms * 1000;
+	
+	gettimeofday(&current_time, NULL);
+	
+	time.tv_usec = ((current_time.tv_usec + micros) % 1000000);
+	time.tv_sec = current_time.tv_sec + ((current_time.tv_usec + micros)/ 1000000);
+	
+	return this->add_absolute(this, job, time);
+}
+
 
 /**
  * @brief implements function destroy of event_queue_t
@@ -371,7 +388,8 @@ event_queue_t *event_queue_create()
 	
 	this->public.get_count = (status_t (*) (event_queue_t *event_queue, int *count)) get_count;
 	this->public.get = (status_t (*) (event_queue_t *event_queue, job_t **job)) get;
-	this->public.add = (status_t (*) (event_queue_t *event_queue, job_t *job, timeval_t time)) add;
+	this->public.add_absolute = (status_t (*) (event_queue_t *event_queue, job_t *job, timeval_t time)) add_absolute;
+	this->public.add_relative = (status_t (*) (event_queue_t *event_queue, job_t *job, u_int32_t ms)) add_relative;
 	this->public.destroy = (status_t (*) (event_queue_t *event_queue)) event_queue_destroy;
 	
 	this->list = linked_list;
