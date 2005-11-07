@@ -28,7 +28,8 @@ typedef enum status_e {
 	SUCCESS,
 	FAILED,
 	OUT_OF_RES,
-	ALREADY_DONE
+	ALREADY_DONE,
+	NOT_SUPPORTED
 } status_t;
 
 typedef struct timeval timeval_t;
