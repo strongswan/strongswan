@@ -29,30 +29,6 @@
 #include "job_queue.h"
 
 /**
- * @brief implements function destroy of job_t
- */
-static status_t job_destroy(job_t *job)
-{
-	pfree(job);
-	return SUCCESS;
-}
-
-/*
- * Creates a job (documented in header-file)
- */
-job_t *job_create(job_type_t type, void *assigned_data)
-{
-	job_t *this = alloc_thing(job_t, "job_t");
-
-	this->destroy = job_destroy;
-
-	this->type = type;
-	this->assigned_data = assigned_data;
-	
-	return this;
-}
-
-/**
  * @brief Private Variables and Functions of job_queue class
  * 
  */
