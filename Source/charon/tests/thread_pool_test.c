@@ -21,6 +21,8 @@
  */
 
 #include <stdlib.h>
+
+#include "thread_pool_test.h"
 #include "../tester.h"
 #include "../thread_pool.h"
 
@@ -37,4 +39,3 @@ void test_thread_pool(tester_t *tester)
 	tester->assert_true(tester, (desired_pool_size == pool_size), "thread creation");
 	tester->assert_true(tester, (pool->destroy(pool) == SUCCESS), "threadpool destruction");
 }
-

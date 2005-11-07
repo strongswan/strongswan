@@ -23,18 +23,14 @@
 #ifndef SOCKET_TEST_H_
 #define SOCKET_TEST_H_
 
+#include "../tester.h"
+
 /**
  * @brief Test function for the type socket_t
  * 
  * @param tester tester object
  */
 void test_socket(tester_t *tester);
-
-/**
- * Test for socket_t
- */
-test_t socket_test = {test_socket,"Socket"};
-
 
 
 #endif /*SOCKET_TEST_H_*/

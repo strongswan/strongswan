@@ -21,13 +21,14 @@
  */
 
  
-//#include <stdlib.h>
+#include <stdlib.h>
 #include <freeswan.h>
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 #include <pthread.h>
 #include <unistd.h>
  
+#include "job_queue_test.h"
 #include "../tester.h"
 #include "../job_queue.h"
  
@@ -130,7 +131,7 @@ void test_job_queue(tester_t *tester)
 	}
 	
 	
-	/* the job-queue has to be empty now! */
+	/* the job-queue has to have disered_value count entries! */
 	tester->assert_true(tester,(job_queue->get_count(job_queue,&value) == SUCCESS), "get count call check");
 	tester->assert_true(tester,(value == desired_value), "get count value check");
 	tester->assert_true(tester,(job_queue->destroy(job_queue) == SUCCESS), "destroy call check");

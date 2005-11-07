@@ -22,6 +22,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#include "socket_test.h"
 #include "../tester.h"
 #include "../socket.h"
 
@@ -47,4 +49,3 @@ void test_socket(tester_t *tester)
 	
 	tester->assert_false(tester, strcmp(test_string, pkt->data.ptr), "packet exchange");
 }
-

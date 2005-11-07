@@ -35,9 +35,4 @@
  */
 void test_job_queue(tester_t *tester);
 
-/**
- * Test 1 for linked_list_t
- */
-test_t job_queue_test1 = {test_job_queue,"Job-Queue Test1"};
-
 #endif /*JOB_QUEUE_TEST_H_*/

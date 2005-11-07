@@ -21,7 +21,7 @@
  */
  
  
-
+#include "event_queue_test.h"
 #include "../tester.h"
 #include "../event_queue.h"
 

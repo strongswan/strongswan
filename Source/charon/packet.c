@@ -25,7 +25,7 @@
 
 
 
-status_t destroy(packet_t *this)
+static status_t destroy(packet_t *this)
 {
 	pfree(this->data.ptr);
 	pfree(this);
@@ -36,6 +36,8 @@ status_t destroy(packet_t *this)
 packet_t *packet_create()
 {
 	packet_t *this = alloc_thing(packet_t, "packet_t");
+	
+	this->destroy = destroy;
 	
 	this->data.len = 0;
 	this->data.ptr = NULL;	

@@ -65,20 +65,4 @@ void test_linked_list_iterator(tester_t *tester);
  */
 void test_linked_list_insert_and_remove(tester_t *tester);
 
-/**
- * Test for linked_list_t
- */
-test_t linked_list_test = {test_linked_list,"Linked List"};
-
-/**
- * Test for linked_list_t with iterator
- */
-test_t linked_list_iterator_test = {test_linked_list_iterator,"Linked List Iterator"};
-
-/**
- * Test for linked_list_t insert and remove
- */
-test_t linked_list_insert_and_remove_test = {test_linked_list_insert_and_remove,"Linked List Insert and remove"};
-
-
 #endif /*LINKED_LIST_TEST_H_*/

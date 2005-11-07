@@ -34,9 +34,4 @@
  */
 void test_event_queue(tester_t *tester);
 
-/**
- * Test for event_queue_t
- */
-test_t event_queue_test = {test_event_queue,"Event-Queue Test"};
-
 #endif /*EVENT_QUEUE_TEST_H_*/
