@@ -84,13 +84,14 @@ job_queue_t *job_queue;
  	FILE * test_output = stderr;
  	
  	test_t *all_tests[] ={
-/*	&linked_list_test,
+	&linked_list_test,
 	&linked_list_iterator_test,
 	&linked_list_insert_and_remove_test,
 	&thread_pool_test,
 	&job_queue_test1,
-	&event_queue_test,*/
+	&event_queue_test,
 	&send_queue_test,
+	&socket_test,
 	NULL
 	};
  	
