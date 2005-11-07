@@ -35,6 +35,7 @@
 #include "tests/send_queue_test.h"
 #include "tests/socket_test.h"
 #include "tests/sender_test.h"
+#include "tests/receiver_test.h"
 
 
 /* output for test messages */
@@ -85,6 +86,10 @@ test_t thread_pool_test = {test_thread_pool,"Thread Pool"};
  */
 test_t sender_test = {test_sender,"Sender"};
 
+/**
+ * Test for receiver_t
+ */
+test_t receiver_test = {test_receiver,"Receiver"};
 
 /**
  * Global job-queue
@@ -120,6 +125,7 @@ socket_t *global_socket;
 	&send_queue_test,
 	&socket_test,
 	&sender_test,
+	&receiver_test,
 	NULL
 	};
  	
@@ -131,8 +137,8 @@ socket_t *global_socket;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	tester->perform_tests(tester,all_tests);
-/* 	tester->perform_test(tester,&sender_test); */
+	tester->perform_tests(tester,all_tests); 
+ /*	tester->perform_test(tester,&receiver_test);  */
  	
 	tester->destroy(tester);
 
