@@ -166,6 +166,7 @@ static status_t get(private_event_queue_t *this, job_t **job)
 	timeval_t current_time;
 	event_t * next_event;
 	int count;
+	int oldstate;
 		
 	pthread_mutex_lock(&(this->mutex));
 	
@@ -174,11 +175,21 @@ static status_t get(private_event_queue_t *this, job_t **job)
 		this->list->get_count(this->list,&count);
 		while(count == 0)
 		{
+			/* add mutex unlock handler for cancellation, enable cancellation */
+			pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
+			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+			
 			pthread_cond_wait( &(this->condvar), &(this->mutex));
+					
+			/* reset cancellation, remove mutex-unlock handler (without executing) */
+			pthread_setcancelstate(oldstate, NULL);
+			pthread_cleanup_pop(0);
+		
 			this->list->get_count(this->list,&count);
 		}
 			
 		this->list->get_first(this->list,(void **) &next_event);
+		
 		gettimeofday(&current_time,NULL);
 		long difference = time_difference(&current_time,&(next_event->time));
 		if (difference <= 0)

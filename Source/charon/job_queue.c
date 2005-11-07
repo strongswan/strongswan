@@ -82,6 +82,7 @@ static status_t get(private_job_queue_t *this, job_t **job)
 		/* add mutex unlock handler for cancellation, enable cancellation */
 		pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		
 		pthread_cond_wait( &(this->condvar), &(this->mutex));
 		
 		/* reset cancellation, remove mutex-unlock handler (without executing) */
