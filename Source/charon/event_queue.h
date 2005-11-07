@@ -25,13 +25,13 @@
 
 #include <sys/time.h>
 
-#include "linked_list.h"
-#include "job_queue.h"
+#include "types.h"
+#include "job.h"
 
 /**
  * @brief Event-Queue
  *
- * Despite the event-queue is based on a linked_list_t 
+ * Although the event-queue is based on a linked_list_t 
  * all access functions are thread-save implemented
  */
 typedef struct event_queue_s event_queue_t;

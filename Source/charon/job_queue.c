@@ -27,6 +27,7 @@
 #include <pluto/defs.h>
 	
 #include "job_queue.h"
+#include "linked_list.h"
 
 /**
  * @brief Private Variables and Functions of job_queue class

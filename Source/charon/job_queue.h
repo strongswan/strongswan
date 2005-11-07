@@ -25,12 +25,11 @@
 
 #include "types.h"
 #include "job.h"
-#include "linked_list.h"
 
 /**
  * @brief Job-Queue
  *
- * Despite the job-queue is based on a linked_list_t 
+ * Although the job-queue is based on a linked_list_t 
  * all access functions are thread-save implemented
  */
 typedef struct job_queue_s job_queue_t;
