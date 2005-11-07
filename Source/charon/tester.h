@@ -96,7 +96,6 @@ struct tester_s {
 	 * @brief Destroys a tester object
 	 * 
 	 * @param tester tester object
-	 * @param Name of the Test
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*destroy) (tester_t *tester);
