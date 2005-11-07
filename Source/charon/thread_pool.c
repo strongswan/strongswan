@@ -20,20 +20,15 @@
  * for more details.
  */
  
- 
-#include "thread_pool.h"
-
-#include "job_queue.h"
-
 #include <stdlib.h>
 #include <freeswan.h>
 #include <pluto/constants.h>
 #include <pluto/defs.h>
-
 #include <pthread.h>
-
-extern job_queue_t *global_job_queue;
-
+ 
+#include "thread_pool.h"
+#include "job_queue.h"
+#include "globals.h"
 
 /**
  * structure with private members for thread_pool

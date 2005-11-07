@@ -1,5 +1,5 @@
 /**
- * @file sender.d
+ * @file sender.c
  * 
  * @brief Implements the Sender Thread encapsulated in the sender_t-object
  * 
@@ -30,10 +30,8 @@
 #include "socket.h"
 #include "packet.h"
 #include "send_queue.h"
+#include "globals.h"
  
-extern send_queue_t *global_send_queue;
-extern socket_t *global_socket;
-
 /**
  * Private data of a sender object
  */
