@@ -42,6 +42,14 @@ struct private_linked_list_element_s{
 	linked_list_element_t public;
 	
 	/**
+	 * @brief Destroys a linked_list_element object
+	 * 
+	 * @param linked_list_element_t calling object
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*destroy) (private_linked_list_element_t *this);
+	
+	/**
 	 * previous list element 
 	 * NULL if first element in list
 	 */
@@ -78,7 +86,7 @@ linked_list_element_t *linked_list_element_create(void *value)
 		return NULL;
 	}
 	
-	this->public.destroy = (status_t (*) (linked_list_element_t *this) ) linked_list_element_destroy;
+	this->destroy = linked_list_element_destroy;
 	
 	this->previous=NULL;
 	this->next=NULL;
@@ -270,7 +278,7 @@ static status_t insert_first(private_linked_list_t *this, void *item)
 		if ((this->first == NULL) || (this->last == NULL))
 		{
 			/* should never happen */
-			element->public.destroy(&(element->public));
+			element->destroy(element);
 			return FAILED;
 		}
 		private_linked_list_element_t *old_first_element = this->first;
@@ -312,7 +320,7 @@ static status_t remove_first(private_linked_list_t *this, void **item)
 
 	this->count--;
 	
-	return	(element->public.destroy(&(element->public)));
+	return	(element->destroy(element));
 }
 
 /**
@@ -359,7 +367,7 @@ static status_t insert_last(private_linked_list_t *this, void *item)
 		if ((this->first == NULL) || (this->last == NULL))
 		{
 			/* should never happen */
-			element->public.destroy(&(element->public));
+			element->destroy(element);
 			return FAILED;
 		}
 		private_linked_list_element_t *old_last_element = this->last;
@@ -401,7 +409,7 @@ static status_t remove_last(private_linked_list_t *this, void **item)
 
 	this->count--;
 	
-	return	(element->public.destroy(&(element->public)));
+	return	(element->destroy(element));
 }
 
 /**
@@ -445,7 +453,7 @@ static status_t insert_before(private_linked_list_t *this, private_linked_list_e
 	{
 		if (this->first != next_element)
 		{
-			element->public.destroy(&(element->public));
+			element->destroy(element);
 			return FAILED;
 		}
 		
@@ -487,7 +495,7 @@ static status_t insert_after(private_linked_list_t *this, private_linked_list_el
 	{
 		if (this->last != previous_element)
 		{
-			element->public.destroy(&(element->public));
+			element->destroy(element);
 			return FAILED;
 		}
 		
@@ -542,7 +550,7 @@ static status_t linked_list_remove(private_linked_list_t *this, private_linked_l
 	}
 	
  	this->count--;
- 	element->public.destroy(&(element->public));
+ 	element->destroy(element);
  	return SUCCESS;
 }
 

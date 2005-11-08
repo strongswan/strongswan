@@ -42,14 +42,6 @@ struct linked_list_element_s {
 	 * value of a list item
 	 */
 	void *value;
-	
-	/**
-	 * @brief Destroys a linked_list_element object
-	 * 
-	 * @param linked_list_element_t calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*destroy) (linked_list_element_t *this);
 };
 
 /**
