@@ -30,7 +30,7 @@
 /**
  * Number of different times to insert per thread
  */
-#define EVENT_QUEUE_TIMES 10
+#define EVENT_QUEUE_TIMES 5
 /**
  * Number of entries per time per thread
  */

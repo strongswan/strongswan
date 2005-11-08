@@ -104,7 +104,7 @@ void test_job_queue(tester_t *tester)
 	test_infos.tester = tester;
 	test_infos.job_queue = job_queue;
 	test_infos.insert_item_count = 10000;
-	test_infos.remove_item_count = 10000;
+	test_infos.remove_item_count = 50000;
 	
 	
 	desired_value = test_infos.insert_item_count * sender_count - 
@@ -130,9 +130,9 @@ void test_job_queue(tester_t *tester)
 		pthread_join(receiver_threads[i], NULL);
 	}
 	
-	
 	/* the job-queue has to have disered_value count entries! */
 	tester->assert_true(tester,(job_queue->get_count(job_queue,&value) == SUCCESS), "get count call check");
-	tester->assert_true(tester,(value == desired_value), "get count value check");
+	tester->assert_true(tester,(value == desired_value), "get count value check");	
+	
 	tester->assert_true(tester,(job_queue->destroy(job_queue) == SUCCESS), "destroy call check");
 }

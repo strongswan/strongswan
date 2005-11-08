@@ -280,6 +280,7 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 		status = iterator->has_next(iterator,&has_next);
 		if (status != SUCCESS)
 		{
+			iterator->destroy(iterator);
 			break;
 		}
 		
@@ -295,8 +296,7 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 			if (time_difference(&(event->time), &(current_event->time)) <= 0)
 			{
 				/* my event has to be fired before the current event in list */
-				status = this->list->insert_before(this->list,current_list_element,event);
-				
+				status = this->list->insert_before(this->list,current_list_element,event);				
 				break;
 			}
 			
@@ -306,6 +306,7 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 				break;
 			}
 		}
+		iterator->destroy(iterator);
 		break;
 	}
 

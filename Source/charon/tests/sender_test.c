@@ -33,7 +33,7 @@
 /**
  * Number of packets to send by sender-thread
  */
-#define NUMBER_OF_PACKETS_TO_SEND 400
+#define NUMBER_OF_PACKETS_TO_SEND 50
 
 /**
  * Port to send the packets to
