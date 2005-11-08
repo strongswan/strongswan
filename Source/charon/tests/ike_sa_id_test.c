@@ -80,6 +80,11 @@ void test_ike_sa_id(tester_t *tester)
 
 	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other4,&are_equal) == SUCCESS), "equal call check");
 	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+
+	tester->assert_true(tester,(other4->replace_values(other4,ike_sa_id) == SUCCESS), "replace values call check");
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other4,&are_equal) == SUCCESS), "equal call check");
+	tester->assert_true(tester,(are_equal == TRUE), "equal check");
+	
 	
 	/* check destroy functionality */
 	tester->assert_true(tester,(ike_sa_id->destroy(ike_sa_id) == SUCCESS), "destroy call check");

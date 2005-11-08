@@ -42,7 +42,7 @@ struct ike_sa_id_s {
 	 * 
 	 * This function is called when a request or reply of a IKE_SA_INIT is received.
 	 * 
-	 * @param this ike_sa_id object
+	 * @param this ike_sa_id_t-object
 	 * @param responder_spi SPI of responder to set
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
@@ -51,7 +51,7 @@ struct ike_sa_id_s {
 	/**
 	 * @brief Returns TRUE if the initiator spi is set (not zero)
 	 * 
-	 * @param this ike_sa_id object
+	 * @param this ike_sa_id_t-object
 	 * @return TRUE if the initiator spi is set, FALSE otherwise
 	 */
 	bool (*initiator_spi_is_set) (ike_sa_id_t *this);
@@ -59,7 +59,7 @@ struct ike_sa_id_s {
 	/**
 	 * @brief Returns TRUE if the responder spi is set (not zero)
 	 * 
-	 * @param this ike_sa_id object
+	 * @param this ike_sa_id_t-object
 	 * @return TRUE if the responder spi is set, FALSE otherwise
 	 */
 	bool (*responder_spi_is_set) (ike_sa_id_t *this);
@@ -67,7 +67,7 @@ struct ike_sa_id_s {
 	/**
 	 * @brief Check if two ike_sa_ids are equal
 	 * 
-	 * @param this ike_sa_id object
+	 * @param this ike_sa_id_t-object
  	 * @param other ike_sa_id object to check if equal
  	 * @param are_equal is set to TRUE, if given ike_sa_ids are equal, FALSE otherwise
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
@@ -75,18 +75,28 @@ struct ike_sa_id_s {
 	status_t (*equals) (ike_sa_id_t *this,ike_sa_id_t *other, bool *are_equal);
 	
 	/**
-	 * @brief Clones a given ike_sa_id-Object
+	 * @brief Replace the values of a given ike_sa_id_t-object with values 
+	 * from another ike_sa_id_t-Object
 	 * 
-	 * @param this ike_sa_id object
- 	 * @param other ike_sa_id object which will be created
+	 * @param this ike_sa_id_t-object
+ 	 * @param other ike_sa_id_t object which values will be taken
+	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 */
+	status_t (*replace_values) (ike_sa_id_t *this,ike_sa_id_t *other);	
+	
+	/**
+	 * @brief Clones a given ike_sa_id_t-object
+	 * 
+	 * @param this ike_sa_id_t-object
+ 	 * @param clone_of_this ike_sa_id_t-object which will be created
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*clone) (ike_sa_id_t *this,ike_sa_id_t **clone_of_this);	
 
 	/**
-	 * @brief Destroys a ike_sa_id object
+	 * @brief Destroys a ike_sa_id_tobject
 	 * 
-	 * @param this ike_sa_id object
+	 * @param this ike_sa_id_t-object
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*destroy) (ike_sa_id_t *this);

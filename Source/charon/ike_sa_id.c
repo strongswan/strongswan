@@ -116,7 +116,27 @@ static status_t equals (private_ike_sa_id_t *this,private_ike_sa_id_t *other, bo
 	return SUCCESS;
 }
 
-static status_t clone (private_ike_sa_id_t *this,ike_sa_id_t **clone_of_this)
+/**
+ * @brief implements function replace_values of ike_sa_id_t
+ */
+status_t replace_values (private_ike_sa_id_t *this, private_ike_sa_id_t *other)
+{
+	if ((this == NULL) || (other == NULL))
+	{
+		return FAILED;
+	}
+	
+	this->initiator_spi = other->initiator_spi;
+	this->responder_spi = other->responder_spi;
+	this->role = other->role;
+	
+	return SUCCESS;
+}
+
+/**
+ * @brief implements function clone of ike_sa_id_t
+ */
+static status_t clone (private_ike_sa_id_t *this, ike_sa_id_t **clone_of_this)
 {
 	if ((this == NULL) || (clone_of_this == NULL))
 	{
@@ -153,11 +173,12 @@ ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi, ike_sa_
 	}
 	
 	/* Public functions */
-	this->public.set_responder_spi = (status_t(*)(ike_sa_id_t*,spi_t))set_responder_spi;
-	this->public.responder_spi_is_set = (bool(*)(ike_sa_id_t*))responder_spi_is_set;
-	this->public.initiator_spi_is_set = (bool(*)(ike_sa_id_t*))initiator_spi_is_set;
-	this->public.equals = (status_t(*)(ike_sa_id_t*,ike_sa_id_t*,bool*))equals;
-	this->public.clone = (status_t(*)(ike_sa_id_t*,ike_sa_id_t**))clone;
+	this->public.set_responder_spi = (status_t(*)(ike_sa_id_t*,spi_t)) set_responder_spi;
+	this->public.responder_spi_is_set = (bool(*)(ike_sa_id_t*)) responder_spi_is_set;
+	this->public.initiator_spi_is_set = (bool(*)(ike_sa_id_t*)) initiator_spi_is_set;
+	this->public.equals = (status_t(*)(ike_sa_id_t*,ike_sa_id_t*,bool*)) equals;
+	this->public.replace_values = (status_t(*)(ike_sa_id_t*,ike_sa_id_t*)) replace_values;
+	this->public.clone = (status_t(*)(ike_sa_id_t*,ike_sa_id_t**)) clone;
 	this->public.destroy = (status_t(*)(ike_sa_id_t*))destroy;
 
 	/* private data */
