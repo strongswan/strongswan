@@ -30,32 +30,6 @@
 #include "types.h"
 
 /**
- * @brief Element of the linked_list.
- * 
- * This element holds a pointer to the value of the list item itself.
- */
-typedef struct linked_list_element_s linked_list_element_t;
-
-struct linked_list_element_s {
-
-	/**
-	 * value of a list item
-	 */
-	void *value;
-};
-
-/**
- * @brief Creates an empty linked list object
- *
- * @param[in] value value of item to be set
- * 
- * @warning only the pointer to the value is stored
- * 
- * @return linked_list_element object
- */
-linked_list_element_t *linked_list_element_create(void *value);
-
-/**
  * @brief Iterator for a linked list
  * 
  * This element holds a pointer to the current element in the linked list
@@ -70,25 +44,24 @@ struct linked_list_iterator_s {
 	 * @brief returns TRUE if more elements are available
 	 * 
 	 * @param this calling object
-	 * @param[out] has_next if more elements are avaiable TRUE is set, FALSE otherwise
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return if more elements are avaiable TRUE, FALSE otherwise
 	 */
-	status_t (*has_next) (linked_list_iterator_t *this, bool * has_next);
+	bool (*has_next) (linked_list_iterator_t *this);
 
 	/**
-	 * @brief returns the current element at the iterator position
+	 * @brief returns the current value at the iterator position
 	 * 
 	 * @param this calling object
-	 * @param[out] element element is set to the current element in iterator
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @param[out] value value is set to the current value at iterator position
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*current) (linked_list_iterator_t *this, linked_list_element_t **element);
+	status_t (*current) (linked_list_iterator_t *this, void **value);
 
 	/**
 	 * @brief Resets a linked_list_iterator object
 	 * 
 	 * @param this calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*reset) (linked_list_iterator_t *this);
 
@@ -96,7 +69,7 @@ struct linked_list_iterator_s {
 	 * @brief Destroys a linked_list_iterator object
 	 * 
 	 * @param this calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*destroy) (linked_list_iterator_t *this);
 };
@@ -120,7 +93,7 @@ struct linked_list_s {
 	 * 
 	 * @param linked_list calling object
 	 * @param[in] count place where the count is written
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*get_count) (linked_list_t *linked_list, int *count);
 	
@@ -132,7 +105,7 @@ struct linked_list_s {
 	 * @param linked_list calling object
 	 * @param[out] iterator place where the iterator is written
 	 * @param[in] forward iterator direction (TRUE: front to end)
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*create_iterator) (linked_list_t *linked_list, linked_list_iterator_t **iterator,bool forward);
 
@@ -141,45 +114,54 @@ struct linked_list_s {
 	 * 
 	 * @param linked_list calling object
 	 * @param[in] item value to insert in list
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*insert_first) (linked_list_t *linked_list, void *item);
 	
 	/**
-	 * @brief inserts a new item before the given element
+	 * @brief inserts a new item before the given iterator position
+	 * 
+	 * The iterator position is not changed after inserting
 	 * 
 	 * @param linked_list calling object
-	 * @param element new element is inserted before this element
+	 * @param iterator new element is inserted before this iterator
 	 * @param[in] item value to insert in list
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*insert_before) (linked_list_t *linked_list, linked_list_element_t *element, void *item);
+	status_t (*insert_before) (linked_list_t *linked_list, linked_list_iterator_t *iterator, void *item);
 
 	/**
-	 * @brief inserts a new item after the given element
+	 * @brief inserts a new item after the given iterator position
+	 * 
+	 * The iterator position is not changed after inserting
 	 * 
 	 * @param linked_list calling object
-	 * @param element new element is inserted after this element
+	 * @param iterator new element is inserted after this iterator
 	 * @param[in] item value to insert in list
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*insert_after) (linked_list_t *linked_list, linked_list_element_t *element, void *item);
+	status_t (*insert_after) (linked_list_t *linked_list, linked_list_iterator_t *iterator, void *item);
 
 	/**
-	 * @brief removes an element from list
+	 * @brief removes an element from list at the given iterator position
+	 * 
+	 * The position of the iterator is set in the following order:
+	 * - to the item before, if available
+	 * - otherwise to the item after, if available
+	 * - otherwise it gets reseted
 	 * 
 	 * @param linked_list calling object
-	 * @param element element to remove
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @param iterator iterator holding the position of the element to remove
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*remove) (linked_list_t *linked_list, linked_list_element_t *element);
+	status_t (*remove) (linked_list_t *linked_list, linked_list_iterator_t *iterator);
 
 	/**
 	 * @brief removes the first item in the list and returns its value
 	 * 
 	 * @param linked_list calling object
 	 * @param[in] item returned value of first item
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*remove_first) (linked_list_t *linked_list, void **item);
 
@@ -188,7 +170,7 @@ struct linked_list_s {
 	 * 
 	 * @param linked_list calling object
 	 * @param[out] item returned value of first item
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*get_first) (linked_list_t *linked_list, void **item);
 
@@ -197,7 +179,7 @@ struct linked_list_s {
 	 * 
 	 * @param linked_list calling object
 	 * @param[in] item value to insert into list
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*insert_last) (linked_list_t *linked_list, void *item);
 	
@@ -206,7 +188,7 @@ struct linked_list_s {
 	 * 
 	 * @param linked_list calling object
 	 * @param[out] item returned value of last item
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*remove_last) (linked_list_t *linked_list, void **item);
 
@@ -215,7 +197,7 @@ struct linked_list_s {
 	 * 
 	 * @param linked_list calling object
 	 * @param[out] item returned value of last item
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*get_last) (linked_list_t *linked_list, void **item);
 	
@@ -228,7 +210,7 @@ struct linked_list_s {
 	 * 			memory leaks!
 	 * 
 	 * @param linked_list calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*destroy) (linked_list_t *linked_list);
 };

@@ -224,10 +224,8 @@ static status_t get(private_event_queue_t *this, job_t **job)
 static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t time)
 {
 	event_t *event = event_create(time,job);
-	linked_list_element_t * current_list_element;
 	event_t *current_event;
 	status_t status;
-	bool has_next;
 	int count;
 	
 	if (event == NULL)
@@ -275,34 +273,17 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 		}
 		
 		
-		status = iterator->has_next(iterator,&has_next);
-		/* first element has not to be checked (already done) */
-		status = iterator->has_next(iterator,&has_next);
-		if (status != SUCCESS)
-		{
-			iterator->destroy(iterator);
-			break;
-		}
+		iterator->has_next(iterator);
+		/* first element has not to be checked (already done) */		
 		
-		while(has_next)
+		while(iterator->has_next(iterator))
 		{
-			status = iterator->current(iterator,&current_list_element);
-			if (status != SUCCESS)
-			{
-				break;
-			}
-			current_event = (event_t *) current_list_element->value;
+			status = iterator->current(iterator,(void **) &current_event);
 			
 			if (time_difference(&(event->time), &(current_event->time)) <= 0)
 			{
 				/* my event has to be fired before the current event in list */
-				status = this->list->insert_before(this->list,current_list_element,event);				
-				break;
-			}
-			
-			iterator->has_next(iterator,&has_next);
-			if (status != SUCCESS)
-			{
+				status = this->list->insert_before(this->list,iterator,event);				
 				break;
 			}
 		}

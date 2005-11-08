@@ -28,18 +28,19 @@
 #include "linked_list.h"
  
 
-typedef struct private_linked_list_element_s private_linked_list_element_t;
+typedef struct linked_list_element_s linked_list_element_t;
 
 
 /**
- * Private Data of a linked list element
+ * @brief Element of the linked_list.
  * 
+ * This element holds a pointer to the value of the list item itself.
  */
-struct private_linked_list_element_s{
+struct linked_list_element_s{
 	/**
-	 * public data of element
+	 * value of a list item
 	 */
-	linked_list_element_t public;
+	void *value;
 	
 	/**
 	 * @brief Destroys a linked_list_element object
@@ -47,24 +48,24 @@ struct private_linked_list_element_s{
 	 * @param linked_list_element_t calling object
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*destroy) (private_linked_list_element_t *this);
+	status_t (*destroy) (linked_list_element_t *this);
 	
 	/**
 	 * previous list element 
 	 * NULL if first element in list
 	 */
-	private_linked_list_element_t *previous;
+	linked_list_element_t *previous;
 	/**
 	 * next list element
 	 * NULL if last element in list
 	 */
-	private_linked_list_element_t *next;
+	linked_list_element_t *next;
 };
 
 /**
  * @brief implements function destroy of linked_list_item_t
  */
-static status_t linked_list_element_destroy(private_linked_list_element_t *this)
+static status_t linked_list_element_destroy(linked_list_element_t *this)
 {
 	if (this == NULL)
 	{
@@ -74,12 +75,19 @@ static status_t linked_list_element_destroy(private_linked_list_element_t *this)
 	return SUCCESS;
 }
 
-/*
- * Creates an empty linked list (described in header-file)
+/**
+ * @brief Creates an empty linked list object
+ *
+ * @param[in] value value of item to be set
+ * 
+ * @warning only the pointer to the value is stored
+ * 
+ * @return linked_list_element object
  */
+
 linked_list_element_t *linked_list_element_create(void *value)
 {
-	private_linked_list_element_t *this = alloc_thing(private_linked_list_element_t, "private_linked_list_element_t");
+	linked_list_element_t *this = alloc_thing(linked_list_element_t, "linked_list_element_t");
 	
 	if (this == NULL)
 	{
@@ -90,9 +98,9 @@ linked_list_element_t *linked_list_element_create(void *value)
 	
 	this->previous=NULL;
 	this->next=NULL;
-	this->public.value = value;
+	this->value = value;
 	
-	return (&this->public);
+	return (this);
 }
 
 /**
@@ -116,12 +124,12 @@ struct private_linked_list_s{
 	 * First element in list
 	 * NULL if no elements in list
 	 */
-	private_linked_list_element_t *first;
+	linked_list_element_t *first;
 	/**
 	 * Last element in list
 	 * NULL if no elements in list
 	 */
-	private_linked_list_element_t *last;
+	linked_list_element_t *last;
 };
 
 
@@ -145,7 +153,7 @@ struct private_linked_list_iterator_s{
 	/**
 	 * current element of the iterator
 	 */
-	private_linked_list_element_t *current;
+	linked_list_element_t *current;
 
 	/**
 	 * direction of iterator
@@ -156,47 +164,49 @@ struct private_linked_list_iterator_s{
 /**
  * Implements function has_next of linked_list_iteratr
  */
-static status_t iterator_has_next(private_linked_list_iterator_t *this, bool * has_next)
+bool iterator_has_next(private_linked_list_iterator_t *this)
 {
 	if (this->list->count == 0)
 	{
-		*has_next = FALSE;
-		return SUCCESS;
+		return FALSE;
 	}
 	if (this->current == NULL)
 	{
 		this->current = (this->forward) ? this->list->first : this->list->last;
-		*has_next = TRUE;
-		return SUCCESS;		
+		return TRUE;		
 	}
 	if (this->forward)
 	{
 		if (this->current->next == NULL)
 		{
-			*has_next = FALSE;
-			return SUCCESS;
+			return FALSE;
 		}
 		this->current = this->current->next;
-		*has_next = TRUE;
-		return SUCCESS;		
+		return TRUE;		
 	}
 	/* backward */	
 	if (this->current->previous == NULL)
 	{
-		*has_next = FALSE;
-		return SUCCESS;
+		return FALSE;
 	}
 	this->current = this->current->previous;
-	*has_next = TRUE;
-	return SUCCESS;		
+	return TRUE;		
 }
 
 /**
  * Implements function current of linked_list_iteratr
  */
-static status_t iterator_current(private_linked_list_iterator_t *this, linked_list_element_t **element)
+static status_t iterator_current(private_linked_list_iterator_t *this, void **value)
 {
-	*element = &(this->current->public);
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+	if (this->current == NULL)
+	{
+		return FAILED;
+	}
+	*value = this->current->value;
 	return SUCCESS;
 }
 
@@ -205,6 +215,10 @@ static status_t iterator_current(private_linked_list_iterator_t *this, linked_li
  */
 static status_t iterator_reset(private_linked_list_iterator_t *this)
 {
+	if (this == NULL)
+	{
+		return FAILED;
+	}
 	this->current = NULL;
 	return SUCCESS;
 }
@@ -214,6 +228,10 @@ static status_t iterator_reset(private_linked_list_iterator_t *this)
  */
 static status_t iterator_destroy(private_linked_list_iterator_t *this)
 {
+	if (this == NULL)
+	{
+		return FAILED;
+	}
 	pfree(this);
 	return SUCCESS;
 }
@@ -223,6 +241,10 @@ static status_t iterator_destroy(private_linked_list_iterator_t *this)
  */
 static status_t get_count(private_linked_list_t *this, int *count)
 {
+	if (this == NULL)
+	{
+		return FAILED;
+	}
 	*count = this->count;
 	return SUCCESS;
 }
@@ -237,8 +259,8 @@ static status_t create_iterator (private_linked_list_t *linked_list, linked_list
 		return FAILED;
 	}
 	
-	this->public.has_next = (status_t (*) (linked_list_iterator_t *this, bool * has_next)) iterator_has_next;
-	this->public.current = (status_t (*) (linked_list_iterator_t *this, linked_list_element_t **element)) iterator_current;
+	this->public.has_next = (bool (*) (linked_list_iterator_t *this)) iterator_has_next;
+	this->public.current = (status_t (*) (linked_list_iterator_t *this, void **value)) iterator_current;
 	this->public.reset = (status_t (*) (linked_list_iterator_t *this)) iterator_reset;
 	this->public.destroy = (status_t (*) (linked_list_iterator_t *this)) iterator_destroy;
 
@@ -258,7 +280,14 @@ static status_t create_iterator (private_linked_list_t *linked_list, linked_list
  */
 static status_t insert_first(private_linked_list_t *this, void *item)
 {
-	private_linked_list_element_t *element =(private_linked_list_element_t *) linked_list_element_create(item);
+	linked_list_element_t *element;
+	
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+	
+	element =(linked_list_element_t *) linked_list_element_create(item);
 	
 	if (element == NULL)
 	{
@@ -281,7 +310,7 @@ static status_t insert_first(private_linked_list_t *this, void *item)
 			element->destroy(element);
 			return FAILED;
 		}
-		private_linked_list_element_t *old_first_element = this->first;
+		linked_list_element_t *old_first_element = this->first;
 		element->next = old_first_element;
 		element->previous = NULL;
 		old_first_element->previous = element;
@@ -298,6 +327,11 @@ static status_t insert_first(private_linked_list_t *this, void *item)
  */
 static status_t remove_first(private_linked_list_t *this, void **item)
 {	
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+
 	if (this->count == 0)
 	{
 		return FAILED;
@@ -308,7 +342,7 @@ static status_t remove_first(private_linked_list_t *this, void **item)
 		return FAILED;
 	}
 	
-	private_linked_list_element_t *element = this->first;
+	linked_list_element_t *element = this->first;
 	
 	if (element->next != NULL)
 	{
@@ -316,7 +350,7 @@ static status_t remove_first(private_linked_list_t *this, void **item)
 	}
 	this->first = element->next;
 
-	*item = element->public.value;
+	*item = element->value;
 
 	this->count--;
 	
@@ -328,6 +362,11 @@ static status_t remove_first(private_linked_list_t *this, void **item)
  */
 static status_t get_first(private_linked_list_t *this, void **item)
 {	
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+
 	if (this->count == 0)
 	{
 		return FAILED;
@@ -338,7 +377,7 @@ static status_t get_first(private_linked_list_t *this, void **item)
 		return FAILED;
 	}
 	
-	*item = this->first->public.value;
+	*item = this->first->value;
 
 	return SUCCESS;
 }
@@ -348,7 +387,12 @@ static status_t get_first(private_linked_list_t *this, void **item)
  */
 static status_t insert_last(private_linked_list_t *this, void *item)
 {
-	private_linked_list_element_t *element = (private_linked_list_element_t *) linked_list_element_create(item);
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+
+	linked_list_element_t *element = (linked_list_element_t *) linked_list_element_create(item);
 	
 	if (element == NULL)
 	{
@@ -370,7 +414,7 @@ static status_t insert_last(private_linked_list_t *this, void *item)
 			element->destroy(element);
 			return FAILED;
 		}
-		private_linked_list_element_t *old_last_element = this->last;
+		linked_list_element_t *old_last_element = this->last;
 		element->previous = old_last_element;
 		element->next = NULL;
 		old_last_element->next = element;
@@ -387,6 +431,11 @@ static status_t insert_last(private_linked_list_t *this, void *item)
  */
 static status_t remove_last(private_linked_list_t *this, void **item)
 {	
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+
 	if (this->count == 0)
 	{
 		return FAILED;
@@ -397,7 +446,7 @@ static status_t remove_last(private_linked_list_t *this, void **item)
 		return FAILED;
 	}
 	
-	private_linked_list_element_t *element = this->last;
+	linked_list_element_t *element = this->last;
 	
 	if (element->previous != NULL)
 	{
@@ -405,7 +454,7 @@ static status_t remove_last(private_linked_list_t *this, void **item)
 	}
 	this->last = element->previous;
 
-	*item = element->public.value;
+	*item = element->value;
 
 	this->count--;
 	
@@ -417,6 +466,11 @@ static status_t remove_last(private_linked_list_t *this, void **item)
  */
 static status_t get_last(private_linked_list_t *this, void **item)
 {
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+	
 	if (this->count == 0)
 	{
 		return FAILED;
@@ -427,7 +481,7 @@ static status_t get_last(private_linked_list_t *this, void **item)
 		return FAILED;
 	}
 	
-	*item = this->last->public.value;
+	*item = this->last->value;
 
 	return SUCCESS;
 }
@@ -435,38 +489,48 @@ static status_t get_last(private_linked_list_t *this, void **item)
 /**
  * @brief implements function insert_before of linked_list_t
  */
-static status_t insert_before(private_linked_list_t *this, private_linked_list_element_t * next_element, void *item)
+static status_t insert_before(private_linked_list_t *this, private_linked_list_iterator_t * iterator, void *item)
 {
+	if ((this == NULL) || (iterator == NULL))
+	{
+		return FAILED;
+	}
+	
 	if (this->count == 0)
 	{
 		return FAILED;
 	}
 
-	private_linked_list_element_t *element =(private_linked_list_element_t *) linked_list_element_create(item);
+	if (iterator->current == NULL)
+	{
+		return (this->public.insert_first(&this->public,item));
+	}
+
+	linked_list_element_t *element =(linked_list_element_t *) linked_list_element_create(item);
 	
 	if (element == NULL)
 	{
 		return FAILED;
 	}
 	
-	if (next_element->previous == NULL)
+	if (iterator->current->previous == NULL)
 	{
-		if (this->first != next_element)
+		if (this->first != iterator->current)
 		{
 			element->destroy(element);
 			return FAILED;
 		}
 		
-		next_element->previous = element;
-		element->next = next_element;
+		iterator->current->previous = element;
+		element->next = iterator->current;
 		this->first = element;
 	}
 	else
 	{
-		next_element->previous->next = element;
-		element->previous = next_element->previous;
-		next_element->previous = element;
-		element->next = next_element;
+		iterator->current->previous->next = element;
+		element->previous = iterator->current->previous;
+		iterator->current->previous = element;
+		element->next = iterator->current;
 	}
 	
 	this->count++;
@@ -477,38 +541,48 @@ static status_t insert_before(private_linked_list_t *this, private_linked_list_e
 /**
  * @brief implements function insert_after of linked_list_t
  */
-static status_t insert_after(private_linked_list_t *this, private_linked_list_element_t * previous_element, void *item)
+static status_t insert_after(private_linked_list_t *this, private_linked_list_iterator_t * iterator, void *item)
 {
+	if ((this == NULL) || (iterator == NULL))
+	{
+		return FAILED;
+	}
+	
 	if (this->count == 0)
 	{
 		return FAILED;
 	}
 
-	private_linked_list_element_t *element =(private_linked_list_element_t *) linked_list_element_create(item);
+	if (iterator->current == NULL)
+	{
+		return (this->public.insert_first(&this->public,item));
+	}
+
+	linked_list_element_t *element =(linked_list_element_t *) linked_list_element_create(item);
 	
 	if (element == NULL)
 	{
 		return FAILED;
 	}
 	
-	if (previous_element->next == NULL)
+	if (iterator->current->next == NULL)
 	{
-		if (this->last != previous_element)
+		if (this->last != iterator->current)
 		{
 			element->destroy(element);
 			return FAILED;
 		}
 		
-		previous_element->next = element;
-		element->previous = previous_element;
+		iterator->current->next = element;
+		element->previous = iterator->current;
 		this->last = element;
 	}
 	else
 	{
-		previous_element->next->previous = element;
-		element->next = previous_element->next;
-		previous_element->next = element;
-		element->previous = previous_element;
+		iterator->current->next->previous = element;
+		element->next = iterator->current->next;
+		iterator->current->next = element;
+		element->previous = iterator->current;
 	}
 	
 	this->count++;
@@ -518,39 +592,62 @@ static status_t insert_after(private_linked_list_t *this, private_linked_list_el
 /**
  * @brief implements function remove of linked_list_t
  */
-static status_t linked_list_remove(private_linked_list_t *this, private_linked_list_element_t * element)
+static status_t linked_list_remove(private_linked_list_t *this, private_linked_list_iterator_t * iterator)
 {
-	if (this->count == 0)
+	linked_list_element_t *new_current;
+	
+	if ((this == NULL) || (iterator == NULL) || (iterator->current == NULL))
 	{
 		return FAILED;
 	}
 	
-	if (element->previous == NULL)
+	if (this->count == 0)
+	{
+		return FAILED;
+	}
+	/* find out the new iterator position */
+	if (iterator->current->previous != NULL)
+	{
+		new_current = iterator->current->previous;
+	}
+	else if (iterator->current->next != NULL)
+	{
+		new_current = iterator->current->next;
+	}
+	else
+	{
+		new_current = NULL;
+	}
+		
+	/* now delete the entry :-) */
+	if (iterator->current->previous == NULL)
 	{	
-		if (element->next == NULL)
+		if (iterator->current->next == NULL)
 		{
 			this->first = NULL; 	
 		 	this->last = NULL;
 		}
 		else
 		{
-			element->next->previous = NULL;
-			this->first = element->next;
+			iterator->current->next->previous = NULL;
+			this->first = iterator->current->next;
 		}
 	}
-	else if (element->next == NULL)
+	else if (iterator->current->next == NULL)
 	{
-		element->previous->next = NULL;
-		this->last = element->previous;
+		iterator->current->previous->next = NULL;
+		this->last = iterator->current->previous;
 	}
 	else
 	{
-		element->previous->next = element->next;
-		element->next->previous = element->previous;
+		iterator->current->previous->next = iterator->current->next;
+		iterator->current->next->previous = iterator->current->previous;
 	}
 	
  	this->count--;
- 	element->destroy(element);
+ 	iterator->current->destroy(iterator->current);
+ 	/* set the new iterator position */
+ 	iterator->current = new_current;
  	return SUCCESS;
 }
 
@@ -559,6 +656,11 @@ static status_t linked_list_remove(private_linked_list_t *this, private_linked_l
  */
 static status_t linked_list_destroy(private_linked_list_t *this)
 {
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+	
 	/* Remove all list items before destroying list */
 	while (this->count > 0)
 	{
@@ -588,9 +690,9 @@ linked_list_t *linked_list_create()
 	this->public.get_last = (status_t (*) (linked_list_t *linked_list, void **item)) get_last;
 	this->public.insert_first = (status_t (*) (linked_list_t *linked_list, void *item)) insert_first;
 	this->public.insert_last = (status_t (*) (linked_list_t *linked_list, void *item)) insert_last;
-	this->public.insert_before = (status_t (*) (linked_list_t *linked_list, linked_list_element_t * element, void *item)) insert_before;
-	this->public.insert_after = (status_t (*) (linked_list_t *linked_list, linked_list_element_t * element, void *item)) insert_after;
-	this->public.remove = (status_t (*) (linked_list_t *linked_list, linked_list_element_t * element)) linked_list_remove;
+	this->public.insert_before = (status_t (*) (linked_list_t *linked_list, linked_list_iterator_t * element, void *item)) insert_before;
+	this->public.insert_after = (status_t (*) (linked_list_t *linked_list, linked_list_iterator_t * element, void *item)) insert_after;
+	this->public.remove = (status_t (*) (linked_list_t *linked_list, linked_list_iterator_t * element)) linked_list_remove;
 	this->public.remove_first = (status_t (*) (linked_list_t *linked_list, void **item)) remove_first;
 	this->public.remove_last = (status_t (*) (linked_list_t *linked_list, void **item)) remove_last;
 	this->public.destroy = (status_t (*) (linked_list_t *linked_list)) linked_list_destroy;

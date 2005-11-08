@@ -105,9 +105,8 @@ void test_linked_list(tester_t *tester)
  */
 void test_linked_list_iterator(tester_t *tester)
 {
-	bool has_next;
-	linked_list_element_t * element;
-	
+	void * value;
+
 	linked_list_t *linked_list = linked_list_create();
 	linked_list->insert_first(linked_list,"one");
 	linked_list->insert_first(linked_list,"two");	
@@ -121,57 +120,45 @@ void test_linked_list_iterator(tester_t *tester)
 	
 	tester->assert_true(tester,(linked_list->create_iterator(linked_list,&iterator,TRUE) == SUCCESS), "create_iterator for it 1 call check");
 	
-	iterator->has_next(iterator,&has_next);
-	tester->assert_true(tester,has_next, "it 1 has_next value check");	
-	iterator->current(iterator,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"five") == 0), "it 1 current value check");
+	tester->assert_true(tester,iterator->has_next(iterator), "it 1 has_next value check");	
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"five") == 0), "it 1 current value check");
 	
-	iterator->has_next(iterator,&has_next);
-	tester->assert_true(tester,has_next, "it 1 has_next value check");	
-	iterator->current(iterator,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"four") == 0), "it 1 current value check");
+	tester->assert_true(tester,iterator->has_next(iterator), "it 1 has_next value check");	
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"four") == 0), "it 1 current value check");
 
 	tester->assert_true(tester,(linked_list->create_iterator(linked_list,&iterator2,FALSE) == SUCCESS), "create_iterator for it 2 call check");
 
-	iterator2->has_next(iterator2,&has_next);
-	tester->assert_true(tester,has_next, "it 2 has_next value check");	
-	iterator2->current(iterator2,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"one") == 0), "it 2 current value check");
+	tester->assert_true(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
+	iterator2->current(iterator2,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"one") == 0), "it 2 current value check");
 
-	iterator->has_next(iterator,&has_next);
-	tester->assert_true(tester,has_next, "it 1 has_next value check");	
-	iterator->current(iterator,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"three") == 0), "it 1 current value check");
+	tester->assert_true(tester,iterator->has_next(iterator), "it 1 has_next value check");	
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "it 1 current value check");
 
-	iterator2->has_next(iterator2,&has_next);
-	tester->assert_true(tester,has_next, "it 2 has_next value check");	
-	iterator2->current(iterator2,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"two") == 0), "it 2 current value check");
+	tester->assert_true(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
+	iterator2->current(iterator2,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"two") == 0), "it 2 current value check");
 
-	iterator->has_next(iterator,&has_next);
-	tester->assert_true(tester,has_next, "it 1 has_next value check");	
-	iterator->current(iterator,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"two") == 0), "it 1 current value check");
+	tester->assert_true(tester,iterator->has_next(iterator), "it 1 has_next value check");	
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"two") == 0), "it 1 current value check");
 
-	iterator2->has_next(iterator2,&has_next);
-	tester->assert_true(tester,has_next, "it 2 has_next value check");	
-	iterator2->current(iterator2,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"three") == 0), "it 2 current value check");
+	tester->assert_true(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
+	iterator2->current(iterator2,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "it 2 current value check");
 
-	iterator->has_next(iterator,&has_next);
-	tester->assert_true(tester,has_next, "it 1 has_next value check");	
-	iterator->current(iterator,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"one") == 0), "it 1 current value check");
+	tester->assert_true(tester,iterator->has_next(iterator), "it 1 has_next value check");	
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"one") == 0), "it 1 current value check");
 
-	iterator->has_next(iterator,&has_next);
-	tester->assert_false(tester,has_next, "it 1 has_next value check");
+	tester->assert_false(tester,iterator->has_next(iterator), "it 1 has_next value check");
 
-	iterator2->has_next(iterator2,&has_next);
-	tester->assert_true(tester,has_next, "it 2 has_next value check");	
-	iterator2->has_next(iterator2,&has_next);
-	tester->assert_true(tester,has_next, "it 2 has_next value check");	
-	iterator2->has_next(iterator2,&has_next);
-	tester->assert_false(tester,has_next, "it 2 has_next value check");	
+	tester->assert_true(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
+	tester->assert_true(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
+	tester->assert_false(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
 
 	tester->assert_true(tester,(iterator->destroy(iterator) == SUCCESS), "it 1 destroy call check");
 	
@@ -185,8 +172,7 @@ void test_linked_list_iterator(tester_t *tester)
  */
 void test_linked_list_insert_and_remove(tester_t *tester)
 {
-	bool has_next;
-	linked_list_element_t * element;
+	void *value;
 	linked_list_iterator_t * iterator;
 	
 	linked_list_t *linked_list = linked_list_create();
@@ -201,28 +187,36 @@ void test_linked_list_insert_and_remove(tester_t *tester)
 	
 	linked_list->create_iterator(linked_list,&iterator,TRUE);
 	
-	iterator->has_next(iterator,&has_next);
-	iterator->has_next(iterator,&has_next);
-	iterator->has_next(iterator,&has_next);
-	iterator->current(iterator,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"three") == 0), "current value check");
+	iterator->has_next(iterator);
+	iterator->has_next(iterator);
+	iterator->has_next(iterator);
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 
-	tester->assert_true(tester,(linked_list->insert_before(linked_list,element,"before_three") == SUCCESS), "insert_before call check");
+	tester->assert_true(tester,(linked_list->insert_before(linked_list,iterator,"before_three") == SUCCESS), "insert_before call check");
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 
-	tester->assert_true(tester,(linked_list->insert_after(linked_list,element,"after_three") == SUCCESS), "insert_after call check");
+
+	tester->assert_true(tester,(linked_list->insert_after(linked_list,iterator,"after_three") == SUCCESS), "insert_after call check");
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 	
-	tester->assert_true(tester,(linked_list->remove(linked_list,element) == SUCCESS), "remove call check");
+	
+	tester->assert_true(tester,(linked_list->remove(linked_list,iterator) == SUCCESS), "remove call check");
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"before_three") == 0), "current value check");	
 	
 	iterator->reset(iterator);
 	
-	iterator->has_next(iterator,&has_next);
-	iterator->has_next(iterator,&has_next);
-	iterator->has_next(iterator,&has_next);
-	iterator->current(iterator,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"before_three") == 0), "current value check");
-	iterator->has_next(iterator,&has_next);
-	iterator->current(iterator,&element);
-	tester->assert_true(tester,(strcmp((char *) element->value,"after_three") == 0), "current value check");
+	iterator->has_next(iterator);
+	iterator->has_next(iterator);
+	iterator->has_next(iterator);
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"before_three") == 0), "current value check");
+	iterator->has_next(iterator);
+	iterator->current(iterator,&value);
+	tester->assert_true(tester,(strcmp((char *) value,"after_three") == 0), "current value check");
 	
 	iterator->destroy(iterator);
 	
