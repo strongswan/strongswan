@@ -76,7 +76,7 @@ static status_t set_responder_spi (private_ike_sa_id_t *this, spi_t responder_sp
 /**
  * @brief implements function initiator_spi_is_set of ike_sa_id_t
  */
-bool initiator_spi_is_set (private_ike_sa_id_t *this)
+static bool initiator_spi_is_set (private_ike_sa_id_t *this)
 {
 	return (!((this->initiator_spi.high == 0) && (this->initiator_spi.low == 0)));
 }
@@ -84,7 +84,7 @@ bool initiator_spi_is_set (private_ike_sa_id_t *this)
 /**
  * @brief implements function responder_spi_is_set of ike_sa_id_t
  */
-bool responder_spi_is_set (private_ike_sa_id_t *this)
+static bool responder_spi_is_set (private_ike_sa_id_t *this)
 {
 	return (!((this->responder_spi.high == 0) && (this->responder_spi.low == 0)));
 }
@@ -92,7 +92,7 @@ bool responder_spi_is_set (private_ike_sa_id_t *this)
 /**
  * @brief implements function equals of ike_sa_id_t
  */
-status_t equals (private_ike_sa_id_t *this,private_ike_sa_id_t *other, bool *are_equal)
+static status_t equals (private_ike_sa_id_t *this,private_ike_sa_id_t *other, bool *are_equal)
 {
 	if ((this == NULL)||(other == NULL))
 	{
@@ -114,6 +114,18 @@ status_t equals (private_ike_sa_id_t *this,private_ike_sa_id_t *other, bool *are
 	}
 	
 	return SUCCESS;
+}
+
+static status_t clone (private_ike_sa_id_t *this,ike_sa_id_t **clone_of_this)
+{
+	if ((this == NULL) || (clone_of_this == NULL))
+	{
+		return FAILED;
+	}
+	
+	*clone_of_this = ike_sa_id_create(this->initiator_spi, this->responder_spi, this->role);
+	
+	return (*clone_of_this == NULL)	? FAILED : SUCCESS;
 }
 
 /**
@@ -145,8 +157,9 @@ ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi, ike_sa_
 	this->public.responder_spi_is_set = (bool(*)(ike_sa_id_t*))responder_spi_is_set;
 	this->public.initiator_spi_is_set = (bool(*)(ike_sa_id_t*))initiator_spi_is_set;
 	this->public.equals = (status_t(*)(ike_sa_id_t*,ike_sa_id_t*,bool*))equals;
+	this->public.clone = (status_t(*)(ike_sa_id_t*,ike_sa_id_t**))clone;
 	this->public.destroy = (status_t(*)(ike_sa_id_t*))destroy;
-	
+
 	/* private data */
 	this->initiator_spi = initiator_spi;
 	this->responder_spi = responder_spi;

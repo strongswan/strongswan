@@ -68,11 +68,20 @@ struct ike_sa_id_s {
 	 * @brief Check if two ike_sa_ids are equal
 	 * 
 	 * @param this ike_sa_id object
- 	 * @param this other ike_sa_id object to check if equal
+ 	 * @param other ike_sa_id object to check if equal
  	 * @param are_equal is set to TRUE, if given ike_sa_ids are equal, FALSE otherwise
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
-	status_t (*equals) (ike_sa_id_t *this,ike_sa_id_t *other, bool *are_equal);	
+	status_t (*equals) (ike_sa_id_t *this,ike_sa_id_t *other, bool *are_equal);
+	
+	/**
+	 * @brief Clones a given ike_sa_id-Object
+	 * 
+	 * @param this ike_sa_id object
+ 	 * @param other ike_sa_id object which will be created
+	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 */
+	status_t (*clone) (ike_sa_id_t *this,ike_sa_id_t **clone_of_this);	
 
 	/**
 	 * @brief Destroys a ike_sa_id object
