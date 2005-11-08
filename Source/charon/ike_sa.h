@@ -70,8 +70,8 @@ struct ike_sa_s {
  * Creates an ike_sa_t-object with a specific ike_sa_id_t-object
  * 
  * @param[in] ike_sa_id ike_sa_id_t-object to associate with new IKE_SA.
- *  			  The object is internal getting cloned 
- * 			  and so has to be destroyed by the caller.
+ *  			 			The object is internal getting cloned 
+ * 			  			and so has to be destroyed by the caller.
  *
  * @warning the Content of internal ike_sa_id_t-Object can change over time 
  * 			e.g. when a IKE_SA_INIT has been finished
