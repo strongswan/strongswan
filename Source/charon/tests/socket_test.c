@@ -39,9 +39,9 @@ void test_socket(tester_t *tester)
 	char *test_string = "Testing functionality of socket_t";
 	
 	
-	pkt->data.ptr = alloc_bytes(strlen(test_string),"test_string");
-	memcpy(pkt->data.ptr,test_string,strlen(test_string));
-	pkt->data.len = strlen(test_string);
+	pkt->data.ptr = alloc_bytes(strlen(test_string) + 1,"test_string");
+	memcpy(pkt->data.ptr,test_string,strlen(test_string) + 1);
+	pkt->data.len = strlen(test_string) + 1;
 	
 	/* send to previously bound socket */
 	pkt->set_destination(pkt, "127.0.0.1", 4500);
