@@ -24,4 +24,30 @@
 #ifndef CONFIGURATION_H_
 #define CONFIGURATION_H_
 
+#include "types.h"
+
+/**
+ * @brief This class is used to represent an IKE_SA-configuration.
+ * 
+ */
+typedef struct configuration_s configuration_t;
+
+struct configuration_s { 	
+
+	/**
+	 * @brief Destroys a configuration_t object
+	 * 
+	 * @param this configuration_t object
+	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 */
+	status_t (*destroy) (configuration_t *this);
+};
+
+/**
+ * Creates an configuration_t-object
+ * 
+ * @return created configuration_t object
+ */
+configuration_t * configuration_create();
+
 #endif /*CONFIGURATION_H_*/

@@ -21,4 +21,58 @@
  * for more details.
  */
 
+#include <stdlib.h>
+#include <freeswan.h>
+#include <pluto/constants.h>
+#include <pluto/defs.h>
+
+#include "types.h"
 #include "configuration.h"
+
+/**
+ * Private data of an configuration_t object
+ */
+typedef struct private_configuration_s private_configuration_t;
+ 
+struct private_configuration_s { 	
+
+	/**
+	 * Public part of a configuration_t object
+	 */
+	configuration_t public;
+	 
+	 
+	/* Private values */
+
+};
+
+/**
+ * @brief implements function destroy of configuration_t
+ */
+static status_t destroy (private_configuration_t *this)
+{
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+	pfree(this);
+	return SUCCESS;
+}
+
+/*
+ * Described in Header-File
+ */
+configuration_t * configuration_create()
+{
+	private_configuration_t *this = alloc_thing(private_configuration_t, "private_configuration_t");
+	if (this == NULL)
+	{
+		return NULL;
+	}
+	
+	/* Public functions */
+	this->public.destroy = (status_t(*)(configuration_t*))destroy;
+
+	
+	return (&this->public);	
+}
