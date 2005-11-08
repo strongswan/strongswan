@@ -1,5 +1,5 @@
 /**
- * @file ihe_sa_id.h
+ * @file ike_sa_id.h
  * 
  * @brief Class for identification of an IKE_SA
  * 
