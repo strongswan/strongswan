@@ -1,0 +1,92 @@
+/**
+ * @file ike_sa_id_test.c
+ * 
+ * @brief Tests to test the IKE_SA Identifier class ike_sa_id_test_t
+ * 
+ */
+
+/*
+ * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+ 
+#include "ike_sa_id_test.h"
+#include "../tester.h"
+#include "../ike_sa_id.h"
+
+/* 
+ * described in Header-File
+ */
+void test_ike_sa_id(tester_t *tester)
+{
+	ike_sa_id_t *ike_sa_id, *clone, *equal, *other1, *other2, *other3, *other4;
+	spi_t initiator, initiator2, responder, responder2;
+	ike_sa_role_t role;
+	bool are_equal = FALSE;
+	
+	initiator.high = 0;
+	initiator.low = 0;
+
+	initiator2.high = 12345612;
+	initiator2.low = 978675;
+	
+	responder.high = 34334;
+	responder.low = 9655;
+
+	responder2.high = 987863;
+	responder2.low = 3827;
+	
+	role = INITIATOR;
+	
+	ike_sa_id = ike_sa_id_create(initiator, responder, role);
+	equal = ike_sa_id_create(initiator, responder, role);
+	other1 = ike_sa_id_create(initiator, responder2, role);
+	other2 = ike_sa_id_create(initiator2, responder2, role);
+	other3 = ike_sa_id_create(initiator2, responder, role);
+	role = RESPONDER;
+	other4 = ike_sa_id_create(initiator, responder, role);
+	
+	/* check equality */
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,equal,&are_equal) == SUCCESS), "equal call check");
+	tester->assert_true(tester,(are_equal == TRUE), "equal check");
+	tester->assert_true(tester,(equal->equals(equal,ike_sa_id,&are_equal) == SUCCESS), "equal call check");
+	tester->assert_true(tester,(are_equal == TRUE), "equal check");	
+
+	/* check clone functionality and equality*/	
+	tester->assert_true(tester,(ike_sa_id->clone(ike_sa_id,&clone) == SUCCESS), "clone call check");
+	tester->assert_false(tester,(clone == ike_sa_id), "clone pointer check");	
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,clone,&are_equal) == SUCCESS), "equal call check");
+	tester->assert_true(tester,(are_equal == TRUE), "equal check");
+	
+	/* check for non equality */
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other1,&are_equal) == SUCCESS), "equal call check");
+	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other2,&are_equal) == SUCCESS), "equal call check");
+	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other3,&are_equal) == SUCCESS), "equal call check");
+	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other4,&are_equal) == SUCCESS), "equal call check");
+	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+	
+	/* check destroy functionality */
+	tester->assert_true(tester,(ike_sa_id->destroy(ike_sa_id) == SUCCESS), "destroy call check");
+	tester->assert_true(tester,(equal->destroy(equal) == SUCCESS), "destroy call check");
+	tester->assert_true(tester,(clone->destroy(clone) == SUCCESS), "destroy call check");
+	tester->assert_true(tester,(clone->destroy(other1) == SUCCESS), "destroy call check");
+	tester->assert_true(tester,(clone->destroy(other2) == SUCCESS), "destroy call check");
+	tester->assert_true(tester,(clone->destroy(other3) == SUCCESS), "destroy call check");
+	tester->assert_true(tester,(clone->destroy(other4) == SUCCESS), "destroy call check");
+}

@@ -37,6 +37,7 @@
 #include "tests/sender_test.h"
 #include "tests/scheduler_test.h"
 #include "tests/receiver_test.h"
+#include "tests/ike_sa_id_test.h"
 
 
 /* output for test messages */
@@ -91,11 +92,16 @@ test_t sender_test = {test_sender,"Sender"};
  * Test for scheduler_t
  */
 test_t scheduler_test = {test_scheduler,"Scheduler"};
+
 /**
  * Test for receiver_t
  */
 test_t receiver_test = {test_receiver,"Receiver"};
 
+/**
+ * Test for ike_sa_id_t
+ */
+test_t ike_sa_id_test = {test_ike_sa_id,"IKE_SA-Identifier"};
 
 /**
  * Global job-queue
@@ -133,6 +139,7 @@ socket_t *global_socket;
 	&sender_test,
 	&scheduler_test,
 	&receiver_test,
+	&ike_sa_id_test,
 	NULL
 	};
  	
@@ -145,7 +152,7 @@ socket_t *global_socket;
  	tester_t *tester = tester_create(test_output, FALSE);
 
 	tester->perform_tests(tester,all_tests); 
- /*	tester->perform_test(tester,&receiver_test);  */
+/*	tester->perform_test(tester,&ike_sa_id_test);  */
  	
 	tester->destroy(tester);
 
