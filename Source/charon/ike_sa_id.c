@@ -21,6 +21,7 @@
  */
  
 #include <stdlib.h>
+#include <string.h>
 #include <freeswan.h>
 #include <pluto/constants.h>
 #include <pluto/defs.h>
@@ -65,11 +66,13 @@ struct private_ike_sa_id_s {
  */
 static status_t set_responder_spi (private_ike_sa_id_t *this, spi_t responder_spi)
 {
-	if (this == NULL)
-	{
-		return FAILED;
-	}
 	this->responder_spi = responder_spi;
+	return SUCCESS;
+}
+
+static status_t set_initiator_spi(private_ike_sa_id_t *this, spi_t initiator_spi)
+{
+	this->initiator_spi = initiator_spi;
 	return SUCCESS;
 }
 
@@ -134,6 +137,19 @@ status_t replace_values (private_ike_sa_id_t *this, private_ike_sa_id_t *other)
 }
 
 /**
+ * @brief implements function ike_sa_id_t.get_values
+ */
+static status_t get_values(private_ike_sa_id_t *this, spi_t *initiator, spi_t *responder, ike_sa_role_t *role)
+{
+	memcpy(initiator, &(this->initiator_spi), sizeof(initiator));
+	memcpy(responder, &(this->responder_spi), sizeof(responder));
+	*role = this->role;
+	
+	return SUCCESS;
+}
+
+
+/**
  * @brief implements function clone of ike_sa_id_t
  */
 static status_t clone (private_ike_sa_id_t *this, ike_sa_id_t **clone_of_this)
@@ -174,10 +190,12 @@ ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi, ike_sa_
 	
 	/* Public functions */
 	this->public.set_responder_spi = (status_t(*)(ike_sa_id_t*,spi_t)) set_responder_spi;
+	this->public.set_initiator_spi = (status_t(*)(ike_sa_id_t*,spi_t)) set_initiator_spi;
 	this->public.responder_spi_is_set = (bool(*)(ike_sa_id_t*)) responder_spi_is_set;
 	this->public.initiator_spi_is_set = (bool(*)(ike_sa_id_t*)) initiator_spi_is_set;
 	this->public.equals = (status_t(*)(ike_sa_id_t*,ike_sa_id_t*,bool*)) equals;
 	this->public.replace_values = (status_t(*)(ike_sa_id_t*,ike_sa_id_t*)) replace_values;
+	this->public.get_values = (status_t(*)(ike_sa_id_t*,spi_t*,spi_t*,ike_sa_role_t*)) get_values;
 	this->public.clone = (status_t(*)(ike_sa_id_t*,ike_sa_id_t**)) clone;
 	this->public.destroy = (status_t(*)(ike_sa_id_t*))destroy;
 

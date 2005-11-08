@@ -114,6 +114,14 @@ static status_t process_configuration (private_ike_sa_t *this,configuration_t *c
 }
 
 /**
+ * @brief implements function private_ike_sa_t.get_id
+ */
+static ike_sa_id_t* get_id(private_ike_sa_t *this)
+{
+	return this->ike_sa_id;
+}
+
+/**
  * @brief implements function destroy of private_ike_sa_t
  */
 static status_t destroy (private_ike_sa_t *this)
@@ -147,6 +155,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* Public functions */
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->public.process_configuration = (status_t(*)(ike_sa_t*, configuration_t*)) process_configuration;	
+	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;	
 	this->public.destroy = (status_t(*)(ike_sa_t*))destroy;
 	
 	

@@ -51,6 +51,16 @@ struct ike_sa_id_s {
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*set_responder_spi) (ike_sa_id_t *this, spi_t responder_spi);
+	
+	/**
+	 * @brief Sets the SPI of the initiator.
+	 * 
+	 * 
+	 * @param this ike_sa_id_t-object
+	 * @param initiator_spi SPI to set
+	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 */
+	status_t (*set_initiator_spi) (ike_sa_id_t *this, spi_t initiator_spi);
 
 	/**
 	 * @brief Returns TRUE if the initiator spi is set (not zero)
@@ -87,6 +97,17 @@ struct ike_sa_id_s {
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*replace_values) (ike_sa_id_t *this,ike_sa_id_t *other);	
+	
+	/**
+	 * @brief get spis and role of an ike_sa_id
+	 * 
+	 * @param this ike_sa_id_t-object
+ 	 * @param initiator address to write initator spi
+ 	 * @param responder address to write responder spi
+ 	 * @param role address to write role
+	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 */
+	status_t (*get_values) (ike_sa_id_t *this, spi_t *initiator, spi_t *responder, ike_sa_role_t *role);	
 	
 	/**
 	 * @brief Clones a given ike_sa_id_t-object

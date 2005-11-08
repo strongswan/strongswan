@@ -56,6 +56,14 @@ struct ike_sa_s {
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*process_configuration) (ike_sa_t *this,configuration_t *configuration);
+	
+	/**
+	 * @brief Get the id of the SA
+	 * 
+	 * @param this ike_sa_t-message_t object object
+	 * @return ike_sa's ike_sa_id_t
+	 */
+	ike_sa_id_t* (*get_id) (ike_sa_t *this);
 
 	/**
 	 * @brief Destroys a ike_sa_t object
