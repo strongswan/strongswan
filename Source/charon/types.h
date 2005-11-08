@@ -24,6 +24,8 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 
+#include <freeswan.h>
+
 typedef enum status_e {
 	SUCCESS,
 	FAILED,
@@ -32,8 +34,23 @@ typedef enum status_e {
 	NOT_SUPPORTED
 } status_t;
 
+typedef enum ike_sa_role_e {
+	INITIATOR,
+	RESPONDER
+} ike_sa_role_t;
+
 typedef struct timeval timeval_t;
 
 typedef struct timespec timespec_t;
+
+/**
+ * Representates a IKE_SA spi
+ */
+typedef struct spi_s spi_t;
+
+struct spi_s{
+	u_int32_t high;
+	u_int32_t low;
+};
 
 #endif /*TYPES_H_*/
