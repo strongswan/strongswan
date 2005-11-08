@@ -25,7 +25,10 @@
 
 static status_t destroy(packet_t *this)
 {
-	pfree(this->data.ptr);
+	if (this->data.ptr != NULL)
+	{
+		pfree(this->data.ptr);
+	}
 	pfree(this);
 	return SUCCESS;
 }
