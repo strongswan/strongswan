@@ -40,9 +40,9 @@
  * which has to be parsed or generated differently has its own
  * enum value.
  */
-typedef enum encoding_e encoding_t;
+typedef enum encoding_type_e encoding_type_t;
 
-enum encoding_e{
+enum encoding_type_e{
 	/**
 	 * Representing a 4 Bit unsigned int value
 	 * 
@@ -186,11 +186,93 @@ struct encoding_rule_s{
 	/**
 	 * Encoding type
 	 */
-	encoding_t type;
+	encoding_type_t type;
 	/**
 	 * Offset in the data struct
 	 */
 	u_int32_t offset;
+};
+
+
+/**
+ * Payload-Types of a IKEv2-Message
+ * 
+ * 
+ * Header and substructures are also defined as 
+ * payload types with values of PRIVATE USE space
+ */
+typedef enum payload_type_e payload_type_t;
+
+enum payload_type_e{
+	/**
+	 * SA
+	 */
+	SECURITY_ASSOCIATION = 33,
+	/**
+	 * KE
+	 */
+	KEY_EXCHANGE = 34,
+	/**
+	 * IDi
+	 */
+	ID_INITIATOR = 35,
+	/**
+	 * IDr
+	 */
+	ID_RESPONDER = 36,
+	/**
+	 * CERT
+	 */
+	CERTIFICATE = 37,
+	/**
+	 * CERTREQ
+	 */
+	CERTIFICATE_REQUEST = 38,
+	/**
+	 * AUTH
+	 */
+	AUTHENTICATION = 39,
+	/**
+	 * Ni, Nr
+	 */
+	NONCE = 40,
+	/**
+	 * N
+	 */
+	NOTIFY = 41,
+	/**
+	 * D
+	 */
+	DELETE = 42,
+	/**
+	 * V
+	 */
+	VENDOR_ID = 43,
+	/**
+	 * TSi
+	 */
+	TRAFFIC_SELECTOR_INITIATOR = 44,
+	/**
+	 * TSr
+	 */
+	TRAFFIC_SELECTOR_RESPONDER = 45,
+	/**
+	 * E
+	 */
+	ENCRYPTED = 46,
+	/**
+	 * CP
+	 */
+	CONFIGURATION = 47,
+	/**
+	 * EAP
+	 */
+	EXTENSIBLE_AUTHENTICATION = 48,
+	
+	/**
+	 * Header has value 140 of PRIVATE USE space
+	 */
+	HEADER = 140
 };
 
 #endif /*ENCODINGS_H_*/
