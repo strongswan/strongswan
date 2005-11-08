@@ -23,4 +23,32 @@
 #ifndef MESSAGE_H_
 #define MESSAGE_H_
 
+#include "types.h"
+
+/**
+ * @brief This class is used to represent an IKEv2-Message.
+ * 
+ * An IKEv2-Message is either a request or response.
+ */
+typedef struct message_s message_t;
+
+struct message_s { 	
+
+	/**
+	 * @brief Destroys a message object
+	 * 
+	 * @param this message_t object
+	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 */
+	status_t (*destroy) (message_t *this);
+};
+
+/**
+ * Creates an message_t-object
+ * 
+ * @return created message_t object
+ */
+message_t * message_create();
+
+
 #endif /*MESSAGE_H_*/

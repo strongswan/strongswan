@@ -20,4 +20,58 @@
  * for more details.
  */
 
+#include <stdlib.h>
+#include <freeswan.h>
+#include <pluto/constants.h>
+#include <pluto/defs.h>
+
+#include "types.h"
 #include "message.h"
+
+/**
+ * Private data of an message_t object
+ */
+typedef struct private_message_s private_message_t;
+ 
+struct private_message_s { 	
+
+	/**
+	 * Public part of a message_t object
+	 */
+	message_t public;
+	 
+	 
+	/* Private values */
+
+};
+
+/**
+ * @brief implements function destroy of message_t
+ */
+static status_t destroy (private_message_t *this)
+{
+	if (this == NULL)
+	{
+		return FAILED;
+	}
+	pfree(this);
+	return SUCCESS;
+}
+
+/*
+ * Described in Header-File
+ */
+message_t * message_create()
+{
+	private_message_t *this = alloc_thing(private_message_t, "private_message_t");
+	if (this == NULL)
+	{
+		return NULL;
+	}
+	
+	/* Public functions */
+	this->public.destroy = (status_t(*)(message_t*))destroy;
+
+	
+	return (&this->public);	
+}
