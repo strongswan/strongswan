@@ -84,10 +84,10 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
  *
  * This constructor additionaly creates a new and empty SA
  *
- * @param ike_sa_id		the associated ike_sa_id_t, NOT cloned
+ * @param ike_sa_id		the associated ike_sa_id_t, cloned
  * @return				created entry, with ike_sa and ike_sa_id
  */
-ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
+static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 {
 	ike_sa_entry_t *this = allocator_alloc_thing(ike_sa_entry_t);
 
