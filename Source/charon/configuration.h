@@ -1,8 +1,10 @@
 /**
  * @file configuration.h
  * 
- * @brief Class configuration_t. 
- * Object of this type represents a configuration for an IKE_SA
+ * @brief class configuration_t. 
+ * 
+ * 
+ * Object of this type represents a configuration for an IKE_SA and its child_sa's
  * 
  */
 
@@ -35,19 +37,19 @@ typedef struct configuration_s configuration_t;
 struct configuration_s { 	
 
 	/**
-	 * @brief Destroys a configuration_t object
+	 * @brief destroys a configuration_t object
 	 * 
 	 * @param this configuration_t object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @return SUCCESS if succeeded, FAILED when NULL pointer given
 	 */
 	status_t (*destroy) (configuration_t *this);
 };
 
 /**
- * Creates an configuration_t-object
+ * creates an configuration_t object
  * 
  * @return created configuration_t object
  */
-configuration_t * configuration_create();
+configuration_t *configuration_create();
 
 #endif /*CONFIGURATION_H_*/
