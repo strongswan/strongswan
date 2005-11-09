@@ -69,6 +69,7 @@ void test_ike_sa_manager(tester_t *tester)
 	
 	td.tester = tester;
 	td.isam = ike_sa_manager_create();
+	tester->assert_true(tester, (status == SUCCESS), "ike_sa_manager creation");
 	
 	
 	
@@ -115,6 +116,7 @@ void test_ike_sa_manager(tester_t *tester)
 	}
 	sleep(1);
 	
+	
 	status = td.isam->checkin(td.isam, ike_sa);
 	tester->assert_true(tester, (status == SUCCESS), "checkin IKE_SA");
 	
@@ -124,12 +126,14 @@ void test_ike_sa_manager(tester_t *tester)
 	 * this should block until the have done their work.*/
 	status = td.isam->delete(td.isam, ike_sa_id);
 	tester->assert_true(tester, (status == SUCCESS), "delete IKE_SA by id");
-	
+
 
 	for (i = 0; i < thread_count; i++) 
 	{
 		pthread_join(threads[i], NULL);
 	}
+	
+	//ike_sa_id->destroy(ike_sa_id);
 	
 	
 	
@@ -149,7 +153,6 @@ void test_ike_sa_manager(tester_t *tester)
 	
 	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
 	tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA 2");
-	//ike_sa_id->destroy(ike_sa_id);
 	for (i = 0; i < thread_count; i++) 
 	{
 		if (pthread_create(&threads[i], NULL, (void*(*)(void*))failed_thread, (void*)ike_sa_id))
@@ -170,6 +173,8 @@ void test_ike_sa_manager(tester_t *tester)
 	{
 		pthread_join(threads[i], NULL);
 	}
+	
+	//ike_sa_id->destroy(ike_sa_id);
 	
 	/* Third Test:
 	 * put in a lot of IKE_SAs, check it out, set a thread waiting
@@ -200,7 +205,8 @@ void test_ike_sa_manager(tester_t *tester)
 	/* let them go acquiring */
 	sleep(1);
 	
-	td.isam->destroy(td.isam);
+	status = td.isam->destroy(td.isam);
+	tester->assert_true(tester, (status == SUCCESS), "ike_sa_manager destruction");
 	
 	for (i = 0; i < thread_count; i++) 
 	{
