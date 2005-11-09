@@ -69,7 +69,7 @@ void test_ike_sa_manager(tester_t *tester)
 	
 	td.tester = tester;
 	td.isam = ike_sa_manager_create();
-	tester->assert_true(tester, (status == SUCCESS), "ike_sa_manager creation");
+	tester->assert_true(tester, (td.isam != NULL), "ike_sa_manager creation");
 	
 	
 	
