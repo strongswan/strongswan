@@ -133,7 +133,7 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
 		fprintf(this->output,"FAILED: %-47s|%10ld us\n",test_name,timediff);
 	}else
 	{
-		fprintf(this->output,"|%10ld ms\n",timediff);
+		fprintf(this->output,"|%10ld us\n",timediff);
 	}
 	if (this->failed_asserts_count > 0)
 	{
