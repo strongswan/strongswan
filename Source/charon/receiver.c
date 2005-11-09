@@ -1,8 +1,8 @@
 /**
  * @file receiver.c
- * 
+ *
  * @brief Implements the Receiver Thread encapsulated in the receiver_t-object
- * 
+ *
  */
 
 /*
@@ -19,7 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include <stdlib.h>
 #include <pthread.h>
 #include <freeswan.h>
@@ -37,13 +37,13 @@
  * Private data of a receiver object
  */
 typedef struct private_receiver_s private_receiver_t;
- 
-struct private_receiver_s { 	
+
+struct private_receiver_s {
 	/**
 	 * Public part of a receiver object
 	 */
 	 receiver_t public;
-	 
+
 	 /**
 	  * Assigned thread to the receiver_t-object
 	  */
@@ -53,7 +53,7 @@ struct private_receiver_s {
 
 /**
  * Thread function started at creation of the receiver object
- * 
+ *
  * @param this assigned receiver object
  * @return SUCCESS if thread_function ended successfully, FAILED otherwise
  */
@@ -63,7 +63,7 @@ static void receiver_thread_function(private_receiver_t * this)
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	packet_t * current_packet;
 	job_t * current_job;
-	
+
 	while (1)
 	{
 		while (global_socket->receive(global_socket,&current_packet) == SUCCESS)
@@ -78,15 +78,15 @@ static void receiver_thread_function(private_receiver_t * this)
 			if (	global_job_queue->add(global_job_queue,current_job) != SUCCESS)
 			{
 				/* Packet could not be sent */
-				/* TODO LOG it */	
+				/* TODO LOG it */
 			}
 
 		}
 		/* NOT GOOD !!!!!! */
-		/* TODO LOG it */	
+		/* TODO LOG it */
 	}
-	
-	
+
+
 }
 
 /**
@@ -95,25 +95,25 @@ static void receiver_thread_function(private_receiver_t * this)
 static status_t destroy(private_receiver_t *this)
 {
 	pthread_cancel(this->assigned_thread);
-	
+
 	pthread_join(this->assigned_thread, NULL);
 
-	pfree(this);
+	allocator_free(this);
 	return SUCCESS;
 }
 
 
 receiver_t * receiver_create()
 {
-	private_receiver_t *this = alloc_thing(private_receiver_t,"private_receiver_t");
-	
+	private_receiver_t *this = allocator_alloc_thing(private_receiver_t,"private_receiver_t");
+
 	this->public.destroy = (status_t(*)(receiver_t*)) destroy;
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))receiver_thread_function, this) != 0)
 	{
 		/* thread could not be created  */
-		pfree(this);
+		allocator_free(this);
 		return NULL;
 	}
-	
+
 	return &(this->public);
 }

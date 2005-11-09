@@ -1,8 +1,8 @@
 /**
  * @file packet.h
- * 
+ *
  * @brief UDP-Packet, contains data, sender and receiver
- * 
+ *
  */
 
 /*
@@ -27,9 +27,9 @@ static status_t destroy(packet_t *this)
 {
 	if (this->data.ptr != NULL)
 	{
-		pfree(this->data.ptr);
+		allocator_free(this->data.ptr);
 	}
-	pfree(this);
+	allocator_free(this);
 	return SUCCESS;
 }
 
@@ -68,12 +68,12 @@ status_t set_source(packet_t *this, char *address, u_int16_t port)
 
 packet_t *packet_create(int family)
 {
-	packet_t *this = alloc_thing(packet_t, "packet_t");
-	
+	packet_t *this = allocator_alloc_thing(packet_t, "packet_t");
+
 	this->destroy = destroy;
 	this->set_destination = set_destination;
 	this->set_source = set_source;
-		
+
 	this->family = family;
 	switch (family)
 	{
@@ -81,11 +81,11 @@ packet_t *packet_create(int family)
 			this->sockaddr_len = sizeof(struct sockaddr_in);
 			break;
 		default: /* not supported */
-			pfree(this);
-			return NULL;	
+			allocator_free(this);
+			return NULL;
 	}
 
 	this->data.len = 0;
-	this->data.ptr = NULL;	
+	this->data.ptr = NULL;
 	return this;
 }

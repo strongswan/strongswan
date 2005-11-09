@@ -1,8 +1,8 @@
 /**
  * @file job.c
- * 
+ *
  * @brief Job-Class representing a job e.g. in job_queue
- * 
+ *
  */
 
 /*
@@ -24,15 +24,15 @@
  #include <freeswan.h>
 #include <pluto/constants.h>
 #include <pluto/defs.h>
- 
+
  #include "job.h"
- 
+
  /**
  * @brief implements function destroy of job_t
  */
 static status_t job_destroy(job_t *job)
 {
-	pfree(job);
+	allocator_free(job);
 	return SUCCESS;
 }
 
@@ -41,12 +41,12 @@ static status_t job_destroy(job_t *job)
  */
 job_t *job_create(job_type_t type, void *assigned_data)
 {
-	job_t *this = alloc_thing(job_t, "job_t");
+	job_t *this = allocator_alloc_thing(job_t, "job_t");
 
 	this->destroy = job_destroy;
 
 	this->type = type;
 	this->assigned_data = assigned_data;
-	
+
 	return this;
 }

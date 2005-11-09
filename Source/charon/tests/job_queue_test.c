@@ -1,8 +1,8 @@
 /**
  * @file job_queue_test.c
- * 
+ *
  * @brief Tests to test the Job-Queue type job_queue_t
- * 
+ *
  */
 
 /*
@@ -20,50 +20,50 @@
  * for more details.
  */
 
- 
+
 #include <stdlib.h>
 #include <freeswan.h>
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 #include <pthread.h>
 #include <unistd.h>
- 
+
 #include "job_queue_test.h"
 #include "../tester.h"
 #include "../job_queue.h"
- 
- 
+
+
 typedef struct job_queue_test_s job_queue_test_t;
 
 /**
  * @brief Informations for the involved test-thread used in this test
- * 
+ *
  */
 struct job_queue_test_s{
 	tester_t *tester;
 	job_queue_t *job_queue;
 	/**
-	 * number of items to be inserted in the job-queue 
+	 * number of items to be inserted in the job-queue
 	 */
-	int insert_item_count;	
+	int insert_item_count;
 	/**
-	 * number of items to be removed by each 
-	 * receiver thread from the job-queue 
+	 * number of items to be removed by each
+	 * receiver thread from the job-queue
 	 */
-	int remove_item_count;	
+	int remove_item_count;
 };
 
 /**
  * @brief sender thread used in the the job_queue test function
- * 
+ *
  * @param testinfo informations for the specific thread.
  */
 static void test_job_queue_sender(job_queue_test_t * testinfo)
 {
-	int i;	
+	int i;
 	for (i = 0; i < testinfo->insert_item_count; i++)
 	{
-		int *value = alloc_thing(int,"int in test_job_queue_sender");
+		int *value = allocator_alloc_thing(int,"int in test_job_queue_sender");
 		*value = i;
 		job_t *job = job_create(INCOMING_PACKET,value);
 		testinfo->job_queue->add(testinfo->job_queue,job);
@@ -72,7 +72,7 @@ static void test_job_queue_sender(job_queue_test_t * testinfo)
 
 /**
  * @brief receiver thread used in the the job_queue test function
- * 
+ *
  * @param testinfo informations for the specific thread.
  */
 static void test_job_queue_receiver(job_queue_test_t * testinfo)
@@ -82,8 +82,8 @@ static void test_job_queue_receiver(job_queue_test_t * testinfo)
 	{
 		job_t *job;
 		testinfo->tester->assert_true(testinfo->tester,(testinfo->job_queue->get(testinfo->job_queue,&job) == SUCCESS), "get job call check");
-		testinfo->tester->assert_true(testinfo->tester,(job->type == INCOMING_PACKET), "job type check");		
-		pfree(job->assigned_data);
+		testinfo->tester->assert_true(testinfo->tester,(job->type == INCOMING_PACKET), "job type check");
+		allocator_free(job->assigned_data);
 		testinfo->tester->assert_true(testinfo->tester,(job->destroy(job) == SUCCESS), "job destroy call check");
 	}
 }
@@ -105,11 +105,11 @@ void test_job_queue(tester_t *tester)
 	test_infos.job_queue = job_queue;
 	test_infos.insert_item_count = 10000;
 	test_infos.remove_item_count = 50000;
-	
-	
-	desired_value = test_infos.insert_item_count * sender_count - 
+
+
+	desired_value = test_infos.insert_item_count * sender_count -
 					test_infos.remove_item_count * receiver_count;
-	
+
 	for (i = 0; i < receiver_count;i++)
 	{
 		pthread_create( &receiver_threads[i], NULL,(void*(*)(void*)) &test_job_queue_receiver, (void*) &test_infos);
@@ -118,8 +118,8 @@ void test_job_queue(tester_t *tester)
 	{
 		pthread_create( &sender_threads[i], NULL,(void*(*)(void*)) &test_job_queue_sender, (void*) &test_infos);
 	}
-	
-	
+
+
 	/* Wait for all threads */
 	for (i = 0; i < sender_count;i++)
 	{
@@ -129,10 +129,10 @@ void test_job_queue(tester_t *tester)
 	{
 		pthread_join(receiver_threads[i], NULL);
 	}
-	
+
 	/* the job-queue has to have disered_value count entries! */
 	tester->assert_true(tester,(job_queue->get_count(job_queue,&value) == SUCCESS), "get count call check");
-	tester->assert_true(tester,(value == desired_value), "get count value check");	
-	
+	tester->assert_true(tester,(value == desired_value), "get count value check");
+
 	tester->assert_true(tester,(job_queue->destroy(job_queue) == SUCCESS), "destroy call check");
 }

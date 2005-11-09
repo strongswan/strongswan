@@ -1,8 +1,8 @@
 /**
  * @file message.c
- * 
+ *
  * @brief Class message_t. Object of this type represents an IKEv2-Message
- * 
+ *
  */
 
 /*
@@ -32,15 +32,15 @@
  * Private data of an message_t object
  */
 typedef struct private_message_s private_message_t;
- 
-struct private_message_s { 	
+
+struct private_message_s {
 
 	/**
 	 * Public part of a message_t object
 	 */
 	message_t public;
-	 
-	 
+
+
 	/* Private values */
 
 };
@@ -54,7 +54,7 @@ static status_t destroy (private_message_t *this)
 	{
 		return FAILED;
 	}
-	pfree(this);
+	allocator_free(this);
 	return SUCCESS;
 }
 
@@ -63,15 +63,15 @@ static status_t destroy (private_message_t *this)
  */
 message_t * message_create()
 {
-	private_message_t *this = alloc_thing(private_message_t, "private_message_t");
+	private_message_t *this = allocator_alloc_thing(private_message_t, "private_message_t");
 	if (this == NULL)
 	{
 		return NULL;
 	}
-	
+
 	/* Public functions */
 	this->public.destroy = (status_t(*)(message_t*))destroy;
 
-	
-	return (&this->public);	
+
+	return (&this->public);
 }

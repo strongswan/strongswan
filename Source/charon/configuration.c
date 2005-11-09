@@ -1,9 +1,9 @@
 /**
  * @file configuration.c
- * 
- * @brief Class configuration_t. 
+ *
+ * @brief Class configuration_t.
  * Object of this type represents a configuration for an IKE_SA
- * 
+ *
  */
 
 /*
@@ -33,15 +33,15 @@
  * Private data of an configuration_t object
  */
 typedef struct private_configuration_s private_configuration_t;
- 
-struct private_configuration_s { 	
+
+struct private_configuration_s {
 
 	/**
 	 * Public part of a configuration_t object
 	 */
 	configuration_t public;
-	 
-	 
+
+
 	/* Private values */
 
 };
@@ -55,7 +55,7 @@ static status_t destroy (private_configuration_t *this)
 	{
 		return FAILED;
 	}
-	pfree(this);
+	allocator_free(this);
 	return SUCCESS;
 }
 
@@ -64,15 +64,15 @@ static status_t destroy (private_configuration_t *this)
  */
 configuration_t * configuration_create()
 {
-	private_configuration_t *this = alloc_thing(private_configuration_t, "private_configuration_t");
+	private_configuration_t *this = allocator_alloc_thing(private_configuration_t, "private_configuration_t");
 	if (this == NULL)
 	{
 		return NULL;
 	}
-	
+
 	/* Public functions */
 	this->public.destroy = (status_t(*)(configuration_t*))destroy;
 
-	
-	return (&this->public);	
+
+	return (&this->public);
 }

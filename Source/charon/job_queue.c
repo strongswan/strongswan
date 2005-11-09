@@ -1,8 +1,8 @@
 /**
  * @file job_queue.c
- * 
+ *
  * @brief Job-Queue based on linked_list_t
- * 
+ *
  */
 
 /*
@@ -25,20 +25,20 @@
 #include <freeswan.h>
 #include <pluto/constants.h>
 #include <pluto/defs.h>
-	
+
 #include "job_queue.h"
 #include "linked_list.h"
 
 /**
  * @brief Private Variables and Functions of job_queue class
- * 
+ *
  */
 typedef struct private_job_queue_s private_job_queue_t;
- 
+
 
 struct private_job_queue_s {
  	job_queue_t public;
- 	
+
 	/**
 	 * The jobs are stored in a linked list
 	 */
@@ -47,12 +47,12 @@ struct private_job_queue_s {
 	 * access to linked_list is locked through this mutex
 	 */
 	pthread_mutex_t mutex;
-	
+
 	/**
 	 * If the queue is empty a thread has to wait
 	 * This condvar is used to wake up such a thread
 	 */
-	pthread_cond_t condvar;	
+	pthread_cond_t condvar;
 };
 
 
@@ -82,9 +82,9 @@ static status_t get(private_job_queue_t *this, job_t **job)
 		/* add mutex unlock handler for cancellation, enable cancellation */
 		pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		
+
 		pthread_cond_wait( &(this->condvar), &(this->mutex));
-		
+
 		/* reset cancellation, remove mutex-unlock handler (without executing) */
 		pthread_setcancelstate(oldstate, NULL);
 		pthread_cleanup_pop(0);
@@ -109,14 +109,14 @@ static status_t add(private_job_queue_t *this, job_t *job)
 
 /**
  * @brief implements function destroy of job_queue_t
- * 
+ *
  */
 static status_t job_queue_destroy (private_job_queue_t *this)
-{	
+{
 	int count;
 	this->list->get_count(this->list,&count);
-	
-	while (count > 0) 
+
+	while (count > 0)
 	{
 		job_t *job;
 		if (this->list->remove_first(this->list,(void *) &job) != SUCCESS)
@@ -128,17 +128,17 @@ static status_t job_queue_destroy (private_job_queue_t *this)
 		this->list->get_count(this->list,&count);
 	}
 	this->list->destroy(this->list);
-	
+
 	pthread_mutex_destroy(&(this->mutex));
-	
+
 	pthread_cond_destroy(&(this->condvar));
-	
-	pfree(this);
+
+	allocator_free(this);
 	return SUCCESS;
 }
 
 /*
- * 
+ *
  * Documented in header
  */
 job_queue_t *job_queue_create()
@@ -148,22 +148,22 @@ job_queue_t *job_queue_create()
 	{
 		return NULL;
 	}
-	
-	private_job_queue_t *this = alloc_thing(private_job_queue_t, "private_job_queue_t");
+
+	private_job_queue_t *this = allocator_alloc_thing(private_job_queue_t, "private_job_queue_t");
 	if (this == NULL)
 	{
 		linked_list->destroy(linked_list);
 		return NULL;
 	}
-	
+
 	this->public.get_count = (status_t(*)(job_queue_t*, int*))get_count;
 	this->public.get = (status_t(*)(job_queue_t*, job_t**))get;
 	this->public.add = (status_t(*)(job_queue_t*, job_t*))add;
 	this->public.destroy = (status_t(*)(job_queue_t*))job_queue_destroy;
-	
+
 	this->list = linked_list;
 	pthread_mutex_init(&(this->mutex), NULL);
 	pthread_cond_init(&(this->condvar), NULL);
-	
+
 	return (&this->public);
 }

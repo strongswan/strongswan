@@ -1,8 +1,8 @@
 /**
  * @file sender_test.h
- * 
+ *
  * @brief Tests to test the Sender (type sender_t)
- * 
+ *
  */
 
 /*
@@ -44,7 +44,7 @@
  * Destination IP Address
  */
 #define DESTINATION_IP "127.0.0.1"
- 
+
 void test_sender(tester_t *tester)
 {
 	int i;
@@ -52,24 +52,24 @@ void test_sender(tester_t *tester)
 	packet_t *packet;
 	packet_t *received_packet;
 	sender = sender_create();
-	
+
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
 		packet = packet_create(AF_INET);
 		packet->set_destination(packet,DESTINATION_IP,PORT_TO_SEND);
-		packet->data.ptr = alloc_thing(int, "packet data");
+		packet->data.ptr = allocator_alloc_thing(int, "packet data");
 		packet->data.len = ( sizeof(int));
 		*((int *) (packet->data.ptr)) = i;
 		global_send_queue->add(global_send_queue,packet);
 	}
-	
+
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
 		global_socket->receive(global_socket,&received_packet);
 		tester->assert_true(tester, (received_packet->data.len == (sizeof(int))), "received data length check");
 		tester->assert_true(tester, (i == *((int *)(received_packet->data.ptr))), "received data value check");
 		received_packet->destroy(received_packet);
-	}		
-	
+	}
+
 	tester->assert_true(tester, (sender->destroy(sender) == SUCCESS), "destroy call check");
 }

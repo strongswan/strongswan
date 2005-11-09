@@ -1,8 +1,8 @@
 /**
  * @file receiver_test.c
- * 
+ *
  * @brief Tests to test the Receiver (type receiver_t)
- * 
+ *
  */
 
 /*
@@ -19,7 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include <string.h>
 #include <unistd.h>
 
@@ -45,7 +45,7 @@
  * Destination IP Address
  */
 #define DESTINATION_IP "127.0.0.1"
- 
+
 void test_receiver(tester_t *tester)
 {
 	int i;
@@ -54,21 +54,21 @@ void test_receiver(tester_t *tester)
 	job_t *job;
 	packet_t *received_packet;
 	receiver = receiver_create();
-	
+
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
 		packet = packet_create(AF_INET);
 		packet->set_destination(packet,DESTINATION_IP,PORT_TO_SEND);
-		packet->data.ptr = alloc_thing(int, "packet data");
+		packet->data.ptr = allocator_alloc_thing(int, "packet data");
 		packet->data.len = ( sizeof(int));
 		*((int *) (packet->data.ptr)) = i;
 		global_socket->send(global_socket,packet);
 		packet->destroy(packet);
 	}
-	
+
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
-		global_job_queue->get(global_job_queue,&job);	
+		global_job_queue->get(global_job_queue,&job);
 		tester->assert_true(tester, (job->type == INCOMING_PACKET), "job type check");
 		received_packet = (packet_t *) job->assigned_data;
 		tester->assert_true(tester, (received_packet->data.len == (sizeof(int))), "received data length check");
@@ -76,7 +76,7 @@ void test_receiver(tester_t *tester)
 		received_packet->destroy(received_packet);
 
 		job->destroy(job);
-	}		
-	
+	}
+
 	tester->assert_true(tester, (receiver->destroy(receiver) == SUCCESS), "destroy call check");
 }

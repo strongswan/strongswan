@@ -1,8 +1,8 @@
 /**
  * @file tester.c
- * 
+ *
  * @brief Test module for automatic testing
- * 
+ *
  */
 
 /*
@@ -28,7 +28,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/time.h>
- 
+
 #include "tester.h"
 #include "linked_list.h"
 #include "thread_pool.h"
@@ -36,18 +36,18 @@
 
 /**
  * @brief Private Variables and Functions of tester class
- * 
+ *
  */
 typedef struct private_tester_s private_tester_t;
- 
+
 struct private_tester_s {
  	tester_t public;
- 	
+
 
 	/* Private functions */
 	void (*run_test) (tester_t *tester, void (*test_function) (tester_t * tester), char * test_name);
-	
-	
+
+
 	/* Private values */
  	FILE* output;
  	int tests_count;
@@ -56,11 +56,11 @@ struct private_tester_s {
  	bool display_succeeded_asserts;
  	pthread_mutex_t mutex;
 };
- 
+
 /*
  * Implementation of function perform_tests
  */
-static status_t perform_tests(tester_t *tester,test_t **tests) 
+static status_t perform_tests(tester_t *tester,test_t **tests)
 {
 	private_tester_t *this =(private_tester_t*) tester;
 	int current_test = 0;
@@ -71,7 +71,7 @@ static status_t perform_tests(tester_t *tester,test_t **tests)
 		this->run_test(tester,tests[current_test]->test_function,tests[current_test]->test_name);
 		current_test++;
 	}
-	
+
 	fprintf(this->output,"End testing. %d of %d tests succeeded\n",this->tests_count - this->failed_tests_count,this->tests_count);
 
 	return SUCCESS;
@@ -80,7 +80,7 @@ static status_t perform_tests(tester_t *tester,test_t **tests)
 /*
  * Implementation of function perform_test
  */
-static status_t perform_test(tester_t *tester, test_t *test) 
+static status_t perform_test(tester_t *tester, test_t *test)
 {
 	test_t *tests[] = {test, NULL};
 	return (perform_tests(tester,tests));
@@ -88,20 +88,20 @@ static status_t perform_test(tester_t *tester, test_t *test)
 
 /**
  * Returns the difference of to timeval structs in microseconds
- * 
+ *
  * @param end_time end time
  * @param start_time start time
- * 
+ *
  * @warning this function is also defined in the event queue
  * 			in later improvements, this function can be added to a general
  *          class type!
- * 
+ *
  * @return difference in microseconds
  */
 static long time_difference(struct timeval *end_time, struct timeval *start_time)
 {
 	long seconds, microseconds;
-	
+
 	seconds = (end_time->tv_sec - start_time->tv_sec);
 	microseconds = (end_time->tv_usec - start_time->tv_usec);
 	return ((seconds * 1000000) + microseconds);
@@ -109,7 +109,7 @@ static long time_difference(struct timeval *end_time, struct timeval *start_time
 
 
 /**
- * Implementation of function run_test 
+ * Implementation of function run_test
  */
 static void run_test(tester_t *tester, void (*test_function) (tester_t * tester), char * test_name)
 {
@@ -123,7 +123,7 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
 	test_function(tester);
 	gettimeofday(&end_time,NULL);
 	timediff = time_difference(&end_time, &start_time);
-	
+
 	fprintf(this->output,"End Test '%s' in %ld microseconds\n", test_name,timediff);
 	if (this->failed_asserts_count > 0)
 	{
@@ -132,27 +132,27 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
 }
 
 /**
- * Implementation of function assert_true 
+ * Implementation of function assert_true
  */
 static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
 {
 	private_tester_t *this = (private_tester_t *) tester;
-	
+
 	if (assert_name == NULL)
 	{
 		assert_name = "unknown";
 	}
-	
+
 	pthread_mutex_lock(&(this->mutex));
 	if (!to_be_true)
 	{
 		this->failed_asserts_count++;
-		fprintf(this->output,"  Assert '%s' failed!\n", assert_name);		
+		fprintf(this->output,"  Assert '%s' failed!\n", assert_name);
 	}else
 	{
 		if (this->display_succeeded_asserts)
 		{
-			fprintf(this->output,"  Assert '%s' succeeded\n", assert_name);		
+			fprintf(this->output,"  Assert '%s' succeeded\n", assert_name);
 		}
 	}
 	pthread_mutex_unlock(&(this->mutex));
@@ -169,31 +169,31 @@ static void assert_false(tester_t *tester, bool to_be_false,char * assert_name)
 /**
  * Implements the destroy function
  */
-static status_t destroy(tester_t *tester) 
+static status_t destroy(tester_t *tester)
 {
 	private_tester_t *this = (private_tester_t*) tester;
 	pthread_mutex_destroy(&(this->mutex));
-	pfree(this);
+	allocator_free(this);
 	return SUCCESS;
 }
 
-tester_t *tester_create(FILE *output, bool display_succeeded_asserts) 
+tester_t *tester_create(FILE *output, bool display_succeeded_asserts)
 {
-	private_tester_t *this = alloc_thing(private_tester_t, "private_tester_t");
-	
+	private_tester_t *this = allocator_alloc_thing(private_tester_t, "private_tester_t");
+
 	this->public.destroy = destroy;
 	this->public.perform_tests = perform_tests;
 	this->public.perform_test = perform_test;
 	this->public.assert_true = assert_true;
 	this->public.assert_false = assert_false;
-	
-	
+
+
 	this->run_test = run_test;
-	this->display_succeeded_asserts = display_succeeded_asserts;	
+	this->display_succeeded_asserts = display_succeeded_asserts;
 	this->failed_tests_count = 0;
 	this->tests_count = 0;
 	this->output = output;
 	pthread_mutex_init(&(this->mutex),NULL);
-	
+
 	return &(this->public);
 }

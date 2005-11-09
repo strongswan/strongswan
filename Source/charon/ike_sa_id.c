@@ -1,8 +1,8 @@
 /**
  * @file ike_sa_id.c
- * 
+ *
  * @brief Class for identification of an IKE_SA
- * 
+ *
  */
 
 /*
@@ -19,7 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include <stdlib.h>
 #include <string.h>
 #include <freeswan.h>
@@ -33,31 +33,31 @@
  * Private data of an ike_sa_id object
  */
 typedef struct private_ike_sa_id_s private_ike_sa_id_t;
- 
-struct private_ike_sa_id_s { 	
+
+struct private_ike_sa_id_s {
 	/**
 	 * Public part of a ike_sa_id object
 	 */
 	ike_sa_id_t public;
-	 
-	 
+
+
 	/* Private values */
-	
+
 	 /**
 	  * SPI of Initiator
 	  */
 	spi_t initiator_spi;
-	
+
 	 /**
 	  * SPI of Responder
 	  */
 	spi_t responder_spi;
-	
+
 	/**
 	 * Role for specific IKE_SA
 	 */
 	ike_sa_role_t role;
-	
+
 };
 
 
@@ -101,7 +101,7 @@ static status_t equals (private_ike_sa_id_t *this,private_ike_sa_id_t *other, bo
 	{
 		return FAILED;
 	}
-	if (	(this->role == other->role) && 
+	if (	(this->role == other->role) &&
 		(this->initiator_spi.high == other->initiator_spi.high) &&
 		(this->initiator_spi.low == other->initiator_spi.low) &&
 		(this->responder_spi.high == other->responder_spi.high) &&
@@ -115,7 +115,7 @@ static status_t equals (private_ike_sa_id_t *this,private_ike_sa_id_t *other, bo
 		/* private_ike_sa_id's are not equal */
 		*are_equal = FALSE;
 	}
-	
+
 	return SUCCESS;
 }
 
@@ -128,11 +128,11 @@ status_t replace_values (private_ike_sa_id_t *this, private_ike_sa_id_t *other)
 	{
 		return FAILED;
 	}
-	
+
 	this->initiator_spi = other->initiator_spi;
 	this->responder_spi = other->responder_spi;
 	this->role = other->role;
-	
+
 	return SUCCESS;
 }
 
@@ -144,7 +144,7 @@ static status_t get_values(private_ike_sa_id_t *this, spi_t *initiator, spi_t *r
 	memcpy(initiator, &(this->initiator_spi), sizeof(initiator));
 	memcpy(responder, &(this->responder_spi), sizeof(responder));
 	*role = this->role;
-	
+
 	return SUCCESS;
 }
 
@@ -158,9 +158,9 @@ static status_t clone (private_ike_sa_id_t *this, ike_sa_id_t **clone_of_this)
 	{
 		return FAILED;
 	}
-	
+
 	*clone_of_this = ike_sa_id_create(this->initiator_spi, this->responder_spi, this->role);
-	
+
 	return (*clone_of_this == NULL)	? FAILED : SUCCESS;
 }
 
@@ -173,7 +173,7 @@ static status_t destroy (private_ike_sa_id_t *this)
 	{
 		return FAILED;
 	}
-	pfree(this);
+	allocator_free(this);
 	return SUCCESS;
 }
 
@@ -182,12 +182,12 @@ static status_t destroy (private_ike_sa_id_t *this)
  */
 ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi, ike_sa_role_t role)
 {
-	private_ike_sa_id_t *this = alloc_thing(private_ike_sa_id_t, "private_ike_sa_id_t");
+	private_ike_sa_id_t *this = allocator_alloc_thing(private_ike_sa_id_t, "private_ike_sa_id_t");
 	if (this == NULL)
 	{
 		return NULL;
 	}
-	
+
 	/* Public functions */
 	this->public.set_responder_spi = (status_t(*)(ike_sa_id_t*,spi_t)) set_responder_spi;
 	this->public.set_initiator_spi = (status_t(*)(ike_sa_id_t*,spi_t)) set_initiator_spi;
@@ -203,6 +203,6 @@ ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi, ike_sa_
 	this->initiator_spi = initiator_spi;
 	this->responder_spi = responder_spi;
 	this->role = role;
-	
-	return (&this->public);	
+
+	return (&this->public);
 }

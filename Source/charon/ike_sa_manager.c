@@ -1,8 +1,8 @@
 /**
  * @file ike_sa_manager.c
- * 
+ *
  * @brief Central point for managing IKE-SAs (creation, locking, deleting...)
- * 
+ *
  */
 
 /*
@@ -51,7 +51,7 @@ struct ike_sa_entry_s {
 	/**
 	 * identifiaction of ike_sa (SPIs)
 	 */
-	ike_sa_id_t *ike_sa_id;	
+	ike_sa_id_t *ike_sa_id;
 	/**
 	 * the contained ike_sa
 	 */
@@ -62,29 +62,29 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
 {
 	this->ike_sa->destroy(this->ike_sa);
 	this->ike_sa_id->destroy(this->ike_sa_id);
-	pfree(this);
+	allocator_free(this);
 	return SUCCESS;
-	
+
 }
 
 
 /**
  * @brief creates a new entry for the ike_sa list
- * 
+ *
  * This constructor additionaly creates a new and empty SA
- * 
+ *
  * @param ike_sa_id		the associated ike_sa_id_t, NOT cloned
  * @return				created entry, with ike_sa and ike_sa_id
  */
 ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 {
-	ike_sa_entry_t *this = alloc_thing(ike_sa_entry_t, "ike_sa_entry_t");
-	
+	ike_sa_entry_t *this = allocator_alloc_thing(ike_sa_entry_t, "ike_sa_entry_t");
+
 	this->destroy = ike_sa_entry_destroy;
 	this->waiting_threads = 0;
 	pthread_cond_init(&(this->condvar), NULL);
 	/* we set checkout flag when we really give it out */
-	this->checked_out = FALSE; 
+	this->checked_out = FALSE;
 	this->ike_sa_id = ike_sa_id;
 	this->ike_sa = ike_sa_create(ike_sa_id);
 	return this;
@@ -99,12 +99,12 @@ struct private_ike_sa_manager_s {
 	 * Public members
 	 */
 	 ike_sa_manager_t public;
-	 
+
 	/**
 	 * @brief get next spi
-	 * 
+	 *
 	 * we give out SPIs incremental
-	 * 
+	 *
 	 * @param this			the ike_sa_manager
 	 * @param spi[out]		spi will be written here
 	 * @return				SUCCESS or,
@@ -113,10 +113,10 @@ struct private_ike_sa_manager_s {
 	 status_t (*get_next_spi) (private_ike_sa_manager_t *this, spi_t *spi);
 	/**
 	 * @brief find the ike_sa_entry in the list by SPIs
-	 * 
+	 *
 	 * This function simply iterates over the linked list. A hash-table
 	 * would be more efficient when storing a lot of IKE_SAs...
-	 * 
+	 *
 	 * @param this			the ike_sa_manager containing the list
 	 * @param ike_sa_id		id of the ike_sa, containing SPIs
 	 * @param entry[out]	pointer to set to the found entry
@@ -126,10 +126,10 @@ struct private_ike_sa_manager_s {
 	 status_t (*get_entry_by_id) (private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_entry_t **entry);
 	 /**
 	 * @brief find the ike_sa_entry in the list by pointer to SA.
-	 * 
+	 *
 	 * This function simply iterates over the linked list. A hash-table
 	 * would be more efficient when storing a lot of IKE_SAs...
-	 * 
+	 *
 	 * @param this			the ike_sa_manager containing the list
 	 * @param ike_sad		pointer to the ike_sa
 	 * @param entry[out]	pointer to set to the found entry
@@ -138,14 +138,14 @@ struct private_ike_sa_manager_s {
 	 */
 	 status_t (*get_entry_by_sa) (private_ike_sa_manager_t *this, ike_sa_t *ike_sa, ike_sa_entry_t **entry);
 	 /**
-	  * @brief 
+	  * @brief
 	  */
 	 status_t (*delete_entry) (private_ike_sa_manager_t *this, ike_sa_entry_t *entry);
 	 /**
 	  * lock for exclusivly accessing the manager
 	  */
 	 pthread_mutex_t mutex;
-	 
+
 	 /**
 	  * Linked list with entries for the ike_sa
 	  */
@@ -153,7 +153,7 @@ struct private_ike_sa_manager_s {
 	 /**
 	  * Next SPI, needed for incremental creation of SPIs
 	  */
-	 spi_t next_spi; 	
+	 spi_t next_spi;
 };
 
 
@@ -194,7 +194,7 @@ static status_t get_ike_sa_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t 
 	{
 		ike_sa_entry_t *current;
 		iterator->current(iterator, (void**)&current);
-		if (current->ike_sa == ike_sa) 
+		if (current->ike_sa == ike_sa)
 		{
 			*entry = current;
 			iterator->destroy(iterator);
@@ -234,24 +234,24 @@ static status_t checkout_ike_sa(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 	bool responder_spi_set;
 	bool initiator_spi_set;
 	status_t retval;
-	
+
 	pthread_mutex_lock(&(this->mutex));
-	
+
 	responder_spi_set = ike_sa_id->responder_spi_is_set(ike_sa_id);
 	initiator_spi_set = ike_sa_id->initiator_spi_is_set(ike_sa_id);
-	
-	if (initiator_spi_set && responder_spi_set) 
+
+	if (initiator_spi_set && responder_spi_set)
 	{
 		/* we SHOULD have an IKE_SA for these SPIs in the list,
 		 * if not, we cant handle the request...
 		 */
 		 ike_sa_entry_t *entry;
 		 /* look for the entry */
-		 if (this->get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS) 
+		 if (this->get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
 		 {
 		 	/* is this IKE_SA already checked out ?? */
-		 	while (entry->checked_out)	
-		 	{ 
+		 	while (entry->checked_out)
+		 	{
 		 		/* so wait until we can get it for us.
 		 		 * we register us as waiting.
 		 		 */
@@ -263,13 +263,13 @@ static status_t checkout_ike_sa(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 		 	entry->checked_out = TRUE;
 		 	*ike_sa = entry->ike_sa;
 		 	/* DON'T use return, we must unlock the mutex! */
-		 	retval = SUCCESS; 
-		 	
+		 	retval = SUCCESS;
+
 		 }
 		 else
 		 {
 		 	/* looks like there is no such IKE_SA, better luck next time... */
-		 	
+
 		 	/* DON'T use return, we must unlock the mutex! */
 		 	retval = NOT_FOUND;
 		 }
@@ -286,22 +286,22 @@ static status_t checkout_ike_sa(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 		spi_t responder_spi;
 		ike_sa_id_t *new_ike_sa_id;
 		ike_sa_entry_t *new_ike_sa_entry;
-		
+
 		/* set SPIs, we are the responder */
 		ike_sa_id->clone(ike_sa_id, &new_ike_sa_id);
 		this->get_next_spi(this, &responder_spi);
 		new_ike_sa_id->set_responder_spi(new_ike_sa_id, responder_spi);
 		/* we also set arguments spi, so its still valid */
 		ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
-		
+
 		/* create entry */
 		new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
 		this->list->insert_last(this->list, new_ike_sa_entry);
-		
+
 		/* check ike_sa out */
 		new_ike_sa_entry->checked_out = TRUE;
 		*ike_sa = new_ike_sa_entry->ike_sa;
-		
+
 		 /* DON'T use return, we must unlock the mutex! */
 		retval = SUCCESS;
 	}
@@ -309,34 +309,34 @@ static status_t checkout_ike_sa(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 	{
 		/* creation of an IKE_SA from local site,
 		 * we are the initiator!
-		 */	
+		 */
 		spi_t initiator_spi, responder_spi;
 		ike_sa_id_t *new_ike_sa_id;
 		ike_sa_entry_t *new_ike_sa_entry;
-		
+
 		/* set SPIs */
 		memset(&responder_spi, 0, sizeof(spi_t));
 		this->get_next_spi(this, &initiator_spi);
-		
+
 		/* we also set arguments SPI, so its still valid */
 		ike_sa_id->set_initiator_spi(ike_sa_id, initiator_spi);
-		
+
 		/* create entry */
 		new_ike_sa_id = ike_sa_id_create(initiator_spi, responder_spi, INITIATOR);
 		new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
 		this->list->insert_last(this->list, new_ike_sa_entry);
-		
+
 		/* check ike_sa out */
 		new_ike_sa_entry->checked_out = TRUE;
 		*ike_sa = new_ike_sa_entry->ike_sa;
-		
+
 		/* DON'T use return, we must unlock the mutex! */
 		retval = SUCCESS;
 	}
-	else 
+	else
 	{
 		/* responder set, initiator not: here is something seriously wrong! */
-		
+
 		/* DON'T use return, we must unlock the mutex! */
 		retval = INVALID_ARG;
 	}
@@ -347,31 +347,31 @@ static status_t checkout_ike_sa(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 }
 
 static status_t checkin_ike_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
-{	
-	/* to check the SA back in, we look for the pointer of the ike_sa 
+{
+	/* to check the SA back in, we look for the pointer of the ike_sa
 	 * in all entries.
 	 * We can't search by SPI's since the MAY have changed (e.g. on reception
 	 * of a IKE_SA_INIT response). Updating of the SPI MAY be necessary...
 	 */
 	status_t retval;
 	ike_sa_entry_t *entry;
-	
+
 	pthread_mutex_lock(&(this->mutex));
 
 
 	/* look for the entry */
-	if (this->get_entry_by_sa(this, ike_sa, &entry) == SUCCESS) 
+	if (this->get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
 	{
 		/* ike_sa_id must be updated */
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
 		/* signal waiting threads */
 		entry->checked_out = FALSE;
 		pthread_cond_signal(&(entry->condvar));
-	 	retval = SUCCESS; 
+	 	retval = SUCCESS;
 	}
 	else
 	{
-		/* this SA is no more, this REALLY should not happen */	
+		/* this SA is no more, this REALLY should not happen */
 		retval = NOT_FOUND;
 	}
 	pthread_mutex_unlock(&(this->mutex));
@@ -381,20 +381,20 @@ static status_t checkin_ike_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 
 
 static status_t delete_ike_sa_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
-{	
-	/* deletion is a bit complex, we must garant that no thread is waiting for 
-	 * this SA. 
+{
+	/* deletion is a bit complex, we must garant that no thread is waiting for
+	 * this SA.
 	 * We take this SA from the list, and start signaling while threads
-	 * are in the condvar. 	
+	 * are in the condvar.
 	 */
 	linked_list_t *list = this->list;
 	linked_list_iterator_t *iterator;
 	ike_sa_entry_t *entry;
 	bool found = FALSE;
 	status_t retval;
-	
+
 	pthread_mutex_lock(&(this->mutex));
-	
+
 	/* remove SA from list */
 	list->create_iterator(list, &iterator, TRUE);
 	while (iterator->has_next(iterator))
@@ -408,8 +408,8 @@ static status_t delete_ike_sa_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ik
 		}
 	}
 	iterator->destroy(iterator);
-	
-	if (found) 
+
+	if (found)
 	{
 		/* wait until all workers have done their work */
 		while (entry->waiting_threads)
@@ -417,9 +417,9 @@ static status_t delete_ike_sa_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ik
 			/* wake up all */
 			pthread_cond_signal(&(entry->condvar));
 			/* and the nice thing, they will wake us again when their work is done */
-			pthread_cond_wait(&(entry->condvar), &(this->mutex));		
+			pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		}
-		
+
 		/* ok, we are alone now, no threads waiting in the entry's condvar */
 		entry->destroy(entry);
 		retval = SUCCESS;
@@ -428,26 +428,26 @@ static status_t delete_ike_sa_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ik
 	{
 		retval = NOT_FOUND;
 	}
-		
+
 	pthread_mutex_unlock(&(this->mutex));
 	return retval;
 }
 
 static status_t delete_ike_sa_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
-{	
-	/* deletion is a bit complex, we must garant that no thread is waiting for 
-	 * this SA. 
+{
+	/* deletion is a bit complex, we must garant that no thread is waiting for
+	 * this SA.
 	 * We take this SA from the list, and start signaling while threads
-	 * are in the condvar. 	
+	 * are in the condvar.
 	 */
 	linked_list_t *list = this->list;
 	linked_list_iterator_t *iterator;
 	ike_sa_entry_t *entry;
 	bool found = FALSE;
 	status_t retval;
-	
+
 	pthread_mutex_lock(&(this->mutex));
-	
+
 	/* remove SA from list */
 	list->create_iterator(list, &iterator, TRUE);
 	while (iterator->has_next(iterator))
@@ -463,8 +463,8 @@ static status_t delete_ike_sa_by_id(private_ike_sa_manager_t *this, ike_sa_id_t 
 		}
 	}
 	iterator->destroy(iterator);
-	
-	if (found) 
+
+	if (found)
 	{
 		/* wait until all workers have done their work */
 		while (entry->waiting_threads)
@@ -472,9 +472,9 @@ static status_t delete_ike_sa_by_id(private_ike_sa_manager_t *this, ike_sa_id_t 
 			/* wake up all */
 			pthread_cond_signal(&(entry->condvar));
 			/* and the nice thing, they will wake us again when their work is done */
-			pthread_cond_wait(&(entry->condvar), &(this->mutex));		
+			pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		}
-		
+
 		/* ok, we are alone now, no threads waiting in the entry's condvar */
 		entry->destroy(entry);
 		retval = SUCCESS;
@@ -483,7 +483,7 @@ static status_t delete_ike_sa_by_id(private_ike_sa_manager_t *this, ike_sa_id_t 
 	{
 		retval = NOT_FOUND;
 	}
-		
+
 	pthread_mutex_unlock(&(this->mutex));
 	return retval;
 }
@@ -501,10 +501,10 @@ static status_t destroy(private_ike_sa_manager_t *this)
 		entry->destroy(entry);
 	}
 	iterator->destroy(iterator);
-	
+
 	list->destroy(list);
-	
-	pfree(this);
+
+	allocator_free(this);
 
 	return SUCCESS;
 }
@@ -512,31 +512,31 @@ static status_t destroy(private_ike_sa_manager_t *this)
 
 ike_sa_manager_t *ike_sa_manager_create()
 {
-	private_ike_sa_manager_t *this = alloc_thing(private_ike_sa_manager_t, "private_ike_sa_manager_t");
-	
+	private_ike_sa_manager_t *this = allocator_alloc_thing(private_ike_sa_manager_t, "private_ike_sa_manager_t");
+
 	/* assign public functions */
 	this->public.destroy = (status_t(*)(ike_sa_manager_t*))destroy;
 	this->public.checkout_ike_sa = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t *sa_id, ike_sa_t **sa))checkout_ike_sa;
 	this->public.checkin_ike_sa = (status_t(*)(ike_sa_manager_t*, ike_sa_t *sa))checkin_ike_sa;
 	this->public.delete_ike_sa_by_id = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t *sa_id))delete_ike_sa_by_id;
 	this->public.delete_ike_sa_by_sa = (status_t(*)(ike_sa_manager_t*, ike_sa_t *ike_sa))delete_ike_sa_by_sa;
-	
+
 	/* initialize private data */
 	this->get_next_spi = get_next_spi;
 	this->get_entry_by_sa = get_ike_sa_entry_by_sa;
 	this->get_entry_by_id = get_ike_sa_entry_by_id;
-	
+
 	this->list = linked_list_create();
 	if (this->list == NULL)
 	{
-		pfree(this);
-		return NULL;	
+		allocator_free(this);
+		return NULL;
 	}
-	
+
 	pthread_mutex_init(&(this->mutex), NULL);
-	
+
 	this->next_spi.low = 1;
 	this->next_spi.high = 0;
-	
+
 	return (ike_sa_manager_t*)this;
 }
