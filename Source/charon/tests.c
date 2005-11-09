@@ -23,6 +23,7 @@
  
 #include <stdio.h>
 #
+#include "allocator.h"
 #include "tester.h"
 #include "job_queue.h"
 #include "event_queue.h"
@@ -154,7 +155,7 @@ socket_t *global_socket;
 	&receiver_test,
 	&ike_sa_id_test,
 	&ike_sa_test,
-	&test_generator_with_unsupported_payload,
+	&generator_test,
 	NULL
 	};
  	
@@ -167,7 +168,7 @@ socket_t *global_socket;
  	tester_t *tester = tester_create(test_output, FALSE);
 
 /*	tester->perform_tests(tester,all_tests);  */
-	tester->perform_test(tester,&generator_test);  
+	tester->perform_test(tester,&thread_pool_test);  
  	
 	tester->destroy(tester);
 
@@ -181,6 +182,7 @@ socket_t *global_socket;
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported in log file */
 	report_leaks();
+	report_memory_leaks();
 #endif
 	
 	return 0;

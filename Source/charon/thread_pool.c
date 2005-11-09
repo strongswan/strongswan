@@ -26,6 +26,7 @@
 #include <pluto/defs.h>
 #include <pthread.h>
  
+#include "allocator.h"
 #include "thread_pool.h"
 #include "job_queue.h"
 #include "globals.h"
@@ -53,15 +54,17 @@ static void job_processing(private_thread_pool_t *this)
 {
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	
+
 	for (;;) {
 		job_t *job;
+
 		global_job_queue->get(global_job_queue, &job);
 		
 		/* process them here */
 		
 		job->destroy(job);
 	}
+
 }
 
 /**
@@ -90,8 +93,8 @@ static status_t destroy(private_thread_pool_t *this)
 	}	
 
 	/* free mem */
-	pfree(this->threads);
-	pfree(this);
+	allocator_free(this->threads);
+	allocator_free(this);
 	return SUCCESS;
 }
 
@@ -102,23 +105,24 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 {
 	int current;
 	
-	private_thread_pool_t *this = alloc_thing(private_thread_pool_t, "private_thread_pool_t");
+	private_thread_pool_t *this = allocator_alloc_thing(private_thread_pool_t);
 	
 	/* fill in public fields */
 	this->public.destroy = (status_t(*)(thread_pool_t*))destroy;
 	this->public.get_pool_size = (status_t(*)(thread_pool_t*, size_t*))get_pool_size;
 	
 	this->pool_size = pool_size;
-	this->threads = alloc_bytes(sizeof(pthread_t) * pool_size, "pthread_t[] of private_thread_pool_t");
-	
+	this->threads = allocator_alloc(sizeof(pthread_t) * pool_size);
+
 	
 	/* try to create as many threads as possible, up tu pool_size */
 	for (current = 0; current < pool_size; current++) {
 		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))job_processing, this)) {
 			/* did we get any? */
 			if (current == 0) {
-				pfree(this->threads);
-				pfree(this);
+
+				allocator_free(this->threads);
+				allocator_free(this);
 				return NULL;
 			}
 			/* not all threads could be created, but at least one :-/ */
