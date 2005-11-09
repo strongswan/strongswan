@@ -45,6 +45,8 @@ encoding_rule_t ike_header_encodings[] = {
 	{ U_INT_4,		offsetof(ike_header_t, maj_version) 		},
  	/* 4 Bit minor version, stored in the field min_version */
 	{ U_INT_4,		offsetof(ike_header_t, min_version) 		},
+	/* 8 Bit for the exchange type */
+	{ U_INT_8,		offsetof(ike_header_t, exchange_type) 	},
  	/* 2 Bit reserved bits, nowhere stored */
 	{ RESERVED_BIT,	0 										}, 
 	{ RESERVED_BIT,	0 										}, 

@@ -43,11 +43,11 @@ struct ike_header_s{
 	/**
 	 * SPI of the initiator
 	 */
-	u_int32_t initiator_spi;
+	u_int64_t initiator_spi;
 	/**
 	 * SPI of the responder
 	 */
-	u_int32_t responder_spi;
+	u_int64_t responder_spi;
 	/**
 	 * next payload type
 	 */

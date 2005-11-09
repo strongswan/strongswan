@@ -68,7 +68,14 @@ void test_generator_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	tester->assert_true(tester,(generator->generate_payload(generator,HEADER,&header_data,&generated_data) == SUCCESS),"generate_payload call check");
 
-	DBG_dump("test:",generated_data.ptr,generated_data.len);
+	int i;
+	u_int8_t *data = generated_data.ptr;
+	
+	for (i = 0; i < generated_data.len;i++)
+	{
+		fprintf(stderr,"%x\n",data[i]);
+	}
+
 	
 	allocator_free_chunk(generated_data);
 	

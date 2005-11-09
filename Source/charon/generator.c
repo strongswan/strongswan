@@ -81,6 +81,8 @@ struct generator_infos_s {
 	 */
 	status_t (*make_space_available) (generator_infos_t *this,size_t bits);
 	
+	status_t (*write_bytes_to_buffer) (generator_infos_t *this,void * bytes,size_t number_of_bytes);
+	
 	status_t (*write_chunk) (generator_infos_t *this,chunk_t *data);	
 };
 
@@ -111,6 +113,28 @@ static status_t generator_info_make_space_available (generator_infos_t *this, si
 	}
 	
 	return SUCCESS;
+}
+
+static status_t generator_info_write_bytes_to_buffer (generator_infos_t *this,void * bytes,size_t number_of_bytes)
+{
+	u_int8_t *read_position = (u_int8_t *) bytes;
+	int i;
+	status_t status;
+	
+	status = this->make_space_available(this,number_of_bytes * 8);
+	
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	
+	for (i = 0; i < number_of_bytes; i++)
+	{
+		*(this->out_position) = *(read_position);
+		read_position++;
+		this->out_position++;
+	}
+	return status;
 }
 
 static status_t generator_infos_write_chunk (generator_infos_t *this,chunk_t *data)
@@ -160,6 +184,7 @@ generator_infos_t * generator_infos_create(void *data_struct)
 	this->destroy = generator_infos_destroy;
 	this->make_space_available = generator_info_make_space_available;
 	this->write_chunk = generator_infos_write_chunk;
+	this->write_bytes_to_buffer = generator_info_write_bytes_to_buffer;
 
 	/* allocate memory for buffer */
 	this->buffer = allocator_alloc(GENERATOR_DATA_BUFFER_SIZE);
@@ -226,7 +251,6 @@ struct private_generator_s {
 static status_t generate_u_int_type (private_generator_t *this,encoding_type_t int_type,u_int32_t offset,generator_infos_t *generator_infos)
 {
 	size_t number_of_bits = 0;
-	
 	status_t status;
 	
 
@@ -250,6 +274,11 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			default:
 			return FAILED;
 	}
+	if (((number_of_bits % 8) == 0) && (generator_infos->current_bit != 0))
+	{
+		/* current bit has to be zero for values greater then 4 bits */
+		return FAILED;
+	}
 	
 	status = generator_infos->make_space_available(generator_infos,number_of_bits);
 	
@@ -257,27 +286,74 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 	{
 		return status;
 	}
-	
-	/* process 4 byte integer special */
-	if (number_of_bits == 4)
+
+	switch (int_type)
 	{
-		if (generator_infos->current_bit == 0)
-		{			
-			*(generator_infos->out_position) = *((u_int8_t *)(generator_infos->data_struct + offset)) << 4;
-			generator_infos->current_bit = 4;
-		}
-		else if (generator_infos->current_bit == 4)
-		{
-			generator_infos->out_position++;
-			generator_infos->current_bit = 0;
+			case U_INT_4:
+			{
+				if (generator_infos->current_bit == 0)
+				{			
+					u_int8_t high_val = *((u_int8_t *)(generator_infos->data_struct + offset)) << 4;
+					u_int8_t low_val = *(generator_infos->out_position) & 0x0F;
+						
+					*(generator_infos->out_position) = high_val | low_val;
+					/* write position is not changed, just bit position is moved */
+					generator_infos->current_bit = 4;
+				}
+				else if (generator_infos->current_bit == 4)
+				{
+					u_int high_val = *(generator_infos->out_position) & 0xF0;
+					u_int low_val = *((u_int8_t *)(generator_infos->data_struct + offset)) & 0x0F;
+					*(generator_infos->out_position) = high_val | low_val;
+					generator_infos->out_position++;
+					generator_infos->current_bit = 0;
+					
+				}
+				else
+				{
+					/* 4 Bit integers must have a 4 bit alignment */
+					return FAILED;
+				};
+				break;
+			}
 			
-		}
-		else
-		{
-			/* 4 Bit integers must have a 4 bit alignment */
+			case U_INT_8:
+			{
+				*generator_infos->out_position = *((u_int8_t *)(generator_infos->data_struct + offset));
+				generator_infos->out_position++;
+				break;
+				
+			}
+			case U_INT_16:
+			{
+				u_int16_t int16_val = htons(*((u_int16_t*)(generator_infos->data_struct + offset)));
+				generator_infos->write_bytes_to_buffer(generator_infos,&int16_val,sizeof(u_int16_t));
+		
+				break;
+			}
+			case U_INT_32:
+			{
+				u_int32_t int32_val = htonl(*((u_int32_t*)(generator_infos->data_struct + offset)));			
+				generator_infos->write_bytes_to_buffer(generator_infos,&int32_val,sizeof(u_int32_t));
+				break;
+			}
+			case U_INT_64:
+			{
+				u_int32_t int32_val_low = htonl(*((u_int32_t*)(generator_infos->data_struct + offset)));
+				u_int32_t int32_val_high = htonl(*((u_int32_t*)(generator_infos->data_struct + offset) + 1));			
+				generator_infos->write_bytes_to_buffer(generator_infos,&int32_val_high,sizeof(u_int32_t));				
+				generator_infos->write_bytes_to_buffer(generator_infos,&int32_val_low,sizeof(u_int32_t));				
+				break;
+			}
+				
+			default:
 			return FAILED;
-		}
+			
 	}
+	
+
+	
+	
 	return SUCCESS;
 }
 
@@ -296,6 +372,7 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 	{
 		return OUT_OF_RES;
 	}
+
 
 	for (i = 0; i < encoding_rules_count;i++)
 	{
