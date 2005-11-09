@@ -40,6 +40,7 @@
 #include "tests/receiver_test.h"
 #include "tests/ike_sa_id_test.h"
 #include "tests/ike_sa_test.h"
+#include "tests/ike_sa_manager_test.h"
 #include "tests/generator_test.h"
 
 
@@ -113,6 +114,11 @@ test_t ike_sa_test = {test_ike_sa,"IKE_SA"};
 
 
 /**
+ * Test for ike_sa_manager_t
+ */
+test_t ike_sa_manager_test = {test_ike_sa_manager, "IKE_SA-Manager"};
+
+/**
  * Test for generator_t
  */
 test_t generator_test = {test_generator_with_unsupported_payload,"Generator: unsupported payload"};
@@ -156,6 +162,7 @@ socket_t *global_socket;
 	&ike_sa_id_test,
 	&ike_sa_test,
 	&generator_test,
+	&ike_sa_manager_test,
 	NULL
 	};
  	
