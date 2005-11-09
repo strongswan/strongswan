@@ -23,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../allocator.h"
 #include "sender_test.h"
 #include "../globals.h"
 #include "../receiver.h"
@@ -59,7 +60,7 @@ void test_receiver(tester_t *tester)
 	{
 		packet = packet_create(AF_INET);
 		packet->set_destination(packet,DESTINATION_IP,PORT_TO_SEND);
-		packet->data.ptr = allocator_alloc_thing(int, "packet data");
+		packet->data.ptr = allocator_alloc_thing(int);
 		packet->data.len = ( sizeof(int));
 		*((int *) (packet->data.ptr)) = i;
 		global_socket->send(global_socket,packet);

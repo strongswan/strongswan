@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../allocator.h"
 #include "socket_test.h"
 #include "../tester.h"
 #include "../socket.h"
@@ -39,7 +40,7 @@ void test_socket(tester_t *tester)
 	char *test_string = "Testing functionality of socket_t";
 
 
-	pkt->data.ptr = allocator_alloc(strlen(test_string) + 1,"test_string");
+	pkt->data.ptr = allocator_alloc(strlen(test_string) + 1);
 	memcpy(pkt->data.ptr,test_string,strlen(test_string) + 1);
 	pkt->data.len = strlen(test_string) + 1;
 

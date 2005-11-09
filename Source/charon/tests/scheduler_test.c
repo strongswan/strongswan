@@ -71,6 +71,7 @@ void test_scheduler(tester_t *tester)
 		usleep(100 * 1000);
 		global_event_queue->get_count(global_event_queue, &event_queue_size);
 		global_job_queue->get_count(global_job_queue, &job_queue_size);
+
 		tester->assert_true(tester, (job_queue_size == current + 1), "job-queue size after event");
 		tester->assert_true(tester, (event_queue_size == job_count - current - 1), "event-queue size after event");
 	}

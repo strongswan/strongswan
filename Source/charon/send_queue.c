@@ -22,6 +22,7 @@
 
  #include <pthread.h>
 
+#include "allocator.h"
  #include "send_queue.h"
  #include "linked_list.h"
 
@@ -149,7 +150,7 @@ send_queue_t *send_queue_create()
 		return NULL;
 	}
 
-	private_send_queue_t *this = allocator_alloc_thing(private_send_queue_t, "private_send_queue_t");
+	private_send_queue_t *this = allocator_alloc_thing(private_send_queue_t);
 	if (this == NULL)
 	{
 		linked_list->destroy(linked_list);

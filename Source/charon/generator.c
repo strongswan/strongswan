@@ -25,6 +25,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
 #include "types.h"
 #include "generator.h"
 
@@ -106,7 +107,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
  */
 static status_t generate (private_generator_t *this,void * data_struct,encoding_rule_t *encoding_rules, size_t encoding_rules_count, chunk_t *data)
 {
-	u_int8_t * buffer = allocator_alloc(GENERATOR_DATA_BUFFER_SIZE,  "generator buffer");
+	u_int8_t * buffer = allocator_alloc(GENERATOR_DATA_BUFFER_SIZE);
 	u_int8_t * out_position = buffer;
 	u_int8_t * roof_position = buffer + GENERATOR_DATA_BUFFER_SIZE;
 	size_t current_bit = 0;
@@ -188,7 +189,7 @@ generator_t * generator_create(payload_info_t ** payload_infos)
 		return NULL;
 	}
 
-	this = allocator_alloc_thing(private_generator_t,"private_generator_t");
+	this = allocator_alloc_thing(private_generator_t);
 	if (this == NULL)
 	{
 		return NULL;

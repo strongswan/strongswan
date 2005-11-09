@@ -26,6 +26,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
 #include "scheduler.h"
 #include "job_queue.h"
 #include "globals.h"
@@ -85,7 +86,7 @@ static status_t destroy(private_scheduler_t *this)
 
 scheduler_t * scheduler_create()
 {
-	private_scheduler_t *this = allocator_alloc_thing(private_scheduler_t,"private_scheduler_t");
+	private_scheduler_t *this = allocator_alloc_thing(private_scheduler_t);
 
 	this->public.destroy = (status_t(*)(scheduler_t*)) destroy;
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))scheduler_thread_function, this) != 0)

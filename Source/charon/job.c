@@ -25,6 +25,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
  #include "job.h"
 
  /**
@@ -41,7 +42,7 @@ static status_t job_destroy(job_t *job)
  */
 job_t *job_create(job_type_t type, void *assigned_data)
 {
-	job_t *this = allocator_alloc_thing(job_t, "job_t");
+	job_t *this = allocator_alloc_thing(job_t);
 
 	this->destroy = job_destroy;
 

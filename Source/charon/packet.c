@@ -20,6 +20,7 @@
  * for more details.
  */
 
+#include "allocator.h"
 #include "packet.h"
 
 
@@ -68,7 +69,7 @@ status_t set_source(packet_t *this, char *address, u_int16_t port)
 
 packet_t *packet_create(int family)
 {
-	packet_t *this = allocator_alloc_thing(packet_t, "packet_t");
+	packet_t *this = allocator_alloc_thing(packet_t);
 
 	this->destroy = destroy;
 	this->set_destination = set_destination;

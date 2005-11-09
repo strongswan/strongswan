@@ -26,7 +26,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-
+#include "allocator.h"
 #include "types.h"
 #include "event_queue.h"
 #include "linked_list.h"
@@ -85,7 +85,7 @@ static status_t event_destroy(event_t *event)
  */
 static event_t *event_create(timeval_t time, job_t *job)
 {
-	event_t *this = allocator_alloc_thing(event_t, "event_t");
+	event_t *this = allocator_alloc_thing(event_t);
 
 	this->destroy = event_destroy;
 
@@ -361,7 +361,7 @@ event_queue_t *event_queue_create()
 		return NULL;
 	}
 
-	private_event_queue_t *this = allocator_alloc_thing(private_event_queue_t, "private_event_queue_t");
+	private_event_queue_t *this = allocator_alloc_thing(private_event_queue_t);
 	if (this == NULL)
 	{
 		linked_list->destroy(linked_list);

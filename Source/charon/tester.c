@@ -29,6 +29,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 
+#include "allocator.h"
 #include "tester.h"
 #include "linked_list.h"
 #include "thread_pool.h"
@@ -179,7 +180,7 @@ static status_t destroy(tester_t *tester)
 
 tester_t *tester_create(FILE *output, bool display_succeeded_asserts)
 {
-	private_tester_t *this = allocator_alloc_thing(private_tester_t, "private_tester_t");
+	private_tester_t *this = allocator_alloc_thing(private_tester_t);
 
 	this->public.destroy = destroy;
 	this->public.perform_tests = perform_tests;

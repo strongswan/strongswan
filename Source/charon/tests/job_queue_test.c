@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include "../allocator.h"
 #include "job_queue_test.h"
 #include "../tester.h"
 #include "../job_queue.h"
@@ -63,7 +64,7 @@ static void test_job_queue_sender(job_queue_test_t * testinfo)
 	int i;
 	for (i = 0; i < testinfo->insert_item_count; i++)
 	{
-		int *value = allocator_alloc_thing(int,"int in test_job_queue_sender");
+		int *value = allocator_alloc_thing(int);
 		*value = i;
 		job_t *job = job_create(INCOMING_PACKET,value);
 		testinfo->job_queue->add(testinfo->job_queue,job);

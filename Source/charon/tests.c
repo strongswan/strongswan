@@ -149,9 +149,9 @@ socket_t *global_socket;
 	&job_queue_test1,
 	&event_queue_test,
 	&send_queue_test,
+	&scheduler_test,
 	&socket_test,
 	&sender_test,
-	&scheduler_test,
 	&receiver_test,
 	&ike_sa_id_test,
 	&ike_sa_test,
@@ -167,8 +167,8 @@ socket_t *global_socket;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-/*	tester->perform_tests(tester,all_tests);  */
-	tester->perform_test(tester,&thread_pool_test);  
+	tester->perform_tests(tester,all_tests);
+/*	tester->perform_test(tester,&scheduler_test);   */
  	
 	tester->destroy(tester);
 
@@ -180,8 +180,7 @@ socket_t *global_socket;
 	global_socket->destroy(global_socket);
 	
 #ifdef LEAK_DETECTIVE
-	/* Leaks are reported in log file */
-	report_leaks();
+	/* Leaks are reported on stderr */
 	report_memory_leaks();
 #endif
 	

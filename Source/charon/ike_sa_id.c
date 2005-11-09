@@ -26,6 +26,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
 #include "types.h"
 #include "ike_sa_id.h"
 
@@ -182,7 +183,7 @@ static status_t destroy (private_ike_sa_id_t *this)
  */
 ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi, ike_sa_role_t role)
 {
-	private_ike_sa_id_t *this = allocator_alloc_thing(private_ike_sa_id_t, "private_ike_sa_id_t");
+	private_ike_sa_id_t *this = allocator_alloc_thing(private_ike_sa_id_t);
 	if (this == NULL)
 	{
 		return NULL;

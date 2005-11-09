@@ -26,6 +26,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
 #include "receiver.h"
 #include "socket.h"
 #include "packet.h"
@@ -105,7 +106,7 @@ static status_t destroy(private_receiver_t *this)
 
 receiver_t * receiver_create()
 {
-	private_receiver_t *this = allocator_alloc_thing(private_receiver_t,"private_receiver_t");
+	private_receiver_t *this = allocator_alloc_thing(private_receiver_t);
 
 	this->public.destroy = (status_t(*)(receiver_t*)) destroy;
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))receiver_thread_function, this) != 0)

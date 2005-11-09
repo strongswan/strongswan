@@ -23,6 +23,7 @@
 #include <pthread.h>
 #include <string.h>
 
+#include "allocator.h"
 #include "ike_sa_manager.h"
 #include "linked_list.h"
 #include "ike_sa_id.h"
@@ -78,7 +79,7 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
  */
 ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 {
-	ike_sa_entry_t *this = allocator_alloc_thing(ike_sa_entry_t, "ike_sa_entry_t");
+	ike_sa_entry_t *this = allocator_alloc_thing(ike_sa_entry_t);
 
 	this->destroy = ike_sa_entry_destroy;
 	this->waiting_threads = 0;
@@ -512,7 +513,7 @@ static status_t destroy(private_ike_sa_manager_t *this)
 
 ike_sa_manager_t *ike_sa_manager_create()
 {
-	private_ike_sa_manager_t *this = allocator_alloc_thing(private_ike_sa_manager_t, "private_ike_sa_manager_t");
+	private_ike_sa_manager_t *this = allocator_alloc_thing(private_ike_sa_manager_t);
 
 	/* assign public functions */
 	this->public.destroy = (status_t(*)(ike_sa_manager_t*))destroy;

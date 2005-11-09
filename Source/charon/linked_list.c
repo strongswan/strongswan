@@ -25,6 +25,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
 #include "linked_list.h"
 
 
@@ -87,7 +88,7 @@ static status_t linked_list_element_destroy(linked_list_element_t *this)
 
 linked_list_element_t *linked_list_element_create(void *value)
 {
-	linked_list_element_t *this = allocator_alloc_thing(linked_list_element_t, "linked_list_element_t");
+	linked_list_element_t *this = allocator_alloc_thing(linked_list_element_t);
 
 	if (this == NULL)
 	{
@@ -252,7 +253,7 @@ static status_t get_count(private_linked_list_t *this, int *count)
 
 static status_t create_iterator (private_linked_list_t *linked_list, linked_list_iterator_t **iterator,bool forward)
 {
-	private_linked_list_iterator_t *this = allocator_alloc_thing(private_linked_list_iterator_t, "private_linked_list_iterator_t");
+	private_linked_list_iterator_t *this = allocator_alloc_thing(private_linked_list_iterator_t);
 
 	if (this == NULL)
 	{
@@ -682,7 +683,7 @@ static status_t linked_list_destroy(private_linked_list_t *this)
  */
 linked_list_t *linked_list_create()
 {
-	private_linked_list_t *this = allocator_alloc_thing(private_linked_list_t, "private_linked_list_t");
+	private_linked_list_t *this = allocator_alloc_thing(private_linked_list_t);
 
 	this->public.get_count = (status_t (*) (linked_list_t *linked_list, int *count)) get_count;
 	this->public.create_iterator = (status_t (*) (linked_list_t *linked_list, linked_list_iterator_t **iterator,bool forward)) create_iterator;

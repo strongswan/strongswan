@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#include "../allocator.h"
 #include "event_queue_test.h"
 #include "../tester.h"
 #include "../event_queue.h"
@@ -76,7 +77,7 @@ static void event_queue_insert_thread(event_queue_test_t * testinfos)
 	{
 		for (j = 0; j < testinfos->entries_per_time;j++)
 		{
-			int *value = allocator_alloc_thing(int, "value");
+			int *value = allocator_alloc_thing(int);
 			*value = i;
 			job = job_create(INCOMING_PACKET,value);
 			time.tv_usec = 0;

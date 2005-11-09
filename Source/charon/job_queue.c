@@ -26,6 +26,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
 #include "job_queue.h"
 #include "linked_list.h"
 
@@ -149,7 +150,7 @@ job_queue_t *job_queue_create()
 		return NULL;
 	}
 
-	private_job_queue_t *this = allocator_alloc_thing(private_job_queue_t, "private_job_queue_t");
+	private_job_queue_t *this = allocator_alloc_thing(private_job_queue_t);
 	if (this == NULL)
 	{
 		linked_list->destroy(linked_list);

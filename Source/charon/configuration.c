@@ -26,6 +26,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
 #include "types.h"
 #include "configuration.h"
 
@@ -64,7 +65,7 @@ static status_t destroy (private_configuration_t *this)
  */
 configuration_t * configuration_create()
 {
-	private_configuration_t *this = allocator_alloc_thing(private_configuration_t, "private_configuration_t");
+	private_configuration_t *this = allocator_alloc_thing(private_configuration_t);
 	if (this == NULL)
 	{
 		return NULL;

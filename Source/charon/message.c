@@ -25,6 +25,7 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
 #include "types.h"
 #include "message.h"
 
@@ -63,7 +64,7 @@ static status_t destroy (private_message_t *this)
  */
 message_t * message_create()
 {
-	private_message_t *this = allocator_alloc_thing(private_message_t, "private_message_t");
+	private_message_t *this = allocator_alloc_thing(private_message_t);
 	if (this == NULL)
 	{
 		return NULL;

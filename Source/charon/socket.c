@@ -22,8 +22,6 @@
  * for more details.
  */
 
-#include "socket.h"
-
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -34,6 +32,8 @@
 #include <pluto/constants.h>
 #include <pluto/defs.h>
 
+#include "allocator.h"
+#include "socket.h"
 
 typedef struct private_socket_s private_socket_t;
 
@@ -83,7 +83,7 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	}
 
 	/* fill in packet */
-	pkt->data.ptr = allocator_alloc(pkt->data.len, "data in packet_t");
+	pkt->data.ptr = allocator_alloc(pkt->data.len);
 	memcpy(pkt->data.ptr, buffer, pkt->data.len);
 
 	/* return packet */
@@ -124,7 +124,7 @@ status_t destroy(private_socket_t *this)
 
 socket_t *socket_create(u_int16_t port)
 {
-	private_socket_t *this = allocator_alloc_thing(private_socket_t, "private_socket_t");
+	private_socket_t *this = allocator_alloc_thing(private_socket_t);
 	struct sockaddr_in addr;
 
 	/* public functions */

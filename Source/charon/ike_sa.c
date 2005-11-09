@@ -21,6 +21,7 @@
  * for more details.
  */
 
+#include "allocator.h"
 #include "types.h"
 #include "linked_list.h"
 #include "ike_sa.h"
@@ -145,7 +146,7 @@ static status_t destroy (private_ike_sa_t *this)
  */
 ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 {
-	private_ike_sa_t *this = allocator_alloc_thing(private_ike_sa_t, "private_ike_sa_t");
+	private_ike_sa_t *this = allocator_alloc_thing(private_ike_sa_t);
 	if (this == NULL)
 	{
 		return NULL;
