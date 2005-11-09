@@ -27,6 +27,11 @@
 #include "encodings.h"
 
 /**
+ * Data Buffer for generating has start size of 3000 Bytes
+ */
+#define GENERATOR_DATA_BUFFER_SIZE 3000
+
+/**
  * @brief A generator_t-object which generates payloads of specific type
  */
 typedef struct generator_s generator_t;
@@ -42,7 +47,9 @@ struct generator_s {
 	 * @param payload_type payload type to generate using the given data struct
 	 * @param[in] data_struct Data struct where the needed data for generating are stored
 	 * @param[out] output pointer to a chunk_t where the data are generated to
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @return SUCCESSFUL if succeeded,
+	 * 		   NOT_SUPPORTED if payload_type is not supported
+	 * 		   OUT_OF_RES if out of ressources
 	 */
 	status_t (*generate_payload) (generator_t *this,payload_type_t payload_type,void * data_struct, chunk_t *data);
 
@@ -55,6 +62,12 @@ struct generator_s {
 	status_t (*destroy) (generator_t *this);
 };
 
-generator_t * generator_create();
+/**
+ * Constructor to create a generator
+ * 
+ * @param payload_infos	pointer to the payload_info_t-array containing
+ * all the payload informations needed to automatic generate a specific payload
+ */
+generator_t * generator_create(payload_info_t ** payload_infos);
 
 #endif /*GENERATOR_H_*/
