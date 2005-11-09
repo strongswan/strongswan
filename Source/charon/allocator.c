@@ -32,99 +32,108 @@
 
 #ifdef LEAK_DETECTIVE
 
+typedef union memory_hdr_u memory_hdr_t;
 
-union mhdr {
+union memory_hdr_u {
     struct {
-	const char *file;
+	const char *filename;
 	size_t line;
-	size_t length;
-	union mhdr *older, *newer;
-    } i;    /* info */
+	size_t size_of_memory;
+	memory_hdr_t *older, *newer;
+    } info;    /* info */
     unsigned long junk;	/* force maximal alignment */
 };
 
-static union mhdr *allocs = NULL;
-
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+/**
+ * global list of allocations
+ * 
+ * thread-save through mutex
+ */
+static memory_hdr_t *allocations = NULL;
 
 /**
- * Allocates memory with LEAK_DETECTION and returns an empty data area filled with zeros
- * 
- * use this function not directly, only with assigned macros
+ * Mutex to ensure, all functions are thread-save
+ */
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/*
+ * described in header
  */ 
 void * allocate(size_t bytes, char * file,int line)
 {
-    union mhdr *p = malloc(sizeof(union mhdr) + bytes);
+    memory_hdr_t *allocated_memory = malloc(sizeof(memory_hdr_t) + bytes);
 
-    if (p == NULL)
+    if (allocated_memory == NULL)
     {
-		return p;
+		return allocated_memory;
     }
+    
     pthread_mutex_lock( &mutex);
-    p->i.line = line;
-    p->i.file = file;
-    p->i.length = bytes;
-    p->i.older = allocs;
-    if (allocs != NULL)
-	allocs->i.newer = p;
-    allocs = p;
-    p->i.newer = NULL;
+    
+    allocated_memory->info.line = line;
+    allocated_memory->info.filename = file;
+    allocated_memory->info.size_of_memory = bytes;
+    allocated_memory->info.older = allocations;
+    if (allocations != NULL)
+    {
+		allocations->info.newer = allocated_memory;
+    }
+    allocations = allocated_memory;
+    allocated_memory->info.newer = NULL;
 
-    memset(p+1, '\0', bytes);
+	/* fill memory with zero's */
+    memset(allocated_memory+1, '\0', bytes);
     pthread_mutex_unlock( &mutex);
-    return p+1;
+    /* real memory starts after header */
+    return (allocated_memory+1);
 }
 
-/**
- * Frees memory with LEAK_DETECTION
- * 
- * use this function not directly, only with assigned macros
+/*
+ * described in header
  */ 
 void free_pointer(void * pointer)
 {
-    union mhdr *p;
+    memory_hdr_t *allocated_memory;
 
     if (pointer == NULL)
     {
 	    	return;	
     }
 	pthread_mutex_lock( &mutex);
-    p = ((union mhdr *)pointer) - 1;
+    allocated_memory = ((memory_hdr_t *)pointer) - 1;
 
-    if (p->i.older != NULL)
+    if (allocated_memory->info.older != NULL)
     {
-	assert(p->i.older->i.newer == p);
-	p->i.older->i.newer = p->i.newer;
+		assert(allocated_memory->info.older->info.newer == allocated_memory);
+		allocated_memory->info.older->info.newer = allocated_memory->info.newer;
     }
-    if (p->i.newer == NULL)
+    if (allocated_memory->info.newer == NULL)
     {
-	assert(p == allocs);
-	allocs = p->i.older;
+		assert(allocated_memory == allocations);
+		allocations = allocated_memory->info.older;
     }
     else
     {
-	assert(p->i.newer->i.older == p);
-	p->i.newer->i.older = p->i.older;
+		assert(allocated_memory->info.newer->info.older == allocated_memory);
+		allocated_memory->info.newer->info.older = allocated_memory->info.older;
     }
     pthread_mutex_unlock( &mutex);
-    free(p);
+    free(allocated_memory);
 }
 
-/**
- * Reallocates memory with LEAK_DETECTION
- * 
- * use this function not directly, only with assigned macros
+/*
+ * described in header
  */ 
 void * reallocate(void * old, size_t bytes, char * file,int line)
 {
-    union mhdr *p;
+    memory_hdr_t *allocated_memory;
 
     if (old == NULL)
     {
 	    	return NULL;
     }
 	pthread_mutex_lock( &mutex);
-    p = ((union mhdr *)old) - 1;
+    allocated_memory = ((memory_hdr_t *)old) - 1;
     
 	void *new_space = allocate(bytes,file,line);
 	if (new_space == NULL)
@@ -134,37 +143,35 @@ void * reallocate(void * old, size_t bytes, char * file,int line)
 		return NULL;
 	}
 	
-	memcpy(new_space,old,p->i.length);
+	memcpy(new_space,old,allocated_memory->info.size_of_memory);
     pthread_mutex_unlock( &mutex);
 	
 	return new_space;
 }
 
 
-/**
- * Reports memory-leaks
- * 
+/*
+ * described in header
  */ 
 void report_memory_leaks(void)
 {
-    union mhdr
-	*p = allocs,
-	*pprev = NULL;
+    memory_hdr_t *p = allocations,
+    				 *pprev = NULL;
     unsigned long n = 0;
 	pthread_mutex_lock( &mutex);
 
     while (p != NULL)
     {
-	assert(pprev == p->i.newer);
+	assert(pprev == p->info.newer);
 	pprev = p;
-	p = p->i.older;
+	p = p->info.older;
 	n++;
-	if (p == NULL || pprev->i.file != p->i.file)
+	if (p == NULL || pprev->info.filename != p->info.filename)
 	{
 	    if (n != 1)
-		fprintf(stderr,"leak: %lu * File %s, Line %d\n", n, pprev->i.file,pprev->i.line);
+		fprintf(stderr,"leak: %lu * File %s, Line %d\n", n, pprev->info.filename,pprev->info.line);
 	    else
-		fprintf(stderr,"leak: File %s, Line %d\n", pprev->i.file,pprev->i.line);
+		fprintf(stderr,"leak: File %s, Line %d\n", pprev->info.filename,pprev->info.line);
 	    n = 0;
 	}
     }

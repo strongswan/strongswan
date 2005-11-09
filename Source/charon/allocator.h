@@ -26,16 +26,60 @@
 
 #include <stddef.h>
 
+
+/**
+ * Function to allocate a special type
+ * 
+ * @param thing object on it a sizeof is performed
+ */
 #define allocator_alloc_thing(thing) (allocator_alloc(sizeof(thing)))
 
 #ifdef LEAK_DETECTIVE
+	/**
+	 * Allocates memory with LEAK_DETECTION and 
+	 * returns an empty data area filled with zeros
+	 * 
+	 * @warning use this function not directly, only with assigned macros 
+	 * allocator_alloc and allocator_alloc_thing
+	 * 
+	 * @param bytes number of bytes to allocate
+	 * @param file filename from which the memory is allocated
+	 * @param line line number in specific file
+	 * @return allocated memory area
+	 */ 
 	void * allocate(size_t bytes, char * file,int line);
+
+	/**
+	 * Reallocates memory with LEAK_DETECTION and 
+	 * returns an empty data area filled with zeros
+	 * 
+	 * @warning use this function not directly, only with assigned macro 
+	 * allocator_realloc
+	 * 
+	 * @param old pointer to the old data area
+	 * @param bytes number of bytes to allocate
+	 * @param file filename from which the memory is allocated
+	 * @param line line number in specific file
+	 * @return reallocated memory area
+	 */ 
 	void * reallocate(void * old, size_t bytes, char * file, int line);
+	/**
+	 * Frees memory with LEAK_DETECTION
+	 * 
+	 * @warning use this function not directly, only with assigned macro 
+	 * allocator_free
+	 * 
+	 * @param pointer pointer to the data area to free
+	 */ 
 	void free_pointer(void * pointer);
 
 	#define allocator_alloc(bytes) (allocate(bytes,__FILE__,__LINE__))
 	#define allocator_realloc(old,bytes) (reallocate(old,bytes,__FILE__, __LINE__))
 	#define allocator_free(pointer) (free_pointer(pointer))
+
+	/**
+	 * Report memory leaks to stderr
+	 */
 	void report_memory_leaks(void);
 #else
 	#define allocator_alloc(bytes) (malloc(bytes))
