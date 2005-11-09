@@ -350,10 +350,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			return FAILED;
 			
 	}
-	
 
-	
-	
 	return SUCCESS;
 }
 
@@ -379,6 +376,7 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 		status = SUCCESS;
 		switch (encoding_rules[i].type)
 		{
+			/* all u int values are generated in generate_u_int_type */
 			case U_INT_4:
 			case U_INT_8:
 			case U_INT_16:
@@ -387,10 +385,51 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 				status = this->generate_u_int_type(this,encoding_rules[i].type,encoding_rules[i].offset,infos);
 				break;
 			case RESERVED_BIT:
+			{
+				u_int8_t reserved_bit = ~(1 << (7 - infos->current_bit));
+				
+				*(infos->out_position) = *(infos->out_position) & reserved_bit;
+				
+				infos->current_bit++;
+				if (infos->current_bit >= 8)
+				{
+					infos->current_bit = infos->current_bit % 8;
+					status = infos->make_space_available(infos,8);
+					infos->out_position++;
+				}
+				break;
+			}
 			case RESERVED_BYTE:
+			{
+				if (infos->current_bit > 0)
+				{
+					return FAILED;
+				}
+				*(infos->out_position) = 0x00;
+				infos->out_position++;
+				break;
+			}
 			case FLAG:
+			{
+				u_int8_t flag_value = (*((bool *) (infos->data_struct + encoding_rules[i].offset))) ? 1 : 0;
+				u_int8_t flag = (flag_value << (7 - infos->current_bit));
+				
+				*(infos->out_position) = *(infos->out_position) | flag;
+				
+				infos->current_bit++;
+				if (infos->current_bit >= 8)
+				{
+					infos->current_bit = infos->current_bit % 8;
+					status = infos->make_space_available(infos,8);
+					infos->out_position++;
+				}
+				break;
+			}
 			case LENGTH:
+				/* length is generated like an U_INT_32 */
+				status = this->generate_u_int_type(this,U_INT_32,encoding_rules[i].offset,infos);
 			case SPI_SIZE:
+				/* actually not implemented */
 			default:
 				break;
 		}
