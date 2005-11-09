@@ -121,7 +121,12 @@ test_t ike_sa_manager_test = {test_ike_sa_manager, "IKE_SA-Manager"};
 /**
  * Test for generator_t
  */
-test_t generator_test = {test_generator_with_unsupported_payload,"Generator: unsupported payload"};
+test_t generator_test1 = {test_generator_with_unsupported_payload,"Generator: unsupported payload"};
+
+/**
+ * Test 2 for generator_t
+ */
+test_t generator_test2 = {test_generator_with_header_payload,"Generator: header payload"};
 
 /**
  * Global job-queue
@@ -161,7 +166,8 @@ socket_t *global_socket;
 	&receiver_test,
 	&ike_sa_id_test,
 	&ike_sa_test,
-	&generator_test,
+	&generator_test1,
+	&generator_test2,
 	&ike_sa_manager_test,
 	NULL
 	};
@@ -174,8 +180,8 @@ socket_t *global_socket;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	tester->perform_tests(tester,all_tests);
-/*	tester->perform_test(tester,&scheduler_test);   */
+	/*tester->perform_tests(tester,all_tests);*/
+	tester->perform_test(tester,&generator_test2);   
  	
 	tester->destroy(tester);
 

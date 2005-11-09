@@ -76,7 +76,11 @@
 	#define allocator_alloc(bytes) (allocate(bytes,__FILE__,__LINE__))
 	#define allocator_realloc(old,bytes) (reallocate(old,bytes,__FILE__, __LINE__))
 	#define allocator_free(pointer) (free_pointer(pointer))
-
+	#define allocator_free_chunk(chunk){	\
+		free_pointer(chunk.ptr);			\
+		chunk.ptr = NULL;				\
+		chunk.len = 0;					\
+	}
 	/**
 	 * Report memory leaks to stderr
 	 */
@@ -85,6 +89,11 @@
 	#define allocator_alloc(bytes) (malloc(bytes))
 	#define allocator_realloc(old,bytes) (realloc(old,bytes))
 	#define allocator_free(pointer) (free(pointer))
+	#define allocator_free_chunk(chunk){	\
+		free(chunk.ptr);					\
+		chunk.ptr = NULL;				\
+		chunk.len = 0;					\
+	}
 	#define report_memory_leaks(void) {}
 #endif
 

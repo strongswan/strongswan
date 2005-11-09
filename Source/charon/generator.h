@@ -32,6 +32,11 @@
 #define GENERATOR_DATA_BUFFER_SIZE 3000
 
 /**
+ * Number of Bytes to increase the buffer if it is to small
+ */
+#define GENERATOR_DATA_BUFFER_INCREASE_VALUE 1000
+
+/**
  * @brief A generator_t-object which generates payloads of specific type
  */
 typedef struct generator_s generator_t;
