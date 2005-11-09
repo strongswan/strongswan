@@ -275,4 +275,36 @@ enum payload_type_e{
 	HEADER = 140
 };
 
+/**
+ * Information of a specific payload are stored in this struct
+ * 
+ * The following informations are needed for each payload
+ * - payload type 
+ * - length of its associated data struct in bytes
+ * - encoding rules array
+ * - encoding rules count
+ */
+typedef struct payload_info_s payload_info_t;
+
+struct payload_info_s{
+	/**
+	 * Type of payload 
+	 */
+	payload_type_t payload_type;
+	/**
+	 * Length of associated data struct in bytes
+	 */
+	size_t data_struct_length;
+	
+	/**
+	 * Pointer to the encoding rules array
+	 */
+	encoding_rule_t *ecoding_rules;
+	
+	/**
+	 * Number of encoding rules for the specific payload_type
+	 */
+	size_t encoding_rules_count;
+};
+
 #endif /*ENCODINGS_H_*/
