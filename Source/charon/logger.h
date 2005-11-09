@@ -25,41 +25,84 @@
 
 #include "types.h"
 
-
+/**
+ * Log Levels supported by the logger object
+ */
 typedef enum logger_level_e logger_level_t;
+
 enum logger_level_e {
+	/**
+	 * basic control messages
+	 */
 	CONTROL = 1,
+	/**
+	 * detailed control messages
+	 */
 	CONTROL_MORE = 2,
+	/**
+	 * raw data dumps not containing private data
+	 */
 	RAW = 4,
+	/**
+	 * private data dumps
+	 */
 	PRIVATE = 8
 };
-
-
-
 
 /**
  * @brief The logger object
  */
 typedef struct logger_s logger_t;
-struct logger_s { 	
-	status_t (*log) (logger_t *this, logger_level_t loglevel, char *format, ...);
+struct logger_s { 
 	
+	/**
+	 * loggs an entry
+	 * 
+	 * function is used like printf
+	 * 
+	 * @param this logger_t-object
+	 * @param loglevel loglevel of specific log entry
+	 * @param format printf like format string
+	 * @param ... printf like parameters 
+	 * @return SUCCESS
+	 */
+	status_t (*log) (logger_t *this, logger_level_t log_level, char *format, ...);
+
+	/**
+	 * enables a loglevel for the current logger_t-object
+	 * 
+	 * @param this logger_t-object
+	 * @param log_level loglevel to enable
+	 * @return SUCCESS
+	 */
 	status_t (*enable_level) (logger_t *this, logger_level_t log_level);
-	
+
+	/**
+	 * disables a loglevel for the current logger_t-object
+	 * 
+	 * @param this logger_t-object
+	 * @param log_level loglevel to disable
+	 * @return SUCCESS
+	 */	
 	status_t (*disable_level) (logger_t *this, logger_level_t log_level);
 	
 	/**
-	 * @brief Destroys a generator object
+	 * @brief destroys a logger_t object
 	 * 
-	 * @param generator generator object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param this logger_t object
+	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*destroy) (logger_t *this);
 };
 
 /**
- * Constructor to create a logger
+ * Constructor to create a logger_t-object
  * 
+ * @param logger_name Name for the logger_t-object
+ * @param file FILE pointer to write the log-messages to. If NULL
+ * 		  syslogger is used.
+ * @param log_level to assign to the new logger_t-object
+ * @return logger_t-object or NULL if failed
  */
 logger_t *logger_create(char *logger_name, char *file, logger_level_t log_level);
 

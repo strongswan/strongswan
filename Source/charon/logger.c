@@ -55,7 +55,10 @@ struct private_logger_s {
 };
 
 
-
+/**
+ * implements logger_t-function log
+ * 
+ */
 static status_t logg(private_logger_t *this, logger_level_t loglevel, char *format, ...)
 {
 	if ((this->level & loglevel) == loglevel)
@@ -78,19 +81,31 @@ static status_t logg(private_logger_t *this, logger_level_t loglevel, char *form
 	
 	return SUCCESS;
 }
-	
+
+/**
+ * implements logger_t-function enable_level
+ * 
+ */
 static status_t enable_level(private_logger_t *this, logger_level_t log_level)
 {
 	this->level |= log_level;
 	return SUCCESS;
 }
-	
+
+/**
+ * implements logger_t-function disable_level
+ * 
+ */
 static status_t disable_level(private_logger_t *this, logger_level_t log_level)
 {
 	this->level &= (~log_level);
 	return SUCCESS;
 }
-	
+
+/**
+ * implements logger_t-function destroy
+ * 
+ */	
 static status_t destroy(private_logger_t *this)
 {
 	if (this->target)
@@ -101,7 +116,10 @@ static status_t destroy(private_logger_t *this)
 	return SUCCESS;
 }
 
-
+/*
+ * Described in Header
+ * 
+ */	
 logger_t *logger_create(char *logger_name, char *file, logger_level_t log_level)
 {
 	private_logger_t *this = allocator_alloc_thing(private_logger_t);
@@ -137,5 +155,3 @@ logger_t *logger_create(char *logger_name, char *file, logger_level_t log_level)
 	
 	return (logger_t*)this;
 }
-
-
