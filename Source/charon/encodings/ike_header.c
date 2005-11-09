@@ -61,3 +61,11 @@ encoding_rule_t ike_header_encodings[] = {
  	/* 4 Byte length fied, stored in the field length */
 	{ LENGTH,		offsetof(ike_header_t, length) 			}
 };
+
+/** 
+ * This informations are needed for autmatic parsing of header content
+ */
+payload_info_t ike_header_info = {HEADER, 
+								  sizeof(ike_header_t),
+								  ike_header_encodings,
+								  (sizeof(ike_header_encodings)/sizeof(encoding_rule_t))};
