@@ -65,16 +65,19 @@ static status_t perform_tests(tester_t *tester,test_t **tests)
 {
 	private_tester_t *this =(private_tester_t*) tester;
 	int current_test = 0;
-	fprintf(this->output,"Start testing\n");
+	fprintf(this->output,"\nStart testing...\n\n");
+	fprintf(this->output,"_____________________________________________________________________\n");
+	fprintf(this->output,"Testname                                               | running time\n");
+	fprintf(this->output,"_______________________________________________________|_____________\n");
 
 	while (tests[current_test] != NULL)
 	{
 		this->run_test(tester,tests[current_test]->test_function,tests[current_test]->test_name);
 		current_test++;
 	}
-
+	fprintf(this->output,"=====================================================================\n");
 	fprintf(this->output,"End testing. %d of %d tests succeeded\n",this->tests_count - this->failed_tests_count,this->tests_count);
-
+	fprintf(this->output,"=====================================================================\n");
 	return SUCCESS;
 }
 
@@ -119,13 +122,19 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
 	private_tester_t *this = (private_tester_t *) tester;
 	this->tests_count++;
 	this->failed_asserts_count = 0;
-	fprintf(this->output,"Start Test '%s'\n", test_name);
+	fprintf(this->output,"%-55s", test_name);
 	gettimeofday(&start_time,NULL);
 	test_function(tester);
 	gettimeofday(&end_time,NULL);
 	timediff = time_difference(&end_time, &start_time);
 
-	fprintf(this->output,"End Test '%s' in %ld microseconds\n", test_name,timediff);
+	if (this->failed_asserts_count > 0)
+	{
+		fprintf(this->output,"FAILED: %-47s|%10ld ms\n",test_name,timediff);
+	}else
+	{
+		fprintf(this->output,"|%10ld ms\n",timediff);
+	}
 	if (this->failed_asserts_count > 0)
 	{
 		this->failed_tests_count++;
@@ -148,12 +157,12 @@ static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
 	if (!to_be_true)
 	{
 		this->failed_asserts_count++;
-		fprintf(this->output,"  Assert '%s' failed!\n", assert_name);
+		fprintf(this->output,"  check '%s' failed!\n", assert_name);
 	}else
 	{
 		if (this->display_succeeded_asserts)
 		{
-			fprintf(this->output,"  Assert '%s' succeeded\n", assert_name);
+			fprintf(this->output,"  check '%s' succeeded\n", assert_name);
 		}
 	}
 	pthread_mutex_unlock(&(this->mutex));
