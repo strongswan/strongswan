@@ -30,62 +30,91 @@
 
 
 /**
- * Uused for geneartor operations
+ * Used for generator operations internaly to store a generator context.
  */
 typedef struct generator_infos_s generator_infos_t;
 
 struct generator_infos_s {
 
 	/**
-	 * Buffer used to generate to
+	 * Buffer used to generate the data into.
 	 */
 	u_int8_t *buffer;
 
 	/**
-	 * current write position in buffer (one byte alligned)
+	 * Current write position in buffer (one byte aligned).
 	 */
 	u_int8_t *out_position;
 
 	/**
-	 * position of last byte in buffer
+	 * Position of last byte in buffer.
 	 */
 	u_int8_t *roof_position;
 
 	/**
-	 * Current bit writing to
+	 * Current bit writing to in current byte (between 0 and 7).
 	 */
 	size_t current_bit;
 
 	/**
-	 * Associated data struct to read informations from
+	 * Associated data struct to read informations from.
 	 */
 	 void * data_struct;
+
 	/**
-	 * @brief Destroys a generator_infos_t object
+	 * @brief Destroys a generator_infos_t object and its containing buffer
 	 *
 	 * @param generator_infos_t generator_infos_t object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @return 					always SUCCESSFUL
 	 */
 	status_t (*destroy) (generator_infos_t *this);
 
 	/**
-	 * Checks if enough space is available in buffer and if not,
-	 * the buffer size is increased until at least the asked amount of space
-	 * is available
+	 * Makes sure enough space is available in buffer to store amount of bits.
+     *
+	 * If buffer is to small to hold the specific amount of bits it 
+	 * is increased using reallocation function of allocator.
 	 *
-	 * @param bits number of bits to make at leas available in buffer
- 	 * @param generator_infos_t generator_infos_t object
-	 * @return SUCCESSFUL if succeeded, OUT_OF_RES otherwise
+ 	 * @param generator_infos_t calling generator_infos_t object
+	 * @param bits 				number of bits to make available in buffer
+	 * @return 
+	 * 							- SUCCESSFUL if succeeded
+	 * 							- OUT_OF_RES otherwise
 	 */
 	status_t (*make_space_available) (generator_infos_t *this,size_t bits);
 
+	/**
+	 * Writes a specific amount of byte into the buffer.
+	 * 
+	 * If buffer is to small to hold the specific amount of bytes it 
+	 * is increased.
+	 *
+ 	 * @param generator_infos_t calling generator_infos_t object
+	 * @param bytes 				pointer to bytes to write
+	 * @param number_of_bytes	number of bytes to write into buffer
+	 * @return 
+	 * 							- SUCCESSFUL if succeeded
+	 * 							- OUT_OF_RES otherwise
+	 */
 	status_t (*write_bytes_to_buffer) (generator_infos_t *this,void * bytes,size_t number_of_bytes);
 
+	/**
+	 * Writes the current buffer content into a chunk_t
+	 * 
+	 * Memory of specific chunk_t gets allocated.
+	 *
+ 	 * @param generator_infos_t calling generator_infos_t object
+	 * @param data				pointer of chunk_t to write to
+	 * @return 
+	 * 							- SUCCESSFUL if succeeded
+	 * 							- OUT_OF_RES otherwise
+	 */
 	status_t (*write_chunk) (generator_infos_t *this,chunk_t *data);
 };
 
 /**
- * implements generator_infos_t's increase_buffer function
+ * Implements generator_infos_t's increase_buffer function.
+ * See #generator_infos_s.increase_buffer.
  */
 static status_t generator_info_make_space_available (generator_infos_t *this, size_t bits)
 {
@@ -112,6 +141,10 @@ static status_t generator_info_make_space_available (generator_infos_t *this, si
 	return SUCCESS;
 }
 
+/**
+ * Implements generator_infos_t's write_bytes_to_buffer function.
+ * See #generator_infos_s.write_bytes_to_buffer.
+ */
 static status_t generator_info_write_bytes_to_buffer (generator_infos_t *this,void * bytes,size_t number_of_bytes)
 {
 	u_int8_t *read_position = (u_int8_t *) bytes;
@@ -134,6 +167,10 @@ static status_t generator_info_write_bytes_to_buffer (generator_infos_t *this,vo
 	return status;
 }
 
+/**
+ * Implements generator_infos_t's write_chunk function.
+ * See #generator_infos_s.write_chunk.
+ */
 static status_t generator_infos_write_chunk (generator_infos_t *this,chunk_t *data)
 {
 	size_t data_length = this->out_position - this->buffer;
@@ -151,12 +188,12 @@ static status_t generator_infos_write_chunk (generator_infos_t *this,chunk_t *da
 }
 
 
+/**
+ * Implements generator_infos_t's destroy function.
+ * See #generator_infos_s.destroy.
+ */
 static status_t generator_infos_destroy (generator_infos_t *this)
 {
-	if (this == NULL)
-	{
-		return FAILED;
-	}
 	allocator_free(this->buffer);
 	allocator_free(this);
 	return SUCCESS;
@@ -164,9 +201,12 @@ static status_t generator_infos_destroy (generator_infos_t *this)
 
 /**
  * Creates a generator_infos_t object holding necessary informations
- * for generating (buffer, data_struct, etc)
+ * for generating (buffer, data_struct, etc).
  *
- * @param data_struct where to read the data out
+ * @param data_struct 	data struct where the specific payload informations are stored
+ * @return 				
+ * 						- pointer to created generator_infos_t object
+ * 						- NULL if memory allocation failed
  */
 generator_infos_t * generator_infos_create(void *data_struct)
 {
@@ -202,36 +242,45 @@ generator_infos_t * generator_infos_create(void *data_struct)
 
 
 /**
- * Private data of a generator_t object
+ * Private part of a generator_t object
  */
 typedef struct private_generator_s private_generator_t;
 
 struct private_generator_s {
 	/**
-	 * Public part of a generator object
+	 * Public part of a generator_t object
 	 */
 	 generator_t public;
 
 	/* private functions and fields */
 
 	/**
-	 * Generates a chunk_t with specific encoding rules
+	 * Generates a chunk_t with specific encoding rules.
 	 *
-	 * items are bytewhise written
+	 * Iems are bytewhise written.
 	 *
-	 * @param this private_generator_t object
-	 * @param data_struct data_struct to read data from
-	 * @param encoding_rules pointer to first encoding_rule of encoding rules array
-	 * @param encoding_rules_count number of encoding rules in encoding rules array
-	 * @param data pointer to chunk where to write the data in
+	 * @param this 					private_generator_t object
+	 * @param data_struct 			data_struct to read data from
+	 * @param encoding_rules 		pointer to first encoding_rule 
+	 * 								of encoding rules array
+	 * @param encoding_rules_count 	number of encoding rules 
+	 * 								in encoding rules array
+	 * @param data 					pointer to chunk_t where to write the data in
 	 *
-	 * @return SUCCESS if succeeded,
- 	 * 		   OUT_OF_RES if out of ressources
+	 * @return 						- SUCCESS if succeeded
+	 * 		  						- OUT_OF_RES if out of ressources
 	 */
 	status_t (*generate) (private_generator_t *this,void * data_struct,encoding_rule_t *encoding_rules, size_t encoding_rules_count, chunk_t *data);
 
 	/**
-	 * TODO
+	 * Generates a U_INT-Field type
+	 *
+	 * @param this 					private_generator_t object
+	 * @param int_type 				type of U_INT field (U_INT_4, U_INT_8, etc.)
+	 * @param offset 				offset of value in data struct
+	 * @param generator_infos		generator_infos_t object where the context is written or read from
+	 * @return 						- SUCCESS if succeeded
+	 * 		  						- OUT_OF_RES if out of ressources
 	 */
 	status_t (*generate_u_int_type) (private_generator_t *this,encoding_type_t int_type,u_int32_t offset, generator_infos_t *generator_infos);
 
@@ -243,7 +292,8 @@ struct private_generator_s {
 };
 
 /**
- * implements private_generator_t's double_buffer function
+ * Implements private_generator_t's generate_u_int_type function.
+ * See #private_generator_s.generate_u_int_type.
  */
 static status_t generate_u_int_type (private_generator_t *this,encoding_type_t int_type,u_int32_t offset,generator_infos_t *generator_infos)
 {
@@ -352,7 +402,8 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 }
 
 /**
- * implements private_generator_t's generate function
+ * Implements private_generator_t's generate function.
+ * See #private_generator_s.generate.
  */
 static status_t generate (private_generator_t *this,void * data_struct,encoding_rule_t *encoding_rules, size_t encoding_rules_count, chunk_t *data)
 {
@@ -444,6 +495,10 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 	return status;
 }
 
+/**
+ * Implements generator_t's generate_payload function.
+ * See #generator_s.generate_payload.
+ */
 static status_t generate_payload (private_generator_t *this,payload_type_t payload_type,void * data_struct, chunk_t *data)
 {
 	int i;
@@ -461,15 +516,11 @@ static status_t generate_payload (private_generator_t *this,payload_type_t paylo
 }
 
 /**
- * Implementation of generator_t's destroy function
+ * Implements generator_t's destroy function.
+ * See #generator_s.destroy.
  */
 static status_t destroy(private_generator_t *this)
 {
-	if (this == NULL)
-	{
-		return FAILED;
-	}
-
 	allocator_free(this);
 	return SUCCESS;
 }
