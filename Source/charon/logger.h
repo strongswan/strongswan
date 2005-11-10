@@ -46,6 +46,10 @@ enum logger_level_e {
 	 * private data dumps
 	 */
 	PRIVATE = 8,
+	/**
+	 * print errors
+	 */
+	ERROR = 16,
 	
 	/**
 	 * All Lol Levels
