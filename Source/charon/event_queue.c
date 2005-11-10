@@ -34,29 +34,29 @@
 
 
 /**
- * @brief represents an event as it is stored in the event queue
+ * @brief Represents an event as it is stored in the event queue.
  *
- * A event consists of a event time and an assigned job object
+ * A event consists of a event time and an assigned job object.
  *
  */
 typedef struct event_s event_t;
 
 struct event_s{
 	/**
-	 * Time to fire the event
+	 * Time to fire the event.
 	 */
 	timeval_t time;
 
 	/**
-	 * Every event has its assigned job
+	 * Every event has its assigned job.
 	 */
 	job_t * job;
 
 	/**
-	 * @brief Destroys a event_t object
+	 * @brief Destroys a event_t object.
 	 *
-	 * @param event_t calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @param event_t 	calling object
+	 * @returns 			always SUCCESS
 	 */
 	status_t (*destroy) (event_t *event);
 };
@@ -67,10 +67,6 @@ struct event_s{
  */
 static status_t event_destroy(event_t *event)
 {
-	if (event == NULL)
-	{
-		return FAILED;
-	}
 	allocator_free(event);
 	return SUCCESS;
 }
@@ -78,17 +74,22 @@ static status_t event_destroy(event_t *event)
 /**
  * @brief Creates a event for a specific time
  *
- * @param time to fire the event
- * @param job job to add to job-queue at specific time
+ * @param time	absolute time to fire the event
+ * @param job 	job to add to job-queue at specific time
  *
- * @return event_t event object
+ * @returns
+ * 				- created event_t object 
+ * 				- NULL if memory allocation failed
  */
 static event_t *event_create(timeval_t time, job_t *job)
 {
 	event_t *this = allocator_alloc_thing(event_t);
+	if (this == NULL)
+	{
+		return this;
+	}
 
 	this->destroy = event_destroy;
-
 	this->time = time;
 	this->job = job;
 
@@ -97,29 +98,33 @@ static event_t *event_create(timeval_t time, job_t *job)
 
 
 /**
- * @brief Private Variables and Functions of event_queue class
+ * @brief Private Variables and Functions of event_queue_t class.
  *
  */
 typedef struct private_event_queue_s private_event_queue_t;
 
 
 struct private_event_queue_s {
+	/**
+	 * Public part.
+	 */
  	event_queue_t public;
 
 	/**
-	 * The events are stored in a linked list
+	 * The events are stored in a linked list of type linked_list_t.
 	 */
 	linked_list_t *list;
 
 	/**
-	 * access to linked_list is locked through this mutex
+	 * Access to linked_list is locked through this mutex.
 	 */
 	pthread_mutex_t mutex;
 
 	/**
 	 * If the queue is empty or an event has not to be fired
-	 * a thread has to wait
-	 * This condvar is used to wake up such a thread
+	 * a thread has to wait.
+	 * 
+	 * This condvar is used to wake up such a thread.
 	 */
 	pthread_cond_t condvar;
 };
@@ -127,14 +132,14 @@ struct private_event_queue_s {
 /**
  * Returns the difference of to timeval structs in microseconds
  *
- * @param end_time end time
- * @param start_time start time
+ * @param end_time 		end time
+ * @param start_time 	start time
  *
  * @warning this function is also defined in the tester class
  * 			In later improvements, this function can be added to a general
  *          class type!
  *
- * @return difference in microseconds
+ * @return 	difference in microseconds (end time - start time)
  */
 static long time_difference(struct timeval *end_time, struct timeval *start_time)
 {
@@ -147,7 +152,8 @@ static long time_difference(struct timeval *end_time, struct timeval *start_time
 
 
 /**
- * @brief implements function get_count of event_queue_t
+ * Implements function get_count of event_queue_t.
+ * See #event_queue_s.get_count for description.
  */
 static int get_count (private_event_queue_t *this)
 {
@@ -159,7 +165,8 @@ static int get_count (private_event_queue_t *this)
 }
 
 /**
- * @brief implements function get of event_queue_t
+ * Implements function get of event_queue_t.
+ * See #event_queue_s.get for description.
  */
 static status_t get(private_event_queue_t *this, job_t **job)
 {
@@ -216,7 +223,8 @@ static status_t get(private_event_queue_t *this, job_t **job)
 }
 
 /**
- * @brief implements function add of event_queue_t
+ * Implements function add_absolute of event_queue_t.
+ * See #event_queue_s.add_absolute for description.
  */
 static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t time)
 {
@@ -297,7 +305,8 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 }
 
 /**
- * @brief implements function add of event_queue_t
+ * Implements function add_relative of event_queue_t.
+ * See #event_queue_s.add_relative for description.
  */
 static status_t add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
 {
@@ -315,7 +324,8 @@ static status_t add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
 
 
 /**
- * @brief implements function destroy of event_queue_t
+ * Implements function destroy of event_queue_t.
+ * See #event_queue_s.destroy for description.
  */
 static status_t event_queue_destroy(private_event_queue_t *this)
 {
@@ -342,7 +352,6 @@ static status_t event_queue_destroy(private_event_queue_t *this)
 }
 
 /*
- *
  * Documented in header
  */
 event_queue_t *event_queue_create()
