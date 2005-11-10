@@ -24,7 +24,7 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 
-#include <freeswan.h>
+#include <sys/types.h>
 
 typedef enum status_e {
 	SUCCESS,
@@ -49,10 +49,26 @@ typedef struct timespec timespec_t;
  * Representates a IKE_SA spi
  */
 typedef struct spi_s spi_t;
-
 struct spi_s{
 	u_int32_t high;
 	u_int32_t low;
 };
+
+/**
+ * General purpose pointer/length abstraction
+ */
+typedef struct chunk_s chunk_t;
+struct chunk_s {
+    u_char *ptr;
+    size_t len;
+};
+
+/**
+ * General purpose boolean type
+ */
+typedef int bool;
+#define FALSE	0
+#define TRUE	1
+
 
 #endif /*TYPES_H_*/
