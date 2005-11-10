@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <stdio.h>
 
 #include "allocator.h"
 #include "types.h"
@@ -285,6 +286,29 @@ struct private_generator_s {
 	status_t (*generate_u_int_type) (private_generator_t *this,encoding_type_t int_type,u_int32_t offset, generator_infos_t *generator_infos);
 
 	/**
+	 * Generates a RESERVED BIT field or a RESERVED BYTE field
+	 *
+	 * @param this 					private_generator_t object
+	 * @param generator_infos		generator_infos_t object where the context is written or read from
+	 * @param bits 					number of bits to generate
+	 * @return 						- SUCCESS if succeeded
+	 * 		  						- OUT_OF_RES if out of ressources
+	 * 								- FAILED if bit count not supported
+	 */
+	status_t (*generate_reserved_field) (private_generator_t *this,generator_infos_t *generator_infos,int bits);
+	
+	/**
+	 * Generates a FLAG field
+	 *
+	 * @param this 					private_generator_t object
+	 * @param generator_infos		generator_infos_t object where the context is written or read from
+	 * @param offset					offset of flag value in data struct
+	 * @return 						- SUCCESS if succeeded
+	 * 		  						- OUT_OF_RES if out of ressources
+	 */
+	status_t (*generate_flag) (private_generator_t *this,generator_infos_t *generator_infos,u_int32_t offset);
+
+	/**
 	 * Pointer to the payload informations needed to automatic
 	 * generate a specific payload type
 	 */
@@ -401,6 +425,71 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 	return SUCCESS;
 }
 
+static status_t generate_reserved_field (private_generator_t *this,generator_infos_t *generator_infos,int bits)
+{
+	status_t status;
+	
+	if ((bits != 1) && (bits != 8))
+	{
+		return FAILED;
+	}
+	status = generator_infos->make_space_available(generator_infos,bits);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	
+	if (bits == 1)
+	{	
+		u_int8_t reserved_bit = ~(1 << (7 - generator_infos->current_bit));
+
+		*(generator_infos->out_position) = *(generator_infos->out_position) & reserved_bit;
+		generator_infos->current_bit++;
+		if (generator_infos->current_bit >= 8)
+		{
+			generator_infos->current_bit = generator_infos->current_bit % 8;
+			generator_infos->out_position++;
+		}
+	}
+	else
+	{
+		/* one byte */
+		if (generator_infos->current_bit > 0)
+		{
+			return FAILED;
+		}
+		*(generator_infos->out_position) = 0x00;
+		generator_infos->out_position++;
+	}
+
+	return SUCCESS;
+		
+		
+}
+
+static status_t generate_flag (private_generator_t *this,generator_infos_t *generator_infos,u_int32_t offset)
+{
+	status_t status;
+	u_int8_t flag_value = (*((bool *) (generator_infos->data_struct + offset))) ? 1 : 0;
+	u_int8_t flag = (flag_value << (7 - generator_infos->current_bit));
+	
+	status = generator_infos->make_space_available(generator_infos,1);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+
+	*(generator_infos->out_position) = *(generator_infos->out_position) | flag;
+
+	generator_infos->current_bit++;
+	if (generator_infos->current_bit >= 8)
+	{
+		generator_infos->current_bit = generator_infos->current_bit % 8;
+		generator_infos->out_position++;
+	}
+	return SUCCESS;
+}
+
 /**
  * Implements private_generator_t's generate function.
  * See #private_generator_s.generate.
@@ -410,14 +499,12 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 	int i;
 	status_t status;
 
-
 	generator_infos_t *infos = generator_infos_create(data_struct);
 
 	if (infos == NULL)
 	{
 		return OUT_OF_RES;
 	}
-
 
 	for (i = 0; i < encoding_rules_count;i++)
 	{
@@ -434,51 +521,26 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 				break;
 			case RESERVED_BIT:
 			{
-				status = infos->make_space_available(infos,1);
-				u_int8_t reserved_bit = ~(1 << (7 - infos->current_bit));
-
-				*(infos->out_position) = *(infos->out_position) & reserved_bit;
-
-				infos->current_bit++;
-				if (infos->current_bit >= 8)
-				{
-					infos->current_bit = infos->current_bit % 8;
-					infos->out_position++;
-				}
+				status = this->generate_reserved_field(this,infos,1);
+	
 				break;
 			}
 			case RESERVED_BYTE:
 			{
-				status = infos->make_space_available(infos,8);
-				if ((status != SUCCESS) || (infos->current_bit > 0))
-				{
-					return FAILED;
-				}
-				*(infos->out_position) = 0x00;
-				infos->out_position++;
+				status = this->generate_reserved_field(this,infos,8);
 				break;
-			}
+			} 
 			case FLAG:
 			{
-				u_int8_t flag_value = (*((bool *) (infos->data_struct + encoding_rules[i].offset))) ? 1 : 0;
-				u_int8_t flag = (flag_value << (7 - infos->current_bit));
-
-				*(infos->out_position) = *(infos->out_position) | flag;
-
-				infos->current_bit++;
-				if (infos->current_bit >= 8)
-				{
-					infos->current_bit = infos->current_bit % 8;
-					status = infos->make_space_available(infos,8);
-					infos->out_position++;
-				}
+				status = this->generate_flag(this,infos,encoding_rules[i].offset);
 				break;
 			}
 			case LENGTH:
 				/* length is generated like an U_INT_32 */
 				status = this->generate_u_int_type(this,U_INT_32,encoding_rules[i].offset,infos);
+				break;
 			case SPI_SIZE:
-				/* actually not implemented */
+				/* currently not implemented */
 			default:
 				break;
 		}
@@ -488,7 +550,6 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 			return status;
 		}
 	}
-
 
 	status = infos->write_chunk(infos,data);
 	infos->destroy(infos);
@@ -550,6 +611,8 @@ generator_t * generator_create(payload_info_t ** payload_infos)
 	/* initiate private functions */
 	this->generate = generate;
 	this->generate_u_int_type = generate_u_int_type;
+	this->generate_reserved_field = generate_reserved_field;
+	this->generate_flag = generate_flag;
 
 	/* initiate private variables */
 	this->payload_infos = payload_infos;
