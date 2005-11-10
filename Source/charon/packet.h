@@ -1,7 +1,7 @@
 /**
  * @file packet.h
  * 
- * @brief UDP-Packet, contains data, sender and receiver
+ * @brief UDP-Packet, contains data, sender and receiver.
  * 
  */
 
@@ -42,6 +42,10 @@ struct packet_s {
 	 * Address family, such as AF_INET
 	 */
 	int family;
+	
+	/**
+	 * 
+	 */
 	size_t sockaddr_len;
 	
 	/**
@@ -62,28 +66,40 @@ struct packet_s {
 	/**
 	 * @brief 			set destination of packet, using address string
 	 *  
+	 * @param packet		calling object
 	 * @param address	ip address string
 	 * @param port		port number
-	 * @return 			SUCCESS
-	 * 					NOT_SUPPORTED
+	 * @return 			- SUCCESS
+	 * 					- NOT_SUPPORTED
 	 */
 	status_t (*set_destination) (packet_t *packet, char *address, u_int16_t port);
 		
 	/**
 	 * @brief 			set destination of packet, using address string
-	 *  
+	 *
+	 * @param packet		calling object  
 	 * @param address	ip address string
 	 * @param port		port number
-	 * @return 			SUCCESS
-	 * 					NOT_SUPPORTED
+	 * @return 			- SUCCESS
+	 * 					- NOT_SUPPORTED
 	 */
 	status_t (*set_source) (packet_t *packet, char *address, u_int16_t port);
+
+	/**
+	 * @brief 			Clones a packet_t object
+	 *  
+	 * @param packet		calling object
+	 * @param clone		pointer to a packet_t object pointer where the new object is stored
+	 * @return 			- SUCCESS if successful
+	 * 					- OUT_OF_RES
+	 */
+	status_t (*clone) (packet_t *packet, packet_t **clone);
 	
 	/**
 	 * @brief 			destroy the packet, freeing contained data
 	 *  
 	 * @param packet	packet to destroy	
-	 * @return 			SUCCESS
+	 * @return 			- SUCCESS
 	 */
 	status_t (*destroy) (packet_t *packet);
 };
@@ -92,7 +108,7 @@ struct packet_s {
  * @brief create an empty packet
  *  
  * @param family		address-family, such as AF_INET
- * @return  			NULL when family not supported
+ * @return  			- NULL when family not supported
  */
 packet_t *packet_create(int family);
 
