@@ -158,7 +158,20 @@ static void *allocate_special(private_allocator_t *this,size_t bytes, char * fil
 static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line)
 {
 	private_allocator_t *this = (private_allocator_t *) allocator;
-	return (allocate_special(this,bytes, file,line,TRUE));
+	return (this->allocate_special(this,bytes, file,line,TRUE));
+}
+
+/**
+ * Implements allocator_t's function allocate_as_chunk. 
+ * See #allocator_s.allocate_as_chunk for description.
+ */
+static chunk_t allocate_as_chunk(allocator_t *allocator,size_t bytes, char * file,int line)
+{
+	private_allocator_t *this = (private_allocator_t *) allocator;
+	chunk_t new_chunk;
+	new_chunk.ptr = this->allocate_special(this,bytes, file,line,TRUE);
+	new_chunk.len = (new_chunk.ptr == NULL) ? 0 : bytes;
+	return new_chunk;
 }
 
 /*
@@ -222,8 +235,32 @@ static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char 
 		return NULL;
 	}
 	
-	memcpy(new_space,old,allocated_memory->info.size_of_memory);
+	
+	/* the smaller size is copied to avoid overflows */
+	memcpy(new_space,old,(allocated_memory->info.size_of_memory < bytes) ? allocated_memory->info.size_of_memory : bytes);
     pthread_mutex_unlock(&(this->mutex));
+    this->public.free_pointer(&(this->public),old);
+	
+	return new_space;
+}
+
+static void * clone_bytes(allocator_t *allocator,void * to_clone, size_t bytes, char * file, int line)
+{
+	private_allocator_t *this = (private_allocator_t *) allocator;
+
+    if (to_clone == NULL)
+    {
+	    	return NULL;
+    }
+    
+	void *new_space = this->allocate_special(this,bytes,file,line,TRUE);
+
+	if (new_space == NULL)
+	{
+		return NULL;
+	}
+	
+	memcpy(new_space,to_clone,bytes);
 	
 	return new_space;
 }
@@ -266,8 +303,10 @@ static void allocator_report_memory_leaks(allocator_t *allocator)
  */
 static private_allocator_t allocator = {
 	public: {allocate: allocate,
+	  		 allocate_as_chunk: allocate_as_chunk,
 			 free_pointer: free_pointer,
 			 reallocate: reallocate,
+			 clone_bytes : clone_bytes,
  			 report_memory_leaks: allocator_report_memory_leaks},
 	allocations: NULL,
 	allocate_special : allocate_special,
