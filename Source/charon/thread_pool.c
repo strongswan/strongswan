@@ -99,6 +99,7 @@ static status_t destroy(private_thread_pool_t *this)
 	}	
 
 	/* free mem */
+	this->logger->destroy(this->logger);
 	allocator_free(this->threads);
 	allocator_free(this);
 	return SUCCESS;
