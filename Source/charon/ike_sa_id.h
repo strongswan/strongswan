@@ -24,10 +24,6 @@
 #ifndef IKE_SA_ID_H_
 #define IKE_SA_ID_H_
 
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
-
 #include "types.h"
 
 /**

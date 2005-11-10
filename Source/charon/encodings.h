@@ -29,9 +29,8 @@
 #ifndef ENCODINGS_H_
 #define ENCODINGS_H_
 
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
+#include "types.h"
+
 
 /**
  * @brief All different kinds of encoding types. 

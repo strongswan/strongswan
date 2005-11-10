@@ -28,9 +28,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
 
 #include "allocator.h"
 #include "socket.h"

@@ -24,11 +24,9 @@
 #define TESTER_H_ 
 
 #include <stdio.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
 
 #include "types.h"
+
 
 /**
  * @brief Specifies a test

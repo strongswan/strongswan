@@ -21,12 +21,12 @@
  */
  
 #include <stdlib.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
 #include <pthread.h>
+#include <string.h>
+#include <errno.h>
  
 #include "allocator.h"
+#include "logger.h"
 #include "thread_pool.h"
 #include "job_queue.h"
 #include "globals.h"
@@ -47,6 +47,10 @@ typedef struct {
 	 * array of thread ids
 	 */
 	pthread_t *threads;
+	/**
+	 * logger of the threadpool
+	 */
+	logger_t *logger;
 } private_thread_pool_t;
 
 
@@ -83,13 +87,15 @@ static status_t destroy(private_thread_pool_t *this)
 {	
 	int current;
 	/* flag thread for termination */
-	for (current = 0; current < this->pool_size; current++) {		
+	for (current = 0; current < this->pool_size; current++) {
+		this->logger->log(this->logger, CONTROL, "cancelling thread %u", this->threads[current]);
 		pthread_cancel(this->threads[current]);
 	}
 	
 	/* wait for all threads */
 	for (current = 0; current < this->pool_size; current++) {
 		pthread_join(this->threads[current], NULL);
+		this->logger->log(this->logger, CONTROL, "thread %u terminated", this->threads[current]);
 	}	
 
 	/* free mem */
@@ -113,19 +119,23 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	
 	this->pool_size = pool_size;
 	this->threads = allocator_alloc(sizeof(pthread_t) * pool_size);
-
+	this->logger = logger_create("thread_pool", 0);
 	
 	/* try to create as many threads as possible, up tu pool_size */
 	for (current = 0; current < pool_size; current++) {
-		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))job_processing, this)) {
-			/* did we get any? */
-			if (current == 0) {
-
+		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))job_processing, this)) 
+		{
+			/* did we get any? */	
+			if (current == 0) 
+			{
+				this->logger->log(this->logger, CONTROL, "could not create any thread: %s\n", strerror(errno));
 				allocator_free(this->threads);
 				allocator_free(this);
 				return NULL;
 			}
 			/* not all threads could be created, but at least one :-/ */
+			this->logger->log(this->logger, CONTROL, "could only create %d from requested %d threads: %s\n", current, pool_size, strerror(errno));
+				
 			this->pool_size = current;
 			return (thread_pool_t*)this;
 		}

@@ -23,10 +23,6 @@
 #ifndef LINKED_LIST_H_
 #define LINKED_LIST_H_
 
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
-
 #include "types.h"
 
 /**

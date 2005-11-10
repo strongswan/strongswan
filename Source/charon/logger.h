@@ -23,11 +23,6 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
-
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
-
 #include "types.h"
 
 /**

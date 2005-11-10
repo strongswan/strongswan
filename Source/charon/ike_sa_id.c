@@ -22,9 +22,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
 
 #include "allocator.h"
 #include "types.h"

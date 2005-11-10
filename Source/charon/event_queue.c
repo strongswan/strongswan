@@ -20,9 +20,6 @@
  * for more details.
  */
 
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
 #include <pthread.h>
 #include <stdlib.h>
 

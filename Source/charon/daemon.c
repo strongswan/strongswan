@@ -21,9 +21,6 @@
  */
  
 #include <stdio.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
  
 #include "types.h"
 #include "tester.h"

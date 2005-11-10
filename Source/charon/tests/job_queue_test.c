@@ -22,9 +22,6 @@
 
 
 #include <stdlib.h>
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
 #include <pthread.h>
 #include <unistd.h>
 

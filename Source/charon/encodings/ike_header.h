@@ -25,9 +25,6 @@
 #ifndef IKE_HEADER_H_
 #define IKE_HEADER_H_
 
-#include <freeswan.h>
-#include <pluto/constants.h>
-#include <pluto/defs.h>
 
 /**
  * Data structure to hold the data of an IKEv2-Header
