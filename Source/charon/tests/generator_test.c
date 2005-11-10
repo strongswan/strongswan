@@ -25,12 +25,14 @@
 #include "../allocator.h"
 #include "generator_test.h"
 #include "../tester.h"
+#include "../logger.h"
 #include "../encodings.h"
 #include "../generator.h"
 #include "../encodings/ike_header.h"
 
 extern payload_info_t *payload_infos[];
 
+extern logger_t *global_logger;
 /*
  * Described in Header 
  */
@@ -85,9 +87,10 @@ void test_generator_with_header_payload(tester_t *tester)
 		0x00,0x00,0x00,0x08,
 	};
 
+
 	tester->assert_true(tester,(generated_data.len == sizeof(expected_generation)), "compare generated data length");
 		
-	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data 1");
 	allocator_free_chunk(generated_data);
 	
 	header_data.initiator_spi = 0x22000054231234;
@@ -96,9 +99,9 @@ void test_generator_with_header_payload(tester_t *tester)
 	header_data.maj_version = 0x2;
 	header_data.min_version = 0x0;
 	header_data.exchange_type = 0x12;
-	header_data.flags.initiator = FALSE;
-	header_data.flags.version = FALSE;
-	header_data.flags.response = FALSE;
+	header_data.flags.initiator = TRUE;
+	header_data.flags.version = TRUE;
+	header_data.flags.response = TRUE;
 	header_data.message_id = 0x33AFF3;
 	header_data.length = 0xAA11F;
 	
@@ -110,12 +113,14 @@ void test_generator_with_header_payload(tester_t *tester)
 		0x54,0x23,0x12,0x34,
 		0x00,0x00,0x00,0x00,
 		0x00,0x12,0x23,0x98,
-		0xF3,0x20,0x12,0x00,
+		0xF3,0x20,0x12,0x38,
 		0x00,0x33,0xAF,0xF3,
 		0x00,0x0A,0xA1,0x1F,
 	};
+	
+	global_logger->log_chunk(global_logger,CONTROL,"generated header",&generated_data);
 
-	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data 2");
 	allocator_free_chunk(generated_data);
 	
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
