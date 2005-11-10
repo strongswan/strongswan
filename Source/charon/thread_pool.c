@@ -1,7 +1,7 @@
 /**
  * @file thread_pool.c
  * 
- * @brief Thread-pool with some threads processing the job_queue
+ * @brief Thread pool with some threads processing the job_queue.
  * 
  */
 
@@ -32,13 +32,21 @@
 #include "globals.h"
 
 /**
- * structure with private members for thread_pool
+ * @brief structure with private members for thread_pool_t
  */
-typedef struct {
+typedef struct private_thread_pool_s private_thread_pool_t;
+
+struct private_thread_pool_s {
 	/**
 	 * inclusion of public members
 	 */
 	thread_pool_t public;
+	/**
+	 * @brief Processing function of a worker thread
+	 * 
+	 * @param this	private_thread_pool_t-Object
+	 */
+	void (*function) (private_thread_pool_t *this);
 	/**
 	 * number of running threads
 	 */
@@ -51,18 +59,25 @@ typedef struct {
 	 * logger of the threadpool
 	 */
 	logger_t *logger;
-} private_thread_pool_t;
+} ;
 
 
+
+/**
+ * implements private_thread_pool_t.function
+ */
 static void job_processing(private_thread_pool_t *this)
 {
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	
+	this->logger->log(this->logger, CONTROL_MORE, "thread %u started working", pthread_self());
 
 	for (;;) {
 		job_t *job;
 
 		global_job_queue->get(global_job_queue, &job);
+		this->logger->log(this->logger, CONTROL_MORE, "thread %u got a job", pthread_self());
 		
 		/* process them here */
 		
@@ -72,12 +87,11 @@ static void job_processing(private_thread_pool_t *this)
 }
 
 /**
- * Implementation of thread_pool_t.get_pool_size
+ * implementation of thread_pool_t.get_pool_size
  */
-static status_t get_pool_size(private_thread_pool_t *this, size_t *size)
+static size_t get_pool_size(private_thread_pool_t *this)
 {
-	*size = this->pool_size;
-	return SUCCESS;
+	return this->pool_size;
 }
 
 /**
@@ -105,8 +119,10 @@ static status_t destroy(private_thread_pool_t *this)
 	return SUCCESS;
 }
 
-/**
- * Implementation of default constructor for thread_pool_t
+#include <stdio.h>
+
+/*
+ * see header
  */
 thread_pool_t *thread_pool_create(size_t pool_size)
 {
@@ -116,21 +132,40 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	
 	/* fill in public fields */
 	this->public.destroy = (status_t(*)(thread_pool_t*))destroy;
-	this->public.get_pool_size = (status_t(*)(thread_pool_t*, size_t*))get_pool_size;
+	this->public.get_pool_size = (size_t(*)(thread_pool_t*))get_pool_size;
 	
+	this->function = job_processing;
 	this->pool_size = pool_size;
+	
 	this->threads = allocator_alloc(sizeof(pthread_t) * pool_size);
-	this->logger = logger_create("thread_pool", 0);
+	if (this->threads == NULL)
+	{
+		allocator_free(this);
+		return NULL;
+	}	
+	this->logger = logger_create("thread_pool", ALL);
+	if (this->threads == NULL)
+	{
+		allocator_free(this);
+		allocator_free(this->threads);
+		return NULL;
+	}	
 	
 	/* try to create as many threads as possible, up tu pool_size */
-	for (current = 0; current < pool_size; current++) {
-		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))job_processing, this)) 
+	for (current = 0; current < pool_size; current++) 
+	{
+		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))this->function, this) == 0) 
 		{
-			/* did we get any? */	
+			this->logger->log(this->logger, CONTROL, "thread %u created", this->threads[current]);
+		}
+		else 
+		{
+			/* creation failed, is it the first one? */	
 			if (current == 0) 
 			{
 				this->logger->log(this->logger, CONTROL, "could not create any thread: %s\n", strerror(errno));
 				allocator_free(this->threads);
+				allocator_free(this->logger);
 				allocator_free(this);
 				return NULL;
 			}
@@ -141,6 +176,5 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 			return (thread_pool_t*)this;
 		}
 	}	
-	
 	return (thread_pool_t*)this;
 }
