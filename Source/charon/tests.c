@@ -43,6 +43,7 @@
 #include "tests/ike_sa_test.h"
 #include "tests/ike_sa_manager_test.h"
 #include "tests/generator_test.h"
+#include "tests/parser_test.h"
 #include "tests/packet_test.h"
 
 
@@ -131,6 +132,12 @@ test_t generator_test1 = {test_generator_with_unsupported_payload,"Generator: un
 test_t generator_test2 = {test_generator_with_header_payload,"Generator: header payload"};
 
 /**
+ * Test 2 for generator_t
+ */
+test_t parser_test = {test_parser_with_header_payload, "Parser: header payload"};
+
+
+/**
  * Test for packet_t
  */
 test_t packet_test = {test_packet,"Packet"};
@@ -182,6 +189,7 @@ logger_t *global_logger;
 	&ike_sa_test,
 	&generator_test1,
 	&generator_test2,
+	&parser_test,
 	&ike_sa_manager_test,
 	&packet_test,
 	NULL
@@ -198,8 +206,8 @@ logger_t *global_logger;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	/*tester->perform_tests(tester,all_tests);*/
-	tester->perform_test(tester,&generator_test2);   
+	tester->perform_tests(tester,all_tests);
+	/*tester->perform_test(tester,&parser_test);   */
  	
 	tester->destroy(tester);
 
@@ -215,7 +223,7 @@ logger_t *global_logger;
 	
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported on stderr */
-	report_memory_leaks();
+	report_memory_leaks(void);
 #endif
 	
 	return 0;
