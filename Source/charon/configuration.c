@@ -1,10 +1,9 @@
 /**
  * @file configuration.c
  * 
- * @brief class configuration_t. 
+ * @brief Configuration class used to store IKE_SA-configurations.
  * 
- * 
- * Object of this type represents a configuration for an IKE_SA and its child_sa's
+ * Object of this type represents a configuration for an IKE_SA and its child_sa's.
  * 
  */
 
@@ -33,24 +32,24 @@
 #include "configuration.h"
 
 /**
- * private data of an configuration_t object
+ * Private data of an configuration_t object
  */
 typedef struct private_configuration_s private_configuration_t;
 
 struct private_configuration_s {
 
 	/**
-	 * public part of a configuration_t object
+	 * Public part of a configuration_t object
 	 */
 	configuration_t public;
 
 
-	/* private values */
-
+	/* Private values */
 };
 
 /**
- * @brief implements function destroy of configuration_t
+ * Implements function destroy of configuration_t.
+ * See #configuration_s.destroy for description.
  */
 static status_t destroy (private_configuration_t *this)
 {
@@ -63,7 +62,7 @@ static status_t destroy (private_configuration_t *this)
 }
 
 /*
- * described in header-file
+ * Described in header-file
  */
 configuration_t * configuration_create()
 {
