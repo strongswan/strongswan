@@ -35,7 +35,7 @@ static struct ike_sa_manager_test_struct_s {
 	ike_sa_manager_t *isam;
 } td;
 
-static void successful_thread(ike_sa_id_t *ike_sa_id)
+static void test1_thread(ike_sa_id_t *ike_sa_id)
 {
 	ike_sa_t *ike_sa;
 	status_t status;
@@ -47,30 +47,44 @@ static void successful_thread(ike_sa_id_t *ike_sa_id)
 	td.tester->assert_true(td.tester, (status == SUCCESS), "checkin of a requested ike_sa");
 }
 
-static void failed_thread(ike_sa_id_t *ike_sa_id)
+
+static void test2_thread(ike_sa_id_t *ike_sa_id)
+{
+	ike_sa_t *ike_sa;
+	status_t status;
+	
+	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
+	td.tester->assert_true(td.tester, (status == NOT_FOUND), "IKE_SA already deleted");	
+}
+
+static void test3_thread(ike_sa_id_t *ike_sa_id)
 {
 	ike_sa_t *ike_sa;
 	status_t status;
 	
 	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
 	td.tester->assert_true(td.tester, (status == NOT_FOUND), "IKE_SA already deleted");
+	
+	ike_sa_id->destroy(ike_sa_id);
 }
+
+
+	
 
 void test_ike_sa_manager(tester_t *tester)
 {
 	status_t status;
 	spi_t initiator, responder;
-	ike_sa_id_t *ike_sa_id;
+	ike_sa_id_t *ike_sa_id, *sa_id;
 	ike_sa_t *ike_sa;
 	int thread_count = 200;
-	int sa_count = 50;
+	int sa_count = 100;
 	int i;
 	pthread_t threads[thread_count];
 	
 	td.tester = tester;
 	td.isam = ike_sa_manager_create();
 	tester->assert_true(tester, (td.isam != NULL), "ike_sa_manager creation");
-	
 	
 	
 	
@@ -91,10 +105,10 @@ void test_ike_sa_manager(tester_t *tester)
 	 * this is usually done be the response from the communication partner, 
 	 * but we don't have one...
 	 */
-	ike_sa_id->destroy(ike_sa_id);
-	ike_sa_id = ike_sa->get_id(ike_sa);
 	responder.low = 123;
-	ike_sa_id->set_responder_spi(ike_sa_id, responder);	
+
+	sa_id = ike_sa->get_id(ike_sa);
+	sa_id->set_responder_spi(sa_id, responder);	
 	/* check in, so we should have a "completed" sa, specified by ike_sa_id */
 	status = td.isam->checkin(td.isam, ike_sa);
 	tester->assert_true(tester, (status == SUCCESS), "checkin modified IKE_SA");
@@ -102,12 +116,10 @@ void test_ike_sa_manager(tester_t *tester)
 	/* now we check it out and start some other threads */
 	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
 	tester->assert_true(tester, (status == SUCCESS), "checkout existing IKE_SA 1");
-	
-	
-	
+		
 	for (i = 0; i < thread_count; i++) 
 	{
-		if (pthread_create(&threads[i], NULL, (void*(*)(void*))successful_thread, (void*)ike_sa_id))
+		if (pthread_create(&threads[i], NULL, (void*(*)(void*))test1_thread, (void*)ike_sa_id))
 		{
 			/* failed, decrease list */
 			thread_count--;
@@ -133,10 +145,7 @@ void test_ike_sa_manager(tester_t *tester)
 		pthread_join(threads[i], NULL);
 	}
 	
-	//ike_sa_id->destroy(ike_sa_id);
-	
-	
-	
+	ike_sa_id->destroy(ike_sa_id);
 	
 	
  	/* Second Test:
@@ -144,7 +153,6 @@ void test_ike_sa_manager(tester_t *tester)
 	 * so we are the responder.
 	 * 
 	 */
-	
 	memset(&initiator, 0, sizeof(initiator));
 	memset(&responder, 0, sizeof(responder));
 	
@@ -155,7 +163,7 @@ void test_ike_sa_manager(tester_t *tester)
 	tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA 2");
 	for (i = 0; i < thread_count; i++) 
 	{
-		if (pthread_create(&threads[i], NULL, (void*(*)(void*))failed_thread, (void*)ike_sa_id))
+		if (pthread_create(&threads[i], NULL, (void*(*)(void*))test2_thread, (void*)ike_sa_id))
 		{
 			/* failed, decrease list */
 			thread_count--;
@@ -174,13 +182,13 @@ void test_ike_sa_manager(tester_t *tester)
 		pthread_join(threads[i], NULL);
 	}
 	
-	//ike_sa_id->destroy(ike_sa_id);
+	ike_sa_id->destroy(ike_sa_id);
 	
 	/* Third Test:
 	 * put in a lot of IKE_SAs, check it out, set a thread waiting
 	 * and destroy the manager...
 	 */
-		
+	
 	memset(&initiator, 0, sizeof(initiator));
 	memset(&responder, 0, sizeof(responder));
 	
@@ -194,12 +202,11 @@ void test_ike_sa_manager(tester_t *tester)
 		status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
 		tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA 3");
 
-		if (pthread_create(&threads[i], NULL, (void*(*)(void*))failed_thread, (void*)ike_sa_id))
+		if (pthread_create(&threads[i], NULL, (void*(*)(void*))test3_thread, (void*)ike_sa_id))
 		{
 			/* failed, decrease list */
 			thread_count--;
 		}
-		//ike_sa_id->destroy(ike_sa_id);
 	}
 	
 	/* let them go acquiring */
@@ -212,6 +219,7 @@ void test_ike_sa_manager(tester_t *tester)
 	{
 		pthread_join(threads[i], NULL);
 	}
+	
 	
 }
 

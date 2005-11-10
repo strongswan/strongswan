@@ -42,7 +42,7 @@ struct ike_sa_entry_s {
 	 */
 	int waiting_threads;
 	/**
-	 * is this SA flagged for deleting ?
+	 * condvar where threads can wait until it's free again
 	 */
 	pthread_cond_t condvar;
 	/**
@@ -84,7 +84,7 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
  *
  * This constructor additionaly creates a new and empty SA
  *
- * @param ike_sa_id		the associated ike_sa_id_t, cloned
+ * @param ike_sa_id		the associated ike_sa_id_t, will be cloned
  * @return				created entry, with ike_sa and ike_sa_id
  */
 static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
@@ -98,7 +98,7 @@ static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 	this->checked_out = FALSE;
 	this->driveout_new_threads = FALSE;
 	this->driveout_waiting_threads = FALSE;
-	this->ike_sa_id = ike_sa_id;
+	ike_sa_id->clone(ike_sa_id, &(this->ike_sa_id));
 	this->ike_sa = ike_sa_create(ike_sa_id);
 	return this;
 }
@@ -343,18 +343,15 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		 * IKE_SA. This could be improved...
 		 */
 		spi_t responder_spi;
-		ike_sa_id_t *new_ike_sa_id;
 		ike_sa_entry_t *new_ike_sa_entry;
 
 		/* set SPIs, we are the responder */
-		ike_sa_id->clone(ike_sa_id, &new_ike_sa_id);
 		this->get_next_spi(this, &responder_spi);
-		new_ike_sa_id->set_responder_spi(new_ike_sa_id, responder_spi);
 		/* we also set arguments spi, so its still valid */
 		ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
 
 		/* create entry */
-		new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
+		new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
 		this->list->insert_last(this->list, new_ike_sa_entry);
 
 		/* check ike_sa out */
@@ -369,12 +366,8 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		/* creation of an IKE_SA from local site,
 		 * we are the initiator!
 		 */
-		spi_t initiator_spi, responder_spi;
-		ike_sa_id_t *new_ike_sa_id;
+		spi_t initiator_spi;
 		ike_sa_entry_t *new_ike_sa_entry;
-
-		/* set SPIs */
-		memset(&responder_spi, 0, sizeof(spi_t));
 		
 		this->get_next_spi(this, &initiator_spi);
 
@@ -382,8 +375,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		ike_sa_id->set_initiator_spi(ike_sa_id, initiator_spi);
 
 		/* create entry */
-		new_ike_sa_id = ike_sa_id_create(initiator_spi, responder_spi, INITIATOR);
-		new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
+		new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
 		this->list->insert_last(this->list, new_ike_sa_entry);
 
 		/* check ike_sa out */
