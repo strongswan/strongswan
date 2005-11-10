@@ -4,11 +4,11 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 
-PROJECT_NAME = SCEPforLinuxStrongSwan
+PROJECT_NAME = IKEv2 for Linux strongSwan
 
 PROJECT_NUMBER = 1.0
 
-OUTPUT_DIRECTORY = ./doc
+OUTPUT_DIRECTORY = /tmp/doc
 
 CREATE_SUBDIRS = NO
 
@@ -60,15 +60,15 @@ SUBGROUPING = YES
 # Build related configuration options
 #---------------------------------------------------------------------------
 
-EXTRACT_ALL = NO
+EXTRACT_ALL = YES
 
-EXTRACT_PRIVATE = NO
+EXTRACT_PRIVATE = YES
 
 EXTRACT_STATIC = YES
 
 EXTRACT_LOCAL_CLASSES = YES
 
-EXTRACT_LOCAL_METHODS = NO
+EXTRACT_LOCAL_METHODS = YES
 
 HIDE_UNDOC_MEMBERS = YES
 
@@ -328,7 +328,7 @@ INCLUDE_PATH =
 
 INCLUDE_FILE_PATTERNS = 
 
-PREDEFINED = 
+PREDEFINED = LEAK_DETECTIVE
 
 EXPAND_AS_DEFINED = 
 
