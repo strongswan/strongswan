@@ -25,6 +25,7 @@
 #include "allocator.h"
 #include "types.h"
 #include "message.h"
+#include "ike_sa_id.h"
 #include "linked_list.h"
 #include "encodings.h"
 
@@ -77,6 +78,21 @@ struct private_message_s {
 	bool is_request;
 	
 	/**
+	 * First Payload type following the header
+	 */
+	payload_type_t first_payload_type;
+	
+	/**
+	 * Message ID of this message
+	 */
+	u_int32_t message_id;
+	
+	/**
+	 * ID of assigned IKE_SA
+	 */
+	ike_sa_id_t *ike_sa_id;
+	
+	/**
 	 * Assigned UDP packet.
 	 * 
 	 * Stores incoming packet or last generated one.
@@ -88,6 +104,55 @@ struct private_message_s {
 	  */
 	linked_list_t *payloads;
 };
+
+
+/**
+ * Implements message_t's set_ike_sa_id function.
+ * See #message_s.set_ike_sa_id.
+ */
+static status_t set_ike_sa_id (private_message_t *this,ike_sa_id_t *ike_sa_id)
+{
+	status_t status;
+	status = ike_sa_id->clone(ike_sa_id,&(this->ike_sa_id));
+	return status;
+}
+
+/**
+ * Implements message_t's get_ike_sa_id function.
+ * See #message_s.get_ike_sa_id.
+ */
+static status_t get_ike_sa_id (private_message_t *this,ike_sa_id_t **ike_sa_id)
+{
+	status_t status;
+	if (this->ike_sa_id == NULL)
+	{
+		return FAILED;
+	}
+	status = this->ike_sa_id->clone(this->ike_sa_id,ike_sa_id);
+	return status;
+}
+
+
+/**
+ * Implements message_t's set_message_id function.
+ * See #message_s.set_message_id.
+ */
+static status_t set_message_id (private_message_t *this,u_int32_t message_id)
+{
+	this->message_id = message_id;
+	return SUCCESS;
+}
+
+
+/**
+ * Implements message_t's set_message_id function.
+ * See #message_s.set_message_id.
+ */
+static u_int32_t get_message_id (private_message_t *this)
+{
+	return this->message_id;
+}
+
 
 /**
  * Implements message_t's set_exchange_type function.
@@ -158,7 +223,6 @@ static status_t generate_packet (private_message_t *this, packet_t **packet)
 		return EXCHANGE_TYPE_NOT_SET;
 	}
 	
-
 	
 	return SUCCESS;
 }
@@ -172,6 +236,10 @@ static status_t destroy (private_message_t *this)
 	if (this->packet != NULL)
 	{
 		this->packet->destroy(this->packet);
+	}
+	if (this->ike_sa_id != NULL)
+	{
+		this->ike_sa_id->destroy(this->ike_sa_id);
 	}
 	this->payloads->destroy(this->payloads);
 	allocator_free(this);
@@ -190,6 +258,10 @@ message_t *message_create_from_packet(packet_t *packet)
 	}
 
 	/* public functions */
+	this->public.set_message_id = (status_t(*)(message_t*, u_int32_t))set_message_id;
+	this->public.get_message_id = (u_int32_t(*)(message_t*))get_message_id;
+	this->public.set_ike_sa_id = (status_t(*)(message_t*, ike_sa_id_t *))set_ike_sa_id;
+	this->public.get_ike_sa_id = (status_t(*)(message_t*, ike_sa_id_t **))get_ike_sa_id;
 	this->public.set_exchange_type = (status_t(*)(message_t*, exchange_type_t))set_exchange_type;
 	this->public.get_exchange_type = (exchange_type_t(*)(message_t*))get_exchange_type;
 	this->public.set_original_initiator = (status_t(*)(message_t*, bool))set_original_initiator;
@@ -203,6 +275,9 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->exchange_type = NOT_SET;
  	this->original_initiator = TRUE;
  	this->is_request = TRUE;
+ 	this->first_payload_type = NO_PAYLOAD;
+ 	this->ike_sa_id = NULL;
+ 	this->message_id = 0;
 
 	/* private values */
 	this->packet = packet;

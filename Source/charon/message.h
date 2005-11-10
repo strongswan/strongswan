@@ -25,7 +25,23 @@
 
 #include "types.h"
 #include "packet.h"
+#include "ike_sa_id.h"
 
+
+/**
+ * Major version of IKEv2-Protocol. Always 2
+ */
+#define IKE_V2_MAJOR_VERSION 2
+
+/**
+ * Minor version of IKEv2-Protocol. Always 0
+ */
+#define IKE_V2_MINOR_VERSION 0
+
+/**
+ * Flag in IKEv2-Header. Always 0
+ */
+#define HIGHER_VERSION_SUPPORTED_FLAG 0
 /**
  * @brief Different types of IKE-Exchanges.
  *
@@ -66,6 +82,53 @@ enum exchange_type_e{
 typedef struct message_s message_t;
 
 struct message_s {
+
+	/**
+	 * @brief Sets the Message ID of the message.
+	 *
+	 * @param this 			message_t object
+	 * @param message_id		message_id to set
+	 * @return				SUCCESS
+	 */
+	status_t (*set_message_id) (message_t *this,u_int32_t message_id);
+
+	/**
+	 * @brief Gets the Message ID of the message.
+	 *
+	 * @param this 			message_t object
+	 * @return				message_id type of the message
+	 */
+	u_int32_t (*get_message_id) (message_t *this);
+
+	/**
+	 * @brief Sets the IKE_SA ID of the message.
+	 * 
+	 * @warning ike_sa_id gets cloned  internaly and 
+	 * so can be destroyed afterwards.
+	 *
+	 * @param this 			message_t object
+	 * @param ike_sa_id		ike_sa_id to set
+	 * @return				
+	 * 						- SUCCESS
+	 * 						- OUT_OF_RES	 
+	 * @return				SUCCESS
+	 */
+	status_t (*set_ike_sa_id) (message_t *this,ike_sa_id_t * ike_sa_id);
+
+	/**
+	 * @brief Gets the IKE_SA ID of the message.
+	 * 
+	 * @warning The returned ike_sa_id is a clone of the internal one.
+	 * So it has to be destroyed by the caller.
+	 *
+	 * @param this 			message_t object
+	 * @param ike_sa_id		pointer to ike_sa_id pointer which will be set
+	 * @return				
+	 * 						- SUCCESS
+	 * 						- OUT_OF_RES
+	 * 						- FAILED if no ike_sa_id is set
+	 */
+	status_t (*get_ike_sa_id) (message_t *this,ike_sa_id_t **ike_sa_id);
 
 	/**
 	 * @brief Sets the exchange type of the message.
