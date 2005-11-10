@@ -27,6 +27,14 @@
 #include "encodings.h"
 
 
+typedef struct parser_context_s parser_context_t;
+
+struct parser_context_s {
+
+	status_t (*destroy) (parser_context_t *this);
+	
+};
+
 
 /**
  * @brief A parser_t object which parses payloads of specific type
@@ -36,22 +44,29 @@ typedef struct parser_s parser_t;
 struct parser_s {
 
 	/**
-	 * @brief Generates a specific payload from given data struct
+	 * @brief parses a chunk and generates a usable data struct
 	 *
 	 * Remember: Header and substructures are also seen as payloads
 	 *
-	 * @param generator generator object
-	 * @return SUCCESSFUL if succeeded,
-	 * 		   NOT_SUPPORTED if payload_type is not supported
-	 * 		   OUT_OF_RES if out of ressources
+	 * @param parser		parser Object
+	 * @param payload_type	definition of payload including encoding_rule
+	 * @param data			chunk of data to parse
+	 * @param[out]			allocated structure with parsed data
+	 * @return 			
+	 * 						- SUCCESSFUL if succeeded,
+	 * 		   				- NOT_SUPPORTED if payload_type is not supported
+	 * 						- OUT_OF_RES if out of ressources
+	 * 						- PARSE_ERROR if corrupted data found
 	 */
-	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type, chunk_t *data, void *data_struct);
-
+	parser_context_t *(*create_context) (parser_t *this, chunk_t data);
+	status_t (*parse_payload) (parser_t *this, parser_context_t* context, payload_type_t payload_type, void **data_struct);
+	
 	/**
-	 * @brief Destroys a generator object
+	 * @brief Destroys a parser object
 	 *
-	 * @param generator generator object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param parser		parser object
+	 * @return 				
+	 * 						- SUCCESSFUL in any case
 	 */
 	status_t (*destroy) (parser_t *this);
 };
@@ -60,6 +75,6 @@ struct parser_s {
  * Constructor to create a parser
  *
  */
-parser_t *parser_create(payload_info_t ** payload_infos);
+parser_t *parser_create(payload_info_t **payload_infos);
 
 #endif /*PARSER_H_*/
