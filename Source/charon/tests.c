@@ -180,8 +180,8 @@ socket_t *global_socket;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	tester->perform_tests(tester,all_tests);
-/*	tester->perform_test(tester,&generator_test2);   */
+/*	tester->perform_tests(tester,all_tests);*/
+	tester->perform_test(tester,&generator_test2);   
  	
 	tester->destroy(tester);
 

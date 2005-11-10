@@ -1,7 +1,7 @@
 /**
  * @file generator.c
  *
- * @brief Generic generator class used to generate IKEv2-Header and Payload
+ * @brief Generic generator class used to generate IKEv2-header and payloads.
  *
  */
 
@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "allocator.h"
 #include "types.h"
@@ -29,7 +30,7 @@
 
 
 /**
- * buffer_t: used for geneartor operations
+ * Uused for geneartor operations
  */
 typedef struct generator_infos_s generator_infos_t;
 
@@ -88,15 +89,13 @@ struct generator_infos_s {
  */
 static status_t generator_info_make_space_available (generator_infos_t *this, size_t bits)
 {
-	size_t free_bits = ((this->roof_position - this->out_position) * 8) - this->current_bit;
-	
-	while (free_bits < bits)
+	while ((((this->roof_position - this->out_position) * 8) - this->current_bit) < bits)
 	{
 		size_t old_buffer_size = ((this->roof_position) - (	this->buffer));
 		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
 		size_t out_position_offset = ((this->out_position) - (this->buffer));
 		u_int8_t *new_buffer;
-	
+
 		new_buffer = allocator_realloc(this->buffer,new_buffer_size);
 		if (new_buffer == NULL)
 		{
@@ -107,8 +106,9 @@ static status_t generator_info_make_space_available (generator_infos_t *this, si
 	
 		this->out_position = (this->buffer + out_position_offset);
 		this->roof_position = (this->buffer + new_buffer_size);
+
 	}
-	
+
 	return SUCCESS;
 }
 
@@ -383,22 +383,23 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 				break;
 			case RESERVED_BIT:
 			{
+				status = infos->make_space_available(infos,1);
 				u_int8_t reserved_bit = ~(1 << (7 - infos->current_bit));
-				
+
 				*(infos->out_position) = *(infos->out_position) & reserved_bit;
 				
 				infos->current_bit++;
 				if (infos->current_bit >= 8)
 				{
 					infos->current_bit = infos->current_bit % 8;
-					status = infos->make_space_available(infos,8);
 					infos->out_position++;
 				}
 				break;
 			}
 			case RESERVED_BYTE:
 			{
-				if (infos->current_bit > 0)
+				status = infos->make_space_available(infos,8);
+				if ((status != SUCCESS) || (infos->current_bit > 0))
 				{
 					return FAILED;
 				}

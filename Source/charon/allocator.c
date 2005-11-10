@@ -33,6 +33,7 @@
 #endif
 
 #include "allocator.h"
+#include "types.h"
 
 #ifdef LEAK_DETECTIVE
 
@@ -93,16 +94,29 @@ struct private_allocator_s
 	 * Mutex used to make sure, all functions are thread-save
 	 */
 	pthread_mutex_t mutex;
+	
+	/**
+	 * Allocates memory with LEAK_DETECTION and 
+	 * returns an empty data area filled with zeros.
+	 *
+	 * @param this 		private_allocator_t object
+	 * @param bytes 		number of bytes to allocate
+	 * @param file 		filename from which the memory is allocated
+	 * @param line 		line number in specific file
+	 * @param use_mutex If FALSE no mutex is used for allocation
+	 * @return 		
+	 * 				- pointer to allocated memory area if successful
+	 * 				- NULL otherwise
+	 */ 
+	void * (*allocate_special) (private_allocator_t *this,size_t bytes, char * file,int line, bool use_mutex);
 };
 
-
 /**
- * Implements allocator_t's function allocate. 
- * See #allocator_s.allocate for description.
+ * Implements private_allocator_t's function allocate_special. 
+ * See #private_allocator_s.allocate_special for description.
  */
-static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line)
+static void *allocate_special(private_allocator_t *this,size_t bytes, char * file,int line, bool use_mutex)
 {
-	private_allocator_t *this = (private_allocator_t *) allocator;
     memory_hdr_t *allocated_memory = malloc(sizeof(memory_hdr_t) + bytes);
 
     if (allocated_memory == NULL)
@@ -110,7 +124,10 @@ static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line
 		return allocated_memory;
     }
     
-    pthread_mutex_lock( &(this->mutex));
+    if (use_mutex)
+    {
+	    pthread_mutex_lock( &(this->mutex));
+    }
     
     allocated_memory->info.line = line;
     allocated_memory->info.filename = file;
@@ -125,9 +142,23 @@ static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line
 
 	/* fill memory with zero's */
     memset(allocated_memory+1, '\0', bytes);
-    pthread_mutex_unlock(&(this->mutex));
+    if (use_mutex)
+    {
+	    pthread_mutex_unlock(&(this->mutex));
+    }
+    
     /* real memory starts after header */
     return (allocated_memory+1);
+}
+
+/**
+ * Implements allocator_t's function allocate. 
+ * See #allocator_s.allocate for description.
+ */
+static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line)
+{
+	private_allocator_t *this = (private_allocator_t *) allocator;
+	return (allocate_special(this,bytes, file,line,TRUE));
 }
 
 /*
@@ -178,14 +209,16 @@ static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char 
     {
 	    	return NULL;
     }
+
 	pthread_mutex_lock( &(this->mutex));
     allocated_memory = ((memory_hdr_t *)old) - 1;
     
-	void *new_space = this->public.allocate(&(this->public),bytes,file,line);
+	void *new_space = this->allocate_special(this,bytes,file,line,FALSE);
+
 	if (new_space == NULL)
 	{
-		this->public.free_pointer(&(this->public),old);
 	    pthread_mutex_unlock(&(this->mutex));
+		this->public.free_pointer(&(this->public),old);
 		return NULL;
 	}
 	
@@ -237,6 +270,7 @@ static private_allocator_t allocator = {
 			 reallocate: reallocate,
  			 report_memory_leaks: allocator_report_memory_leaks},
 	allocations: NULL,
+	allocate_special : allocate_special,
 	mutex: PTHREAD_MUTEX_INITIALIZER
 };
 

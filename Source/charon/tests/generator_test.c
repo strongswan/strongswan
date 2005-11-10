@@ -84,7 +84,9 @@ void test_generator_with_header_payload(tester_t *tester)
 		0x00,0x00,0x00,0x07,
 		0x00,0x00,0x00,0x08,
 	};
-	
+
+	tester->assert_true(tester,(generated_data.len == sizeof(expected_generation)), "compare generated data length");
+		
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 	allocator_free_chunk(generated_data);
 	

@@ -1,7 +1,7 @@
 /**
  * @file generator.h
  * 
- * @brief Generic generator class used to generate IKEv2-Header and Payload
+ * @brief Generic generator class used to generate IKEv2-header and payloads.
  * 
  */
 
@@ -27,12 +27,13 @@
 #include "encodings.h"
 
 /**
- * Data Buffer for generating has start size of 3000 Bytes
+ * Generating is done in a data buffer.
+ * This is thehe start size of this buffer in Bytes.
  */
 #define GENERATOR_DATA_BUFFER_SIZE 3000
 
 /**
- * Number of Bytes to increase the buffer if it is to small
+ * Number of bytes to increase the buffer, if it is to small.
  */
 #define GENERATOR_DATA_BUFFER_INCREASE_VALUE 1000
 
