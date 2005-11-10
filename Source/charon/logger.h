@@ -45,7 +45,12 @@ enum logger_level_e {
 	/**
 	 * private data dumps
 	 */
-	PRIVATE = 8
+	PRIVATE = 8,
+	
+	/**
+	 * All Lol Levels
+	 */
+	ALL = 255
 };
 
 /**
