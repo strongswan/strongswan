@@ -29,6 +29,7 @@
 #include <syslog.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
 
 /**
  * Maximum length of al log entry (only used for logger_s.log)
