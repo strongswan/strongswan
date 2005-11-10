@@ -24,6 +24,7 @@
 #ifndef ALLOCATOR_H_
 #define ALLOCATOR_H_
 
+#include <stdlib.h>
 #include <stddef.h>
 
 #include "types.h"
@@ -213,7 +214,7 @@
 		chunk_t new_chunk; \
 		new_chunk.ptr = malloc(bytes); \
 		new_chunk.len = (new_chunk.ptr == NULL) ? 0 : bytes; \
-		return new_chunk;
+		return new_chunk; \
 	}
 	#define allocator_realloc(old,bytes) (realloc(old,bytes))
 	#define allocator_free(pointer) (free(pointer))
