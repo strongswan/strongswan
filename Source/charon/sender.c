@@ -1,7 +1,7 @@
 /**
  * @file sender.c
  *
- * @brief Implements the Sender Thread encapsulated in the sender_t-object
+ * @brief Implements the Sender Thread encapsulated in the sender_t object
  *
  */
 
@@ -42,7 +42,7 @@ struct private_sender_s {
 	 sender_t public;
 
 	 /**
-	  * Assigned thread to the sender_t-object
+	  * Assigned thread to the sender_t object
 	  */
 	 pthread_t assigned_thread;
 

@@ -1,8 +1,8 @@
 /**
  * @file ike_sa_manager_test.c
- * 
+ *
  * @brief Tests to test the IKE_SA-Manager type ike_sa_manager_t
- * 
+ *
  */
 
 /*
@@ -27,9 +27,9 @@
 
 /**
  * @brief Test function used to test the ike_sa_manager_t functionality
- * 
  *
- * @param tester associated tester_t-object
+ *
+ * @param tester associated tester_t object
  */
 void test_ike_sa_manager(tester_t *tester);
 

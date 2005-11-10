@@ -1,8 +1,8 @@
 /**
  * @file parser.h
- * 
+ *
  * @brief Generic parser class used to parse IKEv2-Header and Payload
- * 
+ *
  */
 
 /*
@@ -29,17 +29,17 @@
 
 
 /**
- * @brief A parser_t-object which parses payloads of specific type
+ * @brief A parser_t object which parses payloads of specific type
  */
 typedef struct parser_s parser_t;
 
-struct parser_s { 	
+struct parser_s {
 
 	/**
 	 * @brief Generates a specific payload from given data struct
-	 * 
+	 *
 	 * Remember: Header and substructures are also seen as payloads
-	 * 
+	 *
 	 * @param generator generator object
 	 * @return SUCCESSFUL if succeeded,
 	 * 		   NOT_SUPPORTED if payload_type is not supported
@@ -49,7 +49,7 @@ struct parser_s {
 
 	/**
 	 * @brief Destroys a generator object
-	 * 
+	 *
 	 * @param generator generator object
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
@@ -58,7 +58,7 @@ struct parser_s {
 
 /**
  * Constructor to create a parser
- * 
+ *
  */
 parser_t *parser_create(payload_info_t ** payload_infos);
 

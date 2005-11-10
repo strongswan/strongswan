@@ -1,8 +1,8 @@
 /**
  * @file sender.h
- * 
- * @brief Implements the Sender Thread encapsulated in the sender_t-object
- * 
+ *
+ * @brief Implements the Sender Thread encapsulated in the sender_t object
+ *
  */
 
 /*
@@ -30,11 +30,11 @@
  */
 typedef struct sender_s sender_t;
 
-struct sender_s { 	
+struct sender_s {
 
 	/**
 	 * @brief Destroys a sender object
-	 * 
+	 *
 	 * @param sender sender object
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */

@@ -1,8 +1,8 @@
 /**
  * @file send_queue_test.c
- * 
+ *
  * @brief Tests to test the Send-Queue type send_queue_t
- * 
+ *
  */
 
 /*
@@ -29,17 +29,17 @@
 
 /**
  * @brief Informations for the involved test-thread used in this test
- * 
+ *
  */
 typedef struct send_queue_test_s send_queue_test_t;
 
 
 struct send_queue_test_s{
 	/**
-	 * Associated tester_t-Object
+	 * Associated tester_t object
 	 */
 	tester_t *tester;
-	
+
 	/**
 	 * Queue to test
 	 */
@@ -48,23 +48,23 @@ struct send_queue_test_s{
 	/**
 	 * number of items to be inserted in the send-queue by each thread
 	 */
-	int insert_item_count;	
+	int insert_item_count;
 
 	/**
-	 * number of items to be removed by each 
-	 * receiver thread from the send-queue 
+	 * number of items to be removed by each
+	 * receiver thread from the send-queue
 	 */
-	int remove_item_count;	
+	int remove_item_count;
 };
 
 /**
  * @brief sender thread used in the the send_queue test function
- * 
+ *
  * @param testinfo informations for the specific thread.
  */
 static void test_send_queue_sender(send_queue_test_t * testinfo)
 {
-	int i;	
+	int i;
 	for (i = 0; i < testinfo->insert_item_count; i++)
 	{
 		packet_t *packet = packet_create(AF_INET);
@@ -75,7 +75,7 @@ static void test_send_queue_sender(send_queue_test_t * testinfo)
 
 /**
  * @brief receiver thread used in the the send_queue test function
- * 
+ *
  * @param testinfo informations for the specific thread.
  */
 static void test_send_queue_receiver(send_queue_test_t * testinfo)
@@ -87,7 +87,7 @@ static void test_send_queue_receiver(send_queue_test_t * testinfo)
 		testinfo->tester->assert_true(testinfo->tester,(testinfo->send_queue->get(testinfo->send_queue,&packet) == SUCCESS), "get packet call check");
 
 		testinfo->tester->assert_true(testinfo->tester,(	packet != NULL), "packet not NULL call check");
-		
+
 		testinfo->tester->assert_true(testinfo->tester,(	packet->destroy(packet) == SUCCESS), "packet destroy call check");
 	}
 }
@@ -109,22 +109,22 @@ void test_send_queue(tester_t *tester)
 	test_infos.send_queue = send_queue;
 	test_infos.insert_item_count = 10000;
 	test_infos.remove_item_count = 10000;
-	
-	
-	desired_value = test_infos.insert_item_count * sender_count - 
+
+
+	desired_value = test_infos.insert_item_count * sender_count -
 					test_infos.remove_item_count * receiver_count;
-	
+
 	for (i = 0; i < receiver_count;i++)
 	{
 		pthread_create( &receiver_threads[i], NULL,(void*(*)(void*)) &test_send_queue_receiver, (void*) &test_infos);
 	}
-	
+
 	for (i = 0; i < sender_count;i++)
 	{
 		pthread_create( &sender_threads[i], NULL,(void*(*)(void*)) &test_send_queue_sender, (void*) &test_infos);
 	}
-	
-	
+
+
 	/* Wait for all threads */
 	for (i = 0; i < sender_count;i++)
 	{
@@ -134,8 +134,8 @@ void test_send_queue(tester_t *tester)
 	{
 		pthread_join(receiver_threads[i], NULL);
 	}
-	
-	
+
+
 	/* the send-queue has to have diserd_value count entries*/
 	tester->assert_true(tester,(send_queue->get_count(send_queue) == desired_value), "count value check");
 	tester->assert_true(tester,(send_queue->destroy(send_queue) == SUCCESS), "destroy call check");

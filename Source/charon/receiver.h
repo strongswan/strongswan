@@ -1,8 +1,8 @@
 /**
  * @file receiver.h
- * 
- * @brief Implements the Receiver Thread encapsulated in the receiver_t-object
- * 
+ *
+ * @brief Implements the Receiver Thread encapsulated in the receiver_t object
+ *
  */
 
 /*
@@ -30,11 +30,11 @@
  */
 typedef struct receiver_s receiver_t;
 
-struct receiver_s { 	
+struct receiver_s {
 
 	/**
 	 * @brief Destroys a receiver object
-	 * 
+	 *
 	 * @param receiver receiver object
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */

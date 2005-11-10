@@ -37,51 +37,51 @@ typedef struct generator_infos_s generator_infos_t;
 struct generator_infos_s {
 
 	/**
-	 * Buffer used to generate to 
+	 * Buffer used to generate to
 	 */
 	u_int8_t *buffer;
-	
+
 	/**
 	 * current write position in buffer (one byte alligned)
 	 */
 	u_int8_t *out_position;
-	
+
 	/**
 	 * position of last byte in buffer
 	 */
 	u_int8_t *roof_position;
-	
+
 	/**
 	 * Current bit writing to
 	 */
 	size_t current_bit;
-	
+
 	/**
 	 * Associated data struct to read informations from
 	 */
 	 void * data_struct;
 	/**
 	 * @brief Destroys a generator_infos_t object
-	 * 
+	 *
 	 * @param generator_infos_t generator_infos_t object
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*destroy) (generator_infos_t *this);
-	
+
 	/**
 	 * Checks if enough space is available in buffer and if not,
-	 * the buffer size is increased until at least the asked amount of space 
+	 * the buffer size is increased until at least the asked amount of space
 	 * is available
-	 * 
+	 *
 	 * @param bits number of bits to make at leas available in buffer
  	 * @param generator_infos_t generator_infos_t object
 	 * @return SUCCESSFUL if succeeded, OUT_OF_RES otherwise
 	 */
 	status_t (*make_space_available) (generator_infos_t *this,size_t bits);
-	
+
 	status_t (*write_bytes_to_buffer) (generator_infos_t *this,void * bytes,size_t number_of_bytes);
-	
-	status_t (*write_chunk) (generator_infos_t *this,chunk_t *data);	
+
+	status_t (*write_chunk) (generator_infos_t *this,chunk_t *data);
 };
 
 /**
@@ -101,9 +101,9 @@ static status_t generator_info_make_space_available (generator_infos_t *this, si
 		{
 			return OUT_OF_RES;
 		}
-	
+
 		this->buffer = new_buffer;
-	
+
 		this->out_position = (this->buffer + out_position_offset);
 		this->roof_position = (this->buffer + new_buffer_size);
 
@@ -117,14 +117,14 @@ static status_t generator_info_write_bytes_to_buffer (generator_infos_t *this,vo
 	u_int8_t *read_position = (u_int8_t *) bytes;
 	int i;
 	status_t status;
-	
+
 	status = this->make_space_available(this,number_of_bytes * 8);
-	
+
 	if (status != SUCCESS)
 	{
 		return status;
 	}
-	
+
 	for (i = 0; i < number_of_bytes; i++)
 	{
 		*(this->out_position) = *(read_position);
@@ -163,9 +163,9 @@ static status_t generator_infos_destroy (generator_infos_t *this)
 }
 
 /**
- * Creates a generator_infos_t-object holding necessary informations 
+ * Creates a generator_infos_t object holding necessary informations
  * for generating (buffer, data_struct, etc)
- * 
+ *
  * @param data_struct where to read the data out
  */
 generator_infos_t * generator_infos_create(void *data_struct)
@@ -190,7 +190,7 @@ generator_infos_t * generator_infos_create(void *data_struct)
 		allocator_free(this);
 		return NULL;
 	}
-	
+
 	/* set private data */
 	this->out_position = this->buffer;
 	this->roof_position = this->buffer + GENERATOR_DATA_BUFFER_SIZE;
@@ -219,7 +219,7 @@ struct private_generator_s {
 	 *
 	 * items are bytewhise written
 	 *
-	 * @param this private_generator_t-object
+	 * @param this private_generator_t object
 	 * @param data_struct data_struct to read data from
 	 * @param encoding_rules pointer to first encoding_rule of encoding rules array
 	 * @param encoding_rules_count number of encoding rules in encoding rules array
@@ -249,7 +249,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 {
 	size_t number_of_bits = 0;
 	status_t status;
-	
+
 
 	switch (int_type)
 	{
@@ -276,9 +276,9 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 		/* current bit has to be zero for values greater then 4 bits */
 		return FAILED;
 	}
-	
+
 	status = generator_infos->make_space_available(generator_infos,number_of_bits);
-	
+
 	if (status != SUCCESS)
 	{
 		return status;
@@ -289,10 +289,10 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			case U_INT_4:
 			{
 				if (generator_infos->current_bit == 0)
-				{			
+				{
 					u_int8_t high_val = *((u_int8_t *)(generator_infos->data_struct + offset)) << 4;
 					u_int8_t low_val = *(generator_infos->out_position) & 0x0F;
-						
+
 					*(generator_infos->out_position) = high_val | low_val;
 					/* write position is not changed, just bit position is moved */
 					generator_infos->current_bit = 4;
@@ -304,7 +304,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 					*(generator_infos->out_position) = high_val | low_val;
 					generator_infos->out_position++;
 					generator_infos->current_bit = 0;
-					
+
 				}
 				else
 				{
@@ -313,39 +313,39 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 				};
 				break;
 			}
-			
+
 			case U_INT_8:
 			{
 				*generator_infos->out_position = *((u_int8_t *)(generator_infos->data_struct + offset));
 				generator_infos->out_position++;
 				break;
-				
+
 			}
 			case U_INT_16:
 			{
 				u_int16_t int16_val = htons(*((u_int16_t*)(generator_infos->data_struct + offset)));
 				generator_infos->write_bytes_to_buffer(generator_infos,&int16_val,sizeof(u_int16_t));
-		
+
 				break;
 			}
 			case U_INT_32:
 			{
-				u_int32_t int32_val = htonl(*((u_int32_t*)(generator_infos->data_struct + offset)));			
+				u_int32_t int32_val = htonl(*((u_int32_t*)(generator_infos->data_struct + offset)));
 				generator_infos->write_bytes_to_buffer(generator_infos,&int32_val,sizeof(u_int32_t));
 				break;
 			}
 			case U_INT_64:
 			{
 				u_int32_t int32_val_low = htonl(*((u_int32_t*)(generator_infos->data_struct + offset)));
-				u_int32_t int32_val_high = htonl(*((u_int32_t*)(generator_infos->data_struct + offset) + 1));			
-				generator_infos->write_bytes_to_buffer(generator_infos,&int32_val_high,sizeof(u_int32_t));				
-				generator_infos->write_bytes_to_buffer(generator_infos,&int32_val_low,sizeof(u_int32_t));				
+				u_int32_t int32_val_high = htonl(*((u_int32_t*)(generator_infos->data_struct + offset) + 1));
+				generator_infos->write_bytes_to_buffer(generator_infos,&int32_val_high,sizeof(u_int32_t));
+				generator_infos->write_bytes_to_buffer(generator_infos,&int32_val_low,sizeof(u_int32_t));
 				break;
 			}
-				
+
 			default:
 			return FAILED;
-			
+
 	}
 
 	return SUCCESS;
@@ -358,8 +358,8 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 {
 	int i;
 	status_t status;
-	
-	
+
+
 	generator_infos_t *infos = generator_infos_create(data_struct);
 
 	if (infos == NULL)
@@ -387,7 +387,7 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 				u_int8_t reserved_bit = ~(1 << (7 - infos->current_bit));
 
 				*(infos->out_position) = *(infos->out_position) & reserved_bit;
-				
+
 				infos->current_bit++;
 				if (infos->current_bit >= 8)
 				{
@@ -411,9 +411,9 @@ static status_t generate (private_generator_t *this,void * data_struct,encoding_
 			{
 				u_int8_t flag_value = (*((bool *) (infos->data_struct + encoding_rules[i].offset))) ? 1 : 0;
 				u_int8_t flag = (flag_value << (7 - infos->current_bit));
-				
+
 				*(infos->out_position) = *(infos->out_position) | flag;
-				
+
 				infos->current_bit++;
 				if (infos->current_bit >= 8)
 				{

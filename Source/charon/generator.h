@@ -1,8 +1,8 @@
 /**
  * @file generator.h
- * 
+ *
  * @brief Generic generator class used to generate IKEv2-header and payloads.
- * 
+ *
  */
 
 /*
@@ -38,17 +38,17 @@
 #define GENERATOR_DATA_BUFFER_INCREASE_VALUE 1000
 
 /**
- * @brief A generator_t-object which generates payloads of specific type
+ * @brief A generator_t object which generates payloads of specific type
  */
 typedef struct generator_s generator_t;
 
-struct generator_s { 	
+struct generator_s {
 
 	/**
 	 * @brief Generates a specific payload from given data struct
-	 * 
+	 *
 	 * Remember: Header and substructures are also seen as payloads
-	 * 
+	 *
 	 * @param generator generator object
 	 * @param payload_type payload type to generate using the given data struct
 	 * @param[in] data_struct Data struct where the needed data for generating are stored
@@ -61,7 +61,7 @@ struct generator_s {
 
 	/**
 	 * @brief Destroys a generator object
-	 * 
+	 *
 	 * @param generator generator object
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
@@ -70,7 +70,7 @@ struct generator_s {
 
 /**
  * Constructor to create a generator
- * 
+ *
  * @param payload_infos	pointer to the payload_info_t-array containing
  * all the payload informations needed to automatic generate a specific payload
  */

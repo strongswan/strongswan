@@ -2,7 +2,7 @@
  * @file ike_sa.c
  *
  * @brief Class ike_sa_t. An object of this type is managed by an
- * ike_sa_manager_t-object and represents an IKE_SA
+ * ike_sa_manager_t object and represents an IKE_SA
  *
  */
 

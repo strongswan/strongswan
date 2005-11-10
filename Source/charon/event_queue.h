@@ -1,8 +1,8 @@
 /**
  * @file event_queue.h
- * 
+ *
  * @brief Event-Queue based on class linked_list_t
- * 
+ *
  */
 
 /*
@@ -31,16 +31,16 @@
 /**
  * @brief Event-Queue used to store timed events.
  *
- * Although the event-queue is based on a linked_list_t 
+ * Although the event-queue is based on a linked_list_t
  * all access functions are thread-save implemented.
  */
 typedef struct event_queue_s event_queue_t;
 
 struct event_queue_s {
-	
+
 	/**
 	 * @brief Returns number of events in queue.
-	 * 
+	 *
 	 * @param event_queue 	calling object
 	 * @return 				number of events in queue
 	 */
@@ -48,39 +48,39 @@ struct event_queue_s {
 
 	/**
 	 * @brief Get the next job from the event-queue.
-	 * 
+	 *
 	 * If no event is pending, this function blocks until a job can be returned.
-	 * 
+	 *
 	 * @param event_queue 	calling object
  	 * @param[out] job 		pointer to a job pointer where to job is returned to
 	 * @return 				- SUCCESS if succeeded
 	 * 						- FAILED otherwisesa
 	 */
 	status_t (*get) (event_queue_t *event_queue, job_t **job);
-	
+
 	/**
 	 * @brief Adds a event to the queue, using a relative time.
-	 * 
+	 *
 	 * This function is non blocking and adds a job_t at a specific time to the list.
-	 * The specific job-object has to get destroyed by the thread which 
+	 * The specific job object has to get destroyed by the thread which
 	 * removes the job.
-	 * 
+	 *
 	 * @param event_queue 	calling object
  	 * @param[in] job 		job to add to the queue (job is not copied)
   	 * @param[in] time 		relative time, when the event has to get fired
-	 * @returns 
+	 * @returns
 	 * 						- SUCCESS if succeeded
 	 * 						- FAILED otherwise
 	 */
 	status_t (*add_relative) (event_queue_t *event_queue, job_t *job, u_int32_t ms);
-	
+
 	/**
 	 * @brief Adds a event to the queue, using an absolute time.
-	 * 
+	 *
 	 * This function is non blocking and adds a job_t at a specific time to the list.
-	 * The specific job-object has to get destroyed by the thread which 
+	 * The specific job object has to get destroyed by the thread which
 	 * removes the job.
-	 * 
+	 *
 	 * @param event_queue 	calling object
  	 * @param[in] 			job job to add to the queue (job is not copied)
   	 * @param[in] 			absolute time time, when the event has to get fired
@@ -92,11 +92,11 @@ struct event_queue_s {
 
 	/**
 	 * @brief Destroys a event_queue object.
-	 * 
+	 *
 	 * @warning The caller of this function has to make sure
 	 * that no thread is going to add or get an event from the event_queue
 	 * after calling this function.
-	 * 
+	 *
 	 * @param event_queue 	calling object
 	 * @returns				always SUCCESS
 	 */
@@ -105,8 +105,8 @@ struct event_queue_s {
 
 /**
  * @brief Creates an empty event_queue
- * 
- * @returns 
+ *
+ * @returns
  * 			- Empty event_queue_t object
  * 			- NULL if memory allocation failed
  */

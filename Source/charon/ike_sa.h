@@ -1,9 +1,9 @@
 /**
  * @file ike_sa.h
- * 
+ *
  * @brief Class ike_sa_t. An object of this type is managed by an
- * ike_sa_manager_t-object and represents an IKE_SA
- * 
+ * ike_sa_manager_t object and represents an IKE_SA
+ *
  */
 
 /*
@@ -31,35 +31,35 @@
 
 /**
  * @brief This class is used to represent an IKE_SA
- * 
+ *
  */
 typedef struct ike_sa_s ike_sa_t;
 
-struct ike_sa_s { 	
+struct ike_sa_s {
 
 	/**
 	 * @brief Processes a incoming IKEv2-Message of type message_t
-	 * 
-	 * @param this ike_sa_t-object object
- 	 * @param[in] message message_t-object to process
+	 *
+	 * @param this ike_sa_t object object
+ 	 * @param[in] message message_t object to process
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*process_message) (ike_sa_t *this,message_t *message);
 
 	/**
 	 * @brief Processes a specific configuration
-	 * 
+	 *
 	 * This function is called when a new IKE_SA is created
-	 * 
+	 *
 	 * @param this ike_sa_t-message_t object object
- 	 * @param[in] message message_t-object to process
+ 	 * @param[in] message message_t object to process
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
 	status_t (*process_configuration) (ike_sa_t *this,configuration_t *configuration);
-	
+
 	/**
 	 * @brief Get the id of the SA
-	 * 
+	 *
 	 * @param this ike_sa_t-message_t object object
 	 * @return ike_sa's ike_sa_id_t
 	 */
@@ -67,7 +67,7 @@ struct ike_sa_s {
 
 	/**
 	 * @brief Destroys a ike_sa_t object
-	 * 
+	 *
 	 * @param this ike_sa_t object
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
@@ -75,13 +75,13 @@ struct ike_sa_s {
 };
 
 /**
- * Creates an ike_sa_t-object with a specific ike_sa_id_t-object
- * 
- * @param[in] ike_sa_id ike_sa_id_t-object to associate with new IKE_SA.
- *  			 			The object is internal getting cloned 
+ * Creates an ike_sa_t object with a specific ike_sa_id_t object
+ *
+ * @param[in] ike_sa_id ike_sa_id_t object to associate with new IKE_SA.
+ *  			 			The object is internal getting cloned
  * 			  			and so has to be destroyed by the caller.
  *
- * @warning the Content of internal ike_sa_id_t-Object can change over time 
+ * @warning the Content of internal ike_sa_id_t object can change over time
  * 			e.g. when a IKE_SA_INIT has been finished
  *
  * @return created ike_sa_t object

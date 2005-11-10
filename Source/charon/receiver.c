@@ -1,7 +1,7 @@
 /**
  * @file receiver.c
  *
- * @brief Implements the Receiver Thread encapsulated in the receiver_t-object
+ * @brief Implements the Receiver Thread encapsulated in the receiver_t object
  *
  */
 
@@ -43,7 +43,7 @@ struct private_receiver_s {
 	 receiver_t public;
 
 	 /**
-	  * Assigned thread to the receiver_t-object
+	  * Assigned thread to the receiver_t object
 	  */
 	 pthread_t assigned_thread;
 

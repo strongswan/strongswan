@@ -40,7 +40,7 @@ struct private_scheduler_s {
 	 scheduler_t public;
 
 	 /**
-	  * Assigned thread to the scheduler_t-object
+	  * Assigned thread to the scheduler_t object
 	  */
 	 pthread_t assigned_thread;
 

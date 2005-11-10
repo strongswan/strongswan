@@ -1,8 +1,8 @@
 /**
  * @file message.h
- * 
+ *
  * @brief Class message_t. Object of this type represents an IKEv2-Message
- * 
+ *
  */
 
 /*
@@ -27,16 +27,16 @@
 
 /**
  * @brief This class is used to represent an IKEv2-Message.
- * 
+ *
  * An IKEv2-Message is either a request or response.
  */
 typedef struct message_s message_t;
 
-struct message_s { 	
+struct message_s {
 
 	/**
 	 * @brief Destroys a message object
-	 * 
+	 *
 	 * @param this message_t object
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
@@ -44,8 +44,8 @@ struct message_s {
 };
 
 /**
- * Creates an message_t-object
- * 
+ * Creates an message_t object
+ *
  * @return created message_t object
  */
 message_t * message_create();
