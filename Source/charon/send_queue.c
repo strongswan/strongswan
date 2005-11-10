@@ -60,12 +60,13 @@ struct private_send_queue_s {
 /**
  * @brief implements function get_count of send_queue_t
  */
-static status_t get_count(private_send_queue_t *this, int *count)
+static int get_count(private_send_queue_t *this)
 {
+	int count;
 	pthread_mutex_lock(&(this->mutex));
-	this->list->get_count(this->list,count);
+	count = this->list->get_count(this->list);
 	pthread_mutex_unlock(&(this->mutex));
-	return SUCCESS;
+	return count;
 }
 
  /**
@@ -73,12 +74,11 @@ static status_t get_count(private_send_queue_t *this, int *count)
  */
 static status_t get(private_send_queue_t *this, packet_t **packet)
 {
-	int count;
 	int oldstate;
 	pthread_mutex_lock(&(this->mutex));
 	/* go to wait while no packets available */
-	this->list->get_count(this->list,&count);
-	while(count == 0)
+	
+	while(this->list->get_count(this->list) == 0)
 	{
 		/* add mutex unlock handler for cancellation, enable cancellation */
 		pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
@@ -88,7 +88,6 @@ static status_t get(private_send_queue_t *this, packet_t **packet)
 		/* reset cancellation, remove mutex-unlock handler (without executing) */
 		pthread_setcancelstate(oldstate, NULL);
 		pthread_cleanup_pop(0);
-		this->list->get_count(this->list,&count);
 	}
 	this->list->remove_first(this->list,(void **) packet);
 	pthread_mutex_unlock(&(this->mutex));
@@ -113,11 +112,9 @@ static status_t add(private_send_queue_t *this, packet_t *packet)
  */
 static status_t destroy (private_send_queue_t *this)
 {
-	int count;
-	this->list->get_count(this->list,&count);
 
 	/* destroy all packets in list before destroying list */
-	while (count > 0)
+	while (this->list->get_count(this->list) > 0)
 	{
 		packet_t *packet;
 		if (this->list->remove_first(this->list,(void *) &packet) != SUCCESS)
@@ -126,7 +123,6 @@ static status_t destroy (private_send_queue_t *this)
 			break;
 		}
 		packet->destroy(packet);
-		this->list->get_count(this->list,&count);
 	}
 	this->list->destroy(this->list);
 
@@ -157,7 +153,7 @@ send_queue_t *send_queue_create()
 		return NULL;
 	}
 
-	this->public.get_count = (status_t(*)(send_queue_t*, int*)) get_count;
+	this->public.get_count = (int(*)(send_queue_t*)) get_count;
 	this->public.get = (status_t(*)(send_queue_t*, packet_t**)) get;
 	this->public.add = (status_t(*)(send_queue_t*, packet_t*)) add;
 	this->public.destroy = (status_t(*)(send_queue_t*)) destroy;

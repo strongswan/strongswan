@@ -1,7 +1,7 @@
 /**
  * @file event_queue.c
  *
- * @brief Event-Queue based on linked_list_t
+ * @brief Event-Queue based on class linked_list_t
  *
  */
 
@@ -149,12 +149,13 @@ static long time_difference(struct timeval *end_time, struct timeval *start_time
 /**
  * @brief implements function get_count of event_queue_t
  */
-static status_t get_count (private_event_queue_t *this, int *count)
+static int get_count (private_event_queue_t *this)
 {
+	int count;
 	pthread_mutex_lock(&(this->mutex));
-	status_t status = this->list->get_count(this->list,count);
+	count = this->list->get_count(this->list);
 	pthread_mutex_unlock(&(this->mutex));
-	return status;
+	return count;
 }
 
 /**
@@ -165,15 +166,13 @@ static status_t get(private_event_queue_t *this, job_t **job)
 	timespec_t timeout;
 	timeval_t current_time;
 	event_t * next_event;
-	int count;
 	int oldstate;
 
 	pthread_mutex_lock(&(this->mutex));
 
 	while (1)
 	{
-		this->list->get_count(this->list,&count);
-		while(count == 0)
+		while(this->list->get_count(this->list) == 0)
 		{
 			/* add mutex unlock handler for cancellation, enable cancellation */
 			pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
@@ -184,8 +183,6 @@ static status_t get(private_event_queue_t *this, job_t **job)
 			/* reset cancellation, remove mutex-unlock handler (without executing) */
 			pthread_setcancelstate(oldstate, NULL);
 			pthread_cleanup_pop(0);
-
-			this->list->get_count(this->list,&count);
 		}
 
 		this->list->get_first(this->list,(void **) &next_event);
@@ -226,7 +223,6 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 	event_t *event = event_create(time,job);
 	event_t *current_event;
 	status_t status;
-	int count;
 
 	if (event == NULL)
 	{
@@ -237,8 +233,7 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 	/* while just used to break out */
 	while(1)
 	{
-		this->list->get_count(this->list,&count);
-		if (count == 0)
+		if (this->list->get_count(this->list) == 0)
 		{
 			status = this->list->insert_first(this->list,event);
 			break;
@@ -324,9 +319,7 @@ static status_t add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
  */
 static status_t event_queue_destroy(private_event_queue_t *this)
 {
-	int count;
-	this->list->get_count(this->list,&count);
-	while (count > 0)
+	while (this->list->get_count(this->list) > 0)
 	{
 		event_t *event;
 
@@ -337,7 +330,6 @@ static status_t event_queue_destroy(private_event_queue_t *this)
 		}
 		event->job->destroy(event->job);
 		event->destroy(event);
-		this->list->get_count(this->list,&count);
 	}
 	this->list->destroy(this->list);
 
@@ -368,7 +360,7 @@ event_queue_t *event_queue_create()
 		return NULL;
 	}
 
-	this->public.get_count = (status_t (*) (event_queue_t *event_queue, int *count)) get_count;
+	this->public.get_count = (int (*) (event_queue_t *event_queue)) get_count;
 	this->public.get = (status_t (*) (event_queue_t *event_queue, job_t **job)) get;
 	this->public.add_absolute = (status_t (*) (event_queue_t *event_queue, job_t *job, timeval_t time)) add_absolute;
 	this->public.add_relative = (status_t (*) (event_queue_t *event_queue, job_t *job, u_int32_t ms)) add_relative;

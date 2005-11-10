@@ -240,14 +240,9 @@ static status_t iterator_destroy(private_linked_list_iterator_t *this)
 /**
  * @brief implements function get_count of linked_list_t
  */
-static status_t get_count(private_linked_list_t *this, int *count)
+static int get_count(private_linked_list_t *this)
 {
-	if (this == NULL)
-	{
-		return FAILED;
-	}
-	*count = this->count;
-	return SUCCESS;
+	return this->count;
 }
 
 
@@ -685,7 +680,7 @@ linked_list_t *linked_list_create()
 {
 	private_linked_list_t *this = allocator_alloc_thing(private_linked_list_t);
 
-	this->public.get_count = (status_t (*) (linked_list_t *linked_list, int *count)) get_count;
+	this->public.get_count = (int (*) (linked_list_t *linked_list)) get_count;
 	this->public.create_iterator = (status_t (*) (linked_list_t *linked_list, linked_list_iterator_t **iterator,bool forward)) create_iterator;
 	this->public.get_first = (status_t (*) (linked_list_t *linked_list, void **item)) get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *linked_list, void **item)) get_last;

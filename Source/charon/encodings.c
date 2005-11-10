@@ -1,13 +1,13 @@
 /**
  * @file encodings.c
  * 
- * @brief Type definitions for parser and generator
- * 		  Also, Payload types are defined here.
+ * @brief Type definitions for parser and generator, 
+ * 		  also payload types are defined here.
  * 
  * Header is parsed like a payload and gets its one payload_id 
- * from PRIVATE USE space. Also the substructures get their own
- * payload_id from PRIVATE_USE space
- * 
+ * from PRIVATE USE space. Also the substructures 
+ * of specific payload types get their own payload_id 
+ * from PRIVATE_USE space. See RFC for mor informations.
  * 
  */
 
@@ -32,9 +32,10 @@
 extern payload_info_t ike_header_info;
 
 /**
- * Contains all payload informations supported by parser and generator
+ * List containing all payload informations 
+ * supported by parser and generator.
  * 
- * @warning This list must be NULL terminated
+ * @warning This list must be NULL terminated.
  */
 payload_info_t *payload_infos[] = {
 	&ike_header_info,

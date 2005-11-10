@@ -31,71 +31,57 @@
 void test_linked_list(tester_t *tester)
 {
 	void *test_value = NULL;
-	int count;
 
 	linked_list_t *linked_list = linked_list_create();
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 0), "count check");
+	
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 0), "count check");
 	
 	linked_list->insert_first(linked_list,"one");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 1), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 1), "count check");
 
 	linked_list->insert_first(linked_list,"two");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 2), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 2), "count check");
 		
 	linked_list->insert_first(linked_list,"three");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 3), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 3), "count check");
 
 	linked_list->insert_first(linked_list,"four");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 4), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 4), "count check");
 
 	linked_list->insert_first(linked_list,"five");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 5), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 5), "count check");
 
 	tester->assert_true(tester,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"five") == 0), "get_first value check");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 5), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 5), "count check");
 
 	tester->assert_true(tester,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "get_last value check");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 5), "count check");
+	tester->assert_true(tester,(	linked_list->get_count(linked_list) == 5), "count check");
 	
 	tester->assert_true(tester,(linked_list->remove_first(linked_list,&test_value) == SUCCESS), "remove_first call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"five") == 0), "remove_first value check");	
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 4), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 4), "count check");
 
 	tester->assert_true(tester,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"four") == 0), "get_first value check");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 4), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 4), "count check");
 
 	tester->assert_true(tester,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "get_last value check");	
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 4), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 4), "count check");
 
 	tester->assert_true(tester,(linked_list->remove_last(linked_list,&test_value) == SUCCESS), "remove_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "remove_last value check");	
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 3), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 3), "count check");
 
 	tester->assert_true(tester,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"two") == 0), "get_last value check");		
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 3), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 3), "count check");
 
 	tester->assert_true(tester,(linked_list->get_first(linked_list,&test_value) == SUCCESS), "get_first call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"four") == 0), "get_first value check");
-	linked_list->get_count(linked_list,&count);
-	tester->assert_true(tester,(count == 3), "count check");
+	tester->assert_true(tester,(linked_list->get_count(linked_list) == 3), "count check");
 	
 	tester->assert_true(tester,(linked_list->destroy(linked_list) == SUCCESS), "destroy call check");
 }

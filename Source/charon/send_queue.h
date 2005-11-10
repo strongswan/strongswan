@@ -41,9 +41,9 @@ struct send_queue_s {
 	 * 
 	 * @param send_queue_t calling object
  	 * @param[out] count integer pointer to store the count in
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @returns number of items in queue
 	 */
-	status_t (*get_count) (send_queue_t *send_queue, int *count);
+	int (*get_count) (send_queue_t *send_queue);
 
 	/**
 	 * @brief get the next packet from the queue

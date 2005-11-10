@@ -40,10 +40,9 @@ struct job_queue_s {
 	 * @brief returns number of jobs in queue
 	 * 
 	 * @param job_queue_t calling object
- 	 * @param[out] count integer pointer to store the job count in
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @returns number of items in queue
 	 */
-	status_t (*get_count) (job_queue_t *job_queue, int *count);
+	int (*get_count) (job_queue_t *job_queue);
 
 	/**
 	 * @brief get the next job from the queue

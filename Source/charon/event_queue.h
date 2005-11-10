@@ -1,7 +1,7 @@
 /**
  * @file event_queue.h
  * 
- * @brief Event-Queue based on linked_list_t
+ * @brief Event-Queue based on class linked_list_t
  * 
  */
 
@@ -29,32 +29,33 @@
 #include "job.h"
 
 /**
- * @brief Event-Queue
+ * @brief Event-Queue used to store timed events.
  *
  * Although the event-queue is based on a linked_list_t 
- * all access functions are thread-save implemented
+ * all access functions are thread-save implemented.
  */
 typedef struct event_queue_s event_queue_t;
 
 struct event_queue_s {
 	
 	/**
-	 * @brief returns number of events in queue
+	 * @brief Returns number of events in queue.
 	 * 
 	 * @param event_queue calling object
  	 * @param[out] count integer pointer to store the event count in
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @return	number of events in queue
 	 */
-	status_t (*get_count) (event_queue_t *event_queue, int *count);
+	int (*get_count) (event_queue_t *event_queue);
 
 	/**
 	 * @brief get the next job from the event-queue
 	 * 
 	 * If no event is pending, this function blocks until a job can be returned.
 	 * 
-	 * @param event_queue calling object
- 	 * @param[out] job pointer to a job pointer where to job is returned to
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @param event_queue 	calling object
+ 	 * @param[out] job 		pointer to a job pointer where to job is returned to
+	 * @return 				- SUCCESS if succeeded
+	 * 						- FAILED otherwisesa
 	 */
 	status_t (*get) (event_queue_t *event_queue, job_t **job);
 	

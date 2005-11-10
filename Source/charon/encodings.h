@@ -1,13 +1,13 @@
 /**
  * @file encodings.h
  * 
- * @brief Type definitions for parser and generator
- * 		  Also, Payload types are defined here.
+ * @brief Type definitions for parser and generator, 
+ * 		  also payload types are defined here.
  * 
  * Header is parsed like a payload and gets its one payload_id 
- * from PRIVATE USE space. Also the substructures get their own
- * payload_id from PRIVATE_USE space
- * 
+ * from PRIVATE USE space. Also the substructures 
+ * of specific payload types get their own payload_id 
+ * from PRIVATE_USE space. See RFC for mor informations.
  * 
  */
 
@@ -38,7 +38,7 @@
  *
  * Each field of an IKEv2-Message (in header or payload) 
  * which has to be parsed or generated differently has its own
- * enum value.
+ * type defined here.
  */
 typedef enum encoding_type_e encoding_type_t;
 
@@ -176,9 +176,9 @@ enum encoding_type_e{
  * a location in the data struct where the current field is stored to
  * or read from.
  * 
- * For examples see directory encodings/
+ * For examples see directory encodings/.
  * 
- * This rules are used by parser and generator
+ * This rules are used by parser and generator.
  */
 typedef struct encoding_rule_s encoding_rule_t;
 
@@ -189,6 +189,12 @@ struct encoding_rule_s{
 	encoding_type_t type;
 	/**
 	 * Offset in the data struct
+	 * 
+	 * When parsing, data are written to this offset of the 
+	 * data struct.
+	 * 
+	 * When generating, data are read from this offset in the 
+	 * data struct.
 	 */
 	u_int32_t offset;
 };
@@ -199,7 +205,7 @@ struct encoding_rule_s{
  * 
  * 
  * Header and substructures are also defined as 
- * payload types with values of PRIVATE USE space
+ * payload types with values from PRIVATE USE space.
  */
 typedef enum payload_type_e payload_type_t;
 
@@ -271,6 +277,9 @@ enum payload_type_e{
 	
 	/**
 	 * Header has value 140 of PRIVATE USE space
+	 * 
+	 * This payload type is not send over wire and just 
+	 * used internally to handle IKEv2-Header like a payload.
 	 */
 	HEADER = 140
 };

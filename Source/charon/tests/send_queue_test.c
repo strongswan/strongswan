@@ -97,7 +97,7 @@ static void test_send_queue_receiver(send_queue_test_t * testinfo)
  */
 void test_send_queue(tester_t *tester)
 {
-	int value, desired_value, i;
+	int desired_value, i;
 	int sender_count = 10;
 	int receiver_count = 2;
 	pthread_t sender_threads[sender_count];
@@ -137,7 +137,6 @@ void test_send_queue(tester_t *tester)
 	
 	
 	/* the send-queue has to have diserd_value count entries*/
-	tester->assert_true(tester,(send_queue->get_count(send_queue,&value) == SUCCESS), "get count call check");
-	tester->assert_true(tester,(value == desired_value), "count value check");
+	tester->assert_true(tester,(send_queue->get_count(send_queue) == desired_value), "count value check");
 	tester->assert_true(tester,(send_queue->destroy(send_queue) == SUCCESS), "destroy call check");
 }

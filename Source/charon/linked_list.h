@@ -92,10 +92,9 @@ struct linked_list_s {
 	 * @brief gets the count of items in the list
 	 * 
 	 * @param linked_list calling object
-	 * @param[in] count place where the count is written
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @return number of items in list
 	 */
-	status_t (*get_count) (linked_list_t *linked_list, int *count);
+	int (*get_count) (linked_list_t *linked_list);
 	
 	/**
 	 * @brief creates a iterator for the given list

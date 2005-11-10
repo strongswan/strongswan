@@ -143,7 +143,7 @@
 	 * 
 	 * @see #allocator_s.report_memory_leaks for description
 	 */
-	#define report_memory_leaks(void) global_allocator->report_memory_leaks(global_allocator);
+	#define report_memory_leaks(void) (global_allocator->report_memory_leaks(global_allocator))
 #else
 	#define allocator_alloc(bytes) (malloc(bytes))
 	#define allocator_realloc(old,bytes) (realloc(old,bytes))

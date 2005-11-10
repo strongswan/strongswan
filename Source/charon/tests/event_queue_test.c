@@ -95,7 +95,6 @@ void test_event_queue(tester_t *tester)
 	event_queue_test_t testinfos;
 	pthread_t threads[EVENT_QUEUE_INSERT_THREADS];
 	int i,j, number_of_total_events;
-	int count;
 	timeval_t current_time, start_time;
 
 	testinfos.tester = tester;
@@ -120,8 +119,7 @@ void test_event_queue(tester_t *tester)
 		pthread_join(threads[i], NULL);
 	}
 
-	tester->assert_true(tester,(event_queue->get_count(event_queue,&count) == SUCCESS), "get_count call check");
-	tester->assert_true(tester,(count == number_of_total_events), "event count check");
+	tester->assert_true(tester,(event_queue->get_count(event_queue) == number_of_total_events), "event count check");
 
 	for (i = 0; i < EVENT_QUEUE_TIMES;i++)
 	{
