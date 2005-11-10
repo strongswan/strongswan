@@ -26,6 +26,25 @@
 #include "types.h"
 #include "message.h"
 #include "linked_list.h"
+#include "encodings.h"
+
+/**
+ * Entry for a payload in the internal used linked list
+ * 
+ */
+typedef struct payload_entry_s payload_entry_t;
+
+struct payload_entry_s{
+	/**
+	 * Type of payload
+	 */
+	payload_type_t payload_type;
+	/**
+	 * Data struct holding the data of given payload
+	 */
+	void *data_struct;
+};
+
 
 /**
  * Private data of an message_t object
@@ -41,6 +60,21 @@ struct private_message_s {
 
 
 	/* Private values */
+	/**
+	 * Assigned exchange type
+	 */
+	 exchange_type_t exchange_type;
+	
+	/**
+	 * TRUE if message is from original initiator, FALSE otherwise.
+	 */
+	bool original_initiator;
+
+	/**
+	 * TRUE if message is request.
+	 * FALSE if message is reply.
+	 */
+	bool is_request;
 	
 	/**
 	 * Assigned UDP packet.
@@ -54,6 +88,80 @@ struct private_message_s {
 	  */
 	linked_list_t *payloads;
 };
+
+/**
+ * Implements message_t's set_exchange_type function.
+ * See #message_s.set_exchange_type.
+ */
+static status_t set_exchange_type (private_message_t *this,exchange_type_t exchange_type)
+{
+	this->exchange_type = exchange_type;
+	return SUCCESS;
+}
+
+
+/**
+ * Implements message_t's get_exchange_type function.
+ * See #message_s.get_exchange_type.
+ */
+static exchange_type_t get_exchange_type (private_message_t *this)
+{
+	return this->exchange_type;
+}
+
+/**
+ * Implements message_t's set_original_initiator function.
+ * See #message_s.set_original_initiator.
+ */
+static status_t set_original_initiator (private_message_t *this,bool original_initiator)
+{
+	this->original_initiator = original_initiator;
+	return SUCCESS;
+}
+
+/**
+ * Implements message_t's get_original_initiator function.
+ * See #message_s.get_original_initiator.
+ */
+static exchange_type_t get_original_initiator (private_message_t *this)
+{
+	return this->original_initiator;
+}
+
+/**
+ * Implements message_t's set_request function.
+ * See #message_s.set_request.
+ */
+static status_t set_request (private_message_t *this,bool request)
+{
+	this->is_request = request;
+	return SUCCESS;
+}
+
+/**
+ * Implements message_t's get_request function.
+ * See #message_s.get_request.
+ */
+static exchange_type_t get_request (private_message_t *this)
+{
+	return this->is_request;
+}
+
+/**
+ * Implements message_t's generate_packet function.
+ * See #message_s.generate_packet.
+ */
+static status_t generate_packet (private_message_t *this, packet_t **packet)
+{
+	if (this->exchange_type == NOT_SET)
+	{
+		return EXCHANGE_TYPE_NOT_SET;
+	}
+	
+
+	
+	return SUCCESS;
+}
 
 /**
  * Implements message_t's destroy function.
@@ -82,7 +190,19 @@ message_t *message_create_from_packet(packet_t *packet)
 	}
 
 	/* public functions */
+	this->public.set_exchange_type = (status_t(*)(message_t*, exchange_type_t))set_exchange_type;
+	this->public.get_exchange_type = (exchange_type_t(*)(message_t*))get_exchange_type;
+	this->public.set_original_initiator = (status_t(*)(message_t*, bool))set_original_initiator;
+	this->public.get_original_initiator = (bool(*)(message_t*))get_original_initiator;
+	this->public.set_request = (status_t(*)(message_t*, bool))set_request;
+	this->public.get_request = (bool(*)(message_t*))get_request;
+	this->public.generate_packet = (status_t (*) (message_t *, packet_t **)) generate_packet;
 	this->public.destroy = (status_t(*)(message_t*))destroy;
+		
+	/* public values */
+	this->exchange_type = NOT_SET;
+ 	this->original_initiator = TRUE;
+ 	this->is_request = TRUE;
 
 	/* private values */
 	this->packet = packet;

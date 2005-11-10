@@ -43,6 +43,7 @@
 #include "tests/ike_sa_test.h"
 #include "tests/ike_sa_manager_test.h"
 #include "tests/generator_test.h"
+#include "tests/packet_test.h"
 
 
 /* output for test messages */
@@ -130,6 +131,12 @@ test_t generator_test1 = {test_generator_with_unsupported_payload,"Generator: un
 test_t generator_test2 = {test_generator_with_header_payload,"Generator: header payload"};
 
 /**
+ * Test for packet_t
+ */
+test_t packet_test = {test_packet,"Packet"};
+
+
+/**
  * Global job-queue
  */
 job_queue_t *global_job_queue;
@@ -176,6 +183,7 @@ logger_t *global_logger;
 	&generator_test1,
 	&generator_test2,
 	&ike_sa_manager_test,
+	&packet_test,
 	NULL
 	};
  	global_logger = logger_create("Tester",ALL);
@@ -190,8 +198,8 @@ logger_t *global_logger;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	tester->perform_tests(tester,all_tests);
-/*	tester->perform_test(tester,&generator_test2);   */
+	/*tester->perform_tests(tester,all_tests);*/
+	tester->perform_test(tester,&generator_test2);   
  	
 	tester->destroy(tester);
 

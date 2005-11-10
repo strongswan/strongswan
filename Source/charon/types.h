@@ -33,7 +33,8 @@ typedef enum status_e {
 	ALREADY_DONE,
 	NOT_SUPPORTED,
 	INVALID_ARG,
-	NOT_FOUND
+	NOT_FOUND,
+	EXCHANGE_TYPE_NOT_SET,
 } status_t;
 
 typedef enum ike_sa_role_e {
