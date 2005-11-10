@@ -36,47 +36,69 @@
 
 #ifdef LEAK_DETECTIVE
 
+/**
+ * Header of each allocated memory area
+ * 
+ * Used to detect memory leaks
+ */
 typedef union memory_hdr_u memory_hdr_t;
 
 union memory_hdr_u {
     struct {
+    	/**
+    	 * Filename withing memory was allocated
+    	 */
 	const char *filename;
+	/**
+	 * Line number in given file
+	 */
 	size_t line;
+	/**
+	 * Allocated memory size. Needed for reallocation
+	 */
 	size_t size_of_memory;
+	/**
+	 * Link to the previous and next memory area
+	 */
 	memory_hdr_t *older, *newer;
     } info;    /* info */
-    unsigned long junk;	/* force maximal alignment */
+    /**
+     * force maximal alignment ?
+     */
+    unsigned long junk;	
 };
 
 /**
- * private allocator_t object
+ * @brief Private allocator_t object.
+ * 
+ * Contains private variables of allocator_t object.
  */
 typedef struct private_allocator_s private_allocator_t;
 
 struct private_allocator_s
 {
 	/**
-	 * public part of an allocator_t object
+	 * Public part of an allocator_t object.
 	 */
 	allocator_t public;
 	
 	/**
-	 * global list of allocations
+	 * Global list of allocations
 	 * 
-	 * thread-save through mutex
+	 * Thread-save through mutex
 	 */
 	memory_hdr_t *allocations;
 
 	/**
-	 * Mutex to ensure, all functions are thread-save
+	 * Mutex used to make sure, all functions are thread-save
 	 */
 	pthread_mutex_t mutex;
-	
 };
 
 
 /**
- * implements allocator_t's function allocate
+ * Implements allocator_t's function allocate. 
+ * See #allocator_s.allocate for description.
  */
 static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line)
 {
@@ -108,8 +130,9 @@ static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line
     return (allocated_memory+1);
 }
 
-/**
- * implements allocator_t's function free_pointer
+/*
+ * Implements allocator_t's free_pointer allocate. 
+ * See #allocator_s.free_pointer for description.
  */
 static void free_pointer(allocator_t *allocator, void * pointer)
 {
@@ -142,8 +165,9 @@ static void free_pointer(allocator_t *allocator, void * pointer)
     free(allocated_memory);
 }
 
-/**
- * implements allocator_t's function reallocate
+/*
+ * Implements allocator_t's reallocate allocate. 
+ * See #allocator_s.reallocate for description.
  */
 static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char * file,int line)
 {
@@ -171,8 +195,9 @@ static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char 
 	return new_space;
 }
 
-/**
- * implements allocator_t's function report_memory_leaks
+/*
+ * Implements allocator_t's report_memory_leaks allocate. 
+ * See #allocator_s.report_memory_leaks for description.
  */
 static void allocator_report_memory_leaks(allocator_t *allocator)
 {
@@ -201,6 +226,11 @@ static void allocator_report_memory_leaks(allocator_t *allocator)
     pthread_mutex_unlock( &(this->mutex));
 }
 
+/** 
+ * Only initiation of allocator object.
+ * 
+ * All allocation macros use this object.
+ */
 static private_allocator_t allocator = {
 	public: {allocate: allocate,
 			 free_pointer: free_pointer,
@@ -210,7 +240,6 @@ static private_allocator_t allocator = {
 	mutex: PTHREAD_MUTEX_INITIALIZER
 };
 
-//allocator.public.allocate = (void *) (allocator_t *,size_t, char *,int) allocate;
 
 
 allocator_t *global_allocator = &(allocator.public);
