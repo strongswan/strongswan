@@ -35,56 +35,76 @@
 #define allocator_alloc_thing(thing) (allocator_alloc(sizeof(thing)))
 
 #ifdef LEAK_DETECTIVE
-	/**
-	 * Allocates memory with LEAK_DETECTION and 
-	 * returns an empty data area filled with zeros
-	 * 
-	 * @warning use this function not directly, only with assigned macros 
-	 * allocator_alloc and allocator_alloc_thing
-	 * 
-	 * @param bytes number of bytes to allocate
-	 * @param file filename from which the memory is allocated
-	 * @param line line number in specific file
-	 * @return allocated memory area
-	 */ 
-	void * allocate(size_t bytes, char * file,int line);
 
-	/**
-	 * Reallocates memory with LEAK_DETECTION and 
-	 * returns an empty data area filled with zeros
-	 * 
-	 * @warning use this function not directly, only with assigned macro 
-	 * allocator_realloc
-	 * 
-	 * @param old pointer to the old data area
-	 * @param bytes number of bytes to allocate
-	 * @param file filename from which the memory is allocated
-	 * @param line line number in specific file
-	 * @return reallocated memory area
-	 */ 
-	void * reallocate(void * old, size_t bytes, char * file, int line);
-	/**
-	 * Frees memory with LEAK_DETECTION
-	 * 
-	 * @warning use this function not directly, only with assigned macro 
-	 * allocator_free
-	 * 
-	 * @param pointer pointer to the data area to free
-	 */ 
-	void free_pointer(void * pointer);
+	typedef struct allocator_s allocator_t;
+	
+	struct allocator_s {
+	
+		/**
+		 * Allocates memory with LEAK_DETECTION and 
+		 * returns an empty data area filled with zeros
+		 * 
+		 * @warning use this function not directly, only with assigned macros 
+		 * allocator_alloc and allocator_alloc_thing
+		 * 
+		 * @param this allocator_t object
+		 * @param bytes number of bytes to allocate
+		 * @param file filename from which the memory is allocated
+		 * @param line line number in specific file
+		 * @return allocated memory area
+		 */ 
+		void * (*allocate) (allocator_t *this,size_t bytes, char * file,int line);
+	
+		/**
+		 * Reallocates memory with LEAK_DETECTION and 
+		 * returns an empty data area filled with zeros
+		 * 
+		 * @warning use this function not directly, only with assigned macro 
+		 * allocator_realloc
+		 * 
+		 * @param this allocator_t object
+		 * @param old pointer to the old data area
+		 * @param bytes number of bytes to allocate
+		 * @param file filename from which the memory is allocated
+		 * @param line line number in specific file
+		 * @return reallocated memory area
+		 */ 
+		void * (*reallocate) (allocator_t *this,void * old, size_t bytes, char * file, int line);
+		/**
+		 * Frees memory with LEAK_DETECTION
+		 * 
+		 * @warning use this function not directly, only with assigned macro 
+		 * allocator_free
+		 * 
+		 * @param this allocator_t object
+		 * @param pointer pointer to the data area to free
+		 */ 
+		void (*free_pointer) (allocator_t *this,void * pointer);
+		
+		/**
+		 * Report memory leaks to stderr
+		 *
+		 * @warning use this function not directly, only with assigned macro 
+		 * report_memory_leaks
+		 * 
+ 		 * @param this allocator_t object
+		 */
+		void (*report_memory_leaks) (allocator_t *this);
+	};
 
-	#define allocator_alloc(bytes) (allocate(bytes,__FILE__,__LINE__))
-	#define allocator_realloc(old,bytes) (reallocate(old,bytes,__FILE__, __LINE__))
-	#define allocator_free(pointer) (free_pointer(pointer))
+	#ifndef ALLOCATOR_C_
+		extern allocator_t *global_allocator;
+	#endif
+	
+	#define allocator_alloc(bytes) (global_allocator->allocate(global_allocator,bytes,__FILE__,__LINE__))
+	#define allocator_realloc(old,bytes) (global_allocator->reallocate(global_allocator,old,bytes,__FILE__, __LINE__))
+	#define allocator_free(pointer) (global_allocator->free_pointer(global_allocator,pointer))
 	#define allocator_free_chunk(chunk){	\
-		free_pointer(chunk.ptr);			\
+		global_allocator->free_pointer(global_allocator,chunk.ptr);			\
 		chunk.ptr = NULL;				\
 		chunk.len = 0;					\
 	}
-	/**
-	 * Report memory leaks to stderr
-	 */
-	void report_memory_leaks(void);
+	#define report_memory_leaks(void) global_allocator->report_memory_leaks(global_allocator);
 #else
 	#define allocator_alloc(bytes) (malloc(bytes))
 	#define allocator_realloc(old,bytes) (realloc(old,bytes))
