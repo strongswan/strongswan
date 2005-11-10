@@ -1,7 +1,7 @@
 /**
  * @file message.h
  *
- * @brief Class message_t. Object of this type represents an IKEv2-Message
+ * @brief Class message_t. Object of this type represents an IKEv2-Message.
  *
  */
 
@@ -24,6 +24,7 @@
 #define MESSAGE_H_
 
 #include "types.h"
+#include "packet.h"
 
 /**
  * @brief This class is used to represent an IKEv2-Message.
@@ -35,20 +36,37 @@ typedef struct message_s message_t;
 struct message_s {
 
 	/**
-	 * @brief Destroys a message object
+	 * @brief Destroys a message and all including objects
 	 *
-	 * @param this message_t object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param this 		message_t object
+	 * @return 
+	 * 					- SUCCESSFUL if succeeded
 	 */
 	status_t (*destroy) (message_t *this);
 };
 
 /**
- * Creates an message_t object
+ * Creates an message_t object from a incoming UDP Packet.
  *
- * @return created message_t object
+ * @warning the given packet_t object is not copied and gets 
+ *			destroyed in message_t's destroy call.
+ * 
+ * @param packet		packet_t object which is assigned to message					  
+ * 
+ * @return 
+ * 					- created message_t object
+ * 					- NULL if out of ressources
+ */
+message_t * message_create_from_packet(packet_t *packet);
+
+
+/**
+ * Creates an empty message_t object.
+ *
+ * @return 
+ * 					- created message_t object
+ * 					- NULL if out of ressources
  */
 message_t * message_create();
-
 
 #endif /*MESSAGE_H_*/

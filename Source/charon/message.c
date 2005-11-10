@@ -1,7 +1,7 @@
 /**
  * @file message.c
  *
- * @brief Class message_t. Object of this type represents an IKEv2-Message
+ * @brief Class message_t. Object of this type represents an IKEv2-Message.
  *
  */
 
@@ -25,6 +25,7 @@
 #include "allocator.h"
 #include "types.h"
 #include "message.h"
+#include "linked_list.h"
 
 /**
  * Private data of an message_t object
@@ -40,18 +41,31 @@ struct private_message_s {
 
 
 	/* Private values */
-
+	
+	/**
+	 * Assigned UDP packet.
+	 * 
+	 * Stores incoming packet or last generated one.
+	 */
+	 packet_t *packet;
+	 
+	 /**
+	  * Linked List where payload data are stored in
+	  */
+	linked_list_t *payloads;
 };
 
 /**
- * @brief implements function destroy of message_t
+ * Implements message_t's destroy function.
+ * See #message_s.destroy.
  */
 static status_t destroy (private_message_t *this)
 {
-	if (this == NULL)
+	if (this->packet != NULL)
 	{
-		return FAILED;
+		this->packet->destroy(this->packet);
 	}
+	this->payloads->destroy(this->payloads);
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -59,7 +73,7 @@ static status_t destroy (private_message_t *this)
 /*
  * Described in Header-File
  */
-message_t * message_create()
+message_t *message_create_from_packet(packet_t *packet)
 {
 	private_message_t *this = allocator_alloc_thing(private_message_t);
 	if (this == NULL)
@@ -67,9 +81,25 @@ message_t * message_create()
 		return NULL;
 	}
 
-	/* Public functions */
+	/* public functions */
 	this->public.destroy = (status_t(*)(message_t*))destroy;
 
+	/* private values */
+	this->packet = packet;
+	this->payloads = linked_list_create();
+	if (this->payloads == NULL)
+	{
+		allocator_free(this);
+		return NULL;
+	}
 
 	return (&this->public);
+}
+
+/*
+ * Described in Header-File
+ */
+message_t *message_create()
+{
+	return message_create_from_packet(NULL);
 }
