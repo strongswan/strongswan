@@ -152,14 +152,9 @@ static status_t get_values(private_ike_sa_id_t *this, spi_t *initiator, spi_t *r
  */
 static status_t clone (private_ike_sa_id_t *this, ike_sa_id_t **clone_of_this)
 {
-	if ((this == NULL) || (clone_of_this == NULL))
-	{
-		return FAILED;
-	}
-
 	*clone_of_this = ike_sa_id_create(this->initiator_spi, this->responder_spi, this->role);
 
-	return (*clone_of_this == NULL)	? FAILED : SUCCESS;
+	return (*clone_of_this == NULL)	? OUT_OF_RES : SUCCESS;
 }
 
 /**
@@ -167,10 +162,6 @@ static status_t clone (private_ike_sa_id_t *this, ike_sa_id_t **clone_of_this)
  */
 static status_t destroy (private_ike_sa_id_t *this)
 {
-	if (this == NULL)
-	{
-		return FAILED;
-	}
 	allocator_free(this);
 	return SUCCESS;
 }
