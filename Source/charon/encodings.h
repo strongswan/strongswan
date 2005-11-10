@@ -209,6 +209,12 @@ struct encoding_rule_s{
 typedef enum payload_type_e payload_type_t;
 
 enum payload_type_e{
+
+	/**
+	 * NO_PAYLOAD
+	 */
+	 NO_PAYLOAD = 0,
+	
 	/**
 	 * SA
 	 */
