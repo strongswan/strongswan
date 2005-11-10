@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "types.h"
 
@@ -210,25 +211,13 @@
 	#define report_memory_leaks(void) (global_allocator->report_memory_leaks(global_allocator))
 #else
 	#define allocator_alloc(bytes) (malloc(bytes))
-	#define allocator_alloc_as_chunk(bytes){\
-		chunk_t new_chunk; \
-		new_chunk.ptr = malloc(bytes); \
-		new_chunk.len = (new_chunk.ptr == NULL) ? 0 : bytes; \
-		return new_chunk; \
-	}
+	
+	chunk_t allocator_alloc_as_chunk(size_t bytes);
+	
 	#define allocator_realloc(old,bytes) (realloc(old,bytes))
 	#define allocator_free(pointer) (free(pointer))
-	#define allocator_clone_bytes(pointer,size){\
-		void *new_data = malloc(size)\
-		if (new_data == NULL) return NULL; \
-		memcpy(new_data,pointer,size)\
-		return new_data; \
-	}
-	#define allocator_free_chunk(chunk){	\
-		free(chunk.ptr);					\
-		chunk.ptr = NULL;				\
-		chunk.len = 0;					\
-	}
+	void * allocator_clone_bytes(void * pointer, size_t size);
+	void allocator_free_chunk(chunk_t chunk);
 	#define report_memory_leaks(void) {}
 #endif
 

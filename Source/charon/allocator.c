@@ -175,7 +175,7 @@ static chunk_t allocate_as_chunk(allocator_t *allocator,size_t bytes, char * fil
 }
 
 /*
- * Implements allocator_t's free_pointer allocate. 
+ * Implements allocator_t's free_pointer function. 
  * See #allocator_s.free_pointer for description.
  */
 static void free_pointer(allocator_t *allocator, void * pointer)
@@ -210,7 +210,7 @@ static void free_pointer(allocator_t *allocator, void * pointer)
 }
 
 /*
- * Implements allocator_t's reallocate allocate. 
+ * Implements allocator_t's reallocate function. 
  * See #allocator_s.reallocate for description.
  */
 static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char * file,int line)
@@ -244,6 +244,10 @@ static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char 
 	return new_space;
 }
 
+/*
+ * Implements allocator_t's clone_bytes function. 
+ * See #allocator_s.clone_bytes for description.
+ */
 static void * clone_bytes(allocator_t *allocator,void * to_clone, size_t bytes, char * file, int line)
 {
 	private_allocator_t *this = (private_allocator_t *) allocator;
@@ -252,6 +256,7 @@ static void * clone_bytes(allocator_t *allocator,void * to_clone, size_t bytes, 
     {
 	    	return NULL;
     }
+
     
 	void *new_space = this->allocate_special(this,bytes,file,line,TRUE);
 
@@ -313,7 +318,35 @@ static private_allocator_t allocator = {
 	mutex: PTHREAD_MUTEX_INITIALIZER
 };
 
-
-
 allocator_t *global_allocator = &(allocator.public);
-#endif
+#else /* !LEAK_DETECTION */
+
+
+chunk_t allocator_alloc_as_chunk(size_t bytes)
+{
+	chunk_t new_chunk;
+	new_chunk.ptr = malloc(bytes); 
+	new_chunk.len = (new_chunk.ptr == NULL) ? 0 : bytes; 
+	return new_chunk; 
+
+}
+
+void * allocator_clone_bytes(void * pointer, size_t size)
+{
+	void *data;
+	data = malloc(size);
+	if (data == NULL){ return NULL;}
+	memcpy(data,pointer,size);
+	return (data);
+}
+
+
+void allocator_free_chunk(chunk_t chunk)
+{
+	free(chunk.ptr);		
+}
+
+
+#endif /* LEAK_DETECTION */
+
+
