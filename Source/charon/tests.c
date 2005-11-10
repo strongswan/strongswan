@@ -22,7 +22,8 @@
  
  
 #include <stdio.h>
-#
+
+#include "logger.h"
 #include "allocator.h"
 #include "tester.h"
 #include "job_queue.h"
@@ -147,6 +148,12 @@ send_queue_t *global_send_queue;
   * Global socket
   */
 socket_t *global_socket;
+
+
+/**
+ * Global logger
+ */
+logger_t *global_logger;
   
  int main()
 {
@@ -171,19 +178,23 @@ socket_t *global_socket;
 	&ike_sa_manager_test,
 	NULL
 	};
+ 	global_logger = logger_create("Tester",ALL);
  	
 	global_socket = socket_create(4600);
  	
  	global_job_queue = job_queue_create();
  	global_event_queue = event_queue_create();
  	global_send_queue = send_queue_create();
+ 	
+
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-/*	tester->perform_tests(tester,all_tests);*/
-	tester->perform_test(tester,&generator_test2);   
+	tester->perform_tests(tester,all_tests);
+/*	tester->perform_test(tester,&generator_test2);   */
  	
 	tester->destroy(tester);
+
 
 	/* Destroy all queues */
 	global_job_queue->destroy(global_job_queue);
@@ -191,6 +202,8 @@ socket_t *global_socket;
 	global_send_queue->destroy(global_send_queue);
 	
 	global_socket->destroy(global_socket);
+	
+	global_logger->destroy(global_logger);
 	
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported on stderr */
