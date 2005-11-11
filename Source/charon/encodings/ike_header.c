@@ -24,7 +24,7 @@
 /* offsetof macro */
 #include <stddef.h>
 
- #include "sencodings.h"
+ #include "encodings.h"
  #include "ike_header.h"
 
 /**
