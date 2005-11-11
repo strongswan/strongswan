@@ -25,7 +25,7 @@
 
 #include "allocator.h"
 #include "ike_sa_manager.h"
-#include "linked_list.h"
+#include "utils/linked_list.h"
 #include "ike_sa_id.h"
 
 /**

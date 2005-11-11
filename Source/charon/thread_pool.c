@@ -24,11 +24,12 @@
 #include <pthread.h>
 #include <string.h>
 #include <errno.h>
+
+#include "thread_pool.h"
  
 #include "allocator.h"
 #include "logger.h"
-#include "thread_pool.h"
-#include "job_queue.h"
+#include "queues/job_queue.h"
 #include "globals.h"
 
 /**

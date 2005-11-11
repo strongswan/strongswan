@@ -22,9 +22,10 @@
 
  #include <pthread.h>
 
-#include "allocator.h"
- #include "send_queue.h"
- #include "linked_list.h"
+#include "send_queue.h"
+
+#include "../allocator.h"
+#include "../utils/linked_list.h"
 
  /**
  * @brief Private Variables and Functions of send_queue class

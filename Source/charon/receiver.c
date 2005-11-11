@@ -23,12 +23,13 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "allocator.h"
 #include "receiver.h"
+
+#include "allocator.h"
 #include "socket.h"
 #include "packet.h"
 #include "job.h"
-#include "job_queue.h"
+#include "queues/job_queue.h"
 #include "globals.h"
 
 /**

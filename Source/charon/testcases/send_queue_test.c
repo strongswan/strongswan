@@ -24,7 +24,7 @@
 
 #include "send_queue_test.h"
 #include "../tester.h"
-#include "../send_queue.h"
+#include "../queues/send_queue.h"
 
 
 /**

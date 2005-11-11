@@ -23,8 +23,8 @@
 #ifndef JOB_QUEUE_H_
 #define JOB_QUEUE_H_
 
-#include "types.h"
-#include "job.h"
+#include "../types.h"
+#include "../job.h"
 
 /**
  * @brief Job-Queue

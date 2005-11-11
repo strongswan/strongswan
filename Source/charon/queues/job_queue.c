@@ -23,9 +23,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "allocator.h"
 #include "job_queue.h"
-#include "linked_list.h"
+
+#include "../allocator.h"
+#include "../utils/linked_list.h"
 
 /**
  * @brief Private Variables and Functions of job_queue class

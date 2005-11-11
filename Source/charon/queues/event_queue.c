@@ -23,10 +23,11 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#include "allocator.h"
-#include "types.h"
 #include "event_queue.h"
-#include "linked_list.h"
+
+#include "../allocator.h"
+#include "../types.h"
+#include "../utils/linked_list.h"
 
 
 

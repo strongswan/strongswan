@@ -26,11 +26,12 @@
 #include <pthread.h>
 #include <sys/time.h>
 
-#include "allocator.h"
 #include "tester.h"
-#include "linked_list.h"
+
+#include "allocator.h"
+#include "utils/linked_list.h"
 #include "thread_pool.h"
-#include "job_queue.h"
+#include "queues/job_queue.h"
 
 /**
  * @brief Private Variables and Functions of tester class

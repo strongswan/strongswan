@@ -23,8 +23,8 @@
 #ifndef SEND_QUEUE_H_
 #define SEND_QUEUE_H_
 
-#include "types.h"
-#include "packet.h"
+#include "../types.h"
+#include "../packet.h"
 
 /**
  * @brief Send-Queue

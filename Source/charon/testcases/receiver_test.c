@@ -29,8 +29,8 @@
 #include "../receiver.h"
 #include "../packet.h"
 #include "../socket.h"
-#include "../send_queue.h"
-#include "../job_queue.h"
+#include "../queues/send_queue.h"
+#include "../queues/job_queue.h"
 
 /**
  * Number of packets to send by sender-thread

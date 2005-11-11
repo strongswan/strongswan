@@ -23,7 +23,7 @@
 #include <string.h>
  
 #include "../tester.h"
-#include "../linked_list.h"
+#include "../utils/linked_list.h"
  
  /*
  * Description in header-file

@@ -22,11 +22,12 @@
 
 #include <stdlib.h>
 
+#include "message.h"
+
 #include "allocator.h"
 #include "types.h"
-#include "message.h"
 #include "ike_sa_id.h"
-#include "linked_list.h"
+#include "utils/linked_list.h"
 #include "encodings.h"
 
 /**

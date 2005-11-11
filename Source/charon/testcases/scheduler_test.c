@@ -26,8 +26,8 @@
 #include "scheduler_test.h"
 #include "../globals.h"
 #include "../scheduler.h"
-#include "../event_queue.h"
-#include "../job_queue.h"
+#include "../queues/event_queue.h"
+#include "../queues/job_queue.h"
 
 
 /**
