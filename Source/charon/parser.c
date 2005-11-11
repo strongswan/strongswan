@@ -24,6 +24,7 @@
 #include <arpa/inet.h>
 
 #include "allocator.h"
+#include "definitions.h"
 #include "globals.h"
 #include "types.h"
 #include "parser.h"
@@ -125,6 +126,8 @@ static private_parser_context_t *create_context(private_parser_t *this, chunk_t 
 static status_t parse_payload(private_parser_t *this, payload_type_t payload_type, void **data_struct, private_parser_context_t *context)
 {
 	payload_info_t *payload_info = NULL;
+	
+	this->logger->log(this->logger, CONTROL, "Parsing a %s payload", mapping_find(payload_type_t_mappings, payload_type));
 	
 	/* find payload in null terminated list*/
 	payload_info = *(this->payload_infos);
@@ -398,7 +401,7 @@ parser_t *parser_create(payload_info_t **payload_infos)
 		return NULL;
 	}
 	
-	global_logger_manager->get_logger(global_logger_manager,PARSER,&(this->logger),"");
+	global_logger_manager->get_logger(global_logger_manager,PARSER,&(this->logger), NULL);
 	
 	if (this->logger == NULL)
 	{
