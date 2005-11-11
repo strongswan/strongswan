@@ -24,6 +24,7 @@
 #include <arpa/inet.h>
 
 #include "allocator.h"
+#include "globals.h"
 #include "types.h"
 #include "parser.h"
 #include "logger.h"
@@ -379,7 +380,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
  */
 static status_t destroy(private_parser_t *this)
 {
-	this->logger->destroy(this->logger);
+	global_logger_manager->destroy_logger(global_logger_manager,this->logger);
 	allocator_free(this);	
 	
 	return SUCCESS;
@@ -397,7 +398,8 @@ parser_t *parser_create(payload_info_t **payload_infos)
 		return NULL;
 	}
 	
-	this->logger = logger_create("parser", ALL,NULL);
+	global_logger_manager->get_logger(global_logger_manager,PARSER,&(this->logger),"");
+	
 	if (this->logger == NULL)
 	{
 		allocator_free(this);

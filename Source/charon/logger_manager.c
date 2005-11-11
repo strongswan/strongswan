@@ -127,6 +127,9 @@ static status_t get_logger (private_logger_manager_t *this, logger_context_t con
 		case RECEIVER_THREAD:
 			context_name = "RECEIVER_THREAD";
 			break;
+		case THREAD_POOL:
+			context_name = "THREAD_POOL";
+			break;
 		case TESTER:
 			context_name = "TESTER";
 			output = stdout;
@@ -137,10 +140,17 @@ static status_t get_logger (private_logger_manager_t *this, logger_context_t con
 	}
 	
 	pthread_mutex_lock(&(this->mutex));
-	snprintf(buffer, MAX_LOGGER_NAME, "%s - %s",context_name,name);
+	if (name != NULL)
+	{
+		snprintf(buffer, MAX_LOGGER_NAME, "%s - %s",context_name,name);
+			/* create logger with default log_level */
+		*logger = logger_create(buffer,logger_level,output);
+	}
+	else
+	{
+		*logger = logger_create(context_name,logger_level,output);
+	}
 	
-	/* create logger with default log_level */
-	*logger = logger_create(buffer,logger_level,output);
 	
 	if (*logger == NULL)
 	{

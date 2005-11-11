@@ -113,7 +113,7 @@ static status_t destroy(private_thread_pool_t *this)
 	}	
 
 	/* free mem */
-	this->logger->destroy(this->logger);
+	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 	allocator_free(this->threads);
 	allocator_free(this);
 	return SUCCESS;
@@ -143,7 +143,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 		allocator_free(this);
 		return NULL;
 	}	
-	this->logger = logger_create("thread_pool", ALL,NULL);
+	global_logger_manager->get_logger(global_logger_manager,THREAD_POOL,&(this->logger),NULL);
 	if (this->threads == NULL)
 	{
 		allocator_free(this);

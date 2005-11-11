@@ -232,6 +232,7 @@ static status_t disable_level(private_logger_t *this, logger_level_t log_level)
  */
 static status_t destroy(private_logger_t *this)
 {
+	allocator_free(this->name);
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -248,6 +249,11 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level,FILE * outpu
 		return NULL;	
 	}
 	
+	if (logger_name == NULL)
+	{
+		logger_name = "";
+	}
+	
 	this->public.log = (status_t(*)(logger_t*,logger_level_t,char*,...))logg;
 	this->public.log_bytes = (status_t(*)(logger_t*, logger_level_t, char*,char*,size_t))log_bytes;
 	this->public.log_chunk = log_chunk;
@@ -259,7 +265,13 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level,FILE * outpu
 
 	/* private variables */
 	this->level = log_level;
-	this->name = logger_name;
+	this->name = allocator_alloc(strlen(logger_name) + 1);
+	if (this->name == NULL)
+	{
+		allocator_free(this);
+		return NULL;
+	}
+	strcpy(this->name,logger_name);
 	this->output = output;
 
 	
