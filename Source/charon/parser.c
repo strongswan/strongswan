@@ -401,7 +401,7 @@ parser_t *parser_create(payload_info_t **payload_infos)
 		return NULL;
 	}
 	
-	global_logger_manager->get_logger(global_logger_manager,PARSER,&(this->logger), NULL);
+	this->logger = global_logger_manager->create_logger(global_logger_manager,PARSER, NULL);
 	
 	if (this->logger == NULL)
 	{

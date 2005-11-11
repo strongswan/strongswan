@@ -67,7 +67,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	status_t status;
 	logger_t *logger;
 	
-	global_logger_manager->get_logger(global_logger_manager,TESTER,&logger,"header payload");
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"header payload");
 	
 	header_data.initiator_spi = 1;
 	header_data.responder_spi = 2;

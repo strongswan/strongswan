@@ -67,10 +67,10 @@ struct logger_manager_s {
 	 * @param name			name for the new logger. Context name is already included 
 	 * 						and has not to be specified.
 	 * @return
-	 * 		 				- SUCCESS
-	 * 						- OUT_OF_RES
+	 * 		 				- logger_t on SUCCESS
+	 * 						- NULL otherwise
 	 */
-	status_t (*get_logger) (logger_manager_t *this, logger_context_t context, logger_t **logger, char *name);
+	logger_t *(*create_logger) (logger_manager_t *this, logger_context_t context, char *name);
 	
 	
 	/**

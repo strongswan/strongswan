@@ -143,7 +143,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 		allocator_free(this);
 		return NULL;
 	}	
-	global_logger_manager->get_logger(global_logger_manager,THREAD_POOL,&(this->logger),NULL);
+	this->logger = global_logger_manager->create_logger(global_logger_manager,THREAD_POOL,NULL);
 	if (this->threads == NULL)
 	{
 		allocator_free(this);

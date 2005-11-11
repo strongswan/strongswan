@@ -89,16 +89,17 @@ struct loggers_entry_s{
 };
 
 /**
- * Implements logger_manager_t-function get_logger.
- * @see logger_manager_s.get_logger.
+ * Implements logger_manager_t-function create_logger.
+ * @see logger_manager_s.create_logger.
  */
-static status_t get_logger (private_logger_manager_t *this, logger_context_t context, logger_t **logger,char * name)
+static logger_t *create_logger(private_logger_manager_t *this, logger_context_t context, char * name)
 {
 	
 	char * context_name;
 	FILE * output = NULL;
 	char buffer[MAX_LOGGER_NAME];
 	loggers_entry_t *entry;
+	logger_t *logger;
 	logger_level_t logger_level = this->public.get_logger_level(&(this->public),context);
 
 	switch(context)
@@ -144,42 +145,42 @@ static status_t get_logger (private_logger_manager_t *this, logger_context_t con
 	{
 		snprintf(buffer, MAX_LOGGER_NAME, "%s - %s",context_name,name);
 			/* create logger with default log_level */
-		*logger = logger_create(buffer,logger_level,output);
+		logger = logger_create(buffer,logger_level,output);
 	}
 	else
 	{
-		*logger = logger_create(context_name,logger_level,output);
+		logger = logger_create(context_name,logger_level,output);
 	}
 	
 	
-	if (*logger == NULL)
+	if (logger == NULL)
 	{
 		pthread_mutex_unlock(&(this->mutex));		
-		return OUT_OF_RES;
+		return NULL;
 	}
 
 	entry = allocator_alloc_thing(loggers_entry_t);
 	
 	if (entry == NULL)
 	{
-		(*logger)->destroy(*logger);
+		logger->destroy(logger);
 		pthread_mutex_unlock(&(this->mutex));		
-		return OUT_OF_RES;
+		return NULL;
 	}
 
 	entry->context = context;
-	entry->logger = *logger;
+	entry->logger = logger;
 
 	if (this->loggers->insert_last(this->loggers,entry) != SUCCESS)
 	{
 		allocator_free(entry);
-		(*logger)->destroy(*logger);
+		logger->destroy(logger);
 		pthread_mutex_unlock(&(this->mutex));		
-		return OUT_OF_RES;
+		return NULL;
 	}
 
 	pthread_mutex_unlock(&(this->mutex));
-	return SUCCESS;
+	return logger;
 	
 }
 
@@ -426,7 +427,7 @@ logger_manager_t *logger_manager_create(logger_level_t default_log_level)
 		return NULL;	
 	}
 
-	this->public.get_logger = (status_t(*)(logger_manager_t*,logger_context_t context, logger_t **logger, char *))get_logger;
+	this->public.create_logger = (logger_t *(*)(logger_manager_t*,logger_context_t context, char *))create_logger;
 	this->public.destroy_logger = (status_t(*)(logger_manager_t*,logger_t *logger))destroy_logger;
 	this->public.destroy = (status_t(*)(logger_manager_t*))destroy;
 	this->public.get_logger_level = (logger_level_t (*)(logger_manager_t *, logger_context_t)) get_logger_level;

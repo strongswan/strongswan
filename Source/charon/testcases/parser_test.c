@@ -48,7 +48,7 @@ void test_parser_with_header_payload(tester_t *tester)
 	
 	logger_t *logger;
 	
-	global_logger_manager->get_logger(global_logger_manager,TESTER,&logger,"header payload");
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER, "header payload");
 	
 	u_int8_t test_bytes[] = {
 		0x00,0x00,0x00,0x00,
