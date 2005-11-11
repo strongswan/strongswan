@@ -24,7 +24,7 @@
 #include "../allocator.h"
 #include "parser_test.h"
 #include "../tester.h"
-#include "../logger.h"
+#include "../logger_manager.h"
 #include "../encodings.h"
 #include "../generator.h"
 #include "../parser.h"
@@ -32,7 +32,8 @@
 
 extern payload_info_t *payload_infos[];
 
-extern logger_t *global_logger;
+extern logger_manager_t *global_logger_manager;
+
 
 /*
  * Described in Header 
@@ -44,6 +45,10 @@ void test_parser_with_header_payload(tester_t *tester)
 	ike_header_t *header_data;
 	status_t status;
 	chunk_t test_chunk;
+	
+	logger_t *logger;
+	
+	global_logger_manager->get_logger(global_logger_manager,TESTER,&logger,"header payload");
 	
 	u_int8_t test_bytes[] = {
 		0x00,0x00,0x00,0x00,
@@ -83,7 +88,7 @@ void test_parser_with_header_payload(tester_t *tester)
 	parser_context->destroy(parser_context);
 	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
 	
-	global_logger->log_bytes(global_logger, RAW, "Header", (void*)header_data, sizeof(ike_header_t));
+	logger->log_bytes(logger, RAW, "Header", (void*)header_data, sizeof(ike_header_t));
 	
 	allocator_free(header_data);
 }

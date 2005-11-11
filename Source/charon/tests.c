@@ -23,7 +23,7 @@
  
 #include <stdio.h>
 
-#include "logger.h"
+#include "logger_manager.h"
 #include "allocator.h"
 #include "tester.h"
 #include "job_queue.h"
@@ -167,7 +167,7 @@ socket_t *global_socket;
 /**
  * Global logger
  */
-logger_t *global_logger;
+logger_manager_t *global_logger_manager;
   
  int main()
 {
@@ -194,7 +194,7 @@ logger_t *global_logger;
 	&packet_test,
 	NULL
 	};
- 	global_logger = logger_create("Tester",ALL);
+ 	global_logger_manager = logger_manager_create(CONTROL);
  	
 	global_socket = socket_create(4600);
  	
@@ -207,7 +207,7 @@ logger_t *global_logger;
  	tester_t *tester = tester_create(test_output, FALSE);
 
 	tester->perform_tests(tester,all_tests);
-	/*tester->perform_test(tester,&parser_test);   */
+/*	tester->perform_test(tester,&parser_test);   */
  	
 	tester->destroy(tester);
 
@@ -219,7 +219,7 @@ logger_t *global_logger;
 	
 	global_socket->destroy(global_socket);
 	
-	global_logger->destroy(global_logger);
+	global_logger_manager->destroy(global_logger_manager);
 	
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported on stderr */

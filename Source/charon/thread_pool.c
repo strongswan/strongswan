@@ -143,7 +143,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 		allocator_free(this);
 		return NULL;
 	}	
-	this->logger = logger_create("thread_pool", ALL);
+	this->logger = logger_create("thread_pool", ALL,NULL);
 	if (this->threads == NULL)
 	{
 		allocator_free(this);

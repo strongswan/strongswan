@@ -397,7 +397,7 @@ parser_t *parser_create(payload_info_t **payload_infos)
 		return NULL;
 	}
 	
-	this->logger = logger_create("parser", ALL);
+	this->logger = logger_create("parser", ALL,NULL);
 	if (this->logger == NULL)
 	{
 		allocator_free(this);

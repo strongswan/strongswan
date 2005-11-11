@@ -70,7 +70,7 @@ struct chunk_s {
  */
 typedef int bool;
 #define FALSE	0
-#define TRUE	1
+#define TRUE		1
 
 
 #endif /*TYPES_H_*/

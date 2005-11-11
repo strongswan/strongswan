@@ -27,10 +27,6 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
- 
-#ifndef ALLOCATOR_C_
-#define ALLOCATOR_C_ 
-#endif
 
 #include "allocator.h"
 #include "types.h"

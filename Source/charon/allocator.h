@@ -151,15 +151,14 @@
 		void (*report_memory_leaks) (allocator_t *this);
 	};
 
-	#ifndef ALLOCATOR_C_
 		
-		/**
-		 * @brief Global allocater_t object.
-		 * 
-		 * Only accessed over macros.
-		 */
-		extern allocator_t *global_allocator;
-	#endif
+	/**
+	 * @brief Global allocater_t object.
+	 * 
+	 * Only accessed over macros.
+	 */
+	extern allocator_t *global_allocator;
+
 	
 	/**
 	 * Macro to allocate some memory

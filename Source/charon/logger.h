@@ -23,6 +23,7 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
+#include <stdio.h>
 #include "types.h"
 
 /**
@@ -144,9 +145,10 @@ struct logger_s {
  *
  * @param logger_name 	Name for the logger_t object
  * @param log_level		or'ed set of log_levels to assign to the new logger_t object
+ * @param output			FILE * if log has to go on a file output, NULL for syslog
  * @return 				logger_t object or NULL if failed
  */
-logger_t *logger_create(char *logger_name, logger_level_t log_level);
+logger_t *logger_create(char *logger_name, logger_level_t log_level,FILE * output);
 
 
 #endif /*LOGGER_H_*/

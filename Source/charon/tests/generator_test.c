@@ -22,7 +22,9 @@
  
 #include <string.h>
 
+#include "../globals.h"
 #include "../allocator.h"
+#include "../logger_manager.h"
 #include "generator_test.h"
 #include "../tester.h"
 #include "../logger.h"
@@ -32,7 +34,6 @@
 
 extern payload_info_t *payload_infos[];
 
-extern logger_t *global_logger;
 /*
  * Described in Header 
  */
@@ -41,7 +42,6 @@ void test_generator_with_unsupported_payload(tester_t *tester)
 	generator_t *generator;
 	generator_context_t *generator_context;
 	void * data_struct;
-	chunk_t generated_data;
 	
 	generator = generator_create(payload_infos);
 	tester->assert_true(tester,(generator != NULL), "generator create check");
@@ -65,6 +65,9 @@ void test_generator_with_header_payload(tester_t *tester)
 	ike_header_t header_data;
 	chunk_t generated_data;
 	status_t status;
+	logger_t *logger;
+	
+	global_logger_manager->get_logger(global_logger_manager,TESTER,&logger,"header payload");
 	
 	header_data.initiator_spi = 1;
 	header_data.responder_spi = 2;
@@ -101,7 +104,7 @@ void test_generator_with_header_payload(tester_t *tester)
 
 
 	tester->assert_true(tester,(generated_data.len == sizeof(expected_generation)), "compare generated data length");
-		
+	logger->log_chunk(logger,RAW,"generated header",&generated_data);		
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data 1");
 	allocator_free_chunk(generated_data);
 	generator_context->destroy(generator_context);
@@ -136,11 +139,12 @@ void test_generator_with_header_payload(tester_t *tester)
 		0x00,0x0A,0xA1,0x1F,
 	};
 	
-	global_logger->log_chunk(global_logger,CONTROL,"generated header",&generated_data);
+	logger->log_chunk(logger,RAW,"generated header",&generated_data);
 
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data 2");
 	allocator_free_chunk(generated_data);
 	
 	generator_context->destroy(generator_context);
+	global_logger_manager->destroy_logger(global_logger_manager,logger);
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 }

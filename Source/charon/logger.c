@@ -20,16 +20,16 @@
  * for more details.
  */
 
-
-
-#include "logger.h"
-#include "types.h"
-#include "allocator.h"
-
 #include <syslog.h>
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
+
+#include "logger.h"
+#include "daemon.h"
+#include "types.h"
+#include "allocator.h"
 
 /**
  * Maximum length of al log entry (only used for logger_s.log)
@@ -37,7 +37,7 @@
 #define MAX_LOG 8192
 
 /**
- * @brief The logger object
+ * @brief The logger object.
  */
 typedef struct private_logger_s private_logger_t;
 struct private_logger_s { 	
@@ -46,39 +46,80 @@ struct private_logger_s {
 	 */
 	logger_t public;
 	/**
-	 * detail-level of logger
+	 * Detail-level of logger.
 	 */
 	logger_level_t level;
 	/**
-	 * name of logger
+	 * Name of logger.
 	 */
 	char *name;
+	/**
+	 * File to write log output to .
+	 * NULL for syslog.
+	 */
+	FILE *output;
+	
+	/* private functions */
+	/**
+	 * Logs a message to the associated log file.
+	 */
+	void (*log_to_file) (private_logger_t *this, char *format, ...);
 };
 
-
 /**
- * implements logger_t-function log
- * @see logger_s.log
+ * Implements logger_t-function log.
+ * @see logger_s.log.
+ * 
+ * Yes, logg is wrong written :-).
  */
 static status_t logg(private_logger_t *this, logger_level_t loglevel, char *format, ...)
 {
 	if ((this->level & loglevel) == loglevel)
 	{
 		char buffer[MAX_LOG];
-		snprintf(buffer, MAX_LOG, "%s: %s", this->name, format);
 		va_list args;
-		va_start(args, format);
-		vsyslog(LOG_INFO, buffer, args);
-		va_end(args);	
-	}
 
+		if (this->output == NULL)
+		{
+			/* syslog */
+			snprintf(buffer, MAX_LOG, "%s: %s", this->name, format);
+			va_start(args, format);
+			vsyslog(LOG_INFO, buffer, args);
+			va_end(args);
+		}
+		else
+		{
+			/* File output */
+			snprintf(buffer, MAX_LOG, "File %s: %s", this->name, format);
+			va_start(args, format);
+			this->log_to_file(this, buffer, args);
+			va_end(args);
+		}
+
+	}
 	return SUCCESS;
 }
 
+/**
+ * Implements private_logger_t-function log_to_file.
+ * @see private_logger_s.log_to_file.
+ */
+static void log_to_file(private_logger_t *this,char *format, ...)
+{
+	char buffer[MAX_LOG];
+	va_list args;
+	time_t current_time;
+	current_time = time(NULL);
+			
+	snprintf(buffer, MAX_LOG, "%s\n", format);
+	va_start(args, format);
+	vfprintf(this->output, buffer, args);
+	va_end(args);
+}
 
 /**
- * implements logger_t-function destroy
- * @see logger_s.log_bytes
+ * Implements logger_t-function destroy.
+ * @see logger_s.log_bytes.
  */
 static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len)
 {
@@ -89,7 +130,13 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 		char *bytes_pos, *bytes_roof;
 		int i;
 
-		syslog(LOG_INFO, "%s: %s (%d bytes)", this->name, label, len);	
+		if (this->output == NULL)
+		{
+			syslog(LOG_INFO, "%s: %s (%d bytes)", this->name, label, len);	
+		}else
+		{
+			this->log_to_file(this,"%s: %s (%d bytes)", this->name, label, len);
+		}
 	
 		bytes_pos = bytes;
 		bytes_roof = bytes + len;
@@ -104,7 +151,14 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 			{
 				*buffer_pos++ = '\0';
 				buffer_pos = buffer;
-				syslog(LOG_INFO, "| %s", buffer);	
+				if (this->output == NULL)
+				{
+					syslog(LOG_INFO, "| %s", buffer);	
+				}
+				else
+				{
+					this->log_to_file(this, "| %s", buffer);
+				}
 			}
 			else if ((i % 8) == 0)
 			{
@@ -127,7 +181,14 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 		
 		*buffer_pos++ = '\0';
 		buffer_pos = buffer;
-		syslog(LOG_INFO, "| %s", buffer);	
+		if (this->output == NULL)
+		{		
+			syslog(LOG_INFO, "| %s", buffer);
+		}
+		else
+		{
+			this->log_to_file(this, "| %s", buffer);
+		}
 	}
 
 	return SUCCESS;
@@ -135,8 +196,8 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 
 
 /**
- * implements logger_t-function log_chunk
- * @see logger_s.log_chunk
+ * Implements logger_t-function log_chunk.
+ * @see logger_s.log_chunk.
  */
 static status_t log_chunk(logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk)
 {
@@ -146,8 +207,8 @@ static status_t log_chunk(logger_t *this, logger_level_t loglevel, char *label, 
 
 
 /**
- * implements logger_t-function enable_level
- * @see logger_s.enable_level
+ * Implements logger_t-function enable_level.
+ * @see logger_s.enable_level.
  */
 static status_t enable_level(private_logger_t *this, logger_level_t log_level)
 {
@@ -156,8 +217,8 @@ static status_t enable_level(private_logger_t *this, logger_level_t log_level)
 }
 
 /**
- * implements logger_t-function disable_level
- * @see logger_s.disable_level
+ * Implements logger_t-function disable_level.
+ * @see logger_s.disable_level.
  */
 static status_t disable_level(private_logger_t *this, logger_level_t log_level)
 {
@@ -166,8 +227,8 @@ static status_t disable_level(private_logger_t *this, logger_level_t log_level)
 }
 
 /**
- * implements logger_t-function destroy
- * @see logger_s.destroy
+ * Implements logger_t-function destroy.
+ * @see logger_s.destroy.
  */
 static status_t destroy(private_logger_t *this)
 {
@@ -178,7 +239,7 @@ static status_t destroy(private_logger_t *this)
 /*
  * Described in Header
  */	
-logger_t *logger_create(char *logger_name, logger_level_t log_level)
+logger_t *logger_create(char *logger_name, logger_level_t log_level,FILE * output)
 {
 	private_logger_t *this = allocator_alloc_thing(private_logger_t);
 		
@@ -194,10 +255,18 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level)
 	this->public.disable_level = (status_t(*)(logger_t*,logger_level_t))disable_level;
 	this->public.destroy = (status_t(*)(logger_t*))destroy;
 
+	this->log_to_file = log_to_file;
+
+	/* private variables */
 	this->level = log_level;
 	this->name = logger_name;
+	this->output = output;
+
 	
-	openlog("charon", 0, LOG_DAEMON);
+	if (output == NULL)
+	{
+		openlog(DEAMON_NAME, 0, LOG_DAEMON);
+	}
 	
 	return (logger_t*)this;
 }
