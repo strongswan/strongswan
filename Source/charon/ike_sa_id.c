@@ -23,9 +23,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "allocator.h"
-#include "types.h"
 #include "ike_sa_id.h"
+
+#include "types.h"
+#include "utils/allocator.h"
 
 /**
  * Private data of an ike_sa_id object

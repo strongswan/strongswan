@@ -23,7 +23,7 @@
 #include <pthread.h>
 
 #include "send_queue_test.h"
-#include "../tester.h"
+
 #include "../queues/send_queue.h"
 
 

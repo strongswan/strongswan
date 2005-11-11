@@ -23,7 +23,7 @@
 #ifndef PACKET_TEST_H_
 #define PACKET_TEST_H_
 
-#include "../tester.h"
+#include "../utils/tester.h"
 
 /**
  * @brief Test function used to test the packet_t functionality

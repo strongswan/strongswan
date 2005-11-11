@@ -21,7 +21,7 @@
  */
  
 #include "ike_sa_id_test.h"
-#include "../tester.h"
+
 #include "../ike_sa_id.h"
 
 /* 

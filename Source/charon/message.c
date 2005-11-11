@@ -24,11 +24,11 @@
 
 #include "message.h"
 
-#include "allocator.h"
 #include "types.h"
 #include "ike_sa_id.h"
 #include "utils/linked_list.h"
-#include "encodings.h"
+#include "utils/allocator.h"
+#include "encodings/encodings.h"
 
 /**
  * Entry for a payload in the internal used linked list

@@ -22,8 +22,9 @@
 
 #include <stdlib.h>
 
-#include "allocator.h"
- #include "job.h"
+#include "job.h"
+
+#include "utils/allocator.h"
 
  /**
  * @brief implements function destroy of job_t

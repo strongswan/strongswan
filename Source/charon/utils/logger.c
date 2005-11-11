@@ -27,8 +27,8 @@
 #include <time.h>
 
 #include "logger.h"
-#include "daemon.h"
-#include "types.h"
+
+#include "../daemon.h"
 #include "allocator.h"
 
 /**

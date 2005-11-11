@@ -21,8 +21,9 @@
  */
 
 #include <string.h>
+
+#include "linked_list_test.h"
  
-#include "../tester.h"
 #include "../utils/linked_list.h"
  
  /*

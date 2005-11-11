@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 #include "scheduler_test.h"
+
 #include "../globals.h"
 #include "../scheduler.h"
 #include "../queues/event_queue.h"

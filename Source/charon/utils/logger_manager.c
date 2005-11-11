@@ -24,7 +24,7 @@
 #include "logger_manager.h"
  
 #include "allocator.h"
-#include "utils/linked_list.h"
+#include "linked_list.h"
 
 /** 
  * Maximum length of a logger name

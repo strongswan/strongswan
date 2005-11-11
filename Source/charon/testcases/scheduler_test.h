@@ -23,7 +23,7 @@
 #ifndef SCHEDULER_TEST_H_
 #define SCHEDULER_TEST_H_
 
-#include "../tester.h"
+#include "../utils/tester.h"
 
 /**
  * @brief Test function for the type scheduler_t

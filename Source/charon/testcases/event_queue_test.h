@@ -23,7 +23,7 @@
 #ifndef EVENT_QUEUE_TEST_H_
 #define EVENT_QUEUE_TEST_H_
 
-#include "../tester.h"
+#include "../utils/tester.h"
 
 /**
  * @brief Test function used to test the event_queue functionality

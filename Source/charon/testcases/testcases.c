@@ -23,13 +23,13 @@
  
 #include <stdio.h>
 
-#include "../logger_manager.h"
-#include "../allocator.h"
-#include "../tester.h"
 #include "../queues/job_queue.h"
 #include "../queues/event_queue.h"
 #include "../queues/send_queue.h"
 #include "../socket.h"
+#include "../utils/logger_manager.h"
+#include "../utils/allocator.h"
+#include "../utils/tester.h"
 #include "linked_list_test.h"
 #include "thread_pool_test.h"
 #include "job_queue_test.h"

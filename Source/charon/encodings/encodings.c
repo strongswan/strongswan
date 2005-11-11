@@ -28,9 +28,9 @@
 
 #include <stdlib.h>
 
-#include "types.h" 
+#include "../types.h" 
 #include "encodings.h"
-#include "encodings/ike_header.h" 
+#include "ike_header.h" 
 
 extern payload_info_t ike_header_info;
 

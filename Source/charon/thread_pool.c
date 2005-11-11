@@ -27,10 +27,10 @@
 
 #include "thread_pool.h"
  
-#include "allocator.h"
-#include "logger.h"
-#include "queues/job_queue.h"
 #include "globals.h"
+#include "queues/job_queue.h"
+#include "utils/allocator.h"
+#include "utils/logger.h"
 
 /**
  * @brief structure with private members for thread_pool_t

@@ -23,7 +23,7 @@
 #ifndef SEND_QUEUE_TEST_H_
 #define SEND_QUEUE_TEST_H_
 
-#include "../tester.h"
+#include "../utils/tester.h"
 
 /**
  * @brief Test function used to test the send_queue functionality

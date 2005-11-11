@@ -29,8 +29,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "allocator.h"
 #include "socket.h"
+
+#include "utils/allocator.h"
 
 typedef struct private_socket_s private_socket_t;
 

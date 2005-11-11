@@ -29,8 +29,8 @@
 #ifndef ENCODINGS_H_
 #define ENCODINGS_H_
 
-#include "types.h"
-#include "definitions.h"
+#include "../types.h"
+#include "../definitions.h"
 
 
 /**

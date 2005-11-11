@@ -25,9 +25,11 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 
-#include "allocator.h"
-#include "types.h"
+
 #include "generator.h"
+
+#include "types.h"
+#include "utils/allocator.h"
 
 
 typedef struct private_generator_context_s private_generator_context_t;

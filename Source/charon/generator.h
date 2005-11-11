@@ -24,7 +24,7 @@
 #define GENERATOR_H_
 
 #include "types.h"
-#include "encodings.h"
+#include "encodings/encodings.h"
 
 /**
  * Generating is done in a data buffer.

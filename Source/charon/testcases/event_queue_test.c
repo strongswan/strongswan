@@ -23,9 +23,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "../allocator.h"
 #include "event_queue_test.h"
-#include "../tester.h"
+
+#include "../utils/allocator.h"
 #include "../queues/event_queue.h"
 
 /**

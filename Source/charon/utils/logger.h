@@ -24,7 +24,7 @@
 #define LOGGER_H_
 
 #include <stdio.h>
-#include "types.h"
+#include "../types.h"
 
 /**
  * Log Levels supported by the logger object

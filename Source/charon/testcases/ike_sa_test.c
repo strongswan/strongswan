@@ -21,8 +21,8 @@
  */
 
 #include "ike_sa_test.h"
+
 #include "../types.h"
-#include "../tester.h"
 #include "../message.h"
 #include "../configuration.h"
 #include "../ike_sa.h"

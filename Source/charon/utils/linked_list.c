@@ -24,7 +24,7 @@
 
 #include "linked_list.h"
 
-#include "../allocator.h"
+#include "allocator.h"
 
 
 typedef struct linked_list_element_s linked_list_element_t;

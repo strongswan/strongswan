@@ -24,7 +24,7 @@
 #define PARSER_H_
 
 #include "types.h"
-#include "encodings.h"
+#include "encodings/encodings.h"
 
 /**
  * @brief The parser context stores state information for a parsing session.

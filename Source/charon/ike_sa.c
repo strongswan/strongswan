@@ -21,10 +21,11 @@
  * for more details.
  */
 
-#include "allocator.h"
-#include "types.h"
-#include "utils/linked_list.h"
 #include "ike_sa.h"
+
+#include "types.h"
+#include "utils/allocator.h"
+#include "utils/linked_list.h"
 
 
 /**

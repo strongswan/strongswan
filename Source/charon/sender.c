@@ -25,11 +25,11 @@
 
 #include "sender.h"
 
-#include "allocator.h"
 #include "socket.h"
 #include "packet.h"
-#include "queues/send_queue.h"
 #include "globals.h"
+#include "queues/send_queue.h"
+#include "utils/allocator.h"
 
 /**
  * Private data of a sender object

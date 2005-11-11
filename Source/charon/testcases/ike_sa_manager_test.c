@@ -25,8 +25,8 @@
 #include <unistd.h>
 
 #include "ike_sa_manager_test.h"
+
 #include "../types.h"
-#include "../tester.h"
 #include "../ike_sa_manager.h"
 
 

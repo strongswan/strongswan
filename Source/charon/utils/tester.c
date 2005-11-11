@@ -29,9 +29,8 @@
 #include "tester.h"
 
 #include "allocator.h"
-#include "utils/linked_list.h"
-#include "thread_pool.h"
-#include "queues/job_queue.h"
+#include "linked_list.h"
+#include "../queues/job_queue.h"
 
 /**
  * @brief Private Variables and Functions of tester class

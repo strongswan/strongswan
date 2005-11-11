@@ -23,11 +23,11 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
+#include "socket.h"
 #include "queues/send_queue.h"
 #include "queues/job_queue.h"
 #include "queues/event_queue.h"
-#include "socket.h"
-#include "logger_manager.h"
+#include "utils/logger_manager.h"
 
 
 extern send_queue_t *global_send_queue;

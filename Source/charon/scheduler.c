@@ -25,9 +25,9 @@
 
 #include "scheduler.h"
 
-#include "allocator.h"
-#include "queues/job_queue.h"
 #include "globals.h"
+#include "utils/allocator.h"
+#include "queues/job_queue.h"
 
 /**
  * Private data of a scheduler object

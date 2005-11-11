@@ -25,9 +25,9 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "../allocator.h"
 #include "job_queue_test.h"
-#include "../tester.h"
+
+#include "../utils/allocator.h"
 #include "../queues/job_queue.h"
 
 

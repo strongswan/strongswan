@@ -22,14 +22,14 @@
  
 #include <string.h>
 
-#include "../globals.h"
-#include "../allocator.h"
-#include "../logger_manager.h"
 #include "generator_test.h"
-#include "../tester.h"
-#include "../logger.h"
-#include "../encodings.h"
+
+#include "../globals.h"
 #include "../generator.h"
+#include "../utils/allocator.h"
+#include "../utils/logger_manager.h"
+#include "../utils/logger.h"
+#include "../encodings/encodings.h"
 #include "../encodings/ike_header.h"
 
 extern payload_info_t *payload_infos[];

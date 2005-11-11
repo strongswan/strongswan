@@ -24,9 +24,10 @@
 
 #include <stdlib.h>
 
-#include "allocator.h"
-#include "types.h"
 #include "configuration.h"
+
+#include "types.h"
+#include "utils/allocator.h"
 
 /**
  * Private data of an configuration_t object

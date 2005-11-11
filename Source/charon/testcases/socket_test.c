@@ -23,10 +23,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../allocator.h"
 #include "socket_test.h"
-#include "../tester.h"
+
 #include "../socket.h"
+#include "../utils/allocator.h"
 
 /*
  * Description in header file

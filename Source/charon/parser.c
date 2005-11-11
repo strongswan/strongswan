@@ -23,12 +23,13 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 
-#include "allocator.h"
+#include "parser.h"
+
+#include "types.h"
 #include "definitions.h"
 #include "globals.h"
-#include "types.h"
-#include "parser.h"
-#include "logger.h"
+#include "utils/allocator.h"
+#include "utils/logger.h"
 
 /**
  * @private data stored in a context

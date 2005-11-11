@@ -29,7 +29,6 @@
 #include <stdio.h>
 
 #include "allocator.h"
-#include "types.h"
 
 #ifdef LEAK_DETECTIVE
 

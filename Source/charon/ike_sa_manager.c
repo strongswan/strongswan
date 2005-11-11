@@ -23,10 +23,11 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "allocator.h"
 #include "ike_sa_manager.h"
-#include "utils/linked_list.h"
+
 #include "ike_sa_id.h"
+#include "utils/allocator.h"
+#include "utils/linked_list.h"
 
 /**
  * @brief An entry in the linked list, contains IKE_SA, locking and lookup data.

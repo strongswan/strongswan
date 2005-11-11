@@ -23,7 +23,7 @@
 #include <stdlib.h>
 
 #include "thread_pool_test.h"
-#include "../tester.h"
+
 #include "../thread_pool.h"
 
 /*

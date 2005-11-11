@@ -25,6 +25,7 @@
 #ifndef IKE_HEADER_H_
 #define IKE_HEADER_H_
 
+#include "../types.h"
 
 /**
  * Data structure to hold the data of an IKEv2-Header
