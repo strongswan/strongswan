@@ -30,6 +30,7 @@
 #define ENCODINGS_H_
 
 #include "types.h"
+#include "definitions.h"
 
 
 /**
@@ -288,6 +289,12 @@ enum payload_type_e{
 	 */
 	HEADER = 140
 };
+
+
+/*
+ * build string mapping array for payload_type_t
+ */
+extern mapping_t payload_type_t_mappings[];
 
 /**
  * Information of a specific payload are stored in this struct
