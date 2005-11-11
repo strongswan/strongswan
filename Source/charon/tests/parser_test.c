@@ -64,7 +64,7 @@ void test_parser_with_header_payload(tester_t *tester)
 	parser_context = parser->create_context(parser, test_chunk);
 	tester->assert_true(tester,(parser_context != NULL), "parser_context create check");
 
-	status = parser->parse_payload(parser, parser_context, HEADER, (void**)&header_data);
+	status = parser->parse_payload(parser, HEADER, (void**)&header_data, parser_context);
 	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
 	
 	tester->assert_true(tester,(header_data->initiator_spi == 1),"parsed initiator_spi value");

@@ -28,7 +28,11 @@
 #include "parser.h"
 #include "logger.h"
 
-
+/**
+ * @private data stored in a context
+ * 
+ * contains pointers and counters to store current state
+ */
 typedef struct private_parser_context_s private_parser_context_t;
 
 struct private_parser_context_s {
@@ -60,6 +64,9 @@ struct private_parser_context_s {
 	
 };
 
+/**
+ * implementation of parser_context_t.destroy
+ */
 static status_t parser_context_destroy(private_parser_context_t *this)
 {
 	allocator_free(this);
@@ -67,28 +74,9 @@ static status_t parser_context_destroy(private_parser_context_t *this)
 	return SUCCESS;	
 }
 
-static private_parser_context_t *parser_context_create(chunk_t input)
-{
-	private_parser_context_t *this = allocator_alloc_thing(private_parser_context_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}
-	
-	this->public.destroy = (status_t(*)(parser_context_t*)) parser_context_destroy;
-	
-	this->input = input.ptr;
-	this->byte_pos = input.ptr;
-	this->bit_pos = 0;
-	this->input_roof = input.ptr + input.len;
-	
-	return this;
-}
-
-
 
 /**
- * Private data of a parser_t object
+ * @brief Private data of a parser_t object
  */
 typedef struct private_parser_s private_parser_t;
 
@@ -107,18 +95,33 @@ struct private_parser_s {
 	 * logger object
 	 */
 	logger_t *logger;
-
-	
 };
 
+/**
+ * implementation of parser_t.create_context
+ */
 static private_parser_context_t *create_context(private_parser_t *this, chunk_t data)
 {
-	private_parser_context_t *context = parser_context_create(data);
+	private_parser_context_t *context = allocator_alloc_thing(private_parser_context_t);
+	if (this == NULL)
+	{
+		return NULL;	
+	}
+	
+	context->public.destroy = (status_t(*)(parser_context_t*)) parser_context_destroy;
+	
+	context->input = data.ptr;
+	context->byte_pos = data.ptr;
+	context->bit_pos = 0;
+	context->input_roof = data.ptr + data.len;
 	
 	return context;
 }
 
-static status_t parse_payload(private_parser_t *this, private_parser_context_t *context, payload_type_t payload_type, void **data_struct)
+/**
+ * implementation of parser_context_t.parse_payload
+ */
+static status_t parse_payload(private_parser_t *this, payload_type_t payload_type, void **data_struct, private_parser_context_t *context)
 {
 	payload_info_t *payload_info = NULL;
 	
@@ -371,6 +374,9 @@ static status_t parse_payload(private_parser_t *this, private_parser_context_t *
 	return NOT_SUPPORTED;
 }
 
+/**
+ * implementation of parser_t.destroy
+ */
 static status_t destroy(private_parser_t *this)
 {
 	this->logger->destroy(this->logger);
@@ -379,6 +385,9 @@ static status_t destroy(private_parser_t *this)
 	return SUCCESS;
 }
 
+/*
+ * see header file
+ */
 parser_t *parser_create(payload_info_t **payload_infos)
 {
 	private_parser_t *this = allocator_alloc_thing(private_parser_t);
@@ -395,7 +404,7 @@ parser_t *parser_create(payload_info_t **payload_infos)
 		return NULL;
 	}
 	this->public.create_context = (parser_context_t*(*)(parser_t*,chunk_t)) create_context;
-	this->public.parse_payload = (status_t(*)(parser_t*,parser_context_t*,payload_type_t,void**)) parse_payload;
+	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,void**,parser_context_t*)) parse_payload;
 	this->public.destroy = (status_t(*)(parser_t*)) destroy;
 	
 	this->payload_infos = payload_infos;	
