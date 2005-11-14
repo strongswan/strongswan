@@ -1,9 +1,11 @@
 /**
  * @file ike_header.c
  * 
- * @brief Definition of the encoding rules used when parsing or generating
- * an IKEv2-Header
- *  
+ * @brief Declaration of the class ike_header_t. 
+ * 
+ * An object of this type represents an ike header and is used to 
+ * generate and parse ike headers.
+ * 
  */
 
 /*

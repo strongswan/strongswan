@@ -1,9 +1,10 @@
 /**
  * @file ike_header.h
  * 
- * @brief Declaration of the data struct ike_header_t. 
+ * @brief Declaration of the class ike_header_t. 
  * 
- * The data of a parsed header are stored in a struct of this type.
+ * An object of this type represents an ike header and is used to 
+ * generate and parse ike headers.
  * 
  */
 
