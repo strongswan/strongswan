@@ -133,6 +133,14 @@ enum payload_type_e{
 	 * used internally to handle a transform substructure like a payload.
 	 */
 	TRANSFORM_SUBSTRUCTURE = 142,
+	
+	/**
+	 * TRANSFORM_ATTRIBUTE has a value of PRIVATE USE space
+	 * 
+	 * This payload type is not send over wire and just 
+	 * used internally to handle a transform attribute like a payload.
+	 */
+	TRANSFORM_ATTRIBUTE = 143,
 };
 
 

@@ -213,7 +213,72 @@ enum encoding_type_e{
 	 * When parsing the parsed transform_substructure_t objects have 
 	 * to be stored in the pointed linked_list.
 	 */	
-	TRANSFORMS
+	TRANSFORMS,
+	/**
+	 * Representating one or more Attributes of a transform substructure
+	 * 
+	 * The offset points to a linked_list_t pointer.
+	 * 
+	 * When generating the transform_attribute_t objects are stored 
+	 * in the pointed linked_list.
+	 * 
+	 * When parsing the parsed transform_attribute_t objects have 
+	 * to be stored in the pointed linked_list.
+	 */	
+	TRANSFORM_ATTRIBUTES,
+	/**
+	 * Representing a 1 Bit flag specifying the format of a transform attribute.
+	 * 
+	 * When generation, the next bit is set to 1 if the associated value 
+	 * in the data struct is TRUE, 0 otherwise. The current write position 
+	 * is moved 1 bit forward afterwards.
+	 *
+	 * When parsing, the next bit is read and stored in the associated data 
+	 * struct. 0 means FALSE, 1 means TRUE, The current read pointer 
+	 * is moved 1 bit forward afterwards.
+	 */
+	ATTRIBUTE_FORMAT,
+	/**
+	 * Representing a 15 Bit unsigned int value used as attribute type 
+	 * in an attribute transform
+	 * 
+	 * 
+	 * When generating it must be changed from host to network order.
+	 * The value is read from the associated data struct.
+ 	 * The current write position is moved 15 bit forward afterwards.
+	 * 
+	 * When parsing it must be changed from network to host order.
+	 * The value is written to the associated data struct.
+	 * The current read pointer is moved 15 bit forward afterwards.
+	 */
+	ATTRIBUTE_TYPE,
+
+	/**
+	 * Depending on the field of type ATTRIBUTE_FORMAT
+	 * this field contains the length or the value of an transform attribute.
+	 * Its stored in a 16 unsigned integer field
+	 * 
+	 * When generating it must be changed from host to network order.
+	 * The value is read from the associated data struct.
+ 	 * The current write position is moved 16 bit forward afterwards.
+	 * 
+	 * When parsing it must be changed from network to host order.
+	 * The value is written to the associated data struct.
+	 * The current read pointer is moved 16 bit forward afterwards.
+	 */
+	ATTRIBUTE_LENGTH_OR_VALUE,
+
+	/*	
+	 * Depending on the field of type ATTRIBUTE_FORMAT
+	 * this field is available or missing and so parsed/generated 
+	 * or not parsed/not generated
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
+	 */
+	ATTRIBUTE_VALUE
 };
 
 /**

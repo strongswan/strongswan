@@ -155,6 +155,24 @@ static size_t get_length(private_sa_payload_t *this)
 	return this->payload_length;
 }
 
+/**
+ * Implements sa_payload_t's create_proposal_substructure_iterator function.
+ * See #sa_payload_s.create_proposal_substructure_iterator for description.
+ */
+static status_t create_proposal_substructure_iterator (private_sa_payload_t *this,linked_list_iterator_t **iterator,bool forward)
+{
+	return (this->proposals->create_iterator(this->proposals,iterator,forward));
+}
+
+/**
+ * Implements sa_payload_t's add_proposal_substructure function.
+ * See #sa_payload_s.add_proposal_substructure for description.
+ */
+static status_t add_proposal_substructure (private_sa_payload_t *this,proposal_substructure_t *proposal)
+{
+	return (this->proposals->insert_last(this->proposals,(void *) proposal));
+}
+
 /*
  * Described in header
  */
@@ -171,6 +189,8 @@ sa_payload_t *sa_payload_create()
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	this->public.create_proposal_substructure_iterator = (status_t (*) (sa_payload_t *,linked_list_iterator_t **,bool)) create_proposal_substructure_iterator;
+	this->public.add_proposal_substructure = (status_t (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
 	this->public.destroy = (status_t (*) (sa_payload_t *)) destroy;
 	
 	/* set default values of the fields */

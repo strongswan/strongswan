@@ -29,6 +29,7 @@
 #include "../types.h"
 #include "payload.h"
 #include "proposal_substructure.h"
+#include "../utils/linked_list.h"
 
 /**
  * Critical flag must not be set
@@ -54,6 +55,33 @@ struct sa_payload_s {
 	 */
 	payload_t payload_interface;
 	
+	/**
+	 * @brief Creates an iterator of stored proposal_substructure_t objects.
+	 * 
+	 * @warning The created iterator has to get destroyed by the caller!
+	 *
+	 * @param this 			calling sa_payload_t object
+	 * @param iterator  		the created iterator is stored at the pointed pointer
+	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @return 		
+	 * 						- SUCCESS or
+	 * 						- OUT_OF_RES if iterator could not be created
+	 */
+	status_t (*create_proposal_substructure_iterator) (sa_payload_t *this,linked_list_iterator_t **iterator, bool forward);
+	
+	/**
+	 * @brief Adds a proposal_substructure_t object to this object.
+	 * 
+	 * @warning The added proposal_substructure_t object  is 
+	 * 			getting destroyed in destroy function of sa_payload_t.
+	 *
+	 * @param this 		calling sa_payload_t object
+	 * @param proposal  proposal_substructure_t object to add
+	 * @return 			- SUCCESS if succeeded
+	 * 					- FAILED otherwise
+	 */
+	status_t (*add_proposal_substructure) (sa_payload_t *this,proposal_substructure_t *proposal);
+
 	/**
 	 * @brief Destroys an sa_payload_t object.
 	 *

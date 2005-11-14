@@ -21,12 +21,14 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+ 
  /* offsetof macro */
 #include <stddef.h>
 
 #include "proposal_substructure.h"
 
 #include "encodings.h"
+#include "transform_substructure.h"
 #include "../types.h"
 #include "../utils/allocator.h"
 #include "../utils/linked_list.h"
@@ -98,7 +100,7 @@ encoding_rule_t proposal_substructure_encodings[] = {
 	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload) 			},
 	/* Reserved Byte is skipped */
 	{ RESERVED_BYTE,		0																},	
-	/* Length of the whole SA payload*/
+	/* Length of the whole proposal substructure payload*/
 	{ PAYLOAD_LENGTH,		offsetof(private_proposal_substructure_t, proposal_length) 	},	
 	/* proposal number is a number of 8 bit */
 	{ U_INT_8,				offsetof(private_proposal_substructure_t, proposal_number) 	},	
@@ -124,7 +126,7 @@ static status_t destroy(private_proposal_substructure_t *this)
 	/* all proposals are getting destroyed */ 
 	while (this->transforms->get_count(this->transforms) > 0)
 	{
-		transforms_substructure_t *current_transform;
+		transform_substructure_t *current_transform;
 		if (this->transforms->remove_last(this->transforms,(void **)&current_transform) != SUCCESS)
 		{
 			break;
@@ -182,6 +184,24 @@ static size_t get_length(private_proposal_substructure_t *this)
 	return this->proposal_length;
 }
 
+/**
+ * Implements proposal_substructure_t's create_transform_substructure_iterator function.
+ * See #proposal_substructure_s.create_transform_substructure_iterator for description.
+ */
+static status_t create_transform_substructure_iterator (private_proposal_substructure_t *this,linked_list_iterator_t **iterator,bool forward)
+{
+	return (this->transforms->create_iterator(this->transforms,iterator,forward));
+}
+
+/**
+ * Implements proposal_substructure_t's add_transform_substructure function.
+ * See #proposal_substructure_s.add_transform_substructure for description.
+ */
+static status_t add_transform_substructure (private_proposal_substructure_t *this,transform_substructure_t *transform)
+{
+	return (this->transforms->insert_last(this->transforms,(void *) transform));
+}
+
 /*
  * Described in header
  */
@@ -198,6 +218,8 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	this->public.create_transform_substructure_iterator = (status_t (*) (proposal_substructure_t *,linked_list_iterator_t **,bool)) create_transform_substructure_iterator;
+	this->public.add_transform_substructure = (status_t (*) (proposal_substructure_t *,transform_substructure_t *)) add_transform_substructure;
 	this->public.destroy = (status_t (*) (proposal_substructure_t *)) destroy;
 	
 	/* set default values of the fields */
@@ -219,5 +241,3 @@ proposal_substructure_t *proposal_substructure_create()
 	}
 	return (&(this->public));
 }
-
-

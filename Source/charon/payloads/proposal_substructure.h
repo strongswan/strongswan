@@ -25,9 +25,10 @@
 #ifndef PROPOSAL_SUBSTRUCTURE_H_
 #define PROPOSAL_SUBSTRUCTURE_H_
 
-
 #include "../types.h"
 #include "payload.h"
+#include "../utils/linked_list.h"
+#include "transform_substructure.h"
 
 /**
  * Object representing an IKEv2- PROPOSAL SUBSTRUCTURE
@@ -42,7 +43,34 @@ struct proposal_substructure_s {
 	 * implements payload_t interface
 	 */
 	payload_t payload_interface;
+
+	/**
+	 * @brief Creates an iterator of stored transform_substructure_t objects.
+	 * 
+	 * @warning The created iterator has to get destroyed by the caller!
+	 *
+	 * @param this 			calling proposal_substructure_t object
+	 * @param iterator  		the created iterator is stored at the pointed pointer
+	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @return 		
+	 * 						- SUCCESS or
+	 * 						- OUT_OF_RES if iterator could not be created
+	 */
+	status_t (*create_transform_substructure_iterator) (proposal_substructure_t *this,linked_list_iterator_t **iterator, bool forward);
 	
+	/**
+	 * @brief Adds a transform_substructure_t object to this object.
+	 * 
+	 * @warning The added transform_substructure_t object  is 
+	 * 			getting destroyed in destroy function of proposal_substructure_t.
+	 *
+	 * @param this 		calling proposal_substructure_t object
+	 * @param transform transform_substructure_t object to add
+	 * @return 			- SUCCESS if succeeded
+	 * 					- FAILED otherwise
+	 */
+	status_t (*add_transform_substructure) (proposal_substructure_t *this,transform_substructure_t *transform);
+
 	/**
 	 * @brief Destroys an proposal_substructure_t object.
 	 *
