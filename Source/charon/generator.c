@@ -469,8 +469,13 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				status = this->generate_flag(this,rules[i].offset);
 				break;
 			}
-			case LENGTH:
-				/* length is generated like an U_INT_32 */
+			case PAYLOAD_LENGTH:
+				/* payload length is generated like an U_INT_16 */
+				status = this->generate_u_int_type(this,U_INT_16,rules[i].offset);
+				break;
+
+			case HEADER_LENGTH:
+				/* header length is generated like an U_INT_32 */
 				status = this->generate_u_int_type(this,U_INT_32,rules[i].offset);
 				break;
 			case SPI_SIZE:
