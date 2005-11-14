@@ -33,6 +33,7 @@
 #include "utils/linked_list.h"
 #include "utils/logger_manager.h"
 #include "payloads/payload.h"
+#include "payloads/proposal_substructure.h"
 #include "payloads/transform_substructure.h"
 
 
@@ -185,6 +186,11 @@ struct private_generator_s {
 	 */
 	u_int32_t last_payload_length_position_offset;
 	
+	/**
+	 * Last SPI size
+	 */
+	u_int8_t last_spi_size;
+	
 	/*
 	 * Attribute format of the last generated transform attribute
 	 * 
@@ -197,7 +203,6 @@ struct private_generator_s {
 	 * Depending on the value of attribute_format this field is used
 	 * to hold the length of the transform attribute in bytes
 	 */
-	
 	u_int16_t attribute_length;
 	
 	/**
@@ -585,12 +590,68 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				status = this->generate_u_int_type(this,U_INT_32,rules[i].offset);
 				break;
 			case SPI_SIZE:
-				/* currently not implemented */
+				/* spi size is handled as 8 bit unsigned integer */
+				status = this->generate_u_int_type(this,U_INT_8,rules[i].offset);
+				this->last_spi_size = *((u_int8_t *)(this->data_struct + rules[i].offset));
 				break;
+			case SPI:
+			{
+				this->logger->log(this->logger,CONTROL_MORE,"SPI value");
+				/* the attribute value is generated */
+				status = this->generate_from_chunk(this,rules[i].offset);
+				break;
+			}
+			case TRANSFORMS:
+			{
+				this->logger->log(this->logger,CONTROL_MORE,"Generate Transforms");
+				/* before iterative generate the transforms, store the current length position */
+				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
+
+				u_int16_t length_of_proposal = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH + this->last_spi_size;
+				u_int16_t int16_val;
+				linked_list_t *transforms = *((linked_list_t **)(this->data_struct + rules[i].offset));
+
+				linked_list_iterator_t *iterator;
+				/* create forward iterator */
+				status = transforms->create_iterator(transforms,&iterator,TRUE);
+				if (status != SUCCESS)
+				{
+					return status;
+				}
+				while (iterator->has_next(iterator))
+				{
+					payload_t *current_transform;
+					u_int32_t before_generate_position_offset;
+					u_int32_t after_generate_position_offset;
+					
+					status = iterator->current(iterator,(void **)&current_transform);
+					if (status != SUCCESS)
+					{
+						iterator->destroy(iterator);	
+						return status;
+					}
+					
+					before_generate_position_offset = (this->out_position - this->buffer);
+					this->public.generate_payload(&(this->public),current_transform);
+					after_generate_position_offset = (this->out_position - this->buffer);
+					
+					/* increase size of transform */
+					length_of_proposal += (after_generate_position_offset - before_generate_position_offset);
+				}
+				
+				iterator->destroy(iterator);
+				
+				this->logger->log(this->logger,CONTROL_MORE,"Length of Transform is %d, offset is %d",length_of_proposal,payload_length_position_offset);
+				
+				int16_val = htons(length_of_proposal);
+				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				
+				break;
+			}	
 			case TRANSFORM_ATTRIBUTES:
 			{
 				this->logger->log(this->logger,CONTROL_MORE,"Generate Transform attributes");
-				/* before iterative generate the transforms, store the current length position */
+				/* before iterative generate the transform attributes, store the current length position */
 				u_int32_t transform_length_position_offset = this->last_payload_length_position_offset;
 
 				u_int16_t length_of_transform = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
@@ -609,6 +670,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 					payload_t *current_attribute;
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
+					
 					status = iterator->current(iterator,(void **)&current_attribute);
 					if (status != SUCCESS)
 					{
