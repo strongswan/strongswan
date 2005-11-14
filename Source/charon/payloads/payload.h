@@ -177,7 +177,7 @@ struct payload_s {
 	 * @param this 				calling object
 	 * @return 					length of this payload
 	 */
-	payload_type_t (*get_length) (payload_t *this);
+	size_t (*get_length) (payload_t *this);
 };
 
 /**
@@ -192,6 +192,6 @@ struct payload_s {
  * 					- NULL if failed
  */
  
-payload_t *create_empty_payload(payload_type_t type);
+payload_t *create_payload(payload_type_t type);
 
 #endif /*PAYLOAD_H_*/

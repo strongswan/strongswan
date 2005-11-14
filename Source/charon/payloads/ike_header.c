@@ -24,8 +24,10 @@
 /* offsetof macro */
 #include <stddef.h>
 
- #include "encodings.h"
- #include "ike_header.h"
+#include "ike_header.h"
+
+#include "encodings.h"
+#include "../utils/allocator.h"
 
 /**
  * Encoding rules to parse or generate a IKEv2-Header
@@ -63,5 +65,55 @@ encoding_rule_t ike_header_encodings[] = {
  	/* 4 Byte length fied, stored in the field length */
 	{ LENGTH,		offsetof(ike_header_t, length) 			}
 };
+
+
+
+status_t destroy(payload_t *this)
+{
+	allocator_free(this);
+	
+	return SUCCESS;
+}
+	
+status_t get_encoding_rules(payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+{
+	*rules = ike_header_encodings;
+	*rule_count = sizeof(ike_header_encodings) / sizeof(encoding_rule_t);
+	
+	return SUCCESS;
+}
+
+payload_type_t get_type(payload_t *this)
+{
+	return HEADER;
+}
+
+payload_type_t get_next_type(payload_t *this)
+{
+	return (((ike_header_t*)this)->next_payload);
+}
+
+size_t get_length(payload_t *this)
+{
+	return sizeof(ike_header_t);
+}
+
+
+ike_header_t *ike_header_create()
+{
+	ike_header_t *this = allocator_alloc_thing(ike_header_t);
+	if (this == NULL)
+	{
+		return NULL;	
+	}	
+	
+	this->payload_interface.get_encoding_rules = get_encoding_rules;
+	this->payload_interface.get_length = get_length;
+	this->payload_interface.get_next_type = get_next_type;
+	this->payload_interface.get_type = get_type;
+	this->payload_interface.destroy = destroy;
+	
+	return this;
+}
 
 

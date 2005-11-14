@@ -106,6 +106,6 @@ struct ike_header_s {
  * 					- NULL if failed
  */
  
-ike_header_t *create_ike_header();
+ike_header_t *ike_header_create();
 
 #endif /*IKE_HEADER_H_*/

@@ -24,13 +24,7 @@
 
 #include "payload.h"
 
-
-
-
-
-
-
-
+#include "ike_header.h"
 
 
 
@@ -60,4 +54,18 @@ mapping_t payload_type_t_mappings[] = {
 	{HEADER, "HEADER"},
 	{MAPPING_END, NULL}
 };
+
+/*
+ * see header
+ */
+payload_t *create_payload(payload_type_t type)
+{
+	switch (type)
+	{
+		case HEADER:
+			return (payload_t*)ike_header_create();
+		default:
+			return NULL;
+	}
+}
 
