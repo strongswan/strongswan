@@ -119,7 +119,7 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
 	private_tester_t *this = (private_tester_t *) tester;
 	this->tests_count++;
 	this->failed_asserts_count = 0;
-	fprintf(this->output,"%-55s", test_name);
+	fprintf(this->output,"%-55s\n", test_name);
 	gettimeofday(&start_time,NULL);
 	test_function(tester);
 	gettimeofday(&end_time,NULL);
@@ -127,16 +127,17 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
 
 	if (this->failed_asserts_count > 0)
 	{
-		fprintf(this->output,"FAILED: %-47s|%10ld us\n",test_name,timediff);
+		fprintf(this->output,"  =>Test failed: %-40s|%10ld us\n",test_name,timediff);
 	}else
 	{
-		fprintf(this->output,"|%10ld us\n",timediff);
+		fprintf(this->output,"\033[1A\033[55C|%10ld us\033[1B\033[80D",timediff);
 	}
 	if (this->failed_asserts_count > 0)
 	{
 		this->failed_tests_count++;
 	}
 }
+ 
 
 /**
  * Implementation of function assert_true
