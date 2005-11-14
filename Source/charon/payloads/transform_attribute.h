@@ -41,6 +41,46 @@ struct transform_attribute_s {
 	 * implements payload_t interface
 	 */
 	payload_t payload_interface;
+
+	/**
+	 * @brief Returns the currently set value of the attribute
+	 * 	
+	 * @warning Returned data are not copied
+	 * 
+	 * @param this 	calling transform_attribute_t object
+	 * @return 		chunk_t pointing to the value
+	 */
+	chunk_t (*get_value) (transform_attribute_t *this);
+	
+	/**
+	 * @brief Sets the value of the attribute.
+	 * 	
+	 * @warning Value is getting copied
+	 * 
+	 * @param this 	calling transform_attribute_t object
+	 * @param value chunk_t pointing to the value to set
+	 * @return 		
+	 * 				- SUCCESS or
+	 * 				- OUT_OF_RES
+	 */
+	status_t (*set_value) (transform_attribute_t *this, chunk_t value);
+
+	/**
+	 * @brief Sets the type of the attribute.
+	 * 	
+	 * @param this 	calling transform_attribute_t object
+	 * @param type	type to set (most significant bit is set to zero)
+	 * @return 		SUCCESS
+	 */
+	status_t (*set_attribute_type) (transform_attribute_t *this, u_int16_t type);
+	
+	/**
+	 * @brief get the type of the attribute.
+	 * 	
+	 * @param this 	calling transform_attribute_t object
+	 * @return 		type of the value
+	 */
+	u_int16_t (*get_attribute_type) (transform_attribute_t *this);
 	
 	/**
 	 * @brief Destroys an transform_attribute_t object.

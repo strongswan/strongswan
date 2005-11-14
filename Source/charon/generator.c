@@ -98,6 +98,15 @@ struct private_generator_s {
 	 */
 	status_t (*write_chunk) (private_generator_t *this,chunk_t *data);
 	
+	/**
+	 * Generates a bytestream from a chunk_t
+	 *
+	 * @param this 					private_generator_t object
+	 * @param offset					offset of chunk_t value in data struct
+	 * @return 						- SUCCESS if succeeded
+	 * 		  						- OUT_OF_RES if out of ressources
+	 */
+	status_t (*generate_from_chunk) (private_generator_t *this,u_int32_t offset);	
 
 	/**
 	 * Makes sure enough space is available in buffer to store amount of bits.
@@ -154,6 +163,21 @@ struct private_generator_s {
 	 */
 	void * data_struct;
 	
+	/*
+	 * Attribute format of the last generated transform attribute
+	 * 
+	 * Used to check if a variable value field is used or not for 
+	 * the transform attribute value.
+	 */
+	bool attribute_format;
+	
+	/*
+	 * Depending on the value of attribute_format this field is used
+	 * to hold the length of the transform attribute in bytes
+	 */
+	
+	u_int16_t attribute_length;
+	
 	/**
 	 * Associated Logger
 	 */
@@ -187,12 +211,15 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			case U_INT_64:
 				number_of_bits = 64;
 				break;
+			case ATTRIBUTE_TYPE:
+				number_of_bits = 15;
+				break;
 			default:
 			return FAILED;
 	}
 	if (((number_of_bits % 8) == 0) && (this->current_bit != 0))
 	{
-		/* current bit has to be zero for values greater then 4 bits */
+		/* current bit has to be zero for values multiple of 8 bits */
 		return FAILED;
 	}
 
@@ -240,6 +267,26 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 				break;
 
 			}
+			case ATTRIBUTE_TYPE:
+			{
+				if (this->current_bit != 1)
+				{
+					return FAILED;
+				}
+				u_int8_t attribute_format_flag = *(this->out_position) & 0x80;
+				
+				u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
+							
+				int16_val = int16_val & 0xFF7F;
+				
+				int16_val = int16_val | attribute_format_flag;
+								
+				this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
+				this->current_bit = 0;
+				break;
+				
+			}
+			
 			case U_INT_16:
 			{
 				u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
@@ -341,6 +388,22 @@ static status_t generate_flag (private_generator_t *this,u_int32_t offset)
 		this->out_position++;
 	}
 	return SUCCESS;
+}
+
+/**
+ * Implements private_generator_t's generate_from_chunk function.
+ * See #private_generator_s.generate_from_chunk.
+ */
+static status_t generate_from_chunk (private_generator_t *this,u_int32_t offset)
+{
+	if (this->current_bit != 0)
+	{
+		return FAILED;
+	}
+	chunk_t *attribute_value = (chunk_t *)(this->data_struct + offset);
+	
+	return this->write_bytes_to_buffer (this,attribute_value->ptr,attribute_value->len);
+	
 }
 
 /**
@@ -480,14 +543,54 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				break;
 			case SPI_SIZE:
 				/* currently not implemented */
-			default:
+				
+			case ATTRIBUTE_FORMAT:
+			{
+				this->logger->log(this->logger,CONTROL_MORE,"Generate Attribute Format flag");
+				/* Attribute format is a flag which is stored in context*/
+
+				status = this->generate_flag(this,rules[i].offset);
+				this->attribute_format = *((bool *) (this->data_struct + rules[i].offset));
 				break;
+			}	
+			case ATTRIBUTE_TYPE:
+			{
+				this->logger->log(this->logger,CONTROL_MORE,"Generate Attribute Type field");
+				// the attribute type is a 15 bit integer so it has to be generated special
+				status = this->generate_u_int_type(this,ATTRIBUTE_TYPE,rules[i].offset);
+				break;
+			}
+			case ATTRIBUTE_LENGTH_OR_VALUE:
+			{
+				this->logger->log(this->logger,CONTROL_MORE,"Generate Attribute Length or Value field");
+				if (this->attribute_format == FALSE)
+				{
+					status = this->generate_u_int_type(this,U_INT_16,rules[i].offset);
+					/* this field hold the length of the attribute */
+					this->attribute_length = *((u_int16_t *)(this->data_struct + rules[i].offset));
+				}
+				else
+				{
+					status = this->write_bytes_to_buffer(this,(this->data_struct + rules[i].offset),2);
+				}
+				break;
+			}				
+			case ATTRIBUTE_VALUE:
+			{
+				if (this->attribute_format == FALSE)
+				{
+					this->logger->log(this->logger,CONTROL_MORE,"Attribute value has not fixed size");
+					/* the attribute value is generated */
+					status = this->generate_from_chunk(this,rules[i].offset);
+				}
+				break;
+			}
+			default:
+				return NOT_SUPPORTED;
 		}
 	}
 
 	return status;
-	
-	return NOT_SUPPORTED;
 }
 
 /**
@@ -526,6 +629,7 @@ generator_t * generator_create()
 	this->generate_u_int_type = generate_u_int_type;
 	this->generate_reserved_field = generate_reserved_field;
 	this->generate_flag = generate_flag;
+	this->generate_from_chunk = generate_from_chunk;
 	this->make_space_available = make_space_available;
 	this->write_bytes_to_buffer = write_bytes_to_buffer;
 

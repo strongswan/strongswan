@@ -31,6 +31,7 @@
 #include "../utils/logger.h"
 #include "../payloads/encodings.h"
 #include "../payloads/ike_header.h"
+#include "../payloads/transform_attribute.h"
 
 /*
  * Described in Header 
@@ -124,4 +125,104 @@ void test_generator_with_header_payload(tester_t *tester)
 	
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+}
+
+/*
+ * Described in header
+ */ 
+void test_generator_with_transform_attribute(tester_t *tester)
+{
+	generator_t *generator;
+	transform_attribute_t *attribute;
+	status_t status;
+	chunk_t generated_data;
+	logger_t *logger;
+	
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"header payload");
+	
+	
+	/* test empty attribute */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	attribute = transform_attribute_create();
+	status = generator->generate_payload(generator,(payload_t *)attribute);
+	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
+
+	u_int8_t expected_generation[] = {
+		0x80,0x00,0x00,0x00,
+	};
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+	allocator_free_chunk(generated_data);
+	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
+	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	
+	/* test attribute with 2 byte data */	
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	attribute = transform_attribute_create();
+	u_int16_t dataval = 5768;
+	chunk_t data;
+	data.ptr = (void *) &dataval;
+	data.len = 2;
+		
+	attribute->set_value(attribute,data);
+	
+	status = generator->generate_payload(generator,(payload_t *)attribute);
+	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
+
+	u_int8_t expected_generation2[] = {
+		0x80,0x00,0x88,0x16,
+	};
+	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data");
+
+	allocator_free_chunk(generated_data);
+	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
+	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+
+
+
+	/* test attribute with 25 byte data */
+		generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	attribute = transform_attribute_create();
+	char *stringval = "ddddddddddeeeeeeeeeefffff";
+	data.ptr = (void *) stringval;
+	data.len = 25;
+		
+	status = attribute->set_value(attribute,data);
+	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
+	
+	status = attribute->set_attribute_type(attribute,456);
+	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+
+
+	status = generator->generate_payload(generator,(payload_t *)attribute);
+	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
+
+	u_int8_t expected_generation3[] = {
+		0x01,0xC8,0x00,0x19,
+		0x64,0x64,0x64,0x64,
+		0x64,0x64,0x64,0x64,
+		0x64,0x64,0x65,0x65,
+		0x65,0x65,0x65,0x65,
+		0x65,0x65,0x65,0x65,
+		0x66,0x66,0x66,0x66,
+		0x66
+	};
+	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
+
+	allocator_free_chunk(generated_data);
+	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
+	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+		
+
+	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 }

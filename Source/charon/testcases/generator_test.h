@@ -33,4 +33,12 @@
  */
 void test_generator_with_header_payload(tester_t *tester);
 
+/**
+ * @brief Test function used to test the generator with transform attribute payload
+ * 
+ *
+ * @param tester associated tester object
+ */
+void test_generator_with_transform_attribute(tester_t *tester);
+
 #endif /*GENERATOR_TEST_H_*/

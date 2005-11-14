@@ -59,7 +59,7 @@ struct private_transform_attribute_s {
 	/**
 	 * Attribute Length if attribute_format is 0, attribute Value otherwise
 	 */
-	u_int8_t	 attribute_length_or_value;
+	u_int16_t attribute_length_or_value;
 	
 	/**
 	 * Attribute value as chunk if attribute_format is 0 (FALSE)
@@ -144,6 +144,71 @@ static size_t get_length(private_transform_attribute_t *this)
 	}
 	return (this->attribute_length_or_value + 4);
 }
+/**
+ * Implements transform_attribute_t's set_value function.
+ * See #transform_attribute_s.set_value for description.
+ */
+static status_t set_value (private_transform_attribute_t *this, chunk_t value)
+{
+	if (value.len > 2)
+	{
+		this->attribute_value.ptr = allocator_clone_bytes(value.ptr,value.len);
+		if (this->attribute_value.ptr == NULL)
+		{
+			return OUT_OF_RES;
+		}
+		this->attribute_value.len = value.len;
+		this->attribute_length_or_value = value.len;
+		/* attribute has not a fixed length */
+		this->attribute_format = FALSE;		
+	}
+	else
+	{
+		memcpy(&(this->attribute_length_or_value),value.ptr,value.len);
+	}
+	return SUCCESS;
+}
+
+/**
+ * Implements transform_attribute_t's get_value function.
+ * See #transform_attribute_s.get_value for description.
+ */
+static chunk_t get_value (private_transform_attribute_t *this)
+{
+	chunk_t value;
+
+	if (this->attribute_format == FALSE)
+	{
+		value.ptr = this->attribute_value.ptr;
+		value.len = this->attribute_value.len;		
+	}
+	else
+	{
+		value.ptr = (void *) &(this->attribute_length_or_value);
+		value.len = 2;
+	}
+	
+	return value;
+}
+
+/**
+ * Implements transform_attribute_t's set_attribute_type function.
+ * See #transform_attribute_s.set_attribute_type for description.
+ */
+static status_t set_attribute_type (private_transform_attribute_t *this, u_int16_t type)
+{
+	this->attribute_type = type & 0x7FFF;
+	return SUCCESS;
+}
+
+/**
+ * Implements transform_attribute_t's get_attribute_type function.
+ * See #transform_attribute_s.get_attribute_type for description.
+ */
+static u_int16_t get_attribute_type (private_transform_attribute_t *this)
+{
+	return this->attribute_type;
+}
 
 /*
  * Described in header
@@ -161,6 +226,10 @@ transform_attribute_t *transform_attribute_create()
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	this->public.set_value = (status_t (*) (transform_attribute_t *,chunk_t value)) set_value;
+	this->public.get_value = (chunk_t (*) (transform_attribute_t *)) get_value;
+	this->public.set_attribute_type = (status_t (*) (transform_attribute_t *,u_int16_t type)) set_attribute_type;
+	this->public.get_attribute_type = (u_int16_t (*) (transform_attribute_t *)) get_attribute_type;
 	this->public.destroy = (status_t (*) (transform_attribute_t *)) destroy;
 	
 	/* set default values of the fields */
