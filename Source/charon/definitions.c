@@ -28,13 +28,13 @@
 char *mapping_find(mapping_t * maps, int value)
 {
 	int i = 0;
-	while (maps[i].value > MAPPING_END)
+	while (maps[i].value != MAPPING_END)
 	{
-		i++;
 		if (maps[i].value == value)
 		{
 			return maps[i].string;
 		}
+		i++;
 	}
 	return "INVALID MAPPING";
 }

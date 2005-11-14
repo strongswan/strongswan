@@ -24,7 +24,7 @@
 #define DEFINITIONS_H_
 
 
-#define MAPPING_END -1
+#define MAPPING_END (-1)
 
 /**
  * @brief mapping entry, where enum-to-string mappings are stored
