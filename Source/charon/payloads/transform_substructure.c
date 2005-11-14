@@ -71,6 +71,15 @@ struct private_transform_substructure_s {
  	 * Transforms Attributes are stored in a linked_list_t
  	 */
 	linked_list_t *attributes;
+	
+	/**
+	 * @brief Computes the length of this substructure.
+	 *
+	 * @param this 	calling private_transform_substructure_t object
+	 * @return 		
+	 * 				SUCCESS in any case
+	 */
+	status_t (*compute_length) (private_transform_substructure_t *this);
 };
 
 
@@ -158,20 +167,7 @@ static payload_type_t get_next_type(private_transform_substructure_t *this)
  */
 static size_t get_length(private_transform_substructure_t *this)
 {
-	linked_list_iterator_t *iterator;
-	status_t status;
-	size_t length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
-	status = this->attributes->create_iterator(this->attributes,&iterator,TRUE);
-	if (status != SUCCESS)
-	return length;
-	while (iterator->has_next(iterator))
-	{
-		payload_t * current_attribute;
-		iterator->current(iterator,(void **) &current_attribute);
-		length += current_attribute->get_length(current_attribute);
-	}
-	
-	this->transform_length = length;
+	this->compute_length(this);
 		
 	return this->transform_length;
 }
@@ -192,7 +188,7 @@ static status_t create_transform_attribute_iterator (private_transform_substruct
 static status_t add_transform_attribute (private_transform_substructure_t *this,transform_attribute_t *attribute)
 {
 	return (this->attributes->insert_last(this->attributes,(void *) attribute));
-	this->transform_length += ((payload_t *)this->attributes)->get_length(((payload_t *)this->attributes));
+	this->compute_length(this);
 	return SUCCESS;
 }
 
@@ -253,6 +249,30 @@ static u_int16_t get_transform_id (private_transform_substructure_t *this)
 	return this->transform_id;
 }
 
+/**
+ * Implements private_transform_substructure_t's compute_length function.
+ * See #private_transform_substructure_s.compute_length for description.
+ */
+static status_t compute_length (private_transform_substructure_t *this)
+{
+	linked_list_iterator_t *iterator;
+	status_t status;
+	size_t length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
+	status = this->attributes->create_iterator(this->attributes,&iterator,TRUE);
+	if (status != SUCCESS)
+	{
+		return length;
+	}
+	while (iterator->has_next(iterator))
+	{
+		payload_t * current_attribute;
+		iterator->current(iterator,(void **) &current_attribute);
+		length += current_attribute->get_length(current_attribute);
+	}
+		
+	return SUCCESS;
+}
+
 /*
  * Described in header
  */
@@ -278,6 +298,9 @@ transform_substructure_t *transform_substructure_create()
 	this->public.set_transform_id = (status_t (*) (transform_substructure_t *,u_int16_t)) set_transform_id;
 	this->public.get_transform_id = (u_int16_t (*) (transform_substructure_t *)) get_transform_id;
 	this->public.destroy = (status_t (*) (transform_substructure_t *)) destroy;
+	
+	/* private functions */
+	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
 	this->next_payload = NO_PAYLOAD;

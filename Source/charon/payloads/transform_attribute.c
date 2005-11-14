@@ -150,6 +150,15 @@ static size_t get_length(private_transform_attribute_t *this)
  */
 static status_t set_value (private_transform_attribute_t *this, chunk_t value)
 {
+	if (this->attribute_value.ptr != NULL)
+	{
+		/* free existing value */
+		allocator_free(this->attribute_value.ptr);
+		this->attribute_value.ptr = NULL;
+		this->attribute_value.len = 0;
+		
+	}
+	
 	if (value.len > 2)
 	{
 		this->attribute_value.ptr = allocator_clone_bytes(value.ptr,value.len);
