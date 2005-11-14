@@ -187,9 +187,10 @@ static status_t create_transform_attribute_iterator (private_transform_substruct
  */
 static status_t add_transform_attribute (private_transform_substructure_t *this,transform_attribute_t *attribute)
 {
-	return (this->attributes->insert_last(this->attributes,(void *) attribute));
+	status_t status;
+	status = this->attributes->insert_last(this->attributes,(void *) attribute);
 	this->compute_length(this);
-	return SUCCESS;
+	return status;
 }
 
 /**
@@ -198,7 +199,7 @@ static status_t add_transform_attribute (private_transform_substructure_t *this,
  */
 static status_t set_is_last_transform (private_transform_substructure_t *this, bool is_last)
 {
-	this->next_payload = (is_last) ? 0 : TRANSFORM_TYPE_VALUE;
+	this->next_payload = (is_last) ? 0: TRANSFORM_TYPE_VALUE;
 	return SUCCESS;
 }
 
@@ -269,6 +270,7 @@ static status_t compute_length (private_transform_substructure_t *this)
 		iterator->current(iterator,(void **) &current_attribute);
 		length += current_attribute->get_length(current_attribute);
 	}
+	iterator->destroy(iterator);
 		
 	return SUCCESS;
 }

@@ -208,8 +208,20 @@ static status_t create_transform_substructure_iterator (private_proposal_substru
  */
 static status_t add_transform_substructure (private_proposal_substructure_t *this,transform_substructure_t *transform)
 {
-	return (this->transforms->insert_last(this->transforms,(void *) transform));
+	status_t status;
+	if (this->transforms->get_count(this->transforms) > 0)
+	{
+		transform_substructure_t *last_transform;
+		status = this->transforms->get_last(this->transforms,(void **) &last_transform);
+		/* last transform is now not anymore last one */
+		last_transform->set_is_last_transform(last_transform,FALSE);
+
+	}
+	transform->set_is_last_transform(transform,TRUE);
+	
+	status = this->transforms->insert_last(this->transforms,(void *) transform);
 	this->compute_length(this);
+	return status;
 }
 
 /**
@@ -313,11 +325,9 @@ static status_t compute_length (private_proposal_substructure_t *this)
 		length += current_transform->get_length(current_transform);
 		transforms_count++;
 	}
-	
+	iterator->destroy(iterator);
 	
 	length += this->spi.len;
-	
-	
 	this->transforms_count= transforms_count;
 	this->proposal_length = length;	
 
