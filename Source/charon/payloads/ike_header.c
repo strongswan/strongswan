@@ -32,7 +32,7 @@
 /**
  * Encoding rules to parse or generate a IKEv2-Header
  * 
- * The defined offsets are the positions in a struct of type 
+ * The defined offsets are the positions in a object of type 
  * ike_header_t.
  * 
  */
@@ -67,14 +67,21 @@ encoding_rule_t ike_header_encodings[] = {
 };
 
 
-
+/**
+ * Implements payload_t's and ike_header_t's destroy function.
+ * See #payload_s.destroy or ike_header_s.destroy for description.
+ */
 static status_t destroy(ike_header_t *this)
 {
 	allocator_free(this);
 	
 	return SUCCESS;
 }
-	
+
+/**
+ * Implements payload_t's get_encoding_rules function.
+ * See #payload_s.get_encoding_rules for description.
+ */
 static status_t get_encoding_rules(payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = ike_header_encodings;
@@ -83,22 +90,36 @@ static status_t get_encoding_rules(payload_t *this, encoding_rule_t **rules, siz
 	return SUCCESS;
 }
 
+/**
+ * Implements payload_t's get_type function.
+ * See #payload_s.get_type for description.
+ */
 static payload_type_t get_type(payload_t *this)
 {
 	return HEADER;
 }
 
+/**
+ * Implements payload_t's get_next_type function.
+ * See #payload_s.get_next_type for description.
+ */
 static payload_type_t get_next_type(payload_t *this)
 {
 	return (((ike_header_t*)this)->next_payload);
 }
 
+/**
+ * Implements payload_t's get_length function.
+ * See #payload_s.get_length for description.
+ */
 static size_t get_length(payload_t *this)
 {
 	return sizeof(ike_header_t);
 }
 
-
+/*
+ * Described in header
+ */
 ike_header_t *ike_header_create()
 {
 	ike_header_t *this = allocator_alloc_thing(ike_header_t);
@@ -113,6 +134,20 @@ ike_header_t *ike_header_create()
 	this->payload_interface.get_type = get_type;
 	this->payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	this->destroy = destroy;
+	
+	/* set default values of the fields */
+	this->initiator_spi = 0;
+	this->responder_spi = 0;
+	this->next_payload = 0;
+	this->maj_version = IKE_MAJOR_VERSION;
+	this->min_version = IKE_MINOR_VERSION;
+	this->exchange_type = NOT_SET;
+	this->flags.initiator = TRUE;
+	this->flags.version = HIGHER_VERSION_SUPPORTED_FLAG;
+	this->flags.response = FALSE;
+	this->message_id = 0;
+	this->length = IKE_HEADER_LENGTH;
+	
 	
 	return this;
 }

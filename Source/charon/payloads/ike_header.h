@@ -29,7 +29,59 @@
 #include "payload.h"
 
 /**
- * Data structure to hold the data of an IKEv2-Header
+ * Major Version of IKEv2
+ */
+#define IKE_MAJOR_VERSION 2
+
+/**
+ * Minor Version of IKEv2
+ */
+#define IKE_MINOR_VERSION 0
+
+/**
+ * Flag in IKEv2-Header. Always 0
+ */
+#define HIGHER_VERSION_SUPPORTED_FLAG 0
+
+/**
+ * Length of IKE Header in Bytes
+ */
+#define IKE_HEADER_LENGTH 28
+
+/**
+ * @brief Different types of IKE-Exchanges.
+ *
+ * See RFC for different types.
+ */
+typedef enum exchange_type_e exchange_type_t;
+
+enum exchange_type_e{
+
+	/**
+	 * NOT_SET, not a official message type :-)
+	 */
+	NOT_SET = 0,
+
+	/**
+	 * IKE_SA_INIT
+	 */
+	IKE_SA_INIT = 34,
+	/**
+	 * IKE_AUTH
+	 */
+	IKE_AUTH = 35,
+	/**
+	 * CREATE_CHILD_SA
+	 */
+	CREATE_CHILD_SA = 36,
+	/**
+	 * INFORMATIONAL
+	 */
+	INFORMATIONAL = 37 
+};
+
+/**
+ * Object representing an IKEv2-Header
  * 
  * The header format of an IKEv2-Message is compatible to the 
  * ISAKMP-Header format to allow implementations supporting 
@@ -98,9 +150,9 @@ struct ike_header_s {
 	u_int32_t length;
 	
 	/**
-	 * @brief Destroys a ike_haeder payload and all included substructures.
+	 * @brief Destroys a ike_header_t object.
 	 *
-	 * @param this 	payload to destroy
+	 * @param this 	ike_header_t object to destroy
 	 * @return 		
 	 * 				SUCCESS in any case
 	 */
@@ -108,7 +160,7 @@ struct ike_header_s {
 };
 
 /**
- * @brief Create an empty ike_header
+ * @brief Create an ike_header_t object
  * 
  * @return			
  * 					- created ike_header, or

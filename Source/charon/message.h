@@ -26,53 +26,7 @@
 #include "types.h"
 #include "packet.h"
 #include "ike_sa_id.h"
-
-
-/**
- * Major version of IKEv2-Protocol. Always 2
- */
-#define IKE_V2_MAJOR_VERSION 2
-
-/**
- * Minor version of IKEv2-Protocol. Always 0
- */
-#define IKE_V2_MINOR_VERSION 0
-
-/**
- * Flag in IKEv2-Header. Always 0
- */
-#define HIGHER_VERSION_SUPPORTED_FLAG 0
-/**
- * @brief Different types of IKE-Exchanges.
- *
- * See RFC for different types.
- */
-typedef enum exchange_type_e exchange_type_t;
-
-enum exchange_type_e{
-
-	/**
-	 * NOT_SET, not a official message type :-)
-	 */
-	NOT_SET = 0,
-
-	/**
-	 * IKE_SA_INIT
-	 */
-	IKE_SA_INIT = 34,
-	/**
-	 * IKE_AUTH
-	 */
-	IKE_AUTH = 35,
-	/**
-	 * CREATE_CHILD_SA
-	 */
-	CREATE_CHILD_SA = 36,
-	/**
-	 * INFORMATIONAL
-	 */
-	INFORMATIONAL = 37 
-};
+#include "payloads/ike_header.h"
 
 /**
  * @brief This class is used to represent an IKEv2-Message.
