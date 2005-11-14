@@ -32,65 +32,40 @@
 #include "../payloads/encodings.h"
 #include "../payloads/ike_header.h"
 
-extern payload_info_t *payload_infos[];
-
-/*
- * Described in Header 
- */
-void test_generator_with_unsupported_payload(tester_t *tester)
-{
-	generator_t *generator;
-	generator_context_t *generator_context;
-	void * data_struct;
-	
-	generator = generator_create(payload_infos);
-	tester->assert_true(tester,(generator != NULL), "generator create check");
-	
-	generator_context = generator->create_context(generator);
-	
-	tester->assert_true(tester,(generator->generate_payload(generator,(payload_type_t) -1,data_struct,generator_context) == NOT_SUPPORTED),"generate_payload call check");
-
-	generator_context->destroy(generator_context);
-		
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
-}
-
 /*
  * Described in Header 
  */
 void test_generator_with_header_payload(tester_t *tester)
 {
 	generator_t *generator;
-	generator_context_t *generator_context;
-	ike_header_t header_data;
+	ike_header_t *header_data;
 	chunk_t generated_data;
 	status_t status;
 	logger_t *logger;
 	
 	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"header payload");
 	
-	header_data.initiator_spi = 1;
-	header_data.responder_spi = 2;
-	header_data.next_payload = 3;
-	header_data.maj_version = 4;
-	header_data.min_version = 5;
-	header_data.exchange_type = 6;
-	header_data.flags.initiator = TRUE;
-	header_data.flags.version = FALSE;
-	header_data.flags.response = TRUE;
-	header_data.message_id = 7;
-	header_data.length = 8;
+	header_data = ike_header_create();
 	
-	generator = generator_create(payload_infos);
+	header_data->initiator_spi = 1;
+	header_data->responder_spi = 2;
+	header_data->next_payload = 3;
+	header_data->maj_version = 4;
+	header_data->min_version = 5;
+	header_data->exchange_type = 6;
+	header_data->flags.initiator = TRUE;
+	header_data->flags.version = FALSE;
+	header_data->flags.response = TRUE;
+	header_data->message_id = 7;
+	header_data->length = 8;
+	
+	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
-	generator_context = generator->create_context(generator);
-	tester->assert_true(tester,(generator_context != NULL), "generator_context create check");
-
-	status = generator->generate_payload(generator,HEADER,&header_data,generator_context);
+	status = generator->generate_payload(generator,(payload_t *) header_data);
 	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
 
-	tester->assert_true(tester,(generator->write_to_chunk(generator,generator_context,&generated_data) == SUCCESS),"write_to_chunk call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
 
 	u_int8_t expected_generation[] = {
 		0x00,0x00,0x00,0x00,
@@ -107,27 +82,28 @@ void test_generator_with_header_payload(tester_t *tester)
 	logger->log_chunk(logger,RAW,"generated header",&generated_data);		
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data 1");
 	allocator_free_chunk(generated_data);
-	generator_context->destroy(generator_context);
 	
+	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 	
-	header_data.initiator_spi = 0x22000054231234;
-	header_data.responder_spi = 0x122398;
-	header_data.next_payload = 0xF3;
-	header_data.maj_version = 0x2;
-	header_data.min_version = 0x0;
-	header_data.exchange_type = 0x12;
-	header_data.flags.initiator = TRUE;
-	header_data.flags.version = TRUE;
-	header_data.flags.response = TRUE;
-	header_data.message_id = 0x33AFF3;
-	header_data.length = 0xAA11F;
+	header_data->initiator_spi = 0x22000054231234;
+	header_data->responder_spi = 0x122398;
+	header_data->next_payload = 0xF3;
+	header_data->maj_version = 0x2;
+	header_data->min_version = 0x0;
+	header_data->exchange_type = 0x12;
+	header_data->flags.initiator = TRUE;
+	header_data->flags.version = TRUE;
+	header_data->flags.response = TRUE;
+	header_data->message_id = 0x33AFF3;
+	header_data->length = 0xAA11F;
 	
-	generator_context = generator->create_context(generator);
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
-	status = generator->generate_payload(generator,HEADER,&header_data,generator_context);
+	status = generator->generate_payload(generator,(payload_t *)header_data);
 	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
 	
-	tester->assert_true(tester,(generator->write_to_chunk(generator,generator_context,&generated_data) == SUCCESS),"write_to_chunk call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
 
 	u_int8_t expected_generation2[] = {
 		0x00,0x22,0x00,0x00,
@@ -143,8 +119,9 @@ void test_generator_with_header_payload(tester_t *tester)
 
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data 2");
 	allocator_free_chunk(generated_data);
+
+	header_data->destroy(header_data);
 	
-	generator_context->destroy(generator_context);
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 }

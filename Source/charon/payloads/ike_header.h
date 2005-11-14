@@ -96,6 +96,15 @@ struct ike_header_s {
 	 * Length of the whole IKEv2-Message (header and all payloads)
 	 */
 	u_int32_t length;
+	
+	/**
+	 * @brief Destroys a ike_haeder payload and all included substructures.
+	 *
+	 * @param this 	payload to destroy
+	 * @return 		
+	 * 				SUCCESS in any case
+	 */
+	status_t (*destroy) (ike_header_t *this);
 };
 
 /**

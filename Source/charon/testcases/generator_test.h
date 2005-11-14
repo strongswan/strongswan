@@ -26,14 +26,6 @@
 #include "../utils/tester.h"
 
 /**
- * @brief Test function used to test the generator with unsupported payload
- * 
- *
- * @param tester associated tester object
- */
-void test_generator_with_unsupported_payload(tester_t *tester);
-
-/**
  * @brief Test function used to test the generator with header payload
  * 
  *

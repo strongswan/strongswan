@@ -68,14 +68,14 @@ encoding_rule_t ike_header_encodings[] = {
 
 
 
-status_t destroy(payload_t *this)
+static status_t destroy(ike_header_t *this)
 {
 	allocator_free(this);
 	
 	return SUCCESS;
 }
 	
-status_t get_encoding_rules(payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+static status_t get_encoding_rules(payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = ike_header_encodings;
 	*rule_count = sizeof(ike_header_encodings) / sizeof(encoding_rule_t);
@@ -83,17 +83,17 @@ status_t get_encoding_rules(payload_t *this, encoding_rule_t **rules, size_t *ru
 	return SUCCESS;
 }
 
-payload_type_t get_type(payload_t *this)
+static payload_type_t get_type(payload_t *this)
 {
 	return HEADER;
 }
 
-payload_type_t get_next_type(payload_t *this)
+static payload_type_t get_next_type(payload_t *this)
 {
 	return (((ike_header_t*)this)->next_payload);
 }
 
-size_t get_length(payload_t *this)
+static size_t get_length(payload_t *this)
 {
 	return sizeof(ike_header_t);
 }
@@ -111,7 +111,8 @@ ike_header_t *ike_header_create()
 	this->payload_interface.get_length = get_length;
 	this->payload_interface.get_next_type = get_next_type;
 	this->payload_interface.get_type = get_type;
-	this->payload_interface.destroy = destroy;
+	this->payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	this->destroy = destroy;
 	
 	return this;
 }
