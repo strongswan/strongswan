@@ -86,6 +86,15 @@ struct private_proposal_substructure_s {
  	 * Transforms are stored in a linked_list_t
  	 */
 	linked_list_t * transforms;
+	
+	/**
+	 * @brief Computes the length of this substructure.
+	 *
+	 * @param this 	calling private_proposal_substructure_t object
+	 * @return 		
+	 * 				SUCCESS in any case
+	 */
+	status_t (*compute_length) (private_proposal_substructure_t *this);
 };
 
 /**
@@ -200,7 +209,121 @@ static status_t create_transform_substructure_iterator (private_proposal_substru
 static status_t add_transform_substructure (private_proposal_substructure_t *this,transform_substructure_t *transform)
 {
 	return (this->transforms->insert_last(this->transforms,(void *) transform));
+	this->compute_length(this);
 }
+
+/**
+ * Implements proposal_substructure_t's set_proposal_number function.
+ * See #proposal_substructure_s.set_proposal_number for description.
+ */
+static status_t set_proposal_number(private_proposal_substructure_t *this,u_int8_t proposal_number)
+{
+	this->proposal_number = proposal_number;
+	return SUCCESS;
+}
+
+/**
+ * Implements proposal_substructure_t's get_proposal_number function.
+ * See #proposal_substructure_s.get_proposal_number for description.
+ */
+static u_int8_t get_proposal_number (private_proposal_substructure_t *this)
+{
+	return (this->proposal_number);
+}
+
+/**
+ * Implements proposal_substructure_t's set_protocol_id function.
+ * See #proposal_substructure_s.set_protocol_id for description.
+ */
+static status_t set_protocol_id(private_proposal_substructure_t *this,u_int8_t protocol_id)
+{
+	this->protocol_id = protocol_id;
+	return SUCCESS;
+}
+
+/**
+ * Implements proposal_substructure_t's get_protocol_id function.
+ * See #proposal_substructure_s.get_protocol_id for description.
+ */
+static u_int8_t get_protocol_id (private_proposal_substructure_t *this)
+{
+	return (this->protocol_id);
+}
+
+
+/**
+ * Implements proposal_substructure_t's set_spi function.
+ * See #proposal_substructure_s.set_spi for description.
+ */
+static status_t set_spi (private_proposal_substructure_t *this, chunk_t spi)
+{
+	/* first delete already set spi value */
+	if (this->spi.ptr != NULL)
+	{
+		allocator_free(this->spi.ptr);
+		this->spi.ptr = NULL;
+		this->spi.len = 0;
+		this->compute_length(this);
+	}
+	
+	this->spi.ptr = allocator_clone_bytes(spi.ptr,spi.len);
+	if (this->spi.ptr == NULL)
+	{
+		return OUT_OF_RES;
+	}
+	this->spi.len = spi.len;
+	this->spi_size = spi.len;
+	this->compute_length(this);
+
+	return SUCCESS;
+}
+
+/**
+ * Implements proposal_substructure_t's get_spi function.
+ * See #proposal_substructure_s.get_spi for description.
+ */
+static chunk_t get_spi (private_proposal_substructure_t *this)
+{
+	chunk_t spi;
+	spi.ptr = this->spi.ptr;
+	spi.len = this->spi.len;		
+	
+	return spi;
+}
+
+/**
+ * Implements private_proposal_substructure_t's compute_length function.
+ * See #private_proposal_substructure_s.compute_length for description.
+ */
+static status_t compute_length (private_proposal_substructure_t *this)
+{
+	linked_list_iterator_t *iterator;
+	status_t status;
+	size_t transforms_count = 0;
+	size_t length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
+	status = this->transforms->create_iterator(this->transforms,&iterator,TRUE);
+	if (status != SUCCESS)
+	{
+		return length;
+	}
+	while (iterator->has_next(iterator))
+	{
+		payload_t * current_transform;
+		iterator->current(iterator,(void **) &current_transform);
+		length += current_transform->get_length(current_transform);
+		transforms_count++;
+	}
+	
+	
+	length += this->spi.len;
+	
+	
+	this->transforms_count= transforms_count;
+	this->proposal_length = length;	
+
+	return SUCCESS;
+}
+
 
 /*
  * Described in header
@@ -220,7 +343,16 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	this->public.create_transform_substructure_iterator = (status_t (*) (proposal_substructure_t *,linked_list_iterator_t **,bool)) create_transform_substructure_iterator;
 	this->public.add_transform_substructure = (status_t (*) (proposal_substructure_t *,transform_substructure_t *)) add_transform_substructure;
+	this->public.set_proposal_number = (status_t (*) (proposal_substructure_t *,u_int8_t))set_proposal_number;
+	this->public.get_proposal_number = (u_int8_t (*) (proposal_substructure_t *)) get_proposal_number;
+	this->public.set_protocol_id = (status_t (*) (proposal_substructure_t *,u_int8_t))set_protocol_id;
+	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
+	this->public.set_spi = (status_t (*) (proposal_substructure_t *,chunk_t))set_spi;
+	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
 	this->public.destroy = (status_t (*) (proposal_substructure_t *)) destroy;
+	
+	/* private functions */
+	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
 	this->next_payload = NO_PAYLOAD;

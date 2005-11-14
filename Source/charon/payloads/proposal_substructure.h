@@ -31,6 +31,12 @@
 #include "transform_substructure.h"
 
 /**
+ * Length of the proposal substructure header
+ * (without spi)
+ */
+#define PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH 8
+
+/**
  * Object representing an IKEv2- PROPOSAL SUBSTRUCTURE
  * 
  * The PROPOSAL SUBSTRUCTURE format is described in RFC section 3.3.1.
@@ -48,6 +54,8 @@ struct proposal_substructure_s {
 	 * @brief Creates an iterator of stored transform_substructure_t objects.
 	 * 
 	 * @warning The created iterator has to get destroyed by the caller!
+	 * 			When deleting any transform over this iterator, call 
+	 * 			get_size to make sure the length and number values are ok.
 	 *
 	 * @param this 			calling proposal_substructure_t object
 	 * @param iterator  		the created iterator is stored at the pointed pointer
@@ -70,6 +78,64 @@ struct proposal_substructure_s {
 	 * 					- FAILED otherwise
 	 */
 	status_t (*add_transform_substructure) (proposal_substructure_t *this,transform_substructure_t *transform);
+	
+	/**
+	 * @brief Sets the proposal number of current proposal.
+	 *
+	 * @param this 		calling proposal_substructure_t object
+	 * @param id			proposal number to set
+	 * @return 			- SUCCESS
+	 */
+	status_t (*set_proposal_number) (proposal_substructure_t *this,u_int8_t proposal_number);
+	
+	/**
+	 * @brief get proposal number of current proposal.
+	 * 
+	 * @param this 		calling proposal_substructure_t object
+	 * @return 			proposal number of current proposal substructure.
+	 */
+	u_int8_t (*get_proposal_number) (proposal_substructure_t *this);
+
+	/**
+	 * @brief Sets the protocol id of current proposal.
+	 *
+	 * @param this 		calling proposal_substructure_t object
+	 * @param id			protocol id to set
+	 * @return 			- SUCCESS
+	 */
+	status_t (*set_protocol_id) (proposal_substructure_t *this,u_int8_t protocol_id);
+	
+	/**
+	 * @brief get protocol id of current proposal.
+	 * 
+	 * @param this 		calling proposal_substructure_t object
+	 * @return 			protocol id of current proposal substructure.
+	 */
+	u_int8_t (*get_protocol_id) (proposal_substructure_t *this);
+
+
+	/**
+	 * @brief Returns the currently set SPI of this proposal.
+	 * 	
+	 * @warning Returned data are not copied
+	 * 
+	 * @param this 	calling proposal_substructure_t object
+	 * @return 		chunk_t pointing to the value
+	 */
+	chunk_t (*get_spi) (proposal_substructure_t *this);
+	
+	/**
+	 * @brief Sets the SPI of the current proposal.
+	 * 	
+	 * @warning SPI is getting copied
+	 * 
+	 * @param this 	calling proposal_substructure_t object
+	 * @param spi	chunk_t pointing to the value to set
+	 * @return 		
+	 * 				- SUCCESS or
+	 * 				- OUT_OF_RES
+	 */
+	status_t (*set_spi) (proposal_substructure_t *this, chunk_t spi);
 
 	/**
 	 * @brief Destroys an proposal_substructure_t object.
