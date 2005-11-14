@@ -31,7 +31,7 @@
 #include "../socket.h"
 #include "../queues/send_queue.h"
 #include "../queues/job_queue.h"
-#include "../encodings/encodings.h"
+#include "../payloads/encodings.h"
 #include "../utils/allocator.h"
 
 /**

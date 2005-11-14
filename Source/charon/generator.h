@@ -24,7 +24,8 @@
 #define GENERATOR_H_
 
 #include "types.h"
-#include "encodings/encodings.h"
+#include "payloads/encodings.h"
+#include "payloads/payload.h"
 
 /**
  * Generating is done in a data buffer.
@@ -120,6 +121,6 @@ struct generator_s {
  * 							all the payload informations needed to 
  * 							automatic generate a specific payload
  */
-generator_t * generator_create(payload_info_t ** payload_infos);
+generator_t * generator_create();
 
 #endif /*GENERATOR_H_*/

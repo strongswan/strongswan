@@ -28,7 +28,8 @@
 #include "ike_sa_id.h"
 #include "utils/linked_list.h"
 #include "utils/allocator.h"
-#include "encodings/encodings.h"
+#include "payloads/encodings.h"
+#include "payloads/payload.h"
 
 /**
  * Entry for a payload in the internal used linked list

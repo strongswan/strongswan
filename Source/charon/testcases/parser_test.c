@@ -27,8 +27,8 @@
 #include "../parser.h"
 #include "../utils/allocator.h"
 #include "../utils/logger_manager.h"
-#include "../encodings/encodings.h"
-#include "../encodings/ike_header.h"
+#include "../payloads/encodings.h"
+#include "../payloads/ike_header.h"
 
 extern payload_info_t *payload_infos[];
 

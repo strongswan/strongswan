@@ -140,7 +140,7 @@ FILE_PATTERNS = *.c *.h
 
 RECURSIVE = YES
 
-EXCLUDE = tests
+EXCLUDE = testcases
 
 EXCLUDE_SYMLINKS = NO
 

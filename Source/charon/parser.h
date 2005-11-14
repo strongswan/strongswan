@@ -24,7 +24,8 @@
 #define PARSER_H_
 
 #include "types.h"
-#include "encodings/encodings.h"
+#include "payloads/encodings.h"
+#include "payloads/payload.h"
 
 /**
  * @brief The parser context stores state information for a parsing session.
@@ -101,6 +102,6 @@ struct parser_s {
  * @param payload_infos			list of payload_info_t 
  *
  */
-parser_t *parser_create(payload_info_t **payload_infos);
+parser_t *parser_create();
 
 #endif /*PARSER_H_*/

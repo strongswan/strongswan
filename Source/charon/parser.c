@@ -30,6 +30,7 @@
 #include "globals.h"
 #include "utils/allocator.h"
 #include "utils/logger.h"
+#include "payloads/payload.h"
 
 /**
  * @private data stored in a context

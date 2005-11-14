@@ -30,6 +30,7 @@
 
 #include "types.h"
 #include "utils/allocator.h"
+#include "payloads/payload.h"
 
 
 typedef struct private_generator_context_s private_generator_context_t;

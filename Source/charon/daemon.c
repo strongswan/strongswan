@@ -24,8 +24,8 @@
  
 
 #include "types.h"
-#include "tester.h"
-#include "job_queue.h"
+#include "utils/tester.h"
+#include "queues/job_queue.h"
 
 
 job_queue_t *job_queue;
