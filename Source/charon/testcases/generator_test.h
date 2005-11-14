@@ -50,5 +50,13 @@ void test_generator_with_transform_attribute(tester_t *tester);
  */
 void test_generator_with_transform_substructure(tester_t *tester);
 
+/**
+ * @brief Test function used to test the generator with proposal substructure payload
+ * 
+ *
+ * @param tester associated tester object
+ */
+void test_generator_with_proposal_substructure(tester_t *tester);
+
 
 #endif /*GENERATOR_TEST_H_*/
