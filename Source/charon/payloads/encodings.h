@@ -146,7 +146,19 @@ enum encoding_type_e{
 	 */
 	FLAG,
 	/**
-	 * Representating a length field
+	 * Representating a length field of a payload
+	 * 
+ 	 * When generating it must be changed from host to network order.
+	 * The value is read from the associated data struct.
+	 * The current write position is moved 16 bit forward afterwards.
+	 * 
+	 * When parsing it must be changed from network to host order.
+	 * The value is written to the associated data struct.
+	 * The current read pointer is moved 16 bit forward afterwards.
+	 */
+	PAYLOAD_LENGTH,
+	/**
+	 * Representating a length field of a header
 	 * 
  	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -156,7 +168,7 @@ enum encoding_type_e{
 	 * The value is written to the associated data struct.
 	 * The current read pointer is moved 32 bit forward afterwards.
 	 */
-	LENGTH,
+	HEADER_LENGTH,
 	/**
 	 * Representating a spi size field
 	 * 
@@ -168,7 +180,19 @@ enum encoding_type_e{
 	 * The value is written to the associated data struct.
 	 * The current read pointer is moved 32 bit forward afterwards.
 	 */
-	SPI_SIZE
+	SPI_SIZE,
+	/**
+	 * Representating one or more proposal substructures
+	 * 
+	 * The offset points to a linked_list_t pointer.
+	 * 
+	 * When generating the proposal_substructure_t objects are stored 
+	 * in the pointed linked_list.
+	 * 
+	 * When parsing the parsed proposal_substructure_t objects have 
+	 * to be stored in the pointed linked_list.
+	 */	
+	PROPOSALS
 };
 
 /**
