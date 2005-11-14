@@ -32,6 +32,7 @@
 #include "../payloads/encodings.h"
 #include "../payloads/ike_header.h"
 #include "../payloads/transform_attribute.h"
+#include "../payloads/transform_substructure.h"
 
 /*
  * Described in Header 
@@ -138,7 +139,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"header payload");
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"transform_attribute payload");
 	
 	
 	/* test empty attribute */
@@ -224,5 +225,86 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 		
 
+	global_logger_manager->destroy_logger(global_logger_manager,logger);	
+}
+
+
+
+/*
+ * Described in header
+ */ 
+void test_generator_with_transform_substructure(tester_t *tester)
+{
+	generator_t *generator;
+	transform_attribute_t *attribute1, *attribute2;
+	transform_substructure_t *transform;
+	chunk_t data;
+	status_t status;
+	chunk_t generated_data;
+	logger_t *logger;
+	
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"transform substr.");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+
+	/* create attribute 1 */	
+	attribute1 = transform_attribute_create();
+	char *stringval = "abcd";
+	data.ptr = (void *) stringval;
+	data.len = 4;
+	status = attribute1->set_value(attribute1,data);
+	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
+	status = attribute1->set_attribute_type(attribute1,0);
+	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	logger->log(logger,CONTROL,"attribute1 created");
+
+	/* create attribute 2 */
+	attribute2 = transform_attribute_create();
+	stringval = "efgh";
+	data.ptr = (void *) stringval;
+	data.len = 4;
+	status = attribute2->set_value(attribute2,data);
+	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
+	status = attribute2->set_attribute_type(attribute2,0);
+	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	logger->log(logger,CONTROL,"attribute2 created");
+
+	/* create transform */
+	transform = transform_substructure_create();
+	tester->assert_true(tester,(transform != NULL), "transform create check");
+	status = transform->add_transform_attribute(transform,attribute1);
+	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
+	status = transform->add_transform_attribute(transform,attribute2);
+	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
+	status = transform->set_transform_type(transform,5); /* hex 5 */
+	tester->assert_true(tester,(status == SUCCESS),"set_transform_type call check");
+	status = transform->set_transform_id(transform,65000); /* hex FDE8 */
+	tester->assert_true(tester,(status == SUCCESS),"set_transform_id call check");
+	
+	
+	logger->log(logger,CONTROL,"transform created");
+
+	status = generator->generate_payload(generator,(payload_t *)transform);
+	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	logger->log_chunk(logger,RAW,"generated transform",&generated_data);	
+
+	u_int8_t expected_generation3[] = {
+		0x00,0x00,0x00,0x18,
+		0x05,0x00,0xFD,0xE8,
+		0x00,0x00,0x00,0x04,
+		0x61,0x62,0x63,0x64,
+		0x00,0x00,0x00,0x04,
+		0x65,0x66,0x67,0x68,
+	};
+	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
+
+	allocator_free_chunk(generated_data);
+	tester->assert_true(tester,(transform->destroy(transform) == SUCCESS), "transform destroy call check");
+	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	
+	
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 }

@@ -65,12 +65,12 @@ struct private_transform_substructure_s {
 	/**
 	 * Transform ID
 	 */
-	u_int8_t transform_id;
+	u_int16_t transform_id;
 	
  	/**
  	 * Transforms Attributes are stored in a linked_list_t
  	 */
-	linked_list_t * attributes;
+	linked_list_t *attributes;
 };
 
 
@@ -93,7 +93,7 @@ encoding_rule_t transform_substructure_encodings[] = {
 	/* Reserved Byte is skipped */
 	{ RESERVED_BYTE,		0																},	
 	/* tranform ID is a number of 8 bit */
-	{ U_INT_8,				offsetof(private_transform_substructure_t, transform_id)		},	
+	{ U_INT_16,				offsetof(private_transform_substructure_t, transform_id)		},	
 	/* Attributes are stored in a transform attribute, 
 	   offset points to a linked_list_t pointer */
 	{ TRANSFORM_ATTRIBUTES,	offsetof(private_transform_substructure_t, attributes) 		}
@@ -158,6 +158,21 @@ static payload_type_t get_next_type(private_transform_substructure_t *this)
  */
 static size_t get_length(private_transform_substructure_t *this)
 {
+	linked_list_iterator_t *iterator;
+	status_t status;
+	size_t length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
+	status = this->attributes->create_iterator(this->attributes,&iterator,TRUE);
+	if (status != SUCCESS)
+	return length;
+	while (iterator->has_next(iterator))
+	{
+		payload_t * current_attribute;
+		iterator->current(iterator,(void **) &current_attribute);
+		length += current_attribute->get_length(current_attribute);
+	}
+	
+	this->transform_length = length;
+		
 	return this->transform_length;
 }
 
@@ -177,8 +192,66 @@ static status_t create_transform_attribute_iterator (private_transform_substruct
 static status_t add_transform_attribute (private_transform_substructure_t *this,transform_attribute_t *attribute)
 {
 	return (this->attributes->insert_last(this->attributes,(void *) attribute));
+	this->transform_length += ((payload_t *)this->attributes)->get_length(((payload_t *)this->attributes));
+	return SUCCESS;
 }
 
+/**
+ * Implements transform_substructure_t's set_is_last_transform function.
+ * See #transform_substructure_s.set_is_last_transform for description.
+ */
+static status_t set_is_last_transform (private_transform_substructure_t *this, bool is_last)
+{
+	this->next_payload = (is_last) ? 0 : TRANSFORM_TYPE_VALUE;
+	return SUCCESS;
+}
+
+/**
+ * Implements transform_substructure_t's get_is_last_transform function.
+ * See #transform_substructure_s.get_is_last_transform for description.
+ */
+static bool get_is_last_transform (private_transform_substructure_t *this)
+{
+	return ((this->next_payload == TRANSFORM_TYPE_VALUE) ? FALSE : TRUE);
+}
+
+/**
+ * Implements transform_substructure_t's set_transform_type function.
+ * See #transform_substructure_s.set_transform_type for description.
+ */
+static status_t set_transform_type (private_transform_substructure_t *this,u_int8_t type)
+{
+	this->transform_type = type;
+	return SUCCESS;
+}
+	
+/**
+ * Implements transform_substructure_t's get_transform_type function.
+ * See #transform_substructure_s.get_transform_type for description.
+ */
+static u_int8_t get_transform_type (private_transform_substructure_t *this)
+{
+	return this->transform_type;
+}
+
+/**
+ * Implements transform_substructure_t's set_transform_id function.
+ * See #transform_substructure_s.set_transform_id for description.
+ */
+static status_t set_transform_id (private_transform_substructure_t *this,u_int16_t id)
+{
+	this->transform_id = id;
+	return SUCCESS;
+}
+	
+/**
+ * Implements transform_substructure_t's get_transform_id function.
+ * See #transform_substructure_s.get_transform_id for description.
+ */
+static u_int16_t get_transform_id (private_transform_substructure_t *this)
+{
+	return this->transform_id;
+}
 
 /*
  * Described in header
@@ -198,11 +271,17 @@ transform_substructure_t *transform_substructure_create()
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	this->public.create_transform_attribute_iterator = (status_t (*) (transform_substructure_t *,linked_list_iterator_t **,bool)) create_transform_attribute_iterator;
 	this->public.add_transform_attribute = (status_t (*) (transform_substructure_t *,transform_attribute_t *)) add_transform_attribute;
+	this->public.set_is_last_transform = (status_t (*) (transform_substructure_t *,bool)) set_is_last_transform;
+	this->public.get_is_last_transform = (bool (*) (transform_substructure_t *)) get_is_last_transform;
+	this->public.set_transform_type = (status_t (*) (transform_substructure_t *,u_int8_t)) set_transform_type;
+	this->public.get_transform_type = (u_int8_t (*) (transform_substructure_t *)) get_transform_type;
+	this->public.set_transform_id = (status_t (*) (transform_substructure_t *,u_int16_t)) set_transform_id;
+	this->public.get_transform_id = (u_int16_t (*) (transform_substructure_t *)) get_transform_id;
 	this->public.destroy = (status_t (*) (transform_substructure_t *)) destroy;
 	
 	/* set default values of the fields */
 	this->next_payload = NO_PAYLOAD;
-	this->transform_length = 0;
+	this->transform_length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
 	this->transform_id = 0;
 	this->transform_type = 0;
 

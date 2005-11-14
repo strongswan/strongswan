@@ -31,6 +31,16 @@
 #include "transform_attribute.h"
 
 /**
+ * IKEv1 Value for a transform payload
+ */
+#define TRANSFORM_TYPE_VALUE 3
+
+/**
+ * Length of the transform substructure header in bytes
+ */
+#define TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH 8
+
+/**
  * Object representing an IKEv2- TRANSFORM SUBSTRUCTURE
  * 
  * The TRANSFORM SUBSTRUCTURE format is described in RFC section 3.3.2.
@@ -48,6 +58,9 @@ struct transform_substructure_s {
 	 * @brief Creates an iterator of stored transform_attribute_t objects.
 	 * 
 	 * @warning The created iterator has to get destroyed by the caller!
+	 * 
+	 * @warning When deleting an transform attribute, the length of this transform substructure
+	 * 			has to be refreshed with get_length!
 	 *
 	 * @param this 			calling transform_substructure_t object
 	 * @param iterator  		the created iterator is stored at the pointed pointer
@@ -71,6 +84,60 @@ struct transform_substructure_s {
 	 */
 	status_t (*add_transform_attribute) (transform_substructure_t *this,transform_attribute_t *attribute);
 	
+	/**
+	 * @brief Sets the next_payload field of this substructure
+	 * 
+	 * If this is the last transform, next payload field is set to 0,
+	 * otherwise to 3 (payload type of transform in IKEv1)
+	 *
+	 * @param this 		calling transform_substructure_t object
+	 * @param is_last	When TRUE, next payload field is set to 0, otherwise to 3
+	 * @return 			- SUCCESS
+	 */
+	status_t (*set_is_last_transform) (transform_substructure_t *this, bool is_last);
+	
+	/**
+	 * @brief Checks if this is the last transform.
+	 * 
+	 * @param this 		calling transform_substructure_t object
+	 * @return 			TRUE if this is the last Transform, FALSE otherwise
+	 */
+	bool (*get_is_last_transform) (transform_substructure_t *this);
+	
+	/**
+	 * @brief Sets transform type of the current transform substructure.
+	 *
+	 * @param this 		calling transform_substructure_t object
+	 * @param type		type value to set
+	 * @return 			- SUCCESS
+	 */
+	status_t (*set_transform_type) (transform_substructure_t *this,u_int8_t type);
+	
+	/**
+	 * @brief get transform type of the current transform.
+	 * 
+	 * @param this 		calling transform_substructure_t object
+	 * @return 			Transform type of current transform substructure.
+	 */
+	u_int8_t (*get_transform_type) (transform_substructure_t *this);
+	
+	/**
+	 * @brief Sets transform id of the current transform substructure.
+	 *
+	 * @param this 		calling transform_substructure_t object
+	 * @param id			transform id to set
+	 * @return 			- SUCCESS
+	 */
+	status_t (*set_transform_id) (transform_substructure_t *this,u_int16_t id);
+	
+	/**
+	 * @brief get transform id of the current transform.
+	 * 
+	 * @param this 		calling transform_substructure_t object
+	 * @return 			Transform id of current transform substructure.
+	 */
+	u_int16_t (*get_transform_id) (transform_substructure_t *this);
+
 	/**
 	 * @brief Destroys an transform_substructure_t object.
 	 *

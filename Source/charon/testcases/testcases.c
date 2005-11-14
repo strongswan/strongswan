@@ -43,7 +43,7 @@
 #include "ike_sa_test.h"
 #include "ike_sa_manager_test.h"
 #include "generator_test.h"
-#include "parser_test.h"
+//#include "parser_test.h"
 #include "packet_test.h"
 
 
@@ -122,14 +122,24 @@ test_t ike_sa_test = {test_ike_sa,"IKE_SA"};
 test_t ike_sa_manager_test = {test_ike_sa_manager, "IKE_SA-Manager"};
 
 /**
+ * Test 1 for generator_t
+ */
+test_t generator_test1 = {test_generator_with_header_payload,"Generator: header payload"};
+/**
  * Test 2 for generator_t
  */
-test_t generator_test2 = {test_generator_with_header_payload,"Generator: header payload"};
+test_t generator_test2 = {test_generator_with_transform_attribute,"Generator: transform attribute"};
+
+/**
+ * Test 3 for generator_t
+ */
+test_t generator_test3 = {test_generator_with_transform_substructure,"Generator: transform substructure"};
+
 
 /**
  * Test 2 for generator_t
  */
-test_t parser_test = {test_parser_with_header_payload, "Parser: header payload"};
+//test_t parser_test = {test_parser_with_header_payload, "Parser: header payload"};
 
 
 /**
@@ -182,13 +192,15 @@ logger_manager_t *global_logger_manager;
 	&receiver_test,
 	&ike_sa_id_test,
 	&ike_sa_test,
+	&generator_test1,
 	&generator_test2,
-	&parser_test,
+	&generator_test3,
+//	&parser_test,
 	&ike_sa_manager_test,
 	&packet_test,
 	NULL
 	};
- 	global_logger_manager = logger_manager_create(CONTROL);
+ 	global_logger_manager = logger_manager_create(ALL);
  	
 	global_socket = socket_create(4600);
  	
@@ -200,8 +212,8 @@ logger_manager_t *global_logger_manager;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	tester->perform_tests(tester,all_tests);
-	//tester->perform_test(tester,&parser_test);   
+	//tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&generator_test3);   
  	
 	tester->destroy(tester);
 

@@ -30,8 +30,10 @@
 
 #include "types.h"
 #include "utils/allocator.h"
+#include "utils/linked_list.h"
 #include "utils/logger_manager.h"
 #include "payloads/payload.h"
+#include "payloads/transform_substructure.h"
 
 
 extern logger_manager_t *global_logger_manager;
@@ -139,6 +141,21 @@ struct private_generator_s {
 	
 	
 	/**
+	 * Writes a specific amount of byte into the buffer at a specific offset.
+	 * 
+	 * @warning buffer size is not check to hold the data if offset is to large.
+	 *
+ 	 * @param this				calling private_generator_t object
+	 * @param bytes 				pointer to bytes to write
+	 * @param number_of_bytes	number of bytes to write into buffer
+	 * @param offset				offset to write the data into
+	 * @return 
+	 * 							- SUCCESSFUL if succeeded
+	 * 							- OUT_OF_RES otherwise
+	 */
+	status_t (*write_bytes_to_buffer_at_offset) (private_generator_t *this,void * bytes,size_t number_of_bytes,u_int32_t offset);
+	
+	/**
 	 * Buffer used to generate the data into.
 	 */
 	u_int8_t *buffer;
@@ -162,6 +179,11 @@ struct private_generator_s {
 	 * Associated data struct to read informations from.
 	 */
 	void * data_struct;
+	
+	/*
+	 * Last payload length position offset in the buffer
+	 */
+	u_int32_t last_payload_length_position_offset;
 	
 	/*
 	 * Attribute format of the last generated transform attribute
@@ -462,6 +484,26 @@ static status_t write_bytes_to_buffer (private_generator_t *this,void * bytes,si
 }
 
 /**
+ * Implements private_generator_t's write_bytes_to_buffer_at_offset function.
+ * See #private_generator_s.write_bytes_to_buffer_at_offset.
+ * TODO automatic buffer increasing!
+ */
+static status_t write_bytes_to_buffer_at_offset (private_generator_t *this,void * bytes,size_t number_of_bytes,u_int32_t offset)
+{
+	u_int8_t *read_position = (u_int8_t *) bytes;
+	int i;
+	u_int8_t *write_position = this->buffer + offset;
+	
+	for (i = 0; i < number_of_bytes; i++)
+	{
+		*(write_position) = *(read_position);
+		read_position++;
+		write_position++;
+	}
+	return SUCCESS;
+}
+
+/**
  * Implements generator_t's write_chunk function.
  * See #generator_s.write_chunk.
  */
@@ -534,6 +576,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 			}
 			case PAYLOAD_LENGTH:
 				/* payload length is generated like an U_INT_16 */
+				this->last_payload_length_position_offset = (this->out_position - this->buffer);
 				status = this->generate_u_int_type(this,U_INT_16,rules[i].offset);
 				break;
 
@@ -543,7 +586,53 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				break;
 			case SPI_SIZE:
 				/* currently not implemented */
+				break;
+			case TRANSFORM_ATTRIBUTES:
+			{
+				this->logger->log(this->logger,CONTROL_MORE,"Generate Transform attributes");
+				/* before iterative generate the transforms, store the current length position */
+				u_int32_t transform_length_position_offset = this->last_payload_length_position_offset;
+
+				u_int16_t length_of_transform = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
+				u_int16_t int16_val;
+				linked_list_t *transform_attributes =*((linked_list_t **)(this->data_struct + rules[i].offset));
+
+				linked_list_iterator_t *iterator;
+				/* create forward iterator */
+				status = transform_attributes->create_iterator(transform_attributes,&iterator,TRUE);
+				if (status != SUCCESS)
+				{
+					return status;
+				}
+				while (iterator->has_next(iterator))
+				{
+					payload_t *current_attribute;
+					u_int32_t before_generate_position_offset;
+					u_int32_t after_generate_position_offset;
+					status = iterator->current(iterator,(void **)&current_attribute);
+					if (status != SUCCESS)
+					{
+						iterator->destroy(iterator);	
+						return status;
+					}
+					
+					before_generate_position_offset = (this->out_position - this->buffer);
+					this->public.generate_payload(&(this->public),current_attribute);
+					after_generate_position_offset = (this->out_position - this->buffer);
+					
+					/* increase size of transform */
+					length_of_transform += (after_generate_position_offset - before_generate_position_offset);
+				}
 				
+				iterator->destroy(iterator);
+				
+				this->logger->log(this->logger,CONTROL_MORE,"Length of Transform is %d, offset is %d",length_of_transform,transform_length_position_offset);
+				
+				int16_val = htons(length_of_transform);
+				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),transform_length_position_offset);
+				
+				break;
+			}	
 			case ATTRIBUTE_FORMAT:
 			{
 				this->logger->log(this->logger,CONTROL_MORE,"Generate Attribute Format flag");
@@ -632,6 +721,7 @@ generator_t * generator_create()
 	this->generate_from_chunk = generate_from_chunk;
 	this->make_space_available = make_space_available;
 	this->write_bytes_to_buffer = write_bytes_to_buffer;
+	this->write_bytes_to_buffer_at_offset = write_bytes_to_buffer_at_offset;
 
 
 	/* allocate memory for buffer */
@@ -647,6 +737,7 @@ generator_t * generator_create()
 	this->roof_position = this->buffer + GENERATOR_DATA_BUFFER_SIZE;
 	this->data_struct = NULL;
 	this->current_bit = 0;
+	this->last_payload_length_position_offset = 0;
 	this->logger = global_logger_manager->create_logger(global_logger_manager,GENERATOR,NULL);
 	return &(this->public);
 }
