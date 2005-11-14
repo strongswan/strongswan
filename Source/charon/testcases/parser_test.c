@@ -30,7 +30,6 @@
 #include "../payloads/encodings.h"
 #include "../payloads/ike_header.h"
 
-extern payload_info_t *payload_infos[];
 
 extern logger_manager_t *global_logger_manager;
 
@@ -41,16 +40,11 @@ extern logger_manager_t *global_logger_manager;
 void test_parser_with_header_payload(tester_t *tester)
 {
 	parser_t *parser;
-	parser_context_t *parser_context;
-	ike_header_t *header_data;
+	ike_header_t *ike_header;
 	status_t status;
-	chunk_t test_chunk;
+	chunk_t header_chunk;
 	
-	logger_t *logger;
-	
-	logger = global_logger_manager->create_logger(global_logger_manager,TESTER, "header payload");
-	
-	u_int8_t test_bytes[] = {
+	u_int8_t header_bytes[] = {
 		0x00,0x00,0x00,0x00,
 		0x00,0x00,0x00,0x01,
 		0x00,0x00,0x00,0x00,
@@ -59,36 +53,29 @@ void test_parser_with_header_payload(tester_t *tester)
 		0x00,0x00,0x00,0x07,
 		0x00,0x00,0x00,0x08,
 	};
-	test_chunk.ptr = test_bytes;
-	test_chunk.len = sizeof(test_bytes);
+	header_chunk.ptr = header_bytes;
+	header_chunk.len = sizeof(header_bytes);
 
 	
-	parser = parser_create(payload_infos);
+	parser = parser_create(header_chunk);
 	tester->assert_true(tester,(parser != NULL), "parser create check");
 	
-	parser_context = parser->create_context(parser, test_chunk);
-	tester->assert_true(tester,(parser_context != NULL), "parser_context create check");
-
-	status = parser->parse_payload(parser, HEADER, (void**)&header_data, parser_context);
+	status = parser->parse_payload(parser, HEADER, (payload_t**)&ike_header);
 	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
 	
-	tester->assert_true(tester,(header_data->initiator_spi == 1),"parsed initiator_spi value");
-	tester->assert_true(tester,(header_data->responder_spi == 2),"parsed responder_spi value");
-	tester->assert_true(tester,(header_data->next_payload == 3),"parsed next_payload value");
-	tester->assert_true(tester,(header_data->maj_version == 4),"parsed maj_version value");
-	tester->assert_true(tester,(header_data->min_version == 5),"parsed min_version value");
-	tester->assert_true(tester,(header_data->exchange_type == 6),"parsed exchange_type value");
-	tester->assert_true(tester,(header_data->flags.initiator == TRUE),"parsed flags.initiator value");
-	tester->assert_true(tester,(header_data->flags.version == FALSE),"parsed flags.version value");
-	tester->assert_true(tester,(header_data->flags.response == TRUE),"parsed flags.response value");
-	tester->assert_true(tester,(header_data->message_id == 7),"parsed message_id value");
-	tester->assert_true(tester,(header_data->length == 8),"parsed length value");
+	tester->assert_true(tester,(ike_header->initiator_spi == 1),"parsed initiator_spi value");
+	tester->assert_true(tester,(ike_header->responder_spi == 2),"parsed responder_spi value");
+	tester->assert_true(tester,(ike_header->next_payload == 3),"parsed next_payload value");
+	tester->assert_true(tester,(ike_header->maj_version == 4),"parsed maj_version value");
+	tester->assert_true(tester,(ike_header->min_version == 5),"parsed min_version value");
+	tester->assert_true(tester,(ike_header->exchange_type == 6),"parsed exchange_type value");
+	tester->assert_true(tester,(ike_header->flags.initiator == TRUE),"parsed flags.initiator value");
+	tester->assert_true(tester,(ike_header->flags.version == FALSE),"parsed flags.version value");
+	tester->assert_true(tester,(ike_header->flags.response == TRUE),"parsed flags.response value");
+	tester->assert_true(tester,(ike_header->message_id == 7),"parsed message_id value");
+	tester->assert_true(tester,(ike_header->length == 8),"parsed length value");
 	
-	
-	parser_context->destroy(parser_context);
 	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
 	
-	logger->log_bytes(logger, RAW, "Header", (void*)header_data, sizeof(ike_header_t));
-	
-	allocator_free(header_data);
+	ike_header->destroy(ike_header);
 }

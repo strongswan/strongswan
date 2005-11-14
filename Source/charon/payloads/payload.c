@@ -58,7 +58,7 @@ mapping_t payload_type_t_mappings[] = {
 /*
  * see header
  */
-payload_t *create_payload(payload_type_t type)
+payload_t *payload_create(payload_type_t type)
 {
 	switch (type)
 	{

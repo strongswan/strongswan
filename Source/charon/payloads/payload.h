@@ -192,6 +192,6 @@ struct payload_s {
  * 					- NULL if failed
  */
  
-payload_t *create_payload(payload_type_t type);
+payload_t *payload_create(payload_type_t type);
 
 #endif /*PAYLOAD_H_*/

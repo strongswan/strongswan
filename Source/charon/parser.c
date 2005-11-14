@@ -37,13 +37,13 @@
  * 
  * contains pointers and counters to store current state
  */
-typedef struct private_parser_context_s private_parser_context_t;
+typedef struct private_parser_s private_parser_t;
 
-struct private_parser_context_s {
+struct private_parser_s {
 	/**
 	 * Public members
 	 */
-	parser_context_t public;
+	parser_t public;
 
 	/**
 	 * Current bit for reading in input data
@@ -65,319 +65,273 @@ struct private_parser_context_s {
 	 */
 	u_int8_t *input_roof;
 	
-	
-};
-
-/**
- * implementation of parser_context_t.destroy
- */
-static status_t parser_context_destroy(private_parser_context_t *this)
-{
-	allocator_free(this);
-	
-	return SUCCESS;	
-}
-
-
-/**
- * @brief Private data of a parser_t object
- */
-typedef struct private_parser_s private_parser_t;
-
-struct private_parser_s {
-	/**
-	 * Public part of a generator object
-	 */
-	 parser_t public;
-
-	/**
-	 * list of payloads and their description
-	 */
-	payload_info_t **payload_infos;
-	
 	/**
 	 * logger object
 	 */
 	logger_t *logger;
+	
+	
 };
-
-/**
- * implementation of parser_t.create_context
- */
-static private_parser_context_t *create_context(private_parser_t *this, chunk_t data)
-{
-	private_parser_context_t *context = allocator_alloc_thing(private_parser_context_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}
-	
-	context->public.destroy = (status_t(*)(parser_context_t*)) parser_context_destroy;
-	
-	context->input = data.ptr;
-	context->byte_pos = data.ptr;
-	context->bit_pos = 0;
-	context->input_roof = data.ptr + data.len;
-	
-	return context;
-}
 
 /**
  * implementation of parser_context_t.parse_payload
  */
-static status_t parse_payload(private_parser_t *this, payload_type_t payload_type, void **data_struct, private_parser_context_t *context)
+static status_t parse_payload(private_parser_t *this, payload_type_t payload_type, payload_t **payload)
 {
-	payload_info_t *payload_info = NULL;
 	
 	this->logger->log(this->logger, CONTROL, "Parsing a %s payload", mapping_find(payload_type_t_mappings, payload_type));
 	
 	/* find payload in null terminated list*/
-	payload_info = *(this->payload_infos);
-	while (payload_info)
-	{
-		if (payload_info->payload_type == payload_type)
-		{
-			void *output;
-			int current;
-			
-			/* ok, do the parsing */
-			output = allocator_alloc(payload_info->data_struct_length);
-			
-			for (current = 0; current < payload_info->encoding_rules_count; current++)
-			{
-				encoding_rule_t *rule = &(payload_info->ecoding_rules[current]);
-				switch (rule->type)
-				{
-					case U_INT_4:
-					{
-						u_int8_t *output_pos = output + rule->offset;
-						if (context->byte_pos + sizeof(u_int8_t) > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_4");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						switch (context->bit_pos)
-						{
-							case 0:
-								*output_pos = *(context->byte_pos) >> 4;
-								context->bit_pos = 4;
-								break;
-							case 4:	
-								*output_pos = *(context->byte_pos) & 0x0F;
-								context->bit_pos = 0;
-								context->byte_pos++;
-								break;
-							default:
-								this->logger->log(this->logger, ERROR, "found rule U_INT_4 on bitpos %d", context->bit_pos);
-								allocator_free(output);
-								return PARSE_ERROR;
-						}
-						break;
-					}
-					case U_INT_8:
-					{
-						u_int8_t *output_pos = output + rule->offset;
-						if (context->byte_pos + sizeof(u_int8_t)  > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_8");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if (context->bit_pos)
-						{
-							this->logger->log(this->logger, ERROR, "found rule U_INT_8 on bitpos %d", context->bit_pos);
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
 
-						*output_pos = *(context->byte_pos);
-						context->byte_pos++;
-						break;
-					}
-					case U_INT_16:
-					{
-						u_int16_t *output_pos = output + rule->offset;
-						if (context->byte_pos + sizeof(u_int16_t) > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_16");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if (context->bit_pos)
-						{
-							this->logger->log(this->logger, ERROR, "found rule U_INT_16 on bitpos %d", context->bit_pos);
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if ((int)context->byte_pos % 2)
-						{
-							this->logger->log(this->logger, ERROR, "found rule U_INT_16 on odd bytepos");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						*output_pos = ntohs(*((u_int16_t*)context->byte_pos));
-						context->byte_pos += 2;
-						break;					
-					}
-					case U_INT_32:
-					{
-						u_int32_t *output_pos = output + rule->offset;
-						if (context->byte_pos + sizeof(u_int32_t) > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_32");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if (context->bit_pos)
-						{
-							this->logger->log(this->logger, ERROR, "found rule U_INT_32 on bitpos %d", context->bit_pos);
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if ((int)context->byte_pos % 4)
-						{
-							this->logger->log(this->logger, ERROR, "found rule U_INT_32 on unaligned bytepos");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						*output_pos = ntohl(*((u_int32_t*)context->byte_pos));
-						context->byte_pos += 4;
-						break;		
-					}
-					case U_INT_64:
-					{
-						u_int32_t *output_pos = output + rule->offset;
-						if (context->byte_pos + 2 * sizeof(u_int32_t) > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_64");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if (context->bit_pos)
-						{
-							this->logger->log(this->logger, ERROR, "found rule U_INT_64 on bitpos %d", context->bit_pos);
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if ((int)context->byte_pos % 8)
-						{
-							this->logger->log(this->logger, ERROR, "found rule U_INT_64 on unaligned bytepos");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						/* assuming little endian host order */
-						*(output_pos + 1) = ntohl(*((u_int32_t*)context->byte_pos));
-						context->byte_pos += 4;
-						*output_pos = ntohl(*((u_int32_t*)context->byte_pos));
-						context->byte_pos += 4;
-						
-						break;	
-					}
-					case RESERVED_BIT:
-					{
-						if (context->byte_pos > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse RESERVED_BIT");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						context->bit_pos = (context->bit_pos + 1) % 8;
-						if (context->bit_pos == 0) 
-						{
-							context->byte_pos++;	
-						}
-						break;
-					}
-					case RESERVED_BYTE:
-					{
-						if (context->byte_pos > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse RESERVED_BYTE");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if (context->bit_pos)
-						{
-							this->logger->log(this->logger, ERROR, "found rule RESERVED_BYTE on bitpos %d", context->bit_pos);
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						context->byte_pos++;	
-						break;
-					}
-					case FLAG:
-					{
-						bool *output_pos = output + rule->offset;
-						u_int8_t mask;
-						if (context->byte_pos > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse FLAG");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						mask = 0x01 << (7 - context->bit_pos);
-						*output_pos = *context->byte_pos & mask;
-					
-						if (*output_pos)
-						{
-							/* set to a "clean", comparable true */
-							*output_pos = TRUE;
-						} 
-						context->bit_pos = (context->bit_pos + 1) % 8;
-						if (context->bit_pos == 0) 
-						{
-							context->byte_pos++;	
-						}
-						break;
-					}
-					case LENGTH:
-					{
-						u_int32_t *output_pos = output + rule->offset;
-						if (context->byte_pos + sizeof(u_int32_t) > context->input_roof)
-						{
-							this->logger->log(this->logger, ERROR, "not enough input to parse LENGTH");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if (context->bit_pos)
-						{
-							this->logger->log(this->logger, ERROR, "found rule LENGTH on bitpos %d", context->bit_pos);
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						if ((int)context->byte_pos % 4)
-						{
-							this->logger->log(this->logger, ERROR, "found rule LENGTH on unaligned bytepos");
-							allocator_free(output);
-							return PARSE_ERROR;
-						}
-						*output_pos = ntohl(*((u_int32_t*)context->byte_pos));
-						context->byte_pos += 4;
-						break;		
-					
-					}
-					case SPI_SIZE:
-					{
-						
-					}
-					default:
-					{
-						this->logger->log(this->logger, ERROR, "parser found unknown type");
-						allocator_free(output);
-						return PARSE_ERROR;
-					}
-				}	
-			}
-			
-			*data_struct = output;
-			return SUCCESS;
-		}
-		payload_info++;
+	payload_t *pld;
+	void *output;
+	int current;
+	encoding_rule_t *rule;
+	size_t rule_count;
+	
+	/* ok, do the parsing */
+	pld = payload_create(payload_type);
+	if (pld == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Payload not supported");
+		return NOT_SUPPORTED;	
 	}
 	
-	this->logger->log(this->logger, ERROR, "Payload not supported");
-	return NOT_SUPPORTED;
+	/* base pointer for output, avoids casting in every rule */
+	output = pld;
+	
+	pld->get_encoding_rules(pld, &rule, &rule_count);
+	
+	for (current = 0; current < rule_count; current++)
+	{
+		switch (rule->type)
+		{
+			case U_INT_4:
+			{
+				u_int8_t *output_pos = output + rule->offset;
+				if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_4");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				switch (this->bit_pos)
+				{
+					case 0:
+						*output_pos = *(this->byte_pos) >> 4;
+						this->bit_pos = 4;
+						break;
+					case 4:	
+						*output_pos = *(this->byte_pos) & 0x0F;
+						this->bit_pos = 0;
+						this->byte_pos++;
+						break;
+					default:
+						this->logger->log(this->logger, ERROR, "found rule U_INT_4 on bitpos %d", this->bit_pos);
+						pld->destroy(pld);
+						return PARSE_ERROR;
+				}
+				break;
+			}
+			case U_INT_8:
+			{
+				u_int8_t *output_pos = output + rule->offset;
+				if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_8");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if (this->bit_pos)
+				{
+					this->logger->log(this->logger, ERROR, "found rule U_INT_8 on bitpos %d", this->bit_pos);
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+
+				*output_pos = *(this->byte_pos);
+				this->byte_pos++;
+				break;
+			}
+			case U_INT_16:
+			{
+				u_int16_t *output_pos = output + rule->offset;
+				if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_16");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if (this->bit_pos)
+				{
+					this->logger->log(this->logger, ERROR, "found rule U_INT_16 on bitpos %d", this->bit_pos);
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if ((int)this->byte_pos % 2)
+				{
+					this->logger->log(this->logger, ERROR, "found rule U_INT_16 on odd bytepos");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				*output_pos = ntohs(*((u_int16_t*)this->byte_pos));
+				this->byte_pos += 2;
+				break;					
+			}
+			case U_INT_32:
+			{
+				u_int32_t *output_pos = output + rule->offset;
+				if (this->byte_pos + sizeof(u_int32_t) > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_32");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if (this->bit_pos)
+				{
+					this->logger->log(this->logger, ERROR, "found rule U_INT_32 on bitpos %d", this->bit_pos);
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if ((int)this->byte_pos % 4)
+				{
+					this->logger->log(this->logger, ERROR, "found rule U_INT_32 on unaligned bytepos");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				*output_pos = ntohl(*((u_int32_t*)this->byte_pos));
+				this->byte_pos += 4;
+				break;		
+			}
+			case U_INT_64:
+			{
+				u_int32_t *output_pos = output + rule->offset;
+				if (this->byte_pos + 2 * sizeof(u_int32_t) > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_64");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if (this->bit_pos)
+				{
+					this->logger->log(this->logger, ERROR, "found rule U_INT_64 on bitpos %d", this->bit_pos);
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if ((int)this->byte_pos % 8)
+				{
+					this->logger->log(this->logger, ERROR, "found rule U_INT_64 on unaligned bytepos");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				/* assuming little endian host order */
+				*(output_pos + 1) = ntohl(*((u_int32_t*)this->byte_pos));
+				this->byte_pos += 4;
+				*output_pos = ntohl(*((u_int32_t*)this->byte_pos));
+				this->byte_pos += 4;
+				
+				break;	
+			}
+			case RESERVED_BIT:
+			{
+				if (this->byte_pos > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse RESERVED_BIT");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				this->bit_pos = (this->bit_pos + 1) % 8;
+				if (this->bit_pos == 0) 
+				{
+					this->byte_pos++;	
+				}
+				break;
+			}
+			case RESERVED_BYTE:
+			{
+				if (this->byte_pos > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse RESERVED_BYTE");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if (this->bit_pos)
+				{
+					this->logger->log(this->logger, ERROR, "found rule RESERVED_BYTE on bitpos %d", this->bit_pos);
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				this->byte_pos++;	
+				break;
+			}
+			case FLAG:
+			{
+				bool *output_pos = output + rule->offset;
+				u_int8_t mask;
+				if (this->byte_pos > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse FLAG");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				mask = 0x01 << (7 - this->bit_pos);
+				*output_pos = *this->byte_pos & mask;
+			
+				if (*output_pos)
+				{
+					/* set to a "clean", comparable true */
+					*output_pos = TRUE;
+				} 
+				this->bit_pos = (this->bit_pos + 1) % 8;
+				if (this->bit_pos == 0) 
+				{
+					this->byte_pos++;	
+				}
+				break;
+			}
+			case LENGTH:
+			{
+				u_int32_t *output_pos = output + rule->offset;
+				if (this->byte_pos + sizeof(u_int32_t) > this->input_roof)
+				{
+					this->logger->log(this->logger, ERROR, "not enough input to parse LENGTH");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if (this->bit_pos)
+				{
+					this->logger->log(this->logger, ERROR, "found rule LENGTH on bitpos %d", this->bit_pos);
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				if ((int)this->byte_pos % 4)
+				{
+					this->logger->log(this->logger, ERROR, "found rule LENGTH on unaligned bytepos");
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				*output_pos = ntohl(*((u_int32_t*)this->byte_pos));
+				this->byte_pos += 4;
+				break;		
+			
+			}
+			case SPI_SIZE:
+			{
+				
+			}
+			default:
+			{
+				this->logger->log(this->logger, ERROR, "parser found unknown type");
+				pld->destroy(pld);
+				return PARSE_ERROR;
+			}
+		}
+		/* process next rulue */
+		rule++;
+	}
+	
+	*payload = pld;
+	return SUCCESS;
 }
 
 /**
@@ -394,7 +348,7 @@ static status_t destroy(private_parser_t *this)
 /*
  * see header file
  */
-parser_t *parser_create(payload_info_t **payload_infos)
+parser_t *parser_create(chunk_t data)
 {
 	private_parser_t *this = allocator_alloc_thing(private_parser_t);
 	
@@ -403,19 +357,23 @@ parser_t *parser_create(payload_info_t **payload_infos)
 		return NULL;
 	}
 	
-	this->logger = global_logger_manager->create_logger(global_logger_manager,PARSER, NULL);
+	this->logger = global_logger_manager->create_logger(global_logger_manager, PARSER, NULL);
 	
 	if (this->logger == NULL)
 	{
 		allocator_free(this);
 		return NULL;
 	}
-	this->public.create_context = (parser_context_t*(*)(parser_t*,chunk_t)) create_context;
-	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,void**,parser_context_t*)) parse_payload;
+	
+	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**)) parse_payload;
 	this->public.destroy = (status_t(*)(parser_t*)) destroy;
 	
-	this->payload_infos = payload_infos;	
 	
+	this->input = data.ptr;
+	this->byte_pos = data.ptr;
+	this->bit_pos = 0;
+	this->input_roof = data.ptr + data.len;
 	
 	return (parser_t*)this;
 }
+

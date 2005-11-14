@@ -43,7 +43,7 @@
 #include "ike_sa_test.h"
 #include "ike_sa_manager_test.h"
 #include "generator_test.h"
-//#include "parser_test.h"
+#include "parser_test.h"
 #include "packet_test.h"
 
 
@@ -129,7 +129,7 @@ test_t generator_test2 = {test_generator_with_header_payload,"Generator: header 
 /**
  * Test 2 for generator_t
  */
-//test_t parser_test = {test_parser_with_header_payload, "Parser: header payload"};
+test_t parser_test = {test_parser_with_header_payload, "Parser: header payload"};
 
 
 /**
@@ -183,7 +183,7 @@ logger_manager_t *global_logger_manager;
 	&ike_sa_id_test,
 	&ike_sa_test,
 	&generator_test2,
-//	&parser_test,
+	&parser_test,
 	&ike_sa_manager_test,
 	&packet_test,
 	NULL
