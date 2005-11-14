@@ -29,6 +29,7 @@
 #include "../utils/logger_manager.h"
 #include "../payloads/encodings.h"
 #include "../payloads/ike_header.h"
+#include "../payloads/sa_payload.h"
 
 
 extern logger_manager_t *global_logger_manager;
@@ -79,9 +80,49 @@ void test_parser_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(ike_header->flags.response == TRUE),"parsed flags.response value");
 	tester->assert_true(tester,(ike_header->message_id == 7),"parsed message_id value");
 	tester->assert_true(tester,(ike_header->length == 8),"parsed length value");
-	
-	
-	
-	
+
 	ike_header->destroy(ike_header);
+}
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_sa_payload(tester_t *tester)
+{
+	parser_t *parser;
+	sa_payload_t *sa_payload;
+	status_t status;
+	chunk_t sa_chunk;
+	
+	u_int8_t sa_bytes[] = {
+		0x00,0x80,0x00,0x24, /* payload header*/
+			0x00,0x00,0x00,0x20,  /* a proposal */
+			0x01,0x02,0x04,0x05,
+			0x01,0x02,0x03,0x04, /* spi */
+				0x00,0x00,0x00,0x14, /* transform */
+				0x02,0x00,0x00,0x03,  
+					0x80,0x01,0x00,0x05, /* attribute without length */
+					0x00,0x01,0x00,0x04, /* attribute with lenngth */
+						0x01,0x02,0x03,0x04
+								
+		
+	};
+	
+	sa_chunk.ptr = sa_bytes;
+	sa_chunk.len = sizeof(sa_bytes);
+
+	
+	parser = parser_create(sa_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, SECURITY_ASSOCIATION, (payload_t**)&sa_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	
+
+	sa_payload->destroy(sa_payload);
 }

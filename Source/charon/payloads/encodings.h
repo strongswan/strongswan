@@ -174,11 +174,11 @@ enum encoding_type_e{
 	 * 
  	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
-	 * The current write position is moved 32 bit forward afterwards.
+	 * The current write position is moved 8 bit forward afterwards.
 	 * 
 	 * When parsing it must be changed from network to host order.
 	 * The value is written to the associated data struct.
-	 * The current read pointer is moved 32 bit forward afterwards.
+	 * The current read pointer is moved 8 bit forward afterwards.
 	 */
 	SPI_SIZE,
 	/**

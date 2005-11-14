@@ -43,7 +43,7 @@
 #include "ike_sa_test.h"
 #include "ike_sa_manager_test.h"
 #include "generator_test.h"
-//#include "parser_test.h"
+#include "parser_test.h"
 #include "packet_test.h"
 
 
@@ -131,6 +131,7 @@ test_t generator_test1 = {test_generator_with_header_payload,"Generator: header 
 test_t generator_test2 = {test_generator_with_transform_attribute,"Generator: transform attribute"};
 
 /**
+ * Parser test for ike header
  * Test 3 for generator_t
  */
 test_t generator_test3 = {test_generator_with_transform_substructure,"Generator: transform substructure"};
@@ -139,7 +140,14 @@ test_t generator_test3 = {test_generator_with_transform_substructure,"Generator:
 /**
  * Test 2 for generator_t
  */
-//test_t parser_test = {test_parser_with_header_payload, "Parser: header payload"};
+
+test_t parser_test_header = {test_parser_with_header_payload, "Parser: header payload"};
+
+
+/**
+ * Parser test for ike security association
+ */
+test_t parser_test_sa_payload = {test_parser_with_sa_payload, "Parser: sa payload"};
 
 
 /**
@@ -194,8 +202,9 @@ logger_manager_t *global_logger_manager;
 	&ike_sa_test,
 	&generator_test1,
 	&generator_test2,
+	&parser_test_header,
+	&parser_test_sa_payload,
 	&generator_test3,
-//	&parser_test,
 	&ike_sa_manager_test,
 	&packet_test,
 	NULL
@@ -212,8 +221,8 @@ logger_manager_t *global_logger_manager;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&generator_test3);   
+	tester->perform_tests(tester,all_tests);
+//	tester->perform_test(tester,&parser_test_sa_payload);   
  	
 	tester->destroy(tester);
 

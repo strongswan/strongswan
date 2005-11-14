@@ -25,6 +25,7 @@
 #include "payload.h"
 
 #include "ike_header.h"
+#include "sa_payload.h"
 
 
 
@@ -67,6 +68,14 @@ payload_t *payload_create(payload_type_t type)
 	{
 		case HEADER:
 			return (payload_t*)ike_header_create();
+		case SECURITY_ASSOCIATION:
+			return (payload_t*)sa_payload_create();
+		case PROPOSAL_SUBSTRUCTURE:
+			return (payload_t*)proposal_substructure_create();
+		case TRANSFORM_SUBSTRUCTURE:
+			return (payload_t*)transform_substructure_create();
+		case TRANSFORM_ATTRIBUTE:
+			return (payload_t*)transform_attribute_create();
 		default:
 			return NULL;
 	}
