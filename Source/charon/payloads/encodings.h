@@ -282,6 +282,11 @@ enum encoding_type_e{
 };
 
 /**
+ * mappings to map encoding_type_t's to strings
+ */
+extern mapping_t encoding_type_t_mappings[];
+
+/**
  * An encoding rule is a mapping of a specific encoding type to 
  * a location in the data struct where the current field is stored to
  * or read from.
