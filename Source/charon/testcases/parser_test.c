@@ -59,9 +59,14 @@ void test_parser_with_header_payload(tester_t *tester)
 	
 	parser = parser_create(header_chunk);
 	tester->assert_true(tester,(parser != NULL), "parser create check");
-	
 	status = parser->parse_payload(parser, HEADER, (payload_t**)&ike_header);
 	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
 	
 	tester->assert_true(tester,(ike_header->initiator_spi == 1),"parsed initiator_spi value");
 	tester->assert_true(tester,(ike_header->responder_spi == 2),"parsed responder_spi value");
@@ -75,7 +80,8 @@ void test_parser_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(ike_header->message_id == 7),"parsed message_id value");
 	tester->assert_true(tester,(ike_header->length == 8),"parsed length value");
 	
-	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	
+	
 	
 	ike_header->destroy(ike_header);
 }
