@@ -79,7 +79,7 @@ struct private_parser_s {
 static status_t parse_payload(private_parser_t *this, payload_type_t payload_type, payload_t **payload)
 {
 	
-	this->logger->log(this->logger, CONTROL, "Parsing a %s payload", mapping_find(payload_type_t_mappings, payload_type));
+	this->logger->log(this->logger, CONTROL, "parsing %s payload", mapping_find(payload_type_t_mappings, payload_type));
 	
 	/* find payload in null terminated list*/
 
@@ -93,10 +93,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	pld = payload_create(payload_type);
 	if (pld == NULL)
 	{
-		this->logger->log(this->logger, ERROR, "Payload not supported");
+		this->logger->log(this->logger, ERROR, "  payload %s not supported", mapping_find(payload_type_t_mappings, payload_type));
 		return NOT_SUPPORTED;	
 	}
-	
 	/* base pointer for output, avoids casting in every rule */
 	output = pld;
 	
@@ -104,14 +103,17 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	
 	for (current = 0; current < rule_count; current++)
 	{
+		this->logger->log(this->logger, CONTROL_MORE, "  parsing rule %d %s", 
+							current, mapping_find(encoding_type_t_mappings, rule->type));
 		switch (rule->type)
 		{
 			case U_INT_4:
 			{
 				u_int8_t *output_pos = output + rule->offset;
-				if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
+				if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_4");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -127,7 +129,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 						this->byte_pos++;
 						break;
 					default:
-						this->logger->log(this->logger, ERROR, "found rule U_INT_4 on bitpos %d", this->bit_pos);
+						this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
+											current, mapping_find(encoding_type_t_mappings, rule->type), this->bit_pos);
 						pld->destroy(pld);
 						return PARSE_ERROR;
 				}
@@ -138,13 +141,15 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				u_int8_t *output_pos = output + rule->offset;
 				if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_8");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if (this->bit_pos)
 				{
-					this->logger->log(this->logger, ERROR, "found rule U_INT_8 on bitpos %d", this->bit_pos);
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
+										current, mapping_find(encoding_type_t_mappings, rule->type), this->bit_pos);
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -158,19 +163,22 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				u_int16_t *output_pos = output + rule->offset;
 				if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_16");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if (this->bit_pos)
 				{
-					this->logger->log(this->logger, ERROR, "found rule U_INT_16 on bitpos %d", this->bit_pos);
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
+										current, mapping_find(encoding_type_t_mappings, rule->type), this->bit_pos);
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if ((int)this->byte_pos % 2)
 				{
-					this->logger->log(this->logger, ERROR, "found rule U_INT_16 on odd bytepos");
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos odd bytepos", 
+											current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -183,19 +191,22 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				u_int32_t *output_pos = output + rule->offset;
 				if (this->byte_pos + sizeof(u_int32_t) > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_32");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if (this->bit_pos)
 				{
-					this->logger->log(this->logger, ERROR, "found rule U_INT_32 on bitpos %d", this->bit_pos);
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
+										current, mapping_find(encoding_type_t_mappings, rule->type), this->bit_pos);
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if ((int)this->byte_pos % 4)
 				{
-					this->logger->log(this->logger, ERROR, "found rule U_INT_32 on unaligned bytepos");
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on unaligned bytepos", 
+											current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -208,19 +219,22 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				u_int32_t *output_pos = output + rule->offset;
 				if (this->byte_pos + 2 * sizeof(u_int32_t) > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse U_INT_64");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if (this->bit_pos)
 				{
-					this->logger->log(this->logger, ERROR, "found rule U_INT_64 on bitpos %d", this->bit_pos);
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
+										current, mapping_find(encoding_type_t_mappings, rule->type), this->bit_pos);
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if ((int)this->byte_pos % 8)
 				{
-					this->logger->log(this->logger, ERROR, "found rule U_INT_64 on unaligned bytepos");
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on unaligned bytepos", 
+											current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -234,9 +248,10 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case RESERVED_BIT:
 			{
-				if (this->byte_pos > this->input_roof)
+				if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse RESERVED_BIT");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -249,15 +264,17 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case RESERVED_BYTE:
 			{
-				if (this->byte_pos > this->input_roof)
+				if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse RESERVED_BYTE");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if (this->bit_pos)
 				{
-					this->logger->log(this->logger, ERROR, "found rule RESERVED_BYTE on bitpos %d", this->bit_pos);
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
+										current, mapping_find(encoding_type_t_mappings, rule->type), this->bit_pos);
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -268,9 +285,10 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			{
 				bool *output_pos = output + rule->offset;
 				u_int8_t mask;
-				if (this->byte_pos > this->input_roof)
+				if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse FLAG");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -289,24 +307,27 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				}
 				break;
 			}
-			case LENGTH:
+			case HEADER_LENGTH:
 			{
 				u_int32_t *output_pos = output + rule->offset;
 				if (this->byte_pos + sizeof(u_int32_t) > this->input_roof)
 				{
-					this->logger->log(this->logger, ERROR, "not enough input to parse LENGTH");
+					this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+										current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if (this->bit_pos)
 				{
-					this->logger->log(this->logger, ERROR, "found rule LENGTH on bitpos %d", this->bit_pos);
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
+										current, mapping_find(encoding_type_t_mappings, rule->type), this->bit_pos);
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				if ((int)this->byte_pos % 4)
 				{
-					this->logger->log(this->logger, ERROR, "found rule LENGTH on unaligned bytepos");
+					this->logger->log(this->logger, ERROR, "  found rule %d %s on unaligned bytepos", 
+											current, mapping_find(encoding_type_t_mappings, rule->type));
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
@@ -315,13 +336,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				break;		
 			
 			}
-			case SPI_SIZE:
-			{
-				
-			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "parser found unknown type");
+				this->logger->log(this->logger, ERROR, "  no rule to parse rule %d %s (%d)", current, mapping_find(payload_type_t_mappings, payload_type), payload_type);
 				pld->destroy(pld);
 				return PARSE_ERROR;
 			}
@@ -358,6 +375,8 @@ parser_t *parser_create(chunk_t data)
 	}
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, PARSER, NULL);
+	this->logger->enable_level(this->logger, ALL);
+	
 	
 	if (this->logger == NULL)
 	{
