@@ -111,12 +111,28 @@ enum payload_type_e{
 	EXTENSIBLE_AUTHENTICATION = 48,
 	
 	/**
-	 * Header has value 140 of PRIVATE USE space
+	 * Header has a value of PRIVATE USE space
 	 * 
 	 * This payload type is not send over wire and just 
 	 * used internally to handle IKEv2-Header like a payload.
 	 */
-	HEADER = 140
+	HEADER = 140,
+	
+	/**
+	 * PROPOSAL_SUBSTRUCTURE has a value of PRIVATE USE space
+	 * 
+	 * This payload type is not send over wire and just 
+	 * used internally to handle a proposal substructure like a payload.
+	 */
+	PROPOSAL_SUBSTRUCTURE = 141,
+
+	/**
+	 * TRANSFORM_SUBSTRUCTURE has a value of PRIVATE USE space
+	 * 
+	 * This payload type is not send over wire and just 
+	 * used internally to handle a transform substructure like a payload.
+	 */
+	TRANSFORM_SUBSTRUCTURE = 142,
 };
 
 

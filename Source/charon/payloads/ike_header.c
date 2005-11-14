@@ -65,7 +65,7 @@ encoding_rule_t ike_header_encodings[] = {
  	/* 4 Byte message id, stored in the field message_id */
 	{ U_INT_32,		offsetof(ike_header_t, message_id) 		},
  	/* 4 Byte length fied, stored in the field length */
-	{ LENGTH,		offsetof(ike_header_t, length) 			}
+	{ HEADER_LENGTH,	offsetof(ike_header_t, length) 			}
 };
 
 
@@ -116,7 +116,7 @@ static payload_type_t get_next_type(payload_t *this)
  */
 static size_t get_length(payload_t *this)
 {
-	return sizeof(ike_header_t);
+	return IKE_HEADER_LENGTH;
 }
 
 /*

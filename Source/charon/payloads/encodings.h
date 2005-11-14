@@ -182,6 +182,15 @@ enum encoding_type_e{
 	 */
 	SPI_SIZE,
 	/**
+	 * Representating a spi field
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
+	 */
+	SPI,
+	/**
 	 * Representating one or more proposal substructures
 	 * 
 	 * The offset points to a linked_list_t pointer.
@@ -192,7 +201,19 @@ enum encoding_type_e{
 	 * When parsing the parsed proposal_substructure_t objects have 
 	 * to be stored in the pointed linked_list.
 	 */	
-	PROPOSALS
+	PROPOSALS,
+	/**
+	 * Representating one or more transform substructures
+	 * 
+	 * The offset points to a linked_list_t pointer.
+	 * 
+	 * When generating the transform_substructure_t objects are stored 
+	 * in the pointed linked_list.
+	 * 
+	 * When parsing the parsed transform_substructure_t objects have 
+	 * to be stored in the pointed linked_list.
+	 */	
+	TRANSFORMS
 };
 
 /**
