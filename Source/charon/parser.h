@@ -29,25 +29,31 @@
 
 
 /**
- * @brief A parser_t object which parses payloads of specific type
+ * @brief A parser_t object which parses payloads
+ * 
+ * A parser is used for parsing one chunk of data. Multiple
+ * payloads can be parsed out of the chunk using parse_payload.
+ * The parser remains the state until destroyed.
  */
 typedef struct parser_s parser_t;
 
 struct parser_s {
 	
 	/**
-	 * @brief parses the next payload in the current context
+	 * @brief parses the next payload
 	 * 
-	 * @warning caller is responsible for freeing allocated data_struct
+	 * @warning caller is responsible for freeing allocated payload
+	 * 
+	 * Rules for parsing are described in the payload definition.
 	 *
 	 * @param parser			parser Object
-	 * @param payload_type		payload to parse
+	 * @param payload_type		payload type to parse
 	 * @param[out] payload		pointer where parsed payload was allocated
 	 * @return 			
 	 * 							- SUCCESSFUL if succeeded,
 	 * 		   					- NOT_SUPPORTED if payload_type is not supported
 	 * 							- OUT_OF_RES if out of ressources
-	 * 							- PARSE_ERROR if corrupted data found
+	 * 							- PARSE_ERROR if corrupted/invalid data found
 	 */
 	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type, payload_t **payload);
 	
@@ -64,10 +70,7 @@ struct parser_s {
 /**
  * @brief Constructor to create a parser
  * 
- * The parser uses a set of payload_infos to know how to
- * parse different payloads.
- * 
- * @param chunk				chunk of data to parse in this session
+ * @param data				chunk of data to parse with this parser object
  * @return 					the parser, or NULL if failed
  *
  */
