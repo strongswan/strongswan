@@ -31,6 +31,7 @@
 #include "../payloads/ike_header.h"
 #include "../payloads/sa_payload.h"
 #include "../payloads/nonce_payload.h"
+#include "../payloads/ke_payload.h"
 
 
 extern logger_manager_t *global_logger_manager;
@@ -192,7 +193,6 @@ void test_parser_with_nonce_payload(tester_t *tester)
 	status_t status;
 	chunk_t nonce_chunk, result;
 	
-	
 	u_int8_t nonce_bytes[] = {
 		0x00,0x00,0x00,0x14, /* payload header */
 			0x00,0x01,0x02,0x03,  /* 16 Byte nonce */
@@ -204,7 +204,6 @@ void test_parser_with_nonce_payload(tester_t *tester)
 	nonce_chunk.ptr = nonce_bytes;
 	nonce_chunk.len = sizeof(nonce_bytes);
 
-	
 	parser = parser_create(nonce_chunk);
 	tester->assert_true(tester,(parser != NULL), "parser create check");
 	status = parser->parse_payload(parser, NONCE, (payload_t**)&nonce_payload);
@@ -215,14 +214,47 @@ void test_parser_with_nonce_payload(tester_t *tester)
 	{
 		return;	
 	}
-
 	nonce_payload->get_nonce(nonce_payload, &result);
-	
 	tester->assert_true(tester,(result.len == 16), "parsed nonce lenght");
 	tester->assert_false(tester,(memcmp(nonce_bytes + 4, result.ptr, result.len)), "parsed nonce data");
-	
-	
-	
-
 	nonce_payload->destroy(nonce_payload);
+}
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_ke_payload(tester_t *tester)
+{
+	parser_t *parser;
+	ke_payload_t *ke_payload;
+	status_t status;
+	chunk_t ke_chunk, result;
+	
+	u_int8_t ke_bytes[] = {
+		0x00,0x00,0x00,0x18, /* payload header */
+		0x00,0x03,0x00,0x00, /* dh group 3 */ 
+			0x01,0x02,0x03,0x03, /* 16 Byte dh data */
+			0x04,0x05,0x06,0x07,
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	ke_chunk.ptr = ke_bytes;
+	ke_chunk.len = sizeof(ke_bytes);
+
+	parser = parser_create(ke_chunk); 
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, KEY_EXCHANGE, (payload_t**)&ke_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	tester->assert_true(tester,(ke_payload->get_dh_group_number(ke_payload) == 3), "DH group");
+	result = ke_payload->get_key_exchange_data(ke_payload);
+	tester->assert_true(tester,(result.len == 16), "parsed key lenght");
+	tester->assert_false(tester,(memcmp(ke_bytes + 8, result.ptr, result.len)), "parsed key data");
+	ke_payload->destroy(ke_payload);
 }

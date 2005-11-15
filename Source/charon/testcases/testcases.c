@@ -145,6 +145,11 @@ test_t parser_test2 = {test_parser_with_sa_payload, "Parser: sa payload"};
  */
 test_t parser_test3 = {test_parser_with_nonce_payload, "Parser: nonce payload"};
 
+/**
+ * Parser test for ike nonce payload
+ */
+test_t parser_test4 = {test_parser_with_ke_payload, "Parser: key exchange payload"};
+
 
 /**
  * Test for packet_t
@@ -223,7 +228,7 @@ logger_manager_t *global_logger_manager;
 
 
 //	tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&parser_test3);   
+	tester->perform_test(tester,&parser_test4);   
 
  	
 	tester->destroy(tester);

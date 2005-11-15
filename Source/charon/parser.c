@@ -740,6 +740,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				}		
 				break;			
 			}
+			case KEY_EXCHANGE_DATA:
+			{
+				size_t keydata_length = payload_length - 8;
+				if (this->parse_chunk(this, rule_number, output + rule->offset, keydata_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}		
+				break;			
+			}
 			default:
 			{
 				this->logger->log(this->logger, ERROR, "  no rule to parse rule %d %s (%d)", rule_number, mapping_find(encoding_type_t_mappings, rule->type), rule->type);
