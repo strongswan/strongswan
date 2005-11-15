@@ -130,15 +130,20 @@ test_t generator_test6 = {test_generator_with_ke_payload,"Generator: KE Payload"
 
 
 /**
- * Test 2 for generator_t
+ * Parser test for ike header
  */
-test_t parser_test_header = {test_parser_with_header_payload, "Parser: header payload"};
+test_t parser_test1 = {test_parser_with_header_payload, "Parser: header payload"};
 
 
 /**
  * Parser test for ike security association
  */
-test_t parser_test_sa_payload = {test_parser_with_sa_payload, "Parser: sa payload"};
+test_t parser_test2 = {test_parser_with_sa_payload, "Parser: sa payload"};
+
+/**
+ * Parser test for ike nonce payload
+ */
+test_t parser_test3 = {test_parser_with_nonce_payload, "Parser: nonce payload"};
 
 
 /**
@@ -193,8 +198,9 @@ logger_manager_t *global_logger_manager;
 	&ike_sa_test,
 	&generator_test1,
 	&generator_test2,
-	&parser_test_header,
-	&parser_test_sa_payload,
+	&parser_test1,
+	&parser_test2,
+	&parser_test3,
 	&generator_test3,
 	&generator_test4,
 	&generator_test5,
@@ -215,8 +221,9 @@ logger_manager_t *global_logger_manager;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&generator_test6);   
+
+//	tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&parser_test3);   
 
  	
 	tester->destroy(tester);
