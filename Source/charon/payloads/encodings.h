@@ -191,7 +191,7 @@ enum encoding_type_e{
 	 */
 	SPI,
 	/**
-	 * Representating a Jey Exchange Data field
+	 * Representating a Key Exchange Data field
 	 * 
  	 * When generating the content of the chunkt pointing to 
  	 * is written.
@@ -199,6 +199,15 @@ enum encoding_type_e{
 	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
 	 */
 	KEY_EXCHANGE_DATA,
+	/**
+	 * Representating a Notification field
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - spi size - 8) bytes are read and written into the chunk pointing to.
+	 */
+	NOTIFICATION_DATA,
 	/**
 	 * Representating one or more proposal substructures
 	 * 
