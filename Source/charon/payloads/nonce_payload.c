@@ -101,11 +101,6 @@ encoding_rule_t nonce_payload_encodings[] = {
 };
 
 /**
- * length of a nonce payload without a nonce in int
- */
-#define NONCE_PAYLOAD_HEADER_LENGTH 4
-
-/**
  * Implements payload_t's and nonce_payload_t's destroy function.
  * See #payload_s.destroy or nonce_payload_s.destroy for description.
  */
@@ -229,6 +224,8 @@ nonce_payload_t *nonce_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH;
+	this->nonce.ptr = NULL;
+	this->nonce.len = 0;
 
 	return (&(this->public));
 }

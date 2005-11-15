@@ -37,6 +37,7 @@
 #include "../payloads/sa_payload.h"
 #include "../payloads/ke_payload.h"
 #include "../payloads/notify_payload.h"
+#include "../payloads/nonce_payload.h"
 
 /*
  * Described in Header 
@@ -735,3 +736,58 @@ void test_generator_with_notify_payload(tester_t *tester)
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 	
 }
+
+/*
+ * Described in header
+ */ 
+void test_generator_with_nonce_payload(tester_t *tester)
+{
+	generator_t *generator;
+	nonce_payload_t *nonce_payload;
+	logger_t *logger;
+	status_t status;
+	chunk_t generated_data;
+	chunk_t nonce;
+	
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"Message with Nonce Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	nonce_payload = nonce_payload_create();
+	
+	
+	nonce.ptr = "1234567890123456";
+	nonce.len = strlen(nonce.ptr);
+
+	nonce_payload->set_nonce(nonce_payload,nonce);
+	
+	status = generator->generate_payload(generator,(payload_t *)nonce_payload);
+	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x14,
+		/* nonce data */
+		0x31,0x32,0x33,0x34,
+		0x35,0x36,0x37,0x38,
+		0x39,0x30,0x31,0x32,
+		0x33,0x34,0x35,0x36
+	};
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(generated_data);	
+	
+	tester->assert_true(tester,(nonce_payload->destroy(nonce_payload) == SUCCESS), "notify_payload destroy call check");
+	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+		
+	global_logger_manager->destroy_logger(global_logger_manager,logger);	
+	
+}
+

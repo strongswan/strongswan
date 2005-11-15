@@ -38,6 +38,7 @@
 #include "payloads/sa_payload.h"
 #include "payloads/ke_payload.h"
 #include "payloads/notify_payload.h"
+#include "payloads/nonce_payload.h"
 
 extern logger_manager_t *global_logger_manager;
 
@@ -786,6 +787,29 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				}
 				break;
 			}		
+			case NONCE_DATA:
+			{
+				/* the Nonce Data value is generated from chunk */
+				status = this->generate_from_chunk(this,rules[i].offset);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger,CONTROL_MORE,"Could no write nonce data from chunk");	
+					return status;
+				}
+				
+				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
+				/* Length of nonce PAYLOAD is calculated */
+				u_int16_t length_of_nonce_payload = NONCE_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
+				u_int16_t int16_val = htons(length_of_nonce_payload);
+
+				status = this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger,CONTROL_MORE,"Could no write payload length into buffer");					
+					return status;
+				}
+				break;
+			}
 			case PROPOSALS:
 			{
 				/* before iterative generate the transforms, store the current payload length position */

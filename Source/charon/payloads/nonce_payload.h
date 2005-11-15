@@ -28,7 +28,10 @@
 #include "../types.h"
 #include "payload.h"
 
-
+/**
+ * length of a nonce payload without a nonce in int
+ */
+#define NONCE_PAYLOAD_HEADER_LENGTH 4
 
 /**
  * Object representing an IKEv2 Nonce payload
