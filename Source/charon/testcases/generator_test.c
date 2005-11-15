@@ -35,6 +35,7 @@
 #include "../payloads/transform_substructure.h"
 #include "../payloads/proposal_substructure.h"
 #include "../payloads/sa_payload.h"
+#include "../payloads/ke_payload.h"
 
 /*
  * Described in Header 
@@ -438,6 +439,9 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 }
 
+/*
+ * Described in header
+ */ 
 void test_generator_with_sa_payload(tester_t *tester)
 {
 	generator_t *generator;
@@ -611,3 +615,61 @@ void test_generator_with_sa_payload(tester_t *tester)
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 	
 }
+
+/*
+ * Described in header
+ */ 
+void test_generator_with_ke_payload(tester_t *tester)
+{
+	generator_t *generator;
+	ke_payload_t *ke_payload;
+	logger_t *logger;
+	status_t status;
+	chunk_t generated_data;
+	chunk_t key_exchange_data;
+	
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"Message with KE Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	ke_payload = ke_payload_create();
+	
+	
+	key_exchange_data.ptr = "test-text";
+	key_exchange_data.len = strlen(key_exchange_data.ptr);
+	
+	ke_payload->set_key_exchange_data(ke_payload,key_exchange_data);
+	
+	ke_payload->set_dh_group_number(ke_payload,7777);
+	
+	status = generator->generate_payload(generator,(payload_t *)ke_payload);
+	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x11,
+		0x1E,0x61,0x00,0x00,
+		/* key exchange data */
+		0x74,0x65,0x73,0x74,
+		0x2D,0x74,0x65,0x78,
+		0x74
+	};
+	
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(generated_data);	
+	
+	tester->assert_true(tester,(ke_payload->destroy(ke_payload) == SUCCESS), "sa_payload destroy call check");
+	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+		
+	global_logger_manager->destroy_logger(global_logger_manager,logger);	
+	
+}
+

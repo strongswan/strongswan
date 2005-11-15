@@ -121,43 +121,24 @@ test_t ike_sa_test = {test_ike_sa,"IKE_SA"};
  */
 test_t ike_sa_manager_test = {test_ike_sa_manager, "IKE_SA-Manager"};
 
-/**
- * Test 1 for generator_t
- */
 test_t generator_test1 = {test_generator_with_header_payload,"Generator: header payload"};
-/**
- * Test 2 for generator_t
- */
 test_t generator_test2 = {test_generator_with_transform_attribute,"Generator: transform attribute"};
-
-/**
- * Parser test for ike header
- * Test 3 for generator_t
- */
 test_t generator_test3 = {test_generator_with_transform_substructure,"Generator: transform substructure"};
-
-/**
- * Test 4 for generator_t
- */
 test_t generator_test4 = {test_generator_with_proposal_substructure,"Generator: proposal substructure"};
-
-/**
- * Test 5 for generator_t
- */
 test_t generator_test5 = {test_generator_with_sa_payload,"Generator: Message with SA Payload"};
+test_t generator_test6 = {test_generator_with_ke_payload,"Generator: KE Payload"};
 
 
 /**
  * Test 2 for generator_t
  */
-
-//test_t parser_test_header = {test_parser_with_header_payload, "Parser: header payload"};
+test_t parser_test_header = {test_parser_with_header_payload, "Parser: header payload"};
 
 
 /**
  * Parser test for ike security association
  */
-//test_t parser_test_sa_payload = {test_parser_with_sa_payload, "Parser: sa payload"};
+test_t parser_test_sa_payload = {test_parser_with_sa_payload, "Parser: sa payload"};
 
 
 /**
@@ -212,11 +193,12 @@ logger_manager_t *global_logger_manager;
 	&ike_sa_test,
 	&generator_test1,
 	&generator_test2,
-//	&parser_test_header,
-	//&parser_test_sa_payload,
+	&parser_test_header,
+	&parser_test_sa_payload,
 	&generator_test3,
 	&generator_test4,
 	&generator_test5,
+	&generator_test6,
 	&ike_sa_manager_test,
 	&packet_test,
 	NULL
@@ -233,8 +215,8 @@ logger_manager_t *global_logger_manager;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-//	tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&generator_test5);   
+	tester->perform_tests(tester,all_tests);
+//	tester->perform_test(tester,&generator_test6);   
 
  	
 	tester->destroy(tester);

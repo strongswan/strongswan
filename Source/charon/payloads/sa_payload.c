@@ -1,5 +1,5 @@
 /**
- * @file sa_payload.h
+ * @file sa_payload.c
  * 
  * @brief Declaration of the class sa_payload_t. 
  * 
@@ -76,7 +76,7 @@ struct private_sa_payload_s {
 };
 
 /**
- * Encoding rules to parse or generate a IKEv2-Header
+ * Encoding rules to parse or generate a IKEv2-SA Payload
  * 
  * The defined offsets are the positions in a object of type 
  * private_sa_payload_t.
