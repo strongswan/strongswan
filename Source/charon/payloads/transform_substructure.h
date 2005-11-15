@@ -59,8 +59,9 @@ struct transform_substructure_s {
 	 * 
 	 * @warning The created iterator has to get destroyed by the caller!
 	 * 
-	 * @warning When deleting an transform attribute, the length of this transform substructure
-	 * 			has to be refreshed with get_length!
+	 * @warning When deleting an transform attribute using this iterator, 
+	 * 			the length of this transform substructure has to be refreshed 
+	 * 			by calling get_length()!
 	 *
 	 * @param this 			calling transform_substructure_t object
 	 * @param iterator  		the created iterator is stored at the pointed pointer

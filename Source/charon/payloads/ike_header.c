@@ -134,23 +134,14 @@ encoding_rule_t ike_header_encodings[] = {
 };
 
 /**
- * Implements ike_header_t's get_next_payload fuction.
- * See #ike_header_t.get_next_payload  for description.
+ * Implements payload_t's set_next_type function.
+ * See #payload_s.set_next_type for description.
  */
-static u_int8_t get_next_payload(private_ike_header_t *this)
+static status_t set_next_type(payload_t *this,payload_type_t type)
 {
-	return this->next_payload;	
+	((private_ike_header_t *)this)->next_payload = type;
+	return SUCCESS;
 }
-
-/**
- * Implements ike_header_t's set_next_payload fuction.
- * See #ike_header_t.set_next_payload  for description.
- */
-static void set_next_payload(private_ike_header_t *this, u_int8_t next_payload)
-{
-	this->next_payload = next_payload;
-}
-
 /**
  * Implements ike_header_t's get_initiator_spi fuction.
  * See #ike_header_t.get_initiator_spi  for description.
@@ -350,13 +341,11 @@ ike_header_t *ike_header_create()
 	this->public.payload_interface.get_encoding_rules = get_encoding_rules;
 	this->public.payload_interface.get_length = get_length;
 	this->public.payload_interface.get_next_type = get_next_type;
+	this->public.payload_interface.set_next_type = set_next_type;
 	this->public.payload_interface.get_type = get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	this->public.destroy = destroy;
 	
-
-	this->public.get_next_payload = (u_int8_t (*) (ike_header_t*))get_next_payload;
-	this->public.set_next_payload = (void (*) (ike_header_t*,u_int8_t))set_next_payload;
 	this->public.get_initiator_spi = (u_int64_t (*) (ike_header_t*))get_initiator_spi;
 	this->public.set_initiator_spi = (void (*) (ike_header_t*,u_int64_t))set_initiator_spi;
 	this->public.get_responder_spi = (u_int64_t (*) (ike_header_t*))get_responder_spi;

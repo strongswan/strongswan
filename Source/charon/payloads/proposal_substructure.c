@@ -185,6 +185,15 @@ static payload_type_t get_next_type(private_proposal_substructure_t *this)
 }
 
 /**
+ * Implements payload_t's set_next_type function.
+ * See #payload_s.set_next_type for description.
+ */
+static status_t set_next_type(private_proposal_substructure_t *this,payload_type_t type)
+{
+	return SUCCESS;
+}
+
+/**
  * Implements payload_t's get_length function.
  * See #payload_s.get_length for description.
  */
@@ -349,6 +358,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
+	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;	
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	this->public.create_transform_substructure_iterator = (status_t (*) (proposal_substructure_t *,linked_list_iterator_t **,bool)) create_transform_substructure_iterator;

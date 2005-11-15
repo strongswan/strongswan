@@ -98,14 +98,6 @@ struct ike_header_s {
 	payload_t payload_interface;
 	
 	/**
-	 * @brief get the next payload type
-	 *
-	 * @param this 			ike_header_t object
-	 * @return 				next payload type
-	 */
-	u_int8_t (*get_next_payload) (ike_header_t *this);
-	
-	/**
 	 * @brief set the next payload
 	 *
 	 * @param this 			ike_header_t object

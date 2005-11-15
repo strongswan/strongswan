@@ -59,6 +59,10 @@ struct sa_payload_s {
 	 * @brief Creates an iterator of stored proposal_substructure_t objects.
 	 * 
 	 * @warning The created iterator has to get destroyed by the caller!
+	 * 
+	 * @warning When deleting an proposal using this iterator, 
+	 * 			the length of this transform substructure has to be refreshed 
+	 * 			by calling get_length()!
 	 *
 	 * @param this 			calling sa_payload_t object
 	 * @param iterator  		the created iterator is stored at the pointed pointer

@@ -194,6 +194,15 @@ struct payload_s {
 	 * @return 					type of next payload
 	 */
 	payload_type_t (*get_next_type) (payload_t *this);
+	
+	/**
+	 * @brief set type of next payload
+	 *
+	 * @param this 				calling object
+	 * @param type 				type of next payload
+	 * @return					SUCCESS in any case
+	 */
+	status_t (*set_next_type) (payload_t *this,payload_type_t type);
 
 	/**
 	 * @brief get length of payload 

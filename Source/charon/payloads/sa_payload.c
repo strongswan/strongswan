@@ -64,6 +64,15 @@ struct private_sa_payload_s {
 	 * Proposals in this payload are stored in a linked_list_t
 	 */
 	linked_list_t * proposals;
+	
+	/**
+	 * @brief Computes the length of this payload.
+	 *
+	 * @param this 	calling private_sa_payload_t object
+	 * @return 		
+	 * 				SUCCESS in any case
+	 */
+	status_t (*compute_length) (private_sa_payload_t *this);
 };
 
 /**
@@ -147,11 +156,22 @@ static payload_type_t get_next_type(private_sa_payload_t *this)
 }
 
 /**
+ * Implements payload_t's set_next_type function.
+ * See #payload_s.set_next_type for description.
+ */
+static status_t set_next_type(private_sa_payload_t *this,payload_type_t type)
+{
+	this->next_payload = type;
+	return SUCCESS;
+}
+
+/**
  * Implements payload_t's get_length function.
  * See #payload_s.get_length for description.
  */
 static size_t get_length(private_sa_payload_t *this)
 {
+	this->compute_length(this);
 	return this->payload_length;
 }
 
@@ -170,7 +190,37 @@ static status_t create_proposal_substructure_iterator (private_sa_payload_t *thi
  */
 static status_t add_proposal_substructure (private_sa_payload_t *this,proposal_substructure_t *proposal)
 {
-	return (this->proposals->insert_last(this->proposals,(void *) proposal));
+	status_t status;
+	status = this->proposals->insert_last(this->proposals,(void *) proposal);
+	this->compute_length(this);
+	return status;
+}
+
+/**
+ * Implements private_sa_payload_t's compute_length function.
+ * See #private_sa_payload_s.compute_length for description.
+ */
+static status_t compute_length (private_sa_payload_t *this)
+{
+	linked_list_iterator_t *iterator;
+	status_t status;
+	size_t length = SA_PAYLOAD_HEADER_LENGTH;
+	status = this->proposals->create_iterator(this->proposals,&iterator,TRUE);
+	if (status != SUCCESS)
+	{
+		return length;
+	}
+	while (iterator->has_next(iterator))
+	{
+		payload_t *current_proposal;
+		iterator->current(iterator,(void **) &current_proposal);
+		length += current_proposal->get_length(current_proposal);
+	}
+	iterator->destroy(iterator);
+	
+	this->payload_length = length;
+		
+	return SUCCESS;
 }
 
 /*
@@ -187,11 +237,15 @@ sa_payload_t *sa_payload_create()
 	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
+	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	this->public.create_proposal_substructure_iterator = (status_t (*) (sa_payload_t *,linked_list_iterator_t **,bool)) create_proposal_substructure_iterator;
 	this->public.add_proposal_substructure = (status_t (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
 	this->public.destroy = (status_t (*) (sa_payload_t *)) destroy;
+	
+	/* private functions */
+	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
 	this->critical = SA_PAYLOAD_CRITICAL_FLAG;
