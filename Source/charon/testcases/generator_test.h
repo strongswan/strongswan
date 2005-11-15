@@ -58,5 +58,13 @@ void test_generator_with_transform_substructure(tester_t *tester);
  */
 void test_generator_with_proposal_substructure(tester_t *tester);
 
+/**
+ * @brief Test function used to test the generator with SA payload
+ * 
+ *
+ * @param tester associated tester object
+ */
+void test_generator_with_sa_payload(tester_t *tester);
+
 
 #endif /*GENERATOR_TEST_H_*/

@@ -35,6 +35,7 @@
 #include "payloads/payload.h"
 #include "payloads/proposal_substructure.h"
 #include "payloads/transform_substructure.h"
+#include "payloads/sa_payload.h"
 
 
 extern logger_manager_t *global_logger_manager;
@@ -615,6 +616,58 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				status = this->generate_from_chunk(this,rules[i].offset);
 				break;
 			}
+			case PROPOSALS:
+			{
+				this->logger->log(this->logger,CONTROL_MORE,"Generate Proposals");
+				/* before iterative generate the transforms, store the current length position */
+				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
+
+				u_int16_t length_of_sa_payload = SA_PAYLOAD_HEADER_LENGTH;
+				u_int16_t int16_val;
+				linked_list_t *proposals = *((linked_list_t **)(this->data_struct + rules[i].offset));
+
+				linked_list_iterator_t *iterator;
+				/* create forward iterator */
+				status = proposals->create_iterator(proposals,&iterator,TRUE);
+				if (status != SUCCESS)
+				{
+					return status;
+				}
+				while (iterator->has_next(iterator))
+				{
+					payload_t *current_proposal;
+					u_int32_t before_generate_position_offset;
+					u_int32_t after_generate_position_offset;
+					
+					status = iterator->current(iterator,(void **)&current_proposal);
+					if (status != SUCCESS)
+					{
+						iterator->destroy(iterator);	
+						return status;
+					}
+					
+					before_generate_position_offset = (this->out_position - this->buffer);
+					status = this->public.generate_payload(&(this->public),current_proposal);
+					after_generate_position_offset = (this->out_position - this->buffer);
+					if (status != SUCCESS)
+					{
+						return status;
+					}
+					
+					/* increase size of transform */
+					length_of_sa_payload += (after_generate_position_offset - before_generate_position_offset);
+				}
+				
+				iterator->destroy(iterator);
+				
+				this->logger->log(this->logger,CONTROL_MORE,"Length of Payload is %d, offset is %d",length_of_sa_payload,payload_length_position_offset);
+				
+				int16_val = htons(length_of_sa_payload);
+				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				
+				break;
+			}	
+
 			case TRANSFORMS:
 			{
 				this->logger->log(this->logger,CONTROL_MORE,"Generate Transforms");
@@ -646,8 +699,12 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 					}
 					
 					before_generate_position_offset = (this->out_position - this->buffer);
-					this->public.generate_payload(&(this->public),current_transform);
+					status = this->public.generate_payload(&(this->public),current_transform);
 					after_generate_position_offset = (this->out_position - this->buffer);
+					if (status != SUCCESS)
+					{
+						return status;
+					}
 					
 					/* increase size of transform */
 					length_of_proposal += (after_generate_position_offset - before_generate_position_offset);
