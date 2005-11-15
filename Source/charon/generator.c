@@ -738,21 +738,25 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 			}
 			case PROPOSALS:
 			{
-				this->logger->log(this->logger,CONTROL_MORE,"Generate Proposals");
-				/* before iterative generate the transforms, store the current length position */
+				/* before iterative generate the transforms, store the current payload length position */
 				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-
+				/* Length of SA_PAYLOAD is calculated */
 				u_int16_t length_of_sa_payload = SA_PAYLOAD_HEADER_LENGTH;
 				u_int16_t int16_val;
+				/* proposals are stored in a linked list and so accessed */
 				linked_list_t *proposals = *((linked_list_t **)(this->data_struct + rules[i].offset));
+
+				this->logger->log(this->logger,CONTROL_MORE,"Generate Proposals");
 
 				linked_list_iterator_t *iterator;
 				/* create forward iterator */
 				status = proposals->create_iterator(proposals,&iterator,TRUE);
 				if (status != SUCCESS)
 				{
+					this->logger->log(this->logger,CONTROL_MORE,"Could not iterator of proposals");
 					return status;
 				}
+				/* every proposal is processed (iterative call )*/
 				while (iterator->has_next(iterator))
 				{
 					payload_t *current_proposal;
@@ -765,40 +769,42 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 						iterator->destroy(iterator);	
 						return status;
 					}
-					
-					before_generate_position_offset = (this->out_position - this->buffer);
+					before_generate_position_offset = this->get_current_buffer_offset(this);
 					status = this->public.generate_payload(&(this->public),current_proposal);
-					after_generate_position_offset = (this->out_position - this->buffer);
+					after_generate_position_offset = this->get_current_buffer_offset(this);
 					if (status != SUCCESS)
 					{
+						iterator->destroy(iterator);	
 						return status;
 					}
 					
 					/* increase size of transform */
 					length_of_sa_payload += (after_generate_position_offset - before_generate_position_offset);
 				}
-				
 				iterator->destroy(iterator);
-				
 				this->logger->log(this->logger,CONTROL_MORE,"Length of Payload is %d, offset is %d",length_of_sa_payload,payload_length_position_offset);
 				
 				int16_val = htons(length_of_sa_payload);
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
-				
+				status = this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger,CONTROL_MORE,"Could no write payload length into buffer");					
+					return status;
+				}
 				break;
 			}	
 
 			case TRANSFORMS:
-			{
-				this->logger->log(this->logger,CONTROL_MORE,"Generate Transforms");
+			{	
 				/* before iterative generate the transforms, store the current length position */
 				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-
 				u_int16_t length_of_proposal = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH + this->last_spi_size;
 				u_int16_t int16_val;
 				linked_list_t *transforms = *((linked_list_t **)(this->data_struct + rules[i].offset));
-
 				linked_list_iterator_t *iterator;
+				
+				this->logger->log(this->logger,CONTROL_MORE,"Generate Transforms");
+				
 				/* create forward iterator */
 				status = transforms->create_iterator(transforms,&iterator,TRUE);
 				if (status != SUCCESS)
@@ -818,11 +824,12 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 						return status;
 					}
 					
-					before_generate_position_offset = (this->out_position - this->buffer);
+					before_generate_position_offset = this->get_current_buffer_offset(this);
 					status = this->public.generate_payload(&(this->public),current_transform);
-					after_generate_position_offset = (this->out_position - this->buffer);
+					after_generate_position_offset = this->get_current_buffer_offset(this);
 					if (status != SUCCESS)
 					{
+						iterator->destroy(iterator);	
 						return status;
 					}
 					
@@ -869,9 +876,9 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 						return status;
 					}
 					
-					before_generate_position_offset = (this->out_position - this->buffer);
+					before_generate_position_offset = this->get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_attribute);
-					after_generate_position_offset = (this->out_position - this->buffer);
+					after_generate_position_offset = this->get_current_buffer_offset(this);
 					
 					/* increase size of transform */
 					length_of_transform += (after_generate_position_offset - before_generate_position_offset);
@@ -888,10 +895,8 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 			}	
 			case ATTRIBUTE_FORMAT:
 			{
-				this->logger->log(this->logger,CONTROL_MORE,"Generate Attribute Format flag");
-				/* Attribute format is a flag which is stored in context*/
-
 				status = this->generate_flag(this,rules[i].offset);
+				/* Attribute format is a flag which is stored in context*/
 				this->attribute_format = *((bool *) (this->data_struct + rules[i].offset));
 				break;
 			}	
@@ -922,6 +927,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				break;
 			}
 			default:
+				this->logger->log(this->logger,CONTROL_MORE,"Field Type %s is not supported",mapping_find(encoding_type_t_mappings,rules[i].type));
 				return NOT_SUPPORTED;
 		}
 	}
@@ -990,5 +996,12 @@ generator_t * generator_create()
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
 	this->logger = global_logger_manager->create_logger(global_logger_manager,GENERATOR,NULL);
+	
+	if (this->logger == NULL)
+	{
+		allocator_free(this->buffer);
+		allocator_free(this);
+		return NULL;
+	}	
 	return &(this->public);
 }
