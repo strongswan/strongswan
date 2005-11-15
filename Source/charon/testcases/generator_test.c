@@ -49,7 +49,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"header payload");
 	
 	header_data = ike_header_create();
-	
+	/*
 	header_data->initiator_spi = 1;
 	header_data->responder_spi = 2;
 	header_data->next_payload = 3;
@@ -61,7 +61,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	header_data->flags.response = TRUE;
 	header_data->message_id = 7;
 	header_data->length = 8;
-	
+	*/
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
@@ -87,8 +87,8 @@ void test_generator_with_header_payload(tester_t *tester)
 	allocator_free_chunk(generated_data);
 	
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
-	
-	header_data->initiator_spi = 0x22000054231234;
+	/*
+	header_data->initiator_spi = 0x22000054231234LL;
 	header_data->responder_spi = 0x122398;
 	header_data->next_payload = 0xF3;
 	header_data->maj_version = 0x2;
@@ -99,7 +99,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	header_data->flags.response = TRUE;
 	header_data->message_id = 0x33AFF3;
 	header_data->length = 0xAA11F;
-	
+	*/
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
