@@ -32,6 +32,7 @@
 #include "../payloads/sa_payload.h"
 #include "../payloads/nonce_payload.h"
 #include "../payloads/ke_payload.h"
+#include "../payloads/notify_payload.h"
 
 
 extern logger_manager_t *global_logger_manager;
@@ -257,4 +258,50 @@ void test_parser_with_ke_payload(tester_t *tester)
 	tester->assert_true(tester,(result.len == 16), "parsed key lenght");
 	tester->assert_false(tester,(memcmp(ke_bytes + 8, result.ptr, result.len)), "parsed key data");
 	ke_payload->destroy(ke_payload);
+}
+
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_notify_payload(tester_t *tester)
+{
+	parser_t *parser;
+	notify_payload_t *notify_payload;
+	status_t status;
+	chunk_t notify_chunk, result;
+	
+	u_int8_t notify_bytes[] = {
+		0x00,0x00,0x00,0x1C, /* payload header */
+		0x03,0x04,0x00,0x01, 
+			0x01,0x02,0x03,0x03, /* spi */
+			0x04,0x05,0x06,0x07, /* noti dati */
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	notify_chunk.ptr = notify_bytes;
+	notify_chunk.len = sizeof(notify_bytes);
+
+	parser = parser_create(notify_chunk); 
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, NOTIFY, (payload_t**)&notify_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	tester->assert_true(tester,(notify_payload->get_protocol_id(notify_payload) == 3), "Protocol id");
+	tester->assert_true(tester,(notify_payload->get_notify_message_type(notify_payload) == 1), "notify message type");
+	
+	result = notify_payload->get_spi(notify_payload);
+	tester->assert_false(tester,(memcmp(notify_bytes + 8, result.ptr, result.len)), "parsed spi");
+	
+	result = notify_payload->get_notification_data(notify_payload);
+	tester->assert_false(tester,(memcmp(notify_bytes + 12, result.ptr, result.len)), "parsed notification data");
+	
+	notify_payload->destroy(notify_payload);
 }

@@ -152,6 +152,11 @@ test_t parser_test3 = {test_parser_with_nonce_payload, "Parser: nonce payload"};
  */
 test_t parser_test4 = {test_parser_with_ke_payload, "Parser: key exchange payload"};
 
+/**
+ * Parser test for ike notify payload
+ */
+test_t parser_test5 = {test_parser_with_notify_payload, "Parser: notify payload"};
+
 
 /**
  * Test for packet_t
@@ -208,6 +213,8 @@ logger_manager_t *global_logger_manager;
 	&parser_test1,
 	&parser_test2,
 	&parser_test3,
+	&parser_test4,
+	&parser_test5,
 	&generator_test3,
 	&generator_test4,
 	&generator_test5,

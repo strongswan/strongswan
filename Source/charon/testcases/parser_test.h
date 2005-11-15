@@ -33,4 +33,6 @@ void test_parser_with_nonce_payload(tester_t *tester);
 
 void test_parser_with_ke_payload(tester_t *tester);
 
+void test_parser_with_notify_payload(tester_t *tester);
+
 #endif /*PARSER_TEST_H_*/
