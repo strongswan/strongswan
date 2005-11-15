@@ -51,7 +51,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	header_data = ike_header_create();
 	header_data->set_initiator_spi(header_data,1);
 	header_data->set_responder_spi(header_data,2);
-	header_data->set_next_payload(header_data, 3);
+	((payload_t *) header_data)->set_next_type((payload_t *) header_data, 3);
 	header_data->set_exchange_type(header_data, 6);
 	header_data->set_initiator_flag(header_data, TRUE);
 	header_data->set_response_flag(header_data, TRUE);
@@ -85,7 +85,7 @@ void test_generator_with_header_payload(tester_t *tester)
 
 	header_data->set_initiator_spi(header_data,0x22000054231234LL);
 	header_data->set_responder_spi(header_data,0x122398);
-	header_data->set_next_payload(header_data, 0xF3);
+	((payload_t *) header_data)->set_next_type((payload_t *) header_data,0xF3);
 	header_data->set_exchange_type(header_data, 0x12);
 	header_data->set_initiator_flag(header_data, TRUE);
 	header_data->set_response_flag(header_data, TRUE);

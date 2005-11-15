@@ -98,14 +98,6 @@ struct ike_header_s {
 	payload_t payload_interface;
 	
 	/**
-	 * @brief set the next payload
-	 *
-	 * @param this 			ike_header_t object
-	 * @param next_payload	next payload type
-	 */
-	void (*set_next_payload) (ike_header_t *this, u_int8_t next_payload);
-	
-	/**
 	 * @brief get the initiator spi
 	 *
 	 * @param this 			ike_header_t object
