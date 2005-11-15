@@ -191,6 +191,15 @@ enum encoding_type_e{
 	 */
 	SPI,
 	/**
+	 * Representating a Jey Exchange Data field
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
+	 */
+	KEY_EXCHANGE_DATA,
+	/**
 	 * Representating one or more proposal substructures
 	 * 
 	 * The offset points to a linked_list_t pointer.
