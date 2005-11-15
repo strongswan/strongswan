@@ -296,7 +296,17 @@ enum encoding_type_e{
 	 * 
 	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
 	 */
-	ATTRIBUTE_VALUE
+	ATTRIBUTE_VALUE,
+
+	/**
+	 * Representating a Nonce Data field
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
+	 */
+	NONCE_DATA
 };
 
 /**

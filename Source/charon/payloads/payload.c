@@ -26,6 +26,7 @@
 
 #include "ike_header.h"
 #include "sa_payload.h"
+#include "nonce_payload.h"
 
 
 
@@ -76,6 +77,8 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)transform_substructure_create();
 		case TRANSFORM_ATTRIBUTE:
 			return (payload_t*)transform_attribute_create();
+		case NONCE:
+			return (payload_t*)nonce_payload_create();
 		default:
 			return NULL;
 	}

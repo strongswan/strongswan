@@ -304,7 +304,7 @@ static status_t parse_uint15(private_parser_t *this, int rule_number, u_int16_t 
 	/* caller interested in result ? */
 	if (output_pos != NULL)
 	{
-		*output_pos = ntohs(*((u_int16_t*)this->byte_pos)) & 0xEFFF;
+		*output_pos = ntohs(*((u_int16_t*)this->byte_pos)) & ~0x8000;
 		this->logger->log(this->logger, RAW, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
@@ -507,8 +507,6 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 			return OUT_OF_RES;	
 		}
 		memcpy(output_pos->ptr, this->byte_pos, length);
-		
-		this->logger->log_bytes(this->logger, RAW, "   =>", output_pos->ptr, length);
 	}
 	this->byte_pos += length;
 	
@@ -712,16 +710,12 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case ATTRIBUTE_LENGTH_OR_VALUE:
 			{	
-				this->logger->log_bytes(this->logger, RAW, "ATTRIBUTE_LENGTH_OR_VALUE", this->byte_pos, 2);
-	
 				if (this->parse_uint16(this, rule_number, output + rule->offset) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
 				attribute_length = *(u_int16_t*)(output + rule->offset);
-				this->logger->log_bytes(this->logger, RAW, "ATTRIBUTE_LENGTH_OR_VALUE", output + rule->offset, 2);
-	
 				break;
 			}
 			case ATTRIBUTE_VALUE:
@@ -735,6 +729,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					}
 				}
 				break;
+			}
+			case NONCE_DATA:
+			{
+				size_t nonce_length = payload_length - 4;
+				if (this->parse_chunk(this, rule_number, output + rule->offset, nonce_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}		
+				break;			
 			}
 			default:
 			{

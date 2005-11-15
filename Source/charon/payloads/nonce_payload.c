@@ -97,7 +97,7 @@ encoding_rule_t nonce_payload_encodings[] = {
 	/* Length of the whole nonce payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_nonce_payload_t, payload_length) 	},	
 	/* some nonce bytes, lenth is defined in PAYLOAD_LENGTH */
-	{ NONCE,			offsetof(private_nonce_payload_t, nonce) 			}
+	{ NONCE_DATA,			offsetof(private_nonce_payload_t, nonce) 		}
 };
 
 /**

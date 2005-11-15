@@ -30,6 +30,7 @@
 #include "../payloads/encodings.h"
 #include "../payloads/ike_header.h"
 #include "../payloads/sa_payload.h"
+#include "../payloads/nonce_payload.h"
 
 
 extern logger_manager_t *global_logger_manager;
@@ -93,6 +94,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 	sa_payload_t *sa_payload;
 	status_t status;
 	chunk_t sa_chunk;
+	linked_list_iterator_t *proposals, *transforms, *attributes;
 	
 	u_int8_t sa_bytes[] = {
 		0x00,0x80,0x00,0x24, /* payload header*/
@@ -100,9 +102,9 @@ void test_parser_with_sa_payload(tester_t *tester)
 			0x01,0x02,0x04,0x05,
 			0x01,0x02,0x03,0x04, /* spi */
 				0x00,0x00,0x00,0x14, /* transform */
-				0x02,0x00,0x00,0x03,  
+				0x07,0x00,0x00,0x03,  
 					0x80,0x01,0x00,0x05, /* attribute without length */
-					0x00,0x01,0x00,0x04, /* attribute with lenngth */
+					0x00,0x03,0x00,0x04, /* attribute with lenngth */
 						0x01,0x02,0x03,0x04
 								
 		
@@ -123,6 +125,104 @@ void test_parser_with_sa_payload(tester_t *tester)
 		return;	
 	}
 	
+	
+	sa_payload->create_proposal_substructure_iterator(sa_payload, &proposals, TRUE);
+	while (proposals->has_next(proposals))
+	{
+		proposal_substructure_t *proposal;
+		proposals->current(proposals, (void**)&proposal);
+		chunk_t spi;
+		u_int8_t spi_should[] = {0x01, 0x02, 0x03, 0x04};
+		
+		tester->assert_true(tester,(proposal->get_proposal_number(proposal) == 1),"proposal number");
+		tester->assert_true(tester,(proposal->get_protocol_id(proposal) == 2),"proposal id");
+		spi = proposal->get_spi(proposal);
+		tester->assert_false(tester,(memcmp(&spi_should, spi.ptr, spi.len)),"proposal spi");
+		
+		proposal->create_transform_substructure_iterator(proposal, &transforms, TRUE);
+		while(transforms->has_next(transforms))
+		{
+			transform_substructure_t *transform;
+			int loopi;
+			transforms->current(transforms, (void**)&transform);
+			tester->assert_true(tester,(transform->get_transform_type(transform) == 7),"transform type");
+			tester->assert_true(tester,(transform->get_transform_id(transform) == 3),"transform id");
+			transform->create_transform_attribute_iterator(transform, &attributes, TRUE);
+			loopi = 0;
+			while (attributes->has_next(attributes))
+			{
+				transform_attribute_t *attribute;
+				attributes->current(attributes, (void**)&attribute);
+				if (loopi == 0)
+				{
+					u_int8_t value[] = {0x05, 0x00};
+					chunk_t attribute_value;
+					tester->assert_true(tester,(attribute->get_attribute_type(attribute) == 1),"attribute 1 type");
+					attribute_value = attribute->get_value(attribute);
+					tester->assert_false(tester,(memcmp(&value, attribute_value.ptr, attribute_value.len)),"attribute 1 value");
+				}
+				if (loopi == 1)
+				{
+					u_int8_t value[] = {0x01, 0x02, 0x03, 0x04};
+					chunk_t attribute_value;
+					tester->assert_true(tester,(attribute->get_attribute_type(attribute) == 3),"attribute 2 type");
+					attribute_value = attribute->get_value(attribute);
+					tester->assert_false(tester,(memcmp(&value, attribute_value.ptr, attribute_value.len)),"attribute 2 value");
+				}
+				loopi++;
+			}
+			attributes->destroy(attributes);
+		}
+		transforms->destroy(transforms);
+	}
+	proposals->destroy(proposals);
+	
+	
 
 	sa_payload->destroy(sa_payload);
+}
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_nonce_payload(tester_t *tester)
+{
+	parser_t *parser;
+	nonce_payload_t *nonce_payload;
+	status_t status;
+	chunk_t nonce_chunk, result;
+	
+	
+	u_int8_t nonce_bytes[] = {
+		0x00,0x00,0x00,0x14, /* payload header */
+			0x00,0x01,0x02,0x03,  /* 16 Byte nonce */
+			0x04,0x05,0x06,0x07,
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	nonce_chunk.ptr = nonce_bytes;
+	nonce_chunk.len = sizeof(nonce_bytes);
+
+	
+	parser = parser_create(nonce_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, NONCE, (payload_t**)&nonce_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+
+	nonce_payload->get_nonce(nonce_payload, &result);
+	
+	tester->assert_true(tester,(result.len == 16), "parsed nonce lenght");
+	tester->assert_false(tester,(memcmp(nonce_bytes + 4, result.ptr, result.len)), "parsed nonce data");
+	
+	
+	
+
+	nonce_payload->destroy(nonce_payload);
 }
