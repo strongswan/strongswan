@@ -49,19 +49,14 @@ void test_generator_with_header_payload(tester_t *tester)
 	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"header payload");
 	
 	header_data = ike_header_create();
-	/*
-	header_data->initiator_spi = 1;
-	header_data->responder_spi = 2;
-	header_data->next_payload = 3;
-	header_data->maj_version = 4;
-	header_data->min_version = 5;
-	header_data->exchange_type = 6;
-	header_data->flags.initiator = TRUE;
-	header_data->flags.version = FALSE;
-	header_data->flags.response = TRUE;
-	header_data->message_id = 7;
-	header_data->length = 8;
-	*/
+	header_data->set_initiator_spi(header_data,1);
+	header_data->set_responder_spi(header_data,2);
+	header_data->set_next_payload(header_data, 3);
+	header_data->set_exchange_type(header_data, 6);
+	header_data->set_initiator_flag(header_data, TRUE);
+	header_data->set_response_flag(header_data, TRUE);
+	header_data->set_message_id(header_data,7);
+
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
@@ -75,31 +70,27 @@ void test_generator_with_header_payload(tester_t *tester)
 		0x00,0x00,0x00,0x01,
 		0x00,0x00,0x00,0x00,
 		0x00,0x00,0x00,0x02,
-		0x03,0x45,0x06,0x28,
+		0x03,0x20,0x06,0x28,
 		0x00,0x00,0x00,0x07,
-		0x00,0x00,0x00,0x08,
+		0x00,0x00,0x00,0x1C,
 	};
 
-
+	logger->log_bytes(logger,RAW,"expected header",expected_generation,sizeof(expected_generation));
 	tester->assert_true(tester,(generated_data.len == sizeof(expected_generation)), "compare generated data length");
 	logger->log_chunk(logger,RAW,"generated header",&generated_data);		
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data 1");
 	allocator_free_chunk(generated_data);
 	
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
-	/*
-	header_data->initiator_spi = 0x22000054231234LL;
-	header_data->responder_spi = 0x122398;
-	header_data->next_payload = 0xF3;
-	header_data->maj_version = 0x2;
-	header_data->min_version = 0x0;
-	header_data->exchange_type = 0x12;
-	header_data->flags.initiator = TRUE;
-	header_data->flags.version = TRUE;
-	header_data->flags.response = TRUE;
-	header_data->message_id = 0x33AFF3;
-	header_data->length = 0xAA11F;
-	*/
+
+	header_data->set_initiator_spi(header_data,0x22000054231234LL);
+	header_data->set_responder_spi(header_data,0x122398);
+	header_data->set_next_payload(header_data, 0xF3);
+	header_data->set_exchange_type(header_data, 0x12);
+	header_data->set_initiator_flag(header_data, TRUE);
+	header_data->set_response_flag(header_data, TRUE);
+	header_data->set_message_id(header_data,0x33AFF3);
+
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
@@ -113,10 +104,12 @@ void test_generator_with_header_payload(tester_t *tester)
 		0x54,0x23,0x12,0x34,
 		0x00,0x00,0x00,0x00,
 		0x00,0x12,0x23,0x98,
-		0xF3,0x20,0x12,0x38,
+		0xF3,0x20,0x12,0x28,
 		0x00,0x33,0xAF,0xF3,
-		0x00,0x0A,0xA1,0x1F,
+		0x00,0x00,0x00,0x1C,
 	};
+	
+	logger->log_bytes(logger,RAW,"expected header",expected_generation2,sizeof(expected_generation2));
 	
 	logger->log_chunk(logger,RAW,"generated header",&generated_data);
 

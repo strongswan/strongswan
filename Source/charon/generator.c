@@ -187,6 +187,11 @@ struct private_generator_s {
 	u_int32_t last_payload_length_position_offset;
 	
 	/**
+	 * Offset of the header length field in the buffer
+	 */
+	u_int32_t header_length_position_offset;
+	
+	/**
 	 * Last SPI size
 	 */
 	u_int8_t last_spi_size;
@@ -515,6 +520,14 @@ static status_t write_bytes_to_buffer_at_offset (private_generator_t *this,void 
 static status_t write_to_chunk (private_generator_t *this,chunk_t *data)
 {
 	size_t data_length = this->out_position - this->buffer;
+	u_int32_t header_length_field = data_length;
+	
+	/* write length into header length field */
+	if (this->header_length_position_offset > 0)
+	{
+		u_int32_t int32_val = htonl(header_length_field);
+		this->write_bytes_to_buffer_at_offset(this,&int32_val,sizeof(u_int32_t),this->header_length_position_offset);
+	}
 
 	if (this->current_bit > 0)
 	data_length++;
@@ -587,6 +600,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 
 			case HEADER_LENGTH:
 				/* header length is generated like an U_INT_32 */
+				this->header_length_position_offset = (this->out_position - this->buffer);				
 				status = this->generate_u_int_type(this,U_INT_32,rules[i].offset);
 				break;
 			case SPI_SIZE:
@@ -800,6 +814,7 @@ generator_t * generator_create()
 	this->data_struct = NULL;
 	this->current_bit = 0;
 	this->last_payload_length_position_offset = 0;
+	this->header_length_position_offset = 0;
 	this->logger = global_logger_manager->create_logger(global_logger_manager,GENERATOR,NULL);
 	return &(this->public);
 }

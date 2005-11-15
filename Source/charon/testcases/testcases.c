@@ -136,18 +136,23 @@ test_t generator_test2 = {test_generator_with_transform_attribute,"Generator: tr
  */
 test_t generator_test3 = {test_generator_with_transform_substructure,"Generator: transform substructure"};
 
+/**
+ * Test 4for generator_t
+ */
+test_t generator_test4 = {test_generator_with_proposal_substructure,"Generator: proposal substructure"};
+
 
 /**
  * Test 2 for generator_t
  */
 
-test_t parser_test_header = {test_parser_with_header_payload, "Parser: header payload"};
+//test_t parser_test_header = {test_parser_with_header_payload, "Parser: header payload"};
 
 
 /**
  * Parser test for ike security association
  */
-test_t parser_test_sa_payload = {test_parser_with_sa_payload, "Parser: sa payload"};
+//test_t parser_test_sa_payload = {test_parser_with_sa_payload, "Parser: sa payload"};
 
 
 /**
@@ -202,9 +207,10 @@ logger_manager_t *global_logger_manager;
 	&ike_sa_test,
 	&generator_test1,
 	&generator_test2,
-	&parser_test_header,
-	&parser_test_sa_payload,
+//	&parser_test_header,
+	//&parser_test_sa_payload,
 	&generator_test3,
+	&generator_test4,
 	&ike_sa_manager_test,
 	&packet_test,
 	NULL
@@ -221,8 +227,9 @@ logger_manager_t *global_logger_manager;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&parser_test_sa_payload);   
+//	tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&generator_test1);   
+
  	
 	tester->destroy(tester);
 

@@ -134,6 +134,24 @@ encoding_rule_t ike_header_encodings[] = {
 };
 
 /**
+ * Implements ike_header_t's get_next_payload fuction.
+ * See #ike_header_t.get_next_payload  for description.
+ */
+static u_int8_t get_next_payload(private_ike_header_t *this)
+{
+	return this->next_payload;	
+}
+
+/**
+ * Implements ike_header_t's set_next_payload fuction.
+ * See #ike_header_t.set_next_payload  for description.
+ */
+static void set_next_payload(private_ike_header_t *this, u_int8_t next_payload)
+{
+	this->next_payload = next_payload;
+}
+
+/**
  * Implements ike_header_t's get_initiator_spi fuction.
  * See #ike_header_t.get_initiator_spi  for description.
  */
@@ -197,6 +215,15 @@ static bool get_response_flag(private_ike_header_t *this)
 }
 
 /**
+ * Implements ike_header_t's set_response_flag fuction.
+ * See #ike_header_t.set_response_flag  for description.
+ */
+static void set_response_flag(private_ike_header_t *this, bool response)
+{
+	this->flags.response = response;	
+}
+
+/**
  * Implements ike_header_t's get_version_flag fuction.
  * See #ike_header_t.get_version_flag  for description.
  */
@@ -212,6 +239,15 @@ static bool get_version_flag(private_ike_header_t *this)
 static bool get_initiator_flag(private_ike_header_t *this)
 {
 	return this->flags.initiator;	
+}
+
+/**
+ * Implements ike_header_t's set_initiator_flag fuction.
+ * See #ike_header_t.set_initiator_flag  for description.
+ */
+static void set_initiator_flag(private_ike_header_t *this, bool initiator)
+{
+	this->flags.initiator = initiator;	
 }
 
 /**
@@ -318,6 +354,9 @@ ike_header_t *ike_header_create()
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	this->public.destroy = destroy;
 	
+
+	this->public.get_next_payload = (u_int8_t (*) (ike_header_t*))get_next_payload;
+	this->public.set_next_payload = (void (*) (ike_header_t*,u_int8_t))set_next_payload;
 	this->public.get_initiator_spi = (u_int64_t (*) (ike_header_t*))get_initiator_spi;
 	this->public.set_initiator_spi = (void (*) (ike_header_t*,u_int64_t))set_initiator_spi;
 	this->public.get_responder_spi = (u_int64_t (*) (ike_header_t*))get_responder_spi;
@@ -325,8 +364,10 @@ ike_header_t *ike_header_create()
 	this->public.get_maj_version = (u_int8_t (*) (ike_header_t*))get_maj_version;
 	this->public.get_min_version = (u_int8_t (*) (ike_header_t*))get_min_version;
 	this->public.get_response_flag = (bool (*) (ike_header_t*))get_response_flag;
+	this->public.set_response_flag = (void (*) (ike_header_t*,bool))set_response_flag;
 	this->public.get_version_flag = (bool (*) (ike_header_t*))get_version_flag;
 	this->public.get_initiator_flag = (bool (*) (ike_header_t*))get_initiator_flag;
+	this->public.set_initiator_flag = (void (*) (ike_header_t*,bool))set_initiator_flag;
 	this->public.get_exchange_type = (u_int8_t (*) (ike_header_t*))get_exchange_type;
 	this->public.set_exchange_type = (void (*) (ike_header_t*,u_int8_t))set_exchange_type;
 	this->public.get_message_id = (u_int32_t (*) (ike_header_t*))get_message_id;

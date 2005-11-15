@@ -98,6 +98,22 @@ struct ike_header_s {
 	payload_t payload_interface;
 	
 	/**
+	 * @brief get the next payload type
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				next payload type
+	 */
+	u_int8_t (*get_next_payload) (ike_header_t *this);
+	
+	/**
+	 * @brief set the next payload
+	 *
+	 * @param this 			ike_header_t object
+	 * @param next_payload	next payload type
+	 */
+	void (*set_next_payload) (ike_header_t *this, u_int8_t next_payload);
+	
+	/**
 	 * @brief get the initiator spi
 	 *
 	 * @param this 			ike_header_t object
@@ -154,6 +170,14 @@ struct ike_header_s {
 	bool (*get_response_flag) (ike_header_t *this);
 	
 	/**
+	 * @brief Set the response flag
+	 *
+	 * @param this 			ike_header_t object
+	 * @param response		response flag
+	 * 
+	 */
+	void (*set_response_flag) (ike_header_t *this, bool response);
+	/**
 	 * @brief get "higher version supported"-flag
 	 *
 	 * @param this 			ike_header_t object
@@ -169,6 +193,15 @@ struct ike_header_s {
 	 */
 	bool (*get_initiator_flag) (ike_header_t *this);
 	
+	/**
+	 * @brief Set the initiator flag
+	 *
+	 * @param this 			ike_header_t object
+	 * @param initiator		initiator flag
+	 * 
+	 */
+	void (*set_initiator_flag) (ike_header_t *this, bool initiator);
+
 	/**
 	 * @brief get the exchange type
 	 *
