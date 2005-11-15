@@ -604,10 +604,10 @@ void test_generator_with_sa_payload(tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
 	allocator_free_chunk(generated_data);
+	tester->assert_true(tester,(ike_header->destroy(ike_header) == SUCCESS), "ike_header destroy call check");
 	tester->assert_true(tester,(sa_payload->destroy(sa_payload) == SUCCESS), "sa_payload destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
-	
-	
+		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 	
 }

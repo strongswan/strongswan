@@ -55,10 +55,11 @@ struct private_generator_s {
 
 
 	/**
-	 * Generates a U_INT-Field type
+	 * Generates a U_INT-Field type and writes it to buffer.
 	 *
 	 * @param this 					private_generator_t object
 	 * @param int_type 				type of U_INT field (U_INT_4, U_INT_8, etc.)
+	 * 								ATTRIBUTE_TYPE is also generated in this function
 	 * @param offset 				offset of value in data struct
 	 * @param generator_contexts		generator_contexts_t object where the context is written or read from
 	 * @return 						- SUCCESS if succeeded
@@ -67,7 +68,40 @@ struct private_generator_s {
 	status_t (*generate_u_int_type) (private_generator_t *this,encoding_type_t int_type,u_int32_t offset);
 
 	/**
-	 * Generates a RESERVED BIT field or a RESERVED BYTE field
+	 * Get size of current buffer in bytes.
+	 *
+	 * @param this 					private_generator_t object
+	 * @return 						Size of buffer in bytes
+	 */
+	size_t (*get_current_buffer_size) (private_generator_t *this);
+	
+	/**
+	 * Get free space of current buffer in bytes.
+	 *
+	 * @param this 					private_generator_t object
+	 * @return 						space in buffer in bytes
+	 */
+	size_t (*get_current_buffer_space) (private_generator_t *this);
+
+	/**
+	 * Get length of data in buffer (in bytes).
+	 *
+	 * @param this 					private_generator_t object
+	 * @return 						length of data in bytes
+	 */	
+	size_t (*get_current_data_length) (private_generator_t *this);
+
+	/**
+	 * Get current offset in buffer (in bytes).
+	 *
+	 * @param this 					private_generator_t object
+	 * @return 						offset in bytes
+	 */	
+	u_int32_t (*get_current_buffer_offset) (private_generator_t *this);
+	
+	/**
+	 * Generates a RESERVED BIT field or a RESERVED BYTE field and writes 
+	 * it to the buffer.
 	 *
 	 * @param this 					private_generator_t object
 	 * @param generator_contexts		generator_contexts_t object where the context is written or read from
@@ -218,6 +252,49 @@ struct private_generator_s {
 };
 
 /**
+ * Implements private_generator_t's get_current_buffer_size function.
+ * See #private_generator_s.get_current_buffer_size.
+ */
+static size_t get_current_buffer_size (private_generator_t *this)
+{
+	return ((this->roof_position) - (this->buffer));
+}
+
+/**
+ * Implements private_generator_t's get_current_buffer_space function.
+ * See #private_generator_s.get_current_buffer_space.
+ */
+static size_t get_current_buffer_space (private_generator_t *this)
+{
+	/* we know, one byte more */
+	size_t space = (this->roof_position) - (this->out_position);
+	if (this->current_bit == 0)
+	{
+		space++;
+	}	
+	return (space);
+}
+
+/**
+ * Implements private_generator_t's get_current_buffer_space function.
+ * See #private_generator_s.get_current_buffer_space.
+ */
+static size_t get_current_data_length (private_generator_t *this)
+{
+	return (this->out_position - this->buffer);
+}
+
+/**
+ * Implements private_generator_t's get_current_buffer_offset function.
+ * See #private_generator_s.get_current_buffer_offset.
+ */
+static u_int32_t get_current_buffer_offset (private_generator_t *this)
+{
+	return (this->out_position - this->buffer);
+}
+
+
+/**
  * Implements private_generator_t's generate_u_int_type function.
  * See #private_generator_s.generate_u_int_type.
  */
@@ -226,7 +303,8 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 	size_t number_of_bits = 0;
 	status_t status;
 
-
+	/* find out number of bits of each U_INT type to check for enough space 
+	   in buffer */
 	switch (int_type)
 	{
 			case U_INT_4:
@@ -250,35 +328,41 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			default:
 			return FAILED;
 	}
+	/* U_INT Types of multiple then 8 bits must be aligned */
 	if (((number_of_bits % 8) == 0) && (this->current_bit != 0))
 	{
+		this->logger->log(this->logger,CONTROL_MORE,"U_INT Type %s is not 8 Bit aligned",	mapping_find(encoding_type_t_mappings,int_type));
 		/* current bit has to be zero for values multiple of 8 bits */
 		return FAILED;
 	}
-
+	
+	/* make sure enough space is available in buffer */
 	status = this->make_space_available(this,number_of_bits);
-
 	if (status != SUCCESS)
 	{
 		return status;
 	}
-
+	/* now handle each u int type differently */
 	switch (int_type)
 	{
 			case U_INT_4:
 			{
 				if (this->current_bit == 0)
 				{
+					/* highval of current byte in buffer has to be set to the new value*/
 					u_int8_t high_val = *((u_int8_t *)(this->data_struct + offset)) << 4;
+					/* lowval in buffer is not changed */
 					u_int8_t low_val = *(this->out_position) & 0x0F;
-
+					/* highval is set, low_val is not changed */
 					*(this->out_position) = high_val | low_val;
 					/* write position is not changed, just bit position is moved */
 					this->current_bit = 4;
 				}
 				else if (this->current_bit == 4)
 				{
+					/* highval in buffer is not changed */
 					u_int high_val = *(this->out_position) & 0xF0;
+					/* lowval of current byte in buffer has to be set to the new value*/
 					u_int low_val = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
 					*(this->out_position) = high_val | low_val;
 					this->out_position++;
@@ -287,14 +371,15 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 				}
 				else
 				{
+					this->logger->log(this->logger,CONTROL_MORE,"U_INT_4 Type is not 4 Bit aligned");
 					/* 4 Bit integers must have a 4 bit alignment */
 					return FAILED;
 				};
 				break;
 			}
-
 			case U_INT_8:
 			{
+				/* 8 bit values are written as they are */
 				*this->out_position = *((u_int8_t *)(this->data_struct + offset));
 				this->out_position++;
 				break;
@@ -302,29 +387,31 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			}
 			case ATTRIBUTE_TYPE:
 			{
+				/* attribute type must not change first bit uf current byte ! */
 				if (this->current_bit != 1)
 				{
+					this->logger->log(this->logger,CONTROL_MORE,"ATTRIBUTE FORMAT flag is not set");
+					/* first bit has to be set! */
 					return FAILED;
 				}
+				/* get value of attribute format flag */
 				u_int8_t attribute_format_flag = *(this->out_position) & 0x80;
-				
+				/* get attribute type value as 16 bit integer*/
 				u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
-							
+				/* last bit must be unset */
 				int16_val = int16_val & 0xFF7F;
 				
 				int16_val = int16_val | attribute_format_flag;
-								
+				/* write bytes to buffer (set bit is overwritten)*/				
 				this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 				this->current_bit = 0;
 				break;
 				
 			}
-			
 			case U_INT_16:
 			{
 				u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
 				this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
-
 				break;
 			}
 			case U_INT_32:
@@ -335,18 +422,19 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			}
 			case U_INT_64:
 			{
+				/* 64 bit integers are written as two 32 bit integers */
 				u_int32_t int32_val_low = htonl(*((u_int32_t*)(this->data_struct + offset)));
 				u_int32_t int32_val_high = htonl(*((u_int32_t*)(this->data_struct + offset) + 1));
+				/* TODO add support for big endian machines */
 				this->write_bytes_to_buffer(this,&int32_val_high,sizeof(u_int32_t));
 				this->write_bytes_to_buffer(this,&int32_val_low,sizeof(u_int32_t));
 				break;
 			}
 
 			default:
+			this->logger->log(this->logger,CONTROL_MORE,"U_INT Type %s is not supported",	mapping_find(encoding_type_t_mappings,int_type));
 			return FAILED;
-
 	}
-
 	return SUCCESS;
 }
 
@@ -358,10 +446,13 @@ static status_t generate_reserved_field (private_generator_t *this,int bits)
 {
 	status_t status;
 	
+	/* only one bit or 8 bit fields are supported */
 	if ((bits != 1) && (bits != 8))
 	{
+		this->logger->log(this->logger,CONTROL_MORE,"Reserved field of %d bits cannot be generated",bits);
 		return FAILED;
 	}
+	/* make sure enough space is available in buffer */
 	status = this->make_space_available(this,bits);
 	if (status != SUCCESS)
 	{
@@ -370,8 +461,8 @@ static status_t generate_reserved_field (private_generator_t *this,int bits)
 	
 	if (bits == 1)
 	{	
+		/* one bit processing */
 		u_int8_t reserved_bit = ~(1 << (7 - this->current_bit));
-
 		*(this->out_position) = *(this->out_position) & reserved_bit;
 		this->current_bit++;
 		if (this->current_bit >= 8)
@@ -382,9 +473,10 @@ static status_t generate_reserved_field (private_generator_t *this,int bits)
 	}
 	else
 	{
-		/* one byte */
+		/* one byte processing*/
 		if (this->current_bit > 0)
 		{
+			this->logger->log(this->logger,CONTROL_MORE,"Reserved field cannot be written cause allignement of current bit is %d",this->current_bit);
 			return FAILED;
 		}
 		*(this->out_position) = 0x00;
@@ -403,9 +495,17 @@ static status_t generate_reserved_field (private_generator_t *this,int bits)
 static status_t generate_flag (private_generator_t *this,u_int32_t offset)
 {
 	status_t status;
-	u_int8_t flag_value = (*((bool *) (this->data_struct + offset))) ? 1 : 0;
-	u_int8_t flag = (flag_value << (7 - this->current_bit));
+	/* value of current flag */
+	u_int8_t flag_value;
+	/* position of flag in current byte */
+	u_int8_t flag;
 	
+	/* if the value in the data_struct is TRUE, flag_value is set to 1, 0 otherwise */
+	flag_value = (*((bool *) (this->data_struct + offset))) ? 1 : 0;
+	/* get flag position */
+	flag = (flag_value << (7 - this->current_bit));
+	
+	/* make sure one bit is available in buffer */
 	status = this->make_space_available(this,1);
 	if (status != SUCCESS)
 	{
@@ -431,11 +531,14 @@ static status_t generate_from_chunk (private_generator_t *this,u_int32_t offset)
 {
 	if (this->current_bit != 0)
 	{
+		this->logger->log(this->logger,CONTROL_MORE,"Chunks can only be taken if bits are alligned in buffer");
 		return FAILED;
 	}
+	/* position in buffer */
 	chunk_t *attribute_value = (chunk_t *)(this->data_struct + offset);
 	
-	return this->write_bytes_to_buffer (this,attribute_value->ptr,attribute_value->len);
+	/* use write_bytes_to_buffer function to do the job */
+	return this->write_bytes_to_buffer(this,attribute_value->ptr,attribute_value->len);
 	
 }
 
@@ -445,13 +548,17 @@ static status_t generate_from_chunk (private_generator_t *this,u_int32_t offset)
  */
 static status_t make_space_available (private_generator_t *this, size_t bits)
 {
-	while ((((this->roof_position - this->out_position) * 8) - this->current_bit) < bits)
+	while (((this->get_current_buffer_space(this) * 8) - this->current_bit) < bits)
 	{
-		size_t old_buffer_size = ((this->roof_position) - (	this->buffer));
+		/* must increase buffer */
+		u_int8_t *new_buffer;
+		size_t old_buffer_size = this->get_current_buffer_size(this);
 		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
 		size_t out_position_offset = ((this->out_position) - (this->buffer));
-		u_int8_t *new_buffer;
 
+		this->logger->log(this->logger,CONTROL_MORE,"Gen-Buffer is increased from %d to %d byte",old_buffer_size,new_buffer_size);
+		
+		/* Reallocate space for new buffer */
 		new_buffer = allocator_realloc(this->buffer,new_buffer_size);
 		if (new_buffer == NULL)
 		{
@@ -462,9 +569,7 @@ static status_t make_space_available (private_generator_t *this, size_t bits)
 
 		this->out_position = (this->buffer + out_position_offset);
 		this->roof_position = (this->buffer + new_buffer_size);
-
 	}
-
 	return SUCCESS;
 }
 
@@ -474,12 +579,11 @@ static status_t make_space_available (private_generator_t *this, size_t bits)
  */
 static status_t write_bytes_to_buffer (private_generator_t *this,void * bytes,size_t number_of_bytes)
 {
-	u_int8_t *read_position = (u_int8_t *) bytes;
 	int i;
 	status_t status;
-
+	u_int8_t *read_position = (u_int8_t *) bytes;
+	
 	status = this->make_space_available(this,number_of_bytes * 8);
-
 	if (status != SUCCESS)
 	{
 		return status;
@@ -497,14 +601,22 @@ static status_t write_bytes_to_buffer (private_generator_t *this,void * bytes,si
 /**
  * Implements private_generator_t's write_bytes_to_buffer_at_offset function.
  * See #private_generator_s.write_bytes_to_buffer_at_offset.
- * TODO automatic buffer increasing!
  */
 static status_t write_bytes_to_buffer_at_offset (private_generator_t *this,void * bytes,size_t number_of_bytes,u_int32_t offset)
 {
-	u_int8_t *read_position = (u_int8_t *) bytes;
 	int i;
-	u_int8_t *write_position = this->buffer + offset;
+	status_t status;
+	u_int8_t *read_position = (u_int8_t *) bytes;
+	u_int8_t *write_position;
+	u_int32_t free_space_after_offset = (this->get_current_buffer_size(this) - offset);
+
+	/* check first if enough space for new data is available */	
+	if (number_of_bytes > free_space_after_offset)
+	{
+		status = this->make_space_available(this,(number_of_bytes - free_space_after_offset) * 8);
+	}
 	
+	write_position = this->buffer + offset;
 	for (i = 0; i < number_of_bytes; i++)
 	{
 		*(write_position) = *(read_position);
@@ -520,7 +632,7 @@ static status_t write_bytes_to_buffer_at_offset (private_generator_t *this,void 
  */
 static status_t write_to_chunk (private_generator_t *this,chunk_t *data)
 {
-	size_t data_length = this->out_position - this->buffer;
+	size_t data_length = this->get_current_data_length(this);
 	u_int32_t header_length_field = data_length;
 	
 	/* write length into header length field */
@@ -536,14 +648,13 @@ static status_t write_to_chunk (private_generator_t *this,chunk_t *data)
 	if (data->ptr == NULL)
 	{
 		data->len = 0;
+		this->logger->log(this->logger,CONTROL_MORE,"OUT OF Ressources to wrote data to chunk!!!!!");
 		return OUT_OF_RES;
 	}
 	memcpy(data->ptr,this->buffer,data_length);
 	data->len = data_length;
 	return SUCCESS;
 }
-
-
 
 /**
  * Implements generator_t's generate_payload function.
@@ -556,12 +667,14 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 	this->data_struct = payload;
 	size_t rule_count;
 	encoding_rule_t *rules;
+	payload_type_t payload_type;
 	
-	
-	payload_type_t payload_type = payload->get_type(payload);
+	/* get payload type */
+	payload_type = payload->get_type(payload);
 	
 	this->logger->log(this->logger,CONTROL,"Start generating payload of type %s",mapping_find(payload_type_t_mappings,payload_type));
 	
+	/* each payload has its own encoding rules */
 	payload->get_encoding_rules(payload,&rules,&rule_count);
 
 	for (i = 0; i < rule_count;i++)
@@ -569,18 +682,20 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 		status = SUCCESS;
 		switch (rules[i].type)
 		{
-			/* all u int values are generated in generate_u_int_type */
+			/* all u int values and ATTRIBUTE_TYPE are generated in generate_u_int_type */
 			case U_INT_4:
 			case U_INT_8:
 			case U_INT_16:
 			case U_INT_32:
 			case U_INT_64:
+			case ATTRIBUTE_TYPE:
+			{
 				status = this->generate_u_int_type(this,rules[i].type,rules[i].offset);
 				break;
+			}
 			case RESERVED_BIT:
 			{
 				status = this->generate_reserved_field(this,1);
-	
 				break;
 			}
 			case RESERVED_BYTE:
@@ -594,25 +709,30 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				break;
 			}
 			case PAYLOAD_LENGTH:
+			{
+				/* position of payload lenght field is temporary stored */
+				this->last_payload_length_position_offset = this->get_current_buffer_offset(this);
 				/* payload length is generated like an U_INT_16 */
-				this->last_payload_length_position_offset = (this->out_position - this->buffer);
 				status = this->generate_u_int_type(this,U_INT_16,rules[i].offset);
 				break;
-
+			}
 			case HEADER_LENGTH:
+			{
+				/* position of header length field is temporary stored */			
+				this->header_length_position_offset = this->get_current_buffer_offset(this);	
 				/* header length is generated like an U_INT_32 */
-				this->header_length_position_offset = (this->out_position - this->buffer);				
 				status = this->generate_u_int_type(this,U_INT_32,rules[i].offset);
 				break;
+			}
 			case SPI_SIZE:
 				/* spi size is handled as 8 bit unsigned integer */
 				status = this->generate_u_int_type(this,U_INT_8,rules[i].offset);
+				/* last spi size is temporary stored */
 				this->last_spi_size = *((u_int8_t *)(this->data_struct + rules[i].offset));
 				break;
 			case SPI:
 			{
-				this->logger->log(this->logger,CONTROL_MORE,"SPI value");
-				/* the attribute value is generated */
+				/* the SPI value is generated from chunk */
 				status = this->generate_from_chunk(this,rules[i].offset);
 				break;
 			}
@@ -775,13 +895,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				this->attribute_format = *((bool *) (this->data_struct + rules[i].offset));
 				break;
 			}	
-			case ATTRIBUTE_TYPE:
-			{
-				this->logger->log(this->logger,CONTROL_MORE,"Generate Attribute Type field");
-				// the attribute type is a 15 bit integer so it has to be generated special
-				status = this->generate_u_int_type(this,ATTRIBUTE_TYPE,rules[i].offset);
-				break;
-			}
+
 			case ATTRIBUTE_LENGTH_OR_VALUE:
 			{
 				this->logger->log(this->logger,CONTROL_MORE,"Generate Attribute Length or Value field");
@@ -847,7 +961,10 @@ generator_t * generator_create()
 	
 	
 	/* initiate private functions */
-//	this->generate = generate;
+	this->get_current_buffer_size = get_current_buffer_size;
+	this->get_current_buffer_space = get_current_buffer_space;
+	this->get_current_data_length = get_current_data_length;
+	this->get_current_buffer_offset = get_current_buffer_offset;
 	this->generate_u_int_type = generate_u_int_type;
 	this->generate_reserved_field = generate_reserved_field;
 	this->generate_flag = generate_flag;
