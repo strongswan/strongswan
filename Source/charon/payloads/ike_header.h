@@ -96,59 +96,110 @@ struct ike_header_s {
 	 * implements payload_t interface
 	 */
 	payload_t payload_interface;
-	/**
-	 * SPI of the initiator
-	 */
-	u_int64_t initiator_spi;
-	/**
-	 * SPI of the responder
-	 */
-	u_int64_t responder_spi;
-	/**
-	 * next payload type
-	 */
-	u_int8_t  next_payload;
-	/**
-	 * IKE major version
-	 */
-	u_int8_t  maj_version;
-
-	/**
-	 * IKE minor version
-	 */	
-	u_int8_t  min_version;
-
-	/**
-	 * Exchange type 
-	 */	
-	u_int8_t  exchange_type;
 	
 	/**
-	 * Flags of the Message
-	 * 
+	 * @brief get the initiator spi
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				initiator_spi
 	 */
-	struct { 
-		/**
-		 * Sender is initiator of the associated IKE_SA_INIT-Exchange
-		 */
-		bool initiator;
-		/**
-		 * is protocol supporting higher version?
-		 */
-		bool version;
-		/**
-		 * TRUE, if this is a response, FALSE if its a Request
-		 */
-		bool response;
-	} flags;
+	u_int64_t (*get_initiator_spi) (ike_header_t *this);
+	
 	/**
-	 * Associated Message-ID
+	 * @brief set the initiator spi
+	 *
+	 * @param this 			ike_header_t object
+	 * @param initiator_spi	initiator_spi
 	 */
-	u_int32_t message_id;
+	void (*set_initiator_spi) (ike_header_t *this, u_int64_t initiator_spi);
+	
 	/**
-	 * Length of the whole IKEv2-Message (header and all payloads)
+	 * @brief get the responder spi
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				responder_spi
 	 */
-	u_int32_t length;
+	u_int64_t (*get_responder_spi) (ike_header_t *this);
+	
+	/**
+	 * @brief set the responder spi
+	 *
+	 * @param this 			ike_header_t object
+	 * @param responder_spi	responder_spi
+	 */
+	void (*set_responder_spi) (ike_header_t *this, u_int64_t responder_spi);
+	
+	/**
+	 * @brief get the major version
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				major version
+	 */
+	u_int8_t (*get_maj_version) (ike_header_t *this);
+	
+	/**
+	 * @brief get the mainor version
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				minor version
+	 */
+	u_int8_t (*get_min_version) (ike_header_t *this);
+	
+	/**
+	 * @brief get the response flag
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				response flag
+	 */
+	bool (*get_response_flag) (ike_header_t *this);
+	
+	/**
+	 * @brief get "higher version supported"-flag
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				version flag
+	 */
+	bool (*get_version_flag) (ike_header_t *this);
+	
+	/**
+	 * @brief get the initiator flag
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				initiator flag
+	 */
+	bool (*get_initiator_flag) (ike_header_t *this);
+	
+	/**
+	 * @brief get the exchange type
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				 exchange type
+	 */
+	u_int8_t (*get_exchange_type) (ike_header_t *this);
+	
+	/**
+	 * @brief set the  exchange type
+	 *
+	 * @param this 			ike_header_t object
+	 * @param exchange_type	exchange type
+	 */
+	void (*set_exchange_type) (ike_header_t *this, u_int8_t exchange_type);
+	
+	/**
+	 * @brief get the message id
+	 *
+	 * @param this 			ike_header_t object
+	 * @return 				message id
+	 */
+	u_int32_t (*get_message_id) (ike_header_t *this);
+	
+	/**
+	 * @brief set the message id
+	 *
+	 * @param this 			ike_header_t object
+	 * @param initiator_spi	message id
+	 */
+	void (*set_message_id) (ike_header_t *this, u_int32_t message_id);
 	
 	/**
 	 * @brief Destroys a ike_header_t object.

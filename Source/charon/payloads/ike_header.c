@@ -31,6 +31,71 @@
 #include "encodings.h"
 #include "../utils/allocator.h"
 
+typedef struct private_ike_header_s private_ike_header_t;
+
+struct private_ike_header_s {
+	/**
+	 * public interface
+	 */
+	ike_header_t public;
+	
+	/**
+	 * SPI of the initiator
+	 */
+	u_int64_t initiator_spi;
+	/**
+	 * SPI of the responder
+	 */
+	u_int64_t responder_spi;
+	/**
+	 * next payload type
+	 */
+	u_int8_t  next_payload;
+	/**
+	 * IKE major version
+	 */
+	u_int8_t  maj_version;
+
+	/**
+	 * IKE minor version
+	 */	
+	u_int8_t  min_version;
+
+	/**
+	 * Exchange type 
+	 */	
+	u_int8_t  exchange_type;
+	
+	/**
+	 * Flags of the Message
+	 * 
+	 */
+	struct { 
+		/**
+		 * Sender is initiator of the associated IKE_SA_INIT-Exchange
+		 */
+		bool initiator;
+		/**
+		 * is protocol supporting higher version?
+		 */
+		bool version;
+		/**
+		 * TRUE, if this is a response, FALSE if its a Request
+		 */
+		bool response;
+	} flags;
+	/**
+	 * Associated Message-ID
+	 */
+	u_int32_t message_id;
+	/**
+	 * Length of the whole IKEv2-Message (header and all payloads)
+	 */
+	u_int32_t length;	
+}; 
+	
+
+
 /**
  * Encoding rules to parse or generate a IKEv2-Header
  * 
@@ -40,34 +105,150 @@
  */
 encoding_rule_t ike_header_encodings[] = {
  	/* 8 Byte SPI, stored in the field initiator_spi */
-	{ U_INT_64,		offsetof(ike_header_t, initiator_spi)	},
+	{ U_INT_64,		offsetof(private_ike_header_t, initiator_spi)	},
  	/* 8 Byte SPI, stored in the field responder_spi */
-	{ U_INT_64,		offsetof(ike_header_t, responder_spi) 	},
+	{ U_INT_64,		offsetof(private_ike_header_t, responder_spi) 	},
  	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,		offsetof(ike_header_t, next_payload) 	},
+	{ U_INT_8,		offsetof(private_ike_header_t, next_payload) 	},
  	/* 4 Bit major version, stored in the field maj_version */
-	{ U_INT_4,		offsetof(ike_header_t, maj_version) 	},
+	{ U_INT_4,		offsetof(private_ike_header_t, maj_version) 	},
  	/* 4 Bit minor version, stored in the field min_version */
-	{ U_INT_4,		offsetof(ike_header_t, min_version) 	},
+	{ U_INT_4,		offsetof(private_ike_header_t, min_version) 	},
 	/* 8 Bit for the exchange type */
-	{ U_INT_8,		offsetof(ike_header_t, exchange_type) 	},
+	{ U_INT_8,		offsetof(private_ike_header_t, exchange_type) 	},
  	/* 2 Bit reserved bits, nowhere stored */
 	{ RESERVED_BIT,	0 										}, 
 	{ RESERVED_BIT,	0 										}, 
  	/* 3 Bit flags, stored in the fields response, version and initiator */
-	{ FLAG,			offsetof(ike_header_t, flags.response) 	},	
-	{ FLAG,			offsetof(ike_header_t, flags.version) 	},
-	{ FLAG,			offsetof(ike_header_t, flags.initiator) },
+	{ FLAG,			offsetof(private_ike_header_t, flags.response) 	},	
+	{ FLAG,			offsetof(private_ike_header_t, flags.version) 	},
+	{ FLAG,			offsetof(private_ike_header_t, flags.initiator) },
  	/* 3 Bit reserved bits, nowhere stored */
 	{ RESERVED_BIT,	0 										},
 	{ RESERVED_BIT,	0 										},
 	{ RESERVED_BIT,	0 										},
  	/* 4 Byte message id, stored in the field message_id */
-	{ U_INT_32,		offsetof(ike_header_t, message_id) 		},
+	{ U_INT_32,		offsetof(private_ike_header_t, message_id) 		},
  	/* 4 Byte length fied, stored in the field length */
-	{ HEADER_LENGTH,	offsetof(ike_header_t, length) 			}
+	{ HEADER_LENGTH,	offsetof(private_ike_header_t, length) 			}
 };
 
+/**
+ * Implements ike_header_t's get_initiator_spi fuction.
+ * See #ike_header_t.get_initiator_spi  for description.
+ */
+static u_int64_t get_initiator_spi(private_ike_header_t *this)
+{
+	return this->initiator_spi;	
+}
+
+/**
+ * Implements ike_header_t's set_initiator_spi fuction.
+ * See #ike_header_t.set_initiator_spi  for description.
+ */
+static void set_initiator_spi(private_ike_header_t *this, u_int64_t initiator_spi)
+{
+	this->initiator_spi = initiator_spi;
+}
+
+/**
+ * Implements ike_header_t's get_responder_spi fuction.
+ * See #ike_header_t.get_responder_spi  for description.
+ */
+static u_int64_t get_responder_spi(private_ike_header_t *this)
+{
+	return this->responder_spi;	
+}
+
+/**
+ * Implements ike_header_t's set_responder_spi fuction.
+ * See #ike_header_t.set_responder_spi  for description.
+ */
+static void set_responder_spi(private_ike_header_t *this, u_int64_t responder_spi)
+{
+	this->responder_spi = responder_spi;
+}
+
+/**
+ * Implements ike_header_t's get_maj_version fuction.
+ * See #ike_header_t.get_maj_version  for description.
+ */
+static u_int8_t get_maj_version(private_ike_header_t *this)
+{
+	return this->maj_version;	
+}
+
+/**
+ * Implements ike_header_t's get_min_version fuction.
+ * See #ike_header_t.get_min_version  for description.
+ */
+static u_int8_t get_min_version(private_ike_header_t *this)
+{
+	return this->min_version;	
+}
+
+/**
+ * Implements ike_header_t's get_response_flag fuction.
+ * See #ike_header_t.get_response_flag  for description.
+ */
+static bool get_response_flag(private_ike_header_t *this)
+{
+	return this->flags.response;	
+}
+
+/**
+ * Implements ike_header_t's get_version_flag fuction.
+ * See #ike_header_t.get_version_flag  for description.
+ */
+static bool get_version_flag(private_ike_header_t *this)
+{
+	return this->flags.version;	
+}
+
+/**
+ * Implements ike_header_t's get_initiator_flag fuction.
+ * See #ike_header_t.get_initiator_flag  for description.
+ */
+static bool get_initiator_flag(private_ike_header_t *this)
+{
+	return this->flags.initiator;	
+}
+
+/**
+ * Implements ike_header_t's get_exchange_type function
+ * See #ike_header_t.get_exchange_type  for description.
+ */
+static u_int8_t get_exchange_type(private_ike_header_t *this)
+{
+	return this->exchange_type;	
+}
+
+/**
+ * Implements ike_header_t's set_exchange_type function.
+ * See #ike_header_t.set_exchange_type  for description.
+ */
+static void set_exchange_type(private_ike_header_t *this, u_int8_t exchange_type)
+{
+	this->exchange_type = exchange_type;	
+}
+
+/**
+ * Implements ike_header_t's get_message_id function.
+ * See #ike_header_t.get_message_id  for description.
+ */
+static u_int32_t get_message_id(private_ike_header_t *this)
+{
+	return this->message_id;	
+}
+
+/**
+ * Implements ike_header_t's set_message_id function.
+ * See #ike_header_t.set_message_id  for description.
+ */
+static void set_message_id(private_ike_header_t *this, u_int32_t message_id)
+{
+	this->message_id = message_id;
+}
 
 /**
  * Implements payload_t's and ike_header_t's destroy function.
@@ -107,7 +288,7 @@ static payload_type_t get_type(payload_t *this)
  */
 static payload_type_t get_next_type(payload_t *this)
 {
-	return (((ike_header_t*)this)->next_payload);
+	return (((private_ike_header_t*)this)->next_payload);
 }
 
 /**
@@ -116,7 +297,7 @@ static payload_type_t get_next_type(payload_t *this)
  */
 static size_t get_length(payload_t *this)
 {
-	return IKE_HEADER_LENGTH;
+	return (((private_ike_header_t*)this)->length);
 }
 
 /*
@@ -124,18 +305,32 @@ static size_t get_length(payload_t *this)
  */
 ike_header_t *ike_header_create()
 {
-	ike_header_t *this = allocator_alloc_thing(ike_header_t);
+	private_ike_header_t *this = allocator_alloc_thing(private_ike_header_t);
 	if (this == NULL)
 	{
 		return NULL;	
 	}	
 	
-	this->payload_interface.get_encoding_rules = get_encoding_rules;
-	this->payload_interface.get_length = get_length;
-	this->payload_interface.get_next_type = get_next_type;
-	this->payload_interface.get_type = get_type;
-	this->payload_interface.destroy = (status_t (*) (payload_t *))destroy;
-	this->destroy = destroy;
+	this->public.payload_interface.get_encoding_rules = get_encoding_rules;
+	this->public.payload_interface.get_length = get_length;
+	this->public.payload_interface.get_next_type = get_next_type;
+	this->public.payload_interface.get_type = get_type;
+	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	this->public.destroy = destroy;
+	
+	this->public.get_initiator_spi = (u_int64_t (*) (ike_header_t*))get_initiator_spi;
+	this->public.set_initiator_spi = (void (*) (ike_header_t*,u_int64_t))set_initiator_spi;
+	this->public.get_responder_spi = (u_int64_t (*) (ike_header_t*))get_responder_spi;
+	this->public.set_responder_spi = (void (*) (ike_header_t *,u_int64_t))set_responder_spi;
+	this->public.get_maj_version = (u_int8_t (*) (ike_header_t*))get_maj_version;
+	this->public.get_min_version = (u_int8_t (*) (ike_header_t*))get_min_version;
+	this->public.get_response_flag = (bool (*) (ike_header_t*))get_response_flag;
+	this->public.get_version_flag = (bool (*) (ike_header_t*))get_version_flag;
+	this->public.get_initiator_flag = (bool (*) (ike_header_t*))get_initiator_flag;
+	this->public.get_exchange_type = (u_int8_t (*) (ike_header_t*))get_exchange_type;
+	this->public.set_exchange_type = (void (*) (ike_header_t*,u_int8_t))set_exchange_type;
+	this->public.get_message_id = (u_int32_t (*) (ike_header_t*))get_message_id;
+	this->public.set_message_id = (void (*) (ike_header_t*,u_int32_t))set_message_id;
 	
 	/* set default values of the fields */
 	this->initiator_spi = 0;
@@ -151,7 +346,7 @@ ike_header_t *ike_header_create()
 	this->length = IKE_HEADER_LENGTH;
 	
 	
-	return this;
+	return (ike_header_t*)this;
 }
 
 

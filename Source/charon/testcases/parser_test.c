@@ -52,7 +52,7 @@ void test_parser_with_header_payload(tester_t *tester)
 		0x00,0x00,0x00,0x02,
 		0x03,0x45,0x06,0x28,
 		0x00,0x00,0x00,0x07,
-		0x00,0x00,0x00,0x08,
+		0x00,0x00,0x00,0x1C,
 	};
 	header_chunk.ptr = header_bytes;
 	header_chunk.len = sizeof(header_bytes);
@@ -69,17 +69,17 @@ void test_parser_with_header_payload(tester_t *tester)
 		return;	
 	}
 	
-	tester->assert_true(tester,(ike_header->initiator_spi == 1),"parsed initiator_spi value");
-	tester->assert_true(tester,(ike_header->responder_spi == 2),"parsed responder_spi value");
-	tester->assert_true(tester,(ike_header->next_payload == 3),"parsed next_payload value");
-	tester->assert_true(tester,(ike_header->maj_version == 4),"parsed maj_version value");
-	tester->assert_true(tester,(ike_header->min_version == 5),"parsed min_version value");
-	tester->assert_true(tester,(ike_header->exchange_type == 6),"parsed exchange_type value");
-	tester->assert_true(tester,(ike_header->flags.initiator == TRUE),"parsed flags.initiator value");
-	tester->assert_true(tester,(ike_header->flags.version == FALSE),"parsed flags.version value");
-	tester->assert_true(tester,(ike_header->flags.response == TRUE),"parsed flags.response value");
-	tester->assert_true(tester,(ike_header->message_id == 7),"parsed message_id value");
-	tester->assert_true(tester,(ike_header->length == 8),"parsed length value");
+	tester->assert_true(tester,(ike_header->get_initiator_spi(ike_header) == 1),"parsed initiator_spi value");
+	tester->assert_true(tester,(ike_header->get_responder_spi(ike_header) == 2),"parsed responder_spi value");
+	tester->assert_true(tester,(ike_header->payload_interface.get_next_type((payload_t*)ike_header) == 3),"parsed next_payload value");
+	tester->assert_true(tester,(ike_header->get_maj_version(ike_header) == 4),"parsed maj_version value");
+	tester->assert_true(tester,(ike_header->get_min_version(ike_header) == 5),"parsed min_version value");
+	tester->assert_true(tester,(ike_header->get_exchange_type(ike_header) == 6),"parsed exchange_type value");
+	tester->assert_true(tester,(ike_header->get_initiator_flag(ike_header) == TRUE),"parsed flags.initiator value");
+	tester->assert_true(tester,(ike_header->get_version_flag(ike_header) == FALSE),"parsed flags.version value");
+	tester->assert_true(tester,(ike_header->get_response_flag(ike_header) == TRUE),"parsed flags.response value");
+	tester->assert_true(tester,(ike_header->get_message_id(ike_header) == 7),"parsed message_id value");
+	tester->assert_true(tester,(ike_header->payload_interface.get_length((payload_t*)ike_header) == 0x1C),"parsed length value");
 
 	ike_header->destroy(ike_header);
 }
