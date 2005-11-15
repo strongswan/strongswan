@@ -29,7 +29,7 @@
 /** 
  * Maximum length of a logger name
  */
-#define MAX_LOGGER_NAME 30
+#define MAX_LOGGER_NAME 45
 
 typedef struct private_logger_manager_s private_logger_manager_t;
 struct private_logger_manager_s { 	

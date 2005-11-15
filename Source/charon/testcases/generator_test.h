@@ -74,5 +74,13 @@ void test_generator_with_sa_payload(tester_t *tester);
  */
 void test_generator_with_ke_payload(tester_t *tester);
 
+/**
+ * @brief Test function used to test the generator with Notify payload
+ * 
+ *
+ * @param tester associated tester object
+ */
+void test_generator_with_notify_payload(tester_t *tester);
+
 
 #endif /*GENERATOR_TEST_H_*/

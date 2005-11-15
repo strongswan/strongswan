@@ -31,7 +31,6 @@
 
 #include "encodings.h"
 #include "../utils/allocator.h"
-#include "../utils/linked_list.h"
 
 
 /**
@@ -118,8 +117,10 @@ encoding_rule_t ke_payload_encodings[] = {
  */
 static status_t destroy(private_ke_payload_t *this)
 {
-	if (this->key_exchange_data.ptr != NULL);
-	allocator_free(this->key_exchange_data.ptr);
+	if (this->key_exchange_data.ptr != NULL)
+	{
+		allocator_free(this->key_exchange_data.ptr);
+	}
 	allocator_free(this);
 	return SUCCESS;
 }

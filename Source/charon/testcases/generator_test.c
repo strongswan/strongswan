@@ -36,6 +36,7 @@
 #include "../payloads/proposal_substructure.h"
 #include "../payloads/sa_payload.h"
 #include "../payloads/ke_payload.h"
+#include "../payloads/notify_payload.h"
 
 /*
  * Described in Header 
@@ -673,3 +674,64 @@ void test_generator_with_ke_payload(tester_t *tester)
 	
 }
 
+/*
+ * Described in header
+ */ 
+void test_generator_with_notify_payload(tester_t *tester)
+{
+	generator_t *generator;
+	notify_payload_t *notify_payload;
+	logger_t *logger;
+	status_t status;
+	chunk_t generated_data;
+	chunk_t spi,notification_data;
+	
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"Message with Notify Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	notify_payload = notify_payload_create();
+	
+	
+	spi.ptr = "12345";
+	spi.len = strlen(spi.ptr);
+	
+	notification_data.ptr = "67890";
+	notification_data.len = strlen(notification_data.ptr);
+	
+	notify_payload->set_protocol_id(notify_payload,255);
+	notify_payload->set_notify_message_type(notify_payload,63333); /* Hex F765 */
+	notify_payload->set_spi(notify_payload,spi);
+	notify_payload->set_notification_data(notify_payload,notification_data);
+	
+	status = generator->generate_payload(generator,(payload_t *)notify_payload);
+	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
+	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x12,
+		0xFF,0x05,0xF7,0x65,
+		/* spi */
+		0x31,0x32,0x33,0x34,
+		0x35,
+		/* notification data */
+		0x36,0x37,0x38,0x39,
+		0x30,
+	};
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(generated_data);	
+	
+	tester->assert_true(tester,(notify_payload->destroy(notify_payload) == SUCCESS), "notify_payload destroy call check");
+	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+		
+	global_logger_manager->destroy_logger(global_logger_manager,logger);	
+	
+}

@@ -127,6 +127,7 @@ test_t generator_test3 = {test_generator_with_transform_substructure,"Generator:
 test_t generator_test4 = {test_generator_with_proposal_substructure,"Generator: proposal substructure"};
 test_t generator_test5 = {test_generator_with_sa_payload,"Generator: Message with SA Payload"};
 test_t generator_test6 = {test_generator_with_ke_payload,"Generator: KE Payload"};
+test_t generator_test7 = {test_generator_with_notify_payload,"Generator: Notify Payload"};
 
 
 /**
@@ -210,6 +211,7 @@ logger_manager_t *global_logger_manager;
 	&generator_test4,
 	&generator_test5,
 	&generator_test6,
+	&generator_test7,
 	&ike_sa_manager_test,
 	&packet_test,
 	NULL
@@ -226,9 +228,8 @@ logger_manager_t *global_logger_manager;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-
-//	tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&parser_test4);   
+	tester->perform_tests(tester,all_tests);
+//	tester->perform_test(tester,&generator_test7); 
 
  	
 	tester->destroy(tester);
