@@ -1,5 +1,5 @@
 /**
- * @file ke_payload.c
+ * @file ke_payload.h
  * 
  * @brief Declaration of the class ke_payload_t. 
  * 
