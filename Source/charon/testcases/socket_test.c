@@ -45,7 +45,7 @@ void test_socket(tester_t *tester)
 	pkt->data.len = strlen(test_string) + 1;
 
 	/* send to previously bound socket */
-	pkt->set_destination(pkt, "127.0.0.1", 4500);
+	pkt->destination = host_create(AF_INET, "127.0.0.1", 4500);
 
 	/* send packet_count packets */
    	for (current = 0; current < packet_count; current++)

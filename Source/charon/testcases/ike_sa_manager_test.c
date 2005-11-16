@@ -97,7 +97,7 @@ void test_ike_sa_manager(tester_t *tester)
 	memset(&initiator, 0, sizeof(initiator));
 	memset(&responder, 0, sizeof(responder));
 	
-	ike_sa_id = ike_sa_id_create(initiator, responder, INITIATOR);
+	ike_sa_id = ike_sa_id_create(initiator, responder, TRUE);
 
 	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
 	tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA");
@@ -105,7 +105,7 @@ void test_ike_sa_manager(tester_t *tester)
 	 * this is usually done be the response from the communication partner, 
 	 * but we don't have one...
 	 */
-	responder.low = 123;
+	responder = 123;
 
 	sa_id = ike_sa->get_id(ike_sa);
 	sa_id->set_responder_spi(sa_id, responder);	
@@ -156,8 +156,8 @@ void test_ike_sa_manager(tester_t *tester)
 	memset(&initiator, 0, sizeof(initiator));
 	memset(&responder, 0, sizeof(responder));
 	
-	initiator.low = 123;
-	ike_sa_id = ike_sa_id_create(initiator, responder, RESPONDER);
+	initiator = 123;
+	ike_sa_id = ike_sa_id_create(initiator, responder, TRUE);
 	
 	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
 	tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA 2");
@@ -196,8 +196,8 @@ void test_ike_sa_manager(tester_t *tester)
 	
 	for (i = 0; i < sa_count; i++) 
 	{
-		initiator.low = i + 1;
-		ike_sa_id = ike_sa_id_create(initiator, responder, RESPONDER);
+		initiator = i + 1;
+		ike_sa_id = ike_sa_id_create(initiator, responder, FALSE);
 		
 		status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
 		tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA 3");

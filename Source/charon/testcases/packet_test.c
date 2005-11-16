@@ -25,7 +25,9 @@
 #include "packet_test.h"
 
 #include "../packet.h"
+#include "../globals.h"
 #include "../utils/allocator.h"
+#include "../utils/logger_manager.h"
 
 
 /*
@@ -33,31 +35,25 @@
  */
 void test_packet(tester_t *tester)
 {
-	packet_t *packet = packet_create(AF_INET);
+	packet_t *packet = packet_create();
 	packet_t *packet2;
 	char * string_to_copy = "aha, soso";
 	
-	packet->data.ptr = allocator_alloc_thing(string_to_copy);
-	packet->data.len = sizeof(string_to_copy);
-	memcpy(packet->data.ptr,string_to_copy,packet->data.len);
+	packet->data.ptr = allocator_alloc(strlen(string_to_copy) + 1);
+	tester->assert_true(tester,(packet->data.ptr != NULL),"NULL pointer check");
+	
+	packet->data.len = strlen(string_to_copy) + 1;
+	strcpy(packet->data.ptr,string_to_copy);
 
 	tester->assert_true(tester,(packet != NULL),"NULL pointer check");
-	
 	tester->assert_true(tester,(packet->clone(packet,&packet2) == SUCCESS),"clone call check");
 
 	tester->assert_false(tester,(packet->data.ptr == packet2->data.ptr),"value pointer check");
 	
-	tester->assert_true(tester,(memcmp(packet->data.ptr,packet2->data.ptr,packet->data.len) == 0),"cloned value check");
-
-	tester->assert_true(tester,(packet->family == packet2->family),"cloned value check");
-	tester->assert_true(tester,(packet->sockaddr_len == packet2->sockaddr_len),"cloned value check");
-	tester->assert_true(tester,(memcmp(&(packet->source),&(packet2->source), sizeof(struct sockaddr)) == 0),"cloned value check");
-	tester->assert_true(tester,(memcmp(&(packet->destination),&(packet2->destination), sizeof(struct sockaddr)) == 0),"cloned value check");
+	tester->assert_true(tester,(packet->data.len == (strlen(string_to_copy) + 1)),"value length check");
 	
+	tester->assert_true(tester,(memcmp(packet->data.ptr,packet2->data.ptr,packet->data.len) == 0),"cloned value check");
 	
 	packet2->destroy(packet2);
 	packet->destroy(packet);
-	
-	
-	
 }

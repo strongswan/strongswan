@@ -167,7 +167,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	data.ptr = (void *) &dataval;
 	data.len = 2;
 		
-	attribute->set_value(attribute,data);
+	attribute->set_value_chunk(attribute,data);
 	
 	status = generator->generate_payload(generator,(payload_t *)attribute);
 	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
@@ -194,7 +194,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	data.ptr = (void *) stringval;
 	data.len = 25;
 		
-	status = attribute->set_value(attribute,data);
+	status = attribute->set_value_chunk(attribute,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	
 	status = attribute->set_attribute_type(attribute,456);
@@ -252,7 +252,7 @@ void test_generator_with_transform_substructure(tester_t *tester)
 	char *stringval = "abcd";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute1->set_value(attribute1,data);
+	status = attribute1->set_value_chunk(attribute1,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	status = attribute1->set_attribute_type(attribute1,0);
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
@@ -263,7 +263,7 @@ void test_generator_with_transform_substructure(tester_t *tester)
 	stringval = "efgh";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute2->set_value(attribute2,data);
+	status = attribute2->set_value_chunk(attribute2,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	status = attribute2->set_attribute_type(attribute2,0);
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
@@ -333,7 +333,7 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	char *stringval = "abcd";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute1->set_value(attribute1,data);
+	status = attribute1->set_value_chunk(attribute1,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	status = attribute1->set_attribute_type(attribute1,0);
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
@@ -344,7 +344,7 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	stringval = "efgh";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute2->set_value(attribute2,data);
+	status = attribute2->set_value_chunk(attribute2,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	status = attribute2->set_attribute_type(attribute2,0);
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
@@ -355,7 +355,7 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	stringval = "ijkl";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute3->set_value(attribute3,data);
+	status = attribute3->set_value_chunk(attribute3,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	status = attribute3->set_attribute_type(attribute3,0);
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
@@ -471,7 +471,7 @@ void test_generator_with_sa_payload(tester_t *tester)
 	char *stringval = "abcd";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute1->set_value(attribute1,data);
+	status = attribute1->set_value_chunk(attribute1,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	status = attribute1->set_attribute_type(attribute1,0);
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
@@ -482,7 +482,7 @@ void test_generator_with_sa_payload(tester_t *tester)
 	stringval = "efgh";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute2->set_value(attribute2,data);
+	status = attribute2->set_value_chunk(attribute2,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	status = attribute2->set_attribute_type(attribute2,0);
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
@@ -493,7 +493,7 @@ void test_generator_with_sa_payload(tester_t *tester)
 	stringval = "ijkl";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute3->set_value(attribute3,data);
+	status = attribute3->set_value_chunk(attribute3,data);
 	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
 	status = attribute3->set_attribute_type(attribute3,0);
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
@@ -763,7 +763,7 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	nonce_payload = nonce_payload_create();
 	
 	
-	nonce.ptr = "1234567890123456";
+	nonce.ptr = allocator_clone_bytes("1234567890123456", strlen("1234567890123456"));
 	nonce.len = strlen(nonce.ptr);
 
 	nonce_payload->set_nonce(nonce_payload,nonce);
@@ -772,6 +772,7 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
 	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
 	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	
 
 	u_int8_t expected_generation[] = {
 		/* payload header */

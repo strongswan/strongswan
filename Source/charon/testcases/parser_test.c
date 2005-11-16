@@ -160,7 +160,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 					u_int8_t value[] = {0x05, 0x00};
 					chunk_t attribute_value;
 					tester->assert_true(tester,(attribute->get_attribute_type(attribute) == 1),"attribute 1 type");
-					attribute_value = attribute->get_value(attribute);
+					attribute_value = attribute->get_value_chunk(attribute);
 					tester->assert_false(tester,(memcmp(&value, attribute_value.ptr, attribute_value.len)),"attribute 1 value");
 				}
 				if (loopi == 1)
@@ -168,7 +168,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 					u_int8_t value[] = {0x01, 0x02, 0x03, 0x04};
 					chunk_t attribute_value;
 					tester->assert_true(tester,(attribute->get_attribute_type(attribute) == 3),"attribute 2 type");
-					attribute_value = attribute->get_value(attribute);
+					attribute_value = attribute->get_value_chunk(attribute);
 					tester->assert_false(tester,(memcmp(&value, attribute_value.ptr, attribute_value.len)),"attribute 2 value");
 				}
 				loopi++;
@@ -219,6 +219,7 @@ void test_parser_with_nonce_payload(tester_t *tester)
 	tester->assert_true(tester,(result.len == 16), "parsed nonce lenght");
 	tester->assert_false(tester,(memcmp(nonce_bytes + 4, result.ptr, result.len)), "parsed nonce data");
 	nonce_payload->destroy(nonce_payload);
+	
 }
 
 /*

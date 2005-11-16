@@ -200,7 +200,7 @@ logger_manager_t *global_logger_manager;
 	&linked_list_insert_and_remove_test,
 	&thread_pool_test,
 	&job_queue_test1,
-	&event_queue_test,
+	//&event_queue_test,
 	&send_queue_test,
 	&scheduler_test,
 	&socket_test,
@@ -237,8 +237,10 @@ logger_manager_t *global_logger_manager;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
+
 	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&event_queue_test);  
+	//tester->perform_test(tester,&packet_test); 
+
 
  	
 	tester->destroy(tester);

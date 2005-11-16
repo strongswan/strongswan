@@ -60,8 +60,8 @@ void test_receiver(tester_t *tester)
 
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
-		packet = packet_create(AF_INET);
-		packet->set_destination(packet,DESTINATION_IP,PORT_TO_SEND);
+		packet = packet_create();
+		packet->destination = host_create(AF_INET,DESTINATION_IP,PORT_TO_SEND);
 		packet->data.ptr = allocator_alloc_thing(int);
 		packet->data.len = ( sizeof(int));
 		*((int *) (packet->data.ptr)) = i;

@@ -31,30 +31,26 @@ void test_ike_sa_id(tester_t *tester)
 {
 	ike_sa_id_t *ike_sa_id, *clone, *equal, *other1, *other2, *other3, *other4;
 	spi_t initiator, initiator2, responder, responder2;
-	ike_sa_role_t role;
+	bool is_initiator;
 	bool are_equal = FALSE;
 	
-	initiator.high = 0;
-	initiator.low = 0;
+	initiator = 0;
 
-	initiator2.high = 12345612;
-	initiator2.low = 978675;
+	initiator2 = 12345612;
 	
-	responder.high = 34334;
-	responder.low = 9655;
+	responder = 34334;
 
-	responder2.high = 987863;
-	responder2.low = 3827;
+	responder2 = 987863;
 	
-	role = INITIATOR;
+	is_initiator = TRUE;
 	
-	ike_sa_id = ike_sa_id_create(initiator, responder, role);
-	equal = ike_sa_id_create(initiator, responder, role);
-	other1 = ike_sa_id_create(initiator, responder2, role);
-	other2 = ike_sa_id_create(initiator2, responder2, role);
-	other3 = ike_sa_id_create(initiator2, responder, role);
-	role = RESPONDER;
-	other4 = ike_sa_id_create(initiator, responder, role);
+	ike_sa_id = ike_sa_id_create(initiator, responder, is_initiator);
+	equal = ike_sa_id_create(initiator, responder, is_initiator);
+	other1 = ike_sa_id_create(initiator, responder2, is_initiator);
+	other2 = ike_sa_id_create(initiator2, responder2, is_initiator);
+	other3 = ike_sa_id_create(initiator2, responder, is_initiator);
+	is_initiator = FALSE;
+	other4 = ike_sa_id_create(initiator, responder, is_initiator);
 	
 	/* check equality */
 	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,equal,&are_equal) == SUCCESS), "equal call check");
