@@ -44,7 +44,7 @@ struct ike_sa_id_s {
 	 *
 	 * @param this ike_sa_id_t object
 	 * @param responder_spi SPI of responder to set
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @return SUCCESSFUL in any case
 	 */
 	status_t (*set_responder_spi) (ike_sa_id_t *this, spi_t responder_spi);
 
@@ -54,7 +54,7 @@ struct ike_sa_id_s {
 	 *
 	 * @param this ike_sa_id_t object
 	 * @param initiator_spi SPI to set
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @return SUCCESSFUL in any case
 	 */
 	status_t (*set_initiator_spi) (ike_sa_id_t *this, spi_t initiator_spi);
 
