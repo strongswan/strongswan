@@ -55,7 +55,7 @@ struct ike_sa_s {
  	 * @param[in] message message_t object to process
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
-	status_t (*process_configuration) (ike_sa_t *this,configuration_t *configuration);
+	status_t (*initialize_connection) (ike_sa_t *this,configuration_t *configuration);
 
 	/**
 	 * @brief Get the id of the SA
