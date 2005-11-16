@@ -106,7 +106,7 @@ encoding_rule_t nonce_payload_encodings[] = {
  */
 static status_t destroy(private_nonce_payload_t *this)
 {
-	if (this->nonce.ptr)
+	if (this->nonce.ptr != NULL)
 	{
 		allocator_free(this->nonce.ptr);
 	}
@@ -124,11 +124,7 @@ static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
 	if (nonce.len >= 16 && nonce.len <= 256)
 	{
 		this->nonce.len = nonce.len;
-		this->nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
-		if (this->nonce.ptr == NULL)
-		{
-			return OUT_OF_RES;	
-		}
+		this->nonce.ptr = nonce.ptr;
 		this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
 		return SUCCESS;	
 	}
@@ -142,11 +138,7 @@ static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
 static status_t get_nonce(private_nonce_payload_t *this, chunk_t *nonce)
 {
 	nonce->len = this->nonce.len;
-	nonce->ptr = allocator_clone_bytes(this->nonce.ptr, this->nonce.len);
-	if (nonce->ptr == NULL)
-	{
-		return OUT_OF_RES;	
-	}
+	nonce->ptr = this->nonce.ptr;
 	return SUCCESS;
 }
 
