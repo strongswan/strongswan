@@ -83,6 +83,90 @@ struct private_transform_substructure_s {
 };
 
 
+/** 
+ * string mappings for transform_type_t
+ */
+mapping_t transform_type_m[] = {
+	{UNDEFINED_TRANSFORM_TYPE, "UNDEFINED_TRANSFORM_TYPE"},
+	{ENCRYPTION_ALGORITHM, "ENCRYPTION_ALGORITHM"},
+	{PSEUDO_RANDOM_FUNCTION, "PSEUDO_RANDOM_FUNCTION"},
+	{INTEGRITIY_ALGORITHM, "INTEGRITIY_ALGORITHM"},
+	{DIFFIE_HELLMAN_GROUP, "DIFFIE_HELLMAN_GROUP"},
+	{EXTENDED_SEQUENCE_NUNBERS, "EXTENDED_SEQUENCE_NUNBERS"},
+	{MAPPING_END, NULL}
+};
+
+
+/** 
+ * string mappings for encryption_algorithm_t
+ */
+mapping_t encryption_algorithm_m[] = {
+	{ENCR_UNDEFINED, "ENCR_UNDEFINED"},
+	{ENCR_DES_IV64, "ENCR_DES_IV64"},
+	{ENCR_DES, "ENCR_DES"},
+	{ENCR_3DES, "ENCR_3DES"},
+	{ENCR_RC5, "ENCR_RC5"},
+	{ENCR_IDEA, "ENCR_IDEA"},
+	{ENCR_CAST, "ENCR_CAST"},
+	{ENCR_BLOWFISH, "ENCR_BLOWFISH"},
+	{ENCR_3IDEA, "ENCR_3IDEA"},
+	{ENCR_DES_IV32, "ENCR_DES_IV32"},
+	{ENCR_NULL, "ENCR_NULL"},
+	{ENCR_AES_CBC, "ENCR_AES_CBC"},
+	{ENCR_AES_CTR, "ENCR_AES_CTR"},
+	{MAPPING_END, NULL}
+};
+
+/** 
+ * string mappings for encryption_algorithm_t
+ */
+mapping_t pseudo_random_function_m[] = {
+	{PRF_UNDEFINED, "PRF_UNDEFINED"},
+	{PRF_HMAC_MD5, "PRF_HMAC_SHA1"},
+	{PRF_HMAC_SHA1, "PRF_HMAC_SHA1"},
+	{PRF_HMAC_TIGER, "PRF_HMAC_TIGER"},
+	{PRF_AES128_CBC, "PRF_AES128_CBC"},
+	{MAPPING_END, NULL}
+};
+
+/** 
+ * string mappings for integrity_algorithm_t
+ */
+mapping_t integrity_algorithm_m[] = {
+	{AUTH_UNDEFINED, "AUTH_UNDEFINED"},
+	{AUTH_HMAC_MD5_96, "AUTH_HMAC_MD5_96"},
+	{AUTH_HMAC_SHA1_96, "AUTH_HMAC_SHA1_96"},
+	{AUTH_DES_MAC, "AUTH_DES_MAC"},
+	{AUTH_KPDK_MD5, "AUTH_KPDK_MD5"},
+	{AUTH_AES_XCBC_96, "AUTH_AES_XCBC_96"},
+	{MAPPING_END, NULL}
+};
+
+/** 
+ * string mappings for diffie_hellman_group_t
+ */
+mapping_t diffie_hellman_group_m[] = {
+	{MODP_UNDEFINED, "MODP_UNDEFINED"},
+	{MODP_768_BIT, "MODP_768_BIT"},
+	{MODP_1024_BIT, "MODP_1024_BIT"},
+	{MODP_1536_BIT, "MODP_1536_BIT"},
+	{MODP_2048_BIT, "MODP_2048_BIT"},
+	{MODP_3072_BIT, "MODP_3072_BIT"},
+	{MODP_4096_BIT, "MODP_4096_BIT"},
+	{MODP_6144_BIT, "MODP_6144_BIT"},
+	{MODP_8192_BIT, "MODP_8192_BIT"},
+	{MAPPING_END, NULL}
+};
+
+/** 
+ * string mappings for extended_sequence_numbers_t
+ */
+mapping_t extended_sequence_numbers_m[] = {
+	{NO_EXT_SEQ_NUMBERS, "NO_EXT_SEQ_NUMBERS"},
+	{EXT_SEQ_NUMBERS, "EXT_SEQ_NUMBERS"},
+	{MAPPING_END, NULL}
+};
+
 /**
  * Encoding rules to parse or generate a Transform substructure
  * 

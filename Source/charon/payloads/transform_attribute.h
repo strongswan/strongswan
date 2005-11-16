@@ -28,6 +28,22 @@
 #include "../types.h"
 #include "payload.h"
 
+
+/**
+ * Type of the attribute, as in IKEv2 draft 3.3.5
+ */
+typedef enum transform_attribute_type_e transform_attribute_type_t;
+
+enum transform_attribute_type_e {
+	ATTRIBUTE_UNDEFINED = 16384,
+	KEY_LENGTH = 14
+};
+
+/** 
+ * string mappings for transform_attribute_type_t
+ */
+extern mapping_t transform_attribute_type_m[];
+
 /**
  * Object representing an IKEv2- TRANSFORM Attribute
  * 
@@ -50,7 +66,17 @@ struct transform_attribute_s {
 	 * @param this 	calling transform_attribute_t object
 	 * @return 		chunk_t pointing to the value
 	 */
-	chunk_t (*get_value) (transform_attribute_t *this);
+	chunk_t (*get_value_chunk) (transform_attribute_t *this);
+	
+	/**
+	 * @brief Returns the currently set value of the attribute
+	 * 	
+	 * @warning Returned data are not copied
+	 * 
+	 * @param this 	calling transform_attribute_t object
+	 * @return 		value
+	 */
+	u_int16_t (*get_value) (transform_attribute_t *this);
 	
 	/**
 	 * @brief Sets the value of the attribute.
@@ -63,7 +89,18 @@ struct transform_attribute_s {
 	 * 				- SUCCESS or
 	 * 				- OUT_OF_RES
 	 */
-	status_t (*set_value) (transform_attribute_t *this, chunk_t value);
+	status_t (*set_value_chunk) (transform_attribute_t *this, chunk_t value);
+
+	/**
+	 * @brief Sets the value of the attribute.
+	 * 
+	 * @param this 	calling transform_attribute_t object
+	 * @param value value to set
+	 * @return 		
+	 * 				- SUCCESS or
+	 * 				- OUT_OF_RES
+	 */
+	status_t (*set_value) (transform_attribute_t *this, u_int16_t value);
 
 	/**
 	 * @brief Sets the type of the attribute.
