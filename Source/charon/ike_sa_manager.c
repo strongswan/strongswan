@@ -295,15 +295,11 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
  */
 static status_t get_next_spi(private_ike_sa_manager_t *this, spi_t *spi)
 {
-	this->next_spi.low ++;
-	if (this->next_spi.low == 0) {
-		/* overflow of lower int in spi */
-		this->next_spi.high ++;
-		if (this->next_spi.high == 0) {
-			/* our software ran so incredible stable, we have no more
-			 * SPIs to give away :-/.  */
-			 return OUT_OF_RES;
-		}
+	this->next_spi++;
+	if (this->next_spi == 0) {
+		/* our software ran so incredible stable, we have no more
+		 * SPIs to give away :-/.  */
+		 return OUT_OF_RES;
 	}
 	*spi = this->next_spi;
 	return SUCCESS;
@@ -715,8 +711,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	pthread_mutex_init(&(this->mutex), NULL);
 
-	this->next_spi.low = 1;
-	this->next_spi.high = 0;
+	this->next_spi = 0;
 
 	return (ike_sa_manager_t*)this;
 }
