@@ -112,18 +112,18 @@ struct private_allocator_s
  */
 static void *allocate_special(private_allocator_t *this,size_t bytes, char * file,int line, bool use_mutex)
 {
-    memory_hdr_t *allocated_memory = malloc(sizeof(memory_hdr_t) + bytes);
-
-    if (allocated_memory == NULL)
+    memory_hdr_t *allocated_memory = malloc(sizeof(memory_hdr_t) + bytes);;
+  
+	if (allocated_memory == NULL)
     {
 		return allocated_memory;
     }
-    
+
     if (use_mutex)
     {
 	    pthread_mutex_lock( &(this->mutex));
     }
-    
+	   
     allocated_memory->info.line = line;
     allocated_memory->info.filename = file;
     allocated_memory->info.size_of_memory = bytes;
@@ -325,6 +325,11 @@ chunk_t allocator_alloc_as_chunk(size_t bytes)
 	return new_chunk; 
 
 }
+
+void * allocator_realloc(void * old, size_t newsize)
+{
+	return realloc(old,newsize);
+} 
 
 void * allocator_clone_bytes(void * pointer, size_t size)
 {

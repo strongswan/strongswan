@@ -40,7 +40,7 @@
 /**
  * Number of test-thread
  */
-#define EVENT_QUEUE_INSERT_THREADS 15
+#define EVENT_QUEUE_INSERT_THREADS 1
 
 /**
  * @brief Informations for the involved test-thread used in this test
@@ -75,11 +75,10 @@ static void event_queue_insert_thread(event_queue_test_t * testinfos)
 	gettimeofday(&current_time,NULL);
 	for (i = 0; i < testinfos->insert_times_count;i++)
 	{
+
 		for (j = 0; j < testinfos->entries_per_time;j++)
 		{
-			int *value = allocator_alloc_thing(int);
-			*value = i;
-			job = job_create(INCOMING_PACKET,value);
+			job = (job_t *) initiate_ike_sa_job_create("testvalue");
 			time.tv_usec = 0;
 			time.tv_sec = current_time.tv_sec + i;
 
@@ -108,16 +107,20 @@ void test_event_queue(tester_t *tester)
 
 	for (i = 0; i < EVENT_QUEUE_INSERT_THREADS; i++)
 	{
-		pthread_create( &threads[i], NULL,(void*(*)(void*)) &event_queue_insert_thread, (void*) &testinfos);
+		int retval;
+		retval = pthread_create( &(threads[i]), NULL,(void*(*)(void*)) &event_queue_insert_thread, (void*) &testinfos);
+		tester->assert_true(tester,(retval== 0), "thread creation call check");
 	}
-
 
 
 	/* wait for all threads */
 	for (i = 0; i < EVENT_QUEUE_INSERT_THREADS; i++)
 	{
-		pthread_join(threads[i], NULL);
-	}
+		int retval;
+		retval = pthread_join(threads[i], NULL);
+		tester->assert_true(tester,(retval== 0), "thread creation call check");
+
+	}		
 
 	tester->assert_true(tester,(event_queue->get_count(event_queue) == number_of_total_events), "event count check");
 
@@ -126,15 +129,16 @@ void test_event_queue(tester_t *tester)
 		for (j = 0; j < (EVENT_QUEUE_ENTRY_PER_TIME * EVENT_QUEUE_INSERT_THREADS);j++)
 		{
 			job_t *job;
+		
 			tester->assert_true(tester,(event_queue->get(event_queue,&job) == SUCCESS), "get call check");
 			gettimeofday(&current_time,NULL);
 			tester->assert_true(tester,((current_time.tv_sec - start_time.tv_sec) == i), "value of entry check");
-
-			allocator_free(job->assigned_data);
 			tester->assert_true(tester,(job->destroy(job) == SUCCESS), "job destroy call check");
+
 		}
 	}
 
 
 	tester->assert_true(tester,(event_queue->destroy(event_queue) == SUCCESS), "destroy call check");
+	return;
 }

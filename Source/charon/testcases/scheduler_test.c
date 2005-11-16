@@ -47,7 +47,8 @@ void test_scheduler(tester_t *tester)
 	/* schedule 5 jobs */
 	for (current = 0; current < job_count; current++)
 	{
-		jobs[current] = job_create(INCOMING_PACKET, (void*)current);
+		/* misusing for testing only */
+		jobs[current] = (job_t *) incoming_packet_job_create((packet_t*)current);
 		global_event_queue->add_relative(global_event_queue, jobs[current], (current+1) * 500);
 	}
 	
@@ -76,7 +77,12 @@ void test_scheduler(tester_t *tester)
 	for (current = 0; current < job_count; current++)
 	{
 		global_job_queue->get(global_job_queue, &(jobs[current]));
-		tester->assert_true(tester, ((int)jobs[current]->assigned_data == current), "job order");
+		incoming_packet_job_t *current_job;
+		current_job = (incoming_packet_job_t*) jobs[current];
+		packet_t *packet;
+		current_job->get_packet(current_job,&packet);
+		
+		tester->assert_true(tester, (((int)packet) == current), "job order");
 		jobs[current]->destroy(jobs[current]);
 	}
 

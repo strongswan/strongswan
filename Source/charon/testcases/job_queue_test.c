@@ -61,9 +61,7 @@ static void test_job_queue_sender(job_queue_test_t * testinfo)
 	int i;
 	for (i = 0; i < testinfo->insert_item_count; i++)
 	{
-		int *value = allocator_alloc_thing(int);
-		*value = i;
-		job_t *job = job_create(INCOMING_PACKET,value);
+		job_t *job = (job_t *) initiate_ike_sa_job_create("test");
 		testinfo->job_queue->add(testinfo->job_queue,job);
 	}
 }
@@ -80,8 +78,7 @@ static void test_job_queue_receiver(job_queue_test_t * testinfo)
 	{
 		job_t *job;
 		testinfo->tester->assert_true(testinfo->tester,(testinfo->job_queue->get(testinfo->job_queue,&job) == SUCCESS), "get job call check");
-		testinfo->tester->assert_true(testinfo->tester,(job->type == INCOMING_PACKET), "job type check");
-		allocator_free(job->assigned_data);
+		testinfo->tester->assert_true(testinfo->tester,(job->get_type(job) == INITIATE_IKE_SA), "job type check");
 		testinfo->tester->assert_true(testinfo->tester,(job->destroy(job) == SUCCESS), "job destroy call check");
 	}
 }

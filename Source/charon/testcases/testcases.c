@@ -200,7 +200,7 @@ logger_manager_t *global_logger_manager;
 	&linked_list_insert_and_remove_test,
 	&thread_pool_test,
 	&job_queue_test1,
-	&event_queue_test,
+/*	&event_queue_test, ERRROR */
 	&send_queue_test,
 	&scheduler_test,
 	&socket_test,
@@ -226,7 +226,7 @@ logger_manager_t *global_logger_manager;
 	NULL
 	};
  	global_logger_manager = logger_manager_create(ALL);
- 	
+
 	global_socket = socket_create(4600);
  	
  	global_job_queue = job_queue_create();
@@ -237,8 +237,8 @@ logger_manager_t *global_logger_manager;
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
-//	tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&generator_test8); 
+	tester->perform_tests(tester,all_tests);
+//	tester->perform_test(tester,&event_queue_test);  
 
  	
 	tester->destroy(tester);

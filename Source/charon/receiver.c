@@ -61,13 +61,13 @@ static void receiver_thread_function(private_receiver_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	packet_t * current_packet;
-	job_t * current_job;
-
+	job_t *current_job;
 	while (1)
 	{
 		while (global_socket->receive(global_socket,&current_packet) == SUCCESS)
 		{
-			current_job = job_create(INCOMING_PACKET,current_packet);
+
+			current_job = (job_t *) incoming_packet_job_create(current_packet);
 			if (current_job == NULL)
 			{
 				/* job could no be created */

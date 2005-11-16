@@ -209,11 +209,10 @@
 	 */
 	#define report_memory_leaks(void) (global_allocator->report_memory_leaks(global_allocator))
 #else
-	#define allocator_alloc(bytes) (malloc(bytes))
-	
+
+	#define allocator_alloc(bytes) (malloc(bytes))	
 	chunk_t allocator_alloc_as_chunk(size_t bytes);
-	
-	#define allocator_realloc(old,bytes) (realloc(old,bytes))
+	void * allocator_realloc(void * old, size_t newsize);
 	#define allocator_free(pointer) (free(pointer))
 	void * allocator_clone_bytes(void * pointer, size_t size);
 	void allocator_free_chunk(chunk_t chunk);
