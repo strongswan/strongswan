@@ -25,6 +25,21 @@
  
 #include "allocator.h"
 #include "linked_list.h"
+#include "../definitions.h"
+
+mapping_t logger_context_t_mappings[] = {
+	{PARSER, "PARSER"},
+	{GENERATOR, "GENERATOR"},
+	{IKE_SA, "IKE_SA"},
+	{IKE_SA_MANAGER, "IKE_SA_MANAGER"},
+	{MESSAGE, "MESSAGE"},
+	{THREAD_POOL, "THREAD_POOL"},
+	{WORKER_THREAD, "WORKER_THREAD"},
+	{EVENT_THREAD, "EVENT_THREAD"},
+	{SENDER_THREAD, "SENDER_THREAD"},
+	{RECEIVER_THREAD, "RECEIVER_THREAD"},
+	{TESTER, "TESTER"},
+};
 
 /** 
  * Maximum length of a logger name

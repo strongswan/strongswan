@@ -36,6 +36,7 @@ enum logger_context_e{
 	PARSER,
 	GENERATOR,
 	IKE_SA,
+	IKE_SA_MANAGER,
 	MESSAGE,
 	THREAD_POOL,
 	WORKER_THREAD,
@@ -44,7 +45,6 @@ enum logger_context_e{
 	RECEIVER_THREAD,
 	TESTER,
 };
-
 
 /**
  * @brief The logger_manager_t object
