@@ -29,6 +29,7 @@
 #include "generator.h"
 
 #include "types.h"
+#include "globals.h"
 #include "utils/allocator.h"
 #include "utils/linked_list.h"
 #include "utils/logger_manager.h"
@@ -39,8 +40,6 @@
 #include "payloads/ke_payload.h"
 #include "payloads/notify_payload.h"
 #include "payloads/nonce_payload.h"
-
-extern logger_manager_t *global_logger_manager;
 
 /**
  * Private part of a generator_t object
