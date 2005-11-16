@@ -24,13 +24,14 @@
 #define JOB_H_
 
 #include "types.h"
+#include "definitions.h"
 
 /**
  * Type of Jobs in Job-Queue
  */
 typedef enum job_type_e job_type_t;
 
-enum job_type_e{
+enum job_type_e {
 	/** 
 	 * process an incoming IKEv2-Message
 	 */
@@ -42,10 +43,11 @@ enum job_type_e{
 	/** 
 	 * establish an ike sa as initiator
 	 */
-	ESTABLISH_IKE_SA
+	INITIATE_IKE_SA
 	/* more job types have to be inserted here */
 };
 
+extern mapping_t job_type_m[];
 
 /**
  * @brief Job as it is stored in the job queue

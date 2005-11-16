@@ -26,6 +26,13 @@
 
 #include "utils/allocator.h"
 
+mapping_t job_type_m[] = {
+	{INCOMING_PACKET, "INCOMING_PACKET"},
+	{RETRANSMIT_REQUEST, "RETRANSMIT_REQUEST"},
+	{INITIATE_IKE_SA, "INITIATE_IKE_SA"},
+	{MAPPING_END, NULL}
+};
+
  /**
  * @brief implements function destroy of job_t
  */
