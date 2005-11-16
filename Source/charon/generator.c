@@ -328,7 +328,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 	/* U_INT Types of multiple then 8 bits must be aligned */
 	if (((number_of_bits % 8) == 0) && (this->current_bit != 0))
 	{
-		this->logger->log(this->logger,CONTROL_MORE,"U_INT Type %s is not 8 Bit aligned",	mapping_find(encoding_type_t_mappings,int_type));
+		this->logger->log(this->logger,CONTROL_MORE,"U_INT Type %s is not 8 Bit aligned",	mapping_find(encoding_type_m,int_type));
 		/* current bit has to be zero for values multiple of 8 bits */
 		return FAILED;
 	}
@@ -429,7 +429,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			}
 
 			default:
-			this->logger->log(this->logger,CONTROL_MORE,"U_INT Type %s is not supported",	mapping_find(encoding_type_t_mappings,int_type));
+			this->logger->log(this->logger,CONTROL_MORE,"U_INT Type %s is not supported",	mapping_find(encoding_type_m,int_type));
 			return FAILED;
 	}
 	return SUCCESS;
@@ -684,7 +684,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 	/* spi size has to get reseted */
 	this->last_spi_size = 0;
 	
-	this->logger->log(this->logger,CONTROL,"Start generating payload of type %s",mapping_find(payload_type_t_mappings,payload_type));
+	this->logger->log(this->logger,CONTROL,"Start generating payload of type %s",mapping_find(payload_type_m,payload_type));
 	
 	/* each payload has its own encoding rules */
 	payload->get_encoding_rules(payload,&rules,&rule_count);
@@ -1009,7 +1009,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				break;
 			}
 			default:
-				this->logger->log(this->logger,CONTROL_MORE,"Field Type %s is not supported",mapping_find(encoding_type_t_mappings,rules[i].type));
+				this->logger->log(this->logger,CONTROL_MORE,"Field Type %s is not supported",mapping_find(encoding_type_m,rules[i].type));
 				return NOT_SUPPORTED;
 		}
 	}
