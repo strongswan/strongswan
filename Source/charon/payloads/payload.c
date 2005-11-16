@@ -37,7 +37,7 @@
 /*
  * build the mappings for payload_type_t
  */
-mapping_t payload_type_t_mappings[] = {
+mapping_t payload_type_m[] = {
 	{NO_PAYLOAD, "NO_PAYLOAD"},
 	{SECURITY_ASSOCIATION, "SECURITY_ASSOCIATION"},
 	{KEY_EXCHANGE, "KEY_EXCHANGE"},

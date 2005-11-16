@@ -147,7 +147,7 @@ enum payload_type_e{
 /*
  * build string mapping array for payload_type_t
  */
-extern mapping_t payload_type_t_mappings[];
+extern mapping_t payload_type_m[];
 
 
 /**
