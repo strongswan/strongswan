@@ -42,11 +42,13 @@ struct incoming_packet_job_s {
 	/**
 	 * @brief Returns the assigned packet_t object
 	 * 	
-	 * @warning Returned packet is not cloned and has to get destroyed by the caller
+	 * @warning Returned packet is not cloned and has to get destroyed by the caller.
 	 * 
 	 * @param this 			calling incoming_packet_job_t object
 	 * @param[out] packet 	assigned packet will be written into this location
-	 * @return 				SUCCESS
+	 * @return 				
+	 * 						- SUCCESS
+	 * 						- FAILED if no packet is assigned
 	 */
 	status_t (*get_packet) (incoming_packet_job_t *this, packet_t **packet);
 

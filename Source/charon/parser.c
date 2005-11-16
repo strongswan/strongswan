@@ -778,6 +778,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 }
 
 /**
+ * implementation of parser_t.reset_context
+ */
+static status_t reset_context (private_parser_t *this)
+{
+	this->byte_pos = this->input;
+	this->bit_pos = 0;
+	return SUCCESS;
+}
+
+/**
  * implementation of parser_t.destroy
  */
 static status_t destroy(private_parser_t *this)
@@ -811,6 +821,7 @@ parser_t *parser_create(chunk_t data)
 	}
 	
 	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**)) parse_payload;
+	this->public.reset_context = (status_t(*)(parser_t*)) reset_context;
 	this->public.destroy = (status_t(*)(parser_t*)) destroy;
 	
 		

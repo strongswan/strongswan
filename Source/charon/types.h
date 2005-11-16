@@ -47,11 +47,6 @@ typedef struct timespec timespec_t;
 typedef struct sockaddr sockaddr_t;
 
 /**
- * Representates a IKE_SA spi
- */
-typedef u_int64_t spi_t;
-
-/**
  * General purpose pointer/length abstraction
  */
 typedef struct chunk_s chunk_t;

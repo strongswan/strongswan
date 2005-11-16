@@ -30,7 +30,7 @@
 void test_ike_sa_id(tester_t *tester)
 {
 	ike_sa_id_t *ike_sa_id, *clone, *equal, *other1, *other2, *other3, *other4;
-	spi_t initiator, initiator2, responder, responder2;
+	u_int64_t initiator, initiator2, responder, responder2;
 	bool is_initiator;
 	bool are_equal = FALSE;
 	

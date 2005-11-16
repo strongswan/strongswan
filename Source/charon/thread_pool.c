@@ -69,19 +69,54 @@ struct private_thread_pool_s {
  */
 static void job_processing(private_thread_pool_t *this)
 {
+
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	
 	this->logger->log(this->logger, CONTROL_MORE, "thread %u started working", pthread_self());
 
 	for (;;) {
 		job_t *job;
-
+		job_type_t job_type;
+		
 		global_job_queue->get(global_job_queue, &job);
-		this->logger->log(this->logger, CONTROL_MORE, "thread %u got a job", pthread_self());
+		job_type = job->get_type(job);
+		this->logger->log(this->logger, CONTROL_MORE, "thread %u got a job of type %s", pthread_self(),mapping_find(job_type_m,job_type));
 		
 		/* process them here */
-		
+		switch (job_type)
+		{
+			case INCOMING_PACKET:
+			{
+				packet_t *packet;
+				message_t *message;
+				incoming_packet_job_t *incoming_packet_job = (incoming_packet_job_t *)job;
+				
+				if (incoming_packet_job->get_packet(incoming_packet_job,&packet) != SUCCESS)
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Packet in job of type %s could not be retrieved!", pthread_self(),mapping_find(job_type_m,job_type));				
+					break;
+				}
+				message = message_create_from_packet(packet);
+				if (message == NULL)
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Message could not be created from packet!", pthread_self(),mapping_find(job_type_m,job_type));				
+					packet->destroy(packet);
+					break;					
+				}
+				
+				//global_ike_sa_manager->checkout
+				break;
+			}
+			case INITIATE_IKE_SA:
+			{
+				break;
+			}
+			case RETRANSMIT_REQUEST:
+			{
+				this->logger->log(this->logger, CONTROL_MORE, "thread %u: Job of type %s not supported!", pthread_self(),mapping_find(job_type_m,job_type));				
+				break;
+			}
+		}
 		job->destroy(job);
 	}
 

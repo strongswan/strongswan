@@ -33,6 +33,7 @@
 #include "utils/logger_manager.h"
 #include "payloads/encodings.h"
 #include "payloads/payload.h"
+#include "parser.h"
 
 /**
  * Entry for a payload in the internal used linked list
@@ -103,14 +104,15 @@ struct private_message_s {
 	 */
 	linked_list_t *payloads;
 	
+	 /**
+	  * Assigned parser to parse Header and Body of this message
+	  */
+	parser_t *parser;
+	
 	/**
 	 * logger for this message
 	 */
 	logger_t *logger;
-	
-	/**
-	 * destination of this message
-	 */
 	
 };
 
@@ -273,7 +275,7 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	ike_header_t *ike_header;
 	payload_t *payload, *next_payload;
 	linked_list_iterator_t *iterator;
-	spi_t initiator_spi, responder_spi;
+	u_int64_t initiator_spi, responder_spi;
 	bool is_initiator;
 	status_t status;
 	
@@ -361,6 +363,27 @@ static status_t generate(private_message_t *this, packet_t **packet)
 }
 
 /**
+ * Implements message_t's parse_header function.
+ * See #message_s.parse_header.
+ */
+static status_t parse_header (private_message_t *this)
+{
+	ike_header_t *ike_header;
+	status_t status;
+	
+	this->parser->reset_context(this->parser);
+	status = this->parser->parse_payload(this->parser,HEADER,(payload_t **) &ike_header);
+	if (status != SUCCESS)
+	{
+		return status;
+		
+	}
+	ike_header->destroy(ike_header);
+	return SUCCESS;	
+}
+
+
+/**
  * Implements message_t's destroy function.
  * See #message_s.destroy.
  */
@@ -420,6 +443,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_source = (status_t (*) (message_t*,host_t**)) get_source;
 	this->public.set_destination = (status_t (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (status_t (*) (message_t*,host_t**)) get_destination;
+	this->public.parse_header = 	(status_t (*) (message_t *)) parse_header;
 	this->public.destroy = (status_t(*)(message_t*))destroy;
 		
 	/* public values */
@@ -446,12 +470,23 @@ message_t *message_create_from_packet(packet_t *packet)
 		allocator_free(this);
 		return NULL;
 	}
+	
+	/* parser is created from data of packet */
+ 	this->parser = parser_create(this->packet->data);
+ 	if (this->parser == NULL)
+ 	{
+ 		this->payloads->destroy(this->payloads);
+		allocator_free(this);
+		return NULL;
+ 	}
 		
 	this->logger = global_logger_manager->create_logger(global_logger_manager, MESSAGE, NULL);
 	if (this->logger == NULL)
 	{
+		this->parser->destroy(this->parser);
 		this->payloads->destroy(this->payloads);
-		allocator_free(this);	
+		allocator_free(this);
+		return NULL;
 	}
 
 	return (&this->public);

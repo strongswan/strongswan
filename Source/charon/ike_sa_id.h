@@ -46,7 +46,7 @@ struct ike_sa_id_s {
 	 * @param responder_spi SPI of responder to set
 	 * @return SUCCESSFUL in any case
 	 */
-	status_t (*set_responder_spi) (ike_sa_id_t *this, spi_t responder_spi);
+	status_t (*set_responder_spi) (ike_sa_id_t *this, u_int64_t responder_spi);
 
 	/**
 	 * @brief Sets the SPI of the initiator.
@@ -56,7 +56,7 @@ struct ike_sa_id_s {
 	 * @param initiator_spi SPI to set
 	 * @return SUCCESSFUL in any case
 	 */
-	status_t (*set_initiator_spi) (ike_sa_id_t *this, spi_t initiator_spi);
+	status_t (*set_initiator_spi) (ike_sa_id_t *this, u_int64_t initiator_spi);
 
 	/**
 	 * @brief Returns TRUE if the initiator spi is set (not zero)
@@ -103,7 +103,7 @@ struct ike_sa_id_s {
  	 * @param is_initiator address to write role
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
-	status_t (*get_values) (ike_sa_id_t *this, spi_t *initiator, spi_t *responder, bool *is_initiator);
+	status_t (*get_values) (ike_sa_id_t *this, u_int64_t *initiator, u_int64_t *responder,bool *is_initiator);
 
 	/**
 	 * @brief Clones a given ike_sa_id_t object
@@ -128,6 +128,7 @@ struct ike_sa_id_s {
  *
  * @warning The initiator SPI and role is not changeable after initiating a ike_sa_id object
  */
-ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi, bool is_initiaor);
+
+ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi, bool is_initiaor);
 
 #endif /*IKE_SA_ID_H_*/

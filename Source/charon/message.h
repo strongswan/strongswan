@@ -158,6 +158,18 @@ struct message_s {
 	 * 					- EXCHANGE_TYPE_NOT_SET if exchange type is currently not set
 	 * ....
 	 */
+
+	/**
+	 * @brief Parses header of message
+	 *
+	 * @param this 		message_t object
+	 * @return
+	 * 					- SUCCESS if header could be parsed
+	 * 					- NOT_SUPPORTED if payload_type is not supported
+	 *					- OUT_OF_RES if out of ressources
+	 *					- PARSE_ERROR if corrupted/invalid data found
+	 */
+	status_t (*parse_header) (message_t *this);
 	
 	status_t (*generate) (message_t *this, packet_t **packet);
 	status_t (*get_source) (message_t *this, host_t **host);

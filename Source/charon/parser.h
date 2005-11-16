@@ -58,6 +58,15 @@ struct parser_s {
 	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type, payload_t **payload);
 	
 	/**
+	 * @brief Resets the current parser context
+	 *
+	 * @param parser		parser object
+	 * @return 				
+	 * 						- SUCCESSFUL in any case
+	 */
+	status_t (*reset_context) (parser_t *this);
+	
+	/**
 	 * @brief Destroys a parser object
 	 *
 	 * @param parser		parser object

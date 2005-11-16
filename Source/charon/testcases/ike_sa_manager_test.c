@@ -74,7 +74,7 @@ static void test3_thread(ike_sa_id_t *ike_sa_id)
 void test_ike_sa_manager(tester_t *tester)
 {
 	status_t status;
-	spi_t initiator, responder;
+	u_int64_t initiator, responder;
 	ike_sa_id_t *ike_sa_id, *sa_id;
 	ike_sa_t *ike_sa;
 	int thread_count = 200;

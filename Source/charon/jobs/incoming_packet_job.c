@@ -59,6 +59,10 @@ static job_type_t get_type(private_incoming_packet_job_t *this)
  */
 static status_t get_packet(private_incoming_packet_job_t *this,packet_t **packet)
 {
+	if (this->packet == NULL)
+	{
+		return FAILED;
+	}
 	*packet = this->packet;
 	return SUCCESS;
 }

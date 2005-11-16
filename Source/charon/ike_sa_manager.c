@@ -131,7 +131,7 @@ struct private_ike_sa_manager_s {
 	 * @return				SUCCESS or,
 	 * 						OUT_OF_RES when we already served 2^64 SPIs ;-)
 	 */
-	 status_t (*get_next_spi) (private_ike_sa_manager_t *this, spi_t *spi);
+	 status_t (*get_next_spi) (private_ike_sa_manager_t *this, u_int64_t *spi);
 
 	/**
 	 * @brief find the ike_sa_entry in the list by SPIs
@@ -193,7 +193,7 @@ struct private_ike_sa_manager_s {
 	 /**
 	  * Next SPI, needed for incremental creation of SPIs
 	  */
-	 spi_t next_spi;
+	 u_int64_t next_spi;
 };
 
 
@@ -293,7 +293,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 /**
  * @see private_ike_sa_manager_t.get_next_spi
  */
-static status_t get_next_spi(private_ike_sa_manager_t *this, spi_t *spi)
+static status_t get_next_spi(private_ike_sa_manager_t *this, u_int64_t *spi)
 {
 	this->next_spi++;
 	if (this->next_spi == 0) {
@@ -383,7 +383,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		 * Request (even a retransmitted one) will result in a
 		 * IKE_SA. This could be improved...
 		 */
-		spi_t responder_spi;
+		u_int64_t responder_spi;
 		ike_sa_entry_t *new_ike_sa_entry;
 
 		/* set SPIs, we are the responder */
@@ -431,7 +431,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		/* creation of an IKE_SA from local site,
 		 * we are the initiator!
 		 */
-		spi_t initiator_spi;
+		u_int64_t initiator_spi;
 		ike_sa_entry_t *new_ike_sa_entry;
 		
 		retval = this->get_next_spi(this, &initiator_spi);

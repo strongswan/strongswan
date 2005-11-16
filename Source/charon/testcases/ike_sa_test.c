@@ -31,7 +31,7 @@ void test_ike_sa(tester_t *tester)
 {
 	ike_sa_t *ike_sa;
 	ike_sa_id_t *ike_sa_id;
-	spi_t initiator, responder;
+	u_int64_t initiator, responder;
 	bool is_initiator;
 	
 
