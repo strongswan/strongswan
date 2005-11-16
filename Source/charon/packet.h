@@ -25,12 +25,8 @@
 
 
 #include "types.h"
+#include "utils/host.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdlib.h>
 
 
 /**
@@ -38,53 +34,22 @@
  */
 typedef struct packet_s packet_t;
 struct packet_s {
-	/**
-	 * Address family, such as AF_INET
-	 */
-	int family;
-	
-	/**
-	 * 
-	 */
-	size_t sockaddr_len;
-	
+
 	/**
 	 * source address structure
 	 */
-	struct sockaddr source;
+	host_t *source;
 		
 	/**
 	 * destination address structure
 	 */
-	struct sockaddr destination;
+	host_t *destination;
 	 
 	 /**
 	  * message data
 	  */
 	chunk_t data;
 		
-	/**
-	 * @brief 			set destination of packet, using address string
-	 *  
-	 * @param packet		calling object
-	 * @param address	ip address string
-	 * @param port		port number
-	 * @return 			- SUCCESS
-	 * 					- NOT_SUPPORTED
-	 */
-	status_t (*set_destination) (packet_t *packet, char *address, u_int16_t port);
-		
-	/**
-	 * @brief 			set destination of packet, using address string
-	 *
-	 * @param packet		calling object  
-	 * @param address	ip address string
-	 * @param port		port number
-	 * @return 			- SUCCESS
-	 * 					- NOT_SUPPORTED
-	 */
-	status_t (*set_source) (packet_t *packet, char *address, u_int16_t port);
-
 	/**
 	 * @brief 			Clones a packet_t object
 	 *  
@@ -110,6 +75,6 @@ struct packet_s {
  * @param family		address-family, such as AF_INET
  * @return  			- NULL when family not supported
  */
-packet_t *packet_create(int family);
+packet_t *packet_create();
 
 #endif /*PACKET_H_*/

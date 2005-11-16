@@ -37,21 +37,6 @@ struct private_packet_s {
 	 * Public part of a packet_t object
 	 */
 	packet_t public;
-	
-	/* private functions */
-	
-	/**
-	 * @brief helper function to set address used by set_dest & set_source.
-	 * 
-	 * @param this 		calling object_t
-	 * @param family 	address family
-	 * @param saddr		source address
-	 * @param address 	address as string
-	 * @return			
-	 * 					- SUCCESS if successfuly
-	 * 					- NOT_SUPPORTED if family is not supported
-	 */
-	status_t (*set_addr) (private_packet_t *this, int family, struct sockaddr *saddr, char *address, u_int16_t port);
 };
 
 /**
@@ -60,6 +45,14 @@ struct private_packet_s {
  */
 static status_t destroy(private_packet_t *this)
 {
+	if (this->public.source != NULL)
+	{
+		this->public.source->destroy(this->public.source);
+	}	
+	if (this->public.destination != NULL)
+	{
+		this->public.destination->destroy(this->public.destination);
+	}
 	if (this->public.data.ptr != NULL)
 	{
 		allocator_free(this->public.data.ptr);
@@ -72,96 +65,64 @@ static status_t destroy(private_packet_t *this)
  * Implements packet_t's clone function.
  * See #packet_s.clone for description.
  */
-static status_t clone (private_packet_t *packet, packet_t **clone)
+static status_t clone (private_packet_t *this, packet_t **clone)
 {
-	*clone = packet_create(packet->public.family);
-	if ((*clone) == NULL)
+	packet_t *other;
+	other = packet_create();
+	if (other == NULL)
 	{
-
 		return OUT_OF_RES;
 	}
-
 	
-	(*clone)->sockaddr_len = packet->public.sockaddr_len;
-	(*clone)->source = packet->public.source;
-	(*clone)->destination = packet->public.destination;
-	/* only clone existing chunks :-) */
-	if (packet->public.data.ptr != NULL)
+	if (this->public.destination != NULL)
 	{
-		(*clone)->data.ptr = allocator_clone_bytes(packet->public.data.ptr,packet->public.data.len);
-		if ((*clone)->data.ptr == NULL)
+		this->public.destination->clone(this->public.destination, &(other->destination));
+	}
+	else {
+		other->destination = NULL;
+	}
+	
+	if (this->public.source != NULL)
+	{
+		this->public.source->clone(this->public.source, &(other->source));
+	}
+	else {
+		other->source = NULL;
+	}
+	
+	/* only clone existing chunks :-) */
+	if (this->public.data.ptr != NULL)
+	{
+		other->data.ptr = allocator_clone_bytes(this->public.data.ptr,this->public.data.len);
+		if (other->data.ptr == NULL)
 		{
-			(*clone)->destroy((*clone));
+			other->destroy(other);
 			return OUT_OF_RES;
 		}
-		(*clone)->data.len = packet->public.data.len;
+		other->data.len = this->public.data.len;
 	}
+	else
+	{
+		other->data.ptr = NULL;
+		other->data.len = 0;
+	}
+	*clone = other;
 	return SUCCESS;
 }
 
-/**
- * Implements private_packet_t's set_addr function.
- * See #private_packet_t.set_addr for description.
- */
-static status_t set_addr(int family, struct sockaddr *saddr, char *address, u_int16_t port)
-{
-	switch (family)
-	{
-		/* IPv4 */
-		case AF_INET:
-			{
-				struct sockaddr_in *sin = (struct sockaddr_in*)saddr;
-				sin->sin_family = AF_INET;
-				sin->sin_addr.s_addr = inet_addr("127.0.0.1");
-				sin->sin_port = htons(port);
-				return SUCCESS;;
-			}
-	}
-	return NOT_SUPPORTED;
-}
-
-/**
- * Implements packet_t's set_destination function.
- * See #packet_t.set_destination for description.
- */
-static status_t set_destination(packet_t *this, char *address, u_int16_t port)
-{
-	struct sockaddr *saddr = &(this->destination);
-	return set_addr(this->family, saddr, address, port);
-}
-
-/**
- * Implements packet_t's set_source function.
- * See #packet_t.set_source for description.
- */
-static status_t set_source(packet_t *this, char *address, u_int16_t port)
-{
-	struct sockaddr *saddr = &(this->source);
-	return set_addr(this->family, saddr, address, port);
-}
 
 /*
  * Documented in header
  */
-packet_t *packet_create(int family)
+packet_t *packet_create()
 {
 	private_packet_t *this = allocator_alloc_thing(private_packet_t);
 
 	this->public.destroy = (status_t(*) (packet_t *)) destroy;
-	this->public.set_destination = set_destination;
-	this->public.set_source = set_source;
 	this->public.clone = (status_t(*) (packet_t *,packet_t**))clone;
-
-	this->public.family = family;
-	switch (family)
-	{
-		case AF_INET:
-			this->public.sockaddr_len = sizeof(struct sockaddr_in);
-			break;
-		default: /* not supported */
-			allocator_free(this);
-			return NULL;
-	}
+	
+	this->public.destination = NULL;
+	this->public.source = NULL;
 
 	this->public.data.len = 0;
 	this->public.data.ptr = NULL;
