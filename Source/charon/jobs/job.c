@@ -1,8 +1,8 @@
 /**
  * @file job.c
- *
- * @brief Job-Class representing a job e.g. in job_queue
- *
+ * 
+ * @brief Job-Interface representing a job e.g. in job_queue
+ * 
  */
 
 /*
@@ -20,11 +20,8 @@
  * for more details.
  */
 
-#include <stdlib.h>
-
 #include "job.h"
 
-#include "../utils/allocator.h"
 
 mapping_t job_type_m[] = {
 	{INCOMING_PACKET, "INCOMING_PACKET"},
@@ -32,27 +29,3 @@ mapping_t job_type_m[] = {
 	{INITIATE_IKE_SA, "INITIATE_IKE_SA"},
 	{MAPPING_END, NULL}
 };
-
- /**
- * @brief implements function destroy of job_t
- */
-static status_t job_destroy(job_t *job)
-{
-	allocator_free(job);
-	return SUCCESS;
-}
-
-/*
- * Creates a job (documented in header-file)
- */
-job_t *job_create(job_type_t type, void *assigned_data)
-{
-	job_t *this = allocator_alloc_thing(job_t);
-
-	this->destroy = job_destroy;
-
-	this->type = type;
-	this->assigned_data = assigned_data;
-
-	return this;
-}

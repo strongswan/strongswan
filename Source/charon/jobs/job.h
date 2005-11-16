@@ -1,7 +1,7 @@
 /**
  * @file job.h
  * 
- * @brief Job-Class representing a job e.g. in job_queue
+ * @brief Job-Interface representing a job e.g. in job_queue
  * 
  */
 
@@ -33,40 +33,43 @@ typedef enum job_type_e job_type_t;
 
 enum job_type_e {
 	/** 
-	 * process an incoming IKEv2-Message
+	 * Process an incoming IKEv2-Message
+	 * 
+ 	 * Job is implemented in class type incoming_packet_job_t
 	 */
 	INCOMING_PACKET,
 	/** 
-	 * retransmit an IKEv2-Message
+	 * Retransmit an IKEv2-Message
 	 */
 	RETRANSMIT_REQUEST,
 	/** 
-	 * establish an ike sa as initiator
+	 * Establish an ike sa as initiator
+	 * 
+	 * Job is implemented in class type initiate_ike_sa_job_t
 	 */
 	INITIATE_IKE_SA
+	
 	/* more job types have to be inserted here */
 };
 
 extern mapping_t job_type_m[];
 
 /**
- * @brief Job as it is stored in the job queue
+ * @brief Job-Interface as it is stored in the job queue
  * 
- * A job consists of a job-type and an assigned value
- * 
- * The value-type for a specific job is not discussed here
+ * A job consists of a job-type and one or more assigned values
  */
 typedef struct job_s job_t;
 
 struct job_s{
+
 	/**
-	 * Type of job
+	 * @brief get type of job
+	 *
+	 * @param this 				calling object
+	 * @return 					type of this job
 	 */
-	job_type_t type;
-	/**
-	 * Every job has its assigned_data based on the job type
-	 */
-	void * assigned_data;
+	job_type_t (*get_type) (job_t *this);
 
 	/**
 	 * @brief Destroys a job_t object
@@ -77,14 +80,7 @@ struct job_s{
 	status_t (*destroy) (job_t *job);
 };
 
-/**
- * @brief Creates a job of specific type
- *
- * @param type type of the job
- * @param assigned_data value to assign to the job
- * 
- * @return job_t job object
- */
-job_t *job_create(job_type_t type, void *assigned_data);
+#include "initiate_ike_sa_job.h"
+#include "incoming_packet_job.h"
 
 #endif /*JOB_H_*/
