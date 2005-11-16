@@ -36,26 +36,20 @@ typedef enum status_e {
 	INVALID_ARG,
 	NOT_FOUND,
 	PARSE_ERROR,
-	EXCHANGE_TYPE_NOT_SET
+	INVALID_STATE
 } status_t;
 
-typedef enum ike_sa_role_e {
-	INITIATOR,
-	RESPONDER
-} ike_sa_role_t;
 
 typedef struct timeval timeval_t;
 
 typedef struct timespec timespec_t;
 
+typedef struct sockaddr sockaddr_t;
+
 /**
  * Representates a IKE_SA spi
  */
-typedef struct spi_s spi_t;
-struct spi_s{
-	u_int32_t high;
-	u_int32_t low;
-};
+typedef u_int64_t spi_t;
 
 /**
  * General purpose pointer/length abstraction
