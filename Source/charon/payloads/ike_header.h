@@ -59,10 +59,9 @@ typedef enum exchange_type_e exchange_type_t;
 enum exchange_type_e{
 
 	/**
-	 * NOT_SET, not a official message type :-)
+	 * EXCHANGE_TYPE_UNDEFINED, not a official message type :-)
 	 */
-	NOT_SET = 0,
-
+	EXCHANGE_TYPE_UNDEFINED = 240,
 	/**
 	 * IKE_SA_INIT
 	 */
@@ -80,6 +79,8 @@ enum exchange_type_e{
 	 */
 	INFORMATIONAL = 37 
 };
+
+extern mapping_t exchange_type_m[];
 
 /**
  * Object representing an IKEv2-Header

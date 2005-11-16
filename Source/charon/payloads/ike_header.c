@@ -93,7 +93,17 @@ struct private_ike_header_s {
 	 */
 	u_int32_t length;	
 }; 
-	
+
+/**
+ * mappings used to get strings for exchange_type_t
+ */
+mapping_t exchange_type_m[] = {
+	{EXCHANGE_TYPE_UNDEFINED, "EXCHANGE_TYPE_UNDEFINED"},
+	{IKE_SA_INIT, "IKE_SA_INIT"},
+	{IKE_AUTH, "IKE_AUTH"},
+	{CREATE_CHILD_SA, "CREATE_CHILD_SA"},
+	{INFORMATIONAL, "INFORMATIONAL"}
+};
 
 
 /**
@@ -368,7 +378,7 @@ ike_header_t *ike_header_create()
 	this->next_payload = 0;
 	this->maj_version = IKE_MAJOR_VERSION;
 	this->min_version = IKE_MINOR_VERSION;
-	this->exchange_type = NOT_SET;
+	this->exchange_type = EXCHANGE_TYPE_UNDEFINED;
 	this->flags.initiator = TRUE;
 	this->flags.version = HIGHER_VERSION_SUPPORTED_FLAG;
 	this->flags.response = FALSE;
