@@ -328,15 +328,19 @@ chunk_t allocator_alloc_as_chunk(size_t bytes)
 
 void * allocator_realloc(void * old, size_t newsize)
 {
-	return realloc(old,newsize);
+	void *data = realloc(old,newsize);
+	return data;
 } 
 
 void * allocator_clone_bytes(void * pointer, size_t size)
 {
+	
 	void *data;
 	data = malloc(size);
-	if (data == NULL){ return NULL;}
-	memcpy(data,pointer,size);
+	
+	if (data == NULL){return NULL;}
+	memmove(data,pointer,size);
+	
 	return (data);
 }
 

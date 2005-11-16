@@ -31,12 +31,12 @@
  * Generating is done in a data buffer.
  * This is thehe start size of this buffer in Bytes.
  */
-#define GENERATOR_DATA_BUFFER_SIZE 3000
+#define GENERATOR_DATA_BUFFER_SIZE 10
 
 /**
  * Number of bytes to increase the buffer, if it is to small.
  */
-#define GENERATOR_DATA_BUFFER_INCREASE_VALUE 1000
+#define GENERATOR_DATA_BUFFER_INCREASE_VALUE 5
 
 /**
  *A generator_t object which generates payloads of specific type.

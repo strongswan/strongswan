@@ -431,6 +431,8 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 		0x00,0x00,0x00,0x04,
 		0x69,0x6A,0x6B,0x6C
 	};
+	logger->log_bytes(logger,RAW,"expected transform",expected_generation,sizeof(expected_generation));	
+
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
 	allocator_free_chunk(generated_data);
@@ -607,6 +609,9 @@ void test_generator_with_sa_payload(tester_t *tester)
 		0x07,0x05,0x00,0x00,
 
 	};
+
+	logger->log_bytes(logger,RAW,"expected transform",expected_generation,sizeof(expected_generation));	
+	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
 	allocator_free_chunk(generated_data);

@@ -269,10 +269,6 @@ static size_t get_current_buffer_space (private_generator_t *this)
 {
 	/* we know, one byte more */
 	size_t space = (this->roof_position) - (this->out_position);
-	if (this->current_bit == 0)
-	{
-		space++;
-	}	
 	return (space);
 }
 
@@ -465,6 +461,13 @@ static status_t generate_reserved_field (private_generator_t *this,int bits)
 		/* one bit processing */
 		u_int8_t reserved_bit = ~(1 << (7 - this->current_bit));
 		*(this->out_position) = *(this->out_position) & reserved_bit;
+		if (this->current_bit == 0)
+		{
+			/* memory must be zero */
+			*(this->out_position) = 0x00;
+		}
+
+
 		this->current_bit++;
 		if (this->current_bit >= 8)
 		{
@@ -511,6 +514,11 @@ static status_t generate_flag (private_generator_t *this,u_int32_t offset)
 	if (status != SUCCESS)
 	{
 		return status;
+	}
+	if (this->current_bit == 0)
+	{
+		/* memory must be zero */
+		*(this->out_position) = 0x00;
 	}
 
 	*(this->out_position) = *(this->out_position) | flag;
@@ -563,6 +571,7 @@ static status_t make_space_available (private_generator_t *this, size_t bits)
 		new_buffer = allocator_realloc(this->buffer,new_buffer_size);
 		if (new_buffer == NULL)
 		{
+			this->logger->log(this->logger,CONTROL_MORE,"Fatal error: Reallocation of buffer failed!!!");
 			return OUT_OF_RES;
 		}
 
