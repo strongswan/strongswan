@@ -121,6 +121,20 @@ static status_t get_random_bytes(private_randomizer_t *this,size_t bytes, u_int8
 {
 	return (this->get_bytes_from_device(this, FALSE, bytes, buffer));
 }
+/**
+ * Implements randomizer_t's allocate_random_bytes function.
+ * See #randomizer_t.allocate_random_bytes for description.
+ */
+static status_t allocate_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
+{
+	chunk->len = bytes;
+	chunk->ptr = allocator_alloc(bytes);
+	if (chunk->ptr == NULL)
+	{
+		return OUT_OF_RES;
+	}	
+	return (this->get_bytes_from_device(this, FALSE, bytes, chunk->ptr));
+}
 
 /**
  * Implements randomizer_t's get_pseudo_random_bytes function.
@@ -130,6 +144,23 @@ static status_t get_pseudo_random_bytes(private_randomizer_t *this,size_t bytes,
 {
 	return (this->get_bytes_from_device(this, TRUE, bytes, buffer));
 }
+
+
+/**
+ * Implements randomizer_t's allocate_random_bytes function.
+ * See #randomizer_t.allocate_random_bytes for description.
+ */
+static status_t allocate_pseudo_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
+{
+	chunk->len = bytes;
+	chunk->ptr = allocator_alloc(bytes);
+	if (chunk->ptr == NULL)
+	{
+		return OUT_OF_RES;
+	}	
+	return (this->get_bytes_from_device(this, TRUE, bytes, chunk->ptr));
+}
+
 
 /**
  * Implements randomizer_t's destroy function.
@@ -169,7 +200,9 @@ randomizer_t *randomizer_create_on_devices(char * random_dev_name,char * prandom
 	
 	/* public functions */
 	this->public.get_random_bytes = (status_t (*) (randomizer_t *,size_t, u_int8_t *)) get_random_bytes;
+	this->public.allocate_random_bytes = (status_t (*) (randomizer_t *,size_t, chunk_t *)) allocate_random_bytes;
 	this->public.get_pseudo_random_bytes = (status_t (*) (randomizer_t *,size_t, u_int8_t *)) get_pseudo_random_bytes;
+	this->public.allocate_pseudo_random_bytes = (status_t (*) (randomizer_t *,size_t, chunk_t *)) allocate_pseudo_random_bytes;
 	this->public.destroy = (status_t (*) (randomizer_t *))destroy;
 	
 	/* private functions */

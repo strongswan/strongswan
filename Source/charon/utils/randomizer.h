@@ -48,6 +48,19 @@ struct randomizer_s {
 	status_t (*get_random_bytes) (randomizer_t *this,size_t bytes, u_int8_t *buffer);
 	
 	/**
+	 * @brief Allocates space and writes in random bytes
+	 * 
+	 * @param this 					calling randomizer_t object
+	 * @param bytes					Number of bytes to allocate
+	 * @param[out] chunk			chunk which will hold the allocated random bytes
+	 * @return
+	 * 								- SUCCESS
+	 * 								- OUT_OF_RES
+	 * 								- FAILED
+	 */	
+	status_t (*allocate_random_bytes) (randomizer_t *this, size_t bytes, chunk_t *chunk);
+	
+	/**
 	 * @brief Reads a specific number of bytes from pseudo random device.
 	 * 
 	 * @param this 					calling randomizer_t object
@@ -59,7 +72,19 @@ struct randomizer_s {
 	 * 								- FAILED
 	 */
 	status_t (*get_pseudo_random_bytes) (randomizer_t *this,size_t bytes, u_int8_t *buffer);
-
+	
+	/**
+	 * @brief Allocates space and writes in pseudo random bytes
+	 * 
+	 * @param this 					calling randomizer_t object
+	 * @param bytes					Number of bytes to allocate
+	 * @param[out] chunk			chunk which will hold the allocated random bytes
+	 * @return
+	 * 								- SUCCESS
+	 * 								- OUT_OF_RES
+	 * 								- FAILED
+	 */	
+	status_t (*allocate_pseudo_random_bytes) (randomizer_t *this, size_t bytes, chunk_t *chunk);
 
 	/**
 	 * @brief Destroys a randomizer_t object.
