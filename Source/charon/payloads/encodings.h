@@ -312,7 +312,7 @@ enum encoding_type_e{
 /**
  * mappings to map encoding_type_t's to strings
  */
-extern mapping_t encoding_type_t_mappings[];
+extern mapping_t encoding_type_m[];
 
 /**
  * An encoding rule is a mapping of a specific encoding type to 

@@ -25,7 +25,7 @@
 #include "encodings.h"
 
 
-mapping_t encoding_type_t_mappings[] = {
+mapping_t encoding_type_m[] = {
 	{U_INT_4, "U_INT_4"},
 	{U_INT_8, "U_INT_8"},
 	{U_INT_16, "U_INT_16"},
