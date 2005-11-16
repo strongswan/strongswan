@@ -363,10 +363,10 @@ static status_t generate(private_message_t *this, packet_t **packet)
 }
 
 /**
- * Implements message_t's parse_header function.
- * See #message_s.parse_header.
+ * Implements message_t's parse_and_verify_header function.
+ * See #message_s.parse_and_verify_header.
  */
-static status_t parse_header (private_message_t *this)
+static status_t parse_and_verify_header (private_message_t *this)
 {
 	ike_header_t *ike_header;
 	status_t status;
@@ -378,7 +378,37 @@ static status_t parse_header (private_message_t *this)
 		return status;
 		
 	}
-	ike_header->destroy(ike_header);
+	if (this->ike_sa_id != NULL)
+	{
+		this->ike_sa_id->destroy(this->ike_sa_id);
+	}
+	this->original_initiator = (!ike_header->get_initiator_flag(ike_header));
+	
+	this->ike_sa_id = ike_sa_id_create(ike_header->get_initiator_spi(ike_header),ike_header->get_responder_spi(ike_header),this->original_initiator);
+	if (this->ike_sa_id == NULL)
+	{
+		ike_header->destroy(ike_header);
+		return OUT_OF_RES;
+	}
+	this->exchange_type = ike_header->get_exchange_type(ike_header);
+	this->message_id = ike_header->get_message_id(ike_header);
+	this->is_request = (!ike_header->get_response_flag(ike_header));
+	if ((ike_header->get_initiator_spi(ike_header) == 0) && (ike_header->get_initiator_spi(ike_header) != 0))
+	{
+		/* initiator spi not set */
+		ike_header->destroy(ike_header);		
+		return VERIFY_ERROR;
+	}
+	if (!((ike_header->get_maj_version(ike_header) == 2) && (ike_header->get_min_version(ike_header) == 0)))
+	{
+		/* version not supported */
+		ike_header->destroy(ike_header);		
+		return NOT_SUPPORTED;	
+	}
+
+
+
+	ike_header->destroy(ike_header);	
 	return SUCCESS;	
 }
 
@@ -443,7 +473,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_source = (status_t (*) (message_t*,host_t**)) get_source;
 	this->public.set_destination = (status_t (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (status_t (*) (message_t*,host_t**)) get_destination;
-	this->public.parse_header = 	(status_t (*) (message_t *)) parse_header;
+	this->public.parse_and_verify_header = 	(status_t (*) (message_t *)) parse_and_verify_header;
 	this->public.destroy = (status_t(*)(message_t*))destroy;
 		
 	/* public values */

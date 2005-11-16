@@ -89,6 +89,9 @@ static void job_processing(private_thread_pool_t *this)
 			{
 				packet_t *packet;
 				message_t *message;
+				ike_sa_t *ike_sa;
+				ike_sa_id_t *ike_sa_id;
+				status_t status;
 				incoming_packet_job_t *incoming_packet_job = (incoming_packet_job_t *)job;
 				
 				if (incoming_packet_job->get_packet(incoming_packet_job,&packet) != SUCCESS)
@@ -103,8 +106,42 @@ static void job_processing(private_thread_pool_t *this)
 					packet->destroy(packet);
 					break;					
 				}
+				status = message->parse_and_verify_header(message);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Message header could not be verified!", pthread_self());				
+					message->destroy(message);
+					break;										
+				}
+				status = message->get_ike_sa_id(message,&ike_sa_id);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: IKE SA ID of message could not be created!", pthread_self());
+					message->destroy(message);
+					break;
+				}
 				
-				//global_ike_sa_manager->checkout
+				status = global_ike_sa_manager->checkout(global_ike_sa_manager,ike_sa_id, &ike_sa);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: IKE SA could not be checked out", pthread_self());
+					message->destroy(message);
+					break;
+				}				
+				
+				status = ike_sa->process_message (ike_sa,message);				
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Message could not be processed by IKE SA", pthread_self());
+				}
+				
+				status = global_ike_sa_manager->checkin(global_ike_sa_manager,ike_sa);
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Checkin of IKE SA return errors", pthread_self());
+				}
+				message->destroy(message);
+				ike_sa_id->destroy(ike_sa_id);				
+				
 				break;
 			}
 			case INITIATE_IKE_SA:

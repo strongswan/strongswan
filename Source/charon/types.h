@@ -36,6 +36,7 @@ typedef enum status_e {
 	INVALID_ARG,
 	NOT_FOUND,
 	PARSE_ERROR,
+	VERIFY_ERROR,
 	INVALID_STATE
 } status_t;
 

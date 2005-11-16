@@ -160,7 +160,7 @@ struct message_s {
 	 */
 
 	/**
-	 * @brief Parses header of message
+	 * @brief Parses and verifies header of message
 	 *
 	 * @param this 		message_t object
 	 * @return
@@ -168,8 +168,9 @@ struct message_s {
 	 * 					- NOT_SUPPORTED if payload_type is not supported
 	 *					- OUT_OF_RES if out of ressources
 	 *					- PARSE_ERROR if corrupted/invalid data found
+	 * 					- VERIFY_ERROR if header contains wrong values
 	 */
-	status_t (*parse_header) (message_t *this);
+	status_t (*parse_and_verify_header) (message_t *this);
 	
 	status_t (*generate) (message_t *this, packet_t **packet);
 	status_t (*get_source) (message_t *this, host_t **host);
