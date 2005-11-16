@@ -25,7 +25,7 @@
 
 #include "receiver.h"
 
-#include "job.h"
+#include "jobs/job.h"
 #include "socket.h"
 #include "packet.h"
 #include "globals.h"

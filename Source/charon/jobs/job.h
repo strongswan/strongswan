@@ -23,8 +23,8 @@
 #ifndef JOB_H_
 #define JOB_H_
 
-#include "types.h"
-#include "definitions.h"
+#include "../types.h"
+#include "../definitions.h"
 
 /**
  * Type of Jobs in Job-Queue

@@ -24,7 +24,7 @@
 
 #include "job.h"
 
-#include "utils/allocator.h"
+#include "../utils/allocator.h"
 
 mapping_t job_type_m[] = {
 	{INCOMING_PACKET, "INCOMING_PACKET"},
