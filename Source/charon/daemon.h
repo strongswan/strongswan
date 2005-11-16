@@ -23,6 +23,11 @@
 #ifndef DAEMON_H_
 #define DAEMON_H_
 
-#define DEAMON_NAME "charon"
+#include "globals.h"
+
+#define DAEMON_NAME "charon"
+
+#define NUMBER_OF_WORKING_THREADS 4
+
 
 #endif /*DAEMON_H_*/

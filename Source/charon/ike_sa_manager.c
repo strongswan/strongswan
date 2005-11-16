@@ -25,13 +25,12 @@
 
 #include "ike_sa_manager.h"
 
+#include "globals.h"
 #include "ike_sa_id.h"
 #include "utils/allocator.h"
 #include "utils/logger.h"
 #include "utils/logger_manager.h"
 #include "utils/linked_list.h"
-
-extern logger_manager_t *global_logger_manager;
 
 /**
  * @brief An entry in the linked list, contains IKE_SA, locking and lookup data.

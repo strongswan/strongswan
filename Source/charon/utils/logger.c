@@ -277,7 +277,7 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level,FILE * outpu
 	
 	if (output == NULL)
 	{
-		openlog(DEAMON_NAME, 0, LOG_DAEMON);
+		openlog(DAEMON_NAME, 0, LOG_DAEMON);
 	}
 	
 	return (logger_t*)this;

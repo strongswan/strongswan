@@ -25,11 +25,11 @@
 
 #include "receiver.h"
 
+#include "job.h"
 #include "socket.h"
 #include "packet.h"
-#include "job.h"
-#include "queues/job_queue.h"
 #include "globals.h"
+#include "queues/job_queue.h"
 #include "utils/allocator.h"
 
 /**

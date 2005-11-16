@@ -28,12 +28,14 @@
 #include "queues/job_queue.h"
 #include "queues/event_queue.h"
 #include "utils/logger_manager.h"
+#include "ike_sa_manager.h"
 
 
+extern socket_t *global_socket;
 extern send_queue_t *global_send_queue;
 extern job_queue_t *global_job_queue;
 extern event_queue_t *global_event_queue;
-extern socket_t *global_socket;
 extern logger_manager_t *global_logger_manager;
+extern ike_sa_manager_t *global_ike_sa_manager;
 
 #endif /*GLOBALS_H_*/
