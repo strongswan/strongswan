@@ -122,39 +122,12 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 
 	switch(context)
 	{
-		case PARSER:
-			context_name = "PARSER";
-			break;
-		case GENERATOR:
-			context_name = "GENERATOR";
-			break;
-		case IKE_SA:
-			context_name = "IKE_SA";
-			break;
-		case MESSAGE:
-			context_name = "MESSAGE";
-			break;
-		case WORKER_THREAD:
-			context_name = "WORKER_THREAD";
-			break;
-		case EVENT_THREAD:
-			context_name = "EVENT_THREAD";
-			break;
-		case SENDER_THREAD:
-			context_name = "SENDER_THREAD";
-			break;
-		case RECEIVER_THREAD:
-			context_name = "RECEIVER_THREAD";
-			break;
-		case THREAD_POOL:
-			context_name = "THREAD_POOL";
-			break;
 		case TESTER:
 			context_name = "TESTER";
 			output = stdout;
 			break;
 		default:
-			context_name = "NO CONTEXT";
+			context_name = mapping_find(logger_context_t_mappings,context);
 			break;		
 	}
 	/* logger manager is thread save */
