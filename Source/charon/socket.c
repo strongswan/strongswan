@@ -54,16 +54,18 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 {
 	char buffer[MAX_PACKET];
 	int oldstate;
-	packet_t *pkt = packet_create(AF_INET);
-
+	packet_t *pkt = packet_create();
 
 	/* add packet destroy handler for cancellation, enable cancellation */
 	pthread_cleanup_push((void(*)(void*))pkt->destroy, (void*)pkt);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	
+	pkt->source = host_create(AF_INET, "0.0.0.0", 0);
 
 	/* do the read */
 	pkt->data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0,
-							&(pkt->source), &(pkt->sockaddr_len));
+							pkt->source->get_sockaddr(pkt->source), 
+							pkt->source->get_sockaddr_len(pkt->source));
 
 	/* reset cancellation, remove packet destroy handler (without executing) */
 	pthread_setcancelstate(oldstate, NULL);
@@ -99,7 +101,8 @@ status_t sender(private_socket_t *this, packet_t *packet)
 
 	/* send data */
 	bytes_sent = sendto(this->socket_fd, packet->data.ptr, packet->data.len,
-						0, &(packet->destination), packet->sockaddr_len);
+						0, packet->destination->get_sockaddr(packet->destination), 
+						*(packet->destination->get_sockaddr_len(packet->destination)));
 
 	if (bytes_sent != packet->data.len)
 	{
