@@ -44,7 +44,8 @@ enum logger_context_e{
 	SENDER_THREAD,
 	RECEIVER_THREAD,
 	TESTER,
-};
+	DAEMON,
+	};
 
 /**
  * @brief The logger_manager_t object

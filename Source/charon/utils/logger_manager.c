@@ -39,6 +39,7 @@ mapping_t logger_context_t_mappings[] = {
 	{SENDER_THREAD, "SENDER_THREAD"},
 	{RECEIVER_THREAD, "RECEIVER_THREAD"},
 	{TESTER, "TESTER"},
+	{DAEMON, "DAEMON"},
 };
 
 /** 
