@@ -55,14 +55,16 @@ struct ike_sa_manager_s {
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier, will be updated
 	 * @param ike_sa[out] 		checked out SA
-	 * @returns 				SUCCESS if checkout successful
-	 * 							NOT_FOUND when no such SA is available
+	 * @returns 					
+	 * 							- SUCCESS if checkout successful
+	 * 							- NOT_FOUND when no such SA is available
+	 * 							- OUT_OF_RES
 	 */
 	status_t (*checkout) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *sa_id, ike_sa_t **ike_sa);
 	/**
 	 * @brief Checkin the SA after usage
 	 * 
-	 * @warning the pointer MUST NOT be used after checkin! The SA must be checked
+	 * @warning the SA pointer MUST NOT be used after checkin! The SA must be checked
 	 * out again!
 	 *  
 	 * @param ike_sa_manager 	the manager object
