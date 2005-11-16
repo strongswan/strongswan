@@ -97,6 +97,23 @@ int main()
 	/* set signal handler */
 	register_signals();
 	
+	/* logger_manager is created first */
+ 	global_logger_manager = logger_manager_create(ALL);
+	if (global_logger_manager == NULL)
+ 	{
+		printf("could not create logger manager");
+ 		return -1;
+ 	}
+
+ 	/* a own logger for the daemon is created */
+ 	logger = global_logger_manager->create_logger(global_logger_manager,DAEMON,NULL);
+ 	if (logger == NULL)
+ 	{
+		printf("could not create logger object");
+ 		destroy_globals();
+ 		return -1;
+ 	}
+	
 	/* initialize all global objects */
  	if (initialize_globals() != SUCCESS)
  	{
@@ -200,15 +217,13 @@ static void register_signals()
 static status_t initialize_globals()
 {
  	/* initialize global object */
- 	global_logger_manager = logger_manager_create(ALL);
-	global_socket = socket_create(4600);
+ 	global_socket = socket_create(4600);
+ 	global_ike_sa_manager = ike_sa_manager_create();
  	global_job_queue = job_queue_create();
  	global_event_queue = event_queue_create();
  	global_send_queue = send_queue_create();
- 	global_ike_sa_manager = ike_sa_manager_create();
  	
- 	if ((global_logger_manager == NULL) ||
-		(global_socket == NULL) ||
+ 	if (	(global_socket == NULL) ||
 		(global_job_queue == NULL) ||
 		(global_event_queue == NULL) ||
 		(global_send_queue == NULL) ||
@@ -240,10 +255,6 @@ static void destroy_globals()
 	if (global_socket != NULL)
 	{
 		global_socket->destroy(global_socket);
-	}
-	if (global_logger_manager != NULL)
-	{
-		global_logger_manager->destroy(global_logger_manager);
 	}
 	if (global_ike_sa_manager != NULL)
 	{
@@ -291,22 +302,18 @@ static status_t start_threads()
  */
 static void end_threads()
 {
- 	logger->log(logger,CONTROL_MORE,"going to stop receiver thread");
 	if (receiver_thread != NULL)
 	{
 		receiver_thread->destroy(receiver_thread);
 	}
- 	logger->log(logger,CONTROL_MORE,"going to stop scheduler thread");
 	if (scheduler_thread != NULL)
 	{
 		scheduler_thread->destroy(scheduler_thread);	
 	}
- 	logger->log(logger,CONTROL_MORE,"going to stop sender thread");
 	if (sender_thread != NULL)
 	{
 		sender_thread->destroy(sender_thread);
 	}
- 	logger->log(logger,CONTROL_MORE,"going to stop all worker threads");
 	if (thread_pool != NULL)
 	{
 		thread_pool->destroy(thread_pool);	
@@ -324,13 +331,18 @@ static void destroy_and_exit(int exit_code)
  	logger->log(logger,CONTROL,"going to exit daemon"); 	
 
 	end_threads();
-
-	/* logger is destroyed */
- 	logger->log(logger,CONTROL_MORE,"destroy logger and afterwards all global objects -> No more log from here");
-	global_logger_manager->destroy_logger(global_logger_manager,logger);
 	
 	/* all globals can be destroyed now */
 	destroy_globals();
+	
+	/* logger is destroyed */
+ 	logger->log(logger,CONTROL_MORE,"destroy logger");
+	global_logger_manager->destroy_logger(global_logger_manager,logger);
+ 	logger->log(logger,CONTROL_MORE,"destroy logger_manager");
+	if (global_logger_manager != NULL)
+	{
+		global_logger_manager->destroy(global_logger_manager);
+	}
 
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported in log file */
