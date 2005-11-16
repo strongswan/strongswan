@@ -117,6 +117,14 @@ struct private_ike_sa_s {
 	
 	linked_list_t *sent_messages;	
 	
+	struct {
+		host_t *host;
+	} me;
+	
+	struct {
+		host_t *host;
+	} other;
+	
 	/**
 	 * a logger for this IKE_SA
 	 */
@@ -135,7 +143,7 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 /**
  * @brief implements function process_configuration of private_ike_sa_t
  */
-static status_t initialize_connection(private_ike_sa_t *this, configuration_t *configuration)
+static status_t initialize_connection(private_ike_sa_t *this, char *name)
 {
 	message_t *message;
 	payload_t *payload;
@@ -429,7 +437,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 
 	/* Public functions */
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
-	this->public.initialize_connection = (status_t(*)(ike_sa_t*, configuration_t*)) initialize_connection;
+	this->public.initialize_connection = (status_t(*)(ike_sa_t*, char*)) initialize_connection;
 	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->public.destroy = (status_t(*)(ike_sa_t*))destroy;
 	
@@ -445,7 +453,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 		allocator_free(this);
 		return NULL;
 	}
-
 	this->child_sas = linked_list_create();
 	if (this->child_sas == NULL)
 	{
@@ -453,7 +460,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 		allocator_free(this);
 		return NULL;
 	}
-	
 	this->randomizer = randomizer_create();
 	if (this->randomizer == NULL)
 	{
@@ -461,15 +467,27 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 		this->ike_sa_id->destroy(this->ike_sa_id);
 		allocator_free(this);
 	}
-	
-	this->logger = global_logger_manager->create_logger(global_logger_manager, IKE_SA, NULL);
-	if (this->logger ==  NULL)
+	this->sent_messages = linked_list_create();
+	if (this->sent_messages == NULL)
 	{
 		this->randomizer->destroy(this->randomizer);
 		this->child_sas->destroy(this->child_sas);
 		this->ike_sa_id->destroy(this->ike_sa_id);
 		allocator_free(this);
 	}
+	this->logger = global_logger_manager->create_logger(global_logger_manager, IKE_SA, NULL);
+	if (this->logger ==  NULL)
+	{
+		this->randomizer->destroy(this->randomizer);
+		this->child_sas->destroy(this->child_sas);
+		this->ike_sa_id->destroy(this->ike_sa_id);
+		this->sent_messages->destroy(this->sent_messages);
+		allocator_free(this);
+	}
+	
+	this->me.host = NULL;
+	this->other.host = NULL;
+
 
 	/* at creation time, IKE_SA isn't in a specific state */
 	this->current_state = NO_STATE;

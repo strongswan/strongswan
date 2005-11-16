@@ -26,7 +26,6 @@
 
 #include "types.h"
 #include "message.h"
-#include "configuration.h"
 #include "ike_sa_id.h"
 
 /**
@@ -46,16 +45,8 @@ struct ike_sa_s {
 	 */
 	status_t (*process_message) (ike_sa_t *this,message_t *message);
 
-	/**
-	 * @brief Processes a specific configuration
-	 *
-	 * This function is called when a new IKE_SA is created
-	 *
-	 * @param this ike_sa_t-message_t object object
- 	 * @param[in] message message_t object to process
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
-	 */
-	status_t (*initialize_connection) (ike_sa_t *this,configuration_t *configuration);
+
+	status_t (*initialize_connection) (ike_sa_t *this, char *name);
 
 	/**
 	 * @brief Get the id of the SA
