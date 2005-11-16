@@ -100,10 +100,10 @@ struct ike_sa_id_s {
 	 * @param this ike_sa_id_t object
  	 * @param initiator address to write initator spi
  	 * @param responder address to write responder spi
- 	 * @param role address to write role
+ 	 * @param is_initiator address to write role
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
-	status_t (*get_values) (ike_sa_id_t *this, spi_t *initiator, spi_t *responder, ike_sa_role_t *role);
+	status_t (*get_values) (ike_sa_id_t *this, spi_t *initiator, spi_t *responder, bool *is_initiator);
 
 	/**
 	 * @brief Clones a given ike_sa_id_t object
@@ -128,6 +128,6 @@ struct ike_sa_id_s {
  *
  * @warning The initiator SPI and role is not changeable after initiating a ike_sa_id object
  */
-ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi,ike_sa_role_t role);
+ike_sa_id_t * ike_sa_id_create(spi_t initiator_spi, spi_t responder_spi, bool is_initiaor);
 
 #endif /*IKE_SA_ID_H_*/
