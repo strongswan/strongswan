@@ -25,9 +25,12 @@
 #include "message.h"
 
 #include "types.h"
+#include "globals.h"
 #include "ike_sa_id.h"
+#include "generator.h"
 #include "utils/linked_list.h"
 #include "utils/allocator.h"
+#include "utils/logger_manager.h"
 #include "payloads/encodings.h"
 #include "payloads/payload.h"
 
@@ -37,7 +40,7 @@
  */
 typedef struct payload_entry_s payload_entry_t;
 
-struct payload_entry_s{
+struct payload_entry_s {
 	/**
 	 * Type of payload
 	 */
@@ -62,11 +65,10 @@ struct private_message_s {
 	message_t public;
 
 
-	/* Private values */
 	/**
 	 * Assigned exchange type
 	 */
-	 exchange_type_t exchange_type;
+	exchange_type_t exchange_type;
 	
 	/**
 	 * TRUE if message is from original initiator, FALSE otherwise.
@@ -78,11 +80,6 @@ struct private_message_s {
 	 * FALSE if message is reply.
 	 */
 	bool is_request;
-	
-	/**
-	 * First Payload type following the header
-	 */
-	payload_type_t first_payload_type;
 	
 	/**
 	 * Message ID of this message
@@ -99,12 +96,22 @@ struct private_message_s {
 	 * 
 	 * Stores incoming packet or last generated one.
 	 */
-	 packet_t *packet;
+	packet_t *packet;
 	 
-	 /**
-	  * Linked List where payload data are stored in
-	  */
+	/**
+	 * Linked List where payload data are stored in
+	 */
 	linked_list_t *payloads;
+	
+	/**
+	 * logger for this message
+	 */
+	logger_t *logger;
+	
+	/**
+	 * destination of this message
+	 */
+	
 };
 
 
@@ -214,18 +221,142 @@ static exchange_type_t get_request (private_message_t *this)
 	return this->is_request;
 }
 
-/**
- * Implements message_t's generate_packet function.
- * See #message_s.generate_packet.
- */
-static status_t generate_packet (private_message_t *this, packet_t **packet)
+static status_t add_payload(private_message_t *this, payload_t *payload)
 {
-	if (this->exchange_type == NOT_SET)
+	if (this->payloads->insert_last(this->payloads, payload) != SUCCESS)
 	{
-		return EXCHANGE_TYPE_NOT_SET;
+		return OUT_OF_RES;	
+	}
+	return SUCCESS;
+}
+
+static status_t set_source(private_message_t *this, host_t *host)
+{
+	if (this->packet->source != NULL)
+	{
+		this->packet->source->destroy(this->packet->source);	
+	}
+	this->packet->source = host;
+	return SUCCESS;
+}
+
+static status_t set_destination(private_message_t *this, host_t *host)
+{
+	if (this->packet->destination != NULL)
+	{
+		this->packet->destination->destroy(this->packet->destination);	
+	}
+	this->packet->destination = host;
+	return SUCCESS;
+}
+
+static status_t get_source(private_message_t *this, host_t **host)
+{
+	*host = this->packet->source;
+	return SUCCESS;
+}
+
+static status_t get_destination(private_message_t *this, host_t **host)
+{
+	*host = this->packet->destination;
+	return SUCCESS;
+}
+
+
+/**
+ * Implements message_t's generate function.
+ * See #message_s.generate.
+ */
+static status_t generate(private_message_t *this, packet_t **packet)
+{
+	generator_t *generator;
+	ike_header_t *ike_header;
+	payload_t *payload, *next_payload;
+	linked_list_iterator_t *iterator;
+	spi_t initiator_spi, responder_spi;
+	bool is_initiator;
+	status_t status;
+	
+	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
+	{
+		return INVALID_STATE;
 	}
 	
+	if (this->packet->source == NULL ||
+		this->packet->destination == NULL) 
+	{
+		return INVALID_STATE;
+	}
 	
+	ike_header = ike_header_create();
+	if (ike_header == NULL)
+	{
+		return OUT_OF_RES;
+	}
+	
+	this->ike_sa_id->get_values(this->ike_sa_id, &initiator_spi, &responder_spi, &is_initiator); 
+	
+	ike_header->set_exchange_type(ike_header, this->exchange_type);
+	ike_header->set_initiator_flag(ike_header, this->original_initiator);
+	ike_header->set_message_id(ike_header, this->message_id);
+	ike_header->set_response_flag(ike_header, !this->is_request);
+	ike_header->set_initiator_flag(ike_header, is_initiator);
+	ike_header->set_initiator_spi(ike_header, initiator_spi);
+	ike_header->set_initiator_spi(ike_header, responder_spi);
+
+	generator = generator_create();
+	
+	payload = (payload_t*)ike_header;
+
+	if (this->payloads->create_iterator(this->payloads, &iterator, TRUE) != SUCCESS)
+	{
+		generator->destroy(generator);
+		ike_header->destroy(ike_header);
+		return OUT_OF_RES;
+	}
+	while(iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&next_payload);
+		payload->set_next_type(payload, next_payload->get_type(next_payload));
+		status = generator->generate_payload(generator, payload);
+		if (status != SUCCESS)
+		{
+			generator->destroy(generator);
+			ike_header->destroy(ike_header);
+			return status;
+		}
+		payload = next_payload;
+	}
+	iterator->destroy(iterator);
+	
+	payload->set_next_type(payload, NO_PAYLOAD);
+	status = generator->generate_payload(generator, payload);
+	if (status != SUCCESS)
+	{
+		generator->destroy(generator);
+		ike_header->destroy(ike_header);
+		return status;
+	}
+	
+	ike_header->destroy(ike_header);
+	
+	
+	
+	if (this->packet->data.ptr != NULL)
+	{
+		allocator_free(this->packet->data.ptr);
+	}	
+	
+	status = generator->write_to_chunk(generator, &(this->packet->data));
+	if (status != SUCCESS)
+	{
+		generator->destroy(generator);
+		return status;
+	}
+	
+	this->packet->clone(this->packet, packet);
+	
+	generator->destroy(generator);
 	return SUCCESS;
 }
 
@@ -235,6 +366,8 @@ static status_t generate_packet (private_message_t *this, packet_t **packet)
  */
 static status_t destroy (private_message_t *this)
 {
+	linked_list_iterator_t *iterator;
+	
 	if (this->packet != NULL)
 	{
 		this->packet->destroy(this->packet);
@@ -243,6 +376,17 @@ static status_t destroy (private_message_t *this)
 	{
 		this->ike_sa_id->destroy(this->ike_sa_id);
 	}
+	
+	this->payloads->create_iterator(this->payloads, &iterator, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		payload_t *payload;
+		iterator->current(iterator, (void**)&payload);	
+		this->logger->log(this->logger, CONTROL_MORE, "Destroying payload of type %s", 
+			mapping_find(payload_type_m, payload->get_type(payload)));
+		payload->destroy(payload);
+	}
+	iterator->destroy(iterator);
 	this->payloads->destroy(this->payloads);
 	allocator_free(this);
 	return SUCCESS;
@@ -270,24 +414,44 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_original_initiator = (bool(*)(message_t*))get_original_initiator;
 	this->public.set_request = (status_t(*)(message_t*, bool))set_request;
 	this->public.get_request = (bool(*)(message_t*))get_request;
-	this->public.generate_packet = (status_t (*) (message_t *, packet_t **)) generate_packet;
+	this->public.add_payload = (status_t(*)(message_t*,payload_t*))add_payload;
+	this->public.generate = (status_t (*) (message_t *, packet_t**)) generate;
+	this->public.set_source = (status_t (*) (message_t*,host_t*)) set_source;
+	this->public.get_source = (status_t (*) (message_t*,host_t**)) get_source;
+	this->public.set_destination = (status_t (*) (message_t*,host_t*)) set_destination;
+	this->public.get_destination = (status_t (*) (message_t*,host_t**)) get_destination;
 	this->public.destroy = (status_t(*)(message_t*))destroy;
 		
 	/* public values */
-	this->exchange_type = NOT_SET;
+	this->exchange_type = EXCHANGE_TYPE_UNDEFINED;
  	this->original_initiator = TRUE;
  	this->is_request = TRUE;
- 	this->first_payload_type = NO_PAYLOAD;
  	this->ike_sa_id = NULL;
  	this->message_id = 0;
 
 	/* private values */
+	if (packet == NULL)
+	{
+		packet = packet_create();	
+	}
+	if (packet == NULL)
+	{
+		allocator_free(this);
+		return NULL;
+	}
 	this->packet = packet;
 	this->payloads = linked_list_create();
 	if (this->payloads == NULL)
 	{
 		allocator_free(this);
 		return NULL;
+	}
+		
+	this->logger = global_logger_manager->create_logger(global_logger_manager, MESSAGE, NULL);
+	if (this->logger == NULL)
+	{
+		this->payloads->destroy(this->payloads);
+		allocator_free(this);	
 	}
 
 	return (&this->public);

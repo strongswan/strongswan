@@ -28,6 +28,9 @@
 #include "ike_sa_id.h"
 #include "payloads/ike_header.h"
 
+
+
+
 /**
  * @brief This class is used to represent an IKEv2-Message.
  *
@@ -136,6 +139,17 @@ struct message_s {
 	bool (*get_request) (message_t *this);
 
 	/**
+	 * @brief Append a payload to the message.
+	 *
+	 * @param this 			message_t object
+	 * @param payload 		payload to append
+	 * @return				
+	 * 						- SUCCESS or
+	 * 						- OUT_OF_RES
+	 */	
+	status_t (*add_payload) (message_t *this, payload_t *payload);
+
+	/**
 	 * @brief Generates the UDP packet of specific message
 	 *
 	 * @param this 		message_t object
@@ -144,7 +158,12 @@ struct message_s {
 	 * 					- EXCHANGE_TYPE_NOT_SET if exchange type is currently not set
 	 * ....
 	 */
-	status_t (*generate_packet) (message_t *this, packet_t **packet);
+	
+	status_t (*generate) (message_t *this, packet_t **packet);
+	status_t (*get_source) (message_t *this, host_t **host);
+	status_t (*set_source) (message_t *this, host_t *host);
+	status_t (*get_destination) (message_t *this, host_t **host);
+	status_t (*set_destination) (message_t *this, host_t *host);
 	
 	/**
 	 * @brief Destroys a message and all including objects
