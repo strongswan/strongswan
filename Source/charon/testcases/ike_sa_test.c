@@ -24,7 +24,6 @@
 
 #include "../types.h"
 #include "../message.h"
-#include "../configuration.h"
 #include "../ike_sa.h"
 
 void test_ike_sa(tester_t *tester)
