@@ -233,7 +233,7 @@ logger_manager_t *global_logger_manager;
  	global_event_queue = event_queue_create();
  	global_send_queue = send_queue_create();
  	
-
+	global_logger_manager->disable_logger_level(global_logger_manager,TESTER,ALL);
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 

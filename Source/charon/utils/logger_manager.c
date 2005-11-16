@@ -141,7 +141,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 			context_name = "NO CONTEXT";
 			break;		
 	}
-	
+	/* logger manager is thread save */
 	pthread_mutex_lock(&(this->mutex));
 	if (name != NULL)
 	{
@@ -186,9 +186,14 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 	
 }
 
+/**
+ * Implements logger_manager_t-function get_logger_level.
+ * @see logger_manager_s.get_logger_level.
+ */
 static logger_level_t get_logger_level (private_logger_manager_t *this, logger_context_t context)
 {
 	linked_list_iterator_t *iterator;
+	/* set logger_level to default logger_level */
 	logger_level_t logger_level = this->default_log_level;
 
 	pthread_mutex_lock(&(this->mutex));
@@ -198,6 +203,8 @@ static logger_level_t get_logger_level (private_logger_manager_t *this, logger_c
 		pthread_mutex_unlock(&(this->mutex));
 		return logger_level;
 	}
+	
+	/* check for existing logger_level entry */
 	while (iterator->has_next(iterator))
 	{
 		
@@ -266,7 +273,6 @@ static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
  */
 static status_t set_logger_level (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable)
 {
-	
 	linked_list_iterator_t *iterator;
 	status_t status;
 	
@@ -278,6 +284,7 @@ static status_t set_logger_level (private_logger_manager_t *this, logger_context
 	}
 
 	status = NOT_FOUND;
+	/* find existing logger_level entry */
 	while (iterator->has_next(iterator))
 	{	
 		logger_levels_entry_t * entry;
@@ -308,7 +315,7 @@ static status_t set_logger_level (private_logger_manager_t *this, logger_context
 	
 	if (status == NOT_FOUND)
 	{
-
+		/* logger_levels entry not existing for current context */
 		logger_levels_entry_t *entry = allocator_alloc_thing(logger_levels_entry_t);
 		if (entry == NULL)
 		{
@@ -316,11 +323,12 @@ static status_t set_logger_level (private_logger_manager_t *this, logger_context
 			return OUT_OF_RES;
 		}
 		entry->context = context;
-		entry->level = 	(enable) ? logger_level : this->default_log_level;
+		entry->level = 	(enable) ? logger_level : (this->default_log_level & (~logger_level));
 
 		status = this->logger_levels->insert_last(this->logger_levels,entry);
 		if (status != SUCCESS)
 		{
+			allocator_free(entry);
 			pthread_mutex_unlock(&(this->mutex));
 			return status;
 		}
