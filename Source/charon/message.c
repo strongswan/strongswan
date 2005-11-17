@@ -86,24 +86,23 @@ struct message_rule_s {
 };
 
 
-supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
-{
-	{SECURITY_ASSOCIATION,1,1},
-	{KEY_EXCHANGE,1,1},
-	{NONCE,1,1},	
-};
-
-supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
+static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
 {
 	{SECURITY_ASSOCIATION,1,1},
 	{KEY_EXCHANGE,1,1},
 	{NONCE,1,1},
 };
 
-message_rule_t message_rules[] = {
-	{IKE_SA_INIT,TRUE,sizeof(supported_ike_sa_init_i_payloads),supported_ike_sa_init_i_payloads},
-	{IKE_SA_INIT,FALSE,sizeof(supported_ike_sa_init_r_payloads),supported_ike_sa_init_r_payloads}
-	
+static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
+{
+	{SECURITY_ASSOCIATION,1,1},
+	{KEY_EXCHANGE,1,1},
+	{NONCE,1,1},
+};
+
+static message_rule_t message_rules[] = {
+	{IKE_SA_INIT,TRUE,(sizeof(supported_ike_sa_init_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_i_payloads},
+	{IKE_SA_INIT,FALSE,(sizeof(supported_ike_sa_init_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_r_payloads}
 };
 
 /**
@@ -200,8 +199,49 @@ struct private_message_s {
 	 */
 	logger_t *logger;
 	
+	/**
+	 * Gets a list of supported payloads of this message type
+	 * 
+	 * @param this							calling object
+	 * @param[out] supported_payloads		first entry of supported payloads
+	 * @param[out] supported_payloads_count	number of supported payload entries
+	 * 
+	 * @return 								SUCCESS
+	 * 										NOT_FOUND if no supported payload definition could be found
+	 */
+	status_t (*get_supported_payloads) (private_message_t *this, supported_payload_entry_t **supported_payloads,size_t *supported_payloads_count);
+	
 };
 
+/**
+ * Implements private_message_t's get_supported_payloads function.
+ * See #private_message_t.get_supported_payloads.
+ */
+status_t get_supported_payloads (private_message_t *this, supported_payload_entry_t **supported_payloads,size_t *supported_payloads_count)
+{
+	int i;
+	exchange_type_t exchange_type = this->public.get_exchange_type(&(this->public));
+	bool is_request = this->public.get_request(&(this->public));
+	
+	
+	for (i = 0; i < (sizeof(message_rules) / sizeof(message_rule_t)); i++)
+	{
+		if ((exchange_type == message_rules[i].exchange_type) &&
+			(is_request == message_rules[i].is_request))
+		{
+			/* found rule for given exchange_type*/
+			*supported_payloads = message_rules[i].supported_payloads;
+			*supported_payloads_count = message_rules[i].supported_payloads_count;
+			
+			return SUCCESS;
+		}
+		
+		
+	}
+	*supported_payloads = NULL;
+	*supported_payloads_count = 0;
+	return NOT_FOUND;
+}
 
 /**
  * Implements message_t's set_ike_sa_id function.
@@ -517,7 +557,7 @@ static status_t parse_header (private_message_t *this)
 	}
 	this->exchange_type = ike_header->get_exchange_type(ike_header);
 	this->message_id = ike_header->get_message_id(ike_header);
-	this->is_request = (!ike_header->get_response_flag(ike_header));
+	this->is_request = (!(ike_header->get_response_flag(ike_header)));
 	if ((ike_header->get_initiator_spi(ike_header) == 0) && (ike_header->get_responder_spi(ike_header) != 0))
 	{
 		/* initiator spi not set */
@@ -539,21 +579,124 @@ static status_t parse_header (private_message_t *this)
 static status_t parse_body (private_message_t *this)
 {
 	status_t status;
+	int i;
 	payload_type_t current_payload_type = this->first_payload;
+	supported_payload_entry_t *supported_payloads;
+	size_t supported_payloads_count;
 	
+	if (this->get_supported_payloads (this,&supported_payloads,&supported_payloads_count) != SUCCESS)
+	{
+		/* message type is not supported */
+		return FAILED;
+	}
 	
 	while (current_payload_type != NO_PAYLOAD)
 	{
 		payload_t *current_payload;
+
+		bool supported = FALSE;
+		for (i = 0; i < supported_payloads_count;i++)
+		{
+			if (supported_payloads[i].payload_type == current_payload_type)
+			{
+				supported = TRUE;
+				break;
+			}
+		}
+		if (!supported && (current_payload_type != NO_PAYLOAD))
+		{
+			/* type not supported */
+			status = NOT_SUPPORTED;
+			this->logger->log(this->logger, ERROR, "Payload type %s not supported",mapping_find(payload_type_m,current_payload_type));
+			break;
+		}
 		
 		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Payload type %s could not be parsed",mapping_find(payload_type_m,current_payload_type));			
+			break;
+		}
 		
 		current_payload_type = current_payload->get_next_type(current_payload);
-		current_payload->destroy(current_payload);
+		
+	//	status = current_payload->verify(current_payload);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Payload type %s could not be verified",mapping_find(payload_type_m,current_payload_type));			
+			status = PARSE_ERROR;
+			break;
+		}
+		
+		status = this->payloads->insert_last(this->payloads,current_payload);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Could not insert current payload to internal list cause of ressource exhausting");
+			break;			
+		}
 		
 	}
+	if (status != SUCCESS)
+	{
+		/* already parsed payload is destroyed later in destroy call from outside this object */
+	}
+	else
+	{
+		linked_list_iterator_t *iterator;
+		
+		status = this->payloads->create_iterator(this->payloads,&iterator,TRUE);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Could not create iterator to check supported payloads");
+			return status;
+		}
+		
+		
+		/* check for payloads with wrong count*/
+		for (i = 0; i < supported_payloads_count;i++)
+		{
+			size_t min_occurence = supported_payloads[i].min_occurence;
+			size_t max_occurence = supported_payloads[i].max_occurence;
+			payload_type_t payload_type = supported_payloads[i].payload_type;
+			size_t found_payloads = 0;
 	
-	return SUCCESS;
+			iterator->reset(iterator);
+			
+			while(iterator->has_next(iterator))
+			{
+				payload_t *current_payload;
+				status = iterator->current(iterator,(void **)&current_payload);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "Could not get payload from internal list");
+					iterator->destroy(iterator);
+					return status;
+				}
+				if (current_payload->get_type(current_payload) == payload_type)
+				{
+					found_payloads++;
+					if (found_payloads > max_occurence)
+					{
+						this->logger->log(this->logger, CONTROL_MORE, "Payload of type %s more than %d times (%d) occured in current message",
+										  mapping_find(payload_type_m,current_payload->get_type(current_payload)),max_occurence,found_payloads);
+						iterator->destroy(iterator);
+						return NOT_SUPPORTED;					
+					}
+				}
+
+			}
+			if (found_payloads < min_occurence)
+			{
+					this->logger->log(this->logger, CONTROL_MORE, "Payload of type %s not occured %d times",
+									  mapping_find(payload_type_m,payload_type),min_occurence);
+					iterator->destroy(iterator);
+					return NOT_SUPPORTED;
+			}
+			
+		}
+		iterator->destroy(iterator);
+	}
+	return status;
 
 }
 
@@ -588,8 +731,8 @@ static status_t destroy (private_message_t *this)
 	iterator->destroy(iterator);
 	this->payloads->destroy(this->payloads);
 	this->parser->destroy(this->parser);
-
-	allocator_free(this);
+	
+allocator_free(this);
 	return SUCCESS;
 }
 
@@ -636,6 +779,9 @@ message_t *message_create_from_packet(packet_t *packet)
  	this->ike_sa_id = NULL;
  	this->first_payload = NO_PAYLOAD;
  	this->message_id = 0;
+
+	/* private functions */
+	this->get_supported_payloads = get_supported_payloads;
 
 	/* private values */
 	if (packet == NULL)

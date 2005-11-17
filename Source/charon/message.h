@@ -184,22 +184,11 @@ struct message_s {
 	status_t (*add_payload) (message_t *this, payload_t *payload);
 
 	/**
-	 * @brief Generates the UDP packet of specific message
-	 *
-	 * @param this 		message_t object
-	 * @return
-	 * 					- SUCCESS if packet could be generated
-	 * 					- EXCHANGE_TYPE_NOT_SET if exchange type is currently not set
-	 * ....
-	 */
-
-	/**
 	 * @brief Parses header of message
 	 *
 	 * @param this 		message_t object
 	 * @return
 	 * 					- SUCCESS if header could be parsed
-	 * 					- NOT_SUPPORTED if payload_type is not supported
 	 *					- OUT_OF_RES if out of ressources
 	 *					- PARSE_ERROR if corrupted/invalid data found
 	 */
@@ -211,12 +200,22 @@ struct message_s {
 	 * @param this 		message_t object
 	 * @return
 	 * 					- SUCCESS if header could be parsed
-	 * 					- NOT_SUPPORTED if payload_type is not supported
+	 * 					- NOT_SUPPORTED if unsupported payload are contained in body
 	 *					- OUT_OF_RES if out of ressources
+	 * 					- FAILED if message type is not suppported!
 	 *					- PARSE_ERROR if corrupted/invalid data found
 	 */
 	status_t (*parse_body) (message_t *this);
-	
+
+	/**
+	 * @brief Generates the UDP packet of specific message
+	 *
+	 * @param this 		message_t object
+	 * @return
+	 * 					- SUCCESS if packet could be generated
+	 * 					- EXCHANGE_TYPE_NOT_SET if exchange type is currently not set
+	 * ....
+	 */	
 	status_t (*generate) (message_t *this, packet_t **packet);
 	status_t (*get_source) (message_t *this, host_t **host);
 	status_t (*set_source) (message_t *this, host_t *host);
