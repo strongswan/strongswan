@@ -48,17 +48,19 @@ static status_t get_remote_host(private_configuration_manager_t *this, char *nam
 	/* some hard coded users for testing */
 	host_t *remote;
 	if (strcmp(name, "pinflb30") == 0) {
-		remote = host_create(AF_INET, "152.96.193.130", 4500);
+		remote = host_create(AF_INET, "152.96.193.130", 500);
 		if (remote == NULL) {
 			return OUT_OF_RES;	
 		}
+		*host = remote;
 		return SUCCESS;
 	}
 	else if (strcmp(name, "pinflb31") == 0) {
-		remote = host_create(AF_INET, "152.96.193.131", 4500);
+		remote = host_create(AF_INET, "152.96.193.131", 500);
 		if (remote == NULL) {
 			return OUT_OF_RES;	
 		}
+		*host = remote;
 		return SUCCESS;
 	}
 	return NOT_FOUND;
@@ -68,7 +70,7 @@ static status_t get_local_host(private_configuration_manager_t *this, char *name
 {
 	/* use default route for now */
 	host_t *local;
-	local = host_create(AF_INET, "0.0.0.0", 4500);
+	local = host_create(AF_INET, "0.0.0.0", 0);
 	if (local == NULL)
 	{
 		return OUT_OF_RES;	
