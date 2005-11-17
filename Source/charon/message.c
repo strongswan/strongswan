@@ -35,6 +35,77 @@
 #include "payloads/payload.h"
 #include "parser.h"
 
+
+/**
+ * Supported payload entry used in message_rule_t
+ * 
+ */
+typedef struct supported_payload_entry_s supported_payload_entry_t;
+
+struct supported_payload_entry_s {
+	/**
+	 * Payload type
+	 */
+	 payload_type_t payload_type;
+	 
+	 /**
+	  * Minimal occurence of this payload
+	  */
+	 size_t min_occurence;
+
+	 /**
+	  * Max occurence of this payload
+	  */	 
+	 size_t max_occurence;
+};
+
+/**
+ * Message Rule used to find out which payloads are supported by each message type
+ * 
+ */
+typedef struct message_rule_s message_rule_t;
+
+struct message_rule_s {
+	/**
+	 * Type of message
+	 */
+	exchange_type_t exchange_type;
+	
+	/**
+	 * Is message a request or response
+	 */
+	bool is_request;
+	 /**
+	  * Number of supported payloads
+	  */
+	 size_t supported_payloads_count;
+	/**
+	 * Pointer to first supported payload entry
+	 */
+	 supported_payload_entry_t *supported_payloads;
+};
+
+
+supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
+{
+	{SECURITY_ASSOCIATION,1,1},
+	{KEY_EXCHANGE,1,1},
+	{NONCE,1,1},	
+};
+
+supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
+{
+	{SECURITY_ASSOCIATION,1,1},
+	{KEY_EXCHANGE,1,1},
+	{NONCE,1,1},
+};
+
+message_rule_t message_rules[] = {
+	{IKE_SA_INIT,TRUE,sizeof(supported_ike_sa_init_i_payloads),supported_ike_sa_init_i_payloads},
+	{IKE_SA_INIT,FALSE,sizeof(supported_ike_sa_init_r_payloads),supported_ike_sa_init_r_payloads}
+	
+};
+
 /**
  * Entry for a payload in the internal used linked list
  * 
@@ -65,6 +136,21 @@ struct private_message_s {
 	 */
 	message_t public;
 
+
+	/**
+	 * Minor version of message
+	 */
+	u_int8_t major_version;
+	
+	/**
+	 * Major version of message
+	 */
+	u_int8_t minor_version;
+	
+	/**
+	 * First Payload in message
+	 */
+	payload_type_t first_payload;
 
 	/**
 	 * Assigned exchange type
@@ -164,6 +250,45 @@ static u_int32_t get_message_id (private_message_t *this)
 	return this->message_id;
 }
 
+/**
+ * Implements message_t's set_major_version function.
+ * See #message_s.set_major_version.
+ */
+static status_t set_major_version (private_message_t *this,u_int8_t major_version)
+{
+	this->major_version = major_version;
+	return SUCCESS;
+}
+
+
+/**
+ * Implements message_t's get_major_version function.
+ * See #message_s.get_major_version.
+ */
+static u_int8_t get_major_version (private_message_t *this)
+{
+	return this->major_version;
+}
+
+/**
+ * Implements message_t's set_minor_version function.
+ * See #message_s.set_minor_version.
+ */
+static status_t set_minor_version (private_message_t *this,u_int8_t minor_version)
+{
+	this->minor_version = minor_version;
+	return SUCCESS;
+}
+
+
+/**
+ * Implements message_t's get_minor_version function.
+ * See #message_s.get_minor_version.
+ */
+static u_int8_t get_minor_version (private_message_t *this)
+{
+	return this->minor_version;
+}
 
 /**
  * Implements message_t's set_exchange_type function.
@@ -363,10 +488,10 @@ static status_t generate(private_message_t *this, packet_t **packet)
 }
 
 /**
- * Implements message_t's parse_and_verify_header function.
- * See #message_s.parse_and_verify_header.
+ * Implements message_t's parse_header function.
+ * See #message_s.parse_header.
  */
-static status_t parse_and_verify_header (private_message_t *this)
+static status_t parse_header (private_message_t *this)
 {
 	ike_header_t *ike_header;
 	status_t status;
@@ -393,24 +518,45 @@ static status_t parse_and_verify_header (private_message_t *this)
 	this->exchange_type = ike_header->get_exchange_type(ike_header);
 	this->message_id = ike_header->get_message_id(ike_header);
 	this->is_request = (!ike_header->get_response_flag(ike_header));
-	if ((ike_header->get_initiator_spi(ike_header) == 0) && (ike_header->get_initiator_spi(ike_header) != 0))
+	if ((ike_header->get_initiator_spi(ike_header) == 0) && (ike_header->get_responder_spi(ike_header) != 0))
 	{
 		/* initiator spi not set */
 		ike_header->destroy(ike_header);		
-		return VERIFY_ERROR;
+		return PARSE_ERROR;
 	}
-	if (!((ike_header->get_maj_version(ike_header) == 2) && (ike_header->get_min_version(ike_header) == 0)))
-	{
-		/* version not supported */
-		ike_header->destroy(ike_header);		
-		return NOT_SUPPORTED;	
-	}
-
-
-
+	this->major_version = ike_header->get_maj_version(ike_header);
+	this->minor_version = ike_header->get_min_version(ike_header);
+	this->first_payload = ike_header->payload_interface.get_next_type(&(ike_header->payload_interface));
+	
 	ike_header->destroy(ike_header);	
 	return SUCCESS;	
 }
+
+/**
+ * Implements message_t's parse_body function.
+ * See #message_s.parse_body.
+ */
+static status_t parse_body (private_message_t *this)
+{
+	status_t status;
+	payload_type_t current_payload_type = this->first_payload;
+	
+	
+	while (current_payload_type != NO_PAYLOAD)
+	{
+		payload_t *current_payload;
+		
+		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
+		
+		current_payload_type = current_payload->get_next_type(current_payload);
+		current_payload->destroy(current_payload);
+		
+	}
+	
+	return SUCCESS;
+
+}
+
 
 
 /**
@@ -441,6 +587,8 @@ static status_t destroy (private_message_t *this)
 	}
 	iterator->destroy(iterator);
 	this->payloads->destroy(this->payloads);
+	this->parser->destroy(this->parser);
+
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -457,6 +605,10 @@ message_t *message_create_from_packet(packet_t *packet)
 	}
 
 	/* public functions */
+	this->public.set_major_version = (status_t(*)(message_t*, u_int8_t))set_major_version;
+	this->public.get_major_version = (u_int8_t(*)(message_t*))get_major_version;
+	this->public.set_minor_version = (status_t(*)(message_t*, u_int8_t))set_minor_version;
+	this->public.get_minor_version = (u_int8_t(*)(message_t*))get_minor_version;
 	this->public.set_message_id = (status_t(*)(message_t*, u_int32_t))set_message_id;
 	this->public.get_message_id = (u_int32_t(*)(message_t*))get_message_id;
 	this->public.set_ike_sa_id = (status_t(*)(message_t*, ike_sa_id_t *))set_ike_sa_id;
@@ -473,7 +625,8 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_source = (status_t (*) (message_t*,host_t**)) get_source;
 	this->public.set_destination = (status_t (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (status_t (*) (message_t*,host_t**)) get_destination;
-	this->public.parse_and_verify_header = 	(status_t (*) (message_t *)) parse_and_verify_header;
+	this->public.parse_header = 	(status_t (*) (message_t *)) parse_header;
+	this->public.parse_body = 	(status_t (*) (message_t *)) parse_body;
 	this->public.destroy = (status_t(*)(message_t*))destroy;
 		
 	/* public values */
@@ -481,6 +634,7 @@ message_t *message_create_from_packet(packet_t *packet)
  	this->original_initiator = TRUE;
  	this->is_request = TRUE;
  	this->ike_sa_id = NULL;
+ 	this->first_payload = NO_PAYLOAD;
  	this->message_id = 0;
 
 	/* private values */
