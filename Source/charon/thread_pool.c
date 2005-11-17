@@ -106,13 +106,20 @@ static void job_processing(private_thread_pool_t *this)
 					packet->destroy(packet);
 					break;					
 				}
-				status = message->parse_and_verify_header(message);
+				status = message->parse_header(message);
 				if (status != SUCCESS)
 				{
 					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Message header could not be verified!", pthread_self());				
 					message->destroy(message);
 					break;										
 				}
+				
+				if ((message->get_major_version(message) != IKE_MAJOR_VERSION) || (message->get_minor_version(message) != IKE_MINOR_VERSION))
+				{
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: IKE Version %d.%d not supported", pthread_self(),message->get_major_version(message),message->get_minor_version(message));	
+					/* Todo send notify */
+				}
+				
 				status = message->get_ike_sa_id(message,&ike_sa_id);
 				if (status != SUCCESS)
 				{
@@ -136,7 +143,7 @@ static void job_processing(private_thread_pool_t *this)
 				}
 				
 				status = global_ike_sa_manager->checkin(global_ike_sa_manager,ike_sa);
-				{
+				if (status != SUCCESS){
 					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Checkin of IKE SA return errors", pthread_self());
 				}
 				message->destroy(message);
