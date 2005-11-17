@@ -139,26 +139,21 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	status_t status;
 	/* @TODO Add Message Processing here */
 	
-	this->logger->log(this->logger, CONTROL_MORE, "Process message ...");
-	
-	//this->logger->log(this->logger, CONTROL_MORE, "First Payload type %s",mapping_find(payload_type_m,message->get_next_payload(message)));
+	this->logger->log(this->logger, CONTROL_MORE, "Process message of exchange type %s",mapping_find(exchange_type_m,message->get_exchange_type(message)));
 	
 	status = message->parse_body(message);
-	
-	
-	/*
-			iterator->current(iterator, (void**)&next_payload);
-		payload->set_next_type(payload, next_payload->get_type(next_payload));
-		status = generator->generate_payload(generator, payload);
-		if (status != SUCCESS)
-		{
-			generator->destroy(generator);
-			ike_header->destroy(ike_header);
-			return status;
-		}
-		payload = next_payload;
-	}*/
-	
+	switch (status)
+	{
+	 	case SUCCESS:
+	 	{
+	 		break;
+	 	}
+		default:
+	 	{
+	 		this->logger->log(this->logger, CONTROL_MORE, "Error of type %s while parsing message body",mapping_find(status_m,status));
+		 	return FAILED;
+	 	}
+	}
 	
 	return status;
 }
@@ -436,7 +431,7 @@ static status_t destroy (private_ike_sa_t *this)
 	this->child_sas->destroy(this->child_sas);
 	
 	this->ike_sa_id->destroy(this->ike_sa_id);
-	
+	this->sent_messages->destroy(this->sent_messages);
 	this->randomizer->destroy(this->randomizer);
 	
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
