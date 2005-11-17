@@ -136,8 +136,31 @@ struct private_ike_sa_s {
  */
 static status_t process_message (private_ike_sa_t *this, message_t *message)
 {
+	status_t status;
 	/* @TODO Add Message Processing here */
-	return SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL_MORE, "Process message ...");
+	
+	//this->logger->log(this->logger, CONTROL_MORE, "First Payload type %s",mapping_find(payload_type_m,message->get_next_payload(message)));
+	
+	status = message->parse_body(message);
+	
+	
+	/*
+			iterator->current(iterator, (void**)&next_payload);
+		payload->set_next_type(payload, next_payload->get_type(next_payload));
+		status = generator->generate_payload(generator, payload);
+		if (status != SUCCESS)
+		{
+			generator->destroy(generator);
+			ike_header->destroy(ike_header);
+			return status;
+		}
+		payload = next_payload;
+	}*/
+	
+	
+	return status;
 }
 
 /**
