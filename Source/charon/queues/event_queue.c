@@ -336,7 +336,7 @@ static status_t event_queue_destroy(private_event_queue_t *this)
 			this->list->destroy(this->list);
 			break;
 		}
-		event->job->destroy(event->job);
+		event->job->destroy_all(event->job);
 		event->destroy(event);
 	}
 	this->list->destroy(this->list);
