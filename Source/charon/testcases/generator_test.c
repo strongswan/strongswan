@@ -764,7 +764,7 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	
 	
 	nonce.ptr = allocator_clone_bytes("1234567890123456", strlen("1234567890123456"));
-	nonce.len = strlen(nonce.ptr);
+	nonce.len = strlen("1234567890123456");
 
 	nonce_payload->set_nonce(nonce_payload,nonce);
 	
