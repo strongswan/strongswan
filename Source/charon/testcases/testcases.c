@@ -26,6 +26,8 @@
 #include "../queues/job_queue.h"
 #include "../queues/event_queue.h"
 #include "../queues/send_queue.h"
+#include "../configuration_manager.h"
+#include "../ike_sa_manager.h"
 #include "../socket.h"
 #include "../utils/logger_manager.h"
 #include "../utils/allocator.h"
@@ -174,10 +176,20 @@ job_queue_t *global_job_queue;
  */
 event_queue_t *global_event_queue;
  
- /**
-  * Global send-queue
-  */
+/**
+ * Global send-queue
+ */
 send_queue_t *global_send_queue;
+
+/**
+ * Global configuration_manager
+ */
+configuration_manager_t *global_configuration_manager;
+
+/**
+ * Global configuration_manager
+ */
+ike_sa_manager_t *global_ike_sa_manager;
 
  /**
   * Global socket
@@ -200,14 +212,14 @@ logger_manager_t *global_logger_manager;
 	&linked_list_insert_and_remove_test,
 	&thread_pool_test,
 	&job_queue_test1,
-	//&event_queue_test,
+	&event_queue_test,
 	&send_queue_test,
 	&scheduler_test,
 	&socket_test,
 	&sender_test,
 	&receiver_test,
 	&ike_sa_id_test,
-	&ike_sa_test,
+	//&ike_sa_test,
 	&generator_test1,
 	&generator_test2,
 	&parser_test1,
@@ -232,6 +244,8 @@ logger_manager_t *global_logger_manager;
  	global_job_queue = job_queue_create();
  	global_event_queue = event_queue_create();
  	global_send_queue = send_queue_create();
+ 	global_configuration_manager = configuration_manager_create();
+ 	global_ike_sa_manager = ike_sa_manager_create();
  	
 	global_logger_manager->disable_logger_level(global_logger_manager,TESTER,ALL);
  	 	
