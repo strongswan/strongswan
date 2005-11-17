@@ -52,6 +52,28 @@ struct linked_list_iterator_s {
 	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*current) (linked_list_iterator_t *this, void **value);
+	
+	/**
+	 * @brief inserts a new item before the given iterator position
+	 * 
+	 * The iterator position is not changed after inserting
+	 * 
+	 * @param this calling iterator
+	 * @param[in] item value to insert in list
+	 * @return SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*insert_before) (linked_list_iterator_t *this, void *item);
+
+	/**
+	 * @brief inserts a new item after the given iterator position
+	 * 
+	 * The iterator position is not changed after inserting
+	 * 
+	 * @param this calling iterator
+	 * @param[in] item value to insert in list
+	 * @return SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*insert_after) (linked_list_iterator_t *this, void *item);
 
 	/**
 	 * @brief Resets a linked_list_iterator object
@@ -112,30 +134,6 @@ struct linked_list_s {
 	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*insert_first) (linked_list_t *linked_list, void *item);
-	
-	/**
-	 * @brief inserts a new item before the given iterator position
-	 * 
-	 * The iterator position is not changed after inserting
-	 * 
-	 * @param linked_list calling object
-	 * @param iterator new element is inserted before this iterator
-	 * @param[in] item value to insert in list
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*insert_before) (linked_list_t *linked_list, linked_list_iterator_t *iterator, void *item);
-
-	/**
-	 * @brief inserts a new item after the given iterator position
-	 * 
-	 * The iterator position is not changed after inserting
-	 * 
-	 * @param linked_list calling object
-	 * @param iterator new element is inserted after this iterator
-	 * @param[in] item value to insert in list
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*insert_after) (linked_list_t *linked_list, linked_list_iterator_t *iterator, void *item);
 
 	/**
 	 * @brief removes an element from list at the given iterator position
