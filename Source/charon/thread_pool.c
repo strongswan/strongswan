@@ -219,6 +219,30 @@ static void job_processing(private_thread_pool_t *this)
 				this->logger->log(this->logger, CONTROL_MORE, "thread %u: Job of type %s not supported!", pthread_self(),mapping_find(job_type_m,job_type));				
 				break;
 			}
+			
+			case DELETE_IKE_SA:
+			{
+				delete_ike_sa_job_t *delete_ike_sa_job = (delete_ike_sa_job_t*) job;
+				ike_sa_id_t *ike_sa_id = delete_ike_sa_job->get_ike_sa_id(delete_ike_sa_job);
+				status_t status;
+								
+				{
+					/* only for logging */
+					u_int64_t initiator;
+					u_int64_t responder;
+					bool is_initiator;
+					ike_sa_id->get_values(ike_sa_id,&initiator,&responder,&is_initiator);
+					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Going to delete IKE SA with SPI's I:%d, R:%d", pthread_self(),initiator,responder);
+				}
+				status = global_ike_sa_manager->delete(global_ike_sa_manager, ike_sa_id);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR, "thread %u: %s  could not delete IKE_SA.", 
+										pthread_self(), mapping_find(status_m, status));
+				}
+				break;
+				
+			}
 		}
 		job->destroy(job);
 	}
