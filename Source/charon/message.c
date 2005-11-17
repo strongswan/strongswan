@@ -701,8 +701,7 @@ static status_t parse_body (private_message_t *this)
 		}
 		iterator->destroy(iterator);
 	}
-	return status;
-
+	return status;	
 }
 
 
