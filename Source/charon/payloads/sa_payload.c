@@ -102,6 +102,80 @@ encoding_rule_t sa_payload_encodings[] = {
 	{ PROPOSALS,		offsetof(private_sa_payload_t, proposals) 				}
 };
 
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !C!  RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                          <Proposals>                          ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/**
+ * Implements payload_t's verify function.
+ * See #payload_s.verify for description.
+ */
+static status_t verify(private_sa_payload_t *this)
+{
+	int proposal_number = 1;
+	status_t status;
+	linked_list_iterator_t *iterator;
+	bool first = TRUE;
+	
+	if (this->critical)
+	{
+		/* critical bit set! */
+		return FAILED;
+	}
+
+	/* check proposal numbering */		
+	status = this->proposals->create_iterator(this->proposals,&iterator,TRUE);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	
+	while(iterator->has_next(iterator))
+	{
+		proposal_substructure_t *current_proposal;
+		status = iterator->current(iterator,(void **)&current_proposal);
+		{
+			break;
+		}
+		if (current_proposal->get_proposal_number(current_proposal) > proposal_number)
+		{
+			if (first) 
+			{
+				/* first number must be 1 */
+				status = FAILED;
+				break;
+			}
+			
+			if (current_proposal->get_proposal_number(current_proposal) != (proposal_number + 1))
+			{
+				/* must be only one more then previous proposal */
+				status = FAILED;
+				break;
+			}
+		}
+		else if (current_proposal->get_proposal_number(current_proposal) < proposal_number)
+		{
+			iterator->destroy(iterator);
+			/* must not be smaller then proceeding one */
+			status = FAILED;
+			break;
+		}
+		first = FALSE;
+	}
+	
+	iterator->destroy(iterator);
+	return status;
+}
+
+
 /**
  * Implements payload_t's and sa_payload_t's destroy function.
  * See #payload_s.destroy or sa_payload_s.destroy for description.
@@ -234,12 +308,16 @@ sa_payload_t *sa_payload_create()
 		return NULL;	
 	}	
 	
+	/* public interface */
+	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
 	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	
+	/* public functions */
 	this->public.create_proposal_substructure_iterator = (status_t (*) (sa_payload_t *,linked_list_iterator_t **,bool)) create_proposal_substructure_iterator;
 	this->public.add_proposal_substructure = (status_t (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
 	this->public.destroy = (status_t (*) (sa_payload_t *)) destroy;
@@ -248,7 +326,7 @@ sa_payload_t *sa_payload_create()
 	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
-	this->critical = SA_PAYLOAD_CRITICAL_FLAG;
+	this->critical = 1;//SA_PAYLOAD_CRITICAL_FLAG;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = SA_PAYLOAD_HEADER_LENGTH;
 

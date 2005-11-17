@@ -100,6 +100,37 @@ encoding_rule_t nonce_payload_encodings[] = {
 	{ NONCE_DATA,			offsetof(private_nonce_payload_t, nonce) 		}
 };
 
+/*                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Next Payload  !C!  RESERVED   !         Payload Length        !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                            Nonce Data                         ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/**
+ * Implements payload_t's verify function.
+ * See #payload_s.verify for description.
+ */
+static status_t verify(private_nonce_payload_t *this)
+{
+	if (this->critical)
+	{
+		/* critical bit is set! */
+		return FAILED;
+	}
+	if ((this->nonce.len < 16) || ((this->nonce.len > 256)))
+	{
+		/* nonce length is wrong */
+		return FAILED;
+	}
+	
+	return SUCCESS;
+}
+
 /**
  * Implements payload_t's and nonce_payload_t's destroy function.
  * See #payload_s.destroy or nonce_payload_s.destroy for description.
@@ -203,6 +234,7 @@ nonce_payload_t *nonce_payload_create()
 		return NULL;	
 	}	
 	
+	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;

@@ -192,6 +192,102 @@ encoding_rule_t transform_substructure_encodings[] = {
 	{ TRANSFORM_ATTRIBUTES,	offsetof(private_transform_substructure_t, attributes) 		}
 };
 
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! 0 (last) or 3 !   RESERVED    !        Transform Length       !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !Transform Type !   RESERVED    !          Transform ID         !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                      Transform Attributes                     ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+
+/**
+ * Implements payload_t's verify function.
+ * See #payload_s.verify for description.
+ */
+static status_t verify(private_transform_substructure_t *this)
+{
+	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != TRANSFORM_SUBSTRUCTURE))
+	{
+		/* must be 0 or 3 */
+		return FAILED;
+	}
+
+	switch (this->transform_type)
+	{
+		case ENCRYPTION_ALGORITHM:
+		{
+			if ((this->transform_id < ENCR_DES_IV64) || (this->transform_id > ENCR_AES_CTR))
+			{
+				return FAILED;
+			}
+			break;
+		}
+		case	 PSEUDO_RANDOM_FUNCTION:
+		{
+			if ((this->transform_id < PRF_HMAC_MD5) || (this->transform_id > PRF_AES128_CBC))
+			{
+				return FAILED;
+			}
+			break;
+		}
+		case INTEGRITIY_ALGORITHM:
+		{
+			if ((this->transform_id < AUTH_HMAC_MD5_96) || (this->transform_id > AUTH_AES_XCBC_96))
+			{
+				return FAILED;
+			}
+			break;
+		}
+		case DIFFIE_HELLMAN_GROUP:
+		{
+			switch (this->transform_id)
+			{
+				case MODP_768_BIT:
+				case MODP_1024_BIT:
+				case MODP_1536_BIT:
+				case MODP_2048_BIT:
+				case MODP_3072_BIT:
+				case MODP_4096_BIT:
+				case MODP_6144_BIT:
+				case MODP_8192_BIT:
+				{
+					break;
+				}
+				default:
+				{
+					return FAILED;
+				}
+			}
+			
+			
+			break;
+		}
+		case EXTENDED_SEQUENCE_NUNBERS:
+		{
+			if ((this->transform_id != NO_EXT_SEQ_NUMBERS) && (this->transform_id != EXT_SEQ_NUMBERS))
+			{
+				return FAILED;
+			}
+			break;
+		}
+		default:
+		{
+			/* not a supported transform type! */
+			return FAILED;
+		}
+	}
+
+	/* proposal number is checked in SA payload */	
+	return SUCCESS;
+}
+
 /**
  * Implements payload_t's and transform_substructure_t's destroy function.
  * See #payload_s.destroy or transform_substructure_s.destroy for description.
@@ -381,12 +477,16 @@ transform_substructure_t *transform_substructure_create()
 		return NULL;	
 	}	
 	
+	/* payload interface */
+	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
 	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;	
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	
+	/* public functions */
 	this->public.create_transform_attribute_iterator = (status_t (*) (transform_substructure_t *,linked_list_iterator_t **,bool)) create_transform_attribute_iterator;
 	this->public.add_transform_attribute = (status_t (*) (transform_substructure_t *,transform_attribute_t *)) add_transform_attribute;
 	this->public.set_is_last_transform = (status_t (*) (transform_substructure_t *,bool)) set_is_last_transform;

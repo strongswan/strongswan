@@ -211,6 +211,16 @@ struct payload_s {
 	 * @return 					length of this payload
 	 */
 	size_t (*get_length) (payload_t *this);
+	
+	/**
+	 * @brief Verifies payload structure and makes consistence check
+	 *
+	 * @param this 				calling object
+	 * @return 					
+	 *							- SUCCESS
+	 * 							- FAILED if consistence not given
+	 */
+	status_t (*verify) (payload_t *this);
 };
 
 /**

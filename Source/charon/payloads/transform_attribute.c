@@ -96,6 +96,32 @@ encoding_rule_t transform_attribute_encodings[] = {
 	{ ATTRIBUTE_VALUE,			offsetof(private_transform_attribute_t, attribute_value) 			}
 };
 
+/*
+                          1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !A!       Attribute Type        !    AF=0  Attribute Length     !
+      !F!                             !    AF=1  Attribute Value      !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                   AF=0  Attribute Value                       !
+      !                   AF=1  Not Transmitted                       !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/**
+ * Implements payload_t's verify function.
+ * See #payload_s.verify for description.
+ */
+static status_t verify(private_transform_attribute_t *this)
+{
+	if (this->attribute_type != KEY_LENGTH)
+	{
+		return FAILED;
+	}
+	
+	return SUCCESS;
+}
+
 /**
  * Implements payload_t's and transform_attribute_t's destroy function.
  * See #payload_s.destroy or transform_attribute_s.destroy for description.
@@ -277,12 +303,16 @@ transform_attribute_t *transform_attribute_create()
 		return NULL;	
 	}	
 	
+	/* payload interface */
+	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
 	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	
+	/* public functions */
 	this->public.set_value_chunk = (status_t (*) (transform_attribute_t *,chunk_t)) set_value_chunk;
 	this->public.set_value = (status_t (*) (transform_attribute_t *,u_int16_t)) set_value;
 	this->public.get_value_chunk = (chunk_t (*) (transform_attribute_t *)) get_value_chunk;

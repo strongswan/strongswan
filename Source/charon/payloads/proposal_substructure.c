@@ -126,6 +126,49 @@ encoding_rule_t proposal_substructure_encodings[] = {
 	{ TRANSFORMS,				offsetof(private_proposal_substructure_t, transforms) 	}
 };
 
+/*
+                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! 0 (last) or 2 !   RESERVED    !         Proposal Length       !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ! Proposal #    !  Protocol ID  !    SPI Size   !# of Transforms!
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      ~                        SPI (variable)                         ~
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                                                               !
+      ~                        <Transforms>                           ~
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+/**
+ * Implements payload_t's verify function.
+ * See #payload_s.verify for description.
+ */
+static status_t verify(private_proposal_substructure_t *this)
+{
+	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != PROPOSAL_SUBSTRUCTURE))
+	{
+		/* must be 0 or 2 */
+		return FAILED;
+	}
+	if (this->transforms_count != this->transforms->get_count(this->transforms))
+	{
+		/* must be the same! */
+		return FAILED;
+	}
+
+	if (this->protocol_id > 4)
+	{
+		/* reserved are not supported */
+		return FAILED;
+	}
+
+	/* proposal number is checked in SA payload */	
+	return SUCCESS;
+}
+
 /**
  * Implements payload_t's and proposal_substructure_t's destroy function.
  * See #payload_s.destroy or proposal_substructure_s.destroy for description.
@@ -354,13 +397,17 @@ proposal_substructure_t *proposal_substructure_create()
 	{
 		return NULL;	
 	}	
-	
+
+	/* interface functions */	
+	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
 	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;	
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	
+	/* public functions */
 	this->public.create_transform_substructure_iterator = (status_t (*) (proposal_substructure_t *,linked_list_iterator_t **,bool)) create_transform_substructure_iterator;
 	this->public.add_transform_substructure = (status_t (*) (proposal_substructure_t *,transform_substructure_t *)) add_transform_substructure;
 	this->public.set_proposal_number = (status_t (*) (proposal_substructure_t *,u_int8_t))set_proposal_number;

@@ -143,6 +143,47 @@ encoding_rule_t ike_header_encodings[] = {
 	{ HEADER_LENGTH,	offsetof(private_ike_header_t, length) 			}
 };
 
+
+/*                           1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                       IKE_SA Initiator's SPI                  !
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                       IKE_SA Responder's SPI                  !
+      !                                                               !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !  Next Payload ! MjVer ! MnVer ! Exchange Type !     Flags     !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                          Message ID                           !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !                            Length                             !
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
+
+/**
+ * Implements payload_t's verify function.
+ * See #payload_s.verify for description.
+ */
+static status_t verify(private_ike_header_t *this)
+{
+	if ((this->exchange_type < IKE_SA_INIT) || (this->exchange_type > INFORMATIONAL))
+	{
+		/* unsupported exchange type */
+		return FAILED;
+	}
+	if ((this->initiator_spi == 0) && (this->responder_spi != 0))
+	{
+		/* initiator spi not set */
+		return FAILED;
+	}
+	
+	/* verification of version is not done in here */
+	
+	return SUCCESS;
+}
+
 /**
  * Implements payload_t's set_next_type function.
  * See #payload_s.set_next_type for description.
@@ -348,6 +389,7 @@ ike_header_t *ike_header_create()
 		return NULL;	
 	}	
 	
+	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = get_encoding_rules;
 	this->public.payload_interface.get_length = get_length;
 	this->public.payload_interface.get_next_type = get_next_type;
