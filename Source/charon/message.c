@@ -540,9 +540,19 @@ static status_t parse_header (private_message_t *this)
 	status = this->parser->parse_payload(this->parser,HEADER,(payload_t **) &ike_header);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "Header could not be parsed");
 		return status;
 		
 	}
+	
+	/* verify payload */
+	status = ike_header->payload_interface.verify(&(ike_header->payload_interface));
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Header could not be verified");
+		return status;
+	}	
+	
 	if (this->ike_sa_id != NULL)
 	{
 		this->ike_sa_id->destroy(this->ike_sa_id);
@@ -552,18 +562,13 @@ static status_t parse_header (private_message_t *this)
 	this->ike_sa_id = ike_sa_id_create(ike_header->get_initiator_spi(ike_header),ike_header->get_responder_spi(ike_header),this->original_initiator);
 	if (this->ike_sa_id == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "Could not creaee ike_sa_id object");
 		ike_header->destroy(ike_header);
 		return OUT_OF_RES;
 	}
 	this->exchange_type = ike_header->get_exchange_type(ike_header);
 	this->message_id = ike_header->get_message_id(ike_header);
 	this->is_request = (!(ike_header->get_response_flag(ike_header)));
-	if ((ike_header->get_initiator_spi(ike_header) == 0) && (ike_header->get_responder_spi(ike_header) != 0))
-	{
-		/* initiator spi not set */
-		ike_header->destroy(ike_header);		
-		return PARSE_ERROR;
-	}
 	this->major_version = ike_header->get_maj_version(ike_header);
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(&(ike_header->payload_interface));
@@ -620,11 +625,11 @@ static status_t parse_body (private_message_t *this)
 		
 		current_payload_type = current_payload->get_next_type(current_payload);
 		
-	//	status = current_payload->verify(current_payload);
+		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Payload type %s could not be verified",mapping_find(payload_type_m,current_payload_type));			
-			status = PARSE_ERROR;
+			status = VERIFY_ERROR;
 			break;
 		}
 		

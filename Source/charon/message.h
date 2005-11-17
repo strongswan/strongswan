@@ -191,6 +191,7 @@ struct message_s {
 	 * 					- SUCCESS if header could be parsed
 	 *					- OUT_OF_RES if out of ressources
 	 *					- PARSE_ERROR if corrupted/invalid data found
+	 * 					- FAILED if consistence check of header failed
 	 */
 	status_t (*parse_header) (message_t *this);
 	
@@ -204,6 +205,7 @@ struct message_s {
 	 *					- OUT_OF_RES if out of ressources
 	 * 					- FAILED if message type is not suppported!
 	 *					- PARSE_ERROR if corrupted/invalid data found
+	 * 					- VERIFY_ERROR if verification of some payload failed
 	 */
 	status_t (*parse_body) (message_t *this);
 
