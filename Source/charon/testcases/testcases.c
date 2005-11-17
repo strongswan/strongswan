@@ -47,6 +47,7 @@
 #include "generator_test.h"
 #include "parser_test.h"
 #include "packet_test.h"
+#include "diffie_hellman_test.h"
 
 
 /* output for test messages */
@@ -167,6 +168,12 @@ test_t packet_test = {test_packet,"Packet"};
 
 
 /**
+ * Test for packet_t
+ */
+test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
+
+
+/**
  * Global job-queue
  */
 job_queue_t *global_job_queue;
@@ -219,7 +226,7 @@ logger_manager_t *global_logger_manager;
 	&sender_test,
 	&receiver_test,
 	&ike_sa_id_test,
-	//&ike_sa_test,
+	&ike_sa_test,
 	&generator_test1,
 	&generator_test2,
 	&parser_test1,
@@ -235,6 +242,7 @@ logger_manager_t *global_logger_manager;
 	&generator_test8,
 	&ike_sa_manager_test,
 	&packet_test,
+	&diffie_hellman_test,
 	NULL
 	};
  	global_logger_manager = logger_manager_create(ALL);
@@ -247,13 +255,13 @@ logger_manager_t *global_logger_manager;
  	global_configuration_manager = configuration_manager_create();
  	global_ike_sa_manager = ike_sa_manager_create();
  	
-	global_logger_manager->disable_logger_level(global_logger_manager,TESTER,ALL);
+	//global_logger_manager->disable_logger_level(global_logger_manager,TESTER,ALL);
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
 
-	tester->perform_tests(tester,all_tests);
-	//tester->perform_test(tester,&packet_test); 
+	//tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&diffie_hellman_test); 
 
 
  	

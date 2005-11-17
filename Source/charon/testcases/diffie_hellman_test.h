@@ -1,7 +1,7 @@
 /**
- * @file definitions.h
+ * @file diffie_hellman_test.h
  * 
- * @brief general purpose definitions and macros
+ * @brief Tests to test the Diffie Hellman object diffie_hellman_t
  * 
  */
 
@@ -20,39 +20,18 @@
  * for more details.
  */
 
-#ifndef DEFINITIONS_H_
-#define DEFINITIONS_H_
+#ifndef DIFFIE_HELLMAN_TEST_H_
+#define DIFFIE_HELLMAN_TEST_H_
 
-#define MAPPING_END (-1)
-
-/**
- * @brief mapping entry, where enum-to-string mappings are stored
- */
-typedef struct mapping_s mapping_t;
-struct mapping_s
-{
-	/**
-	 * enumeration value
-	 */
-	int value;
-	/**
-	 * mapped string
-	 */
-	char *string;
-};
-
+#include "../utils/tester.h"
 
 /**
- * @brief find a mapping_string in the mapping[]
+ * @brief Test function used to test the diffie_hellman_t functionality
  * 
- * @param mappings		mappings array
- * @param value			enum-value to get the string from
- * 
+ * Tests are performed using one thread
+ *
+ * @param tester associated tester object
  */
-char *mapping_find(mapping_t *mappings, int value);
+void test_diffie_hellman(tester_t *tester);
 
-
-
-
-
-#endif /*DEFINITIONS_H_*/
+#endif /*DIFFIE_HELLMAN_TEST_H_*/

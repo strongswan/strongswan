@@ -140,15 +140,15 @@ int main()
 	 	destroy_and_exit(-1);
 	}
 	
-//	int i;
-//	for(i = 0; i<10; i++)
-//	{
-//		initiate_ike_sa_job_t *initiate_job;
-//		
-//		initiate_job = initiate_ike_sa_job_create("pinflb31");
-//		global_event_queue->add_relative(global_event_queue, (job_t*)initiate_job, i * 1000);
-//		
-//	}
+	int i;
+	for(i = 0; i<10; i++)
+	{
+		initiate_ike_sa_job_t *initiate_job;
+		
+		initiate_job = initiate_ike_sa_job_create("pinflb31");
+		global_event_queue->add_relative(global_event_queue, (job_t*)initiate_job, i * 1000);
+		
+	}
  	
  	logger->log(logger,CONTROL_MORE,"going to wait for exit signal");
  	/* go and handle signals*/

@@ -24,6 +24,7 @@
 #ifndef TYPES_H_
 #define TYPES_H_
 
+#include <gmp.h> 
 #include <sys/types.h>
 #include <stdlib.h>
 
@@ -66,6 +67,7 @@ struct chunk_s {
 typedef int bool;
 #define FALSE	0
 #define TRUE		1
+
 
 
 #endif /*TYPES_H_*/

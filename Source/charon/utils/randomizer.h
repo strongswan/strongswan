@@ -78,7 +78,7 @@ struct randomizer_s {
 	 * 
 	 * @param this 					calling randomizer_t object
 	 * @param bytes					Number of bytes to allocate
-	 * @param[out] chunk			chunk which will hold the allocated random bytes
+	 * @param[out] chunk				chunk which will hold the allocated random bytes
 	 * @return
 	 * 								- SUCCESS
 	 * 								- OUT_OF_RES
