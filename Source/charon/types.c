@@ -1,5 +1,5 @@
 /**
- * @file types.h
+ * @file types.c
  * 
  * @brief Generic type definitions
  * 
@@ -20,52 +20,21 @@
  * for more details.
  */
  
-
-#ifndef TYPES_H_
-#define TYPES_H_
-
-#include <sys/types.h>
-#include <stdlib.h>
-
-#include "definitions.h"
-
-typedef enum status_e {
-	SUCCESS,
-	FAILED,
-	OUT_OF_RES,
-	ALREADY_DONE,
-	NOT_SUPPORTED,
-	INVALID_ARG,
-	NOT_FOUND,
-	PARSE_ERROR,
-	VERIFY_ERROR,
-	INVALID_STATE
-} status_t;
-
-extern mapping_t status_m[];
+#include "types.h"
 
 
-typedef struct timeval timeval_t;
 
-typedef struct timespec timespec_t;
-
-typedef struct sockaddr sockaddr_t;
-
-/**
- * General purpose pointer/length abstraction
- */
-typedef struct chunk_s chunk_t;
-struct chunk_s {
-    u_char *ptr;
-    size_t len;
+mapping_t status_m[] = {
+	{SUCCESS, "SUCCESS"},
+	{FAILED, "FAILED"},
+	{OUT_OF_RES, "OUT_OF_RES"},
+	{ALREADY_DONE, "ALREADY_DONE"},
+	{NOT_SUPPORTED, "NOT_SUPPORTED"},
+	{INVALID_ARG, "INVALID_ARG"},
+	{NOT_FOUND, "NOT_FOUND"},
+	{PARSE_ERROR, "PARSE_ERROR"},
+	{VERIFY_ERROR, "VERIFY_ERROR"},
+	{INVALID_STATE, "INVALID_STATE"},
+	{MAPPING_END, NULL}
 };
 
-/**
- * General purpose boolean type
- */
-typedef int bool;
-#define FALSE	0
-#define TRUE		1
-
-
-#endif /*TYPES_H_*/
