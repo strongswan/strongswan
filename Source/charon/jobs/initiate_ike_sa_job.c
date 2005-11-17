@@ -64,7 +64,6 @@ static char * get_configuration_name(private_initiate_ike_sa_job_t *this)
 	return this->configuration_name;
 }
 
-
 /**
  * Implements job_t's and initiate_ike_sa_job_t's destroy function.
  * See #job_t.destroy or #initiate_ike_sa_job_t.destroy for description.
@@ -91,6 +90,8 @@ initiate_ike_sa_job_t *initiate_ike_sa_job_create(char *configuration_name)
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
+	/* same as destroy */
+	this->public.job_interface.destroy_all = (status_t (*) (job_t *)) destroy;
 	this->public.job_interface.destroy = destroy;
 	
 	/* public functions */

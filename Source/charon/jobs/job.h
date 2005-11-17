@@ -72,6 +72,14 @@ struct job_s{
 	job_type_t (*get_type) (job_t *this);
 
 	/**
+	 * @brief Destroys a job_t object and all assigned data!
+	 * 
+	 * @param job_t calling object
+	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*destroy_all) (job_t *job);
+
+	/**
 	 * @brief Destroys a job_t object
 	 * 
 	 * @param job_t calling object

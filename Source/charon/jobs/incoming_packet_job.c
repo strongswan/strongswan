@@ -68,6 +68,21 @@ static status_t get_packet(private_incoming_packet_job_t *this,packet_t **packet
 }
 
 
+
+/**
+ * Implements job_t's and destroy_all function.
+ * See #job_t.destroy_all description.
+ */
+static status_t destroy_all(private_incoming_packet_job_t *this)
+{
+	if (this->packet != NULL)
+	{
+		this->packet->destroy(this->packet);
+	}
+	allocator_free(this);
+	return SUCCESS;
+}
+
 /**
  * Implements job_t's and incoming_packet_job_t's destroy function.
  * See #job_t.destroy or #incoming_packet_job_t.destroy for description.
@@ -93,6 +108,7 @@ incoming_packet_job_t *incoming_packet_job_create(packet_t *packet)
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
+	this->public.job_interface.destroy_all = (status_t (*) (job_t *)) destroy_all;
 	this->public.job_interface.destroy = destroy;
 	
 	/* public functions */
