@@ -139,8 +139,9 @@ status_t replace_values (private_ike_sa_id_t *this, private_ike_sa_id_t *other)
  */
 static status_t get_values(private_ike_sa_id_t *this, u_int64_t *initiator, u_int64_t *responder, bool *is_initiator)
 {
-	memcpy(initiator, &(this->initiator_spi), sizeof(initiator));
-	memcpy(responder, &(this->responder_spi), sizeof(responder));
+	memcpy(initiator, &(this->initiator_spi), sizeof(this->initiator_spi));
+	memcpy(responder, &(this->responder_spi), sizeof(this->responder_spi));
+
 	*is_initiator = this->is_initiator;
 
 	return SUCCESS;
