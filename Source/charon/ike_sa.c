@@ -46,30 +46,30 @@ enum ike_sa_state_e {
 	/**
 	 * IKE_SA is is not in a state
 	 */
-	NO_STATE,
+	NO_STATE = 1,
 
 	/**
 	 * A IKE_SA_INIT-message was sent: role initiator
 	 */
-	IKE_SA_INIT_REQUESTED,
+	IKE_SA_INIT_REQUESTED = 2,
 
 	/**
 	 * A IKE_SA_INIT-message was replied: role responder
 	 */
-	IKE_SA_INIT_RESPONDED,
+	IKE_SA_INIT_RESPONDED = 3,
 
 	/**
 	 * An IKE_AUTH-message was sent after a successful
 	 * IKE_SA_INIT-exchange: role initiator
 	 */
-	IKE_AUTH_REQUESTED,
+	IKE_AUTH_REQUESTED = 4,
 
 	/**
 	 * An IKE_AUTH-message was replied: role responder.
 	 * In this state, all the informations for an IKE_SA
 	 * and one CHILD_SA are known.
 	 */
-	IKE_SA_INITIALIZED
+	IKE_SA_INITIALIZED = 5
 };
 
 
