@@ -29,6 +29,7 @@
 #include "queues/event_queue.h"
 #include "utils/logger_manager.h"
 #include "ike_sa_manager.h"
+#include "configuration_manager.h"
 
 
 extern socket_t *global_socket;
@@ -37,5 +38,6 @@ extern job_queue_t *global_job_queue;
 extern event_queue_t *global_event_queue;
 extern logger_manager_t *global_logger_manager;
 extern ike_sa_manager_t *global_ike_sa_manager;
+extern configuration_manager_t *global_configuration_manager;
 
 #endif /*GLOBALS_H_*/

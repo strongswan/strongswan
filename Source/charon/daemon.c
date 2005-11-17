@@ -63,6 +63,8 @@ socket_t *global_socket = NULL;
 logger_manager_t *global_logger_manager = NULL;
 /** Global ike_sa-manager */
 ike_sa_manager_t *global_ike_sa_manager = NULL;
+/** Global configuration-manager */
+configuration_manager_t *global_configuration_manager = NULL;
 
 /**
  * logger_t object assigned for daemon things
@@ -137,6 +139,16 @@ int main()
 	 	logger->log(logger,CONTROL,"Fatal error: Needed Threads could not be started");		
 	 	destroy_and_exit(-1);
 	}
+	
+//	int i;
+//	for(i = 0; i<10; i++)
+//	{
+//		initiate_ike_sa_job_t *initiate_job;
+//		
+//		initiate_job = initiate_ike_sa_job_create("pinflb31");
+//		global_event_queue->add_relative(global_event_queue, (job_t*)initiate_job, i * 1000);
+//		
+//	}
  	
  	logger->log(logger,CONTROL_MORE,"going to wait for exit signal");
  	/* go and handle signals*/
@@ -222,11 +234,13 @@ static status_t initialize_globals()
  	global_job_queue = job_queue_create();
  	global_event_queue = event_queue_create();
  	global_send_queue = send_queue_create();
+ 	global_configuration_manager = configuration_manager_create();
  	
  	if (	(global_socket == NULL) ||
 		(global_job_queue == NULL) ||
 		(global_event_queue == NULL) ||
 		(global_send_queue == NULL) ||
+		(global_configuration_manager == NULL) ||
 		(global_ike_sa_manager == NULL))
  	{
 	 	return FAILED;
@@ -259,6 +273,10 @@ static void destroy_globals()
 	if (global_ike_sa_manager != NULL)
 	{
 		global_ike_sa_manager->destroy(global_ike_sa_manager);
+	}
+	if (global_ike_sa_manager != NULL)
+	{
+		global_configuration_manager->destroy(global_configuration_manager);
 	}
 }
 
@@ -339,6 +357,7 @@ static void destroy_and_exit(int exit_code)
  	logger->log(logger,CONTROL_MORE,"destroy logger");
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
  	logger->log(logger,CONTROL_MORE,"destroy logger_manager");
+ 	logger->log(logger,CONTROL_MORE,"------------------------------------");
 	if (global_logger_manager != NULL)
 	{
 		global_logger_manager->destroy(global_logger_manager);
