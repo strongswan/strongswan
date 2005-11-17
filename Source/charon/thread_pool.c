@@ -205,6 +205,13 @@ static void job_processing(private_thread_pool_t *this)
 					global_ike_sa_manager->checkin_and_delete(global_ike_sa_manager, ike_sa);
 					break;
 				}
+				
+				status = global_ike_sa_manager->checkin(global_ike_sa_manager, ike_sa);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR, "thread %u: %s  could not checkin IKE_SA.", 
+										pthread_self(), mapping_find(status_m, status));
+				}
 				break;
 			}
 			case RETRANSMIT_REQUEST:
