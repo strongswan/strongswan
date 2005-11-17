@@ -160,7 +160,7 @@ static status_t get_encoding_rules(private_nonce_payload_t *this, encoding_rule_
  */
 static payload_type_t get_type(private_nonce_payload_t *this)
 {
-	return SECURITY_ASSOCIATION;
+	return NONCE;
 }
 
 /**
