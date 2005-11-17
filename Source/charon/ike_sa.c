@@ -141,6 +141,7 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	
 	this->logger->log(this->logger, CONTROL_MORE, "Process message of exchange type %s",mapping_find(exchange_type_m,message->get_exchange_type(message)));
 	
+	/* parse body */
 	status = message->parse_body(message);
 	switch (status)
 	{
@@ -150,11 +151,37 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	 	}
 		default:
 	 	{
-	 		this->logger->log(this->logger, CONTROL_MORE, "Error of type %s while parsing message body",mapping_find(status_m,status));
+	 		this->logger->log(this->logger, ERROR, "Error of type %s while parsing message body",mapping_find(status_m,status));
+	 		switch (this->current_state)
+	 		{
+	 			case NO_STATE:
+	 			{
+	 				job_t *delete_job;
+	 				/* create delete job for this ike_sa */
+					delete_job = (job_t *) delete_ike_sa_job_create(this->ike_sa_id);
+	 				if (delete_job == NULL)
+	 				{
+				 		this->logger->log(this->logger, ERROR, "Job to delete IKE SA could not be created");
+	 				}
+	 				
+	 				status = global_job_queue->add(global_job_queue,delete_job);
+	 				if (status != SUCCESS)
+	 				{
+				 		this->logger->log(this->logger, ERROR, "%s Job to delete IKE SA could not be added to job queue",mapping_find(status_m,status));
+				 		delete_job->destroy_all(delete_job);
+	 				}
+	 				
+	 			}
+	 			default:
+	 			{
+	 				break;	
+	 			}
+	 		}
+	 		
 		 	return FAILED;
 	 	}
 	}
-	
+		
 	return status;
 }
 
