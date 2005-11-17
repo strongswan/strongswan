@@ -326,7 +326,7 @@ sa_payload_t *sa_payload_create()
 	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
-	this->critical = 1;//SA_PAYLOAD_CRITICAL_FLAG;
+	this->critical = SA_PAYLOAD_CRITICAL_FLAG;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = SA_PAYLOAD_HEADER_LENGTH;
 
