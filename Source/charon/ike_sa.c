@@ -193,20 +193,19 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	message_t *message;
 	payload_t *payload;
 	packet_t *packet;
-	host_t *source, *destination;
 	status_t status;
 	
 	this->logger->log(this->logger, CONTROL, "initializing connection");
 	
 	this->original_initiator = TRUE;
 	
-	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &source);
+	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &(this->me.host));
 	if (status != SUCCESS)
 	{	
 		return INVALID_ARG;
 	}
 	
-	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &destination);
+	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &(this->other.host));
 	if (status != SUCCESS)
 	{	
 		return INVALID_ARG;
@@ -220,8 +219,8 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	}
 	
 
-	message->set_source(message, source);
-	message->set_destination(message, destination);
+	message->set_source(message, this->me.host);
+	message->set_destination(message, this->other.host);
 
 	message->set_exchange_type(message, IKE_SA_INIT);
 	message->set_original_initiator(message, this->original_initiator);
@@ -272,6 +271,7 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 
 	message->destroy(message);
 
+	this->current_state = IKE_SA_INIT_REQUESTED;
 
 	return SUCCESS;
 }
@@ -289,12 +289,10 @@ static ike_sa_id_t* get_id(private_ike_sa_t *this)
  */
 static status_t build_sa_payload(private_ike_sa_t *this, sa_payload_t **payload)
 {
-	sa_payload_t *sa_payload;
-	proposal_substructure_t *proposal;
-	transform_substructure_t *transform;
-	transform_attribute_t *attribute;
-	
-	
+	sa_payload_t* sa_payload;
+	linked_list_iterator_t *iterator;
+	status_t status;
+
 	this->logger->log(this->logger, CONTROL_MORE, "building sa payload");
 	
 	sa_payload = sa_payload_create();
@@ -302,104 +300,22 @@ static status_t build_sa_payload(private_ike_sa_t *this, sa_payload_t **payload)
 	{
 		return OUT_OF_RES;
 	}
+	status = sa_payload->create_proposal_substructure_iterator(sa_payload, &iterator, FALSE);
+	if (status != SUCCESS)
+	{
+		sa_payload->destroy(sa_payload);
+		return status;
+	}
+	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->other.host, iterator);
+	if (status != SUCCESS)
+	{
+		sa_payload->destroy(sa_payload);
+		return status;
+	}
 	
-	do
-	{	/* no loop, just to break */
-		proposal = proposal_substructure_create();
-		if (proposal == NULL)
-		{
-			break;
-		}
-		sa_payload->add_proposal_substructure(sa_payload, proposal);
-		
-		/* 
-		 * Encryption Algorithm 
-		 */
-		transform = transform_substructure_create();
-		if (transform == NULL)
-		{
-			break;
-		}
-		proposal->add_transform_substructure(proposal, transform);
-		transform->set_is_last_transform(transform, FALSE);
-		transform->set_transform_type(transform, ENCRYPTION_ALGORITHM);
-		transform->set_transform_id(transform, ENCR_AES_CBC);
-		
-		attribute = transform_attribute_create();
-		if (attribute == NULL)
-		{		
-			break;
-		}
-		transform->add_transform_attribute(transform, attribute);
-		attribute->set_attribute_type(attribute, KEY_LENGTH);
-		attribute->set_value(attribute, 16);
-		
-	 	/* 
-	 	 * Pseudo-random Function
-	 	 */
-	 	transform = transform_substructure_create();
-		if (transform == NULL)
-		{
-			break;
-		}
-		proposal->add_transform_substructure(proposal, transform);
-		transform->set_is_last_transform(transform, FALSE);
-		transform->set_transform_type(transform, PSEUDO_RANDOM_FUNCTION);
-		transform->set_transform_id(transform, PRF_HMAC_SHA1);
-		
-		attribute = transform_attribute_create();
-		if (attribute == NULL)
-		{		
-			break;
-		}
-		transform->add_transform_attribute(transform, attribute);
-		attribute->set_attribute_type(attribute, KEY_LENGTH);
-		attribute->set_value(attribute, 16);
-
-	 	
-	 	/* 
-	 	 * Integrity Algorithm 
-	 	 */
-	 	transform = transform_substructure_create();
-		if (transform == NULL)
-		{
-			break;
-		}
-		proposal->add_transform_substructure(proposal, transform);
-		transform->set_is_last_transform(transform, FALSE);
-		transform->set_transform_type(transform, INTEGRITIY_ALGORITHM);
-		transform->set_transform_id(transform, AUTH_HMAC_SHA1_96);
-		
-		attribute = transform_attribute_create();
-		if (attribute == NULL)
-		{		
-			break;
-		}
-		transform->add_transform_attribute(transform, attribute);
-		attribute->set_attribute_type(attribute, KEY_LENGTH);
-		attribute->set_value(attribute, 16);
-	 	
-	 	
-	    /* 
-	     * Diffie-Hellman Group 
-	     */
-	 	transform = transform_substructure_create();
-		if (transform == NULL)
-		{
-			break;
-		}
-		proposal->add_transform_substructure(proposal, transform);
-		transform->set_is_last_transform(transform, FALSE);
-		transform->set_transform_type(transform, DIFFIE_HELLMAN_GROUP);
-		transform->set_transform_id(transform, MODP_1024_BIT);
-		
-		*payload = sa_payload;
-		
-		return SUCCESS;
-		
-	} while(FALSE);
+	*payload = sa_payload;
 	
-	return OUT_OF_RES;
+	return SUCCESS;
 }
 
 /**

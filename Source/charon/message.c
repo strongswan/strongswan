@@ -469,9 +469,13 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	ike_header->set_response_flag(ike_header, !this->is_request);
 	ike_header->set_initiator_flag(ike_header, is_initiator);
 	ike_header->set_initiator_spi(ike_header, initiator_spi);
-	ike_header->set_initiator_spi(ike_header, responder_spi);
-
+	ike_header->set_responder_spi(ike_header, responder_spi);
+	
 	generator = generator_create();
+	if (generator == NULL)
+	{
+		return OUT_OF_RES;	
+	}
 	
 	payload = (payload_t*)ike_header;
 

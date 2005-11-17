@@ -28,6 +28,11 @@
 
 #include "types.h"
 #include "utils/allocator.h"
+#include "payloads/nonce_payload.h"
+#include "payloads/proposal_substructure.h"
+#include "payloads/ke_payload.h"
+#include "payloads/transform_substructure.h"
+#include "payloads/transform_attribute.h"
 
 /**
  * Private data of an configuration_t object
@@ -79,13 +84,157 @@ static status_t get_local_host(private_configuration_manager_t *this, char *name
 	return SUCCESS;
 }
 	
-static status_t get_proposals_for_host(private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *list)
+static status_t get_proposals_for_host(private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *iterator)
 {
-	return FAILED;
+	/* use a default proposal:
+	 * - ENCR_AES_CBC 128Bit
+	 * - PRF_HMAC_SHA1 128Bit
+	 * - AUTH_HMAC_SHA1_96 96Bit
+	 * - MODP_1024_BIT
+	 */
+	proposal_substructure_t *proposal;
+	transform_substructure_t *transform;
+	transform_attribute_t *attribute;
+	status_t status;
+	
+	proposal = proposal_substructure_create();
+	if (proposal == NULL)
+	{
+		return OUT_OF_RES;
+	}
+	
+	/* 
+	 * Encryption Algorithm 
+	 */
+	transform = transform_substructure_create();
+	if (transform == NULL)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	status = proposal->add_transform_substructure(proposal, transform);
+	if (status != SUCCESS)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	transform->set_is_last_transform(transform, FALSE);
+	transform->set_transform_type(transform, ENCRYPTION_ALGORITHM);
+	transform->set_transform_id(transform, ENCR_AES_CBC);
+	
+	attribute = transform_attribute_create();
+	if (attribute == NULL)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	status = transform->add_transform_attribute(transform, attribute);
+	if (status != SUCCESS)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	attribute->set_attribute_type(attribute, KEY_LENGTH);
+	attribute->set_value(attribute, 16);
+	
+ 	/* 
+ 	 * Pseudo-random Function
+ 	 */
+ 	transform = transform_substructure_create();
+	if (transform == NULL)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	status = proposal->add_transform_substructure(proposal, transform);
+	if (status != SUCCESS)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	transform->set_is_last_transform(transform, FALSE);
+	transform->set_transform_type(transform, PSEUDO_RANDOM_FUNCTION);
+	transform->set_transform_id(transform, PRF_HMAC_SHA1);
+	
+	attribute = transform_attribute_create();
+	if (attribute == NULL)
+	{		
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	status = transform->add_transform_attribute(transform, attribute);
+	if (status != SUCCESS)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	attribute->set_attribute_type(attribute, KEY_LENGTH);
+	attribute->set_value(attribute, 16);
+
+ 	
+ 	/* 
+ 	 * Integrity Algorithm 
+ 	 */
+ 	transform = transform_substructure_create();
+	if (transform == NULL)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	status = proposal->add_transform_substructure(proposal, transform);
+	if (status != SUCCESS)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	transform->set_is_last_transform(transform, FALSE);
+	transform->set_transform_type(transform, INTEGRITIY_ALGORITHM);
+	transform->set_transform_id(transform, AUTH_HMAC_SHA1_96);
+	
+	attribute = transform_attribute_create();
+	if (attribute == NULL)
+	{		
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	status = transform->add_transform_attribute(transform, attribute);
+	if (status != SUCCESS)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	attribute->set_attribute_type(attribute, KEY_LENGTH);
+	attribute->set_value(attribute, 12);
+ 	
+ 	
+    /* 
+     * Diffie-Hellman Group 
+     */
+ 	transform = transform_substructure_create();
+	if (transform == NULL)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	status = proposal->add_transform_substructure(proposal, transform);
+	if (status != SUCCESS)
+	{
+		proposal->destroy(proposal);
+		return OUT_OF_RES;
+	}
+	transform->set_is_last_transform(transform, FALSE);
+	transform->set_transform_type(transform, DIFFIE_HELLMAN_GROUP);
+	transform->set_transform_id(transform, MODP_1024_BIT);
+	
+	iterator->insert_after(iterator, (void*)proposal);
+	
+	return SUCCESS;
 }
 	
 static status_t select_proposals_for_host(private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *in, linked_list_iterator_t *out)
 {
+	
+	
 	return FAILED;
 }
 
