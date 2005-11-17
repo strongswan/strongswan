@@ -217,7 +217,7 @@ static void register_signals()
 static status_t initialize_globals()
 {
  	/* initialize global object */
- 	global_socket = socket_create(4500);
+ 	global_socket = socket_create(IKEV2_UDP_PORT);
  	global_ike_sa_manager = ike_sa_manager_create();
  	global_job_queue = job_queue_create();
  	global_event_queue = event_queue_create();
