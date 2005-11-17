@@ -509,6 +509,7 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 		memcpy(output_pos->ptr, this->byte_pos, length);
 	}
 	this->byte_pos += length;
+	this->logger->log_bytes(this->logger, RAW, "   =>", (void*)output_pos->ptr, length);
 	
 	return SUCCESS;
 }
