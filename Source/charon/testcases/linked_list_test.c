@@ -180,12 +180,12 @@ void test_linked_list_insert_and_remove(tester_t *tester)
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 
-	tester->assert_true(tester,(linked_list->insert_before(linked_list,iterator,"before_three") == SUCCESS), "insert_before call check");
+	tester->assert_true(tester,(iterator->insert_before(iterator,"before_three") == SUCCESS), "insert_before call check");
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 
 
-	tester->assert_true(tester,(linked_list->insert_after(linked_list,iterator,"after_three") == SUCCESS), "insert_after call check");
+	tester->assert_true(tester,(iterator->insert_after(iterator,"after_three") == SUCCESS), "insert_after call check");
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 	
