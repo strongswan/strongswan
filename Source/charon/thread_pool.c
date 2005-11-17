@@ -106,6 +106,7 @@ static void job_processing(private_thread_pool_t *this)
 					packet->destroy(packet);
 					break;					
 				}
+
 				status = message->parse_header(message);
 				if (status != SUCCESS)
 				{
@@ -134,7 +135,18 @@ static void job_processing(private_thread_pool_t *this)
 					this->logger->log(this->logger, CONTROL_MORE, "thread %u: IKE SA could not be checked out", pthread_self());
 					message->destroy(message);
 					break;
-				}				
+				}
+				
+				{
+					/* only for logging */
+					ike_sa_id_t *checked_out_ike_sa_id;
+					checked_out_ike_sa_id = ike_sa->get_id(ike_sa);
+					u_int64_t initiator;
+					u_int64_t responder;
+					bool is_initiator;
+					checked_out_ike_sa_id->get_values(checked_out_ike_sa_id,&initiator,&responder,&is_initiator);
+					this->logger->log(this->logger, CONTROL_MORE, "IKE SA with SPI's I:%d, R:%d checked out", initiator,responder);
+				}
 				
 				status = ike_sa->process_message (ike_sa,message);				
 				if (status != SUCCESS)
