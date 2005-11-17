@@ -26,7 +26,9 @@
 #include "scheduler.h"
 
 #include "globals.h"
+#include "definitions.h"
 #include "utils/allocator.h"
+#include "utils/logger_manager.h"
 #include "queues/job_queue.h"
 
 /**
@@ -44,6 +46,11 @@ struct private_scheduler_s {
 	  * Assigned thread to the scheduler_t object
 	  */
 	 pthread_t assigned_thread;
+	 
+	 /** 
+	  * logger for this scheduler
+	  */
+	 logger_t *logger;
 
 };
 
@@ -61,10 +68,12 @@ static void scheduler_thread_function(private_scheduler_t * this)
 
 	for (;;)
 	{
+		this->logger->log(this->logger, CONTROL, "waiting for next event...");
 		/* get a job, this block until one is available */
 		global_event_queue->get(global_event_queue, &current_job);
 		/* queue the job in the job queue, workers will eat them */
 		global_job_queue->add(global_job_queue, current_job);
+		this->logger->log(this->logger, CONTROL, "got event, added job %s to job-queue.", mapping_find(job_type_m, current_job->get_type(current_job)));
 	}
 }
 
@@ -76,6 +85,8 @@ static status_t destroy(private_scheduler_t *this)
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
+	
+	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
 	allocator_free(this);
 	return SUCCESS;
@@ -87,9 +98,18 @@ scheduler_t * scheduler_create()
 	private_scheduler_t *this = allocator_alloc_thing(private_scheduler_t);
 
 	this->public.destroy = (status_t(*)(scheduler_t*)) destroy;
+	
+	this->logger = global_logger_manager->create_logger(global_logger_manager, SCHEDULER_THREAD, NULL);
+	if (this->logger == NULL)
+	{
+		allocator_free(this);
+		return NULL;	
+	}
+	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))scheduler_thread_function, this) != 0)
 	{
 		/* thread could not be created  */
+		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 		allocator_free(this);
 		return NULL;
 	}

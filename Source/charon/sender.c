@@ -30,6 +30,7 @@
 #include "globals.h"
 #include "queues/send_queue.h"
 #include "utils/allocator.h"
+#include "utils/logger_manager.h"
 
 /**
  * Private data of a sender object
@@ -46,6 +47,11 @@ struct private_sender_s {
 	  * Assigned thread to the sender_t object
 	  */
 	 pthread_t assigned_thread;
+	 
+	 /**
+	  * logger for this sender
+	  */
+	 logger_t *logger;
 
 };
 
@@ -57,31 +63,26 @@ struct private_sender_s {
  */
 static void sender_thread_function(private_sender_t * this)
 {
+	packet_t * current_packet;
+	status_t status;
+	
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	packet_t * current_packet;
 
 	while (1)
 	{
 		while (global_send_queue->get(global_send_queue,&current_packet) == SUCCESS)
 		{
-			if (	global_socket->send(global_socket,current_packet) == SUCCESS)
+			this->logger->log(this->logger, CONTROL, "got a packet, sending it");
+			status = global_socket->send(global_socket,current_packet);
+			if (status != SUCCESS)
 			{
-				current_packet->destroy(current_packet);
+				this->logger->log(this->logger, ERROR, "sending failed, socket returned %s", 
+									mapping_find(status_m, status));
 			}
-			else
-			{
-				/* Packet could not be sent */
-				/* TODO LOG it */
-			}
-
+			current_packet->destroy(current_packet);
 		}
-
-		/* NOT GOOD !!!!!! */
-		/* TODO LOG it */
 	}
-
-
 }
 
 /**
@@ -103,6 +104,14 @@ sender_t * sender_create()
 	private_sender_t *this = allocator_alloc_thing(private_sender_t);
 
 	this->public.destroy = (status_t(*)(sender_t*)) destroy;
+	
+	this->logger = global_logger_manager->create_logger(global_logger_manager, SENDER_THREAD, NULL);
+	if (this->logger == NULL)
+	{
+		allocator_free(this);
+		return NULL;	
+	}
+	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))sender_thread_function, this) != 0)
 	{
 		/* thread could not be created  */
