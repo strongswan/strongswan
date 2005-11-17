@@ -47,7 +47,14 @@ enum job_type_e {
 	 * 
 	 * Job is implemented in class type initiate_ike_sa_job_t
 	 */
-	INITIATE_IKE_SA
+	INITIATE_IKE_SA,
+	/** 
+	 * Delete an ike sa
+	 * 
+	 * Job is implemented in class type delete_ike_sa_job_t
+	 */
+	DELETE_IKE_SA
+	
 	
 	/* more job types have to be inserted here */
 };
@@ -89,6 +96,9 @@ struct job_s{
 };
 
 #include "initiate_ike_sa_job.h"
+#include "delete_ike_sa_job.h"
 #include "incoming_packet_job.h"
+
+
 
 #endif /*JOB_H_*/
