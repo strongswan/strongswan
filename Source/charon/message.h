@@ -41,6 +41,40 @@ typedef struct message_s message_t;
 struct message_s {
 
 	/**
+	 * @brief Sets the IKE major version of the message.
+	 *
+	 * @param this 			message_t object
+	 * @param major_version	major version to set
+	 * @return				SUCCESS
+	 */
+	status_t (*set_major_version) (message_t *this,u_int8_t major_version);
+
+	/**
+	 * @brief Gets the IKE major version of the message.
+	 *
+	 * @param this 			message_t object
+	 * @return				major version of the message
+	 */
+	u_int8_t (*get_major_version) (message_t *this);
+	
+	/**
+	 * @brief Sets the IKE minor version of the message.
+	 *
+	 * @param this 			message_t object
+	 * @param minor_version	minor version to set
+	 * @return				SUCCESS
+	 */
+	status_t (*set_minor_version) (message_t *this,u_int8_t minor_version);
+
+	/**
+	 * @brief Gets the IKE minor version of the message.
+	 *
+	 * @param this 			message_t object
+	 * @return				minor version of the message
+	 */
+	u_int8_t (*get_minor_version) (message_t *this);
+
+	/**
 	 * @brief Sets the Message ID of the message.
 	 *
 	 * @param this 			message_t object
@@ -160,7 +194,7 @@ struct message_s {
 	 */
 
 	/**
-	 * @brief Parses and verifies header of message
+	 * @brief Parses header of message
 	 *
 	 * @param this 		message_t object
 	 * @return
@@ -168,9 +202,20 @@ struct message_s {
 	 * 					- NOT_SUPPORTED if payload_type is not supported
 	 *					- OUT_OF_RES if out of ressources
 	 *					- PARSE_ERROR if corrupted/invalid data found
-	 * 					- VERIFY_ERROR if header contains wrong values
 	 */
-	status_t (*parse_and_verify_header) (message_t *this);
+	status_t (*parse_header) (message_t *this);
+	
+	/**
+	 * @brief Parses body of message
+	 *
+	 * @param this 		message_t object
+	 * @return
+	 * 					- SUCCESS if header could be parsed
+	 * 					- NOT_SUPPORTED if payload_type is not supported
+	 *					- OUT_OF_RES if out of ressources
+	 *					- PARSE_ERROR if corrupted/invalid data found
+	 */
+	status_t (*parse_body) (message_t *this);
 	
 	status_t (*generate) (message_t *this, packet_t **packet);
 	status_t (*get_source) (message_t *this, host_t **host);
