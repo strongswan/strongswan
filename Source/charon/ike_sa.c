@@ -166,11 +166,24 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	message_t *message;
 	payload_t *payload;
 	packet_t *packet;
+	host_t *source, *destination;
 	status_t status;
 	
 	this->logger->log(this->logger, CONTROL, "initializing connection");
 	
 	this->original_initiator = TRUE;
+	
+	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &source);
+	if (status != SUCCESS)
+	{	
+		return INVALID_ARG;
+	}
+	
+	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &destination);
+	if (status != SUCCESS)
+	{	
+		return INVALID_ARG;
+	}
 	
 	message = message_create();
 	
@@ -180,6 +193,9 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	}
 	
 
+	message->set_source(message, source);
+	message->set_destination(message, destination);
+
 	message->set_exchange_type(message, IKE_SA_INIT);
 	message->set_original_initiator(message, this->original_initiator);
 	message->set_message_id(message, 0);
@@ -188,7 +204,8 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	
 	status = this->build_sa_payload(this, (sa_payload_t**)&payload);
 	if (status != SUCCESS)
-	{
+	{	
+		this->logger->log(this->logger, ERROR, "Could not build SA payload");
 		message->destroy(message);
 		return status;
 	}
@@ -198,6 +215,7 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	status = this->build_ke_payload(this, (ke_payload_t**)&payload);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "Could not build KE payload");
 		message->destroy(message);
 		return status;
 	}
@@ -207,6 +225,7 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	status = this->build_nonce_payload(this, (nonce_payload_t**)&payload);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "Could not build NONCE payload");
 		message->destroy(message);
 		return status;
 	}
@@ -216,17 +235,18 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	status = message->generate(message, &packet);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "Could not generate message");
 		message->destroy(message);
 		return status;
 	}
 	
+	
 	global_send_queue->add(global_send_queue, packet);
-
 
 	message->destroy(message);
 
 
-	return OUT_OF_RES;
+	return SUCCESS;
 }
 
 /**
