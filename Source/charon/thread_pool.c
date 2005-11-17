@@ -165,6 +165,46 @@ static void job_processing(private_thread_pool_t *this)
 			}
 			case INITIATE_IKE_SA:
 			{
+				/*
+				 * Initiatie an IKE_SA:
+				 * - is defined by a name of a configuration
+				 * - create an empty IKE_SA via manager
+				 * - call initiate_connection on this sa
+				 */
+				initiate_ike_sa_job_t *initiate_job;
+				ike_sa_id_t *ike_sa_id;
+				ike_sa_t *ike_sa;
+				status_t status;
+				
+				initiate_job = (initiate_ike_sa_job_t *)job;
+				this->logger->log(this->logger, CONTROL, "thread %u: Initiating an IKE_SA for config \"%s\"", 
+									pthread_self(), initiate_job->get_configuration_name(initiate_job));				
+				
+				ike_sa_id = ike_sa_id_create(0, 0, TRUE);
+				if (ike_sa_id == NULL)
+				{
+					this->logger->log(this->logger, ERROR, "thread %u: %s by creating ike_sa_id_t, job rejected.", 
+										pthread_self(), mapping_find(status_m, status));
+					break;
+				}
+				
+				status = global_ike_sa_manager->checkout(global_ike_sa_manager, ike_sa_id, &ike_sa);
+				ike_sa_id->destroy(ike_sa_id);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR, "thread %u: %s by checking out new IKE_SA, job rejected.", 
+										pthread_self(), mapping_find(status_m, status));
+					break;
+				}
+				
+				status = ike_sa->initialize_connection(ike_sa, initiate_job->get_configuration_name(initiate_job));
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR, "thread %u: %s by initialize_conection, job and rejected, IKE_SA deleted.", 
+										pthread_self(), mapping_find(status_m, status));
+					global_ike_sa_manager->checkin_and_delete(global_ike_sa_manager, ike_sa);
+					break;
+				}
 				break;
 			}
 			case RETRANSMIT_REQUEST:
