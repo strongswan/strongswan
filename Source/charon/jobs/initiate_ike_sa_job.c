@@ -98,7 +98,7 @@ initiate_ike_sa_job_t *initiate_ike_sa_job_create(char *configuration_name)
 	this->public.destroy = (status_t (*)(initiate_ike_sa_job_t *)) destroy;
 	
 	/* private variables */
-	this->configuration_name = allocator_alloc(sizeof(configuration_name) + 1);
+	this->configuration_name = allocator_alloc(strlen(configuration_name) + 1);
 	if (this->configuration_name == NULL)
 	{
 		allocator_free(this);
