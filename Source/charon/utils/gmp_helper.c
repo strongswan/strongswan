@@ -130,6 +130,7 @@ static status_t init_prime (private_gmp_helper_t *this, mpz_t *prime, int bytes)
    	allocator_free(random_bytes.ptr);
    	random_bytes.ptr = NULL;   
 
+	/* composites are possible but should never occur */
 	mpz_nextprime (*(prime),*(prime));
 
 	return SUCCESS;

@@ -54,6 +54,8 @@ struct gmp_helper_s {
 	
 	/* Convert network form (binary bytes, big-endian) to mpz_t of gmp library.
 	 * 
+	 * mpz_t gets initialized in this function.
+	 * 
 	 * @param this				calling private_gmp_helper_t object
 	 * @param mpz_value 			pointer to a mpz_t value
 	 * @param data				chunk_t containing the network form of data
