@@ -39,6 +39,12 @@
 
 
 /**
+ * 
+ * This implementation supports only window size 1
+ */
+#define WINDOW_SIZE 1
+
+/**
  * States in which a IKE_SA can actually be
  */
 typedef enum ike_sa_state_e ike_sa_state_t;
@@ -131,6 +137,11 @@ struct private_ike_sa_s {
 	 */
 	randomizer_t *randomizer;
 	
+	/**
+	 * contains the last X sent messages
+	 * 
+	 * X is windows size (here 1)
+	 */
 	linked_list_t *sent_messages;	
 	
 	struct {
@@ -156,6 +167,14 @@ struct private_ike_sa_s {
 		 * Priority used get matching dh_group number
 		 */
 		u_int16_t dh_group_priority;
+		/**
+		 * 
+		 */
+		 chunk_t sent_nonce;
+		/**
+		 * 
+		 */
+		 chunk_t received_nonce;
 	} ike_sa_init_data;
 	
 
@@ -180,8 +199,30 @@ struct private_ike_sa_s {
  */
 static status_t process_message (private_ike_sa_t *this, message_t *message)
 {	
+	u_int32_t message_id;
 	this->logger->log(this->logger, CONTROL|MORE, "Process message of exchange type %s",
 						mapping_find(exchange_type_m,message->get_exchange_type(message)));
+	
+	/* check message id */
+
+//	message_id = message->get_message_id(message);
+//	if (message_id < (message_id_in - WINDOW_SIZE))
+//	{
+//		this->logger->log(this->logger, ERROR, "message cause of message id not handled");
+//		/* message is to old */
+//		return FAILED;
+//	}
+//	if (message_id > (message_id_in))
+//	{
+//		this->logger->log(this->logger, ERROR, "message id %d not as expected %d",message_id,message_id_in);
+//		/* message is to old */
+//		return FAILED;
+//	}
+//	
+//	
+//	
+//	message->get_exchange_type(message);
+	
 	
 	switch (message->get_exchange_type(message))
 	{
@@ -255,6 +296,8 @@ static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool
 	new_message->set_exchange_type(new_message, type);
 	new_message->set_request(new_message, request);
 	
+	new_message->set_message_id(new_message, this->message_id_in);
+	
 	new_message->set_ike_sa_id(new_message, this->ike_sa_id);
 	
 	*message = new_message;
@@ -265,7 +308,136 @@ static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool
 
 static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name)
 {
+	message_t *message;
+	payload_t *payload;
+	packet_t *packet;
+	status_t status;
 	
+	this->logger->log(this->logger, CONTROL, "initializing connection");
+		
+	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &(this->me.host));
+	if (status != SUCCESS)
+	{	
+		return INVALID_ARG;
+	}
+	
+	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &(this->other.host));
+	if (status != SUCCESS)
+	{	
+		return INVALID_ARG;
+	}
+	
+	status = global_configuration_manager->get_dh_group_number(global_configuration_manager, name, &(this->ike_sa_init_data.dh_group_number), this->ike_sa_init_data.dh_group_priority);
+	if (status != SUCCESS)
+	{	
+		return INVALID_ARG;
+	}
+	
+	this	->logger->log(this->logger, CONTROL|MORE, "create diffie hellman object");
+	if (this->ike_sa_init_data.diffie_hellman != NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t  already existing!");
+		return FAILED;
+	}
+	this->ike_sa_init_data.diffie_hellman = diffie_hellman_create(this->ike_sa_init_data.dh_group_number);
+	if (this->ike_sa_init_data.diffie_hellman == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t could not be created!");
+		return FAILED;			
+	}
+	
+	if (this->ike_sa_init_data.sent_nonce.ptr != NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Nonce for IKE_SA_INIT phase already existing!");
+		return FAILED;	
+	}
+		
+	if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 16, &(this->ike_sa_init_data.sent_nonce)) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not create nonce!");
+		return OUT_OF_RES;
+	}
+		
+	
+	/* going to build message */
+	
+	status = this->build_message(this, IKE_SA_INIT, TRUE, &message);
+	if (status != SUCCESS)
+	{	
+		this->logger->log(this->logger, ERROR, "Could not build message");
+		return status;
+	}
+
+	/* build SA payload */		
+	status = this->build_sa_payload(this, (sa_payload_t**)&payload);
+	if (status != SUCCESS)
+	{	
+		this->logger->log(this->logger, ERROR, "Could not build SA payload");
+		message->destroy(message);
+		return status;
+	}
+	message->add_payload(message, payload);
+	
+	/* build KE payload */
+	status = this->build_ke_payload(this,(ke_payload_t **) &payload);
+	if (status != SUCCESS)
+	{	
+		this->logger->log(this->logger, ERROR, "Could not build KE payload");
+		message->destroy(message);
+		return status;
+	}
+	message->add_payload(message, payload);
+	
+	/* build Nonce payload */
+	status = this->build_nonce_payload(this, (nonce_payload_t**)&payload);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not build NONCE payload");
+		message->destroy(message);
+		return status;
+	}
+	message->add_payload(message, payload);
+	
+	
+	status = message->generate(message, &packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not generate message");
+		message->destroy(message);
+		return status;
+	}
+	
+	status = global_send_queue->add(global_send_queue, packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not add packet to send queue");
+		message->destroy(message);
+		return status;
+	}
+
+	if (	this->sent_messages->get_count(this->sent_messages) >= WINDOW_SIZE)
+	{
+		message_t *removed_message;
+		/* destroy message */
+		this->sent_messages->remove_last(this->sent_messages,(void **)&removed_message);
+		removed_message->destroy(removed_message);
+	}
+	
+	status = this->sent_messages->insert_first(this->sent_messages,(void *) message);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not store last received message");
+		message->destroy(message);
+		return status;
+	}
+
+	/* message counter can no be increased */
+	this->message_id_in++;
+	
+	/* states has NOW changed :-) */
+	this->state = IKE_SA_INIT_REQUESTED;
+
+	return SUCCESS;
 }
 
 static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t *message)
@@ -360,126 +532,8 @@ static status_t transto_ike_auth_requested(private_ike_sa_t *this, message_t *me
  */
 static status_t initialize_connection(private_ike_sa_t *this, char *name)
 {
-	message_t *message;
-	payload_t *payload;
-	packet_t *packet;
-	status_t status;
-	
-	this->logger->log(this->logger, CONTROL, "initializing connection");
-		
-	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &(this->me.host));
-	if (status != SUCCESS)
-	{	
-		return INVALID_ARG;
-	}
-	
-	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &(this->other.host));
-	if (status != SUCCESS)
-	{	
-		return INVALID_ARG;
-	}
-	
-	status = global_configuration_manager->get_dh_group_number(global_configuration_manager, name, &(this->ike_sa_init_data.dh_group_number), this->ike_sa_init_data.dh_group_priority);
-	if (status != SUCCESS)
-	{	
-		return INVALID_ARG;
-	}
-	
-	status = this->build_message(this, IKE_SA_INIT, TRUE, &message);
-	if (status != SUCCESS)
-	{	
-		return status;
-	}
-	
-	
-	status = this->build_sa_payload(this, (sa_payload_t**)&payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not build SA payload");
-		message->destroy(message);
-		return status;
-	}
-	message->add_payload(message, payload);
-	
-	{
-		ke_payload_t *ke_payload;
-		chunk_t key_data;
-		this	->logger->log(this->logger, CONTROL|MORE, "create diffie hellman object");
-		if (this->ike_sa_init_data.diffie_hellman != NULL)
-		{
-			this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t  already existing!");
-			message->destroy(message);
-			return FAILED;
-		}
-		this->ike_sa_init_data.diffie_hellman = diffie_hellman_create(this->ike_sa_init_data.dh_group_number);
-		
-		if (this->ike_sa_init_data.diffie_hellman == NULL)
-		{
-			this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t could not be created!");
-			message->destroy(message);
-			return FAILED;			
-		}
-		
-		this	->logger->log(this->logger, CONTROL|MORE, "get public dh value to send in ke payload");
-
-		status = this->ike_sa_init_data.diffie_hellman->get_my_public_value(this->ike_sa_init_data.diffie_hellman,&key_data);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not get my DH public value");
-			message->destroy(message);
-			return status;
-		}
-	
-		ke_payload = ke_payload_create();
-		if (ke_payload == NULL)
-		{
-			this->logger->log(this->logger, ERROR, "Could not build KE payload");
-			message->destroy(message);
-			allocator_free_chunk(key_data);
-			return OUT_OF_RES;	
-		}
-		ke_payload->set_dh_group_number(ke_payload, MODP_1024_BIT);
-		if (ke_payload->set_key_exchange_data(ke_payload, key_data) != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not build KE payload");
-			ke_payload->destroy(ke_payload);
-			message->destroy(message);
-			allocator_free_chunk(key_data);
-			return OUT_OF_RES;
-		}
-		allocator_free_chunk(key_data);
-		
-		payload = (payload_t *) ke_payload;
-	}
-
-	message->add_payload(message, payload);
-	
-	status = this->build_nonce_payload(this, (nonce_payload_t**)&payload);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not build NONCE payload");
-		message->destroy(message);
-		return status;
-	}
-	payload->set_next_type(payload, NO_PAYLOAD);
-	message->add_payload(message, payload);
-	
-	status = message->generate(message, &packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not generate message");
-		message->destroy(message);
-		return status;
-	}
-	
-	
-	global_send_queue->add(global_send_queue, packet);
-
-	message->destroy(message);
-
-	this->state = IKE_SA_INIT_REQUESTED;
-
-	return SUCCESS;
+	/* work is done in transto_ike_sa_init_requested */
+	return (this->transto_ike_sa_init_requested(this,name));
 }
 
 /**
@@ -526,7 +580,57 @@ static status_t build_sa_payload(private_ike_sa_t *this, sa_payload_t **payload)
 
 static status_t build_ke_payload(private_ike_sa_t *this, ke_payload_t **payload)
 {
+	ke_payload_t *ke_payload;
+	chunk_t key_data;
+	status_t status;
+
+	this->logger->log(this->logger, CONTROL|MORE, "building ke payload");
 	
+	if (this->state != NO_STATE)
+	{
+		this->logger->log(this->logger, ERROR, "KE payload in state %s not supported",mapping_find(ike_sa_state_m,this->state));
+		return FALSE;
+	}
+	
+	switch(this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		case TRUE:
+		{
+			this	->logger->log(this->logger, CONTROL|MORE, "get public dh value to send in ke payload");
+			status = this->ike_sa_init_data.diffie_hellman->get_my_public_value(this->ike_sa_init_data.diffie_hellman,&key_data);
+			if (status != SUCCESS)
+			{
+				this->logger->log(this->logger, ERROR, "Could not get my DH public value");
+				return status;
+			}
+		
+			ke_payload = ke_payload_create();
+			if (ke_payload == NULL)
+			{
+				this->logger->log(this->logger, ERROR, "Could not create KE payload");
+				allocator_free_chunk(key_data);
+				return OUT_OF_RES;	
+			}
+			ke_payload->set_dh_group_number(ke_payload, MODP_1024_BIT);
+			if (ke_payload->set_key_exchange_data(ke_payload, key_data) != SUCCESS)
+			{
+				this->logger->log(this->logger, ERROR, "Could not set key exchange data of KE payload");
+				ke_payload->destroy(ke_payload);
+				allocator_free_chunk(key_data);
+				return OUT_OF_RES;
+			}
+			allocator_free_chunk(key_data);
+		
+			*payload = ke_payload;
+			return SUCCESS;			
+		}
+		default: /* FALSE */
+		{
+			break;
+		}
+	}
+
+	return FAILED;
 }
 
 /**
@@ -535,22 +639,15 @@ static status_t build_ke_payload(private_ike_sa_t *this, ke_payload_t **payload)
 static status_t build_nonce_payload(private_ike_sa_t *this, nonce_payload_t **payload)
 {
 	nonce_payload_t *nonce_payload;
-	chunk_t nonce;
 	
 	this->logger->log(this->logger, CONTROL|MORE, "building nonce payload");
-	
-	if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 16, &nonce) != SUCCESS)
-	{
-		return OUT_OF_RES;
-	}
-	
 	nonce_payload = nonce_payload_create();
 	if (nonce_payload == NULL)
 	{
 		return OUT_OF_RES;	
 	}
-	
-	nonce_payload->set_nonce(nonce_payload, nonce);
+
+	nonce_payload->set_nonce(nonce_payload, this->ike_sa_init_data.sent_nonce);
 	
 	*payload = nonce_payload;
 	
@@ -562,24 +659,45 @@ static status_t build_nonce_payload(private_ike_sa_t *this, nonce_payload_t **pa
  */
 static status_t destroy (private_ike_sa_t *this)
 {
-	linked_list_iterator_t *iterator;
-
-	this->child_sas->create_iterator(this->child_sas, &iterator, TRUE);
-	while (iterator->has_next(iterator))
+	/* destroy child sa's */
+	while (this->child_sas->get_count(this->child_sas) > 0)
 	{
-		payload_t *payload;
-		iterator->current(iterator, (void**)&payload);
-		payload->destroy(payload);
+		void *child_sa;
+		if (this->child_sas->remove_first(this->child_sas,&child_sa) != SUCCESS)
+		{
+			break;
+		}
+		/* destroy child sa */
 	}
-	iterator->destroy(iterator);
 	this->child_sas->destroy(this->child_sas);
 	
+	/* destroy ike_sa_id */
 	this->ike_sa_id->destroy(this->ike_sa_id);
+
+	/* destroy stored sent messages */
+	while (this->sent_messages->get_count(this->sent_messages) > 0)
+	{
+		message_t *message;
+		if (this->sent_messages->remove_first(this->sent_messages,(void **) &message) != SUCCESS)
+		{
+			break;
+		}
+		message->destroy(message);
+	}
 	this->sent_messages->destroy(this->sent_messages);
+	
 	this->randomizer->destroy(this->randomizer);
 	if (this->ike_sa_init_data.diffie_hellman != NULL)
 	{
 		this->ike_sa_init_data.diffie_hellman->destroy(this->ike_sa_init_data.diffie_hellman);
+	}
+	if (this->ike_sa_init_data.sent_nonce.ptr != NULL)
+	{
+		allocator_free_chunk(this->ike_sa_init_data.sent_nonce);		
+	}
+	if (this->ike_sa_init_data.received_nonce.ptr != NULL)
+	{
+		allocator_free_chunk(this->ike_sa_init_data.received_nonce);
 	}
 	
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
@@ -607,10 +725,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->public.destroy = (status_t(*)(ike_sa_t*))destroy;
 	
+	/* private functions */
 	this->build_sa_payload = build_sa_payload;
 	this->build_nonce_payload = build_nonce_payload;
 	this->build_ke_payload = build_ke_payload;
-	
 	this->build_message = build_message;
 	this->transto_ike_sa_init_requested = transto_ike_sa_init_requested;
 	this->transto_ike_sa_init_responded = transto_ike_sa_init_responded;
@@ -662,6 +780,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_sa_init_data.dh_group_number = 0;
 	/* 1 means highest priority */
 	this->ike_sa_init_data.dh_group_priority = 1;
+	this->ike_sa_init_data.sent_nonce.len = 0;
+	this->ike_sa_init_data.sent_nonce.ptr = NULL;
+	this->ike_sa_init_data.received_nonce.len = 0;
+	this->ike_sa_init_data.received_nonce.ptr = NULL;
 	this->message_id_out = 0;
 	this->message_id_in = 0;
 
