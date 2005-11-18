@@ -82,6 +82,12 @@ static status_t get_local_host(private_configuration_manager_t *this, char *name
 	*host = local;
 	return SUCCESS;
 }
+
+static status_t get_dh_group_number(private_configuration_manager_t *this,char *name, u_int16_t *dh_group_number, u_int16_t priority)
+{
+	*dh_group_number = MODP_1024_BIT;
+	return SUCCESS;
+}
 	
 static status_t get_proposals_for_host(private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *iterator)
 {
@@ -274,6 +280,7 @@ configuration_manager_t *configuration_manager_create()
 	this->public.destroy = (status_t(*)(configuration_manager_t*))destroy;
 	this->public.get_remote_host = (status_t(*)(configuration_manager_t*,char*,host_t**))get_remote_host;
 	this->public.get_local_host = (status_t(*)(configuration_manager_t*,char*,host_t**))get_local_host;
+	this->public.get_dh_group_number = (status_t(*)(configuration_manager_t*,char*,u_int16_t *, u_int16_t))get_dh_group_number;
 	this->public.get_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,linked_list_iterator_t*))get_proposals_for_host;
 	this->public.select_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,linked_list_iterator_t*,linked_list_iterator_t*))select_proposals_for_host;
 	this->public.is_dh_group_allowed_for_host = (status_t(*)(configuration_manager_t*,host_t*,diffie_hellman_group_t,bool*)) is_dh_group_allowed_for_host;

@@ -40,6 +40,8 @@ struct configuration_manager_s {
 	
 	status_t (*get_local_host) (configuration_manager_t *this, char *name, host_t **host);
 	
+	status_t (*get_dh_group_number) (configuration_manager_t *this, char *name, u_int16_t *dh_group_number, u_int16_t priority);
+	
 	status_t (*get_proposals_for_host) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *list);
 	
 	status_t (*select_proposals_for_host) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *in, linked_list_iterator_t *out);
