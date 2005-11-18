@@ -245,7 +245,7 @@ logger_manager_t *global_logger_manager;
 	&diffie_hellman_test,
 	NULL
 	};
- 	global_logger_manager = logger_manager_create(ALL);
+ 	global_logger_manager = logger_manager_create(FULL);
 
 	global_socket = socket_create(4600);
  	
@@ -255,13 +255,13 @@ logger_manager_t *global_logger_manager;
  	global_configuration_manager = configuration_manager_create();
  	global_ike_sa_manager = ike_sa_manager_create();
  	
-	//global_logger_manager->disable_logger_level(global_logger_manager,TESTER,ALL);
+	global_logger_manager->disable_logger_level(global_logger_manager,TESTER,FULL);
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);
 
 
-	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&diffie_hellman_test); 
+	tester->perform_tests(tester,all_tests);
+	//tester->perform_test(tester,&diffie_hellman_test); 
 
 
  	
