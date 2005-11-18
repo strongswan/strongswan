@@ -155,11 +155,7 @@ struct private_message_s {
 	 * Assigned exchange type
 	 */
 	exchange_type_t exchange_type;
-	
-	/**
-	 * TRUE if message is from original initiator, FALSE otherwise.
-	 */
-	bool original_initiator;
+
 
 	/**
 	 * TRUE if message is request.
@@ -350,24 +346,6 @@ static exchange_type_t get_exchange_type (private_message_t *this)
 	return this->exchange_type;
 }
 
-/**
- * Implements message_t's set_original_initiator function.
- * See #message_s.set_original_initiator.
- */
-static status_t set_original_initiator (private_message_t *this,bool original_initiator)
-{
-	this->original_initiator = original_initiator;
-	return SUCCESS;
-}
-
-/**
- * Implements message_t's get_original_initiator function.
- * See #message_s.get_original_initiator.
- */
-static exchange_type_t get_original_initiator (private_message_t *this)
-{
-	return this->original_initiator;
-}
 
 /**
  * Implements message_t's set_request function.
@@ -470,7 +448,7 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	this->ike_sa_id->get_values(this->ike_sa_id, &initiator_spi, &responder_spi, &is_initiator); 
 	
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
-	ike_header->set_initiator_flag(ike_header, this->original_initiator);
+	ike_header->set_initiator_flag(ike_header, is_initiator);
 	ike_header->set_message_id(ike_header, this->message_id);
 	ike_header->set_response_flag(ike_header, !this->is_request);
 	ike_header->set_initiator_flag(ike_header, is_initiator);
@@ -567,9 +545,10 @@ static status_t parse_header (private_message_t *this)
 	{
 		this->ike_sa_id->destroy(this->ike_sa_id);
 	}
-	this->original_initiator = (!ike_header->get_initiator_flag(ike_header));
 	
-	this->ike_sa_id = ike_sa_id_create(ike_header->get_initiator_spi(ike_header),ike_header->get_responder_spi(ike_header),this->original_initiator);
+	this->ike_sa_id = ike_sa_id_create(ike_header->get_initiator_spi(ike_header),
+									   ike_header->get_responder_spi(ike_header),
+									   !ike_header->get_initiator_flag(ike_header));
 	if (this->ike_sa_id == NULL)
 	{
 		this->logger->log(this->logger, ERROR, "Could not creaee ike_sa_id object");
@@ -772,8 +751,6 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_ike_sa_id = (status_t(*)(message_t*, ike_sa_id_t **))get_ike_sa_id;
 	this->public.set_exchange_type = (status_t(*)(message_t*, exchange_type_t))set_exchange_type;
 	this->public.get_exchange_type = (exchange_type_t(*)(message_t*))get_exchange_type;
-	this->public.set_original_initiator = (status_t(*)(message_t*, bool))set_original_initiator;
-	this->public.get_original_initiator = (bool(*)(message_t*))get_original_initiator;
 	this->public.set_request = (status_t(*)(message_t*, bool))set_request;
 	this->public.get_request = (bool(*)(message_t*))get_request;
 	this->public.add_payload = (status_t(*)(message_t*,payload_t*))add_payload;
@@ -789,7 +766,6 @@ message_t *message_create_from_packet(packet_t *packet)
 		
 	/* public values */
 	this->exchange_type = EXCHANGE_TYPE_UNDEFINED;
- 	this->original_initiator = TRUE;
  	this->is_request = TRUE;
  	this->ike_sa_id = NULL;
  	this->first_payload = NO_PAYLOAD;

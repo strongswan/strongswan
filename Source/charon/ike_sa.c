@@ -103,6 +103,8 @@ struct private_ike_sa_s {
 	status_t (*build_nonce_payload) (private_ike_sa_t *this, nonce_payload_t **payload);
 	status_t (*build_ke_payload) (private_ike_sa_t *this, ke_payload_t **payload);
 	
+	status_t (*build_message) (private_ike_sa_t *this, exchange_type_t type, bool request);
+	
 	status_t (*transto_ike_sa_init_responded) (private_ike_sa_t *this, message_t *message);
 	status_t (*transto_ike_auth_requested) (private_ike_sa_t *this, message_t *message);
 
@@ -143,6 +145,9 @@ struct private_ike_sa_s {
 	} other;
 	
 	diffie_hellman_t *diffie_hellman;
+	
+	u_int32_t message_id_in;
+	u_int32_t message_id_out;
 	
 	/**
 	 * a logger for this IKE_SA
@@ -205,10 +210,41 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 }
 
 
+static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool request)
+{
+	status_t status;
+	message_t *message;
+	host_t *source, *destination;
+	
+	message = message_create();	
+	if (message == NULL)
+	{
+		return OUT_OF_RES;
+	}
+	
+	status  = this->me.host->clone(this->me.host, &source);
+	status |= this->other.host->clone(this->other.host, &destination);	
+	if (status != SUCCESS)
+	{
+		message->destroy(message);
+		return status;	
+	}
+	message->set_source(message, source);
+	message->set_destination(message, destination);
+	
+	message->set_exchange_type(message, type);
+	message->set_request(message, request);
+	
+	message->set_ike_sa_id(message, this->ike_sa_id);
+	
+	return SUCCESS;
+}
+
 static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t *message)
 {
 	status_t status;
 	linked_list_iterator_t *payloads;
+	message_t *respond;
 	
 	status = message->parse_body(message);
 	if (status != SUCCESS)
@@ -216,9 +252,14 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 		return status;	
 	}
 	
+
+	
+	
+	
 	status = message->get_payload_iterator(message, &payloads);
 	if (status != SUCCESS)
 	{
+		respond->destroy(respond);
 		return status;	
 	}
 	while (payloads->has_next(payloads))
@@ -239,7 +280,7 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 					payloads->destroy(payloads);
 					return status;
 				}
-				//global_configuration_manager->select_prop
+				//global_configuration_manager->select_proposals_for_host
 				
 				break;
 			}
@@ -325,7 +366,7 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 
 	message->set_exchange_type(message, IKE_SA_INIT);
 	message->set_original_initiator(message, this->original_initiator);
-	message->set_message_id(message, 0);
+	message->set_message_id(message, this->message_id_out++);
 	message->set_ike_sa_id(message, this->ike_sa_id);
 	message->set_request(message, TRUE);
 	
@@ -527,11 +568,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->build_ke_payload = build_ke_payload;
 	this->build_nonce_payload = build_nonce_payload;
 	
-	
+	this->build_message = build_message;
 	this->transto_ike_sa_init_responded = transto_ike_sa_init_responded;
 	this->transto_ike_auth_requested = transto_ike_auth_requested;
 
-
+	
 
 	/* initialize private fields */
 	if (ike_sa_id->clone(ike_sa_id,&(this->ike_sa_id)) != SUCCESS)
@@ -574,6 +615,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->me.host = NULL;
 	this->other.host = NULL;
 	this->diffie_hellman = NULL;
+	this->message_id_out = 0;
+	this->message_id_in = 0;
 
 
 	/* at creation time, IKE_SA isn't in a specific state */
