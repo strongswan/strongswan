@@ -46,10 +46,10 @@ void test_ike_sa(tester_t *tester)
 	/* test every ike_sa function */
 	ike_sa = ike_sa_create(ike_sa_id);
 	
-	ike_sa->initialize_connection(ike_sa, NULL);
+/*	ike_sa->initialize_connection(ike_sa, NULL);
 	
 	tester->assert_true(tester,(ike_sa != NULL), "ike_sa pointer check");
-
+*/
 	tester->assert_true(tester,(ike_sa->destroy(ike_sa) == SUCCESS), "destroy call check");
 	
 	ike_sa_id->destroy(ike_sa_id);
