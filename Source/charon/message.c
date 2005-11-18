@@ -368,10 +368,25 @@ static exchange_type_t get_request (private_message_t *this)
 
 static status_t add_payload(private_message_t *this, payload_t *payload)
 {
+	payload_t *last_payload;
+	if (this->payloads->get_last(this->payloads,(void **) &last_payload) != SUCCESS)
+	{
+		return OUT_OF_RES;	
+	}
+	
 	if (this->payloads->insert_last(this->payloads, payload) != SUCCESS)
 	{
 		return OUT_OF_RES;	
 	}
+	if (this->payloads->get_count(this->payloads) == 1)
+	{
+		this->first_payload = payload->get_type(payload);
+	}
+	else
+	{
+		last_payload->set_next_type(last_payload,payload->get_type(payload));
+	}
+	
 	return SUCCESS;
 }
 
@@ -424,8 +439,6 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	ike_header_t *ike_header;
 	payload_t *payload, *next_payload;
 	linked_list_iterator_t *iterator;
-	u_int64_t initiator_spi, responder_spi;
-	bool is_initiator;
 	status_t status;
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
@@ -445,15 +458,13 @@ static status_t generate(private_message_t *this, packet_t **packet)
 		return OUT_OF_RES;
 	}
 	
-	this->ike_sa_id->get_values(this->ike_sa_id, &initiator_spi, &responder_spi, &is_initiator); 
 	
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
-	ike_header->set_initiator_flag(ike_header, is_initiator);
 	ike_header->set_message_id(ike_header, this->message_id);
 	ike_header->set_response_flag(ike_header, !this->is_request);
-	ike_header->set_initiator_flag(ike_header, is_initiator);
-	ike_header->set_initiator_spi(ike_header, initiator_spi);
-	ike_header->set_responder_spi(ike_header, responder_spi);
+	ike_header->set_initiator_flag(ike_header, this->ike_sa_id->is_initiator(this->ike_sa_id));
+	ike_header->set_initiator_spi(ike_header, this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
+	ike_header->set_responder_spi(ike_header, this->ike_sa_id->get_responder_spi(this->ike_sa_id));
 	
 	generator = generator_create();
 	if (generator == NULL)

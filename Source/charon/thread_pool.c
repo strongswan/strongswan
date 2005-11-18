@@ -128,6 +128,10 @@ static void job_processing(private_thread_pool_t *this)
 					message->destroy(message);
 					break;
 				}
+				/* we must switch the initiator flag here, because the sender 
+				 * interprets this flag the other way round
+				 */
+				ike_sa_id->switch_initiator(ike_sa_id);
 				
 				status = global_ike_sa_manager->checkout(global_ike_sa_manager,ike_sa_id, &ike_sa);
 				if (status != SUCCESS)
@@ -141,10 +145,8 @@ static void job_processing(private_thread_pool_t *this)
 					/* only for logging */
 					ike_sa_id_t *checked_out_ike_sa_id;
 					checked_out_ike_sa_id = ike_sa->get_id(ike_sa);
-					u_int64_t initiator;
-					u_int64_t responder;
-					bool is_initiator;
-					checked_out_ike_sa_id->get_values(checked_out_ike_sa_id,&initiator,&responder,&is_initiator);
+					u_int64_t initiator = checked_out_ike_sa_id->get_initiator_spi(checked_out_ike_sa_id);
+					u_int64_t responder = checked_out_ike_sa_id->get_responder_spi(checked_out_ike_sa_id);
 					this->logger->log(this->logger, CONTROL|MORE, "IKE SA with SPI's I:%d, R:%d checked out", initiator,responder);
 				}
 				
@@ -188,6 +190,7 @@ static void job_processing(private_thread_pool_t *this)
 					break;
 				}
 				
+				
 				status = global_ike_sa_manager->checkout(global_ike_sa_manager, ike_sa_id, &ike_sa);
 				ike_sa_id->destroy(ike_sa_id);
 				if (status != SUCCESS)
@@ -228,10 +231,8 @@ static void job_processing(private_thread_pool_t *this)
 								
 				{
 					/* only for logging */
-					u_int64_t initiator;
-					u_int64_t responder;
-					bool is_initiator;
-					ike_sa_id->get_values(ike_sa_id,&initiator,&responder,&is_initiator);
+					u_int64_t initiator = ike_sa_id->get_initiator_spi(ike_sa_id);
+					u_int64_t responder = ike_sa_id->get_responder_spi(ike_sa_id);
 					this->logger->log(this->logger, CONTROL|MORE, "thread %u: Going to delete IKE SA with SPI's I:%d, R:%d", pthread_self(),initiator,responder);
 				}
 				status = global_ike_sa_manager->delete(global_ike_sa_manager, ike_sa_id);

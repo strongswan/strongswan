@@ -316,8 +316,8 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 
 	pthread_mutex_lock(&(this->mutex));
 
-	responder_spi_set = ike_sa_id->responder_spi_is_set(ike_sa_id);
-	initiator_spi_set = ike_sa_id->initiator_spi_is_set(ike_sa_id);
+	responder_spi_set = (FALSE != ike_sa_id->get_responder_spi(ike_sa_id));
+	initiator_spi_set = (FALSE != ike_sa_id->get_initiator_spi(ike_sa_id));
 
 	if (initiator_spi_set && responder_spi_set)
 	{
@@ -385,6 +385,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		 */
 		u_int64_t responder_spi;
 		ike_sa_entry_t *new_ike_sa_entry;
+		
 
 		/* set SPIs, we are the responder */
 		retval = this->get_next_spi(this, &responder_spi);

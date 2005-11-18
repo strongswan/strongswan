@@ -173,9 +173,21 @@ static status_t verify(private_ike_header_t *this)
 		/* unsupported exchange type */
 		return FAILED;
 	}
-	if ((this->initiator_spi == 0) && (this->responder_spi != 0))
+	if (this->initiator_spi == 0)
 	{
 		/* initiator spi not set */
+		return FAILED;
+	}
+	
+	if ((this->responder_spi == 0) && (!this->flags.initiator))
+	{
+		/* must be original initiator*/
+		return FAILED;
+	}
+
+	if ((this->responder_spi == 0) && (this->flags.response))
+	{
+		/* must be request*/
 		return FAILED;
 	}
 	

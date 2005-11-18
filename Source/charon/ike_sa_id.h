@@ -59,20 +59,20 @@ struct ike_sa_id_s {
 	status_t (*set_initiator_spi) (ike_sa_id_t *this, u_int64_t initiator_spi);
 
 	/**
-	 * @brief Returns TRUE if the initiator spi is set (not zero)
+	 * @brief Returns the initiator spi
 	 *
 	 * @param this ike_sa_id_t object
-	 * @return TRUE if the initiator spi is set, FALSE otherwise
+	 * @return spi of the initiator
 	 */
-	bool (*initiator_spi_is_set) (ike_sa_id_t *this);
+	u_int64_t (*get_initiator_spi) (ike_sa_id_t *this);
 
 	/**
-	 * @brief Returns TRUE if the responder spi is set (not zero)
+	 * @brief Returns the responder spi
 	 *
 	 * @param this ike_sa_id_t object
-	 * @return TRUE if the responder spi is set, FALSE otherwise
+	 * @return spi of the responder
 	 */
-	bool (*responder_spi_is_set) (ike_sa_id_t *this);
+	u_int64_t (*get_responder_spi) (ike_sa_id_t *this);
 
 	/**
 	 * @brief Check if two ike_sa_ids are equal
@@ -92,18 +92,23 @@ struct ike_sa_id_s {
  	 * @param other ike_sa_id_t object which values will be taken
 	 * @return SUCCESSFUL if succeeded, FAILED otherwise
 	 */
-	status_t (*replace_values) (ike_sa_id_t *this,ike_sa_id_t *other);
+	status_t (*replace_values) (ike_sa_id_t *this, ike_sa_id_t *other);
 
 	/**
-	 * @brief get spis and role of an ike_sa_id
+	 * @brief gets the initiator flag
 	 *
 	 * @param this ike_sa_id_t object
- 	 * @param initiator address to write initator spi
- 	 * @param responder address to write responder spi
- 	 * @param is_initiator address to write role
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @return TRUE if we are the original initator
 	 */
-	status_t (*get_values) (ike_sa_id_t *this, u_int64_t *initiator, u_int64_t *responder,bool *is_initiator);
+	bool (*is_initiator) (ike_sa_id_t *this);
+
+	/**
+	 * @brief switches the initiator flag
+	 * 
+	 * @param this ike_sa_id_t object
+	 * @return TRUE if we are the original initator after switch
+	 */
+	bool (*switch_initiator) (ike_sa_id_t *this);
 
 	/**
 	 * @brief Clones a given ike_sa_id_t object

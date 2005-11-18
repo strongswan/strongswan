@@ -100,10 +100,13 @@ struct private_ike_sa_s {
 	ike_sa_t public;
 	
 	status_t (*build_sa_payload) (private_ike_sa_t *this, sa_payload_t **payload);
+	status_t (*build_ke_payload) (private_ike_sa_t *this, ke_payload_t **payload);
 	status_t (*build_nonce_payload) (private_ike_sa_t *this, nonce_payload_t **payload);
 	
-	status_t (*build_message) (private_ike_sa_t *this, exchange_type_t type, bool request);
+	status_t (*build_message) (private_ike_sa_t *this, exchange_type_t type, bool request, message_t **message);
 	
+	
+	status_t (*transto_ike_sa_init_requested) (private_ike_sa_t *this, char *name);
 	status_t (*transto_ike_sa_init_responded) (private_ike_sa_t *this, message_t *message);
 	status_t (*transto_ike_auth_requested) (private_ike_sa_t *this, message_t *message);
 
@@ -122,11 +125,6 @@ struct private_ike_sa_s {
 	 * Current state of the IKE_SA
 	 */
 	ike_sa_state_t state;
-	
-	/**
-	 * is this IKE_SA the original initiator of this IKE_SA
-	 */
-	bool original_initiator;
 	
 	/**
 	 * this SA's source for random data
@@ -232,14 +230,14 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 }
 
 
-static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool request)
+static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool request, message_t **message)
 {
 	status_t status;
-	message_t *message;
+	message_t *new_message; 
 	host_t *source, *destination;
 	
-	message = message_create();	
-	if (message == NULL)
+	new_message = message_create();	
+	if (new_message == NULL)
 	{
 		return OUT_OF_RES;
 	}
@@ -248,18 +246,26 @@ static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool
 	status |= this->other.host->clone(this->other.host, &destination);	
 	if (status != SUCCESS)
 	{
-		message->destroy(message);
+		new_message->destroy(new_message);
 		return status;	
 	}
-	message->set_source(message, source);
-	message->set_destination(message, destination);
+	new_message->set_source(new_message, source);
+	new_message->set_destination(new_message, destination);
 	
-	message->set_exchange_type(message, type);
-	message->set_request(message, request);
+	new_message->set_exchange_type(new_message, type);
+	new_message->set_request(new_message, request);
 	
-	message->set_ike_sa_id(message, this->ike_sa_id);
+	new_message->set_ike_sa_id(new_message, this->ike_sa_id);
+	
+	*message = new_message;
 	
 	return SUCCESS;
+}
+
+
+static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name)
+{
+	
 }
 
 static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t *message)
@@ -360,9 +366,7 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	status_t status;
 	
 	this->logger->log(this->logger, CONTROL, "initializing connection");
-	
-	this->original_initiator = TRUE;
-	
+		
 	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &(this->me.host));
 	if (status != SUCCESS)
 	{	
@@ -381,22 +385,12 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 		return INVALID_ARG;
 	}
 	
-	message = message_create();
-	
-	if (message == NULL)
-	{
-		return OUT_OF_RES;	
+	status = this->build_message(this, IKE_SA_INIT, TRUE, &message);
+	if (status != SUCCESS)
+	{	
+		return status;
 	}
 	
-
-	message->set_source(message, this->me.host);
-	message->set_destination(message, this->other.host);
-
-	message->set_exchange_type(message, IKE_SA_INIT);
-	message->set_original_initiator(message, this->original_initiator);
-	message->set_message_id(message, this->message_id_out++);
-	message->set_ike_sa_id(message, this->ike_sa_id);
-	message->set_request(message, TRUE);
 	
 	status = this->build_sa_payload(this, (sa_payload_t**)&payload);
 	if (status != SUCCESS)
@@ -405,7 +399,6 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 		message->destroy(message);
 		return status;
 	}
-	payload->set_next_type(payload, KEY_EXCHANGE);
 	message->add_payload(message, payload);
 	
 	{
@@ -459,7 +452,6 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 		payload = (payload_t *) ke_payload;
 	}
 
-	payload->set_next_type(payload, NONCE);
 	message->add_payload(message, payload);
 	
 	status = this->build_nonce_payload(this, (nonce_payload_t**)&payload);
@@ -532,6 +524,10 @@ static status_t build_sa_payload(private_ike_sa_t *this, sa_payload_t **payload)
 	return SUCCESS;
 }
 
+static status_t build_ke_payload(private_ike_sa_t *this, ke_payload_t **payload)
+{
+	
+}
 
 /**
  * implements private_ike_sa_t.build_nonce_payload
@@ -613,8 +609,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	
 	this->build_sa_payload = build_sa_payload;
 	this->build_nonce_payload = build_nonce_payload;
+	this->build_ke_payload = build_ke_payload;
 	
 	this->build_message = build_message;
+	this->transto_ike_sa_init_requested = transto_ike_sa_init_requested;
 	this->transto_ike_sa_init_responded = transto_ike_sa_init_responded;
 	this->transto_ike_auth_requested = transto_ike_auth_requested;
 
