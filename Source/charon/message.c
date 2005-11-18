@@ -677,7 +677,7 @@ static status_t parse_body (private_message_t *this)
 				status = iterator->current(iterator,(void **)&current_payload);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, CONTROL_MORE, "Could not get payload from internal list");
+					this->logger->log(this->logger, CONTROL|MORE, "Could not get payload from internal list");
 					iterator->destroy(iterator);
 					return status;
 				}
@@ -686,7 +686,7 @@ static status_t parse_body (private_message_t *this)
 					found_payloads++;
 					if (found_payloads > max_occurence)
 					{
-						this->logger->log(this->logger, CONTROL_MORE, "Payload of type %s more than %d times (%d) occured in current message",
+						this->logger->log(this->logger, CONTROL|MORE, "Payload of type %s more than %d times (%d) occured in current message",
 										  mapping_find(payload_type_m,current_payload->get_type(current_payload)),max_occurence,found_payloads);
 						iterator->destroy(iterator);
 						return NOT_SUPPORTED;					
@@ -696,7 +696,7 @@ static status_t parse_body (private_message_t *this)
 			}
 			if (found_payloads < min_occurence)
 			{
-					this->logger->log(this->logger, CONTROL_MORE, "Payload of type %s not occured %d times",
+					this->logger->log(this->logger, CONTROL|MORE, "Payload of type %s not occured %d times",
 									  mapping_find(payload_type_m,payload_type),min_occurence);
 					iterator->destroy(iterator);
 					return NOT_SUPPORTED;
@@ -732,7 +732,7 @@ static status_t destroy (private_message_t *this)
 	{
 		payload_t *payload;
 		iterator->current(iterator, (void**)&payload);	
-		this->logger->log(this->logger, CONTROL_MORE, "Destroying payload of type %s", 
+		this->logger->log(this->logger, CONTROL|MORE, "Destroying payload of type %s", 
 			mapping_find(payload_type_m, payload->get_type(payload)));
 		payload->destroy(payload);
 	}

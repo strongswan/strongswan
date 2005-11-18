@@ -27,35 +27,51 @@
 #include "../types.h"
 
 /**
- * Log Levels supported by the logger object
+ * @brief Log Levels supported by the logger object
+ * 
+ * Logleves are devided in two types:
+ * - One to specify the type log
+ * - One to specify the detail-level of the log
+ * Use combinations of these to build detailed loglevels, such
+ * as CONTROL|MORE fore a detailed cotrol level, or
+ * use RAW| to see all raw data dumps (except private)
  */
 typedef enum logger_level_e logger_level_t;
 enum logger_level_e {
 	/**
-	 * basic control messages
+	 * control flow
 	 */
 	CONTROL = 1,
 	/**
-	 * detailed control messages
+	 * error reporting
 	 */
-	CONTROL_MORE = 2,
+	ERROR = 2,
 	/**
-	 * raw data dumps not containing private data
+	 * raw data dumps
 	 */
 	RAW = 4,
 	/**
 	 * private data dumps
 	 */
 	PRIVATE = 8,
-	/**
-	 * print errors
-	 */
-	ERROR = 16,
 	
 	/**
-	 * All Lol Levels
+	 * use more detailed output for those above
 	 */
-	ALL = 255
+	MORE = 16, 
+	/**
+	 * use even more detailed output
+	 */
+	MOST = MORE + 32,
+	/**
+	 * use full detailed output
+	 */
+	ALL = MOST + 64,
+	
+	/**
+	 * Summary for all types with all detail-levels
+	 */
+	FULL = ALL + CONTROL + ERROR + RAW + PRIVATE
 };
 
 /**

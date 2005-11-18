@@ -331,7 +331,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		 	/* can we give this out to new requesters?*/
 		 	if (entry->driveout_new_threads)
 		 	{
-		 		this->logger->log(this->logger,CONTROL_MORE,"Drive out new thread for existing IKE_SA");
+		 		this->logger->log(this->logger,CONTROL|MORE,"Drive out new thread for existing IKE_SA");
 		 		/* no we can't */
 		 		retval = NOT_FOUND;
 		 	}
@@ -354,7 +354,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 			 	{
 			 		/* we must signal here, others are interested that we leave */
 			 		pthread_cond_signal(&(entry->condvar));
-			 		this->logger->log(this->logger,CONTROL_MORE,"Drive out waiting thread for existing IKE_SA");
+			 		this->logger->log(this->logger,CONTROL|MORE,"Drive out waiting thread for existing IKE_SA");
 			 		retval = NOT_FOUND;
 			 	}
 			 	else
@@ -477,7 +477,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 	else
 	{
 		/* responder set, initiator not: here is something seriously wrong! */
- 		this->logger->log(this->logger,CONTROL_MORE,"Invalid IKE_SA SPI's");
+ 		this->logger->log(this->logger,CONTROL|MORE,"Invalid IKE_SA SPI's");
 		/* DON'T use return, we must unlock the mutex! */
 		retval = INVALID_ARG;
 	}

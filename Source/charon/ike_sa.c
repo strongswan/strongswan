@@ -139,7 +139,7 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	status_t status;
 	/* @TODO Add Message Processing here */
 	
-	this->logger->log(this->logger, CONTROL_MORE, "Process message of exchange type %s",mapping_find(exchange_type_m,message->get_exchange_type(message)));
+	this->logger->log(this->logger, CONTROL|MORE, "Process message of exchange type %s",mapping_find(exchange_type_m,message->get_exchange_type(message)));
 	
 	/* parse body */
 	status = message->parse_body(message);
@@ -293,7 +293,7 @@ static status_t build_sa_payload(private_ike_sa_t *this, sa_payload_t **payload)
 	linked_list_iterator_t *iterator;
 	status_t status;
 
-	this->logger->log(this->logger, CONTROL_MORE, "building sa payload");
+	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
 	
 	sa_payload = sa_payload_create();
 	if (sa_payload == NULL)
@@ -327,7 +327,7 @@ static status_t build_ke_payload(private_ike_sa_t *this, ke_payload_t **payload)
 	chunk_t key_data;
 	
 	
-	this->logger->log(this->logger, CONTROL_MORE, "building ke payload");
+	this->logger->log(this->logger, CONTROL|MORE, "building ke payload");
 	
 	key_data.ptr = "12345";
 	key_data.len = strlen("12345");
@@ -356,7 +356,7 @@ static status_t build_nonce_payload(private_ike_sa_t *this, nonce_payload_t **pa
 	nonce_payload_t *nonce_payload;
 	chunk_t nonce;
 	
-	this->logger->log(this->logger, CONTROL_MORE, "building nonce payload");
+	this->logger->log(this->logger, CONTROL|MORE, "building nonce payload");
 	
 	if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 16, &nonce) != SUCCESS)
 	{

@@ -72,7 +72,7 @@ static void job_processing(private_thread_pool_t *this)
 
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	this->logger->log(this->logger, CONTROL_MORE, "thread %u started working", pthread_self());
+	this->logger->log(this->logger, CONTROL|MORE, "thread %u started working", pthread_self());
 
 	for (;;) {
 		job_t *job;
@@ -80,7 +80,7 @@ static void job_processing(private_thread_pool_t *this)
 		
 		global_job_queue->get(global_job_queue, &job);
 		job_type = job->get_type(job);
-		this->logger->log(this->logger, CONTROL_MORE, "thread %u got a job of type %s", pthread_self(),mapping_find(job_type_m,job_type));
+		this->logger->log(this->logger, CONTROL|MORE, "thread %u got a job of type %s", pthread_self(),mapping_find(job_type_m,job_type));
 		
 		/* process them here */
 		switch (job_type)
@@ -96,13 +96,13 @@ static void job_processing(private_thread_pool_t *this)
 				
 				if (incoming_packet_job->get_packet(incoming_packet_job,&packet) != SUCCESS)
 				{
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Packet in job of type %s could not be retrieved!", pthread_self(),mapping_find(job_type_m,job_type));				
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: Packet in job of type %s could not be retrieved!", pthread_self(),mapping_find(job_type_m,job_type));				
 					break;
 				}
 				message = message_create_from_packet(packet);
 				if (message == NULL)
 				{
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Message could not be created from packet!", pthread_self(),mapping_find(job_type_m,job_type));				
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: Message could not be created from packet!", pthread_self(),mapping_find(job_type_m,job_type));				
 					packet->destroy(packet);
 					break;					
 				}
@@ -110,21 +110,21 @@ static void job_processing(private_thread_pool_t *this)
 				status = message->parse_header(message);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Message header could not be verified!", pthread_self());				
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: Message header could not be verified!", pthread_self());				
 					message->destroy(message);
 					break;										
 				}
 				
 				if ((message->get_major_version(message) != IKE_MAJOR_VERSION) || (message->get_minor_version(message) != IKE_MINOR_VERSION))
 				{
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: IKE Version %d.%d not supported", pthread_self(),message->get_major_version(message),message->get_minor_version(message));	
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: IKE Version %d.%d not supported", pthread_self(),message->get_major_version(message),message->get_minor_version(message));	
 					/* Todo send notify */
 				}
 				
 				status = message->get_ike_sa_id(message,&ike_sa_id);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: IKE SA ID of message could not be created!", pthread_self());
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: IKE SA ID of message could not be created!", pthread_self());
 					message->destroy(message);
 					break;
 				}
@@ -132,7 +132,7 @@ static void job_processing(private_thread_pool_t *this)
 				status = global_ike_sa_manager->checkout(global_ike_sa_manager,ike_sa_id, &ike_sa);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: IKE SA could not be checked out", pthread_self());
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: IKE SA could not be checked out", pthread_self());
 					message->destroy(message);
 					break;
 				}
@@ -145,18 +145,18 @@ static void job_processing(private_thread_pool_t *this)
 					u_int64_t responder;
 					bool is_initiator;
 					checked_out_ike_sa_id->get_values(checked_out_ike_sa_id,&initiator,&responder,&is_initiator);
-					this->logger->log(this->logger, CONTROL_MORE, "IKE SA with SPI's I:%d, R:%d checked out", initiator,responder);
+					this->logger->log(this->logger, CONTROL|MORE, "IKE SA with SPI's I:%d, R:%d checked out", initiator,responder);
 				}
 				
 				status = ike_sa->process_message (ike_sa,message);				
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Message could not be processed by IKE SA", pthread_self());
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: Message could not be processed by IKE SA", pthread_self());
 				}
 				
 				status = global_ike_sa_manager->checkin(global_ike_sa_manager,ike_sa);
 				if (status != SUCCESS){
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Checkin of IKE SA return errors", pthread_self());
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: Checkin of IKE SA return errors", pthread_self());
 				}
 				message->destroy(message);
 				ike_sa_id->destroy(ike_sa_id);				
@@ -216,7 +216,7 @@ static void job_processing(private_thread_pool_t *this)
 			}
 			case RETRANSMIT_REQUEST:
 			{
-				this->logger->log(this->logger, CONTROL_MORE, "thread %u: Job of type %s not supported!", pthread_self(),mapping_find(job_type_m,job_type));				
+				this->logger->log(this->logger, CONTROL|MORE, "thread %u: Job of type %s not supported!", pthread_self(),mapping_find(job_type_m,job_type));				
 				break;
 			}
 			
@@ -232,7 +232,7 @@ static void job_processing(private_thread_pool_t *this)
 					u_int64_t responder;
 					bool is_initiator;
 					ike_sa_id->get_values(ike_sa_id,&initiator,&responder,&is_initiator);
-					this->logger->log(this->logger, CONTROL_MORE, "thread %u: Going to delete IKE SA with SPI's I:%d, R:%d", pthread_self(),initiator,responder);
+					this->logger->log(this->logger, CONTROL|MORE, "thread %u: Going to delete IKE SA with SPI's I:%d, R:%d", pthread_self(),initiator,responder);
 				}
 				status = global_ike_sa_manager->delete(global_ike_sa_manager, ike_sa_id);
 				if (status != SUCCESS)

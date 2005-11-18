@@ -100,7 +100,7 @@ int main()
 	register_signals();
 	
 	/* logger_manager is created first */
- 	global_logger_manager = logger_manager_create(ALL);
+ 	global_logger_manager = logger_manager_create(FULL);
 	if (global_logger_manager == NULL)
  	{
 		printf("could not create logger manager");
@@ -150,7 +150,7 @@ int main()
 		
 	}
  	
- 	logger->log(logger,CONTROL_MORE,"going to wait for exit signal");
+ 	logger->log(logger,CONTROL|MORE,"going to wait for exit signal");
  	/* go and handle signals*/
  	main_loop();
  	
@@ -354,10 +354,10 @@ static void destroy_and_exit(int exit_code)
 	destroy_globals();
 	
 	/* logger is destroyed */
- 	logger->log(logger,CONTROL_MORE,"destroy logger");
+ 	logger->log(logger,CONTROL|MORE,"destroy logger");
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
- 	logger->log(logger,CONTROL_MORE,"destroy logger_manager");
- 	logger->log(logger,CONTROL_MORE,"------------------------------------");
+ 	logger->log(logger,CONTROL|MORE,"destroy logger_manager");
+ 	logger->log(logger,CONTROL|MORE,"------------------------------------");
 	if (global_logger_manager != NULL)
 	{
 		global_logger_manager->destroy(global_logger_manager);

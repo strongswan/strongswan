@@ -543,7 +543,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
 	{
 		rule = &(this->rules[rule_number]);
-		this->logger->log(this->logger, CONTROL_MORE, "  parsing rule %d %s", 
+		this->logger->log(this->logger, CONTROL|MORE, "  parsing rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, rule->type));
 		switch (rule->type)
 		{
@@ -812,7 +812,7 @@ parser_t *parser_create(chunk_t data)
 	}
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, PARSER, NULL);
-	this->logger->enable_level(this->logger, CONTROL|CONTROL_MORE|ERROR|RAW);
+	this->logger->enable_level(this->logger, CONTROL|MORE|ERROR|RAW);
 	
 	
 	if (this->logger == NULL)
