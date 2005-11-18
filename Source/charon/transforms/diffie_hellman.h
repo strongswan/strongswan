@@ -24,6 +24,7 @@
 #define DIFFIE_HELLMAN_H_
 
 #include "../types.h"
+#include "../payloads/transform_substructure.h"
 
 /**
  * Object representing a diffie hellman exchange
@@ -107,6 +108,6 @@ struct diffie_hellman_s {
  * 							- diffie_hellman_t if successfully
  * 							- NULL if out of ressources or dh_group not supported
  */
-diffie_hellman_t *diffie_hellman_create(u_int16_t dh_group_number);
+diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number);
 
 #endif /*DIFFIE_HELLMAN_H_*/

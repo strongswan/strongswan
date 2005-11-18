@@ -558,7 +558,7 @@ static status_t destroy(private_diffie_hellman_t *this)
 /*
  * Described in header
  */
-diffie_hellman_t *diffie_hellman_create(u_int16_t dh_group_number)
+diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 {
 	private_diffie_hellman_t *this = allocator_alloc_thing(private_diffie_hellman_t);
 	if ((this == NULL))
