@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 1999, 2000, 2001  Henry Spencer.
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -20,10 +21,17 @@
  * for more details.
  */
  
+#include <stdio.h>
+ 
 #include "gmp_helper.h"
 
 #include "allocator.h"
 #include "randomizer.h"
+
+/**
+ * Number of times the probabilistic primality test is applied
+ */
+#define PRIMECHECK_ROUNDS 30
 
 /**
  * Private data of an gmp_helper_t object.
@@ -92,6 +100,7 @@ static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk
 
     if (mpz_sgn(temp1) != 0)
     {
+	    fprintf (stderr,"value %d\n",mpz_sgn(temp1));
 		status = FAILED;
     }
     mpz_clear(temp1);
@@ -115,14 +124,21 @@ static status_t init_prime (private_gmp_helper_t *this, mpz_t *prime, int bytes)
     		return OUT_OF_RES;
     } 
     
-   	status = randomizer->allocate_random_bytes(randomizer,bytes, &random_bytes);
+    /* TODO change to true random device ? */
+ //  	status = randomizer->allocate_random_bytes(randomizer,bytes, &random_bytes);
+   	status = randomizer->allocate_pseudo_random_bytes(randomizer,bytes, &random_bytes);
+   	
+   	/* make sure most significant bit is set */
+   	random_bytes.ptr[0] = random_bytes.ptr[0] | 0x80;
+   	
+   	
    	/* not needed anymore */
    	randomizer->destroy(randomizer);
    	if (status != SUCCESS)
    	{
    		return status;
    	}
-   	
+  	   	
    	/* convert chunk to mpz value */
    	this->public.chunk_to_mpz(&(this->public),prime, random_bytes);
 
@@ -136,6 +152,80 @@ static status_t init_prime (private_gmp_helper_t *this, mpz_t *prime, int bytes)
 	return SUCCESS;
 }
 
+
+static status_t init_prime_fast (private_gmp_helper_t *this, mpz_t *prime, int bytes){
+	randomizer_t *randomizer;
+    chunk_t random_bytes;
+    status_t status;  
+    unsigned long tries;
+    size_t length;
+
+    
+    randomizer = randomizer_create();
+    
+    if (randomizer == NULL)
+    {
+    		return OUT_OF_RES;
+    } 
+    
+    /* TODO change to true random device ? */
+ //  	status = randomizer->allocate_random_bytes(randomizer,bytes, &random_bytes);
+   	status = randomizer->allocate_pseudo_random_bytes(randomizer,bytes, &random_bytes);
+   	
+   	/* make sure most significant bit is set */
+   	random_bytes.ptr[0] = random_bytes.ptr[0] | 0x80;
+   	/* not needed anymore */
+   	randomizer->destroy(randomizer);
+   	if (status != SUCCESS)
+   	{
+   		return status;
+   	}
+
+   	/* convert chunk to mpz value */
+   	this->public.chunk_to_mpz(&(this->public),prime, random_bytes);
+
+   	/* chunk is not used anymore */
+   	allocator_free(random_bytes.ptr);
+   	random_bytes.ptr = NULL;   
+	
+	/* make value odd */
+	if (mpz_fdiv_ui(*prime, 2) != 1)
+	{
+		/* make value odd */
+		mpz_add_ui(*prime,*prime,1);
+	}
+	
+    tries = 1;
+	
+	/* starting find a prime */	
+	while (!mpz_probab_prime_p(*prime, PRIMECHECK_ROUNDS))
+    {
+		/* not a prime, increase by 2 */
+		mpz_add_ui(*prime, *prime, 2);
+		tries++;
+    }
+
+    length = mpz_sizeinbase(*prime, 2);
+
+
+    /* check bit length of primee */
+	if ((length < (bytes * 8)) || (length > ((bytes * 8) + 1)))
+	{
+		return FAILED;
+	}
+	
+
+    if (length == ((bytes * 8) + 1))
+    {
+    		/* carry out occured! retry */
+		mpz_clear(*prime);
+
+		/* recursive call */
+    		return this->public.init_prime_fast(&(this->public),prime, bytes);
+    }
+
+    return SUCCESS;
+}
 
 
 /**
@@ -162,6 +252,7 @@ gmp_helper_t *gmp_helper_create()
 	/* public functions */
 	this->public.destroy = (status_t (*)(gmp_helper_t *)) destroy;
 	this->public.init_prime = (status_t (*) (gmp_helper_t *, mpz_t *, int)) init_prime;
+	this->public.init_prime_fast = (status_t (*) (gmp_helper_t *, mpz_t *, int)) init_prime_fast;
 	
 	/* private functions */	
 	this->public.chunk_to_mpz = (void (*) (gmp_helper_t *,mpz_t *, chunk_t )) chunk_to_mpz;

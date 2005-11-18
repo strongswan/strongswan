@@ -51,6 +51,21 @@ struct gmp_helper_s {
 	 * 				- OUT_OF_RES
 	 */
 	status_t (*init_prime) (gmp_helper_t *this, mpz_t *var, int bytes);
+
+	/**
+	 * @brief initialize an mpz_t to a random prime of specified size without using gmp 
+	 * next prime function! Must be faster then the gmp version
+	 *
+	 *
+	 * @param			this calling object
+	 * @param[out] var 	mpz_t variable to initialize
+	 * @param[in] 		bytes length of given prime in bytes
+	 * @return 		
+	 * 				- SUCCCESS
+	 * 				- FAILED
+	 * 				- OUT_OF_RES
+	 */	
+	status_t (*init_prime_fast) (gmp_helper_t *this, mpz_t *prime, int bytes);
 	
 	/* Convert network form (binary bytes, big-endian) to mpz_t of gmp library.
 	 * 

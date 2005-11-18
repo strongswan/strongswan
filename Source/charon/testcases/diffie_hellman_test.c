@@ -27,30 +27,51 @@
 #include "../globals.h"
 #include "../utils/logger_manager.h"
 #include "../utils/allocator.h"
+#include "../payloads/transform_substructure.h"
 
 /* 
  * described in Header-File
  */
 void test_diffie_hellman(tester_t *tester)
 {
-	diffie_hellman_t *diffie_hellman;
+	diffie_hellman_t *my_diffie_hellman, *other_diffie_hellman;
 	logger_t *logger;
-	chunk_t public_value;
+	chunk_t my_public_value, other_public_value;
+	chunk_t my_secret, other_secret;
 
 	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"Diffie Hellman");
 
 
-	diffie_hellman = diffie_hellman_create(5);
-	tester->assert_true(tester,(diffie_hellman != NULL), "create call check");	
+	my_diffie_hellman = diffie_hellman_create(MODP_1024_BIT);
+	tester->assert_true(tester,(my_diffie_hellman != NULL), "create call check");	
 	
+	other_diffie_hellman = diffie_hellman_create(MODP_1024_BIT);
+	tester->assert_true(tester,(other_diffie_hellman != NULL), "create call check");	
 
+	tester->assert_true(tester,(	my_diffie_hellman->get_my_public_value(my_diffie_hellman,&my_public_value) == SUCCESS), "get_my_public_value call check");
+	logger->log_chunk(logger,RAW,"My public value",&my_public_value);
+
+	tester->assert_true(tester,(	other_diffie_hellman->get_my_public_value(other_diffie_hellman,&other_public_value) == SUCCESS), "get_my_public_value call check");
+	logger->log_chunk(logger,RAW,"Other public value",&other_public_value);
+
+	tester->assert_true(tester,(	my_diffie_hellman->set_other_public_value(my_diffie_hellman,other_public_value) == SUCCESS), "set_other_public_value call check");
+	tester->assert_true(tester,(	other_diffie_hellman->set_other_public_value(other_diffie_hellman,my_public_value) == SUCCESS), "set_other_public_value call check");
+
+	allocator_free(my_public_value.ptr);
+	allocator_free(other_public_value.ptr);
 	
-	tester->assert_true(tester,(	diffie_hellman->get_my_public_value(diffie_hellman,&public_value) == SUCCESS), "get_my_public_value call check");
+	tester->assert_true(tester,(	my_diffie_hellman->get_shared_secret(my_diffie_hellman,&my_secret) == SUCCESS), "get_shared_secret call check");
+	logger->log_chunk(logger,RAW,"My shared secret",&my_secret);
 
-	logger->log_chunk(logger,RAW,"Public value",&public_value);
-
-	allocator_free(public_value.ptr);
+	tester->assert_true(tester,(	other_diffie_hellman->get_shared_secret(other_diffie_hellman,&other_secret) == SUCCESS), "get_shared_secret call check");
+	logger->log_chunk(logger,RAW,"Other shared secret",&other_secret);
+	
+	tester->assert_true(tester,(	memcmp(my_secret.ptr,other_secret.ptr,other_secret.len) == 0), "shared secret same value check");
+	
+	allocator_free(my_secret.ptr);
+	allocator_free(other_secret.ptr);	
 		
-	tester->assert_true(tester,(diffie_hellman->destroy(diffie_hellman) == SUCCESS), "destroy call check");
+	tester->assert_true(tester,(my_diffie_hellman->destroy(my_diffie_hellman) == SUCCESS), "destroy call check");
+	tester->assert_true(tester,(other_diffie_hellman->destroy(other_diffie_hellman) == SUCCESS), "destroy call check");
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
 }
