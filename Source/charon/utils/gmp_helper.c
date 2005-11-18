@@ -74,26 +74,28 @@ static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk
     mpz_t temp1, temp2;
     status_t status = SUCCESS;
     int i;
+    chunk_t tmp_chunk;
 
-    data->len = bytes;
-    data->ptr = allocator_alloc(data->len);
+    tmp_chunk.len = bytes;
+    tmp_chunk.ptr = allocator_alloc(tmp_chunk.len);
     
-    if (data->ptr == NULL)
+    if (tmp_chunk.ptr == NULL)
     {
+    		allocator_free_chunk(tmp_chunk);
 	    	return OUT_OF_RES;
     }
 
     /* free memory */
-    memset(data->ptr,0,data->len);
+    memset(tmp_chunk.ptr,0,tmp_chunk.len);
 
     mpz_init(temp1);
     mpz_init(temp2);
 
     mpz_set(temp1, *mpz_value);
 
-    for (i = data->len-1; i >= 0; i--)
+    for (i = tmp_chunk.len-1; i >= 0; i--)
     {
-		data->ptr[i] = mpz_mdivmod_ui(temp2, NULL, temp1, 1 << 8);
+		tmp_chunk.ptr[i] = mpz_mdivmod_ui(temp2, NULL, temp1, 1 << 8);
 		mpz_set(temp1, temp2);
 
     }
@@ -105,6 +107,11 @@ static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk
     }
     mpz_clear(temp1);
     mpz_clear(temp2);
+    *data = tmp_chunk;
+	if (status != SUCCESS)
+	{
+    		allocator_free_chunk(tmp_chunk);
+	}
     return status;
 }
 
