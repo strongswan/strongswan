@@ -138,11 +138,18 @@ struct private_ike_sa_s {
 	randomizer_t *randomizer;
 	
 	/**
-	 * contains the last X sent messages
+	 * contains the last X responded messages
 	 * 
 	 * X is windows size (here 1)
 	 */
-	linked_list_t *sent_messages;	
+	linked_list_t *responded_messages;
+
+	/**
+	 * contains the last X requested messages
+	 * 
+	 * X is windows size (here 1)
+	 */
+	linked_list_t *requested_messages;
 	
 	struct {
 		host_t *host;
@@ -200,28 +207,13 @@ struct private_ike_sa_s {
 static status_t process_message (private_ike_sa_t *this, message_t *message)
 {	
 	u_int32_t message_id;
-	this->logger->log(this->logger, CONTROL|MORE, "Process message of exchange type %s",
+	bool is_request;
+	is_request = message->get_request(message);
+	this->logger->log(this->logger, CONTROL|MORE, "Process %s message of exchange type %s",(is_request) ? "REQUEST" : "RESPONSE",
 						mapping_find(exchange_type_m,message->get_exchange_type(message)));
 	
-	/* check message id */
 
-//	message_id = message->get_message_id(message);
-//	if (message_id < (message_id_in - WINDOW_SIZE))
-//	{
-//		this->logger->log(this->logger, ERROR, "message cause of message id not handled");
-//		/* message is to old */
-//		return FAILED;
-//	}
-//	if (message_id > (message_id_in))
-//	{
-//		this->logger->log(this->logger, ERROR, "message id %d not as expected %d",message_id,message_id_in);
-//		/* message is to old */
-//		return FAILED;
-//	}
-//	
-//	
-//	
-//	message->get_exchange_type(message);
+	//message->get_exchange_type(message);
 	
 	
 	switch (message->get_exchange_type(message))
@@ -296,7 +288,13 @@ static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool
 	new_message->set_exchange_type(new_message, type);
 	new_message->set_request(new_message, request);
 	
-	new_message->set_message_id(new_message, this->message_id_in);
+	if (request)
+	{
+		new_message->set_message_id(new_message, this->message_id_out);
+	}else
+	{
+		new_message->set_message_id(new_message, this->message_id_in);
+	}
 	
 	new_message->set_ike_sa_id(new_message, this->ike_sa_id);
 	
@@ -415,15 +413,15 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 		return status;
 	}
 
-	if (	this->sent_messages->get_count(this->sent_messages) >= WINDOW_SIZE)
+	if (	this->requested_messages->get_count(this->requested_messages) >= WINDOW_SIZE)
 	{
 		message_t *removed_message;
 		/* destroy message */
-		this->sent_messages->remove_last(this->sent_messages,(void **)&removed_message);
+		this->requested_messages->remove_last(this->requested_messages,(void **)&removed_message);
 		removed_message->destroy(removed_message);
 	}
 	
-	status = this->sent_messages->insert_first(this->sent_messages,(void *) message);
+	status = this->requested_messages->insert_first(this->requested_messages,(void *) message);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not store last received message");
@@ -431,8 +429,8 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 		return status;
 	}
 
-	/* message counter can no be increased */
-	this->message_id_in++;
+	/* message counter can now be increased */
+	this->message_id_out++;
 	
 	/* states has NOW changed :-) */
 	this->state = IKE_SA_INIT_REQUESTED;
@@ -674,18 +672,31 @@ static status_t destroy (private_ike_sa_t *this)
 	/* destroy ike_sa_id */
 	this->ike_sa_id->destroy(this->ike_sa_id);
 
-	/* destroy stored sent messages */
-	while (this->sent_messages->get_count(this->sent_messages) > 0)
+	/* destroy stored requested messages */
+	while (this->requested_messages->get_count(this->requested_messages) > 0)
 	{
 		message_t *message;
-		if (this->sent_messages->remove_first(this->sent_messages,(void **) &message) != SUCCESS)
+		if (this->requested_messages->remove_first(this->requested_messages,(void **) &message) != SUCCESS)
 		{
 			break;
 		}
 		message->destroy(message);
 	}
-	this->sent_messages->destroy(this->sent_messages);
+	this->requested_messages->destroy(this->requested_messages);
 	
+	/* destroy stored responded messages */
+	while (this->responded_messages->get_count(this->responded_messages) > 0)
+	{
+		message_t *message;
+		if (this->responded_messages->remove_first(this->responded_messages,(void **) &message) != SUCCESS)
+		{
+			break;
+		}
+		message->destroy(message);
+	}
+	this->responded_messages->destroy(this->responded_messages);
+
+
 	this->randomizer->destroy(this->randomizer);
 	if (this->ike_sa_init_data.diffie_hellman != NULL)
 	{
@@ -756,21 +767,32 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 		this->ike_sa_id->destroy(this->ike_sa_id);
 		allocator_free(this);
 	}
-	this->sent_messages = linked_list_create();
-	if (this->sent_messages == NULL)
+	this->responded_messages = linked_list_create();
+	if (this->responded_messages == NULL)
 	{
 		this->randomizer->destroy(this->randomizer);
 		this->child_sas->destroy(this->child_sas);
 		this->ike_sa_id->destroy(this->ike_sa_id);
 		allocator_free(this);
 	}
+	this->requested_messages = linked_list_create();
+	if (this->requested_messages == NULL)
+	{
+		this->randomizer->destroy(this->randomizer);
+		this->child_sas->destroy(this->child_sas);
+		this->ike_sa_id->destroy(this->ike_sa_id);
+		this->responded_messages->destroy(this->responded_messages);
+		allocator_free(this);
+	}
+
 	this->logger = global_logger_manager->create_logger(global_logger_manager, IKE_SA, NULL);
 	if (this->logger ==  NULL)
 	{
 		this->randomizer->destroy(this->randomizer);
 		this->child_sas->destroy(this->child_sas);
 		this->ike_sa_id->destroy(this->ike_sa_id);
-		this->sent_messages->destroy(this->sent_messages);
+		this->responded_messages->destroy(this->responded_messages);
+		this->requested_messages->destroy(this->requested_messages);
 		allocator_free(this);
 	}
 	
