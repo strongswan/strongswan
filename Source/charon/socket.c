@@ -61,6 +61,7 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	
 	pkt->source = host_create(AF_INET, "0.0.0.0", 0);
+	pkt->destination = host_create(AF_INET, "0.0.0.0", 0);
 
 	/* do the read */
 	pkt->data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0,

@@ -214,11 +214,20 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 	/* default status */
 	status = NOT_FOUND;
 	
+	
 	while (iterator->has_next(iterator))
 	{
 		ike_sa_entry_t *current;
 		bool are_equal = FALSE;
 		iterator->current(iterator, (void**)&current);
+		if (current->ike_sa_id->get_responder_spi(current->ike_sa_id) == 0) {
+			if (current->ike_sa_id->get_initiator_spi(current->ike_sa_id) == ike_sa_id->get_initiator_spi(ike_sa_id))
+			{
+				*entry = current;
+				status = SUCCESS;
+				break;
+			}
+		}
 		current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id, &are_equal);
 		if (are_equal)
 		{

@@ -369,7 +369,8 @@ static exchange_type_t get_request (private_message_t *this)
 static status_t add_payload(private_message_t *this, payload_t *payload)
 {
 	payload_t *last_payload;
-	if (this->payloads->get_last(this->payloads,(void **) &last_payload) != SUCCESS)
+	if ((this->payloads->get_count(this->payloads) > 0) &&
+	    (this->payloads->get_last(this->payloads,(void **) &last_payload) != SUCCESS))
 	{
 		return OUT_OF_RES;	
 	}
@@ -583,17 +584,22 @@ static status_t parse_header (private_message_t *this)
  */
 static status_t parse_body (private_message_t *this)
 {
-	status_t status;
+	status_t status = SUCCESS;
 	int i;
 	payload_type_t current_payload_type = this->first_payload;
 	supported_payload_entry_t *supported_payloads;
 	size_t supported_payloads_count;
 	
+			
 	if (this->get_supported_payloads (this,&supported_payloads,&supported_payloads_count) != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "could not get supported payloads");
 		/* message type is not supported */
 		return FAILED;
 	}
+	
+	
+	this->logger->log(this->logger, ERROR, "first payload %s", mapping_find(payload_type_m, current_payload_type));
 	
 	while (current_payload_type != NO_PAYLOAD)
 	{

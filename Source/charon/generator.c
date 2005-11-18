@@ -994,7 +994,8 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				}
 				else
 				{
-					status = this->write_bytes_to_buffer(this,(this->data_struct + rules[i].offset),2);
+					status = this->generate_u_int_type(this,U_INT_16,rules[i].offset);
+//					status = this->write_bytes_to_buffer(this,(this->data_struct + rules[i].offset),2);
 				}
 				break;
 			}				

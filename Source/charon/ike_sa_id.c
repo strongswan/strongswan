@@ -148,7 +148,15 @@ static bool is_initiator(private_ike_sa_id_t *this)
  */
 static bool switch_initiator(private_ike_sa_id_t *this)
 {
-	return (this->is_initiator_flag = !this->is_initiator_flag);
+	if (this->is_initiator_flag)
+	{
+		this->is_initiator_flag = FALSE;
+	}
+	else
+	{
+		this->is_initiator_flag = TRUE;	
+	}
+	return this->is_initiator_flag;
 }
 
 

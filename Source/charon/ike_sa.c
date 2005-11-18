@@ -174,6 +174,11 @@ struct private_ike_sa_s {
 		 * Priority used get matching dh_group number
 		 */
 		u_int16_t dh_group_priority;
+		
+		/**
+		 * selected proposals
+		 */
+		linked_list_t *proposals;
 		/**
 		 * 
 		 */
@@ -438,67 +443,165 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 	return SUCCESS;
 }
 
-static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t *message)
+static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t *request)
 {
 	status_t status;
 	linked_list_iterator_t *payloads;
-	message_t *respond;
+	message_t *response;
+	host_t *source, *destination;
 	
-	status = message->parse_body(message);
+	/* this is the first message we process, so copy host infos */
+	request->get_source(request, &source);
+	request->get_destination(request, &destination);
+	/* we need to clone them, since we destroy the message later */
+	destination->clone(destination, &(this->me.host));
+	source->clone(source, &(this->other.host));
+	
+	/* parse incoming message */
+	status = request->parse_body(request);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "Could not parse body");
 		return status;	
 	}
-	
-
-	
-	
-	
-	status = message->get_payload_iterator(message, &payloads);
+	/* iterate over incoming payloads */
+	status = request->get_payload_iterator(request, &payloads);
 	if (status != SUCCESS)
 	{
-		respond->destroy(respond);
+		request->destroy(request);
 		return status;	
 	}
 	while (payloads->has_next(payloads))
 	{
 		payload_t *payload;
-		payloads->current(payloads, (void**)payload);
+		payloads->current(payloads, (void**)&payload);
+		
+		this->logger->log(this->logger, CONTROL|MORE, "Processing payload %s", mapping_find(payload_type_m, payload->get_type(payload)));
 		switch (payload->get_type(payload))
 		{
 			case SECURITY_ASSOCIATION:
 			{
-				sa_payload_t *sa_payload;
-				linked_list_iterator_t *proposals;
+				sa_payload_t *sa_payload = (sa_payload_t*)payload;
+				linked_list_iterator_t *suggested_proposals, *accepted_proposals;
+				/* create a list for accepted proposals */
+				if (this->ike_sa_init_data.proposals == NULL) {
+					this->ike_sa_init_data.proposals = linked_list_create();
+				}
+				else
+				{
+					/** @todo destroy list contents */	
+				}
+				if (this->ike_sa_init_data.proposals == NULL)
+				{
+					payloads->destroy(payloads);
+					return OUT_OF_RES;	
+				}
+				status = this->ike_sa_init_data.proposals->create_iterator(this->ike_sa_init_data.proposals, &accepted_proposals, FALSE);
+				if (status != SUCCESS)
+				{
+					payloads->destroy(payloads);
+					return status;	
+				}
 				
-				sa_payload = (sa_payload_t*)payload;
-				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &proposals, TRUE);
+				/* get the list of suggested proposals */ 
+				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
+				if (status != SUCCESS)
+				{	
+					accepted_proposals->destroy(accepted_proposals);
+					payloads->destroy(payloads);
+					return status;
+				}
+				
+				/* now let the configuration-manager select a subset of the proposals */
+				status = global_configuration_manager->select_proposals_for_host(global_configuration_manager,
+									this->other.host, suggested_proposals, accepted_proposals);
+				if (status != SUCCESS)
+				{
+					suggested_proposals->destroy(suggested_proposals);
+					accepted_proposals->destroy(accepted_proposals);
+					payloads->destroy(payloads);
+					return status;
+				}
+									
+				suggested_proposals->destroy(suggested_proposals);
+				accepted_proposals->destroy(accepted_proposals);
+				
+				/* ok, we have what we need for sa_payload */
+				break;
+			}
+			case KEY_EXCHANGE:
+			{
+				ke_payload_t *ke_payload = (ke_payload_t*)payload;
+				diffie_hellman_t *dh;
+				diffie_hellman_group_t group;
+				bool allowed_group;
+				
+				group = ke_payload->get_dh_group_number(ke_payload);
+				
+				status = global_configuration_manager->is_dh_group_allowed_for_host(global_configuration_manager,
+								this->other.host, group, &allowed_group);
 				if (status != SUCCESS)
 				{
 					payloads->destroy(payloads);
 					return status;
 				}
-				//global_configuration_manager->select_proposals_for_host
+				if (!allowed_group)
+				{
+					/** @todo info reply */	
+				}
 				
-				break;
-			}
-			case KEY_EXCHANGE:
-			{
+				dh = diffie_hellman_create(group);
+				if (dh == NULL)
+				{
+					payloads->destroy(payloads);
+					return OUT_OF_RES;
+				}
+				
+				status = dh->set_other_public_value(dh, ke_payload->get_key_exchange_data(ke_payload));
+				if (status != SUCCESS)
+				{
+					dh->destroy(dh);
+					payloads->destroy(payloads);
+					return OUT_OF_RES;
+				}
+				/** @todo destroy if there is already one */
+				this->ike_sa_init_data.diffie_hellman = dh;
 				break;
 			}
 			case NONCE:
 			{
+				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
+				chunk_t nonce;
+				
+				nonce_payload->get_nonce(nonce_payload, &nonce);
+				/** @todo free if there is already one */
+				this->ike_sa_init_data.received_nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
+				this->ike_sa_init_data.received_nonce.len = nonce.len;
+				if (this->ike_sa_init_data.received_nonce.ptr == NULL)
+				{
+					payloads->destroy(payloads);
+					return OUT_OF_RES;
+				}
 				break;
 			}
 			default:
 			{
-				
+				/** @todo handle */
 			}
 				
 		}
 			
 	}
+	payloads->destroy(payloads);
 	
+	printf("done.\n");
+
+	/* set up the reply */
+	status = this->build_message(this, IKE_SA_INIT, FALSE, &response);
+	if (status != SUCCESS)
+	{
+		return status;	
+	}
 	
 	
 	
@@ -520,9 +623,146 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 	return SUCCESS;
 }
 
-static status_t transto_ike_auth_requested(private_ike_sa_t *this, message_t *message)
-{
-	return SUCCESS;
+static status_t transto_ike_auth_requested(private_ike_sa_t *this, message_t *response)
+{	
+	status_t status;
+	linked_list_iterator_t *payloads;
+
+	
+	/* parse incoming message */
+	status = response->parse_body(response);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not parse body");
+		return status;	
+	}
+	/* iterate over incoming payloads */
+	status = response->get_payload_iterator(response, &payloads);
+	if (status != SUCCESS)
+	{
+		response->destroy(response);
+		return status;	
+	}
+	while (payloads->has_next(payloads))
+	{
+		payload_t *payload;
+		payloads->current(payloads, (void**)&payload);
+		
+		this->logger->log(this->logger, CONTROL|MORE, "Processing payload %s", mapping_find(payload_type_m, payload->get_type(payload)));
+		switch (payload->get_type(payload))
+		{
+//			case SECURITY_ASSOCIATION:
+//			{
+//				sa_payload_t *sa_payload = (sa_payload_t*)payload;
+//				linked_list_iterator_t *suggested_proposals, *accepted_proposals;
+//				/* create a list for accepted proposals */
+//				if (this->ike_sa_init_data.proposals == NULL) {
+//					this->ike_sa_init_data.proposals = linked_list_create();
+//				}
+//				else
+//				{
+//					/** @todo destroy list contents */	
+//				}
+//				if (this->ike_sa_init_data.proposals == NULL)
+//				{
+//					payloads->destroy(payloads);
+//					return OUT_OF_RES;	
+//				}
+//				status = this->ike_sa_init_data.proposals->create_iterator(this->ike_sa_init_data.proposals, &accepted_proposals, FALSE);
+//				if (status != SUCCESS)
+//				{
+//					payloads->destroy(payloads);
+//					return status;	
+//				}
+//				
+//				/* get the list of suggested proposals */ 
+//				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
+//				if (status != SUCCESS)
+//				{	
+//					accepted_proposals->destroy(accepted_proposals);
+//					payloads->destroy(payloads);
+//					return status;
+//				}
+//				
+//				/* now let the configuration-manager select a subset of the proposals */
+//				status = global_configuration_manager->select_proposals_for_host(global_configuration_manager,
+//									this->other.host, suggested_proposals, accepted_proposals);
+//				if (status != SUCCESS)
+//				{
+//					suggested_proposals->destroy(suggested_proposals);
+//					accepted_proposals->destroy(accepted_proposals);
+//					payloads->destroy(payloads);
+//					return status;
+//				}
+//									
+//				suggested_proposals->destroy(suggested_proposals);
+//				accepted_proposals->destroy(accepted_proposals);
+//				
+//				/* ok, we have what we need for sa_payload */
+//				break;
+//			}
+			case KEY_EXCHANGE:
+			{
+				ke_payload_t *ke_payload = (ke_payload_t*)payload;
+				diffie_hellman_t *dh;
+				chunk_t shared_secret;
+				
+				dh = this->ike_sa_init_data.diffie_hellman;
+				
+				
+
+				
+				status = dh->set_other_public_value(dh, ke_payload->get_key_exchange_data(ke_payload));
+				if (status != SUCCESS)
+				{
+					dh->destroy(dh);
+					payloads->destroy(payloads);
+					return OUT_OF_RES;
+				}
+				
+				status = dh->get_shared_secret(dh, &shared_secret);
+				
+				this->logger->log_chunk(this->logger, RAW, "Shared secret", &shared_secret);
+				
+				break;
+			}
+			case NONCE:
+			{
+				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
+				chunk_t nonce;
+				
+				nonce_payload->get_nonce(nonce_payload, &nonce);
+				/** @todo free if there is already one */
+				this->ike_sa_init_data.received_nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
+				this->ike_sa_init_data.received_nonce.len = nonce.len;
+				if (this->ike_sa_init_data.received_nonce.ptr == NULL)
+				{
+					payloads->destroy(payloads);
+					return OUT_OF_RES;
+				}
+				break;
+			}
+			default:
+			{
+				/** @todo handle */
+			}
+				
+		}
+			
+	}
+	payloads->destroy(payloads);
+	
+	printf("done.\n");
+
+	/* set up the reply */
+	status = this->build_message(this, IKE_SA_INIT, FALSE, &response);
+	if (status != SUCCESS)
+	{
+		return status;	
+	}
+	
+	
+	
 }
 
 /**
@@ -806,6 +1046,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_sa_init_data.sent_nonce.ptr = NULL;
 	this->ike_sa_init_data.received_nonce.len = 0;
 	this->ike_sa_init_data.received_nonce.ptr = NULL;
+	this->ike_sa_init_data.proposals = NULL;
 	this->message_id_out = 0;
 	this->message_id_in = 0;
 
