@@ -25,10 +25,12 @@
 
 #include "types.h"
 #include "globals.h"
+#include "definitions.h"
 #include "utils/allocator.h"
 #include "utils/linked_list.h"
 #include "utils/logger_manager.h"
 #include "utils/randomizer.h"
+#include "transforms/diffie_hellman.h"
 #include "payloads/sa_payload.h"
 #include "payloads/nonce_payload.h"
 #include "payloads/ke_payload.h"
@@ -72,6 +74,18 @@ enum ike_sa_state_e {
 	IKE_SA_INITIALIZED = 5
 };
 
+/**
+ * string mappings for ike_sa_state 
+ */
+mapping_t ike_sa_state_m[] = {
+	{NO_STATE, "NO_STATE"},
+	{IKE_SA_INIT_REQUESTED, "IKE_SA_INIT_REQUESTED"},
+	{IKE_SA_INIT_RESPONDED, "IKE_SA_INIT_RESPONDED"},
+	{IKE_AUTH_REQUESTED, "IKE_AUTH_REQUESTED"},
+	{IKE_SA_INITIALIZED, "IKE_SA_INITIALIZED"},
+	{MAPPING_END, NULL}
+};
+
 
 /**
  * Private data of an message_t object
@@ -88,6 +102,9 @@ struct private_ike_sa_s {
 	status_t (*build_sa_payload) (private_ike_sa_t *this, sa_payload_t **payload);
 	status_t (*build_nonce_payload) (private_ike_sa_t *this, nonce_payload_t **payload);
 	status_t (*build_ke_payload) (private_ike_sa_t *this, ke_payload_t **payload);
+	
+	status_t (*transto_ike_sa_init_responded) (private_ike_sa_t *this, message_t *message);
+	status_t (*transto_ike_auth_requested) (private_ike_sa_t *this, message_t *message);
 
 	/* Private values */
 	/**
@@ -103,7 +120,7 @@ struct private_ike_sa_s {
 	/**
 	 * Current state of the IKE_SA
 	 */
-	ike_sa_state_t current_state;
+	ike_sa_state_t state;
 	
 	/**
 	 * is this IKE_SA the original initiator of this IKE_SA
@@ -125,6 +142,8 @@ struct private_ike_sa_s {
 		host_t *host;
 	} other;
 	
+	diffie_hellman_t *diffie_hellman;
+	
 	/**
 	 * a logger for this IKE_SA
 	 */
@@ -135,54 +154,136 @@ struct private_ike_sa_s {
  * @brief implements function process_message of private_ike_sa_t
  */
 static status_t process_message (private_ike_sa_t *this, message_t *message)
+{	
+	this->logger->log(this->logger, CONTROL|MORE, "Process message of exchange type %s",
+						mapping_find(exchange_type_m,message->get_exchange_type(message)));
+	
+	switch (message->get_exchange_type(message))
+	{
+		case IKE_SA_INIT:
+		{
+			if (message->get_request(message)) {
+				if (this->state == 	NO_STATE)
+				{
+					/* state transission NO_STATE => IKE_SA_INIT_RESPONDED */
+					return this->transto_ike_sa_init_responded(this, message);
+				}
+			}
+			else
+			{
+				if (this->state == IKE_SA_INIT_REQUESTED)
+				{
+					/* state transission IKE_SA_INIT_REQUESTED => IKE_AUTH_REQUESTED*/
+					return this->transto_ike_auth_requested(this, message);
+				}
+			}
+			break;
+		}
+		case IKE_AUTH:
+		{
+			/* break; */
+		}
+		case CREATE_CHILD_SA:
+		{
+			/* break; */
+		}
+		case INFORMATIONAL:
+		{
+			/* break; */
+		}
+		default:
+		{
+			this->logger->log(this->logger, ERROR, "processing %s-message not supported.",
+								mapping_find(exchange_type_m,message->get_exchange_type(message)));
+			return NOT_SUPPORTED;
+		}
+	}
+	this->logger->log(this->logger, ERROR, "received %s-message in state %s, rejected.",
+								mapping_find(exchange_type_m, message->get_exchange_type(message)),
+								mapping_find(ike_sa_state_m, this->state));
+	return INVALID_STATE;
+}
+
+
+static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t *message)
 {
 	status_t status;
-	/* @TODO Add Message Processing here */
+	linked_list_iterator_t *payloads;
 	
-	this->logger->log(this->logger, CONTROL|MORE, "Process message of exchange type %s",mapping_find(exchange_type_m,message->get_exchange_type(message)));
-	
-	/* parse body */
 	status = message->parse_body(message);
-	switch (status)
+	if (status != SUCCESS)
 	{
-	 	case SUCCESS:
-	 	{
-	 		break;
-	 	}
-		default:
-	 	{
-	 		this->logger->log(this->logger, ERROR, "Error of type %s while parsing message body",mapping_find(status_m,status));
-	 		switch (this->current_state)
-	 		{
-	 			case NO_STATE:
-	 			{
-	 				job_t *delete_job;
-	 				/* create delete job for this ike_sa */
-					delete_job = (job_t *) delete_ike_sa_job_create(this->ike_sa_id);
-	 				if (delete_job == NULL)
-	 				{
-				 		this->logger->log(this->logger, ERROR, "Job to delete IKE SA could not be created");
-	 				}
-	 				
-	 				status = global_job_queue->add(global_job_queue,delete_job);
-	 				if (status != SUCCESS)
-	 				{
-				 		this->logger->log(this->logger, ERROR, "%s Job to delete IKE SA could not be added to job queue",mapping_find(status_m,status));
-				 		delete_job->destroy_all(delete_job);
-	 				}
-	 				
-	 			}
-	 			default:
-	 			{
-	 				break;	
-	 			}
-	 		}
-	 		
-		 	return FAILED;
-	 	}
+		return status;	
 	}
-		
-	return status;
+	
+	status = message->get_payload_iterator(message, &payloads);
+	if (status != SUCCESS)
+	{
+		return status;	
+	}
+	while (payloads->has_next(payloads))
+	{
+		payload_t *payload;
+		payloads->current(payloads, (void**)payload);
+		switch (payload->get_type(payload))
+		{
+			case SECURITY_ASSOCIATION:
+			{
+				sa_payload_t *sa_payload;
+				linked_list_iterator_t *proposals;
+				
+				sa_payload = (sa_payload_t*)payload;
+				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &proposals, TRUE);
+				if (status != SUCCESS)
+				{
+					payloads->destroy(payloads);
+					return status;
+				}
+				//global_configuration_manager->select_prop
+				
+				break;
+			}
+			case KEY_EXCHANGE:
+			{
+				break;
+			}
+			case NONCE:
+			{
+				break;
+			}
+			default:
+			{
+				
+			}
+				
+		}
+			
+	}
+	
+	
+	
+	
+	
+	/*
+	job_t *delete_job;
+	delete_job = (job_t *) delete_ike_sa_job_create(this->ike_sa_id);
+	if (delete_job == NULL)
+	{
+ 		this->logger->log(this->logger, ERROR, "Job to delete IKE SA could not be created");
+	}
+	
+	status = global_job_queue->add(global_job_queue,delete_job);
+	if (status != SUCCESS)
+	{
+ 		this->logger->log(this->logger, ERROR, "%s Job to delete IKE SA could not be added to job queue",mapping_find(status_m,status));
+ 		delete_job->destroy_all(delete_job);
+	}*/
+	return SUCCESS;
+}
+
+static status_t transto_ike_auth_requested(private_ike_sa_t *this, message_t *message)
+{
+	return SUCCESS;
 }
 
 /**
@@ -271,7 +372,7 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 
 	message->destroy(message);
 
-	this->current_state = IKE_SA_INIT_REQUESTED;
+	this->state = IKE_SA_INIT_REQUESTED;
 
 	return SUCCESS;
 }
@@ -425,6 +526,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->build_sa_payload = build_sa_payload;
 	this->build_ke_payload = build_ke_payload;
 	this->build_nonce_payload = build_nonce_payload;
+	
+	
+	this->transto_ike_sa_init_responded = transto_ike_sa_init_responded;
+	this->transto_ike_auth_requested = transto_ike_auth_requested;
 
 
 
@@ -468,10 +573,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	
 	this->me.host = NULL;
 	this->other.host = NULL;
+	this->diffie_hellman = NULL;
 
 
 	/* at creation time, IKE_SA isn't in a specific state */
-	this->current_state = NO_STATE;
+	this->state = NO_STATE;
 
 	return (&this->public);
 }

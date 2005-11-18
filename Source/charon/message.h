@@ -27,6 +27,7 @@
 #include "packet.h"
 #include "ike_sa_id.h"
 #include "payloads/ike_header.h"
+#include "utils/linked_list.h"
 
 
 
@@ -223,6 +224,7 @@ struct message_s {
 	status_t (*set_source) (message_t *this, host_t *host);
 	status_t (*get_destination) (message_t *this, host_t **host);
 	status_t (*set_destination) (message_t *this, host_t *host);
+	status_t (*get_payload_iterator) (message_t *this, linked_list_iterator_t **iterator);
 	
 	/**
 	 * @brief Destroys a message and all including objects

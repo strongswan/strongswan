@@ -430,6 +430,12 @@ static status_t get_destination(private_message_t *this, host_t **host)
 }
 
 
+static status_t get_payload_iterator(private_message_t *this, linked_list_iterator_t **iterator)
+{
+	return this->payloads->create_iterator(this->payloads, iterator, TRUE);
+}
+
+
 /**
  * Implements message_t's generate function.
  * See #message_s.generate.
@@ -776,6 +782,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_source = (status_t (*) (message_t*,host_t**)) get_source;
 	this->public.set_destination = (status_t (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (status_t (*) (message_t*,host_t**)) get_destination;
+	this->public.get_payload_iterator = (status_t (*) (message_t *, linked_list_iterator_t **)) get_payload_iterator;
 	this->public.parse_header = 	(status_t (*) (message_t *)) parse_header;
 	this->public.parse_body = 	(status_t (*) (message_t *)) parse_body;
 	this->public.destroy = (status_t(*)(message_t*))destroy;

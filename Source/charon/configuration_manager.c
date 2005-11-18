@@ -31,7 +31,6 @@
 #include "payloads/nonce_payload.h"
 #include "payloads/proposal_substructure.h"
 #include "payloads/ke_payload.h"
-#include "payloads/transform_substructure.h"
 #include "payloads/transform_attribute.h"
 
 /**
@@ -238,6 +237,17 @@ static status_t select_proposals_for_host(private_configuration_manager_t *this,
 	return FAILED;
 }
 
+static status_t is_dh_group_allowed_for_host(private_configuration_manager_t *this, host_t *host, diffie_hellman_group_t group, bool *allowed)
+{
+	if (group == MODP_768_BIT ||
+		group == MODP_1024_BIT)
+	{
+		*allowed = TRUE;		
+	}
+	*allowed = FALSE;
+	return SUCCESS;
+}
+
 
 /**
  * Implements function destroy of configuration_t.
@@ -266,7 +276,7 @@ configuration_manager_t *configuration_manager_create()
 	this->public.get_local_host = (status_t(*)(configuration_manager_t*,char*,host_t**))get_local_host;
 	this->public.get_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,linked_list_iterator_t*))get_proposals_for_host;
 	this->public.select_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,linked_list_iterator_t*,linked_list_iterator_t*))select_proposals_for_host;
-	
+	this->public.is_dh_group_allowed_for_host = (status_t(*)(configuration_manager_t*,host_t*,diffie_hellman_group_t,bool*)) is_dh_group_allowed_for_host;
 
 	return (&this->public);
 }

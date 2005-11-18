@@ -26,6 +26,7 @@
 #include "types.h"
 #include "utils/linked_list.h"
 #include "utils/host.h"
+#include "payloads/transform_substructure.h"
 
 /**
  * @brief Manages all configuration aspects of the daemon.
@@ -41,8 +42,10 @@ struct configuration_manager_s {
 	
 	status_t (*get_proposals_for_host) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *list);
 	
-	status_t (*select_proposals_for_host)  (configuration_manager_t *this, host_t *host, linked_list_iterator_t *in, linked_list_iterator_t *out);
-
+	status_t (*select_proposals_for_host) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *in, linked_list_iterator_t *out);
+	
+	status_t (*is_dh_group_allowed_for_host) (configuration_manager_t *this, host_t *host, diffie_hellman_group_t group, bool *allowed);
+	
 	status_t (*destroy) (configuration_manager_t *this);
 };
 
