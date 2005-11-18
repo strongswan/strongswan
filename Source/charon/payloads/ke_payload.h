@@ -29,6 +29,7 @@
 
 #include "../types.h"
 #include "payload.h"
+#include "transform_substructure.h"
 #include "../utils/linked_list.h"
 
 /**
@@ -84,7 +85,7 @@ struct ke_payload_s {
 	 * @param this 		calling ke_payload_t object
 	 * @return 			DH Group Number of this payload
 	 */
-	u_int16_t (*get_dh_group_number) (ke_payload_t *this);
+	diffie_hellman_group_t (*get_dh_group_number) (ke_payload_t *this);
 
 	/**
 	 * @brief Sets the Diffie-Hellman Group Number of this KE payload.
@@ -93,7 +94,7 @@ struct ke_payload_s {
 	 * @param dh_group_number	DH Group to set
 	 * @return 					SUCCESS
 	 */
-	status_t (*set_dh_group_number) (ke_payload_t *this, u_int16_t dh_group_number);
+	status_t (*set_dh_group_number) (ke_payload_t *this, diffie_hellman_group_t dh_group_number);
 
 	/**
 	 * @brief Destroys an ke_payload_t object.

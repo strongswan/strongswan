@@ -64,7 +64,7 @@ struct private_ke_payload_s {
 	/**
 	 * DH Group Number
 	 */
-	u_int16_t dh_group_number;
+	diffie_hellman_group_t dh_group_number;
 	
 	/**
 	 * Key Exchange Data of this KE payload
@@ -263,7 +263,7 @@ status_t set_key_exchange_data(private_ke_payload_t *this, chunk_t key_exchange_
  * Implements ke_payload_t's get_dh_group_number function.
  * See #ke_payload_t.get_dh_group_number for description.
  */
-u_int16_t get_dh_group_number(private_ke_payload_t *this)
+diffie_hellman_group_t get_dh_group_number(private_ke_payload_t *this)
 {
 	return this->dh_group_number;
 }
@@ -272,7 +272,7 @@ u_int16_t get_dh_group_number(private_ke_payload_t *this)
  * Implements ke_payload_t's set_dh_group_number function.
  * See #ke_payload_t.set_dh_group_number for description.
  */
-status_t set_dh_group_number(private_ke_payload_t *this, u_int16_t dh_group_number)
+status_t set_dh_group_number(private_ke_payload_t *this, diffie_hellman_group_t dh_group_number)
 {
 	this->dh_group_number = dh_group_number;
 	return SUCCESS;
@@ -300,8 +300,8 @@ ke_payload_t *ke_payload_create()
 	/* public functions */
 	this->public.get_key_exchange_data = (chunk_t (*) (ke_payload_t *)) get_key_exchange_data;
 	this->public.set_key_exchange_data = (status_t (*) (ke_payload_t *,chunk_t)) set_key_exchange_data;
-	this->public.get_dh_group_number = (u_int16_t (*) (ke_payload_t *)) get_dh_group_number;
-	this->public.set_dh_group_number =(status_t (*) (ke_payload_t *,u_int16_t)) set_dh_group_number;
+	this->public.get_dh_group_number = (diffie_hellman_group_t (*) (ke_payload_t *)) get_dh_group_number;
+	this->public.set_dh_group_number =(status_t (*) (ke_payload_t *,diffie_hellman_group_t)) set_dh_group_number;
 	this->public.destroy = (status_t (*) (ke_payload_t *)) destroy;
 	
 	/* private functions */
