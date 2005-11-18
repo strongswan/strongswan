@@ -101,7 +101,6 @@ struct private_ike_sa_s {
 	
 	status_t (*build_sa_payload) (private_ike_sa_t *this, sa_payload_t **payload);
 	status_t (*build_nonce_payload) (private_ike_sa_t *this, nonce_payload_t **payload);
-	status_t (*build_ke_payload) (private_ike_sa_t *this, ke_payload_t **payload);
 	
 	status_t (*build_message) (private_ike_sa_t *this, exchange_type_t type, bool request);
 	
@@ -144,9 +143,32 @@ struct private_ike_sa_s {
 		host_t *host;
 	} other;
 	
-	diffie_hellman_t *diffie_hellman;
 	
+	struct {
+		/**
+		 * Diffie Hellman object used to compute shared secret
+		 */
+		diffie_hellman_t *diffie_hellman;
+		/**
+		 * Diffie Hellman group number
+		 */
+		u_int16_t dh_group_number;	
+		
+		/**
+		 * Priority used get matching dh_group number
+		 */
+		u_int16_t dh_group_priority;
+	} ike_sa_init_data;
+	
+
+	/**
+	 * next message id to receive
+	 */
 	u_int32_t message_id_in;
+	
+	/**
+	 * next message id to send
+	 */
 	u_int32_t message_id_out;
 	
 	/**
@@ -353,6 +375,12 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 		return INVALID_ARG;
 	}
 	
+	status = global_configuration_manager->get_dh_group_number(global_configuration_manager, name, &(this->ike_sa_init_data.dh_group_number), this->ike_sa_init_data.dh_group_priority);
+	if (status != SUCCESS)
+	{	
+		return INVALID_ARG;
+	}
+	
 	message = message_create();
 	
 	if (message == NULL)
@@ -380,13 +408,57 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	payload->set_next_type(payload, KEY_EXCHANGE);
 	message->add_payload(message, payload);
 	
-	status = this->build_ke_payload(this, (ke_payload_t**)&payload);
-	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not build KE payload");
-		message->destroy(message);
-		return status;
+		ke_payload_t *ke_payload;
+		chunk_t key_data;
+		this	->logger->log(this->logger, CONTROL|MORE, "create diffie hellman object");
+		if (this->ike_sa_init_data.diffie_hellman != NULL)
+		{
+			this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t  already existing!");
+			message->destroy(message);
+			return FAILED;
+		}
+		this->ike_sa_init_data.diffie_hellman = diffie_hellman_create(this->ike_sa_init_data.dh_group_number);
+		
+		if (this->ike_sa_init_data.diffie_hellman == NULL)
+		{
+			this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t could not be created!");
+			message->destroy(message);
+			return FAILED;			
+		}
+		
+		this	->logger->log(this->logger, CONTROL|MORE, "get public dh value to send in ke payload");
+
+		status = this->ike_sa_init_data.diffie_hellman->get_my_public_value(this->ike_sa_init_data.diffie_hellman,&key_data);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Could not get my DH public value");
+			message->destroy(message);
+			return status;
+		}
+	
+		ke_payload = ke_payload_create();
+		if (ke_payload == NULL)
+		{
+			this->logger->log(this->logger, ERROR, "Could not build KE payload");
+			message->destroy(message);
+			allocator_free_chunk(key_data);
+			return OUT_OF_RES;	
+		}
+		ke_payload->set_dh_group_number(ke_payload, MODP_1024_BIT);
+		if (ke_payload->set_key_exchange_data(ke_payload, key_data) != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Could not build KE payload");
+			ke_payload->destroy(ke_payload);
+			message->destroy(message);
+			allocator_free_chunk(key_data);
+			return OUT_OF_RES;
+		}
+		allocator_free_chunk(key_data);
+		
+		payload = (payload_t *) ke_payload;
 	}
+
 	payload->set_next_type(payload, NONCE);
 	message->add_payload(message, payload);
 	
@@ -460,35 +532,6 @@ static status_t build_sa_payload(private_ike_sa_t *this, sa_payload_t **payload)
 	return SUCCESS;
 }
 
-/**
- * implements private_ike_sa_t.build_ke_payload
- */
-static status_t build_ke_payload(private_ike_sa_t *this, ke_payload_t **payload)
-{
-	ke_payload_t *ke_payload;
-	chunk_t key_data;
-	
-	
-	this->logger->log(this->logger, CONTROL|MORE, "building ke payload");
-	
-	key_data.ptr = "12345";
-	key_data.len = strlen("12345");
-	
-	
-	ke_payload = ke_payload_create();
-	if (ke_payload == NULL)
-	{
-		return OUT_OF_RES;	
-	}
-	ke_payload->set_dh_group_number(ke_payload, MODP_1024_BIT);
-	if (ke_payload->set_key_exchange_data(ke_payload, key_data) != SUCCESS)
-	{
-		ke_payload->destroy(ke_payload);
-		return OUT_OF_RES;
-	}
-	*payload = ke_payload;
-	return SUCCESS;
-}
 
 /**
  * implements private_ike_sa_t.build_nonce_payload
@@ -538,6 +581,10 @@ static status_t destroy (private_ike_sa_t *this)
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	this->sent_messages->destroy(this->sent_messages);
 	this->randomizer->destroy(this->randomizer);
+	if (this->ike_sa_init_data.diffie_hellman != NULL)
+	{
+		this->ike_sa_init_data.diffie_hellman->destroy(this->ike_sa_init_data.diffie_hellman);
+	}
 	
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
@@ -565,7 +612,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.destroy = (status_t(*)(ike_sa_t*))destroy;
 	
 	this->build_sa_payload = build_sa_payload;
-	this->build_ke_payload = build_ke_payload;
 	this->build_nonce_payload = build_nonce_payload;
 	
 	this->build_message = build_message;
@@ -614,7 +660,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	
 	this->me.host = NULL;
 	this->other.host = NULL;
-	this->diffie_hellman = NULL;
+	this->ike_sa_init_data.diffie_hellman = NULL;
+	this->ike_sa_init_data.dh_group_number = 0;
+	/* 1 means highest priority */
+	this->ike_sa_init_data.dh_group_priority = 1;
 	this->message_id_out = 0;
 	this->message_id_in = 0;
 
