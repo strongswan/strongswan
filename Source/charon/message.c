@@ -442,6 +442,12 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	linked_list_iterator_t *iterator;
 	status_t status;
 	
+	if (this->packet != NULL)
+	{
+		/* already generated packet is just cloned */
+		this->packet->clone(this->packet, packet);
+	}
+	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
 		return INVALID_STATE;
@@ -742,7 +748,7 @@ static status_t destroy (private_message_t *this)
 	this->payloads->destroy(this->payloads);
 	this->parser->destroy(this->parser);
 	
-allocator_free(this);
+	allocator_free(this);
 	return SUCCESS;
 }
 
