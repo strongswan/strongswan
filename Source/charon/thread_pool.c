@@ -157,7 +157,8 @@ static void job_processing(private_thread_pool_t *this)
 				}
 				
 				status = global_ike_sa_manager->checkin(global_ike_sa_manager,ike_sa);
-				if (status != SUCCESS){
+				if (status != SUCCESS)
+				{
 					this->logger->log(this->logger, CONTROL|MORE, "thread %u: Checkin of IKE SA return errors", pthread_self());
 				}
 				message->destroy(message);
