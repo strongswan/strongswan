@@ -35,6 +35,11 @@ struct private_ike_auth_requested_s {
 	 */
 	ike_auth_requested_t public;
 	
+	
+	/**
+	 * Assigned IKE_SA
+	 */
+	 protected_ike_sa_t *ike_sa;
 };
 
 /**
@@ -66,7 +71,7 @@ static status_t destroy(private_ike_auth_requested_t *this)
 /* 
  * Described in header.
  */
-ike_auth_requested_t *ike_auth_requested_create()
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa)
 {
 	private_ike_auth_requested_t *this = allocator_alloc_thing(private_ike_auth_requested_t);
 	
@@ -79,6 +84,9 @@ ike_auth_requested_t *ike_auth_requested_create()
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *,state_t **)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
 	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
+	
+	/* private data */
+	this->ike_sa = ike_sa;
 	
 	return &(this->public);
 }

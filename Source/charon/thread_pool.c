@@ -91,11 +91,11 @@ static void job_processing(private_thread_pool_t *this)
 		{
 			case INCOMING_PACKET:
 			{
-				packet_t *packet;
-				message_t *message;
-				ike_sa_t *ike_sa;
+				packet_t 	*packet;
+				message_t 	*message;
+				ike_sa_t 	*ike_sa;
 				ike_sa_id_t *ike_sa_id;
-				status_t status;
+				status_t 	status;
 				incoming_packet_job_t *incoming_packet_job = (incoming_packet_job_t *)job;
 				
 				
@@ -105,6 +105,7 @@ static void job_processing(private_thread_pool_t *this)
 										mapping_find(job_type_m,job_type));				
 					break;
 				}
+				
 				message = message_create_from_packet(packet);
 				if (message == NULL)
 				{
@@ -173,6 +174,7 @@ static void job_processing(private_thread_pool_t *this)
 									ike_sa_id->get_initiator_spi(ike_sa_id),
 									ike_sa_id->get_responder_spi(ike_sa_id),
 									ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
+				ike_sa_id->destroy(ike_sa_id);
 									
 				status = global_ike_sa_manager->checkin(global_ike_sa_manager, ike_sa);
 				if (status != SUCCESS)
@@ -180,8 +182,6 @@ static void job_processing(private_thread_pool_t *this)
 					this->worker_logger->log(this->worker_logger, ERROR, "checkin of IKE SA failed");
 				}
 				message->destroy(message);
-				ike_sa_id->destroy(ike_sa_id);				
-				
 				break;
 			}
 			case INITIATE_IKE_SA:

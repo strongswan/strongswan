@@ -27,6 +27,8 @@
 #include "../types.h"
 #include "../message.h"
 
+extern mapping_t ike_sa_state_m[];
+
 /**
  * States in which a IKE_SA can actually be
  */

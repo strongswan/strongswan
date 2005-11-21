@@ -26,6 +26,8 @@
 
 #include "state.h"
 
+#include "../ike_sa.h"
+
 /**
  * @brief This class represents an IKE_SA state when initializing
  * 		  a connection as initiator
@@ -52,8 +54,10 @@ struct initiator_init_s {
 
 /**
  * Constructor of class initiator_init_t
+ * 
+ * @param ike_sa assigned IKE_SA
  */
-initiator_init_t *initiator_init_create();
+initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa);
 
 
 #endif /*INITIATOR_INIT_H_*/

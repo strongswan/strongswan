@@ -24,6 +24,7 @@
 #define IKE_SA_ESTABLISHED_H_
 
 #include "state.h"
+#include "../ike_sa.h"
 
 /**
  * @brief This class represents an the state of an established
@@ -42,7 +43,9 @@ struct ike_sa_established_s {
 
 /**
  * Constructor of class ike_sa_established_t
+ * 
+ * @param ike_sa assigned ike_sa
  */
-ike_sa_established_t *ike_sa_established_create();
+ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa);
 
 #endif /*IKE_SA_ESTABLISHED_H_*/

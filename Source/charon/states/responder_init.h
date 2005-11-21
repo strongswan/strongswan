@@ -25,6 +25,8 @@
 
 #include "state.h"
 
+#include "../ike_sa.h"
+
 /**
  * @brief This class represents an IKE_SA state when initializing
  * 		  a connection as responder
@@ -42,7 +44,9 @@ struct responder_init_s {
 
 /**
  * Constructor of class responder_init_t
+ * 
+ * @param ike_sa 	assigned IKE_SA
  */
-responder_init_t *responder_init_create();
+responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa);
 
 #endif /*RESPONDER_INIT_H_*/

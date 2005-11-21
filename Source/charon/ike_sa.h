@@ -27,6 +27,16 @@
 #include "types.h"
 #include "message.h"
 #include "ike_sa_id.h"
+#include "utils/logger.h"
+#include "utils/randomizer.h"
+#include "states/state.h"
+
+
+
+/**
+ * Nonce size in bytes of all sent nonces
+ */
+#define NONCE_SIZE 16
 
 /**
  * @brief This class is used to represent an IKE_SA
@@ -64,6 +74,147 @@ struct ike_sa_s {
 	 */
 	status_t (*destroy) (ike_sa_t *this);
 };
+
+/**
+ * Protected data of an ike_sa_t object
+ */
+typedef struct protected_ike_sa_s protected_ike_sa_t;
+
+struct protected_ike_sa_s {
+
+	/**
+	 * Public part of a ike_sa_t object
+	 */
+	ike_sa_t public;
+	
+	/**
+	 * Builds an empty IKEv2-Message and fills in default informations.
+	 * 
+	 * Depending on the type of message (request or response), the message id is 
+	 * either message_id_out or message_id_in.
+	 * 
+	 * Used in every state.
+	 * 
+	 * @param this		calling object
+	 * @param type		exchange type of new message
+	 * @param request	TRUE, if message has to be a request
+	 * @param message	new message is stored at this location
+	 * @return			
+	 * 					- SUCCESS
+	 * 					- OUT_OF_RES
+	 */
+	status_t (*build_message) (protected_ike_sa_t *this, exchange_type_t type, bool request, message_t **message);
+
+	/**
+	 * Creates a job to delete the given IKE_SA
+	 */
+	status_t (*create_delete_job) (protected_ike_sa_t *this);
+
+	/**
+	 * Resends the last sent reply
+	 */
+	status_t (*resend_last_reply) (protected_ike_sa_t *this);
+	
+	
+	/* protected values */
+	
+	/**
+	 * Identifier for the current IKE_SA
+	 */
+	ike_sa_id_t *ike_sa_id;
+
+	/**
+	 * Linked List containing the child sa's of the current IKE_SA
+	 */
+	linked_list_t *child_sas;
+
+	/**
+	 * Current state of the IKE_SA
+	 */
+	state_t *current_state;
+	
+	/**
+	 * this SA's source for random data
+	 */
+	randomizer_t *randomizer;
+	
+	/**
+	 * contains the last responded message
+	 * 
+	 */
+	message_t *last_responded_message;
+
+	/**
+	 * contains the last requested message
+	 * 
+	 */
+	message_t *last_requested_message;
+	
+	/**
+	 * Informations of this host
+	 */
+	struct {
+		host_t *host;
+	} me;
+
+	/**
+	 * Informations of the other host
+	 */	
+	struct {
+		host_t *host;
+	} other;
+	
+	
+//	struct {
+//		/**
+//		 * Diffie Hellman object used to compute shared secret
+//		 */
+//		diffie_hellman_t *diffie_hellman;
+//		
+//		/**
+//		 * Diffie Hellman group number
+//		 */
+//		u_int16_t dh_group_number;	
+//		
+//		/**
+//		 * Priority used get matching dh_group number
+//		 */
+//		u_int16_t dh_group_priority;
+//		
+//		/**
+//		 * selected proposals
+//		 */
+//		linked_list_t *proposals;
+//		
+//		/**
+//		 * Sent nonce value
+//		 */
+//		 chunk_t sent_nonce;
+//		
+//		/**
+//		 * received nonce value
+//		 */
+//		 chunk_t received_nonce;
+//	} ike_sa_init_data;
+	
+
+	/**
+	 * next message id to receive
+	 */
+	u_int32_t message_id_in;
+	
+	/**
+	 * next message id to send
+	 */
+	u_int32_t message_id_out;
+	
+	/**
+	 * a logger for this IKE_SA
+	 */
+	logger_t *logger;
+};
+
+
 
 /**
  * Creates an ike_sa_t object with a specific ike_sa_id_t object

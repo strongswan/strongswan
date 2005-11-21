@@ -24,6 +24,7 @@
 #define IKE_AUTH_REQUESTED_H_
 
 #include "state.h"
+#include "../ike_sa.h"
 
 /**
  * @brief This class represents an IKE_SA, which has requested an IKE_AUTH.
@@ -41,7 +42,9 @@ struct ike_auth_requested_s {
 
 /**
  * Constructor of class ike_auth_requested_t
+ * 
+ * @param ike_sa		assigned ike_sa object
  */
-ike_auth_requested_t *ike_auth_requested_create();
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa);
 
 #endif /*IKE_AUTH_REQUESTED_H_*/
