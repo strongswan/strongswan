@@ -264,6 +264,18 @@ struct transform_substructure_s {
 	u_int16_t (*get_transform_id) (transform_substructure_t *this);
 
 	/**
+	 * @brief Clones an transform_substructure_t object.
+	 *
+	 * @param this 	transform_substructure_t object to clone
+	 * @param clone	pointer to a transform_substructure_t object pointer 
+	 * 				where the new object is stored to.
+	 * @return 		
+	 * 				- OUT_OF_RES
+	 * 				- SUCCESS in any case
+	 */
+	status_t (*clone) (transform_substructure_t *this,transform_substructure_t **clone);
+
+	/**
 	 * @brief Destroys an transform_substructure_t object.
 	 *
 	 * @param this 	transform_substructure_t object to destroy

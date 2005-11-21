@@ -123,21 +123,6 @@ static status_t verify(private_transform_attribute_t *this)
 }
 
 /**
- * Implements payload_t's and transform_attribute_t's destroy function.
- * See #payload_s.destroy or transform_attribute_s.destroy for description.
- */
-static status_t destroy(private_transform_attribute_t *this)
-{
-	if (this->attribute_value.ptr != NULL)
-	{
-		allocator_free(this->attribute_value.ptr);
-	}	
-	allocator_free(this);
-	
-	return SUCCESS;
-}
-
-/**
  * Implements payload_t's get_encoding_rules function.
  * See #payload_s.get_encoding_rules for description.
  */
@@ -292,6 +277,50 @@ static u_int16_t get_attribute_type (private_transform_attribute_t *this)
 	return this->attribute_type;
 }
 
+/**
+ * Implements transform_attribute_t's clone function.
+ * See transform_attribute_s.clone for description.
+ */
+static status_t clone(private_transform_attribute_t *this,transform_attribute_t **clone)
+{
+	private_transform_attribute_t *new_clone;
+	
+	new_clone = (private_transform_attribute_t *) transform_attribute_create();
+	
+	new_clone->attribute_format = this->attribute_format;
+	new_clone->attribute_type = this->attribute_type;
+	new_clone->attribute_length_or_value = this->attribute_length_or_value;
+	
+	if (!new_clone->attribute_format)
+	{
+		new_clone->attribute_value.ptr = allocator_clone_bytes(this->attribute_value.ptr,this->attribute_value.len);		
+		new_clone->attribute_value.len = this->attribute_value.len;
+		if (new_clone->attribute_value.ptr == NULL)
+		{
+			new_clone->public.destroy(&(new_clone->public));
+			return OUT_OF_RES;
+		}
+	}
+	
+	*clone = (transform_attribute_t *) new_clone;
+	return SUCCESS;
+}
+
+/**
+ * Implements payload_t's and transform_attribute_t's destroy function.
+ * See #payload_s.destroy or transform_attribute_s.destroy for description.
+ */
+static status_t destroy(private_transform_attribute_t *this)
+{
+	if (this->attribute_value.ptr != NULL)
+	{
+		allocator_free(this->attribute_value.ptr);
+	}	
+	allocator_free(this);
+	
+	return SUCCESS;
+}
+
 /*
  * Described in header
  */
@@ -319,6 +348,7 @@ transform_attribute_t *transform_attribute_create()
 	this->public.get_value = (u_int16_t (*) (transform_attribute_t *)) get_value;
 	this->public.set_attribute_type = (status_t (*) (transform_attribute_t *,u_int16_t type)) set_attribute_type;
 	this->public.get_attribute_type = (u_int16_t (*) (transform_attribute_t *)) get_attribute_type;
+	this->public.clone = (status_t (*) (transform_attribute_t *,transform_attribute_t **)) clone;
 	this->public.destroy = (status_t (*) (transform_attribute_t *)) destroy;
 	
 	/* set default values of the fields */

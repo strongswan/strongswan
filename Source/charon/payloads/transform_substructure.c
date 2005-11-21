@@ -289,29 +289,6 @@ static status_t verify(private_transform_substructure_t *this)
 }
 
 /**
- * Implements payload_t's and transform_substructure_t's destroy function.
- * See #payload_s.destroy or transform_substructure_s.destroy for description.
- */
-static status_t destroy(private_transform_substructure_t *this)
-{
-	/* all proposals are getting destroyed */ 
-	while (this->attributes->get_count(this->attributes) > 0)
-	{
-		transform_attribute_t *current_attribute;
-		if (this->attributes->remove_last(this->attributes,(void **)&current_attribute) != SUCCESS)
-		{
-			break;
-		}
-		current_attribute->destroy(current_attribute);
-	}
-	this->attributes->destroy(this->attributes);
-	
-	allocator_free(this);
-	
-	return SUCCESS;
-}
-
-/**
  * Implements payload_t's get_encoding_rules function.
  * See #payload_s.get_encoding_rules for description.
  */
@@ -466,6 +443,88 @@ static status_t compute_length (private_transform_substructure_t *this)
 	return SUCCESS;
 }
 
+/**
+ * Implements transform_substructure_t's clone function.
+ * See transform_substructure_s.clone for description.
+ */
+static status_t clone(private_transform_substructure_t *this,transform_substructure_t **clone)
+{
+	private_transform_substructure_t *new_clone;
+	linked_list_iterator_t *attributes;
+	status_t status;
+	
+	new_clone = (private_transform_substructure_t *) transform_substructure_create();
+	
+	new_clone->next_payload = this->next_payload;
+	new_clone->transform_type = this->transform_type;
+	new_clone->transform_id = this->transform_id;
+
+	status = this->attributes->create_iterator(this->attributes,&attributes,FALSE);
+	if (status != SUCCESS)
+	{
+		new_clone->public.destroy(&(new_clone->public));
+		return status;
+	}
+
+	while (attributes->has_next(attributes))
+	{
+		transform_attribute_t *current_attribute;
+		transform_attribute_t *current_attribute_clone;
+		status = attributes->current(attributes,(void **) &current_attribute);
+		if (status != SUCCESS)
+		{
+			attributes->destroy(attributes);
+			new_clone->public.destroy(&(new_clone->public));
+			return status;
+		}
+		status = current_attribute->clone(current_attribute,&current_attribute_clone);
+		if (status != SUCCESS)
+		{
+			attributes->destroy(attributes);
+			new_clone->public.destroy(&(new_clone->public));
+			return status;
+		}
+		
+		status = new_clone->public.add_transform_attribute(&(new_clone->public),current_attribute_clone);
+		if (status != SUCCESS)
+		{
+			attributes->destroy(attributes);
+			current_attribute_clone->destroy(current_attribute_clone);
+			new_clone->public.destroy(&(new_clone->public));
+			return status;
+		}				
+	}
+	
+	attributes->destroy(attributes);	
+	
+	*clone = new_clone;
+	return SUCCESS;
+}
+
+
+/**
+ * Implements payload_t's and transform_substructure_t's destroy function.
+ * See #payload_s.destroy or transform_substructure_s.destroy for description.
+ */
+static status_t destroy(private_transform_substructure_t *this)
+{
+	/* all proposals are getting destroyed */ 
+	while (this->attributes->get_count(this->attributes) > 0)
+	{
+		transform_attribute_t *current_attribute;
+		if (this->attributes->remove_last(this->attributes,(void **)&current_attribute) != SUCCESS)
+		{
+			break;
+		}
+		current_attribute->destroy(current_attribute);
+	}
+	this->attributes->destroy(this->attributes);
+	
+	allocator_free(this);
+	
+	return SUCCESS;
+}
+
 /*
  * Described in header
  */
@@ -495,6 +554,7 @@ transform_substructure_t *transform_substructure_create()
 	this->public.get_transform_type = (u_int8_t (*) (transform_substructure_t *)) get_transform_type;
 	this->public.set_transform_id = (status_t (*) (transform_substructure_t *,u_int16_t)) set_transform_id;
 	this->public.get_transform_id = (u_int16_t (*) (transform_substructure_t *)) get_transform_id;
+	this->public.clone = (status_t (*) (transform_substructure_t *,transform_substructure_t **)) clone;
 	this->public.destroy = (status_t (*) (transform_substructure_t *)) destroy;
 	
 	/* private functions */

@@ -120,6 +120,17 @@ struct transform_attribute_s {
 	u_int16_t (*get_attribute_type) (transform_attribute_t *this);
 	
 	/**
+	 * @brief Clones an transform_attribute_t object.
+	 *
+	 * @param this 	transform_attribute_t object to clone
+	 * @param clone	the new clone will be written there
+	 * @return 		
+	 * 				- OUT_OF_RES
+	 * 				- SUCCESS
+	 */
+	status_t (*clone) (transform_attribute_t *this,transform_attribute_t **clone);
+
+	/**
 	 * @brief Destroys an transform_attribute_t object.
 	 *
 	 * @param this 	transform_attribute_t object to destroy

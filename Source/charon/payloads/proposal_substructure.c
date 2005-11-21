@@ -170,34 +170,6 @@ static status_t verify(private_proposal_substructure_t *this)
 }
 
 /**
- * Implements payload_t's and proposal_substructure_t's destroy function.
- * See #payload_s.destroy or proposal_substructure_s.destroy for description.
- */
-static status_t destroy(private_proposal_substructure_t *this)
-{
-	/* all proposals are getting destroyed */ 
-	while (this->transforms->get_count(this->transforms) > 0)
-	{
-		transform_substructure_t *current_transform;
-		if (this->transforms->remove_last(this->transforms,(void **)&current_transform) != SUCCESS)
-		{
-			break;
-		}
-		current_transform->destroy(current_transform);
-	}
-	this->transforms->destroy(this->transforms);
-	
-	if (this->spi.ptr != NULL)
-	{
-		allocator_free(this->spi.ptr);
-	}
-	
-	allocator_free(this);
-	
-	return SUCCESS;
-}
-
-/**
  * Implements payload_t's get_encoding_rules function.
  * See #payload_s.get_encoding_rules for description.
  */
@@ -386,6 +358,103 @@ static status_t compute_length (private_proposal_substructure_t *this)
 	return SUCCESS;
 }
 
+/**
+ * Implements proposal_substructure_t's clone function.
+ * See #proposal_substructure_s.clone for description.
+ */
+static status_t clone(private_proposal_substructure_t *this, private_proposal_substructure_t **clone)
+{
+	private_proposal_substructure_t * new_clone;
+	linked_list_iterator_t *transforms;
+	status_t status;
+	
+	new_clone = (private_proposal_substructure_t *) proposal_substructure_create();
+	
+	new_clone->next_payload = this->next_payload;
+	new_clone->proposal_number = this->proposal_number;
+	new_clone->protocol_id = this->protocol_id;
+	new_clone->spi_size = this->spi_size;
+	if (this->spi.ptr != NULL)
+	{
+		new_clone->spi.ptr = allocator_clone_bytes(this->spi.ptr,this->spi.len);
+		if (new_clone->spi.ptr == NULL)
+		{
+			new_clone->public.destroy(&(new_clone->public));
+			return OUT_OF_RES;
+		}
+		new_clone->spi.len = this->spi.len;
+	}
+
+	status = this->transforms->create_iterator(this->transforms,&transforms,FALSE);
+	if (status != SUCCESS)
+	{
+		new_clone->public.destroy(&(new_clone->public));
+		return status;
+	}
+
+	while (transforms->has_next(transforms))
+	{
+		transform_substructure_t *current_transform;
+		transform_substructure_t *current_transform_clone;
+		status = transforms->current(transforms,(void **) &current_transform);
+		if (status != SUCCESS)
+		{
+			transforms->destroy(transforms);
+			new_clone->public.destroy(&(new_clone->public));
+			return status;
+		}
+		status = current_transform->clone(current_transform,&current_transform_clone);
+		if (status != SUCCESS)
+		{
+			transforms->destroy(transforms);
+			new_clone->public.destroy(&(new_clone->public));
+			return status;
+		}
+		
+		status = new_clone->public.add_transform_substructure(&(new_clone->public),current_transform_clone);
+		if (status != SUCCESS)
+		{
+			transforms->destroy(transforms);
+			current_transform_clone->destroy(current_transform_clone);
+			new_clone->public.destroy(&(new_clone->public));
+			return status;
+		}				
+	}
+	
+	transforms->destroy(transforms);	
+	
+	*clone = new_clone;	
+	
+	return SUCCESS;
+}
+
+/**
+ * Implements payload_t's and proposal_substructure_t's destroy function.
+ * See #payload_s.destroy or proposal_substructure_s.destroy for description.
+ */
+static status_t destroy(private_proposal_substructure_t *this)
+{
+	/* all proposals are getting destroyed */ 
+	while (this->transforms->get_count(this->transforms) > 0)
+	{
+		transform_substructure_t *current_transform;
+		if (this->transforms->remove_last(this->transforms,(void **)&current_transform) != SUCCESS)
+		{
+			break;
+		}
+		current_transform->destroy(current_transform);
+	}
+	this->transforms->destroy(this->transforms);
+	
+	if (this->spi.ptr != NULL)
+	{
+		allocator_free(this->spi.ptr);
+	}
+	
+	allocator_free(this);
+	
+	return SUCCESS;
+}
 
 /*
  * Described in header
@@ -416,6 +485,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
 	this->public.set_spi = (status_t (*) (proposal_substructure_t *,chunk_t))set_spi;
 	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
+	this->public.clone = (status_t (*) (proposal_substructure_t *, proposal_substructure_t **)) clone;
 	this->public.destroy = (status_t (*) (proposal_substructure_t *)) destroy;
 	
 	/* private functions */

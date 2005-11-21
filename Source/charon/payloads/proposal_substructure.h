@@ -151,6 +151,17 @@ struct proposal_substructure_s {
 	status_t (*set_spi) (proposal_substructure_t *this, chunk_t spi);
 
 	/**
+	 * @brief Clones an proposal_substructure_t object.
+	 *
+	 * @param this 	proposal_substructure_t object to clone
+	 * @param clone	cloned object will be written there
+	 * @return 		
+	 * 				- SUCCESS
+	 * 				- OUT_OF_RES
+	 */
+	status_t (*clone) (proposal_substructure_t *this,proposal_substructure_t **clone);
+
+	/**
 	 * @brief Destroys an proposal_substructure_t object.
 	 *
 	 * @param this 	proposal_substructure_t object to destroy
