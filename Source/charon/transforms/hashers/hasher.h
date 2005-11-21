@@ -46,19 +46,30 @@ struct hasher_s {
 	/**
 	 * @brief hash data and write it in the buffer
 	 * 
+	 * If the parameter hash is NULL, no result is written back
+	 * an more data can be appended to already hashed data.
+	 * If not, the result is written back and the hasher is reset.
+	 * 
+	 * @warning: the hash output parameter must hold at least
+	 * #hash_t.get_block_size bytes.
+	 * 
 	 * @param this			calling hasher
 	 * @param data			data to hash
 	 * @param [out]buffer	pointer where the hash will be written
 	 * @return				
 	 * 						- SUCCESS in any case
 	 */
-	status_t (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *buffer);
+	status_t (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *hash);
 	
 	/**
 	 * @brief hash data and allocate space for the hash
 	 * 
+	 * If the parameter hash is NULL, no result is written back
+	 * an more data can be appended to already hashed data.
+	 * If not, the result is written back and the hasher is reset.
+	 * 
 	 * @param this			calling hasher
-	 * @param seed			a chunk containing the seed for the next bytes
+	 * @param data			chunk with data to hash
 	 * @param [out]hash		chunk which will hold allocated hash
 	 * @return				
 	 * 						- SUCCESS in any case
@@ -73,6 +84,15 @@ struct hasher_s {
 	 * @return				block size in bytes
 	 */
 	size_t (*get_block_size) (hasher_t *this);
+	
+	/**
+	 * @brief reset the hashers state, which allows
+	 * computation of a completly new hash.
+	 * 
+	 * @param this			calling hasher
+	 * @return				- SUCCESS in any case
+	 */
+	status_t (*reset) (hasher_t *this);
 	
 	/**
 	 * @brief Destroys a hasher object.
