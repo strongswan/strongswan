@@ -85,7 +85,9 @@ struct message_rule_s {
 	 supported_payload_entry_t *supported_payloads;
 };
 
-
+/**
+ * message rule for ike_sa_init from initiator
+ */
 static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
 {
 	{SECURITY_ASSOCIATION,1,1},
@@ -93,6 +95,9 @@ static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
 	{NONCE,1,1},
 };
 
+/**
+ * message rule for ike_sa_init from responder
+ */
 static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
 {
 	{SECURITY_ASSOCIATION,1,1},
@@ -100,6 +105,10 @@ static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
 	{NONCE,1,1},
 };
 
+
+/**
+ * message rules, defines allowed payloads
+ */
 static message_rule_t message_rules[] = {
 	{IKE_SA_INIT,TRUE,(sizeof(supported_ike_sa_init_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_i_payloads},
 	{IKE_SA_INIT,FALSE,(sizeof(supported_ike_sa_init_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_r_payloads}
@@ -388,6 +397,9 @@ static status_t add_payload(private_message_t *this, payload_t *payload)
 		last_payload->set_next_type(last_payload,payload->get_type(payload));
 	}
 	
+	this->logger->log(this->logger, CONTROL|MORE, "added payload of type %s to message", 
+						mapping_find(payload_type_m, payload->get_type(payload)));
+	
 	return SUCCESS;
 }
 
@@ -442,6 +454,10 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	linked_list_iterator_t *iterator;
 	status_t status;
 	
+	
+	this->logger->log(this->logger, CONTROL, "generating message, contains %d payloads", 
+						this->payloads->get_count(this->payloads));
+	
 	if (this->packet != NULL)
 	{
 		/* already generated packet is just cloned */
@@ -450,14 +466,17 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
+		this->logger->log(this->logger, ERROR, "exchange type is not defined");
 		return INVALID_STATE;
 	}
 	
 	if (this->packet->source == NULL ||
 		this->packet->destination == NULL) 
 	{
+		this->logger->log(this->logger, ERROR, "source/destination not defined");
 		return INVALID_STATE;
 	}
+	
 	
 	ike_header = ike_header_create();
 	if (ike_header == NULL)
@@ -530,6 +549,9 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	this->packet->clone(this->packet, packet);
 	
 	generator->destroy(generator);
+	
+	
+	this->logger->log(this->logger, CONTROL, "message generated successfully");
 	return SUCCESS;
 }
 
@@ -537,10 +559,13 @@ static status_t generate(private_message_t *this, packet_t **packet)
  * Implements message_t's parse_header function.
  * See #message_s.parse_header.
  */
-static status_t parse_header (private_message_t *this)
+static status_t parse_header(private_message_t *this)
 {
 	ike_header_t *ike_header;
 	status_t status;
+	
+	
+	this->logger->log(this->logger, CONTROL, "parsing header of message");
 	
 	this->parser->reset_context(this->parser);
 	status = this->parser->parse_payload(this->parser,HEADER,(payload_t **) &ike_header);
@@ -555,7 +580,7 @@ static status_t parse_header (private_message_t *this)
 	status = ike_header->payload_interface.verify(&(ike_header->payload_interface));
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Header could not be verified");
+		this->logger->log(this->logger, ERROR, "Header verification failed");
 		return status;
 	}	
 	
@@ -566,10 +591,10 @@ static status_t parse_header (private_message_t *this)
 	
 	this->ike_sa_id = ike_sa_id_create(ike_header->get_initiator_spi(ike_header),
 									   ike_header->get_responder_spi(ike_header),
-									   !ike_header->get_initiator_flag(ike_header));
+									   ike_header->get_initiator_flag(ike_header));
 	if (this->ike_sa_id == NULL)
 	{
-		this->logger->log(this->logger, ERROR, "Could not creaee ike_sa_id object");
+		this->logger->log(this->logger, ERROR, "could not create ike_sa_id object");
 		ike_header->destroy(ike_header);
 		return OUT_OF_RES;
 	}
@@ -579,6 +604,9 @@ static status_t parse_header (private_message_t *this)
 	this->major_version = ike_header->get_maj_version(ike_header);
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(&(ike_header->payload_interface));
+	
+	
+	this->logger->log(this->logger, CONTROL, "parsing header successfully");
 	
 	ike_header->destroy(ike_header);	
 	return SUCCESS;	
@@ -596,23 +624,22 @@ static status_t parse_body (private_message_t *this)
 	supported_payload_entry_t *supported_payloads;
 	size_t supported_payloads_count;
 	
+	
+	this->logger->log(this->logger, CONTROL, "parsing body of message");
 			
-	if (this->get_supported_payloads (this,&supported_payloads,&supported_payloads_count) != SUCCESS)
+	if (this->get_supported_payloads (this, &supported_payloads, &supported_payloads_count) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "could not get supported payloads");
-		/* message type is not supported */
 		return FAILED;
 	}
-	
-	
-	this->logger->log(this->logger, ERROR, "first payload %s", mapping_find(payload_type_m, current_payload_type));
-	
+		
 	while (current_payload_type != NO_PAYLOAD)
 	{
 		payload_t *current_payload;
 		bool supported = FALSE;
 		
-		this->logger->log(this->logger, ERROR, "Start parsing payload of type %s", mapping_find(payload_type_m, current_payload_type));
+		this->logger->log(this->logger, CONTROL|MORE, "start parsing payload of type %s", 
+							mapping_find(payload_type_m, current_payload_type));
 		for (i = 0; i < supported_payloads_count;i++)
 		{
 			if (supported_payloads[i].payload_type == current_payload_type)
@@ -625,21 +652,21 @@ static status_t parse_body (private_message_t *this)
 		{
 			/* type not supported */
 			status = NOT_SUPPORTED;
-			this->logger->log(this->logger, ERROR, "Payload type %s not supported",mapping_find(payload_type_m,current_payload_type));
+			this->logger->log(this->logger, ERROR, "payload type %s not supported",mapping_find(payload_type_m,current_payload_type));
 			break;
 		}
 		
 		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Payload type %s could not be parsed",mapping_find(payload_type_m,current_payload_type));			
+			this->logger->log(this->logger, ERROR, "payload type %s could not be parsed",mapping_find(payload_type_m,current_payload_type));			
 			break;
 		}
 		
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Payload type %s could not be verified",mapping_find(payload_type_m,current_payload_type));			
+			this->logger->log(this->logger, ERROR, "payload type %s could not be verified",mapping_find(payload_type_m,current_payload_type));			
 			status = VERIFY_ERROR;
 			break;
 		}
@@ -670,7 +697,6 @@ static status_t parse_body (private_message_t *this)
 			return status;
 		}
 		
-		
 		/* check for payloads with wrong count*/
 		for (i = 0; i < supported_payloads_count;i++)
 		{
@@ -687,7 +713,7 @@ static status_t parse_body (private_message_t *this)
 				status = iterator->current(iterator,(void **)&current_payload);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, CONTROL|MORE, "Could not get payload from internal list");
+					this->logger->log(this->logger, ERROR, "Could not get payload from internal list");
 					iterator->destroy(iterator);
 					return status;
 				}
@@ -696,7 +722,7 @@ static status_t parse_body (private_message_t *this)
 					found_payloads++;
 					if (found_payloads > max_occurence)
 					{
-						this->logger->log(this->logger, CONTROL|MORE, "Payload of type %s more than %d times (%d) occured in current message",
+						this->logger->log(this->logger, ERROR, "Payload of type %s more than %d times (%d) occured in current message",
 										  mapping_find(payload_type_m,current_payload->get_type(current_payload)),max_occurence,found_payloads);
 						iterator->destroy(iterator);
 						return NOT_SUPPORTED;					
@@ -706,7 +732,7 @@ static status_t parse_body (private_message_t *this)
 			}
 			if (found_payloads < min_occurence)
 			{
-					this->logger->log(this->logger, CONTROL|MORE, "Payload of type %s not occured %d times",
+					this->logger->log(this->logger, ERROR, "Payload of type %s not occured %d times",
 									  mapping_find(payload_type_m,payload_type),min_occurence);
 					iterator->destroy(iterator);
 					return NOT_SUPPORTED;
@@ -742,13 +768,14 @@ static status_t destroy (private_message_t *this)
 	{
 		payload_t *payload;
 		iterator->current(iterator, (void**)&payload);	
-		this->logger->log(this->logger, CONTROL|MORE, "Destroying payload of type %s", 
-			mapping_find(payload_type_m, payload->get_type(payload)));
+		this->logger->log(this->logger, CONTROL|MOST, "Destroying payload of type %s", 
+							mapping_find(payload_type_m, payload->get_type(payload)));
 		payload->destroy(payload);
 	}
 	iterator->destroy(iterator);
 	this->payloads->destroy(this->payloads);
 	this->parser->destroy(this->parser);
+	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 	
 	allocator_free(this);
 	return SUCCESS;
