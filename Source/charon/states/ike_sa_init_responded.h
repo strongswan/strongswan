@@ -1,0 +1,4 @@
+#ifndef IKE_SA_INIT_RESPONDED_H_
+#define IKE_SA_INIT_RESPONDED_H_
+
+#endif /*IKE_SA_INIT_RESPONDED_H_*/
