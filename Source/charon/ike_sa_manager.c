@@ -735,12 +735,12 @@ static status_t destroy(private_ike_sa_manager_t *this)
 		this->delete_entry(this, entry);
 	}
 	iterator->destroy(iterator);
-
 	list->destroy(list);
 	pthread_mutex_unlock(&(this->mutex));
-	
+
 	/* destroy logger at end */
 	global_logger_manager->destroy_logger(global_logger_manager,this->logger);
+
 	allocator_free(this);
 	
 	return SUCCESS;
