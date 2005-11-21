@@ -46,7 +46,7 @@ struct parser_s {
 	 * 
 	 * Rules for parsing are described in the payload definition.
 	 *
-	 * @param parser			parser Object
+	 * @param this				parser Object
 	 * @param payload_type		payload type to parse
 	 * @param[out] payload		pointer where parsed payload was allocated
 	 * @return 			

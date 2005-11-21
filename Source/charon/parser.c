@@ -31,8 +31,15 @@
 #include "utils/allocator.h"
 #include "utils/logger.h"
 #include "utils/linked_list.h"
-#include "payloads/payload.h"
 #include "payloads/encodings.h"
+#include "payloads/payload.h"
+#include "payloads/sa_payload.h"
+#include "payloads/proposal_substructure.h"
+#include "payloads/transform_substructure.h"
+#include "payloads/transform_attribute.h"
+#include "payloads/ke_payload.h"
+#include "payloads/nonce_payload.h"
+#include "payloads/notify_payload.h"
 
 
 
@@ -216,7 +223,8 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 	if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
 	{
 		this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+							rule_number, mapping_find(encoding_type_m, 
+							this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
 	switch (this->bit_pos)
@@ -240,13 +248,14 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 			break;
 		default:
 			this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-								rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), this->bit_pos);
+								rule_number, mapping_find(encoding_type_m, 
+								this->rules[rule_number].type), this->bit_pos);
 			return PARSE_ERROR;
 	}
 	
 	if (output_pos != NULL)
 	{
-		this->logger->log(this->logger, RAW, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
 	}
 	
 	
@@ -261,13 +270,15 @@ static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *o
 	if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
 	{
 		this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+							rule_number, mapping_find(encoding_type_m, 
+							this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos)
 	{
 		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), this->bit_pos);
+							rule_number, mapping_find(encoding_type_m, 
+							this->rules[rule_number].type), this->bit_pos);
 		return PARSE_ERROR;
 	}
 
@@ -275,7 +286,7 @@ static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *o
 	if (output_pos != NULL)
 	{
 		*output_pos = *(this->byte_pos);
-		this->logger->log(this->logger, RAW, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
 	}
 	this->byte_pos++;
 	
@@ -292,20 +303,22 @@ static status_t parse_uint15(private_parser_t *this, int rule_number, u_int16_t 
 	if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
 	{
 		this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+							rule_number, mapping_find(encoding_type_m, 
+							this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos != 1)
 	{
 		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), this->bit_pos);
+							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
+							this->bit_pos);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
 	if (output_pos != NULL)
 	{
 		*output_pos = ntohs(*((u_int16_t*)this->byte_pos)) & ~0x8000;
-		this->logger->log(this->logger, RAW, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
 	this->bit_pos = 0;
@@ -329,7 +342,8 @@ static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t 
 	if (this->bit_pos)
 	{
 		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), this->bit_pos);
+							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
+							this->bit_pos);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
@@ -337,7 +351,7 @@ static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t 
 	{
 		*output_pos = ntohs(*((u_int16_t*)this->byte_pos));
 		
-		this->logger->log(this->logger, RAW, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
 	
@@ -358,7 +372,8 @@ static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t 
 	if (this->bit_pos)
 	{
 		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), this->bit_pos);
+							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
+							this->bit_pos);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
@@ -366,7 +381,7 @@ static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t 
 	{
 		*output_pos = ntohl(*((u_int32_t*)this->byte_pos));
 		
-		this->logger->log(this->logger, RAW, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
 	}
 	this->byte_pos += 4;
 	
@@ -388,7 +403,8 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 	if (this->bit_pos)
 	{
 		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), this->bit_pos);
+							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
+							this->bit_pos);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
@@ -398,7 +414,7 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 		*(output_pos + 1) = ntohl(*((u_int32_t*)this->byte_pos));
 		*output_pos = ntohl(*(((u_int32_t*)this->byte_pos) + 1));
 		
-		this->logger->log_bytes(this->logger, RAW, "   =>", (void*)output_pos, 8);
+		this->logger->log_bytes(this->logger, RAW|MORE, "   =>", (void*)output_pos, 8);
 	}
 	this->byte_pos += 8;
 	
@@ -431,7 +447,7 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 			*output_pos = TRUE;
 		}
 		
-		this->logger->log(this->logger, RAW, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
 	}
 	this->bit_pos = (this->bit_pos + 1) % 8;
 	if (this->bit_pos == 0) 
@@ -469,9 +485,13 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 		u_int8_t *pos_before = this->byte_pos;
 		payload_t *payload;
 		status_t status;
+		this->logger->log(this->logger, CONTROL|MORE, "  %d bytes left, parsing recursivly %s", 
+							length, mapping_find(payload_type_m, payload_type));
 		status = this->public.parse_payload((parser_t*)this, payload_type, &payload);
 		if (status != SUCCESS)
 		{
+			this->logger->log(this->logger, ERROR, "  parsing of a %s substructure failed", 
+								mapping_find(payload_type_m, payload_type));
 			return status;	
 		}
 		list->insert_last(list, payload);
@@ -488,8 +508,8 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 {
 	if (this->byte_pos + length > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s, SPI_LENGTH: %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), length);
+		this->logger->log(this->logger, ERROR, "  not enough input (%d bytes) to parse rule %d %s", 
+							length, rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos)
@@ -504,12 +524,13 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 		output_pos->ptr = allocator_alloc(length);
 		if (output_pos->ptr == NULL)
 		{
+			this->logger->log(this->logger, ERROR, "  allocation of chunk (%d bytes) failed", length);
 			return OUT_OF_RES;	
 		}
 		memcpy(output_pos->ptr, this->byte_pos, length);
 	}
 	this->byte_pos += length;
-	this->logger->log_bytes(this->logger, RAW, "   =>", (void*)output_pos->ptr, length);
+	this->logger->log_bytes(this->logger, RAW|MORE, "   =>", (void*)output_pos->ptr, length);
 	
 	return SUCCESS;
 }
@@ -526,7 +547,12 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	int rule_number;
 	encoding_rule_t *rule;
 	
-	this->logger->log(this->logger, CONTROL, "parsing %s payload", mapping_find(payload_type_m, payload_type));
+	this->logger->log(this->logger, CONTROL, "parsing %s payload, %d bytes left", 
+						mapping_find(payload_type_m, payload_type),
+						this->input_roof-this->byte_pos);
+	
+	this->logger->log_bytes(this->logger, RAW, "parsing payload from", this->byte_pos, 
+								this->input_roof-this->byte_pos);
 	
 	/* ok, do the parsing */
 	pld = payload_create(payload_type);
@@ -659,29 +685,27 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case PROPOSALS:
 			{
-				size_t proposals_length = payload_length - 4;
+				size_t proposals_length = payload_length - SA_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_list(this, rule_number, output + rule->offset, PROPOSAL_SUBSTRUCTURE, proposals_length) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				//TODO check if next_payloads are correct?
 				break;							
 			}
 			case TRANSFORMS:
 			{
-				size_t transforms_length = payload_length - spi_size - 8;
+				size_t transforms_length = payload_length - spi_size - PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
 				if (this->parse_list(this, rule_number, output + rule->offset, TRANSFORM_SUBSTRUCTURE, transforms_length) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
 				}
-				//TODO check if we have the desired transforms count
 				break;							
 			}
 			case TRANSFORM_ATTRIBUTES:
 			{
-				size_t transform_a_length = payload_length - 8;
+				size_t transform_a_length = payload_length - TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
 				if (this->parse_list(this, rule_number, output + rule->offset, TRANSFORM_ATTRIBUTE, transform_a_length) != SUCCESS) 
 				{
 					pld->destroy(pld);
@@ -733,7 +757,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case NONCE_DATA:
 			{
-				size_t nonce_length = payload_length - 4;
+				size_t nonce_length = payload_length - NONCE_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, nonce_length) != SUCCESS) 
 				{
 					pld->destroy(pld);
@@ -743,7 +767,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case KEY_EXCHANGE_DATA:
 			{
-				size_t keydata_length = payload_length - 8;
+				size_t keydata_length = payload_length - KE_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, keydata_length) != SUCCESS) 
 				{
 					pld->destroy(pld);
@@ -753,7 +777,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			case NOTIFICATION_DATA:
 			{
-				size_t notify_length = payload_length - 8 - spi_size;
+				size_t notify_length = payload_length - NOTIFY_PAYLOAD_HEADER_LENGTH - spi_size;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, notify_length) != SUCCESS) 
 				{
 					pld->destroy(pld);
@@ -812,11 +836,13 @@ parser_t *parser_create(chunk_t data)
 	}
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, PARSER, NULL);
-	this->logger->enable_level(this->logger, CONTROL|MORE|ERROR|RAW);
+	this->logger->disable_level(this->logger, FULL);
+	this->logger->enable_level(this->logger, RAW|CONTROL|ALL);
 	
 	
 	if (this->logger == NULL)
 	{
+		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 		allocator_free(this);
 		return NULL;
 	}
@@ -835,8 +861,7 @@ parser_t *parser_create(chunk_t data)
 	this->parse_bit = parse_bit;
 	this->parse_list = parse_list;
 	this->parse_chunk = parse_chunk;
-	
-	
+		
 	this->input = data.ptr;
 	this->byte_pos = data.ptr;
 	this->bit_pos = 0;
