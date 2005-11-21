@@ -142,10 +142,12 @@ static void job_processing(private_thread_pool_t *this)
 					message->destroy(message);
 					break;
 				}
-				/* we must switch the initiator flag here, because the sender 
-				 * interprets this flag the other way round
+				/* we must switch the initiator flag when receiving a request
 				 */
-				ike_sa_id->switch_initiator(ike_sa_id);
+				if (message->get_request(message))
+				{
+					ike_sa_id->switch_initiator(ike_sa_id);
+				}
 				
 				this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking out IKE SA %lld:%lld, role %s", 
 									ike_sa_id->get_initiator_spi(ike_sa_id),
