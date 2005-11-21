@@ -36,6 +36,19 @@
  */
 #define PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH 8
 
+
+/**
+ * Protocol ID of a proposal
+ */
+typedef enum protocol_id_e protocol_id_t;
+
+enum protocol_id_e {
+	UNDEFINED_PROTOCOL_ID = 201,
+	IKE = 1,
+	AH = 2,
+	ESP = 3,
+};         
+
 /**
  * Object representing an IKEv2- PROPOSAL SUBSTRUCTURE
  * 
