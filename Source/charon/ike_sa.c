@@ -39,6 +39,11 @@
 
 
 /**
+ * Nonce size in bytes of all sent nonces
+ */
+#define NONCE_SIZE 16
+
+/**
  * States in which a IKE_SA can actually be
  */
 typedef enum ike_sa_state_e ike_sa_state_t;
@@ -297,6 +302,9 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 					return this->transto_ike_auth_requested(this, message);
 				}
 			}
+			
+			this->logger->log(this->logger, ERROR | MORE, "Message in current state %s not supported",mapping_find(ike_sa_state_m,this->state));	
+			
 			break;
 		}
 		case IKE_AUTH:
@@ -397,6 +405,7 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 	payload_t *payload;
 	packet_t *packet;
 	status_t status;
+	linked_list_iterator_t *proposal_iterator;
 	
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
@@ -421,6 +430,28 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 		return INVALID_ARG;
 	}
 	
+	if (this->ike_sa_init_data.proposals->get_count(this->ike_sa_init_data.proposals) > 0)
+	{
+		this->logger->log(this->logger, ERROR, "Proposals allready existing!");
+		return FAILED;		
+	}
+
+	status = this->ike_sa_init_data.proposals->create_iterator(this->ike_sa_init_data.proposals, &proposal_iterator, FALSE);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: Could not create iterator on list for proposals");
+		return status;	
+	}
+	
+	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->other.host, proposal_iterator);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve Proposals for %s",name);
+		return status;
+	}
+	/* not needed anymore */
+	proposal_iterator->destroy(proposal_iterator);
+	
 	if (this->ike_sa_init_data.diffie_hellman != NULL)
 	{
 		this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t already existing!");
@@ -440,7 +471,7 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 		return FAILED;	
 	}
 		
-	if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 16, &(this->ike_sa_init_data.sent_nonce)) != SUCCESS)
+	if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, NONCE_SIZE, &(this->ike_sa_init_data.sent_nonce)) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not create nonce!");
 		return OUT_OF_RES;
@@ -509,7 +540,8 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 		message->destroy(message);
 		return status;
 	}
-	
+
+	/* generate packet */	
 	this	->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
 	status = message->generate(message, &packet);
 	if (status != SUCCESS)
@@ -540,7 +572,7 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 	/* message counter can now be increased */
 	this->message_id_out++;
 	
-	/* states has NOW changed :-) */
+	/* state has NOW changed :-) */
 	this	->logger->log(this->logger, CONTROL|MORE, "Change state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,this->state),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
 	this->state = IKE_SA_INIT_REQUESTED;
 
@@ -553,6 +585,8 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 	linked_list_iterator_t *payloads;
 	message_t *response;
 	host_t *source, *destination;
+	payload_t *payload;
+	packet_t *packet;
 	
 	/* this is the first message we process, so copy host infos */
 	request->get_source(request, &source);
@@ -594,29 +628,6 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				linked_list_iterator_t *suggested_proposals, *accepted_proposals;
 
-				/* create a list for accepted proposals */
-				if (this->ike_sa_init_data.proposals == NULL)
-				{
-					this->ike_sa_init_data.proposals = linked_list_create();
-				}
-				else
-				{
-					/* delete stored proposals */
-					while (this->ike_sa_init_data.proposals->get_count(this->ike_sa_init_data.proposals) > 0)
-					{
-						proposal_substructure_t *current_proposal;
-						this->ike_sa_init_data.proposals->remove_first(this->ike_sa_init_data.proposals,(void **)&current_proposal);
-						current_proposal->destroy(current_proposal);
-					}
-				}
-				if (this->ike_sa_init_data.proposals == NULL)
-				{
-					/* destroy iterator and leave */
-					this->logger->log(this->logger, ERROR, "Fatal error: Could not create list for proposals");
-					payloads->destroy(payloads);
-					this->create_delete_job(this);
-					return OUT_OF_RES;	
-				}
 				status = this->ike_sa_init_data.proposals->create_iterator(this->ike_sa_init_data.proposals, &accepted_proposals, FALSE);
 				if (status != SUCCESS)
 				{
@@ -654,6 +665,7 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 				suggested_proposals->destroy(suggested_proposals);
 				accepted_proposals->destroy(accepted_proposals);
 				
+				this->logger->log(this->logger, CONTROL | MORE, "SA Payload processed");
 				/* ok, we have what we need for sa_payload (proposals are stored in this->proposals)*/
 				break;
 			}
@@ -702,8 +714,15 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 					this->create_delete_job(this);
 					return OUT_OF_RES;
 				}
-				/** @todo destroy if there is already one */
+
+				if (this->ike_sa_init_data.diffie_hellman != NULL)
+				{
+					this->logger->log(this->logger, CONTROL | MORE, "Going to destroy allready existing diffie_hellman object");	
+					this->ike_sa_init_data.diffie_hellman->destroy(this->ike_sa_init_data.diffie_hellman);
+				}
 				this->ike_sa_init_data.diffie_hellman = dh;
+				
+				this->logger->log(this->logger, CONTROL | MORE, "KE Payload processed");
 				break;
 			}
 			case NONCE:
@@ -722,11 +741,16 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 					this->create_delete_job(this);
 					return OUT_OF_RES;
 				}
+				
+				this->logger->log(this->logger, CONTROL | MORE, "Nonce Payload processed");
 				break;
 			}
 			default:
 			{
-				/** @todo handle */
+				this->logger->log(this->logger, ERROR | MORE, "Payload type not supported!");
+				payloads->destroy(payloads);
+				this->create_delete_job(this);
+				return OUT_OF_RES;				
 			}
 				
 		}
@@ -737,6 +761,21 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 	
 	this->logger->log(this->logger, CONTROL | MORE, "Request successfully handled. Going to create reply.");
 
+	
+	if (this->ike_sa_init_data.sent_nonce.ptr != NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Nonce for IKE_SA_INIT phase already existing!");
+		return FAILED;	
+	}
+
+	this->logger->log(this->logger, CONTROL | MOST, "Going to create nonce.");		
+	if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, NONCE_SIZE, &(this->ike_sa_init_data.sent_nonce)) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not create nonce!");
+		return OUT_OF_RES;
+	}
+		
+
 	/* set up the reply */
 	status = this->build_message(this, IKE_SA_INIT, FALSE, &response);
 	if (status != SUCCESS)
@@ -746,8 +785,99 @@ static status_t transto_ike_sa_init_responded(private_ike_sa_t *this, message_t 
 		return status;	
 	}
 	
-	/* leaks */
-	response->destroy(response);
+	/* build SA payload */		
+	status = this->build_sa_payload(this, (sa_payload_t**)&payload);
+	if (status != SUCCESS)
+	{	
+		this->logger->log(this->logger, ERROR, "Could not build SA payload");
+		this->create_delete_job(this);
+		response->destroy(response);
+		return status;
+	}
+	
+	this	->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
+	status = response->add_payload(response, payload);
+	if (status != SUCCESS)
+	{	
+		this->logger->log(this->logger, ERROR, "Could not add SA payload to message");
+		this->create_delete_job(this);
+		response->destroy(response);
+		return status;
+	}
+	
+	/* build KE payload */
+	status = this->build_ke_payload(this,(ke_payload_t **) &payload);
+	if (status != SUCCESS)
+	{	
+		this->logger->log(this->logger, ERROR, "Could not build KE payload");
+		this->create_delete_job(this);
+		response->destroy(response);
+		return status;
+	}
+
+	this	->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
+	status = response->add_payload(response, payload);
+	if (status != SUCCESS)
+	{	
+		this->logger->log(this->logger, ERROR, "Could not add KE payload to message");
+		this->create_delete_job(this);
+		response->destroy(response);
+		return status;
+	}
+	
+	/* build Nonce payload */
+	status = this->build_nonce_payload(this, (nonce_payload_t**)&payload);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not build NONCE payload");
+		this->create_delete_job(this);
+		response->destroy(response);
+		return status;
+	}
+
+	this	->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
+	status = response->add_payload(response, payload);
+	if (status != SUCCESS)
+	{	
+		this->logger->log(this->logger, ERROR, "Could not add nonce payload to message");
+		this->create_delete_job(this);
+		response->destroy(response);
+		return status;
+	}
+	
+	/* generate packet */	
+	this	->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
+	status = response->generate(response, &packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: could not generate packet from message");
+		this->create_delete_job(this);
+		response->destroy(response);
+		return status;
+	}
+	
+	this	->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	status = global_send_queue->add(global_send_queue, packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not add packet to send queue");
+		this->create_delete_job(this);
+		response->destroy(response);
+		return status;
+	}
+
+	if (	this->last_responded_message != NULL)
+	{
+		/* destroy message */
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy stored last responded message");
+		this->last_responded_message->destroy(this->last_responded_message);
+	}
+
+	this->last_responded_message	 = response;
+
+	/* state has NOW changed :-) */
+	this	->logger->log(this->logger, CONTROL|MORE, "Change state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,this->state),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
+	this->state = IKE_SA_INIT_RESPONDED;
 	
 	
 	return SUCCESS;
@@ -838,10 +968,8 @@ static status_t transto_ike_auth_requested(private_ike_sa_t *this, message_t *re
 				chunk_t shared_secret;
 				
 				dh = this->ike_sa_init_data.diffie_hellman;
-				
-				
 
-				
+			
 				status = dh->set_other_public_value(dh, ke_payload->get_key_exchange_data(ke_payload));
 				if (status != SUCCESS)
 				{
@@ -922,28 +1050,58 @@ static ike_sa_id_t* get_id(private_ike_sa_t *this)
 static status_t build_sa_payload(private_ike_sa_t *this, sa_payload_t **payload)
 {
 	sa_payload_t* sa_payload;
-	linked_list_iterator_t *iterator;
+	linked_list_iterator_t *proposal_iterator;
 	status_t status;
+	
+	
+	/* SA payload takes proposals from this->ike_sa_init_data.proposals and writes them to the created sa_payload */
 
 	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
+	
+	status = this->ike_sa_init_data.proposals->create_iterator(this->ike_sa_init_data.proposals, &proposal_iterator, FALSE);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: Could not create iterator on list for proposals");
+		return status;	
+	}
 	
 	sa_payload = sa_payload_create();
 	if (sa_payload == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "Fatal error: Could not create SA payload object");
 		return OUT_OF_RES;
 	}
-	status = sa_payload->create_proposal_substructure_iterator(sa_payload, &iterator, FALSE);
-	if (status != SUCCESS)
+	
+	while (proposal_iterator->has_next(proposal_iterator))
 	{
-		sa_payload->destroy(sa_payload);
-		return status;
+		proposal_substructure_t *current_proposal;
+		proposal_substructure_t *current_proposal_clone;
+		status = proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Could not get current proposal needed to copy");
+			sa_payload->destroy(sa_payload);
+			return status;	
+		}
+		status = current_proposal->clone(current_proposal,&current_proposal_clone);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Could not clone current proposal");
+			sa_payload->destroy(sa_payload);
+			return status;	
+		}
+		
+		status = sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Could not add cloned proposal to SA payload");
+			sa_payload->destroy(sa_payload);
+			return status;	
+		}
+
 	}
-	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->other.host, iterator);
-	if (status != SUCCESS)
-	{
-		sa_payload->destroy(sa_payload);
-		return status;
-	}
+	
+	this->logger->log(this->logger, CONTROL|MORE, "sa payload buildet");
 	
 	*payload = sa_payload;
 	
@@ -967,6 +1125,7 @@ static status_t build_ke_payload(private_ike_sa_t *this, ke_payload_t **payload)
 	switch(this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
 		case TRUE:
+		case FALSE:
 		{
 			this	->logger->log(this->logger, CONTROL|MORE, "get public dh value to send in ke payload");
 			status = this->ike_sa_init_data.diffie_hellman->get_my_public_value(this->ike_sa_init_data.diffie_hellman,&key_data);
@@ -996,10 +1155,6 @@ static status_t build_ke_payload(private_ike_sa_t *this, ke_payload_t **payload)
 			*payload = ke_payload;
 			return SUCCESS;			
 		}
-		default: /* FALSE */
-		{
-			break;
-		}
 	}
 
 	return FAILED;
@@ -1011,16 +1166,32 @@ static status_t build_ke_payload(private_ike_sa_t *this, ke_payload_t **payload)
 static status_t build_nonce_payload(private_ike_sa_t *this, nonce_payload_t **payload)
 {
 	nonce_payload_t *nonce_payload;
+	status_t status;
 	
 	this->logger->log(this->logger, CONTROL|MORE, "building nonce payload");
+	
+	if (this->state != NO_STATE)
+	{
+		this->logger->log(this->logger, ERROR, "Nonce payload in state %s not supported",mapping_find(ike_sa_state_m,this->state));
+		return FALSE;
+	}
+
 	nonce_payload = nonce_payload_create();
 	if (nonce_payload == NULL)
-	{
+	{	
+		this->logger->log(this->logger, ERROR, "Fatal error: could not create nonce payload object");
 		return OUT_OF_RES;	
 	}
 
-	nonce_payload->set_nonce(nonce_payload, this->ike_sa_init_data.sent_nonce);
+	status = nonce_payload->set_nonce(nonce_payload, this->ike_sa_init_data.sent_nonce);
 	
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: could not set nonce data of payload");
+		nonce_payload->destroy(nonce_payload);
+		return status;
+	}
+		
 	*payload = nonce_payload;
 	
 	return SUCCESS;
@@ -1115,17 +1286,15 @@ static status_t destroy (private_ike_sa_t *this)
 	}
 	
 	/* destroy stored proposal */
-	if (this->ike_sa_init_data.proposals != NULL)
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
+	while (this->ike_sa_init_data.proposals->get_count(this->ike_sa_init_data.proposals) > 0)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
-		while (this->ike_sa_init_data.proposals->get_count(this->ike_sa_init_data.proposals) > 0)
-		{
-			proposal_substructure_t *current_proposal;
-			this->ike_sa_init_data.proposals->remove_first(this->ike_sa_init_data.proposals,(void **)&current_proposal);
-			current_proposal->destroy(current_proposal);
-		}
-		this->ike_sa_init_data.proposals->destroy(this->ike_sa_init_data.proposals);
+		proposal_substructure_t *current_proposal;
+		this->ike_sa_init_data.proposals->remove_first(this->ike_sa_init_data.proposals,(void **)&current_proposal);
+		current_proposal->destroy(current_proposal);
 	}
+	this->ike_sa_init_data.proposals->destroy(this->ike_sa_init_data.proposals);
+
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy randomizer");
 	this->randomizer->destroy(this->randomizer);
@@ -1241,7 +1410,16 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_sa_init_data.sent_nonce.ptr = NULL;
 	this->ike_sa_init_data.received_nonce.len = 0;
 	this->ike_sa_init_data.received_nonce.ptr = NULL;
-	this->ike_sa_init_data.proposals = NULL;
+	this->ike_sa_init_data.proposals = linked_list_create();
+	if (this->ike_sa_init_data.proposals == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: Could not create list for child_sa's");
+		this->child_sas->destroy(this->child_sas);
+		this->ike_sa_id->destroy(this->ike_sa_id);
+		this->randomizer->destroy(this->randomizer);
+		global_logger_manager->destroy_logger(global_logger_manager,this->logger);
+		allocator_free(this);
+	}
 	this->last_requested_message = NULL;
 	this->last_responded_message = NULL;
 	this->message_id_out = 0;
