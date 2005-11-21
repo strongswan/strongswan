@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <pthread.h>
 
 #include "logger.h"
 
@@ -59,12 +60,79 @@ struct private_logger_s {
 	 */
 	FILE *output;
 	
+	/**
+	 * should a thread_id be included in the log?
+	 */
+	bool log_thread_id;
+	
 	/* private functions */
 	/**
 	 * Logs a message to the associated log file.
 	 */
 	void (*log_to_file) (private_logger_t *this, char *format, ...);
+	/**
+	 * applies a prefix to string and stores it in buffer
+	 * 
+	 * @warning: buffer must be at least MAX_LOG long
+	 */
+	void (*prepend_prefix) (private_logger_t *this, logger_level_t loglevel, char *string, char *buffer);
 };
+
+/**
+ * Implements private_logger_t.prepend_prefix
+ */
+static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char *string, char *buffer)
+{
+	char log_type, log_details;
+	if (loglevel & CONTROL)
+	{
+		log_type = '~';
+	}
+	else if (loglevel & ERROR)
+	{
+		log_type = '!';
+	}
+	else if (loglevel & RAW)
+	{
+		log_type = '#';
+	}
+	else if (loglevel & PRIVATE)
+	{
+		log_type = '?';
+	}
+	else
+	{
+		log_type = '-';
+	}
+	
+	if (loglevel & ALL)
+	{
+		log_details = '3';
+	}
+	else if (loglevel & MOST)
+	{
+		log_details = '2';
+	}
+	else if (loglevel & MORE)
+	{
+		log_details = '1';
+	}
+	else
+	{
+		log_details = '0';
+	}
+	
+	
+	if (this->log_thread_id)
+	{
+		snprintf(buffer, MAX_LOG, "[%c%c] [%s] @%u %s", log_type, log_details, this->name, (int)pthread_self(), string);
+	}
+	else
+	{
+		snprintf(buffer, MAX_LOG, "[%c%c] [%s] %s", log_type, log_details, this->name, string);
+	}
+	
+}
 
 /**
  * Implements logger_t-function log.
@@ -78,11 +146,12 @@ static status_t logg(private_logger_t *this, logger_level_t loglevel, char *form
 	{
 		char buffer[MAX_LOG];
 		va_list args;
+		
 
 		if (this->output == NULL)
 		{
 			/* syslog */
-			snprintf(buffer, MAX_LOG, "%s: %s", this->name, format);
+			this->prepend_prefix(this, loglevel, format, buffer);
 			va_start(args, format);
 			vsyslog(LOG_INFO, buffer, args);
 			va_end(args);
@@ -90,7 +159,7 @@ static status_t logg(private_logger_t *this, logger_level_t loglevel, char *form
 		else
 		{
 			/* File output */
-			snprintf(buffer, MAX_LOG, "File %s: %s", this->name, format);
+			this->prepend_prefix(this, loglevel, format, buffer);
 			va_start(args, format);
 			this->log_to_file(this, buffer, args);
 			va_end(args);
@@ -125,17 +194,22 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 {
 	if ((this->level & loglevel) == loglevel)
 	{
-		char buffer[64];
+		char buffer[MAX_LOG];
+		char *format;
 		char *buffer_pos;
 		char *bytes_pos, *bytes_roof;
 		int i;
+		
+		
+		format = "%s (%d bytes)";
+		this->prepend_prefix(this, loglevel, format, buffer);
 
 		if (this->output == NULL)
 		{
-			syslog(LOG_INFO, "%s: %s (%d bytes)", this->name, label, len);	
+			syslog(LOG_INFO, buffer, label, len);	
 		}else
 		{
-			this->log_to_file(this,"%s: %s (%d bytes)", this->name, label, len);
+			this->log_to_file(this, buffer, label, len);
 		}
 	
 		bytes_pos = bytes;
@@ -240,7 +314,7 @@ static status_t destroy(private_logger_t *this)
 /*
  * Described in Header
  */	
-logger_t *logger_create(char *logger_name, logger_level_t log_level,FILE * output)
+logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output)
 {
 	private_logger_t *this = allocator_alloc_thing(private_logger_t);
 		
@@ -262,9 +336,11 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level,FILE * outpu
 	this->public.destroy = (status_t(*)(logger_t*))destroy;
 
 	this->log_to_file = log_to_file;
+	this->prepend_prefix = prepend_prefix;
 
 	/* private variables */
 	this->level = log_level;
+	this->log_thread_id = log_thread_id;
 	this->name = allocator_alloc(strlen(logger_name) + 1);
 	if (this->name == NULL)
 	{

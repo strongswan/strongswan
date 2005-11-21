@@ -29,15 +29,16 @@
 
 mapping_t logger_context_t_mappings[] = {
 	{PARSER, "PARSER"},
-	{GENERATOR, "GENERATOR"},
+	{GENERATOR, "GENRAT"},
 	{IKE_SA, "IKE_SA"},
-	{IKE_SA_MANAGER, "IKE_SA_MANAGER"},
-	{MESSAGE, "MESSAGE"},
-	{THREAD_POOL, "THREAD_POOL"},
-	{WORKER_THREAD, "WORKER_THREAD"},
-	{SCHEDULER_THREAD, "SCHEDULER_THREAD"},
-	{SENDER_THREAD, "SENDER_THREAD"},
-	{RECEIVER_THREAD, "RECEIVER_THREAD"},
+	{IKE_SA_MANAGER, "ISAMGR"},
+	{MESSAGE, "MESSAG"},
+	{THREAD_POOL, "THPOOL"},
+	{WORKER, "WORKER"},
+	{SCHEDULER, "SCHEDU"},
+	{SENDER, "SENDER"},
+	{RECEIVER, "RECEVR"},
+	{SOCKET, "SOCKET"},
 	{TESTER, "TESTER"},
 	{DAEMON, "DAEMON"},
 };
@@ -114,21 +115,31 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 {
 	
 	char * context_name;
+	bool log_thread_ids = TRUE;
 	FILE * output = NULL;
 	char buffer[MAX_LOGGER_NAME];
 	loggers_entry_t *entry;
 	logger_t *logger;
 	logger_level_t logger_level = this->public.get_logger_level(&(this->public),context);
+	
+	context_name = mapping_find(logger_context_t_mappings,context);
 
 	switch(context)
 	{
 		case TESTER:
-			context_name = "TESTER";
+			log_thread_ids = FALSE;
 			output = stdout;
 			break;
+		case SCHEDULER:
+		case SENDER:
+		case RECEIVER:
+		case THREAD_POOL:
+		case SOCKET:
+		case DAEMON:
+			log_thread_ids = FALSE;
+			break;
 		default:
-			context_name = mapping_find(logger_context_t_mappings,context);
-			break;		
+			break;
 	}
 	/* logger manager is thread save */
 	pthread_mutex_lock(&(this->mutex));
@@ -136,11 +147,11 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 	{
 		snprintf(buffer, MAX_LOGGER_NAME, "%s - %s",context_name,name);
 			/* create logger with default log_level */
-		logger = logger_create(buffer,logger_level,output);
+		logger = logger_create(buffer,logger_level,log_thread_ids,output);
 	}
 	else
 	{
-		logger = logger_create(context_name,logger_level,output);
+		logger = logger_create(context_name,logger_level,log_thread_ids,output);
 	}
 	
 	

@@ -164,7 +164,7 @@ struct logger_s {
  * @param output			FILE * if log has to go on a file output, NULL for syslog
  * @return 				logger_t object or NULL if failed
  */
-logger_t *logger_create(char *logger_name, logger_level_t log_level,FILE * output);
+logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output);
 
 
 #endif /*LOGGER_H_*/
