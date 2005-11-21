@@ -610,8 +610,9 @@ static status_t parse_body (private_message_t *this)
 	while (current_payload_type != NO_PAYLOAD)
 	{
 		payload_t *current_payload;
-
 		bool supported = FALSE;
+		
+		this->logger->log(this->logger, ERROR, "Start parsing payload of type %s", mapping_find(payload_type_m, current_payload_type));
 		for (i = 0; i < supported_payloads_count;i++)
 		{
 			if (supported_payloads[i].payload_type == current_payload_type)
@@ -635,8 +636,6 @@ static status_t parse_body (private_message_t *this)
 			break;
 		}
 		
-		current_payload_type = current_payload->get_next_type(current_payload);
-		
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
@@ -644,6 +643,9 @@ static status_t parse_body (private_message_t *this)
 			status = VERIFY_ERROR;
 			break;
 		}
+
+		/* get next payload type */
+		current_payload_type = current_payload->get_next_type(current_payload);
 		
 		status = this->payloads->insert_last(this->payloads,current_payload);
 		if (status != SUCCESS)
