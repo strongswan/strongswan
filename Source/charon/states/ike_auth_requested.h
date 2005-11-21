@@ -1,7 +1,7 @@
 /**
- * @file state.c
+ * @file ike_auth_requested.h
  * 
- * @brief Interface for a specific IKE_SA state
+ * @brief State of an IKE_SA, which has requested an IKE_AUTH.
  * 
  */
 
@@ -19,19 +19,29 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
+#ifndef IKE_AUTH_REQUESTED_H_
+#define IKE_AUTH_REQUESTED_H_
+
 #include "state.h"
 
+/**
+ * @brief This class represents an IKE_SA, which has requested an IKE_AUTH.
+ *
+ */
+typedef struct ike_auth_requested_s ike_auth_requested_t;
+
+struct ike_auth_requested_s {
+	/**
+	 * methods of the state_t interface
+	 */
+	state_t state_interface;
+
+};
 
 /**
- * string mappings for ike_sa_state 
+ * Constructor of class ike_auth_requested_t
  */
-mapping_t ike_sa_state_m[] = {
-	{INITIATOR_INIT, "INITIATOR_INIT"},
-	{RESPONDER_INIT, "RESPONDER_INIT"},
-	{IKE_SA_INIT_REQUESTED, "IKE_SA_INIT_REQUESTED"},
-	{IKE_SA_INIT_RESPONDED, "IKE_SA_INIT_RESPONDED"},
-	{IKE_AUTH_REQUESTED, "IKE_AUTH_REQUESTED"},
-	{IKE_SA_ESTABLISHED, "IKE_SA_ESTABLISHED"},
-	{MAPPING_END, NULL}
-};
+ike_auth_requested_t *ike_auth_requested_create();
+
+#endif /*IKE_AUTH_REQUESTED_H_*/

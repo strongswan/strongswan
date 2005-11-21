@@ -65,7 +65,7 @@ enum ike_sa_state_e {
 	 * In this state, all the informations for an IKE_SA
 	 * and one CHILD_SA are known.
 	 */
-	IKE_SA_INITIALIZED = 6
+	IKE_SA_ESTABLISHED = 6
 };
 
 /**

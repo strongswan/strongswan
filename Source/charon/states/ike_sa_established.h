@@ -1,7 +1,7 @@
 /**
- * @file state.c
+ * @file ike_sa_established.h
  * 
- * @brief Interface for a specific IKE_SA state
+ * @brief State of an established IKE_SA.
  * 
  */
 
@@ -19,19 +19,30 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
+#ifndef IKE_SA_ESTABLISHED_H_
+#define IKE_SA_ESTABLISHED_H_
+
 #include "state.h"
 
+/**
+ * @brief This class represents an the state of an established
+ * IKE_SA.
+ *
+ */
+typedef struct ike_sa_established_s ike_sa_established_t;
+
+struct ike_sa_established_s {
+	/**
+	 * methods of the state_t interface
+	 */
+	state_t state_interface;
+
+};
 
 /**
- * string mappings for ike_sa_state 
+ * Constructor of class ike_sa_established_t
  */
-mapping_t ike_sa_state_m[] = {
-	{INITIATOR_INIT, "INITIATOR_INIT"},
-	{RESPONDER_INIT, "RESPONDER_INIT"},
-	{IKE_SA_INIT_REQUESTED, "IKE_SA_INIT_REQUESTED"},
-	{IKE_SA_INIT_RESPONDED, "IKE_SA_INIT_RESPONDED"},
-	{IKE_AUTH_REQUESTED, "IKE_AUTH_REQUESTED"},
-	{IKE_SA_ESTABLISHED, "IKE_SA_ESTABLISHED"},
-	{MAPPING_END, NULL}
-};
+ike_sa_established_t *ike_sa_established_create();
+
+#endif /*IKE_SA_ESTABLISHED_H_*/
