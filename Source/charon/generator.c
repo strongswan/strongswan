@@ -328,7 +328,8 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 	/* U_INT Types of multiple then 8 bits must be aligned */
 	if (((number_of_bits % 8) == 0) && (this->current_bit != 0))
 	{
-		this->logger->log(this->logger,CONTROL|MORE,"U_INT Type %s is not 8 Bit aligned",	mapping_find(encoding_type_m,int_type));
+		this->logger->log(this->logger, ERROR, "U_INT Type %s is not 8 Bit aligned", 
+							mapping_find(encoding_type_m,int_type));
 		/* current bit has to be zero for values multiple of 8 bits */
 		return FAILED;
 	}
@@ -352,6 +353,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 					u_int8_t low_val = *(this->out_position) & 0x0F;
 					/* highval is set, low_val is not changed */
 					*(this->out_position) = high_val | low_val;
+					this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
 					/* write position is not changed, just bit position is moved */
 					this->current_bit = 4;
 				}
@@ -362,13 +364,14 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 					/* lowval of current byte in buffer has to be set to the new value*/
 					u_int low_val = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
 					*(this->out_position) = high_val | low_val;
+					this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
 					this->out_position++;
 					this->current_bit = 0;
 
 				}
 				else
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"U_INT_4 Type is not 4 Bit aligned");
+					this->logger->log(this->logger, ERROR, "U_INT_4 Type is not 4 Bit aligned");
 					/* 4 Bit integers must have a 4 bit alignment */
 					return FAILED;
 				};
@@ -378,6 +381,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			{
 				/* 8 bit values are written as they are */
 				*this->out_position = *((u_int8_t *)(this->data_struct + offset));
+				this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
 				this->out_position++;
 				break;
 
@@ -387,7 +391,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 				/* attribute type must not change first bit uf current byte ! */
 				if (this->current_bit != 1)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"ATTRIBUTE FORMAT flag is not set");
+					this->logger->log(this->logger, ERROR, "ATTRIBUTE FORMAT flag is not set");
 					/* first bit has to be set! */
 					return FAILED;
 				}
@@ -399,6 +403,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 				int16_val = int16_val & 0xFF7F;
 				
 				int16_val = int16_val | attribute_format_flag;
+				this->logger->log(this->logger, RAW|MOST, "   => 0x%x", int16_val);
 				/* write bytes to buffer (set bit is overwritten)*/				
 				this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 				this->current_bit = 0;
@@ -408,12 +413,14 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			case U_INT_16:
 			{
 				u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
+				this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int16_val, sizeof(int16_val));
 				this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 				break;
 			}
 			case U_INT_32:
 			{
 				u_int32_t int32_val = htonl(*((u_int32_t*)(this->data_struct + offset)));
+				this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int32_val, sizeof(int32_val));
 				this->write_bytes_to_buffer(this,&int32_val,sizeof(u_int32_t));
 				break;
 			}
@@ -422,6 +429,8 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 				/* 64 bit integers are written as two 32 bit integers */
 				u_int32_t int32_val_low = htonl(*((u_int32_t*)(this->data_struct + offset)));
 				u_int32_t int32_val_high = htonl(*((u_int32_t*)(this->data_struct + offset) + 1));
+				this->logger->log_bytes(this->logger, RAW|MOST, "   => (low)", (void*)&int32_val_low, sizeof(int32_val_low));
+				this->logger->log_bytes(this->logger, RAW|MOST, "   => (high)", (void*)&int32_val_high, sizeof(int32_val_high));
 				/* TODO add support for big endian machines */
 				this->write_bytes_to_buffer(this,&int32_val_high,sizeof(u_int32_t));
 				this->write_bytes_to_buffer(this,&int32_val_low,sizeof(u_int32_t));
@@ -429,7 +438,7 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			}
 
 			default:
-			this->logger->log(this->logger,CONTROL|MORE,"U_INT Type %s is not supported",	mapping_find(encoding_type_m,int_type));
+			this->logger->log(this->logger, ERROR, "U_INT Type %s is not supported", mapping_find(encoding_type_m,int_type));
 			return FAILED;
 	}
 	return SUCCESS;
@@ -439,14 +448,14 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
  * Implements private_generator_t's generate_reserved_field function.
  * See #private_generator_s.generate_reserved_field.
  */
-static status_t generate_reserved_field (private_generator_t *this,int bits)
+static status_t generate_reserved_field(private_generator_t *this,int bits)
 {
 	status_t status;
 	
 	/* only one bit or 8 bit fields are supported */
 	if ((bits != 1) && (bits != 8))
 	{
-		this->logger->log(this->logger,CONTROL|MORE,"Reserved field of %d bits cannot be generated",bits);
+		this->logger->log(this->logger, ERROR, "Reserved field of %d bits cannot be generated", bits);
 		return FAILED;
 	}
 	/* make sure enough space is available in buffer */
@@ -480,7 +489,9 @@ static status_t generate_reserved_field (private_generator_t *this,int bits)
 		/* one byte processing*/
 		if (this->current_bit > 0)
 		{
-			this->logger->log(this->logger,CONTROL|MORE,"Reserved field cannot be written cause allignement of current bit is %d",this->current_bit);
+			this->logger->log(this->logger, ERROR, 
+								"Reserved field cannot be written cause allignement of current bit is %d",
+								this->current_bit);
 			return FAILED;
 		}
 		*(this->out_position) = 0x00;
@@ -522,6 +533,9 @@ static status_t generate_flag (private_generator_t *this,u_int32_t offset)
 	}
 
 	*(this->out_position) = *(this->out_position) | flag;
+	
+	
+	this->logger->log(this->logger, RAW|MOST, "   => 0x0%x", *(this->out_position));
 
 	this->current_bit++;
 	if (this->current_bit >= 8)
@@ -540,11 +554,14 @@ static status_t generate_from_chunk (private_generator_t *this,u_int32_t offset)
 {
 	if (this->current_bit != 0)
 	{
-		this->logger->log(this->logger,CONTROL|MORE,"Chunks can only be taken if bits are alligned in buffer");
+		this->logger->log(this->logger, ERROR, "can not generate a chunk at Bitpos %d", this->current_bit);
 		return FAILED;
 	}
+	
 	/* position in buffer */
 	chunk_t *attribute_value = (chunk_t *)(this->data_struct + offset);
+	
+	this->logger->log_chunk(this->logger, RAW|MOST, "   =>", attribute_value);
 	
 	/* use write_bytes_to_buffer function to do the job */
 	return this->write_bytes_to_buffer(this,attribute_value->ptr,attribute_value->len);
@@ -565,13 +582,14 @@ static status_t make_space_available (private_generator_t *this, size_t bits)
 		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
 		size_t out_position_offset = ((this->out_position) - (this->buffer));
 
-		this->logger->log(this->logger,CONTROL|MORE,"Gen-Buffer is increased from %d to %d byte",old_buffer_size,new_buffer_size);
+		this->logger->log(this->logger, CONTROL|MOST, "increased gen buffer from %d to %d byte", 
+							old_buffer_size, new_buffer_size);
 		
 		/* Reallocate space for new buffer */
 		new_buffer = allocator_realloc(this->buffer,new_buffer_size);
 		if (new_buffer == NULL)
 		{
-			this->logger->log(this->logger,CONTROL|MORE,"Fatal error: Reallocation of buffer failed!!!");
+			this->logger->log(this->logger, ERROR, "reallocation of gen buffer failed!!!");
 			return OUT_OF_RES;
 		}
 
@@ -587,7 +605,7 @@ static status_t make_space_available (private_generator_t *this, size_t bits)
  * Implements private_generator_t's write_bytes_to_buffer function.
  * See #private_generator_s.write_bytes_to_buffer.
  */
-static status_t write_bytes_to_buffer (private_generator_t *this,void * bytes,size_t number_of_bytes)
+static status_t write_bytes_to_buffer (private_generator_t *this,void * bytes, size_t number_of_bytes)
 {
 	int i;
 	status_t status;
@@ -658,11 +676,14 @@ static status_t write_to_chunk (private_generator_t *this,chunk_t *data)
 	if (data->ptr == NULL)
 	{
 		data->len = 0;
-		this->logger->log(this->logger,CONTROL|MORE,"OUT OF Ressources to wrote data to chunk!!!!!");
+		this->logger->log(this->logger, ERROR, "not enougth ressources to allocate chunk");
 		return OUT_OF_RES;
 	}
 	memcpy(data->ptr,this->buffer,data_length);
 	data->len = data_length;
+	
+	this->logger->log_chunk(this->logger, RAW, "generated data of this parser", data);
+	
 	return SUCCESS;
 }
 
@@ -678,13 +699,17 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 	size_t rule_count;
 	encoding_rule_t *rules;
 	payload_type_t payload_type;
+	u_int8_t *payload_start;
 	
 	/* get payload type */
 	payload_type = payload->get_type(payload);
 	/* spi size has to get reseted */
 	this->last_spi_size = 0;
 	
-	this->logger->log(this->logger,CONTROL,"Start generating payload of type %s",mapping_find(payload_type_m,payload_type));
+	payload_start = this->out_position;
+	
+	this->logger->log(this->logger, CONTROL, "generating payload of type %s",
+						mapping_find(payload_type_m,payload_type));
 	
 	/* each payload has its own encoding rules */
 	payload->get_encoding_rules(payload,&rules,&rule_count);
@@ -692,6 +717,8 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 	for (i = 0; i < rule_count;i++)
 	{
 		status = SUCCESS;
+		this->logger->log(this->logger, CONTROL|MORE, "  generating rule %d %s",
+							i, mapping_find(encoding_type_m,rules[i].type));
 		switch (rules[i].type)
 		{
 			/* all u int values and ATTRIBUTE_TYPE are generated in generate_u_int_type */
@@ -754,7 +781,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				status = this->generate_from_chunk(this,rules[i].offset);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Could no write key exchange data from chunk");	
+					this->logger->log(this->logger, ERROR, "could no write key exchange data from chunk");	
 					return status;
 				}
 				
@@ -766,7 +793,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				status = this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Could no write payload length into buffer");					
+					this->logger->log(this->logger, ERROR, "could not write payload length into buffer");					
 					return status;
 				}
 				break;
@@ -777,7 +804,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				status = this->generate_from_chunk(this,rules[i].offset);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Could no write notification data from chunk");	
+					this->logger->log(this->logger, ERROR, "Could not generate notification data from chunk");	
 					return status;
 				}
 				
@@ -790,7 +817,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				status = this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Could no write payload length into buffer");					
+					this->logger->log(this->logger, ERROR, "could not write payload length into buffer");					
 					return status;
 				}
 				break;
@@ -798,10 +825,11 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 			case NONCE_DATA:
 			{
 				/* the Nonce Data value is generated from chunk */
-				status = this->generate_from_chunk(this,rules[i].offset);
+				status = this->generate_from_chunk(this, rules[i].offset);
+				
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Could no write nonce data from chunk");	
+					this->logger->log(this->logger, ERROR, "could not write nonce data from chunk");	
 					return status;
 				}
 				
@@ -813,7 +841,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				status = this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Could no write payload length into buffer");					
+					this->logger->log(this->logger, ERROR, "could not write payload length into buffer");					
 					return status;
 				}
 				break;
@@ -828,14 +856,12 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				/* proposals are stored in a linked list and so accessed */
 				linked_list_t *proposals = *((linked_list_t **)(this->data_struct + rules[i].offset));
 
-				this->logger->log(this->logger,CONTROL|MORE,"Generate Proposals");
-
 				linked_list_iterator_t *iterator;
 				/* create forward iterator */
 				status = proposals->create_iterator(proposals,&iterator,TRUE);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Could not iterator of proposals");
+					this->logger->log(this->logger, ERROR, "could not create iterator for proposals");
 					return status;
 				}
 				/* every proposal is processed (iterative call )*/
@@ -864,13 +890,12 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 					length_of_sa_payload += (after_generate_position_offset - before_generate_position_offset);
 				}
 				iterator->destroy(iterator);
-				this->logger->log(this->logger,CONTROL|MORE,"Length of Payload is %d, offset is %d",length_of_sa_payload,payload_length_position_offset);
 				
 				int16_val = htons(length_of_sa_payload);
 				status = this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Could no write payload length into buffer");					
+					this->logger->log(this->logger, ERROR, "could not write payload length into buffer");					
 					return status;
 				}
 				break;
@@ -884,9 +909,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				u_int16_t int16_val;
 				linked_list_t *transforms = *((linked_list_t **)(this->data_struct + rules[i].offset));
 				linked_list_iterator_t *iterator;
-				
-				this->logger->log(this->logger,CONTROL|MORE,"Generate Transforms");
-				
+								
 				/* create forward iterator */
 				status = transforms->create_iterator(transforms,&iterator,TRUE);
 				if (status != SUCCESS)
@@ -920,9 +943,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				}
 				
 				iterator->destroy(iterator);
-				
-				this->logger->log(this->logger,CONTROL|MORE,"Length of Transform is %d, offset is %d",length_of_proposal,payload_length_position_offset);
-				
+								
 				int16_val = htons(length_of_proposal);
 				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				
@@ -930,7 +951,6 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 			}	
 			case TRANSFORM_ATTRIBUTES:
 			{
-				this->logger->log(this->logger,CONTROL|MORE,"Generate Transform attributes");
 				/* before iterative generate the transform attributes, store the current length position */
 				u_int32_t transform_length_position_offset = this->last_payload_length_position_offset;
 
@@ -968,8 +988,6 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				
 				iterator->destroy(iterator);
 				
-				this->logger->log(this->logger,CONTROL|MORE,"Length of Transform is %d, offset is %d",length_of_transform,transform_length_position_offset);
-				
 				int16_val = htons(length_of_transform);
 				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),transform_length_position_offset);
 				
@@ -985,7 +1003,6 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 
 			case ATTRIBUTE_LENGTH_OR_VALUE:
 			{
-				this->logger->log(this->logger,CONTROL|MORE,"Generate Attribute Length or Value field");
 				if (this->attribute_format == FALSE)
 				{
 					status = this->generate_u_int_type(this,U_INT_16,rules[i].offset);
@@ -1003,17 +1020,20 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 			{
 				if (this->attribute_format == FALSE)
 				{
-					this->logger->log(this->logger,CONTROL|MORE,"Attribute value has not fixed size");
+					this->logger->log(this->logger, CONTROL|MOST, "attribute value has not fixed size");
 					/* the attribute value is generated */
 					status = this->generate_from_chunk(this,rules[i].offset);
 				}
 				break;
 			}
 			default:
-				this->logger->log(this->logger,CONTROL|MORE,"Field Type %s is not supported",mapping_find(encoding_type_m,rules[i].type));
+				this->logger->log(this->logger, ERROR, "field type %s is not supported",
+									mapping_find(encoding_type_m,rules[i].type));
 				return NOT_SUPPORTED;
 		}
 	}
+	this->logger->log_bytes(this->logger, RAW|MORE, "generated data for this payload",
+							payload_start, this->out_position-payload_start);
 
 	return status;
 }
@@ -1079,6 +1099,8 @@ generator_t * generator_create()
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
 	this->logger = global_logger_manager->create_logger(global_logger_manager,GENERATOR,NULL);
+	this->logger->disable_level(this->logger, FULL);
+	this->logger->enable_level(this->logger, CONTROL);
 	
 	if (this->logger == NULL)
 	{

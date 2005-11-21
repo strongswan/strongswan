@@ -255,7 +255,7 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 	
 	if (output_pos != NULL)
 	{
-		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
 	}
 	
 	
@@ -286,7 +286,7 @@ static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *o
 	if (output_pos != NULL)
 	{
 		*output_pos = *(this->byte_pos);
-		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
 	}
 	this->byte_pos++;
 	
@@ -318,7 +318,7 @@ static status_t parse_uint15(private_parser_t *this, int rule_number, u_int16_t 
 	if (output_pos != NULL)
 	{
 		*output_pos = ntohs(*((u_int16_t*)this->byte_pos)) & ~0x8000;
-		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
 	this->bit_pos = 0;
@@ -351,7 +351,7 @@ static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t 
 	{
 		*output_pos = ntohs(*((u_int16_t*)this->byte_pos));
 		
-		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
 	
@@ -381,7 +381,7 @@ static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t 
 	{
 		*output_pos = ntohl(*((u_int32_t*)this->byte_pos));
 		
-		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
 	}
 	this->byte_pos += 4;
 	
@@ -414,7 +414,7 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 		*(output_pos + 1) = ntohl(*((u_int32_t*)this->byte_pos));
 		*output_pos = ntohl(*(((u_int32_t*)this->byte_pos) + 1));
 		
-		this->logger->log_bytes(this->logger, RAW|MORE, "   =>", (void*)output_pos, 8);
+		this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)output_pos, 8);
 	}
 	this->byte_pos += 8;
 	
@@ -447,7 +447,7 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 			*output_pos = TRUE;
 		}
 		
-		this->logger->log(this->logger, RAW|MORE, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
 	}
 	this->bit_pos = (this->bit_pos + 1) % 8;
 	if (this->bit_pos == 0) 
@@ -530,7 +530,7 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 		memcpy(output_pos->ptr, this->byte_pos, length);
 	}
 	this->byte_pos += length;
-	this->logger->log_bytes(this->logger, RAW|MORE, "   =>", (void*)output_pos->ptr, length);
+	this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)output_pos->ptr, length);
 	
 	return SUCCESS;
 }
@@ -837,7 +837,7 @@ parser_t *parser_create(chunk_t data)
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, PARSER, NULL);
 	this->logger->disable_level(this->logger, FULL);
-	this->logger->enable_level(this->logger, RAW|CONTROL|ALL);
+	this->logger->enable_level(this->logger, CONTROL);
 	
 	
 	if (this->logger == NULL)
