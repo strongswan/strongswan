@@ -48,6 +48,7 @@
 #include "parser_test.h"
 #include "packet_test.h"
 #include "diffie_hellman_test.h"
+#include "hasher_sha1_test.h"
 
 
 /* output for test messages */
@@ -172,6 +173,11 @@ test_t packet_test = {test_packet,"Packet"};
  */
 test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
 
+/**
+ * Test for packet_t
+ */
+test_t hasher_sha1_test = {test_hasher_sha1,"SHA1 hasher"};
+
 
 /**
  * Global job-queue
@@ -243,6 +249,7 @@ logger_manager_t *global_logger_manager;
 	&ike_sa_manager_test,
 	&packet_test,
 	&diffie_hellman_test,
+	&hasher_sha1_test,
 	NULL
 	};
  	global_logger_manager = logger_manager_create(FULL);
@@ -261,7 +268,7 @@ logger_manager_t *global_logger_manager;
 
 
 	tester->perform_tests(tester,all_tests);
-	//tester->perform_test(tester,&diffie_hellman_test); 
+	//tester->perform_test(tester,&hasher_sha1_test); 
 
 
  	
