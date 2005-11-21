@@ -303,7 +303,6 @@ static status_t destroy (protected_ike_sa_t *this)
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy logger of IKE_SA");
 	
-	
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
 	allocator_free(this);

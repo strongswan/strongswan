@@ -234,7 +234,7 @@ static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
 {
 	
 	linked_list_iterator_t *iterator;
-	status_t status;
+	status_t status = NOT_FOUND;
 	
 	pthread_mutex_lock(&(this->mutex));
 	if (this->loggers->create_iterator(this->loggers,&iterator,TRUE) != SUCCESS)
@@ -263,7 +263,6 @@ static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
 		}
 	}
 	iterator->destroy(iterator);
-
 	pthread_mutex_unlock(&(this->mutex));
 	return status;
 }
