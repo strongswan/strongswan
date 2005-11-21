@@ -137,10 +137,6 @@ static status_t verify(private_nonce_payload_t *this)
  */
 static status_t destroy(private_nonce_payload_t *this)
 {
-	if (this->nonce.ptr != NULL)
-	{
-		allocator_free(this->nonce.ptr);
-	}
 	allocator_free(this);
 	
 	return SUCCESS;
@@ -168,8 +164,8 @@ static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
  */
 static status_t get_nonce(private_nonce_payload_t *this, chunk_t *nonce)
 {
-	nonce->len = this->nonce.len;
 	nonce->ptr = this->nonce.ptr;
+	nonce->len = this->nonce.len;
 	return SUCCESS;
 }
 
