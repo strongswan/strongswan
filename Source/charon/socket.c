@@ -26,12 +26,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
 
 #include "socket.h"
 
+#include "globals.h"
 #include "utils/allocator.h"
+#include "utils/logger_manager.h"
 
 typedef struct private_socket_s private_socket_t;
 
@@ -44,7 +47,11 @@ struct private_socket_s{
 	 /**
 	  * currently we only have one socket, maybe more in the future ?
 	  */
-	  int socket_fd;
+	 int socket_fd;
+	 /** 
+	  * logger for this socket
+	  */
+	 logger_t *logger;
 };
 
 /**
@@ -63,6 +70,8 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	pkt->source = host_create(AF_INET, "0.0.0.0", 0);
 	pkt->destination = host_create(AF_INET, "0.0.0.0", 0);
 
+
+	this->logger->log(this->logger, CONTROL|MORE, "going to read from socket");
 	/* do the read */
 	pkt->data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0,
 							pkt->source->get_sockaddr(pkt->source), 
@@ -79,9 +88,13 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	if (pkt->data.len < 0)
 	{
 		pkt->destroy(pkt);
-		/* TODO: log detailed error */
+		this->logger->log(this->logger, ERROR, "error reading from socket: %s", strerror(errno));
 		return FAILED;
 	}
+	
+	this->logger->log(this->logger, CONTROL, "received packet from %s:%d",
+						pkt->source->get_address(pkt->source), 
+						pkt->source->get_port(pkt->source));
 
 	/* fill in packet */
 	pkt->data.ptr = allocator_alloc(pkt->data.len);
@@ -100,6 +113,10 @@ status_t sender(private_socket_t *this, packet_t *packet)
 {
 	ssize_t bytes_sent;
 
+
+	this->logger->log(this->logger, CONTROL, "sending packet to %s:%d",
+						packet->destination->get_address(packet->destination), 
+						packet->destination->get_port(packet->destination));
 	/* send data */
 	bytes_sent = sendto(this->socket_fd, packet->data.ptr, packet->data.len,
 						0, packet->destination->get_sockaddr(packet->destination), 
@@ -107,7 +124,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 
 	if (bytes_sent != packet->data.len)
 	{
-		/* TODO: log detailed error */
+		this->logger->log(this->logger, ERROR, "error writing to socket: %s", strerror(errno));
 		return FAILED;
 	}
 	return SUCCESS;
@@ -119,6 +136,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 status_t destroy(private_socket_t *this)
 {
 	close(this->socket_fd);
+	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 	allocator_free(this);
 
 	return SUCCESS;
@@ -133,12 +151,22 @@ socket_t *socket_create(u_int16_t port)
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
 	this->public.destroy = (status_t(*)(socket_t*))destroy;
+	
+	
+	this->logger = global_logger_manager->create_logger(global_logger_manager, SOCKET, NULL);
+	if (this->logger == NULL)
+	{
+		allocator_free(this);
+		return NULL;
+	}
 
 	/* create default ipv4 socket */
 	this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
-	if (this->socket_fd < 0) {
+	if (this->socket_fd < 0) 
+	{
+		this->logger->log(this->logger, ERROR, "unable to open socket: %s", strerror(errno));
+		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 		allocator_free(this);
-		/* TODO: log detailed error */
 		return NULL;
 	}
 
@@ -146,9 +174,11 @@ socket_t *socket_create(u_int16_t port)
 	addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(port);
-    if (bind(this->socket_fd,(struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    if (bind(this->socket_fd,(struct sockaddr*)&addr, sizeof(addr)) < 0) 
+    {
+		this->logger->log(this->logger, ERROR, "unable to bind socket to port %d: %s", port, strerror(errno));
+		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 		allocator_free(this);
-		/* TODO: log detailed error */
         return NULL;
     }
 

@@ -73,7 +73,7 @@ static void sender_thread_function(private_sender_t * this)
 	{
 		while (global_send_queue->get(global_send_queue,&current_packet) == SUCCESS)
 		{
-			this->logger->log(this->logger, CONTROL, "got a packet, sending it");
+			this->logger->log(this->logger, CONTROL|MORE, "got a packet, sending it");
 			status = global_socket->send(global_socket,current_packet);
 			if (status != SUCCESS)
 			{
@@ -93,6 +93,8 @@ static status_t destroy(private_sender_t *this)
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
+	
+	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
 	allocator_free(this);
 	return SUCCESS;
@@ -105,7 +107,7 @@ sender_t * sender_create()
 
 	this->public.destroy = (status_t(*)(sender_t*)) destroy;
 	
-	this->logger = global_logger_manager->create_logger(global_logger_manager, SENDER_THREAD, NULL);
+	this->logger = global_logger_manager->create_logger(global_logger_manager, SENDER, NULL);
 	if (this->logger == NULL)
 	{
 		allocator_free(this);
