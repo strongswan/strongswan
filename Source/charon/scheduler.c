@@ -68,7 +68,7 @@ static void scheduler_thread_function(private_scheduler_t * this)
 
 	for (;;)
 	{
-		this->logger->log(this->logger, CONTROL, "waiting for next event...");
+		this->logger->log(this->logger, CONTROL|MORE, "waiting for next event...");
 		/* get a job, this block until one is available */
 		global_event_queue->get(global_event_queue, &current_job);
 		/* queue the job in the job queue, workers will eat them */
@@ -99,7 +99,7 @@ scheduler_t * scheduler_create()
 
 	this->public.destroy = (status_t(*)(scheduler_t*)) destroy;
 	
-	this->logger = global_logger_manager->create_logger(global_logger_manager, SCHEDULER_THREAD, NULL);
+	this->logger = global_logger_manager->create_logger(global_logger_manager, SCHEDULER, NULL);
 	if (this->logger == NULL)
 	{
 		allocator_free(this);
