@@ -53,20 +53,62 @@ struct private_host_s {
 };
 
 
-
-sockaddr_t  *get_sockaddr(private_host_t *this)
+/**
+ * implements host_t.get_sockaddr
+ */
+static sockaddr_t  *get_sockaddr(private_host_t *this)
 {
 	return &(this->address);
 }
 
-socklen_t *get_sockaddr_len(private_host_t *this)
+/**
+ * implements host_t.get_sockaddr_len
+ */
+static socklen_t *get_sockaddr_len(private_host_t *this)
 {
 	return &(this->socklen);
 }
 
 /**
- * Implements host_t-function destroy.
- * @see host_t.destroy.
+ * implements host_t.get_address
+ */
+static char *get_address(private_host_t *this)
+{
+	switch (this->family) 
+	{
+		case AF_INET: 
+		{
+			struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
+			return inet_ntoa(sin->sin_addr);
+		}
+		default:
+		{
+			return "(family	not supported)";
+		}
+	}
+}
+
+/**
+ * implements host_t.get_port
+ */
+static u_int16_t get_port(private_host_t *this)
+{
+	switch (this->family) 
+	{
+		case AF_INET: 
+		{
+			struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
+			return ntohs(sin->sin_port);
+		}
+		default:
+		{
+			return 0;
+		}
+	}
+}
+
+/**
+ * Implements host_t.destroy
  */
 static status_t destroy(private_host_t *this)
 {
@@ -75,8 +117,7 @@ static status_t destroy(private_host_t *this)
 }
 
 /**
- * Implements host_t-function clone.
- * @see host_t.clone.
+ * Implements host_t.clone.
  */
 static status_t clone(private_host_t *this, host_t **other)
 {
@@ -108,6 +149,8 @@ host_t *host_create(int family, char *address, u_int16_t port)
 	this->public.get_sockaddr = (sockaddr_t* (*) (host_t*))get_sockaddr;
 	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
 	this->public.clone = (status_t (*) (host_t*, host_t**))clone;
+	this->public.get_address = (char* (*) (host_t *))get_address;
+	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
 	this->public.destroy = (status_t (*) (host_t*))destroy;
 	
 	this->family = family;
