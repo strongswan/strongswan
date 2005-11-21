@@ -39,12 +39,6 @@
 
 
 /**
- * 
- * This implementation supports only window size 1
- */
-#define WINDOW_SIZE 1
-
-/**
  * States in which a IKE_SA can actually be
  */
 typedef enum ike_sa_state_e ike_sa_state_t;
@@ -138,23 +132,27 @@ struct private_ike_sa_s {
 	randomizer_t *randomizer;
 	
 	/**
-	 * contains the last X responded messages
+	 * contains the last responded message
 	 * 
-	 * X is windows size (here 1)
 	 */
-	linked_list_t *responded_messages;
+	message_t *last_responded_message;
 
 	/**
-	 * contains the last X requested messages
+	 * contains the last requested message
 	 * 
-	 * X is windows size (here 1)
 	 */
-	linked_list_t *requested_messages;
+	message_t *last_requested_message;
 	
+	/**
+	 * Informations of this host
+	 */
 	struct {
 		host_t *host;
 	} me;
-	
+
+	/**
+	 * Informations of the other host
+	 */	
 	struct {
 		host_t *host;
 	} other;
@@ -180,11 +178,11 @@ struct private_ike_sa_s {
 		 */
 		linked_list_t *proposals;
 		/**
-		 * 
+		 * Sent nonce value
 		 */
 		 chunk_t sent_nonce;
 		/**
-		 * 
+		 * received nonce value
 		 */
 		 chunk_t received_nonce;
 	} ike_sa_init_data;
@@ -418,21 +416,13 @@ static status_t transto_ike_sa_init_requested(private_ike_sa_t *this, char *name
 		return status;
 	}
 
-	if (	this->requested_messages->get_count(this->requested_messages) >= WINDOW_SIZE)
+	if (	this->last_requested_message != NULL)
 	{
-		message_t *removed_message;
 		/* destroy message */
-		this->requested_messages->remove_last(this->requested_messages,(void **)&removed_message);
-		removed_message->destroy(removed_message);
+		this->last_requested_message->destroy(this->last_requested_message);
 	}
-	
-	status = this->requested_messages->insert_first(this->requested_messages,(void *) message);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not store last received message");
-		message->destroy(message);
-		return status;
-	}
+
+	this->last_requested_message	 = message;
 
 	/* message counter can now be increased */
 	this->message_id_out++;
@@ -897,7 +887,11 @@ static status_t build_nonce_payload(private_ike_sa_t *this, nonce_payload_t **pa
  */
 static status_t destroy (private_ike_sa_t *this)
 {
+	
+	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy IKE_SA");
+	
 	/* destroy child sa's */
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy all child_sa's");
 	while (this->child_sas->get_count(this->child_sas) > 0)
 	{
 		void *child_sa;
@@ -910,47 +904,44 @@ static status_t destroy (private_ike_sa_t *this)
 	this->child_sas->destroy(this->child_sas);
 	
 	/* destroy ike_sa_id */
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy assigned ike_sa_id");
 	this->ike_sa_id->destroy(this->ike_sa_id);
 
-	/* destroy stored requested messages */
-	while (this->requested_messages->get_count(this->requested_messages) > 0)
+	/* destroy stored requested message */
+	if (this->last_requested_message != NULL)
 	{
-		message_t *message;
-		if (this->requested_messages->remove_first(this->requested_messages,(void **) &message) != SUCCESS)
-		{
-			break;
-		}
-		message->destroy(message);
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy last requested message");
+		this->last_requested_message->destroy(this->last_requested_message);
 	}
-	this->requested_messages->destroy(this->requested_messages);
 	
 	/* destroy stored responded messages */
-	while (this->responded_messages->get_count(this->responded_messages) > 0)
+	if (this->last_responded_message != NULL)
 	{
-		message_t *message;
-		if (this->responded_messages->remove_first(this->responded_messages,(void **) &message) != SUCCESS)
-		{
-			break;
-		}
-		message->destroy(message);
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy last responded message");
+		this->last_responded_message->destroy(this->last_responded_message);
 	}
-	this->responded_messages->destroy(this->responded_messages);
-
-
+	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy randomizer");
 	this->randomizer->destroy(this->randomizer);
+
+	this->logger->log(this->logger, CONTROL | MOST, "Going to destroy ike_sa_init data");
 	if (this->ike_sa_init_data.diffie_hellman != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 		this->ike_sa_init_data.diffie_hellman->destroy(this->ike_sa_init_data.diffie_hellman);
 	}
 	if (this->ike_sa_init_data.sent_nonce.ptr != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce data");
 		allocator_free_chunk(this->ike_sa_init_data.sent_nonce);		
 	}
 	if (this->ike_sa_init_data.received_nonce.ptr != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce data");
 		allocator_free_chunk(this->ike_sa_init_data.received_nonce);
 	}
 	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy logger of IKE_SA");
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
 	allocator_free(this);
@@ -988,51 +979,35 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	
 
 	/* initialize private fields */
+	this->logger = global_logger_manager->create_logger(global_logger_manager, IKE_SA, NULL);
+	if (this->logger ==  NULL)
+	{
+		allocator_free(this);
+	}
+	
 	if (ike_sa_id->clone(ike_sa_id,&(this->ike_sa_id)) != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "Fatal error: Could not clone ike_sa_id");
+		global_logger_manager->destroy_logger(global_logger_manager,this->logger);
 		allocator_free(this);
 		return NULL;
 	}
 	this->child_sas = linked_list_create();
 	if (this->child_sas == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "Fatal error: Could not create list for child_sa's");
 		this->ike_sa_id->destroy(this->ike_sa_id);
+		global_logger_manager->destroy_logger(global_logger_manager,this->logger);
 		allocator_free(this);
 		return NULL;
 	}
 	this->randomizer = randomizer_create();
 	if (this->randomizer == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "Fatal error: Could not create list for child_sa's");
 		this->child_sas->destroy(this->child_sas);
 		this->ike_sa_id->destroy(this->ike_sa_id);
-		allocator_free(this);
-	}
-	this->responded_messages = linked_list_create();
-	if (this->responded_messages == NULL)
-	{
-		this->randomizer->destroy(this->randomizer);
-		this->child_sas->destroy(this->child_sas);
-		this->ike_sa_id->destroy(this->ike_sa_id);
-		allocator_free(this);
-	}
-	this->requested_messages = linked_list_create();
-	if (this->requested_messages == NULL)
-	{
-		this->randomizer->destroy(this->randomizer);
-		this->child_sas->destroy(this->child_sas);
-		this->ike_sa_id->destroy(this->ike_sa_id);
-		this->responded_messages->destroy(this->responded_messages);
-		allocator_free(this);
-	}
-
-	this->logger = global_logger_manager->create_logger(global_logger_manager, IKE_SA, NULL);
-	if (this->logger ==  NULL)
-	{
-		this->randomizer->destroy(this->randomizer);
-		this->child_sas->destroy(this->child_sas);
-		this->ike_sa_id->destroy(this->ike_sa_id);
-		this->responded_messages->destroy(this->responded_messages);
-		this->requested_messages->destroy(this->requested_messages);
+		global_logger_manager->destroy_logger(global_logger_manager,this->logger);
 		allocator_free(this);
 	}
 	
@@ -1047,6 +1022,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_sa_init_data.received_nonce.len = 0;
 	this->ike_sa_init_data.received_nonce.ptr = NULL;
 	this->ike_sa_init_data.proposals = NULL;
+	this->last_requested_message = NULL;
+	this->last_responded_message = NULL;
 	this->message_id_out = 0;
 	this->message_id_in = 0;
 
