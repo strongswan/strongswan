@@ -31,7 +31,9 @@
 
 #define BLOCK_SIZE_SHA1 20
 
-
+/*
+ * ugly macro stuff
+ */ 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -50,6 +52,10 @@
 #define R3(v,w,x,y,z,i) z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
 #define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
 
+
+/**
+ * private data structure with hasing context
+ */
 typedef struct private_hasher_sha1_s private_hasher_sha1_t;
 
 struct private_hasher_sha1_s {
@@ -58,13 +64,17 @@ struct private_hasher_sha1_s {
 	 */
 	hasher_sha1_t public;
 	
-
+	/*
+	 * state of the hasher
+	 */
 	u_int32_t state[5];
     u_int32_t count[2];
     u_int8_t buffer[64];
 };
 
-/* Hash a single 512-bit block. This is the core of the algorithm. */
+/* 
+ * Hash a single 512-bit block. This is the core of the algorithm. *
+ */
 void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
 {
 	u_int32_t a, b, c, d, e;
@@ -113,7 +123,9 @@ void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
     memset(block, '\0', sizeof(block));
 }
 
-/* Run your data through this. */
+/* 
+ * Run your data through this. 
+ */
 void SHA1Update(private_hasher_sha1_t* this, u_int8_t *data, u_int32_t len)
 {
 	u_int32_t i;
@@ -182,6 +194,7 @@ static status_t get_hash(private_hasher_sha1_t *this, chunk_t chunk, u_int8_t *b
 	if (buffer != NULL)
 	{
 		SHA1Final(this, buffer);
+		this->public.hasher_interface.reset(&(this->public.hasher_interface));
 	}
 	return SUCCESS;
 }
@@ -204,6 +217,7 @@ static status_t allocate_hash(private_hasher_sha1_t *this, chunk_t chunk, chunk_
 	if (hash != NULL)
 	{
 		SHA1Final(this, allocated_hash.ptr);
+		this->public.hasher_interface.reset(&(this->public.hasher_interface));
 	}
 	
 	*hash = allocated_hash;
