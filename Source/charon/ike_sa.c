@@ -95,6 +95,7 @@ static status_t process_message (protected_ike_sa_t *this, message_t *message)
 	
 	/* now the message is processed by the current state object */
 	status = this->current_state->process_message(this->current_state,message,&new_state);
+
 	if (status == SUCCESS)
 	{
 		this->current_state = new_state;
@@ -285,25 +286,27 @@ static status_t destroy (protected_ike_sa_t *this)
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy randomizer");
 	this->randomizer->destroy(this->randomizer);
 
-//	if (this->me.host != NULL)
-//	{
-//		this->logger->log(this->logger, CONTROL | MOST, "Destroy host informations of me");
-//		this->me.host->destroy(this->me.host);
-//	}
-//	
-//	if (this->other.host != NULL)
-//	{
-//		this->logger->log(this->logger, CONTROL | MOST, "Destroy host informations of other");
-//		this->other.host->destroy(this->other.host);
-//	}
-//	
-//	this->logger->log(this->logger, CONTROL | MOST, "Destroy current state object");
-//	this->current_state->destroy(this->current_state);
-//	
-//	this->logger->log(this->logger, CONTROL | MOST, "Destroy logger of IKE_SA");
-//	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
-//
-//	allocator_free(this);
+	if (this->me.host != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy host informations of me");
+		this->me.host->destroy(this->me.host);
+	}
+	
+	if (this->other.host != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy host informations of other");
+		this->other.host->destroy(this->other.host);
+	}
+	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy current state object");
+	this->current_state->destroy(this->current_state);
+	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy logger of IKE_SA");
+	
+	
+	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+
+	allocator_free(this);
 	return SUCCESS;
 }
 
@@ -379,7 +382,17 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	{
 		this->current_state = (state_t *) responder_init_create(this);
 	}
+	
+	if (this->current_state == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: Could not create state object");
+		this->child_sas->destroy(this->child_sas);
+		this->ike_sa_id->destroy(this->ike_sa_id);
+		global_logger_manager->destroy_logger(global_logger_manager,this->logger);
+		this->randomizer->destroy(this->randomizer);
+		allocator_free(this);
+	}
 
 
-	return (&this->public);
+	return &(this->public);
 }

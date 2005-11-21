@@ -458,12 +458,6 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	this->logger->log(this->logger, CONTROL, "generating message, contains %d payloads", 
 						this->payloads->get_count(this->payloads));
 	
-	if (this->packet != NULL)
-	{
-		/* already generated packet is just cloned */
-		this->packet->clone(this->packet, packet);
-	}
-	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
 		this->logger->log(this->logger, ERROR, "exchange type is not defined");
@@ -754,10 +748,8 @@ static status_t destroy (private_message_t *this)
 {
 	linked_list_iterator_t *iterator;
 	
-	if (this->packet != NULL)
-	{
-		this->packet->destroy(this->packet);
-	}
+	this->packet->destroy(this->packet);
+
 	if (this->ike_sa_id != NULL)
 	{
 		this->ike_sa_id->destroy(this->ike_sa_id);

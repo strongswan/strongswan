@@ -255,6 +255,17 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	/* iterator can be destroyed */
 	payloads->destroy(payloads);
+
+	/********************/	
+	diffie_hellman_t *dh = this->diffie_hellman;
+	chunk_t shared_secret;
+				
+	status = dh->get_shared_secret(dh, &shared_secret);
+	this->logger->log_chunk(this->logger, RAW, "Shared secret", &shared_secret);
+	
+	allocator_free_chunk(shared_secret);
+		/********************/
+
 	
 	this->logger->log(this->logger, CONTROL | MORE, "Request successfully handled. Going to create reply.");
 
@@ -350,7 +361,8 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 
 	/* state has NOW changed :-) */
 //	this	->logger->log(this->logger, CONTROL|MORE, "Change state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,this->state),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
-
+	
+	*new_state = &(this->public.state_interface);
 	
 	return SUCCESS;
 }
@@ -391,6 +403,7 @@ static status_t build_sa_payload(private_responder_init_t *this, payload_t **pay
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Could not get current proposal needed to copy");
+			proposal_iterator->destroy(proposal_iterator);
 			sa_payload->destroy(sa_payload);
 			return status;	
 		}
@@ -398,6 +411,7 @@ static status_t build_sa_payload(private_responder_init_t *this, payload_t **pay
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Could not clone current proposal");
+			proposal_iterator->destroy(proposal_iterator);
 			sa_payload->destroy(sa_payload);
 			return status;	
 		}
@@ -406,11 +420,14 @@ static status_t build_sa_payload(private_responder_init_t *this, payload_t **pay
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Could not add cloned proposal to SA payload");
+			proposal_iterator->destroy(proposal_iterator);
 			sa_payload->destroy(sa_payload);
 			return status;	
 		}
 
 	}
+
+	proposal_iterator->destroy(proposal_iterator);	
 	
 	this->logger->log(this->logger, CONTROL|MORE, "sa payload builded");
 	
@@ -505,6 +522,8 @@ static ike_sa_state_t get_state(private_responder_init_t *this)
  */
 static status_t destroy(private_responder_init_t *this)
 {
+	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy responder init state object");
+	
 	/* destroy stored proposal */
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
 	while (this->proposals->get_count(this->proposals) > 0)
@@ -514,8 +533,30 @@ static status_t destroy(private_responder_init_t *this)
 		current_proposal->destroy(current_proposal);
 	}
 	this->proposals->destroy(this->proposals);
+	
+	if (this->sent_nonce.ptr != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
+		allocator_free(this->sent_nonce.ptr);
+	}
+
+	if (this->received_nonce.ptr != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
+		allocator_free(this->received_nonce.ptr);
+	}
+	
+	/* destroy diffie hellman object */
+	if (this->diffie_hellman != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie_hellman_t object");
+		this->diffie_hellman->destroy(this->diffie_hellman);
+	}
+	
 	allocator_free(this);
+		
 	return SUCCESS;
+	
 }
 
 /* 

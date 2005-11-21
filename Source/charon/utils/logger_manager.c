@@ -263,6 +263,7 @@ static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
 		}
 	}
 	iterator->destroy(iterator);
+
 	pthread_mutex_unlock(&(this->mutex));
 	return status;
 }

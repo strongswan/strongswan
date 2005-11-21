@@ -304,6 +304,7 @@ static status_t build_sa_payload(private_initiator_init_t *this, payload_t **pay
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Could not get current proposal needed to copy");
+			proposal_iterator->destroy(proposal_iterator);
 			sa_payload->destroy(sa_payload);
 			return status;	
 		}
@@ -311,6 +312,7 @@ static status_t build_sa_payload(private_initiator_init_t *this, payload_t **pay
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Could not clone current proposal");
+			proposal_iterator->destroy(proposal_iterator);
 			sa_payload->destroy(sa_payload);
 			return status;	
 		}
@@ -319,11 +321,13 @@ static status_t build_sa_payload(private_initiator_init_t *this, payload_t **pay
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Could not add cloned proposal to SA payload");
+			proposal_iterator->destroy(proposal_iterator);
 			sa_payload->destroy(sa_payload);
 			return status;	
 		}
 
 	}
+	proposal_iterator->destroy(proposal_iterator);
 	
 	this->logger->log(this->logger, CONTROL|MORE, "sa payload builded");
 	

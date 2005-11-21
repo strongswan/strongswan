@@ -165,8 +165,10 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				}
 				
 				status = dh->get_shared_secret(dh, &shared_secret);
-				
+					
 				this->logger->log_chunk(this->logger, RAW, "Shared secret", &shared_secret);
+				
+				allocator_free_chunk(shared_secret);
 				
 				break;
 			}
@@ -196,14 +198,17 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	}
 	payloads->destroy(payloads);
 
-	/* set up the reply */
-	status = this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
-	if (status != SUCCESS)
-	{
-		return status;	
-	}
 
-	response->destroy(response);
+	/* set up the reply */
+//	status = this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
+//	if (status != SUCCESS)
+//	{
+//		return status;	
+//	}
+
+//	response->destroy(response);
+
+	*new_state = this;
 	
 	return SUCCESS;
 }
@@ -221,6 +226,19 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
  */
 static status_t destroy(private_ike_sa_init_requested_t *this)
 {
+	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy state of type ike_sa_init_requested_t");
+	this->diffie_hellman->destroy(this->diffie_hellman);
+	if (this->sent_nonce.ptr != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
+		allocator_free(this->sent_nonce.ptr);
+	}
+	if (this->received_nonce.ptr != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
+		allocator_free(this->received_nonce.ptr);
+	}
+	
 	allocator_free(this);
 	return SUCCESS;
 }

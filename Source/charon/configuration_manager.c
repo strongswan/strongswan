@@ -52,7 +52,7 @@ static status_t get_remote_host(private_configuration_manager_t *this, char *nam
 	/* some hard coded users for testing */
 	host_t *remote;
 	if (strcmp(name, "pinflb30") == 0) {
-		remote = host_create(AF_INET, "152.96.193.130", 500);
+		remote = host_create(AF_INET, "152.96.193.131", 500);
 		if (remote == NULL) {
 			return OUT_OF_RES;	
 		}
