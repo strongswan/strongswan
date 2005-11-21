@@ -31,6 +31,7 @@
 #include "globals.h"
 #include "queues/job_queue.h"
 #include "utils/allocator.h"
+#include "utils/logger_manager.h"
 
 /**
  * Private data of a receiver object
@@ -47,6 +48,11 @@ struct private_receiver_s {
 	  * Assigned thread to the receiver_t object
 	  */
 	 pthread_t assigned_thread;
+	 /**
+	  * logger for the receiver
+	  */
+	 logger_t *logger;
+	 
 
 };
 
@@ -58,34 +64,30 @@ struct private_receiver_s {
  */
 static void receiver_thread_function(private_receiver_t * this)
 {
-	/* cancellation disabled by default */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	packet_t * current_packet;
 	job_t *current_job;
+	/* cancellation disabled by default */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	while (1)
 	{
 		while (global_socket->receive(global_socket,&current_packet) == SUCCESS)
 		{
-
+			this->logger->log(this->logger, CONTROL, "creating job from packet");
 			current_job = (job_t *) incoming_packet_job_create(current_packet);
 			if (current_job == NULL)
 			{
-				/* job could no be created */
-				/* TODO LOG it */
+				this->logger->log(this->logger, ERROR, "job creation failed");
 			}
 
-			if (	global_job_queue->add(global_job_queue,current_job) != SUCCESS)
+			if (global_job_queue->add(global_job_queue,current_job) != SUCCESS)
 			{
-				/* Packet could not be sent */
-				/* TODO LOG it */
+				this->logger->log(this->logger, ERROR, "job queueing failed");
 			}
 
 		}
-		/* NOT GOOD !!!!!! */
-		/* TODO LOG it */
+		/* bad bad, rebuild the socket ? */
+		this->logger->log(this->logger, ERROR, "receiving from socket failed!");
 	}
-
-
 }
 
 /**
@@ -96,6 +98,8 @@ static status_t destroy(private_receiver_t *this)
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
+	
+	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
 	allocator_free(this);
 	return SUCCESS;
@@ -107,9 +111,17 @@ receiver_t * receiver_create()
 	private_receiver_t *this = allocator_alloc_thing(private_receiver_t);
 
 	this->public.destroy = (status_t(*)(receiver_t*)) destroy;
+	
+	this->logger = global_logger_manager->create_logger(global_logger_manager, RECEIVER, NULL);
+	if (this->logger == NULL)
+	{
+		allocator_free(this);
+	}
+	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))receiver_thread_function, this) != 0)
 	{
 		/* thread could not be created  */
+		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 		allocator_free(this);
 		return NULL;
 	}
