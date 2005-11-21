@@ -59,6 +59,12 @@ struct private_ike_sa_init_requested_s {
 	chunk_t received_nonce;
 	
 	/**
+	 * DH group priority used to get dh_group_number from configuration manager.
+	 * Currently not used but usable if informational messages of unsupported dh group number are processed.
+	 */
+	u_int16_t dh_group_priority;
+	
+	/**
 	 * Logger used to log data 
 	 * 
 	 * Is logger of ike_sa!
@@ -246,7 +252,7 @@ static status_t destroy(private_ike_sa_init_requested_t *this)
 /* 
  * Described in header.
  */
-ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce)
+ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa,u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce)
 {
 	private_ike_sa_init_requested_t *this = allocator_alloc_thing(private_ike_sa_init_requested_t);
 	
@@ -267,6 +273,7 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->logger = this->ike_sa->logger;
 	this->diffie_hellman = diffie_hellman;
 	this->sent_nonce = sent_nonce;
+	this->dh_group_priority = dh_group_priority;
 	
 	return &(this->public);
 }

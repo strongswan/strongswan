@@ -36,32 +36,37 @@
 typedef struct private_responder_init_s private_responder_init_t;
 struct private_responder_init_s {
 	/**
-	 * methods of the state_t interface
+	 * Methods of the state_t interface.
 	 */
 	responder_init_t public;
 	
 	/**
-	 * Assigned IKE_SA
+	 * Assigned IKE_SA.
 	 */
 	protected_ike_sa_t *ike_sa;
 	
 	/**
-	 * Diffie Hellman object used to compute shared secret
+	 * Diffie Hellman object used to compute shared secret.
+	 * 
+	 * After processing of incoming IKE_SA_INIT-Request the shared key is 
+	 * passed to the next state of type ike_sa_init_responded_t.
 	 */
 	diffie_hellman_t *diffie_hellman;
 		
 	/**
-	 * Diffie Hellman group number
+	 * Diffie Hellman group number.
 	 */
 	u_int16_t dh_group_number;	
 	
 	/**
-	 * Priority used get matching dh_group number
+	 * Priority used to get matching dh_group number.
 	 */
 	u_int16_t dh_group_priority;
 
 	/**
-	 * Sent nonce value
+	 * Sent nonce value.
+	 * 
+	 * This value is passed to the next state of type ike_sa_init_responded_t.
 	 */
 	chunk_t sent_nonce;
 	
@@ -82,8 +87,39 @@ struct private_responder_init_s {
 	 */
 	linked_list_t *proposals;
 	
+	/**
+	 * Builds the SA payload for this state.
+	 * 
+	 * @param this		calling object
+	 * @param payload	The generated SA payload object of type ke_payload_t is 
+	 * 					stored at this location.
+	 * @return			
+	 * 					- SUCCESS
+	 * 					- OUT_OF_RES
+	 */
 	status_t (*build_sa_payload) (private_responder_init_t *this, payload_t **payload);
+
+	/**
+	 * Builds the KE payload for this state.
+	 * 
+	 * @param this		calling object
+	 * @param payload	The generated KE payload object of type ke_payload_t is 
+	 * 					stored at this location.
+	 * @return			
+	 * 					- SUCCESS
+	 * 					- OUT_OF_RES
+	 */
 	status_t (*build_ke_payload) (private_responder_init_t *this, payload_t **payload);
+	/**
+	 * Builds the NONCE payload for this state.
+	 * 
+	 * @param this		calling object
+	 * @param payload	The generated NONCE payload object of type ke_payload_t is 
+	 * 					stored at this location.
+	 * @return			
+	 * 					- SUCCESS
+	 * 					- OUT_OF_RES
+	 */
 	status_t (*build_nonce_payload) (private_responder_init_t *this, payload_t **payload);	
 };
 
