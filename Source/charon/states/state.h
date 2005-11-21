@@ -69,6 +69,11 @@ enum ike_sa_state_e {
 };
 
 /**
+ * string mappings for ike_sa_state_t
+ */
+extern mapping_t ike_sa_state_m[];
+
+/**
  * @brief This interface represents an IKE_SA state
  *
  */
