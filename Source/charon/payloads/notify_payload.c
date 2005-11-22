@@ -169,25 +169,6 @@ static status_t verify(private_notify_payload_t *this)
 }
 
 /**
- * Implements payload_t's and notify_payload_t's destroy function.
- * See #payload_s.destroy or notify_payload_s.destroy for description.
- */
-static status_t destroy(private_notify_payload_t *this)
-{
-	if (this->notification_data.ptr != NULL)
-	{
-		allocator_free(this->notification_data.ptr);
-	}
-	if (this->spi.ptr != NULL)
-	{
-		allocator_free(this->spi.ptr);
-	}
-
-	allocator_free(this);
-	return SUCCESS;
-}
-
-/**
  * Implements payload_t's get_encoding_rules function.
  * See #payload_s.get_encoding_rules for description.
  */
@@ -367,6 +348,25 @@ status_t set_notification_data(private_notify_payload_t *this, chunk_t notificat
 	this->notification_data.len = notification_data.len;
 	this->compute_length(this);
 	
+	return SUCCESS;
+}
+
+/**
+ * Implements payload_t's and notify_payload_t's destroy function.
+ * See #payload_s.destroy or notify_payload_s.destroy for description.
+ */
+static status_t destroy(private_notify_payload_t *this)
+{
+	if (this->notification_data.ptr != NULL)
+	{
+		allocator_free(this->notification_data.ptr);
+	}
+	if (this->spi.ptr != NULL)
+	{
+		allocator_free(this->spi.ptr);
+	}
+
+	allocator_free(this);
 	return SUCCESS;
 }
 
