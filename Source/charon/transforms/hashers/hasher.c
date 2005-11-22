@@ -34,11 +34,11 @@ hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
 {
 	switch (hash_algorithm)
 	{
-		case SHA1:
+		case HASH_SHA1:
 		{
 			return (hasher_t*)hasher_sha1_create();
 		}
-		case MD5:
+		case HASH_MD5:
 		default:
 			return NULL;
 	}

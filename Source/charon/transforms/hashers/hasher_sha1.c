@@ -206,21 +206,21 @@ static status_t get_hash(private_hasher_sha1_t *this, chunk_t chunk, u_int8_t *b
 static status_t allocate_hash(private_hasher_sha1_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
-	allocated_hash.ptr = allocator_alloc(BLOCK_SIZE_SHA1);
-	allocated_hash.len = BLOCK_SIZE_SHA1;
-	if (allocated_hash.ptr == NULL)
-	{
-		return OUT_OF_RES;
-	}
 	
 	SHA1Update(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
-	{
+	{	
+		allocated_hash.ptr = allocator_alloc(BLOCK_SIZE_SHA1);
+		allocated_hash.len = BLOCK_SIZE_SHA1;
+		if (allocated_hash.ptr == NULL)
+		{
+			return OUT_OF_RES;
+		}
 		SHA1Final(this, allocated_hash.ptr);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
+		
+		*hash = allocated_hash;
 	}
-	
-	*hash = allocated_hash;
 	
 	return SUCCESS;
 }

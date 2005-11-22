@@ -32,8 +32,8 @@
 typedef enum hash_algorithm_e hash_algorithm_t;
 
 enum hash_algorithm_e {
-	SHA1,
-	MD5
+	HASH_SHA1,
+	HASH_MD5
 };
 
 
