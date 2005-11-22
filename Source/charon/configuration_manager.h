@@ -139,20 +139,20 @@ struct configuration_manager_s {
 	 * Returns the transforms of type crypter_t, signer_t and prf_t as specified in given proposal.
 	 * 
 	 * 
-	 * @param this				calling object
-	 * @param host				host information
-	 * @param proposals			iterator with selected proposals
-	 * @param[out] crypter		The created transform object of type crypter_t is stored at this location
-	 * @param[out] signer		The created transform object of type signer_t is stored at this location
-	 * @param[out] prf			The created transform object of type prf_t is stored at this location
+	 * @param this							calling object
+	 * @param host							host information
+	 * @param proposals						iterator with selected proposals
+	 * @param[out] encryption_algorithm		
+	 * @param[out] pseudo_random_function	
+	 * @param[out] integrity_algorithm		
 	 * 
 	 * @return		
-	 * 							- OUT_OF_RES
-	 * 							- FAILED
-	 * 							- NOT_FOUND (not yet implemented)
-	 * 							- SUCCESS
+	 * 										- OUT_OF_RES
+	 * 										- FAILED
+	 * 										- NOT_FOUND (not yet implemented)
+	 * 										- SUCCESS
 	 */
-	status_t (*get_transforms_for_host_and_proposals) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *proposals,crypter_t **crypter,signer_t **signer, prf_t **prf);
+	status_t (*get_transforms_for_host_and_proposals) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *proposals,encryption_algorithm_t *encryption_algorithm,pseudo_random_function_t *pseudo_random_function, integrity_algorithm_t *integrity_algorithm);
 	
 	/**
 	 * Checks if a given dh_group number is allowed for a specific host

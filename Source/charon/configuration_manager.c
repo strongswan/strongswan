@@ -68,7 +68,7 @@ static status_t get_remote_host(private_configuration_manager_t *this, char *nam
 	
 	if (strcmp(name, "pinflb30") == 0)
 	{
-		remote = host_create(AF_INET, "152.96.193.131", 500);
+		remote = host_create(AF_INET, "152.96.193.130", 500);
 	}
 	else if (strcmp(name, "pinflb31") == 0)
 	{
@@ -234,7 +234,7 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 		return OUT_OF_RES;
 	}
 	transform->set_transform_type(transform, INTEGRITIY_ALGORITHM);
-	transform->set_transform_id(transform, AUTH_HMAC_MD5_96);
+	transform->set_transform_id(transform, AUTH_HMAC_SHA1_96);
 	
 	attribute = transform_attribute_create();
 	if (attribute == NULL)
@@ -249,7 +249,7 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 		return OUT_OF_RES;
 	}
 	attribute->set_attribute_type(attribute, KEY_LENGTH);
-	attribute->set_value(attribute, 16);
+	attribute->set_value(attribute, 20);
  	
  	
     /* 
@@ -318,7 +318,7 @@ static status_t select_proposals_for_host(private_configuration_manager_t *this,
 /**
  * Implements function configuration_manager_t.get_transforms_for_host_and_proposals.
  */
-static status_t get_transforms_for_host_and_proposals (private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *proposals,crypter_t **crypter,signer_t **signer, prf_t **prf)
+static status_t get_transforms_for_host_and_proposals (private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *proposals,encryption_algorithm_t *encryption_algorithm,pseudo_random_function_t *pseudo_random_function, integrity_algorithm_t *integrity_algorithm)
 {
 	/*
 	 * Currently the given proposals are not checked if they are valid for specific host!
@@ -326,9 +326,9 @@ static status_t get_transforms_for_host_and_proposals (private_configuration_man
 	 * The first proposal is taken and the appropriate transform objects are created (only if they are supported)
 	 */
 
-	prf_t *selected_prf = NULL;
-	crypter_t *selected_crypter = NULL;
-	signer_t *selected_signer = NULL;
+	encryption_algorithm_t		selected_encryption_algorithm = ENCR_UNDEFINED;
+	pseudo_random_function_t		selected_pseudo_random_function = PRF_UNDEFINED;
+	integrity_algorithm_t		selected_integrity_algorithm = AUTH_UNDEFINED;
 	proposal_substructure_t *proposal;
 	linked_list_iterator_t *transforms;
 	status_t status;
@@ -378,24 +378,19 @@ static status_t get_transforms_for_host_and_proposals (private_configuration_man
 			case ENCRYPTION_ALGORITHM:
 			{
 				this->logger->log(this->logger,CONTROL | MORE, "Encryption algorithm: %s",mapping_find(encryption_algorithm_m,transform_id));	
+				selected_encryption_algorithm = transform_id;
 				break;
 			}
 			case	 PSEUDO_RANDOM_FUNCTION:
 			{
 				this->logger->log(this->logger,CONTROL | MORE, "Create transform object for PRF of type %s",mapping_find(pseudo_random_function_m,transform_id));
-
-				selected_prf = prf_create(transform_id);
-				if (selected_prf == NULL)
-				{
-					this->logger->log(this->logger,ERROR  | MORE, "PRF not supported!");
-					transforms->destroy(transforms);	
-					return FAILED;
-				}
+				selected_pseudo_random_function = transform_id;
 				break;
 			}
 			case INTEGRITIY_ALGORITHM:
 			{
 				this->logger->log(this->logger,CONTROL | MORE, "Integrity algorithm: %s",mapping_find(integrity_algorithm_m,transform_id));
+				selected_integrity_algorithm = transform_id;
 				break;
 			}
 			case DIFFIE_HELLMAN_GROUP:
@@ -414,10 +409,9 @@ static status_t get_transforms_for_host_and_proposals (private_configuration_man
 	
 	transforms->destroy(transforms);
 
-	*crypter = selected_crypter;
-	*signer = selected_signer;
-	*prf = selected_prf;
-	
+	*encryption_algorithm = selected_encryption_algorithm;
+	*pseudo_random_function = selected_pseudo_random_function;
+	*integrity_algorithm = selected_integrity_algorithm;
 	return SUCCESS;
 }
 
@@ -474,7 +468,7 @@ configuration_manager_t *configuration_manager_create()
 	this->public.get_dh_group_number = (status_t(*)(configuration_manager_t*,char*,u_int16_t *, u_int16_t))get_dh_group_number;
 	this->public.get_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,linked_list_iterator_t*))get_proposals_for_host;
 	this->public.select_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,linked_list_iterator_t*,linked_list_iterator_t*))select_proposals_for_host;
-	this->public.get_transforms_for_host_and_proposals =  (status_t (*) (configuration_manager_t *, host_t *, linked_list_iterator_t *,crypter_t **,signer_t **, prf_t **)) get_transforms_for_host_and_proposals;
+	this->public.get_transforms_for_host_and_proposals =  (status_t (*) (configuration_manager_t *, host_t *, linked_list_iterator_t *,encryption_algorithm_t *,pseudo_random_function_t *, integrity_algorithm_t *)) get_transforms_for_host_and_proposals;
 	this->public.is_dh_group_allowed_for_host = (status_t(*)(configuration_manager_t*,host_t*,diffie_hellman_group_t,bool*)) is_dh_group_allowed_for_host;
 
 	/* private variables */
