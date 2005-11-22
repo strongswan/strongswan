@@ -50,6 +50,7 @@
 #include "diffie_hellman_test.h"
 #include "hasher_sha1_test.h"
 #include "hmac_test.h"
+#include "prf_plus_test.h"
 
 
 /* output for test messages */
@@ -184,6 +185,14 @@ test_t hasher_sha1_test = {test_hasher_sha1,"SHA1 hasher"};
  */
 test_t hmac_test1 = {test_hmac_sha1, "HMAC-SHA1"};
 
+/**
+ * Test for prf_plus
+ */
+test_t prf_plus_test = {test_prf_plus, "prf+"};
+
+
+
+
 
 /**
  * Global job-queue
@@ -274,7 +283,7 @@ logger_manager_t *global_logger_manager;
 
 
 	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&hmac_test1); 
+	tester->perform_test(tester,&prf_plus_test); 
 
 
  	
