@@ -76,7 +76,7 @@ static status_t get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buf
 	appending_chunk.ptr = &(this->appending_octet);
 	appending_chunk.len = 1;
 	
-	while (length)
+	while (length > 0)
 	{	/* still more to do... */
 		if (this->buffer.len == this->given_out)
 		{	/* no bytes left in buffer, get next*/	

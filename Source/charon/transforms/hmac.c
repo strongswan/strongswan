@@ -157,7 +157,7 @@ static status_t set_key(private_hmac_t *this, chunk_t key)
 		this->opaded_key.ptr[i] = buffer[i] ^ 0x5C;
 	}
 	
-	/* begin hashing if inner pad */
+	/* begin hashing of inner pad */
 	this->h->reset(this->h);
 	this->h->get_hash(this->h, this->ipaded_key, NULL);
 	
