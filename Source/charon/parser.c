@@ -138,6 +138,19 @@ struct private_parser_s {
 	status_t (*parse_uint64) (private_parser_t *this, int rule_number, u_int64_t *output_pos);
 	
 	/**
+	 * @brief parse a given amount of bytes and writes them to a specific location
+	 * 
+	 * @param this				parser object
+	 * @param rule_number		number of current rule
+	 * @param[out] output_pos	pointer where to write the parsed result
+	 * @param bytes				number of bytes to parse
+	 * @return 					
+	 * 							- SUCCESS or
+	 * 							- PARSE_ERROR when not successful
+	 */
+	status_t (*parse_bytes) (private_parser_t *this, int rule_number, u_int8_t *output_pos,size_t bytes);
+	
+	/**
 	 * @brief parse a single Bit from the current parsing position
 	 * 
 	 * @param this				parser object
@@ -423,6 +436,34 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 	return SUCCESS;
 }
 
+static status_t parse_bytes (private_parser_t *this, int rule_number, u_int8_t *output_pos,size_t bytes)
+{
+	if (this->byte_pos + bytes > this->input_roof)
+	{
+		this->logger->log(this->logger, ERROR, "  not enough input to parse rule %d %s", 
+							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+		return PARSE_ERROR;
+	}
+	if (this->bit_pos)
+	{
+		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
+							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
+							this->bit_pos);
+		return PARSE_ERROR;
+	}
+
+	/* caller interested in result ? */
+	if (output_pos != NULL)
+	{
+		memcpy(output_pos,this->byte_pos,bytes);
+		
+		this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)output_pos, bytes);
+	}
+	this->byte_pos += bytes;
+	
+	return SUCCESS;
+}
+
 /**
  * implementation of private_parser_t.parse_bit
  */
@@ -612,6 +653,15 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case U_INT_64:
 			{
 				if (this->parse_uint64(this, rule_number, output + rule->offset) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;	
+			}
+			case IKE_SPI:
+			{
+				if (this->parse_bytes(this, rule_number, output + rule->offset,8) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
@@ -858,6 +908,7 @@ parser_t *parser_create(chunk_t data)
 	this->parse_uint16 = parse_uint16;
 	this->parse_uint32 = parse_uint32;
 	this->parse_uint64 = parse_uint64;
+	this->parse_bytes = parse_bytes;
 	this->parse_bit = parse_bit;
 	this->parse_list = parse_list;
 	this->parse_chunk = parse_chunk;
