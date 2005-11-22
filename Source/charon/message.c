@@ -575,6 +575,7 @@ static status_t parse_header(private_message_t *this)
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Header verification failed");
+		ike_header->destroy(ike_header);
 		return status;
 	}	
 	
