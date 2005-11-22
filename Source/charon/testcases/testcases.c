@@ -49,6 +49,7 @@
 #include "packet_test.h"
 #include "diffie_hellman_test.h"
 #include "hasher_sha1_test.h"
+#include "hasher_md5_test.h"
 #include "hmac_test.h"
 #include "prf_plus_test.h"
 
@@ -181,9 +182,14 @@ test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
 test_t hasher_sha1_test = {test_hasher_sha1,"SHA1 hasher"};
 
 /**
+ * Test for md5 hasher
+ */
+test_t hasher_md5_test = {test_hasher_md5,"MD5 hasher"};
+
+/**
  * Test for hmac
  */
-test_t hmac_test1 = {test_hmac_sha1, "HMAC-SHA1"};
+test_t hmac_test1 = {test_hmac_sha1, "HMAC using SHA1"};
 
 /**
  * Test for prf_plus
@@ -235,37 +241,40 @@ logger_manager_t *global_logger_manager;
  	FILE * test_output = stderr;
  	
  	test_t *all_tests[] ={
-	&linked_list_test,
-	&linked_list_iterator_test,
-	&linked_list_insert_and_remove_test,
-	&thread_pool_test,
-	&job_queue_test1,
-	&event_queue_test,
-	&send_queue_test,
-	&scheduler_test,
-	&socket_test,
-	&sender_test,
-	&receiver_test,
-	&ike_sa_id_test,
-	&ike_sa_test,
-	&generator_test1,
-	&generator_test2,
-	&parser_test1,
-	&parser_test2,
-	&parser_test3,
-	&parser_test4,
-	&parser_test5,
-	&generator_test3,
-	&generator_test4,
-	&generator_test5,
-	&generator_test6,
-	&generator_test7,
-	&generator_test8,
-	&ike_sa_manager_test,
-	&packet_test,
-	&diffie_hellman_test,
-	&hasher_sha1_test,
-	NULL
+		&linked_list_test,
+		&linked_list_iterator_test,
+		&linked_list_insert_and_remove_test,
+		&thread_pool_test,
+		&job_queue_test1,
+		&event_queue_test,
+		&send_queue_test,
+		&scheduler_test,
+		&socket_test,
+		&sender_test,
+		&receiver_test,
+		&ike_sa_id_test,
+		//&ike_sa_test,
+		&generator_test1,
+		&generator_test2,
+		&parser_test1,
+		&parser_test2,
+		&parser_test3,
+		&parser_test4,
+		&parser_test5,
+		&generator_test3,
+		&generator_test4,
+		&generator_test5,
+		&generator_test6,
+		&generator_test7,
+		&generator_test8,
+		//&ike_sa_manager_test,
+		&packet_test,
+		&diffie_hellman_test,
+		&hasher_sha1_test,
+		&hasher_md5_test,
+		&hmac_test1,
+		&prf_plus_test,
+		NULL
 	};
  	global_logger_manager = logger_manager_create(FULL);
 
@@ -282,8 +291,8 @@ logger_manager_t *global_logger_manager;
  	tester_t *tester = tester_create(test_output, FALSE);
 
 
-	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&prf_plus_test); 
+	tester->perform_tests(tester,all_tests);
+	//tester->perform_test(tester,&hasher_md5_test); 
 
 
  	

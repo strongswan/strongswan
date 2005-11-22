@@ -1,7 +1,8 @@
 /**
- * @file hasher.c
+ * @file hasher_md5.h
  * 
- * @brief Generic interface for hash functions
+ * @brief Implementation of hasher_t interface using the
+ * md5 algorithm.
  * 
  */
 
@@ -20,35 +21,33 @@
  * for more details.
  */
 
+#ifndef HASHER_MD5_H_
+#define HASHER_MD5_H_
 
 #include "hasher.h"
 
-#include "hasher_sha1.h"
-#include "hasher_md5.h"
 
-
-
-/*
- * Described in header
+/**
+ * Object representing the md5 hasher
+ * 
  */
-hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
-{
-	switch (hash_algorithm)
-	{
-		case HASH_SHA1:
-		{
-			return (hasher_t*)hasher_sha1_create();
-		}
-		case HASH_MD5:
-		{
-			return (hasher_t*)hasher_md5_create();
-		}
-		default:
-			return NULL;
-	}
-}
+typedef struct hasher_md5_s hasher_md5_t;
 
+struct hasher_md5_s {
+	
+	/**
+	 * generic hasher_t interface for this hasher
+	 */
+	hasher_t hasher_interface;
+};
 
+/**
+ * Creates a new hasher_md5_t object
+ * 
+ * @return
+ * 							- hasher_md5_t if successfully
+ * 							- NULL if out of ressources
+ */
+hasher_md5_t *hasher_md5_create();
 
-
-
+#endif /*HASHER_md5_H_*/

@@ -1,7 +1,7 @@
 /**
- * @file hasher.c
+ * @file hasher_md5_test.h
  * 
- * @brief Generic interface for hash functions
+ * @brief Tests the md5 hasher 
  * 
  */
 
@@ -19,36 +19,19 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+ 
+#ifndef HASHER_MD5_TEST_H_
+#define HASHER_MD5_TEST_H_
 
+#include "../transforms/hashers/hasher.h"
+#include "../transforms/hashers/hasher_md5.h"
+#include "../utils/tester.h"
 
-#include "hasher.h"
-
-#include "hasher_sha1.h"
-#include "hasher_md5.h"
-
-
-
-/*
- * Described in header
+/**
+ * @brief Test function used to test the md5-hasher functionality
+ *
+ * @param tester associated tester object
  */
-hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
-{
-	switch (hash_algorithm)
-	{
-		case HASH_SHA1:
-		{
-			return (hasher_t*)hasher_sha1_create();
-		}
-		case HASH_MD5:
-		{
-			return (hasher_t*)hasher_md5_create();
-		}
-		default:
-			return NULL;
-	}
-}
+void test_hasher_md5(tester_t *tester);
 
-
-
-
-
+#endif /*HASHER_MD5_TEST_H_*/
