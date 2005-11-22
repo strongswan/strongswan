@@ -169,7 +169,8 @@ void test_hmac_sha1(tester_t *tester)
 	
  	for (i=0; i<3; i++)
  	{
-	 	hmac_t *hmac = hmac_create(HASH_SHA1, keys[i]);
+	 	hmac_t *hmac = hmac_create(HASH_SHA1);
+	 	hmac->set_key(hmac, keys[i]);
 		hmac->allocate_mac(hmac, data[i], &digest[i]);
 		hmac->destroy(hmac);
 		

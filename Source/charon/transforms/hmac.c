@@ -110,6 +110,37 @@ static size_t get_block_size(private_hmac_t *this)
 }
 
 /**
+ * implementation of hmac_t.set_key
+ */
+static status_t set_key(private_hmac_t *this, chunk_t key)
+{
+	int i;
+	u_int8_t buffer[this->b];
+	
+	memset(buffer, 0, this->b);
+	
+	if (key.len > this->b)
+	{	
+		/* if key is too long, it will be hashed */
+		this->h->get_hash(this->h, key, buffer);
+	}
+	else
+	{	
+		/* if not, just copy it in our pre-padded k */
+		memcpy(buffer, key.ptr, key.len);	
+	}
+			
+	/* apply ipad and opad to key */
+	for (i = 0; i < this->b; i++)
+	{
+		this->ipaded_key.ptr[i] = buffer[i] ^ 0x36;
+		this->opaded_key.ptr[i] = buffer[i] ^ 0x5C;
+	}
+	
+	return SUCCESS;;
+}
+
+/**
  * implementation of hmac_t.destroy
  */
 static status_t destroy(private_hmac_t *this)
@@ -125,10 +156,9 @@ static status_t destroy(private_hmac_t *this)
 /*
  * Described in header
  */
-hmac_t *hmac_create(hash_algorithm_t hash_algorithm, chunk_t key)
+hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 {
 	private_hmac_t *this;
-	u_int8_t i;
 	
 	this = allocator_alloc_thing(private_hmac_t);
 	if (this == NULL)
@@ -139,6 +169,7 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm, chunk_t key)
 	this->public.get_mac = (size_t (*)(hmac_t *,chunk_t,u_int8_t*))get_mac;
 	this->public.allocate_mac = (size_t (*)(hmac_t *,chunk_t,chunk_t*))allocate_mac;
 	this->public.get_block_size = (size_t (*)(hmac_t *))get_block_size;
+	this->public.set_key = (status_t (*)(hmac_t *,chunk_t))set_key;
 	this->public.destroy = (status_t (*)(hmac_t *))destroy;
 	
 	/* set b, according to hasher */
@@ -160,26 +191,7 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm, chunk_t key)
 		return NULL;	
 	}
 	
-	/* k must be b long, padded with 0x00 */
-	this->k.ptr = allocator_alloc(this->b);
-	this->k.len = this->b;
-	if (this->k.ptr == NULL)
-	{
-		this->h->destroy(this->h);
-		allocator_free(this);
-	}
-	memset(this->k.ptr, 0, this->k.len);
 
-	if (key.len > this->h->get_block_size(this->h))
-	{	
-		/* if key is too long, it will be hashed */
-		this->h->get_hash(this->h, key, this->k.ptr);
-	}
-	else
-	{	
-		/* if not, just copy it in our pre-padded k */
-		memcpy(this->k.ptr, key.ptr, key.len);	
-	}
 
 	/* build ipad and opad */
 	this->opaded_key.ptr = allocator_alloc(this->b);
@@ -196,17 +208,11 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm, chunk_t key)
 	if (this->ipaded_key.ptr == NULL)
 	{
 		this->h->destroy(this->h);
-		allocator_free(this->k.ptr);
 		allocator_free(this->opaded_key.ptr);
 		allocator_free(this);
 		return NULL;	
 	}
-		
-	for (i = 0; i < this->b; i++)
-	{
-		this->ipaded_key.ptr[i] = this->k.ptr[i] ^ 0x36;
-		this->opaded_key.ptr[i] = this->k.ptr[i] ^ 0x5C;
-	}
+
 	
 	return &(this->public);
 }

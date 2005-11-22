@@ -64,7 +64,18 @@ struct hmac_s {
 	 * @param this			calling hmac
 	 * @return				block size in bytes
 	 */
-	size_t (*get_block_size) (hmac_t *this);
+	size_t (*get_block_size) (hmac_t *this);	
+	
+	/**
+	 * @brief set the key for this hmac
+	 * 
+	 * Any key length is accepted.
+	 * 
+	 * @param this			calling hmac
+	 * @param key			key to set
+	 * @return				block size in bytes
+	 */
+	size_t (*set_key) (hmac_t *this, chunk_t key);
 	
 	/**
 	 * @brief Destroys a hmac object.
@@ -80,11 +91,10 @@ struct hmac_s {
  * Creates a new hmac_t object
  * 
  * @param hash_algorithm		hash algorithm to use
- * @param key					A chunk containing the key
  * @return
  *								- hmac_t if successfully
  *								- NULL if out of ressources or hash not supported
  */
-hmac_t *hmac_create(hash_algorithm_t hash_algorithm, chunk_t key);
+hmac_t *hmac_create(hash_algorithm_t hash_algorithm);
 
 #endif /*HMAC_H_*/
