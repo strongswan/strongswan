@@ -3,7 +3,7 @@
  * 
  * @brief Configuration class used to store IKE_SA-configurations.
  * 
- * Object of this type represents a configuration for an IKE_SA and its child_sa's.
+ * Object of this type represents the configuration for all IKE_SA's and their child_sa's.
  * 
  */
 
@@ -53,14 +53,14 @@ struct private_configuration_manager_s {
 };
 
 /**
- * Implements function configuration_manager_t.get_remote_host .
+ * Implements function configuration_manager_t.get_remote_host.
  */
 static status_t get_remote_host(private_configuration_manager_t *this, char *name, host_t **host)
 {
 	/*
-	 * For testing purposes, hard coded host informations are returned.
+	 * For testing purposes, hard coded host informations for two configurations are returned.
 	 * 
-	 * Further improvements could store them in a linked list or hash table
+	 * Further improvements could store them in a linked list or hash table.
 	 */
 
 	host_t *remote;
@@ -86,10 +86,17 @@ static status_t get_remote_host(private_configuration_manager_t *this, char *nam
 	*host = remote;
 	return status;
 }
-	
+
+/**
+ * Implements function configuration_manager_t.get_local_host.
+ */
 static status_t get_local_host(private_configuration_manager_t *this, char *name, host_t **host)
 {
-	/* use default route for now */
+	/*
+	 * For testing purposes, only the default route is returned for each configuration.
+	 * 
+	 * Further improvements could store different local host informations in a linked list or hash table.
+	 */
 	host_t *local;
 	local = host_create(AF_INET, "0.0.0.0", 0);
 	if (local == NULL)
@@ -100,18 +107,34 @@ static status_t get_local_host(private_configuration_manager_t *this, char *name
 	return SUCCESS;
 }
 
+/**
+ * Implements function configuration_manager_t.get_dh_group_number.
+ */
 static status_t get_dh_group_number(private_configuration_manager_t *this,char *name, u_int16_t *dh_group_number, u_int16_t priority)
 {
-	*dh_group_number = MODP_1024_BIT;
+	/* Currently only two dh_group_numbers are supported for each configuration*/
+	
+	if (priority == 1)
+	{
+		*dh_group_number = MODP_1024_BIT;
+	}
+	else
+	{
+		*dh_group_number = MODP_768_BIT;
+	}
 	return SUCCESS;
 }
-	
+
+/**
+ * Implements function configuration_manager_t.get_proposals_for_host.
+ */
 static status_t get_proposals_for_host(private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *iterator)
 {
-	/* use a default IKE proposal:
+	/* 
+	 * Currently the following hard coded proposal is created and returned for all hosts:
 	 * - ENCR_AES_CBC 128Bit
-	 * - PRF_HMAC_SHA1 128Bit
-	 * - AUTH_HMAC_SHA1_96 96Bit
+	 * - PRF_HMAC_SHA1 160Bit
+	 * - AUTH_HMAC_SHA1_96 128Bit
 	 * - MODP_1024_BIT
 	 */
 	proposal_substructure_t *proposal;
@@ -252,14 +275,16 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 	return SUCCESS;
 }
 	
+/**
+ * Implements function configuration_manager_t.select_proposals_for_host.
+ */
 static status_t select_proposals_for_host(private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *in, linked_list_iterator_t *out)
 {
+	/* Currently the first suggested proposal is selected, cloned and then returned*/
 	status_t status;
 	proposal_substructure_t *first_suggested_proposal;
 	proposal_substructure_t *selected_proposal;
 	
-	/* select just first suggested proposal */
-
 	this->logger->log(this->logger,CONTROL | MORE, "Going to select first suggested proposal");
 	if (!in->has_next(in))
 	{
@@ -290,11 +315,20 @@ static status_t select_proposals_for_host(private_configuration_manager_t *this,
 	return status;
 }
 
+/**
+ * Implements function configuration_manager_t.get_transforms_for_host_and_proposals.
+ */
 static status_t get_transforms_for_host_and_proposals (private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *proposals,crypter_t **crypter,signer_t **signer, prf_t **prf)
 {
+	/*
+	 * Currently the given proposals are not checked if they are valid for specific host!
+	 * 
+	 * The first proposal is taken and the appropriate transform objects are created (only if they are supported)
+	 */
+
+	prf_t *selected_prf = NULL;
 	crypter_t *selected_crypter = NULL;
 	signer_t *selected_signer = NULL;
-	prf_t *selected_prf = NULL;
 	proposal_substructure_t *proposal;
 	linked_list_iterator_t *transforms;
 	status_t status;
@@ -387,8 +421,15 @@ static status_t get_transforms_for_host_and_proposals (private_configuration_man
 	return SUCCESS;
 }
 
+/**
+ * Implements function configuration_manager_t.is_dh_group_allowed_for_host.
+ */
 static status_t is_dh_group_allowed_for_host(private_configuration_manager_t *this, host_t *host, diffie_hellman_group_t group, bool *allowed)
 {
+	/*
+	 * Only the two DH groups 768 and 1024 are supported for each configuration
+	 */
+	
 	if (group == MODP_768_BIT || group == MODP_1024_BIT)
 	{
 		*allowed = TRUE;		
