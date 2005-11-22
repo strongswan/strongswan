@@ -68,20 +68,37 @@ struct private_hmac_s {
  */
 static status_t get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 {
-	/* H(K XOR opad, H(K XOR ipad, text)) */
+	/* H(K XOR opad, H(K XOR ipad, text)) 
+	 * 
+	 * if out is NULL, we append text to the inner hash.
+	 * else, we complete the inner and do the outer.
+	 * 
+	 */
+	
 	u_int8_t buffer[this->h->get_block_size(this->h)];
 	chunk_t inner;
-	inner.ptr = buffer;
-	inner.len = this->h->get_block_size(this->h);
 	
-	/* inner */
-	this->h->get_hash(this->h, this->ipaded_key, NULL);
-	this->h->get_hash(this->h, data, buffer);
-	
-	/* outer */
-	this->h->get_hash(this->h, this->opaded_key, NULL);
-	this->h->get_hash(this->h, inner, out);
-	
+	if (out == NULL)
+	{
+		/* append data to inner */
+		this->h->get_hash(this->h, data, NULL);
+	}
+	else
+	{
+		/* append and do outer hash */
+		inner.ptr = buffer;
+		inner.len = this->h->get_block_size(this->h);
+		
+		/* complete inner */
+		this->h->get_hash(this->h, data, buffer);
+		
+		/* do outer */
+		this->h->get_hash(this->h, this->opaded_key, NULL);
+		this->h->get_hash(this->h, inner, out);
+		
+		/* reinit for next call */
+		this->h->get_hash(this->h, this->ipaded_key, NULL);
+	}
 	return SUCCESS;
 }
 
@@ -91,13 +108,21 @@ static status_t get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 static status_t allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 {
 	/* allocate space and use get_mac */
-	out->len = this->h->get_block_size(this->h);
-	out->ptr = allocator_alloc(out->len);
-	if (out->ptr == NULL)
+	if (out == NULL)
 	{
-		return OUT_OF_RES;	
+		/* append mode */
+		this->public.get_mac(&(this->public), data, NULL);
 	}
-	this->public.get_mac(&(this->public), data, out->ptr);
+	else
+	{
+		out->len = this->h->get_block_size(this->h);
+		out->ptr = allocator_alloc(out->len);
+		if (out->ptr == NULL)
+		{
+			return OUT_OF_RES;	
+		}
+		this->public.get_mac(&(this->public), data, out->ptr);
+	}
 	return SUCCESS;
 }
 	
@@ -136,6 +161,10 @@ static status_t set_key(private_hmac_t *this, chunk_t key)
 		this->ipaded_key.ptr[i] = buffer[i] ^ 0x36;
 		this->opaded_key.ptr[i] = buffer[i] ^ 0x5C;
 	}
+	
+	/* begin hashing if inner pad */
+	this->h->reset(this->h);
+	this->h->get_hash(this->h, this->ipaded_key, NULL);
 	
 	return SUCCESS;;
 }
