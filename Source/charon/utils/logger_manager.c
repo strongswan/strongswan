@@ -41,6 +41,7 @@ mapping_t logger_context_t_mappings[] = {
 	{SOCKET, "SOCKET"},
 	{TESTER, "TESTER"},
 	{DAEMON, "DAEMON"},
+	{CONFIGURATION_MANAGER, "CONFIG"},
 };
 
 /** 
@@ -394,6 +395,7 @@ static status_t disable_logger_level (private_logger_manager_t *this, logger_con
  */
 static status_t destroy(private_logger_manager_t *this)
 {
+
 	while (this->loggers->get_count(this->loggers) > 0)
 	{
 		loggers_entry_t *current_entry;
@@ -404,7 +406,7 @@ static status_t destroy(private_logger_manager_t *this)
 		current_entry->logger->destroy(current_entry->logger);
 		
 		/* entry can be destroyed */
-		allocator_free(current_entry);		
+		allocator_free(current_entry);	
 	}
 	
 	while (this->logger_levels->get_count(this->logger_levels) > 0)

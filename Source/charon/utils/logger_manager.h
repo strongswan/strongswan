@@ -46,6 +46,7 @@ enum logger_context_e{
 	SOCKET,
 	TESTER,
 	DAEMON,
+	CONFIGURATION_MANAGER,
 	};
 
 /**
@@ -67,7 +68,7 @@ struct logger_manager_s {
 	 * @param context		logger_context to use the logger for.
 	 * @param[out] logger	pointer to a a place where the new logger is stored
 	 * @param name			name for the new logger. Context name is already included 
-	 * 						and has not to be specified.
+	 * 						and has not to be specified (so NULL is allowed).
 	 * @return
 	 * 		 				- logger_t on SUCCESS
 	 * 						- NULL otherwise
