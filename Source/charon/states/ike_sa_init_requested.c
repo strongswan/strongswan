@@ -22,6 +22,7 @@
  
 #include "ike_sa_init_requested.h"
 
+#include "../globals.h"
 #include "../utils/allocator.h"
 #include "../transforms/diffie_hellman.h"
 #include "../payloads/sa_payload.h"
@@ -48,6 +49,12 @@ struct private_ike_sa_init_requested_s {
 	 * Diffie Hellman object used to compute shared secret
 	 */
 	diffie_hellman_t *diffie_hellman;
+	
+	/**
+	 * Shared secret of successful exchange
+	 */
+	chunk_t shared_secret;
+	
 	/**
 	 * Sent nonce value
 	 */
@@ -58,9 +65,14 @@ struct private_ike_sa_init_requested_s {
 	 */
 	chunk_t received_nonce;
 	
+	crypter_t *crypter;
+	signer_t *signer;
+	prf_t *prf;
+	
 	/**
 	 * DH group priority used to get dh_group_number from configuration manager.
-	 * Currently not used but usable if informational messages of unsupported dh group number are processed.
+	 * 
+	 * Currently uused but usable if informational messages of unsupported dh group number are processed.
 	 */
 	u_int16_t dh_group_priority;
 	
@@ -77,22 +89,37 @@ struct private_ike_sa_init_requested_s {
  */
 static status_t process_message(private_ike_sa_init_requested_t *this, message_t *message, state_t **new_state)
 {
-	status_t status;
-	linked_list_iterator_t *payloads;
-	message_t *response;
+	status_t 				status;
+	linked_list_iterator_t 	*payloads;
+	exchange_type_t			exchange_type;
 
+
+	exchange_type = message->get_exchange_type(message);
+	if (exchange_type != IKE_SA_INIT)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_sa_init_requested",mapping_find(exchange_type_m,exchange_type));
+		return FAILED;
+	}
+	
+	if (message->get_request(message))
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Only responses of type IKE_SA_INIT supported in state ike_sa_init_requested");
+		return FAILED;
+	}
 	
 	/* parse incoming message */
 	status = message->parse_body(message);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not parse body");
+		this->logger->log(this->logger, ERROR | MORE, "Could not parse body");
 		return status;	
 	}
+	
 	/* iterate over incoming payloads */
 	status = message->get_payload_iterator(message, &payloads);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "Could not create payload interator");
 		return status;	
 	}
 	while (payloads->has_next(payloads))
@@ -103,106 +130,135 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		this->logger->log(this->logger, CONTROL|MORE, "Processing payload %s", mapping_find(payload_type_m, payload->get_type(payload)));
 		switch (payload->get_type(payload))
 		{
-//			case SECURITY_ASSOCIATION:
-//			{
-//				sa_payload_t *sa_payload = (sa_payload_t*)payload;
-//				linked_list_iterator_t *suggested_proposals, *accepted_proposals;
-//				/* create a list for accepted proposals */
-//				if (this->ike_sa_init_data.proposals == NULL) {
-//					this->ike_sa_init_data.proposals = linked_list_create();
-//				}
-//				else
-//				{
-//					/** @todo destroy list contents */	
-//				}
-//				if (this->ike_sa_init_data.proposals == NULL)
-//				{
-//					payloads->destroy(payloads);
-//					return OUT_OF_RES;	
-//				}
-//				status = this->ike_sa_init_data.proposals->create_iterator(this->ike_sa_init_data.proposals, &accepted_proposals, FALSE);
-//				if (status != SUCCESS)
-//				{
-//					payloads->destroy(payloads);
-//					return status;	
-//				}
-//				
-//				/* get the list of suggested proposals */ 
-//				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
-//				if (status != SUCCESS)
-//				{	
-//					accepted_proposals->destroy(accepted_proposals);
-//					payloads->destroy(payloads);
-//					return status;
-//				}
-//				
-//				/* now let the configuration-manager select a subset of the proposals */
-//				status = global_configuration_manager->select_proposals_for_host(global_configuration_manager,
-//									this->other.host, suggested_proposals, accepted_proposals);
-//				if (status != SUCCESS)
-//				{
-//					suggested_proposals->destroy(suggested_proposals);
-//					accepted_proposals->destroy(accepted_proposals);
-//					payloads->destroy(payloads);
-//					return status;
-//				}
-//									
-//				suggested_proposals->destroy(suggested_proposals);
-//				accepted_proposals->destroy(accepted_proposals);
-//				
-//				/* ok, we have what we need for sa_payload */
-//				break;
-//			}
+			case SECURITY_ASSOCIATION:
+			{
+				sa_payload_t 			*sa_payload = (sa_payload_t*)payload;
+				linked_list_iterator_t 	*suggested_proposals;
+
+
+				/* get the list of suggested proposals */ 
+				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
+				if (status != SUCCESS)
+				{	
+					this->logger->log(this->logger, ERROR, "Fatal errror: Could not create iterator on suggested proposals");
+					payloads->destroy(payloads);
+					return status;
+				}
+				
+				if (this->crypter != NULL)
+				{
+					this->logger->log(this->logger, CONTROL | MOST, "Destroy existing crypter object");
+					this->crypter->destroy(this->crypter);
+					this->crypter = NULL;
+				}
+			
+				if (this->signer != NULL)
+				{
+					this->logger->log(this->logger, CONTROL | MOST, "Destroy existing signer object");
+					this->signer->destroy(this->signer);
+					this->signer = NULL;
+				}
+				
+				if (this->prf != NULL)
+				{
+					this->logger->log(this->logger, CONTROL | MOST, "Destroy existing prf object");
+					this->prf->destroy(this->prf);
+					this->prf = NULL;
+				}
+				
+				/* now let the configuration-manager return the transforms for the given proposal*/
+				this->logger->log(this->logger, CONTROL | MOST, "Get transforms for suggested proposal");
+				status = global_configuration_manager->get_transforms_for_host_and_proposals(global_configuration_manager,
+									this->ike_sa->other.host, suggested_proposals, &(this->crypter),&(this->signer),&(this->prf));
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "Suggested proposals not supported!");
+					suggested_proposals->destroy(suggested_proposals);
+					payloads->destroy(payloads);
+					return status;
+				}
+				
+				suggested_proposals->destroy(suggested_proposals);
+
+				/* ok, we have what we need for sa_payload */
+				break;
+			}
 			case KEY_EXCHANGE:
 			{
 				ke_payload_t *ke_payload = (ke_payload_t*)payload;
-				diffie_hellman_t *dh;
-				chunk_t shared_secret;
-				
-				dh = this->diffie_hellman;
-
-			
-				status = dh->set_other_public_value(dh, ke_payload->get_key_exchange_data(ke_payload));
+		
+				status = this->diffie_hellman->set_other_public_value(this->diffie_hellman, ke_payload->get_key_exchange_data(ke_payload));
 				if (status != SUCCESS)
 				{
-					dh->destroy(dh);
+					this->logger->log(this->logger, ERROR, "Could not set other public value for DH exchange. Status %s",mapping_find(status_m,status));
 					payloads->destroy(payloads);
 					return OUT_OF_RES;
 				}
 				
-				status = dh->get_shared_secret(dh, &shared_secret);
-					
-				this->logger->log_chunk(this->logger, RAW, "Shared secret", &shared_secret);
-				
-				allocator_free_chunk(shared_secret);
-				
+				/* shared secret is computed AFTER processing of all payloads... */				
 				break;
 			}
 			case NONCE:
 			{
-				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
-				chunk_t nonce;
-				
-				nonce_payload->get_nonce(nonce_payload, &nonce);
-				/** @todo free if there is already one */
-				this->received_nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
-				this->received_nonce.len = nonce.len;
-				if (this->received_nonce.ptr == NULL)
+				nonce_payload_t 	*nonce_payload = (nonce_payload_t*)payload;
+								
+				if (this->received_nonce.ptr != NULL)
 				{
+					this->logger->log(this->logger, CONTROL | MOST, "Destroy existing received nonce");
+					allocator_free(this->received_nonce.ptr);
+					this->received_nonce.ptr = NULL;
+					this->received_nonce.len = 0;
+				}
+
+				status = nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR, "Fatal error: Could not get received nonce");
 					payloads->destroy(payloads);
 					return OUT_OF_RES;
 				}
+				
 				break;
 			}
 			default:
 			{
-				/** @todo handle */
+				this->logger->log(this->logger, ERROR, "Fatal errror: Payload type not supported!!!!");
+				payloads->destroy(payloads);
+				return FAILED;
 			}
 				
 		}
 			
 	}
 	payloads->destroy(payloads);
+
+	if (this->shared_secret.ptr != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy existing shared_secret");
+		allocator_free(this->shared_secret.ptr);
+		this->shared_secret.ptr = NULL;
+		this->shared_secret.len = 0;
+	}
+
+
+	/* store shared secret  */
+	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
+	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &(this->shared_secret));		
+	this->logger->log_chunk(this->logger, RAW, "Shared secret", &this->shared_secret);
+				
+
+
+	/****************************
+	 * 
+	 *  TODO
+	 * 
+	 * Create PRF+ object
+	 * 
+	 * Create Keys for next process
+	 * 
+	 * Send IKE_SA_AUTH request
+	 * 
+	 ****************************/
 
 
 	/* set up the reply */
@@ -214,7 +270,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 //	response->destroy(response);
 
-	*new_state = this;
+	*new_state = (state_t *) this;
 	
 	return SUCCESS;
 }
@@ -233,6 +289,8 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
 static status_t destroy(private_ike_sa_init_requested_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy state of type ike_sa_init_requested_t");
+	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
 	if (this->sent_nonce.ptr != NULL)
 	{
@@ -243,6 +301,30 @@ static status_t destroy(private_ike_sa_init_requested_t *this)
 	{
 		this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
 		allocator_free(this->received_nonce.ptr);
+	}
+
+	if (this->shared_secret.ptr != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret");
+		allocator_free(this->shared_secret.ptr);
+	}
+	
+	if (this->crypter != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy crypter object");
+		this->crypter->destroy(this->crypter);
+	}
+
+	if (this->signer != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy signer object");
+		this->signer->destroy(this->signer);
+	}
+	
+	if (this->prf != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy prf object");
+		this->prf->destroy(this->prf);
 	}
 	
 	allocator_free(this);
@@ -270,10 +352,16 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->ike_sa = ike_sa;
 	this->received_nonce.ptr = NULL;
 	this->received_nonce.len = 0;
+	this->shared_secret.ptr = NULL;
+	this->shared_secret.len = 0;
 	this->logger = this->ike_sa->logger;
 	this->diffie_hellman = diffie_hellman;
 	this->sent_nonce = sent_nonce;
 	this->dh_group_priority = dh_group_priority;
+	this->crypter = NULL;
+	this->signer = NULL;
+	this->prf = NULL;
+	
 	
 	return &(this->public);
 }
