@@ -82,9 +82,11 @@ static void scheduler_thread_function(private_scheduler_t * this)
  */
 static status_t destroy(private_scheduler_t *this)
 {
+	this->logger->log(this->logger, CONTROL | MORE, "Going to terminate scheduler thread");
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
+	this->logger->log(this->logger, CONTROL | MORE, "Scheduler thread terminated");	
 	
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
