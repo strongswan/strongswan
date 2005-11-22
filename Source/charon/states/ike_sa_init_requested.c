@@ -65,10 +65,6 @@ struct private_ike_sa_init_requested_s {
 	 */
 	chunk_t received_nonce;
 	
-	crypter_t *crypter;
-	signer_t *signer;
-	prf_t *prf;
-	
 	/**
 	 * DH group priority used to get dh_group_number from configuration manager.
 	 * 
@@ -92,7 +88,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	status_t 				status;
 	linked_list_iterator_t 	*payloads;
 	exchange_type_t			exchange_type;
-
+	u_int64_t 				responder_spi;
 
 	exchange_type = message->get_exchange_type(message);
 	if (exchange_type != IKE_SA_INIT)
@@ -115,6 +111,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		return status;	
 	}
 	
+	responder_spi = message->get_responder_spi(message);
+	this->ike_sa->ike_sa_id->set_responder_spi(this->ike_sa->ike_sa_id,responder_spi);
+	
 	/* iterate over incoming payloads */
 	status = message->get_payload_iterator(message, &payloads);
 	if (status != SUCCESS)
@@ -132,9 +131,11 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		{
 			case SECURITY_ASSOCIATION:
 			{
-				sa_payload_t 			*sa_payload = (sa_payload_t*)payload;
-				linked_list_iterator_t 	*suggested_proposals;
-
+				sa_payload_t 				*sa_payload = (sa_payload_t*)payload;
+				linked_list_iterator_t 		*suggested_proposals;
+				encryption_algorithm_t		encryption_algorithm = ENCR_UNDEFINED;
+				pseudo_random_function_t		pseudo_random_function = PRF_UNDEFINED;
+				integrity_algorithm_t		integrity_algorithm = AUTH_UNDEFINED;
 
 				/* get the list of suggested proposals */ 
 				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
@@ -145,31 +146,10 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 					return status;
 				}
 				
-				if (this->crypter != NULL)
-				{
-					this->logger->log(this->logger, CONTROL | MOST, "Destroy existing crypter object");
-					this->crypter->destroy(this->crypter);
-					this->crypter = NULL;
-				}
-			
-				if (this->signer != NULL)
-				{
-					this->logger->log(this->logger, CONTROL | MOST, "Destroy existing signer object");
-					this->signer->destroy(this->signer);
-					this->signer = NULL;
-				}
-				
-				if (this->prf != NULL)
-				{
-					this->logger->log(this->logger, CONTROL | MOST, "Destroy existing prf object");
-					this->prf->destroy(this->prf);
-					this->prf = NULL;
-				}
-				
 				/* now let the configuration-manager return the transforms for the given proposal*/
 				this->logger->log(this->logger, CONTROL | MOST, "Get transforms for suggested proposal");
 				status = global_configuration_manager->get_transforms_for_host_and_proposals(global_configuration_manager,
-									this->ike_sa->other.host, suggested_proposals, &(this->crypter),&(this->signer),&(this->prf));
+									this->ike_sa->other.host, suggested_proposals, &encryption_algorithm,&pseudo_random_function,&integrity_algorithm);
 				if (status != SUCCESS)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "Suggested proposals not supported!");
@@ -177,8 +157,15 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 					payloads->destroy(payloads);
 					return status;
 				}
-				
 				suggested_proposals->destroy(suggested_proposals);
+				
+				this->ike_sa->prf = prf_create(pseudo_random_function);
+				if (this->ike_sa->prf == NULL)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "PRF type not supported");
+					return FAILED;
+				}
+				
 
 				/* ok, we have what we need for sa_payload */
 				break;
@@ -244,9 +231,18 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	/* store shared secret  */
 	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
 	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &(this->shared_secret));		
-	this->logger->log_chunk(this->logger, RAW, "Shared secret", &this->shared_secret);
-				
-
+	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &this->shared_secret);
+	
+	status = this->ike_sa->compute_secrets(this->ike_sa,this->shared_secret,this->sent_nonce, this->received_nonce);
+	if (status != SUCCESS)
+	{
+		/* secrets could not be computed */
+		this->logger->log(this->logger, ERROR | MORE, "Secrets could not be computed!");
+		return status;
+	}
+	
+	
+	
 
 	/****************************
 	 * 
@@ -309,24 +305,6 @@ static status_t destroy(private_ike_sa_init_requested_t *this)
 		allocator_free(this->shared_secret.ptr);
 	}
 	
-	if (this->crypter != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy crypter object");
-		this->crypter->destroy(this->crypter);
-	}
-
-	if (this->signer != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy signer object");
-		this->signer->destroy(this->signer);
-	}
-	
-	if (this->prf != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy prf object");
-		this->prf->destroy(this->prf);
-	}
-	
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -358,10 +336,6 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->diffie_hellman = diffie_hellman;
 	this->sent_nonce = sent_nonce;
 	this->dh_group_priority = dh_group_priority;
-	this->crypter = NULL;
-	this->signer = NULL;
-	this->prf = NULL;
-	
 	
 	return &(this->public);
 }
