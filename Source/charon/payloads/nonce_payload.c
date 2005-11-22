@@ -132,17 +132,6 @@ static status_t verify(private_nonce_payload_t *this)
 }
 
 /**
- * Implements payload_t's and nonce_payload_t's destroy function.
- * See #payload_s.destroy or nonce_payload_s.destroy for description.
- */
-static status_t destroy(private_nonce_payload_t *this)
-{
-	allocator_free(this);
-	
-	return SUCCESS;
-}
-
-/**
  * Implements nonce_payload_t's set_nonce function.
  * See #nonce_payload_t.set_nonce for description.
  */
@@ -150,8 +139,13 @@ static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
 {
 	if (nonce.len >= 16 && nonce.len <= 256)
 	{
+
+		this->nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
+		if (this->nonce.ptr == NULL)
+		{
+			return OUT_OF_RES;
+		}	
 		this->nonce.len = nonce.len;
-		this->nonce.ptr = nonce.ptr;
 		this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
 		return SUCCESS;	
 	}
@@ -164,10 +158,15 @@ static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
  */
 static status_t get_nonce(private_nonce_payload_t *this, chunk_t *nonce)
 {
-	nonce->ptr = this->nonce.ptr;
+	nonce->ptr = allocator_clone_bytes(this->nonce.ptr,this->nonce.len);
+	if (nonce->ptr == NULL)
+	{
+		return OUT_OF_RES;
+	}
 	nonce->len = this->nonce.len;
 	return SUCCESS;
 }
+
 
 /**
  * Implements payload_t's get_encoding_rules function.
@@ -219,6 +218,21 @@ static size_t get_length(private_nonce_payload_t *this)
 	return this->payload_length;
 }
 
+/**
+ * Implements payload_t's and nonce_payload_t's destroy function.
+ * See #payload_s.destroy or nonce_payload_s.destroy for description.
+ */
+static status_t destroy(private_nonce_payload_t *this)
+{
+	if (this->nonce.ptr != NULL)
+	{
+		allocator_free(this->nonce.ptr);
+	}
+	
+	allocator_free(this);	
+	return SUCCESS;
+}
+
 /*
  * Described in header
  */
@@ -230,6 +244,7 @@ nonce_payload_t *nonce_payload_create()
 		return NULL;	
 	}	
 	
+	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
@@ -237,10 +252,13 @@ nonce_payload_t *nonce_payload_create()
 	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	
+	/* public functions */
 	this->public.destroy = (status_t (*) (nonce_payload_t *)) destroy;
 	this->public.set_nonce = (status_t (*) (nonce_payload_t *,chunk_t)) set_nonce;
 	this->public.get_nonce = (status_t (*) (nonce_payload_t *,chunk_t*)) get_nonce;
 	
+	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH;
