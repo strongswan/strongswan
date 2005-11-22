@@ -91,6 +91,14 @@ struct message_s {
 	 * @return				message_id type of the message
 	 */
 	u_int32_t (*get_message_id) (message_t *this);
+	
+	/**
+	 * @brief Gets the responder SPI of the message.
+	 *
+	 * @param this 			message_t object
+	 * @return				responder spi of the message
+	 */
+	u_int64_t (*get_responder_spi) (message_t *this);
 
 	/**
 	 * @brief Sets the IKE_SA ID of the message.
