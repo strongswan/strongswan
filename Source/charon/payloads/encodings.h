@@ -306,7 +306,17 @@ enum encoding_type_e{
 	 * 
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
-	NONCE_DATA
+	NONCE_DATA,
+
+	/**
+	 * Representating an IKE_SPI field in an IKEv2 Header
+	 * 
+ 	 * When generating the value of the u_int64_t pointing to 
+ 	 * is written (host and networ order is not changed).
+	 * 
+	 * When parsing 8 bytes are read and written into the u_int64_t pointing to.
+	 */
+	IKE_SPI
 };
 
 /**

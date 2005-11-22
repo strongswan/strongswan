@@ -31,6 +31,7 @@ mapping_t encoding_type_m[] = {
 	{U_INT_16, "U_INT_16"},
 	{U_INT_32, "U_INT_32"},
 	{U_INT_64, "U_INT_64"},
+	{IKE_SPI, "IKE_SPI"},
 	{RESERVED_BIT, "RESERVED_BIT"},
 	{RESERVED_BYTE, "RESERVED_BYTE"},
 	{FLAG, "FLAG"},
