@@ -90,9 +90,11 @@ static void sender_thread_function(private_sender_t * this)
  */
 static status_t destroy(private_sender_t *this)
 {
+	this->logger->log(this->logger, CONTROL | MORE, "Going to terminate sender thread");
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
+	this->logger->log(this->logger, CONTROL | MORE, "Sender thread terminated");	
 	
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
