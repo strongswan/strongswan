@@ -49,6 +49,7 @@
 #include "packet_test.h"
 #include "diffie_hellman_test.h"
 #include "hasher_sha1_test.h"
+#include "hmac_test.h"
 
 
 /* output for test messages */
@@ -174,9 +175,14 @@ test_t packet_test = {test_packet,"Packet"};
 test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
 
 /**
- * Test for packet_t
+ * Test for sha1 hasher
  */
 test_t hasher_sha1_test = {test_hasher_sha1,"SHA1 hasher"};
+
+/**
+ * Test for hmac
+ */
+test_t hmac_test1 = {test_hmac_sha1, "HMAC-SHA1"};
 
 
 /**
@@ -267,8 +273,8 @@ logger_manager_t *global_logger_manager;
  	tester_t *tester = tester_create(test_output, FALSE);
 
 
-	tester->perform_tests(tester,all_tests);
-	//tester->perform_test(tester,&hasher_sha1_test); 
+	//tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&hmac_test1); 
 
 
  	
