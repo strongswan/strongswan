@@ -122,14 +122,6 @@ int main()
  		destroy_globals();
  		return -1;
  	}
- 	/* a own logger for the daemon is created */
- 	logger = global_logger_manager->create_logger(global_logger_manager,DAEMON,NULL);
- 	if (logger == NULL)
- 	{
-		printf("could not create logger object");
- 		destroy_globals();
- 		return -1;
- 	}
  	
  	logger->log(logger,CONTROL,"start daemon %s", DAEMON_NAME); 	
  	/* now  its time to create all the different threads :-) */ 
@@ -274,7 +266,7 @@ static void destroy_globals()
 	{
 		global_ike_sa_manager->destroy(global_ike_sa_manager);
 	}
-	if (global_ike_sa_manager != NULL)
+	if (global_configuration_manager != NULL)
 	{
 		global_configuration_manager->destroy(global_configuration_manager);
 	}
@@ -355,13 +347,10 @@ static void destroy_and_exit(int exit_code)
 	
 	/* logger is destroyed */
  	logger->log(logger,CONTROL|MORE,"destroy logger");
-	global_logger_manager->destroy_logger(global_logger_manager,logger);
  	logger->log(logger,CONTROL|MORE,"destroy logger_manager");
  	logger->log(logger,CONTROL|MORE,"------------------------------------");
-	if (global_logger_manager != NULL)
-	{
-		global_logger_manager->destroy(global_logger_manager);
-	}
+	global_logger_manager->destroy_logger(global_logger_manager,logger);
+	global_logger_manager->destroy(global_logger_manager);
 
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported in log file */
