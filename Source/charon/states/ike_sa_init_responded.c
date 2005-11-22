@@ -36,9 +36,34 @@ struct private_ike_sa_init_responded_s {
 	ike_sa_init_responded_t public;
 	
 	/**
+	 * Shared secret from DH-Exchange
+	 * 
+	 * All needed secrets are derived from this shared secret and then passed to the next
+	 * state of type ike_sa_established_t
+	 */
+	chunk_t shared_secret;
+	
+	/**
+	 * Sent nonce used to calculate secrets
+	 */
+	chunk_t received_nonce;
+	
+	/**
+	 * Sent nonce used to calculate secrets
+	 */
+	chunk_t sent_nonce;
+	
+	/**
 	 * Assigned IKE_SA
 	 */
 	protected_ike_sa_t *ike_sa;
+	
+	/**
+	 * Logger used to log data 
+	 * 
+	 * Is logger of ike_sa!
+	 */
+	logger_t *logger;
 };
 
 /**
@@ -63,6 +88,17 @@ static ike_sa_state_t get_state(private_ike_sa_init_responded_t *this)
  */
 static status_t destroy(private_ike_sa_init_responded_t *this)
 {
+	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy ike_sa_init_responded_t state object");
+	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared_secret");
+	allocator_free(this->shared_secret.ptr);
+
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
+	allocator_free(this->sent_nonce.ptr);
+
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
+	allocator_free(this->received_nonce.ptr);
+	
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -70,7 +106,8 @@ static status_t destroy(private_ike_sa_init_responded_t *this)
 /* 
  * Described in header.
  */
-ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa)
+ 
+ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t shared_secret, chunk_t received_nonce, chunk_t sent_nonce)
 {
 	private_ike_sa_init_responded_t *this = allocator_alloc_thing(private_ike_sa_init_responded_t);
 	
@@ -86,6 +123,10 @@ ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa
 	
 	/* private data */
 	this->ike_sa = ike_sa;
+	this->logger = this->ike_sa->logger;
+	this->shared_secret = shared_secret;
+	this->received_nonce = received_nonce;
+	this->sent_nonce = sent_nonce;
 	
 	return &(this->public);
 }
