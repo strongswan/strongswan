@@ -686,6 +686,7 @@ static status_t destroy(private_ike_sa_manager_t *this)
 	linked_list_t *list = this->ike_sa_list;
 	linked_list_iterator_t *iterator;
 	status_t status;
+	ike_sa_entry_t *entry;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
@@ -703,7 +704,6 @@ static status_t destroy(private_ike_sa_manager_t *this)
 	this->logger->log(this->logger,CONTROL | MOST,"Set driveout flags for all stored IKE_SA's");
 	while (iterator->has_next(iterator))
 	{
-		ike_sa_entry_t *entry;
 		iterator->current(iterator, (void**)&entry);
 		/* do not accept new threads, drive out waiting threads */
 		entry->driveout_new_threads = TRUE;
@@ -715,7 +715,6 @@ static status_t destroy(private_ike_sa_manager_t *this)
 	iterator->reset(iterator);
 	while (iterator->has_next(iterator))
 	{
-		ike_sa_entry_t *entry;
 		iterator->current(iterator, (void**)&entry);
 		while (entry->waiting_threads)
 		{
@@ -727,15 +726,15 @@ static status_t destroy(private_ike_sa_manager_t *this)
 	}
 	this->logger->log(this->logger,CONTROL | MOST,"Delete all IKE_SA's");
 	/* Step 3: delete all entries */
-	iterator->reset(iterator);
-	while (iterator->has_next(iterator))
+	iterator->destroy(iterator);
+
+	while (list->get_count(list) > 0)
 	{
-		ike_sa_entry_t *entry;
-		iterator->current(iterator, (void**)&entry);
+		list->get_first(list, (void**)&entry);
 		this->delete_entry(this, entry);
 	}
-	iterator->destroy(iterator);
 	list->destroy(list);
+	this->logger->log(this->logger,CONTROL | MOST,"IKE_SA's deleted");
 	pthread_mutex_unlock(&(this->mutex));
 
 	/* destroy logger at end */
