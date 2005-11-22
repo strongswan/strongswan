@@ -95,10 +95,12 @@ static void receiver_thread_function(private_receiver_t * this)
  */
 static status_t destroy(private_receiver_t *this)
 {
+	this->logger->log(this->logger, CONTROL | MORE, "Going to terminate receiver thread");
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
-	
+	this->logger->log(this->logger, CONTROL | MORE, "Receiver thread terminated");
+		
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
 	allocator_free(this);
