@@ -291,8 +291,8 @@ logger_manager_t *global_logger_manager;
  	tester_t *tester = tester_create(test_output, FALSE);
 
 
-	tester->perform_tests(tester,all_tests);
-	//tester->perform_test(tester,&hasher_md5_test); 
+	//tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&prf_plus_test); 
 
 
  	
