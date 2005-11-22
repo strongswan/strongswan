@@ -31,6 +31,7 @@
 #include "utils/logger_manager.h"
 #include "utils/randomizer.h"
 #include "transforms/diffie_hellman.h"
+#include "transforms/prf_plus.h"
 #include "payloads/sa_payload.h"
 #include "payloads/nonce_payload.h"
 #include "payloads/ke_payload.h"
@@ -195,6 +196,97 @@ static ike_sa_id_t* get_id(protected_ike_sa_t *this)
 	return this->ike_sa_id;
 }
 
+static status_t compute_secrets (protected_ike_sa_t *this,chunk_t dh_shared_secret,chunk_t initiator_nonce, chunk_t responder_nonce)
+{
+	chunk_t concatenated_nonces;
+	chunk_t skeyseed;
+	chunk_t prf_plus_seed;
+	status_t status;
+	u_int64_t initiator_spi;
+	u_int64_t responder_spi;
+	prf_plus_t *prf_plus;
+	chunk_t secrets_raw;
+
+	/*
+	 * TODO check length for specific prf's 
+	 */
+	concatenated_nonces.len = (initiator_nonce.len + responder_nonce.len);
+	concatenated_nonces.ptr = allocator_alloc(concatenated_nonces.len);
+	if (concatenated_nonces.ptr == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal errror: Could not allocate memory for concatenated nonces");
+		return FAILED;
+	}
+	/* first is initiator */
+	memcpy(concatenated_nonces.ptr,initiator_nonce.ptr,initiator_nonce.len);
+	/* second is responder */
+	memcpy(concatenated_nonces.ptr + initiator_nonce.len,responder_nonce.ptr,responder_nonce.len);
+
+	/* status of set_key is not checked */
+	status = this->prf->set_key(this->prf,concatenated_nonces);
+
+	status = this->prf->allocate_bytes(this->prf,dh_shared_secret,&skeyseed);
+	if (status != SUCCESS)
+	{
+		allocator_free_chunk(concatenated_nonces);
+		this->logger->log(this->logger, ERROR, "Fatal errror: Could not allocate bytes for skeyseed");
+		return status;
+	}
+	allocator_free_chunk(concatenated_nonces);
+
+	prf_plus_seed.len = (initiator_nonce.len + responder_nonce.len + 16);
+	prf_plus_seed.ptr = allocator_alloc(prf_plus_seed.len);
+	if (prf_plus_seed.ptr == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal errror: Could not allocate memory for prf+ seed");
+		allocator_free_chunk(skeyseed);
+		return FAILED;
+	}
+	
+	/* first is initiator */
+	memcpy(prf_plus_seed.ptr,initiator_nonce.ptr,initiator_nonce.len);
+	/* second is responder */
+	memcpy(prf_plus_seed.ptr + initiator_nonce.len,responder_nonce.ptr,responder_nonce.len);
+	/* third is initiator spi */
+	initiator_spi = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
+	memcpy(prf_plus_seed.ptr + initiator_nonce.len + responder_nonce.len,&initiator_spi,8);
+	/* fourth is responder spi */
+	responder_spi = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
+	memcpy(prf_plus_seed.ptr + initiator_nonce.len + responder_nonce.len + 8,&responder_spi,8);
+	
+	this->logger->log_chunk(this->logger, PRIVATE, "Keyseed", &skeyseed);
+	this->logger->log_chunk(this->logger, PRIVATE, "PRF+ Seed", &prf_plus_seed);
+
+	this->logger->log(this->logger, CONTROL | MOST, "Set new key of prf object");
+	status = this->prf->set_key(this->prf,skeyseed);
+	allocator_free_chunk(skeyseed);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal errror: Could not allocate memory for prf+ seed");
+		allocator_free_chunk(prf_plus_seed);
+		return FAILED;
+	}
+	
+	this->logger->log(this->logger, CONTROL | MOST, "Create new prf+ object");
+	prf_plus = prf_plus_create(this->prf, prf_plus_seed);
+	allocator_free_chunk(prf_plus_seed);
+	if (prf_plus == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal errror: prf+ object could not be created");
+		return FAILED;
+	}
+	
+	prf_plus->allocate_bytes(prf_plus,100,&secrets_raw);
+	
+	this->logger->log_chunk(this->logger, PRIVATE, "Secrets", &secrets_raw);
+	
+	allocator_free_chunk(secrets_raw);
+	
+	prf_plus->destroy(prf_plus);
+
+	return SUCCESS;
+}
+
 /**
  * @brief implements function resend_last_reply of protected_ike_sa_t
  */
@@ -264,6 +356,66 @@ static status_t destroy (protected_ike_sa_t *this)
 		/* destroy child sa */
 	}
 	this->child_sas->destroy(this->child_sas);
+
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy secrets");
+	if (this->secrets.d_key.ptr != NULL)
+	{
+		allocator_free(this->secrets.d_key.ptr);
+	}
+	if (this->secrets.ai_key.ptr != NULL)
+	{
+		allocator_free(this->secrets.ai_key.ptr);
+	}
+	if (this->secrets.ar_key.ptr != NULL)
+	{
+		allocator_free(this->secrets.ar_key.ptr);
+	}
+	if (this->secrets.ei_key.ptr != NULL)
+	{
+		allocator_free(this->secrets.ei_key.ptr);
+	}
+	if (this->secrets.er_key.ptr != NULL)
+	{
+		allocator_free(this->secrets.er_key.ptr);
+	}
+	if (this->secrets.pi_key.ptr != NULL)
+	{
+		allocator_free(this->secrets.pi_key.ptr);
+	}
+	if (this->secrets.pr_key.ptr != NULL)
+	{
+		allocator_free(this->secrets.pr_key.ptr);
+	}
+	
+	if (	this->crypter_initiator != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy initiator crypter");
+		this->crypter_initiator->destroy(this->crypter_initiator);
+	}
+	
+	if (	this->crypter_responder != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy responder crypter");
+		this->crypter_responder->destroy(this->crypter_responder);
+	}
+	
+	if (	this->signer_initiator != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy initiator signer");
+		this->signer_initiator->destroy(this->signer_initiator);
+	}
+
+	if (this->signer_responder != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy responder signer");
+		this->signer_responder->destroy(this->signer_responder);
+	}
+	
+	if (this->prf != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy prf");
+		this->prf->destroy(this->prf);
+	}
 	
 	/* destroy ike_sa_id */
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy assigned ike_sa_id");
@@ -330,6 +482,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->build_message = build_message;
 	this->resend_last_reply = resend_last_reply;
 	this->create_delete_job = create_delete_job;
+	this->compute_secrets = compute_secrets;
 
 	/* initialize private fields */
 	this->logger = global_logger_manager->create_logger(global_logger_manager, IKE_SA, NULL);
@@ -370,6 +523,27 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->last_responded_message = NULL;
 	this->message_id_out = 0;
 	this->message_id_in = 0;
+	this->secrets.d_key.ptr = NULL;
+	this->secrets.d_key.len = 0;
+	this->secrets.ai_key.ptr = NULL;
+	this->secrets.ai_key.len = 0;
+	this->secrets.ar_key.ptr = NULL;
+	this->secrets.ar_key.len = 0;
+	this->secrets.ei_key.ptr = NULL;	
+	this->secrets.ei_key.len = 0;
+	this->secrets.er_key.ptr = NULL;
+	this->secrets.er_key.len = 0;
+	this->secrets.pi_key.ptr = NULL;
+	this->secrets.pi_key.len = 0;
+	this->secrets.pr_key.ptr = NULL;
+	this->secrets.pr_key.len = 0;
+	this->crypter_initiator = NULL;
+	this->crypter_responder = NULL;
+	this->signer_initiator = NULL;
+	this->signer_responder = NULL;
+	this->prf = NULL;
+	
+
 
 
 	/* at creation time, IKE_SA is in a initiator state */
