@@ -30,6 +30,9 @@
 #include "utils/logger.h"
 #include "utils/randomizer.h"
 #include "states/state.h"
+#include "transforms/prfs/prf.h"
+#include "transforms/crypters/crypter.h"
+#include "transforms/signers/signer.h"
 
 
 
@@ -55,7 +58,13 @@ struct ike_sa_s {
 	 */
 	status_t (*process_message) (ike_sa_t *this,message_t *message);
 
-
+	/**
+	 * Initiate a new connection with given configuration name
+	 * 
+	 * @param this 			calling object
+	 * @param name 			name of the configuration
+	 * @return				TODO
+	 */
 	status_t (*initialize_connection) (ike_sa_t *this, char *name);
 
 	/**
@@ -104,6 +113,17 @@ struct protected_ike_sa_s {
 	 * 					- OUT_OF_RES
 	 */
 	status_t (*build_message) (protected_ike_sa_t *this, exchange_type_t type, bool request, message_t **message);
+
+	/**
+	 * Initiate a new connection with given configuration name
+	 * 
+	 * @param this 				calling object
+	 * @param dh_shared_secret	shared secret of diffie hellman exchange
+	 * @param initiator_nonce	nonce of initiator
+	 * @param responder_nonce	nonce of responder
+	 * @return					TODO
+	 */
+	status_t (*compute_secrets) (protected_ike_sa_t *this,chunk_t dh_shared_secret,chunk_t initiator_nonce, chunk_t responder_nonce);
 
 	/**
 	 * Creates a job to delete the given IKE_SA
@@ -164,39 +184,73 @@ struct protected_ike_sa_s {
 		host_t *host;
 	} other;
 	
+	/**
+	 * Crypter object for initiator
+	 */
+	crypter_t *crypter_initiator;
 	
-//	struct {
-//		/**
-//		 * Diffie Hellman object used to compute shared secret
-//		 */
-//		diffie_hellman_t *diffie_hellman;
-//		
-//		/**
-//		 * Diffie Hellman group number
-//		 */
-//		u_int16_t dh_group_number;	
-//		
-//		/**
-//		 * Priority used get matching dh_group number
-//		 */
-//		u_int16_t dh_group_priority;
-//		
-//		/**
-//		 * selected proposals
-//		 */
-//		linked_list_t *proposals;
-//		
-//		/**
-//		 * Sent nonce value
-//		 */
-//		 chunk_t sent_nonce;
-//		
-//		/**
-//		 * received nonce value
-//		 */
-//		 chunk_t received_nonce;
-//	} ike_sa_init_data;
+	/**
+	 * Crypter object for responder
+	 */
+	crypter_t *crypter_responder;
 	
+	/**
+	 * Signer object for initiator
+	 */
+	signer_t *signer_initiator;
+	
+	/**
+	 * Signer object for responder
+	 */
+	signer_t *signer_responder;
+	
+	/**
+	 * prf function
+	 */
+	prf_t *prf;
+	
+	
+	
+	/**
+	 * Shared secrets
+	 */
+	struct {
+		/**
+		 * Key used for deriving other keys
+		 */
+		chunk_t d_key;
+		
+		/**
+		 * Key for authenticate (initiator)
+		 */
+		chunk_t ai_key;
+		
+		/**
+		 * Key for authenticate (responder)
+		 */
+		chunk_t ar_key;
+
+		/**
+		 * Key for encryption (initiator)
+		 */
+		chunk_t ei_key;	
+
+		/**
+		 * Key for encryption (responder)
+		 */
+		chunk_t er_key;	
+
+		/**
+		 * Key for generating auth payload (initiator)
+		 */
+		chunk_t pi_key;	
+
+		/**
+		 * Key for generating auth payload (responder)
+		 */
+		chunk_t pr_key;	
+
+	} secrets;
 
 	/**
 	 * next message id to receive
