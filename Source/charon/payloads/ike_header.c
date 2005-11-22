@@ -115,9 +115,9 @@ mapping_t exchange_type_m[] = {
  */
 encoding_rule_t ike_header_encodings[] = {
  	/* 8 Byte SPI, stored in the field initiator_spi */
-	{ U_INT_64,		offsetof(private_ike_header_t, initiator_spi)	},
+	{ IKE_SPI,		offsetof(private_ike_header_t, initiator_spi)	},
  	/* 8 Byte SPI, stored in the field responder_spi */
-	{ U_INT_64,		offsetof(private_ike_header_t, responder_spi) 	},
+	{ IKE_SPI,		offsetof(private_ike_header_t, responder_spi) 	},
  	/* 1 Byte next payload type, stored in the field next_payload */
 	{ U_INT_8,		offsetof(private_ike_header_t, next_payload) 	},
  	/* 4 Bit major version, stored in the field maj_version */
