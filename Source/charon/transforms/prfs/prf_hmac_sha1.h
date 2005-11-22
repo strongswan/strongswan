@@ -2,7 +2,8 @@
  * @file prf_hmac_sha1.h
  * 
  * @brief Implementation of prf_t interface using the
- * HMAC SHA1 algorithm.
+ * HMAC SHA1 algorithm. This simply wraps hmac-sha1
+ * in a prf.
  * 
  */
 
@@ -29,7 +30,7 @@
 #include "../../types.h"
 
 /**
- * Object representing a diffie hellman exchange
+ * Object representing a prf using HMAC-SHA1
  * 
  */
 typedef struct prf_hmac_sha1_s prf_hmac_sha1_t;
