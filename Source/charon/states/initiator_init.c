@@ -86,6 +86,17 @@ struct private_initiator_init_s {
 	logger_t *logger;
 	
 	/**
+	 * Builds the IKE_SA_INIT request message.
+	 * 
+	 * @param this		calling object
+	 * @param message	the created message will be stored at this location
+	 * @return			
+	 * 					- SUCCESS
+	 * 					- OUT_OF_RES
+	 */
+	status_t (*build_ike_sa_init_request) (private_initiator_init_t *this, message_t **message);
+	
+	/**
 	 * Builds the SA payload for this state.
 	 * 
 	 * @param this		calling object
@@ -137,7 +148,6 @@ struct private_initiator_init_s {
 static status_t initiate_connection (private_initiator_init_t *this, char *name, state_t **new_state)
 {
 	message_t 				*message;
-	payload_t 				*payload;
 	packet_t 				*packet;
 	status_t 				status;
 	linked_list_iterator_t 	*proposal_iterator;
@@ -183,8 +193,11 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	/* not needed anymore */
 	proposal_iterator->destroy(proposal_iterator);
 	
-	this	->logger->log(this->logger, CONTROL|MOST, "create diffie hellman object");
-	this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
+	if (this->diffie_hellman == NULL)
+	{
+		this	->logger->log(this->logger, CONTROL|MOST, "create diffie hellman object");
+		this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
+	}
 	
 	if (this->diffie_hellman == NULL)
 	{
@@ -192,6 +205,13 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 		return FAILED;			
 	}
 	
+	if (this->sent_nonce.ptr != NULL)
+	{
+		this->logger->log(this->logger, ERROR, "Free existing sent nonce!");
+		allocator_free(this->sent_nonce.ptr);
+		this->sent_nonce.ptr = NULL;
+		this->sent_nonce.len = 0;
+	}
 
 	this	->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for nonce");
 	if (this->ike_sa->randomizer->allocate_pseudo_random_bytes(this->ike_sa->randomizer, NONCE_SIZE, &(this->sent_nonce)) != SUCCESS)
@@ -202,12 +222,84 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	this	->logger->log(this->logger, RAW|MOST, "Nonce",&(this->sent_nonce));
 
 	
+	
+	status = this->build_ike_sa_init_request (this,&message);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: could not build IKE_SA_INIT request message");
+		return status;
+	}
+	
+	/* generate packet */	
+	this	->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
+	status = message->generate(message, &packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: could not generate packet from message");
+		message->destroy(message);
+		return status;
+	}
+	
+	this	->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	status = global_send_queue->add(global_send_queue, packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not add packet to send queue");
+		packet->destroy(packet);
+		message->destroy(message);
+		return status;
+	}
+
+	/* state can now be changed */
+	this	->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_number, this->diffie_hellman, this->sent_nonce);
+
+	if (next_state == NULL)
+	{
+		this	->logger->log(this->logger, ERROR, "Fatal error: could not create next state object of type ike_sa_init_requested_t");
+		return FAILED;
+	}
+
+	if (	this->ike_sa->last_requested_message != NULL)
+	{
+		/* destroy message */
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy stored last requested message");
+		this->ike_sa->last_requested_message->destroy(this->ike_sa->last_requested_message);
+	}
+
+	/* message is set after state create */
+	this	->logger->log(this->logger, CONTROL|MOST, "replace last requested message with current one");
+	this->ike_sa->last_requested_message	 = message;
+
+	/* message counter can now be increased */
+	this	->logger->log(this->logger, CONTROL|MOST, "Increate message counter for outgoing messages");
+	this->ike_sa->message_id_out++;
+
+	*new_state = (state_t *) next_state;
+	/* state has NOW changed :-) */
+	this	->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
+
+	this	->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
+	this->destroy_after_state_change(this);
+
+	return SUCCESS;
+}
+
+/**
+ * implements private_initiator_init_t.build_ike_sa_init_request
+ */
+static status_t build_ike_sa_init_request (private_initiator_init_t *this, message_t **request)
+{
+	status_t status;
+	payload_t *payload;
+	message_t *message;
+	
 	/* going to build message */
 	this	->logger->log(this->logger, CONTROL|MOST, "Going to build message");
 	status = this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, TRUE, &message);
 	if (status != SUCCESS)
 	{	
-		this->logger->log(this->logger, ERROR, "Could not build message");
+		this->logger->log(this->logger, ERROR, "Could not build empty message");
 		return status;
 	}
 
@@ -225,6 +317,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR, "Could not add SA payload to message");
+		payload->destroy(payload);
 		message->destroy(message);
 		return status;
 	}
@@ -243,6 +336,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR, "Could not add KE payload to message");
+		payload->destroy(payload);
 		message->destroy(message);
 		return status;
 	}
@@ -261,61 +355,12 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR, "Could not add nonce payload to message");
-		message->destroy(message);
-		return status;
-	}
-
-	/* generate packet */	
-	this	->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
-	status = message->generate(message, &packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not generate packet from message");
+		payload->destroy(payload);
 		message->destroy(message);
 		return status;
 	}
 	
-	this	->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
-	status = global_send_queue->add(global_send_queue, packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not add packet to send queue");
-		message->destroy(message);
-		return status;
-	}
-
-	if (	this->ike_sa->last_requested_message != NULL)
-	{
-		/* destroy message */
-		this	->logger->log(this->logger, CONTROL|MOST, "Destroy stored last requested message");
-		this->ike_sa->last_requested_message->destroy(this->ike_sa->last_requested_message);
-	}
-
-	this	->logger->log(this->logger, CONTROL|MOST, "replace last requested message with current one");
-	this->ike_sa->last_requested_message	 = message;
-
-	/* message counter can now be increased */
-	this	->logger->log(this->logger, CONTROL|MOST, "Increate message counter for outgoing messages");
-	this->ike_sa->message_id_out++;
-	
-	
-	/* state can now be changed */
-	this	->logger->log(this->logger, CONTROL|MOST, "Create next state object");
-	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_number, this->diffie_hellman, this->sent_nonce);
-
-	if (next_state == NULL)
-	{
-		this	->logger->log(this->logger, ERROR, "Fatal error: could not create next state object of type ike_sa_init_requested_t");
-		return FAILED;
-	}
-
-	*new_state = (state_t *) next_state;
-	/* state has NOW changed :-) */
-	this	->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
-
-	this	->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
-	this->destroy_after_state_change(this);
-
+	*request = message;
 	return SUCCESS;
 }
 
@@ -501,6 +546,11 @@ static status_t destroy(private_initiator_init_t *this)
 		this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie_hellman_t object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
+	if (this->sent_nonce.ptr != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Free memory of sent nonce");
+		allocator_free(this->sent_nonce.ptr);
+	}
 	
 	allocator_free(this);
 	return SUCCESS;
@@ -548,6 +598,7 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	
 	/* private functions */
 	this->destroy_after_state_change = destroy_after_state_change;
+	this->build_ike_sa_init_request = build_ike_sa_init_request;
 	this->build_nonce_payload = build_nonce_payload;
 	this->build_sa_payload = build_sa_payload;
 	this->build_ke_payload = build_ke_payload;
