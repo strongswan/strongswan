@@ -46,6 +46,6 @@ struct ike_sa_init_responded_s {
  * 
  * @param ike_sa assigned IKE_SA
  */
-ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa);
+ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t shared_secret, chunk_t received_nonce, chunk_t sent_nonce);
 
 #endif /*IKE_SA_INIT_RESPONDED_H_*/
