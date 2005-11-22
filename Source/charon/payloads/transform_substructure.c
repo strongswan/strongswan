@@ -122,7 +122,7 @@ mapping_t encryption_algorithm_m[] = {
  */
 mapping_t pseudo_random_function_m[] = {
 	{PRF_UNDEFINED, "PRF_UNDEFINED"},
-	{PRF_HMAC_MD5, "PRF_HMAC_SHA1"},
+	{PRF_HMAC_MD5, "PRF_HMAC_MD5"},
 	{PRF_HMAC_SHA1, "PRF_HMAC_SHA1"},
 	{PRF_HMAC_TIGER, "PRF_HMAC_TIGER"},
 	{PRF_AES128_CBC, "PRF_AES128_CBC"},
@@ -497,7 +497,7 @@ static status_t clone(private_transform_substructure_t *this,transform_substruct
 	
 	attributes->destroy(attributes);	
 	
-	*clone = new_clone;
+	*clone = &(new_clone->public);
 	return SUCCESS;
 }
 
