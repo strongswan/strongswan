@@ -190,6 +190,7 @@ test_t hasher_md5_test = {test_hasher_md5,"MD5 hasher"};
  * Test for hmac
  */
 test_t hmac_test1 = {test_hmac_sha1, "HMAC using SHA1"};
+test_t hmac_test2 = {test_hmac_md5, "HMAC using MD5"};
 
 /**
  * Test for prf_plus
@@ -253,7 +254,7 @@ logger_manager_t *global_logger_manager;
 		&sender_test,
 		&receiver_test,
 		&ike_sa_id_test,
-		//&ike_sa_test,
+		&ike_sa_test,
 		&generator_test1,
 		&generator_test2,
 		&parser_test1,
@@ -267,12 +268,13 @@ logger_manager_t *global_logger_manager;
 		&generator_test6,
 		&generator_test7,
 		&generator_test8,
-		//&ike_sa_manager_test,
+		&ike_sa_manager_test,
 		&packet_test,
 		&diffie_hellman_test,
 		&hasher_sha1_test,
 		&hasher_md5_test,
 		&hmac_test1,
+		&hmac_test2,
 		&prf_plus_test,
 		NULL
 	};
@@ -291,8 +293,8 @@ logger_manager_t *global_logger_manager;
  	tester_t *tester = tester_create(test_output, FALSE);
 
 
-	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&prf_plus_test); 
+	tester->perform_tests(tester,all_tests);
+	//tester->perform_test(tester,&hmac_test2); 
 
 
  	

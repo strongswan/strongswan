@@ -34,4 +34,12 @@
  */
 void test_hmac_sha1(tester_t *tester);
 
+/**
+ * @brief Test function used to test the hmac functionality
+ * using md5.
+ *
+ * @param tester associated tester object
+ */
+void test_hmac_md5(tester_t *tester);
+
 #endif /*HMAC_TEST_H_*/
