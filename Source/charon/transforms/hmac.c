@@ -39,11 +39,6 @@ struct private_hmac_s {
 	hmac_t public;
 	
 	/**
-	 * key, as in RFC
-	 */
-	chunk_t k;
-	
-	/**
 	 * block size, as in RFC
 	 */
 	u_int8_t b;
@@ -175,7 +170,6 @@ static status_t set_key(private_hmac_t *this, chunk_t key)
 static status_t destroy(private_hmac_t *this)
 {
 	this->h->destroy(this->h);
-	allocator_free(this->k.ptr);
 	allocator_free(this->opaded_key.ptr);
 	allocator_free(this->ipaded_key.ptr);
 	allocator_free(this);
@@ -228,7 +222,6 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	if (this->opaded_key.ptr == NULL)
 	{
 		this->h->destroy(this->h);
-		allocator_free(this->k.ptr);
 		allocator_free(this);
 		return NULL;	
 	}
