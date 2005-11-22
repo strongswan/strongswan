@@ -87,13 +87,13 @@ void test_hmac_sha1(tester_t *tester)
 	 * data_len =      73
 	 * digest =        0xe8e99d0f45237d786d6bbaa7965c7808bbff1a91
 	 * 
-	 * currently performing test 1, 2 and 7
+	 * currently performing test 1, 2, 4 and 7
 	 */
 	
-	chunk_t keys[7];
-	chunk_t data[7];
-	chunk_t digest[7];
-	chunk_t reference[7];
+	chunk_t keys[4];
+	chunk_t data[4];
+	chunk_t digest[4];
+	chunk_t reference[4];
 	int i;
 	
 	/*
@@ -178,4 +178,42 @@ void test_hmac_sha1(tester_t *tester)
 		tester->assert_false(tester, memcmp(digest[i].ptr, reference[i].ptr, 20), "hmac value");
 		allocator_free(digest[i].ptr);
  	}
+ 	
+ 	/*
+ 	 * test 4 is donne in append mode
+ 	 */	
+ 	u_int8_t val = 0xcd;
+
+	u_int8_t key4[] = {
+		0x01,0x02,0x03,0x04,
+		0x05,0x06,0x07,0x08,
+		0x09,0x0a,0x0b,0x0c,
+		0x0d,0x0e,0x0f,0x10,
+		0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19
+	};
+	keys[3].ptr = key4;
+	keys[3].len = sizeof(key4);
+	u_int8_t reference4[] = {
+		0x4c,0x90,0x07,0xf4,
+		0x02,0x62,0x50,0xc6,
+		0xbc,0x84,0x14,0xf9,
+		0xbf,0x50,0xc8,0x6c,
+		0x2d,0x72,0x35,0xda
+	};
+	reference[3].ptr = reference4;
+	reference[3].len = sizeof(reference4);
+ 	
+ 	hmac_t *hmac = hmac_create(HASH_SHA1);
+ 	hmac->set_key(hmac, keys[3]); 	
+ 	data[3].ptr = &val;
+ 	data[3].len = 1;
+ 	for (i=0; i<49; i++)
+ 	{	
+		hmac->get_mac(hmac, data[3], NULL);
+ 	}
+	hmac->allocate_mac(hmac, data[3], &digest[3]);
+	hmac->destroy(hmac);
+	
+	tester->assert_true(tester, digest[3].len == 20, "chunk len append mode");
+	tester->assert_false(tester, memcmp(digest[3].ptr, reference[3].ptr, 20), "hmac value append mode");
 }
