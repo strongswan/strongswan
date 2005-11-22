@@ -53,7 +53,7 @@ struct nonce_payload_s {
 	 * The nonce must have length between 16 and 256 bytes
 	 *
 	 * @param this 			calling nonce_payload_t object
-	 * @param nonce	  		chunk containing the nonce, will NOT be cloned
+	 * @param nonce	  		chunk containing the nonce, will be cloned
 	 * @return 				
 	 * 						- SUCCESS or
 	 * 						- INVALID_ARG, if nonce has an invalid size
@@ -64,11 +64,11 @@ struct nonce_payload_s {
 	 * @brief Get the nonce value.
 	 *
 	 * @param this 			calling nonce_payload_t object
-	 * @param[out] nonce	chunk where nonce data is located (NOT cloned)
+	 * @param[out] nonce	chunk where nonce data is located (cloned)
 	 * @return 				SUCCESS in any case
 	 */
 	status_t (*get_nonce) (nonce_payload_t *this, chunk_t *nonce);
-
+	
 	/**
 	 * @brief Destroys an nonce_payload_t object.
 	 *
