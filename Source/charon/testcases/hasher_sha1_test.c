@@ -41,7 +41,7 @@ void test_hasher_sha1(tester_t *tester)
 	 * 	A million repetitions of "a"
 	 *   		34AA973C D4C4DAA4 F61EEB2B DBAD2731 6534016F
 	 */	
-	hasher_t *hasher = hasher_create(SHA1);
+	hasher_t *hasher = hasher_create(HASH_SHA1);
 	u_int8_t hash_buffer[20];
 	chunk_t abc, abcdb, aaa, hash_chunk;
 	u_int32_t i;
