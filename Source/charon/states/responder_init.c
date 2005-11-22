@@ -22,6 +22,7 @@
  
 #include "responder_init.h"
 
+#include "ike_sa_init_responded.h"
 #include "../globals.h"
 #include "../utils/allocator.h"
 #include "../payloads/sa_payload.h"
@@ -72,6 +73,8 @@ struct private_responder_init_s {
 	
 	/**
 	 * Received nonce value
+	 * 
+	 * This value is passed to the next state of type ike_sa_init_responded_t.
 	 */
 	chunk_t received_nonce;
 	
@@ -121,6 +124,16 @@ struct private_responder_init_s {
 	 * 					- OUT_OF_RES
 	 */
 	status_t (*build_nonce_payload) (private_responder_init_t *this, payload_t **payload);	
+	
+	/**
+	 * Destroy function called internally of this class after state change succeeded.
+	 * 
+	 * This destroy function does not destroy objects which were passed to the new state.
+	 * 
+	 * @param this		calling object
+	 * @return			SUCCESS in any case
+	 */
+	status_t (*destroy_after_state_change) (private_responder_init_t *this);
 };
 
 /**
@@ -134,6 +147,22 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	message_t *response;
 	payload_t *payload;
 	packet_t *packet;
+	chunk_t shared_secret;
+	exchange_type_t	exchange_type;
+	ike_sa_init_responded_t *next_state;
+
+	exchange_type = message->get_exchange_type(message);
+	if (exchange_type != IKE_SA_INIT)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state responder_init",mapping_find(exchange_type_m,exchange_type));
+		return FAILED;
+	}
+	
+	if (!message->get_request(message))
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Only requests of type IKE_SA_INIT supported in state responder_init");
+		return FAILED;
+	}
 	
 	/* this is the first message we process, so copy host infos */
 	message->get_source(message, &source);
@@ -263,15 +292,20 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			case NONCE:
 			{
 				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
-				chunk_t nonce;
+
+				if (this->received_nonce.ptr != NULL)
+				{
+					this->logger->log(this->logger, CONTROL | MOST, "Destroy stored received nonce");
+					allocator_free(this->received_nonce.ptr);
+					this->received_nonce.ptr = NULL;
+					this->received_nonce.len = 0;
+				}
 
 				this->logger->log(this->logger, CONTROL | MORE, "Get nonce value and store it");
-				nonce_payload->get_nonce(nonce_payload, &nonce);
-				/** @todo free if there is already one */
-				this->received_nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
-				this->received_nonce.len = nonce.len;
-				if (this->received_nonce.ptr == NULL)
+				status = nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
+				if (status != SUCCESS)
 				{
+					this->logger->log(this->logger, ERROR, "Fatal error: Could not get nonce");
 					payloads->destroy(payloads);
 					return OUT_OF_RES;
 				}
@@ -291,17 +325,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	/* iterator can be destroyed */
 	payloads->destroy(payloads);
-
-	/********************/	
-	diffie_hellman_t *dh = this->diffie_hellman;
-	chunk_t shared_secret;
-				
-	status = dh->get_shared_secret(dh, &shared_secret);
-	this->logger->log_chunk(this->logger, RAW, "Shared secret", &shared_secret);
-	
-	allocator_free_chunk(shared_secret);
-		/********************/
-
 	
 	this->logger->log(this->logger, CONTROL | MORE, "Request successfully handled. Going to create reply.");
 
@@ -386,19 +409,40 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		return status;
 	}
 
+	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &shared_secret);
+	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &shared_secret);
+	
+	
+	/* state can now be changed */
+	this	->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+
+	next_state = ike_sa_init_responded_create(this->ike_sa, shared_secret, this->received_nonce, this->sent_nonce);
+
+	if (next_state == NULL)
+	{
+		this	->logger->log(this->logger, ERROR, "Fatal error: could not create next state object of type ike_sa_init_responded_t");
+		allocator_free_chunk(shared_secret);
+		return FAILED;
+	}
+	
 	if (	this->ike_sa->last_responded_message != NULL)
 	{
 		/* destroy message */
 		this	->logger->log(this->logger, CONTROL|MOST, "Destroy stored last responded message");
 		this->ike_sa->last_responded_message->destroy(this->ike_sa->last_responded_message);
 	}
-
 	this->ike_sa->last_responded_message	 = response;
 
+	/* message counter can now be increased */
+	this	->logger->log(this->logger, CONTROL|MOST, "Increate message counter for incoming messages");
+	this->ike_sa->message_id_in++;
+
+	*new_state = (state_t *) next_state;
 	/* state has NOW changed :-) */
-//	this	->logger->log(this->logger, CONTROL|MORE, "Change state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,this->state),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
-	
-	*new_state = &(this->public.state_interface);
+	this	->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,RESPONDER_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_RESPONDED) );
+
+	this	->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
+	this->destroy_after_state_change(this);	
 	
 	return SUCCESS;
 }
@@ -595,6 +639,34 @@ static status_t destroy(private_responder_init_t *this)
 	
 }
 
+/**
+ * Implements private_responder_init_t.destroy_after_state_change
+ */
+static status_t destroy_after_state_change (private_responder_init_t *this)
+{
+	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy responder_init_t state object");
+	
+	/* destroy stored proposal */
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
+	while (this->proposals->get_count(this->proposals) > 0)
+	{
+		proposal_substructure_t *current_proposal;
+		this->proposals->remove_first(this->proposals,(void **)&current_proposal);
+		current_proposal->destroy(current_proposal);
+	}
+	this->proposals->destroy(this->proposals);
+	
+	/* destroy diffie hellman object */
+	if (this->diffie_hellman != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie_hellman_t object");
+		this->diffie_hellman->destroy(this->diffie_hellman);
+	}
+	
+	allocator_free(this);
+	return SUCCESS;
+}
+
 /* 
  * Described in header.
  */
@@ -616,6 +688,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->build_sa_payload = build_sa_payload;
 	this->build_ke_payload = build_ke_payload;
 	this->build_nonce_payload = build_nonce_payload;
+	this->destroy_after_state_change = destroy_after_state_change;
 	
 	/* private data */
 	this->ike_sa = ike_sa;
