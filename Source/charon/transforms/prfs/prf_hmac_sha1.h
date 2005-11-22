@@ -45,11 +45,10 @@ struct prf_hmac_sha1_s {
 /**
  * Creates a new prf_hmac_sha1_t object
  * 
- * @param key						Key to use for this prf
  * @return
  * 									- prf_hmac_sha1_t if successfully
  * 									- NULL if out of ressources
  */
-prf_hmac_sha1_t *prf_hmac_sha1_create(chunk_t key);
+prf_hmac_sha1_t *prf_hmac_sha1_create();
 
 #endif /*PRF_HMAC_SHA1_H_*/

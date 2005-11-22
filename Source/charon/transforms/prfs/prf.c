@@ -29,13 +29,13 @@
 /*
  * Described in header
  */
-prf_t *prf_create(pseudo_random_function_t pseudo_random_function, chunk_t key)
+prf_t *prf_create(pseudo_random_function_t pseudo_random_function)
 {
 	switch (pseudo_random_function)
 	{
 		case PRF_HMAC_SHA1:
 		{
-			return (prf_t*)prf_hmac_sha1_create(key);
+			return (prf_t*)prf_hmac_sha1_create();
 		}
 		case PRF_HMAC_MD5:
 		case PRF_HMAC_TIGER:

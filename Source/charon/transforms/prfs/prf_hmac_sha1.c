@@ -44,7 +44,7 @@ struct private_prf_hmac_sha1_s {
 /*
  * Described in header
  */
-prf_hmac_sha1_t *prf_hmac_sha1_create(chunk_t key)
+prf_hmac_sha1_t *prf_hmac_sha1_create()
 {
 	private_prf_hmac_sha1_t *this = allocator_alloc_thing(private_prf_hmac_sha1_t);
 	

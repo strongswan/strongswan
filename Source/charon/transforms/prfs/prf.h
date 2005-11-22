@@ -65,6 +65,14 @@ struct prf_s {
 	size_t (*get_block_size) (prf_t *this);
 	
 	/**
+	 * @brief Set the key for this prf
+	 * 
+	 * @param this			calling prf
+	 * @return				block size in bytes
+	 */
+	status_t (*set_key) (prf_t *this, chunk_t key);
+	
+	/**
 	 * @brief Destroys a prf object.
 	 *
 	 * @param this 	prf_t object to destroy
@@ -78,11 +86,10 @@ struct prf_s {
  * Creates a new prf_t object
  * 
  * @param pseudo_random_function	Algorithm to use
- * @param key						A chunk containing the key
  * @return
  * 									- prf_t if successfully
  * 									- NULL if out of ressources or prf not supported
  */
-prf_t *prf_create(pseudo_random_function_t pseudo_random_function, chunk_t key);
+prf_t *prf_create(pseudo_random_function_t pseudo_random_function);
 
 #endif /*PRF_H_*/
