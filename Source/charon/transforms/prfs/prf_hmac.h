@@ -1,9 +1,8 @@
 /**
- * @file prf_hmac_sha1.h
+ * @file prf_hmac.h
  * 
  * @brief Implementation of prf_t interface using the
- * HMAC SHA1 algorithm. This simply wraps hmac-sha1
- * in a prf.
+ * a HMAC algorithm. This simply wraps a hmac in a prf.
  * 
  */
 
@@ -22,20 +21,21 @@
  * for more details.
  */
 
-#ifndef PRF_HMAC_SHA1_H_
-#define PRF_HMAC_SHA1_H_
+#ifndef PRF_HMAC_H_
+#define PRF_HMAC_H_
 
 #include "prf.h"
 
 #include "../../types.h"
+#include "../hashers/hasher.h"
 
 /**
- * Object representing a prf using HMAC-SHA1
+ * Object representing a prf using HMAC
  * 
  */
-typedef struct prf_hmac_sha1_s prf_hmac_sha1_t;
+typedef struct prf_hmac_s prf_hmac_t;
 
-struct prf_hmac_sha1_s {
+struct prf_hmac_s {
 	
 	/**
 	 * generic prf_t interface for this prf
@@ -44,12 +44,13 @@ struct prf_hmac_sha1_s {
 };
 
 /**
- * Creates a new prf_hmac_sha1_t object
+ * Creates a new prf_hmac_t object
  * 
+ * @param hash_algorithm			hmac's hash algorithm
  * @return
- * 									- prf_hmac_sha1_t if successfully
+ * 									- prf_hmac_t if successfully
  * 									- NULL if out of ressources
  */
-prf_hmac_sha1_t *prf_hmac_sha1_create();
+prf_hmac_t *prf_hmac_create(hash_algorithm_t hash_algorithm);
 
 #endif /*PRF_HMAC_SHA1_H_*/

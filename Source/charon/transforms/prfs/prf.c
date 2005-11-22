@@ -23,7 +23,8 @@
 
 #include "prf.h"
 
-#include "prf_hmac_sha1.h"
+#include "prf_hmac.h"
+#include "../hashers/hasher.h"
 
 
 /*
@@ -35,9 +36,12 @@ prf_t *prf_create(pseudo_random_function_t pseudo_random_function)
 	{
 		case PRF_HMAC_SHA1:
 		{
-			return (prf_t*)prf_hmac_sha1_create();
+			return (prf_t*)prf_hmac_create(HASH_SHA1);
 		}
 		case PRF_HMAC_MD5:
+		{
+			return (prf_t*)prf_hmac_create(HASH_MD5);
+		}
 		case PRF_HMAC_TIGER:
 		case PRF_AES128_CBC:
 		default:
