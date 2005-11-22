@@ -322,6 +322,10 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 			case ATTRIBUTE_TYPE:
 				number_of_bits = 15;
 				break;
+			case IKE_SPI:
+				number_of_bits = 64;
+				break;
+
 			default:
 			return FAILED;
 	}
@@ -434,6 +438,14 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 				/* TODO add support for big endian machines */
 				this->write_bytes_to_buffer(this,&int32_val_high,sizeof(u_int32_t));
 				this->write_bytes_to_buffer(this,&int32_val_low,sizeof(u_int32_t));
+				break;
+			}
+			
+			case IKE_SPI:
+			{
+				/* 64 bit are written as they come :-) */
+				this->write_bytes_to_buffer(this,(this->data_struct + offset),sizeof(u_int64_t));
+				this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)(this->data_struct + offset), sizeof(u_int64_t));
 				break;
 			}
 
@@ -721,12 +733,13 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 							i, mapping_find(encoding_type_m,rules[i].type));
 		switch (rules[i].type)
 		{
-			/* all u int values and ATTRIBUTE_TYPE are generated in generate_u_int_type */
+			/* all u int values, IKE_SPI and ATTRIBUTE_TYPE are generated in generate_u_int_type */
 			case U_INT_4:
 			case U_INT_8:
 			case U_INT_16:
 			case U_INT_32:
 			case U_INT_64:
+			case IKE_SPI:
 			case ATTRIBUTE_TYPE:
 			{
 				status = this->generate_u_int_type(this,rules[i].type,rules[i].offset);
