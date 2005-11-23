@@ -202,6 +202,9 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				linked_list_iterator_t *suggested_proposals, *accepted_proposals;
+				encryption_algorithm_t		encryption_algorithm = ENCR_UNDEFINED;
+				pseudo_random_function_t		pseudo_random_function = PRF_UNDEFINED;
+				integrity_algorithm_t		integrity_algorithm = AUTH_UNDEFINED;
 
 				status = this->proposals->create_iterator(this->proposals, &accepted_proposals, FALSE);
 				if (status != SUCCESS)
@@ -235,7 +238,28 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				
 				/* iterators are not needed anymore */			
 				suggested_proposals->destroy(suggested_proposals);
+					
+				
+				/* now let the configuration-manager return the transforms for the given proposal*/
+				this->logger->log(this->logger, CONTROL | MOST, "Get transforms for accepted proposal");
+				status = global_configuration_manager->get_transforms_for_host_and_proposals(global_configuration_manager,
+									this->ike_sa->other.host, accepted_proposals, &encryption_algorithm,&pseudo_random_function,&integrity_algorithm);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "Accepted proposals not supported?!");
+					accepted_proposals->destroy(accepted_proposals);
+					payloads->destroy(payloads);
+					return status;
+				}
 				accepted_proposals->destroy(accepted_proposals);
+				
+				this->ike_sa->prf = prf_create(pseudo_random_function);
+				if (this->ike_sa->prf == NULL)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "PRF type not supported");
+					payloads->destroy(payloads);
+					return FAILED;
+				}
 				
 				this->logger->log(this->logger, CONTROL | MORE, "SA Payload processed");
 				/* ok, we have what we need for sa_payload (proposals are stored in this->proposals)*/

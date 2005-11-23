@@ -163,6 +163,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				if (this->ike_sa->prf == NULL)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "PRF type not supported");
+					payloads->destroy(payloads);
 					return FAILED;
 				}
 				
