@@ -18,7 +18,11 @@ NETWORK_DIR= $(MAIN_DIR)network/
 OBJS+= $(BUILD_DIR)packet.o
 $(BUILD_DIR)packet.o :		$(NETWORK_DIR)packet.c $(NETWORK_DIR)packet.h
 							$(CC) $(CFLAGS) -c -o $@ $<
-				
+
 OBJS+= $(BUILD_DIR)socket.o
 $(BUILD_DIR)socket.o :		$(NETWORK_DIR)socket.c $(NETWORK_DIR)socket.h
-							$(CC) $(CFLAGS) -c -o $@ $<				
+							$(CC) $(CFLAGS) -c -o $@ $<
+
+OBJS+= $(BUILD_DIR)host.o
+$(BUILD_DIR)host.o :		$(NETWORK_DIR)host.c $(NETWORK_DIR)host.h
+							$(CC) $(CFLAGS) -c -o $@ $<

@@ -25,7 +25,7 @@
 
 #include <types.h>
 #include <utils/linked_list.h>
-#include <utils/host.h>
+#include <network/host.h>
 #include <encoding/payloads/transform_substructure.h>
 #include <transforms/prfs/prf.h>
 #include <transforms/signers/signer.h>

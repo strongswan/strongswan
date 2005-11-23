@@ -23,10 +23,6 @@ OBJS+= $(BUILD_DIR)gmp_helper.o
 $(BUILD_DIR)gmp_helper.o :		$(UTILS_DIR)gmp_helper.c $(UTILS_DIR)gmp_helper.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)host.o
-$(BUILD_DIR)host.o :			$(UTILS_DIR)host.c $(UTILS_DIR)host.h
-								$(CC) $(CFLAGS) -c -o $@ $<
-
 OBJS+= $(BUILD_DIR)linked_list.o
 $(BUILD_DIR)linked_list.o :		$(UTILS_DIR)linked_list.c $(UTILS_DIR)linked_list.h
 								$(CC) $(CFLAGS) -c -o $@ $<
