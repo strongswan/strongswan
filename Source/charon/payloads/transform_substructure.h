@@ -25,12 +25,12 @@
 #ifndef TRANSFORM_SUBSTRUCTURE_H_
 #define TRANSFORM_SUBSTRUCTURE_H_
 
-#include "../types.h"
-#include "../definitions.h"
-#include "payload.h"
-#include "../definitions.h"
-#include "../utils/linked_list.h"
-#include "transform_attribute.h"
+#include <types.h>
+#include <definitions.h>
+#include <payloads/payload.h>
+#include <payloads/transform_attribute.h>
+#include <utils/linked_list.h>
+
 
 /**
  * IKEv1 Value for a transform payload

@@ -27,11 +27,11 @@
 
 #include "transform_substructure.h"
 
-#include "transform_attribute.h"
-#include "encodings.h"
-#include "../types.h"
-#include "../utils/allocator.h"
-#include "../utils/linked_list.h"
+#include <payloads/transform_attribute.h>
+#include <payloads/encodings.h>
+#include <types.h>
+#include <utils/allocator.h>
+#include <utils/linked_list.h>
 
 /**
  * Private data of an transform_substructure_t' Object

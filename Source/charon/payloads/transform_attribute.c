@@ -27,9 +27,9 @@
 
 #include "transform_attribute.h"
 
-#include "encodings.h"
-#include "../types.h"
-#include "../utils/allocator.h"
+#include <payloads/encodings.h>
+#include <types.h>
+#include <utils/allocator.h>
 
 /**
  * Private data of an transform_attribute_t Object

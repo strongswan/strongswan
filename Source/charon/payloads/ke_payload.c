@@ -29,8 +29,8 @@
 
 #include "ke_payload.h"
 
-#include "encodings.h"
-#include "../utils/allocator.h"
+#include <payloads/encodings.h>
+#include <utils/allocator.h>
 
 
 /**

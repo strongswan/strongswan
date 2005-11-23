@@ -29,8 +29,8 @@
 
 #include "notify_payload.h"
 
-#include "encodings.h"
-#include "../utils/allocator.h"
+#include <payloads/encodings.h>
+#include <utils/allocator.h>
 
 /**
  * Private data of an notify_payload_t Object

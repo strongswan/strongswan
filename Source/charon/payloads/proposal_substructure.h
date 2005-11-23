@@ -25,10 +25,10 @@
 #ifndef PROPOSAL_SUBSTRUCTURE_H_
 #define PROPOSAL_SUBSTRUCTURE_H_
 
-#include "../types.h"
-#include "payload.h"
-#include "../utils/linked_list.h"
-#include "transform_substructure.h"
+#include <types.h>
+#include <payloads/payload.h>
+#include <payloads/transform_substructure.h>
+#include <utils/linked_list.h>
 
 /**
  * Length of the proposal substructure header

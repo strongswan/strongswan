@@ -24,11 +24,11 @@
 
 #include "payload.h"
 
-#include "ike_header.h"
-#include "sa_payload.h"
-#include "nonce_payload.h"
-#include "ke_payload.h"
-#include "notify_payload.h"
+#include <payloads/ike_header.h>
+#include <payloads/sa_payload.h>
+#include <payloads/nonce_payload.h>
+#include <payloads/ke_payload.h>
+#include <payloads/notify_payload.h>
 
 
 

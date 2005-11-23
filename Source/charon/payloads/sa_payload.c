@@ -28,9 +28,9 @@
 
 #include "sa_payload.h"
 
-#include "encodings.h"
-#include "../utils/allocator.h"
-#include "../utils/linked_list.h"
+#include <payloads/encodings.h>
+#include <utils/allocator.h>
+#include <utils/linked_list.h>
 
 
 /**

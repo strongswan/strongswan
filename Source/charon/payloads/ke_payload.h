@@ -27,10 +27,10 @@
 #ifndef KE_PAYLOAD_H_
 #define KE_PAYLOAD_H_
 
-#include "../types.h"
-#include "payload.h"
-#include "transform_substructure.h"
-#include "../utils/linked_list.h"
+#include <types.h>
+#include <payloads/payload.h>
+#include <payloads/transform_substructure.h>
+#include <utils/linked_list.h>
 
 /**
  * Critical flag must not be set

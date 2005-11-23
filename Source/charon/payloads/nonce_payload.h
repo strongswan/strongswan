@@ -25,8 +25,8 @@
 #ifndef NONCE_PAYLOAD_H_
 #define NONCE_PAYLOAD_H_
 
-#include "../types.h"
-#include "payload.h"
+#include <types.h>
+#include <payloads/payload.h>
 
 /**
  * length of a nonce payload without a nonce in int

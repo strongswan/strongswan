@@ -26,10 +26,10 @@
 #ifndef SA_PAYLOAD_H_
 #define SA_PAYLOAD_H_
 
-#include "../types.h"
-#include "payload.h"
-#include "proposal_substructure.h"
-#include "../utils/linked_list.h"
+#include <types.h>
+#include <payloads/payload.h>
+#include <payloads/proposal_substructure.h>
+#include <utils/linked_list.h>
 
 /**
  * Critical flag must not be set

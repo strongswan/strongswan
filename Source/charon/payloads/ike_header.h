@@ -26,8 +26,8 @@
 #ifndef IKE_HEADER_H_
 #define IKE_HEADER_H_
 
-#include "../types.h"
-#include "payload.h"
+#include <types.h>
+#include <payloads/payload.h>
 
 /**
  * Major Version of IKEv2

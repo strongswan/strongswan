@@ -25,8 +25,8 @@
 #ifndef TRANSFORM_ATTRIBUTE_H_
 #define TRANSFORM_ATTRIBUTE_H_
 
-#include "../types.h"
-#include "payload.h"
+#include <types.h>
+#include <payloads/payload.h>
 
 
 /**
