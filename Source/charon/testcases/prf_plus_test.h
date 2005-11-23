@@ -23,8 +23,8 @@
 #ifndef PRF_PLUS_TEST_H_
 #define PRF_PLUS_TEST_H_
 
-#include "../transforms/prf_plus.h"
-#include "../utils/tester.h"
+#include <transforms/prf_plus.h>
+#include <utils/tester.h>
 
 /**
  * @brief Test function used to test the prf_plus class.

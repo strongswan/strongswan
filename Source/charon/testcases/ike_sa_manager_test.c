@@ -26,8 +26,8 @@
 
 #include "ike_sa_manager_test.h"
 
-#include "../types.h"
-#include "../ike_sa_manager.h"
+#include <types.h>
+#include <ike_sa_manager.h>
 
 
 static struct ike_sa_manager_test_struct_s {

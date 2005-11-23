@@ -23,35 +23,35 @@
  
 #include <stdio.h>
 
-#include "../queues/job_queue.h"
-#include "../queues/event_queue.h"
-#include "../queues/send_queue.h"
-#include "../configuration_manager.h"
-#include "../ike_sa_manager.h"
-#include "../socket.h"
-#include "../utils/logger_manager.h"
-#include "../utils/allocator.h"
-#include "../utils/tester.h"
-#include "linked_list_test.h"
-#include "thread_pool_test.h"
-#include "job_queue_test.h"
-#include "event_queue_test.h"
-#include "send_queue_test.h"
-#include "socket_test.h"
-#include "sender_test.h"
-#include "scheduler_test.h"
-#include "receiver_test.h"
-#include "ike_sa_id_test.h"
-#include "ike_sa_test.h"
-#include "ike_sa_manager_test.h"
-#include "generator_test.h"
-#include "parser_test.h"
-#include "packet_test.h"
-#include "diffie_hellman_test.h"
-#include "hasher_sha1_test.h"
-#include "hasher_md5_test.h"
-#include "hmac_test.h"
-#include "prf_plus_test.h"
+#include <queues/job_queue.h>
+#include <queues/event_queue.h>
+#include <queues/send_queue.h>
+#include <configuration_manager.h>
+#include <ike_sa_manager.h>
+#include <socket.h>
+#include <utils/logger_manager.h>
+#include <utils/allocator.h>
+#include <utils/tester.h>
+#include <testcases/linked_list_test.h>
+#include <testcases/thread_pool_test.h>
+#include <testcases/job_queue_test.h>
+#include <testcases/event_queue_test.h>
+#include <testcases/send_queue_test.h>
+#include <testcases/socket_test.h>
+#include <testcases/sender_test.h>
+#include <testcases/scheduler_test.h>
+#include <testcases/receiver_test.h>
+#include <testcases/ike_sa_id_test.h>
+#include <testcases/ike_sa_test.h>
+#include <testcases/ike_sa_manager_test.h>
+#include <testcases/generator_test.h>
+#include <testcases/parser_test.h>
+#include <testcases/packet_test.h>
+#include <testcases/diffie_hellman_test.h>
+#include <testcases/hasher_sha1_test.h>
+#include <testcases/hasher_md5_test.h>
+#include <testcases/hmac_test.h>
+#include <testcases/prf_plus_test.h>
 
 
 /* output for test messages */

@@ -23,8 +23,8 @@
 #ifndef HMAC_TEST_H_
 #define HMAC_TEST_H_
 
-#include "../transforms/hmac.h"
-#include "../utils/tester.h"
+#include <transforms/hmac.h>
+#include <utils/tester.h>
 
 /**
  * @brief Test function used to test the hmac functionality

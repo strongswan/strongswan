@@ -25,8 +25,8 @@
 
 #include "socket_test.h"
 
-#include "../socket.h"
-#include "../utils/allocator.h"
+#include <socket.h>
+#include <utils/allocator.h>
 
 /*
  * Description in header file

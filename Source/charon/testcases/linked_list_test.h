@@ -23,7 +23,7 @@
 #ifndef LINKED_LIST_TEST_H_
 #define LINKED_LIST_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 /**
  * @brief Test function for the type linked_list_t

@@ -24,8 +24,8 @@
  
 #include "prf_plus_test.h"
 
-#include "../transforms/prf_plus.h"
-#include "../utils/allocator.h"
+#include <transforms/prf_plus.h>
+#include <utils/allocator.h>
 
 
 /* 

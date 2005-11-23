@@ -24,7 +24,7 @@
  
 #include "hasher_md5_test.h"
 
-#include "../utils/allocator.h"
+#include <utils/allocator.h>
 
 
 /* 

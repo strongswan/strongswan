@@ -23,9 +23,9 @@
 #ifndef HASHER_MD5_TEST_H_
 #define HASHER_MD5_TEST_H_
 
-#include "../transforms/hashers/hasher.h"
-#include "../transforms/hashers/hasher_md5.h"
-#include "../utils/tester.h"
+#include <transforms/hashers/hasher.h>
+#include <transforms/hashers/hasher_md5.h>
+#include <utils/tester.h>
 
 /**
  * @brief Test function used to test the md5-hasher functionality

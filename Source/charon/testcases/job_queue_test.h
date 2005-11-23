@@ -23,7 +23,7 @@
 #ifndef JOB_QUEUE_TEST_H_
 #define JOB_QUEUE_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 /**
  * @brief Test function used to test the job_queue functionality

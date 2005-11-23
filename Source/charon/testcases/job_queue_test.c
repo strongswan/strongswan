@@ -27,8 +27,8 @@
 
 #include "job_queue_test.h"
 
-#include "../utils/allocator.h"
-#include "../queues/job_queue.h"
+#include <utils/allocator.h>
+#include <queues/job_queue.h>
 
 
 typedef struct job_queue_test_s job_queue_test_t;

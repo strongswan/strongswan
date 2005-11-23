@@ -23,9 +23,9 @@
 #ifndef HASHER_SHA1_TEST_H_
 #define HASHER_SHA1_TEST_H_
 
-#include "../transforms/hashers/hasher.h"
-#include "../transforms/hashers/hasher_sha1.h"
-#include "../utils/tester.h"
+#include <transforms/hashers/hasher.h>
+#include <transforms/hashers/hasher_sha1.h>
+#include <utils/tester.h>
 
 /**
  * @brief Test function used to test the sha1-hasher functionality

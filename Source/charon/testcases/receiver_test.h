@@ -23,7 +23,7 @@
 #ifndef RECEIVER_TEST_H_
 #define RECEIVER_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 /**
  * @brief Test function for the type receiver_t

@@ -24,8 +24,8 @@
  
 #include "hmac_test.h"
 
-#include "../transforms/hmac.h"
-#include "../utils/allocator.h"
+#include <transforms/hmac.h>
+#include <utils/allocator.h>
 
 
 /* 

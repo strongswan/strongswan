@@ -24,10 +24,10 @@
 
 #include "../transforms/diffie_hellman.h"
 
-#include "../globals.h"
-#include "../utils/logger_manager.h"
-#include "../utils/allocator.h"
-#include "../payloads/transform_substructure.h"
+#include <globals.h>
+#include <utils/logger_manager.h>
+#include <utils/allocator.h>
+#include <payloads/transform_substructure.h>
 
 /* 
  * described in Header-File

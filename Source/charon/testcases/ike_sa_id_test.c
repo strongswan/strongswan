@@ -22,7 +22,7 @@
  
 #include "ike_sa_id_test.h"
 
-#include "../ike_sa_id.h"
+#include <ike_sa_id.h>
 
 /* 
  * described in Header-File

@@ -25,14 +25,14 @@
 
 #include "receiver_test.h"
 
-#include "../globals.h"
-#include "../receiver.h"
-#include "../packet.h"
-#include "../socket.h"
-#include "../queues/send_queue.h"
-#include "../queues/job_queue.h"
-#include "../payloads/encodings.h"
-#include "../utils/allocator.h"
+#include <globals.h>
+#include <receiver.h>
+#include <packet.h>
+#include <socket.h>
+#include <queues/send_queue.h>
+#include <queues/job_queue.h>
+#include <payloads/encodings.h>
+#include <utils/allocator.h>
 
 /**
  * Number of packets to send by sender-thread

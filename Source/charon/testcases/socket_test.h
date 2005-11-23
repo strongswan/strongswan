@@ -23,7 +23,7 @@
 #ifndef SOCKET_TEST_H_
 #define SOCKET_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 /**
  * @brief Test function for the type socket_t

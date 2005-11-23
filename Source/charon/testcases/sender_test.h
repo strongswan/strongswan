@@ -23,7 +23,7 @@
 #ifndef SENDER_TEST_H_
 #define SENDER_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 /**
  * @brief Test function for the type sender_t

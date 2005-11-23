@@ -24,7 +24,7 @@
 
 #include "linked_list_test.h"
  
-#include "../utils/linked_list.h"
+#include <utils/linked_list.h>
  
  /*
  * Description in header-file

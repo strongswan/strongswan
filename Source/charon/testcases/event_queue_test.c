@@ -25,8 +25,8 @@
 
 #include "event_queue_test.h"
 
-#include "../utils/allocator.h"
-#include "../queues/event_queue.h"
+#include <utils/allocator.h>
+#include <queues/event_queue.h>
 
 /**
  * Number of different times to insert per thread

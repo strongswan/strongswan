@@ -24,7 +24,7 @@
  
 #include "hasher_sha1_test.h"
 
-#include "../utils/allocator.h"
+#include <utils/allocator.h>
 
 
 /* 

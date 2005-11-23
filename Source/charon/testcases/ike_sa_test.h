@@ -23,7 +23,7 @@
 #ifndef IKE_SA_TEST_H_
 #define IKE_SA_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 /**
  * @brief Test function used to test the ike_sa_t functionality

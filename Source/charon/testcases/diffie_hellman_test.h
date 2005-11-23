@@ -23,7 +23,7 @@
 #ifndef DIFFIE_HELLMAN_TEST_H_
 #define DIFFIE_HELLMAN_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 /**
  * @brief Test function used to test the diffie_hellman_t functionality

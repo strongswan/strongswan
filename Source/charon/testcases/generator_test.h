@@ -23,7 +23,7 @@
 #ifndef GENERATOR_TEST_H_
 #define GENERATOR_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 /**
  * @brief Test function used to test the generator with header payload

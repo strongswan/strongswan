@@ -22,7 +22,7 @@
 #ifndef PARSER_TEST_H_
 #define PARSER_TEST_H_
 
-#include "../utils/tester.h"
+#include <utils/tester.h>
 
 
 void test_parser_with_header_payload(tester_t *tester);
