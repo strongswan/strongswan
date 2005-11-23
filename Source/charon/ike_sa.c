@@ -222,6 +222,9 @@ static status_t compute_secrets (protected_ike_sa_t *this,chunk_t dh_shared_secr
 	/* second is responder */
 	memcpy(concatenated_nonces.ptr + initiator_nonce.len,responder_nonce.ptr,responder_nonce.len);
 
+	this->logger->log_chunk(this->logger, RAW, "Nonce data", &concatenated_nonces);
+
+
 	/* status of set_key is not checked */
 	status = this->prf->set_key(this->prf,concatenated_nonces);
 
