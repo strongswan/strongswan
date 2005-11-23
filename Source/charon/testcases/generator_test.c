@@ -25,19 +25,19 @@
 #include "generator_test.h"
 
 #include <globals.h>
-#include <generator.h>
+#include <encoding/generator.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 #include <utils/logger.h>
-#include <payloads/encodings.h>
-#include <payloads/ike_header.h>
-#include <payloads/transform_attribute.h>
-#include <payloads/transform_substructure.h>
-#include <payloads/proposal_substructure.h>
-#include <payloads/sa_payload.h>
-#include <payloads/ke_payload.h>
-#include <payloads/notify_payload.h>
-#include <payloads/nonce_payload.h>
+#include <encoding/payloads/encodings.h>
+#include <encoding/payloads/ike_header.h>
+#include <encoding/payloads/transform_attribute.h>
+#include <encoding/payloads/transform_substructure.h>
+#include <encoding/payloads/proposal_substructure.h>
+#include <encoding/payloads/sa_payload.h>
+#include <encoding/payloads/ke_payload.h>
+#include <encoding/payloads/notify_payload.h>
+#include <encoding/payloads/nonce_payload.h>
 
 /*
  * Described in Header 

@@ -26,7 +26,7 @@
 #include <types.h>
 #include <ike_sa_id.h>
 #include <network/packet.h>
-#include <payloads/ike_header.h>
+#include <encoding/payloads/ike_header.h>
 #include <utils/linked_list.h>
 
 

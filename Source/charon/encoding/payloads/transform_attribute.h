@@ -26,7 +26,7 @@
 #define TRANSFORM_ATTRIBUTE_H_
 
 #include <types.h>
-#include <payloads/payload.h>
+#include <encoding/payloads/payload.h>
 
 
 /**

@@ -28,9 +28,9 @@
 #include <states/ike_sa_init_requested.h>
 #include <utils/allocator.h>
 #include <transforms/diffie_hellman.h>
-#include <payloads/sa_payload.h>
-#include <payloads/ke_payload.h>
-#include <payloads/nonce_payload.h>
+#include <encoding/payloads/sa_payload.h>
+#include <encoding/payloads/ke_payload.h>
+#include <encoding/payloads/nonce_payload.h>
 
 
 /**

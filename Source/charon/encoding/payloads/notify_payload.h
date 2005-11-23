@@ -29,7 +29,7 @@
 #define NOTIFY_PAYLOAD_H_
 
 #include <types.h>
-#include <payloads/payload.h>
+#include <encoding/payloads/payload.h>
 #include <utils/linked_list.h>
 
 /**

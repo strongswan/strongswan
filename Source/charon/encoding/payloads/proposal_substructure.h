@@ -26,8 +26,8 @@
 #define PROPOSAL_SUBSTRUCTURE_H_
 
 #include <types.h>
-#include <payloads/payload.h>
-#include <payloads/transform_substructure.h>
+#include <encoding/payloads/payload.h>
+#include <encoding/payloads/transform_substructure.h>
 #include <utils/linked_list.h>
 
 /**

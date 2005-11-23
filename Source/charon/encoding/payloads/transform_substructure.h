@@ -27,8 +27,8 @@
 
 #include <types.h>
 #include <definitions.h>
-#include <payloads/payload.h>
-#include <payloads/transform_attribute.h>
+#include <encoding/payloads/payload.h>
+#include <encoding/payloads/transform_attribute.h>
 #include <utils/linked_list.h>
 
 

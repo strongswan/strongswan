@@ -32,11 +32,11 @@
 #include <utils/randomizer.h>
 #include <transforms/diffie_hellman.h>
 #include <transforms/prf_plus.h>
-#include <payloads/sa_payload.h>
-#include <payloads/nonce_payload.h>
-#include <payloads/ke_payload.h>
-#include <payloads/transform_substructure.h>
-#include <payloads/transform_attribute.h>
+#include <encoding/payloads/sa_payload.h>
+#include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/ke_payload.h>
+#include <encoding/payloads/transform_substructure.h>
+#include <encoding/payloads/transform_attribute.h>
 #include <states/initiator_init.h>
 #include <states/responder_init.h>
 

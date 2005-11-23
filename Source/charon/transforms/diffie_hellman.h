@@ -24,7 +24,7 @@
 #define DIFFIE_HELLMAN_H_
 
 #include <types.h>
-#include <payloads/transform_substructure.h>
+#include <encoding/payloads/transform_substructure.h>
 
 /**
  * Object representing a diffie hellman exchange

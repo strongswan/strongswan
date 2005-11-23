@@ -27,13 +27,13 @@
 #include <types.h>
 #include <globals.h>
 #include <ike_sa_id.h>
-#include <generator.h>
-#include <parser.h>
+#include <encoding/generator.h>
+#include <encoding/parser.h>
 #include <utils/linked_list.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
-#include <payloads/encodings.h>
-#include <payloads/payload.h>
+#include <encoding/payloads/encodings.h>
+#include <encoding/payloads/payload.h>
 
 
 /**

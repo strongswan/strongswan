@@ -25,7 +25,7 @@
 #define IKE_SA_H_
 
 #include <types.h>
-#include <message.h>
+#include <encoding/message.h>
 #include <ike_sa_id.h>
 #include <utils/logger.h>
 #include <utils/randomizer.h>

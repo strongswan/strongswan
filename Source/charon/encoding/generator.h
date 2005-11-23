@@ -24,8 +24,8 @@
 #define GENERATOR_H_
 
 #include <types.h>
-#include <payloads/encodings.h>
-#include <payloads/payload.h>
+#include <encoding/payloads/encodings.h>
+#include <encoding/payloads/payload.h>
 
 /**
  * Generating is done in a data buffer.

@@ -24,9 +24,9 @@
 #ifndef PAYLOAD_H_
 #define PAYLOAD_H_
 
-#include <payloads/encodings.h>
 #include <types.h>
 #include <definitions.h>
+#include <encoding/payloads/encodings.h>
 
 
 /**

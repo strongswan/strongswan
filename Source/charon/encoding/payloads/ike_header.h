@@ -27,7 +27,7 @@
 #define IKE_HEADER_H_
 
 #include <types.h>
-#include <payloads/payload.h>
+#include <encoding/payloads/payload.h>
 
 /**
  * Major Version of IKEv2

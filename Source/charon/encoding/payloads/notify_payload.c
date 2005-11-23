@@ -29,7 +29,7 @@
 
 #include "notify_payload.h"
 
-#include <payloads/encodings.h>
+#include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 
 /**

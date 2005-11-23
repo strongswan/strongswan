@@ -27,8 +27,8 @@
 
 #include "transform_substructure.h"
 
-#include <payloads/transform_attribute.h>
-#include <payloads/encodings.h>
+#include <encoding/payloads/transform_attribute.h>
+#include <encoding/payloads/encodings.h>
 #include <types.h>
 #include <utils/allocator.h>
 #include <utils/linked_list.h>

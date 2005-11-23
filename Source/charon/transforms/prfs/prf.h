@@ -23,7 +23,7 @@
 #ifndef PRF_H_
 #define PRF_H_
 
-#include <payloads/transform_substructure.h>
+#include <encoding/payloads/transform_substructure.h>
 
 
 /**

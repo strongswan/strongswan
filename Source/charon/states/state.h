@@ -25,7 +25,7 @@
 
 #include <definitions.h>
 #include <types.h>
-#include <message.h>
+#include <encoding/message.h>
 
 extern mapping_t ike_sa_state_m[];
 

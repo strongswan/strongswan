@@ -27,8 +27,8 @@
 
 #include "proposal_substructure.h"
 
-#include <payloads/encodings.h>
-#include <payloads/transform_substructure.h>
+#include <encoding/payloads/encodings.h>
+#include <encoding/payloads/transform_substructure.h>
 #include <types.h>
 #include <utils/allocator.h>
 #include <utils/linked_list.h>

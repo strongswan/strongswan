@@ -27,8 +27,8 @@
 #define SA_PAYLOAD_H_
 
 #include <types.h>
-#include <payloads/payload.h>
-#include <payloads/proposal_substructure.h>
+#include <encoding/payloads/payload.h>
+#include <encoding/payloads/proposal_substructure.h>
 #include <utils/linked_list.h>
 
 /**

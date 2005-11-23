@@ -32,7 +32,7 @@
 #include <queues/send_queue.h>
 #include <queues/job_queue.h>
 #include <queues/jobs/incoming_packet_job.h>
-#include <payloads/encodings.h>
+#include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 
 /**
