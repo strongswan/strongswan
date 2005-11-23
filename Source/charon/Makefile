@@ -23,15 +23,21 @@ CFLAGS+= -DLEAK_DETECTIVE -I.
 # objects is extended by each included Makefile
 OBJS= 
 
-daemon :		$(BUILD_DIR)charon
+daemon :		build_dir $(BUILD_DIR)charon
 
-all :			$(BUILD_DIR)charon $(BUILD_DIR)run_tests
+all :		build_dir $(BUILD_DIR)charon $(BUILD_DIR)run_tests
 
 doxygen : 
-				doxygen doxyconfig.DoxyFile
+			doxygen doxyconfig.DoxyFile
 
-include network/Makefile.network
+include $(MAIN_DIR)network/Makefile.network
+include $(MAIN_DIR)config/Makefile.config
+include $(MAIN_DIR)encoding/Makefile.encoding
+include $(MAIN_DIR)queues/Makefile.queues
+include $(MAIN_DIR)sa/Makefile.sa
 
+build_dir:
+							mkdir $(BUILD_DIR)
 
 $(BUILD_DIR)daemon.o :		daemon.c daemon.h 
 							$(CC) $(CFLAGS) -c -o $@ $<
@@ -50,11 +56,12 @@ $(BUILD_DIR)charon :		$(OBJS) $(BUILD_DIR)daemon.o
 							$(CC) $(CFLAGS) $(OBJS) $(BUILD_DIR)daemon.o -o $@ 
 				
 							
-include testcases/Makefile.testcases	
+#include testcases/Makefile.testcases	
 				
-$(BUILD_DIR)run_tests :		$(OBJS)
+#$(BUILD_DIR)run_tests :		$(OBJS)
 							$(CC) $(CFLAGS) $(OBJS) -o $@ 
 				
 
 clean : 		
-							rm $(OBJS) $(BUILD_DIR)charon
+							rm $(OBJS) $(BUILD_DIR)charon $(BUILD_DIR)daemon.o; \
+							rmdir $(BUILD_DIR)

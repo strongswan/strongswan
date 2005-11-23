@@ -12,13 +12,19 @@
 # for more details.
 #
 
-NETWORK_DIR= $(MAIN_DIR)network/
+ENCODING_DIR= $(MAIN_DIR)encoding/
+
+OBJS+= $(BUILD_DIR)generator.o
+$(BUILD_DIR)generator.o :		$(ENCODING_DIR)generator.c $(ENCODING_DIR)generator.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+OBJS+= $(BUILD_DIR)parser.o
+$(BUILD_DIR)parser.o :			$(ENCODING_DIR)parser.c $(ENCODING_DIR)parser.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+OBJS+= $(BUILD_DIR)message.o
+$(BUILD_DIR)message.o :			$(ENCODING_DIR)message.c $(ENCODING_DIR)message.h
+								$(CC) $(CFLAGS) -c -o $@ $<
 
 
-OBJS+= $(BUILD_DIR)packet.o
-$(BUILD_DIR)packet.o :		$(NETWORK_DIR)packet.c $(NETWORK_DIR)packet.h
-							$(CC) $(CFLAGS) -c -o $@ $<
-				
-OBJS+= $(BUILD_DIR)socket.o
-$(BUILD_DIR)socket.o :		$(NETWORK_DIR)socket.c $(NETWORK_DIR)socket.h
-							$(CC) $(CFLAGS) -c -o $@ $<				
+include $(ENCODING_DIR)payloads/Makefile.payloads

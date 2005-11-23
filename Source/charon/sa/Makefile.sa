@@ -12,13 +12,18 @@
 # for more details.
 #
 
-NETWORK_DIR= $(MAIN_DIR)network/
+SA_DIR= $(MAIN_DIR)sa/
 
+OBJS+= $(BUILD_DIR)ike_sa_id.o
+$(BUILD_DIR)ike_sa_id.o :		$(SA_DIR)ike_sa_id.c $(SA_DIR)ike_sa_id.h
+								$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)packet.o
-$(BUILD_DIR)packet.o :		$(NETWORK_DIR)packet.c $(NETWORK_DIR)packet.h
-							$(CC) $(CFLAGS) -c -o $@ $<
-				
-OBJS+= $(BUILD_DIR)socket.o
-$(BUILD_DIR)socket.o :		$(NETWORK_DIR)socket.c $(NETWORK_DIR)socket.h
-							$(CC) $(CFLAGS) -c -o $@ $<				
+OBJS+= $(BUILD_DIR)ike_sa_manager.o
+$(BUILD_DIR)ike_sa_manager.o :	$(SA_DIR)ike_sa_manager.c $(SA_DIR)ike_sa_manager.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+OBJS+= $(BUILD_DIR)ike_sa.o
+$(BUILD_DIR)ike_sa.o :			$(SA_DIR)ike_sa.c $(SA_DIR)ike_sa.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+include $(SA_DIR)states/Makefile.states
