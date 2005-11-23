@@ -28,8 +28,8 @@
 #include <socket.h>
 #include <packet.h>
 #include <globals.h>
-#include <jobs/job.h>
 #include <queues/job_queue.h>
+#include <queues/jobs/job.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 

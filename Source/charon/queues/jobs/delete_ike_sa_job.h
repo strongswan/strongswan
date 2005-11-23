@@ -25,7 +25,7 @@
 
 #include <types.h>
 #include <ike_sa_id.h>
-#include <jobs/job.h>
+#include <queues/jobs/job.h>
 
 
 /**

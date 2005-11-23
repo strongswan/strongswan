@@ -24,7 +24,7 @@
 #define INITIATE_IKE_SA_JOB_H_
 
 #include <types.h>
-#include <jobs/job.h>
+#include <queues/jobs/job.h>
 
 /**
  * Object representing an INITIATE_IKE_SA Job

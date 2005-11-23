@@ -24,7 +24,7 @@
 #define JOB_QUEUE_H_
 
 #include <types.h>
-#include <jobs/job.h>
+#include <queues/jobs/job.h>
 
 /**
  * @brief Job-Queue

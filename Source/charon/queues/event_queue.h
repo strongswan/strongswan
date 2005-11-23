@@ -26,7 +26,7 @@
 #include <sys/time.h>
 
 #include <types.h>
-#include <jobs/job.h>
+#include <queues/jobs/job.h>
 
 /**
  * @brief Event-Queue used to store timed events.
