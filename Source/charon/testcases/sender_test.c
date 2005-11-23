@@ -25,7 +25,7 @@
 #include "sender_test.h"
 
 #include <globals.h>
-#include <sender.h>
+#include <threads/sender.h>
 #include <network/packet.h>
 #include <network/socket.h>
 #include <queues/send_queue.h>

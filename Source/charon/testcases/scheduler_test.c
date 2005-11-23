@@ -26,7 +26,7 @@
 #include "scheduler_test.h"
 
 #include <globals.h>
-#include <scheduler.h>
+#include <threads/scheduler.h>
 #include <queues/event_queue.h>
 #include <queues/job_queue.h>
 #include <queues/jobs/incoming_packet_job.h>

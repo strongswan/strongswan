@@ -29,10 +29,10 @@
 
 #include <types.h>
 #include <ike_sa_manager.h>
-#include <sender.h>
-#include <receiver.h>
-#include <scheduler.h>
-#include <thread_pool.h>
+#include <threads/sender.h>
+#include <threads/receiver.h>
+#include <threads/scheduler.h>
+#include <threads/thread_pool.h>
 #include <network/socket.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>

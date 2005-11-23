@@ -24,7 +24,7 @@
 
 #include "thread_pool_test.h"
 
-#include <thread_pool.h>
+#include <threads/thread_pool.h>
 
 /*
  * Description in header file

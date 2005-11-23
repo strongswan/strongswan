@@ -26,7 +26,7 @@
 #include "receiver_test.h"
 
 #include <globals.h>
-#include <receiver.h>
+#include <threads/receiver.h>
 #include <network/packet.h>
 #include <network/socket.h>
 #include <queues/send_queue.h>
