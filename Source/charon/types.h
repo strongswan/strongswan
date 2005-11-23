@@ -28,7 +28,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
-#include "definitions.h"
+#include <definitions.h>
 
 typedef enum status_e {
 	SUCCESS,

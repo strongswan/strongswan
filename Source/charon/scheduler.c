@@ -25,11 +25,11 @@
 
 #include "scheduler.h"
 
-#include "globals.h"
-#include "definitions.h"
-#include "utils/allocator.h"
-#include "utils/logger_manager.h"
-#include "queues/job_queue.h"
+#include <globals.h>
+#include <definitions.h>
+#include <utils/allocator.h>
+#include <utils/logger_manager.h>
+#include <queues/job_queue.h>
 
 /**
  * Private data of a scheduler object

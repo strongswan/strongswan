@@ -22,7 +22,7 @@
  
 #include "ike_auth_requested.h"
 
-#include "../utils/allocator.h"
+#include <utils/allocator.h>
 
 /**
  * Private data of a ike_auth_requested_t object.

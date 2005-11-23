@@ -27,10 +27,10 @@
 
 #include "diffie_hellman.h"
 
-#include "../payloads/transform_substructure.h"
-#include "../utils/allocator.h"
-#include "../utils/randomizer.h"
-#include "../utils/gmp_helper.h"
+#include <payloads/transform_substructure.h>
+#include <utils/allocator.h>
+#include <utils/randomizer.h>
+#include <utils/gmp_helper.h>
 
 
 /**

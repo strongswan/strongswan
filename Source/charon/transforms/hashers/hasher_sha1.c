@@ -26,8 +26,8 @@
 
 #include "hasher_sha1.h"
 
-#include "../../definitions.h"
-#include "../../utils/allocator.h"
+#include <definitions.h>
+#include <utils/allocator.h>
 
 #define BLOCK_SIZE_SHA1 20
 

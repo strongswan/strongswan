@@ -23,8 +23,8 @@
 
 #include "hasher.h"
 
-#include "hasher_sha1.h"
-#include "hasher_md5.h"
+#include <transforms/hashers/hasher_sha1.h>
+#include <transforms/hashers/hasher_md5.h>
 
 
 

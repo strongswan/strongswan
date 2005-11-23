@@ -23,9 +23,8 @@
 #ifndef RESPONDER_INIT_H_
 #define RESPONDER_INIT_H_
 
-#include "state.h"
-
-#include "../ike_sa.h"
+#include <ike_sa.h>
+#include <states/state.h>
 
 /**
  * @brief This class represents an IKE_SA state when initializing

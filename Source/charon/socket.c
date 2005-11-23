@@ -32,9 +32,9 @@
 
 #include "socket.h"
 
-#include "globals.h"
-#include "utils/allocator.h"
-#include "utils/logger_manager.h"
+#include <globals.h>
+#include <utils/allocator.h>
+#include <utils/logger_manager.h>
 
 typedef struct private_socket_s private_socket_t;
 

@@ -23,8 +23,8 @@
 
 #include "prf.h"
 
-#include "prf_hmac.h"
-#include "../hashers/hasher.h"
+#include <transforms/hashers/hasher.h>
+#include <transforms/prfs/prf_hmac.h>
 
 
 /*

@@ -25,13 +25,13 @@
 
 #include "receiver.h"
 
-#include "jobs/job.h"
-#include "socket.h"
-#include "packet.h"
-#include "globals.h"
-#include "queues/job_queue.h"
-#include "utils/allocator.h"
-#include "utils/logger_manager.h"
+#include <socket.h>
+#include <packet.h>
+#include <globals.h>
+#include <jobs/job.h>
+#include <queues/job_queue.h>
+#include <utils/allocator.h>
+#include <utils/logger_manager.h>
 
 /**
  * Private data of a receiver object

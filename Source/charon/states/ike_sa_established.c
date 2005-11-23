@@ -22,7 +22,7 @@
  
 #include "ike_sa_established.h"
 
-#include "../utils/allocator.h"
+#include <utils/allocator.h>
 
 /**
  * Private data of a ike_sa_established_t object.

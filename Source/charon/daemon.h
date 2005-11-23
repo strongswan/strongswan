@@ -23,7 +23,7 @@
 #ifndef DAEMON_H_
 #define DAEMON_H_
 
-#include "globals.h"
+#include <globals.h>
 
 #define DAEMON_NAME "charon"
 

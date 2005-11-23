@@ -24,7 +24,7 @@
 #ifndef HASHER_SHA1_H_
 #define HASHER_SHA1_H_
 
-#include "hasher.h"
+#include <transforms/hashers/hasher.h>
 
 
 /**

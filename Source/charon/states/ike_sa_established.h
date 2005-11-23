@@ -23,8 +23,8 @@
 #ifndef IKE_SA_ESTABLISHED_H_
 #define IKE_SA_ESTABLISHED_H_
 
-#include "state.h"
-#include "../ike_sa.h"
+#include <states/state.h>
+#include <ike_sa.h>
 
 /**
  * @brief This class represents an the state of an established

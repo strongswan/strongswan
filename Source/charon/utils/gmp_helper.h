@@ -28,7 +28,7 @@
 
 #include <gmp.h>
 
-#include "../types.h"
+#include <types.h>
 
 /**
  * Class with helper functions to manipulate gmp values 

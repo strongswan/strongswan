@@ -23,7 +23,7 @@
 #ifndef RANDOMIZER_H_
 #define RANDOMIZER_H_
 
-#include "../types.h"
+#include <types.h>
 
 /**
  * Object representing an randomizer

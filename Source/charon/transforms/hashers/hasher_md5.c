@@ -28,8 +28,8 @@
 
 #include "hasher_md5.h"
 
-#include "../../definitions.h"
-#include "../../utils/allocator.h"
+#include <definitions.h>
+#include <utils/allocator.h>
 
 #define BLOCK_SIZE_MD5 16
 

@@ -23,8 +23,8 @@
 
 #include "prf_hmac.h"
 
-#include "../../utils/allocator.h"
-#include "../hmac.h"
+#include <utils/allocator.h>
+#include <transforms/hmac.h>
 
 typedef struct private_prf_hmac_s private_prf_hmac_t;
 

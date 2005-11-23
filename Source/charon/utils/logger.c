@@ -29,8 +29,8 @@
 
 #include "logger.h"
 
-#include "../daemon.h"
-#include "allocator.h"
+#include <daemon.h>
+#include <utils/allocator.h>
 
 /**
  * Maximum length of al log entry (only used for logger_s.log)

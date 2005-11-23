@@ -25,12 +25,12 @@
 
 #include "sender.h"
 
-#include "socket.h"
-#include "packet.h"
-#include "globals.h"
-#include "queues/send_queue.h"
-#include "utils/allocator.h"
-#include "utils/logger_manager.h"
+#include <socket.h>
+#include <packet.h>
+#include <globals.h>
+#include <queues/send_queue.h>
+#include <utils/allocator.h>
+#include <utils/logger_manager.h>
 
 /**
  * Private data of a sender object

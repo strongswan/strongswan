@@ -24,10 +24,10 @@
 #ifndef IKE_SA_INIT_REQUESTED_H_
 #define IKE_SA_INIT_REQUESTED_H_
 
-#include "state.h"
-#include "../types.h"
-#include "../transforms/diffie_hellman.h"
-#include "../ike_sa.h"
+#include <types.h>
+#include <ike_sa.h>
+#include <states/state.h>
+#include <transforms/diffie_hellman.h>
 
 /**
  * @brief This class represents an IKE_SA state when requested an IKE_SA_INIT

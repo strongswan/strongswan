@@ -23,7 +23,7 @@
 #ifndef SENDER_H_
 #define SENDER_H_
 
-#include "types.h"
+#include <types.h>
 
 /**
  * @brief A Sender object which sends packets on the socket

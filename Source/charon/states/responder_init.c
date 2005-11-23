@@ -22,13 +22,14 @@
  
 #include "responder_init.h"
 
-#include "ike_sa_init_responded.h"
-#include "../globals.h"
-#include "../utils/allocator.h"
-#include "../payloads/sa_payload.h"
-#include "../payloads/ke_payload.h"
-#include "../payloads/nonce_payload.h"
-#include "../transforms/diffie_hellman.h"
+#include <globals.h>
+#include <states/state.h>
+#include <states/ike_sa_init_responded.h>
+#include <utils/allocator.h>
+#include <payloads/sa_payload.h>
+#include <payloads/ke_payload.h>
+#include <payloads/nonce_payload.h>
+#include <transforms/diffie_hellman.h>
 
 /**
  * Private data of a responder_init_t object.

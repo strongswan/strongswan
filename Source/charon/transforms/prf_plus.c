@@ -23,8 +23,8 @@
 
 #include "prf_plus.h"
 
-#include "../utils/allocator.h"
-#include "../definitions.h"
+#include <utils/allocator.h>
+#include <definitions.h>
 
 /**
  * Private data of an prf_plus_t object.

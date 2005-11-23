@@ -26,13 +26,13 @@
 
 #include "configuration_manager.h"
 
-#include "types.h"
-#include "globals.h"
-#include "utils/allocator.h"
-#include "payloads/nonce_payload.h"
-#include "payloads/proposal_substructure.h"
-#include "payloads/ke_payload.h"
-#include "payloads/transform_attribute.h"
+#include <types.h>
+#include <globals.h>
+#include <utils/allocator.h>
+#include <payloads/nonce_payload.h>
+#include <payloads/proposal_substructure.h>
+#include <payloads/ke_payload.h>
+#include <payloads/transform_attribute.h>
 
 /**
  * Private data of an configuration_t object

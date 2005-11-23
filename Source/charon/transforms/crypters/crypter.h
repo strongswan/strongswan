@@ -23,7 +23,7 @@
 #ifndef CRYPTER_H_
 #define CRYPTER_H_
 
-#include "../../payloads/transform_substructure.h"
+#include <payloads/transform_substructure.h>
 
 
 /**

@@ -20,11 +20,9 @@
  * for more details.
  */
 
-
-
 #include "host.h"
 
-#include "allocator.h"
+#include <utils/allocator.h>
 
 /**
  * @brief The logger object.

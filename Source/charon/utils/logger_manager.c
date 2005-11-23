@@ -23,9 +23,9 @@
  
 #include "logger_manager.h"
  
-#include "allocator.h"
-#include "linked_list.h"
-#include "../definitions.h"
+#include <definitions.h>
+#include <utils/allocator.h>
+#include <utils/linked_list.h>
 
 mapping_t logger_context_t_mappings[] = {
 	{PARSER, "PARSER"},

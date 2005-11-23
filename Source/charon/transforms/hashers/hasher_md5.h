@@ -24,7 +24,7 @@
 #ifndef HASHER_MD5_H_
 #define HASHER_MD5_H_
 
-#include "hasher.h"
+#include <transforms/hashers/hasher.h>
 
 
 /**

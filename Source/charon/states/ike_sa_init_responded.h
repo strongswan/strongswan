@@ -23,9 +23,8 @@
 #ifndef IKE_SA_INIT_RESPONDED_H_
 #define IKE_SA_INIT_RESPONDED_H_
 
-#include "state.h"
-
-#include "../ike_sa.h"
+#include <ike_sa.h>
+#include <states/state.h>
 
 /**
  * @brief This class represents an IKE_SA state when responded to an IKE_SA_INIT request

@@ -25,7 +25,7 @@
 
 #include <pthread.h>
 
-#include "logger.h"
+#include <utils/logger.h>
 
 /**
  * @brief Context of a specific logger 

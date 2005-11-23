@@ -25,8 +25,8 @@
  
 #include "gmp_helper.h"
 
-#include "allocator.h"
-#include "randomizer.h"
+#include <utils/allocator.h>
+#include <utils/randomizer.h>
 
 /**
  * Number of times the probabilistic primality test is applied

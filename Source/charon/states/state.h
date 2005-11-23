@@ -23,9 +23,9 @@
 #ifndef STATE_H_
 #define STATE_H_
 
-#include "../definitions.h"
-#include "../types.h"
-#include "../message.h"
+#include <definitions.h>
+#include <types.h>
+#include <message.h>
 
 extern mapping_t ike_sa_state_m[];
 

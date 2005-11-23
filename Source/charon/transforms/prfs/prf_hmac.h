@@ -26,8 +26,8 @@
 
 #include "prf.h"
 
-#include "../../types.h"
-#include "../hashers/hasher.h"
+#include <types.h>
+#include <transforms/hashers/hasher.h>
 
 /**
  * Object representing a prf using HMAC

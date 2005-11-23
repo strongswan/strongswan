@@ -28,7 +28,7 @@
  
 #include "randomizer.h"
 
-#include "allocator.h"
+#include <utils/allocator.h>
 
 /**
  * Default random device used when no device is given.

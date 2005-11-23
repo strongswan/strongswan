@@ -28,18 +28,18 @@
 
 #include "generator.h"
 
-#include "types.h"
-#include "globals.h"
-#include "utils/allocator.h"
-#include "utils/linked_list.h"
-#include "utils/logger_manager.h"
-#include "payloads/payload.h"
-#include "payloads/proposal_substructure.h"
-#include "payloads/transform_substructure.h"
-#include "payloads/sa_payload.h"
-#include "payloads/ke_payload.h"
-#include "payloads/notify_payload.h"
-#include "payloads/nonce_payload.h"
+#include <types.h>
+#include <globals.h>
+#include <utils/allocator.h>
+#include <utils/linked_list.h>
+#include <utils/logger_manager.h>
+#include <payloads/payload.h>
+#include <payloads/proposal_substructure.h>
+#include <payloads/transform_substructure.h>
+#include <payloads/sa_payload.h>
+#include <payloads/ke_payload.h>
+#include <payloads/notify_payload.h>
+#include <payloads/nonce_payload.h>
 
 /**
  * Private part of a generator_t object

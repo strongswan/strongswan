@@ -24,9 +24,9 @@
 #ifndef INITIATOR_INIT_H_
 #define INITIATOR_INIT_H_
 
-#include "state.h"
+#include <ike_sa.h>
+#include <states/state.h>
 
-#include "../ike_sa.h"
 
 /**
  * @brief This class represents an IKE_SA state when initializing

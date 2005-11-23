@@ -23,13 +23,13 @@
 #ifndef CONFIGURATION_MANAGER_H_
 #define CONFIGURATION_MANAGER_H_
 
-#include "types.h"
-#include "utils/linked_list.h"
-#include "utils/host.h"
-#include "payloads/transform_substructure.h"
-#include "transforms/prfs/prf.h"
-#include "transforms/signers/signer.h"
-#include "transforms/crypters/crypter.h"
+#include <types.h>
+#include <utils/linked_list.h>
+#include <utils/host.h>
+#include <payloads/transform_substructure.h>
+#include <transforms/prfs/prf.h>
+#include <transforms/signers/signer.h>
+#include <transforms/crypters/crypter.h>
 
 /**
  * @brief Manages all configuration aspects of the daemon.

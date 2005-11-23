@@ -23,7 +23,7 @@
 #ifndef SCHEDULER_H_
 #define SCHEDULER_H_
 
-#include "types.h"
+#include <types.h>
 
 /**
  * @brief The scheduler, looks for timed events in event-queue and adds them

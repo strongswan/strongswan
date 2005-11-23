@@ -25,7 +25,7 @@
 
 #include <stdlib.h>
 
-#include "types.h"
+#include <types.h>
 
 /**
  * @brief A thread_pool contains a pool of threads processing the job queue.

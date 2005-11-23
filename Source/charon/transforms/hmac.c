@@ -24,7 +24,7 @@
 
 #include "hmac.h"
 
-#include "../utils/allocator.h"
+#include <utils/allocator.h>
 
 /**
  * Private data of an hmac_t object.

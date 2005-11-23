@@ -23,13 +23,13 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
-#include "socket.h"
-#include "queues/send_queue.h"
-#include "queues/job_queue.h"
-#include "queues/event_queue.h"
-#include "utils/logger_manager.h"
-#include "ike_sa_manager.h"
-#include "configuration_manager.h"
+#include <socket.h>
+#include <ike_sa_manager.h>
+#include <queues/send_queue.h>
+#include <queues/job_queue.h>
+#include <queues/event_queue.h>
+#include <utils/logger_manager.h>
+#include <configuration_manager.h>
 
 
 extern socket_t *global_socket;

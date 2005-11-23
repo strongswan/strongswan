@@ -23,8 +23,8 @@
 #ifndef DIFFIE_HELLMAN_H_
 #define DIFFIE_HELLMAN_H_
 
-#include "../types.h"
-#include "../payloads/transform_substructure.h"
+#include <types.h>
+#include <payloads/transform_substructure.h>
 
 /**
  * Object representing a diffie hellman exchange

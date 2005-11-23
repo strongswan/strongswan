@@ -23,7 +23,7 @@
 #ifndef LINKED_LIST_H_
 #define LINKED_LIST_H_
 
-#include "../types.h"
+#include <types.h>
 
 /**
  * @brief Iterator for a linked list

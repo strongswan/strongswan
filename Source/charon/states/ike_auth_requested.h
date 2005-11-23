@@ -23,8 +23,8 @@
 #ifndef IKE_AUTH_REQUESTED_H_
 #define IKE_AUTH_REQUESTED_H_
 
-#include "state.h"
-#include "../ike_sa.h"
+#include <states/state.h>
+#include <ike_sa.h>
 
 /**
  * @brief This class represents an IKE_SA, which has requested an IKE_AUTH.

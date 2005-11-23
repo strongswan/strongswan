@@ -24,7 +24,7 @@
 #define HASHER_H_
 
 
-#include "../../types.h"
+#include <types.h>
 
 /**
  * algorithms to use for hashing

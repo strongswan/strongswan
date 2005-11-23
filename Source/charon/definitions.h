@@ -71,7 +71,9 @@
 #define min(x,y) (x < y ? x : y)
 
 
-
+/**
+ * mapping entry which defines the end of a mapping_t array
+ */
 #define MAPPING_END (-1)
 
 /**

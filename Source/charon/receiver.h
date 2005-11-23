@@ -23,7 +23,7 @@
 #ifndef RECEIVER_H_
 #define RECEIVER_H_
 
-#include "types.h"
+#include <types.h>
 
 /**
  * @brief A Receiver object which receives packets on the socket and adds them to the job-queue

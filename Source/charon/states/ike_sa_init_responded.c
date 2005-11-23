@@ -22,7 +22,7 @@
  
 #include "ike_sa_init_responded.h"
 
-#include "../utils/allocator.h"
+#include <utils/allocator.h>
 
 /**
  * Private data of a ike_sa_init_responded_t object.
