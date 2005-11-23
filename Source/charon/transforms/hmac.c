@@ -199,6 +199,7 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	switch (hash_algorithm)
 	{
 		case HASH_SHA1:
+		case HASH_MD5:
 			this->b = 64;
 			break;
 		default:
