@@ -30,7 +30,7 @@ daemon :	$(BUILD_DIR)charon
 testcases :	$(BUILD_DIR)run_tests 
 
 doxygen : 
-			doxygen doxyconfig.DoxyFile
+			doxygen documentation.DoxyFile
 
 
 include $(MAIN_DIR)network/Makefile.network
