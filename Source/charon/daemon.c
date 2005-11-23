@@ -27,18 +27,18 @@
 #include "daemon.h" 
 
 
-#include "types.h"
-#include "socket.h"
-#include "ike_sa_manager.h"
-#include "sender.h"
-#include "receiver.h"
-#include "scheduler.h"
-#include "thread_pool.h"
-#include "utils/allocator.h"
-#include "utils/logger_manager.h"
-#include "queues/event_queue.h"
-#include "queues/job_queue.h"
-#include "queues/send_queue.h"
+#include <types.h>
+#include <ike_sa_manager.h>
+#include <sender.h>
+#include <receiver.h>
+#include <scheduler.h>
+#include <thread_pool.h>
+#include <network/socket.h>
+#include <utils/allocator.h>
+#include <utils/logger_manager.h>
+#include <queues/event_queue.h>
+#include <queues/job_queue.h>
+#include <queues/send_queue.h>
 
 
 /* function declaration (defined and described after main function) */

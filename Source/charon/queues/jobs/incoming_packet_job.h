@@ -24,7 +24,7 @@
 #define INCOMING_PACKET_JOB_H_
 
 #include <types.h>
-#include <packet.h>
+#include <network/packet.h>
 #include <queues/jobs/job.h>
 
 /**

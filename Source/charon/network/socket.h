@@ -27,7 +27,7 @@
 
 
 #include <types.h>
-#include <packet.h>
+#include <network/packet.h>
 
 
 /**

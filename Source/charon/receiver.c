@@ -25,9 +25,9 @@
 
 #include "receiver.h"
 
-#include <socket.h>
-#include <packet.h>
 #include <globals.h>
+#include <network/socket.h>
+#include <network/packet.h>
 #include <queues/job_queue.h>
 #include <queues/jobs/job.h>
 #include <utils/allocator.h>

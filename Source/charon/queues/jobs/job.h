@@ -95,10 +95,5 @@ struct job_s{
 	status_t (*destroy) (job_t *job);
 };
 
-#include "initiate_ike_sa_job.h"
-#include "delete_ike_sa_job.h"
-#include "incoming_packet_job.h"
-
-
 
 #endif /*JOB_H_*/

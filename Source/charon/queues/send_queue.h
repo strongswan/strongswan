@@ -24,7 +24,7 @@
 #define SEND_QUEUE_H_
 
 #include <types.h>
-#include <packet.h>
+#include <network/packet.h>
 
 /**
  * @brief Send-Queue

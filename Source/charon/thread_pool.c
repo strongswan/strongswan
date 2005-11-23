@@ -29,6 +29,9 @@
  
 #include <globals.h>
 #include <queues/job_queue.h>
+#include <queues/jobs/delete_ike_sa_job.h>
+#include <queues/jobs/incoming_packet_job.h>
+#include <queues/jobs/initiate_ike_sa_job.h>
 #include <utils/allocator.h>
 #include <utils/logger.h>
 

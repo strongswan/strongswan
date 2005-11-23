@@ -24,8 +24,8 @@
 
 #include "packet_test.h"
 
-#include <packet.h>
 #include <globals.h>
+#include <network/packet.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
