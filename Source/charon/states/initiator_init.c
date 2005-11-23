@@ -147,11 +147,11 @@ struct private_initiator_init_s {
  */
 static status_t initiate_connection (private_initiator_init_t *this, char *name, state_t **new_state)
 {
+	linked_list_iterator_t 	*proposal_iterator;
+	ike_sa_init_requested_t 	*next_state;
 	message_t 				*message;
 	packet_t 				*packet;
 	status_t 				status;
-	linked_list_iterator_t 	*proposal_iterator;
-	ike_sa_init_requested_t 	*next_state;
 
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
@@ -184,15 +184,15 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	}
 	
 	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->ike_sa->other.host, proposal_iterator);
+	/* not needed anymore */
+	proposal_iterator->destroy(proposal_iterator);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve Proposals for %s",name);
-		proposal_iterator->destroy(proposal_iterator);
 		return status;
 	}
-	/* not needed anymore */
-	proposal_iterator->destroy(proposal_iterator);
-	
+
+	/* a diffie hellman object could allready exist caused by an failed initiate_connection call */	
 	if (this->diffie_hellman == NULL)
 	{
 		this	->logger->log(this->logger, CONTROL|MOST, "create diffie hellman object");
@@ -209,8 +209,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	{
 		this->logger->log(this->logger, ERROR, "Free existing sent nonce!");
 		allocator_free(this->sent_nonce.ptr);
-		this->sent_nonce.ptr = NULL;
-		this->sent_nonce.len = 0;
+		this->sent_nonce = CHUNK_INITIALIZER;
 	}
 
 	this	->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for nonce");
@@ -456,7 +455,7 @@ static status_t build_ke_payload(private_initiator_init_t *this, payload_t **pay
 		allocator_free_chunk(key_data);
 		return OUT_OF_RES;	
 	}
-	ke_payload->set_dh_group_number(ke_payload, MODP_1024_BIT);
+	ke_payload->set_dh_group_number(ke_payload, this->dh_group_number);
 	if (ke_payload->set_key_exchange_data(ke_payload, key_data) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not set key exchange data of KE payload");
@@ -608,8 +607,7 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	this->dh_group_priority = 1;
 	this->logger = this->ike_sa->logger;
 	this->proposals = linked_list_create();
-	this->sent_nonce.ptr = NULL;
-	this->sent_nonce.len = 0;
+	this->sent_nonce = CHUNK_INITIALIZER;
 	if (this->proposals == NULL)
 	{
 		allocator_free(this);
