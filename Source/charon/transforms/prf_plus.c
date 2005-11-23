@@ -72,6 +72,7 @@ static status_t get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buf
 {	
 	chunk_t appending_chunk;
 	size_t bytes_in_round;
+	size_t total_bytes_written = 0;
 	
 	appending_chunk.ptr = &(this->appending_octet);
 	appending_chunk.len = 1;
@@ -89,10 +90,11 @@ static status_t get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buf
 		/* how many bytes can we write in this round ? */
 		bytes_in_round = min(length, this->buffer.len - this->given_out);
 		/* copy bytes from buffer with offset */
-		memcpy(buffer, this->buffer.ptr + this->given_out, bytes_in_round);
+		memcpy(buffer + total_bytes_written, this->buffer.ptr + this->given_out, bytes_in_round);
 		
 		length -= bytes_in_round;
 		this->given_out += bytes_in_round;
+		total_bytes_written += bytes_in_round;
 	}
 	return SUCCESS;
 }
