@@ -61,6 +61,8 @@ struct chunk_s {
     size_t len;
 };
 
+extern chunk_t CHUNK_INITIALIZER;
+
 /**
  * General purpose boolean type
  */

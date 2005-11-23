@@ -38,3 +38,4 @@ mapping_t status_m[] = {
 	{MAPPING_END, NULL}
 };
 
+chunk_t CHUNK_INITIALIZER = {NULL,0};
