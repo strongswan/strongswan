@@ -334,6 +334,15 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		this->logger->log(this->logger, ERROR, "Could not create nonce!");
 		return OUT_OF_RES;
 	}
+
+	status = this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->received_nonce, this->sent_nonce);
+	if (status != SUCCESS)
+	{
+		/* secrets could not be computed */
+		this->logger->log(this->logger, ERROR | MORE, "Secrets could not be computed!");
+		return status;
+	}
+	
 		
 
 	/* set up the reply */
