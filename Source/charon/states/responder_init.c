@@ -358,6 +358,11 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		this->logger->log(this->logger, ERROR, "Could not create nonce!");
 		return OUT_OF_RES;
 	}
+	
+	/* store shared secret  */
+	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
+	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &shared_secret);
+	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &shared_secret);
 
 	status = this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->received_nonce, this->sent_nonce);
 	if (status != SUCCESS)
@@ -442,10 +447,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		return status;
 	}
 
-	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &shared_secret);
-	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &shared_secret);
-	
-	
 	/* state can now be changed */
 	this	->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 
