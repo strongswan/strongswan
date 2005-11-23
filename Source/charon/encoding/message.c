@@ -26,7 +26,7 @@
 
 #include <types.h>
 #include <globals.h>
-#include <ike_sa_id.h>
+#include <sa/ike_sa_id.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 #include <utils/linked_list.h>

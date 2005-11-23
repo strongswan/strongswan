@@ -26,7 +26,7 @@
 #include "ike_sa_manager.h"
 
 #include <globals.h>
-#include <ike_sa_id.h>
+#include <sa/ike_sa_id.h>
 #include <utils/allocator.h>
 #include <utils/logger.h>
 #include <utils/logger_manager.h>

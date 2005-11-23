@@ -24,7 +24,7 @@
 #define DELETE_IKE_SA_JOB_H_
 
 #include <types.h>
-#include <ike_sa_id.h>
+#include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
 
 

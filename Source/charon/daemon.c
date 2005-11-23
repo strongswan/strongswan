@@ -28,7 +28,7 @@
 
 
 #include <types.h>
-#include <ike_sa_manager.h>
+#include <sa/ike_sa_manager.h>
 #include <threads/sender.h>
 #include <threads/receiver.h>
 #include <threads/scheduler.h>

@@ -24,7 +24,7 @@
 #define IKE_SA_MANAGER_H_
 
 #include <types.h>
-#include <ike_sa.h>
+#include <sa/ike_sa.h>
 
 
 /**

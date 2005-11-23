@@ -24,7 +24,7 @@
 
 #include <types.h>
 #include <encoding/message.h>
-#include <ike_sa.h>
+#include <sa/ike_sa.h>
 
 void test_ike_sa(tester_t *tester)
 {

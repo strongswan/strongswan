@@ -37,8 +37,8 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/transform_substructure.h>
 #include <encoding/payloads/transform_attribute.h>
-#include <states/initiator_init.h>
-#include <states/responder_init.h>
+#include <sa/states/initiator_init.h>
+#include <sa/states/responder_init.h>
 
 
 

@@ -24,7 +24,7 @@
 #define MESSAGE_H_
 
 #include <types.h>
-#include <ike_sa_id.h>
+#include <sa/ike_sa_id.h>
 #include <network/packet.h>
 #include <encoding/payloads/ike_header.h>
 #include <utils/linked_list.h>

@@ -26,10 +26,10 @@
 
 #include <types.h>
 #include <encoding/message.h>
-#include <ike_sa_id.h>
+#include <sa/ike_sa_id.h>
 #include <utils/logger.h>
 #include <utils/randomizer.h>
-#include <states/state.h>
+#include <sa/states/state.h>
 #include <transforms/prfs/prf.h>
 #include <transforms/crypters/crypter.h>
 #include <transforms/signers/signer.h>
