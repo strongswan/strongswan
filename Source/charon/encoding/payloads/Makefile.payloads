@@ -30,6 +30,10 @@ OBJS+= $(BUILD_DIR)nonce_payload.o
 $(BUILD_DIR)nonce_payload.o :			$(PAYLOADS_DIR)nonce_payload.c $(PAYLOADS_DIR)nonce_payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
+OBJS+= $(BUILD_DIR)notify_payload.o
+$(BUILD_DIR)notify_payload.o :			$(PAYLOADS_DIR)notify_payload.c $(PAYLOADS_DIR)notify_payload.h
+										$(CC) $(CFLAGS) -c -o $@ $<
+
 OBJS+= $(BUILD_DIR)payload.o
 $(BUILD_DIR)payload.o :					$(PAYLOADS_DIR)payload.c $(PAYLOADS_DIR)payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<

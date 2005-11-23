@@ -26,9 +26,9 @@
 #include <queues/job_queue.h>
 #include <queues/event_queue.h>
 #include <queues/send_queue.h>
-#include <configuration_manager.h>
-#include <ike_sa_manager.h>
-#include <socket.h>
+#include <config/configuration_manager.h>
+#include <sa/ike_sa_manager.h>
+#include <network/socket.h>
 #include <utils/logger_manager.h>
 #include <utils/allocator.h>
 #include <utils/tester.h>
