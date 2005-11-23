@@ -22,7 +22,7 @@
 
 #include "delete_ike_sa_job.h"
 
-#include "../utils/allocator.h"
+#include <utils/allocator.h>
 
 /**
  * Private data of an delete_ike_sa_job_t Object

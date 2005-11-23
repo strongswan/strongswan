@@ -23,8 +23,8 @@
 #ifndef INITIATE_IKE_SA_JOB_H_
 #define INITIATE_IKE_SA_JOB_H_
 
-#include "../types.h"
-#include "job.h"
+#include <types.h>
+#include <jobs/job.h>
 
 /**
  * Object representing an INITIATE_IKE_SA Job

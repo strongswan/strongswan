@@ -23,7 +23,7 @@
 
 #include "incoming_packet_job.h"
 
-#include "../utils/allocator.h"
+#include <utils/allocator.h>
 
 /**
  * Private data of an incoming_packet_job_t Object

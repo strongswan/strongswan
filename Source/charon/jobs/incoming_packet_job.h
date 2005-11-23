@@ -23,9 +23,9 @@
 #ifndef INCOMING_PACKET_JOB_H_
 #define INCOMING_PACKET_JOB_H_
 
-#include "job.h"
-#include "../types.h"
-#include "../packet.h"
+#include <jobs/job.h>
+#include <types.h>
+#include <packet.h>
 
 /**
  * Object representing an INCOMING_PACKET Job

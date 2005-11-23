@@ -23,9 +23,9 @@
 #ifndef DELETE_IKE_SA_JOB_H_
 #define DELETE_IKE_SA_JOB_H_
 
-#include "../types.h"
-#include "../ike_sa_id.h"
-#include "job.h"
+#include <types.h>
+#include <ike_sa_id.h>
+#include <jobs/job.h>
 
 
 /**

@@ -24,8 +24,8 @@
 
 #include "send_queue.h"
 
-#include "../utils/allocator.h"
-#include "../utils/linked_list.h"
+#include <utils/allocator.h>
+#include <utils/linked_list.h>
 
  /**
  * @brief Private Variables and Functions of send_queue class
