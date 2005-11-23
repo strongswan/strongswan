@@ -101,7 +101,7 @@ prf_hmac_t *prf_hmac_create(hash_algorithm_t hash_algorithm)
 	this->public.prf_interface.set_key = (status_t (*) (prf_t *,chunk_t))set_key;
 	this->public.prf_interface.destroy = (status_t (*) (prf_t *))destroy;
 	
-	this->hmac = hmac_create(HASH_SHA1);
+	this->hmac = hmac_create(hash_algorithm);
 	if (this->hmac == NULL)
 	{
 		allocator_free(this);
