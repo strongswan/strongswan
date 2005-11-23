@@ -133,8 +133,8 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 	/* 
 	 * Currently the following hard coded proposal is created and returned for all hosts:
 	 * - ENCR_AES_CBC 128Bit
-	 * - PRF_HMAC_SHA1 160Bit
-	 * - AUTH_HMAC_SHA1_96 128Bit
+	 * - PRF_HMAC_MD5 128Bit
+	 * - AUTH_HMAC_MD5_96 128Bit
 	 * - MODP_1024_BIT
 	 */
 	proposal_substructure_t *proposal;
@@ -200,7 +200,7 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 		return OUT_OF_RES;
 	}
 	transform->set_transform_type(transform, PSEUDO_RANDOM_FUNCTION);
-	transform->set_transform_id(transform, PRF_HMAC_SHA1);
+	transform->set_transform_id(transform, PRF_HMAC_MD5);
 	
 	attribute = transform_attribute_create();
 	if (attribute == NULL)
@@ -215,7 +215,7 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 		return OUT_OF_RES;
 	}
 	attribute->set_attribute_type(attribute, KEY_LENGTH);
-	attribute->set_value(attribute, 20);
+	attribute->set_value(attribute, 16);
 
  	
  	/* 
@@ -234,7 +234,7 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 		return OUT_OF_RES;
 	}
 	transform->set_transform_type(transform, INTEGRITIY_ALGORITHM);
-	transform->set_transform_id(transform, AUTH_HMAC_SHA1_96);
+	transform->set_transform_id(transform, AUTH_HMAC_MD5_96);
 	
 	attribute = transform_attribute_create();
 	if (attribute == NULL)
@@ -249,7 +249,7 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 		return OUT_OF_RES;
 	}
 	attribute->set_attribute_type(attribute, KEY_LENGTH);
-	attribute->set_value(attribute, 20);
+	attribute->set_value(attribute, 16);
  	
  	
     /* 
