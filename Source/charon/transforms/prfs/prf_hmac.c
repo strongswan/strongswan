@@ -1,8 +1,7 @@
 /**
  * @file prf_hmac.c
  * 
- * @brief Implementation of prf_t interface using the
- * a HMAC algorithm. This simply wraps a hmac in a prf.
+ * @brief Implementation for prf_hmac_t.
  * 
  */
 

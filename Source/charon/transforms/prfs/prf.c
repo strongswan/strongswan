@@ -1,7 +1,7 @@
 /**
  * @file prf.c
  * 
- * @brief Generic interface for pseudo-random-functions
+ * @brief Generic constructor for all prf_t
  * 
  */
 
@@ -25,6 +25,19 @@
 
 #include <transforms/hashers/hasher.h>
 #include <transforms/prfs/prf_hmac.h>
+
+
+/** 
+ * string mappings for encryption_algorithm_t
+ */
+mapping_t pseudo_random_function_m[] = {
+{PRF_UNDEFINED, "PRF_UNDEFINED"},
+{PRF_HMAC_MD5, "PRF_HMAC_MD5"},
+{PRF_HMAC_SHA1, "PRF_HMAC_SHA1"},
+{PRF_HMAC_TIGER, "PRF_HMAC_TIGER"},
+{PRF_AES128_CBC, "PRF_AES128_CBC"},
+{MAPPING_END, NULL}
+};
 
 
 /*

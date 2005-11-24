@@ -1,8 +1,7 @@
 /**
  * @file hasher_md5.h
  * 
- * @brief Implementation of hasher_t interface using the
- * md5 algorithm.
+ * @brief Interface for hasher_md5_t.
  * 
  */
 
@@ -30,8 +29,10 @@
 typedef struct hasher_md5_t hasher_md5_t;
 
 /**
- * Object representing the md5 hasher
+ * @brief Implementation of hasher_t interface using the
+ * MD5 algorithm.
  * 
+ * @ingroup hashers
  */
 struct hasher_md5_t {
 	
@@ -42,11 +43,13 @@ struct hasher_md5_t {
 };
 
 /**
- * Creates a new hasher_md5_t object
+ * @brief Creates a new hasher_md5_t.
  * 
  * @return
- * 							- hasher_md5_t if successfully
- * 							- NULL if out of ressources
+ * 				- hasher_md5_t if successfully
+ * 				- NULL if out of ressources
+ * 
+ * @ingroup hashers
  */
 hasher_md5_t *hasher_md5_create();
 

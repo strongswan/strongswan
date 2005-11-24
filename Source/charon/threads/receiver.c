@@ -30,6 +30,7 @@
 #include <network/packet.h>
 #include <queues/job_queue.h>
 #include <queues/jobs/job.h>
+#include <queues/jobs/incoming_packet_job.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 

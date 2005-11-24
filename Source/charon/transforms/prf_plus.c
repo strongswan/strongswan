@@ -1,7 +1,7 @@
 /**
  * @file prf_plus.c
  * 
- * @brief Implements the prf+ function described in IKEv2 draft.
+ * @brief Implementation of prf_plus_t.
  * 
  */
 

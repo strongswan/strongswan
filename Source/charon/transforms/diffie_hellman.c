@@ -32,6 +32,23 @@
 #include <utils/gmp_helper.h>
 
 
+/** 
+ * string mappings for diffie_hellman_group_t
+ */
+mapping_t diffie_hellman_group_m[] = {
+	{MODP_UNDEFINED, "MODP_UNDEFINED"},
+	{MODP_768_BIT, "MODP_768_BIT"},
+	{MODP_1024_BIT, "MODP_1024_BIT"},
+	{MODP_1536_BIT, "MODP_1536_BIT"},
+	{MODP_2048_BIT, "MODP_2048_BIT"},
+	{MODP_3072_BIT, "MODP_3072_BIT"},
+	{MODP_4096_BIT, "MODP_4096_BIT"},
+	{MODP_6144_BIT, "MODP_6144_BIT"},
+	{MODP_8192_BIT, "MODP_8192_BIT"},
+	{MAPPING_END, NULL}
+};
+
+
 /**
  * Modulus of Group 1 (MODP_768_BIT)
  */

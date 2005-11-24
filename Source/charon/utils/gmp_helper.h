@@ -1,5 +1,5 @@
 /**
- * @file gmp_helper.c
+ * @file gmp_helper.h
  * 
  * @brief Class with helper functions for gmp operations
  * 

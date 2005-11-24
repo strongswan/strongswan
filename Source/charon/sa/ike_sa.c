@@ -39,6 +39,7 @@
 #include <encoding/payloads/transform_attribute.h>
 #include <sa/states/initiator_init.h>
 #include <sa/states/responder_init.h>
+#include <queues/jobs/delete_ike_sa_job.h>
 
 
 

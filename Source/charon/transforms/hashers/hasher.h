@@ -1,7 +1,7 @@
 /**
  * @file hasher.h
  * 
- * @brief Generic interface for hash functions
+ * @brief Interface for hasher_t.
  * 
  */
 
@@ -29,18 +29,25 @@
 typedef enum hash_algorithm_t hash_algorithm_t;
 
 /**
- * algorithms to use for hashing
+ * @brief Algorithms to use for hashing.
  */
 enum hash_algorithm_t {
 	HASH_SHA1,
 	HASH_MD5
 };
 
+/**
+ * string mappings for hash_algorithm_t
+ */
+extern mapping_t hash_algorithm_m[];
+
 
 typedef struct hasher_t hasher_t;
 
 /**
- * Object representing a hasher
+ * @brief Generic interface for all hash functions.
+ * 
+ * @ingroup hashers
  */
 struct hasher_t {
 	/**
@@ -51,7 +58,7 @@ struct hasher_t {
 	 * If not, the result is written back and the hasher is reset.
 	 * 
 	 * @warning: the hash output parameter must hold at least
-	 * #hash_t.get_block_size bytes.
+	 * hash_t.get_block_size bytes.
 	 * 
 	 * @param this			calling hasher
 	 * @param data			data to hash
@@ -78,7 +85,7 @@ struct hasher_t {
 	status_t (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
 	
 	/**
-	 * @brief get the block size of this hashing function
+	 * @brief Get the block size of this hashing function.
 	 * 
 	 * @param this			calling hasher
 	 * @return				block size in bytes
@@ -86,7 +93,7 @@ struct hasher_t {
 	size_t (*get_block_size) (hasher_t *this);
 	
 	/**
-	 * @brief reset the hashers state, which allows
+	 * @brief Resets the hashers state, which allows
 	 * computation of a completly new hash.
 	 * 
 	 * @param this			calling hasher
@@ -105,12 +112,14 @@ struct hasher_t {
 };
 
 /**
- * Creates a new hasher_t object
+ * @brief Generic interface to create a hasher_t.
  * 
- * @param hash_algorithm			Algorithm to use for hashing
+ * @param hash_algorithm	Algorithm to use for hashing
  * @return
- * 									- hasher_t if successfully
- * 									- NULL if out of ressources 
+ * 							- hasher_t if successfully
+ * 							- NULL if out of ressources 
+ * 
+ * @ingroup hashers
  */
 hasher_t *hasher_create(hash_algorithm_t hash_algorithm);
 

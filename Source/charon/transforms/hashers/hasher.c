@@ -1,7 +1,7 @@
 /**
  * @file hasher.c
  * 
- * @brief Generic interface for hash functions
+ * @brief Generic constructor for hasher_t
  * 
  */
 
@@ -26,7 +26,14 @@
 #include <transforms/hashers/hasher_sha1.h>
 #include <transforms/hashers/hasher_md5.h>
 
-
+/**
+ * mappings for hash_algorithm_t
+ */
+mapping_t hash_algorithm_m[] = {
+	{HASH_SHA1, "HASH_SHA1"},
+	{HASH_MD5, "HASH_MD5"},
+	{MAPPING_END, NULL}
+};
 
 /*
  * Described in header

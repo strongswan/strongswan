@@ -71,7 +71,6 @@ struct packet_t {
 /**
  * @brief create an empty packet
  *  
- * @param family		address-family, such as AF_INET
  * @return  			- NULL when family not supported
  */
 packet_t *packet_create();

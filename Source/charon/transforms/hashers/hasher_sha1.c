@@ -1,8 +1,7 @@
 /**
  * @file hasher_sha1.c
  * 
- * @brief Implementation of hasher_t interface using the
- * SHA1 algorithm.
+ * @brief Implementation of hasher_sha_t.
  * 
  */
 

@@ -29,6 +29,7 @@
 
 #include <utils/allocator.h>
 #include <queues/job_queue.h>
+#include <queues/jobs/initiate_ike_sa_job.h>
 
 
 typedef struct job_queue_test_s job_queue_test_t;

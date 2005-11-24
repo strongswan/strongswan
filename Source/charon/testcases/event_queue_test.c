@@ -27,6 +27,7 @@
 
 #include <utils/allocator.h>
 #include <queues/event_queue.h>
+#include <queues/jobs/initiate_ike_sa_job.h>
 
 /**
  * Number of different times to insert per thread

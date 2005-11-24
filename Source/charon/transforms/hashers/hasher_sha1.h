@@ -1,8 +1,7 @@
 /**
  * @file hasher_sha1.h
  * 
- * @brief Implementation of hasher_t interface using the
- * SHA1 algorithm.
+ * @brief Interface for the hasher_sha1_t
  * 
  */
 
@@ -30,8 +29,10 @@
 typedef struct hasher_sha1_t hasher_sha1_t;
 
 /**
- * Object representing the sha1 hasher
+ * @brief Implementation of hasher_t interface using the
+ * SHA1 algorithm.
  * 
+ * @ingroup hashers
  */
 struct hasher_sha1_t {
 	
@@ -42,11 +43,13 @@ struct hasher_sha1_t {
 };
 
 /**
- * Creates a new hasher_sha1_t object
+ * @brief Creates a new hasher_sha1_t.
  * 
  * @return
- * 							- hasher_sha1_t if successfully
- * 							- NULL if out of ressources
+ * 				- hasher_sha1_t if successfully
+ * 				- NULL if out of ressources
+ * 
+ * @ingroup hashers
  */
 hasher_sha1_t *hasher_sha1_create();
 

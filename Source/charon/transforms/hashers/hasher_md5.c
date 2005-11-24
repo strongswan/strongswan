@@ -1,8 +1,7 @@
 /**
  * @file hasher_md5.c
  * 
- * @brief Implementation of hasher_t interface using the
- * md5 algorithm.
+ * @brief Implementation of hasher_md5_t.
  * 
  */
 

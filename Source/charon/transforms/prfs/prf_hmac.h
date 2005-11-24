@@ -1,8 +1,7 @@
 /**
  * @file prf_hmac.h
  * 
- * @brief Implementation of prf_t interface using the
- * a HMAC algorithm. This simply wraps a hmac in a prf.
+ * @brief Interface for prf_hmac_t.
  * 
  */
 
@@ -24,32 +23,38 @@
 #ifndef PRF_HMAC_H_
 #define PRF_HMAC_H_
 
-#include "prf.h"
-
 #include <types.h>
+#include <transforms/prfs/prf.h>
 #include <transforms/hashers/hasher.h>
 
 typedef struct prf_hmac_t prf_hmac_t;
 
 /**
- * Object representing a prf using HMAC
+ * @brief Implementation of prf_t interface using the
+ * a HMAC algorithm.
  * 
+ * This simply wraps a hmac_t in a prf_t. More a question of
+ * interface matchig.
+ * 
+ * @ingroup prfs
  */
 struct prf_hmac_t {
 	
 	/**
-	 * generic prf_t interface for this prf
+	 * Generic prf_t interface for this prf_hmac_t class.
 	 */
 	prf_t prf_interface;
 };
 
 /**
- * Creates a new prf_hmac_t object
+ * @brief Creates a new prf_hmac_t object
  * 
  * @param hash_algorithm			hmac's hash algorithm
  * @return
  * 									- prf_hmac_t if successfully
  * 									- NULL if out of ressources
+ * 
+ * @ingroup prfs
  */
 prf_hmac_t *prf_hmac_create(hash_algorithm_t hash_algorithm);
 

@@ -1,7 +1,7 @@
 /**
  * @file crypter.h
  * 
- * @brief Generic interface for encryption algorithms
+ * @brief Interface of crypter_t
  * 
  */
 
@@ -23,13 +23,41 @@
 #ifndef CRYPTER_H_
 #define CRYPTER_H_
 
-#include <encoding/payloads/transform_substructure.h>
+#include <types.h>
 
+typedef enum encryption_algorithm_t encryption_algorithm_t;
+
+/**
+ * @brief Encryption algorithm, as in IKEv2 draft 3.3.2
+ */
+enum encryption_algorithm_t {
+	ENCR_UNDEFINED = 1024,
+	ENCR_DES_IV64 = 1,
+	ENCR_DES = 2,
+	ENCR_3DES = 3,
+	ENCR_RC5 = 4,
+	ENCR_IDEA = 5,
+	ENCR_CAST = 6,
+	ENCR_BLOWFISH = 7,
+	ENCR_3IDEA = 8,
+	ENCR_DES_IV32 = 9,
+	RESERVED = 10,
+	ENCR_NULL = 11,
+	ENCR_AES_CBC = 12,
+	ENCR_AES_CTR = 13
+};
+
+/** 
+ * string mappings for encryption_algorithm_t
+ */
+extern mapping_t encryption_algorithm_m[];
 
 typedef struct crypter_t crypter_t;
 
 /**
- * Object representing a crypter object
+ * @brief Generic interface for symmetric encryption algorithms.
+ * 
+ * @ingroup crypters
  */
 struct crypter_t {
 	/**
@@ -59,36 +87,38 @@ struct crypter_t {
 	/**
 	 * @brief get the block size of this crypter
 	 * 
-	 * @param this			calling crypter
-	 * @return				block size in bytes
+	 * @param this				calling crypter
+	 * @return					block size in bytes
 	 */
 	size_t (*get_block_size) (crypter_t *this);
 	
 	/**
 	 * @brief Set the key for this crypter
 	 * 
-	 * @param this			calling crypter
-	 * @return				block size in bytes
+	 * @param this				calling crypter
+	 * @param key				key to set
+	 * @return
+	 * 							- SUCCESS in any case
 	 */
 	status_t (*set_key) (crypter_t *this, chunk_t key);
 	
 	/**
-	 * @brief Destroys a crypter object.
+	 * @brief Destroys a crypter_t object.
 	 *
-	 * @param this 	crypter_t object to destroy
+	 * @param this 				crypter_t object to destroy
 	 * @return 		
-	 * 				SUCCESS in any case
+	 * 							- SUCCESS in any case
 	 */
 	status_t (*destroy) (crypter_t *this);
 };
 
 /**
- * Creates a new crypter_t object
+ * @brief Generic constructor for crypter_t objects.
  * 
- * @param pseudo_random_function	Algorithm to use
+ * @param encryption_algorithm	Algorithm to use for crypter
  * @return
- * 									- crypter_t if successfully
- * 									- NULL if out of ressources or crypter not supported
+ * 								- crypter_t if successfully
+ * 								- NULL if out of ressources or crypter not supported
  */
 crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm);
 

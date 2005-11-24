@@ -66,14 +66,44 @@
 
 /**
  * @addtogroup transforms
+ * 
+ * Transform algorithms of different kind.
  */
  
 /**
  * @addtogroup prfs
  * 
+ * Pseudo random functions, generate a lot of pseudo
+ * randomness using random numbers.
+ * 
+ * @ingroup transforms
+ */
+
+/**
+ * @addtogroup signers
+ * 
+ * Symmetric signing algorithms, used to ensure 
+ * message integrity.
+ * 
+ * @ingroup transforms
+ */
+
+/**
+ * @addtogroup crypters
+ * 
+ * Symmetric encryption algorithms, used to en-
+ * and decrypt.
+ * 
  * @ingroup transforms
  */
  
+/**
+ * @addtogroup hashers
+ * 
+ * Hash algorithms
+ * 
+ * @ingroup transforms
+ */
 
 /**
  * macro gives back larger of two values
