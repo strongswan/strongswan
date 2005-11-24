@@ -76,6 +76,19 @@ struct linked_list_iterator_t {
 	status_t (*insert_after) (linked_list_iterator_t *this, void *item);
 
 	/**
+	 * @brief removes an element from list at the given iterator position.
+	 * 
+	 * The position of the iterator is set in the following order:
+	 * - to the item before, if available
+	 * - otherwise to the item after, if available
+	 * - otherwise it gets reseted
+	 * 
+	 * @param linked_list calling object
+	 * @param iterator iterator holding the position of the element to remove
+	 * @return SUCCESS if succeeded, FAILED otherwise
+	 */
+	status_t (*remove) (linked_list_iterator_t *iterator);
+	/**
 	 * @brief Resets a linked_list_iterator object
 	 * 
 	 * @param this calling object
@@ -134,20 +147,6 @@ struct linked_list_t {
 	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*insert_first) (linked_list_t *linked_list, void *item);
-
-	/**
-	 * @brief removes an element from list at the given iterator position
-	 * 
-	 * The position of the iterator is set in the following order:
-	 * - to the item before, if available
-	 * - otherwise to the item after, if available
-	 * - otherwise it gets reseted
-	 * 
-	 * @param linked_list calling object
-	 * @param iterator iterator holding the position of the element to remove
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*remove) (linked_list_t *linked_list, linked_list_iterator_t *iterator);
 
 	/**
 	 * @brief removes the first item in the list and returns its value

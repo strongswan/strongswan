@@ -190,7 +190,7 @@ void test_linked_list_insert_and_remove(tester_t *tester)
 	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 	
 	
-	tester->assert_true(tester,(linked_list->remove(linked_list,iterator) == SUCCESS), "remove call check");
+	tester->assert_true(tester,(iterator->remove(iterator) == SUCCESS), "remove call check");
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"before_three") == 0), "current value check");	
 	

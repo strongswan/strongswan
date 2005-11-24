@@ -335,7 +335,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 		if (current == entry) 
 		{
 	 		this->logger->log(this->logger,CONTROL | MOST,"Found entry by pointer. Going to delete it.");
-			list->remove(list, iterator);
+			iterator->remove(iterator);
 			entry->destroy(entry);
 			status = SUCCESS;
 			break;

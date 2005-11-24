@@ -257,7 +257,7 @@ static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
 		status = NOT_FOUND;
 		if (entry->logger == logger)
 		{
-			this->loggers->remove(this->loggers,iterator);
+			iterator->remove(iterator);
 			allocator_free(entry);
 			logger->destroy(logger);
 			status = SUCCESS;
