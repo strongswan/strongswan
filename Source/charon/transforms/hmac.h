@@ -28,14 +28,14 @@
 
 typedef struct hmac_t hmac_t;
 
-
 /**
- * @brief Message authentication based using hash functions.
+ * @brief Message authentication using hash functions.
  * 
  * This class implements the message authenticaion algorithm
  * described in RFC2104. It uses a hash function, wich must
  * be implemented as a hasher_t class.
  * 
+ * @see http://www.faqs.org/rfcs/rfc2104.html
  * @see hasher_t, prf_hmac_t
  * 
  * @ingroup transforms
@@ -76,7 +76,7 @@ struct hmac_t {
 	status_t (*allocate_mac) (hmac_t *this, chunk_t data, chunk_t *chunk);
 	
 	/**
-	 * @brief get the block size of this hmac
+	 * @brief Get the block size of this hmac.
 	 * 
 	 * @param this			calling hmac
 	 * @return				block size in bytes
@@ -84,7 +84,7 @@ struct hmac_t {
 	size_t (*get_block_size) (hmac_t *this);	
 	
 	/**
-	 * @brief set the key for this hmac
+	 * @brief Set the key for this hmac.
 	 * 
 	 * Any key length is accepted.
 	 * 
@@ -97,9 +97,9 @@ struct hmac_t {
 	/**
 	 * @brief Destroys a hmac object.
 	 *
-	 * @param this 	hmac_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
+	 * @param this 			hmac_t object to destroy
+	 * @return
+	 * 						- SUCCESS in any case
 	 */
 	status_t (*destroy) (hmac_t *this);
 };
@@ -107,7 +107,7 @@ struct hmac_t {
 /**
  * @brief Creates a new hmac_t object.
  * 
- * Creates a new hmac_t object using sing hash_algorithm to
+ * Creates a new hmac_t object using hash_algorithm to
  * create a hasher_t internally.
  * 
  * @param hash_algorithm		hash algorithm to use

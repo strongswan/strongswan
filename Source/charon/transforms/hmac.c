@@ -1,7 +1,7 @@
 /**
  * @file hmac.c
  * 
- * @brief Implementation of hmac_t
+ * @brief Implementation of hmac_t.
  */
 
 /*
@@ -9,13 +9,13 @@
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
+ * under the terms of the GNU General hmac License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
  *
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General hmac License
  * for more details.
  */
 
@@ -24,17 +24,17 @@
 
 #include <utils/allocator.h>
 
+
 typedef struct private_hmac_t private_hmac_t;
 
 /**
  * Private data of an hmac_t object.
- * 
  */
 struct private_hmac_t {
 	/**
-	 * public hmac_t interface
+	 * hmac_t interface
 	 */
-	hmac_t public;
+	hmac_t hmac;
 	
 	/**
 	 * block size, as in RFC
@@ -57,7 +57,7 @@ struct private_hmac_t {
 };
 
 /**
- * implementation of hmac_t.get_mac
+ * Implementation of hmac_t.get_mac.
  */
 static status_t get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 {
@@ -96,7 +96,7 @@ static status_t get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 }
 
 /**
- * implementation of hmac_t.allocate_mac
+ * Implementation of hmac_t.allocate_mac.
  */
 static status_t allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 {
@@ -104,7 +104,7 @@ static status_t allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 	if (out == NULL)
 	{
 		/* append mode */
-		this->public.get_mac(&(this->public), data, NULL);
+		this->hmac.get_mac(&(this->hmac), data, NULL);
 	}
 	else
 	{
@@ -114,13 +114,13 @@ static status_t allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 		{
 			return OUT_OF_RES;	
 		}
-		this->public.get_mac(&(this->public), data, out->ptr);
+		this->hmac.get_mac(&(this->hmac), data, out->ptr);
 	}
 	return SUCCESS;
 }
 	
 /**
- * implementation of hmac_t.get_block_size
+ * Implementation of hmac_t.get_block_size.
  */
 static size_t get_block_size(private_hmac_t *this)
 {
@@ -128,7 +128,7 @@ static size_t get_block_size(private_hmac_t *this)
 }
 
 /**
- * implementation of hmac_t.set_key
+ * Implementation of hmac_t.set_key.
  */
 static status_t set_key(private_hmac_t *this, chunk_t key)
 {
@@ -163,7 +163,7 @@ static status_t set_key(private_hmac_t *this, chunk_t key)
 }
 
 /**
- * implementation of hmac_t.destroy
+ * Implementation of hmac_t.destroy.
  */
 static status_t destroy(private_hmac_t *this)
 {
@@ -186,12 +186,12 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	{
 		return NULL;	
 	}
-	/* set public methods */
-	this->public.get_mac = (size_t (*)(hmac_t *,chunk_t,u_int8_t*))get_mac;
-	this->public.allocate_mac = (size_t (*)(hmac_t *,chunk_t,chunk_t*))allocate_mac;
-	this->public.get_block_size = (size_t (*)(hmac_t *))get_block_size;
-	this->public.set_key = (status_t (*)(hmac_t *,chunk_t))set_key;
-	this->public.destroy = (status_t (*)(hmac_t *))destroy;
+	/* set hmac_t methods */
+	this->hmac.get_mac = (size_t (*)(hmac_t *,chunk_t,u_int8_t*))get_mac;
+	this->hmac.allocate_mac = (size_t (*)(hmac_t *,chunk_t,chunk_t*))allocate_mac;
+	this->hmac.get_block_size = (size_t (*)(hmac_t *))get_block_size;
+	this->hmac.set_key = (status_t (*)(hmac_t *,chunk_t))set_key;
+	this->hmac.destroy = (status_t (*)(hmac_t *))destroy;
 	
 	/* set b, according to hasher */
 	switch (hash_algorithm)
@@ -212,8 +212,6 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 		allocator_free(this);
 		return NULL;	
 	}
-	
-
 
 	/* build ipad and opad */
 	this->opaded_key.ptr = allocator_alloc(this->b);
@@ -234,6 +232,5 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 		return NULL;	
 	}
 
-	
-	return &(this->public);
+	return &(this->hmac);
 }
