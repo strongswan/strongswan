@@ -216,6 +216,7 @@ void test_hmac_sha1(tester_t *tester)
 	
 	tester->assert_true(tester, digest[3].len == 20, "chunk len append mode");
 	tester->assert_false(tester, memcmp(digest[3].ptr, reference[3].ptr, 20), "hmac value append mode");
+	allocator_free(digest[3].ptr);
 }
 
 /* 
@@ -404,4 +405,5 @@ void test_hmac_md5(tester_t *tester)
 	
 	tester->assert_true(tester, digest[3].len == 16, "chunk len append mode");
 	tester->assert_false(tester, memcmp(digest[3].ptr, reference[3].ptr, 16), "hmac value append mode");
+	allocator_free(digest[3].ptr);
 }

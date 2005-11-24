@@ -100,4 +100,7 @@ void test_hasher_sha1(tester_t *tester)
 		} 
 	}
 	tester->assert_false(tester, memcmp(hash_buffer, hash_aaa, 20), "hash for aaa...");
+	
+
+	tester->assert_true(tester, (hasher->destroy(hasher) == SUCCESS), "destroy call test");
 }

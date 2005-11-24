@@ -294,13 +294,17 @@ logger_manager_t *global_logger_manager;
 
 
 	tester->perform_tests(tester,all_tests);
-	//tester->perform_test(tester,&hmac_test2); 
+//	tester->perform_test(tester,&hasher_sha1_test); 
 
 
  	
 	tester->destroy(tester);
 
 
+	/* Destroy objects*/
+ 	global_configuration_manager->destroy(global_configuration_manager);
+ 	global_ike_sa_manager->destroy(global_ike_sa_manager);
+	
 	/* Destroy all queues */
 	global_job_queue->destroy(global_job_queue);
 	global_event_queue->destroy(global_event_queue);	

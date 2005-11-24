@@ -70,10 +70,10 @@ void test_generator_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
 
 	u_int8_t expected_generation[] = {
+		0x01,0x00,0x00,0x00,
 		0x00,0x00,0x00,0x00,
-		0x00,0x00,0x00,0x01,
+		0x02,0x00,0x00,0x00,
 		0x00,0x00,0x00,0x00,
-		0x00,0x00,0x00,0x02,
 		0x03,0x20,0x06,0x28,
 		0x00,0x00,0x00,0x07,
 		0x00,0x00,0x00,0x1C,
@@ -104,14 +104,15 @@ void test_generator_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
 
 	u_int8_t expected_generation2[] = {
-		0x00,0x22,0x00,0x00,
-		0x54,0x23,0x12,0x34,
+		0x34,0x12,0x23,0x54,
+		0x00,0x00,0x22,0x00,
+		0x98,0x23,0x12,0x00,
 		0x00,0x00,0x00,0x00,
-		0x00,0x12,0x23,0x98,
 		0xF3,0x20,0x12,0x28,
 		0x00,0x33,0xAF,0xF3,
 		0x00,0x00,0x00,0x1C,
 	};
+
 	
 	logger->log_bytes(logger,RAW,"expected header",expected_generation2,sizeof(expected_generation2));
 	
@@ -175,7 +176,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
 
 	u_int8_t expected_generation2[] = {
-		0x80,0x00,0x88,0x16,
+		0x80,0x00,0x16,0x88,
 	};
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data");
 
@@ -574,10 +575,10 @@ void test_generator_with_sa_payload(tester_t *tester)
 
 	u_int8_t expected_generation[] = {
 		/* sa payload header */
-		0x00,0x22,0x00,0x00,
-		0x54,0x23,0x12,0x34,
+		0x34,0x12,0x23,0x54,
+		0x00,0x00,0x22,0x00,
+		0x98,0x23,0x12,0x00,
 		0x00,0x00,0x00,0x00,
-		0x00,0x12,0x23,0x98,
 		0x21,0x20,0x12,0x28,
 		0x00,0x33,0xAF,0xF3,
 		0x00,0x00,0x00,0x60,
@@ -763,7 +764,7 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	nonce_payload = nonce_payload_create();
 	
 	
-	nonce.ptr = allocator_clone_bytes("1234567890123456", strlen("1234567890123456"));
+	nonce.ptr = "1234567890123456";
 	nonce.len = strlen("1234567890123456");
 
 	nonce_payload->set_nonce(nonce_payload,nonce);
@@ -788,7 +789,8 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);	
+	allocator_free_chunk(generated_data);
+	
 	
 	tester->assert_true(tester,(nonce_payload->destroy(nonce_payload) == SUCCESS), "notify_payload destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
