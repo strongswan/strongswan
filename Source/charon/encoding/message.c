@@ -114,13 +114,13 @@ static message_rule_t message_rules[] = {
 	{IKE_SA_INIT,FALSE,(sizeof(supported_ike_sa_init_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_r_payloads}
 };
 
+typedef struct payload_entry_t payload_entry_t;
+
 /**
  * Entry for a payload in the internal used linked list
  * 
  */
-typedef struct payload_entry_s payload_entry_t;
-
-struct payload_entry_s {
+struct payload_entry_t {
 	/**
 	 * Type of payload
 	 */
@@ -132,12 +132,12 @@ struct payload_entry_s {
 };
 
 
+typedef struct private_message_t private_message_t;
+
 /**
  * Private data of an message_t object
  */
-typedef struct private_message_s private_message_t;
-
-struct private_message_s {
+struct private_message_t {
 
 	/**
 	 * Public part of a message_t object

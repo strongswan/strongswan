@@ -26,9 +26,9 @@
 #include <utils/allocator.h>
 #include <transforms/hmac.h>
 
-typedef struct private_prf_hmac_s private_prf_hmac_t;
+typedef struct private_prf_hmac_t private_prf_hmac_t;
 
-struct private_prf_hmac_s {
+struct private_prf_hmac_t {
 	/**
 	 * public interface for this prf
 	 */

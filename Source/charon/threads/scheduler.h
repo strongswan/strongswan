@@ -25,15 +25,15 @@
 
 #include <types.h>
 
+typedef struct scheduler_t scheduler_t;
+
 /**
  * @brief The scheduler, looks for timed events in event-queue and adds them
  * to the job-queue.
  * 
  * Starts a thread which does the work, since event-queue is blocking
  */
-typedef struct scheduler_s scheduler_t;
-
-struct scheduler_s { 	
+struct scheduler_t { 	
 
 	/**
 	 * @brief Destroys a scheduler object

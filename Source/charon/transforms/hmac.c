@@ -1,9 +1,7 @@
 /**
  * @file hmac.c
  * 
- * @brief Implementation of message authentication
- * using cryptographic hash functions (HMAC). See RFC2104.
- * 
+ * @brief Implementation of hmac_t
  */
 
 /*
@@ -26,13 +24,13 @@
 
 #include <utils/allocator.h>
 
+typedef struct private_hmac_t private_hmac_t;
+
 /**
  * Private data of an hmac_t object.
  * 
  */
-typedef struct private_hmac_s private_hmac_t;
-
-struct private_hmac_s {
+struct private_hmac_t {
 	/**
 	 * public hmac_t interface
 	 */

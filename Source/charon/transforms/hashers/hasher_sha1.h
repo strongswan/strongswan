@@ -27,13 +27,13 @@
 #include <transforms/hashers/hasher.h>
 
 
+typedef struct hasher_sha1_t hasher_sha1_t;
+
 /**
  * Object representing the sha1 hasher
  * 
  */
-typedef struct hasher_sha1_s hasher_sha1_t;
-
-struct hasher_sha1_s {
+struct hasher_sha1_t {
 	
 	/**
 	 * generic hasher_t interface for this hasher

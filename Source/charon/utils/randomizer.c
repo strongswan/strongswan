@@ -40,9 +40,9 @@
  */
 #define DEFAULT_PSEUDO_RANDOM_DEVICE "/dev/urandom"
 
-typedef struct private_randomizer_s private_randomizer_t;
+typedef struct private_randomizer_t private_randomizer_t;
 
-struct private_randomizer_s {
+struct private_randomizer_t {
 	/**
 	 * public interface
 	 */

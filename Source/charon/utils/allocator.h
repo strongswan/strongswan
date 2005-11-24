@@ -53,13 +53,13 @@
 
 #ifdef LEAK_DETECTIVE
 
-	/**
-	 * @brief Allocater object use to detect memory leaks.
-	 * 
-	 */
-	typedef struct allocator_s allocator_t;
+	typedef struct allocator_t allocator_t;
 
-	struct allocator_s {
+	/**
+ 	 *@brief Allocater object use to detect memory leaks.
+	 *
+	 */
+	struct allocator_t {
 	
 		/**
 		 * Allocates memory with LEAK_DETECTION and 

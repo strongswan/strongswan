@@ -28,12 +28,12 @@
 #include <types.h>
 #include <utils/allocator.h>
 
+typedef struct private_ike_sa_id_t private_ike_sa_id_t;
+
 /**
  * Private data of an ike_sa_id object
  */
-typedef struct private_ike_sa_id_s private_ike_sa_id_t;
-
-struct private_ike_sa_id_s {
+struct private_ike_sa_id_t {
 	/**
 	 * Public part of a ike_sa_id object
 	 */

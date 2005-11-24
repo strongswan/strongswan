@@ -27,19 +27,20 @@
 #include <sa/ike_sa.h>
 
 
+typedef struct ike_sa_manager_t ike_sa_manager_t;
+
 /**
- * @brief The IKE_SA-Manager manages the IKE_SAs ;-). 
- * 
+ * @brief The IKE_SA-Manager manages the IKE_SAs ;-).
+ *
  * To avoid access from multiple threads, IKE_SAs must be checked out from
  * the manager, and checked back in after usage. 
  * The manager also handles deletion of SAs.
- * 
+ *
  * @todo checking of double-checkouts from the same threads would be nice.
  * This could be by comparing thread-ids via pthread_self()...
- * 
+ *
  */
-typedef struct ike_sa_manager_s ike_sa_manager_t;
-struct ike_sa_manager_s {
+struct ike_sa_manager_t {
 	/**
 	 * @brief Checkout an IKE_SA, create it when necesarry
 	 * 

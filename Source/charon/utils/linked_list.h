@@ -25,16 +25,16 @@
 
 #include <types.h>
 
+typedef struct linked_list_iterator_t linked_list_iterator_t;
+
 /**
- * @brief Iterator for a linked list
- * 
+ * @brief Iterator for a linked list.
+ *
  * This element holds a pointer to the current element in the linked list
- * 
+ *
  * @warning the iterator is NOT thread-save
  */
-typedef struct linked_list_iterator_s linked_list_iterator_t;
-
-struct linked_list_iterator_s {
+struct linked_list_iterator_t {
 
 	/**
 	 * @brief returns TRUE if more elements are available
@@ -92,8 +92,11 @@ struct linked_list_iterator_s {
 	status_t (*destroy) (linked_list_iterator_t *this);
 };
 
+typedef struct linked_list_t linked_list_t;
+
+
 /**
- * @brief Double Linked List (named only as linked list)
+ * @brief Double Linked List (named only as linked list).
  *
  * @warning Access to an object of this type is not thread-save
  * 
@@ -101,10 +104,7 @@ struct linked_list_iterator_s {
  * @see event_queue_t
  * @see send_queue_t
  */
-typedef struct linked_list_s linked_list_t;
-
-
-struct linked_list_s {
+struct linked_list_t {
 
 	/**
 	 * @brief gets the count of items in the list

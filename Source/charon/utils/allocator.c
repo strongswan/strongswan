@@ -32,14 +32,14 @@
 
 #ifdef LEAK_DETECTIVE
 
+typedef union memory_hdr_t memory_hdr_t;
+
 /**
  * Header of each allocated memory area
  * 
  * Used to detect memory leaks
  */
-typedef union memory_hdr_u memory_hdr_t;
-
-union memory_hdr_u {
+union memory_hdr_t {
     struct {
     	/**
     	 * Filename withing memory was allocated
@@ -69,9 +69,9 @@ union memory_hdr_u {
  * 
  * Contains private variables of allocator_t object.
  */
-typedef struct private_allocator_s private_allocator_t;
+typedef struct private_allocator_t private_allocator_t;
 
-struct private_allocator_s
+struct private_allocator_t
 {
 	/**
 	 * Public part of an allocator_t object.

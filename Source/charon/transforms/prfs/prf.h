@@ -26,12 +26,14 @@
 #include <encoding/payloads/transform_substructure.h>
 
 
+typedef struct prf_t prf_t;
+
 /**
  * Object representing a diffie hellman exchange
+ * 
+ * @ingroup prfs
  */
-typedef struct prf_s prf_t;
-
-struct prf_s {
+struct prf_t {
 	/**
 	 * @brief generates pseudo random bytes and writes them
 	 * in the buffer
@@ -89,6 +91,8 @@ struct prf_s {
  * @return
  * 									- prf_t if successfully
  * 									- NULL if out of ressources or prf not supported
+ *
+ * @ingroup prfs
  */
 prf_t *prf_create(pseudo_random_function_t pseudo_random_function);
 

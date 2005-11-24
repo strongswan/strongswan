@@ -30,13 +30,13 @@
 
 #include <types.h>
 
+typedef struct gmp_helper_t gmp_helper_t;
+
 /**
- * Class with helper functions to manipulate gmp values 
+ * @brief Class with helper functions to manipulate gmp values.
  * 
  */
-typedef struct gmp_helper_s gmp_helper_t;
-
-struct gmp_helper_s {
+struct gmp_helper_t {
 
 	/**
 	 * @brief initialize an mpz_t to a random prime of specified size

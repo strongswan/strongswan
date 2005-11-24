@@ -33,12 +33,13 @@
 #include <encoding/payloads/nonce_payload.h>
 
 
+typedef struct private_initiator_init_t private_initiator_init_t;
+
 /**
  * Private data of a initiator_init_t object.
  *
  */
-typedef struct private_initiator_init_s private_initiator_init_t;
-struct private_initiator_init_s {
+struct private_initiator_init_t {
 	/**
 	 * Methods of the state_t interface.
 	 */

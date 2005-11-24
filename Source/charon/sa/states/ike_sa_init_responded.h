@@ -26,13 +26,13 @@
 #include <sa/ike_sa.h>
 #include <sa/states/state.h>
 
+typedef struct ike_sa_init_responded_t ike_sa_init_responded_t;
+
 /**
- * @brief This class represents an IKE_SA state when responded to an IKE_SA_INIT request
+ * @brief This class represents an IKE_SA state when responded to an IKE_SA_INIT request.
  *
  */
-typedef struct ike_sa_init_responded_s ike_sa_init_responded_t;
-
-struct ike_sa_init_responded_s {
+struct ike_sa_init_responded_t {
 	/**
 	 * methods of the state_t interface
 	 */

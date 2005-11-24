@@ -29,7 +29,7 @@
 
 #define NUMBER_OF_WORKING_THREADS 4
 
-#define IKEV2_UDP_PORT 500
+#define IKEV2_UDP_PORT 4500
 
 
 #endif /*DAEMON_H_*/

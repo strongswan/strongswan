@@ -33,12 +33,12 @@
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
+typedef struct private_receiver_t private_receiver_t;
+
 /**
  * Private data of a receiver object
  */
-typedef struct private_receiver_s private_receiver_t;
-
-struct private_receiver_s {
+struct private_receiver_t {
 	/**
 	 * Public part of a receiver object
 	 */

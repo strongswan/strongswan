@@ -27,6 +27,8 @@
 
 #include <types.h>
 
+typedef enum logger_level_t logger_level_t;
+
 /**
  * @brief Log Levels supported by the logger object
  * 
@@ -37,8 +39,7 @@
  * as CONTROL|MORE fore a detailed cotrol level, or
  * use RAW| to see all raw data dumps (except private)
  */
-typedef enum logger_level_e logger_level_t;
-enum logger_level_e {
+enum logger_level_t {
 	/**
 	 * control flow
 	 */
@@ -75,11 +76,12 @@ enum logger_level_e {
 	FULL = ALL + CONTROL + ERROR + RAW + PRIVATE
 };
 
+typedef struct logger_t logger_t;
+
 /**
  * @brief The logger object
  */
-typedef struct logger_s logger_t;
-struct logger_s {
+struct logger_t {
 
 	/**
 	 * @brief Log an entry, using printf()-like params.

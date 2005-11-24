@@ -27,15 +27,14 @@
 #include <utils/allocator.h>
 
 
-typedef struct linked_list_element_s linked_list_element_t;
-
+typedef struct linked_list_element_t linked_list_element_t;
 
 /**
  * @brief Element of the linked_list.
  *
  * This element holds a pointer to the value of the list item itself.
  */
-struct linked_list_element_s{
+struct linked_list_element_t {
 	/**
 	 * value of a list item
 	 */
@@ -106,9 +105,9 @@ linked_list_element_t *linked_list_element_create(void *value)
  * Private variables and functions of linked list
  *
  */
-typedef struct private_linked_list_s private_linked_list_t;
+typedef struct private_linked_list_t private_linked_list_t;
 
-struct private_linked_list_s{
+struct private_linked_list_t {
 	/**
 	 * Public part of linked list
 	 */
@@ -136,9 +135,9 @@ struct private_linked_list_s{
  * Private variables and functions of linked list iterator
  *
  */
-typedef struct private_linked_list_iterator_s private_linked_list_iterator_t;
+typedef struct private_linked_list_iterator_t private_linked_list_iterator_t;
 
-struct private_linked_list_iterator_s{
+struct private_linked_list_iterator_t {
 	/**
 	 * Public part of linked list iterator
 	 */

@@ -26,12 +26,12 @@
 #include <encoding/payloads/transform_substructure.h>
 
 
+typedef struct crypter_t crypter_t;
+
 /**
  * Object representing a crypter object
  */
-typedef struct crypter_s crypter_t;
-
-struct crypter_s {
+struct crypter_t {
 	/**
 	 * @brief Encrypt a chunk of data and allocate space for 
 	 * the encrypted value.

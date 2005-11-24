@@ -29,12 +29,12 @@
 
 extern mapping_t ike_sa_state_m[];
 
+typedef enum ike_sa_state_t ike_sa_state_t;
+
 /**
  * States in which a IKE_SA can actually be
  */
-typedef enum ike_sa_state_e ike_sa_state_t;
-
-enum ike_sa_state_e {
+enum ike_sa_state_t {
 
 	/**
 	 * IKE_SA is is not in a state as initiator
@@ -75,13 +75,12 @@ enum ike_sa_state_e {
  */
 extern mapping_t ike_sa_state_m[];
 
+typedef struct state_t state_t;
+
 /**
  * @brief This interface represents an IKE_SA state
- *
  */
-typedef struct state_s state_t;
-
-struct state_s {
+struct state_t {
 
 	/**
 	 * @brief Processes a incoming IKEv2-Message of type message_t

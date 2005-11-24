@@ -53,12 +53,12 @@
 #define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
 
 
+typedef struct private_hasher_sha1_t private_hasher_sha1_t;
+
 /**
  * private data structure with hasing context
  */
-typedef struct private_hasher_sha1_s private_hasher_sha1_t;
-
-struct private_hasher_sha1_s {
+struct private_hasher_sha1_t {
 	/**
 	 * public interface for this hasher
 	 */

@@ -27,13 +27,13 @@
 #include <transforms/hashers/hasher.h>
 
 
+typedef struct hasher_md5_t hasher_md5_t;
+
 /**
  * Object representing the md5 hasher
  * 
  */
-typedef struct hasher_md5_s hasher_md5_t;
-
-struct hasher_md5_s {
+struct hasher_md5_t {
 	
 	/**
 	 * generic hasher_t interface for this hasher

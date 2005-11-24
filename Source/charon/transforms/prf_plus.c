@@ -26,13 +26,13 @@
 #include <utils/allocator.h>
 #include <definitions.h>
 
+typedef struct private_prf_plus_t private_prf_plus_t;
+
 /**
  * Private data of an prf_plus_t object.
  * 
  */
-typedef struct private_prf_plus_s private_prf_plus_t;
-
-struct private_prf_plus_s {
+struct private_prf_plus_t {
 	/**
 	 * public prf_plus_t interface
 	 */

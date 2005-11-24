@@ -25,12 +25,12 @@
 
 #include <types.h>
 
+typedef struct sender_t sender_t;
+
 /**
  * @brief A Sender object which sends packets on the socket
  */
-typedef struct sender_s sender_t;
-
-struct sender_s {
+struct sender_t {
 
 	/**
 	 * @brief Destroys a sender object

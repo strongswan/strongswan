@@ -26,6 +26,8 @@
 
 #include "types.h"
 
+typedef struct ike_sa_id_t ike_sa_id_t;
+
 /**
  * @brief This class is used to identify an IKE_SA.
  *
@@ -33,9 +35,7 @@
  * Additionaly it contains the role of the actual running IKEv2-Daemon
  * for the specific IKE_SA.
  */
-typedef struct ike_sa_id_s ike_sa_id_t;
-
-struct ike_sa_id_s {
+struct ike_sa_id_t {
 
 	/**
 	 * @brief Sets the SPI of the responder.

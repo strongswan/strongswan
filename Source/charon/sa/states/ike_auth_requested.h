@@ -26,13 +26,14 @@
 #include <sa/states/state.h>
 #include <sa/ike_sa.h>
 
+
+typedef struct ike_auth_requested_t ike_auth_requested_t;
+
 /**
  * @brief This class represents an IKE_SA, which has requested an IKE_AUTH.
  *
  */
-typedef struct ike_auth_requested_s ike_auth_requested_t;
-
-struct ike_auth_requested_s {
+struct ike_auth_requested_t {
 	/**
 	 * methods of the state_t interface
 	 */

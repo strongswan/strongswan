@@ -26,12 +26,12 @@
 #include <encoding/payloads/transform_substructure.h>
 
 
+typedef struct signer_t signer_t;
+
 /**
  * Object representing a diffie hellman exchange
  */
-typedef struct signer_s signer_t;
-
-struct signer_s {
+struct signer_t {
 	/**
 	 * @brief generates pseudo random bytes and writes them
 	 * in the buffer

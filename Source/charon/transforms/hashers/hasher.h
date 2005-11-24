@@ -26,23 +26,23 @@
 
 #include <types.h>
 
+typedef enum hash_algorithm_t hash_algorithm_t;
+
 /**
  * algorithms to use for hashing
  */
-typedef enum hash_algorithm_e hash_algorithm_t;
-
-enum hash_algorithm_e {
+enum hash_algorithm_t {
 	HASH_SHA1,
 	HASH_MD5
 };
 
 
+typedef struct hasher_t hasher_t;
+
 /**
  * Object representing a hasher
  */
-typedef struct hasher_s hasher_t;
-
-struct hasher_s {
+struct hasher_t {
 	/**
 	 * @brief hash data and write it in the buffer
 	 * 

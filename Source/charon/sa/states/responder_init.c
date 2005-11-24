@@ -31,12 +31,14 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <transforms/diffie_hellman.h>
 
+
+typedef struct private_responder_init_t private_responder_init_t;
+
 /**
  * Private data of a responder_init_t object.
  *
  */
-typedef struct private_responder_init_s private_responder_init_t;
-struct private_responder_init_s {
+struct private_responder_init_t {
 	/**
 	 * Methods of the state_t interface.
 	 */

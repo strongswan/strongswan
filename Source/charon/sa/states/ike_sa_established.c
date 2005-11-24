@@ -24,12 +24,14 @@
 
 #include <utils/allocator.h>
 
+
+typedef struct private_ike_sa_established_t private_ike_sa_established_t;
+
 /**
  * Private data of a ike_sa_established_t object.
  *
  */
-typedef struct private_ike_sa_established_s private_ike_sa_established_t;
-struct private_ike_sa_established_s {
+struct private_ike_sa_established_t {
 	/**
 	 * methods of the state_t interface
 	 */

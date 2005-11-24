@@ -29,22 +29,22 @@
 
 
 
+typedef struct test_t test_t;
+
+typedef struct tester_t tester_t;
+
 /**
  * @brief Specifies a test
  */
-typedef struct test_s test_t;
-
-/**
- * @brief A tester object to perform tests with
- */
-typedef struct tester_s tester_t;
-
-struct test_s{
+struct test_t {
 	void (*test_function) (tester_t * tester);
 	char * test_name;
 };
 
-struct tester_s {
+/**
+ * @brief A tester object to perform tests with
+ */
+struct tester_t {
 
 	/**
 	 * @brief Tests all testcases in array tests with specific tester object

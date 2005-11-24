@@ -26,14 +26,14 @@
 #include <sa/states/state.h>
 #include <sa/ike_sa.h>
 
+typedef struct ike_sa_established_t ike_sa_established_t;
+
 /**
- * @brief This class represents an the state of an established
+ * @brief This class represents an the state of an established.
  * IKE_SA.
  *
  */
-typedef struct ike_sa_established_s ike_sa_established_t;
-
-struct ike_sa_established_s {
+struct ike_sa_established_t {
 	/**
 	 * methods of the state_t interface
 	 */

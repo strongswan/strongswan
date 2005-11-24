@@ -32,11 +32,12 @@
 #include <utils/logger_manager.h>
 #include <utils/linked_list.h>
 
+typedef struct ike_sa_entry_t ike_sa_entry_t;
+
 /**
  * @brief An entry in the linked list, contains IKE_SA, locking and lookup data.
  */
-typedef struct ike_sa_entry_s ike_sa_entry_t;
-struct ike_sa_entry_s {
+struct ike_sa_entry_t {
 	/**
 	 * destructor, also destroys ike_sa
 	 */
@@ -131,11 +132,12 @@ static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 	return this;
 }
 
+typedef struct private_ike_sa_manager_t private_ike_sa_manager_t;
+
 /**
  * Additional private members to ike_sa_manager_t
  */
-typedef struct private_ike_sa_manager_s private_ike_sa_manager_t;
-struct private_ike_sa_manager_s {
+struct private_ike_sa_manager_t {
 	/**
 	 * Public members
 	 */

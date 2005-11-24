@@ -27,12 +27,12 @@
 
 #include <utils/logger.h>
 
+typedef enum logger_context_t logger_context_t;
+
 /**
  * @brief Context of a specific logger 
  */
-typedef enum logger_context_e logger_context_t;
-
-enum logger_context_e{
+enum logger_context_t {
 	PARSER,
 	GENERATOR,
 	IKE_SA,
@@ -47,14 +47,14 @@ enum logger_context_e{
 	TESTER,
 	DAEMON,
 	CONFIGURATION_MANAGER,
-	};
+};
+
+typedef struct logger_manager_t logger_manager_t;
 
 /**
  * @brief The logger_manager_t object
  */
-typedef struct logger_manager_s logger_manager_t;
-
-struct logger_manager_s {
+struct logger_manager_t {
 	
 	/**
 	 * @brief Gets a logger_t object for a specific logger context.

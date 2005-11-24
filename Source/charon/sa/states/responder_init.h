@@ -26,14 +26,15 @@
 #include <sa/ike_sa.h>
 #include <sa/states/state.h>
 
+
+typedef struct responder_init_t responder_init_t;
+
 /**
- * @brief This class represents an IKE_SA state when initializing
- * 		  a connection as responder
+ * @brief This class represents an IKE_SA state when initializing.
+ * a connection as responder
  *
  */
-typedef struct responder_init_s responder_init_t;
-
-struct responder_init_s {
+struct responder_init_t {
 	/**
 	 * methods of the state_t interface
 	 */

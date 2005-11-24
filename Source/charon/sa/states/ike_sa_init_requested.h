@@ -29,13 +29,13 @@
 #include <sa/states/state.h>
 #include <transforms/diffie_hellman.h>
 
+typedef struct ike_sa_init_requested_t ike_sa_init_requested_t;
+
 /**
- * @brief This class represents an IKE_SA state when requested an IKE_SA_INIT
+ * @brief This class represents an IKE_SA state when requested an IKE_SA_INIT.
  *
  */
-typedef struct ike_sa_init_requested_s ike_sa_init_requested_t;
-
-struct ike_sa_init_requested_s {
+struct ike_sa_init_requested_t {
 	/**
 	 * methods of the state_t interface
 	 */

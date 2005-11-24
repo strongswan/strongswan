@@ -49,8 +49,9 @@ mapping_t logger_context_t_mappings[] = {
  */
 #define MAX_LOGGER_NAME 45
 
-typedef struct private_logger_manager_s private_logger_manager_t;
-struct private_logger_manager_s { 	
+typedef struct private_logger_manager_t private_logger_manager_t;
+
+struct private_logger_manager_t { 	
 	/**
 	 * Public data.
 	 */
@@ -91,9 +92,9 @@ struct private_logger_manager_s {
 /**
  * Entry in the logger_levels linked list
  */
-typedef struct logger_levels_entry_s logger_levels_entry_t;
+typedef struct logger_levels_entry_t logger_levels_entry_t;
 
-struct logger_levels_entry_s{
+struct logger_levels_entry_t {
 	logger_context_t context;
 	logger_level_t level;
 };
@@ -101,9 +102,9 @@ struct logger_levels_entry_s{
 /**
  * Entry in the loggers linked list
  */
-typedef struct loggers_entry_s loggers_entry_t;
+typedef struct loggers_entry_t loggers_entry_t;
 
-struct loggers_entry_s{
+struct loggers_entry_t {
 	logger_context_t context;
 	logger_t *logger;
 };

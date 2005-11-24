@@ -26,13 +26,13 @@
 #include <types.h>
 #include <encoding/payloads/transform_substructure.h>
 
+typedef struct diffie_hellman_t diffie_hellman_t;
+
 /**
  * Object representing a diffie hellman exchange
  * 
  */
-typedef struct diffie_hellman_s diffie_hellman_t;
-
-struct diffie_hellman_s {
+struct diffie_hellman_t {
 		
 	/**
 	 * @brief Returns the shared secret of this diffie hellman exchange

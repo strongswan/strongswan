@@ -27,15 +27,16 @@
 
 #include <types.h>
 
+
+typedef struct thread_pool_t thread_pool_t;
+
 /**
  * @brief A thread_pool contains a pool of threads processing the job queue.
  * 
  * Current implementation uses as many threads as specified in constructor.
  * A more improved version would dynamically increase thread count if necessary...
  */
-typedef struct thread_pool_s thread_pool_t;
-
-struct thread_pool_s {
+struct thread_pool_t {
 	/**
 	 * @brief return currently instanciated threads
 	 * 

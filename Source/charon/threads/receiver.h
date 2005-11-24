@@ -25,12 +25,12 @@
 
 #include <types.h>
 
+typedef struct receiver_t receiver_t;
+
 /**
  * @brief A Receiver object which receives packets on the socket and adds them to the job-queue
  */
-typedef struct receiver_s receiver_t;
-
-struct receiver_s {
+struct receiver_t {
 
 	/**
 	 * @brief Destroys a receiver object

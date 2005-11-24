@@ -41,13 +41,13 @@
  */
 #define NONCE_SIZE 16
 
+typedef struct ike_sa_t ike_sa_t;
+
 /**
  * @brief This class is used to represent an IKE_SA
  *
  */
-typedef struct ike_sa_s ike_sa_t;
-
-struct ike_sa_s {
+struct ike_sa_t {
 
 	/**
 	 * @brief Processes a incoming IKEv2-Message of type message_t
@@ -84,12 +84,12 @@ struct ike_sa_s {
 	status_t (*destroy) (ike_sa_t *this);
 };
 
+typedef struct protected_ike_sa_t protected_ike_sa_t;
+
 /**
  * Protected data of an ike_sa_t object
  */
-typedef struct protected_ike_sa_s protected_ike_sa_t;
-
-struct protected_ike_sa_s {
+struct protected_ike_sa_t {
 
 	/**
 	 * Public part of a ike_sa_t object

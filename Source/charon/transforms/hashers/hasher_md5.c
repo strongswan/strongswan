@@ -98,12 +98,12 @@ Rotation is separate from addition to prevent recomputation.
 
 
 
+typedef struct private_hasher_md5_t private_hasher_md5_t;
+
 /**
  * private data structure with hasing context
  */
-typedef struct private_hasher_md5_s private_hasher_md5_t;
-
-struct private_hasher_md5_s {
+struct private_hasher_md5_t {
 	/**
 	 * public interface for this hasher
 	 */

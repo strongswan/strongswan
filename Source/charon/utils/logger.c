@@ -37,11 +37,12 @@
  */
 #define MAX_LOG 8192
 
+typedef struct private_logger_t private_logger_t;
+
 /**
  * @brief The logger object.
  */
-typedef struct private_logger_s private_logger_t;
-struct private_logger_s { 	
+struct private_logger_t {
 	/**
 	 * Public data
 	 */

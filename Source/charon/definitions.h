@@ -60,6 +60,22 @@
 #endif
 
 /**
+ * Doxygen namespace support
+ */
+
+
+/**
+ * @addtogroup transforms
+ */
+ 
+/**
+ * @addtogroup prfs
+ * 
+ * @ingroup transforms
+ */
+ 
+
+/**
  * macro gives back larger of two values
  */
 #define max(x,y) (x > y ? x : y)
@@ -76,11 +92,12 @@
  */
 #define MAPPING_END (-1)
 
+typedef struct mapping_t mapping_t;
+
 /**
- * @brief mapping entry, where enum-to-string mappings are stored
+ * @brief mapping entry, where enum-to-string mappings are stored.
  */
-typedef struct mapping_s mapping_t;
-struct mapping_s
+struct mapping_t
 {
 	/**
 	 * enumeration value

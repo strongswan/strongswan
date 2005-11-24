@@ -30,7 +30,12 @@
 
 #include <definitions.h>
 
-typedef enum status_e {
+typedef enum status_t status_t;
+
+/**
+ * return status for function calls
+ */
+enum status_t {
 	SUCCESS,
 	FAILED,
 	OUT_OF_RES,
@@ -41,7 +46,7 @@ typedef enum status_e {
 	PARSE_ERROR,
 	VERIFY_ERROR,
 	INVALID_STATE
-} status_t;
+};
 
 extern mapping_t status_m[];
 
@@ -52,15 +57,20 @@ typedef struct timespec timespec_t;
 
 typedef struct sockaddr sockaddr_t;
 
+typedef struct chunk_t chunk_t;
+
 /**
  * General purpose pointer/length abstraction
  */
-typedef struct chunk_s chunk_t;
-struct chunk_s {
+struct chunk_t {
     u_char *ptr;
     size_t len;
 };
 
+/**
+ * {NULL, 0}-chunk, handy for initialization 
+ * of chunks.
+ */
 extern chunk_t CHUNK_INITIALIZER;
 
 /**

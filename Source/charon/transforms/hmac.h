@@ -1,9 +1,7 @@
 /**
  * @file hmac.h
  * 
- * @brief Implementation of message authentication
- * using cryptographic hash functions (HMAC). See RFC2104.
- * 
+ * @brief Interface of hmac_t.
  */
 
 /*
@@ -24,16 +22,25 @@
 #ifndef HMAC_H_
 #define HMAC_H_
 
-
 #include <transforms/hashers/hasher.h>
+#include <definitions.h>
+
+
+typedef struct hmac_t hmac_t;
 
 
 /**
- * Object representing a hmac
+ * @brief Message authentication based using hash functions.
+ * 
+ * This class implements the message authenticaion algorithm
+ * described in RFC2104. It uses a hash function, wich must
+ * be implemented as a hasher_t class.
+ * 
+ * @see hasher_t, prf_hmac_t
+ * 
+ * @ingroup transforms
  */
-typedef struct hmac_s hmac_t;
-
-struct hmac_s {
+struct hmac_t {
 	/**
 	 * @brief Generate message authentication code.
 	 * 
@@ -98,13 +105,19 @@ struct hmac_s {
 };
 
 /**
- * Creates a new hmac_t object
+ * @brief Creates a new hmac_t object.
+ * 
+ * Creates a new hmac_t object using sing hash_algorithm to
+ * create a hasher_t internally.
  * 
  * @param hash_algorithm		hash algorithm to use
  * @return
  *								- hmac_t if successfully
  *								- NULL if out of ressources or hash not supported
+ * 
+ * @ingroup transforms
  */
 hmac_t *hmac_create(hash_algorithm_t hash_algorithm);
+
 
 #endif /*HMAC_H_*/

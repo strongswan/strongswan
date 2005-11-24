@@ -25,14 +25,14 @@
 
 #include <types.h>
 
+typedef struct randomizer_t randomizer_t;
+
 /**
- * Object representing an randomizer
+ * @brief Object representing an randomizer
  * 
  * This class is thread save as file system read calls are thread save...
  */
-typedef struct randomizer_s randomizer_t;
-
-struct randomizer_s {
+struct randomizer_t {
 	
 	/**
 	 * @brief Reads a specific number of bytes from random device.

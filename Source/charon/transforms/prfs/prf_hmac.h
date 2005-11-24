@@ -29,13 +29,13 @@
 #include <types.h>
 #include <transforms/hashers/hasher.h>
 
+typedef struct prf_hmac_t prf_hmac_t;
+
 /**
  * Object representing a prf using HMAC
  * 
  */
-typedef struct prf_hmac_s prf_hmac_t;
-
-struct prf_hmac_s {
+struct prf_hmac_t {
 	
 	/**
 	 * generic prf_t interface for this prf

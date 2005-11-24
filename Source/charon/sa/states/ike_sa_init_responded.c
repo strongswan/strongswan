@@ -24,12 +24,14 @@
 
 #include <utils/allocator.h>
 
+
+typedef struct private_ike_sa_init_responded_t private_ike_sa_init_responded_t;
+
 /**
  * Private data of a ike_sa_init_responded_t object.
  *
  */
-typedef struct private_ike_sa_init_responded_s private_ike_sa_init_responded_t;
-struct private_ike_sa_init_responded_s {
+struct private_ike_sa_init_responded_t {
 	/**
 	 * methods of the state_t interface
 	 */

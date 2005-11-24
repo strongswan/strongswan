@@ -34,9 +34,9 @@
 /**
  * Private data of a scheduler object
  */
-typedef struct private_scheduler_s private_scheduler_t;
+typedef struct private_scheduler_t private_scheduler_t;
 
-struct private_scheduler_s {
+struct private_scheduler_t {
 	/**
 	 * Public part of a scheduler object
 	 */

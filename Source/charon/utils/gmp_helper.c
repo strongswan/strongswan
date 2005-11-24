@@ -33,13 +33,12 @@
  */
 #define PRIMECHECK_ROUNDS 30
 
+typedef struct private_gmp_helper_t private_gmp_helper_t;
+
 /**
  * Private data of an gmp_helper_t object.
- * 
  */
-typedef struct private_gmp_helper_s private_gmp_helper_t;
-
-struct private_gmp_helper_s {
+struct private_gmp_helper_t {
 	/**
 	 * public gmp_helper_t interface
 	 */

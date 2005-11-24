@@ -35,12 +35,12 @@
 #include <utils/allocator.h>
 #include <utils/logger.h>
 
+typedef struct private_thread_pool_t private_thread_pool_t;
+
 /**
  * @brief structure with private members for thread_pool_t
  */
-typedef struct private_thread_pool_s private_thread_pool_t;
-
-struct private_thread_pool_s {
+struct private_thread_pool_t {
 	/**
 	 * inclusion of public members
 	 */

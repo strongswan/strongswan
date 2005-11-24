@@ -333,9 +333,9 @@ extern mapping_t encoding_type_m[];
  * 
  * This rules are used by parser and generator.
  */
-typedef struct encoding_rule_s encoding_rule_t;
+typedef struct encoding_rule_t encoding_rule_t;
 
-struct encoding_rule_s{
+struct encoding_rule_t {
 	/**
 	 * Encoding type
 	 */

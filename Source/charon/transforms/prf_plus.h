@@ -27,12 +27,12 @@
 #include <transforms/prfs/prf.h>
 
 
+typedef struct prf_plus_t prf_plus_t;
+
 /**
  * Object representing a prf_plus
  */
-typedef struct prf_plus_s prf_plus_t;
-
-struct prf_plus_s {
+struct prf_plus_t {
 	/**
 	 * @brief Get pseudo random bytes.
 	 * 

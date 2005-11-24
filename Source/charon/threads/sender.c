@@ -32,12 +32,12 @@
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
+typedef struct private_sender_t private_sender_t;
+
 /**
  * Private data of a sender object
  */
-typedef struct private_sender_s private_sender_t;
-
-struct private_sender_s {
+struct private_sender_t {
 	/**
 	 * Public part of a sender object
 	 */

@@ -28,14 +28,14 @@
 #include <sa/states/state.h>
 
 
+typedef struct initiator_init_t initiator_init_t;
+
 /**
- * @brief This class represents an IKE_SA state when initializing
- * 		  a connection as initiator
+ * @brief This class represents an IKE_SA state when initializing.
+ * a connection as initiator
  *
  */
-typedef struct initiator_init_s initiator_init_t;
-
-struct initiator_init_s {
+struct initiator_init_t {
 	/**
 	 * methods of the state_t interface
 	 */

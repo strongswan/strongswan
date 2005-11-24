@@ -289,12 +289,12 @@ static u_int8_t group18_modulus[] = {
 	0x60,0xC9,0x80,0xDD,0x98,0xED,0xD3,0xDF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
 };
 
+typedef struct modulus_info_entry_t modulus_info_entry_t;
+
 /** 
  * Entry of the modulus list
  */
-typedef struct modulus_info_entry_s modulus_info_entry_t;
-
-struct modulus_info_entry_s{
+struct modulus_info_entry_t {
 	/**
 	 * Group number as it is defined in transform_substructure.h
 	 */
@@ -328,13 +328,13 @@ static modulus_info_entry_t modulus_info_entries[] = {
 	{MODP_8192_BIT,group18_modulus,sizeof(group18_modulus),2},
 };
 
+typedef struct private_diffie_hellman_t private_diffie_hellman_t;
+
 /**
  * Private data of an diffie_hellman_t object.
  * 
  */
-typedef struct private_diffie_hellman_s private_diffie_hellman_t;
-
-struct private_diffie_hellman_s {
+struct private_diffie_hellman_t {
 	/**
 	 * public diffie_hellman_t interface
 	 */

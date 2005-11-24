@@ -32,13 +32,14 @@
 #include <utils/linked_list.h>
 #include <queues/job_queue.h>
 
+
+typedef struct private_tester_t private_tester_t;
+
 /**
- * @brief Private Variables and Functions of tester class
+ * @brief Private Variables and Functions of tester class.
  *
  */
-typedef struct private_tester_s private_tester_t;
-
-struct private_tester_s {
+struct private_tester_t {
  	tester_t public;
 
 

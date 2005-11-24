@@ -24,12 +24,14 @@
 
 #include <utils/allocator.h>
 
+
+typedef struct private_ike_auth_requested_t private_ike_auth_requested_t;
+
 /**
  * Private data of a ike_auth_requested_t object.
  *
  */
-typedef struct private_ike_auth_requested_s private_ike_auth_requested_t;
-struct private_ike_auth_requested_s {
+struct private_ike_auth_requested_t {
 	/**
 	 * methods of the state_t interface
 	 */
