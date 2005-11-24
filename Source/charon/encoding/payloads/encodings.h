@@ -33,6 +33,8 @@
 #include <definitions.h>
 
 
+typedef enum encoding_type_t encoding_type_t;
+
 /**
  * @brief All different kinds of encoding types. 
  *
@@ -40,9 +42,7 @@
  * which has to be parsed or generated differently has its own
  * type defined here.
  */
-typedef enum encoding_type_e encoding_type_t;
-
-enum encoding_type_e{
+enum encoding_type_t{
 	/**
 	 * Representing a 4 Bit unsigned int value
 	 * 

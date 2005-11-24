@@ -49,14 +49,14 @@
  */
 #define IKE_HEADER_LENGTH 28
 
+typedef enum exchange_type_t exchange_type_t;
+
 /**
  * @brief Different types of IKE-Exchanges.
  *
  * See RFC for different types.
  */
-typedef enum exchange_type_e exchange_type_t;
-
-enum exchange_type_e{
+enum exchange_type_t{
 
 	/**
 	 * EXCHANGE_TYPE_UNDEFINED, not a official message type :-)
@@ -82,6 +82,8 @@ enum exchange_type_e{
 
 extern mapping_t exchange_type_m[];
 
+typedef struct ike_header_t ike_header_t;
+
 /**
  * Object representing an IKEv2-Header
  * 
@@ -90,9 +92,7 @@ extern mapping_t exchange_type_m[];
  * both versions of the IKE-protocol.
  * 
  */
-typedef struct ike_header_s ike_header_t;
-
-struct ike_header_s {
+struct ike_header_t {
 	/**
 	 * implements payload_t interface
 	 */

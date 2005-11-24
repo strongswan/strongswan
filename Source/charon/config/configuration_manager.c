@@ -34,12 +34,12 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/transform_attribute.h>
 
+typedef struct private_configuration_manager_t private_configuration_manager_t;
+
 /**
  * Private data of an configuration_t object
  */
-typedef struct private_configuration_manager_s private_configuration_manager_t;
-
-struct private_configuration_manager_s {
+struct private_configuration_manager_t {
 
 	/**
 	 * Public part

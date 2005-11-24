@@ -26,13 +26,13 @@
 #include <types.h>
 #include <queues/jobs/job.h>
 
+typedef struct initiate_ike_sa_job_t initiate_ike_sa_job_t;
+
 /**
  * Object representing an INITIATE_IKE_SA Job
  * 
  */
-typedef struct initiate_ike_sa_job_s initiate_ike_sa_job_t;
-
-struct initiate_ike_sa_job_s {
+struct initiate_ike_sa_job_t {
 	/**
 	 * implements job_t interface
 	 */

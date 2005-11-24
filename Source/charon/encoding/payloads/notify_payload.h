@@ -42,15 +42,15 @@
  */
 #define NOTIFY_PAYLOAD_HEADER_LENGTH 8
 
+typedef struct notify_payload_t notify_payload_t;
+
 /**
  * Object representing an IKEv2-Notify Payload
  * 
  * The Notify Payload format is described in Draft section 3.10.
  * 
  */
-typedef struct notify_payload_s notify_payload_t;
-
-struct notify_payload_s {
+struct notify_payload_t {
 	/**
 	 * implements payload_t interface
 	 */

@@ -26,15 +26,15 @@
 #include <utils/allocator.h>
 
 
-/**
- * Private data of an packet_t object
- */
-typedef struct private_packet_s private_packet_t;
+typedef struct private_packet_t private_packet_t;
 
-struct private_packet_s {
+/**
+ * Private data of an packet_t object.
+ */
+struct private_packet_t {
 
 	/**
-	 * Public part of a packet_t object
+	 * Public part of a packet_t object.
 	 */
 	packet_t public;
 };

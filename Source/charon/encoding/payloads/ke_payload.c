@@ -33,13 +33,13 @@
 #include <utils/allocator.h>
 
 
+typedef struct private_ke_payload_t private_ke_payload_t;
+
 /**
  * Private data of an ke_payload_t Object
  * 
  */
-typedef struct private_ke_payload_s private_ke_payload_t;
-
-struct private_ke_payload_s {
+struct private_ke_payload_t {
 	/**
 	 * public ke_payload_t interface
 	 */

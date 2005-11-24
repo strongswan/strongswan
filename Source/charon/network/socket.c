@@ -36,9 +36,13 @@
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
-typedef struct private_socket_s private_socket_t;
 
-struct private_socket_s{
+typedef struct private_socket_t private_socket_t;
+
+/**
+ * Private data of an socket_t object
+ */
+struct private_socket_t{
 	/**
 	 * public functions
 	 */

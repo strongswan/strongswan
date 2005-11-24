@@ -43,14 +43,15 @@
 
 
 
+
+typedef struct private_parser_t private_parser_t;
+
 /**
  * @private data stored in a context
  * 
  * contains pointers and counters to store current state
  */
-typedef struct private_parser_s private_parser_t;
-
-struct private_parser_s {
+struct private_parser_t {
 	/**
 	 * Public members, see parser_t
 	 */

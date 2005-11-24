@@ -31,6 +31,9 @@
 #include <transforms/signers/signer.h>
 #include <transforms/crypters/crypter.h>
 
+
+typedef struct configuration_manager_t configuration_manager_t;
+
 /**
  * @brief Manages all configuration aspects of the daemon.
  * 
@@ -39,9 +42,7 @@
  * or a hash map and are managed by this class.
  * 
  */
-typedef struct configuration_manager_s configuration_manager_t;
-
-struct configuration_manager_s { 
+struct configuration_manager_t { 
 	
 	/**
 	 * Gets the remote host information for a specific configuration name.

@@ -33,15 +33,15 @@
  */
 #define NONCE_PAYLOAD_HEADER_LENGTH 4
 
+typedef struct nonce_payload_t nonce_payload_t;
+
 /**
  * Object representing an IKEv2 Nonce payload
  * 
  * The Nonce payload format is described in draft section 3.3.
  * 
  */
-typedef struct nonce_payload_s nonce_payload_t;
-
-struct nonce_payload_s {
+struct nonce_payload_t {
 	/**
 	 * implements payload_t interface
 	 */

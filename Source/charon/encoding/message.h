@@ -30,16 +30,14 @@
 #include <utils/linked_list.h>
 
 
-
+typedef struct message_t message_t;
 
 /**
  * @brief This class is used to represent an IKEv2-Message.
  *
  * An IKEv2-Message is either a request or response.
  */
-typedef struct message_s message_t;
-
-struct message_s {
+struct message_t {
 
 	/**
 	 * @brief Sets the IKE major version of the message.

@@ -36,13 +36,13 @@
 #include <encoding/payloads/payload.h>
 
 
+typedef struct supported_payload_entry_t supported_payload_entry_t;
+
 /**
  * Supported payload entry used in message_rule_t
  * 
  */
-typedef struct supported_payload_entry_s supported_payload_entry_t;
-
-struct supported_payload_entry_s {
+struct supported_payload_entry_t {
 	/**
 	 * Payload type
 	 */
@@ -59,13 +59,13 @@ struct supported_payload_entry_s {
 	 size_t max_occurence;
 };
 
+typedef struct message_rule_t message_rule_t;
+
 /**
  * Message Rule used to find out which payloads are supported by each message type
  * 
  */
-typedef struct message_rule_s message_rule_t;
-
-struct message_rule_s {
+struct message_rule_t {
 	/**
 	 * Type of message
 	 */

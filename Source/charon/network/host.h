@@ -32,11 +32,12 @@
 
 #include <types.h>
 
+
+typedef struct host_t host_t;
 /**
- * @brief The logger object
+ * @brief Representates a Host
  */
-typedef struct host_s host_t;
-struct host_s {
+struct host_t {
 	/** 
 	 * @brief Build a clone of this host object.
 	 * 

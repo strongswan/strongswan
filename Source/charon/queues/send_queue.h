@@ -26,15 +26,16 @@
 #include <types.h>
 #include <network/packet.h>
 
+
+typedef struct send_queue_t send_queue_t;
+
 /**
  * @brief Send-Queue
  *
  * Although the send-queue is based on a linked_list_t
  * all access functions are thread-save implemented
  */
-typedef struct send_queue_s send_queue_t;
-
-struct send_queue_s {
+struct send_queue_t {
 
 	/**
 	 * @brief returns number of packets in queue

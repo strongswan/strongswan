@@ -28,13 +28,13 @@
 #include <queues/jobs/job.h>
 
 
+typedef struct delete_ike_sa_job_t delete_ike_sa_job_t;
+
 /**
  * Object representing an DELETE_IKE_SA Job
  * 
  */
-typedef struct delete_ike_sa_job_s delete_ike_sa_job_t;
-
-struct delete_ike_sa_job_s {
+struct delete_ike_sa_job_t {
 	/**
 	 * implements job_t interface
 	 */

@@ -28,12 +28,11 @@
 #include <network/host.h>
 
 
-
+typedef struct packet_t packet_t;
 /**
  * @brief UDP-Packet, contains data, sender and receiver
  */
-typedef struct packet_s packet_t;
-struct packet_s {
+struct packet_t {
 
 	/**
 	 * source address structure

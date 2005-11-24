@@ -29,12 +29,12 @@
 #include <encoding/payloads/payload.h>
 
 
+typedef enum transform_attribute_type_t transform_attribute_type_t;
+
 /**
  * Type of the attribute, as in IKEv2 draft 3.3.5
  */
-typedef enum transform_attribute_type_e transform_attribute_type_t;
-
-enum transform_attribute_type_e {
+enum transform_attribute_type_t {
 	ATTRIBUTE_UNDEFINED = 16384,
 	KEY_LENGTH = 14
 };
@@ -44,15 +44,15 @@ enum transform_attribute_type_e {
  */
 extern mapping_t transform_attribute_type_m[];
 
+typedef struct transform_attribute_t transform_attribute_t;
+
 /**
  * Object representing an IKEv2- TRANSFORM Attribute
  * 
  * The TRANSFORM ATTRIBUTE format is described in RFC section 3.3.5.
  * 
  */
-typedef struct transform_attribute_s transform_attribute_t;
-
-struct transform_attribute_s {
+struct transform_attribute_t {
 	/**
 	 * implements payload_t interface
 	 */

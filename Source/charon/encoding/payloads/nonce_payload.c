@@ -31,14 +31,13 @@
 #include <utils/allocator.h>
 
 
+typedef struct private_nonce_payload_t private_nonce_payload_t;
 
 /**
  * Private data of an nonce_payload_t' Object
  * 
  */
-typedef struct private_nonce_payload_s private_nonce_payload_t;
-
-struct private_nonce_payload_s {
+struct private_nonce_payload_t {
 	/**
 	 * public nonce_payload_t interface
 	 */

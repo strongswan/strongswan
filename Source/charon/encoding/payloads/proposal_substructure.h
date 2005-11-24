@@ -37,17 +37,19 @@
 #define PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH 8
 
 
+typedef enum protocol_id_t protocol_id_t;
+
 /**
  * Protocol ID of a proposal
  */
-typedef enum protocol_id_e protocol_id_t;
-
-enum protocol_id_e {
+enum protocol_id_t {
 	UNDEFINED_PROTOCOL_ID = 201,
 	IKE = 1,
 	AH = 2,
 	ESP = 3,
 };         
+
+typedef struct proposal_substructure_t proposal_substructure_t;
 
 /**
  * Object representing an IKEv2- PROPOSAL SUBSTRUCTURE
@@ -55,9 +57,7 @@ enum protocol_id_e {
  * The PROPOSAL SUBSTRUCTURE format is described in RFC section 3.3.1.
  * 
  */
-typedef struct proposal_substructure_s proposal_substructure_t;
-
-struct proposal_substructure_s {
+struct proposal_substructure_t {
 	/**
 	 * implements payload_t interface
 	 */

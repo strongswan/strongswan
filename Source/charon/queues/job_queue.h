@@ -26,15 +26,15 @@
 #include <types.h>
 #include <queues/jobs/job.h>
 
+typedef struct job_queue_t job_queue_t;
+
 /**
  * @brief Job-Queue
  *
  * Although the job-queue is based on a linked_list_t
  * all access functions are thread-save implemented
  */
-typedef struct job_queue_s job_queue_t;
-
-struct job_queue_s {
+struct job_queue_t {
 
 	/**
 	 * @brief returns number of jobs in queue

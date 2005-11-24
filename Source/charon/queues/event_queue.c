@@ -31,15 +31,15 @@
 
 
 
+typedef struct event_t event_t;
+
 /**
  * @brief Represents an event as it is stored in the event queue.
  *
  * A event consists of a event time and an assigned job object.
  *
  */
-typedef struct event_s event_t;
-
-struct event_s{
+struct event_t{
 	/**
 	 * Time to fire the event.
 	 */
@@ -95,14 +95,13 @@ static event_t *event_create(timeval_t time, job_t *job)
 }
 
 
+typedef struct private_event_queue_t private_event_queue_t;
+
 /**
  * @brief Private Variables and Functions of event_queue_t class.
  *
  */
-typedef struct private_event_queue_s private_event_queue_t;
-
-
-struct private_event_queue_s {
+struct private_event_queue_t {
 	/**
 	 * Public part.
 	 */

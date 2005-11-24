@@ -29,6 +29,8 @@
 #include <encoding/payloads/encodings.h>
 
 
+typedef enum payload_type_t payload_type_t;
+
 /**
  * Payload-Types of a IKEv2-Message
  * 
@@ -36,9 +38,7 @@
  * Header and substructures are also defined as 
  * payload types with values from PRIVATE USE space.
  */
-typedef enum payload_type_e payload_type_t;
-
-enum payload_type_e{
+enum payload_type_t{
 
 	/**
 	 * NO_PAYLOAD
@@ -150,15 +150,15 @@ enum payload_type_e{
 extern mapping_t payload_type_m[];
 
 
+typedef struct payload_t payload_t;
+
 /**
  * @brief Generic interface for all payload types (inclusive 
  * header and substructures)
  * 
  * 
  */
-typedef struct payload_s payload_t;
-
-struct payload_s {
+struct payload_t {
 	/**
 	 * @brief Destroys a payload and all included substructures.
 	 *

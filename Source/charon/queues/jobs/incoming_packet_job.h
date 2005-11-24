@@ -27,13 +27,14 @@
 #include <network/packet.h>
 #include <queues/jobs/job.h>
 
+
+typedef struct incoming_packet_job_t incoming_packet_job_t;
+
 /**
  * Object representing an INCOMING_PACKET Job
  * 
  */
-typedef struct incoming_packet_job_s incoming_packet_job_t;
-
-struct incoming_packet_job_s {
+struct incoming_packet_job_t {
 	/**
 	 * implements job_t interface
 	 */

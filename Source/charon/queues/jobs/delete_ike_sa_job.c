@@ -24,13 +24,14 @@
 
 #include <utils/allocator.h>
 
+
+typedef struct private_delete_ike_sa_job_t private_delete_ike_sa_job_t;
+
 /**
  * Private data of an delete_ike_sa_job_t Object
  * 
  */
-typedef struct private_delete_ike_sa_job_s private_delete_ike_sa_job_t;
-
-struct private_delete_ike_sa_job_s {
+struct private_delete_ike_sa_job_t {
 	/**
 	 * public delete_ike_sa_job_t interface
 	 */

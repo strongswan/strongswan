@@ -27,14 +27,14 @@
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 
+
+typedef struct private_send_queue_t private_send_queue_t;
+
  /**
  * @brief Private Variables and Functions of send_queue class
  *
  */
-typedef struct private_send_queue_s private_send_queue_t;
-
-
-struct private_send_queue_s {
+struct private_send_queue_t {
 	/**
 	 * Public part of the send_queue_t object
 	 */

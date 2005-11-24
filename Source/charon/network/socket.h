@@ -37,12 +37,13 @@
 #define MAX_PACKET 3000
 
 
+typedef struct socket_t socket_t;
+
 /**
  * @brief abstraction of one (ipv4), or in future, of multiple sockets
  * 
  */
-typedef struct socket_s socket_t;
-struct socket_s {
+struct socket_t {
 	/**
 	 * @brief receive a packet
 	 * 

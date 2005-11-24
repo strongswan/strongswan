@@ -28,14 +28,14 @@
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 
+
+typedef struct private_job_queue_t private_job_queue_t;
+
 /**
  * @brief Private Variables and Functions of job_queue class
  *
  */
-typedef struct private_job_queue_s private_job_queue_t;
-
-
-struct private_job_queue_s {
+struct private_job_queue_t {
  	job_queue_t public;
 
 	/**

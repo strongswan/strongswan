@@ -24,11 +24,13 @@
 
 #include <utils/allocator.h>
 
+
+typedef struct private_host_t private_host_t;
+
 /**
- * @brief The logger object.
+ * @brief Private Data of a host object.
  */
-typedef struct private_host_s private_host_t;
-struct private_host_s { 	
+struct private_host_t { 	
 	/**
 	 * Public data
 	 */

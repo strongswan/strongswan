@@ -31,9 +31,14 @@
 #include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 
-typedef struct private_ike_header_s private_ike_header_t;
 
-struct private_ike_header_s {
+typedef struct private_ike_header_t private_ike_header_t;
+
+/**
+ * Private data of an ike_header_t Object
+ * 
+ */
+struct private_ike_header_t {
 	/**
 	 * public interface
 	 */

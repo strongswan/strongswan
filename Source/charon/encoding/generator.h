@@ -38,12 +38,12 @@
  */
 #define GENERATOR_DATA_BUFFER_INCREASE_VALUE 500
 
+typedef struct generator_t generator_t;
+
 /**
  *A generator_t object which generates payloads of specific type.
  */
-typedef struct generator_s generator_t;
-
-struct generator_s {
+struct generator_t {
 	
 	/**
 	 * @brief Generates a specific payload from given payload object.

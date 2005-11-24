@@ -25,13 +25,14 @@
 
 #include <utils/allocator.h>
 
+
+typedef struct private_incoming_packet_job_t private_incoming_packet_job_t;
+
 /**
  * Private data of an incoming_packet_job_t Object
  * 
  */
-typedef struct private_incoming_packet_job_s private_incoming_packet_job_t;
-
-struct private_incoming_packet_job_s {
+struct private_incoming_packet_job_t {
 	/**
 	 * public incoming_packet_job_t interface
 	 */

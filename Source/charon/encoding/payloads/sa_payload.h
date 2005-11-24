@@ -41,15 +41,15 @@
  */
 #define SA_PAYLOAD_HEADER_LENGTH 4
 
+typedef struct sa_payload_t sa_payload_t;
+
 /**
  * Object representing an IKEv2-SA Payload
  * 
  * The SA Payload format is described in RFC section 3.3.
  * 
  */
-typedef struct sa_payload_s sa_payload_t;
-
-struct sa_payload_s {
+struct sa_payload_t {
 	/**
 	 * implements payload_t interface
 	 */

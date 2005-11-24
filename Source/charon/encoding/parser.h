@@ -28,6 +28,8 @@
 #include <encoding/payloads/payload.h>
 
 
+typedef struct parser_t parser_t;
+
 /**
  * @brief A parser_t object which parses payloads
  * 
@@ -35,9 +37,7 @@
  * payloads can be parsed out of the chunk using parse_payload.
  * The parser remains the state until destroyed.
  */
-typedef struct parser_s parser_t;
-
-struct parser_s {
+struct parser_t {
 	
 	/**
 	 * @brief parses the next payload

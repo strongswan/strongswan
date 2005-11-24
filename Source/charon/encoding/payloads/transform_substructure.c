@@ -33,13 +33,14 @@
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 
+
+typedef struct private_transform_substructure_t private_transform_substructure_t;
+
 /**
  * Private data of an transform_substructure_t' Object
  * 
  */
-typedef struct private_transform_substructure_s private_transform_substructure_t;
-
-struct private_transform_substructure_s {
+struct private_transform_substructure_t {
 	/**
 	 * public transform_substructure_t interface
 	 */

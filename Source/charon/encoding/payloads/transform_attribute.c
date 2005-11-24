@@ -31,13 +31,13 @@
 #include <types.h>
 #include <utils/allocator.h>
 
+typedef struct private_transform_attribute_t private_transform_attribute_t;
+
 /**
  * Private data of an transform_attribute_t Object
  * 
  */
-typedef struct private_transform_attribute_s private_transform_attribute_t;
-
-struct private_transform_attribute_s {
+struct private_transform_attribute_t {
 	/**
 	 * public transform_attribute_t interface
 	 */

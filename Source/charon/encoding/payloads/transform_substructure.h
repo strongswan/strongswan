@@ -43,12 +43,12 @@
 #define TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH 8
 
 
+typedef enum transform_type_t transform_type_t;
+
 /**
  * Type of a transform, as in IKEv2 draft 3.3.2
  */
-typedef enum transform_type_e transform_type_t;
-
-enum transform_type_e {
+enum transform_type_t {
 	UNDEFINED_TRANSFORM_TYPE = 241,
 	ENCRYPTION_ALGORITHM = 1,
 	PSEUDO_RANDOM_FUNCTION = 2,
@@ -62,12 +62,12 @@ enum transform_type_e {
  */
 extern mapping_t transform_type_m[];
 
+typedef enum encryption_algorithm_t encryption_algorithm_t;
+
 /**
  * Encryption algorithm, as in IKEv2 draft 3.3.2
  */
-typedef enum encryption_algorithm_e encryption_algorithm_t;
-
-enum encryption_algorithm_e {
+enum encryption_algorithm_t {
 	ENCR_UNDEFINED = 1024,
 	ENCR_DES_IV64 = 1,
 	ENCR_DES = 2,
@@ -89,12 +89,12 @@ enum encryption_algorithm_e {
  */
 extern mapping_t encryption_algorithm_m[];
 
+typedef enum pseudo_random_function_t pseudo_random_function_t;
+
 /**
  * Pseudo random function, as in IKEv2 draft 3.3.2
  */
-typedef enum pseudo_random_function_e pseudo_random_function_t;
-
-enum pseudo_random_function_e {
+enum pseudo_random_function_t {
 	PRF_UNDEFINED = 1024,
 	PRF_HMAC_MD5 = 1,
 	PRF_HMAC_SHA1 = 2,
@@ -107,12 +107,12 @@ enum pseudo_random_function_e {
  */
 extern mapping_t pseudo_random_function_m[];
 
+typedef enum integrity_algorithm_t integrity_algorithm_t;
+
 /**
  * Integrity algorithm, as in IKEv2 draft 3.3.2
  */
-typedef enum integrity_algorithm_e integrity_algorithm_t;
-
-enum integrity_algorithm_e {
+enum integrity_algorithm_t {
 	AUTH_UNDEFINED = 1024,
 	AUTH_HMAC_MD5_96 = 1,
 	AUTH_HMAC_SHA1_96 = 2,
@@ -127,12 +127,12 @@ enum integrity_algorithm_e {
 extern mapping_t integrity_algorithm_m[];
 
 
+typedef enum diffie_hellman_group_t diffie_hellman_group_t;
+
 /** 
  * Diffie-Hellman group, as in IKEv2 draft 3.3.2 and RFC 3526
  */
-typedef enum diffie_hellman_group_e diffie_hellman_group_t;
-
-enum diffie_hellman_group_e {
+enum diffie_hellman_group_t {
 	MODP_UNDEFINED = 1024,
 	MODP_768_BIT = 1,
 	MODP_1024_BIT = 2,
@@ -149,12 +149,12 @@ enum diffie_hellman_group_e {
  */
 extern mapping_t diffie_hellman_group_m[];
 
+typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
+
 /** 
  * Extended sequence numbers, as in IKEv2 draft 3.3.2
  */
-typedef enum extended_sequence_numbers_e extended_sequence_numbers_t;
-
-enum extended_sequence_numbers_e {
+enum extended_sequence_numbers_t {
 	NO_EXT_SEQ_NUMBERS = 0,
 	EXT_SEQ_NUMBERS = 1
 };
@@ -164,15 +164,15 @@ enum extended_sequence_numbers_e {
  */
 extern mapping_t extended_sequence_numbers_m[];
 
+typedef struct transform_substructure_t transform_substructure_t;
+
 /**
  * Object representing an IKEv2- TRANSFORM SUBSTRUCTURE
  * 
  * The TRANSFORM SUBSTRUCTURE format is described in RFC section 3.3.2.
  * 
  */
-typedef struct transform_substructure_s transform_substructure_t;
-
-struct transform_substructure_s {
+struct transform_substructure_t {
 	/**
 	 * implements payload_t interface
 	 */

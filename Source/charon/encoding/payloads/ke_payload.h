@@ -42,15 +42,16 @@
  */
 #define KE_PAYLOAD_HEADER_LENGTH 8
 
+
+typedef struct ke_payload_t ke_payload_t;
+
 /**
  * Object representing an IKEv2-KE Payload
  * 
  * The KE Payload format is described in RFC section 3.4.
  * 
  */
-typedef struct ke_payload_s ke_payload_t;
-
-struct ke_payload_s {
+struct ke_payload_t {
 	/**
 	 * implements payload_t interface
 	 */

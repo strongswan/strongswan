@@ -26,12 +26,13 @@
 #include <types.h>
 #include <definitions.h>
 
+
+typedef enum job_type_t job_type_t;
+
 /**
  * Type of Jobs in Job-Queue
  */
-typedef enum job_type_e job_type_t;
-
-enum job_type_e {
+enum job_type_t {
 	/** 
 	 * Process an incoming IKEv2-Message
 	 * 
@@ -61,14 +62,15 @@ enum job_type_e {
 
 extern mapping_t job_type_m[];
 
+
+typedef struct job_t job_t;
+
 /**
  * @brief Job-Interface as it is stored in the job queue
  * 
  * A job consists of a job-type and one or more assigned values
  */
-typedef struct job_s job_t;
-
-struct job_s{
+struct job_t{
 
 	/**
 	 * @brief get type of job

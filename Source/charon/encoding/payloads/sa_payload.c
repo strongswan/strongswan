@@ -33,13 +33,13 @@
 #include <utils/linked_list.h>
 
 
+typedef struct private_sa_payload_t private_sa_payload_t;
+
 /**
  * Private data of an sa_payload_t' Object
  * 
  */
-typedef struct private_sa_payload_s private_sa_payload_t;
-
-struct private_sa_payload_s {
+struct private_sa_payload_t {
 	/**
 	 * public sa_payload_t interface
 	 */

@@ -41,12 +41,13 @@
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 
+
+typedef struct private_generator_t private_generator_t;
+
 /**
  * Private part of a generator_t object
  */
-typedef struct private_generator_s private_generator_t;
-
-struct private_generator_s {
+struct private_generator_t {
 	/**
 	 * Public part of a generator_t object
 	 */

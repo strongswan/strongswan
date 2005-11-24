@@ -33,13 +33,13 @@
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 
+typedef struct private_proposal_substructure_t private_proposal_substructure_t;
+
 /**
  * Private data of an proposal_substructure_t' Object
  * 
  */
-typedef struct private_proposal_substructure_s private_proposal_substructure_t;
-
-struct private_proposal_substructure_s {
+struct private_proposal_substructure_t {
 	/**
 	 * public proposal_substructure_t interface
 	 */

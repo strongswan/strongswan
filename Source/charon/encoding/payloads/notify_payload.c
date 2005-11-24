@@ -32,13 +32,14 @@
 #include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 
+
+typedef struct private_notify_payload_t private_notify_payload_t;
+
 /**
  * Private data of an notify_payload_t Object
  * 
  */
-typedef struct private_notify_payload_s private_notify_payload_t;
-
-struct private_notify_payload_s {
+struct private_notify_payload_t {
 	/**
 	 * public notify_payload_t interface
 	 */

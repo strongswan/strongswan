@@ -28,15 +28,15 @@
 #include <types.h>
 #include <queues/jobs/job.h>
 
+typedef struct event_queue_t event_queue_t;
+
 /**
  * @brief Event-Queue used to store timed events.
  *
  * Although the event-queue is based on a linked_list_t
  * all access functions are thread-save implemented.
  */
-typedef struct event_queue_s event_queue_t;
-
-struct event_queue_s {
+struct event_queue_t {
 
 	/**
 	 * @brief Returns number of events in queue.
