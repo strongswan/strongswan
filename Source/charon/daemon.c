@@ -39,6 +39,7 @@
 #include <queues/event_queue.h>
 #include <queues/job_queue.h>
 #include <queues/send_queue.h>
+#include <queues/jobs/initiate_ike_sa_job.h>
 
 
 /* function declaration (defined and described after main function) */
@@ -132,15 +133,15 @@ int main()
 	 	destroy_and_exit(-1);
 	}
 	
-//	int i;
-//	for(i = 0; i<1; i++)
-//	{
-//		initiate_ike_sa_job_t *initiate_job;
-//		
-//		initiate_job = initiate_ike_sa_job_create("pinflb30");
-//		global_event_queue->add_relative(global_event_queue, (job_t*)initiate_job, i * 1000);
-//		
-//	}
+	int i;
+	for(i = 0; i<1; i++)
+	{
+		initiate_ike_sa_job_t *initiate_job;
+		
+		initiate_job = initiate_ike_sa_job_create("pinflb31");
+		global_event_queue->add_relative(global_event_queue, (job_t*)initiate_job, i * 1000);
+		
+	}
  	
  	logger->log(logger,CONTROL|MORE,"going to wait for exit signal");
  	/* go and handle signals*/
@@ -246,28 +247,34 @@ static status_t initialize_globals()
  */
 static void destroy_globals()
 {
-	if (global_ike_sa_manager != NULL)
+	if (global_job_queue != NULL)
 	{
+	 	logger->log(logger,CONTROL|MOST,"destroy global_job_queue");
 		global_job_queue->destroy(global_job_queue);
 	}
 	if (global_event_queue != NULL)
 	{
+	 	logger->log(logger,CONTROL|MOST,"destroy global_event_queue");
 		global_event_queue->destroy(global_event_queue);	
 	}
 	if (global_send_queue != NULL)
 	{
+	 	logger->log(logger,CONTROL|MOST,"destroy global_send_queue");
 		global_send_queue->destroy(global_send_queue);	
 	}
 	if (global_socket != NULL)
 	{
+	 	logger->log(logger,CONTROL|MOST,"destroy global_socket");
 		global_socket->destroy(global_socket);
 	}
 	if (global_ike_sa_manager != NULL)
 	{
+	 	logger->log(logger,CONTROL|MOST,"destroy global_ike_sa_manager");
 		global_ike_sa_manager->destroy(global_ike_sa_manager);
 	}
 	if (global_configuration_manager != NULL)
 	{
+	 	logger->log(logger,CONTROL|MOST,"destroy global_configuration_manager");
 		global_configuration_manager->destroy(global_configuration_manager);
 	}
 }
