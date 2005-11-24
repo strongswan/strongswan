@@ -1,7 +1,7 @@
 /**
  * @file linked_list.c
  *
- * @brief Generic Double Linked List
+ * @brief Implementation of linked_list_t.
  *
  */
 
@@ -355,16 +355,11 @@ static status_t get_first(private_linked_list_t *this, void **item)
  */
 static status_t insert_last(private_linked_list_t *this, void *item)
 {
-	if (this == NULL)
-	{
-		return FAILED;
-	}
-
 	linked_list_element_t *element = (linked_list_element_t *) linked_list_element_create(item);
 
 	if (element == NULL)
 	{
-		return FAILED;
+		return OUT_OF_RES;
 	}
 
 	if (this->count == 0)
@@ -606,7 +601,7 @@ static status_t create_iterator (private_linked_list_t *linked_list, iterator_t 
 
 	if (this == NULL)
 	{
-		return FAILED;
+		return OUT_OF_RES;
 	}
 
 	this->public.has_next = (bool (*) (iterator_t *this)) iterator_has_next;

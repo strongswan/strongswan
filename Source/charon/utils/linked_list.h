@@ -1,7 +1,7 @@
 /**
  * @file linked_list.h
  * 
- * @brief Generic Double Linked List
+ * @brief Interface of linked_list_t.
  * 
  */
 
@@ -32,48 +32,53 @@ typedef struct linked_list_t linked_list_t;
 /**
  * @brief Double Linked List (named only as linked list).
  *
- * @warning Access to an object of this type is not thread-save
+ * @warning Access to an object of this type is not thread-save.
  * 
- * @see job_queue_t
- * @see event_queue_t
- * @see send_queue_t
+ * @see job_queue_t, event_queue_t, send_queue_t
+ * 
+ * @ingroup utils
  */
 struct linked_list_t {
 
 	/**
-	 * @brief gets the count of items in the list
+	 * @brief Gets the count of items in the list.
 	 * 
-	 * @param linked_list calling object
-	 * @return number of items in list
+	 * @param linked_list 	calling object
+	 * @return 				number of items in list
 	 */
 	int (*get_count) (linked_list_t *linked_list);
 	
 	/**
-	 * @brief creates a iterator for the given list
+	 * @brief Creates a iterator for the given list.
 	 * 
-	 * @warning has to get destroyed
+	 * @warning Created iterator has to get destroyed by the caller.
 	 * 
-	 * @param linked_list calling object
-	 * @param[out] iterator place where the iterator is written
-	 * @param[in] forward iterator direction (TRUE: front to end)
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @param linked_list 	calling object
+	 * @param[out] iterator 	place where the iterator is written
+	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @return 				
+	 * 						- SUCCESS
+	 * 						- OUT_OF_RES
 	 */
 	status_t (*create_iterator) (linked_list_t *linked_list, iterator_t **iterator,bool forward);
 
 	/**
-	 * @brief inserts a new item at the beginning of the list
+	 * @brief Inserts a new item at the beginning of the list.
 	 * 
-	 * @param linked_list calling object
-	 * @param[in] item value to insert in list
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @param linked_list 	calling object
+	 * @param[in] 			item value to insert in list
+	 * @return 				
+	 * 						- SUCCESS
+	 * 						- FAILED if internal list is corrupted.
+	 * 						- OUT_OF_RES
 	 */
 	status_t (*insert_first) (linked_list_t *linked_list, void *item);
 
 	/**
-	 * @brief removes the first item in the list and returns its value
+	 * @brief Removes the first item in the list and returns its value.
 	 * 
-	 * @param linked_list calling object
-	 * @param[in] item returned value of first item
+	 * @param linked_list 	calling object
+	 * @param[in] item 		returned value of first item
 	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
 	status_t (*remove_first) (linked_list_t *linked_list, void **item);
@@ -129,9 +134,11 @@ struct linked_list_t {
 };
 
 /**
- * @brief Creates an empty linked list object
+ * @brief Creates an empty linked list object.
+ * 
+ * @ingroup utils
  */
-linked_list_t *linked_list_create(void);
+linked_list_t *linked_list_create();
 
 
 #endif /*LINKED_LIST_H_*/

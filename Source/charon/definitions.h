@@ -104,6 +104,12 @@
  * 
  * @ingroup transforms
  */
+ 
+ /**
+ * @addtogroup utils
+ * 
+ * Generic helper classes.
+ */
 
 /**
  * macro gives back larger of two values
