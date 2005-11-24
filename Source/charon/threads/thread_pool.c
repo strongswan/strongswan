@@ -192,27 +192,14 @@ static void job_processing(private_thread_pool_t *this)
 				 * - call initiate_connection on this sa
 				 */
 				initiate_ike_sa_job_t *initiate_job;
-				ike_sa_id_t *ike_sa_id;
 				ike_sa_t *ike_sa;
 				status_t status;
 				
 				initiate_job = (initiate_ike_sa_job_t *)job;			
+					
+				this->worker_logger->log(this->worker_logger, CONTROL|MOST, "create and checking out IKE SA");
 				
-				ike_sa_id = ike_sa_id_create(0, 0, TRUE);
-				if (ike_sa_id == NULL)
-				{
-					this->worker_logger->log(this->worker_logger, ERROR, "%s by creating ike_sa_id_t, job rejected.", 
-										mapping_find(status_m, status));
-					break;
-				}
-				
-				this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking out IKE SA %lld:%lld, role %s", 
-									ike_sa_id->get_initiator_spi(ike_sa_id),
-									ike_sa_id->get_responder_spi(ike_sa_id),
-									ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
-				
-				status = global_ike_sa_manager->checkout(global_ike_sa_manager, ike_sa_id, &ike_sa);
-				ike_sa_id->destroy(ike_sa_id);
+				status = global_ike_sa_manager->create_and_checkout(global_ike_sa_manager, &ike_sa);
 				if (status != SUCCESS)
 				{
 					this->worker_logger->log(this->worker_logger, ERROR, "%s by checking out new IKE_SA, job rejected.", 

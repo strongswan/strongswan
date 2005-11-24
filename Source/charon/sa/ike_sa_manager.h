@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_manager.h
  * 
- * @brief Central point for managing IKE-SAs (creation, locking, deleting...)
+ * @brief Interface of ike_sa_manager_t.
  * 
  */
 
@@ -33,7 +33,7 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  * @brief The IKE_SA-Manager manages the IKE_SAs ;-).
  *
  * To avoid access from multiple threads, IKE_SAs must be checked out from
- * the manager, and checked back in after usage. 
+ * the manager, and checked in after usage. 
  * The manager also handles deletion of SAs.
  *
  * @todo checking of double-checkouts from the same threads would be nice.
@@ -46,7 +46,6 @@ struct ike_sa_manager_t {
 	 * 
 	 * Checks out a SA by its ID. An SA will be created, when:
 	 * - Responder SPI is not set (when received an IKE_SA_INIT from initiator)
-	 * - Both SPIs are not set (for initiating IKE_SA_INIT)
 	 * Management of SPIs is the managers job, he will set it.
 	 * This function blocks until SA is available for checkout.
 	 * 
@@ -62,16 +61,34 @@ struct ike_sa_manager_t {
 	 * 							- OUT_OF_RES
 	 */
 	status_t (*checkout) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *sa_id, ike_sa_t **ike_sa);
+	
+	/**
+	 * @brief Create and checkout an IKE_SA as original initator.
+	 * 
+	 * Creates and checks out a SA as initiator. An SA will be created, when:
+	 * Management of SPIs is the managers job, he will set it.
+	 * 
+	 * @warning checking out two times without checking in will
+	 * result in a deadlock!
+	 * 
+	 * @param ike_sa_manager 	the manager object
+	 * @param ike_sa[out] 		checked out SA
+	 * @returns 					
+	 * 							- SUCCESS if checkout successful
+	 * 							- OUT_OF_RES
+	 */
+	status_t (*create_and_checkout) (ike_sa_manager_t* ike_sa_manager,ike_sa_t **ike_sa);
+      	
 	/**
 	 * @brief Checkin the SA after usage
 	 * 
-	 * @warning the SA pointer MUST NOT be used after checkin! The SA must be checked
-	 * out again!
+	 * @warning the SA pointer MUST NOT be used after checkin! 
+	 * The SA must be checked out again!
 	 *  
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier, will be updated
 	 * @param ike_sa[out]		checked out SA
-	 * @returns 				SUCCESS if checked in
+	 * @returns 					SUCCESS if checked in
 	 * 							NOT_FOUND when not found (shouldn't happen!)
 	 */
 	status_t (*checkin) (ike_sa_manager_t* ike_sa_manager, ike_sa_t *ike_sa);
@@ -83,7 +100,7 @@ struct ike_sa_manager_t {
 	 *  
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier
-	 * @returns 				SUCCESS if found
+	 * @returns 					SUCCESS if found
 	 * 							NOT_FOUND when no such SA is available
 	 */
 	status_t (*delete) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *ike_sa_id);

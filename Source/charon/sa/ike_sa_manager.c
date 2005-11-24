@@ -363,7 +363,73 @@ static status_t get_next_spi(private_ike_sa_manager_t *this, u_int64_t *spi)
 }
 
 /**
- * @see ike_sa_manager_s.checkout_ike_sa
+ * Implementation of ike_sa_manager.create_and_checkout.
+ */
+static status_t create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa)
+{
+	status_t retval;
+	u_int64_t initiator_spi;
+	ike_sa_entry_t *new_ike_sa_entry;
+	ike_sa_id_t *new_ike_sa_id;
+
+	retval = this->get_next_spi(this, &initiator_spi);
+	if (retval == SUCCESS)
+	{
+		new_ike_sa_id = 	ike_sa_id_create(0, 0, TRUE);
+		if (new_ike_sa_id != NULL)
+		{
+			new_ike_sa_id->set_initiator_spi(new_ike_sa_id, initiator_spi);
+	
+			/* create entry */
+			new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
+			new_ike_sa_id->destroy(new_ike_sa_id);
+			if (new_ike_sa_entry != NULL)
+			{ 
+				/* each access is locked */
+				pthread_mutex_lock(&(this->mutex));
+				
+				retval = this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
+	
+				if (retval == SUCCESS)
+				{
+					/* check ike_sa out */
+					this->logger->log(this->logger,CONTROL | MORE ,"New IKE_SA created and added to list of known IKE_SA's");
+					new_ike_sa_entry->checked_out = TRUE;
+					*ike_sa = new_ike_sa_entry->ike_sa;
+					/* DON'T use return, we must unlock the mutex! */
+				}
+				else
+				{
+					/* ike_sa_entry could not be added to list*/
+					this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry_t could not be added to list");
+				}
+				pthread_mutex_unlock(&(this->mutex));
+			}
+			else
+			{
+				/* new ike_sa_entry could not be created */
+				this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry_t could not be created");	
+				retval = OUT_OF_RES;
+			}
+		}
+		else
+		{
+			/* new ike_sa_id could not be created */
+ 			this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_id_t could not be created");	
+			retval = OUT_OF_RES;
+		}
+	}
+	else
+	{
+		/* next SPI could not be created */
+ 		this->logger->log(this->logger,ERROR,"Fatal error: Next SPI could not be created");
+	}
+
+	return retval;
+}
+
+/**
+ * Implementation of ike_sa_manager.checkout.
  */
 static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_t **ike_sa)
 {
@@ -480,6 +546,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 			{
 				/* new ike_sa_entry could not be created */
 				this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry could not be created");			
+				retval = OUT_OF_RES;
 			}
 		}
 		else
@@ -487,55 +554,6 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 			this->logger->log(this->logger,ERROR,"Fatal error: Next SPI could not be created");
 		}
 		
-	}
-	else if (!initiator_spi_set && !responder_spi_set)
-	{
-		/* creation of an IKE_SA from local site,
-		 * we are the initiator!
-		 */
-		u_int64_t initiator_spi;
-		ike_sa_entry_t *new_ike_sa_entry;
-		
-		retval = this->get_next_spi(this, &initiator_spi);
-		if (retval == SUCCESS)
-		{
-			/* we also set arguments SPI, so its still valid */
-			ike_sa_id->set_initiator_spi(ike_sa_id, initiator_spi);
-
-			/* create entry */
-			new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
-			if (new_ike_sa_entry != NULL)
-			{ 
-				retval = this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
-
-				if (retval == SUCCESS)
-				{
-					/* check ike_sa out */
-					this->logger->log(this->logger,CONTROL | MORE ,"New IKE_SA created and added to list of known IKE_SA's");
-					new_ike_sa_entry->checked_out = TRUE;
-					*ike_sa = new_ike_sa_entry->ike_sa;
-			
-					/* DON'T use return, we must unlock the mutex! */
-				}
-				else
-				{
-					/* ike_sa_entry could not be added to list*/
-					this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry could not be added to list");
-				}		
-			}
-			else
-			{
-				/* new ike_sa_entry could not be created */
-				this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry could not be created");	
-			}
-		}
-		else
-		{
-			/* next SPI could not be created */
-	 		this->logger->log(this->logger,ERROR,"Fatal error: Next SPI could not be created");
-		}
-
-
 	}
 	else
 	{
@@ -756,6 +774,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	/* assign public functions */
 	this->public.destroy = (status_t(*)(ike_sa_manager_t*))destroy;
+	this->public.create_and_checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_t **sa))create_and_checkout;
 	this->public.checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t *sa_id, ike_sa_t **sa))checkout;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*, ike_sa_t *sa))checkin;
 	this->public.delete = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t *sa_id))delete;
