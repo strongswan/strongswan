@@ -203,7 +203,11 @@ struct message_t {
 	status_t (*parse_header) (message_t *this);
 	
 	/**
-	 * @brief Parses body of message
+	 * @brief Parses body of message.
+	 * 
+	 * The body gets not only parsed, but rather it gets verified. 
+	 * All payloads are verified if they are allowed to exist in the message 
+	 * of this type and if their own structure is ok.
 	 *
 	 * @param this 		message_t object
 	 * @return
