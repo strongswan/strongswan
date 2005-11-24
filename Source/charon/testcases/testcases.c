@@ -65,7 +65,7 @@ test_t linked_list_test = {test_linked_list,"Linked List"};
 /**
  * Test for linked_list_t with iterator
  */
-test_t linked_list_iterator_test = {test_linked_list_iterator,"Linked List Iterator"};
+test_t iterator_test = {test_linked_list_iterator,"Linked List Iterator"};
 
 /**
  * Test for linked_list_t insert and remove
@@ -243,7 +243,7 @@ logger_manager_t *global_logger_manager;
  	
  	test_t *all_tests[] ={
 		&linked_list_test,
-		&linked_list_iterator_test,
+		&iterator_test,
 		&linked_list_insert_and_remove_test,
 		&thread_pool_test,
 		&job_queue_test1,

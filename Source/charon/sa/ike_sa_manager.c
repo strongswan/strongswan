@@ -226,7 +226,7 @@ struct private_ike_sa_manager_t {
 static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_entry_t **entry)
 {
 	linked_list_t *list = this->ike_sa_list;
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status;
 	
 	/* create iterator over list of ike_sa's */
@@ -279,7 +279,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa, ike_sa_entry_t **entry)
 {
 	linked_list_t *list = this->ike_sa_list;
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status;
 	
 	status = list->create_iterator(list, &iterator, TRUE);
@@ -315,7 +315,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *entry)
 {
 	linked_list_t *list = this->ike_sa_list;
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status;
 	
 	status = list->create_iterator(list, &iterator, TRUE);
@@ -686,7 +686,7 @@ static status_t destroy(private_ike_sa_manager_t *this)
 {
 	/* destroy all list entries */
 	linked_list_t *list = this->ike_sa_list;
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status;
 	ike_sa_entry_t *entry;
 	

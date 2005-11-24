@@ -870,7 +870,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				/* proposals are stored in a linked list and so accessed */
 				linked_list_t *proposals = *((linked_list_t **)(this->data_struct + rules[i].offset));
 
-				linked_list_iterator_t *iterator;
+				iterator_t *iterator;
 				/* create forward iterator */
 				status = proposals->create_iterator(proposals,&iterator,TRUE);
 				if (status != SUCCESS)
@@ -922,7 +922,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				u_int16_t length_of_proposal = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH + this->last_spi_size;
 				u_int16_t int16_val;
 				linked_list_t *transforms = *((linked_list_t **)(this->data_struct + rules[i].offset));
-				linked_list_iterator_t *iterator;
+				iterator_t *iterator;
 								
 				/* create forward iterator */
 				status = transforms->create_iterator(transforms,&iterator,TRUE);
@@ -972,7 +972,7 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 				u_int16_t int16_val;
 				linked_list_t *transform_attributes =*((linked_list_t **)(this->data_struct + rules[i].offset));
 
-				linked_list_iterator_t *iterator;
+				iterator_t *iterator;
 				/* create forward iterator */
 				status = transform_attributes->create_iterator(transform_attributes,&iterator,TRUE);
 				if (status != SUCCESS)

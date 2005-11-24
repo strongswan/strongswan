@@ -71,7 +71,7 @@ struct sa_payload_t {
 	 * 						- SUCCESS or
 	 * 						- OUT_OF_RES if iterator could not be created
 	 */
-	status_t (*create_proposal_substructure_iterator) (sa_payload_t *this,linked_list_iterator_t **iterator, bool forward);
+	status_t (*create_proposal_substructure_iterator) (sa_payload_t *this,iterator_t **iterator, bool forward);
 	
 	/**
 	 * @brief Adds a proposal_substructure_t object to this object.

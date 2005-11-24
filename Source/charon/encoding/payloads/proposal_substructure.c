@@ -221,7 +221,7 @@ static size_t get_length(private_proposal_substructure_t *this)
  * Implements proposal_substructure_t's create_transform_substructure_iterator function.
  * See #proposal_substructure_s.create_transform_substructure_iterator for description.
  */
-static status_t create_transform_substructure_iterator (private_proposal_substructure_t *this,linked_list_iterator_t **iterator,bool forward)
+static status_t create_transform_substructure_iterator (private_proposal_substructure_t *this,iterator_t **iterator,bool forward)
 {
 	return (this->transforms->create_iterator(this->transforms,iterator,forward));
 }
@@ -333,7 +333,7 @@ static chunk_t get_spi (private_proposal_substructure_t *this)
  */
 static status_t compute_length (private_proposal_substructure_t *this)
 {
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status;
 	size_t transforms_count = 0;
 	size_t length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
@@ -365,7 +365,7 @@ static status_t compute_length (private_proposal_substructure_t *this)
 static status_t clone(private_proposal_substructure_t *this, private_proposal_substructure_t **clone)
 {
 	private_proposal_substructure_t * new_clone;
-	linked_list_iterator_t *transforms;
+	iterator_t *transforms;
 	status_t status;
 	
 	new_clone = (private_proposal_substructure_t *) proposal_substructure_create();
@@ -477,7 +477,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.create_transform_substructure_iterator = (status_t (*) (proposal_substructure_t *,linked_list_iterator_t **,bool)) create_transform_substructure_iterator;
+	this->public.create_transform_substructure_iterator = (status_t (*) (proposal_substructure_t *,iterator_t **,bool)) create_transform_substructure_iterator;
 	this->public.add_transform_substructure = (status_t (*) (proposal_substructure_t *,transform_substructure_t *)) add_transform_substructure;
 	this->public.set_proposal_number = (status_t (*) (proposal_substructure_t *,u_int8_t))set_proposal_number;
 	this->public.get_proposal_number = (u_int8_t (*) (proposal_substructure_t *)) get_proposal_number;

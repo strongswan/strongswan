@@ -445,7 +445,7 @@ static status_t get_destination(private_message_t *this, host_t **host)
 }
 
 
-static status_t get_payload_iterator(private_message_t *this, linked_list_iterator_t **iterator)
+static status_t get_payload_iterator(private_message_t *this, iterator_t **iterator)
 {
 	return this->payloads->create_iterator(this->payloads, iterator, TRUE);
 }
@@ -460,7 +460,7 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	generator_t *generator;
 	ike_header_t *ike_header;
 	payload_t *payload, *next_payload;
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status;
 	
 	
@@ -692,7 +692,7 @@ static status_t parse_body (private_message_t *this)
 	}
 	else
 	{
-		linked_list_iterator_t *iterator;
+		iterator_t *iterator;
 		
 		status = this->payloads->create_iterator(this->payloads,&iterator,TRUE);
 		if (status != SUCCESS)
@@ -756,7 +756,7 @@ static status_t parse_body (private_message_t *this)
  */
 static status_t destroy (private_message_t *this)
 {
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	
 	this->packet->destroy(this->packet);
 
@@ -814,7 +814,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_source = (status_t (*) (message_t*,host_t**)) get_source;
 	this->public.set_destination = (status_t (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (status_t (*) (message_t*,host_t**)) get_destination;
-	this->public.get_payload_iterator = (status_t (*) (message_t *, linked_list_iterator_t **)) get_payload_iterator;
+	this->public.get_payload_iterator = (status_t (*) (message_t *, iterator_t **)) get_payload_iterator;
 	this->public.parse_header = 	(status_t (*) (message_t *)) parse_header;
 	this->public.parse_body = 	(status_t (*) (message_t *)) parse_body;
 	this->public.destroy = (status_t(*)(message_t*))destroy;

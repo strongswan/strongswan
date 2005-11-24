@@ -144,7 +144,7 @@ struct private_responder_init_t {
  */
 static status_t process_message(private_responder_init_t *this, message_t *message, state_t **new_state)
 {
-	linked_list_iterator_t *payloads;
+	iterator_t *payloads;
 	host_t *source, *destination;
 	status_t status;
 	message_t *response;
@@ -204,7 +204,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			case SECURITY_ASSOCIATION:
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
-				linked_list_iterator_t *suggested_proposals, *accepted_proposals;
+				iterator_t *suggested_proposals, *accepted_proposals;
 				encryption_algorithm_t		encryption_algorithm = ENCR_UNDEFINED;
 				pseudo_random_function_t		pseudo_random_function = PRF_UNDEFINED;
 				integrity_algorithm_t		integrity_algorithm = AUTH_UNDEFINED;
@@ -490,7 +490,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 static status_t build_sa_payload(private_responder_init_t *this, payload_t **payload)
 {
 	sa_payload_t* sa_payload;
-	linked_list_iterator_t *proposal_iterator;
+	iterator_t *proposal_iterator;
 	status_t status;
 	
 	

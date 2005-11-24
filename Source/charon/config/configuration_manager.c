@@ -128,7 +128,7 @@ static status_t get_dh_group_number(private_configuration_manager_t *this,char *
 /**
  * Implements function configuration_manager_t.get_proposals_for_host.
  */
-static status_t get_proposals_for_host(private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *iterator)
+static status_t get_proposals_for_host(private_configuration_manager_t *this, host_t *host, iterator_t *iterator)
 {
 	/* 
 	 * Currently the following hard coded proposal is created and returned for all hosts:
@@ -278,7 +278,7 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 /**
  * Implements function configuration_manager_t.select_proposals_for_host.
  */
-static status_t select_proposals_for_host(private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *in, linked_list_iterator_t *out)
+static status_t select_proposals_for_host(private_configuration_manager_t *this, host_t *host, iterator_t *in, iterator_t *out)
 {
 	/* Currently the first suggested proposal is selected, cloned and then returned*/
 	status_t status;
@@ -318,7 +318,7 @@ static status_t select_proposals_for_host(private_configuration_manager_t *this,
 /**
  * Implements function configuration_manager_t.get_transforms_for_host_and_proposals.
  */
-static status_t get_transforms_for_host_and_proposals (private_configuration_manager_t *this, host_t *host, linked_list_iterator_t *proposals,encryption_algorithm_t *encryption_algorithm,pseudo_random_function_t *pseudo_random_function, integrity_algorithm_t *integrity_algorithm)
+static status_t get_transforms_for_host_and_proposals (private_configuration_manager_t *this, host_t *host, iterator_t *proposals,encryption_algorithm_t *encryption_algorithm,pseudo_random_function_t *pseudo_random_function, integrity_algorithm_t *integrity_algorithm)
 {
 	/*
 	 * Currently the given proposals are not checked if they are valid for specific host!
@@ -330,7 +330,7 @@ static status_t get_transforms_for_host_and_proposals (private_configuration_man
 	pseudo_random_function_t		selected_pseudo_random_function = PRF_UNDEFINED;
 	integrity_algorithm_t		selected_integrity_algorithm = AUTH_UNDEFINED;
 	proposal_substructure_t *proposal;
-	linked_list_iterator_t *transforms;
+	iterator_t *transforms;
 	status_t status;
 
 	this->logger->log(this->logger,ERROR, "Going to get transforms for given proposal");
@@ -466,9 +466,9 @@ configuration_manager_t *configuration_manager_create()
 	this->public.get_remote_host = (status_t(*)(configuration_manager_t*,char*,host_t**))get_remote_host;
 	this->public.get_local_host = (status_t(*)(configuration_manager_t*,char*,host_t**))get_local_host;
 	this->public.get_dh_group_number = (status_t(*)(configuration_manager_t*,char*,u_int16_t *, u_int16_t))get_dh_group_number;
-	this->public.get_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,linked_list_iterator_t*))get_proposals_for_host;
-	this->public.select_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,linked_list_iterator_t*,linked_list_iterator_t*))select_proposals_for_host;
-	this->public.get_transforms_for_host_and_proposals =  (status_t (*) (configuration_manager_t *, host_t *, linked_list_iterator_t *,encryption_algorithm_t *,pseudo_random_function_t *, integrity_algorithm_t *)) get_transforms_for_host_and_proposals;
+	this->public.get_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,iterator_t*))get_proposals_for_host;
+	this->public.select_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,iterator_t*,iterator_t*))select_proposals_for_host;
+	this->public.get_transforms_for_host_and_proposals =  (status_t (*) (configuration_manager_t *, host_t *, iterator_t *,encryption_algorithm_t *,pseudo_random_function_t *, integrity_algorithm_t *)) get_transforms_for_host_and_proposals;
 	this->public.is_dh_group_allowed_for_host = (status_t(*)(configuration_manager_t*,host_t*,diffie_hellman_group_t,bool*)) is_dh_group_allowed_for_host;
 
 	/* private variables */

@@ -334,7 +334,7 @@ static size_t get_length(private_transform_substructure_t *this)
  * Implements transform_substructure_t's create_transform_attribute_iterator function.
  * See #transform_substructure_s.create_transform_attribute_iterator for description.
  */
-static status_t create_transform_attribute_iterator (private_transform_substructure_t *this,linked_list_iterator_t **iterator,bool forward)
+static status_t create_transform_attribute_iterator (private_transform_substructure_t *this,iterator_t **iterator,bool forward)
 {
 	return (this->attributes->create_iterator(this->attributes,iterator,forward));
 }
@@ -423,7 +423,7 @@ static u_int16_t get_transform_id (private_transform_substructure_t *this)
  */
 static status_t compute_length (private_transform_substructure_t *this)
 {
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status;
 	size_t length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
 	status = this->attributes->create_iterator(this->attributes,&iterator,TRUE);
@@ -451,7 +451,7 @@ static status_t compute_length (private_transform_substructure_t *this)
 static status_t clone(private_transform_substructure_t *this,transform_substructure_t **clone)
 {
 	private_transform_substructure_t *new_clone;
-	linked_list_iterator_t *attributes;
+	iterator_t *attributes;
 	status_t status;
 	
 	new_clone = (private_transform_substructure_t *) transform_substructure_create();
@@ -547,7 +547,7 @@ transform_substructure_t *transform_substructure_create()
 	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.create_transform_attribute_iterator = (status_t (*) (transform_substructure_t *,linked_list_iterator_t **,bool)) create_transform_attribute_iterator;
+	this->public.create_transform_attribute_iterator = (status_t (*) (transform_substructure_t *,iterator_t **,bool)) create_transform_attribute_iterator;
 	this->public.add_transform_attribute = (status_t (*) (transform_substructure_t *,transform_attribute_t *)) add_transform_attribute;
 	this->public.set_is_last_transform = (status_t (*) (transform_substructure_t *,bool)) set_is_last_transform;
 	this->public.get_is_last_transform = (bool (*) (transform_substructure_t *)) get_is_last_transform;

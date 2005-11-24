@@ -114,7 +114,7 @@ struct configuration_manager_t {
 	 * 							- NOT_FOUND (not yet implemented)
 	 * 							- SUCCESS
 	 */
-	status_t (*get_proposals_for_host) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *list);
+	status_t (*get_proposals_for_host) (configuration_manager_t *this, host_t *host, iterator_t *list);
 	
 	/**
 	 * Checks the suggested proposals passed as iterator in and selects one proposal to be sent as selection
@@ -134,7 +134,7 @@ struct configuration_manager_t {
 	 * 							- NOT_FOUND (not yet implemented)
 	 * 							- SUCCESS
 	 */
-	status_t (*select_proposals_for_host) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *in, linked_list_iterator_t *out);
+	status_t (*select_proposals_for_host) (configuration_manager_t *this, host_t *host, iterator_t *in, iterator_t *out);
 	
 	/**
 	 * Returns the transforms of type crypter_t, signer_t and prf_t as specified in given proposal.
@@ -153,7 +153,7 @@ struct configuration_manager_t {
 	 * 										- NOT_FOUND (not yet implemented)
 	 * 										- SUCCESS
 	 */
-	status_t (*get_transforms_for_host_and_proposals) (configuration_manager_t *this, host_t *host, linked_list_iterator_t *proposals,encryption_algorithm_t *encryption_algorithm,pseudo_random_function_t *pseudo_random_function, integrity_algorithm_t *integrity_algorithm);
+	status_t (*get_transforms_for_host_and_proposals) (configuration_manager_t *this, host_t *host, iterator_t *proposals,encryption_algorithm_t *encryption_algorithm,pseudo_random_function_t *pseudo_random_function, integrity_algorithm_t *integrity_algorithm);
 	
 	/**
 	 * Checks if a given dh_group number is allowed for a specific host

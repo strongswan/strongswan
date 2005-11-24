@@ -77,7 +77,7 @@ struct proposal_substructure_t {
 	 * 						- SUCCESS or
 	 * 						- OUT_OF_RES if iterator could not be created
 	 */
-	status_t (*create_transform_substructure_iterator) (proposal_substructure_t *this,linked_list_iterator_t **iterator, bool forward);
+	status_t (*create_transform_substructure_iterator) (proposal_substructure_t *this,iterator_t **iterator, bool forward);
 	
 	/**
 	 * @brief Adds a transform_substructure_t object to this object.

@@ -264,7 +264,7 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 			break;
 		}
 
-		linked_list_iterator_t * iterator;
+		iterator_t * iterator;
 
 		status = this->list->create_iterator(this->list,&iterator,TRUE);
 		if (status != SUCCESS)

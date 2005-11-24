@@ -96,7 +96,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 	sa_payload_t *sa_payload;
 	status_t status;
 	chunk_t sa_chunk;
-	linked_list_iterator_t *proposals, *transforms, *attributes;
+	iterator_t *proposals, *transforms, *attributes;
 	
 	u_int8_t sa_bytes[] = {
 		0x00,0x80,0x00,0x24, /* payload header*/

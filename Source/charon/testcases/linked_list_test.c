@@ -101,8 +101,8 @@ void test_linked_list_iterator(tester_t *tester)
 	linked_list->insert_first(linked_list,"four");
 	linked_list->insert_first(linked_list,"five");
 
-	linked_list_iterator_t * iterator;
-	linked_list_iterator_t * iterator2;
+	iterator_t * iterator;
+	iterator_t * iterator2;
 	
 	
 	tester->assert_true(tester,(linked_list->create_iterator(linked_list,&iterator,TRUE) == SUCCESS), "create_iterator for it 1 call check");
@@ -160,7 +160,7 @@ void test_linked_list_iterator(tester_t *tester)
 void test_linked_list_insert_and_remove(tester_t *tester)
 {
 	void *value;
-	linked_list_iterator_t * iterator;
+	iterator_t * iterator;
 	
 	linked_list_t *linked_list = linked_list_create();
 	linked_list->insert_first(linked_list,"one");

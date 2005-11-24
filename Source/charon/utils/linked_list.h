@@ -24,89 +24,10 @@
 #define LINKED_LIST_H_
 
 #include <types.h>
+#include <utils/iterator.h>
 
-typedef struct linked_list_iterator_t linked_list_iterator_t;
-
-/**
- * @brief Iterator for a linked list.
- *
- * This element holds a pointer to the current element in the linked list
- *
- * @warning the iterator is NOT thread-save
- */
-struct linked_list_iterator_t {
-
-	/**
-	 * @brief returns TRUE if more elements are available
-	 * 
-	 * @param this calling object
-	 * @return if more elements are avaiable TRUE, FALSE otherwise
-	 */
-	bool (*has_next) (linked_list_iterator_t *this);
-
-	/**
-	 * @brief returns the current value at the iterator position
-	 * 
-	 * @param this calling object
-	 * @param[out] value value is set to the current value at iterator position
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*current) (linked_list_iterator_t *this, void **value);
-	
-	/**
-	 * @brief inserts a new item before the given iterator position
-	 * 
-	 * The iterator position is not changed after inserting
-	 * 
-	 * @param this calling iterator
-	 * @param[in] item value to insert in list
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*insert_before) (linked_list_iterator_t *this, void *item);
-
-	/**
-	 * @brief inserts a new item after the given iterator position
-	 * 
-	 * The iterator position is not changed after inserting
-	 * 
-	 * @param this calling iterator
-	 * @param[in] item value to insert in list
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*insert_after) (linked_list_iterator_t *this, void *item);
-
-	/**
-	 * @brief removes an element from list at the given iterator position.
-	 * 
-	 * The position of the iterator is set in the following order:
-	 * - to the item before, if available
-	 * - otherwise to the item after, if available
-	 * - otherwise it gets reseted
-	 * 
-	 * @param linked_list calling object
-	 * @param iterator iterator holding the position of the element to remove
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*remove) (linked_list_iterator_t *iterator);
-	/**
-	 * @brief Resets a linked_list_iterator object
-	 * 
-	 * @param this calling object
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*reset) (linked_list_iterator_t *this);
-
-	/**
-	 * @brief Destroys a linked_list_iterator object
-	 * 
-	 * @param this calling object
-	 * @return SUCCESS if succeeded, FAILED otherwise
-	 */
-	status_t (*destroy) (linked_list_iterator_t *this);
-};
 
 typedef struct linked_list_t linked_list_t;
-
 
 /**
  * @brief Double Linked List (named only as linked list).
@@ -137,7 +58,7 @@ struct linked_list_t {
 	 * @param[in] forward iterator direction (TRUE: front to end)
 	 * @return SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*create_iterator) (linked_list_t *linked_list, linked_list_iterator_t **iterator,bool forward);
+	status_t (*create_iterator) (linked_list_t *linked_list, iterator_t **iterator,bool forward);
 
 	/**
 	 * @brief inserts a new item at the beginning of the list

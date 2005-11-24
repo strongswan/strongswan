@@ -148,7 +148,7 @@ struct private_initiator_init_t {
  */
 static status_t initiate_connection (private_initiator_init_t *this, char *name, state_t **new_state)
 {
-	linked_list_iterator_t 	*proposal_iterator;
+	iterator_t 	*proposal_iterator;
 	ike_sa_init_requested_t 	*next_state;
 	message_t 				*message;
 	packet_t 				*packet;
@@ -370,7 +370,7 @@ static status_t build_ike_sa_init_request (private_initiator_init_t *this, messa
 static status_t build_sa_payload(private_initiator_init_t *this, payload_t **payload)
 {
 	sa_payload_t* sa_payload;
-	linked_list_iterator_t *proposal_iterator;
+	iterator_t *proposal_iterator;
 	status_t status;
 	
 	/* SA payload takes proposals from this->ike_sa_init_data.proposals and writes them to the created sa_payload */

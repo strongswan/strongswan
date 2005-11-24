@@ -194,7 +194,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
  */
 static logger_level_t get_logger_level (private_logger_manager_t *this, logger_context_t context)
 {
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	/* set logger_level to default logger_level */
 	logger_level_t logger_level = this->default_log_level;
 
@@ -235,7 +235,7 @@ static logger_level_t get_logger_level (private_logger_manager_t *this, logger_c
 static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
 {
 	
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status = NOT_FOUND;
 	
 	pthread_mutex_lock(&(this->mutex));
@@ -275,7 +275,7 @@ static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
  */
 static status_t set_logger_level (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable)
 {
-	linked_list_iterator_t *iterator;
+	iterator_t *iterator;
 	status_t status;
 	
 	pthread_mutex_lock(&(this->mutex));
