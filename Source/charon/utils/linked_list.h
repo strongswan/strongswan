@@ -79,56 +79,68 @@ struct linked_list_t {
 	 * 
 	 * @param linked_list 	calling object
 	 * @param[in] item 		returned value of first item
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @return
+	 * 						- SUCCESS
+	 * 						- NOT_FOUND, if list is empty
 	 */
 	status_t (*remove_first) (linked_list_t *linked_list, void **item);
 
 	/**
-	 * @brief returns the value of the first list item without removing it
+	 * @brief Returns the value of the first list item without removing it.
 	 * 
-	 * @param linked_list calling object
-	 * @param[out] item returned value of first item
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @param linked_list 	calling object
+	 * @param[out] 			item returned value of first item
+	 * @return
+	 * 						- SUCCESS
+	 * 						- NOT_FOUND, if list is empty
 	 */
 	status_t (*get_first) (linked_list_t *linked_list, void **item);
 
 	/**
-	 * @brief inserts a new item at the end of the list
+	 * @brief Inserts a new item at the end of the list.
 	 * 
-	 * @param linked_list calling object
-	 * @param[in] item value to insert into list
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @param linked_list 	calling object
+	 * @param[in] 			item value to insert into list
+	 * @return 				
+	 * 						- SUCCESS
+	 * 						- FAILED if internal list is corrupted.
+	 * 						- OUT_OF_RES
 	 */
 	status_t (*insert_last) (linked_list_t *linked_list, void *item);
 	
 	/**
-	 * @brief removes the last item in the list and returns its value
+	 * @brief Removes the last item in the list and returns its value.
 	 * 
-	 * @param linked_list calling object
-	 * @param[out] item returned value of last item
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @param linked_list 	calling object
+	 * @param[out] 			item returned value of last item
+	 * @return
+	 * 						- SUCCESS
+	 * 						- NOT_FOUND if list is empty
 	 */
 	status_t (*remove_last) (linked_list_t *linked_list, void **item);
 
 	/**
-	 * @brief Returns the value of the last list item without removing it
+	 * @brief Returns the value of the last list item without removing it.
 	 * 
-	 * @param linked_list calling object
-	 * @param[out] item returned value of last item
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @param linked_list 	calling object
+	 * @param[out] 			item returned value of last item
+	 * @return
+	 * 						- SUCCESS
+	 * 						- NOT_FOUND if list is empty
 	 */
 	status_t (*get_last) (linked_list_t *linked_list, void **item);
 	
 	/**
-	 * @brief Destroys a linked_list object
+	 * @brief Destroys a linked_list object.
 	 * 
-	 * @warning all items are removed before deleting the list. The
+	 * @warning All items are removed before deleting the list. The
 	 *          associated values are NOT destroyed. 
 	 * 			Destroying an list which is not empty may cause
 	 * 			memory leaks!
 	 * 
-	 * @param linked_list calling object
-	 * @return SUCCESS if succeeded, FAILED otherwise
+	 * @param linked_list 	calling object
+	 * @return
+	 * 						- SUCCESS
 	 */
 	status_t (*destroy) (linked_list_t *linked_list);
 };
