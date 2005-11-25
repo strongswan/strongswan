@@ -83,7 +83,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(generated_data.len == sizeof(expected_generation)), "compare generated data length");
 	logger->log_chunk(logger,RAW,"generated header",&generated_data);		
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data 1");
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 	
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 
@@ -119,7 +119,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	logger->log_chunk(logger,RAW,"generated header",&generated_data);
 
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data 2");
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 
 	header_data->destroy(header_data);
 	
@@ -154,7 +154,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 		0x80,0x00,0x00,0x00,
 	};
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 	
@@ -180,7 +180,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	};
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 
@@ -219,7 +219,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	};
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 		
@@ -300,7 +300,7 @@ void test_generator_with_transform_substructure(tester_t *tester)
 	};
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(transform->destroy(transform) == SUCCESS), "transform destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 	
@@ -436,7 +436,7 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(proposal->destroy(proposal) == SUCCESS), "proposal destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
 	
@@ -615,7 +615,7 @@ void test_generator_with_sa_payload(tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(ike_header->destroy(ike_header) == SUCCESS), "ike_header destroy call check");
 	tester->assert_true(tester,(sa_payload->destroy(sa_payload) == SUCCESS), "sa_payload destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
@@ -672,7 +672,7 @@ void test_generator_with_ke_payload(tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);	
+	allocator_free_chunk(&generated_data);	
 	
 	tester->assert_true(tester,(ke_payload->destroy(ke_payload) == SUCCESS), "sa_payload destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
@@ -734,7 +734,7 @@ void test_generator_with_notify_payload(tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);	
+	allocator_free_chunk(&generated_data);	
 	
 	tester->assert_true(tester,(notify_payload->destroy(notify_payload) == SUCCESS), "notify_payload destroy call check");
 	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
@@ -789,7 +789,7 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(generated_data);
+	allocator_free_chunk(&generated_data);
 	
 	
 	tester->assert_true(tester,(nonce_payload->destroy(nonce_payload) == SUCCESS), "notify_payload destroy call check");

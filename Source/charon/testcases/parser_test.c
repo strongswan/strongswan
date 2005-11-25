@@ -219,7 +219,7 @@ void test_parser_with_nonce_payload(tester_t *tester)
 	tester->assert_true(tester,(result.len == 16), "parsed nonce lenght");
 	tester->assert_false(tester,(memcmp(nonce_bytes + 4, result.ptr, result.len)), "parsed nonce data");
 	nonce_payload->destroy(nonce_payload);
-	allocator_free_chunk(result);
+	allocator_free_chunk(&result);
 }
 
 /*

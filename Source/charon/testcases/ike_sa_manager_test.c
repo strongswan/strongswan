@@ -94,12 +94,8 @@ void test_ike_sa_manager(tester_t *tester)
 	 * create an IKE_SA, 
 	 * 
 	 */
-	memset(&initiator, 0, sizeof(initiator));
-	memset(&responder, 0, sizeof(responder));
-	
-	ike_sa_id = ike_sa_id_create(initiator, responder, TRUE);
 
-	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
+	status = td.isam->create_and_checkout(td.isam, &ike_sa);
 	tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA");
 	/* for testing purposes, we manipulate the responder spi.
 	 * this is usually done be the response from the communication partner, 
@@ -109,6 +105,10 @@ void test_ike_sa_manager(tester_t *tester)
 
 	sa_id = ike_sa->get_id(ike_sa);
 	sa_id->set_responder_spi(sa_id, responder);	
+	
+	status = sa_id->clone(sa_id,&ike_sa_id);
+	tester->assert_true(tester, (status == SUCCESS), "clone sa id");
+		
 	/* check in, so we should have a "completed" sa, specified by ike_sa_id */
 	status = td.isam->checkin(td.isam, ike_sa);
 	tester->assert_true(tester, (status == SUCCESS), "checkin modified IKE_SA");
