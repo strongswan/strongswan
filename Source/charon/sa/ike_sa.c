@@ -232,18 +232,18 @@ static status_t compute_secrets (protected_ike_sa_t *this,chunk_t dh_shared_secr
 	status = this->prf->allocate_bytes(this->prf,dh_shared_secret,&skeyseed);
 	if (status != SUCCESS)
 	{
-		allocator_free_chunk(concatenated_nonces);
+		allocator_free_chunk(&concatenated_nonces);
 		this->logger->log(this->logger, ERROR, "Fatal errror: Could not allocate bytes for skeyseed");
 		return status;
 	}
-	allocator_free_chunk(concatenated_nonces);
+	allocator_free_chunk(&concatenated_nonces);
 
 	prf_plus_seed.len = (initiator_nonce.len + responder_nonce.len + 16);
 	prf_plus_seed.ptr = allocator_alloc(prf_plus_seed.len);
 	if (prf_plus_seed.ptr == NULL)
 	{
 		this->logger->log(this->logger, ERROR, "Fatal errror: Could not allocate memory for prf+ seed");
-		allocator_free_chunk(skeyseed);
+		allocator_free_chunk(&skeyseed);
 		return FAILED;
 	}
 	
@@ -263,17 +263,17 @@ static status_t compute_secrets (protected_ike_sa_t *this,chunk_t dh_shared_secr
 
 	this->logger->log(this->logger, CONTROL | MOST, "Set new key of prf object");
 	status = this->prf->set_key(this->prf,skeyseed);
-	allocator_free_chunk(skeyseed);
+	allocator_free_chunk(&skeyseed);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Fatal errror: Could not allocate memory for prf+ seed");
-		allocator_free_chunk(prf_plus_seed);
+		allocator_free_chunk(&prf_plus_seed);
 		return FAILED;
 	}
-	
+	 
 	this->logger->log(this->logger, CONTROL | MOST, "Create new prf+ object");
 	prf_plus = prf_plus_create(this->prf, prf_plus_seed);
-	allocator_free_chunk(prf_plus_seed);
+	allocator_free_chunk(&prf_plus_seed);
 	if (prf_plus == NULL)
 	{
 		this->logger->log(this->logger, ERROR, "Fatal errror: prf+ object could not be created");
@@ -284,7 +284,7 @@ static status_t compute_secrets (protected_ike_sa_t *this,chunk_t dh_shared_secr
 	
 	this->logger->log_chunk(this->logger, PRIVATE, "Secrets", &secrets_raw);
 	
-	allocator_free_chunk(secrets_raw);
+	allocator_free_chunk(&secrets_raw);
 	
 	prf_plus->destroy(prf_plus);
 
