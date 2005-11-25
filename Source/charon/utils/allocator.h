@@ -1,9 +1,7 @@
 /**
  * @file allocator.h
  * 
- * @brief Memory allocation with LEAK_DETECTION support
- * 
- * Thread-save implementation 
+ * @brief Interface of allocator_t.
  */
 
 /*
@@ -32,22 +30,26 @@
 
 
 /**
- * Macro to allocate a special type
+ * Macro to allocate a special type.
  * 
- * @param thing 	object on which a sizeof is performed
+ * @param thing 		object on which a sizeof is performed
  * @return 
- * 			- Pointer to allocated memory if successful
- * 			- NULL otherwise
+ * 					- Pointer to allocated memory
+ * 					- NULL if out of ressources.
+ * 
+ * @ingroup utils
  */
 #define allocator_alloc_thing_as_chunk(thing) (allocator_alloc_as_chunk(sizeof(thing)))
 
 /**
- * Macro to allocate a special type as chunk_t
+ * Macro to allocate a special type as chunk_t.
  * 
- * @param thing 	object on which a sizeof is performed
+ * @param thing 		object on which a sizeof is performed
  * @return 
- * 			- chunk_t pointing to allocated memory if successful
- * 			- chunk_t containing empty pointer
+ * 					- chunk_t pointing to allocated memory if successful
+ * 					- chunk_t containing empty pointer if out of ressources
+ *
+ * @ingroup utils
  */
 #define allocator_alloc_thing(thing) (allocator_alloc(sizeof(thing)))
 
@@ -58,6 +60,7 @@
 	/**
  	 *@brief Allocater object use to detect memory leaks.
 	 *
+	 * @ingroup utils
 	 */
 	struct allocator_t {
 	
@@ -73,8 +76,8 @@
 		 * @param file 	filename from which the memory is allocated
 		 * @param line 	line number in specific file
 		 * @return 		
-		 * 				- pointer to allocated memory area if successful
-		 * 				- NULL otherwise
+		 * 				- pointer to allocated memory area
+		 * 				- NULL if out of ressources
 		 */ 
 		void * (*allocate) (allocator_t *this,size_t bytes, char * file,int line);
 
@@ -82,58 +85,60 @@
 		 * Allocates memory with LEAK_DETECTION and 
 		 * returns an chunk pointing to an empy data area filled with zeros.
 		 * 
-		 * @warning 		Use this function not directly, only with assigned macros 
-		 * 				#allocator_alloc_as_chunk and #allocator_alloc_thing_as_chunk.
+		 * @warning 		Use this function not directly, only with assigned 
+		 * 				macros #allocator_alloc_as_chunk and 
+		 * 				#allocator_alloc_thing_as_chunk.
 		 * 
 		 * @param this 	allocator_t object
 		 * @param bytes number of bytes to allocate
 		 * @param file 	filename from which the memory is allocated
 		 * @param line 	line number in specific file
 		 * @return 		
-		 * 				- pointer to allocated memory area if successful
-		 * 				- NULL otherwise
+		 * 				- pointer to allocated memory area
+		 * 				- NULL if out of ressources
 		 */ 
 		chunk_t (*allocate_as_chunk) (allocator_t *this,size_t bytes, char * file,int line);
 	
 		/**
 		 * Reallocates memory with LEAK_DETECTION and 
-		 * returns an empty data area filled with zeros
+		 * returns an empty data area filled with zeros.
 		 * 
 		 * @warning 		Use this function not directly, only with assigned macro 
-		 * 				#allocator_realloc
+		 * 				#allocator_realloc.
 		 * 
 		 * @param this 	allocator_t object
 		 * @param old 	pointer to the old data area
 		 * @param bytes number of bytes to allocate
 		 * @param file 	filename from which the memory is allocated
 		 * @param line 	line number in specific file
-		 * @return 		- pointer to reallocated memory area if successful
-		 * 				- NULL otherwise
+		 * @return 		
+		 * 				- pointer to reallocated memory area
+		 * 				- NULL if out of ressources
 		 */ 
 		void * (*reallocate) (allocator_t *this,void * old, size_t bytes, char * file, int line);
 		
 		/**
-		 * Clones memory with LEAK_DETECTION and 
-		 * returns a cloned data area.
+		 * Clones memory with LEAK_DETECTION and returns a cloned data area.
 		 * 
 		 * @warning 		Use this function not directly, only with assigned macro 
-		 * 				#allocator_clone_bytes
+		 * 				#allocator_clone_bytes.
 		 * 
 		 * @param this 	allocator_t object
 		 * @param old 	pointer to the old data area
 		 * @param bytes number of bytes to allocate
 		 * @param file 	filename from which the memory is allocated
 		 * @param line 	line number in specific file
-		 * @return 		- pointer to reallocated memory area if successful
-		 * 				- NULL otherwise
+		 * @return 		
+		 * 				- pointer to reallocated memory area if successful
+		 * 				- NULL if out of ressources
 		 */ 
 		void * (*clone_bytes) (allocator_t *this,void * to_clone, size_t bytes, char * file, int line);		
 				
 		/**
-		 * Frees memory with LEAK_DETECTION
+		 * Frees memory with LEAK_DETECTION.
 		 * 
 		 * @warning 		Use this function not directly, only with assigned macro 
-		 * 				#allocator_free
+		 * 				#allocator_free.
 		 * 
 		 * @param this 		allocator_t object
 		 * @param pointer 	pointer to the data area to free
@@ -141,7 +146,7 @@
 		void (*free_pointer) (allocator_t *this,void * pointer);
 		
 		/**
-		 * Report memory leaks to stderr
+		 * Report memory leaks to stderr.
 		 *
 		 * @warning 		Use this function not directly, only with assigned macro 
 		 * 				#report_memory_leaks
@@ -161,61 +166,119 @@
 
 	
 	/**
-	 * Macro to allocate some memory
+	 * Macro to allocate some memory.
 	 * 
-	 * @see #allocator_s.allocate for description
+	 * See #allocator_t.allocate for description.
+	 * 
+	 * @ingroup utils
 	 */
 	#define allocator_alloc(bytes) (global_allocator->allocate(global_allocator,bytes,__FILE__,__LINE__))
 	
 	/**
-	 * Macro to allocate some memory for a chunk_t
+	 * Macro to allocate some memory for a chunk_t.
 	 * 
-	 * @see #allocator_s.allocate_as_chunk for description
+	 * See #allocator_t.allocate_as_chunk for description.
+	 * 
+	 * @ingroup utils
 	 */
 	#define allocator_alloc_as_chunk(bytes) (global_allocator->allocate_as_chunk(global_allocator,bytes,__FILE__,__LINE__))
 	
 	/**
-	 * Macro to reallocate some memory
+	 * Macro to reallocate some memory.
 	 * 
-	 * @see #allocator_s.reallocate for description
+	 * See #allocator_s.reallocate for description.
+	 * 
+	 * @ingroup utils
 	 */
 	#define allocator_realloc(old,bytes) (global_allocator->reallocate(global_allocator,old,bytes,__FILE__, __LINE__))
 	
 	/**
-	 * Macro to clone some memory
+	 * Macro to clone some memory.
 	 * 
-	 * @see #allocator_s.*clone_bytes  for description
+	 * See #allocator_s.*clone_bytes  for description.
+	 * 
+	 * @ingroup utils
 	 */
 	#define allocator_clone_bytes(old,bytes) (global_allocator->clone_bytes(global_allocator,old,bytes,__FILE__, __LINE__))
 	
 	/**
-	 * Macro to free some memory
+	 * Macro to free some memory.
 	 * 
-	 * @see #allocator_s.free for description
+	 * See #allocator_s.free for description.
+	 *
+	 * @ingroup utils
 	 */
 	#define allocator_free(pointer) (global_allocator->free_pointer(global_allocator,pointer))
 	/**
-	 * Macro to free a chunk
+	 * Macro to free a chunk.
 	 */
 	#define allocator_free_chunk(chunk){	\
-		global_allocator->free_pointer(global_allocator,chunk.ptr);			\
-		chunk.ptr = NULL;				\
-		chunk.len = 0;					\
+		global_allocator->free_pointer(global_allocator,(chunk)->ptr);			\
+		(chunk)->ptr = NULL;				\
+		(chunk)->len = 0;					\
 	}
 	/**
-	 * Macro to report memory leaks
+	 * Macro to report memory leaks.
 	 * 
-	 * @see #allocator_s.report_memory_leaks for description
+	 * See #allocator_s.report_memory_leaks for description.
+	 * 
+	 * @ingroup utils
 	 */
 	#define report_memory_leaks(void) (global_allocator->report_memory_leaks(global_allocator))
 #else
-
+	/**
+	 * Macro to allocate some memory.
+	 *
+	 * @ingroup utils
+	 */
 	#define allocator_alloc(bytes) (malloc(bytes))	
+
+	/**
+	 * Allocate some memory as chunk.
+	 * 
+	 * @ingroup utils
+	 */
 	chunk_t allocator_alloc_as_chunk(size_t bytes);
+
+	/**
+	 * Reallocate some memory.
+	 * 
+	 * @ingroup utils
+	 */
 	void * allocator_realloc(void * old, size_t newsize);
+	
+	/**
+	 * Free allocated memory.
+	 * 
+	 * @ingroup utils
+	 */
 	#define allocator_free(pointer) (free(pointer))
+	
+	/**
+	 * Clone bytes.
+	 *
+	 *
+ 	 * @param pointer	pointer to read data from
+ 	 * @param size		number of bytes to clone
+	 * 
+	 * @ingroup utils
+	 */
 	void * allocator_clone_bytes(void * pointer, size_t size);
-	void allocator_free_chunk(chunk_t chunk);
+	
+	/**
+	 * Frees memory used by chunk.
+	 * 
+	 * @param chunk		pointer of chunk to free
+	 * 
+	 * @ingroup utils
+	 */
+	void allocator_free_chunk(chunk_t *chunk);
+	
+	/**
+	 * Report memory leaks.
+	 * 
+	 * @ingroup utils
+	 */
 	#define report_memory_leaks(void) {}
 #endif
 

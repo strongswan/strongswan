@@ -1,9 +1,7 @@
 /**
  * @file allocator.c
  * 
- * @brief Memory allocation with LEAK_DETECTION support
- * 
- * Thread-save implementation 
+ * @brief Implementation of allocator_t.
  */
 
 /*
@@ -32,45 +30,51 @@
 
 #ifdef LEAK_DETECTIVE
 
+
 typedef union memory_hdr_t memory_hdr_t;
 
 /**
- * Header of each allocated memory area
+ * Header of each allocated memory area.
  * 
- * Used to detect memory leaks
+ * Ideas stolen from pluto's defs.c.
+ * 
+ * Used to detect memory leaks.
  */
 union memory_hdr_t {
+	/**
+	 * Informations
+	 */
     struct {
-    	/**
-    	 * Filename withing memory was allocated
-    	 */
-	const char *filename;
-	/**
-	 * Line number in given file
-	 */
-	size_t line;
-	/**
-	 * Allocated memory size. Needed for reallocation
-	 */
-	size_t size_of_memory;
-	/**
-	 * Link to the previous and next memory area
-	 */
-	memory_hdr_t *older, *newer;
-    } info;    /* info */
+	    	/**
+	    	 * Filename withing memory was allocated
+	    	 */
+		const char *filename;
+		/**
+		 * Line number in given file
+		 */
+		size_t line;
+		/**
+		 * Allocated memory size. Needed for reallocation
+		 */
+		size_t size_of_memory;
+		/**
+		 * Link to the previous and next memory area
+		 */
+		memory_hdr_t *older, *newer;
+    } info;
     /**
      * force maximal alignment ?
      */
     unsigned long junk;	
 };
 
+typedef struct private_allocator_t private_allocator_t;
+
 /**
  * @brief Private allocator_t object.
  * 
  * Contains private variables of allocator_t object.
  */
-typedef struct private_allocator_t private_allocator_t;
-
 struct private_allocator_t
 {
 	/**
@@ -79,14 +83,14 @@ struct private_allocator_t
 	allocator_t public;
 	
 	/**
-	 * Global list of allocations
+	 * Global list of allocations.
 	 * 
-	 * Thread-save through mutex
+	 * Thread-save through mutex.
 	 */
 	memory_hdr_t *allocations;
 
 	/**
-	 * Mutex used to make sure, all functions are thread-save
+	 * Mutex used to make sure, all functions are thread-save.
 	 */
 	pthread_mutex_t mutex;
 	
@@ -98,17 +102,16 @@ struct private_allocator_t
 	 * @param bytes 		number of bytes to allocate
 	 * @param file 		filename from which the memory is allocated
 	 * @param line 		line number in specific file
-	 * @param use_mutex If FALSE no mutex is used for allocation
+	 * @param use_mutex if FALSE no mutex is used for allocation
 	 * @return 		
-	 * 				- pointer to allocated memory area if successful
-	 * 				- NULL otherwise
+	 * 					- pointer to allocated memory area
+	 * 					- NULL if out of ressources
 	 */ 
 	void * (*allocate_special) (private_allocator_t *this,size_t bytes, char * file,int line, bool use_mutex);
 };
 
 /**
- * Implements private_allocator_t's function allocate_special. 
- * See #private_allocator_s.allocate_special for description.
+ * Implementation of private_allocator_t.allocate_special. 
  */
 static void *allocate_special(private_allocator_t *this,size_t bytes, char * file,int line, bool use_mutex)
 {
@@ -147,8 +150,7 @@ static void *allocate_special(private_allocator_t *this,size_t bytes, char * fil
 }
 
 /**
- * Implements allocator_t's function allocate. 
- * See #allocator_s.allocate for description.
+ * Implementation of allocator_t.allocate. 
  */
 static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line)
 {
@@ -157,8 +159,7 @@ static void * allocate(allocator_t *allocator,size_t bytes, char * file,int line
 }
 
 /**
- * Implements allocator_t's function allocate_as_chunk. 
- * See #allocator_s.allocate_as_chunk for description.
+ * Implementation of allocator_t.allocate_as_chunk. 
  */
 static chunk_t allocate_as_chunk(allocator_t *allocator,size_t bytes, char * file,int line)
 {
@@ -169,9 +170,8 @@ static chunk_t allocate_as_chunk(allocator_t *allocator,size_t bytes, char * fil
 	return new_chunk;
 }
 
-/*
- * Implements allocator_t's free_pointer function. 
- * See #allocator_s.free_pointer for description.
+/**
+ * Implementation of allocator_t.free_pointer. 
  */
 static void free_pointer(allocator_t *allocator, void * pointer)
 {
@@ -204,9 +204,8 @@ static void free_pointer(allocator_t *allocator, void * pointer)
     free(allocated_memory);
 }
 
-/*
- * Implements allocator_t's reallocate function. 
- * See #allocator_s.reallocate for description.
+/**
+ * Implementation of allocator_t.reallocate. 
  */
 static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char * file,int line)
 {
@@ -239,9 +238,8 @@ static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char 
 	return new_space;
 }
 
-/*
- * Implements allocator_t's clone_bytes function. 
- * See #allocator_s.clone_bytes for description.
+/**
+ * Implementation of allocator_t.clone_bytes. 
  */
 static void * clone_bytes(allocator_t *allocator,void * to_clone, size_t bytes, char * file, int line)
 {
@@ -265,9 +263,8 @@ static void * clone_bytes(allocator_t *allocator,void * to_clone, size_t bytes, 
 	return new_space;
 }
 
-/*
- * Implements allocator_t's report_memory_leaks allocate. 
- * See #allocator_s.report_memory_leaks for description.
+/**
+ * Implementation of allocator_t.allocator_report_memory_leaks. 
  */
 static void allocator_report_memory_leaks(allocator_t *allocator)
 {
@@ -297,7 +294,7 @@ static void allocator_report_memory_leaks(allocator_t *allocator)
 }
 
 /** 
- * Only initiation of allocator object.
+ * Only Initiation of allocator object.
  * 
  * All allocation macros use this object.
  */
@@ -317,6 +314,9 @@ allocator_t *global_allocator = &(allocator.public);
 #else /* !LEAK_DETECTION */
 
 
+/*
+ * Described in header
+ */
 chunk_t allocator_alloc_as_chunk(size_t bytes)
 {
 	chunk_t new_chunk;
@@ -326,12 +326,18 @@ chunk_t allocator_alloc_as_chunk(size_t bytes)
 
 }
 
+/*
+ * Described in header
+ */
 void * allocator_realloc(void * old, size_t newsize)
 {
 	void *data = realloc(old,newsize);
 	return data;
 } 
 
+/*
+ * Described in header
+ */
 void * allocator_clone_bytes(void * pointer, size_t size)
 {
 	
@@ -344,13 +350,15 @@ void * allocator_clone_bytes(void * pointer, size_t size)
 	return (data);
 }
 
-
-void allocator_free_chunk(chunk_t chunk)
+/*
+ * Described in header
+ */
+void allocator_free_chunk(chunk_t *chunk)
 {
-	free(chunk.ptr);		
+	free(chunk->ptr);
+	chunk->ptr = NULL;
+	chunk->len = 0;
 }
 
 
 #endif /* LEAK_DETECTION */
-
-
