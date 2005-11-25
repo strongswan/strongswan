@@ -49,7 +49,7 @@ struct iterator_t {
 	 * Returns the current value at the iterator position.
 	 * 
 	 * @param this 			calling object
-	 * @param [out]value 	value is set to the current value at iterator position
+	 * @param[out] value 	value is set to the current value at iterator position
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if list is empty
@@ -62,7 +62,7 @@ struct iterator_t {
 	 * The iterator position is not changed after inserting
 	 * 
 	 * @param this 			calling iterator
-	 * @param [in]item 		value to insert in list
+	 * @param[in] item 		value to insert in list
 	 * @return 
 	 * 						- SUCCESS
 	 * 						- FAILED
@@ -75,7 +75,7 @@ struct iterator_t {
 	 * The iterator position is not changed after inserting.
 	 * 
 	 * @param this 			calling iterator
-	 * @param [in]item 		value to insert in list
+	 * @param[in] item 		value to insert in list
 	 * @return
 	 * 						- SUCCESS 
 	 * 						- FAILED

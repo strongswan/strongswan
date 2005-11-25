@@ -1,7 +1,7 @@
 /**
  * @file randomizer.h
  * 
- * @brief Class used to get random and pseudo random values
+ * @brief Interface of randomizer_t.
  * 
  */
 
@@ -28,9 +28,11 @@
 typedef struct randomizer_t randomizer_t;
 
 /**
- * @brief Object representing an randomizer
+ * @brief Class used to get random and pseudo random values.
+ *
+ * This class is thread save as file system read calls are thread save.
  * 
- * This class is thread save as file system read calls are thread save...
+ * @ingroup utils
  */
 struct randomizer_t {
 	
@@ -38,25 +40,25 @@ struct randomizer_t {
 	 * @brief Reads a specific number of bytes from random device.
 	 * 
 	 * @param this 					calling randomizer_t object
-	 * @param bytes					Number of bytes to read
-	 * @param[out] buffer			Pointer to buffer where to write the data in.
+	 * @param bytes					number of bytes to read
+	 * @param[out] buffer			pointer to buffer where to write the data in.
 	 * 								Size of buffer has to be at least bytes.
 	 * @return
 	 * 								- SUCCESS
-	 * 								- FAILED
+	 * 								- FAILED if random device could not be opened
 	 */
 	status_t (*get_random_bytes) (randomizer_t *this,size_t bytes, u_int8_t *buffer);
 	
 	/**
-	 * @brief Allocates space and writes in random bytes
+	 * @brief Allocates space and writes in random bytes.
 	 * 
 	 * @param this 					calling randomizer_t object
-	 * @param bytes					Number of bytes to allocate
-	 * @param[out] chunk			chunk which will hold the allocated random bytes
+	 * @param bytes					number of bytes to allocate
+	 * @param[out] chunk				chunk which will hold the allocated random bytes
 	 * @return
 	 * 								- SUCCESS
 	 * 								- OUT_OF_RES
-	 * 								- FAILED
+	 * 								- FAILED if random device could not be opened
 	 */	
 	status_t (*allocate_random_bytes) (randomizer_t *this, size_t bytes, chunk_t *chunk);
 	
@@ -64,25 +66,25 @@ struct randomizer_t {
 	 * @brief Reads a specific number of bytes from pseudo random device.
 	 * 
 	 * @param this 					calling randomizer_t object
-	 * @param bytes					Number of bytes to read
-	 * @param[out] buffer			Pointer to buffer where to write the data in.
-	 * 								Size of buffer has to be at least bytes.
+	 * @param bytes					number of bytes to read
+	 * @param[out] buffer			pointer to buffer where to write the data in.
+	 * 								size of buffer has to be at least bytes.
 	 * @return
 	 * 								- SUCCESS
-	 * 								- FAILED
+	 * 								- FAILED if random device could not be opened
 	 */
 	status_t (*get_pseudo_random_bytes) (randomizer_t *this,size_t bytes, u_int8_t *buffer);
 	
 	/**
-	 * @brief Allocates space and writes in pseudo random bytes
+	 * @brief Allocates space and writes in pseudo random bytes.
 	 * 
 	 * @param this 					calling randomizer_t object
-	 * @param bytes					Number of bytes to allocate
+	 * @param bytes					number of bytes to allocate
 	 * @param[out] chunk				chunk which will hold the allocated random bytes
 	 * @return
 	 * 								- SUCCESS
 	 * 								- OUT_OF_RES
-	 * 								- FAILED
+	 * 								- FAILED if random device could not be opened
 	 */	
 	status_t (*allocate_pseudo_random_bytes) (randomizer_t *this, size_t bytes, chunk_t *chunk);
 
@@ -90,29 +92,32 @@ struct randomizer_t {
 	 * @brief Destroys a randomizer_t object.
 	 *
 	 * @param this 	randomizer_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
+	 * @return 		SUCCESS in any case
 	 */
 	status_t (*destroy) (randomizer_t *this);
 };
 
 /**
- * @brief Create an randomizer_t object
+ * @brief Creates a randomizer_t object
  * 
  * @return			
  * 					- created randomizer_t, or
  * 					- NULL if failed
+ * 
+ * @ingroup utils
  */
 randomizer_t *randomizer_create();
 
 /**
- * @brief Create an randomizer_t object with specific random device names
+ * @brief Creates an randomizer_t object with specific random device names.
  * 
- * @param random_dev_name	Device name for random values, etc /dev/random
- * @param prandom_dev_name	Device name for pseudo random values, etc /dev/urandom
+ * @param random_dev_name	device name for random values, etc /dev/random
+ * @param prandom_dev_name	device name for pseudo random values, etc /dev/urandom
  * @return					
- *	 						- created randomizer_t, or
- * 							- NULL if failed
+ *	 						- created randomizer_t
+ * 							- NULL if out of ressources
+ * 
+ * @ingroup utils
  */
 randomizer_t *randomizer_create_on_devices(char * random_dev_name,char * prandom_dev_name);
 

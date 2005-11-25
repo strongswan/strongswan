@@ -186,7 +186,7 @@
 	/**
 	 * Macro to reallocate some memory.
 	 * 
-	 * See #allocator_s.reallocate for description.
+	 * See #allocator_t.reallocate for description.
 	 * 
 	 * @ingroup utils
 	 */
@@ -195,7 +195,7 @@
 	/**
 	 * Macro to clone some memory.
 	 * 
-	 * See #allocator_s.*clone_bytes  for description.
+	 * See #allocator_t.*clone_bytes  for description.
 	 * 
 	 * @ingroup utils
 	 */
@@ -204,7 +204,7 @@
 	/**
 	 * Macro to free some memory.
 	 * 
-	 * See #allocator_s.free for description.
+	 * See #allocator_t.free_pointer for description.
 	 *
 	 * @ingroup utils
 	 */

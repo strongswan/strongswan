@@ -1,7 +1,7 @@
 /**
  * @file randomizer.c
  * 
- * @brief Class used to get random and pseudo random values
+ * @brief Implementation of randomizer_t.
  * 
  */
 
@@ -30,53 +30,46 @@
 
 #include <utils/allocator.h>
 
-/**
- * Default random device used when no device is given.
- */
-#define DEFAULT_RANDOM_DEVICE "/dev/random"
-
-/**
- * Pseudo random device used when no device is given.
- */
-#define DEFAULT_PSEUDO_RANDOM_DEVICE "/dev/urandom"
-
 typedef struct private_randomizer_t private_randomizer_t;
 
+/**
+ * Private data of an randomizer_t object
+ */
 struct private_randomizer_t {
 	/**
-	 * public interface
+	 * Public interface.
 	 */
 	randomizer_t public;
 	
 	/**
-	 * @brief Reads a specific number of bytes from random or pseudo random device
+	 * @brief Reads a specific number of bytes from random or pseudo random device.
 	 * 
+	 * @param this					calling object
 	 * @param pseudo_random			TRUE, if pseudo random bytes should be read,
 	 * 								FALSE for true random bytes
-	 * @param bytes					Number of bytes to read
-	 * @param[out] buffer			Pointer to buffer where to write the data in.
+	 * @param bytes					number of bytes to read
+	 * @param[out] buffer			pointer to buffer where to write the data in.
 	 * 								Size of buffer has to be at least bytes.
 	 * @return
 	 * 								- SUCCESS
-	 * 								- FAILED
+	 * 								- FAILED if random device could not be opened
 	 */
 	status_t (*get_bytes_from_device) (private_randomizer_t *this,bool pseudo_random, size_t bytes, u_int8_t *buffer);
 		
 	/**
-	 * Random device name
+	 * Random device name.
 	 */
 	char *random_dev_name;
 	
 	/**
-	 * Pseudo random device name
+	 * Pseudo random device name.
 	 */
 	char *pseudo_random_dev_name;
 };
 
 
 /**
- * Implements private_randomizer_t's get_bytes_from_device function.
- * See #private_randomizer_t.get_bytes_from_device for description.
+ * Implementation of private_randomizer_t.get_bytes_from_device.
  */
 static status_t get_bytes_from_device(private_randomizer_t *this,bool pseudo_random, size_t bytes, u_int8_t *buffer)
 {
@@ -114,16 +107,15 @@ static status_t get_bytes_from_device(private_randomizer_t *this,bool pseudo_ran
 }
 
 /**
- * Implements randomizer_t's get_random_bytes function.
- * See #randomizer_t.get_random_bytes for description.
+ * Implementation of randomizer_t.get_random_bytes.
  */
 static status_t get_random_bytes(private_randomizer_t *this,size_t bytes, u_int8_t *buffer)
 {
 	return (this->get_bytes_from_device(this, FALSE, bytes, buffer));
 }
+
 /**
- * Implements randomizer_t's allocate_random_bytes function.
- * See #randomizer_t.allocate_random_bytes for description.
+ * Implementation of randomizer_t.allocate_random_bytes.
  */
 static status_t allocate_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
 {
@@ -137,8 +129,7 @@ static status_t allocate_random_bytes(private_randomizer_t *this, size_t bytes, 
 }
 
 /**
- * Implements randomizer_t's get_pseudo_random_bytes function.
- * See #randomizer_t.get_pseudo_random_bytes for description.
+ * Implementation of randomizer_t.get_pseudo_random_bytes.
  */
 static status_t get_pseudo_random_bytes(private_randomizer_t *this,size_t bytes, u_int8_t *buffer)
 {
@@ -147,8 +138,7 @@ static status_t get_pseudo_random_bytes(private_randomizer_t *this,size_t bytes,
 
 
 /**
- * Implements randomizer_t's allocate_random_bytes function.
- * See #randomizer_t.allocate_random_bytes for description.
+ * Implementation of randomizer_t.allocate_pseudo_random_bytes.
  */
 static status_t allocate_pseudo_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
 {
@@ -163,8 +153,7 @@ static status_t allocate_pseudo_random_bytes(private_randomizer_t *this, size_t 
 
 
 /**
- * Implements randomizer_t's destroy function.
- * See #randomizer_t.destroy for description.
+ * Implementation of randomizer_t.destroy.
  */
 static status_t destroy(private_randomizer_t *this)
 {
