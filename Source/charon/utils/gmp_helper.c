@@ -1,7 +1,7 @@
 /**
  * @file gmp_helper.c
  * 
- * @brief Class with helper functions for gmp operations
+ * @brief Implementation of gmp_helper_t.
  * 
  */
 
@@ -29,9 +29,10 @@
 #include <utils/randomizer.h>
 
 /**
- * Number of times the probabilistic primality test is applied
+ * Number of times the probabilistic primality test is applied.
  */
 #define PRIMECHECK_ROUNDS 30
+
 
 typedef struct private_gmp_helper_t private_gmp_helper_t;
 
@@ -40,7 +41,7 @@ typedef struct private_gmp_helper_t private_gmp_helper_t;
  */
 struct private_gmp_helper_t {
 	/**
-	 * public gmp_helper_t interface
+	 * Public gmp_helper_t interface.
 	 */
 	gmp_helper_t public;
 
@@ -48,8 +49,7 @@ struct private_gmp_helper_t {
 
 
 /**
- * Implements private_gmp_helper_t's chunk_to_mpz function.
- * See #private_gmp_helper_t.chunk_to_mpz for description.
+ * Implementation of gmp_helper_t.chunk_to_mpz.
  */
 static void chunk_to_mpz(private_gmp_helper_t *this, mpz_t *mpz_value, chunk_t data)
 {
@@ -65,8 +65,7 @@ static void chunk_to_mpz(private_gmp_helper_t *this, mpz_t *mpz_value, chunk_t d
 }
 
 /**
- * Implements private_gmp_helper_t's mpz_to_chunk function.
- * See #private_gmp_helper_t.mpz_to_chunk for description.
+ * Implementation of gmp_helper_t.mpz_to_chunk.
  */
 static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk_t *data,size_t bytes)
 {
@@ -115,8 +114,7 @@ static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk
 }
 
 /**
- * Implements gmp_helper_t's init_prime function.
- * See #gmp_helper_t.init_prime for description.
+ * Implementation of gmp_helper_t.init_prime.
  */
 static status_t init_prime (private_gmp_helper_t *this, mpz_t *prime, int bytes)
 {
@@ -140,11 +138,7 @@ static status_t init_prime (private_gmp_helper_t *this, mpz_t *prime, int bytes)
    	
    	/* not needed anymore */
    	randomizer->destroy(randomizer);
-   	if (status != SUCCESS)
-   	{
-   		return status;
-   	}
-  	   	
+   	   	
    	/* convert chunk to mpz value */
    	this->public.chunk_to_mpz(&(this->public),prime, random_bytes);
 
@@ -158,7 +152,9 @@ static status_t init_prime (private_gmp_helper_t *this, mpz_t *prime, int bytes)
 	return SUCCESS;
 }
 
-
+/**
+ * Implementation of gmp_helper_t.init_prime_fast.
+ */
 static status_t init_prime_fast (private_gmp_helper_t *this, mpz_t *prime, int bytes){
 	randomizer_t *randomizer;
     chunk_t random_bytes;
@@ -182,10 +178,6 @@ static status_t init_prime_fast (private_gmp_helper_t *this, mpz_t *prime, int b
    	random_bytes.ptr[0] = random_bytes.ptr[0] | 0x80;
    	/* not needed anymore */
    	randomizer->destroy(randomizer);
-   	if (status != SUCCESS)
-   	{
-   		return status;
-   	}
 
    	/* convert chunk to mpz value */
    	this->public.chunk_to_mpz(&(this->public),prime, random_bytes);
@@ -214,7 +206,7 @@ static status_t init_prime_fast (private_gmp_helper_t *this, mpz_t *prime, int b
     length = mpz_sizeinbase(*prime, 2);
 
 
-    /* check bit length of primee */
+    /* check bit length of prime */
 	if ((length < (bytes * 8)) || (length > ((bytes * 8) + 1)))
 	{
 		return FAILED;
@@ -235,8 +227,7 @@ static status_t init_prime_fast (private_gmp_helper_t *this, mpz_t *prime, int b
 
 
 /**
- * Implements gmp_helper_t's destroy function.
- * See #gmp_helper_t.destroy for description.
+ * Implementation of gmp_helper_t.destroy.
  */
 static status_t destroy(private_gmp_helper_t *this)
 {

@@ -1,7 +1,7 @@
 /**
  * @file gmp_helper.h
  * 
- * @brief Class with helper functions for gmp operations
+ * @brief Interface of gmp_helper_t.
  * 
  */
 
@@ -30,64 +30,67 @@
 
 #include <types.h>
 
+
 typedef struct gmp_helper_t gmp_helper_t;
 
 /**
  * @brief Class with helper functions to manipulate gmp values.
  * 
+ * @ingroup utils
  */
 struct gmp_helper_t {
 
 	/**
-	 * @brief initialize an mpz_t to a random prime of specified size
+	 * Initialize an mpz_t to a random prime of specified size.
 	 *
 	 *
 	 * @param			this calling object
-	 * @param[out] var 	mpz_t variable to initialize
+	 * @param[out] var 	pointer to mpz_t variable to initialize
 	 * @param[in] 		bytes length of given prime in bytes
 	 * @return 		
-	 * 				- SUCCCESS
-	 * 				- FAILED
-	 * 				- OUT_OF_RES
+	 * 					- SUCCCESS
+	 * 					- OUT_OF_RES
 	 */
 	status_t (*init_prime) (gmp_helper_t *this, mpz_t *var, int bytes);
 
 	/**
-	 * @brief initialize an mpz_t to a random prime of specified size without using gmp 
-	 * next prime function! Must be faster then the gmp version
+	 * Initialize an mpz_t to a random prime of specified size without using gmp 
+	 * next prime function.
 	 *
 	 *
 	 * @param			this calling object
 	 * @param[out] var 	mpz_t variable to initialize
 	 * @param[in] 		bytes length of given prime in bytes
 	 * @return 		
-	 * 				- SUCCCESS
-	 * 				- FAILED
-	 * 				- OUT_OF_RES
+	 * 					- SUCCCESS
+	 * 					- FAILED if length of prime not as asked. Try again.
+	 * 					- OUT_OF_RES
 	 */	
 	status_t (*init_prime_fast) (gmp_helper_t *this, mpz_t *prime, int bytes);
 	
-	/* Convert network form (binary bytes, big-endian) to mpz_t of gmp library.
+	/**
+	 *  Convert network form (binary bytes, big-endian) to mpz_t of gmp library.
 	 * 
-	 * mpz_t gets initialized in this function.
+	 * The given mpz_t gets initialized in this function.
 	 * 
-	 * @param this				calling private_gmp_helper_t object
-	 * @param mpz_value 			pointer to a mpz_t value
-	 * @param data				chunk_t containing the network form of data
+	 * @param this		calling private_gmp_helper_t object
+	 * @param mpz_value 	pointer to a mpz_t value
+	 * @param data		chunk_t containing the network form of data
 	 */
 	void (*chunk_to_mpz) (gmp_helper_t *this,mpz_t *mpz_value, chunk_t data);
 	
-	/* Convert mpz_t to network form (binary bytes, big-endian).
+	/**
+	 * Convert mpz_t to network form (binary bytes, big-endian).
 	 * 
-	 * @param this				calling private_gmp_helper_t object
-	 * @param mpz_value 			mpz_value to convert
-	 * @param data				chunk_t where the data are written to
-	 * @param bytes				number of bytes to copy 
+	 * @param this		calling private_gmp_helper_t object
+	 * @param mpz_value 	mpz_value to convert
+	 * @param data		chunk_t where the data are written to
+	 * @param bytes		number of bytes to copy 
 	 * 
-	 * @return					
-	 * 							- SUCCESS
-	 * 							- OUT_OF_RES
-	 * 							- FAILED if mpz_t value was longer then given bytes count
+	 * @return			
+	 * 					- SUCCESS
+	 * 					- OUT_OF_RES
+	 * 					- FAILED if mpz_t value was longer then given bytes count
 	 */
 	status_t (*mpz_to_chunk) (gmp_helper_t *this,mpz_t *mpz_value, chunk_t *data,size_t bytes);
 
@@ -95,8 +98,7 @@ struct gmp_helper_t {
 	 * @brief Destroys an gmp_helper_t object.
 	 *
 	 * @param this 	gmp_helper_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
+	 * @return 		SUCCESS in any case
 	 */
 	status_t (*destroy) (gmp_helper_t *this);
 };
@@ -105,10 +107,11 @@ struct gmp_helper_t {
  * Creates a new gmp_helper_t object
  * 
  * @return
- * 							- gmp_helper_t if successfully
+ * 							- gmp_helper_t object
  * 							- NULL if out of ressources
+ * 
+ * @ingroup utils
  */
 gmp_helper_t *gmp_helper_create();
-
 
 #endif /*GMP_HELPER_H_*/
