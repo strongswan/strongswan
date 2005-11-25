@@ -80,7 +80,7 @@ static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk
     
     if (tmp_chunk.ptr == NULL)
     {
-    		allocator_free_chunk(tmp_chunk);
+    		allocator_free_chunk(&tmp_chunk);
 	    	return OUT_OF_RES;
     }
 
@@ -109,7 +109,7 @@ static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk
     *data = tmp_chunk;
 	if (status != SUCCESS)
 	{
-    		allocator_free_chunk(tmp_chunk);
+    		allocator_free_chunk(&tmp_chunk);
 	}
     return status;
 }
