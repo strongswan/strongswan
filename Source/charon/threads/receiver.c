@@ -1,7 +1,7 @@
 /**
  * @file receiver.c
  *
- * @brief Implements the Receiver Thread encapsulated in the receiver_t object
+ * @brief Implementation of receiver_t.
  *
  */
 
@@ -44,6 +44,13 @@ struct private_receiver_t {
 	 * Public part of a receiver object
 	 */
 	 receiver_t public;
+	 
+	 /**
+	  * @brief Thread function started at creation of the receiver object.
+	  *
+	  * @param this assigned receiver object
+	  */
+	 void (*receive_packets) (private_receiver_t *this);
 
 	 /**
 	  * Assigned thread to the receiver_t object
@@ -58,12 +65,9 @@ struct private_receiver_t {
 };
 
 /**
- * Thread function started at creation of the receiver object
- *
- * @param this assigned receiver object
- * @return SUCCESS if thread_function ended successfully, FAILED otherwise
+ * implements private_receiver_t.receive_packets
  */
-static void receiver_thread_function(private_receiver_t * this)
+static void receive_packets(private_receiver_t * this)
 {
 	packet_t * current_packet;
 	job_t *current_job;
@@ -108,12 +112,15 @@ static status_t destroy(private_receiver_t *this)
 	return SUCCESS;
 }
 
-
+/*
+ * see header
+ */
 receiver_t * receiver_create()
 {
 	private_receiver_t *this = allocator_alloc_thing(private_receiver_t);
 
 	this->public.destroy = (status_t(*)(receiver_t*)) destroy;
+	this->receive_packets = receive_packets;
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, RECEIVER, NULL);
 	if (this->logger == NULL)
@@ -121,9 +128,9 @@ receiver_t * receiver_create()
 		allocator_free(this);
 	}
 	
-	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))receiver_thread_function, this) != 0)
+	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->receive_packets, this) != 0)
 	{
-		/* thread could not be created  */
+		this->logger->log(this->logger, ERROR, "Receiver thread could not be started");
 		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 		allocator_free(this);
 		return NULL;

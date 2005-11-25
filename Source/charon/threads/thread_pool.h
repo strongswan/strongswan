@@ -1,7 +1,7 @@
 /**
  * @file thread_pool.h
  * 
- * @brief Thread pool with some threads processing the job_queue
+ * @brief Interface for thread_pool_t.
  * 
  */
 
@@ -34,18 +34,20 @@ typedef struct thread_pool_t thread_pool_t;
  * @brief A thread_pool contains a pool of threads processing the job queue.
  * 
  * Current implementation uses as many threads as specified in constructor.
- * A more improved version would dynamically increase thread count if necessary...
+ * A more improved version would dynamically increase thread count if necessary.
+ * 
+ * @ingroup threads
  */
 struct thread_pool_t {
 	/**
-	 * @brief return currently instanciated threads
+	 * @brief Return currently instanciated threads.
 	 * 
 	 * @param thread_pool	thread_pool_t object		
 	 * @return				size of thread pool
 	 */
 	size_t (*get_pool_size) (thread_pool_t *thread_pool);
 	/**
-	 * @brief destroy pool
+	 * @brief Destroy a thread_pool_t.
 	 * 
 	 * sends cancellation request to all threads and AWAITS their termination.
 	 * 
@@ -57,12 +59,14 @@ struct thread_pool_t {
 };
 
 /**
- * @brief Create the thread pool using using pool_size of threads
- *  
+ * @brief Create the thread pool using using pool_size of threads.
+ * 
  * @param pool_size			desired pool size
- * @return 					
- * 							- NULL if no threads could be created
- * 							- thread_pool if one ore more threads could be instanciated
+ * @return
+ *							- thread_pool_t if one ore more threads could be started, or
+ *							- NULL if no threads could be created
+ *
+ * @ingroup threads
  */
 thread_pool_t *thread_pool_create(size_t pool_size);
 

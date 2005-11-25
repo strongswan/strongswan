@@ -1,7 +1,7 @@
 /**
  * @file sender.c
  *
- * @brief Implements the Sender Thread encapsulated in the sender_t object
+ * @brief Implementation of sender_t.
  *
  */
 
@@ -49,6 +49,13 @@ struct private_sender_t {
 	 pthread_t assigned_thread;
 	 
 	 /**
+	  * @brief The threads function, sends out packets.
+	  * 
+	  * @param this 	assigned sender object
+	  */
+	 void (*send_packets) (private_sender_t * this);
+	 
+	 /**
 	  * logger for this sender
 	  */
 	 logger_t *logger;
@@ -56,12 +63,9 @@ struct private_sender_t {
 };
 
 /**
- * Thread function started at creation of the sender object
- *
- * @param this assigned sender object
- * @return SUCCESS if thread_function ended successfully, FAILED otherwise
+ * implements private_sender_t.send_packets
  */
-static void sender_thread_function(private_sender_t * this)
+static void send_packets(private_sender_t * this)
 {
 	packet_t * current_packet;
 	status_t status;
@@ -86,7 +90,7 @@ static void sender_thread_function(private_sender_t * this)
 }
 
 /**
- * Implementation of sender_t's destroy function
+ * implements sender_t.destroy
  */
 static status_t destroy(private_sender_t *this)
 {
@@ -102,11 +106,14 @@ static status_t destroy(private_sender_t *this)
 	return SUCCESS;
 }
 
-
+/*
+ * see header
+ */
 sender_t * sender_create()
 {
 	private_sender_t *this = allocator_alloc_thing(private_sender_t);
 
+	this->send_packets = send_packets;
 	this->public.destroy = (status_t(*)(sender_t*)) destroy;
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, SENDER, NULL);
@@ -116,9 +123,9 @@ sender_t * sender_create()
 		return NULL;	
 	}
 	
-	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))sender_thread_function, this) != 0)
+	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->send_packets, this) != 0)
 	{
-		/* thread could not be created  */
+		this->logger->log(this->logger, ERROR, "Sender thread could not be created");
 		allocator_free(this);
 		return NULL;
 	}

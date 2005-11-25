@@ -1,7 +1,7 @@
 /**
  * @file scheduler.c
  *
- * @brief implements the scheduler, looks for jobs in event-queue
+ * @brief Implementation of scheduler_t.
  *
  */
 
@@ -41,6 +41,16 @@ struct private_scheduler_t {
 	 * Public part of a scheduler object
 	 */
 	 scheduler_t public;
+	 
+	 
+	/**
+	 * @brief Get events from the event queue and add them to to job queue.
+	 *
+	 * Thread function started at creation of the scheduler object.
+	 *
+	 * @param this 		assigned scheduler object
+	 */
+	void (*get_events) (private_scheduler_t *this);
 
 	 /**
 	  * Assigned thread to the scheduler_t object
@@ -55,12 +65,9 @@ struct private_scheduler_t {
 };
 
 /**
- * Thread function started at creation of the scheduler object
- *
- * @param this assigned scheduler object
- * @return SUCCESS if thread_function ended successfully, FAILED otherwise
+ * implements private_scheduler_t.get_events
  */
-static void scheduler_thread_function(private_scheduler_t * this)
+static void get_events(private_scheduler_t * this)
 {
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
@@ -73,7 +80,8 @@ static void scheduler_thread_function(private_scheduler_t * this)
 		global_event_queue->get(global_event_queue, &current_job);
 		/* queue the job in the job queue, workers will eat them */
 		global_job_queue->add(global_job_queue, current_job);
-		this->logger->log(this->logger, CONTROL, "got event, added job %s to job-queue.", mapping_find(job_type_m, current_job->get_type(current_job)));
+		this->logger->log(this->logger, CONTROL, "got event, added job %s to job-queue.", 
+						  mapping_find(job_type_m, current_job->get_type(current_job)));
 	}
 }
 
@@ -100,6 +108,7 @@ scheduler_t * scheduler_create()
 	private_scheduler_t *this = allocator_alloc_thing(private_scheduler_t);
 
 	this->public.destroy = (status_t(*)(scheduler_t*)) destroy;
+	this->get_events = get_events;
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, SCHEDULER, NULL);
 	if (this->logger == NULL)
@@ -108,9 +117,10 @@ scheduler_t * scheduler_create()
 		return NULL;	
 	}
 	
-	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))scheduler_thread_function, this) != 0)
+	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->get_events, this) != 0)
 	{
 		/* thread could not be created  */
+		this->logger->log(this->logger, ERROR, "Scheduler thread could not be created!");	
 		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 		allocator_free(this);
 		return NULL;

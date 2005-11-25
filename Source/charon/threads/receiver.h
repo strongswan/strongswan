@@ -1,7 +1,7 @@
 /**
  * @file receiver.h
  *
- * @brief Implements the Receiver Thread encapsulated in the receiver_t object
+ * @brief Interface of receiver_t.
  *
  */
 
@@ -28,20 +28,38 @@
 typedef struct receiver_t receiver_t;
 
 /**
- * @brief A Receiver object which receives packets on the socket and adds them to the job-queue
+ * @brief Receives packets from the socket and adds them to the job queue.
+ * 
+ * The receiver starts a thread, wich reads on the blocking socket. If 
+ * there is data available, a packet_t is created from the data, wrapped
+ * in an incoming_packet_job_t and added to the job queue.
+ * 
+ * @ingroup threads
  */
 struct receiver_t {
 
 	/**
-	 * @brief Destroys a receiver object
+	 * @brief Destroys a receiver_t
 	 *
-	 * @param receiver receiver object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param receiver 	receiver object
+	 * @return 
+	 * 				- SUCCESS in any case
 	 */
 	status_t (*destroy) (receiver_t *receiver);
 };
 
-
+/**
+ * @brief Create a receiver.
+ * 
+ * The receiver thread will start working, get data
+ * from the socket and add those packets to the job queue.
+ * 
+ * @return
+ * 					- created receiver_t, or
+ * 					- NULL of thread could not be started
+ * 
+ * @ingroup threads
+ */
 receiver_t * receiver_create();
 
 #endif /*RECEIVER_H_*/

@@ -1,7 +1,7 @@
 /**
  * @file sender.h
  *
- * @brief Implements the Sender Thread encapsulated in the sender_t object
+ * @brief Interface of sender_t.
  *
  */
 
@@ -28,20 +28,35 @@
 typedef struct sender_t sender_t;
 
 /**
- * @brief A Sender object which sends packets on the socket
+ * @brief Sends packets over the socket.
+ * 
+ * @ingroup threads
  */
 struct sender_t {
 
 	/**
 	 * @brief Destroys a sender object
 	 *
-	 * @param sender sender object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param sender 	sender object
+	 * @return 
+	 * 					- SUCCESS in any case
 	 */
 	status_t (*destroy) (sender_t *sender);
 };
 
 
+/**
+ * @brief Create the sender thread.
+ * 
+ * The thread will start to work, getting packets
+ * from the send queue and sends them out.
+ * 
+ * @return
+ * 					- created sender_t, or
+ * 					- NULL of thread could not be started
+ * 
+ * @ingroup threads
+ */
 sender_t * sender_create();
 
 #endif /*SENDER_H_*/

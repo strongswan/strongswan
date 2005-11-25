@@ -110,6 +110,15 @@
  * 
  * Generic helper classes.
  */
+  
+/**
+ * @addtogroup threads
+ * 
+ * Threaded classes, which will do their 
+ * job alone.
+ */
+ 
+ 
 
 /**
  * macro gives back larger of two values

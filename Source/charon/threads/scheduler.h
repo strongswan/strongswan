@@ -1,7 +1,7 @@
 /**
  * @file scheduler.h
  * 
- * @brief implements the scheduler, looks for jobs in event-queue
+ * @brief Interface of scheduler_t.
  * 
  */
 
@@ -31,20 +31,34 @@ typedef struct scheduler_t scheduler_t;
  * @brief The scheduler, looks for timed events in event-queue and adds them
  * to the job-queue.
  * 
- * Starts a thread which does the work, since event-queue is blocking
+ * Starts a thread which does the work, since event-queue is blocking.
+ * 
+ * @ingroup threads
  */
 struct scheduler_t { 	
 
 	/**
-	 * @brief Destroys a scheduler object
+	 * @brief Destroys a scheduler object.
 	 * 
-	 * @param scheduler scheduler object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param scheduler 	scheduler object
+	 * @return 
+	 * 						- SUCCESS in any case
 	 */
 	status_t (*destroy) (scheduler_t *scheduler);
 };
 
-
+/**
+ * @brief Create a scheduler with its thread.
+ * 
+ * The thread will start to get jobs form the event queue 
+ * and adds them to the job queue.
+ * 
+ * @return 
+ * 			- the created scheduler_t instance, or
+ * 			- NULL if thread could not be started
+ * 
+ * @ingroup threads
+ */
 scheduler_t * scheduler_create();
 
 #endif /*SCHEDULER_H_*/
