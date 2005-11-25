@@ -31,11 +31,12 @@ typedef struct iterator_t iterator_t;
  * iterator_t defines an interface for iterating over collections.
  * It allows searching, deleting, updating and inserting.
  * 
+ * @ingroup utils 
  */
 struct iterator_t {
 
 	/**
-	 * @brief Moves to the next element, if available.
+	 * Moves to the next element, if available.
 	 * 
 	 * @param this 			calling object
 	 * @return
@@ -45,39 +46,39 @@ struct iterator_t {
 	bool (*has_next) (iterator_t *this);
 
 	/**
-	 * @brief Returns the current value at the iterator position.
+	 * Returns the current value at the iterator position.
 	 * 
 	 * @param this 			calling object
 	 * @param [out]value 	value is set to the current value at iterator position
 	 * @return
-	 * 						- SUCCESS, or
-	 * 						- FAILED if iterator is on an invalid state
+	 * 						- SUCCESS
+	 * 						- FAILED if list is empty
 	 */
 	status_t (*current) (iterator_t *this, void **value);
 	
 	/**
-	 * @brief Inserts a new item before the given iterator position.
+	 * Inserts a new item before the given iterator position.
 	 * 
 	 * The iterator position is not changed after inserting
 	 * 
 	 * @param this 			calling iterator
 	 * @param [in]item 		value to insert in list
 	 * @return 
-	 * 						- SUCCESS if succeeded, 
-	 * 						- FAILED otherwise
+	 * 						- SUCCESS
+	 * 						- FAILED
 	 */
 	status_t (*insert_before) (iterator_t *this, void *item);
 
 	/**
-	 * @brief Inserts a new item after the given iterator position.
+	 * Inserts a new item after the given iterator position.
 	 * 
 	 * The iterator position is not changed after inserting.
 	 * 
 	 * @param this 			calling iterator
 	 * @param [in]item 		value to insert in list
 	 * @return
-	 * 						- SUCCESS if succeeded, 
-	 * 						- FAILED otherwise
+	 * 						- SUCCESS 
+	 * 						- FAILED
 	 */
 	status_t (*insert_after) (iterator_t *this, void *item);
 
@@ -91,8 +92,8 @@ struct iterator_t {
 	 * 
 	 * @param linked_list 	calling object
 	 * @return 
-	 * 						- SUCCESS if succeeded, 
-	 * 						- FAILED otherwise
+	 * 						- SUCCESS
+	 * 						- FAILED
 	 */
 	status_t (*remove) (iterator_t *iterator);
 			  
@@ -104,9 +105,7 @@ struct iterator_t {
 	 * with the resetted iterator.
 	 * 
 	 * @param this 			calling object
-	 * @return 
-	 * 						- SUCCESS if succeeded, 
-	 * 						- FAILED otherwise
+	 * @return 				SUCCESS in any case
 	 */
 	status_t (*reset) (iterator_t *this);
 
@@ -114,9 +113,8 @@ struct iterator_t {
 	 * @brief Destroys an iterator.
 	 * 
 	 * @param this 			iterator to destroy
-	 * @return 
-	 * 						- SUCCESS if succeeded, 
-	 * 						- FAILED otherwise
+	 * @return 				SUCCESS in any case
+	 * 
 	 */
 	status_t (*destroy) (iterator_t *this);
 };

@@ -1,7 +1,7 @@
 /**
  * @file logger_manager.c
  *
- * @brief Logger manager. Manages globaly all logger objects
+ * @brief Implementation of logger_manager_t.
  *
  */
 
@@ -49,8 +49,12 @@ mapping_t logger_context_t_mappings[] = {
  */
 #define MAX_LOGGER_NAME 45
 
+
 typedef struct private_logger_manager_t private_logger_manager_t;
 
+/** 
+ * Private data of logger_manager_t object.
+ */
 struct private_logger_manager_t { 	
 	/**
 	 * Public data.
@@ -73,45 +77,52 @@ struct private_logger_manager_t {
 	pthread_mutex_t mutex;
 	
 	/**
-	 * Default logger level for a created logger used if no specific logger_level is set
+	 * Default logger level for a created logger used 
+	 * if no specific logger_level is set.
 	 */
 	logger_level_t default_log_level;
 	
 	/**
 	 * Sets set logger_level of a specific context.
+	 * 
 	 * @param this 			calling object
 	 * @param context 		context to set level
  	 * @param logger_level 	logger_level to set
  	 * @param enable 		enable specific level or disable it
- 	 * @return SUCCESS
+ 	 * @return 				
+ 	 * 						- SUCCESS
+ 	 * 						- OUT_OF_RES
 	 */
 	status_t (*set_logger_level) (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable);
 	
 };
 
-/**
- * Entry in the logger_levels linked list
- */
+
 typedef struct logger_levels_entry_t logger_levels_entry_t;
 
+/**
+ * Entry in the logger_levels linked list.
+ * 
+ * This entry specifies the current log level for 
+ * logger_t objects in specific context.
+ */
 struct logger_levels_entry_t {
 	logger_context_t context;
 	logger_level_t level;
 };
 
-/**
- * Entry in the loggers linked list
- */
 typedef struct loggers_entry_t loggers_entry_t;
 
+/**
+ * Entry in the loggers linked list.
+ */
 struct loggers_entry_t {
 	logger_context_t context;
 	logger_t *logger;
 };
 
 /**
- * Implements logger_manager_t-function create_logger.
- * @see logger_manager_s.create_logger.
+ * Implementation of logger_manager_t.create_logger.
  */
 static logger_t *create_logger(private_logger_manager_t *this, logger_context_t context, char * name)
 {
@@ -189,8 +200,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 }
 
 /**
- * Implements logger_manager_t-function get_logger_level.
- * @see logger_manager_s.get_logger_level.
+ * Implementation of logger_manager_t.get_logger_level.
  */
 static logger_level_t get_logger_level (private_logger_manager_t *this, logger_context_t context)
 {
@@ -229,8 +239,7 @@ static logger_level_t get_logger_level (private_logger_manager_t *this, logger_c
 }
 
 /**
- * Implements logger_manager_t-function destroy_logger.
- * @see logger_manager_s.destroy_logger.
+ * Implementation of logger_manager_t.destroy_logger.
  */
 static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
 {
@@ -270,8 +279,7 @@ static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
 }
 
 /**
- * Implements private_logger_manager_t-function set_logger_level.
- * @see private_logger_manager_s.set_logger_level.
+ * Implementation of private_logger_manager_t.set_logger_level.
  */
 static status_t set_logger_level (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable)
 {
@@ -373,8 +381,7 @@ static status_t set_logger_level (private_logger_manager_t *this, logger_context
 }
 
 /**
- * Implements logger_manager_t-function enable_logger_level.
- * @see logger_manager_s.enable_logger_level.
+ * Implementation of logger_manager_t.enable_logger_level.
  */
 static status_t enable_logger_level (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level)
 {
@@ -382,8 +389,7 @@ static status_t enable_logger_level (private_logger_manager_t *this, logger_cont
 }
 
 /**
- * Implements logger_manager_t-function disable_logger_level.
- * @see logger_manager_s.disable_logger_level.
+ * Implementation of logger_manager_t.disable_logger_level.
  */
 static status_t disable_logger_level (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level)
 {
@@ -391,8 +397,7 @@ static status_t disable_logger_level (private_logger_manager_t *this, logger_con
 }
 
 /**
- * Implements logger_manager_t-function destroy.
- * @see logger_manager_s.destroy.
+ * Implementation of logger_manager_t.destroy.
  */
 static status_t destroy(private_logger_manager_t *this)
 {
@@ -429,7 +434,7 @@ static status_t destroy(private_logger_manager_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 logger_manager_t *logger_manager_create(logger_level_t default_log_level)
 {
