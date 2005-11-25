@@ -1,7 +1,7 @@
 /**
  * @file tester.c
  *
- * @brief Test module for automatic testing
+ * @brief Implementation of tester_t.
  *
  */
 
@@ -40,24 +40,58 @@ typedef struct private_tester_t private_tester_t;
  *
  */
 struct private_tester_t {
+ 	
+ 	/**
+ 	 * Public interface.
+ 	 */
  	tester_t public;
 
 
 	/* Private functions */
+	/**
+	 * Runs a specific test.
+	 * 
+	 * @param tester 			associated tester object
+	 * @param test_function		test function to perform
+	 * @param test_name			name for the given test
+	 */
 	void (*run_test) (tester_t *tester, void (*test_function) (tester_t * tester), char * test_name);
 
 
 	/* Private values */
+	/**
+	 * Output is written into this file.
+	 */
  	FILE* output;
+ 	
+ 	/**
+ 	 * Number of runned tests.
+ 	 */
  	int tests_count;
+ 	
+ 	/**
+ 	 * Number of failed tests.
+ 	 */
  	int failed_tests_count;
+ 	
+ 	/**
+ 	 * Number of failed asserts in curret test.
+ 	 */ 
  	int failed_asserts_count;
+ 	
+ 	/**
+ 	 * TRUE if succeeded asserts should also be written to output.
+ 	 */
  	bool display_succeeded_asserts;
+ 	
+ 	/**
+ 	 * Mutex to make this object thread-save.
+ 	 */
  	pthread_mutex_t mutex;
 };
 
-/*
- * Implementation of function perform_tests
+/**
+ * Implementation of tester_t.perform_tests.
  */
 static status_t perform_tests(tester_t *tester,test_t **tests)
 {
@@ -79,8 +113,8 @@ static status_t perform_tests(tester_t *tester,test_t **tests)
 	return SUCCESS;
 }
 
-/*
- * Implementation of function perform_test
+/**
+ * Implementation of tester_t.perform_test.
  */
 static status_t perform_test(tester_t *tester, test_t *test)
 {
@@ -89,14 +123,16 @@ static status_t perform_test(tester_t *tester, test_t *test)
 }
 
 /**
- * Returns the difference of to timeval structs in microseconds
- *
- * @param end_time end time
- * @param start_time start time
+ * Returns the difference of to timeval structs in microseconds.
  *
  * @warning this function is also defined in the event queue
  * 			in later improvements, this function can be added to a general
  *          class type!
+ *
+ * @param end_time 		end time
+ * @param start_time 	start time
+ * 
+ * @TODO make object function or move to utils!
  *
  * @return difference in microseconds
  */
@@ -111,7 +147,7 @@ static long time_difference(struct timeval *end_time, struct timeval *start_time
 
 
 /**
- * Implementation of function run_test
+ * Implementation of private_tester_t.run_test.
  */
 static void run_test(tester_t *tester, void (*test_function) (tester_t * tester), char * test_name)
 {
@@ -141,7 +177,7 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
  
 
 /**
- * Implementation of function assert_true
+ * Implementation of tester_t.assert_true.
  */
 static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
 {
@@ -168,7 +204,7 @@ static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
 }
 
 /**
- * Implementation of function assert_false
+ * Implementation of tester_t.assert_false.
  */
 static void assert_false(tester_t *tester, bool to_be_false,char * assert_name)
 {
@@ -176,7 +212,7 @@ static void assert_false(tester_t *tester, bool to_be_false,char * assert_name)
 }
 
 /**
- * Implements the destroy function
+ * Implementation of tester_t.destroy.
  */
 static status_t destroy(tester_t *tester)
 {
@@ -186,6 +222,9 @@ static status_t destroy(tester_t *tester)
 	return SUCCESS;
 }
 
+/*
+ * Described in header.
+ */
 tester_t *tester_create(FILE *output, bool display_succeeded_asserts)
 {
 	private_tester_t *this = allocator_alloc_thing(private_tester_t);
