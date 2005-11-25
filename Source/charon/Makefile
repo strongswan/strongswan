@@ -18,7 +18,7 @@ MAIN_DIR= ./
 
 LDFLAGS= -lgmp -lpthread
 
-CFLAGS+= -Wall -Werror -DLEAK_DETECTIVE -I.
+CFLAGS+= -Wall -Werror -DLEAK_DETECTIVE -I. -g
 
 # objects is extended by each included Makefile
 OBJS= 
