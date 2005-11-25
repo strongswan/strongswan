@@ -124,148 +124,106 @@ struct protected_ike_sa_t {
 	 * @return					TODO
 	 */
 	status_t (*compute_secrets) (protected_ike_sa_t *this,chunk_t dh_shared_secret,chunk_t initiator_nonce, chunk_t responder_nonce);
-
-	/**
-	 * Creates a job to delete the given IKE_SA
-	 */
-	status_t (*create_delete_job) (protected_ike_sa_t *this);
-
-	/**
-	 * Resends the last sent reply
-	 */
-	status_t (*resend_last_reply) (protected_ike_sa_t *this);
-	
-	
-	/* protected values */
 	
 	/**
-	 * Identifier for the current IKE_SA
-	 */
-	ike_sa_id_t *ike_sa_id;
-
-	/**
-	 * Linked List containing the child sa's of the current IKE_SA
-	 */
-	linked_list_t *child_sas;
-
-	/**
-	 * Current state of the IKE_SA
-	 */
-	state_t *current_state;
-	
-	/**
-	 * this SA's source for random data
-	 */
-	randomizer_t *randomizer;
-	
-	/**
-	 * contains the last responded message
+	 * Gets the internal stored logger_t object for given ike_sa_t object.
 	 * 
+	 * @param this 				calling object
+	 * @return					pointer to the internal stored logger_t object
 	 */
-	message_t *last_responded_message;
+	logger_t *(*get_logger) (protected_ike_sa_t *this);
+	
 
 	/**
-	 * contains the last requested message
+	 * Gets the internal stored host_t object for my host.
 	 * 
+	 * @param this 				calling object
+	 * @return					pointer to the internal stored host_t object
 	 */
-	message_t *last_requested_message;
-	
-	/**
-	 * Informations of this host
-	 */
-	struct {
-		host_t *host;
-	} me;
+	host_t *(*get_my_host) (protected_ike_sa_t *this);
 
 	/**
-	 * Informations of the other host
-	 */	
-	struct {
-		host_t *host;
-	} other;
+	 * Gets the internal stored host_t object for other host.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to the internal stored host_t object
+	 */
+	host_t *(*get_other_host) (protected_ike_sa_t *this);
 	
 	/**
-	 * Crypter object for initiator
+	 * Sets the internal stored host_t object for my host.
+	 * 
+	 * Allready existing object gets destroyed. object gets not cloned!
+	 * 
+	 * @param this 				calling object
+	 * @param my_host			pointer to the new host_t object
 	 */
-	crypter_t *crypter_initiator;
-	
-	/**
-	 * Crypter object for responder
-	 */
-	crypter_t *crypter_responder;
-	
-	/**
-	 * Signer object for initiator
-	 */
-	signer_t *signer_initiator;
-	
-	/**
-	 * Signer object for responder
-	 */
-	signer_t *signer_responder;
-	
-	/**
-	 * prf function
-	 */
-	prf_t *prf;
-	
-	
-	
-	/**
-	 * Shared secrets
-	 */
-	struct {
-		/**
-		 * Key used for deriving other keys
-		 */
-		chunk_t d_key;
-		
-		/**
-		 * Key for authenticate (initiator)
-		 */
-		chunk_t ai_key;
-		
-		/**
-		 * Key for authenticate (responder)
-		 */
-		chunk_t ar_key;
-
-		/**
-		 * Key for encryption (initiator)
-		 */
-		chunk_t ei_key;	
-
-		/**
-		 * Key for encryption (responder)
-		 */
-		chunk_t er_key;	
-
-		/**
-		 * Key for generating auth payload (initiator)
-		 */
-		chunk_t pi_key;	
-
-		/**
-		 * Key for generating auth payload (responder)
-		 */
-		chunk_t pr_key;	
-
-	} secrets;
+	void (*set_my_host) (protected_ike_sa_t *this,host_t * my_host);
 
 	/**
-	 * next message id to receive
+	 * Sets the internal stored host_t object for other host.
+	 * 
+	 * Allready existing object gets destroyed. object gets not cloned!
+	 * 
+	 * @param this 				calling object
+	 * @param other_host			pointer to the new host_t object
 	 */
-	u_int32_t message_id_in;
+	void (*set_other_host) (protected_ike_sa_t *this,host_t *other_host);
 	
 	/**
-	 * next message id to send
+	 * Sets the internal stored prf_t object.
+	 * 
+	 * Allready existing object gets destroyed. object gets not cloned!
+	 * 
+	 * @param this 				calling object
+	 * @param prf				pointer to the new prf_t object
 	 */
-	u_int32_t message_id_out;
+	void (*set_prf) (protected_ike_sa_t *this,prf_t *prf);
 	
 	/**
-	 * a logger for this IKE_SA
+	 * Sets the last requested message.
+	 * 
+	 * Allready set last requested message gets destroyed. object gets not cloned!
+	 * 
+	 * @param this 				calling object
+	 * @param message			pointer to the new last requested message
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED if message id is not next expected one
 	 */
-	logger_t *logger;
+	status_t (*set_last_requested_message) (protected_ike_sa_t *this,message_t * message);
+
+	/**
+	 * Sets the last responded message.
+	 * 
+	 * Allready set last requested message gets destroyed. object gets not cloned!
+	 * 
+	 * @param this 				calling object
+	 * @param message			pointer to the new last responded message
+	 * return					
+	 * 							- SUCCESS
+	 * 							- FAILED if message id is not next expected one
+	 */
+	status_t (*set_last_responded_message) (protected_ike_sa_t *this,message_t * message);
+	
+	/**
+	 * Gets the internal stored randomizer_t object.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to the internal randomizer_t object
+	 */
+	randomizer_t *(*get_randomizer) (protected_ike_sa_t *this);
+	
+	/**
+	 * Sets the new state_t object of the IKE_SA object.
+	 * 
+	 * The old state_t object gets not destroyed. It's the callers duty to 
+	 * make sure old state is destroyed (Normally the old state is the caller ).
+	 * 
+	 * @param this 				calling object
+	 * @param state				pointer to the new state_t object
+	 */
+	void (*set_new_state) (protected_ike_sa_t *this,state_t *state);
 };
 
 

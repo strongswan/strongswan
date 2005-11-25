@@ -146,29 +146,35 @@ struct private_initiator_init_t {
 /**
  * Implements function initiator_init_t.initiate_connection.
  */
-static status_t initiate_connection (private_initiator_init_t *this, char *name, state_t **new_state)
+static status_t initiate_connection (private_initiator_init_t *this, char *name)
 {
 	iterator_t 	*proposal_iterator;
 	ike_sa_init_requested_t 	*next_state;
 	message_t 				*message;
 	packet_t 				*packet;
 	status_t 				status;
+	host_t 					*my_host;
+	host_t 					*other_host;
+	randomizer_t				*randomizer;
+	
 
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
-	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &(this->ike_sa->me.host));
+	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &my_host);
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve local host configuration information for %s",name);
 		return INVALID_ARG;
 	}
+	this->ike_sa->set_my_host(this->ike_sa,my_host);
 	
-	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &(this->ike_sa->other.host));
+	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &other_host);
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve remote host configuration information for %s",name);
 		return INVALID_ARG;
 	}
+	this->ike_sa->set_other_host(this->ike_sa,other_host);
 	
 	status = global_configuration_manager->get_dh_group_number(global_configuration_manager, name, &(this->dh_group_number), this->dh_group_priority);
 	if (status != SUCCESS)
@@ -184,7 +190,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 		return status;	
 	}
 	
-	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->ike_sa->other.host, proposal_iterator);
+	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->ike_sa->get_other_host(this->ike_sa), proposal_iterator);
 	/* not needed anymore */
 	proposal_iterator->destroy(proposal_iterator);
 	if (status != SUCCESS)
@@ -214,7 +220,8 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	}
 
 	this	->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for nonce");
-	if (this->ike_sa->randomizer->allocate_pseudo_random_bytes(this->ike_sa->randomizer, NONCE_SIZE, &(this->sent_nonce)) != SUCCESS)
+	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
+	if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce)) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not create nonce!");
 		return OUT_OF_RES;
@@ -253,29 +260,27 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name,
 	/* state can now be changed */
 	this	->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_number, this->diffie_hellman, this->sent_nonce);
-
 	if (next_state == NULL)
 	{
 		this	->logger->log(this->logger, ERROR, "Fatal error: could not create next state object of type ike_sa_init_requested_t");
+		message->destroy(message);
 		return FAILED;
 	}
 
-	if (	this->ike_sa->last_requested_message != NULL)
+	/* last message can now be set */
+	status = this->ike_sa->set_last_requested_message(this->ike_sa, message);
+
+	if (status != SUCCESS)
 	{
-		/* destroy message */
-		this	->logger->log(this->logger, CONTROL|MOST, "Destroy stored last requested message");
-		this->ike_sa->last_requested_message->destroy(this->ike_sa->last_requested_message);
+		this->logger->log(this->logger, ERROR, "Could not set last requested message");
+		(next_state->state_interface).destroy(&(next_state->state_interface));
+		message->destroy(message);
+		return status;
 	}
 
-	/* message is set after state create */
-	this	->logger->log(this->logger, CONTROL|MOST, "replace last requested message with current one");
-	this->ike_sa->last_requested_message	 = message;
+	/* state can now be changed */ 
+	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 
-	/* message counter can now be increased */
-	this	->logger->log(this->logger, CONTROL|MOST, "Increate message counter for outgoing messages");
-	this->ike_sa->message_id_out++;
-
-	*new_state = (state_t *) next_state;
 	/* state has NOW changed :-) */
 	this	->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
 
@@ -589,12 +594,12 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	}
 
 	/* interface functions */
-	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *,state_t **)) process_message;
+	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
 	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
 	
 	/* public functions */
-	this->public.initiate_connection = (status_t (*)(initiator_init_t *, char *, state_t **)) initiate_connection;
+	this->public.initiate_connection = (status_t (*)(initiator_init_t *, char *)) initiate_connection;
 	
 	/* private functions */
 	this->destroy_after_state_change = destroy_after_state_change;
@@ -606,7 +611,7 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->dh_group_priority = 1;
-	this->logger = this->ike_sa->logger;
+	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->proposals = linked_list_create();
 	this->sent_nonce = CHUNK_INITIALIZER;
 	if (this->proposals == NULL)

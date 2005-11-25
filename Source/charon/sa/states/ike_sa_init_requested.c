@@ -85,12 +85,14 @@ struct private_ike_sa_init_requested_t {
 /**
  * Implements state_t.get_state
  */
-static status_t process_message(private_ike_sa_init_requested_t *this, message_t *message, state_t **new_state)
+static status_t process_message(private_ike_sa_init_requested_t *this, message_t *message)
 {
-	status_t 				status;
-	iterator_t 	*payloads;
-	exchange_type_t			exchange_type;
-	u_int64_t 				responder_spi;
+	status_t status;
+	iterator_t *payloads;
+	exchange_type_t	exchange_type;
+	u_int64_t responder_spi;
+	ike_sa_id_t *ike_sa_id;
+	
 
 	exchange_type = message->get_exchange_type(message);
 	if (exchange_type != IKE_SA_INIT)
@@ -114,7 +116,8 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	}
 	
 	responder_spi = message->get_responder_spi(message);
-	this->ike_sa->ike_sa_id->set_responder_spi(this->ike_sa->ike_sa_id,responder_spi);
+	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
+	ike_sa_id->set_responder_spi(ike_sa_id,responder_spi);
 	
 	/* iterate over incoming payloads */
 	status = message->get_payload_iterator(message, &payloads);
@@ -138,7 +141,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				encryption_algorithm_t		encryption_algorithm = ENCR_UNDEFINED;
 				pseudo_random_function_t		pseudo_random_function = PRF_UNDEFINED;
 				integrity_algorithm_t		integrity_algorithm = AUTH_UNDEFINED;
-
+				prf_t *prf;
+				
+				
 				/* get the list of suggested proposals */ 
 				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
 				if (status != SUCCESS)
@@ -151,7 +156,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				/* now let the configuration-manager return the transforms for the given proposal*/
 				this->logger->log(this->logger, CONTROL | MOST, "Get transforms for suggested proposal");
 				status = global_configuration_manager->get_transforms_for_host_and_proposals(global_configuration_manager,
-									this->ike_sa->other.host, suggested_proposals, &encryption_algorithm,&pseudo_random_function,&integrity_algorithm);
+									this->ike_sa->get_other_host(this->ike_sa), suggested_proposals, &encryption_algorithm,&pseudo_random_function,&integrity_algorithm);
 				if (status != SUCCESS)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "Suggested proposals not supported!");
@@ -161,13 +166,14 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				}
 				suggested_proposals->destroy(suggested_proposals);
 				
-				this->ike_sa->prf = prf_create(pseudo_random_function);
-				if (this->ike_sa->prf == NULL)
+				prf = prf_create(pseudo_random_function);
+				if (prf == NULL)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "PRF type not supported");
 					payloads->destroy(payloads);
 					return FAILED;
 				}
+				this->ike_sa->set_prf(this->ike_sa,prf);
 				
 
 				/* ok, we have what we need for sa_payload */
@@ -251,11 +257,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	 * 
 	 *  TODO
 	 * 
-	 * Create PRF+ object
-	 * 
-	 * Create Keys for next process
-	 * 
 	 * Send IKE_SA_AUTH request
+	 * 
+	 * Make state change
 	 * 
 	 ****************************/
 
@@ -269,7 +273,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 //	response->destroy(response);
 
-	*new_state = (state_t *) this;
+
 	
 	return SUCCESS;
 }
@@ -325,7 +329,7 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	}
 
 	/* interface functions */
-	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *,state_t **)) process_message;
+	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
 	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
 	
@@ -335,7 +339,7 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->received_nonce.len = 0;
 	this->shared_secret.ptr = NULL;
 	this->shared_secret.len = 0;
-	this->logger = this->ike_sa->logger;
+	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->diffie_hellman = diffie_hellman;
 	this->sent_nonce = sent_nonce;
 	this->dh_group_priority = dh_group_priority;

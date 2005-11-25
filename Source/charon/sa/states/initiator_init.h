@@ -46,10 +46,9 @@ struct initiator_init_t {
 	 * 
 	 * @param this 			calling object
 	 * @param name 			name of the configuration
-	 * @param new_state		new state if call succeeded
 	 * @return				TODO
 	 */
-	status_t (*initiate_connection) (initiator_init_t *this, char *name, state_t **new_state);	
+	status_t (*initiate_connection) (initiator_init_t *this, char *name);	
 };
 
 /**

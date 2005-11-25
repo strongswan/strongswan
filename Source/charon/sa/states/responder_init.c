@@ -142,7 +142,7 @@ struct private_responder_init_t {
 /**
  * Implements state_t.get_state
  */
-static status_t process_message(private_responder_init_t *this, message_t *message, state_t **new_state)
+static status_t process_message(private_responder_init_t *this, message_t *message)
 {
 	iterator_t *payloads;
 	host_t *source, *destination;
@@ -153,6 +153,9 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	chunk_t shared_secret;
 	exchange_type_t	exchange_type;
 	ike_sa_init_responded_t *next_state;
+	host_t *my_host;
+	host_t *other_host;
+	randomizer_t *randomizer;
 
 	exchange_type = message->get_exchange_type(message);
 	if (exchange_type != IKE_SA_INIT)
@@ -172,8 +175,23 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	message->get_destination(message, &destination);
 	
 	/* we need to clone them, since we destroy the message later */
-	destination->clone(destination, &(this->ike_sa->me.host));
-	source->clone(source, &(this->ike_sa->other.host));
+	status = destination->clone(destination, &my_host);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: could not clone my host informations");
+		return status;	
+	}
+	status = source->clone(source, &other_host);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Fatal error: could not clone other host informations");
+		my_host->destroy(my_host);
+		return status;	
+	}
+
+	
+	this->ike_sa->set_my_host(this->ike_sa, my_host);
+	this->ike_sa->set_other_host(this->ike_sa, other_host);
 	
 	/* parse incoming message */
 	status = message->parse_body(message);
@@ -205,9 +223,10 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				iterator_t *suggested_proposals, *accepted_proposals;
-				encryption_algorithm_t		encryption_algorithm = ENCR_UNDEFINED;
-				pseudo_random_function_t		pseudo_random_function = PRF_UNDEFINED;
-				integrity_algorithm_t		integrity_algorithm = AUTH_UNDEFINED;
+				encryption_algorithm_t encryption_algorithm = ENCR_UNDEFINED;
+				pseudo_random_function_t	 pseudo_random_function = PRF_UNDEFINED;
+				integrity_algorithm_t integrity_algorithm = AUTH_UNDEFINED;
+				prf_t *prf;
 
 				status = this->proposals->create_iterator(this->proposals, &accepted_proposals, FALSE);
 				if (status != SUCCESS)
@@ -229,7 +248,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				
 				/* now let the configuration-manager select a subset of the proposals */
 				status = global_configuration_manager->select_proposals_for_host(global_configuration_manager,
-									this->ike_sa->other.host, suggested_proposals, accepted_proposals);
+									this->ike_sa->get_other_host(this->ike_sa), suggested_proposals, accepted_proposals);
 				if (status != SUCCESS)
 				{
 					this->logger->log(this->logger, CONTROL | MORE, "No proposal of suggested proposals selected");
@@ -246,7 +265,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				/* now let the configuration-manager return the transforms for the given proposal*/
 				this->logger->log(this->logger, CONTROL | MOST, "Get transforms for accepted proposal");
 				status = global_configuration_manager->get_transforms_for_host_and_proposals(global_configuration_manager,
-									this->ike_sa->other.host, accepted_proposals, &encryption_algorithm,&pseudo_random_function,&integrity_algorithm);
+									this->ike_sa->get_other_host(this->ike_sa), accepted_proposals, &encryption_algorithm,&pseudo_random_function,&integrity_algorithm);
 				if (status != SUCCESS)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "Accepted proposals not supported?!");
@@ -256,13 +275,14 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				}
 				accepted_proposals->destroy(accepted_proposals);
 				
-				this->ike_sa->prf = prf_create(pseudo_random_function);
-				if (this->ike_sa->prf == NULL)
+				prf = prf_create(pseudo_random_function);
+				if (prf == NULL)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "PRF type not supported");
 					payloads->destroy(payloads);
 					return FAILED;
 				}
+				this->ike_sa->set_prf(this->ike_sa,prf);
 				
 				this->logger->log(this->logger, CONTROL | MORE, "SA Payload processed");
 				/* ok, we have what we need for sa_payload (proposals are stored in this->proposals)*/
@@ -278,7 +298,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				group = ke_payload->get_dh_group_number(ke_payload);
 				
 				status = global_configuration_manager->is_dh_group_allowed_for_host(global_configuration_manager,
-								this->ike_sa->other.host, group, &allowed_group);
+								this->ike_sa->get_other_host(this->ike_sa), group, &allowed_group);
 
 				if (status != SUCCESS)
 				{
@@ -355,8 +375,11 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	
 	this->logger->log(this->logger, CONTROL | MORE, "Request successfully handled. Going to create reply.");
 
-	this->logger->log(this->logger, CONTROL | MOST, "Going to create nonce.");		
-	if (this->ike_sa->randomizer->allocate_pseudo_random_bytes(this->ike_sa->randomizer, NONCE_SIZE, &(this->sent_nonce)) != SUCCESS)
+	this->logger->log(this->logger, CONTROL | MOST, "Going to create nonce.");	
+	
+	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
+	
+	if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce)) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not create nonce!");
 		return OUT_OF_RES;
@@ -447,6 +470,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not add packet to send queue");
+		packet->destroy(packet);
 		return status;
 	}
 
@@ -462,19 +486,19 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		return FAILED;
 	}
 	
-	if (	this->ike_sa->last_responded_message != NULL)
+	/* last message can now be set */
+	status = this->ike_sa->set_last_responded_message(this->ike_sa, response);
+
+	if (status != SUCCESS)
 	{
-		/* destroy message */
-		this	->logger->log(this->logger, CONTROL|MOST, "Destroy stored last responded message");
-		this->ike_sa->last_responded_message->destroy(this->ike_sa->last_responded_message);
+		this->logger->log(this->logger, ERROR, "Could not set last responded message");
+		response->destroy(response);
+		(next_state->state_interface).destroy(&(next_state->state_interface));
+		return status;
 	}
-	this->ike_sa->last_responded_message	 = response;
 
-	/* message counter can now be increased */
-	this	->logger->log(this->logger, CONTROL|MOST, "Increate message counter for incoming messages");
-	this->ike_sa->message_id_in++;
-
-	*new_state = (state_t *) next_state;
+	/* state can now be changed */
+	this->ike_sa->set_new_state(this->ike_sa, (state_t *) next_state);
 	/* state has NOW changed :-) */
 	this	->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,RESPONDER_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_RESPONDED) );
 
@@ -717,7 +741,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	}
 
 	/* interface functions */
-	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *,state_t **)) process_message;
+	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
 	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
 	
@@ -729,7 +753,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->logger = this->ike_sa->logger;
+	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->sent_nonce.ptr = NULL;
 	this->sent_nonce.len = 0;
 	this->received_nonce.ptr = NULL;

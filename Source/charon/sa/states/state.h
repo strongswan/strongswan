@@ -87,13 +87,11 @@ struct state_t {
 	 *
 	 * @param this 			state_t object
  	 * @param[in] 			message message_t object to process
-	 * @param this 			state_t pointer to the new state_t object
 	 * @return 				
 	 * 						- SUCCESSFUL if succeeded
 	 * 						- FAILED otherwise
 	 */
-	status_t (*process_message) (state_t *this,message_t *message,state_t **new_state);
-
+	status_t (*process_message) (state_t *this,message_t *message);
 
 	/**
 	 * @brief Get the current state

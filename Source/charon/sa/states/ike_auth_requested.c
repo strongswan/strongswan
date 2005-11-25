@@ -47,9 +47,8 @@ struct private_ike_auth_requested_t {
 /**
  * Implements state_t.get_state
  */
-static status_t process_message(private_ike_auth_requested_t *this, message_t *message, state_t **new_state)
+static status_t process_message(private_ike_auth_requested_t *this, message_t *message)
 {
-	*new_state = (state_t *) this;
 	return SUCCESS;
 }
 
@@ -83,7 +82,7 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa)
 	}
 
 	/* interface functions */
-	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *,state_t **)) process_message;
+	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
 	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
 	
