@@ -458,7 +458,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	if (next_state == NULL)
 	{
 		this	->logger->log(this->logger, ERROR, "Fatal error: could not create next state object of type ike_sa_init_responded_t");
-		allocator_free_chunk(shared_secret);
+		allocator_free_chunk(&shared_secret);
 		return FAILED;
 	}
 	
@@ -577,7 +577,7 @@ static status_t build_ke_payload(private_responder_init_t *this, payload_t **pay
 	if (ke_payload == NULL)
 	{
 		this->logger->log(this->logger, ERROR, "Could not create KE payload");
-		allocator_free_chunk(key_data);
+		allocator_free_chunk(&key_data);
 		return OUT_OF_RES;	
 	}
 	ke_payload->set_dh_group_number(ke_payload, MODP_1024_BIT);
@@ -585,10 +585,10 @@ static status_t build_ke_payload(private_responder_init_t *this, payload_t **pay
 	{
 		this->logger->log(this->logger, ERROR, "Could not set key exchange data of KE payload");
 		ke_payload->destroy(ke_payload);
-		allocator_free_chunk(key_data);
+		allocator_free_chunk(&key_data);
 		return OUT_OF_RES;
 	}
-	allocator_free_chunk(key_data);
+	allocator_free_chunk(&key_data);
 
 	*payload = (payload_t *) ke_payload;
 	return SUCCESS;			

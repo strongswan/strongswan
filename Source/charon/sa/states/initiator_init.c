@@ -453,7 +453,7 @@ static status_t build_ke_payload(private_initiator_init_t *this, payload_t **pay
 	if (ke_payload == NULL)
 	{
 		this->logger->log(this->logger, ERROR, "Could not create KE payload");
-		allocator_free_chunk(key_data);
+		allocator_free_chunk(&key_data);
 		return OUT_OF_RES;	
 	}
 	ke_payload->set_dh_group_number(ke_payload, this->dh_group_number);
@@ -461,10 +461,10 @@ static status_t build_ke_payload(private_initiator_init_t *this, payload_t **pay
 	{
 		this->logger->log(this->logger, ERROR, "Could not set key exchange data of KE payload");
 		ke_payload->destroy(ke_payload);
-		allocator_free_chunk(key_data);
+		allocator_free_chunk(&key_data);
 		return OUT_OF_RES;
 	}
-	allocator_free_chunk(key_data);
+	allocator_free_chunk(&key_data);
 	
 	this->logger->log(this->logger, CONTROL|MORE, "ke payload builded");
 
