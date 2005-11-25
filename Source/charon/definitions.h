@@ -156,7 +156,15 @@ struct mapping_t
 char *mapping_find(mapping_t *mappings, int value);
 
 
+/**
+ * Default random device used when no device is given.
+ */
+#define DEFAULT_RANDOM_DEVICE "/dev/random"
 
+/**
+ * Pseudo random device used when no device is given.
+ */
+#define DEFAULT_PSEUDO_RANDOM_DEVICE "/dev/urandom"
 
 
 #endif /*DEFINITIONS_H_*/
