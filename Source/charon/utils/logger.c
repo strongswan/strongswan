@@ -1,7 +1,7 @@
 /**
  * @file logger.c
  * 
- * @brief Logger object, allows fine-controlled logging
+ * @brief Implementation of logger_t.
  * 
  */
 
@@ -56,13 +56,13 @@ struct private_logger_t {
 	 */
 	char *name;
 	/**
-	 * File to write log output to .
+	 * File to write log output to.
 	 * NULL for syslog.
 	 */
 	FILE *output;
 	
 	/**
-	 * should a thread_id be included in the log?
+	 * Should a thread_id be included in the log?
 	 */
 	bool log_thread_id;
 	
@@ -72,15 +72,15 @@ struct private_logger_t {
 	 */
 	void (*log_to_file) (private_logger_t *this, char *format, ...);
 	/**
-	 * applies a prefix to string and stores it in buffer
+	 * Applies a prefix to string and stores it in buffer.
 	 * 
-	 * @warning: buffer must be at least MAX_LOG long
+	 * @warning: buffer must be at least have MAX_LOG size.
 	 */
 	void (*prepend_prefix) (private_logger_t *this, logger_level_t loglevel, char *string, char *buffer);
 };
 
 /**
- * Implements private_logger_t.prepend_prefix
+ * Implementation of private_logger_t.prepend_prefix.
  */
 static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char *string, char *buffer)
 {
@@ -136,9 +136,8 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
 }
 
 /**
- * Implements logger_t-function log.
- * @see logger_s.log.
- * 
+ * Implementation of logger_t.log.
+ *
  * Yes, logg is wrong written :-).
  */
 static status_t logg(private_logger_t *this, logger_level_t loglevel, char *format, ...)
@@ -171,8 +170,7 @@ static status_t logg(private_logger_t *this, logger_level_t loglevel, char *form
 }
 
 /**
- * Implements private_logger_t-function log_to_file.
- * @see private_logger_s.log_to_file.
+ * Implementation of private_logger_t.log_to_file.
  */
 static void log_to_file(private_logger_t *this,char *format, ...)
 {
@@ -188,8 +186,7 @@ static void log_to_file(private_logger_t *this,char *format, ...)
 }
 
 /**
- * Implements logger_t-function destroy.
- * @see logger_s.log_bytes.
+ * Implementation of logger_t.log_bytes.
  */
 static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len)
 {
@@ -271,8 +268,7 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 
 
 /**
- * Implements logger_t-function log_chunk.
- * @see logger_s.log_chunk.
+ * Implementation of logger_t.log_chunk.
  */
 static status_t log_chunk(logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk)
 {
@@ -282,8 +278,7 @@ static status_t log_chunk(logger_t *this, logger_level_t loglevel, char *label, 
 
 
 /**
- * Implements logger_t-function enable_level.
- * @see logger_s.enable_level.
+ * Implementation of logger_t.enable_level.
  */
 static status_t enable_level(private_logger_t *this, logger_level_t log_level)
 {
@@ -292,8 +287,7 @@ static status_t enable_level(private_logger_t *this, logger_level_t log_level)
 }
 
 /**
- * Implements logger_t-function disable_level.
- * @see logger_s.disable_level.
+ * Implementation of logger_t.disable_level.
  */
 static status_t disable_level(private_logger_t *this, logger_level_t log_level)
 {
@@ -302,8 +296,7 @@ static status_t disable_level(private_logger_t *this, logger_level_t log_level)
 }
 
 /**
- * Implements logger_t-function destroy.
- * @see logger_s.destroy.
+ * Implementation of logger_t.destroy.
  */
 static status_t destroy(private_logger_t *this)
 {
@@ -313,7 +306,7 @@ static status_t destroy(private_logger_t *this)
 }
 
 /*
- * Described in Header
+ * Described in header.
  */	
 logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output)
 {

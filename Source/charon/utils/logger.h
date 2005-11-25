@@ -1,7 +1,7 @@
 /**
  * @file logger.h
  *
- * @brief Logger object, allows fine-controlled logging
+ * @brief Interface of logger_t.
  *
  */
 
@@ -27,51 +27,55 @@
 
 #include <types.h>
 
+
 typedef enum logger_level_t logger_level_t;
 
 /**
- * @brief Log Levels supported by the logger object
+ * @brief Log Levels supported by the logger object.
  * 
  * Logleves are devided in two types:
  * - One to specify the type log
  * - One to specify the detail-level of the log
+ * 
  * Use combinations of these to build detailed loglevels, such
  * as CONTROL|MORE fore a detailed cotrol level, or
- * use RAW| to see all raw data dumps (except private)
+ * use RAW to see all raw data dumps (except private).
+ * 
+ * @ingroup utils
  */
 enum logger_level_t {
 	/**
-	 * control flow
+	 * Control flow.
 	 */
 	CONTROL = 1,
 	/**
-	 * error reporting
+	 * Error reporting.
 	 */
 	ERROR = 2,
 	/**
-	 * raw data dumps
+	 * Raw data dumps.
 	 */
 	RAW = 4,
 	/**
-	 * private data dumps
+	 * Private data dumps.
 	 */
 	PRIVATE = 8,
 	
 	/**
-	 * use more detailed output for those above
+	 * Use more detailed output for those above.
 	 */
 	MORE = 16, 
 	/**
-	 * use even more detailed output
+	 * Use even more detailed output.
 	 */
 	MOST = MORE + 32,
 	/**
-	 * use full detailed output
+	 * Use full detailed output.
 	 */
 	ALL = MOST + 64,
 	
 	/**
-	 * Summary for all types with all detail-levels
+	 * Summary for all types with all detail-levels.
 	 */
 	FULL = ALL + CONTROL + ERROR + RAW + PRIVATE
 };
@@ -79,7 +83,9 @@ enum logger_level_t {
 typedef struct logger_t logger_t;
 
 /**
- * @brief The logger object
+ * @brief Class to simplify logging.
+ * 
+ * @ingroup utils
  */
 struct logger_t {
 
@@ -93,8 +99,7 @@ struct logger_t {
 	 * @param loglevel 	or'ed set of loglevels
 	 * @param format 	printf like format string
 	 * @param ... 		printf like parameters
-	 * @return
-	 * 					- SUCCESS in any case
+	 * @return			SUCCESS in any case
 	 */
 	status_t (*log) (logger_t *this, logger_level_t log_level, char *format, ...);
 
@@ -106,11 +111,10 @@ struct logger_t {
 	 *
 	 * @param this 		logger_t object
 	 * @param loglevel 	or'ed set of loglevels
-	 * @param label 	a labeling name, logged with the bytes
-	 * @param bytes 	pointer to the bytes to dump
+	 * @param label 		a labeling name, logged with the bytes
+	 * @param bytes 		pointer to the bytes to dump
 	 * @param len	 	number of bytes to dump
-	 * @return
-	 * 					- SUCCESS in any case
+	 * @return			SUCCESS in any case
 	 */
 	status_t (*log_bytes) (logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len);
 
@@ -122,10 +126,9 @@ struct logger_t {
 	 *
 	 * @param this 		logger_t object
 	 * @param loglevel 	or'ed set of loglevels
-	 * @param label 	a labeling name, logged with the bytes
+	 * @param label 		a labeling name, logged with the bytes
 	 * @param chunk		pointer to a chunk to log
-	 * @return
-	 * 					- SUCCESS in any case
+	 * @return			SUCCESS in any case
 	 */
 	status_t (*log_chunk) (logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk);
 
@@ -134,8 +137,7 @@ struct logger_t {
 	 *
 	 * @param 			this logger_t object
 	 * @param 			log_level loglevel to enable
-	 * @return
-	 * 					- SUCCESS in any case
+	 * @return			SUCCESS in any case
 	 */
 	status_t (*enable_level) (logger_t *this, logger_level_t log_level);
 
@@ -144,17 +146,15 @@ struct logger_t {
 	 *
 	 * @param 			this logger_t object
 	 * @param 			log_level loglevel to enable
-	 * @return
-	 * 					- SUCCESS in any case
+	 * @return			UCCESS in any case
 	 */
 	status_t (*disable_level) (logger_t *this, logger_level_t log_level);
 
 	/**
-	 * @brief destroys a logger_t object.
+	 * @brief Destroys a logger_t object.
 	 *
 	 * @param this		logger_t object
-	 * @return
-	 * 		 			- SUCCESS in any case
+	 * @return			SUCCESS in any case
 	 */
 	status_t (*destroy) (logger_t *this);
 };
@@ -162,10 +162,14 @@ struct logger_t {
 /**
  * @brief Constructor to create a logger_t object.
  *
- * @param logger_name 	Name for the logger_t object
+ * @param logger_name 	name for the logger_t object
  * @param log_level		or'ed set of log_levels to assign to the new logger_t object
  * @param output			FILE * if log has to go on a file output, NULL for syslog
- * @return 				logger_t object or NULL if failed
+ * @return 				
+ * 						- logger_t object 
+ * 						- NULL if out of ressources
+ * 
+ * @ingroup utils
  */
 logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output);
 

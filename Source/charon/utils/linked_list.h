@@ -30,7 +30,7 @@
 typedef struct linked_list_t linked_list_t;
 
 /**
- * @brief Double Linked List (named only as linked list).
+ * @brief Class implementing a double linked list (named only as linked list).
  *
  * @warning Access to an object of this type is not thread-save.
  * 
