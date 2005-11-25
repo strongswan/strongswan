@@ -17,3 +17,7 @@ CRYPTERS_DIR= $(TRANSFORMS_DIR)crypters/
 OBJS+= $(BUILD_DIR)crypter.o
 $(BUILD_DIR)crypter.o :			$(CRYPTERS_DIR)crypter.c $(CRYPTERS_DIR)crypter.h
 								$(CC) $(CFLAGS) -c -o $@ $<
+								
+OBJS+= $(BUILD_DIR)aes_crypter.o
+$(BUILD_DIR)aes_crypter.o :		$(CRYPTERS_DIR)aes_crypter.c $(CRYPTERS_DIR)aes_crypter.h
+								$(CC) $(CFLAGS) -c -o $@ $<
