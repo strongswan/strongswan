@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "scheduler.h"
 
@@ -69,9 +70,12 @@ struct private_scheduler_t {
  */
 static void get_events(private_scheduler_t * this)
 {
+	job_t *current_job;
+	
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	job_t *current_job;
+	
+	this->logger->log(this->logger, CONTROL, "scheduler thread running, pid %d", getpid());
 
 	for (;;)
 	{

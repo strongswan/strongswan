@@ -24,6 +24,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "thread_pool.h"
  
@@ -104,7 +105,8 @@ static void process_jobs(private_thread_pool_t *this)
 {
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-	this->worker_logger->log(this->worker_logger, CONTROL, "started working");
+	
+	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running, pid: %d", getpid());
 
 	for (;;) {
 		job_t *job;
@@ -318,14 +320,14 @@ static status_t destroy(private_thread_pool_t *this)
 	int current;
 	/* flag thread for termination */
 	for (current = 0; current < this->pool_size; current++) {
-		this->pool_logger->log(this->pool_logger, CONTROL, "cancelling thread %u", this->threads[current]);
+		this->pool_logger->log(this->pool_logger, CONTROL, "cancelling worker a thread #%d", current+1);
 		pthread_cancel(this->threads[current]);
 	}
 	
 	/* wait for all threads */
 	for (current = 0; current < this->pool_size; current++) {
 		pthread_join(this->threads[current], NULL);
-		this->pool_logger->log(this->pool_logger, CONTROL, "thread %u terminated", this->threads[current]);
+		this->pool_logger->log(this->pool_logger, CONTROL, "worker thread #%d terminated", current+1);
 	}	
 
 	/* free mem */
@@ -384,14 +386,14 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	{
 		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))this->process_jobs, this) == 0) 
 		{
-			this->pool_logger->log(this->pool_logger, CONTROL, "thread %u created", this->threads[current]);
+			this->pool_logger->log(this->pool_logger, CONTROL, "created worker thread #%d", current+1);
 		}
-		else 
+		else
 		{
 			/* creation failed, is it the first one? */	
 			if (current == 0) 
 			{
-				this->pool_logger->log(this->pool_logger, ERROR, "could not create any thread: %s\n", strerror(errno));
+				this->pool_logger->log(this->pool_logger, ERROR, "could not create any thread");
 				global_logger_manager->destroy_logger(global_logger_manager, this->pool_logger);
 				global_logger_manager->destroy_logger(global_logger_manager, this->worker_logger);
 				allocator_free(this->threads);
@@ -399,7 +401,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 				return NULL;
 			}
 			/* not all threads could be created, but at least one :-/ */
-			this->pool_logger->log(this->pool_logger, CONTROL, "could only create %d from requested %d threads: %s\n", current, pool_size, strerror(errno));
+			this->pool_logger->log(this->pool_logger, ERROR, "could only create %d from requested %d threads!", current, pool_size);
 				
 			this->pool_size = current;
 			return (thread_pool_t*)this;

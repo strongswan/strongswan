@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "sender.h"
 
@@ -72,6 +73,8 @@ static void send_packets(private_sender_t * this)
 	
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
+	this->logger->log(this->logger, CONTROL, "sender thread running, pid %d", getpid());
 
 	while (1)
 	{

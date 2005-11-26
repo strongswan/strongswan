@@ -1,7 +1,7 @@
 /**
  * @file thread_pool.h
  * 
- * @brief Interface for thread_pool_t.
+ * @brief Interface of thread_pool_t.
  * 
  */
 

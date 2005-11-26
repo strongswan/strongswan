@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "receiver.h"
 
@@ -71,8 +72,12 @@ static void receive_packets(private_receiver_t * this)
 {
 	packet_t * current_packet;
 	job_t *current_job;
+	
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+	
+	this->logger->log(this->logger, CONTROL, "receiver thread running, pid %d", getpid());
+	
 	while (1)
 	{
 		while (global_socket->receive(global_socket,&current_packet) == SUCCESS)
