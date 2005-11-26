@@ -79,8 +79,8 @@ static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk
     
     if (tmp_chunk.ptr == NULL)
     {
-    		allocator_free_chunk(&tmp_chunk);
-	    	return OUT_OF_RES;
+    	allocator_free_chunk(&tmp_chunk);
+	    return OUT_OF_RES;
     }
 
     /* free memory */
@@ -108,7 +108,7 @@ static status_t mpz_to_chunk (private_gmp_helper_t *this,mpz_t *mpz_value, chunk
     *data = tmp_chunk;
 	if (status != SUCCESS)
 	{
-    		allocator_free_chunk(&tmp_chunk);
+    	allocator_free_chunk(&tmp_chunk);
 	}
     return status;
 }
@@ -129,7 +129,7 @@ static status_t init_prime (private_gmp_helper_t *this, mpz_t *prime, int bytes)
     } 
     
     /* TODO change to true random device ? */
- //  	status = randomizer->allocate_random_bytes(randomizer,bytes, &random_bytes);
+	//status = randomizer->allocate_random_bytes(randomizer,bytes, &random_bytes);
    	status = randomizer->allocate_pseudo_random_bytes(randomizer,bytes, &random_bytes);
    	
    	/* make sure most significant bit is set */
@@ -171,7 +171,7 @@ static status_t init_prime_fast (private_gmp_helper_t *this, mpz_t *prime, int b
     } 
     
     /* TODO change to true random device ? */
- //  	status = randomizer->allocate_random_bytes(randomizer,bytes, &random_bytes);
+	//status = randomizer->allocate_random_bytes(randomizer,bytes, &random_bytes);
    	status = randomizer->allocate_pseudo_random_bytes(randomizer,bytes, &random_bytes);
    	
    	/* make sure most significant bit is set */
@@ -215,11 +215,11 @@ static status_t init_prime_fast (private_gmp_helper_t *this, mpz_t *prime, int b
 
     if (length == ((bytes * 8) + 1))
     {
-    		/* carry out occured! retry */
+    	/* carry out occured! retry */
 		mpz_clear(*prime);
 
 		/* recursive call */
-    		return this->public.init_prime_fast(&(this->public),prime, bytes);
+    	return this->public.init_prime_fast(&(this->public),prime, bytes);
     }
 
     return SUCCESS;

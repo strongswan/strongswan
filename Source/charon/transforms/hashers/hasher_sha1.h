@@ -1,7 +1,7 @@
 /**
  * @file hasher_sha1.h
  * 
- * @brief Interface for the hasher_sha1_t
+ * @brief Interface of hasher_sha1_t
  * 
  */
 
