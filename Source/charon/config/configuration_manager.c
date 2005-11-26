@@ -74,6 +74,10 @@ static status_t get_remote_host(private_configuration_manager_t *this, char *nam
 	{
 		remote = host_create(AF_INET, "152.96.193.131", 500);
 	}
+	else if (strcmp(name, "localhost") == 0)
+	{
+		remote = host_create(AF_INET, "127.0.0.1", 500);
+	}
 	else
 	{
 		status = NOT_FOUND;
