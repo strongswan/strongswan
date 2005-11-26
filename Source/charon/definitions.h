@@ -59,9 +59,6 @@
  #error "BYTE_ORDER must be defined"
 #endif
 
-/**
- * Doxygen namespace support
- */
 
 
 /**
@@ -100,7 +97,31 @@
 /**
  * @addtogroup hashers
  * 
- * Hash algorithms
+ * Hashing algorithms.
+ * 
+ * Example for using hasher_t:
+ * @code
+ * chunk_t data;
+ * chunk_t md5_hash;
+ * u_int8_t sha1_hash[20];
+ * 
+ * hasher_t *hasher;
+ * 
+ * data.ptr = "string to hash";
+ * data.len = strlen(data.ptr);
+ * 
+ * // use MD5, allocate hash
+ * hasher = hasher_create(HASH_MD5);
+ * hasher->allocate_hash(hasher, data, &hash);
+ * hasher->destroy(hasher);
+ * 
+ * // use SHA1, hash in buffer
+ * hasher = hasher_create(HASH_SHA1);
+ * hasher->get_hash(hasher, data, &sha1_hash);
+ * hasher->destroy(hasher);
+ * @endcode
+ * 
+ * 
  * 
  * @ingroup transforms
  */
