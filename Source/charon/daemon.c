@@ -124,7 +124,7 @@ int main()
  		return -1;
  	}
  	
- 	logger->log(logger,CONTROL,"start daemon %s", DAEMON_NAME); 	
+ 	logger->log(logger,CONTROL,"starting %s", DAEMON_NAME); 	
  	/* now  its time to create all the different threads :-) */ 
 	if (start_threads() != SUCCESS)
 	{
@@ -138,8 +138,8 @@ int main()
 	{
 		initiate_ike_sa_job_t *initiate_job;
 		
-		initiate_job = initiate_ike_sa_job_create("pinflb31");
-		global_event_queue->add_relative(global_event_queue, (job_t*)initiate_job, i * 1000);
+		initiate_job = initiate_ike_sa_job_create("localhost");
+		global_job_queue->add(global_job_queue, (job_t*)initiate_job);
 		
 	}
  	
@@ -293,6 +293,11 @@ static status_t start_threads()
 	{
 		return FAILED;
 	}
+	receiver_thread = receiver_create();
+	if (receiver_thread == NULL)
+	{
+		return FAILED;
+	}	
 	scheduler_thread = scheduler_create();
 	if (scheduler_thread == NULL)
 	{
@@ -303,11 +308,6 @@ static status_t start_threads()
 	{
 		return FAILED;
 	}
-	receiver_thread = receiver_create();
-	if (receiver_thread == NULL)
-	{
-		return FAILED;
-	}	
 
 	return SUCCESS;
 }
@@ -355,7 +355,6 @@ static void destroy_and_exit(int exit_code)
 	/* logger is destroyed */
  	logger->log(logger,CONTROL|MORE,"destroy logger");
  	logger->log(logger,CONTROL|MORE,"destroy logger_manager");
- 	logger->log(logger,CONTROL|MORE,"------------------------------------");
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
 	global_logger_manager->destroy(global_logger_manager);
 
