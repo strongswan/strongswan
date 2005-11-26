@@ -133,27 +133,42 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 	char buffer[MAX_LOGGER_NAME];
 	loggers_entry_t *entry;
 	logger_t *logger;
-	logger_level_t logger_level = this->public.get_logger_level(&(this->public),context);
+	logger_level_t logger_level;
 	
 	context_name = mapping_find(logger_context_t_mappings,context);
+	
+	/* output to stdout, since we are debugging all days */
+	output = stdout;
 
 	switch(context)
 	{
 		case TESTER:
 			log_thread_ids = FALSE;
 			output = stdout;
+			logger_level = FULL;
 			break;
+		case PARSER:
+		case GENERATOR:
+		case IKE_SA:
+		case IKE_SA_MANAGER:
+		case MESSAGE:
+		case THREAD_POOL:
+		case WORKER:
 		case SCHEDULER:
 		case SENDER:
 		case RECEIVER:
-		case THREAD_POOL:
 		case SOCKET:
 		case DAEMON:
+		case CONFIGURATION_MANAGER:
 			log_thread_ids = FALSE;
-			break;
-		default:
+			logger_level = ERROR|CONTROL;
 			break;
 	}
+	
+	
+	/* reduce to global definiton of loglevel */
+	logger_level &= this->public.get_logger_level(&(this->public),context);
+	
 	/* logger manager is thread save */
 	pthread_mutex_lock(&(this->mutex));
 	if (name != NULL)

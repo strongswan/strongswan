@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "logger.h"
 
@@ -62,15 +63,10 @@ struct private_logger_t {
 	FILE *output;
 	
 	/**
-	 * Should a thread_id be included in the log?
+	 * Should a pid be included in the log?
 	 */
-	bool log_thread_id;
+	bool log_pid;
 	
-	/* private functions */
-	/**
-	 * Logs a message to the associated log file.
-	 */
-	void (*log_to_file) (private_logger_t *this, char *format, ...);
 	/**
 	 * Applies a prefix to string and stores it in buffer.
 	 * 
@@ -124,9 +120,9 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
 	}
 	
 	
-	if (this->log_thread_id)
+	if (this->log_pid)
 	{
-		snprintf(buffer, MAX_LOG, "[%c%c] [%s] @%u %s", log_type, log_details, this->name, (int)pthread_self(), string);
+		snprintf(buffer, MAX_LOG, "[%c%c] [%s] @%d %s", log_type, log_details, this->name, getpid(), string);
 	}
 	else
 	{
@@ -161,8 +157,9 @@ static status_t logg(private_logger_t *this, logger_level_t loglevel, char *form
 			/* File output */
 			this->prepend_prefix(this, loglevel, format, buffer);
 			va_start(args, format);
-			this->log_to_file(this, buffer, args);
+			vfprintf(this->output, buffer, args);
 			va_end(args);
+			fprintf(this->output, "\n");
 		}
 
 	}
@@ -170,26 +167,18 @@ static status_t logg(private_logger_t *this, logger_level_t loglevel, char *form
 }
 
 /**
- * Implementation of private_logger_t.log_to_file.
- */
-static void log_to_file(private_logger_t *this,char *format, ...)
-{
-	char buffer[MAX_LOG];
-	va_list args;
-	time_t current_time;
-	current_time = time(NULL);
-			
-	snprintf(buffer, MAX_LOG, "%s\n", format);
-	va_start(args, format);
-	vfprintf(this->output, buffer, args);
-	va_end(args);
-}
-
-/**
  * Implementation of logger_t.log_bytes.
  */
 static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len)
 {
+	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+	
+	/* since me can't do multi-line output to syslog, 
+	 * we must do multiple syslogs. To avoid
+	 * problems in output order, lock this by a mutex.
+	 */
+	pthread_mutex_lock(&mutex);
+	
 	if ((this->level & loglevel) == loglevel)
 	{
 		char buffer[MAX_LOG];
@@ -205,9 +194,11 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 		if (this->output == NULL)
 		{
 			syslog(LOG_INFO, buffer, label, len);	
-		}else
+		}
+		else
 		{
-			this->log_to_file(this, buffer, label, len);
+			fprintf(this->output, buffer, label, len);
+			fprintf(this->output, "\n");
 		}
 	
 		bytes_pos = bytes;
@@ -216,7 +207,7 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 
 		for (i = 1; bytes_pos < bytes_roof; i++)
 		{
-			static const char hexdig[] = "0123456789ABCDEF";
+			static char hexdig[] = "0123456789ABCDEF";
 			*buffer_pos++ = hexdig[(*bytes_pos >> 4) & 0xF];
 			*buffer_pos++ = hexdig[ *bytes_pos       & 0xF];
 			if ((i % 16) == 0) 
@@ -229,7 +220,7 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 				}
 				else
 				{
-					this->log_to_file(this, "| %s", buffer);
+					fprintf(this->output, "| %s\n", buffer);
 				}
 			}
 			else if ((i % 8) == 0)
@@ -252,17 +243,21 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 		}
 		
 		*buffer_pos++ = '\0';
-		buffer_pos = buffer;
-		if (this->output == NULL)
-		{		
-			syslog(LOG_INFO, "| %s", buffer);
-		}
-		else
+		if (buffer_pos > buffer + 1)
 		{
-			this->log_to_file(this, "| %s", buffer);
+			buffer_pos = buffer;
+			if (this->output == NULL)
+			{		
+				syslog(LOG_INFO, "| %s", buffer);
+			}
+			else
+			{
+				fprintf(this->output, "| %s\n", buffer);
+			}
 		}
 	}
 
+	pthread_mutex_unlock(&mutex);
 	return SUCCESS;
 }
 
@@ -308,7 +303,7 @@ static status_t destroy(private_logger_t *this)
 /*
  * Described in header.
  */	
-logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output)
+logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_pid, FILE * output)
 {
 	private_logger_t *this = allocator_alloc_thing(private_logger_t);
 		
@@ -329,12 +324,11 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_th
 	this->public.disable_level = (status_t(*)(logger_t*,logger_level_t))disable_level;
 	this->public.destroy = (status_t(*)(logger_t*))destroy;
 
-	this->log_to_file = log_to_file;
 	this->prepend_prefix = prepend_prefix;
 
 	/* private variables */
 	this->level = log_level;
-	this->log_thread_id = log_thread_id;
+	this->log_pid = log_pid;
 	this->name = allocator_alloc(strlen(logger_name) + 1);
 	if (this->name == NULL)
 	{

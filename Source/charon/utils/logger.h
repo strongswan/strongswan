@@ -164,15 +164,15 @@ struct logger_t {
  *
  * @param logger_name 	name for the logger_t object
  * @param log_level		or'ed set of log_levels to assign to the new logger_t object
- * @param log_thread_id	TRUE if thread id should also be logged
- * @param output			FILE * if log has to go on a file output, NULL for syslog
+ * @param log_pid		TRUE if thread id should also be logged
+ * @param output		FILE * if log has to go on a file output, NULL for syslog
  * @return 				
  * 						- logger_t object 
  * 						- NULL if out of ressources
  * 
  * @ingroup utils
  */
-logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output);
+logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_pid, FILE * output);
 
 
 #endif /*LOGGER_H_*/
