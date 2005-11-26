@@ -1113,8 +1113,6 @@ generator_t * generator_create()
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
 	this->logger = global_logger_manager->create_logger(global_logger_manager,GENERATOR,NULL);
-	this->logger->disable_level(this->logger, FULL);
-	this->logger->enable_level(this->logger, CONTROL);
 	
 	if (this->logger == NULL)
 	{

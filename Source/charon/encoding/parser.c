@@ -887,8 +887,6 @@ parser_t *parser_create(chunk_t data)
 	}
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, PARSER, NULL);
-	this->logger->disable_level(this->logger, FULL);
-	this->logger->enable_level(this->logger, CONTROL);
 	
 	
 	if (this->logger == NULL)
