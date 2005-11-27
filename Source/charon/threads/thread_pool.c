@@ -348,6 +348,10 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	int current;
 	
 	private_thread_pool_t *this = allocator_alloc_thing(private_thread_pool_t);
+	if (this == NULL)
+	{
+		return NULL;
+	}
 	
 	/* fill in public fields */
 	this->public.destroy = (status_t(*)(thread_pool_t*))destroy;

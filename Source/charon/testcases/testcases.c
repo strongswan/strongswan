@@ -48,8 +48,7 @@
 #include <testcases/parser_test.h>
 #include <testcases/packet_test.h>
 #include <testcases/diffie_hellman_test.h>
-#include <testcases/hasher_sha1_test.h>
-#include <testcases/hasher_md5_test.h>
+#include <testcases/hasher_test.h>
 #include <testcases/hmac_test.h>
 #include <testcases/prf_plus_test.h>
 
@@ -179,12 +178,12 @@ test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
 /**
  * Test for sha1 hasher
  */
-test_t hasher_sha1_test = {test_hasher_sha1,"SHA1 hasher"};
+test_t sha1_hasher_test = {test_sha1_hasher,"SHA1 hasher"};
 
 /**
  * Test for md5 hasher
  */
-test_t hasher_md5_test = {test_hasher_md5,"MD5 hasher"};
+test_t md5_hasher_test = {test_md5_hasher,"MD5 hasher"};
 
 /**
  * Test for hmac
@@ -271,14 +270,14 @@ logger_manager_t *global_logger_manager;
 		&ike_sa_manager_test,
 		&packet_test,
 		&diffie_hellman_test,
-		&hasher_sha1_test,
-		&hasher_md5_test,
+		&sha1_hasher_test,
+		&md5_hasher_test,
 		&hmac_test1,
 		&hmac_test2,
 		&prf_plus_test,
 		NULL
 	};
- 	global_logger_manager = logger_manager_create(FULL);
+ 	global_logger_manager = logger_manager_create(0);
 
 	global_socket = socket_create(4600);
  	
@@ -294,7 +293,7 @@ logger_manager_t *global_logger_manager;
 
 
 	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&hasher_sha1_test); 
+//	tester->perform_test(tester,&sha1_hasher_test); 
 
 
  	

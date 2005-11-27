@@ -23,8 +23,8 @@
 
 #include "hasher.h"
 
-#include <transforms/hashers/hasher_sha1.h>
-#include <transforms/hashers/hasher_md5.h>
+#include <transforms/hashers/sha1_hasher.h>
+#include <transforms/hashers/md5_hasher.h>
 
 /**
  * mappings for hash_algorithm_t
@@ -44,11 +44,11 @@ hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
 	{
 		case HASH_SHA1:
 		{
-			return (hasher_t*)hasher_sha1_create();
+			return (hasher_t*)sha1_hasher_create();
 		}
 		case HASH_MD5:
 		{
-			return (hasher_t*)hasher_md5_create();
+			return (hasher_t*)md5_hasher_create();
 		}
 		default:
 			return NULL;

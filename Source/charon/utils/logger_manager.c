@@ -133,7 +133,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 	char buffer[MAX_LOGGER_NAME];
 	loggers_entry_t *entry;
 	logger_t *logger;
-	logger_level_t logger_level;
+	logger_level_t logger_level = 0;
 	
 	context_name = mapping_find(logger_context_t_mappings,context);
 	
@@ -145,13 +145,14 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case TESTER:
 			log_thread_ids = FALSE;
 			output = stdout;
-			logger_level = FULL;
+			logger_level = 0;
 			break;
-		case PARSER:
-		case GENERATOR:
 		case IKE_SA:
 		case IKE_SA_MANAGER:
 		case MESSAGE:
+			logger_level |= ALL;
+		case PARSER:
+		case GENERATOR:
 		case THREAD_POOL:
 		case WORKER:
 		case SCHEDULER:
@@ -161,7 +162,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case DAEMON:
 		case CONFIGURATION_MANAGER:
 			log_thread_ids = FALSE;
-			logger_level = ERROR|CONTROL;
+			logger_level |= ERROR|CONTROL;
 			break;
 	}
 	

@@ -19,10 +19,6 @@ TEST_OBJS+= $(BUILD_DIR)diffie_hellman_test.o
 $(BUILD_DIR)diffie_hellman_test.o :	$(TESTCASES_DIR)diffie_hellman_test.c $(TESTCASES_DIR)diffie_hellman_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
 
-TEST_OBJS+= $(BUILD_DIR)hasher_md5_test.o
-$(BUILD_DIR)hasher_md5_test.o :		$(TESTCASES_DIR)hasher_md5_test.c $(TESTCASES_DIR)hasher_md5_test.h
-									$(CC) $(CFLAGS) -c -o $@ $<
-
 TEST_OBJS+= $(BUILD_DIR)event_queue_test.o
 $(BUILD_DIR)event_queue_test.o :	$(TESTCASES_DIR)event_queue_test.c $(TESTCASES_DIR)event_queue_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
@@ -43,8 +39,8 @@ TEST_OBJS+= $(BUILD_DIR)parser_test.o
 $(BUILD_DIR)parser_test.o :			$(TESTCASES_DIR)parser_test.c $(TESTCASES_DIR)parser_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
 
-TEST_OBJS+= $(BUILD_DIR)hasher_sha1_test.o
-$(BUILD_DIR)hasher_sha1_test.o :	$(TESTCASES_DIR)hasher_sha1_test.c $(TESTCASES_DIR)hasher_sha1_test.h
+TEST_OBJS+= $(BUILD_DIR)hasher_test.o
+$(BUILD_DIR)hasher_test.o :			$(TESTCASES_DIR)hasher_test.c $(TESTCASES_DIR)hasher_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
 
 TEST_OBJS+= $(BUILD_DIR)ike_sa_manager_test.o

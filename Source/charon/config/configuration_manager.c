@@ -337,7 +337,7 @@ static status_t get_transforms_for_host_and_proposals (private_configuration_man
 	iterator_t *transforms;
 	status_t status;
 
-	this->logger->log(this->logger,ERROR, "Going to get transforms for given proposal");
+	this->logger->log(this->logger,CONTROL|MORE, "Going to get transforms for given proposal");
 
 	if (!proposals->has_next(proposals))
 	{

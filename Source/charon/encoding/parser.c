@@ -849,7 +849,6 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	
 	*payload = pld;
 	
-	this->logger->log(this->logger, CONTROL, "parsing %s successful", mapping_find(payload_type_m, payload_type));
 	return SUCCESS;
 }
 

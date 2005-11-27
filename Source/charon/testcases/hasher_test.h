@@ -1,7 +1,7 @@
 /**
- * @file hasher_sha1.h
+ * @file hasher_test.h
  * 
- * @brief Interface of hasher_sha1_t
+ * @brief Tests the hashers 
  * 
  */
 
@@ -19,38 +19,27 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
-
-#ifndef HASHER_SHA1_H_
-#define HASHER_SHA1_H_
+ 
+#ifndef HASHER_TEST_H_
+#define HASHER_TEST_H_
 
 #include <transforms/hashers/hasher.h>
-
-
-typedef struct hasher_sha1_t hasher_sha1_t;
-
-/**
- * @brief Implementation of hasher_t interface using the
- * SHA1 algorithm.
- * 
- * @ingroup hashers
- */
-struct hasher_sha1_t {
-	
-	/**
-	 * generic hasher_t interface for this hasher
-	 */
-	hasher_t hasher_interface;
-};
+#include <transforms/hashers/md5_hasher.h>
+#include <transforms/hashers/sha1_hasher.h>
+#include <utils/tester.h>
 
 /**
- * @brief Creates a new hasher_sha1_t.
- * 
- * @return
- * 				- hasher_sha1_t if successfully
- * 				- NULL if out of ressources
- * 
- * @ingroup hashers
+ * @brief Test function used to test the sha1-hasher functionality
+ *
+ * @param tester associated tester object
  */
-hasher_sha1_t *hasher_sha1_create();
+void test_sha1_hasher(tester_t *tester);
 
-#endif /*HASHER_SHA1_H_*/
+/**
+ * @brief Test function used to test the md5-hasher functionality
+ *
+ * @param tester associated tester object
+ */
+void test_md5_hasher(tester_t *tester);
+
+#endif /*HASHER_TEST_H_*/

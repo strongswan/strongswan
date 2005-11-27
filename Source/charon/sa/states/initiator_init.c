@@ -238,7 +238,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	}
 	
 	/* generate packet */	
-	this	->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
+	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
 	status = message->generate(message, &packet);
 	if (status != SUCCESS)
 	{
@@ -247,7 +247,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 		return status;
 	}
 	
-	this	->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
 	status = global_send_queue->add(global_send_queue, packet);
 	if (status != SUCCESS)
 	{
@@ -258,7 +258,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	}
 
 	/* state can now be changed */
-	this	->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_number, this->diffie_hellman, this->sent_nonce);
 	if (next_state == NULL)
 	{
@@ -282,9 +282,9 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 
 	/* state has NOW changed :-) */
-	this	->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
+	this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
 
-	this	->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
+	this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
 	this->destroy_after_state_change(this);
 
 	return SUCCESS;

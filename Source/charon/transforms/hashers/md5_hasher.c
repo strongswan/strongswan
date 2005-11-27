@@ -1,7 +1,7 @@
 /**
- * @file hasher_md5.c
+ * @file md5_hasher.c
  * 
- * @brief Implementation of hasher_md5_t.
+ * @brief Implementation of md5_hasher_t.
  * 
  */
 
@@ -25,7 +25,7 @@
  * for more details.
  */
 
-#include "hasher_md5.h"
+#include "md5_hasher.h"
 
 #include <definitions.h>
 #include <utils/allocator.h>
@@ -97,16 +97,16 @@ Rotation is separate from addition to prevent recomputation.
 
 
 
-typedef struct private_hasher_md5_t private_hasher_md5_t;
+typedef struct private_md5_hasher_t private_md5_hasher_t;
 
 /**
  * private data structure with hasing context
  */
-struct private_hasher_md5_t {
+struct private_md5_hasher_t {
 	/**
 	 * public interface for this hasher
 	 */
-	hasher_md5_t public;
+	md5_hasher_t public;
 	
 	/*
 	 * state of the hasher
@@ -244,7 +244,7 @@ static void MD5Transform(u_int32_t state[4], u_int8_t block[64])
  * operation, processing another message block, and updating the
  * context.
  */
-void MD5Update(private_hasher_md5_t *this, u_int8_t *input, size_t inputLen)
+void MD5Update(private_md5_hasher_t *this, u_int8_t *input, size_t inputLen)
 {
 	u_int32_t i;
 	size_t index, partLen;
@@ -285,7 +285,7 @@ void MD5Update(private_hasher_md5_t *this, u_int8_t *input, size_t inputLen)
 /* MD5 finalization. Ends an MD5 message-digest operation, writing the
  * the message digest and zeroizing the context.
  */
-void MD5Final (private_hasher_md5_t *this, u_int8_t digest[16])
+void MD5Final (private_md5_hasher_t *this, u_int8_t digest[16])
 {
 	u_int8_t bits[8];
 	size_t index, padLen;
@@ -313,7 +313,7 @@ void MD5Final (private_hasher_md5_t *this, u_int8_t digest[16])
 /**
  * implementation of hasher_t.get_hash for md5
  */
-static status_t get_hash(private_hasher_md5_t *this, chunk_t chunk, u_int8_t *buffer)
+static status_t get_hash(private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
 {
 	MD5Update(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)
@@ -328,7 +328,7 @@ static status_t get_hash(private_hasher_md5_t *this, chunk_t chunk, u_int8_t *bu
 /**
  * implementation of hasher_t.allocate_hash for md5
  */
-static status_t allocate_hash(private_hasher_md5_t *this, chunk_t chunk, chunk_t *hash)
+static status_t allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
 	
@@ -353,7 +353,7 @@ static status_t allocate_hash(private_hasher_md5_t *this, chunk_t chunk, chunk_t
 /**
  * implementation of hasher_t.get_block_size for md5
  */
-static size_t get_block_size(private_hasher_md5_t *this)
+static size_t get_block_size(private_md5_hasher_t *this)
 {
 	return BLOCK_SIZE_MD5;
 }
@@ -361,7 +361,7 @@ static size_t get_block_size(private_hasher_md5_t *this)
 /**
  * implementation of hasher_t.reset for md5
  */
-static status_t reset(private_hasher_md5_t *this)
+static status_t reset(private_md5_hasher_t *this)
 {
   	this->state[0] = 0x67452301;
   	this->state[1] = 0xefcdab89;
@@ -374,7 +374,7 @@ static status_t reset(private_hasher_md5_t *this)
 /**
  * implementation of hasher_t.destroy for md5
  */
-static status_t destroy(private_hasher_md5_t *this)
+static status_t destroy(private_md5_hasher_t *this)
 {
 	allocator_free(this);
 	return SUCCESS;
@@ -384,9 +384,9 @@ static status_t destroy(private_hasher_md5_t *this)
 /*
  * Described in header
  */
-hasher_md5_t *hasher_md5_create()
+md5_hasher_t *md5_hasher_create()
 {
-	private_hasher_md5_t *this = allocator_alloc_thing(private_hasher_md5_t);
+	private_md5_hasher_t *this = allocator_alloc_thing(private_md5_hasher_t);
 	if (this == NULL)
 	{
 		return NULL;	

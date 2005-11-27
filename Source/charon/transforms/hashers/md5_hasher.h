@@ -1,7 +1,7 @@
 /**
- * @file hasher_md5_test.h
+ * @file md5_hasher.h
  * 
- * @brief Tests the md5 hasher 
+ * @brief Interface for md5_hasher_t.
  * 
  */
 
@@ -19,19 +19,38 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-#ifndef HASHER_MD5_TEST_H_
-#define HASHER_MD5_TEST_H_
+
+#ifndef MD5_HASHER_H_
+#define MD5_HASHER_H_
 
 #include <transforms/hashers/hasher.h>
-#include <transforms/hashers/hasher_md5.h>
-#include <utils/tester.h>
+
+
+typedef struct md5_hasher_t md5_hasher_t;
 
 /**
- * @brief Test function used to test the md5-hasher functionality
- *
- * @param tester associated tester object
+ * @brief Implementation of hasher_t interface using the
+ * MD5 algorithm.
+ * 
+ * @ingroup hashers
  */
-void test_hasher_md5(tester_t *tester);
+struct md5_hasher_t {
+	
+	/**
+	 * generic hasher_t interface for this hasher
+	 */
+	hasher_t hasher_interface;
+};
 
-#endif /*HASHER_MD5_TEST_H_*/
+/**
+ * @brief Creates a new md5_hasher_t.
+ * 
+ * @return
+ * 				- md5_hasher_t if successfully
+ * 				- NULL if out of ressources
+ * 
+ * @ingroup hashers
+ */
+md5_hasher_t *md5_hasher_create();
+
+#endif /*MD5_HASHER_H_*/

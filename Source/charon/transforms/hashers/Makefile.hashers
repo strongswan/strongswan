@@ -18,10 +18,10 @@ OBJS+= $(BUILD_DIR)hasher.o
 $(BUILD_DIR)hasher.o :			$(HASHERS_DIR)hasher.c $(HASHERS_DIR)hasher.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)hasher_sha1.o
-$(BUILD_DIR)hasher_sha1.o :		$(HASHERS_DIR)hasher_sha1.c $(HASHERS_DIR)hasher_sha1.h
+OBJS+= $(BUILD_DIR)sha1_hasher.o
+$(BUILD_DIR)sha1_hasher.o :		$(HASHERS_DIR)sha1_hasher.c $(HASHERS_DIR)sha1_hasher.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)hasher_md5.o
-$(BUILD_DIR)hasher_md5.o :		$(HASHERS_DIR)hasher_md5.c $(HASHERS_DIR)hasher_md5.h
+OBJS+= $(BUILD_DIR)md5_hasher.o
+$(BUILD_DIR)md5_hasher.o :		$(HASHERS_DIR)md5_hasher.c $(HASHERS_DIR)md5_hasher.h
 								$(CC) $(CFLAGS) -c -o $@ $<

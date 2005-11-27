@@ -220,7 +220,7 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	is_request = message->get_request(message);
 	exchange_type = message->get_exchange_type(message);
 
-	this->logger->log(this->logger, CONTROL|MORE, "Process %s message of exchange type %s",(is_request) ? "REQUEST" : "RESPONSE",mapping_find(exchange_type_m,exchange_type));
+	this->logger->log(this->logger, CONTROL, "Process %s message of exchange type %s",(is_request) ? "REQUEST" : "RESPONSE",mapping_find(exchange_type_m,exchange_type));
 
 	message_id = message->get_message_id(message);
 
@@ -270,7 +270,7 @@ static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool
 	message_t *new_message; 
 	host_t *source, *destination;
 
-	this	->logger->log(this->logger, CONTROL|MORE, "build empty message");	
+	this->logger->log(this->logger, CONTROL|MORE, "build empty message");	
 	new_message = message_create();	
 	if (new_message == NULL)
 	{

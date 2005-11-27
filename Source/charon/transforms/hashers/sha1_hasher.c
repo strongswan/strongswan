@@ -1,5 +1,5 @@
 /**
- * @file hasher_sha1.c
+ * @file sha1_hasher.c
  * 
  * @brief Implementation of hasher_sha_t.
  * 
@@ -23,7 +23,7 @@
  * for more details.
  */
 
-#include "hasher_sha1.h"
+#include "sha1_hasher.h"
 
 #include <definitions.h>
 #include <utils/allocator.h>
@@ -52,16 +52,16 @@
 #define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
 
 
-typedef struct private_hasher_sha1_t private_hasher_sha1_t;
+typedef struct private_sha1_hasher_t private_sha1_hasher_t;
 
 /**
  * private data structure with hasing context
  */
-struct private_hasher_sha1_t {
+struct private_sha1_hasher_t {
 	/**
 	 * public interface for this hasher
 	 */
-	hasher_sha1_t public;
+	sha1_hasher_t public;
 	
 	/*
 	 * state of the hasher
@@ -125,7 +125,7 @@ void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
 /* 
  * Run your data through this. 
  */
-void SHA1Update(private_hasher_sha1_t* this, u_int8_t *data, u_int32_t len)
+void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len)
 {
 	u_int32_t i;
 	u_int32_t j;
@@ -158,7 +158,7 @@ void SHA1Update(private_hasher_sha1_t* this, u_int8_t *data, u_int32_t len)
 /* 
  * Add padding and return the message digest. 
  */
-void SHA1Final(private_hasher_sha1_t *this, u_int8_t *digest)
+void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
 {
 	u_int32_t i;
 	u_int8_t finalcount[8];
@@ -187,7 +187,7 @@ void SHA1Final(private_hasher_sha1_t *this, u_int8_t *digest)
 /**
  * implementation of hasher_t.get_hash for sha1
  */
-static status_t get_hash(private_hasher_sha1_t *this, chunk_t chunk, u_int8_t *buffer)
+static status_t get_hash(private_sha1_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
 {
 	SHA1Update(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)
@@ -202,7 +202,7 @@ static status_t get_hash(private_hasher_sha1_t *this, chunk_t chunk, u_int8_t *b
 /**
  * implementation of hasher_t.allocate_hash for sha1
  */
-static status_t allocate_hash(private_hasher_sha1_t *this, chunk_t chunk, chunk_t *hash)
+static status_t allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
 	
@@ -227,7 +227,7 @@ static status_t allocate_hash(private_hasher_sha1_t *this, chunk_t chunk, chunk_
 /**
  * implementation of hasher_t.get_block_size for sha1
  */
-static size_t get_block_size(private_hasher_sha1_t *this)
+static size_t get_block_size(private_sha1_hasher_t *this)
 {
 	return BLOCK_SIZE_SHA1;
 }
@@ -235,7 +235,7 @@ static size_t get_block_size(private_hasher_sha1_t *this)
 /**
  * implementation of hasher_t.reset for sha1
  */
-static status_t reset(private_hasher_sha1_t *this)
+static status_t reset(private_sha1_hasher_t *this)
 {
 	this->state[0] = 0x67452301;
     this->state[1] = 0xEFCDAB89;
@@ -249,7 +249,7 @@ static status_t reset(private_hasher_sha1_t *this)
 /**
  * implementation of hasher_t.destroy for sha1
  */
-static status_t destroy(private_hasher_sha1_t *this)
+static status_t destroy(private_sha1_hasher_t *this)
 {
 	allocator_free(this);
 	return SUCCESS;
@@ -259,9 +259,9 @@ static status_t destroy(private_hasher_sha1_t *this)
 /*
  * Described in header
  */
-hasher_sha1_t *hasher_sha1_create()
+sha1_hasher_t *sha1_hasher_create()
 {
-	private_hasher_sha1_t *this = allocator_alloc_thing(private_hasher_sha1_t);
+	private_sha1_hasher_t *this = allocator_alloc_thing(private_sha1_hasher_t);
 	if (this == NULL)
 	{
 		return NULL;	
