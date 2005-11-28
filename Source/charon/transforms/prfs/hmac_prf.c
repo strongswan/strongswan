@@ -1,7 +1,7 @@
 /**
- * @file prf_hmac.c
+ * @file hmac_prf.c
  * 
- * @brief Implementation for prf_hmac_t.
+ * @brief Implementation for hmac_prf_t.
  * 
  */
 
@@ -20,18 +20,18 @@
  * for more details.
  */
 
-#include "prf_hmac.h"
+#include "hmac_prf.h"
 
 #include <utils/allocator.h>
 #include <transforms/hmac.h>
 
-typedef struct private_prf_hmac_t private_prf_hmac_t;
+typedef struct private_hmac_prf_t private_hmac_prf_t;
 
-struct private_prf_hmac_t {
+struct private_hmac_prf_t {
 	/**
 	 * public interface for this prf
 	 */
-	prf_hmac_t public;	
+	hmac_prf_t public;	
 	
 	/**
 	 * hmac to use for generation
@@ -42,7 +42,7 @@ struct private_prf_hmac_t {
 /**
  * implementation of prf_t.get_bytes
  */
-static status_t get_bytes(private_prf_hmac_t *this, chunk_t seed, u_int8_t *buffer)
+static status_t get_bytes(private_hmac_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
 	return this->hmac->get_mac(this->hmac, seed, buffer);
 }
@@ -50,7 +50,7 @@ static status_t get_bytes(private_prf_hmac_t *this, chunk_t seed, u_int8_t *buff
 /**
  * implementation of prf_t.allocate_bytes
  */
-static status_t allocate_bytes(private_prf_hmac_t *this, chunk_t seed, chunk_t *chunk)
+static status_t allocate_bytes(private_hmac_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
 	return this->hmac->allocate_mac(this->hmac, seed, chunk);
 }
@@ -58,7 +58,7 @@ static status_t allocate_bytes(private_prf_hmac_t *this, chunk_t seed, chunk_t *
 /**
  * implementation of prf_t.get_block_size
  */
-static size_t get_block_size(private_prf_hmac_t *this)
+static size_t get_block_size(private_hmac_prf_t *this)
 {
 	return this->hmac->get_block_size(this->hmac);
 }
@@ -66,7 +66,7 @@ static size_t get_block_size(private_prf_hmac_t *this)
 /**
  * implementation of prf_t.set_key
  */
-static status_t set_key(private_prf_hmac_t *this, chunk_t key)
+static status_t set_key(private_hmac_prf_t *this, chunk_t key)
 {
 	this->hmac->set_key(this->hmac, key);
 	return SUCCESS;
@@ -75,7 +75,7 @@ static status_t set_key(private_prf_hmac_t *this, chunk_t key)
 /**
  * implementation of prf_t.destroy
  */
-static status_t destroy(private_prf_hmac_t *this)
+static status_t destroy(private_hmac_prf_t *this)
 {
 	allocator_free(this);
 	this->hmac->destroy(this->hmac);
@@ -85,9 +85,9 @@ static status_t destroy(private_prf_hmac_t *this)
 /*
  * Described in header
  */
-prf_hmac_t *prf_hmac_create(hash_algorithm_t hash_algorithm)
+hmac_prf_t *hmac_prf_create(hash_algorithm_t hash_algorithm)
 {
-	private_prf_hmac_t *this = allocator_alloc_thing(private_prf_hmac_t);
+	private_hmac_prf_t *this = allocator_alloc_thing(private_hmac_prf_t);
 	
 	if (this == NULL)
 	{

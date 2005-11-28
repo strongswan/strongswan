@@ -24,7 +24,7 @@
 #include "prf.h"
 
 #include <transforms/hashers/hasher.h>
-#include <transforms/prfs/prf_hmac.h>
+#include <transforms/prfs/hmac_prf.h>
 
 
 /** 
@@ -49,11 +49,11 @@ prf_t *prf_create(pseudo_random_function_t pseudo_random_function)
 	{
 		case PRF_HMAC_SHA1:
 		{
-			return (prf_t*)prf_hmac_create(HASH_SHA1);
+			return (prf_t*)hmac_prf_create(HASH_SHA1);
 		}
 		case PRF_HMAC_MD5:
 		{
-			return (prf_t*)prf_hmac_create(HASH_MD5);
+			return (prf_t*)hmac_prf_create(HASH_MD5);
 		}
 		case PRF_HMAC_TIGER:
 		case PRF_AES128_CBC:

@@ -1,7 +1,7 @@
 /**
- * @file prf_hmac.h
+ * @file hmac_prf.h
  * 
- * @brief Interface for prf_hmac_t.
+ * @brief Interface for hmac_prf_t.
  * 
  */
 
@@ -27,7 +27,7 @@
 #include <transforms/prfs/prf.h>
 #include <transforms/hashers/hasher.h>
 
-typedef struct prf_hmac_t prf_hmac_t;
+typedef struct hmac_prf_t hmac_prf_t;
 
 /**
  * @brief Implementation of prf_t interface using the
@@ -38,24 +38,24 @@ typedef struct prf_hmac_t prf_hmac_t;
  * 
  * @ingroup prfs
  */
-struct prf_hmac_t {
+struct hmac_prf_t {
 	
 	/**
-	 * Generic prf_t interface for this prf_hmac_t class.
+	 * Generic prf_t interface for this hmac_prf_t class.
 	 */
 	prf_t prf_interface;
 };
 
 /**
- * @brief Creates a new prf_hmac_t object
+ * @brief Creates a new hmac_prf_t object
  * 
  * @param hash_algorithm			hmac's hash algorithm
  * @return
- * 									- prf_hmac_t if successfully
+ * 									- hmac_prf_t if successfully
  * 									- NULL if out of ressources
  * 
  * @ingroup prfs
  */
-prf_hmac_t *prf_hmac_create(hash_algorithm_t hash_algorithm);
+hmac_prf_t *hmac_prf_create(hash_algorithm_t hash_algorithm);
 
 #endif /*PRF_HMAC_SHA1_H_*/

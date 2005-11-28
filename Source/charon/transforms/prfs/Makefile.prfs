@@ -18,6 +18,6 @@ OBJS+= $(BUILD_DIR)prf.o
 $(BUILD_DIR)prf.o :				$(PRFS_DIR)prf.c $(PRFS_DIR)prf.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)prf_hmac.o
-$(BUILD_DIR)prf_hmac.o :		$(PRFS_DIR)prf_hmac.c $(PRFS_DIR)prf_hmac.h
+OBJS+= $(BUILD_DIR)hmac_prf.o
+$(BUILD_DIR)hmac_prf.o :			$(PRFS_DIR)hmac_prf.c $(PRFS_DIR)hmac_prf.h
 								$(CC) $(CFLAGS) -c -o $@ $<

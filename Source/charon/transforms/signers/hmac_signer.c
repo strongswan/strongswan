@@ -23,7 +23,7 @@
 #include "hmac_signer.h"
 
 #include <utils/allocator.h>
-#include <transforms/prfs/prf_hmac.h>
+#include <transforms/prfs/hmac_prf.h>
 
 /**
  * This class represents a hmac signer with 12 byte (96 bit) output
@@ -155,7 +155,7 @@ hmac_signer_t *hmac_signer_create(hash_algorithm_t hash_algoritm)
 		return NULL;	
 	}
 	
-	this->hmac_prf = (prf_t *) prf_hmac_create(hash_algoritm);
+	this->hmac_prf = (prf_t *) hmac_prf_create(hash_algoritm);
 	
 	if (this->hmac_prf == NULL)
 	{
