@@ -119,7 +119,8 @@ static void *allocate_special(private_allocator_t *this,size_t bytes, char * fil
   
 	if (allocated_memory == NULL)
     {
-		return allocated_memory;
+    		/* TODO LOG this case */
+    		exit(-1);
     }
 
     if (use_mutex)
@@ -321,7 +322,12 @@ chunk_t allocator_alloc_as_chunk(size_t bytes)
 {
 	chunk_t new_chunk;
 	new_chunk.ptr = malloc(bytes); 
-	new_chunk.len = (new_chunk.ptr == NULL) ? 0 : bytes; 
+	if ((new_chunk.ptr == NULL)
+	{
+		/* TODO log this case */
+		exit(-1);
+	}
+	new_chunk.len = bytes; 
 	return new_chunk; 
 
 }
@@ -344,7 +350,7 @@ void * allocator_clone_bytes(void * pointer, size_t size)
 	void *data;
 	data = malloc(size);
 	
-	if (data == NULL){return NULL;}
+	if (data == NULL){exit(-1);}
 	memmove(data,pointer,size);
 	
 	return (data);
