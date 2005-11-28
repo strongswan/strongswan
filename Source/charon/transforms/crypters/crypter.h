@@ -66,11 +66,12 @@ struct crypter_t {
 	 * 
 	 * @param this				calling crypter
 	 * @param data				data to encrypt
+	 * @param iv					iv
 	 * @param [out]encrypted	pointer where the encrypted bytes will be written
 	 * @return				
 	 * 							- SUCCESS in any case
 	 */
-	status_t (*encrypt) (crypter_t *this, chunk_t data, chunk_t *encrypted);
+	status_t (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted);
 	
 	/**
 	 * @brief Decrypt a chunk of data and allocate space for 
@@ -78,11 +79,12 @@ struct crypter_t {
 	 * 
 	 * @param this				calling crypter
 	 * @param data				data to decrypt
+	 * @param iv					iv
 	 * @param [out]encrypted	pointer where the decrypted bytes will be written
 	 * @return				
 	 * 							- SUCCESS in any case
 	 */
-	status_t (*decrypt) (crypter_t *this, chunk_t data, chunk_t *decrypted);
+	status_t (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted);
 
 	/**
 	 * @brief get the block size of this crypter
