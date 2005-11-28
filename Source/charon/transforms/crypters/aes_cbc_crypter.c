@@ -84,34 +84,52 @@ struct private_aes_cbc_crypter_t {
      */
     u_int32_t    blocksize;	
     
-   	
+    /**
+     * Decrypts a block.
+     * 
+     * No memory gets allocated.
+     * 
+     * @param this			calling object
+     * @param[in] in_blk		block to decrypt
+     * @param[out] out_blk	decrypted data are written to this location
+     */
+ 	void (*decrypt_block) (const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);
+ 
+    /**
+     * Encrypts a block.
+     * 
+     * No memory gets allocated.
+     * 
+     * @param this			calling object
+     * @param[in] in_blk		block to encrypt
+     * @param[out] out_blk	encrypted data are written to this location
+     */	
+	void (*encrypt_block) (const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);
 };
 
 
 /* ugly macro stuff */
-/*******************************/
 
-// CONFIGURATION OPTIONS (see also aes.h)
-//
-// 1.  Define UNROLL for full loop unrolling in encryption and decryption.
-// 2.  Define PARTIAL_UNROLL to unroll two loops in encryption and decryption.
-// 3.  Define FIXED_TABLES for compiled rather than dynamic tables.
-// 4.  Define FF_TABLES to use tables for field multiplies and inverses.
-//     Do not enable this without understanding stack space requirements.
-// 5.  Define ARRAYS to use arrays to hold the local state block. If this
-//     is not defined, individually declared 32-bit words are used.
-// 6.  Define FAST_VARIABLE if a high speed variable block implementation
-//     is needed (essentially three separate fixed block size code sequences)
-// 7.  Define either ONE_TABLE or FOUR_TABLES for a fast table driven 
-//     version using 1 table (2 kbytes of table space) or 4 tables (8
-//     kbytes of table space) for higher speed.
-// 8.  Define either ONE_LR_TABLE or FOUR_LR_TABLES for a further speed 
-//     increase by using tables for the last rounds but with more table
-//     space (2 or 8 kbytes extra).
-// 9.  If neither ONE_TABLE nor FOUR_TABLES is defined, a compact but 
-//     slower version is provided.
-// 10. If fast decryption key scheduling is needed define ONE_IM_TABLE
-//     or FOUR_IM_TABLES for higher speed (2 or 8 kbytes extra).
+/* 1.  Define UNROLL for full loop unrolling in encryption and decryption.
+ * 2.  Define PARTIAL_UNROLL to unroll two loops in encryption and decryption.
+ * 3.  Define FIXED_TABLES for compiled rather than dynamic tables.
+ * 4.  Define FF_TABLES to use tables for field multiplies and inverses.
+ *     Do not enable this without understanding stack space requirements.
+ * 5.  Define ARRAYS to use arrays to hold the local state block. If this
+ *     is not defined, individually declared 32-bit words are used.
+ * 6.  Define FAST_VARIABLE if a high speed variable block implementation
+ *     is needed (essentially three separate fixed block size code sequences)
+ * 7.  Define either ONE_TABLE or FOUR_TABLES for a fast table driven 
+ *     version using 1 table (2 kbytes of table space) or 4 tables (8
+ *     kbytes of table space) for higher speed.
+ * 8.  Define either ONE_LR_TABLE or FOUR_LR_TABLES for a further speed 
+ *     increase by using tables for the last rounds but with more table
+ *     space (2 or 8 kbytes extra).
+ * 9.  If neither ONE_TABLE nor FOUR_TABLES is defined, a compact but 
+ *     slower version is provided.
+ * 10. If fast decryption key scheduling is needed define ONE_IM_TABLE
+ *     or FOUR_IM_TABLES for higher speed (2 or 8 kbytes extra).
+ */
 
 #define UNROLL
 //#define PARTIAL_UNROLL
@@ -150,14 +168,20 @@ struct private_aes_cbc_crypter_t {
 #error an illegal block size has been specified
 #endif  
 
-// upr(x,n): rotates bytes within words by n positions, moving bytes 
-// to higher index positions with wrap around into low positions
-// ups(x,n): moves bytes by n positions to higher index positions in 
-// words but without wrap around
-// bval(x,n): extracts a byte from a word
-
+/**
+ * Rotates bytes within words by n positions, moving bytes 
+ * to higher index positions with wrap around into low positions.
+ */ 
 #define upr(x,n)        (((x) << 8 * (n)) | ((x) >> (32 - 8 * (n))))
+/**
+ * Moves bytes by n positions to higher index positions in 
+ * words but without wrap around.
+ */ 
 #define ups(x,n)        ((x) << 8 * (n))
+
+/**
+ * Extracts a byte from a word.
+ */
 #define bval(x,n)       ((unsigned char)((x) >> 8 * (n)))
 #define bytes2word(b0, b1, b2, b3)  \
         ((u_int32_t)(b3) << 24 | (u_int32_t)(b2) << 16 | (u_int32_t)(b1) << 8 | (b0))
@@ -941,38 +965,7 @@ static void gen_tabs(void)
     f2 ^= f4 ^ f8 ^ upr(f2 ^ f9,3) ^ upr(f4 ^ f9,2) ^ upr(f9,1))
 #endif
 
-// Subroutine to set the block size (if variable) in bytes, legal
-// values being 16, 24 and 32.
-
-#if defined(AES_BLOCK_SIZE)
-#define nc   (AES_BLOCK_SIZE / 4)
-#else
-#define nc   (cx->aes_Ncol)
-
-void aes_set_blk(private_aes_cbc_crypter_t *cx, int n_bytes)
-{
-#if !defined(FIXED_TABLES)
-    if(!tab_gen) { gen_tabs(); tab_gen = 1; }
-#endif
-
-    switch(n_bytes) {
-    case 32:        /* bytes */
-    case 256:       /* bits */
-        nc = 8;
-        break;
-    case 24:        /* bytes */
-    case 192:       /* bits */
-        nc = 6;
-        break;
-    case 16:        /* bytes */
-    case 128:       /* bits */
-    default:
-        nc = 4;
-        break;
-    }
-}
-
-#endif
+#define nc   (this->aes_Ncol)
 
 // Initialise the key schedule from the user supplied key. The key
 // length is now specified in bytes - 16, 24 or 32 as appropriate.
@@ -1014,110 +1007,6 @@ switch(nc) \
 }
 
 #endif
-
-void aes_set_key(private_aes_cbc_crypter_t *cx, const unsigned char in_key[], int n_bytes, const int f)
-{   u_int32_t    *kf, *kt, rci;
-
-#if !defined(FIXED_TABLES)
-    if(!tab_gen) { gen_tabs(); tab_gen = 1; }
-#endif
-
-    switch(n_bytes) {
-    case 32:                    /* bytes */
-    case 256:                   /* bits */
-        cx->aes_Nkey = 8;
-        break;
-    case 24:                    /* bytes */
-    case 192:                   /* bits */
-        cx->aes_Nkey = 6;
-        break;
-    case 16:                    /* bytes */
-    case 128:                   /* bits */
-    default:
-        cx->aes_Nkey = 4;
-        break;
-    }
-
-    cx->aes_Nrnd = (cx->aes_Nkey > nc ? cx->aes_Nkey : nc) + 6; 
-
-    cx->aes_e_key[0] = const_word_in(in_key     );
-    cx->aes_e_key[1] = const_word_in(in_key +  4);
-    cx->aes_e_key[2] = const_word_in(in_key +  8);
-    cx->aes_e_key[3] = const_word_in(in_key + 12);
-
-    kf = cx->aes_e_key; 
-    kt = kf + nc * (cx->aes_Nrnd + 1) - cx->aes_Nkey; 
-    rci = 0;
-
-    switch(cx->aes_Nkey)
-    {
-    case 4: do
-            {   kf[4] = kf[0] ^ ls_box(kf[3],3) ^ rcon_tab[rci++];
-                kf[5] = kf[1] ^ kf[4];
-                kf[6] = kf[2] ^ kf[5];
-                kf[7] = kf[3] ^ kf[6];
-                kf += 4;
-            }
-            while(kf < kt);
-            break;
-
-    case 6: cx->aes_e_key[4] = const_word_in(in_key + 16);
-            cx->aes_e_key[5] = const_word_in(in_key + 20);
-            do
-            {   kf[ 6] = kf[0] ^ ls_box(kf[5],3) ^ rcon_tab[rci++];
-                kf[ 7] = kf[1] ^ kf[ 6];
-                kf[ 8] = kf[2] ^ kf[ 7];
-                kf[ 9] = kf[3] ^ kf[ 8];
-                kf[10] = kf[4] ^ kf[ 9];
-                kf[11] = kf[5] ^ kf[10];
-                kf += 6;
-            }
-            while(kf < kt);
-            break;
-
-    case 8: cx->aes_e_key[4] = const_word_in(in_key + 16);
-            cx->aes_e_key[5] = const_word_in(in_key + 20);
-            cx->aes_e_key[6] = const_word_in(in_key + 24);
-            cx->aes_e_key[7] = const_word_in(in_key + 28);
-            do
-            {   kf[ 8] = kf[0] ^ ls_box(kf[7],3) ^ rcon_tab[rci++];
-                kf[ 9] = kf[1] ^ kf[ 8];
-                kf[10] = kf[2] ^ kf[ 9];
-                kf[11] = kf[3] ^ kf[10];
-                kf[12] = kf[4] ^ ls_box(kf[11],0);
-                kf[13] = kf[5] ^ kf[12];
-                kf[14] = kf[6] ^ kf[13];
-                kf[15] = kf[7] ^ kf[14];
-                kf += 8;
-            }
-            while (kf < kt);
-            break;
-    }
-
-    if(!f)
-    {   u_int32_t    i;
-        
-        kt = cx->aes_d_key + nc * cx->aes_Nrnd;
-        kf = cx->aes_e_key;
-        
-        cpy(kt, kf); kt -= 2 * nc;
-
-        for(i = 1; i < cx->aes_Nrnd; ++i)
-        { 
-#if defined(ONE_TABLE) || defined(FOUR_TABLES)
-#if !defined(ONE_IM_TABLE) && !defined(FOUR_IM_TABLES)
-            u_int32_t    f2, f4, f8, f9;
-#endif
-            mix(kt, kf);
-#else
-            cpy(kt, kf);
-#endif
-            kt -= 2 * nc;
-        }
-        
-        cpy(kt, kf);
-    }
-}
 
 // y = output word, x = input word, r = row, c = column
 // for r = 0, 1, 2 and 3 = column accessed for row r
@@ -1355,9 +1244,12 @@ switch(nc) \
 #endif
 #endif
 
-void aes_encrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk[], unsigned char out_blk[])
+/**
+ * Implementation of private_aes_cbc_crypter_t.encrypt_block.
+ */
+static void encrypt_block(const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[])
 {   u_int32_t        locals(b0, b1);
-    const u_int32_t  *kp = cx->aes_e_key;
+    const u_int32_t  *kp = this->aes_e_key;
 
 #if !defined(ONE_TABLE) && !defined(FOUR_TABLES)
     u_int32_t        f2;
@@ -1367,7 +1259,7 @@ void aes_encrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk
 
 #if defined(UNROLL)
 
-    switch(cx->aes_Nrnd)
+    switch(this->aes_Nrnd)
     {
     case 14:    round(fwd_rnd,  b1, b0, kp         ); 
                 round(fwd_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
@@ -1388,7 +1280,7 @@ void aes_encrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk
 #elif defined(PARTIAL_UNROLL)
     {   u_int32_t    rnd;
 
-        for(rnd = 0; rnd < (cx->aes_Nrnd >> 1) - 1; ++rnd)
+        for(rnd = 0; rnd < (this->aes_Nrnd >> 1) - 1; ++rnd)
         {
             round(fwd_rnd, b1, b0, kp); 
             round(fwd_rnd, b0, b1, kp + nc); kp += 2 * nc;
@@ -1400,7 +1292,7 @@ void aes_encrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk
 #else
     {   u_int32_t    rnd;
 
-        for(rnd = 0; rnd < cx->aes_Nrnd - 1; ++rnd)
+        for(rnd = 0; rnd < this->aes_Nrnd - 1; ++rnd)
         {
             round(fwd_rnd, b1, b0, kp); 
             l_copy(b0, b1); kp += nc;
@@ -1413,9 +1305,12 @@ void aes_encrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk
     state_out(out_blk, b0);
 }
 
-void aes_decrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk[], unsigned char out_blk[])
+/**
+ * Implementation of private_aes_cbc_crypter_t.decrypt_block.
+ */
+static void decrypt_block(const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[])
 {   u_int32_t        locals(b0, b1);
-    const u_int32_t  *kp = cx->aes_d_key;
+    const u_int32_t  *kp = this->aes_d_key;
 
 #if !defined(ONE_TABLE) && !defined(FOUR_TABLES)
     u_int32_t        f2, f4, f8, f9; 
@@ -1425,7 +1320,7 @@ void aes_decrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk
 
 #if defined(UNROLL)
 
-    switch(cx->aes_Nrnd)
+    switch(this->aes_Nrnd)
     {
     case 14:    round(inv_rnd,  b1, b0, kp         );
                 round(inv_rnd,  b0, b1, kp + nc    ); kp += 2 * nc;
@@ -1446,7 +1341,7 @@ void aes_decrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk
 #elif defined(PARTIAL_UNROLL)
     {   u_int32_t    rnd;
 
-        for(rnd = 0; rnd < (cx->aes_Nrnd >> 1) - 1; ++rnd)
+        for(rnd = 0; rnd < (this->aes_Nrnd >> 1) - 1; ++rnd)
         {
             round(inv_rnd, b1, b0, kp); 
             round(inv_rnd, b0, b1, kp + nc); kp += 2 * nc;
@@ -1458,7 +1353,7 @@ void aes_decrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk
 #else
     {   u_int32_t    rnd;
 
-        for(rnd = 0; rnd < cx->aes_Nrnd - 1; ++rnd)
+        for(rnd = 0; rnd < this->aes_Nrnd - 1; ++rnd)
         {
             round(inv_rnd, b1, b0, kp); 
             l_copy(b0, b1); kp += nc;
@@ -1470,11 +1365,6 @@ void aes_decrypt(const private_aes_cbc_crypter_t *cx, const unsigned char in_blk
 
     state_out(out_blk, b0);
 }
-
-
-
-/* *************************/
-
 
 /**
  * Implementation of crypter_t.decrypt.
@@ -1506,7 +1396,7 @@ static status_t decrypt (private_aes_cbc_crypter_t *this, chunk_t data, chunk_t 
 	in+=pos;
 	out+=pos;
 	while(pos>=0) {
-		aes_decrypt(this,in,out);
+		this->decrypt_block(this,in,out);
 		if (pos==0)
 			iv_i=(const u_int32_t*) (iv.ptr);
 		else
@@ -1561,7 +1451,7 @@ static status_t encrypt (private_aes_cbc_crypter_t *this, chunk_t data, chunk_t 
 		*((u_int32_t *)(&out[ 4])) = iv_i[1]^*((const u_int32_t *)(&in[ 4]));
 		*((u_int32_t *)(&out[ 8])) = iv_i[2]^*((const u_int32_t *)(&in[ 8]));
 		*((u_int32_t *)(&out[12])) = iv_i[3]^*((const u_int32_t *)(&in[12]));
-		aes_encrypt(this,out,out);
+		this->encrypt_block(this,out,out);
 		in+=16;
 		out+=16;
 		pos+=16;
@@ -1582,7 +1472,94 @@ static size_t get_block_size (private_aes_cbc_crypter_t *this)
  */
 static status_t set_key (private_aes_cbc_crypter_t *this, chunk_t key)
 {
-	aes_set_key(this, key.ptr, key.len,0);
+	u_int32_t    *kf, *kt, rci, f = 0;
+	u_int8_t *in_key = key.ptr;
+
+	if (key.len != this->blocksize)
+	{
+		return INVALID_ARG;
+	}
+
+    this->aes_Nrnd = (this->aes_Nkey > (this->aes_Ncol) ? this->aes_Nkey : (this->aes_Ncol)) + 6; 
+
+    this->aes_e_key[0] = const_word_in(in_key     );
+    this->aes_e_key[1] = const_word_in(in_key +  4);
+    this->aes_e_key[2] = const_word_in(in_key +  8);
+    this->aes_e_key[3] = const_word_in(in_key + 12);
+
+    kf = this->aes_e_key; 
+    kt = kf + nc * (this->aes_Nrnd + 1) - this->aes_Nkey; 
+    rci = 0;
+
+    switch(this->aes_Nkey)
+    {
+    case 4: do
+            {   kf[4] = kf[0] ^ ls_box(kf[3],3) ^ rcon_tab[rci++];
+                kf[5] = kf[1] ^ kf[4];
+                kf[6] = kf[2] ^ kf[5];
+                kf[7] = kf[3] ^ kf[6];
+                kf += 4;
+            }
+            while(kf < kt);
+            break;
+
+    case 6: this->aes_e_key[4] = const_word_in(in_key + 16);
+            this->aes_e_key[5] = const_word_in(in_key + 20);
+            do
+            {   kf[ 6] = kf[0] ^ ls_box(kf[5],3) ^ rcon_tab[rci++];
+                kf[ 7] = kf[1] ^ kf[ 6];
+                kf[ 8] = kf[2] ^ kf[ 7];
+                kf[ 9] = kf[3] ^ kf[ 8];
+                kf[10] = kf[4] ^ kf[ 9];
+                kf[11] = kf[5] ^ kf[10];
+                kf += 6;
+            }
+            while(kf < kt);
+            break;
+
+    case 8: this->aes_e_key[4] = const_word_in(in_key + 16);
+            this->aes_e_key[5] = const_word_in(in_key + 20);
+            this->aes_e_key[6] = const_word_in(in_key + 24);
+            this->aes_e_key[7] = const_word_in(in_key + 28);
+            do
+            {   kf[ 8] = kf[0] ^ ls_box(kf[7],3) ^ rcon_tab[rci++];
+                kf[ 9] = kf[1] ^ kf[ 8];
+                kf[10] = kf[2] ^ kf[ 9];
+                kf[11] = kf[3] ^ kf[10];
+                kf[12] = kf[4] ^ ls_box(kf[11],0);
+                kf[13] = kf[5] ^ kf[12];
+                kf[14] = kf[6] ^ kf[13];
+                kf[15] = kf[7] ^ kf[14];
+                kf += 8;
+            }
+            while (kf < kt);
+            break;
+    }
+
+    if(!f)
+    {   u_int32_t    i;
+        
+        kt = this->aes_d_key + nc * this->aes_Nrnd;
+        kf = this->aes_e_key;
+        
+        cpy(kt, kf); kt -= 2 * nc;
+
+        for(i = 1; i < this->aes_Nrnd; ++i)
+        { 
+#if defined(ONE_TABLE) || defined(FOUR_TABLES)
+#if !defined(ONE_IM_TABLE) && !defined(FOUR_IM_TABLES)
+            u_int32_t    f2, f4, f8, f9;
+#endif
+            mix(kt, kf);
+#else
+            cpy(kt, kf);
+#endif
+            kt -= 2 * nc;
+        }
+        
+        cpy(kt, kf);
+    }
+
 	return SUCCESS;
 }
 
@@ -1595,7 +1572,9 @@ static status_t destroy (private_aes_cbc_crypter_t *this)
 	return SUCCESS;
 }
 
-
+/*
+ * Described in header
+ */
 aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize)
 {
 	private_aes_cbc_crypter_t *this = allocator_alloc_thing(private_aes_cbc_crypter_t);
@@ -1610,19 +1589,21 @@ aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize)
     switch(blocksize) {
     case 32:        /* bytes */
         this->aes_Ncol = 8;
+        this->aes_Nkey = 8;
         this->blocksize = blocksize;
         break;
     case 24:        /* bytes */
         this->aes_Ncol = 6;
+        this->aes_Nkey = 6;
         this->blocksize = blocksize;
         break;
     case 16:        /* bytes */
     default:
         this->aes_Ncol = 4;
+        this->aes_Nkey = 4;
         this->blocksize = 16;
         break;
     }
-	
 
 	/* functions of crypter_t interface */	
 	this->public.crypter_interface.encrypt = (status_t (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
@@ -1634,6 +1615,9 @@ aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize)
 	/* public functions */
 	this->public.destroy = (status_t (*) (aes_cbc_crypter_t *)) destroy;
 	
+	/* private functions */
+	this->decrypt_block = decrypt_block;
+	this->encrypt_block = encrypt_block;
 	
 	return &(this->public);
 }
