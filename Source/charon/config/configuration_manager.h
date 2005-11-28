@@ -137,23 +137,24 @@ struct configuration_manager_t {
 	status_t (*select_proposals_for_host) (configuration_manager_t *this, host_t *host, iterator_t *in, iterator_t *out);
 	
 	/**
-	 * Returns the transforms of type crypter_t, signer_t and prf_t as specified in given proposal.
+	 * Checks if the selected proposals of a remote hosts are valid.
 	 * 
 	 * 
-	 * @param this							calling object
-	 * @param host							host information
-	 * @param proposals						iterator with selected proposals
-	 * @param[out] encryption_algorithm		
-	 * @param[out] pseudo_random_function	
-	 * @param[out] integrity_algorithm		
+	 * @param this				calling object
+	 * @param host				host information
+	 * @param proposals			iterator with selected proposals
+	 * @param[out] valid			TRUE if selected proposals are accepted
 	 * 
-	 * @return		
-	 * 										- OUT_OF_RES
-	 * 										- FAILED
-	 * 										- NOT_FOUND (not yet implemented)
-	 * 										- SUCCESS
+	 * @return			
+	 * 												- OUT_OF_RES
+	 * 												- FAILED
+	 * 												- NOT_FOUND (not yet implemented)
+	 * 												- SUCCESS
 	 */
-	status_t (*get_transforms_for_host_and_proposals) (configuration_manager_t *this, host_t *host, iterator_t *proposals,encryption_algorithm_t *encryption_algorithm,pseudo_random_function_t *pseudo_random_function, integrity_algorithm_t *integrity_algorithm);
+	status_t (*check_selected_proposals_for_host) (configuration_manager_t *this,
+												   host_t *host, 
+												   iterator_t *proposals,
+												   bool *valid);
 	
 	/**
 	 * Checks if a given dh_group number is allowed for a specific host

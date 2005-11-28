@@ -32,6 +32,7 @@
 #include <utils/randomizer.h>
 #include <transforms/diffie_hellman.h>
 #include <transforms/prf_plus.h>
+#include <transforms/crypters/crypter.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -348,6 +349,9 @@ static ike_sa_id_t* get_id(private_ike_sa_t *this)
 	return this->ike_sa_id;
 }
 
+/**
+ * @brief implements function protected_ike_sa_t.compute_secrets
+ */
 static status_t compute_secrets (private_ike_sa_t *this,chunk_t dh_shared_secret,chunk_t initiator_nonce, chunk_t responder_nonce)
 {
 	chunk_t concatenated_nonces;
@@ -357,8 +361,8 @@ static status_t compute_secrets (private_ike_sa_t *this,chunk_t dh_shared_secret
 	u_int64_t initiator_spi;
 	u_int64_t responder_spi;
 	prf_plus_t *prf_plus;
-	chunk_t secrets_raw;
-
+	
+	
 	/*
 	 * TODO check length for specific prf's 
 	 */
@@ -398,6 +402,7 @@ static status_t compute_secrets (private_ike_sa_t *this,chunk_t dh_shared_secret
 		return FAILED;
 	}
 	
+	
 	/* first is initiator */
 	memcpy(prf_plus_seed.ptr,initiator_nonce.ptr,initiator_nonce.len);
 	/* second is responder */
@@ -409,8 +414,8 @@ static status_t compute_secrets (private_ike_sa_t *this,chunk_t dh_shared_secret
 	responder_spi = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
 	memcpy(prf_plus_seed.ptr + initiator_nonce.len + responder_nonce.len + 8,&responder_spi,8);
 	
-	this->logger->log_chunk(this->logger, PRIVATE, "Keyseed", &skeyseed);
-	this->logger->log_chunk(this->logger, PRIVATE, "PRF+ Seed", &prf_plus_seed);
+	this->logger->log_chunk(this->logger, PRIVATE | MORE, "Keyseed", &skeyseed);
+	this->logger->log_chunk(this->logger, PRIVATE | MORE, "PRF+ Seed", &prf_plus_seed);
 
 	this->logger->log(this->logger, CONTROL | MOST, "Set new key of prf object");
 	status = this->prf->set_key(this->prf,skeyseed);
@@ -431,11 +436,85 @@ static status_t compute_secrets (private_ike_sa_t *this,chunk_t dh_shared_secret
 		return FAILED;
 	}
 	
-	prf_plus->allocate_bytes(prf_plus,100,&secrets_raw);
+	status = prf_plus->allocate_bytes(prf_plus,this->prf->get_block_size(this->prf),&(this->secrets.d_key));
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not allocate bytes from prf+ for Sk_d");
+		return status;
+	}
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", &(this->secrets.d_key));
+
+	status = prf_plus->allocate_bytes(prf_plus,this->crypter_initiator->get_block_size(this->crypter_initiator),&(this->secrets.ei_key));
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not allocate bytes from prf+ for Sk_ei");
+		return status;
+	}
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", &(this->secrets.ei_key));
+	status = this->crypter_initiator->set_key(this->crypter_initiator,this->secrets.ei_key);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not set encryption key initiator crypter");
+		return status;
+	}
+
+	status = prf_plus->allocate_bytes(prf_plus,this->crypter_responder->get_block_size(this->crypter_responder),&(this->secrets.er_key));
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not allocate bytes from prf+ for Sk_er");
+		return status;
+	}
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", &(this->secrets.er_key));
+	status = this->crypter_responder->set_key(this->crypter_responder,this->secrets.er_key);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not set encryption key responder crypter");
+		return status;
+	}
+
+	status = prf_plus->allocate_bytes(prf_plus,this->signer_initiator->get_block_size(this->signer_initiator),&(this->secrets.ai_key));
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not allocate bytes from prf+ for Sk_ai");
+		return status;
+	}
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &(this->secrets.ai_key));
+	status = this->signer_initiator->set_key(this->signer_initiator,this->secrets.ai_key);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not set key for initiator signer");
+		return status;
+	}
+
+	status = prf_plus->allocate_bytes(prf_plus,this->signer_responder->get_block_size(this->signer_responder),&(this->secrets.ar_key));
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not allocate bytes from prf+ for Sk_ar");
+		return status;
+	}
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", &(this->secrets.ar_key));
+	status = this->signer_responder->set_key(this->signer_responder,this->secrets.ar_key);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not set key for responder signer");
+		return status;
+	}	
+
+	status = prf_plus->allocate_bytes(prf_plus,this->crypter_responder->get_block_size(this->crypter_responder),&(this->secrets.pi_key));
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not allocate bytes from prf+ for Sk_pi");
+		return status;
+	}
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", &(this->secrets.pi_key));
 	
-	this->logger->log_chunk(this->logger, PRIVATE, "Secrets", &secrets_raw);
-	
-	allocator_free_chunk(&secrets_raw);
+	status = prf_plus->allocate_bytes(prf_plus,this->crypter_responder->get_block_size(this->crypter_responder),&(this->secrets.pr_key));
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not allocate bytes from prf+ for Sk_pr");
+		return status;
+	}
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pr secret", &(this->secrets.pr_key));
 	
 	prf_plus->destroy(prf_plus);
 
@@ -496,6 +575,7 @@ status_t create_delete_job (private_ike_sa_t *this)
  */
 static void set_new_state (private_ike_sa_t *this, state_t *state)
 {
+	this->logger->log(this->logger, ERROR, "Change current state %s to %s",mapping_find(ike_sa_state_m,this->current_state->get_state(this->current_state)),mapping_find(ike_sa_state_m,state->get_state(state)));
 	this->current_state = state;
 }
 
@@ -530,6 +610,7 @@ static void set_my_host (private_ike_sa_t *this, host_t *my_host)
 {
 	if (this->me.host != NULL)
 	{
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing my host object");
 		this->me.host->destroy(this->me.host);
 	}
 	this->me.host = my_host;
@@ -542,6 +623,7 @@ static void set_other_host (private_ike_sa_t *this, host_t *other_host)
 {
 	if (this->other.host != NULL)
 	{
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing other host object");
 		this->other.host->destroy(this->other.host);
 	}
 	this->other.host = other_host;
@@ -550,13 +632,110 @@ static void set_other_host (private_ike_sa_t *this, host_t *other_host)
 /**
  * Implementation of protected_ike_sa_t.set_prf.
  */
-static void set_prf (private_ike_sa_t *this,prf_t *prf)
+static status_t create_transforms_from_proposal (private_ike_sa_t *this,proposal_substructure_t *proposal)
 {
+	status_t status;
+	u_int16_t encryption_algorithm;
+	u_int16_t encryption_algorithm_key_length;
+	u_int16_t integrity_algorithm;
+	u_int16_t integrity_algorithm_key_length;
+	u_int16_t pseudo_random_function;
+	u_int16_t pseudo_random_function_key_length;
+	
+	this	->logger->log(this->logger, CONTROL|MORE, "Going to create transform objects for proposal");
+	
+	this	->logger->log(this->logger, CONTROL|MOST, "Get encryption transform type");
+	status = proposal->get_info_for_transform_type(proposal,ENCRYPTION_ALGORITHM,&(encryption_algorithm),&(encryption_algorithm_key_length));
+	if (status != SUCCESS)
+	{
+		this	->logger->log(this->logger, ERROR|MORE, "Could not get encryption transform type");
+		return status;
+	}
+	this	->logger->log(this->logger, CONTROL|MORE, "Encryption algorithm: %s with keylength %d",mapping_find(encryption_algorithm_m,encryption_algorithm),encryption_algorithm_key_length);
+	
+	this	->logger->log(this->logger, CONTROL|MOST, "Get integrity transform type");
+	status = proposal->get_info_for_transform_type(proposal,INTEGRITY_ALGORITHM,&(integrity_algorithm),&(integrity_algorithm_key_length));
+	if (status != SUCCESS)
+	{
+		this	->logger->log(this->logger, ERROR|MORE, "Could not get integrity transform type");
+		return status;
+	}
+	this	->logger->log(this->logger, CONTROL|MORE, "integrity algorithm: %s with keylength %d",mapping_find(integrity_algorithm_m,integrity_algorithm),integrity_algorithm_key_length);
+	
+	this	->logger->log(this->logger, CONTROL|MOST, "Get prf transform type");
+	status = proposal->get_info_for_transform_type(proposal,PSEUDO_RANDOM_FUNCTION,&(pseudo_random_function),&(pseudo_random_function_key_length));
+	if (status != SUCCESS)
+	{
+		this	->logger->log(this->logger, ERROR|MORE, "Could not prf transform type");
+		return status;
+	}
+	this	->logger->log(this->logger, CONTROL|MORE, "prf: %s with keylength %d",mapping_find(pseudo_random_function_m,pseudo_random_function),pseudo_random_function_key_length);
+
+
+	
+
 	if (this->prf != NULL)
 	{
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing prf_t object");
 		this->prf->destroy(this->prf);
 	}
-	this->prf = prf;
+	this->prf = prf_create(pseudo_random_function);
+	if (this->prf == NULL)
+	{
+		this	->logger->log(this->logger, ERROR|MORE, "prf does not seem to be supported!");
+		return FAILED;
+	}
+	
+	if (this->crypter_initiator != NULL)
+	{
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing initiator crypter_t object");
+		this->crypter_initiator->destroy(this->crypter_initiator);
+	}
+	this->crypter_initiator = crypter_create(encryption_algorithm,encryption_algorithm_key_length);
+	if (this->crypter_initiator == NULL)
+	{
+		this	->logger->log(this->logger, ERROR|MORE, "encryption algorithm does not seem to be supported!");
+		return FAILED;
+	}
+
+	if (this->crypter_responder != NULL)
+	{
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing responder crypter_t object");
+		this->crypter_responder->destroy(this->crypter_responder);
+	}
+	this->crypter_responder = crypter_create(encryption_algorithm,encryption_algorithm_key_length);
+	if (this->crypter_responder == NULL)
+	{
+		this	->logger->log(this->logger, ERROR|MORE, "encryption algorithm does not seem to be supported!");
+		return FAILED;
+	}
+	
+	if (this->signer_initiator != NULL)
+	{
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing initiator signer_t object");
+		this->signer_initiator->destroy(this->signer_initiator);
+	}
+	this->signer_initiator = signer_create(integrity_algorithm);
+	if (this->signer_initiator == NULL)
+	{
+		this	->logger->log(this->logger, ERROR|MORE, "integrity algorithm does not seem to be supported!");
+		return FAILED;
+	}
+	
+	
+	if (this->signer_responder != NULL)
+	{
+		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing responder signer_t object");
+		this->signer_responder->destroy(this->signer_responder);
+	}
+	this->signer_responder = signer_create(integrity_algorithm);
+	if (this->signer_responder == NULL)
+	{
+		this	->logger->log(this->logger, ERROR|MORE, "integrity algorithm does not seem to be supported!");
+		return FAILED;
+	}
+
+	return SUCCESS;
 }
 
 /**
@@ -775,7 +954,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_randomizer = (randomizer_t *(*) (protected_ike_sa_t *)) get_randomizer;
 	this->protected.set_last_requested_message = (status_t (*) (protected_ike_sa_t *,message_t *)) set_last_requested_message;
 	this->protected.set_last_responded_message = (status_t (*) (protected_ike_sa_t *,message_t *)) set_last_responded_message;
-	this->protected.set_prf = (void (*) (protected_ike_sa_t *,prf_t *)) set_prf;
+	this->protected.create_transforms_from_proposal = (status_t (*) (protected_ike_sa_t *,proposal_substructure_t *)) create_transforms_from_proposal;
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
 
 	/* private functions */

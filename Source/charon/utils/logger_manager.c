@@ -148,6 +148,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 			logger_level |= FULL;
 			break;
 		case IKE_SA:
+			logger_level |= FULL;
 		case IKE_SA_MANAGER:
 		case MESSAGE:
 			logger_level |= ALL;

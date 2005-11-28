@@ -118,10 +118,11 @@ struct crypter_t {
  * @brief Generic constructor for crypter_t objects.
  * 
  * @param encryption_algorithm	Algorithm to use for crypter
+ * @param blocksize 				block size in bytes
  * @return
  * 								- crypter_t if successfully
  * 								- NULL if out of ressources or crypter not supported
  */
-crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm);
+crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t blocksize);
 
 #endif /*CRYPTER_H_*/

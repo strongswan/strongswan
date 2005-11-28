@@ -45,3 +45,20 @@ mapping_t encryption_algorithm_m[] = {
 {ENCR_AES_CTR, "ENCR_AES_CTR"},
 {MAPPING_END, NULL}
 };
+
+/* 
+ * Described in header.
+ */
+crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm,size_t blocksize)
+{
+	switch (encryption_algorithm)
+	{
+		case ENCR_AES_CBC:
+		{
+			return (crypter_t*)aes_cbc_crypter_create(blocksize);
+			
+		}
+		default:
+			return NULL;
+	}
+}

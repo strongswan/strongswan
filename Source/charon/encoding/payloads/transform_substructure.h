@@ -56,7 +56,7 @@ enum transform_type_t {
 	UNDEFINED_TRANSFORM_TYPE = 241,
 	ENCRYPTION_ALGORITHM = 1,
 	PSEUDO_RANDOM_FUNCTION = 2,
-	INTEGRITIY_ALGORITHM = 3,
+	INTEGRITY_ALGORITHM = 3,
 	DIFFIE_HELLMAN_GROUP = 4,
 	EXTENDED_SEQUENCE_NUNBERS = 5
 };
@@ -180,6 +180,19 @@ struct transform_substructure_t {
 	 * @return 			Transform id of current transform substructure.
 	 */
 	u_int16_t (*get_transform_id) (transform_substructure_t *this);
+	
+	/**
+	 * @brief get transform id of the current transform.
+	 * 
+	 * @param this 			calling transform_substructure_t object
+	 * @param key_length		The key length is written to this location	
+	 * @return 			
+	 * 						- SUCCESS if a key length attribute is contained
+	 * 						- FAILED if no key length attribute is part of this 
+	 * 						  transform or key length uses more then 16 bit!
+	 * 						- OUT_OF_RES
+	 */
+	status_t (*get_key_length) (transform_substructure_t *this,u_int16_t *key_length);
 
 	/**
 	 * @brief Clones an transform_substructure_t object.

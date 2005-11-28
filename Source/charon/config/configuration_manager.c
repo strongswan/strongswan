@@ -237,7 +237,7 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 		proposal->destroy(proposal);
 		return OUT_OF_RES;
 	}
-	transform->set_transform_type(transform, INTEGRITIY_ALGORITHM);
+	transform->set_transform_type(transform, INTEGRITY_ALGORITHM);
 	transform->set_transform_id(transform, AUTH_HMAC_MD5_96);
 	
 	attribute = transform_attribute_create();
@@ -320,102 +320,17 @@ static status_t select_proposals_for_host(private_configuration_manager_t *this,
 }
 
 /**
- * Implements function configuration_manager_t.get_transforms_for_host_and_proposals.
+ * Implements function configuration_manager_t.check_selected_proposals_for_host.
  */
-static status_t get_transforms_for_host_and_proposals (private_configuration_manager_t *this, host_t *host, iterator_t *proposals,encryption_algorithm_t *encryption_algorithm,pseudo_random_function_t *pseudo_random_function, integrity_algorithm_t *integrity_algorithm)
+static status_t check_selected_proposals_for_host (private_configuration_manager_t *this, host_t *host, iterator_t *proposals,bool *valid)
 {
 	/*
 	 * Currently the given proposals are not checked if they are valid for specific host!
 	 * 
-	 * The first proposal is taken and the appropriate transform objects are created (only if they are supported)
+	 * The first proposal is taken
 	 */
 
-	encryption_algorithm_t		selected_encryption_algorithm = ENCR_UNDEFINED;
-	pseudo_random_function_t		selected_pseudo_random_function = PRF_UNDEFINED;
-	integrity_algorithm_t		selected_integrity_algorithm = AUTH_UNDEFINED;
-	proposal_substructure_t *proposal;
-	iterator_t *transforms;
-	status_t status;
-
-	this->logger->log(this->logger,CONTROL|MORE, "Going to get transforms for given proposal");
-
-	if (!proposals->has_next(proposals))
-	{
-		this->logger->log(this->logger,ERROR | MORE, "No proposal available");
-		return FAILED;
-	}
-	
-	status = proposals->current(proposals,(void **) &(proposal));
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger,ERROR, "Fatal error: could not get first proposal from iterator");
-		return status;	
-	}
-	
-	status = proposal->create_transform_substructure_iterator(proposal,&transforms,TRUE);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger,ERROR, "Fatal error: could not create iterator of transforms");
-		return status;	
-	}
-	
-	while (transforms->has_next(transforms))
-	{
-		transform_substructure_t *current_transform;
-		transform_type_t transform_type;
-		u_int16_t transform_id;
-		
-		status = transforms->current(transforms,(void **) &(current_transform));
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger,ERROR, "Fatal error: could not get current transform substructure object");
-			transforms->destroy(transforms);	
-			return status;	
-		}
-		
-		transform_type = current_transform->get_transform_type(current_transform);
-		transform_id = current_transform->get_transform_id(current_transform);
-		
-		this->logger->log(this->logger,CONTROL | MOST, "Going to process transform of type %s",mapping_find(transform_type_m,transform_type));
-		switch (transform_type)
-		{
-			case ENCRYPTION_ALGORITHM:
-			{
-				this->logger->log(this->logger,CONTROL | MORE, "Encryption algorithm: %s",mapping_find(encryption_algorithm_m,transform_id));	
-				selected_encryption_algorithm = transform_id;
-				break;
-			}
-			case	 PSEUDO_RANDOM_FUNCTION:
-			{
-				this->logger->log(this->logger,CONTROL | MORE, "Create transform object for PRF of type %s",mapping_find(pseudo_random_function_m,transform_id));
-				selected_pseudo_random_function = transform_id;
-				break;
-			}
-			case INTEGRITIY_ALGORITHM:
-			{
-				this->logger->log(this->logger,CONTROL | MORE, "Integrity algorithm: %s",mapping_find(integrity_algorithm_m,transform_id));
-				selected_integrity_algorithm = transform_id;
-				break;
-			}
-			case DIFFIE_HELLMAN_GROUP:
-			{
-				this->logger->log(this->logger,CONTROL | MORE, "DH Group: %s",mapping_find(diffie_hellman_group_m,transform_id));
-				break;
-			}
-			default:
-			{
-				this->logger->log(this->logger,ERROR  | MORE, "Transform type not supported!");
-				transforms->destroy(transforms);	
-				return FAILED;
-			}	
-		}
-	}
-	
-	transforms->destroy(transforms);
-
-	*encryption_algorithm = selected_encryption_algorithm;
-	*pseudo_random_function = selected_pseudo_random_function;
-	*integrity_algorithm = selected_integrity_algorithm;
+	this->logger->log(this->logger,CONTROL|MORE, "Going to check selected proposals");
 	return SUCCESS;
 }
 
@@ -472,7 +387,7 @@ configuration_manager_t *configuration_manager_create()
 	this->public.get_dh_group_number = (status_t(*)(configuration_manager_t*,char*,u_int16_t *, u_int16_t))get_dh_group_number;
 	this->public.get_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,iterator_t*))get_proposals_for_host;
 	this->public.select_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,iterator_t*,iterator_t*))select_proposals_for_host;
-	this->public.get_transforms_for_host_and_proposals =  (status_t (*) (configuration_manager_t *, host_t *, iterator_t *,encryption_algorithm_t *,pseudo_random_function_t *, integrity_algorithm_t *)) get_transforms_for_host_and_proposals;
+	this->public.check_selected_proposals_for_host =  (status_t (*) (configuration_manager_t *, host_t *, iterator_t *,bool *)) check_selected_proposals_for_host;
 	this->public.is_dh_group_allowed_for_host = (status_t(*)(configuration_manager_t*,host_t*,diffie_hellman_group_t,bool*)) is_dh_group_allowed_for_host;
 
 	/* private variables */

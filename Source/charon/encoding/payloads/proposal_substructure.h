@@ -125,6 +125,21 @@ struct proposal_substructure_t {
 	 * @return 			protocol id of current proposal substructure.
 	 */
 	u_int8_t (*get_protocol_id) (proposal_substructure_t *this);
+	
+	/**
+	 * @brief Get informations for a specific transform type. 
+	 * 
+	 * @param this 			calling proposal_substructure_t object
+	 * @param type			type to get informations for
+	 * @param transform_id 	transform id of the specific type
+	 * @param key_length 	key length of the specific key length transform attribute
+	 * @return 			
+	 * 						- SUCCESS if transform type is part of this proposal and 
+	 * 					 	 all data (incl. key length) could be fetched
+	 * 						- FAILED if transform type is not part of this proposal
+	 * 						- OUT_OF_RES
+	 */
+	status_t (*get_info_for_transform_type) (proposal_substructure_t *this,transform_type_t type, u_int16_t *transform_id, u_int16_t *key_length);
 
 
 	/**

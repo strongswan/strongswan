@@ -26,6 +26,7 @@
 
 #include <types.h>
 #include <encoding/message.h>
+#include <encoding/payloads/proposal_substructure.h>
 #include <sa/ike_sa_id.h>
 #include <utils/logger.h>
 #include <utils/randomizer.h>
@@ -171,14 +172,16 @@ struct protected_ike_sa_t {
 	void (*set_other_host) (protected_ike_sa_t *this,host_t *other_host);
 	
 	/**
-	 * Sets the internal stored prf_t object.
+	 * Creates all needed transform objects for given ike_sa_t using 
+	 * the informations stored in a proposal_substructure_t object
 	 * 
-	 * Allready existing object gets destroyed. object gets not cloned!
+	 * Allready existing objects get destroyed.
 	 * 
 	 * @param this 				calling object
-	 * @param prf				pointer to the new prf_t object
+	 * @param proposal			proposal used to get informations for transform
+	 * 							objects (algorithms, key lengths, etc.)
 	 */
-	void (*set_prf) (protected_ike_sa_t *this,prf_t *prf);
+	status_t (*create_transforms_from_proposal) (protected_ike_sa_t *this,proposal_substructure_t *proposal);
 	
 	/**
 	 * Sets the last requested message.

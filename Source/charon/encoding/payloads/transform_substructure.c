@@ -91,7 +91,7 @@ mapping_t transform_type_m[] = {
 	{UNDEFINED_TRANSFORM_TYPE, "UNDEFINED_TRANSFORM_TYPE"},
 	{ENCRYPTION_ALGORITHM, "ENCRYPTION_ALGORITHM"},
 	{PSEUDO_RANDOM_FUNCTION, "PSEUDO_RANDOM_FUNCTION"},
-	{INTEGRITIY_ALGORITHM, "INTEGRITIY_ALGORITHM"},
+	{INTEGRITY_ALGORITHM, "INTEGRITY_ALGORITHM"},
 	{DIFFIE_HELLMAN_GROUP, "DIFFIE_HELLMAN_GROUP"},
 	{EXTENDED_SEQUENCE_NUNBERS, "EXTENDED_SEQUENCE_NUNBERS"},
 	{MAPPING_END, NULL}
@@ -177,7 +177,7 @@ static status_t verify(private_transform_substructure_t *this)
 			}
 			break;
 		}
-		case INTEGRITIY_ALGORITHM:
+		case INTEGRITY_ALGORITHM:
 		{
 			if ((this->transform_id < AUTH_HMAC_MD5_96) || (this->transform_id > AUTH_AES_XCBC_96))
 			{
@@ -443,6 +443,43 @@ static status_t clone(private_transform_substructure_t *this,transform_substruct
 
 
 /**
+ * Implementation of transform_substructure_t.get_key_length.
+ */
+static status_t get_key_length(private_transform_substructure_t *this, u_int16_t *key_length)
+{
+	iterator_t *attributes;
+	status_t status;
+	
+	status = this->attributes->create_iterator(this->attributes,&attributes,TRUE);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	
+	while (attributes->has_next(attributes))
+	{
+		transform_attribute_t *current_attribute;
+		status = attributes->current(attributes,(void **) &current_attribute);
+		if (status != SUCCESS)
+		{
+			attributes->destroy(attributes);
+			return status;
+		}
+		if (current_attribute->get_attribute_type(current_attribute) == KEY_LENGTH)
+		{
+			*key_length = current_attribute->get_value(current_attribute);
+			attributes->destroy(attributes);	
+			return SUCCESS;
+		}
+		
+	}
+	attributes->destroy(attributes);
+	
+	return FAILED;
+}
+
+
+/**
  * Implements payload_t's and transform_substructure_t's destroy function.
  * See #payload_s.destroy or transform_substructure_s.destroy for description.
  */
@@ -494,6 +531,7 @@ transform_substructure_t *transform_substructure_create()
 	this->public.get_transform_type = (u_int8_t (*) (transform_substructure_t *)) get_transform_type;
 	this->public.set_transform_id = (status_t (*) (transform_substructure_t *,u_int16_t)) set_transform_id;
 	this->public.get_transform_id = (u_int16_t (*) (transform_substructure_t *)) get_transform_id;
+	this->public.get_key_length = (status_t (*) (transform_substructure_t *,u_int16_t *)) get_key_length;
 	this->public.clone = (status_t (*) (transform_substructure_t *,transform_substructure_t **)) clone;
 	this->public.destroy = (status_t (*) (transform_substructure_t *)) destroy;
 	

@@ -327,6 +327,41 @@ static chunk_t get_spi (private_proposal_substructure_t *this)
 	return spi;
 }
 
+static status_t get_info_for_transform_type (private_proposal_substructure_t *this,transform_type_t type, u_int16_t *transform_id, u_int16_t *key_length)
+{
+	iterator_t *iterator;
+	status_t status;
+	u_int16_t found_transform_id;
+	u_int16_t found_key_length;
+
+	status = this->transforms->create_iterator(this->transforms,&iterator,TRUE);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	while (iterator->has_next(iterator))
+	{
+		transform_substructure_t *current_transform;
+		status = iterator->current(iterator,(void **) &current_transform);
+		if (status != SUCCESS)
+		{
+			break;
+		}
+		if (current_transform->get_transform_type(current_transform) == type)
+		{
+			/* now get data for specific type */
+			found_transform_id = current_transform->get_transform_id(current_transform);
+			status = current_transform->get_key_length(current_transform,&found_key_length);
+			*transform_id = found_transform_id;
+			*key_length = found_key_length;
+			iterator->destroy(iterator);
+			return status;
+		}		
+	}
+	iterator->destroy(iterator);
+	return FAILED;
+}
+
 /**
  * Implements private_proposal_substructure_t's compute_length function.
  * See #private_proposal_substructure_s.compute_length for description.
@@ -483,10 +518,12 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.get_proposal_number = (u_int8_t (*) (proposal_substructure_t *)) get_proposal_number;
 	this->public.set_protocol_id = (status_t (*) (proposal_substructure_t *,u_int8_t))set_protocol_id;
 	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
+	this->public.get_info_for_transform_type = 	(status_t (*) (proposal_substructure_t *,transform_type_t,u_int16_t *, u_int16_t *))get_info_for_transform_type;
 	this->public.set_spi = (status_t (*) (proposal_substructure_t *,chunk_t))set_spi;
 	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
 	this->public.clone = (status_t (*) (proposal_substructure_t *, proposal_substructure_t **)) clone;
 	this->public.destroy = (status_t (*) (proposal_substructure_t *)) destroy;
+	
 	
 	/* private functions */
 	this->compute_length = compute_length;

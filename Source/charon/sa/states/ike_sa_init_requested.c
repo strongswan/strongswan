@@ -136,12 +136,10 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		{
 			case SECURITY_ASSOCIATION:
 			{
-				sa_payload_t 				*sa_payload = (sa_payload_t*)payload;
-				iterator_t 		*suggested_proposals;
-				encryption_algorithm_t		encryption_algorithm = ENCR_UNDEFINED;
-				pseudo_random_function_t		pseudo_random_function = PRF_UNDEFINED;
-				integrity_algorithm_t		integrity_algorithm = AUTH_UNDEFINED;
-				prf_t *prf;
+				sa_payload_t *sa_payload = (sa_payload_t*)payload;
+				iterator_t 	*suggested_proposals;
+				proposal_substructure_t *suggested_proposal;			
+				bool valid;
 				
 				
 				/* get the list of suggested proposals */ 
@@ -153,27 +151,46 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 					return status;
 				}
 				
-				/* now let the configuration-manager return the transforms for the given proposal*/
-				this->logger->log(this->logger, CONTROL | MOST, "Get transforms for suggested proposal");
-				status = global_configuration_manager->get_transforms_for_host_and_proposals(global_configuration_manager,
-									this->ike_sa->get_other_host(this->ike_sa), suggested_proposals, &encryption_algorithm,&pseudo_random_function,&integrity_algorithm);
+				/* now let the configuration-manager check the selected proposals*/
+				this->logger->log(this->logger, CONTROL | MOST, "Check suggested proposals");
+				status = global_configuration_manager->check_selected_proposals_for_host(global_configuration_manager,
+									this->ike_sa->get_other_host(this->ike_sa), suggested_proposals,&valid);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "Suggested proposals not supported!");
+					this->logger->log(this->logger, ERROR | MORE, "Could not check suggested proposals!");
 					suggested_proposals->destroy(suggested_proposals);
 					payloads->destroy(payloads);
 					return status;
 				}
-				suggested_proposals->destroy(suggested_proposals);
-				
-				prf = prf_create(pseudo_random_function);
-				if (prf == NULL)
+
+				if (!valid)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "PRF type not supported");
+					this->logger->log(this->logger, ERROR | MORE, "Suggested proposals not accepted!");
 					payloads->destroy(payloads);
-					return FAILED;
+					return status;
 				}
-				this->ike_sa->set_prf(this->ike_sa,prf);
+
+
+				/* let the ike_sa create their own transforms from proposal informations */
+				suggested_proposals->reset(suggested_proposals);
+				/* TODO check for true*/
+				suggested_proposals->has_next(suggested_proposals);
+				status = suggested_proposals->current(suggested_proposals,(void **)&suggested_proposal);
+				suggested_proposals->destroy(suggested_proposals);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "Could not get first proposal");
+					payloads->destroy(payloads);
+					return status;
+				}
+								
+				status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,suggested_proposal);	
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "Transform objects could not be created from selected proposal");
+					payloads->destroy(payloads);
+					return status;
+				}
 				
 
 				/* ok, we have what we need for sa_payload */

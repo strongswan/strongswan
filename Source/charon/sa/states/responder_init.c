@@ -223,10 +223,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				iterator_t *suggested_proposals, *accepted_proposals;
-				encryption_algorithm_t encryption_algorithm = ENCR_UNDEFINED;
-				pseudo_random_function_t	 pseudo_random_function = PRF_UNDEFINED;
-				integrity_algorithm_t integrity_algorithm = AUTH_UNDEFINED;
-				prf_t *prf;
+				proposal_substructure_t *accepted_proposal;
 
 				status = this->proposals->create_iterator(this->proposals, &accepted_proposals, FALSE);
 				if (status != SUCCESS)
@@ -260,12 +257,13 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				
 				/* iterators are not needed anymore */			
 				suggested_proposals->destroy(suggested_proposals);
-					
 				
-				/* now let the configuration-manager return the transforms for the given proposal*/
-				this->logger->log(this->logger, CONTROL | MOST, "Get transforms for accepted proposal");
-				status = global_configuration_manager->get_transforms_for_host_and_proposals(global_configuration_manager,
-									this->ike_sa->get_other_host(this->ike_sa), accepted_proposals, &encryption_algorithm,&pseudo_random_function,&integrity_algorithm);
+				
+				/* let the ike_sa create their own transforms from proposal informations */
+				accepted_proposals->reset(accepted_proposals);
+				/* TODO check for true*/
+				accepted_proposals->has_next(accepted_proposals);
+				status = accepted_proposals->current(accepted_proposals,(void **)&accepted_proposal);
 				if (status != SUCCESS)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "Accepted proposals not supported?!");
@@ -273,16 +271,15 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 					payloads->destroy(payloads);
 					return status;
 				}
-				accepted_proposals->destroy(accepted_proposals);
 				
-				prf = prf_create(pseudo_random_function);
-				if (prf == NULL)
+				status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,accepted_proposal);	
+				accepted_proposals->destroy(accepted_proposals);
+				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "PRF type not supported");
+					this->logger->log(this->logger, ERROR | MORE, "Transform objects could not be created from selected proposal");
 					payloads->destroy(payloads);
-					return FAILED;
+					return status;
 				}
-				this->ike_sa->set_prf(this->ike_sa,prf);
 				
 				this->logger->log(this->logger, CONTROL | MORE, "SA Payload processed");
 				/* ok, we have what we need for sa_payload (proposals are stored in this->proposals)*/
@@ -397,8 +394,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		this->logger->log(this->logger, ERROR | MORE, "Secrets could not be computed!");
 		return status;
 	}
-	
-		
 
 	/* set up the reply */
 	status = this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
