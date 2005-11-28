@@ -29,7 +29,7 @@
 
 /**
  * Generating is done in a data buffer.
- * This is thehe start size of this buffer in Bytes.
+ * This is thehe start size of this buffer in bytes.
  */
 #define GENERATOR_DATA_BUFFER_SIZE 500
 
@@ -52,36 +52,29 @@ struct generator_t {
 	 *
 	 * @param this 				generator_t object
 	 * @param[in] payload 		interface payload_t implementing object
-	 * @return 
-	 * 							- SUCCESSFUL if succeeded
-	 * 		   					- OUT_OF_RES if out of ressources
 	 */
-	status_t (*generate_payload) (generator_t *this,payload_t *payload);
+	void (*generate_payload) (generator_t *this,payload_t *payload);
 	
 	/**
-	 * Writes all generated data of current generator context to a chunk
+	 * Writes all generated data of current generator context to a chunk.
 	 *
 	 * @param this 				generator_t object
- * 	 * @param[out] data 			chunk to write the data to
-	 * @return 
-	 * @return 
-	 * 							- SUCCESSFUL if succeeded
-	 * 							- OUT_OF_RES otherwise
+ 	 * @param[out] data 			chunk to write the data to
 	 */
-	status_t (*write_to_chunk) (generator_t *this,chunk_t *data);
+	void (*write_to_chunk) (generator_t *this,chunk_t *data);
 
 	/**
 	 * @brief Destroys a generator_t object.
 	 *
 	 * @param this 		generator_t object
-	 * 
-	 * @return 			always success
 	 */
-	status_t (*destroy) (generator_t *this);
+	void (*destroy) (generator_t *this);
 };
 
 /**
- * Constructor to create a generator
+ * Constructor to create a generator.
+ * 
+ * Returns a new generator_t object.
  *
  */
 generator_t * generator_create();

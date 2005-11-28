@@ -64,10 +64,9 @@ void test_generator_with_header_payload(tester_t *tester)
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
-	status = generator->generate_payload(generator,(payload_t *) header_data);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
+	generator->generate_payload(generator,(payload_t *) header_data);
 
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->write_to_chunk(generator,&generated_data);
 
 	u_int8_t expected_generation[] = {
 		0x01,0x00,0x00,0x00,
@@ -85,7 +84,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data 1");
 	allocator_free_chunk(&generated_data);
 	
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 
 	header_data->set_initiator_spi(header_data,0x22000054231234LL);
 	header_data->set_responder_spi(header_data,0x122398);
@@ -98,10 +97,10 @@ void test_generator_with_header_payload(tester_t *tester)
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
-	status = generator->generate_payload(generator,(payload_t *)header_data);
+	generator->generate_payload(generator,(payload_t *)header_data);
 	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
 	
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->write_to_chunk(generator,&generated_data);
 
 	u_int8_t expected_generation2[] = {
 		0x34,0x12,0x23,0x54,
@@ -124,7 +123,7 @@ void test_generator_with_header_payload(tester_t *tester)
 	header_data->destroy(header_data);
 	
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 }
 
 /*
@@ -145,9 +144,8 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	attribute = transform_attribute_create();
-	status = generator->generate_payload(generator,(payload_t *)attribute);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)attribute);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
 
 	u_int8_t expected_generation[] = {
@@ -156,7 +154,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 	
 	/* test attribute with 2 byte data */	
 	generator = generator_create();
@@ -170,9 +168,8 @@ void test_generator_with_transform_attribute(tester_t *tester)
 		
 	attribute->set_value_chunk(attribute,data);
 	
-	status = generator->generate_payload(generator,(payload_t *)attribute);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)attribute);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
 
 	u_int8_t expected_generation2[] = {
@@ -182,7 +179,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 
 	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 
 
 
@@ -202,9 +199,8 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
 
 
-	status = generator->generate_payload(generator,(payload_t *)attribute);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)attribute);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
 
 	u_int8_t expected_generation3[] = {
@@ -221,7 +217,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 
 	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 		
 
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
@@ -285,9 +281,8 @@ void test_generator_with_transform_substructure(tester_t *tester)
 	
 	logger->log(logger,CONTROL,"transform created");
 
-	status = generator->generate_payload(generator,(payload_t *)transform);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)transform);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated transform",&generated_data);	
 
 	u_int8_t expected_generation3[] = {
@@ -302,7 +297,7 @@ void test_generator_with_transform_substructure(tester_t *tester)
 
 	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(transform->destroy(transform) == SUCCESS), "transform destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 	
 	
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
@@ -405,9 +400,8 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	tester->assert_true(tester,(status == SUCCESS),"set_protocol_id call check");	
 	
 
-	status = generator->generate_payload(generator,(payload_t *)proposal);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)proposal);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated transform",&generated_data);	
 
 	u_int8_t expected_generation[] = {
@@ -438,7 +432,7 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 
 	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(proposal->destroy(proposal) == SUCCESS), "proposal destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 	
 	
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
@@ -566,11 +560,9 @@ void test_generator_with_sa_payload(tester_t *tester)
 	ike_header->set_response_flag(ike_header, TRUE);
 	ike_header->set_message_id(ike_header,0x33AFF3);
 
-	status = generator->generate_payload(generator,(payload_t *)ike_header);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	status = generator->generate_payload(generator,(payload_t *)sa_payload);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)ike_header);
+	generator->generate_payload(generator,(payload_t *)sa_payload);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated transform",&generated_data);	
 
 	u_int8_t expected_generation[] = {
@@ -618,7 +610,7 @@ void test_generator_with_sa_payload(tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	tester->assert_true(tester,(ike_header->destroy(ike_header) == SUCCESS), "ike_header destroy call check");
 	tester->assert_true(tester,(sa_payload->destroy(sa_payload) == SUCCESS), "sa_payload destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 	
@@ -632,7 +624,6 @@ void test_generator_with_ke_payload(tester_t *tester)
 	generator_t *generator;
 	ke_payload_t *ke_payload;
 	logger_t *logger;
-	status_t status;
 	chunk_t generated_data;
 	chunk_t key_exchange_data;
 	
@@ -652,9 +643,8 @@ void test_generator_with_ke_payload(tester_t *tester)
 	
 	ke_payload->set_dh_group_number(ke_payload,7777);
 	
-	status = generator->generate_payload(generator,(payload_t *)ke_payload);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)ke_payload);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
 
 	u_int8_t expected_generation[] = {
@@ -675,7 +665,7 @@ void test_generator_with_ke_payload(tester_t *tester)
 	allocator_free_chunk(&generated_data);	
 	
 	tester->assert_true(tester,(ke_payload->destroy(ke_payload) == SUCCESS), "sa_payload destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 	
@@ -689,7 +679,6 @@ void test_generator_with_notify_payload(tester_t *tester)
 	generator_t *generator;
 	notify_payload_t *notify_payload;
 	logger_t *logger;
-	status_t status;
 	chunk_t generated_data;
 	chunk_t spi,notification_data;
 	
@@ -713,9 +702,8 @@ void test_generator_with_notify_payload(tester_t *tester)
 	notify_payload->set_spi(notify_payload,spi);
 	notify_payload->set_notification_data(notify_payload,notification_data);
 	
-	status = generator->generate_payload(generator,(payload_t *)notify_payload);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)notify_payload);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
 
 	u_int8_t expected_generation[] = {
@@ -737,7 +725,7 @@ void test_generator_with_notify_payload(tester_t *tester)
 	allocator_free_chunk(&generated_data);	
 	
 	tester->assert_true(tester,(notify_payload->destroy(notify_payload) == SUCCESS), "notify_payload destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 	
@@ -751,7 +739,6 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	generator_t *generator;
 	nonce_payload_t *nonce_payload;
 	logger_t *logger;
-	status_t status;
 	chunk_t generated_data;
 	chunk_t nonce;
 	
@@ -769,9 +756,8 @@ void test_generator_with_nonce_payload(tester_t *tester)
 
 	nonce_payload->set_nonce(nonce_payload,nonce);
 	
-	status = generator->generate_payload(generator,(payload_t *)nonce_payload);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
-	tester->assert_true(tester,(generator->write_to_chunk(generator,&generated_data) == SUCCESS),"write_to_chunk call check");
+	generator->generate_payload(generator,(payload_t *)nonce_payload);
+	generator->write_to_chunk(generator,&generated_data);
 	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
 	
 
@@ -793,7 +779,7 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	
 	
 	tester->assert_true(tester,(nonce_payload->destroy(nonce_payload) == SUCCESS), "notify_payload destroy call check");
-	tester->assert_true(tester,(generator->destroy(generator) == SUCCESS), "generator destroy call check");
+	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
 	

@@ -586,32 +586,21 @@ static status_t generate(private_encryption_payload_t *this)
 		iterator->current(iterator, (void**)&next_payload);
 		current_payload->set_next_type(current_payload, next_payload->get_type(next_payload));
 		
-		status = generator->generate_payload(generator, current_payload);
-		if (status != SUCCESS)
-		{
-			generator->destroy(generator);
-			iterator->destroy(iterator);
-			return status;
-		}
+		generator->generate_payload(generator, current_payload);
 		current_payload = next_payload;
 	}
 	iterator->destroy(iterator);
 	
 	/* build last payload */
 	current_payload->set_next_type(current_payload, NO_PAYLOAD);
-	status = generator->generate_payload(generator, current_payload);
-	if (status != SUCCESS)
-	{
-		generator->destroy(generator);
-		return status;
-	}
+	generator->generate_payload(generator, current_payload);
 	
 	/* free already generated data */
 	allocator_free(this->decrypted.ptr);
 	
-	status = generator->write_to_chunk(generator, &(this->decrypted));
+	generator->write_to_chunk(generator, &(this->decrypted));
 	generator->destroy(generator);
-	return status;
+	return SUCCESS;
 }
 
 static status_t parse(private_encryption_payload_t *this)

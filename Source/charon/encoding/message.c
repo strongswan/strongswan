@@ -514,13 +514,8 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	{
 		iterator->current(iterator, (void**)&next_payload);
 		payload->set_next_type(payload, next_payload->get_type(next_payload));
-		status = generator->generate_payload(generator, payload);
-		if (status != SUCCESS)
-		{
-			generator->destroy(generator);
-			ike_header->destroy(ike_header);
-			return status;
-		}
+		generator->generate_payload(generator, payload);
+
 		payload = next_payload;
 	}
 	iterator->destroy(iterator);
@@ -540,13 +535,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 			return status;
 		}
 	}
-	status = generator->generate_payload(generator, payload);
-	if (status != SUCCESS)
-	{
-		generator->destroy(generator);
-		ike_header->destroy(ike_header);
-		return status;
-	}
+	generator->generate_payload(generator, payload);
 	ike_header->destroy(ike_header);
 		
 	/* build packet */
@@ -554,12 +543,8 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	{
 		allocator_free(this->packet->data.ptr);
 	}	
-	status = generator->write_to_chunk(generator, &(this->packet->data));
+	generator->write_to_chunk(generator, &(this->packet->data));
 	generator->destroy(generator);
-	if (status != SUCCESS)
-	{
-		return status;
-	}
 	
 	/* append integrity checksum if necessary */
 	if (payload->get_type(payload) == ENCRYPTED)
