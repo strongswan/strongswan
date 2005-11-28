@@ -41,6 +41,8 @@ typedef struct configuration_manager_t configuration_manager_t;
  * It is expected, that in future different configurations are stored in a linked list 
  * or a hash map and are managed by this class.
  * 
+ * @ingroup config
+ * 
  */
 struct configuration_manager_t { 
 	
@@ -184,6 +186,8 @@ struct configuration_manager_t {
  * @return 
  * 			- pointer to created manager object if succeeded
  * 			- NULL if memory allocation failed
+ * 
+ * @ingroup config
  */
 configuration_manager_t *configuration_manager_create();
 

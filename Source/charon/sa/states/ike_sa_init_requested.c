@@ -120,12 +120,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	ike_sa_id->set_responder_spi(ike_sa_id,responder_spi);
 	
 	/* iterate over incoming payloads */
-	status = message->get_payload_iterator(message, &payloads);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not create payload interator");
-		return status;	
-	}
+	message->get_payload_iterator(message, &payloads);
 	while (payloads->has_next(payloads))
 	{
 		payload_t *payload;

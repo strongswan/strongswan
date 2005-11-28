@@ -1,7 +1,7 @@
 /**
  * @file generator.c
  *
- * @brief Generic generator class used to generate IKEv2-header and payloads.
+ * @brief Implementation of generator_t.
  *
  */
 
@@ -113,7 +113,7 @@ struct private_generator_t {
 	void (*generate_reserved_field) (private_generator_t *this,int bits);
 	
 	/**
-	 * Generates a FLAG field
+	 * Generates a FLAG field.
 	 *
 	 * @param this 					private_generator_t object
 	 * @param generator_contexts		generator_contexts_t object where the context is written or read from
@@ -122,7 +122,7 @@ struct private_generator_t {
 	void (*generate_flag) (private_generator_t *this,u_int32_t offset);
 	
 	/**
-	 * Writes the current buffer content into a chunk_t
+	 * Writes the current buffer content into a chunk_t.
 	 * 
 	 * Memory of specific chunk_t gets allocated.
 	 *
@@ -132,7 +132,7 @@ struct private_generator_t {
 	void (*write_chunk) (private_generator_t *this,chunk_t *data);
 	
 	/**
-	 * Generates a bytestream from a chunk_t
+	 * Generates a bytestream from a chunk_t.
 	 *
 	 * @param this 					private_generator_t object
 	 * @param offset					offset of chunk_t value in data struct
@@ -201,22 +201,22 @@ struct private_generator_t {
 	void * data_struct;
 	
 	/*
-	 * Last payload length position offset in the buffer
+	 * Last payload length position offset in the buffer.
 	 */
 	u_int32_t last_payload_length_position_offset;
 	
 	/**
-	 * Offset of the header length field in the buffer
+	 * Offset of the header length field in the buffer.
 	 */
 	u_int32_t header_length_position_offset;
 	
 	/**
-	 * Last SPI size
+	 * Last SPI size.
 	 */
 	u_int8_t last_spi_size;
 	
 	/*
-	 * Attribute format of the last generated transform attribute
+	 * Attribute format of the last generated transform attribute.
 	 * 
 	 * Used to check if a variable value field is used or not for 
 	 * the transform attribute value.
@@ -225,19 +225,18 @@ struct private_generator_t {
 	
 	/*
 	 * Depending on the value of attribute_format this field is used
-	 * to hold the length of the transform attribute in bytes
+	 * to hold the length of the transform attribute in bytes.
 	 */
 	u_int16_t attribute_length;
 	
 	/**
-	 * Associated Logger
+	 * Associated Logger.
 	 */
 	logger_t *logger;
 };
 
 /**
- * Implements private_generator_t's get_current_buffer_size function.
- * See #private_generator_s.get_current_buffer_size.
+ * Implementation of private_generator_t.get_current_buffer_size.
  */
 static size_t get_current_buffer_size (private_generator_t *this)
 {
@@ -245,8 +244,7 @@ static size_t get_current_buffer_size (private_generator_t *this)
 }
 
 /**
- * Implements private_generator_t's get_current_buffer_space function.
- * See #private_generator_s.get_current_buffer_space.
+ * Implementation of private_generator_t.get_current_buffer_space.
  */
 static size_t get_current_buffer_space (private_generator_t *this)
 {
@@ -256,8 +254,7 @@ static size_t get_current_buffer_space (private_generator_t *this)
 }
 
 /**
- * Implements private_generator_t's get_current_buffer_space function.
- * See #private_generator_s.get_current_buffer_space.
+ * Implementation of private_generator_t.get_current_data_length.
  */
 static size_t get_current_data_length (private_generator_t *this)
 {
@@ -265,18 +262,15 @@ static size_t get_current_data_length (private_generator_t *this)
 }
 
 /**
- * Implements private_generator_t's get_current_buffer_offset function.
- * See #private_generator_s.get_current_buffer_offset.
+ * Implementation of private_generator_t.get_current_buffer_offset.
  */
 static u_int32_t get_current_buffer_offset (private_generator_t *this)
 {
 	return (this->out_position - this->buffer);
 }
 
-
 /**
- * Implements private_generator_t's generate_u_int_type function.
- * See #private_generator_s.generate_u_int_type.
+ * Implementation of private_generator_t.generate_u_int_type.
  */
 static void generate_u_int_type (private_generator_t *this,encoding_type_t int_type,u_int32_t offset)
 {
@@ -438,8 +432,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 }
 
 /**
- * Implements private_generator_t's generate_reserved_field function.
- * See #private_generator_s.generate_reserved_field.
+ * Implementation of private_generator_t.generate_reserved_field.
  */
 static void generate_reserved_field(private_generator_t *this,int bits)
 {
@@ -487,8 +480,7 @@ static void generate_reserved_field(private_generator_t *this,int bits)
 }
 
 /**
- * Implements private_generator_t's generate_flag function.
- * See #private_generator_s.generate_flag.
+ * Implementation of private_generator_t.generate_flag.
  */
 static void generate_flag (private_generator_t *this,u_int32_t offset)
 {
@@ -524,8 +516,7 @@ static void generate_flag (private_generator_t *this,u_int32_t offset)
 }
 
 /**
- * Implements private_generator_t's generate_from_chunk function.
- * See #private_generator_s.generate_from_chunk.
+ * Implementation of private_generator_t.generate_from_chunk.
  */
 static void generate_from_chunk (private_generator_t *this,u_int32_t offset)
 {
@@ -545,8 +536,7 @@ static void generate_from_chunk (private_generator_t *this,u_int32_t offset)
 }
 
 /**
- * Implements private_generator_t's generator_context_make_space_available function.
- * See #private_generator_s.generator_context_make_space_available.
+ * Implementation of private_generator_t.make_space_available.
  */
 static void make_space_available (private_generator_t *this, size_t bits)
 {
@@ -576,8 +566,7 @@ static void make_space_available (private_generator_t *this, size_t bits)
 }
 
 /**
- * Implements private_generator_t's write_bytes_to_buffer function.
- * See #private_generator_s.write_bytes_to_buffer.
+ * Implementation of private_generator_t.write_bytes_to_buffer.
  */
 static void write_bytes_to_buffer (private_generator_t *this,void * bytes, size_t number_of_bytes)
 {
@@ -595,8 +584,7 @@ static void write_bytes_to_buffer (private_generator_t *this,void * bytes, size_
 }
 
 /**
- * Implements private_generator_t's write_bytes_to_buffer_at_offset function.
- * See #private_generator_s.write_bytes_to_buffer_at_offset.
+ * Implementation of private_generator_t.write_bytes_to_buffer_at_offset.
  */
 static void write_bytes_to_buffer_at_offset (private_generator_t *this,void * bytes,size_t number_of_bytes,u_int32_t offset)
 {
@@ -622,8 +610,7 @@ static void write_bytes_to_buffer_at_offset (private_generator_t *this,void * by
 }
 
 /**
- * Implements generator_t's write_chunk function.
- * See #generator_s.write_chunk.
+ * Implementation of private_generator_t.write_to_chunk.
  */
 static void write_to_chunk (private_generator_t *this,chunk_t *data)
 {
@@ -647,8 +634,7 @@ static void write_to_chunk (private_generator_t *this,chunk_t *data)
 }
 
 /**
- * Implements generator_t's generate_payload function.
- * See #generator_s.generate_payload.
+ * Implementation of private_generator_t.generate_payload.
  */
 static void generate_payload (private_generator_t *this,payload_t *payload)
 {
@@ -928,8 +914,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 }
 
 /**
- * Implements generator_t's destroy function.
- * See #generator_s.destroy.
+ * Implementation of generator_t.destroy.
  */
 static status_t destroy(private_generator_t *this)
 {
@@ -947,10 +932,6 @@ generator_t * generator_create()
 	private_generator_t *this;
 
 	this = allocator_alloc_thing(private_generator_t);
-	if (this == NULL)
-	{
-		return NULL;
-	}
 
 	/* initiate public functions */
 	this->public.generate_payload = (void(*)(generator_t*, payload_t *)) generate_payload;
@@ -974,11 +955,6 @@ generator_t * generator_create()
 
 	/* allocate memory for buffer */
 	this->buffer = allocator_alloc(GENERATOR_DATA_BUFFER_SIZE);
-	if (this->buffer == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 
 	/* initiate private variables */
 	this->out_position = this->buffer;
@@ -988,12 +964,6 @@ generator_t * generator_create()
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
 	this->logger = global_logger_manager->create_logger(global_logger_manager,GENERATOR,NULL);
-	
-	if (this->logger == NULL)
-	{
-		allocator_free(this->buffer);
-		allocator_free(this);
-		return NULL;
-	}	
+
 	return &(this->public);
 }

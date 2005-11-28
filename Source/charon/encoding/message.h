@@ -1,7 +1,7 @@
 /**
  * @file message.h
  *
- * @brief Class message_t. Object of this type represents an IKEv2-Message.
+ * @brief Interface of message_t.
  *
  */
 
@@ -38,6 +38,8 @@ typedef struct message_t message_t;
  * @brief This class is used to represent an IKEv2-Message.
  *
  * An IKEv2-Message is either a request or response.
+ *
+ * @ingroup encoding
  */
 struct message_t {
 
@@ -46,9 +48,8 @@ struct message_t {
 	 *
 	 * @param this 			message_t object
 	 * @param major_version	major version to set
-	 * @return				SUCCESS
 	 */
-	status_t (*set_major_version) (message_t *this,u_int8_t major_version);
+	void (*set_major_version) (message_t *this,u_int8_t major_version);
 
 	/**
 	 * @brief Gets the IKE major version of the message.
@@ -63,9 +64,8 @@ struct message_t {
 	 *
 	 * @param this 			message_t object
 	 * @param minor_version	minor version to set
-	 * @return				SUCCESS
 	 */
-	status_t (*set_minor_version) (message_t *this,u_int8_t minor_version);
+	void (*set_minor_version) (message_t *this,u_int8_t minor_version);
 
 	/**
 	 * @brief Gets the IKE minor version of the message.
@@ -80,9 +80,8 @@ struct message_t {
 	 *
 	 * @param this 			message_t object
 	 * @param message_id		message_id to set
-	 * @return				SUCCESS
 	 */
-	status_t (*set_message_id) (message_t *this,u_int32_t message_id);
+	void (*set_message_id) (message_t *this,u_int32_t message_id);
 
 	/**
 	 * @brief Gets the Message ID of the message.
@@ -108,12 +107,8 @@ struct message_t {
 	 *
 	 * @param this 			message_t object
 	 * @param ike_sa_id		ike_sa_id to set
-	 * @return				
-	 * 						- SUCCESS
-	 * 						- OUT_OF_RES	 
-	 * @return				SUCCESS
 	 */
-	status_t (*set_ike_sa_id) (message_t *this,ike_sa_id_t * ike_sa_id);
+	void (*set_ike_sa_id) (message_t *this,ike_sa_id_t * ike_sa_id);
 
 	/**
 	 * @brief Gets the IKE_SA ID of the message.
@@ -125,7 +120,6 @@ struct message_t {
 	 * @param ike_sa_id		pointer to ike_sa_id pointer which will be set
 	 * @return				
 	 * 						- SUCCESS
-	 * 						- OUT_OF_RES
 	 * 						- FAILED if no ike_sa_id is set
 	 */
 	status_t (*get_ike_sa_id) (message_t *this,ike_sa_id_t **ike_sa_id);
@@ -135,9 +129,8 @@ struct message_t {
 	 *
 	 * @param this 			message_t object
 	 * @param exchange_type	exchange_type to set
-	 * @return				SUCCESS
 	 */
-	status_t (*set_exchange_type) (message_t *this,exchange_type_t exchange_type);
+	void (*set_exchange_type) (message_t *this,exchange_type_t exchange_type);
 
 	/**
 	 * @brief Gets the exchange type of the message.
@@ -152,9 +145,8 @@ struct message_t {
 	 *
 	 * @param this 					message_t object
 	 * @param original_initiator		TRUE if message is from original initiator
-	 * @return						SUCCESS
 	 */
-	status_t (*set_original_initiator) (message_t *this,bool original_initiator);
+	void (*set_original_initiator) (message_t *this,bool original_initiator);
 
 	/**
 	 * @brief Gets original initiator flag.
@@ -169,9 +161,8 @@ struct message_t {
 	 *
 	 * @param this 					message_t object
 	 * @param original_initiator		TRUE if message is a request, FALSE if it is a reply
-	 * @return						SUCCESS
 	 */
-	status_t (*set_request) (message_t *this,bool request);
+	void (*set_request) (message_t *this,bool request);
 
 	/**
 	 * @brief Gets request flag.
@@ -188,9 +179,8 @@ struct message_t {
 	 * @param payload 		payload to append
 	 * @return				
 	 * 						- SUCCESS or
-	 * 						- OUT_OF_RES
 	 */	
-	status_t (*add_payload) (message_t *this, payload_t *payload);
+	void (*add_payload) (message_t *this, payload_t *payload);
 
 	/**
 	 * @brief Parses header of message
@@ -198,7 +188,6 @@ struct message_t {
 	 * @param this 		message_t object
 	 * @return
 	 * 					- SUCCESS if header could be parsed
-	 *					- OUT_OF_RES if out of ressources
 	 *					- PARSE_ERROR if corrupted/invalid data found
 	 * 					- FAILED if consistence check of header failed
 	 */
@@ -215,7 +204,6 @@ struct message_t {
 	 * @return
 	 * 					- SUCCESS if header could be parsed
 	 * 					- NOT_SUPPORTED if unsupported payload are contained in body
-	 *					- OUT_OF_RES if out of ressources
 	 * 					- FAILED if message type is not suppported!
 	 *					- PARSE_ERROR if corrupted/invalid data found
 	 * 					- VERIFY_ERROR if verification of some payload failed
@@ -234,19 +222,18 @@ struct message_t {
 	status_t (*generate) (message_t *this, crypter_t *crypter, signer_t *signer, packet_t **packet);
 	
 	status_t (*verify) (message_t *this);
-	status_t (*get_source) (message_t *this, host_t **host);
-	status_t (*set_source) (message_t *this, host_t *host);
-	status_t (*get_destination) (message_t *this, host_t **host);
-	status_t (*set_destination) (message_t *this, host_t *host);
-	status_t (*get_payload_iterator) (message_t *this, iterator_t **iterator);
+	void (*get_source) (message_t *this, host_t **host);
+	void (*set_source) (message_t *this, host_t *host);
+	void (*get_destination) (message_t *this, host_t **host);
+	void (*set_destination) (message_t *this, host_t *host);
+	void (*get_payload_iterator) (message_t *this, iterator_t **iterator);
 	
 	/**
 	 * @brief Destroys a message and all including objects
 	 *
 	 * @param this 		message_t object
-	 * @return 			SUCCESS
 	 */
-	status_t (*destroy) (message_t *this);
+	void (*destroy) (message_t *this);
 };
 
 /**
@@ -263,9 +250,9 @@ struct message_t {
  * 
  * @param packet		packet_t object which is assigned to message					  
  * 
- * @return 
- * 					- created message_t object
- * 					- NULL if out of ressources
+ * @return 			created message_t object
+ * 
+ * @ingroup encoding
  */
 message_t * message_create_from_packet(packet_t *packet);
 
@@ -277,9 +264,9 @@ message_t * message_create_from_packet(packet_t *packet);
  * - original_initiator is set to TRUE
  * - is_request is set to TRUE
  * 
- * @return 
- * 					- created message_t object
- * 					- NULL if out of ressources
+ * @return created message_t object
+ *
+ * @ingroup encoding
  */
 message_t * message_create();
 

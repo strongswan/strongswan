@@ -1,7 +1,7 @@
 /**
  * @file generator.h
  *
- * @brief Generic generator class used to generate IKEv2-header and payloads.
+ * @brief Interface of generator_t.
  *
  */
 
@@ -42,6 +42,8 @@ typedef struct generator_t generator_t;
 
 /**
  *A generator_t object which generates payloads of specific type.
+ * 
+ * @ingroup encoding
  */
 struct generator_t {
 	
@@ -75,7 +77,8 @@ struct generator_t {
  * Constructor to create a generator.
  * 
  * Returns a new generator_t object.
- *
+ * 
+ * @ingroup encoding
  */
 generator_t * generator_create();
 

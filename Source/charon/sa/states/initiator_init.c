@@ -318,14 +318,7 @@ static status_t build_ike_sa_init_request (private_initiator_init_t *this, messa
 	}
 	
 	this	->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
-	status = message->add_payload(message, payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not add SA payload to message");
-		payload->destroy(payload);
-		message->destroy(message);
-		return status;
-	}
+	message->add_payload(message, payload);
 
 	/* build KE payload */
 	status = this->build_ke_payload(this, &payload);
@@ -337,14 +330,7 @@ static status_t build_ike_sa_init_request (private_initiator_init_t *this, messa
 	}
 
 	this	->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
-	status = message->add_payload(message, payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not add KE payload to message");
-		payload->destroy(payload);
-		message->destroy(message);
-		return status;
-	}
+	message->add_payload(message, payload);
 	
 	/* build Nonce payload */
 	status = this->build_nonce_payload(this, &payload);
@@ -356,14 +342,7 @@ static status_t build_ike_sa_init_request (private_initiator_init_t *this, messa
 	}
 
 	this	->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
-	status = message->add_payload(message, payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not add nonce payload to message");
-		payload->destroy(payload);
-		message->destroy(message);
-		return status;
-	}
+	message->add_payload(message, payload);
 	
 	*request = message;
 	return SUCCESS;

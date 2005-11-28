@@ -202,12 +202,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 
 	/* iterate over incoming payloads. We can be sure, the message contains only accepted payloads! */
-	status = message->get_payload_iterator(message, &payloads);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: Could not get payload interator");
-		return status;
-	}
+	message->get_payload_iterator(message, &payloads);
 	
 	while (payloads->has_next(payloads))
 	{
@@ -412,12 +407,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	
 	this->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
-	status = response->add_payload(response, payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not add SA payload to message");
-		return status;
-	}
+	response->add_payload(response, payload);
 	
 	/* build KE payload */
 	status = this->build_ke_payload(this,&payload);
@@ -428,12 +418,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 
 	this->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
-	status = response->add_payload(response, payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not add KE payload to message");
-		return status;
-	}
+	response->add_payload(response, payload);
 	
 	/* build Nonce payload */
 	status = this->build_nonce_payload(this, &payload);
@@ -444,12 +429,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 
 	this->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
-	status = response->add_payload(response, payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not add nonce payload to message");
-		return status;
-	}
+	response->add_payload(response, payload);
 	
 	/* generate packet */	
 	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");

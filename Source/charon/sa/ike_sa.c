@@ -303,14 +303,8 @@ static status_t build_message(private_ike_sa_t *this, exchange_type_t type, bool
 	
 	new_message->set_message_id(new_message, (request) ? this->message_id_out : this->message_id_in);
 
-	status = new_message->set_ike_sa_id(new_message, this->ike_sa_id);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not set ike_sa_id of message");
-		new_message->destroy(new_message);
-		return status;
-	}
-	
+	new_message->set_ike_sa_id(new_message, this->ike_sa_id);
+		
 	*message = new_message;
 	
 	return SUCCESS;
