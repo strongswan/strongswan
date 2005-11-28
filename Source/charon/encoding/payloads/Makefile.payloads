@@ -53,4 +53,8 @@ $(BUILD_DIR)transform_attribute.o :		$(PAYLOADS_DIR)transform_attribute.c $(PAYL
 OBJS+= $(BUILD_DIR)transform_substructure.o
 $(BUILD_DIR)transform_substructure.o :	$(PAYLOADS_DIR)transform_substructure.c $(PAYLOADS_DIR)transform_substructure.h
 										$(CC) $(CFLAGS) -c -o $@ $<
+
+OBJS+= $(BUILD_DIR)encryption_payload.o
+$(BUILD_DIR)encryption_payload.o :		$(PAYLOADS_DIR)encryption_payload.c $(PAYLOADS_DIR)encryption_payload.h
+										$(CC) $(CFLAGS) -c -o $@ $<
 								

@@ -28,6 +28,8 @@
 #include <network/packet.h>
 #include <encoding/payloads/ike_header.h>
 #include <utils/linked_list.h>
+#include <transforms/crypters/crypter.h>
+#include <transforms/signers/signer.h>
 
 
 typedef struct message_t message_t;
@@ -218,7 +220,7 @@ struct message_t {
 	 *					- PARSE_ERROR if corrupted/invalid data found
 	 * 					- VERIFY_ERROR if verification of some payload failed
 	 */
-	status_t (*parse_body) (message_t *this);
+	status_t (*parse_body) (message_t *this, crypter_t *crypter, signer_t *signer);
 
 	/**
 	 * @brief Generates the UDP packet of specific message
@@ -229,7 +231,9 @@ struct message_t {
 	 * 					- EXCHANGE_TYPE_NOT_SET if exchange type is currently not set
 	 * ....
 	 */	
-	status_t (*generate) (message_t *this, packet_t **packet);
+	status_t (*generate) (message_t *this, crypter_t *crypter, signer_t *signer, packet_t **packet);
+	
+	status_t (*verify) (message_t *this);
 	status_t (*get_source) (message_t *this, host_t **host);
 	status_t (*set_source) (message_t *this, host_t *host);
 	status_t (*get_destination) (message_t *this, host_t **host);

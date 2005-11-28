@@ -34,6 +34,7 @@
 #include <utils/logger_manager.h>
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
+#include <encoding/payloads/encryption_payload.h>
 
 
 typedef struct supported_payload_entry_t supported_payload_entry_t;
@@ -455,7 +456,7 @@ static status_t get_payload_iterator(private_message_t *this, iterator_t **itera
  * Implements message_t's generate function.
  * See #message_s.generate.
  */
-static status_t generate(private_message_t *this, packet_t **packet)
+static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* signer, packet_t **packet)
 {
 	generator_t *generator;
 	ike_header_t *ike_header;
@@ -480,13 +481,12 @@ static status_t generate(private_message_t *this, packet_t **packet)
 		return INVALID_STATE;
 	}
 	
-	
+	/* build ike header */
 	ike_header = ike_header_create();
 	if (ike_header == NULL)
 	{
 		return OUT_OF_RES;
 	}
-	
 	
 	ike_header->set_exchange_type(ike_header, this->exchange_type);
 	ike_header->set_message_id(ike_header, this->message_id);
@@ -509,6 +509,7 @@ static status_t generate(private_message_t *this, packet_t **packet)
 		ike_header->destroy(ike_header);
 		return OUT_OF_RES;
 	}
+	/* generate every payload, except last one */
 	while(iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&next_payload);
@@ -524,7 +525,21 @@ static status_t generate(private_message_t *this, packet_t **packet)
 	}
 	iterator->destroy(iterator);
 	
+	/* build last payload */
 	payload->set_next_type(payload, NO_PAYLOAD);
+	/* if it's an encryption payload, build it first */
+	if (payload->get_type(payload) == ENCRYPTED)
+	{
+		encryption_payload_t *encryption_payload = (encryption_payload_t*)payload;
+		encryption_payload->set_signer(encryption_payload, signer);
+		status = encryption_payload->encrypt(encryption_payload, crypter);
+		if (status != SUCCESS)
+		{
+			generator->destroy(generator);
+			ike_header->destroy(ike_header);
+			return status;
+		}
+	}
 	status = generator->generate_payload(generator, payload);
 	if (status != SUCCESS)
 	{
@@ -532,27 +547,33 @@ static status_t generate(private_message_t *this, packet_t **packet)
 		ike_header->destroy(ike_header);
 		return status;
 	}
-	
 	ike_header->destroy(ike_header);
-	
-	
-	
+		
+	/* build packet */
 	if (this->packet->data.ptr != NULL)
 	{
 		allocator_free(this->packet->data.ptr);
 	}	
-	
 	status = generator->write_to_chunk(generator, &(this->packet->data));
+	generator->destroy(generator);
 	if (status != SUCCESS)
 	{
-		generator->destroy(generator);
 		return status;
 	}
 	
+	/* append integrity checksum if necessary */
+	if (payload->get_type(payload) == ENCRYPTED)
+	{
+		encryption_payload_t *encryption_payload = (encryption_payload_t*)payload;
+		status = encryption_payload->build_signature(encryption_payload, this->packet->data);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+	}
+	
+	/* colen packet for caller */
 	this->packet->clone(this->packet, packet);
-	
-	generator->destroy(generator);
-	
 	
 	this->logger->log(this->logger, CONTROL, "message generated successfully");
 	return SUCCESS;
@@ -617,62 +638,54 @@ static status_t parse_header(private_message_t *this)
 }
 
 /**
- * Implements message_t's parse_body function.
- * See #message_s.parse_body.
+ * Implements message_t.parse_body.
  */
-static status_t parse_body (private_message_t *this)
+static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t *signer)
 {
 	status_t status = SUCCESS;
-	int i;
 	payload_type_t current_payload_type = this->first_payload;
-	supported_payload_entry_t *supported_payloads;
-	size_t supported_payloads_count;
-	
-	
-	this->logger->log(this->logger, CONTROL, "parsing body of message");
-			
-	if (this->get_supported_payloads (this, &supported_payloads, &supported_payloads_count) != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "could not get supported payloads");
-		return FAILED;
-	}
 		
+	this->logger->log(this->logger, CONTROL, "parsing body of message");
+	
 	while (current_payload_type != NO_PAYLOAD)
 	{
 		payload_t *current_payload;
-		bool supported = FALSE;
 		
 		this->logger->log(this->logger, CONTROL|MORE, "start parsing payload of type %s", 
 							mapping_find(payload_type_m, current_payload_type));
-		for (i = 0; i < supported_payloads_count;i++)
-		{
-			if (supported_payloads[i].payload_type == current_payload_type)
-			{
-				supported = TRUE;
-				break;
-			}
-		}
-		if (!supported && (current_payload_type != NO_PAYLOAD))
-		{
-			/* type not supported */
-			status = NOT_SUPPORTED;
-			this->logger->log(this->logger, ERROR, "payload type %s not supported",mapping_find(payload_type_m,current_payload_type));
-			break;
-		}
 		
 		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "payload type %s could not be parsed",mapping_find(payload_type_m,current_payload_type));			
-			break;
+			this->logger->log(this->logger, ERROR, "payload type %s could not be parsed",mapping_find(payload_type_m,current_payload_type));
+			return status;
 		}
 		
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "payload type %s could not be verified",mapping_find(payload_type_m,current_payload_type));			
+			this->logger->log(this->logger, ERROR, "payload type %s could not be verified",mapping_find(payload_type_m,current_payload_type));
 			status = VERIFY_ERROR;
-			break;
+			return status;
+		}
+		
+		/* encrypted payload must be decrypted */
+		if (current_payload->get_type(current_payload) == ENCRYPTED)
+		{
+			encryption_payload_t *encryption_payload = (encryption_payload_t*)current_payload;
+			encryption_payload->set_signer(encryption_payload, signer);
+			status = encryption_payload->verify_signature(encryption_payload, this->packet->data);
+			if (status != SUCCESS)
+			{
+				this->logger->log(this->logger, ERROR, "encryption payload signature invaild");
+				return status;
+			}
+			status = encryption_payload->decrypt(encryption_payload, crypter);
+			if (status != SUCCESS)
+			{
+				this->logger->log(this->logger, ERROR, "parsing decrypted encryption payload failed");
+				return status;
+			}
 		}
 
 		/* get next payload type */
@@ -681,73 +694,86 @@ static status_t parse_body (private_message_t *this)
 		status = this->payloads->insert_last(this->payloads,current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Could not insert current payload to internal list cause of ressource exhausting");
-			break;			
+			this->logger->log(this->logger, ERROR, "%s on adding payload", mapping_find(status_m, status));
+			return status;;
 		}
 		
 	}
-	if (status != SUCCESS)
-	{
-		/* already parsed payload is destroyed later in destroy call from outside this object */
-	}
-	else
-	{
-		iterator_t *iterator;
-		
-		status = this->payloads->create_iterator(this->payloads,&iterator,TRUE);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not create iterator to check supported payloads");
-			return status;
-		}
-		
-		/* check for payloads with wrong count*/
-		for (i = 0; i < supported_payloads_count;i++)
-		{
-			size_t min_occurence = supported_payloads[i].min_occurence;
-			size_t max_occurence = supported_payloads[i].max_occurence;
-			payload_type_t payload_type = supported_payloads[i].payload_type;
-			size_t found_payloads = 0;
+	return this->public.verify(&(this->public));
 	
-			iterator->reset(iterator);
-			
-			while(iterator->has_next(iterator))
-			{
-				payload_t *current_payload;
-				status = iterator->current(iterator,(void **)&current_payload);
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR, "Could not get payload from internal list");
-					iterator->destroy(iterator);
-					return status;
-				}
-				if (current_payload->get_type(current_payload) == payload_type)
-				{
-					found_payloads++;
-					if (found_payloads > max_occurence)
-					{
-						this->logger->log(this->logger, ERROR, "Payload of type %s more than %d times (%d) occured in current message",
-										  mapping_find(payload_type_m,current_payload->get_type(current_payload)),max_occurence,found_payloads);
-						iterator->destroy(iterator);
-						return NOT_SUPPORTED;					
-					}
-				}
-
-			}
-			if (found_payloads < min_occurence)
-			{
-					this->logger->log(this->logger, ERROR, "Payload of type %s not occured %d times",
-									  mapping_find(payload_type_m,payload_type),min_occurence);
-					iterator->destroy(iterator);
-					return NOT_SUPPORTED;
-			}
-			
-		}
-		iterator->destroy(iterator);
-	}
-	return status;	
 }
 
+/**
+ * implements message_t.verify
+ */
+static status_t verify(private_message_t *this)
+{
+	iterator_t *iterator;
+	status_t status;
+	int i;
+	supported_payload_entry_t *supported_payloads;
+	size_t supported_payloads_count;
+	
+	this->logger->log(this->logger, CONTROL|MORE, "verifying message");
+	
+	status = this->get_supported_payloads(this, &supported_payloads, &supported_payloads_count);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "could not get supported payloads: %s");
+		return status;
+	}
+		
+	status = this->payloads->create_iterator(this->payloads,&iterator,TRUE);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not create iterator to check supported payloads");
+		return status;
+	}
+		
+	/* check for payloads with wrong count*/
+	for (i = 0; i < supported_payloads_count;i++)
+	{
+		size_t min_occurence = supported_payloads[i].min_occurence;
+		size_t max_occurence = supported_payloads[i].max_occurence;
+		payload_type_t payload_type = supported_payloads[i].payload_type;
+		size_t found_payloads = 0;
+	
+		iterator->reset(iterator);
+			
+		while(iterator->has_next(iterator))
+		{
+			payload_t *current_payload;
+			status = iterator->current(iterator,(void **)&current_payload);
+			if (status != SUCCESS)
+			{
+				this->logger->log(this->logger, ERROR, "Could not get payload from internal list");
+				iterator->destroy(iterator);
+				return OUT_OF_RES;
+			}
+			if (current_payload->get_type(current_payload) == payload_type)
+			{
+				found_payloads++;
+				if (found_payloads > max_occurence)
+				{
+					this->logger->log(this->logger, ERROR, "Payload of type %s more than %d times (%d) occured in current message",
+									  mapping_find(payload_type_m,current_payload->get_type(current_payload)),max_occurence,found_payloads);
+					iterator->destroy(iterator);
+					return NOT_SUPPORTED;					
+				}
+			}
+		}
+		if (found_payloads < min_occurence)
+		{
+			this->logger->log(this->logger, ERROR, "Payload of type %s not occured %d times",
+							  mapping_find(payload_type_m,payload_type),min_occurence);
+			iterator->destroy(iterator);
+			return NOT_SUPPORTED;
+		}
+	}
+	iterator->destroy(iterator);
+	
+	return SUCCESS;
+}
 
 
 /**
@@ -809,14 +835,15 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.set_request = (status_t(*)(message_t*, bool))set_request;
 	this->public.get_request = (bool(*)(message_t*))get_request;
 	this->public.add_payload = (status_t(*)(message_t*,payload_t*))add_payload;
-	this->public.generate = (status_t (*) (message_t *, packet_t**)) generate;
+	this->public.generate = (status_t (*) (message_t *,crypter_t*,signer_t*,packet_t**)) generate;
 	this->public.set_source = (status_t (*) (message_t*,host_t*)) set_source;
 	this->public.get_source = (status_t (*) (message_t*,host_t**)) get_source;
 	this->public.set_destination = (status_t (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (status_t (*) (message_t*,host_t**)) get_destination;
 	this->public.get_payload_iterator = (status_t (*) (message_t *, iterator_t **)) get_payload_iterator;
-	this->public.parse_header = 	(status_t (*) (message_t *)) parse_header;
-	this->public.parse_body = 	(status_t (*) (message_t *)) parse_body;
+	this->public.parse_header = (status_t (*) (message_t *)) parse_header;
+	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
+	this->public.verify =  (status_t (*) (message_t*)) verify;
 	this->public.destroy = (status_t(*)(message_t*))destroy;
 		
 	/* public values */

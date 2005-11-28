@@ -151,11 +151,11 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 			logger_level |= FULL;
 		case IKE_SA_MANAGER:
 		case MESSAGE:
+		case WORKER:
 			logger_level |= ALL;
 		case PARSER:
 		case GENERATOR:
 		case THREAD_POOL:
-		case WORKER:
 		case SCHEDULER:
 		case SENDER:
 		case RECEIVER:

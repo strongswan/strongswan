@@ -348,111 +348,112 @@ static status_t generate_u_int_type (private_generator_t *this,encoding_type_t i
 	/* now handle each u int type differently */
 	switch (int_type)
 	{
-			case U_INT_4:
+		case U_INT_4:
+		{
+			if (this->current_bit == 0)
 			{
-				if (this->current_bit == 0)
-				{
-					/* highval of current byte in buffer has to be set to the new value*/
-					u_int8_t high_val = *((u_int8_t *)(this->data_struct + offset)) << 4;
-					/* lowval in buffer is not changed */
-					u_int8_t low_val = *(this->out_position) & 0x0F;
-					/* highval is set, low_val is not changed */
-					*(this->out_position) = high_val | low_val;
-					this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
-					/* write position is not changed, just bit position is moved */
-					this->current_bit = 4;
-				}
-				else if (this->current_bit == 4)
-				{
-					/* highval in buffer is not changed */
-					u_int high_val = *(this->out_position) & 0xF0;
-					/* lowval of current byte in buffer has to be set to the new value*/
-					u_int low_val = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
-					*(this->out_position) = high_val | low_val;
-					this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
-					this->out_position++;
-					this->current_bit = 0;
-
-				}
-				else
-				{
-					this->logger->log(this->logger, ERROR, "U_INT_4 Type is not 4 Bit aligned");
-					/* 4 Bit integers must have a 4 bit alignment */
-					return FAILED;
-				};
-				break;
+				/* highval of current byte in buffer has to be set to the new value*/
+				u_int8_t high_val = *((u_int8_t *)(this->data_struct + offset)) << 4;
+				/* lowval in buffer is not changed */
+				u_int8_t low_val = *(this->out_position) & 0x0F;
+				/* highval is set, low_val is not changed */
+				*(this->out_position) = high_val | low_val;
+				this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
+				/* write position is not changed, just bit position is moved */
+				this->current_bit = 4;
 			}
-			case U_INT_8:
+			else if (this->current_bit == 4)
 			{
-				/* 8 bit values are written as they are */
-				*this->out_position = *((u_int8_t *)(this->data_struct + offset));
+				/* highval in buffer is not changed */
+				u_int high_val = *(this->out_position) & 0xF0;
+				/* lowval of current byte in buffer has to be set to the new value*/
+				u_int low_val = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
+				*(this->out_position) = high_val | low_val;
 				this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
 				this->out_position++;
-				break;
-
-			}
-			case ATTRIBUTE_TYPE:
-			{
-				/* attribute type must not change first bit uf current byte ! */
-				if (this->current_bit != 1)
-				{
-					this->logger->log(this->logger, ERROR, "ATTRIBUTE FORMAT flag is not set");
-					/* first bit has to be set! */
-					return FAILED;
-				}
-				/* get value of attribute format flag */
-				u_int8_t attribute_format_flag = *(this->out_position) & 0x80;
-				/* get attribute type value as 16 bit integer*/
-				u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
-				/* last bit must be unset */
-				int16_val = int16_val & 0xFF7F;
-				
-				int16_val = int16_val | attribute_format_flag;
-				this->logger->log(this->logger, RAW|MOST, "   => 0x%x", int16_val);
-				/* write bytes to buffer (set bit is overwritten)*/				
-				this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 				this->current_bit = 0;
-				break;
-				
-			}
-			case U_INT_16:
-			{
-				u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
-				this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int16_val, sizeof(int16_val));
-				this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
-				break;
-			}
-			case U_INT_32:
-			{
-				u_int32_t int32_val = htonl(*((u_int32_t*)(this->data_struct + offset)));
-				this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int32_val, sizeof(int32_val));
-				this->write_bytes_to_buffer(this,&int32_val,sizeof(u_int32_t));
-				break;
-			}
-			case U_INT_64:
-			{
-				/* 64 bit integers are written as two 32 bit integers */
-				u_int32_t int32_val_low = htonl(*((u_int32_t*)(this->data_struct + offset)));
-				u_int32_t int32_val_high = htonl(*((u_int32_t*)(this->data_struct + offset) + 1));
-				this->logger->log_bytes(this->logger, RAW|MOST, "   => (low)", (void*)&int32_val_low, sizeof(int32_val_low));
-				this->logger->log_bytes(this->logger, RAW|MOST, "   => (high)", (void*)&int32_val_high, sizeof(int32_val_high));
-				/* TODO add support for big endian machines */
-				this->write_bytes_to_buffer(this,&int32_val_high,sizeof(u_int32_t));
-				this->write_bytes_to_buffer(this,&int32_val_low,sizeof(u_int32_t));
-				break;
-			}
-			
-			case IKE_SPI:
-			{
-				/* 64 bit are written as they come :-) */
-				this->write_bytes_to_buffer(this,(this->data_struct + offset),sizeof(u_int64_t));
-				this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)(this->data_struct + offset), sizeof(u_int64_t));
-				break;
-			}
 
-			default:
+			}
+			else
+			{
+				this->logger->log(this->logger, ERROR, "U_INT_4 Type is not 4 Bit aligned");
+				/* 4 Bit integers must have a 4 bit alignment */
+				return FAILED;
+			};
+			break;
+		}
+		case U_INT_8:
+		{
+			/* 8 bit values are written as they are */
+			*this->out_position = *((u_int8_t *)(this->data_struct + offset));
+			this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
+			this->out_position++;
+			break;
+
+		}
+		case ATTRIBUTE_TYPE:
+		{
+			/* attribute type must not change first bit uf current byte ! */
+			if (this->current_bit != 1)
+			{
+				this->logger->log(this->logger, ERROR, "ATTRIBUTE FORMAT flag is not set");
+				/* first bit has to be set! */
+				return FAILED;
+			}
+			/* get value of attribute format flag */
+			u_int8_t attribute_format_flag = *(this->out_position) & 0x80;
+			/* get attribute type value as 16 bit integer*/
+			u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
+			/* last bit must be unset */
+			int16_val = int16_val & 0xFF7F;
+			
+			int16_val = int16_val | attribute_format_flag;
+			this->logger->log(this->logger, RAW|MOST, "   => 0x%x", int16_val);
+			/* write bytes to buffer (set bit is overwritten)*/				
+			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
+			this->current_bit = 0;
+			break;
+			
+		}
+		case U_INT_16:
+		{
+			u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
+			this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int16_val, sizeof(int16_val));
+			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
+			break;
+		}
+		case U_INT_32:
+		{
+			u_int32_t int32_val = htonl(*((u_int32_t*)(this->data_struct + offset)));
+			this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int32_val, sizeof(int32_val));
+			this->write_bytes_to_buffer(this,&int32_val,sizeof(u_int32_t));
+			break;
+		}
+		case U_INT_64:
+		{
+			/* 64 bit integers are written as two 32 bit integers */
+			u_int32_t int32_val_low = htonl(*((u_int32_t*)(this->data_struct + offset)));
+			u_int32_t int32_val_high = htonl(*((u_int32_t*)(this->data_struct + offset) + 1));
+			this->logger->log_bytes(this->logger, RAW|MOST, "   => (low)", (void*)&int32_val_low, sizeof(int32_val_low));
+			this->logger->log_bytes(this->logger, RAW|MOST, "   => (high)", (void*)&int32_val_high, sizeof(int32_val_high));
+			/* TODO add support for big endian machines */
+			this->write_bytes_to_buffer(this,&int32_val_high,sizeof(u_int32_t));
+			this->write_bytes_to_buffer(this,&int32_val_low,sizeof(u_int32_t));
+			break;
+		}
+		
+		case IKE_SPI:
+		{
+			/* 64 bit are written as they come :-) */
+			this->write_bytes_to_buffer(this,(this->data_struct + offset),sizeof(u_int64_t));
+			this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)(this->data_struct + offset), sizeof(u_int64_t));
+			break;
+		}
+		default:
+		{
 			this->logger->log(this->logger, ERROR, "U_INT Type %s is not supported", mapping_find(encoding_type_m,int_type));
 			return FAILED;
+		}
 	}
 	return SUCCESS;
 }
@@ -1037,6 +1038,21 @@ static status_t generate_payload (private_generator_t *this,payload_t *payload)
 					this->logger->log(this->logger, CONTROL|MOST, "attribute value has not fixed size");
 					/* the attribute value is generated */
 					status = this->generate_from_chunk(this,rules[i].offset);
+					if (status != SUCCESS)
+					{
+						this->logger->log(this->logger, ERROR, "could not write attribute value from chunk");	
+						return status;
+					}
+				}
+				break;
+			}
+			case ENCRYPTED_DATA:
+			{
+				status = this->generate_from_chunk(this, rules[i].offset);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR, "could not write encrypted data from chunk");	
+					return status;
 				}
 				break;
 			}

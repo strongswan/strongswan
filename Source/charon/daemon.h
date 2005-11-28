@@ -27,7 +27,7 @@
 
 #define DAEMON_NAME "charon"
 
-#define NUMBER_OF_WORKING_THREADS 4
+#define NUMBER_OF_WORKING_THREADS 1
 
 #define IKEV2_UDP_PORT 500
 

@@ -108,7 +108,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	}
 	
 	/* parse incoming message */
-	status = message->parse_body(message);
+	status = message->parse_body(message, NULL, NULL);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not parse body");

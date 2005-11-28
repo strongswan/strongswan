@@ -40,6 +40,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
+#include <encoding/payloads/encryption_payload.h>
 
 
 
@@ -835,6 +836,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					return PARSE_ERROR;
 				}		
 				break;			
+			}
+			case ENCRYPTED_DATA:
+			{				
+				size_t data_length = payload_length - ENCRYPTION_PAYLOAD_HEADER_LENGTH ;
+				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}		
+				break;	
 			}
 			default:
 			{

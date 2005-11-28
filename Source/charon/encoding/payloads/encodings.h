@@ -286,7 +286,7 @@ enum encoding_type_t{
 	 */
 	ATTRIBUTE_LENGTH_OR_VALUE,
 
-	/*	
+	/**
 	 * Depending on the field of type ATTRIBUTE_FORMAT
 	 * this field is available or missing and so parsed/generated 
 	 * or not parsed/not generated
@@ -316,7 +316,10 @@ enum encoding_type_t{
 	 * 
 	 * When parsing 8 bytes are read and written into the u_int64_t pointing to.
 	 */
-	IKE_SPI
+	IKE_SPI,
+	
+	ENCRYPTED_DATA,
+	
 };
 
 /**

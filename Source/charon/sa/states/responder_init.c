@@ -194,7 +194,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	this->ike_sa->set_other_host(this->ike_sa, other_host);
 	
 	/* parse incoming message */
-	status = message->parse_body(message);
+	status = message->parse_body(message, NULL, NULL);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not parse body of request message");
@@ -411,7 +411,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		return status;
 	}
 	
-	this	->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
+	this->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
 	status = response->add_payload(response, payload);
 	if (status != SUCCESS)
 	{	
@@ -427,7 +427,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		return status;
 	}
 
-	this	->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
+	this->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
 	status = response->add_payload(response, payload);
 	if (status != SUCCESS)
 	{	
@@ -443,7 +443,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		return status;
 	}
 
-	this	->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
+	this->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
 	status = response->add_payload(response, payload);
 	if (status != SUCCESS)
 	{	
@@ -452,8 +452,8 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	
 	/* generate packet */	
-	this	->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
-	status = response->generate(response, &packet);
+	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
+	status = response->generate(response, NULL, NULL, &packet);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Fatal error: could not generate packet from message");

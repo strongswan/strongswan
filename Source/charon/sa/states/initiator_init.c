@@ -239,7 +239,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	
 	/* generate packet */	
 	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
-	status = message->generate(message, &packet);
+	status = message->generate(message, NULL, NULL, &packet);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Fatal error: could not generate packet from message");

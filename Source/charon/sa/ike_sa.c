@@ -529,7 +529,7 @@ status_t resend_last_reply (private_ike_sa_t *this)
 	packet_t *packet;
 	status_t status;
 	
-	status = this->last_responded_message->generate(this->last_responded_message, &packet);
+	status = this->last_responded_message->generate(this->last_responded_message, NULL, NULL, &packet);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not generate message to resent");

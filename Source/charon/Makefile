@@ -21,9 +21,7 @@ LDFLAGS= -lgmp -lpthread
 CFLAGS+= -Wall \
 		 -DLEAK_DETECTIVE \
 		 -I. \
-		 -g
-
-#		 -Werror
+		 -g #-Werror
 
 # objects is extended by each included Makefile
 OBJS= 
