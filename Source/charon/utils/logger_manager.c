@@ -145,7 +145,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case TESTER:
 			log_thread_ids = FALSE;
 			output = stdout;
-			logger_level = 0;
+			logger_level |= FULL;
 			break;
 		case IKE_SA:
 		case IKE_SA_MANAGER:

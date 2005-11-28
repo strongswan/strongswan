@@ -15,6 +15,11 @@
 TESTCASES_DIR= $(MAIN_DIR)testcases/
 
 
+TEST_OBJS+= $(BUILD_DIR)aes_cbc_crypter_test.o
+$(BUILD_DIR)aes_cbc_crypter_test.o :	$(TESTCASES_DIR)aes_cbc_crypter_test.c $(TESTCASES_DIR)aes_cbc_crypter_test.h
+									$(CC) $(CFLAGS) -c -o $@ $<
+
+
 TEST_OBJS+= $(BUILD_DIR)diffie_hellman_test.o
 $(BUILD_DIR)diffie_hellman_test.o :	$(TESTCASES_DIR)diffie_hellman_test.c $(TESTCASES_DIR)diffie_hellman_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<

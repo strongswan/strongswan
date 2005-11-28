@@ -1,7 +1,7 @@
 /**
- * @file aes_crypter.c
+ * @file aes_cbc_crypter.c
  * 
- * @brief Implementation of aes_crypter_t
+ * @brief Implementation of aes_cbc_crypter_t
  * 
  */
  
@@ -21,7 +21,7 @@
  * for more details.
  */
  
-#include "aes_crypter.h"
+#include "aes_cbc_crypter.h"
 
 #include <utils/allocator.h>
 
@@ -41,19 +41,19 @@
 #define AES_KS_LENGTH   120
 #define AES_RC_LENGTH    29
 
-typedef struct private_aes_crypter_t private_aes_crypter_t;
+typedef struct private_aes_cbc_crypter_t private_aes_cbc_crypter_t;
 
 /**
  * @brief Class implementing the AES symmetric encryption algorithm.
  * 
  * @ingroup crypters
  */
-struct private_aes_crypter_t {
+struct private_aes_cbc_crypter_t {
 	
 	/**
 	 * Public part of this class.
 	 */
-	aes_crypter_t public;
+	aes_cbc_crypter_t public;
 	
 	/**
 	 * Number of words in the key input block.
@@ -96,7 +96,7 @@ struct private_aes_crypter_t {
 	 * @return				
 	 * 							- SUCCESS in any case
 	 */
-	status_t (*encrypt_block) (private_aes_crypter_t *this, u_int8_t *data, u_int8_t *encrypted);
+	status_t (*encrypt_block) (private_aes_cbc_crypter_t *this, u_int8_t *data, u_int8_t *encrypted);
 	
 	/**
 	 * @brief Decrypt a chunk of data with blocksize length.
@@ -109,7 +109,7 @@ struct private_aes_crypter_t {
 	 * @return				
 	 * 							- SUCCESS in any case
 	 */
-	status_t (*decrypt_block) (private_aes_crypter_t *this, u_int8_t *data, u_int8_t *decrypted);
+	status_t (*decrypt_block) (private_aes_cbc_crypter_t *this, u_int8_t *data, u_int8_t *decrypted);
 	
 };
 
@@ -1263,9 +1263,9 @@ switch(this->aes_Ncol) \
 
 
 /**
- * Implementation of private_aes_crypter_t.encrypt_block.
+ * Implementation of private_aes_cbc_crypter_t.encrypt_block.
  */
-static status_t encrypt_block (private_aes_crypter_t *this, u_int8_t *data, u_int8_t *encrypted)
+static status_t encrypt_block (private_aes_cbc_crypter_t *this, u_int8_t *data, u_int8_t *encrypted)
 {
 	u_int32_t        locals(b0, b1);
     const u_int32_t  *kp = this->aes_e_key;
@@ -1338,9 +1338,9 @@ static status_t encrypt_block (private_aes_crypter_t *this, u_int8_t *data, u_in
 }
 
 /**
- * Implementation of private_aes_crypter_t.decrypt_block.
+ * Implementation of private_aes_cbc_crypter_t.decrypt_block.
  */
-static status_t decrypt_block (private_aes_crypter_t *this, u_int8_t *data, u_int8_t *decrypted)
+static status_t decrypt_block (private_aes_cbc_crypter_t *this, u_int8_t *data, u_int8_t *decrypted)
 {
 	u_int32_t        locals(b0, b1);
     const u_int32_t  *kp = this->aes_d_key;
@@ -1417,7 +1417,7 @@ static status_t decrypt_block (private_aes_crypter_t *this, u_int8_t *data, u_in
 /**
  * Implementation of crypter_t.decrypt.
  */
-static status_t decrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
+static status_t decrypt (private_aes_cbc_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted)
 {
 	int ret, pos;
 	const u_int32_t *iv_i;
@@ -1465,7 +1465,7 @@ static status_t decrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv, 
 /**
  * Implementation of crypter_t.decrypt.
  */
-static status_t encrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
+static status_t encrypt (private_aes_cbc_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted)
 {
 	int ret, pos;
 	const u_int32_t *iv_i;
@@ -1510,7 +1510,7 @@ static status_t encrypt (private_aes_crypter_t *this, chunk_t data, chunk_t iv, 
 /**
  * Implementation of crypter_t.get_block_size.
  */
-static size_t get_block_size (private_aes_crypter_t *this)
+static size_t get_block_size (private_aes_cbc_crypter_t *this)
 {
 	return this->blocksize;
 }
@@ -1518,7 +1518,7 @@ static size_t get_block_size (private_aes_crypter_t *this)
 /**
  * Implementation of crypter_t.set_key.
  */
-static status_t set_key (private_aes_crypter_t *this, chunk_t key)
+static status_t set_key (private_aes_cbc_crypter_t *this, chunk_t key)
 {
 	u_int32_t    *kf, *kt, rci, f = 0;
 	
@@ -1612,18 +1612,18 @@ static status_t set_key (private_aes_crypter_t *this, chunk_t key)
 }
 
 /**
- * Implementation of crypter_t.destroy and aes_crypter_t.destroy.
+ * Implementation of crypter_t.destroy and aes_cbc_crypter_t.destroy.
  */
-static status_t destroy (private_aes_crypter_t *this)
+static status_t destroy (private_aes_cbc_crypter_t *this)
 {
 	allocator_free(this);
 	return SUCCESS;
 }
 
 
-aes_crypter_t *aes_crypter_create(size_t blocksize)
+aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize)
 {
-	private_aes_crypter_t *this = allocator_alloc_thing(private_aes_crypter_t);
+	private_aes_cbc_crypter_t *this = allocator_alloc_thing(private_aes_cbc_crypter_t);
 	if (this == NULL)
 	{
 		return NULL;	
@@ -1657,7 +1657,7 @@ aes_crypter_t *aes_crypter_create(size_t blocksize)
 	this->public.crypter_interface.destroy = (status_t (*) (crypter_t *)) destroy;
 
 	/* public functions */
-	this->public.destroy = (status_t (*) (aes_crypter_t *)) destroy;
+	this->public.destroy = (status_t (*) (aes_cbc_crypter_t *)) destroy;
 	
 	/* private functions */
 	this->encrypt_block = encrypt_block;

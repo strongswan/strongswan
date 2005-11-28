@@ -1,7 +1,7 @@
 /**
- * @file aes_crypter.h
+ * @file aes_cbc_crypter.h
  * 
- * @brief Interface of aes_crypter_t
+ * @brief Interface of aes_cbc_crypter_t
  * 
  */
 
@@ -27,14 +27,14 @@
 #include <transforms/crypters/crypter.h>
 
 
-typedef struct aes_crypter_t aes_crypter_t;
+typedef struct aes_cbc_crypter_t aes_cbc_crypter_t;
 
 /**
  * @brief Class implementing the AES symmetric encryption algorithm.
  * 
  * @ingroup crypters
  */
-struct aes_crypter_t {
+struct aes_cbc_crypter_t {
 	
 	/**
 	 * crypter_t interface.
@@ -42,26 +42,26 @@ struct aes_crypter_t {
 	crypter_t crypter_interface;
 	
 	/**
-	 * @brief Destroys a aes_crypter_t object.
+	 * @brief Destroys a aes_cbc_crypter_t object.
 	 *
 	 * @param this 				crypter_t object to destroy
 	 * @return 		
 	 * 							- SUCCESS in any case
 	 */
-	status_t (*destroy) (aes_crypter_t *this);
+	status_t (*destroy) (aes_cbc_crypter_t *this);
 };
 
 /**
- * @brief Constructor to create aes_crypter_t objects.
+ * @brief Constructor to create aes_cbc_crypter_t objects.
  * 
  * @param blocksize				block size of AES crypter
  * 								(16, 24 or 32 are supported)
  * 								Default size is set to 16.
  * @return
- * 								- aes_crypter_t if successfully
+ * 								- aes_cbc_crypter_t if successfully
  * 								- NULL if out of ressources
  */
-aes_crypter_t *aes_crypter_create(size_t blocksize);
+aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize);
 
 
 #endif //_AES_CRYPTER_H_
