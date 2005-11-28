@@ -292,7 +292,7 @@ logger_manager_t *global_logger_manager;
  	global_configuration_manager = configuration_manager_create();
  	global_ike_sa_manager = ike_sa_manager_create();
  	
-//	global_logger_manager->disable_logger_level(global_logger_manager,TESTER,FULL);
+	global_logger_manager->disable_logger_level(global_logger_manager,TESTER,FULL);
 //	global_logger_manager->enable_logger_level(global_logger_manager,TESTER,RAW);
  	 	
  	tester_t *tester = tester_create(test_output, FALSE);

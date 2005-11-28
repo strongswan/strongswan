@@ -67,9 +67,8 @@ void test_aes_cbc_crypter(tester_t *tester)
 	logger->log_chunk(logger,RAW,"exptected encrypted :", &expected_encrypted1);
 	logger->log_chunk(logger,RAW,"encrypted :", &encrypted1);
 	
+	tester->assert_true(tester, (crypter->decrypt(crypter,encrypted1,iv1_chunk,&decrypted1) == SUCCESS), "decrypt call test");
 	allocator_free_chunk(&encrypted1);
-
-	tester->assert_true(tester, (crypter->decrypt(crypter,data1,iv1_chunk,&decrypted1) == SUCCESS), "decrypt call test");
 
 	tester->assert_true(tester, (memcmp(decrypted1.ptr, plaintext1, 16) == 0), "decrypted value");
 	
@@ -118,16 +117,15 @@ void test_aes_cbc_crypter(tester_t *tester)
 	
 	tester->assert_true(tester, (crypter->encrypt(crypter,data2,iv2_chunk,&encrypted2) == SUCCESS), "encrypt call test");
 	
-	tester->assert_true(tester, (memcmp(encrypted2.ptr, expected_encrypted2.ptr, 26) == 0), "Encrypted value");
+	tester->assert_true(tester, (memcmp(encrypted2.ptr, expected_encrypted2.ptr, 32) == 0), "Encrypted value");
 	
 	logger->log_chunk(logger,RAW,"exptected encrypted :", &expected_encrypted2);
 	logger->log_chunk(logger,RAW,"encrypted :", &encrypted2);
 	
+	tester->assert_true(tester, (crypter->decrypt(crypter,encrypted2,iv2_chunk,&decrypted2) == SUCCESS), "decrypt call test");
 	allocator_free_chunk(&encrypted2);
 
-	tester->assert_true(tester, (crypter->decrypt(crypter,data2,iv2_chunk,&decrypted2) == SUCCESS), "decrypt call test");
-
-	tester->assert_true(tester, (memcmp(decrypted2.ptr, plaintext2, 26) == 0), "decrypted value");
+	tester->assert_true(tester, (memcmp(decrypted2.ptr, plaintext2, 32) == 0), "decrypted value");
 	
 	logger->log_chunk(logger,RAW,"expected decrypted :", &data2);
 	logger->log_chunk(logger,RAW,"decrypted :", &decrypted2);
