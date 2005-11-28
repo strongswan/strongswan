@@ -1,9 +1,7 @@
 /**
  * @file proposal_substructure.h
  * 
- * @brief Declaration of the class proposal_substructure_t. 
- * 
- * An object of this type represents an IKEv2 PROPOSAL Substructure and contains transforms.
+ * @brief Interface of proposal_substructure_t.
  * 
  */
 
@@ -32,7 +30,9 @@
 
 /**
  * Length of the proposal substructure header
- * (without spi)
+ * (without spi).
+ * 
+ * @ingroup payloads
  */
 #define PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH 8
 
@@ -40,7 +40,9 @@
 typedef enum protocol_id_t protocol_id_t;
 
 /**
- * Protocol ID of a proposal
+ * Protocol ID of a proposal.
+ * 
+ * @ingroup payloads
  */
 enum protocol_id_t {
 	UNDEFINED_PROTOCOL_ID = 201,
@@ -52,14 +54,15 @@ enum protocol_id_t {
 typedef struct proposal_substructure_t proposal_substructure_t;
 
 /**
- * Object representing an IKEv2- PROPOSAL SUBSTRUCTURE
+ * Object representing an IKEv2-PROPOSAL SUBSTRUCTURE.
  * 
  * The PROPOSAL SUBSTRUCTURE format is described in RFC section 3.3.1.
  * 
+ * @ingroup payloads
  */
 struct proposal_substructure_t {
 	/**
-	 * implements payload_t interface
+	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 
@@ -73,11 +76,8 @@ struct proposal_substructure_t {
 	 * @param this 			calling proposal_substructure_t object
 	 * @param iterator  		the created iterator is stored at the pointed pointer
 	 * @param[in] forward 	iterator direction (TRUE: front to end)
-	 * @return 		
-	 * 						- SUCCESS or
-	 * 						- OUT_OF_RES if iterator could not be created
 	 */
-	status_t (*create_transform_substructure_iterator) (proposal_substructure_t *this,iterator_t **iterator, bool forward);
+	void (*create_transform_substructure_iterator) (proposal_substructure_t *this,iterator_t **iterator, bool forward);
 	
 	/**
 	 * @brief Adds a transform_substructure_t object to this object.
@@ -87,19 +87,16 @@ struct proposal_substructure_t {
 	 *
 	 * @param this 		calling proposal_substructure_t object
 	 * @param transform transform_substructure_t object to add
-	 * @return 			- SUCCESS if succeeded
-	 * 					- FAILED otherwise
 	 */
-	status_t (*add_transform_substructure) (proposal_substructure_t *this,transform_substructure_t *transform);
+	void (*add_transform_substructure) (proposal_substructure_t *this,transform_substructure_t *transform);
 	
 	/**
 	 * @brief Sets the proposal number of current proposal.
 	 *
 	 * @param this 		calling proposal_substructure_t object
 	 * @param id			proposal number to set
-	 * @return 			- SUCCESS
 	 */
-	status_t (*set_proposal_number) (proposal_substructure_t *this,u_int8_t proposal_number);
+	void (*set_proposal_number) (proposal_substructure_t *this,u_int8_t proposal_number);
 	
 	/**
 	 * @brief get proposal number of current proposal.
@@ -114,9 +111,8 @@ struct proposal_substructure_t {
 	 *
 	 * @param this 		calling proposal_substructure_t object
 	 * @param id			protocol id to set
-	 * @return 			- SUCCESS
 	 */
-	status_t (*set_protocol_id) (proposal_substructure_t *this,u_int8_t protocol_id);
+	void (*set_protocol_id) (proposal_substructure_t *this,u_int8_t protocol_id);
 	
 	/**
 	 * @brief get protocol id of current proposal.
@@ -136,8 +132,7 @@ struct proposal_substructure_t {
 	 * @return 			
 	 * 						- SUCCESS if transform type is part of this proposal and 
 	 * 					 	 all data (incl. key length) could be fetched
-	 * 						- FAILED if transform type is not part of this proposal
-	 * 						- OUT_OF_RES
+	 * 						- NOT_FOUND if transform type is not part of this proposal
 	 */
 	status_t (*get_info_for_transform_type) (proposal_substructure_t *this,transform_type_t type, u_int16_t *transform_id, u_int16_t *key_length);
 
@@ -159,41 +154,32 @@ struct proposal_substructure_t {
 	 * 
 	 * @param this 	calling proposal_substructure_t object
 	 * @param spi	chunk_t pointing to the value to set
-	 * @return 		
-	 * 				- SUCCESS or
-	 * 				- OUT_OF_RES
 	 */
-	status_t (*set_spi) (proposal_substructure_t *this, chunk_t spi);
+	void (*set_spi) (proposal_substructure_t *this, chunk_t spi);
 
 	/**
 	 * @brief Clones an proposal_substructure_t object.
 	 *
 	 * @param this 	proposal_substructure_t object to clone
 	 * @param clone	cloned object will be written there
-	 * @return 		
-	 * 				- SUCCESS
-	 * 				- OUT_OF_RES
 	 */
-	status_t (*clone) (proposal_substructure_t *this,proposal_substructure_t **clone);
+	void (*clone) (proposal_substructure_t *this,proposal_substructure_t **clone);
 
 	/**
 	 * @brief Destroys an proposal_substructure_t object.
 	 *
 	 * @param this 	proposal_substructure_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (proposal_substructure_t *this);
+	void (*destroy) (proposal_substructure_t *this);
 };
 
 /**
  * @brief Creates an empty proposal_substructure_t object
  * 
- * @return			
- * 					- created proposal_substructure_t object, or
- * 					- NULL if failed
+ * @return			created proposal_substructure_t object
+ * 
+ * @ingroup payloads
  */
- 
 proposal_substructure_t *proposal_substructure_create();
 
 

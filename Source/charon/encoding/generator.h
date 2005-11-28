@@ -41,7 +41,7 @@
 typedef struct generator_t generator_t;
 
 /**
- *A generator_t object which generates payloads of specific type.
+ * A generator_t class used to generate IKEv2 payloads.
  * 
  * @ingroup encoding
  */

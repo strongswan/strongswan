@@ -29,7 +29,7 @@
 #include <utils/linked_list.h>
 
 /**
- * encrpytion payload length in bytes without IV and following data
+ * Encrpytion payload length in bytes without IV and following data.
  */
 #define ENCRYPTION_PAYLOAD_HEADER_LENGTH 4
 
@@ -39,10 +39,11 @@ typedef struct encryption_payload_t encryption_payload_t;
 /** 
  * @brief The encryption payload as described in RFC section 3.14.
  * 
+ * @ingroup payloads
  */
 struct encryption_payload_t {
 	/**
-	 * implements payload_t interface
+	 * Implements payload_t interface.
 	 */
 	payload_t payload_interface;
 	
@@ -52,21 +53,16 @@ struct encryption_payload_t {
 	 * @param this 			calling encryption_payload_t object
 	 * @param iterator  	the created iterator is stored at the pointed pointer
 	 * @param[in] forward 	iterator direction (TRUE: front to end)
-	 * @return	
-	 * 						- SUCCESS or
-	 * 						- OUT_OF_RES if iterator could not be created
 	 */
-	status_t (*create_payload_iterator) (encryption_payload_t *this, iterator_t **iterator, bool forward);
+	void (*create_payload_iterator) (encryption_payload_t *this, iterator_t **iterator, bool forward);
 	
 	/**
 	 * @brief Adds a payload to this encryption payload.
 	 *
 	 * @param this 			calling encryption_payload_t object
 	 * @param payload		payload_t object to add
-	 * @return 				- SUCCESS if succeeded
-	 * 						- FAILED otherwise
 	 */
-	status_t (*add_payload) (encryption_payload_t *this, payload_t *payload);
+	void (*add_payload) (encryption_payload_t *this, payload_t *payload);
 	
 	/**
 	 * @brief Decrypt and return contained data.
@@ -81,7 +77,7 @@ struct encryption_payload_t {
 	 *						- FAILED if crypter does not match data
 	 */
 	
-	status_t (*set_signer) (encryption_payload_t *this, signer_t *signer); 
+	void (*set_signer) (encryption_payload_t *this, signer_t *signer); 
 	
 	status_t (*encrypt) (encryption_payload_t *this, crypter_t *crypter);
 	status_t (*decrypt) (encryption_payload_t *this, crypter_t *crypter);
@@ -93,21 +89,18 @@ struct encryption_payload_t {
 	 * @brief Destroys an encryption_payload_t object.
 	 *
 	 * @param this 	encryption_payload_t object to destroy
-	 * @return 		
-	 * 						- SUCCESS in any case
 	 */
-	status_t (*destroy) (encryption_payload_t *this);
+	void (*destroy) (encryption_payload_t *this);
 };
 
 /**
  * @brief Creates an empty encryption_payload_t object.
  * 
- * @return			
- * 					- created encryption_payload_t object, or
- * 					- NULL if failed
+ * @return	created encryption_payload_t object
+ * 
+ * @ingroup payloads
  */
  
 encryption_payload_t *encryption_payload_create();
-
 
 #endif /*ENCRYPTION_PAYLOAD_H_*/

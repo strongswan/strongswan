@@ -1,9 +1,7 @@
 /**
  * @file nonce_payload.h
  * 
- * @brief Declaration of the class nonce_payload_t. 
- * 
- * An object of this type represents an IKEv2 Nonce-Payload.
+ * @brief Interface of nonce_payload_t.
  * 
  */
 
@@ -29,28 +27,32 @@
 #include <encoding/payloads/payload.h>
 
 /**
- * length of a nonce payload without a nonce in int
+ * Length of a nonce payload without a nonce in bytes.
+ * 
+ * @ingroup payloads
  */
 #define NONCE_PAYLOAD_HEADER_LENGTH 4
 
 typedef struct nonce_payload_t nonce_payload_t;
 
 /**
- * Object representing an IKEv2 Nonce payload
+ * Object representing an IKEv2 Nonce payload.
  * 
  * The Nonce payload format is described in draft section 3.3.
+ * 
+ * @ingroup payloads
  * 
  */
 struct nonce_payload_t {
 	/**
-	 * implements payload_t interface
+	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
 	 * @brief Set the nonce value.
 	 * 
-	 * The nonce must have length between 16 and 256 bytes
+	 * The nonce must have length between 16 and 256 bytes.
 	 *
 	 * @param this 			calling nonce_payload_t object
 	 * @param nonce	  		chunk containing the nonce, will be cloned
@@ -65,26 +67,23 @@ struct nonce_payload_t {
 	 *
 	 * @param this 			calling nonce_payload_t object
 	 * @param[out] nonce	chunk where nonce data is located (cloned)
-	 * @return 				SUCCESS in any case
 	 */
-	status_t (*get_nonce) (nonce_payload_t *this, chunk_t *nonce);
+	void (*get_nonce) (nonce_payload_t *this, chunk_t *nonce);
 	
 	/**
 	 * @brief Destroys an nonce_payload_t object.
 	 *
 	 * @param this 	nonce_payload_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (nonce_payload_t *this);
+	void (*destroy) (nonce_payload_t *this);
 };
 
 /**
  * @brief Creates an empty nonce_payload_t object
  * 
- * @return			
- * 					- created nonce_payload_t object, or
- * 					- NULL if failed
+ * @return			created nonce_payload_t object
+ * 
+ * @ingroup payloads
  */
  
 nonce_payload_t *nonce_payload_create();

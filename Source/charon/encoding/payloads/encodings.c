@@ -1,8 +1,7 @@
 /**
  * @file encodings.c
  * 
- * @brief Type definitions for parser and generator, 
- * 		  also payload types are defined here.
+ * @brief Encoding types of fields in a IKEv2 payload.
  * 
  */
 
@@ -51,4 +50,3 @@ mapping_t encoding_type_m[] = {
 	{NONCE_DATA, "NONCE_DATA"},
 	{MAPPING_END, NULL}
 };
-

@@ -60,6 +60,25 @@
 #endif
 
 
+/**
+ * @addtogroup config
+ * 
+ * Configuration stuff.
+ */
+
+/**
+ * @addtogroup encoding
+ * 
+ * Classes used to encode and decode IKEv2 Messages.
+ */
+ 
+ /**
+ * @addtogroup payloads
+ * 
+ * Classes representing a specific IKEv2 Payload type.
+ * 
+ * @ingroup encoding
+ */
 
 /**
  * @addtogroup transforms

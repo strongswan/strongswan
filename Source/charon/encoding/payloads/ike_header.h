@@ -1,10 +1,7 @@
 /**
  * @file ike_header.h
  * 
- * @brief Declaration of the class ike_header_t. 
- * 
- * An object of this type represents an ike header and is used to 
- * generate and parse ike headers.
+ * @brief Interface of ike_header_t. 
  * 
  */
 
@@ -30,22 +27,30 @@
 #include <encoding/payloads/payload.h>
 
 /**
- * Major Version of IKEv2
+ * Major Version of IKEv2.
+ * 
+ * @ingroup payloads
  */
 #define IKE_MAJOR_VERSION 2
 
 /**
- * Minor Version of IKEv2
+ * Minor Version of IKEv2.
+ * 
+ * @ingroup payloads
  */
 #define IKE_MINOR_VERSION 0
 
 /**
- * Flag in IKEv2-Header. Always 0
+ * Flag in IKEv2-Header. Always 0.
+ * 
+ * @ingroup payloads
  */
 #define HIGHER_VERSION_SUPPORTED_FLAG 0
 
 /**
- * Length of IKE Header in Bytes
+ * Length of IKE Header in Bytes.
+ * 
+ * @ingroup payloads
  */
 #define IKE_HEADER_LENGTH 28
 
@@ -54,28 +59,34 @@ typedef enum exchange_type_t exchange_type_t;
 /**
  * @brief Different types of IKE-Exchanges.
  *
- * See RFC for different types.
+ * See Draft for different types.
+ * 
+ * @ingroup payloads
  */
 enum exchange_type_t{
 
 	/**
-	 * EXCHANGE_TYPE_UNDEFINED, not a official message type :-)
+	 * EXCHANGE_TYPE_UNDEFINED, not a official message type :-).
 	 */
 	EXCHANGE_TYPE_UNDEFINED = 240,
+	
 	/**
-	 * IKE_SA_INIT
+	 * IKE_SA_INIT.
 	 */
 	IKE_SA_INIT = 34,
+
 	/**
-	 * IKE_AUTH
+	 * IKE_AUTH.
 	 */
 	IKE_AUTH = 35,
+
 	/**
-	 * CREATE_CHILD_SA
+	 * CREATE_CHILD_SA.
 	 */
 	CREATE_CHILD_SA = 36,
+
 	/**
-	 * INFORMATIONAL
+	 * INFORMATIONAL.
 	 */
 	INFORMATIONAL = 37 
 };
@@ -85,21 +96,24 @@ extern mapping_t exchange_type_m[];
 typedef struct ike_header_t ike_header_t;
 
 /**
- * Object representing an IKEv2-Header
+ * An object of this type represents an IKEv2 header and is used to 
+ * generate and parse IKEv2 headers.
+ * 
  * 
  * The header format of an IKEv2-Message is compatible to the 
  * ISAKMP-Header format to allow implementations supporting 
  * both versions of the IKE-protocol.
  * 
+ * @ingroup payloads
  */
 struct ike_header_t {
 	/**
-	 * implements payload_t interface
+	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 	
 	/**
-	 * @brief get the initiator spi
+	 * @brief Get the initiator spi.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				initiator_spi
@@ -107,7 +121,7 @@ struct ike_header_t {
 	u_int64_t (*get_initiator_spi) (ike_header_t *this);
 	
 	/**
-	 * @brief set the initiator spi
+	 * @brief Set the initiator spi.
 	 *
 	 * @param this 			ike_header_t object
 	 * @param initiator_spi	initiator_spi
@@ -115,7 +129,7 @@ struct ike_header_t {
 	void (*set_initiator_spi) (ike_header_t *this, u_int64_t initiator_spi);
 	
 	/**
-	 * @brief get the responder spi
+	 * @brief Get the responder spi.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				responder_spi
@@ -123,7 +137,7 @@ struct ike_header_t {
 	u_int64_t (*get_responder_spi) (ike_header_t *this);
 	
 	/**
-	 * @brief set the responder spi
+	 * @brief Set the responder spi.
 	 *
 	 * @param this 			ike_header_t object
 	 * @param responder_spi	responder_spi
@@ -131,7 +145,7 @@ struct ike_header_t {
 	void (*set_responder_spi) (ike_header_t *this, u_int64_t responder_spi);
 	
 	/**
-	 * @brief get the major version
+	 * @brief Get the major version.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				major version
@@ -139,7 +153,7 @@ struct ike_header_t {
 	u_int8_t (*get_maj_version) (ike_header_t *this);
 	
 	/**
-	 * @brief get the mainor version
+	 * @brief Get the minor version.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				minor version
@@ -147,7 +161,7 @@ struct ike_header_t {
 	u_int8_t (*get_min_version) (ike_header_t *this);
 	
 	/**
-	 * @brief get the response flag
+	 * @brief Get the response flag.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				response flag
@@ -155,7 +169,7 @@ struct ike_header_t {
 	bool (*get_response_flag) (ike_header_t *this);
 	
 	/**
-	 * @brief Set the response flag
+	 * @brief Set the response flag-
 	 *
 	 * @param this 			ike_header_t object
 	 * @param response		response flag
@@ -163,7 +177,7 @@ struct ike_header_t {
 	 */
 	void (*set_response_flag) (ike_header_t *this, bool response);
 	/**
-	 * @brief get "higher version supported"-flag
+	 * @brief Get "higher version supported"-flag.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				version flag
@@ -171,7 +185,7 @@ struct ike_header_t {
 	bool (*get_version_flag) (ike_header_t *this);
 	
 	/**
-	 * @brief get the initiator flag
+	 * @brief Get the initiator flag.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				initiator flag
@@ -179,7 +193,7 @@ struct ike_header_t {
 	bool (*get_initiator_flag) (ike_header_t *this);
 	
 	/**
-	 * @brief Set the initiator flag
+	 * @brief Set the initiator flag.
 	 *
 	 * @param this 			ike_header_t object
 	 * @param initiator		initiator flag
@@ -188,7 +202,7 @@ struct ike_header_t {
 	void (*set_initiator_flag) (ike_header_t *this, bool initiator);
 
 	/**
-	 * @brief get the exchange type
+	 * @brief Get the exchange type.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				 exchange type
@@ -196,7 +210,7 @@ struct ike_header_t {
 	u_int8_t (*get_exchange_type) (ike_header_t *this);
 	
 	/**
-	 * @brief set the  exchange type
+	 * @brief Set the  exchange type.
 	 *
 	 * @param this 			ike_header_t object
 	 * @param exchange_type	exchange type
@@ -204,7 +218,7 @@ struct ike_header_t {
 	void (*set_exchange_type) (ike_header_t *this, u_int8_t exchange_type);
 	
 	/**
-	 * @brief get the message id
+	 * @brief Get the message id.
 	 *
 	 * @param this 			ike_header_t object
 	 * @return 				message id
@@ -212,7 +226,7 @@ struct ike_header_t {
 	u_int32_t (*get_message_id) (ike_header_t *this);
 	
 	/**
-	 * @brief set the message id
+	 * @brief Set the message id.
 	 *
 	 * @param this 			ike_header_t object
 	 * @param initiator_spi	message id
@@ -223,20 +237,17 @@ struct ike_header_t {
 	 * @brief Destroys a ike_header_t object.
 	 *
 	 * @param this 	ike_header_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (ike_header_t *this);
+	void (*destroy) (ike_header_t *this);
 };
 
 /**
  * @brief Create an ike_header_t object
  * 
- * @return			
- * 					- created ike_header, or
- * 					- NULL if failed
+ * @return			created ike_header_t object
+ * 
+ * @ingroup payloads
  */
- 
 ike_header_t *ike_header_create();
 
 #endif /*IKE_HEADER_H_*/

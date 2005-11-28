@@ -1,11 +1,7 @@
 /**
  * @file notify_payload.c
  * 
- * @brief Declaration of the class notify_payload_t. 
- * 
- * An object of this type represents an IKEv2 Notify-Payload.
- * 
- * See section 3.10 of Draft for details of this payload type.
+ * @brief Implementation of notify_payload_t.
  * 
  */
 
@@ -36,52 +32,52 @@
 typedef struct private_notify_payload_t private_notify_payload_t;
 
 /**
- * Private data of an notify_payload_t Object
+ * Private data of an notify_payload_t object.
  * 
  */
 struct private_notify_payload_t {
 	/**
-	 * public notify_payload_t interface
+	 * Public notify_payload_t interface.
 	 */
 	notify_payload_t public;
 	
 	/**
-	 * next payload type
+	 * Next payload type.
 	 */
 	u_int8_t  next_payload;
 
 	/**
-	 * Critical flag
+	 * Critical flag.
 	 */
 	bool critical;
 		
 	/**
-	 * Length of this payload
+	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
 		
 	/**
-	 * protocol id
+	 * Protocol id.
 	 */
 	u_int8_t protocol_id;
 	
 	/**
-	 * spi size
+	 * Spi size.
 	 */
 	u_int8_t spi_size;
 	
 	/**
-	 * notify message type
+	 * Notify message type.
 	 */
 	u_int16_t notify_message_type;
 	
 	/**
-	 * Security parameter index (spi)
+	 * Security parameter index (spi).
 	 */
 	chunk_t spi;
 
 	/**
-	 * Notification data
+	 * Notification data.
 	 */
 	chunk_t notification_data;
 	
@@ -89,14 +85,12 @@ struct private_notify_payload_t {
 	 * @brief Computes the length of this payload.
 	 *
 	 * @param this 	calling private_ke_payload_t object
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*compute_length) (private_notify_payload_t *this);
+	void (*compute_length) (private_notify_payload_t *this);
 };
 
 /**
- * Encoding rules to parse or generate a IKEv2-Notify Payload
+ * Encoding rules to parse or generate a IKEv2-Notify Payload.
  * 
  * The defined offsets are the positions in a object of type 
  * private_notify_payload_t.
@@ -148,8 +142,7 @@ encoding_rule_t notify_payload_encodings[] = {
 */
 
 /**
- * Implements payload_t's verify function.
- * See #payload_s.verify for description.
+ * Implementation of payload_t.verify.
  */
 static status_t verify(private_notify_payload_t *this)
 {
@@ -170,19 +163,16 @@ static status_t verify(private_notify_payload_t *this)
 }
 
 /**
- * Implements payload_t's get_encoding_rules function.
- * See #payload_s.get_encoding_rules for description.
+ * Implementation of payload_t.get_encoding_rules.
  */
-static status_t get_encoding_rules(private_notify_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+static void get_encoding_rules(private_notify_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = notify_payload_encodings;
 	*rule_count = sizeof(notify_payload_encodings) / sizeof(encoding_rule_t);
-	return SUCCESS;
 }
 
 /**
- * Implements payload_t's get_type function.
- * See #payload_s.get_type for description.
+ * Implementation of payload_t.get_type.
  */
 static payload_type_t get_type(private_notify_payload_t *this)
 {
@@ -190,8 +180,7 @@ static payload_type_t get_type(private_notify_payload_t *this)
 }
 
 /**
- * Implements payload_t's get_next_type function.
- * See #payload_s.get_next_type for description.
+ * Implementation of payload_t.get_next_type.
  */
 static payload_type_t get_next_type(private_notify_payload_t *this)
 {
@@ -199,18 +188,15 @@ static payload_type_t get_next_type(private_notify_payload_t *this)
 }
 
 /**
- * Implements payload_t's set_next_type function.
- * See #payload_s.set_next_type for description.
+ * Implementation of payload_t.set_next_type.
  */
-static status_t set_next_type(private_notify_payload_t *this,payload_type_t type)
+static void set_next_type(private_notify_payload_t *this,payload_type_t type)
 {
 	this->next_payload = type;
-	return SUCCESS;
 }
 
 /**
- * Implements payload_t's get_length function.
- * See #payload_s.get_length for description.
+ * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_notify_payload_t *this)
 {
@@ -219,10 +205,9 @@ static size_t get_length(private_notify_payload_t *this)
 }
 
 /**
- * Implements private_ke_payload_t's compute_length function.
- * See #private_ke_payload_s.compute_length for description.
+ * Implementation of private_notify_payload_t.compute_length.
  */
-static status_t compute_length (private_notify_payload_t *this)
+static void compute_length (private_notify_payload_t *this)
 {
 	size_t length = NOTIFY_PAYLOAD_HEADER_LENGTH;
 	if (this->notification_data.ptr != NULL)
@@ -235,63 +220,53 @@ static status_t compute_length (private_notify_payload_t *this)
 	}
 	
 	this->payload_length = length;
-		
-	return SUCCESS;
+
 }
 
-
 /**
- * Implements notify_payload_t's get_protocol_id function.
- * See #notify_payload_s.get_protocol_id for description.
+ * Implementation of notify_payload_t.get_protocol_id.
  */
-u_int8_t get_protocol_id(private_notify_payload_t *this)
+static u_int8_t get_protocol_id(private_notify_payload_t *this)
 {
 	return this->protocol_id;
 }
 
 /**
- * Implements notify_payload_t's set_protocol_id function.
- * See #notify_payload_s.set_protocol_id for description.
+ * Implementation of notify_payload_t.set_protocol_id.
  */
-status_t set_protocol_id(private_notify_payload_t *this, u_int8_t protocol_id)
+static void set_protocol_id(private_notify_payload_t *this, u_int8_t protocol_id)
 {
 	this->protocol_id = protocol_id;
-	return SUCCESS;
 }
 
 /**
- * Implements notify_payload_t's get_notification_data function.
- * See #notify_payload_s.get_notification_data for description.
+ * Implementation of notify_payload_t.get_notify_message_type.
  */
-u_int16_t get_notify_message_type(private_notify_payload_t *this)
+static u_int16_t get_notify_message_type(private_notify_payload_t *this)
 {
 	return this->notify_message_type;
 }
 
 /**
- * Implements notify_payload_t's get_notification_data function.
- * See #notify_payload_s.get_notification_data for description.
+ * Implementation of notify_payload_t.set_notify_message_type.
  */
-status_t set_notify_message_type(private_notify_payload_t *this, u_int16_t notify_message_type)
+static void set_notify_message_type(private_notify_payload_t *this, u_int16_t notify_message_type)
 {
 	this->notify_message_type = notify_message_type;
-	return SUCCESS;
 }
 
 /**
- * Implements notify_payload_t's get_spi function.
- * See #notify_payload_s.get_spi for description.
+ * Implementation of notify_payload_t.get_spi.
  */
-chunk_t get_spi(private_notify_payload_t *this)
+static chunk_t get_spi(private_notify_payload_t *this)
 {
 	return (this->spi);
 }
 
 /**
- * Implements notify_payload_t's set_spi function.
- * See #notify_payload_s.set_spi for description.
+ * Implementation of notify_payload_t.set_spi.
  */
-status_t set_spi(private_notify_payload_t *this, chunk_t spi)
+static void set_spi(private_notify_payload_t *this, chunk_t spi)
 {
 	/* destroy existing data first */
 	if (this->spi.ptr != NULL)
@@ -304,32 +279,25 @@ status_t set_spi(private_notify_payload_t *this, chunk_t spi)
 	}
 	
 	this->spi.ptr = allocator_clone_bytes(spi.ptr,spi.len);
-	if (this->spi.ptr == NULL)
-	{
-		return OUT_OF_RES;
-	}
+
 	this->spi.len = spi.len;
 	this->spi_size = spi.len;
 	this->compute_length(this);
-	
-	return SUCCESS;
+
 }
 
-
 /**
- * Implements notify_payload_t's get_notification_data function.
- * See #notify_payload_s.get_notification_data for description.
+ * Implementation of notify_payload_t.get_notification_data.
  */
-chunk_t get_notification_data(private_notify_payload_t *this)
+static chunk_t get_notification_data(private_notify_payload_t *this)
 {
 	return (this->notification_data);
 }
 
 /**
- * Implements notify_payload_t's get_notification_data function.
- * See #notify_payload_s.get_notification_data for description.
+ * Implementation of notify_payload_t.set_notification_data.
  */
-status_t set_notification_data(private_notify_payload_t *this, chunk_t notification_data)
+static status_t set_notification_data(private_notify_payload_t *this, chunk_t notification_data)
 {
 	/* destroy existing data first */
 	if (this->notification_data.ptr != NULL)
@@ -342,10 +310,6 @@ status_t set_notification_data(private_notify_payload_t *this, chunk_t notificat
 	}
 	
 	this->notification_data.ptr = allocator_clone_bytes(notification_data.ptr,notification_data.len);
-	if (this->notification_data.ptr == NULL)
-	{
-		return OUT_OF_RES;
-	}
 	this->notification_data.len = notification_data.len;
 	this->compute_length(this);
 	
@@ -353,8 +317,7 @@ status_t set_notification_data(private_notify_payload_t *this, chunk_t notificat
 }
 
 /**
- * Implements payload_t's and notify_payload_t's destroy function.
- * See #payload_s.destroy or notify_payload_s.destroy for description.
+ * Implementation of notify_payload_t.destroy and notify_payload_t.destroy.
  */
 static status_t destroy(private_notify_payload_t *this)
 {
@@ -377,29 +340,26 @@ static status_t destroy(private_notify_payload_t *this)
 notify_payload_t *notify_payload_create()
 {
 	private_notify_payload_t *this = allocator_alloc_thing(private_notify_payload_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}	
+
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
+	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;
+	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
-	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 
 	/* public functions */
 	this->public.get_protocol_id = (u_int8_t (*) (notify_payload_t *)) get_protocol_id;
-	this->public.set_protocol_id  = (status_t (*) (notify_payload_t *,u_int8_t)) set_protocol_id;
+	this->public.set_protocol_id  = (void (*) (notify_payload_t *,u_int8_t)) set_protocol_id;
 	this->public.get_notify_message_type = (u_int16_t (*) (notify_payload_t *)) get_notify_message_type;
-	this->public.set_notify_message_type = (status_t (*) (notify_payload_t *,u_int16_t)) set_notify_message_type;
+	this->public.set_notify_message_type = (void (*) (notify_payload_t *,u_int16_t)) set_notify_message_type;
 	this->public.get_spi = (chunk_t (*) (notify_payload_t *)) get_spi;
-	this->public.set_spi = (status_t (*) (notify_payload_t *,chunk_t)) set_spi;
+	this->public.set_spi = (void (*) (notify_payload_t *,chunk_t)) set_spi;
 	this->public.get_notification_data = (chunk_t (*) (notify_payload_t *)) get_notification_data;
-	this->public.set_notification_data = (status_t (*) (notify_payload_t *,chunk_t)) set_notification_data;
-	this->public.destroy = (status_t (*) (notify_payload_t *)) destroy;
+	this->public.set_notification_data = (void (*) (notify_payload_t *,chunk_t)) set_notification_data;
+	this->public.destroy = (void (*) (notify_payload_t *)) destroy;
 	
 	/* private functions */
 	this->compute_length = compute_length;

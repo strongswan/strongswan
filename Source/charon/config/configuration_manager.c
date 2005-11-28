@@ -214,7 +214,6 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 static status_t select_proposals_for_host(private_configuration_manager_t *this, host_t *host, iterator_t *in, iterator_t *out)
 {
 	/* Currently the first suggested proposal is selected, cloned and then returned*/
-	status_t status;
 	proposal_substructure_t *first_suggested_proposal;
 	proposal_substructure_t *selected_proposal;
 	
@@ -226,12 +225,12 @@ static status_t select_proposals_for_host(private_configuration_manager_t *this,
 		return FAILED;
 	}
 	
-	status = in->current(in,(void **) &first_suggested_proposal);
+	in->current(in,(void **) &first_suggested_proposal);
 
-	status = first_suggested_proposal->clone(first_suggested_proposal,&selected_proposal);
+	first_suggested_proposal->clone(first_suggested_proposal,&selected_proposal);
 	
-	status = out->insert_after(out,selected_proposal);
-	return status;
+	out->insert_after(out,selected_proposal);
+	return SUCCESS;
 }
 
 /**

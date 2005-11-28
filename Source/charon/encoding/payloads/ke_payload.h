@@ -1,11 +1,7 @@
 /**
  * @file ke_payload.h
  * 
- * @brief Declaration of the class ke_payload_t. 
- * 
- * An object of this type represents an IKEv2 KE-Payload.
- * 
- * See section 3.4 of RFC for details of this payload type.
+ * @brief Interface of ke_payload_t.
  * 
  */
 
@@ -33,12 +29,16 @@
 #include <utils/linked_list.h>
 
 /**
- * Critical flag must not be set
+ * Critical flag must not be set.
+ * 
+ * @ingroup payloads
  */
 #define KE_PAYLOAD_CRITICAL_FLAG FALSE;
 
 /**
- * KE payload length in bytes without any key exchange data
+ * KE payload length in bytes without any key exchange data.
+ * 
+ * @ingroup payloads
  */
 #define KE_PAYLOAD_HEADER_LENGTH 8
 
@@ -46,14 +46,15 @@
 typedef struct ke_payload_t ke_payload_t;
 
 /**
- * Object representing an IKEv2-KE Payload
+ * Object representing an IKEv2-KE Payload.
  * 
  * The KE Payload format is described in RFC section 3.4.
  * 
+ * @ingroup payloads
  */
 struct ke_payload_t {
 	/**
-	 * implements payload_t interface
+	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 	
@@ -74,11 +75,8 @@ struct ke_payload_t {
 	 * 
 	 * @param this 				calling ke_payload_t object
 	 * @param key_exchange_data 	chunk_t pointing to the value to set
-	 * @return 		
-	 * 							- SUCCESS or
-	 * 							- OUT_OF_RES
 	 */
-	status_t (*set_key_exchange_data) (ke_payload_t *this, chunk_t key_exchange_data);
+	void (*set_key_exchange_data) (ke_payload_t *this, chunk_t key_exchange_data);
 
 	/**
 	 * @brief Gets the Diffie-Hellman Group Number of this KE payload.
@@ -93,28 +91,24 @@ struct ke_payload_t {
 	 * 	
 	 * @param this 				calling ke_payload_t object
 	 * @param dh_group_number	DH Group to set
-	 * @return 					SUCCESS
 	 */
-	status_t (*set_dh_group_number) (ke_payload_t *this, diffie_hellman_group_t dh_group_number);
+	void (*set_dh_group_number) (ke_payload_t *this, diffie_hellman_group_t dh_group_number);
 
 	/**
 	 * @brief Destroys an ke_payload_t object.
 	 *
 	 * @param this 	ke_payload_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (ke_payload_t *this);
+	void (*destroy) (ke_payload_t *this);
 };
 
 /**
  * @brief Creates an empty ke_payload_t object
  * 
- * @return			
- * 					- created ke_payload_t object, or
- * 					- NULL if failed
+ * @return			created ke_payload_t object
+ * 
+ * @ingroup payloads
  */
- 
 ke_payload_t *ke_payload_create();
 
 

@@ -1,13 +1,7 @@
 /**
  * @file encodings.h
  * 
- * @brief Type definitions for parser and generator, 
- * 		  also payload types are defined here.
- * 
- * Header is parsed like a payload and gets its one payload_id 
- * from PRIVATE USE space. Also the substructures 
- * of specific payload types get their own payload_id 
- * from PRIVATE_USE space. See RFC for mor informations.
+ * @brief Encoding types of fields in a IKEv2 payload.
  * 
  */
 
@@ -41,10 +35,17 @@ typedef enum encoding_type_t encoding_type_t;
  * Each field of an IKEv2-Message (in header or payload) 
  * which has to be parsed or generated differently has its own
  * type defined here.
+ * 
+ * Header is parsed like a payload and gets its one payload_id 
+ * from PRIVATE USE space. Also the substructures 
+ * of specific payload types get their own payload_id 
+ * from PRIVATE_USE space. See IKEv2-Draft for more informations.
+ * 
+ * @ingroup payloads
  */
 enum encoding_type_t{
 	/**
-	 * Representing a 4 Bit unsigned int value
+	 * Representing a 4 Bit unsigned int value.
 	 * 
 	 * 
 	 * When generating it must be changed from host to network order.
@@ -57,7 +58,7 @@ enum encoding_type_t{
 	 */
 	U_INT_4,
 	/**
-	 * Representing a 8 Bit unsigned int value
+	 * Representing a 8 Bit unsigned int value.
 	 * 
 	 * 
 	 * When generating it must be changed from host to network order.
@@ -70,7 +71,7 @@ enum encoding_type_t{
 	 */
 	U_INT_8,
 	/**
-	 * Representing a 16 Bit unsigned int value
+	 * Representing a 16 Bit unsigned int value.
 	 * 
 	 * 
 	 * When generating it must be changed from host to network order.
@@ -83,7 +84,7 @@ enum encoding_type_t{
 	 */
 	U_INT_16,
 	/**
-	 * Representing a 32 Bit unsigned int value
+	 * Representing a 32 Bit unsigned int value.
 	 * 
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -96,7 +97,7 @@ enum encoding_type_t{
 
 	U_INT_32,
 	/**
-	 * Representing a 64 Bit unsigned int value
+	 * Representing a 64 Bit unsigned int value.
 	 * 
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -108,7 +109,7 @@ enum encoding_type_t{
 	 */
 	U_INT_64,
 	/**
-	 * @brief represents a RESERVED_BIT used in FLAG-Bytes
+	 * @brief represents a RESERVED_BIT used in FLAG-Bytes.
 	 * 
 	 * When generating, the next bit is set to zero and the current write 
 	 * position is moved one bit forward.
@@ -121,7 +122,7 @@ enum encoding_type_t{
 	 */
 	RESERVED_BIT,
 	/**
-	 * @brief represents a RESERVED_BYTE
+	 * @brief represents a RESERVED_BYTE.
 	 * 
 	 * When generating, the next byte is set to zero and the current write 
 	 * position is moved one byte forward.
@@ -146,7 +147,7 @@ enum encoding_type_t{
 	 */
 	FLAG,
 	/**
-	 * Representating a length field of a payload
+	 * Representating a length field of a payload.
 	 * 
  	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -158,7 +159,7 @@ enum encoding_type_t{
 	 */
 	PAYLOAD_LENGTH,
 	/**
-	 * Representating a length field of a header
+	 * Representating a length field of a header.
 	 * 
  	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -170,7 +171,7 @@ enum encoding_type_t{
 	 */
 	HEADER_LENGTH,
 	/**
-	 * Representating a spi size field
+	 * Representating a spi size field.
 	 * 
  	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -182,7 +183,7 @@ enum encoding_type_t{
 	 */
 	SPI_SIZE,
 	/**
-	 * Representating a spi field
+	 * Representating a spi field.
 	 * 
  	 * When generating the content of the chunkt pointing to 
  	 * is written.
@@ -191,7 +192,7 @@ enum encoding_type_t{
 	 */
 	SPI,
 	/**
-	 * Representating a Key Exchange Data field
+	 * Representating a Key Exchange Data field.
 	 * 
  	 * When generating the content of the chunkt pointing to 
  	 * is written.
@@ -200,7 +201,7 @@ enum encoding_type_t{
 	 */
 	KEY_EXCHANGE_DATA,
 	/**
-	 * Representating a Notification field
+	 * Representating a Notification field.
 	 * 
  	 * When generating the content of the chunkt pointing to 
  	 * is written.
@@ -209,7 +210,7 @@ enum encoding_type_t{
 	 */
 	NOTIFICATION_DATA,
 	/**
-	 * Representating one or more proposal substructures
+	 * Representating one or more proposal substructures.
 	 * 
 	 * The offset points to a linked_list_t pointer.
 	 * 
@@ -221,7 +222,7 @@ enum encoding_type_t{
 	 */	
 	PROPOSALS,
 	/**
-	 * Representating one or more transform substructures
+	 * Representating one or more transform substructures.
 	 * 
 	 * The offset points to a linked_list_t pointer.
 	 * 
@@ -233,7 +234,7 @@ enum encoding_type_t{
 	 */	
 	TRANSFORMS,
 	/**
-	 * Representating one or more Attributes of a transform substructure
+	 * Representating one or more Attributes of a transform substructure.
 	 * 
 	 * The offset points to a linked_list_t pointer.
 	 * 
@@ -258,7 +259,7 @@ enum encoding_type_t{
 	ATTRIBUTE_FORMAT,
 	/**
 	 * Representing a 15 Bit unsigned int value used as attribute type 
-	 * in an attribute transform
+	 * in an attribute transform.
 	 * 
 	 * 
 	 * When generating it must be changed from host to network order.
@@ -274,7 +275,7 @@ enum encoding_type_t{
 	/**
 	 * Depending on the field of type ATTRIBUTE_FORMAT
 	 * this field contains the length or the value of an transform attribute.
-	 * Its stored in a 16 unsigned integer field
+	 * Its stored in a 16 unsigned integer field.
 	 * 
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -289,7 +290,7 @@ enum encoding_type_t{
 	/**
 	 * Depending on the field of type ATTRIBUTE_FORMAT
 	 * this field is available or missing and so parsed/generated 
-	 * or not parsed/not generated
+	 * or not parsed/not generated.
 	 * 
  	 * When generating the content of the chunkt pointing to 
  	 * is written.
@@ -299,7 +300,7 @@ enum encoding_type_t{
 	ATTRIBUTE_VALUE,
 
 	/**
-	 * Representating a Nonce Data field
+	 * Representating a Nonce Data field.
 	 * 
  	 * When generating the content of the chunkt pointing to 
  	 * is written.
@@ -309,7 +310,7 @@ enum encoding_type_t{
 	NONCE_DATA,
 
 	/**
-	 * Representating an IKE_SPI field in an IKEv2 Header
+	 * Representating an IKE_SPI field in an IKEv2 Header.
 	 * 
  	 * When generating the value of the u_int64_t pointing to 
  	 * is written (host and networ order is not changed).
@@ -327,24 +328,27 @@ enum encoding_type_t{
  */
 extern mapping_t encoding_type_m[];
 
+typedef struct encoding_rule_t encoding_rule_t;
+
 /**
  * An encoding rule is a mapping of a specific encoding type to 
  * a location in the data struct where the current field is stored to
  * or read from.
  * 
- * For examples see directory encodings/.
+ * For examples see files in this directory.
  * 
  * This rules are used by parser and generator.
+ * 
+ * @ingroup payloads
  */
-typedef struct encoding_rule_t encoding_rule_t;
-
 struct encoding_rule_t {
 	/**
-	 * Encoding type
+	 * Encoding type.
 	 */
 	encoding_type_t type;
+	
 	/**
-	 * Offset in the data struct
+	 * Offset in the data struct.
 	 * 
 	 * When parsing, data are written to this offset of the 
 	 * data struct.
@@ -354,9 +358,5 @@ struct encoding_rule_t {
 	 */
 	u_int32_t offset;
 };
-
-
-
-
 
 #endif /*ENCODINGS_H_*/

@@ -1,10 +1,7 @@
 /**
  * @file sa_payload.c
  * 
- * @brief Declaration of the class sa_payload_t. 
- * 
- * An object of this type represents an IKEv2 SA-Payload and contains proposal 
- * substructures.
+ * @brief Implementation of sa_payload_t.
  * 
  */
 
@@ -36,32 +33,32 @@
 typedef struct private_sa_payload_t private_sa_payload_t;
 
 /**
- * Private data of an sa_payload_t' Object
+ * Private data of an sa_payload_t object.
  * 
  */
 struct private_sa_payload_t {
 	/**
-	 * public sa_payload_t interface
+	 * Public sa_payload_t interface.
 	 */
 	sa_payload_t public;
 	
 	/**
-	 * next payload type
+	 * Next payload type.
 	 */
 	u_int8_t  next_payload;
 
 	/**
-	 * Critical flag
+	 * Critical flag.
 	 */
 	bool critical;
 	
 	/**
-	 * Length of this payload
+	 * Length of this payload.
 	 */
 	u_int16_t payload_length;
 	
 	/**
-	 * Proposals in this payload are stored in a linked_list_t
+	 * Proposals in this payload are stored in a linked_list_t.
 	 */
 	linked_list_t * proposals;
 	
@@ -69,10 +66,8 @@ struct private_sa_payload_t {
 	 * @brief Computes the length of this payload.
 	 *
 	 * @param this 	calling private_sa_payload_t object
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*compute_length) (private_sa_payload_t *this);
+	void (*compute_length) (private_sa_payload_t *this);
 };
 
 /**
@@ -115,8 +110,7 @@ encoding_rule_t sa_payload_encodings[] = {
 */
 
 /**
- * Implements payload_t's verify function.
- * See #payload_s.verify for description.
+ * Implementation of payload_t.verify.
  */
 static status_t verify(private_sa_payload_t *this)
 {
@@ -177,8 +171,7 @@ static status_t verify(private_sa_payload_t *this)
 
 
 /**
- * Implements payload_t's and sa_payload_t's destroy function.
- * See #payload_s.destroy or sa_payload_s.destroy for description.
+ * Implementation of payload_t.destroy and sa_payload_t.destroy.
  */
 static status_t destroy(private_sa_payload_t *this)
 {
@@ -186,10 +179,7 @@ static status_t destroy(private_sa_payload_t *this)
 	while (this->proposals->get_count(this->proposals) > 0)
 	{
 		proposal_substructure_t *current_proposal;
-		if (this->proposals->remove_last(this->proposals,(void **)&current_proposal) != SUCCESS)
-		{
-			break;
-		}
+		this->proposals->remove_last(this->proposals,(void **)&current_proposal);
 		current_proposal->destroy(current_proposal);
 	}
 	this->proposals->destroy(this->proposals);
@@ -200,20 +190,16 @@ static status_t destroy(private_sa_payload_t *this)
 }
 
 /**
- * Implements payload_t's get_encoding_rules function.
- * See #payload_s.get_encoding_rules for description.
+ * Implementation of payload_t.get_encoding_rules.
  */
-static status_t get_encoding_rules(private_sa_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
+static void get_encoding_rules(private_sa_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
 	*rules = sa_payload_encodings;
 	*rule_count = sizeof(sa_payload_encodings) / sizeof(encoding_rule_t);
-	
-	return SUCCESS;
 }
 
 /**
- * Implements payload_t's get_type function.
- * See #payload_s.get_type for description.
+ * Implementation of payload_t.get_type.
  */
 static payload_type_t get_type(private_sa_payload_t *this)
 {
@@ -221,8 +207,7 @@ static payload_type_t get_type(private_sa_payload_t *this)
 }
 
 /**
- * Implements payload_t's get_next_type function.
- * See #payload_s.get_next_type for description.
+ * Implementation of payload_t.get_next_type.
  */
 static payload_type_t get_next_type(private_sa_payload_t *this)
 {
@@ -230,18 +215,15 @@ static payload_type_t get_next_type(private_sa_payload_t *this)
 }
 
 /**
- * Implements payload_t's set_next_type function.
- * See #payload_s.set_next_type for description.
+ * Implementation of payload_t.set_next_type.
  */
-static status_t set_next_type(private_sa_payload_t *this,payload_type_t type)
+static void set_next_type(private_sa_payload_t *this,payload_type_t type)
 {
 	this->next_payload = type;
-	return SUCCESS;
 }
 
 /**
- * Implements payload_t's get_length function.
- * See #payload_s.get_length for description.
+ * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_sa_payload_t *this)
 {
@@ -250,40 +232,30 @@ static size_t get_length(private_sa_payload_t *this)
 }
 
 /**
- * Implements sa_payload_t's create_proposal_substructure_iterator function.
- * See #sa_payload_s.create_proposal_substructure_iterator for description.
+ * Implementation of sa_payload_t.create_proposal_substructure_iterator.
  */
-static status_t create_proposal_substructure_iterator (private_sa_payload_t *this,iterator_t **iterator,bool forward)
+static void create_proposal_substructure_iterator (private_sa_payload_t *this,iterator_t **iterator,bool forward)
 {
-	return (this->proposals->create_iterator(this->proposals,iterator,forward));
+	this->proposals->create_iterator(this->proposals,iterator,forward);
 }
 
 /**
- * Implements sa_payload_t's add_proposal_substructure function.
- * See #sa_payload_s.add_proposal_substructure for description.
+ * Implementation of sa_payload_t.add_proposal_substructure.
  */
-static status_t add_proposal_substructure (private_sa_payload_t *this,proposal_substructure_t *proposal)
+static void add_proposal_substructure (private_sa_payload_t *this,proposal_substructure_t *proposal)
 {
-	status_t status;
-	status = this->proposals->insert_last(this->proposals,(void *) proposal);
+	this->proposals->insert_last(this->proposals,(void *) proposal);
 	this->compute_length(this);
-	return status;
 }
 
 /**
- * Implements private_sa_payload_t's compute_length function.
- * See #private_sa_payload_s.compute_length for description.
+ * Implementation of private_sa_payload_t.compute_length.
  */
-static status_t compute_length (private_sa_payload_t *this)
+static void compute_length (private_sa_payload_t *this)
 {
 	iterator_t *iterator;
-	status_t status;
 	size_t length = SA_PAYLOAD_HEADER_LENGTH;
-	status = this->proposals->create_iterator(this->proposals,&iterator,TRUE);
-	if (status != SUCCESS)
-	{
-		return length;
-	}
+	this->proposals->create_iterator(this->proposals,&iterator,TRUE);
 	while (iterator->has_next(iterator))
 	{
 		payload_t *current_proposal;
@@ -293,34 +265,28 @@ static status_t compute_length (private_sa_payload_t *this)
 	iterator->destroy(iterator);
 	
 	this->payload_length = length;
-		
-	return SUCCESS;
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 sa_payload_t *sa_payload_create()
 {
 	private_sa_payload_t *this = allocator_alloc_thing(private_sa_payload_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}	
 	
 	/* public interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (status_t (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
+	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
 	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
 	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (status_t (*) (payload_t *,payload_type_t)) set_next_type;
+	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
-	this->public.payload_interface.destroy = (status_t (*) (payload_t *))destroy;
+	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.create_proposal_substructure_iterator = (status_t (*) (sa_payload_t *,iterator_t **,bool)) create_proposal_substructure_iterator;
-	this->public.add_proposal_substructure = (status_t (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
-	this->public.destroy = (status_t (*) (sa_payload_t *)) destroy;
+	this->public.create_proposal_substructure_iterator = (void (*) (sa_payload_t *,iterator_t **,bool)) create_proposal_substructure_iterator;
+	this->public.add_proposal_substructure = (void (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
+	this->public.destroy = (void (*) (sa_payload_t *)) destroy;
 	
 	/* private functions */
 	this->compute_length = compute_length;
@@ -331,12 +297,6 @@ sa_payload_t *sa_payload_create()
 	this->payload_length = SA_PAYLOAD_HEADER_LENGTH;
 
 	this->proposals = linked_list_create();
-	
-	if (this->proposals == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 	return (&(this->public));
 }
 

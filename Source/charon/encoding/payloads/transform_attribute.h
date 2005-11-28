@@ -1,9 +1,7 @@
 /**
  * @file transform_attribute.h
  * 
- * @brief Declaration of the class transform_attribute_t. 
- * 
- * An object of this type represents an IKEv2 TRANSFORM attribute.
+ * @brief Interface of transform_attribute_t.
  * 
  */
 
@@ -32,7 +30,9 @@
 typedef enum transform_attribute_type_t transform_attribute_type_t;
 
 /**
- * Type of the attribute, as in IKEv2 draft 3.3.5
+ * Type of the attribute, as in IKEv2 draft 3.3.5.
+ * 
+ * @ingroup payloads
  */
 enum transform_attribute_type_t {
 	ATTRIBUTE_UNDEFINED = 16384,
@@ -40,28 +40,31 @@ enum transform_attribute_type_t {
 };
 
 /** 
- * string mappings for transform_attribute_type_t
+ * String mappings for transform_attribute_type_t.
+ * 
+ * @ingroup payloads
  */
 extern mapping_t transform_attribute_type_m[];
 
 typedef struct transform_attribute_t transform_attribute_t;
 
 /**
- * Object representing an IKEv2- TRANSFORM Attribute
+ * Object representing an IKEv2- TRANSFORM Attribute.
  * 
  * The TRANSFORM ATTRIBUTE format is described in RFC section 3.3.5.
  * 
+ * @ingroup payloads
  */
 struct transform_attribute_t {
 	/**
-	 * implements payload_t interface
+	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 
 	/**
-	 * @brief Returns the currently set value of the attribute
+	 * @brief Returns the currently set value of the attribute.
 	 * 	
-	 * @warning Returned data are not copied
+	 * @warning Returned data are not copied.
 	 * 
 	 * @param this 	calling transform_attribute_t object
 	 * @return 		chunk_t pointing to the value
@@ -69,9 +72,9 @@ struct transform_attribute_t {
 	chunk_t (*get_value_chunk) (transform_attribute_t *this);
 	
 	/**
-	 * @brief Returns the currently set value of the attribute
+	 * @brief Returns the currently set value of the attribute.
 	 * 	
-	 * @warning Returned data are not copied
+	 * @warning Returned data are not copied.
 	 * 
 	 * @param this 	calling transform_attribute_t object
 	 * @return 		value
@@ -81,35 +84,28 @@ struct transform_attribute_t {
 	/**
 	 * @brief Sets the value of the attribute.
 	 * 	
-	 * @warning Value is getting copied
+	 * @warning Value is getting copied.
 	 * 
 	 * @param this 	calling transform_attribute_t object
 	 * @param value chunk_t pointing to the value to set
-	 * @return 		
-	 * 				- SUCCESS or
-	 * 				- OUT_OF_RES
 	 */
-	status_t (*set_value_chunk) (transform_attribute_t *this, chunk_t value);
+	void (*set_value_chunk) (transform_attribute_t *this, chunk_t value);
 
 	/**
 	 * @brief Sets the value of the attribute.
 	 * 
 	 * @param this 	calling transform_attribute_t object
 	 * @param value value to set
-	 * @return 		
-	 * 				- SUCCESS or
-	 * 				- OUT_OF_RES
 	 */
-	status_t (*set_value) (transform_attribute_t *this, u_int16_t value);
+	void (*set_value) (transform_attribute_t *this, u_int16_t value);
 
 	/**
 	 * @brief Sets the type of the attribute.
 	 * 	
 	 * @param this 	calling transform_attribute_t object
 	 * @param type	type to set (most significant bit is set to zero)
-	 * @return 		SUCCESS
 	 */
-	status_t (*set_attribute_type) (transform_attribute_t *this, u_int16_t type);
+	void (*set_attribute_type) (transform_attribute_t *this, u_int16_t type);
 	
 	/**
 	 * @brief get the type of the attribute.
@@ -124,30 +120,23 @@ struct transform_attribute_t {
 	 *
 	 * @param this 	transform_attribute_t object to clone
 	 * @param clone	the new clone will be written there
-	 * @return 		
-	 * 				- OUT_OF_RES
-	 * 				- SUCCESS
 	 */
-	status_t (*clone) (transform_attribute_t *this,transform_attribute_t **clone);
+	void (*clone) (transform_attribute_t *this,transform_attribute_t **clone);
 
 	/**
 	 * @brief Destroys an transform_attribute_t object.
 	 *
 	 * @param this 	transform_attribute_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (transform_attribute_t *this);
+	void (*destroy) (transform_attribute_t *this);
 };
 
 /**
  * @brief Creates an empty transform_attribute_t object
  * 
- * @return			
- * 					- created transform_attribute_t object, or
- * 					- NULL if failed
+ * @return			created transform_attribute_t object
+ * @ingroup payloads
  */
- 
 transform_attribute_t *transform_attribute_create();
 
 #endif /*TRANSFORM_ATTRIBUTE_H_*/
