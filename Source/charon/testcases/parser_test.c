@@ -65,7 +65,7 @@ void test_parser_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(parser != NULL), "parser create check");
 	status = parser->parse_payload(parser, HEADER, (payload_t**)&ike_header);
 	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
-	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	parser->destroy(parser);
 	
 	if (status != SUCCESS)
 	{
@@ -120,7 +120,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 	tester->assert_true(tester,(parser != NULL), "parser create check");
 	status = parser->parse_payload(parser, SECURITY_ASSOCIATION, (payload_t**)&sa_payload);
 	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
-	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	parser->destroy(parser);
 	
 	if (status != SUCCESS)
 	{
@@ -209,7 +209,7 @@ void test_parser_with_nonce_payload(tester_t *tester)
 	tester->assert_true(tester,(parser != NULL), "parser create check");
 	status = parser->parse_payload(parser, NONCE, (payload_t**)&nonce_payload);
 	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
-	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	parser->destroy(parser);
 	
 	if (status != SUCCESS)
 	{
@@ -248,7 +248,7 @@ void test_parser_with_ke_payload(tester_t *tester)
 	tester->assert_true(tester,(parser != NULL), "parser create check");
 	status = parser->parse_payload(parser, KEY_EXCHANGE, (payload_t**)&ke_payload);
 	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
-	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	parser->destroy(parser);
 	
 	if (status != SUCCESS)
 	{
@@ -289,7 +289,7 @@ void test_parser_with_notify_payload(tester_t *tester)
 	tester->assert_true(tester,(parser != NULL), "parser create check");
 	status = parser->parse_payload(parser, NOTIFY, (payload_t**)&notify_payload);
 	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
-	tester->assert_true(tester,(parser->destroy(parser) == SUCCESS), "parser destroy call check");
+	parser->destroy(parser);
 	
 	if (status != SUCCESS)
 	{

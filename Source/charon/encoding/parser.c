@@ -1,7 +1,7 @@
 /**
  * @file parser.c
  *
- * @brief Generic parser class used to parse IKEv2-Header and Payload
+ * @brief Implementation of parser_t.
  *
  */
 
@@ -44,24 +44,23 @@
 
 
 
-
 typedef struct private_parser_t private_parser_t;
 
 /**
- * @private data stored in a context
+ * Private data stored in a context.
  * 
- * contains pointers and counters to store current state
+ * Contains pointers and counters to store current state.
  */
 struct private_parser_t {
 	/**
-	 * Public members, see parser_t
+	 * Public members, see parser_t.
 	 */
 	parser_t public;
 	
 	/**
-	 * @brief parse a 4-Bit unsigned integer from the current parsing position.
+	 * @brief Parse a 4-Bit unsigned integer from the current parsing position.
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer where to write the parsed result
 	 * @return 					
@@ -71,9 +70,9 @@ struct private_parser_t {
 	status_t (*parse_uint4)  (private_parser_t *this, int rule_number, u_int8_t *output_pos);
 	
 	/**
-	 * @brief parse a 8-Bit unsigned integer from the current parsing position.
+	 * @brief Parse a 8-Bit unsigned integer from the current parsing position.
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer where to write the parsed result
 	 * @return 					
@@ -83,12 +82,12 @@ struct private_parser_t {
 	status_t (*parse_uint8)  (private_parser_t *this, int rule_number, u_int8_t *output_pos);
 	
 	/**
-	 * @brief parse a 15-Bit unsigned integer from the current parsing position.
+	 * @brief Parse a 15-Bit unsigned integer from the current parsing position.
 	 * 
 	 * This is a special case used for ATTRIBUTE_TYPE.
 	 * Big-/Little-endian conversion is done here.
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer where to write the parsed result
 	 * @return 					
@@ -98,11 +97,11 @@ struct private_parser_t {
 	status_t (*parse_uint15) (private_parser_t *this, int rule_number, u_int16_t *output_pos);
 	
 	/**
-	 * @brief parse a 16-Bit unsigned integer from the current parsing position.
+	 * @brief Parse a 16-Bit unsigned integer from the current parsing position.
 	 * 
 	 * Big-/Little-endian conversion is done here.
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer where to write the parsed result
 	 * @return 					
@@ -112,11 +111,11 @@ struct private_parser_t {
 	status_t (*parse_uint16) (private_parser_t *this, int rule_number, u_int16_t *output_pos);
 	
 	/**
-	 * @brief parse a 32-Bit unsigned integer from the current parsing position.
+	 * @brief Parse a 32-Bit unsigned integer from the current parsing position.
 	 * 
 	 * Big-/Little-endian conversion is done here.
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer where to write the parsed result
 	 * @return 					
@@ -126,11 +125,11 @@ struct private_parser_t {
 	status_t (*parse_uint32) (private_parser_t *this, int rule_number, u_int32_t *output_pos);
 	
 	/**
-	 * @brief parse a 64-Bit unsigned integer from the current parsing position.
+	 * @brief Parse a 64-Bit unsigned integer from the current parsing position.
 	 * 
 	 * @todo add support for big-endian machines.
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer where to write the parsed result
 	 * @return 					
@@ -140,9 +139,9 @@ struct private_parser_t {
 	status_t (*parse_uint64) (private_parser_t *this, int rule_number, u_int64_t *output_pos);
 	
 	/**
-	 * @brief parse a given amount of bytes and writes them to a specific location
+	 * @brief Parse a given amount of bytes and writes them to a specific location
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer where to write the parsed result
 	 * @param bytes				number of bytes to parse
@@ -153,9 +152,9 @@ struct private_parser_t {
 	status_t (*parse_bytes) (private_parser_t *this, int rule_number, u_int8_t *output_pos,size_t bytes);
 	
 	/**
-	 * @brief parse a single Bit from the current parsing position
+	 * @brief Parse a single Bit from the current parsing position
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer where to write the parsed result
 	 * @return 					
@@ -165,14 +164,14 @@ struct private_parser_t {
 	status_t (*parse_bit)    (private_parser_t *this, int rule_number, bool *output_pos);
 	
 	/**
-	 * @brief parse substructures in a list
+	 * @brief Parse substructures in a list
 	 * 
 	 * This function calls the parser recursivly to parse contained substructures
 	 * in a linked_list_t. The list must already be created. Payload defines
 	 * the type of the substructures. parsing is continued until the specified length
 	 * is completely parsed.
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer of a linked_list where substructures are added
 	 * @param payload_type		type of the contained substructures to parse
@@ -184,12 +183,12 @@ struct private_parser_t {
 	status_t (*parse_list)   (private_parser_t *this, int rule_number, linked_list_t **output_pos, payload_type_t payload_ype, size_t length);
 	
 	/**
-	 * @brief parse data from current parsing position in a chunk.
+	 * @brief Parse data from current parsing position in a chunk.
 	 * 
 	 * This function clones length number of bytes to output_pos, without 
 	 * modifiyng them. Space will be allocated and must be freed by caller.
 	 * 
-	 * @param this				parser object
+	 * @param this				parser_t object
 	 * @param rule_number		number of current rule
 	 * @param[out] output_pos	pointer of a chunk which will point to the allocated data
 	 * @param length			number of bytes to clone
@@ -200,38 +199,38 @@ struct private_parser_t {
 	status_t (*parse_chunk)  (private_parser_t *this, int rule_number, chunk_t *output_pos, size_t length);
 
 	/**
-	 * Current bit for reading in input data
+	 * Current bit for reading in input data.
 	 */
 	u_int8_t bit_pos;
 	
 	/**
-	 * Current byte for reading in input data
+	 * Current byte for reading in input data.
 	 */
 	u_int8_t *byte_pos;
 	
 	/**
-	 * input data to parse
+	 * Input data to parse.
 	 */
 	u_int8_t *input;
 	
 	/**
-	 * roof of input, used for length-checking
+	 * Roof of input, used for length-checking.
 	 */
 	u_int8_t *input_roof;
 	
 	/**
-	 * set of encoding rules for this parsing session
+	 * Set of encoding rules for this parsing session.
 	 */
 	encoding_rule_t *rules;
 	
 	/**
-	 * logger object
+	 * Assigned logger_t object.
 	 */
 	logger_t *logger;
 };
 
 /**
- * implementation of private_parser_t.parse_uint4
+ * Implementation of private_parser_t.parse_uint4.
  */
 static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *output_pos)
 {
@@ -273,12 +272,11 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
 	}
 	
-	
 	return SUCCESS;
 }
 
 /**
- * implementation of private_parser_t.parse_uint8
+ * Implementation of private_parser_t.parse_uint8.
  */
 static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *output_pos)
 {
@@ -305,13 +303,11 @@ static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *o
 	}
 	this->byte_pos++;
 	
-	
-	
 	return SUCCESS;
 }
 
 /**
- * implementation of private_parser_t.parse_uint15
+ * Implementation of private_parser_t.parse_uint15.
  */
 static status_t parse_uint15(private_parser_t *this, int rule_number, u_int16_t *output_pos)
 {
@@ -338,13 +334,11 @@ static status_t parse_uint15(private_parser_t *this, int rule_number, u_int16_t 
 	this->byte_pos += 2;
 	this->bit_pos = 0;
 	
-	
-	
 	return SUCCESS;
 }
 
 /**
- * implementation of private_parser_t.parse_uint16
+ * Implementation of private_parser_t.parse_uint16.
  */
 static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t *output_pos)
 {
@@ -370,11 +364,10 @@ static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t 
 	}
 	this->byte_pos += 2;
 	
-	
 	return SUCCESS;
 }
 /**
- * implementation of private_parser_t.parse_uint32
+ * Implementation of private_parser_t.parse_uint32.
  */
 static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t *output_pos)
 {
@@ -400,12 +393,11 @@ static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t 
 	}
 	this->byte_pos += 4;
 	
-	
 	return SUCCESS;
 }
 
 /**
- * implementation of private_parser_t.parse_uint64
+ * Implementation of private_parser_t.parse_uint64.
  */
 static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t *output_pos)
 {
@@ -432,12 +424,13 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 		this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)output_pos, 8);
 	}
 	this->byte_pos += 8;
-	
-	
-	
+
 	return SUCCESS;
 }
 
+/**
+ * Implementation of private_parser_t.parse_bytes.
+ */
 static status_t parse_bytes (private_parser_t *this, int rule_number, u_int8_t *output_pos,size_t bytes)
 {
 	if (this->byte_pos + bytes > this->input_roof)
@@ -467,7 +460,7 @@ static status_t parse_bytes (private_parser_t *this, int rule_number, u_int8_t *
 }
 
 /**
- * implementation of private_parser_t.parse_bit
+ * Implementation of private_parser_t.parse_bit.
  */
 static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_pos)
 {
@@ -498,12 +491,11 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 		this->byte_pos++;	
 	}
 	
-
 	return SUCCESS;
 }
 
 /**
- * implementation of private_parser_t.parse_list
+ * Implementation of private_parser_t.parse_list.
  */
 static status_t parse_list(private_parser_t *this, int rule_number, linked_list_t **output_pos, payload_type_t payload_type, size_t length)
 {
@@ -545,7 +537,7 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 }
 
 /**
- * implementation of private_parser_t.parse_chunk
+ * Implementation of private_parser_t.parse_chunk.
  */
 static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *output_pos, size_t length)
 {
@@ -565,11 +557,6 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 	{
 		output_pos->len = length;
 		output_pos->ptr = allocator_alloc(length);
-		if (output_pos->ptr == NULL)
-		{
-			this->logger->log(this->logger, ERROR, "  allocation of chunk (%d bytes) failed", length);
-			return OUT_OF_RES;	
-		}
 		memcpy(output_pos->ptr, this->byte_pos, length);
 	}
 	this->byte_pos += length;
@@ -579,7 +566,7 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 }
 
 /**
- * implementation of parser_context_t.parse_payload
+ * Implementation of parser_t.parse_payload.
  */
 static status_t parse_payload(private_parser_t *this, payload_type_t payload_type, payload_t **payload)
 {
@@ -864,51 +851,35 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 }
 
 /**
- * implementation of parser_t.reset_context
+ * Implementation of parser_t.reset_context.
  */
-static status_t reset_context (private_parser_t *this)
+static void reset_context (private_parser_t *this)
 {
 	this->byte_pos = this->input;
 	this->bit_pos = 0;
-	return SUCCESS;
 }
 
 /**
- * implementation of parser_t.destroy
+ * Implementation of parser_t.destroy.
  */
-static status_t destroy(private_parser_t *this)
+static void destroy(private_parser_t *this)
 {
 	global_logger_manager->destroy_logger(global_logger_manager,this->logger);
 	allocator_free(this);	
-	
-	return SUCCESS;
 }
 
 /*
- * see header file
+ * Described in header.
  */
 parser_t *parser_create(chunk_t data)
 {
 	private_parser_t *this = allocator_alloc_thing(private_parser_t);
 	
-	if (this == NULL)
-	{
-		return NULL;
-	}
-	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, PARSER, NULL);
 	
-	
-	if (this->logger == NULL)
-	{
-		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
-		allocator_free(this);
-		return NULL;
-	}
-	
 	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**)) parse_payload;
-	this->public.reset_context = (status_t(*)(parser_t*)) reset_context;
-	this->public.destroy = (status_t(*)(parser_t*)) destroy;
+	this->public.reset_context = (void(*)(parser_t*)) reset_context;
+	this->public.destroy = (void(*)(parser_t*)) destroy;
 	
 		
 	this->parse_uint4 = parse_uint4;
