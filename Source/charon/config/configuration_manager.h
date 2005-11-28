@@ -54,7 +54,6 @@ struct configuration_manager_t {
 	 * @param host	remote host information gets stored at this location
 	 * 
 	 * @return		
-	 * 				- OUT_OF_RES
 	 * 				- NOT_FOUND
 	 * 				- SUCCESS
 	 */
@@ -70,7 +69,6 @@ struct configuration_manager_t {
 	 * @param host	local host information gets stored at this location
 	 * 
 	 * @return		
-	 * 				- OUT_OF_RES
 	 * 				- NOT_FOUND (not yet implemented)
 	 * 				- SUCCESS
 	 */
@@ -110,7 +108,6 @@ struct configuration_manager_t {
 	 * @param list				iterator where the proposals are written to
 	 * 
 	 * @return		
-	 * 							- OUT_OF_RES
 	 * 							- NOT_FOUND (not yet implemented)
 	 * 							- SUCCESS
 	 */
@@ -129,7 +126,6 @@ struct configuration_manager_t {
 	 * @param out				The selected proposals of type proposal_substructure_t * are written to this iterator
 	 * 
 	 * @return		
-	 * 							- OUT_OF_RES
 	 * 							- FAILED
 	 * 							- NOT_FOUND (not yet implemented)
 	 * 							- SUCCESS
@@ -146,7 +142,6 @@ struct configuration_manager_t {
 	 * @param[out] valid			TRUE if selected proposals are accepted
 	 * 
 	 * @return			
-	 * 												- OUT_OF_RES
 	 * 												- FAILED
 	 * 												- NOT_FOUND (not yet implemented)
 	 * 												- SUCCESS

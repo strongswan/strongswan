@@ -82,10 +82,6 @@ static status_t get_remote_host(private_configuration_manager_t *this, char *nam
 	{
 		status = NOT_FOUND;
 	}
-	if ((status != NOT_FOUND) && (remote == NULL))
-	{
-		return OUT_OF_RES;	
-	}
 
 	*host = remote;
 	return status;
@@ -101,13 +97,7 @@ static status_t get_local_host(private_configuration_manager_t *this, char *name
 	 * 
 	 * Further improvements could store different local host informations in a linked list or hash table.
 	 */
-	host_t *local;
-	local = host_create(AF_INET, "0.0.0.0", 0);
-	if (local == NULL)
-	{
-		return OUT_OF_RES;	
-	}
-	*host = local;
+	*host = host_create(AF_INET, "0.0.0.0", 0);
 	return SUCCESS;
 }
 
@@ -144,13 +134,8 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 	proposal_substructure_t *proposal;
 	transform_substructure_t *transform;
 	transform_attribute_t *attribute;
-	status_t status;
 	
 	proposal = proposal_substructure_create();
-	if (proposal == NULL)
-	{
-		return OUT_OF_RES;
-	}
 	
 	proposal->set_proposal_number(proposal, 1);
 	proposal->set_protocol_id(proposal, 1);
@@ -159,32 +144,16 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
 	 * Encryption Algorithm 
 	 */
 	transform = transform_substructure_create();
-	if (transform == NULL)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
-	status = proposal->add_transform_substructure(proposal, transform);
-	if (status != SUCCESS)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
+
+	proposal->add_transform_substructure(proposal, transform);
+
 	transform->set_transform_type(transform, ENCRYPTION_ALGORITHM);
 	transform->set_transform_id(transform, ENCR_AES_CBC);
 	
 	attribute = transform_attribute_create();
-	if (attribute == NULL)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
-	status = transform->add_transform_attribute(transform, attribute);
-	if (status != SUCCESS)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
+
+	transform->add_transform_attribute(transform, attribute);
+
 	attribute->set_attribute_type(attribute, KEY_LENGTH);
 	attribute->set_value(attribute, 16);
 	
@@ -192,32 +161,16 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
  	 * Pseudo-random Function
  	 */
  	transform = transform_substructure_create();
-	if (transform == NULL)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
-	status = proposal->add_transform_substructure(proposal, transform);
-	if (status != SUCCESS)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
+
+	proposal->add_transform_substructure(proposal, transform);
+
 	transform->set_transform_type(transform, PSEUDO_RANDOM_FUNCTION);
 	transform->set_transform_id(transform, PRF_HMAC_MD5);
 	
 	attribute = transform_attribute_create();
-	if (attribute == NULL)
-	{		
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
-	status = transform->add_transform_attribute(transform, attribute);
-	if (status != SUCCESS)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
+
+	transform->add_transform_attribute(transform, attribute);
+
 	attribute->set_attribute_type(attribute, KEY_LENGTH);
 	attribute->set_value(attribute, 16);
 
@@ -226,32 +179,16 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
  	 * Integrity Algorithm 
  	 */
  	transform = transform_substructure_create();
-	if (transform == NULL)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
-	status = proposal->add_transform_substructure(proposal, transform);
-	if (status != SUCCESS)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
+
+	proposal->add_transform_substructure(proposal, transform);
+
 	transform->set_transform_type(transform, INTEGRITY_ALGORITHM);
 	transform->set_transform_id(transform, AUTH_HMAC_MD5_96);
 	
 	attribute = transform_attribute_create();
-	if (attribute == NULL)
-	{		
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
-	status = transform->add_transform_attribute(transform, attribute);
-	if (status != SUCCESS)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
+
+	transform->add_transform_attribute(transform, attribute);
+
 	attribute->set_attribute_type(attribute, KEY_LENGTH);
 	attribute->set_value(attribute, 16);
  	
@@ -260,17 +197,9 @@ static status_t get_proposals_for_host(private_configuration_manager_t *this, ho
      * Diffie-Hellman Group 
      */
  	transform = transform_substructure_create();
-	if (transform == NULL)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
-	status = proposal->add_transform_substructure(proposal, transform);
-	if (status != SUCCESS)
-	{
-		proposal->destroy(proposal);
-		return OUT_OF_RES;
-	}
+
+	proposal->add_transform_substructure(proposal, transform);
+
 	transform->set_transform_type(transform, DIFFIE_HELLMAN_GROUP);
 	transform->set_transform_id(transform, MODP_1024_BIT);
 	
@@ -298,24 +227,10 @@ static status_t select_proposals_for_host(private_configuration_manager_t *this,
 	}
 	
 	status = in->current(in,(void **) &first_suggested_proposal);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger,ERROR, "Fatal error: could not get first proposal from iterator");
-		return status;	
-	}
+
 	status = first_suggested_proposal->clone(first_suggested_proposal,&selected_proposal);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger,ERROR, "Fatal error: could not clone proposal");
-		/* could not clone proposal */
-		return status;	
-	}
 	
 	status = out->insert_after(out,selected_proposal);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger,ERROR, "Fatal error: could not insert selected proposal in out iterator");
-	}	
 	return status;
 }
 
@@ -374,11 +289,6 @@ static status_t destroy(private_configuration_manager_t *this)
 configuration_manager_t *configuration_manager_create()
 {
 	private_configuration_manager_t *this = allocator_alloc_thing(private_configuration_manager_t);
-	
-	if (this == NULL)
-	{
-		return NULL;
-	}
 
 	/* public functions */
 	this->public.destroy = (status_t(*)(configuration_manager_t*))destroy;
@@ -392,12 +302,6 @@ configuration_manager_t *configuration_manager_create()
 
 	/* private variables */
 	this->logger = global_logger_manager->create_logger(global_logger_manager,CONFIGURATION_MANAGER,NULL);
-
-	if (this->logger == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 
 	return (&this->public);
 }
