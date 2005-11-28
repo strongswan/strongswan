@@ -1,7 +1,7 @@
 /**
- * @file crypter.c
+ * @file hmac_signer_test.h
  * 
- * @brief Generic constructor for crypter_t.
+ * @brief Tests the hmac SHA1 and MD5 signer class hmac_signer_t 
  * 
  */
 
@@ -20,28 +20,23 @@
  * for more details.
  */
 
+#ifndef _HMAC_SIGNER_TEST_H_
+#define _HMAC_SIGNER_TEST_H_
 
-#include "crypter.h"
+#include <utils/tester.h>
 
-#include <transforms/crypters/aes_cbc_crypter.h>
-
-
-/** 
- * string mappings for encryption_algorithm_t
+/**
+ * @brief Test function used to test the hmac sign functionality using MD5.
+ *
+ * @param tester associated tester object
  */
-mapping_t encryption_algorithm_m[] = {
-{ENCR_UNDEFINED, "ENCR_UNDEFINED"},
-{ENCR_DES_IV64, "ENCR_DES_IV64"},
-{ENCR_DES, "ENCR_DES"},
-{ENCR_3DES, "ENCR_3DES"},
-{ENCR_RC5, "ENCR_RC5"},
-{ENCR_IDEA, "ENCR_IDEA"},
-{ENCR_CAST, "ENCR_CAST"},
-{ENCR_BLOWFISH, "ENCR_BLOWFISH"},
-{ENCR_3IDEA, "ENCR_3IDEA"},
-{ENCR_DES_IV32, "ENCR_DES_IV32"},
-{ENCR_NULL, "ENCR_NULL"},
-{ENCR_AES_CBC, "ENCR_AES_CBC"},
-{ENCR_AES_CTR, "ENCR_AES_CTR"},
-{MAPPING_END, NULL}
-};
+void test_hmac_md5_signer(tester_t *tester);
+
+/**
+ * @brief Test function used to test the hmac sign functionality using SHA1.
+ *
+ * @param tester associated tester object
+ */
+void test_hmac_sha1_signer(tester_t *tester);
+
+#endif //_HMAC_SIGNER_TEST_H_

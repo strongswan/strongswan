@@ -17,3 +17,7 @@ SIGNERS_DIR= $(TRANSFORMS_DIR)signers/
 OBJS+= $(BUILD_DIR)signer.o
 $(BUILD_DIR)signer.o :			$(SIGNERS_DIR)signer.c $(SIGNERS_DIR)signer.h
 								$(CC) $(CFLAGS) -c -o $@ $<
+								
+OBJS+= $(BUILD_DIR)hmac_signer.o
+$(BUILD_DIR)hmac_signer.o :		$(SIGNERS_DIR)hmac_signer.c $(SIGNERS_DIR)hmac_signer.h
+								$(CC) $(CFLAGS) -c -o $@ $<

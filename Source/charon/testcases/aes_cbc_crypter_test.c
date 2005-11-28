@@ -109,7 +109,8 @@ void test_aes_cbc_crypter(tester_t *tester)
 	chunk_t data2 = {ptr: plaintext2, len : 32};
 	chunk_t encrypted2;
 	chunk_t decrypted2;
-	 	 
+	
+
 	crypter = (crypter_t *) aes_cbc_crypter_create(16);
   	tester->assert_true(tester, (crypter != NULL), "create call test");
   	
@@ -131,7 +132,8 @@ void test_aes_cbc_crypter(tester_t *tester)
 	logger->log_chunk(logger,RAW,"decrypted :", &decrypted2);
 	
 	allocator_free_chunk(&decrypted2);
-	 
+
+ 	tester->assert_true(tester, (crypter->destroy(crypter) == SUCCESS), "destroy call test");
 	 
 	/*
 	 * Test 3 of RFC3603
@@ -173,7 +175,7 @@ void test_aes_cbc_crypter(tester_t *tester)
 	chunk_t data3 = {ptr: plaintext3, len : 64};
 	chunk_t encrypted3;
 	chunk_t decrypted3;
-	 	 
+
 	crypter = (crypter_t *) aes_cbc_crypter_create(16);
   	tester->assert_true(tester, (crypter != NULL), "create call test");
   	
@@ -198,9 +200,7 @@ void test_aes_cbc_crypter(tester_t *tester)
 	 
 	tester->assert_true(tester, (crypter->destroy(crypter) == SUCCESS), "destroy call test");
 	
-	
 
-	
 	
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
 }

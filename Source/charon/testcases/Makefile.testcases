@@ -59,6 +59,10 @@ $(BUILD_DIR)linked_list_test.o :	$(TESTCASES_DIR)linked_list_test.c $(TESTCASES_
 TEST_OBJS+= $(BUILD_DIR)hmac_test.o
 $(BUILD_DIR)hmac_test.o :			$(TESTCASES_DIR)hmac_test.c $(TESTCASES_DIR)hmac_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
+
+TEST_OBJS+= $(BUILD_DIR)hmac_signer_test.o
+$(BUILD_DIR)hmac_signer_test.o :		$(TESTCASES_DIR)hmac_signer_test.c $(TESTCASES_DIR)hmac_signer_test.h
+									$(CC) $(CFLAGS) -c -o $@ $<
 											
 TEST_OBJS+= $(BUILD_DIR)scheduler_test.o
 $(BUILD_DIR)scheduler_test.o :		$(TESTCASES_DIR)scheduler_test.c $(TESTCASES_DIR)scheduler_test.h

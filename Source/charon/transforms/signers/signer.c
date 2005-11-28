@@ -22,6 +22,7 @@
 
 #include "signer.h"
 
+#include <transforms/signers/hmac_signer.h>
 
 /** 
  * string mappings for integrity_algorithm_t
@@ -35,3 +36,21 @@ mapping_t integrity_algorithm_m[] = {
 	{AUTH_AES_XCBC_96, "AUTH_AES_XCBC_96"},
 	{MAPPING_END, NULL}
 };
+
+signer_t *signer_create(integrity_algorithm_t integrity_algorithm)
+{
+	switch(integrity_algorithm)
+	{
+		case AUTH_HMAC_SHA1_96:
+		{
+			return ((signer_t *) hmac_signer_create(HASH_SHA1));
+		}
+		case AUTH_HMAC_MD5_96:
+		{
+			return ((signer_t *) hmac_signer_create(HASH_MD5));
+		}
+
+		default:
+			return NULL;
+	}
+}
