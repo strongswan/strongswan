@@ -90,7 +90,7 @@ void test_md5_hasher(tester_t *tester)
 	tester->assert_true(tester, hash_chunk.len == 16, "hash len");
 	tester->assert_false(tester, memcmp(hash_chunk.ptr, hash_abcd, hash_chunk.len), "hash for abcd...");
 	allocator_free(hash_chunk.ptr);
-	tester->assert_true(tester, (hasher->destroy(hasher) == SUCCESS), "destroy call test");
+	hasher->destroy(hasher);
 }
 
 /* 
@@ -168,5 +168,5 @@ void test_sha1_hasher(tester_t *tester)
 	tester->assert_false(tester, memcmp(hash_buffer, hash_aaa, 20), "hash for aaa...");
 	
 
-	tester->assert_true(tester, (hasher->destroy(hasher) == SUCCESS), "destroy call test");
+	hasher->destroy(hasher);
 }

@@ -1,7 +1,7 @@
 /**
  * @file state.h
  * 
- * @brief Interface for a specific IKE_SA state
+ * @brief Interface for a specific IKE_SA state.
  * 
  */
 
@@ -83,7 +83,7 @@ typedef struct state_t state_t;
 struct state_t {
 
 	/**
-	 * @brief Processes a incoming IKEv2-Message of type message_t
+	 * @brief Processes a incoming IKEv2-Message of type message_t.
 	 *
 	 * @param this 			state_t object
  	 * @param[in] 			message message_t object to process
@@ -94,7 +94,7 @@ struct state_t {
 	status_t (*process_message) (state_t *this,message_t *message);
 
 	/**
-	 * @brief Get the current state
+	 * @brief Get the current state.
 	 *
 	 * @param this 	state_t object
 	 * @return 		state 
@@ -102,12 +102,11 @@ struct state_t {
 	ike_sa_state_t (*get_state) (state_t *this);
 
 	/**
-	 * @brief Destroys a state_t object
+	 * @brief Destroys a state_t object.
 	 *
-	 * @param this 	state_t object
-	 * @return		SUCCESS in any case
+	 * @param this 	state_t object to destroy
 	 */
-	status_t (*destroy) (state_t *this);
+	void (*destroy) (state_t *this);
 };
 
 

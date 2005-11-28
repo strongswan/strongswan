@@ -52,7 +52,7 @@ struct iterator_t {
 	 * @param[out] value 	value is set to the current value at iterator position
 	 * @return
 	 * 						- SUCCESS
-	 * 						- FAILED if list is empty
+	 * 						- FAILED if iterator on an invalid position
 	 */
 	status_t (*current) (iterator_t *this, void **value);
 	
@@ -63,24 +63,18 @@ struct iterator_t {
 	 * 
 	 * @param this 			calling iterator
 	 * @param[in] item 		value to insert in list
-	 * @return 
-	 * 						- SUCCESS
-	 * 						- FAILED
 	 */
-	status_t (*insert_before) (iterator_t *this, void *item);
+	void (*insert_before) (iterator_t *this, void *item);
 
 	/**
-	 * Inserts a new item after the given iterator position.
+	 * @brief Inserts a new item after the given iterator position.
 	 * 
 	 * The iterator position is not changed after inserting.
 	 * 
 	 * @param this 			calling iterator
 	 * @param[in] item 		value to insert in list
-	 * @return
-	 * 						- SUCCESS 
-	 * 						- FAILED
 	 */
-	status_t (*insert_after) (iterator_t *this, void *item);
+	void (*insert_after) (iterator_t *this, void *item);
 
 	/**
 	 * @brief removes an element from list at the given iterator position.
@@ -93,7 +87,7 @@ struct iterator_t {
 	 * @param linked_list 	calling object
 	 * @return 
 	 * 						- SUCCESS
-	 * 						- FAILED
+	 * 						- FAILED if iterator is on an invalid position
 	 */
 	status_t (*remove) (iterator_t *iterator);
 			  
@@ -107,7 +101,7 @@ struct iterator_t {
 	 * @param this 			calling object
 	 * @return 				SUCCESS in any case
 	 */
-	status_t (*reset) (iterator_t *this);
+	void (*reset) (iterator_t *this);
 
 	/**
 	 * @brief Destroys an iterator.
@@ -116,7 +110,7 @@ struct iterator_t {
 	 * @return 				SUCCESS in any case
 	 * 
 	 */
-	status_t (*destroy) (iterator_t *this);
+	void (*destroy) (iterator_t *this);
 };
 
 #endif /*ITERATOR_H_*/

@@ -287,9 +287,9 @@ static size_t get_length(private_encryption_payload_t *this)
 /**
  * Implementation of payload_t.create_payload_iterator.
  */
-static status_t create_payload_iterator (private_encryption_payload_t *this, iterator_t **iterator, bool forward)
+static void create_payload_iterator (private_encryption_payload_t *this, iterator_t **iterator, bool forward)
 {
-	return (this->payloads->create_iterator(this->payloads, iterator, forward));
+	this->payloads->create_iterator(this->payloads, iterator, forward);
 }
 
 /**

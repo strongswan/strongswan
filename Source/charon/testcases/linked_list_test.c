@@ -84,7 +84,7 @@ void test_linked_list(tester_t *tester)
 	tester->assert_true(tester,(strcmp((char *) test_value,"four") == 0), "get_first value check");
 	tester->assert_true(tester,(linked_list->get_count(linked_list) == 3), "count check");
 	
-	tester->assert_true(tester,(linked_list->destroy(linked_list) == SUCCESS), "destroy call check");
+	linked_list->destroy(linked_list);
 }
 
  /*
@@ -105,7 +105,7 @@ void test_linked_list_iterator(tester_t *tester)
 	iterator_t * iterator2;
 	
 	
-	tester->assert_true(tester,(linked_list->create_iterator(linked_list,&iterator,TRUE) == SUCCESS), "create_iterator for it 1 call check");
+	linked_list->create_iterator(linked_list,&iterator,TRUE);
 	
 	tester->assert_true(tester,iterator->has_next(iterator), "it 1 has_next value check");	
 	iterator->current(iterator,&value);
@@ -115,7 +115,7 @@ void test_linked_list_iterator(tester_t *tester)
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"four") == 0), "it 1 current value check");
 
-	tester->assert_true(tester,(linked_list->create_iterator(linked_list,&iterator2,FALSE) == SUCCESS), "create_iterator for it 2 call check");
+	linked_list->create_iterator(linked_list,&iterator2,FALSE);
 
 	tester->assert_true(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
 	iterator2->current(iterator2,&value);
@@ -147,10 +147,8 @@ void test_linked_list_iterator(tester_t *tester)
 	tester->assert_true(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
 	tester->assert_false(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
 
-	tester->assert_true(tester,(iterator->destroy(iterator) == SUCCESS), "it 1 destroy call check");
-	
-	tester->assert_true(tester,(iterator2->destroy(iterator2) == SUCCESS), "it 2 destroy call check");
-	
+	iterator->destroy(iterator);
+	iterator2->destroy(iterator2);
 	linked_list->destroy(linked_list);
 }
 
@@ -180,12 +178,12 @@ void test_linked_list_insert_and_remove(tester_t *tester)
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 
-	tester->assert_true(tester,(iterator->insert_before(iterator,"before_three") == SUCCESS), "insert_before call check");
+	iterator->insert_before(iterator,"before_three");
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 
 
-	tester->assert_true(tester,(iterator->insert_after(iterator,"after_three") == SUCCESS), "insert_after call check");
+	iterator->insert_after(iterator,"after_three");
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"three") == 0), "current value check");
 	

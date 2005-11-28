@@ -88,5 +88,5 @@ void test_scheduler(tester_t *tester)
 	}
 
 	/* destruction test */
-	tester->assert_true(tester, (scheduler->destroy(scheduler) == SUCCESS), "destroy call check");
+	scheduler->destroy(scheduler);
 }

@@ -61,10 +61,8 @@ struct signer_t {
 	 * @param this			calling signer
 	 * @param data			a chunk containing the data to sign
 	 * @param[out] buffer	pointer where the signature will be written
-	 * @return				
-	 * 						- SUCCESS in any case
 	 */
-	status_t (*get_signature) (signer_t *this, chunk_t data, u_int8_t *buffer);
+	void (*get_signature) (signer_t *this, chunk_t data, u_int8_t *buffer);
 	
 	/**
 	 * @brief Generate a signature and allocate space for it.
@@ -72,11 +70,8 @@ struct signer_t {
 	 * @param this			calling signer
 	 * @param data			a chunk containing the data to sign
 	 * @param[out] chunk	chunk which will hold the allocated signature
-	 * @return				
-	 * 						- SUCCESS in any case
-	 * 						- OUT_OF_RES if space could not be allocated
 	 */
-	status_t (*allocate_signature) (signer_t *this, chunk_t data, chunk_t *chunk);
+	void (*allocate_signature) (signer_t *this, chunk_t data, chunk_t *chunk);
 	
 	/**
 	 * @brief Verify a signature.
@@ -85,10 +80,8 @@ struct signer_t {
 	 * @param data			a chunk containing the data to verify
 	 * @param signature		a chunk containing the signature
 	 * @param[out] vaild	set to TRUE, if signature is valid, to FALSE otherwise
-	 * @return				
-	 * 						- SUCCESS in any case
 	 */
-	status_t (*verify_signature) (signer_t *this, chunk_t data, chunk_t signature, bool *valid);
+	void (*verify_signature) (signer_t *this, chunk_t data, chunk_t signature, bool *valid);
 	
 	/**
 	 * @brief Get the block size of this signature algorithm.
@@ -103,19 +96,15 @@ struct signer_t {
 	 * 
 	 * @param this			calling signer
 	 * @param key			key to set
-	 * @return
-	 * 						- SUCCESS in any case
 	 */
-	status_t (*set_key) (signer_t *this, chunk_t key);
+	void (*set_key) (signer_t *this, chunk_t key);
 	
 	/**
 	 * @brief Destroys a signer object.
 	 *
-	* @param this			signer_t object to destroy
-	 * @return 		
-	 * 						- SUCCESS in any case
+	 * @param this			signer_t object to destroy
 	 */
-	status_t (*destroy) (signer_t *this);
+	void (*destroy) (signer_t *this);
 };
 
 /**
@@ -123,8 +112,8 @@ struct signer_t {
  * 
  * @param integrity_algorithm	Algorithm to use for signing and verifying.
  * @return
- * 								- signer_t if successfully
- * 								- NULL if out of ressources or signer not supported
+ * 								- signer_t if successfully, 
+ * 								- NULL if signer not supported
  * 
  * @ingroup signers
  */

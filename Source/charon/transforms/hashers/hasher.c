@@ -54,8 +54,3 @@ hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
 			return NULL;
 	}
 }
-
-
-
-
-

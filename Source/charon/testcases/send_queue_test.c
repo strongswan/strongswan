@@ -138,5 +138,5 @@ void test_send_queue(tester_t *tester)
 
 	/* the send-queue has to have diserd_value count entries*/
 	tester->assert_true(tester,(send_queue->get_count(send_queue) == desired_value), "count value check");
-	tester->assert_true(tester,(send_queue->destroy(send_queue) == SUCCESS), "destroy call check");
+	send_queue->destroy(send_queue);
 }

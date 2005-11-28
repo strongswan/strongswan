@@ -54,8 +54,8 @@ void test_diffie_hellman(tester_t *tester)
 	tester->assert_true(tester,(	other_diffie_hellman->get_my_public_value(other_diffie_hellman,&other_public_value) == SUCCESS), "get_my_public_value call check");
 	logger->log_chunk(logger,RAW,"Other public value",&other_public_value);
 
-	tester->assert_true(tester,(	my_diffie_hellman->set_other_public_value(my_diffie_hellman,other_public_value) == SUCCESS), "set_other_public_value call check");
-	tester->assert_true(tester,(	other_diffie_hellman->set_other_public_value(other_diffie_hellman,my_public_value) == SUCCESS), "set_other_public_value call check");
+	my_diffie_hellman->set_other_public_value(my_diffie_hellman,other_public_value);
+	other_diffie_hellman->set_other_public_value(other_diffie_hellman,my_public_value);
 
 	allocator_free(my_public_value.ptr);
 	allocator_free(other_public_value.ptr);
@@ -71,7 +71,7 @@ void test_diffie_hellman(tester_t *tester)
 	allocator_free(my_secret.ptr);
 	allocator_free(other_secret.ptr);	
 		
-	tester->assert_true(tester,(my_diffie_hellman->destroy(my_diffie_hellman) == SUCCESS), "destroy call check");
-	tester->assert_true(tester,(other_diffie_hellman->destroy(other_diffie_hellman) == SUCCESS), "destroy call check");
+	my_diffie_hellman->destroy(my_diffie_hellman);
+	other_diffie_hellman->destroy(other_diffie_hellman);
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
 }

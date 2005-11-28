@@ -1,7 +1,7 @@
 /**
  * @file send_queue.c
  *
- * @brief Send-Queue based on linked_list_t
+ * @brief Implementation of send_queue_t.
  *
  */
 
@@ -59,7 +59,7 @@ struct private_send_queue_t {
 
 
 /**
- * @brief implements function get_count of send_queue_t
+ * implements send_queue_t.get_count
  */
 static int get_count(private_send_queue_t *this)
 {
@@ -71,11 +71,12 @@ static int get_count(private_send_queue_t *this)
 }
 
  /**
- * @brief implements function get of send_queue_t
+ * implements send_queue_t.get
  */
-static status_t get(private_send_queue_t *this, packet_t **packet)
+static packet_t *get(private_send_queue_t *this)
 {
 	int oldstate;
+	packet_t *packet;
 	pthread_mutex_lock(&(this->mutex));
 	/* go to wait while no packets available */
 	
@@ -90,28 +91,26 @@ static status_t get(private_send_queue_t *this, packet_t **packet)
 		pthread_setcancelstate(oldstate, NULL);
 		pthread_cleanup_pop(0);
 	}
-	this->list->remove_first(this->list,(void **) packet);
+	this->list->remove_first(this->list,(void **)&packet);
 	pthread_mutex_unlock(&(this->mutex));
-	return SUCCESS;
+	return packet;
 }
 
  /**
- * @brief implements function add of send_queue_t
+ * implements send_queue_t.add
  */
-static status_t add(private_send_queue_t *this, packet_t *packet)
+static void add(private_send_queue_t *this, packet_t *packet)
 {
 	pthread_mutex_lock(&(this->mutex));
 	this->list->insert_last(this->list,packet);
 	pthread_cond_signal( &(this->condvar));
 	pthread_mutex_unlock(&(this->mutex));
-	return SUCCESS;
 }
 
  /**
- * @brief implements function destroy of send_queue_t
- *
+ * implements send_queue_t.destroy
  */
-static status_t destroy (private_send_queue_t *this)
+static void destroy (private_send_queue_t *this)
 {
 
 	/* destroy all packets in list before destroying list */
@@ -132,7 +131,6 @@ static status_t destroy (private_send_queue_t *this)
 	pthread_cond_destroy(&(this->condvar));
 
 	allocator_free(this);
-	return SUCCESS;
 }
 
  /*
@@ -141,25 +139,14 @@ static status_t destroy (private_send_queue_t *this)
  */
 send_queue_t *send_queue_create()
 {
-	linked_list_t *linked_list = linked_list_create();
-	if (linked_list == NULL)
-	{
-		return NULL;
-	}
-
 	private_send_queue_t *this = allocator_alloc_thing(private_send_queue_t);
-	if (this == NULL)
-	{
-		linked_list->destroy(linked_list);
-		return NULL;
-	}
-
+	
 	this->public.get_count = (int(*)(send_queue_t*)) get_count;
-	this->public.get = (status_t(*)(send_queue_t*, packet_t**)) get;
-	this->public.add = (status_t(*)(send_queue_t*, packet_t*)) add;
-	this->public.destroy = (status_t(*)(send_queue_t*)) destroy;
+	this->public.get = (packet_t*(*)(send_queue_t*)) get;
+	this->public.add = (void(*)(send_queue_t*, packet_t*)) add;
+	this->public.destroy = (void(*)(send_queue_t*)) destroy;
 
-	this->list = linked_list;
+	this->list = linked_list_create();
 	pthread_mutex_init(&(this->mutex), NULL);
 	pthread_cond_init(&(this->condvar), NULL);
 

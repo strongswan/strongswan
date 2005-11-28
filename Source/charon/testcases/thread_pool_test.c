@@ -37,5 +37,5 @@ void test_thread_pool(tester_t *tester)
 	thread_pool_t *pool = thread_pool_create(desired_pool_size);
 	pool_size = pool->get_pool_size(pool);
 	tester->assert_true(tester, (desired_pool_size == pool_size), "thread creation");
-	tester->assert_true(tester, (pool->destroy(pool) == SUCCESS), "threadpool destruction");
+	pool->destroy(pool);
 }

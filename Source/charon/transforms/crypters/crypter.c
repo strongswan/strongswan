@@ -56,7 +56,6 @@ crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm,size_t blo
 		case ENCR_AES_CBC:
 		{
 			return (crypter_t*)aes_cbc_crypter_create(blocksize);
-			
 		}
 		default:
 			return NULL;

@@ -254,7 +254,7 @@ status_t get_supported_payloads (private_message_t *this, supported_payload_entr
  */
 static void set_ike_sa_id (private_message_t *this,ike_sa_id_t *ike_sa_id)
 {
-	ike_sa_id->clone(ike_sa_id,&(this->ike_sa_id));
+	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 }
 
 /**
@@ -266,7 +266,7 @@ static status_t get_ike_sa_id (private_message_t *this,ike_sa_id_t **ike_sa_id)
 	{
 		return FAILED;
 	}
-	this->ike_sa_id->clone(this->ike_sa_id,ike_sa_id);
+	*ike_sa_id = this->ike_sa_id->clone(this->ike_sa_id);
 	return SUCCESS;
 }
 
@@ -641,12 +641,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		/* get next payload type */
 		current_payload_type = current_payload->get_next_type(current_payload);
 		
-		status = this->payloads->insert_last(this->payloads,current_payload);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "%s on adding payload", mapping_find(status_m, status));
-			return status;;
-		}
+		this->payloads->insert_last(this->payloads,current_payload);
 		
 	}
 	return this->public.verify(&(this->public));

@@ -96,11 +96,7 @@ delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
 	this->public.destroy = (status_t (*)(delete_ike_sa_job_t *)) destroy;
 	
 	/* private variables */
-	if (ike_sa_id->clone(ike_sa_id,&(this->ike_sa_id)) != SUCCESS)
-	{
-		allocator_free(this);
-		return NULL;
-	}
+	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	
 	return &(this->public);
 }

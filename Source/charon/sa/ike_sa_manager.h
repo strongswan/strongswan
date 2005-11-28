@@ -58,7 +58,6 @@ struct ike_sa_manager_t {
 	 * @returns 					
 	 * 							- SUCCESS if checkout successful
 	 * 							- NOT_FOUND when no such SA is available
-	 * 							- OUT_OF_RES
 	 */
 	status_t (*checkout) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *sa_id, ike_sa_t **ike_sa);
 	
@@ -73,12 +72,9 @@ struct ike_sa_manager_t {
 	 * 
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa[out] 		checked out SA
-	 * @returns 					
-	 * 							- SUCCESS if checkout successful
-	 * 							- OUT_OF_RES
 	 */
-	status_t (*create_and_checkout) (ike_sa_manager_t* ike_sa_manager,ike_sa_t **ike_sa);
-      	
+	void (*create_and_checkout) (ike_sa_manager_t* ike_sa_manager,ike_sa_t **ike_sa);
+ 
 	/**
 	 * @brief Checkin the SA after usage
 	 * 
@@ -88,8 +84,9 @@ struct ike_sa_manager_t {
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier, will be updated
 	 * @param ike_sa[out]		checked out SA
-	 * @returns 					SUCCESS if checked in
-	 * 							NOT_FOUND when not found (shouldn't happen!)
+	 * @returns 				
+	 * 							- SUCCESS if checked in
+	 * 							- NOT_FOUND when not found (shouldn't happen!)
 	 */
 	status_t (*checkin) (ike_sa_manager_t* ike_sa_manager, ike_sa_t *ike_sa);
 	/**
@@ -100,17 +97,20 @@ struct ike_sa_manager_t {
 	 *  
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier
-	 * @returns 					SUCCESS if found
-	 * 							NOT_FOUND when no such SA is available
+	 * @returns 				
+	 * 							- SUCCESS if found
+	 * 							- NOT_FOUND when no such SA is available
 	 */
 	status_t (*delete) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *ike_sa_id);
+	
 	/**
 	 * @brief delete a checked out SA
-	 *  
+	 *
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa			SA to delete
-	 * @returns 				SUCCESS if found
-	 * 							NOT_FOUND when no such SA is available
+	 * @returns 				
+	 * 							- SUCCESS if found
+	 * 							- NOT_FOUND when no such SA is available
 	 */
 	status_t (*checkin_and_delete) (ike_sa_manager_t* ike_sa_manager, ike_sa_t *ike_sa);
 	
@@ -120,15 +120,14 @@ struct ike_sa_manager_t {
 	 * Threads will be driven out, so all SAs can be deleted cleanly
 	 * 
 	 * @param ike_sa_manager the manager object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*destroy) (ike_sa_manager_t *ike_sa_manager);
+	void (*destroy) (ike_sa_manager_t *ike_sa_manager);
 };
 
 /**
  * @brief Create a manager
  * 
- * @returns the manager
+ * @returns 	the created manager
  */
 ike_sa_manager_t *ike_sa_manager_create();
 

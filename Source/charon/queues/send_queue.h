@@ -1,7 +1,7 @@
 /**
  * @file send_queue.h
  *
- * @brief Send-Queue based on linked_list_t
+ * @brief Interface of send_queue_t.
  *
  */
 
@@ -40,40 +40,38 @@ struct send_queue_t {
 	/**
 	 * @brief returns number of packets in queue
 	 *
-	 * @param send_queue_t calling object
- 	 * @param[out] count integer pointer to store the count in
-	 * @returns number of items in queue
+	 * @param send_queue_t 	calling object
+ 	 * @param[out] 			count integer pointer to store the count in
+	 * @returns 			number of items in queue
 	 */
 	int (*get_count) (send_queue_t *send_queue);
 
 	/**
-	 * @brief get the next packet from the queue
+	 * @brief get the next packet from the queue.
 	 *
 	 * If the queue is empty, this function blocks until a packet can be returned.
 	 *
 	 * After using, the returned packet has to get destroyed by the caller.
 	 *
-	 * @param send_queue_t calling object
- 	 * @param[out] packet pointer to a packet_t pointer where to packet is returned to
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @param send_queue_t 	calling object
+ 	 * @param[out] packet 	pointer to a packet_t pointer where to packet is returned to
 	 */
-	status_t (*get) (send_queue_t *send_queue, packet_t **packet);
+	packet_t *(*get) (send_queue_t *send_queue);
 
 	/**
-	 * @brief adds a packet to the queue
+	 * @brief adds a packet to the queue.
 	 *
 	 * This function is non blocking and adds a packet_t to the list.
 	 * The specific packet object has to get destroyed by the thread which
 	 * removes the packet.
 	 *
-	 * @param send_queue_t calling object
- 	 * @param[in] packet packet_t to add to the queue (packet is not copied)
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @param send_queue_t 	calling object
+ 	 * @param packet 		packet_t to add to the queue (packet is not copied)
 	 */
-	status_t (*add) (send_queue_t *send_queue, packet_t *packet);
+	void (*add) (send_queue_t *send_queue, packet_t *packet);
 
 	/**
-	 * @brief destroys a send_queue object
+	 * @brief destroys a send_queue object.
 	 *
 	 * @warning The caller of this function has to make sure
 	 * that no thread is going to add or get a packet from the send_queue
@@ -82,11 +80,11 @@ struct send_queue_t {
 	 * @param send_queue_t calling object
 	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*destroy) (send_queue_t *send_queue);
+	void (*destroy) (send_queue_t *send_queue);
 };
 
 /**
- * @brief Creates an empty send_queue_t
+ * @brief Creates an empty send_queue_t.
  *
  * @return send_queue_t empty send_queue_t
  */

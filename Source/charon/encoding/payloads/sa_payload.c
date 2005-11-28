@@ -126,11 +126,7 @@ static status_t verify(private_sa_payload_t *this)
 	}
 
 	/* check proposal numbering */		
-	status = this->proposals->create_iterator(this->proposals,&iterator,TRUE);
-	if (status != SUCCESS)
-	{
-		return status;
-	}
+	this->proposals->create_iterator(this->proposals,&iterator,TRUE);
 	
 	while(iterator->has_next(iterator))
 	{

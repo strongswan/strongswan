@@ -111,16 +111,11 @@ static status_t destroy(private_ike_sa_init_responded_t *this)
 ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t shared_secret, chunk_t received_nonce, chunk_t sent_nonce)
 {
 	private_ike_sa_init_responded_t *this = allocator_alloc_thing(private_ike_sa_init_responded_t);
-	
-	if (this == NULL)
-	{
-		return NULL;
-	}
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
-	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
+	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

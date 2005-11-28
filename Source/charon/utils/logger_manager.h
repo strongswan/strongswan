@@ -73,9 +73,7 @@ struct logger_manager_t {
 	 * @param[out] logger	pointer to a a place where the new logger is stored
 	 * @param name			name for the new logger. Context name is already included 
 	 * 						and has not to be specified (so NULL is allowed)
-	 * @return				
-	 * 						- logger_t object
-	 * 						- NULL if out of ressources
+	 * @return				logger_t object
 	 */
 	logger_t *(*create_logger) (logger_manager_t *this, logger_context_t context, char *name);
 	
@@ -88,12 +86,9 @@ struct logger_manager_t {
 	 * destroy function.
 	 *
 	 * @param this		logger_manager_t object
-	 * @param logger		pointer to the logger which has to be destroyed
-	 * @return			- SUCCESS
-	 * 					- OUT_OF_RES (when searching the specific logger_t object)
-	 * 					- NOT_FOUND
+	 * @param logger	pointer to the logger which has to be destroyed
 	 */
-	status_t (*destroy_logger) (logger_manager_t *this,logger_t *logger);
+	void (*destroy_logger) (logger_manager_t *this,logger_t *logger);
 	
 	/**
 	 * Returns the set logger_level of a specific context or 0.
@@ -110,11 +105,8 @@ struct logger_manager_t {
 	 * @param this 			calling object
 	 * @param context 		context to set level
  	 * @param logger_level 	logger_level to eanble
- 	 * @return 				
- 	 * 						- SUCCESS
- 	 * 						- OUT_OF_RES
 	 */
-	status_t (*enable_logger_level) (logger_manager_t *this, logger_context_t context,logger_level_t logger_level);
+	void (*enable_logger_level) (logger_manager_t *this, logger_context_t context,logger_level_t logger_level);
 		
 
 	/**
@@ -123,11 +115,8 @@ struct logger_manager_t {
 	 * @param this 			calling object
 	 * @param context 		context to set level
  	 * @param logger_level 	logger_level to disable
- 	 * @return
- 	 * 						- SUCCESS
- 	 * 						- OUT_OF_RES
 	 */
-	status_t (*disable_logger_level) (logger_manager_t *this, logger_context_t context,logger_level_t logger_level);
+	void (*disable_logger_level) (logger_manager_t *this, logger_context_t context,logger_level_t logger_level);
 
 
 	/**
@@ -136,19 +125,15 @@ struct logger_manager_t {
 	 * All remaining managed logger_t objects are also destroyed.
 	 *
 	 * @param this		logger_manager_t object
-	 * @return
-	 * 		 			- SUCCESS in any case
 	 */
-	status_t (*destroy) (logger_manager_t *this);
+	void (*destroy) (logger_manager_t *this);
 };
 
 /**
  * @brief Constructor to create a logger_manager_t object.
  *
  * @param default_log_level 	default log level for a context
- * @return 					
- * 							- logger_manager_t object
- * 							- NULL if out of ressources
+ * @return 						logger_manager_t object
  * 
  * @ingroup utils
  */

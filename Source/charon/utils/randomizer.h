@@ -54,10 +54,9 @@ struct randomizer_t {
 	 * 
 	 * @param this 					calling randomizer_t object
 	 * @param bytes					number of bytes to allocate
-	 * @param[out] chunk				chunk which will hold the allocated random bytes
+	 * @param[out] chunk			chunk which will hold the allocated random bytes
 	 * @return
 	 * 								- SUCCESS
-	 * 								- OUT_OF_RES
 	 * 								- FAILED if random device could not be opened
 	 */	
 	status_t (*allocate_random_bytes) (randomizer_t *this, size_t bytes, chunk_t *chunk);
@@ -83,7 +82,6 @@ struct randomizer_t {
 	 * @param[out] chunk				chunk which will hold the allocated random bytes
 	 * @return
 	 * 								- SUCCESS
-	 * 								- OUT_OF_RES
 	 * 								- FAILED if random device could not be opened
 	 */	
 	status_t (*allocate_pseudo_random_bytes) (randomizer_t *this, size_t bytes, chunk_t *chunk);
@@ -92,9 +90,8 @@ struct randomizer_t {
 	 * @brief Destroys a randomizer_t object.
 	 *
 	 * @param this 	randomizer_t object to destroy
-	 * @return 		SUCCESS in any case
 	 */
-	status_t (*destroy) (randomizer_t *this);
+	void (*destroy) (randomizer_t *this);
 };
 
 /**
@@ -115,7 +112,7 @@ randomizer_t *randomizer_create();
  * @param prandom_dev_name	device name for pseudo random values, etc /dev/urandom
  * @return					
  *	 						- created randomizer_t
- * 							- NULL if out of ressources
+ * 							- NULL if failed
  * 
  * @ingroup utils
  */

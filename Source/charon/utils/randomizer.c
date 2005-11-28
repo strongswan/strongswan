@@ -155,13 +155,11 @@ static status_t allocate_pseudo_random_bytes(private_randomizer_t *this, size_t 
 /**
  * Implementation of randomizer_t.destroy.
  */
-static status_t destroy(private_randomizer_t *this)
+static void destroy(private_randomizer_t *this)
 {
 	allocator_free(this->random_dev_name);
 	allocator_free(this->pseudo_random_dev_name);
 	allocator_free(this);
-	
-	return SUCCESS;
 }
 
 /*
@@ -178,41 +176,22 @@ randomizer_t *randomizer_create(void)
 randomizer_t *randomizer_create_on_devices(char * random_dev_name,char * prandom_dev_name)
 {
 	private_randomizer_t *this = allocator_alloc_thing(private_randomizer_t);
-	if (this == NULL)
-	{
-		return NULL;
-	}
-	if ((random_dev_name == NULL) || (prandom_dev_name == NULL))
-	{
-		return NULL;
-	}
-	
+
 	/* public functions */
 	this->public.get_random_bytes = (status_t (*) (randomizer_t *,size_t, u_int8_t *)) get_random_bytes;
 	this->public.allocate_random_bytes = (status_t (*) (randomizer_t *,size_t, chunk_t *)) allocate_random_bytes;
 	this->public.get_pseudo_random_bytes = (status_t (*) (randomizer_t *,size_t, u_int8_t *)) get_pseudo_random_bytes;
 	this->public.allocate_pseudo_random_bytes = (status_t (*) (randomizer_t *,size_t, chunk_t *)) allocate_pseudo_random_bytes;
-	this->public.destroy = (status_t (*) (randomizer_t *))destroy;
+	this->public.destroy = (void (*) (randomizer_t *))destroy;
 	
 	/* private functions */
 	this->get_bytes_from_device = get_bytes_from_device;
 	
 	/* private fields */
 	this->random_dev_name = allocator_alloc(strlen(random_dev_name) + 1);
-	if (this->random_dev_name == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 	strcpy(this->random_dev_name,random_dev_name);
 	
 	this->pseudo_random_dev_name = allocator_alloc(strlen(prandom_dev_name) + 1);
-	if (this->pseudo_random_dev_name == NULL)
-	{
-		allocator_free(this->random_dev_name);
-		allocator_free(this);
-		return NULL;
-	}
 	strcpy(this->pseudo_random_dev_name,prandom_dev_name);	
 	
 	return &(this->public);

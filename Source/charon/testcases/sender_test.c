@@ -73,5 +73,5 @@ void test_sender(tester_t *tester)
 		received_packet->destroy(received_packet);
 	}
 
-	tester->assert_true(tester, (sender->destroy(sender) == SUCCESS), "destroy call check");
+	sender->destroy(sender);
 }

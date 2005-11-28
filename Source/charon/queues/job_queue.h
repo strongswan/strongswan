@@ -1,7 +1,7 @@
 /**
  * @file job_queue.h
  *
- * @brief Job-Queue based on linked_list_t
+ * @brief Interface of job_queue_t-
  *
  */
 
@@ -39,8 +39,8 @@ struct job_queue_t {
 	/**
 	 * @brief returns number of jobs in queue
 	 *
-	 * @param job_queue_t calling object
-	 * @returns number of items in queue
+	 * @param job_queue_t 	calling object
+	 * @returns 			number of items in queue
 	 */
 	int (*get_count) (job_queue_t *job_queue);
 
@@ -48,14 +48,13 @@ struct job_queue_t {
 	 * @brief get the next job from the queue
 	 *
 	 * If the queue is empty, this function blocks until a job can be returned.
-	 *
 	 * After using, the returned job has to get destroyed by the caller.
 	 *
-	 * @param job_queue_t calling object
- 	 * @param[out] job pointer to a job pointer where to job is returned to
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @param job_queue_t 	calling object
+ 	 * @param[out] job 		pointer to a job pointer where to job is returned to
+	 * @return				job
 	 */
-	status_t (*get) (job_queue_t *job_queue, job_t **job);
+	job_t *(*get) (job_queue_t *job_queue);
 
 	/**
 	 * @brief adds a job to the queue
@@ -66,9 +65,8 @@ struct job_queue_t {
 	 *
 	 * @param job_queue_t calling object
  	 * @param[in] job job to add to the queue (job is not copied)
-	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*add) (job_queue_t *job_queue, job_t *job);
+	void (*add) (job_queue_t *job_queue, job_t *job);
 
 	/**
 	 * @brief destroys a job_queue object
@@ -78,9 +76,8 @@ struct job_queue_t {
 	 * after calling this function.
 	 *
 	 * @param job_queue_t calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*destroy) (job_queue_t *job_queue);
+	void (*destroy) (job_queue_t *job_queue);
 };
 
 /**
@@ -89,4 +86,5 @@ struct job_queue_t {
  * @return job_queue_t empty job_queue
  */
 job_queue_t *job_queue_create();
+
 #endif /*JOB_QUEUE_H_*/

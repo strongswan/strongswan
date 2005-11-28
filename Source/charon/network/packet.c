@@ -76,7 +76,7 @@ static status_t clone (private_packet_t *this, packet_t **clone)
 	
 	if (this->public.destination != NULL)
 	{
-		this->public.destination->clone(this->public.destination, &(other->destination));
+		other->destination = this->public.destination->clone(this->public.destination);
 	}
 	else {
 		other->destination = NULL;
@@ -84,7 +84,7 @@ static status_t clone (private_packet_t *this, packet_t **clone)
 	
 	if (this->public.source != NULL)
 	{
-		this->public.source->clone(this->public.source, &(other->source));
+		other->source = this->public.source->clone(this->public.source);
 	}
 	else {
 		other->source = NULL;

@@ -73,7 +73,6 @@ struct diffie_hellman_t {
 	 * @return 				
 	 * 						- SUCCESS, or
 	 * 						- FAILED if not both DH values are set
-	 * 						- OUT_OF_RES if out of ressources
 	 */
 	status_t (*get_shared_secret) (diffie_hellman_t *this, chunk_t *secret);
 	
@@ -84,11 +83,8 @@ struct diffie_hellman_t {
 	 * 
 	 * @param this 			calling diffie_hellman_t object
 	 * @param public_value 	public value of partner
-	 * @return 				
-	 * 						- SUCCESS, or
-	 * 						- OUT_OF_RES if out of ressources
 	 */
-	status_t (*set_other_public_value) (diffie_hellman_t *this, chunk_t public_value);
+	void (*set_other_public_value) (diffie_hellman_t *this, chunk_t public_value);
 	
 	/**
 	 * @brief Gets the public value of partner.
@@ -99,7 +95,6 @@ struct diffie_hellman_t {
 	 * @param[out] public_value public value of partner is stored at this location
 	 * @return 				
 	 * 							- SUCCESS, or
-	 * 							- OUT_OF_RES if out of ressources
 	 * 							- FAILED if other public value not set
 	 */
 	status_t (*get_other_public_value) (diffie_hellman_t *this, chunk_t *public_value);
@@ -110,10 +105,10 @@ struct diffie_hellman_t {
 	 * @warning chunk gets copied
 	 * 
 	 * @param this 				calling diffie_hellman_t object
-	 * @param[out] public_value public value of caller is stored at this location
+	 * @param[out] 				public_value public value of caller is stored at this location
 	 * @return 				
 	 * 							- SUCCESS, or
-	 * 							- OUT_OF_RES if out of ressources
+	 * 							- FAILED if not computed
 	 */
 	status_t (*get_my_public_value) (diffie_hellman_t *this, chunk_t *public_value);
 
@@ -121,10 +116,8 @@ struct diffie_hellman_t {
 	 * @brief Destroys an diffie_hellman_t object.
 	 *
 	 * @param this 				diffie_hellman_t object to destroy
-	 * @return 		
-	 * 							- SUCCESS in any case
 	 */
-	status_t (*destroy) (diffie_hellman_t *this);
+	void (*destroy) (diffie_hellman_t *this);
 };
 
 /**
@@ -134,8 +127,8 @@ struct diffie_hellman_t {
  * 
  * @param dh_group_number	Diffie Hellman group number to use
  * @return
- * 							- diffie_hellman_t if successfully
- * 							- NULL if out of ressources or dh_group not supported
+ * 							- diffie_hellman_t object
+ * 							- NULL if dh group not supported
  * 
  * @ingroup transforms
  */

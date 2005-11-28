@@ -41,7 +41,7 @@
 typedef struct private_logger_t private_logger_t;
 
 /**
- * @brief The logger object.
+ * @brief The logger object's private data.
  */
 struct private_logger_t {
 	/**
@@ -119,7 +119,6 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
 		log_details = '0';
 	}
 	
-	
 	if (this->log_pid)
 	{
 		snprintf(buffer, MAX_LOG, "[%c%c] [%s] @%d %s", log_type, log_details, this->name, getpid(), string);
@@ -128,7 +127,6 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
 	{
 		snprintf(buffer, MAX_LOG, "[%c%c] [%s] %s", log_type, log_details, this->name, string);
 	}
-	
 }
 
 /**
@@ -136,7 +134,7 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
  *
  * Yes, logg is wrong written :-).
  */
-static status_t logg(private_logger_t *this, logger_level_t loglevel, char *format, ...)
+static void logg(private_logger_t *this, logger_level_t loglevel, char *format, ...)
 {
 	if ((this->level & loglevel) == loglevel)
 	{
@@ -163,13 +161,12 @@ static status_t logg(private_logger_t *this, logger_level_t loglevel, char *form
 		}
 
 	}
-	return SUCCESS;
 }
 
 /**
  * Implementation of logger_t.log_bytes.
  */
-static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len)
+static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len)
 {
 	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 	
@@ -256,48 +253,42 @@ static status_t log_bytes(private_logger_t *this, logger_level_t loglevel, char 
 			}
 		}
 	}
-
 	pthread_mutex_unlock(&mutex);
-	return SUCCESS;
 }
 
 
 /**
  * Implementation of logger_t.log_chunk.
  */
-static status_t log_chunk(logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk)
+static void log_chunk(logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk)
 {
 	this->log_bytes(this, loglevel, label, chunk->ptr, chunk->len);
-	return SUCCESS;
 }
 
 
 /**
  * Implementation of logger_t.enable_level.
  */
-static status_t enable_level(private_logger_t *this, logger_level_t log_level)
+static void enable_level(private_logger_t *this, logger_level_t log_level)
 {
 	this->level |= log_level;
-	return SUCCESS;
 }
 
 /**
  * Implementation of logger_t.disable_level.
  */
-static status_t disable_level(private_logger_t *this, logger_level_t log_level)
+static void disable_level(private_logger_t *this, logger_level_t log_level)
 {
 	this->level &= ~log_level;
-	return SUCCESS;
 }
 
 /**
  * Implementation of logger_t.destroy.
  */
-static status_t destroy(private_logger_t *this)
+static void destroy(private_logger_t *this)
 {
 	allocator_free(this->name);
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -306,23 +297,18 @@ static status_t destroy(private_logger_t *this)
 logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_pid, FILE * output)
 {
 	private_logger_t *this = allocator_alloc_thing(private_logger_t);
-		
-	if (this == NULL)
-	{
-		return NULL;	
-	}
 	
 	if (logger_name == NULL)
 	{
 		logger_name = "";
 	}
 	
-	this->public.log = (status_t(*)(logger_t*,logger_level_t,char*,...))logg;
-	this->public.log_bytes = (status_t(*)(logger_t*, logger_level_t, char*,char*,size_t))log_bytes;
+	this->public.log = (void(*)(logger_t*,logger_level_t,char*,...))logg;
+	this->public.log_bytes = (void(*)(logger_t*, logger_level_t, char*,char*,size_t))log_bytes;
 	this->public.log_chunk = log_chunk;
-	this->public.enable_level = (status_t(*)(logger_t*,logger_level_t))enable_level;
-	this->public.disable_level = (status_t(*)(logger_t*,logger_level_t))disable_level;
-	this->public.destroy = (status_t(*)(logger_t*))destroy;
+	this->public.enable_level = (void(*)(logger_t*,logger_level_t))enable_level;
+	this->public.disable_level = (void(*)(logger_t*,logger_level_t))disable_level;
+	this->public.destroy = (void(*)(logger_t*))destroy;
 
 	this->prepend_prefix = prepend_prefix;
 
@@ -330,14 +316,9 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_pi
 	this->level = log_level;
 	this->log_pid = log_pid;
 	this->name = allocator_alloc(strlen(logger_name) + 1);
-	if (this->name == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
+
 	strcpy(this->name,logger_name);
 	this->output = output;
-
 	
 	if (output == NULL)
 	{

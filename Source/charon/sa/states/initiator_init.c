@@ -91,11 +91,8 @@ struct private_initiator_init_t {
 	 * 
 	 * @param this		calling object
 	 * @param message	the created message will be stored at this location
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*build_ike_sa_init_request) (private_initiator_init_t *this, message_t **message);
+	void (*build_ike_sa_init_request) (private_initiator_init_t *this, message_t **message);
 	
 	/**
 	 * Builds the SA payload for this state.
@@ -103,11 +100,8 @@ struct private_initiator_init_t {
 	 * @param this		calling object
 	 * @param payload	The generated SA payload object of type ke_payload_t is 
 	 * 					stored at this location.
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*build_sa_payload) (private_initiator_init_t *this, payload_t **payload);
+	void (*build_sa_payload) (private_initiator_init_t *this, payload_t **payload);
 
 	/**
 	 * Builds the KE payload for this state.
@@ -115,22 +109,17 @@ struct private_initiator_init_t {
 	 * @param this		calling object
 	 * @param payload	The generated KE payload object of type ke_payload_t is 
 	 * 					stored at this location.
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*build_ke_payload) (private_initiator_init_t *this, payload_t **payload);
+	void (*build_ke_payload) (private_initiator_init_t *this, payload_t **payload);
+	
 	/**
 	 * Builds the NONCE payload for this state.
 	 * 
 	 * @param this		calling object
 	 * @param payload	The generated NONCE payload object of type ke_payload_t is 
 	 * 					stored at this location.
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*build_nonce_payload) (private_initiator_init_t *this, payload_t **payload);	
+	void (*build_nonce_payload) (private_initiator_init_t *this, payload_t **payload);	
 	
 	/**
 	 * Destroy function called internally of this class after state change succeeded.
@@ -138,9 +127,8 @@ struct private_initiator_init_t {
 	 * This destroy function does not destroy objects which were passed to the new state.
 	 * 
 	 * @param this		calling object
-	 * @return			SUCCESS in any case
 	 */
-	status_t (*destroy_after_state_change) (private_initiator_init_t *this);
+	void (*destroy_after_state_change) (private_initiator_init_t *this);
 };
 
 /**
@@ -148,18 +136,18 @@ struct private_initiator_init_t {
  */
 static status_t initiate_connection (private_initiator_init_t *this, char *name)
 {
-	iterator_t 	*proposal_iterator;
-	ike_sa_init_requested_t 	*next_state;
-	message_t 				*message;
-	packet_t 				*packet;
-	status_t 				status;
-	host_t 					*my_host;
-	host_t 					*other_host;
-	randomizer_t				*randomizer;
+	iterator_t *proposal_iterator;
+	ike_sa_init_requested_t *next_state;
+	message_t *message;
+	packet_t *packet;
+	status_t status;
+	host_t *my_host;
+	host_t *other_host;
+	randomizer_t *randomizer;
 	
-
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
+	/* get local host */
 	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &my_host);
 	if (status != SUCCESS)
 	{	
@@ -168,6 +156,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	}
 	this->ike_sa->set_my_host(this->ike_sa,my_host);
 	
+	/* get remote host */
 	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &other_host);
 	if (status != SUCCESS)
 	{	
@@ -176,22 +165,17 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	}
 	this->ike_sa->set_other_host(this->ike_sa,other_host);
 	
+	/* get dh group */
 	status = global_configuration_manager->get_dh_group_number(global_configuration_manager, name, &(this->dh_group_number), this->dh_group_priority);
 	if (status != SUCCESS)
-	{	
+	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve DH group number configuration for %s",name);
 		return INVALID_ARG;
 	}
 
-	status = this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: Could not create iterator on list for proposals");
-		return status;	
-	}
-	
+	/* get proposals */
+	this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
 	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->ike_sa->get_other_host(this->ike_sa), proposal_iterator);
-	/* not needed anymore */
 	proposal_iterator->destroy(proposal_iterator);
 	if (status != SUCCESS)
 	{
@@ -202,70 +186,45 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	/* a diffie hellman object could allready exist caused by an failed initiate_connection call */	
 	if (this->diffie_hellman == NULL)
 	{
-		this	->logger->log(this->logger, CONTROL|MOST, "create diffie hellman object");
 		this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
 	}
 	
 	if (this->diffie_hellman == NULL)
 	{
 		this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t could not be created!");
-		return FAILED;			
+		return FAILED;
 	}
 	
 	if (this->sent_nonce.ptr != NULL)
 	{
-		this->logger->log(this->logger, ERROR, "Free existing sent nonce!");
 		allocator_free(this->sent_nonce.ptr);
 		this->sent_nonce = CHUNK_INITIALIZER;
 	}
 
-	this	->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for nonce");
+	this->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for nonce");
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
-	if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce)) != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not create nonce!");
-		return OUT_OF_RES;
-	}
-	this	->logger->log(this->logger, RAW|MOST, "Nonce",&(this->sent_nonce));
+	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
 
-	
-	
-	status = this->build_ike_sa_init_request (this,&message);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not build IKE_SA_INIT request message");
-		return status;
-	}
-	
+	this->logger->log(this->logger, RAW|MOST, "Nonce",&(this->sent_nonce));
+
+	this->build_ike_sa_init_request (this,&message);
+
 	/* generate packet */	
 	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
 	status = message->generate(message, NULL, NULL, &packet);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not generate packet from message");
+		this->logger->log(this->logger, ERROR, "could not generate packet from message");
 		message->destroy(message);
 		return status;
 	}
 	
 	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
-	status = global_send_queue->add(global_send_queue, packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not add packet to send queue");
-		packet->destroy(packet);
-		message->destroy(message);
-		return status;
-	}
+	global_send_queue->add(global_send_queue, packet);
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_number, this->diffie_hellman, this->sent_nonce);
-	if (next_state == NULL)
-	{
-		this	->logger->log(this->logger, ERROR, "Fatal error: could not create next state object of type ike_sa_init_requested_t");
-		message->destroy(message);
-		return FAILED;
-	}
 
 	/* last message can now be set */
 	status = this->ike_sa->set_last_requested_message(this->ike_sa, message);
@@ -282,7 +241,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 
 	/* state has NOW changed :-) */
-	this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
+	this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
 
 	this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
 	this->destroy_after_state_change(this);
@@ -293,200 +252,99 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 /**
  * implements private_initiator_init_t.build_ike_sa_init_request
  */
-static status_t build_ike_sa_init_request (private_initiator_init_t *this, message_t **request)
+static void build_ike_sa_init_request (private_initiator_init_t *this, message_t **request)
 {
-	status_t status;
 	payload_t *payload;
 	message_t *message;
 	
 	/* going to build message */
-	this	->logger->log(this->logger, CONTROL|MOST, "Going to build message");
-	status = this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, TRUE, &message);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not build empty message");
-		return status;
-	}
-
-	/* build SA payload */		
-	status = this->build_sa_payload(this, &payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not build SA payload");
-		message->destroy(message);
-		return status;
-	}
+	this->logger->log(this->logger, CONTROL|MOST, "Going to build message");
+	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, TRUE, &message);
 	
-	this	->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
+	/* build SA payload */		
+	this->build_sa_payload(this, &payload);
+	this->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
 	message->add_payload(message, payload);
-
+	
 	/* build KE payload */
-	status = this->build_ke_payload(this, &payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not build KE payload");
-		message->destroy(message);
-		return status;
-	}
-
-	this	->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
+	this->build_ke_payload(this, &payload);
+	this->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
 	message->add_payload(message, payload);
 	
 	/* build Nonce payload */
-	status = this->build_nonce_payload(this, &payload);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not build NONCE payload");
-		message->destroy(message);
-		return status;
-	}
-
-	this	->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
+	this->build_nonce_payload(this, &payload);
+	this->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
 	message->add_payload(message, payload);
 	
 	*request = message;
-	return SUCCESS;
 }
 
 /**
  * implements private_initiator_init_t.build_sa_payload
  */
-static status_t build_sa_payload(private_initiator_init_t *this, payload_t **payload)
+static void build_sa_payload(private_initiator_init_t *this, payload_t **payload)
 {
 	sa_payload_t* sa_payload;
 	iterator_t *proposal_iterator;
-	status_t status;
 	
-	/* SA payload takes proposals from this->ike_sa_init_data.proposals and writes them to the created sa_payload */
+	/* SA payload takes proposals from this->ike_sa_init_data.proposals 
+	 * and writes them to the created sa_payload 
+	 */
 
 	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
-	status = this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: Could not create iterator on list for proposals");
-		return status;	
-	}
+	this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
 	
 	sa_payload = sa_payload_create();
-	if (sa_payload == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: Could not create SA payload object");
-		return OUT_OF_RES;
-	}
 	
 	while (proposal_iterator->has_next(proposal_iterator))
 	{
 		proposal_substructure_t *current_proposal;
 		proposal_substructure_t *current_proposal_clone;
-		status = proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not get current proposal needed to copy");
-			proposal_iterator->destroy(proposal_iterator);
-			sa_payload->destroy(sa_payload);
-			return status;	
-		}
-		status = current_proposal->clone(current_proposal,&current_proposal_clone);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not clone current proposal");
-			proposal_iterator->destroy(proposal_iterator);
-			sa_payload->destroy(sa_payload);
-			return status;	
-		}
-		
-		status = sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not add cloned proposal to SA payload");
-			proposal_iterator->destroy(proposal_iterator);
-			sa_payload->destroy(sa_payload);
-			return status;	
-		}
+		proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
 
+		current_proposal->clone(current_proposal,&current_proposal_clone);
+		
+		sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
 	}
 	proposal_iterator->destroy(proposal_iterator);
 	
-	this->logger->log(this->logger, CONTROL|MORE, "sa payload builded");
-
 	*payload = (payload_t *) sa_payload;	
-	return SUCCESS;
 }
 
 /**
  * implements private_initiator_init_t.build_ke_payload
  */
-static status_t build_ke_payload(private_initiator_init_t *this, payload_t **payload)
+static void build_ke_payload(private_initiator_init_t *this, payload_t **payload)
 {
 	ke_payload_t *ke_payload;
 	chunk_t key_data;
-	status_t status;
-
+	
 	this->logger->log(this->logger, CONTROL|MORE, "building ke payload");
 	
-
-	this	->logger->log(this->logger, CONTROL|MORE, "get public dh value to send in ke payload");
-	status = this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not get my DH public value");
-		return status;
-	}
+	this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
 
 	ke_payload = ke_payload_create();
-	if (ke_payload == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "Could not create KE payload");
-		allocator_free_chunk(&key_data);
-		return OUT_OF_RES;	
-	}
 	ke_payload->set_dh_group_number(ke_payload, this->dh_group_number);
-	if (ke_payload->set_key_exchange_data(ke_payload, key_data) != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not set key exchange data of KE payload");
-		ke_payload->destroy(ke_payload);
-		allocator_free_chunk(&key_data);
-		return OUT_OF_RES;
-	}
-	allocator_free_chunk(&key_data);
+	ke_payload->set_key_exchange_data(ke_payload, key_data);
 	
-	this->logger->log(this->logger, CONTROL|MORE, "ke payload builded");
-
+	allocator_free_chunk(&key_data);
 	*payload = (payload_t *) ke_payload;
-	return SUCCESS;			
 }
 
 /**
  * implements private_initiator_init_t.build_nonce_payload
  */
-static status_t build_nonce_payload(private_initiator_init_t *this, payload_t **payload)
+static void build_nonce_payload(private_initiator_init_t *this, payload_t **payload)
 {
 	nonce_payload_t *nonce_payload;
-	status_t status;
 	
 	this->logger->log(this->logger, CONTROL|MORE, "building nonce payload");
-
+	
 	nonce_payload = nonce_payload_create();
-	if (nonce_payload == NULL)
-	{	
-		this->logger->log(this->logger, ERROR, "Fatal error: could not create nonce payload object");
-		return OUT_OF_RES;	
-	}
-
-	status = nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
 	
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not set nonce data of payload");
-		nonce_payload->destroy(nonce_payload);
-		return status;
-	}
-		
+	nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
+	
 	*payload = (payload_t *) nonce_payload;
-	
-	this->logger->log(this->logger, CONTROL|MORE, "nonce payload builded");
-	
-	return SUCCESS;
 }
 
 /**
@@ -510,7 +368,7 @@ static ike_sa_state_t get_state(private_initiator_init_t *this)
 /**
  * Implements state_t.get_state
  */
-static status_t destroy(private_initiator_init_t *this)
+static void destroy(private_initiator_init_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy initiator_init_t state object");
 
@@ -535,15 +393,13 @@ static status_t destroy(private_initiator_init_t *this)
 		this->logger->log(this->logger, CONTROL | MOST, "Free memory of sent nonce");
 		allocator_free(this->sent_nonce.ptr);
 	}
-	
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /**
  * Implements private_initiator_init_t.destroy_after_state_change
  */
-static status_t destroy_after_state_change (private_initiator_init_t *this)
+static void destroy_after_state_change (private_initiator_init_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy initiator_init_t state object");
 	
@@ -557,7 +413,6 @@ static status_t destroy_after_state_change (private_initiator_init_t *this)
 	}
 	this->proposals->destroy(this->proposals);
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /* 
@@ -566,16 +421,11 @@ static status_t destroy_after_state_change (private_initiator_init_t *this)
 initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 {
 	private_initiator_init_t *this = allocator_alloc_thing(private_initiator_init_t);
-	
-	if (this == NULL)
-	{
-		return NULL;
-	}
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
-	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
+	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
 	
 	/* public functions */
 	this->public.initiate_connection = (status_t (*)(initiator_init_t *, char *)) initiate_connection;
@@ -593,11 +443,6 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->proposals = linked_list_create();
 	this->sent_nonce = CHUNK_INITIALIZER;
-	if (this->proposals == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
-	
+
 	return &(this->public);
 }

@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_id.c
  *
- * @brief Class for identification of an IKE_SA
+ * @brief Implementation of ike_sa_id_t.
  *
  */
 
@@ -39,9 +39,6 @@ struct private_ike_sa_id_t {
 	 */
 	ike_sa_id_t public;
 
-
-	/* Private values */
-
 	 /**
 	  * SPI of Initiator
 	  */
@@ -61,22 +58,23 @@ struct private_ike_sa_id_t {
 
 
 /**
- * @brief implements function set_responder_spi of ike_sa_id_t
+ * implements ike_sa_id_t.set_responder_spi.
  */
-static status_t set_responder_spi (private_ike_sa_id_t *this, u_int64_t responder_spi)
+static void set_responder_spi (private_ike_sa_id_t *this, u_int64_t responder_spi)
 {
 	this->responder_spi = responder_spi;
-	return SUCCESS;
-}
-
-static status_t set_initiator_spi(private_ike_sa_id_t *this, u_int64_t initiator_spi)
-{
-	this->initiator_spi = initiator_spi;
-	return SUCCESS;
 }
 
 /**
- * @brief implements ike_sa_id_t.get_initiator_spi
+ * implements ike_sa_id_t.set_initiator_spi.
+ */
+static void set_initiator_spi(private_ike_sa_id_t *this, u_int64_t initiator_spi)
+{
+	this->initiator_spi = initiator_spi;
+}
+
+/**
+ * implements ike_sa_id_t.get_initiator_spi.
  */
 static u_int64_t get_initiator_spi (private_ike_sa_id_t *this)
 {
@@ -84,7 +82,7 @@ static u_int64_t get_initiator_spi (private_ike_sa_id_t *this)
 }
 
 /**
- * @brief implements ike_sa_id_t.get_responder_spi
+ * implements ike_sa_id_t.get_responder_spi.
  */
 static u_int64_t get_responder_spi (private_ike_sa_id_t *this)
 {
@@ -92,51 +90,40 @@ static u_int64_t get_responder_spi (private_ike_sa_id_t *this)
 }
 
 /**
- * @brief implements function equals of ike_sa_id_t
+ * implements ike_sa_id_t.get_responder_spi.
  */
-static status_t equals (private_ike_sa_id_t *this,private_ike_sa_id_t *other, bool *are_equal)
+static bool equals (private_ike_sa_id_t *this, private_ike_sa_id_t *other)
 {
 	if ((this == NULL)||(other == NULL))
 	{
-		return FAILED;
+		return FALSE;
 	}
 	if ((this->is_initiator_flag == other->is_initiator_flag) &&
 		(this->initiator_spi == other->initiator_spi) &&
 		(this->responder_spi == other->responder_spi))
-
 	{
 		/* private_ike_sa_id's are equal */
-		*are_equal = TRUE;
+		return TRUE;
 	}
 	else
 	{
 		/* private_ike_sa_id's are not equal */
-		*are_equal = FALSE;
+		return FALSE;
 	}
-
-	return SUCCESS;
 }
 
 /**
- * @brief implements function replace_values of ike_sa_id_t
+ * implements ike_sa_id_t.replace_values.
  */
-status_t replace_values (private_ike_sa_id_t *this, private_ike_sa_id_t *other)
+static void replace_values(private_ike_sa_id_t *this, private_ike_sa_id_t *other)
 {
-	if ((this == NULL) || (other == NULL))
-	{
-		return FAILED;
-	}
-
 	this->initiator_spi = other->initiator_spi;
 	this->responder_spi = other->responder_spi;
 	this->is_initiator_flag = other->is_initiator_flag;
-
-	return SUCCESS;
 }
 
-
 /**
- * @brief implements ike_sa_id_t.is_initiator
+ * implements ike_sa_id_t.is_initiator.
  */
 static bool is_initiator(private_ike_sa_id_t *this)
 {
@@ -144,7 +131,7 @@ static bool is_initiator(private_ike_sa_id_t *this)
 }
 
 /**
- * @brief implements ike_sa_id_t.switch_initiator
+ * implements ike_sa_id_t.switch_initiator.
  */
 static bool switch_initiator(private_ike_sa_id_t *this)
 {
@@ -159,24 +146,20 @@ static bool switch_initiator(private_ike_sa_id_t *this)
 	return this->is_initiator_flag;
 }
 
-
 /**
- * @brief implements function clone of ike_sa_id_t
+ * implements ike_sa_id_t.clone.
  */
-static status_t clone (private_ike_sa_id_t *this, ike_sa_id_t **clone_of_this)
+static ike_sa_id_t* clone(private_ike_sa_id_t *this)
 {
-	*clone_of_this = ike_sa_id_create(this->initiator_spi, this->responder_spi, this->is_initiator_flag);
-
-	return (*clone_of_this == NULL)	? OUT_OF_RES : SUCCESS;
+	return ike_sa_id_create(this->initiator_spi, this->responder_spi, this->is_initiator_flag);
 }
 
 /**
- * @brief implements function destroy of ike_sa_id_t
+ * implements ike_sa_id_t.clone.
  */
-static status_t destroy (private_ike_sa_id_t *this)
+static void destroy(private_ike_sa_id_t *this)
 {
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -185,24 +168,20 @@ static status_t destroy (private_ike_sa_id_t *this)
 ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi, bool is_initiator_flag)
 {
 	private_ike_sa_id_t *this = allocator_alloc_thing(private_ike_sa_id_t);
-	if (this == NULL)
-	{
-		return NULL;
-	}
 
 	/* Public functions */
-	this->public.set_responder_spi = (status_t(*)(ike_sa_id_t*,u_int64_t)) set_responder_spi;
-	this->public.set_initiator_spi = (status_t(*)(ike_sa_id_t*,u_int64_t)) set_initiator_spi;
+	this->public.set_responder_spi = (void(*)(ike_sa_id_t*,u_int64_t)) set_responder_spi;
+	this->public.set_initiator_spi = (void(*)(ike_sa_id_t*,u_int64_t)) set_initiator_spi;
 	this->public.get_responder_spi = (u_int64_t(*)(ike_sa_id_t*)) get_responder_spi;
 	this->public.get_initiator_spi = (u_int64_t(*)(ike_sa_id_t*)) get_initiator_spi;
-	this->public.equals = (status_t(*)(ike_sa_id_t*,ike_sa_id_t*,bool*)) equals;
-	this->public.replace_values = (status_t(*)(ike_sa_id_t*,ike_sa_id_t*)) replace_values;
+	this->public.equals = (bool(*)(ike_sa_id_t*,ike_sa_id_t*)) equals;
+	this->public.replace_values = (void(*)(ike_sa_id_t*,ike_sa_id_t*)) replace_values;
 
 	this->public.is_initiator = (bool(*)(ike_sa_id_t*)) is_initiator;
 	this->public.switch_initiator = (bool(*)(ike_sa_id_t*)) switch_initiator;
 
-	this->public.clone = (status_t(*)(ike_sa_id_t*,ike_sa_id_t**)) clone;
-	this->public.destroy = (status_t(*)(ike_sa_id_t*))destroy;
+	this->public.clone = (ike_sa_id_t*(*)(ike_sa_id_t*)) clone;
+	this->public.destroy = (void(*)(ike_sa_id_t*))destroy;
 
 	/* private data */
 	this->initiator_spi = initiator_spi;

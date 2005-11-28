@@ -38,10 +38,8 @@ struct sender_t {
 	 * @brief Destroys a sender object
 	 *
 	 * @param sender 	sender object
-	 * @return 
-	 * 					- SUCCESS in any case
 	 */
-	status_t (*destroy) (sender_t *sender);
+	void (*destroy) (sender_t *sender);
 };
 
 

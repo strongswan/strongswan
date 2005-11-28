@@ -41,10 +41,8 @@ struct scheduler_t {
 	 * @brief Destroys a scheduler object.
 	 * 
 	 * @param scheduler 	scheduler object
-	 * @return 
-	 * 						- SUCCESS in any case
 	 */
-	status_t (*destroy) (scheduler_t *scheduler);
+	void (*destroy) (scheduler_t *scheduler);
 };
 
 /**
@@ -54,8 +52,8 @@ struct scheduler_t {
  * and adds them to the job queue.
  * 
  * @return 
- * 			- the created scheduler_t instance, or
- * 			- NULL if thread could not be started
+ * 				- the created scheduler_t instance, or
+ * 				- NULL if thread could not be started
  * 
  * @ingroup threads
  */

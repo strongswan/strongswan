@@ -96,11 +96,6 @@ static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 {
 	ike_sa_entry_t *this = allocator_alloc_thing(ike_sa_entry_t);
 
-	if (this == NULL)
-	{
-		return NULL;
-	}
-
 	/* destroy function */
 	this->destroy = ike_sa_entry_destroy;
 	
@@ -113,22 +108,11 @@ static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 	this->driveout_waiting_threads = FALSE;
 	
 	/* ike_sa_id is always cloned */
-	ike_sa_id->clone(ike_sa_id, &(this->ike_sa_id));
-	if (this->ike_sa_id == NULL)
-	{
-		allocator_free(this);	
-		return NULL;
-	}
-	
+	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+
 	/* create new ike_sa */
 	this->ike_sa = ike_sa_create(ike_sa_id);
-	if (this->ike_sa == NULL)
-	{
-		this->ike_sa_id->destroy(this->ike_sa_id);
-		allocator_free(this);	
-		return NULL;
-		
-	}
+
 	return this;
 }
 
@@ -149,11 +133,9 @@ struct private_ike_sa_manager_t {
 	 * we give out SPIs incremental
 	 *
 	 * @param this			the ike_sa_manager
-	 * @param spi[out]		spi will be written here
-	 * @return				SUCCESS or,
-	 * 						OUT_OF_RES when we already served 2^64 SPIs ;-)
+	 * @return 				the next spi
 	 */
-	 status_t (*get_next_spi) (private_ike_sa_manager_t *this, u_int64_t *spi);
+	u_int64_t (*get_next_spi) (private_ike_sa_manager_t *this);
 
 	/**
 	 * @brief find the ike_sa_entry in the list by SPIs
@@ -167,7 +149,6 @@ struct private_ike_sa_manager_t {
 	 * @return				
 	 * 						- SUCCESS when found,
 	 * 						- NOT_FOUND when no such ike_sa_id in list
-	 * 						- OUT_OF_RES
 	 */
 	 status_t (*get_entry_by_id) (private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_entry_t **entry);
 
@@ -183,7 +164,6 @@ struct private_ike_sa_manager_t {
 	 * @return				
 	 * 						- SUCCESS when found,
 	 * 						- NOT_FOUND when no such ike_sa_id in list
-	 * 						- OUT_OF_RES
 	 */
 	 status_t (*get_entry_by_sa) (private_ike_sa_manager_t *this, ike_sa_t *ike_sa, ike_sa_entry_t **entry);
 	 
@@ -221,7 +201,7 @@ struct private_ike_sa_manager_t {
 
 
 /**
- * @see private_ike_sa_manager_t.get_entry_by_id
+ * Implements private_ike_sa_manager_t.get_entry_by_id.
  */
 static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_entry_t **entry)
 {
@@ -230,22 +210,14 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 	status_t status;
 	
 	/* create iterator over list of ike_sa's */
-	status = list->create_iterator(list, &iterator, TRUE);
-	if (status != SUCCESS)
-	{
- 		this->logger->log(this->logger,ERROR,"Fatal Error: could not create iterator: %s",mapping_find(status_m,status));
-		/* out of res */
-		return status;
-	}
-	
+	list->create_iterator(list, &iterator, TRUE);
+
 	/* default status */
 	status = NOT_FOUND;
-	
 	
 	while (iterator->has_next(iterator))
 	{
 		ike_sa_entry_t *current;
-		bool are_equal = FALSE;
 		
 		iterator->current(iterator, (void**)&current);
 		if (current->ike_sa_id->get_responder_spi(current->ike_sa_id) == 0) {
@@ -259,10 +231,9 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 				break;
 			}
 		}
-		current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id, &are_equal);
-		if (are_equal)
+		 if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
 		{
-	 		this->logger->log(this->logger,CONTROL | MOST,"Found entry by full ID");
+			this->logger->log(this->logger,CONTROL | MOST,"Found entry by full ID");
 			*entry = current;
 			status = SUCCESS;
 			break;
@@ -274,7 +245,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 }
 
 /**
- * @see private_ike_sa_manager_t.get_entry_by_sa
+ * Implements private_ike_sa_manager_t.get_entry_by_sa.
  */
 static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa, ike_sa_entry_t **entry)
 {
@@ -282,12 +253,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 	iterator_t *iterator;
 	status_t status;
 	
-	status = list->create_iterator(list, &iterator, TRUE);
-	if (status != SUCCESS)
-	{
- 		this->logger->log(this->logger,ERROR,"Fatal Error: could not create iterator: %s",mapping_find(status_m,status));
-		return status;
-	}
+	list->create_iterator(list, &iterator, TRUE);
 	
 	/* default status */
 	status = NOT_FOUND;
@@ -306,11 +272,12 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 		}
 	}
 	iterator->destroy(iterator);
+	
 	return status;
 }
 
 /**
- * @see private_ike_sa_manager_s.delete_entry
+ * Implements private_ike_sa_manager_s.delete_entry.
  */
 static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *entry)
 {
@@ -318,13 +285,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 	iterator_t *iterator;
 	status_t status;
 	
-	status = list->create_iterator(list, &iterator, TRUE);
-	
-	if (status != SUCCESS)
-	{
- 		this->logger->log(this->logger,ERROR,"Fatal Error: could not create iterator: %s",mapping_find(status_m,status));
-		return status;
-	}
+	list->create_iterator(list, &iterator, TRUE);
 
 	status = NOT_FOUND;	
 	
@@ -347,85 +308,47 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 
 
 /**
- * @see private_ike_sa_manager_t.get_next_spi
+ * Implements private_ike_sa_manager_t.get_next_spi.
  */
-static status_t get_next_spi(private_ike_sa_manager_t *this, u_int64_t *spi)
+static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 {
 	this->next_spi++;
 	if (this->next_spi == 0) {
-		/* our software ran so incredible stable, we have no more
-		 * SPIs to give away :-/.  */
- 		this->logger->log(this->logger,CONTROL | MOST,"No more SPI values available. WOW!");
-		return OUT_OF_RES;
+		/* TODO handle overflow,
+		 * delete all SAs or so
+		 */
 	}
-	*spi = this->next_spi;
-	return SUCCESS;
+	return this->next_spi;
 }
 
 /**
  * Implementation of ike_sa_manager.create_and_checkout.
  */
-static status_t create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa)
+static void create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa)
 {
-	status_t retval;
 	u_int64_t initiator_spi;
 	ike_sa_entry_t *new_ike_sa_entry;
 	ike_sa_id_t *new_ike_sa_id;
 
-	retval = this->get_next_spi(this, &initiator_spi);
-	if (retval == SUCCESS)
-	{
-		new_ike_sa_id = 	ike_sa_id_create(0, 0, TRUE);
-		if (new_ike_sa_id != NULL)
-		{
-			new_ike_sa_id->set_initiator_spi(new_ike_sa_id, initiator_spi);
-	
-			/* create entry */
-			new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
-			new_ike_sa_id->destroy(new_ike_sa_id);
-			if (new_ike_sa_entry != NULL)
-			{ 
-				/* each access is locked */
-				pthread_mutex_lock(&(this->mutex));
-				
-				retval = this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
-	
-				if (retval == SUCCESS)
-				{
-					/* check ike_sa out */
-					this->logger->log(this->logger,CONTROL | MORE ,"New IKE_SA created and added to list of known IKE_SA's");
-					new_ike_sa_entry->checked_out = TRUE;
-					*ike_sa = new_ike_sa_entry->ike_sa;
-					/* DON'T use return, we must unlock the mutex! */
-				}
-				else
-				{
-					/* ike_sa_entry could not be added to list*/
-					this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry_t could not be added to list");
-				}
-				pthread_mutex_unlock(&(this->mutex));
-			}
-			else
-			{
-				/* new ike_sa_entry could not be created */
-				this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry_t could not be created");	
-				retval = OUT_OF_RES;
-			}
-		}
-		else
-		{
-			/* new ike_sa_id could not be created */
- 			this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_id_t could not be created");	
-			retval = OUT_OF_RES;
-		}
-	}
-	else
-	{
-		/* next SPI could not be created */
- 		this->logger->log(this->logger,ERROR,"Fatal error: Next SPI could not be created");
-	}
+	initiator_spi = this->get_next_spi(this);
+	new_ike_sa_id = ike_sa_id_create(0, 0, TRUE);
+	new_ike_sa_id->set_initiator_spi(new_ike_sa_id, initiator_spi);
 
-	return retval;
+	/* create entry */
+	new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
+	new_ike_sa_id->destroy(new_ike_sa_id);
+
+	/* each access is locked */
+	pthread_mutex_lock(&(this->mutex));
+	
+	this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
+
+	/* check ike_sa out */
+	this->logger->log(this->logger,CONTROL | MORE ,"New IKE_SA created and added to list of known IKE_SA's");
+	new_ike_sa_entry->checked_out = TRUE;
+	*ike_sa = new_ike_sa_entry->ike_sa;
+
+	pthread_mutex_unlock(&(this->mutex));
 }
 
 /**
@@ -436,13 +359,13 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 	bool responder_spi_set;
 	bool initiator_spi_set;
 	status_t retval;
-
+	
 	/* each access is locked */
 	pthread_mutex_lock(&(this->mutex));
-
+	
 	responder_spi_set = (FALSE != ike_sa_id->get_responder_spi(ike_sa_id));
 	initiator_spi_set = (FALSE != ike_sa_id->get_initiator_spi(ike_sa_id));
-
+	
 	if (initiator_spi_set && responder_spi_set)
 	{
 		/* we SHOULD have an IKE_SA for these SPIs in the list,
@@ -461,44 +384,44 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		 	}
 		 	else
 		 	{
-			 	/* is this IKE_SA already checked out ?? 
-			 	 * are we welcome to get this SA ? */
-			 	while (entry->checked_out && !entry->driveout_waiting_threads)	
-			 	{ 
-			 		/* so wait until we can get it for us.
-			 		 * we register us as waiting.
-			 		 */
-			 		entry->waiting_threads++;
-			 		pthread_cond_wait(&(entry->condvar), &(this->mutex));
-			 		entry->waiting_threads--;
-			 	}
-			 	
-			 	/* hm, a deletion request forbids us to get this SA, go home */
-			 	if (entry->driveout_waiting_threads)
-			 	{
-			 		/* we must signal here, others are interested that we leave */
-			 		pthread_cond_signal(&(entry->condvar));
-			 		this->logger->log(this->logger,CONTROL|MORE,"Drive out waiting thread for existing IKE_SA");
-			 		retval = NOT_FOUND;
-			 	}
-			 	else
-			 	{
-			 		this->logger->log(this->logger,CONTROL|MOST,"IKE SA successfully checked out");
-				 	/* ok, this IKE_SA is finally ours */
-				 	entry->checked_out = TRUE;
-				 	*ike_sa = entry->ike_sa;
-				 	/* DON'T use return, we must unlock the mutex! */
-				 	retval = SUCCESS; 
-			 	}
-		 	}
-		 }
-		 else
-		 {
-	 		this->logger->log(this->logger,ERROR | MORE,"IKE SA not stored in known IKE_SA list");
-		 	/* looks like there is no such IKE_SA, better luck next time... */
-		 	/* DON'T use return, we must unlock the mutex! */
-		 	retval = NOT_FOUND;
-		 }
+				/* is this IKE_SA already checked out ?? 
+				 * are we welcome to get this SA ? */
+				while (entry->checked_out && !entry->driveout_waiting_threads)	
+				{ 
+					/* so wait until we can get it for us.
+					 * we register us as waiting.
+					 */
+					entry->waiting_threads++;
+					pthread_cond_wait(&(entry->condvar), &(this->mutex));
+					entry->waiting_threads--;
+				}
+				
+				/* hm, a deletion request forbids us to get this SA, go home */
+				if (entry->driveout_waiting_threads)
+				{
+					/* we must signal here, others are interested that we leave */
+					pthread_cond_signal(&(entry->condvar));
+					this->logger->log(this->logger,CONTROL|MORE,"Drive out waiting thread for existing IKE_SA");
+					retval = NOT_FOUND;
+				}
+				else
+				{
+					this->logger->log(this->logger,CONTROL|MOST,"IKE SA successfully checked out");
+					/* ok, this IKE_SA is finally ours */
+					entry->checked_out = TRUE;
+					*ike_sa = entry->ike_sa;
+					/* DON'T use return, we must unlock the mutex! */
+					retval = SUCCESS; 
+				}
+			}
+		}
+		else
+		{
+			this->logger->log(this->logger,ERROR | MORE,"IKE SA not stored in known IKE_SA list");
+			/* looks like there is no such IKE_SA, better luck next time... */
+			/* DON'T use return, we must unlock the mutex! */
+			retval = NOT_FOUND;
+		}
 	}
 	else if (initiator_spi_set && !responder_spi_set)
 	{
@@ -512,53 +435,29 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		u_int64_t responder_spi;
 		ike_sa_entry_t *new_ike_sa_entry;
 		
-
-		/* set SPIs, we are the responder */
-		retval = this->get_next_spi(this, &responder_spi);
-
-		if (retval == SUCCESS)
-		{ /* next SPI could be created */
-			
-			/* we also set arguments spi, so its still valid */
-			ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
-			
-			/* create entry */
-			new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
-			if (new_ike_sa_entry != NULL)
-			{ 
-				retval = this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
-				if (retval == SUCCESS)
-				{
-					/* check ike_sa out */
-					this->logger->log(this->logger,CONTROL | MORE ,"IKE_SA added to list of known IKE_SA's");
-					new_ike_sa_entry->checked_out = TRUE;
-					*ike_sa = new_ike_sa_entry->ike_sa;
-			
-					 /* DON'T use return, we must unlock the mutex! */
-				}
-				else
-				{
-					/* ike_sa_entry could not be added to list*/
-					this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry could not be added to list");
-				}			
-			}
-			else
-			{
-				/* new ike_sa_entry could not be created */
-				this->logger->log(this->logger,ERROR,"Fatal error: ike_sa_entry could not be created");			
-				retval = OUT_OF_RES;
-			}
-		}
-		else
-		{ /* next SPI could not be created */
-			this->logger->log(this->logger,ERROR,"Fatal error: Next SPI could not be created");
-		}
 		
+		/* set SPIs, we are the responder */
+		responder_spi = this->get_next_spi(this);
+		
+		/* we also set arguments spi, so its still valid */
+		ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
+		
+		/* create entry */
+		new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
+		
+		this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
+		
+		/* check ike_sa out */
+		this->logger->log(this->logger,CONTROL | MORE ,"IKE_SA added to list of known IKE_SA's");
+		new_ike_sa_entry->checked_out = TRUE;
+		*ike_sa = new_ike_sa_entry->ike_sa;
+		
+		retval = SUCCESS;
 	}
 	else
 	{
 		/* responder set, initiator not: here is something seriously wrong! */
- 		this->logger->log(this->logger,ERROR | MORE,"Invalid IKE_SA SPI's");
+ 		this->logger->log(this->logger,ERROR | MORE, "Invalid IKE_SA SPI's");
 		/* DON'T use return, we must unlock the mutex! */
 		retval = INVALID_ARG;
 	}
@@ -647,14 +546,13 @@ static status_t checkin_and_delete(private_ike_sa_manager_t *this, ike_sa_t *ike
 		this->logger->log(this->logger,ERROR,"Fatal Error: Tried to checkin and delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}
-
+	
 	pthread_mutex_unlock(&(this->mutex));
 	return retval;
 }
 
 /**
- * Implements ike_sa_manager_t-function delete.
- * @see ike_sa_manager_t.delete.
+ * Implements ike_sa_manager_t.delete.
  */
 static status_t delete(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 {
@@ -697,15 +595,13 @@ static status_t delete(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 }
 
 /**
- * Implements ike_sa_manager_t-function destroy.
- * @see ike_sa_manager_t.destroy.
+ * Implements ike_sa_manager_t.destroy.
  */
-static status_t destroy(private_ike_sa_manager_t *this)
+static void destroy(private_ike_sa_manager_t *this)
 {
 	/* destroy all list entries */
 	linked_list_t *list = this->ike_sa_list;
 	iterator_t *iterator;
-	status_t status;
 	ike_sa_entry_t *entry;
 	
 	pthread_mutex_lock(&(this->mutex));
@@ -713,13 +609,7 @@ static status_t destroy(private_ike_sa_manager_t *this)
 	this->logger->log(this->logger,CONTROL | MORE,"Going to destroy IKE_SA manager and all managed IKE_SA's");
 	
 	/* Step 1: drive out all waiting threads  */
-	status = list->create_iterator(list, &iterator, TRUE);
-	
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger,ERROR,"Fatal Error: Create of iterator while destroying IKE_SA-Manager failed");
-		return FAILED;
-	}
+	list->create_iterator(list, &iterator, TRUE);
 
 	this->logger->log(this->logger,CONTROL | MOST,"Set driveout flags for all stored IKE_SA's");
 	while (iterator->has_next(iterator))
@@ -761,8 +651,6 @@ static status_t destroy(private_ike_sa_manager_t *this)
 	global_logger_manager->destroy_logger(global_logger_manager,this->logger);
 
 	allocator_free(this);
-	
-	return SUCCESS;
 }
 
 /*
@@ -773,8 +661,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 	private_ike_sa_manager_t *this = allocator_alloc_thing(private_ike_sa_manager_t);
 
 	/* assign public functions */
-	this->public.destroy = (status_t(*)(ike_sa_manager_t*))destroy;
-	this->public.create_and_checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_t **sa))create_and_checkout;
+	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
+	this->public.create_and_checkout = (void(*)(ike_sa_manager_t*, ike_sa_t **sa))create_and_checkout;
 	this->public.checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t *sa_id, ike_sa_t **sa))checkout;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*, ike_sa_t *sa))checkin;
 	this->public.delete = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t *sa_id))delete;
@@ -788,20 +676,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	/* initialize private variables */
 	this->logger = global_logger_manager->create_logger(global_logger_manager,IKE_SA_MANAGER,NULL);
-	if (this->logger == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 	
 	this->ike_sa_list = linked_list_create();
-	if (this->ike_sa_list == NULL)
-	{
-		this->logger->log(this->logger,ERROR,"Fatal error: Failed to create list for managed IKE_SA");
-		global_logger_manager->destroy_logger(global_logger_manager,this->logger);
-		allocator_free(this);
-		return NULL;
-	}
 
 	pthread_mutex_init(&(this->mutex), NULL);
 

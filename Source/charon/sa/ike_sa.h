@@ -1,8 +1,7 @@
 /**
  * @file ike_sa.h
  *
- * @brief Class ike_sa_t. An object of this type is managed by an
- * ike_sa_manager_t object and represents an IKE_SA
+ * @brief Interface of ike_sa_id_t.
  *
  */
 
@@ -45,8 +44,8 @@
 typedef struct ike_sa_t ike_sa_t;
 
 /**
- * @brief This class is used to represent an IKE_SA
- *
+ * @brief Class ike_sa_t. An object of this type is managed by an
+ * ike_sa_manager_t object and represents an IKE_SA.
  */
 struct ike_sa_t {
 
@@ -60,7 +59,7 @@ struct ike_sa_t {
 	status_t (*process_message) (ike_sa_t *this,message_t *message);
 
 	/**
-	 * Initiate a new connection with given configuration name
+	 * @brief Initiate a new connection with given configuration name.
 	 * 
 	 * @param this 			calling object
 	 * @param name 			name of the configuration
@@ -69,26 +68,28 @@ struct ike_sa_t {
 	status_t (*initialize_connection) (ike_sa_t *this, char *name);
 
 	/**
-	 * @brief Get the id of the SA
+	 * @brief Get the id of the SA.
 	 *
-	 * @param this ike_sa_t-message_t object object
-	 * @return ike_sa's ike_sa_id_t
+	 * @param this 			ike_sa_t object object
+	 * @return 				ike_sa's ike_sa_id_t
 	 */
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
 
 	/**
-	 * @brief Destroys a ike_sa_t object
+	 * @brief Destroys a ike_sa_t object.
 	 *
-	 * @param this ike_sa_t object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param this 			ike_sa_t object
 	 */
-	status_t (*destroy) (ike_sa_t *this);
+	void (*destroy) (ike_sa_t *this);
 };
 
 typedef struct protected_ike_sa_t protected_ike_sa_t;
 
 /**
- * Protected data of an ike_sa_t object
+ * @brief Protected data of an ike_sa_t object.
+ * 
+ * This members should only be accessed from 
+ * the varius state classes.
  */
 struct protected_ike_sa_t {
 
@@ -105,15 +106,12 @@ struct protected_ike_sa_t {
 	 * 
 	 * Used in every state.
 	 * 
-	 * @param this		calling object
-	 * @param type		exchange type of new message
-	 * @param request	TRUE, if message has to be a request
-	 * @param message	new message is stored at this location
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
+	 * @param this				calling object
+	 * @param type				exchange type of new message
+	 * @param request			TRUE, if message has to be a request
+	 * @param message			new message is stored at this location
 	 */
-	status_t (*build_message) (protected_ike_sa_t *this, exchange_type_t type, bool request, message_t **message);
+	void (*build_message) (protected_ike_sa_t *this, exchange_type_t type, bool request, message_t **message);
 
 	/**
 	 * Initiate a new connection with given configuration name
@@ -122,9 +120,8 @@ struct protected_ike_sa_t {
 	 * @param dh_shared_secret	shared secret of diffie hellman exchange
 	 * @param initiator_nonce	nonce of initiator
 	 * @param responder_nonce	nonce of responder
-	 * @return					TODO
 	 */
-	status_t (*compute_secrets) (protected_ike_sa_t *this,chunk_t dh_shared_secret,chunk_t initiator_nonce, chunk_t responder_nonce);
+	void (*compute_secrets) (protected_ike_sa_t *this,chunk_t dh_shared_secret,chunk_t initiator_nonce, chunk_t responder_nonce);
 	
 	/**
 	 * Gets the internal stored logger_t object for given ike_sa_t object.
@@ -234,14 +231,14 @@ struct protected_ike_sa_t {
 /**
  * Creates an ike_sa_t object with a specific ike_sa_id_t object
  *
- * @param[in] ike_sa_id ike_sa_id_t object to associate with new IKE_SA.
- *  			 			The object is internal getting cloned
- * 			  			and so has to be destroyed by the caller.
+ * @param[in] ike_sa_id 	ike_sa_id_t object to associate with new IKE_SA.
+ *				 			The object is internal getting cloned
+ *							and so has to be destroyed by the caller.
  *
  * @warning the Content of internal ike_sa_id_t object can change over time
- * 			e.g. when a IKE_SA_INIT has been finished
+ * 			e.g. when a IKE_SA_INIT has been finished.
  *
- * @return created ike_sa_t object
+ * @return 					created ike_sa_t object
  */
 ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id);
 

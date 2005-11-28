@@ -43,8 +43,8 @@ struct linked_list_t {
 	/**
 	 * @brief Gets the count of items in the list.
 	 * 
-	 * @param linked_list 	calling object
-	 * @return 				number of items in list
+	 * @param linked_list 		calling object
+	 * @return 					number of items in list
 	 */
 	int (*get_count) (linked_list_t *linked_list);
 	
@@ -53,26 +53,19 @@ struct linked_list_t {
 	 * 
 	 * @warning Created iterator has to get destroyed by the caller.
 	 * 
-	 * @param linked_list 	calling object
+	 * @param linked_list 		calling object
 	 * @param[out] iterator 	place where the iterator is written
-	 * @param[in] forward 	iterator direction (TRUE: front to end)
-	 * @return 				
-	 * 						- SUCCESS
-	 * 						- OUT_OF_RES
+	 * @param[in] forward 		iterator direction (TRUE: front to end)
 	 */
-	status_t (*create_iterator) (linked_list_t *linked_list, iterator_t **iterator,bool forward);
+	void (*create_iterator) (linked_list_t *linked_list, iterator_t **iterator, bool forward);
 
 	/**
 	 * @brief Inserts a new item at the beginning of the list.
 	 * 
 	 * @param linked_list 	calling object
 	 * @param[in] 			item value to insert in list
-	 * @return 				
-	 * 						- SUCCESS
-	 * 						- FAILED if internal list is corrupted.
-	 * 						- OUT_OF_RES
 	 */
-	status_t (*insert_first) (linked_list_t *linked_list, void *item);
+	void (*insert_first) (linked_list_t *linked_list, void *item);
 
 	/**
 	 * @brief Removes the first item in the list and returns its value.
@@ -101,12 +94,8 @@ struct linked_list_t {
 	 * 
 	 * @param linked_list 	calling object
 	 * @param[in] 			item value to insert into list
-	 * @return 				
-	 * 						- SUCCESS
-	 * 						- FAILED if internal list is corrupted.
-	 * 						- OUT_OF_RES
 	 */
-	status_t (*insert_last) (linked_list_t *linked_list, void *item);
+	void (*insert_last) (linked_list_t *linked_list, void *item);
 	
 	/**
 	 * @brief Removes the last item in the list and returns its value.
@@ -142,11 +131,13 @@ struct linked_list_t {
 	 * @return
 	 * 						- SUCCESS
 	 */
-	status_t (*destroy) (linked_list_t *linked_list);
+	void (*destroy) (linked_list_t *linked_list);
 };
 
 /**
  * @brief Creates an empty linked list object.
+ * 
+ * @return the created linked list.
  * 
  * @ingroup utils
  */

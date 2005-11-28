@@ -81,15 +81,18 @@ struct private_thread_pool_t {
 	/**
 	 * number of running threads
 	 */
-	 size_t pool_size;
+	size_t pool_size;
+	
 	/**
 	 * array of thread ids
 	 */
 	pthread_t *threads;
+	
 	/**
 	 * logger of the threadpool
 	 */
 	logger_t *pool_logger;
+	
 	/**
 	 * logger of the worker threads
 	 */
@@ -112,7 +115,7 @@ static void process_jobs(private_thread_pool_t *this)
 		job_t *job;
 		job_type_t job_type;
 		
-		global_job_queue->get(global_job_queue, &job);
+		job = global_job_queue->get(global_job_queue);
 		job_type = job->get_type(job);
 		this->worker_logger->log(this->worker_logger, CONTROL|MORE, "got a job of type %s", 
 								 mapping_find(job_type_m,job_type));
@@ -148,15 +151,14 @@ static void process_jobs(private_thread_pool_t *this)
 /**
  * implementation of private_thread_pool_t.process_incoming_packet_job
  */
-void process_incoming_packet_job(private_thread_pool_t *this, incoming_packet_job_t *job)
+static void process_incoming_packet_job(private_thread_pool_t *this, incoming_packet_job_t *job)
 {
 	packet_t 	*packet;
 	message_t 	*message;
 	ike_sa_t 	*ike_sa;
 	ike_sa_id_t *ike_sa_id;
 	status_t 	status;
-				
-				
+	
 	if (job->get_packet(job,&packet) != SUCCESS)
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "packet in job could not be retrieved!");				
@@ -239,7 +241,7 @@ void process_incoming_packet_job(private_thread_pool_t *this, incoming_packet_jo
 /**
  * implementation of private_thread_pool_t.process_initiate_ike_sa_job
  */
-void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ike_sa_job_t *job)
+static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ike_sa_job_t *job)
 {
 	/*
 	 * Initiatie an IKE_SA:
@@ -249,19 +251,12 @@ void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ike_sa_jo
 	 */
 	ike_sa_t *ike_sa;
 	status_t status;
-							
-					
+	
+	
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "create and checking out IKE SA");
-				
-	status = global_ike_sa_manager->create_and_checkout(global_ike_sa_manager, &ike_sa);
-	if (status != SUCCESS)
-	{
-		this->worker_logger->log(this->worker_logger, ERROR, "%s by checking out new IKE_SA, job rejected.", 
-								 mapping_find(status_m, status));
-		return;
-	}
-				
-				
+	
+	global_ike_sa_manager->create_and_checkout(global_ike_sa_manager, &ike_sa);
+	
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "initializing connection \"%s\"", 
 							 job->get_configuration_name(job));
 	status = ike_sa->initialize_connection(ike_sa, job->get_configuration_name(job));
@@ -272,7 +267,7 @@ void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ike_sa_jo
 		global_ike_sa_manager->checkin_and_delete(global_ike_sa_manager, ike_sa);
 		return;
 	}
-				
+	
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking in IKE SA");
 	status = global_ike_sa_manager->checkin(global_ike_sa_manager, ike_sa);
 	if (status != SUCCESS)
@@ -285,7 +280,7 @@ void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ike_sa_jo
 /**
  * implementation of private_thread_pool_t.process_delete_ike_sa_job
  */
-void process_delete_ike_sa_job(private_thread_pool_t *this, delete_ike_sa_job_t *job)
+static void process_delete_ike_sa_job(private_thread_pool_t *this, delete_ike_sa_job_t *job)
 {
 	status_t status;
 	ike_sa_id_t *ike_sa_id = job->get_ike_sa_id(job);
@@ -294,7 +289,7 @@ void process_delete_ike_sa_job(private_thread_pool_t *this, delete_ike_sa_job_t 
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
-									
+	
 	status = global_ike_sa_manager->delete(global_ike_sa_manager, ike_sa_id);
 	if (status != SUCCESS)
 	{
@@ -315,7 +310,7 @@ static size_t get_pool_size(private_thread_pool_t *this)
 /**
  * Implementation of thread_pool_t.destroy
  */
-static status_t destroy(private_thread_pool_t *this)
+static void destroy(private_thread_pool_t *this)
 {	
 	int current;
 	/* flag thread for termination */
@@ -335,10 +330,7 @@ static status_t destroy(private_thread_pool_t *this)
 	global_logger_manager->destroy_logger(global_logger_manager, this->worker_logger);
 	allocator_free(this->threads);
 	allocator_free(this);
-	return SUCCESS;
 }
-
-#include <stdio.h>
 
 /*
  * see header
@@ -348,13 +340,9 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	int current;
 	
 	private_thread_pool_t *this = allocator_alloc_thing(private_thread_pool_t);
-	if (this == NULL)
-	{
-		return NULL;
-	}
 	
 	/* fill in public fields */
-	this->public.destroy = (status_t(*)(thread_pool_t*))destroy;
+	this->public.destroy = (void(*)(thread_pool_t*))destroy;
 	this->public.get_pool_size = (size_t(*)(thread_pool_t*))get_pool_size;
 	
 	this->process_jobs = process_jobs;
@@ -364,26 +352,10 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	this->pool_size = pool_size;
 	
 	this->threads = allocator_alloc(sizeof(pthread_t) * pool_size);
-	if (this->threads == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}	
+
 	this->pool_logger = global_logger_manager->create_logger(global_logger_manager,THREAD_POOL,NULL);
-	if (this->threads == NULL)
-	{
-		allocator_free(this);
-		allocator_free(this->threads);
-		return NULL;
-	}	
+
 	this->worker_logger = global_logger_manager->create_logger(global_logger_manager,WORKER,NULL);
-	if (this->threads == NULL)
-	{
-		global_logger_manager->destroy_logger(global_logger_manager, this->pool_logger);
-		allocator_free(this);
-		allocator_free(this->threads);
-		return NULL;
-	}	
 	
 	/* try to create as many threads as possible, up tu pool_size */
 	for (current = 0; current < pool_size; current++) 

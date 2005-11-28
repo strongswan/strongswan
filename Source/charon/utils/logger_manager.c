@@ -89,11 +89,8 @@ struct private_logger_manager_t {
 	 * @param context 		context to set level
  	 * @param logger_level 	logger_level to set
  	 * @param enable 		enable specific level or disable it
- 	 * @return 				
- 	 * 						- SUCCESS
- 	 * 						- OUT_OF_RES
 	 */
-	status_t (*set_logger_level) (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable);
+	void (*set_logger_level) (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable);
 	
 };
 
@@ -184,32 +181,13 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		logger = logger_create(context_name,logger_level,log_thread_ids,output);
 	}
 	
-	
-	if (logger == NULL)
-	{
-		pthread_mutex_unlock(&(this->mutex));		
-		return NULL;
-	}
 
 	entry = allocator_alloc_thing(loggers_entry_t);
-	
-	if (entry == NULL)
-	{
-		logger->destroy(logger);
-		pthread_mutex_unlock(&(this->mutex));		
-		return NULL;
-	}
 
 	entry->context = context;
 	entry->logger = logger;
 
-	if (this->loggers->insert_last(this->loggers,entry) != SUCCESS)
-	{
-		allocator_free(entry);
-		logger->destroy(logger);
-		pthread_mutex_unlock(&(this->mutex));		
-		return NULL;
-	}
+	this->loggers->insert_last(this->loggers,entry);
 
 	pthread_mutex_unlock(&(this->mutex));
 	return logger;
@@ -227,28 +205,18 @@ static logger_level_t get_logger_level (private_logger_manager_t *this, logger_c
 
 	pthread_mutex_lock(&(this->mutex));
 
-	if (this->logger_levels->create_iterator(this->logger_levels,&iterator,TRUE) != SUCCESS)
-	{
-		pthread_mutex_unlock(&(this->mutex));
-		return logger_level;
-	}
-	
+	this->logger_levels->create_iterator(this->logger_levels, &iterator,TRUE);
 	/* check for existing logger_level entry */
 	while (iterator->has_next(iterator))
 	{
-		
 		logger_levels_entry_t * entry;
-		if (iterator->current(iterator,(void **)&entry) != SUCCESS)
-		{	
-			break;
-		}
+		iterator->current(iterator,(void **)&entry);
 		if (entry->context == context)
 		{
 			logger_level = entry->level;
 			break;
 		}
 	}
-	
 	iterator->destroy(iterator);
 
 	pthread_mutex_unlock(&(this->mutex));
@@ -258,71 +226,45 @@ static logger_level_t get_logger_level (private_logger_manager_t *this, logger_c
 /**
  * Implementation of logger_manager_t.destroy_logger.
  */
-static status_t destroy_logger (private_logger_manager_t *this,logger_t *logger)
+static void destroy_logger(private_logger_manager_t *this,logger_t *logger)
 {
-	
 	iterator_t *iterator;
-	status_t status = NOT_FOUND;
 	
 	pthread_mutex_lock(&(this->mutex));
-	if (this->loggers->create_iterator(this->loggers,&iterator,TRUE) != SUCCESS)
-	{
-		pthread_mutex_unlock(&(this->mutex));
-		return OUT_OF_RES;
-	}
-
+	
+	this->loggers->create_iterator(this->loggers,&iterator,TRUE);
 	while (iterator->has_next(iterator))
 	{
-		
 		loggers_entry_t * entry;
-		status = iterator->current(iterator,(void **)&entry);
-		if (status != SUCCESS)
-		{	
-			break;
-		}
-		status = NOT_FOUND;
+		iterator->current(iterator,(void **)&entry);
 		if (entry->logger == logger)
 		{
 			iterator->remove(iterator);
 			allocator_free(entry);
 			logger->destroy(logger);
-			status = SUCCESS;
 			break; 
 		}
 	}
 	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->mutex));
-	return status;
 }
 
 /**
  * Implementation of private_logger_manager_t.set_logger_level.
  */
-static status_t set_logger_level (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable)
+static void set_logger_level(private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable)
 {
 	iterator_t *iterator;
-	status_t status;
+	bool found = FALSE;
 	
 	pthread_mutex_lock(&(this->mutex));
-	if (this->logger_levels->create_iterator(this->logger_levels,&iterator,TRUE) != SUCCESS)
-	{
-		pthread_mutex_unlock(&(this->mutex));
-		return OUT_OF_RES;
-	}
+	this->logger_levels->create_iterator(this->logger_levels,&iterator,TRUE);
 
-	status = NOT_FOUND;
 	/* find existing logger_level entry */
 	while (iterator->has_next(iterator))
 	{	
 		logger_levels_entry_t * entry;
-		status = iterator->current(iterator,(void **)&entry);
-		if (status != SUCCESS)
-		{	
-			iterator->destroy(iterator);
-			pthread_mutex_unlock(&(this->mutex));
-			return status;
-		}
-		status = NOT_FOUND;
+		iterator->current(iterator,(void **)&entry);
 		if (entry->context == context)
 		{
 			if (enable)
@@ -333,74 +275,51 @@ static status_t set_logger_level (private_logger_manager_t *this, logger_context
 			{
 				entry->level &= ~logger_level;
 			}
-
-			status = SUCCESS;
+			found = TRUE;
 			break; 
 		}
 	}
 	iterator->destroy(iterator);
 	
-	if (status == NOT_FOUND)
+	if (!found)
 	{
 		/* logger_levels entry not existing for current context */
 		logger_levels_entry_t *entry = allocator_alloc_thing(logger_levels_entry_t);
-		if (entry == NULL)
-		{
-			pthread_mutex_unlock(&(this->mutex));
-			return OUT_OF_RES;
-		}
+
 		entry->context = context;
 		entry->level = 	(enable) ? logger_level : (this->default_log_level & (~logger_level));
 
-		status = this->logger_levels->insert_last(this->logger_levels,entry);
-		if (status != SUCCESS)
-		{
-			allocator_free(entry);
-			pthread_mutex_unlock(&(this->mutex));
-			return status;
-		}
+		this->logger_levels->insert_last(this->logger_levels,entry);
 	}
 	
-	if (this->loggers->create_iterator(this->loggers,&iterator,TRUE) != SUCCESS)
-	{
-		pthread_mutex_unlock(&(this->mutex));
-		return OUT_OF_RES;
-	}
-
+	this->loggers->create_iterator(this->loggers,&iterator,TRUE);
 	while (iterator->has_next(iterator))
 	{
-		
 		loggers_entry_t * entry;
-		status = iterator->current(iterator,(void **)&entry);
-		if (status != SUCCESS)
-		{	
-			iterator->destroy(iterator);
-			pthread_mutex_unlock(&(this->mutex));
-			return status;
-		}
+		iterator->current(iterator,(void **)&entry);
+
 		if (entry->context == context)
 		{
 			if (enable)
 			{
-				status = entry->logger->enable_level(entry->logger,logger_level);
+				entry->logger->enable_level(entry->logger,logger_level);
 			}
 			else
 			{
-				status = entry->logger->disable_level(entry->logger,logger_level);
+				entry->logger->disable_level(entry->logger,logger_level);
 			}
 			
 		}
 	}
-
 	iterator->destroy(iterator);
+	
 	pthread_mutex_unlock(&(this->mutex));
-	return SUCCESS;
 }
 
 /**
  * Implementation of logger_manager_t.enable_logger_level.
  */
-static status_t enable_logger_level (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level)
+static void enable_logger_level(private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level)
 {
 	return set_logger_level(this,context,logger_level,TRUE);
 }
@@ -408,7 +327,7 @@ static status_t enable_logger_level (private_logger_manager_t *this, logger_cont
 /**
  * Implementation of logger_manager_t.disable_logger_level.
  */
-static status_t disable_logger_level (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level)
+static void disable_logger_level(private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level)
 {
 	return set_logger_level(this,context,logger_level,FALSE);
 }
@@ -416,7 +335,7 @@ static status_t disable_logger_level (private_logger_manager_t *this, logger_con
 /**
  * Implementation of logger_manager_t.destroy.
  */
-static status_t destroy(private_logger_manager_t *this)
+static void destroy(private_logger_manager_t *this)
 {
 
 	while (this->loggers->get_count(this->loggers) > 0)
@@ -447,7 +366,6 @@ static status_t destroy(private_logger_manager_t *this)
 	pthread_mutex_destroy(&(this->mutex));
 	
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -456,35 +374,18 @@ static status_t destroy(private_logger_manager_t *this)
 logger_manager_t *logger_manager_create(logger_level_t default_log_level)
 {
 	private_logger_manager_t *this = allocator_alloc_thing(private_logger_manager_t);
-		
-	if (this == NULL)
-	{
-		return NULL;	
-	}
-
+	
 	this->public.create_logger = (logger_t *(*)(logger_manager_t*,logger_context_t context, char *))create_logger;
-	this->public.destroy_logger = (status_t(*)(logger_manager_t*,logger_t *logger))destroy_logger;
-	this->public.destroy = (status_t(*)(logger_manager_t*))destroy;
+	this->public.destroy_logger = (void(*)(logger_manager_t*,logger_t *logger))destroy_logger;
+	this->public.destroy = (void(*)(logger_manager_t*))destroy;
 	this->public.get_logger_level = (logger_level_t (*)(logger_manager_t *, logger_context_t)) get_logger_level;
-	this->public.enable_logger_level = (status_t (*)(logger_manager_t *, logger_context_t,logger_level_t)) enable_logger_level;
-	this->public.disable_logger_level = (status_t (*)(logger_manager_t *, logger_context_t,logger_level_t)) disable_logger_level;
-	this->set_logger_level = (status_t (*)(private_logger_manager_t *, logger_context_t,logger_level_t,bool)) set_logger_level;
+	this->public.enable_logger_level = (void (*)(logger_manager_t *, logger_context_t,logger_level_t)) enable_logger_level;
+	this->public.disable_logger_level = (void (*)(logger_manager_t *, logger_context_t,logger_level_t)) disable_logger_level;
+	this->set_logger_level = (void (*)(private_logger_manager_t *, logger_context_t,logger_level_t,bool)) set_logger_level;
 	
 	/* private variables */
 	this->loggers = linked_list_create();
-	
-	if (this->loggers == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 	this->logger_levels = linked_list_create();
-	if (this->logger_levels == NULL)
-	{
-		this->loggers->destroy(this->loggers);
-		allocator_free(this);
-		return NULL;
-	}
 	this->default_log_level = default_log_level;
 	
 	pthread_mutex_init(&(this->mutex), NULL);

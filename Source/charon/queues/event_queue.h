@@ -1,7 +1,7 @@
 /**
  * @file event_queue.h
  *
- * @brief Event-Queue based on class linked_list_t
+ * @brief Interface of job_queue_t.
  *
  */
 
@@ -53,10 +53,9 @@ struct event_queue_t {
 	 *
 	 * @param event_queue 	calling object
  	 * @param[out] job 		pointer to a job pointer where to job is returned to
-	 * @return 				- SUCCESS if succeeded
-	 * 						- FAILED otherwisesa
+	 * @return 				next job
 	 */
-	status_t (*get) (event_queue_t *event_queue, job_t **job);
+	job_t *(*get) (event_queue_t *event_queue);
 
 	/**
 	 * @brief Adds a event to the queue, using a relative time.
@@ -68,11 +67,8 @@ struct event_queue_t {
 	 * @param event_queue 	calling object
  	 * @param[in] job 		job to add to the queue (job is not copied)
   	 * @param[in] time 		relative time, when the event has to get fired
-	 * @returns
-	 * 						- SUCCESS if succeeded
-	 * 						- FAILED otherwise
 	 */
-	status_t (*add_relative) (event_queue_t *event_queue, job_t *job, u_int32_t ms);
+	void (*add_relative) (event_queue_t *event_queue, job_t *job, u_int32_t ms);
 
 	/**
 	 * @brief Adds a event to the queue, using an absolute time.
@@ -84,11 +80,8 @@ struct event_queue_t {
 	 * @param event_queue 	calling object
  	 * @param[in] 			job job to add to the queue (job is not copied)
   	 * @param[in] 			absolute time time, when the event has to get fired
-	 * @returns
-	 * 						- SUCCESS if succeeded
-	 * 						- FAILED otherwise
 	 */
-	status_t (*add_absolute) (event_queue_t *event_queue, job_t *job, timeval_t time);
+	void (*add_absolute) (event_queue_t *event_queue, job_t *job, timeval_t time);
 
 	/**
 	 * @brief Destroys a event_queue object.
@@ -100,15 +93,13 @@ struct event_queue_t {
 	 * @param event_queue 	calling object
 	 * @returns				always SUCCESS
 	 */
-	status_t (*destroy) (event_queue_t *event_queue);
+	void (*destroy) (event_queue_t *event_queue);
 };
 
 /**
  * @brief Creates an empty event_queue
  *
- * @returns
- * 			- Empty event_queue_t object
- * 			- NULL if memory allocation failed
+ * @returns		event_queue
  */
 event_queue_t *event_queue_create();
 #endif /*EVENT_QUEUE_H_*/

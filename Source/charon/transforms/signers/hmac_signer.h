@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _HMAC_SIGNER_H_
-#define _HMAC_SIGNER_H_
+#ifndef HMAC_SIGNER_H_
+#define HMAC_SIGNER_H_
 
 #include <transforms/signers/signer.h>
 #include <transforms/hashers/hasher.h>
@@ -30,7 +30,7 @@ typedef struct hmac_signer_t hmac_signer_t;
 
 /**
  * @brief Implementation of hmac_signer_t interface using the
- * HMAC algorithm in combination with eather MD5 or SHA1.
+ * HMAC algorithm in combination with either MD5 or SHA1.
  * 
  * @ingroup signers
  */
@@ -45,15 +45,14 @@ struct hmac_signer_t {
 /**
  * @brief Creates a new hmac_signer_t.
  * 
- * @param hash_algorithm		Hash algorithm to use with signer
- * 
- * @return
- * 							- hmac_signer_t if successfully
- * 							- NULL if out of ressources
+ * @param hash_algorithm	Hash algorithm to use with signer
+ * @return					
+ * 							- hmac_signer_t
+ * 							- NULL if hash not supported
  * 
  * @ingroup signers
  */
 hmac_signer_t *hmac_signer_create(hash_algorithm_t hash_algoritm);
 
 
-#endif //_HMAC_SIGNER_H_
+#endif /*HMAC_SIGNER_H_*/

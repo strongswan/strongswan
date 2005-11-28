@@ -68,8 +68,9 @@ struct crypter_t {
 	 * @param data				data to encrypt
 	 * @param iv					iv
 	 * @param [out]encrypted	pointer where the encrypted bytes will be written
-	 * @return				
-	 * 							- SUCCESS in any case
+	 * @return
+	 * 							- SUCCESS, or
+	 * 							- INVALID_ARG if data size not a multiple of  block size
 	 */
 	status_t (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted);
 	
@@ -81,8 +82,9 @@ struct crypter_t {
 	 * @param data				data to decrypt
 	 * @param iv					iv
 	 * @param [out]encrypted	pointer where the decrypted bytes will be written
-	 * @return				
-	 * 							- SUCCESS in any case
+	 * @return
+	 * 							- SUCCESS, or
+	 * 							- INVALID_ARG if data size not a multiple of  block size
 	 */
 	status_t (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted);
 
@@ -100,7 +102,8 @@ struct crypter_t {
 	 * @param this				calling crypter
 	 * @param key				key to set
 	 * @return
-	 * 							- SUCCESS in any case
+	 * 							- SUCCESS, or
+	 * 							- INVALID_ARG if key size != block size
 	 */
 	status_t (*set_key) (crypter_t *this, chunk_t key);
 	
@@ -108,10 +111,8 @@ struct crypter_t {
 	 * @brief Destroys a crypter_t object.
 	 *
 	 * @param this 				crypter_t object to destroy
-	 * @return 		
-	 * 							- SUCCESS in any case
 	 */
-	status_t (*destroy) (crypter_t *this);
+	void (*destroy) (crypter_t *this);
 };
 
 /**
@@ -121,7 +122,7 @@ struct crypter_t {
  * @param blocksize 				block size in bytes
  * @return
  * 								- crypter_t if successfully
- * 								- NULL if out of ressources or crypter not supported
+ * 								- NULL if crypter not supported
  */
 crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t blocksize);
 

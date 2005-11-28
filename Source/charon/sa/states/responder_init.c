@@ -1,7 +1,7 @@
 /**
  * @file responder_init.c
  * 
- * @brief Start state of a IKE_SA as responder
+ * @brief Implementation of responder_init_t.
  * 
  */
 
@@ -99,11 +99,8 @@ struct private_responder_init_t {
 	 * @param this		calling object
 	 * @param payload	The generated SA payload object of type ke_payload_t is 
 	 * 					stored at this location.
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*build_sa_payload) (private_responder_init_t *this, payload_t **payload);
+	void (*build_sa_payload) (private_responder_init_t *this, payload_t **payload);
 
 	/**
 	 * Builds the KE payload for this state.
@@ -111,22 +108,17 @@ struct private_responder_init_t {
 	 * @param this		calling object
 	 * @param payload	The generated KE payload object of type ke_payload_t is 
 	 * 					stored at this location.
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*build_ke_payload) (private_responder_init_t *this, payload_t **payload);
+	void (*build_ke_payload) (private_responder_init_t *this, payload_t **payload);
+	
 	/**
 	 * Builds the NONCE payload for this state.
 	 * 
 	 * @param this		calling object
 	 * @param payload	The generated NONCE payload object of type ke_payload_t is 
 	 * 					stored at this location.
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*build_nonce_payload) (private_responder_init_t *this, payload_t **payload);	
+	void (*build_nonce_payload) (private_responder_init_t *this, payload_t **payload);	
 	
 	/**
 	 * Destroy function called internally of this class after state change succeeded.
@@ -134,9 +126,8 @@ struct private_responder_init_t {
 	 * This destroy function does not destroy objects which were passed to the new state.
 	 * 
 	 * @param this		calling object
-	 * @return			SUCCESS in any case
 	 */
-	status_t (*destroy_after_state_change) (private_responder_init_t *this);
+	void (*destroy_after_state_change) (private_responder_init_t *this);
 };
 
 /**
@@ -175,20 +166,8 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	message->get_destination(message, &destination);
 	
 	/* we need to clone them, since we destroy the message later */
-	status = destination->clone(destination, &my_host);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not clone my host informations");
-		return status;	
-	}
-	status = source->clone(source, &other_host);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not clone other host informations");
-		my_host->destroy(my_host);
-		return status;	
-	}
-
+	my_host = destination->clone(destination);
+	other_host = source->clone(source);
 	
 	this->ike_sa->set_my_host(this->ike_sa, my_host);
 	this->ike_sa->set_other_host(this->ike_sa, other_host);
@@ -198,7 +177,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not parse body of request message");
-		return status;	
+		return status;
 	}
 
 	/* iterate over incoming payloads. We can be sure, the message contains only accepted payloads! */
@@ -219,24 +198,11 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				iterator_t *suggested_proposals, *accepted_proposals;
 				proposal_substructure_t *accepted_proposal;
-
-				status = this->proposals->create_iterator(this->proposals, &accepted_proposals, FALSE);
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR, "Fatal error: Could not create iterator on list for proposals");
-					payloads->destroy(payloads);
-					return status;	
-				}
+				
+				this->proposals->create_iterator(this->proposals, &accepted_proposals, FALSE);
 				
 				/* get the list of suggested proposals */ 
-				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
-				if (status != SUCCESS)
-				{	
-					this->logger->log(this->logger, ERROR, "Fatal error: Could not create iterator on suggested proposals");
-					accepted_proposals->destroy(accepted_proposals);
-					payloads->destroy(payloads);
-					return status;
-				}
+				sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
 				
 				/* now let the configuration-manager select a subset of the proposals */
 				status = global_configuration_manager->select_proposals_for_host(global_configuration_manager,
@@ -252,7 +218,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				
 				/* iterators are not needed anymore */			
 				suggested_proposals->destroy(suggested_proposals);
-				
 				
 				/* let the ike_sa create their own transforms from proposal informations */
 				accepted_proposals->reset(accepted_proposals);
@@ -309,19 +274,12 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				{
 					this->logger->log(this->logger, ERROR, "Could not generate DH object");
 					payloads->destroy(payloads);
-					return OUT_OF_RES;
+					return NOT_SUPPORTED;
 				}
 
 				this->logger->log(this->logger, CONTROL | MORE, "Set other DH public value");
 				
-				status = dh->set_other_public_value(dh, ke_payload->get_key_exchange_data(ke_payload));
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR, "Could not set other DH public value");
-					dh->destroy(dh);
-					payloads->destroy(payloads);
-					return OUT_OF_RES;
-				}
+				dh->set_other_public_value(dh, ke_payload->get_key_exchange_data(ke_payload));
 
 				this->diffie_hellman = dh;
 				
@@ -332,22 +290,11 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			{
 				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
 
-				if (this->received_nonce.ptr != NULL)
-				{
-					this->logger->log(this->logger, CONTROL | MOST, "Destroy stored received nonce");
-					allocator_free(this->received_nonce.ptr);
-					this->received_nonce.ptr = NULL;
-					this->received_nonce.len = 0;
-				}
+				allocator_free(this->received_nonce.ptr);
+				this->received_nonce = CHUNK_INITIALIZER;
 
 				this->logger->log(this->logger, CONTROL | MORE, "Get nonce value and store it");
-				status = nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR, "Fatal error: Could not get nonce");
-					payloads->destroy(payloads);
-					return OUT_OF_RES;
-				}
+				nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
 				
 				this->logger->log(this->logger, CONTROL | MORE, "Nonce Payload processed");
 				break;
@@ -356,11 +303,9 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			{
 				this->logger->log(this->logger, ERROR | MORE, "Payload type not supported!");
 				payloads->destroy(payloads);
-				return OUT_OF_RES;
+				return NOT_SUPPORTED;
 			}
-				
 		}
-			
 	}
 	/* iterator can be destroyed */
 	payloads->destroy(payloads);
@@ -371,63 +316,31 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
 	
-	if (randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce)) != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not create nonce!");
-		return OUT_OF_RES;
-	}
-	
+	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
+
 	/* store shared secret  */
 	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
 	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &shared_secret);
 	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &shared_secret);
 
-	status = this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->received_nonce, this->sent_nonce);
-	if (status != SUCCESS)
-	{
-		/* secrets could not be computed */
-		this->logger->log(this->logger, ERROR | MORE, "Secrets could not be computed!");
-		return status;
-	}
+	this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->received_nonce, this->sent_nonce);
 
 	/* set up the reply */
-	status = this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not create empty message");
-		return status;	
-	}
+	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
+
 	
 	/* build SA payload */		
-	status = this->build_sa_payload(this, &payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not build SA payload");
-		return status;
-	}
-	
+	this->build_sa_payload(this, &payload);
 	this->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
 	response->add_payload(response, payload);
 	
 	/* build KE payload */
-	status = this->build_ke_payload(this,&payload);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR, "Could not build KE payload");
-		return status;
-	}
-
+	this->build_ke_payload(this,&payload);
 	this->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
 	response->add_payload(response, payload);
 	
 	/* build Nonce payload */
-	status = this->build_nonce_payload(this, &payload);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not build NONCE payload");
-		return status;
-	}
-
+	this->build_nonce_payload(this, &payload);
 	this->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
 	response->add_payload(response, payload);
 	
@@ -436,30 +349,17 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	status = response->generate(response, NULL, NULL, &packet);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not generate packet from message");
+		this->logger->log(this->logger, ERROR, "could not generate packet from message");
 		return status;
 	}
 	
-	this	->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
-	status = global_send_queue->add(global_send_queue, packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not add packet to send queue");
-		packet->destroy(packet);
-		return status;
-	}
+	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	 global_send_queue->add(global_send_queue, packet);
 
 	/* state can now be changed */
-	this	->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 
 	next_state = ike_sa_init_responded_create(this->ike_sa, shared_secret, this->received_nonce, this->sent_nonce);
-
-	if (next_state == NULL)
-	{
-		this	->logger->log(this->logger, ERROR, "Fatal error: could not create next state object of type ike_sa_init_responded_t");
-		allocator_free_chunk(&shared_secret);
-		return FAILED;
-	}
 	
 	/* last message can now be set */
 	status = this->ike_sa->set_last_responded_message(this->ike_sa, response);
@@ -475,9 +375,9 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	/* state can now be changed */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t *) next_state);
 	/* state has NOW changed :-) */
-	this	->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,RESPONDER_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_RESPONDED) );
+	this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,RESPONDER_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_RESPONDED) );
 
-	this	->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
+	this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
 	this->destroy_after_state_change(this);	
 	
 	return SUCCESS;
@@ -486,142 +386,67 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 /**
  * implements private_initiator_init_t.build_sa_payload
  */
-static status_t build_sa_payload(private_responder_init_t *this, payload_t **payload)
+static void build_sa_payload(private_responder_init_t *this, payload_t **payload)
 {
 	sa_payload_t* sa_payload;
 	iterator_t *proposal_iterator;
-	status_t status;
-	
 	
 	/* SA payload takes proposals from this->ike_sa_init_data.proposals and writes them to the created sa_payload */
-
+	
 	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
 	
-	status = this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: Could not create iterator on list for proposals");
-		return status;	
-	}
+	this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
 	
 	sa_payload = sa_payload_create();
-	if (sa_payload == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: Could not create SA payload object");
-		return OUT_OF_RES;
-	}
 	
 	while (proposal_iterator->has_next(proposal_iterator))
 	{
 		proposal_substructure_t *current_proposal;
 		proposal_substructure_t *current_proposal_clone;
-		status = proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not get current proposal needed to copy");
-			proposal_iterator->destroy(proposal_iterator);
-			sa_payload->destroy(sa_payload);
-			return status;	
-		}
-		status = current_proposal->clone(current_proposal,&current_proposal_clone);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not clone current proposal");
-			proposal_iterator->destroy(proposal_iterator);
-			sa_payload->destroy(sa_payload);
-			return status;	
-		}
 		
-		status = sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "Could not add cloned proposal to SA payload");
-			proposal_iterator->destroy(proposal_iterator);
-			sa_payload->destroy(sa_payload);
-			return status;	
-		}
-
+		proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
+		current_proposal->clone(current_proposal,&current_proposal_clone);
+		sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
 	}
-
+	
 	proposal_iterator->destroy(proposal_iterator);	
 	
-	this->logger->log(this->logger, CONTROL|MORE, "sa payload builded");
-	
 	*payload = (payload_t *) sa_payload;
-	
-	return SUCCESS;
 }
 
 /**
  * implements private_initiator_init_t.build_ke_payload
  */
-static status_t build_ke_payload(private_responder_init_t *this, payload_t **payload)
+static void build_ke_payload(private_responder_init_t *this, payload_t **payload)
 {
 	ke_payload_t *ke_payload;
 	chunk_t key_data;
-	status_t status;
 
 	this->logger->log(this->logger, CONTROL|MORE, "building ke payload");
-	
-
-	this	->logger->log(this->logger, CONTROL|MORE, "get public dh value to send in ke payload");
-	status = this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not get my DH public value");
-		return status;
-	}
+	this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
 
 	ke_payload = ke_payload_create();
-	if (ke_payload == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "Could not create KE payload");
-		allocator_free_chunk(&key_data);
-		return OUT_OF_RES;	
-	}
 	ke_payload->set_dh_group_number(ke_payload, MODP_1024_BIT);
-	if (ke_payload->set_key_exchange_data(ke_payload, key_data) != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not set key exchange data of KE payload");
-		ke_payload->destroy(ke_payload);
-		allocator_free_chunk(&key_data);
-		return OUT_OF_RES;
-	}
-	allocator_free_chunk(&key_data);
 
+	allocator_free_chunk(&key_data);
 	*payload = (payload_t *) ke_payload;
-	return SUCCESS;			
 }
 
 /**
  * implements private_initiator_init_t.build_nonce_payload
  */
-static status_t build_nonce_payload(private_responder_init_t *this, payload_t **payload)
+static void build_nonce_payload(private_responder_init_t *this, payload_t **payload)
 {
 	nonce_payload_t *nonce_payload;
 	status_t status;
 	
 	this->logger->log(this->logger, CONTROL|MORE, "building nonce payload");
-
+	
 	nonce_payload = nonce_payload_create();
-	if (nonce_payload == NULL)
-	{	
-		this->logger->log(this->logger, ERROR, "Fatal error: could not create nonce payload object");
-		return OUT_OF_RES;	
-	}
-
+	
 	status = nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
 	
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Fatal error: could not set nonce data of payload");
-		nonce_payload->destroy(nonce_payload);
-		return status;
-	}
-		
 	*payload = (payload_t *) nonce_payload;
-	
-	return SUCCESS;
 }
 
 
@@ -636,7 +461,7 @@ static ike_sa_state_t get_state(private_responder_init_t *this)
 /**
  * Implements state_t.get_state
  */
-static status_t destroy(private_responder_init_t *this)
+static void destroy(private_responder_init_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy responder init state object");
 	
@@ -650,35 +475,20 @@ static status_t destroy(private_responder_init_t *this)
 	}
 	this->proposals->destroy(this->proposals);
 	
-	if (this->sent_nonce.ptr != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
-		allocator_free(this->sent_nonce.ptr);
-	}
+	allocator_free(this->sent_nonce.ptr);
+	allocator_free(this->received_nonce.ptr);
 
-	if (this->received_nonce.ptr != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
-		allocator_free(this->received_nonce.ptr);
-	}
-	
-	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie_hellman_t object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
-	
 	allocator_free(this);
-		
-	return SUCCESS;
-	
 }
 
 /**
  * Implements private_responder_init_t.destroy_after_state_change
  */
-static status_t destroy_after_state_change (private_responder_init_t *this)
+static void destroy_after_state_change (private_responder_init_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy responder_init_t state object");
 	
@@ -700,7 +510,6 @@ static status_t destroy_after_state_change (private_responder_init_t *this)
 	}
 	
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /* 
@@ -709,16 +518,11 @@ static status_t destroy_after_state_change (private_responder_init_t *this)
 responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 {
 	private_responder_init_t *this = allocator_alloc_thing(private_responder_init_t);
-	
-	if (this == NULL)
-	{
-		return NULL;
-	}
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
-	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
+	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
 	
 	/* private functions */
 	this->build_sa_payload = build_sa_payload;
@@ -729,16 +533,9 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
-	this->sent_nonce.ptr = NULL;
-	this->sent_nonce.len = 0;
-	this->received_nonce.ptr = NULL;
-	this->received_nonce.len = 0;
+	this->sent_nonce = CHUNK_INITIALIZER;
+	this->received_nonce = CHUNK_INITIALIZER;
 	this->proposals = linked_list_create();
-	if (this->proposals == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
-	
+
 	return &(this->public);
 }

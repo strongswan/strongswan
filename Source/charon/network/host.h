@@ -1,7 +1,7 @@
 /**
  * @file host.h
  *
- * @brief host object, identifies a host and defines some useful functions on it.
+ * @brief Interface of host_t.
  *
  */
 
@@ -36,19 +36,18 @@
 typedef struct host_t host_t;
 /**
  * @brief Representates a Host
+ * 
+ * Host object, identifies a host and defines some useful functions on it.
  */
 struct host_t {
 	/** 
 	 * @brief Build a clone of this host object.
 	 * 
 	 * @param this			object to clone
-	 * @param [out]other	address where to allocate the clone
-	 * @return				
-	 * 						- SUCCESS, or
-	 * 						- OUT_OF_RES
+	 * @return				cloned host
 	 */
-	 
-	status_t (*clone) (host_t *this, host_t **other);
+	host_t *(*clone) (host_t *this);
+	
 	/** 
 	 * @brief Get a pointer to the internal sockaddr struct.
 	 * 
@@ -100,7 +99,7 @@ struct host_t {
 	 * @param this			calling
 	 * @return				SUCCESS in any case
 	 */
-	status_t (*destroy) (host_t *this);
+	void (*destroy) (host_t *this);
 };
 
 /**
@@ -112,10 +111,9 @@ struct host_t {
  * @param address		string of an address, such as "152.96.193.130"
  * @param port			port number
  * @return 				the host_t object or NULL, when
- * 						not enough ressources, or
  * 						family not supported.
  */
 host_t *host_create(int family, char *address, u_int16_t port);
-
+		  
 
 #endif /*HOST_H_*/

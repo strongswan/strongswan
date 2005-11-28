@@ -438,8 +438,7 @@ struct private_diffie_hellman_t {
 };
 
 /**
- * Implements private_diffie_hellman_t's set_modulus function.
- * See #private_diffie_hellman_t.set_modulus for description.
+ * Implements private_diffie_hellman_tset_modulus.
  */
 static status_t set_modulus(private_diffie_hellman_t *this)
 {
@@ -464,19 +463,16 @@ static status_t set_modulus(private_diffie_hellman_t *this)
 }
 
 /**
- * Implements diffie_hellman_t's set_other_public_value function.
- * See #diffie_hellman_t.set_other_public_value for description.
+ * Implementation of diffie_hellman_t.set_other_public_value.
  */
-static status_t set_other_public_value(private_diffie_hellman_t *this,chunk_t public_value)
+static void set_other_public_value(private_diffie_hellman_t *this,chunk_t public_value)
 {
 	this->gmp_helper->chunk_to_mpz(this->gmp_helper,&(this->other_public_value),public_value);
-	this->compute_shared_secret(this);		
-	return SUCCESS;
+	this->compute_shared_secret(this);
 }
 
 /**
- * Implements diffie_hellman_t's get_other_public_value function.
- * See #diffie_hellman_t.get_other_public_value for description.
+ * Implements diffie_hellman_t.get_other_public_value.
  */
 static status_t get_other_public_value(private_diffie_hellman_t *this,chunk_t *public_value)
 {
@@ -484,12 +480,12 @@ static status_t get_other_public_value(private_diffie_hellman_t *this,chunk_t *p
 	{
 		return FAILED;
 	}
-	return (this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->other_public_value), public_value,this->modulus_length));
+	this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->other_public_value), public_value,this->modulus_length);
+	return SUCCESS;
 }
 
 /**
- * Implements private_diffie_hellman_t's compute_shared_secret function.
- * See #private_diffie_hellman_t.compute_shared_secret for description.
+ * Implements private_diffie_hellman_t.compute_shared_secret.
  */
 static void compute_shared_secret (private_diffie_hellman_t *this)
 {
@@ -497,14 +493,13 @@ static void compute_shared_secret (private_diffie_hellman_t *this)
 	mpz_init(this->shared_secret);
 	/* calculate my public value */
 	mpz_powm(this->shared_secret,this->other_public_value,this->my_prime,this->modulus);
-
+	
 	this->shared_secret_is_computed = TRUE;
 }
 
 
 /**
- * Implements private_diffie_hellman_t's compute_public_value function.
- * See #private_diffie_hellman_t.compute_public_value for description.
+ * Implements private_diffie_hellman_t.compute_public_value.
  */
 static void compute_public_value (private_diffie_hellman_t *this)
 {
@@ -521,8 +516,7 @@ static void compute_public_value (private_diffie_hellman_t *this)
 }
 
 /**
- * Implements diffie_hellman_t's get_my_public_value function.
- * See #diffie_hellman_t.get_my_public_value for description.
+ * Implements diffie_hellman_t.get_my_public_value.
  */
 static status_t get_my_public_value(private_diffie_hellman_t *this,chunk_t *public_value)
 {
@@ -530,12 +524,12 @@ static status_t get_my_public_value(private_diffie_hellman_t *this,chunk_t *publ
 	{
 		this->compute_public_value(this);
 	}
-	return (this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->my_public_value), public_value,this->modulus_length));
+	this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->my_public_value), public_value,this->modulus_length);
+	return SUCCESS;
 }
 
 /**
- * Implements diffie_hellman_t's get_shared_secret function.
- * See #diffie_hellman_t.get_shared_secret for description.
+ * Implements diffie_hellman_t.get_shared_secret.
  */
 static status_t get_shared_secret(private_diffie_hellman_t *this,chunk_t *secret)
 {
@@ -543,14 +537,14 @@ static status_t get_shared_secret(private_diffie_hellman_t *this,chunk_t *secret
 	{
 		return FAILED;
 	}
-	return (this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->shared_secret), secret,this->modulus_length));
+	this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->shared_secret), secret,this->modulus_length);
+	return SUCCESS;
 }
 
 /**
- * Implements diffie_hellman_t's destroy function.
- * See #diffie_hellman_t.destroy for description.
+ * Implements diffie_hellman_t.destroy.
  */
-static status_t destroy(private_diffie_hellman_t *this)
+static void destroy(private_diffie_hellman_t *this)
 {
 	this->gmp_helper->destroy(this->gmp_helper);
 	mpz_clear(this->modulus);
@@ -565,9 +559,7 @@ static status_t destroy(private_diffie_hellman_t *this)
 		mpz_clear(this->other_public_value);
 		mpz_clear(this->shared_secret);
 	}
-
 	allocator_free(this);
-	return SUCCESS;
 }
 
 
@@ -577,17 +569,13 @@ static status_t destroy(private_diffie_hellman_t *this)
 diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 {
 	private_diffie_hellman_t *this = allocator_alloc_thing(private_diffie_hellman_t);
-	if ((this == NULL))
-	{
-		return NULL;
-	}
-	
+
 	/* public functions */
 	this->public.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
-	this->public.set_other_public_value = (status_t (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
+	this->public.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
 	this->public.get_other_public_value = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_other_public_value;
 	this->public.get_my_public_value = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
-	this->public.destroy = (status_t (*)(diffie_hellman_t *)) destroy;
+	this->public.destroy = (void (*)(diffie_hellman_t *)) destroy;
 	
 	/* private functions */
 	this->set_modulus = set_modulus;
@@ -599,12 +587,6 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	
 	this->gmp_helper = gmp_helper_create();
 	
-	if (this->gmp_helper == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
-
 	/* set this->modulus */	
 	if (this->set_modulus(this) != SUCCESS)
 	{
@@ -612,13 +594,9 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 		allocator_free(this);
 		return NULL;
 	}
-	    
-	if (this->gmp_helper->init_prime(this->gmp_helper,&(this->my_prime),this->modulus_length) != SUCCESS)
-	{
-		this->gmp_helper->destroy(this->gmp_helper);
-		allocator_free(this);
-		return NULL;
-	}
+	
+	this->gmp_helper->init_prime(this->gmp_helper,&(this->my_prime),this->modulus_length);
+	
 	this->my_public_value_is_computed = FALSE;
 	this->shared_secret_is_computed = FALSE;
 	

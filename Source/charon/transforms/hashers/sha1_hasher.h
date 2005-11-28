@@ -45,9 +45,7 @@ struct sha1_hasher_t {
 /**
  * @brief Creates a new sha1_hasher_t.
  * 
- * @return
- * 				- sha1_hasher_t if successfully
- * 				- NULL if out of ressources
+ * @return	sha1_hasher_t object
  * 
  * @ingroup hashers
  */

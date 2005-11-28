@@ -1,7 +1,7 @@
 /**
  * @file host.c
  * 
- * @brief host object, identifies a host and defines some useful functions on it.
+ * @brief Implementation of host_t.
  * 
  */
 
@@ -110,28 +110,20 @@ static u_int16_t get_port(private_host_t *this)
 /**
  * Implements host_t.destroy
  */
-static status_t destroy(private_host_t *this)
+static void destroy(private_host_t *this)
 {
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /**
  * Implements host_t.clone.
  */
-static status_t clone(private_host_t *this, host_t **other)
+static private_host_t *clone(private_host_t *this)
 {
 	private_host_t *new = allocator_alloc_thing(private_host_t);
-	
-	if (new == NULL)
-	{
-		return OUT_OF_RES;	
-	}	
 		
 	memcpy(new, this, sizeof(private_host_t));
-	*other = (host_t*)new;
-	
-	return SUCCESS;
+	return new;
 }
 
 
@@ -141,17 +133,13 @@ static status_t clone(private_host_t *this, host_t **other)
 host_t *host_create(int family, char *address, u_int16_t port)
 {
 	private_host_t *this = allocator_alloc_thing(private_host_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}
 	
 	this->public.get_sockaddr = (sockaddr_t* (*) (host_t*))get_sockaddr;
 	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
-	this->public.clone = (status_t (*) (host_t*, host_t**))clone;
+	this->public.clone = (host_t* (*) (host_t*))clone;
 	this->public.get_address = (char* (*) (host_t *))get_address;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
-	this->public.destroy = (status_t (*) (host_t*))destroy;
+	this->public.destroy = (void (*) (host_t*))destroy;
 	
 	this->family = family;
 

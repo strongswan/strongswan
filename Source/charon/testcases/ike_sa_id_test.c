@@ -83,11 +83,11 @@ void test_ike_sa_id(tester_t *tester)
 	
 	
 	/* check destroy functionality */
-	tester->assert_true(tester,(ike_sa_id->destroy(ike_sa_id) == SUCCESS), "destroy call check");
-	tester->assert_true(tester,(equal->destroy(equal) == SUCCESS), "destroy call check");
-	tester->assert_true(tester,(clone->destroy(clone) == SUCCESS), "destroy call check");
-	tester->assert_true(tester,(other1->destroy(other1) == SUCCESS), "destroy call check");
-	tester->assert_true(tester,(other2->destroy(other2) == SUCCESS), "destroy call check");
-	tester->assert_true(tester,(other3->destroy(other3) == SUCCESS), "destroy call check");
-	tester->assert_true(tester,(other4->destroy(other4) == SUCCESS), "destroy call check");
+	ike_sa_id->destroy(ike_sa_id);
+	equal->destroy(equal);
+	clone->destroy(clone);
+	other1->destroy(other1);
+	other2->destroy(other2);
+	other3->destroy(other3);
+	other4->destroy(other4);
 }

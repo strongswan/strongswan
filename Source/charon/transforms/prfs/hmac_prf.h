@@ -49,10 +49,10 @@ struct hmac_prf_t {
 /**
  * @brief Creates a new hmac_prf_t object
  * 
- * @param hash_algorithm			hmac's hash algorithm
+ * @param hash_algorithm	hmac's hash algorithm
  * @return
- * 									- hmac_prf_t if successfully
- * 									- NULL if out of ressources
+ * 							- hmac_prf_t if successfully
+ * 							- NULL if hash not supported
  * 
  * @ingroup prfs
  */

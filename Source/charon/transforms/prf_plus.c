@@ -68,7 +68,7 @@ struct private_prf_plus_t {
 /**
  * implementation of prf_plus_t.get_bytes
  */
-static status_t get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
+static void get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
 {	
 	chunk_t appending_chunk;
 	size_t bytes_in_round;
@@ -96,32 +96,26 @@ static status_t get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buf
 		this->given_out += bytes_in_round;
 		total_bytes_written += bytes_in_round;
 	}
-	return SUCCESS;
 }
 
 /**
  * implementation of prf_plus_t.allocate_bytes
  */	
-static status_t allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chunk)
+static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chunk)
 {
 	chunk->ptr = allocator_alloc(length);
 	chunk->len = length;
-	if (chunk->ptr == NULL)
-	{
-		return OUT_OF_RES;	
-	}
-	return this->public.get_bytes(&(this->public), length, chunk->ptr);
+	this->public.get_bytes(&(this->public), length, chunk->ptr);
 }
 
 /**
  * implementation of prf_plus_t.destroy
  */
-static status_t destroy(private_prf_plus_t *this)
+static void destroy(private_prf_plus_t *this)
 {
 	allocator_free(this->buffer.ptr);
 	allocator_free(this->seed.ptr);
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -133,14 +127,11 @@ prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed)
 	chunk_t appending_chunk;
 	
 	this = allocator_alloc_thing(private_prf_plus_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}
+
 	/* set public methods */
-	this->public.get_bytes = (size_t (*)(prf_plus_t *,size_t,u_int8_t*))get_bytes;
-	this->public.allocate_bytes = (size_t (*)(prf_plus_t *,size_t,chunk_t*))allocate_bytes;
-	this->public.destroy = (status_t (*)(prf_plus_t *))destroy;
+	this->public.get_bytes = (void (*)(prf_plus_t *,size_t,u_int8_t*))get_bytes;
+	this->public.allocate_bytes = (void (*)(prf_plus_t *,size_t,chunk_t*))allocate_bytes;
+	this->public.destroy = (void (*)(prf_plus_t *))destroy;
 	
 	/* take over prf */
 	this->prf = prf;
@@ -148,23 +139,13 @@ prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed)
 	/* allocate buffer for prf output */
 	this->buffer.len = prf->get_block_size(prf);
 	this->buffer.ptr = allocator_alloc(this->buffer.len);
-	if (this->buffer.ptr == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
+
 	this->appending_octet = 0x01;
 	
 	/* clone seed */
 	this->seed.ptr = allocator_clone_bytes(seed.ptr, seed.len);
 	this->seed.len = seed.len;
-	if (this->seed.ptr == NULL)
-	{
-		allocator_free(this->buffer.ptr);
-		allocator_free(this);
-		return NULL;	
-	}
-	
+
 	/* do the first run */
 	appending_chunk.ptr = &(this->appending_octet);
 	appending_chunk.len = 1;

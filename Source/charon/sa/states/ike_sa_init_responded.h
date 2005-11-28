@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_init_responded.h
  * 
- * @brief State of a IKE_SA after responding to an IKE_SA_INIT request
+ * @brief Interface of ike_sa_init_responded_t.
  * 
  */
 

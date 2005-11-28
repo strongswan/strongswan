@@ -78,24 +78,22 @@ static void send_packets(private_sender_t * this)
 
 	while (1)
 	{
-		while (global_send_queue->get(global_send_queue,&current_packet) == SUCCESS)
+		current_packet = global_send_queue->get(global_send_queue);
+		this->logger->log(this->logger, CONTROL|MORE, "got a packet, sending it");
+		status = global_socket->send(global_socket,current_packet);
+		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, CONTROL|MORE, "got a packet, sending it");
-			status = global_socket->send(global_socket,current_packet);
-			if (status != SUCCESS)
-			{
-				this->logger->log(this->logger, ERROR, "sending failed, socket returned %s", 
-									mapping_find(status_m, status));
-			}
-			current_packet->destroy(current_packet);
+			this->logger->log(this->logger, ERROR, "sending failed, socket returned %s", 
+								mapping_find(status_m, status));
 		}
+		current_packet->destroy(current_packet);
 	}
 }
 
 /**
  * implements sender_t.destroy
  */
-static status_t destroy(private_sender_t *this)
+static void destroy(private_sender_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to terminate sender thread");
 	pthread_cancel(this->assigned_thread);
@@ -106,7 +104,6 @@ static status_t destroy(private_sender_t *this)
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -117,15 +114,10 @@ sender_t * sender_create()
 	private_sender_t *this = allocator_alloc_thing(private_sender_t);
 
 	this->send_packets = send_packets;
-	this->public.destroy = (status_t(*)(sender_t*)) destroy;
+	this->public.destroy = (void(*)(sender_t*)) destroy;
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, SENDER, NULL);
-	if (this->logger == NULL)
-	{
-		allocator_free(this);
-		return NULL;	
-	}
-	
+
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->send_packets, this) != 0)
 	{
 		this->logger->log(this->logger, ERROR, "Sender thread could not be created");

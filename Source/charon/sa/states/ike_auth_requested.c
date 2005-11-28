@@ -63,10 +63,9 @@ static ike_sa_state_t get_state(private_ike_auth_requested_t *this)
 /**
  * Implements state_t.get_state
  */
-static status_t destroy(private_ike_auth_requested_t *this)
+static void destroy(private_ike_auth_requested_t *this)
 {
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /* 
@@ -75,16 +74,11 @@ static status_t destroy(private_ike_auth_requested_t *this)
 ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa)
 {
 	private_ike_auth_requested_t *this = allocator_alloc_thing(private_ike_auth_requested_t);
-	
-	if (this == NULL)
-	{
-		return NULL;
-	}
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
-	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
+	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

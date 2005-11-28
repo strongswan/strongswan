@@ -61,8 +61,6 @@ struct private_receiver_t {
 	  * logger for the receiver
 	  */
 	 logger_t *logger;
-	 
-
 };
 
 /**
@@ -84,15 +82,8 @@ static void receive_packets(private_receiver_t * this)
 		{
 			this->logger->log(this->logger, CONTROL, "creating job from packet");
 			current_job = (job_t *) incoming_packet_job_create(current_packet);
-			if (current_job == NULL)
-			{
-				this->logger->log(this->logger, ERROR, "job creation failed");
-			}
 
-			if (global_job_queue->add(global_job_queue,current_job) != SUCCESS)
-			{
-				this->logger->log(this->logger, ERROR, "job queueing failed");
-			}
+			global_job_queue->add(global_job_queue,current_job);
 
 		}
 		/* bad bad, rebuild the socket ? */
@@ -103,7 +94,7 @@ static void receive_packets(private_receiver_t * this)
 /**
  * Implementation of receiver_t's destroy function
  */
-static status_t destroy(private_receiver_t *this)
+static void destroy(private_receiver_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to terminate receiver thread");
 	pthread_cancel(this->assigned_thread);
@@ -114,7 +105,6 @@ static status_t destroy(private_receiver_t *this)
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -124,14 +114,10 @@ receiver_t * receiver_create()
 {
 	private_receiver_t *this = allocator_alloc_thing(private_receiver_t);
 
-	this->public.destroy = (status_t(*)(receiver_t*)) destroy;
+	this->public.destroy = (void(*)(receiver_t*)) destroy;
 	this->receive_packets = receive_packets;
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, RECEIVER, NULL);
-	if (this->logger == NULL)
-	{
-		allocator_free(this);
-	}
 	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->receive_packets, this) != 0)
 	{

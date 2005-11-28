@@ -59,7 +59,7 @@ struct private_hmac_t {
 /**
  * Implementation of hmac_t.get_mac.
  */
-static status_t get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
+static void get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 {
 	/* H(K XOR opad, H(K XOR ipad, text)) 
 	 * 
@@ -92,13 +92,12 @@ static status_t get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 		/* reinit for next call */
 		this->h->get_hash(this->h, this->ipaded_key, NULL);
 	}
-	return SUCCESS;
 }
 
 /**
  * Implementation of hmac_t.allocate_mac.
  */
-static status_t allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
+static void allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 {
 	/* allocate space and use get_mac */
 	if (out == NULL)
@@ -110,13 +109,8 @@ static status_t allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 	{
 		out->len = this->h->get_block_size(this->h);
 		out->ptr = allocator_alloc(out->len);
-		if (out->ptr == NULL)
-		{
-			return OUT_OF_RES;	
-		}
 		this->hmac.get_mac(&(this->hmac), data, out->ptr);
 	}
-	return SUCCESS;
 }
 	
 /**
@@ -130,7 +124,7 @@ static size_t get_block_size(private_hmac_t *this)
 /**
  * Implementation of hmac_t.set_key.
  */
-static status_t set_key(private_hmac_t *this, chunk_t key)
+static void set_key(private_hmac_t *this, chunk_t key)
 {
 	int i;
 	u_int8_t buffer[this->b];
@@ -158,20 +152,17 @@ static status_t set_key(private_hmac_t *this, chunk_t key)
 	/* begin hashing of inner pad */
 	this->h->reset(this->h);
 	this->h->get_hash(this->h, this->ipaded_key, NULL);
-	
-	return SUCCESS;;
 }
 
 /**
  * Implementation of hmac_t.destroy.
  */
-static status_t destroy(private_hmac_t *this)
+static void destroy(private_hmac_t *this)
 {
 	this->h->destroy(this->h);
 	allocator_free(this->opaded_key.ptr);
 	allocator_free(this->ipaded_key.ptr);
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -182,16 +173,13 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	private_hmac_t *this;
 	
 	this = allocator_alloc_thing(private_hmac_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}
+
 	/* set hmac_t methods */
-	this->hmac.get_mac = (size_t (*)(hmac_t *,chunk_t,u_int8_t*))get_mac;
-	this->hmac.allocate_mac = (size_t (*)(hmac_t *,chunk_t,chunk_t*))allocate_mac;
+	this->hmac.get_mac = (void (*)(hmac_t *,chunk_t,u_int8_t*))get_mac;
+	this->hmac.allocate_mac = (void (*)(hmac_t *,chunk_t,chunk_t*))allocate_mac;
 	this->hmac.get_block_size = (size_t (*)(hmac_t *))get_block_size;
-	this->hmac.set_key = (status_t (*)(hmac_t *,chunk_t))set_key;
-	this->hmac.destroy = (status_t (*)(hmac_t *))destroy;
+	this->hmac.set_key = (void (*)(hmac_t *,chunk_t))set_key;
+	this->hmac.destroy = (void (*)(hmac_t *))destroy;
 	
 	/* set b, according to hasher */
 	switch (hash_algorithm)
@@ -207,30 +195,13 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 		
 	/* build the hasher */
 	this->h = hasher_create(hash_algorithm);
-	if (this->h == NULL)
-	{
-		allocator_free(this);
-		return NULL;	
-	}
 
 	/* build ipad and opad */
 	this->opaded_key.ptr = allocator_alloc(this->b);
 	this->opaded_key.len = this->b;
-	if (this->opaded_key.ptr == NULL)
-	{
-		this->h->destroy(this->h);
-		allocator_free(this);
-		return NULL;	
-	}
+
 	this->ipaded_key.ptr = allocator_alloc(this->b);
 	this->ipaded_key.len = this->b;
-	if (this->ipaded_key.ptr == NULL)
-	{
-		this->h->destroy(this->h);
-		allocator_free(this->opaded_key.ptr);
-		allocator_free(this);
-		return NULL;	
-	}
 
 	return &(this->hmac);
 }

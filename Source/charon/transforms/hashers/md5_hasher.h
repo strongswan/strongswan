@@ -45,9 +45,7 @@ struct md5_hasher_t {
 /**
  * @brief Creates a new md5_hasher_t.
  * 
- * @return
- * 				- md5_hasher_t if successfully
- * 				- NULL if out of ressources
+ * @return	md5_hasher_t object
  * 
  * @ingroup hashers
  */

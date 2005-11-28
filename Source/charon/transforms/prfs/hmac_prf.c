@@ -42,17 +42,17 @@ struct private_hmac_prf_t {
 /**
  * implementation of prf_t.get_bytes
  */
-static status_t get_bytes(private_hmac_prf_t *this, chunk_t seed, u_int8_t *buffer)
+static void get_bytes(private_hmac_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
-	return this->hmac->get_mac(this->hmac, seed, buffer);
+	this->hmac->get_mac(this->hmac, seed, buffer);
 }
 
 /**
  * implementation of prf_t.allocate_bytes
  */
-static status_t allocate_bytes(private_hmac_prf_t *this, chunk_t seed, chunk_t *chunk)
+static void allocate_bytes(private_hmac_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
-	return this->hmac->allocate_mac(this->hmac, seed, chunk);
+	this->hmac->allocate_mac(this->hmac, seed, chunk);
 }
 
 /**
@@ -66,20 +66,18 @@ static size_t get_block_size(private_hmac_prf_t *this)
 /**
  * implementation of prf_t.set_key
  */
-static status_t set_key(private_hmac_prf_t *this, chunk_t key)
+static void set_key(private_hmac_prf_t *this, chunk_t key)
 {
 	this->hmac->set_key(this->hmac, key);
-	return SUCCESS;
 }
 
 /**
  * implementation of prf_t.destroy
  */
-static status_t destroy(private_hmac_prf_t *this)
+static void destroy(private_hmac_prf_t *this)
 {
 	allocator_free(this);
 	this->hmac->destroy(this->hmac);
-	return SUCCESS;
 }
 
 /*
@@ -89,16 +87,11 @@ hmac_prf_t *hmac_prf_create(hash_algorithm_t hash_algorithm)
 {
 	private_hmac_prf_t *this = allocator_alloc_thing(private_hmac_prf_t);
 	
-	if (this == NULL)
-	{
-		return NULL;	
-	}
-	
-	this->public.prf_interface.get_bytes = (status_t (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
-	this->public.prf_interface.allocate_bytes = (status_t (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
+	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
+	this->public.prf_interface.allocate_bytes = (void (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
 	this->public.prf_interface.get_block_size = (size_t (*) (prf_t*))get_block_size;
-	this->public.prf_interface.set_key = (status_t (*) (prf_t *,chunk_t))set_key;
-	this->public.prf_interface.destroy = (status_t (*) (prf_t *))destroy;
+	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
+	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
 	
 	this->hmac = hmac_create(hash_algorithm);
 	if (this->hmac == NULL)

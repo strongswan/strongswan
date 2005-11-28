@@ -1,7 +1,7 @@
 /**
  * @file job_queue.c
  *
- * @brief Job-Queue based on linked_list_t
+ * @brief Implementation of job_queue_t
  *
  */
 
@@ -56,7 +56,7 @@ struct private_job_queue_t {
 
 
 /**
- * @brief implements function get_count of job_queue_t
+ * implements job_queue_t.get_count
  */
 static int get_count(private_job_queue_t *this)
 {
@@ -68,11 +68,12 @@ static int get_count(private_job_queue_t *this)
 }
 
 /**
- * @brief implements function get of job_queue_t
+ * implements job_queue_t.get
  */
-static status_t get(private_job_queue_t *this, job_t **job)
+static job_t *get(private_job_queue_t *this)
 {
 	int oldstate;
+	job_t *job;
 	pthread_mutex_lock(&(this->mutex));
 	/* go to wait while no jobs available */
 	while(this->list->get_count(this->list) == 0)
@@ -87,28 +88,26 @@ static status_t get(private_job_queue_t *this, job_t **job)
 		pthread_setcancelstate(oldstate, NULL);
 		pthread_cleanup_pop(0);
 	}
-	this->list->remove_first(this->list,(void **) job);
+	this->list->remove_first(this->list,(void **) &job);
 	pthread_mutex_unlock(&(this->mutex));
-	return SUCCESS;
+	return job;
 }
 
 /**
- * @brief implements function add of job_queue_t
+ * implements function job_queue_t.add
  */
-static status_t add(private_job_queue_t *this, job_t *job)
+static void add(private_job_queue_t *this, job_t *job)
 {
 	pthread_mutex_lock(&(this->mutex));
 	this->list->insert_last(this->list,job);
 	pthread_cond_signal( &(this->condvar));
 	pthread_mutex_unlock(&(this->mutex));
-	return SUCCESS;
 }
 
 /**
- * @brief implements function destroy of job_queue_t
- *
+ * implements job_queue_t.destroy
  */
-static status_t job_queue_destroy (private_job_queue_t *this)
+static void job_queue_destroy (private_job_queue_t *this)
 {
 	while (this->list->get_count(this->list) > 0)
 	{
@@ -127,7 +126,6 @@ static status_t job_queue_destroy (private_job_queue_t *this)
 	pthread_cond_destroy(&(this->condvar));
 
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -136,25 +134,14 @@ static status_t job_queue_destroy (private_job_queue_t *this)
  */
 job_queue_t *job_queue_create()
 {
-	linked_list_t *linked_list = linked_list_create();
-	if (linked_list == NULL)
-	{
-		return NULL;
-	}
-
 	private_job_queue_t *this = allocator_alloc_thing(private_job_queue_t);
-	if (this == NULL)
-	{
-		linked_list->destroy(linked_list);
-		return NULL;
-	}
 
 	this->public.get_count = (int(*)(job_queue_t*))get_count;
-	this->public.get = (status_t(*)(job_queue_t*, job_t**))get;
-	this->public.add = (status_t(*)(job_queue_t*, job_t*))add;
-	this->public.destroy = (status_t(*)(job_queue_t*))job_queue_destroy;
+	this->public.get = (job_t*(*)(job_queue_t*))get;
+	this->public.add = (void(*)(job_queue_t*, job_t*))add;
+	this->public.destroy = (void(*)(job_queue_t*))job_queue_destroy;
 
-	this->list = linked_list;
+	this->list = linked_list_create();
 	pthread_mutex_init(&(this->mutex), NULL);
 	pthread_cond_init(&(this->condvar), NULL);
 

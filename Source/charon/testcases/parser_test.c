@@ -179,8 +179,6 @@ void test_parser_with_sa_payload(tester_t *tester)
 	}
 	proposals->destroy(proposals);
 	
-	
-
 	sa_payload->destroy(sa_payload);
 }
 

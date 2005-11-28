@@ -108,8 +108,7 @@ void test_hmac_md5_signer(tester_t *tester)
 	
 	
 
-	tester->assert_true(tester, (signer->destroy(signer) == SUCCESS), "signer destroy call check");
-	
+	signer->destroy(signer);	
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
 }
 
@@ -205,10 +204,7 @@ void test_hmac_sha1_signer(tester_t *tester)
 		tester->assert_true(tester, (valid == FALSE), "Signature not valid check");
  	}
 	
-	
-
-	tester->assert_true(tester, (signer->destroy(signer) == SUCCESS), "signer destroy call check");
-	
+	signer->destroy(signer);
 	global_logger_manager->destroy_logger(global_logger_manager,logger);
 
 }

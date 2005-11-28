@@ -74,7 +74,7 @@ struct private_sha1_hasher_t {
 /* 
  * Hash a single 512-bit block. This is the core of the algorithm. *
  */
-void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
+static void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
 {
 	u_int32_t a, b, c, d, e;
 	typedef union {
@@ -125,7 +125,7 @@ void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
 /* 
  * Run your data through this. 
  */
-void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len)
+static void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len)
 {
 	u_int32_t i;
 	u_int32_t j;
@@ -158,7 +158,7 @@ void SHA1Update(private_sha1_hasher_t* this, u_int8_t *data, u_int32_t len)
 /* 
  * Add padding and return the message digest. 
  */
-void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
+static void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
 {
 	u_int32_t i;
 	u_int8_t finalcount[8];
@@ -187,7 +187,7 @@ void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
 /**
  * implementation of hasher_t.get_hash for sha1
  */
-static status_t get_hash(private_sha1_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+static void get_hash(private_sha1_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
 {
 	SHA1Update(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)
@@ -195,14 +195,13 @@ static status_t get_hash(private_sha1_hasher_t *this, chunk_t chunk, u_int8_t *b
 		SHA1Final(this, buffer);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
 	}
-	return SUCCESS;
 }
 
 
 /**
  * implementation of hasher_t.allocate_hash for sha1
  */
-static status_t allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *hash)
+static void allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
 	
@@ -211,17 +210,12 @@ static status_t allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_
 	{	
 		allocated_hash.ptr = allocator_alloc(BLOCK_SIZE_SHA1);
 		allocated_hash.len = BLOCK_SIZE_SHA1;
-		if (allocated_hash.ptr == NULL)
-		{
-			return OUT_OF_RES;
-		}
+		
 		SHA1Final(this, allocated_hash.ptr);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
 		
 		*hash = allocated_hash;
 	}
-	
-	return SUCCESS;
 }
 	
 /**
@@ -235,7 +229,7 @@ static size_t get_block_size(private_sha1_hasher_t *this)
 /**
  * implementation of hasher_t.reset for sha1
  */
-static status_t reset(private_sha1_hasher_t *this)
+static void reset(private_sha1_hasher_t *this)
 {
 	this->state[0] = 0x67452301;
     this->state[1] = 0xEFCDAB89;
@@ -244,15 +238,13 @@ static status_t reset(private_sha1_hasher_t *this)
     this->state[4] = 0xC3D2E1F0;
     this->count[0] = 0;
     this->count[1] = 0;
-    return SUCCESS;
 }
 /**
  * implementation of hasher_t.destroy for sha1
  */
-static status_t destroy(private_sha1_hasher_t *this)
+static void destroy(private_sha1_hasher_t *this)
 {
 	allocator_free(this);
-	return SUCCESS;
 }
 
 
@@ -267,11 +259,11 @@ sha1_hasher_t *sha1_hasher_create()
 		return NULL;	
 	}
 	
-	this->public.hasher_interface.get_hash = (status_t (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
-	this->public.hasher_interface.allocate_hash = (status_t (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
+	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
+	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
 	this->public.hasher_interface.get_block_size = (size_t (*) (hasher_t*))get_block_size;
-	this->public.hasher_interface.reset = (size_t (*) (hasher_t*))reset;
-	this->public.hasher_interface.destroy = (size_t (*) (hasher_t*))destroy;
+	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
+	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 	
 	/* initialize */
 	this->public.hasher_interface.reset(&(this->public.hasher_interface));

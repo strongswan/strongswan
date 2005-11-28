@@ -63,18 +63,16 @@ struct tester_t {
 	 * @param tester 	tester_t object
  	 * @param tests		pointer	to an array of test_t-pointers.
  	 * 			      	The last item has to be NULL.
-	 * @return			SUCCESS in any case
 	 */
-	status_t (*perform_tests) (tester_t *tester,test_t **tests);
+	void (*perform_tests) (tester_t *tester,test_t **tests);
 
 	/**
 	 * @brief Run a specific test case.
 	 *
 	 * @param this 		tester_t object
 	 * @param test 		pointer to a test_t object which will be performed
-	 * @return			SUCCESS in any case
 	 */
- 	status_t (*perform_test) (tester_t *tester, test_t *test);
+ 	void (*perform_test) (tester_t *tester, test_t *test);
 
 	/**
 	 * Is called in a testcase to check a specific situation for TRUE.
@@ -106,9 +104,8 @@ struct tester_t {
 	 * @brief Destroys a tester_t object
 	 *
 	 * @param tester 	tester_t object
-	 * @return 			SUCCESS in any case
 	 */
-	status_t (*destroy) (tester_t *tester);
+	void (*destroy) (tester_t *tester);
 };
 
 /**
@@ -118,9 +115,7 @@ struct tester_t {
  * @param display_succeeded_asserts has to be TRUE, if all asserts should be displayed,
  * 									FALSE otherwise
  *
- * @return							
- * 									- tester_t object
- * 									- NULL if out of ressources
+ * @return							- tester_t object
  * 
  * @ingroup utils
  */

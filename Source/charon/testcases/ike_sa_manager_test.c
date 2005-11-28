@@ -95,8 +95,7 @@ void test_ike_sa_manager(tester_t *tester)
 	 * 
 	 */
 
-	status = td.isam->create_and_checkout(td.isam, &ike_sa);
-	tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA");
+	td.isam->create_and_checkout(td.isam, &ike_sa);
 	/* for testing purposes, we manipulate the responder spi.
 	 * this is usually done be the response from the communication partner, 
 	 * but we don't have one...
@@ -212,8 +211,7 @@ void test_ike_sa_manager(tester_t *tester)
 	/* let them go acquiring */
 	sleep(1);
 	
-	status = td.isam->destroy(td.isam);
-	tester->assert_true(tester, (status == SUCCESS), "ike_sa_manager destruction");
+	td.isam->destroy(td.isam);
 	
 	for (i = 0; i < thread_count; i++) 
 	{

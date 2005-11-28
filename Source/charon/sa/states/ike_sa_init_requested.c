@@ -138,13 +138,8 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				
 				
 				/* get the list of suggested proposals */ 
-				status = sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
-				if (status != SUCCESS)
-				{	
-					this->logger->log(this->logger, ERROR, "Fatal errror: Could not create iterator on suggested proposals");
-					payloads->destroy(payloads);
-					return status;
-				}
+				sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
+
 				
 				/* now let the configuration-manager check the selected proposals*/
 				this->logger->log(this->logger, CONTROL | MOST, "Check suggested proposals");
@@ -194,14 +189,8 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 			case KEY_EXCHANGE:
 			{
 				ke_payload_t *ke_payload = (ke_payload_t*)payload;
-		
-				status = this->diffie_hellman->set_other_public_value(this->diffie_hellman, ke_payload->get_key_exchange_data(ke_payload));
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR, "Could not set other public value for DH exchange. Status %s",mapping_find(status_m,status));
-					payloads->destroy(payloads);
-					return OUT_OF_RES;
-				}
+				
+				this->diffie_hellman->set_other_public_value(this->diffie_hellman, ke_payload->get_key_exchange_data(ke_payload));
 				
 				/* shared secret is computed AFTER processing of all payloads... */				
 				break;
@@ -209,28 +198,16 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 			case NONCE:
 			{
 				nonce_payload_t 	*nonce_payload = (nonce_payload_t*)payload;
-								
-				if (this->received_nonce.ptr != NULL)
-				{
-					this->logger->log(this->logger, CONTROL | MOST, "Destroy existing received nonce");
-					allocator_free(this->received_nonce.ptr);
-					this->received_nonce.ptr = NULL;
-					this->received_nonce.len = 0;
-				}
-
-				status = nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR, "Fatal error: Could not get received nonce");
-					payloads->destroy(payloads);
-					return OUT_OF_RES;
-				}
 				
+				allocator_free(this->received_nonce.ptr);
+				this->received_nonce = CHUNK_INITIALIZER;
+				
+				nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
 				break;
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "Fatal errror: Payload type not supported!!!!");
+				this->logger->log(this->logger, ERROR, "Payload type not supported!!!!");
 				payloads->destroy(payloads);
 				return FAILED;
 			}
@@ -239,31 +216,16 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 			
 	}
 	payloads->destroy(payloads);
-
-	if (this->shared_secret.ptr != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy existing shared_secret");
-		allocator_free(this->shared_secret.ptr);
-		this->shared_secret.ptr = NULL;
-		this->shared_secret.len = 0;
-	}
-
-
+	
+	allocator_free(this->shared_secret.ptr);
+	this->shared_secret = CHUNK_INITIALIZER;
+	
 	/* store shared secret  */
 	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
 	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &(this->shared_secret));		
 	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &this->shared_secret);
 	
-	status = this->ike_sa->compute_secrets(this->ike_sa,this->shared_secret,this->sent_nonce, this->received_nonce);
-	if (status != SUCCESS)
-	{
-		/* secrets could not be computed */
-		this->logger->log(this->logger, ERROR | MORE, "Secrets could not be computed!");
-		return status;
-	}
-	
-	
-	
+	this->ike_sa->compute_secrets(this->ike_sa,this->shared_secret,this->sent_nonce, this->received_nonce);
 
 	/****************************
 	 * 
@@ -285,7 +247,6 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 //	response->destroy(response);
 
-
 	
 	return SUCCESS;
 }
@@ -301,31 +262,17 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
 /**
  * Implements state_t.get_state
  */
-static status_t destroy(private_ike_sa_init_requested_t *this)
+static void destroy(private_ike_sa_init_requested_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy state of type ike_sa_init_requested_t");
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	if (this->sent_nonce.ptr != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
-		allocator_free(this->sent_nonce.ptr);
-	}
-	if (this->received_nonce.ptr != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
-		allocator_free(this->received_nonce.ptr);
-	}
-
-	if (this->shared_secret.ptr != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret");
-		allocator_free(this->shared_secret.ptr);
-	}
 	
+	allocator_free(this->sent_nonce.ptr);
+	allocator_free(this->received_nonce.ptr);
+	allocator_free(this->shared_secret.ptr);
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /* 
@@ -335,22 +282,15 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 {
 	private_ike_sa_init_requested_t *this = allocator_alloc_thing(private_ike_sa_init_requested_t);
 	
-	if (this == NULL)
-	{
-		return NULL;
-	}
-
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
-	this->public.state_interface.destroy  = (status_t (*) (state_t *)) destroy;
+	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->received_nonce.ptr = NULL;
-	this->received_nonce.len = 0;
-	this->shared_secret.ptr = NULL;
-	this->shared_secret.len = 0;
+	this->received_nonce = CHUNK_INITIALIZER;
+	this->shared_secret = CHUNK_INITIALIZER;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->diffie_hellman = diffie_hellman;
 	this->sent_nonce = sent_nonce;

@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_id.h
  *
- * @brief Class for identification of an IKE_SA
+ * @brief Interface of ike_sa_id_t.
  *
  */
 
@@ -42,98 +42,96 @@ struct ike_sa_id_t {
 	 *
 	 * This function is called when a request or reply of a IKE_SA_INIT is received.
 	 *
-	 * @param this ike_sa_id_t object
-	 * @param responder_spi SPI of responder to set
-	 * @return SUCCESSFUL in any case
+	 * @param this 				ike_sa_id_t object
+	 * @param responder_spi 	SPI of responder to set
 	 */
-	status_t (*set_responder_spi) (ike_sa_id_t *this, u_int64_t responder_spi);
+	void (*set_responder_spi) (ike_sa_id_t *this, u_int64_t responder_spi);
 
 	/**
 	 * @brief Sets the SPI of the initiator.
 	 *
 	 *
-	 * @param this ike_sa_id_t object
-	 * @param initiator_spi SPI to set
-	 * @return SUCCESSFUL in any case
+	 * @param this 				ike_sa_id_t object
+	 * @param initiator_spi 	SPI to set
 	 */
-	status_t (*set_initiator_spi) (ike_sa_id_t *this, u_int64_t initiator_spi);
+	void (*set_initiator_spi) (ike_sa_id_t *this, u_int64_t initiator_spi);
 
 	/**
-	 * @brief Returns the initiator spi
+	 * @brief Returns the initiator spi.
 	 *
-	 * @param this ike_sa_id_t object
-	 * @return spi of the initiator
+	 * @param this 				ike_sa_id_t object
+	 * @return 					spi of the initiator
 	 */
 	u_int64_t (*get_initiator_spi) (ike_sa_id_t *this);
 
 	/**
-	 * @brief Returns the responder spi
+	 * @brief Returns the responder spi.
 	 *
-	 * @param this ike_sa_id_t object
-	 * @return spi of the responder
+	 * @param this 				ike_sa_id_t object
+	 * @return 					spi of the responder
 	 */
 	u_int64_t (*get_responder_spi) (ike_sa_id_t *this);
 
 	/**
-	 * @brief Check if two ike_sa_ids are equal
+	 * @brief Check if two ike_sa_ids are equal.
 	 *
-	 * @param this ike_sa_id_t object
- 	 * @param other ike_sa_id object to check if equal
- 	 * @param are_equal is set to TRUE, if given ike_sa_ids are equal, FALSE otherwise
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param this 				ike_sa_id_t object
+ 	 * @param other 			ike_sa_id object to check if equal
+ 	 * @return 					TRUE if given ike_sa_ids are equal, FALSE otherwise
 	 */
-	status_t (*equals) (ike_sa_id_t *this,ike_sa_id_t *other, bool *are_equal);
+	bool (*equals) (ike_sa_id_t *this, ike_sa_id_t *other);
 
 	/**
-	 * @brief Replace the values of a given ike_sa_id_t object with values
-	 * from another ike_sa_id_t object
+	 * @brief Replace the values of a given ike_sa_id_t object with values.
+	 * from another ike_sa_id_t object.
 	 *
-	 * @param this ike_sa_id_t object
- 	 * @param other ike_sa_id_t object which values will be taken
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param this 				ike_sa_id_t object
+ 	 * @param other 			ike_sa_id_t object which values will be taken
 	 */
-	status_t (*replace_values) (ike_sa_id_t *this, ike_sa_id_t *other);
+	void (*replace_values) (ike_sa_id_t *this, ike_sa_id_t *other);
 
 	/**
-	 * @brief gets the initiator flag
+	 * @brief gets the initiator flag.
 	 *
-	 * @param this ike_sa_id_t object
-	 * @return TRUE if we are the original initator
+	 * @param this 				ike_sa_id_t object
+	 * @return 					TRUE if we are the original initator
 	 */
 	bool (*is_initiator) (ike_sa_id_t *this);
 
 	/**
-	 * @brief switches the initiator flag
+	 * @brief switches the initiator flag.
 	 * 
-	 * @param this ike_sa_id_t object
-	 * @return TRUE if we are the original initator after switch
+	 * @param this 				ike_sa_id_t object
+	 * @return 					TRUE if we are the original initator after switch
 	 */
 	bool (*switch_initiator) (ike_sa_id_t *this);
 
 	/**
-	 * @brief Clones a given ike_sa_id_t object
+	 * @brief Clones a given ike_sa_id_t object.
 	 *
-	 * @param this ike_sa_id_t object
- 	 * @param clone_of_this ike_sa_id_t object which will be created
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param this				ike_sa_id_t object
+	 * @return 					cloned ike_sa_id
 	 */
-	status_t (*clone) (ike_sa_id_t *this,ike_sa_id_t **clone_of_this);
+	ike_sa_id_t *(*clone) (ike_sa_id_t *this);
 
 	/**
-	 * @brief Destroys a ike_sa_id_tobject
+	 * @brief Destroys a ike_sa_id_tobject.
 	 *
-	 * @param this ike_sa_id_t object
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @param this 				ike_sa_id_t object
 	 */
-	status_t (*destroy) (ike_sa_id_t *this);
+	void (*destroy) (ike_sa_id_t *this);
 };
 
 /**
- * Creates an ike_sa_id_t object with specific spi's and defined role
+ * @brief Creates an ike_sa_id_t object with specific spi's and defined role
  *
  * @warning The initiator SPI and role is not changeable after initiating a ike_sa_id object
+ * 
+ * @param initiator_spi			initiators spi
+ * @param responder_spi			responders spi
+ * @param is_initiator			TRUE if we are the original initiator
+ * @return						created ike_sa_id_t object
  */
-
 ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi, bool is_initiaor);
 
 #endif /*IKE_SA_ID_H_*/

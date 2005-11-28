@@ -244,7 +244,7 @@ static void MD5Transform(u_int32_t state[4], u_int8_t block[64])
  * operation, processing another message block, and updating the
  * context.
  */
-void MD5Update(private_md5_hasher_t *this, u_int8_t *input, size_t inputLen)
+static void MD5Update(private_md5_hasher_t *this, u_int8_t *input, size_t inputLen)
 {
 	u_int32_t i;
 	size_t index, partLen;
@@ -285,7 +285,7 @@ void MD5Update(private_md5_hasher_t *this, u_int8_t *input, size_t inputLen)
 /* MD5 finalization. Ends an MD5 message-digest operation, writing the
  * the message digest and zeroizing the context.
  */
-void MD5Final (private_md5_hasher_t *this, u_int8_t digest[16])
+static void MD5Final (private_md5_hasher_t *this, u_int8_t digest[16])
 {
 	u_int8_t bits[8];
 	size_t index, padLen;
@@ -313,7 +313,7 @@ void MD5Final (private_md5_hasher_t *this, u_int8_t digest[16])
 /**
  * implementation of hasher_t.get_hash for md5
  */
-static status_t get_hash(private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
+static void get_hash(private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
 {
 	MD5Update(this, chunk.ptr, chunk.len);
 	if (buffer != NULL)
@@ -321,14 +321,13 @@ static status_t get_hash(private_md5_hasher_t *this, chunk_t chunk, u_int8_t *bu
 		MD5Final(this, buffer);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
 	}
-	return SUCCESS;
 }
 
 
 /**
  * implementation of hasher_t.allocate_hash for md5
  */
-static status_t allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *hash)
+static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
 	chunk_t allocated_hash;
 	
@@ -337,17 +336,12 @@ static status_t allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t
 	{	
 		allocated_hash.ptr = allocator_alloc(BLOCK_SIZE_MD5);
 		allocated_hash.len = BLOCK_SIZE_MD5;
-		if (allocated_hash.ptr == NULL)
-		{
-			return OUT_OF_RES;
-		}
+
 		MD5Final(this, allocated_hash.ptr);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
 		
 		*hash = allocated_hash;
 	}
-	
-	return SUCCESS;
 }
 	
 /**
@@ -357,11 +351,11 @@ static size_t get_block_size(private_md5_hasher_t *this)
 {
 	return BLOCK_SIZE_MD5;
 }
-	
+
 /**
  * implementation of hasher_t.reset for md5
  */
-static status_t reset(private_md5_hasher_t *this)
+static void reset(private_md5_hasher_t *this)
 {
   	this->state[0] = 0x67452301;
   	this->state[1] = 0xefcdab89;
@@ -369,17 +363,15 @@ static status_t reset(private_md5_hasher_t *this)
   	this->state[3] = 0x10325476;
   	this->count[0] = 0;
   	this->count[1] = 0;
-    return SUCCESS;
 }
+
 /**
  * implementation of hasher_t.destroy for md5
  */
-static status_t destroy(private_md5_hasher_t *this)
+static void destroy(private_md5_hasher_t *this)
 {
 	allocator_free(this);
-	return SUCCESS;
 }
-
 
 /*
  * Described in header
@@ -387,16 +379,12 @@ static status_t destroy(private_md5_hasher_t *this)
 md5_hasher_t *md5_hasher_create()
 {
 	private_md5_hasher_t *this = allocator_alloc_thing(private_md5_hasher_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}
-	
-	this->public.hasher_interface.get_hash = (status_t (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
-	this->public.hasher_interface.allocate_hash = (status_t (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
+
+	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
+	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
 	this->public.hasher_interface.get_block_size = (size_t (*) (hasher_t*))get_block_size;
-	this->public.hasher_interface.reset = (size_t (*) (hasher_t*))reset;
-	this->public.hasher_interface.destroy = (size_t (*) (hasher_t*))destroy;
+	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
+	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 	
 	/* initialize */
 	this->public.hasher_interface.reset(&(this->public.hasher_interface));

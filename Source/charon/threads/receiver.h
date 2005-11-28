@@ -42,10 +42,8 @@ struct receiver_t {
 	 * @brief Destroys a receiver_t
 	 *
 	 * @param receiver 	receiver object
-	 * @return 
-	 * 				- SUCCESS in any case
 	 */
-	status_t (*destroy) (receiver_t *receiver);
+	void (*destroy) (receiver_t *receiver);
 };
 
 /**

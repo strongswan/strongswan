@@ -52,10 +52,8 @@ struct thread_pool_t {
 	 * sends cancellation request to all threads and AWAITS their termination.
 	 * 
 	 * @param thread_pool	thread_pool_t object
-	 * @return				
-	 * 						- SUCCESS in any case
 	 */
-	status_t (*destroy) (thread_pool_t *thread_pool);
+	void (*destroy) (thread_pool_t *thread_pool);
 };
 
 /**

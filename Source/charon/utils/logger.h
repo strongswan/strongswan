@@ -99,9 +99,8 @@ struct logger_t {
 	 * @param loglevel 	or'ed set of loglevels
 	 * @param format 	printf like format string
 	 * @param ... 		printf like parameters
-	 * @return			SUCCESS in any case
 	 */
-	status_t (*log) (logger_t *this, logger_level_t log_level, char *format, ...);
+	void (*log) (logger_t *this, logger_level_t log_level, char *format, ...);
 
 	/**
 	 * @brief Log some bytes, useful for debugging.
@@ -114,9 +113,8 @@ struct logger_t {
 	 * @param label 		a labeling name, logged with the bytes
 	 * @param bytes 		pointer to the bytes to dump
 	 * @param len	 	number of bytes to dump
-	 * @return			SUCCESS in any case
 	 */
-	status_t (*log_bytes) (logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len);
+	void (*log_bytes) (logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len);
 
 	/**
 	 * @brief Log a chunk, useful for debugging.
@@ -128,35 +126,31 @@ struct logger_t {
 	 * @param loglevel 	or'ed set of loglevels
 	 * @param label 		a labeling name, logged with the bytes
 	 * @param chunk		pointer to a chunk to log
-	 * @return			SUCCESS in any case
 	 */
-	status_t (*log_chunk) (logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk);
+	void (*log_chunk) (logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk);
 
 	/**
 	 * @brief Enables a loglevel for the current logger_t object.
 	 *
 	 * @param 			this logger_t object
 	 * @param 			log_level loglevel to enable
-	 * @return			SUCCESS in any case
 	 */
-	status_t (*enable_level) (logger_t *this, logger_level_t log_level);
+	void (*enable_level) (logger_t *this, logger_level_t log_level);
 
 	/**
 	 * @brief Disables a loglevel for the current logger_t object.
 	 *
 	 * @param 			this logger_t object
 	 * @param 			log_level loglevel to enable
-	 * @return			UCCESS in any case
 	 */
-	status_t (*disable_level) (logger_t *this, logger_level_t log_level);
+	void (*disable_level) (logger_t *this, logger_level_t log_level);
 
 	/**
 	 * @brief Destroys a logger_t object.
 	 *
 	 * @param this		logger_t object
-	 * @return			SUCCESS in any case
 	 */
-	status_t (*destroy) (logger_t *this);
+	void (*destroy) (logger_t *this);
 };
 
 /**
@@ -166,9 +160,7 @@ struct logger_t {
  * @param log_level		or'ed set of log_levels to assign to the new logger_t object
  * @param log_pid		TRUE if thread id should also be logged
  * @param output		FILE * if log has to go on a file output, NULL for syslog
- * @return 				
- * 						- logger_t object 
- * 						- NULL if out of ressources
+ * @return 				logger_t object 
  * 
  * @ingroup utils
  */

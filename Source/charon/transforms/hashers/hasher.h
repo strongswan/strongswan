@@ -63,10 +63,8 @@ struct hasher_t {
 	 * @param this			calling hasher
 	 * @param data			data to hash
 	 * @param [out]buffer	pointer where the hash will be written
-	 * @return				
-	 * 						- SUCCESS in any case
 	 */
-	status_t (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *hash);
+	void (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *hash);
 	
 	/**
 	 * @brief hash data and allocate space for the hash
@@ -78,11 +76,8 @@ struct hasher_t {
 	 * @param this			calling hasher
 	 * @param data			chunk with data to hash
 	 * @param [out]hash		chunk which will hold allocated hash
-	 * @return				
-	 * 						- SUCCESS in any case
-	 * 						- OUT_OF_RES if space could not be allocated
 	 */
-	status_t (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
+	void (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
 	
 	/**
 	 * @brief Get the block size of this hashing function.
@@ -97,18 +92,15 @@ struct hasher_t {
 	 * computation of a completly new hash.
 	 * 
 	 * @param this			calling hasher
-	 * @return				- SUCCESS in any case
 	 */
-	status_t (*reset) (hasher_t *this);
+	void (*reset) (hasher_t *this);
 	
 	/**
 	 * @brief Destroys a hasher object.
 	 *
 	 * @param this 	hasher_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (hasher_t *this);
+	void (*destroy) (hasher_t *this);
 };
 
 /**
@@ -117,7 +109,7 @@ struct hasher_t {
  * @param hash_algorithm	Algorithm to use for hashing
  * @return
  * 							- hasher_t if successfully
- * 							- NULL if out of ressources 
+ * 							- NULL if algorithm not supported
  * 
  * @ingroup hashers
  */

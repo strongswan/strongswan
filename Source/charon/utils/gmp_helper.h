@@ -47,26 +47,8 @@ struct gmp_helper_t {
 	 * @param			this calling object
 	 * @param[out] var 	pointer to mpz_t variable to initialize
 	 * @param[in] 		bytes length of given prime in bytes
-	 * @return 		
-	 * 					- SUCCCESS
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*init_prime) (gmp_helper_t *this, mpz_t *var, int bytes);
-
-	/**
-	 * Initialize an mpz_t to a random prime of specified size without using gmp 
-	 * next prime function.
-	 *
-	 *
-	 * @param			this calling object
-	 * @param[out] var 	mpz_t variable to initialize
-	 * @param[in] 		bytes length of given prime in bytes
-	 * @return 		
-	 * 					- SUCCCESS
-	 * 					- FAILED if length of prime not as asked. Try again.
-	 * 					- OUT_OF_RES
-	 */	
-	status_t (*init_prime_fast) (gmp_helper_t *this, mpz_t *prime, int bytes);
+	void (*init_prime) (gmp_helper_t *this, mpz_t *var, int bytes);
 	
 	/**
 	 *  Convert network form (binary bytes, big-endian) to mpz_t of gmp library.
@@ -74,7 +56,7 @@ struct gmp_helper_t {
 	 * The given mpz_t gets initialized in this function.
 	 * 
 	 * @param this		calling private_gmp_helper_t object
-	 * @param mpz_value 	pointer to a mpz_t value
+	 * @param mpz_value pointer to a mpz_t value
 	 * @param data		chunk_t containing the network form of data
 	 */
 	void (*chunk_to_mpz) (gmp_helper_t *this,mpz_t *mpz_value, chunk_t data);
@@ -83,16 +65,11 @@ struct gmp_helper_t {
 	 * Convert mpz_t to network form (binary bytes, big-endian).
 	 * 
 	 * @param this		calling private_gmp_helper_t object
-	 * @param mpz_value 	mpz_value to convert
+	 * @param mpz_value mpz_value to convert
 	 * @param data		chunk_t where the data are written to
 	 * @param bytes		number of bytes to copy 
-	 * 
-	 * @return			
-	 * 					- SUCCESS
-	 * 					- OUT_OF_RES
-	 * 					- FAILED if mpz_t value was longer then given bytes count
 	 */
-	status_t (*mpz_to_chunk) (gmp_helper_t *this,mpz_t *mpz_value, chunk_t *data,size_t bytes);
+	void (*mpz_to_chunk) (gmp_helper_t *this, mpz_t *mpz_value, chunk_t *data, size_t bytes);
 
 	/**
 	 * @brief Destroys an gmp_helper_t object.
@@ -100,15 +77,13 @@ struct gmp_helper_t {
 	 * @param this 	gmp_helper_t object to destroy
 	 * @return 		SUCCESS in any case
 	 */
-	status_t (*destroy) (gmp_helper_t *this);
+	void (*destroy) (gmp_helper_t *this);
 };
 
 /**
  * Creates a new gmp_helper_t object
  * 
- * @return
- * 							- gmp_helper_t object
- * 							- NULL if out of ressources
+ * @return			gmp_helper_t object
  * 
  * @ingroup utils
  */

@@ -1474,90 +1474,90 @@ static status_t set_key (private_aes_cbc_crypter_t *this, chunk_t key)
 {
 	u_int32_t    *kf, *kt, rci, f = 0;
 	u_int8_t *in_key = key.ptr;
-
+	
 	if (key.len != this->blocksize)
 	{
 		return INVALID_ARG;
 	}
+	
+	this->aes_Nrnd = (this->aes_Nkey > (this->aes_Ncol) ? this->aes_Nkey : (this->aes_Ncol)) + 6; 
+	
+	this->aes_e_key[0] = const_word_in(in_key     );
+	this->aes_e_key[1] = const_word_in(in_key +  4);
+	this->aes_e_key[2] = const_word_in(in_key +  8);
+	this->aes_e_key[3] = const_word_in(in_key + 12);
+	
+	kf = this->aes_e_key; 
+	kt = kf + nc * (this->aes_Nrnd + 1) - this->aes_Nkey; 
+	rci = 0;
+	
+	switch(this->aes_Nkey)
+	{
+	case 4: do
+			{   kf[4] = kf[0] ^ ls_box(kf[3],3) ^ rcon_tab[rci++];
+				kf[5] = kf[1] ^ kf[4];
+				kf[6] = kf[2] ^ kf[5];
+				kf[7] = kf[3] ^ kf[6];
+				kf += 4;
+			}
+			while(kf < kt);
+			break;
+	
+	case 6: this->aes_e_key[4] = const_word_in(in_key + 16);
+			this->aes_e_key[5] = const_word_in(in_key + 20);
+			do
+			{   kf[ 6] = kf[0] ^ ls_box(kf[5],3) ^ rcon_tab[rci++];
+				kf[ 7] = kf[1] ^ kf[ 6];
+				kf[ 8] = kf[2] ^ kf[ 7];
+				kf[ 9] = kf[3] ^ kf[ 8];
+				kf[10] = kf[4] ^ kf[ 9];
+				kf[11] = kf[5] ^ kf[10];
+				kf += 6;
+			}
+			while(kf < kt);
+			break;
 
-    this->aes_Nrnd = (this->aes_Nkey > (this->aes_Ncol) ? this->aes_Nkey : (this->aes_Ncol)) + 6; 
-
-    this->aes_e_key[0] = const_word_in(in_key     );
-    this->aes_e_key[1] = const_word_in(in_key +  4);
-    this->aes_e_key[2] = const_word_in(in_key +  8);
-    this->aes_e_key[3] = const_word_in(in_key + 12);
-
-    kf = this->aes_e_key; 
-    kt = kf + nc * (this->aes_Nrnd + 1) - this->aes_Nkey; 
-    rci = 0;
-
-    switch(this->aes_Nkey)
+	case 8: this->aes_e_key[4] = const_word_in(in_key + 16);
+			this->aes_e_key[5] = const_word_in(in_key + 20);
+			this->aes_e_key[6] = const_word_in(in_key + 24);
+			this->aes_e_key[7] = const_word_in(in_key + 28);
+			do
+			{   kf[ 8] = kf[0] ^ ls_box(kf[7],3) ^ rcon_tab[rci++];
+				kf[ 9] = kf[1] ^ kf[ 8];
+				kf[10] = kf[2] ^ kf[ 9];
+				kf[11] = kf[3] ^ kf[10];
+				kf[12] = kf[4] ^ ls_box(kf[11],0);
+				kf[13] = kf[5] ^ kf[12];
+				kf[14] = kf[6] ^ kf[13];
+				kf[15] = kf[7] ^ kf[14];
+				kf += 8;
+			}
+			while (kf < kt);
+			break;
+	}
+	
+	if(!f)
     {
-    case 4: do
-            {   kf[4] = kf[0] ^ ls_box(kf[3],3) ^ rcon_tab[rci++];
-                kf[5] = kf[1] ^ kf[4];
-                kf[6] = kf[2] ^ kf[5];
-                kf[7] = kf[3] ^ kf[6];
-                kf += 4;
-            }
-            while(kf < kt);
-            break;
+		u_int32_t    i;
 
-    case 6: this->aes_e_key[4] = const_word_in(in_key + 16);
-            this->aes_e_key[5] = const_word_in(in_key + 20);
-            do
-            {   kf[ 6] = kf[0] ^ ls_box(kf[5],3) ^ rcon_tab[rci++];
-                kf[ 7] = kf[1] ^ kf[ 6];
-                kf[ 8] = kf[2] ^ kf[ 7];
-                kf[ 9] = kf[3] ^ kf[ 8];
-                kf[10] = kf[4] ^ kf[ 9];
-                kf[11] = kf[5] ^ kf[10];
-                kf += 6;
-            }
-            while(kf < kt);
-            break;
-
-    case 8: this->aes_e_key[4] = const_word_in(in_key + 16);
-            this->aes_e_key[5] = const_word_in(in_key + 20);
-            this->aes_e_key[6] = const_word_in(in_key + 24);
-            this->aes_e_key[7] = const_word_in(in_key + 28);
-            do
-            {   kf[ 8] = kf[0] ^ ls_box(kf[7],3) ^ rcon_tab[rci++];
-                kf[ 9] = kf[1] ^ kf[ 8];
-                kf[10] = kf[2] ^ kf[ 9];
-                kf[11] = kf[3] ^ kf[10];
-                kf[12] = kf[4] ^ ls_box(kf[11],0);
-                kf[13] = kf[5] ^ kf[12];
-                kf[14] = kf[6] ^ kf[13];
-                kf[15] = kf[7] ^ kf[14];
-                kf += 8;
-            }
-            while (kf < kt);
-            break;
-    }
-
-    if(!f)
-    {   u_int32_t    i;
-        
-        kt = this->aes_d_key + nc * this->aes_Nrnd;
-        kf = this->aes_e_key;
-        
-        cpy(kt, kf); kt -= 2 * nc;
-
-        for(i = 1; i < this->aes_Nrnd; ++i)
-        { 
+		kt = this->aes_d_key + nc * this->aes_Nrnd;
+		kf = this->aes_e_key;
+		
+		cpy(kt, kf); kt -= 2 * nc;
+		
+		for(i = 1; i < this->aes_Nrnd; ++i)
+		{ 
 #if defined(ONE_TABLE) || defined(FOUR_TABLES)
 #if !defined(ONE_IM_TABLE) && !defined(FOUR_IM_TABLES)
-            u_int32_t    f2, f4, f8, f9;
+			u_int32_t    f2, f4, f8, f9;
 #endif
-            mix(kt, kf);
+			mix(kt, kf);
 #else
-            cpy(kt, kf);
+			cpy(kt, kf);
 #endif
-            kt -= 2 * nc;
+			kt -= 2 * nc;
         }
-        
-        cpy(kt, kf);
+		cpy(kt, kf);
     }
 
 	return SUCCESS;
@@ -1566,10 +1566,9 @@ static status_t set_key (private_aes_cbc_crypter_t *this, chunk_t key)
 /**
  * Implementation of crypter_t.destroy and aes_cbc_crypter_t.destroy.
  */
-static status_t destroy (private_aes_cbc_crypter_t *this)
+static void destroy (private_aes_cbc_crypter_t *this)
 {
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -1578,10 +1577,7 @@ static status_t destroy (private_aes_cbc_crypter_t *this)
 aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize)
 {
 	private_aes_cbc_crypter_t *this = allocator_alloc_thing(private_aes_cbc_crypter_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}
+
 	#if !defined(FIXED_TABLES)
     if(!tab_gen) { gen_tabs(); tab_gen = 1; }
 	#endif
@@ -1610,10 +1606,7 @@ aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize)
 	this->public.crypter_interface.decrypt = (status_t (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
 	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
 	this->public.crypter_interface.set_key = (status_t (*) (crypter_t *,chunk_t)) set_key;
-	this->public.crypter_interface.destroy = (status_t (*) (crypter_t *)) destroy;
-
-	/* public functions */
-	this->public.destroy = (status_t (*) (aes_cbc_crypter_t *)) destroy;
+	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
 	
 	/* private functions */
 	this->decrypt_block = decrypt_block;

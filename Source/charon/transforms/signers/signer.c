@@ -37,6 +37,10 @@ mapping_t integrity_algorithm_m[] = {
 	{MAPPING_END, NULL}
 };
 
+
+/*
+ * see header
+ */
 signer_t *signer_create(integrity_algorithm_t integrity_algorithm)
 {
 	switch(integrity_algorithm)
@@ -49,7 +53,6 @@ signer_t *signer_create(integrity_algorithm_t integrity_algorithm)
 		{
 			return ((signer_t *) hmac_signer_create(HASH_MD5));
 		}
-
 		default:
 			return NULL;
 	}

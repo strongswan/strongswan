@@ -1,7 +1,7 @@
 /**
  * @file responder_init.h
  * 
- * @brief Start state of a IKE_SA as responder
+ * @brief Interface of responder_init_t.
  * 
  */
 
@@ -31,7 +31,7 @@ typedef struct responder_init_t responder_init_t;
 
 /**
  * @brief This class represents an IKE_SA state when initializing.
- * a connection as responder
+ * a connection as responder.
  *
  */
 struct responder_init_t {
@@ -45,7 +45,9 @@ struct responder_init_t {
 /**
  * Constructor of class responder_init_t
  * 
- * @param ike_sa 	assigned IKE_SA
+ * @param ike_sa assigned IKE_SA
+ * 
+ * @return responder_init state
  */
 responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa);
 

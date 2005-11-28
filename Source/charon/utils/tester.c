@@ -93,7 +93,7 @@ struct private_tester_t {
 /**
  * Implementation of tester_t.perform_tests.
  */
-static status_t perform_tests(tester_t *tester,test_t **tests)
+static void perform_tests(tester_t *tester,test_t **tests)
 {
 	private_tester_t *this =(private_tester_t*) tester;
 	int current_test = 0;
@@ -110,13 +110,12 @@ static status_t perform_tests(tester_t *tester,test_t **tests)
 	fprintf(this->output,"=====================================================================\n");
 	fprintf(this->output,"End testing. %d of %d tests succeeded\n",this->tests_count - this->failed_tests_count,this->tests_count);
 	fprintf(this->output,"=====================================================================\n");
-	return SUCCESS;
 }
 
 /**
  * Implementation of tester_t.perform_test.
  */
-static status_t perform_test(tester_t *tester, test_t *test)
+static void perform_test(tester_t *tester, test_t *test)
 {
 	test_t *tests[] = {test, NULL};
 	return (perform_tests(tester,tests));
@@ -214,12 +213,11 @@ static void assert_false(tester_t *tester, bool to_be_false,char * assert_name)
 /**
  * Implementation of tester_t.destroy.
  */
-static status_t destroy(tester_t *tester)
+static void destroy(tester_t *tester)
 {
 	private_tester_t *this = (private_tester_t*) tester;
 	pthread_mutex_destroy(&(this->mutex));
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*

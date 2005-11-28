@@ -83,5 +83,5 @@ void test_receiver(tester_t *tester)
 		job->destroy(job);
 	}
 
-	tester->assert_true(tester, (receiver->destroy(receiver) == SUCCESS), "destroy call check");
+	receiver->destroy(receiver);
 }

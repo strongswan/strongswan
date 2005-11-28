@@ -1,7 +1,7 @@
 /**
  * @file event_queue.c
  *
- * @brief Event-Queue based on class linked_list_t
+ * @brief Implementation of event_queue_t
  *
  */
 
@@ -54,19 +54,17 @@ struct event_t{
 	 * @brief Destroys a event_t object.
 	 *
 	 * @param event_t 	calling object
-	 * @returns 			always SUCCESS
 	 */
-	status_t (*destroy) (event_t *event);
+	void (*destroy) (event_t *event);
 };
 
 
 /**
- * @brief implements function destroy of event_t
+ * implements event_t.destroy
  */
-static status_t event_destroy(event_t *event)
+static void event_destroy(event_t *event)
 {
 	allocator_free(event);
-	return SUCCESS;
 }
 
 /**
@@ -75,17 +73,11 @@ static status_t event_destroy(event_t *event)
  * @param time	absolute time to fire the event
  * @param job 	job to add to job-queue at specific time
  *
- * @returns
- * 				- created event_t object 
- * 				- NULL if memory allocation failed
+ * @returns		created event_t object 
  */
 static event_t *event_create(timeval_t time, job_t *job)
 {
 	event_t *this = allocator_alloc_thing(event_t);
-	if (this == NULL)
-	{
-		return this;
-	}
 
 	this->destroy = event_destroy;
 	this->time = time;
@@ -149,8 +141,7 @@ static long time_difference(struct timeval *end_time, struct timeval *start_time
 
 
 /**
- * Implements function get_count of event_queue_t.
- * See #event_queue_s.get_count for description.
+ * Implements event_queue_t.get_count
  */
 static int get_count (private_event_queue_t *this)
 {
@@ -162,14 +153,14 @@ static int get_count (private_event_queue_t *this)
 }
 
 /**
- * Implements function get of event_queue_t.
- * See #event_queue_s.get for description.
+ * Implements event_queue_t.get
  */
-static status_t get(private_event_queue_t *this, job_t **job)
+static job_t *get(private_event_queue_t *this)
 {
 	timespec_t timeout;
 	timeval_t current_time;
 	event_t * next_event;
+	job_t *job;
 	int oldstate;
 
 	pthread_mutex_lock(&(this->mutex));
@@ -205,7 +196,7 @@ static status_t get(private_event_queue_t *this, job_t **job)
 			/* event available */
 			this->list->remove_first(this->list,(void **) &next_event);
 
-			*job = next_event->job;
+			job = next_event->job;
 
 			next_event->destroy(next_event);
 			break;
@@ -216,23 +207,19 @@ static status_t get(private_event_queue_t *this, job_t **job)
 
 	pthread_mutex_unlock(&(this->mutex));
 
-	return SUCCESS;
+	return job;
 }
 
 /**
  * Implements function add_absolute of event_queue_t.
  * See #event_queue_s.add_absolute for description.
  */
-static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t time)
+static void add_absolute(private_event_queue_t *this, job_t *job, timeval_t time)
 {
 	event_t *event = event_create(time,job);
 	event_t *current_event;
 	status_t status;
 
-	if (event == NULL)
-	{
-		return FAILED;
-	}
 	pthread_mutex_lock(&(this->mutex));
 
 	/* while just used to break out */
@@ -240,7 +227,7 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 	{
 		if (this->list->get_count(this->list) == 0)
 		{
-			status = this->list->insert_first(this->list,event);
+			this->list->insert_first(this->list,event);
 			break;
 		}
 
@@ -250,7 +237,7 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 		if (time_difference(&(event->time), &(current_event->time)) >= 0)
 		{
 			/* my event has to be fired after the last event in list */
-			status = this->list->insert_last(this->list,event);
+			this->list->insert_last(this->list,event);
 			break;
 		}
 
@@ -260,18 +247,13 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 		if (time_difference(&(event->time), &(current_event->time)) < 0)
 		{
 			/* my event has to be fired before the first event in list */
-			status = this->list->insert_first(this->list,event);
+			this->list->insert_first(this->list,event);
 			break;
 		}
 
 		iterator_t * iterator;
 
-		status = this->list->create_iterator(this->list,&iterator,TRUE);
-		if (status != SUCCESS)
-		{
-			break;
-		}
-
+		this->list->create_iterator(this->list,&iterator,TRUE);
 
 		iterator->has_next(iterator);
 		/* first element has not to be checked (already done) */
@@ -283,7 +265,7 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 			if (time_difference(&(event->time), &(current_event->time)) <= 0)
 			{
 				/* my event has to be fired before the current event in list */
-				status = iterator->insert_before(iterator,event);
+				iterator->insert_before(iterator,event);
 				break;
 			}
 		}
@@ -293,19 +275,12 @@ static status_t add_absolute(private_event_queue_t *this, job_t *job, timeval_t 
 
 	pthread_cond_signal( &(this->condvar));
 	pthread_mutex_unlock(&(this->mutex));
-
-	if (status != SUCCESS)
-	{
-		event->destroy(event);
-	}
-	return status;
 }
 
 /**
- * Implements function add_relative of event_queue_t.
- * See #event_queue_s.add_relative for description.
+ * Implements  event_queue_t.add_relative.
  */
-static status_t add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
+static void add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
 {
 	timeval_t current_time;
 	timeval_t time;
@@ -316,15 +291,14 @@ static status_t add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
 	time.tv_usec = ((current_time.tv_usec + micros) % 1000000);
 	time.tv_sec = current_time.tv_sec + ((current_time.tv_usec + micros)/ 1000000);
 
-	return this->add_absolute(this, job, time);
+	this->add_absolute(this, job, time);
 }
 
 
 /**
- * Implements function destroy of event_queue_t.
- * See #event_queue_s.destroy for description.
+ * Implements event_queue_t.destroy.
  */
-static status_t event_queue_destroy(private_event_queue_t *this)
+static void event_queue_destroy(private_event_queue_t *this)
 {
 	while (this->list->get_count(this->list) > 0)
 	{
@@ -345,7 +319,6 @@ static status_t event_queue_destroy(private_event_queue_t *this)
 	pthread_cond_destroy(&(this->condvar));
 
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -353,26 +326,15 @@ static status_t event_queue_destroy(private_event_queue_t *this)
  */
 event_queue_t *event_queue_create()
 {
-	linked_list_t *linked_list = linked_list_create();
-	if (linked_list == NULL)
-	{
-		return NULL;
-	}
-
 	private_event_queue_t *this = allocator_alloc_thing(private_event_queue_t);
-	if (this == NULL)
-	{
-		linked_list->destroy(linked_list);
-		return NULL;
-	}
 
 	this->public.get_count = (int (*) (event_queue_t *event_queue)) get_count;
-	this->public.get = (status_t (*) (event_queue_t *event_queue, job_t **job)) get;
-	this->public.add_absolute = (status_t (*) (event_queue_t *event_queue, job_t *job, timeval_t time)) add_absolute;
-	this->public.add_relative = (status_t (*) (event_queue_t *event_queue, job_t *job, u_int32_t ms)) add_relative;
-	this->public.destroy = (status_t (*) (event_queue_t *event_queue)) event_queue_destroy;
+	this->public.get = (job_t *(*) (event_queue_t *event_queue)) get;
+	this->public.add_absolute = (void (*) (event_queue_t *event_queue, job_t *job, timeval_t time)) add_absolute;
+	this->public.add_relative = (void (*) (event_queue_t *event_queue, job_t *job, u_int32_t ms)) add_relative;
+	this->public.destroy = (void (*) (event_queue_t *event_queue)) event_queue_destroy;
 
-	this->list = linked_list;
+	this->list = linked_list_create();;
 	pthread_mutex_init(&(this->mutex), NULL);
 	pthread_cond_init(&(this->condvar), NULL);
 
