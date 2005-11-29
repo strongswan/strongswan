@@ -36,7 +36,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/auth_payload.h>
-
+#include <encoding/payloads/ts_payload.h>
 
 
 /*
@@ -384,4 +384,91 @@ void test_parser_with_auth_payload(tester_t *tester)
 	tester->assert_false(tester,(memcmp(auth_bytes + 8, result.ptr, result.len)), "parsed nonce data");
 	auth_payload->destroy(auth_payload);
 	allocator_free_chunk(&result);
+}
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_ts_payload(tester_t *tester)
+{
+	parser_t *parser;
+	ts_payload_t *ts_payload;
+	status_t status;
+	chunk_t ts_chunk;
+	traffic_selector_substructure_t *ts1, *ts2;
+	host_t *start_host1, *start_host2, *end_host1, *end_host2;
+	iterator_t *iterator;
+	
+	u_int8_t ts_bytes[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x28,
+		0x02,0x00,0x00,0x00,
+		
+			/* traffic selector 1 */
+			0x07,0x00,0x00,0x10,
+			0x01,0xF4,0x01,0xF4,
+			0xC0,0xA8,0x01,0x00,
+			0xC0,0xA8,0x01,0xFF,
+
+			/* traffic selector 2 */
+			0x07,0x03,0x00,0x10,
+			0x00,0x00,0xFF,0xFF,
+			0x00,0x00,0x00,0x00,
+			0xFF,0xFF,0xFF,0xFF,			
+	};
+	
+	ts_chunk.ptr = ts_bytes;
+	ts_chunk.len = sizeof(ts_bytes);
+
+	parser = parser_create(ts_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, TRAFFIC_SELECTOR_RESPONDER, (payload_t**)&ts_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	
+	iterator = ts_payload->create_traffic_selector_substructure_iterator(ts_payload,TRUE);
+	
+	tester->assert_true(tester,(iterator->has_next(iterator)), "has next check");
+
+	/* check first ts */
+	iterator->current(iterator,(void **)&ts1);
+	tester->assert_true(tester,(ts1->get_protocol_id(ts1) == 0), "ip protocol id check");
+	start_host1 = ts1->get_start_host(ts1);
+	end_host1 = ts1->get_end_host(ts1);
+	tester->assert_true(tester,(start_host1->get_port(start_host1) == 500), "start port check");
+	tester->assert_true(tester,(end_host1->get_port(end_host1) == 500), "start port check");
+	tester->assert_true(tester,(memcmp(start_host1->get_address(start_host1),"192.168.1.0",strlen("192.168.1.0")) == 0), "start address check");
+	tester->assert_true(tester,(memcmp(end_host1->get_address(end_host1),"192.168.1.255",strlen("192.168.1.255")) == 0), "end address check");
+	
+	start_host1->destroy(start_host1);
+	end_host1->destroy(end_host1);
+
+	tester->assert_true(tester,(iterator->has_next(iterator)), "has next check");
+
+	/* check second ts */
+
+	iterator->current(iterator,(void **)&ts2);
+	
+	tester->assert_true(tester,(ts2->get_protocol_id(ts2) == 3), "ip protocol id check");
+	start_host2 = ts2->get_start_host(ts2);
+	end_host2 = ts2->get_end_host(ts2);
+	tester->assert_true(tester,(start_host2->get_port(start_host2) == 0), "start port check");
+	tester->assert_true(tester,(end_host2->get_port(end_host2) == 65535), "start port check");
+	tester->assert_true(tester,(memcmp(start_host2->get_address(start_host2),"0.0.0.0",strlen("0.0.0.0")) == 0), "start address check");
+	tester->assert_true(tester,(memcmp(end_host2->get_address(end_host2),"255.255.255.255",strlen("255.255.255.255")) == 0), "end address check");
+	start_host2->destroy(start_host2);	
+	end_host2->destroy(end_host2);
+	
+	
+	
+	tester->assert_false(tester,(iterator->has_next(iterator)), "has next check");
+	
+	iterator->destroy(iterator);
+	
+	ts_payload->destroy(ts_payload);
 }

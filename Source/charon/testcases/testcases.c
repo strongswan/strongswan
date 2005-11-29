@@ -83,6 +83,7 @@ test_t generator_test7 = {test_generator_with_notify_payload,"Generator: Notify 
 test_t generator_test8 = {test_generator_with_nonce_payload,"Generator: Nonce Payload"};
 test_t generator_test9 = {test_generator_with_id_payload,"Generator: ID Payload"};
 test_t generator_test10 = {test_generator_with_auth_payload,"Generator: AUTH Payload"};
+test_t generator_test11 = {test_generator_with_ts_payload,"Generator: TS Payload"};
 test_t parser_test1 = {test_parser_with_header_payload, "Parser: header payload"};
 test_t parser_test2 = {test_parser_with_sa_payload, "Parser: sa payload"};
 test_t parser_test3 = {test_parser_with_nonce_payload, "Parser: nonce payload"};
@@ -90,6 +91,7 @@ test_t parser_test4 = {test_parser_with_ke_payload, "Parser: key exchange payloa
 test_t parser_test5 = {test_parser_with_notify_payload, "Parser: notify payload"};
 test_t parser_test6 = {test_parser_with_id_payload, "Parser: ID payload"};
 test_t parser_test7 = {test_parser_with_auth_payload, "Parser: AUTH payload"};
+test_t parser_test8 = {test_parser_with_ts_payload, "Parser: TS payload"};
 test_t packet_test = {test_packet,"Packet"};
 test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
 test_t sha1_hasher_test = {test_sha1_hasher,"SHA1 hasher"};
@@ -171,6 +173,7 @@ int main()
 		&parser_test5,
 		&parser_test6,
 		&parser_test7,
+		&parser_test8,
 		&generator_test3,
 		&generator_test4,
 		&generator_test5,
@@ -179,6 +182,7 @@ int main()
 		&generator_test8,
 		&generator_test9,
 		&generator_test10,
+		&generator_test11,
 		&ike_sa_manager_test,
 		&packet_test,
 		&diffie_hellman_test,
@@ -196,13 +200,13 @@ int main()
 	daemon_create();
  
 	charon->logger_manager->disable_logger_level(charon->logger_manager,TESTER,FULL);
-	//charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW);
+	charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW);
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 	
-	tester->perform_tests(tester,all_tests);
-	//tester->perform_test(tester,&generator_test9); 
+//	tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&parser_test8); 
 	
 	
 	tester->destroy(tester);

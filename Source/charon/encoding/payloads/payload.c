@@ -31,10 +31,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/auth_payload.h>
-
-
-
-
+#include <encoding/payloads/ts_payload.h>
 
 /*
  * build the mappings for payload_type_t
@@ -61,6 +58,7 @@ mapping_t payload_type_m[] = {
 	{PROPOSAL_SUBSTRUCTURE, "PROPOSAL_SUBSTRUCTURE"},
 	{TRANSFORM_SUBSTRUCTURE, "TRANSFORM_SUBSTRUCTURE"},
 	{TRANSFORM_ATTRIBUTE, "TRANSFORM_ATTRIBUTE"},
+	{TRAFFIC_SELECTOR_SUBSTRUCTURE, "TRAFFIC_SELECTOR_SUBSTRUCTURE"},
 	{MAPPING_END, NULL}
 };
 
@@ -89,6 +87,12 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)id_payload_create(FALSE);
 		case AUTHENTICATION:
 			return (payload_t*)auth_payload_create();
+		case TRAFFIC_SELECTOR_SUBSTRUCTURE:
+			return (payload_t*)traffic_selector_substructure_create();
+		case TRAFFIC_SELECTOR_INITIATOR:
+			return (payload_t*)ts_payload_create(TRUE);
+		case TRAFFIC_SELECTOR_RESPONDER:
+			return (payload_t*)ts_payload_create(FALSE);
 		case KEY_EXCHANGE:
 			return (payload_t*)ke_payload_create();
 		case NOTIFY:

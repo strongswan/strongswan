@@ -42,6 +42,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/ts_payload.h>
 
 
 typedef struct private_generator_t private_generator_t;
@@ -285,6 +286,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			case U_INT_4:
 				number_of_bits = 4;
 				break;
+			case TS_TYPE:
 			case U_INT_8:
 				number_of_bits = 8;
 				break;
@@ -358,6 +360,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			};
 			break;
 		}
+		case TS_TYPE:
 		case U_INT_8:
 		{
 			/* 8 bit values are written as they are */
@@ -666,13 +669,14 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 							i, mapping_find(encoding_type_m,rules[i].type));
 		switch (rules[i].type)
 		{
-			/* all u int values, IKE_SPI and ATTRIBUTE_TYPE are generated in generate_u_int_type */
+			/* all u int values, IKE_SPI,TS_TYPE and ATTRIBUTE_TYPE are generated in generate_u_int_type */
 			case U_INT_4:
 			case U_INT_8:
 			case U_INT_16:
 			case U_INT_32:
 			case U_INT_64:
 			case IKE_SPI:
+			case TS_TYPE:
 			case ATTRIBUTE_TYPE:
 			{
 				this->generate_u_int_type(this,rules[i].type,rules[i].offset);
@@ -715,6 +719,12 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				/* last spi size is temporary stored */
 				this->last_spi_size = *((u_int8_t *)(this->data_struct + rules[i].offset));
 				break;
+			case ADDRESS:
+			{
+				/* the Address value is generated from chunk */
+				this->generate_from_chunk(this,rules[i].offset);
+				break;
+			}
 			case SPI:
 			{
 				/* the SPI value is generated from chunk */
@@ -822,7 +832,6 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				break;
 			}	
-
 			case TRANSFORMS:
 			{	
 				/* before iterative generate the transforms, store the current length position */
@@ -925,6 +934,42 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				}
 				break;
 			}
+			case TRAFFIC_SELECTORS:
+			{
+				/* before iterative generate the traffic_selectors, store the current payload length position */
+				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
+				/* Length of SA_PAYLOAD is calculated */
+				u_int16_t length_of_ts_payload = TS_PAYLOAD_HEADER_LENGTH;
+				u_int16_t int16_val;
+				/* traffic selectors are stored in a linked list and so accessed */
+				linked_list_t *traffic_selectors = *((linked_list_t **)(this->data_struct + rules[i].offset));
+
+				iterator_t *iterator;
+				/* create forward iterator */
+				iterator = traffic_selectors->create_iterator(traffic_selectors,TRUE);
+				/* every proposal is processed (iterative call )*/
+				while (iterator->has_next(iterator))
+				{
+					payload_t *current_traffic_selector_substructure;
+					u_int32_t before_generate_position_offset;
+					u_int32_t after_generate_position_offset;
+					
+					iterator->current(iterator,(void **)&current_traffic_selector_substructure);
+
+					before_generate_position_offset = this->get_current_buffer_offset(this);
+					this->public.generate_payload(&(this->public),current_traffic_selector_substructure);
+					after_generate_position_offset = this->get_current_buffer_offset(this);
+					
+					/* increase size of transform */
+					length_of_ts_payload += (after_generate_position_offset - before_generate_position_offset);
+				}
+				iterator->destroy(iterator);
+				
+				int16_val = htons(length_of_ts_payload);
+				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				break;
+			}	
+			
 			case ENCRYPTED_DATA:
 			{
 				this->generate_from_chunk(this, rules[i].offset);

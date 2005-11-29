@@ -79,12 +79,22 @@ struct host_t {
 	 * @brief get the address of this host
 	 * 
 	 * Mostly used for debugging purposes. 
-	 * @warging string must NOT be freed
+	 * @warning string must NOT be freed
 	 * 
 	 * @param this			object to clone
 	 * @return				address string, 
 	 */
 	char* (*get_address) (host_t *this);
+	
+	/** 
+	 * @brief get the address of this host as chunk_t
+	 * 
+	 * @warning returned chunk has to get destroyed by caller.
+	 * 
+	 * @param this			object to clone
+	 * @return				address string, 
+	 */
+	chunk_t (*get_address_as_chunk) (host_t *this);
 		
 	/** 
 	 * @brief get the port of this host
@@ -121,4 +131,19 @@ struct host_t {
  */
 host_t *host_create(int family, char *address, u_int16_t port);
 
+/**
+ * @brief Constructor to create a host_t object
+ * 
+ * Currently supports only IPv4!
+ *
+ * @param family 		Address family to use for this object, such as AF_INET or AF_INET6
+ * @param address		address as 4 byte chunk_t in networ order
+ * @param port			port number
+ * @return 				
+ * 						- the host_t object, or 
+ * 						- NULL, when family not supported or chunk_t length not 4 bytes.
+ * 
+ * @ingroup network
+ */
+host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
 #endif /*HOST_H_*/

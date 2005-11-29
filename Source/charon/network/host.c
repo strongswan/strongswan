@@ -89,6 +89,32 @@ static char *get_address(private_host_t *this)
 }
 
 /**
+ * Implementation of host_t.get_address_as_chunk.
+ */
+static chunk_t get_address_as_chunk(private_host_t *this)
+{
+	chunk_t address = CHUNK_INITIALIZER;
+	
+	switch (this->family) 
+	{
+		case AF_INET: 
+		{
+			/* allocate 4 bytes for IPV4 address*/
+			address.ptr = allocator_alloc(4);
+			address.len = 4;
+			struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
+			memcpy(address.ptr,&(sin->sin_addr.s_addr),4);
+		}
+		default:
+		{
+			/* empty chunk is returned */
+			return address;
+		}
+	}
+	
+}
+
+/**
  * implements host_t.get_port
  */
 static u_int16_t get_port(private_host_t *this)
@@ -128,7 +154,7 @@ static private_host_t *clone(private_host_t *this)
 
 
 /*
- * see header
+ * Described in header.
  */
 host_t *host_create(int family, char *address, u_int16_t port)
 {
@@ -138,6 +164,7 @@ host_t *host_create(int family, char *address, u_int16_t port)
 	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
 	this->public.clone = (host_t* (*) (host_t*))clone;
 	this->public.get_address = (char* (*) (host_t *))get_address;
+	this->public.get_address_as_chunk = (chunk_t (*) (host_t *)) get_address_as_chunk;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
 	this->public.destroy = (void (*) (host_t*))destroy;
 	
@@ -154,6 +181,43 @@ host_t *host_create(int family, char *address, u_int16_t port)
 			sin->sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
 			return (host_t*)this;
+		}
+	}
+	allocator_free(this);
+	return NULL;
+}
+
+/*
+ * Described in header.
+ */
+host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
+{
+	private_host_t *this = allocator_alloc_thing(private_host_t);
+	
+	this->public.get_sockaddr = (sockaddr_t* (*) (host_t*))get_sockaddr;
+	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
+	this->public.clone = (host_t* (*) (host_t*))clone;
+	this->public.get_address = (char* (*) (host_t *))get_address;
+	this->public.get_address_as_chunk = (chunk_t (*) (host_t *)) get_address_as_chunk;
+	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
+	this->public.destroy = (void (*) (host_t*))destroy;
+	
+	this->family = family;
+
+	if (address.len == 4)
+	{
+		switch (family)
+		{
+			/* IPv4 */
+			case AF_INET:
+			{
+				struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
+				sin->sin_family = AF_INET;
+				memcpy(&(sin->sin_addr.s_addr),address.ptr,4);
+				sin->sin_port = htons(port);
+				this->socklen = sizeof(struct sockaddr_in);
+				return (host_t*)this;
+			}
 		}
 	}
 	allocator_free(this);

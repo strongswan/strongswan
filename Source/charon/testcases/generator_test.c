@@ -40,6 +40,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/ts_payload.h>
 
 /*
  * Described in Header 
@@ -834,6 +835,90 @@ void test_generator_with_auth_payload(tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	
 	auth_payload->destroy(auth_payload);
+	generator->destroy(generator);
+		
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
+}
+
+/*
+ * Described in header.
+ */ 
+void test_generator_with_ts_payload(tester_t *tester)
+{
+	generator_t *generator;
+	ts_payload_t *ts_payload;
+	traffic_selector_substructure_t *ts1, *ts2;
+	host_t *start_host1, *start_host2, *end_host1, *end_host2;
+	logger_t *logger;
+	chunk_t generated_data;
+	
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with TS Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+
+	ts_payload = ts_payload_create(TRUE);
+	
+	/* first traffic selector */
+	ts1 = traffic_selector_substructure_create();
+	
+	start_host1 = host_create(AF_INET,"192.168.1.0",500);
+	ts1->set_start_host(ts1,start_host1);
+	start_host1->destroy(start_host1);
+
+	end_host1 = host_create(AF_INET,"192.168.1.255",500);
+	ts1->set_end_host(ts1,end_host1);
+	end_host1->destroy(end_host1);
+
+	ts_payload->add_traffic_selector_substructure(ts_payload,ts1);
+
+	/* second traffic selector */
+
+	ts2 = traffic_selector_substructure_create();
+	
+	start_host2 = host_create(AF_INET,"0.0.0.0",0);
+	ts2->set_start_host(ts2,start_host2);
+	ts2->set_protocol_id(ts2,3);
+	start_host2->destroy(start_host2);
+
+	end_host2 = host_create(AF_INET,"255.255.255.255",65535);
+	ts2->set_end_host(ts2,end_host2);
+	end_host2->destroy(end_host2);
+
+	ts_payload->add_traffic_selector_substructure(ts_payload,ts2);
+
+	
+	generator->generate_payload(generator,(payload_t *)ts_payload);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	
+
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x28,
+		0x02,0x00,0x00,0x00,
+		
+		/* traffic selector 1 */
+		0x07,0x00,0x00,0x10,
+		0x01,0xF4,0x01,0xF4,
+		0xC0,0xA8,0x01,0x00,
+		0xC0,0xA8,0x01,0xFF,
+
+		/* traffic selector 2 */
+		0x07,0x03,0x00,0x10,
+		0x00,0x00,0xFF,0xFF,
+		0x00,0x00,0x00,0x00,
+		0xFF,0xFF,0xFF,0xFF,			
+	};
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(&generated_data);
+	
+	ts_payload->destroy(ts_payload);
 	generator->destroy(generator);
 		
 	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	

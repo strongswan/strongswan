@@ -43,6 +43,7 @@
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/ts_payload.h>
 
 
 typedef struct private_parser_t private_parser_t;
@@ -574,6 +575,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	payload_t *pld;
 	void *output;
 	size_t rule_count, payload_length, spi_size, attribute_length;
+	u_int16_t ts_type;
 	bool attribute_format;
 	int rule_number;
 	encoding_rule_t *rule;
@@ -854,6 +856,36 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 					return PARSE_ERROR;
 				}		
 				break;	
+			}
+			case TS_TYPE:
+			{
+				if (this->parse_uint8(this, rule_number, output + rule->offset) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				ts_type = *(u_int8_t*)(output + rule->offset);
+				break;							
+			}
+			case ADDRESS:
+			{
+				size_t address_length = (ts_type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+				if (this->parse_chunk(this, rule_number, output + rule->offset,address_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;							
+			}
+			case TRAFFIC_SELECTORS:
+			{
+				size_t traffic_selectors_length = payload_length - TS_PAYLOAD_HEADER_LENGTH;
+				if (this->parse_list(this, rule_number, output + rule->offset, TRAFFIC_SELECTOR_SUBSTRUCTURE, traffic_selectors_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;							
 			}
 			default:
 			{
