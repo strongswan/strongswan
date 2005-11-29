@@ -106,11 +106,8 @@ struct diffie_hellman_t {
 	 * 
 	 * @param this 				calling diffie_hellman_t object
 	 * @param[out] 				public_value public value of caller is stored at this location
-	 * @return 				
-	 * 							- SUCCESS, or
-	 * 							- FAILED if not computed
 	 */
-	status_t (*get_my_public_value) (diffie_hellman_t *this, chunk_t *public_value);
+	void (*get_my_public_value) (diffie_hellman_t *this, chunk_t *public_value);
 
 	/**
 	 * @brief Destroys an diffie_hellman_t object.

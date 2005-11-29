@@ -1,7 +1,7 @@
 /**
  * @file diffie_hellman.c
  * 
- * @brief Class to represent a diffie hellman exchange.
+ * @brief Implementation of diffie_hellman_t.
  * 
  */
 
@@ -33,7 +33,7 @@
 
 
 /** 
- * string mappings for diffie_hellman_group_t
+ * String mappings for diffie_hellman_group_t.
  */
 mapping_t diffie_hellman_group_m[] = {
 	{MODP_UNDEFINED, "MODP_UNDEFINED"},
@@ -50,7 +50,7 @@ mapping_t diffie_hellman_group_m[] = {
 
 
 /**
- * Modulus of Group 1 (MODP_768_BIT)
+ * Modulus of Group 1 (MODP_768_BIT).
  */
 static u_int8_t group1_modulus[] = {
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,0x21,0x68,0xC2,0x34,
@@ -62,7 +62,7 @@ static u_int8_t group1_modulus[] = {
 };
 
 /**
- * Modulus of Group 2 (MODP_1024_BIT)
+ * Modulus of Group 2 (MODP_1024_BIT).
  */
 static u_int8_t group2_modulus[] = {
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,0x21,0x68,0xC2,0x34,
@@ -76,7 +76,7 @@ static u_int8_t group2_modulus[] = {
 };
 
 /**
- * Modulus of Group 5 (MODP_1536_BIT)
+ * Modulus of Group 5 (MODP_1536_BIT).
  */
 static u_int8_t group5_modulus[] = {
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,0x21,0x68,0xC2,0x34,
@@ -93,7 +93,7 @@ static u_int8_t group5_modulus[] = {
 	0xF1,0x74,0x6C,0x08,0xCA,0x23,0x73,0x27,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
 };
 /**
- * Modulus of Group 14 (MODP_2048_BIT)
+ * Modulus of Group 14 (MODP_2048_BIT).
  */
 static u_int8_t group14_modulus[] = {
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,0x21,0x68,0xC2,0x34,
@@ -115,7 +115,7 @@ static u_int8_t group14_modulus[] = {
 };
 
 /**
- * Modulus of Group 15 (MODP_3072_BIT)
+ * Modulus of Group 15 (MODP_3072_BIT).
  */
 static u_int8_t group15_modulus[] = {
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,0x21,0x68,0xC2,0x34,
@@ -145,7 +145,7 @@ static u_int8_t group15_modulus[] = {
 };
 
 /**
- * Modulus of Group 16 (MODP_4096_BIT)
+ * Modulus of Group 16 (MODP_4096_BIT).
  */
 static u_int8_t group16_modulus[] = {
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,0x21,0x68,0xC2,0x34,
@@ -183,7 +183,7 @@ static u_int8_t group16_modulus[] = {
 };
 
 /**
- * Modulus of Group 17 (MODP_6144_BIT)
+ * Modulus of Group 17 (MODP_6144_BIT).
  */
 static u_int8_t group17_modulus[] = {
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,0x21,0x68,0xC2,0x34,
@@ -237,7 +237,7 @@ static u_int8_t group17_modulus[] = {
 };
 
 /**
- * Modulus of Group 18 (MODP_8192_BIT)
+ * Modulus of Group 18 (MODP_8192_BIT).
  */
 static u_int8_t group18_modulus[] = {
 	0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,0x21,0x68,0xC2,0x34,
@@ -309,31 +309,34 @@ static u_int8_t group18_modulus[] = {
 typedef struct modulus_info_entry_t modulus_info_entry_t;
 
 /** 
- * Entry of the modulus list
+ * Entry of the modulus list.
  */
 struct modulus_info_entry_t {
 	/**
-	 * Group number as it is defined in transform_substructure.h
+	 * Group number as it is defined in transform_substructure.h.
 	 */
 	diffie_hellman_group_t group;
 	
 	/**
-	 * Pointer to first byte of modulus in (network order)
+	 * Pointer to first byte of modulus in (network order).
 	 */
 	u_int8_t *modulus;
 	
 	/* 
-	 * Length of modulus in bytes
+	 * Length of modulus in bytes.
 	 */	
 	size_t modulus_length;
 	
 	/* 
-	 * Generator value
+	 * Generator value.
 	 */	
 	u_int16_t generator;
 };
 
 
+/**
+ * All supported modulus values.
+ */
 static modulus_info_entry_t modulus_info_entries[] = {
 	{MODP_768_BIT,group1_modulus,sizeof(group1_modulus),2},
 	{MODP_1024_BIT,group2_modulus,sizeof(group2_modulus),2},
@@ -353,67 +356,62 @@ typedef struct private_diffie_hellman_t private_diffie_hellman_t;
  */
 struct private_diffie_hellman_t {
 	/**
-	 * public diffie_hellman_t interface
+	 * Public diffie_hellman_t interface.
 	 */
 	diffie_hellman_t public;
 	
 	/**
-	 * Diffie Hellman group number
+	 * Diffie Hellman group number.
 	 */
 	u_int16_t dh_group_number;
 
 	/**
-	 * Modulus
+	 * Modulus.
 	 */
 	mpz_t modulus;
 	
 	/**
-	 * Modulus length
+	 * Modulus length.
 	 */
 	size_t modulus_length;
 	
 	/* 
-	 * Generator value
+	 * Generator value.
 	 */	
 	u_int16_t generator;
 
 	/**
-	 * My prime 
+	 * My prime .
 	 */
 	mpz_t my_prime;
 	
 	/**
-	 * My public value
+	 * My public value.
 	 */
 	mpz_t my_public_value;
 
 	/**
-	 * Other public value
+	 * Other public value.
 	 */	
 	mpz_t other_public_value;
 	
 	/**
-	 * Shared secret
+	 * Shared secret.
 	 */	
 	mpz_t shared_secret;
 
 	/**
-	 * True if public modulus is computed and stored in my_public_value
-	 */
-	bool my_public_value_is_computed;
-
-	/**
-	 * True if shared secret is computed and stored in my_public_value
+	 * True if shared secret is computed and stored in my_public_value.
 	 */
 	bool shared_secret_is_computed;
 
 	/**
-	 * helper class for gmp functions
+	 * helper class for gmp functions.
 	 */	
 	gmp_helper_t *gmp_helper;
 	
 	/**
-	 * Sets the modulus for a specific diffie hellman group
+	 * Sets the modulus for a specific diffie hellman group.
 	 * 
 	 * @param this			calling object
 	 * @return
@@ -423,14 +421,14 @@ struct private_diffie_hellman_t {
 	status_t (*set_modulus) (private_diffie_hellman_t *this);
 	
 	/**
-	 * Makes sure my public value is computed
+	 * Makes sure my public value is computed.
 	 * 
 	 * @param this			calling object
 	 */
 	void (*compute_public_value) (private_diffie_hellman_t *this);
 
 	/**
-	 * Computes shared secret (other public value must be available)
+	 * Computes shared secret (other public value must be available).
 	 * 
 	 * @param this			calling object
 	 */
@@ -438,7 +436,7 @@ struct private_diffie_hellman_t {
 };
 
 /**
- * Implements private_diffie_hellman_tset_modulus.
+ * Implementation of private_diffie_hellman_t.set_modulus.
  */
 static status_t set_modulus(private_diffie_hellman_t *this)
 {
@@ -472,7 +470,7 @@ static void set_other_public_value(private_diffie_hellman_t *this,chunk_t public
 }
 
 /**
- * Implements diffie_hellman_t.get_other_public_value.
+ * Implementation of diffie_hellman_t.get_other_public_value.
  */
 static status_t get_other_public_value(private_diffie_hellman_t *this,chunk_t *public_value)
 {
@@ -485,7 +483,7 @@ static status_t get_other_public_value(private_diffie_hellman_t *this,chunk_t *p
 }
 
 /**
- * Implements private_diffie_hellman_t.compute_shared_secret.
+ * Implementation of private_diffie_hellman_t.compute_shared_secret.
  */
 static void compute_shared_secret (private_diffie_hellman_t *this)
 {
@@ -499,7 +497,7 @@ static void compute_shared_secret (private_diffie_hellman_t *this)
 
 
 /**
- * Implements private_diffie_hellman_t.compute_public_value.
+ * Implementation of private_diffie_hellman_t.compute_public_value.
  */
 static void compute_public_value (private_diffie_hellman_t *this)
 {
@@ -512,24 +510,18 @@ static void compute_public_value (private_diffie_hellman_t *this)
 	mpz_powm(this->my_public_value,generator,this->my_prime,this->modulus);
 	/* generator not used anymore */
 	mpz_clear(generator);
-	this->my_public_value_is_computed = TRUE;
 }
 
 /**
- * Implements diffie_hellman_t.get_my_public_value.
+ * Implementation of diffie_hellman_t.get_my_public_value.
  */
-static status_t get_my_public_value(private_diffie_hellman_t *this,chunk_t *public_value)
+static void get_my_public_value(private_diffie_hellman_t *this,chunk_t *public_value)
 {
-	if (this->my_public_value_is_computed == FALSE)
-	{
-		this->compute_public_value(this);
-	}
 	this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->my_public_value), public_value,this->modulus_length);
-	return SUCCESS;
 }
 
 /**
- * Implements diffie_hellman_t.get_shared_secret.
+ * Implementation of diffie_hellman_t.get_shared_secret.
  */
 static status_t get_shared_secret(private_diffie_hellman_t *this,chunk_t *secret)
 {
@@ -542,17 +534,15 @@ static status_t get_shared_secret(private_diffie_hellman_t *this,chunk_t *secret
 }
 
 /**
- * Implements diffie_hellman_t.destroy.
+ * Implementation of diffie_hellman_t.destroy.
  */
 static void destroy(private_diffie_hellman_t *this)
 {
 	this->gmp_helper->destroy(this->gmp_helper);
 	mpz_clear(this->modulus);
 	mpz_clear(this->my_prime);
-	if (this->my_public_value_is_computed)
-	{
-		mpz_clear(this->my_public_value);
-	}
+	mpz_clear(this->my_public_value);
+
 	if (this->shared_secret_is_computed)
 	{
 		/* other public value gets initialized together with shared secret */
@@ -564,7 +554,7 @@ static void destroy(private_diffie_hellman_t *this)
 
 
 /*
- * Described in header
+ * Described in header.
  */
 diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 {
@@ -574,7 +564,7 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	this->public.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
 	this->public.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
 	this->public.get_other_public_value = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_other_public_value;
-	this->public.get_my_public_value = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
+	this->public.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
 	this->public.destroy = (void (*)(diffie_hellman_t *)) destroy;
 	
 	/* private functions */
@@ -597,7 +587,8 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	
 	this->gmp_helper->init_prime(this->gmp_helper,&(this->my_prime),this->modulus_length);
 	
-	this->my_public_value_is_computed = FALSE;
+	this->compute_public_value(this);
+	
 	this->shared_secret_is_computed = FALSE;
 	
 	return &(this->public);
