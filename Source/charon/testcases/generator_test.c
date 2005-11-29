@@ -38,6 +38,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/id_payload.h>
 
 /*
  * Described in Header 
@@ -725,6 +726,60 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	
 	
 	nonce_payload->destroy(nonce_payload);
+	generator->destroy(generator);
+		
+	global_logger_manager->destroy_logger(global_logger_manager,logger);	
+	
+}
+
+/*
+ * Described in header.
+ */ 
+void test_generator_with_id_payload(tester_t *tester)
+{
+	generator_t *generator;
+	id_payload_t *id_payload;
+	logger_t *logger;
+	chunk_t generated_data;
+	chunk_t id;
+	
+	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"Message with ID Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	id_payload = id_payload_create(FALSE);
+	
+	
+	id.ptr = "123456789012";
+	id.len = strlen(id.ptr);
+
+	id_payload->set_id_type(id_payload,ID_IPV4_ADDR);
+	id_payload->set_data(id_payload,id);
+	
+	generator->generate_payload(generator,(payload_t *)id_payload);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	
+
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x14,
+		0x01,0x00,0x00,0x00,
+		/* id data */
+		0x31,0x32,0x33,0x34,
+		0x35,0x36,0x37,0x38,
+		0x39,0x30,0x31,0x32,
+	};
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(&generated_data);
+	
+	id_payload->destroy(id_payload);
 	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	

@@ -136,6 +136,7 @@ test_t generator_test5 = {test_generator_with_sa_payload,"Generator: Message wit
 test_t generator_test6 = {test_generator_with_ke_payload,"Generator: KE Payload"};
 test_t generator_test7 = {test_generator_with_notify_payload,"Generator: Notify Payload"};
 test_t generator_test8 = {test_generator_with_nonce_payload,"Generator: Nonce Payload"};
+test_t generator_test9 = {test_generator_with_id_payload,"Generator: ID Payload"};
 
 
 /**
@@ -164,6 +165,10 @@ test_t parser_test4 = {test_parser_with_ke_payload, "Parser: key exchange payloa
  */
 test_t parser_test5 = {test_parser_with_notify_payload, "Parser: notify payload"};
 
+/**
+ * Parser test for ike notify payload
+ */
+test_t parser_test6 = {test_parser_with_id_payload, "Parser: ID payload"};
 
 /**
  * Test for packet_t
@@ -274,12 +279,14 @@ logger_manager_t *global_logger_manager;
 		&parser_test3,
 		&parser_test4,
 		&parser_test5,
+		&parser_test6,
 		&generator_test3,
 		&generator_test4,
 		&generator_test5,
 		&generator_test6,
 		&generator_test7,
 		&generator_test8,
+		&generator_test9,
 		&ike_sa_manager_test,
 		&packet_test,
 		&diffie_hellman_test,
@@ -310,7 +317,7 @@ logger_manager_t *global_logger_manager;
 
 
 	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&hmac_signer_test2); 
+	//tester->perform_test(tester,&generator_test9); 
 
 
  	

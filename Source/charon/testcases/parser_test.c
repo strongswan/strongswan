@@ -32,6 +32,7 @@
 #include <encoding/payloads/ike_header.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/notify_payload.h>
 
@@ -220,6 +221,47 @@ void test_parser_with_nonce_payload(tester_t *tester)
 	nonce_payload->destroy(nonce_payload);
 	allocator_free_chunk(&result);
 }
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_id_payload(tester_t *tester)
+{
+	parser_t *parser;
+	id_payload_t *id_payload;
+	status_t status;
+	chunk_t id_chunk, result;
+	
+	u_int8_t id_bytes[] = {
+		0x00,0x00,0x00,0x14, /* payload header */
+		0x05,0x01,0x02,0x03,
+			0x04,0x05,0x06,0x07,/* 12 Byte nonce */
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	id_chunk.ptr = id_bytes;
+	id_chunk.len = sizeof(id_bytes);
+
+	parser = parser_create(id_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, ID_INITIATOR, (payload_t**)&id_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	result = id_payload->get_data(id_payload);
+	tester->assert_true(tester,(id_payload->get_initiator(id_payload) == TRUE), "is IDi payload");
+	tester->assert_true(tester,(id_payload->get_id_type(id_payload) == ID_IPV6_ADDR), "is ID_IPV6_ADDR ID type");
+	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
+	tester->assert_false(tester,(memcmp(id_bytes + 8, result.ptr, result.len)), "parsed nonce data");
+	id_payload->destroy(id_payload);
+	allocator_free_chunk(&result);
+}
+
 
 /*
  * Described in Header 

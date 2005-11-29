@@ -99,7 +99,6 @@ struct iterator_t {
 	 * with the resetted iterator.
 	 * 
 	 * @param this 			calling object
-	 * @return 				SUCCESS in any case
 	 */
 	void (*reset) (iterator_t *this);
 
@@ -107,7 +106,6 @@ struct iterator_t {
 	 * @brief Destroys an iterator.
 	 * 
 	 * @param this 			iterator to destroy
-	 * @return 				SUCCESS in any case
 	 * 
 	 */
 	void (*destroy) (iterator_t *this);

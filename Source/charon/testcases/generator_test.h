@@ -28,7 +28,7 @@
 /**
  * @brief Test function used to test the generator with header payload.
  * 
- * @param tester associated tester object
+ * @param tester associated tester_t object
  * 
  * @ingroup testcases
  */
@@ -37,7 +37,7 @@ void test_generator_with_header_payload(tester_t *tester);
 /**
  * @brief Test function used to test the generator with transform attribute payload.
  *
- * @param tester associated tester object
+ * @param tester associated tester_t object
  * 
  * @ingroup testcases
  */
@@ -47,7 +47,7 @@ void test_generator_with_transform_attribute(tester_t *tester);
 /**
  * @brief Test function used to test the generator with transform substructure payload.
  *
- * @param tester associated tester object
+ * @param tester associated tester_t object
  * 
  * @ingroup testcases
  */
@@ -56,7 +56,7 @@ void test_generator_with_transform_substructure(tester_t *tester);
 /**
  * @brief Test function used to test the generator with proposal substructure payload.
  *
- * @param tester associated tester object
+ * @param tester associated tester_t object
  * 
  * @ingroup testcases
  */
@@ -65,7 +65,7 @@ void test_generator_with_proposal_substructure(tester_t *tester);
 /**
  * @brief Test function used to test the generator with SA payload.
  * 
- * @param tester associated tester object
+ * @param tester associated tester_t object
  * 
  * @ingroup testcases
  */
@@ -74,7 +74,7 @@ void test_generator_with_sa_payload(tester_t *tester);
 /**
  * @brief Test function used to test the generator with KE payload.
  *
- * @param tester associated tester object
+ * @param tester associated tester_t object
  * 
  * @ingroup testcases
  */
@@ -83,7 +83,7 @@ void test_generator_with_ke_payload(tester_t *tester);
 /**
  * @brief Test function used to test the generator with Notify payload.
  *
- * @param tester associated tester object
+ * @param tester associated tester_t object
  * 
  * @ingroup testcases
  */
@@ -92,11 +92,20 @@ void test_generator_with_notify_payload(tester_t *tester);
 /**
  * @brief Test function used to test the generator with Nonce payload.
  * 
- * @param tester associated tester object
+ * @param tester associated tester_t object
  * 
  * @ingroup testcases
  */
 void test_generator_with_nonce_payload(tester_t *tester);
+
+/**
+ * @brief Test function used to test the generator with ID payload.
+ * 
+ * @param tester associated tester_t object
+ * 
+ * @ingroup testcases
+ */
+void test_generator_with_id_payload(tester_t *tester);
 
 
 #endif /*GENERATOR_TEST_H_*/

@@ -57,6 +57,16 @@ void test_parser_with_nonce_payload(tester_t *tester);
 
 /**
  * @brief Test function used to test the parser_t functionality when 
+ * parsing a ID payload.
+ *
+ * @param tester 	associated tester_t object
+ * 
+ * @ingroup testcases
+ */
+void test_parser_with_id_payload(tester_t *tester);
+
+/**
+ * @brief Test function used to test the parser_t functionality when 
  * parsing a ke payload.
  *
  * @param tester 	associated tester_t object

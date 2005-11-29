@@ -308,6 +308,16 @@ enum encoding_type_t{
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
 	NONCE_DATA,
+	
+	/**
+	 * Representating a ID Data field.
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
+	 */
+	ID_DATA,
 
 	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.
@@ -319,6 +329,9 @@ enum encoding_type_t{
 	 */
 	IKE_SPI,
 	
+	/**
+	 * Representing the encrypted data body of a encryption payload.
+	 */
 	ENCRYPTED_DATA,
 	
 };

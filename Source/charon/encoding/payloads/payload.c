@@ -27,6 +27,7 @@
 #include <encoding/payloads/ike_header.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/notify_payload.h>
 
@@ -81,6 +82,10 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)transform_attribute_create();
 		case NONCE:
 			return (payload_t*)nonce_payload_create();
+		case ID_INITIATOR:
+			return (payload_t*)id_payload_create(TRUE);
+		case ID_RESPONDER:
+			return (payload_t*)id_payload_create(FALSE);
 		case KEY_EXCHANGE:
 			return (payload_t*)ke_payload_create();
 		case NOTIFY:
