@@ -57,77 +57,20 @@
 /* output for test messages */
 extern FILE * stderr;
 
-/**
- * Test for linked_list_t
- */
 test_t linked_list_test = {test_linked_list,"Linked List"};
-
-/**
- * Test for linked_list_t with iterator
- */
 test_t iterator_test = {test_linked_list_iterator,"Linked List Iterator"};
-
-/**
- * Test for linked_list_t insert and remove
- */
 test_t linked_list_insert_and_remove_test = {test_linked_list_insert_and_remove,"Linked List Insert and remove"};
-
-/**
- * Test for event_queue_t
- */
 test_t event_queue_test = {test_event_queue,"Event-Queue"};
-
-/**
- * Test 1 for job_queue_t
- */
 test_t job_queue_test1 = {test_job_queue,"Job-Queue"};
-
-/**
- * Test 1 for linked_list_t
- */
 test_t send_queue_test = {test_send_queue,"Send-Queue"};
-
-/**
- * Test for socket_t
- */
 test_t socket_test = {test_socket,"Socket"};
-
-/**
- * Test for thread_pool_t
- */
 test_t thread_pool_test = {test_thread_pool,"Thread Pool"};
-
-/**
- * Test for sender_t
- */
 test_t sender_test = {test_sender,"Sender"};
-
-/**
- * Test for scheduler_t
- */
 test_t scheduler_test = {test_scheduler,"Scheduler"};
-
-/**
- * Test for receiver_t
- */
 test_t receiver_test = {test_receiver,"Receiver"};
-
-/**
- * Test for ike_sa_id_t
- */
 test_t ike_sa_id_test = {test_ike_sa_id,"IKE_SA-Identifier"};
-
-/**
- * Test for ike_sa_t
- */
 test_t ike_sa_test = {test_ike_sa,"IKE_SA"};
-
-
-/**
- * Test for ike_sa_manager_t
- */
 test_t ike_sa_manager_test = {test_ike_sa_manager, "IKE_SA-Manager"};
-
 test_t generator_test1 = {test_generator_with_header_payload,"Generator: header payload"};
 test_t generator_test2 = {test_generator_with_transform_attribute,"Generator: transform attribute"};
 test_t generator_test3 = {test_generator_with_transform_substructure,"Generator: transform substructure"};
@@ -137,84 +80,21 @@ test_t generator_test6 = {test_generator_with_ke_payload,"Generator: KE Payload"
 test_t generator_test7 = {test_generator_with_notify_payload,"Generator: Notify Payload"};
 test_t generator_test8 = {test_generator_with_nonce_payload,"Generator: Nonce Payload"};
 test_t generator_test9 = {test_generator_with_id_payload,"Generator: ID Payload"};
-
-
-/**
- * Parser test for ike header
- */
 test_t parser_test1 = {test_parser_with_header_payload, "Parser: header payload"};
-
-
-/**
- * Parser test for ike security association
- */
 test_t parser_test2 = {test_parser_with_sa_payload, "Parser: sa payload"};
-
-/**
- * Parser test for ike nonce payload
- */
 test_t parser_test3 = {test_parser_with_nonce_payload, "Parser: nonce payload"};
-
-/**
- * Parser test for ike nonce payload
- */
 test_t parser_test4 = {test_parser_with_ke_payload, "Parser: key exchange payload"};
-
-/**
- * Parser test for ike notify payload
- */
 test_t parser_test5 = {test_parser_with_notify_payload, "Parser: notify payload"};
-
-/**
- * Parser test for ike notify payload
- */
 test_t parser_test6 = {test_parser_with_id_payload, "Parser: ID payload"};
-
-/**
- * Test for packet_t
- */
 test_t packet_test = {test_packet,"Packet"};
-
-
-/**
- * Test for packet_t
- */
 test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
-
-/**
- * Test for sha1 hasher
- */
 test_t sha1_hasher_test = {test_sha1_hasher,"SHA1 hasher"};
-
-/**
- * Test for md5 hasher
- */
 test_t md5_hasher_test = {test_md5_hasher,"MD5 hasher"};
-
-/**
- * Test for hmac
- */
 test_t hmac_test1 = {test_hmac_sha1, "HMAC using SHA1"};
 test_t hmac_test2 = {test_hmac_md5, "HMAC using MD5"};
-
-/**
- * Test for prf_plus
- */
 test_t prf_plus_test = {test_prf_plus, "prf+"};
-
-/**
- * Test for AES CBC crypter
- */
 test_t aes_cbc_crypter_test = {test_aes_cbc_crypter, "AES CBC"};
-
-/**
- * Test for hmac signer with MD5
- */
 test_t hmac_signer_test1 = {test_hmac_md5_signer, "HMAC MD5 signer test"};
-
-/**
- * Test for hmac signer with SHA1
- */
 test_t hmac_signer_test2 = {test_hmac_sha1_signer, "HMAC SHA1 signer test"};
 
 
