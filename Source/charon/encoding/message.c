@@ -429,9 +429,9 @@ static void get_destination(private_message_t *this, host_t **host)
 /**
  * Implementation of message_t.get_destination.
  */
-static void get_payload_iterator(private_message_t *this, iterator_t **iterator)
+static iterator_t *get_payload_iterator(private_message_t *this)
 {
-	this->payloads->create_iterator(this->payloads, iterator, TRUE);
+	return this->payloads->create_iterator(this->payloads, TRUE);
 }
 
 
@@ -477,7 +477,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	
 	payload = (payload_t*)ike_header;
 
-	this->payloads->create_iterator(this->payloads, &iterator, TRUE);
+	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	
 	/* generate every payload, except last one */
 	while(iterator->has_next(iterator))
@@ -666,9 +666,7 @@ static status_t verify(private_message_t *this)
 		this->logger->log(this->logger, ERROR, "could not get supported payloads: %s");
 		return status;
 	}
-		
-	this->payloads->create_iterator(this->payloads,&iterator,TRUE);
-
+	iterator = this->payloads->create_iterator(this->payloads,TRUE);
 	/* check for payloads with wrong count*/
 	for (i = 0; i < supported_payloads_count;i++)
 	{
@@ -683,6 +681,7 @@ static status_t verify(private_message_t *this)
 		{
 			payload_t *current_payload;
 			iterator->current(iterator,(void **)&current_payload);
+			
 
 			if (current_payload->get_type(current_payload) == payload_type)
 			{
@@ -725,7 +724,7 @@ static void destroy (private_message_t *this)
 		this->ike_sa_id->destroy(this->ike_sa_id);
 	}
 	
-	this->payloads->create_iterator(this->payloads, &iterator, TRUE);
+	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		payload_t *payload;
@@ -748,10 +747,6 @@ static void destroy (private_message_t *this)
 message_t *message_create_from_packet(packet_t *packet)
 {
 	private_message_t *this = allocator_alloc_thing(private_message_t);
-	if (this == NULL)
-	{
-		return NULL;
-	}
 
 	/* public functions */
 	this->public.set_major_version = (void(*)(message_t*, u_int8_t))set_major_version;
@@ -773,7 +768,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_source = (void (*) (message_t*,host_t**)) get_source;
 	this->public.set_destination = (void (*) (message_t*,host_t*)) set_destination;
 	this->public.get_destination = (void (*) (message_t*,host_t**)) get_destination;
-	this->public.get_payload_iterator = (void (*) (message_t *, iterator_t **)) get_payload_iterator;
+	this->public.get_payload_iterator = (iterator_t * (*) (message_t *)) get_payload_iterator;
 	this->public.parse_header = (status_t (*) (message_t *)) parse_header;
 	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
 	this->public.verify =  (status_t (*) (message_t*)) verify;
@@ -794,36 +789,13 @@ message_t *message_create_from_packet(packet_t *packet)
 	{
 		packet = packet_create();	
 	}
-	if (packet == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 	this->packet = packet;
 	this->payloads = linked_list_create();
-	if (this->payloads == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 	
 	/* parser is created from data of packet */
  	this->parser = parser_create(this->packet->data);
- 	if (this->parser == NULL)
- 	{
- 		this->payloads->destroy(this->payloads);
-		allocator_free(this);
-		return NULL;
- 	}
 		
 	this->logger = global_logger_manager->create_logger(global_logger_manager, MESSAGE, NULL);
-	if (this->logger == NULL)
-	{
-		this->parser->destroy(this->parser);
-		this->payloads->destroy(this->payloads);
-		allocator_free(this);
-		return NULL;
-	}
 
 	return (&this->public);
 }

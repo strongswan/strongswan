@@ -253,7 +253,7 @@ static void add_absolute(private_event_queue_t *this, job_t *job, timeval_t time
 
 		iterator_t * iterator;
 
-		this->list->create_iterator(this->list,&iterator,TRUE);
+		iterator = this->list->create_iterator(this->list,TRUE);
 
 		iterator->has_next(iterator);
 		/* first element has not to be checked (already done) */

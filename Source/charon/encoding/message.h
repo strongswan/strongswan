@@ -226,7 +226,7 @@ struct message_t {
 	void (*set_source) (message_t *this, host_t *host);
 	void (*get_destination) (message_t *this, host_t **host);
 	void (*set_destination) (message_t *this, host_t *host);
-	void (*get_payload_iterator) (message_t *this, iterator_t **iterator);
+	iterator_t * (*get_payload_iterator) (message_t *this);
 	
 	/**
 	 * @brief Destroys a message and all including objects

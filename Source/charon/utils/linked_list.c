@@ -482,7 +482,7 @@ static status_t get_last(private_linked_list_t *this, void **item)
 /**
  * Implementation of linked_list_t.create_iterator.
  */
-static void create_iterator (private_linked_list_t *linked_list, iterator_t **iterator,bool forward)
+static iterator_t *create_iterator (private_linked_list_t *linked_list,bool forward)
 {
 	private_iterator_t *this = allocator_alloc_thing(private_iterator_t);
 
@@ -498,7 +498,7 @@ static void create_iterator (private_linked_list_t *linked_list, iterator_t **it
 	this->current = NULL;
 	this->list = linked_list;
 
-	*iterator = &(this->public);
+	return &(this->public);
 }
 
 /**
@@ -525,7 +525,7 @@ linked_list_t *linked_list_create()
 	private_linked_list_t *this = allocator_alloc_thing(private_linked_list_t);
 
 	this->public.get_count = (int (*) (linked_list_t *linked_list)) get_count;
-	this->public.create_iterator = (void (*) (linked_list_t *linked_list, iterator_t **iterator,bool forward)) create_iterator;
+	this->public.create_iterator = (iterator_t * (*) (linked_list_t *linked_list,bool forward)) create_iterator;
 	this->public.get_first = (status_t (*) (linked_list_t *linked_list, void **item)) get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *linked_list, void **item)) get_last;
 	this->public.insert_first = (void (*) (linked_list_t *linked_list, void *item)) insert_first;

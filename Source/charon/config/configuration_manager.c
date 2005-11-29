@@ -227,7 +227,7 @@ static status_t select_proposals_for_host(private_configuration_manager_t *this,
 	
 	in->current(in,(void **) &first_suggested_proposal);
 
-	first_suggested_proposal->clone(first_suggested_proposal,&selected_proposal);
+	selected_proposal = first_suggested_proposal->clone(first_suggested_proposal);
 	
 	out->insert_after(out,selected_proposal);
 	return SUCCESS;

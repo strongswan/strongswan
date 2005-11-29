@@ -179,9 +179,8 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		this->logger->log(this->logger, ERROR | MORE, "Could not parse body of request message");
 		return status;
 	}
-
 	/* iterate over incoming payloads. We can be sure, the message contains only accepted payloads! */
-	message->get_payload_iterator(message, &payloads);
+	payloads = message->get_payload_iterator(message);
 	
 	while (payloads->has_next(payloads))
 	{
@@ -199,10 +198,10 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				iterator_t *suggested_proposals, *accepted_proposals;
 				proposal_substructure_t *accepted_proposal;
 				
-				this->proposals->create_iterator(this->proposals, &accepted_proposals, FALSE);
+				accepted_proposals = this->proposals->create_iterator(this->proposals, FALSE);
 				
 				/* get the list of suggested proposals */ 
-				sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
+				suggested_proposals = sa_payload->create_proposal_substructure_iterator(sa_payload, TRUE);
 				
 				/* now let the configuration-manager select a subset of the proposals */
 				status = global_configuration_manager->select_proposals_for_host(global_configuration_manager,
@@ -395,7 +394,7 @@ static void build_sa_payload(private_responder_init_t *this, payload_t **payload
 	
 	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
 	
-	this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
+	proposal_iterator = this->proposals->create_iterator(this->proposals, FALSE);
 	
 	sa_payload = sa_payload_create();
 	
@@ -405,7 +404,7 @@ static void build_sa_payload(private_responder_init_t *this, payload_t **payload
 		proposal_substructure_t *current_proposal_clone;
 		
 		proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
-		current_proposal->clone(current_proposal,&current_proposal_clone);
+		current_proposal_clone = current_proposal->clone(current_proposal);
 		sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
 	}
 	

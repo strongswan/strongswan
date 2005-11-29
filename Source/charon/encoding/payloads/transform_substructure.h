@@ -117,10 +117,10 @@ struct transform_substructure_t {
 	 * 			by calling get_length()!
 	 *
 	 * @param this 			calling transform_substructure_t object
-	 * @param iterator  		the created iterator is stored at the pointed pointer
 	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @return				created iterator_t object.
 	 */
-	void (*create_transform_attribute_iterator) (transform_substructure_t *this,iterator_t **iterator, bool forward);
+	iterator_t * (*create_transform_attribute_iterator) (transform_substructure_t *this, bool forward);
 	
 	/**
 	 * @brief Adds a transform_attribute_t object to this object.
@@ -200,10 +200,9 @@ struct transform_substructure_t {
 	 * @brief Clones an transform_substructure_t object.
 	 *
 	 * @param this 	transform_substructure_t object to clone
-	 * @param clone	pointer to a transform_substructure_t object pointer 
-	 * 				where the new object is stored to.
+	 * @return		cloned transform_substructure_t object
 	 */
-	void (*clone) (transform_substructure_t *this,transform_substructure_t **clone);
+	transform_substructure_t* (*clone) (transform_substructure_t *this);
 
 	/**
 	 * @brief Destroys an transform_substructure_t object.

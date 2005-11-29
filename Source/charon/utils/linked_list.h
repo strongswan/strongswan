@@ -51,13 +51,13 @@ struct linked_list_t {
 	/**
 	 * @brief Creates a iterator for the given list.
 	 * 
-	 * @warning Created iterator has to get destroyed by the caller.
+	 * @warning Created iterator_t object has to get destroyed by the caller.
 	 * 
 	 * @param linked_list 		calling object
-	 * @param[out] iterator 	place where the iterator is written
 	 * @param[in] forward 		iterator direction (TRUE: front to end)
+	 * @return					new iterator_t object
 	 */
-	void (*create_iterator) (linked_list_t *linked_list, iterator_t **iterator, bool forward);
+	iterator_t * (*create_iterator) (linked_list_t *linked_list, bool forward);
 
 	/**
 	 * @brief Inserts a new item at the beginning of the list.
@@ -128,8 +128,6 @@ struct linked_list_t {
 	 * 			memory leaks!
 	 * 
 	 * @param linked_list 	calling object
-	 * @return
-	 * 						- SUCCESS
 	 */
 	void (*destroy) (linked_list_t *linked_list);
 };

@@ -287,9 +287,9 @@ static size_t get_length(private_encryption_payload_t *this)
 /**
  * Implementation of payload_t.create_payload_iterator.
  */
-static void create_payload_iterator (private_encryption_payload_t *this, iterator_t **iterator, bool forward)
+static  iterator_t *create_payload_iterator (private_encryption_payload_t *this, bool forward)
 {
-	this->payloads->create_iterator(this->payloads, iterator, forward);
+	return (this->payloads->create_iterator(this->payloads, forward));
 }
 
 /**
@@ -506,7 +506,7 @@ static void generate(private_encryption_payload_t *this)
 	iterator_t *iterator;
 	
 	/* create iterator */
-	this->payloads->create_iterator(this->payloads, &iterator, TRUE);
+	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	
 	/* get first payload */
 	if (iterator->has_next(iterator))
@@ -598,7 +598,7 @@ static void compute_length(private_encryption_payload_t *this)
 {
 	iterator_t *iterator;
 	size_t length = ENCRYPTION_PAYLOAD_HEADER_LENGTH;
-	this->payloads->create_iterator(this->payloads, &iterator, TRUE);
+	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 
 	while (iterator->has_next(iterator))
 	{
@@ -629,7 +629,7 @@ encryption_payload_t *encryption_payload_create()
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.create_payload_iterator = (void (*) (encryption_payload_t *,iterator_t **,bool)) create_payload_iterator;
+	this->public.create_payload_iterator = (iterator_t * (*) (encryption_payload_t *,bool)) create_payload_iterator;
 	this->public.add_payload = (void (*) (encryption_payload_t *,payload_t *)) add_payload;
 	this->public.encrypt = (status_t (*) (encryption_payload_t *, crypter_t*)) encrypt;
 	this->public.decrypt = (status_t (*) (encryption_payload_t *, crypter_t*)) decrypt;

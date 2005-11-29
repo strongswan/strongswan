@@ -771,7 +771,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 
 				iterator_t *iterator;
 				/* create forward iterator */
-				proposals->create_iterator(proposals,&iterator,TRUE);
+				iterator = proposals->create_iterator(proposals,TRUE);
 				/* every proposal is processed (iterative call )*/
 				while (iterator->has_next(iterator))
 				{
@@ -805,7 +805,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				iterator_t *iterator;
 								
 				/* create forward iterator */
-				transforms->create_iterator(transforms,&iterator,TRUE);
+				iterator = transforms->create_iterator(transforms,TRUE);
 				while (iterator->has_next(iterator))
 				{
 					payload_t *current_transform;
@@ -840,7 +840,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 
 				iterator_t *iterator;
 				/* create forward iterator */
-				transform_attributes->create_iterator(transform_attributes,&iterator,TRUE);
+				iterator = transform_attributes->create_iterator(transform_attributes,TRUE);
 				while (iterator->has_next(iterator))
 				{
 					payload_t *current_attribute;

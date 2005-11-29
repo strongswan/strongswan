@@ -205,7 +205,7 @@ static logger_level_t get_logger_level (private_logger_manager_t *this, logger_c
 
 	pthread_mutex_lock(&(this->mutex));
 
-	this->logger_levels->create_iterator(this->logger_levels, &iterator,TRUE);
+	iterator = this->logger_levels->create_iterator(this->logger_levels,TRUE);
 	/* check for existing logger_level entry */
 	while (iterator->has_next(iterator))
 	{
@@ -232,7 +232,7 @@ static void destroy_logger(private_logger_manager_t *this,logger_t *logger)
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	this->loggers->create_iterator(this->loggers,&iterator,TRUE);
+	iterator = this->loggers->create_iterator(this->loggers,TRUE);
 	while (iterator->has_next(iterator))
 	{
 		loggers_entry_t * entry;
@@ -258,7 +258,7 @@ static void set_logger_level(private_logger_manager_t *this, logger_context_t co
 	bool found = FALSE;
 	
 	pthread_mutex_lock(&(this->mutex));
-	this->logger_levels->create_iterator(this->logger_levels,&iterator,TRUE);
+	iterator = this->logger_levels->create_iterator(this->logger_levels,TRUE);
 
 	/* find existing logger_level entry */
 	while (iterator->has_next(iterator))
@@ -292,7 +292,7 @@ static void set_logger_level(private_logger_manager_t *this, logger_context_t co
 		this->logger_levels->insert_last(this->logger_levels,entry);
 	}
 	
-	this->loggers->create_iterator(this->loggers,&iterator,TRUE);
+	iterator = this->loggers->create_iterator(this->loggers,TRUE);
 	while (iterator->has_next(iterator))
 	{
 		loggers_entry_t * entry;

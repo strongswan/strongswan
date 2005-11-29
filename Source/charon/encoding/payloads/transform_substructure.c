@@ -261,9 +261,9 @@ static size_t get_length(private_transform_substructure_t *this)
 /**
  * Implementation of transform_substructure_t.create_transform_attribute_iterator.
  */
-static void create_transform_attribute_iterator (private_transform_substructure_t *this,iterator_t **iterator,bool forward)
+static iterator_t *create_transform_attribute_iterator (private_transform_substructure_t *this,bool forward)
 {
-	this->attributes->create_iterator(this->attributes,iterator,forward);
+	return this->attributes->create_iterator(this->attributes,forward);
 }
 
 /**
@@ -337,7 +337,7 @@ static void compute_length (private_transform_substructure_t *this)
 {
 	iterator_t *iterator;
 	size_t length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
-	this->attributes->create_iterator(this->attributes,&iterator,TRUE);
+	iterator = this->attributes->create_iterator(this->attributes,TRUE);
 	while (iterator->has_next(iterator))
 	{
 		payload_t * current_attribute;
@@ -353,7 +353,7 @@ static void compute_length (private_transform_substructure_t *this)
 /**
  * Implementation of transform_substructure_t.clone.
  */
-static void clone(private_transform_substructure_t *this,transform_substructure_t **clone)
+static transform_substructure_t *clone(private_transform_substructure_t *this)
 {
 	private_transform_substructure_t *new_clone;
 	iterator_t *attributes;
@@ -364,7 +364,7 @@ static void clone(private_transform_substructure_t *this,transform_substructure_
 	new_clone->transform_type = this->transform_type;
 	new_clone->transform_id = this->transform_id;
 
-	this->attributes->create_iterator(this->attributes,&attributes,FALSE);
+	attributes = this->attributes->create_iterator(this->attributes,FALSE);
 
 	while (attributes->has_next(attributes))
 	{
@@ -372,14 +372,14 @@ static void clone(private_transform_substructure_t *this,transform_substructure_
 		transform_attribute_t *current_attribute_clone;
 		attributes->current(attributes,(void **) &current_attribute);
 
-		current_attribute->clone(current_attribute,&current_attribute_clone);
+		current_attribute_clone = current_attribute->clone(current_attribute);
 		
 		new_clone->public.add_transform_attribute(&(new_clone->public),current_attribute_clone);
 	}
 	
 	attributes->destroy(attributes);	
 	
-	*clone = &(new_clone->public);
+	return &(new_clone->public);
 }
 
 
@@ -390,7 +390,7 @@ static status_t get_key_length(private_transform_substructure_t *this, u_int16_t
 {
 	iterator_t *attributes;
 	
-	this->attributes->create_iterator(this->attributes,&attributes,TRUE);
+	attributes = this->attributes->create_iterator(this->attributes,TRUE);
 
 	while (attributes->has_next(attributes))
 	{
@@ -445,7 +445,7 @@ transform_substructure_t *transform_substructure_create()
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.create_transform_attribute_iterator = (void (*) (transform_substructure_t *,iterator_t **,bool)) create_transform_attribute_iterator;
+	this->public.create_transform_attribute_iterator = (iterator_t * (*) (transform_substructure_t *,bool)) create_transform_attribute_iterator;
 	this->public.add_transform_attribute = (void (*) (transform_substructure_t *,transform_attribute_t *)) add_transform_attribute;
 	this->public.set_is_last_transform = (void (*) (transform_substructure_t *,bool)) set_is_last_transform;
 	this->public.get_is_last_transform = (bool (*) (transform_substructure_t *)) get_is_last_transform;
@@ -454,7 +454,7 @@ transform_substructure_t *transform_substructure_create()
 	this->public.set_transform_id = (void (*) (transform_substructure_t *,u_int16_t)) set_transform_id;
 	this->public.get_transform_id = (u_int16_t (*) (transform_substructure_t *)) get_transform_id;
 	this->public.get_key_length = (status_t (*) (transform_substructure_t *,u_int16_t *)) get_key_length;
-	this->public.clone = (void (*) (transform_substructure_t *,transform_substructure_t **)) clone;
+	this->public.clone = (transform_substructure_t* (*) (transform_substructure_t *)) clone;
 	this->public.destroy = (void (*) (transform_substructure_t *)) destroy;
 	
 	/* private functions */

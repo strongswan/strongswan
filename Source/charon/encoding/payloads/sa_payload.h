@@ -67,10 +67,10 @@ struct sa_payload_t {
 	 * 			by calling get_length()!
 	 *
 	 * @param this 			calling sa_payload_t object
-	 * @param iterator  		the created iterator is stored at the pointed pointer
 	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @return				created iterator_t object
 	 */
-	void (*create_proposal_substructure_iterator) (sa_payload_t *this,iterator_t **iterator, bool forward);
+	iterator_t *(*create_proposal_substructure_iterator) (sa_payload_t *this, bool forward);
 	
 	/**
 	 * @brief Adds a proposal_substructure_t object to this object.

@@ -49,12 +49,14 @@ struct encryption_payload_t {
 	
 	/**
 	 * @brief Creates an iterator for all contained payloads.
+	 * 
+	 * @warning iterator_t object has to get destroyed by the caller.
 	 *
 	 * @param this 			calling encryption_payload_t object
-	 * @param iterator  	the created iterator is stored at the pointed pointer
 	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * return				created iterator_t object
 	 */
-	void (*create_payload_iterator) (encryption_payload_t *this, iterator_t **iterator, bool forward);
+	 iterator_t *(*create_payload_iterator) (encryption_payload_t *this, bool forward);
 	
 	/**
 	 * @brief Adds a payload to this encryption payload.

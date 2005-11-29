@@ -119,9 +119,9 @@ struct transform_attribute_t {
 	 * @brief Clones an transform_attribute_t object.
 	 *
 	 * @param this 	transform_attribute_t object to clone
-	 * @param clone	the new clone will be written there
+	 * @return		cloned transform_attribute_t object
 	 */
-	void (*clone) (transform_attribute_t *this,transform_attribute_t **clone);
+	transform_attribute_t * (*clone) (transform_attribute_t *this);
 
 	/**
 	 * @brief Destroys an transform_attribute_t object.

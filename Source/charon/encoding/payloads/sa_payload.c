@@ -126,7 +126,7 @@ static status_t verify(private_sa_payload_t *this)
 	}
 
 	/* check proposal numbering */		
-	this->proposals->create_iterator(this->proposals,&iterator,TRUE);
+	iterator = this->proposals->create_iterator(this->proposals,TRUE);
 	
 	while(iterator->has_next(iterator))
 	{
@@ -230,9 +230,9 @@ static size_t get_length(private_sa_payload_t *this)
 /**
  * Implementation of sa_payload_t.create_proposal_substructure_iterator.
  */
-static void create_proposal_substructure_iterator (private_sa_payload_t *this,iterator_t **iterator,bool forward)
+static iterator_t *create_proposal_substructure_iterator (private_sa_payload_t *this,bool forward)
 {
-	this->proposals->create_iterator(this->proposals,iterator,forward);
+	return this->proposals->create_iterator(this->proposals,forward);
 }
 
 /**
@@ -251,7 +251,7 @@ static void compute_length (private_sa_payload_t *this)
 {
 	iterator_t *iterator;
 	size_t length = SA_PAYLOAD_HEADER_LENGTH;
-	this->proposals->create_iterator(this->proposals,&iterator,TRUE);
+	iterator = this->proposals->create_iterator(this->proposals,TRUE);
 	while (iterator->has_next(iterator))
 	{
 		payload_t *current_proposal;
@@ -280,7 +280,7 @@ sa_payload_t *sa_payload_create()
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.create_proposal_substructure_iterator = (void (*) (sa_payload_t *,iterator_t **,bool)) create_proposal_substructure_iterator;
+	this->public.create_proposal_substructure_iterator = (iterator_t* (*) (sa_payload_t *,bool)) create_proposal_substructure_iterator;
 	this->public.add_proposal_substructure = (void (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
 	this->public.destroy = (void (*) (sa_payload_t *)) destroy;
 	

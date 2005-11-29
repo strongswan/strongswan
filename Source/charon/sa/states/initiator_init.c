@@ -174,7 +174,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	}
 
 	/* get proposals */
-	this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
+	proposal_iterator = this->proposals->create_iterator(this->proposals, FALSE);
 	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->ike_sa->get_other_host(this->ike_sa), proposal_iterator);
 	proposal_iterator->destroy(proposal_iterator);
 	if (status != SUCCESS)
@@ -292,7 +292,7 @@ static void build_sa_payload(private_initiator_init_t *this, payload_t **payload
 	 */
 
 	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
-	this->proposals->create_iterator(this->proposals, &proposal_iterator, FALSE);
+	proposal_iterator = this->proposals->create_iterator(this->proposals, FALSE);
 	
 	sa_payload = sa_payload_create();
 	
@@ -302,7 +302,7 @@ static void build_sa_payload(private_initiator_init_t *this, payload_t **payload
 		proposal_substructure_t *current_proposal_clone;
 		proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
 
-		current_proposal->clone(current_proposal,&current_proposal_clone);
+		current_proposal_clone = current_proposal->clone(current_proposal);
 		
 		sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
 	}

@@ -205,9 +205,9 @@ static size_t get_length(private_proposal_substructure_t *this)
 /**
  * Implementation of proposal_substructure_t.create_transform_substructure_iterator.
  */
-static void create_transform_substructure_iterator (private_proposal_substructure_t *this,iterator_t **iterator,bool forward)
+static iterator_t *create_transform_substructure_iterator (private_proposal_substructure_t *this,bool forward)
 {
-	this->transforms->create_iterator(this->transforms,iterator,forward);
+	return (this->transforms->create_iterator(this->transforms,forward));
 }
 
 /**
@@ -304,7 +304,7 @@ static status_t get_info_for_transform_type (private_proposal_substructure_t *th
 	u_int16_t found_transform_id;
 	u_int16_t found_key_length;
 
-	this->transforms->create_iterator(this->transforms,&iterator,TRUE);
+	iterator = this->transforms->create_iterator(this->transforms,TRUE);
 
 	while (iterator->has_next(iterator))
 	{
@@ -337,7 +337,7 @@ static void compute_length (private_proposal_substructure_t *this)
 	iterator_t *iterator;
 	size_t transforms_count = 0;
 	size_t length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
-	this->transforms->create_iterator(this->transforms,&iterator,TRUE);
+	iterator = this->transforms->create_iterator(this->transforms,TRUE);
 	while (iterator->has_next(iterator))
 	{
 		payload_t * current_transform;
@@ -356,7 +356,7 @@ static void compute_length (private_proposal_substructure_t *this)
 /**
  * Implementation of proposal_substructure_t.clone.
  */
-static void clone(private_proposal_substructure_t *this, private_proposal_substructure_t **clone)
+static private_proposal_substructure_t* clone(private_proposal_substructure_t *this)
 {
 	private_proposal_substructure_t * new_clone;
 	iterator_t *transforms;
@@ -373,7 +373,7 @@ static void clone(private_proposal_substructure_t *this, private_proposal_substr
 		new_clone->spi.len = this->spi.len;
 	}
 
-	this->transforms->create_iterator(this->transforms,&transforms,FALSE);
+	transforms = this->transforms->create_iterator(this->transforms,FALSE);
 
 	while (transforms->has_next(transforms))
 	{
@@ -382,14 +382,14 @@ static void clone(private_proposal_substructure_t *this, private_proposal_substr
 
 		transforms->current(transforms,(void **) &current_transform);
 
-		current_transform->clone(current_transform,&current_transform_clone);
+		current_transform_clone = current_transform->clone(current_transform);
 		
 		new_clone->public.add_transform_substructure(&(new_clone->public),current_transform_clone);
 	}
 	
 	transforms->destroy(transforms);	
 	
-	*clone = new_clone;	
+	return new_clone;	
 }
 
 /**
@@ -437,7 +437,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.create_transform_substructure_iterator = (void (*) (proposal_substructure_t *,iterator_t **,bool)) create_transform_substructure_iterator;
+	this->public.create_transform_substructure_iterator = (iterator_t* (*) (proposal_substructure_t *,bool)) create_transform_substructure_iterator;
 	this->public.add_transform_substructure = (void (*) (proposal_substructure_t *,transform_substructure_t *)) add_transform_substructure;
 	this->public.set_proposal_number = (void (*) (proposal_substructure_t *,u_int8_t))set_proposal_number;
 	this->public.get_proposal_number = (u_int8_t (*) (proposal_substructure_t *)) get_proposal_number;
@@ -446,7 +446,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.get_info_for_transform_type = 	(status_t (*) (proposal_substructure_t *,transform_type_t,u_int16_t *, u_int16_t *))get_info_for_transform_type;
 	this->public.set_spi = (void (*) (proposal_substructure_t *,chunk_t))set_spi;
 	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
-	this->public.clone = (void (*) (proposal_substructure_t *, proposal_substructure_t **)) clone;
+	this->public.clone = (proposal_substructure_t * (*) (proposal_substructure_t *)) clone;
 	this->public.destroy = (void (*) (proposal_substructure_t *)) destroy;
 	
 	

@@ -74,10 +74,10 @@ struct proposal_substructure_t {
 	 * 			get_size to make sure the length and number values are ok.
 	 *
 	 * @param this 			calling proposal_substructure_t object
-	 * @param iterator  		the created iterator is stored at the pointed pointer
 	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @return				created iterator_t object
 	 */
-	void (*create_transform_substructure_iterator) (proposal_substructure_t *this,iterator_t **iterator, bool forward);
+	iterator_t * (*create_transform_substructure_iterator) (proposal_substructure_t *this, bool forward);
 	
 	/**
 	 * @brief Adds a transform_substructure_t object to this object.
@@ -161,9 +161,9 @@ struct proposal_substructure_t {
 	 * @brief Clones an proposal_substructure_t object.
 	 *
 	 * @param this 	proposal_substructure_t object to clone
-	 * @param clone	cloned object will be written there
+	 * @return		cloned object
 	 */
-	void (*clone) (proposal_substructure_t *this,proposal_substructure_t **clone);
+	proposal_substructure_t* (*clone) (proposal_substructure_t *this);
 
 	/**
 	 * @brief Destroys an proposal_substructure_t object.

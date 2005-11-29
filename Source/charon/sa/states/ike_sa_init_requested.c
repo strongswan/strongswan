@@ -120,7 +120,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	ike_sa_id->set_responder_spi(ike_sa_id,responder_spi);
 	
 	/* iterate over incoming payloads */
-	message->get_payload_iterator(message, &payloads);
+	payloads = message->get_payload_iterator(message);
 	while (payloads->has_next(payloads))
 	{
 		payload_t *payload;
@@ -138,7 +138,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				
 				
 				/* get the list of suggested proposals */ 
-				sa_payload->create_proposal_substructure_iterator(sa_payload, &suggested_proposals, TRUE);
+				suggested_proposals = sa_payload->create_proposal_substructure_iterator(sa_payload, TRUE);
 
 				
 				/* now let the configuration-manager check the selected proposals*/

@@ -209,7 +209,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 	status_t status;
 	
 	/* create iterator over list of ike_sa's */
-	list->create_iterator(list, &iterator, TRUE);
+	iterator = list->create_iterator(list, TRUE);
 
 	/* default status */
 	status = NOT_FOUND;
@@ -252,7 +252,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 	iterator_t *iterator;
 	status_t status;
 	
-	list->create_iterator(list, &iterator, TRUE);
+	iterator = list->create_iterator(list, TRUE);
 	
 	/* default status */
 	status = NOT_FOUND;
@@ -284,7 +284,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 	iterator_t *iterator;
 	status_t status;
 	
-	list->create_iterator(list, &iterator, TRUE);
+	iterator = list->create_iterator(list, TRUE);
 
 	status = NOT_FOUND;	
 	
@@ -606,7 +606,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	this->logger->log(this->logger,CONTROL | MORE,"Going to destroy IKE_SA manager and all managed IKE_SA's");
 	
 	/* Step 1: drive out all waiting threads  */
-	list->create_iterator(list, &iterator, TRUE);
+	iterator = list->create_iterator(list, TRUE);
 
 	this->logger->log(this->logger,CONTROL | MOST,"Set driveout flags for all stored IKE_SA's");
 	while (iterator->has_next(iterator))

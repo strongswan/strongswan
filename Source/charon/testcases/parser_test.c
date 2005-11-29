@@ -129,7 +129,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 	}
 	
 	
-	sa_payload->create_proposal_substructure_iterator(sa_payload, &proposals, TRUE);
+	proposals = sa_payload->create_proposal_substructure_iterator(sa_payload, TRUE);
 	while (proposals->has_next(proposals))
 	{
 		proposal_substructure_t *proposal;
@@ -142,7 +142,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 		spi = proposal->get_spi(proposal);
 		tester->assert_false(tester,(memcmp(&spi_should, spi.ptr, spi.len)),"proposal spi");
 		
-		proposal->create_transform_substructure_iterator(proposal, &transforms, TRUE);
+		transforms = proposal->create_transform_substructure_iterator(proposal, TRUE);
 		while(transforms->has_next(transforms))
 		{
 			transform_substructure_t *transform;
@@ -150,7 +150,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 			transforms->current(transforms, (void**)&transform);
 			tester->assert_true(tester,(transform->get_transform_type(transform) == 7),"transform type");
 			tester->assert_true(tester,(transform->get_transform_id(transform) == 3),"transform id");
-			transform->create_transform_attribute_iterator(transform, &attributes, TRUE);
+			attributes = transform->create_transform_attribute_iterator(transform, TRUE);
 			loopi = 0;
 			while (attributes->has_next(attributes))
 			{

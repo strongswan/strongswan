@@ -105,7 +105,7 @@ void test_linked_list_iterator(tester_t *tester)
 	iterator_t * iterator2;
 	
 	
-	linked_list->create_iterator(linked_list,&iterator,TRUE);
+	iterator = linked_list->create_iterator(linked_list,TRUE);
 	
 	tester->assert_true(tester,iterator->has_next(iterator), "it 1 has_next value check");	
 	iterator->current(iterator,&value);
@@ -115,7 +115,7 @@ void test_linked_list_iterator(tester_t *tester)
 	iterator->current(iterator,&value);
 	tester->assert_true(tester,(strcmp((char *) value,"four") == 0), "it 1 current value check");
 
-	linked_list->create_iterator(linked_list,&iterator2,FALSE);
+	iterator2 = linked_list->create_iterator(linked_list,FALSE);
 
 	tester->assert_true(tester,iterator2->has_next(iterator2), "it 2 has_next value check");	
 	iterator2->current(iterator2,&value);
@@ -170,7 +170,7 @@ void test_linked_list_insert_and_remove(tester_t *tester)
 	
 
 	
-	linked_list->create_iterator(linked_list,&iterator,TRUE);
+	iterator = linked_list->create_iterator(linked_list,TRUE);
 	
 	iterator->has_next(iterator);
 	iterator->has_next(iterator);

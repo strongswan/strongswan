@@ -255,7 +255,7 @@ static u_int16_t get_attribute_type (private_transform_attribute_t *this)
 /**
  * Implementation of transform_attribute_t.clone.
  */
-static void clone(private_transform_attribute_t *this,transform_attribute_t **clone)
+static transform_attribute_t * clone(private_transform_attribute_t *this)
 {
 	private_transform_attribute_t *new_clone;
 	
@@ -271,7 +271,7 @@ static void clone(private_transform_attribute_t *this,transform_attribute_t **cl
 		new_clone->attribute_value.len = this->attribute_value.len;
 	}
 	
-	*clone = (transform_attribute_t *) new_clone;
+	return (transform_attribute_t *) new_clone;
 }
 
 /**
@@ -309,7 +309,7 @@ transform_attribute_t *transform_attribute_create()
 	this->public.get_value = (u_int16_t (*) (transform_attribute_t *)) get_value;
 	this->public.set_attribute_type = (void (*) (transform_attribute_t *,u_int16_t type)) set_attribute_type;
 	this->public.get_attribute_type = (u_int16_t (*) (transform_attribute_t *)) get_attribute_type;
-	this->public.clone = (void (*) (transform_attribute_t *,transform_attribute_t **)) clone;
+	this->public.clone = (transform_attribute_t * (*) (transform_attribute_t *)) clone;
 	this->public.destroy = (void (*) (transform_attribute_t *)) destroy;
 	
 	/* set default values of the fields */
