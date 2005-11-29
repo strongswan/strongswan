@@ -41,6 +41,7 @@
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
+#include <encoding/payloads/auth_payload.h>
 
 
 typedef struct private_generator_t private_generator_t;
@@ -769,6 +770,19 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				/* Length of nonce PAYLOAD is calculated */
 				u_int16_t length_of_id_payload = ID_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
 				u_int16_t int16_val = htons(length_of_id_payload);
+
+				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				break;
+			}
+			case AUTH_DATA:
+			{
+				/* the AUTH Data value is generated from chunk */
+				this->generate_from_chunk(this, rules[i].offset);
+				
+				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
+				/* Length of nonce PAYLOAD is calculated */
+				u_int16_t length_of_auth_payload = AUTH_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
+				u_int16_t int16_val = htons(length_of_auth_payload);
 
 				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				break;

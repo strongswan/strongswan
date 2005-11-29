@@ -30,6 +30,7 @@
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/notify_payload.h>
+#include <encoding/payloads/auth_payload.h>
 
 
 
@@ -86,6 +87,8 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)id_payload_create(TRUE);
 		case ID_RESPONDER:
 			return (payload_t*)id_payload_create(FALSE);
+		case AUTHENTICATION:
+			return (payload_t*)auth_payload_create();
 		case KEY_EXCHANGE:
 			return (payload_t*)ke_payload_create();
 		case NOTIFY:

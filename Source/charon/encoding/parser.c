@@ -42,7 +42,7 @@
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/encryption_payload.h>
-
+#include <encoding/payloads/auth_payload.h>
 
 
 typedef struct private_parser_t private_parser_t;
@@ -808,6 +808,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case ID_DATA:
 			{
 				size_t data_length = payload_length - ID_PAYLOAD_HEADER_LENGTH;
+				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}		
+				break;			
+			}
+			case AUTH_DATA:
+			{
+				size_t data_length = payload_length - AUTH_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
 				{
 					pld->destroy(pld);

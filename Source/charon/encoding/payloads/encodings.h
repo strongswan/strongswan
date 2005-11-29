@@ -318,6 +318,16 @@ enum encoding_type_t{
 	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
 	 */
 	ID_DATA,
+	
+	/**
+	 * Representating a AUTH Data field.
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
+	 */
+	AUTH_DATA,
 
 	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.

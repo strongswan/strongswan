@@ -35,6 +35,7 @@
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/notify_payload.h>
+#include <encoding/payloads/auth_payload.h>
 
 
 
@@ -344,4 +345,43 @@ void test_parser_with_notify_payload(tester_t *tester)
 	tester->assert_false(tester,(memcmp(notify_bytes + 12, result.ptr, result.len)), "parsed notification data");
 	
 	notify_payload->destroy(notify_payload);
+}
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_auth_payload(tester_t *tester)
+{
+	parser_t *parser;
+	auth_payload_t *auth_payload;
+	status_t status;
+	chunk_t auth_chunk, result;
+	
+	u_int8_t auth_bytes[] = {
+		0x00,0x00,0x00,0x14, /* payload header */
+		0x03,0x01,0x02,0x03,
+			0x04,0x05,0x06,0x07,/* 12 Byte nonce */
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	auth_chunk.ptr = auth_bytes;
+	auth_chunk.len = sizeof(auth_bytes);
+
+	parser = parser_create(auth_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, AUTHENTICATION, (payload_t**)&auth_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	result = auth_payload->get_data(auth_payload);
+	tester->assert_true(tester,(auth_payload->get_auth_method(auth_payload) == DSS_DIGITAL_SIGNATURE), "is DSS_DIGITAL_SIGNATURE method");
+	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
+	tester->assert_false(tester,(memcmp(auth_bytes + 8, result.ptr, result.len)), "parsed nonce data");
+	auth_payload->destroy(auth_payload);
+	allocator_free_chunk(&result);
 }

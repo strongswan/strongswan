@@ -81,13 +81,6 @@ struct private_id_payload_t {
 	 * The contained id data value.
 	 */
 	chunk_t id_data;
-	
-	/**
-	 * @brief Computes the length of this payload.
-	 *
-	 * @param this 	calling private_id_payload_t object
-	 */
-	void (*compute_length) (private_id_payload_t *this);
 };
 
 /**
@@ -196,7 +189,6 @@ static void set_next_type(private_id_payload_t *this,payload_type_t type)
  */
 static size_t get_length(private_id_payload_t *this)
 {
-	this->compute_length(this);
 	return this->payload_length;
 }
 
@@ -227,6 +219,7 @@ static void set_data (private_id_payload_t *this, chunk_t data)
 	}
 	this->id_data.ptr = allocator_clone_bytes(data.ptr,data.len);
 	this->id_data.len = data.len;
+	this->payload_length = ID_PAYLOAD_HEADER_LENGTH + this->id_data.len;
 }
 
 /**
@@ -258,14 +251,6 @@ static bool get_initiator (private_id_payload_t *this)
 static void set_initiator (private_id_payload_t *this,bool is_initiator)
 {
 	this->is_initiator = is_initiator;
-}
-
-/**
- * Implementation of private_id_payload_t.compute_length.
- */
-static void compute_length(private_id_payload_t *this)
-{
-	this->payload_length = ID_PAYLOAD_HEADER_LENGTH + this->id_data.len;
 }
 
 /**
@@ -305,10 +290,7 @@ id_payload_t *id_payload_create(bool is_initiator)
 	this->public.get_data = (chunk_t (*) (id_payload_t *)) get_data;
 	this->public.get_initiator = (bool (*) (id_payload_t *)) get_initiator;
 	this->public.set_initiator = (void (*) (id_payload_t *,bool)) set_initiator;
-	
-	/* private functions */
-	this->compute_length = compute_length;
-	
+
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
