@@ -50,7 +50,7 @@ void test_ike_sa(tester_t *tester)
 	
 	tester->assert_true(tester,(ike_sa != NULL), "ike_sa pointer check");
 */
-	tester->assert_true(tester,(ike_sa->destroy(ike_sa) == SUCCESS), "destroy call check");
+	ike_sa->destroy(ike_sa);
 	
 	ike_sa_id->destroy(ike_sa_id);
 }

@@ -48,10 +48,10 @@ void test_diffie_hellman(tester_t *tester)
 	other_diffie_hellman = diffie_hellman_create(MODP_1024_BIT);
 	tester->assert_true(tester,(other_diffie_hellman != NULL), "create call check");	
 
-	tester->assert_true(tester,(	my_diffie_hellman->get_my_public_value(my_diffie_hellman,&my_public_value) == SUCCESS), "get_my_public_value call check");
+	my_diffie_hellman->get_my_public_value(my_diffie_hellman,&my_public_value);
 	logger->log_chunk(logger,RAW,"My public value",&my_public_value);
 
-	tester->assert_true(tester,(	other_diffie_hellman->get_my_public_value(other_diffie_hellman,&other_public_value) == SUCCESS), "get_my_public_value call check");
+	other_diffie_hellman->get_my_public_value(other_diffie_hellman,&other_public_value);
 	logger->log_chunk(logger,RAW,"Other public value",&other_public_value);
 
 	my_diffie_hellman->set_other_public_value(my_diffie_hellman,other_public_value);

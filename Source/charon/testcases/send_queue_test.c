@@ -69,7 +69,7 @@ static void test_send_queue_sender(send_queue_test_t * testinfo)
 	{
 		packet_t *packet = packet_create(AF_INET);
 		testinfo->tester->assert_true(testinfo->tester,(packet != NULL), "create packet call check");
-		testinfo->tester->assert_true(testinfo->tester,(testinfo->send_queue->add(testinfo->send_queue,packet) == SUCCESS), "add packet call check");
+		testinfo->send_queue->add(testinfo->send_queue,packet);
 	}
 }
 
@@ -84,7 +84,7 @@ static void test_send_queue_receiver(send_queue_test_t * testinfo)
 	for (i = 0; i < testinfo->remove_item_count; i++)
 	{
 		packet_t *packet;
-		testinfo->tester->assert_true(testinfo->tester,(testinfo->send_queue->get(testinfo->send_queue,&packet) == SUCCESS), "get packet call check");
+		packet = testinfo->send_queue->get(testinfo->send_queue);
 
 		testinfo->tester->assert_true(testinfo->tester,(	packet != NULL), "packet not NULL call check");
 

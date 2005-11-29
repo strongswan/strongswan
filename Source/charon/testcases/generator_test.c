@@ -47,7 +47,6 @@ void test_generator_with_header_payload(tester_t *tester)
 	generator_t *generator;
 	ike_header_t *header_data;
 	chunk_t generated_data;
-	status_t status;
 	logger_t *logger;
 	
 	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"header payload");
@@ -98,7 +97,6 @@ void test_generator_with_header_payload(tester_t *tester)
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
 	generator->generate_payload(generator,(payload_t *)header_data);
-	tester->assert_true(tester,(status == SUCCESS),"generate_payload call check");
 	
 	generator->write_to_chunk(generator,&generated_data);
 
@@ -133,7 +131,6 @@ void test_generator_with_transform_attribute(tester_t *tester)
 {
 	generator_t *generator;
 	transform_attribute_t *attribute;
-	status_t status;
 	chunk_t generated_data;
 	logger_t *logger;
 	
@@ -153,7 +150,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	};
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 	allocator_free_chunk(&generated_data);
-	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
+	attribute->destroy(attribute);
 	generator->destroy(generator);
 	
 	/* test attribute with 2 byte data */	
@@ -178,7 +175,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data");
 
 	allocator_free_chunk(&generated_data);
-	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
+	attribute->destroy(attribute);
 	generator->destroy(generator);
 
 
@@ -192,11 +189,9 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	data.ptr = (void *) stringval;
 	data.len = 25;
 		
-	status = attribute->set_value_chunk(attribute,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
+	attribute->set_value_chunk(attribute,data);
 	
-	status = attribute->set_attribute_type(attribute,456);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute->set_attribute_type(attribute,456);
 
 
 	generator->generate_payload(generator,(payload_t *)attribute);
@@ -216,7 +211,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
 	allocator_free_chunk(&generated_data);
-	tester->assert_true(tester,(attribute->destroy(attribute) == SUCCESS), "attribute destroy call check");
+	attribute->destroy(attribute);
 	generator->destroy(generator);
 		
 
@@ -234,7 +229,6 @@ void test_generator_with_transform_substructure(tester_t *tester)
 	transform_attribute_t *attribute1, *attribute2;
 	transform_substructure_t *transform;
 	chunk_t data;
-	status_t status;
 	chunk_t generated_data;
 	logger_t *logger;
 	
@@ -249,10 +243,8 @@ void test_generator_with_transform_substructure(tester_t *tester)
 	char *stringval = "abcd";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute1->set_value_chunk(attribute1,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
-	status = attribute1->set_attribute_type(attribute1,0);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute1->set_value_chunk(attribute1,data);
+	attribute1->set_attribute_type(attribute1,0);
 	logger->log(logger,CONTROL,"attribute1 created");
 
 	/* create attribute 2 */
@@ -260,23 +252,17 @@ void test_generator_with_transform_substructure(tester_t *tester)
 	stringval = "efgh";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute2->set_value_chunk(attribute2,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
-	status = attribute2->set_attribute_type(attribute2,0);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute2->set_value_chunk(attribute2,data);
+	attribute2->set_attribute_type(attribute2,0);
 	logger->log(logger,CONTROL,"attribute2 created");
 
 	/* create transform */
 	transform = transform_substructure_create();
 	tester->assert_true(tester,(transform != NULL), "transform create check");
-	status = transform->add_transform_attribute(transform,attribute1);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
-	status = transform->add_transform_attribute(transform,attribute2);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
-	status = transform->set_transform_type(transform,5); /* hex 5 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_type call check");
-	status = transform->set_transform_id(transform,65000); /* hex FDE8 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_id call check");
+	transform->add_transform_attribute(transform,attribute1);
+	transform->add_transform_attribute(transform,attribute2);
+	transform->set_transform_type(transform,5); /* hex 5 */
+	transform->set_transform_id(transform,65000); /* hex FDE8 */
 	
 	
 	logger->log(logger,CONTROL,"transform created");
@@ -296,7 +282,7 @@ void test_generator_with_transform_substructure(tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
 	allocator_free_chunk(&generated_data);
-	tester->assert_true(tester,(transform->destroy(transform) == SUCCESS), "transform destroy call check");
+	transform->destroy(transform);
 	generator->destroy(generator);
 	
 	
@@ -314,7 +300,6 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	transform_substructure_t *transform1, *transform2;
 	proposal_substructure_t *proposal;
 	chunk_t data;
-	status_t status;
 	chunk_t generated_data;
 	logger_t *logger;
 	
@@ -329,10 +314,9 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	char *stringval = "abcd";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute1->set_value_chunk(attribute1,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
-	status = attribute1->set_attribute_type(attribute1,0);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute1->set_value_chunk(attribute1,data);
+	attribute1->set_attribute_type(attribute1,0);
+	
 	logger->log(logger,CONTROL,"attribute1 created");
 
 	/* create attribute 2 */
@@ -340,10 +324,8 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	stringval = "efgh";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute2->set_value_chunk(attribute2,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
-	status = attribute2->set_attribute_type(attribute2,0);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute2->set_value_chunk(attribute2,data);
+	attribute2->set_attribute_type(attribute2,0);
 	logger->log(logger,CONTROL,"attribute2 created");
 
 	/* create attribute 3 */
@@ -351,34 +333,25 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	stringval = "ijkl";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute3->set_value_chunk(attribute3,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
-	status = attribute3->set_attribute_type(attribute3,0);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute3->set_value_chunk(attribute3,data);
+	attribute3->set_attribute_type(attribute3,0);
 	logger->log(logger,CONTROL,"attribute3 created");
 
 	/* create transform 1*/
 	transform1 = transform_substructure_create();
 	tester->assert_true(tester,(transform1 != NULL), "transform create check");
-	status = transform1->add_transform_attribute(transform1,attribute1);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
-	status = transform1->add_transform_attribute(transform1,attribute2);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
-	status = transform1->set_transform_type(transform1,5); /* hex 5 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_type call check");
-	status = transform1->set_transform_id(transform1,65000); /* hex FDE8 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_id call check");
+	transform1->add_transform_attribute(transform1,attribute1);
+	transform1->add_transform_attribute(transform1,attribute2);
+	transform1->set_transform_type(transform1,5); /* hex 5 */
+	transform1->set_transform_id(transform1,65000); /* hex FDE8 */
 	
 	/* create transform 2*/
 	transform2 = transform_substructure_create();
 	tester->assert_true(tester,(transform2 != NULL), "transform create check");
-	status = transform2->add_transform_attribute(transform2,attribute3);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
-	status = transform2->set_transform_type(transform2,3); /* hex 3 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_type call check");
-	status = transform2->set_transform_id(transform2,4); /* hex 4 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_id call check");
-	
+	transform2->add_transform_attribute(transform2,attribute3);
+	transform2->set_transform_type(transform2,3); /* hex 3 */
+	transform2->set_transform_id(transform2,4); /* hex 4 */
+		
 	logger->log(logger,CONTROL,"transforms created");
 	
 	proposal = proposal_substructure_create();
@@ -388,17 +361,11 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	data.ptr = (void *) stringval;
 	data.len = 8;
 	
-	status = proposal->add_transform_substructure(proposal,transform1);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_substructure call check");
-	status = proposal->add_transform_substructure(proposal,transform2);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_substructure call check");	
-	status = proposal->set_spi(proposal,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_spi call check");	
-	status = proposal->set_proposal_number(proposal,7);
-	tester->assert_true(tester,(status == SUCCESS),"set_proposal_number call check");	
-	status = proposal->set_protocol_id(proposal,4);
-	tester->assert_true(tester,(status == SUCCESS),"set_protocol_id call check");	
-	
+	proposal->add_transform_substructure(proposal,transform1);
+	proposal->add_transform_substructure(proposal,transform2);
+	proposal->set_spi(proposal,data);
+	proposal->set_proposal_number(proposal,7);
+	proposal->set_protocol_id(proposal,4);	
 
 	generator->generate_payload(generator,(payload_t *)proposal);
 	generator->write_to_chunk(generator,&generated_data);
@@ -431,7 +398,7 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
 	allocator_free_chunk(&generated_data);
-	tester->assert_true(tester,(proposal->destroy(proposal) == SUCCESS), "proposal destroy call check");
+	proposal->destroy(proposal);
 	generator->destroy(generator);
 	
 	
@@ -451,7 +418,6 @@ void test_generator_with_sa_payload(tester_t *tester)
 	ike_header_t *ike_header;
 	
 	chunk_t data;
-	status_t status;
 	chunk_t generated_data;
 	logger_t *logger;
 	
@@ -466,10 +432,8 @@ void test_generator_with_sa_payload(tester_t *tester)
 	char *stringval = "abcd";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute1->set_value_chunk(attribute1,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
-	status = attribute1->set_attribute_type(attribute1,0);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute1->set_value_chunk(attribute1,data);
+	attribute1->set_attribute_type(attribute1,0);
 	logger->log(logger,CONTROL,"attribute1 created");
 
 	/* create attribute 2 */
@@ -477,10 +441,8 @@ void test_generator_with_sa_payload(tester_t *tester)
 	stringval = "efgh";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute2->set_value_chunk(attribute2,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
-	status = attribute2->set_attribute_type(attribute2,0);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute2->set_value_chunk(attribute2,data);
+	attribute2->set_attribute_type(attribute2,0);
 	logger->log(logger,CONTROL,"attribute2 created");
 
 	/* create attribute 3 */
@@ -488,34 +450,25 @@ void test_generator_with_sa_payload(tester_t *tester)
 	stringval = "ijkl";
 	data.ptr = (void *) stringval;
 	data.len = 4;
-	status = attribute3->set_value_chunk(attribute3,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_value call check");
-	status = attribute3->set_attribute_type(attribute3,0);
-	tester->assert_true(tester,(status == SUCCESS),"set_attribute_type call check");
+	attribute3->set_value_chunk(attribute3,data);
+	attribute3->set_attribute_type(attribute3,0);
 	logger->log(logger,CONTROL,"attribute3 created");
 
 	/* create transform 1*/
 	transform1 = transform_substructure_create();
 	tester->assert_true(tester,(transform1 != NULL), "transform create check");
-	status = transform1->add_transform_attribute(transform1,attribute1);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
-	status = transform1->add_transform_attribute(transform1,attribute2);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
-	status = transform1->set_transform_type(transform1,5); /* hex 5 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_type call check");
-	status = transform1->set_transform_id(transform1,65000); /* hex FDE8 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_id call check");
-	
+	transform1->add_transform_attribute(transform1,attribute1);
+	transform1->add_transform_attribute(transform1,attribute2);
+	transform1->set_transform_type(transform1,5); /* hex 5 */
+	transform1->set_transform_id(transform1,65000); /* hex FDE8 */
+		
 	/* create transform 2*/
 	transform2 = transform_substructure_create();
 	tester->assert_true(tester,(transform2 != NULL), "transform create check");
-	status = transform2->add_transform_attribute(transform2,attribute3);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_attribute call check");
-	status = transform2->set_transform_type(transform2,3); /* hex 3 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_type call check");
-	status = transform2->set_transform_id(transform2,4); /* hex 4 */
-	tester->assert_true(tester,(status == SUCCESS),"set_transform_id call check");
-	
+	transform2->add_transform_attribute(transform2,attribute3);
+	transform2->set_transform_type(transform2,3); /* hex 3 */
+	transform2->set_transform_id(transform2,4); /* hex 4 */
+		
 	logger->log(logger,CONTROL,"transforms created");
 	
 	/* create proposal 1 */
@@ -526,24 +479,17 @@ void test_generator_with_sa_payload(tester_t *tester)
 	data.ptr = (void *) stringval;
 	data.len = 8;
 	
-	status = proposal1->add_transform_substructure(proposal1,transform1);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_substructure call check");
-	status = proposal1->add_transform_substructure(proposal1,transform2);
-	tester->assert_true(tester,(status == SUCCESS),"add_transform_substructure call check");	
-	status = proposal1->set_spi(proposal1,data);
-	tester->assert_true(tester,(status == SUCCESS),"set_spi call check");	
-	status = proposal1->set_proposal_number(proposal1,7);
-	tester->assert_true(tester,(status == SUCCESS),"set_proposal_number call check");	
-	status = proposal1->set_protocol_id(proposal1,4);
-	tester->assert_true(tester,(status == SUCCESS),"set_protocol_id call check");	
+	proposal1->add_transform_substructure(proposal1,transform1);
+	proposal1->add_transform_substructure(proposal1,transform2);
+	proposal1->set_spi(proposal1,data);
+	proposal1->set_proposal_number(proposal1,7);
+	proposal1->set_protocol_id(proposal1,4);
 	
 	/* create proposal 2 */
 	proposal2 = proposal_substructure_create();
 	tester->assert_true(tester,(proposal2 != NULL), "proposal create check");
-	status = proposal2->set_proposal_number(proposal2,7);
-	tester->assert_true(tester,(status == SUCCESS),"set_proposal_number call check");	
-	status = proposal2->set_protocol_id(proposal2,5);
-	tester->assert_true(tester,(status == SUCCESS),"set_protocol_id call check");
+	proposal2->set_proposal_number(proposal2,7);
+	proposal2->set_protocol_id(proposal2,5);
 
 	/* create sa_payload */
 	sa_payload = sa_payload_create();
@@ -608,8 +554,8 @@ void test_generator_with_sa_payload(tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
 	allocator_free_chunk(&generated_data);
-	tester->assert_true(tester,(ike_header->destroy(ike_header) == SUCCESS), "ike_header destroy call check");
-	tester->assert_true(tester,(sa_payload->destroy(sa_payload) == SUCCESS), "sa_payload destroy call check");
+	ike_header->destroy(ike_header);
+	sa_payload->destroy(sa_payload);
 	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
@@ -664,7 +610,7 @@ void test_generator_with_ke_payload(tester_t *tester)
 
 	allocator_free_chunk(&generated_data);	
 	
-	tester->assert_true(tester,(ke_payload->destroy(ke_payload) == SUCCESS), "sa_payload destroy call check");
+	ke_payload->destroy(ke_payload);
 	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
@@ -724,7 +670,7 @@ void test_generator_with_notify_payload(tester_t *tester)
 
 	allocator_free_chunk(&generated_data);	
 	
-	tester->assert_true(tester,(notify_payload->destroy(notify_payload) == SUCCESS), "notify_payload destroy call check");
+	notify_payload->destroy(notify_payload);
 	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	
@@ -778,7 +724,7 @@ void test_generator_with_nonce_payload(tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	
 	
-	tester->assert_true(tester,(nonce_payload->destroy(nonce_payload) == SUCCESS), "notify_payload destroy call check");
+	nonce_payload->destroy(nonce_payload);
 	generator->destroy(generator);
 		
 	global_logger_manager->destroy_logger(global_logger_manager,logger);	

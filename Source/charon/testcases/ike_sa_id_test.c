@@ -32,7 +32,6 @@ void test_ike_sa_id(tester_t *tester)
 	ike_sa_id_t *ike_sa_id, *clone, *equal, *other1, *other2, *other3, *other4;
 	u_int64_t initiator, initiator2, responder, responder2;
 	bool is_initiator;
-	bool are_equal = FALSE;
 	
 	initiator = 0;
 
@@ -53,33 +52,25 @@ void test_ike_sa_id(tester_t *tester)
 	other4 = ike_sa_id_create(initiator, responder, is_initiator);
 	
 	/* check equality */
-	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,equal,&are_equal) == SUCCESS), "equal call check");
-	tester->assert_true(tester,(are_equal == TRUE), "equal check");
-	tester->assert_true(tester,(equal->equals(equal,ike_sa_id,&are_equal) == SUCCESS), "equal call check");
-	tester->assert_true(tester,(are_equal == TRUE), "equal check");	
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,equal) == TRUE), "equal check");
+	tester->assert_true(tester,(equal->equals(equal,ike_sa_id) == TRUE), "equal check");
 
 	/* check clone functionality and equality*/	
-	tester->assert_true(tester,(ike_sa_id->clone(ike_sa_id,&clone) == SUCCESS), "clone call check");
+	clone = ike_sa_id->clone(ike_sa_id);
 	tester->assert_false(tester,(clone == ike_sa_id), "clone pointer check");	
-	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,clone,&are_equal) == SUCCESS), "equal call check");
-	tester->assert_true(tester,(are_equal == TRUE), "equal check");
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,clone) == TRUE), "equal check");
 	
 	/* check for non equality */
-	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other1,&are_equal) == SUCCESS), "equal call check");
-	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+	tester->assert_false(tester,(ike_sa_id->equals(ike_sa_id,other1) == TRUE), "equal check");
 
-	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other2,&are_equal) == SUCCESS), "equal call check");
-	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+	tester->assert_false(tester,(ike_sa_id->equals(ike_sa_id,other2) == TRUE), "equal check");
 
-	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other3,&are_equal) == SUCCESS), "equal call check");
-	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+	tester->assert_false(tester,(ike_sa_id->equals(ike_sa_id,other3) == TRUE), "equal check");
 
-	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other4,&are_equal) == SUCCESS), "equal call check");
-	tester->assert_false(tester,(are_equal == TRUE), "equal check");
+	tester->assert_false(tester,(ike_sa_id->equals(ike_sa_id,other4) == TRUE), "equal check");
 
-	tester->assert_true(tester,(other4->replace_values(other4,ike_sa_id) == SUCCESS), "replace values call check");
-	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other4,&are_equal) == SUCCESS), "equal call check");
-	tester->assert_true(tester,(are_equal == TRUE), "equal check");
+	other4->replace_values(other4,ike_sa_id);
+	tester->assert_true(tester,(ike_sa_id->equals(ike_sa_id,other4) == TRUE), "equal check");
 	
 	
 	/* check destroy functionality */

@@ -68,7 +68,6 @@ struct event_queue_test_s{
 static void event_queue_insert_thread(event_queue_test_t * testinfos)
 {
 	timeval_t current_time;
-	tester_t *tester = testinfos->tester;
 	timeval_t time;
 	job_t * job;
 	int i,j;
@@ -83,7 +82,7 @@ static void event_queue_insert_thread(event_queue_test_t * testinfos)
 			time.tv_usec = 0;
 			time.tv_sec = current_time.tv_sec + i;
 
-			tester->assert_true(tester,(testinfos->event_queue->add_absolute(testinfos->event_queue,job,time) == SUCCESS), "add call check");
+			testinfos->event_queue->add_absolute(testinfos->event_queue,job,time);
 		}
 	}
 }
@@ -131,7 +130,7 @@ void test_event_queue(tester_t *tester)
 		{
 			job_t *job;
 		
-			tester->assert_true(tester,(event_queue->get(event_queue,&job) == SUCCESS), "get call check");
+			job = event_queue->get(event_queue);
 			gettimeofday(&current_time,NULL);
 			tester->assert_true(tester,((current_time.tv_sec - start_time.tv_sec) == i), "value of entry check");
 			tester->assert_true(tester,(job->destroy(job) == SUCCESS), "job destroy call check");
@@ -140,6 +139,6 @@ void test_event_queue(tester_t *tester)
 	}
 
 
-	tester->assert_true(tester,(event_queue->destroy(event_queue) == SUCCESS), "destroy call check");
+	event_queue->destroy(event_queue);
 	return;
 }

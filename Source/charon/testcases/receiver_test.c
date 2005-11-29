@@ -72,7 +72,7 @@ void test_receiver(tester_t *tester)
 
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
-		global_job_queue->get(global_job_queue,&job);
+		job = global_job_queue->get(global_job_queue);
 		tester->assert_true(tester, (job->get_type(job) == INCOMING_PACKET), "job type check");
 		
 		((incoming_packet_job_t *)(job))->get_packet((incoming_packet_job_t *)(job),&received_packet);

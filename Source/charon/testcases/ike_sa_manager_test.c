@@ -105,8 +105,7 @@ void test_ike_sa_manager(tester_t *tester)
 	sa_id = ike_sa->get_id(ike_sa);
 	sa_id->set_responder_spi(sa_id, responder);	
 	
-	status = sa_id->clone(sa_id,&ike_sa_id);
-	tester->assert_true(tester, (status == SUCCESS), "clone sa id");
+	ike_sa_id = sa_id->clone(sa_id);
 		
 	/* check in, so we should have a "completed" sa, specified by ike_sa_id */
 	status = td.isam->checkin(td.isam, ike_sa);

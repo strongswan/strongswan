@@ -78,7 +78,7 @@ static void test_job_queue_receiver(job_queue_test_t * testinfo)
 	for (i = 0; i < testinfo->remove_item_count; i++)
 	{
 		job_t *job;
-		testinfo->tester->assert_true(testinfo->tester,(testinfo->job_queue->get(testinfo->job_queue,&job) == SUCCESS), "get job call check");
+		job = testinfo->job_queue->get(testinfo->job_queue);
 		testinfo->tester->assert_true(testinfo->tester,(job->get_type(job) == INITIATE_IKE_SA), "job type check");
 		testinfo->tester->assert_true(testinfo->tester,(job->destroy(job) == SUCCESS), "job destroy call check");
 	}
@@ -129,5 +129,5 @@ void test_job_queue(tester_t *tester)
 	/* the job-queue has to have disered_value count entries! */
 	tester->assert_true(tester,(job_queue->get_count(job_queue) == desired_value), "get count value check");
 
-	tester->assert_true(tester,(job_queue->destroy(job_queue) == SUCCESS), "destroy call check");
+	job_queue->destroy(job_queue);
 }

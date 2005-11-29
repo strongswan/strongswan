@@ -77,7 +77,7 @@ void test_scheduler(tester_t *tester)
 	/* check job order */
 	for (current = 0; current < job_count; current++)
 	{
-		global_job_queue->get(global_job_queue, &(jobs[current]));
+		jobs[current] =	global_job_queue->get(global_job_queue);
 		incoming_packet_job_t *current_job;
 		current_job = (incoming_packet_job_t*) jobs[current];
 		packet_t *packet;
