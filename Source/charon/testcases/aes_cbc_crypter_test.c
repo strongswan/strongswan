@@ -25,7 +25,7 @@
 #include "aes_cbc_crypter_test.h"
 
 #include <utils/allocator.h>
-#include <globals.h>
+#include <daemon.h>
 
 void test_aes_cbc_crypter(tester_t *tester)
 {
@@ -53,7 +53,7 @@ void test_aes_cbc_crypter(tester_t *tester)
 	chunk_t decrypted1;
  	logger_t *logger;
 	
-	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"AES CBC");
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"AES CBC");
 	 	 
 	crypter = (crypter_t *) aes_cbc_crypter_create(16);
   	tester->assert_true(tester, (crypter != NULL), "create call test");
@@ -199,6 +199,6 @@ void test_aes_cbc_crypter(tester_t *tester)
 	
 	crypter->destroy(crypter);
 	
-	global_logger_manager->destroy_logger(global_logger_manager,logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);
 }
 

@@ -28,170 +28,84 @@
 
 
 #include <types.h>
-#include <sa/ike_sa_manager.h>
-#include <threads/sender.h>
-#include <threads/receiver.h>
-#include <threads/scheduler.h>
-#include <threads/thread_pool.h>
-#include <network/socket.h>
 #include <utils/allocator.h>
-#include <utils/logger_manager.h>
-#include <queues/event_queue.h>
-#include <queues/job_queue.h>
-#include <queues/send_queue.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 
 
-/* function declaration (defined and described after main function) */
 
-static status_t initialize_globals();
-static void destroy_globals();
-static status_t start_threads();
-static void end_threads();
-static void main_loop();
-static void register_signals();
-static void destroy_and_exit(int);
 
-/** Global job-queue */
-job_queue_t *global_job_queue = NULL;
-/** Global event-queue */
-event_queue_t *global_event_queue = NULL;
- /** Global send-queue */
-send_queue_t *global_send_queue = NULL;
- /** Global socket */
-socket_t *global_socket = NULL;
-/** Global logger manager */
-logger_manager_t *global_logger_manager = NULL;
-/** Global ike_sa-manager */
-ike_sa_manager_t *global_ike_sa_manager = NULL;
-/** Global configuration-manager */
-configuration_manager_t *global_configuration_manager = NULL;
+typedef struct private_daemon_t private_daemon_t;
 
 /**
- * logger_t object assigned for daemon things
+ * Private additions to daemon_t, contains
+ * threads and internal functions.
  */
-static logger_t *logger = NULL;
-
-/**
- * Sender-Thread
- */
-static sender_t *sender_thread = NULL;
-/**
- * Receiver-Thread
- */
-static receiver_t *receiver_thread = NULL;
-/**
- * Scheduler-Thread
- */
-static scheduler_t *scheduler_thread = NULL;
-/**
- * Thread pool holding the worker threads
- */
-static thread_pool_t *thread_pool = NULL;
-
-/**
- * Signal set used for signal handling
- */
-sigset_t signal_set;
-
-
-int main()
-{
-	/* set signal handler */
-	register_signals();
+struct private_daemon_t {
+	/**
+	 * public members of daemon_t
+	 */
+	daemon_t public;
 	
-	/* logger_manager is created first */
- 	global_logger_manager = logger_manager_create(FULL);
-	if (global_logger_manager == NULL)
- 	{
-		printf("could not create logger manager");
- 		return -1;
- 	}
+	/**
+	 * logger_t object assigned for daemon things
+	 */
+	logger_t *logger;
 
- 	/* a own logger for the daemon is created */
- 	logger = global_logger_manager->create_logger(global_logger_manager,DAEMON,NULL);
- 	if (logger == NULL)
- 	{
-		printf("could not create logger object");
- 		destroy_globals();
- 		return -1;
- 	}
+	/**
+	 * Signal set used for signal handling
+	 */
+	sigset_t signal_set;
 	
-	/* initialize all global objects */
- 	if (initialize_globals() != SUCCESS)
- 	{
- 		destroy_globals();
- 		return -1;
- 	}
- 	
- 	logger->log(logger,CONTROL,"starting %s", DAEMON_NAME); 	
- 	/* now  its time to create all the different threads :-) */ 
-	if (start_threads() != SUCCESS)
+	void (*run) (private_daemon_t *this);
+	void (*destroy) (private_daemon_t *this, char *reason);
+	void (*build_test_jobs) (private_daemon_t *this);
+	void (*initialize) (private_daemon_t *this);
+	void (*cleanup) (private_daemon_t *this);
+};
+
+
+
+/** 
+ * instance of the daemon 
+ */
+daemon_t *charon;
+
+
+
+/**
+ * Loop of the main thread, waits for signals
+ */
+static void run(private_daemon_t *this)
+{	
+	while(TRUE)
 	{
-		/* ugh, not good */
-	 	logger->log(logger,CONTROL,"Fatal error: Needed Threads could not be started");		
-	 	destroy_and_exit(-1);
-	}
-	
-	int i;
-	for(i = 0; i<1; i++)
-	{
-		initiate_ike_sa_job_t *initiate_job;
+		int signal_number;
+		int error;
 		
-		initiate_job = initiate_ike_sa_job_create("localhost");
-		global_job_queue->add(global_job_queue, (job_t*)initiate_job);
-		
-	}
- 	
- 	logger->log(logger,CONTROL|MORE,"going to wait for exit signal");
- 	/* go and handle signals*/
- 	main_loop();
- 	
- 	destroy_and_exit(0);
- 	
- 	/* never reached */
- 	return -1;
-}
-
-/**
- * Main Loop.
- * Waits for registered signals and acts dependently
- */
-static void main_loop()
-{
-	while(1)
-	{
-	   int signal_number;
-       int error;
-
-       error = sigwait(&signal_set, &signal_number);
-
-       if(error)
-       {
-              /* do error code */
-			  logger->log(logger,CONTROL,"Error %d when waiting for signal",error);
-              return;
-       }
-       switch (signal_number)
-       {
+		error = sigwait(&(this->signal_set), &signal_number);
+		if(error)
+		{
+			this->logger->log(this->logger, ERROR, "Error %d when waiting for signal", error);
+			return;
+		}
+		switch (signal_number)
+		{
 			case SIGHUP:
 			{
-				logger->log(logger,CONTROL,"Signal of type SIGHUP received. Do nothing");
+				this->logger->log(this->logger, CONTROL, "Signal of type SIGHUP received. Do nothing");
 				break;
 			}
 			case SIGINT:
 			{
-				logger->log(logger,CONTROL,"Signal of type SIGINT received. Exit main loop.");
+				this->logger->log(this->logger, CONTROL, "Signal of type SIGINT received. Exit main loop.");
 				return;
 			}
 			case SIGTERM:
-			{
-				logger->log(logger,CONTROL,"Signal of type SIGTERM received. Exit main loop.");			
+				this->logger->log(this->logger, CONTROL, "Signal of type SIGTERM received. Exit main loop.");
 				return;
-			}
 			default:
 			{
-				logger->log(logger,CONTROL,"Unknown signal %d received. Do nothing",signal_number);
+				this->logger->log(this->logger, CONTROL, "Unknown signal %d received. Do nothing", signal_number);
 				break;
 			}
 		}
@@ -199,169 +113,167 @@ static void main_loop()
 }
 
 /**
- * Registers signals SIGINT, SIGHUP and SIGTERM.
- * Signals are handled in main_loop()
+ * Initialize the destruction of the daemon
  */
-static void register_signals()
+static void destroy(private_daemon_t *this, char *reason)
 {
-    sigemptyset(&signal_set);
-    sigaddset(&signal_set, SIGINT); 
-    sigaddset(&signal_set, SIGHUP); 
-    sigaddset(&signal_set, SIGTERM); 
-    pthread_sigmask(SIG_BLOCK, &signal_set, 0);
-
+	/* we send SIGTERM, so the daemon can cleanly shut down */
+	this->logger->log(this->logger, ERROR, "Killing daemon: %s", reason);
+	this->logger->log(this->logger, CONTROL, "sending SIGTERM to ourself", reason);
+	kill(0, SIGTERM);
+	/* thread must die, since he produced a ciritcal failure and can't continue */
+	pthread_exit(NULL);
 }
 
 /**
- * Initializes global objects
- * 
- * @return
- * 			- SUCCESS
- * 			- FAILED
+ * build some jobs to test daemon functionality
  */
-static status_t initialize_globals()
+static void build_test_jobs(daemon_t *this)
 {
- 	/* initialize global object */
- 	global_socket = socket_create(IKEV2_UDP_PORT);
- 	global_ike_sa_manager = ike_sa_manager_create();
- 	global_job_queue = job_queue_create();
- 	global_event_queue = event_queue_create();
- 	global_send_queue = send_queue_create();
- 	global_configuration_manager = configuration_manager_create();
- 	
- 	if (	(global_socket == NULL) ||
-		(global_job_queue == NULL) ||
-		(global_event_queue == NULL) ||
-		(global_send_queue == NULL) ||
-		(global_configuration_manager == NULL) ||
-		(global_ike_sa_manager == NULL))
- 	{
-	 	return FAILED;
- 	}
- 	
- 	return SUCCESS;
-}
-
-/**
- * Destroy global objects
- */
-static void destroy_globals()
-{
-	if (global_job_queue != NULL)
+	int i;
+	for(i = 0; i<1; i++)
 	{
-	 	logger->log(logger,CONTROL|MOST,"destroy global_job_queue");
-		global_job_queue->destroy(global_job_queue);
+		initiate_ike_sa_job_t *initiate_job;
+		initiate_job = initiate_ike_sa_job_create("localhost");
+		this->job_queue->add(this->job_queue, (job_t*)initiate_job);
 	}
-	if (global_event_queue != NULL)
-	{
-	 	logger->log(logger,CONTROL|MOST,"destroy global_event_queue");
-		global_event_queue->destroy(global_event_queue);	
-	}
-	if (global_send_queue != NULL)
-	{
-	 	logger->log(logger,CONTROL|MOST,"destroy global_send_queue");
-		global_send_queue->destroy(global_send_queue);	
-	}
-	if (global_socket != NULL)
-	{
-	 	logger->log(logger,CONTROL|MOST,"destroy global_socket");
-		global_socket->destroy(global_socket);
-	}
-	if (global_ike_sa_manager != NULL)
-	{
-	 	logger->log(logger,CONTROL|MOST,"destroy global_ike_sa_manager");
-		global_ike_sa_manager->destroy(global_ike_sa_manager);
-	}
-	if (global_configuration_manager != NULL)
-	{
-	 	logger->log(logger,CONTROL|MOST,"destroy global_configuration_manager");
-		global_configuration_manager->destroy(global_configuration_manager);
-	}
-}
-
-/**
- * Creates all needed Threads
- * 
- * @return
- * 			- SUCCESS
- * 			- FAILED
- */
-static status_t start_threads()
-{
-	sender_thread = sender_create();
-	if (sender_thread == NULL)
-	{
-		return FAILED;
-	}
-	receiver_thread = receiver_create();
-	if (receiver_thread == NULL)
-	{
-		return FAILED;
-	}	
-	scheduler_thread = scheduler_create();
-	if (scheduler_thread == NULL)
-	{
-		return FAILED;
-	}
-	thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
-	if (thread_pool == NULL)
-	{
-		return FAILED;
-	}
-
-	return SUCCESS;
 }
 
 
 /**
- * Ends all Threads
- * 
+ * Initialize global objects and threads
  */
-static void end_threads()
+static void initialize(daemon_t *this)
 {
-	if (receiver_thread != NULL)
-	{
-		receiver_thread->destroy(receiver_thread);
-	}
-	if (scheduler_thread != NULL)
-	{
-		scheduler_thread->destroy(scheduler_thread);	
-	}
-	if (sender_thread != NULL)
-	{
-		sender_thread->destroy(sender_thread);
-	}
-	if (thread_pool != NULL)
-	{
-		thread_pool->destroy(thread_pool);	
-	}
-
-}
-
-/**
- * Destroys initialized objects, kills all threads and exits
- * 
- * @param exit_code Code to exit with
- */
-static void destroy_and_exit(int exit_code)
-{
- 	logger->log(logger,CONTROL,"going to exit daemon"); 	
-
-	end_threads();
+	this->socket = socket_create(IKEV2_UDP_PORT);
+	this->ike_sa_manager = ike_sa_manager_create();
+	this->job_queue = job_queue_create();
+	this->event_queue = event_queue_create();
+	this->send_queue = send_queue_create();
+	this->configuration_manager = configuration_manager_create();
 	
-	/* all globals can be destroyed now */
-	destroy_globals();
-	
-	/* logger is destroyed */
- 	logger->log(logger,CONTROL|MORE,"destroy logger");
- 	logger->log(logger,CONTROL|MORE,"destroy logger_manager");
-	global_logger_manager->destroy_logger(global_logger_manager,logger);
-	global_logger_manager->destroy(global_logger_manager);
+	this->sender = sender_create();
+	this->receiver = receiver_create();
+	this->scheduler = scheduler_create();
+	this->thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
+}
 
+/**
+ * Destory all initiated objects
+ */
+static void cleanup(daemon_t *this)
+{
+	if (this->receiver != NULL)
+	{
+		this->receiver->destroy(this->receiver);
+	}
+	if (this->scheduler != NULL)
+	{
+		this->scheduler->destroy(this->scheduler);	
+	}
+	if (this->sender != NULL)
+	{
+		this->sender->destroy(this->sender);
+	}
+	if (this->thread_pool != NULL)
+	{
+		this->thread_pool->destroy(this->thread_pool);	
+	}
+	if (this->job_queue != NULL)
+	{
+		this->job_queue->destroy(this->job_queue);
+	}
+	if (this->event_queue != NULL)
+	{
+		this->event_queue->destroy(this->event_queue);	
+	}
+	if (this->send_queue != NULL)
+	{
+		this->send_queue->destroy(this->send_queue);	
+	}
+	if (this->socket != NULL)
+	{
+		this->socket->destroy(this->socket);
+	}
+	if (this->ike_sa_manager != NULL)
+	{
+		this->ike_sa_manager->destroy(this->ike_sa_manager);
+	}
+	if (this->configuration_manager != NULL)
+	{
+		this->configuration_manager->destroy(this->configuration_manager);
+	}
+	
+	this->logger_manager->destroy(this->logger_manager);
+	allocator_free(this);
+}
+
+
+
+/**
+ * @brief Create the daemon.
+ * 
+ * @return 	created daemon_t
+ */
+private_daemon_t *daemon_create()
+{
+	private_daemon_t *this = allocator_alloc_thing(private_daemon_t);
+		
+	/* assign methods */
+	this->run = run;
+	this->public.destroy = (void (*) (daemon_t*,char*))destroy;
+	this->build_test_jobs = (void (*) (private_daemon_t*)) build_test_jobs;
+	this->initialize = (void (*) (private_daemon_t*))initialize;
+	this->cleanup = (void (*) (private_daemon_t*))cleanup;
+	
+	/* first build a logger */
+	this->public.logger_manager = logger_manager_create(DEFAULT_LOGLEVEL);
+	this->logger = (this->public.logger_manager)->create_logger(this->public.logger_manager, DAEMON, NULL);
+	
+	/* NULL members for clean destruction */
+	this->public.socket = NULL;
+	this->public.ike_sa_manager = NULL;
+	this->public.job_queue = NULL;
+	this->public.event_queue = NULL;
+	this->public.send_queue = NULL;
+	this->public.configuration_manager = NULL;
+	this->public.sender= NULL;
+	this->public.receiver = NULL;
+	this->public.scheduler = NULL;
+	this->public.thread_pool = NULL;
+	
+	/* setup signal handling */
+	sigemptyset(&(this->signal_set));
+	sigaddset(&(this->signal_set), SIGINT); 
+	sigaddset(&(this->signal_set), SIGHUP); 
+	sigaddset(&(this->signal_set), SIGTERM); 
+	pthread_sigmask(SIG_BLOCK, &(this->signal_set), 0);
+	
+	return this;
+}
+
+/**
+ * Main function, manages the daemon
+ */
+int main(int argc, char *argv[])
+{
+	private_daemon_t *private_charon;
+	
+	private_charon = daemon_create();
+	charon = (daemon_t*)private_charon;
+	
+	private_charon->initialize(private_charon);
+	
+	private_charon->build_test_jobs(private_charon);
+	
+	private_charon->run(private_charon);
+	
+	private_charon->cleanup(private_charon);
+	
 #ifdef LEAK_DETECTIVE
-	/* Leaks are reported in log file */
 	report_memory_leaks(void);
 #endif
 
-	exit(exit_code);	
+	return 0;
 }
+

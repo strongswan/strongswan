@@ -360,7 +360,7 @@ static status_t encrypt(private_encryption_payload_t *this, crypter_t *crypter)
 		
 	/* encrypt concatenated chunk */
 	allocator_free(this->encrypted.ptr);
-	status = crypter->encrypt(crypter, iv, concatenated, &(this->encrypted));
+	status = crypter->encrypt(crypter, concatenated, iv, &(this->encrypted));
 	allocator_free(padding.ptr);
 	allocator_free(concatenated.ptr);
 	allocator_free(iv.ptr);
@@ -408,7 +408,7 @@ static status_t decrypt(private_encryption_payload_t *this, crypter_t *crypter)
 	/* free previus data, if any */
 	allocator_free(this->decrypted.ptr);
 	
-	status = crypter->decrypt(crypter, iv, concatenated, &(this->decrypted));
+	status = crypter->decrypt(crypter, concatenated, iv, &(this->decrypted));
 	if (status != SUCCESS)
 	{
 		return FAILED;

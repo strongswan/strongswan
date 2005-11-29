@@ -23,7 +23,7 @@
 #include "initiator_init.h"
 
 
-#include <globals.h>
+#include <daemon.h>
 #include <sa/states/state.h>
 #include <sa/states/ike_sa_init_requested.h>
 #include <utils/allocator.h>
@@ -148,7 +148,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
 	/* get local host */
-	status = global_configuration_manager->get_local_host(global_configuration_manager, name, &my_host);
+	status = charon->configuration_manager->get_local_host(charon->configuration_manager, name, &my_host);
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve local host configuration information for %s",name);
@@ -157,7 +157,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->ike_sa->set_my_host(this->ike_sa,my_host);
 	
 	/* get remote host */
-	status = global_configuration_manager->get_remote_host(global_configuration_manager, name, &other_host);
+	status = charon->configuration_manager->get_remote_host(charon->configuration_manager, name, &other_host);
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve remote host configuration information for %s",name);
@@ -166,7 +166,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->ike_sa->set_other_host(this->ike_sa,other_host);
 	
 	/* get dh group */
-	status = global_configuration_manager->get_dh_group_number(global_configuration_manager, name, &(this->dh_group_number), this->dh_group_priority);
+	status = charon->configuration_manager->get_dh_group_number(charon->configuration_manager, name, &(this->dh_group_number), this->dh_group_priority);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve DH group number configuration for %s",name);
@@ -175,7 +175,8 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 
 	/* get proposals */
 	proposal_iterator = this->proposals->create_iterator(this->proposals, FALSE);
-	status = global_configuration_manager->get_proposals_for_host(global_configuration_manager, this->ike_sa->get_other_host(this->ike_sa), proposal_iterator);
+	status = charon->configuration_manager->get_proposals_for_host(charon->configuration_manager, this->ike_sa->get_other_host(this->ike_sa), proposal_iterator);
+	
 	proposal_iterator->destroy(proposal_iterator);
 	if (status != SUCCESS)
 	{
@@ -220,7 +221,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	}
 	
 	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
-	global_send_queue->add(global_send_queue, packet);
+	charon->send_queue->add(charon->send_queue, packet);
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");

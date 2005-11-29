@@ -25,7 +25,7 @@
 
 #include "ike_sa_manager.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <sa/ike_sa_id.h>
 #include <utils/allocator.h>
 #include <utils/logger.h>
@@ -645,7 +645,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	pthread_mutex_unlock(&(this->mutex));
 
 	/* destroy logger at end */
-	global_logger_manager->destroy_logger(global_logger_manager,this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 
 	allocator_free(this);
 }
@@ -672,7 +672,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->delete_entry = delete_entry;
 
 	/* initialize private variables */
-	this->logger = global_logger_manager->create_logger(global_logger_manager,IKE_SA_MANAGER,NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager,IKE_SA_MANAGER,NULL);
 	
 	this->ike_sa_list = linked_list_create();
 

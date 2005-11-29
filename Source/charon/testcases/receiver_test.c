@@ -25,7 +25,7 @@
 
 #include "receiver_test.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <threads/receiver.h>
 #include <network/packet.h>
 #include <network/socket.h>
@@ -66,13 +66,13 @@ void test_receiver(tester_t *tester)
 		packet->data.ptr = allocator_alloc_thing(int);
 		packet->data.len = ( sizeof(int));
 		*((int *) (packet->data.ptr)) = i;
-		global_socket->send(global_socket,packet);
+		charon->socket->send(charon->socket,packet);
 		packet->destroy(packet);
 	}
 
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
-		job = global_job_queue->get(global_job_queue);
+		job = charon->job_queue->get(charon->job_queue);
 		tester->assert_true(tester, (job->get_type(job) == INCOMING_PACKET), "job type check");
 		
 		received_packet = ((incoming_packet_job_t *)(job))->get_packet((incoming_packet_job_t *)(job));

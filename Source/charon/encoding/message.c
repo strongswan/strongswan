@@ -25,7 +25,7 @@
 #include "message.h"
 
 #include <types.h>
-#include <globals.h>
+#include <daemon.h>
 #include <sa/ike_sa_id.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
@@ -736,7 +736,7 @@ static void destroy (private_message_t *this)
 	iterator->destroy(iterator);
 	this->payloads->destroy(this->payloads);
 	this->parser->destroy(this->parser);
-	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 	
 	allocator_free(this);
 }
@@ -795,7 +795,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	/* parser is created from data of packet */
  	this->parser = parser_create(this->packet->data);
 		
-	this->logger = global_logger_manager->create_logger(global_logger_manager, MESSAGE, NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager, MESSAGE, NULL);
 
 	return (&this->public);
 }

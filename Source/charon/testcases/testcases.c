@@ -23,6 +23,8 @@
  
 #include <stdio.h>
 
+#include <daemon.h>
+
 #include <queues/job_queue.h>
 #include <queues/event_queue.h>
 #include <queues/send_queue.h>
@@ -98,47 +100,53 @@ test_t hmac_signer_test1 = {test_hmac_md5_signer, "HMAC MD5 signer test"};
 test_t hmac_signer_test2 = {test_hmac_sha1_signer, "HMAC SHA1 signer test"};
 
 
-/**
- * Global job-queue
- */
-job_queue_t *global_job_queue;
+daemon_t* charon;
 
-/**
- * Global event-queue
- */
-event_queue_t *global_event_queue;
- 
-/**
- * Global send-queue
- */
-send_queue_t *global_send_queue;
-
-/**
- * Global configuration_manager
- */
-configuration_manager_t *global_configuration_manager;
-
-/**
- * Global configuration_manager
- */
-ike_sa_manager_t *global_ike_sa_manager;
-
- /**
-  * Global socket
-  */
-socket_t *global_socket;
-
-
-/**
- * Global logger
- */
-logger_manager_t *global_logger_manager;
-  
- int main()
+static void daemon_destroy(daemon_t *this, char* none)
 {
- 	FILE * test_output = stderr;
- 	
- 	test_t *all_tests[] ={
+	this->logger_manager->destroy(this->logger_manager);
+	this->socket->destroy(this->socket);
+	this->ike_sa_manager->destroy(this->ike_sa_manager);
+	this->job_queue->destroy(this->job_queue);
+	this->event_queue->destroy(this->event_queue);
+	this->send_queue->destroy(this->send_queue);
+	this->configuration_manager->destroy(this->configuration_manager);
+	allocator_free(charon);
+}
+
+/**
+ * @brief Create the dummy daemon for testing.
+ * 
+ * @return 	created daemon_t
+ */
+daemon_t *daemon_create()
+{
+	charon = allocator_alloc_thing(daemon_t);
+		
+	/* assign methods */
+	charon->destroy = daemon_destroy;
+	
+	charon->logger_manager = logger_manager_create(0);
+	charon->socket = socket_create(4600);
+	charon->ike_sa_manager = ike_sa_manager_create();
+	charon->job_queue = job_queue_create();
+	charon->event_queue = event_queue_create();
+	charon->send_queue = send_queue_create();
+	charon->configuration_manager = configuration_manager_create();
+	charon->sender = NULL;
+	charon->receiver = NULL;
+	charon->scheduler = NULL;
+	charon->thread_pool = NULL;
+	
+	return charon;
+}
+
+
+int main()
+{
+	FILE * test_output = stderr;
+	
+	test_t *all_tests[] ={
 		&linked_list_test,
 		&iterator_test,
 		&linked_list_insert_and_remove_test,
@@ -180,42 +188,22 @@ logger_manager_t *global_logger_manager;
 		&hmac_signer_test2,
 		NULL
 	};
- 	global_logger_manager = logger_manager_create(0);
-
-	global_socket = socket_create(4600);
- 	
- 	global_job_queue = job_queue_create();
- 	global_event_queue = event_queue_create();
- 	global_send_queue = send_queue_create();
- 	global_configuration_manager = configuration_manager_create();
- 	global_ike_sa_manager = ike_sa_manager_create();
- 	
-	global_logger_manager->disable_logger_level(global_logger_manager,TESTER,FULL);
-	//global_logger_manager->enable_logger_level(global_logger_manager,TESTER,RAW);
- 	 	
- 	tester_t *tester = tester_create(test_output, FALSE);
-
-
+ 
+	daemon_create();
+ 
+	charon->logger_manager->disable_logger_level(charon->logger_manager,TESTER,FULL);
+	//charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW);
+	
+	tester_t *tester = tester_create(test_output, FALSE);
+	
+	
 	tester->perform_tests(tester,all_tests);
 	//tester->perform_test(tester,&generator_test9); 
-
-
- 	
+	
+	
 	tester->destroy(tester);
-
-
-	/* Destroy objects*/
- 	global_configuration_manager->destroy(global_configuration_manager);
- 	global_ike_sa_manager->destroy(global_ike_sa_manager);
 	
-	/* Destroy all queues */
-	global_job_queue->destroy(global_job_queue);
-	global_event_queue->destroy(global_event_queue);	
-	global_send_queue->destroy(global_send_queue);
-	
-	global_socket->destroy(global_socket);
-	
-	global_logger_manager->destroy(global_logger_manager);
+	charon->destroy(charon, NULL);
 	
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported on stderr */

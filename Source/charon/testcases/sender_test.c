@@ -24,7 +24,7 @@
 
 #include "sender_test.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <threads/sender.h>
 #include <network/packet.h>
 #include <network/socket.h>
@@ -62,12 +62,12 @@ void test_sender(tester_t *tester)
 		packet->data.ptr = allocator_alloc_thing(int);
 		packet->data.len = ( sizeof(int));
 		*((int *) (packet->data.ptr)) = i;
-		global_send_queue->add(global_send_queue,packet);
+		charon->send_queue->add(charon->send_queue,packet);
 	}
 
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
-		global_socket->receive(global_socket,&received_packet);
+		charon->socket->receive(charon->socket,&received_packet);
 		tester->assert_true(tester, (received_packet->data.len == (sizeof(int))), "received data length check");
 		tester->assert_true(tester, (i == *((int *)(received_packet->data.ptr))), "received data value check");
 		received_packet->destroy(received_packet);

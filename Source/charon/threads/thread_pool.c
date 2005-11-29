@@ -28,7 +28,7 @@
 
 #include "thread_pool.h"
  
-#include <globals.h>
+#include <daemon.h>
 #include <queues/job_queue.h>
 #include <queues/jobs/delete_ike_sa_job.h>
 #include <queues/jobs/incoming_packet_job.h>
@@ -115,7 +115,7 @@ static void process_jobs(private_thread_pool_t *this)
 		job_t *job;
 		job_type_t job_type;
 		
-		job = global_job_queue->get(global_job_queue);
+		job = charon->job_queue->get(charon->job_queue);
 		job_type = job->get_type(job);
 		this->worker_logger->log(this->worker_logger, CONTROL|MORE, "got a job of type %s", 
 								 mapping_find(job_type_m,job_type));
@@ -194,7 +194,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
 				
-	status = global_ike_sa_manager->checkout(global_ike_sa_manager,ike_sa_id, &ike_sa);
+	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
 	if (status != SUCCESS)
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "IKE SA could not be checked out");
@@ -215,7 +215,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
 	ike_sa_id->destroy(ike_sa_id);
 									
-	status = global_ike_sa_manager->checkin(global_ike_sa_manager, ike_sa);
+	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	if (status != SUCCESS)
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "checkin of IKE SA failed");
@@ -240,7 +240,7 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 	
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "create and checking out IKE SA");
 	
-	global_ike_sa_manager->create_and_checkout(global_ike_sa_manager, &ike_sa);
+	charon->ike_sa_manager->create_and_checkout(charon->ike_sa_manager, &ike_sa);
 	
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "initializing connection \"%s\"", 
 							 job->get_configuration_name(job));
@@ -249,12 +249,12 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "%s by initialize_conection, job and rejected, IKE_SA deleted.", 
 								 mapping_find(status_m, status));
-		global_ike_sa_manager->checkin_and_delete(global_ike_sa_manager, ike_sa);
+		charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
 		return;
 	}
 	
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking in IKE SA");
-	status = global_ike_sa_manager->checkin(global_ike_sa_manager, ike_sa);
+	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	if (status != SUCCESS)
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "%s could not checkin IKE_SA.", 
@@ -275,7 +275,7 @@ static void process_delete_ike_sa_job(private_thread_pool_t *this, delete_ike_sa
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
 	
-	status = global_ike_sa_manager->delete(global_ike_sa_manager, ike_sa_id);
+	status = charon->ike_sa_manager->delete(charon->ike_sa_manager, ike_sa_id);
 	if (status != SUCCESS)
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "could not delete IKE_SA (%s)", 
@@ -311,8 +311,8 @@ static void destroy(private_thread_pool_t *this)
 	}	
 
 	/* free mem */
-	global_logger_manager->destroy_logger(global_logger_manager, this->pool_logger);
-	global_logger_manager->destroy_logger(global_logger_manager, this->worker_logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->pool_logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->worker_logger);
 	allocator_free(this->threads);
 	allocator_free(this);
 }
@@ -338,9 +338,9 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	
 	this->threads = allocator_alloc(sizeof(pthread_t) * pool_size);
 
-	this->pool_logger = global_logger_manager->create_logger(global_logger_manager,THREAD_POOL,NULL);
+	this->pool_logger = charon->logger_manager->create_logger(charon->logger_manager,THREAD_POOL,NULL);
 
-	this->worker_logger = global_logger_manager->create_logger(global_logger_manager,WORKER,NULL);
+	this->worker_logger = charon->logger_manager->create_logger(charon->logger_manager,WORKER,NULL);
 	
 	/* try to create as many threads as possible, up tu pool_size */
 	for (current = 0; current < pool_size; current++) 
@@ -355,8 +355,8 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 			if (current == 0) 
 			{
 				this->pool_logger->log(this->pool_logger, ERROR, "could not create any thread");
-				global_logger_manager->destroy_logger(global_logger_manager, this->pool_logger);
-				global_logger_manager->destroy_logger(global_logger_manager, this->worker_logger);
+				charon->logger_manager->destroy_logger(charon->logger_manager, this->pool_logger);
+				charon->logger_manager->destroy_logger(charon->logger_manager, this->worker_logger);
 				allocator_free(this->threads);
 				allocator_free(this);
 				return NULL;

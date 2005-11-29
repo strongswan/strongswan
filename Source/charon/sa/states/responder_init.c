@@ -22,7 +22,7 @@
  
 #include "responder_init.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <sa/states/state.h>
 #include <sa/states/ike_sa_init_responded.h>
 #include <utils/allocator.h>
@@ -204,7 +204,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				suggested_proposals = sa_payload->create_proposal_substructure_iterator(sa_payload, TRUE);
 				
 				/* now let the configuration-manager select a subset of the proposals */
-				status = global_configuration_manager->select_proposals_for_host(global_configuration_manager,
+				status = charon->configuration_manager->select_proposals_for_host(charon->configuration_manager,
 									this->ike_sa->get_other_host(this->ike_sa), suggested_proposals, accepted_proposals);
 				if (status != SUCCESS)
 				{
@@ -253,7 +253,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				
 				group = ke_payload->get_dh_group_number(ke_payload);
 				
-				status = global_configuration_manager->is_dh_group_allowed_for_host(global_configuration_manager,
+				status = charon->configuration_manager->is_dh_group_allowed_for_host(charon->configuration_manager,
 								this->ike_sa->get_other_host(this->ike_sa), group, &allowed_group);
 
 				if (status != SUCCESS)
@@ -353,7 +353,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	
 	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
-	 global_send_queue->add(global_send_queue, packet);
+	 charon->send_queue->add(charon->send_queue, packet);
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");

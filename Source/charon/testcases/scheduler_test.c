@@ -25,7 +25,7 @@
 
 #include "scheduler_test.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <threads/scheduler.h>
 #include <queues/event_queue.h>
 #include <queues/job_queue.h>
@@ -50,7 +50,7 @@ void test_scheduler(tester_t *tester)
 	{
 		/* misusing for testing only */
 		jobs[current] = (job_t *) incoming_packet_job_create((packet_t*)(current+1));
-		global_event_queue->add_relative(global_event_queue, jobs[current], (current+1) * 500);
+		charon->event_queue->add_relative(charon->event_queue, jobs[current], (current+1) * 500);
 	}
 	
 	
@@ -66,18 +66,18 @@ void test_scheduler(tester_t *tester)
 	{
 		usleep(400 * 1000); 
 		
-		tester->assert_true(tester, (global_job_queue->get_count(global_job_queue) == current ), "job-queue size before event");
-		tester->assert_true(tester, (global_event_queue->get_count(global_event_queue) == job_count - current), "event-queue size before event");
+		tester->assert_true(tester, (charon->job_queue->get_count(charon->job_queue) == current ), "job-queue size before event");
+		tester->assert_true(tester, (charon->event_queue->get_count(charon->event_queue) == job_count - current), "event-queue size before event");
 		usleep(100 * 1000);
 
-		tester->assert_true(tester, (global_job_queue->get_count(global_job_queue) == current + 1), "job-queue size after event");
-		tester->assert_true(tester, (global_event_queue->get_count(global_event_queue) == job_count - current - 1), "event-queue size after event");
+		tester->assert_true(tester, (charon->job_queue->get_count(charon->job_queue) == current + 1), "job-queue size after event");
+		tester->assert_true(tester, (charon->event_queue->get_count(charon->event_queue) == job_count - current - 1), "event-queue size after event");
 	}
 	
 	/* check job order */
 	for (current = 0; current < job_count; current++)
 	{
-		jobs[current] =	global_job_queue->get(global_job_queue);
+		jobs[current] =	charon->job_queue->get(charon->job_queue);
 		incoming_packet_job_t *current_job;
 		current_job = (incoming_packet_job_t*) jobs[current];
 		packet_t *packet;

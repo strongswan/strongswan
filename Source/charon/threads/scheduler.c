@@ -26,7 +26,7 @@
 
 #include "scheduler.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <definitions.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
@@ -79,9 +79,9 @@ static void get_events(private_scheduler_t * this)
 	{
 		this->logger->log(this->logger, CONTROL|MORE, "waiting for next event...");
 		/* get a job, this block until one is available */
-		current_job = global_event_queue->get(global_event_queue);
+		current_job = charon->event_queue->get(charon->event_queue);
 		/* queue the job in the job queue, workers will eat them */
-		global_job_queue->add(global_job_queue, current_job);
+		charon->job_queue->add(charon->job_queue, current_job);
 		this->logger->log(this->logger, CONTROL, "got event, added job %s to job-queue.", 
 						  mapping_find(job_type_m, current_job->get_type(current_job)));
 	}
@@ -98,7 +98,7 @@ static void destroy(private_scheduler_t *this)
 	pthread_join(this->assigned_thread, NULL);
 	this->logger->log(this->logger, CONTROL | MORE, "Scheduler thread terminated");	
 	
-	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);
 }
@@ -111,13 +111,13 @@ scheduler_t * scheduler_create()
 	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	this->get_events = get_events;
 	
-	this->logger = global_logger_manager->create_logger(global_logger_manager, SCHEDULER, NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager, SCHEDULER, NULL);
 	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->get_events, this) != 0)
 	{
 		/* thread could not be created  */
 		this->logger->log(this->logger, ERROR, "Scheduler thread could not be created!");
-		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
 		return NULL;
 	}

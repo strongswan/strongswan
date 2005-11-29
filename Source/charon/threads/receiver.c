@@ -26,7 +26,7 @@
 
 #include "receiver.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <network/socket.h>
 #include <network/packet.h>
 #include <queues/job_queue.h>
@@ -78,12 +78,12 @@ static void receive_packets(private_receiver_t * this)
 	
 	while (1)
 	{
-		while (global_socket->receive(global_socket,&current_packet) == SUCCESS)
+		while (charon->socket->receive(charon->socket,&current_packet) == SUCCESS)
 		{
 			this->logger->log(this->logger, CONTROL, "creating job from packet");
 			current_job = (job_t *) incoming_packet_job_create(current_packet);
 
-			global_job_queue->add(global_job_queue,current_job);
+			charon->job_queue->add(charon->job_queue,current_job);
 
 		}
 		/* bad bad, rebuild the socket ? */
@@ -102,7 +102,7 @@ static void destroy(private_receiver_t *this)
 	pthread_join(this->assigned_thread, NULL);
 	this->logger->log(this->logger, CONTROL | MORE, "Receiver thread terminated");
 		
-	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);
 }
@@ -117,12 +117,12 @@ receiver_t * receiver_create()
 	this->public.destroy = (void(*)(receiver_t*)) destroy;
 	this->receive_packets = receive_packets;
 	
-	this->logger = global_logger_manager->create_logger(global_logger_manager, RECEIVER, NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager, RECEIVER, NULL);
 	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->receive_packets, this) != 0)
 	{
 		this->logger->log(this->logger, ERROR, "Receiver thread could not be started");
-		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
 		return NULL;
 	}

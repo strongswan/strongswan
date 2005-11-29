@@ -24,7 +24,7 @@
 
 #include "../transforms/diffie_hellman.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <utils/logger_manager.h>
 #include <utils/allocator.h>
 #include <encoding/payloads/transform_substructure.h>
@@ -39,7 +39,7 @@ void test_diffie_hellman(tester_t *tester)
 	chunk_t my_public_value, other_public_value;
 	chunk_t my_secret, other_secret;
 
-	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"Diffie Hellman");
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Diffie Hellman");
 
 
 	my_diffie_hellman = diffie_hellman_create(MODP_1024_BIT);
@@ -73,5 +73,5 @@ void test_diffie_hellman(tester_t *tester)
 		
 	my_diffie_hellman->destroy(my_diffie_hellman);
 	other_diffie_hellman->destroy(other_diffie_hellman);
-	global_logger_manager->destroy_logger(global_logger_manager,logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);
 }

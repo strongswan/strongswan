@@ -29,7 +29,7 @@
 #include "generator.h"
 
 #include <types.h>
-#include <globals.h>
+#include <daemon.h>
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
@@ -933,7 +933,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 static status_t destroy(private_generator_t *this)
 {
 	allocator_free(this->buffer);
-	global_logger_manager->destroy_logger(global_logger_manager,this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -977,7 +977,7 @@ generator_t * generator_create()
 	this->current_bit = 0;
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
-	this->logger = global_logger_manager->create_logger(global_logger_manager,GENERATOR,NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager,GENERATOR,NULL);
 
 	return &(this->public);
 }

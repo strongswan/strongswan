@@ -23,7 +23,7 @@
 #include "ike_sa.h"
 
 #include <types.h>
-#include <globals.h>
+#include <daemon.h>
 #include <definitions.h>
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
@@ -414,7 +414,7 @@ static status_t resend_last_reply(private_ike_sa_t *this)
 		return status;
 	}
 	
-	global_send_queue->add(global_send_queue, packet);
+	charon->send_queue->add(charon->send_queue, packet);
 	return SUCCESS;
 }
 
@@ -428,7 +428,7 @@ static status_t create_delete_job(private_ike_sa_t *this)
 	this->logger->log(this->logger, CONTROL | MORE, "Going to create job to delete this IKE_SA");
 
 	delete_job = (job_t *) delete_ike_sa_job_create(this->ike_sa_id);
-	global_job_queue->add(global_job_queue,delete_job);
+	charon->job_queue->add(charon->job_queue,delete_job);
 
 	return SUCCESS;
 }
@@ -738,7 +738,7 @@ static void destroy (private_ike_sa_t *this)
 	this->current_state->destroy(this->current_state);
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy logger of IKE_SA");
-	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);
 }
@@ -776,7 +776,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 
 
 	/* initialize private fields */
-	this->logger = global_logger_manager->create_logger(global_logger_manager, IKE_SA, NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager, IKE_SA, NULL);
 	
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();

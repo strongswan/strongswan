@@ -22,7 +22,7 @@
  
 #include "ike_sa_init_requested.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <utils/allocator.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -143,7 +143,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				
 				/* now let the configuration-manager check the selected proposals*/
 				this->logger->log(this->logger, CONTROL | MOST, "Check suggested proposals");
-				status = global_configuration_manager->check_selected_proposals_for_host(global_configuration_manager,
+				status = charon->configuration_manager->check_selected_proposals_for_host(charon->configuration_manager,
 									this->ike_sa->get_other_host(this->ike_sa), suggested_proposals,&valid);
 				if (status != SUCCESS)
 				{

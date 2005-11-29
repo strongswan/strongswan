@@ -27,7 +27,7 @@
 #include "configuration_manager.h"
 
 #include <types.h>
-#include <globals.h>
+#include <daemon.h>
 #include <utils/allocator.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/proposal_substructure.h>
@@ -76,7 +76,7 @@ static status_t get_remote_host(private_configuration_manager_t *this, char *nam
 	}
 	else if (strcmp(name, "localhost") == 0)
 	{
-		remote = host_create(AF_INET, "127.0.0.1", 4500);
+		remote = host_create(AF_INET, "127.0.0.1", 500);
 	}
 	else
 	{
@@ -277,7 +277,7 @@ static status_t destroy(private_configuration_manager_t *this)
 	this->logger->log(this->logger,CONTROL | MORE, "Going to destroy configuration manager ");
 	
 	this->logger->log(this->logger,CONTROL | MOST, "Destroy assigned logger");
-	global_logger_manager->destroy_logger(global_logger_manager,this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -300,7 +300,7 @@ configuration_manager_t *configuration_manager_create()
 	this->public.is_dh_group_allowed_for_host = (status_t(*)(configuration_manager_t*,host_t*,diffie_hellman_group_t,bool*)) is_dh_group_allowed_for_host;
 
 	/* private variables */
-	this->logger = global_logger_manager->create_logger(global_logger_manager,CONFIGURATION_MANAGER,NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager,CONFIGURATION_MANAGER,NULL);
 
 	return (&this->public);
 }

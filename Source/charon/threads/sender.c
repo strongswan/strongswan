@@ -26,7 +26,7 @@
 
 #include "sender.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <network/socket.h>
 #include <network/packet.h>
 #include <queues/send_queue.h>
@@ -78,9 +78,9 @@ static void send_packets(private_sender_t * this)
 
 	while (1)
 	{
-		current_packet = global_send_queue->get(global_send_queue);
+		current_packet = charon->send_queue->get(charon->send_queue);
 		this->logger->log(this->logger, CONTROL|MORE, "got a packet, sending it");
-		status = global_socket->send(global_socket,current_packet);
+		status = charon->socket->send(charon->socket,current_packet);
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "sending failed, socket returned %s", 
@@ -101,7 +101,7 @@ static void destroy(private_sender_t *this)
 	pthread_join(this->assigned_thread, NULL);
 	this->logger->log(this->logger, CONTROL | MORE, "Sender thread terminated");	
 	
-	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);
 }
@@ -116,7 +116,7 @@ sender_t * sender_create()
 	this->send_packets = send_packets;
 	this->public.destroy = (void(*)(sender_t*)) destroy;
 	
-	this->logger = global_logger_manager->create_logger(global_logger_manager, SENDER, NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager, SENDER, NULL);
 
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->send_packets, this) != 0)
 	{

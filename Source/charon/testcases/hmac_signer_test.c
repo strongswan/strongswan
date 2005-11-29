@@ -27,7 +27,7 @@
 
 #include <transforms/signers/signer.h>
 #include <utils/allocator.h>
-#include <globals.h>
+#include <daemon.h>
 
 
 /*
@@ -56,7 +56,7 @@ void test_hmac_md5_signer(tester_t *tester)
  	logger_t *logger;
  	bool valid;
 	
-	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"HMAC MD5 96");
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"HMAC MD5 96");
 	
 	signer_t *signer = (signer_t *)	signer_create(AUTH_HMAC_MD5_96);
 	tester->assert_true(tester, (signer != NULL), "signer create call check");
@@ -109,7 +109,7 @@ void test_hmac_md5_signer(tester_t *tester)
 	
 
 	signer->destroy(signer);	
-	global_logger_manager->destroy_logger(global_logger_manager,logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);
 }
 
 
@@ -138,7 +138,7 @@ void test_hmac_sha1_signer(tester_t *tester)
  	logger_t *logger;
  	bool valid;
 	
-	logger = global_logger_manager->create_logger(global_logger_manager,TESTER,"HMAC SHA1 96");
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"HMAC SHA1 96");
 	
 	signer_t *signer = (signer_t *)	signer_create(AUTH_HMAC_SHA1_96);
 	tester->assert_true(tester, (signer != NULL), "signer create call check");
@@ -205,6 +205,6 @@ void test_hmac_sha1_signer(tester_t *tester)
  	}
 	
 	signer->destroy(signer);
-	global_logger_manager->destroy_logger(global_logger_manager,logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);
 
 }

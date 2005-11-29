@@ -37,8 +37,6 @@
 #include <encoding/payloads/notify_payload.h>
 
 
-extern logger_manager_t *global_logger_manager;
-
 
 /*
  * Described in Header 

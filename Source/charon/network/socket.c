@@ -30,7 +30,7 @@
 
 #include "socket.h"
 
-#include <globals.h>
+#include <daemon.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
@@ -139,7 +139,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 void destroy(private_socket_t *this)
 {
 	close(this->socket_fd);
-	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 	allocator_free(this);
 }
 
@@ -153,14 +153,14 @@ socket_t *socket_create(u_int16_t port)
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
 	this->public.destroy = (void(*)(socket_t*))destroy;
 	
-	this->logger = global_logger_manager->create_logger(global_logger_manager, SOCKET, NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager, SOCKET, NULL);
 
 	/* create default ipv4 socket */
 	this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
 	if (this->socket_fd < 0) 
 	{
 		this->logger->log(this->logger, ERROR, "unable to open socket: %s", strerror(errno));
-		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
 		return NULL;
 	}
@@ -172,7 +172,7 @@ socket_t *socket_create(u_int16_t port)
     if (bind(this->socket_fd,(struct sockaddr*)&addr, sizeof(addr)) < 0) 
     {
 		this->logger->log(this->logger, ERROR, "unable to bind socket to port %d: %s", port, strerror(errno));
-		global_logger_manager->destroy_logger(global_logger_manager, this->logger);
+		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
         return NULL;
     }
