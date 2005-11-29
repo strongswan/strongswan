@@ -104,7 +104,7 @@ test_t hmac_signer_test2 = {test_hmac_sha1_signer, "HMAC SHA1 signer test"};
 
 daemon_t* charon;
 
-static void daemon_destroy(daemon_t *this, char* none)
+static void daemon_kill(daemon_t *this, char* none)
 {
 	this->logger_manager->destroy(this->logger_manager);
 	this->socket->destroy(this->socket);
@@ -126,7 +126,7 @@ daemon_t *daemon_create()
 	charon = allocator_alloc_thing(daemon_t);
 		
 	/* assign methods */
-	charon->destroy = daemon_destroy;
+	charon->kill = daemon_kill;
 	
 	charon->logger_manager = logger_manager_create(0);
 	charon->socket = socket_create(4600);
@@ -207,7 +207,7 @@ int main()
 	
 	tester->destroy(tester);
 	
-	charon->destroy(charon, NULL);
+	charon->kill(charon, NULL);
 	
 #ifdef LEAK_DETECTIVE
 	/* Leaks are reported on stderr */

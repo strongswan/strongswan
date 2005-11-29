@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "daemon.h" 
 
@@ -56,21 +57,36 @@ struct private_daemon_t {
 	 */
 	sigset_t signal_set;
 	
+	/** 
+	 * pid of main-thread
+	 */
+	pid_t main_thread_pid;
+	
+	/**
+	 * main loop
+	 */
 	void (*run) (private_daemon_t *this);
-	void (*destroy) (private_daemon_t *this, char *reason);
+	
+	/**
+	 * a routine to add jobs for testing
+	 */
 	void (*build_test_jobs) (private_daemon_t *this);
+	
+	/**
+	 * initializing daemon
+	 */
 	void (*initialize) (private_daemon_t *this);
-	void (*cleanup) (private_daemon_t *this);
+	
+	/**
+	 * destroy the daemon
+	 */
+	void (*destroy) (private_daemon_t *this);
 };
-
-
 
 /** 
  * instance of the daemon 
  */
 daemon_t *charon;
-
-
 
 /**
  * Loop of the main thread, waits for signals
@@ -115,96 +131,104 @@ static void run(private_daemon_t *this)
 /**
  * Initialize the destruction of the daemon
  */
-static void destroy(private_daemon_t *this, char *reason)
+static void kill_daemon(private_daemon_t *this, char *reason)
 {
 	/* we send SIGTERM, so the daemon can cleanly shut down */
 	this->logger->log(this->logger, ERROR, "Killing daemon: %s", reason);
-	this->logger->log(this->logger, CONTROL, "sending SIGTERM to ourself", reason);
-	kill(0, SIGTERM);
-	/* thread must die, since he produced a ciritcal failure and can't continue */
-	pthread_exit(NULL);
+	if (this->main_thread_pid == getpid())
+	{
+		/* initialization failed, terminate daemon */
+		this->destroy(this);
+		exit(-1);
+	}
+	else
+	{
+		this->logger->log(this->logger, CONTROL, "sending SIGTERM to ourself", reason);
+		kill(0, SIGTERM);
+		/* thread must die, since he produced a ciritcal failure and can't continue */
+		pthread_exit(NULL);
+	}
 }
 
 /**
  * build some jobs to test daemon functionality
  */
-static void build_test_jobs(daemon_t *this)
+static void build_test_jobs(private_daemon_t *this)
 {
 	int i;
 	for(i = 0; i<1; i++)
 	{
 		initiate_ike_sa_job_t *initiate_job;
 		initiate_job = initiate_ike_sa_job_create("localhost");
-		this->job_queue->add(this->job_queue, (job_t*)initiate_job);
+		this->public.job_queue->add(this->public.job_queue, (job_t*)initiate_job);
 	}
 }
-
 
 /**
  * Initialize global objects and threads
  */
-static void initialize(daemon_t *this)
+static void initialize(private_daemon_t *this)
 {
-	this->socket = socket_create(IKEV2_UDP_PORT);
-	this->ike_sa_manager = ike_sa_manager_create();
-	this->job_queue = job_queue_create();
-	this->event_queue = event_queue_create();
-	this->send_queue = send_queue_create();
-	this->configuration_manager = configuration_manager_create();
+	this->public.socket = socket_create(IKEV2_UDP_PORT);
+	this->public.ike_sa_manager = ike_sa_manager_create();
+	this->public.job_queue = job_queue_create();
+	this->public.event_queue = event_queue_create();
+	this->public.send_queue = send_queue_create();
+	this->public.configuration_manager = configuration_manager_create();
 	
-	this->sender = sender_create();
-	this->receiver = receiver_create();
-	this->scheduler = scheduler_create();
-	this->thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
+	this->public.sender = sender_create();
+	this->public.receiver = receiver_create();
+	this->public.scheduler = scheduler_create();
+	this->public.thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
 }
 
 /**
  * Destory all initiated objects
  */
-static void cleanup(daemon_t *this)
+static void destroy(private_daemon_t *this)
 {
-	if (this->receiver != NULL)
+	if (this->public.receiver != NULL)
 	{
-		this->receiver->destroy(this->receiver);
+		this->public.receiver->destroy(this->public.receiver);
 	}
-	if (this->scheduler != NULL)
+	if (this->public.scheduler != NULL)
 	{
-		this->scheduler->destroy(this->scheduler);	
+		this->public.scheduler->destroy(this->public.scheduler);	
 	}
-	if (this->sender != NULL)
+	if (this->public.sender != NULL)
 	{
-		this->sender->destroy(this->sender);
+		this->public.sender->destroy(this->public.sender);
 	}
-	if (this->thread_pool != NULL)
+	if (this->public.thread_pool != NULL)
 	{
-		this->thread_pool->destroy(this->thread_pool);	
+		this->public.thread_pool->destroy(this->public.thread_pool);	
 	}
-	if (this->job_queue != NULL)
+	if (this->public.job_queue != NULL)
 	{
-		this->job_queue->destroy(this->job_queue);
+		this->public.job_queue->destroy(this->public.job_queue);
 	}
-	if (this->event_queue != NULL)
+	if (this->public.event_queue != NULL)
 	{
-		this->event_queue->destroy(this->event_queue);	
+		this->public.event_queue->destroy(this->public.event_queue);	
 	}
-	if (this->send_queue != NULL)
+	if (this->public.send_queue != NULL)
 	{
-		this->send_queue->destroy(this->send_queue);	
+		this->public.send_queue->destroy(this->public.send_queue);	
 	}
-	if (this->socket != NULL)
+	if (this->public.socket != NULL)
 	{
-		this->socket->destroy(this->socket);
+		this->public.socket->destroy(this->public.socket);
 	}
-	if (this->ike_sa_manager != NULL)
+	if (this->public.ike_sa_manager != NULL)
 	{
-		this->ike_sa_manager->destroy(this->ike_sa_manager);
+		this->public.ike_sa_manager->destroy(this->public.ike_sa_manager);
 	}
-	if (this->configuration_manager != NULL)
+	if (this->public.configuration_manager != NULL)
 	{
-		this->configuration_manager->destroy(this->configuration_manager);
+		this->public.configuration_manager->destroy(this->public.configuration_manager);
 	}
 	
-	this->logger_manager->destroy(this->logger_manager);
+	this->public.logger_manager->destroy(this->public.logger_manager);
 	allocator_free(this);
 }
 
@@ -221,10 +245,10 @@ private_daemon_t *daemon_create()
 		
 	/* assign methods */
 	this->run = run;
-	this->public.destroy = (void (*) (daemon_t*,char*))destroy;
-	this->build_test_jobs = (void (*) (private_daemon_t*)) build_test_jobs;
-	this->initialize = (void (*) (private_daemon_t*))initialize;
-	this->cleanup = (void (*) (private_daemon_t*))cleanup;
+	this->destroy = destroy;
+	this->build_test_jobs = build_test_jobs;
+	this->initialize = initialize;
+	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
 	
 	/* first build a logger */
 	this->public.logger_manager = logger_manager_create(DEFAULT_LOGLEVEL);
@@ -241,6 +265,8 @@ private_daemon_t *daemon_create()
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;
 	this->public.thread_pool = NULL;
+	
+	this->main_thread_pid = getpid();
 	
 	/* setup signal handling */
 	sigemptyset(&(this->signal_set));
@@ -268,12 +294,12 @@ int main(int argc, char *argv[])
 	
 	private_charon->run(private_charon);
 	
-	private_charon->cleanup(private_charon);
+	private_charon->destroy(private_charon);
 	
 #ifdef LEAK_DETECTIVE
 	report_memory_leaks(void);
 #endif
 
-	return 0;
+	exit(0);
 }
 

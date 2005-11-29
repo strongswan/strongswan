@@ -154,7 +154,7 @@ socket_t *socket_create(u_int16_t port)
 	this->public.destroy = (void(*)(socket_t*))destroy;
 	
 	this->logger = charon->logger_manager->create_logger(charon->logger_manager, SOCKET, NULL);
-
+	
 	/* create default ipv4 socket */
 	this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
 	if (this->socket_fd < 0) 
@@ -162,7 +162,7 @@ socket_t *socket_create(u_int16_t port)
 		this->logger->log(this->logger, ERROR, "unable to open socket: %s", strerror(errno));
 		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
-		return NULL;
+		charon->kill(charon, "socket could not be opened");
 	}
 
 	/* bind socket to all interfaces */
@@ -174,7 +174,7 @@ socket_t *socket_create(u_int16_t port)
 		this->logger->log(this->logger, ERROR, "unable to bind socket to port %d: %s", port, strerror(errno));
 		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
-        return NULL;
+		charon->kill(charon, "socket could not be opened");
     }
 
 	return (socket_t*)this;

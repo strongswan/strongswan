@@ -48,7 +48,7 @@
  * There are several other threads, this defines
  * only the number of threads in thread_pool_t.
  */
-#define NUMBER_OF_WORKING_THREADS 1
+#define NUMBER_OF_WORKING_THREADS 4
 
 /**
  * Port on which the daemon will 
@@ -121,10 +121,10 @@ struct daemon_t {
 	/**
 	 * @brief shut down the daemon
 	 * 
-	 * @param this	the daemon to kill
+	 * @param this		the daemon to kill
 	 * @param reason	describition why it will be killed
 	 */
-	void (*destroy) (daemon_t *this, char *reason);
+	void (*kill) (daemon_t *this, char *reason);
 };
 
 /**
