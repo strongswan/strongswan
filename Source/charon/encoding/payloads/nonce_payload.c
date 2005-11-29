@@ -193,6 +193,14 @@ static size_t get_length(private_nonce_payload_t *this)
 }
 
 /**
+ * Implementation of private_id_payload_t.compute_length.
+ */
+static void compute_length(private_nonce_payload_t *this)
+{
+	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + this->nonce.len;
+}
+
+/**
  * Implementation of payload_t.destroy and nonce_payload_t.destroy.
  */
 static void destroy(private_nonce_payload_t *this)
@@ -225,6 +233,9 @@ nonce_payload_t *nonce_payload_create()
 	this->public.destroy = (void (*) (nonce_payload_t *)) destroy;
 	this->public.set_nonce = (status_t (*) (nonce_payload_t *,chunk_t)) set_nonce;
 	this->public.get_nonce = (void (*) (nonce_payload_t *,chunk_t*)) get_nonce;
+	
+	/* private functions */
+	this->compute_length = compute_length;
 	
 	/* private variables */
 	this->critical = FALSE;

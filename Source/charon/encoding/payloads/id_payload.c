@@ -146,6 +146,15 @@ static status_t verify(private_id_payload_t *this)
 		/* critical bit is set! */
 		return FAILED;
 	}
+	if ((this->id_type == 0) ||
+		(this->id_type == 4) ||
+		((this->id_type >= 6) && (this->id_type <= 8)) ||
+		((this->id_type >= 12) && (this->id_type <= 200)))
+	{
+		/* reserved IDs */
+		return FAILED;
+	}
+		
 	return SUCCESS;
 }
 
@@ -252,6 +261,14 @@ static void set_initiator (private_id_payload_t *this,bool is_initiator)
 }
 
 /**
+ * Implementation of private_id_payload_t.compute_length.
+ */
+static void compute_length(private_id_payload_t *this)
+{
+	this->payload_length = ID_PAYLOAD_HEADER_LENGTH + this->id_data.len;
+}
+
+/**
  * Implementation of payload_t.destroy and id_payload_t.destroy.
  */
 static void destroy(private_id_payload_t *this)
@@ -288,6 +305,9 @@ id_payload_t *id_payload_create(bool is_initiator)
 	this->public.get_data = (chunk_t (*) (id_payload_t *)) get_data;
 	this->public.get_initiator = (bool (*) (id_payload_t *)) get_initiator;
 	this->public.set_initiator = (void (*) (id_payload_t *,bool)) set_initiator;
+	
+	/* private functions */
+	this->compute_length = compute_length;
 	
 	/* private variables */
 	this->critical = FALSE;

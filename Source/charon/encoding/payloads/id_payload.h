@@ -28,7 +28,7 @@
 #include <encoding/payloads/payload.h>
 
 /**
- * Length of a nonce payload without a nonce in bytes.
+ * Length of a id payload without the data in bytes.
  * 
  * @ingroup payloads
  */
