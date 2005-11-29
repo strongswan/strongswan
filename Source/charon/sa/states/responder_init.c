@@ -275,7 +275,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 					payloads->destroy(payloads);
 					return NOT_SUPPORTED;
 				}
-
 				this->logger->log(this->logger, CONTROL | MORE, "Set other DH public value");
 				
 				dh->set_other_public_value(dh, ke_payload->get_key_exchange_data(ke_payload));
@@ -425,6 +424,7 @@ static void build_ke_payload(private_responder_init_t *this, payload_t **payload
 	this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
 
 	ke_payload = ke_payload_create();
+	ke_payload->set_key_exchange_data(ke_payload,key_data);
 	ke_payload->set_dh_group_number(ke_payload, MODP_1024_BIT);
 
 	allocator_free_chunk(&key_data);

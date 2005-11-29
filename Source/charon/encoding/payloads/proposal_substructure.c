@@ -141,6 +141,9 @@ encoding_rule_t proposal_substructure_encodings[] = {
  */
 static status_t verify(private_proposal_substructure_t *this)
 {
+	status_t status = SUCCESS;
+	iterator_t *iterator;
+	
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != PROPOSAL_SUBSTRUCTURE))
 	{
 		/* must be 0 or 2 */
@@ -157,9 +160,26 @@ static status_t verify(private_proposal_substructure_t *this)
 		/* reserved are not supported */
 		return FAILED;
 	}
+	
+	iterator = this->transforms->create_iterator(this->transforms,TRUE);
+	
+	while(iterator->has_next(iterator))
+	{
+		payload_t *current_transform;
+		iterator->current(iterator,(void **)&current_transform);
+
+		status = current_transform->verify(current_transform);
+		if (status != SUCCESS)
+		{
+			break;
+		}
+	}
+	
+	iterator->destroy(iterator);
+
 
 	/* proposal number is checked in SA payload */	
-	return SUCCESS;
+	return status;
 }
 
 /**

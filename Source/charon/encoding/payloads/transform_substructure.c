@@ -148,7 +148,10 @@ encoding_rule_t transform_substructure_encodings[] = {
  */
 static status_t verify(private_transform_substructure_t *this)
 {
-	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != TRANSFORM_SUBSTRUCTURE))
+	status_t status = SUCCESS;
+	iterator_t *iterator;
+	
+	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 3))
 	{
 		/* must be 0 or 3 */
 		return FAILED;
@@ -218,9 +221,25 @@ static status_t verify(private_transform_substructure_t *this)
 			return FAILED;
 		}
 	}
+	iterator = this->attributes->create_iterator(this->attributes,TRUE);
+	
+	while(iterator->has_next(iterator))
+	{
+		payload_t *current_attributes;
+		iterator->current(iterator,(void **)&current_attributes);
+
+		status = current_attributes->verify(current_attributes);
+		if (status != SUCCESS)
+		{
+			break;
+		}
+	}
+	
+	iterator->destroy(iterator);
+
 
 	/* proposal number is checked in SA payload */	
-	return SUCCESS;
+	return status;
 }
 
 /**

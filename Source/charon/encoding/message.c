@@ -614,6 +614,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "payload type %s could not be verified",mapping_find(payload_type_m,current_payload_type));
+			current_payload->destroy(current_payload);
 			status = VERIFY_ERROR;
 			return status;
 		}
@@ -627,12 +628,14 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 			if (status != SUCCESS)
 			{
 				this->logger->log(this->logger, ERROR, "encryption payload signature invaild");
+				current_payload->destroy(current_payload);
 				return status;
 			}
 			status = encryption_payload->decrypt(encryption_payload, crypter);
 			if (status != SUCCESS)
 			{
 				this->logger->log(this->logger, ERROR, "parsing decrypted encryption payload failed");
+				current_payload->destroy(current_payload);
 				return status;
 			}
 		}

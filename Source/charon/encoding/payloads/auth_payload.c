@@ -1,7 +1,7 @@
 /**
  * @file auth_payload.h
  * 
- * @brief Interface of auth_payload_t.
+ * @brief Implementation of auth_payload_t.
  * 
  */
 

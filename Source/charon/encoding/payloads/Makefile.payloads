@@ -42,6 +42,10 @@ OBJS+= $(BUILD_DIR)auth_payload.o
 $(BUILD_DIR)auth_payload.o :				$(PAYLOADS_DIR)auth_payload.c $(PAYLOADS_DIR)auth_payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
+#OBJS+= $(BUILD_DIR)ts_payload.o
+#$(BUILD_DIR)ts_payload.o :				$(PAYLOADS_DIR)ts_payload.c $(PAYLOADS_DIR)ts_payload.h
+#										$(CC) $(CFLAGS) -c -o $@ $<
+
 OBJS+= $(BUILD_DIR)payload.o
 $(BUILD_DIR)payload.o :					$(PAYLOADS_DIR)payload.c $(PAYLOADS_DIR)payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<

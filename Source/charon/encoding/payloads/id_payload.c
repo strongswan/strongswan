@@ -53,7 +53,7 @@ struct private_id_payload_t {
 	id_payload_t public;
 	
 	/**
-	 * TRUE if this ID payload is of type IDi, FALSE for IDr
+	 * TRUE if this ID payload is of type IDi, FALSE for IDr.
 	 */
 	bool is_initiator;
 	

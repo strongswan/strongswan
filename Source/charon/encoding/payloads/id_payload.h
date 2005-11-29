@@ -176,8 +176,6 @@ struct id_payload_t {
 /**
  * @brief Creates an empty id_payload_t object.
  * 
- * As default a ID payload of type IDi is created.
- * 
  * @param is_initiator	
  * 						- TRUE if this payload is of type IDi
  * 						- FALSE if this payload is of type IDr

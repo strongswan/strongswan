@@ -115,7 +115,7 @@ encoding_rule_t sa_payload_encodings[] = {
 static status_t verify(private_sa_payload_t *this)
 {
 	int proposal_number = 1;
-	status_t status;
+	status_t status = SUCCESS;
 	iterator_t *iterator;
 	bool first = TRUE;
 	
@@ -131,10 +131,7 @@ static status_t verify(private_sa_payload_t *this)
 	while(iterator->has_next(iterator))
 	{
 		proposal_substructure_t *current_proposal;
-		status = iterator->current(iterator,(void **)&current_proposal);
-		{
-			break;
-		}
+		iterator->current(iterator,(void **)&current_proposal);
 		if (current_proposal->get_proposal_number(current_proposal) > proposal_number)
 		{
 			if (first) 
@@ -156,6 +153,12 @@ static status_t verify(private_sa_payload_t *this)
 			iterator->destroy(iterator);
 			/* must not be smaller then proceeding one */
 			status = FAILED;
+			break;
+		}
+		
+		status = current_proposal->payload_interface.verify(&(current_proposal->payload_interface));
+		if (status != SUCCESS)
+		{
 			break;
 		}
 		first = FALSE;
