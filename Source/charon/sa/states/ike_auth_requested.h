@@ -1,7 +1,7 @@
 /**
  * @file ike_auth_requested.h
  * 
- * @brief State of an IKE_SA, which has requested an IKE_AUTH.
+ * @brief Interface of ike_auth_requested_t.
  * 
  */
 
@@ -31,7 +31,8 @@ typedef struct ike_auth_requested_t ike_auth_requested_t;
 
 /**
  * @brief This class represents an IKE_SA, which has requested an IKE_AUTH.
- *
+ * 
+ * @ingroup states
  */
 struct ike_auth_requested_t {
 	/**
@@ -45,6 +46,9 @@ struct ike_auth_requested_t {
  * Constructor of class ike_auth_requested_t
  * 
  * @param ike_sa		assigned ike_sa object
+ * @return				created ike_auth_requested_t object
+ * 
+ * @ingroup states
  */
 ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa);
 

@@ -46,7 +46,7 @@ void test_packet(tester_t *tester)
 	strcpy(packet->data.ptr,string_to_copy);
 
 	tester->assert_true(tester,(packet != NULL),"NULL pointer check");
-	tester->assert_true(tester,(packet->clone(packet,&packet2) == SUCCESS),"clone call check");
+	packet2 = packet->clone(packet);
 
 	tester->assert_false(tester,(packet->data.ptr == packet2->data.ptr),"value pointer check");
 	

@@ -1,7 +1,7 @@
 /**
  * @file delete_ike_sa_job.h
  * 
- * @brief Job of type DELETE_IKE_SA
+ * @brief Implementation of delete_ike_sa_job_t.
  * 
  */
 
@@ -29,7 +29,6 @@ typedef struct private_delete_ike_sa_job_t private_delete_ike_sa_job_t;
 
 /**
  * Private data of an delete_ike_sa_job_t Object
- * 
  */
 struct private_delete_ike_sa_job_t {
 	/**
@@ -43,10 +42,8 @@ struct private_delete_ike_sa_job_t {
 	ike_sa_id_t *ike_sa_id;
 };
 
-
 /**
- * Implements delete_ike_sa_job_t's get_type function.
- * See #delete_ike_sa_job_t.get_type for description.
+ * Implements job_t.get_type.
  */
 static job_type_t get_type(private_delete_ike_sa_job_t *this)
 {
@@ -54,24 +51,21 @@ static job_type_t get_type(private_delete_ike_sa_job_t *this)
 }
 
 /**
- * Implements delete_ike_sa_job_t's get_ike_sa_id function.
- * See #delete_ike_sa_job_t.get_ike_sa_id for description.
+ * Implements elete_ike_sa_job_t.get_ike_sa_id
  */
-static ike_sa_id_t * get_ike_sa_id(private_delete_ike_sa_job_t *this)
+static ike_sa_id_t *get_ike_sa_id(private_delete_ike_sa_job_t *this)
 {
 	return this->ike_sa_id;
 }
 
 /**
- * Implements job_t's and delete_ike_sa_job_t's destroy function.
- * See #job_t.destroy or #delete_ike_sa_job_t.destroy for description.
+ * Implements job_t.destroy.
  */
-static status_t destroy(job_t *job)
+static void destroy(job_t *job)
 {
 	private_delete_ike_sa_job_t *this = (private_delete_ike_sa_job_t *) job;
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -80,20 +74,16 @@ static status_t destroy(job_t *job)
 delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
 {
 	private_delete_ike_sa_job_t *this = allocator_alloc_thing(private_delete_ike_sa_job_t);
-	if (this == NULL)
-	{
-		return NULL;
-	}
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
 	/* same as destroy */
-	this->public.job_interface.destroy_all = (status_t (*) (job_t *)) destroy;
+	this->public.job_interface.destroy_all = (void (*) (job_t *)) destroy;
 	this->public.job_interface.destroy = destroy;
 	
 	/* public functions */
 	this->public.get_ike_sa_id = (ike_sa_id_t * (*)(delete_ike_sa_job_t *)) get_ike_sa_id;
-	this->public.destroy = (status_t (*)(delete_ike_sa_job_t *)) destroy;
+	this->public.destroy = (void (*)(delete_ike_sa_job_t *)) destroy;
 	
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);

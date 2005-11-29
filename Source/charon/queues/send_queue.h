@@ -33,7 +33,9 @@ typedef struct send_queue_t send_queue_t;
  * @brief Send-Queue
  *
  * Although the send-queue is based on a linked_list_t
- * all access functions are thread-save implemented
+ * all access functions are thread-save implemented.
+ * 
+ * @ingroup queues
  */
 struct send_queue_t {
 
@@ -54,7 +56,7 @@ struct send_queue_t {
 	 * After using, the returned packet has to get destroyed by the caller.
 	 *
 	 * @param send_queue_t 	calling object
- 	 * @param[out] packet 	pointer to a packet_t pointer where to packet is returned to
+	 * @return 				next packet from the queue
 	 */
 	packet_t *(*get) (send_queue_t *send_queue);
 
@@ -77,8 +79,7 @@ struct send_queue_t {
 	 * that no thread is going to add or get a packet from the send_queue
 	 * after calling this function.
 	 *
-	 * @param send_queue_t calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
+	 * @param send_queue_t 	calling object
 	 */
 	void (*destroy) (send_queue_t *send_queue);
 };
@@ -87,6 +88,8 @@ struct send_queue_t {
  * @brief Creates an empty send_queue_t.
  *
  * @return send_queue_t empty send_queue_t
+ * 
+ * @ingroup queues
  */
 send_queue_t *send_queue_create();
 

@@ -34,6 +34,8 @@ typedef struct ike_sa_id_t ike_sa_id_t;
  * An IKE_SA is identified by its initiator and responder spi's.
  * Additionaly it contains the role of the actual running IKEv2-Daemon
  * for the specific IKE_SA.
+ * 
+ * @ingroup sa
  */
 struct ike_sa_id_t {
 
@@ -131,6 +133,8 @@ struct ike_sa_id_t {
  * @param responder_spi			responders spi
  * @param is_initiator			TRUE if we are the original initiator
  * @return						created ike_sa_id_t object
+ * 
+ * @ingroup sa
  */
 ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi, bool is_initiaor);
 

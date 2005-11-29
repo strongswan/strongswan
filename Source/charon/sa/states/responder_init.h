@@ -32,7 +32,8 @@ typedef struct responder_init_t responder_init_t;
 /**
  * @brief This class represents an IKE_SA state when initializing.
  * a connection as responder.
- *
+ * 
+ * @ingroup states
  */
 struct responder_init_t {
 	/**
@@ -48,6 +49,8 @@ struct responder_init_t {
  * @param ike_sa assigned IKE_SA
  * 
  * @return responder_init state
+ * 
+ * @ingroup states
  */
 responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa);
 

@@ -1,7 +1,7 @@
 /**
  * @file ike_auth_requested.c
  * 
- * @brief State of an IKE_SA, which has requested an IKE_AUTH.
+ * @brief Implementation of ike_auth_requested_t.
  * 
  */
 

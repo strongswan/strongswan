@@ -1,7 +1,7 @@
 /**
  * @file delete_ike_sa_job.h
  * 
- * @brief Job of type DELETE_IKE_SA
+ * @brief Interface of delete_ike_sa_job_t.
  * 
  */
 
@@ -31,8 +31,9 @@
 typedef struct delete_ike_sa_job_t delete_ike_sa_job_t;
 
 /**
- * Object representing an DELETE_IKE_SA Job
+ * @brief Class representing an DELETE_IKE_SA Job.
  * 
+ * @ingroup jobs
  */
 struct delete_ike_sa_job_t {
 	/**
@@ -41,7 +42,7 @@ struct delete_ike_sa_job_t {
 	job_t job_interface;
 	
 	/**
-	 * @brief Returns the currently set ike_sa_id
+	 * @brief Returns the currently set ike_sa_id.
 	 * 	
 	 * @warning Returned object is not copied.
 	 * 
@@ -51,24 +52,21 @@ struct delete_ike_sa_job_t {
 	ike_sa_id_t * (*get_ike_sa_id) (delete_ike_sa_job_t *this);
 
 	/**
-	 * @brief Destroys an delete_ike_sa_job_t object (including assigned data)
+	 * @brief Destroys an delete_ike_sa_job_t object (including assigned data).
 	 *
 	 * @param this 	delete_ike_sa_job_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (delete_ike_sa_job_t *this);
+	void (*destroy) (delete_ike_sa_job_t *this);
 };
 
 /**
- * Creates a job of type DELETE_IKE_SA
+ * @brief Creates a job of type DELETE_IKE_SA.
  * 
- * @param ike_sa_id	id of the IKE_SA to delete
- * @return
- * 				- delete_ike_sa_job_t if successfully
- * 				- NULL if out of ressources
+ * @param ike_sa_id		id of the IKE_SA to delete
+ * @return				created delete_ike_sa_job_t object
+ * 
+ * @ingroup jobs
  */
 delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id);
-
 
 #endif /*DELETE_IKE_SA_JOB_H_*/

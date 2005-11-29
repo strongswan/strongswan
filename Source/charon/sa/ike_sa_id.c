@@ -56,7 +56,6 @@ struct private_ike_sa_id_t {
 
 };
 
-
 /**
  * implements ike_sa_id_t.set_responder_spi.
  */
@@ -94,7 +93,7 @@ static u_int64_t get_responder_spi (private_ike_sa_id_t *this)
  */
 static bool equals (private_ike_sa_id_t *this, private_ike_sa_id_t *other)
 {
-	if ((this == NULL)||(other == NULL))
+	if (other == NULL)
 	{
 		return FALSE;
 	}

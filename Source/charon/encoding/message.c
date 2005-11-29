@@ -527,16 +527,15 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 		}
 	}
 	
-	/* colen packet for caller */
-	this->packet->clone(this->packet, packet);
+	/* clone packet for caller */
+	*packet = this->packet->clone(this->packet);
 	
 	this->logger->log(this->logger, CONTROL, "message generated successfully");
 	return SUCCESS;
 }
 
 /**
- * Implements message_t's parse_header function.
- * See #message_s.parse_header.
+ * Implements message_t.parse_header.
  */
 static status_t parse_header(private_message_t *this)
 {

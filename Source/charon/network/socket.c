@@ -1,9 +1,7 @@
 /**
  * @file socket.c
  *
- * @brief management of sockets
- *
- * receiver reads from here, sender writes to here
+ * @brief Implementation of socket_t.
  *
  */
 
@@ -52,6 +50,7 @@ struct private_socket_t{
 	  * currently we only have one socket, maybe more in the future ?
 	  */
 	 int socket_fd;
+	 
 	 /** 
 	  * logger for this socket
 	  */
@@ -137,13 +136,11 @@ status_t sender(private_socket_t *this, packet_t *packet)
 /**
  * implementation of socket_t.destroy
  */
-status_t destroy(private_socket_t *this)
+void destroy(private_socket_t *this)
 {
 	close(this->socket_fd);
 	global_logger_manager->destroy_logger(global_logger_manager, this->logger);
 	allocator_free(this);
-
-	return SUCCESS;
 }
 
 socket_t *socket_create(u_int16_t port)
@@ -154,15 +151,9 @@ socket_t *socket_create(u_int16_t port)
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
-	this->public.destroy = (status_t(*)(socket_t*))destroy;
-	
+	this->public.destroy = (void(*)(socket_t*))destroy;
 	
 	this->logger = global_logger_manager->create_logger(global_logger_manager, SOCKET, NULL);
-	if (this->logger == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
 
 	/* create default ipv4 socket */
 	this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);

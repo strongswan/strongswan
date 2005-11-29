@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_established.h
  * 
- * @brief State of an established IKE_SA.
+ * @brief Interface of ike_sa_established_t.
  * 
  */
 
@@ -29,9 +29,10 @@
 typedef struct ike_sa_established_t ike_sa_established_t;
 
 /**
- * @brief This class represents an the state of an established.
+ * @brief This class represents an the state of an established
  * IKE_SA.
- *
+ * 
+ * @ingroup states
  */
 struct ike_sa_established_t {
 	/**
@@ -44,7 +45,10 @@ struct ike_sa_established_t {
 /**
  * Constructor of class ike_sa_established_t
  * 
- * @param ike_sa assigned ike_sa
+ * @param ike_sa 	assigned ike_sa
+ * @return			created ike_sa_established_t object
+ * 
+ * @ingroup states
  */
 ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa);
 

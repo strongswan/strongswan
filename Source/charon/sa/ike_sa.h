@@ -38,6 +38,8 @@
 
 /**
  * Nonce size in bytes of all sent nonces
+ * 
+ * @ingroup sa
  */
 #define NONCE_SIZE 16
 
@@ -46,6 +48,8 @@ typedef struct ike_sa_t ike_sa_t;
 /**
  * @brief Class ike_sa_t. An object of this type is managed by an
  * ike_sa_manager_t object and represents an IKE_SA.
+ * 
+ * @ingroup sa
  */
 struct ike_sa_t {
 
@@ -90,6 +94,8 @@ typedef struct protected_ike_sa_t protected_ike_sa_t;
  * 
  * This members should only be accessed from 
  * the varius state classes.
+ * 
+ * @ingroup sa
  */
 struct protected_ike_sa_t {
 
@@ -239,6 +245,8 @@ struct protected_ike_sa_t {
  * 			e.g. when a IKE_SA_INIT has been finished.
  *
  * @return 					created ike_sa_t object
+ * 
+ * @ingroup sa
  */
 ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id);
 

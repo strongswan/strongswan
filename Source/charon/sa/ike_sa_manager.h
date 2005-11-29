@@ -38,7 +38,8 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  *
  * @todo checking of double-checkouts from the same threads would be nice.
  * This could be by comparing thread-ids via pthread_self()...
- *
+ * 
+ * @ingroup sa
  */
 struct ike_sa_manager_t {
 	/**
@@ -128,6 +129,8 @@ struct ike_sa_manager_t {
  * @brief Create a manager
  * 
  * @returns 	the created manager
+ * 
+ * @ingroup sa
  */
 ike_sa_manager_t *ike_sa_manager_create();
 

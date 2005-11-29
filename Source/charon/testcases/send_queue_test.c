@@ -88,7 +88,7 @@ static void test_send_queue_receiver(send_queue_test_t * testinfo)
 
 		testinfo->tester->assert_true(testinfo->tester,(	packet != NULL), "packet not NULL call check");
 
-		testinfo->tester->assert_true(testinfo->tester,(	packet->destroy(packet) == SUCCESS), "packet destroy call check");
+		packet->destroy(packet);
 	}
 }
 

@@ -1,8 +1,7 @@
 /**
  * @file ike_sa.c
  *
- * @brief Class ike_sa_t. An object of this type is managed by an
- * ike_sa_manager_t object and represents an IKE_SA
+ * @brief Implementation of ike_sa_t.
  *
  */
 
@@ -56,7 +55,6 @@ struct private_ike_sa_t {
 	 * Protected part of a ike_sa_t object.
 	 */
 	protected_ike_sa_t protected;
-
 
 	/**
 	 * Creates a job to delete the given IKE_SA.

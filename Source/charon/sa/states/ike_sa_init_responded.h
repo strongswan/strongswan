@@ -29,8 +29,10 @@
 typedef struct ike_sa_init_responded_t ike_sa_init_responded_t;
 
 /**
- * @brief This class represents an IKE_SA state when responded to an IKE_SA_INIT request.
- *
+ * @brief This class represents an IKE_SA state when 
+ * responded to an IKE_SA_INIT request.
+ * 
+ * @ingroup states
  */
 struct ike_sa_init_responded_t {
 	/**
@@ -41,9 +43,12 @@ struct ike_sa_init_responded_t {
 };
 
 /**
- * Constructor of class ike_sa_init_responded_t
+ * @brief Constructor of class ike_sa_init_responded_t
  * 
- * @param ike_sa assigned IKE_SA
+ * @param ike_sa 		assigned IKE_SA
+ * @todo Params description
+ * 
+ * @ingroup states
  */
 ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t shared_secret, chunk_t received_nonce, chunk_t sent_nonce);
 

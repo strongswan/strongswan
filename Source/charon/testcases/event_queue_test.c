@@ -133,8 +133,7 @@ void test_event_queue(tester_t *tester)
 			job = event_queue->get(event_queue);
 			gettimeofday(&current_time,NULL);
 			tester->assert_true(tester,((current_time.tv_sec - start_time.tv_sec) == i), "value of entry check");
-			tester->assert_true(tester,(job->destroy(job) == SUCCESS), "job destroy call check");
-
+			job->destroy(job);
 		}
 	}
 

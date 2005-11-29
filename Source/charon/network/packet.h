@@ -1,7 +1,7 @@
 /**
  * @file packet.h
  * 
- * @brief UDP-Packet, contains data, sender and receiver.
+ * @brief Interface of packet_t.
  * 
  */
 
@@ -30,7 +30,9 @@
 
 typedef struct packet_t packet_t;
 /**
- * @brief UDP-Packet, contains data, sender and receiver
+ * @brief Abstraction of an UDP-Packet, contains data, sender and receiver.
+ * 
+ * @ingroup network
  */
 struct packet_t {
 
@@ -50,28 +52,27 @@ struct packet_t {
 	chunk_t data;
 		
 	/**
-	 * @brief 			Clones a packet_t object
+	 * @brief 			Clones a packet_t object.
 	 *  
-	 * @param packet		calling object
+	 * @param packet	calling object
 	 * @param clone		pointer to a packet_t object pointer where the new object is stored
-	 * @return 			- SUCCESS if successful
-	 * 					- OUT_OF_RES
 	 */
-	status_t (*clone) (packet_t *packet, packet_t **clone);
+	packet_t* (*clone) (packet_t *packet);
 	
 	/**
-	 * @brief 			destroy the packet, freeing contained data
+	 * @brief 			Destroy the packet, freeing contained data.
 	 *  
 	 * @param packet	packet to destroy	
-	 * @return 			- SUCCESS
 	 */
-	status_t (*destroy) (packet_t *packet);
+	void (*destroy) (packet_t *packet);
 };
 
 /**
  * @brief create an empty packet
  *  
- * @return  			- NULL when family not supported
+ * @return  			created packet_t object
+ * 
+ * @ingroup network
  */
 packet_t *packet_create();
 

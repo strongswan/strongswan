@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_manager.c
  *
- * @brief Central point for managing IKE-SAs (creation, locking, deleting...)
+ * @brief Implementation of ike_sa_mananger_t.
  *
  */
 
@@ -35,7 +35,7 @@
 typedef struct ike_sa_entry_t ike_sa_entry_t;
 
 /**
- * @brief An entry in the linked list, contains IKE_SA, locking and lookup data.
+ * An entry in the linked list, contains IKE_SA, locking and lookup data.
  */
 struct ike_sa_entry_t {
 	/**
@@ -73,7 +73,7 @@ struct ike_sa_entry_t {
 };
 
 /**
- * @see ike_sa_entry_t.destroy
+ * Implements ike_sa_entry_t.destroy.
  */
 static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
 {
@@ -87,7 +87,7 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
 /**
  * @brief creates a new entry for the ike_sa list
  *
- * This constructor additionaly creates a new and empty SA
+ * This constructor additionaly creates a new and empty SA.
  *
  * @param ike_sa_id		the associated ike_sa_id_t, will be cloned
  * @return				created entry, with ike_sa and ike_sa_id
@@ -130,7 +130,7 @@ struct private_ike_sa_manager_t {
 	/**
 	 * @brief get next spi
 	 *
-	 * we give out SPIs incremental
+	 * we give out SPIs incremental.
 	 *
 	 * @param this			the ike_sa_manager
 	 * @return 				the next spi
@@ -138,7 +138,7 @@ struct private_ike_sa_manager_t {
 	u_int64_t (*get_next_spi) (private_ike_sa_manager_t *this);
 
 	/**
-	 * @brief find the ike_sa_entry in the list by SPIs
+	 * @brief find the ike_sa_entry in the list by SPIs.
 	 *
 	 * This function simply iterates over the linked list. A hash-table
 	 * would be more efficient when storing a lot of IKE_SAs...
@@ -198,7 +198,6 @@ struct private_ike_sa_manager_t {
 	  */
 	 u_int64_t next_spi;
 };
-
 
 /**
  * Implements private_ike_sa_manager_t.get_entry_by_id.
@@ -468,8 +467,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 }
 
 /**
- * Implements ike_sa_manager_t-function checkin.
- * @see ike_sa_manager_t.checkin.
+ * Implements ike_sa_manager_t.checkin.
  */
 static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
@@ -506,8 +504,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 
 
 /**
- * Implements ike_sa_manager_t-function checkin_and_delete.
- * @see ike_sa_manager_t.checkin_and_delete.
+ * Implements ike_sa_manager_t.checkin_and_delete.
  */
 static status_t checkin_and_delete(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {

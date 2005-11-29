@@ -1,7 +1,7 @@
 /**
  * @file job.c
  * 
- * @brief Job-Interface representing a job e.g. in job_queue
+ * @brief Interface additions to job_t.
  * 
  */
 

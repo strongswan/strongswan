@@ -1,7 +1,7 @@
 /**
  * @file incoming_packet_job.h
  * 
- * @brief Job of type INCOMING_PACKET
+ * @brief Interface of incoming_packet_job_t.
  * 
  */
 
@@ -31,8 +31,9 @@
 typedef struct incoming_packet_job_t incoming_packet_job_t;
 
 /**
- * Object representing an INCOMING_PACKET Job
+ * @brief Object representing an INCOMING_PACKET Job.
  * 
+ * @ingroup jobs
  */
 struct incoming_packet_job_t {
 	/**
@@ -46,32 +47,26 @@ struct incoming_packet_job_t {
 	 * @warning Returned packet is not cloned and has to get destroyed by the caller.
 	 * 
 	 * @param this 			calling incoming_packet_job_t object
-	 * @param[out] packet 	assigned packet will be written into this location
-	 * @return 				
-	 * 						- SUCCESS
-	 * 						- FAILED if no packet is assigned
+	 * @return			 	assigned packet
 	 */
-	status_t (*get_packet) (incoming_packet_job_t *this, packet_t **packet);
+	packet_t *(*get_packet) (incoming_packet_job_t *this);
 
 	/**
 	 * @brief Destroys an incoming_packet_job_t object.
 	 *
 	 * @param this 	incoming_packet_job_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (incoming_packet_job_t *this);
+	void (*destroy) (incoming_packet_job_t *this);
 };
 
 /**
- * Creates a job of type INCOMING_PACKET
+ * @brief Creates a job of type INCOMING_PACKET
  * 
  * @param[in] packet		packet to assign with this job
- * @return
- * 						- incoming_packet_job_t if successfully
- * 						- NULL if out of ressources
+ * @return					created incoming_packet_job_t object
+ * 
+ * @ingroup jobs
  */
 incoming_packet_job_t *incoming_packet_job_create(packet_t *packet);
-
 
 #endif /*INCOMING_PACKET_JOB_H_*/

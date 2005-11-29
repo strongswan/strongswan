@@ -34,10 +34,13 @@
 
 
 typedef struct host_t host_t;
+
 /**
  * @brief Representates a Host
  * 
  * Host object, identifies a host and defines some useful functions on it.
+ * 
+ * @ingroup network
  */
 struct host_t {
 	/** 
@@ -105,15 +108,17 @@ struct host_t {
 /**
  * @brief Constructor to create a host_t object
  * 
- * currently supports only IPv4!
+ * Currently supports only IPv4!
  *
  * @param family 		Address family to use for this object, such as AF_INET or AF_INET6
  * @param address		string of an address, such as "152.96.193.130"
  * @param port			port number
- * @return 				the host_t object or NULL, when
- * 						family not supported.
+ * @return 				
+ * 						- the host_t object, or 
+ * 						- NULL, when family not supported.
+ * 
+ * @ingroup network
  */
 host_t *host_create(int family, char *address, u_int16_t port);
-		  
 
 #endif /*HOST_H_*/

@@ -159,19 +159,10 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 	ike_sa_id_t *ike_sa_id;
 	status_t 	status;
 	
-	if (job->get_packet(job,&packet) != SUCCESS)
-	{
-		this->worker_logger->log(this->worker_logger, ERROR, "packet in job could not be retrieved!");				
-		return;
-	}
+	
+	packet = job->get_packet(job);
 				
 	message = message_create_from_packet(packet);
-	if (message == NULL)
-	{
-		this->worker_logger->log(this->worker_logger, ERROR, "message could not be created from packet!");
-		packet->destroy(packet);
-		return;					
-	}
 
 	status = message->parse_header(message);
 	if (status != SUCCESS)
@@ -194,13 +185,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 		/* Todo send notify */
 	}
 				
-	status = message->get_ike_sa_id(message, &ike_sa_id);
-	if (status != SUCCESS)
-	{
-		this->worker_logger->log(this->worker_logger, ERROR, "IKE SA ID of message could not be created!");
-		message->destroy(message);
-		return;
-	}
+	message->get_ike_sa_id(message, &ike_sa_id);
 			
 	ike_sa_id->switch_initiator(ike_sa_id);
 				

@@ -1,8 +1,7 @@
 /**
  * @file initiate_ike_sa_job.h
  * 
- * @brief Job of type INITIATE_IKE_SA
- * 
+ * @brief Interface of initiate_ike_sa_job_t.
  */
 
 /*
@@ -31,6 +30,7 @@ typedef struct initiate_ike_sa_job_t initiate_ike_sa_job_t;
 /**
  * Object representing an INITIATE_IKE_SA Job
  * 
+ * @ingroup jobs
  */
 struct initiate_ike_sa_job_t {
 	/**
@@ -52,19 +52,17 @@ struct initiate_ike_sa_job_t {
 	 * @brief Destroys an initiate_ike_sa_job_t object.
 	 *
 	 * @param this 	initiate_ike_sa_job_t object to destroy
-	 * @return 		
-	 * 				SUCCESS in any case
 	 */
-	status_t (*destroy) (initiate_ike_sa_job_t *this);
+	void (*destroy) (initiate_ike_sa_job_t *this);
 };
 
 /**
- * Creates a job of type INITIATE_IKE_SA
+ * @brief Creates a job of type INITIATE_IKE_SA.
  * 
  * @param configuration_name		name of the configuration to initiate IKE_SA with
- * @return
- * 				- initiate_ike_sa_job_t if successfully
- * 				- NULL if out of ressources or no configuration_name given
+ * @return							initiate_ike_sa_job_t object
+ * 
+ * @ingroup jobs
  */
 initiate_ike_sa_job_t *initiate_ike_sa_job_create(char *configuration_name);
 

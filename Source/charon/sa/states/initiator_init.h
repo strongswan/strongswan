@@ -1,7 +1,7 @@
 /**
  * @file initiator_init.h
  * 
- * @brief Start state of a IKE_SA as initiator
+ * @brief Interface of initiator_init_t.
  * 
  */
 
@@ -33,7 +33,8 @@ typedef struct initiator_init_t initiator_init_t;
 /**
  * @brief This class represents an IKE_SA state when initializing.
  * a connection as initiator
- *
+ * 
+ * @ingroup states
  */
 struct initiator_init_t {
 	/**
@@ -52,9 +53,11 @@ struct initiator_init_t {
 };
 
 /**
- * Constructor of class initiator_init_t
+ * @brief Constructor of class initiator_init_t
  * 
  * @param ike_sa assigned IKE_SA
+ * 
+ * @ingroup states
  */
 initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa);
 

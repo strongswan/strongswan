@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_init_requested.c
  * 
- * @brief State of a IKE_SA after requesting an IKE_SA_INIT 
+ * @brief Implementation of ike_sa_init_requested_t.
  * 
  */
 

@@ -1,9 +1,7 @@
 /**
  * @file socket.h
  * 
- * @brief management of sockets
- * 
- * receiver reads from here, sender writes to here
+ * @brief Interface for socket_t.
  * 
  */
 
@@ -31,8 +29,11 @@
 
 
 /**
- * maximum size of a packet
+ * @brief Maximum size of a packet.
+ * 
  * 3000 Bytes should be sufficient, see IKEv2 draft
+ * 
+ * @ingroup network
  */
 #define MAX_PACKET 3000
 
@@ -40,12 +41,15 @@
 typedef struct socket_t socket_t;
 
 /**
- * @brief abstraction of one (ipv4), or in future, of multiple sockets
+ * @brief Abstraction of one (ipv4), or in future, of multiple sockets.
+ *
+ * Receiver reads from here, sender writes to here.
  * 
+ * @ingroup network
  */
 struct socket_t {
 	/**
-	 * @brief receive a packet
+	 * @brief Receive a packet.
 	 * 
 	 * reads a packet from one of the sockets.
 	 * source will be set, dest not implemented
@@ -59,7 +63,7 @@ struct socket_t {
 	status_t (*receive) (socket_t *sock, packet_t **packet);
 	
 	/**
-	 * @brief send a packet
+	 * @brief Send a packet.
 	 * 
 	 * sends a packet via desired socket.
 	 * uses source and dest in packet.
@@ -72,24 +76,26 @@ struct socket_t {
 	status_t (*send) (socket_t *sock, packet_t *packet);
 	
 	/**
-	 * @brief destroy sockets
+	 * @brief Destroy sockets.
 	 * 
 	 * close sockets and destroy socket_t object
 	 * 
 	 * @param sock 			socket_t to destroy
 	 * @return 				SUCCESS
 	 */
-	status_t (*destroy) (socket_t *sock);
+	void (*destroy) (socket_t *sock);
 };
 
 /**
- * @brief socket_t constructor
+ * @brief socket_t constructor.
  * 
  * currently creates one socket, listening on all addresses
  * on port.
  *  
  * @param port				port to bind socket to
  * @return  				the created socket, or NULL on error
+ * 
+ * @ingroup network
  */
 socket_t *socket_create(u_int16_t port);
 

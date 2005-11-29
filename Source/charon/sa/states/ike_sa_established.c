@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_established.c
  * 
- * @brief State of an established IKE_SA.
+ * @brief Implementation of ike_sa_established_t.
  * 
  */
 
@@ -29,7 +29,6 @@ typedef struct private_ike_sa_established_t private_ike_sa_established_t;
 
 /**
  * Private data of a ike_sa_established_t object.
- *
  */
 struct private_ike_sa_established_t {
 	/**

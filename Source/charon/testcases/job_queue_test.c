@@ -80,7 +80,7 @@ static void test_job_queue_receiver(job_queue_test_t * testinfo)
 		job_t *job;
 		job = testinfo->job_queue->get(testinfo->job_queue);
 		testinfo->tester->assert_true(testinfo->tester,(job->get_type(job) == INITIATE_IKE_SA), "job type check");
-		testinfo->tester->assert_true(testinfo->tester,(job->destroy(job) == SUCCESS), "job destroy call check");
+		job->destroy(job);
 	}
 }
 

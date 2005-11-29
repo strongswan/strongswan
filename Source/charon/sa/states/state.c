@@ -1,7 +1,7 @@
 /**
  * @file state.c
  * 
- * @brief Interface for a specific IKE_SA state
+ * @brief Interface additions to ike_sa_sate_t.
  * 
  */
 

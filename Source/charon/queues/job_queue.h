@@ -1,7 +1,7 @@
 /**
  * @file job_queue.h
  *
- * @brief Interface of job_queue_t-
+ * @brief Interface of job_queue_t.
  *
  */
 
@@ -32,7 +32,9 @@ typedef struct job_queue_t job_queue_t;
  * @brief Job-Queue
  *
  * Although the job-queue is based on a linked_list_t
- * all access functions are thread-save implemented
+ * all access functions are thread-save implemented.
+ * 
+ * @ingroup queues
  */
 struct job_queue_t {
 
@@ -52,7 +54,7 @@ struct job_queue_t {
 	 *
 	 * @param job_queue_t 	calling object
  	 * @param[out] job 		pointer to a job pointer where to job is returned to
-	 * @return				job
+	 * @return				next job
 	 */
 	job_t *(*get) (job_queue_t *job_queue);
 
@@ -63,8 +65,8 @@ struct job_queue_t {
 	 * The specific job object has to get destroyed by the thread which
 	 * removes the job.
 	 *
-	 * @param job_queue_t calling object
- 	 * @param[in] job job to add to the queue (job is not copied)
+	 * @param job_queue_t 	calling object
+ 	 * @param job 			job to add to the queue (job is not copied)
 	 */
 	void (*add) (job_queue_t *job_queue, job_t *job);
 
@@ -75,15 +77,17 @@ struct job_queue_t {
 	 * that no thread is going to add or get a job from the job_queue
 	 * after calling this function.
 	 *
-	 * @param job_queue_t calling object
+	 * @param job_queue_t 	calling object
 	 */
 	void (*destroy) (job_queue_t *job_queue);
 };
 
 /**
- * @brief Creates an empty job_queue
+ * @brief Creates an empty job_queue.
  *
  * @return job_queue_t empty job_queue
+ * 
+ * @ingroup queues
  */
 job_queue_t *job_queue_create();
 

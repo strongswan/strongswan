@@ -65,6 +65,6 @@ void test_socket(tester_t *tester)
 		pkt->destroy(pkt);
    	}
 
-	tester->assert_true(tester, (skt->destroy(skt) == SUCCESS), "socket destroy call check");
+	skt->destroy(skt);
 
 }

@@ -1,7 +1,7 @@
 /**
  * @file job.h
  * 
- * @brief Job-Interface representing a job e.g. in job_queue
+ * @brief Interface job_t.
  * 
  */
 
@@ -30,7 +30,9 @@
 typedef enum job_type_t job_type_t;
 
 /**
- * Type of Jobs in Job-Queue
+ * @brief Definition of the various job types.
+ * 
+ * @ingroup jobs
  */
 enum job_type_t {
 	/** 
@@ -60,20 +62,25 @@ enum job_type_t {
 	/* more job types have to be inserted here */
 };
 
+/**
+ * string mappings for job_type_t
+ */
 extern mapping_t job_type_m[];
 
 
 typedef struct job_t job_t;
 
 /**
- * @brief Job-Interface as it is stored in the job queue
+ * @brief Job-Interface as it is stored in the job queue.
  * 
- * A job consists of a job-type and one or more assigned values
+ * A job consists of a job-type and one or more assigned values.
+ * 
+ * @ingroup jobs
  */
-struct job_t{
+struct job_t {
 
 	/**
-	 * @brief get type of job
+	 * @brief get type of job.
 	 *
 	 * @param this 				calling object
 	 * @return 					type of this job
@@ -84,17 +91,15 @@ struct job_t{
 	 * @brief Destroys a job_t object and all assigned data!
 	 * 
 	 * @param job_t calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*destroy_all) (job_t *job);
+	void (*destroy_all) (job_t *job);
 
 	/**
 	 * @brief Destroys a job_t object
 	 * 
 	 * @param job_t calling object
-	 * @returns SUCCESS if succeeded, FAILED otherwise
 	 */
-	status_t (*destroy) (job_t *job);
+	void (*destroy) (job_t *job);
 };
 
 

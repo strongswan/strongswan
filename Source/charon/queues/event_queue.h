@@ -35,6 +35,8 @@ typedef struct event_queue_t event_queue_t;
  *
  * Although the event-queue is based on a linked_list_t
  * all access functions are thread-save implemented.
+ * 
+ * @ingroup queues
  */
 struct event_queue_t {
 
@@ -100,6 +102,9 @@ struct event_queue_t {
  * @brief Creates an empty event_queue
  *
  * @returns		event_queue
+ * 
+ * @ingroup queues
  */
 event_queue_t *event_queue_create();
+		  
 #endif /*EVENT_QUEUE_H_*/

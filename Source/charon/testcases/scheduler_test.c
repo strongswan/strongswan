@@ -81,7 +81,7 @@ void test_scheduler(tester_t *tester)
 		incoming_packet_job_t *current_job;
 		current_job = (incoming_packet_job_t*) jobs[current];
 		packet_t *packet;
-		current_job->get_packet(current_job,&packet);
+		packet = current_job->get_packet(current_job);
 		
 		tester->assert_true(tester, (((int)packet) == current+1), "job order");
 		jobs[current]->destroy(jobs[current]);

@@ -87,7 +87,7 @@ static ike_sa_state_t get_state(private_ike_sa_init_responded_t *this)
 /**
  * Implements state_t.get_state
  */
-static status_t destroy(private_ike_sa_init_responded_t *this)
+static void destroy(private_ike_sa_init_responded_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy ike_sa_init_responded_t state object");
 	
@@ -101,7 +101,6 @@ static status_t destroy(private_ike_sa_init_responded_t *this)
 	allocator_free(this->received_nonce.ptr);
 	
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /* 

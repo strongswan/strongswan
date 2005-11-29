@@ -75,7 +75,7 @@ void test_receiver(tester_t *tester)
 		job = global_job_queue->get(global_job_queue);
 		tester->assert_true(tester, (job->get_type(job) == INCOMING_PACKET), "job type check");
 		
-		((incoming_packet_job_t *)(job))->get_packet((incoming_packet_job_t *)(job),&received_packet);
+		received_packet = ((incoming_packet_job_t *)(job))->get_packet((incoming_packet_job_t *)(job));
 		tester->assert_true(tester, (received_packet->data.len == (sizeof(int))), "received data length check");
 		tester->assert_true(tester, (i == *((int *)(received_packet->data.ptr))), "received data value check");
 		received_packet->destroy(received_packet);

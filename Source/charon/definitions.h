@@ -61,40 +61,74 @@
 
 
 /**
- * @addtogroup config
+ * @defgroup config
  * 
  * Configuration stuff.
  */
 
 /**
- * @addtogroup encoding
+ * @defgroup encoding
  * 
  * Classes used to encode and decode IKEv2 Messages.
  */
+
+/**
+ * @defgroup network
+ * 
+ * Low level network stuff.
+ */
  
  /**
- * @addtogroup payloads
+ * @defgroup payloads
  * 
  * Classes representing a specific IKEv2 Payload type.
  * 
  * @ingroup encoding
  */
 
+/**
+ * @defgroup sa
+ * 
+ * Security association with all helber classes.
+ */
+
 
 /**
- * @addtogroup testcases
+ * @defgroup states
+ *
+ * Varius states in which an IKE SA can be.
+ *
+ * @ingroup sa
+ */
+
+/**
+ * @defgroup queues
+ * 
+ * Different kind of queues.
+ */
+ 
+ /**
+  * @defgroup jobs
+  * 
+  * Jobs used in job queue and event queue.
+  * 
+  * @ingroup queues
+  */
+
+/**
+ * @defgroup testcases
  * 
  * Testcases used to test the different classes in seperate module tests.
  */
 
 /**
- * @addtogroup transforms
+ * @defgroup transforms
  * 
  * Transform algorithms of different kind.
  */
  
 /**
- * @addtogroup prfs
+ * @defgroup prfs
  * 
  * Pseudo random functions, generate a lot of pseudo
  * randomness using random numbers.
@@ -103,7 +137,7 @@
  */
 
 /**
- * @addtogroup signers
+ * @defgroup signers
  * 
  * Symmetric signing algorithms, used to ensure 
  * message integrity.
@@ -112,7 +146,7 @@
  */
 
 /**
- * @addtogroup crypters
+ * @defgroup crypters
  * 
  * Symmetric encryption algorithms, used to en-
  * and decrypt.
@@ -121,7 +155,7 @@
  */
  
 /**
- * @addtogroup hashers
+ * @defgroup hashers
  * 
  * Hashing algorithms.
  * 
@@ -153,13 +187,13 @@
  */
  
  /**
- * @addtogroup utils
+ * @defgroup utils
  * 
  * Generic helper classes.
  */
   
 /**
- * @addtogroup threads
+ * @defgroup threads
  * 
  * Threaded classes, which will do their 
  * job alone.

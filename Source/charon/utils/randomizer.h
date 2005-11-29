@@ -32,6 +32,8 @@ typedef struct randomizer_t randomizer_t;
  *
  * This class is thread save as file system read calls are thread save.
  * 
+ * @todo fix FEHLVERHALTEN
+ * 
  * @ingroup utils
  */
 struct randomizer_t {

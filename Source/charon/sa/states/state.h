@@ -1,7 +1,7 @@
 /**
  * @file state.h
  * 
- * @brief Interface for a specific IKE_SA state.
+ * @brief Interface ike_sa_sate_t.
  * 
  */
 
@@ -33,6 +33,8 @@ typedef enum ike_sa_state_t ike_sa_state_t;
 
 /**
  * States in which a IKE_SA can actually be
+ * 
+ * @ingroup states
  */
 enum ike_sa_state_t {
 
@@ -79,6 +81,8 @@ typedef struct state_t state_t;
 
 /**
  * @brief This interface represents an IKE_SA state
+ * 
+ * @ingroup states
  */
 struct state_t {
 
@@ -108,6 +112,5 @@ struct state_t {
 	 */
 	void (*destroy) (state_t *this);
 };
-
 
 #endif /*STATE_H_*/
