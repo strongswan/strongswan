@@ -27,6 +27,7 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/id_payload.h>
 #include <transforms/diffie_hellman.h>
 
 
@@ -80,6 +81,24 @@ struct private_ike_sa_init_requested_t {
 	 * Is logger of ike_sa!
 	 */
 	logger_t *logger;
+	
+	/**
+	 * Builds the IKE_SA_AUTH request message.
+	 * 
+	 * @param this		calling object
+	 * @param message	the created message will be stored at this location
+	 */
+	void (*build_ike_auth_request) (private_ike_sa_init_requested_t *this, message_t **message);
+	
+	/**
+	 * Builds the id payload for this state.
+	 * 
+	 * @param this		calling object
+	 * @param payload	The generated payload object of type id_payload_t is 
+	 * 					stored at this location.
+	 */
+	void (*build_id_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	
 };
 
 /**
@@ -90,6 +109,8 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	status_t status;
 	iterator_t *payloads;
 	exchange_type_t	exchange_type;
+	message_t *request;
+	packet_t *packet;
 	u_int64_t responder_spi;
 	ike_sa_id_t *ike_sa_id;
 	
@@ -227,6 +248,25 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	
 	this->ike_sa->compute_secrets(this->ike_sa,this->shared_secret,this->sent_nonce, this->received_nonce);
 
+	this->build_ike_auth_request (this,&request);
+
+	/* generate packet */	
+	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
+
+	status = request->generate(request, this->ike_sa->get_crypter_initiator(this->ike_sa), this->ike_sa->get_signer_initiator(this->ike_sa), &packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "could not generate packet from message");
+		message->destroy(message);
+		return status;
+	}
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	charon->send_queue->add(charon->send_queue, packet);
+	
+	
+	request->destroy(request);
+
 	/****************************
 	 * 
 	 *  TODO
@@ -249,6 +289,45 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 	
 	return SUCCESS;
+}
+
+/**
+ * implements private_ike_sa_init_requested_t.build_ike_auth_request
+ */
+static void build_ike_auth_request (private_ike_sa_init_requested_t *this, message_t **request)
+{
+	payload_t *payload;
+	message_t *message;
+	
+	/* going to build message */
+	this->logger->log(this->logger, CONTROL|MOST, "Going to build empty message");
+	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &message);
+	
+	
+	/* build id payload */
+	this->build_id_payload(this, &payload);
+	this->logger->log(this->logger, CONTROL|MOST, "add id payload to message");
+	message->add_payload(message, payload);
+	
+	*request = message;
+}
+
+static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+{
+	id_payload_t *id_payload;
+	chunk_t email;
+	
+	/* create IDi */
+	id_payload = id_payload_create(TRUE);
+	/* TODO special functions on id payload */
+	/* TODO configuration manager request */
+	id_payload->set_id_type(id_payload,ID_RFC822_ADDR);
+	email.ptr = "moerdi@hsr.ch";
+	email.len = strlen(email.ptr);
+	this->logger->log_chunk(this->logger, CONTROL, "Moerdi",&email);
+	id_payload->set_data(id_payload,email);
+	
+	*payload = (payload_t *) id_payload;
 }
 
 /**
@@ -286,6 +365,10 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
 	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
+	
+	/* private functions */
+	this->build_ike_auth_request = build_ike_auth_request;
+	this->build_id_payload = build_id_payload;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

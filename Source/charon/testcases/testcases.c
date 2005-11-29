@@ -211,7 +211,6 @@ int main()
 	//tester->perform_test(tester,&encryption_payload_test); 
 	
 	
-	
 	tester->destroy(tester);
 	
 	charon->kill(charon, NULL);

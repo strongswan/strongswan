@@ -92,6 +92,14 @@ struct signer_t {
 	size_t (*get_block_size) (signer_t *this);
 	
 	/**
+	 * @brief Get the key size of the signature algorithm.
+	 * 
+	 * @param this			calling signer
+	 * @return				key size in bytes
+	 */
+	size_t (*get_key_size) (signer_t *this);
+	
+	/**
 	 * @brief Set the key for this signer.
 	 * 
 	 * @param this			calling signer

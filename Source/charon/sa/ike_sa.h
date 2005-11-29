@@ -230,6 +230,23 @@ struct protected_ike_sa_t {
 	 * @param state				pointer to the new state_t object
 	 */
 	void (*set_new_state) (protected_ike_sa_t *this,state_t *state);
+	
+	/**
+	 * Gets the internal stored initiator crypter_t object.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to crypter_t object
+	 */
+	crypter_t *(*get_crypter_initiator) (protected_ike_sa_t *this);
+	
+	/**
+	 * Gets the internal stored initiator signer object.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to signer_t object
+	 */
+	signer_t *(*get_signer_initiator) (protected_ike_sa_t *this);
+
 };
 
 

@@ -96,6 +96,11 @@ static void verify_signature (private_hmac_signer_t *this, chunk_t data, chunk_t
 		*valid = FALSE;
 	}
 }
+
+static size_t get_key_size (private_hmac_signer_t *this)
+{
+	return this->hmac_prf->get_block_size(this->hmac_prf);
+}
 	
 static size_t get_block_size (private_hmac_signer_t *this)
 {
@@ -138,6 +143,7 @@ hmac_signer_t *hmac_signer_create(hash_algorithm_t hash_algoritm)
 	this->public.signer_interface.get_signature = (void (*) (signer_t*, chunk_t, u_int8_t*))get_signature;
 	this->public.signer_interface.allocate_signature = (void (*) (signer_t*, chunk_t, chunk_t*))allocate_signature;
 	this->public.signer_interface.verify_signature = (void (*) (signer_t*, chunk_t, chunk_t,bool *))verify_signature;
+	this->public.signer_interface.get_key_size = (size_t (*) (signer_t*))get_key_size;
 	this->public.signer_interface.get_block_size = (size_t (*) (signer_t*))get_block_size;
 	this->public.signer_interface.set_key = (void (*) (signer_t*,chunk_t))set_key;
 	this->public.signer_interface.destroy = (void (*) (signer_t*))destroy;

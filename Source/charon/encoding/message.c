@@ -58,6 +58,11 @@ struct supported_payload_entry_t {
 	  * Max occurence of this payload.
 	  */	 
 	 size_t max_occurence;
+	 
+	 /**
+	  * TRUE if payload has to get encrypted
+	  */
+	 bool encrypted;
 };
 
 typedef struct message_rule_t message_rule_t;
@@ -92,9 +97,9 @@ struct message_rule_t {
  */
 static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
 {
-	{SECURITY_ASSOCIATION,1,1},
-	{KEY_EXCHANGE,1,1},
-	{NONCE,1,1},
+	{SECURITY_ASSOCIATION,1,1,FALSE},
+	{KEY_EXCHANGE,1,1,FALSE},
+	{NONCE,1,1,FALSE},
 };
 
 /**
@@ -102,18 +107,47 @@ static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
  */
 static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
 {
-	{SECURITY_ASSOCIATION,1,1},
-	{KEY_EXCHANGE,1,1},
-	{NONCE,1,1},
+	{SECURITY_ASSOCIATION,1,1,FALSE},
+	{KEY_EXCHANGE,1,1,FALSE},
+	{NONCE,1,1,FALSE},
 };
 
+/**
+ * Message rule for IKE_AUTH from initiator.
+ */
+static supported_payload_entry_t supported_ike_auth_i_payloads[] =
+{
+	{ID_INITIATOR,1,1,TRUE},
+	{CERTIFICATE,0,1,TRUE},
+	{CERTIFICATE_REQUEST,0,1,TRUE},
+	{ID_RESPONDER,0,1,TRUE},
+	{AUTHENTICATION,1,1,TRUE},
+	{SECURITY_ASSOCIATION,1,1,TRUE},
+	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE},
+	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE},
+};
+
+/**
+ * Message rule for IKE_AUTH from responder.
+ */
+static supported_payload_entry_t supported_ike_auth_r_payloads[] =
+{
+	{CERTIFICATE,0,1,TRUE},
+	{ID_RESPONDER,0,1,TRUE},
+	{AUTHENTICATION,1,1,TRUE},
+	{SECURITY_ASSOCIATION,1,1,TRUE},
+	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE},
+	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE},
+};
 
 /**
  * Message rules, defines allowed payloads.
  */
 static message_rule_t message_rules[] = {
 	{IKE_SA_INIT,TRUE,(sizeof(supported_ike_sa_init_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_i_payloads},
-	{IKE_SA_INIT,FALSE,(sizeof(supported_ike_sa_init_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_r_payloads}
+	{IKE_SA_INIT,FALSE,(sizeof(supported_ike_sa_init_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_r_payloads},
+	{IKE_AUTH,TRUE,(sizeof(supported_ike_auth_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_auth_i_payloads},
+	{IKE_AUTH,FALSE,(sizeof(supported_ike_auth_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_auth_r_payloads}
 };
 
 typedef struct payload_entry_t payload_entry_t;
@@ -217,6 +251,13 @@ struct private_message_t {
 	 *										- NOT_FOUND if no supported payload definition could be found
 	 */
 	status_t (*get_supported_payloads) (private_message_t *this, supported_payload_entry_t **supported_payloads,size_t *supported_payloads_count);
+	
+	/**
+	 * Encrypts all payloads which has to get encrypted.
+	 * 
+	 * @param this							calling object
+	 */
+	status_t (*encrypt_payloads) (private_message_t *this,crypter_t *crypter, signer_t* signer);
 	
 };
 
@@ -463,6 +504,13 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 		return INVALID_STATE;
 	}
 	
+	status = this->encrypt_payloads(this,crypter,signer);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not encrypt payloads");
+		return status;
+	}
+
 	/* build ike header */
 	ike_header = ike_header_create();
 
@@ -472,7 +520,8 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	ike_header->set_initiator_flag(ike_header, this->ike_sa_id->is_initiator(this->ike_sa_id));
 	ike_header->set_initiator_spi(ike_header, this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
 	ike_header->set_responder_spi(ike_header, this->ike_sa_id->get_responder_spi(this->ike_sa_id));
-	
+
+
 	generator = generator_create();
 	
 	payload = (payload_t*)ike_header;
@@ -493,18 +542,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	/* build last payload */
 	payload->set_next_type(payload, NO_PAYLOAD);
 	/* if it's an encryption payload, build it first */
-	if (payload->get_type(payload) == ENCRYPTED)
-	{
-		encryption_payload_t *encryption_payload = (encryption_payload_t*)payload;
-		encryption_payload->set_transforms(encryption_payload, crypter, signer);
-		status = encryption_payload->encrypt(encryption_payload);
-		if (status != SUCCESS)
-		{
-			generator->destroy(generator);
-			ike_header->destroy(ike_header);
-			return status;
-		}
-	}
+
 	generator->generate_payload(generator, payload);
 	ike_header->destroy(ike_header);
 		
@@ -712,6 +750,73 @@ static status_t verify(private_message_t *this)
 }
 
 
+static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, signer_t* signer)
+{
+	status_t status;
+	supported_payload_entry_t *supported_payloads;
+	size_t supported_payloads_count;
+	encryption_payload_t *encryption_payload = NULL;
+	linked_list_t *all_payloads = linked_list_create();
+	int i;
+	
+	status = this->get_supported_payloads(this, &supported_payloads, &supported_payloads_count);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	
+	/* first copy all payloads in a temporary list */
+	while (this->payloads->get_count(this->payloads) > 0)
+	{
+		void *current_payload;
+		this->payloads->remove_first(this->payloads,&current_payload);
+		all_payloads->insert_last(all_payloads,current_payload);
+	}
+	
+	while (all_payloads->get_count(all_payloads) > 0)
+	{
+		payload_t *current_payload;
+		bool to_encrypt = FALSE;
+		
+		all_payloads->remove_first(all_payloads,(void **)&current_payload);
+		
+		for (i = 0; i < supported_payloads_count;i++)
+		{
+			if ((supported_payloads[i].payload_type == current_payload->get_type(current_payload)) &&
+				(supported_payloads[i].encrypted))
+			{
+				to_encrypt = TRUE;
+				break;
+			}
+		}
+		
+		if (to_encrypt)
+		{
+			if (encryption_payload == NULL)
+			{
+				encryption_payload = encryption_payload_create();
+			}
+			encryption_payload->add_payload(encryption_payload,current_payload);
+		}
+		else
+		{
+			this->payloads->insert_last(this->payloads,current_payload);
+		}
+	}
+
+	status = SUCCESS;
+	if (encryption_payload != NULL)
+	{
+		encryption_payload->set_transforms(encryption_payload,crypter,signer);
+		status = encryption_payload->encrypt(encryption_payload);
+		this->payloads->insert_last(this->payloads,encryption_payload);
+	}
+	
+	all_payloads->destroy(all_payloads);
+	
+	return status;
+}
+
 /**
  * Implements message_t's destroy function.
  * See #message_s.destroy.
@@ -777,7 +882,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.verify =  (status_t (*) (message_t*)) verify;
 	this->public.destroy = (void(*)(message_t*))destroy;
 		
-	/* public values */
+	/* private values */
 	this->exchange_type = EXCHANGE_TYPE_UNDEFINED;
  	this->is_request = TRUE;
  	this->ike_sa_id = NULL;
@@ -786,6 +891,7 @@ message_t *message_create_from_packet(packet_t *packet)
 
 	/* private functions */
 	this->get_supported_payloads = get_supported_payloads;
+	this->encrypt_payloads = encrypt_payloads;
 
 	/* private values */
 	if (packet == NULL)

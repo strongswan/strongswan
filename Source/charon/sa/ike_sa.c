@@ -374,6 +374,15 @@ static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chun
 	prf_plus->allocate_bytes(prf_plus,this->prf->get_block_size(this->prf),&(this->secrets.d_key));
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", &(this->secrets.d_key));
 
+	prf_plus->allocate_bytes(prf_plus,this->signer_initiator->get_key_size(this->signer_initiator),&(this->secrets.ai_key));
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &(this->secrets.ai_key));
+	this->signer_initiator->set_key(this->signer_initiator,this->secrets.ai_key);
+
+	prf_plus->allocate_bytes(prf_plus,this->signer_responder->get_key_size(this->signer_responder),&(this->secrets.ar_key));
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", &(this->secrets.ar_key));
+	this->signer_responder->set_key(this->signer_responder,this->secrets.ar_key);
+
+
 	prf_plus->allocate_bytes(prf_plus,this->crypter_initiator->get_block_size(this->crypter_initiator),&(this->secrets.ei_key));
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", &(this->secrets.ei_key));
 	this->crypter_initiator->set_key(this->crypter_initiator,this->secrets.ei_key);
@@ -381,14 +390,6 @@ static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chun
 	prf_plus->allocate_bytes(prf_plus,this->crypter_responder->get_block_size(this->crypter_responder),&(this->secrets.er_key));
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", &(this->secrets.er_key));
 	this->crypter_responder->set_key(this->crypter_responder,this->secrets.er_key);
-
-	prf_plus->allocate_bytes(prf_plus,this->signer_initiator->get_block_size(this->signer_initiator),&(this->secrets.ai_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &(this->secrets.ai_key));
-	this->signer_initiator->set_key(this->signer_initiator,this->secrets.ai_key);
-
-	prf_plus->allocate_bytes(prf_plus,this->signer_responder->get_block_size(this->signer_responder),&(this->secrets.ar_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", &(this->secrets.ar_key));
-	this->signer_responder->set_key(this->signer_responder,this->secrets.ar_key);
 
 	prf_plus->allocate_bytes(prf_plus,this->crypter_responder->get_block_size(this->crypter_responder),&(this->secrets.pi_key));
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", &(this->secrets.pi_key));
@@ -601,6 +602,22 @@ static randomizer_t *get_randomizer (private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.get_crypter_initiator.
+ */
+static crypter_t *get_crypter_initiator (private_ike_sa_t *this)
+{
+	return this->crypter_initiator;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.get_signer_initiator.
+ */
+static signer_t *get_signer_initiator (private_ike_sa_t *this)
+{
+	return this->signer_initiator;
+}
+
+/**
  * Implementation of protected_ike_sa_t.set_last_requested_message.
  */
 static status_t set_last_requested_message (private_ike_sa_t *this,message_t * message)
@@ -769,10 +786,14 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.set_last_responded_message = (status_t (*) (protected_ike_sa_t *,message_t *)) set_last_responded_message;
 	this->protected.create_transforms_from_proposal = (status_t (*) (protected_ike_sa_t *,proposal_substructure_t *)) create_transforms_from_proposal;
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
+	this->protected.get_crypter_initiator = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_initiator;
+	this->protected.get_signer_initiator = (signer_t *(*) (protected_ike_sa_t *)) get_signer_initiator;	
 
 	/* private functions */
 	this->resend_last_reply = resend_last_reply;
 	this->create_delete_job = create_delete_job;
+
+
 
 
 	/* initialize private fields */
