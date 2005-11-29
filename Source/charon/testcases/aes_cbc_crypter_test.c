@@ -1,7 +1,7 @@
 /**
  * @file aes_cbc_crypter_test.c
  * 
- * @brief Tests the aes_cbc_crypter_t class.
+ * @brief Tests for the aes_cbc_crypter_t class.
  * 
  */
 

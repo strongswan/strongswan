@@ -1,7 +1,7 @@
 /**
  * @file diffie_hellman_test.h
  * 
- * @brief Tests to test the Diffie Hellman object diffie_hellman_t
+ * @brief Tests for the diffie_hellman_t class.
  * 
  */
 
@@ -26,11 +26,11 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the diffie_hellman_t functionality
- * 
- * Tests are performed using one thread
+ * @brief Test function used to test the diffie_hellman_t functionality.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_diffie_hellman(tester_t *tester);
 

@@ -1,7 +1,7 @@
 /**
  * @file thread_pool_test.h
  * 
- * @brief Tests to test the Thread-Pool type thread_pool_t
+ * @brief Tests for the thread_pool_t class.
  * 
  */
 
@@ -26,9 +26,11 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function for the type thread_pool_t
+ * @brief Test function for the class thread_pool_t.
  * 
- * @param tester tester object
+ * @param tester 	tester object
+ * 
+ * @ingroup testcases
  */
 void test_thread_pool(tester_t *tester);
 

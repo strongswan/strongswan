@@ -80,6 +80,13 @@
  * @ingroup encoding
  */
 
+
+/**
+ * @addtogroup testcases
+ * 
+ * Testcases used to test the different classes in seperate module tests.
+ */
+
 /**
  * @addtogroup transforms
  * 

@@ -1,7 +1,7 @@
 /**
  * @file hmac_signer_test.h
  * 
- * @brief Tests the hmac SHA1 and MD5 signer class hmac_signer_t 
+ * @brief Tests for the hmac_signer_t class.
  * 
  */
 
@@ -29,6 +29,8 @@
  * @brief Test function used to test the hmac sign functionality using MD5.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_hmac_md5_signer(tester_t *tester);
 
@@ -36,6 +38,8 @@ void test_hmac_md5_signer(tester_t *tester);
  * @brief Test function used to test the hmac sign functionality using SHA1.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_hmac_sha1_signer(tester_t *tester);
 

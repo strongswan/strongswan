@@ -1,7 +1,7 @@
 /**
  * @file event_queue_test.h
  *
- * @brief Tests to test the Event-Queue type event_queue_t
+ * @brief Tests for the event_queue_t class.
  *
  */
 

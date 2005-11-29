@@ -1,7 +1,7 @@
 /**
- * @file thread_pool_test.c
+ * @file socket_test.c
  *
- * @brief Tests to test the Socket (type socket_t)
+ * @brief Tests for the socket_t class.
  *
  */
 

@@ -1,7 +1,7 @@
 /**
  * @file packet_test.c
  *
- * @brief Tests to test the class type packet_t
+ * @brief Tests for the packet_t class.
  *
  */
 

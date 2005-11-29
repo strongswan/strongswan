@@ -1,6 +1,7 @@
 /**
- * @file parser_test.h
+ * @file parser_test.c
  * 
+ * @brief Tests for the parser_t class.
  * 
  */
 

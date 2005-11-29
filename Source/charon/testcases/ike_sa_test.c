@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_test.c
  * 
- * @brief Tests to test the IKE_SA type ike_sa_t
+ * @brief Tests for the ike_sa_t class.
  * 
  */
 

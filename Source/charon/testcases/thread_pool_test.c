@@ -1,7 +1,7 @@
 /**
  * @file thread_pool_test.c
  * 
- * @brief Tests to test the Thread-Pool type thread_pool_t
+ * @brief Tests for the thread_pool_t class.
  * 
  */
 

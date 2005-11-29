@@ -1,7 +1,7 @@
 /**
  * @file generator.h
  * 
- * @brief Tests to test the Generator class generator_t
+ * @brief Tests for the generator_t class.
  * 
  */
 
@@ -26,67 +26,75 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the generator with header payload
+ * @brief Test function used to test the generator with header payload.
  * 
- *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_generator_with_header_payload(tester_t *tester);
 
 /**
- * @brief Test function used to test the generator with transform attribute payload
- * 
+ * @brief Test function used to test the generator with transform attribute payload.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_generator_with_transform_attribute(tester_t *tester);
 
 
 /**
- * @brief Test function used to test the generator with transform substructure payload
- * 
+ * @brief Test function used to test the generator with transform substructure payload.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_generator_with_transform_substructure(tester_t *tester);
 
 /**
- * @brief Test function used to test the generator with proposal substructure payload
- * 
+ * @brief Test function used to test the generator with proposal substructure payload.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_generator_with_proposal_substructure(tester_t *tester);
 
 /**
- * @brief Test function used to test the generator with SA payload
+ * @brief Test function used to test the generator with SA payload.
  * 
- *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_generator_with_sa_payload(tester_t *tester);
 
 /**
- * @brief Test function used to test the generator with KE payload
- * 
+ * @brief Test function used to test the generator with KE payload.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_generator_with_ke_payload(tester_t *tester);
 
 /**
- * @brief Test function used to test the generator with Notify payload
- * 
+ * @brief Test function used to test the generator with Notify payload.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_generator_with_notify_payload(tester_t *tester);
 
 /**
- * @brief Test function used to test the generator with Nonce payload
+ * @brief Test function used to test the generator with Nonce payload.
  * 
- *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_generator_with_nonce_payload(tester_t *tester);
 

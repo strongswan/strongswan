@@ -1,7 +1,7 @@
 /**
  * @file prf_plus_test.h
  * 
- * @brief Tests the prf_plus class
+ * @brief Tests for the prf_plus_t class.
  * 
  */
 
@@ -29,7 +29,9 @@
 /**
  * @brief Test function used to test the prf_plus class.
  *
- * @param tester associated tester object
+ * @param tester 	associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_prf_plus(tester_t *tester);
 

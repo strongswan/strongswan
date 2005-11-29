@@ -1,7 +1,7 @@
 /**
  * @file socket_test.h
  * 
- * @brief Tests to test the Socket (type socket_t)
+ * @brief Tests for the socket_t class.
  * 
  */
 
@@ -26,9 +26,11 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function for the type socket_t
+ * @brief Test function for the class socket_t.
  * 
- * @param tester tester object
+ * @param tester 	tester object
+ * 
+ * @ingroup testcases
  */
 void test_socket(tester_t *tester);
 

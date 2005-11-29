@@ -1,7 +1,7 @@
 /**
  * @file prf_plus_test.h
  * 
- * @brief Tests the prf_plus class 
+ * @brief Tests for the prf_plus_t class.
  * 
  */
 

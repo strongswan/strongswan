@@ -1,7 +1,7 @@
 /**
  * @file job_queue_test.c
  *
- * @brief Tests to test the Job-Queue type job_queue_t
+ * @brief Tests for the job_queue_t class.
  *
  */
 

@@ -1,6 +1,7 @@
 /**
  * @file parser_test.h
  * 
+ * @brief Tests for the parser_t class.
  * 
  */
 
@@ -24,15 +25,54 @@
 
 #include <utils/tester.h>
 
-
+/**
+ * @brief Test function used to test the parser_t functionality when 
+ * parsing a header payload.
+ *
+ * @param tester 	associated tester_t object
+ * 
+ * @ingroup testcases
+ */
 void test_parser_with_header_payload(tester_t *tester);
 
+/**
+ * @brief Test function used to test the parser_t functionality when 
+ * parsing a sa payload.
+ *
+ * @param tester 	associated tester_t object
+ * 
+ * @ingroup testcases
+ */
 void test_parser_with_sa_payload(tester_t *tester);
 
+/**
+ * @brief Test function used to test the parser_t functionality when 
+ * parsing a nonce payload.
+ *
+ * @param tester 	associated tester_t object
+ * 
+ * @ingroup testcases
+ */
 void test_parser_with_nonce_payload(tester_t *tester);
 
+/**
+ * @brief Test function used to test the parser_t functionality when 
+ * parsing a ke payload.
+ *
+ * @param tester 	associated tester_t object
+ * 
+ * @ingroup testcases
+ */
 void test_parser_with_ke_payload(tester_t *tester);
 
+/**
+ * @brief Test function used to test the parser_t functionality when 
+ * parsing a notify payload.
+ *
+ * @param tester 	associated tester_t object
+ * 
+ * @ingroup testcases
+ */
 void test_parser_with_notify_payload(tester_t *tester);
 
 #endif /*PARSER_TEST_H_*/

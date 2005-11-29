@@ -1,7 +1,7 @@
 /**
  * @file receiver_test.h
  * 
- * @brief Tests to test the Receiver (type receiver_t)
+ * @brief Tests for the receiver_t class.
  * 
  */
 
@@ -26,9 +26,11 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function for the type receiver_t
+ * @brief Test function for the type receiver_t.
  * 
- * @param tester tester object
+ * @param tester 	tester object
+ * 
+ * @ingroup testcases
  */
 void test_receiver(tester_t *tester);
 

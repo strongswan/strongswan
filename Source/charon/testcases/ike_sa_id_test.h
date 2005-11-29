@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_id_test.h
  * 
- * @brief Tests to test the IKE_SA Identifier class ike_sa_id_test_t
+ * @brief Tests for the ike_sa_id_t class.
  * 
  */
 
@@ -26,12 +26,14 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the ike_sa_id functionality
+ * @brief Test function used to test the ike_sa_id functionality.
  * 
  * Tests are performed using one thread to test the 
  * features of the ike_sa_id_t.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_ike_sa_id(tester_t *tester);
 

@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_manager_test.c
  * 
- * @brief Tests to test the IKE_SA-Manager type ike_sa_manager_t
+ * @brief Tests for the ike_sa_manager_t class.
  * 
  */
 

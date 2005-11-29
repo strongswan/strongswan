@@ -1,7 +1,7 @@
 /**
  * @file sender_test.h
  * 
- * @brief Tests to test the Sender (type sender_t)
+ * @brief Tests for the sender_t class.
  * 
  */
 
@@ -26,9 +26,11 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function for the type sender_t
+ * @brief Test function for the class sender_t.
  * 
- * @param tester tester object
+ * @param tester 	tester object
+ * 
+ * @ingroup testcases
  */
 void test_sender(tester_t *tester);
 

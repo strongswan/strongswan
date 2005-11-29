@@ -26,11 +26,13 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the event_queue functionality
+ * @brief Test function used to test the event_queue functionality.
  * 
- * Tests are performed using one thread
+ * Tests are performed using one thread.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_event_queue(tester_t *tester);
 

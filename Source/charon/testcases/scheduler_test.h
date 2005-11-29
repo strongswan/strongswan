@@ -1,7 +1,7 @@
 /**
  * @file scheduler_test.h
  * 
- * @brief Tests to test the scheduler (type scheduler_t)
+ * @brief Tests for the scheduler_t class.
  * 
  */
 
@@ -26,9 +26,11 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function for the type scheduler_t
+ * @brief Test function for the type scheduler_t.
  * 
- * @param tester tester object
+ * @param tester		tester object
+ * 
+ * @ingroup testcases
  */
 void test_scheduler(tester_t *tester);
 

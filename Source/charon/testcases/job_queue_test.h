@@ -1,7 +1,7 @@
 /**
  * @file job_queue_test.h
  * 
- * @brief Tests to test the Job-Queue type job_queue_t
+ * @brief Tests for the job_queue_test_t class.
  * 
  */
 
@@ -26,12 +26,14 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the job_queue functionality
+ * @brief Test function used to test the job_queue functionality.
  * 
  * Tests are performed using different threads to test the multi-threaded
  * features of the job_queue_t.
  *
- * @param tester associated tester object
+ * @param tester 	associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_job_queue(tester_t *tester);
 

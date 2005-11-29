@@ -1,7 +1,7 @@
 /**
  * @file diffie_hellman_test.c
  * 
- * @brief Tests to test the Diffie Hellman object diffie_hellman_t
+ * @brief Tests for the diffie_hellman_t class.
  * 
  */
 

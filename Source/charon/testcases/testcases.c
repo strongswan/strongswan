@@ -1,7 +1,7 @@
 /**
  * @file tests.c
  * 
- * @brief Main for all tests
+ * @brief Main for all testcases.
  * 
  */
 

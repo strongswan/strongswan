@@ -1,7 +1,7 @@
 /**
  * @file send_queue_test.c
  *
- * @brief Tests to test the Send-Queue type send_queue_t
+ * @brief Tests for the send_queue_t class.
  *
  */
 

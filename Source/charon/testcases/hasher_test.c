@@ -1,7 +1,7 @@
 /**
- * @file md5_hasher_test.h
+ * @file hasher_test.h
  * 
- * @brief Tests the md5 hasher 
+ * @brief Tests for the hasher_t classes.
  * 
  */
 

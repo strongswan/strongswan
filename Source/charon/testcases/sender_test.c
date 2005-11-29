@@ -1,7 +1,7 @@
 /**
  * @file sender_test.h
  *
- * @brief Tests to test the Sender (type sender_t)
+ * @brief Tests for the sender_t class.
  *
  */
 

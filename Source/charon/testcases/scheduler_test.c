@@ -1,7 +1,7 @@
 /**
  * @file scheduler_test.c
  * 
- * @brief Tests to test the Scheduler (type scheduler_t)
+ * @brief Tests for the scheduler_t class.
  * 
  */
 

@@ -1,7 +1,7 @@
 /**
  * @file linked_list_test.h
  * 
- * @brief Tests to test the Linked List type linked_list_t
+ * @brief Tests for the linked_list_t class.
  * 
  */
 
@@ -26,7 +26,7 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function for the type linked_list_t
+ * @brief Test function for the type linked_list_t.
  *
  * Performs different kinds of assertions to check the functionality
  * of the linked_list_t in a Single-Threaded environment. 
@@ -34,12 +34,14 @@
  * @warning To be usable in multi-threaded software 
  * this list has to get protected with locks.
  *  
- * @param tester tester object
+ * @param tester 	tester object
+ * 
+ * @ingroup testcases
  */
 void test_linked_list(tester_t *tester);
 
 /**
- * @brief Test function for the type linked_list_t and its iterator
+ * @brief Test function for the type linked_list_t and its iterator.
  *
  * Performs different kinds of assertions to check the functionality
  * of the linked_list_t and its iterator in a Single-Threaded environment. 
@@ -47,13 +49,15 @@ void test_linked_list(tester_t *tester);
  * @warning To be usable in multi-threaded software 
  * this list has to get protected with locks.
  *  
- * @param tester tester object
+ * @param tester 	tester object
+ * 
+ * @ingroup testcases
  */
 void test_linked_list_iterator(tester_t *tester);
 
 /**
  * @brief Test function for the type linked_list_t and its insert and remove
- * 		  functions
+ * 		  functions.
  *
  * Performs different kinds of assertions to check the functionality
  * of the linked_list_t and its insert and remove functions
@@ -61,7 +65,9 @@ void test_linked_list_iterator(tester_t *tester);
  * @warning To be usable in multi-threaded software 
  * this list has to get protected with locks.
  *  
- * @param tester tester object
+ * @param tester 	tester object
+ * 
+ * @ingroup testcases
  */
 void test_linked_list_insert_and_remove(tester_t *tester);
 

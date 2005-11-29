@@ -1,7 +1,7 @@
 /**
  * @file aes_cbc_crypter_test.h
  * 
- * @brief Tests the aes_cbc_crypter_t class.
+ * @brief Tests for the aes_cbc_crypter_t class.
  * 
  */
 
@@ -30,6 +30,8 @@
  * @brief Test function used to test the aes_cbc_crypter_t class.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_aes_cbc_crypter(tester_t *tester);
 

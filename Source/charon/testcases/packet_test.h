@@ -1,7 +1,7 @@
 /**
  * @file packet_test.h
  *
- * @brief Tests to test the class type packet_t
+ * @brief Tests for the packet_t class.
  *
  */
 
@@ -26,10 +26,11 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the packet_t functionality
+ * @brief Test function used to test the packet_t functionality.
  *
- *
- * @param tester associated tester_t object
+ * @param tester 	associated tester_t object
+ * 
+ * @ingroup testcases
  */
 void test_packet(tester_t *tester);
 

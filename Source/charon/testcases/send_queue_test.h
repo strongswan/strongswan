@@ -1,7 +1,7 @@
 /**
  * @file send_queue_test.h
  * 
- * @brief Tests to test the Send-Queue type send_queue_t
+ * @brief Tests for the send_queue_t class.
  * 
  */
 
@@ -26,12 +26,14 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the send_queue functionality
+ * @brief Test function used to test the send_queue functionality.
  * 
  * Tests are performed using different threads to test the multi-threaded
  * features of the send_queue_t.
  *
- * @param tester associated tester object
+ * @param tester 	associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_send_queue(tester_t *tester);
 

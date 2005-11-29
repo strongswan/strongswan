@@ -1,7 +1,7 @@
 /**
  * @file hmac_test.h
  * 
- * @brief Tests the hmac class 
+ * @brief Tests for the hmac_t class.
  * 
  */
 

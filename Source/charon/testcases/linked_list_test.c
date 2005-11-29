@@ -1,7 +1,7 @@
 /**
  * @file linked_list_test.c
  * 
- * @brief Tests to test the Linked List type linked_list_t
+ * @brief Tests for the linked_list_t class.
  * 
  */
 

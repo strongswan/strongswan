@@ -1,7 +1,7 @@
 /**
  * @file ike_sa_test.h
  *
- * @brief Tests to test the IKE_SA type ike_sa_t
+ * @brief Tests for the ike_sa_t class.
  *
  */
 
@@ -26,10 +26,11 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the ike_sa_t functionality
- *
+ * @brief Test function used to test the ike_sa_t functionality.
  *
  * @param tester associated tester_t object
+ * 
+ * @ingroup testcases
  */
 void test_ike_sa(tester_t *tester);
 

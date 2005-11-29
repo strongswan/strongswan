@@ -1,7 +1,7 @@
 /**
  * @file hasher_test.h
  * 
- * @brief Tests the hashers 
+ * @brief Tests for the hasher_t classes.
  * 
  */
 
@@ -29,16 +29,20 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the sha1-hasher functionality
+ * @brief Test function used to test the SHA1-hasher functionality.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_sha1_hasher(tester_t *tester);
 
 /**
- * @brief Test function used to test the md5-hasher functionality
+ * @brief Test function used to test the Md5-hasher functionality.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_md5_hasher(tester_t *tester);
 

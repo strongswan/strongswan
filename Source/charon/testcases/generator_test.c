@@ -1,7 +1,7 @@
 /**
- * @file generator.h
+ * @file generator_test.c
  * 
- * @brief Tests to test the Generator class generator_t
+ * @brief Tests for the generator_t class.
  * 
  */
 

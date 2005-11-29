@@ -1,7 +1,7 @@
 /**
  * @file hmac_test.h
  * 
- * @brief Tests the hmac class
+ * @brief Tests for the hmac_t class.
  * 
  */
 
@@ -28,17 +28,21 @@
 
 /**
  * @brief Test function used to test the hmac functionality
- * using sha1.
+ * using SHA1.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_hmac_sha1(tester_t *tester);
 
 /**
  * @brief Test function used to test the hmac functionality
- * using md5.
+ * using MD5.
  *
  * @param tester associated tester object
+ * 
+ * @ingroup testcases
  */
 void test_hmac_md5(tester_t *tester);
 

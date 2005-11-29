@@ -1,7 +1,7 @@
 /**
  * @file hmac_signer_test.c
  * 
- * @brief Tests the hmac SHA1 and MD5 signer class hmac_signer_t 
+ * @brief Tests for the hmac_signer_t class.
  * 
  */
 

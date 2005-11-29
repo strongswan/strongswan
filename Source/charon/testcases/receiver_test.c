@@ -1,7 +1,7 @@
 /**
  * @file receiver_test.c
  *
- * @brief Tests to test the Receiver (type receiver_t)
+ * @brief Tests for the receiver_t class.
  *
  */
 
