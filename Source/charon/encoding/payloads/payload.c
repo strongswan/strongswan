@@ -31,6 +31,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/ts_payload.h>
 
 /*
@@ -97,6 +98,8 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)ke_payload_create();
 		case NOTIFY:
 			return (payload_t*)notify_payload_create();
+		case ENCRYPTED:
+			return (payload_t*)encryption_payload_create();
 		default:
 			return NULL;
 	}

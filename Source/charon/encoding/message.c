@@ -496,8 +496,8 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	if (payload->get_type(payload) == ENCRYPTED)
 	{
 		encryption_payload_t *encryption_payload = (encryption_payload_t*)payload;
-		encryption_payload->set_signer(encryption_payload, signer);
-		status = encryption_payload->encrypt(encryption_payload, crypter);
+		encryption_payload->set_transforms(encryption_payload, crypter, signer);
+		status = encryption_payload->encrypt(encryption_payload);
 		if (status != SUCCESS)
 		{
 			generator->destroy(generator);
@@ -623,7 +623,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		if (current_payload->get_type(current_payload) == ENCRYPTED)
 		{
 			encryption_payload_t *encryption_payload = (encryption_payload_t*)current_payload;
-			encryption_payload->set_signer(encryption_payload, signer);
+			encryption_payload->set_transforms(encryption_payload, crypter, signer);
 			status = encryption_payload->verify_signature(encryption_payload, this->packet->data);
 			if (status != SUCCESS)
 			{
@@ -631,7 +631,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 				current_payload->destroy(current_payload);
 				return status;
 			}
-			status = encryption_payload->decrypt(encryption_payload, crypter);
+			status = encryption_payload->decrypt(encryption_payload);
 			if (status != SUCCESS)
 			{
 				this->logger->log(this->logger, ERROR, "parsing decrypted encryption payload failed");

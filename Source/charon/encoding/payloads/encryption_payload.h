@@ -67,24 +67,77 @@ struct encryption_payload_t {
 	void (*add_payload) (encryption_payload_t *this, payload_t *payload);
 	
 	/**
-	 * @brief Decrypt and return contained data.
+	 * @brief Set transforms to use.
 	 * 
-	 * Decrypt the contained data (encoded payloads) using supplied crypter.
+	 * To decryption, encryption, signature building and verifying,
+	 * the payload needs a crypter and a signer object.
+	 * 
+	 * @warning Do NOT call this function twice!
 	 *
 	 * @param this			calling encryption_payload_t
-	 * @param crypter		crypter_t to use for data decryption
-	 * @param[out]data		resulting data in decrypted and unpadded form
-	 * @return 				
-	 *						- SUCCESS, or
-	 *						- FAILED if crypter does not match data
+	 * @param crypter		crypter_t to use for data de-/encryption
+	 * @param signer		signer_t to use for data signing/verifying
 	 */
+	void (*set_transforms) (encryption_payload_t *this, crypter_t *crypter, signer_t *signer);
 	
-	void (*set_signer) (encryption_payload_t *this, signer_t *signer); 
+	/**
+	 * @brief Generate and encrypt contained payloads.
+	 * 
+	 * This function generates the content for added payloads
+	 * and encrypts them. Signature is not built, since we need
+	 * additional data (the full message).
+	 *
+	 * @param this			calling encryption_payload_t
+	 * @return
+	 * 						- SUCCESS, or
+	 * 						- INVALID_STATE if transforms not set
+	 */
+	status_t (*encrypt) (encryption_payload_t *this);
 	
-	status_t (*encrypt) (encryption_payload_t *this, crypter_t *crypter);
-	status_t (*decrypt) (encryption_payload_t *this, crypter_t *crypter);
+	/**
+	 * @brief Decrypt and parse contained payloads.
+	 * 
+	 * This function decrypts the contained data. After, 
+	 * the payloads are parsed internally and are accessible
+	 * via the iterator.
+	 *
+	 * @param this			calling encryption_payload_t
+	 * @return
+	 * 						- SUCCESS, or
+	 * 						- INVALID_STATE if transforms not set, or
+	 * 						- FAILED if data is invalid
+	 */
+	status_t (*decrypt) (encryption_payload_t *this);
 	
+	/**
+	 * @brief Build the signature.
+	 * 
+	 * The signature is built over the FULL message, so the header
+	 * and every payload (inclusive this one) must already be generated.
+	 * The generated message is supplied via the data paramater.
+	 * 
+	 * @param this			calling encryption_payload_t
+	 * @param data			chunk contains the already generated message
+	 * @return
+	 * 						- SUCCESS, or
+	 * 						- INVALID_STATE if transforms not set
+	 */
 	status_t (*build_signature) (encryption_payload_t *this, chunk_t data);
+		
+	/**
+	 * @brief Verify the signature.
+	 * 
+	 * Since the signature is built over the full message, we need
+	 * this data to do the verification. The message data
+	 * is supplied via the data argument.
+	 * 
+	 * @param this			calling encryption_payload_t
+	 * @param data			chunk contains the message 
+	 * @return
+	 * 						- SUCCESS, or
+	 * 						- FAILED if signature invalid, or
+	 * 						- INVALID_STATE if transforms not set
+	 */
 	status_t (*verify_signature) (encryption_payload_t *this, chunk_t data);
 
 	/**

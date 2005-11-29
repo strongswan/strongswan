@@ -55,6 +55,7 @@
 #include <testcases/prf_plus_test.h>
 #include <testcases/aes_cbc_crypter_test.h>
 #include <testcases/hmac_signer_test.h>
+#include <testcases/encryption_payload_test.h>
 
 /* output for test messages */
 extern FILE * stderr;
@@ -102,6 +103,7 @@ test_t prf_plus_test = {test_prf_plus, "prf+"};
 test_t aes_cbc_crypter_test = {test_aes_cbc_crypter, "AES CBC"};
 test_t hmac_signer_test1 = {test_hmac_md5_signer, "HMAC MD5 signer test"};
 test_t hmac_signer_test2 = {test_hmac_sha1_signer, "HMAC SHA1 signer test"};
+test_t encryption_payload_test = {test_encryption_payload, "encryption payload test"};
 
 
 daemon_t* charon;
@@ -194,19 +196,20 @@ int main()
 		&aes_cbc_crypter_test,
 		&hmac_signer_test1,
 		&hmac_signer_test2,
+		&encryption_payload_test,
 		NULL
 	};
  
 	daemon_create();
  
 	charon->logger_manager->disable_logger_level(charon->logger_manager,TESTER,FULL);
-	charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW);
+	//charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW);
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
+	tester->perform_tests(tester,all_tests);
+	//tester->perform_test(tester,&encryption_payload_test); 
 	
-//	tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&parser_test8); 
 	
 	
 	tester->destroy(tester);

@@ -103,5 +103,9 @@ $(BUILD_DIR)sender_test.o :			$(TESTCASES_DIR)sender_test.c $(TESTCASES_DIR)send
 TEST_OBJS+= $(BUILD_DIR)thread_pool_test.o
 $(BUILD_DIR)thread_pool_test.o :	$(TESTCASES_DIR)thread_pool_test.c $(TESTCASES_DIR)thread_pool_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
+									
+TEST_OBJS+= $(BUILD_DIR)encryption_payload_test.o
+$(BUILD_DIR)encryption_payload_test.o :	$(TESTCASES_DIR)encryption_payload_test.c $(TESTCASES_DIR)encryption_payload_test.h
+									$(CC) $(CFLAGS) -c -o $@ $<
 
 
