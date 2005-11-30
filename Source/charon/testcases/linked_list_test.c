@@ -69,8 +69,40 @@ void test_linked_list(tester_t *tester)
 	tester->assert_true(tester,(linked_list->get_count(linked_list) == 4), "count check");
 
 	tester->assert_true(tester,(linked_list->get_last(linked_list,&test_value) == SUCCESS), "get_last call check");
-	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "get_last value check");	
+	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "get_last value check");
 	tester->assert_true(tester,(linked_list->get_count(linked_list) == 4), "count check");
+
+	tester->assert_true(tester,(linked_list->get_at_position(linked_list,0,&test_value) == SUCCESS), "get_at_position call check");
+	tester->assert_true(tester,(strcmp((char *) test_value,"four") == 0), "get_at_position value check");
+
+	tester->assert_true(tester,(linked_list->get_at_position(linked_list,1,&test_value) == SUCCESS), "get_at_position call check");
+	tester->assert_true(tester,(strcmp((char *) test_value,"three") == 0), "get_at_position value check");
+	
+	tester->assert_true(tester,(linked_list->get_at_position(linked_list,2,&test_value) == SUCCESS), "get_at_position call check");
+	tester->assert_true(tester,(strcmp((char *) test_value,"two") == 0), "get_at_position value check");
+	
+	tester->assert_true(tester,(linked_list->get_at_position(linked_list,3,&test_value) == SUCCESS), "get_at_position call check");
+	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "get_at_position value check");
+
+	tester->assert_false(tester,(linked_list->get_at_position(linked_list,4,&test_value) == SUCCESS), "get_at_position call check");
+	tester->assert_false(tester,(linked_list->remove_at_position(linked_list,4,&test_value) == SUCCESS), "remove_at_position call check");
+	tester->assert_false(tester,(linked_list->insert_at_position(linked_list,5,test_value) == SUCCESS), "insert_at_position call 1 check");
+
+	tester->assert_true(tester,(linked_list->insert_at_position(linked_list,3,"six") == SUCCESS), "insert_at_position call 2 check");
+	tester->assert_true(tester,(linked_list->insert_at_position(linked_list,3,"seven") == SUCCESS), "insert_at_position call 3 check");
+
+	tester->assert_true(tester,(linked_list->get_at_position(linked_list,3,&test_value) == SUCCESS), "get_at_position call check");
+	tester->assert_true(tester,(strcmp((char *) test_value,"seven") == 0), "get_at_position value 1 check");	
+
+	tester->assert_true(tester,(linked_list->get_at_position(linked_list,4,&test_value) == SUCCESS), "get_at_position call check");
+	tester->assert_true(tester,(strcmp((char *) test_value,"six") == 0), "get_at_position value 2 check");	
+
+	tester->assert_true(tester,(linked_list->get_at_position(linked_list,5,&test_value) == SUCCESS), "get_at_position call check");
+	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "get_at_position value 3 check");	
+	
+	tester->assert_true(tester,(linked_list->remove_at_position(linked_list,3,&test_value) == SUCCESS), "remove_at_position call check");	
+	tester->assert_true(tester,(linked_list->remove_at_position(linked_list,3,&test_value) == SUCCESS), "remove_at_position call check");	
+
 
 	tester->assert_true(tester,(linked_list->remove_last(linked_list,&test_value) == SUCCESS), "remove_last call check");
 	tester->assert_true(tester,(strcmp((char *) test_value,"one") == 0), "remove_last value check");	

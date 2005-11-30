@@ -218,7 +218,7 @@ static status_t remove(private_iterator_t *this)
 		return NOT_FOUND;
 	}
 	/* find out the new iterator position */
-	if (this ->current->previous != NULL)
+	if (this->current->previous != NULL)
 	{
 		new_current = this->current->previous;
 	}
@@ -483,6 +483,107 @@ static status_t remove_last(private_linked_list_t *this, void **item)
 }
 
 /**
+ * Implementation of linked_list_t.insert_at_position.
+ */
+static status_t insert_at_position (private_linked_list_t *this,size_t position, void *item)
+{
+	linked_list_element_t *current_element;
+	int i;
+	
+	if (this->count <= position)
+	{
+		return INVALID_ARG;
+	}
+	
+	current_element =  this->first;
+	
+	for (i = 0; i < position;i++)
+	{
+		current_element = current_element->next;
+	}
+
+	if (current_element == NULL)
+	{
+		this->public.insert_last(&(this->public),item);
+		return SUCCESS;
+	}
+
+	linked_list_element_t *element =(linked_list_element_t *) linked_list_element_create(item);
+
+
+	if (current_element->previous == NULL)
+	{
+		current_element->previous = element;
+		element->next = current_element;
+		this->first = element;
+	}
+	else
+	{
+		current_element->previous->next = element;
+		element->previous = current_element->previous;
+		current_element->previous = element;
+		element->next = current_element;
+	}
+
+
+	this->count++;
+	return SUCCESS;
+}
+	
+/**
+ * Implementation of linked_list_t.remove_at_position.
+ */
+static status_t remove_at_position (private_linked_list_t *this,size_t position, void **item)
+{
+	iterator_t *iterator;
+	int i;
+
+	if (this->count <= position)
+	{
+		return INVALID_ARG;
+	}
+	
+	iterator = this->public.create_iterator(&(this->public),TRUE);
+	
+	iterator->has_next(iterator);
+	for (i = 0; i < position;i++)
+	{
+		iterator->has_next(iterator);
+	}
+	iterator->current(iterator,item);
+	iterator->remove(iterator);
+	iterator->destroy(iterator);
+
+	return SUCCESS;
+}
+
+/**
+ * Implementation of linked_list_t.get_at_position.
+ */
+static status_t get_at_position (private_linked_list_t *this,size_t position, void **item)
+{
+	int i;
+	iterator_t *iterator;
+	status_t status;
+	if (this->count <= position)
+	{
+		return INVALID_ARG;
+	}
+
+	iterator = this->public.create_iterator(&(this->public),TRUE);
+	
+	iterator->has_next(iterator);
+	for (i = 0; i < position;i++)
+	{
+		iterator->has_next(iterator);
+	}
+	status = iterator->current(iterator,item);
+	iterator->destroy(iterator);
+	return status;
+}
+
+
+/**
  * Implementation of linked_list_t.get_last.
  */
 static status_t get_last(private_linked_list_t *this, void **item)
@@ -543,15 +644,19 @@ linked_list_t *linked_list_create()
 {
 	private_linked_list_t *this = allocator_alloc_thing(private_linked_list_t);
 
-	this->public.get_count = (int (*) (linked_list_t *linked_list)) get_count;
-	this->public.create_iterator = (iterator_t * (*) (linked_list_t *linked_list,bool forward)) create_iterator;
-	this->public.get_first = (status_t (*) (linked_list_t *linked_list, void **item)) get_first;
-	this->public.get_last = (status_t (*) (linked_list_t *linked_list, void **item)) get_last;
-	this->public.insert_first = (void (*) (linked_list_t *linked_list, void *item)) insert_first;
-	this->public.insert_last = (void (*) (linked_list_t *linked_list, void *item)) insert_last;
-	this->public.remove_first = (status_t (*) (linked_list_t *linked_list, void **item)) remove_first;
-	this->public.remove_last = (status_t (*) (linked_list_t *linked_list, void **item)) remove_last;
-	this->public.destroy = (void (*) (linked_list_t *linked_list)) linked_list_destroy;
+	this->public.get_count = (int (*) (linked_list_t *)) get_count;
+	this->public.create_iterator = (iterator_t * (*) (linked_list_t *,bool )) create_iterator;
+	this->public.get_first = (status_t (*) (linked_list_t *, void **item)) get_first;
+	this->public.get_last = (status_t (*) (linked_list_t *, void **item)) get_last;
+	this->public.insert_first = (void (*) (linked_list_t *, void *item)) insert_first;
+	this->public.insert_last = (void (*) (linked_list_t *, void *item)) insert_last;
+	this->public.remove_first = (status_t (*) (linked_list_t *, void **item)) remove_first;
+	this->public.remove_last = (status_t (*) (linked_list_t *, void **item)) remove_last;
+	this->public.insert_at_position =(status_t (*) (linked_list_t *,size_t, void *)) insert_at_position;
+	this->public.remove_at_position =(status_t (*) (linked_list_t *,size_t, void **)) remove_at_position;
+	this->public.get_at_position =(status_t (*) (linked_list_t *,size_t, void **)) get_at_position;
+	
+	this->public.destroy = (void (*) (linked_list_t *)) linked_list_destroy;
 
 	this->count = 0;
 	this->first = NULL;

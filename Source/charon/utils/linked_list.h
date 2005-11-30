@@ -98,6 +98,42 @@ struct linked_list_t {
 	void (*insert_last) (linked_list_t *linked_list, void *item);
 	
 	/**
+	 * @brief Inserts a new item at a given position in the list.
+	 * 
+	 * @param linked_list 	calling object
+	 * @param position		position starting at 0 to insert new entry
+	 * @param[in] 			item value to insert into list
+	 * @return
+	 * 						- SUCCESS
+	 * 						- INVALID_ARG if position not existing
+	 */
+	status_t (*insert_at_position) (linked_list_t *linked_list,size_t position, void *item);
+	
+	/**
+	 * @brief Removes an item from a given position in the list.
+	 * 
+	 * @param linked_list 	calling object
+	 * @param position		position starting at 0 to remove entry from
+	 * @param[out] 			removed item will be stored at this location
+	 * @return
+	 * 						- SUCCESS
+	 * 						- INVALID_ARG if position not existing
+	 */
+	status_t (*remove_at_position) (linked_list_t *linked_list,size_t position, void **item);
+
+	/**
+	 * @brief Get an item from a given position in the list.
+	 * 
+	 * @param linked_list 	calling object
+	 * @param position		position starting at 0 to get entry from
+	 * @param[out] 			item will be stored at this location
+	 * @return
+	 * 						- SUCCESS
+	 * 						- INVALID_ARG if position not existing
+	 */
+	status_t (*get_at_position) (linked_list_t *linked_list,size_t position, void **item);
+
+	/**
 	 * @brief Removes the last item in the list and returns its value.
 	 * 
 	 * @param linked_list 	calling object
