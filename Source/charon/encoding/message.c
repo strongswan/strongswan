@@ -894,11 +894,12 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 	status = this->get_message_rule(this, &message_rule);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR | MORE, "No message rule for this message type");
 		return status;
 	}
-	
 	if (!message_rule->encrypted_content)
 	{
+		this->logger->log(this->logger, CONTROL | MORE, "Message doesn't have to be encrypted");
 		/* message contains no content to encrypt */
 		return SUCCESS;
 	}
@@ -927,7 +928,6 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		if ((status == SUCCESS) && (supported_payload_entry->encrypted))
 		{
 			to_encrypt = TRUE;
-			break;
 		}
 		
 		if (to_encrypt)
