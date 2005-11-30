@@ -165,7 +165,14 @@ static void get_encoding_rules(private_id_payload_t *this, encoding_rule_t **rul
  */
 static payload_type_t get_payload_type(private_id_payload_t *this)
 {
-	return ((this->is_initiator) ? ID_INITIATOR : ID_RESPONDER);
+	if (this->is_initiator)
+	{
+		return ID_INITIATOR;
+	}
+	else
+	{
+		return ID_RESPONDER;
+	}
 }
 
 /**
