@@ -67,6 +67,25 @@ struct encryption_payload_t {
 	void (*add_payload) (encryption_payload_t *this, payload_t *payload);
 	
 	/**
+	 * @brief Reove the last payload in the contained payload list.
+	 *
+	 * @param this 			calling encryption_payload_t object
+	 * @param[out] payload	removed payload
+	 * @return
+	 * 						- SUCCESS, or
+	 * 						- NOT_FOUND if list empty
+	 */
+	status_t (*remove_first_payload) (encryption_payload_t *this, payload_t **payload);
+	
+	/**
+	 * @brief Get the number of payloads.
+	 *
+	 * @param this 			calling encryption_payload_t object
+	 * @return				number of contained payloads
+	 */
+	size_t (*get_payload_count) (encryption_payload_t *this);
+	
+	/**
 	 * @brief Set transforms to use.
 	 * 
 	 * To decryption, encryption, signature building and verifying,

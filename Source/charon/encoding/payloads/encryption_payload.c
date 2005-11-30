@@ -253,6 +253,23 @@ static void add_payload(private_encryption_payload_t *this, payload_t *payload)
 }
 
 /**
+ * Implementation of encryption_payload_t.remove_first_payload.
+ */
+static status_t remove_first_payload(private_encryption_payload_t *this, payload_t **payload)
+{
+	return this->payloads->remove_first(this->payloads, (void**)payload);
+}
+
+/**
+ * Implementation of encryption_payload_t.get_payload_count.
+ */
+static size_t get_payload_count(private_encryption_payload_t *this)
+{
+	return this->payloads->get_count(this->payloads);
+}
+
+
+/**
  * Implementation of encryption_payload_t.encrypt.
  */
 static status_t encrypt(private_encryption_payload_t *this)
@@ -329,7 +346,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	{
 		return INVALID_STATE;
 	}
-		
+	
 	/* get IV */
 	iv.len = this->crypter->get_block_size(this->crypter);
 	iv.ptr = this->encrypted.ptr;
@@ -591,6 +608,9 @@ encryption_payload_t *encryption_payload_create()
 	/* public functions */
 	this->public.create_payload_iterator = (iterator_t * (*) (encryption_payload_t *,bool)) create_payload_iterator;
 	this->public.add_payload = (void (*) (encryption_payload_t *,payload_t *)) add_payload;
+	this->public.remove_first_payload = (status_t (*)(encryption_payload_t*, payload_t **)) remove_first_payload;
+	this->public.get_payload_count = (size_t (*)(encryption_payload_t*)) get_payload_count;
+	
 	this->public.encrypt = (status_t (*) (encryption_payload_t *)) encrypt;
 	this->public.decrypt = (status_t (*) (encryption_payload_t *)) decrypt;
 	this->public.set_transforms = (void (*) (encryption_payload_t*,crypter_t*,signer_t*)) set_transforms;
