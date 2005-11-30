@@ -153,8 +153,8 @@ static supported_payload_entry_t supported_ike_auth_r_payloads[] =
 static message_rule_t message_rules[] = {
 	{IKE_SA_INIT,TRUE,FALSE,(sizeof(supported_ike_sa_init_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_i_payloads},
 	{IKE_SA_INIT,FALSE,FALSE,(sizeof(supported_ike_sa_init_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_r_payloads},
-	{IKE_AUTH,TRUE,FALSE,(sizeof(supported_ike_auth_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_auth_i_payloads},
-	{IKE_AUTH,FALSE,FALSE,(sizeof(supported_ike_auth_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_auth_r_payloads}
+	{IKE_AUTH,TRUE,TRUE,(sizeof(supported_ike_auth_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_auth_i_payloads},
+	{IKE_AUTH,FALSE,TRUE,(sizeof(supported_ike_auth_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_auth_r_payloads}
 };
 
 typedef struct payload_entry_t payload_entry_t;
@@ -869,7 +869,9 @@ static status_t decrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		if (payload_entry->encrypted != current_payload_was_encrypted)
 		{
 			/* payload type not supported */
-			this->logger->log(this->logger, ERROR | MORE, "Payload type %s should be %s!",(payload_entry->encrypted) ? "encrypted": "not encrypted");
+			this->logger->log(this->logger, ERROR | MORE, "Payload type %s should be %s!", 
+								mapping_find(payload_type_m,current_payload->get_type(current_payload)),
+								(payload_entry->encrypted) ? "encrypted": "not encrypted");
 			iterator->destroy(iterator);
 			return status;
 		}
