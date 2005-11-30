@@ -59,6 +59,13 @@ struct parser_t {
 	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type, payload_t **payload);
 	
 	/**
+	 * Gets the remaining byte count which is not currently parsed.
+	 * 
+	 * @param parser		parser_t object
+	 */
+	int (*get_remaining_byte_count) (parser_t *this);
+	
+	/**
 	 * @brief Resets the current parser context.
 	 *
 	 * @param parser		parser_t object

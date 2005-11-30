@@ -162,8 +162,8 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	
 	/* this is the first message we process, so copy host infos */
-	message->get_source(message, &source);
-	message->get_destination(message, &destination);
+	source = message->get_source(message);
+	destination = message->get_destination(message);
 	
 	/* we need to clone them, since we destroy the message later */
 	my_host = destination->clone(destination);

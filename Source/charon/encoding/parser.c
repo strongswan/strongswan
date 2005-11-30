@@ -904,6 +904,15 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 }
 
 /**
+ * Implementation of parser_t.get_remaining_byte_count.
+ */
+static int get_remaining_byte_count (private_parser_t *this)
+{
+	int count = (this->input_roof - this->byte_pos);
+	return count;
+}
+
+/**
  * Implementation of parser_t.reset_context.
  */
 static void reset_context (private_parser_t *this)
@@ -932,6 +941,7 @@ parser_t *parser_create(chunk_t data)
 	
 	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**)) parse_payload;
 	this->public.reset_context = (void(*)(parser_t*)) reset_context;
+	this->public.get_remaining_byte_count = (int (*) (parser_t *))get_remaining_byte_count;
 	this->public.destroy = (void(*)(parser_t*)) destroy;
 	
 		

@@ -177,8 +177,6 @@ struct message_t {
 	 *
 	 * @param this 			message_t object
 	 * @param payload 		payload to append
-	 * @return				
-	 * 						- SUCCESS or
 	 */	
 	void (*add_payload) (message_t *this, payload_t *payload);
 
@@ -221,15 +219,70 @@ struct message_t {
 	 */	
 	status_t (*generate) (message_t *this, crypter_t *crypter, signer_t *signer, packet_t **packet);
 	
+	/**
+	 * Verifies the structure of the message_t object. 
+	 * 
+	 * The payloads are checked for the correct occurence count.
+	 *
+	 * @param this 		message_t object
+	 */
 	status_t (*verify) (message_t *this);
-	void (*get_source) (message_t *this, host_t **host);
+	
+	/**
+	 * Gets the source host informations. 
+	 * 
+	 * @warning Returned host_t object is not getting cloned.
+	 *
+	 * @param this 		message_t object
+	 * @return			host_t object representing source host
+	 */	
+	host_t * (*get_source) (message_t *this);
+	
+	/**
+	 * Sets the source host informations. 
+	 * 
+	 * @warning host_t object is not getting cloned and gets destroyed by
+	 * 			message_t.destroy or next call of message_t.set_source.
+	 *
+	 * @param this 		message_t object
+	 * @param host		host_t object representing source host
+	 */	
 	void (*set_source) (message_t *this, host_t *host);
-	void (*get_destination) (message_t *this, host_t **host);
+
+	/**
+	 * Gets the destination host informations. 
+	 * 
+	 * @warning Returned host_t object is not getting cloned.
+	 *
+	 * @param this 		message_t object
+	 * @return			host_t object representing destination host
+	 */	
+	host_t * (*get_destination) (message_t *this);
+
+	/**
+	 * Sets the destination host informations. 
+	 * 
+	 * @warning host_t object is not getting cloned and gets destroyed by
+	 * 			message_t.destroy or next call of message_t.set_destination.
+	 *
+	 * @param this 		message_t object
+	 * @param host		host_t object representing destination host
+	 */	
 	void (*set_destination) (message_t *this, host_t *host);
+	
+	/**
+	 * Returns an iterator on all stored payloads.
+	 * 
+	 * @warning Don't insert payloads over this iterator. 
+	 * 			Use message_t.add_payload instead.
+	 *
+	 * @param this 		message_t object
+	 * @return			iterator_t object which has to get destroyd by the caller
+	 */	
 	iterator_t * (*get_payload_iterator) (message_t *this);
 	
 	/**
-	 * @brief Destroys a message and all including objects
+	 * @brief Destroys a message and all including objects.
 	 *
 	 * @param this 		message_t object
 	 */
@@ -250,7 +303,7 @@ struct message_t {
  * 
  * @param packet		packet_t object which is assigned to message					  
  * 
- * @return 			created message_t object
+ * @return 				created message_t object
  * 
  * @ingroup encoding
  */
