@@ -843,11 +843,13 @@ static status_t decrypt_payloads (private_message_t *this,crypter_t *crypter, si
 			
 			/* encryption_payload is replaced with first encrypted payload*/
 			encrypted_payload_iterator->current(encrypted_payload_iterator,(void **)&current_encrypted_payload);
+			this->logger->log(this->logger, CONTROL | MORE, "Replace encrypted payload with payload of type %s.",mapping_find(payload_type_m,current_encrypted_payload->get_type(current_encrypted_payload));
 			iterator->replace(iterator,NULL,(void *) current_encrypted_payload);
 			
 			/* all encrypted payloads are added to the payload list */
 			while (encrypted_payload_iterator->has_next(encrypted_payload_iterator))
 			{
+				this->logger->log(this->logger, CONTROL | MORE, "Insert unencrypted payload of type %s at end of list.",mapping_find(payload_type_m,current_encrypted_payload->get_type(current_encrypted_payload));
 				encrypted_payload_iterator->current(encrypted_payload_iterator,(void **)&current_encrypted_payload);				
 				this->payloads->insert_last(this->payloads,current_encrypted_payload);
 			}

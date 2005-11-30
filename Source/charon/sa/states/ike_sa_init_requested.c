@@ -28,7 +28,9 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
+#include <encoding/payloads/auth_payload.h>
 #include <transforms/diffie_hellman.h>
+#include <sa/states/ike_auth_requested.h>
 
 
 typedef struct private_ike_sa_init_requested_t private_ike_sa_init_requested_t;
@@ -99,6 +101,23 @@ struct private_ike_sa_init_requested_t {
 	 */
 	void (*build_id_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
 	
+	/**
+	 * Builds the id payload for this state.
+	 * 
+	 * @param this		calling object
+	 * @param payload	The generated payload object of type auth_payload_t is 
+	 * 					stored at this location.
+	 */
+	void (*build_auth_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	
+	/**
+	 * Destroy function called internally of this class after state change succeeded.
+	 * 
+	 * This destroy function does not destroy objects which were passed to the new state.
+	 * 
+	 * @param this		calling object
+	 */
+	void (*destroy_after_state_change) (private_ike_sa_init_requested_t *this);
 };
 
 /**
@@ -113,6 +132,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	packet_t *packet;
 	u_int64_t responder_spi;
 	ike_sa_id_t *ike_sa_id;
+	ike_auth_requested_t *next_state;
 	
 
 	exchange_type = reply->get_exchange_type(reply);
@@ -265,6 +285,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
 	charon->send_queue->add(charon->send_queue, packet);
 	
+	/* state can now be changed */
+	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+	next_state = ike_auth_requested_create(this->ike_sa);
 	
 	/* last message can now be set */
 	status = this->ike_sa->set_last_requested_message(this->ike_sa, request);
@@ -272,32 +295,19 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not set last requested message");
-	//	(next_state->state_interface).destroy(&(next_state->state_interface));
+		(next_state->state_interface).destroy(&(next_state->state_interface));
 		request->destroy(request);
 		return status;
 	}
 
+	/* state can now be changed */ 
+	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 
-	/****************************
-	 * 
-	 *  TODO
-	 * 
-	 * Send IKE_SA_AUTH request
-	 * 
-	 * Make state change
-	 * 
-	 ****************************/
+	/* state has NOW changed :-) */
+	this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED),mapping_find(ike_sa_state_m,IKE_AUTH_REQUESTED) );
 
-
-	/* set up the reply */
-//	status = this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
-//	if (status != SUCCESS)
-//	{
-//		return status;	
-//	}
-
-//	response->destroy(response);
-
+	this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
+	this->destroy_after_state_change(this);
 	
 	return SUCCESS;
 }
@@ -317,12 +327,20 @@ static void build_ike_auth_request (private_ike_sa_init_requested_t *this, messa
 	
 	/* build id payload */
 	this->build_id_payload(this, &payload);
-	this->logger->log(this->logger, CONTROL|MOST, "add id payload to message");
+	this->logger->log(this->logger, CONTROL|MOST, "add ID payload to message");
+	message->add_payload(message, payload);
+
+	/* build auth payload */
+	this->build_auth_payload(this, &payload);
+	this->logger->log(this->logger, CONTROL|MOST, "add AUTH payload to message");
 	message->add_payload(message, payload);
 	
 	*request = message;
 }
 
+/**
+ * Implementation of private_ike_sa_init_requested_t.build_id_payload.
+ */
 static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
 {
 	id_payload_t *id_payload;
@@ -342,11 +360,47 @@ static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t *
 }
 
 /**
+ * Implementation of private_ike_sa_init_requested_t.build_auth_payload.
+ */
+static void build_auth_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+{
+	auth_payload_t *auth_payload;
+	chunk_t auth_data;
+	
+	/* create IDi */
+	auth_payload = auth_payload_create();
+	/* TODO configuration manager request */
+	auth_payload->set_auth_method(auth_payload,RSA_DIGITAL_SIGNATURE);
+	auth_data.ptr = "this is the key";
+	auth_data.len = strlen(auth_data.ptr);
+	this->logger->log_chunk(this->logger, CONTROL, "Auth Data",&auth_data);
+	auth_payload->set_data(auth_payload,auth_data);
+	*payload = (payload_t *) auth_payload;
+}
+
+/**
  * Implements state_t.get_state
  */
 static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
 {
 	return IKE_SA_INIT_REQUESTED;
+}
+
+/**
+ * Implements private_ike_sa_init_requested_t.destroy_after_state_change
+ */
+static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
+{
+	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy state of type ike_sa_init_requested_t after state change");
+	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
+	this->diffie_hellman->destroy(this->diffie_hellman);
+	
+	allocator_free(this->sent_nonce.ptr);
+	allocator_free(this->received_nonce.ptr);
+	allocator_free(this->shared_secret.ptr);
+	allocator_free(this);
+	
 }
 
 /**
@@ -380,6 +434,8 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	/* private functions */
 	this->build_ike_auth_request = build_ike_auth_request;
 	this->build_id_payload = build_id_payload;
+	this->build_auth_payload = build_auth_payload;
+	this->destroy_after_state_change = destroy_after_state_change;
 	
 	/* private data */
 	this->ike_sa = ike_sa;
