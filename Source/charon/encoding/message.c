@@ -788,12 +788,14 @@ static status_t decrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		/* get current payload */		
 		iterator->current(iterator,(void **)&current_payload);
 		
+		this->logger->log(this->logger, CONTROL | MOST, "Process payload of type %s.",mapping_find(payload_type_m,current_payload->get_type(current_payload)));
+		
 		if (current_payload->get_type(current_payload) == ENCRYPTED)
 		{
 			encryption_payload_t *encryption_payload;
 			iterator_t *encrypted_payload_iterator;
 			payload_t *current_encrypted_payload;
-			
+	
 			if (!message_rule->encrypted_content)
 			{
 				this->logger->log(this->logger, ERROR | MORE, "Encrypted payload not allowed for this message type");
