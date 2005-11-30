@@ -75,6 +75,21 @@ struct iterator_t {
 	 * @param[in] item 		value to insert in list
 	 */
 	void (*insert_after) (iterator_t *this, void *item);
+	
+	/**
+	 * @brief Replace the current item at current iterator position.
+	 * 
+	 * The iterator position is not changed after replacing.
+	 * 
+	 * @param this 			calling iterator
+	 * @param[out]old_item  old value will be written here(can be NULL)
+	 * @param[in] new_item  new value
+	 * 
+	 * @return 
+	 * 						- SUCCESS
+	 * 						- FAILED if iterator is on an invalid position
+	 */
+	status_t (*replace) (iterator_t *this, void **old_item, void *new_item);
 
 	/**
 	 * @brief removes an element from list at the given iterator position.

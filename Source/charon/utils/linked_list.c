@@ -293,6 +293,24 @@ static void insert_before(private_iterator_t * iterator, void *item)
 }
 
 /**
+ * Implementation of iterator_t.replace.
+ */
+status_t replace (private_iterator_t *this, void **old_item, void *new_item)
+{
+	if (this->current == NULL)
+	{
+		return NOT_FOUND;
+	}
+	if (old_item != NULL)
+	{
+		*old_item = this->current->value;
+	}
+	this->current->value = new_item;
+	
+	return SUCCESS;
+}
+
+/**
  * Implementation of iterator_t.insert_after.
  */
 static void insert_after(private_iterator_t * iterator, void *item)
@@ -490,6 +508,7 @@ static iterator_t *create_iterator (private_linked_list_t *linked_list,bool forw
 	this->public.current = (status_t (*) (iterator_t *this, void **value)) iterator_current;
 	this->public.insert_before = (void (*) (iterator_t *this, void *item)) insert_before;
 	this->public.insert_after = (void (*) (iterator_t *this, void *item)) insert_after;
+	this->public.replace = (status_t (*) (iterator_t *, void **, void *)) replace;
 	this->public.remove = (status_t (*) (iterator_t *this)) remove;
 	this->public.reset = (void (*) (iterator_t *this)) iterator_reset;
 	this->public.destroy = (void (*) (iterator_t *this)) iterator_destroy;

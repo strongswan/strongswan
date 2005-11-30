@@ -104,7 +104,7 @@ struct private_ike_sa_init_requested_t {
 /**
  * Implements state_t.get_state
  */
-static status_t process_message(private_ike_sa_init_requested_t *this, message_t *message)
+static status_t process_message(private_ike_sa_init_requested_t *this, message_t *reply)
 {
 	status_t status;
 	iterator_t *payloads;
@@ -115,33 +115,33 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	ike_sa_id_t *ike_sa_id;
 	
 
-	exchange_type = message->get_exchange_type(message);
+	exchange_type = reply->get_exchange_type(reply);
 	if (exchange_type != IKE_SA_INIT)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_sa_init_requested",mapping_find(exchange_type_m,exchange_type));
 		return FAILED;
 	}
 	
-	if (message->get_request(message))
+	if (reply->get_request(reply))
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Only responses of type IKE_SA_INIT supported in state ike_sa_init_requested");
 		return FAILED;
 	}
 	
 	/* parse incoming message */
-	status = message->parse_body(message, NULL, NULL);
+	status = reply->parse_body(reply, NULL, NULL);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not parse body");
 		return status;	
 	}
 	
-	responder_spi = message->get_responder_spi(message);
+	responder_spi = reply->get_responder_spi(reply);
 	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
 	ike_sa_id->set_responder_spi(ike_sa_id,responder_spi);
 	
 	/* iterate over incoming payloads */
-	payloads = message->get_payload_iterator(message);
+	payloads = reply->get_payload_iterator(reply);
 	while (payloads->has_next(payloads))
 	{
 		payload_t *payload;
@@ -248,6 +248,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	
 	this->ike_sa->compute_secrets(this->ike_sa,this->shared_secret,this->sent_nonce, this->received_nonce);
 
+	/* build the complete IKE_AUTH request */
 	this->build_ike_auth_request (this,&request);
 
 	/* generate packet */	
@@ -257,7 +258,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "could not generate packet from message");
-		message->destroy(message);
+		reply->destroy(reply);
 		return status;
 	}
 	
@@ -265,7 +266,17 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	charon->send_queue->add(charon->send_queue, packet);
 	
 	
-	request->destroy(request);
+	/* last message can now be set */
+	status = this->ike_sa->set_last_requested_message(this->ike_sa, request);
+
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not set last requested message");
+	//	(next_state->state_interface).destroy(&(next_state->state_interface));
+		request->destroy(request);
+		return status;
+	}
+
 
 	/****************************
 	 * 
