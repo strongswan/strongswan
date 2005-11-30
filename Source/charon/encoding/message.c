@@ -438,22 +438,17 @@ static void add_payload(private_message_t *this, payload_t *payload)
 	if (this->payloads->get_count(this->payloads) > 0)
 	{
 		this->payloads->get_last(this->payloads,(void **) &last_payload);
-	}
-	
-	this->payloads->insert_last(this->payloads, payload);
-
-	if (this->payloads->get_count(this->payloads) == 1)
-	{
-		this->first_payload = payload->get_type(payload);
+		last_payload->set_next_type(last_payload, payload->get_type(payload));
 	}
 	else
 	{
-		last_payload->set_next_type(last_payload,payload->get_type(payload));
+		this->first_payload = payload->get_type(payload);
 	}
-	
+	payload->set_next_type(payload, NO_PAYLOAD);
+	this->payloads->insert_last(this->payloads, (void*)payload);
+
 	this->logger->log(this->logger, CONTROL|MORE, "added payload of type %s to message", 
 						mapping_find(payload_type_m, payload->get_type(payload)));
-	
 }
 
 /**
@@ -660,7 +655,8 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	status_t status = SUCCESS;
 	payload_type_t current_payload_type = this->first_payload;
 		
-	this->logger->log(this->logger, CONTROL, "parsing body of message");
+	this->logger->log(this->logger, CONTROL, "parsing body of message, first payload %s",
+						mapping_find(payload_type_m, current_payload_type));
 
 	while ((current_payload_type != NO_PAYLOAD))
 	{
@@ -953,7 +949,7 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 	{
 		encryption_payload->set_transforms(encryption_payload,crypter,signer);
 		status = encryption_payload->encrypt(encryption_payload);
-		this->payloads->insert_last(this->payloads,encryption_payload);
+		this->public.add_payload(&(this->public), (payload_t*)encryption_payload);
 	}
 	
 	all_payloads->destroy(all_payloads);

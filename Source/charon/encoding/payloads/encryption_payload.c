@@ -159,59 +159,7 @@ encoding_rule_t encryption_payload_encodings[] = {
  */
 static status_t verify(private_encryption_payload_t *this)
 {
-// 	int proposal_number = 1;
-	status_t status;
-// 	iterator_t *iterator;
-// 	bool first = TRUE;
-// 	
-// 	if (this->critical)
-// 	{
-// 		/* critical bit set! */
-// 		return FAILED;
-// 	}
-// 
-// 	/* check proposal numbering */		
-// 	status = this->proposals->create_iterator(this->proposals,&iterator,TRUE);
-// 	if (status != SUCCESS)
-// 	{
-// 		return status;
-// 	}
-// 	
-// 	while(iterator->has_next(iterator))
-// 	{
-// 		proposal_substructure_t *current_proposal;
-// 		status = iterator->current(iterator,(void **)&current_proposal);
-// 		{
-// 			break;
-// 		}
-// 		if (current_proposal->get_proposal_number(current_proposal) > proposal_number)
-// 		{
-// 			if (first) 
-// 			{
-// 				/* first number must be 1 */
-// 				status = FAILED;
-// 				break;
-// 			}
-// 			
-// 			if (current_proposal->get_proposal_number(current_proposal) != (proposal_number + 1))
-// 			{
-// 				/* must be only one more then previous proposal */
-// 				status = FAILED;
-// 				break;
-// 			}
-// 		}
-// 		else if (current_proposal->get_proposal_number(current_proposal) < proposal_number)
-// 		{
-// 			iterator->destroy(iterator);
-// 			/* must not be smaller then proceeding one */
-// 			status = FAILED;
-// 			break;
-// 		}
-// 		first = FALSE;
-// 	}
-// 	
-// 	iterator->destroy(iterator);
-	return status;
+	return SUCCESS;
 }
 
 /**
