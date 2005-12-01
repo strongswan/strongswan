@@ -24,6 +24,7 @@
 
 #include <utils/linked_list.h>
 #include <utils/allocator.h>
+#include <utils/identification.h>
 
 typedef struct private_sa_config_t private_sa_config_t;
 
@@ -73,22 +74,33 @@ struct private_sa_config_t {
 	bool (*proposal_equals) (private_sa_config_t *this, child_proposal_t *first, child_proposal_t *second);
 };
 
-
+/**
+ * implements sa_config_t.get_my_id
+ */
 static identification_t *get_my_id(private_sa_config_t *this)
 {
 	return this->my_id;
 }
 
+/**
+ * implements sa_config_t.get_other_id
+ */
 static identification_t *get_other_id(private_sa_config_t *this)
 {
 	return this->other_id;
 }
 
+/**
+ * implements sa_config_t.get_auth_method
+ */
 static auth_method_t get_auth_method(private_sa_config_t *this)
 {
 	return this->auth_method;
 }
-	
+
+/**
+ * implements sa_config_t.get_traffic_selectors
+ */
 static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_t **traffic_selectors)
 {
 	iterator_t *iterator;
@@ -108,6 +120,9 @@ static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_
 	return counter;	
 }
 
+/**
+ * implements sa_config_t.select_traffic_selectors
+ */
 static size_t select_traffic_selectors(private_sa_config_t *this, traffic_selector_t *supplied, size_t count, traffic_selector_t **selected)
 {
 	iterator_t *iterator;
@@ -136,7 +151,10 @@ static size_t select_traffic_selectors(private_sa_config_t *this, traffic_select
 	*selected = allocator_realloc(*selected, sizeof(traffic_selector_t) * counter);
 	return counter;	
 }
-	
+
+/**
+ * implements sa_config_t.get_proposals
+ */
 static size_t get_proposals(private_sa_config_t *this, child_proposal_t **proposals)
 {
 	iterator_t *iterator;
@@ -156,6 +174,9 @@ static size_t get_proposals(private_sa_config_t *this, child_proposal_t **propos
 	return counter;	
 }
 
+/**
+ * implements sa_config_t.select_proposal
+ */
 static child_proposal_t *select_proposal(private_sa_config_t *this, child_proposal_t *supplied, size_t count)
 {
 	iterator_t *iterator;
@@ -183,6 +204,9 @@ static child_proposal_t *select_proposal(private_sa_config_t *this, child_propos
 	return selected_proposal;
 }
 
+/**
+ * implements private_sa_config_t.traffic_selector_equals
+ */
 static bool traffic_selector_equals(private_sa_config_t *this, traffic_selector_t *first,  traffic_selector_t *second)
 {
 	if (first->protocol == second->protocol)
@@ -197,43 +221,60 @@ static bool traffic_selector_equals(private_sa_config_t *this, traffic_selector_
 	return FALSE;	
 }
 
+/**
+ * implements private_sa_config_t.proposal_equals
+ */
 static bool proposal_equals(private_sa_config_t *this, child_proposal_t *first, child_proposal_t *second)
 {
+	bool equal = FALSE;
+	
 	if (first->ah.is_set && second->ah.is_set)
 	{
 		if ((first->ah.integrity_algorithm != second->ah.integrity_algorithm) ||
-			(first->ah.key_size != second->ah.key_size))
+			(first->ah.integrity_algorithm_key_size != second->ah.integrity_algorithm_key_size) ||
+			(first->ah.diffie_hellman_group != second->ah.diffie_hellman_group) ||
+			(first->ah.extended_sequence_numbers != second->ah.extended_sequence_numbers))
 		{
 			return FALSE;
 		}
-	}
-	else
-	{
-		return FALSE;	
+		equal = TRUE;
 	}
 	if (first->esp.is_set && second->esp.is_set)
 	{
 		if ((first->esp.encryption_algorithm != second->esp.encryption_algorithm) ||
-			(first->esp.key_size != second->esp.key_size))
+			(first->esp.encryption_algorithm_key_size != second->esp.encryption_algorithm_key_size) ||
+			(first->esp.integrity_algorithm != second->esp.integrity_algorithm) ||
+			(first->esp.integrity_algorithm_key_size != second->esp.integrity_algorithm_key_size) ||
+			(first->esp.diffie_hellman_group != second->esp.diffie_hellman_group) ||
+			(first->esp.extended_sequence_numbers != second->esp.extended_sequence_numbers))
 		{
 			return FALSE;
 		}
+		equal = TRUE;
 	}
-	else
-	{
-		return FALSE;	
-	}
-	return TRUE;
-}
-	
-static void add_traffic_selector(private_sa_config_t *this, traffic_selector_t *traffic_selector)
-{
-	this->ts->insert_last(this->ts, (void*)traffic_selector);
+	return equal;
 }
 
+/**
+ * implements sa_config_t.add_traffic_selector
+ */
+static void add_traffic_selector(private_sa_config_t *this, traffic_selector_t *traffic_selector)
+{
+	/* clone ts, and add*/
+	traffic_selector_t *new_ts = allocator_alloc_thing(traffic_selector_t);
+	*new_ts = *traffic_selector;
+	this->ts->insert_last(this->ts, (void*)new_ts);
+}
+
+/**
+ * implements sa_config_t.add_proposal
+ */
 static void add_proposal(private_sa_config_t *this, child_proposal_t *proposal)
 {
-	this->proposals->insert_last(this->ts, (void*)proposal);
+	/* clone proposal, and add*/
+	child_proposal_t *new_proposal = allocator_alloc_thing(child_proposal_t);
+	*new_proposal = *proposal;
+	this->proposals->insert_last(this->proposals, (void*)new_proposal);
 }
 
 /**
@@ -243,6 +284,7 @@ static status_t destroy(private_sa_config_t *this)
 {	
 	child_proposal_t *proposal;
 	traffic_selector_t *traffic_selector;
+	
 	
 	/* delete proposals */
 	while(this->proposals->get_count(this->proposals) > 0)
@@ -260,6 +302,10 @@ static status_t destroy(private_sa_config_t *this)
 	}
 	this->ts->destroy(this->ts);
 	
+	/* delete ids */
+	this->my_id->destroy(this->my_id);
+	this->other_id->destroy(this->other_id);
+	
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -267,7 +313,7 @@ static status_t destroy(private_sa_config_t *this)
 /*
  * Described in header-file
  */
-sa_config_t *sa_config_create()
+sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other_id_type, char *other_id, auth_method_t auth_method)
 {
 	private_sa_config_t *this = allocator_alloc_thing(private_sa_config_t);
 
@@ -283,7 +329,23 @@ sa_config_t *sa_config_create()
 	this->public.add_proposal = (void(*)(sa_config_t*,child_proposal_t*))add_proposal;
 	this->public.destroy = (void(*)(sa_config_t*))destroy;
 
-	/* private variables */
+	
+	/* apply init values */
+	this->my_id = identification_create_from_string(my_id_type, my_id);
+	if (this->my_id == NULL)
+	{
+		allocator_free(this);
+		return NULL;	
+	}
+	this->other_id = identification_create_from_string(other_id_type, other_id);
+	if (this->my_id == NULL)
+	{
+		this->other_id->destroy(this->other_id);
+		allocator_free(this);
+		return NULL;	
+	}
+	
+	/* init private members*/
 	this->proposal_equals = proposal_equals;
 	this->traffic_selector_equals = traffic_selector_equals;
 	this->proposals = linked_list_create();
