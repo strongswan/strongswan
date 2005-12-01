@@ -54,6 +54,7 @@ struct child_proposal_t {
 		size_t integrity_algorithm_key_size;
 		diffie_hellman_group_t diffie_hellman_group;
 		extended_sequence_numbers_t extended_sequence_numbers;
+		u_int8_t spi[4];
 	} ah;
 	
 	/**
@@ -67,6 +68,7 @@ struct child_proposal_t {
 		size_t integrity_algorithm_key_size;
 		diffie_hellman_group_t diffie_hellman_group;
 		extended_sequence_numbers_t extended_sequence_numbers;
+		u_int8_t spi[4];
 	} esp;
 };
 
@@ -85,6 +87,18 @@ struct traffic_selector_t {
 	 * Protocol for which this ts applies (TCP/UDP/ICMP)
 	 */
 	u_int8_t protocol;
+	
+	union {
+		struct {
+			
+			
+		} ipv4;
+		struct {
+			/* ipv6 support */
+		} ipv6;
+		
+	};
+	
 	/**
 	 * Start address and port for allowed range
 	 */
@@ -167,7 +181,7 @@ struct sa_config_t {
 	 * @param[out]traffic_selectors	pointer where proposals will be allocated
 	 * @return						number of allocated proposals
 	 */
-	size_t (*get_proposals) (sa_config_t *this, child_proposal_t **proposals);
+	size_t (*get_proposals) (sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t **proposals);
 	
 	/**
 	 * @brief Select a proposal from a supplied list
@@ -179,7 +193,7 @@ struct sa_config_t {
 	 * @param count					number of proposals stored at supplied
 	 * @return						the selected proposal
 	 */
-	child_proposal_t* (*select_proposal) (sa_config_t *this, child_proposal_t *supplied, size_t count);
+	child_proposal_t* (*select_proposal) (sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t *supplied, size_t count);
 	
 	/**
 	 * @brief Add a traffic selector to the list. 
