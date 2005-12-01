@@ -137,7 +137,7 @@ daemon_t *daemon_create()
 	charon->kill = daemon_kill;
 	
 	charon->logger_manager = logger_manager_create(0);
-	charon->socket = socket_create(4600);
+	charon->socket = socket_create(4601);
 	charon->ike_sa_manager = ike_sa_manager_create();
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
@@ -214,8 +214,8 @@ int main()
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
-	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&parser_test2); 
+//	tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&sa_config_test); 
 	
 	
 	tester->destroy(tester);

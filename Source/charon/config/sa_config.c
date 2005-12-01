@@ -59,14 +59,29 @@ struct private_sa_config_t {
 	linked_list_t *proposals;
 	
 	/**
-	 * list for traffic selectors
+	 * list for traffic selectors for initiator site
 	 */
-	linked_list_t *ts;
+	linked_list_t *ts_initiator;
+	
+	/**
+	 * list for traffic selectors for responder site
+	 */
+	linked_list_t *ts_responder;
 
 	/**
 	 * compare two proposals for equality
 	 */
 	bool (*proposal_equals) (private_sa_config_t *this, child_proposal_t *first, child_proposal_t *second);
+
+	/**
+	 * get_traffic_selectors for both
+	 */
+	size_t (*get_traffic_selectors) (private_sa_config_t *,linked_list_t*,traffic_selector_t**[]);
+
+	/**
+	 * select_traffic_selectors for both
+	 */
+	size_t (*select_traffic_selectors) (private_sa_config_t *,linked_list_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]);
 };
 
 /**
@@ -93,18 +108,35 @@ static auth_method_t get_auth_method(private_sa_config_t *this)
 	return this->auth_method;
 }
 
+
 /**
- * implements sa_config_t.get_traffic_selectors
+ * implements sa_config_t.get_traffic_selectors_initiator
  */
-static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_t **traffic_selectors[])
+static size_t get_traffic_selectors_initiator(private_sa_config_t *this, traffic_selector_t **traffic_selectors[])
+{
+	return this->get_traffic_selectors(this, this->ts_initiator, traffic_selectors);
+}
+
+/**
+ * implements sa_config_t.get_traffic_selectors_responder
+ */
+static size_t get_traffic_selectors_responder(private_sa_config_t *this, traffic_selector_t **traffic_selectors[])
+{
+	return this->get_traffic_selectors(this, this->ts_responder, traffic_selectors);
+}
+
+/**
+ * implements private_sa_config_t.get_traffic_selectors
+ */
+static size_t get_traffic_selectors(private_sa_config_t *this, linked_list_t *ts_list, traffic_selector_t **traffic_selectors[])
 {
 	iterator_t *iterator;
 	traffic_selector_t *current_ts;
 	int counter = 0;
-	*traffic_selectors = allocator_alloc(sizeof(traffic_selector_t*) * this->ts->get_count(this->ts));
+	*traffic_selectors = allocator_alloc(sizeof(traffic_selector_t*) * ts_list->get_count(ts_list));
 	
 	/* copy all ts from the list in an array */
-	iterator = this->ts->create_iterator(this->ts, TRUE);
+	iterator = ts_list->create_iterator(ts_list, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current_ts);
@@ -116,17 +148,32 @@ static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_
 }
 
 /**
- * implements sa_config_t.select_traffic_selectors
+ * implements private_sa_config_t.select_traffic_selectors_initiator
  */
-static size_t select_traffic_selectors(private_sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[])
+static size_t select_traffic_selectors_initiator(private_sa_config_t *this,traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[])
+{
+	return this->select_traffic_selectors(this, this->ts_initiator, supplied, count, selected);
+}
+
+/**
+ * implements private_sa_config_t.select_traffic_selectors_responder
+ */
+static size_t select_traffic_selectors_responder(private_sa_config_t *this,traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[])
+{
+	return this->select_traffic_selectors(this, this->ts_responder, supplied, count, selected);
+}
+/**
+ * implements private_sa_config_t.select_traffic_selectors
+ */
+static size_t select_traffic_selectors(private_sa_config_t *this, linked_list_t *ts_list, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[])
 {
 	iterator_t *iterator;
 	traffic_selector_t *current_ts;
 	int i, counter = 0;
-	*selected = allocator_alloc(sizeof(traffic_selector_t*) * this->ts->get_count(this->ts));
+	*selected = allocator_alloc(sizeof(traffic_selector_t*) * ts_list->get_count(ts_list));
 	
 	/* iterate over all stored proposals */
-	iterator = this->ts->create_iterator(this->ts, TRUE);
+	iterator = ts_list->create_iterator(ts_list, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current_ts);
@@ -243,13 +290,21 @@ static bool proposal_equals(private_sa_config_t *this, child_proposal_t *first, 
 }
 
 /**
- * implements sa_config_t.add_traffic_selector
+ * implements sa_config_t.add_traffic_selector_initiator
  */
-static void add_traffic_selector(private_sa_config_t *this, traffic_selector_t *traffic_selector)
+static void add_traffic_selector_initiator(private_sa_config_t *this, traffic_selector_t *traffic_selector)
 {
 	/* clone ts, and add*/
-	
-	this->ts->insert_last(this->ts, (void*)traffic_selector->clone(traffic_selector));
+	this->ts_initiator->insert_last(this->ts_initiator, (void*)traffic_selector->clone(traffic_selector));
+}
+
+/**
+ * implements sa_config_t.add_traffic_selector_responder
+ */
+static void add_traffic_selector_responder(private_sa_config_t *this, traffic_selector_t *traffic_selector)
+{
+	/* clone ts, and add*/
+	this->ts_responder->insert_last(this->ts_responder, (void*)traffic_selector->clone(traffic_selector));
 }
 
 /**
@@ -281,12 +336,20 @@ static status_t destroy(private_sa_config_t *this)
 	this->proposals->destroy(this->proposals);
 	
 	/* delete traffic selectors */
-	while(this->ts->get_count(this->ts) > 0)
+	while(this->ts_initiator->get_count(this->ts_initiator) > 0)
 	{
-		this->ts->remove_last(this->ts, (void**)&traffic_selector);
+		this->ts_initiator->remove_last(this->ts_initiator, (void**)&traffic_selector);
 		traffic_selector->destroy(traffic_selector);
 	}
-	this->ts->destroy(this->ts);
+	this->ts_initiator->destroy(this->ts_initiator);
+	
+	/* delete traffic selectors */
+	while(this->ts_responder->get_count(this->ts_responder) > 0)
+	{
+		this->ts_responder->remove_last(this->ts_responder, (void**)&traffic_selector);
+		traffic_selector->destroy(traffic_selector);
+	}
+	this->ts_responder->destroy(this->ts_responder);
 	
 	/* delete ids */
 	this->my_id->destroy(this->my_id);
@@ -307,11 +370,14 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	this->public.get_my_id = (identification_t*(*)(sa_config_t*))get_my_id;
 	this->public.get_other_id = (identification_t*(*)(sa_config_t*))get_other_id;
 	this->public.get_auth_method = (auth_method_t(*)(sa_config_t*))get_auth_method;
-	this->public.get_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t**[]))get_traffic_selectors;
-	this->public.select_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]))select_traffic_selectors;
+	this->public.get_traffic_selectors_initiator = (size_t(*)(sa_config_t*,traffic_selector_t**[]))get_traffic_selectors_initiator;
+	this->public.select_traffic_selectors_initiator = (size_t(*)(sa_config_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]))select_traffic_selectors_initiator;
+	this->public.get_traffic_selectors_responder = (size_t(*)(sa_config_t*,traffic_selector_t**[]))get_traffic_selectors_responder;
+	this->public.select_traffic_selectors_responder = (size_t(*)(sa_config_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]))select_traffic_selectors_responder;
 	this->public.get_proposals = (size_t(*)(sa_config_t*,u_int8_t[4],u_int8_t[4],child_proposal_t**))get_proposals;
 	this->public.select_proposal = (child_proposal_t*(*)(sa_config_t*,u_int8_t[4],u_int8_t[4],child_proposal_t*,size_t))select_proposal;
-	this->public.add_traffic_selector = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector;
+	this->public.add_traffic_selector_initiator = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector_initiator;
+	this->public.add_traffic_selector_responder = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector_responder;
 	this->public.add_proposal = (void(*)(sa_config_t*,child_proposal_t*))add_proposal;
 	this->public.destroy = (void(*)(sa_config_t*))destroy;
 
@@ -333,8 +399,11 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	
 	/* init private members*/
 	this->proposal_equals = proposal_equals;
+	this->select_traffic_selectors = select_traffic_selectors;
+	this->get_traffic_selectors = get_traffic_selectors;
 	this->proposals = linked_list_create();
-	this->ts = linked_list_create();
+	this->ts_initiator = linked_list_create();
+	this->ts_responder = linked_list_create();
 
 	return (&this->public);
 }

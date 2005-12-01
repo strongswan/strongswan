@@ -27,6 +27,7 @@
 #include <config/traffic_selector.h>
 #include <utils/allocator.h>
 #include <utils/logger.h>
+#include <encoding/payloads/ts_payload.h>
 
 
 /**
@@ -39,6 +40,7 @@ void test_sa_config(tester_t *tester)
 	child_proposal_t prop[3], *prop_result;
 	size_t count;
 	logger_t *logger;
+	ts_payload_t *ts_payload;
 	
 	u_int8_t spi[4] = {0x01,0x02,0x03,0x04};
 	
@@ -132,19 +134,34 @@ void test_sa_config(tester_t *tester)
 	/* icmp request, should be discarded */
 	ts_request[3] = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
 	
-	sa_config->add_traffic_selector(sa_config, ts_policy[0]);
-	sa_config->add_traffic_selector(sa_config, ts_policy[1]);
-	sa_config->add_traffic_selector(sa_config, ts_policy[2]);
+	sa_config->add_traffic_selector_initiator(sa_config, ts_policy[0]);
+	sa_config->add_traffic_selector_initiator(sa_config, ts_policy[1]);
+	sa_config->add_traffic_selector_initiator(sa_config, ts_policy[2]);
 	
-	count = sa_config->get_traffic_selectors(sa_config, &ts_result);
+	count = sa_config->get_traffic_selectors_initiator(sa_config, &ts_result);
 	tester->assert_true(tester, (count == 3), "ts get count");
 	ts_result[0]->destroy(ts_result[0]);
 	ts_result[0]->destroy(ts_result[1]);
 	ts_result[0]->destroy(ts_result[2]);
 	allocator_free(ts_result);
 	
-	count = sa_config->select_traffic_selectors(sa_config, &ts_request[0], 4, &ts_result);
+	count = sa_config->select_traffic_selectors_initiator(sa_config, &ts_request[0], 4, &ts_result);
 	tester->assert_true(tester, (count == 3), "ts select count");
+	
+	
+	/* store and restore into ts payload, tricky tricky */
+	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_result, count);
+	
+	/* destroy */
+	ts_result[0]->destroy(ts_result[0]);
+	ts_result[0]->destroy(ts_result[1]); 
+	ts_result[0]->destroy(ts_result[2]);
+	allocator_free(ts_result);
+	
+	/* get them again out of the payload */
+	count = ts_payload->get_traffic_selectors(ts_payload, &ts_result);
+	ts_payload->destroy(ts_payload);
+	
 	
 	
 	int i;
@@ -178,10 +195,12 @@ void test_sa_config(tester_t *tester)
 		allocator_free(ta_ref.ptr);
 	}
 
+
+	/* destroy */
 	ts_result[0]->destroy(ts_result[0]);
-	ts_result[0]->destroy(ts_result[1]);
+	ts_result[0]->destroy(ts_result[1]); 
 	ts_result[0]->destroy(ts_result[2]);
-	allocator_free(ts_result);
+	allocator_free(ts_result);	
 	
 	ts_policy[0]->destroy(ts_policy[0]);
 	ts_policy[1]->destroy(ts_policy[1]);

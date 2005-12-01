@@ -236,25 +236,28 @@ static iterator_t * create_traffic_selector_substructure_iterator (private_ts_pa
 	return this->traffic_selectors->create_iterator(this->traffic_selectors,forward);
 }
 
+/**
+ * Implementation of ts_payload_t.get_traffic_selectors.
+ */
 static size_t get_traffic_selectors(private_ts_payload_t *this, traffic_selector_t **traffic_selectors[])
 {
 	traffic_selector_t **ts;
 	iterator_t *iterator;
 	int i = 0;
 	
-	//ts = allocator_alloc(sizeof(traffic_selector_t*) * this->number_of_traffic_selectors);
+	ts = allocator_alloc(sizeof(traffic_selector_t*) * this->number_of_traffic_selectors);
 	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors, TRUE);
-	int x = this->traffic_selectors->get_count(this->traffic_selectors);
-	while (iterator->has_next)
+	while (iterator->has_next(iterator))
 	{
 		traffic_selector_substructure_t *ts_substructure;
 		iterator->current(iterator, (void**)&ts_substructure);
-		//ts[i] = ts_substructure->get_traffic_selector(ts_substructure);
+		ts[i] = ts_substructure->get_traffic_selector(ts_substructure);
 		i++;
 	}
+	iterator->destroy(iterator);
 	
 	/* return values */
-	//*traffic_selectors = ts;
+	*traffic_selectors = ts;
 	return this->number_of_traffic_selectors;
 }
 

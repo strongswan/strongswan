@@ -113,7 +113,7 @@ struct sa_config_t {
 	auth_method_t (*get_auth_method) (sa_config_t *this);
 	
 	/**
-	 * @brief Get configured traffic selectors.
+	 * @brief Get configured traffic selectors for initiator site.
 	 * 
 	 * Returns a pointer to an allocated array, in which
 	 * pointers to traffic selectors are stored.
@@ -125,10 +125,26 @@ struct sa_config_t {
 	 * @param[out]traffic_selectors	pointer where traffic selectors will be allocated
 	 * @return						number of returned traffic selectors
 	 */
-	size_t (*get_traffic_selectors) (sa_config_t *this, traffic_selector_t **traffic_selectors[]);
+	size_t (*get_traffic_selectors_initiator) (sa_config_t *this, traffic_selector_t **traffic_selectors[]);
+	
+		
+	/**
+	 * @brief Get configured traffic selectors for responder site.
+	 * 
+	 * Returns a pointer to an allocated array, in which
+	 * pointers to traffic selectors are stored.
+	 * 
+	 * @warning Resulting pointer array must be freed!
+	 * @warning Traffic selectors in array must be destroyed!
+	 * 
+	 * @param this					calling object
+	 * @param[out]traffic_selectors	pointer where traffic selectors will be allocated
+	 * @return						number of returned traffic selectors
+	 */
+	size_t (*get_traffic_selectors_responder) (sa_config_t *this, traffic_selector_t **traffic_selectors[]);
 	
 	/**
-	 * @brief Select traffic selectors from a supplied list.
+	 * @brief Select traffic selectors from a supplied list for initiator.
 	 * 
 	 * Returns a pointer to an allocated array, in which
 	 * pointers to traffic selectors are stored.
@@ -142,7 +158,24 @@ struct sa_config_t {
 	 * @param[out]traffic_selectors	pointer where selected traffic selectors will be allocated
 	 * @return						number of selected traffic selectors
 	 */
-	size_t (*select_traffic_selectors) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
+	size_t (*select_traffic_selectors_initiator) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
+		
+	/**
+	 * @brief Select traffic selectors from a supplied list for responder.
+	 * 
+	 * Returns a pointer to an allocated array, in which
+	 * pointers to traffic selectors are stored.
+	 * 
+	 * @warning Resulting pointer array must be freed!
+	 * @warning Traffic selectors in array must be destroyed!
+	 * 
+	 * @param this					calling object
+	 * @param supplied				pointer to an array of ts to select from.
+	 * @param count					number of ts stored at supplied
+	 * @param[out]traffic_selectors	pointer where selected traffic selectors will be allocated
+	 * @return						number of selected traffic selectors
+	 */
+	size_t (*select_traffic_selectors_responder) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
 	
 	/**
 	 * @brief Get the list of proposals for this config.
@@ -168,7 +201,7 @@ struct sa_config_t {
 	child_proposal_t* (*select_proposal) (sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t *supplied, size_t count);
 	
 	/**
-	 * @brief Add a traffic selector to the list. 
+	 * @brief Add a traffic selector to the list for initiator. 
 	 * 
 	 * Added proposal will be cloned.
 	 * 
@@ -177,7 +210,19 @@ struct sa_config_t {
 	 * @param this					calling object
 	 * @param traffic_selector		traffic_selector to add
 	 */
-	void (*add_traffic_selector) (sa_config_t *this, traffic_selector_t *traffic_selector);
+	void (*add_traffic_selector_initiator) (sa_config_t *this, traffic_selector_t *traffic_selector);
+	
+	/**
+	 * @brief Add a traffic selector to the list for responder. 
+	 * 
+	 * Added proposal will be cloned.
+	 * 
+	 * @warning Do not add while other threads are reading.
+	 * 
+	 * @param this					calling object
+	 * @param traffic_selector		traffic_selector to add
+	 */
+	void (*add_traffic_selector_responder) (sa_config_t *this, traffic_selector_t *traffic_selector);
 	
 	/**
 	 * @brief Add a proposal to the list. 
