@@ -418,6 +418,8 @@ void test_generator_with_sa_payload(tester_t *tester)
 	transform_substructure_t *transform1, *transform2;
 	proposal_substructure_t *proposal1, *proposal2;
 	ike_proposal_t *ike_proposals;
+	size_t child_proposal_count;
+	child_proposal_t *child_proposals;
 	size_t ike_proposal_count;
 	sa_payload_t *sa_payload;
 	ike_header_t *ike_header;
@@ -566,7 +568,7 @@ void test_generator_with_sa_payload(tester_t *tester)
 	sa_payload->destroy(sa_payload);
 	generator->destroy(generator);
 	
-	
+	/* --------------------------- */
 	/* test with automatic created proposals */
 	
 	generator = generator_create();
@@ -638,6 +640,138 @@ void test_generator_with_sa_payload(tester_t *tester)
 	allocator_free(ike_proposals);
 	allocator_free_chunk(&generated_data);
 	generator->destroy(generator);
+	
+	
+	/* --------------------------- */
+	/* test with automatic created child proposals */
+
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+
+	child_proposal_count = 2;
+	child_proposals = allocator_alloc(child_proposal_count * (sizeof(child_proposal_t)));
+
+	child_proposals[0].ah.is_set = TRUE;
+	child_proposals[0].ah.integrity_algorithm = AUTH_HMAC_MD5_96;
+	child_proposals[0].ah.integrity_algorithm_key_size = 20;
+	child_proposals[0].ah.diffie_hellman_group = MODP_2048_BIT;
+	child_proposals[0].ah.extended_sequence_numbers = EXT_SEQ_NUMBERS;
+	child_proposals[0].ah.spi[0] = 1;
+	child_proposals[0].ah.spi[1] = 1;
+	child_proposals[0].ah.spi[2] = 1;
+	child_proposals[0].ah.spi[3] = 1;
+
+	child_proposals[0].esp.is_set = TRUE;
+	child_proposals[0].esp.diffie_hellman_group = MODP_1024_BIT;
+	child_proposals[0].esp.encryption_algorithm = ENCR_AES_CBC;
+	child_proposals[0].esp.encryption_algorithm_key_size = 32;
+	child_proposals[0].esp.integrity_algorithm = AUTH_UNDEFINED;
+	child_proposals[0].esp.spi[0] = 2;
+	child_proposals[0].esp.spi[1] = 2;
+	child_proposals[0].esp.spi[2] = 2;
+	child_proposals[0].esp.spi[3] = 2;
+	
+	child_proposals[1].ah.is_set = TRUE;
+	child_proposals[1].ah.integrity_algorithm = AUTH_HMAC_MD5_96;
+	child_proposals[1].ah.integrity_algorithm_key_size = 20;
+	child_proposals[1].ah.diffie_hellman_group = MODP_2048_BIT;
+	child_proposals[1].ah.extended_sequence_numbers = EXT_SEQ_NUMBERS;
+	child_proposals[1].ah.spi[0] = 1;
+	child_proposals[1].ah.spi[1] = 1;
+	child_proposals[1].ah.spi[2] = 1;
+	child_proposals[1].ah.spi[3] = 1;
+
+	child_proposals[1].esp.is_set = TRUE;
+	child_proposals[1].esp.diffie_hellman_group = MODP_1024_BIT;
+	child_proposals[1].esp.encryption_algorithm = ENCR_AES_CBC;
+	child_proposals[1].esp.encryption_algorithm_key_size = 32;
+	child_proposals[1].esp.integrity_algorithm = AUTH_HMAC_MD5_96;
+	child_proposals[1].esp.integrity_algorithm_key_size = 20;
+	child_proposals[1].esp.spi[0] = 2;
+	child_proposals[1].esp.spi[1] = 2;
+	child_proposals[1].esp.spi[2] = 2;
+	child_proposals[1].esp.spi[3] = 2;	
+	
+	
+	sa_payload = sa_payload_create_from_child_proposals(child_proposals,child_proposal_count);
+	tester->assert_true(tester,(sa_payload != NULL), "sa_payload create check");
+
+	generator->generate_payload(generator,(payload_t *)sa_payload);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated",&generated_data);	
+
+	u_int8_t expected_generation3[] = {	
+		0x00,0x00,0x00,0xA0, /* payload header*/
+
+			/* suite 1 */
+			0x02,0x00,0x00,0x28,  /* a proposal */
+			0x01,0x02,0x04,0x03,
+			0x01,0x01,0x01,0x01,
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x03,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+
+				0x03,0x00,0x00,0x08, /* transform 2 */
+				0x04,0x00,0x00,0x0E,  
+
+				0x00,0x00,0x00,0x08, /* transform 3 */
+				0x05,0x00,0x00,0x01,  
+
+
+			0x02,0x00,0x00,0x20,  /* a proposal */
+			0x01,0x03,0x04,0x02,
+			0x02,0x02,0x02,0x02,
+			
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x01,0x00,0x00,0x0C,  
+					0x80,0x0E,0x00,0x20, /* keylength attribute with 32 bytes length */
+					
+				0x00,0x00,0x00,0x08, /* transform 2 */
+				0x04,0x00,0x00,0x02,  
+
+			/* suite 2 */
+			0x02,0x00,0x00,0x28,  /* a proposal */
+			0x02,0x02,0x04,0x03,
+			0x01,0x01,0x01,0x01,
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x03,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+
+				0x03,0x00,0x00,0x08, /* transform 2 */
+				0x04,0x00,0x00,0x0E,  
+
+				0x00,0x00,0x00,0x08, /* transform 3 */
+				0x05,0x00,0x00,0x01,  
+
+
+			0x00,0x00,0x00,0x2C,  /* a proposal */
+			0x02,0x03,0x04,0x03,
+			0x02,0x02,0x02,0x02,
+			
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x01,0x00,0x00,0x0C,  
+					0x80,0x0E,0x00,0x20, /* keylength attribute with 32 bytes length */
+					
+				0x03,0x00,0x00,0x0C, /* transform 2 */
+				0x03,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+					
+				0x00,0x00,0x00,0x08, /* transform 3 */
+				0x04,0x00,0x00,0x02,  
+
+	};
+
+
+	logger->log_bytes(logger,RAW,"expected",expected_generation3,sizeof(expected_generation3));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
+
+	sa_payload->destroy(sa_payload);
+	allocator_free(child_proposals);
+	allocator_free_chunk(&generated_data);
+	generator->destroy(generator);
+	
 		
 	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 	

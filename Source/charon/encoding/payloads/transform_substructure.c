@@ -89,7 +89,7 @@ mapping_t transform_type_m[] = {
 	{PSEUDO_RANDOM_FUNCTION, "PSEUDO_RANDOM_FUNCTION"},
 	{INTEGRITY_ALGORITHM, "INTEGRITY_ALGORITHM"},
 	{DIFFIE_HELLMAN_GROUP, "DIFFIE_HELLMAN_GROUP"},
-	{EXTENDED_SEQUENCE_NUNBERS, "EXTENDED_SEQUENCE_NUNBERS"},
+	{EXTENDED_SEQUENCE_NUMBERS, "EXTENDED_SEQUENCE_NUMBERS"},
 	{MAPPING_END, NULL}
 };
 
@@ -207,7 +207,7 @@ static status_t verify(private_transform_substructure_t *this)
 			
 			break;
 		}
-		case EXTENDED_SEQUENCE_NUNBERS:
+		case EXTENDED_SEQUENCE_NUMBERS:
 		{
 			if ((this->transform_id != NO_EXT_SEQ_NUMBERS) && (this->transform_id != EXT_SEQ_NUMBERS))
 			{

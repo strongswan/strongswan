@@ -28,6 +28,7 @@
 #include <encoding/payloads/proposal_substructure.h>
 #include <utils/linked_list.h>
 #include <config/init_config.h>
+#include <config/sa_config.h>
 
 /**
  * Critical flag must not be set.
@@ -98,7 +99,19 @@ struct sa_payload_t {
 	 * 							- FAILED if a proposal does not contain all needed transforms
 	 * 							  for a IKE_PROPOSAL 
 	 */
-	status_t (*get_ike_proposals) (sa_payload_t *this, ike_proposal_t **proposals, size_t *proposal_count);	
+	status_t (*get_ike_proposals) (sa_payload_t *this, ike_proposal_t **proposals, size_t *proposal_count);
+	
+	/**
+	 * Creates an array of child_proposal_t's in this SA payload.
+	 * 
+	 * @param proposals			the pointer to the first entry of child_proposal_t's is set
+	 * @param proposal_count	the number of found proposals is written at this location
+	 * @return
+	 * 							- SUCCESS if child proposals could be found
+	 * 							- NOT_FOUND if no child proposal could be found
+	 * 							- FAILED if a proposal does not contain all needed transforms
+	 */
+	status_t (*get_child_proposals) (sa_payload_t *this, child_proposal_t **proposals, size_t *proposal_count);	
 
 	/**
 	 * @brief Destroys an sa_payload_t object.
@@ -127,5 +140,19 @@ sa_payload_t *sa_payload_create();
  * @ingroup payloads
  */
 sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, size_t proposal_count);
+
+/**
+ * @brief Creates a sa_payload_t object from array of child_proposal_t's.
+ * 
+ * @warning for proposals where AH and ESP is not set, an empty proposal is created.
+ * 
+ * 
+ * @return					created sa_payload_t object
+ * @param proposals			pointer to first proposal in array of type child_proposal_t
+ * @param proposal_count	number of child_proposal_t's in array
+ * 
+ * @ingroup payloads
+ */
+sa_payload_t *sa_payload_create_from_child_proposals(child_proposal_t *proposals, size_t proposal_count);
 
 #endif /*SA_PAYLOAD_H_*/

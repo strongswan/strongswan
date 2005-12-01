@@ -96,10 +96,12 @@ void test_parser_with_sa_payload(tester_t *tester)
 	parser_t *parser;
 	sa_payload_t *sa_payload;
 	status_t status;
-	chunk_t sa_chunk, sa_chunk2;
+	chunk_t sa_chunk, sa_chunk2, sa_chunk3;
 	iterator_t *proposals, *transforms, *attributes;
     ike_proposal_t *ike_proposals;
     size_t ike_proposal_count;
+    child_proposal_t *child_proposals;
+    size_t child_proposal_count;
 	
 	/* first test generic parsing functionality */
 		
@@ -262,6 +264,140 @@ void test_parser_with_sa_payload(tester_t *tester)
 	{
 		allocator_free(ike_proposals);
 	}
+	sa_payload->destroy(sa_payload);
+	
+	/* now test SA functionality after parsing an SA payload with child sa proposals*/
+	u_int8_t sa_bytes3[] = {
+		0x00,0x00,0x00,0xA0, /* payload header*/
+
+			/* suite 1 */
+			0x02,0x00,0x00,0x28,  /* a proposal */
+			0x01,0x02,0x04,0x03,
+			0x01,0x01,0x01,0x01,
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x03,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+
+				0x03,0x00,0x00,0x08, /* transform 2 */
+				0x04,0x00,0x00,0x0E,  
+
+				0x00,0x00,0x00,0x08, /* transform 3 */
+				0x05,0x00,0x00,0x01,  
+
+
+			0x02,0x00,0x00,0x20,  /* a proposal */
+			0x01,0x03,0x04,0x02,
+			0x02,0x02,0x02,0x02,
+			
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x01,0x00,0x00,0x0C,  
+					0x80,0x0E,0x00,0x20, /* keylength attribute with 32 bytes length */
+					
+				0x00,0x00,0x00,0x08, /* transform 2 */
+				0x04,0x00,0x00,0x02,  
+
+			/* suite 2 */
+			0x02,0x00,0x00,0x28,  /* a proposal */
+			0x02,0x02,0x04,0x03,
+			0x01,0x01,0x01,0x01,
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x03,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+
+				0x03,0x00,0x00,0x08, /* transform 2 */
+				0x04,0x00,0x00,0x0E,  
+
+				0x00,0x00,0x00,0x08, /* transform 3 */
+				0x05,0x00,0x00,0x01,  
+
+
+			0x00,0x00,0x00,0x2C,  /* a proposal */
+			0x02,0x03,0x04,0x03,
+			0x02,0x02,0x02,0x02,
+			
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x01,0x00,0x00,0x0C,  
+					0x80,0x0E,0x00,0x20, /* keylength attribute with 32 bytes length */
+					
+				0x03,0x00,0x00,0x0C, /* transform 2 */
+				0x03,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+					
+				0x00,0x00,0x00,0x08, /* transform 3 */
+				0x04,0x00,0x00,0x02,
+	};
+	
+	sa_chunk3.ptr = sa_bytes3;
+	sa_chunk3.len = sizeof(sa_bytes3);
+		
+	parser = parser_create(sa_chunk3);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, SECURITY_ASSOCIATION, (payload_t**)&sa_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+
+	status = sa_payload->payload_interface.verify(&(sa_payload->payload_interface));
+	tester->assert_true(tester,(status == SUCCESS),"verify call check");
+
+	status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals, &ike_proposal_count);	
+	tester->assert_false(tester,(status == SUCCESS),"get ike proposals call check");
+	
+	status = sa_payload->get_child_proposals (sa_payload, &child_proposals, &child_proposal_count);	
+	tester->assert_true(tester,(status == SUCCESS),"get child proposals call check");	
+	
+
+	tester->assert_true(tester,(child_proposal_count == 2),"child proposal count check");
+	tester->assert_true(tester,(child_proposals[0].ah.is_set == TRUE),"is ah set check");
+	tester->assert_true(tester,(child_proposals[0].ah.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
+	tester->assert_true(tester,(child_proposals[0].ah.integrity_algorithm_key_size == 20),"integrity_algorithm_key_size check");
+	tester->assert_true(tester,(child_proposals[0].ah.diffie_hellman_group == MODP_2048_BIT),"diffie_hellman_group check");
+	tester->assert_true(tester,(child_proposals[0].ah.extended_sequence_numbers == EXT_SEQ_NUMBERS),"extended_sequence_numbers check");
+	tester->assert_true(tester,(child_proposals[0].ah.spi[0] == 1),"spi check");
+	tester->assert_true(tester,(child_proposals[0].ah.spi[1] == 1),"spi check");
+	tester->assert_true(tester,(child_proposals[0].ah.spi[2] == 1),"spi check");
+	tester->assert_true(tester,(child_proposals[0].ah.spi[3] == 1),"spi check");
+	
+	tester->assert_true(tester,(child_proposals[0].esp.is_set == TRUE),"is ah set check");
+	tester->assert_true(tester,(child_proposals[0].esp.encryption_algorithm == ENCR_AES_CBC),"integrity_algorithm check");
+	tester->assert_true(tester,(child_proposals[0].esp.encryption_algorithm_key_size == 32),"integrity_algorithm_key_size check");
+	tester->assert_true(tester,(child_proposals[0].esp.diffie_hellman_group == MODP_1024_BIT),"diffie_hellman_group check");
+	tester->assert_true(tester,(child_proposals[0].esp.integrity_algorithm == AUTH_UNDEFINED),"integrity_algorithm check");
+	tester->assert_true(tester,(child_proposals[0].esp.spi[0] == 2),"spi check");
+	tester->assert_true(tester,(child_proposals[0].esp.spi[1] == 2),"spi check");
+	tester->assert_true(tester,(child_proposals[0].esp.spi[2] == 2),"spi check");
+	tester->assert_true(tester,(child_proposals[0].esp.spi[3] == 2),"spi check");
+
+	tester->assert_true(tester,(child_proposals[1].ah.is_set == TRUE),"is ah set check");
+	tester->assert_true(tester,(child_proposals[1].ah.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
+	tester->assert_true(tester,(child_proposals[1].ah.integrity_algorithm_key_size == 20),"integrity_algorithm_key_size check");
+	tester->assert_true(tester,(child_proposals[1].ah.diffie_hellman_group == MODP_2048_BIT),"diffie_hellman_group check");
+	tester->assert_true(tester,(child_proposals[1].ah.extended_sequence_numbers == EXT_SEQ_NUMBERS),"extended_sequence_numbers check");
+	tester->assert_true(tester,(child_proposals[1].ah.spi[0] == 1),"spi check");
+	tester->assert_true(tester,(child_proposals[1].ah.spi[1] == 1),"spi check");
+	tester->assert_true(tester,(child_proposals[1].ah.spi[2] == 1),"spi check");
+	tester->assert_true(tester,(child_proposals[1].ah.spi[3] == 1),"spi check");	
+
+	tester->assert_true(tester,(child_proposals[1].esp.is_set == TRUE),"is ah set check");
+	tester->assert_true(tester,(child_proposals[1].esp.encryption_algorithm == ENCR_AES_CBC),"integrity_algorithm check");
+	tester->assert_true(tester,(child_proposals[1].esp.encryption_algorithm_key_size == 32),"integrity_algorithm_key_size check");
+	tester->assert_true(tester,(child_proposals[1].esp.diffie_hellman_group == MODP_1024_BIT),"diffie_hellman_group check");
+	tester->assert_true(tester,(child_proposals[1].esp.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
+	tester->assert_true(tester,(child_proposals[1].esp.integrity_algorithm_key_size == 20),"integrity_algorithm check");
+	tester->assert_true(tester,(child_proposals[1].esp.spi[0] == 2),"spi check");
+	tester->assert_true(tester,(child_proposals[1].esp.spi[1] == 2),"spi check");
+	tester->assert_true(tester,(child_proposals[1].esp.spi[2] == 2),"spi check");
+	tester->assert_true(tester,(child_proposals[1].esp.spi[3] == 2),"spi check");
+
+	if (status == SUCCESS)
+	{
+		allocator_free(child_proposals);
+	}
+
 	
 	sa_payload->destroy(sa_payload);
 }
