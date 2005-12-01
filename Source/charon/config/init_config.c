@@ -24,6 +24,7 @@
 
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
+#include <utils/logger.h>
 
 typedef struct private_init_config_t private_init_config_t;
 
@@ -58,13 +59,29 @@ struct private_init_config_t {
  */
 static host_t * get_my_host (private_init_config_t *this)
 {
-	return this->my_host->clone(this->my_host);
+	return this->my_host;
 }
 
 /**
  * Implementation of init_config_t.get_other_host.
  */
 static host_t * get_other_host (private_init_config_t *this)
+{
+	return this->other_host;
+}
+
+/**
+ * Implementation of init_config_t.get_my_host_clone.
+ */
+static host_t * get_my_host_clone (private_init_config_t *this)
+{
+	return this->my_host->clone(this->my_host);
+}
+
+/**
+ * Implementation of init_config_t.get_other_host_clone.
+ */
+static host_t * get_other_host_clone (private_init_config_t *this)
 {
 	return this->other_host->clone(this->other_host);
 }
@@ -131,13 +148,21 @@ static status_t select_proposal (private_init_config_t *this, ike_proposal_t *pr
 		{
 			my_iterator->current(my_iterator,(void **) &my_current_proposal);
 		
-			if (memcmp(my_current_proposal,&proposals[i],sizeof(ike_proposal_t)) == 0)
+			/* memcmp doesn't work here */
+			if ((proposals[i].encryption_algorithm == my_current_proposal->encryption_algorithm) &&
+				(proposals[i].encryption_algorithm_key_length == my_current_proposal->encryption_algorithm_key_length) &&
+				(proposals[i].integrity_algorithm == my_current_proposal->integrity_algorithm) &&
+				(proposals[i].integrity_algorithm_key_length == my_current_proposal->integrity_algorithm_key_length) &&
+				(proposals[i].pseudo_random_function == my_current_proposal->pseudo_random_function) &&
+				(proposals[i].pseudo_random_function_key_length == my_current_proposal->pseudo_random_function_key_length) &&
+				(proposals[i].diffie_hellman_group == my_current_proposal->diffie_hellman_group))
 			{
 				/* found a matching proposal */
 				*selected_proposal = *my_current_proposal;
 				my_iterator->destroy(my_iterator);
 				return SUCCESS;
 			}
+			
 		}				
 	}
 	
@@ -151,6 +176,7 @@ static status_t select_proposal (private_init_config_t *this, ike_proposal_t *pr
 static void add_proposal (private_init_config_t *this,size_t priority, ike_proposal_t proposal)
 {
 	ike_proposal_t * new_proposal = allocator_alloc(sizeof(ike_proposal_t));
+	status_t status;
 	
 	*new_proposal = proposal;
 	 
@@ -161,7 +187,8 @@ static void add_proposal (private_init_config_t *this,size_t priority, ike_propo
 		return;
 	}
 	
-	this->proposals->insert_at_position(this->proposals,(priority - 1),new_proposal);
+	status = this->proposals->insert_at_position(this->proposals,(priority - 1),new_proposal);
+
 }
 
 /**
@@ -180,7 +207,6 @@ static void destroy (private_init_config_t *this)
 	
 	this->my_host->destroy(this->my_host);
 	this->other_host->destroy(this->other_host);
-	
 	allocator_free(this);
 }
 
@@ -194,6 +220,8 @@ init_config_t * init_config_create(char * my_ip, char *other_ip, u_int16_t my_po
 	/* public functions */
 	this->public.get_my_host = (host_t*(*)(init_config_t*))get_my_host;
 	this->public.get_other_host = (host_t*(*)(init_config_t*))get_other_host;
+	this->public.get_my_host_clone = (host_t*(*)(init_config_t*))get_my_host_clone;
+	this->public.get_other_host_clone = (host_t*(*)(init_config_t*))get_other_host_clone;
 	this->public.get_dh_group_number = (diffie_hellman_group_t (*)(init_config_t*,size_t))get_dh_group_number;
 	this->public.get_proposals = (size_t(*)(init_config_t*,ike_proposal_t**))get_proposals;
 	this->public.select_proposal = (status_t(*)(init_config_t*,ike_proposal_t*,size_t,ike_proposal_t*))select_proposal;
@@ -203,7 +231,7 @@ init_config_t * init_config_create(char * my_ip, char *other_ip, u_int16_t my_po
 	/* private variables */
 	this->my_host = host_create(AF_INET,my_ip, my_port);
 	this->other_host = host_create(AF_INET,other_ip, other_port);
-	
+		
 	this->proposals = linked_list_create();
 
 	return (&this->public);

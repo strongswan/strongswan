@@ -54,7 +54,7 @@
  * Port on which the daemon will 
  * listen for incoming traffic
  */
-#define IKEV2_UDP_PORT 500
+#define IKEV2_UDP_PORT 4500
 
 /**
  * Default loglevel to use. This is the

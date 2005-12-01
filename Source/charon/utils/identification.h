@@ -76,6 +76,16 @@ struct identification_t {
 	 * @return 			string
 	 */
 	char *(*get_string) (identification_t *this);
+	
+	/**
+	 * @brief Check if two identification_t objects are equal.
+	 * 
+	 * @param this		the identification_t_object
+	 * @param other		other identification_t_object
+	 * @return 			string
+	 */
+	bool (*equals) (identification_t *this,identification_t *other);
+
 
 	/**
 	 * @brief Destroys a identification_t object.

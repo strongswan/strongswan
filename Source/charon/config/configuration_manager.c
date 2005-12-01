@@ -29,10 +29,67 @@
 #include <types.h>
 #include <daemon.h>
 #include <utils/allocator.h>
-#include <encoding/payloads/nonce_payload.h>
-#include <encoding/payloads/proposal_substructure.h>
-#include <encoding/payloads/ke_payload.h>
-#include <encoding/payloads/transform_attribute.h>
+
+typedef struct configuration_entry_t configuration_entry_t;
+
+/* A configuration entry combines a configuration name with a init and sa 
+ * configuration represented as init_config_t and sa_config_t objects.
+ */
+struct configuration_entry_t {
+	
+	/**
+	 * Configuration name.
+	 * 
+	 */
+	char *name;
+	
+	/**
+	 * Configuration for IKE_SA_INIT exchange.
+	 */
+	init_config_t *init_config;
+
+	/**
+	 * Configuration for all phases after IKE_SA_INIT exchange.
+	 */
+	sa_config_t *sa_config;
+	
+	/**
+	 * Destroys a configuration_entry_t
+	 * 
+	 * 
+	 * @param this				calling object
+	 */
+	void (*destroy) (configuration_entry_t *this);
+};
+
+static void configuration_entry_destroy (configuration_entry_t *this)
+{
+	allocator_free(this->name);
+	allocator_free(this);
+}
+
+/**
+ * Creates a configuration_entry_t object 
+ * 
+ * @param name 			name of the configuration entry (gets copied)
+ * @param init_config	object of type init_config_t
+ * @param sa_config		object of type sa_config_t
+ */
+configuration_entry_t * configuration_entry_create(char * name, init_config_t * init_config, sa_config_t * sa_config)
+{
+	configuration_entry_t *entry = allocator_alloc_thing(configuration_entry_t);
+
+	/* functions */
+	entry->destroy = configuration_entry_destroy;
+
+	/* private data */
+	entry->init_config = init_config;
+	entry->sa_config = sa_config;
+	entry->name = allocator_alloc(strlen(name) + 1);
+	strcpy(entry->name,name);
+	return entry;
+}
+
 
 typedef struct private_configuration_manager_t private_configuration_manager_t;
 
@@ -42,244 +99,353 @@ typedef struct private_configuration_manager_t private_configuration_manager_t;
 struct private_configuration_manager_t {
 
 	/**
-	 * Public part
+	 * Public part of configuration manager.
 	 */
 	configuration_manager_t public;
 
 	/**
-	 * Assigned logger object 
+	 * Holding all configurations.
+	 */
+	linked_list_t *configurations;
+
+	/**
+	 * Holding all init_configs.
+	 */
+	linked_list_t *init_configs;
+
+	/**
+	 * Holding all init_configs.
+	 */
+	linked_list_t *sa_configs;
+
+
+	/**
+	 * Assigned logger object.
 	 */
 	logger_t *logger;
+
+	/**
+	 * Load default configuration
+	 * 
+	 * 
+	 * @param this				calling object
+	 * @param name				name for the configuration
+	 * @param init_config		init_config_t object
+	 * @param sa_config			sa_config_t object
+	 */
+	void (*add_new_configuration) (private_configuration_manager_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config);
+	
+	/**
+	 * Load default configuration
+	 * 
+	 * 
+	 * @param this				calling object
+	 */
+	void (*load_default_config) (private_configuration_manager_t *this);
 };
 
 /**
- * Implements function configuration_manager_t.get_remote_host.
+ * Implementation of private_configuration_manager_t.load_default_config.
  */
-static status_t get_remote_host(private_configuration_manager_t *this, char *name, host_t **host)
+static void load_default_config (private_configuration_manager_t *this)
 {
-	/*
-	 * For testing purposes, hard coded host informations for two configurations are returned.
-	 * 
-	 * Further improvements could store them in a linked list or hash table.
-	 */
-
-	host_t *remote;
-	status_t status = SUCCESS;
+	init_config_t *init_config1, *init_config2, *init_config3;
+	ike_proposal_t proposals[2];	
+	sa_config_t *sa_config;
 	
-	if (strcmp(name, "pinflb30") == 0)
-	{
-		remote = host_create(AF_INET, "152.96.193.130", 500);
-	}
-	else if (strcmp(name, "pinflb31") == 0)
-	{
-		remote = host_create(AF_INET, "152.96.193.131", 500);
-	}
-	else if (strcmp(name, "localhost") == 0)
-	{
-		remote = host_create(AF_INET, "127.0.0.1", 500);
-	}
-	else
-	{
-		status = NOT_FOUND;
-	}
+	init_config1 = init_config_create("152.96.193.130","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config2 = init_config_create("152.96.193.131","152.96.193.130",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config3 = init_config_create("0.0.0.0","127.0.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	
 
-	*host = remote;
+	proposals[0].encryption_algorithm = ENCR_AES_CBC;
+	proposals[0].encryption_algorithm_key_length = 20;
+	proposals[0].integrity_algorithm = AUTH_HMAC_SHA1_96;
+	proposals[0].integrity_algorithm_key_length = 20;
+	proposals[0].pseudo_random_function = PRF_HMAC_SHA1;
+	proposals[0].pseudo_random_function_key_length = 20;
+	proposals[0].diffie_hellman_group = MODP_768_BIT;
+	
+	proposals[1] = proposals[0];
+	proposals[1].integrity_algorithm = AUTH_HMAC_MD5_96;
+	proposals[1].integrity_algorithm_key_length = 16;
+	proposals[1].pseudo_random_function = PRF_HMAC_MD5;
+	proposals[1].pseudo_random_function_key_length = 16;
+
+	init_config1->add_proposal(init_config1,1,proposals[0]);
+	init_config1->add_proposal(init_config1,1,proposals[1]);
+	init_config2->add_proposal(init_config2,1,proposals[0]);
+	init_config2->add_proposal(init_config2,1,proposals[1]);
+	init_config3->add_proposal(init_config3,1,proposals[0]);
+	init_config3->add_proposal(init_config3,1,proposals[1]);
+	
+	this->add_new_configuration(this,"pinflb31",init_config1,sa_config);
+	this->add_new_configuration(this,"pinflb30",init_config2,sa_config);
+	this->add_new_configuration(this,"localhost",init_config3,sa_config);
+
+}
+
+/**
+ * Implementation of configuration_manager_t.get_init_config_for_host.
+ */
+static status_t get_init_config_for_host (private_configuration_manager_t *this, host_t *my_host, host_t *other_host,init_config_t **init_config)
+{
+	iterator_t *iterator;
+	status_t status = NOT_FOUND;
+	
+	iterator = this->configurations->create_iterator(this->configurations,TRUE);
+	
+	while (iterator->has_next(iterator))
+	{
+		configuration_entry_t *entry;
+		host_t *config_my_host;
+		host_t *config_other_host;
+		
+		iterator->current(iterator,(void **) &entry);
+
+		config_my_host = entry->init_config->get_my_host(entry->init_config);
+		config_other_host = entry->init_config->get_other_host(entry->init_config);
+
+		/* first check if ip is equal */
+		if(config_other_host->ip_is_equal(config_other_host,other_host))
+		{
+			/* could be right one, check my_host for default route*/
+			if (config_my_host->is_default_route(config_my_host))
+			{
+				*init_config = entry->init_config;
+				status = SUCCESS;
+				break;
+			}
+			/* check now if host informations are the same */
+			else if (config_my_host->ip_is_equal(config_my_host,my_host))
+			{
+				*init_config = entry->init_config;
+				status = SUCCESS;
+				break;
+			}
+			
+		}
+		/* Then check for wildcard hosts!
+		 * TODO
+		 * actually its only checked if other host with default route can be found! */
+		else if (config_other_host->is_default_route(config_other_host))
+		{
+			/* could be right one, check my_host for default route*/
+			if (config_my_host->is_default_route(config_my_host))
+			{
+				*init_config = entry->init_config;
+				status = SUCCESS;
+				break;
+			}
+			/* check now if host informations are the same */
+			else if (config_my_host->ip_is_equal(config_my_host,my_host))
+			{
+				*init_config = entry->init_config;
+				status = SUCCESS;
+				break;
+			}
+		}
+	}
+	
+	iterator->destroy(iterator);
+	
 	return status;
 }
 
 /**
- * Implements function configuration_manager_t.get_local_host.
+ * Implementation of configuration_manager_t.get_init_config_for_name.
  */
-static status_t get_local_host(private_configuration_manager_t *this, char *name, host_t **host)
+static status_t get_init_config_for_name (private_configuration_manager_t *this, char *name, init_config_t **init_config)
 {
-	/*
-	 * For testing purposes, only the default route is returned for each configuration.
-	 * 
-	 * Further improvements could store different local host informations in a linked list or hash table.
-	 */
-	*host = host_create(AF_INET, "0.0.0.0", 0);
-	return SUCCESS;
-}
-
-/**
- * Implements function configuration_manager_t.get_dh_group_number.
- */
-static status_t get_dh_group_number(private_configuration_manager_t *this,char *name, u_int16_t *dh_group_number, u_int16_t priority)
-{
-	/* Currently only two dh_group_numbers are supported for each configuration*/
+	iterator_t *iterator;
+	status_t status = NOT_FOUND;
 	
-	if (priority == 1)
+	iterator = this->configurations->create_iterator(this->configurations,TRUE);
+	
+	while (iterator->has_next(iterator))
 	{
-		*dh_group_number = MODP_1024_BIT;
-	}
-	else
-	{
-		*dh_group_number = MODP_768_BIT;
-	}
-	return SUCCESS;
-}
+		configuration_entry_t *entry;
+		iterator->current(iterator,(void **) &entry);
 
-/**
- * Implements function configuration_manager_t.get_proposals_for_host.
- */
-static status_t get_proposals_for_host(private_configuration_manager_t *this, host_t *host, iterator_t *iterator)
-{
-	/* 
-	 * Currently the following hard coded proposal is created and returned for all hosts:
-	 * - ENCR_AES_CBC 128Bit
-	 * - PRF_HMAC_MD5 128Bit
-	 * - AUTH_HMAC_MD5_96 128Bit
-	 * - MODP_1024_BIT
-	 */
-	proposal_substructure_t *proposal;
-	transform_substructure_t *transform;
-	transform_attribute_t *attribute;
-	
-	proposal = proposal_substructure_create();
-	
-	proposal->set_proposal_number(proposal, 1);
-	proposal->set_protocol_id(proposal, 1);
-	
-	/* 
-	 * Encryption Algorithm 
-	 */
-	transform = transform_substructure_create();
+		if (strcmp(entry->name,name) == 0)
+		{
 
-	proposal->add_transform_substructure(proposal, transform);
-
-	transform->set_transform_type(transform, ENCRYPTION_ALGORITHM);
-	transform->set_transform_id(transform, ENCR_AES_CBC);
-	
-	attribute = transform_attribute_create();
-
-	transform->add_transform_attribute(transform, attribute);
-
-	attribute->set_attribute_type(attribute, KEY_LENGTH);
-	attribute->set_value(attribute, 16);
-	
- 	/* 
- 	 * Pseudo-random Function
- 	 */
- 	transform = transform_substructure_create();
-
-	proposal->add_transform_substructure(proposal, transform);
-
-	transform->set_transform_type(transform, PSEUDO_RANDOM_FUNCTION);
-	transform->set_transform_id(transform, PRF_HMAC_MD5);
-	
-	attribute = transform_attribute_create();
-
-	transform->add_transform_attribute(transform, attribute);
-
-	attribute->set_attribute_type(attribute, KEY_LENGTH);
-	attribute->set_value(attribute, 16);
-
- 	
- 	/* 
- 	 * Integrity Algorithm 
- 	 */
- 	transform = transform_substructure_create();
-
-	proposal->add_transform_substructure(proposal, transform);
-
-	transform->set_transform_type(transform, INTEGRITY_ALGORITHM);
-	transform->set_transform_id(transform, AUTH_HMAC_MD5_96);
-	
-	attribute = transform_attribute_create();
-
-	transform->add_transform_attribute(transform, attribute);
-
-	attribute->set_attribute_type(attribute, KEY_LENGTH);
-	attribute->set_value(attribute, 16);
- 	
- 	
-    /* 
-     * Diffie-Hellman Group 
-     */
- 	transform = transform_substructure_create();
-
-	proposal->add_transform_substructure(proposal, transform);
-
-	transform->set_transform_type(transform, DIFFIE_HELLMAN_GROUP);
-	transform->set_transform_id(transform, MODP_1024_BIT);
-	
-	iterator->insert_after(iterator, (void*)proposal);
-	
-	return SUCCESS;
-}
-	
-/**
- * Implements function configuration_manager_t.select_proposals_for_host.
- */
-static status_t select_proposals_for_host(private_configuration_manager_t *this, host_t *host, iterator_t *in, iterator_t *out)
-{
-	/* Currently the first suggested proposal is selected, cloned and then returned*/
-	proposal_substructure_t *first_suggested_proposal;
-	proposal_substructure_t *selected_proposal;
-	
-	this->logger->log(this->logger,CONTROL | MORE, "Going to select first suggested proposal");
-	if (!in->has_next(in))
-	{
-		this->logger->log(this->logger,ERROR | MORE, "No proposal suggested");
-		/* no suggested proposal! */
-		return FAILED;
+			/* found configuration */
+			*init_config = entry->init_config;
+			status = SUCCESS;
+			break;
+		}
 	}
 	
-	in->current(in,(void **) &first_suggested_proposal);
-
-	selected_proposal = first_suggested_proposal->clone(first_suggested_proposal);
+	iterator->destroy(iterator);
 	
-	out->insert_after(out,selected_proposal);
-	return SUCCESS;
+	return status;
 }
-
-/**
- * Implements function configuration_manager_t.check_selected_proposals_for_host.
- */
-static status_t check_selected_proposals_for_host (private_configuration_manager_t *this, host_t *host, iterator_t *proposals,bool *valid)
-{
-	/*
-	 * Currently the given proposals are not checked if they are valid for specific host!
-	 * 
-	 * The first proposal is taken
-	 */
-
-	this->logger->log(this->logger,CONTROL|MORE, "Going to check selected proposals");
-	return SUCCESS;
-}
-
-/**
- * Implements function configuration_manager_t.is_dh_group_allowed_for_host.
- */
-static status_t is_dh_group_allowed_for_host(private_configuration_manager_t *this, host_t *host, diffie_hellman_group_t group, bool *allowed)
-{
-	/*
-	 * Only the two DH groups 768 and 1024 are supported for each configuration
-	 */
 	
-	if (group == MODP_768_BIT || group == MODP_1024_BIT)
+/**
+ * Implementation of configuration_manager_t.get_sa_config_for_name.
+ */
+static status_t get_sa_config_for_name (private_configuration_manager_t *this, char *name, sa_config_t **sa_config)
+{
+	iterator_t *iterator;
+	status_t status = NOT_FOUND;
+	
+	iterator = this->configurations->create_iterator(this->configurations,TRUE);
+	
+	while (iterator->has_next(iterator))
 	{
-		*allowed = TRUE;		
+		configuration_entry_t *entry;
+		iterator->current(iterator,(void **) &entry);
+
+		if (strcmp(entry->name,name) == 0)
+		{
+			/* found configuration */
+			*sa_config = entry->sa_config;
+			status = SUCCESS;
+			break;
+		}
 	}
-	*allowed = FALSE;
 	
-	this->logger->log(this->logger,CONTROL | MORE, "DH group %s is %s",mapping_find(diffie_hellman_group_m, group),(allowed)? "allowed" : "not allowed");
-	return SUCCESS;
+	iterator->destroy(iterator);
+	
+	return status;
 }
 
+/**
+ * Implementation of configuration_manager_t.get_sa_config_for_init_config_and_id.
+ */
+static status_t get_sa_config_for_init_config_and_id (private_configuration_manager_t *this, init_config_t *init_config, identification_t *other_id, identification_t *my_id,sa_config_t **sa_config)
+{	
+	iterator_t *iterator;
+	status_t status = NOT_FOUND;
+	
+	iterator = this->configurations->create_iterator(this->configurations,TRUE);
+	
+	while (iterator->has_next(iterator))
+	{
+		configuration_entry_t *entry;
+		iterator->current(iterator,(void **) &entry);
+
+		if (entry->init_config == init_config)
+		{
+			identification_t *config_my_id = entry->sa_config->get_my_id(entry->sa_config);
+			identification_t *config_other_id = entry->sa_config->get_other_id(entry->sa_config);
+
+			/* host informations seem to be the same */
+			if (config_other_id->equals(config_other_id,other_id))
+			{
+				/* other ids seems to match */
+				
+				if (my_id == NULL)
+				{
+					/* first matching one is selected */
+					
+					/* TODO priorize found entries */
+					*sa_config = entry->sa_config;
+					status = SUCCESS;
+					break;
+				}
+
+				if (config_my_id->equals(config_my_id,my_id))
+				{
+					*sa_config = entry->sa_config;
+					status = SUCCESS;
+					break;
+				}
+
+			}
+		}
+	}
+	
+	iterator->destroy(iterator);
+	
+	return status;
+}
 
 /**
- * Implements function destroy of configuration_t.
- * See #configuration_s.destroy for description.
+ * Implementation of private_configuration_manager_t.add_new_configuration.
  */
-static status_t destroy(private_configuration_manager_t *this)
+static void add_new_configuration (private_configuration_manager_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config)
+{
+	iterator_t *iterator;
+	bool found;
+	
+	iterator = this->init_configs->create_iterator(this->init_configs,TRUE);
+	found = FALSE;
+	while (iterator->has_next(iterator))
+	{
+		init_config_t *found_init_config;
+		iterator->current(iterator,(void **) &found_init_config);
+		if (init_config == found_init_config)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	if (!found)
+	{
+		this->init_configs->insert_first(this->init_configs,init_config);
+	}
+	
+	iterator = this->sa_configs->create_iterator(this->sa_configs,TRUE);
+	found = FALSE;
+	while (iterator->has_next(iterator))
+	{
+		sa_config_t *found_sa_config;
+		iterator->current(iterator,(void **) &found_sa_config);
+		if (sa_config == found_sa_config)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	if (!found)
+	{
+		this->sa_configs->insert_first(this->sa_configs,sa_config);
+	}
+
+	this->configurations->insert_first(this->configurations,configuration_entry_create(name,init_config,sa_config));
+}
+
+/**
+ * Implementation of configuration_manager_t.destroy.
+ */
+static void destroy(private_configuration_manager_t *this)
 {
 	this->logger->log(this->logger,CONTROL | MORE, "Going to destroy configuration manager ");
+
+	while (this->configurations->get_count(this->configurations) > 0)
+	{
+		configuration_entry_t *entry;
+		this->configurations->remove_first(this->configurations,(void **) &entry);
+		entry->destroy(entry);
+	}
+	/* todo delete all config objects */
+	
+	this->configurations->destroy(this->configurations);
+	
+	while (this->sa_configs->get_count(this->sa_configs) > 0)
+	{
+		sa_config_t *sa_config;
+		this->sa_configs->remove_first(this->sa_configs,(void **) &sa_config);
+//		sa_config->destroy(sa_config);
+	}
+
+	this->sa_configs->destroy(this->sa_configs);
+	
+	while (this->init_configs->get_count(this->init_configs) > 0)
+	{
+		init_config_t *init_config;
+		this->init_configs->remove_first(this->init_configs,(void **) &init_config);
+		init_config->destroy(init_config);
+	}
+	this->init_configs->destroy(this->init_configs);
 	
 	this->logger->log(this->logger,CONTROL | MOST, "Destroy assigned logger");
 	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 	allocator_free(this);
-	return SUCCESS;
 }
 
 /*
@@ -290,17 +456,23 @@ configuration_manager_t *configuration_manager_create()
 	private_configuration_manager_t *this = allocator_alloc_thing(private_configuration_manager_t);
 
 	/* public functions */
-	this->public.destroy = (status_t(*)(configuration_manager_t*))destroy;
-	this->public.get_remote_host = (status_t(*)(configuration_manager_t*,char*,host_t**))get_remote_host;
-	this->public.get_local_host = (status_t(*)(configuration_manager_t*,char*,host_t**))get_local_host;
-	this->public.get_dh_group_number = (status_t(*)(configuration_manager_t*,char*,u_int16_t *, u_int16_t))get_dh_group_number;
-	this->public.get_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,iterator_t*))get_proposals_for_host;
-	this->public.select_proposals_for_host = (status_t(*)(configuration_manager_t*,host_t*,iterator_t*,iterator_t*))select_proposals_for_host;
-	this->public.check_selected_proposals_for_host =  (status_t (*) (configuration_manager_t *, host_t *, iterator_t *,bool *)) check_selected_proposals_for_host;
-	this->public.is_dh_group_allowed_for_host = (status_t(*)(configuration_manager_t*,host_t*,diffie_hellman_group_t,bool*)) is_dh_group_allowed_for_host;
-
+	this->public.destroy = (void(*)(configuration_manager_t*))destroy;
+	this->public.get_init_config_for_name = (status_t (*) (configuration_manager_t *, char *, init_config_t **)) get_init_config_for_name;
+	this->public.get_init_config_for_host = (status_t (*) (configuration_manager_t *, host_t *, host_t *,init_config_t **)) get_init_config_for_host;
+	this->public.get_sa_config_for_name =(status_t (*) (configuration_manager_t *, char *, sa_config_t **)) get_sa_config_for_name;
+	this->public.get_sa_config_for_init_config_and_id =(status_t (*) (configuration_manager_t *, init_config_t *, identification_t *, identification_t *,sa_config_t **)) get_sa_config_for_init_config_and_id;
+	
+	/* private functions */
+	this->load_default_config = load_default_config;
+	this->add_new_configuration = add_new_configuration;
+	
 	/* private variables */
 	this->logger = charon->logger_manager->create_logger(charon->logger_manager,CONFIGURATION_MANAGER,NULL);
+	this->configurations = linked_list_create();
+	this->sa_configs = linked_list_create();
+	this->init_configs = linked_list_create();
+	
+	this->load_default_config(this);
 
 	return (&this->public);
 }

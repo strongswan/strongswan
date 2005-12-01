@@ -72,12 +72,6 @@ struct private_initiator_init_t {
 	 * This nonce is passed to the next state of type ike_sa_init_requested_t.
 	 */
 	chunk_t sent_nonce;
-	
-	/**
-	 * Proposals used to initiate connection.
-	 * 
-	 */
-	linked_list_t *proposals;
 
 	/**
 	 * Logger used to log :-)
@@ -136,64 +130,41 @@ struct private_initiator_init_t {
  */
 static status_t initiate_connection (private_initiator_init_t *this, char *name)
 {
-	iterator_t *proposal_iterator;
 	ike_sa_init_requested_t *next_state;
 	message_t *message;
 	packet_t *packet;
 	status_t status;
-	host_t *my_host;
-	host_t *other_host;
 	randomizer_t *randomizer;
+	init_config_t *init_config;
 	
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
-	/* get local host */
-	status = charon->configuration_manager->get_local_host(charon->configuration_manager, name, &my_host);
+	/* get init_config_t object */
+	status = charon->configuration_manager->get_init_config_for_name(charon->configuration_manager,name,&init_config);
+	
 	if (status != SUCCESS)
 	{	
-		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve local host configuration information for %s",name);
+		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve INIT configuration informations for %s",name);
 		return INVALID_ARG;
 	}
-	this->ike_sa->set_my_host(this->ike_sa,my_host);
 	
-	/* get remote host */
-	status = charon->configuration_manager->get_remote_host(charon->configuration_manager, name, &other_host);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve remote host configuration information for %s",name);
-		return INVALID_ARG;
-	}
-	this->ike_sa->set_other_host(this->ike_sa,other_host);
+	/* configuration can be set */
+	this->ike_sa->set_init_config(this->ike_sa,init_config);
 	
-	/* get dh group */
-	status = charon->configuration_manager->get_dh_group_number(charon->configuration_manager, name, &(this->dh_group_number), this->dh_group_priority);
-	if (status != SUCCESS)
+	this->ike_sa->set_other_host(this->ike_sa,init_config->get_other_host_clone(init_config));
+	this->ike_sa->set_my_host(this->ike_sa,init_config->get_my_host_clone(init_config));
+	
+	this->dh_group_number = init_config->get_dh_group_number(init_config,this->dh_group_priority);
+	if (this->dh_group_number == MODP_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve DH group number configuration for %s",name);
+		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be  retrieved with priority %d", this->dh_group_priority);
 		return INVALID_ARG;
 	}
-
-	/* get proposals */
-	proposal_iterator = this->proposals->create_iterator(this->proposals, FALSE);
-	status = charon->configuration_manager->get_proposals_for_host(charon->configuration_manager, this->ike_sa->get_other_host(this->ike_sa), proposal_iterator);
 	
-	proposal_iterator->destroy(proposal_iterator);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve Proposals for %s",name);
-		return status;
-	}
-
 	/* a diffie hellman object could allready exist caused by an failed initiate_connection call */	
 	if (this->diffie_hellman == NULL)
 	{
 		this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
-	}
-	
-	if (this->diffie_hellman == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "Object of type diffie_hellman_t could not be created!");
-		return FAILED;
 	}
 	
 	if (this->sent_nonce.ptr != NULL)
@@ -286,29 +257,19 @@ static void build_ike_sa_init_request (private_initiator_init_t *this, message_t
 static void build_sa_payload(private_initiator_init_t *this, payload_t **payload)
 {
 	sa_payload_t* sa_payload;
-	iterator_t *proposal_iterator;
+	size_t proposal_count;
+	ike_proposal_t *proposals;
+	init_config_t *init_config;
 	
-	/* SA payload takes proposals from this->ike_sa_init_data.proposals 
-	 * and writes them to the created sa_payload 
-	 */
-
 	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
-	proposal_iterator = this->proposals->create_iterator(this->proposals, FALSE);
 	
-	sa_payload = sa_payload_create();
-	
-	while (proposal_iterator->has_next(proposal_iterator))
-	{
-		proposal_substructure_t *current_proposal;
-		proposal_substructure_t *current_proposal_clone;
-		proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
+	init_config = this->ike_sa->get_init_config(this->ike_sa);
 
-		current_proposal_clone = current_proposal->clone(current_proposal);
-		
-		sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
-	}
-	proposal_iterator->destroy(proposal_iterator);
+	proposal_count = init_config->get_proposals(init_config,&proposals);
 	
+	sa_payload = sa_payload_create_from_ike_proposals(proposals,proposal_count);	
+
+	allocator_free(proposals);
 	*payload = (payload_t *) sa_payload;	
 }
 
@@ -375,14 +336,7 @@ static void destroy(private_initiator_init_t *this)
 
 	/* destroy stored proposal */
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
-	while (this->proposals->get_count(this->proposals) > 0)
-	{
-		proposal_substructure_t *current_proposal;
-		this->proposals->remove_first(this->proposals,(void **)&current_proposal);
-		current_proposal->destroy(current_proposal);
-	}
-	this->proposals->destroy(this->proposals);
-	
+
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
 	{
@@ -406,13 +360,6 @@ static void destroy_after_state_change (private_initiator_init_t *this)
 	
 	/* destroy stored proposal */
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
-	while (this->proposals->get_count(this->proposals) > 0)
-	{
-		proposal_substructure_t *current_proposal;
-		this->proposals->remove_first(this->proposals,(void **)&current_proposal);
-		current_proposal->destroy(current_proposal);
-	}
-	this->proposals->destroy(this->proposals);
 	allocator_free(this);
 }
 
@@ -442,7 +389,6 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	this->ike_sa = ike_sa;
 	this->dh_group_priority = 1;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
-	this->proposals = linked_list_create();
 	this->sent_nonce = CHUNK_INITIALIZER;
 
 	return &(this->public);

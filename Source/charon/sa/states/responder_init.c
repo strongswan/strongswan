@@ -89,10 +89,10 @@ struct private_responder_init_t {
 	logger_t *logger;
 	
 	/**
-	 * Proposals used to initiate connection
+	 * Selected proposal from suggested ones.
 	 */
-	linked_list_t *proposals;
-	
+	ike_proposal_t selected_proposal;
+
 	/**
 	 * Builds the SA payload for this state.
 	 * 
@@ -147,6 +147,8 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	host_t *my_host;
 	host_t *other_host;
 	randomizer_t *randomizer;
+	init_config_t *init_config;
+	diffie_hellman_group_t dh_group = MODP_UNDEFINED;
 
 	exchange_type = message->get_exchange_type(message);
 	if (exchange_type != IKE_SA_INIT)
@@ -154,16 +156,26 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state responder_init",mapping_find(exchange_type_m,exchange_type));
 		return FAILED;
 	}
-	
 	if (!message->get_request(message))
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Only requests of type IKE_SA_INIT supported in state responder_init");
 		return FAILED;
 	}
-	
 	/* this is the first message we process, so copy host infos */
 	source = message->get_source(message);
 	destination = message->get_destination(message);
+
+	status = charon->configuration_manager->get_init_config_for_host(charon->configuration_manager,destination,source,&init_config);
+
+	if (status != SUCCESS)
+	{
+		/* no configuration matches given host */
+		this->logger->log(this->logger, ERROR | MORE, "No INIT configuration found for given remote and local hosts");
+		return FAILED;
+	}
+	
+	this->ike_sa->set_init_config(this->ike_sa,init_config);
+	
 	
 	/* we need to clone them, since we destroy the message later */
 	my_host = destination->clone(destination);
@@ -195,44 +207,30 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			case SECURITY_ASSOCIATION:
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
-				iterator_t *suggested_proposals, *accepted_proposals;
-				proposal_substructure_t *accepted_proposal;
-				
-				accepted_proposals = this->proposals->create_iterator(this->proposals, FALSE);
-				
+				ike_proposal_t *ike_proposals;
+				size_t proposal_count;
+			
 				/* get the list of suggested proposals */ 
-				suggested_proposals = sa_payload->create_proposal_substructure_iterator(sa_payload, TRUE);
-				
-				/* now let the configuration-manager select a subset of the proposals */
-				status = charon->configuration_manager->select_proposals_for_host(charon->configuration_manager,
-									this->ike_sa->get_other_host(this->ike_sa), suggested_proposals, accepted_proposals);
+				status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals,&proposal_count);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, CONTROL | MORE, "No proposal of suggested proposals selected");
-					suggested_proposals->destroy(suggested_proposals);
-					accepted_proposals->destroy(accepted_proposals);
+					this->logger->log(this->logger, ERROR | MORE, "SA payload does not contain IKE proposals");
+					payloads->destroy(payloads);
+					return status;	
+				}
+	
+				status = init_config->select_proposal(init_config, ike_proposals,proposal_count,&(this->selected_proposal));
+				allocator_free(ike_proposals);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "No proposal of suggested proposals selected");
 					payloads->destroy(payloads);
 					return status;
 				}
 				
-				/* iterators are not needed anymore */			
-				suggested_proposals->destroy(suggested_proposals);
+				dh_group = this->selected_proposal.diffie_hellman_group;
 				
-				/* let the ike_sa create their own transforms from proposal informations */
-				accepted_proposals->reset(accepted_proposals);
-				/* TODO check for true*/
-				accepted_proposals->has_next(accepted_proposals);
-				status = accepted_proposals->current(accepted_proposals,(void **)&accepted_proposal);
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR | MORE, "Accepted proposals not supported?!");
-					accepted_proposals->destroy(accepted_proposals);
-					payloads->destroy(payloads);
-					return status;
-				}
-				
-				status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,accepted_proposal);	
-				accepted_proposals->destroy(accepted_proposals);
+				status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,&(this->selected_proposal));	
 				if (status != SUCCESS)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "Transform objects could not be created from selected proposal");
@@ -253,12 +251,9 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				
 				group = ke_payload->get_dh_group_number(ke_payload);
 				
-				status = charon->configuration_manager->is_dh_group_allowed_for_host(charon->configuration_manager,
-								this->ike_sa->get_other_host(this->ike_sa), group, &allowed_group);
-
-				if (status != SUCCESS)
+				if (dh_group == MODP_UNDEFINED)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "Could not get informations about DH group");
+					this->logger->log(this->logger, ERROR | MORE, "Could not get informations about DH group. SA payload before KE payload?");
 					payloads->destroy(payloads);
 					return status;
 				}
@@ -387,27 +382,12 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 static void build_sa_payload(private_responder_init_t *this, payload_t **payload)
 {
 	sa_payload_t* sa_payload;
-	iterator_t *proposal_iterator;
 	
 	/* SA payload takes proposals from this->ike_sa_init_data.proposals and writes them to the created sa_payload */
 	
 	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
 	
-	proposal_iterator = this->proposals->create_iterator(this->proposals, FALSE);
-	
-	sa_payload = sa_payload_create();
-	
-	while (proposal_iterator->has_next(proposal_iterator))
-	{
-		proposal_substructure_t *current_proposal;
-		proposal_substructure_t *current_proposal_clone;
-		
-		proposal_iterator->current(proposal_iterator,(void **) &current_proposal);
-		current_proposal_clone = current_proposal->clone(current_proposal);
-		sa_payload->add_proposal_substructure(sa_payload,current_proposal_clone);
-	}
-	
-	proposal_iterator->destroy(proposal_iterator);	
+	sa_payload = sa_payload_create_from_ike_proposals(&(this->selected_proposal),1);	
 	
 	*payload = (payload_t *) sa_payload;
 }
@@ -466,13 +446,6 @@ static void destroy(private_responder_init_t *this)
 	
 	/* destroy stored proposal */
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
-	while (this->proposals->get_count(this->proposals) > 0)
-	{
-		proposal_substructure_t *current_proposal;
-		this->proposals->remove_first(this->proposals,(void **)&current_proposal);
-		current_proposal->destroy(current_proposal);
-	}
-	this->proposals->destroy(this->proposals);
 	
 	allocator_free(this->sent_nonce.ptr);
 	allocator_free(this->received_nonce.ptr);
@@ -493,13 +466,6 @@ static void destroy_after_state_change (private_responder_init_t *this)
 	
 	/* destroy stored proposal */
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
-	while (this->proposals->get_count(this->proposals) > 0)
-	{
-		proposal_substructure_t *current_proposal;
-		this->proposals->remove_first(this->proposals,(void **)&current_proposal);
-		current_proposal->destroy(current_proposal);
-	}
-	this->proposals->destroy(this->proposals);
 	
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
@@ -534,7 +500,6 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->sent_nonce = CHUNK_INITIALIZER;
 	this->received_nonce = CHUNK_INITIALIZER;
-	this->proposals = linked_list_create();
 
 	return &(this->public);
 }

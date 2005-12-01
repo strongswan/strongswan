@@ -173,57 +173,48 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 			case SECURITY_ASSOCIATION:
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
-				iterator_t 	*suggested_proposals;
-				proposal_substructure_t *suggested_proposal;			
-				bool valid;
-				
+				ike_proposal_t *ike_proposals;
+				ike_proposal_t selected_proposal;
+				size_t proposal_count;			
+				init_config_t *init_config;	
 				
 				/* get the list of suggested proposals */ 
-				suggested_proposals = sa_payload->create_proposal_substructure_iterator(sa_payload, TRUE);
-
+				status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals,&proposal_count);
+				if (status != SUCCESS)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "SA payload does not contain IKE proposals");
+					payloads->destroy(payloads);
+					return status;	
+				}
+				
+				if (proposal_count != 1)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "More then one proposal selected!");
+					allocator_free(ike_proposals);
+					payloads->destroy(payloads);
+					return status;							
+				}
 				
 				/* now let the configuration-manager check the selected proposals*/
 				this->logger->log(this->logger, CONTROL | MOST, "Check suggested proposals");
-				status = charon->configuration_manager->check_selected_proposals_for_host(charon->configuration_manager,
-									this->ike_sa->get_other_host(this->ike_sa), suggested_proposals,&valid);
+				init_config = this->ike_sa->get_init_config(this->ike_sa);
+
+				status = init_config->select_proposal (init_config,ike_proposals,1,&selected_proposal);
+				allocator_free(ike_proposals);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "Could not check suggested proposals!");
-					suggested_proposals->destroy(suggested_proposals);
+					this->logger->log(this->logger, ERROR | MORE, "Selected proposal not a suggested one!");
 					payloads->destroy(payloads);
 					return status;
 				}
-
-				if (!valid)
-				{
-					this->logger->log(this->logger, ERROR | MORE, "Suggested proposals not accepted!");
-					payloads->destroy(payloads);
-					return status;
-				}
-
-
-				/* let the ike_sa create their own transforms from proposal informations */
-				suggested_proposals->reset(suggested_proposals);
-				/* TODO check for true*/
-				suggested_proposals->has_next(suggested_proposals);
-				status = suggested_proposals->current(suggested_proposals,(void **)&suggested_proposal);
-				suggested_proposals->destroy(suggested_proposals);
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR | MORE, "Could not get first proposal");
-					payloads->destroy(payloads);
-					return status;
-				}
-								
-				status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,suggested_proposal);	
+							
+				status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,&selected_proposal);	
 				if (status != SUCCESS)
 				{
 					this->logger->log(this->logger, ERROR | MORE, "Transform objects could not be created from selected proposal");
 					payloads->destroy(payloads);
 					return status;
 				}
-				
-
 				/* ok, we have what we need for sa_payload */
 				break;
 			}

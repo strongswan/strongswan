@@ -27,6 +27,7 @@
 #include <encoding/message.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <sa/ike_sa_id.h>
+#include <config/configuration_manager.h>
 #include <utils/logger.h>
 #include <utils/randomizer.h>
 #include <sa/states/state.h>
@@ -137,6 +138,41 @@ struct protected_ike_sa_t {
 	 */
 	logger_t *(*get_logger) (protected_ike_sa_t *this);
 	
+	/**
+	 * Gets the internal stored init_config_t object.
+	 * 
+	 * Returned value has to get checked for NULL value!
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to the internal stored init_config_t object
+	 */
+	init_config_t *(*get_init_config) (protected_ike_sa_t *this);
+	
+	/**
+	 * Sets the internal init_config_t object.
+	 * 
+	 * @param this 				calling object
+	 * @param init_config		object of type init_config_t
+	 */
+	void (*set_init_config) (protected_ike_sa_t *this,init_config_t *init_config);
+	
+	/**
+	 * Gets the internal stored sa_config_t object.
+	 * 
+	 * Returned value has to get checked for NULL value!
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to the internal stored sa_config_t object
+	 */
+	sa_config_t *(*get_sa_config) (protected_ike_sa_t *this);
+	
+	/**
+	 * Sets the internal sa_config_t object.
+	 * 
+	 * @param this 				calling object
+	 * @param sa_config			object of type sa_config_t
+	 */
+	void (*set_sa_config) (protected_ike_sa_t *this,sa_config_t *sa_config);
 
 	/**
 	 * Gets the internal stored host_t object for my host.
@@ -176,7 +212,7 @@ struct protected_ike_sa_t {
 	
 	/**
 	 * Creates all needed transform objects for given ike_sa_t using 
-	 * the informations stored in a proposal_substructure_t object
+	 * the informations stored in a ike_proposal_t object
 	 * 
 	 * Allready existing objects get destroyed.
 	 * 
@@ -184,7 +220,7 @@ struct protected_ike_sa_t {
 	 * @param proposal			proposal used to get informations for transform
 	 * 							objects (algorithms, key lengths, etc.)
 	 */
-	status_t (*create_transforms_from_proposal) (protected_ike_sa_t *this,proposal_substructure_t *proposal);
+	status_t (*create_transforms_from_proposal) (protected_ike_sa_t *this,ike_proposal_t * proposal);
 	
 	/**
 	 * Sets the last requested message.

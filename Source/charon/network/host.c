@@ -70,6 +70,34 @@ static socklen_t *get_sockaddr_len(private_host_t *this)
 }
 
 /**
+ * Implementation of host_t.is_default_route.
+ */
+static bool is_default_route (private_host_t *this)
+{
+	switch (this->family) 
+	{
+		case AF_INET: 
+		{
+			int i;
+			for (i = 0; i < 4;i++)
+			{
+				struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
+				if (*((&sin->sin_addr.s_addr) + i) != 0)
+				{
+					return FALSE;
+				}
+			}
+			return TRUE;
+		}
+		default:
+		{
+			/* empty chunk is returned */
+			return FALSE;
+		}	
+	}
+}
+
+/**
  * implements host_t.get_address
  */
 static char *get_address(private_host_t *this)
@@ -156,7 +184,7 @@ static private_host_t *clone(private_host_t *this)
 /**
  * Impelements host_t.equals
  */
-static bool equals(private_host_t *this, private_host_t *other)
+static bool ip_is_equal(private_host_t *this, private_host_t *other)
 {
 	switch (this->family)
 	{
@@ -166,7 +194,6 @@ static bool equals(private_host_t *this, private_host_t *other)
 			struct sockaddr_in *sin1 = (struct sockaddr_in*)&(this->address);
 			struct sockaddr_in *sin2 = (struct sockaddr_in*)&(other->address);
 			if ((sin1->sin_family == sin2->sin_family) &&
-				(sin1->sin_port == sin2->sin_port) &&
 				(sin1->sin_addr.s_addr == sin2->sin_addr.s_addr))
 			{
 				return TRUE;	
@@ -177,10 +204,10 @@ static bool equals(private_host_t *this, private_host_t *other)
 }
 
 
-/*
- * Described in header.
+/**
+ * Creates an empty host_t object 
  */
-host_t *host_create(int family, char *address, u_int16_t port)
+static private_host_t *host_create_empty()
 {
 	private_host_t *this = allocator_alloc_thing(private_host_t);
 	
@@ -190,7 +217,19 @@ host_t *host_create(int family, char *address, u_int16_t port)
 	this->public.get_address = (char* (*) (host_t *))get_address;
 	this->public.get_address_as_chunk = (chunk_t (*) (host_t *)) get_address_as_chunk;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
+	this->public.ip_is_equal = (bool (*) (host_t *,host_t *)) ip_is_equal;
+	this->public.is_default_route = (bool (*) (host_t *)) is_default_route;
 	this->public.destroy = (void (*) (host_t*))destroy;
+	
+	return this;
+}
+
+/*
+ * Described in header.
+ */
+host_t *host_create(int family, char *address, u_int16_t port)
+{
+	private_host_t *this = host_create_empty();
 	
 	this->family = family;
 
@@ -204,11 +243,16 @@ host_t *host_create(int family, char *address, u_int16_t port)
 			sin->sin_addr.s_addr = inet_addr(address);
 			sin->sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
-			return (host_t*)this;
+			return &(this->public);
+		}
+		default:
+		{
+			allocator_free(this);
+			return NULL;
+
 		}
 	}
-	allocator_free(this);
-	return NULL;
+	
 }
 
 /*
@@ -216,16 +260,7 @@ host_t *host_create(int family, char *address, u_int16_t port)
  */
 host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 {
-	private_host_t *this = allocator_alloc_thing(private_host_t);
-	
-	this->public.get_sockaddr = (sockaddr_t* (*) (host_t*))get_sockaddr;
-	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
-	this->public.clone = (host_t* (*) (host_t*))clone;
-	this->public.get_address = (char* (*) (host_t *))get_address;
-	this->public.get_address_as_chunk = (chunk_t (*) (host_t *)) get_address_as_chunk;
-	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
-	this->public.equals = (bool (*) (host_t *,host_t *))equals;
-	this->public.destroy = (void (*) (host_t*))destroy;
+	private_host_t *this = host_create_empty();
 	
 	this->family = family;
 
@@ -241,8 +276,9 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 				memcpy(&(sin->sin_addr.s_addr),address.ptr,4);
 				sin->sin_port = htons(port);
 				this->socklen = sizeof(struct sockaddr_in);
-				return (host_t*)this;
+				return &(this->public);
 			}
+			
 		}
 	}
 	allocator_free(this);

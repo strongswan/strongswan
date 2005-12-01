@@ -87,7 +87,7 @@ struct init_config_t {
 	/**
 	 * Get my host information as host_t object.
 	 * 
-	 * @warning Object is getting cloned and has to get destroyed by caller.
+	 * @warning Object is NOT getting cloned.
 	 * 
 	 * @param this	calling object
 	 * @return		host information as host_t object
@@ -97,12 +97,32 @@ struct init_config_t {
 	/**
 	 * Get other host information as host_t object.
 	 * 
-	 * @warning Object is getting cloned and has to get destroyed by caller.
+	 * @warning Object is NOT getting cloned.
 	 * 
 	 * @param this	calling object
 	 * @return		host information as host_t object
 	 */
 	host_t * (*get_other_host) (init_config_t *this);
+	
+	/**
+	 * Get my host information as host_t object.
+	 * 
+	 * @warning Object is not getting cloned and has to get destroyed by caller.
+	 * 
+	 * @param this	calling object
+	 * @return		host information as host_t object
+	 */
+	host_t * (*get_my_host_clone) (init_config_t *this);
+
+	/**
+	 * Get other host information as host_t object.
+	 * 
+	 * @warning Object is not getting cloned and has to get destroyed by caller.
+	 * 
+	 * @param this	calling object
+	 * @return		host information as host_t object
+	 */
+	host_t * (*get_other_host_clone) (init_config_t *this);
 	
 	/**
 	 * Get the diffie hellman group to use as initiator with given priority.

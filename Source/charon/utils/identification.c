@@ -81,6 +81,25 @@ static char *get_string(private_identification_t *this)
 }
 
 /**
+ * Implementation of identification_t.equals.
+ */
+static bool equals (private_identification_t *this,private_identification_t *other)
+{
+	if (this->type == other->type)
+	{
+		if (this->encoded.len != other->encoded.len)
+		{
+			return FALSE;
+		}
+		if (memcmp(this->encoded.ptr,other->encoded.ptr,this->encoded.len) == 0)
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
  * implements identification_t.destroy
  */
 static void destroy(private_identification_t *this)
@@ -99,6 +118,7 @@ static private_identification_t *identification_create()
 	private_identification_t *this = allocator_alloc_thing(private_identification_t);
 	
 	/* assign methods */
+	this->public.equals = (bool (*) (identification_t*,identification_t*))equals;
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
 	this->public.get_string = (char* (*) (identification_t*))get_string;

@@ -81,17 +81,27 @@ struct host_t {
 	 * Mostly used for debugging purposes. 
 	 * @warning string must NOT be freed
 	 * 
-	 * @param this			object to clone
+	 * @param this			object
 	 * @return				address string, 
 	 */
 	char* (*get_address) (host_t *this);
+	
+	/** 
+	 * @brief Checks if the ip address of host is set to default route.
+	 * 
+	 * @param this			calling object
+	 * @return				
+	 * 						- TRUE if host has IP 0.0.0.0 for default route 
+	 * 						- FALSE otherwise
+	 */
+	bool (*is_default_route) (host_t *this);
 	
 	/** 
 	 * @brief get the address of this host as chunk_t
 	 * 
 	 * @warning returned chunk has to get destroyed by caller.
 	 * 
-	 * @param this			object to clone
+	 * @param this			object
 	 * @return				address string, 
 	 */
 	chunk_t (*get_address_as_chunk) (host_t *this);
@@ -107,13 +117,13 @@ struct host_t {
 	u_int16_t (*get_port) (host_t *this);
 		
 	/** 
-	 * @brief Compare two hosts.
+	 * @brief Compare the ips of two hosts hosts.
 	 * 
 	 * @param this			object to compare
 	 * @param other			the other to compare
-	 * @return				TRUE if port and address are equal
+	 * @return				TRUE if addresses are equal.
 	 */
-	bool (*equals) (host_t *this, host_t *other);
+	bool (*ip_is_equal) (host_t *this, host_t *other);
 	
 	/** 
 	 * @brief Destroy this host object

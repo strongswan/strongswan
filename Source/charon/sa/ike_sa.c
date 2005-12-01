@@ -81,6 +81,16 @@ struct private_ike_sa_t {
 	 * Linked List containing the child sa's of the current IKE_SA
 	 */
 	linked_list_t *child_sas;
+	
+	/**
+	 * TODO
+	 */
+	init_config_t *init_config;
+	
+	/**
+	 * TODO
+	 */
+	sa_config_t *sa_config;
 
 	/**
 	 * Current state of the IKE_SA
@@ -297,11 +307,7 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	current_state = (initiator_init_t *) this->current_state;
 	
 	status = current_state->initiate_connection(current_state,name);
-	
-	if (status != SUCCESS)
-	{
-		this->create_delete_job(this);
-	}
+
 	return status;
 }
 
@@ -468,15 +474,42 @@ static host_t *get_other_host (private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.get_init_config.
+ */
+static init_config_t *get_init_config (private_ike_sa_t *this)
+{
+	return this->init_config;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.set_init_config.
+ */
+static void set_init_config (private_ike_sa_t *this,init_config_t * init_config)
+{
+	this->init_config = init_config;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.get_sa_config.
+ */
+static sa_config_t *get_sa_config (private_ike_sa_t *this)
+{
+	return this->sa_config;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.set_sa_config.
+ */
+static void set_sa_config (private_ike_sa_t *this,sa_config_t * sa_config)
+{
+	this->sa_config = sa_config;
+}
+
+/**
  * Implementation of protected_ike_sa_t.set_my_host.
  */
 static void set_my_host (private_ike_sa_t *this, host_t *my_host)
 {
-	if (this->me.host != NULL)
-	{
-		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing my host object");
-		this->me.host->destroy(this->me.host);
-	}
 	this->me.host = my_host;
 }
 
@@ -485,61 +518,25 @@ static void set_my_host (private_ike_sa_t *this, host_t *my_host)
  */
 static void set_other_host (private_ike_sa_t *this, host_t *other_host)
 {
-	if (this->other.host != NULL)
-	{
-		this	->logger->log(this->logger, CONTROL|MOST, "Destroy existing other host object");
-		this->other.host->destroy(this->other.host);
-	}
 	this->other.host = other_host;
 }
 
 /**
  * Implementation of protected_ike_sa_t.set_prf.
  */
-static status_t create_transforms_from_proposal (private_ike_sa_t *this,proposal_substructure_t *proposal)
+static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_proposal_t *proposal)
 {
-	status_t status;
-	u_int16_t encryption_algorithm;
-	u_int16_t encryption_algorithm_key_length;
-	u_int16_t integrity_algorithm;
-	u_int16_t integrity_algorithm_key_length;
-	u_int16_t pseudo_random_function;
-	u_int16_t pseudo_random_function_key_length;
-	
 	this->logger->log(this->logger, CONTROL|MORE, "Going to create transform objects for proposal");
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Get encryption transform type");
-	status = proposal->get_info_for_transform_type(proposal,ENCRYPTION_ALGORITHM,&(encryption_algorithm),&(encryption_algorithm_key_length));
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR|MORE, "Could not get encryption transform type");
-		return status;
-	}
-	this->logger->log(this->logger, CONTROL|MORE, "Encryption algorithm: %s with keylength %d",mapping_find(encryption_algorithm_m,encryption_algorithm),encryption_algorithm_key_length);
-	
-	this->logger->log(this->logger, CONTROL|MOST, "Get integrity transform type");
-	status = proposal->get_info_for_transform_type(proposal,INTEGRITY_ALGORITHM,&(integrity_algorithm),&(integrity_algorithm_key_length));
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR|MORE, "Could not get integrity transform type");
-		return status;
-	}
-	this->logger->log(this->logger, CONTROL|MORE, "integrity algorithm: %s with keylength %d",mapping_find(integrity_algorithm_m,integrity_algorithm),integrity_algorithm_key_length);
-	
-	this->logger->log(this->logger, CONTROL|MOST, "Get prf transform type");
-	status = proposal->get_info_for_transform_type(proposal,PSEUDO_RANDOM_FUNCTION,&(pseudo_random_function),&(pseudo_random_function_key_length));
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR|MORE, "Could not prf transform type");
-		return status;
-	}
-	this->logger->log(this->logger, CONTROL|MORE, "prf: %s with keylength %d",mapping_find(pseudo_random_function_m,pseudo_random_function),pseudo_random_function_key_length);
+	this->logger->log(this->logger, CONTROL|MORE, "Encryption algorithm: %s with keylength %d",mapping_find(encryption_algorithm_m,proposal->encryption_algorithm),proposal->encryption_algorithm_key_length);
+	this->logger->log(this->logger, CONTROL|MORE, "integrity algorithm: %s with keylength %d",mapping_find(integrity_algorithm_m,proposal->integrity_algorithm),proposal->integrity_algorithm_key_length);
+	this->logger->log(this->logger, CONTROL|MORE, "prf: %s with keylength %d",mapping_find(pseudo_random_function_m,proposal->pseudo_random_function),proposal->pseudo_random_function_key_length);
 	
 	if (this->prf != NULL)
 	{
 		this->prf->destroy(this->prf);
 	}
-	this->prf = prf_create(pseudo_random_function);
+	this->prf = prf_create(proposal->pseudo_random_function);
 	if (this->prf == NULL)
 	{
 		this->logger->log(this->logger, ERROR|MORE, "prf not supported!");
@@ -550,7 +547,7 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,proposal
 	{
 		this->crypter_initiator->destroy(this->crypter_initiator);
 	}
-	this->crypter_initiator = crypter_create(encryption_algorithm,encryption_algorithm_key_length);
+	this->crypter_initiator = crypter_create(proposal->encryption_algorithm,proposal->encryption_algorithm_key_length);
 	if (this->crypter_initiator == NULL)
 	{
 		this->logger->log(this->logger, ERROR|MORE, "encryption algorithm not supported!");
@@ -561,7 +558,7 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,proposal
 	{
 		this->crypter_responder->destroy(this->crypter_responder);
 	}
-	this->crypter_responder = crypter_create(encryption_algorithm,encryption_algorithm_key_length);
+	this->crypter_responder = crypter_create(proposal->encryption_algorithm,proposal->encryption_algorithm_key_length);
 	if (this->crypter_responder == NULL)
 	{
 		this->logger->log(this->logger, ERROR|MORE, "encryption algorithm not supported!");
@@ -572,7 +569,7 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,proposal
 	{
 		this->signer_initiator->destroy(this->signer_initiator);
 	}
-	this->signer_initiator = signer_create(integrity_algorithm);
+	this->signer_initiator = signer_create(proposal->integrity_algorithm);
 	if (this->signer_initiator == NULL)
 	{
 		this->logger->log(this->logger, ERROR|MORE, "integrity algorithm not supported!");
@@ -583,7 +580,7 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,proposal
 	{
 		this->signer_responder->destroy(this->signer_responder);
 	}
-	this->signer_responder = signer_create(integrity_algorithm);
+	this->signer_responder = signer_create(proposal->integrity_algorithm);
 	if (this->signer_responder == NULL)
 	{
 		this->logger->log(this->logger, ERROR|MORE, "integrity algorithm not supported!");
@@ -733,6 +730,19 @@ static void destroy (private_ike_sa_t *this)
 		this->last_requested_message->destroy(this->last_requested_message);
 	}
 	
+	/* destroy stored host_t objects */
+	if (this->me.host != NULL)
+	{
+		this->me.host->destroy(this->me.host);
+	}
+	
+	/* destroy stored host_t objects */
+	if (this->other.host != NULL)
+	{
+		this->other.host->destroy(this->other.host);
+	}
+	
+	
 	/* destroy stored responded messages */
 	if (this->last_responded_message != NULL)
 	{
@@ -741,16 +751,6 @@ static void destroy (private_ike_sa_t *this)
 	
 	this->randomizer->destroy(this->randomizer);
 
-	if (this->me.host != NULL)
-	{
-		this->me.host->destroy(this->me.host);
-	}
-	
-	if (this->other.host != NULL)
-	{
-		this->other.host->destroy(this->other.host);
-	}
-	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy current state object");
 	this->current_state->destroy(this->current_state);
 	
@@ -777,6 +777,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.build_message = (void (*) (protected_ike_sa_t *, exchange_type_t , bool , message_t **)) build_message;
 	this->protected.compute_secrets = (void (*) (protected_ike_sa_t *,chunk_t ,chunk_t , chunk_t )) compute_secrets;
 	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;		
+	this->protected.set_init_config = (void (*) (protected_ike_sa_t *,init_config_t *)) set_init_config;
+	this->protected.get_init_config = (init_config_t *(*) (protected_ike_sa_t *)) get_init_config;
+	this->protected.set_sa_config = (void (*) (protected_ike_sa_t *,sa_config_t *)) set_sa_config;
+	this->protected.get_sa_config = (sa_config_t *(*) (protected_ike_sa_t *)) get_sa_config;
 	this->protected.get_my_host = (host_t *(*) (protected_ike_sa_t *)) get_my_host;
 	this->protected.get_other_host = (host_t *(*) (protected_ike_sa_t *)) get_other_host;
 	this->protected.set_my_host = (void(*) (protected_ike_sa_t *,host_t *)) set_my_host;
@@ -784,7 +788,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_randomizer = (randomizer_t *(*) (protected_ike_sa_t *)) get_randomizer;
 	this->protected.set_last_requested_message = (status_t (*) (protected_ike_sa_t *,message_t *)) set_last_requested_message;
 	this->protected.set_last_responded_message = (status_t (*) (protected_ike_sa_t *,message_t *)) set_last_responded_message;
-	this->protected.create_transforms_from_proposal = (status_t (*) (protected_ike_sa_t *,proposal_substructure_t *)) create_transforms_from_proposal;
+	this->protected.create_transforms_from_proposal = (status_t (*) (protected_ike_sa_t *,ike_proposal_t *)) create_transforms_from_proposal;
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
 	this->protected.get_crypter_initiator = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_initiator;
 	this->protected.get_signer_initiator = (signer_t *(*) (protected_ike_sa_t *)) get_signer_initiator;	
@@ -821,6 +825,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->signer_initiator = NULL;
 	this->signer_responder = NULL;
 	this->prf = NULL;
+	this->init_config = NULL;
+	this->sa_config = NULL;
 	
 	/* at creation time, IKE_SA is in a initiator state */
 	if (ike_sa_id->is_initiator(ike_sa_id))

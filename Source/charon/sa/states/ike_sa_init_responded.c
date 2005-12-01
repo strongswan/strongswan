@@ -83,7 +83,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	status_t status;
 	signer_t *signer;
 	crypter_t *crypter;
-	iterator_t *payloads, *iterator;
+	iterator_t *payloads;
 	exchange_type_t exchange_type;
 	id_payload_t *idi_payload, *idr_payload;
 	auth_payload_t *auth_payload;
@@ -234,7 +234,6 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 
 static status_t build_id_payload(private_ike_sa_init_responded_t *this, id_payload_t *id_payload)
 {
-	
 	return SUCCESS;
 }
 
