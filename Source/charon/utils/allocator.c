@@ -342,9 +342,8 @@ chunk_t allocator_alloc_as_chunk(size_t bytes)
 {
 	chunk_t new_chunk;
 	new_chunk.ptr = malloc(bytes); 
-	if ((new_chunk.ptr == NULL)
+	if (new_chunk.ptr == NULL)
 	{
-		/* TODO log this case */
 		exit(-1);
 	}
 	new_chunk.len = bytes; 
@@ -380,14 +379,14 @@ void * allocator_clone_bytes(void * pointer, size_t size)
 /**
  * Described in header
  */
-static chunk_t clone_chunk(chunk_t chunk)
+chunk_t allocator_clone_chunk(chunk_t chunk)
 {
 	chunk_t clone = CHUNK_INITIALIZER;
 	
 	if (chunk.ptr && chunk.len > 0)
 	{
 		clone.ptr = malloc(chunk.len);
-		if (clone.ptr == NULL) {exit(-1)};
+		if (clone.ptr == NULL) {exit(-1);}
 		clone.len = chunk.len;
 		memcpy(clone.ptr, chunk.ptr, chunk.len);
 	}

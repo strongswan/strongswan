@@ -300,7 +300,7 @@
 	 * 
 	 * @ingroup utils
 	 */
-	chunk_t allocator_clone_bytes(chunk_t chunk);
+	chunk_t allocator_clone_chunk(chunk_t chunk);
 	
 	/**
 	 * Frees memory used by chunk.
