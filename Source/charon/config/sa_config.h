@@ -26,9 +26,11 @@
 #include <types.h>
 #include <utils/identification.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/transform_substructure.h>
 #include <network/host.h>
 #include <transforms/crypters/crypter.h>
 #include <transforms/signers/signer.h>
+#include <transforms/diffie_hellman.h>
 
 
 typedef struct child_proposal_t child_proposal_t;
@@ -49,7 +51,9 @@ struct child_proposal_t {
 	struct {
 		bool is_set;
 		integrity_algorithm_t integrity_algorithm;
-		size_t key_size;
+		size_t integrity_algorithm_key_size;
+		diffie_hellman_group_t diffie_hellman_group;
+		extended_sequence_numbers_t extended_sequence_numbers;
 	} ah;
 	
 	/**
@@ -58,7 +62,11 @@ struct child_proposal_t {
 	struct {
 		bool is_set;
 		encryption_algorithm_t encryption_algorithm;
-		size_t key_size;
+		size_t encryption_algorithm_key_size;
+		integrity_algorithm_t integrity_algorithm;
+		size_t integrity_algorithm_key_size;
+		diffie_hellman_group_t diffie_hellman_group;
+		extended_sequence_numbers_t extended_sequence_numbers;
 	} esp;
 };
 
@@ -176,7 +184,7 @@ struct sa_config_t {
 	/**
 	 * @brief Add a traffic selector to the list. 
 	 * 
-	 * Added proposal will be destroyed with config destruction.
+	 * Added proposal will be cloned.
 	 * 
 	 * @warning Do not add while other threads are reading.
 	 * 
@@ -190,7 +198,7 @@ struct sa_config_t {
 	 * 
 	 * The proposals are stored by priority, first added
 	 * is the most prefered.
-	 * Added proposal will be destroyed with config destruction.
+	 * Added proposal will be cloned.
 	 * 
 	 * @warning Do not add while other threads are reading.
 	 * 
