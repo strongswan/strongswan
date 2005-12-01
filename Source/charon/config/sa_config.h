@@ -115,7 +115,11 @@ struct sa_config_t {
 	/**
 	 * @brief Get configured traffic selectors.
 	 * 
-	 * @warning Resulting array must be freed!
+	 * Returns a pointer to an allocated array, in which
+	 * pointers to traffic selectors are stored.
+	 * 
+	 * @warning Resulting pointer array must be freed!
+	 * @warning Traffic selectors in array must be destroyed!
 	 * 
 	 * @param this					calling object
 	 * @param[out]traffic_selectors	pointer where traffic selectors will be allocated
@@ -126,7 +130,11 @@ struct sa_config_t {
 	/**
 	 * @brief Select traffic selectors from a supplied list.
 	 * 
-	 * @warning Resulting array must be freed!
+	 * Returns a pointer to an allocated array, in which
+	 * pointers to traffic selectors are stored.
+	 * 
+	 * @warning Resulting pointer array must be freed!
+	 * @warning Traffic selectors in array must be destroyed!
 	 * 
 	 * @param this					calling object
 	 * @param supplied				pointer to an array of ts to select from.
