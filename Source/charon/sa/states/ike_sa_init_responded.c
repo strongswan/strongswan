@@ -109,6 +109,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	crypter = this->ike_sa->get_crypter_initiator(this->ike_sa);
 	
 	/* parse incoming message */
+
 	status = message->parse_body(message, crypter, signer);
 	if (status != SUCCESS)
 	{

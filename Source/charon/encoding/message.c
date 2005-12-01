@@ -892,6 +892,7 @@ static status_t decrypt_and_verify_payloads (private_message_t *this,crypter_t *
 				
 			if (encryption_payload->get_payload_count(encryption_payload) == 0)
 			{
+				this->logger->log(this->logger, CONTROL | MORE, "Encrypted payload is empty");
 				iterator->remove(iterator);
 				encryption_payload->destroy(encryption_payload);
 				/* encrypted payload contains no other payload */
@@ -908,10 +909,13 @@ static status_t decrypt_and_verify_payloads (private_message_t *this,crypter_t *
 					 * Set the next payload of proceeding payload 
 					 * to the first payload of encrypted ones */
 					last_payload->set_next_type(last_payload,current_payload_type);
-				}		
+				}
+				break;
 
 			}
 	
+			this->logger->log(this->logger, CONTROL | MORE, "Encrypted payload is not empty");
+			
 			/* encryption_payload is replaced with first encrypted payload*/
 			encryption_payload->remove_first_payload(encryption_payload, &current_encrypted_payload);
 			

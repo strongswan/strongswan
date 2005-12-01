@@ -29,6 +29,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/ts_payload.h>
 #include <transforms/diffie_hellman.h>
 #include <sa/states/ike_auth_requested.h>
 
@@ -73,7 +74,7 @@ struct private_ike_sa_init_requested_t {
 	/**
 	 * DH group priority used to get dh_group_number from configuration manager.
 	 * 
-	 * Currently uused but usable if informational messages of unsupported dh group number are processed.
+	 * Currently unused but usable if informational messages of unsupported dh group number are processed.
 	 */
 	u_int16_t dh_group_priority;
 	
@@ -111,6 +112,33 @@ struct private_ike_sa_init_requested_t {
 	void (*build_auth_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
 	
 	/**
+	 * Builds the SA payload for this state.
+	 * 
+	 * @param this		calling object
+	 * @param payload	The generated payload object of type sa_payload_t is 
+	 * 					stored at this location.
+	 */
+	void (*build_sa_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	
+	/**
+	 * Builds the TSi payload for this state.
+	 * 
+	 * @param this		calling object
+	 * @param payload	The generated payload object of type ts_payload_t is 
+	 * 					stored at this location.
+	 */
+	void (*build_tsi_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	
+	/**
+	 * Builds the TSr payload for this state.
+	 * 
+	 * @param this		calling object
+	 * @param payload	The generated payload object of type ts_payload_t is 
+	 * 					stored at this location.
+	 */
+	void (*build_tsr_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	
+	/**
 	 * Destroy function called internally of this class after state change succeeded.
 	 * 
 	 * This destroy function does not destroy objects which were passed to the new state.
@@ -123,45 +151,61 @@ struct private_ike_sa_init_requested_t {
 /**
  * Implements state_t.get_state
  */
-static status_t process_message(private_ike_sa_init_requested_t *this, message_t *reply)
+static status_t process_message(private_ike_sa_init_requested_t *this, message_t *ike_sa_init_reply)
 {
-	status_t status;
-	iterator_t *payloads;
+	ike_auth_requested_t *next_state;
 	exchange_type_t	exchange_type;
-	message_t *request;
-	packet_t *packet;
 	u_int64_t responder_spi;
 	ike_sa_id_t *ike_sa_id;
-	ike_auth_requested_t *next_state;
+	iterator_t *payloads;
+	message_t *request;
+	packet_t *packet;
+	status_t status;
 	
-
-	exchange_type = reply->get_exchange_type(reply);
+	/*
+	 * In this state a reply message of type IKE_SA_INIT is expected:
+	 * 
+	 *   <--    HDR, SAr1, KEr, Nr, [CERTREQ]
+	 * or
+	 *   <--    HDR, N
+	 */
+	exchange_type = ike_sa_init_reply->get_exchange_type(ike_sa_init_reply);
 	if (exchange_type != IKE_SA_INIT)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_sa_init_requested",mapping_find(exchange_type_m,exchange_type));
 		return FAILED;
 	}
 	
-	if (reply->get_request(reply))
+	if (ike_sa_init_reply->get_request(ike_sa_init_reply))
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Only responses of type IKE_SA_INIT supported in state ike_sa_init_requested");
 		return FAILED;
 	}
 	
 	/* parse incoming message */
-	status = reply->parse_body(reply, NULL, NULL);
+	status = ike_sa_init_reply->parse_body(ike_sa_init_reply, NULL, NULL);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Could not parse body");
+		this->logger->log(this->logger, ERROR | MORE, "Parsing of body returned error: %s",mapping_find(status_m,status));
 		return status;	
 	}
 	
-	responder_spi = reply->get_responder_spi(reply);
+
+	if (responder_spi == 0)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Responder SPI still zero.");
+		return FAILED;
+	}
+	/* because I am original initiator i have to update the responder SPI to the new one */	
+	responder_spi = ike_sa_init_reply->get_responder_spi(ike_sa_init_reply);
 	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
 	ike_sa_id->set_responder_spi(ike_sa_id,responder_spi);
 	
-	/* iterate over incoming payloads */
-	payloads = reply->get_payload_iterator(reply);
+	/* Iterate over all payloads.
+	 * 
+	 * The message is allready checked for the right payload types.
+	 */
+	payloads = ike_sa_init_reply->get_payload_iterator(ike_sa_init_reply);
 	while (payloads->has_next(payloads))
 	{
 		payload_t *payload;
@@ -269,7 +313,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "could not generate packet from message");
-		reply->destroy(reply);
+		request->destroy(request);
 		return status;
 	}
 	
@@ -315,7 +359,6 @@ static void build_ike_auth_request (private_ike_sa_init_requested_t *this, messa
 	this->logger->log(this->logger, CONTROL|MOST, "Going to build empty message");
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &message);
 	
-	
 	/* build id payload */
 	this->build_id_payload(this, &payload);
 	this->logger->log(this->logger, CONTROL|MOST, "add ID payload to message");
@@ -326,6 +369,21 @@ static void build_ike_auth_request (private_ike_sa_init_requested_t *this, messa
 	this->logger->log(this->logger, CONTROL|MOST, "add AUTH payload to message");
 	message->add_payload(message, payload);
 	
+	/* build sa payload */
+	this->build_sa_payload(this, &payload);
+	this->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
+	message->add_payload(message, payload);
+	
+	/* build tsi payload */
+	this->build_tsi_payload(this, &payload);
+	this->logger->log(this->logger, CONTROL|MOST, "add TSi payload to message");
+	message->add_payload(message, payload);	
+	
+	/* build tsr payload */
+	this->build_tsr_payload(this, &payload);
+	this->logger->log(this->logger, CONTROL|MOST, "add TSr payload to message");
+	message->add_payload(message, payload);	
+	
 	*request = message;
 }
 
@@ -334,18 +392,16 @@ static void build_ike_auth_request (private_ike_sa_init_requested_t *this, messa
  */
 static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
 {
+	sa_config_t *sa_config;
 	id_payload_t *id_payload;
-	chunk_t email;
+	identification_t *identification;
+	
+	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
+
+	identification = sa_config->get_my_id(sa_config);
 	
 	/* create IDi */
-	id_payload = id_payload_create(TRUE);
-	/* TODO special functions on id payload */
-	/* TODO configuration manager request */
-	id_payload->set_id_type(id_payload,ID_RFC822_ADDR);
-	email.ptr = "moerdi@hsr.ch";
-	email.len = strlen(email.ptr)+1;
-	this->logger->log_chunk(this->logger, CONTROL, "Moerdi",&email);
-	id_payload->set_data(id_payload,email);
+	id_payload = id_payload_create_from_identification(TRUE,identification);
 	
 	*payload = (payload_t *) id_payload;
 }
@@ -356,18 +412,76 @@ static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t *
 static void build_auth_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
 {
 	auth_payload_t *auth_payload;
-	chunk_t auth_data;
+	sa_config_t *sa_config;
+
+	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	
-	/* create IDi */
 	auth_payload = auth_payload_create();
-	/* TODO configuration manager request */
-	auth_payload->set_auth_method(auth_payload,RSA_DIGITAL_SIGNATURE);
-	auth_data.ptr = "this is the key";
-	auth_data.len = strlen(auth_data.ptr);
-	this->logger->log_chunk(this->logger, CONTROL, "Auth Data",&auth_data);
-	auth_payload->set_data(auth_payload,auth_data);
+	auth_payload->set_auth_method(auth_payload,sa_config->get_auth_method(sa_config));
 	*payload = (payload_t *) auth_payload;
 }
+
+/**
+ * Implementation of private_ike_sa_init_requested_t.build_sa_payload.
+ */
+static void build_sa_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+{
+	sa_config_t *sa_config;
+	sa_payload_t *sa_payload;
+	u_int8_t esp_spi[4] = {0x01,0x01,0x01,0x01};
+	u_int8_t ah_spi[4] = {0x01,0x01,0x01,0x01};
+	size_t proposal_count;
+	child_proposal_t *proposals;
+
+	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
+
+	proposal_count = sa_config->get_proposals(sa_config,ah_spi,esp_spi,&proposals);
+	/* create IDi */
+	sa_payload = sa_payload_create_from_child_proposals(proposals, proposal_count);
+	allocator_free(proposals);
+	*payload = (payload_t *) sa_payload;
+}
+
+/**
+ * Implementation of private_ike_sa_init_requested_t.build_tsi_payload.
+ */
+static void build_tsi_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+{
+	sa_config_t *sa_config;
+	ts_payload_t *ts_payload;
+	size_t traffic_selectors_count;
+	traffic_selector_t **traffic_selectors;
+	
+	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
+	
+	traffic_selectors_count = sa_config->get_traffic_selectors_initiator(sa_config,&traffic_selectors);
+
+	/* create IDi */
+	ts_payload = ts_payload_create_from_traffic_selectors(TRUE,traffic_selectors, traffic_selectors_count);
+	allocator_free(traffic_selectors);
+	*payload = (payload_t *) ts_payload;
+}
+
+/**
+ * Implementation of private_ike_sa_init_requested_t.build_tsr_payload.
+ */
+static void build_tsr_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+{
+	sa_config_t *sa_config;
+	ts_payload_t *ts_payload;
+	size_t traffic_selectors_count;
+	traffic_selector_t **traffic_selectors;
+	
+	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
+	
+	traffic_selectors_count = sa_config->get_traffic_selectors_responder(sa_config,&traffic_selectors);
+
+	/* create IDi */
+	ts_payload = ts_payload_create_from_traffic_selectors(FALSE,traffic_selectors, traffic_selectors_count);
+	allocator_free(traffic_selectors);
+	*payload = (payload_t *) ts_payload;
+}
+
 
 /**
  * Implements state_t.get_state
@@ -386,12 +500,11 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	
+
 	allocator_free(this->sent_nonce.ptr);
 	allocator_free(this->received_nonce.ptr);
 	allocator_free(this->shared_secret.ptr);
-	allocator_free(this);
-	
+	allocator_free(this);	
 }
 
 /**
@@ -413,7 +526,7 @@ static void destroy(private_ike_sa_init_requested_t *this)
 /* 
  * Described in header.
  */
-ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa,u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce)
+ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce)
 {
 	private_ike_sa_init_requested_t *this = allocator_alloc_thing(private_ike_sa_init_requested_t);
 	
@@ -426,6 +539,9 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->build_ike_auth_request = build_ike_auth_request;
 	this->build_id_payload = build_id_payload;
 	this->build_auth_payload = build_auth_payload;
+	this->build_sa_payload = build_sa_payload;
+	this->build_tsi_payload = build_tsi_payload;
+	this->build_tsr_payload = build_tsr_payload;
 	this->destroy_after_state_change = destroy_after_state_change;
 	
 	/* private data */

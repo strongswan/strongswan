@@ -25,21 +25,6 @@
 #include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 
-/** 
- * String mappings for id_type_t.
- */
-mapping_t id_type_m[] = {
-{ID_IPV4_ADDR, "ID_IPV4_ADDR"},
-{ID_FQDN, "ID_FQDN"},
-{ID_RFC822_ADDR, "ID_RFC822_ADDR"},
-{ID_IPV6_ADDR, "ID_IPV6_ADDR"},
-{ID_DER_ASN1_DN, "ID_DER_ASN1_DN"},
-{ID_DER_ASN1_GN, "ID_DER_ASN1_GN"},
-{ID_KEY_ID, "ID_KEY_ID"},
-{MAPPING_END, NULL}
-};
-
-
 typedef struct private_id_payload_t private_id_payload_t;
 
 /**
@@ -108,11 +93,11 @@ encoding_rule_t id_payload_encodings[] = {
  	/* 1 Byte ID type*/
 	{ U_INT_8,			offsetof(private_id_payload_t, id_type)		 	},
 	/* 3 reserved bytes */
-	{ RESERVED_BYTE,	0 													},
-	{ RESERVED_BYTE,	0 													},
-	{ RESERVED_BYTE,	0 													},
+	{ RESERVED_BYTE,	0 												},
+	{ RESERVED_BYTE,	0 												},
+	{ RESERVED_BYTE,	0 												},
 	/* some id data bytes, length is defined in PAYLOAD_LENGTH */
-	{ ID_DATA,			offsetof(private_id_payload_t, id_data) 			}
+	{ ID_DATA,			offsetof(private_id_payload_t, id_data) 		}
 };
 
 /*
@@ -261,6 +246,14 @@ static void set_initiator (private_id_payload_t *this,bool is_initiator)
 }
 
 /**
+ * Implementation of id_payload_t.get_identification.
+ */
+static identification_t * get_identification (private_id_payload_t *this)
+{
+	return identification_create_from_encoding(this->id_type,this->id_data);
+}
+
+/**
  * Implementation of payload_t.destroy and id_payload_t.destroy.
  */
 static void destroy(private_id_payload_t *this)
@@ -274,7 +267,7 @@ static void destroy(private_id_payload_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 id_payload_t *id_payload_create(bool is_initiator)
 {
@@ -297,6 +290,7 @@ id_payload_t *id_payload_create(bool is_initiator)
 	this->public.get_data = (chunk_t (*) (id_payload_t *)) get_data;
 	this->public.get_initiator = (bool (*) (id_payload_t *)) get_initiator;
 	this->public.set_initiator = (void (*) (id_payload_t *,bool)) set_initiator;
+	this->public.get_identification = (identification_t * (*) (id_payload_t *this)) get_identification;
 
 	/* private variables */
 	this->critical = FALSE;
@@ -306,4 +300,15 @@ id_payload_t *id_payload_create(bool is_initiator)
 	this->is_initiator = is_initiator;
 
 	return (&(this->public));
+}
+
+/*
+ * Described in header.
+ */
+id_payload_t *id_payload_create_from_identification(bool is_initiator,identification_t *identification)
+{
+	id_payload_t *this= id_payload_create(is_initiator);
+	this->set_data(this,identification->get_encoding(identification));
+	this->set_id_type(this,identification->get_type(identification));
+	return this;
 }

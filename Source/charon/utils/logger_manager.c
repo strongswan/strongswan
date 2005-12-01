@@ -150,7 +150,6 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case MESSAGE:
 		case WORKER:
 			logger_level |= ALL;
-			break;
 		case PARSER:
 		case GENERATOR:
 		case THREAD_POOL:

@@ -388,9 +388,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	/* free padding */
 	this->decrypted.ptr = allocator_realloc(this->decrypted.ptr, this->decrypted.len);
 	
-	this->parse(this);
-	
-	return SUCCESS;
+	return (this->parse(this));
 }
 
 /**
@@ -539,9 +537,11 @@ static status_t parse(private_encryption_payload_t *this)
 			return PARSE_ERROR;
 		}
 		
+
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
+			current_payload->destroy(current_payload);
 			parser->destroy(parser);
 			return VERIFY_ERROR;
 		}

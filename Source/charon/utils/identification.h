@@ -27,7 +27,59 @@
 
 #include "types.h"
 
-#include <encoding/payloads/id_payload.h>
+typedef enum id_type_t id_type_t;
+
+/**
+ * ID Types of a ID payload.
+ * 
+ * @ingroup payloads
+ */
+enum id_type_t {
+	/**
+	 * ID data is a single four (4) octet IPv4 address.
+	 */
+	ID_IPV4_ADDR = 1,
+
+	/**
+	 * ID data is a fully-qualified domain name string.
+	 * An example of a ID_FQDN is, "example.com".
+	 * The string MUST not contain any terminators (e.g., NULL, CR, etc.).
+	 */
+	ID_FQDN = 2,
+	
+	/**
+	 * ID data is a fully-qualified RFC822 email address string, An example of
+	 * a ID_RFC822_ADDR is, "jsmith@example.com".  The string MUST
+	 * not contain any terminators.
+	 */
+	ID_RFC822_ADDR = 3,
+	
+	/**
+	 * ID data is a single sixteen (16) octet IPv6 address.
+	 */
+	ID_IPV6_ADDR = 5,
+	
+	/**
+	 * ID data is the binary DER encoding of an ASN.1 X.500 Distinguished Name
+     * [X.501].
+     */
+	ID_DER_ASN1_DN = 9,
+	
+	/**
+	 * ID data is the binary DER encoding of an ASN.1 X.500 GeneralName
+     * [X.509].
+     */
+	ID_DER_ASN1_GN = 10,
+	
+	/**
+	 * ID data is an opaque octet stream which may be used to pass vendor-
+     * specific information necessary to do certain proprietary
+     * types of identification.
+     */
+	ID_KEY_ID = 11
+};
+
+extern mapping_t id_type_m[];
 
 typedef struct identification_t identification_t;
 

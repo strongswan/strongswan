@@ -29,6 +29,22 @@
 #include <utils/allocator.h>
 
 
+/** 
+ * String mappings for id_type_t.
+ */
+mapping_t id_type_m[] = {
+{ID_IPV4_ADDR, "ID_IPV4_ADDR"},
+{ID_FQDN, "ID_FQDN"},
+{ID_RFC822_ADDR, "ID_RFC822_ADDR"},
+{ID_IPV6_ADDR, "ID_IPV6_ADDR"},
+{ID_DER_ASN1_DN, "ID_DER_ASN1_DN"},
+{ID_DER_ASN1_GN, "ID_DER_ASN1_GN"},
+{ID_KEY_ID, "ID_KEY_ID"},
+{MAPPING_END, NULL}
+};
+
+
+
 typedef struct private_identification_t private_identification_t;
 
 /**
@@ -136,6 +152,7 @@ static private_identification_t *identification_create()
 identification_t *identification_create_from_string(id_type_t type, char *string)
 {
 	private_identification_t *this = identification_create();
+	this->type = type;
 	switch (type)
 	{
 		case ID_IPV4_ADDR:
@@ -175,6 +192,7 @@ identification_t *identification_create_from_string(id_type_t type, char *string
 identification_t *identification_create_from_encoding(id_type_t type, chunk_t encoded)
 {
 	private_identification_t *this = identification_create();
+	this->type = type;
 	switch (type)
 	{
 		case ID_IPV4_ADDR:

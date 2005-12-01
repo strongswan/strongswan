@@ -150,27 +150,30 @@ struct private_configuration_manager_t {
 static void load_default_config (private_configuration_manager_t *this)
 {
 	init_config_t *init_config1, *init_config2, *init_config3;
-	ike_proposal_t proposals[2];	
-	sa_config_t *sa_config;
+	ike_proposal_t proposals[2];
+	child_proposal_t child_proposals[1];
+	sa_config_t *sa_config1, *sa_config2;
+	traffic_selector_t *ts;
 	
-	init_config1 = init_config_create("152.96.193.130","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config1 = init_config_create("152.96.193.131","152.96.193.131",IKEV2_UDP_PORT,500);
 	init_config2 = init_config_create("152.96.193.131","152.96.193.130",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config3 = init_config_create("0.0.0.0","127.0.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
 	
 
 	proposals[0].encryption_algorithm = ENCR_AES_CBC;
-	proposals[0].encryption_algorithm_key_length = 20;
-	proposals[0].integrity_algorithm = AUTH_HMAC_SHA1_96;
-	proposals[0].integrity_algorithm_key_length = 20;
-	proposals[0].pseudo_random_function = PRF_HMAC_SHA1;
-	proposals[0].pseudo_random_function_key_length = 20;
-	proposals[0].diffie_hellman_group = MODP_768_BIT;
+	proposals[0].encryption_algorithm_key_length = 16;
+	proposals[0].integrity_algorithm = AUTH_HMAC_MD5_96;
+	proposals[0].integrity_algorithm_key_length = 16;
+	proposals[0].pseudo_random_function = PRF_HMAC_MD5;
+	proposals[0].pseudo_random_function_key_length = 16;
+	proposals[0].diffie_hellman_group = MODP_1024_BIT;
 	
 	proposals[1] = proposals[0];
-	proposals[1].integrity_algorithm = AUTH_HMAC_MD5_96;
-	proposals[1].integrity_algorithm_key_length = 16;
-	proposals[1].pseudo_random_function = PRF_HMAC_MD5;
-	proposals[1].pseudo_random_function_key_length = 16;
+	proposals[1].integrity_algorithm = AUTH_HMAC_SHA1_96;
+	proposals[1].integrity_algorithm_key_length = 20;
+	proposals[1].pseudo_random_function = PRF_HMAC_SHA1;
+	proposals[1].pseudo_random_function_key_length = 20;
 
 	init_config1->add_proposal(init_config1,1,proposals[0]);
 	init_config1->add_proposal(init_config1,1,proposals[1]);
@@ -179,9 +182,45 @@ static void load_default_config (private_configuration_manager_t *this)
 	init_config3->add_proposal(init_config3,1,proposals[0]);
 	init_config3->add_proposal(init_config3,1,proposals[1]);
 	
-	this->add_new_configuration(this,"pinflb31",init_config1,sa_config);
-	this->add_new_configuration(this,"pinflb30",init_config2,sa_config);
-	this->add_new_configuration(this,"localhost",init_config3,sa_config);
+	sa_config1 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
+								  ID_IPV4_ADDR, "152.96.193.131",
+								  RSA_DIGITAL_SIGNATURE);
+								  
+	sa_config1->add_traffic_selector_initiator(sa_config1,ts);
+	sa_config1->add_traffic_selector_responder(sa_config1,ts);
+
+	sa_config2 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
+								  ID_IPV4_ADDR, "152.96.193.131",
+								  RSA_DIGITAL_SIGNATURE);
+
+	sa_config2->add_traffic_selector_initiator(sa_config2,ts);
+	sa_config2->add_traffic_selector_responder(sa_config2,ts);
+	
+	ts->destroy(ts);
+	
+	/* ah and esp prop */
+	child_proposals[0].ah.is_set = TRUE;
+	child_proposals[0].ah.integrity_algorithm = AUTH_HMAC_MD5_96;
+	child_proposals[0].ah.integrity_algorithm_key_size = 16;
+	child_proposals[0].ah.diffie_hellman_group = MODP_1024_BIT;
+	child_proposals[0].ah.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
+
+	child_proposals[0].esp.is_set = TRUE;
+	child_proposals[0].esp.diffie_hellman_group = MODP_1024_BIT;
+	child_proposals[0].esp.encryption_algorithm = ENCR_AES_CBC;
+	child_proposals[0].esp.encryption_algorithm_key_size = 16;
+	child_proposals[0].esp.integrity_algorithm = AUTH_UNDEFINED;
+	child_proposals[0].esp.spi[0] = 2;
+	child_proposals[0].esp.spi[1] = 2;
+	child_proposals[0].esp.spi[2] = 2;
+	child_proposals[0].esp.spi[3] = 2;
+	
+	sa_config1->add_proposal(sa_config1, &child_proposals[0]);
+	sa_config2->add_proposal(sa_config2, &child_proposals[0]);
+
+	this->add_new_configuration(this,"pinflb31",init_config1,sa_config2);
+	this->add_new_configuration(this,"pinflb30",init_config2,sa_config1);
+	this->add_new_configuration(this,"localhost",init_config3,sa_config1);
 
 }
 
@@ -430,7 +469,7 @@ static void destroy(private_configuration_manager_t *this)
 	{
 		sa_config_t *sa_config;
 		this->sa_configs->remove_first(this->sa_configs,(void **) &sa_config);
-//		sa_config->destroy(sa_config);
+		sa_config->destroy(sa_config);
 	}
 
 	this->sa_configs->destroy(this->sa_configs);

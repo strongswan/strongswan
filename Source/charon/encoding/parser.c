@@ -814,7 +814,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;
-				}		
+				}	
 				break;			
 			}
 			case AUTH_DATA:
