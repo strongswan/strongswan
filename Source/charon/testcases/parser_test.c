@@ -96,9 +96,13 @@ void test_parser_with_sa_payload(tester_t *tester)
 	parser_t *parser;
 	sa_payload_t *sa_payload;
 	status_t status;
-	chunk_t sa_chunk;
+	chunk_t sa_chunk, sa_chunk2;
 	iterator_t *proposals, *transforms, *attributes;
+    ike_proposal_t *ike_proposals;
+    size_t ike_proposal_count;
 	
+	/* first test generic parsing functionality */
+		
 	u_int8_t sa_bytes[] = {
 		0x00,0x80,0x00,0x24, /* payload header*/
 			0x00,0x00,0x00,0x20,  /* a proposal */
@@ -107,7 +111,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 				0x00,0x00,0x00,0x14, /* transform */
 				0x07,0x00,0x00,0x03,  
 					0x80,0x01,0x00,0x05, /* attribute without length */
-					0x00,0x03,0x00,0x04, /* attribute with lenngth */
+					0x00,0x03,0x00,0x04, /* attribute with length */
 						0x01,0x02,0x03,0x04
 								
 		
@@ -179,6 +183,85 @@ void test_parser_with_sa_payload(tester_t *tester)
 		transforms->destroy(transforms);
 	}
 	proposals->destroy(proposals);
+	
+	sa_payload->destroy(sa_payload);
+	
+	
+	
+	/* now test SA functionality after parsing an SA payload*/
+	
+	u_int8_t sa_bytes2[] = {
+		0x00,0x00,0x00,0x6C, /* payload header*/
+			0x02,0x00,0x00,0x34,  /* a proposal */
+			0x01,0x01,0x00,0x04,
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x01,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+				0x03,0x00,0x00,0x0C, /* transform 2 */
+				0x02,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+				0x03,0x00,0x00,0x0C, /* transform 3 */
+				0x03,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+				0x00,0x00,0x00,0x08, /* transform 4 */
+				0x04,0x00,0x00,0x01, 
+			0x00,0x00,0x00,0x34,  /* a proposal */
+			0x01,0x01,0x00,0x04,
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x01,0x00,0x00,0x02,  
+					0x80,0x0E,0x00,0x10, /* keylength attribute with 16 bytes length */
+				0x03,0x00,0x00,0x0C, /* transform 2 */
+				0x02,0x00,0x00,0x02,  
+					0x80,0x0E,0x00,0x10, /* keylength attribute with 16 bytes length */
+				0x03,0x00,0x00,0x0C, /* transform 3 */
+				0x03,0x00,0x00,0x02,  
+					0x80,0x0E,0x00,0x10, /* keylength attribute with 16 bytes length */
+				0x00,0x00,0x00,0x08, /* transform 4 */
+				0x04,0x00,0x00,0x02, 		
+	};
+	
+	sa_chunk2.ptr = sa_bytes2;
+	sa_chunk2.len = sizeof(sa_bytes2);
+		
+	parser = parser_create(sa_chunk2);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, SECURITY_ASSOCIATION, (payload_t**)&sa_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+
+	status = sa_payload->payload_interface.verify(&(sa_payload->payload_interface));
+	tester->assert_true(tester,(status == SUCCESS),"verify call check");
+
+	status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals, &ike_proposal_count);	
+	tester->assert_true(tester,(status == SUCCESS),"get ike proposals call check");	
+	
+	tester->assert_true(tester,(ike_proposal_count == 2),"ike proposal count check");
+	tester->assert_true(tester,(ike_proposals[0].encryption_algorithm == 1),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[0].encryption_algorithm_key_length == 20),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[0].integrity_algorithm == 1),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[0].integrity_algorithm_key_length == 20),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[0].pseudo_random_function == 1),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[0].pseudo_random_function_key_length == 20),"ike proposal content check");		
+	tester->assert_true(tester,(ike_proposals[0].diffie_hellman_group == 1),"ike proposal content check");	
+	
+	tester->assert_true(tester,(ike_proposals[1].encryption_algorithm == 2),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[1].encryption_algorithm_key_length == 16),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[1].integrity_algorithm == 2),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[1].integrity_algorithm_key_length == 16),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[1].pseudo_random_function == 2),"ike proposal content check");	
+	tester->assert_true(tester,(ike_proposals[1].pseudo_random_function_key_length == 16),"ike proposal content check");		
+	tester->assert_true(tester,(ike_proposals[1].diffie_hellman_group == 2),"ike proposal content check");	
+	
+	
+	if (status == SUCCESS)
+	{
+		allocator_free(ike_proposals);
+	}
 	
 	sa_payload->destroy(sa_payload);
 }

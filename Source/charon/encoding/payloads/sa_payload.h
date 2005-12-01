@@ -27,6 +27,7 @@
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <utils/linked_list.h>
+#include <config/init_config.h>
 
 /**
  * Critical flag must not be set.
@@ -82,6 +83,22 @@ struct sa_payload_t {
 	 * @param proposal  proposal_substructure_t object to add
 	 */
 	void (*add_proposal_substructure) (sa_payload_t *this,proposal_substructure_t *proposal);
+	
+	/**
+	 * Creates an array of ike_proposal_t's in this SA payload.
+	 * 
+	 * An IKE proposal consist of transform of type ENCRYPTION_ALGORITHM,
+	 * PSEUDO_RANDOM_FUNCTION, INTEGRITY_ALGORITHM and DIFFIE_HELLMAN_GROUP
+	 * 
+	 * @param proposals			the pointer to the first entry of ike_proposal_t's is set
+	 * @param proposal_count	the number of found proposals is written at this location
+	 * @return
+	 * 							- SUCCESS if an IKE proposal could be found
+	 * 							- NOT_FOUND if no IKE proposal could be found
+	 * 							- FAILED if a proposal does not contain all needed transforms
+	 * 							  for a IKE_PROPOSAL 
+	 */
+	status_t (*get_ike_proposals) (sa_payload_t *this, ike_proposal_t **proposals, size_t *proposal_count);	
 
 	/**
 	 * @brief Destroys an sa_payload_t object.
@@ -100,5 +117,15 @@ struct sa_payload_t {
  */
 sa_payload_t *sa_payload_create();
 
+/**
+ * @brief Creates a sa_payload_t object from array of ike_proposal_t's.
+ * 
+ * @return					created sa_payload_t object
+ * @param proposals			pointer to first proposal in array of type ike_proposal_t
+ * @param proposal_count	number of ike_proposal_t's in array
+ * 
+ * @ingroup payloads
+ */
+sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, size_t proposal_count);
 
 #endif /*SA_PAYLOAD_H_*/

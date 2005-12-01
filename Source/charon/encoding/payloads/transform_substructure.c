@@ -448,7 +448,7 @@ static void destroy(private_transform_substructure_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 transform_substructure_t *transform_substructure_create()
 {
@@ -487,4 +487,32 @@ transform_substructure_t *transform_substructure_create()
 	this->attributes = linked_list_create();
 	
 	return (&(this->public));
+}
+
+/*
+ * Described in header
+ */
+transform_substructure_t *transform_substructure_create_type(transform_type_t transform_type, u_int16_t transform_id, u_int16_t key_length)
+{
+	transform_substructure_t *transform = transform_substructure_create();
+	
+	transform->set_transform_type(transform,transform_type);
+	transform->set_transform_id(transform,transform_id);
+	
+	switch (transform_type)
+	{
+		case ENCRYPTION_ALGORITHM:
+		case PSEUDO_RANDOM_FUNCTION:
+		case INTEGRITY_ALGORITHM:
+		{
+			transform_attribute_t *attribute = transform_attribute_create_key_length(key_length);
+			transform->add_transform_attribute(transform,attribute);
+			break;
+		}
+		default:
+		{
+			/* no keylength attribute is created */
+		}
+	}	
+	return transform;
 }

@@ -322,3 +322,13 @@ transform_attribute_t *transform_attribute_create()
 	return (&(this->public));
 }
 
+/*
+ * Described in header.
+ */
+transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length)
+{
+	transform_attribute_t *attribute = transform_attribute_create();
+	attribute->set_attribute_type(attribute,KEY_LENGTH);
+	attribute->set_value(attribute,key_length);
+	return attribute;
+}

@@ -29,6 +29,13 @@
 #include <utils/linked_list.h>
 
 /**
+ * IKEv1 Value for a proposal payload.
+ * 
+ * @ingroup payloads
+ */
+#define PROPOSAL_TYPE_VALUE 2
+
+/**
  * Length of the proposal substructure header
  * (without spi).
  * 
@@ -107,6 +114,22 @@ struct proposal_substructure_t {
 	u_int8_t (*get_proposal_number) (proposal_substructure_t *this);
 
 	/**
+	 * @brief get the number of transforms in current proposal.
+	 * 
+	 * @param this 		calling proposal_substructure_t object
+	 * @return 			transform count in current proposal
+	 */
+	size_t (*get_transform_count) (proposal_substructure_t *this);
+
+	/**
+	 * @brief get size of the set spi in bytes.
+	 * 
+	 * @param this 		calling proposal_substructure_t object
+	 * @return 			size of the spi in bytes
+	 */
+	size_t (*get_spi_size) (proposal_substructure_t *this);
+
+	/**
 	 * @brief Sets the protocol id of current proposal.
 	 *
 	 * @param this 		calling proposal_substructure_t object
@@ -136,6 +159,16 @@ struct proposal_substructure_t {
 	 */
 	status_t (*get_info_for_transform_type) (proposal_substructure_t *this,transform_type_t type, u_int16_t *transform_id, u_int16_t *key_length);
 
+	/**
+	 * @brief Sets the next_payload field of this substructure
+	 * 
+	 * If this is the last proposal, next payload field is set to 0,
+	 * otherwise to 2
+	 *
+	 * @param this 		calling proposal_substructure_t object
+	 * @param is_last	When TRUE, next payload field is set to 0, otherwise to 2
+	 */
+	void (*set_is_last_proposal) (proposal_substructure_t *this, bool is_last);
 
 	/**
 	 * @brief Returns the currently set SPI of this proposal.

@@ -417,6 +417,8 @@ void test_generator_with_sa_payload(tester_t *tester)
 	transform_attribute_t *attribute1, *attribute2, *attribute3;
 	transform_substructure_t *transform1, *transform2;
 	proposal_substructure_t *proposal1, *proposal2;
+	ike_proposal_t *ike_proposals;
+	size_t ike_proposal_count;
 	sa_payload_t *sa_payload;
 	ike_header_t *ike_header;
 	
@@ -429,6 +431,9 @@ void test_generator_with_sa_payload(tester_t *tester)
 	/* create generator */
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	/* --------------------------- */
+	/* test first with self created proposals */
 
 	/* create attribute 1 */	
 	attribute1 = transform_attribute_create();
@@ -527,7 +532,7 @@ void test_generator_with_sa_payload(tester_t *tester)
 		/* sa payload header */
 		0x00,0x00,0x00,0x44,
 		/* proposal header */
-		0x00,0x00,0x00,0x38,
+		0x02,0x00,0x00,0x38,
 		0x07,0x04,0x08,0x02,
 		/* SPI */
 		0x41,0x42,0x43,0x44,
@@ -559,6 +564,79 @@ void test_generator_with_sa_payload(tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	ike_header->destroy(ike_header);
 	sa_payload->destroy(sa_payload);
+	generator->destroy(generator);
+	
+	
+	/* test with automatic created proposals */
+	
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+
+	ike_proposal_count = 2;
+	ike_proposals = allocator_alloc(ike_proposal_count * (sizeof(ike_proposal_t)));
+	
+	ike_proposals[0].encryption_algorithm = 1;
+	ike_proposals[0].encryption_algorithm_key_length = 20;
+	ike_proposals[0].pseudo_random_function = 2;
+	ike_proposals[0].pseudo_random_function_key_length = 22;
+	ike_proposals[0].integrity_algorithm = 3;
+	ike_proposals[0].integrity_algorithm_key_length = 24;
+	ike_proposals[0].diffie_hellman_group = 4;
+
+	ike_proposals[1].encryption_algorithm = 5;
+	ike_proposals[1].encryption_algorithm_key_length = 26;
+	ike_proposals[1].pseudo_random_function = 6;
+	ike_proposals[1].pseudo_random_function_key_length = 28;
+	ike_proposals[1].integrity_algorithm = 7;
+	ike_proposals[1].integrity_algorithm_key_length = 30;
+	ike_proposals[1].diffie_hellman_group = 8;
+	
+	sa_payload = sa_payload_create_from_ike_proposals(ike_proposals,ike_proposal_count);
+	tester->assert_true(tester,(sa_payload != NULL), "sa_payload create check");
+
+	generator->generate_payload(generator,(payload_t *)sa_payload);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated",&generated_data);	
+
+	u_int8_t expected_generation2[] = {	
+		0x00,0x00,0x00,0x6C, /* payload header*/
+			0x02,0x00,0x00,0x34,  /* a proposal */
+			0x01,0x01,0x00,0x04,
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x01,0x00,0x00,0x01,  
+					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
+				0x03,0x00,0x00,0x0C, /* transform 2 */
+				0x02,0x00,0x00,0x02,  
+					0x80,0x0E,0x00,0x16, /* keylength attribute with 20 bytes length */
+				0x03,0x00,0x00,0x0C, /* transform 3 */
+				0x03,0x00,0x00,0x03,  
+					0x80,0x0E,0x00,0x18, /* keylength attribute with 20 bytes length */
+				0x00,0x00,0x00,0x08, /* transform 4 */
+				0x04,0x00,0x00,0x04, 
+			0x00,0x00,0x00,0x34,  /* a proposal */
+			0x02,0x01,0x00,0x04,
+				0x03,0x00,0x00,0x0C, /* transform 1 */
+				0x01,0x00,0x00,0x05,  
+					0x80,0x0E,0x00,0x1A, /* keylength attribute with 16 bytes length */
+				0x03,0x00,0x00,0x0C, /* transform 2 */
+				0x02,0x00,0x00,0x06,  
+					0x80,0x0E,0x00,0x1C, /* keylength attribute with 16 bytes length */
+				0x03,0x00,0x00,0x0C, /* transform 3 */
+				0x03,0x00,0x00,0x07,  
+					0x80,0x0E,0x00,0x1E, /* keylength attribute with 16 bytes length */
+				0x00,0x00,0x00,0x08, /* transform 4 */
+				0x04,0x00,0x00,0x08, 		
+
+	};
+
+	logger->log_bytes(logger,RAW,"expected",expected_generation2,sizeof(expected_generation2));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data");
+
+	sa_payload->destroy(sa_payload);
+	allocator_free(ike_proposals);
+	allocator_free_chunk(&generated_data);
 	generator->destroy(generator);
 		
 	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	

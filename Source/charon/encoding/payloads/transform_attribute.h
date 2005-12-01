@@ -132,11 +132,23 @@ struct transform_attribute_t {
 };
 
 /**
- * @brief Creates an empty transform_attribute_t object
+ * @brief Creates an empty transform_attribute_t object.
  * 
  * @return			created transform_attribute_t object
+ * 
  * @ingroup payloads
  */
 transform_attribute_t *transform_attribute_create();
+
+/**
+ * @brief Creates an transform_attribute_t of type KEY_LENGTH.
+ * 
+ * @param key_length	key length in bytes
+ * @return				created transform_attribute_t object
+ * 
+ * @ingroup payloads
+ */
+transform_attribute_t *transform_attribute_create_key_length(u_int16_t key_length);
+
 
 #endif /*TRANSFORM_ATTRIBUTE_H_*/

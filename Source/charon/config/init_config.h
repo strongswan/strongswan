@@ -25,8 +25,11 @@
 
 #include <types.h>
 #include <network/host.h>
-#include <encoding/payloads/sa_payload.h>
 #include <utils/iterator.h>
+#include <transforms/crypters/crypter.h>
+#include <transforms/prfs/prf.h>
+#include <transforms/signers/signer.h>
+#include <transforms/diffie_hellman.h>
 
 typedef struct ike_proposal_t ike_proposal_t;
 
@@ -65,10 +68,11 @@ struct ike_proposal_t {
 	u_int16_t pseudo_random_function_key_length;
 	
 	/**
-	 * Diffie hellman group
+	 * Diffie hellman group.
 	 */
 	diffie_hellman_group_t diffie_hellman_group;
 };
+
 
 typedef struct init_config_t init_config_t;
 

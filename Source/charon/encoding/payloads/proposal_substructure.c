@@ -144,7 +144,7 @@ static status_t verify(private_proposal_substructure_t *this)
 	status_t status = SUCCESS;
 	iterator_t *iterator;
 	
-	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != PROPOSAL_SUBSTRUCTURE))
+	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 2))
 	{
 		/* must be 0 or 2 */
 		return FAILED;
@@ -249,6 +249,15 @@ static void add_transform_substructure (private_proposal_substructure_t *this,tr
 	this->transforms->insert_last(this->transforms,(void *) transform);
 	this->compute_length(this);
 }
+
+/**
+ * Implementation of proposal_substructure_t.proposal_substructure_t.
+ */
+static void set_is_last_proposal (private_proposal_substructure_t *this, bool is_last)
+{
+	this->next_payload = (is_last) ? 0: PROPOSAL_TYPE_VALUE;
+}
+
 
 /**
  * Implementation of proposal_substructure_t.set_proposal_number.
@@ -374,6 +383,22 @@ static void compute_length (private_proposal_substructure_t *this)
 }
 
 /**
+ * Implementation of proposal_substructure_t.get_transform_count.
+ */
+static size_t get_transform_count (private_proposal_substructure_t *this)
+{
+	return this->transforms->get_count(this->transforms);
+}
+
+/**
+ * Implementation of proposal_substructure_t.get_spi_size.
+ */
+static size_t get_spi_size (private_proposal_substructure_t *this)
+{
+	return 	this->spi.len;
+}
+
+/**
  * Implementation of proposal_substructure_t.clone.
  */
 static private_proposal_substructure_t* clone(private_proposal_substructure_t *this)
@@ -464,8 +489,12 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.set_protocol_id = (void (*) (proposal_substructure_t *,u_int8_t))set_protocol_id;
 	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
 	this->public.get_info_for_transform_type = 	(status_t (*) (proposal_substructure_t *,transform_type_t,u_int16_t *, u_int16_t *))get_info_for_transform_type;
+	this->public.set_is_last_proposal = (void (*) (proposal_substructure_t *,bool)) set_is_last_proposal;
+	
 	this->public.set_spi = (void (*) (proposal_substructure_t *,chunk_t))set_spi;
 	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
+	this->public.get_transform_count = (size_t (*) (proposal_substructure_t *)) get_transform_count;
+	this->public.get_spi_size = (size_t (*) (proposal_substructure_t *)) get_spi_size;	
 	this->public.clone = (proposal_substructure_t * (*) (proposal_substructure_t *)) clone;
 	this->public.destroy = (void (*) (proposal_substructure_t *)) destroy;
 	

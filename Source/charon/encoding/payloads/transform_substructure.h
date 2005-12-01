@@ -137,7 +137,7 @@ struct transform_substructure_t {
 	 * @brief Sets the next_payload field of this substructure
 	 * 
 	 * If this is the last transform, next payload field is set to 0,
-	 * otherwise to 3 (payload type of transform in IKEv1)
+	 * otherwise to 3
 	 *
 	 * @param this 		calling transform_substructure_t object
 	 * @param is_last	When TRUE, next payload field is set to 0, otherwise to 3
@@ -213,12 +213,28 @@ struct transform_substructure_t {
 };
 
 /**
- * @brief Creates an empty transform_substructure_t object
+ * @brief Creates an empty transform_substructure_t object.
  * 
  * @return			created transform_substructure_t object
  * 
  * @ingroup payloads
  */
 transform_substructure_t *transform_substructure_create();
+
+/**
+ * @brief Creates an empty transform_substructure_t object.
+ * 
+ * The key length is used for the transport types ENCRYPTION_ALGORITHM,
+ * PSEUDO_RANDOM_FUNCTION, INTEGRITY_ALGORITHM. For all 
+ * other transport types the key_length parameter is not used
+ * 
+ * @return					created transform_substructure_t object
+ * @param transform_type	type of transform to create
+ * @param transform_id		transform id specifying the specific algorithm of a transform type
+ * @param key_length		Key length for key lenght attribute
+ * 
+ * @ingroup payloads
+ */
+transform_substructure_t *transform_substructure_create_type(transform_type_t transform_type, u_int16_t transform_id, u_int16_t key_length);
 
 #endif /*TRANSFORM_SUBSTRUCTURE_H_*/
