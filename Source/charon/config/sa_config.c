@@ -62,11 +62,6 @@ struct private_sa_config_t {
 	 * list for traffic selectors
 	 */
 	linked_list_t *ts;
-	
-	/**
-	 * compare two traffic_selectors for equality
-	 */
-	bool (*traffic_selector_equals) (private_sa_config_t *this, traffic_selector_t *first,  traffic_selector_t *second);
 
 	/**
 	 * compare two proposals for equality
@@ -101,19 +96,19 @@ static auth_method_t get_auth_method(private_sa_config_t *this)
 /**
  * implements sa_config_t.get_traffic_selectors
  */
-static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_t **traffic_selectors)
+static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_t ***traffic_selectors)
 {
 	iterator_t *iterator;
 	traffic_selector_t *current_ts;
 	int counter = 0;
-	*traffic_selectors = allocator_alloc(sizeof(traffic_selector_t) * this->ts->get_count(this->ts));
+	*traffic_selectors = allocator_alloc(sizeof(traffic_selector_t*) * this->ts->get_count(this->ts));
 	
 	/* copy all ts from the list in an array */
 	iterator = this->ts->create_iterator(this->ts, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current_ts);
-		memcpy((*traffic_selectors) + counter, current_ts, sizeof(traffic_selector_t));
+		*((*traffic_selectors) + counter) = current_ts->clone(current_ts);
 		counter++;
 	}
 	iterator->destroy(iterator);
@@ -123,12 +118,12 @@ static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_
 /**
  * implements sa_config_t.select_traffic_selectors
  */
-static size_t select_traffic_selectors(private_sa_config_t *this, traffic_selector_t *supplied, size_t count, traffic_selector_t **selected)
+static size_t select_traffic_selectors(private_sa_config_t *this, traffic_selector_t **supplied, size_t count, traffic_selector_t ***selected)
 {
 	iterator_t *iterator;
 	traffic_selector_t *current_ts;
 	int i, counter = 0;
-	*selected = allocator_alloc(sizeof(traffic_selector_t) * this->ts->get_count(this->ts));
+	*selected = allocator_alloc(sizeof(traffic_selector_t*) * this->ts->get_count(this->ts));
 	
 	/* iterate over all stored proposals */
 	iterator = this->ts->create_iterator(this->ts, TRUE);
@@ -137,10 +132,13 @@ static size_t select_traffic_selectors(private_sa_config_t *this, traffic_select
 		iterator->current(iterator, (void**)&current_ts);
 		for (i = 0; i < count; i++)
 		{
-			/* copy if a supplied one is equal to ours */
-			if (this->traffic_selector_equals(this, &(supplied[i]), current_ts))
+			traffic_selector_t *new_ts;
+			/* compare it */
+			new_ts = current_ts->get_subset(current_ts, supplied[i]);
+			/* match ? */
+			if (new_ts)
 			{
-				memcpy((*selected) + counter, current_ts, sizeof(traffic_selector_t));
+				*((*selected) + counter) = new_ts;
 				counter++;
 			}
 		}
@@ -155,7 +153,7 @@ static size_t select_traffic_selectors(private_sa_config_t *this, traffic_select
 /**
  * implements sa_config_t.get_proposals
  */
-static size_t get_proposals(private_sa_config_t *this, child_proposal_t **proposals)
+static size_t get_proposals(private_sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t **proposals)
 {
 	iterator_t *iterator;
 	child_proposal_t *current_proposal;
@@ -166,8 +164,11 @@ static size_t get_proposals(private_sa_config_t *this, child_proposal_t **propos
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
 	while (iterator->has_next(iterator))
 	{
+		child_proposal_t *new_proposal = (*proposals) + counter;
 		iterator->current(iterator, (void**)&current_proposal);
-		memcpy((*proposals) + counter, current_proposal, sizeof(child_proposal_t));
+		*new_proposal = *current_proposal;
+		memcpy(new_proposal->ah.spi, ah_spi, 4);
+		memcpy(new_proposal->ah.spi, esp_spi, 4);
 		counter++;
 	}
 	iterator->destroy(iterator);
@@ -177,10 +178,10 @@ static size_t get_proposals(private_sa_config_t *this, child_proposal_t **propos
 /**
  * implements sa_config_t.select_proposal
  */
-static child_proposal_t *select_proposal(private_sa_config_t *this, child_proposal_t *supplied, size_t count)
+static child_proposal_t *select_proposal(private_sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t *supplied, size_t count)
 {
 	iterator_t *iterator;
-	child_proposal_t *current_proposal, *selected_proposal = NULL;
+	child_proposal_t *current_proposal, *selected_proposal;
 	int i;
 	
 	/* iterate over all stored proposals */
@@ -194,32 +195,18 @@ static child_proposal_t *select_proposal(private_sa_config_t *this, child_propos
 			if (this->proposal_equals(this, &(supplied[i]), current_proposal))
 			{
 				selected_proposal = allocator_alloc(sizeof(child_proposal_t));
-				memcpy(selected_proposal, current_proposal, sizeof(child_proposal_t));
-				break;
+				*selected_proposal = *current_proposal;
+				memcpy(selected_proposal->ah.spi, ah_spi, 4);
+				memcpy(selected_proposal->ah.spi, esp_spi, 4);
+				iterator->destroy(iterator);
+				return selected_proposal;
 			}
 		}
 	}
 	iterator->destroy(iterator);
-
-	return selected_proposal;
+	return NULL;
 }
 
-/**
- * implements private_sa_config_t.traffic_selector_equals
- */
-static bool traffic_selector_equals(private_sa_config_t *this, traffic_selector_t *first,  traffic_selector_t *second)
-{
-	if (first->protocol == second->protocol)
-	{
-		if (first->begin->equals(first->begin, second->begin) &&
-			first->end->equals(first->end, second->end))
-		{
-			return TRUE;
-				
-		}
-	}
-	return FALSE;	
-}
 
 /**
  * implements private_sa_config_t.proposal_equals
@@ -261,9 +248,7 @@ static bool proposal_equals(private_sa_config_t *this, child_proposal_t *first, 
 static void add_traffic_selector(private_sa_config_t *this, traffic_selector_t *traffic_selector)
 {
 	/* clone ts, and add*/
-	traffic_selector_t *new_ts = allocator_alloc_thing(traffic_selector_t);
-	*new_ts = *traffic_selector;
-	this->ts->insert_last(this->ts, (void*)new_ts);
+	this->ts->insert_last(this->ts, (void*)traffic_selector);
 }
 
 /**
@@ -298,7 +283,7 @@ static status_t destroy(private_sa_config_t *this)
 	while(this->ts->get_count(this->ts) > 0)
 	{
 		this->ts->remove_last(this->ts, (void**)&traffic_selector);
-		allocator_free(traffic_selector);
+		traffic_selector->destroy(traffic_selector);
 	}
 	this->ts->destroy(this->ts);
 	
@@ -318,13 +303,13 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	private_sa_config_t *this = allocator_alloc_thing(private_sa_config_t);
 
 	/* public functions */
-	this->public.get_my_id = (identification_t(*)(sa_config_t*))get_my_id;
-	this->public.get_other_id = (identification_t(*)(sa_config_t*))get_other_id;
+	this->public.get_my_id = (identification_t*(*)(sa_config_t*))get_my_id;
+	this->public.get_other_id = (identification_t*(*)(sa_config_t*))get_other_id;
 	this->public.get_auth_method = (auth_method_t(*)(sa_config_t*))get_auth_method;
-	this->public.get_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t**))get_traffic_selectors;
-	this->public.select_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t*,size_t,traffic_selector_t**))select_traffic_selectors;
-	this->public.get_proposals = (size_t(*)(sa_config_t*,child_proposal_t**))get_proposals;
-	this->public.select_proposal = (child_proposal_t*(*)(sa_config_t*,child_proposal_t*,size_t))select_proposal;
+	this->public.get_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t***))get_traffic_selectors;
+	this->public.select_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t**,size_t,traffic_selector_t***))select_traffic_selectors;
+	this->public.get_proposals = (size_t(*)(sa_config_t*,u_int8_t[4],u_int8_t[4],child_proposal_t**))get_proposals;
+	this->public.select_proposal = (child_proposal_t*(*)(sa_config_t*,u_int8_t[4],u_int8_t[4],child_proposal_t*,size_t))select_proposal;
 	this->public.add_traffic_selector = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector;
 	this->public.add_proposal = (void(*)(sa_config_t*,child_proposal_t*))add_proposal;
 	this->public.destroy = (void(*)(sa_config_t*))destroy;
@@ -347,7 +332,6 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	
 	/* init private members*/
 	this->proposal_equals = proposal_equals;
-	this->traffic_selector_equals = traffic_selector_equals;
 	this->proposals = linked_list_create();
 	this->ts = linked_list_create();
 

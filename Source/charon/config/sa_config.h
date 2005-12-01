@@ -31,6 +31,7 @@
 #include <transforms/crypters/crypter.h>
 #include <transforms/signers/signer.h>
 #include <transforms/diffie_hellman.h>
+#include <config/traffic_selector.h>
 
 
 typedef struct child_proposal_t child_proposal_t;
@@ -73,43 +74,6 @@ struct child_proposal_t {
 };
 
 
-typedef struct traffic_selector_t traffic_selector_t;
-
-/**
- * @brief Storage structure for a traffic selection.
- * 
- * Specifies a protocol and a valid IP and port range.
- * 
- * @ingroup config
- */
-struct traffic_selector_t {
-	/**
-	 * Protocol for which this ts applies (TCP/UDP/ICMP)
-	 */
-	u_int8_t protocol;
-	
-	union {
-		struct {
-			
-			
-		} ipv4;
-		struct {
-			/* ipv6 support */
-		} ipv6;
-		
-	};
-	
-	/**
-	 * Start address and port for allowed range
-	 */
-	host_t *begin;
-	/**
-	 * End address and port for allowed range
-	 */
-	host_t *end;
-};
-
-
 typedef struct sa_config_t sa_config_t;
 
 /**
@@ -130,7 +94,7 @@ struct sa_config_t {
 	 * @param this					calling object
 	 * @return						own id
 	 */
-	identification_t (*get_my_id) (sa_config_t *this);
+	identification_t *(*get_my_id) (sa_config_t *this);
 	
 	/**
 	 * @brief Get id of communication partner..
@@ -138,7 +102,7 @@ struct sa_config_t {
 	 * @param this					calling object
 	 * @return						other id
 	 */
-	identification_t (*get_other_id) (sa_config_t *this);
+	identification_t *(*get_other_id) (sa_config_t *this);
 	
 	/**
 	 * @brief Get authentication method to use for IKE_AUTH.
@@ -157,7 +121,7 @@ struct sa_config_t {
 	 * @param[out]traffic_selectors	pointer where traffic selectors will be allocated
 	 * @return						number of returned traffic selectors
 	 */
-	size_t (*get_traffic_selectors) (sa_config_t *this, traffic_selector_t **traffic_selectors);
+	size_t (*get_traffic_selectors) (sa_config_t *this, traffic_selector_t ***traffic_selectors);
 	
 	/**
 	 * @brief Select traffic selectors from a supplied list.
@@ -170,7 +134,7 @@ struct sa_config_t {
 	 * @param[out]traffic_selectors	pointer where selected traffic selectors will be allocated
 	 * @return						number of selected traffic selectors
 	 */
-	size_t (*select_traffic_selectors) (sa_config_t *this, traffic_selector_t *supplied, size_t count, traffic_selector_t **selected);
+	size_t (*select_traffic_selectors) (sa_config_t *this, traffic_selector_t **supplied, size_t count, traffic_selector_t ***selected);
 	
 	/**
 	 * @brief Get the list of proposals for this config.
