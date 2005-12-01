@@ -99,31 +99,26 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		u_int16_t from_port, to_port;
 		private_traffic_selector_t *new_ts;
 		
+		/* calculate the maximum address range allowed for both */
 		from_addr = max(this->from_addr_ipv4, other->from_addr_ipv4);
 		to_addr = min(this->to_addr_ipv4, other->to_addr_ipv4);
-		
-		printf("FromAddr: policy: %u, request: %u, match: %u\n", this->from_addr_ipv4, other->from_addr_ipv4, from_addr);
-		printf("ToAddr  : policy: %u, request: %u, match: %u\n", this->to_addr_ipv4, other->to_addr_ipv4, to_addr);
 		if (from_addr > to_addr)
 		{
 			/* no match */
 			return NULL;	
 		}
+		
+		/* calculate the maximum port range allowed for both */
 		from_port = max(this->from_port, other->from_port);
 		to_port = min(this->to_port, other->to_port);
-		
-		printf("FromPort: policy: %u, request: %u, match: %u\n", this->from_port, other->from_port, from_port);
-		printf("ToPort:   policy: %u, request: %u, match: %u\n", this->to_port, other->to_port, to_port);
 		if (from_port > to_port)
 		{
 			/* no match */
 			return NULL;	
 		}
 		
-		
-		printf("got one\n");
+		/* got a match, return it */
 		new_ts = traffic_selector_create(this->protocol, this->type, from_port, to_port); 
-		
 		new_ts->from_addr_ipv4 = from_addr;
 		new_ts->to_addr_ipv4 = to_addr;
 		new_ts->type = TS_IPV4_ADDR_RANGE;

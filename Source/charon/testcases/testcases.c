@@ -57,6 +57,7 @@
 #include <testcases/hmac_signer_test.h>
 #include <testcases/encryption_payload_test.h>
 #include <testcases/init_config_test.h>
+#include <testcases/sa_config_test.h>
 
 /* output for test messages */
 extern FILE * stderr;
@@ -106,6 +107,7 @@ test_t hmac_signer_test1 = {test_hmac_md5_signer, "HMAC MD5 signer test"};
 test_t hmac_signer_test2 = {test_hmac_sha1_signer, "HMAC SHA1 signer test"};
 test_t encryption_payload_test = {test_encryption_payload, "encryption payload test"};
 test_t init_config_test = {test_init_config, "init_config_t test"};
+test_t sa_config_test = {test_sa_config, "sa_config_t test"};
 
 
 daemon_t* charon;
@@ -200,6 +202,7 @@ int main()
 		&hmac_signer_test2,
 		&encryption_payload_test,
 		&init_config_test,
+		&sa_config_test,
 		NULL
 	};
  
@@ -210,6 +213,7 @@ int main()
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
+
 	tester->perform_tests(tester,all_tests);
 //	tester->perform_test(tester,&parser_test2); 
 	

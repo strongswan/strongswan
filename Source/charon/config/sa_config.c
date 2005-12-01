@@ -248,7 +248,8 @@ static bool proposal_equals(private_sa_config_t *this, child_proposal_t *first, 
 static void add_traffic_selector(private_sa_config_t *this, traffic_selector_t *traffic_selector)
 {
 	/* clone ts, and add*/
-	this->ts->insert_last(this->ts, (void*)traffic_selector);
+	
+	this->ts->insert_last(this->ts, (void*)traffic_selector->clone(traffic_selector));
 }
 
 /**

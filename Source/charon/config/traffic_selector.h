@@ -30,27 +30,87 @@
 typedef struct traffic_selector_t traffic_selector_t;
 
 /**
- * @brief 
- *
+ * @brief Object representing a traffic selector entry.
+ * 
+ * A traffic selector defines an range of addresses
+ * and a range of ports. 
  * 
  * @ingroup config
  */
 struct traffic_selector_t {
 	
+	/**
+	 * @brief Compare two traffic selectors, and create a new one
+	 * which is the largest subset of bouth (subnet & port).
+	 * 
+	 * Resulting traffic_selector is newly created and must be destroyed.
+	 * 
+	 * @param this		first to compare
+	 * @param other		second to compare
+	 * @return
+	 * 					- created subset of them
+	 * 					- or NULL if no match between this and other
+	 */
 	traffic_selector_t *(*get_subset) (traffic_selector_t *this, traffic_selector_t *other);
 	
+	/**
+	 * @brief Clone a traffic selector.
+	 *  
+	 * @param this		traffic selector to clone
+	 * @return			clone of it
+	 */
 	traffic_selector_t *(*clone) (traffic_selector_t *this);
 	
+	/**
+	 * @brief Get starting address of this ts as a chunk.
+	 * 
+	 * Data is in network order and represents the address.
+	 * Size depends on protocol.
+	 * 
+	 * Resulting chunk data is allocated and must be freed!
+	 *  
+	 * @param this		calling object
+	 * @return			chunk containing the address
+	 */
 	chunk_t (*get_from_address) (traffic_selector_t *this);
 	
+	/**
+	 * @brief Get ending address of this ts as a chunk.
+	 * 
+	 * Data is in network order and represents the address.
+	 * Size depends on protocol.
+	 * 
+	 * Resulting chunk data is allocated and must be freed!
+	 *  
+	 * @param this		calling object
+	 * @return			chunk containing the address
+	 */
 	chunk_t (*get_to_address) (traffic_selector_t *this);
 	
+	/**
+	 * @brief Get starting port of this ts.
+	 * 
+	 * Port is in host order, since the parser converts it.
+	 * Size depends on protocol.
+	 *  
+	 * @param this		calling object
+	 * @return			port
+	 */
 	u_int16_t (*get_from_port) (traffic_selector_t *this);
 	
+	/**
+	 * @brief Get ending port of this ts.
+	 * 
+	 * Port is in host order, since the parser converts it.
+	 * Size depends on protocol.
+	 *  
+	 * @param this		calling object
+	 * @return			port
+	 */
 	u_int16_t (*get_to_port) (traffic_selector_t *this);
 	
 	/**
-	 * @brief Destroys the config object
+	 * @brief Destroys the ts object
 	 * 
 	 * 
 	 * @param this				calling object
@@ -59,16 +119,41 @@ struct traffic_selector_t {
 };
 
 /**
- * @brief 
+ * @brief Create a new traffic selector using human readable params.
  * 
- * @return 		created traffic_selector_t
+ * @param protocol 		protocol for this ts, such as TCP or UDP
+ * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
+ * @param from_addr		start of address range as string
+ * @param from_port		port number in host order
+ * @param to_addr		end of address range as string
+ * @param to_port		port number in host order
+ * @return
+ * 						- created traffic_selector_t
+ * 						- NULL if invalid address strings
  * 
  * @ingroup config
  */
 traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_type_t type, char *from_addr, u_int16_t from_port, char *to_addr, u_int16_t to_port);
 
+/**
+ * @brief Create a new traffic selector using data read from the net.
+ * 
+ * There exists a mix of network and host order in the params.
+ * But the parser gives us this data in this format, so we
+ * don't have to convert twice.
+ * 
+ * @param protocol 		protocol for this ts, such as TCP or UDP
+ * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
+ * @param from_addr		start of address range, network order
+ * @param from_port		port number, host order
+ * @param to_addr		end of address range as string, network
+ * @param to_port		port number, host order
+ * @return
+ * 						- created traffic_selector_t
+ * 						- NULL if invalid address strings
+ * 
+ * @ingroup config
+ */
 traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from_address, int16_t from_port, chunk_t to_address, u_int16_t to_port);
 
 #endif //_TRAFFIC_SELECTOR_H_
-
-

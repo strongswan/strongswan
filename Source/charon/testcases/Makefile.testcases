@@ -111,3 +111,7 @@ $(BUILD_DIR)encryption_payload_test.o :	$(TESTCASES_DIR)encryption_payload_test.
 TEST_OBJS+= $(BUILD_DIR)init_config_test.o
 $(BUILD_DIR)init_config_test.o :	$(TESTCASES_DIR)init_config_test.c $(TESTCASES_DIR)init_config_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
+
+TEST_OBJS+= $(BUILD_DIR)sa_config_test.o
+$(BUILD_DIR)sa_config_test.o :		$(TESTCASES_DIR)sa_config_test.c $(TESTCASES_DIR)sa_config_test.h
+									$(CC) $(CFLAGS) -c -o $@ $<
