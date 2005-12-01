@@ -42,3 +42,7 @@ $(BUILD_DIR)randomizer.o :		$(UTILS_DIR)randomizer.c $(UTILS_DIR)randomizer.h
 OBJS+= $(BUILD_DIR)tester.o
 $(BUILD_DIR)tester.o :			$(UTILS_DIR)tester.c $(UTILS_DIR)tester.h
 								$(CC) $(CFLAGS) -c -o $@ $<
+
+OBJS+= $(BUILD_DIR)identification.o
+$(BUILD_DIR)identification.o :	$(UTILS_DIR)identification.c $(UTILS_DIR)identification.h
+								$(CC) $(CFLAGS) -c -o $@ $<

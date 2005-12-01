@@ -153,6 +153,30 @@ static private_host_t *clone(private_host_t *this)
 }
 
 
+/**
+ * Impelements host_t.equals
+ */
+static bool equals(private_host_t *this, private_host_t *other)
+{
+	switch (this->family)
+	{
+		/* IPv4 */
+		case AF_INET:
+		{
+			struct sockaddr_in *sin1 = (struct sockaddr_in*)&(this->address);
+			struct sockaddr_in *sin2 = (struct sockaddr_in*)&(other->address);
+			if ((sin1->sin_family == sin2->sin_family) &&
+				(sin1->sin_port == sin2->sin_port) &&
+				(sin1->sin_addr.s_addr == sin2->sin_addr.s_addr))
+			{
+				return TRUE;	
+			}
+		}
+	}
+	return FALSE;
+}
+
+
 /*
  * Described in header.
  */
@@ -200,6 +224,7 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 	this->public.get_address = (char* (*) (host_t *))get_address;
 	this->public.get_address_as_chunk = (chunk_t (*) (host_t *)) get_address_as_chunk;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
+	this->public.equals = (bool (*) (host_t *,host_t *))equals;
 	this->public.destroy = (void (*) (host_t*))destroy;
 	
 	this->family = family;

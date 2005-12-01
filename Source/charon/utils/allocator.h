@@ -133,6 +133,22 @@
 		 * 				- NULL if out of ressources
 		 */ 
 		void * (*clone_bytes) (allocator_t *this,void * to_clone, size_t bytes, char * file, int line);		
+		
+		/**
+		 * Clones a chunk with LEAK_DETECTION and returns a cloned chunk.
+		 * 
+		 * @warning 	Use this function not directly, only with assigned macro 
+		 * 				#allocator_clone_chunk-
+		 * 
+		 * @param this 	allocator_t object
+		 * @param chunk	chunk to clone
+		 * @param file 	filename from which the memory is allocated
+		 * @param line 	line number in specific file
+		 * @return 		
+		 * 				- pointer to reallocated memory area if successful
+		 * 				- NULL if out of ressources
+		 */ 
+		chunk_t (*clone_chunk) (allocator_t *this, chunk_t chunk, char * file, int line);		
 				
 		/**
 		 * Frees memory with LEAK_DETECTION.
@@ -201,6 +217,16 @@
 	 */
 	#define allocator_clone_bytes(old,bytes) (global_allocator->clone_bytes(global_allocator,old,bytes,__FILE__, __LINE__))
 	
+	
+	/**
+	 * Macro to clone a chunk and its contents
+	 * 
+	 * See #allocator_t.clone_chunk  for description.
+	 * 
+	 * @ingroup utils
+	 */
+	#define allocator_clone_chunk(chunk) (global_allocator->clone_chunk(global_allocator,chunk,__FILE__, __LINE__))
+	
 	/**
 	 * Macro to free some memory.
 	 * 
@@ -264,6 +290,17 @@
 	 * @ingroup utils
 	 */
 	void * allocator_clone_bytes(void * pointer, size_t size);
+	
+	/**
+	 * Clone a chunk and its contents.
+	 *
+	 *
+ 	 * @param chunk		chunk to clone
+ 	 * @return 			cloned chunk
+	 * 
+	 * @ingroup utils
+	 */
+	chunk_t allocator_clone_bytes(chunk_t chunk);
 	
 	/**
 	 * Frees memory used by chunk.

@@ -352,7 +352,7 @@ static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t *
 	/* TODO configuration manager request */
 	id_payload->set_id_type(id_payload,ID_RFC822_ADDR);
 	email.ptr = "moerdi@hsr.ch";
-	email.len = strlen(email.ptr);
+	email.len = strlen(email.ptr)+1;
 	this->logger->log_chunk(this->logger, CONTROL, "Moerdi",&email);
 	id_payload->set_data(id_payload,email);
 	

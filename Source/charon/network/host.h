@@ -105,6 +105,15 @@ struct host_t {
 	 * @return				port number
 	 */
 	u_int16_t (*get_port) (host_t *this);
+		
+	/** 
+	 * @brief Compare two hosts.
+	 * 
+	 * @param this			object to compare
+	 * @param other			the other to compare
+	 * @return				TRUE if port and address are equal
+	 */
+	bool (*equals) (host_t *this, host_t *other);
 	
 	/** 
 	 * @brief Destroy this host object

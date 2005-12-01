@@ -264,6 +264,25 @@ static void * clone_bytes(allocator_t *allocator,void * to_clone, size_t bytes, 
 	return new_space;
 }
 
+
+/**
+ * Implementation of allocator_t.clone_chunk. 
+ */
+static chunk_t clone_chunk(allocator_t *allocator, chunk_t chunk, char * file, int line)
+{
+	private_allocator_t *this = (private_allocator_t *) allocator;
+	chunk_t clone = CHUNK_INITIALIZER;
+	
+	if (chunk.ptr && chunk.len > 0)
+	{
+		clone.ptr = this->allocate_special(this,chunk.len,file,line,TRUE);
+		clone.len = chunk.len;
+		memcpy(clone.ptr, chunk.ptr, chunk.len);
+	}
+	
+    return clone;
+}
+
 /**
  * Implementation of allocator_t.allocator_report_memory_leaks. 
  */
@@ -305,6 +324,7 @@ static private_allocator_t allocator = {
 			 free_pointer: free_pointer,
 			 reallocate: reallocate,
 			 clone_bytes : clone_bytes,
+			 clone_chunk : clone_chunk,
  			 report_memory_leaks: allocator_report_memory_leaks},
 	allocations: NULL,
 	allocate_special : allocate_special,
@@ -354,6 +374,25 @@ void * allocator_clone_bytes(void * pointer, size_t size)
 	memmove(data,pointer,size);
 	
 	return (data);
+}
+
+
+/**
+ * Described in header
+ */
+static chunk_t clone_chunk(chunk_t chunk)
+{
+	chunk_t clone = CHUNK_INITIALIZER;
+	
+	if (chunk.ptr && chunk.len > 0)
+	{
+		clone.ptr = malloc(chunk.len);
+		if (clone.ptr == NULL) {exit(-1)};
+		clone.len = chunk.len;
+		memcpy(clone.ptr, chunk.ptr, chunk.len);
+	}
+	
+    return clone;
 }
 
 /*
