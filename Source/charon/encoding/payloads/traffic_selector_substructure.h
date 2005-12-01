@@ -27,6 +27,7 @@
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <network/host.h>
+#include <config/traffic_selector.h>
 
 /**
  * Length of a TRAFFIC SELECTOR SUBSTRUCTURE without start and end address.
@@ -34,35 +35,6 @@
  * @ingroup payloads
  */
 #define TRAFFIC_SELECTOR_HEADER_LENGTH 8
-
-
-typedef enum ts_type_t ts_type_t;
-
-/**
- * Traffic selector Types.
- * 
- * @ingroup payloads
- */
-enum ts_type_t {
-	/*
-	 * A range of IPv4 addresses, represented by two four (4) octet
-     * values.  The first value is the beginning IPv4 address
-     * (inclusive) and the second value is the ending IPv4 address
-     * (inclusive). All addresses falling between the two specified
-     * addresses are considered to be within the list.
-     */
-	TS_IPV4_ADDR_RANGE = 7,
-	/*
-	 * A range of IPv6 addresses, represented by two sixteen (16)
-     * octet values.  The first value is the beginning IPv6 address
-     * (inclusive) and the second value is the ending IPv6 address
-     * (inclusive). All addresses falling between the two specified
-     *  addresses are considered to be within the list.
-	 */
-	TS_IPV6_ADDR_RANGE = 8
-};
-
-extern mapping_t ts_type_m[];
 
 typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
 
@@ -153,6 +125,16 @@ struct traffic_selector_substructure_t {
 	void (*set_end_host) (traffic_selector_substructure_t *this,host_t *end_host);
 	
 	/**
+	 * @brief Get a traffic_selector_t from this substructure.
+	 *
+	 * @warning traffic_selector_t must be destroyed after usage.
+	 * 
+	 * @param this 		calling traffic_selector_substructure_t object
+	 * @return			contained traffic_selector_t
+	 */
+	traffic_selector_t *(*get_traffic_selector) (traffic_selector_substructure_t *this);
+	
+	/**
 	 * @brief Destroys an traffic_selector_substructure_t object.
 	 *
 	 * @param this 	traffic_selector_substructure_t object to destroy
@@ -170,6 +152,17 @@ struct traffic_selector_substructure_t {
  * @ingroup payloads
  */
 traffic_selector_substructure_t *traffic_selector_substructure_create();
+
+/**
+ * @brief Creates an initialized traffif selector substructure using
+ * the values from a traffic_selector_t.
+ * 
+ * @param traffic_selector	traffic_selector_t to use for initialization
+ * @return					created traffic_selector_substructure_t object
+ * 
+ * @ingroup payloads
+ */
+traffic_selector_substructure_t *traffic_selector_substructure_create_from_traffic_selector(traffic_selector_t *traffic_selector);
 
 
 #endif //TRAFFIC_SELECTOR_SUBSTRUCTURE_H_

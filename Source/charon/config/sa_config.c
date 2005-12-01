@@ -96,7 +96,7 @@ static auth_method_t get_auth_method(private_sa_config_t *this)
 /**
  * implements sa_config_t.get_traffic_selectors
  */
-static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_t ***traffic_selectors)
+static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_t **traffic_selectors[])
 {
 	iterator_t *iterator;
 	traffic_selector_t *current_ts;
@@ -118,7 +118,7 @@ static size_t get_traffic_selectors(private_sa_config_t *this, traffic_selector_
 /**
  * implements sa_config_t.select_traffic_selectors
  */
-static size_t select_traffic_selectors(private_sa_config_t *this, traffic_selector_t **supplied, size_t count, traffic_selector_t ***selected)
+static size_t select_traffic_selectors(private_sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[])
 {
 	iterator_t *iterator;
 	traffic_selector_t *current_ts;
@@ -307,8 +307,8 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	this->public.get_my_id = (identification_t*(*)(sa_config_t*))get_my_id;
 	this->public.get_other_id = (identification_t*(*)(sa_config_t*))get_other_id;
 	this->public.get_auth_method = (auth_method_t(*)(sa_config_t*))get_auth_method;
-	this->public.get_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t***))get_traffic_selectors;
-	this->public.select_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t**,size_t,traffic_selector_t***))select_traffic_selectors;
+	this->public.get_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t**[]))get_traffic_selectors;
+	this->public.select_traffic_selectors = (size_t(*)(sa_config_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]))select_traffic_selectors;
 	this->public.get_proposals = (size_t(*)(sa_config_t*,u_int8_t[4],u_int8_t[4],child_proposal_t**))get_proposals;
 	this->public.select_proposal = (child_proposal_t*(*)(sa_config_t*,u_int8_t[4],u_int8_t[4],child_proposal_t*,size_t))select_proposal;
 	this->public.add_traffic_selector = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector;

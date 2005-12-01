@@ -24,7 +24,37 @@
 #define _TRAFFIC_SELECTOR_H_
 
 #include <types.h>
-#include <encoding/payloads/traffic_selector_substructure.h>
+
+typedef enum ts_type_t ts_type_t;
+
+/**
+ * Traffic selector Types.
+ * 
+ * @ingroup config
+ */
+enum ts_type_t {
+	/*
+	 * A range of IPv4 addresses, represented by two four (4) octet
+     * values.  The first value is the beginning IPv4 address
+     * (inclusive) and the second value is the ending IPv4 address
+     * (inclusive). All addresses falling between the two specified
+     * addresses are considered to be within the list.
+     */
+	TS_IPV4_ADDR_RANGE = 7,
+	/*
+	 * A range of IPv6 addresses, represented by two sixteen (16)
+     * octet values.  The first value is the beginning IPv6 address
+     * (inclusive) and the second value is the ending IPv6 address
+     * (inclusive). All addresses falling between the two specified
+     *  addresses are considered to be within the list.
+	 */
+	TS_IPV6_ADDR_RANGE = 8
+};
+
+/**
+ * string mappings for ts_type_t
+ */
+extern mapping_t ts_type_m[];
 
 
 typedef struct traffic_selector_t traffic_selector_t;
@@ -108,6 +138,22 @@ struct traffic_selector_t {
 	 * @return			port
 	 */
 	u_int16_t (*get_to_port) (traffic_selector_t *this);
+	
+	/**
+	 * @brief Get the type of the traffic selector.
+	 * 
+	 * @param this		calling obect
+	 * @return			ts_type_t specifying the type
+	 */
+	ts_type_t (*get_type) (traffic_selector_t *this);
+		
+	/**
+	 * @brief Get the protocol id of this ts.
+	 * 
+	 * @param this		calling obect
+	 * @return			protocol id
+	 */
+	u_int8_t (*get_protocol) (traffic_selector_t *this);
 	
 	/**
 	 * @brief Destroys the ts object

@@ -25,6 +25,7 @@
 #include <utils/linked_list.h>
 #include <utils/allocator.h>
 #include <utils/identification.h>
+#include <arpa/inet.h>
 
 typedef struct private_traffic_selector_t private_traffic_selector_t;
 
@@ -198,6 +199,22 @@ static u_int16_t get_to_port(private_traffic_selector_t *this)
 }
 
 /**
+ * Implements traffic_selector_t.get_type.
+ */
+static ts_type_t get_type(private_traffic_selector_t *this)
+{
+	return this->type;
+}
+
+/**
+ * Implements traffic_selector_t.get_protocol.
+ */
+static u_int8_t get_protocol(private_traffic_selector_t *this)
+{
+	return this->protocol;
+}
+
+/**
  * Implements traffic_selector_t.clone.
  */
 static traffic_selector_t *clone(private_traffic_selector_t *this)
@@ -316,6 +333,8 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->public.get_to_address = (chunk_t(*)(traffic_selector_t*))get_to_address;
 	this->public.get_from_port = (u_int16_t(*)(traffic_selector_t*))get_from_port;
 	this->public.get_to_port = (u_int16_t(*)(traffic_selector_t*))get_to_port;	
+	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;	
+	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;	
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
 	

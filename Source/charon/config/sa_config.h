@@ -125,7 +125,7 @@ struct sa_config_t {
 	 * @param[out]traffic_selectors	pointer where traffic selectors will be allocated
 	 * @return						number of returned traffic selectors
 	 */
-	size_t (*get_traffic_selectors) (sa_config_t *this, traffic_selector_t ***traffic_selectors);
+	size_t (*get_traffic_selectors) (sa_config_t *this, traffic_selector_t **traffic_selectors[]);
 	
 	/**
 	 * @brief Select traffic selectors from a supplied list.
@@ -142,7 +142,7 @@ struct sa_config_t {
 	 * @param[out]traffic_selectors	pointer where selected traffic selectors will be allocated
 	 * @return						number of selected traffic selectors
 	 */
-	size_t (*select_traffic_selectors) (sa_config_t *this, traffic_selector_t **supplied, size_t count, traffic_selector_t ***selected);
+	size_t (*select_traffic_selectors) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
 	
 	/**
 	 * @brief Get the list of proposals for this config.
@@ -153,7 +153,7 @@ struct sa_config_t {
 	 * @param[out]traffic_selectors	pointer where proposals will be allocated
 	 * @return						number of allocated proposals
 	 */
-	size_t (*get_proposals) (sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t **proposals);
+	size_t (*get_proposals) (sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t *proposals[]);
 	
 	/**
 	 * @brief Select a proposal from a supplied list

@@ -26,6 +26,7 @@
 
 #include <types.h>
 #include <utils/iterator.h>
+#include <config/traffic_selector.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/traffic_selector_substructure.h>
 
@@ -100,6 +101,18 @@ struct ts_payload_t {
 	 * @return				created iterator_t object
 	 */
 	iterator_t *(*create_traffic_selector_substructure_iterator) (ts_payload_t *this, bool forward);
+	
+	/**
+	 * @brief Create an array of the nested traffic_selector_t's.
+	 * 
+	 * @warning Array must be freed after usage.
+	 * @warnging traffic selector must be destroyed after usage.
+	 *
+	 * @param this 			calling ts_payload_t object
+	 * @param[out]			address of the array of traffic_selectors will be written here.
+	 * @return				number of ts in the allocated array
+	 */
+	size_t (*get_traffic_selectors) (ts_payload_t *this, traffic_selector_t **traffic_selectors[]);
 
 	/**
 	 * @brief Destroys an ts_payload_t object.
@@ -110,18 +123,32 @@ struct ts_payload_t {
 };
 
 /**
- * @brief Creates an empty id_payload_t object.
+ * @brief Creates an empty ts_payload_t object.
  * 
  * 
  * @param is_initiator	
  * 						- TRUE if this payload is of type TSi
  * 						- FALSE if this payload is of type TSr
  * 
- * @return				created id_payload_t object
+ * @return				created ts_payload_t object
  * 
  * @ingroup payloads
  */
 ts_payload_t *ts_payload_create(bool is_initiator);
+
+/**
+ * @brief Creates ts_payload with the specified traffic_selectors.
+ * 
+ * 
+ * @param is_initiator	
+ * 						- TRUE if this payload is of type TSi
+ * 						- FALSE if this payload is of type TSr
+ * 
+ * @return				created ts_payload_t object
+ * 
+ * @ingroup payloads
+ */
+ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, traffic_selector_t *traffic_selectors[], size_t count);
 
 
 #endif //TS_PAYLOAD_H_

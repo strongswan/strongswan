@@ -225,7 +225,7 @@ static void set_initiator (private_ts_payload_t *this,bool is_initiator)
 static void add_traffic_selector_substructure (private_ts_payload_t *this,traffic_selector_substructure_t *traffic_selector)
 {
 	this->traffic_selectors->insert_last(this->traffic_selectors,traffic_selector);
-	this->number_of_traffic_selectors= this->traffic_selectors->get_count(this->traffic_selectors);
+	this->number_of_traffic_selectors = this->traffic_selectors->get_count(this->traffic_selectors);
 }
 
 /**
@@ -234,6 +234,28 @@ static void add_traffic_selector_substructure (private_ts_payload_t *this,traffi
 static iterator_t * create_traffic_selector_substructure_iterator (private_ts_payload_t *this, bool forward)
 {
 	return this->traffic_selectors->create_iterator(this->traffic_selectors,forward);
+}
+
+static size_t get_traffic_selectors(private_ts_payload_t *this, traffic_selector_t **traffic_selectors[])
+{
+	traffic_selector_t **ts;
+	iterator_t *iterator;
+	int i = 0;
+	
+	//ts = allocator_alloc(sizeof(traffic_selector_t*) * this->number_of_traffic_selectors);
+	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors, TRUE);
+	int x = this->traffic_selectors->get_count(this->traffic_selectors);
+	while (iterator->has_next)
+	{
+		traffic_selector_substructure_t *ts_substructure;
+		iterator->current(iterator, (void**)&ts_substructure);
+		//ts[i] = ts_substructure->get_traffic_selector(ts_substructure);
+		i++;
+	}
+	
+	/* return values */
+	//*traffic_selectors = ts;
+	return this->number_of_traffic_selectors;
 }
 
 /**
@@ -301,6 +323,7 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 	this->public.set_initiator = (void (*) (ts_payload_t *,bool)) set_initiator;
 	this->public.add_traffic_selector_substructure = (void (*) (ts_payload_t *,traffic_selector_substructure_t *)) add_traffic_selector_substructure;
 	this->public.create_traffic_selector_substructure_iterator = (iterator_t* (*) (ts_payload_t *,bool)) create_traffic_selector_substructure_iterator;
+	this->public.get_traffic_selectors = (size_t (*) (ts_payload_t *, traffic_selector_t**[])) get_traffic_selectors;
 	
 	/* private functions */
 	this->compute_length = compute_length;
@@ -311,7 +334,28 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 	this->payload_length =TS_PAYLOAD_HEADER_LENGTH;
 	this->is_initiator = is_initiator;
 	this->number_of_traffic_selectors=0;
-	this->traffic_selectors = linked_list_create();
+	this->traffic_selectors = linked_list_create();  
 
-	return (&(this->public));
+	return &(this->public);
 }
+
+/*
+ * Described in header
+ */
+ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, traffic_selector_t *traffic_selectors[], size_t count)
+{
+	int i;
+	private_ts_payload_t *this;
+	
+	this = (private_ts_payload_t*)ts_payload_create(is_initiator);
+	
+	for (i = 0; i < count; i++)
+	{
+		traffic_selector_substructure_t *ts_substructure;
+		ts_substructure = traffic_selector_substructure_create_from_traffic_selector(traffic_selectors[i]);
+		this->public.add_traffic_selector_substructure(&(this->public), ts_substructure);
+	}
+	
+	return &(this->public);
+}
+
