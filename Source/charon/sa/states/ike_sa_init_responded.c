@@ -251,6 +251,10 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	init_config = this->ike_sa->get_init_config(this->ike_sa);
 	status = charon->configuration_manager->get_sa_config_for_init_config_and_id(charon->configuration_manager,init_config, other_id,my_id, &(this->sa_config));
 	other_id->destroy(other_id);
+	if (my_id)
+	{
+		my_id->destroy(my_id);
+	}
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR, "Could not find config for %s", other_id->get_string(other_id));
@@ -262,10 +266,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	}
 	
 	/* get my id, if not requested */
-	if (!my_id)
-	{
-		my_id = this->sa_config->get_my_id(this->sa_config);
-	}
+	my_id = this->sa_config->get_my_id(this->sa_config);	
 	
 	/* set sa_config in ike_sa for other states */
 	this->ike_sa->set_sa_config(this->ike_sa, this->sa_config);
@@ -274,7 +275,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	idr_response = id_payload_create_from_identification(FALSE, my_id);
 	response->add_payload(response, (payload_t*)idr_response);
 	
-	my_id->destroy(my_id);	
+	
 	return SUCCESS;
 }
 
