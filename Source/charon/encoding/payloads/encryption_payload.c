@@ -353,6 +353,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	
 	/* get IV */
 	iv.len = this->crypter->get_block_size(this->crypter);
+	
 	iv.ptr = this->encrypted.ptr;
 	
 	/* point concatenated to data + padding + padding_length*/
@@ -394,7 +395,6 @@ static status_t decrypt(private_encryption_payload_t *this)
 	
 	/* free padding */
 	this->decrypted.ptr = allocator_realloc(this->decrypted.ptr, this->decrypted.len);
-	
 	this->logger->log(this->logger, CONTROL|MOST, "decryption successful, trying to parse content");
 	return (this->parse(this));
 }

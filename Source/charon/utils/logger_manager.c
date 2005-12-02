@@ -151,6 +151,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case MESSAGE:
 		case ENCRYPTION_PAYLOAD:
 		case WORKER:
+		case CONFIGURATION_MANAGER:
 			logger_level |= ALL;
 		case PARSER:
 		case GENERATOR:
@@ -160,12 +161,10 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case RECEIVER:
 		case SOCKET:
 		case DAEMON:
-		case CONFIGURATION_MANAGER:
 			log_thread_ids = FALSE;
 			logger_level |= ERROR|CONTROL;
 			break;
 	}
-	
 	
 	/* reduce to global definiton of loglevel */
 	logger_level &= this->public.get_logger_level(&(this->public),context);

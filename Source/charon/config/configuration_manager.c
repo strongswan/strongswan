@@ -166,8 +166,8 @@ static void load_default_config (private_configuration_manager_t *this)
 	sa_config_t *sa_config1, *sa_config2, *sa_config3;
 	traffic_selector_t *ts;
 	
-	init_config1 = init_config_create("152.96.193.130","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
-	init_config2 = init_config_create("152.96.193.131","152.96.193.130",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config1 = init_config_create("0.0.0.0","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config2 = init_config_create("0.0.0.0","152.96.193.130",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config3 = init_config_create("0.0.0.0","127.0.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
 	
@@ -254,6 +254,9 @@ static status_t get_init_config_for_host (private_configuration_manager_t *this,
 	
 	iterator = this->configurations->create_iterator(this->configurations,TRUE);
 	
+	this->logger->log(this->logger, CONTROL|MORE, "getting config for hosts %s - %s", 
+						my_host->get_address(my_host), other_host->get_address(other_host));
+	
 	while (iterator->has_next(iterator))
 	{
 		configuration_entry_t *entry;
@@ -268,9 +271,12 @@ static status_t get_init_config_for_host (private_configuration_manager_t *this,
 		/* first check if ip is equal */
 		if(config_other_host->ip_is_equal(config_other_host,other_host))
 		{
+			this->logger->log(this->logger, CONTROL|MOST, "config entry with remote host %s", 
+						config_other_host->get_address(config_other_host));
 			/* could be right one, check my_host for default route*/
 			if (config_my_host->is_default_route(config_my_host))
 			{
+				printf("is default route\n");
 				*init_config = entry->init_config;
 				status = SUCCESS;
 				break;

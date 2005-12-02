@@ -42,6 +42,11 @@ struct private_host_t {
 	int family;
 	
 	/**
+	 * string representation of host
+	 */
+	char *string;
+	
+	/**
 	 * low-lewel structure, wich stores the address
 	 */
 	sockaddr_t address;
@@ -78,16 +83,15 @@ static bool is_default_route (private_host_t *this)
 	{
 		case AF_INET: 
 		{
-			int i;
-			for (i = 0; i < 4;i++)
+			static u_int8_t default_route[4] = {0x00,0x00,0x00,0x00};
+			struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
+			printf("host address: %ul\n", sin->sin_addr.s_addr);
+			
+			if (memcmp(default_route,&(sin->sin_addr.s_addr),4) == 0)
 			{
-				struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
-				if (*((&sin->sin_addr.s_addr) + i) != 0)
-				{
-					return FALSE;
-				}
+				return TRUE;
 			}
-			return TRUE;
+			return FALSE;
 		}
 		default:
 		{
@@ -106,8 +110,13 @@ static char *get_address(private_host_t *this)
 	{
 		case AF_INET: 
 		{
+			char *string;
 			struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
-			return inet_ntoa(sin->sin_addr);
+			allocator_free(this->string);
+			string = inet_ntoa(sin->sin_addr);
+			this->string = allocator_alloc(strlen(string)+1);
+			strcpy(this->string, string);
+			return this->string;
 		}
 		default:
 		{
@@ -161,13 +170,6 @@ static u_int16_t get_port(private_host_t *this)
 	}
 }
 
-/**
- * Implements host_t.destroy
- */
-static void destroy(private_host_t *this)
-{
-	allocator_free(this);
-}
 
 /**
  * Implements host_t.clone.
@@ -175,8 +177,14 @@ static void destroy(private_host_t *this)
 static private_host_t *clone(private_host_t *this)
 {
 	private_host_t *new = allocator_alloc_thing(private_host_t);
+	
 		
 	memcpy(new, this, sizeof(private_host_t));
+	if (this->string)
+	{
+		new->string = allocator_alloc(strlen(this->string)+1);
+		strcpy(new->string, this->string);
+	}
 	return new;
 }
 
@@ -203,6 +211,14 @@ static bool ip_is_equal(private_host_t *this, private_host_t *other)
 	return FALSE;
 }
 
+/**
+ * Implements host_t.destroy
+ */
+static void destroy(private_host_t *this)
+{
+	allocator_free(this->string);
+	allocator_free(this);
+}
 
 /**
  * Creates an empty host_t object 
@@ -220,6 +236,8 @@ static private_host_t *host_create_empty()
 	this->public.ip_is_equal = (bool (*) (host_t *,host_t *)) ip_is_equal;
 	this->public.is_default_route = (bool (*) (host_t *)) is_default_route;
 	this->public.destroy = (void (*) (host_t*))destroy;
+	
+	this->string = NULL;
 	
 	return this;
 }

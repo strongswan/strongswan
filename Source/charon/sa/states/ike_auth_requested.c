@@ -259,24 +259,21 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 {
 	identification_t *other_id, *configured_other_id;
 	
-	/* idr is optional */
-	if (idr_payload)
+	other_id = idr_payload->get_identification(idr_payload);
+
+	configured_other_id = this->sa_config->get_other_id(this->sa_config);
+	if (configured_other_id)
 	{
-		other_id = idr_payload->get_identification(idr_payload);
-	
-		configured_other_id = this->sa_config->get_other_id(this->sa_config);
-		if (configured_other_id)
+		if (!other_id->equals(other_id, configured_other_id))
 		{
-			if (!other_id->equals(other_id, configured_other_id))
-			{
-				this->logger->log(this->logger, ERROR, "IKE_AUTH reply didn't contain requested id");
-				return FAILED;	
-			}
+			other_id->destroy(other_id);
+			this->logger->log(this->logger, ERROR, "IKE_AUTH reply didn't contain requested id");
+			return FAILED;	
 		}
-		
-		other_id->destroy(other_id);
-		/* TODO do we have to store other_id  somewhere ? */
 	}
+	
+	other_id->destroy(other_id);
+	/* TODO do we have to store other_id  somewhere ? */
 	return SUCCESS;
 }
 
