@@ -175,7 +175,14 @@ static void get_encoding_rules(private_ts_payload_t *this, encoding_rule_t **rul
  */
 static payload_type_t get_payload_type(private_ts_payload_t *this)
 {
-	return ((this->is_initiator) ? TRAFFIC_SELECTOR_INITIATOR : TRAFFIC_SELECTOR_RESPONDER);
+	if (this->is_initiator)
+	{
+		return TRAFFIC_SELECTOR_INITIATOR;
+	}
+	else
+	{
+		return TRAFFIC_SELECTOR_RESPONDER;
+	}
 }
 
 /**
