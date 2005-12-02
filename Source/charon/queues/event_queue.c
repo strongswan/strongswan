@@ -189,7 +189,15 @@ static job_t *get(private_event_queue_t *this)
 			timeout.tv_sec = next_event->time.tv_sec;
             timeout.tv_nsec = next_event->time.tv_usec * 1000;
 
+			/* add mutex unlock handler for cancellation, enable cancellation */
+			pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
+			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+			
 			pthread_cond_timedwait( &(this->condvar), &(this->mutex),&timeout);
+			
+			/* reset cancellation, remove mutex-unlock handler (without executing) */
+			pthread_setcancelstate(oldstate, NULL);
+			pthread_cleanup_pop(0);
 		}
 		else
 		{
