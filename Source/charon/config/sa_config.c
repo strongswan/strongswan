@@ -260,31 +260,74 @@ static child_proposal_t *select_proposal(private_sa_config_t *this, u_int8_t ah_
  */
 static bool proposal_equals(private_sa_config_t *this, child_proposal_t *first, child_proposal_t *second)
 {
+	/* 
+	 * 	Proto ? Mandatory ? Optional
+	 *  -----------------------------------
+	 *  ESP   ? ENCR      ? INTEG, D-H, ESN
+     *  AH    ? INTEG     ? D-H, ESN
+     */
+	
+	/* equality defaults to false, so return is FALSE if ah and esp not set */
 	bool equal = FALSE;
 	
+	/* check ah, if set */
 	if (first->ah.is_set && second->ah.is_set)
 	{
-		if ((first->ah.integrity_algorithm != second->ah.integrity_algorithm) ||
-			(first->ah.integrity_algorithm_key_size != second->ah.integrity_algorithm_key_size) ||
-			(first->ah.diffie_hellman_group != second->ah.diffie_hellman_group) ||
-			(first->ah.extended_sequence_numbers != second->ah.extended_sequence_numbers))
+		/* integrity alg is mandatory, with key size */
+		if ((first->ah.integrity_algorithm == second->ah.integrity_algorithm) &&
+			(first->ah.integrity_algorithm_key_size == second->ah.integrity_algorithm_key_size))
 		{
-			return FALSE;
+			/* dh group is optional, but must be NOT_SET when not set */
+			if 	(first->ah.diffie_hellman_group != second->ah.diffie_hellman_group)
+			{
+				return FALSE;
+			}
+			/* sequence numbers is optional, but must be NOT_SET when not set */
+			if (first->ah.extended_sequence_numbers != second->ah.extended_sequence_numbers)
+			{
+				return FALSE;
+			}
+			/* all checked, ah seems ok */
+			equal = TRUE;	
 		}
-		equal = TRUE;
+		else
+		{
+			return FALSE;	
+		}
 	}
+	/* check esp, if set */
 	if (first->esp.is_set && second->esp.is_set)
 	{
-		if ((first->esp.encryption_algorithm != second->esp.encryption_algorithm) ||
-			(first->esp.encryption_algorithm_key_size != second->esp.encryption_algorithm_key_size) ||
-			(first->esp.integrity_algorithm != second->esp.integrity_algorithm) ||
-			(first->esp.integrity_algorithm_key_size != second->esp.integrity_algorithm_key_size) ||
-			(first->esp.diffie_hellman_group != second->esp.diffie_hellman_group) ||
-			(first->esp.extended_sequence_numbers != second->esp.extended_sequence_numbers))
+		/* encryption alg is mandatory, with key size */
+		if ((first->esp.encryption_algorithm == second->esp.encryption_algorithm) &&
+			(first->esp.encryption_algorithm_key_size == second->esp.encryption_algorithm_key_size))
 		{
-			return FALSE;
+			/* int alg is optional, check key only when not NOT_SET */
+			if (first->esp.integrity_algorithm != second->esp.integrity_algorithm)
+			{
+				return FALSE;	
+			}
+			if ((first->esp.integrity_algorithm != AUTH_UNDEFINED) &&
+				(first->esp.integrity_algorithm_key_size != second->esp.integrity_algorithm_key_size))
+			{
+				return FALSE;	
+			}
+			/* dh group is optional, but must be NOT_SET when not set */
+			if (first->esp.diffie_hellman_group != second->esp.diffie_hellman_group)
+			{
+				return FALSE;	
+			}
+			if (first->esp.extended_sequence_numbers != second->esp.extended_sequence_numbers)
+			{
+				return FALSE;	
+			}
+			/* all checked, esp seems ok */
+			equal = TRUE;
 		}
-		equal = TRUE;
+		else
+		{
+			return FALSE;	
+		}
 	}
 	return equal;
 }

@@ -282,6 +282,22 @@ struct protected_ike_sa_t {
 	 * @return					pointer to signer_t object
 	 */
 	signer_t *(*get_signer_initiator) (protected_ike_sa_t *this);
+	
+	/**
+	 * Gets the internal stored responder crypter_t object.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to crypter_t object
+	 */
+	crypter_t *(*get_crypter_responder) (protected_ike_sa_t *this);
+	
+	/**
+	 * Gets the internal stored responder signer object.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to signer_t object
+	 */
+	signer_t *(*get_signer_responder) (protected_ike_sa_t *this);
 
 	/**
 	 * Resets message id counters and does destroy stored received and sent messages.

@@ -49,6 +49,7 @@ enum logger_context_t {
 	TESTER,
 	DAEMON,
 	CONFIGURATION_MANAGER,
+	ENCRYPTION_PAYLOAD,
 };
 
 typedef struct logger_manager_t logger_manager_t;

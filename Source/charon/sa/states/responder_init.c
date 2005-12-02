@@ -361,7 +361,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 
-	next_state = ike_sa_init_responded_create(this->ike_sa, shared_secret, this->received_nonce, this->sent_nonce);
+	next_state = ike_sa_init_responded_create(this->ike_sa);
 	
 	/* last message can now be set */
 	status = this->ike_sa->set_last_responded_message(this->ike_sa, response);

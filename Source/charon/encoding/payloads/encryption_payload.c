@@ -25,9 +25,11 @@
 
 #include "encryption_payload.h"
 
+#include <daemon.h>
 #include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
+#include <utils/logger.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 #include <utils/iterator.h>
@@ -93,6 +95,11 @@ struct private_encryption_payload_t {
 	 */
 	linked_list_t *payloads;
 	
+	/** 
+	 * logger for this payload, uses MESSAGE context
+	 */
+	logger_t *logger;
+	
 	/**
 	 * @brief Computes the length of this payload.
 	 *
@@ -106,6 +113,12 @@ struct private_encryption_payload_t {
 	 * @param this 	calling private_encryption_payload_t object
 	 */
 	void (*generate) (private_encryption_payload_t *this);
+		
+	/**
+	 * @brief Parse payloads from a (unencrypted) chunk.
+	 * 
+	 * @param this 	calling private_encryption_payload_t object
+	 */
 	status_t (*parse) (private_encryption_payload_t *this);
 };
 
@@ -160,24 +173,6 @@ encoding_rule_t encryption_payload_encodings[] = {
 static status_t verify(private_encryption_payload_t *this)
 {
 	return SUCCESS;
-}
-
-/**
- * Implementation of payload_t.destroy.
- */
-static void destroy(private_encryption_payload_t *this)
-{
-	/* all proposals are getting destroyed */ 
-	while (this->payloads->get_count(this->payloads) > 0)
-	{
-		payload_t *current_payload;
-		this->payloads->remove_last(this->payloads,(void **)&current_payload);
-		current_payload->destroy(current_payload);
-	}
-	this->payloads->destroy(this->payloads);
-	allocator_free(this->encrypted.ptr);
-	allocator_free(this->decrypted.ptr);
-	allocator_free(this);
 }
 
 /**
@@ -281,14 +276,18 @@ static status_t encrypt(private_encryption_payload_t *this)
 	
 	if (this->signer == NULL || this->crypter == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "could not encrypt, signer/crypter not set");
 		return INVALID_STATE;
 	}
 	
 	/* for random data in iv and padding */
 	randomizer = randomizer_create();
 
+
 	/* build payload chunk */
 	this->generate(this);
+	
+	this->logger->log(this->logger, CONTROL|MOST, "encrypting payloads");
 	
 	/* build padding */
 	block_size = this->crypter->get_block_size(this->crypter);
@@ -315,6 +314,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	allocator_free(to_crypt.ptr);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "encryption failed");
 		allocator_free(iv.ptr);
 		return status;
 	}
@@ -342,8 +342,12 @@ static status_t decrypt(private_encryption_payload_t *this)
 	u_int8_t padding_length;
 	status_t status;
 	
+	
+	this->logger->log(this->logger, CONTROL|MOST, "decrypting encryption payload");
+	
 	if (this->signer == NULL || this->crypter == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "could not decrypt, no crypter/signer set");
 		return INVALID_STATE;
 	}
 	
@@ -360,6 +364,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	 */
 	if (concatenated.len < iv.len)
 	{
+		this->logger->log(this->logger, ERROR, "could not decrypt, invalid input");
 		return FAILED;
 	}
 	
@@ -369,6 +374,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	status = this->crypter->decrypt(this->crypter, concatenated, iv, &(this->decrypted));
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "could not decrypt, decryption failed");
 		return FAILED;
 	}
 	
@@ -381,6 +387,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	/* check size again */
 	if (padding_length > concatenated.len || this->decrypted.len < 0)
 	{
+		this->logger->log(this->logger, ERROR, "decryption failed, invalid padding length found. Invalid key ?");
 		/* decryption failed :-/ */
 		return FAILED;
 	}
@@ -388,6 +395,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	/* free padding */
 	this->decrypted.ptr = allocator_realloc(this->decrypted.ptr, this->decrypted.len);
 	
+	this->logger->log(this->logger, CONTROL|MOST, "decryption successful, trying to parse content");
 	return (this->parse(this));
 }
 
@@ -410,12 +418,14 @@ static status_t build_signature(private_encryption_payload_t *this, chunk_t data
 	
 	if (this->signer == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "unable to build signature, no signer set");
 		return INVALID_STATE;
 	}
 	
 	sig.len = this->signer->get_block_size(this->signer);
 	data_without_sig.len -= sig.len;
 	sig.ptr = data.ptr + data_without_sig.len;
+	this->logger->log(this->logger, CONTROL|MOST, "building signature");
 	this->signer->get_signature(this->signer, data_without_sig, sig.ptr);
 	return SUCCESS;
 }
@@ -430,12 +440,14 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 	
 	if (this->signer == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "unable to verify signature, no signer set");
 		return INVALID_STATE;
 	}
 	/* find signature in data chunk */
 	sig.len = this->signer->get_block_size(this->signer);
 	if (data.len <= sig.len)
 	{
+		this->logger->log(this->logger, ERROR|MORE, "unable to verify signature, invalid input");
 		return FAILED;
 	}
 	sig.ptr = data.ptr + data.len - sig.len;
@@ -447,9 +459,11 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 	
 	if (!valid)
 	{
+		this->logger->log(this->logger, ERROR|MORE, "signature verification failed");
 		return FAILED;
 	}
 	
+	this->logger->log(this->logger, CONTROL|MOST, "signature verification successful");
 	return SUCCESS;
 }
 
@@ -477,6 +491,7 @@ static void generate(private_encryption_payload_t *this)
 	else
 	{
 		/* no paylads? */
+		this->logger->log(this->logger, CONTROL|MOST, "generating contained payloads, but no available");
 		allocator_free(this->decrypted.ptr);
 		this->decrypted = CHUNK_INITIALIZER;
 		iterator->destroy(iterator);
@@ -504,6 +519,7 @@ static void generate(private_encryption_payload_t *this)
 	
 	generator->write_to_chunk(generator, &(this->decrypted));
 	generator->destroy(generator);
+	this->logger->log(this->logger, CONTROL|MOST, "successfully generated content in encrpytion payload");
 }
 
 /**
@@ -518,6 +534,7 @@ static status_t parse(private_encryption_payload_t *this)
 	/* check if there is decrypted data */
 	if (this->decrypted.ptr == NULL)
 	{
+		this->logger->log(this->logger, ERROR, "unable to parse, no input!");
 		return INVALID_STATE;
 	}
 	
@@ -541,6 +558,10 @@ static status_t parse(private_encryption_payload_t *this)
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
+			
+			this->logger->log(this->logger, ERROR, "%s verification failed: %s", 
+								mapping_find(payload_type_m,current_payload->get_type(current_payload)),
+								mapping_find(status_m, status));
 			current_payload->destroy(current_payload);
 			parser->destroy(parser);
 			return VERIFY_ERROR;
@@ -552,6 +573,7 @@ static status_t parse(private_encryption_payload_t *this)
 		this->payloads->insert_last(this->payloads,current_payload);
 	}
 	parser->destroy(parser);
+	this->logger->log(this->logger, CONTROL|MOST, "succesfully parsed content of encryption payload");
 	return SUCCESS;
 }
 
@@ -589,6 +611,26 @@ static void compute_length(private_encryption_payload_t *this)
 	this->payload_length = length;
 }
 
+
+/**
+ * Implementation of payload_t.destroy.
+ */
+static void destroy(private_encryption_payload_t *this)
+{
+	/* all proposals are getting destroyed */ 
+	while (this->payloads->get_count(this->payloads) > 0)
+	{
+		payload_t *current_payload;
+		this->payloads->remove_last(this->payloads,(void **)&current_payload);
+		current_payload->destroy(current_payload);
+	}
+	this->payloads->destroy(this->payloads);
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
+	allocator_free(this->encrypted.ptr);
+	allocator_free(this->decrypted.ptr);
+	allocator_free(this);
+}
+
 /*
  * Described in header
  */
@@ -622,6 +664,7 @@ encryption_payload_t *encryption_payload_create()
 	this->compute_length = compute_length;
 	this->generate = generate;
 	this->parse = parse;
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager, ENCRYPTION_PAYLOAD, NULL);
 	
 	/* set default values of the fields */
 	this->critical = TRUE;

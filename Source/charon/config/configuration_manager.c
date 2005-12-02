@@ -152,7 +152,7 @@ static void load_default_config (private_configuration_manager_t *this)
 	init_config_t *init_config1, *init_config2, *init_config3;
 	ike_proposal_t proposals[2];
 	child_proposal_t child_proposals[1];
-	sa_config_t *sa_config1, *sa_config2;
+	sa_config_t *sa_config1, *sa_config2, *sa_config3;
 	traffic_selector_t *ts;
 	
 	init_config1 = init_config_create("152.96.193.131","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
@@ -195,6 +195,13 @@ static void load_default_config (private_configuration_manager_t *this)
 
 	sa_config2->add_traffic_selector_initiator(sa_config2,ts);
 	sa_config2->add_traffic_selector_responder(sa_config2,ts);
+
+	sa_config3 = sa_config_create(ID_IPV4_ADDR, "127.0.0.1", 
+								  ID_IPV4_ADDR, "127.0.0.1",
+								  SHARED_KEY_MESSAGE_INTEGRITY_CODE);
+
+	sa_config3->add_traffic_selector_initiator(sa_config3,ts);
+	sa_config3->add_traffic_selector_responder(sa_config3,ts);
 	
 	ts->destroy(ts);
 	
@@ -210,6 +217,7 @@ static void load_default_config (private_configuration_manager_t *this)
 	child_proposals[0].esp.encryption_algorithm = ENCR_AES_CBC;
 	child_proposals[0].esp.encryption_algorithm_key_size = 16;
 	child_proposals[0].esp.integrity_algorithm = AUTH_UNDEFINED;
+	child_proposals[0].esp.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
 	child_proposals[0].esp.spi[0] = 2;
 	child_proposals[0].esp.spi[1] = 2;
 	child_proposals[0].esp.spi[2] = 2;
@@ -217,10 +225,11 @@ static void load_default_config (private_configuration_manager_t *this)
 	
 	sa_config1->add_proposal(sa_config1, &child_proposals[0]);
 	sa_config2->add_proposal(sa_config2, &child_proposals[0]);
+	sa_config3->add_proposal(sa_config3, &child_proposals[0]);
 
 	this->add_new_configuration(this,"pinflb31",init_config1,sa_config2);
 	this->add_new_configuration(this,"pinflb30",init_config2,sa_config1);
-	this->add_new_configuration(this,"localhost",init_config3,sa_config1);
+	this->add_new_configuration(this,"localhost",init_config3,sa_config3);
 
 }
 

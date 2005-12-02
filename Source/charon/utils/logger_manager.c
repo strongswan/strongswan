@@ -42,6 +42,7 @@ mapping_t logger_context_t_mappings[] = {
 	{TESTER, "TESTER"},
 	{DAEMON, "DAEMON"},
 	{CONFIGURATION_MANAGER, "CONFIG"},
+	{ENCRYPTION_PAYLOAD, "ENCPLD"},
 };
 
 /** 
@@ -148,6 +149,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 			logger_level |= FULL;
 		case IKE_SA_MANAGER:
 		case MESSAGE:
+		case ENCRYPTION_PAYLOAD:
 		case WORKER:
 			logger_level |= ALL;
 		case PARSER:

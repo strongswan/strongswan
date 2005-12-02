@@ -534,7 +534,9 @@ static void build_tsi_payload (private_ike_sa_init_requested_t *this, payload_t 
 	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	traffic_selectors_count = sa_config->get_traffic_selectors_initiator(sa_config,&traffic_selectors);
+	printf("traffic_selectors: %d\n", traffic_selectors_count);
 	ts_payload = ts_payload_create_from_traffic_selectors(TRUE,traffic_selectors, traffic_selectors_count);
+	
 	allocator_free(traffic_selectors);
 
 	*payload = (payload_t *) ts_payload;

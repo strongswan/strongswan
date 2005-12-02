@@ -22,8 +22,15 @@
  
 #include "ike_auth_requested.h"
 
+#include <daemon.h>
 #include <utils/allocator.h>
-
+#include <encoding/payloads/ts_payload.h>
+#include <encoding/payloads/sa_payload.h>
+#include <encoding/payloads/id_payload.h>
+#include <encoding/payloads/auth_payload.h>
+#include <transforms/signers/signer.h>
+#include <transforms/crypters/crypter.h>
+#include <sa/states/ike_sa_established.h>
 
 typedef struct private_ike_auth_requested_t private_ike_auth_requested_t;
 
@@ -51,16 +58,280 @@ struct private_ike_auth_requested_t {
 	 * Assigned IKE_SA
 	 */
 	 protected_ike_sa_t *ike_sa;
+	 
+	/**
+	 * SA config, just a copy of the one stored in the ike_sa
+	 */
+	sa_config_t *sa_config; 
+	 
+	/**
+	 * Logger used to log data 
+	 * 
+	 * Is logger of ike_sa!
+	 */
+	logger_t *logger;
+	
+	status_t (*process_idr_payload) (private_ike_auth_requested_t *this, id_payload_t *idr_payload);
+	status_t (*process_sa_payload) (private_ike_auth_requested_t *this, sa_payload_t *sa_payload);
+	status_t (*process_auth_payload) (private_ike_auth_requested_t *this, auth_payload_t *auth_payload);
+	status_t (*process_ts_payload) (private_ike_auth_requested_t *this, bool ts_initiator, ts_payload_t *ts_payload);
+	 
 };
 
+
 /**
- * Implements state_t.get_state
+ * Implements state_t.process_message
  */
-static status_t process_message(private_ike_auth_requested_t *this, message_t *message)
+static status_t process_message(private_ike_auth_requested_t *this, message_t *request)
 {
+	status_t status;
+	signer_t *signer;
+	crypter_t *crypter;
+	iterator_t *payloads;
+	exchange_type_t exchange_type;
+	id_payload_t *idr_payload;
+	auth_payload_t *auth_payload;
+	sa_payload_t *sa_payload;
+	ts_payload_t *tsi_payload, *tsr_payload;
+	
+	return SUCCESS;
+
+	exchange_type = request->get_exchange_type(request);
+	if (exchange_type != IKE_AUTH)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_auth_requested",
+							mapping_find(exchange_type_m,exchange_type));
+		return FAILED;
+	}
+	
+	if (request->get_request(request))
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Only responses of type IKE_AUTH supported in state ike_auth_requested");
+		return FAILED;
+	}
+	
+	/* get signer for verification and crypter for decryption */
+	signer = this->ike_sa->get_signer_responder(this->ike_sa);
+	crypter = this->ike_sa->get_crypter_responder(this->ike_sa);
+	
+	/* parse incoming message */
+	status = request->parse_body(request, crypter, signer);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Could not parse body of request message");
+		return status;
+	}
+	
+	this->sa_config = this->ike_sa->get_sa_config(this->ike_sa);
+	
+	/* iterate over incoming payloads. Message is verified, we can be sure there are the required payloads */
+	payloads = request->get_payload_iterator(request);
+	while (payloads->has_next(payloads))
+	{
+		payload_t *payload;
+		payloads->current(payloads, (void**)&payload);
+		
+		switch (payload->get_type(payload))
+		{
+			case AUTHENTICATION:
+			{
+				auth_payload = (auth_payload_t*)payload;
+				break;	
+			}
+			case ID_RESPONDER:
+			{
+				idr_payload = (id_payload_t*)payload;
+				break;	
+			}
+			case SECURITY_ASSOCIATION:
+			{
+				sa_payload = (sa_payload_t*)payload;
+				break;
+			}
+			case CERTIFICATE:
+			{
+				/* TODO handle cert payloads */
+				break;
+			}
+			case TRAFFIC_SELECTOR_INITIATOR:
+			{
+				tsi_payload = (ts_payload_t*)payload;				
+				break;	
+			}
+			case TRAFFIC_SELECTOR_RESPONDER:
+			{
+				tsr_payload = (ts_payload_t*)payload;
+				break;	
+			}
+			default:
+			{
+				/* can't happen, since message is verified, notify's? */
+				break;
+			}
+		}
+	}
+	/* iterator can be destroyed */
+	payloads->destroy(payloads);
+	
+	
+	/* add payloads to it */
+	status = this->process_idr_payload(this, idr_payload);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Processing idr payload failed");
+		return status;
+	}
+	status = this->process_sa_payload(this, sa_payload);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Processing sa payload failed");
+		return status;
+	}
+	status = this->process_auth_payload(this, auth_payload);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Processing auth payload failed");
+		return status;
+	}
+	status = this->process_ts_payload(this, TRUE, tsi_payload);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Processing tsi payload failed");
+		return status;
+	}
+	status = this->process_ts_payload(this, FALSE, tsr_payload);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Processing tsr payload failed");
+		return status;
+	}
+
+	this->logger->log(this->logger, CONTROL | MORE, "IKE_AUTH response successfully handled. IKE_SA established.");
+	
+	/* create new state */
+	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+
 	return SUCCESS;
 }
 
+/**
+ * Implements private_ike_auth_requested_t.build_idr_payload
+ */
+static status_t process_idr_payload(private_ike_auth_requested_t *this, id_payload_t *idr_payload)
+{
+	identification_t *other_id, *configured_other_id;
+	
+	other_id = idr_payload->get_identification(idr_payload);
+
+	configured_other_id = this->sa_config->get_other_id(this->sa_config);
+	if (configured_other_id)
+	{
+		if (!other_id->equals(other_id, configured_other_id))
+		{
+			this->logger->log(this->logger, ERROR, "IKE_AUTH reply didn't contain requested id");
+			return FAILED;	
+		}
+	}
+	
+	/* TODO do we have to store other_id  somewhere ? */	
+	return SUCCESS;
+}
+
+/**
+ * Implements private_ike_auth_requested_t.build_sa_payload
+ */
+static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payload_t *sa_payload)
+{
+	child_proposal_t *proposals, *proposal_chosen;
+	size_t proposal_count;
+	status_t status;
+	
+	/* dummy spis, until we have a child sa to request them */
+	u_int8_t ah_spi[4] = {0x01, 0x02, 0x03, 0x04};
+	u_int8_t esp_spi[4] = {0x05, 0x06, 0x07, 0x08};
+	
+	/* check selected proposal */
+	status = sa_payload->get_child_proposals(sa_payload, &proposals, &proposal_count);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "responders sa payload contained no proposals");
+		return FAILED;
+	}
+	if (proposal_count > 1)
+	{
+		allocator_free(proposals);
+		this->logger->log(this->logger, ERROR, "responders sa payload contained more than one proposal");
+		return FAILED;
+	}
+	
+	proposal_chosen = this->sa_config->select_proposal(this->sa_config, ah_spi, esp_spi, proposals, proposal_count);
+	if (proposal_chosen == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "responder selected an not offered proposal");
+		allocator_free(proposals);
+		return FAILED;
+	}
+	else
+	{
+		allocator_free(proposal_chosen);
+	}
+	
+	allocator_free(proposals);
+	
+	return SUCCESS;
+}
+
+/**
+ * Implements private_ike_auth_requested_t.build_auth_payload
+ */
+static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_payload_t *auth_payload)
+{
+	/* TODO VERIFY auth here */
+	return SUCCESS;	
+}
+
+/**
+ * Implements private_ike_auth_requested_t.build_ts_payload
+ */
+static status_t process_ts_payload(private_ike_auth_requested_t *this, bool ts_initiator, ts_payload_t *ts_payload)
+{
+	traffic_selector_t **ts_received, **ts_selected;
+	size_t ts_received_count, ts_selected_count;
+	status_t status = SUCCESS;
+	
+	/* get ts form payload */
+	ts_received_count = ts_payload->get_traffic_selectors(ts_payload, &ts_received);
+	/* select ts depending on payload type */
+	if (ts_initiator)
+	{
+		ts_selected_count = this->sa_config->select_traffic_selectors_initiator(this->sa_config, ts_received, ts_received_count, &ts_selected);
+	}
+	else
+	{
+		ts_selected_count = this->sa_config->select_traffic_selectors_responder(this->sa_config, ts_received, ts_received_count, &ts_selected);
+	}
+	/* check if the responder selected valid proposals */
+	if (ts_selected_count != ts_received_count)
+	{
+		this->logger->log(this->logger, ERROR, "responder selected invalid traffic selectors");
+		status = FAILED;	
+	}
+	
+	/* cleanup */
+	while(ts_received_count--) 
+	{
+		traffic_selector_t *ts = *ts_received + ts_received_count;
+		ts->destroy(ts);
+	}
+	allocator_free(ts_received);
+	while(ts_selected_count--) 
+	{
+		traffic_selector_t *ts = *ts_selected + ts_selected_count;
+		ts->destroy(ts);
+	}
+	allocator_free(ts_selected);
+	return status;
+}
 /**
  * Implements state_t.get_state
  */
@@ -90,6 +361,13 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chun
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
 	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
+	
+	/* private functions */
+	
+	this->process_idr_payload = process_idr_payload;
+	this->process_sa_payload = process_sa_payload;
+	this->process_auth_payload = process_auth_payload;
+	this->process_ts_payload = process_ts_payload;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

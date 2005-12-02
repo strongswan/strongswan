@@ -615,6 +615,23 @@ static signer_t *get_signer_initiator (private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.get_crypter_responder.
+ */
+static crypter_t *get_crypter_responder(private_ike_sa_t *this)
+{
+	return this->crypter_responder;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.get_signer_responder.
+ */
+static signer_t *get_signer_responder (private_ike_sa_t *this)
+{
+	return this->signer_responder;
+}
+
+
+/**
  * Implementation of protected_ike_sa_t.set_last_requested_message.
  */
 static status_t set_last_requested_message (private_ike_sa_t *this,message_t * message)
@@ -815,6 +832,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
 	this->protected.get_crypter_initiator = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_initiator;
 	this->protected.get_signer_initiator = (signer_t *(*) (protected_ike_sa_t *)) get_signer_initiator;	
+	this->protected.get_crypter_responder = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_responder;
+	this->protected.get_signer_responder = (signer_t *(*) (protected_ike_sa_t *)) get_signer_responder;	
 	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t *)) reset_message_buffers;
 
 	/* private functions */

@@ -128,7 +128,7 @@ encoding_rule_t ts_payload_encodings[] = {
 static status_t verify(private_ts_payload_t *this)
 {
 	iterator_t *iterator;
-	status_t status;
+	status_t status = FAILED;
 	
 	if (this->critical)
 	{
@@ -142,7 +142,6 @@ static status_t verify(private_ts_payload_t *this)
 	}
 	
 	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors,TRUE);
-	
 	while(iterator->has_next(iterator))
 	{
 		payload_t *current_traffic_selector;
@@ -154,9 +153,7 @@ static status_t verify(private_ts_payload_t *this)
 			break;
 		}
 	}
-	
 	iterator->destroy(iterator);
-	
 	
 	return status;
 }
