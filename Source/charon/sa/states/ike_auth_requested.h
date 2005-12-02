@@ -52,6 +52,6 @@ struct ike_auth_requested_t {
  * 
  * @ingroup states
  */
-ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chunk_t sent_nonce, chunk_t received_nonce);
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa);
 
 #endif /*IKE_AUTH_REQUESTED_H_*/

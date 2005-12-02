@@ -346,7 +346,7 @@ static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_
 	size_t ts_received_count, ts_selected_count;
 	status_t status = SUCCESS;
 	ts_payload_t *ts_response;
-	
+
 	/* build a reply payload with selected traffic selectors */
 	ts_received_count = request->get_traffic_selectors(request, &ts_received);
 	/* select ts depending on payload type */

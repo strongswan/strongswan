@@ -45,16 +45,6 @@ struct private_ike_auth_requested_t {
 	ike_auth_requested_t public;
 	
 	/**
-	 * Sent nonce value
-	 */
-	chunk_t sent_nonce;
-	
-	/**
-	 * Received nonce
-	 */
-	chunk_t received_nonce;
-	
-	/**
 	 * Assigned IKE_SA
 	 */
 	 protected_ike_sa_t *ike_sa;
@@ -89,13 +79,11 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 	crypter_t *crypter;
 	iterator_t *payloads;
 	exchange_type_t exchange_type;
-	id_payload_t *idr_payload;
+	id_payload_t *idr_payload = NULL;
 	auth_payload_t *auth_payload;
 	sa_payload_t *sa_payload;
 	ts_payload_t *tsi_payload, *tsr_payload;
 	
-	return SUCCESS;
-
 	exchange_type = request->get_exchange_type(request);
 	if (exchange_type != IKE_AUTH)
 	{
@@ -172,8 +160,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 	}
 	/* iterator can be destroyed */
 	payloads->destroy(payloads);
-	
-	
+
 	/* add payloads to it */
 	status = this->process_idr_payload(this, idr_payload);
 	if (status != SUCCESS)
@@ -211,6 +198,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 	/* create new state */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
 
+	this->public.state_interface.destroy(&(this->public.state_interface));
 	return SUCCESS;
 }
 
@@ -221,19 +209,24 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 {
 	identification_t *other_id, *configured_other_id;
 	
-	other_id = idr_payload->get_identification(idr_payload);
-
-	configured_other_id = this->sa_config->get_other_id(this->sa_config);
-	if (configured_other_id)
+	/* idr is optional */
+	if (idr_payload)
 	{
-		if (!other_id->equals(other_id, configured_other_id))
-		{
-			this->logger->log(this->logger, ERROR, "IKE_AUTH reply didn't contain requested id");
-			return FAILED;	
-		}
-	}
+		other_id = idr_payload->get_identification(idr_payload);
 	
-	/* TODO do we have to store other_id  somewhere ? */	
+		configured_other_id = this->sa_config->get_other_id(this->sa_config);
+		if (configured_other_id)
+		{
+			if (!other_id->equals(other_id, configured_other_id))
+			{
+				this->logger->log(this->logger, ERROR, "IKE_AUTH reply didn't contain requested id");
+				return FAILED;	
+			}
+		}
+		
+		other_id->destroy(other_id);
+		/* TODO do we have to store other_id  somewhere ? */
+	}
 	return SUCCESS;
 }
 
@@ -345,15 +338,13 @@ static ike_sa_state_t get_state(private_ike_auth_requested_t *this)
  */
 static void destroy(private_ike_auth_requested_t *this)
 {
-	allocator_free(this->sent_nonce.ptr);
-	allocator_free(this->received_nonce.ptr);
 	allocator_free(this);
 }
 
 /* 
  * Described in header.
  */
-ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chunk_t sent_nonce, chunk_t received_nonce)
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa)
 {
 	private_ike_auth_requested_t *this = allocator_alloc_thing(private_ike_auth_requested_t);
 
@@ -371,9 +362,7 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chun
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->sent_nonce = sent_nonce;
-	this->received_nonce = received_nonce;
-	
+	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	
 	return &(this->public);
 }

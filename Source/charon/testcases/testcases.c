@@ -214,8 +214,8 @@ int main()
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
-//	tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&sa_config_test); 
+	tester->perform_tests(tester,all_tests);
+//	tester->perform_test(tester,&sa_config_test); 
 	
 	
 	tester->destroy(tester);

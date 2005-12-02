@@ -821,7 +821,6 @@ static status_t verify(private_message_t *this)
 		}
 	}
 	iterator->destroy(iterator);
-	
 	return SUCCESS;
 }
 

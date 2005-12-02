@@ -458,7 +458,7 @@ static status_t create_delete_job(private_ike_sa_t *this)
  */
 static void set_new_state (private_ike_sa_t *this, state_t *state)
 {
-	this->logger->log(this->logger, ERROR, "Change current state %s to %s",mapping_find(ike_sa_state_m,this->current_state->get_state(this->current_state)),mapping_find(ike_sa_state_m,state->get_state(state)));
+	this->logger->log(this->logger, CONTROL, "Change current state %s to %s",mapping_find(ike_sa_state_m,this->current_state->get_state(this->current_state)),mapping_find(ike_sa_state_m,state->get_state(state)));
 	this->current_state = state;
 }
 
@@ -628,9 +628,6 @@ static signer_t *get_signer_initiator (private_ike_sa_t *this)
 }
 
 /**
-<<<<<<< .mine
- * Implementation of protected_ike_sa_t.send_request.
-=======
  * Implementation of protected_ike_sa_t.get_crypter_responder.
  */
 static crypter_t *get_crypter_responder(private_ike_sa_t *this)
@@ -646,10 +643,8 @@ static signer_t *get_signer_responder (private_ike_sa_t *this)
 	return this->signer_responder;
 }
 
-
 /**
- * Implementation of protected_ike_sa_t.set_last_requested_message.
->>>>>>> .r660
+ * Implementation of protected_ike_sa_t.send_request.
  */
 static status_t send_request (private_ike_sa_t *this,message_t * message)
 {
@@ -704,7 +699,7 @@ static status_t send_response (private_ike_sa_t *this,message_t * message)
 		return FAILED;	
 	}
 	
-	status = message->generate(message, this->crypter_initiator,this->signer_initiator, &packet);
+	status = message->generate(message, this->crypter_responder,this->signer_responder, &packet);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not generate packet from message");

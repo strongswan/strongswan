@@ -394,7 +394,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
-	next_state = ike_auth_requested_create(this->ike_sa,this->sent_nonce,this->received_nonce);
+	next_state = ike_auth_requested_create(this->ike_sa);
 
 	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
@@ -517,9 +517,14 @@ static void build_tsi_payload (private_ike_sa_init_requested_t *this, payload_t 
 	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	traffic_selectors_count = sa_config->get_traffic_selectors_initiator(sa_config,&traffic_selectors);
-	printf("traffic_selectors: %d\n", traffic_selectors_count);
 	ts_payload = ts_payload_create_from_traffic_selectors(TRUE,traffic_selectors, traffic_selectors_count);
 	
+	/* cleanup traffic selectors */
+	while(traffic_selectors_count--) 
+	{
+		traffic_selector_t *ts = *traffic_selectors + traffic_selectors_count;
+		ts->destroy(ts);
+	}	
 	allocator_free(traffic_selectors);
 
 	*payload = (payload_t *) ts_payload;
@@ -538,6 +543,13 @@ static void build_tsr_payload (private_ike_sa_init_requested_t *this, payload_t 
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	traffic_selectors_count = sa_config->get_traffic_selectors_responder(sa_config,&traffic_selectors);
 	ts_payload = ts_payload_create_from_traffic_selectors(FALSE,traffic_selectors, traffic_selectors_count);
+	
+	/* cleanup traffic selectors */
+	while(traffic_selectors_count--) 
+	{
+		traffic_selector_t *ts = *traffic_selectors + traffic_selectors_count;
+		ts->destroy(ts);
+	}	
 	allocator_free(traffic_selectors);
 
 	*payload = (payload_t *) ts_payload;
@@ -561,6 +573,10 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");	
+	allocator_free(this->sent_nonce.ptr);
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
+	allocator_free(this->received_nonce.ptr);
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
 	allocator_free_chunk(&(this->shared_secret));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
