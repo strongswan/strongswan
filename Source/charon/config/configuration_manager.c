@@ -182,16 +182,16 @@ static void load_default_config (private_configuration_manager_t *this)
 	init_config3->add_proposal(init_config3,1,proposals[0]);
 	init_config3->add_proposal(init_config3,1,proposals[1]);
 	
-	sa_config1 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
-								  ID_IPV4_ADDR, "152.96.193.131",
-								  RSA_DIGITAL_SIGNATURE);
+	sa_config1 = sa_config_create(ID_IPV4_ADDR, "152.96.193.131", 
+								  ID_IPV4_ADDR, "152.96.193.130",
+								  SHARED_KEY_MESSAGE_INTEGRITY_CODE);
 								  
 	sa_config1->add_traffic_selector_initiator(sa_config1,ts);
 	sa_config1->add_traffic_selector_responder(sa_config1,ts);
 
 	sa_config2 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
 								  ID_IPV4_ADDR, "152.96.193.131",
-								  RSA_DIGITAL_SIGNATURE);
+								  SHARED_KEY_MESSAGE_INTEGRITY_CODE);
 
 	sa_config2->add_traffic_selector_initiator(sa_config2,ts);
 	sa_config2->add_traffic_selector_responder(sa_config2,ts);

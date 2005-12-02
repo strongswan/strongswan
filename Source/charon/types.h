@@ -45,7 +45,8 @@ enum status_t {
 	NOT_FOUND,
 	PARSE_ERROR,
 	VERIFY_ERROR,
-	INVALID_STATE
+	INVALID_STATE,
+	DELETE_ME,
 };
 
 extern mapping_t status_m[];

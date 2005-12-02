@@ -404,6 +404,7 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	this->proposals = linked_list_create();
 	this->ts_initiator = linked_list_create();
 	this->ts_responder = linked_list_create();
+	this->auth_method = auth_method;
 
 	return (&this->public);
 }

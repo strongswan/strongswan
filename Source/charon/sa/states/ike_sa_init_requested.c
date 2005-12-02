@@ -155,6 +155,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 {
 	ike_auth_requested_t *next_state;
 	exchange_type_t	exchange_type;
+	init_config_t *init_config;	
 	u_int64_t responder_spi;
 	ike_sa_id_t *ike_sa_id;
 	iterator_t *payloads;
@@ -190,10 +191,13 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		return status;	
 	}
 	
+	/* get configuration */
+	init_config = this->ike_sa->get_init_config(this->ike_sa);
+	
 
 	if (responder_spi == 0)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Responder SPI still zero.");
+		this->logger->log(this->logger, ERROR | MORE, "Responder SPI still zero");
 		return FAILED;
 	}
 	/* because I am original initiator i have to update the responder SPI to the new one */	
@@ -207,7 +211,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	 */
 	payloads = ike_sa_init_reply->get_payload_iterator(ike_sa_init_reply);
 	while (payloads->has_next(payloads))
-	{
+	{ 
 		payload_t *payload;
 		payloads->current(payloads, (void**)&payload);
 		
@@ -220,9 +224,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				ike_proposal_t *ike_proposals;
 				ike_proposal_t selected_proposal;
 				size_t proposal_count;			
-				init_config_t *init_config;	
+
 				
-				/* get the list of suggested proposals */ 
+				/* get the list of selected proposals */ 
 				status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals,&proposal_count);
 				if (status != SUCCESS)
 				{
@@ -230,24 +234,22 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 					payloads->destroy(payloads);
 					return status;	
 				}
-				
+				/* the peer has to select only one proposal */
 				if (proposal_count != 1)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "More then one proposal selected!");
+					this->logger->log(this->logger, ERROR | MORE, "More then 1 proposal (%d) selected!",proposal_count);
 					allocator_free(ike_proposals);
 					payloads->destroy(payloads);
 					return status;							
 				}
 				
 				/* now let the configuration-manager check the selected proposals*/
-				this->logger->log(this->logger, CONTROL | MOST, "Check suggested proposals");
-				init_config = this->ike_sa->get_init_config(this->ike_sa);
-
+				this->logger->log(this->logger, CONTROL | MOST, "Check selected proposal");
 				status = init_config->select_proposal (init_config,ike_proposals,1,&selected_proposal);
 				allocator_free(ike_proposals);
 				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "Selected proposal not a suggested one!");
+					this->logger->log(this->logger, ERROR | MORE, "Selected proposal not a suggested one! Peer is trying to trick me!");
 					payloads->destroy(payloads);
 					return status;
 				}
@@ -265,17 +267,16 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 			case KEY_EXCHANGE:
 			{
 				ke_payload_t *ke_payload = (ke_payload_t*)payload;
-				
-				this->diffie_hellman->set_other_public_value(this->diffie_hellman, ke_payload->get_key_exchange_data(ke_payload));
-				
+				this->diffie_hellman->set_other_public_value(this->diffie_hellman, ke_payload->get_key_exchange_data(ke_payload));				
 				/* shared secret is computed AFTER processing of all payloads... */				
 				break;
 			}
 			case NONCE:
 			{
-				nonce_payload_t 	*nonce_payload = (nonce_payload_t*)payload;
+				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
 				
 				allocator_free(this->received_nonce.ptr);
+
 				this->received_nonce = CHUNK_INITIALIZER;
 				
 				nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
@@ -283,7 +284,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "Payload type not supported!!!!");
+				this->logger->log(this->logger, ERROR, "Payload type %s not supported in state ike_sa_init_requested!", mapping_find(payload_type_m, payload->get_type(payload)));
 				payloads->destroy(payloads);
 				return FAILED;
 			}
@@ -296,25 +297,28 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	allocator_free(this->shared_secret.ptr);
 	this->shared_secret = CHUNK_INITIALIZER;
 	
-	/* store shared secret  */
+	/* store shared secret  
+	 * status of dh objectt does not have to get checked cause other key is set
+	 */
 	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
 	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &(this->shared_secret));		
 	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &this->shared_secret);
-	
+
+	this->logger->log(this->logger, CONTROL | MOST, "Going to derive all secrets from shared secret");	
 	this->ike_sa->compute_secrets(this->ike_sa,this->shared_secret,this->sent_nonce, this->received_nonce);
 
 	/* build the complete IKE_AUTH request */
 	this->build_ike_auth_request (this,&request);
 
 	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
+	this->logger->log(this->logger, CONTROL|MOST, "Generate packet from message");
 
 	status = request->generate(request, this->ike_sa->get_crypter_initiator(this->ike_sa), this->ike_sa->get_signer_initiator(this->ike_sa), &packet);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "could not generate packet from message");
+		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
 		request->destroy(request);
-		return status;
+		return DELETE_ME;
 	}
 	
 	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
@@ -332,7 +336,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		this->logger->log(this->logger, ERROR, "Could not set last requested message");
 		(next_state->state_interface).destroy(&(next_state->state_interface));
 		request->destroy(request);
-		return status;
+		return DELETE_ME;
 	}
 
 	/* state can now be changed */ 
@@ -343,7 +347,6 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 	this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
 	this->destroy_after_state_change(this);
-	
 	return SUCCESS;
 }
 

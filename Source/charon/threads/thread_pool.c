@@ -214,11 +214,19 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
 	ike_sa_id->destroy(ike_sa_id);
-									
-	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		
+	if (status == DELETE_ME)
+	{
+		status = charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
+	}
+	else
+	{
+		status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	}
+					
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "checkin of IKE SA failed");
+		this->worker_logger->log(this->worker_logger, ERROR, "checkin of IKE SA failed!");
 	}
 	message->destroy(message);
 }
@@ -247,7 +255,7 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 	status = ike_sa->initialize_connection(ike_sa, job->get_configuration_name(job));
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "%s by initialize_conection, job and rejected, IKE_SA deleted.", 
+		this->worker_logger->log(this->worker_logger, ERROR, "%s by initialize_conection, going to delete IKE_SA.", 
 								 mapping_find(status_m, status));
 		charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
 		return;
