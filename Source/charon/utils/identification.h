@@ -32,7 +32,7 @@ typedef enum id_type_t id_type_t;
 /**
  * ID Types of a ID payload.
  * 
- * @ingroup payloads
+ * @ingroup utils
  */
 enum id_type_t {
 	/**
@@ -96,7 +96,7 @@ typedef struct identification_t identification_t;
  * - ID_DER_ASN1_GN (not implemented)
  * - ID_KEY_ID (not implemented)
  *
- * @ingroup sa
+ * @ingroup utils
  */
 struct identification_t {
 	
@@ -155,7 +155,7 @@ struct identification_t {
  * @return			- created identification_t object, or
  * 					- NULL if type not supported.
  * 
- * @ingroup sa
+ * @ingroup utils
  */
 identification_t * identification_create_from_string(id_type_t type, char *string);
 
@@ -168,7 +168,7 @@ identification_t * identification_create_from_string(id_type_t type, char *strin
  * @return			- created identification_t object, or
  * 					- NULL if type not supported.
  * 
- * @ingroup sa
+ * @ingroup utils
  */
 identification_t * identification_create_from_encoding(id_type_t type, chunk_t encoded);
 
