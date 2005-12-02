@@ -232,6 +232,8 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	
 	/* create new state */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+	
+	this->public.state_interface.destroy(&(this->public.state_interface));
 
 	return SUCCESS;
 }
@@ -370,7 +372,7 @@ static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_
 	}
 	else
 	{
-		ts_response = ts_payload_create_from_traffic_selectors(FALSE, ts_selected, ts_selected_count);
+		ts_response = ts_payload_create_from_traffic_selectors(ts_initiator, ts_selected, ts_selected_count);
 		response->add_payload(response, (payload_t*)ts_response);
 	}
 	
@@ -404,9 +406,7 @@ static ike_sa_state_t get_state(private_ike_sa_init_responded_t *this)
 static void destroy(private_ike_sa_init_responded_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy ike_sa_init_responded_t state object");
-	
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
-	
+		
 	allocator_free(this);
 }
 
