@@ -37,6 +37,15 @@ struct private_ike_auth_requested_t {
 	 */
 	ike_auth_requested_t public;
 	
+	/**
+	 * Sent nonce value
+	 */
+	chunk_t sent_nonce;
+	
+	/**
+	 * Received nonce
+	 */
+	chunk_t received_nonce;
 	
 	/**
 	 * Assigned IKE_SA
@@ -65,13 +74,15 @@ static ike_sa_state_t get_state(private_ike_auth_requested_t *this)
  */
 static void destroy(private_ike_auth_requested_t *this)
 {
+	allocator_free(this->sent_nonce.ptr);
+	allocator_free(this->received_nonce.ptr);
 	allocator_free(this);
 }
 
 /* 
  * Described in header.
  */
-ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa)
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chunk_t sent_nonce, chunk_t received_nonce)
 {
 	private_ike_auth_requested_t *this = allocator_alloc_thing(private_ike_auth_requested_t);
 
@@ -82,6 +93,9 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
+	this->sent_nonce = sent_nonce;
+	this->received_nonce = received_nonce;
+	
 	
 	return &(this->public);
 }

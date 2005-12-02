@@ -159,7 +159,7 @@ static void build_test_jobs(private_daemon_t *this)
 	for(i = 0; i<1; i++)
 	{
 		initiate_ike_sa_job_t *initiate_job;
-		initiate_job = initiate_ike_sa_job_create("pinflb30");
+		initiate_job = initiate_ike_sa_job_create("localhost");
 		this->public.job_queue->add(this->public.job_queue, (job_t*)initiate_job);
 	}
 }

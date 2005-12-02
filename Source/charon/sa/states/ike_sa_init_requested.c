@@ -326,9 +326,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
-	next_state = ike_auth_requested_create(this->ike_sa);
+	next_state = ike_auth_requested_create(this->ike_sa,this->sent_nonce,this->received_nonce);
 	
-	/* last message can now be set */
+	/* last messages can now be set */
 	status = this->ike_sa->set_last_requested_message(this->ike_sa, request);
 
 	if (status != SUCCESS)
@@ -400,10 +400,8 @@ static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t *
 	identification_t *identification;
 	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-
+	/* identification_t object gets NOT cloned here */
 	identification = sa_config->get_my_id(sa_config);
-	
-	/* create IDi */
 	id_payload = id_payload_create_from_identification(TRUE,identification);
 	
 	*payload = (payload_t *) id_payload;
@@ -418,9 +416,12 @@ static void build_auth_payload (private_ike_sa_init_requested_t *this, payload_t
 	sa_config_t *sa_config;
 
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	
 	auth_payload = auth_payload_create();
 	auth_payload->set_auth_method(auth_payload,sa_config->get_auth_method(sa_config));
+	/*
+	 * TODO generate AUTH DATA 
+	 */
+
 	*payload = (payload_t *) auth_payload;
 }
 
@@ -429,19 +430,21 @@ static void build_auth_payload (private_ike_sa_init_requested_t *this, payload_t
  */
 static void build_sa_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
 {
-	sa_config_t *sa_config;
+	child_proposal_t *proposals;
 	sa_payload_t *sa_payload;
+	sa_config_t *sa_config;
+	size_t proposal_count;
+	/*
+	 * TODO: get SPIs from kernel
+	 */
 	u_int8_t esp_spi[4] = {0x01,0x01,0x01,0x01};
 	u_int8_t ah_spi[4] = {0x01,0x01,0x01,0x01};
-	size_t proposal_count;
-	child_proposal_t *proposals;
 
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-
 	proposal_count = sa_config->get_proposals(sa_config,ah_spi,esp_spi,&proposals);
-	/* create IDi */
 	sa_payload = sa_payload_create_from_child_proposals(proposals, proposal_count);
 	allocator_free(proposals);
+
 	*payload = (payload_t *) sa_payload;
 }
 
@@ -450,18 +453,16 @@ static void build_sa_payload (private_ike_sa_init_requested_t *this, payload_t *
  */
 static void build_tsi_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
 {
-	sa_config_t *sa_config;
-	ts_payload_t *ts_payload;
-	size_t traffic_selectors_count;
 	traffic_selector_t **traffic_selectors;
+	size_t traffic_selectors_count;
+	ts_payload_t *ts_payload;
+	sa_config_t *sa_config;
 	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	
 	traffic_selectors_count = sa_config->get_traffic_selectors_initiator(sa_config,&traffic_selectors);
-
-	/* create IDi */
 	ts_payload = ts_payload_create_from_traffic_selectors(TRUE,traffic_selectors, traffic_selectors_count);
 	allocator_free(traffic_selectors);
+
 	*payload = (payload_t *) ts_payload;
 }
 
@@ -470,18 +471,16 @@ static void build_tsi_payload (private_ike_sa_init_requested_t *this, payload_t 
  */
 static void build_tsr_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
 {
-	sa_config_t *sa_config;
-	ts_payload_t *ts_payload;
-	size_t traffic_selectors_count;
 	traffic_selector_t **traffic_selectors;
+	size_t traffic_selectors_count;
+	ts_payload_t *ts_payload;
+	sa_config_t *sa_config;
 	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	
 	traffic_selectors_count = sa_config->get_traffic_selectors_responder(sa_config,&traffic_selectors);
-
-	/* create IDi */
 	ts_payload = ts_payload_create_from_traffic_selectors(FALSE,traffic_selectors, traffic_selectors_count);
 	allocator_free(traffic_selectors);
+
 	*payload = (payload_t *) ts_payload;
 }
 
@@ -499,14 +498,13 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
  */
 static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy state of type ike_sa_init_requested_t after state change");
+	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy state of type ike_sa_init_requested_t after state change.");
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-
-	allocator_free(this->sent_nonce.ptr);
-	allocator_free(this->received_nonce.ptr);
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
 	allocator_free(this->shared_secret.ptr);
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
 	allocator_free(this);	
 }
 
@@ -519,10 +517,13 @@ static void destroy(private_ike_sa_init_requested_t *this)
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");	
 	allocator_free(this->sent_nonce.ptr);
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
 	allocator_free(this->received_nonce.ptr);
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
 	allocator_free(this->shared_secret.ptr);
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
 	allocator_free(this);
 }
 

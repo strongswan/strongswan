@@ -155,7 +155,7 @@ static void load_default_config (private_configuration_manager_t *this)
 	sa_config_t *sa_config1, *sa_config2;
 	traffic_selector_t *ts;
 	
-	init_config1 = init_config_create("152.96.193.131","152.96.193.131",IKEV2_UDP_PORT,500);
+	init_config1 = init_config_create("152.96.193.131","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config2 = init_config_create("152.96.193.131","152.96.193.130",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config3 = init_config_create("0.0.0.0","127.0.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);

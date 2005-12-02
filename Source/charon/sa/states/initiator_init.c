@@ -1,7 +1,7 @@
 /**
  * @file initiator_init.c
  * 
- * @brief Start state of a IKE_SA as initiator
+ * @brief Implementation of initiator_init_t.
  * 
  */
 
@@ -36,7 +36,7 @@
 typedef struct private_initiator_init_t private_initiator_init_t;
 
 /**
- * Private data of a initiator_init_t object.
+ * Private data of a initiator_init_t object..
  *
  */
 struct private_initiator_init_t {
@@ -131,28 +131,24 @@ struct private_initiator_init_t {
 static status_t initiate_connection (private_initiator_init_t *this, char *name)
 {
 	ike_sa_init_requested_t *next_state;
+	init_config_t *init_config;
+	randomizer_t *randomizer;
+	sa_config_t *sa_config;
 	message_t *message;
 	packet_t *packet;
 	status_t status;
-	randomizer_t *randomizer;
-	init_config_t *init_config;
-	sa_config_t *sa_config;
 	
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
-	/* get init_config_t object */
 	status = charon->configuration_manager->get_init_config_for_name(charon->configuration_manager,name,&init_config);
-	
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve INIT configuration informations for %s",name);
 		return INVALID_ARG;
 	}
 	
-	/* configuration can be set */
 	this->ike_sa->set_init_config(this->ike_sa,init_config);
 	
-	/* get sa_config_t object */
 	status = charon->configuration_manager->get_sa_config_for_name(charon->configuration_manager,name,&sa_config);
 	
 	if (status != SUCCESS)
@@ -161,8 +157,9 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 		return INVALID_ARG;
 	}
 	
-	/* configuration can be set */
 	this->ike_sa->set_sa_config(this->ike_sa,sa_config);
+	
+	
 	
 	this->ike_sa->set_other_host(this->ike_sa,init_config->get_other_host_clone(init_config));
 	this->ike_sa->set_my_host(this->ike_sa,init_config->get_my_host_clone(init_config));
