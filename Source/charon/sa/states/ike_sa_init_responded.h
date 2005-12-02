@@ -32,6 +32,10 @@ typedef struct ike_sa_init_responded_t ike_sa_init_responded_t;
  * @brief This class represents an IKE_SA state when 
  * responded to an IKE_SA_INIT request.
  * 
+ * The state accpets IKE_AUTH requests. It proves the authenticity
+ * and sets up the first child sa. Then it sends back an IKE_AUTH
+ * reply and processes to the IKE_SA_ESTABLISHED state.
+ * 
  * @ingroup states
  */
 struct ike_sa_init_responded_t {

@@ -32,6 +32,10 @@ typedef struct ike_auth_requested_t ike_auth_requested_t;
 /**
  * @brief This class represents an IKE_SA, which has requested an IKE_AUTH.
  * 
+ * The state accpets IKE_AUTH responses. It proves the authenticity
+ * and sets up the first child sa. After that, it processes to the 
+ * IKE_SA_ESTABLISHED state.
+ * 
  * @ingroup states
  */
 struct ike_auth_requested_t {

@@ -61,9 +61,24 @@ struct private_ike_auth_requested_t {
 	 */
 	logger_t *logger;
 	
+	/**
+	 * process the IDr payload (check if other id is valid)
+	 */
 	status_t (*process_idr_payload) (private_ike_auth_requested_t *this, id_payload_t *idr_payload);
+	
+	/**
+	 * process the SA payload (check if selected proposals are valid, setup child sa)
+	 */
 	status_t (*process_sa_payload) (private_ike_auth_requested_t *this, sa_payload_t *sa_payload);
+	
+	/**
+	 * process the AUTH payload (check authenticity of message)
+	 */
 	status_t (*process_auth_payload) (private_ike_auth_requested_t *this, auth_payload_t *auth_payload);
+	
+	/**
+	 * process the TS payload (check if selected traffic selectors are valid)
+	 */
 	status_t (*process_ts_payload) (private_ike_auth_requested_t *this, bool ts_initiator, ts_payload_t *ts_payload);
 	 
 };
@@ -161,7 +176,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 	/* iterator can be destroyed */
 	payloads->destroy(payloads);
 
-	/* add payloads to it */
+	/* process all payloads */
 	status = this->process_idr_payload(this, idr_payload);
 	if (status != SUCCESS)
 	{
@@ -204,7 +219,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 }
 
 /**
- * Implements private_ike_auth_requested_t.build_idr_payload
+ * Implements private_ike_auth_requested_t.process_idr_payload
  */
 static status_t process_idr_payload(private_ike_auth_requested_t *this, id_payload_t *idr_payload)
 {
@@ -232,7 +247,7 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 }
 
 /**
- * Implements private_ike_auth_requested_t.build_sa_payload
+ * Implements private_ike_auth_requested_t.process_sa_payload
  */
 static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payload_t *sa_payload)
 {
@@ -276,7 +291,7 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 }
 
 /**
- * Implements private_ike_auth_requested_t.build_auth_payload
+ * Implements private_ike_auth_requested_t.process_auth_payload
  */
 static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_payload_t *auth_payload)
 {
@@ -285,7 +300,7 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
 }
 
 /**
- * Implements private_ike_auth_requested_t.build_ts_payload
+ * Implements private_ike_auth_requested_t.process_ts_payload
  */
 static status_t process_ts_payload(private_ike_auth_requested_t *this, bool ts_initiator, ts_payload_t *ts_payload)
 {
