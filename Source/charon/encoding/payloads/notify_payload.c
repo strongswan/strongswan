@@ -28,6 +28,27 @@
 #include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 
+/** 
+ * String mappings for notify_message_type_t.
+ */
+mapping_t notify_message_type_m[] = {
+	{UNSUPPORTED_CRITICAL_PAYLOAD, "UNSUPPORTED_CRITICAL_PAYLOAD"},
+	{INVALID_IKE_SPI, "INVALID_IKE_SPI"},
+	{INVALID_MAJOR_VERSION, "INVALID_MAJOR_VERSION"},
+	{INVALID_SYNTAX, "INVALID_SYNTAX"},
+	{INVALID_MESSAGE_ID, "MODP_2048_BIT"},
+	{INVALID_SPI, "INVALID_SPI"},
+	{NO_PROPOSAL_CHOSEN, "NO_PROPOSAL_CHOSEN"},
+	{INVALID_KE_PAYLOAD, "INVALID_KE_PAYLOAD"},
+	{AUTHENTICATION_FAILED, "AUTHENTICATION_FAILED"},
+	{SINGLE_PAIR_REQUIRED, "SINGLE_PAIR_REQUIRED"},
+	{NO_ADDITIONAL_SAS, "NO_ADDITIONAL_SAS"},
+	{INTERNAL_ADDRESS_FAILURE, "INTERNAL_ADDRESS_FAILURE"},
+	{FAILED_CP_REQUIRED, "FAILED_CP_REQUIRED"},
+	{TS_UACCEPTABLE, "TS_UACCEPTABLE"},
+	{INVALID_SELECTORS, "INVALID_SELECTORS"},
+	{MAPPING_END, NULL}
+};
 
 typedef struct private_notify_payload_t private_notify_payload_t;
 
@@ -176,7 +197,7 @@ static void get_encoding_rules(private_notify_payload_t *this, encoding_rule_t *
  */
 static payload_type_t get_type(private_notify_payload_t *this)
 {
-	return KEY_EXCHANGE;
+	return NOTIFY;
 }
 
 /**
@@ -378,3 +399,15 @@ notify_payload_t *notify_payload_create()
 	return (&(this->public));
 }
 
+/*
+ * Described in header.
+ */
+notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_message_type_t notify_message_type)
+{
+	notify_payload_t *notify = notify_payload_create();
+
+	notify->set_notify_message_type(notify,notify_message_type);
+	notify->set_protocol_id(notify,protocol_id);
+	
+	return notify;
+}

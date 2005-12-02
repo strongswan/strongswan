@@ -283,6 +283,12 @@ struct protected_ike_sa_t {
 	 */
 	signer_t *(*get_signer_initiator) (protected_ike_sa_t *this);
 
+	/**
+	 * Resets message id counters and does destroy stored received and sent messages.
+	 * 
+	 * @param this 				calling object
+	 */	
+	void (*reset_message_buffers) (protected_ike_sa_t *this);
 };
 
 

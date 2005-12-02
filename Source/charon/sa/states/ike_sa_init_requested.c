@@ -27,11 +27,13 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ts_payload.h>
 #include <transforms/diffie_hellman.h>
 #include <sa/states/ike_auth_requested.h>
+#include <sa/states/initiator_init.h>
 
 
 typedef struct private_ike_sa_init_requested_t private_ike_sa_init_requested_t;
@@ -218,6 +220,70 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		this->logger->log(this->logger, CONTROL|MORE, "Processing payload %s", mapping_find(payload_type_m, payload->get_type(payload)));
 		switch (payload->get_type(payload))
 		{
+			case NOTIFY:
+			{
+				notify_payload_t *notify_payload = (notify_payload_t *) payload;
+				
+				
+				this->logger->log(this->logger, CONTROL|MORE, "Process notify type %s for protocol %s",
+								  mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)),
+								  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
+								  
+				if (notify_payload->get_protocol_id(notify_payload) != IKE)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "Notify reply not for IKE protocol.");
+					payloads->destroy(payloads);
+					return FAILED;	
+				}
+				switch (notify_payload->get_notify_message_type(notify_payload))
+				{
+					case NO_PROPOSAL_CHOSEN:
+					{
+						this->logger->log(this->logger, ERROR, "Peer didn't choose a proposal!!!");
+						payloads->destroy(payloads);
+						return DELETE_ME;
+					}
+					case INVALID_KE_PAYLOAD:
+					{
+						initiator_init_t *initiator_init_state;
+						u_int16_t new_dh_group_priority;
+						
+						this->logger->log(this->logger, ERROR, "Selected DH group is not the one in the proposal selected by the responder!");
+						payloads->destroy(payloads);						
+						/* Going to change state back to initiator_init_t */
+						this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+						initiator_init_state = initiator_init_create(this->ike_sa);
+
+						/* buffer of sent and received messages has to get reseted */
+						this->ike_sa->reset_message_buffers(this->ike_sa);
+
+						/* state can now be changed */ 
+						this->ike_sa->set_new_state(this->ike_sa,(state_t *) initiator_init_state);
+
+						/* state has NOW changed :-) */
+						this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
+
+						this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
+						this->logger->log(this->logger, CONTROL|MOST, "Going to retry initialization of connection");
+						new_dh_group_priority = this->dh_group_priority + 1;
+						
+						this->public.state_interface.destroy(&(this->public.state_interface));
+						return (initiator_init_state->retry_initiate_connection (initiator_init_state,new_dh_group_priority));
+					}
+					default:
+					{
+						/*
+						 * If an unrecognized Notify type is received, the IKE_SA gets destroyed.
+						 * 
+						 */
+						
+						this->logger->log(this->logger, ERROR, "Notify type %s not recognized in state ike_sa_init_requested.",
+										  mapping_find(notify_message_type_m,notify_payload->get_notify_message_type(notify_payload)));
+						payloads->destroy(payloads);
+						return DELETE_ME;	
+					}
+				}
+			
 			/**
 			 * TODO check for notify of type 
 			 * 
@@ -225,7 +291,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 			 * 
 			 * call destroy after state change not destroy_after_state_change!!!
 			 */
-			
+			}
 			case SECURITY_ASSOCIATION:
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;

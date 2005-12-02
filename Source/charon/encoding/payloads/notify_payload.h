@@ -26,6 +26,7 @@
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
+#include <encoding/payloads/proposal_substructure.h>
 #include <utils/linked_list.h>
 
 /**
@@ -41,6 +42,41 @@
  * @ingroup payloads
  */
 #define NOTIFY_PAYLOAD_HEADER_LENGTH 8
+
+typedef enum notify_message_type_t notify_message_type_t;
+
+
+/** 
+ * @brief Notify message types.
+ * 
+ * Ssee IKEv2 draft 3.10.1.
+ * 
+ * @ingroup payloads
+ */
+enum notify_message_type_t {
+	UNSUPPORTED_CRITICAL_PAYLOAD = 1,
+	INVALID_IKE_SPI = 4,
+	INVALID_MAJOR_VERSION = 5,
+	INVALID_SYNTAX = 7,
+	INVALID_MESSAGE_ID = 9,
+	INVALID_SPI = 11,
+	NO_PROPOSAL_CHOSEN = 14,
+	INVALID_KE_PAYLOAD = 17,
+	AUTHENTICATION_FAILED = 24,
+	SINGLE_PAIR_REQUIRED = 34,
+	NO_ADDITIONAL_SAS = 35,
+	INTERNAL_ADDRESS_FAILURE = 36,
+	FAILED_CP_REQUIRED = 37,
+	TS_UACCEPTABLE = 38,
+	INVALID_SELECTORS = 39
+};
+
+/** 
+ * String mappings for notify_message_type_t.
+ */
+extern mapping_t notify_message_type_m[];
+
+
 
 typedef struct notify_payload_t notify_payload_t;
 
@@ -146,6 +182,17 @@ struct notify_payload_t {
  * @ingroup payloads
  */
 notify_payload_t *notify_payload_create();
+
+/**
+ * @brief Creates an notify_payload_t object of specific type for specific protocol id.
+ * 
+ * @param protocol_id			protocol id (IKE, AH or ESP)
+ * @param notify_message_type	notify type (see notify_message_type_t)
+ * @return						created notify_payload_t object
+ * 
+ * @ingroup payloads
+ */
+notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_message_type_t notify_message_type);
 
 
 #endif /*NOTIFY_PAYLOAD_H_*/

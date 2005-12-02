@@ -31,6 +31,18 @@
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 
+/** 
+ * String mappings for protocol_id_t.
+ */
+mapping_t protocol_id_m[] = {
+	{UNDEFINED_PROTOCOL_ID, "UNDEFINED_PROTOCOL_ID"},
+	{IKE, "IKE"},
+	{AH, "AH"},
+	{ESP, "ESP"},
+	{MAPPING_END, NULL}
+};
+
+
 typedef struct private_proposal_substructure_t private_proposal_substructure_t;
 
 /**

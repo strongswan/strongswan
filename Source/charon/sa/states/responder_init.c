@@ -29,6 +29,7 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/notify_payload.h>
 #include <transforms/diffie_hellman.h>
 
 
@@ -136,6 +137,16 @@ struct private_responder_init_t {
 	 * @param this		calling object
 	 */
 	void (*destroy_after_state_change) (private_responder_init_t *this);
+	
+	/**
+	 * Sends a IKE_SA_INIT reply with a notify payload.
+	 * 
+	 * @param this		calling object
+	 * @param type		type of notify message
+	 * @param data		data of notify message
+	 */
+	void (*send_notify_reply) (private_responder_init_t *this,notify_message_type_t type, chunk_t data);
+
 };
 
 /**
@@ -230,6 +241,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				{
 					this->logger->log(this->logger, ERROR | MORE, "No proposal of suggested proposals selected");
 					payloads->destroy(payloads);
+					this->send_notify_reply(this,NO_PROPOSAL_CHOSEN,CHUNK_INITIALIZER);			
 					return DELETE_ME;
 				}
 				
@@ -263,11 +275,18 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				}
 				if (this->dh_group_number != group)
 				{
-					/* group not same as selected one */
+					u_int16_t accepted_group;
+					chunk_t accepted_group_chunk;
+					/* group not same as selected one 
+					 * Maybe key exchange payload is before SA payload */
+					this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group not as in selected proposal!");
+					payloads->destroy(payloads);
 					
-					/**
-					 * TODO send notify reply
-					 */
+					accepted_group = htons(this->dh_group_number);
+					accepted_group_chunk.ptr = (u_int8_t*) &(accepted_group);
+					accepted_group_chunk.len = 2;
+					this->send_notify_reply(this,INVALID_KE_PAYLOAD,accepted_group_chunk);
+					return DELETE_ME;
 				}
 				
 				/* create diffie hellman object to handle DH exchange */
@@ -453,6 +472,44 @@ static ike_sa_state_t get_state(private_responder_init_t *this)
 }
 
 /**
+ * Implementation of private_initiator_init_t.send_notify_reply.
+ */
+static void send_notify_reply (private_responder_init_t *this,notify_message_type_t type, chunk_t data)
+{
+	notify_payload_t *payload;
+	message_t *response;
+	packet_t *packet;
+	status_t status;
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Going to build message with notify payload");
+	/* set up the reply */
+	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
+	payload = notify_payload_create_from_protocol_and_type(IKE,type);
+	if ((data.ptr != NULL) && (data.len > 0))
+	{
+		this->logger->log(this->logger, CONTROL|MOST, "Add Data to notify payload");
+		payload->set_notification_data(payload,data);
+	}
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Add Notify payload to message");
+	response->add_payload(response,(payload_t *) payload);
+	
+	/* generate packet */	
+	this->logger->log(this->logger, CONTROL|MOST, "Gnerate packet from message");
+	status = response->generate(response, NULL, NULL, &packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
+		return;
+	}
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	charon->send_queue->add(charon->send_queue, packet);
+	this->logger->log(this->logger, CONTROL|MOST, "Destroy message");
+	response->destroy(response);
+}
+
+/**
  * Implements state_t.get_state
  */
 static void destroy(private_responder_init_t *this)
@@ -509,12 +566,14 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->build_ke_payload = build_ke_payload;
 	this->build_nonce_payload = build_nonce_payload;
 	this->destroy_after_state_change = destroy_after_state_change;
+	this->send_notify_reply = send_notify_reply;
 	
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->sent_nonce = CHUNK_INITIALIZER;
 	this->received_nonce = CHUNK_INITIALIZER;
+	this->dh_group_number = MODP_UNDEFINED;
 
 	return &(this->public);
 }

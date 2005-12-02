@@ -56,7 +56,12 @@ enum protocol_id_t {
 	IKE = 1,
 	AH = 2,
 	ESP = 3,
-};         
+};
+
+/** 
+ * String mappings for protocol_id_t.
+ */
+extern mapping_t protocol_id_m[];
 
 typedef struct proposal_substructure_t proposal_substructure_t;
 

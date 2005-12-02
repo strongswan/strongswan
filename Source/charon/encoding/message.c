@@ -63,6 +63,11 @@ struct supported_payload_entry_t {
 	  * TRUE if payload has to get encrypted
 	  */
 	 bool encrypted;
+	 
+	 /**
+	  * Verifying can stop after checking this payload.
+	  */
+	 bool can_be_last;
 };
 
 typedef struct message_rule_t message_rule_t;
@@ -104,9 +109,9 @@ struct message_rule_t {
  */
 static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
 {
-	{SECURITY_ASSOCIATION,1,1,FALSE},
-	{KEY_EXCHANGE,1,1,FALSE},
-	{NONCE,1,1,FALSE},
+	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
+	{KEY_EXCHANGE,1,1,FALSE,FALSE},
+	{NONCE,1,1,FALSE,FALSE},
 };
 
 /**
@@ -114,9 +119,10 @@ static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
  */
 static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
 {
-	{SECURITY_ASSOCIATION,1,1,FALSE},
-	{KEY_EXCHANGE,1,1,FALSE},
-	{NONCE,1,1,FALSE},
+	{NOTIFY,0,1,FALSE,TRUE},
+	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
+	{KEY_EXCHANGE,1,1,FALSE,FALSE},
+	{NONCE,1,1,FALSE,FALSE},
 };
 
 /**
@@ -124,14 +130,14 @@ static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
  */
 static supported_payload_entry_t supported_ike_auth_i_payloads[] =
 {
-	{ID_INITIATOR,1,1,TRUE},
-	{CERTIFICATE,0,1,TRUE},
-	{CERTIFICATE_REQUEST,0,1,TRUE},
-	{ID_RESPONDER,0,1,TRUE},
-	{AUTHENTICATION,1,1,TRUE},
-	{SECURITY_ASSOCIATION,1,1,TRUE},
-	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE},
-	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE},
+	{ID_INITIATOR,1,1,TRUE,FALSE},
+	{CERTIFICATE,0,1,TRUE,FALSE},
+	{CERTIFICATE_REQUEST,0,1,TRUE,FALSE},
+	{ID_RESPONDER,0,1,TRUE,FALSE},
+	{AUTHENTICATION,1,1,TRUE,FALSE},
+	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE,FALSE},
 };
 
 /**
@@ -139,12 +145,12 @@ static supported_payload_entry_t supported_ike_auth_i_payloads[] =
  */
 static supported_payload_entry_t supported_ike_auth_r_payloads[] =
 {
-	{CERTIFICATE,0,1,TRUE},
-	{ID_RESPONDER,0,1,TRUE},
-	{AUTHENTICATION,1,1,TRUE},
-	{SECURITY_ASSOCIATION,1,1,TRUE},
-	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE},
-	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE},
+	{CERTIFICATE,0,1,TRUE,FALSE},
+	{ID_RESPONDER,0,1,TRUE,FALSE},
+	{AUTHENTICATION,1,1,TRUE,FALSE},
+	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE,FALSE},
 };
 
 /**
@@ -749,6 +755,7 @@ static status_t verify(private_message_t *this)
 	status_t status;
 	iterator_t *iterator;
 	message_rule_t *message_rule;
+	size_t total_found_payloads = 0;
 	
 	this->logger->log(this->logger, CONTROL|MORE, "Verifying message structure");
 	
@@ -759,7 +766,7 @@ static status_t verify(private_message_t *this)
 						  mapping_find(exchange_type_m,this->exchange_type));
 		return status;
 	}
-	
+
 	iterator = this->payloads->create_iterator(this->payloads,TRUE);
 	/* check for payloads with wrong count*/
 	for (i = 0; i < message_rule->supported_payloads_count;i++)
@@ -776,6 +783,7 @@ static status_t verify(private_message_t *this)
 			if (current_payload->get_type(current_payload) == message_rule->supported_payloads[i].payload_type)
 			{
 				found_payloads++;
+				total_found_payloads++;
 				this->logger->log(this->logger, CONTROL | MOST, "Found payload of type %s",
 							  mapping_find(payload_type_m,message_rule->supported_payloads[i].payload_type));
 
@@ -797,6 +805,11 @@ static status_t verify(private_message_t *this)
 							  message_rule->supported_payloads[i].min_occurence,found_payloads);
 			iterator->destroy(iterator);
 			return NOT_SUPPORTED;
+		}
+		if ((message_rule->supported_payloads[i].can_be_last) && (this->payloads->get_count(this->payloads) == total_found_payloads))
+		{
+			iterator->destroy(iterator);
+			return SUCCESS;	
 		}
 	}
 	iterator->destroy(iterator);

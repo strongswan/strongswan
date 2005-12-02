@@ -665,9 +665,32 @@ static status_t set_last_responded_message (private_ike_sa_t *this,message_t * m
 	return SUCCESS;
 }
 
+/**
+ * Implementation of protected_ike_sa_t.destroy.
+ */
+static void reset_message_buffers (private_ike_sa_t *this)
+{
+	this->logger->log(this->logger, CONTROL|MOST, "Reset message counters and destroy stored messages");
+	/* destroy stored requested message */
+	if (this->last_requested_message != NULL)
+	{
+		this->last_requested_message->destroy(this->last_requested_message);
+		this->last_requested_message = NULL;
+	}
+	
+	/* destroy stored responded messages */
+	if (this->last_responded_message != NULL)
+	{
+		this->last_responded_message->destroy(this->last_responded_message);
+		this->last_responded_message = NULL;
+	}
+	
+	this->message_id_out = 0;
+	this->message_id_in = 0;
+}
 
 /**
- * Implements protected_ike_sa_t.destroy.
+ * Implementation of protected_ike_sa_t.destroy.
  */
 static void destroy (private_ike_sa_t *this)
 {
@@ -792,6 +815,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
 	this->protected.get_crypter_initiator = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_initiator;
 	this->protected.get_signer_initiator = (signer_t *(*) (protected_ike_sa_t *)) get_signer_initiator;	
+	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t *)) reset_message_buffers;
 
 	/* private functions */
 	this->resend_last_reply = resend_last_reply;

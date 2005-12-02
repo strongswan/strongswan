@@ -140,7 +140,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve INIT configuration informations for %s",name);
-		return INVALID_ARG;
+		return DELETE_ME;
 	}
 	
 	this->ike_sa->set_init_config(this->ike_sa,init_config);
@@ -150,7 +150,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve SA configuration informations for %s",name);
-		return INVALID_ARG;
+		return DELETE_ME;
 	}
 	
 	this->ike_sa->set_sa_config(this->ike_sa,sa_config);
@@ -163,7 +163,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	if (this->dh_group_number == MODP_UNDEFINED)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be  retrieved with priority %d", this->dh_group_priority);
-		return INVALID_ARG;
+		return DELETE_ME;
 	}
 	
 	/* next step is done in retry_initiate_connection */
@@ -181,14 +181,20 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	message_t *message;
 	packet_t *packet;
 	status_t status;
+	ike_sa_id_t *ike_sa_id;
+	
+	this->dh_group_priority = dh_group_priority;
 		
 	init_config = this->ike_sa->get_init_config(this->ike_sa);
+	
+	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
+	ike_sa_id->set_responder_spi(ike_sa_id,0);
 	
 	this->dh_group_number = init_config->get_dh_group_number(init_config,dh_group_priority);
 	if (this->dh_group_number == MODP_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be retrieved with priority %d", this->dh_group_priority);
-		return INVALID_ARG;
+		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be retrieved with priority %d", dh_group_priority);
+		return DELETE_ME;
 	}
 	
 	this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
@@ -208,7 +214,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	{
 		this->logger->log(this->logger, ERROR, "could not generate packet from message");
 		message->destroy(message);
-		return status;
+		return DELETE_ME;
 	}
 	
 	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
@@ -216,7 +222,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
-	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_number, this->diffie_hellman, this->sent_nonce);
+	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_priority, this->diffie_hellman, this->sent_nonce);
 
 	/* last message can now be set */
 	status = this->ike_sa->set_last_requested_message(this->ike_sa, message);
@@ -226,7 +232,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 		this->logger->log(this->logger, ERROR, "Could not set last requested message");
 		(next_state->state_interface).destroy(&(next_state->state_interface));
 		message->destroy(message);
-		return status;
+		return DELETE_ME;
 	}
 
 	/* state can now be changed */ 
@@ -332,9 +338,8 @@ static void build_nonce_payload(private_initiator_init_t *this, payload_t **payl
 /**
  * Implements state_t.get_state
  */
-static status_t process_message(private_initiator_init_t *this, message_t *message, state_t **new_state)
+static status_t process_message(private_initiator_init_t *this, message_t *message)
 {
-	*new_state = (state_t *) this;
 	this->logger->log(this->logger, ERROR|MORE, "In state INITIATOR_INIT no message is processed");
 	return FAILED;
 }

@@ -182,7 +182,9 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 		this->worker_logger->log(this->worker_logger, ERROR, "IKE version %d.%d not supported", 
 								 message->get_major_version(message),
 								 message->get_minor_version(message));	
-		/* Todo send notify */
+		/*
+		 * TODO send notify reply of type INVALID_MAJOR_VERSION
+		 */
 	}
 				
 	message->get_ike_sa_id(message, &ike_sa_id);
@@ -200,16 +202,22 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 		this->worker_logger->log(this->worker_logger, ERROR, "IKE SA could not be checked out");
 		ike_sa_id->destroy(ike_sa_id);	
 		message->destroy(message);
+
+		/*
+		 * TODO send notify reply of type INVALID_IKE_SPI if SPI could not be found
+		 */
+
 		return;
 	}
 				
 	status = ike_sa->process_message(ike_sa, message);				
-	if (status != SUCCESS)
+	if ((status != SUCCESS) && (status != DELETE_ME))
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "message could not be processed by IKE SA");
 	}
 				
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking in IKE SA %lld:%lld, role %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "%s IKE SA %lld:%lld, role %s", 
+							 (status == DELETE_ME) ? "Checkin and delete" : "Checkin",
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
