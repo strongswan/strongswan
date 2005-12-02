@@ -342,6 +342,7 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
 	if (status != SUCCESS)
 	{
+		job->destroy(job);
 		this->worker_logger->log(this->worker_logger, ERROR, "IKE SA could not be checked out. Allready deleted?");
 		return;
 	}

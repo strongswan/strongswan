@@ -145,6 +145,7 @@ static supported_payload_entry_t supported_ike_auth_i_payloads[] =
  */
 static supported_payload_entry_t supported_ike_auth_r_payloads[] =
 {
+	{NOTIFY,0,1,TRUE,TRUE},
 	{CERTIFICATE,0,1,TRUE,FALSE},
 	{ID_RESPONDER,0,1,TRUE,FALSE},
 	{AUTHENTICATION,1,1,TRUE,FALSE},

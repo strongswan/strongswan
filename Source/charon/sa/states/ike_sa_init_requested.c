@@ -391,7 +391,8 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		request->destroy(request);
 		return DELETE_ME;
 	}
-	this->ike_sa->set_last_replied_message_id(this->ike_sa,request->get_message_id(request));
+	
+	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_sa_init_reply->get_message_id(ike_sa_init_reply));
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");

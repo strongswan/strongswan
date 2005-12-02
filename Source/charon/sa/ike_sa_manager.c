@@ -219,7 +219,8 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 		ike_sa_entry_t *current;
 		
 		iterator->current(iterator, (void**)&current);
-		if (current->ike_sa_id->get_responder_spi(current->ike_sa_id) == 0) {
+		if (current->ike_sa_id->get_responder_spi(current->ike_sa_id) == 0)
+		{
 			/* seems to be a half ready ike_sa */
 			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) == ike_sa_id->get_initiator_spi(ike_sa_id))
 				&& (ike_sa_id->is_initiator(ike_sa_id) == current->ike_sa_id->is_initiator(current->ike_sa_id)))
@@ -230,7 +231,18 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 				break;
 			}
 		}
-		 if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
+		else if (ike_sa_id->get_responder_spi(ike_sa_id) == 0)
+		{
+			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) == ike_sa_id->get_initiator_spi(ike_sa_id))
+				&& (ike_sa_id->is_initiator(ike_sa_id) == current->ike_sa_id->is_initiator(current->ike_sa_id)))
+			{
+		 		this->logger->log(this->logger,CONTROL | MOST,"Found entry by initiator spi %d",ike_sa_id->get_initiator_spi(ike_sa_id));
+				*entry = current;
+				status = SUCCESS;
+				break;
+			}			
+		}
+		if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
 		{
 			this->logger->log(this->logger,CONTROL | MOST,"Found entry by full ID");
 			*entry = current;
@@ -357,6 +369,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 {
 	bool responder_spi_set;
 	bool initiator_spi_set;
+	bool original_initiator;
 	status_t retval;
 	
 	/* each access is locked */
@@ -364,8 +377,10 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 	
 	responder_spi_set = (FALSE != ike_sa_id->get_responder_spi(ike_sa_id));
 	initiator_spi_set = (FALSE != ike_sa_id->get_initiator_spi(ike_sa_id));
+	original_initiator = ike_sa_id->is_initiator(ike_sa_id);
 	
-	if (initiator_spi_set && responder_spi_set)
+	if ((initiator_spi_set && responder_spi_set) ||
+		((initiator_spi_set && !responder_spi_set) && (original_initiator)))
 	{
 		/* we SHOULD have an IKE_SA for these SPIs in the list,
 		 * if not, we can't handle the request...
@@ -422,7 +437,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 			retval = NOT_FOUND;
 		}
 	}
-	else if (initiator_spi_set && !responder_spi_set)
+	else if ((initiator_spi_set && !responder_spi_set) && (!original_initiator))
 	{
 		/* an IKE_SA_INIT from an another endpoint,
 		 * he is the initiator.

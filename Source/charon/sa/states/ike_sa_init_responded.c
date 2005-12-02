@@ -162,8 +162,9 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 			}
 			default:
 			{
-				/* can't happen, since message is verified, notify's? */
-				break;
+				this->logger->log(this->logger, ERROR, "Payload type %s not supported in state ike_auth_requested!", mapping_find(payload_type_m, payload->get_type(payload)));
+				payloads->destroy(payloads);
+				return FAILED;
 			}
 		}
 	}

@@ -166,7 +166,7 @@ static void load_default_config (private_configuration_manager_t *this)
 	sa_config_t *sa_config1, *sa_config2, *sa_config3;
 	traffic_selector_t *ts;
 	
-	init_config1 = init_config_create("152.96.193.131","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config1 = init_config_create("152.96.193.130","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config2 = init_config_create("152.96.193.131","152.96.193.130",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config3 = init_config_create("0.0.0.0","127.0.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
@@ -193,15 +193,15 @@ static void load_default_config (private_configuration_manager_t *this)
 	init_config3->add_proposal(init_config3,1,proposals[0]);
 	init_config3->add_proposal(init_config3,1,proposals[1]);
 	
-	sa_config1 = sa_config_create(ID_IPV4_ADDR, "152.96.193.131", 
-								  ID_IPV4_ADDR, "152.96.193.130",
+	sa_config1 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
+								  ID_IPV4_ADDR, "152.96.193.131",
 								  SHARED_KEY_MESSAGE_INTEGRITY_CODE);
 								  
 	sa_config1->add_traffic_selector_initiator(sa_config1,ts);
 	sa_config1->add_traffic_selector_responder(sa_config1,ts);
 
-	sa_config2 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
-								  ID_IPV4_ADDR, "152.96.193.131",
+	sa_config2 = sa_config_create(ID_IPV4_ADDR, "152.96.193.131", 
+								  ID_IPV4_ADDR, "152.96.193.130",
 								  SHARED_KEY_MESSAGE_INTEGRITY_CODE);
 
 	sa_config2->add_traffic_selector_initiator(sa_config2,ts);
@@ -238,8 +238,8 @@ static void load_default_config (private_configuration_manager_t *this)
 	sa_config2->add_proposal(sa_config2, &child_proposals[0]);
 	sa_config3->add_proposal(sa_config3, &child_proposals[0]);
 
-	this->add_new_configuration(this,"pinflb31",init_config1,sa_config2);
-	this->add_new_configuration(this,"pinflb30",init_config2,sa_config1);
+	this->add_new_configuration(this,"pinflb31",init_config1,sa_config1);
+	this->add_new_configuration(this,"pinflb30",init_config2,sa_config2);
 	this->add_new_configuration(this,"localhost",init_config3,sa_config3);
 
 }

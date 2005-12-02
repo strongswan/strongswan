@@ -28,6 +28,7 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/notify_payload.h>
 #include <transforms/signers/signer.h>
 #include <transforms/crypters/crypter.h>
 #include <sa/states/ike_sa_established.h>
@@ -87,7 +88,7 @@ struct private_ike_auth_requested_t {
 /**
  * Implements state_t.process_message
  */
-static status_t process_message(private_ike_auth_requested_t *this, message_t *request)
+static status_t process_message(private_ike_auth_requested_t *this, message_t *ike_auth_reply)
 {
 	status_t status;
 	signer_t *signer;
@@ -99,7 +100,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 	sa_payload_t *sa_payload;
 	ts_payload_t *tsi_payload, *tsr_payload;
 	
-	exchange_type = request->get_exchange_type(request);
+	exchange_type = ike_auth_reply->get_exchange_type(ike_auth_reply);
 	if (exchange_type != IKE_AUTH)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_auth_requested",
@@ -107,7 +108,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 		return FAILED;
 	}
 	
-	if (request->get_request(request))
+	if (ike_auth_reply->get_request(ike_auth_reply))
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Only responses of type IKE_AUTH supported in state ike_auth_requested");
 		return FAILED;
@@ -118,7 +119,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 	crypter = this->ike_sa->get_crypter_responder(this->ike_sa);
 	
 	/* parse incoming message */
-	status = request->parse_body(request, crypter, signer);
+	status = ike_auth_reply->parse_body(ike_auth_reply, crypter, signer);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not parse body of request message");
@@ -128,7 +129,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 	this->sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	
 	/* iterate over incoming payloads. Message is verified, we can be sure there are the required payloads */
-	payloads = request->get_payload_iterator(request);
+	payloads = ike_auth_reply->get_payload_iterator(ike_auth_reply);
 	while (payloads->has_next(payloads))
 	{
 		payload_t *payload;
@@ -166,10 +167,43 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 				tsr_payload = (ts_payload_t*)payload;
 				break;	
 			}
+			case NOTIFY:
+			{
+				notify_payload_t *notify_payload = (notify_payload_t *) payload;
+				
+				
+				this->logger->log(this->logger, CONTROL|MORE, "Process notify type %s for protocol %s",
+								  mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)),
+								  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
+								  
+				if (notify_payload->get_protocol_id(notify_payload) != IKE)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "Notify reply not for IKE protocol.");
+					payloads->destroy(payloads);
+					return FAILED;	
+				}
+				
+				switch (notify_payload->get_notify_message_type(notify_payload))
+				{
+					default:
+					{
+						/*
+						 * If an unrecognized Notify type is received, the IKE_SA gets destroyed.
+						 * 
+						 */
+						
+						this->logger->log(this->logger, ERROR, "Notify type %s not recognized in state ike_auth_requested.",
+										  mapping_find(notify_message_type_m,notify_payload->get_notify_message_type(notify_payload)));
+						payloads->destroy(payloads);
+						return DELETE_ME;	
+					}
+				}
+			}
 			default:
 			{
-				/* can't happen, since message is verified, notify's? */
-				break;
+				this->logger->log(this->logger, ERROR, "Payload type %s not supported in state ike_auth_requested!", mapping_find(payload_type_m, payload->get_type(payload)));
+				payloads->destroy(payloads);
+				return FAILED;
 			}
 		}
 	}
@@ -208,7 +242,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 		return status;
 	}
 
-	this->ike_sa->set_last_replied_message_id(this->ike_sa,request->get_message_id(request));
+	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_auth_reply->get_message_id(ike_auth_reply));
 	this->logger->log(this->logger, CONTROL | MORE, "IKE_AUTH response successfully handled. IKE_SA established.");
 	
 	/* create new state */

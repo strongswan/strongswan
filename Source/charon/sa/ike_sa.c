@@ -210,7 +210,7 @@ struct private_ike_sa_t {
 	/**
 	 * Last message id which was successfully replied.
 	 */
-	u_int32_t last_replied_message_id;
+	int32_t last_replied_message_id;
 	
 	/**
 	 * a logger for this IKE_SA
@@ -431,8 +431,8 @@ static status_t resend_last_reply(private_ike_sa_t *this)
 status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
 {
 	packet_t *packet;
-	
-	if ((this->message_id_out -1) != message_id)
+		
+	if (this->last_requested_message == NULL)
 	{
 		return NOT_FOUND;
 	}
@@ -441,12 +441,13 @@ status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
 	{
 		return NOT_FOUND;
 	}
-	
-	if (this->last_requested_message == NULL)
+
+	if ((this->last_requested_message->get_message_id(this->last_requested_message)) != message_id)
 	{
 		return NOT_FOUND;
 	}
 	
+	this->logger->log(this->logger, CONTROL | MORE, "Going to retransmit message with id %d",message_id);
 	packet = this->last_requested_message->get_packet(this->last_requested_message);
 	charon->send_queue->add(charon->send_queue, packet);
 	
@@ -713,7 +714,7 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 	}
 	
 	/* message counter can now be increased */
-	this->logger->log(this->logger, CONTROL|MOST, "Increase message counter for outgoing messages");
+	this->logger->log(this->logger, CONTROL|MOST, "Increase message counter for outgoing messages from %d",this->message_id_out);
 	this->message_id_out++;
 	return SUCCESS;	
 }
@@ -796,7 +797,10 @@ static void reset_message_buffers (private_ike_sa_t *this)
  */
 static void destroy (private_ike_sa_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy IKE_SA");
+	this->logger->log(this->logger, CONTROL|MOST, "Going to destroy IKE SA %llu:%llu, role %s", 
+					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
+					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
+					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 
 	/* destroy child sa's */
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy all child_sa's");
