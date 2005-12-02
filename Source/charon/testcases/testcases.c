@@ -142,7 +142,7 @@ daemon_t *daemon_create()
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
 	charon->send_queue = send_queue_create();
-	charon->configuration_manager = configuration_manager_create();
+	charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT);
 	charon->sender = NULL;
 	charon->receiver = NULL;
 	charon->scheduler = NULL;

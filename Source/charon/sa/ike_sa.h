@@ -281,6 +281,14 @@ struct protected_ike_sa_t {
 	void (*set_new_state) (protected_ike_sa_t *this,state_t *state);
 	
 	/**
+	 * Sets the last replied message id.
+	 * 
+	 * @param this 				calling object
+	 * @param message_id		message id
+	 */
+	void (*set_last_replied_message_id) (protected_ike_sa_t *this,u_int32_t message_id);
+	
+	/**
 	 * Gets the internal stored initiator crypter_t object.
 	 * 
 	 * @param this 				calling object

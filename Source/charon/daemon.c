@@ -174,7 +174,7 @@ static void initialize(private_daemon_t *this)
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.send_queue = send_queue_create();
-	this->public.configuration_manager = configuration_manager_create();
+	this->public.configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT);
 	
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();

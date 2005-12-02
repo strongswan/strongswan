@@ -46,6 +46,11 @@ struct private_retransmit_request_job_t {
 	 * ID of the IKE_SA which the message belongs to.
 	 */
 	ike_sa_id_t *ike_sa_id;
+	
+	/**
+	 * Number of times a request was retransmitted
+	 */
+	u_int32_t retransmit_count;
 };
 
 
@@ -63,6 +68,22 @@ static job_type_t get_type(private_retransmit_request_job_t *this)
 static ike_sa_id_t *get_ike_sa_id(private_retransmit_request_job_t *this)
 {
 	return this->ike_sa_id;
+}
+
+/**
+ * Implements retransmit_request_job_t.get_retransmit_count.
+ */
+static u_int32_t get_retransmit_count(private_retransmit_request_job_t *this)
+{
+	return this->retransmit_count;
+}
+
+/**
+ * Implements retransmit_request_job_t.increase_retransmit_count.
+ */
+static void increase_retransmit_count(private_retransmit_request_job_t *this)
+{
+	this->retransmit_count++;
 }
 
 /**
@@ -100,9 +121,12 @@ retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike
 	this->public.get_ike_sa_id = (ike_sa_id_t * (*)(retransmit_request_job_t *)) get_ike_sa_id;
 	this->public.get_message_id = (u_int32_t (*)(retransmit_request_job_t *)) get_message_id;
 	this->public.destroy = (void (*)(retransmit_request_job_t *)) destroy;
+	this->public.get_retransmit_count = (u_int32_t (*)(retransmit_request_job_t *)) get_retransmit_count;
+	this->public.increase_retransmit_count = (void (*)(retransmit_request_job_t *)) increase_retransmit_count;
 	
 	/* private variables */
 	this->message_id = message_id;
+	this->retransmit_count = 0;
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	
 	return &(this->public);

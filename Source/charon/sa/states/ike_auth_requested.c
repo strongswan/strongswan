@@ -193,6 +193,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *r
 		return status;
 	}
 
+	this->ike_sa->set_last_replied_message_id(this->ike_sa,request->get_message_id(request));
 	this->logger->log(this->logger, CONTROL | MORE, "IKE_AUTH response successfully handled. IKE_SA established.");
 	
 	/* create new state */

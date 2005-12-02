@@ -52,9 +52,19 @@
 
 /**
  * Port on which the daemon will 
- * listen for incoming traffic
+ * listen for incoming traffic.
  */
 #define IKEV2_UDP_PORT 4500
+
+/**
+ * First retransmit timeout in milliseconds.
+ */
+#define RETRANSMIT_TIMEOUT 3000
+
+/**
+ * Max retransmit count. 0 for infinite.
+ */
+#define MAX_RETRANSMIT_COUNT 0
 
 /**
  * Default loglevel to use. This is the

@@ -42,6 +42,21 @@ struct retransmit_request_job_t {
 	job_t job_interface;
 	
 	/**
+	 * @brief Returns the retransmit count for a specific request.
+	 *
+	 * @param this 	calling retransmit_request_job_t object
+	 * @return 		retransmit count of request
+	 */
+	u_int32_t (*get_retransmit_count) (retransmit_request_job_t *this);
+
+	/**
+	 * @brief Increases number of retransmitt attemps.
+	 *
+	 * @param this 	calling retransmit_request_job_t object
+	 */	
+	void (*increase_retransmit_count) (retransmit_request_job_t *this);
+	
+	/**
 	 * @brief Returns the message_id of the request to be resent
 	 *
 	 * @param this 	calling retransmit_request_job_t object

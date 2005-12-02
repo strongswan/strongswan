@@ -123,6 +123,17 @@ struct private_configuration_manager_t {
 	 * Assigned logger object.
 	 */
 	logger_t *logger;
+	
+
+	/**
+	 * Max number of retransmitted requests.
+	 */	
+	u_int32_t max_retransmit_count;
+	
+	/**
+	 * First retransmit timeout in ms.
+	 */
+	u_int32_t first_retransmit_timeout;
 
 	/**
 	 * Load default configuration
@@ -457,6 +468,21 @@ static void add_new_configuration (private_configuration_manager_t *this, char *
 	this->configurations->insert_first(this->configurations,configuration_entry_create(name,init_config,sa_config));
 }
 
+static status_t get_retransmit_timeout (private_configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
+{
+	if ((retransmit_count > this->max_retransmit_count) && (this->max_retransmit_count != 0))
+	{
+		return FAILED;
+	}
+	
+	/**
+	 * TODO implement a good retransmit policy
+	 */
+	*timeout = this->first_retransmit_timeout * (retransmit_count + 1);
+	
+	return SUCCESS;
+}
+
 /**
  * Implementation of configuration_manager_t.destroy.
  */
@@ -499,7 +525,7 @@ static void destroy(private_configuration_manager_t *this)
 /*
  * Described in header-file
  */
-configuration_manager_t *configuration_manager_create()
+configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count)
 {
 	private_configuration_manager_t *this = allocator_alloc_thing(private_configuration_manager_t);
 
@@ -509,6 +535,7 @@ configuration_manager_t *configuration_manager_create()
 	this->public.get_init_config_for_host = (status_t (*) (configuration_manager_t *, host_t *, host_t *,init_config_t **)) get_init_config_for_host;
 	this->public.get_sa_config_for_name =(status_t (*) (configuration_manager_t *, char *, sa_config_t **)) get_sa_config_for_name;
 	this->public.get_sa_config_for_init_config_and_id =(status_t (*) (configuration_manager_t *, init_config_t *, identification_t *, identification_t *,sa_config_t **)) get_sa_config_for_init_config_and_id;
+	this->public.get_retransmit_timeout = (status_t (*) (configuration_manager_t *, u_int32_t retransmit_count, u_int32_t *timeout))get_retransmit_timeout;
 	
 	/* private functions */
 	this->load_default_config = load_default_config;
@@ -519,6 +546,8 @@ configuration_manager_t *configuration_manager_create()
 	this->configurations = linked_list_create();
 	this->sa_configs = linked_list_create();
 	this->init_configs = linked_list_create();
+	this->max_retransmit_count = max_retransmit_count;
+	this->first_retransmit_timeout = first_retransmit_timeout;
 	
 	this->load_default_config(this);
 

@@ -40,6 +40,7 @@
 #include <sa/states/initiator_init.h>
 #include <sa/states/responder_init.h>
 #include <queues/jobs/delete_ike_sa_job.h>
+#include <queues/jobs/retransmit_request_job.h>
 
 
 
@@ -197,14 +198,19 @@ struct private_ike_sa_t {
 	} secrets;
 
 	/**
-	 * next message id to receive
+	 * next message id to receive.
 	 */
 	u_int32_t message_id_in;
 	
 	/**
-	 * next message id to send
+	 * next message id to send.
 	 */
 	u_int32_t message_id_out;
+	
+	/**
+	 * Last message id which was successfully replied.
+	 */
+	u_int32_t last_replied_message_id;
 	
 	/**
 	 * a logger for this IKE_SA
@@ -430,8 +436,18 @@ status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
 	{
 		return NOT_FOUND;
 	}
+
+	if (message_id == this->last_replied_message_id)
+	{
+		return NOT_FOUND;
+	}
 	
-	packet = this->last_responded_message->get_packet(this->last_responded_message);
+	if (this->last_requested_message == NULL)
+	{
+		return NOT_FOUND;
+	}
+	
+	packet = this->last_requested_message->get_packet(this->last_requested_message);
 	charon->send_queue->add(charon->send_queue, packet);
 	
 	return SUCCESS;
@@ -650,6 +666,8 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 {
 	packet_t *packet;
 	status_t status;
+	retransmit_request_job_t *retransmit_job;
+	u_int32_t timeout;
 	
 	if (message->get_message_id(message) != this->message_id_out)
 	{
@@ -678,7 +696,22 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 
 	this->logger->log(this->logger, CONTROL|MOST, "replace last requested message with new one");
 	this->last_requested_message = message;
-
+	
+	retransmit_job = retransmit_request_job_create(this->message_id_out,this->ike_sa_id);
+	
+	status = charon->configuration_manager->get_retransmit_timeout (charon->configuration_manager,retransmit_job->get_retransmit_count(retransmit_job),&timeout);
+	
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, CONTROL|MOST, "No retransmit job for message created!");
+		retransmit_job->destroy(retransmit_job);
+	}
+	else
+	{
+		this->logger->log(this->logger, CONTROL|MOST, "Request will be retransmitted in %d ms.",timeout);
+		charon->event_queue->add_relative(charon->event_queue,(job_t *) retransmit_job,timeout);
+	}
+	
 	/* message counter can now be increased */
 	this->logger->log(this->logger, CONTROL|MOST, "Increase message counter for outgoing messages");
 	this->message_id_out++;
@@ -726,7 +759,15 @@ static status_t send_response (private_ike_sa_t *this,message_t * message)
 }
 
 /**
- * Implementation of protected_ike_sa_t.destroy.
+ * Implementation of protected_ike_sa_t.set_last_replied_message_id.
+ */
+static void set_last_replied_message_id (private_ike_sa_t *this,u_int32_t message_id)
+{
+	this->last_replied_message_id = message_id;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.reset_message_buffers.
  */
 static void reset_message_buffers (private_ike_sa_t *this)
 {
@@ -747,6 +788,7 @@ static void reset_message_buffers (private_ike_sa_t *this)
 	
 	this->message_id_out = 0;
 	this->message_id_in = 0;
+	this->last_replied_message_id = -1;
 }
 
 /**
@@ -879,7 +921,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_crypter_responder = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_responder;
 	this->protected.get_signer_responder = (signer_t *(*) (protected_ike_sa_t *)) get_signer_responder;	
 	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t *)) reset_message_buffers;
-
+	this->protected.set_last_replied_message_id = (void (*) (protected_ike_sa_t *,u_int32_t)) set_last_replied_message_id;
+	
 	/* private functions */
 	this->resend_last_reply = resend_last_reply;
 	this->create_delete_job = create_delete_job;
@@ -897,6 +940,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->last_responded_message = NULL;
 	this->message_id_out = 0;
 	this->message_id_in = 0;
+	this->last_replied_message_id = -1;
 	this->secrets.d_key = CHUNK_INITIALIZER;
 	this->secrets.ai_key = CHUNK_INITIALIZER;
 	this->secrets.ar_key = CHUNK_INITIALIZER;

@@ -153,7 +153,6 @@ static void process_jobs(private_thread_pool_t *this)
 			case RETRANSMIT_REQUEST:
 			{
 				this->process_retransmit_request_job(this, (retransmit_request_job_t*)job);
-				job->destroy(job);
 				break;
 			}
 			default:
@@ -327,10 +326,13 @@ static void process_delete_ike_sa_job(private_thread_pool_t *this, delete_ike_sa
  */
 static void process_retransmit_request_job(private_thread_pool_t *this, retransmit_request_job_t *job)
 {
-	status_t status;
+
 	ike_sa_id_t *ike_sa_id = job->get_ike_sa_id(job);
 	u_int32_t message_id = job->get_message_id(job);
+	bool stop_retransmitting = FALSE;
+	u_int32_t timeout;
 	ike_sa_t *ike_sa;
+	status_t status;
 										
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking out IKE SA %lld:%lld, role %s", 
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
@@ -348,7 +350,8 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 				
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Message does'nt have to be retransmitted");
+		this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Message doesn't have to be retransmitted");
+		stop_retransmitting = TRUE;
 	}
 				
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Checkin IKE SA %lld:%lld, role %s", 
@@ -361,11 +364,25 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "Checkin of IKE SA failed!");
 	}
-/*
-	u_int32_t message_id = message->get_message_id(message);
-	retransmit_request_job_t *new_job = retransmit_request_job_create(message_id,ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue,(job_t *) new_job,5000);*/
 
+	if (stop_retransmitting)
+	{
+		job->destroy(job);
+		return;
+	}
+	
+	job->increase_retransmit_count(job);
+	status = charon->configuration_manager->get_retransmit_timeout (charon->configuration_manager,job->get_retransmit_count(job),&timeout);
+	if (status != SUCCESS)
+	{
+		this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Message will not be anymore retransmitted");
+		job->destroy(job);
+		/*
+		 * TODO delete IKE_SA ? 
+		 */
+		return;
+	}
+	charon->event_queue->add_relative(charon->event_queue,(job_t *) job,timeout);
 }
 
 /**
