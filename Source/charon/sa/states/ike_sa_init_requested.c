@@ -162,7 +162,6 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	ike_sa_id_t *ike_sa_id;
 	iterator_t *payloads;
 	message_t *request;
-	packet_t *packet;
 	status_t status;
 	
 	/*
@@ -384,34 +383,18 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	/* build the complete IKE_AUTH request */
 	this->build_ike_auth_request (this,&request);
 
-	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|MOST, "Generate packet from message");
-
-	status = request->generate(request, this->ike_sa->get_crypter_initiator(this->ike_sa), this->ike_sa->get_signer_initiator(this->ike_sa), &packet);
+	/* message can now be sent (must not be destroyed) */
+	status = this->ike_sa->send_request(this->ike_sa, request);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
+		this->logger->log(this->logger, ERROR, "Could not send request message");
 		request->destroy(request);
 		return DELETE_ME;
 	}
-	
-	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
-	charon->send_queue->add(charon->send_queue, packet);
-	
+
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 	next_state = ike_auth_requested_create(this->ike_sa,this->sent_nonce,this->received_nonce);
-	
-	/* last messages can now be set */
-	status = this->ike_sa->set_last_requested_message(this->ike_sa, request);
-
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not set last requested message");
-		(next_state->state_interface).destroy(&(next_state->state_interface));
-		request->destroy(request);
-		return DELETE_ME;
-	}
 
 	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
@@ -579,7 +562,7 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
-	allocator_free(this->shared_secret.ptr);
+	allocator_free_chunk(&(this->shared_secret));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
 	allocator_free(this);	
 }
@@ -598,7 +581,7 @@ static void destroy(private_ike_sa_init_requested_t *this)
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
 	allocator_free(this->received_nonce.ptr);
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
-	allocator_free(this->shared_secret.ptr);
+	allocator_free_chunk(&(this->shared_secret));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
 	allocator_free(this);
 }

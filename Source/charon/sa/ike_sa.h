@@ -71,6 +71,17 @@ struct ike_sa_t {
 	 * @return				TODO
 	 */
 	status_t (*initialize_connection) (ike_sa_t *this, char *name);
+	
+	/**
+	 * @brief Retransmits a request.
+	 * 
+	 * @param this 			calling object
+	 * @param message_id	ID of the request to retransmit
+	 * @return
+	 * 						- SUCCESS
+	 * 						- NOT_FOUND if request doesn't have to be retransmited
+	 */
+	status_t (*retransmit_request) (ike_sa_t *this, u_int32_t message_id);
 
 	/**
 	 * @brief Get the id of the SA.
@@ -223,30 +234,32 @@ struct protected_ike_sa_t {
 	status_t (*create_transforms_from_proposal) (protected_ike_sa_t *this,ike_proposal_t * proposal);
 	
 	/**
-	 * Sets the last requested message.
+	 * Sends the next request message.
 	 * 
-	 * Allready set last requested message gets destroyed. object gets not cloned!
+	 * Also the first retransmit job is created.
+	 * 
+	 * Stored requested message gets destroyed. object gets not cloned!
 	 * 
 	 * @param this 				calling object
-	 * @param message			pointer to the new last requested message
+	 * @param message			pointer to the message which should be sent
 	 * @return
 	 * 							- SUCCESS
 	 * 							- FAILED if message id is not next expected one
 	 */
-	status_t (*set_last_requested_message) (protected_ike_sa_t *this,message_t * message);
+	status_t (*send_request) (protected_ike_sa_t *this,message_t * message);
 
 	/**
-	 * Sets the last responded message.
+	 * Sends the next response message.
 	 * 
-	 * Allready set last requested message gets destroyed. object gets not cloned!
+	 * Stored responded message gets destroyed. object gets not cloned!
 	 * 
 	 * @param this 				calling object
-	 * @param message			pointer to the new last responded message
+	 * @param message			pointer to the message which should be sent
 	 * return					
 	 * 							- SUCCESS
 	 * 							- FAILED if message id is not next expected one
 	 */
-	status_t (*set_last_responded_message) (protected_ike_sa_t *this,message_t * message);
+	status_t (*send_response) (protected_ike_sa_t *this,message_t * message);
 	
 	/**
 	 * Gets the internal stored randomizer_t object.

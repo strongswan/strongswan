@@ -407,23 +407,36 @@ static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chun
 }
 
 /**
- * Implements protected_ike_sa_t.resend_last_reply.
+ * Implementation of  private_ike_sa_t.resend_last_reply.
  */
 static status_t resend_last_reply(private_ike_sa_t *this)
 {
 	packet_t *packet;
-	status_t status;
 	
-	status = this->last_responded_message->generate(this->last_responded_message, NULL, NULL, &packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not generate message to resent");
-		return status;
-	}
-	
+	packet = this->last_responded_message->get_packet(this->last_responded_message);
 	charon->send_queue->add(charon->send_queue, packet);
+
 	return SUCCESS;
 }
+
+/**
+ * Implementation of ike_sa_t.retransmit_request.
+ */
+status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
+{
+	packet_t *packet;
+	
+	if ((this->message_id_out -1) != message_id)
+	{
+		return NOT_FOUND;
+	}
+	
+	packet = this->last_responded_message->get_packet(this->last_responded_message);
+	charon->send_queue->add(charon->send_queue, packet);
+	
+	return SUCCESS;
+}
+	
 
 /**
  * Implements protected_ike_sa_t.resend_last_reply.
@@ -615,6 +628,9 @@ static signer_t *get_signer_initiator (private_ike_sa_t *this)
 }
 
 /**
+<<<<<<< .mine
+ * Implementation of protected_ike_sa_t.send_request.
+=======
  * Implementation of protected_ike_sa_t.get_crypter_responder.
  */
 static crypter_t *get_crypter_responder(private_ike_sa_t *this)
@@ -633,50 +649,82 @@ static signer_t *get_signer_responder (private_ike_sa_t *this)
 
 /**
  * Implementation of protected_ike_sa_t.set_last_requested_message.
+>>>>>>> .r660
  */
-static status_t set_last_requested_message (private_ike_sa_t *this,message_t * message)
+static status_t send_request (private_ike_sa_t *this,message_t * message)
 {
+	packet_t *packet;
+	status_t status;
+	
+	if (message->get_message_id(message) != this->message_id_out)
+	{
+		this->logger->log(this->logger, ERROR, "Message could not be sent cause id was not as expected");
+		return FAILED;
+	}
+
+	/* generate packet */	
+	this->logger->log(this->logger, CONTROL|MOST, "Generate packet from message");
+
+	status = message->generate(message, this->crypter_initiator,this->signer_initiator, &packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
+		return FAILED;
+	}
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	charon->send_queue->add(charon->send_queue, packet);
+	
 	if (this->last_requested_message != NULL)
 	{
 		/* destroy message */
 		this->last_requested_message->destroy(this->last_requested_message);
-	}
+	}	
 
-	if (message->get_message_id(message) != this->message_id_out)
-	{
-		this->logger->log(this->logger, CONTROL|MOST, "last requested message could not be set cause id was not as expected");
-		return FAILED;
-	}
 	this->logger->log(this->logger, CONTROL|MOST, "replace last requested message with new one");
 	this->last_requested_message = message;
 
 	/* message counter can now be increased */
-	this->logger->log(this->logger, CONTROL|MOST, "Increate message counter for outgoing messages");
+	this->logger->log(this->logger, CONTROL|MOST, "Increase message counter for outgoing messages");
 	this->message_id_out++;
 	return SUCCESS;	
 }
 
 /**
- * Implementation of protected_ike_sa_t.set_last_responded_message.
+ * Implementation of protected_ike_sa_t.send_response.
  */
-static status_t set_last_responded_message (private_ike_sa_t *this,message_t * message)
+static status_t send_response (private_ike_sa_t *this,message_t * message)
 {
+	packet_t *packet;
+	status_t status;
+	
+	if (message->get_message_id(message) != this->message_id_in)
+	{
+		this->logger->log(this->logger, CONTROL|MOST, "Message could not be sent cause id was not as expected");
+		return FAILED;	
+	}
+	
+	status = message->generate(message, this->crypter_initiator,this->signer_initiator, &packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
+		return FAILED;
+	}
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	charon->send_queue->add(charon->send_queue, packet);
+	
 	if (this->last_responded_message != NULL)
 	{
 		/* destroy message */
 		this->last_responded_message->destroy(this->last_responded_message);
 	}
-	if (message->get_message_id(message) != this->message_id_in)
-	{
-		this->logger->log(this->logger, CONTROL|MOST, "last responded message could not be set cause id was not as expected");
-		return FAILED;
-		
-	}
+	
 	this->logger->log(this->logger, CONTROL|MOST, "replace last responded message with new one");
 	this->last_responded_message = message;
 
 	/* message counter can now be increased */
-	this->logger->log(this->logger, CONTROL|MOST, "Increate message counter for incoming messages");
+	this->logger->log(this->logger, CONTROL|MOST, "Increase message counter for incoming messages");
 	this->message_id_in++;
 
 	return SUCCESS;
@@ -811,6 +859,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->protected.public.initialize_connection = (status_t(*)(ike_sa_t*, char*)) initialize_connection;
 	this->protected.public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
+	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->protected.public.destroy = (void(*)(ike_sa_t*))destroy;
 	
 	/* protected functions */
@@ -826,8 +875,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.set_my_host = (void(*) (protected_ike_sa_t *,host_t *)) set_my_host;
 	this->protected.set_other_host = (void(*) (protected_ike_sa_t *, host_t *)) set_other_host;
 	this->protected.get_randomizer = (randomizer_t *(*) (protected_ike_sa_t *)) get_randomizer;
-	this->protected.set_last_requested_message = (status_t (*) (protected_ike_sa_t *,message_t *)) set_last_requested_message;
-	this->protected.set_last_responded_message = (status_t (*) (protected_ike_sa_t *,message_t *)) set_last_responded_message;
+	this->protected.send_request = (status_t (*) (protected_ike_sa_t *,message_t *)) send_request;
+	this->protected.send_response = (status_t (*) (protected_ike_sa_t *,message_t *)) send_response;
 	this->protected.create_transforms_from_proposal = (status_t (*) (protected_ike_sa_t *,ike_proposal_t *)) create_transforms_from_proposal;
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
 	this->protected.get_crypter_initiator = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_initiator;
@@ -839,9 +888,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* private functions */
 	this->resend_last_reply = resend_last_reply;
 	this->create_delete_job = create_delete_job;
-
-
-
 
 	/* initialize private fields */
 	this->logger = charon->logger_manager->create_logger(charon->logger_manager, IKE_SA, NULL);

@@ -26,6 +26,10 @@ OBJS+= $(BUILD_DIR)initiate_ike_sa_job.o
 $(BUILD_DIR)initiate_ike_sa_job.o :		$(JOBS_DIR)initiate_ike_sa_job.c $(JOBS_DIR)initiate_ike_sa_job.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
+OBJS+= $(BUILD_DIR)retransmit_request_job.o
+$(BUILD_DIR)retransmit_request_job.o :	$(JOBS_DIR)retransmit_request_job.c $(JOBS_DIR)retransmit_request_job.h
+										$(CC) $(CFLAGS) -c -o $@ $<
+
 OBJS+= $(BUILD_DIR)job.o
 $(BUILD_DIR)job.o :						$(JOBS_DIR)job.c $(JOBS_DIR)job.h
 										$(CC) $(CFLAGS) -c -o $@ $<

@@ -27,6 +27,7 @@
 #include <sa/states/state.h>
 #include <sa/states/ike_sa_init_requested.h>
 #include <utils/allocator.h>
+#include <queues/jobs/retransmit_request_job.h>
 #include <transforms/diffie_hellman.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -179,7 +180,6 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	init_config_t *init_config;
 	randomizer_t *randomizer;
 	message_t *message;
-	packet_t *packet;
 	status_t status;
 	ike_sa_id_t *ike_sa_id;
 	
@@ -201,49 +201,36 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 
 	this->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for nonce");
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
+	
+	allocator_free_chunk(&(this->sent_nonce));
+	
 	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
 
 	this->logger->log(this->logger, RAW|MOST, "Nonce",&(this->sent_nonce));
 
 	this->build_ike_sa_init_request (this,&message);
 
-	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
-	status = message->generate(message, NULL, NULL, &packet);
+	/* message can now be sent (must not be destroyed) */
+	status = this->ike_sa->send_request(this->ike_sa, message);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "could not generate packet from message");
+		this->logger->log(this->logger, ERROR, "Could not send request message");
 		message->destroy(message);
 		return DELETE_ME;
 	}
-	
-	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
-	charon->send_queue->add(charon->send_queue, packet);
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_priority, this->diffie_hellman, this->sent_nonce);
-
-	/* last message can now be set */
-	status = this->ike_sa->set_last_requested_message(this->ike_sa, message);
-
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not set last requested message");
-		(next_state->state_interface).destroy(&(next_state->state_interface));
-		message->destroy(message);
-		return DELETE_ME;
-	}
 
 	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 
 	/* state has NOW changed :-) */
 	this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
-
+	
 	this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
 	this->destroy_after_state_change(this);
-
 	return SUCCESS;
 }
 

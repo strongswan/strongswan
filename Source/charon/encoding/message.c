@@ -631,6 +631,14 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 }
 
 /**
+ * Implementation of message_t.get_packet.
+ */
+static packet_t *get_packet (private_message_t *this)
+{
+	return this->packet->clone(this->packet);
+}
+
+/**
  * Implementation of message_t.parse_header.
  */
 static status_t parse_header(private_message_t *this)
@@ -1154,6 +1162,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.parse_header = (status_t (*) (message_t *)) parse_header;
 	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
 	this->public.verify =  (status_t (*) (message_t*)) verify;
+	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;
 	this->public.destroy = (void(*)(message_t*))destroy;
 		
 	/* private values */

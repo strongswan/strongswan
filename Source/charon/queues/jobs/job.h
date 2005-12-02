@@ -41,15 +41,18 @@ enum job_type_t {
  	 * Job is implemented in class type incoming_packet_job_t
 	 */
 	INCOMING_PACKET,
+	
 	/** 
 	 * Retransmit an IKEv2-Message
 	 */
 	RETRANSMIT_REQUEST,
+	
 	/** 
 	 * Establish an ike sa as initiator
 	 * 
 	 * Job is implemented in class type initiate_ike_sa_job_t
 	 */
+	
 	INITIATE_IKE_SA,
 	/** 
 	 * Delete an ike sa

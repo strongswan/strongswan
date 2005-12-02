@@ -83,7 +83,6 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	sa_payload_t *sa_request;
 	ts_payload_t *tsi_request, *tsr_request;
 	message_t *response;
-	packet_t *response_packet;
 
 	exchange_type = request->get_exchange_type(request);
 	if (exchange_type != IKE_AUTH)
@@ -210,25 +209,18 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		this->logger->log(this->logger, ERROR, "Building tsr payload failed");
 		response->destroy(response);
 		return status;
-	}
-	
-	/* generate response, get transfroms first */
-	signer = this->ike_sa->get_signer_responder(this->ike_sa);
-	crypter = this->ike_sa->get_crypter_responder(this->ike_sa);
-	status = response->generate(response, crypter, signer, &response_packet);
+	}		
+
+	this->logger->log(this->logger, CONTROL | MORE, "IKE_AUTH request successfully handled. Sending reply.");
+	status = this->ike_sa->send_response(this->ike_sa, response);
+
+	/* message can now be sent (must not be destroyed) */
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Error in message generation");
+		this->logger->log(this->logger, ERROR, "Could not send response message");
 		response->destroy(response);
-		return status;
+		return DELETE_ME;
 	}
-
-	
-	/* send it out */
-	this->logger->log(this->logger, CONTROL | MORE, "IKE_AUTH request successfully handled. Sending reply.");
-	charon->send_queue->add(charon->send_queue, response_packet);
-	/* store for timeout reply */
-	this->ike_sa->set_last_responded_message(this->ike_sa, response);
 	
 	/* create new state */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));

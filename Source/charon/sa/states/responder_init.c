@@ -163,7 +163,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	iterator_t *payloads;
 	message_t *response;
 	host_t *other_host;
-	packet_t *packet;
 	host_t *my_host;
 	status_t status;
 
@@ -344,36 +343,27 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 
 	this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->received_nonce, this->sent_nonce);
 
+	/* not used anymore */
+	allocator_free_chunk(&shared_secret);
+
 	this->build_ike_sa_init_reply(this,&response);
-	
-	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|MOST, "generate packet from message");
-	status = response->generate(response, NULL, NULL, &packet);
+
+	/* message can now be sent (must not be destroyed) */
+	status = this->ike_sa->send_response(this->ike_sa, response);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "could not generate packet from message");
+		this->logger->log(this->logger, ERROR, "Could not send response message");
+		response->destroy(response);
 		return DELETE_ME;
 	}
-	
-	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
-	 charon->send_queue->add(charon->send_queue, packet);
+
+
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 
 	next_state = ike_sa_init_responded_create(this->ike_sa);
 	
-	/* last message can now be set */
-	status = this->ike_sa->set_last_responded_message(this->ike_sa, response);
-
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not set last responded message");
-		response->destroy(response);
-		(next_state->state_interface).destroy(&(next_state->state_interface));
-		return DELETE_ME;
-	}
-
 	/* state can now be changed */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t *) next_state);
 	/* state has NOW changed :-) */
@@ -517,9 +507,9 @@ static void destroy(private_responder_init_t *this)
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy responder init state object");
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
-	allocator_free(this->sent_nonce.ptr);
+	allocator_free_chunk(&(this->sent_nonce));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
-	allocator_free(this->received_nonce.ptr);
+	allocator_free_chunk(&(this->received_nonce));
 
 	if (this->diffie_hellman != NULL)
 	{
@@ -543,6 +533,11 @@ static void destroy_after_state_change (private_responder_init_t *this)
 		this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie_hellman_t object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
+	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
+	allocator_free_chunk(&(this->sent_nonce));
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
+	allocator_free_chunk(&(this->received_nonce));
 
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object");	
 	allocator_free(this);

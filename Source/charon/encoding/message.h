@@ -282,6 +282,14 @@ struct message_t {
 	iterator_t * (*get_payload_iterator) (message_t *this);
 	
 	/**
+	 * Returns a clone of the internal stored packet_t object.
+	 *
+	 * @param this 		message_t object
+	 * @return			packet_t object as clone of internal one
+	 */	
+	packet_t * (*get_packet) (message_t *this);
+	
+	/**
 	 * @brief Destroys a message and all including objects.
 	 *
 	 * @param this 		message_t object
