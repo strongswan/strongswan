@@ -396,7 +396,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
-	next_state = ike_auth_requested_create(this->ike_sa);
+	next_state = ike_auth_requested_create(this->ike_sa,this->received_nonce);
 
 	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
@@ -577,8 +577,6 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 	this->diffie_hellman->destroy(this->diffie_hellman);
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");	
 	allocator_free(this->sent_nonce.ptr);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
-	allocator_free(this->received_nonce.ptr);
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
 	allocator_free_chunk(&(this->shared_secret));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");

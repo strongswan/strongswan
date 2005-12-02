@@ -362,7 +362,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 
-	next_state = ike_sa_init_responded_create(this->ike_sa);
+	next_state = ike_sa_init_responded_create(this->ike_sa, this->received_nonce);
 	
 	/* state can now be changed */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t *) next_state);
@@ -536,9 +536,6 @@ static void destroy_after_state_change (private_responder_init_t *this)
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
 	allocator_free_chunk(&(this->sent_nonce));
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
-	allocator_free_chunk(&(this->received_nonce));
-
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object");	
 	allocator_free(this);
 }

@@ -35,8 +35,6 @@
 #include <transforms/crypters/crypter.h>
 #include <transforms/signers/signer.h>
 
-
-
 /**
  * Nonce size in bytes of all sent nonces
  * 
@@ -100,6 +98,8 @@ struct ike_sa_t {
 };
 
 typedef struct protected_ike_sa_t protected_ike_sa_t;
+
+
 
 /**
  * @brief Protected data of an ike_sa_t object.
@@ -319,6 +319,34 @@ struct protected_ike_sa_t {
 	 * @return					pointer to signer_t object
 	 */
 	signer_t *(*get_signer_responder) (protected_ike_sa_t *this);
+	
+	/**
+	 * Gets the internal stored prf_t object.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to prf_t object
+	 */
+	prf_t *(*get_prf) (protected_ike_sa_t *this);
+	
+	/**
+	 * Gets the data of last sent message.
+	 * 
+	 * Data are not getting cloned.
+	 * 
+	 * @param this 				calling object
+	 * @return					chunk_t pointing to data
+	 */
+	chunk_t (*get_last_sent_message_data) (protected_ike_sa_t *this);
+	
+	/**
+	 * Gets the Shared key SK_pr.
+	 * 
+	 * Returned value is not cloned!
+	 * 
+	 * @param this 				calling object
+	 * @return					SK_pr key
+	 */
+	chunk_t (*get_key_pr) (protected_ike_sa_t *this);
 
 	/**
 	 * Resets message id counters and does destroy stored received and sent messages.
@@ -326,6 +354,7 @@ struct protected_ike_sa_t {
 	 * @param this 				calling object
 	 */	
 	void (*reset_message_buffers) (protected_ike_sa_t *this);
+
 };
 
 

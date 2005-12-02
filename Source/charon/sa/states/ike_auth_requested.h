@@ -50,12 +50,11 @@ struct ike_auth_requested_t {
  * Constructor of class ike_auth_requested_t
  * 
  * @param ike_sa		assigned ike_sa object
- * @param sent_nonce	Sent nonce value
  * @param received_nonce	Received nonce value
  * @return				created ike_auth_requested_t object
  * 
  * @ingroup states
  */
-ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa);
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce);
 
 #endif /*IKE_AUTH_REQUESTED_H_*/

@@ -552,6 +552,22 @@ static void set_other_host (private_ike_sa_t *this, host_t *other_host)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.get_prf.
+ */
+static prf_t *get_prf (private_ike_sa_t *this)
+{
+	return this->prf;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.get_key_pr.
+ */
+static chunk_t get_key_pr (private_ike_sa_t *this)
+{
+	return this->secrets.pr_key;
+}
+
+/**
  * Implementation of protected_ike_sa_t.set_prf.
  */
 static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_proposal_t *proposal)
@@ -768,6 +784,23 @@ static void set_last_replied_message_id (private_ike_sa_t *this,u_int32_t messag
 }
 
 /**
+ * Implementation of protected_ike_sa_t.get_last_sent_message_data.
+ */
+static chunk_t get_last_sent_message_data (private_ike_sa_t *this)
+{
+	chunk_t last_sent_message_data = CHUNK_INITIALIZER;
+	packet_t *packet;
+	
+	if (this->last_requested_message != NULL)
+	{
+		packet = this->last_requested_message->get_packet(this->last_requested_message);
+		last_sent_message_data = packet->data;
+	}
+	
+	return last_sent_message_data;
+}
+
+/**
  * Implementation of protected_ike_sa_t.reset_message_buffers.
  */
 static void reset_message_buffers (private_ike_sa_t *this)
@@ -906,6 +939,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* protected functions */
 	this->protected.build_message = (void (*) (protected_ike_sa_t *, exchange_type_t , bool , message_t **)) build_message;
 	this->protected.compute_secrets = (void (*) (protected_ike_sa_t *,chunk_t ,chunk_t , chunk_t )) compute_secrets;
+	this->protected.get_prf = (prf_t *(*) (protected_ike_sa_t *)) get_prf;	
+	this->protected.get_key_pr = (chunk_t (*) (protected_ike_sa_t *)) get_key_pr;	
 	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;		
 	this->protected.set_init_config = (void (*) (protected_ike_sa_t *,init_config_t *)) set_init_config;
 	this->protected.get_init_config = (init_config_t *(*) (protected_ike_sa_t *)) get_init_config;
@@ -925,6 +960,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_crypter_responder = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_responder;
 	this->protected.get_signer_responder = (signer_t *(*) (protected_ike_sa_t *)) get_signer_responder;	
 	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t *)) reset_message_buffers;
+	this->protected.get_last_sent_message_data = (chunk_t (*) (protected_ike_sa_t *this)) get_last_sent_message_data;
 	this->protected.set_last_replied_message_id = (void (*) (protected_ike_sa_t *,u_int32_t)) set_last_replied_message_id;
 	
 	/* private functions */

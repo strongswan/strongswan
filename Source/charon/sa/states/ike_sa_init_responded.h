@@ -49,11 +49,11 @@ struct ike_sa_init_responded_t {
 /**
  * @brief Constructor of class ike_sa_init_responded_t
  * 
- * @param ike_sa 		assigned IKE_SA
- * @todo Params description
+ * @param ike_sa 			assigned IKE_SA
+ * @param received_nonce	received nonce data
  * 
  * @ingroup states
  */
-ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa);
+ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce);
 
 #endif /*IKE_SA_INIT_RESPONDED_H_*/

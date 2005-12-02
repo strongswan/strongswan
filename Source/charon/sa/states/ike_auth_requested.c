@@ -32,6 +32,7 @@
 #include <transforms/signers/signer.h>
 #include <transforms/crypters/crypter.h>
 #include <sa/states/ike_sa_established.h>
+#include <sa/authenticator.h>
 
 typedef struct private_ike_auth_requested_t private_ike_auth_requested_t;
 
@@ -54,6 +55,11 @@ struct private_ike_auth_requested_t {
 	 * SA config, just a copy of the one stored in the ike_sa
 	 */
 	sa_config_t *sa_config; 
+	
+	/**
+	 * Received nonce from responder
+	 */
+	chunk_t received_nonce;
 	 
 	/**
 	 * Logger used to log data 
@@ -75,7 +81,7 @@ struct private_ike_auth_requested_t {
 	/**
 	 * process the AUTH payload (check authenticity of message)
 	 */
-	status_t (*process_auth_payload) (private_ike_auth_requested_t *this, auth_payload_t *auth_payload);
+	status_t (*process_auth_payload) (private_ike_auth_requested_t *this, auth_payload_t *auth_payload, id_payload_t *other_id_payload);
 	
 	/**
 	 * process the TS payload (check if selected traffic selectors are valid)
@@ -223,7 +229,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 		this->logger->log(this->logger, ERROR, "Processing sa payload failed");
 		return status;
 	}
-	status = this->process_auth_payload(this, auth_payload);
+	status = this->process_auth_payload(this, auth_payload,idr_payload);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Processing auth payload failed");
@@ -264,6 +270,10 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 	configured_other_id = this->sa_config->get_other_id(this->sa_config);
 	if (configured_other_id)
 	{
+		this->logger->log(this->logger, CONTROL, "configured ID: %s, ID of responder: %s",
+							configured_other_id->get_string(configured_other_id),
+							other_id->get_string(other_id));
+
 		if (!other_id->equals(other_id, configured_other_id))
 		{
 			other_id->destroy(other_id);
@@ -324,8 +334,27 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 /**
  * Implements private_ike_auth_requested_t.process_auth_payload
  */
-static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_payload_t *auth_payload)
+static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_payload_t *auth_payload, id_payload_t *other_id_payload)
 {
+	
+	chunk_t received_auth_data = auth_payload->get_data(auth_payload);
+	chunk_t last_message_data = this->ike_sa->get_last_sent_message_data(this->ike_sa);
+	bool verified;
+	identification_t *identification;
+	authenticator_t *authenticator;
+	
+	identification = other_id_payload->get_identification(other_id_payload);
+	
+	/* TODO VERIFY auth here */
+	authenticator = authenticator_create(this->ike_sa);
+
+	authenticator->verify_authentication(authenticator,auth_payload->get_auth_method(auth_payload),received_auth_data,last_message_data,this->received_nonce,identification,&verified);
+	
+	authenticator->destroy(authenticator);
+	
+	allocator_free_chunk(&received_auth_data);
+	
+	
 	/* TODO VERIFY auth here */
 	return SUCCESS;	
 }
@@ -385,13 +414,14 @@ static ike_sa_state_t get_state(private_ike_auth_requested_t *this)
  */
 static void destroy(private_ike_auth_requested_t *this)
 {
+	allocator_free_chunk(&(this->received_nonce));
 	allocator_free(this);
 }
 
 /* 
  * Described in header.
  */
-ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa)
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce)
 {
 	private_ike_auth_requested_t *this = allocator_alloc_thing(private_ike_auth_requested_t);
 
@@ -409,6 +439,7 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
+	this->received_nonce = received_nonce;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	
 	return &(this->public);
