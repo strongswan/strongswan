@@ -98,11 +98,11 @@ encoding_rule_t ke_payload_encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_ke_payload_t, payload_length) 		},	
 	/* DH Group number as 16 bit field*/
-	{ U_INT_16,			offsetof(private_ke_payload_t, dh_group_number) 		},
-	{ RESERVED_BYTE,	0 														}, 
-	{ RESERVED_BYTE,	0 														}, 
+	{ U_INT_16,			offsetof(private_ke_payload_t, dh_group_number) 	},
+	{ RESERVED_BYTE,	0 													}, 
+	{ RESERVED_BYTE,	0 													}, 
 	/* Key Exchange Data is from variable size */
-	{ KEY_EXCHANGE_DATA,	offsetof(private_ke_payload_t, key_exchange_data) 	}
+	{ KEY_EXCHANGE_DATA,	offsetof(private_ke_payload_t, key_exchange_data)}
 };
 
 /*

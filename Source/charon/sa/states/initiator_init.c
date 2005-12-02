@@ -126,16 +126,12 @@ struct private_initiator_init_t {
 };
 
 /**
- * Implements function initiator_init_t.initiate_connection.
+ * Implementation of initiator_init_t.initiate_connection.
  */
 static status_t initiate_connection (private_initiator_init_t *this, char *name)
 {
-	ike_sa_init_requested_t *next_state;
 	init_config_t *init_config;
-	randomizer_t *randomizer;
 	sa_config_t *sa_config;
-	message_t *message;
-	packet_t *packet;
 	status_t status;
 	
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
@@ -159,8 +155,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	
 	this->ike_sa->set_sa_config(this->ike_sa,sa_config);
 	
-	
-	
+	/* host informations are read from configuration */	
 	this->ike_sa->set_other_host(this->ike_sa,init_config->get_other_host_clone(init_config));
 	this->ike_sa->set_my_host(this->ike_sa,init_config->get_my_host_clone(init_config));
 	
@@ -171,17 +166,32 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 		return INVALID_ARG;
 	}
 	
-	/* a diffie hellman object could allready exist caused by an failed initiate_connection call */	
-	if (this->diffie_hellman == NULL)
+	/* next step is done in retry_initiate_connection */
+	return this->public.retry_initiate_connection(&(this->public),this->dh_group_priority);
+}
+
+/**
+ * Implementation of initiator_init_t.retry_initiate_connection.
+ */
+status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group_priority)
+{
+	ike_sa_init_requested_t *next_state;
+	init_config_t *init_config;
+	randomizer_t *randomizer;
+	message_t *message;
+	packet_t *packet;
+	status_t status;
+		
+	init_config = this->ike_sa->get_init_config(this->ike_sa);
+	
+	this->dh_group_number = init_config->get_dh_group_number(init_config,dh_group_priority);
+	if (this->dh_group_number == MODP_UNDEFINED)
 	{
-		this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
+		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be retrieved with priority %d", this->dh_group_priority);
+		return INVALID_ARG;
 	}
 	
-	if (this->sent_nonce.ptr != NULL)
-	{
-		allocator_free(this->sent_nonce.ptr);
-		this->sent_nonce = CHUNK_INITIALIZER;
-	}
+	this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
 
 	this->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for nonce");
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
@@ -387,6 +397,7 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	
 	/* public functions */
 	this->public.initiate_connection = (status_t (*)(initiator_init_t *, char *)) initiate_connection;
+	this->public.retry_initiate_connection = (status_t (*)(initiator_init_t *, int )) retry_initiate_connection;
 	
 	/* private functions */
 	this->destroy_after_state_change = destroy_after_state_change;

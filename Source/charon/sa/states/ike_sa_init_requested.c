@@ -218,6 +218,14 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		this->logger->log(this->logger, CONTROL|MORE, "Processing payload %s", mapping_find(payload_type_m, payload->get_type(payload)));
 		switch (payload->get_type(payload))
 		{
+			/**
+			 * TODO check for notify of type 
+			 * 
+			 * and change to state INITIATOR_INIT;
+			 * 
+			 * call destroy after state change not destroy_after_state_change!!!
+			 */
+			
 			case SECURITY_ASSOCIATION:
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;

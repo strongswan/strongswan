@@ -46,10 +46,20 @@ struct initiator_init_t {
 	 * Initiate a new connection with given configuration name
 	 * 
 	 * @param this 			calling object
+	 * 
 	 * @param name 			name of the configuration
 	 * @return				TODO
 	 */
-	status_t (*initiate_connection) (initiator_init_t *this, char *name);	
+	status_t (*initiate_connection) (initiator_init_t *this, char *name);
+	
+	/**
+	 * Retries to initiate a new connection with another dh_group_priority
+	 * 
+	 * @param this 				calling object
+	 * @param dh_group_priority	dh group priority to try with
+	 * @return					TODO
+	 */
+	status_t (*retry_initiate_connection) (initiator_init_t *this, int dh_group_priority);
 };
 
 /**
