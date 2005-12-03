@@ -471,7 +471,7 @@ void test_parser_with_id_payload(tester_t *tester)
 	{
 		return;	
 	}
-	result = id_payload->get_data(id_payload);
+	result = id_payload->get_data_clone(id_payload);
 	tester->assert_true(tester,(id_payload->get_initiator(id_payload) == TRUE), "is IDi payload");
 	tester->assert_true(tester,(id_payload->get_id_type(id_payload) == ID_IPV6_ADDR), "is ID_IPV6_ADDR ID type");
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
@@ -597,7 +597,7 @@ void test_parser_with_auth_payload(tester_t *tester)
 	{
 		return;	
 	}
-	result = auth_payload->get_data(auth_payload);
+	result = auth_payload->get_data_clone(auth_payload);
 	tester->assert_true(tester,(auth_payload->get_auth_method(auth_payload) == DSS_DIGITAL_SIGNATURE), "is DSS_DIGITAL_SIGNATURE method");
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
 	tester->assert_false(tester,(memcmp(auth_bytes + 8, result.ptr, result.len)), "parsed nonce data");

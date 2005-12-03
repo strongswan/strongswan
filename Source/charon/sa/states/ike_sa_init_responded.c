@@ -57,6 +57,21 @@ struct private_ike_sa_init_responded_t {
 	chunk_t received_nonce;
 	
 	/**
+	 * Sent nonce.
+	 */
+	chunk_t sent_nonce;
+	
+	/**
+	 * Data of the IKE_SA_INIT response.
+	 */
+	chunk_t ike_sa_init_response_data;
+
+	/**
+	 * Data of the IKE_SA_INIT request.
+	 */	
+	chunk_t ike_sa_init_request_data;
+	
+	/**
 	 * sa config to use
 	 */
 	sa_config_t *sa_config;
@@ -68,9 +83,9 @@ struct private_ike_sa_init_responded_t {
 	 */
 	logger_t *logger;
 	
-	status_t (*build_idr_payload) (private_ike_sa_init_responded_t *this, id_payload_t *request_idi, id_payload_t *request_idr, message_t *response);
+	status_t (*build_idr_payload) (private_ike_sa_init_responded_t *this, id_payload_t *request_idi, id_payload_t *request_idr, message_t *response,id_payload_t **response_idr);
 	status_t (*build_sa_payload) (private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *response);
-	status_t (*build_auth_payload) (private_ike_sa_init_responded_t *this, auth_payload_t *request,id_payload_t *other_id_payload, message_t *response);
+	status_t (*build_auth_payload) (private_ike_sa_init_responded_t *this, auth_payload_t *request,id_payload_t *other_id_payload,id_payload_t *my_id_payload, message_t* response);
 	status_t (*build_ts_payload) (private_ike_sa_init_responded_t *this, bool ts_initiator, ts_payload_t *request, message_t *response);
 };
 
@@ -84,7 +99,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	crypter_t *crypter;
 	iterator_t *payloads;
 	exchange_type_t exchange_type;
-	id_payload_t *idi_request, *idr_request = NULL;
+	id_payload_t *idi_request, *idr_request = NULL,*idr_response;
 	auth_payload_t *auth_request;
 	sa_payload_t *sa_request;
 	ts_payload_t *tsi_request, *tsr_request;
@@ -182,7 +197,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	
 	/* add payloads to it */
 	
-	status = this->build_idr_payload(this, idi_request, idr_request, response);
+	status = this->build_idr_payload(this, idi_request, idr_request, response,&idr_response);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Building idr payload failed");
@@ -196,7 +211,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		response->destroy(response);
 		return status;
 	}
-	status = this->build_auth_payload(this, auth_request,idi_request, response);
+	status = this->build_auth_payload(this, auth_request,idi_request, idr_response,response);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Building auth payload failed");
@@ -240,7 +255,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 /**
  * Implements private_ike_sa_init_responded_t.build_idr_payload
  */
-static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payload_t *request_idi, id_payload_t *request_idr, message_t *response)
+static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payload_t *request_idi, id_payload_t *request_idr, message_t *response,id_payload_t **response_idr)
 {
 	identification_t *other_id, *my_id = NULL;
 	init_config_t *init_config;
@@ -280,7 +295,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	/*  build response */
 	idr_response = id_payload_create_from_identification(FALSE, my_id);
 	response->add_payload(response, (payload_t*)idr_response);
-	
+	*response_idr = idr_response;
 	
 	return SUCCESS;
 }
@@ -331,37 +346,41 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 /**
  * Implements private_ike_sa_init_responded_t.build_auth_payload
  */
-static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_payload_t *request,id_payload_t *other_id_payload, message_t *response)
+static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_payload_t *auth_request,id_payload_t *other_id_payload,id_payload_t *my_id_payload, message_t* response)
 {
-	auth_payload_t *dummy;
-	u_int8_t data[] = {0x01,0x03,0x01,0x03,0x01,0x03,0x01,0x03,0x01,0x03,0x01,0x03,0x01,0x03,0x01,0x03};
-	chunk_t auth_data;
-	auth_data.ptr = data;
-	auth_data.len = sizeof(data);
 	authenticator_t *authenticator;
-	chunk_t received_auth_data = request->get_data(request);
-	chunk_t last_message_data = this->ike_sa->get_last_sent_message_data(this->ike_sa);
-	bool verified;
-	identification_t *identification;
+	auth_payload_t *auth_reply;
+	status_t status;
+	bool verified;	
 	
-	identification = other_id_payload->get_identification(other_id_payload);
-	
-	/* TODO VERIFY auth here */
 	authenticator = authenticator_create(this->ike_sa);
 
-	authenticator->verify_authentication(authenticator,request->get_auth_method(request),received_auth_data,last_message_data,this->received_nonce,identification,&verified);
-	
+
+	status =  authenticator->verify_auth_data(authenticator,auth_request, this->ike_sa_init_request_data,this->sent_nonce,other_id_payload,&verified);
+
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Verification of AUTH payload returned status %s",mapping_find(status_m,status));
+		authenticator->destroy(authenticator);
+		return status;
+	}
+	if (!verified)
+	{
+		this->logger->log(this->logger, ERROR, "Verification of AUTH failed.");
+		authenticator->destroy(authenticator);
+		return FAILED;
+	}
+
+	status = authenticator->compute_auth_data(authenticator,&auth_reply, this->ike_sa_init_response_data,this->received_nonce,my_id_payload);
 	authenticator->destroy(authenticator);
-	
-	allocator_free_chunk(&received_auth_data);
-	
-	dummy = auth_payload_create();
-	dummy->set_data(dummy, auth_data);
-	dummy->set_auth_method(dummy, RSA_DIGITAL_SIGNATURE);
-	
-	/* TODO replace dummy */
-	
-	response->add_payload(response, (payload_t *)dummy);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not compute AUTH payload.");
+		return FAILED;
+		
+	}
+
+	response->add_payload(response, (payload_t *)auth_reply);
 	return SUCCESS;	
 }
 
@@ -427,14 +446,22 @@ static void destroy(private_ike_sa_init_responded_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy ike_sa_init_responded_t state object");
 	
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
 	allocator_free_chunk(&(this->received_nonce));
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
+	allocator_free_chunk(&(this->sent_nonce));
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy IKE_SA_INIT response octets");
+	allocator_free_chunk(&(this->ike_sa_init_response_data));
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy IKE_SA_INIT request octets");
+	allocator_free_chunk(&(this->ike_sa_init_request_data));
+
 	allocator_free(this);
 }
 
 /* 
  * Described in header.
  */
-ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce)
+ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce, chunk_t sent_nonce,chunk_t ike_sa_init_request_data, chunk_t ike_sa_init_response_data)
 {
 	private_ike_sa_init_responded_t *this = allocator_alloc_thing(private_ike_sa_init_responded_t);
 
@@ -452,6 +479,9 @@ ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->received_nonce = received_nonce;
+	this->sent_nonce = sent_nonce;
+	this->ike_sa_init_response_data = ike_sa_init_response_data;
+	this->ike_sa_init_request_data = ike_sa_init_request_data;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	
 	return &(this->public);

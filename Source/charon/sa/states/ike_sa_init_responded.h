@@ -54,6 +54,6 @@ struct ike_sa_init_responded_t {
  * 
  * @ingroup states
  */
-ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce);
+ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce,chunk_t sent_nonce,chunk_t ike_sa_init_request_data,chunk_t ike_sa_init_response_data);
 
 #endif /*IKE_SA_INIT_RESPONDED_H_*/

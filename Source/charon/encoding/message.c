@@ -640,6 +640,14 @@ static packet_t *get_packet (private_message_t *this)
 }
 
 /**
+ * Implementation of message_t.get_packet_data.
+ */
+static chunk_t get_packet_data (private_message_t *this)
+{
+	return allocator_clone_chunk(this->packet->data);
+}
+
+/**
  * Implementation of message_t.parse_header.
  */
 static status_t parse_header(private_message_t *this)
@@ -1163,6 +1171,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
 	this->public.verify =  (status_t (*) (message_t*)) verify;
 	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;
+	this->public.get_packet_data = (chunk_t (*) (message_t *this)) get_packet_data;
 	this->public.destroy = (void(*)(message_t*))destroy;
 		
 	/* private values */

@@ -87,8 +87,18 @@ struct id_payload_t {
 	 * @param this 			calling id_payload_t object
 	 * @return				ID data as chunk_t
 	 */
-	chunk_t (*get_data) (id_payload_t *this);
+	chunk_t (*get_data_clone) (id_payload_t *this);
 	
+	/**
+	 * @brief Get the ID data.
+	 * 
+	 * Returned data are NOT copied.
+	 *
+	 * @param this 			calling id_payload_t object
+	 * @return				ID data as chunk_t
+	 */
+	chunk_t (*get_data) (id_payload_t *this);
+
 	/**
 	 * @brief Creates an identification object of this id payload.
 	 * 

@@ -60,6 +60,16 @@ struct private_ike_auth_requested_t {
 	 * Received nonce from responder
 	 */
 	chunk_t received_nonce;
+	
+	/**
+	 * Sent nonce in IKE_SA_INIT request.
+	 */
+	chunk_t sent_nonce;
+	
+	/**
+	 * IKE_SA_INIT-Request in binary form.
+	 */
+	chunk_t ike_sa_init_reply_data;
 	 
 	/**
 	 * Logger used to log data 
@@ -336,26 +346,28 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
  */
 static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_payload_t *auth_payload, id_payload_t *other_id_payload)
 {
-	
-	chunk_t received_auth_data = auth_payload->get_data(auth_payload);
-	chunk_t last_message_data = this->ike_sa->get_last_sent_message_data(this->ike_sa);
-	bool verified;
-	identification_t *identification;
 	authenticator_t *authenticator;
-	
-	identification = other_id_payload->get_identification(other_id_payload);
-	
+	status_t status;
+	bool verified;
+		
 	/* TODO VERIFY auth here */
 	authenticator = authenticator_create(this->ike_sa);
 
-	authenticator->verify_authentication(authenticator,auth_payload->get_auth_method(auth_payload),received_auth_data,last_message_data,this->received_nonce,identification,&verified);
-	
+	status = authenticator->verify_auth_data(authenticator,auth_payload,this->ike_sa_init_reply_data,this->sent_nonce,other_id_payload,&verified);
 	authenticator->destroy(authenticator);
-	
-	allocator_free_chunk(&received_auth_data);
-	
-	
-	/* TODO VERIFY auth here */
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not verify AUTH data. Error status: %s",mapping_find(status_m,status));
+		return FAILED;	
+	}
+
+	if (!verified)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "AUTH data could not be verified");
+		return FAILED;	
+	}
+
+	this->logger->log(this->logger, CONTROL | MORE, "AUTH data verified");
 	return SUCCESS;	
 }
 
@@ -415,13 +427,15 @@ static ike_sa_state_t get_state(private_ike_auth_requested_t *this)
 static void destroy(private_ike_auth_requested_t *this)
 {
 	allocator_free_chunk(&(this->received_nonce));
+	allocator_free_chunk(&(this->sent_nonce));
+	allocator_free_chunk(&(this->ike_sa_init_reply_data));	
 	allocator_free(this);
 }
 
 /* 
  * Described in header.
  */
-ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce)
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk_t sent_nonce,chunk_t received_nonce,chunk_t ike_sa_init_reply_data)
 {
 	private_ike_auth_requested_t *this = allocator_alloc_thing(private_ike_auth_requested_t);
 
@@ -440,6 +454,8 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa, chun
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->received_nonce = received_nonce;
+	this->sent_nonce = sent_nonce;
+	this->ike_sa_init_reply_data = ike_sa_init_reply_data;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	
 	return &(this->public);

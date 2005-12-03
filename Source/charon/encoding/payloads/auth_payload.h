@@ -115,6 +115,16 @@ struct auth_payload_t {
 	 * @param this 			calling auth_payload_t object
 	 * @return				AUTH data as chunk_t
 	 */
+	chunk_t (*get_data_clone) (auth_payload_t *this);
+	
+	/**
+	 * @brief Get the AUTH data.
+	 * 
+	 * Returned data are NOT copied
+	 *
+	 * @param this 			calling auth_payload_t object
+	 * @return				AUTH data as chunk_t
+	 */
 	chunk_t (*get_data) (auth_payload_t *this);
 	
 	/**

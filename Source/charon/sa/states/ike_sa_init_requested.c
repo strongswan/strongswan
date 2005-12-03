@@ -34,6 +34,7 @@
 #include <transforms/diffie_hellman.h>
 #include <sa/states/ike_auth_requested.h>
 #include <sa/states/initiator_init.h>
+#include <sa/authenticator.h>
 
 
 typedef struct private_ike_sa_init_requested_t private_ike_sa_init_requested_t;
@@ -74,6 +75,11 @@ struct private_ike_sa_init_requested_t {
 	chunk_t received_nonce;
 	
 	/**
+	 * Packet data of ike_sa_init request
+	 */
+	chunk_t ike_sa_init_request_data;
+	
+	/**
 	 * DH group priority used to get dh_group_number from configuration manager.
 	 * 
 	 * Currently unused but usable if informational messages of unsupported dh group number are processed.
@@ -92,8 +98,11 @@ struct private_ike_sa_init_requested_t {
 	 * 
 	 * @param this		calling object
 	 * @param message	the created message will be stored at this location
+	 * @return
+	 * 					- SUCCESS
+	 * 					- FAILED
 	 */
-	void (*build_ike_auth_request) (private_ike_sa_init_requested_t *this, message_t **message);
+	status_t (*build_ike_auth_request) (private_ike_sa_init_requested_t *this, message_t **message);
 	
 	/**
 	 * Builds the id payload for this state.
@@ -110,8 +119,11 @@ struct private_ike_sa_init_requested_t {
 	 * @param this		calling object
 	 * @param payload	The generated payload object of type auth_payload_t is 
 	 * 					stored at this location.
+	 * @return
+	 * 					- SUCCESS
+	 * 					- FAILED
 	 */
-	void (*build_auth_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	status_t (*build_auth_payload) (private_ike_sa_init_requested_t *this, payload_t **payload,id_payload_t *my_id_payload);
 	
 	/**
 	 * Builds the SA payload for this state.
@@ -156,6 +168,7 @@ struct private_ike_sa_init_requested_t {
 static status_t process_message(private_ike_sa_init_requested_t *this, message_t *ike_sa_init_reply)
 {
 	ike_auth_requested_t *next_state;
+	chunk_t ike_sa_init_reply_data;
 	exchange_type_t	exchange_type;
 	init_config_t *init_config;	
 	u_int64_t responder_spi;
@@ -381,8 +394,14 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	this->ike_sa->compute_secrets(this->ike_sa,this->shared_secret,this->sent_nonce, this->received_nonce);
 
 	/* build the complete IKE_AUTH request */
-	this->build_ike_auth_request (this,&request);
-
+	status = this->build_ike_auth_request (this,&request);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not build request message");
+		return DELETE_ME;
+	}
+	
+	
 	/* message can now be sent (must not be destroyed) */
 	status = this->ike_sa->send_request(this->ike_sa, request);
 	if (status != SUCCESS)
@@ -394,9 +413,11 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_sa_init_reply->get_message_id(ike_sa_init_reply));
 
+	ike_sa_init_reply_data = ike_sa_init_reply->get_packet_data(ike_sa_init_reply);
+
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
-	next_state = ike_auth_requested_create(this->ike_sa,this->received_nonce);
+	next_state = ike_auth_requested_create(this->ike_sa,this->sent_nonce,this->received_nonce,ike_sa_init_reply_data);
 
 	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
@@ -412,10 +433,11 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 /**
  * implements private_ike_sa_init_requested_t.build_ike_auth_request
  */
-static void build_ike_auth_request (private_ike_sa_init_requested_t *this, message_t **request)
+static status_t build_ike_auth_request (private_ike_sa_init_requested_t *this, message_t **request)
 {
 	payload_t *payload;
 	message_t *message;
+	status_t status;
 	
 	/* going to build message */
 	this->logger->log(this->logger, CONTROL|MOST, "Going to build empty message");
@@ -427,7 +449,14 @@ static void build_ike_auth_request (private_ike_sa_init_requested_t *this, messa
 	message->add_payload(message, payload);
 
 	/* build auth payload */
-	this->build_auth_payload(this, &payload);
+	status = this->build_auth_payload(this, &payload,(id_payload_t *) payload);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Could not create auth payload");
+		message->destroy(message);
+		return status;
+	}
+	
 	this->logger->log(this->logger, CONTROL|MOST, "add AUTH payload to message");
 	message->add_payload(message, payload);
 	
@@ -447,6 +476,7 @@ static void build_ike_auth_request (private_ike_sa_init_requested_t *this, messa
 	message->add_payload(message, payload);	
 	
 	*request = message;
+	return SUCCESS;
 }
 
 /**
@@ -469,19 +499,23 @@ static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t *
 /**
  * Implementation of private_ike_sa_init_requested_t.build_auth_payload.
  */
-static void build_auth_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+static status_t build_auth_payload (private_ike_sa_init_requested_t *this, payload_t **payload,id_payload_t *my_id_payload)
 {
+	authenticator_t *authenticator;
 	auth_payload_t *auth_payload;
-	sa_config_t *sa_config;
-
-	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	auth_payload = auth_payload_create();
-	auth_payload->set_auth_method(auth_payload,sa_config->get_auth_method(sa_config));
-	/*
-	 * TODO generate AUTH DATA 
-	 */
-
+	status_t status;
+	
+	authenticator = authenticator_create(this->ike_sa);
+	status = authenticator->compute_auth_data(authenticator,&auth_payload,this->ike_sa_init_request_data,this->received_nonce,my_id_payload);	
+	authenticator->destroy(authenticator);
+	
+	if (status != SUCCESS)
+	{
+		return status;		
+	}
+	
 	*payload = (payload_t *) auth_payload;
+	return SUCCESS;
 }
 
 /**
@@ -575,10 +609,10 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");	
-	allocator_free(this->sent_nonce.ptr);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret");	
 	allocator_free_chunk(&(this->shared_secret));
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy ike_sa_init_request_data");	
+	allocator_free_chunk(&(this->ike_sa_init_request_data));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
 	allocator_free(this);	
 }
@@ -598,6 +632,8 @@ static void destroy(private_ike_sa_init_requested_t *this)
 	allocator_free(this->received_nonce.ptr);
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
 	allocator_free_chunk(&(this->shared_secret));
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy ike_sa_init_request_data");	
+	allocator_free_chunk(&(this->ike_sa_init_request_data));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
 	allocator_free(this);
 }
@@ -605,7 +641,7 @@ static void destroy(private_ike_sa_init_requested_t *this)
 /* 
  * Described in header.
  */
-ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce)
+ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce,chunk_t ike_sa_init_request_data)
 {
 	private_ike_sa_init_requested_t *this = allocator_alloc_thing(private_ike_sa_init_requested_t);
 	
@@ -630,6 +666,7 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->diffie_hellman = diffie_hellman;
 	this->sent_nonce = sent_nonce;
+	this->ike_sa_init_request_data = ike_sa_init_request_data;
 	this->dh_group_priority = dh_group_priority;
 	
 	return &(this->public);

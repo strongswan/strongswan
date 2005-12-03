@@ -784,20 +784,19 @@ static void set_last_replied_message_id (private_ike_sa_t *this,u_int32_t messag
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_last_sent_message_data.
+ * Implementation of protected_ike_sa_t.get_last_responded_message.
  */
-static chunk_t get_last_sent_message_data (private_ike_sa_t *this)
+static message_t * get_last_responded_message (private_ike_sa_t *this)
 {
-	chunk_t last_sent_message_data = CHUNK_INITIALIZER;
-	packet_t *packet;
-	
-	if (this->last_requested_message != NULL)
-	{
-		packet = this->last_requested_message->get_packet(this->last_requested_message);
-		last_sent_message_data = packet->data;
-	}
-	
-	return last_sent_message_data;
+	return this->last_responded_message;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.get_last_requested_message.
+ */
+static message_t * get_last_requested_message (private_ike_sa_t *this)
+{
+	return this->last_requested_message;
 }
 
 /**
@@ -960,7 +959,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_crypter_responder = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_responder;
 	this->protected.get_signer_responder = (signer_t *(*) (protected_ike_sa_t *)) get_signer_responder;	
 	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t *)) reset_message_buffers;
-	this->protected.get_last_sent_message_data = (chunk_t (*) (protected_ike_sa_t *this)) get_last_sent_message_data;
+	this->protected.get_last_responded_message = (message_t * (*) (protected_ike_sa_t *this)) get_last_responded_message;
+	this->protected.get_last_requested_message = (message_t * (*) (protected_ike_sa_t *this)) get_last_requested_message;
+	
 	this->protected.set_last_replied_message_id = (void (*) (protected_ike_sa_t *,u_int32_t)) set_last_replied_message_id;
 	
 	/* private functions */

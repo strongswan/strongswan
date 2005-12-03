@@ -53,6 +53,6 @@ struct ike_sa_init_requested_t {
  * 
  * @ingroup states
  */
-ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce);
+ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce, chunk_t ike_sa_init_request_data);
 
 #endif /*IKE_SA_INIT_REQUESTED_H_*/

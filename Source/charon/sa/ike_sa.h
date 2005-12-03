@@ -329,15 +329,26 @@ struct protected_ike_sa_t {
 	prf_t *(*get_prf) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the data of last sent message.
-	 * 
-	 * Data are not getting cloned.
-	 * 
+	 * Gets the last responded message.
+	 *  
 	 * @param this 				calling object
-	 * @return					chunk_t pointing to data
+	 * @return					
+	 * 							- last received as message_t object 
+	 * 							- NULL if no last request available
 	 */
-	chunk_t (*get_last_sent_message_data) (protected_ike_sa_t *this);
+	message_t *(*get_last_responded_message) (protected_ike_sa_t *this);
 	
+	/**
+	 * Gets the last requested message.
+	 *  
+	 * @param this 				calling object
+	 * @return					
+	 * 							- last sent as message_t object 
+	 * 							- NULL if no last request available
+	 */
+	message_t *(*get_last_requested_message) (protected_ike_sa_t *this);
+
+
 	/**
 	 * Gets the Shared key SK_pr.
 	 * 

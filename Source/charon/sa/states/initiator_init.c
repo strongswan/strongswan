@@ -134,6 +134,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	init_config_t *init_config;
 	sa_config_t *sa_config;
 	status_t status;
+
 	
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
@@ -177,11 +178,13 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group_priority)
 {
 	ike_sa_init_requested_t *next_state;
+	chunk_t ike_sa_init_request_data;
 	init_config_t *init_config;
 	randomizer_t *randomizer;
+	ike_sa_id_t *ike_sa_id;
 	message_t *message;
 	status_t status;
-	ike_sa_id_t *ike_sa_id;
+
 	
 	this->dh_group_priority = dh_group_priority;
 		
@@ -218,10 +221,14 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 		message->destroy(message);
 		return DELETE_ME;
 	}
+	
+	message = this->ike_sa->get_last_requested_message(this->ike_sa);
+	
+	ike_sa_init_request_data = message->get_packet_data(message);
 
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
-	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_priority, this->diffie_hellman, this->sent_nonce);
+	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_priority, this->diffie_hellman, this->sent_nonce,ike_sa_init_request_data);
 
 	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);

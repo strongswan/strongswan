@@ -214,10 +214,19 @@ static void set_data (private_id_payload_t *this, chunk_t data)
 	this->payload_length = ID_PAYLOAD_HEADER_LENGTH + this->id_data.len;
 }
 
+
 /**
- * Implementation of id_payload_t.get_data.
+ * Implementation of id_payload_t.get_data_clone.
  */
 static chunk_t get_data (private_id_payload_t *this)
+{
+	return (this->id_data);
+}
+
+/**
+ * Implementation of id_payload_t.get_data_clone.
+ */
+static chunk_t get_data_clone (private_id_payload_t *this)
 {
 	chunk_t cloned_data;
 	if (this->id_data.ptr == NULL)
@@ -288,6 +297,8 @@ id_payload_t *id_payload_create(bool is_initiator)
 	this->public.get_id_type = (id_type_t (*) (id_payload_t *)) get_id_type;
 	this->public.set_data = (void (*) (id_payload_t *,chunk_t)) set_data;
 	this->public.get_data = (chunk_t (*) (id_payload_t *)) get_data;
+	this->public.get_data_clone = (chunk_t (*) (id_payload_t *)) get_data_clone;
+	
 	this->public.get_initiator = (bool (*) (id_payload_t *)) get_initiator;
 	this->public.set_initiator = (void (*) (id_payload_t *,bool)) set_initiator;
 	this->public.get_identification = (identification_t * (*) (id_payload_t *this)) get_identification;

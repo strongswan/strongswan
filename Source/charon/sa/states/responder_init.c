@@ -155,6 +155,8 @@ struct private_responder_init_t {
 static status_t process_message(private_responder_init_t *this, message_t *message)
 {
 	ike_sa_init_responded_t *next_state;
+	chunk_t ike_sa_init_response_data;
+	chunk_t ike_sa_init_request_data;
 	exchange_type_t	exchange_type;
 	host_t *source, *destination;
 	init_config_t *init_config;
@@ -165,6 +167,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	host_t *other_host;
 	host_t *my_host;
 	status_t status;
+
 
 	exchange_type = message->get_exchange_type(message);
 	if (exchange_type != IKE_SA_INIT)
@@ -357,12 +360,14 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		return DELETE_ME;
 	}
 
-
-
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
 
-	next_state = ike_sa_init_responded_create(this->ike_sa, this->received_nonce);
+	response = this->ike_sa->get_last_responded_message(this->ike_sa);
+	ike_sa_init_response_data = response->get_packet_data(response);
+	ike_sa_init_request_data = message->get_packet_data(message);
+
+	next_state = ike_sa_init_responded_create(this->ike_sa, this->received_nonce, this->sent_nonce,ike_sa_init_request_data,ike_sa_init_response_data);
 	
 	/* state can now be changed */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t *) next_state);
@@ -534,8 +539,6 @@ static void destroy_after_state_change (private_responder_init_t *this)
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
 	
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
-	allocator_free_chunk(&(this->sent_nonce));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object");	
 	allocator_free(this);
 }

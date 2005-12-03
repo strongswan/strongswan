@@ -290,6 +290,15 @@ struct message_t {
 	packet_t * (*get_packet) (message_t *this);
 	
 	/**
+	 * Returns a clone of the internal stored packet_t data.
+	 *
+	 * @param this 		message_t object
+	 * @return			clone of the internal stored packet_t data.
+	 */	
+	chunk_t (*get_packet_data) (message_t *this);
+	
+	
+	/**
 	 * @brief Destroys a message and all including objects.
 	 *
 	 * @param this 		message_t object

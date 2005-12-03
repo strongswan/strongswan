@@ -215,6 +215,14 @@ static void set_data (private_auth_payload_t *this, chunk_t data)
  */
 static chunk_t get_data (private_auth_payload_t *this)
 {
+	return (this->auth_data);
+}
+
+/**
+ * Implementation of auth_payload_t.get_data_clone.
+ */
+static chunk_t get_data_clone (private_auth_payload_t *this)
+{
 	chunk_t cloned_data;
 	if (this->auth_data.ptr == NULL)
 	{
@@ -259,6 +267,7 @@ auth_payload_t *auth_payload_create()
 	this->public.set_auth_method = (void (*) (auth_payload_t *,auth_method_t)) set_auth_method;
 	this->public.get_auth_method = (auth_method_t (*) (auth_payload_t *)) get_auth_method;
 	this->public.set_data = (void (*) (auth_payload_t *,chunk_t)) set_data;
+	this->public.get_data_clone = (chunk_t (*) (auth_payload_t *)) get_data_clone;
 	this->public.get_data = (chunk_t (*) (auth_payload_t *)) get_data;
 	
 	/* private variables */

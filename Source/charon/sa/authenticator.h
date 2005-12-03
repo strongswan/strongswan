@@ -27,7 +27,8 @@
 
 #include <types.h>
 #include <encoding/payloads/auth_payload.h>
-#include <utils/identification.h>
+#include <encoding/payloads/id_payload.h>
+#include <network/packet.h>
 #include <sa/ike_sa.h>
 
 
@@ -51,7 +52,7 @@ struct authenticator_t {
 	 * @return
 	 * 						- NOT_SUPPORTED if auth_method is not supported
 	 */
-	status_t (*verify_authentication) (authenticator_t *this,auth_method_t auth_method, chunk_t auth_data, chunk_t last_message, chunk_t other_nonce,identification_t *my_id,bool *verified);
+	status_t (*verify_auth_data) (authenticator_t *this,auth_payload_t *auth_payload, chunk_t last_received_packet,chunk_t my_nonce,id_payload_t *other_id_payload,bool *verified);
 
 	/**
 	 * @brief Verifying of given authentication data.
@@ -61,9 +62,7 @@ struct authenticator_t {
 	 * @return
 	 * 						- NOT_SUPPORTED if auth_method is not supported
 	 */
-	status_t (*allocate_auth_data) (authenticator_t *this,auth_method_t auth_method,chunk_t last_message, chunk_t other_nonce,identification_t *my_id,chunk_t *auth_data);
-
-
+	status_t (*compute_auth_data) (authenticator_t *this,auth_payload_t **auth_payload, chunk_t last_sent_packet,chunk_t other_nonce,id_payload_t *my_id_payload);
 	/**
 	 * @brief Destroys a authenticator_t object.
 	 *
