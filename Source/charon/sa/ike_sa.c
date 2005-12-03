@@ -567,6 +567,15 @@ static chunk_t get_key_pr (private_ike_sa_t *this)
 	return this->secrets.pr_key;
 }
 
+
+/**
+ * Implementation of protected_ike_sa_t.get_key_pi.
+ */
+static chunk_t get_key_pi (private_ike_sa_t *this)
+{
+	return this->secrets.pi_key;
+}
+
 /**
  * Implementation of protected_ike_sa_t.set_prf.
  */
@@ -940,6 +949,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.compute_secrets = (void (*) (protected_ike_sa_t *,chunk_t ,chunk_t , chunk_t )) compute_secrets;
 	this->protected.get_prf = (prf_t *(*) (protected_ike_sa_t *)) get_prf;	
 	this->protected.get_key_pr = (chunk_t (*) (protected_ike_sa_t *)) get_key_pr;	
+	this->protected.get_key_pi = (chunk_t (*) (protected_ike_sa_t *)) get_key_pi;	
 	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;		
 	this->protected.set_init_config = (void (*) (protected_ike_sa_t *,init_config_t *)) set_init_config;
 	this->protected.get_init_config = (init_config_t *(*) (protected_ike_sa_t *)) get_init_config;

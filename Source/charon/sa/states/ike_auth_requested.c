@@ -353,7 +353,7 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
 	/* TODO VERIFY auth here */
 	authenticator = authenticator_create(this->ike_sa);
 
-	status = authenticator->verify_auth_data(authenticator,auth_payload,this->ike_sa_init_reply_data,this->sent_nonce,other_id_payload,&verified);
+	status = authenticator->verify_auth_data(authenticator,auth_payload,this->ike_sa_init_reply_data,this->sent_nonce,other_id_payload,FALSE,&verified);
 	authenticator->destroy(authenticator);
 	if (status != SUCCESS)
 	{

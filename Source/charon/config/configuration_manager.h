@@ -114,10 +114,25 @@ struct configuration_manager_t {
 	 * @param[out] timeout		the new retransmit timeout in milliseconds
 	 * 
 	 * @return		
-	 * 				- FAILED	if the message should not be resent again
+	 * 				- FAILED, if the message should not be resent again
 	 * 				- SUCCESS
 	 */
 	status_t (*get_retransmit_timeout) (configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout);
+	
+	/**
+	 * Get the preshared secret of a specific ID.
+	 * 
+	 * The preshared secret gets not cloned.
+	 * 
+	 * @param this						calling object
+	 * @param identification			identification_t object identifiying the ID.
+	 * @param[out] preshared_secret		the preshared secret will be written there
+	 * 
+	 * @return		
+	 * 				- NOT_FOUND			if no preshared secrets is configured for specific id
+	 * 				- SUCCESS
+	 */	
+	status_t (*get_shared_secret) (configuration_manager_t *this, identification_t *identification, chunk_t *preshared_secret);
 
 	/**
 	 * Destroys configuration manager

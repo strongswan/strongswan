@@ -506,7 +506,7 @@ static status_t build_auth_payload (private_ike_sa_init_requested_t *this, paylo
 	status_t status;
 	
 	authenticator = authenticator_create(this->ike_sa);
-	status = authenticator->compute_auth_data(authenticator,&auth_payload,this->ike_sa_init_request_data,this->received_nonce,my_id_payload);	
+	status = authenticator->compute_auth_data(authenticator,&auth_payload,this->ike_sa_init_request_data,this->received_nonce,my_id_payload,TRUE);	
 	authenticator->destroy(authenticator);
 	
 	if (status != SUCCESS)

@@ -358,6 +358,16 @@ struct protected_ike_sa_t {
 	 * @return					SK_pr key
 	 */
 	chunk_t (*get_key_pr) (protected_ike_sa_t *this);
+	
+	/**
+	 * Gets the Shared key SK_pi.
+	 * 
+	 * Returned value is not cloned!
+	 * 
+	 * @param this 				calling object
+	 * @return					SK_pr key
+	 */
+	chunk_t (*get_key_pi) (protected_ike_sa_t *this);
 
 	/**
 	 * Resets message id counters and does destroy stored received and sent messages.

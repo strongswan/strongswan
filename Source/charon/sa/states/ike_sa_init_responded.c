@@ -356,7 +356,7 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 	authenticator = authenticator_create(this->ike_sa);
 
 
-	status =  authenticator->verify_auth_data(authenticator,auth_request, this->ike_sa_init_request_data,this->sent_nonce,other_id_payload,&verified);
+	status =  authenticator->verify_auth_data(authenticator,auth_request, this->ike_sa_init_request_data,this->sent_nonce,other_id_payload,TRUE,&verified);
 
 	if (status != SUCCESS)
 	{
@@ -371,7 +371,7 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 		return FAILED;
 	}
 
-	status = authenticator->compute_auth_data(authenticator,&auth_reply, this->ike_sa_init_response_data,this->received_nonce,my_id_payload);
+	status = authenticator->compute_auth_data(authenticator,&auth_reply, this->ike_sa_init_response_data,this->received_nonce,my_id_payload,FALSE);
 	authenticator->destroy(authenticator);
 	if (status != SUCCESS)
 	{

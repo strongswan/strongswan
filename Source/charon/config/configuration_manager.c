@@ -30,6 +30,26 @@
 #include <daemon.h>
 #include <utils/allocator.h>
 
+
+typedef struct preshared_secret_entry_t preshared_secret_entry_t;
+
+/**
+ * An preshared secret entry combines an identifier with a 
+ * preshared secret.
+ */
+struct preshared_secret_entry_t {
+
+	/**
+	 * Identification.
+	 */
+	identification_t *identification;
+	
+	/**
+	 * Preshared secret as chunk
+	 */	
+	chunk_t preshared_secret;
+};
+
 typedef struct configuration_entry_t configuration_entry_t;
 
 /* A configuration entry combines a configuration name with a init and sa 
@@ -117,7 +137,11 @@ struct private_configuration_manager_t {
 	 * Holding all init_configs.
 	 */
 	linked_list_t *sa_configs;
-
+	
+	/**
+	 * Holding all preshared secrets.
+	 */
+	linked_list_t *preshared_secrets;
 
 	/**
 	 * Assigned logger object.
@@ -136,7 +160,7 @@ struct private_configuration_manager_t {
 	u_int32_t first_retransmit_timeout;
 
 	/**
-	 * Load default configuration
+	 * Adds a new IKE_SA configuration
 	 * 
 	 * 
 	 * @param this				calling object
@@ -145,6 +169,17 @@ struct private_configuration_manager_t {
 	 * @param sa_config			sa_config_t object
 	 */
 	void (*add_new_configuration) (private_configuration_manager_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config);
+	
+	/**
+	 * Adds a new IKE_SA configuration
+	 * 
+	 * 
+	 * @param this				calling object
+	 * @param type				type of identification
+	 * @param id_string			identification as string
+	 * @param preshared_secret	preshared secret as string
+	 */
+	void (*add_new_preshared_secret) (private_configuration_manager_t *this,id_type_t type, char *id_string, char *preshared_secret);
 	
 	/**
 	 * Load default configuration
@@ -242,6 +277,9 @@ static void load_default_config (private_configuration_manager_t *this)
 	this->add_new_configuration(this,"pinflb30",init_config2,sa_config2);
 	this->add_new_configuration(this,"localhost",init_config3,sa_config3);
 
+	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.130","das ist ein sicheres wort");
+	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.131","das ist ein sicheres wort");
+	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "127.0.0.1","das ist ein sicheres wort");
 }
 
 /**
@@ -474,6 +512,48 @@ static void add_new_configuration (private_configuration_manager_t *this, char *
 	this->configurations->insert_first(this->configurations,configuration_entry_create(name,init_config,sa_config));
 }
 
+/**
+ * Implementation of private_configuration_manager_t.add_new_preshared_secret.
+ */
+static void add_new_preshared_secret (private_configuration_manager_t *this,id_type_t type, char *id_string, char *preshared_secret)
+{
+	preshared_secret_entry_t *entry = allocator_alloc_thing(preshared_secret_entry_t);
+	
+	entry->identification = identification_create_from_string(type,id_string);
+	entry->preshared_secret.len = strlen(preshared_secret);
+	entry->preshared_secret.ptr = allocator_alloc(entry->preshared_secret.len);
+	memcpy(entry->preshared_secret.ptr,preshared_secret,entry->preshared_secret.len);
+	
+	this->preshared_secrets->insert_last(this->preshared_secrets,entry);
+}
+
+
+/**
+ * Implementation of configuration_manager_t.get_shared_secret.
+ */
+static status_t get_shared_secret(private_configuration_manager_t *this, identification_t *identification, chunk_t *preshared_secret)
+{
+	iterator_t *iterator;
+	
+	iterator = this->preshared_secrets->create_iterator(this->preshared_secrets,TRUE);
+	while (iterator->has_next(iterator))
+	{
+		preshared_secret_entry_t *entry;
+		iterator->current(iterator,(void **) &entry);
+		if (entry->identification->equals(entry->identification,identification))
+		{
+			*preshared_secret = entry->preshared_secret;
+			iterator->destroy(iterator);
+			return SUCCESS;
+		}
+	}
+	iterator->destroy(iterator);
+	return NOT_FOUND;
+}
+
+/**
+ * Implementation of configuration_manager_t.destroy.
+ */
 static status_t get_retransmit_timeout (private_configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
 {
 	if ((retransmit_count > this->max_retransmit_count) && (this->max_retransmit_count != 0))
@@ -523,6 +603,16 @@ static void destroy(private_configuration_manager_t *this)
 	}
 	this->init_configs->destroy(this->init_configs);
 	
+	while (this->preshared_secrets->get_count(this->preshared_secrets) > 0)
+	{
+		preshared_secret_entry_t *entry;
+		this->preshared_secrets->remove_first(this->preshared_secrets,(void **) &entry);
+		entry->identification->destroy(entry->identification);
+		allocator_free_chunk(&(entry->preshared_secret));
+		allocator_free(entry);
+	}
+	this->preshared_secrets->destroy(this->preshared_secrets);
+		
 	this->logger->log(this->logger,CONTROL | MOST, "Destroy assigned logger");
 	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 	allocator_free(this);
@@ -542,16 +632,19 @@ configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit
 	this->public.get_sa_config_for_name =(status_t (*) (configuration_manager_t *, char *, sa_config_t **)) get_sa_config_for_name;
 	this->public.get_sa_config_for_init_config_and_id =(status_t (*) (configuration_manager_t *, init_config_t *, identification_t *, identification_t *,sa_config_t **)) get_sa_config_for_init_config_and_id;
 	this->public.get_retransmit_timeout = (status_t (*) (configuration_manager_t *, u_int32_t retransmit_count, u_int32_t *timeout))get_retransmit_timeout;
+	this->public.get_shared_secret = (status_t (*) (configuration_manager_t *, identification_t *, chunk_t *))get_shared_secret;
 	
 	/* private functions */
 	this->load_default_config = load_default_config;
 	this->add_new_configuration = add_new_configuration;
+	this->add_new_preshared_secret = add_new_preshared_secret;
 	
 	/* private variables */
 	this->logger = charon->logger_manager->create_logger(charon->logger_manager,CONFIGURATION_MANAGER,NULL);
 	this->configurations = linked_list_create();
 	this->sa_configs = linked_list_create();
 	this->init_configs = linked_list_create();
+	this->preshared_secrets = linked_list_create();
 	this->max_retransmit_count = max_retransmit_count;
 	this->first_retransmit_timeout = first_retransmit_timeout;
 	

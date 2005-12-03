@@ -52,7 +52,7 @@ struct authenticator_t {
 	 * @return
 	 * 						- NOT_SUPPORTED if auth_method is not supported
 	 */
-	status_t (*verify_auth_data) (authenticator_t *this,auth_payload_t *auth_payload, chunk_t last_received_packet,chunk_t my_nonce,id_payload_t *other_id_payload,bool *verified);
+	status_t (*verify_auth_data) (authenticator_t *this,auth_payload_t *auth_payload, chunk_t last_received_packet,chunk_t my_nonce,id_payload_t *other_id_payload, bool initiator,bool *verified);
 
 	/**
 	 * @brief Verifying of given authentication data.
@@ -62,7 +62,7 @@ struct authenticator_t {
 	 * @return
 	 * 						- NOT_SUPPORTED if auth_method is not supported
 	 */
-	status_t (*compute_auth_data) (authenticator_t *this,auth_payload_t **auth_payload, chunk_t last_sent_packet,chunk_t other_nonce,id_payload_t *my_id_payload);
+	status_t (*compute_auth_data) (authenticator_t *this,auth_payload_t **auth_payload, chunk_t last_sent_packet,chunk_t other_nonce,id_payload_t *my_id_payload, bool initiator);
 	/**
 	 * @brief Destroys a authenticator_t object.
 	 *

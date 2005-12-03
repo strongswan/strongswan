@@ -148,12 +148,12 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case IKE_SA:
 			logger_level |= FULL;
 		case IKE_SA_MANAGER:
-		case MESSAGE:
-		case ENCRYPTION_PAYLOAD:
 		case WORKER:
 		case CONFIGURATION_MANAGER:
 			logger_level |= ALL;
-		case PARSER:
+		case MESSAGE:
+		case ENCRYPTION_PAYLOAD:
+
 		case GENERATOR:
 		case THREAD_POOL:
 		case SCHEDULER:
@@ -161,8 +161,10 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case RECEIVER:
 		case SOCKET:
 		case DAEMON:
+			logger_level |= CONTROL;
+		case PARSER:
 			log_thread_ids = FALSE;
-			logger_level |= ERROR|CONTROL;
+			logger_level |= ERROR;
 			break;
 	}
 	
