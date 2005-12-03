@@ -74,116 +74,175 @@ struct private_ike_sa_t {
 	/* private values */
 	
 	/**
-	 * Identifier for the current IKE_SA
+	 * Identifier for the current IKE_SA.
 	 */
 	ike_sa_id_t *ike_sa_id;
 
 	/**
-	 * Linked List containing the child sa's of the current IKE_SA
+	 * Linked List containing the child sa's of the current IKE_SA.
 	 */
 	linked_list_t *child_sas;
 	
 	/**
-	 * TODO
-	 */
-	init_config_t *init_config;
-	
-	/**
-	 * TODO
-	 */
-	sa_config_t *sa_config;
-
-	/**
-	 * Current state of the IKE_SA
+	 * Current state of the IKE_SA represented as state_t object.
+	 * 
+	 * A state object representates one of the following states and is processing 
+	 * messages in the specific state:
+	 *  - INITIATOR_INIT
+	 *  - RESPONDER_INIT
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
 	 */
 	state_t *current_state;
 	
 	/**
-	 * this SA's source for random data
+	 * INIT configuration, needed for the IKE_SA_INIT exchange.
+	 * 
+	 * Gets set in states:
+	 *  - INITATOR_INIT
+	 *  - RESPONDER_INIT
+	 * 
+	 * Available in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
+	 */
+	init_config_t *init_config;
+	
+	/**
+	 * SA configuration, needed for all other exchanges after IKE_SA_INIT exchange.
+	 * 
+	 * Gets set in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - IKE_SA_INIT_RESPONDED
+	 * 
+	 * Available in states:
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
+	 */
+	sa_config_t *sa_config;
+	
+	/**
+	 * This SA's source for random data.
+	 * 
+	 * Is available in every state.
 	 */
 	randomizer_t *randomizer;
 	
 	/**
-	 * contains the last responded message
-	 * 
+	 * The last responded message.
 	 */
 	message_t *last_responded_message;
 
 	/**
-	 * contains the last requested message
-	 * 
+	 * The ast requested message.
 	 */
 	message_t *last_requested_message;
 	
 	/**
-	 * Informations of this host
+	 * Informations of this host.
 	 */
 	struct {
 		host_t *host;
 	} me;
 
 	/**
-	 * Informations of the other host
+	 * Informations of the other host.
 	 */	
 	struct {
 		host_t *host;
 	} other;
 	
 	/**
-	 * Crypter object for initiator
+	 * Crypter object for initiator.
+	 * 
+	 * Gets set in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - RESPONDER_INIT
+	 * 
+	 * Available in states:
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
 	 */
 	crypter_t *crypter_initiator;
 	
 	/**
-	 * Crypter object for responder
+	 * Crypter object for responder.
+	 * 
+	 * Gets set in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - RESPONDER_INIT
+	 * 
+	 * Available in states:
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
 	 */
 	crypter_t *crypter_responder;
 	
 	/**
-	 * Signer object for initiator
+	 * Signer object for initiator.
+	 * 
+	 * Gets set in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - RESPONDER_INIT
+	 * 
+	 * Available in states:
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
 	 */
 	signer_t *signer_initiator;
 	
 	/**
-	 * Signer object for responder
+	 * Signer object for responder.
+	 * 
+	 * Gets set in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - RESPONDER_INIT
+	 * 
+	 * Available in states:
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
 	 */
 	signer_t *signer_responder;
 	
 	/**
-	 * prf function
+	 * Prf function.
+	 * 
+	 * Gets set in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - RESPONDER_INIT
+	 * 
+	 * Available in states:
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
 	 */
 	prf_t *prf;
 	
-	
-	
 	/**
-	 * Shared secrets
+	 * Shared secrets which have to be stored.
+	 * 
+	 * Are getting set in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - RESPONDER_INIT
+	 * 
+	 * Available in states:
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
 	 */
 	struct {
 		/**
 		 * Key used for deriving other keys
 		 */
 		chunk_t d_key;
-		
-		/**
-		 * Key for authenticate (initiator)
-		 */
-		chunk_t ai_key;
-		
-		/**
-		 * Key for authenticate (responder)
-		 */
-		chunk_t ar_key;
-
-		/**
-		 * Key for encryption (initiator)
-		 */
-		chunk_t ei_key;	
-
-		/**
-		 * Key for encryption (responder)
-		 */
-		chunk_t er_key;	
 
 		/**
 		 * Key for generating auth payload (initiator)
@@ -198,29 +257,28 @@ struct private_ike_sa_t {
 	} secrets;
 
 	/**
-	 * next message id to receive.
+	 * Next message id to receive.
 	 */
 	u_int32_t message_id_in;
 	
 	/**
-	 * next message id to send.
+	 * Next message id to send.
 	 */
 	u_int32_t message_id_out;
 	
 	/**
-	 * Last message id which was successfully replied.
+	 * Last reply id which was successfully received.
 	 */
 	int32_t last_replied_message_id;
 	
 	/**
-	 * a logger for this IKE_SA
+	 * A logger for this IKE_SA.
 	 */
 	logger_t *logger;
 };
 
-
 /**
- * Implements protected_ike_sa_t.process_message.
+ * Implementation of ike_sa_t.process_message.
  */
 static status_t process_message (private_ike_sa_t *this, message_t *message)
 {
@@ -228,9 +286,9 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	exchange_type_t exchange_type;
 	bool is_request;
 	
-	/* we must process each request or response from remote host */
+	/* We must process each request or response from remote host */
 
-	/* find out type of message (request or response) */
+	/* Find out type of message (request or response) */
 	is_request = message->get_request(message);
 	exchange_type = message->get_exchange_type(message);
 
@@ -243,8 +301,8 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	 */
 	if (is_request && (message_id == (this->message_id_in - 1)))
 	{
-		/* message can be resent ! */
-		this->logger->log(this->logger, CONTROL|MORE, "Resent message detected. Send stored reply");
+		/* Message can be resent ! */
+		this->logger->log(this->logger, CONTROL|MORE, "Resent request detected. Send stored reply.");
 		return (this->resend_last_reply(this));
 	}
 	
@@ -268,42 +326,43 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 		}
 	}
 	
-	/* now the message is processed by the current state object */
-	/* the current state does change the current change to the next one*/
+	/* now the message is processed by the current state object.
+	 * The specific state object is responsible to check if a message can be received in 
+	 * the state it represents.
+	 * The current state is also responsible to change the state object to the next state 
+	 * by calling protected_ike_sa_t.set_new_state*/
 	return this->current_state->process_message(this->current_state,message);
 }
 
 /**
- * Implements protected_ike_sa_t.build_message.
+ * Implementation of protected_ike_sa_t.build_message.
  */
 static void build_message(private_ike_sa_t *this, exchange_type_t type, bool request, message_t **message)
 {
 	message_t *new_message; 
-	host_t *source, *destination;
 
-	this->logger->log(this->logger, CONTROL|MORE, "build empty message");	
+	this->logger->log(this->logger, CONTROL|MOST, "Build empty message");
 	new_message = message_create();	
-	
-	source = this->me.host->clone(this->me.host);
-	destination = this->other.host->clone(this->other.host);	
-
-	new_message->set_source(new_message, source);
-	new_message->set_destination(new_message, destination);
+	new_message->set_source(new_message, this->me.host->clone(this->me.host));
+	new_message->set_destination(new_message, this->other.host->clone(this->other.host));
 	new_message->set_exchange_type(new_message, type);
 	new_message->set_request(new_message, request);
 	new_message->set_message_id(new_message, (request) ? this->message_id_out : this->message_id_in);
 	new_message->set_ike_sa_id(new_message, this->ike_sa_id);
+
 	*message = new_message;
 }
 
 /**
- * Implements protected_ike_sa_t.process_configuration.
+ * Implementation of protected_ike_sa_t.process_configuration.
  */
 static status_t initialize_connection(private_ike_sa_t *this, char *name)
 {
-	/* work is done in state object of type INITIATOR_INIT */
 	initiator_init_t *current_state;
 	status_t status;
+
+	/* Work is done in state object of type INITIATOR_INIT. All other states are not 
+	 * initial states and so don't have a initialize_connection function */
 	
 	if (this->current_state->get_state(this->current_state) != INITIATOR_INIT)
 	{
@@ -313,12 +372,11 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	current_state = (initiator_init_t *) this->current_state;
 	
 	status = current_state->initiate_connection(current_state,name);
-
 	return status;
 }
 
 /**
- * Implements protected_ike_sa_t.get_id.
+ * Implementation of protected_ike_sa_t.get_id.
  */
 static ike_sa_id_t* get_id(private_ike_sa_t *this)
 {
@@ -326,37 +384,43 @@ static ike_sa_id_t* get_id(private_ike_sa_t *this)
 }
 
 /**
- * Implements protected_ike_sa_t.compute_secrets.
+ * Implementation of protected_ike_sa_t.compute_secrets.
  */
 static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chunk_t initiator_nonce, chunk_t responder_nonce)
 {
-	chunk_t concatenated_nonces;
-	chunk_t skeyseed;
-	chunk_t prf_plus_seed;
+	u_int8_t ei_buffer[this->crypter_initiator->get_block_size(this->crypter_initiator)];
+	chunk_t ei_key = {ptr: ei_buffer, len: sizeof(ei_buffer)};
+	u_int8_t er_buffer[this->crypter_responder->get_block_size(this->crypter_responder)];
+	chunk_t er_key = {ptr: er_buffer, len: sizeof(er_buffer)};
+	u_int8_t ai_buffer[this->signer_initiator->get_key_size(this->signer_initiator)];
+	chunk_t ai_key = {ptr: ai_buffer, len: sizeof(ai_buffer)};
+	u_int8_t ar_buffer[this->signer_responder->get_key_size(this->signer_responder)];
+	chunk_t ar_key = {ptr: ar_buffer, len: sizeof(ar_buffer)};
+	u_int8_t concatenated_nonces_buffer[initiator_nonce.len + responder_nonce.len];
+	chunk_t concatenated_nonces = {ptr: concatenated_nonces_buffer, len : sizeof(concatenated_nonces_buffer)};
+	u_int8_t skeyseed_buffer[this->prf->get_block_size(this->prf)];
+	chunk_t skeyseed = {ptr: skeyseed_buffer, len: sizeof(skeyseed_buffer)};
 	u_int64_t initiator_spi;
 	u_int64_t responder_spi;
+	chunk_t prf_plus_seed;
 	prf_plus_t *prf_plus;
+
 	
-	
-	/*
-	 * TODO check length for specific prf's 
+	/**
+	 * TODO check length fo specific prfs
 	 */
-	concatenated_nonces.len = (initiator_nonce.len + responder_nonce.len);
-	concatenated_nonces.ptr = allocator_alloc(concatenated_nonces.len);
 
 	/* first is initiator */
 	memcpy(concatenated_nonces.ptr,initiator_nonce.ptr,initiator_nonce.len);
 	/* second is responder */
 	memcpy(concatenated_nonces.ptr + initiator_nonce.len,responder_nonce.ptr,responder_nonce.len);
 
-	this->logger->log_chunk(this->logger, RAW, "Nonce data", &concatenated_nonces);
+	this->logger->log_chunk(this->logger, RAW | MOST, "Nonce data", &concatenated_nonces);
 
-	/* status of set_key is not checked */
+	/* Status of set_key is not checked */
 	this->prf->set_key(this->prf,concatenated_nonces);
 
-	this->prf->allocate_bytes(this->prf,dh_shared_secret,&skeyseed);
-
-	allocator_free_chunk(&concatenated_nonces);
+	this->prf->get_bytes(this->prf,dh_shared_secret,skeyseed_buffer);
 
 	prf_plus_seed.len = (initiator_nonce.len + responder_nonce.len + 16);
 	prf_plus_seed.ptr = allocator_alloc(prf_plus_seed.len);
@@ -377,31 +441,30 @@ static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chun
 
 	this->logger->log(this->logger, CONTROL | MOST, "Set new key of prf object");
 	this->prf->set_key(this->prf,skeyseed);
-	allocator_free_chunk(&skeyseed);
  
 	this->logger->log(this->logger, CONTROL | MOST, "Create new prf+ object");
 	prf_plus = prf_plus_create(this->prf, prf_plus_seed);
 	allocator_free_chunk(&prf_plus_seed);
 	
+	
 	prf_plus->allocate_bytes(prf_plus,this->prf->get_block_size(this->prf),&(this->secrets.d_key));
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", &(this->secrets.d_key));
 
-	prf_plus->allocate_bytes(prf_plus,this->signer_initiator->get_key_size(this->signer_initiator),&(this->secrets.ai_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &(this->secrets.ai_key));
-	this->signer_initiator->set_key(this->signer_initiator,this->secrets.ai_key);
+	prf_plus->get_bytes(prf_plus,ai_key.len,ai_buffer);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &(ai_key));
+	this->signer_initiator->set_key(this->signer_initiator,ai_key);
 
-	prf_plus->allocate_bytes(prf_plus,this->signer_responder->get_key_size(this->signer_responder),&(this->secrets.ar_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", &(this->secrets.ar_key));
-	this->signer_responder->set_key(this->signer_responder,this->secrets.ar_key);
+	prf_plus->get_bytes(prf_plus,ar_key.len,ar_buffer);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", &(ar_key));
+	this->signer_responder->set_key(this->signer_responder,ar_key);
 
-
-	prf_plus->allocate_bytes(prf_plus,this->crypter_initiator->get_block_size(this->crypter_initiator),&(this->secrets.ei_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", &(this->secrets.ei_key));
-	this->crypter_initiator->set_key(this->crypter_initiator,this->secrets.ei_key);
-
-	prf_plus->allocate_bytes(prf_plus,this->crypter_responder->get_block_size(this->crypter_responder),&(this->secrets.er_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", &(this->secrets.er_key));
-	this->crypter_responder->set_key(this->crypter_responder,this->secrets.er_key);
+	prf_plus->get_bytes(prf_plus,ei_key.len,ei_buffer);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", &(ei_key));
+	this->crypter_initiator->set_key(this->crypter_initiator,ei_key);
+	
+	prf_plus->get_bytes(prf_plus,er_key.len,er_buffer);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", &(er_key));
+	this->crypter_responder->set_key(this->crypter_responder,er_key);
 
 	prf_plus->allocate_bytes(prf_plus,this->crypter_responder->get_block_size(this->crypter_responder),&(this->secrets.pi_key));
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", &(this->secrets.pi_key));
@@ -413,12 +476,13 @@ static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chun
 }
 
 /**
- * Implementation of  private_ike_sa_t.resend_last_reply.
+ * Implementation of private_ike_sa_t.resend_last_reply.
  */
 static status_t resend_last_reply(private_ike_sa_t *this)
 {
 	packet_t *packet;
 	
+	this->logger->log(this->logger, CONTROL | MORE, "Going to retransmit last reply");
 	packet = this->last_responded_message->get_packet(this->last_responded_message);
 	charon->send_queue->add(charon->send_queue, packet);
 
@@ -456,7 +520,7 @@ status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
 	
 
 /**
- * Implements protected_ike_sa_t.resend_last_reply.
+ * Implementation of private_ike_sa_t.resend_last_reply.
  */
 static status_t create_delete_job(private_ike_sa_t *this)
 {
@@ -475,7 +539,9 @@ static status_t create_delete_job(private_ike_sa_t *this)
  */
 static void set_new_state (private_ike_sa_t *this, state_t *state)
 {
-	this->logger->log(this->logger, CONTROL, "Change current state %s to %s",mapping_find(ike_sa_state_m,this->current_state->get_state(this->current_state)),mapping_find(ike_sa_state_m,state->get_state(state)));
+	this->logger->log(this->logger, CONTROL, "Change current state %s to %s",
+					  mapping_find(ike_sa_state_m,this->current_state->get_state(this->current_state)),
+					  mapping_find(ike_sa_state_m,state->get_state(state)));
 	this->current_state = state;
 }
 
@@ -605,7 +671,8 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_prop
 	this->crypter_initiator = crypter_create(proposal->encryption_algorithm,proposal->encryption_algorithm_key_length);
 	if (this->crypter_initiator == NULL)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "encryption algorithm not supported!");
+		this->logger->log(this->logger, ERROR|MORE, "encryption algorithm %s not supported!",
+						  mapping_find(encryption_algorithm_m,proposal->encryption_algorithm));
 		return FAILED;
 	}
 
@@ -614,11 +681,7 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_prop
 		this->crypter_responder->destroy(this->crypter_responder);
 	}
 	this->crypter_responder = crypter_create(proposal->encryption_algorithm,proposal->encryption_algorithm_key_length);
-	if (this->crypter_responder == NULL)
-	{
-		this->logger->log(this->logger, ERROR|MORE, "encryption algorithm not supported!");
-		return FAILED;
-	}
+	/* check must not be done again */
 	
 	if (this->signer_initiator != NULL)
 	{
@@ -636,11 +699,6 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_prop
 		this->signer_responder->destroy(this->signer_responder);
 	}
 	this->signer_responder = signer_create(proposal->integrity_algorithm);
-	if (this->signer_responder == NULL)
-	{
-		this->logger->log(this->logger, ERROR|MORE, "integrity algorithm not supported!");
-		return FAILED;
-	}
 
 	return SUCCESS;
 }
@@ -690,14 +748,15 @@ static signer_t *get_signer_responder (private_ike_sa_t *this)
  */
 static status_t send_request (private_ike_sa_t *this,message_t * message)
 {
-	packet_t *packet;
-	status_t status;
 	retransmit_request_job_t *retransmit_job;
 	u_int32_t timeout;
+	packet_t *packet;
+	status_t status;
 	
 	if (message->get_message_id(message) != this->message_id_out)
 	{
-		this->logger->log(this->logger, ERROR, "Message could not be sent cause id was not as expected");
+		this->logger->log(this->logger, ERROR, "Message could not be sent cause id (%d) was not as expected (%d)",
+							message->get_message_id(message),this->message_id_out);
 		return FAILED;
 	}
 
@@ -857,68 +916,72 @@ static void destroy (private_ike_sa_t *this)
 	this->child_sas->destroy(this->child_sas);
 
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy secrets");
-	
 	allocator_free(this->secrets.d_key.ptr);
-	allocator_free(this->secrets.ai_key.ptr);
-	allocator_free(this->secrets.ar_key.ptr);
-	allocator_free(this->secrets.ei_key.ptr);
-	allocator_free(this->secrets.er_key.ptr);
 	allocator_free(this->secrets.pi_key.ptr);
 	allocator_free(this->secrets.pr_key.ptr);
 	
 	if (this->crypter_initiator != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy initiator crypter_t object");
 		this->crypter_initiator->destroy(this->crypter_initiator);
 	}
 	
 	if (this->crypter_responder != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy responder crypter_t object");
 		this->crypter_responder->destroy(this->crypter_responder);
 	}
 	
 	if (this->signer_initiator != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy initiator signer_t object");
 		this->signer_initiator->destroy(this->signer_initiator);
 	}
 
 	if (this->signer_responder != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy responder signer_t object");
 		this->signer_responder->destroy(this->signer_responder);
 	}
 	
 	if (this->prf != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy prf_t object");
 		this->prf->destroy(this->prf);
 	}
 	
 	/* destroy ike_sa_id */
+	this->logger->log(this->logger, CONTROL | MOST, "Destroy ike_sa_id object");
 	this->ike_sa_id->destroy(this->ike_sa_id);
 
 	/* destroy stored requested message */
 	if (this->last_requested_message != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy last requested message");
 		this->last_requested_message->destroy(this->last_requested_message);
+	}
+	
+	/* destroy stored responded messages */
+	if (this->last_responded_message != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy last responded message");
+		this->last_responded_message->destroy(this->last_responded_message);
 	}
 	
 	/* destroy stored host_t objects */
 	if (this->me.host != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy my host_t object");
 		this->me.host->destroy(this->me.host);
 	}
 	
 	/* destroy stored host_t objects */
 	if (this->other.host != NULL)
 	{
+		this->logger->log(this->logger, CONTROL | MOST, "Destroy other host_t object");
 		this->other.host->destroy(this->other.host);
 	}
-	
-	
-	/* destroy stored responded messages */
-	if (this->last_responded_message != NULL)
-	{
-		this->last_responded_message->destroy(this->last_responded_message);
-	}
-	
+		
 	this->randomizer->destroy(this->randomizer);
 
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy current state object");
@@ -993,10 +1056,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->message_id_in = 0;
 	this->last_replied_message_id = -1;
 	this->secrets.d_key = CHUNK_INITIALIZER;
-	this->secrets.ai_key = CHUNK_INITIALIZER;
-	this->secrets.ar_key = CHUNK_INITIALIZER;
-	this->secrets.ei_key = CHUNK_INITIALIZER;	
-	this->secrets.er_key = CHUNK_INITIALIZER;
 	this->secrets.pi_key = CHUNK_INITIALIZER;
 	this->secrets.pr_key = CHUNK_INITIALIZER;
 	this->crypter_initiator = NULL;
