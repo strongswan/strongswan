@@ -32,12 +32,12 @@
 typedef struct prime_pool_t prime_pool_t;
 
 /**
- * @brief Prime generation
+ * @brief Prime generation thread.
  * 
  * Starts a low-priority thread which will
- * generate generate primes in the background.
+ * preallocate primes in the background.
  * This increases responsibility, since prime generation
- * is the most time-comsuming task.
+ * is the most time-consuming task.
  * 
  * @ingroup threads
  */
@@ -53,10 +53,11 @@ struct prime_pool_t {
 	int (*get_count) (prime_pool_t *prime_pool, size_t prime_size);
 
 	/**
-	 * @brief Get a prime for the given size.
+	 * @brief Get a prime of the given size.
 	 *
 	 * If no primes are available, the threads generates one of its own.
-	 * Prime is allocated and must be freed by caller.
+	 * Supplied mpz will be initialized to a prime and must be cleared
+	 * after usage.
 	 *
 	 * @param prime_pool_t 	calling object
 	 * @return 				chunk containing the prime
@@ -64,7 +65,7 @@ struct prime_pool_t {
 	void (*get_prime) (prime_pool_t *prime_pool, size_t prime_size, mpz_t *prime);
 
 	/**
-	 * @brief destroys a prime_pool object.
+	 * @brief Destroys a prime_pool object.
 	 *
 	 * Stopps the prime thread and destroys the pool.
 	 *
@@ -75,8 +76,14 @@ struct prime_pool_t {
 
 /**
  * @brief Creates a prime pool with a thread in it.
+ * 
+ * The specified limit limits the preallocation of primes
+ * for a specific prime_size. If limit is zero, no thread
+ * will be created, prime computation is done from
+ * the get_prime-calling thread.
  *
- * @return prime_pool_t the prime_pool
+ * @param generation_limit	generation limit to use
+ * @return 					created prime pool
  * 
  * @ingroup threads
  */

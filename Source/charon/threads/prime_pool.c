@@ -24,6 +24,7 @@
 
 #include "prime_pool.h"
 
+#include <daemon.h>
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 #include <utils/randomizer.h>
@@ -41,7 +42,7 @@ struct prime_list_t {
 	size_t prime_size;
 	
 	/**
-	 * is this much used prime_size ?
+	 * is this much used prime_size ? 
 	 */
 	u_int32_t usage;
 	
@@ -89,6 +90,11 @@ struct private_prime_pool_t {
 	 * prime generation thread 
 	 */
 	pthread_t thread;
+	
+	/** 
+	 * Logger instance for the prime_pool
+	 */
+	logger_t *logger;
 	
 	/**
 	 * Function for the prime thread, generate primes
@@ -145,13 +151,17 @@ static void get_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prim
 	{
 		prime_list_t *prime_list;
 		iterator->current(iterator, (void*)&prime_list);
+		/* decrease usage marker for every kind of prime */
+		prime_list->usage = max(prime_list->usage - 1, 0);
 		if (prime_list->prime_size == prime_size)
 		{
 			mpz_t *removed_prime;
 			create_new_list = FALSE;
-			prime_list->usage += 2;
+			/* this prime is well selling, increase usage marker by number of different prime sizes */
+			prime_list->usage += this->prime_lists->get_count(this->prime_lists);
 			if (prime_list->primes->remove_first(prime_list->primes, (void*)&removed_prime) == SUCCESS)
 			{
+				this->logger->log(this->logger, CONTROL|MOST, "thread removed a prime with size %d", prime_size);
 				mpz_init_set(*prime, *removed_prime);
 				mpz_clear(*removed_prime);
 				allocator_free(removed_prime);
@@ -159,13 +169,13 @@ static void get_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prim
 			}
 			/* wake up prime thread, he may be sleeping */
 			pthread_cond_signal(&(this->condvar));
-			break;
 		}
 	}
 	iterator->destroy(iterator);
 	
 	if (create_new_list)
 	{
+		this->logger->log(this->logger, CONTROL|MORE, "creating a new list for primes with size %d", prime_size);
 		/* there is no list for this prime size, create one */
 		prime_list_t *prime_list;
 		prime_list = allocator_alloc_thing(prime_list_t);
@@ -182,6 +192,7 @@ static void get_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prim
 	if (!prime_found)
 	{
 		/* no prime found, create one ourself */
+		this->logger->log(this->logger, CONTROL|MOST, "caller didn't find a prime, generates on it's own.");
 		this->compute_prime(this, prime_size, prime);
 	}
 }
@@ -227,13 +238,15 @@ void generate_primes(private_prime_pool_t *this)
 	/* allow cancellation */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	/* reduce priority */
 	while (TRUE)
 	{
 		prime_list_t *selected_prime_list = NULL;
 		u_int32_t max_usage = 0;
 		iterator_t *iterator;
 		mpz_t *prime;
+		
+		
+		this->logger->log(this->logger, CONTROL|MOST, "finding most important prime size...");
 		
 		pthread_mutex_lock(&(this->mutex));
 		
@@ -243,6 +256,10 @@ void generate_primes(private_prime_pool_t *this)
 		{
 			prime_list_t *prime_list;
 			iterator->current(iterator, (void*)&prime_list);
+			this->logger->log(this->logger, CONTROL|MOST, "primes with size %d have usage %d, %d in list",
+								 prime_list->prime_size, prime_list->usage,
+								 prime_list->primes->get_count(prime_list->primes));
+			/* get the prime_size with the highest usage factor */
 			if (prime_list->usage > max_usage)
 			{
 				if (prime_list->primes->get_count(prime_list->primes) < this->generation_limit)
@@ -257,7 +274,8 @@ void generate_primes(private_prime_pool_t *this)
 		
 		if (selected_prime_list == NULL)
 		{		
-			/* wait, be able to cancel */
+			this->logger->log(this->logger, CONTROL|MORE, "nothing to do, goint to sleep");
+			/* nothing to do. wait, while able to cancel */
 			pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 
@@ -271,11 +289,14 @@ void generate_primes(private_prime_pool_t *this)
 		
 		if (selected_prime_list != NULL)
 		{
+			this->logger->log(this->logger, CONTROL|MORE, "going to generate a prime with size %d",
+								selected_prime_list->prime_size);
 			/* generate the prime of requested size */
 			prime = allocator_alloc_thing(mpz_t);
 			compute_prime(this, selected_prime_list->prime_size, prime);
 			
 			/* insert prime */
+			this->logger->log(this->logger, CONTROL|MOST, "prime generated, inserting in list");
 			pthread_mutex_lock(&(this->mutex));
 			selected_prime_list->primes->insert_last(selected_prime_list->primes, (void*)prime);
 			pthread_mutex_unlock(&(this->mutex));
@@ -283,19 +304,18 @@ void generate_primes(private_prime_pool_t *this)
 	}
 }
 
-
  /**
  * implements prime_pool_t.destroy
  */
 static void destroy (private_prime_pool_t *this)
 {	
+	/* cancel thread, if available */
 	if (this->generation_limit > 0)
 	{
 		pthread_cancel(this->thread);
 		pthread_join(this->thread, NULL);
 	}
-	
-
+	/* get every prime list */
 	while ((this->prime_lists->get_count(this->prime_lists) > 0))
 	{
 		prime_list_t *prime_list;
@@ -317,12 +337,13 @@ static void destroy (private_prime_pool_t *this)
 
 	pthread_mutex_destroy(&(this->mutex));
 	pthread_cond_destroy(&(this->condvar));
+	
+	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);
 }
 
 /*
- *
  * Documented in header
  */
 prime_pool_t *prime_pool_create(int generation_limit)
@@ -335,6 +356,7 @@ prime_pool_t *prime_pool_create(int generation_limit)
 	this->public.destroy = (void(*)(prime_pool_t*)) destroy;
 
 	/* private members */
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager, PRIME_POOL, NULL);
 	this->generate_primes = generate_primes;
 	this->compute_prime = compute_prime;
 	this->generation_limit = generation_limit;
@@ -342,15 +364,35 @@ prime_pool_t *prime_pool_create(int generation_limit)
 	pthread_mutex_init(&(this->mutex), NULL);
 	pthread_cond_init(&(this->condvar), NULL);
 	
+	
+	/* thread is only created if he has anything to do */
 	if (generation_limit > 0)
 	{
 		if (pthread_create(&(this->thread), NULL, (void*(*)(void*))this->generate_primes, this) != 0)
 		{
-			pthread_mutex_destroy(&(this->mutex));
-			pthread_cond_destroy(&(this->condvar));
-			this->prime_lists->destroy(this->prime_lists);
-			allocator_free(this);
-			return NULL;
+			/* failed. we live with that problem, since getting primes is still possible */
+			this->logger->log(this->logger, ERROR, "thread creation failed, working without thread!");
+		}
+		/* set priority */
+		else
+		{
+			struct sched_param param;
+			int policy;
+			/* get params first */
+			if (pthread_getschedparam(this->thread, &policy, &param) == 0)
+			{
+				param.sched_priority = sched_get_priority_min(policy);
+				if (pthread_setschedparam(this->thread, policy, &param) != 0)
+				{
+					/* failed to set priority */	
+				this->logger->log(this->logger, ERROR, "could not reduce priority of thread, running in default priority!");
+				}
+			}
+			else
+			{
+				/* failed to get priority */	
+				this->logger->log(this->logger, ERROR, "could not reduce priority of thread, running in default priority!");
+			}
 		}
 	}
 	return (&this->public);
