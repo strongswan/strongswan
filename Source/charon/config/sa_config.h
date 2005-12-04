@@ -47,7 +47,7 @@ typedef struct child_proposal_t child_proposal_t;
 struct child_proposal_t {
 	
 	/**
-	 * Data for AH, if set
+	 * Data for AH, if set.
 	 */
 	struct {
 		bool is_set;
@@ -59,7 +59,7 @@ struct child_proposal_t {
 	} ah;
 	
 	/**
-	 * data for ESP, if set
+	 * Data for ESP, if set.
 	 */
 	struct {
 		bool is_set;
@@ -79,10 +79,13 @@ typedef struct sa_config_t sa_config_t;
 /**
  * @brief Stores configuration of an initialized connection.
  * 
- * During the IKE_AUTH phase, we have enought data to specify a 
+ * During the IKE_AUTH phase, we have enough data to specify a 
  * configuration. 
  * 
  * @warning This config is not thread save.
+ * 
+ * @b Constructors:
+ *   - sa_config_create()
  * 
  * @ingroup config
  */
@@ -91,13 +94,17 @@ struct sa_config_t {
 	/**
 	 * @brief Get own id to use for identification.
 	 * 
+	 * Returned object is not getting cloned.
+	 * 
 	 * @param this					calling object
 	 * @return						own id
 	 */
 	identification_t *(*get_my_id) (sa_config_t *this);
 	
 	/**
-	 * @brief Get id of communication partner..
+	 * @brief Get id of communication partner.
+	 *
+	 * Returned object is not getting cloned.
 	 * 
 	 * @param this					calling object
 	 * @return						other id
@@ -240,7 +247,6 @@ struct sa_config_t {
 	
 	/**
 	 * @brief Destroys the config object
-	 * 
 	 * 
 	 * @param this				calling object
 	 */

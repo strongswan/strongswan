@@ -31,10 +31,13 @@
 #include <transforms/signers/signer.h>
 #include <transforms/diffie_hellman.h>
 
+
 typedef struct ike_proposal_t ike_proposal_t;
 
 /**
- * Represents a Proposal used in IKE_SA_INIT phase.
+ * @brief Represents a Proposal used in IKE_SA_INIT phase.
+ * 
+ * @ingroup config
  */
 struct ike_proposal_t {
 	/**
@@ -53,7 +56,7 @@ struct ike_proposal_t {
 	integrity_algorithm_t integrity_algorithm;
 	
 	/**
-	 * Key length of integrity algorithm
+	 * Key length of integrity algorithm.
 	 */
 	u_int16_t integrity_algorithm_key_length;
 	
@@ -77,17 +80,19 @@ struct ike_proposal_t {
 typedef struct init_config_t init_config_t;
 
 /**
- * Represents a configuration class holding all needed informations for IKE_SA_INIT phase.
+ * @brief Represents a configuration class holding all needed informations for IKE_SA_INIT phase.
+ * 
+ * @b Constructors:
+ *  - init_config_create()
  * 
  * @ingroup config
- * 
  */
 struct init_config_t { 
 
 	/**
-	 * Get my host information as host_t object.
+	 * @brief Get my host information as host_t object.
 	 * 
-	 * @warning Object is NOT getting cloned.
+	 * Object is NOT getting cloned.
 	 * 
 	 * @param this	calling object
 	 * @return		host information as host_t object
@@ -95,9 +100,9 @@ struct init_config_t {
 	host_t * (*get_my_host) (init_config_t *this);
 
 	/**
-	 * Get other host information as host_t object.
+	 * @brief Get other host information as host_t object.
 	 * 
-	 * @warning Object is NOT getting cloned.
+	 * Object is NOT getting cloned.
 	 * 
 	 * @param this	calling object
 	 * @return		host information as host_t object
@@ -105,9 +110,9 @@ struct init_config_t {
 	host_t * (*get_other_host) (init_config_t *this);
 	
 	/**
-	 * Get my host information as host_t object.
+	 * @brief Get my host information as host_t object.
 	 * 
-	 * @warning Object is not getting cloned and has to get destroyed by caller.
+	 * Object is getting cloned and has to get destroyed by caller.
 	 * 
 	 * @param this	calling object
 	 * @return		host information as host_t object
@@ -115,9 +120,9 @@ struct init_config_t {
 	host_t * (*get_my_host_clone) (init_config_t *this);
 
 	/**
-	 * Get other host information as host_t object.
+	 * @brief Get other host information as host_t object.
 	 * 
-	 * @warning Object is not getting cloned and has to get destroyed by caller.
+	 * @warning Object is getting cloned and has to get destroyed by caller.
 	 * 
 	 * @param this	calling object
 	 * @return		host information as host_t object
@@ -125,8 +130,7 @@ struct init_config_t {
 	host_t * (*get_other_host_clone) (init_config_t *this);
 	
 	/**
-	 * Get the diffie hellman group to use as initiator with given priority.
-	 * 
+	 * @brief Get the diffie hellman group to use as initiator with given priority.
 	 * 
 	 * @param this		calling object
 	 * @param priority 	priority of dh group number (starting at 1)
@@ -136,9 +140,9 @@ struct init_config_t {
 	diffie_hellman_group_t (*get_dh_group_number) (init_config_t *this,size_t priority);
 	
 	/**
-	 * Returns a list of all supported ike_proposals of type ike_proposal_t *.
+	 * @brief Returns a list of all supported ike_proposals of type ike_proposal_t *.
 	 * 
-	 * @warning array of ike_proposal_t has to get destroyed by the caller
+	 * Returned array of ike_proposal_t has to get destroyed by the caller.
 	 * 
 	 * @param this				calling object
 	 * @param proposals			first proposal in a array
@@ -147,7 +151,7 @@ struct init_config_t {
 	size_t (*get_proposals) (init_config_t *this,ike_proposal_t **proposals);
 	
 	/**
-	 * Adds a proposal with given priority to the current stored proposals
+	 * @brief Adds a proposal with given priority to the current stored proposals.
 	 * 
 	 * If allready a proposal with given priority is stored the other one is 
 	 * moved one priority back. If priority is higher then all other stored 
@@ -160,8 +164,7 @@ struct init_config_t {
 	void (*add_proposal) (init_config_t *this,size_t priority, ike_proposal_t proposal);
 	
 	/**
-	 * Select a proposed from suggested proposals.
-	 * 
+	 * @brief Select a proposed from suggested proposals.
 	 * 
 	 * @param this					calling object
 	 * @param suggested_proposals	first proposal in a array
@@ -184,7 +187,7 @@ struct init_config_t {
 /**
  * Creates a init_config_t object.
  * 
- * @return  pointer to created init_config_t object.
+ * @return  	- pointer to created init_config_t object.
  * 
  * @ingroup config
  */
