@@ -1,7 +1,7 @@
 /**
  * @file rsa_private_key.h
  * 
- * @brief Interface rsa_private_key_t.
+ * @brief Interface of rsa_private_key_t.
  * 
  */
 
@@ -25,7 +25,6 @@
 
 #include <types.h>
 #include <definitions.h>
-
 #include <transforms/rsa/rsa_public_key.h>
 #include <transforms/hashers/hasher.h>
 
@@ -37,7 +36,7 @@ typedef struct rsa_private_key_t rsa_private_key_t;
  * 
  * Currently only supports signing using EMSA encoding.
  * 
- * @todo Implement proper key set/get load/save
+ * @TODO Implement proper key set/get load/save
  * methods using ASN1.
  * 
  * @b Constructors:
@@ -52,7 +51,7 @@ struct rsa_private_key_t {
 	/**
 	 * @bief Build a signature over a chunk using EMSA-PKCS1 encoding.
 	 * 
-	 * This signature creates a hash using the specied hash algorithm, concatenates
+	 * This signature creates a hash using the specified hash algorithm, concatenates
 	 * it with an ASN1-OID of the hash algorithm and runs the RSASP1 function
 	 * on it.
 	 * 

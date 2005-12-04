@@ -1,7 +1,7 @@
 /**
  * @file configuration_manager.h
  * 
- * @brief Manages all configuration aspects of the daemon.
+ * @brief Interface of configuration_manager_t.
  *  
  */
 
@@ -35,52 +35,59 @@ typedef struct configuration_manager_t configuration_manager_t;
 /**
  * @brief Manages all configuration aspects of the daemon.
  * 
+ * @b Constructors:
+ * 	- configuration_manager_create()
+ * 
  * @ingroup config
  * 
  */
 struct configuration_manager_t { 
 
 	/**
-	 * Get the configuration information needed for IKE_SA_INIT exchange 
+	 * @brief Returns the configuration information needed for IKE_SA_INIT exchange 
 	 * for a specific configuration name.
 	 * 
-	 * The returned init_config_t object MUST NOT be destroyed cause it's the original one.
+	 * The returned init_config_t object MUST NOT be destroyed cause it's managed by 
+	 * this configuration_manager_t object.
 	 * 
 	 * @param this				calling object
 	 * @param name				name of the configuration
-	 * @param[out] init_config	the configuration is stored at this place
+	 * @param[out] init_config	the init_config_t object is stored at this location
 	 * 
 	 * @return		
-	 * 				- NOT_FOUND
-	 * 				- SUCCESS
+	 * 							- NOT_FOUND
+	 * 							- SUCCESS
 	 */
 	status_t (*get_init_config_for_name) (configuration_manager_t *this, char *name, init_config_t **init_config);
 
 	/**
-	 * Get the configuration information needed for IKE_SA_INIT exchange 
+	 * @brief Returns the configuration information needed for IKE_SA_INIT exchange 
 	 * for specific host informations.
 	 * 
-	 * The returned init_config_t object MUST NOT be destroyed cause it's the original one.
+	 * The returned init_config_t object MUST NOT be destroyed cause it's managed by 
+	 * this configuration_manager_t object.
 	 * 
 	 * @param this				calling object
 	 * @param my_host			my host informations
-	 * @param other_host			other host informations
-	 * @param[out] init_config	the configuration is stored at this place
+	 * @param other_host		other host informations
+	 * @param[out] init_config	the init_config_t object is stored at this location
 	 * 
 	 * @return		
-	 * 				- NOT_FOUND
-	 * 				- SUCCESS
+	 * 							- NOT_FOUND
+	 * 							- SUCCESS
 	 */	
 	status_t (*get_init_config_for_host) (configuration_manager_t *this, host_t *my_host, host_t *other_host,init_config_t **init_config);
 	
 	/**
-	 * Get the configuration information needed after IKE_SA_INIT exchange.
+	 * @brief Returns the configuration information needed after IKE_SA_INIT exchange 
+	 * for a specific configuration name.
 	 * 
-	 * The returned sa_config_t object MUST not be destroyed cause it's the original one.
+	 * The returned sa_config_t object MUST NOT be destroyed cause it's managed by 
+	 * this configuration_manager_t object.
 	 * 
 	 * @param this				calling object
 	 * @param name				name of the configuration
-	 * @param[out] sa_config	the configuration is stored at this place
+	 * @param[out] sa_config	the sa_config_t object is stored at this location
 	 * 
 	 * @return		
 	 * 				- NOT_FOUND
@@ -89,103 +96,104 @@ struct configuration_manager_t {
 	status_t (*get_sa_config_for_name) (configuration_manager_t *this, char *name, sa_config_t **sa_config);
 	
 	/**
-	 * Get the configuration information needed after IKE_SA_INIT exchange 
+	 * @brief Returns the configuration information needed after IKE_SA_INIT exchange 
 	 * for specific init_config_t and ID data.
 	 * 
-	 * The returned sa_config_t object MUST NOT be destroyed cause it's the original one.
+	 * The returned sa_config_t object MUST NOT be destroyed cause it's managed by 
+	 * this configuration_manager_t object.
 	 * 
 	 * @param this				calling object
 	 * @param init_config		init_config_t object
 	 * @param other_id			identification of other one
-	 * @param my_id			my identification (can be NULL)
-	 * @param[out] sa_config	the configuration is stored at this place
+	 * @param my_id				my identification (can be NULL)
+	 * @param[out] sa_config	the sa_config_t object is stored at this location
 	 * 
 	 * @return		
-	 * 				- NOT_FOUND
-	 * 				- SUCCESS
+	 * 							- NOT_FOUND
+	 * 							- SUCCESS
 	 */	
 	status_t (*get_sa_config_for_init_config_and_id) (configuration_manager_t *this, init_config_t *init_config, identification_t *other_id, identification_t *my_id,sa_config_t **sa_config);
 
 	/**
-	 * Get the retransmit timeout.
+	 * @brief Returns the retransmit timeout.
 	 * 
 	 * The timeout values are managed by the configuration manager.
 	 * 
 	 * @param this				calling object
-	 * @param retransmit_count	number of times a message was allready retransmitted
+	 * @param retransmit_count	number of times a message was retransmitted so far
 	 * @param[out] timeout		the new retransmit timeout in milliseconds
 	 * 
 	 * @return		
-	 * 				- FAILED, if the message should not be resent again
-	 * 				- SUCCESS
+	 * 							- FAILED, if the message should not be retransmitted
+	 * 							- SUCCESS
 	 */
 	status_t (*get_retransmit_timeout) (configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout);
 	
 	/**
-	 * Get the preshared secret of a specific ID.
+	 * @brief Returns the preshared secret of a specific ID.
 	 * 
-	 * The preshared secret gets not cloned.
+	 * The returned preshared secret MUST NOT be destroyed cause it's managed by 
+	 * this configuration_manager_t object.
 	 * 
 	 * @param this						calling object
 	 * @param identification			identification_t object identifiying the ID.
-	 * @param[out] preshared_secret		the preshared secret will be written there
+	 * @param[out] preshared_secret		the preshared secret will be written there.
 	 * 
 	 * @return		
-	 * 				- NOT_FOUND			if no preshared secrets is configured for specific id
-	 * 				- SUCCESS
+	 * 									- NOT_FOUND	if no preshared secrets for specific ID could be found
+	 * 									- SUCCESS
 	 */	
 	status_t (*get_shared_secret) (configuration_manager_t *this, identification_t *identification, chunk_t *preshared_secret);
 	
 	/**
-	 * Get the RSA public key of a specific ID.
+	 * @brief Returns the RSA public key of a specific ID.
 	 * 
-	 * Object is not cloned and shuld not be destroyed.
+	 * The returned rsa_public_key_t object MUST NOT be destroyed cause it's managed by 
+	 * this configuration_manager_t object.
 	 * 
 	 * @param this						calling object
 	 * @param identification			identification_t object identifiying the ID.
 	 * @param[out] public_key			the public key will be written there
 	 * 
 	 * @return		
-	 * 				- NOT_FOUND			if no key is configured for specific id
-	 * 				- SUCCESS
+	 * 									- NOT_FOUND	if no key is configured for specific id
+	 * 									- SUCCESS
 	 */	
 	status_t (*get_rsa_public_key) (configuration_manager_t *this, identification_t *identification, rsa_public_key_t **public_key);
 	
 	/**
-	 * Get the RSA public key of a specific ID.
+	 * @brief Returns the RSA private key of a specific ID.
 	 * 
-	 * Object is not cloned and shuld not be destroyed.
+	 * The returned rsa_private_key_t object MUST NOT be destroyed cause it's managed by 
+	 * this configuration_manager_t object.
 	 * 
 	 * @param this						calling object
 	 * @param identification			identification_t object identifiying the ID.
 	 * @param[out] private_key			the private key will be written there
 	 * 
 	 * @return		
-	 * 				- NOT_FOUND			if no key is configured for specific id
-	 * 				- SUCCESS
+	 * 									- NOT_FOUND	if no key is configured for specific id
+	 * 									- SUCCESS
 	 */	
 	status_t (*get_rsa_private_key) (configuration_manager_t *this, identification_t *identification, rsa_private_key_t **private_key);
 
 	/**
-	 * Destroys configuration manager
+	 * Destroys a configuration_manager_t object.
 	 * 
-	 * 
-	 * @param this				calling object
+	 * @param this 						calling object
 	 * @return		
-	 * 							- SUCCESS
+	 * 									- SUCCESS
 	 */
 	void (*destroy) (configuration_manager_t *this);
 };
 
 /**
- * Creates the mighty configuration manager
+ * @brief Creates the mighty configuration manager.
  * 
  * @param first_retransmit_timeout 	first retransmit timeout in milliseconds
- * @param max_retransmit_count		max number of retransmitted requests (0 for infinite)
+ * @param max_retransmit_count		max number of tries to retransmitted a requests (0 for infinite)
  * @return 
- * 			- pointer to created manager object if succeeded
- * 			- NULL if memory allocation failed
- * 
+ * 									- pointer to created configuration_manager_t object
  * @ingroup config
  */
 configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count);

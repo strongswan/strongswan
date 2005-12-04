@@ -1,7 +1,7 @@
 /**
  * @file rsa_public_key.h
  * 
- * @brief Interface rsa_public_key_t.
+ * @brief Interface of rsa_public_key_t.
  * 
  */
 

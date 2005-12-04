@@ -1,9 +1,7 @@
 /**
- * @file configuration.c
+ * @file configuration_manager.c
  * 
- * @brief Configuration class used to store IKE_SA-configurations.
- * 
- * Object of this type represents the configuration for all IKE_SA's and their child_sa's.
+ * @brief Implementation of configuration_manager_t.
  * 
  */
 
@@ -34,7 +32,7 @@
 typedef struct preshared_secret_entry_t preshared_secret_entry_t;
 
 /**
- * An preshared secret entry combines an identifier with a 
+ * A preshared secret entry combines an identifier and a 
  * preshared secret.
  */
 struct preshared_secret_entry_t {
@@ -45,7 +43,7 @@ struct preshared_secret_entry_t {
 	identification_t *identification;
 	
 	/**
-	 * Preshared secret as chunk
+	 * Preshared secret as chunk_t. The NULL termination is not included.
 	 */	
 	chunk_t preshared_secret;
 };
@@ -64,7 +62,7 @@ struct rsa_private_key_entry_t {
 	identification_t *identification;
 	
 	/**
-	 * private key
+	 * Private key.
 	 */	
 	rsa_private_key_t* private_key;
 };
@@ -82,7 +80,7 @@ struct rsa_public_key_entry_t {
 	identification_t *identification;
 	
 	/**
-	 * private key
+	 * Private key.
 	 */	
 	rsa_public_key_t* public_key;
 };
@@ -91,6 +89,9 @@ typedef struct configuration_entry_t configuration_entry_t;
 
 /* A configuration entry combines a configuration name with a init and sa 
  * configuration represented as init_config_t and sa_config_t objects.
+ * 
+ * @b Constructors:
+ *  - configuration_entry_create()
  */
 struct configuration_entry_t {
 	
@@ -113,12 +114,14 @@ struct configuration_entry_t {
 	/**
 	 * Destroys a configuration_entry_t
 	 * 
-	 * 
 	 * @param this				calling object
 	 */
 	void (*destroy) (configuration_entry_t *this);
 };
 
+/**
+ * Implementation of configuration_entry_t.destroy.
+ */
 static void configuration_entry_destroy (configuration_entry_t *this)
 {
 	allocator_free(this->name);
@@ -126,7 +129,7 @@ static void configuration_entry_destroy (configuration_entry_t *this)
 }
 
 /**
- * Creates a configuration_entry_t object 
+ * @brief Creates a configuration_entry_t object.
  * 
  * @param name 			name of the configuration entry (gets copied)
  * @param init_config	object of type init_config_t
@@ -147,16 +150,15 @@ configuration_entry_t * configuration_entry_create(char * name, init_config_t * 
 	return entry;
 }
 
-
 typedef struct private_configuration_manager_t private_configuration_manager_t;
 
 /**
- * Private data of an configuration_t object
+ * Private data of an configuration_manager_t object.
  */
 struct private_configuration_manager_t {
 
 	/**
-	 * Public part of configuration manager.
+	 * Public part of configuration_manager_t object.
 	 */
 	configuration_manager_t public;
 
@@ -166,38 +168,38 @@ struct private_configuration_manager_t {
 	linked_list_t *configurations;
 
 	/**
-	 * Holding all init_configs.
+	 * Holding all managed init_configs.
 	 */
 	linked_list_t *init_configs;
 
 	/**
-	 * Holding all init_configs.
+	 * Holding all managed init_configs.
 	 */
 	linked_list_t *sa_configs;
 	
 	/**
-	 * Holding all preshared secrets.
+	 * Holding all managed preshared secrets.
 	 */
 	linked_list_t *preshared_secrets;
 	
 	/**
-	 * Holding all private secrets.
+	 * Holding all managed private secrets.
 	 */
 	linked_list_t *rsa_private_keys;
 	
 	/**
-	 * Holding all public secrets.
+	 * Holding all managed public secrets.
 	 */
 	linked_list_t *rsa_public_keys;
 
 	/**
-	 * Assigned logger object.
+	 * Assigned logger_t object.
 	 */
 	logger_t *logger;
 	
-
 	/**
-	 * Max number of retransmitted requests.
+	 * Max number of requests to be retransmitted.
+	 * 0 for infinite.
 	 */	
 	u_int32_t max_retransmit_count;
 	
@@ -207,7 +209,7 @@ struct private_configuration_manager_t {
 	u_int32_t first_retransmit_timeout;
 
 	/**
-	 * Adds a new IKE_SA configuration
+	 * Adds a new IKE_SA configuration.
 	 * 
 	 * 
 	 * @param this				calling object
@@ -218,7 +220,7 @@ struct private_configuration_manager_t {
 	void (*add_new_configuration) (private_configuration_manager_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config);
 	
 	/**
-	 * Adds a new IKE_SA configuration
+	 * Adds a new preshared secret.
 	 * 
 	 * 
 	 * @param this				calling object
@@ -229,35 +231,37 @@ struct private_configuration_manager_t {
 	void (*add_new_preshared_secret) (private_configuration_manager_t *this,id_type_t type, char *id_string, char *preshared_secret);
 	
 	/**
-	 * Adds a new IKE_SA configuration
+	 * Adds a new rsa private key.
 	 * 
 	 * 
 	 * @param this				calling object
 	 * @param type				type of identification
 	 * @param id_string			identification as string
-	 * @param preshared_secret	preshared secret as string
+	 * @param key_pos			location of key
+	 * @param key_len			length of key
 	 */
 	void (*add_new_rsa_private_key) (private_configuration_manager_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
 	
 	/**
-	 * Adds a new IKE_SA configuration
+	 * Adds a new rsa public key.
 	 * 
 	 * 
 	 * @param this				calling object
 	 * @param type				type of identification
 	 * @param id_string			identification as string
-	 * @param preshared_secret	preshared secret as string
+	 * @param key_pos			location of key
+	 * @param key_len			length of key
 	 */
 	void (*add_new_rsa_public_key) (private_configuration_manager_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
 	
 	/**
-	 * Load default configuration
-	 * 
+	 * Load default configuration.
 	 * 
 	 * @param this				calling object
 	 */
 	void (*load_default_config) (private_configuration_manager_t *this);
 };
+
 
 u_int8_t public_key_1[];
 u_int8_t private_key_1[];
@@ -735,16 +739,16 @@ static void destroy(private_configuration_manager_t *this)
 {
 	this->logger->log(this->logger,CONTROL | MORE, "Going to destroy configuration manager ");
 
+	this->logger->log(this->logger,CONTROL | MOST, "Destroy configuration entries");
 	while (this->configurations->get_count(this->configurations) > 0)
 	{
 		configuration_entry_t *entry;
 		this->configurations->remove_first(this->configurations,(void **) &entry);
 		entry->destroy(entry);
 	}
-	/* todo delete all config objects */
-	
 	this->configurations->destroy(this->configurations);
-	
+
+	this->logger->log(this->logger,CONTROL | MOST, "Destroy sa_config_t objects");	
 	while (this->sa_configs->get_count(this->sa_configs) > 0)
 	{
 		sa_config_t *sa_config;
@@ -754,6 +758,7 @@ static void destroy(private_configuration_manager_t *this)
 
 	this->sa_configs->destroy(this->sa_configs);
 	
+	this->logger->log(this->logger,CONTROL | MOST, "Destroy init_config_t objects");
 	while (this->init_configs->get_count(this->init_configs) > 0)
 	{
 		init_config_t *init_config;
@@ -771,7 +776,8 @@ static void destroy(private_configuration_manager_t *this)
 		allocator_free(entry);
 	}
 	this->preshared_secrets->destroy(this->preshared_secrets);
-	
+
+	this->logger->log(this->logger,CONTROL | MOST, "Destroy rsa private keys");	
 	while (this->rsa_private_keys->get_count(this->rsa_private_keys) > 0)
 	{
 		rsa_private_key_entry_t *entry;
@@ -781,7 +787,8 @@ static void destroy(private_configuration_manager_t *this)
 		allocator_free(entry);
 	}
 	this->rsa_private_keys->destroy(this->rsa_private_keys);
-	
+
+	this->logger->log(this->logger,CONTROL | MOST, "Destroy rsa public keys");
 	while (this->rsa_public_keys->get_count(this->rsa_public_keys) > 0)
 	{
 		rsa_public_key_entry_t *entry;
@@ -837,19 +844,6 @@ configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit
 
 	return (&this->public);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 u_int8_t public_key_1[] = {
