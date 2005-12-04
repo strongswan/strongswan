@@ -32,6 +32,12 @@ typedef struct md5_hasher_t md5_hasher_t;
  * @brief Implementation of hasher_t interface using the
  * MD5 algorithm.
  * 
+ * @b Constructors:
+ * - hasher_create() using HASH_MD5
+ * - md5_hasher_create()
+ * 
+ * @see hasher_t
+ * 
  * @ingroup hashers
  */
 struct md5_hasher_t {

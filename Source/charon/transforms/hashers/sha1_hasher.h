@@ -32,6 +32,12 @@ typedef struct sha1_hasher_t sha1_hasher_t;
  * @brief Implementation of hasher_t interface using the
  * SHA1 algorithm.
  * 
+ * @b Constructors:
+ * - hasher_create() using HASH_SHA1
+ * - sha1_hasher_create()
+ * 
+ * @see hasher_t
+ * 
  * @ingroup hashers
  */
 struct sha1_hasher_t {

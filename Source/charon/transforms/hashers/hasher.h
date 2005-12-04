@@ -51,6 +51,11 @@ typedef struct hasher_t hasher_t;
 /**
  * @brief Generic interface for all hash functions.
  * 
+ * @b Constructors:
+ * - hasher_create()
+ * 
+ * @see md5_hasher_t, sha1_hasher_t
+ * 
  * @ingroup hashers
  */
 struct hasher_t {
