@@ -205,6 +205,7 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 			/* build string, must be cloned */
 			this->string = allocator_alloc(strlen(tmp)+1);
 			strcpy(this->string, tmp);
+			break;
 		}
 		case ID_IPV6_ADDR:
 		{
