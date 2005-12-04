@@ -20,7 +20,7 @@
  * for more details.
  */
 
- #include <pthread.h>
+#include <pthread.h>
 
 #include "send_queue.h"
 

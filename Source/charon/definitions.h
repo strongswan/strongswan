@@ -63,7 +63,7 @@
 /**
  * @defgroup config
  * 
- * Configuration stuff.
+ * Classes which implement configuration related things.
  */
 
 /**
@@ -75,13 +75,13 @@
 /**
  * @defgroup network
  * 
- * Low level network stuff.
+ * Classes for network relevant stuff.
  */
  
  /**
  * @defgroup payloads
  * 
- * Classes representing a specific IKEv2 Payload type.
+ * Classes representing a specific IKEv2 Payload.
  * 
  * @ingroup encoding
  */
@@ -125,6 +125,14 @@
  * @defgroup transforms
  * 
  * Transform algorithms of different kind.
+ */
+ 
+/**
+ * @defgroup rsa
+ * 
+ * RSA public key algorithm
+ * 
+ * @ingroup transforms
  */
  
 /**

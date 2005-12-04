@@ -363,7 +363,7 @@ static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
 	mpz_t p, q, n, e, d, exp1, exp2, coeff;
 	mpz_t m, q1, t;
 	
-	if (key_size <= 0) 
+	if (key_size < 0) 
 	{
 		return INVALID_ARG;
 	}

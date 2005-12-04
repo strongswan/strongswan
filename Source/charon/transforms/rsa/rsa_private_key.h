@@ -37,31 +37,125 @@ typedef struct rsa_private_key_t rsa_private_key_t;
  * 
  * Currently only supports signing using EMSA encoding.
  * 
- * @ingroup asymmetrics
+ * @todo Implement proper key set/get load/save
+ * methods using ASN1.
+ * 
+ * @b Constructors:
+ *  - rsa_private_key_create()
+ * 
+ * @see rsa_public_key_t
+ * 
+ * @ingroup rsa
  */
 struct rsa_private_key_t {
 
+	/**
+	 * @bief Build a signature over a chunk using EMSA-PKCS1 encoding.
+	 * 
+	 * This signature creates a hash using the specied hash algorithm, concatenates
+	 * it with an ASN1-OID of the hash algorithm and runs the RSASP1 function
+	 * on it.
+	 * 
+	 * @param this				rsa_private_key to use
+	 * @param hash_algorithm	hash algorithm to use for hashing
+	 * @param data				data to sign
+	 * @param[out] signature	allocated signature
+	 * @return
+	 * 							- SUCCESS
+	 * 							- INVALID_STATE, if key not set
+	 * 							- NOT_SUPPORTED, if hash algorithm not supported
+	 */
 	status_t (*build_emsa_pkcs1_signature) (rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature);
 	
+	/**
+	 * @brief Set the key.
+	 * 
+	 * Currently uses a proprietary format which is only inteded
+	 * for testing. This should be replaced with a proper
+	 * ASN1 encoded key format, when charon gets the ASN1 
+	 * capabilities.
+	 * 
+	 * @param this				calling object
+	 * @param key				key (in a propriarity format)
+	 * @return					currently SUCCESS in any case
+	 */
 	status_t (*set_key) (rsa_private_key_t *this, chunk_t key);
 	
+	/**
+	 * @brief Gets the key.
+	 * 
+	 * Currently uses a proprietary format which is only inteded
+	 * for testing. This should be replaced with a proper
+	 * ASN1 encoded key format, when charon gets the ASN1 
+	 * capabilities.
+	 * 
+	 * @param this				calling object
+	 * @param key				key (in a propriarity format)
+	 * @return					
+	 * 							- SUCCESS
+	 * 							- INVALID_STATE, if key not set
+	 */
 	status_t (*get_key) (rsa_private_key_t *this, chunk_t *key);
 	
+	/**
+	 * @brief Loads a key from a file.
+	 * 
+	 * Not implemented!
+	 * 
+	 * @param this				calling object
+	 * @param file				file from which key should be read
+	 * @return					NOT_SUPPORTED
+	 */
 	status_t (*load_key) (rsa_private_key_t *this, char *file);
 	
+	/**
+	 * @brief Saves a key to a file.
+	 * 
+	 * Not implemented!
+	 * 
+	 * @param this				calling object
+	 * @param file				file to which the key should be written.
+	 * @return					NOT_SUPPORTED
+	 */
 	status_t (*save_key) (rsa_private_key_t *this, char *file);
 	
+	/**
+	 * @brief Generate a new key.
+	 * 
+	 * Generates a new private_key with specified key size
+	 * 
+	 * @param this				calling object
+	 * @param key_size			size of the key in bits
+	 * @return					
+	 * 							- SUCCESS
+	 * 							- INVALID_ARG if key_size invalid
+	 */
 	status_t (*generate_key) (rsa_private_key_t *this, size_t key_size);
 	
+	/**
+	 * @brief Create a rsa_public_key_t with the public
+	 * parts of the key.
+	 * 
+	 * @param this				calling object
+	 * @return					public_key
+	 */
 	rsa_public_key_t *(*get_public_key) (rsa_private_key_t *this);
-
+	
+	/**
+	 * @brief Destroys the private key.
+	 * 
+	 * @param this				private key to destroy
+	 */
 	void (*destroy) (rsa_private_key_t *this);
 };
 
 /**
- * Types are defined in public_key.h
+ * @brief Create a new rsa_private_key without
+ * any key inside.
  * 
- * @ingroup asymmetrics
+ * @return created rsa_private_key_t.
+ * 
+ * @ingroup rsa
  */
 rsa_private_key_t *rsa_private_key_create();
 

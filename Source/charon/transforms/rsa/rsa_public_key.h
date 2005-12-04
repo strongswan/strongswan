@@ -37,26 +37,100 @@ typedef struct rsa_public_key_t rsa_public_key_t;
  * Currently only supports signature verification using
  * the EMSA encoding (see PKCS1)
  * 
- * @ingroup asymmetrics
+ * @b Constructors:
+ * - rsa_public_key_create()
+ * 
+ * @see rsa_private_key_t
+ * 
+ * @ingroup rsa
  */
 struct rsa_public_key_t {
 
+	/**
+	 * @bief Verify a EMSA-PKCS1 encodined signature.
+	 * 
+	 * Processes the supplied signature with the RSAVP1 function,
+	 * selects the hash algorithm form the resultign ASN1-OID and
+	 * verifies the hash against the supplied data.
+	 * 
+	 * @param this				rsa_private_key to use
+	 * @param data				data to sign
+	 * @param signature			signature to verify
+	 * @return
+	 * 							- SUCCESS, if signature ok
+	 * 							- INVALID_STATE, if key not set
+	 * 							- NOT_SUPPORTED, if hash algorithm not supported
+	 * 							- INVALID_ARG, if signature is not a signature
+	 * 							- FAILED if signature invalid or unable to verify
+	 */
 	status_t (*verify_emsa_pkcs1_signature) (rsa_public_key_t *this, chunk_t data, chunk_t signature);
 	
+	/**
+	 * @brief Set the key.
+	 * 
+	 * Currently uses a proprietary format which is only inteded
+	 * for testing. This should be replaced with a proper
+	 * ASN1 encoded key format, when charon gets the ASN1 
+	 * capabilities.
+	 * 
+	 * @param this				calling object
+	 * @param key				key (in a propriarity format)
+	 * @return					currently SUCCESS in any case
+	 */
 	status_t (*set_key) (rsa_public_key_t *this, chunk_t key);
 	
+	/**
+	 * @brief Gets the key.
+	 * 
+	 * Currently uses a proprietary format which is only inteded
+	 * for testing. This should be replaced with a proper
+	 * ASN1 encoded key format, when charon gets the ASN1 
+	 * capabilities.
+	 * 
+	 * @param this				calling object
+	 * @param key				key (in a propriarity format)
+	 * @return					
+	 * 							- SUCCESS
+	 * 							- INVALID_STATE, if key not set
+	 */
 	status_t (*get_key) (rsa_public_key_t *this, chunk_t *key);
 	
+	/**
+	 * @brief Loads a key from a file.
+	 * 
+	 * Not implemented!
+	 * 
+	 * @param this				calling object
+	 * @param file				file from which key should be read
+	 * @return					NOT_SUPPORTED
+	 */
 	status_t (*load_key) (rsa_public_key_t *this, char *file);
 	
+	/**
+	 * @brief Saves a key to a file.
+	 * 
+	 * Not implemented!
+	 * 
+	 * @param this				calling object
+	 * @param file				file to which the key should be written.
+	 * @return					NOT_SUPPORTED
+	 */
 	status_t (*save_key) (rsa_public_key_t *this, char *file);
-
+	
+	/**
+	 * @brief Destroys the public key.
+	 * 
+	 * @param this				public key to destroy
+	 */
 	void (*destroy) (rsa_public_key_t *this);
 };
 
 /**
+ * @brief Create a public key without any key inside.
  * 
- * @ingroup asymmetrics
+ * @return created rsa_public_key_t.
+ * 
+ * @ingroup rsa
  */
 rsa_public_key_t *rsa_public_key_create();
 

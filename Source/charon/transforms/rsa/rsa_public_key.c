@@ -147,6 +147,11 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	chunk_t em;
 	u_int8_t *pos;
 	
+	if(!this->is_key_set)
+	{
+		return INVALID_STATE;	
+	}
+	
 	if (signature.len > this->k)
 	{
 		return INVALID_ARG;	
