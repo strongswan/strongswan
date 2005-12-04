@@ -29,5 +29,9 @@ $(BUILD_DIR)ike_sa.o :			$(SA_DIR)ike_sa.c $(SA_DIR)ike_sa.h
 OBJS+= $(BUILD_DIR)authenticator.o
 $(BUILD_DIR)authenticator.o :	$(SA_DIR)authenticator.c $(SA_DIR)authenticator.h
 								$(CC) $(CFLAGS) -c -o $@ $<
+								
+OBJS+= $(BUILD_DIR)child_sa.o
+$(BUILD_DIR)child_sa.o :		$(SA_DIR)child_sa.c $(SA_DIR)child_sa.h
+								$(CC) $(CFLAGS) -c -o $@ $<
 
 include $(SA_DIR)states/Makefile.states

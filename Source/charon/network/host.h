@@ -29,6 +29,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <linux/xfrm.h>
 
 #include <types.h>
 
@@ -74,6 +75,16 @@ struct host_t {
 	 * @return				length of the sockaddr struct
 	 */
 	socklen_t *(*get_sockaddr_len) (host_t *this);
+	
+	/**
+	 * @brief Gets the address as xfrm_address_t.
+	 */
+	xfrm_address_t (*get_xfrm_addr) (host_t *this);
+	
+	/**
+	 * @brief Gets the address as xfrm_address_t.
+	 */
+	int (*get_family) (host_t *this);
 	
 	/** 
 	 * @brief get the address of this host
