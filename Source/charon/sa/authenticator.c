@@ -152,7 +152,7 @@ static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
 		{
 			
-			identification_t *other_id =other_id_payload->get_identification(other_id_payload);
+			identification_t *other_id = other_id_payload->get_identification(other_id_payload);
 			chunk_t auth_data = auth_payload->get_data(auth_payload);
 			chunk_t preshared_secret;
 			status_t status;
@@ -182,6 +182,37 @@ static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *
 			}
 			allocator_free_chunk(&my_auth_data);		
 			return SUCCESS;
+		}
+		case RSA_DIGITAL_SIGNATURE:
+		{
+			identification_t *other_id = other_id_payload->get_identification(other_id_payload);
+			rsa_public_key_t *public_key;
+			status_t status;
+			chunk_t octets, auth_data;
+			
+			auth_data = auth_payload->get_data(auth_payload);
+			
+			status = charon->configuration_manager->get_rsa_public_key(charon->configuration_manager, other_id, &public_key);
+			other_id->destroy(other_id);
+			if (status != SUCCESS)
+			{
+				return status;	
+			}
+			
+			octets = this->allocate_octets(this,last_received_packet,my_nonce,other_id_payload,initiator);
+			
+			status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
+			if (status == SUCCESS)
+			{
+				*verified = TRUE;	
+			}
+			else
+			{
+				*verified = FALSE;	
+			}
+			
+			allocator_free_chunk(&octets);
+			return status;
 		}
 		default:
 		{
@@ -219,6 +250,36 @@ static status_t compute_auth_data (private_authenticator_t *this,auth_payload_t 
 
 			*auth_payload = auth_payload_create();
 			(*auth_payload)->set_auth_method((*auth_payload),SHARED_KEY_MESSAGE_INTEGRITY_CODE);
+			(*auth_payload)->set_data((*auth_payload),auth_data);
+
+			allocator_free_chunk(&auth_data);
+			return SUCCESS;
+		}
+		case RSA_DIGITAL_SIGNATURE:
+		{
+			identification_t *my_id = my_id_payload->get_identification(my_id_payload);
+			rsa_private_key_t *private_key;
+			status_t status;
+			chunk_t octets, auth_data;
+			
+			status = charon->configuration_manager->get_rsa_private_key(charon->configuration_manager, my_id, &private_key);
+			my_id->destroy(my_id);
+			if (status != SUCCESS)
+			{
+				return status;	
+			}
+			
+			octets = this->allocate_octets(this,last_sent_packet,other_nonce,my_id_payload,initiator);
+			
+			status = private_key->build_emsa_pkcs1_signature(private_key, HASH_SHA1, octets, &auth_data);
+			allocator_free_chunk(&octets);
+			if (status != SUCCESS)
+			{
+				return status;	
+			}
+			
+			*auth_payload = auth_payload_create();
+			(*auth_payload)->set_auth_method((*auth_payload), RSA_DIGITAL_SIGNATURE);
 			(*auth_payload)->set_data((*auth_payload),auth_data);
 
 			allocator_free_chunk(&auth_data);

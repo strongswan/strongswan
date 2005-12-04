@@ -29,6 +29,7 @@
 #include <threads/receiver.h>
 #include <threads/scheduler.h>
 #include <threads/thread_pool.h>
+#include <threads/prime_pool.h>
 #include <sa/ike_sa_manager.h>
 #include <queues/send_queue.h>
 #include <queues/job_queue.h>
@@ -54,7 +55,7 @@
  * Port on which the daemon will 
  * listen for incoming traffic.
  */
-#define IKEV2_UDP_PORT 500
+#define IKEV2_UDP_PORT 4500
 
 /**
  * First retransmit timeout in milliseconds.
@@ -127,6 +128,11 @@ struct daemon_t {
 	 * Thread pool holding the worker threads
 	 */
 	thread_pool_t *thread_pool;
+	
+	/**
+	 * Low-priority thread which generates primes
+	 */
+	prime_pool_t *prime_pool;
 	
 	/**
 	 * @brief shut down the daemon

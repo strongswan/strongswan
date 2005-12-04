@@ -25,6 +25,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <gmp.h>
 
 #include "allocator.h"
 
@@ -213,26 +214,17 @@ static void * reallocate(allocator_t *allocator, void * old, size_t bytes, char 
 	private_allocator_t *this = (private_allocator_t *) allocator;
     memory_hdr_t *allocated_memory;
 
-    if (old == NULL)
-    {
-	    	return NULL;
-    }
 
 	pthread_mutex_lock( &(this->mutex));
     allocated_memory = ((memory_hdr_t *)old) - 1;
     
 	void *new_space = this->allocate_special(this,bytes,file,line,FALSE);
 
-	if (new_space == NULL)
-	{
-	    pthread_mutex_unlock(&(this->mutex));
-		this->public.free_pointer(&(this->public),old);
-		return NULL;
+	if (old != NULL)
+	{	
+		/* the smaller size is copied to avoid overflows */
+		memcpy(new_space,old,(allocated_memory->info.size_of_memory < bytes) ? allocated_memory->info.size_of_memory : bytes);
 	}
-	
-	
-	/* the smaller size is copied to avoid overflows */
-	memcpy(new_space,old,(allocated_memory->info.size_of_memory < bytes) ? allocated_memory->info.size_of_memory : bytes);
     pthread_mutex_unlock(&(this->mutex));
     this->public.free_pointer(&(this->public),old);
 	
@@ -331,7 +323,40 @@ static private_allocator_t allocator = {
 	mutex: PTHREAD_MUTEX_INITIALIZER
 };
 
+
 allocator_t *global_allocator = &(allocator.public);
+
+/*
+ * alloc function for gmp
+ */
+void *gmp_alloc(size_t bytes)
+{
+	return allocator.allocate_special(&allocator, bytes, "[ gmp internal ]", 0 , TRUE);
+}
+
+/*
+ * realloc function for gmp
+ */
+void *gmp_realloc(void *old, size_t old_bytes, size_t new_bytes)
+{
+	return global_allocator->reallocate(global_allocator, old, new_bytes, "[ gmp internal ]", 0);
+}
+/*
+ * free function for gmp
+ */
+void gmp_free(void *ptr, size_t bytes)
+{
+	free_pointer(global_allocator, ptr);
+}
+
+/*
+ * Described in header
+ */
+void allocator_init()
+{
+	mp_set_memory_functions (gmp_alloc, gmp_realloc, gmp_free);
+}
+
 #else /* !LEAK_DETECTION */
 
 

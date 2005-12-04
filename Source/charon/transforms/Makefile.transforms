@@ -18,6 +18,7 @@ include $(TRANSFORMS_DIR)crypters/Makefile.crypters
 include $(TRANSFORMS_DIR)hashers/Makefile.hashers
 include $(TRANSFORMS_DIR)prfs/Makefile.prfs
 include $(TRANSFORMS_DIR)signers/Makefile.signers
+include $(TRANSFORMS_DIR)rsa/Makefile.rsa
 
 OBJS+= $(BUILD_DIR)diffie_hellman.o
 $(BUILD_DIR)diffie_hellman.o :	$(TRANSFORMS_DIR)diffie_hellman.c $(TRANSFORMS_DIR)diffie_hellman.h

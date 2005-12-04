@@ -32,8 +32,12 @@ typedef enum hash_algorithm_t hash_algorithm_t;
  * @brief Algorithms to use for hashing.
  */
 enum hash_algorithm_t {
-	HASH_SHA1,
-	HASH_MD5
+	HASH_MD2,
+	HASH_MD5, /* supported */
+	HASH_SHA1, /* supported */
+	HASH_SHA256,
+	HASH_SHA384,
+	HASH_SHA512,
 };
 
 /**

@@ -26,6 +26,8 @@
 #include <types.h>
 #include <config/init_config.h>
 #include <config/sa_config.h>
+#include <transforms/rsa/rsa_private_key.h>
+#include <transforms/rsa/rsa_public_key.h>
 
 
 typedef struct configuration_manager_t configuration_manager_t;
@@ -133,6 +135,36 @@ struct configuration_manager_t {
 	 * 				- SUCCESS
 	 */	
 	status_t (*get_shared_secret) (configuration_manager_t *this, identification_t *identification, chunk_t *preshared_secret);
+	
+	/**
+	 * Get the RSA public key of a specific ID.
+	 * 
+	 * Object is not cloned and shuld not be destroyed.
+	 * 
+	 * @param this						calling object
+	 * @param identification			identification_t object identifiying the ID.
+	 * @param[out] public_key			the public key will be written there
+	 * 
+	 * @return		
+	 * 				- NOT_FOUND			if no key is configured for specific id
+	 * 				- SUCCESS
+	 */	
+	status_t (*get_rsa_public_key) (configuration_manager_t *this, identification_t *identification, rsa_public_key_t **public_key);
+	
+	/**
+	 * Get the RSA public key of a specific ID.
+	 * 
+	 * Object is not cloned and shuld not be destroyed.
+	 * 
+	 * @param this						calling object
+	 * @param identification			identification_t object identifiying the ID.
+	 * @param[out] private_key			the private key will be written there
+	 * 
+	 * @return		
+	 * 				- NOT_FOUND			if no key is configured for specific id
+	 * 				- SUCCESS
+	 */	
+	status_t (*get_rsa_private_key) (configuration_manager_t *this, identification_t *identification, rsa_private_key_t **private_key);
 
 	/**
 	 * Destroys configuration manager

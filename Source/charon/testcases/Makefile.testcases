@@ -115,3 +115,11 @@ $(BUILD_DIR)init_config_test.o :	$(TESTCASES_DIR)init_config_test.c $(TESTCASES_
 TEST_OBJS+= $(BUILD_DIR)sa_config_test.o
 $(BUILD_DIR)sa_config_test.o :		$(TESTCASES_DIR)sa_config_test.c $(TESTCASES_DIR)sa_config_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
+
+TEST_OBJS+= $(BUILD_DIR)rsa_test.o
+$(BUILD_DIR)rsa_test.o :			$(TESTCASES_DIR)rsa_test.c $(TESTCASES_DIR)rsa_test.h
+									$(CC) $(CFLAGS) -c -o $@ $<
+
+TEST_OBJS+= $(BUILD_DIR)prime_pool_test.o
+$(BUILD_DIR)prime_pool_test.o :		$(TESTCASES_DIR)prime_pool_test.c $(TESTCASES_DIR)prime_pool_test.h
+									$(CC) $(CFLAGS) -c -o $@ $<

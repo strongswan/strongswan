@@ -27,9 +27,9 @@
 
 #include "diffie_hellman.h"
 
+#include <daemon.h>
 #include <utils/allocator.h>
 #include <utils/randomizer.h>
-#include <utils/gmp_helper.h>
 
 
 /** 
@@ -404,11 +404,6 @@ struct private_diffie_hellman_t {
 	 * True if shared secret is computed and stored in my_public_value.
 	 */
 	bool shared_secret_is_computed;
-
-	/**
-	 * helper class for gmp functions.
-	 */	
-	gmp_helper_t *gmp_helper;
 	
 	/**
 	 * Sets the modulus for a specific diffie hellman group.
@@ -450,7 +445,7 @@ static status_t set_modulus(private_diffie_hellman_t *this)
 			chunk_t modulus_chunk;
 			modulus_chunk.ptr = modulus_info_entries[i].modulus;
 			modulus_chunk.len = modulus_info_entries[i].modulus_length;
-			this->gmp_helper->chunk_to_mpz(this->gmp_helper,&(this->modulus),modulus_chunk);
+			mpz_import(this->modulus, modulus_chunk.len, 1, 1, 1, 0, modulus_chunk.ptr);
 			this->modulus_length = modulus_chunk.len;
 			this->generator = modulus_info_entries[i].generator;
 			status = SUCCESS;
@@ -465,7 +460,7 @@ static status_t set_modulus(private_diffie_hellman_t *this)
  */
 static void set_other_public_value(private_diffie_hellman_t *this,chunk_t public_value)
 {
-	this->gmp_helper->chunk_to_mpz(this->gmp_helper,&(this->other_public_value),public_value);
+	mpz_import(this->other_public_value, public_value.len, 1, 1, 1, 0, public_value.ptr);
 	this->compute_shared_secret(this);
 }
 
@@ -478,7 +473,8 @@ static status_t get_other_public_value(private_diffie_hellman_t *this,chunk_t *p
 	{
 		return FAILED;
 	}
-	this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->other_public_value), public_value,this->modulus_length);
+	public_value->len = this->modulus_length;
+    public_value->ptr = mpz_export(NULL, NULL, 1, public_value->len, 1, 0, this->other_public_value);
 	return SUCCESS;
 }
 
@@ -517,7 +513,8 @@ static void compute_public_value (private_diffie_hellman_t *this)
  */
 static void get_my_public_value(private_diffie_hellman_t *this,chunk_t *public_value)
 {
-	this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->my_public_value), public_value,this->modulus_length);
+	public_value->len = this->modulus_length;
+    public_value->ptr = mpz_export(NULL, NULL, 1, public_value->len, 1, 0, this->my_public_value);
 }
 
 /**
@@ -529,7 +526,8 @@ static status_t get_shared_secret(private_diffie_hellman_t *this,chunk_t *secret
 	{
 		return FAILED;
 	}
-	this->gmp_helper->mpz_to_chunk(this->gmp_helper,&(this->shared_secret), secret,this->modulus_length);
+	secret->len = this->modulus_length;
+    secret->ptr = mpz_export(NULL, NULL, 1, secret->len, 1, 0, this->shared_secret);
 	return SUCCESS;
 }
 
@@ -538,7 +536,6 @@ static status_t get_shared_secret(private_diffie_hellman_t *this,chunk_t *secret
  */
 static void destroy(private_diffie_hellman_t *this)
 {
-	this->gmp_helper->destroy(this->gmp_helper);
 	mpz_clear(this->modulus);
 	mpz_clear(this->my_prime);
 	mpz_clear(this->my_public_value);
@@ -575,17 +572,14 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	/* private variables */
 	this->dh_group_number = dh_group_number;
 	
-	this->gmp_helper = gmp_helper_create();
-	
 	/* set this->modulus */	
 	if (this->set_modulus(this) != SUCCESS)
 	{
-		this->gmp_helper->destroy(this->gmp_helper);
 		allocator_free(this);
 		return NULL;
 	}
 	
-	this->gmp_helper->init_prime(this->gmp_helper,&(this->my_prime),this->modulus_length);
+	charon->prime_pool->get_prime(charon->prime_pool, this->modulus_length, &(this->my_prime));
 	
 	this->compute_public_value(this);
 	

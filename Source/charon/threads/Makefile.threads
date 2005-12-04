@@ -29,3 +29,7 @@ $(BUILD_DIR)sender.o :			$(THREADS_DIR)sender.c $(THREADS_DIR)sender.h
 OBJS+= $(BUILD_DIR)thread_pool.o
 $(BUILD_DIR)thread_pool.o :		$(THREADS_DIR)thread_pool.c $(THREADS_DIR)thread_pool.h
 								$(CC) $(CFLAGS) -c -o $@ $<
+								
+OBJS+= $(BUILD_DIR)prime_pool.o
+$(BUILD_DIR)prime_pool.o :		$(THREADS_DIR)prime_pool.c $(THREADS_DIR)prime_pool.h
+								$(CC) $(CFLAGS) -c -o $@ $<

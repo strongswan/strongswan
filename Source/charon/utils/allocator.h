@@ -172,7 +172,15 @@
 		void (*report_memory_leaks) (allocator_t *this);
 	};
 
-		
+	
+	/**
+	 * @brief Initialize the allocator.
+	 * 
+	 * Setup the allocator (currently set
+	 * allocation functions for libgmp)
+	 */
+	void allocator_init();
+	
 	/**
 	 * @brief Global allocater_t object.
 	 * 
@@ -316,7 +324,14 @@
 	 * 
 	 * @ingroup utils
 	 */
-	#define report_memory_leaks(void) {}
+	#define report_memory_leaks() {}
+	
+	/**
+	 * Initialize the allocator.
+	 * 
+	 * @ingroup utils
+	 */
+	#define allocator_init() {}
 #endif
 
 #endif /*ALLOCATOR_H_*/

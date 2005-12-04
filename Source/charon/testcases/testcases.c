@@ -58,6 +58,8 @@
 #include <testcases/encryption_payload_test.h>
 #include <testcases/init_config_test.h>
 #include <testcases/sa_config_test.h>
+#include <testcases/rsa_test.h>
+#include <testcases/prime_pool_test.h>
 
 /* output for test messages */
 extern FILE * stderr;
@@ -108,6 +110,8 @@ test_t hmac_signer_test2 = {test_hmac_sha1_signer, "HMAC SHA1 signer test"};
 test_t encryption_payload_test = {test_encryption_payload, "encryption payload test"};
 test_t init_config_test = {test_init_config, "init_config_t test"};
 test_t sa_config_test = {test_sa_config, "sa_config_t test"};
+test_t rsa_test = {test_rsa, "RSA private/public key test"};
+test_t prime_pool_test = {test_prime_pool, "Prime pool"};
 
 
 daemon_t* charon;
@@ -118,6 +122,7 @@ static void daemon_kill(daemon_t *this, char* none)
 	this->socket->destroy(this->socket);
 	this->ike_sa_manager->destroy(this->ike_sa_manager);
 	this->job_queue->destroy(this->job_queue);
+	this->prime_pool->destroy(this->prime_pool);
 	this->event_queue->destroy(this->event_queue);
 	this->send_queue->destroy(this->send_queue);
 	this->configuration_manager->destroy(this->configuration_manager);
@@ -130,18 +135,19 @@ static void daemon_kill(daemon_t *this, char* none)
  * @return 	created daemon_t
  */
 daemon_t *daemon_create()
-{
+{	
 	charon = allocator_alloc_thing(daemon_t);
 		
 	/* assign methods */
 	charon->kill = daemon_kill;
 	
 	charon->logger_manager = logger_manager_create(0);
-	charon->socket = socket_create(4601);
+	charon->socket = socket_create(4600);
 	charon->ike_sa_manager = ike_sa_manager_create();
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
 	charon->send_queue = send_queue_create();
+	charon->prime_pool = prime_pool_create(0);
 	charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT);
 	charon->sender = NULL;
 	charon->receiver = NULL;
@@ -203,8 +209,13 @@ int main()
 		&encryption_payload_test,
 		&init_config_test,
 		&sa_config_test,
+		&rsa_test,
+		&prime_pool_test,
 		NULL
 	};
+	
+	/* allocator needs initialization */
+	allocator_init();
  
 	daemon_create();
  
@@ -214,8 +225,8 @@ int main()
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
-	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&sa_config_test); 
+//	tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&rsa_test); 
 	
 	
 	tester->destroy(tester);

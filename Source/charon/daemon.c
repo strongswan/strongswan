@@ -179,6 +179,7 @@ static void initialize(private_daemon_t *this)
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();
+	this->public.prime_pool = prime_pool_create(0);
 	this->public.thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
 }
 
@@ -202,6 +203,10 @@ static void destroy(private_daemon_t *this)
 	if (this->public.thread_pool != NULL)
 	{
 		this->public.thread_pool->destroy(this->public.thread_pool);	
+	}
+	if (this->public.prime_pool != NULL)
+	{
+		this->public.prime_pool->destroy(this->public.prime_pool);	
 	}
 	if (this->public.job_queue != NULL)
 	{
@@ -240,7 +245,7 @@ static void destroy(private_daemon_t *this)
  * @return 	created daemon_t
  */
 private_daemon_t *daemon_create()
-{
+{	
 	private_daemon_t *this = allocator_alloc_thing(private_daemon_t);
 		
 	/* assign methods */
@@ -284,6 +289,9 @@ private_daemon_t *daemon_create()
 int main(int argc, char *argv[])
 {
 	private_daemon_t *private_charon;
+	
+	/* allocation needs initialization, before any allocs are done */
+	allocator_init();
 	
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;

@@ -57,6 +57,9 @@ typedef struct crypter_t crypter_t;
 /**
  * @brief Generic interface for symmetric encryption algorithms.
  * 
+ * @todo Distinguish between block_size and key_size, since not all
+ * algorithms use key_size == block_size (e.g. 3DES).
+ * 
  * @ingroup crypters
  */
 struct crypter_t {
