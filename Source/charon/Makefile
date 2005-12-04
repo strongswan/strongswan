@@ -71,4 +71,4 @@ $(BUILD_DIR)run_tests :		$(TEST_OBJS)
 
 clean : 		
 							rm -f $(TEST_OBJS) $(BUILD_DIR)charon $(BUILD_DIR)run_tests $(BUILD_DIR)daemon.o; \
-							rmdir $(BUILD_DIR)
+							rmdir --ignore-fail-on-non-empty $(BUILD_DIR)
