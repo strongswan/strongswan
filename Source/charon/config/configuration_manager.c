@@ -393,7 +393,6 @@ static status_t get_init_config_for_host (private_configuration_manager_t *this,
 			/* could be right one, check my_host for default route*/
 			if (config_my_host->is_default_route(config_my_host))
 			{
-				printf("is default route\n");
 				*init_config = entry->init_config;
 				status = SUCCESS;
 				break;

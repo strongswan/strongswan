@@ -553,7 +553,7 @@ static void make_space_available (private_generator_t *this, size_t bits)
 		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
 		size_t out_position_offset = ((this->out_position) - (this->buffer));
 
-		this->logger->log(this->logger, CONTROL|MOST, "increased gen buffer from %d to %d byte", 
+		this->logger->log(this->logger, CONTROL|ALL, "increased gen buffer from %d to %d byte", 
 							old_buffer_size, new_buffer_size);
 		
 		/* Reallocate space for new buffer */
@@ -657,7 +657,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 	
 	payload_start = this->out_position;
 	
-	this->logger->log(this->logger, CONTROL, "generating payload of type %s",
+	this->logger->log(this->logger, CONTROL|MORE, "generating payload of type %s",
 											mapping_find(payload_type_m,payload_type));
 	
 	/* each payload has its own encoding rules */
@@ -665,7 +665,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 
 	for (i = 0; i < rule_count;i++)
 	{
-		this->logger->log(this->logger, CONTROL|MORE, "  generating rule %d %s",
+		this->logger->log(this->logger, CONTROL|MOST, "  generating rule %d %s",
 							i, mapping_find(encoding_type_m,rules[i].type));
 		switch (rules[i].type)
 		{
@@ -928,7 +928,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			{
 				if (this->attribute_format == FALSE)
 				{
-					this->logger->log(this->logger, CONTROL|MOST, "attribute value has not fixed size");
+					this->logger->log(this->logger, CONTROL|ALL, "attribute value has not fixed size");
 					/* the attribute value is generated */
 					this->generate_from_chunk(this,rules[i].offset);
 				}

@@ -43,6 +43,8 @@ mapping_t logger_context_t_mappings[] = {
 	{DAEMON, "DAEMON"},
 	{CONFIGURATION_MANAGER, "CONFIG"},
 	{ENCRYPTION_PAYLOAD, "ENCPLD"},
+	{PRIME_POOL, "PRIMEP"},
+	{MAPPING_END, NULL},
 };
 
 /** 
@@ -137,39 +139,55 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 	
 	/* output to stdout, since we are debugging all days */
 	output = stdout;
+	
+	/* defaults */
+	log_thread_ids = FALSE;
+	logger_level = this->public.get_logger_level(&(this->public),context);;
 
 	switch(context)
 	{
 		case TESTER:
-			log_thread_ids = FALSE;
 			output = stdout;
-			logger_level |= FULL;
+			break;
+		case IKE_SA_MANAGER:
+			log_thread_ids = TRUE;
 			break;
 		case IKE_SA:
-			logger_level |= FULL;
-		case IKE_SA_MANAGER:
-		case WORKER:
+			log_thread_ids = TRUE;
+			break;
 		case CONFIGURATION_MANAGER:
-			logger_level |= ALL;
+			log_thread_ids = TRUE;
+			break;
 		case MESSAGE:
+			log_thread_ids = TRUE;
+			break;
 		case ENCRYPTION_PAYLOAD:
-
+			log_thread_ids = TRUE;
+			break;
 		case GENERATOR:
-		case THREAD_POOL:
-		case SCHEDULER:
-		case SENDER:
-		case RECEIVER:
-		case SOCKET:
-		case DAEMON:
-			logger_level |= CONTROL;
+			log_thread_ids = TRUE;
+			break;
 		case PARSER:
-			log_thread_ids = FALSE;
-			logger_level |= ERROR;
+			log_thread_ids = TRUE;
+			break;
+		case WORKER:
+			log_thread_ids = TRUE;
+			break;
+		case THREAD_POOL:
+			break;
+		case PRIME_POOL:
+			break;
+		case SCHEDULER:
+			break;
+		case SENDER:
+			break;
+		case RECEIVER:
+			break;
+		case SOCKET:
+			break;
+		case DAEMON:
 			break;
 	}
-	
-	/* reduce to global definiton of loglevel */
-	logger_level &= this->public.get_logger_level(&(this->public),context);
 	
 	/* logger manager is thread save */
 	pthread_mutex_lock(&(this->mutex));

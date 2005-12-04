@@ -85,7 +85,6 @@ static bool is_default_route (private_host_t *this)
 		{
 			static u_int8_t default_route[4] = {0x00,0x00,0x00,0x00};
 			struct sockaddr_in *sin = (struct sockaddr_in*)&(this->address);
-			printf("host address: %ul\n", sin->sin_addr.s_addr);
 			
 			if (memcmp(default_route,&(sin->sin_addr.s_addr),4) == 0)
 			{

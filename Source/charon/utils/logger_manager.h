@@ -50,6 +50,7 @@ enum logger_context_t {
 	DAEMON,
 	CONFIGURATION_MANAGER,
 	ENCRYPTION_PAYLOAD,
+	PRIME_POOL,
 };
 
 typedef struct logger_manager_t logger_manager_t;

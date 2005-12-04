@@ -656,7 +656,7 @@ static status_t parse_header(private_message_t *this)
 	status_t status;
 	
 	
-	this->logger->log(this->logger, CONTROL, "parsing Header of message");
+	this->logger->log(this->logger, CONTROL|MORE, "parsing Header of message");
 	
 	this->parser->reset_context(this->parser);
 	status = this->parser->parse_payload(this->parser,HEADER,(payload_t **) &ike_header);
@@ -692,8 +692,8 @@ static status_t parse_header(private_message_t *this)
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(&(ike_header->payload_interface));
 	
-	
-	this->logger->log(this->logger, CONTROL, "Parsing and verification of header successfully");
+	this->logger->log(this->logger, CONTROL, "Parsed a %s %s", mapping_find(exchange_type_m, this->exchange_type),
+						this->is_request ? "request" : "response");
 	
 	ike_header->destroy(ike_header);	
 	return SUCCESS;	
@@ -707,14 +707,14 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	status_t status = SUCCESS;
 	payload_type_t current_payload_type = this->first_payload;
 		
-	this->logger->log(this->logger, CONTROL, "Parsing body of message, first payload %s",
+	this->logger->log(this->logger, CONTROL|MORE, "Parsing body of message, first payload %s",
 					  mapping_find(payload_type_m, current_payload_type));
 
 	while ((current_payload_type != NO_PAYLOAD))
 	{
 		payload_t *current_payload;
 		
-		this->logger->log(this->logger, CONTROL|MORE, "Start parsing payload of type %s", 
+		this->logger->log(this->logger, CONTROL|MOST, "Start parsing payload of type %s", 
 							mapping_find(payload_type_m, current_payload_type));
 		
 		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
@@ -751,6 +751,11 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		/* get next payload type */
 		current_payload_type = current_payload->get_next_type(current_payload);
 	}
+	
+	this->logger->log(this->logger, CONTROL, "Message a %s %s contains %d payloads", 
+						mapping_find(exchange_type_m, this->exchange_type),
+						this->is_request ? "request" : "response",
+						this->payloads->get_count(this->payloads));
 
 	status = this->decrypt_and_verify_payloads(this,crypter,signer);
 	if (status != SUCCESS)

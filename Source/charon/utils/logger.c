@@ -26,7 +26,6 @@
 #include <stdio.h>
 #include <time.h>
 #include <pthread.h>
-#include <unistd.h>
 
 #include "logger.h"
 
@@ -63,9 +62,9 @@ struct private_logger_t {
 	FILE *output;
 	
 	/**
-	 * Should a pid be included in the log?
+	 * Should a thread_id be included in the log?
 	 */
-	bool log_pid;
+	bool log_thread_id;
 	
 	/**
 	 * Applies a prefix to string and stores it in buffer.
@@ -119,9 +118,9 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
 		log_details = '0';
 	}
 	
-	if (this->log_pid)
+	if (this->log_thread_id)
 	{
-		snprintf(buffer, MAX_LOG, "[%c%c] [%s] @%d %s", log_type, log_details, this->name, getpid(), string);
+		snprintf(buffer, MAX_LOG, "[%c%c] [%s] @%u %s", log_type, log_details, this->name, (int)pthread_self(), string);
 	}
 	else
 	{
@@ -294,7 +293,7 @@ static void destroy(private_logger_t *this)
 /*
  * Described in header.
  */	
-logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_pid, FILE * output)
+logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output)
 {
 	private_logger_t *this = allocator_alloc_thing(private_logger_t);
 	
@@ -314,7 +313,7 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_pi
 
 	/* private variables */
 	this->level = log_level;
-	this->log_pid = log_pid;
+	this->log_thread_id = log_thread_id;
 	this->name = allocator_alloc(strlen(logger_name) + 1);
 
 	strcpy(this->name,logger_name);

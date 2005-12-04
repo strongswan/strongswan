@@ -72,7 +72,7 @@
  * maximum allowed level for ever context, the definiton
  * of the context may be less verbose.
  */
-#define DEFAULT_LOGLEVEL FULL
+#define DEFAULT_LOGLEVEL CONTROL
 
 typedef struct daemon_t daemon_t;
 

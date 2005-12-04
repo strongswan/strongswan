@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <pthread.h>
-#include <unistd.h>
 
 #include "daemon.h" 
 
@@ -58,9 +57,9 @@ struct private_daemon_t {
 	sigset_t signal_set;
 	
 	/** 
-	 * pid of main-thread
+	 * thread_id of main-thread
 	 */
-	pid_t main_thread_pid;
+	pthread_t main_thread_id;
 	
 	/**
 	 * main loop
@@ -135,7 +134,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 {
 	/* we send SIGTERM, so the daemon can cleanly shut down */
 	this->logger->log(this->logger, ERROR, "Killing daemon: %s", reason);
-	if (this->main_thread_pid == getpid())
+	if (this->main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
 		this->destroy(this);
@@ -156,11 +155,11 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 static void build_test_jobs(private_daemon_t *this)
 {
 	int i;
-	for(i = 0; i<1; i++)
+	for(i = 0; i<100; i++)
 	{
 		initiate_ike_sa_job_t *initiate_job;
 		initiate_job = initiate_ike_sa_job_create("localhost");
-		this->public.job_queue->add(this->public.job_queue, (job_t*)initiate_job);
+		this->public.event_queue->add_relative(this->public.event_queue, (job_t*)initiate_job, i * 5000);
 	}
 }
 
@@ -179,7 +178,7 @@ static void initialize(private_daemon_t *this)
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();
-	this->public.prime_pool = prime_pool_create(0);
+	this->public.prime_pool = prime_pool_create(10);
 	this->public.thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
 }
 
@@ -271,7 +270,7 @@ private_daemon_t *daemon_create()
 	this->public.scheduler = NULL;
 	this->public.thread_pool = NULL;
 	
-	this->main_thread_pid = getpid();
+	this->main_thread_id = pthread_self();
 	
 	/* setup signal handling */
 	sigemptyset(&(this->signal_set));

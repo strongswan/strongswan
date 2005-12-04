@@ -110,8 +110,8 @@ struct logger_t {
 	 *
 	 * @param this 		logger_t object
 	 * @param loglevel 	or'ed set of loglevels
-	 * @param label 		a labeling name, logged with the bytes
-	 * @param bytes 		pointer to the bytes to dump
+	 * @param label 	a labeling name, logged with the bytes
+	 * @param bytes 	pointer to the bytes to dump
 	 * @param len	 	number of bytes to dump
 	 */
 	void (*log_bytes) (logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len);
@@ -124,7 +124,7 @@ struct logger_t {
 	 *
 	 * @param this 		logger_t object
 	 * @param loglevel 	or'ed set of loglevels
-	 * @param label 		a labeling name, logged with the bytes
+	 * @param label 	a labeling name, logged with the bytes
 	 * @param chunk		pointer to a chunk to log
 	 */
 	void (*log_chunk) (logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk);
@@ -158,13 +158,13 @@ struct logger_t {
  *
  * @param logger_name 	name for the logger_t object
  * @param log_level		or'ed set of log_levels to assign to the new logger_t object
- * @param log_pid		TRUE if thread id should also be logged
- * @param output			FILE * if log has to go on a file output, NULL for syslog
+ * @param log_thread_id	TRUE if thread id should also be logged
+ * @param output		FILE * if log has to go on a file output, NULL for syslog
  * @return 				logger_t object 
  * 
  * @ingroup utils
  */
-logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_pid, FILE * output);
+logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output);
 
 
 #endif /*LOGGER_H_*/

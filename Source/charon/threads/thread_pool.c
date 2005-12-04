@@ -24,7 +24,6 @@
 #include <pthread.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>
 
 #include "thread_pool.h"
  
@@ -119,7 +118,7 @@ static void process_jobs(private_thread_pool_t *this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running, pid: %d", getpid());
+	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running, thread_id: %u", (int)pthread_self());
 
 	for (;;) {
 		job_t *job;
