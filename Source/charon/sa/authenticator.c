@@ -33,7 +33,7 @@
 /**
  * Length of key pad in bytes.
  */
-#define IKE_V2_KEY_PAD_LEN 17
+#define IKE_V2_KEY_PAD_LEN strlen(IKE_V2_KEY_PAD)
 
 typedef struct private_authenticator_t private_authenticator_t;
 
@@ -43,17 +43,17 @@ typedef struct private_authenticator_t private_authenticator_t;
 struct private_authenticator_t {
 
 	/**
-	 * Public interface.
+	 * Public authenticator_t interface.
 	 */
 	authenticator_t public;
 
 	/**
-	 * Assigned IKE_SA. Needed to get prf function.
+	 * Assigned IKE_SA. Needed to get objects of type prf_t, sa_config_t and logger_t.
 	 */
 	protected_ike_sa_t *ike_sa;
 	
 	/**
-	 * PRF function. Taken from the IKE_SA.
+	 * PRF taken from the IKE_SA.
 	 */
 	prf_t *prf;
 
@@ -65,15 +65,38 @@ struct private_authenticator_t {
 	logger_t *logger;
 	
 	/**
-	 * TODO
+	 * Creates the octets which are signed (RSA) or MACed (shared secret) as described in section 
+	 * 2.15 of draft.
+	 * 
+	 * @param this				calling object
+	 * @param last_message		the last message to include in created octets 
+	 * 							(either binary form of IKE_SA_INIT request or IKE_SA_INIT response)
+	 * @param other_nonce		Nonce data received from other peer
+	 * @param my_id				id_payload_t object representing an ID payload
+	 * @param initiator			Type of peer. TRUE, if it is original initiator, FALSE otherwise
+	 * @return					octets as described in section 2.15. Memory gets allocated and has to get 
+	 * 							destroyed by caller.
 	 */
 	chunk_t (*allocate_octets) (private_authenticator_t *this,chunk_t last_message, chunk_t other_nonce,id_payload_t *my_id, bool initiator);
 	
+	/**
+	 * Creates the AUTH data using auth method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
+	 * 
+	 * @param this				calling object
+	 * @param last_message		the last message
+	 * 							(either binary form of IKE_SA_INIT request or IKE_SA_INIT response)
+	 * @param nonce				Nonce data to include in auth data compution
+	 * @param id_payload		id_payload_t object representing an ID payload
+	 * @param initiator			Type of peer. TRUE, if it is original initiator, FALSE otherwise
+	 * @param shared_secret		shared secret as chunk_t. If shared secret is a string, the NULL termination is not included.
+	 * @return					AUTH data as dscribed in section 2.15 for AUTH method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
+	 * 							Memory gets allocated and has to get destroyed by caller.
+	 */
 	chunk_t (*allocate_auth_data_with_preshared_secret) (private_authenticator_t *this,chunk_t last_message, chunk_t nonce,id_payload_t *id_payload, bool initiator,chunk_t preshared_secret);
 };
 
 /**
- * Implementation of authenticator_t.private_authenticator_t.
+ * Implementation of private_authenticator_t.allocate_octets.
  */
 static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_message, chunk_t other_nonce,id_payload_t *my_id, bool initiator)
 {
@@ -84,8 +107,8 @@ static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_messag
 	chunk_t octets;
 	
 	id_with_header[0] = my_id->get_id_type(my_id);
-	/* TODO
-	 * Reserved bytes are not in any case zero
+	/* TODO:
+	 * Reserved bytes are not in any case zero.
 	 */
 	id_with_header[1] = 0x00;
 	id_with_header[2] = 0x00;
@@ -116,7 +139,7 @@ static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_messag
 }
 
 /**
- * Implementation of authenticator_t.allocate_auth_data_with_preshared_secret.
+ * Implementation of private_authenticator_t.allocate_auth_data_with_preshared_secret.
  */
 static chunk_t allocate_auth_data_with_preshared_secret (private_authenticator_t *this,chunk_t last_message, chunk_t nonce,id_payload_t *id_payload, bool initiator,chunk_t preshared_secret)
 {
@@ -142,9 +165,8 @@ static chunk_t allocate_auth_data_with_preshared_secret (private_authenticator_t
 }
 
 /**
- * Implementation of authenticator_t.private_authenticator_t.
+ * Implementation of authenticator_t.verify_auth_data.
  */
-
 static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *auth_payload, chunk_t last_received_packet,chunk_t my_nonce,id_payload_t *other_id_payload,bool initiator,bool *verified)
 {
 	switch(auth_payload->get_auth_method(auth_payload))
@@ -228,15 +250,13 @@ static status_t compute_auth_data (private_authenticator_t *this,auth_payload_t 
 {
 	sa_config_t *sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	
-	
 	switch(sa_config->get_auth_method(sa_config))
 	{
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
 		{
 			identification_t *my_id =my_id_payload->get_identification(my_id_payload);
 			chunk_t preshared_secret;
-			status_t status;
-			
+			status_t status;		
 
 			status = charon->configuration_manager->get_shared_secret(charon->configuration_manager,my_id,&preshared_secret);
 

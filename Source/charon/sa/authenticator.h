@@ -20,10 +20,8 @@
  * for more details.
  */
 
-
 #ifndef _AUTHENTICATOR_H_
 #define _AUTHENTICATOR_H_
-
 
 #include <types.h>
 #include <encoding/payloads/auth_payload.h>
@@ -34,7 +32,6 @@
 
 typedef struct authenticator_t authenticator_t;
 
-
 /**
  * @brief Class authenticator_t. Used to authenticate a peer.
  * 
@@ -43,7 +40,8 @@ typedef struct authenticator_t authenticator_t;
  *  - RSA_DIGITAL_SIGNATURE
  * 
  * This class retrieves needed data for specific AUTH methods (RSA keys, shared secrets, etc.)
- * over an internal stored protected_ike_sa_t object or directly from the configuration_manager_t.
+ * over an internal stored protected_ike_sa_t object or directly from the configuration_manager_t over
+ * the daemon_t object charon.
  * 
  * @ingroup sa
  */
@@ -127,6 +125,8 @@ struct authenticator_t {
  * This preconditions are not given in IKE_SA states INITIATOR_INIT or RESPONDER_INIT!
  * 
  * @param ike_sa		object of type protected_ike_sa_t
+ * 
+ * @ingroup sa
  */
 authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa);
 
