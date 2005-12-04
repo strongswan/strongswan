@@ -152,7 +152,8 @@ struct identification_t {
  * 
  * @param type		type of this id, such as ID_IPV4_ADDR or ID_RFC822_ADDR
  * @param string	input string, which will be converted
- * @return			- created identification_t object, or
+ * @return
+ * 					- created identification_t object, or
  * 					- NULL if type not supported.
  * 
  * @ingroup utils
@@ -165,8 +166,7 @@ identification_t * identification_create_from_string(id_type_t type, char *strin
  * 
  * @param type		type of this id, such as ID_IPV4_ADDR or ID_RFC822_ADDR
  * @param encoded	encoded bytes, such as from identification_t.get_encoding
- * @return			- created identification_t object, or
- * 					- NULL if type not supported.
+ * @return			created identification_t object
  * 
  * @ingroup utils
  */

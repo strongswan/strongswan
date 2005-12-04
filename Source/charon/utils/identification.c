@@ -33,14 +33,14 @@
  * String mappings for id_type_t.
  */
 mapping_t id_type_m[] = {
-{ID_IPV4_ADDR, "ID_IPV4_ADDR"},
-{ID_FQDN, "ID_FQDN"},
-{ID_RFC822_ADDR, "ID_RFC822_ADDR"},
-{ID_IPV6_ADDR, "ID_IPV6_ADDR"},
-{ID_DER_ASN1_DN, "ID_DER_ASN1_DN"},
-{ID_DER_ASN1_GN, "ID_DER_ASN1_GN"},
-{ID_KEY_ID, "ID_KEY_ID"},
-{MAPPING_END, NULL}
+	{ID_IPV4_ADDR, "ID_IPV4_ADDR"},
+	{ID_FQDN, "ID_FQDN"},
+	{ID_RFC822_ADDR, "ID_RFC822_ADDR"},
+	{ID_IPV6_ADDR, "ID_IPV6_ADDR"},
+	{ID_DER_ASN1_DN, "ID_DER_ASN1_DN"},
+	{ID_DER_ASN1_GN, "ID_DER_ASN1_GN"},
+	{ID_KEY_ID, "ID_KEY_ID"},
+	{MAPPING_END, NULL}
 };
 
 
@@ -130,7 +130,6 @@ static void destroy(private_identification_t *this)
  */
 static private_identification_t *identification_create()
 {
-	
 	private_identification_t *this = allocator_alloc_thing(private_identification_t);
 	
 	/* assign methods */
@@ -152,6 +151,7 @@ static private_identification_t *identification_create()
 identification_t *identification_create_from_string(id_type_t type, char *string)
 {
 	private_identification_t *this = identification_create();
+	
 	this->type = type;
 	switch (type)
 	{
@@ -192,36 +192,55 @@ identification_t *identification_create_from_string(id_type_t type, char *string
 identification_t *identification_create_from_encoding(id_type_t type, chunk_t encoded)
 {
 	private_identification_t *this = identification_create();
+	
+	this->encoded = allocator_clone_chunk(encoded);
+	
 	this->type = type;
 	switch (type)
 	{
 		case ID_IPV4_ADDR:
 		{
 			char *tmp;
-			/* clone chunk */
-			if (encoded.len != 4)
-			{
-				allocator_free(this);
-				return NULL;	
-			}
-			this->encoded = allocator_clone_chunk(encoded);
 			tmp = inet_ntoa(*((struct in_addr*)(encoded.ptr)));
 			/* build string, must be cloned */
 			this->string = allocator_alloc(strlen(tmp)+1);
 			strcpy(this->string, tmp);
-			return &(this->public);
 		}
 		case ID_IPV6_ADDR:
+		{
+			this->string = "[ID_IPV6_ADDR]";
+			break;
+		}
 		case ID_FQDN:
+		{
+			this->string = "[ID_FQDN]";
+			break;
+		}
 		case ID_RFC822_ADDR:
+		{
+			this->string = "[ID_RFC822_ADDR]";
+			break;
+		}
 		case ID_DER_ASN1_DN:
+		{
+			this->string = "[ID_DER_ASN1_DN]";
+			break;
+		}
 		case ID_DER_ASN1_GN:
+		{
+			this->string = "[ID_DER_ASN1_GN]";
+			break;
+		}
 		case ID_KEY_ID:
+		{
+			this->string = "[ID_KEY_ID]";
+			break;
+		}
 		default:
 		{
-			/* not supported */
-			allocator_free(this);
-			return NULL;
+			this->string = "[unknown id_type_t]";
 		}
 	}
+	
+	return &(this->public);
 }
