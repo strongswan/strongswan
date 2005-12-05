@@ -178,6 +178,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case PRIME_POOL:
 			break;
 		case SCHEDULER:
+			logger_level = 0;
 			break;
 		case SENDER:
 			break;

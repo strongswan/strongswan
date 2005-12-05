@@ -355,9 +355,9 @@ static void load_default_config (private_configuration_manager_t *this)
 	this->add_new_configuration(this,"pinflb30",init_config2,sa_config2);
 	this->add_new_configuration(this,"localhost",init_config3,sa_config3);
 
-	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.130","das ist ein sicheres wort");
-	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.131","das ist ein sicheres wort");
-	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "127.0.0.1","das ist ein sicheres wort");
+	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.130","verschluesselt");
+	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.131","verschluesselt");
+	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "127.0.0.1","verschluesselt");
 	
 	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "127.0.0.1", public_key_1, 256);
 	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "152.96.193.131", public_key_2, 256);
@@ -602,7 +602,7 @@ static void add_new_preshared_secret (private_configuration_manager_t *this,id_t
 	preshared_secret_entry_t *entry = allocator_alloc_thing(preshared_secret_entry_t);
 	
 	entry->identification = identification_create_from_string(type,id_string);
-	entry->preshared_secret.len = strlen(preshared_secret);
+	entry->preshared_secret.len = strlen(preshared_secret) + 1;
 	entry->preshared_secret.ptr = allocator_alloc(entry->preshared_secret.len);
 	memcpy(entry->preshared_secret.ptr,preshared_secret,entry->preshared_secret.len);
 	

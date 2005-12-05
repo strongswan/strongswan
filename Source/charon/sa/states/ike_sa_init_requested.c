@@ -251,9 +251,15 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				{
 					case NO_PROPOSAL_CHOSEN:
 					{
-						this->logger->log(this->logger, ERROR, "Peer didn't choose a proposal!!!");
+						this->logger->log(this->logger, ERROR, "Peer didn't choose a proposal!");
 						payloads->destroy(payloads);
 						return DELETE_ME;
+					}
+					case INVALID_MAJOR_VERSION:
+					{
+						this->logger->log(this->logger, ERROR, "Peer doesn't support IKEv2!");
+						payloads->destroy(payloads);
+						return DELETE_ME;						
 					}
 					case INVALID_KE_PAYLOAD:
 					{

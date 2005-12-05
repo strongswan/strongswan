@@ -117,7 +117,8 @@ struct private_initiator_init_t {
 	void (*build_nonce_payload) (private_initiator_init_t *this, payload_t **payload);	
 	
 	/**
-	 * Destroy function called internally of this class after state change succeeded.
+	 * Destroy function called internally of this class after state change to state 
+	 * IKE_SA_INIT_REQUESTED succeeded.
 	 * 
 	 * This destroy function does not destroy objects which were passed to the new state.
 	 * 
@@ -164,7 +165,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->dh_group_number = init_config->get_dh_group_number(init_config,this->dh_group_priority);
 	if (this->dh_group_number == MODP_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be  retrieved with priority %d", this->dh_group_priority);
+		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be retrieved with priority %d", this->dh_group_priority);
 		return DELETE_ME;
 	}
 	

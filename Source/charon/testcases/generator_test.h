@@ -117,6 +117,15 @@ void test_generator_with_id_payload(tester_t *tester);
 void test_generator_with_auth_payload(tester_t *tester);
 
 /**
+ * @brief Test function used to test the generator with CERT payload.
+ * 
+ * @param tester associated tester_t object
+ * 
+ * @ingroup testcases
+ */
+void test_generator_with_cert_payload(tester_t *tester);
+
+/**
  * @brief Test function used to test the generator with TS payload.
  * 
  * @param tester associated tester_t object

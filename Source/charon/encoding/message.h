@@ -27,6 +27,7 @@
 #include <sa/ike_sa_id.h>
 #include <network/packet.h>
 #include <encoding/payloads/ike_header.h>
+#include <encoding/payloads/notify_payload.h>
 #include <utils/linked_list.h>
 #include <transforms/crypters/crypter.h>
 #include <transforms/signers/signer.h>
@@ -139,22 +140,6 @@ struct message_t {
 	 * @return				exchange type of the message
 	 */
 	exchange_type_t (*get_exchange_type) (message_t *this);
-
-	/**
-	 * @brief Sets the original initiator flag.
-	 *
-	 * @param this 					message_t object
-	 * @param original_initiator		TRUE if message is from original initiator
-	 */
-	void (*set_original_initiator) (message_t *this,bool original_initiator);
-
-	/**
-	 * @brief Gets original initiator flag.
-	 *
-	 * @param this 			message_t object
-	 * @return				TRUE if message is from original initiator, FALSE otherwise
-	 */
-	bool (*get_original_initiator) (message_t *this);
 
 	/**
 	 * @brief Sets the request flag.
@@ -339,5 +324,14 @@ message_t * message_create_from_packet(packet_t *packet);
  * @ingroup encoding
  */
 message_t * message_create();
+
+/**
+ * Creates an message_t object of type reply containing a notify payload.
+ *
+ * @return created message_t object
+ *
+ * @ingroup encoding
+ */
+message_t *message_create_notify_reply(host_t *source, host_t *destination, exchange_type_t exchange_type, bool original_initiator,ike_sa_id_t *ike_sa_id,notify_message_type_t notify_type);
 
 #endif /*MESSAGE_H_*/

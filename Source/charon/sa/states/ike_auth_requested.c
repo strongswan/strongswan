@@ -194,13 +194,33 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 								  
 				if (notify_payload->get_protocol_id(notify_payload) != IKE)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "Notify reply not for IKE protocol.");
+					this->logger->log(this->logger, ERROR | MORE, "Notify reply not for IKE protocol");
 					payloads->destroy(payloads);
 					return FAILED;	
 				}
 				
 				switch (notify_payload->get_notify_message_type(notify_payload))
 				{
+					case INVALID_SYNTAX:
+					{
+						this->logger->log(this->logger, ERROR, "Going to destroy IKE_SA");
+						payloads->destroy(payloads);
+						return DELETE_ME;	
+						
+					}
+					case AUTHENTICATION_FAILED:
+					{
+						this->logger->log(this->logger, ERROR, "Keys invalid?. Going to destroy IKE_SA");
+						payloads->destroy(payloads);
+						return DELETE_ME;	
+						
+					}
+					case SINGLE_PAIR_REQUIRED:
+					{
+						this->logger->log(this->logger, ERROR, "Please reconfigure CHILD_SA. Going to destroy IKE_SA");
+						payloads->destroy(payloads);
+						return DELETE_ME;		
+					}
 					default:
 					{
 						/*
@@ -348,22 +368,15 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
 {
 	authenticator_t *authenticator;
 	status_t status;
-	bool verified;
 		
 	/* TODO VERIFY auth here */
 	authenticator = authenticator_create(this->ike_sa);
 
-	status = authenticator->verify_auth_data(authenticator,auth_payload,this->ike_sa_init_reply_data,this->sent_nonce,other_id_payload,FALSE,&verified);
+	status = authenticator->verify_auth_data(authenticator,auth_payload,this->ike_sa_init_reply_data,this->sent_nonce,other_id_payload,FALSE);
 	authenticator->destroy(authenticator);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not verify AUTH data. Error status: %s",mapping_find(status_m,status));
-		return FAILED;	
-	}
-
-	if (!verified)
-	{
-		this->logger->log(this->logger, ERROR | MORE, "AUTH data could not be verified");
 		return FAILED;	
 	}
 

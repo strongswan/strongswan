@@ -41,6 +41,10 @@ $(BUILD_DIR)id_payload.o :				$(PAYLOADS_DIR)id_payload.c $(PAYLOADS_DIR)id_payl
 OBJS+= $(BUILD_DIR)auth_payload.o
 $(BUILD_DIR)auth_payload.o :				$(PAYLOADS_DIR)auth_payload.c $(PAYLOADS_DIR)auth_payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<
+										
+OBJS+= $(BUILD_DIR)cert_payload.o
+$(BUILD_DIR)cert_payload.o :			$(PAYLOADS_DIR)cert_payload.c $(PAYLOADS_DIR)cert_payload.h
+										$(CC) $(CFLAGS) -c -o $@ $<
 
 OBJS+= $(BUILD_DIR)ts_payload.o
 $(BUILD_DIR)ts_payload.o :				$(PAYLOADS_DIR)ts_payload.c $(PAYLOADS_DIR)ts_payload.h

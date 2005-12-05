@@ -155,10 +155,10 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 static void build_test_jobs(private_daemon_t *this)
 {
 	int i;
-	for(i = 0; i<100; i++)
+	for(i = 0; i<1; i++)
 	{
 		initiate_ike_sa_job_t *initiate_job;
-		initiate_job = initiate_ike_sa_job_create("localhost");
+		initiate_job = initiate_ike_sa_job_create("pinflb30");
 		this->public.event_queue->add_relative(this->public.event_queue, (job_t*)initiate_job, i * 5000);
 	}
 }

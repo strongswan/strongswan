@@ -189,6 +189,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	{
 		/* no configuration matches given host */
 		this->logger->log(this->logger, ERROR | MORE, "No INIT configuration found for given remote and local hosts");
+		
 		return DELETE_ME;
 	}
 	
@@ -243,7 +244,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				{
 					this->logger->log(this->logger, ERROR | MORE, "No proposal of suggested proposals selected");
 					payloads->destroy(payloads);
-					this->send_notify_reply(this,NO_PROPOSAL_CHOSEN,CHUNK_INITIALIZER);			
+					this->send_notify_reply(this,NO_PROPOSAL_CHOSEN,CHUNK_INITIALIZER);
 					return DELETE_ME;
 				}
 				
@@ -258,7 +259,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				}
 				
 				this->logger->log(this->logger, CONTROL | MORE, "SA Payload processed");
-				/* ok, we have what we need for sa_payload (proposals are stored in this->proposals)*/
 				break;
 			}
 			case KEY_EXCHANGE:
@@ -320,6 +320,31 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 				
 				this->logger->log(this->logger, CONTROL | MORE, "Nonce Payload processed");
 				break;
+			}
+			case NOTIFY:
+			{
+				notify_payload_t *notify_payload = (notify_payload_t *) payload;
+				
+				
+				this->logger->log(this->logger, CONTROL|MORE, "Process notify type %s for protocol %s",
+								  mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)),
+								  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
+								  
+				if (notify_payload->get_protocol_id(notify_payload) != IKE)
+				{
+					this->logger->log(this->logger, ERROR | MORE, "Notify not for IKE protocol.");
+					payloads->destroy(payloads);
+					return FAILED;	
+				}
+				switch (notify_payload->get_notify_message_type(notify_payload))
+				{
+					default:
+					{
+						this->logger->log(this->logger, CONTROL|MORE, "Processing of notify type %s not yet implemented",
+											mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)));
+						break;
+					}
+				}
 			}
 			default:
 			{

@@ -36,6 +36,11 @@
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/encryption_payload.h>
 
+/**
+ * Max number of notify payloads per IKEv2 Message
+ */
+#define MAX_NOTIFY_PAYLOADS 10
+
 
 typedef struct supported_payload_entry_t supported_payload_entry_t;
 
@@ -109,6 +114,7 @@ struct message_rule_t {
  */
 static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
 {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,FALSE,FALSE},
 	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
 	{KEY_EXCHANGE,1,1,FALSE,FALSE},
 	{NONCE,1,1,FALSE,FALSE},
@@ -119,7 +125,7 @@ static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
  */
 static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
 {
-	{NOTIFY,0,1,FALSE,TRUE},
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,FALSE,TRUE},
 	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
 	{KEY_EXCHANGE,1,1,FALSE,FALSE},
 	{NONCE,1,1,FALSE,FALSE},
@@ -130,6 +136,7 @@ static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
  */
 static supported_payload_entry_t supported_ike_auth_i_payloads[] =
 {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
 	{ID_INITIATOR,1,1,TRUE,FALSE},
 	{CERTIFICATE,0,1,TRUE,FALSE},
 	{CERTIFICATE_REQUEST,0,1,TRUE,FALSE},
@@ -145,7 +152,7 @@ static supported_payload_entry_t supported_ike_auth_i_payloads[] =
  */
 static supported_payload_entry_t supported_ike_auth_r_payloads[] =
 {
-	{NOTIFY,0,1,TRUE,TRUE},
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
 	{CERTIFICATE,0,1,TRUE,FALSE},
 	{ID_RESPONDER,1,1,TRUE,FALSE},
 	{AUTHENTICATION,1,1,TRUE,FALSE},
@@ -1214,4 +1221,25 @@ message_t *message_create_from_packet(packet_t *packet)
 message_t *message_create()
 {
 	return message_create_from_packet(NULL);
+}
+
+/*
+ * Described in Header.
+ */
+message_t *message_create_notify_reply(host_t *source, host_t *destination, exchange_type_t exchange_type, bool original_initiator,ike_sa_id_t *ike_sa_id,notify_message_type_t notify_type)
+{
+	message_t *message = message_create_from_packet(NULL);
+	notify_payload_t *payload;
+	
+	message->set_source(message, source->clone(source));
+	message->set_destination(message, destination->clone(destination));
+	message->set_exchange_type(message, exchange_type);
+	message->set_request(message, FALSE);
+	message->set_message_id(message,0);
+	message->set_ike_sa_id(message, ike_sa_id);
+	
+	payload = notify_payload_create_from_protocol_and_type(IKE,notify_type);
+	message->add_payload(message,(payload_t *) payload);
+	
+	return message;
 }

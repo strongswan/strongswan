@@ -102,7 +102,12 @@ static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_messag
 {
 	chunk_t id_chunk = my_id->get_data(my_id);
 	u_int8_t id_with_header[4 + id_chunk.len];
-	chunk_t id_with_header_chunk = {ptr:id_with_header, len: sizeof(id_with_header) };
+	/*
+	 * IKEv2 for linux is not compatible with IKEv2 Draft and so not compatible with this
+	 * implementation, cause AUTH data are computed without
+	 * ID type and the three reserved bytes.
+	 */
+	chunk_t id_with_header_chunk = {ptr:id_with_header, len: sizeof(id_with_header)};
 	u_int8_t *current_pos;
 	chunk_t octets;
 	
@@ -123,6 +128,7 @@ static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_messag
 	{
 		this->prf->set_key(this->prf,this->ike_sa->get_key_pr(this->ike_sa));
 	}
+
 	
 	/* 4 bytes are id type and reserved fields of id payload */
 	octets.len = last_message.len + other_nonce.len + this->prf->get_block_size(this->prf);
@@ -167,13 +173,12 @@ static chunk_t allocate_auth_data_with_preshared_secret (private_authenticator_t
 /**
  * Implementation of authenticator_t.verify_auth_data.
  */
-static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *auth_payload, chunk_t last_received_packet,chunk_t my_nonce,id_payload_t *other_id_payload,bool initiator,bool *verified)
+static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *auth_payload, chunk_t last_received_packet,chunk_t my_nonce,id_payload_t *other_id_payload,bool initiator)
 {
 	switch(auth_payload->get_auth_method(auth_payload))
 	{
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
 		{
-			
 			identification_t *other_id = other_id_payload->get_identification(other_id_payload);
 			chunk_t auth_data = auth_payload->get_data(auth_payload);
 			chunk_t preshared_secret;
@@ -190,20 +195,19 @@ static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *
 			
 			if (auth_data.len != my_auth_data.len)
 			{
-				*verified = FALSE;
 				allocator_free_chunk(&my_auth_data);
-				return SUCCESS;
+				return FAILED;
 			}
 			if (memcmp(auth_data.ptr,my_auth_data.ptr,my_auth_data.len) == 0)
 			{
-				*verified = TRUE;
+				status = SUCCESS;
 			}
 			else
 			{
-				*verified = FALSE;
+				status = FAILED;
 			}
-			allocator_free_chunk(&my_auth_data);		
-			return SUCCESS;
+			allocator_free_chunk(&my_auth_data);
+			return status;
 		}
 		case RSA_DIGITAL_SIGNATURE:
 		{
@@ -224,14 +228,6 @@ static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *
 			octets = this->allocate_octets(this,last_received_packet,my_nonce,other_id_payload,initiator);
 			
 			status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
-			if (status == SUCCESS)
-			{
-				*verified = TRUE;	
-			}
-			else
-			{
-				*verified = FALSE;	
-			}
 			
 			allocator_free_chunk(&octets);
 			return status;
@@ -329,7 +325,7 @@ authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa)
 
 	/* Public functions */
 	this->public.destroy = (void(*)(authenticator_t*))destroy;
-	this->public.verify_auth_data = (status_t (*) (authenticator_t *,auth_payload_t *, chunk_t ,chunk_t ,id_payload_t *,bool,bool *)) verify_auth_data;
+	this->public.verify_auth_data = (status_t (*) (authenticator_t *,auth_payload_t *, chunk_t ,chunk_t ,id_payload_t *,bool)) verify_auth_data;
 	this->public.compute_auth_data = (status_t (*) (authenticator_t *,auth_payload_t **, chunk_t ,chunk_t ,id_payload_t *,bool)) compute_auth_data;
 	
 	/* private functions */

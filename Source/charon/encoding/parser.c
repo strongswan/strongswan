@@ -43,6 +43,7 @@
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/ts_payload.h>
 
 
@@ -820,6 +821,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case AUTH_DATA:
 			{
 				size_t data_length = payload_length - AUTH_PAYLOAD_HEADER_LENGTH;
+				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}		
+				break;			
+			}
+			case CERT_DATA:
+			{
+				size_t data_length = payload_length - CERT_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
 				{
 					pld->destroy(pld);

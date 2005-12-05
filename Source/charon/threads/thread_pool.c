@@ -33,6 +33,7 @@
 #include <queues/jobs/incoming_packet_job.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 #include <queues/jobs/retransmit_request_job.h>
+#include <encoding/payloads/notify_payload.h>
 #include <utils/allocator.h>
 #include <utils/logger.h>
 
@@ -115,20 +116,23 @@ struct private_thread_pool_t {
  */
 static void process_jobs(private_thread_pool_t *this)
 {
+	job_t *job;
+	job_type_t job_type;
+	timeval_t start_time;
+	timeval_t end_time;
+	
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
 	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running, thread_id: %u", (int)pthread_self());
 
 	for (;;) {
-		job_t *job;
-		job_type_t job_type;
 		
 		job = charon->job_queue->get(charon->job_queue);
 		job_type = job->get_type(job);
 		this->worker_logger->log(this->worker_logger, CONTROL|MORE, "Process job of type %s", 
 								 mapping_find(job_type_m,job_type));
-		
+		gettimeofday(&start_time,NULL);
 		switch (job_type)
 		{
 			case INCOMING_PACKET:
@@ -162,8 +166,11 @@ static void process_jobs(private_thread_pool_t *this)
 				break;
 			}
 		}
-
-		this->worker_logger->log(this->worker_logger, CONTROL|MORE, "Processing of job finished");
+		gettimeofday(&end_time,NULL);
+		
+		this->worker_logger->log(this->worker_logger, CONTROL, "Processed job of type %s in %d us",
+									mapping_find(job_type_m,job_type),
+									(((end_time.tv_sec - start_time.tv_sec) * 1000000) + (end_time.tv_usec - start_time.tv_usec)));
 
 
 	}
@@ -199,13 +206,43 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 				
 	if ((message->get_major_version(message) != IKE_MAJOR_VERSION) || 
 			(message->get_minor_version(message) != IKE_MINOR_VERSION))
+
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "IKE version %d.%d not supported", 
 								 message->get_major_version(message),
 								 message->get_minor_version(message));	
 		/*
-		 * TODO send notify reply of type INVALID_MAJOR_VERSION
+		 * TODO send notify reply of type INVALID_MAJOR_VERSION for requests of type IKE_SA_INIT.
+		 * 
+		 * This check is not handled in state_t object of IKE_SA to increase speed.
 		 */
+		 if ((message->get_exchange_type(message) == IKE_SA_INIT) && (message->get_request(message)))
+		 {
+		 	message_t *response;
+	 		message->get_ike_sa_id(message, &ike_sa_id);
+	 		ike_sa_id->switch_initiator(ike_sa_id);
+		 	response = message_create_notify_reply(message->get_destination(message),
+		 										   message->get_source(message),
+		 										   IKE_SA_INIT,
+		 										   FALSE,ike_sa_id,INVALID_MAJOR_VERSION);
+
+			message->destroy(message);
+			ike_sa_id->destroy(ike_sa_id);
+			status = response->generate(response, NULL, NULL, &packet);
+			if (status != SUCCESS)
+			{
+				this->worker_logger->log(this->worker_logger, ERROR, "Could not generate packet from message");
+				response->destroy(response);
+				return;
+			}
+			this->worker_logger->log(this->worker_logger, ERROR, "Send notify reply of type INVALID_MAJOR_VERSION"); 
+			charon->send_queue->add(charon->send_queue, packet);
+			response->destroy(response);
+			return;
+		 }
+ 		message->destroy(message);
+		
+		 return;
 	}
 				
 	message->get_ike_sa_id(message, &ike_sa_id);

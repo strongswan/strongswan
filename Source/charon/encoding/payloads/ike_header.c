@@ -186,18 +186,6 @@ static status_t verify(private_ike_header_t *this)
 		return FAILED;
 	}
 	
-	if ((this->responder_spi == 0) && (!this->flags.initiator))
-	{
-		/* must be original initiator*/
-		return FAILED;
-	}
-
-	if ((this->responder_spi == 0) && (this->flags.response))
-	{
-		/* must be request*/
-		return FAILED;
-	}
-	
 	/* verification of version is not done in here */
 	
 	return SUCCESS;

@@ -60,12 +60,10 @@ struct authenticator_t {
 	 * @param my_nonce				The sent nonce (without payload header)
 	 * @param other_id_payload		The ID payload received from other peer
 	 * @param initiator				Type of other peer. TRUE, if it is original initiator, FALSE otherwise
-	 * @param[out] verified			
-	 * 								- TRUE, if verification succeeded
-	 * 								- FALSE, if verification data could not be verified
 	 * 
 	 * @return
 	 * 								- SUCCESS if verification could be processed (does not mean the data could be verified)
+	 * 								- FAILED if verification failed
 	 * 								- NOT_SUPPORTED if AUTH method not supported
 	 * 								- NOT_FOUND if the data for specific AUTH method could not be found (e.g. shared secret, rsa key)
 	 * 								- TODO rsa errors!!
@@ -75,8 +73,7 @@ struct authenticator_t {
 									chunk_t last_received_packet,
 									chunk_t my_nonce,
 									id_payload_t *other_id_payload, 
-									bool initiator,
-									bool *verified);
+									bool initiator);
 
 	/**
 	 * @brief Computes authentication data and creates specific AUTH payload.

@@ -55,7 +55,7 @@
  * Port on which the daemon will 
  * listen for incoming traffic.
  */
-#define IKEV2_UDP_PORT 4500
+#define IKEV2_UDP_PORT 500
 
 /**
  * First retransmit timeout in milliseconds.
@@ -72,7 +72,7 @@
  * maximum allowed level for ever context, the definiton
  * of the context may be less verbose.
  */
-#define DEFAULT_LOGLEVEL CONTROL
+#define DEFAULT_LOGLEVEL CONTROL | ERROR
 
 typedef struct daemon_t daemon_t;
 
