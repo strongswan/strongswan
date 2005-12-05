@@ -43,6 +43,7 @@
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/ts_payload.h>
+#include <encoding/payloads/delete_payload.h>
 
 /*
  * Described in Header 
@@ -1201,7 +1202,7 @@ void test_generator_with_certreq_payload(tester_t *tester)
 	chunk_t generated_data;
 	chunk_t certreq;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with CERT Payload");
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with CERTREQ Payload");
 	
 	/* create generator */
 	generator = generator_create();
@@ -1237,6 +1238,60 @@ void test_generator_with_certreq_payload(tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	
 	certreq_payload->destroy(certreq_payload);
+	generator->destroy(generator);
+		
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
+}
+
+/*
+ * Described in header.
+ */ 
+void test_generator_with_delete_payload(tester_t *tester)
+{
+	generator_t *generator;
+	delete_payload_t *delete_payload;
+	logger_t *logger;
+	chunk_t generated_data;
+	chunk_t spis;
+	
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with DELETE Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	delete_payload = delete_payload_create();
+	
+	
+	spis.ptr = "123456789012";
+	spis.len = strlen(spis.ptr);
+
+	delete_payload->set_protocol_id(delete_payload,AH);
+	delete_payload->set_spi_count(delete_payload,3);
+	delete_payload->set_spi_size(delete_payload,4);
+	delete_payload->set_spis(delete_payload,spis);
+	
+	generator->generate_payload(generator,(payload_t *)delete_payload);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x14,
+		0x02,0x04,0x00,0x03,
+		/* delete data */
+		0x31,0x32,0x33,0x34,
+		0x35,0x36,0x37,0x38,
+		0x39,0x30,0x31,0x32,
+	};
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(&generated_data);
+	
+	delete_payload->destroy(delete_payload);
 	generator->destroy(generator);
 		
 	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	

@@ -56,5 +56,6 @@ mapping_t encoding_type_m[] = {
 	{TRAFFIC_SELECTORS, "TRAFFIC_SELECTORS"},
 	{CERT_DATA, "CERT_DATA"},
 	{CERTREQ_DATA, "CERTREQ_DATA"},
+	{SPIS, "SPIS"},
 	{MAPPING_END, NULL}
 };

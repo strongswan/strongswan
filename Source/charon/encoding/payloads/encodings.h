@@ -387,6 +387,16 @@ enum encoding_type_t{
 	 * When parsing (Payload Length - 5) bytes are read and written into the chunk pointing to.
 	 */
 	CERTREQ_DATA,
+	
+	/**
+	 * Representating the SPIS field in a DELETE payload.
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
+	 */
+	SPIS,
 
 	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.

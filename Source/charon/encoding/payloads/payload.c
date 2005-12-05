@@ -35,6 +35,7 @@
 #include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/ts_payload.h>
+#include <encoding/payloads/delete_payload.h>
 
 /*
  * build the mappings for payload_type_t
@@ -104,6 +105,8 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)ke_payload_create();
 		case NOTIFY:
 			return (payload_t*)notify_payload_create();
+		case DELETE:
+			return (payload_t*)delete_payload_create();
 		case ENCRYPTED:
 			return (payload_t*)encryption_payload_create();
 		default:

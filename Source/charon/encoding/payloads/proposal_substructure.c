@@ -167,7 +167,7 @@ static status_t verify(private_proposal_substructure_t *this)
 		return FAILED;
 	}
 
-	if (this->protocol_id > 4)
+	if ((this->protocol_id == 0) || (this->protocol_id >= 4))
 	{
 		/* reserved are not supported */
 		return FAILED;

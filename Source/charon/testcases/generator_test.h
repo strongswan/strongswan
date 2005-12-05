@@ -134,7 +134,6 @@ void test_generator_with_ts_payload(tester_t *tester);
  */
 void test_generator_with_cert_payload(tester_t *tester);
 
-
 /**
  * @brief Test function used to test the generator with CERTREQ payload.
  * 
@@ -143,6 +142,15 @@ void test_generator_with_cert_payload(tester_t *tester);
  * @ingroup testcases
  */
 void test_generator_with_certreq_payload(tester_t *tester);
+
+/**
+ * @brief Test function used to test the generator with DELETE payload.
+ * 
+ * @param tester associated tester_t object
+ * 
+ * @ingroup testcases
+ */
+void test_generator_with_delete_payload(tester_t *tester);
 
 
 #endif /*GENERATOR_TEST_H_*/

@@ -39,6 +39,7 @@
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/ts_payload.h>
+#include <encoding/payloads/delete_payload.h>
 
 
 /*
@@ -770,5 +771,47 @@ void test_parser_with_certreq_payload(tester_t *tester)
 	tester->assert_false(tester,(memcmp(certreq_bytes + 5, result.ptr, result.len)), "parsed data");
 	certreq_payload->destroy(certreq_payload);
 	allocator_free_chunk(&result);
+}
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_delete_payload(tester_t *tester)
+{
+	parser_t *parser;
+	delete_payload_t *delete_payload;
+	status_t status;
+	chunk_t delete_chunk, result;
+	
+	u_int8_t delete_bytes[] = {
+		0x00,0x00,0x00,0x14, /* payload header */
+		0x03,0x03,0x00,0x04,
+			0x04,0x05,0x06,0x07,/* 12 Byte data */
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	delete_chunk.ptr = delete_bytes;
+	delete_chunk.len = sizeof(delete_bytes);
+
+	parser = parser_create(delete_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, DELETE, (payload_t**)&delete_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	result = delete_payload->get_spis(delete_payload);
+	tester->assert_true(tester,(delete_payload->get_protocol_id(delete_payload) == ESP), "is ESP protocol");
+	tester->assert_true(tester,(delete_payload->get_spi_size(delete_payload) == 3), "SPI size check");
+	tester->assert_true(tester,(delete_payload->get_spi_count(delete_payload) == 4), "SPI count check");
+	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
+	tester->assert_false(tester,(memcmp(delete_bytes + 8, result.ptr, result.len)), "parsed data");
+	tester->assert_true(tester,(((payload_t *)delete_payload)->verify((payload_t *)delete_payload) == SUCCESS), "verify check");
+	
+	delete_payload->destroy(delete_payload);
 }
 

@@ -45,6 +45,7 @@
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/ts_payload.h>
+#include <encoding/payloads/delete_payload.h>
 
 
 typedef struct private_generator_t private_generator_t;
@@ -740,6 +741,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			case AUTH_DATA:
 			case CERT_DATA:
 			case CERTREQ_DATA:
+			case SPIS:
 			{
 				u_int32_t payload_length_position_offset;
 				u_int16_t length_of_payload;
@@ -768,6 +770,9 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 						break;
 					case CERTREQ_DATA:
 						header_length = CERTREQ_PAYLOAD_HEADER_LENGTH;
+						break;
+					case SPIS:
+						header_length = DELETE_PAYLOAD_HEADER_LENGTH;
 						break;
 					default:
 						break;
