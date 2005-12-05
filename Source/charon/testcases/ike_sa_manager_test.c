@@ -48,15 +48,6 @@ static void test1_thread(ike_sa_id_t *ike_sa_id)
 }
 
 
-static void test2_thread(ike_sa_id_t *ike_sa_id)
-{
-	ike_sa_t *ike_sa;
-	status_t status;
-	
-	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
-	td.tester->assert_true(td.tester, (status == NOT_FOUND), "IKE_SA already deleted");	
-}
-
 static void test3_thread(ike_sa_id_t *ike_sa_id)
 {
 	ike_sa_t *ike_sa;

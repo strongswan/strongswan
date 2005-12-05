@@ -174,6 +174,14 @@ enum payload_type_t{
 	 * used internally to handle a transform attribute like a payload.
 	 */
 	CONFIGURATION_ATTRIBUTE = 145,
+	
+	/**
+	 * A unknown payload has a value of PRIVATE USE space.
+	 * 
+	 * This payload type is not send over wire and just 
+	 * used internally to handle a unknown payload.
+	 */
+	UNKNOWN_PAYLOAD = 146,
 };
 
 

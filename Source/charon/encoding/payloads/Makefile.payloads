@@ -69,6 +69,10 @@ $(BUILD_DIR)configuration_attribute.o :	$(PAYLOADS_DIR)configuration_attribute.c
 OBJS+= $(BUILD_DIR)eap_payload.o
 $(BUILD_DIR)eap_payload.o :				$(PAYLOADS_DIR)eap_payload.c $(PAYLOADS_DIR)eap_payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<
+										
+OBJS+= $(BUILD_DIR)unknown_payload.o
+$(BUILD_DIR)unknown_payload.o :			$(PAYLOADS_DIR)unknown_payload.c $(PAYLOADS_DIR)unknown_payload.h
+										$(CC) $(CFLAGS) -c -o $@ $<
 
 OBJS+= $(BUILD_DIR)ts_payload.o
 $(BUILD_DIR)ts_payload.o :				$(PAYLOADS_DIR)ts_payload.c $(PAYLOADS_DIR)ts_payload.h

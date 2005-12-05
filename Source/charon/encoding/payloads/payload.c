@@ -40,6 +40,7 @@
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/configuration_attribute.h>
 #include <encoding/payloads/eap_payload.h>
+#include <encoding/payloads/unknown_payload.h>
 
 /*
  * build the mappings for payload_type_t
@@ -68,6 +69,7 @@ mapping_t payload_type_m[] = {
 	{TRANSFORM_ATTRIBUTE, "TRANSFORM_ATTRIBUTE"},
 	{TRAFFIC_SELECTOR_SUBSTRUCTURE, "TRAFFIC_SELECTOR_SUBSTRUCTURE"},
 	{CONFIGURATION_ATTRIBUTE,"CONFIGURATION_ATTRIBUTE"},
+	{UNKNOWN_PAYLOAD,"UNKNOWN_PAYLOAD"},
 	{MAPPING_END, NULL}
 };
 
@@ -120,6 +122,8 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)configuration_attribute_create();
 		case EXTENSIBLE_AUTHENTICATION:
 			return (payload_t*)eap_payload_create();
+		case UNKNOWN_PAYLOAD:
+			return (payload_t*)unknown_payload_create();
 		case ENCRYPTED:
 			return (payload_t*)encryption_payload_create();
 		default:
