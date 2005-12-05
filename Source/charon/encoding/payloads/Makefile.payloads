@@ -54,6 +54,9 @@ OBJS+= $(BUILD_DIR)delete_payload.o
 $(BUILD_DIR)delete_payload.o :			$(PAYLOADS_DIR)delete_payload.c $(PAYLOADS_DIR)delete_payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
+OBJS+= $(BUILD_DIR)vendor_id_payload.o
+$(BUILD_DIR)vendor_id_payload.o :		$(PAYLOADS_DIR)vendor_id_payload.c $(PAYLOADS_DIR)vendor_id_payload.h
+										$(CC) $(CFLAGS) -c -o $@ $<
 
 OBJS+= $(BUILD_DIR)ts_payload.o
 $(BUILD_DIR)ts_payload.o :				$(PAYLOADS_DIR)ts_payload.c $(PAYLOADS_DIR)ts_payload.h

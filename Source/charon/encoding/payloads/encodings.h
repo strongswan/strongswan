@@ -397,6 +397,16 @@ enum encoding_type_t{
 	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
 	 */
 	SPIS,
+	
+	/**
+	 * Representating the VID DATA field in a VENDOR ID payload.
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
+	 */
+	VID_DATA,
 
 	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.

@@ -40,6 +40,7 @@
 #include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/delete_payload.h>
+#include <encoding/payloads/vendor_id_payload.h>
 
 
 /*
@@ -814,4 +815,44 @@ void test_parser_with_delete_payload(tester_t *tester)
 	
 	delete_payload->destroy(delete_payload);
 }
+
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_vendor_id_payload(tester_t *tester)
+{
+	parser_t *parser;
+	vendor_id_payload_t *vendor_id_payload;
+	status_t status;
+	chunk_t vendor_id_chunk, result;
+	
+	u_int8_t vendor_id_bytes[] = {
+		0x00,0x00,0x00,0x10, /* payload header */
+			0x04,0x05,0x06,0x07,/* 12 Byte data */
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	vendor_id_chunk.ptr = vendor_id_bytes;
+	vendor_id_chunk.len = sizeof(vendor_id_bytes);
+
+	parser = parser_create(vendor_id_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, VENDOR_ID, (payload_t**)&vendor_id_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	result = vendor_id_payload->get_data(vendor_id_payload);
+	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
+	tester->assert_false(tester,(memcmp(vendor_id_bytes + 4, result.ptr, result.len)), "parsed data");
+	tester->assert_true(tester,(((payload_t *)vendor_id_payload)->verify((payload_t *)vendor_id_payload) == SUCCESS), "verify check");
+	
+	vendor_id_payload->destroy(vendor_id_payload);
+}
+
 

@@ -135,4 +135,14 @@ void test_parser_with_certreq_payload(tester_t *tester);
  */
 void test_parser_with_delete_payload(tester_t *tester);
 
+/**
+ * @brief Test function used to test the parser_t functionality when 
+ * parsing a VENDOR ID payload.
+ *
+ * @param tester 	associated tester_t object
+ * 
+ * @ingroup testcases
+ */
+void test_parser_with_vendor_id_payload(tester_t *tester);
+
 #endif /*PARSER_TEST_H_*/

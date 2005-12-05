@@ -57,5 +57,6 @@ mapping_t encoding_type_m[] = {
 	{CERT_DATA, "CERT_DATA"},
 	{CERTREQ_DATA, "CERTREQ_DATA"},
 	{SPIS, "SPIS"},
+	{VID_DATA, "VID_DATA"},
 	{MAPPING_END, NULL}
 };
