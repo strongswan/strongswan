@@ -125,7 +125,7 @@ static void destroy(private_identification_t *this)
 	allocator_free(this);	
 }
 
-/**
+/*
  * Generic constructor used for the other twos
  */
 static private_identification_t *identification_create()
@@ -240,7 +240,9 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 		}
 	}			
 	
-	/* build string, must be cloned */
+	/* build string, must be cloned since 
+	 * inet_ntoa points to a subsequently 
+	 * overwritten buffer */
 	this->string = allocator_alloc(strlen(string)+1);
 	strcpy(this->string, string);
 	

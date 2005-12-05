@@ -30,7 +30,7 @@
 typedef enum logger_context_t logger_context_t;
 
 /**
- * @brief Context of a specific logger 
+ * @brief Context of a specific logger.
  * 
  * @ingroup utils
  */
@@ -56,7 +56,16 @@ enum logger_context_t {
 typedef struct logger_manager_t logger_manager_t;
 
 /**
- * Class to manage logger_t objects.
+ * @brief Class to manage logger_t objects.
+ * 
+ * The logger manager stores all loggers in a list and
+ * allows their manipulation. Via a logger_context_t, the loglevel
+ * of a specific logging type can be adjusted at runtime.
+ * 
+ * @b Constructors:
+ * - logger_manager_create()
+ * 
+ * @see logger_t
  * 
  * @ingroup utils
  */

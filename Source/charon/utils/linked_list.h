@@ -34,6 +34,9 @@ typedef struct linked_list_t linked_list_t;
  *
  * @warning Access to an object of this type is not thread-save.
  * 
+ * @b Costructors:
+ * - linked_list_create()
+ * 
  * @see job_queue_t, event_queue_t, send_queue_t
  * 
  * @ingroup utils
@@ -43,8 +46,8 @@ struct linked_list_t {
 	/**
 	 * @brief Gets the count of items in the list.
 	 * 
-	 * @param linked_list 		calling object
-	 * @return 					number of items in list
+	 * @param linked_list 	calling object
+	 * @return 				number of items in list
 	 */
 	int (*get_count) (linked_list_t *linked_list);
 	
@@ -53,9 +56,9 @@ struct linked_list_t {
 	 * 
 	 * @warning Created iterator_t object has to get destroyed by the caller.
 	 * 
-	 * @param linked_list 		calling object
-	 * @param[in] forward 		iterator direction (TRUE: front to end)
-	 * @return					new iterator_t object
+	 * @param linked_list 	calling object
+	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @return				new iterator_t object
 	 */
 	iterator_t * (*create_iterator) (linked_list_t *linked_list, bool forward);
 

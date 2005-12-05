@@ -31,12 +31,21 @@ typedef struct iterator_t iterator_t;
  * iterator_t defines an interface for iterating over collections.
  * It allows searching, deleting, updating and inserting.
  * 
+ * @b Constructors:
+ * - via linked_list_t.create_iterator, or
+ * - any other class which supports this interface
+ * 
+ * @see linked_list_t
+ * 
  * @ingroup utils 
  */
 struct iterator_t {
 
 	/**
-	 * Moves to the next element, if available.
+	 * @brief Moves to the next element, if available.
+	 * 
+	 * A newly created iterator doesn't point to any item,
+	 * call has_next first to point it to the first item.
 	 * 
 	 * @param this 			calling object
 	 * @return
@@ -46,7 +55,7 @@ struct iterator_t {
 	bool (*has_next) (iterator_t *this);
 
 	/**
-	 * Returns the current value at the iterator position.
+	 * @brief Returns the current value at the iterator position.
 	 * 
 	 * @param this 			calling object
 	 * @param[out] value 	value is set to the current value at iterator position
@@ -57,7 +66,7 @@ struct iterator_t {
 	status_t (*current) (iterator_t *this, void **value);
 	
 	/**
-	 * Inserts a new item before the given iterator position.
+	 * @biref Inserts a new item before the given iterator position.
 	 * 
 	 * The iterator position is not changed after inserting
 	 * 
@@ -92,7 +101,7 @@ struct iterator_t {
 	status_t (*replace) (iterator_t *this, void **old_item, void *new_item);
 
 	/**
-	 * @brief removes an element from list at the given iterator position.
+	 * @brief Removes an element from list at the given iterator position.
 	 * 
 	 * The position of the iterator is set in the following order:
 	 * - to the item before, if available
