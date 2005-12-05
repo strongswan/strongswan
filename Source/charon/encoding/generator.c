@@ -734,95 +734,56 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				break;
 			}
 			case KEY_EXCHANGE_DATA:
-			{
-				/* the Key Exchange Data value is generated from chunk */
-				this->generate_from_chunk(this,rules[i].offset);
-
-				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-				/* Length of KE_PAYLOAD is calculated */
-				u_int16_t length_of_ke_payload = KE_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
-
-				u_int16_t int16_val = htons(length_of_ke_payload);			
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
-				break;
-			}
 			case NOTIFICATION_DATA:
-			{
-				/* the Notification Data value is generated from chunk */
-				this->generate_from_chunk(this,rules[i].offset);
-				
-				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-				/* Length of Notification PAYLOAD is calculated */
-				u_int16_t length_of_notify_payload = NOTIFY_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
-				length_of_notify_payload += this->last_spi_size;
-				u_int16_t int16_val = htons(length_of_notify_payload);
-
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
-				break;
-			}		
 			case NONCE_DATA:
-			{
-				/* the Nonce Data value is generated from chunk */
-				this->generate_from_chunk(this, rules[i].offset);
-				
-				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-				/* Length of nonce PAYLOAD is calculated */
-				u_int16_t length_of_nonce_payload = NONCE_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
-				u_int16_t int16_val = htons(length_of_nonce_payload);
-
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
-				break;
-			}
 			case ID_DATA:
-			{
-				/* the ID Data value is generated from chunk */
-				this->generate_from_chunk(this, rules[i].offset);
-				
-				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-				/* Length of nonce PAYLOAD is calculated */
-				u_int16_t length_of_id_payload = ID_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
-				u_int16_t int16_val = htons(length_of_id_payload);
-
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
-				break;
-			}
 			case AUTH_DATA:
-			{
-				/* the AUTH Data value is generated from chunk */
-				this->generate_from_chunk(this, rules[i].offset);
-				
-				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-				/* Length of nonce PAYLOAD is calculated */
-				u_int16_t length_of_auth_payload = AUTH_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
-				u_int16_t int16_val = htons(length_of_auth_payload);
-
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
-				break;
-			}
 			case CERT_DATA:
-			{
-				/* the CERT Data value is generated from chunk */
-				this->generate_from_chunk(this, rules[i].offset);
-				
-				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-				/* Length of PAYLOAD is calculated */
-				u_int16_t length_of_cert_payload = CERT_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
-				u_int16_t int16_val = htons(length_of_cert_payload);
-
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
-				break;
-			}
 			case CERTREQ_DATA:
 			{
-				/* the CERTREQ Data value is generated from chunk */
-				this->generate_from_chunk(this, rules[i].offset);
-				
-				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
-				/* Length of PAYLOAD is calculated */
-				u_int16_t length_of_certreq_payload = CERTREQ_PAYLOAD_HEADER_LENGTH + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
-				u_int16_t int16_val = htons(length_of_certreq_payload);
+				u_int32_t payload_length_position_offset;
+				u_int16_t length_of_payload;
+				u_int16_t header_length = 0;
+				u_int16_t length_in_network_order;
 
-				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
+				switch(rules[i].type)
+				{
+					case KEY_EXCHANGE_DATA:
+						header_length = KE_PAYLOAD_HEADER_LENGTH;
+						break;
+					case NOTIFICATION_DATA:
+						header_length = NOTIFY_PAYLOAD_HEADER_LENGTH + this->last_spi_size ;
+						break;
+					case NONCE_DATA:
+						header_length = NONCE_PAYLOAD_HEADER_LENGTH;
+						break;
+					case ID_DATA:
+						header_length = ID_PAYLOAD_HEADER_LENGTH;
+						break;
+					case AUTH_DATA:
+						header_length = AUTH_PAYLOAD_HEADER_LENGTH;
+						break;
+					case CERT_DATA:
+						header_length = CERT_PAYLOAD_HEADER_LENGTH;
+						break;
+					case CERTREQ_DATA:
+						header_length = CERTREQ_PAYLOAD_HEADER_LENGTH;
+						break;
+					default:
+						break;
+				}
+				
+				/* the data value is generated from chunk */
+				this->generate_from_chunk(this,rules[i].offset);
+
+				payload_length_position_offset = this->last_payload_length_position_offset;
+				
+				
+				/* Length of payload is calculated */
+				length_of_payload = header_length + ((chunk_t *)(this->data_struct + rules[i].offset))->len;
+
+				length_in_network_order = htons(length_of_payload);			
+				this->write_bytes_to_buffer_at_offset(this,&length_in_network_order,sizeof(u_int16_t),payload_length_position_offset);
 				break;
 			}
 			case PROPOSALS:
