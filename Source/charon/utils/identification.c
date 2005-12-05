@@ -191,6 +191,7 @@ identification_t *identification_create_from_string(id_type_t type, char *string
  */
 identification_t *identification_create_from_encoding(id_type_t type, chunk_t encoded)
 {
+	char *string;
 	private_identification_t *this = identification_create();
 	
 	this->encoded = allocator_clone_chunk(encoded);
@@ -200,48 +201,48 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 	{
 		case ID_IPV4_ADDR:
 		{
-			char *tmp;
-			tmp = inet_ntoa(*((struct in_addr*)(encoded.ptr)));
-			/* build string, must be cloned */
-			this->string = allocator_alloc(strlen(tmp)+1);
-			strcpy(this->string, tmp);
+			string = inet_ntoa(*((struct in_addr*)(encoded.ptr)));
 			break;
 		}
 		case ID_IPV6_ADDR:
 		{
-			this->string = "[ID_IPV6_ADDR]";
+			string = "[ID_IPV6_ADDR]";
 			break;
 		}
 		case ID_FQDN:
 		{
-			this->string = "[ID_FQDN]";
+			string = "[ID_FQDN]";
 			break;
 		}
 		case ID_RFC822_ADDR:
 		{
-			this->string = "[ID_RFC822_ADDR]";
+			string = "[ID_RFC822_ADDR]";
 			break;
 		}
 		case ID_DER_ASN1_DN:
 		{
-			this->string = "[ID_DER_ASN1_DN]";
+			string = "[ID_DER_ASN1_DN]";
 			break;
 		}
 		case ID_DER_ASN1_GN:
 		{
-			this->string = "[ID_DER_ASN1_GN]";
+			string = "[ID_DER_ASN1_GN]";
 			break;
 		}
 		case ID_KEY_ID:
 		{
-			this->string = "[ID_KEY_ID]";
+			string = "[ID_KEY_ID]";
 			break;
 		}
 		default:
 		{
-			this->string = "[unknown id_type_t]";
+			string = "[unknown id_type_t]";
 		}
-	}
+	}			
+	
+	/* build string, must be cloned */
+	this->string = allocator_alloc(strlen(string)+1);
+	strcpy(this->string, string);
 	
 	return &(this->public);
 }

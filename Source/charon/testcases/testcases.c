@@ -60,6 +60,7 @@
 #include <testcases/sa_config_test.h>
 #include <testcases/rsa_test.h>
 #include <testcases/prime_pool_test.h>
+#include <testcases/kernel_interface_test.h>
 
 /* output for test messages */
 extern FILE * stderr;
@@ -120,6 +121,7 @@ test_t init_config_test = {test_init_config, "init_config_t test"};
 test_t sa_config_test = {test_sa_config, "sa_config_t test"};
 test_t rsa_test = {test_rsa, "RSA private/public key test"};
 test_t prime_pool_test = {test_prime_pool, "Prime pool"};
+test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 
 
 daemon_t* charon;

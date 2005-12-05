@@ -121,7 +121,7 @@ sender_t * sender_create()
 	{
 		this->logger->log(this->logger, ERROR, "Sender thread could not be created");
 		allocator_free(this);
-		return NULL;
+		charon->kill(charon, "Unable to create sender thread");
 	}
 
 	return &(this->public);

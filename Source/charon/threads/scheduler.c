@@ -118,7 +118,7 @@ scheduler_t * scheduler_create()
 		this->logger->log(this->logger, ERROR, "Scheduler thread could not be created!");
 		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
-		return NULL;
+		charon->kill(charon, "Unable to create scheduler thread");
 	}
 
 	return &(this->public);

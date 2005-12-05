@@ -123,3 +123,9 @@ $(BUILD_DIR)rsa_test.o :			$(TESTCASES_DIR)rsa_test.c $(TESTCASES_DIR)rsa_test.h
 TEST_OBJS+= $(BUILD_DIR)prime_pool_test.o
 $(BUILD_DIR)prime_pool_test.o :		$(TESTCASES_DIR)prime_pool_test.c $(TESTCASES_DIR)prime_pool_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
+
+
+TEST_OBJS+= $(BUILD_DIR)kernel_interface_test.o
+$(BUILD_DIR)kernel_interface_test.o :	$(TESTCASES_DIR)kernel_interface_test.c $(TESTCASES_DIR)kernel_interface_test.h
+									$(CC) $(CFLAGS) -c -o $@ $<
+									
