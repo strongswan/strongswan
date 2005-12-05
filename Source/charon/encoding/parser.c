@@ -48,6 +48,8 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
+#include <encoding/payloads/cp_payload.h>
+#include <encoding/payloads/configuration_attribute.h>
 
 
 typedef struct private_parser_t private_parser_t;
@@ -759,6 +761,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				}
 				break;							
 			}
+			case CONFIGURATION_ATTRIBUTES:
+			{
+				size_t configuration_attributes_length = payload_length - CP_PAYLOAD_HEADER_LENGTH;
+				if (this->parse_list(this, rule_number, output + rule->offset, CONFIGURATION_ATTRIBUTE, configuration_attributes_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;							
+			}
 			case ATTRIBUTE_FORMAT:
 			{
 				if (this->parse_bit(this, rule_number, output + rule->offset) != SUCCESS) 
@@ -779,6 +791,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 				attribute_format = *(bool*)(output + rule->offset);
 				break;
 			}
+			case CONFIGURATION_ATTRIBUTE_LENGTH:
+			{
+				if (this->parse_uint16(this, rule_number, output + rule->offset) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				attribute_length = *(u_int16_t*)(output + rule->offset);
+				break;
+			}			
 			case ATTRIBUTE_LENGTH_OR_VALUE:
 			{	
 				if (this->parse_uint16(this, rule_number, output + rule->offset) != SUCCESS) 
@@ -864,6 +886,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case VID_DATA:
 			{
 				size_t data_length = payload_length - VENDOR_ID_PAYLOAD_HEADER_LENGTH;
+				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}		
+				break;			
+			}
+			case CONFIGURATION_ATTRIBUTE_VALUE:
+			{
+				size_t data_length = attribute_length;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
 				{
 					pld->destroy(pld);

@@ -37,6 +37,8 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
+#include <encoding/payloads/cp_payload.h>
+#include <encoding/payloads/configuration_attribute.h>
 
 /*
  * build the mappings for payload_type_t
@@ -64,6 +66,7 @@ mapping_t payload_type_m[] = {
 	{TRANSFORM_SUBSTRUCTURE, "TRANSFORM_SUBSTRUCTURE"},
 	{TRANSFORM_ATTRIBUTE, "TRANSFORM_ATTRIBUTE"},
 	{TRAFFIC_SELECTOR_SUBSTRUCTURE, "TRAFFIC_SELECTOR_SUBSTRUCTURE"},
+	{CONFIGURATION_ATTRIBUTE,"CONFIGURATION_ATTRIBUTE"},
 	{MAPPING_END, NULL}
 };
 
@@ -110,6 +113,10 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)delete_payload_create();
 		case VENDOR_ID:
 			return (payload_t*)vendor_id_payload_create();
+		case CONFIGURATION:
+			return (payload_t*)cp_payload_create();
+		case CONFIGURATION_ATTRIBUTE:
+			return (payload_t*)configuration_attribute_create();
 		case ENCRYPTED:
 			return (payload_t*)encryption_payload_create();
 		default:

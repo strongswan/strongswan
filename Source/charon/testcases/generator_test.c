@@ -45,6 +45,7 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
+#include <encoding/payloads/cp_payload.h>
 
 /*
  * Described in Header 
@@ -1346,3 +1347,78 @@ void test_generator_with_vendor_id_payload(tester_t *tester)
 		
 	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
+
+/*
+ * Described in header
+ */ 
+void test_generator_with_cp_payload(tester_t *tester)
+{
+	generator_t *generator;
+	configuration_attribute_t *attribute1, *attribute2;
+	cp_payload_t *configuration;
+	chunk_t data;
+	chunk_t generated_data;
+	logger_t *logger;
+	
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"CP Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+
+	/* create attribute 1 */	
+	attribute1 = configuration_attribute_create();
+	char *stringval = "abcd";
+	data.ptr = (void *) stringval;
+	data.len = 4;
+	attribute1->set_value(attribute1,data);
+	attribute1->set_attribute_type(attribute1,3);
+	logger->log(logger,CONTROL,"attribute1 created");
+
+	/* create attribute 2 */
+	attribute2 = configuration_attribute_create();
+	stringval = "efgh";
+	data.ptr = (void *) stringval;
+	data.len = 4;
+	attribute2->set_value(attribute2,data);
+	attribute2->set_attribute_type(attribute2,4);
+	logger->log(logger,CONTROL,"attribute2 created");
+
+	/* create configuration */
+	configuration = cp_payload_create();
+	tester->assert_true(tester,(configuration != NULL), "configuration create check");
+	configuration->add_configuration_attribute(configuration,attribute1);
+	configuration->add_configuration_attribute(configuration,attribute2);
+	configuration->set_config_type(configuration,5); /* hex 5 */
+	
+	
+	logger->log(logger,CONTROL,"cp payload created");
+
+	generator->generate_payload(generator,(payload_t *)configuration);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated configuration",&generated_data);	
+
+	u_int8_t expected_generation3[] = {
+		/* cp payload header */
+		0x00,0x00,0x00,0x18,
+		0x05,0x00,0x00,0x00,
+		/* configuration attribute 1*/
+		0x00,0x03,0x00,0x04,
+		0x61,0x62,0x63,0x64,
+		/* configuration attribute 2*/
+		0x00,0x04,0x00,0x04,
+		0x65,0x66,0x67,0x68,
+	};
+	
+	logger->log_bytes(logger,RAW,"expected configuration",expected_generation3,sizeof(expected_generation3));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
+
+	allocator_free_chunk(&generated_data);
+	configuration->destroy(configuration);
+	generator->destroy(generator);
+	
+	
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
+}
+

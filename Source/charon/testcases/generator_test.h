@@ -161,4 +161,15 @@ void test_generator_with_delete_payload(tester_t *tester);
  */
 void test_generator_with_vendor_id_payload(tester_t *tester);
 
+
+/**
+ * @brief Test function used to test the generator with CP payload.
+ * 
+ * @param tester associated tester_t object
+ * 
+ * @ingroup testcases
+ */
+void test_generator_with_cp_payload(tester_t *tester);
+
+
 #endif /*GENERATOR_TEST_H_*/

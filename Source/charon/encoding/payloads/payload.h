@@ -166,6 +166,14 @@ enum payload_type_t{
 	 * used internally to handle a transform selector like a payload.
 	 */	
 	TRAFFIC_SELECTOR_SUBSTRUCTURE = 144,
+	
+	/**
+	 * CONFIGURATION_ATTRIBUTE has a value of PRIVATE USE space.
+	 * 
+	 * This payload type is not send over wire and just 
+	 * used internally to handle a transform attribute like a payload.
+	 */
+	CONFIGURATION_ATTRIBUTE = 145,
 };
 
 

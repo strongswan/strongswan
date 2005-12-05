@@ -47,6 +47,8 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
+#include <encoding/payloads/cp_payload.h>
+#include <encoding/payloads/configuration_attribute.h>
 
 
 typedef struct private_generator_t private_generator_t;
@@ -295,6 +297,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				number_of_bits = 8;
 				break;
 			case U_INT_16:
+			case CONFIGURATION_ATTRIBUTE_LENGTH:
 				number_of_bits = 16;
 				break;
 			case U_INT_32:
@@ -399,6 +402,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			
 		}
 		case U_INT_16:
+		case CONFIGURATION_ATTRIBUTE_LENGTH:
 		{
 			u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
 			this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int16_val, sizeof(int16_val));
@@ -682,6 +686,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			case IKE_SPI:
 			case TS_TYPE:
 			case ATTRIBUTE_TYPE:
+			case CONFIGURATION_ATTRIBUTE_LENGTH:
 			{
 				this->generate_u_int_type(this,rules[i].type,rules[i].offset);
 				break;
@@ -743,6 +748,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			case CERT_DATA:
 			case CERTREQ_DATA:
 			case SPIS:
+			case CONFIGURATION_ATTRIBUTE_VALUE:
 			case VID_DATA:
 			{
 				u_int32_t payload_length_position_offset;
@@ -778,6 +784,9 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 						break;
 					case VID_DATA:
 						header_length = VENDOR_ID_PAYLOAD_HEADER_LENGTH;
+						break;
+					case CONFIGURATION_ATTRIBUTE_VALUE:
+						header_length = CONFIGURATION_ATTRIBUTE_HEADER_LENGTH;
 						break;
 					default:
 						break;
@@ -899,6 +908,41 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),transform_length_position_offset);
 				
 				break;
+			}
+			case CONFIGURATION_ATTRIBUTES:
+			{
+				/* before iterative generate the configuration attributes, store the current length position */
+				u_int32_t configurations_length_position_offset = this->last_payload_length_position_offset;
+
+				u_int16_t length_of_configurations = CP_PAYLOAD_HEADER_LENGTH;
+				u_int16_t int16_val;
+				linked_list_t *configuration_attributes =*((linked_list_t **)(this->data_struct + rules[i].offset));
+
+				iterator_t *iterator;
+				/* create forward iterator */
+				iterator = configuration_attributes->create_iterator(configuration_attributes,TRUE);
+				while (iterator->has_next(iterator))
+				{
+					payload_t *current_attribute;
+					u_int32_t before_generate_position_offset;
+					u_int32_t after_generate_position_offset;
+					
+					iterator->current(iterator,(void **)&current_attribute);
+					
+					before_generate_position_offset = this->get_current_buffer_offset(this);
+					this->public.generate_payload(&(this->public),current_attribute);
+					after_generate_position_offset = this->get_current_buffer_offset(this);
+					
+					/* increase size of transform */
+					length_of_configurations += (after_generate_position_offset - before_generate_position_offset);
+				}
+				
+				iterator->destroy(iterator);
+				
+				int16_val = htons(length_of_configurations);
+				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),configurations_length_position_offset);
+				
+				break;
 			}	
 			case ATTRIBUTE_FORMAT:
 			{
@@ -922,7 +966,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 //					status = this->write_bytes_to_buffer(this,(this->data_struct + rules[i].offset),2);
 				}
 				break;
-			}				
+			}
 			case ATTRIBUTE_VALUE:
 			{
 				if (this->attribute_format == FALSE)

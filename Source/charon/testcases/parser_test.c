@@ -41,6 +41,7 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
+#include <encoding/payloads/cp_payload.h>
 
 
 /*
@@ -855,4 +856,72 @@ void test_parser_with_vendor_id_payload(tester_t *tester)
 	vendor_id_payload->destroy(vendor_id_payload);
 }
 
+/*
+ * Described in Header 
+ */
+void test_parser_with_cp_payload(tester_t *tester)
+{
+	parser_t *parser;
+	cp_payload_t *cp_payload;
+	configuration_attribute_t *attribute;
+	status_t status;
+	chunk_t cp_chunk;
+	iterator_t *iterator;
+	
+	/* first test generic parsing functionality */
+		
+	u_int8_t cp_bytes[] = {
+		/* cp payload header */
+		0x00,0x00,0x00,0x18,
+		0x05,0x00,0x00,0x00,
+		/* configuration attribute 1*/
+		0x00,0x03,0x00,0x04,
+		0x61,0x62,0x63,0x64,
+		/* configuration attribute 2*/
+		0x00,0x04,0x00,0x04,
+		0x65,0x66,0x67,0x68,
+	};
+	
+	cp_chunk.ptr = cp_bytes;
+	cp_chunk.len = sizeof(cp_bytes);
 
+	
+	parser = parser_create(cp_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, CONFIGURATION, (payload_t**)&cp_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+
+	iterator = cp_payload->create_configuration_attribute_iterator(cp_payload,TRUE);
+	
+	tester->assert_true(tester,(iterator->has_next(iterator)),"has_next call check");
+	
+	iterator->current(iterator,(void **)&attribute);
+
+
+	tester->assert_true(tester,(attribute->get_attribute_type(attribute) == 3),"get type check");	
+	tester->assert_true(tester,(attribute->get_attribute_length(attribute) == 4),"get type check");
+
+	tester->assert_true(tester,(iterator->has_next(iterator)),"has_next call check");
+
+	iterator->current(iterator,(void **)&attribute);
+	
+
+	tester->assert_true(tester,(attribute->get_attribute_type(attribute) == 4),"get type check");	
+	tester->assert_true(tester,(attribute->get_attribute_length(attribute) == 4),"get type check");
+	
+	iterator->current(iterator,(void **)&attribute);
+	
+	tester->assert_false(tester,(iterator->has_next(iterator)),"has_next call check");
+	
+	
+	iterator->destroy(iterator);
+
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+
+	cp_payload->destroy(cp_payload);
+	parser->destroy(parser);
+
+}

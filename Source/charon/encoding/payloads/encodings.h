@@ -245,6 +245,29 @@ enum encoding_type_t{
 	 * to be stored in the pointed linked_list.
 	 */	
 	TRANSFORM_ATTRIBUTES,
+
+	/**
+	 * Representating one or more Attributes of a configuration payload.
+	 * 
+	 * The offset points to a linked_list_t pointer.
+	 * 
+	 * When generating the configuration_attribute_t objects are stored 
+	 * in the pointed linked_list.
+	 * 
+	 * When parsing the parsed configuration_attribute_t objects have 
+	 * to be stored in the pointed linked_list.
+	 */		
+	CONFIGURATION_ATTRIBUTES,
+	
+	/**
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
+	 */
+	CONFIGURATION_ATTRIBUTE_VALUE,
+	
 	/**
 	 * Representing a 1 Bit flag specifying the format of a transform attribute.
 	 * 
@@ -286,6 +309,20 @@ enum encoding_type_t{
 	 * The current read pointer is moved 16 bit forward afterwards.
 	 */
 	ATTRIBUTE_LENGTH_OR_VALUE,
+
+	/**
+	 * This field contains the length or the value of an configuration attribute.
+	 * Its stored in a 16 unsigned integer field.
+	 * 
+	 * When generating it must be changed from host to network order.
+	 * The value is read from the associated data struct.
+ 	 * The current write position is moved 16 bit forward afterwards.
+	 * 
+	 * When parsing it must be changed from network to host order.
+	 * The value is written to the associated data struct.
+	 * The current read pointer is moved 16 bit forward afterwards.
+	 */
+	CONFIGURATION_ATTRIBUTE_LENGTH,
 
 	/**
 	 * Depending on the field of type ATTRIBUTE_FORMAT
