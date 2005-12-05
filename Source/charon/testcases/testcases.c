@@ -95,6 +95,7 @@ test_t generator_test13 = {test_generator_with_certreq_payload,"Generator: CERTR
 test_t generator_test14 = {test_generator_with_delete_payload,"Generator: DELETE Payload"};
 test_t generator_test15 = {test_generator_with_vendor_id_payload,"Generator: VENDOR ID Payload"};
 test_t generator_test16 = {test_generator_with_cp_payload,"Generator: CP Payload"};
+test_t generator_test17 = {test_generator_with_eap_payload,"Generator: EAP Payload"};
 test_t parser_test1 = {test_parser_with_header_payload, "Parser: header payload"};
 test_t parser_test2 = {test_parser_with_sa_payload, "Parser: sa payload"};
 test_t parser_test3 = {test_parser_with_nonce_payload, "Parser: nonce payload"};
@@ -108,6 +109,7 @@ test_t parser_test10 = {test_parser_with_certreq_payload, "Parser: CERTREQ paylo
 test_t parser_test11 = {test_parser_with_delete_payload, "Parser: DELETE payload"};
 test_t parser_test12 = {test_parser_with_vendor_id_payload, "Parser: VENDOR ID payload"};
 test_t parser_test13 = {test_parser_with_cp_payload, "Parser: CP payload"};
+test_t parser_test14 = {test_parser_with_eap_payload, "Parser: EAP payload"};
 test_t packet_test = {test_packet,"Packet"};
 test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
 test_t sha1_hasher_test = {test_sha1_hasher,"SHA1 hasher"};
@@ -203,6 +205,7 @@ int main()
 		&parser_test11,
 		&parser_test12,
 		&parser_test13,
+		&parser_test14,
 		&generator_test3,
 		&generator_test4,
 		&generator_test5,
@@ -217,6 +220,7 @@ int main()
 		&generator_test14,
 		&generator_test15,
 		&generator_test16,
+		&generator_test17,
 		&ike_sa_manager_test,
 		&packet_test,
 		&diffie_hellman_test,
@@ -248,7 +252,7 @@ int main()
 	
 
 	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&parser_test13); 
+//	tester->perform_test(tester,&parser_test14); 
 	
 	
 	tester->destroy(tester);

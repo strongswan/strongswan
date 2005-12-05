@@ -39,6 +39,7 @@
 #include <encoding/payloads/vendor_id_payload.h>
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/configuration_attribute.h>
+#include <encoding/payloads/eap_payload.h>
 
 /*
  * build the mappings for payload_type_t
@@ -117,6 +118,8 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)cp_payload_create();
 		case CONFIGURATION_ATTRIBUTE:
 			return (payload_t*)configuration_attribute_create();
+		case EXTENSIBLE_AUTHENTICATION:
+			return (payload_t*)eap_payload_create();
 		case ENCRYPTED:
 			return (payload_t*)encryption_payload_create();
 		default:

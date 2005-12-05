@@ -49,6 +49,7 @@
 #include <encoding/payloads/vendor_id_payload.h>
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/configuration_attribute.h>
+#include <encoding/payloads/eap_payload.h>
 
 
 typedef struct private_generator_t private_generator_t;
@@ -750,6 +751,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			case SPIS:
 			case CONFIGURATION_ATTRIBUTE_VALUE:
 			case VID_DATA:
+			case EAP_MESSAGE:
 			{
 				u_int32_t payload_length_position_offset;
 				u_int16_t length_of_payload;
@@ -787,6 +789,9 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 						break;
 					case CONFIGURATION_ATTRIBUTE_VALUE:
 						header_length = CONFIGURATION_ATTRIBUTE_HEADER_LENGTH;
+						break;
+					case EAP_MESSAGE:
+						header_length = EAP_PAYLOAD_HEADER_LENGTH;
 						break;
 					default:
 						break;

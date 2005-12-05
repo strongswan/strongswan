@@ -158,27 +158,11 @@ void test_ike_sa_manager(tester_t *tester)
 	ike_sa_id = ike_sa_id_create(initiator, responder, TRUE);
 	
 	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
-	tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA 2");
-	for (i = 0; i < thread_count; i++) 
-	{
-		if (pthread_create(&threads[i], NULL, (void*(*)(void*))test2_thread, (void*)ike_sa_id))
-		{
-			/* failed, decrease list */
-			thread_count--;
-			i--;	
-		}
-	}
+	tester->assert_false(tester, (status == SUCCESS), "checkout unexisting IKE_SA 2");
+	
 	/* let them go acquiring */
 	sleep(1);
 	
-	/* this time, we delete the ike_sa while its checked out */
-	td.isam->checkin_and_delete(td.isam, ike_sa);
-	tester->assert_true(tester, (status == SUCCESS), "delete IKE_SA by SA");
-	
-	for (i = 0; i < thread_count; i++) 
-	{
-		pthread_join(threads[i], NULL);
-	}
 	
 	ike_sa_id->destroy(ike_sa_id);
 	

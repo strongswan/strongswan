@@ -42,6 +42,7 @@
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
 #include <encoding/payloads/cp_payload.h>
+#include <encoding/payloads/eap_payload.h>
 
 
 /*
@@ -925,3 +926,42 @@ void test_parser_with_cp_payload(tester_t *tester)
 	parser->destroy(parser);
 
 }
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_eap_payload(tester_t *tester)
+{
+	parser_t *parser;
+	eap_payload_t *eap_payload;
+	status_t status;
+	chunk_t eap_chunk, result;
+	
+	u_int8_t eap_bytes[] = {
+		0x00,0x00,0x00,0x10, /* payload header */
+			0x04,0x05,0x06,0x07,/* 12 Byte data */
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	eap_chunk.ptr = eap_bytes;
+	eap_chunk.len = sizeof(eap_bytes);
+
+	parser = parser_create(eap_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, VENDOR_ID, (payload_t**)&eap_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	result = eap_payload->get_message(eap_payload);
+	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
+	tester->assert_false(tester,(memcmp(eap_bytes + 4, result.ptr, result.len)), "parsed data");
+	tester->assert_true(tester,(((payload_t *)eap_payload)->verify((payload_t *)eap_payload) == SUCCESS), "verify check");
+	
+	eap_payload->destroy(eap_payload);
+}
+

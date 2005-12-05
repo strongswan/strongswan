@@ -426,6 +426,16 @@ enum encoding_type_t{
 	CERTREQ_DATA,
 	
 	/**
+	 * Representating an EAP message field.
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
+	 */
+	EAP_MESSAGE,
+	
+	/**
 	 * Representating the SPIS field in a DELETE payload.
 	 * 
  	 * When generating the content of the chunkt pointing to 

@@ -46,6 +46,7 @@
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/vendor_id_payload.h>
 #include <encoding/payloads/cp_payload.h>
+#include <encoding/payloads/eap_payload.h>
 
 /*
  * Described in Header 
@@ -1422,3 +1423,51 @@ void test_generator_with_cp_payload(tester_t *tester)
 	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
+/*
+ * Described in header.
+ */ 
+void test_generator_with_eap_payload(tester_t *tester)
+{
+	generator_t *generator;
+	eap_payload_t *eap_payload;
+	logger_t *logger;
+	chunk_t generated_data;
+	chunk_t message;
+	
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with EAP Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	eap_payload = eap_payload_create();
+	
+	
+	message.ptr = "123456789012";
+	message.len = strlen(message.ptr);
+;
+	eap_payload->set_message(eap_payload,message);	
+	generator->generate_payload(generator,(payload_t *)eap_payload);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x10,
+		/* eap data */
+		0x31,0x32,0x33,0x34,
+		0x35,0x36,0x37,0x38,
+		0x39,0x30,0x31,0x32,
+	};
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(&generated_data);
+	
+	eap_payload->destroy(eap_payload);
+	generator->destroy(generator);
+		
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
+}
