@@ -32,6 +32,7 @@
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/cert_payload.h>
+#include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/ts_payload.h>
 
@@ -91,6 +92,8 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)auth_payload_create();
 		case CERTIFICATE:
 			return (payload_t*)cert_payload_create();
+		case CERTIFICATE_REQUEST:
+			return (payload_t*)certreq_payload_create();
 		case TRAFFIC_SELECTOR_SUBSTRUCTURE:
 			return (payload_t*)traffic_selector_substructure_create();
 		case TRAFFIC_SELECTOR_INITIATOR:

@@ -37,6 +37,7 @@
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/cert_payload.h>
+#include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/ts_payload.h>
 
 
@@ -729,6 +730,45 @@ void test_parser_with_cert_payload(tester_t *tester)
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
 	tester->assert_false(tester,(memcmp(cert_bytes + 5, result.ptr, result.len)), "parsed data");
 	cert_payload->destroy(cert_payload);
+	allocator_free_chunk(&result);
+}
+
+/*
+ * Described in Header 
+ */
+void test_parser_with_certreq_payload(tester_t *tester)
+{
+	parser_t *parser;
+	certreq_payload_t *certreq_payload;
+	status_t status;
+	chunk_t certreq_chunk, result;
+	
+	u_int8_t certreq_bytes[] = {
+		0x00,0x00,0x00,0x11, /* payload header */
+		0x03,
+			0x04,0x05,0x06,0x07,/* 12 Byte data */
+			0x08,0x09,0x0A,0x2B,
+			0x0C,0x0D,0x0E,0x0F
+	};
+	
+	certreq_chunk.ptr = certreq_bytes;
+	certreq_chunk.len = sizeof(certreq_bytes);
+
+	parser = parser_create(certreq_chunk);
+	tester->assert_true(tester,(parser != NULL), "parser create check");
+	status = parser->parse_payload(parser, CERTIFICATE_REQUEST, (payload_t**)&certreq_payload);
+	tester->assert_true(tester,(status == SUCCESS),"parse_payload call check");
+	parser->destroy(parser);
+	
+	if (status != SUCCESS)
+	{
+		return;	
+	}
+	result = certreq_payload->get_data_clone(certreq_payload);
+	tester->assert_true(tester,(certreq_payload->get_cert_encoding(certreq_payload) == DNS_SIGNED_KEY), "is DNS_SIGNED_KEY encoding");
+	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
+	tester->assert_false(tester,(memcmp(certreq_bytes + 5, result.ptr, result.len)), "parsed data");
+	certreq_payload->destroy(certreq_payload);
 	allocator_free_chunk(&result);
 }
 

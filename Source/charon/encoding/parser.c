@@ -44,6 +44,7 @@
 #include <encoding/payloads/encryption_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/cert_payload.h>
+#include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/ts_payload.h>
 
 
@@ -831,6 +832,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			case CERT_DATA:
 			{
 				size_t data_length = payload_length - CERT_PAYLOAD_HEADER_LENGTH;
+				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}		
+				break;			
+			}
+			case CERTREQ_DATA:
+			{
+				size_t data_length = payload_length - CERTREQ_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_chunk(this, rule_number, output + rule->offset, data_length) != SUCCESS) 
 				{
 					pld->destroy(pld);

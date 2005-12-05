@@ -90,6 +90,7 @@ test_t generator_test9 = {test_generator_with_id_payload,"Generator: ID Payload"
 test_t generator_test10 = {test_generator_with_auth_payload,"Generator: AUTH Payload"};
 test_t generator_test11 = {test_generator_with_ts_payload,"Generator: TS Payload"};
 test_t generator_test12 = {test_generator_with_cert_payload,"Generator: CERT Payload"};
+test_t generator_test13 = {test_generator_with_certreq_payload,"Generator: CERTREQ Payload"};
 test_t parser_test1 = {test_parser_with_header_payload, "Parser: header payload"};
 test_t parser_test2 = {test_parser_with_sa_payload, "Parser: sa payload"};
 test_t parser_test3 = {test_parser_with_nonce_payload, "Parser: nonce payload"};
@@ -99,6 +100,7 @@ test_t parser_test6 = {test_parser_with_id_payload, "Parser: ID payload"};
 test_t parser_test7 = {test_parser_with_auth_payload, "Parser: AUTH payload"};
 test_t parser_test8 = {test_parser_with_ts_payload, "Parser: TS payload"};
 test_t parser_test9 = {test_parser_with_cert_payload, "Parser: CERT payload"};
+test_t parser_test10 = {test_parser_with_certreq_payload, "Parser: CERTREQ payload"};
 test_t packet_test = {test_packet,"Packet"};
 test_t diffie_hellman_test = {test_diffie_hellman,"Diffie Hellman"};
 test_t sha1_hasher_test = {test_sha1_hasher,"SHA1 hasher"};
@@ -189,6 +191,7 @@ int main()
 		&parser_test7,
 		&parser_test8,
 		&parser_test9,
+		&parser_test10,
 		&generator_test3,
 		&generator_test4,
 		&generator_test5,
@@ -199,6 +202,7 @@ int main()
 		&generator_test10,
 		&generator_test11,
 		&generator_test12,
+		&generator_test13,
 		&ike_sa_manager_test,
 		&packet_test,
 		&diffie_hellman_test,
@@ -229,8 +233,8 @@ int main()
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
-	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&parser_test9); 
+//	tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&generator_test13); 
 	
 	
 	tester->destroy(tester);

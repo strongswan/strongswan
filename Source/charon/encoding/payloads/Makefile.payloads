@@ -46,6 +46,9 @@ OBJS+= $(BUILD_DIR)cert_payload.o
 $(BUILD_DIR)cert_payload.o :			$(PAYLOADS_DIR)cert_payload.c $(PAYLOADS_DIR)cert_payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
+OBJS+= $(BUILD_DIR)certreq_payload.o
+$(BUILD_DIR)certreq_payload.o :			$(PAYLOADS_DIR)certreq_payload.c $(PAYLOADS_DIR)certreq_payload.h
+										$(CC) $(CFLAGS) -c -o $@ $<
 OBJS+= $(BUILD_DIR)ts_payload.o
 $(BUILD_DIR)ts_payload.o :				$(PAYLOADS_DIR)ts_payload.c $(PAYLOADS_DIR)ts_payload.h
 										$(CC) $(CFLAGS) -c -o $@ $<

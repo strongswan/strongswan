@@ -379,6 +379,16 @@ enum encoding_type_t{
 	CERT_DATA,
 
 	/**
+	 * Representating a CERTREQ Data field.
+	 * 
+ 	 * When generating the content of the chunkt pointing to 
+ 	 * is written.
+	 * 
+	 * When parsing (Payload Length - 5) bytes are read and written into the chunk pointing to.
+	 */
+	CERTREQ_DATA,
+
+	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.
 	 * 
  	 * When generating the value of the u_int64_t pointing to 

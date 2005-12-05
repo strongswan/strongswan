@@ -41,6 +41,7 @@
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/cert_payload.h>
+#include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/ts_payload.h>
 
 /*
@@ -1056,58 +1057,6 @@ void test_generator_with_auth_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_cert_payload(tester_t *tester)
-{
-	generator_t *generator;
-	cert_payload_t *cert_payload;
-	logger_t *logger;
-	chunk_t generated_data;
-	chunk_t cert;
-	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with CERT Payload");
-	
-	/* create generator */
-	generator = generator_create();
-	tester->assert_true(tester,(generator != NULL), "generator create check");
-	
-	cert_payload = cert_payload_create();
-	
-	
-	cert.ptr = "123456789012";
-	cert.len = strlen(cert.ptr);
-
-	cert_payload->set_cert_encoding(cert_payload,PGP_CERTIFICATE);
-	cert_payload->set_data(cert_payload,cert);
-	
-	generator->generate_payload(generator,(payload_t *)cert_payload);
-	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
-	
-	u_int8_t expected_generation[] = {
-		/* payload header */
-		0x00,0x00,0x00,0x11,
-		0x02,
-		/* cert data */
-		0x31,0x32,0x33,0x34,
-		0x35,0x36,0x37,0x38,
-		0x39,0x30,0x31,0x32,
-	};
-	
-	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
-	
-	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
-
-	allocator_free_chunk(&generated_data);
-	
-	cert_payload->destroy(cert_payload);
-	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
-}
-
-/*
- * Described in header.
- */ 
 void test_generator_with_ts_payload(tester_t *tester)
 {
 	generator_t *generator;
@@ -1184,6 +1133,110 @@ void test_generator_with_ts_payload(tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	
 	ts_payload->destroy(ts_payload);
+	generator->destroy(generator);
+		
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
+}
+
+/*
+ * Described in header.
+ */ 
+void test_generator_with_cert_payload(tester_t *tester)
+{
+	generator_t *generator;
+	cert_payload_t *cert_payload;
+	logger_t *logger;
+	chunk_t generated_data;
+	chunk_t cert;
+	
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with CERT Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	cert_payload = cert_payload_create();
+	
+	
+	cert.ptr = "123456789012";
+	cert.len = strlen(cert.ptr);
+
+	cert_payload->set_cert_encoding(cert_payload,PGP_CERTIFICATE);
+	cert_payload->set_data(cert_payload,cert);
+	
+	generator->generate_payload(generator,(payload_t *)cert_payload);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x11,
+		0x02,
+		/* cert data */
+		0x31,0x32,0x33,0x34,
+		0x35,0x36,0x37,0x38,
+		0x39,0x30,0x31,0x32,
+	};
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(&generated_data);
+	
+	cert_payload->destroy(cert_payload);
+	generator->destroy(generator);
+		
+	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
+}
+
+/*
+ * Described in header.
+ */ 
+void test_generator_with_certreq_payload(tester_t *tester)
+{
+	generator_t *generator;
+	certreq_payload_t *certreq_payload;
+	logger_t *logger;
+	chunk_t generated_data;
+	chunk_t certreq;
+	
+	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with CERT Payload");
+	
+	/* create generator */
+	generator = generator_create();
+	tester->assert_true(tester,(generator != NULL), "generator create check");
+	
+	certreq_payload = certreq_payload_create();
+	
+	
+	certreq.ptr = "123456789012";
+	certreq.len = strlen(certreq.ptr);
+
+	certreq_payload->set_cert_encoding(certreq_payload,PGP_CERTIFICATE);
+	certreq_payload->set_data(certreq_payload,certreq);
+	
+	generator->generate_payload(generator,(payload_t *)certreq_payload);
+	generator->write_to_chunk(generator,&generated_data);
+	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	
+	u_int8_t expected_generation[] = {
+		/* payload header */
+		0x00,0x00,0x00,0x11,
+		0x02,
+		/* certreq data */
+		0x31,0x32,0x33,0x34,
+		0x35,0x36,0x37,0x38,
+		0x39,0x30,0x31,0x32,
+	};
+	
+	logger->log_bytes(logger,RAW,"expected payload",expected_generation,sizeof(expected_generation));	
+	
+	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
+
+	allocator_free_chunk(&generated_data);
+	
+	certreq_payload->destroy(certreq_payload);
 	generator->destroy(generator);
 		
 	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
