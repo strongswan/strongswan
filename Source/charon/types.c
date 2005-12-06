@@ -1,7 +1,7 @@
 /**
  * @file types.c
  * 
- * @brief Generic type definitions
+ * @brief Generic types.
  * 
  */
 
@@ -23,7 +23,9 @@
 #include "types.h"
 
 
-
+/**
+ * String mappings for type status_t.
+ */
 mapping_t status_m[] = {
 	{SUCCESS, "SUCCESS"},
 	{FAILED, "FAILED"},
@@ -40,4 +42,7 @@ mapping_t status_m[] = {
 	{MAPPING_END, NULL}
 };
 
+/**
+ * Empty chunk.
+ */
 chunk_t CHUNK_INITIALIZER = {NULL,0};

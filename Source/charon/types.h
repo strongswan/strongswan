@@ -1,7 +1,7 @@
 /**
  * @file types.h
  * 
- * @brief Generic type definitions
+ * @brief Generic types.
  * 
  */
 
@@ -30,42 +30,112 @@
 
 #include <definitions.h>
 
+
 typedef enum status_t status_t;
 
 /**
- * return status for function calls
+ * Return values of function calls.
  */
 enum status_t {
+	/**
+	 * Call succeeded.
+	 */
 	SUCCESS,
+	
+	/**
+	 * Call failed.
+	 */
 	FAILED,
+	
+	/**
+	 * Out of ressources.
+	 */
+	
 	OUT_OF_RES,
+	/**
+	 * Already done.
+	 */
 	ALREADY_DONE,
+	
+	/**
+	 * Not supported.
+	 */
 	NOT_SUPPORTED,
+	
+	/**
+	 * One of the arguments is invalid.
+	 */
 	INVALID_ARG,
+	
+	/**
+	 * Something could not be found.
+	 */
 	NOT_FOUND,
+	
+	/**
+	 * Error while parsing.
+	 */
 	PARSE_ERROR,
+	
+	/**
+	 * Error while verifying.
+	 */
 	VERIFY_ERROR,
+	
+	/**
+	 * Object in invalid state.
+	 */
 	INVALID_STATE,
+	
+	/**
+	 * Delete object which function belongs to.
+	 */
 	DELETE_ME,
+	
+	/**
+	 * An object got created.
+	 */
 	CREATED,
 };
 
+
+/**
+ * String mappings for type status_t.
+ */
 extern mapping_t status_m[];
 
-
+/**
+ * Handle struct timeval like an own type.
+ */
 typedef struct timeval timeval_t;
 
+/**
+ * Handle struct timespec like an own type.
+ */
 typedef struct timespec timespec_t;
 
+/**
+ * Handle struct chunk_t like an own type.
+ */
 typedef struct sockaddr sockaddr_t;
 
+/**
+ * Use struct chunk_t as chunk_t.
+ */
 typedef struct chunk_t chunk_t;
 
 /**
- * General purpose pointer/length abstraction
+ * General purpose pointer/length abstraction.
  */
 struct chunk_t {
+	/**
+	 * Pointer to start of data
+	 */
     u_char *ptr;
+    
+    /**
+     * Length of data in bytes
+     */
     size_t len;
 };
 
@@ -76,12 +146,10 @@ struct chunk_t {
 extern chunk_t CHUNK_INITIALIZER;
 
 /**
- * General purpose boolean type
+ * General purpose boolean type.
  */
 typedef int bool;
 #define FALSE	0
-#define TRUE		1
-
-
+#define TRUE	1
 
 #endif /*TYPES_H_*/
