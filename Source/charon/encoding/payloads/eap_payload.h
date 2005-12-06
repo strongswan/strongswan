@@ -37,12 +37,14 @@
 typedef struct eap_payload_t eap_payload_t;
 
 /**
- * Object representing an IKEv2 EAP payload.
+ * @brief Class representing an IKEv2 EAP payload.
  * 
  * The EAP payload format is described in draft section 3.16.
  * 
- * @ingroup payloads
+ * @b Constructors:
+ * - eap_payload_create()
  * 
+ * @ingroup payloads
  */
 struct eap_payload_t {
 	/**
@@ -91,7 +93,7 @@ struct eap_payload_t {
 /**
  * @brief Creates an empty eap_payload_t object.
  * 
- * @return				created eap_payload_t object
+ * @return eap_payload_t object
  * 
  * @ingroup payloads
  */

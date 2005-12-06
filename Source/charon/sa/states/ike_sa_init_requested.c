@@ -465,7 +465,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 status_t process_nonce_payload (private_ike_sa_init_requested_t *this, nonce_payload_t *nonce_payload)
 {
 	allocator_free(this->received_nonce.ptr);
-	nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
+	this->received_nonce = nonce_payload->get_nonce(nonce_payload);
 	return SUCCESS;
 }
 

@@ -66,7 +66,7 @@ typedef enum exchange_type_t exchange_type_t;
 enum exchange_type_t{
 
 	/**
-	 * EXCHANGE_TYPE_UNDEFINED, not a official message type :-).
+	 * EXCHANGE_TYPE_UNDEFINED. In private space, since not a official message type.
 	 */
 	EXCHANGE_TYPE_UNDEFINED = 240,
 	
@@ -91,18 +91,26 @@ enum exchange_type_t{
 	INFORMATIONAL = 37 
 };
 
+/**
+ * string mappings for exchange_type_t
+ * 
+ * @ingroup payloads
+ */
 extern mapping_t exchange_type_m[];
+
 
 typedef struct ike_header_t ike_header_t;
 
 /**
- * An object of this type represents an IKEv2 header and is used to 
+ * @brief An object of this type represents an IKEv2 header and is used to 
  * generate and parse IKEv2 headers.
- * 
  * 
  * The header format of an IKEv2-Message is compatible to the 
  * ISAKMP-Header format to allow implementations supporting 
  * both versions of the IKE-protocol.
+ * 
+ * @b Constructors:
+ * - ike_header_create()
  * 
  * @ingroup payloads
  */
@@ -236,7 +244,7 @@ struct ike_header_t {
 	/**
 	 * @brief Destroys a ike_header_t object.
 	 *
-	 * @param this 	ike_header_t object to destroy
+	 * @param this 			ike_header_t object to destroy
 	 */
 	void (*destroy) (ike_header_t *this);
 };
@@ -244,7 +252,7 @@ struct ike_header_t {
 /**
  * @brief Create an ike_header_t object
  * 
- * @return			created ike_header_t object
+ * @return ike_header_t object
  * 
  * @ingroup payloads
  */

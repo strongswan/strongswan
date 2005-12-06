@@ -439,7 +439,7 @@ void test_parser_with_nonce_payload(tester_t *tester)
 	{
 		return;	
 	}
-	nonce_payload->get_nonce(nonce_payload, &result);
+	result = nonce_payload->get_nonce(nonce_payload);
 	tester->assert_true(tester,(result.len == 16), "parsed nonce lenght");
 	tester->assert_false(tester,(memcmp(nonce_bytes + 4, result.ptr, result.len)), "parsed nonce data");
 	nonce_payload->destroy(nonce_payload);

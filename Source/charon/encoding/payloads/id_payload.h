@@ -43,8 +43,11 @@ typedef struct id_payload_t id_payload_t;
  * 
  * The ID payload format is described in draft section 3.5.
  * 
- * @ingroup payloads
+ * @b Constructors:
+ * - id_payload_create_from_identification()
+ * - id_payload_create()
  * 
+ * @ingroup payloads
  */
 struct id_payload_t {
 	/**
@@ -54,7 +57,6 @@ struct id_payload_t {
 
 	/**
 	 * @brief Set the ID type.
-	 * 
 	 *
 	 * @param this 			calling id_payload_t object
 	 * @param type			Type of ID
@@ -105,9 +107,7 @@ struct id_payload_t {
 	 * Returned object has to get destroyed by the caller.
 	 *
 	 * @param this 			calling id_payload_t object
-	 * @return				
-	 * 						- identification_t object 
-	 * 						- NULL if ID type not supported
+	 * @return				identification_t object 
 	 */
 	identification_t *(*get_identification) (id_payload_t *this);
 	
@@ -148,7 +148,7 @@ struct id_payload_t {
  * 						- TRUE if this payload is of type IDi
  * 						- FALSE if this payload is of type IDr
  * 
- * @return				created id_payload_t object
+ * @return				id_payload_t object
  * 
  * @ingroup payloads
  */
@@ -161,7 +161,7 @@ id_payload_t *id_payload_create(bool is_initiator);
  * 							- TRUE if this payload is of type IDi
  * 							- FALSE if this payload is of type IDr
  * @param identification	identification_t object
- * @return					created id_payload_t object
+ * @return					id_payload_t object
  * 
  * @ingroup payloads
  */

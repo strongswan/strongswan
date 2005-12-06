@@ -130,24 +130,21 @@ static status_t verify(private_nonce_payload_t *this)
  */
 static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
 {
-	if (nonce.len >= 16 && nonce.len <= 256)
-	{
-
-		this->nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
-		this->nonce.len = nonce.len;
-		this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
-		return SUCCESS;	
-	}
-	return INVALID_ARG;
+	this->nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
+	this->nonce.len = nonce.len;
+	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
+	return SUCCESS;
 }
 
 /**
  * Implementation of nonce_payload_t.get_nonce.
  */
-static void get_nonce(private_nonce_payload_t *this, chunk_t *nonce)
+static chunk_t get_nonce(private_nonce_payload_t *this)
 {
-	nonce->ptr = allocator_clone_bytes(this->nonce.ptr,this->nonce.len);
-	nonce->len = this->nonce.len;
+	chunk_t nonce;
+	nonce.ptr = allocator_clone_bytes(this->nonce.ptr,this->nonce.len);
+	nonce.len = this->nonce.len;
+	return nonce;
 }
 
 /**
@@ -231,8 +228,8 @@ nonce_payload_t *nonce_payload_create()
 	
 	/* public functions */
 	this->public.destroy = (void (*) (nonce_payload_t *)) destroy;
-	this->public.set_nonce = (status_t (*) (nonce_payload_t *,chunk_t)) set_nonce;
-	this->public.get_nonce = (void (*) (nonce_payload_t *,chunk_t*)) get_nonce;
+	this->public.set_nonce = (void (*) (nonce_payload_t *,chunk_t)) set_nonce;
+	this->public.get_nonce = (chunk_t (*) (nonce_payload_t *)) get_nonce;
 	
 	/* private functions */
 	this->compute_length = compute_length;

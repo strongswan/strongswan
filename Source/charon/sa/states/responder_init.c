@@ -455,7 +455,7 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 	this->received_nonce = CHUNK_INITIALIZER;
 
 	this->logger->log(this->logger, CONTROL | MOST, "Get NONCE value and store it");
-	nonce_request->get_nonce(nonce_request, &(this->received_nonce));
+	this->received_nonce = nonce_request->get_nonce(nonce_request);
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Create new NONCE value.");	
 	

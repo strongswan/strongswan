@@ -1,7 +1,7 @@
 /**
  * @file encodings.h
  * 
- * @brief Encoding types of fields in a IKEv2 payload.
+ * @brief Definition of encoding_type_t.
  * 
  */
 
@@ -43,7 +43,8 @@ typedef enum encoding_type_t encoding_type_t;
  * 
  * @ingroup payloads
  */
-enum encoding_type_t{
+enum encoding_type_t {
+	
 	/**
 	 * Representing a 4 Bit unsigned int value.
 	 * 
@@ -57,6 +58,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 4 bit forward afterwards.
 	 */
 	U_INT_4,
+	
 	/**
 	 * Representing a 8 Bit unsigned int value.
 	 * 
@@ -70,6 +72,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 8 bit forward afterwards.
 	 */
 	U_INT_8,
+	
 	/**
 	 * Representing a 16 Bit unsigned int value.
 	 * 
@@ -83,6 +86,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 16 bit forward afterwards.
 	 */
 	U_INT_16,
+	
 	/**
 	 * Representing a 32 Bit unsigned int value.
 	 * 
@@ -94,8 +98,8 @@ enum encoding_type_t{
 	 * The value is written to the associated data struct.
 	 * The current read pointer is moved 32 bit forward afterwards.
 	 */
-
 	U_INT_32,
+	
 	/**
 	 * Representing a 64 Bit unsigned int value.
 	 * 
@@ -108,6 +112,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 64 bit forward afterwards.
 	 */
 	U_INT_64,
+	
 	/**
 	 * @brief represents a RESERVED_BIT used in FLAG-Bytes.
 	 * 
@@ -121,6 +126,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 1 bit forward afterwards.
 	 */
 	RESERVED_BIT,
+	
 	/**
 	 * @brief represents a RESERVED_BYTE.
 	 * 
@@ -134,6 +140,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 1 byte forward afterwards.
 	 */
 	RESERVED_BYTE,
+	
 	/**
 	 * Representing a 1 Bit flag.
 	 * 
@@ -146,6 +153,7 @@ enum encoding_type_t{
 	 * is moved 1 bit forward afterwards
 	 */
 	FLAG,
+	
 	/**
 	 * Representating a length field of a payload.
 	 * 
@@ -158,6 +166,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 16 bit forward afterwards.
 	 */
 	PAYLOAD_LENGTH,
+	
 	/**
 	 * Representating a length field of a header.
 	 * 
@@ -170,6 +179,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 32 bit forward afterwards.
 	 */
 	HEADER_LENGTH,
+	
 	/**
 	 * Representating a spi size field.
 	 * 
@@ -182,6 +192,7 @@ enum encoding_type_t{
 	 * The current read pointer is moved 8 bit forward afterwards.
 	 */
 	SPI_SIZE,
+	
 	/**
 	 * Representating a spi field.
 	 * 
@@ -191,6 +202,7 @@ enum encoding_type_t{
 	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
 	 */
 	SPI,
+	
 	/**
 	 * Representating a Key Exchange Data field.
 	 * 
@@ -200,6 +212,7 @@ enum encoding_type_t{
 	 * When parsing (Payload Length - 8) bytes are read and written into the chunk pointing to.
 	 */
 	KEY_EXCHANGE_DATA,
+	
 	/**
 	 * Representating a Notification field.
 	 * 
@@ -209,6 +222,7 @@ enum encoding_type_t{
 	 * When parsing (Payload Length - spi size - 8) bytes are read and written into the chunk pointing to.
 	 */
 	NOTIFICATION_DATA,
+	
 	/**
 	 * Representating one or more proposal substructures.
 	 * 
@@ -221,6 +235,7 @@ enum encoding_type_t{
 	 * to be stored in the pointed linked_list.
 	 */	
 	PROPOSALS,
+	
 	/**
 	 * Representating one or more transform substructures.
 	 * 
@@ -233,6 +248,7 @@ enum encoding_type_t{
 	 * to be stored in the pointed linked_list.
 	 */	
 	TRANSFORMS,
+	
 	/**
 	 * Representating one or more Attributes of a transform substructure.
 	 * 
@@ -464,8 +480,7 @@ enum encoding_type_t{
 	 * When parsing (Payload Length - 4) bytes are read and written into the chunk pointing to.
 	 */
 	UNKNOWN_DATA,
-
-
+	
 	/**
 	 * Representating an IKE_SPI field in an IKEv2 Header.
 	 * 
@@ -480,13 +495,15 @@ enum encoding_type_t{
 	 * Representing the encrypted data body of a encryption payload.
 	 */
 	ENCRYPTED_DATA,
-	
 };
 
 /**
  * mappings to map encoding_type_t's to strings
+ * 
+ * @ingroup payloads
  */
 extern mapping_t encoding_type_m[];
+
 
 typedef struct encoding_rule_t encoding_rule_t;
 
@@ -502,6 +519,7 @@ typedef struct encoding_rule_t encoding_rule_t;
  * @ingroup payloads
  */
 struct encoding_rule_t {
+	
 	/**
 	 * Encoding type.
 	 */

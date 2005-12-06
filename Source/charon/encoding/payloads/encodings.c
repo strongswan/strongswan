@@ -1,7 +1,7 @@
 /**
  * @file encodings.c
  * 
- * @brief Encoding types of fields in a IKEv2 payload.
+ * @brief String mappings of encoding_type_t.
  * 
  */
 

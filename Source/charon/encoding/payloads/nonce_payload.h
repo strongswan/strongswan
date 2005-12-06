@@ -40,8 +40,10 @@ typedef struct nonce_payload_t nonce_payload_t;
  * 
  * The Nonce payload format is described in draft section 3.3.
  * 
- * @ingroup payloads
+ * @b Constructors:
+ * - nonce_payload_create()
  * 
+ * @ingroup payloads
  */
 struct nonce_payload_t {
 	/**
@@ -51,24 +53,19 @@ struct nonce_payload_t {
 
 	/**
 	 * @brief Set the nonce value.
-	 * 
-	 * The nonce must have length between 16 and 256 bytes.
 	 *
 	 * @param this 			calling nonce_payload_t object
 	 * @param nonce	  		chunk containing the nonce, will be cloned
-	 * @return 				
-	 * 						- SUCCESS or
-	 * 						- INVALID_ARG, if nonce has an invalid size
 	 */
-	status_t (*set_nonce) (nonce_payload_t *this, chunk_t nonce);
+	void (*set_nonce) (nonce_payload_t *this, chunk_t nonce);
 	
 	/**
 	 * @brief Get the nonce value.
 	 *
 	 * @param this 			calling nonce_payload_t object
-	 * @param[out] nonce	chunk where nonce data is located (cloned)
+	 * @return				a chunk containing the cloned nonce
 	 */
-	void (*get_nonce) (nonce_payload_t *this, chunk_t *nonce);
+	chunk_t (*get_nonce) (nonce_payload_t *this);
 	
 	/**
 	 * @brief Destroys an nonce_payload_t object.
@@ -81,7 +78,7 @@ struct nonce_payload_t {
 /**
  * @brief Creates an empty nonce_payload_t object
  * 
- * @return			created nonce_payload_t object
+ * @return nonce_payload_t object
  * 
  * @ingroup payloads
  */

@@ -31,11 +31,14 @@
 typedef struct parser_t parser_t;
 
 /**
- * A parser_t class to parse IKEv2 payloads.
+ * @brief A parser_t class to parse IKEv2 payloads.
  * 
  * A parser is used for parsing one chunk of data. Multiple
  * payloads can be parsed out of the chunk using parse_payload.
  * The parser remains the state until destroyed.
+ * 
+ * @b Constructors:
+ * - parser_create()
  * 
  * @ingroup encoding
  */
@@ -53,7 +56,6 @@ struct parser_t {
 	 * @param[out] payload		pointer where parsed payload was allocated
 	 * @return 			
 	 * 							- SUCCESSFUL if succeeded,
-	 * 		   					- NOT_SUPPORTED if payload_type is not supported
 	 * 							- PARSE_ERROR if corrupted/invalid data found
 	 */
 	status_t (*parse_payload) (parser_t *this, payload_type_t payload_type, payload_t **payload);
@@ -84,7 +86,7 @@ struct parser_t {
  * @brief Constructor to create a parser_t object.
  * 
  * @param data				chunk of data to parse with this parser_t object
- * @return 					the parser_t object
+ * @return 					parser_t object
  * 
  * @ingroup encoding
  */

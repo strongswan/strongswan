@@ -30,9 +30,9 @@
  * String mappings for ts_type_t.
  */
 mapping_t ts_type_m[] = {
-{TS_IPV4_ADDR_RANGE, "TS_IPV4_ADDR_RANGE"},
-{TS_IPV6_ADDR_RANGE, "TS_IPV6_ADDR_RANGE"},
-{MAPPING_END, NULL}
+	{TS_IPV4_ADDR_RANGE, "TS_IPV4_ADDR_RANGE"},
+	{TS_IPV6_ADDR_RANGE, "TS_IPV6_ADDR_RANGE"},
+	{MAPPING_END, NULL}
 };
 
 

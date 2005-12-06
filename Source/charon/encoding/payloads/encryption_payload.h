@@ -30,6 +30,8 @@
 
 /**
  * Encrpytion payload length in bytes without IV and following data.
+ * 
+ * @ingroup payloads
  */
 #define ENCRYPTION_PAYLOAD_HEADER_LENGTH 4
 
@@ -38,6 +40,19 @@ typedef struct encryption_payload_t encryption_payload_t;
 
 /** 
  * @brief The encryption payload as described in RFC section 3.14.
+ * 
+ * Before any crypt/decrypt/sign/verify operation can occur, 
+ * the transforms must be set. After that, a parsed encryption payload
+ * can be decrypted, which also will parse the contained payloads.
+ * Encryption is done the same way, added payloads will get generated
+ * and then encrypted.
+ * For signature building, there is the FULL packet needed. Meaning it
+ * must be builded after generation of all payloads and the encryption
+ * of the encryption payload.
+ * Signature verificatin is done before decryption.
+ * 
+ * @b Constructors:
+ * - encryption_payload_create()
  * 
  * @ingroup payloads
  */
@@ -91,7 +106,8 @@ struct encryption_payload_t {
 	 * To decryption, encryption, signature building and verifying,
 	 * the payload needs a crypter and a signer object.
 	 * 
-	 * @warning Do NOT call this function twice!
+	 * @warning Do NOT call this function again after encryption, since
+	 * the signer must be the same while encrypting and signature building!
 	 *
 	 * @param this			calling encryption_payload_t
 	 * @param crypter		crypter_t to use for data de-/encryption
@@ -162,7 +178,7 @@ struct encryption_payload_t {
 	/**
 	 * @brief Destroys an encryption_payload_t object.
 	 *
-	 * @param this 	encryption_payload_t object to destroy
+	 * @param this 			encryption_payload_t object to destroy
 	 */
 	void (*destroy) (encryption_payload_t *this);
 };
@@ -170,11 +186,11 @@ struct encryption_payload_t {
 /**
  * @brief Creates an empty encryption_payload_t object.
  * 
- * @return	created encryption_payload_t object
+ * @returnencryption_payload_t object
  * 
  * @ingroup payloads
  */
- 
 encryption_payload_t *encryption_payload_create();
+
 
 #endif /*ENCRYPTION_PAYLOAD_H_*/

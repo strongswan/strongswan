@@ -118,7 +118,7 @@ void test_encryption_payload(tester_t *tester)
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&nonce_payload);
-		nonce_payload->get_nonce(nonce_payload, &got_nonce);
+		got_nonce = nonce_payload->get_nonce(nonce_payload);
 	}
 	iterator->destroy(iterator);
 	

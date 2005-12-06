@@ -41,12 +41,15 @@
 typedef struct ts_payload_t ts_payload_t;
 
 /**
- * Object representing an IKEv2 TS payload.
+ * @brief Class representing an IKEv2 TS payload.
  * 
  * The TS payload format is described in draft section 3.13.
  * 
- * @ingroup payloads
+ * @b Constructors:
+ * - ts_payload_create()
+ * - ts_payload_create_from_traffic_selectors()
  * 
+ * @ingroup payloads
  */
 struct ts_payload_t {
 	/**
@@ -61,7 +64,6 @@ struct ts_payload_t {
 	 * @return
 	 * 						- TRUE if this payload is of type TSi
 	 * 						- FALSE if this payload is of type TSr
-	 * 
 	 */
 	bool (*get_initiator) (ts_payload_t *this);
 	
@@ -72,7 +74,6 @@ struct ts_payload_t {
 	 * @param is_initiator	
 	 * 						- TRUE if this payload is of type TSi
 	 * 						- FALSE if this payload is of type TSr
-	 * 
 	 */
 	void (*set_initiator) (ts_payload_t *this,bool is_initiator);
 	
@@ -129,8 +130,7 @@ struct ts_payload_t {
  * @param is_initiator	
  * 						- TRUE if this payload is of type TSi
  * 						- FALSE if this payload is of type TSr
- * 
- * @return				created ts_payload_t object
+ * @return				ts_payload_t object
  * 
  * @ingroup payloads
  */
@@ -143,8 +143,7 @@ ts_payload_t *ts_payload_create(bool is_initiator);
  * @param is_initiator	
  * 						- TRUE if this payload is of type TSi
  * 						- FALSE if this payload is of type TSr
- * 
- * @return				created ts_payload_t object
+ * @return				ts_payload_t object
  * 
  * @ingroup payloads
  */

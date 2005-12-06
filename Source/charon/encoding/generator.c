@@ -62,10 +62,7 @@ struct private_generator_t {
 	 * Public part of a generator_t object.
 	 */
 	 generator_t public;
-
-	/* private functions and fields */
-
-
+	 
 	/**
 	 * Generates a U_INT-Field type and writes it to buffer.
 	 *
@@ -73,9 +70,9 @@ struct private_generator_t {
 	 * @param int_type 				type of U_INT field (U_INT_4, U_INT_8, etc.)
 	 * 								ATTRIBUTE_TYPE is also generated in this function
 	 * @param offset 				offset of value in data struct
-	 * @param generator_contexts		generator_contexts_t object where the context is written or read from
+	 * @param generator_contexts	generator_contexts_t object where the context is written or read from
 	 * @return
-	 *  								- SUCCESS
+	 *  							- SUCCESS
 	 * 								- FAILED if allignment is wrong
 	 */
 	void (*generate_u_int_type) (private_generator_t *this,encoding_type_t int_type,u_int32_t offset);
@@ -117,7 +114,7 @@ struct private_generator_t {
 	 * it to the buffer.
 	 *
 	 * @param this 					private_generator_t object
-	 * @param generator_contexts		generator_contexts_t object where the context is written or read from
+	 * @param generator_contexts	generator_contexts_t object where the context is written or read from
 	 * @param bits 					number of bits to generate
 	 */
 	void (*generate_reserved_field) (private_generator_t *this,int bits);
@@ -126,8 +123,8 @@ struct private_generator_t {
 	 * Generates a FLAG field.
 	 *
 	 * @param this 					private_generator_t object
-	 * @param generator_contexts		generator_contexts_t object where the context is written or read from
-	 * @param offset					offset of flag value in data struct
+	 * @param generator_contexts	generator_contexts_t object where the context is written or read from
+	 * @param offset				offset of flag value in data struct
 	 */
 	void (*generate_flag) (private_generator_t *this,u_int32_t offset);
 	
@@ -144,8 +141,8 @@ struct private_generator_t {
 	/**
 	 * Generates a bytestream from a chunk_t.
 	 *
-	 * @param this 					private_generator_t object
-	 * @param offset					offset of chunk_t value in data struct
+	 * @param this 				private_generator_t object
+	 * @param offset			offset of chunk_t value in data struct
 	 */
 	void (*generate_from_chunk) (private_generator_t *this,u_int32_t offset);	
 
@@ -167,7 +164,7 @@ struct private_generator_t {
 	 * is increased.
 	 *
  	 * @param this				calling private_generator_t object
-	 * @param bytes 				pointer to bytes to write
+	 * @param bytes 			pointer to bytes to write
 	 * @param number_of_bytes	number of bytes to write into buffer
 	 */
 	void (*write_bytes_to_buffer) (private_generator_t *this,void * bytes,size_t number_of_bytes);
@@ -179,9 +176,9 @@ struct private_generator_t {
 	 * @warning buffer size is not check to hold the data if offset is to large.
 	 *
  	 * @param this				calling private_generator_t object
-	 * @param bytes 				pointer to bytes to write
+	 * @param bytes 			pointer to bytes to write
 	 * @param number_of_bytes	number of bytes to write into buffer
-	 * @param offset				offset to write the data into
+	 * @param offset			offset to write the data into
 	 */
 	void (*write_bytes_to_buffer_at_offset) (private_generator_t *this,void * bytes,size_t number_of_bytes,u_int32_t offset);
 	
@@ -557,7 +554,6 @@ static void make_space_available (private_generator_t *this, size_t bits)
 	while (((this->get_current_buffer_space(this) * 8) - this->current_bit) < bits)
 	{
 		/* must increase buffer */
-		u_int8_t *new_buffer;
 		size_t old_buffer_size = this->get_current_buffer_size(this);
 		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
 		size_t out_position_offset = ((this->out_position) - (this->buffer));
@@ -566,13 +562,7 @@ static void make_space_available (private_generator_t *this, size_t bits)
 							old_buffer_size, new_buffer_size);
 		
 		/* Reallocate space for new buffer */
-		new_buffer = allocator_realloc(this->buffer,new_buffer_size);
-		if (new_buffer == NULL)
-		{
-			this->logger->log(this->logger, ERROR, "reallocation of gen buffer failed!!!");
-		}
-
-		this->buffer = new_buffer;
+		this->buffer = allocator_realloc(this->buffer,new_buffer_size);
 
 		this->out_position = (this->buffer + out_position_offset);
 		this->roof_position = (this->buffer + new_buffer_size);
@@ -620,7 +610,6 @@ static void write_bytes_to_buffer_at_offset (private_generator_t *this,void * by
 		read_position++;
 		write_position++;
 	}
-
 }
 
 /**
@@ -968,7 +957,6 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				else
 				{
 					this->generate_u_int_type(this,U_INT_16,rules[i].offset);
-//					status = this->write_bytes_to_buffer(this,(this->data_struct + rules[i].offset),2);
 				}
 				break;
 			}
@@ -1031,7 +1019,6 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 	}
 	this->logger->log_bytes(this->logger, RAW|MORE, "generated data for this payload",
 							payload_start, this->out_position-payload_start);
-
 }
 
 /**
@@ -1048,7 +1035,7 @@ static status_t destroy(private_generator_t *this)
 /*
  * Described in header
  */
-generator_t * generator_create()
+generator_t *generator_create()
 {
 	private_generator_t *this;
 

@@ -198,7 +198,6 @@ static void destroy(private_vendor_id_payload_t *this)
 	{
 		allocator_free_chunk(&(this->vendor_id_data));
 	}
-	
 	allocator_free(this);	
 }
 
@@ -227,7 +226,7 @@ vendor_id_payload_t *vendor_id_payload_create()
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
-	this->payload_length =VENDOR_ID_PAYLOAD_HEADER_LENGTH;
+	this->payload_length = VENDOR_ID_PAYLOAD_HEADER_LENGTH;
 	this->vendor_id_data = CHUNK_INITIALIZER;
 
 	return (&(this->public));

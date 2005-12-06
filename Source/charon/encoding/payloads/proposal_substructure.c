@@ -31,6 +31,12 @@
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 
+
+/**
+ * IKEv1 Value for a proposal payload.
+ */
+#define PROPOSAL_TYPE_VALUE 2
+
 /** 
  * String mappings for protocol_id_t.
  */

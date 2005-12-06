@@ -51,15 +51,23 @@ enum config_type_t {
 	CFG_ACK = 4,
 };
 
+/**
+ * string mappings for config_type_t.
+ * 
+ * @ingroup payloads
+ */
 extern mapping_t config_type_m[];
 
 
 typedef struct cp_payload_t cp_payload_t;
 
 /**
- * Class representing an IKEv2-CP Payload.
+ * @brief Class representing an IKEv2-CP Payload.
  * 
  * The CP Payload format is described in RFC section 3.15.
+ * 
+ * @b Constructors:
+ * - cp_payload_create()
  * 
  * @ingroup payloads
  */
@@ -90,19 +98,31 @@ struct cp_payload_t {
 	 * @warning The added configuration_attribute_t object is 
 	 * 			getting destroyed in destroy function of cp_payload_t.
 	 *
-	 * @param this 		calling cp_payload_t object
-	 * @param attribute	configuration_attribute_t object to add
+	 * @param this 			calling cp_payload_t object
+	 * @param attribute		configuration_attribute_t object to add
 	 */
 	void (*add_configuration_attribute) (cp_payload_t *this, configuration_attribute_t *attribute);
 	
+	/**
+	 * @brief Set the config type.
+	 *
+	 * @param this 			calling cp_payload_t object
+	 * @param config_type	config_type_t to set
+	 */
 	void (*set_config_type) (cp_payload_t *this,config_type_t config_type);
 	
+	/**
+	 * @brief Get the config type.
+	 *
+	 * @param this 			calling cp_payload_t object
+	 * @return				config_type_t
+	 */
 	config_type_t (*get_config_type) (cp_payload_t *this);
 	
 	/**
 	 * @brief Destroys an cp_payload_t object.
 	 *
-	 * @param this 	cp_payload_t object to destroy
+	 * @param this 			cp_payload_t object to destroy
 	 */
 	void (*destroy) (cp_payload_t *this);
 };
@@ -110,7 +130,7 @@ struct cp_payload_t {
 /**
  * @brief Creates an empty cp_payload_t object
  * 
- * @return			created cp_payload_t object
+ * @return cp_payload_t object
  * 
  * @ingroup payloads
  */

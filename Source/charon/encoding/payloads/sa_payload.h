@@ -47,9 +47,14 @@
 typedef struct sa_payload_t sa_payload_t;
 
 /**
- * Class representing an IKEv2-SA Payload.
+ * @brief Class representing an IKEv2-SA Payload.
  * 
  * The SA Payload format is described in RFC section 3.3.
+ * 
+ * @b Constructors:
+ * - sa_payload_create()
+ * - sa_payload_create_from_ike_proposals()
+ * - sa_payload_create_from_child_proposal()
  * 
  * @ingroup payloads
  */
@@ -68,9 +73,9 @@ struct sa_payload_t {
 	 * 			the length of this transform substructure has to be refreshed 
 	 * 			by calling get_length()!
 	 *
-	 * @param this 			calling sa_payload_t object
-	 * @param[in] forward 	iterator direction (TRUE: front to end)
-	 * @return				created iterator_t object
+	 * @param this 				calling sa_payload_t object
+	 * @param[in] forward 		iterator direction (TRUE: front to end)
+	 * @return					created iterator_t object
 	 */
 	iterator_t *(*create_proposal_substructure_iterator) (sa_payload_t *this, bool forward);
 	
@@ -80,13 +85,13 @@ struct sa_payload_t {
 	 * @warning The added proposal_substructure_t object  is 
 	 * 			getting destroyed in destroy function of sa_payload_t.
 	 *
-	 * @param this 		calling sa_payload_t object
-	 * @param proposal  proposal_substructure_t object to add
+	 * @param this 				calling sa_payload_t object
+	 * @param proposal  		proposal_substructure_t object to add
 	 */
 	void (*add_proposal_substructure) (sa_payload_t *this,proposal_substructure_t *proposal);
 	
 	/**
-	 * Creates an array of ike_proposal_t's in this SA payload.
+	 * @brief Creates an array of ike_proposal_t's in this SA payload.
 	 * 
 	 * An IKE proposal consist of transform of type ENCRYPTION_ALGORITHM,
 	 * PSEUDO_RANDOM_FUNCTION, INTEGRITY_ALGORITHM and DIFFIE_HELLMAN_GROUP
@@ -102,7 +107,7 @@ struct sa_payload_t {
 	status_t (*get_ike_proposals) (sa_payload_t *this, ike_proposal_t **proposals, size_t *proposal_count);
 	
 	/**
-	 * Creates an array of child_proposal_t's in this SA payload.
+	 * @brief Creates an array of child_proposal_t's in this SA payload.
 	 * 
 	 * @param proposals			the pointer to the first entry of child_proposal_t's is set
 	 * @param proposal_count	the number of found proposals is written at this location
@@ -124,7 +129,7 @@ struct sa_payload_t {
 /**
  * @brief Creates an empty sa_payload_t object
  * 
- * @return			created sa_payload_t object
+ * @return					created sa_payload_t object
  * 
  * @ingroup payloads
  */
@@ -136,6 +141,7 @@ sa_payload_t *sa_payload_create();
  * @return					created sa_payload_t object
  * @param proposals			pointer to first proposal in array of type ike_proposal_t
  * @param proposal_count	number of ike_proposal_t's in array
+ * @return					sa_payload_t object
  * 
  * @ingroup payloads
  */
@@ -150,9 +156,11 @@ sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, si
  * @return					created sa_payload_t object
  * @param proposals			pointer to first proposal in array of type child_proposal_t
  * @param proposal_count	number of child_proposal_t's in array
+ * @return					sa_payload_t object
  * 
  * @ingroup payloads
  */
 sa_payload_t *sa_payload_create_from_child_proposals(child_proposal_t *proposals, size_t proposal_count);
+
 
 #endif /*SA_PAYLOAD_H_*/

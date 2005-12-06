@@ -28,16 +28,9 @@
 #include <encoding/payloads/transform_substructure.h>
 #include <utils/linked_list.h>
 
-/**
- * IKEv1 Value for a proposal payload.
- * 
- * @ingroup payloads
- */
-#define PROPOSAL_TYPE_VALUE 2
 
 /**
- * Length of the proposal substructure header
- * (without spi).
+ * Length of the proposal substructure header (without spi).
  * 
  * @ingroup payloads
  */
@@ -60,6 +53,8 @@ enum protocol_id_t {
 
 /** 
  * String mappings for protocol_id_t.
+ * 
+ * @ingroup payloads
  */
 extern mapping_t protocol_id_m[];
 
@@ -69,6 +64,9 @@ typedef struct proposal_substructure_t proposal_substructure_t;
  * Object representing an IKEv2-PROPOSAL SUBSTRUCTURE.
  * 
  * The PROPOSAL SUBSTRUCTURE format is described in RFC section 3.3.1.
+ * 
+ * @b Constructors:
+ * - proposal_substructure_create()
  * 
  * @ingroup payloads
  */
@@ -214,12 +212,11 @@ struct proposal_substructure_t {
 /**
  * @brief Creates an empty proposal_substructure_t object
  * 
- * @return			created proposal_substructure_t object
+ * @return proposal_substructure_t object
  * 
  * @ingroup payloads
  */
 proposal_substructure_t *proposal_substructure_create();
-
 
 
 #endif /*PROPOSAL_SUBSTRUCTURE_H_*/

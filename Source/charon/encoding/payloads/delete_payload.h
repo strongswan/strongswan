@@ -39,12 +39,14 @@
 typedef struct delete_payload_t delete_payload_t;
 
 /**
- * Object representing an IKEv2 DELETE payload.
+ * @brief Class representing an IKEv2 DELETE payload.
  * 
  * The DELETE payload format is described in draft section 3.11.
  * 
- * @ingroup payloads
+ * @b Constructors:
+ * - delete_payload_create()
  * 
+ * @ingroup payloads
  */
 struct delete_payload_t {
 	/**
@@ -54,7 +56,6 @@ struct delete_payload_t {
 
 	/**
 	 * @brief Set the protocol ID.
-	 * 
 	 *
 	 * @param this 			calling delete_payload_t object
 	 * @param protocol_id	protocol ID
@@ -82,13 +83,12 @@ struct delete_payload_t {
 	 * @brief Get the SPI size.
 	 *
 	 * @param this 			calling delete_payload_t object
-	 * @return				 SPI size
+	 * @return				SPI size
 	 */
 	u_int8_t (*get_spi_size) (delete_payload_t *this);
 	
 	/**
 	 * @brief Set the SPI count.
-	 * 
 	 *
 	 * @param this 			calling delete_payload_t object
 	 * @param spi_count		SPI count
@@ -144,7 +144,7 @@ struct delete_payload_t {
 /**
  * @brief Creates an empty delete_payload_t object.
  * 
- * @return				created delete_payload_t object
+ * @return delete_payload_t object
  * 
  * @ingroup payloads
  */

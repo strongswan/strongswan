@@ -228,10 +228,10 @@ transform_substructure_t *transform_substructure_create();
  * PSEUDO_RANDOM_FUNCTION, INTEGRITY_ALGORITHM. For all 
  * other transport types the key_length parameter is not used
  * 
- * @return					created transform_substructure_t object
  * @param transform_type	type of transform to create
  * @param transform_id		transform id specifying the specific algorithm of a transform type
  * @param key_length		Key length for key lenght attribute
+ * @return					transform_substructure_t object
  * 
  * @ingroup payloads
  */

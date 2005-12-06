@@ -70,9 +70,12 @@ extern mapping_t configuration_attribute_type_m[];
 typedef struct configuration_attribute_t configuration_attribute_t;
 
 /**
- * Object representing an IKEv2- CONFIGURATION Attribute.
+ * @brief Class representing an IKEv2-CONFIGURATION Attribute.
  * 
  * The CONFIGURATION ATTRIBUTE format is described in RFC section 3.15.1.
+ * 
+ * @b Constructors:
+ * - configuration_attribute_create()
  * 
  * @ingroup payloads
  */

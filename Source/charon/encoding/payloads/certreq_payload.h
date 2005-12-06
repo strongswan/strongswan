@@ -38,12 +38,17 @@
 typedef struct certreq_payload_t certreq_payload_t;
 
 /**
- * Object representing an IKEv2 CERTREQ payload.
+ * @brief Class representing an IKEv2 CERTREQ payload.
  * 
  * The CERTREQ payload format is described in draft section 3.7.
+ * This is just a dummy implementation to fullfill the standards
+ * requirements. A full implementation would offer setters/getters
+ * for the different encoding types.
+ * 
+ * @b Constructors:
+ * - certreq_payload_create()
  * 
  * @ingroup payloads
- * 
  */
 struct certreq_payload_t {
 	/**
@@ -53,7 +58,6 @@ struct certreq_payload_t {
 
 	/**
 	 * @brief Set the CERT encoding.
-	 * 
 	 *
 	 * @param this 			calling certreq_payload_t object
 	 * @param encoding		CERT encoding
@@ -109,7 +113,7 @@ struct certreq_payload_t {
 /**
  * @brief Creates an empty certreq_payload_t object.
  * 
- * @return				created certreq_payload_t object
+ * @return certreq_payload_t object
  * 
  * @ingroup payloads
  */

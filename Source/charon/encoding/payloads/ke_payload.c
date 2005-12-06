@@ -56,7 +56,6 @@ struct private_ke_payload_t {
 	 */
 	u_int16_t payload_length;
 	
-	
 	/**
 	 * DH Group Number.
 	 */
@@ -274,7 +273,7 @@ ke_payload_t *ke_payload_create()
 	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
-	this->critical = KE_PAYLOAD_CRITICAL_FLAG;
+	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = KE_PAYLOAD_HEADER_LENGTH;
 	this->key_exchange_data.ptr = NULL;

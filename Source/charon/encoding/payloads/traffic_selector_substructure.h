@@ -39,12 +39,15 @@
 typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
 
 /**
- * Object representing an IKEv2 TRAFFIC SELECTOR.
+ * @brief Class representing an IKEv2 TRAFFIC SELECTOR.
  * 
  * The TRAFFIC SELECTOR format is described in draft section 3.13.1.
  * 
- * @ingroup payloads
+ * @b Constructors:
+ * - traffic_selector_substructure_create()
+ * - traffic_selector_substructure_create_from_traffic_selector()
  * 
+ * @ingroup payloads
  */
 struct traffic_selector_substructure_t {
 	/**
@@ -147,7 +150,7 @@ struct traffic_selector_substructure_t {
  *
  * TS type is set to default TS_IPV4_ADDR_RANGE!
  *  
- * @return				created traffic_selector_substructure_t object
+ * @return 					traffic_selector_substructure_t object
  * 
  * @ingroup payloads
  */
@@ -158,7 +161,7 @@ traffic_selector_substructure_t *traffic_selector_substructure_create();
  * the values from a traffic_selector_t.
  * 
  * @param traffic_selector	traffic_selector_t to use for initialization
- * @return					created traffic_selector_substructure_t object
+ * @return					traffic_selector_substructure_t object
  * 
  * @ingroup payloads
  */

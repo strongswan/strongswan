@@ -85,7 +85,7 @@ struct unknown_payload_t {
 /**
  * @brief Creates an empty unknown_payload_t object.
  * 
- * @return				created unknown_payload_t object
+ * @return unknown_payload_t object
  * 
  * @ingroup payloads
  */

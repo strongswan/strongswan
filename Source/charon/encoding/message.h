@@ -335,7 +335,7 @@ struct message_t {
  * Call message_t.parse_header afterwards.
  * 
  * @param packet		packet_t object which is assigned to message	
- * @return 				created message_t object
+ * @return 				message_t object
  * 
  * @ingroup encoding
  */
@@ -349,7 +349,7 @@ message_t * message_create_from_packet(packet_t *packet);
  * - original_initiator is set to TRUE
  * - is_request is set to TRUE
  * 
- * @return created message_t object
+ * @return message_t object
  *
  * @ingroup encoding
  */
@@ -358,7 +358,7 @@ message_t * message_create();
 /**
  * @brief Creates an message_t object of type reply containing a notify payload.
  *
- * @return created message_t object
+ * @return message_t object
  *
  * @ingroup encoding
  */

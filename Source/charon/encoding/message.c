@@ -747,7 +747,8 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Payload type %s could not be parsed",mapping_find(payload_type_m,current_payload_type));
+			this->logger->log(this->logger, ERROR, "Payload type %s could not be parsed",
+								mapping_find(payload_type_m,current_payload_type));
 			return status;
 		}
 
@@ -758,7 +759,8 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Payload type %s could not be verified",mapping_find(payload_type_m,current_payload_type));
+			this->logger->log(this->logger, ERROR, "Payload type %s verification failed",
+								mapping_find(payload_type_m,current_payload_type));
 			current_payload->destroy(current_payload);
 			status = VERIFY_ERROR;
 			return status;
@@ -771,7 +773,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		/* an encryption payload is the last one, so STOP here. decryption is done later */
 		if (current_payload_type == ENCRYPTED)
 		{
-			this->logger->log(this->logger, CONTROL|MOST, "Payload of type encrypted found. Stop parsing.", 
+			this->logger->log(this->logger, CONTROL|MOST, "Payload of type encrypted found. Stop parsing", 
 								mapping_find(payload_type_m, current_payload_type));			
 			break;	
 		}
@@ -779,13 +781,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		/* get next payload type */
 		current_payload_type = current_payload->get_next_type(current_payload);
 	}
-	
-	this->logger->log(this->logger, CONTROL, "Message a %s %s contains %d payloads", 
-						mapping_find(exchange_type_m, this->exchange_type),
-						this->is_request ? "request" : "response",
-						this->payloads->get_count(this->payloads));
 
-	/* */
 	if (current_payload_type == ENCRYPTED)
 	status = this->decrypt_payloads(this,crypter,signer);
 	if (status != SUCCESS)
@@ -799,6 +795,12 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	{
 		this->logger->log(this->logger, ERROR, "Verification of message failed");
 	}
+	
+	this->logger->log(this->logger, CONTROL, "Message a %s %s contains %d payloads", 
+					mapping_find(exchange_type_m, this->exchange_type),
+					this->is_request ? "request" : "response",
+					this->payloads->get_count(this->payloads));
+	
 	return status;
 }
 
@@ -836,7 +838,7 @@ static status_t verify(private_message_t *this)
 				unknown_payload_t *unknown_payload = (unknown_payload_t*)current_payload;
 				if (unknown_payload->is_critical(unknown_payload))
 				{
-					this->logger->log(this->logger, ERROR, "%s (%d) is not supported, but its critical!",
+					this->logger->log(this->logger, ERROR|MORE, "%s (%d) is not supported, but its critical!",
 									  mapping_find(payload_type_m, current_payload_type), current_payload_type);
 					iterator->destroy(iterator);
 					return NOT_SUPPORTED;	
@@ -846,13 +848,13 @@ static status_t verify(private_message_t *this)
 			{
 				found_payloads++;
 				total_found_payloads++;
-				this->logger->log(this->logger, CONTROL | MOST, "Found payload of type %s",
+				this->logger->log(this->logger, CONTROL|MOST, "Found payload of type %s",
 							  mapping_find(payload_type_m, this->message_rule->payload_rules[i].payload_type));
 	
 				/* as soon as ohe payload occures more then specified, the verification fails */
 				if (found_payloads > this->message_rule->payload_rules[i].max_occurence)
 				{
-					this->logger->log(this->logger, ERROR, "Payload of type %s more than %d times (%d) occured in current message",
+					this->logger->log(this->logger, ERROR|MORE, "Payload of type %s more than %d times (%d) occured in current message",
 									  mapping_find(payload_type_m, current_payload_type),
 									  this->message_rule->payload_rules[i].max_occurence, found_payloads);
 					iterator->destroy(iterator);
@@ -863,7 +865,7 @@ static status_t verify(private_message_t *this)
 
 		if (found_payloads < this->message_rule->payload_rules[i].min_occurence)
 		{
-			this->logger->log(this->logger, ERROR, "Payload of type %s not occured %d times (%d)",
+			this->logger->log(this->logger, ERROR|MORE, "Payload of type %s not occured %d times (%d)",
 							  mapping_find(payload_type_m, this->message_rule->payload_rules[i].payload_type),
 							  this->message_rule->payload_rules[i].min_occurence, found_payloads);
 			iterator->destroy(iterator);
@@ -906,7 +908,8 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 		/* needed to check */
 		current_payload_type = current_payload->get_type(current_payload);
 		
-		this->logger->log(this->logger, CONTROL | MOST, "Process payload of type %s",mapping_find(payload_type_m,current_payload_type));
+		this->logger->log(this->logger, CONTROL|MOST, "Process payload of type %s",
+							mapping_find(payload_type_m,current_payload_type));
 		
 		if (current_payload_type == ENCRYPTED)
 		{
@@ -915,7 +918,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			
 			encryption_payload = (encryption_payload_t*)current_payload;
 			
-			this->logger->log(this->logger, CONTROL | MORE, "Found an encryption payload");
+			this->logger->log(this->logger, CONTROL | MOST, "Found an encryption payload");
 
 			if (payload_number != this->payloads->get_count(this->payloads))
 			{
@@ -934,7 +937,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				iterator->destroy(iterator);
 				return status;
 			}
-			this->logger->log(this->logger, CONTROL | MORE, "Decrypt content of encryption payload");
+			this->logger->log(this->logger, CONTROL | MOST, "Decrypt content of encryption payload");
 			status = encryption_payload->decrypt(encryption_payload);
 			if (status != SUCCESS)
 			{
@@ -950,7 +953,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			/* check if there are payloads contained in the encryption payload */
 			if (encryption_payload->get_payload_count(encryption_payload) == 0)
 			{
-				this->logger->log(this->logger, CONTROL | MOST, "Encrypted payload is empty");
+				this->logger->log(this->logger, CONTROL|MOST, "Encrypted payload is empty");
 				/* remove the encryption payload, is not needed anymore */
 				iterator->remove(iterator);
 				/* encrypted payload contains no other payload */
@@ -958,7 +961,6 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL | MOST, "Encrypted payload is not empty");
 				/* encryption_payload is replaced with first payload contained in encryption_payload */
 				encryption_payload->remove_first_payload(encryption_payload, &current_encrypted_payload);
 				iterator->replace(iterator,NULL,(void *) current_encrypted_payload);
@@ -981,7 +983,8 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			while (encryption_payload->get_payload_count(encryption_payload) > 0)
 			{
 				encryption_payload->remove_first_payload(encryption_payload, &current_encrypted_payload);
-				this->logger->log(this->logger, CONTROL | MORE, "Insert unencrypted payload of type %s at end of list.",mapping_find(payload_type_m,current_encrypted_payload->get_type(current_encrypted_payload)));
+				this->logger->log(this->logger, CONTROL | MORE, "Insert unencrypted payload of type %s at end of list.",
+									mapping_find(payload_type_m,current_encrypted_payload->get_type(current_encrypted_payload)));
 				this->payloads->insert_last(this->payloads,current_encrypted_payload);
 			}
 			
@@ -1008,7 +1011,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				/* payload was not encrypted, but should have been. or vice-versa */
 				this->logger->log(this->logger, ERROR | MORE, "Payload type %s should be %s!", 
 									mapping_find(payload_type_m,current_payload_type),
-									(payload_rule->encrypted) ? "encrypted": "not encrypted");
+									(payload_rule->encrypted) ? "encrypted" : "not encrypted");
 				iterator->destroy(iterator);
 				return FAILED;
 			}
@@ -1057,7 +1060,8 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		bool to_encrypt = FALSE;
 		
 		all_payloads->remove_first(all_payloads,(void **)&current_payload);
-		this->logger->log(this->logger, CONTROL | MOST, "Get rule for payload %s", mapping_find(payload_type_m,current_payload->get_type(current_payload)));
+		this->logger->log(this->logger, CONTROL | ALL, "Get rule for payload %s", 
+							mapping_find(payload_type_m,current_payload->get_type(current_payload)));
 		
 		status = this->get_payload_rule(this,current_payload->get_type(current_payload),&payload_rule);
 		/* for payload types which are not found in supported payload list, it is presumed 

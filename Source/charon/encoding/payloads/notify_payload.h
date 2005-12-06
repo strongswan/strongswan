@@ -49,7 +49,7 @@ typedef enum notify_message_type_t notify_message_type_t;
 /** 
  * @brief Notify message types.
  * 
- * Ssee IKEv2 draft 3.10.1.
+ * See IKEv2 draft 3.10.1.
  * 
  * @ingroup payloads
  */
@@ -76,18 +76,22 @@ enum notify_message_type_t {
 
 /** 
  * String mappings for notify_message_type_t.
+ * 
+ * @ingroup payloads
  */
 extern mapping_t notify_message_type_m[];
-
 
 
 typedef struct notify_payload_t notify_payload_t;
 
 /**
- * Object representing an IKEv2-Notify Payload.
+ * @brief Class representing an IKEv2-Notify Payload.
  * 
  * The Notify Payload format is described in Draft section 3.10.
- *
+ * 
+ * @b Constructors:
+ * - notify_payload_create()
+ * - notify_payload_create_from_protocol_and_type()
  *
  * @ingroup payloads
  */
@@ -191,7 +195,7 @@ notify_payload_t *notify_payload_create();
  * 
  * @param protocol_id			protocol id (IKE, AH or ESP)
  * @param notify_message_type	notify type (see notify_message_type_t)
- * @return						created notify_payload_t object
+ * @return						notify_payload_t object
  * 
  * @ingroup payloads
  */

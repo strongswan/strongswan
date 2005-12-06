@@ -37,7 +37,7 @@
 typedef enum cert_encoding_t cert_encoding_t;
 
 /**
- * Cert Encoding.
+ * @brief Certificate encoding, as described in IKEv2 draft section 3.6
  * 
  * @ingroup payloads
  */
@@ -56,6 +56,11 @@ enum cert_encoding_t {
 	HASH_AND_URL_X509_BUNDLE = 13
 };
 
+/**
+ * string mappings for cert_encoding_t.
+ * 
+ * @ingroup payloads
+ */
 extern mapping_t cert_encoding_m[];
 
 
@@ -65,11 +70,17 @@ typedef struct cert_payload_t cert_payload_t;
  * Object representing an IKEv2 CERT payload.
  * 
  * The CERT payload format is described in draft section 3.6.
+ * This is just a dummy implementation to fullfill the standards
+ * requirements. A full implementation would offer setters/getters
+ * for the different encoding types.
+ * 
+ * @b Constructors:
+ * - cert_payload_create()
  * 
  * @ingroup payloads
- * 
  */
 struct cert_payload_t {
+	
 	/**
 	 * The payload_t interface.
 	 */
@@ -77,7 +88,6 @@ struct cert_payload_t {
 
 	/**
 	 * @brief Set the CERT encoding.
-	 * 
 	 *
 	 * @param this 			calling cert_payload_t object
 	 * @param encoding		CERT encoding
@@ -125,7 +135,7 @@ struct cert_payload_t {
 	/**
 	 * @brief Destroys an cert_payload_t object.
 	 *
-	 * @param this 	cert_payload_t object to destroy
+	 * @param this 			cert_payload_t object to destroy
 	 */
 	void (*destroy) (cert_payload_t *this);
 };
@@ -133,7 +143,7 @@ struct cert_payload_t {
 /**
  * @brief Creates an empty cert_payload_t object.
  * 
- * @return				created cert_payload_t object
+ * @return cert_payload_t object
  * 
  * @ingroup payloads
  */

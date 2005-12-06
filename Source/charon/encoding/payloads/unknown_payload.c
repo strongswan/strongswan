@@ -101,6 +101,7 @@ encoding_rule_t unknown_payload_encodings[] = {
  */
 static status_t verify(private_unknown_payload_t *this)
 {
+	/* can't do any checks, so we assume its good */
 	return SUCCESS;
 }
 

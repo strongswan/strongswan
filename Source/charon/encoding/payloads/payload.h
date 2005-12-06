@@ -3,7 +3,6 @@
  * 
  * @brief Interface payload_t.
  * 
- * 
  */
 
 /*
@@ -273,7 +272,7 @@ struct payload_t {
  * an unknwon_paylod is created with the chunk of data in it.
  * 
  * @param type		type of the payload to create
- * @return			created payload
+ * @return			payload_t object
  */
 payload_t *payload_create(payload_type_t type);
 

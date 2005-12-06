@@ -1044,7 +1044,6 @@ parser_t *parser_create(chunk_t data)
 	this->public.get_remaining_byte_count = (int (*) (parser_t *))get_remaining_byte_count;
 	this->public.destroy = (void(*)(parser_t*)) destroy;
 	
-		
 	this->parse_uint4 = parse_uint4;
 	this->parse_uint8 = parse_uint8;
 	this->parse_uint15 = parse_uint15;

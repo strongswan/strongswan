@@ -37,12 +37,14 @@
 typedef struct vendor_id_payload_t vendor_id_payload_t;
 
 /**
- * Object representing an IKEv2 VENDOR ID payload.
+ * @brief Class representing an IKEv2 VENDOR ID payload.
  * 
  * The VENDOR ID payload format is described in draft section 3.12.
  * 
- * @ingroup payloads
+ * @b Constructors:
+ * - vendor_id_payload_create()
  * 
+ * @ingroup payloads
  */
 struct vendor_id_payload_t {
 	/**
@@ -91,7 +93,7 @@ struct vendor_id_payload_t {
 /**
  * @brief Creates an empty vendor_id_payload_t object.
  * 
- * @return				created vendor_id_payload_t object
+ * @return vendor_id_payload_t object
  * 
  * @ingroup payloads
  */

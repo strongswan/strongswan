@@ -257,7 +257,7 @@ static void set_initiator (private_id_payload_t *this,bool is_initiator)
 /**
  * Implementation of id_payload_t.get_identification.
  */
-static identification_t * get_identification (private_id_payload_t *this)
+static identification_t *get_identification (private_id_payload_t *this)
 {
 	return identification_create_from_encoding(this->id_type,this->id_data);
 }
@@ -271,7 +271,6 @@ static void destroy(private_id_payload_t *this)
 	{
 		allocator_free_chunk(&(this->id_data));
 	}
-	
 	allocator_free(this);	
 }
 

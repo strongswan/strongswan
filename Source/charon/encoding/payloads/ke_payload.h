@@ -27,14 +27,6 @@
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_substructure.h>
 #include <utils/linked_list.h>
-
-/**
- * Critical flag must not be set.
- * 
- * @ingroup payloads
- */
-#define KE_PAYLOAD_CRITICAL_FLAG FALSE;
-
 /**
  * KE payload length in bytes without any key exchange data.
  * 
@@ -46,9 +38,12 @@
 typedef struct ke_payload_t ke_payload_t;
 
 /**
- * Object representing an IKEv2-KE Payload.
+ * @brief Class representing an IKEv2-KE Payload.
  * 
  * The KE Payload format is described in RFC section 3.4.
+ * 
+ * @b Constructors:
+ * - ke_payload_create()
  * 
  * @ingroup payloads
  */
@@ -105,7 +100,7 @@ struct ke_payload_t {
 /**
  * @brief Creates an empty ke_payload_t object
  * 
- * @return			created ke_payload_t object
+ * @return ke_payload_t object
  * 
  * @ingroup payloads
  */

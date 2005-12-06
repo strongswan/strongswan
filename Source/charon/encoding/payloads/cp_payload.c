@@ -34,11 +34,11 @@
  * String mappings for config_type_t.
  */
 mapping_t config_type_m[] = {
-{CFG_REQUEST, "CFG_REQUEST"},
-{CFG_REPLY, "CFG_REPLY"},
-{CFG_SET, "CFG_SET"},
-{CFG_ACK, "CFG_ACK"},
-{MAPPING_END, NULL}
+	{CFG_REQUEST, "CFG_REQUEST"},
+	{CFG_REPLY, "CFG_REPLY"},
+	{CFG_SET, "CFG_SET"},
+	{CFG_ACK, "CFG_ACK"},
+	{MAPPING_END, NULL}
 };
 
 

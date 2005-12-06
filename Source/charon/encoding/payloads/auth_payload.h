@@ -61,20 +61,28 @@ enum auth_method_t {
     DSS_DIGITAL_SIGNATURE = 3,
 };
 
+/**
+ * string mappings for auth method.
+ * 
+ * @ingroup payloads
+ */
 extern mapping_t auth_method_m[];
 
 
 typedef struct auth_payload_t auth_payload_t;
 
 /**
- * Object representing an IKEv2 AUTH payload.
+ * @brief Object representing an IKEv2 AUTH payload.
  * 
  * The AUTH payload format is described in draft section 3.8.
  * 
- * @ingroup payloads
+ * @b Constructors:
+ * - auth_payload_create()
  * 
+ * @ingroup payloads
  */
 struct auth_payload_t {
+	
 	/**
 	 * The payload_t interface.
 	 */
@@ -82,10 +90,9 @@ struct auth_payload_t {
 
 	/**
 	 * @brief Set the AUTH method.
-	 * 
 	 *
 	 * @param this 			calling auth_payload_t object
-	 * @param method			Method of AUTH
+	 * @param method		auth_method_t to use
 	 */
 	void (*set_auth_method) (auth_payload_t *this, auth_method_t method);
 	
@@ -93,7 +100,7 @@ struct auth_payload_t {
 	 * @brief Get the AUTH method.
 	 *
 	 * @param this 			calling auth_payload_t object
-	 * @return				Method of the AUTH 
+	 * @return				auth_method_t used
 	 */
 	auth_method_t (*get_auth_method) (auth_payload_t *this);
 	
@@ -110,7 +117,7 @@ struct auth_payload_t {
 	/**
 	 * @brief Get the AUTH data.
 	 * 
-	 * Returned data are a copy of the internal one
+	 * Returned data are a copy of the internal one.
 	 *
 	 * @param this 			calling auth_payload_t object
 	 * @return				AUTH data as chunk_t
@@ -130,7 +137,7 @@ struct auth_payload_t {
 	/**
 	 * @brief Destroys an auth_payload_t object.
 	 *
-	 * @param this 	auth_payload_t object to destroy
+	 * @param this 			auth_payload_t object to destroy
 	 */
 	void (*destroy) (auth_payload_t *this);
 };
@@ -138,7 +145,7 @@ struct auth_payload_t {
 /**
  * @brief Creates an empty auth_payload_t object.
  * 
- * @return				created auth_payload_t object
+ * @return auth_payload_t object
  * 
  * @ingroup payloads
  */
