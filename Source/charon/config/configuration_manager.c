@@ -216,7 +216,6 @@ struct private_configuration_manager_t {
 	/**
 	 * Adds a new IKE_SA configuration.
 	 * 
-	 * 
 	 * @param this				calling object
 	 * @param name				name for the configuration
 	 * @param init_config		init_config_t object
@@ -226,7 +225,6 @@ struct private_configuration_manager_t {
 	
 	/**
 	 * Adds a new preshared secret.
-	 * 
 	 * 
 	 * @param this				calling object
 	 * @param type				type of identification
@@ -238,7 +236,6 @@ struct private_configuration_manager_t {
 	/**
 	 * Adds a new rsa private key.
 	 * 
-	 * 
 	 * @param this				calling object
 	 * @param type				type of identification
 	 * @param id_string			identification as string
@@ -249,7 +246,6 @@ struct private_configuration_manager_t {
 	
 	/**
 	 * Adds a new rsa public key.
-	 * 
 	 * 
 	 * @param this				calling object
 	 * @param type				type of identification

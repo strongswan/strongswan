@@ -488,11 +488,7 @@ static void add_payload(private_message_t *this, payload_t *payload)
  */
 static void set_source(private_message_t *this, host_t *host)
 {
-	if (this->packet->source != NULL)
-	{
-		this->packet->source->destroy(this->packet->source);	
-	}
-	this->packet->source = host;
+	this->packet->set_source(this->packet, host);
 }
 
 /**
@@ -500,11 +496,8 @@ static void set_source(private_message_t *this, host_t *host)
  */
 static void set_destination(private_message_t *this, host_t *host)
 {
-	if (this->packet->destination != NULL)
-	{
-		this->packet->destination->destroy(this->packet->destination);	
-	}
-	this->packet->destination = host;
+
+	this->packet->set_destination(this->packet, host);
 }
 
 /**
@@ -512,7 +505,7 @@ static void set_destination(private_message_t *this, host_t *host)
  */
 static host_t* get_source(private_message_t *this)
 {
-	return this->packet->source;
+	return this->packet->get_source(this->packet);
 }
 
 /**
@@ -520,7 +513,7 @@ static host_t* get_source(private_message_t *this)
  */
 static host_t * get_destination(private_message_t *this)
 {
-	return this->packet->destination;
+	return this->packet->get_destination(this->packet);
 }
 
 /**
@@ -542,6 +535,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	payload_t *payload, *next_payload;
 	iterator_t *iterator;
 	status_t status;
+	chunk_t packet_data;
 	
 	this->logger->log(this->logger, CONTROL, "Generating message of type %s, contains %d payloads",
 					  mapping_find(exchange_type_m,this->exchange_type),
@@ -554,11 +548,11 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 		return INVALID_STATE;
 	}
 	
-	if (this->packet->source == NULL ||
-		this->packet->destination == NULL) 
+	if (this->packet->get_source(this->packet) == NULL ||
+		this->packet->get_destination(this->packet) == NULL) 
 	{
 		this->logger->log(this->logger, ERROR|MORE, "%s not defined",
-							!this->packet->source ? "source" : "destination");
+							!this->packet->get_source(this->packet) ? "source" : "destination");
 		return INVALID_STATE;
 	}
 	
@@ -615,12 +609,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	ike_header->destroy(ike_header);
 		
 	/* build packet */
-	if (this->packet->data.ptr != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | MOST, "Replace last generated packet data");
-		allocator_free(this->packet->data.ptr);
-	}	
-	generator->write_to_chunk(generator, &(this->packet->data));
+	generator->write_to_chunk(generator, &packet_data);
 	generator->destroy(generator);
 	
 	/* if last payload is of type encrypted, integrity checksum if necessary */
@@ -628,12 +617,14 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	{
 		this->logger->log(this->logger, CONTROL | MORE, "Build signature on whole message");
 		encryption_payload_t *encryption_payload = (encryption_payload_t*)payload;
-		status = encryption_payload->build_signature(encryption_payload, this->packet->data);
+		status = encryption_payload->build_signature(encryption_payload, packet_data);
 		if (status != SUCCESS)
 		{
 			return status;
 		}
 	}
+	
+	this->packet->set_data(this->packet, packet_data);
 	
 	/* clone packet for caller */
 	*packet = this->packet->clone(this->packet);
@@ -656,7 +647,7 @@ static packet_t *get_packet (private_message_t *this)
  */
 static chunk_t get_packet_data (private_message_t *this)
 {
-	return allocator_clone_chunk(this->packet->data);
+	return allocator_clone_chunk(this->packet->get_data(this->packet));
 }
 
 /**
@@ -930,7 +921,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			/* decrypt */			
 			encryption_payload->set_transforms(encryption_payload, crypter, signer);
 			this->logger->log(this->logger, CONTROL | MORE, "Verify signature of encryption payload");
-			status = encryption_payload->verify_signature(encryption_payload, this->packet->data);
+			status = encryption_payload->verify_signature(encryption_payload, this->packet->get_data(this->packet));
 			if (status != SUCCESS)
 			{
 				this->logger->log(this->logger, ERROR | MORE, "encryption payload signature invalid");
@@ -1206,7 +1197,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->payloads = linked_list_create();
 	
 	/* parser is created from data of packet */
- 	this->parser = parser_create(this->packet->data);
+ 	this->parser = parser_create(this->packet->get_data(this->packet));
 		
 	this->logger = charon->logger_manager->create_logger(charon->logger_manager, MESSAGE, NULL);
 

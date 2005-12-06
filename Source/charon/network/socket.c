@@ -63,32 +63,32 @@ struct private_socket_t{
 status_t receiver(private_socket_t *this, packet_t **packet)
 {
 	char buffer[MAX_PACKET];
+	chunk_t data;
 	int oldstate;
+	host_t *source, *dest;
 	packet_t *pkt = packet_create();
 
 	/* add packet destroy handler for cancellation, enable cancellation */
 	pthread_cleanup_push((void(*)(void*))pkt->destroy, (void*)pkt);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	
-	pkt->source = host_create(AF_INET, "0.0.0.0", 0);
-	pkt->destination = host_create(AF_INET, "0.0.0.0", 0);
-
+	source = host_create(AF_INET, "0.0.0.0", 0);
+	dest = host_create(AF_INET, "0.0.0.0", 0);
+	pkt->set_source(pkt, source);
+	pkt->set_destination(pkt, dest);
 
 	this->logger->log(this->logger, CONTROL|MORE, "going to read from socket");
 	/* do the read */
-	pkt->data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0,
-							pkt->source->get_sockaddr(pkt->source), 
-							pkt->source->get_sockaddr_len(pkt->source));
+	data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0,
+						source->get_sockaddr(source), 
+						source->get_sockaddr_len(source));
 
 	/* reset cancellation, remove packet destroy handler (without executing) */
 	pthread_setcancelstate(oldstate, NULL);
 	pthread_cleanup_pop(0);
 
 
-	/* TODO: get senders destination address, using
-	 * IP_PKTINFO and recvmsg */
-
-	if (pkt->data.len < 0)
+	if (data.len < 0)
 	{
 		pkt->destroy(pkt);
 		this->logger->log(this->logger, ERROR, "error reading from socket: %s", strerror(errno));
@@ -96,12 +96,14 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	}
 	
 	this->logger->log(this->logger, CONTROL, "received packet from %s:%d",
-						pkt->source->get_address(pkt->source), 
-						pkt->source->get_port(pkt->source));
+						source->get_address(source), 
+						source->get_port(source));
 
 	/* fill in packet */
-	pkt->data.ptr = allocator_alloc(pkt->data.len);
-	memcpy(pkt->data.ptr, buffer, pkt->data.len);
+	data.ptr = allocator_alloc(data.len);
+	memcpy(data.ptr, buffer, data.len);
+	
+	pkt->set_data(pkt, data);
 
 	/* return packet */
 	*packet = pkt;
@@ -115,17 +117,22 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 status_t sender(private_socket_t *this, packet_t *packet)
 {
 	ssize_t bytes_sent;
+	chunk_t data;
+	host_t *source, *dest;
+	
+	source = packet->get_source(packet);
+	dest = packet->get_destination(packet);
+	data = packet->get_data(packet);
 
 
 	this->logger->log(this->logger, CONTROL, "sending packet to %s:%d",
-						packet->destination->get_address(packet->destination), 
-						packet->destination->get_port(packet->destination));
+						dest->get_address(dest), 
+						dest->get_port(dest));
 	/* send data */
-	bytes_sent = sendto(this->socket_fd, packet->data.ptr, packet->data.len,
-						0, packet->destination->get_sockaddr(packet->destination), 
-						*(packet->destination->get_sockaddr_len(packet->destination)));
+	bytes_sent = sendto(this->socket_fd, data.ptr, data.len, 0, 
+						dest->get_sockaddr(dest), *(dest->get_sockaddr_len(dest)));
 
-	if (bytes_sent != packet->data.len)
+	if (bytes_sent != data.len)
 	{
 		this->logger->log(this->logger, ERROR, "error writing to socket: %s", strerror(errno));
 		return FAILED;

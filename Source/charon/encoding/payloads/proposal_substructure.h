@@ -61,7 +61,7 @@ extern mapping_t protocol_id_m[];
 typedef struct proposal_substructure_t proposal_substructure_t;
 
 /**
- * Object representing an IKEv2-PROPOSAL SUBSTRUCTURE.
+ * @brief Class representing an IKEv2-PROPOSAL SUBSTRUCTURE.
  * 
  * The PROPOSAL SUBSTRUCTURE format is described in RFC section 3.3.1.
  * 

@@ -48,6 +48,8 @@ typedef struct certreq_payload_t certreq_payload_t;
  * @b Constructors:
  * - certreq_payload_create()
  * 
+ * @todo Implement payload functionality.
+ * 
  * @ingroup payloads
  */
 struct certreq_payload_t {

@@ -92,6 +92,8 @@ typedef struct notify_payload_t notify_payload_t;
  * @b Constructors:
  * - notify_payload_create()
  * - notify_payload_create_from_protocol_and_type()
+ * 
+ * @todo Build specified constructor/getter for notify's
  *
  * @ingroup payloads
  */

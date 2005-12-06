@@ -42,7 +42,7 @@ typedef struct ike_proposal_t ike_proposal_t;
 struct ike_proposal_t {
 	/**
 	 * Encryption algorithm.
-	 * */
+	 */
 	encryption_algorithm_t encryption_algorithm;
 	
 	/**
@@ -177,7 +177,7 @@ struct init_config_t {
 	status_t (*select_proposal) (init_config_t *this, ike_proposal_t *proposals, size_t proposal_count, ike_proposal_t *selected_proposal);
 	
 	/**
-	 * Destroys a init_config_t object.
+	 * @brief Destroys a init_config_t object.
 	 * 
 	 * @param this	calling object
 	 */
@@ -185,9 +185,9 @@ struct init_config_t {
 };
 
 /**
- * Creates a init_config_t object.
+ * @brief Creates a init_config_t object.
  * 
- * @return  	- pointer to created init_config_t object.
+ * @return init_config_t object.
  * 
  * @ingroup config
  */

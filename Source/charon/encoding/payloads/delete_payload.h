@@ -46,6 +46,8 @@ typedef struct delete_payload_t delete_payload_t;
  * @b Constructors:
  * - delete_payload_create()
  * 
+ * @todo Implement better setter/getters
+ * 
  * @ingroup payloads
  */
 struct delete_payload_t {

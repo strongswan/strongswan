@@ -28,7 +28,7 @@
 typedef enum ts_type_t ts_type_t;
 
 /**
- * Traffic selector Types.
+ * Traffic selector types.
  * 
  * @ingroup config
  */
@@ -64,6 +64,10 @@ typedef struct traffic_selector_t traffic_selector_t;
  * 
  * A traffic selector defines an range of addresses
  * and a range of ports. 
+ * 
+ * @b Constructors:
+ * - traffic_selector_create_from_bytes()
+ * - traffic_selector_create_from_string()
  * 
  * @ingroup config
  */
@@ -158,8 +162,7 @@ struct traffic_selector_t {
 	/**
 	 * @brief Destroys the ts object
 	 * 
-	 * 
-	 * @param this				calling object
+	 * @param this		calling object
 	 */
 	void (*destroy) (traffic_selector_t *this);
 };
@@ -174,8 +177,8 @@ struct traffic_selector_t {
  * @param to_addr		end of address range as string
  * @param to_port		port number in host order
  * @return
- * 						- created traffic_selector_t
- * 						- NULL if invalid address strings
+ * 						- traffic_selector_t object
+ * 						- NULL if invalid address strings/protocol
  * 
  * @ingroup config
  */
@@ -195,9 +198,9 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
  * @param to_addr		end of address range as string, network
  * @param to_port		port number, host order
  * @return
- * 						- created traffic_selector_t
- * 						- NULL if invalid address strings
- * 
+ * 						- traffic_selector_t object
+ * 						- NULL if invalid address input/protocol
+ *
  * @ingroup config
  */
 traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from_address, int16_t from_port, chunk_t to_address, u_int16_t to_port);

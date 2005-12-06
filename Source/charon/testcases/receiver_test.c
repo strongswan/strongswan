@@ -58,15 +58,17 @@ void test_receiver(tester_t *tester)
 	job_t *job;
 	packet_t *received_packet;
 	receiver = receiver_create();
+	chunk_t test_data;
 
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
 		packet = packet_create();
-		packet->destination = host_create(AF_INET,DESTINATION_IP,PORT_TO_SEND);
-		packet->data.ptr = allocator_alloc_thing(int);
-		packet->data.len = ( sizeof(int));
-		*((int *) (packet->data.ptr)) = i;
-		charon->socket->send(charon->socket,packet);
+		packet->set_destination(packet, host_create(AF_INET,DESTINATION_IP,PORT_TO_SEND));
+		test_data.ptr = allocator_alloc_thing(int);
+		test_data.len = ( sizeof(int));
+		*((int *) (test_data.ptr)) = i;
+		packet->set_data(packet, test_data);
+		charon->socket->send(charon->socket, packet);
 		packet->destroy(packet);
 	}
 
@@ -76,8 +78,9 @@ void test_receiver(tester_t *tester)
 		tester->assert_true(tester, (job->get_type(job) == INCOMING_PACKET), "job type check");
 		
 		received_packet = ((incoming_packet_job_t *)(job))->get_packet((incoming_packet_job_t *)(job));
-		tester->assert_true(tester, (received_packet->data.len == (sizeof(int))), "received data length check");
-		tester->assert_true(tester, (i == *((int *)(received_packet->data.ptr))), "received data value check");
+		test_data = received_packet->get_data(received_packet);
+		tester->assert_true(tester, (test_data.len == (sizeof(int))), "received data length check");
+		tester->assert_true(tester, (i == *((int *)(test_data.ptr))), "received data value check");
 		received_packet->destroy(received_packet);
 
 		job->destroy(job);

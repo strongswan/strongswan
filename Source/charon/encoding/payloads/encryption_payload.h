@@ -186,7 +186,7 @@ struct encryption_payload_t {
 /**
  * @brief Creates an empty encryption_payload_t object.
  * 
- * @returnencryption_payload_t object
+ * @return encryption_payload_t object
  * 
  * @ingroup payloads
  */

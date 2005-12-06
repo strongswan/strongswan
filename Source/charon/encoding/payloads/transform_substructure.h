@@ -95,7 +95,7 @@ extern mapping_t extended_sequence_numbers_m[];
 typedef struct transform_substructure_t transform_substructure_t;
 
 /**
- * Object representing an IKEv2- TRANSFORM SUBSTRUCTURE.
+ * @brief Class representing an IKEv2- TRANSFORM SUBSTRUCTURE.
  * 
  * The TRANSFORM SUBSTRUCTURE format is described in RFC section 3.3.2.
  * 

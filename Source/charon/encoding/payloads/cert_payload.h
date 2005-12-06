@@ -67,7 +67,7 @@ extern mapping_t cert_encoding_m[];
 typedef struct cert_payload_t cert_payload_t;
 
 /**
- * Object representing an IKEv2 CERT payload.
+ * @brief Class representing an IKEv2 CERT payload.
  * 
  * The CERT payload format is described in draft section 3.6.
  * This is just a dummy implementation to fullfill the standards
@@ -76,6 +76,8 @@ typedef struct cert_payload_t cert_payload_t;
  * 
  * @b Constructors:
  * - cert_payload_create()
+ * 
+ * @todo Implement setters/getters for the different certificate encodings.
  * 
  * @ingroup payloads
  */

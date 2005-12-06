@@ -72,7 +72,7 @@ extern mapping_t auth_method_m[];
 typedef struct auth_payload_t auth_payload_t;
 
 /**
- * @brief Object representing an IKEv2 AUTH payload.
+ * @brief Class representing an IKEv2 AUTH payload.
  * 
  * The AUTH payload format is described in draft section 3.8.
  * 

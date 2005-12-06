@@ -63,7 +63,7 @@ struct private_host_t {
 /**
  * implements host_t.get_sockaddr
  */
-static sockaddr_t  *get_sockaddr(private_host_t *this)
+static sockaddr_t *get_sockaddr(private_host_t *this)
 {
 	return &(this->address);
 }

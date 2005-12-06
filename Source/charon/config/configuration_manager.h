@@ -38,8 +38,9 @@ typedef struct configuration_manager_t configuration_manager_t;
  * @b Constructors:
  * 	- configuration_manager_create()
  * 
- * @ingroup config
+ * @todo Build a (file) backend for the configuration manager.
  * 
+ * @ingroup config
  */
 struct configuration_manager_t { 
 
@@ -150,13 +151,13 @@ struct configuration_manager_t {
 	 * The returned preshared secret MUST NOT be destroyed cause it's managed by 
 	 * this configuration_manager_t object.
 	 * 
-	 * @param this						calling object
-	 * @param identification			identification_t object identifiying the ID.
-	 * @param[out] preshared_secret		the preshared secret will be written there.
+	 * @param this					calling object
+	 * @param identification		identification_t object identifiying the ID.
+	 * @param[out] preshared_secret	the preshared secret will be written there.
 	 * 
 	 * @return		
-	 * 									- NOT_FOUND	if no preshared secrets for specific ID could be found
-	 * 									- SUCCESS
+	 * 								- NOT_FOUND	if no preshared secrets for specific ID could be found
+	 * 								- SUCCESS
 	 */	
 	status_t (*get_shared_secret) (configuration_manager_t *this, identification_t *identification, chunk_t *preshared_secret);
 	
@@ -166,13 +167,13 @@ struct configuration_manager_t {
 	 * The returned rsa_public_key_t object MUST NOT be destroyed cause it's managed by 
 	 * this configuration_manager_t object.
 	 * 
-	 * @param this						calling object
-	 * @param identification			identification_t object identifiying the ID.
-	 * @param[out] public_key			the public key will be written there
+	 * @param this					calling object
+	 * @param identification		identification_t object identifiying the ID.
+	 * @param[out] public_key		the public key will be written there
 	 * 
 	 * @return		
-	 * 									- NOT_FOUND	if no key is configured for specific id
-	 * 									- SUCCESS
+	 * 								- NOT_FOUND	if no key is configured for specific id
+	 * 								- SUCCESS
 	 */	
 	status_t (*get_rsa_public_key) (configuration_manager_t *this, identification_t *identification, rsa_public_key_t **public_key);
 	
@@ -182,22 +183,20 @@ struct configuration_manager_t {
 	 * The returned rsa_private_key_t object MUST NOT be destroyed cause it's managed by 
 	 * this configuration_manager_t object.
 	 * 
-	 * @param this						calling object
-	 * @param identification			identification_t object identifiying the ID.
-	 * @param[out] private_key			the private key will be written there
+	 * @param this					calling object
+	 * @param identification		identification_t object identifiying the ID.
+	 * @param[out] private_key		the private key will be written there
 	 * 
 	 * @return		
-	 * 									- NOT_FOUND	if no key is configured for specific id
-	 * 									- SUCCESS
+	 * 								- NOT_FOUND	if no key is configured for specific id
+	 * 								- SUCCESS
 	 */	
 	status_t (*get_rsa_private_key) (configuration_manager_t *this, identification_t *identification, rsa_private_key_t **private_key);
 
 	/**
-	 * Destroys a configuration_manager_t object.
+	 * @brief Destroys a configuration_manager_t object.
 	 * 
-	 * @param this 						calling object
-	 * @return		
-	 * 									- SUCCESS
+	 * @param this 					calling object
 	 */
 	void (*destroy) (configuration_manager_t *this);
 };
@@ -208,8 +207,8 @@ struct configuration_manager_t {
  * @param first_retransmit_timeout 	first retransmit timeout in milliseconds
  * @param max_retransmit_count		max number of tries to retransmitted a requests (0 for infinite)
  * @param half_open_ike_sa_timeout  timeout after that a half open IKE_SA gets deleted
- * @return 
- * 									- pointer to created configuration_manager_t object
+ * @return 							configuration_manager_t object
+ * 
  * @ingroup config
  */
 configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count, u_int32_t half_open_ike_sa_timeout);

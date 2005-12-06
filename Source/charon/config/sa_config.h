@@ -270,7 +270,7 @@ struct sa_config_t {
  * @param auth_method		Method of authentication
  * @param ike_sa_lifetime	lifetime of this IKE_SA in milliseconds. IKE_SA will be deleted
  * 							after this lifetime!
- * @return 					created sa_config_t
+ * @return 					sa_config_t object
  * 
  * @ingroup config
  */

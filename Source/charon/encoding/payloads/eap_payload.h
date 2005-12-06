@@ -44,6 +44,8 @@ typedef struct eap_payload_t eap_payload_t;
  * @b Constructors:
  * - eap_payload_create()
  * 
+ * @todo Implement functionality for this payload
+ * 
  * @ingroup payloads
  */
 struct eap_payload_t {

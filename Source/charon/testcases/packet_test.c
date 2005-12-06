@@ -37,22 +37,19 @@ void test_packet(tester_t *tester)
 {
 	packet_t *packet = packet_create();
 	packet_t *packet2;
-	char * string_to_copy = "aha, soso";
+	chunk_t data;
+	char *string_to_copy = "aha, soso";
 	
-	packet->data.ptr = allocator_alloc(strlen(string_to_copy) + 1);
-	tester->assert_true(tester,(packet->data.ptr != NULL),"NULL pointer check");
+	data.len = strlen(string_to_copy) + 1;
+	data.ptr = allocator_alloc(data.len);
+	memcpy(data.ptr, string_to_copy, data.len);
 	
-	packet->data.len = strlen(string_to_copy) + 1;
-	strcpy(packet->data.ptr,string_to_copy);
-
-	tester->assert_true(tester,(packet != NULL),"NULL pointer check");
+	packet->set_data(packet, data);
 	packet2 = packet->clone(packet);
-
-	tester->assert_false(tester,(packet->data.ptr == packet2->data.ptr),"value pointer check");
+	data = packet2->get_data(packet2);
 	
-	tester->assert_true(tester,(packet->data.len == (strlen(string_to_copy) + 1)),"value length check");
-	
-	tester->assert_true(tester,(memcmp(packet->data.ptr,packet2->data.ptr,packet->data.len) == 0),"cloned value check");
+	tester->assert_true(tester,(data.len == (strlen(string_to_copy) + 1)),"value length check");
+	tester->assert_true(tester,(memcmp(data.ptr,string_to_copy,data.len) == 0),"cloned value check");
 	
 	packet2->destroy(packet2);
 	packet->destroy(packet);

@@ -39,11 +39,19 @@ typedef struct host_t host_t;
 /**
  * @brief Representates a Host
  * 
- * Host object, identifies a host and defines some useful functions on it.
+ * Host object, identifies a address:port pair and defines some 
+ * useful functions on it.
+ * 
+ * @b Constructors:
+ * - host_create()
+ * - host_create_from_chunk()
+ * 
+ * @todo Add IPv6 support
  * 
  * @ingroup network
  */
 struct host_t {
+	
 	/** 
 	 * @brief Build a clone of this host object.
 	 * 
@@ -78,11 +86,23 @@ struct host_t {
 	
 	/**
 	 * @brief Gets the address as xfrm_address_t.
+	 * 
+	 * This function allows the conversion to an
+	 * xfrm_address_t, used for netlink communication
+	 * with the kernel.
+	 * 
+	 * @see kernel_interface_t.
+	 * 
+	 * @param this			calling object
+	 * @return				address in xfrm_address_t format
 	 */
 	xfrm_address_t (*get_xfrm_addr) (host_t *this);
 	
 	/**
-	 * @brief Gets the address as xfrm_address_t.
+	 * @brief Gets the family of the address
+	 * 
+	 * @param this			calling object
+	 * @return				family
 	 */
 	int (*get_family) (host_t *this);
 	
@@ -154,8 +174,8 @@ struct host_t {
  * @param address		string of an address, such as "152.96.193.130"
  * @param port			port number
  * @return 				
- * 						- the host_t object, or 
- * 						- NULL, when family not supported.
+ * 						- host_t object 
+ * 						- NULL, if family not supported.
  * 
  * @ingroup network
  */
@@ -170,10 +190,12 @@ host_t *host_create(int family, char *address, u_int16_t port);
  * @param address		address as 4 byte chunk_t in networ order
  * @param port			port number
  * @return 				
- * 						- the host_t object, or 
- * 						- NULL, when family not supported or chunk_t length not 4 bytes.
+ * 						- host_t object 
+ * 						- NULL, if family not supported or chunk_t length not 4 bytes.
  * 
  * @ingroup network
  */
 host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
+
+
 #endif /*HOST_H_*/

@@ -49,7 +49,7 @@ extern mapping_t transform_attribute_type_m[];
 typedef struct transform_attribute_t transform_attribute_t;
 
 /**
- * Object representing an IKEv2- TRANSFORM Attribute.
+ * @brief Class representing an IKEv2- TRANSFORM Attribute.
  * 
  * The TRANSFORM ATTRIBUTE format is described in RFC section 3.3.5.
  * 

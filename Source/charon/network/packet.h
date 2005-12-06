@@ -29,30 +29,85 @@
 
 
 typedef struct packet_t packet_t;
+
 /**
  * @brief Abstraction of an UDP-Packet, contains data, sender and receiver.
+ * 
+ * @b Constructors:
+ * - packet_create()
  * 
  * @ingroup network
  */
 struct packet_t {
 
 	/**
-	 * source address structure
+	 * @brief Set the source address.
+	 * 
+	 * Set host_t is now owned by packet_t, it will destroy
+	 * it if necessary.
+	 * 
+	 * @param this		calling object
+	 * @param source	address to set as source
 	 */
-	host_t *source;
-		
+	void (*set_source) (packet_t *packet, host_t *source);
+	
 	/**
-	 * destination address structure
+	 * @brief Set the destination address.
+	 * 
+	 * Set host_t is now owned by packet_t, it will destroy
+	 * it if necessary.
+	 * 
+	 * @param this		calling object
+	 * @param source	address to set as destination
 	 */
-	host_t *destination;
-	 
-	 /**
-	  * message data
-	  */
-	chunk_t data;
-		
+	void (*set_destination) (packet_t *packet, host_t *destination);
+	
 	/**
-	 * @brief 			Clones a packet_t object.
+	 * @brief Get the source address.
+	 * 
+	 * Set host_t is still owned by packet_t, clone it
+	 * if needed.
+	 * 
+	 * @param this		calling object
+	 * @return			source address
+	 */
+	host_t *(*get_source) (packet_t *packet);
+	
+	/**
+	 * @brief Get the destination address.
+	 * 
+	 * Set host_t is still owned by packet_t, clone it
+	 * if needed.
+	 * 
+	 * @param this		calling object
+	 * @return			destination address
+	 */
+	host_t *(*get_destination) (packet_t *packet);
+	
+	/**
+	 * @brief Get the data from the packet.
+	 * 
+	 * The data pointed by the chunk is still owned 
+	 * by the packet. Clone it if needed.
+	 * 
+	 * @param this		calling object
+	 * @return			chunk containing the data
+	 */
+	chunk_t (*get_data) (packet_t *packet);
+	
+	/**
+	 * @brief Set the data in the packet.
+	 * 
+	 * Supplied chunk data is now owned by the 
+	 * packet. It will free it.
+	 * 
+	 * @param this		calling object
+	 * @param data		chunk with data to set
+	 */
+	void (*set_data) (packet_t *packet, chunk_t data);
+	
+	/**
+	 * @brief Clones a packet_t object.
 	 *  
 	 * @param packet	calling object
 	 * @param clone		pointer to a packet_t object pointer where the new object is stored
@@ -60,7 +115,7 @@ struct packet_t {
 	packet_t* (*clone) (packet_t *packet);
 	
 	/**
-	 * @brief 			Destroy the packet, freeing contained data.
+	 * @brief Destroy the packet, freeing contained data.
 	 *  
 	 * @param packet	packet to destroy	
 	 */
@@ -70,10 +125,11 @@ struct packet_t {
 /**
  * @brief create an empty packet
  *  
- * @return  			created packet_t object
+ * @return packet_t object
  * 
  * @ingroup network
  */
 packet_t *packet_create();
+
 
 #endif /*PACKET_H_*/

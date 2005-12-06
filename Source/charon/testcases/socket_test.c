@@ -38,14 +38,16 @@ void test_socket(tester_t *tester)
 	socket_t *skt = socket_create(4500);
 	packet_t *pkt = packet_create(AF_INET);
 	char *test_string = "Testing functionality of socket_t";
+	chunk_t data;
 
 
-	pkt->data.ptr = allocator_alloc(strlen(test_string) + 1);
-	memcpy(pkt->data.ptr,test_string,strlen(test_string) + 1);
-	pkt->data.len = strlen(test_string) + 1;
+	data.ptr = allocator_alloc(strlen(test_string) + 1);
+	memcpy(data.ptr,test_string,strlen(test_string) + 1);
+	data.len = strlen(test_string) + 1;
 
 	/* send to previously bound socket */
-	pkt->destination = host_create(AF_INET, "127.0.0.1", 4500);
+	pkt->set_destination(pkt, host_create(AF_INET, "127.0.0.1", 4500));
+	pkt->set_data(pkt, data);
 
 	/* send packet_count packets */
    	for (current = 0; current < packet_count; current++)
@@ -61,7 +63,8 @@ void test_socket(tester_t *tester)
    	for (current = 0; current < packet_count; current++)
    	{
 		skt->receive(skt, &pkt);
-		tester->assert_false(tester, strcmp(test_string, pkt->data.ptr), "packet exchange");
+		data = pkt->get_data(pkt);
+		tester->assert_false(tester, strcmp(test_string, data.ptr), "packet exchange");
 		pkt->destroy(pkt);
    	}
 
