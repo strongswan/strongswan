@@ -1,7 +1,7 @@
 /**
  * @file daemon.h
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Interface of daemon_t.
  * 
  */
 
@@ -23,28 +23,26 @@
 #ifndef DAEMON_H_
 #define DAEMON_H_
 
-
-
 #include <threads/sender.h>
 #include <threads/receiver.h>
 #include <threads/scheduler.h>
-#include <threads/thread_pool.h>
 #include <threads/prime_pool.h>
+#include <threads/thread_pool.h>
+#include <network/socket.h>
 #include <sa/ike_sa_manager.h>
 #include <queues/send_queue.h>
 #include <queues/job_queue.h>
-#include <network/socket.h>
 #include <queues/event_queue.h>
 #include <utils/logger_manager.h>
 #include <config/configuration_manager.h>
 
 /**
- * Name of the daemon
+ * Name of the daemon.
  */
 #define DAEMON_NAME "charon"
 
 /**
- * Number of threads in the thread pool
+ * @brief Number of threads in the thread pool.
  * 
  * There are several other threads, this defines
  * only the number of threads in thread_pool_t.
@@ -52,13 +50,14 @@
 #define NUMBER_OF_WORKING_THREADS 4
 
 /**
- * Port on which the daemon will 
- * listen for incoming traffic.
+ * UDP Port on which the daemon will listen for incoming traffic.
  */
 #define IKEV2_UDP_PORT 500
 
 /**
- * First retransmit timeout in milliseconds.
+ * @brief First retransmit timeout in milliseconds.
+ * 
+ * Timeout value is increasing in each retransmit round.
  */
 #define RETRANSMIT_TIMEOUT 3000
 
@@ -68,79 +67,97 @@
 #define HALF_OPEN_IKE_SA_TIMEOUT 30000
 
 /**
- * Max retransmit count. 0 for infinite.
+ * @brief Max retransmit count.
+ * 
+ * 0 for infinite. The max time a half open IKE_SA is alive is set by 
+ * RETRANSMIT_TIMEOUT.
  */
 #define MAX_RETRANSMIT_COUNT 0
 
+
 /**
- * Default loglevel to use. This is the
- * maximum allowed level for ever context, the definiton
+ * Max number of primes to precompute per prime type.
+ */
+#define PRIME_PRE_COMPUTATION_LIMIT 5
+
+/**
+ * @brief Default loglevel for every logger context.
+ * 
+ * This is the maximum allowed level for ever context, the definiton
  * of the context may be less verbose.
  */
 #define DEFAULT_LOGLEVEL CONTROL | ERROR
 
+
 typedef struct daemon_t daemon_t;
 
 /**
- * @brief Main class of daemon, contains some globals 
+ * @brief Main class of daemon, contains some globals.
  */ 
 struct daemon_t {
 	/**
-	 * socket_t instance
+	 * A socket_t instance.
 	 */
 	socket_t *socket;
+	
 	/**
-	 * send_queue_t instance
+	 * A send_queue_t instance.
 	 */
+	 
 	send_queue_t *send_queue;
+	
 	/**
-	 * job_queue_t instance
+	 * A job_queue_t instance.
 	 */
 	job_queue_t *job_queue;
+	
 	/**
-	 * event_queue_t instance
+	 * A event_queue_t instance.
 	 */
 	event_queue_t *event_queue;
+	
 	/**
-	 * logger_manager_t instance
+	 * A logger_manager_t instance.
 	 */
 	logger_manager_t *logger_manager;
+
 	/**
-	 * ike_sa_manager_t instance
+	 * A ike_sa_manager_t instance.
 	 */
 	ike_sa_manager_t *ike_sa_manager;
+	
 	/**
-	 * configuration_manager_t instance
+	 * A configuration_manager_t instance.
 	 */
 	configuration_manager_t *configuration_manager;
 	
 	/**
-	 * Sender-Thread
+	 * The Sender-Thread.
  	 */
 	sender_t *sender;
 	
 	/**
-	 * Receiver-Thread
+	 * The Receiver-Thread.
 	 */
 	receiver_t *receiver;
 	
 	/**
-	 * Scheduler-Thread
+	 * The Scheduler-Thread.
 	 */
 	scheduler_t *scheduler;
 	
 	/**
-	 * Thread pool holding the worker threads
+	 * The Thread pool managing the worker threads.
 	 */
 	thread_pool_t *thread_pool;
 	
 	/**
-	 * Low-priority thread which generates primes
+	 * Low-priority thread which generates primes.
 	 */
 	prime_pool_t *prime_pool;
 	
 	/**
-	 * @brief shut down the daemon
+	 * @brief Shut down the daemon.
 	 * 
 	 * @param this		the daemon to kill
 	 * @param reason	describition why it will be killed
@@ -149,7 +166,7 @@ struct daemon_t {
 };
 
 /**
- * one and only instance of the daemon
+ * One and only instance of the daemon.
  */
 extern daemon_t *charon;
 

@@ -1,7 +1,7 @@
 /**
  * @file daemon.c
  * 
- * @brief Main of IKEv2-Daemon
+ * @brief Implementation of daemon_t and main of IKEv2-Daemon.
  * 
  */
 
@@ -26,69 +26,73 @@
 
 #include "daemon.h" 
 
-
 #include <types.h>
 #include <utils/allocator.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 
 
-
-
 typedef struct private_daemon_t private_daemon_t;
 
 /**
- * Private additions to daemon_t, contains
- * threads and internal functions.
+ * Private additions to daemon_t, contains threads and internal functions.
  */
 struct private_daemon_t {
 	/**
-	 * public members of daemon_t
+	 * Public members of daemon_t.
 	 */
 	daemon_t public;
 	
 	/**
-	 * logger_t object assigned for daemon things
+	 * A logger_t object assigned for daemon things.
 	 */
 	logger_t *logger;
 
 	/**
-	 * Signal set used for signal handling
+	 * Signal set used for signal handling.
 	 */
 	sigset_t signal_set;
 	
 	/** 
-	 * thread_id of main-thread
+	 * The thread_id of main-thread.
 	 */
 	pthread_t main_thread_id;
 	
 	/**
-	 * main loop
+	 * Main loop function.
+	 * 
+	 * @param this 	calling object
 	 */
 	void (*run) (private_daemon_t *this);
 	
 	/**
-	 * a routine to add jobs for testing
+	 * A routine to add jobs for testing.
+	 * 
+	 * @param this 	calling object
 	 */
 	void (*build_test_jobs) (private_daemon_t *this);
 	
 	/**
-	 * initializing daemon
+	 * Initialize the daemon.
+	 * 
+	 * @param this 	calling object
 	 */
 	void (*initialize) (private_daemon_t *this);
 	
 	/**
-	 * destroy the daemon
+	 * Destroy the daemon.
+	 * 
+	 * @param this 	calling object
 	 */
 	void (*destroy) (private_daemon_t *this);
 };
 
 /** 
- * instance of the daemon 
+ * One and only instance of the daemon.
  */
 daemon_t *charon;
 
 /**
- * Loop of the main thread, waits for signals
+ * Implementation of private_daemon_t.run.
  */
 static void run(private_daemon_t *this)
 {	
@@ -112,11 +116,11 @@ static void run(private_daemon_t *this)
 			}
 			case SIGINT:
 			{
-				this->logger->log(this->logger, CONTROL, "Signal of type SIGINT received. Exit main loop.");
+				this->logger->log(this->logger, CONTROL, "Signal of type SIGINT received. Exit main loop");
 				return;
 			}
 			case SIGTERM:
-				this->logger->log(this->logger, CONTROL, "Signal of type SIGTERM received. Exit main loop.");
+				this->logger->log(this->logger, CONTROL, "Signal of type SIGTERM received. Exit main loop");
 				return;
 			default:
 			{
@@ -128,12 +132,12 @@ static void run(private_daemon_t *this)
 }
 
 /**
- * Initialize the destruction of the daemon
+ * Implementation of daemon_t.kill.
  */
 static void kill_daemon(private_daemon_t *this, char *reason)
 {
 	/* we send SIGTERM, so the daemon can cleanly shut down */
-	this->logger->log(this->logger, ERROR, "Killing daemon: %s", reason);
+	this->logger->log(this->logger, CONTROL, "Killing daemon: %s", reason);
 	if (this->main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
@@ -150,7 +154,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 }
 
 /**
- * build some jobs to test daemon functionality
+ * Implementation of private_daemon_t.build_test_jobs.
  */
 static void build_test_jobs(private_daemon_t *this)
 {
@@ -164,7 +168,7 @@ static void build_test_jobs(private_daemon_t *this)
 }
 
 /**
- * Initialize global objects and threads
+ * Implementation of private_daemon_t.initialize.
  */
 static void initialize(private_daemon_t *this)
 {
@@ -178,7 +182,7 @@ static void initialize(private_daemon_t *this)
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();
-	this->public.prime_pool = prime_pool_create(10);
+	this->public.prime_pool = prime_pool_create(PRIME_PRE_COMPUTATION_LIMIT);
 	this->public.thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
 }
 
@@ -283,7 +287,7 @@ private_daemon_t *daemon_create()
 }
 
 /**
- * Main function, manages the daemon
+ * Main function, manages the daemon.
  */
 int main(int argc, char *argv[])
 {
