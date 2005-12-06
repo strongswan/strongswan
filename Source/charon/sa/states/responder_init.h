@@ -30,25 +30,27 @@
 typedef struct responder_init_t responder_init_t;
 
 /**
- * @brief This class represents an IKE_SA state when initializing.
- * a connection as responder.
+ * @brief This class represents an IKE_SA state when 
+ * initializing a connection as responder.
+ * 
+ * @b Constructors:
+ *  - responder_init_create()
  * 
  * @ingroup states
  */
 struct responder_init_t {
 	/**
-	 * methods of the state_t interface
+	 * The state_t interface.
 	 */
 	state_t state_interface;
-
 };
 
 /**
- * Constructor of class responder_init_t
+ * Constructor of class responder_init_t.
  * 
- * @param ike_sa assigned IKE_SA
+ * @param ike_sa 	assigned IKE_SA
  * 
- * @return responder_init state
+ * @return 			responder_init_t object
  * 
  * @ingroup states
  */
