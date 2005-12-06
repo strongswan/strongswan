@@ -28,11 +28,12 @@
 #include <utils/allocator.h>
 #include <transforms/hashers/hasher.h>
 
-/* since we don't have an ASN1 parser/generator,
+/* 
+ * Since we don't have an ASN1 parser/generator,
  * we use these predefined values for
  * hash algorithm oids. These also contain
  * the length of the following hash.
- * These values are also used in rsa_private_key.c
+ * These values are also used in rsa_private_key.c.
  */
 
 u_int8_t md2_oid[18] = {
@@ -74,7 +75,7 @@ u_int8_t sha512_oid[] = {
 typedef struct private_rsa_public_key_t private_rsa_public_key_t;
 
 /**
- * private data structure with signing context.
+ * Private data structure with signing context.
  */
 struct private_rsa_public_key_t {
 	/**
@@ -83,38 +84,45 @@ struct private_rsa_public_key_t {
 	rsa_public_key_t public;
 	
 	/**
-	 * is the key already set ?
+	 * Is the key already set ?
 	 */
 	bool is_key_set;
 	
 	/**
-	 * public modulus
+	 * Public modulus.
 	 */
 	mpz_t n;
 	/**
-	 * public exponent
+	 * Public exponent.
 	 */
 	mpz_t e;
 	
 	/**
-	 * keysize in bytes
+	 * Keysize in bytes.
 	 */
 	size_t k;
 	
 	/**
 	 * @brief Implements the RSAEP algorithm specified in PKCS#1.
+	 * 
+	 * @param this		calling object
+	 * @param data		data to process
+	 * @return			processed data
 	 */
 	chunk_t (*rsaep) (private_rsa_public_key_t *this, chunk_t data);
 		
 	/**
 	 * @brief Implements the RSASVP1 algorithm specified in PKCS#1.
+	 * 
+	 * @param this		calling object
+	 * @param data		data to process
+	 * @return			processed data
 	 */
 	chunk_t (*rsavp1) (private_rsa_public_key_t *this, chunk_t data);
 };
 
 /**
- * Implements private_rsa_public_key_t.rsadp
- * Implements private_rsa_public_key_t.rsavp1
+ * Implementation of private_rsa_public_key_t.rsadp and private_rsa_public_key_t.rsavp1
  */
 static chunk_t rsaep(private_rsa_public_key_t *this, chunk_t data)
 {
@@ -138,7 +146,7 @@ static chunk_t rsaep(private_rsa_public_key_t *this, chunk_t data)
 }
 
 /**
- * implementation of rsa_public_key.verify_emsa_signature.
+ * Implementation of rsa_public_key.verify_emsa_signature.
  */
 static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chunk_t data, chunk_t signature)
 {
@@ -266,7 +274,7 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 }
 	
 /**
- * implementation of rsa_public_key.set_key.
+ * Implementation of rsa_public_key.set_key.
  */
 static status_t set_key(private_rsa_public_key_t *this, chunk_t key)
 {
@@ -289,7 +297,7 @@ static status_t set_key(private_rsa_public_key_t *this, chunk_t key)
 
 	
 /**
- * implementation of rsa_public_key.get_key.
+ * Implementation of rsa_public_key.get_key.
  */
 static status_t get_key(private_rsa_public_key_t *this, chunk_t *key)
 {
@@ -316,7 +324,7 @@ static status_t get_key(private_rsa_public_key_t *this, chunk_t *key)
 }
 	
 /**
- * implementation of rsa_public_key.load_key.
+ * Implementation of rsa_public_key.load_key.
  */
 static status_t load_key(private_rsa_public_key_t *this, char *file)
 {
@@ -324,7 +332,7 @@ static status_t load_key(private_rsa_public_key_t *this, char *file)
 }
 
 /**
- * implementation of rsa_public_key.save_key.
+ * Implementation of rsa_public_key.save_key.
  */
 static status_t save_key(private_rsa_public_key_t *this, char *file)
 {
@@ -332,7 +340,7 @@ static status_t save_key(private_rsa_public_key_t *this, char *file)
 }
 
 /**
- * implementation of rsa_public_key.destroy.
+ * Implementation of rsa_public_key.destroy.
  */
 static void destroy(private_rsa_public_key_t *this)
 {
@@ -345,7 +353,7 @@ static void destroy(private_rsa_public_key_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 rsa_public_key_t *rsa_public_key_create()
 {

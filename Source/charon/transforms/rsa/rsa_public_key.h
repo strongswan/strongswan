@@ -42,6 +42,8 @@ typedef struct rsa_public_key_t rsa_public_key_t;
  * 
  * @see rsa_private_key_t
  * 
+ * @todo Implement proper key set/get load/save methods using ASN1.
+ * 
  * @ingroup rsa
  */
 struct rsa_public_key_t {

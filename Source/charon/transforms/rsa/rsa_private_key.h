@@ -36,14 +36,13 @@ typedef struct rsa_private_key_t rsa_private_key_t;
  * 
  * Currently only supports signing using EMSA encoding.
  * 
- * @TODO Implement proper key set/get load/save
- * methods using ASN1.
- * 
  * @b Constructors:
  *  - rsa_private_key_create()
  * 
  * @see rsa_public_key_t
  * 
+ * @todo Implement proper key set/get load/save methods using ASN1.
+ *
  * @ingroup rsa
  */
 struct rsa_private_key_t {
@@ -55,7 +54,7 @@ struct rsa_private_key_t {
 	 * it with an ASN1-OID of the hash algorithm and runs the RSASP1 function
 	 * on it.
 	 * 
-	 * @param this				rsa_private_key to use
+	 * @param this				calling object
 	 * @param hash_algorithm	hash algorithm to use for hashing
 	 * @param data				data to sign
 	 * @param[out] signature	allocated signature

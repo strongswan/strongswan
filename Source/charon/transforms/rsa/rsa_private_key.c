@@ -28,8 +28,9 @@
 #include <utils/allocator.h>
 
 
-/* oids for hash algorithms are defined in
- * rsa_public_key.c
+/* 
+ * Oids for hash algorithms are defined in
+ * rsa_public_key.c.
  */
 extern u_int8_t md2_oid[18];
 extern u_int8_t md5_oid[18];
@@ -39,7 +40,7 @@ extern u_int8_t sha384_oid[19];
 extern u_int8_t sha512_oid[19];
 
 /**
- *  Public exponent to use for key generation
+ *  Public exponent to use for key generation.
  */
 #define PUBLIC_EXPONENT 0x10001
 
@@ -47,7 +48,7 @@ extern u_int8_t sha512_oid[19];
 typedef struct private_rsa_private_key_t private_rsa_private_key_t;
 
 /**
- * private data structure for rsa_private_key.
+ * Private data of a rsa_private_key_t object.
  */
 struct private_rsa_private_key_t {
 	/**
@@ -56,70 +57,76 @@ struct private_rsa_private_key_t {
 	rsa_private_key_t public;
 	
 	/**
-	 * is the key already set ?
+	 * Is the key already set ?
 	 */
 	bool is_key_set;
 	
 	/**
-	 * public modulus
+	 * Public modulus.
 	 */
 	mpz_t n;
 	
 	/**
-	 * public exponent
+	 * Public exponent.
 	 */
 	mpz_t e;
 	
 	/**
-	 * private Prime 1
+	 * Private prime 1.
 	 */
 	mpz_t p;
 	
 	/**
-	 * private Prime 2
+	 * Private Prime 2.
 	 */
 	mpz_t q;
 	
 	/**
-	 * private exponent
+	 * Private exponent.
 	 */
 	mpz_t d;
 	
 	/**
-	 * private exponent 1
+	 * Private exponent 1.
 	 */
 	mpz_t exp1;
 	
 	/**
-	 * private exponent 2
+	 * Private exponent 2.
 	 */
 	mpz_t exp2;
 	
 	/**
-	 * private coefficient
+	 * Private coefficient.
 	 */
 	mpz_t coeff;
 	
 	/**
-	 * keysize in bytes
+	 * Keysize in bytes.
 	 */
 	size_t k;
 	
 	/**
 	 * @brief Implements the RSADP algorithm specified in PKCS#1.
+	 * 
+	 * @param this		calling object
+	 * @param data		data to process
+	 * @return			processed data
 	 */
 	chunk_t (*rsadp) (private_rsa_private_key_t *this, chunk_t data);
 		
 	/**
 	 * @brief Implements the RSASP1 algorithm specified in PKCS#1.
+	 * @param this		calling object
+	 * @param data		data to process
+	 * @return			processed data
 	 */
 	chunk_t (*rsasp1) (private_rsa_private_key_t *this, chunk_t data);
 	
 };
 
 /**
- * Implements private_rsa_private_key_t.rsadp
- * Implements private_rsa_private_key_t.rsasp1
+ * Implementation of private_rsa_private_key_t.rsadp and private_rsa_private_key_t.rsasp1.
  */
 static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 {
@@ -151,7 +158,7 @@ static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 }
 
 /**
- * implementation of rsa_private_key.build_emsa_signature.
+ * Implementation of rsa_private_key.build_emsa_signature.
  */
 static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature)
 {
@@ -247,7 +254,7 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 
 	
 /**
- * implementation of rsa_private_key.set_key.
+ * Implementation of rsa_private_key.set_key.
  */
 static status_t set_key(private_rsa_private_key_t *this, chunk_t key)
 {
@@ -288,7 +295,7 @@ static status_t set_key(private_rsa_private_key_t *this, chunk_t key)
 }
 	
 /**
- * implementation of rsa_private_key.get_key.
+ * Implementation of rsa_private_key.get_key.
  */
 static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
 {
@@ -340,7 +347,7 @@ static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
 }
 	
 /**
- * implementation of rsa_private_key.load_key.
+ * Implementation of rsa_private_key.load_key.
  */
 static status_t load_key(private_rsa_private_key_t *this, char *file)
 {
@@ -348,7 +355,7 @@ static status_t load_key(private_rsa_private_key_t *this, char *file)
 }
 
 /**
- * implementation of rsa_private_key.save_key.
+ * Implementation of rsa_private_key.save_key.
  */
 static status_t save_key(private_rsa_private_key_t *this, char *file)
 {
@@ -356,7 +363,7 @@ static status_t save_key(private_rsa_private_key_t *this, char *file)
 }
 
 /**
- * implementation of rsa_private_key.generate_key.
+ * Implementation of rsa_private_key.generate_key.
  */
 static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
 {
@@ -450,7 +457,9 @@ static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
 	return SUCCESS;
 }
 
-
+/**
+ * Implementation of rsa_private_key.get_public_key.
+ */
 rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
 {
 	rsa_public_key_t *public_key;
@@ -485,7 +494,7 @@ rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
 
 
 /**
- * implementation of rsa_private_key.destroy.
+ * Implementation of rsa_private_key.destroy.
  */
 static void destroy(private_rsa_private_key_t *this)
 {
@@ -504,7 +513,7 @@ static void destroy(private_rsa_private_key_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 rsa_private_key_t *rsa_private_key_create(hash_algorithm_t hash_algoritm)
 {
