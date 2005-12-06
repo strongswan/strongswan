@@ -158,7 +158,7 @@ static void build_test_jobs(private_daemon_t *this)
 	for(i = 0; i<1; i++)
 	{
 		initiate_ike_sa_job_t *initiate_job;
-		initiate_job = initiate_ike_sa_job_create("pinflb30");
+		initiate_job = initiate_ike_sa_job_create("localhost");
 		this->public.event_queue->add_relative(this->public.event_queue, (job_t*)initiate_job, i * 5000);
 	}
 }
@@ -173,7 +173,7 @@ static void initialize(private_daemon_t *this)
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.send_queue = send_queue_create();
-	this->public.configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT);
+	this->public.configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT, HALF_OPEN_IKE_SA_TIMEOUT);
 	
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();

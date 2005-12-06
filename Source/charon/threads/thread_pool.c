@@ -29,7 +29,8 @@
  
 #include <daemon.h>
 #include <queues/job_queue.h>
-#include <queues/jobs/delete_ike_sa_job.h>
+#include <queues/jobs/delete_half_open_ike_sa_job.h>
+#include <queues/jobs/delete_established_ike_sa_job.h>
 #include <queues/jobs/incoming_packet_job.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 #include <queues/jobs/retransmit_request_job.h>
@@ -75,13 +76,21 @@ struct private_thread_pool_t {
 	void (*process_initiate_ike_sa_job) (private_thread_pool_t *this, initiate_ike_sa_job_t *job);
 
 	/**
-	 * @brief Process a DELETE_IKE_SA job.
+	 * @brief Process a DELETE_HALF_OPEN_IKE_SA job.
 	 * 
 	 * @param this	private_thread_pool_t object
-	 * @param job	delete_ike_sa_job_t object
+	 * @param job	delete__half_open_ike_sa_job_t object
 	 */
-	void (*process_delete_ike_sa_job) (private_thread_pool_t *this, delete_ike_sa_job_t *job);
+	void (*process_delete_half_open_ike_sa_job) (private_thread_pool_t *this, delete_half_open_ike_sa_job_t *job);
 	
+	/**
+	 * @brief Process a DELETE_ESTABLISHED_IKE_SA job.
+	 * 
+	 * @param this	private_thread_pool_t object
+	 * @param job	delete_established_ike_sa_job_t object
+	 */
+	void (*process_delete_established_ike_sa_job) (private_thread_pool_t *this, delete_established_ike_sa_job_t *job);
+
 	/**
 	 * @brief Process a RETRANSMIT_REQUEST job.
 	 * 
@@ -89,6 +98,17 @@ struct private_thread_pool_t {
 	 * @param job	retransmit_request_job_t object
 	 */
 	void (*process_retransmit_request_job) (private_thread_pool_t *this, retransmit_request_job_t *job);
+	
+	/**
+	 * Creates a job of type DELETE_HALF_OPEN_IKE_SA.
+	 * 
+	 * This job is used to delete IKE_SA's which are still in state INITIATOR_INIT,
+	 * RESPONDER_INIT, IKE_AUTH_REQUESTED, IKE_INIT_REQUESTED or IKE_INIT_RESPONDED.
+	 * 
+	 * @param ike_sa_id		ID of IKE_SA to delete
+	 * @param delay			Delay in ms after a half open IKE_SA gets deleted!
+	 */
+	void (*create_delete_half_open_ike_sa_job) (private_thread_pool_t *this,ike_sa_id_t *ike_sa_id, u_int32_t delay);
 	
 	/**
 	 * number of running threads
@@ -147,9 +167,15 @@ static void process_jobs(private_thread_pool_t *this)
 				job->destroy(job);
 				break;
 			}
-			case DELETE_IKE_SA:
+			case DELETE_HALF_OPEN_IKE_SA:
 			{
-				this->process_delete_ike_sa_job(this, (delete_ike_sa_job_t*)job);
+				this->process_delete_half_open_ike_sa_job(this, (delete_half_open_ike_sa_job_t*)job);
+				job->destroy(job);
+				break;
+			}
+			case DELETE_ESTABLISHED_IKE_SA:
+			{
+				this->process_delete_established_ike_sa_job(this, (delete_established_ike_sa_job_t*)job);
 				job->destroy(job);
 				break;
 			}
@@ -255,19 +281,25 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
 				
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
-	if (status != SUCCESS)
+	if ((status != SUCCESS) && (status != CREATED))
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "IKE SA could not be checked out");
 		ike_sa_id->destroy(ike_sa_id);	
 		message->destroy(message);
 
 		/*
-		 * TODO send notify reply of type INVALID_IKE_SPI if SPI could not be found
+		 * TODO send notify reply of type INVALID_IKE_SPI if SPI could not be found ?
 		 */
 
 		return;
 	}
-				
+
+	if (status == CREATED)
+	{
+		this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Create Job to delete half open IKE_SA.");
+		this->create_delete_half_open_ike_sa_job(this,ike_sa_id,charon->configuration_manager->get_half_open_ike_sa_timeout(charon->configuration_manager));
+	}
+
 	status = ike_sa->process_message(ike_sa, message);				
 	if ((status != SUCCESS) && (status != DELETE_ME))
 	{
@@ -326,6 +358,9 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 		charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
 		return;
 	}
+
+	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Create Job to delete half open IKE_SA.");
+	this->create_delete_half_open_ike_sa_job(this,ike_sa->get_id(ike_sa),charon->configuration_manager->get_half_open_ike_sa_timeout(charon->configuration_manager));
 	
 	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking in IKE SA");
 	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
@@ -339,23 +374,89 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 /**
  * Implementation of private_thread_pool_t.process_delete_ike_sa_job.
  */
-static void process_delete_ike_sa_job(private_thread_pool_t *this, delete_ike_sa_job_t *job)
+static void process_delete_half_open_ike_sa_job(private_thread_pool_t *this, delete_half_open_ike_sa_job_t *job)
 {
-	status_t status;
 	ike_sa_id_t *ike_sa_id = job->get_ike_sa_id(job);
-										
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "deleting IKE SA %lld:%lld, role %s", 
-							 ike_sa_id->get_initiator_spi(ike_sa_id),
-							 ike_sa_id->get_responder_spi(ike_sa_id),
-							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
+	ike_sa_t *ike_sa;
+	status_t status;	
+	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
+	if ((status != SUCCESS) && (status != CREATED))
+	{
+		this->worker_logger->log(this->worker_logger, CONTROL | ALL, "IKE SA seems to be allready deleted and so doesn't have to be deleted");
+		return;
+	}
 	
-	status = charon->ike_sa_manager->delete(charon->ike_sa_manager, ike_sa_id);
+
+	switch (ike_sa->get_state(ike_sa))
+	{
+		case INITIATOR_INIT:
+		case RESPONDER_INIT:
+		case IKE_SA_INIT_REQUESTED:
+		case IKE_SA_INIT_RESPONDED:
+		case IKE_AUTH_REQUESTED:
+		{
+			/* IKE_SA is half open and gets deleted! */
+			status = charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
+			if (status != SUCCESS)
+			{
+				this->worker_logger->log(this->worker_logger, ERROR, "Could not checkin and delete checked out IKE_SA!");
+			}
+			break;
+		}
+		default:
+		{
+			/* IKE_SA is established and so is not getting deleted! */
+			status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			if (status != SUCCESS)
+			{
+				this->worker_logger->log(this->worker_logger, ERROR, "Could not checkin a checked out IKE_SA!");
+			}
+			break;
+		}
+	}
+}
+
+/**
+ * Implementation of private_thread_pool_t.process_delete_established_ike_sa_job.
+ */
+static void process_delete_established_ike_sa_job(private_thread_pool_t *this, delete_established_ike_sa_job_t *job)
+{
+	ike_sa_id_t *ike_sa_id = job->get_ike_sa_id(job);
+	ike_sa_t *ike_sa;
+	status_t status;	
+	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
+	if ((status != SUCCESS) && (status != CREATED))
+	{
+		this->worker_logger->log(this->worker_logger, CONTROL | ALL, "IKE SA seems to be allready deleted and so doesn't have to be deleted");
+		return;
+	}
+
+	switch (ike_sa->get_state(ike_sa))
+	{
+		case INITIATOR_INIT:
+		case RESPONDER_INIT:
+		case IKE_SA_INIT_REQUESTED:
+		case IKE_SA_INIT_RESPONDED:
+		case IKE_AUTH_REQUESTED:
+		{
+			break;
+		}
+		default:
+		{
+			/*
+			 * TODO Send delete notify
+			 */
+			break;
+		}
+	}
+	
+	status = charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "could not delete IKE_SA (%s)", 
-								 mapping_find(status_m, status));
-	}	
+		this->worker_logger->log(this->worker_logger, ERROR, "Could not checkin and delete checked out IKE_SA!");
+	}
 }
+
 
 /**
  * Implementation of private_thread_pool_t.process_retransmit_request_job.
@@ -376,7 +477,7 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
 				
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
-	if (status != SUCCESS)
+	if ((status != SUCCESS) && (status != CREATED))
 	{
 		job->destroy(job);
 		this->worker_logger->log(this->worker_logger, ERROR, "IKE SA could not be checked out. Allready deleted?");
@@ -421,6 +522,22 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 	}
 	charon->event_queue->add_relative(charon->event_queue,(job_t *) job,timeout);
 }
+
+
+
+/**
+ * Implementation of private_thread_pool_t.create_delete_half_open_ike_sa_job.
+ */
+static void create_delete_half_open_ike_sa_job(private_thread_pool_t *this,ike_sa_id_t *ike_sa_id, u_int32_t delay)
+{
+	job_t *delete_job;
+
+	this->worker_logger->log(this->worker_logger, CONTROL | MORE, "Going to create job to delete half open IKE_SA in %d ms", delay);
+
+	delete_job = (job_t *) delete_half_open_ike_sa_job_create(ike_sa_id);
+	charon->event_queue->add_relative(charon->event_queue,delete_job, delay);
+}
+
 
 /**
  * Implementation of thread_pool_t.get_pool_size.
@@ -470,9 +587,12 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	
 	this->process_jobs = process_jobs;
 	this->process_initiate_ike_sa_job = process_initiate_ike_sa_job;
-	this->process_delete_ike_sa_job = process_delete_ike_sa_job;
+	this->process_delete_half_open_ike_sa_job = process_delete_half_open_ike_sa_job;
+	this->process_delete_established_ike_sa_job = process_delete_established_ike_sa_job;
 	this->process_incoming_packet_job = process_incoming_packet_job;
 	this->process_retransmit_request_job = process_retransmit_request_job;
+	this->create_delete_half_open_ike_sa_job = create_delete_half_open_ike_sa_job;
+	
 	this->pool_size = pool_size;
 	
 	this->threads = allocator_alloc(sizeof(pthread_t) * pool_size);

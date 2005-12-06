@@ -36,30 +36,37 @@ typedef enum job_type_t job_type_t;
  */
 enum job_type_t {
 	/** 
-	 * Process an incoming IKEv2-Message
+	 * Process an incoming IKEv2-Message.
 	 * 
  	 * Job is implemented in class type incoming_packet_job_t
 	 */
 	INCOMING_PACKET,
 	
 	/** 
-	 * Retransmit an IKEv2-Message
+	 * Retransmit an IKEv2-Message.
 	 */
 	RETRANSMIT_REQUEST,
 	
 	/** 
-	 * Establish an ike sa as initiator
+	 * Establish an ike sa as initiator.
 	 * 
 	 * Job is implemented in class type initiate_ike_sa_job_t
 	 */
 	
 	INITIATE_IKE_SA,
 	/** 
-	 * Delete an ike sa
+	 * Delete an ike sa which is still not established.
 	 * 
-	 * Job is implemented in class type delete_ike_sa_job_t
+	 * Job is implemented in class type delete_half_open_ike_sa_job_t
 	 */
-	DELETE_IKE_SA
+	DELETE_HALF_OPEN_IKE_SA,
+	
+	/** 
+	 * Delete an ike sa which is established.
+	 * 
+	 * Job is implemented in class type delete_established_ike_sa_job_t
+	 */	
+	DELETE_ESTABLISHED_IKE_SA
 	
 	
 	/* more job types have to be inserted here */

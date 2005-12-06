@@ -47,6 +47,7 @@ enum status_t {
 	VERIFY_ERROR,
 	INVALID_STATE,
 	DELETE_ME,
+	CREATED,
 };
 
 extern mapping_t status_m[];

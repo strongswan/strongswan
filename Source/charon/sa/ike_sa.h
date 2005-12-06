@@ -88,6 +88,14 @@ struct ike_sa_t {
 	 * @return 				ike_sa's ike_sa_id_t
 	 */
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
+	
+	/**
+	 * @brief Get the state of type of associated state object.
+	 *
+	 * @param this 			ike_sa_t object object
+	 * @return 				state of IKE_SA
+	 */
+	ike_sa_state_t (*get_state) (ike_sa_t *this);
 
 	/**
 	 * @brief Destroys a ike_sa_t object.
@@ -375,7 +383,16 @@ struct protected_ike_sa_t {
 	 * @param this 				calling object
 	 */	
 	void (*reset_message_buffers) (protected_ike_sa_t *this);
-
+	
+	/**
+	 * Creates a job of type DELETE_ESTABLISHED_IKE_SA for the current IKE_SA.
+	 * 
+	 * 
+	 * @param this 				calling object
+	 * @param timeout			timeout after the IKE_SA gets deleted
+	 * 
+	 */	
+	void (*create_delete_established_ike_sa_job) (protected_ike_sa_t *this,u_int32_t timeout);
 };
 
 

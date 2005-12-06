@@ -339,6 +339,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	
 	/* create new state */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
 	
 	this->public.state_interface.destroy(&(this->public.state_interface));
 

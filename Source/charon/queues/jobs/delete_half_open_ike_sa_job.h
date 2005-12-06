@@ -1,7 +1,7 @@
 /**
- * @file delete_ike_sa_job.h
+ * @file delete_half_open_ike_sa_job.h
  * 
- * @brief Interface of delete_ike_sa_job_t.
+ * @brief Interface of delete_half_open_ike_sa_job_t.
  * 
  */
 
@@ -20,24 +20,27 @@
  * for more details.
  */
  
-#ifndef DELETE_IKE_SA_JOB_H_
-#define DELETE_IKE_SA_JOB_H_
+#ifndef DELETE_HALF_OPEN_IKE_SA_JOB_H_
+#define DELETE_HALF_OPEN_IKE_SA_JOB_H_
 
 #include <types.h>
 #include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
 
 
-typedef struct delete_ike_sa_job_t delete_ike_sa_job_t;
+typedef struct delete_half_open_ike_sa_job_t delete_half_open_ike_sa_job_t;
 
 /**
- * @brief Class representing an DELETE_IKE_SA Job.
+ * @brief Class representing an DELETE_HALF_OPEN_IKE_SA Job.
+ * 
+ * @b Constructors:
+ *  - delete_half_open_ike_sa_job_create()
  * 
  * @ingroup jobs
  */
-struct delete_ike_sa_job_t {
+struct delete_half_open_ike_sa_job_t {
 	/**
-	 * implements job_t interface
+	 * The job_t interface.
 	 */
 	job_t job_interface;
 	
@@ -46,27 +49,27 @@ struct delete_ike_sa_job_t {
 	 * 	
 	 * @warning Returned object is not copied.
 	 * 
-	 * @param this 	calling delete_ike_sa_job_t object
+	 * @param this 	calling delete_half_open_ike_sa_job_t object
 	 * @return 		ike_sa_id_t object
 	 */
-	ike_sa_id_t * (*get_ike_sa_id) (delete_ike_sa_job_t *this);
+	ike_sa_id_t * (*get_ike_sa_id) (delete_half_open_ike_sa_job_t *this);
 
 	/**
-	 * @brief Destroys an delete_ike_sa_job_t object (including assigned data).
+	 * @brief Destroys an delete_half_open_ike_sa_job_t object (including assigned data).
 	 *
-	 * @param this 	delete_ike_sa_job_t object to destroy
+	 * @param this 	delete_half_open_ike_sa_job_t object to destroy
 	 */
-	void (*destroy) (delete_ike_sa_job_t *this);
+	void (*destroy) (delete_half_open_ike_sa_job_t *this);
 };
 
 /**
- * @brief Creates a job of type DELETE_IKE_SA.
+ * @brief Creates a job of type DELETE_HALF_OPEN_IKE_SA.
  * 
  * @param ike_sa_id		id of the IKE_SA to delete
- * @return				created delete_ike_sa_job_t object
+ * @return				created delete_half_open_ike_sa_job_t object
  * 
  * @ingroup jobs
  */
-delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id);
+delete_half_open_ike_sa_job_t *delete_half_open_ike_sa_job_create(ike_sa_id_t *ike_sa_id);
 
-#endif /*DELETE_IKE_SA_JOB_H_*/
+#endif /*DELETE_HALF_OPEN_IKE_SA_JOB_H_*/

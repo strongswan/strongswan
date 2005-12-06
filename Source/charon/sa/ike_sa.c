@@ -39,8 +39,8 @@
 #include <encoding/payloads/transform_attribute.h>
 #include <sa/states/initiator_init.h>
 #include <sa/states/responder_init.h>
-#include <queues/jobs/delete_ike_sa_job.h>
 #include <queues/jobs/retransmit_request_job.h>
+#include <queues/jobs/delete_established_ike_sa_job.h>
 
 
 
@@ -56,13 +56,6 @@ struct private_ike_sa_t {
 	 * Protected part of a ike_sa_t object.
 	 */
 	protected_ike_sa_t protected;
-
-	/**
-	 * Creates a job to delete the given IKE_SA.
-	 * 
-	 * @param this 				calling object
-	 */
-	status_t (*create_delete_job) (private_ike_sa_t *this);
 
 	/**
 	 * Resends the last sent reply.
@@ -518,22 +511,6 @@ status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
 	return SUCCESS;
 }
 	
-
-/**
- * Implementation of private_ike_sa_t.resend_last_reply.
- */
-static status_t create_delete_job(private_ike_sa_t *this)
-{
-	job_t *delete_job;
-
-	this->logger->log(this->logger, CONTROL | MORE, "Going to create job to delete this IKE_SA");
-
-	delete_job = (job_t *) delete_ike_sa_job_create(this->ike_sa_id);
-	charon->job_queue->add(charon->job_queue,delete_job);
-
-	return SUCCESS;
-}
-
 /**
  * Implementation of protected_ike_sa_t.set_new_state.
  */
@@ -867,6 +844,11 @@ static message_t * get_last_requested_message (private_ike_sa_t *this)
 	return this->last_requested_message;
 }
 
+static ike_sa_state_t get_state (private_ike_sa_t *this)
+{
+	return this->current_state->get_state(this->current_state);
+}
+
 /**
  * Implementation of protected_ike_sa_t.reset_message_buffers.
  */
@@ -890,6 +872,16 @@ static void reset_message_buffers (private_ike_sa_t *this)
 	this->message_id_out = 0;
 	this->message_id_in = 0;
 	this->last_replied_message_id = -1;
+}
+
+static void create_delete_established_ike_sa_job (private_ike_sa_t *this,u_int32_t timeout)
+{
+	job_t *delete_job;
+
+	this->logger->log(this->logger, CONTROL | MORE, "Going to create job to delete established IKE_SA in %d ms", timeout);
+
+	delete_job = (job_t *) delete_established_ike_sa_job_create(this->ike_sa_id);
+	charon->event_queue->add_relative(charon->event_queue,delete_job, timeout);
 }
 
 /**
@@ -1005,6 +997,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.initialize_connection = (status_t(*)(ike_sa_t*, char*)) initialize_connection;
 	this->protected.public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
+	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t *this)) get_state;
 	this->protected.public.destroy = (void(*)(ike_sa_t*))destroy;
 	
 	/* protected functions */
@@ -1034,12 +1027,12 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t *)) reset_message_buffers;
 	this->protected.get_last_responded_message = (message_t * (*) (protected_ike_sa_t *this)) get_last_responded_message;
 	this->protected.get_last_requested_message = (message_t * (*) (protected_ike_sa_t *this)) get_last_requested_message;
+	this->protected.create_delete_established_ike_sa_job = (void (*) (protected_ike_sa_t *this,u_int32_t)) create_delete_established_ike_sa_job;
 	
 	this->protected.set_last_replied_message_id = (void (*) (protected_ike_sa_t *,u_int32_t)) set_last_replied_message_id;
 	
 	/* private functions */
 	this->resend_last_reply = resend_last_reply;
-	this->create_delete_job = create_delete_job;
 
 	/* initialize private fields */
 	this->logger = charon->logger_manager->create_logger(charon->logger_manager, IKE_SA, NULL);

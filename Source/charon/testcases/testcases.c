@@ -162,7 +162,7 @@ daemon_t *daemon_create()
 	charon->event_queue = event_queue_create();
 	charon->send_queue = send_queue_create();
 	charon->prime_pool = prime_pool_create(0);
-	charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT);
+	charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT,HALF_OPEN_IKE_SA_TIMEOUT);
 	charon->sender = NULL;
 	charon->receiver = NULL;
 	charon->scheduler = NULL;

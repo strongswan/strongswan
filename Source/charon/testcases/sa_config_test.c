@@ -49,7 +49,8 @@ void test_sa_config(tester_t *tester)
 	
 	sa_config = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
 								 ID_IPV4_ADDR, "152.96.193.131",
-								 RSA_DIGITAL_SIGNATURE);
+								 RSA_DIGITAL_SIGNATURE,
+								 30000);
 	
 	tester->assert_true(tester, (sa_config != NULL), "sa_config construction");
 

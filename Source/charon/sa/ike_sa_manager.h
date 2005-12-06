@@ -59,6 +59,7 @@ struct ike_sa_manager_t {
 	 * @returns 					
 	 * 							- SUCCESS if checkout successful
 	 * 							- NOT_FOUND when no such SA is available
+	 * 							- CREATED if a new IKE_SA got created
 	 */
 	status_t (*checkout) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *sa_id, ike_sa_t **ike_sa);
 	

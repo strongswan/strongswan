@@ -207,6 +207,11 @@ struct private_configuration_manager_t {
 	 * First retransmit timeout in ms.
 	 */
 	u_int32_t first_retransmit_timeout;
+	
+	/**
+	 * Timeout in ms after that time a IKE_SA gets deleted.
+	 */
+	u_int32_t half_open_ike_sa_timeout;
 
 	/**
 	 * Adds a new IKE_SA configuration.
@@ -308,21 +313,24 @@ static void load_default_config (private_configuration_manager_t *this)
 	
 	sa_config1 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
 								  ID_IPV4_ADDR, "152.96.193.131",
-								  SHARED_KEY_MESSAGE_INTEGRITY_CODE);
+								  SHARED_KEY_MESSAGE_INTEGRITY_CODE,
+								  30000);
 								  
 	sa_config1->add_traffic_selector_initiator(sa_config1,ts);
 	sa_config1->add_traffic_selector_responder(sa_config1,ts);
 
 	sa_config2 = sa_config_create(ID_IPV4_ADDR, "152.96.193.131", 
 								  ID_IPV4_ADDR, "152.96.193.130",
-								  SHARED_KEY_MESSAGE_INTEGRITY_CODE);
+								  SHARED_KEY_MESSAGE_INTEGRITY_CODE,
+								  30000);
 
 	sa_config2->add_traffic_selector_initiator(sa_config2,ts);
 	sa_config2->add_traffic_selector_responder(sa_config2,ts);
 
 	sa_config3 = sa_config_create(ID_IPV4_ADDR, "127.0.0.1", 
 								  ID_IPV4_ADDR, "127.0.0.1",
-								  RSA_DIGITAL_SIGNATURE);
+								  RSA_DIGITAL_SIGNATURE,
+								  30000);
 
 	sa_config3->add_traffic_selector_initiator(sa_config3,ts);
 	sa_config3->add_traffic_selector_responder(sa_config3,ts);
@@ -715,7 +723,7 @@ static status_t get_rsa_private_key(private_configuration_manager_t *this, ident
 }
 
 /**
- * Implementation of configuration_manager_t.destroy.
+ * Implementation of configuration_manager_t.get_retransmit_timeout.
  */
 static status_t get_retransmit_timeout (private_configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
 {
@@ -730,6 +738,14 @@ static status_t get_retransmit_timeout (private_configuration_manager_t *this, u
 	*timeout = this->first_retransmit_timeout * (retransmit_count + 1);
 	
 	return SUCCESS;
+}
+
+/**
+ * Implementation of configuration_manager_t.get_half_open_ike_sa_timeout.
+ */
+static u_int32_t get_half_open_ike_sa_timeout (private_configuration_manager_t *this)
+{
+	return this->half_open_ike_sa_timeout;
 }
 
 /**
@@ -807,7 +823,7 @@ static void destroy(private_configuration_manager_t *this)
 /*
  * Described in header-file
  */
-configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count)
+configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count, u_int32_t half_open_ike_sa_timeout)
 {
 	private_configuration_manager_t *this = allocator_alloc_thing(private_configuration_manager_t);
 
@@ -818,6 +834,7 @@ configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit
 	this->public.get_sa_config_for_name =(status_t (*) (configuration_manager_t *, char *, sa_config_t **)) get_sa_config_for_name;
 	this->public.get_sa_config_for_init_config_and_id =(status_t (*) (configuration_manager_t *, init_config_t *, identification_t *, identification_t *,sa_config_t **)) get_sa_config_for_init_config_and_id;
 	this->public.get_retransmit_timeout = (status_t (*) (configuration_manager_t *, u_int32_t retransmit_count, u_int32_t *timeout))get_retransmit_timeout;
+	this->public.get_half_open_ike_sa_timeout = (u_int32_t (*) (configuration_manager_t *)) get_half_open_ike_sa_timeout;
 	this->public.get_shared_secret = (status_t (*) (configuration_manager_t *, identification_t *, chunk_t *))get_shared_secret;
 	this->public.get_rsa_private_key = (status_t (*) (configuration_manager_t *, identification_t *, rsa_private_key_t**))get_rsa_private_key;
 	this->public.get_rsa_public_key = (status_t (*) (configuration_manager_t *, identification_t *, rsa_public_key_t**))get_rsa_public_key;
@@ -839,6 +856,7 @@ configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit
 	this->rsa_public_keys = linked_list_create();
 	this->max_retransmit_count = max_retransmit_count;
 	this->first_retransmit_timeout = first_retransmit_timeout;
+	this->half_open_ike_sa_timeout = half_open_ike_sa_timeout;
 	
 	this->load_default_config(this);
 

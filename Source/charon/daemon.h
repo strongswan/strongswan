@@ -63,6 +63,11 @@
 #define RETRANSMIT_TIMEOUT 3000
 
 /**
+ * Timeout in milliseconds after that a half open IKE_SA gets deleted.
+ */
+#define HALF_OPEN_IKE_SA_TIMEOUT 30000
+
+/**
  * Max retransmit count. 0 for infinite.
  */
 #define MAX_RETRANSMIT_COUNT 0

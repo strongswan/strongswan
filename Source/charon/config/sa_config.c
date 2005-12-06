@@ -54,6 +54,11 @@ struct private_sa_config_t {
 	auth_method_t auth_method;
 	
 	/**
+	 * Lifetime of IKE_SA in milliseconds.
+	 */
+	u_int32_t ike_sa_lifetime;
+	
+	/**
 	 * list for all proposals
 	 */
 	linked_list_t *proposals;
@@ -85,7 +90,7 @@ struct private_sa_config_t {
 };
 
 /**
- * implements sa_config_t.get_my_id
+ * Implementation of sa_config_t.get_my_id
  */
 static identification_t *get_my_id(private_sa_config_t *this)
 {
@@ -93,7 +98,7 @@ static identification_t *get_my_id(private_sa_config_t *this)
 }
 
 /**
- * implements sa_config_t.get_other_id
+ * Implementation of sa_config_t.get_other_id
  */
 static identification_t *get_other_id(private_sa_config_t *this)
 {
@@ -101,16 +106,23 @@ static identification_t *get_other_id(private_sa_config_t *this)
 }
 
 /**
- * implements sa_config_t.get_auth_method
+ * Implementation of sa_config_t.get_auth_method.
  */
 static auth_method_t get_auth_method(private_sa_config_t *this)
 {
 	return this->auth_method;
 }
 
+/**
+ * Implementation of sa_config_t.get_ike_sa_lifetime.
+ */
+static u_int32_t get_ike_sa_lifetime (private_sa_config_t *this)
+{
+	return this->ike_sa_lifetime;
+}
 
 /**
- * implements sa_config_t.get_traffic_selectors_initiator
+ * Implementation of sa_config_t.get_traffic_selectors_initiator
  */
 static size_t get_traffic_selectors_initiator(private_sa_config_t *this, traffic_selector_t **traffic_selectors[])
 {
@@ -118,7 +130,7 @@ static size_t get_traffic_selectors_initiator(private_sa_config_t *this, traffic
 }
 
 /**
- * implements sa_config_t.get_traffic_selectors_responder
+ * Implementation of sa_config_t.get_traffic_selectors_responder
  */
 static size_t get_traffic_selectors_responder(private_sa_config_t *this, traffic_selector_t **traffic_selectors[])
 {
@@ -126,7 +138,7 @@ static size_t get_traffic_selectors_responder(private_sa_config_t *this, traffic
 }
 
 /**
- * implements private_sa_config_t.get_traffic_selectors
+ * Implementation of private_sa_config_t.get_traffic_selectors
  */
 static size_t get_traffic_selectors(private_sa_config_t *this, linked_list_t *ts_list, traffic_selector_t **traffic_selectors[])
 {
@@ -148,7 +160,7 @@ static size_t get_traffic_selectors(private_sa_config_t *this, linked_list_t *ts
 }
 
 /**
- * implements private_sa_config_t.select_traffic_selectors_initiator
+ * Implementation of private_sa_config_t.select_traffic_selectors_initiator
  */
 static size_t select_traffic_selectors_initiator(private_sa_config_t *this,traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[])
 {
@@ -156,14 +168,14 @@ static size_t select_traffic_selectors_initiator(private_sa_config_t *this,traff
 }
 
 /**
- * implements private_sa_config_t.select_traffic_selectors_responder
+ * Implementation of private_sa_config_t.select_traffic_selectors_responder
  */
 static size_t select_traffic_selectors_responder(private_sa_config_t *this,traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[])
 {
 	return this->select_traffic_selectors(this, this->ts_responder, supplied, count, selected);
 }
 /**
- * implements private_sa_config_t.select_traffic_selectors
+ * Implementation of private_sa_config_t.select_traffic_selectors
  */
 static size_t select_traffic_selectors(private_sa_config_t *this, linked_list_t *ts_list, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[])
 {
@@ -198,7 +210,7 @@ static size_t select_traffic_selectors(private_sa_config_t *this, linked_list_t 
 }
 
 /**
- * implements sa_config_t.get_proposals
+ * Implementation of sa_config_t.get_proposals
  */
 static size_t get_proposals(private_sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t **proposals)
 {
@@ -223,7 +235,7 @@ static size_t get_proposals(private_sa_config_t *this, u_int8_t ah_spi[4], u_int
 }
 
 /**
- * implements sa_config_t.select_proposal
+ * Implementation of sa_config_t.select_proposal
  */
 static child_proposal_t *select_proposal(private_sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t *supplied, size_t count)
 {
@@ -256,7 +268,7 @@ static child_proposal_t *select_proposal(private_sa_config_t *this, u_int8_t ah_
 
 
 /**
- * implements private_sa_config_t.proposal_equals
+ * Implementation of private_sa_config_t.proposal_equals
  */
 static bool proposal_equals(private_sa_config_t *this, child_proposal_t *first, child_proposal_t *second)
 {
@@ -333,7 +345,7 @@ static bool proposal_equals(private_sa_config_t *this, child_proposal_t *first, 
 }
 
 /**
- * implements sa_config_t.add_traffic_selector_initiator
+ * Implementation of sa_config_t.add_traffic_selector_initiator
  */
 static void add_traffic_selector_initiator(private_sa_config_t *this, traffic_selector_t *traffic_selector)
 {
@@ -342,7 +354,7 @@ static void add_traffic_selector_initiator(private_sa_config_t *this, traffic_se
 }
 
 /**
- * implements sa_config_t.add_traffic_selector_responder
+ * Implementation of sa_config_t.add_traffic_selector_responder
  */
 static void add_traffic_selector_responder(private_sa_config_t *this, traffic_selector_t *traffic_selector)
 {
@@ -351,7 +363,7 @@ static void add_traffic_selector_responder(private_sa_config_t *this, traffic_se
 }
 
 /**
- * implements sa_config_t.add_proposal
+ * Implementation of sa_config_t.add_proposal
  */
 static void add_proposal(private_sa_config_t *this, child_proposal_t *proposal)
 {
@@ -405,7 +417,7 @@ static status_t destroy(private_sa_config_t *this)
 /*
  * Described in header-file
  */
-sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other_id_type, char *other_id, auth_method_t auth_method)
+sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other_id_type, char *other_id, auth_method_t auth_method, u_int32_t ike_sa_lifetime)
 {
 	private_sa_config_t *this = allocator_alloc_thing(private_sa_config_t);
 
@@ -413,6 +425,7 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	this->public.get_my_id = (identification_t*(*)(sa_config_t*))get_my_id;
 	this->public.get_other_id = (identification_t*(*)(sa_config_t*))get_other_id;
 	this->public.get_auth_method = (auth_method_t(*)(sa_config_t*))get_auth_method;
+	this->public.get_ike_sa_lifetime = (u_int32_t(*)(sa_config_t*))get_ike_sa_lifetime;
 	this->public.get_traffic_selectors_initiator = (size_t(*)(sa_config_t*,traffic_selector_t**[]))get_traffic_selectors_initiator;
 	this->public.select_traffic_selectors_initiator = (size_t(*)(sa_config_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]))select_traffic_selectors_initiator;
 	this->public.get_traffic_selectors_responder = (size_t(*)(sa_config_t*,traffic_selector_t**[]))get_traffic_selectors_responder;
@@ -448,6 +461,7 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	this->ts_initiator = linked_list_create();
 	this->ts_responder = linked_list_create();
 	this->auth_method = auth_method;
+	this->ike_sa_lifetime = ike_sa_lifetime;
 
 	return (&this->public);
 }

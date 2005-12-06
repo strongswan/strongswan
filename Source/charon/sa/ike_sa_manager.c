@@ -466,7 +466,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		new_ike_sa_entry->checked_out = TRUE;
 		*ike_sa = new_ike_sa_entry->ike_sa;
 		
-		retval = SUCCESS;
+		retval = CREATED;
 	}
 	else
 	{

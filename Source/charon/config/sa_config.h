@@ -120,6 +120,13 @@ struct sa_config_t {
 	auth_method_t (*get_auth_method) (sa_config_t *this);
 	
 	/**
+	 * @brief Get lifetime of IKE_SA in milliseconds.
+	 * 
+	 * @return IKE_SA lifetime in milliseconds.
+	 */
+	u_int32_t (*get_ike_sa_lifetime) (sa_config_t *this);
+	
+	/**
 	 * @brief Get configured traffic selectors for initiator site.
 	 * 
 	 * Returns a pointer to an allocated array, in which
@@ -256,10 +263,17 @@ struct sa_config_t {
 /**
  * @brief Create a configuration object for IKE_AUTH and later.
  * 
- * @return 		created sa_config_t
+ * @param my_id_type		type of my identification
+ * @param my_id 			my identification as string
+ * @param other_id_type		type of other identification
+ * @param other_id 			other identification as string
+ * @param auth_method		Method of authentication
+ * @param ike_sa_lifetime	lifetime of this IKE_SA in milliseconds. IKE_SA will be deleted
+ * 							after this lifetime!
+ * @return 					created sa_config_t
  * 
  * @ingroup config
  */
-sa_config_t *sa_config_create();
+sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other_id_type, char *other_id, auth_method_t auth_method, u_int32_t ike_sa_lifetime);
 
 #endif //_SA_CONFIG_H_

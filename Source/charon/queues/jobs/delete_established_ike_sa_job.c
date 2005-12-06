@@ -1,7 +1,7 @@
 /**
- * @file delete_ike_sa_job.h
+ * @file delete_established_ike_sa_job.c
  * 
- * @brief Implementation of delete_ike_sa_job_t.
+ * @brief Implementation of delete_established_ike_sa_job_t.
  * 
  */
 
@@ -20,50 +20,50 @@
  * for more details.
  */
 
-#include "delete_ike_sa_job.h"
+#include "delete_established_ike_sa_job.h"
 
 #include <utils/allocator.h>
 
 
-typedef struct private_delete_ike_sa_job_t private_delete_ike_sa_job_t;
+typedef struct private_delete_established_ike_sa_job_t private_delete_established_ike_sa_job_t;
 
 /**
- * Private data of an delete_ike_sa_job_t Object
+ * Private data of an delete_established_ike_sa_job_t object.
  */
-struct private_delete_ike_sa_job_t {
+struct private_delete_established_ike_sa_job_t {
 	/**
-	 * public delete_ike_sa_job_t interface
+	 * Public delete_established_ike_sa_job_t interface.
 	 */
-	delete_ike_sa_job_t public;
+	delete_established_ike_sa_job_t public;
 	
 	/**
-	 * ID of the ike_sa to delete
+	 * ID of the ike_sa to delete.
 	 */
 	ike_sa_id_t *ike_sa_id;
 };
 
 /**
- * Implements job_t.get_type.
+ * Implementation of job_t.get_type.
  */
-static job_type_t get_type(private_delete_ike_sa_job_t *this)
+static job_type_t get_type(private_delete_established_ike_sa_job_t *this)
 {
-	return DELETE_IKE_SA;
+	return DELETE_ESTABLISHED_IKE_SA;
 }
 
 /**
- * Implements elete_ike_sa_job_t.get_ike_sa_id
+ * Implementation of delete_established_ike_sa_job_t.get_ike_sa_id
  */
-static ike_sa_id_t *get_ike_sa_id(private_delete_ike_sa_job_t *this)
+static ike_sa_id_t *get_ike_sa_id(private_delete_established_ike_sa_job_t *this)
 {
 	return this->ike_sa_id;
 }
 
 /**
- * Implements job_t.destroy.
+ * Implementation of job_t.destroy.
  */
 static void destroy(job_t *job)
 {
-	private_delete_ike_sa_job_t *this = (private_delete_ike_sa_job_t *) job;
+	private_delete_established_ike_sa_job_t *this = (private_delete_established_ike_sa_job_t *) job;
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	allocator_free(this);
 }
@@ -71,9 +71,9 @@ static void destroy(job_t *job)
 /*
  * Described in header
  */
-delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
+delete_established_ike_sa_job_t *delete_established_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
 {
-	private_delete_ike_sa_job_t *this = allocator_alloc_thing(private_delete_ike_sa_job_t);
+	private_delete_established_ike_sa_job_t *this = allocator_alloc_thing(private_delete_established_ike_sa_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
@@ -82,8 +82,8 @@ delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
 	this->public.job_interface.destroy = destroy;
 	
 	/* public functions */
-	this->public.get_ike_sa_id = (ike_sa_id_t * (*)(delete_ike_sa_job_t *)) get_ike_sa_id;
-	this->public.destroy = (void (*)(delete_ike_sa_job_t *)) destroy;
+	this->public.get_ike_sa_id = (ike_sa_id_t * (*)(delete_established_ike_sa_job_t *)) get_ike_sa_id;
+	this->public.destroy = (void (*)(delete_established_ike_sa_job_t *)) destroy;
 	
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);

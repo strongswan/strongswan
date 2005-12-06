@@ -130,6 +130,21 @@ struct configuration_manager_t {
 	status_t (*get_retransmit_timeout) (configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout);
 	
 	/**
+	 * @brief Returns the timeout for an half open IKE_SA in ms.
+	 * 
+	 * Half open means that the IKE_SA is still in one of the following states:
+	 *  - INITIATOR_INIT
+	 *  - RESPONDER_INIT
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 * 
+	 * @param this				calling object
+	 * @return					timeout in milliseconds (ms)
+	 */	
+	u_int32_t (*get_half_open_ike_sa_timeout) (configuration_manager_t *this);
+	
+	/**
 	 * @brief Returns the preshared secret of a specific ID.
 	 * 
 	 * The returned preshared secret MUST NOT be destroyed cause it's managed by 
@@ -192,10 +207,11 @@ struct configuration_manager_t {
  * 
  * @param first_retransmit_timeout 	first retransmit timeout in milliseconds
  * @param max_retransmit_count		max number of tries to retransmitted a requests (0 for infinite)
+ * @param half_open_ike_sa_timeout  timeout after that a half open IKE_SA gets deleted
  * @return 
  * 									- pointer to created configuration_manager_t object
  * @ingroup config
  */
-configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count);
+configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count, u_int32_t half_open_ike_sa_timeout);
 
 #endif /*CONFIGURATION_MANAGER_H_*/

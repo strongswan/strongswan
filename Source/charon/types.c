@@ -36,6 +36,7 @@ mapping_t status_m[] = {
 	{VERIFY_ERROR, "VERIFY_ERROR"},
 	{INVALID_STATE, "INVALID_STATE"},
 	{DELETE_ME, "DELETE_ME"},
+	{CREATED, "CREATED"},
 	{MAPPING_END, NULL}
 };
 
