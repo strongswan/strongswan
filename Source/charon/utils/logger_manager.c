@@ -27,6 +27,9 @@
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
 
+/**
+ * String mappings for logger_context_t
+ */
 mapping_t logger_context_t_mappings[] = {
 	{PARSER, "PARSER"},
 	{GENERATOR, "GENRAT"},
@@ -48,7 +51,7 @@ mapping_t logger_context_t_mappings[] = {
 };
 
 /** 
- * Maximum length of a logger name
+ * Maximum length of a logger name in bytes.
  */
 #define MAX_LOGGER_NAME 45
 
@@ -65,7 +68,7 @@ struct private_logger_manager_t {
 	logger_manager_t public;
 
 	/**
-	 * Managed loggers.
+	 * List of managed loggers.
 	 */
 	linked_list_t *loggers;
 	
@@ -93,7 +96,10 @@ struct private_logger_manager_t {
  	 * @param logger_level 	logger_level to set
  	 * @param enable 		enable specific level or disable it
 	 */
-	void (*set_logger_level) (private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable);
+	void (*set_logger_level) (private_logger_manager_t *this, 
+							  logger_context_t context,
+							  logger_level_t logger_level,
+							  bool enable);
 	
 };
 
@@ -107,17 +113,33 @@ typedef struct logger_levels_entry_t logger_levels_entry_t;
  * logger_t objects in specific context.
  */
 struct logger_levels_entry_t {
+	/**
+	 * Logger context.
+	 */
 	logger_context_t context;
+	
+	/**
+	 * Logger level of logger context.
+	 */
 	logger_level_t level;
 };
+
 
 typedef struct loggers_entry_t loggers_entry_t;
 
 /**
  * Entry in the loggers linked list.
+ * 
+ * @todo Replace loggers_entry_t with logger_t and add get_context() function to logger_t class.
  */
 struct loggers_entry_t {
+	/**
+	 * Logger context.
+	 */
 	logger_context_t context;
+	/**
+	 * Assigned logger
+	 */
 	logger_t *logger;
 };
 

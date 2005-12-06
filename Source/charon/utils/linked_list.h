@@ -37,7 +37,10 @@ typedef struct linked_list_t linked_list_t;
  * @b Costructors:
  * - linked_list_create()
  * 
- * @see job_queue_t, event_queue_t, send_queue_t
+ * @see		
+ * 			- job_queue_t
+ * 			- event_queue_t
+ * 			- send_queue_t
  * 
  * @ingroup utils
  */
@@ -57,7 +60,7 @@ struct linked_list_t {
 	 * @warning Created iterator_t object has to get destroyed by the caller.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @param forward 		iterator direction (TRUE: front to end)
 	 * @return				new iterator_t object
 	 */
 	iterator_t * (*create_iterator) (linked_list_t *linked_list, bool forward);
@@ -66,7 +69,7 @@ struct linked_list_t {
 	 * @brief Inserts a new item at the beginning of the list.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[in] 			item value to insert in list
+	 * @param[in] item		item value to insert in list
 	 */
 	void (*insert_first) (linked_list_t *linked_list, void *item);
 
@@ -74,7 +77,7 @@ struct linked_list_t {
 	 * @brief Removes the first item in the list and returns its value.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[in] item 		returned value of first item
+	 * @param[out] item 	returned value of first item
 	 * @return
 	 * 						- SUCCESS
 	 * 						- NOT_FOUND, if list is empty
@@ -85,7 +88,7 @@ struct linked_list_t {
 	 * @brief Returns the value of the first list item without removing it.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[out] 			item returned value of first item
+	 * @param[out] item		item returned value of first item
 	 * @return
 	 * 						- SUCCESS
 	 * 						- NOT_FOUND, if list is empty
@@ -96,7 +99,7 @@ struct linked_list_t {
 	 * @brief Inserts a new item at the end of the list.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[in] 			item value to insert into list
+	 * @param[in] item 		item value to insert into list
 	 */
 	void (*insert_last) (linked_list_t *linked_list, void *item);
 	
@@ -105,7 +108,7 @@ struct linked_list_t {
 	 * 
 	 * @param linked_list 	calling object
 	 * @param position		position starting at 0 to insert new entry
-	 * @param[in] 			item value to insert into list
+	 * @param[in] item		item value to insert into list
 	 * @return
 	 * 						- SUCCESS
 	 * 						- INVALID_ARG if position not existing
@@ -117,7 +120,7 @@ struct linked_list_t {
 	 * 
 	 * @param linked_list 	calling object
 	 * @param position		position starting at 0 to remove entry from
-	 * @param[out] 			removed item will be stored at this location
+	 * @param[out] item 	removed item will be stored at this location
 	 * @return
 	 * 						- SUCCESS
 	 * 						- INVALID_ARG if position not existing
@@ -129,7 +132,7 @@ struct linked_list_t {
 	 * 
 	 * @param linked_list 	calling object
 	 * @param position		position starting at 0 to get entry from
-	 * @param[out] 			item will be stored at this location
+	 * @param[out] item		item will be stored at this location
 	 * @return
 	 * 						- SUCCESS
 	 * 						- INVALID_ARG if position not existing
@@ -140,7 +143,7 @@ struct linked_list_t {
 	 * @brief Removes the last item in the list and returns its value.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[out] 			item returned value of last item
+	 * @param[out] item		item returned value of last item
 	 * @return
 	 * 						- SUCCESS
 	 * 						- NOT_FOUND if list is empty
@@ -151,7 +154,7 @@ struct linked_list_t {
 	 * @brief Returns the value of the last list item without removing it.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[out] 			item returned value of last item
+	 * @param[out] item		item returned value of last item
 	 * @return
 	 * 						- SUCCESS
 	 * 						- NOT_FOUND if list is empty
@@ -174,7 +177,7 @@ struct linked_list_t {
 /**
  * @brief Creates an empty linked list object.
  * 
- * @return the created linked list.
+ * @return 		linked_list_t object.
  * 
  * @ingroup utils
  */

@@ -28,7 +28,6 @@
 
 #include <utils/allocator.h>
 
-
 /** 
  * String mappings for id_type_t.
  */
@@ -44,7 +43,6 @@ mapping_t id_type_m[] = {
 };
 
 
-
 typedef struct private_identification_t private_identification_t;
 
 /**
@@ -57,23 +55,23 @@ struct private_identification_t {
 	identification_t public;
 	
 	/**
-	 * string representation of this id
+	 * String representation of this ID.
 	 */
 	char *string;
 	
 	/**
-	 * encoded representation of this id
+	 * Encoded representation of this ID.
 	 */
 	chunk_t encoded;
 	
 	/**
-	 * type of this id
+	 * Type of this ID.
 	 */
 	id_type_t type;
 };
 
 /**
- * implements identification_t.get_encoding
+ * Implementation of identification_t.get_encoding.
  */
 static chunk_t get_encoding(private_identification_t *this)
 {
@@ -81,7 +79,7 @@ static chunk_t get_encoding(private_identification_t *this)
 }
 
 /**
- * implements identification_t.get_type
+ * Implementation of identification_t.get_type.
  */
 static id_type_t get_type(private_identification_t *this)
 {
@@ -89,7 +87,7 @@ static id_type_t get_type(private_identification_t *this)
 }
 	
 /**
- * implements identification_t.get_string
+ * Implementation of identification_t.get_string.
  */
 static char *get_string(private_identification_t *this)
 {
@@ -116,7 +114,7 @@ static bool equals (private_identification_t *this,private_identification_t *oth
 }
 
 /**
- * implements identification_t.destroy
+ * Implementation of identification_t.destroy.
  */
 static void destroy(private_identification_t *this)
 {
@@ -126,13 +124,14 @@ static void destroy(private_identification_t *this)
 }
 
 /*
- * Generic constructor used for the other twos
+ * Generic constructor used for the other constructors.
+ * 
+ * @return 		private_identification_t object
  */
 static private_identification_t *identification_create()
 {
 	private_identification_t *this = allocator_alloc_thing(private_identification_t);
 	
-	/* assign methods */
 	this->public.equals = (bool (*) (identification_t*,identification_t*))equals;
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;

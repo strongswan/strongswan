@@ -27,6 +27,7 @@
 
 #include <utils/logger.h>
 
+
 typedef enum logger_context_t logger_context_t;
 
 /**
@@ -53,17 +54,18 @@ enum logger_context_t {
 	PRIME_POOL,
 };
 
+
 typedef struct logger_manager_t logger_manager_t;
 
 /**
  * @brief Class to manage logger_t objects.
  * 
- * The logger manager stores all loggers in a list and
+ * The logger manager manages all logger_t object in a list and
  * allows their manipulation. Via a logger_context_t, the loglevel
  * of a specific logging type can be adjusted at runtime.
  * 
  * @b Constructors:
- * - logger_manager_create()
+ *  - logger_manager_create()
  * 
  * @see logger_t
  * 
@@ -81,18 +83,16 @@ struct logger_manager_t {
 	 *
 	 * @param this			logger_manager_t object
 	 * @param context		logger_context to use the logger for
-	 * @param[out] logger	pointer to a a place where the new logger is stored
 	 * @param name			name for the new logger. Context name is already included 
 	 * 						and has not to be specified (so NULL is allowed)
 	 * @return				logger_t object
 	 */
 	logger_t *(*create_logger) (logger_manager_t *this, logger_context_t context, char *name);
 	
-	
 	/**
 	 * @brief Destroys a logger_t object which is not used anymore.
 	 * 
-	 * @warning Objects of type logger_t which are not destroyed over function
+	 * Objects of type logger_t which are not destroyed over function
 	 * #logger_manager_t.destroy_logger are destroyed in logger_managers 
 	 * destroy function.
 	 *
@@ -111,21 +111,21 @@ struct logger_manager_t {
 	logger_level_t (*get_logger_level) (logger_manager_t *this, logger_context_t context);
 	
 	/**
-	 * Enables a logger_level of a specific context.
+	 * Enables a logger level of a specific context.
 	 * 
 	 * @param this 			calling object
 	 * @param context 		context to set level
- 	 * @param logger_level 	logger_level to eanble
+ 	 * @param logger_level 	logger level to eanble
 	 */
 	void (*enable_logger_level) (logger_manager_t *this, logger_context_t context,logger_level_t logger_level);
 		
 
 	/**
-	 * Disables a logger_level of a specific context.
+	 * Disables a logger level of a specific context.
 	 * 
 	 * @param this 			calling object
 	 * @param context 		context to set level
- 	 * @param logger_level 	logger_level to disable
+ 	 * @param logger_level 	logger level to disable
 	 */
 	void (*disable_logger_level) (logger_manager_t *this, logger_context_t context,logger_level_t logger_level);
 
@@ -143,7 +143,7 @@ struct logger_manager_t {
 /**
  * @brief Constructor to create a logger_manager_t object.
  *
- * @param default_log_level 	default log level for a context
+ * @param default_log_level 	default log level for all context
  * @return 						logger_manager_t object
  * 
  * @ingroup utils

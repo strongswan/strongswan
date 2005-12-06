@@ -29,13 +29,13 @@
 
 #include "allocator.h"
 
-#ifdef LEAK_DETECTIVE
 
+#ifdef LEAK_DETECTIVE
 
 typedef union memory_hdr_t memory_hdr_t;
 
 /**
- * Header of each allocated memory area.
+ * @brief Header of each allocated memory area.
  * 
  * Ideas stolen from pluto's defs.c.
  * 
@@ -43,28 +43,29 @@ typedef union memory_hdr_t memory_hdr_t;
  */
 union memory_hdr_t {
 	/**
-	 * Informations
+	 * Informations.
 	 */
     struct {
 	    	/**
-	    	 * Filename withing memory was allocated
+	    	 * Filename withing memory was allocated.
 	    	 */
 		const char *filename;
 		/**
-		 * Line number in given file
+		 * Line number in given file.
 		 */
 		size_t line;
 		/**
-		 * Allocated memory size. Needed for reallocation
+		 * Allocated memory size. Needed for reallocation.
 		 */
 		size_t size_of_memory;
 		/**
-		 * Link to the previous and next memory area
+		 * Link to the previous and next memory area.
 		 */
 		memory_hdr_t *older, *newer;
     } info;
     /**
-     * force maximal alignment ?
+     * Force maximal alignment ?
+     * 
      */
     unsigned long junk;	
 };
@@ -100,13 +101,11 @@ struct private_allocator_t
 	 * returns an empty data area filled with zeros.
 	 *
 	 * @param this 		private_allocator_t object
-	 * @param bytes 		number of bytes to allocate
+	 * @param bytes 	number of bytes to allocate
 	 * @param file 		filename from which the memory is allocated
 	 * @param line 		line number in specific file
 	 * @param use_mutex if FALSE no mutex is used for allocation
-	 * @return 		
-	 * 					- pointer to allocated memory area
-	 * 					- NULL if out of ressources
+	 * @return 			pointer to allocated memory area
 	 */ 
 	void * (*allocate_special) (private_allocator_t *this,size_t bytes, char * file,int line, bool use_mutex);
 };
@@ -256,7 +255,6 @@ static void * clone_bytes(allocator_t *allocator,void * to_clone, size_t bytes, 
 	return new_space;
 }
 
-
 /**
  * Implementation of allocator_t.clone_chunk. 
  */
@@ -327,7 +325,7 @@ static private_allocator_t allocator = {
 allocator_t *global_allocator = &(allocator.public);
 
 /*
- * alloc function for gmp
+ * Alloc function for gmp.
  */
 void *gmp_alloc(size_t bytes)
 {
@@ -335,14 +333,14 @@ void *gmp_alloc(size_t bytes)
 }
 
 /*
- * realloc function for gmp
+ * Realloc function for gmp.
  */
 void *gmp_realloc(void *old, size_t old_bytes, size_t new_bytes)
 {
 	return global_allocator->reallocate(global_allocator, old, new_bytes, "[ gmp internal ]", 0);
 }
 /*
- * free function for gmp
+ * Free function for gmp.
  */
 void gmp_free(void *ptr, size_t bytes)
 {
@@ -359,9 +357,8 @@ void allocator_init()
 
 #else /* !LEAK_DETECTION */
 
-
 /*
- * Described in header
+ * Described in header.
  */
 chunk_t allocator_alloc_as_chunk(size_t bytes)
 {
@@ -377,7 +374,7 @@ chunk_t allocator_alloc_as_chunk(size_t bytes)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 void * allocator_realloc(void * old, size_t newsize)
 {
@@ -386,7 +383,7 @@ void * allocator_realloc(void * old, size_t newsize)
 } 
 
 /*
- * Described in header
+ * Described in header.
  */
 void * allocator_clone_bytes(void * pointer, size_t size)
 {
@@ -400,9 +397,8 @@ void * allocator_clone_bytes(void * pointer, size_t size)
 	return (data);
 }
 
-
 /**
- * Described in header
+ * Described in header.
  */
 chunk_t allocator_clone_chunk(chunk_t chunk)
 {
@@ -420,7 +416,7 @@ chunk_t allocator_clone_chunk(chunk_t chunk)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 void allocator_free_chunk(chunk_t *chunk)
 {
@@ -428,6 +424,5 @@ void allocator_free_chunk(chunk_t *chunk)
 	chunk->ptr = NULL;
 	chunk->len = 0;
 }
-
 
 #endif /* LEAK_DETECTION */

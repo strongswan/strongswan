@@ -33,18 +33,19 @@
 #include <utils/allocator.h>
 
 /**
- * Maximum length of al log entry (only used for logger_s.log)
+ * Maximum length of a log entry (only used for logger_s.log).
  */
 #define MAX_LOG 8192
+
 
 typedef struct private_logger_t private_logger_t;
 
 /**
- * @brief The logger object's private data.
+ * @brief Private data of a logger_t object.
  */
 struct private_logger_t {
 	/**
-	 * Public data
+	 * Public data.
 	 */
 	logger_t public;
 	/**
@@ -255,7 +256,6 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 	pthread_mutex_unlock(&mutex);
 }
 
-
 /**
  * Implementation of logger_t.log_chunk.
  */
@@ -263,7 +263,6 @@ static void log_chunk(logger_t *this, logger_level_t loglevel, char *label, chun
 {
 	this->log_bytes(this, loglevel, label, chunk->ptr, chunk->len);
 }
-
 
 /**
  * Implementation of logger_t.enable_level.
@@ -297,11 +296,7 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_th
 {
 	private_logger_t *this = allocator_alloc_thing(private_logger_t);
 	
-	if (logger_name == NULL)
-	{
-		logger_name = "";
-	}
-	
+	/* public functions */
 	this->public.log = (void(*)(logger_t*,logger_level_t,char*,...))logg;
 	this->public.log_bytes = (void(*)(logger_t*, logger_level_t, char*,char*,size_t))log_bytes;
 	this->public.log_chunk = log_chunk;
@@ -309,7 +304,13 @@ logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_th
 	this->public.disable_level = (void(*)(logger_t*,logger_level_t))disable_level;
 	this->public.destroy = (void(*)(logger_t*))destroy;
 
+	/* private functions */
 	this->prepend_prefix = prepend_prefix;
+
+	if (logger_name == NULL)
+	{
+		logger_name = "";
+	}
 
 	/* private variables */
 	this->level = log_level;

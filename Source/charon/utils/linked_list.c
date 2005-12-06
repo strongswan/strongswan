@@ -27,35 +27,39 @@
 #include <utils/allocator.h>
 
 
+
 typedef struct linked_list_element_t linked_list_element_t;
 
 /**
- * @brief Element of the linked_list.
+ * @brief Element in a linked list.
  *
- * This element holds a pointer to the value of the list item itself.
+ * This element holds a pointer to the value it represents.
  */
 struct linked_list_element_t {
+
 	/**
 	 * Value of a list item.
 	 */
 	void *value;
 
 	/**
-	 * previous list element
-	 * NULL if first element in list
+	 * Previous list element.
+	 * 
+	 * NULL if first element in list.
 	 */
 	linked_list_element_t *previous;
 	
 	/**
-	 * next list element
-	 * NULL if last element in list
+	 * Next list element.
+	 * 
+	 * NULL if last element in list.
 	 */
 	linked_list_element_t *next;
 
 	/**
 	 * Destroys a linked_list_element object.
 	 *
-	 * @param linked_list_element_t 		calling object
+	 * @param linked_list_element_t 	calling object
 	 */
 	void (*destroy) (linked_list_element_t *this);
 };
@@ -73,8 +77,8 @@ static void linked_list_element_destroy(linked_list_element_t *this)
  *
  * @warning Only the pointer to the value is stored.
  * 
- * @param[in] value 			value of item to be set
- * @return 						linked_list_element_t object
+ * @param[in] value 		value of item to be set
+ * @return 					linked_list_element_t object
  */
 
 linked_list_element_t *linked_list_element_create(void *value)
@@ -92,8 +96,9 @@ linked_list_element_t *linked_list_element_create(void *value)
 
 
 typedef struct private_linked_list_t private_linked_list_t;
+
 /**
- * Private variables and functions of linked list.
+ * Private data of a linked_list_t object.
  *
  */
 struct private_linked_list_t {
@@ -582,7 +587,6 @@ static status_t get_at_position (private_linked_list_t *this,size_t position, vo
 	return status;
 }
 
-
 /**
  * Implementation of linked_list_t.get_last.
  */
@@ -628,7 +632,6 @@ static void linked_list_destroy(private_linked_list_t *this)
 {
 	void * value;
 	/* Remove all list items before destroying list */
-	
 	while (this->public.remove_first(&(this->public),&value) != NOT_FOUND)
 	{
 		/* values are not destroyed so memory leaks are possible
@@ -638,7 +641,7 @@ static void linked_list_destroy(private_linked_list_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 linked_list_t *linked_list_create()
 {

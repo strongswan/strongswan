@@ -33,9 +33,9 @@ typedef enum logger_level_t logger_level_t;
 /**
  * @brief Log Levels supported by the logger object.
  * 
- * Logleves are devided in two types:
- * - One to specify the type log
- * - One to specify the detail-level of the log
+ * Logleves are devided in two different kinds:
+ * - levels to specify the type of the log
+ * - levels to specify the detail-level of the log
  * 
  * Use combinations of these to build detailed loglevels, such
  * as CONTROL|MORE fore a detailed cotrol level, or
@@ -85,6 +85,9 @@ typedef struct logger_t logger_t;
 /**
  * @brief Class to simplify logging.
  * 
+ * @b Constructors:
+ *  - logger_create()
+ * 
  * @ingroup utils
  */
 struct logger_t {
@@ -92,11 +95,11 @@ struct logger_t {
 	/**
 	 * @brief Log an entry, using printf()-like params.
 	 *
-	 * The specefied loglevels must ALL be activated that
+	 * All specified loglevels must be activated that
 	 * the log is done.
 	 *
 	 * @param this 		logger_t object
-	 * @param loglevel 	or'ed set of loglevels
+	 * @param loglevel 	or'ed set of logger_level_t's
 	 * @param format 	printf like format string
 	 * @param ... 		printf like parameters
 	 */
@@ -105,11 +108,11 @@ struct logger_t {
 	/**
 	 * @brief Log some bytes, useful for debugging.
 	 *
-	 * The specefied loglevels must ALL be activated that
+	 * All specified loglevels must be activated that
 	 * the log is done.
 	 *
 	 * @param this 		logger_t object
-	 * @param loglevel 	or'ed set of loglevels
+	 * @param loglevel 	or'ed set of logger_level_t's
 	 * @param label 	a labeling name, logged with the bytes
 	 * @param bytes 	pointer to the bytes to dump
 	 * @param len	 	number of bytes to dump
@@ -119,11 +122,11 @@ struct logger_t {
 	/**
 	 * @brief Log a chunk, useful for debugging.
 	 *
-	 * The specefied loglevels must ALL be activated that
+	 * All specified loglevels must be activated that
 	 * the log is done.
 	 *
 	 * @param this 		logger_t object
-	 * @param loglevel 	or'ed set of loglevels
+	 * @param loglevel 	or'ed set of logger_level_t's
 	 * @param label 	a labeling name, logged with the bytes
 	 * @param chunk		pointer to a chunk to log
 	 */

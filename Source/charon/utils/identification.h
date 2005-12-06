@@ -30,9 +30,11 @@
 typedef enum id_type_t id_type_t;
 
 /**
- * @brief ID Types of a ID payload.
+ * @brief ID Types in a ID payload.
  * 
- * @see identification_t
+ * @see 
+ * 			- identification_t
+ * 			- id_payload_t
  * 
  * @ingroup utils
  */
@@ -83,7 +85,7 @@ enum id_type_t {
 };
 
 /**
- * string amppings for id_type_t
+ * String mappings for id_type_t.
  */
 extern mapping_t id_type_m[];
 
@@ -106,7 +108,7 @@ typedef struct identification_t identification_t;
  * - identification_create_from_string()
  * - identification_create_from_encoding()
  * 
- * @todo Implement other types. 
+ * @todo Support for other ID types then ID_IPV4_ADDR. 
  *
  * @ingroup utils
  */
@@ -150,7 +152,6 @@ struct identification_t {
 	 */
 	bool (*equals) (identification_t *this,identification_t *other);
 
-
 	/**
 	 * @brief Destroys a identification_t object.
 	 *
@@ -178,7 +179,7 @@ identification_t * identification_create_from_string(id_type_t type, char *strin
  * 
  * @param type		type of this id, such as ID_IPV4_ADDR
  * @param encoded	encoded bytes, such as from identification_t.get_encoding
- * @return			created identification_t object
+ * @return			identification_t object
  * 
  * @ingroup utils
  */
