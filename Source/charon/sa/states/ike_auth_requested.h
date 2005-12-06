@@ -33,14 +33,17 @@ typedef struct ike_auth_requested_t ike_auth_requested_t;
  * @brief This class represents an IKE_SA, which has requested an IKE_AUTH.
  * 
  * The state accpets IKE_AUTH responses. It proves the authenticity
- * and sets up the first child sa. After that, it processes to the 
- * IKE_SA_ESTABLISHED state.
+ * and sets up the first child sa. After that, it changes IKE_SA state to 
+ * IKE_SA_ESTABLISHED.
+ * 
+ * @ Constructors:
+ *  - ike_auth_requested_create()
  * 
  * @ingroup states
  */
 struct ike_auth_requested_t {
 	/**
-	 * methods of the state_t interface
+	 * The state_t interface.
 	 */
 	state_t state_interface;
 
@@ -49,12 +52,17 @@ struct ike_auth_requested_t {
 /**
  * Constructor of class ike_auth_requested_t
  * 
- * @param ike_sa		assigned ike_sa object
- * @param received_nonce	Received nonce value
- * @return				created ike_auth_requested_t object
+ * @param ike_sa					assigned ike_sa object
+ * @param sent_nonce				Sent nonce value in IKE_SA_INIT request
+ * @param received_nonce			Received nonce value in IKE_SA_INIT response
+ * @param ike_sa_init_reply_data		binary representation of IKE_SA_INIT reply 
+ * @return							created ike_auth_requested_t object
  * 
  * @ingroup states
  */
-ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk_t sent_nonce,chunk_t received_nonce,chunk_t ike_sa_init_repy_data);
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,
+												chunk_t sent_nonce,
+												chunk_t received_nonce,
+												chunk_t ike_sa_init_reply_data);
 
 #endif /*IKE_AUTH_REQUESTED_H_*/

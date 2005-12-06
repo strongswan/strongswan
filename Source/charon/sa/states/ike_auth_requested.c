@@ -42,22 +42,22 @@ typedef struct private_ike_auth_requested_t private_ike_auth_requested_t;
  */
 struct private_ike_auth_requested_t {
 	/**
-	 * methods of the state_t interface
+	 * Public interface of ike_auth_requested_t.
 	 */
 	ike_auth_requested_t public;
 	
 	/**
-	 * Assigned IKE_SA
+	 * Assigned IKE_SA.
 	 */
 	 protected_ike_sa_t *ike_sa;
 	 
 	/**
-	 * SA config, just a copy of the one stored in the ike_sa
+	 * SA config, just a copy of the one stored in the ike_sa.
 	 */
 	sa_config_t *sa_config; 
 	
 	/**
-	 * Received nonce from responder
+	 * Received nonce from responder.
 	 */
 	chunk_t received_nonce;
 	
@@ -72,29 +72,55 @@ struct private_ike_auth_requested_t {
 	chunk_t ike_sa_init_reply_data;
 	 
 	/**
-	 * Logger used to log data 
+	 * Assigned Logger.
 	 * 
 	 * Is logger of ike_sa!
 	 */
 	logger_t *logger;
 	
 	/**
-	 * process the IDr payload (check if other id is valid)
+	 * Process the IDr payload (check if other id is valid)
+	 * 
+	 * @param this			calling object
+	 * @param idr_payload	ID payload of responder
+	 * @return				
+	 * 						- SUCCESS
+	 * 						- DELETE_ME
 	 */
 	status_t (*process_idr_payload) (private_ike_auth_requested_t *this, id_payload_t *idr_payload);
 	
 	/**
-	 * process the SA payload (check if selected proposals are valid, setup child sa)
+	 * Process the SA payload (check if selected proposals are valid, setup child sa)
+	 * 
+	 * @param this			calling object
+	 * @param sa_payload	SA payload of responder
+	 *
+	 * 						- SUCCESS
+	 * 						- DELETE_ME
 	 */
 	status_t (*process_sa_payload) (private_ike_auth_requested_t *this, sa_payload_t *sa_payload);
 	
 	/**
-	 * process the AUTH payload (check authenticity of message)
+	 * Process the AUTH payload (check authenticity of message)
+	 * 
+	 * @param this				calling object
+	 * @param auth_payload		AUTH payload of responder
+	 * @param other_id_payload	ID payload of responder
+	 *
+	 * 						- SUCCESS
+	 * 						- DELETE_ME
 	 */
 	status_t (*process_auth_payload) (private_ike_auth_requested_t *this, auth_payload_t *auth_payload, id_payload_t *other_id_payload);
 	
 	/**
-	 * process the TS payload (check if selected traffic selectors are valid)
+	 * Process the TS payload (check if selected traffic selectors are valid)
+	 * 
+	 * @param this			calling object
+	 * @param ts_initiator	TRUE if TS payload is TSi, FALSE for TSr
+	 * @param ts_payload	TS payload of responder
+	 *
+	 * 						- SUCCESS
+	 * 						- DELETE_ME
 	 */
 	status_t (*process_ts_payload) (private_ike_auth_requested_t *this, bool ts_initiator, ts_payload_t *ts_payload);
 	 
@@ -106,21 +132,19 @@ struct private_ike_auth_requested_t {
  */
 static status_t process_message(private_ike_auth_requested_t *this, message_t *ike_auth_reply)
 {
-	status_t status;
-	signer_t *signer;
-	crypter_t *crypter;
-	iterator_t *payloads;
-	exchange_type_t exchange_type;
+	ts_payload_t *tsi_payload, *tsr_payload;
 	id_payload_t *idr_payload = NULL;
 	auth_payload_t *auth_payload;
 	sa_payload_t *sa_payload;
-	ts_payload_t *tsi_payload, *tsr_payload;
+	iterator_t *payloads;
+	crypter_t *crypter;
+	signer_t *signer;
+	status_t status;
 	
-	exchange_type = ike_auth_reply->get_exchange_type(ike_auth_reply);
-	if (exchange_type != IKE_AUTH)
+	if (ike_auth_reply->get_exchange_type(ike_auth_reply) != IKE_AUTH)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_auth_requested",
-							mapping_find(exchange_type_m,exchange_type));
+							mapping_find(exchange_type_m,ike_auth_reply->get_exchange_type(ike_auth_reply)));
 		return FAILED;
 	}
 	
@@ -196,7 +220,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 				{
 					this->logger->log(this->logger, ERROR | MORE, "Notify reply not for IKE protocol");
 					payloads->destroy(payloads);
-					return FAILED;	
+					return DELETE_ME;	
 				}
 				
 				switch (notify_payload->get_notify_message_type(notify_payload))
@@ -224,22 +248,32 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 					default:
 					{
 						/*
-						 * If an unrecognized Notify type is received, the IKE_SA gets destroyed.
+						 * - In case of unknown error: IKE_SA gets destroyed.
+						 * - In case of unknown status: logging
 						 * 
 						 */
-						
-						this->logger->log(this->logger, ERROR, "Notify type %s not recognized in state ike_auth_requested.",
-										  mapping_find(notify_message_type_m,notify_payload->get_notify_message_type(notify_payload)));
-						payloads->destroy(payloads);
-						return DELETE_ME;	
+						notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
+						if (notify_message_type < 16383)
+						{
+							this->logger->log(this->logger, ERROR, "Notify error type %d not recognized in state IKE_AUTH_REQUESTED.",
+											  notify_message_type);
+							payloads->destroy(payloads);
+							return DELETE_ME;	
+
+						}
+						else
+						{
+							this->logger->log(this->logger, ERROR, "Notify status type %d not handled in state IKE_AUTH_REQUESTED.",
+											  notify_message_type);
+							break;
+						}
 					}
 				}
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "Payload type %s not supported in state ike_auth_requested!", mapping_find(payload_type_m, payload->get_type(payload)));
-				payloads->destroy(payloads);
-				return FAILED;
+				this->logger->log(this->logger, ERROR, "Payload id %d not handled in state IKE_AUTH_REQUESTED", payload->get_type(payload));
+				break;
 			}
 		}
 	}
@@ -308,7 +342,7 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 		{
 			other_id->destroy(other_id);
 			this->logger->log(this->logger, ERROR, "IKE_AUTH reply didn't contain requested id");
-			return FAILED;	
+			return DELETE_ME;	
 		}
 	}
 	
@@ -335,13 +369,13 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "responders sa payload contained no proposals");
-		return FAILED;
+		return DELETE_ME;
 	}
 	if (proposal_count > 1)
 	{
 		allocator_free(proposals);
 		this->logger->log(this->logger, ERROR, "responders sa payload contained more than one proposal");
-		return FAILED;
+		return DELETE_ME;
 	}
 	
 	proposal_chosen = this->sa_config->select_proposal(this->sa_config, ah_spi, esp_spi, proposals, proposal_count);
@@ -349,7 +383,7 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 	{
 		this->logger->log(this->logger, ERROR, "responder selected an not offered proposal");
 		allocator_free(proposals);
-		return FAILED;
+		return DELETE_ME;
 	}
 	else
 	{
@@ -377,7 +411,7 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not verify AUTH data. Error status: %s",mapping_find(status_m,status));
-		return FAILED;	
+		return DELETE_ME;	
 	}
 
 	this->logger->log(this->logger, CONTROL | MORE, "AUTH data verified");
@@ -408,7 +442,7 @@ static status_t process_ts_payload(private_ike_auth_requested_t *this, bool ts_i
 	if (ts_selected_count != ts_received_count)
 	{
 		this->logger->log(this->logger, ERROR, "responder selected invalid traffic selectors");
-		status = FAILED;	
+		status = DELETE_ME;	
 	}
 	
 	/* cleanup */
