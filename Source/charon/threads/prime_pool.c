@@ -301,6 +301,10 @@ void generate_primes(private_prime_pool_t *this)
 			selected_prime_list->primes->insert_last(selected_prime_list->primes, (void*)prime);
 			pthread_mutex_unlock(&(this->mutex));
 		}
+		/* abort if requested */
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+		pthread_testcancel();
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	}
 }
 
