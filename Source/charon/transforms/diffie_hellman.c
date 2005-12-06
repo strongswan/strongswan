@@ -313,12 +313,12 @@ typedef struct modulus_info_entry_t modulus_info_entry_t;
  */
 struct modulus_info_entry_t {
 	/**
-	 * Group number as it is defined in transform_substructure.h.
+	 * Group number as it is defined in file transform_substructure.h.
 	 */
 	diffie_hellman_group_t group;
 	
 	/**
-	 * Pointer to first byte of modulus in (network order).
+	 * Pointer to first byte of modulus (network order).
 	 */
 	u_int8_t *modulus;
 	
@@ -491,7 +491,6 @@ static void compute_shared_secret (private_diffie_hellman_t *this)
 	this->shared_secret_is_computed = TRUE;
 }
 
-
 /**
  * Implementation of private_diffie_hellman_t.compute_public_value.
  */
@@ -548,7 +547,6 @@ static void destroy(private_diffie_hellman_t *this)
 	}
 	allocator_free(this);
 }
-
 
 /*
  * Described in header.

@@ -34,39 +34,38 @@ typedef struct private_prf_plus_t private_prf_plus_t;
  */
 struct private_prf_plus_t {
 	/**
-	 * public prf_plus_t interface
+	 * Public interface of prf_plus_t.
 	 */
 	prf_plus_t public;
 	
 	/**
-	 * prf to use
+	 * PRF to use.
 	 */
 	prf_t *prf;
 	
 	/**
-	 * initial seed
+	 * Initial seed.
 	 */
 	chunk_t seed;
 	
 	/**
-	 * buffer to store current prf result
+	 * Buffer to store current PRF result.
 	 */
 	chunk_t buffer;
 		
 	/**
-	 * already given out bytes in current buffer
+	 * Already given out bytes in current buffer.
 	 */
 	size_t given_out;
 	
 	/**
-	 * octet which will be appended to the seed
+	 * Octet which will be appended to the seed.
 	 */
 	u_int8_t appending_octet;
 };
 
-
 /**
- * implementation of prf_plus_t.get_bytes
+ * Implementation of prf_plus_t.get_bytes.
  */
 static void get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
 {	
@@ -99,7 +98,7 @@ static void get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
 }
 
 /**
- * implementation of prf_plus_t.allocate_bytes
+ * Implementation of prf_plus_t.allocate_bytes.
  */	
 static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chunk)
 {
@@ -109,7 +108,7 @@ static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chu
 }
 
 /**
- * implementation of prf_plus_t.destroy
+ * Implementation of prf_plus_t.destroy.
  */
 static void destroy(private_prf_plus_t *this)
 {
@@ -119,7 +118,7 @@ static void destroy(private_prf_plus_t *this)
 }
 
 /*
- * Description in header
+ * Description in header.
  */
 prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed)
 {

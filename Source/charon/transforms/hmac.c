@@ -28,30 +28,33 @@
 typedef struct private_hmac_t private_hmac_t;
 
 /**
- * Private data of an hmac_t object.
+ * Private data of a hmac_t object.
+ * 
+ * The variable names are the same as in the RFC.
  */
 struct private_hmac_t {
 	/**
-	 * hmac_t interface
+	 * Public hmac_t interface.
 	 */
 	hmac_t hmac;
 	
 	/**
-	 * block size, as in RFC
+	 * Block size, as in RFC.
 	 */
 	u_int8_t b;
 	
 	/**
-	 * hash function
+	 * Hash function.
 	 */
 	hasher_t *h;
 	
 	/**
-	 * previously xor'ed key using opad
+	 * Previously xor'ed key using opad.
 	 */
 	chunk_t opaded_key;
+	
 	/**
-	 * previously xor'ed key using ipad
+	 * Previously xor'ed key using ipad.
 	 */
 	chunk_t ipaded_key;
 };

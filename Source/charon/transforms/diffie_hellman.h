@@ -33,7 +33,9 @@ typedef enum diffie_hellman_group_t diffie_hellman_group_t;
  * 
  * The modulus (or group) to use for a Diffie-Hellman calculation.
  * 
- * @see IKEv2 draft 3.3.2 and RFC 3526.
+ * See IKEv2 draft 3.3.2 and RFC 3526.
+ * 
+ * @warning Use of big modulus sizes can be cpu consuming.
  * 
  * @ingroup transforms
  */
@@ -50,7 +52,7 @@ enum diffie_hellman_group_t {
 };
 
 /** 
- * string mappings for diffie_hellman_group_t
+ * String mappings for diffie_hellman_group_t.
  */
 extern mapping_t diffie_hellman_group_m[];
 
@@ -59,6 +61,9 @@ typedef struct diffie_hellman_t diffie_hellman_t;
 
 /**
  * @brief Implementation of the widely used Diffie-Hellman algorithm.
+ * 
+ * @b Constructors:
+ *  - diffie_hellman_create()
  * 
  * @ingroup transforms
  */
@@ -73,7 +78,7 @@ struct diffie_hellman_t {
 	 * @param this 			calling diffie_hellman_t object
 	 * @param[out] secret 	shared secret will be written into this chunk
 	 * @return 				
-	 * 						- SUCCESS, or
+	 * 						- SUCCESS
 	 * 						- FAILED if not both DH values are set
 	 */
 	status_t (*get_shared_secret) (diffie_hellman_t *this, chunk_t *secret);
@@ -81,7 +86,7 @@ struct diffie_hellman_t {
 	/**
 	 * @brief Sets the public value of partner.
 	 * 	
-	 * @warning chunk gets copied
+	 * chunk gets cloned and can be destroyed afterwards.
 	 * 
 	 * @param this 			calling diffie_hellman_t object
 	 * @param public_value 	public value of partner
@@ -91,12 +96,13 @@ struct diffie_hellman_t {
 	/**
 	 * @brief Gets the public value of partner.
 	 * 	
-	 * @warning chunk gets copied
+	 * @warning Space for returned chunk is allocated and must be 
+	 * freed by the caller.
 	 * 
 	 * @param this 				calling diffie_hellman_t object
 	 * @param[out] public_value public value of partner is stored at this location
 	 * @return 				
-	 * 							- SUCCESS, or
+	 * 							- SUCCESS
 	 * 							- FAILED if other public value not set
 	 */
 	status_t (*get_other_public_value) (diffie_hellman_t *this, chunk_t *public_value);
@@ -104,7 +110,8 @@ struct diffie_hellman_t {
 	/**
 	 * @brief Gets the public value of caller
 	 * 	
-	 * @warning chunk gets copied
+	 * @warning Space for returned chunk is allocated and must be 
+	 * freed by the caller.
 	 * 
 	 * @param this 				calling diffie_hellman_t object
 	 * @param[out] 				public_value public value of caller is stored at this location
