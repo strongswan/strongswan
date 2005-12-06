@@ -25,7 +25,7 @@
 #include <transforms/signers/hmac_signer.h>
 
 /** 
- * string mappings for integrity_algorithm_t
+ * String mappings for integrity_algorithm_t.
  */
 mapping_t integrity_algorithm_m[] = {
 	{AUTH_UNDEFINED, "AUTH_UNDEFINED"},
@@ -39,7 +39,7 @@ mapping_t integrity_algorithm_m[] = {
 
 
 /*
- * see header
+ * Described in header.
  */
 signer_t *signer_create(integrity_algorithm_t integrity_algorithm)
 {

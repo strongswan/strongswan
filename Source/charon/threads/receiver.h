@@ -25,13 +25,14 @@
 
 #include <types.h>
 
+
 typedef struct receiver_t receiver_t;
 
 /**
  * @brief Receives packets from the socket and adds them to the job queue.
  * 
  * The receiver starts a thread, wich reads on the blocking socket. If 
- * there is data available, a packet_t is created from the data, wrapped
+ * data is available, a packet_t object is created , wrapped
  * in an incoming_packet_job_t and added to the job queue.
  * 
  * @ingroup threads

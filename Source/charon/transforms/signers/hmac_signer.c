@@ -26,18 +26,18 @@
 #include <transforms/prfs/hmac_prf.h>
 
 /**
- * This class represents a hmac signer with 12 byte (96 bit) output
+ * This class represents a hmac signer with 12 byte (96 bit) output.
  */
 #define BLOCK_SIZE	12
 
 typedef struct private_hmac_signer_t private_hmac_signer_t;
 
 /**
- * private data structure with signing context.
+ * Private data structure with signing context.
  */
 struct private_hmac_signer_t {
 	/**
-	 * Public interface for this signer.
+	 * Public interface of hmac_signer_t.
 	 */
 	hmac_signer_t public;
 	
@@ -47,7 +47,9 @@ struct private_hmac_signer_t {
 	prf_t *hmac_prf;
 };
 
-
+/**
+ * Implementation of signer_t.get_signature.
+ */
 static void get_signature (private_hmac_signer_t *this, chunk_t data, u_int8_t *buffer)
 {
 	u_int8_t full_mac[this->hmac_prf->get_block_size(this->hmac_prf)];
@@ -58,6 +60,9 @@ static void get_signature (private_hmac_signer_t *this, chunk_t data, u_int8_t *
 	memcpy(buffer,full_mac,BLOCK_SIZE);
 }
 
+/**
+ * Implementation of signer_t.allocate_signature.
+ */
 static void allocate_signature (private_hmac_signer_t *this, chunk_t data, chunk_t *chunk)
 {
 	chunk_t signature;
@@ -68,13 +73,16 @@ static void allocate_signature (private_hmac_signer_t *this, chunk_t data, chunk
 	signature.ptr = allocator_alloc(BLOCK_SIZE);
 	signature.len = BLOCK_SIZE;
 	
-	/* copy mac aka signature :-) */
+	/* copy signature */
 	memcpy(signature.ptr,full_mac,BLOCK_SIZE);
 
 	*chunk = signature;
 }
 
-static void verify_signature (private_hmac_signer_t *this, chunk_t data, chunk_t signature, bool *valid)
+/**
+ * Implementation of signer_t.verify_signature.
+ */
+static bool verify_signature (private_hmac_signer_t *this, chunk_t data, chunk_t signature)
 {
 	u_int8_t full_mac[this->hmac_prf->get_block_size(this->hmac_prf)];
 	
@@ -82,38 +90,46 @@ static void verify_signature (private_hmac_signer_t *this, chunk_t data, chunk_t
 	
 	if (signature.len != BLOCK_SIZE)
 	{
-		*valid = FALSE;
-		return;
+		return FALSE;
 	}
 	
 	/* compare mac aka signature :-) */
 	if (memcmp(signature.ptr,full_mac,BLOCK_SIZE) == 0)
 	{
-		*valid = TRUE;
+		return TRUE;
 	}
 	else
 	{
-		*valid = FALSE;
+		return FALSE;
 	}
 }
 
+/**
+ * Implementation of signer_t.get_key_size.
+ */
 static size_t get_key_size (private_hmac_signer_t *this)
 {
 	return this->hmac_prf->get_block_size(this->hmac_prf);
 }
-	
+
+/**
+ * Implementation of signer_t.get_block_size.
+ */
 static size_t get_block_size (private_hmac_signer_t *this)
 {
 	return BLOCK_SIZE;
 }
-	
+
+/**
+ * Implementation of signer_t.set_key.
+ */
 static void set_key (private_hmac_signer_t *this, chunk_t key)
 {
 	this->hmac_prf->set_key(this->hmac_prf,key);
 }
 
 /**
- * implementation of signer_t.destroy.
+ * Implementation of signer_t.destroy.
  */
 static status_t destroy(private_hmac_signer_t *this)
 {
@@ -121,7 +137,6 @@ static status_t destroy(private_hmac_signer_t *this)
 	allocator_free(this);
 	return SUCCESS;
 }
-
 
 /*
  * Described in header
@@ -142,7 +157,7 @@ hmac_signer_t *hmac_signer_create(hash_algorithm_t hash_algoritm)
 	/* interface functions */
 	this->public.signer_interface.get_signature = (void (*) (signer_t*, chunk_t, u_int8_t*))get_signature;
 	this->public.signer_interface.allocate_signature = (void (*) (signer_t*, chunk_t, chunk_t*))allocate_signature;
-	this->public.signer_interface.verify_signature = (void (*) (signer_t*, chunk_t, chunk_t,bool *))verify_signature;
+	this->public.signer_interface.verify_signature = (bool (*) (signer_t*, chunk_t, chunk_t))verify_signature;
 	this->public.signer_interface.get_key_size = (size_t (*) (signer_t*))get_key_size;
 	this->public.signer_interface.get_block_size = (size_t (*) (signer_t*))get_block_size;
 	this->public.signer_interface.set_key = (void (*) (signer_t*,chunk_t))set_key;

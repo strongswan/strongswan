@@ -29,7 +29,7 @@
 typedef struct hmac_signer_t hmac_signer_t;
 
 /**
- * @brief Implementation of hmac_signer_t interface using the
+ * @brief Implementation of signer_t interface using the
  * HMAC algorithm in combination with either MD5 or SHA1.
  * 
  * @ingroup signers
@@ -48,7 +48,7 @@ struct hmac_signer_t {
  * @param hash_algorithm	Hash algorithm to use with signer
  * @return					
  * 							- hmac_signer_t
- * 							- NULL if hash not supported
+ * 							- NULL if hash algorithm not supported
  * 
  * @ingroup signers
  */

@@ -99,10 +99,10 @@ void test_hmac_md5_signer(tester_t *tester)
 		logger->log_chunk(logger,RAW,"expected signature:",&reference[i]);
 		logger->log_chunk(logger,RAW,"signature:",&signature[i]);
 		allocator_free(signature[i].ptr);
-		signer->verify_signature(signer, data[i],reference[i], &valid);
+		valid = signer->verify_signature(signer, data[i],reference[i]);
 		tester->assert_true(tester, (valid == TRUE), "Signature valid check");
 
-		signer->verify_signature(signer, data[i],wrong_reference[i], &valid);
+		valid = signer->verify_signature(signer, data[i],wrong_reference[i]);
 		tester->assert_true(tester, (valid == FALSE), "Signature not valid check");
  	}
 	
@@ -197,10 +197,10 @@ void test_hmac_sha1_signer(tester_t *tester)
 		logger->log_chunk(logger,RAW,"expected signature:",&reference[i]);
 		logger->log_chunk(logger,RAW,"signature:",&signature[i]);
 		allocator_free(signature[i].ptr);
-		signer->verify_signature(signer, data[i],reference[i], &valid);
+		valid = signer->verify_signature(signer, data[i],reference[i]);
 		tester->assert_true(tester, (valid == TRUE), "Signature valid check");
 
-		signer->verify_signature(signer, data[i],wrong_reference[i], &valid);
+		valid = signer->verify_signature(signer, data[i],wrong_reference[i]);
 		tester->assert_true(tester, (valid == FALSE), "Signature not valid check");
  	}
 	

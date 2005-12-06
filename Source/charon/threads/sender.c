@@ -32,38 +32,39 @@
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
+
 typedef struct private_sender_t private_sender_t;
 
 /**
- * Private data of a sender object
+ * Private data of a sender_t object.
  */
 struct private_sender_t {
 	/**
-	 * Public part of a sender object
+	 * Public part of a sender_t object.
 	 */
 	 sender_t public;
 
 	 /**
-	  * Assigned thread to the sender_t object
+	  * Assigned thread.
 	  */
 	 pthread_t assigned_thread;
 	 
 	 /**
-	  * @brief The threads function, sends out packets.
+	  * @brief The thread function, sends out packets.
 	  * 
-	  * @param this 	assigned sender object
+	  * @param this 	calling object
 	  */
 	 void (*send_packets) (private_sender_t * this);
 	 
 	 /**
-	  * logger for this sender
+	  * A logger for this sender_t object.
 	  */
 	 logger_t *logger;
 
 };
 
 /**
- * implements private_sender_t.send_packets
+ * Implementation of private_sender_t.send_packets.
  */
 static void send_packets(private_sender_t * this)
 {
@@ -90,7 +91,7 @@ static void send_packets(private_sender_t * this)
 }
 
 /**
- * implements sender_t.destroy
+ * Implementation of sender_t.destroy.
  */
 static void destroy(private_sender_t *this)
 {
@@ -106,7 +107,7 @@ static void destroy(private_sender_t *this)
 }
 
 /*
- * see header
+ * Described in header.
  */
 sender_t * sender_create()
 {

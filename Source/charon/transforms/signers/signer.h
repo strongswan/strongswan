@@ -31,10 +31,21 @@ typedef enum integrity_algorithm_t integrity_algorithm_t;
 /**
  * @brief Integrity algorithm, as in IKEv2 draft 3.3.2.
  * 
+ * Currently only the following algorithms are implemented and therefore supported:
+ * - AUTH_HMAC_MD5_96
+ * - AUTH_HMAC_SHA1_96
+ * 
+ * @ingroup signers
  */
 enum integrity_algorithm_t {
 	AUTH_UNDEFINED = 1024,
+	/**
+	 * Implemented in class hmac_signer_t.
+	 */
 	AUTH_HMAC_MD5_96 = 1,
+	/**
+	 * Implemented in class hmac_signer_t.
+	 */
 	AUTH_HMAC_SHA1_96 = 2,
 	AUTH_DES_MAC = 3,
 	AUTH_KPDK_MD5 = 4,
@@ -42,7 +53,7 @@ enum integrity_algorithm_t {
 };
 
 /** 
- * string mappings for integrity_algorithm_t
+ * String mappings for integrity_algorithm_t.
  */
 extern mapping_t integrity_algorithm_m[];
 
@@ -52,13 +63,19 @@ typedef struct signer_t signer_t;
 /**
  * @brief Generig interface for a symmetric signature algorithm.
  * 
+ * @b Constructors:
+ *  - signer_create()
+ *  - hmac_signer_create()
+ * 
+ * @todo Implement more integrity algorithms
+ * 
  * @ingroup signers
  */
 struct signer_t {
 	/**
 	 * @brief Generate a signature.
 	 * 
-	 * @param this			calling signer
+	 * @param this			calling object
 	 * @param data			a chunk containing the data to sign
 	 * @param[out] buffer	pointer where the signature will be written
 	 */
@@ -67,7 +84,7 @@ struct signer_t {
 	/**
 	 * @brief Generate a signature and allocate space for it.
 	 * 
-	 * @param this			calling signer
+	 * @param this			calling object
 	 * @param data			a chunk containing the data to sign
 	 * @param[out] chunk	chunk which will hold the allocated signature
 	 */
@@ -76,17 +93,17 @@ struct signer_t {
 	/**
 	 * @brief Verify a signature.
 	 * 
-	 * @param this			calling signer
+	 * @param this			calling object
 	 * @param data			a chunk containing the data to verify
 	 * @param signature		a chunk containing the signature
-	 * @param[out] vaild	set to TRUE, if signature is valid, to FALSE otherwise
+	 * @return				TRUE, if signature is valid, FALSE otherwise
 	 */
-	void (*verify_signature) (signer_t *this, chunk_t data, chunk_t signature, bool *valid);
+	bool (*verify_signature) (signer_t *this, chunk_t data, chunk_t signature);
 	
 	/**
 	 * @brief Get the block size of this signature algorithm.
 	 * 
-	 * @param this			calling signer
+	 * @param this			calling object
 	 * @return				block size in bytes
 	 */
 	size_t (*get_block_size) (signer_t *this);
@@ -94,23 +111,23 @@ struct signer_t {
 	/**
 	 * @brief Get the key size of the signature algorithm.
 	 * 
-	 * @param this			calling signer
+	 * @param this			calling object
 	 * @return				key size in bytes
 	 */
 	size_t (*get_key_size) (signer_t *this);
 	
 	/**
-	 * @brief Set the key for this signer.
+	 * @brief Set the key for this object.
 	 * 
-	 * @param this			calling signer
+	 * @param this			calling object
 	 * @param key			key to set
 	 */
 	void (*set_key) (signer_t *this, chunk_t key);
 	
 	/**
-	 * @brief Destroys a signer object.
+	 * @brief Destroys a signer_t object.
 	 *
-	 * @param this			signer_t object to destroy
+	 * @param this			calling object
 	 */
 	void (*destroy) (signer_t *this);
 };
@@ -120,7 +137,7 @@ struct signer_t {
  * 
  * @param integrity_algorithm	Algorithm to use for signing and verifying.
  * @return
- * 								- signer_t if successfully, 
+ * 								- signer_t object
  * 								- NULL if signer not supported
  * 
  * @ingroup signers

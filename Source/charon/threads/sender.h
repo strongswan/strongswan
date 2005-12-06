@@ -28,16 +28,19 @@
 typedef struct sender_t sender_t;
 
 /**
- * @brief Sends packets over the socket.
+ * @brief Thread responsible for sending packets over the socket.
+ * 
+ * @b Constructors:
+ *  - sender_create()
  * 
  * @ingroup threads
  */
 struct sender_t {
 
 	/**
-	 * @brief Destroys a sender object
+	 * @brief Destroys a sender object.
 	 *
-	 * @param sender 	sender object
+	 * @param sender 	calling object
 	 */
 	void (*destroy) (sender_t *sender);
 };
@@ -50,7 +53,7 @@ struct sender_t {
  * from the send queue and sends them out.
  * 
  * @return
- * 					- created sender_t, or
+ * 					- sender_t object
  * 					- NULL of thread could not be started
  * 
  * @ingroup threads

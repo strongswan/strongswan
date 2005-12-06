@@ -456,7 +456,7 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 	/* verify it */
 	data_without_sig.len = data.len - sig.len;
 	data_without_sig.ptr = data.ptr;
-	this->signer->verify_signature(this->signer, data_without_sig, sig, &valid);
+	valid = this->signer->verify_signature(this->signer, data_without_sig, sig);
 	
 	if (!valid)
 	{
