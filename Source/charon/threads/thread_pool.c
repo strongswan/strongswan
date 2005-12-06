@@ -450,7 +450,7 @@ static void process_delete_established_ike_sa_job(private_thread_pool_t *this, d
 			break;
 		}
 	}
-	
+	this->worker_logger->log(this->worker_logger, CONTROL, "Delete established IKE_SA.");	
 	status = charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
 	if (status != SUCCESS)
 	{
