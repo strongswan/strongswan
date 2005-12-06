@@ -39,6 +39,11 @@ typedef struct prime_pool_t prime_pool_t;
  * This increases responsibility, since prime generation
  * is the most time-consuming task.
  * 
+ * @b Constructors:
+ *  - prime_pool_create()
+ * 
+ * @todo Store and load prime values
+ * 
  * @ingroup threads
  */
 struct prime_pool_t {
@@ -46,8 +51,8 @@ struct prime_pool_t {
 	/**
 	 * @brief Get the number of available primes for the given prime size.
 	 *
-	 * @param prime_pool_t 	calling object
- 	 * @param 				size of the prime
+	 * @param prime_pool 	calling object
+ 	 * @param prime_size	size of the prime
 	 * @returns 			number of primes
 	 */
 	int (*get_count) (prime_pool_t *prime_pool, size_t prime_size);
@@ -59,7 +64,9 @@ struct prime_pool_t {
 	 * Supplied mpz will be initialized to a prime and must be cleared
 	 * after usage.
 	 *
-	 * @param prime_pool_t 	calling object
+	 * @param prime_pool 	calling object
+	 * @param prime_size 	size of the prime to return
+	 * @param prime			the prime value will be written into pointed mpz_t value.
 	 * @return 				chunk containing the prime
 	 */
 	void (*get_prime) (prime_pool_t *prime_pool, size_t prime_size, mpz_t *prime);
@@ -69,7 +76,7 @@ struct prime_pool_t {
 	 *
 	 * Stopps the prime thread and destroys the pool.
 	 *
-	 * @param prime_pool_t 	calling object
+	 * @param prime_pool 	calling object
 	 */
 	void (*destroy) (prime_pool_t *prime_pool);
 };
@@ -83,7 +90,7 @@ struct prime_pool_t {
  * the get_prime-calling thread.
  *
  * @param generation_limit	generation limit to use
- * @return 					created prime pool
+ * @return 					prime_pool_t object
  * 
  * @ingroup threads
  */

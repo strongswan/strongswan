@@ -28,10 +28,15 @@
 typedef struct scheduler_t scheduler_t;
 
 /**
- * @brief The scheduler, looks for timed events in event-queue and adds them
+ * @brief The scheduler thread is responsible for timed events.
+ * 
+ * The scheduler thread takes out jobs from the event-queue and adds them
  * to the job-queue.
  * 
  * Starts a thread which does the work, since event-queue is blocking.
+ * 
+ * @b Constructors:
+ *  - scheduler_create()
  * 
  * @ingroup threads
  */
@@ -40,19 +45,19 @@ struct scheduler_t {
 	/**
 	 * @brief Destroys a scheduler object.
 	 * 
-	 * @param scheduler 	scheduler object
+	 * @param scheduler 	calling object
 	 */
 	void (*destroy) (scheduler_t *scheduler);
 };
 
 /**
- * @brief Create a scheduler with its thread.
+ * @brief Create a scheduler with its associated thread.
  * 
  * The thread will start to get jobs form the event queue 
  * and adds them to the job queue.
  * 
  * @return 
- * 				- the created scheduler_t instance, or
+ * 				- scheduler_t object
  * 				- NULL if thread could not be started
  * 
  * @ingroup threads

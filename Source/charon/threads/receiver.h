@@ -35,12 +35,15 @@ typedef struct receiver_t receiver_t;
  * data is available, a packet_t object is created , wrapped
  * in an incoming_packet_job_t and added to the job queue.
  * 
+ * @b Constructors:
+ *  - receiver_create()
+ * 
  * @ingroup threads
  */
 struct receiver_t {
 
 	/**
-	 * @brief Destroys a receiver_t
+	 * @brief Destroys a receiver_t object.
 	 *
 	 * @param receiver 	receiver object
 	 */
@@ -48,13 +51,13 @@ struct receiver_t {
 };
 
 /**
- * @brief Create a receiver.
+ * @brief Create a receiver_t object.
  * 
  * The receiver thread will start working, get data
  * from the socket and add those packets to the job queue.
  * 
  * @return
- * 					- created receiver_t, or
+ * 					- receiver_t object
  * 					- NULL of thread could not be started
  * 
  * @ingroup threads

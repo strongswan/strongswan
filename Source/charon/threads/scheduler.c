@@ -31,14 +31,15 @@
 #include <utils/logger_manager.h>
 #include <queues/job_queue.h>
 
-/**
- * Private data of a scheduler object
- */
+
 typedef struct private_scheduler_t private_scheduler_t;
 
+/**
+ * Private data of a scheduler_t object.
+ */
 struct private_scheduler_t {
 	/**
-	 * Public part of a scheduler object
+	 * Public part of a scheduler_t object.
 	 */
 	 scheduler_t public;
 	 
@@ -47,23 +48,23 @@ struct private_scheduler_t {
 	 *
 	 * Thread function started at creation of the scheduler object.
 	 *
-	 * @param this 		assigned scheduler object
+	 * @param this 		calling object
 	 */
 	void (*get_events) (private_scheduler_t *this);
 
 	/**
-	 * Assigned thread to the scheduler_t object
+	 * Assigned thread.
 	 */
 	pthread_t assigned_thread;
 	
 	/** 
-	 * logger for this scheduler
+	 * A logger.
 	 */
 	logger_t *logger;
 };
 
 /**
- * implements private_scheduler_t.get_events
+ * Implementation of private_scheduler_t.get_events.
  */
 static void get_events(private_scheduler_t * this)
 {
@@ -72,22 +73,22 @@ static void get_events(private_scheduler_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->logger->log(this->logger, CONTROL, "scheduler thread running, thread_id %u", (int)pthread_self());
+	this->logger->log(this->logger, CONTROL, "Scheduler thread running, thread_id %u", (int)pthread_self());
 
 	for (;;)
 	{
-		this->logger->log(this->logger, CONTROL|MORE, "waiting for next event...");
+		this->logger->log(this->logger, CONTROL|MOST, "Waiting for next event...");
 		/* get a job, this block until one is available */
 		current_job = charon->event_queue->get(charon->event_queue);
 		/* queue the job in the job queue, workers will eat them */
 		charon->job_queue->add(charon->job_queue, current_job);
-		this->logger->log(this->logger, CONTROL, "got event, added job %s to job-queue.", 
+		this->logger->log(this->logger, CONTROL | MORE, "Got event, added job %s to job-queue.", 
 						  mapping_find(job_type_m, current_job->get_type(current_job)));
 	}
 }
 
 /**
- * Implementation of scheduler_t's destroy function
+ * Implementation of scheduler_t.destroy.
  */
 static void destroy(private_scheduler_t *this)
 {
@@ -102,7 +103,9 @@ static void destroy(private_scheduler_t *this)
 	allocator_free(this);
 }
 
-
+/*
+ * Described in header.
+ */
 scheduler_t * scheduler_create()
 {
 	private_scheduler_t *this = allocator_alloc_thing(private_scheduler_t);

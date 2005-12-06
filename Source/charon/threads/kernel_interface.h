@@ -30,14 +30,23 @@
 typedef struct kernel_interface_t kernel_interface_t;
 
 /**
- * @brief 
+ * @brief Interface to the kernel.
+ * 
+ * @b Constructors:
+ *  - kernel_interface_create()
  * 
  * @ingroup threads
  */
 struct kernel_interface_t {
 
+	/**
+	 * Not yet fully implemented!
+	 */
 	status_t (*get_spi) (kernel_interface_t *this, host_t *src, host_t *dest, protocol_id_t protocol, bool tunnel_mode, u_int32_t *spi);
 	
+	/**
+	 * Not yet fully implemented!
+	 */
 	status_t (*add_sa)(kernel_interface_t *this,
 						host_t *me, 
 						host_t *other, 
@@ -56,15 +65,13 @@ struct kernel_interface_t {
 	/**
 	 * @brief Destroys a kernel_interface object.
 	 *
-	 * Stopps the prime thread and destroys the pool.
-	 *
 	 * @param kernel_interface_t 	calling object
 	 */
 	void (*destroy) (kernel_interface_t *kernel_interface);
 };
 
 /**
- * @brief 
+ * @brief Creates an object of type kernel_interface_t.
  * 
  * @ingroup threads
  */

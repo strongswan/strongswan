@@ -34,36 +34,38 @@
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
+
 typedef struct private_receiver_t private_receiver_t;
 
 /**
- * Private data of a receiver object
+ * Private data of a receiver_t object.
  */
 struct private_receiver_t {
 	/**
-	 * Public part of a receiver object
+	 * Public part of a receiver_t object.
 	 */
 	 receiver_t public;
 	 
 	 /**
 	  * @brief Thread function started at creation of the receiver object.
 	  *
-	  * @param this assigned receiver object
+	  * @param this 	calling object
 	  */
 	 void (*receive_packets) (private_receiver_t *this);
 
 	 /**
-	  * Assigned thread to the receiver_t object
+	  * Assigned thread.
 	  */
 	 pthread_t assigned_thread;
+	 
 	 /**
-	  * logger for the receiver
+	  * A logger for the receiver_t object.
 	  */
 	 logger_t *logger;
 };
 
 /**
- * implements private_receiver_t.receive_packets
+ * Implementation of receiver_t.receive_packets.
  */
 static void receive_packets(private_receiver_t * this)
 {
@@ -73,25 +75,25 @@ static void receive_packets(private_receiver_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->logger->log(this->logger, CONTROL, "receiver thread running, thread_id %u", (int)pthread_self());
+	this->logger->log(this->logger, CONTROL, "Receiver thread running, thread_id %u", (int)pthread_self());
 	
 	while (1)
 	{
 		while (charon->socket->receive(charon->socket,&current_packet) == SUCCESS)
 		{
-			this->logger->log(this->logger, CONTROL, "creating job from packet");
+			this->logger->log(this->logger, CONTROL | MORE, "Creating job from packet");
 			current_job = (job_t *) incoming_packet_job_create(current_packet);
 
 			charon->job_queue->add(charon->job_queue,current_job);
 
 		}
 		/* bad bad, rebuild the socket ? */
-		this->logger->log(this->logger, ERROR, "receiving from socket failed!");
+		this->logger->log(this->logger, ERROR, "Receiving from socket failed!");
 	}
 }
 
 /**
- * Implementation of receiver_t's destroy function
+ * Implementation of receiver_t.destroy.
  */
 static void destroy(private_receiver_t *this)
 {
@@ -107,7 +109,7 @@ static void destroy(private_receiver_t *this)
 }
 
 /*
- * see header
+ * Described in header.
  */
 receiver_t * receiver_create()
 {

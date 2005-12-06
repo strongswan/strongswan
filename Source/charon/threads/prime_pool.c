@@ -33,21 +33,21 @@
 typedef struct prime_list_t prime_list_t;
 
 /**
- * A prime_list_t contains prime for a specific size.
+ * A prime_list_t contains prime values of a specific size.
  */
 struct prime_list_t {
 	/**
-	 * Size of the stored primes 
+	 * Size of the stored primes .
 	 */
 	size_t prime_size;
 	
 	/**
-	 * is this much used prime_size ? 
+	 * Is this much used prime_size ?
 	 */
 	u_int32_t usage;
 	
 	/**
-	 * list of primes
+	 * List of primes.
 	 */
 	linked_list_t *primes;
 };
@@ -55,61 +55,60 @@ struct prime_list_t {
 typedef struct private_prime_pool_t private_prime_pool_t;
 
  /**
- * @brief Private Variables and Functions of prime_pool class
- *
+ * @brief Private data of prime_pool_t.
  */
 struct private_prime_pool_t {
 	/**
-	 * Public part of the prime_pool_t object
+	 * Public part of the prime_pool_t object.
 	 */
  	prime_pool_t public;
 
 	/**
-	 * A list which contains a set of prime_list_t's
+	 * A list which contains a set of prime_list_t's.
 	 */
 	linked_list_t *prime_lists;
 
 	/**
 	 * prime generation is stopped if more than
-	 * that primes of a kind are already generated
+	 * that primes of a kind are already generated.
 	 */
 	int generation_limit;
 	
 	/**
-	 * access to prime_lists is locked through this mutex
+	 * Access to prime_lists is locked through this mutex.
 	 */
 	pthread_mutex_t mutex;
 
 	/**
 	 * If the queue is empty a thread has to wait
-	 * This condvar is used to wake up such a thread
+	 * This condvar is used to wake up such a thread.
 	 */
 	pthread_cond_t condvar;
 	
 	/**
-	 * prime generation thread 
+	 * Prime generation thread.
 	 */
 	pthread_t thread;
 	
 	/** 
-	 * Logger instance for the prime_pool
+	 * Logger instance for the prime_pool.
 	 */
 	logger_t *logger;
 	
 	/**
-	 * Function for the prime thread, generate primes
+	 * Function for the prime thread, generate primes.
 	 */
 	void (*generate_primes) (private_prime_pool_t *this);
 	
 	/**
-	 * calculate a prime of requested size
+	 * Calculate a prime of requested size.
 	 */
 	void (*compute_prime) (private_prime_pool_t *this, size_t prime_size, mpz_t *prime);
 };
 
 
 /**
- * implements prime_pool_t.get_count
+ * Implementation of prime_pool_t.get_count.
  */
 static int get_count(private_prime_pool_t *this, size_t prime_size)
 {
@@ -136,7 +135,7 @@ static int get_count(private_prime_pool_t *this, size_t prime_size)
 }
 
 /**
- * implements prime_pool_t.get_prime
+ * Implementation of prime_pool_t.get_prime.
  */
 static void get_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prime)
 {
@@ -161,7 +160,7 @@ static void get_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prim
 			prime_list->usage += this->prime_lists->get_count(this->prime_lists);
 			if (prime_list->primes->remove_first(prime_list->primes, (void*)&removed_prime) == SUCCESS)
 			{
-				this->logger->log(this->logger, CONTROL|MOST, "thread removed a prime with size %d", prime_size);
+				this->logger->log(this->logger, CONTROL|MOST, "Thread removed a prime with size %d", prime_size);
 				mpz_init_set(*prime, *removed_prime);
 				mpz_clear(*removed_prime);
 				allocator_free(removed_prime);
@@ -175,7 +174,7 @@ static void get_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prim
 	
 	if (create_new_list)
 	{
-		this->logger->log(this->logger, CONTROL|MORE, "creating a new list for primes with size %d", prime_size);
+		this->logger->log(this->logger, CONTROL|MORE, "Creating a new list for primes with size %d", prime_size);
 		/* there is no list for this prime size, create one */
 		prime_list_t *prime_list;
 		prime_list = allocator_alloc_thing(prime_list_t);
@@ -192,13 +191,13 @@ static void get_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prim
 	if (!prime_found)
 	{
 		/* no prime found, create one ourself */
-		this->logger->log(this->logger, CONTROL|MOST, "caller didn't find a prime, generates on it's own.");
+		this->logger->log(this->logger, CONTROL|MOST, "Caller didn't find a prime, generates on it's own.");
 		this->compute_prime(this, prime_size, prime);
 	}
 }
 
 /**
- * implements private_prime_pool_t.compute_prime
+ * Implementation of private_prime_pool_t.compute_prime.
  */
 void compute_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prime)
 {
@@ -231,7 +230,7 @@ void compute_prime(private_prime_pool_t *this, size_t prime_size, mpz_t *prime)
 }
 
 /**
- * implements private_prime_pool_t.generate_primes
+ * Implementation of private_prime_pool_t.generate_primes.
  */
 void generate_primes(private_prime_pool_t *this)
 {
@@ -246,7 +245,7 @@ void generate_primes(private_prime_pool_t *this)
 		mpz_t *prime;
 		
 		
-		this->logger->log(this->logger, CONTROL|MOST, "finding most important prime size...");
+		this->logger->log(this->logger, CONTROL|MOST, "Finding most important prime size...");
 		
 		pthread_mutex_lock(&(this->mutex));
 		
@@ -256,7 +255,7 @@ void generate_primes(private_prime_pool_t *this)
 		{
 			prime_list_t *prime_list;
 			iterator->current(iterator, (void*)&prime_list);
-			this->logger->log(this->logger, CONTROL|MOST, "primes with size %d have usage %d, %d in list",
+			this->logger->log(this->logger, CONTROL|MOST, "Primes with size %d have usage %d, %d in list",
 								 prime_list->prime_size, prime_list->usage,
 								 prime_list->primes->get_count(prime_list->primes));
 			/* get the prime_size with the highest usage factor */
@@ -274,7 +273,7 @@ void generate_primes(private_prime_pool_t *this)
 		
 		if (selected_prime_list == NULL)
 		{		
-			this->logger->log(this->logger, CONTROL|MORE, "nothing to do, goint to sleep");
+			this->logger->log(this->logger, CONTROL|MORE, "Nothing to do, goint to sleep");
 			/* nothing to do. wait, while able to cancel */
 			pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
@@ -289,14 +288,14 @@ void generate_primes(private_prime_pool_t *this)
 		
 		if (selected_prime_list != NULL)
 		{
-			this->logger->log(this->logger, CONTROL|MORE, "going to generate a prime with size %d",
+			this->logger->log(this->logger, CONTROL|MORE, "Going to generate a prime with size %d",
 								selected_prime_list->prime_size);
 			/* generate the prime of requested size */
 			prime = allocator_alloc_thing(mpz_t);
 			compute_prime(this, selected_prime_list->prime_size, prime);
 			
 			/* insert prime */
-			this->logger->log(this->logger, CONTROL|MOST, "prime generated, inserting in list");
+			this->logger->log(this->logger, CONTROL|MOST, "Prime generated, inserting in list");
 			pthread_mutex_lock(&(this->mutex));
 			selected_prime_list->primes->insert_last(selected_prime_list->primes, (void*)prime);
 			pthread_mutex_unlock(&(this->mutex));
@@ -309,7 +308,7 @@ void generate_primes(private_prime_pool_t *this)
 }
 
  /**
- * implements prime_pool_t.destroy
+ * Implementation of prime_pool_t.destroy.
  */
 static void destroy (private_prime_pool_t *this)
 {	
@@ -348,7 +347,7 @@ static void destroy (private_prime_pool_t *this)
 }
 
 /*
- * Documented in header
+ * Documented in header,
  */
 prime_pool_t *prime_pool_create(int generation_limit)
 {
@@ -375,7 +374,7 @@ prime_pool_t *prime_pool_create(int generation_limit)
 		if (pthread_create(&(this->thread), NULL, (void*(*)(void*))this->generate_primes, this) != 0)
 		{
 			/* failed. we live with that problem, since getting primes is still possible */
-			this->logger->log(this->logger, ERROR, "thread creation failed, working without thread!");
+			this->logger->log(this->logger, ERROR, "Thread creation failed, working without thread!");
 		}
 		/* set priority */
 		else
@@ -389,13 +388,13 @@ prime_pool_t *prime_pool_create(int generation_limit)
 				if (pthread_setschedparam(this->thread, policy, &param) != 0)
 				{
 					/* failed to set priority */	
-				this->logger->log(this->logger, ERROR, "could not reduce priority of thread, running in default priority!");
+				this->logger->log(this->logger, ERROR, "Could not reduce priority of thread, running in default priority!");
 				}
 			}
 			else
 			{
 				/* failed to get priority */	
-				this->logger->log(this->logger, ERROR, "could not reduce priority of thread, running in default priority!");
+				this->logger->log(this->logger, ERROR, "Could not reduce priority of thread, running in default priority!");
 			}
 		}
 	}

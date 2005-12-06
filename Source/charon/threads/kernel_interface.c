@@ -67,55 +67,55 @@ struct netlink_algo_t {
 typedef struct private_kernel_interface_t private_kernel_interface_t;
 
  /**
- * @brief Private Variables and Functions of kernel_interface class
+ * @brief Private Variables and Functions of kernel_interface class.
  *
  */
 struct private_kernel_interface_t {
 	/**
-	 * Public part of the kernel_interface_t object
+	 * Public part of the kernel_interface_t object.
 	 */
  	kernel_interface_t public;
  	
  	/**
- 	 * netlink communication socket
+ 	 * Netlink communication socket.
  	 */
  	int socket;
  	int bc_socket;
 
 	pid_t pid;
  	/**
- 	 * sequence number for messages
+ 	 * Sequence number for messages.
  	 */
  	u_int32_t seq;
  	
  	/** 
- 	 * list of responded messages
+ 	 * List of responded messages.
  	 */
  	linked_list_t *responses;
  	
  	/**
- 	 * thread which receives messages
+ 	 * Thread which receives messages.
  	 */
  	pthread_t thread;
  	
  	/**
- 	 * mutex locks access to replies list 
+ 	 * Mutex locks access to replies list.
  	 */
  	pthread_mutex_t mutex;
  	
  	/**
- 	 * Condvar allows signaling of threads waiting for a reply
+ 	 * Condvar allows signaling of threads waiting for a reply.
  	 */
  	pthread_cond_t condvar;
  	logger_t *logger;
  	
  	/**
- 	 * Function for the thread, receives messages
+ 	 * Function for the thread, receives messages.
  	 */
  	void (*receive_messages) (private_kernel_interface_t *this);
  	
  	/**
- 	 * Sends a netlink_message_t down to the kernel
+ 	 * Sends a netlink_message_t down to the kernel.
  	 */
  	status_t (*send_message) (private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response);
 };
@@ -396,7 +396,7 @@ static void receive_messages(private_kernel_interface_t *this)
 
 
 /**
- * implements kernel_interface_t.destroy
+ * Implementation of kernel_interface_t.destroy.
  */
 static void destroy(private_kernel_interface_t *this)
 {	
@@ -408,7 +408,7 @@ static void destroy(private_kernel_interface_t *this)
 }
 
 /*
- * Documented in header
+ * Described in header.
  */
 kernel_interface_t *kernel_interface_create()
 {

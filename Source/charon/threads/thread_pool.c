@@ -38,31 +38,32 @@
 #include <utils/allocator.h>
 #include <utils/logger.h>
 
+
 typedef struct private_thread_pool_t private_thread_pool_t;
 
 /**
- * @brief Structure with private members for thread_pool_t.
+ * @brief Private data of thread_pool_t class.
  */
 struct private_thread_pool_t {
 	/**
-	 * inclusion of public members
+	 * Public thread_pool_t interface.
 	 */
 	thread_pool_t public;
 	
 	/**
-	 * @brief Main processing functino for worker threads.
+	 * @brief Main processing function for worker threads.
 	 *
 	 * Gets a job from the job queue and calls corresponding
 	 * function for processing.
 	 * 
-	 * @param this	private_thread_pool_t-Object
+	 * @param this	calling object
 	 */
 	void (*process_jobs) (private_thread_pool_t *this);
 
 	/**
 	 * @brief Process a INCOMING_PACKET job.
 	 * 
-	 * @param this	private_thread_pool_t object
+	 * @param this	calling object
 	 * @param job	incoming_packet_job_t object
 	 */
 	void (*process_incoming_packet_job) (private_thread_pool_t *this, incoming_packet_job_t *job);
@@ -70,7 +71,7 @@ struct private_thread_pool_t {
 	/**
 	 * @brief Process a INITIATE_IKE_SA job.
 	 * 
-	 * @param this	private_thread_pool_t object
+	 * @param this	calling object
 	 * @param job	initiate_ike_sa_job_t object
 	 */
 	void (*process_initiate_ike_sa_job) (private_thread_pool_t *this, initiate_ike_sa_job_t *job);
@@ -78,7 +79,7 @@ struct private_thread_pool_t {
 	/**
 	 * @brief Process a DELETE_HALF_OPEN_IKE_SA job.
 	 * 
-	 * @param this	private_thread_pool_t object
+	 * @param this	calling object
 	 * @param job	delete__half_open_ike_sa_job_t object
 	 */
 	void (*process_delete_half_open_ike_sa_job) (private_thread_pool_t *this, delete_half_open_ike_sa_job_t *job);
@@ -86,7 +87,7 @@ struct private_thread_pool_t {
 	/**
 	 * @brief Process a DELETE_ESTABLISHED_IKE_SA job.
 	 * 
-	 * @param this	private_thread_pool_t object
+	 * @param this	calling object
 	 * @param job	delete_established_ike_sa_job_t object
 	 */
 	void (*process_delete_established_ike_sa_job) (private_thread_pool_t *this, delete_established_ike_sa_job_t *job);
@@ -94,7 +95,7 @@ struct private_thread_pool_t {
 	/**
 	 * @brief Process a RETRANSMIT_REQUEST job.
 	 * 
-	 * @param this	private_thread_pool_t object
+	 * @param this	calling object
 	 * @param job	retransmit_request_job_t object
 	 */
 	void (*process_retransmit_request_job) (private_thread_pool_t *this, retransmit_request_job_t *job);
@@ -111,22 +112,22 @@ struct private_thread_pool_t {
 	void (*create_delete_half_open_ike_sa_job) (private_thread_pool_t *this,ike_sa_id_t *ike_sa_id, u_int32_t delay);
 	
 	/**
-	 * number of running threads
+	 * Number of running threads.
 	 */
 	size_t pool_size;
 	
 	/**
-	 * array of thread ids
+	 * Array of thread ids.
 	 */
 	pthread_t *threads;
 	
 	/**
-	 * logger of the threadpool
+	 * Logger of the thread pool.
 	 */
 	logger_t *pool_logger;
 	
 	/**
-	 * logger of the worker threads
+	 * Logger of the worker threads.
 	 */
 	logger_t *worker_logger;
 } ;
@@ -144,13 +145,13 @@ static void process_jobs(private_thread_pool_t *this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running, thread_id: %u", (int)pthread_self());
+	this->worker_logger->log(this->worker_logger, CONTROL, "Worker thread running, thread_id: %u", (int)pthread_self());
 
 	for (;;) {
 		
 		job = charon->job_queue->get(charon->job_queue);
 		job_type = job->get_type(job);
-		this->worker_logger->log(this->worker_logger, CONTROL|MORE, "Process job of type %s", 
+		this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Process job of type %s", 
 								 mapping_find(job_type_m,job_type));
 		gettimeofday(&start_time,NULL);
 		switch (job_type)
@@ -186,7 +187,7 @@ static void process_jobs(private_thread_pool_t *this)
 			}
 			default:
 			{
-				this->worker_logger->log(this->worker_logger, ERROR, "job of type %s not supported!", 
+				this->worker_logger->log(this->worker_logger, ERROR, "Job of type %s not supported!", 
 										 mapping_find(job_type_m,job_type));				
 				job->destroy(job);
 				break;
@@ -194,7 +195,7 @@ static void process_jobs(private_thread_pool_t *this)
 		}
 		gettimeofday(&end_time,NULL);
 		
-		this->worker_logger->log(this->worker_logger, CONTROL, "Processed job of type %s in %d us",
+		this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Processed job of type %s in %d us",
 									mapping_find(job_type_m,job_type),
 									(((end_time.tv_sec - start_time.tv_sec) * 1000000) + (end_time.tv_usec - start_time.tv_usec)));
 
@@ -221,12 +222,12 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 	status = message->parse_header(message);
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "message header could not be verified!");				
+		this->worker_logger->log(this->worker_logger, ERROR, "Message header could not be verified!");				
 		message->destroy(message);
 		return;										
 	}
 				
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "message is a %s %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Message is a %s %s", 
 							 mapping_find(exchange_type_m, message->get_exchange_type(message)),
 							 message->get_request(message) ? "request" : "reply");
 				
@@ -234,7 +235,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 			(message->get_minor_version(message) != IKE_MINOR_VERSION))
 
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "IKE version %d.%d not supported", 
+		this->worker_logger->log(this->worker_logger, ERROR | MOST, "IKE version %d.%d not supported", 
 								 message->get_major_version(message),
 								 message->get_minor_version(message));	
 		/*
@@ -275,7 +276,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 			
 	ike_sa_id->switch_initiator(ike_sa_id);
 				
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking out IKE SA %lld:%lld, role %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|ALL, "Checking out IKE SA %lld:%lld, role %s", 
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
@@ -296,17 +297,17 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 
 	if (status == CREATED)
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Create Job to delete half open IKE_SA.");
+		this->worker_logger->log(this->worker_logger, CONTROL|ALL, "Create Job to delete half open IKE_SA.");
 		this->create_delete_half_open_ike_sa_job(this,ike_sa_id,charon->configuration_manager->get_half_open_ike_sa_timeout(charon->configuration_manager));
 	}
 
 	status = ike_sa->process_message(ike_sa, message);				
 	if ((status != SUCCESS) && (status != DELETE_ME))
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "message could not be processed by IKE SA");
+		this->worker_logger->log(this->worker_logger, ERROR, "Message could not be processed by IKE SA");
 	}
 				
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "%s IKE SA %lld:%lld, role %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|ALL, "%s IKE SA %lld:%lld, role %s", 
 							 (status == DELETE_ME) ? "Checkin and delete" : "Checkin",
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
@@ -324,7 +325,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 					
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "checkin of IKE SA failed!");
+		this->worker_logger->log(this->worker_logger, ERROR, "Checkin of IKE SA failed!");
 	}
 	message->destroy(message);
 }
@@ -344,29 +345,29 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 	status_t status;
 	
 	
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "create and checking out IKE SA");
+	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Create and checking out IKE SA");
 	
 	charon->ike_sa_manager->create_and_checkout(charon->ike_sa_manager, &ike_sa);
 	
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "initializing connection \"%s\"", 
+	this->worker_logger->log(this->worker_logger, CONTROL, "Initializing connection \"%s\"", 
 							 job->get_configuration_name(job));
 	status = ike_sa->initialize_connection(ike_sa, job->get_configuration_name(job));
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "%s by initialize_conection, going to delete IKE_SA.", 
+		this->worker_logger->log(this->worker_logger, ERROR, "%s: By initialize_conection, going to delete IKE_SA.", 
 								 mapping_find(status_m, status));
 		charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
 		return;
 	}
 
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Create Job to delete half open IKE_SA.");
+	this->worker_logger->log(this->worker_logger, CONTROL|ALL, "Create Job to delete half open IKE_SA.");
 	this->create_delete_half_open_ike_sa_job(this,ike_sa->get_id(ike_sa),charon->configuration_manager->get_half_open_ike_sa_timeout(charon->configuration_manager));
 	
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking in IKE SA");
+	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Checking in IKE SA");
 	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "%s could not checkin IKE_SA.", 
+		this->worker_logger->log(this->worker_logger, ERROR, "%s: Could not checkin IKE_SA.", 
 								 mapping_find(status_m, status));
 	}
 }
@@ -471,7 +472,7 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 	ike_sa_t *ike_sa;
 	status_t status;
 										
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "checking out IKE SA %lld:%lld, role %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Checking out IKE SA %lld:%lld, role %s", 
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
@@ -488,7 +489,7 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 				
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Message doesn't have to be retransmitted");
+		this->worker_logger->log(this->worker_logger, CONTROL | ALL, "Message doesn't have to be retransmitted");
 		stop_retransmitting = TRUE;
 	}
 				
@@ -532,7 +533,7 @@ static void create_delete_half_open_ike_sa_job(private_thread_pool_t *this,ike_s
 {
 	job_t *delete_job;
 
-	this->worker_logger->log(this->worker_logger, CONTROL | MORE, "Going to create job to delete half open IKE_SA in %d ms", delay);
+	this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Going to create job to delete half open IKE_SA in %d ms", delay);
 
 	delete_job = (job_t *) delete_half_open_ike_sa_job_create(ike_sa_id);
 	charon->event_queue->add_relative(charon->event_queue,delete_job, delay);
@@ -606,14 +607,14 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	{
 		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))this->process_jobs, this) == 0) 
 		{
-			this->pool_logger->log(this->pool_logger, CONTROL, "created worker thread #%d", current+1);
+			this->pool_logger->log(this->pool_logger, CONTROL, "Created worker thread #%d", current+1);
 		}
 		else
 		{
 			/* creation failed, is it the first one? */	
 			if (current == 0) 
 			{
-				this->pool_logger->log(this->pool_logger, ERROR, "could not create any thread");
+				this->pool_logger->log(this->pool_logger, ERROR, "Could not create any thread");
 				charon->logger_manager->destroy_logger(charon->logger_manager, this->pool_logger);
 				charon->logger_manager->destroy_logger(charon->logger_manager, this->worker_logger);
 				allocator_free(this->threads);
@@ -621,7 +622,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 				return NULL;
 			}
 			/* not all threads could be created, but at least one :-/ */
-			this->pool_logger->log(this->pool_logger, ERROR, "could only create %d from requested %d threads!", current, pool_size);
+			this->pool_logger->log(this->pool_logger, ERROR, "Could only create %d from requested %d threads!", current, pool_size);
 				
 			this->pool_size = current;
 			return (thread_pool_t*)this;

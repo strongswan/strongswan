@@ -74,16 +74,16 @@ static void send_packets(private_sender_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
-	this->logger->log(this->logger, CONTROL, "sender thread running, thread_id %u", (int)pthread_self());
+	this->logger->log(this->logger, CONTROL, "Sender thread running, thread_id %u", (int)pthread_self());
 
 	while (1)
 	{
 		current_packet = charon->send_queue->get(charon->send_queue);
-		this->logger->log(this->logger, CONTROL|MORE, "got a packet, sending it");
+		this->logger->log(this->logger, CONTROL|MORE, "Got a packet, sending it");
 		status = charon->socket->send(charon->socket,current_packet);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "sending failed, socket returned %s", 
+			this->logger->log(this->logger, ERROR, "Sending failed, socket returned %s", 
 								mapping_find(status_m, status));
 		}
 		current_packet->destroy(current_packet);
