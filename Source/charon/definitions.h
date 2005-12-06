@@ -1,7 +1,7 @@
 /**
  * @file definitions.h
  * 
- * @brief general purpose definitions and macros
+ * @brief General purpose definitions and macros.
  * 
  */
 
@@ -63,13 +63,13 @@
 /**
  * @defgroup config
  * 
- * Classes which implement configuration related things.
+ * Classes implementing configuration related things.
  */
 
 /**
  * @defgroup encoding
  * 
- * Classes used to encode and decode IKEv2 Messages.
+ * Classes used to encode and decode IKEv2 messages.
  */
 
 /**
@@ -81,7 +81,7 @@
  /**
  * @defgroup payloads
  * 
- * Classes representing a specific IKEv2 Payload.
+ * Classes representing specific IKEv2 payloads.
  * 
  * @ingroup encoding
  */
@@ -89,7 +89,7 @@
 /**
  * @defgroup sa
  * 
- * Security association with all helber classes.
+ * Security association and helper classes.
  */
 
 
@@ -130,7 +130,7 @@
 /**
  * @defgroup rsa
  * 
- * RSA public key algorithm
+ * RSA public key algorithm.
  * 
  * @ingroup transforms
  */
@@ -138,8 +138,7 @@
 /**
  * @defgroup prfs
  * 
- * Pseudo random functions, generate a lot of pseudo
- * randomness using random numbers.
+ * Pseudo random functions.
  * 
  * @ingroup transforms
  */
@@ -147,8 +146,7 @@
 /**
  * @defgroup signers
  * 
- * Symmetric signing algorithms, used to ensure 
- * message integrity.
+ * Symmetric signing algorithms, used to ensure message integrity.
  * 
  * @ingroup transforms
  */
@@ -156,8 +154,7 @@
 /**
  * @defgroup crypters
  * 
- * Symmetric encryption algorithms, used to en-
- * and decrypt.
+ * Symmetric encryption algorithms, used to encrypt and decrypt.
  * 
  * @ingroup transforms
  */
@@ -166,30 +163,6 @@
  * @defgroup hashers
  * 
  * Hashing algorithms.
- * 
- * Example for using hasher_t:
- * @code
- * chunk_t data;
- * chunk_t md5_hash;
- * u_int8_t sha1_hash[20];
- * 
- * hasher_t *hasher;
- * 
- * data.ptr = "string to hash";
- * data.len = strlen(data.ptr);
- * 
- * // use MD5, allocate hash
- * hasher = hasher_create(HASH_MD5);
- * hasher->allocate_hash(hasher, data, &hash);
- * hasher->destroy(hasher);
- * 
- * // use SHA1, hash in buffer
- * hasher = hasher_create(HASH_SHA1);
- * hasher->get_hash(hasher, data, &sha1_hash);
- * hasher->destroy(hasher);
- * @endcode
- * 
- * 
  * 
  * @ingroup transforms
  */
@@ -203,49 +176,46 @@
 /**
  * @defgroup threads
  * 
- * Threaded classes, which will do their 
- * job alone.
+ * Threaded classes, which will do their job alone.
  */
  
- 
-
 /**
- * macro gives back larger of two values
+ * Macro gives back larger of two values.
  */
 #define max(x,y) (x > y ? x : y)
 
-
 /**
- * macro gives back smaller of two values
+ * Macro gives back smaller of two values.
  */
 #define min(x,y) (x < y ? x : y)
 
-
 /**
- * mapping entry which defines the end of a mapping_t array
+ * Papping entry which defines the end of a mapping_t array.
  */
 #define MAPPING_END (-1)
+
 
 typedef struct mapping_t mapping_t;
 
 /**
- * @brief mapping entry, where enum-to-string mappings are stored.
+ * @brief Mapping entry, where enum-to-string mappings are stored.
  */
 struct mapping_t
 {
 	/**
-	 * enumeration value
+	 * Enumeration value.
 	 */
 	int value;
+	
 	/**
-	 * mapped string
+	 * Mapped string.
 	 */
 	char *string;
 };
 
 
 /**
- * @brief find a mapping_string in the mapping[]
+ * @brief Find a mapping_string in the mapping[].
  * 
  * @param mappings		mappings array
  * @param value			enum-value to get the string from

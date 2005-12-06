@@ -1,7 +1,7 @@
 /**
  * @file definitions.c
  * 
- * @brief general purpose functions used in definitions.h
+ * @brief General purpose definitions and macros.
  * 
  */
 
@@ -23,7 +23,7 @@
 #include "definitions.h"
 
 /*
- * see header
+ * Described in header.
  */
 char *mapping_find(mapping_t * maps, int value)
 {
