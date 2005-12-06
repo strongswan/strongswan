@@ -75,12 +75,12 @@ struct private_aes_cbc_crypter_t {
     u_int32_t    aes_d_key[AES_KS_LENGTH];   
     
     /**
-     * the number of columns in the cipher state
+     * The number of columns in the cipher state.
      */
     u_int32_t    aes_Ncol;	
 
     /**
-     * Blocksize of this AES cypher object
+     * Blocksize of this AES cypher object.
      */
     u_int32_t    blocksize;	
     
@@ -90,7 +90,7 @@ struct private_aes_cbc_crypter_t {
      * No memory gets allocated.
      * 
      * @param this			calling object
-     * @param[in] in_blk		block to decrypt
+     * @param[in] in_blk	block to decrypt
      * @param[out] out_blk	decrypted data are written to this location
      */
  	void (*decrypt_block) (const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);
@@ -101,7 +101,7 @@ struct private_aes_cbc_crypter_t {
      * No memory gets allocated.
      * 
      * @param this			calling object
-     * @param[in] in_blk		block to encrypt
+     * @param[in] in_blk	block to encrypt
      * @param[out] out_blk	encrypted data are written to this location
      */	
 	void (*encrypt_block) (const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);

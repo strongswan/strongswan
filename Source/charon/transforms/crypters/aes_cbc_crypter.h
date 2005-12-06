@@ -32,12 +32,15 @@ typedef struct aes_cbc_crypter_t aes_cbc_crypter_t;
 /**
  * @brief Class implementing the AES symmetric encryption algorithm.
  * 
+ * @b Constructors:
+ *  - aes_cbc_crypter_create()
+ * 
  * @ingroup crypters
  */
 struct aes_cbc_crypter_t {
 	
 	/**
-	 * crypter_t interface.
+	 * The crypter_t interface.
 	 */
 	crypter_t crypter_interface;
 };
@@ -45,10 +48,12 @@ struct aes_cbc_crypter_t {
 /**
  * @brief Constructor to create aes_cbc_crypter_t objects.
  * 
+ * If an unvalid blocksize is specified, 16 is selected.
+ * 
  * @param blocksize		block size of AES crypter
  * 						(16, 24 or 32 are supported)
  * 						Default size is set to 16.
- * @return				aes_cbc_crypter_t if successfully
+ * @return				aes_cbc_crypter_t object
  */
 aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize);
 

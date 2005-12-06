@@ -27,7 +27,7 @@
 
 
 /** 
- * string mappings for encryption_algorithm_t
+ * String mappings for encryption_algorithm_t.
  */
 mapping_t encryption_algorithm_m[] = {
 {ENCR_UNDEFINED, "ENCR_UNDEFINED"},

@@ -28,7 +28,18 @@
 typedef enum encryption_algorithm_t encryption_algorithm_t;
 
 /**
- * @brief Encryption algorithm, as in IKEv2 draft 3.3.2
+ * @brief Encryption algorithm, as in IKEv2 draft 3.3.2.
+ * 
+ * Currently only the following algorithms are implemented and therefore supported:
+ * - ENCR_AES_CBC
+ * 
+ * @b Constructors:
+ *  - crypter_create()
+ *  - aes_cbc_crypter_create()
+ * 
+ * @todo Implement more enryption algorithm, especially 3DES
+ * 
+ * @ingroup crypters
  */
 enum encryption_algorithm_t {
 	ENCR_UNDEFINED = 1024,
@@ -41,16 +52,19 @@ enum encryption_algorithm_t {
 	ENCR_BLOWFISH = 7,
 	ENCR_3IDEA = 8,
 	ENCR_DES_IV32 = 9,
-	RESERVED = 10,
 	ENCR_NULL = 11,
+	/**
+	 * Implemented in class aes_cbc_crypter_t.
+	 */
 	ENCR_AES_CBC = 12,
 	ENCR_AES_CTR = 13
 };
 
 /** 
- * string mappings for encryption_algorithm_t
+ * String mappings for encryption_algorithm_t.
  */
 extern mapping_t encryption_algorithm_m[];
+
 
 typedef struct crypter_t crypter_t;
 
@@ -67,13 +81,13 @@ struct crypter_t {
 	 * @brief Encrypt a chunk of data and allocate space for 
 	 * the encrypted value.
 	 * 
-	 * @param this				calling crypter
+	 * @param this				calling object
 	 * @param data				data to encrypt
-	 * @param iv					iv
+	 * @param iv				initializing vector
 	 * @param [out]encrypted	pointer where the encrypted bytes will be written
 	 * @return
-	 * 							- SUCCESS, or
-	 * 							- INVALID_ARG if data size not a multiple of  block size
+	 * 							- SUCCESS
+	 * 							- INVALID_ARG if data size not a multiple of block size
 	 */
 	status_t (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted);
 	
@@ -81,31 +95,31 @@ struct crypter_t {
 	 * @brief Decrypt a chunk of data and allocate space for 
 	 * the decrypted value.
 	 * 
-	 * @param this				calling crypter
+	 * @param this				calling object
 	 * @param data				data to decrypt
-	 * @param iv					iv
+	 * @param iv				initializing vector
 	 * @param [out]encrypted	pointer where the decrypted bytes will be written
 	 * @return
-	 * 							- SUCCESS, or
-	 * 							- INVALID_ARG if data size not a multiple of  block size
+	 * 							- SUCCESS
+	 * 							- INVALID_ARG if data size not a multiple of block size
 	 */
 	status_t (*decrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *decrypted);
 
 	/**
-	 * @brief get the block size of this crypter
+	 * @brief Get the block size of this crypter_t object.
 	 * 
-	 * @param this				calling crypter
+	 * @param this				calling object
 	 * @return					block size in bytes
 	 */
 	size_t (*get_block_size) (crypter_t *this);
 	
 	/**
-	 * @brief Set the key for this crypter
+	 * @brief Set the key for this crypter_t object.
 	 * 
-	 * @param this				calling crypter
+	 * @param this				calling object
 	 * @param key				key to set
 	 * @return
-	 * 							- SUCCESS, or
+	 * 							- SUCCESS
 	 * 							- INVALID_ARG if key size != block size
 	 */
 	status_t (*set_key) (crypter_t *this, chunk_t key);
@@ -113,7 +127,7 @@ struct crypter_t {
 	/**
 	 * @brief Destroys a crypter_t object.
 	 *
-	 * @param this 				crypter_t object to destroy
+	 * @param this 				calling object
 	 */
 	void (*destroy) (crypter_t *this);
 };
@@ -121,11 +135,14 @@ struct crypter_t {
 /**
  * @brief Generic constructor for crypter_t objects.
  * 
+ * Currently only the following algorithms are implemented and therefore supported:
+ * - ENCR_AES_CBC
+ * 
  * @param encryption_algorithm	Algorithm to use for crypter
- * @param blocksize 				block size in bytes
+ * @param blocksize 			block size in bytes
  * @return
- * 								- crypter_t if successfully
- * 								- NULL if crypter not supported
+ * 								- crypter_t object
+ * 								- NULL if encryption algorithm or blocksize is not supported
  */
 crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t blocksize);
 
