@@ -32,27 +32,37 @@
 typedef struct ike_sa_init_requested_t ike_sa_init_requested_t;
 
 /**
- * @brief This class represents an IKE_SA state when requested an IKE_SA_INIT.
+ * @brief This class represents an IKE_SA state when 
+ * requested an IKE_SA_INIT as initiator.
+ * 
+ * @b Constructors:
+ *  - ike_sa_init_requested_create()
  * 
  * @ingroup states
  */
 struct ike_sa_init_requested_t {
 	/**
-	 * methods of the state_t interface
+	 * The state_t interface.
 	 */
 	state_t state_interface;
 };
 
 /**
- * Constructor of class ike_sa_init_responded_t
+ * Constructor of class ike_sa_init_requested_t.
  * 
- * @param ike_sa 				assigned ike_sa
- * @param diffie_hellman		diffie_hellman object use to retrieve shared secret
- * @param sent_nonce			Sent nonce value
- * @return						created ike_sa_init_request_t object
+ * @param ike_sa 					assigned ike_sa
+ * @param dh_group_priority			the last used priority number to get the DH group for request
+ * @param diffie_hellman			diffie_hellman object use to retrieve shared secret
+ * @param sent_nonce				Sent nonce value
+ * @param ike_sa_init_request_data	the binary representation of the IKE_SA_INIT request message
+ * @return							created ike_sa_init_request_t object
  * 
  * @ingroup states
  */
-ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce, chunk_t ike_sa_init_request_data);
+ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa,
+														u_int16_t dh_group_priority,
+														diffie_hellman_t *diffie_hellman,
+														chunk_t sent_nonce,
+														chunk_t ike_sa_init_request_data);
 
 #endif /*IKE_SA_INIT_REQUESTED_H_*/

@@ -45,7 +45,7 @@ typedef struct private_ike_sa_init_requested_t private_ike_sa_init_requested_t;
  */
 struct private_ike_sa_init_requested_t {
 	/**
-	 * methods of the state_t interface
+	 * Public interface of an ike_sa_init_requested_t object.
 	 */
 	ike_sa_init_requested_t public;
 	
@@ -55,17 +55,12 @@ struct private_ike_sa_init_requested_t {
 	protected_ike_sa_t *ike_sa;
 	
 	/**
-	 * Diffie Hellman object used to compute shared secret
+	 * Diffie Hellman object used to compute shared secret.
 	 */
 	diffie_hellman_t *diffie_hellman;
-	
+		
 	/**
-	 * Shared secret of successful exchange
-	 */
-	chunk_t shared_secret;
-	
-	/**
-	 * Sent nonce value
+	 * Sent nonce value.
 	 */
 	chunk_t sent_nonce;
 	
@@ -82,78 +77,112 @@ struct private_ike_sa_init_requested_t {
 	/**
 	 * DH group priority used to get dh_group_number from configuration manager.
 	 * 
-	 * Currently unused but usable if informational messages of unsupported dh group number are processed.
+	 * Is passed to the next state object of type INITATOR_INIT if the selected group number 
+	 * is not the same as in the peers selected proposal.
 	 */
 	u_int16_t dh_group_priority;
 	
 	/**
-	 * Logger used to log data 
+	 * Assigned logger
 	 * 
 	 * Is logger of ike_sa!
 	 */
 	logger_t *logger;
 	
+
 	/**
-	 * Builds the IKE_SA_AUTH request message.
+	 * Process NONCE payload of IKE_SA_INIT response.
 	 * 
-	 * @param this		calling object
-	 * @param message	the created message will be stored at this location
+	 * @param this			calling object
+	 * @param nonce_payload	NONCE payload to process
+	 * @return				SUCCESS in any case
+	 */
+	status_t (*process_nonce_payload) (private_ike_sa_init_requested_t *this, nonce_payload_t *nonce_payload);
+
+	/**
+	 * Process SA payload of IKE_SA_INIT response.
+	 * 
+	 * @param this			calling object
+	 * @param sa_payload	SA payload to process
+	 * @return				
+	 * 						- SUCCESS
+	 * 						- FAILED
+	 */
+	status_t (*process_sa_payload) (private_ike_sa_init_requested_t *this, sa_payload_t *sa_payload);
+	
+	/**
+	 * Process KE payload of IKE_SA_INIT response.
+	 * 
+	 * @param this			calling object
+	 * @param sa_payload	KE payload to process
+	 * @return				
+	 * 						- SUCCESS
+	 * 						- FAILED
+	 */
+	status_t (*process_ke_payload) (private_ike_sa_init_requested_t *this, ke_payload_t *ke_payload);
+
+	/**
+	 * Build ID payload for IKE_AUTH request.
+	 * 
+	 * @param this				calling object
+	 * @param[out] id_payload	buildet ID payload
+	 * @param response			created payload will be added to this message_t object
 	 * @return
-	 * 					- SUCCESS
-	 * 					- FAILED
+	 * 							- SUCCESS
+	 * 							- FAILED
 	 */
-	status_t (*build_ike_auth_request) (private_ike_sa_init_requested_t *this, message_t **message);
+	status_t (*build_id_payload) (private_ike_sa_init_requested_t *this,id_payload_t **id_payload, message_t *response);
 	
 	/**
-	 * Builds the id payload for this state.
+	 * Build AUTH payload for IKE_AUTH request.
 	 * 
-	 * @param this		calling object
-	 * @param payload	The generated payload object of type id_payload_t is 
-	 * 					stored at this location.
-	 */
-	void (*build_id_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
-	
-	/**
-	 * Builds the id payload for this state.
-	 * 
-	 * @param this		calling object
-	 * @param payload	The generated payload object of type auth_payload_t is 
-	 * 					stored at this location.
+	 * @param this				calling object
+	 * @param my_id_payload		buildet ID payload
+	 * @param response			created payload will be added to this message_t object
 	 * @return
-	 * 					- SUCCESS
-	 * 					- FAILED
+	 * 							- SUCCESS
+	 * 							- FAILED
 	 */
-	status_t (*build_auth_payload) (private_ike_sa_init_requested_t *this, payload_t **payload,id_payload_t *my_id_payload);
-	
+	status_t (*build_auth_payload) (private_ike_sa_init_requested_t *this,id_payload_t *my_id_payload, message_t *response);
+
 	/**
-	 * Builds the SA payload for this state.
+	 * Build SA payload for IKE_AUTH request.
 	 * 
-	 * @param this		calling object
-	 * @param payload	The generated payload object of type sa_payload_t is 
-	 * 					stored at this location.
+	 * @param this				calling object
+	 * @param response			created payload will be added to this message_t object
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED
 	 */
-	void (*build_sa_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	status_t (*build_sa_payload) (private_ike_sa_init_requested_t *this, message_t *response);
 	
 	/**
-	 * Builds the TSi payload for this state.
+	 * Build TSi payload for IKE_AUTH request.
 	 * 
-	 * @param this		calling object
-	 * @param payload	The generated payload object of type ts_payload_t is 
-	 * 					stored at this location.
+	 * @param this				calling object
+	 * @param response			created payload will be added to this message_t object
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED
 	 */
-	void (*build_tsi_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	status_t (*build_tsi_payload) (private_ike_sa_init_requested_t *this, message_t *response);
 	
 	/**
-	 * Builds the TSr payload for this state.
+	 * Build TSr payload for IKE_AUTH request.
 	 * 
-	 * @param this		calling object
-	 * @param payload	The generated payload object of type ts_payload_t is 
-	 * 					stored at this location.
+	 * @param this				calling object
+	 * @param response			created payload will be added to this message_t object
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED
 	 */
-	void (*build_tsr_payload) (private_ike_sa_init_requested_t *this, payload_t **payload);
+	status_t (*build_tsr_payload) (private_ike_sa_init_requested_t *this, message_t *response);
 	
 	/**
-	 * Destroy function called internally of this class after state change succeeded.
+	 * Destroy function called internally of this class after state change to 
+	 * state IKE_AUTH_REQUESTED succeeded. 
+	 * 
+	 * In case of state change to INITIATOR_INIT the default destroy function gets called.
 	 * 
 	 * This destroy function does not destroy objects which were passed to the new state.
 	 * 
@@ -163,17 +192,20 @@ struct private_ike_sa_init_requested_t {
 };
 
 /**
- * Implements state_t.get_state
+ * Implementation of state_t.process_message.
  */
 static status_t process_message(private_ike_sa_init_requested_t *this, message_t *ike_sa_init_reply)
 {
 	ike_auth_requested_t *next_state;
 	chunk_t ike_sa_init_reply_data;
-	exchange_type_t	exchange_type;
-	init_config_t *init_config;	
+	nonce_payload_t *nonce_payload;
+	sa_payload_t *sa_payload;
+	ke_payload_t *ke_payload;
+	id_payload_t *id_payload;
 	u_int64_t responder_spi;
 	ike_sa_id_t *ike_sa_id;
 	iterator_t *payloads;
+
 	message_t *request;
 	status_t status;
 	
@@ -184,10 +216,11 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	 * or
 	 *   <--    HDR, N
 	 */
-	exchange_type = ike_sa_init_reply->get_exchange_type(ike_sa_init_reply);
-	if (exchange_type != IKE_SA_INIT)
+
+	if (ike_sa_init_reply->get_exchange_type(ike_sa_init_reply) != IKE_SA_INIT)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_sa_init_requested",mapping_find(exchange_type_m,exchange_type));
+		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_sa_init_requested",
+							mapping_find(exchange_type_m,ike_sa_init_reply->get_exchange_type(ike_sa_init_reply)));
 		return FAILED;
 	}
 	
@@ -205,10 +238,6 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		return status;	
 	}
 	
-	/* get configuration */
-	init_config = this->ike_sa->get_init_config(this->ike_sa);
-	
-
 	if (responder_spi == 0)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Responder SPI still zero");
@@ -291,94 +320,48 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 					default:
 					{
 						/*
-						 * If an unrecognized Notify type is received, the IKE_SA gets destroyed.
+						 * - In case of unknown error: IKE_SA gets destroyed.
+						 * - In case of unknown status: logging
 						 * 
 						 */
-						
-						this->logger->log(this->logger, ERROR, "Notify type %s not recognized in state ike_sa_init_requested.",
-										  mapping_find(notify_message_type_m,notify_payload->get_notify_message_type(notify_payload)));
-						payloads->destroy(payloads);
-						return DELETE_ME;	
+						notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
+						if (notify_message_type < 16383)
+						{
+							this->logger->log(this->logger, ERROR, "Notify error type %d not recognized in state IKE_SA_INIT_REQUESTED.",
+											  notify_message_type);
+							payloads->destroy(payloads);
+							return DELETE_ME;	
+
+						}
+						else
+						{
+							this->logger->log(this->logger, ERROR, "Notify status type %d not handled in state IKE_SA_INIT_REQUESTED.",
+											  notify_message_type);
+							break;
+						}
 					}
 				}
 			
-			/**
-			 * TODO check for notify of type 
-			 * 
-			 * and change to state INITIATOR_INIT;
-			 * 
-			 * call destroy after state change not destroy_after_state_change!!!
-			 */
 			}
 			case SECURITY_ASSOCIATION:
 			{
-				sa_payload_t *sa_payload = (sa_payload_t*)payload;
-				ike_proposal_t *ike_proposals;
-				ike_proposal_t selected_proposal;
-				size_t proposal_count;			
-
-				
-				/* get the list of selected proposals */ 
-				status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals,&proposal_count);
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR | MORE, "SA payload does not contain IKE proposals");
-					payloads->destroy(payloads);
-					return status;	
-				}
-				/* the peer has to select only one proposal */
-				if (proposal_count != 1)
-				{
-					this->logger->log(this->logger, ERROR | MORE, "More then 1 proposal (%d) selected!",proposal_count);
-					allocator_free(ike_proposals);
-					payloads->destroy(payloads);
-					return status;							
-				}
-				
-				/* now let the configuration-manager check the selected proposals*/
-				this->logger->log(this->logger, CONTROL | MOST, "Check selected proposal");
-				status = init_config->select_proposal (init_config,ike_proposals,1,&selected_proposal);
-				allocator_free(ike_proposals);
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR | MORE, "Selected proposal not a suggested one! Peer is trying to trick me!");
-					payloads->destroy(payloads);
-					return status;
-				}
-							
-				status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,&selected_proposal);	
-				if (status != SUCCESS)
-				{
-					this->logger->log(this->logger, ERROR | MORE, "Transform objects could not be created from selected proposal");
-					payloads->destroy(payloads);
-					return status;
-				}
-				/* ok, we have what we need for sa_payload */
+				sa_payload = (sa_payload_t*)payload;
 				break;
 			}
 			case KEY_EXCHANGE:
 			{
-				ke_payload_t *ke_payload = (ke_payload_t*)payload;
-				this->diffie_hellman->set_other_public_value(this->diffie_hellman, ke_payload->get_key_exchange_data(ke_payload));				
-				/* shared secret is computed AFTER processing of all payloads... */				
+				ke_payload = (ke_payload_t*)payload;
 				break;
 			}
 			case NONCE:
 			{
-				nonce_payload_t *nonce_payload = (nonce_payload_t*)payload;
-				
-				allocator_free(this->received_nonce.ptr);
-
-				this->received_nonce = CHUNK_INITIALIZER;
-				
-				nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
+				nonce_payload = (nonce_payload_t*)payload;
 				break;
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "Payload type %s not supported in state ike_sa_init_requested!", mapping_find(payload_type_m, payload->get_type(payload)));
-				payloads->destroy(payloads);
-				return FAILED;
+				this->logger->log(this->logger, ERROR, "Payload with ID %d not handled in state IKE_SA_INIT_REQUESTED", payload->get_type(payload));
+				break;
 			}
 				
 		}
@@ -386,27 +369,66 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	}
 	payloads->destroy(payloads);
 	
-	allocator_free(this->shared_secret.ptr);
-	this->shared_secret = CHUNK_INITIALIZER;
-	
-	/* store shared secret  
-	 * status of dh objectt does not have to get checked cause other key is set
-	 */
-	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
-	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &(this->shared_secret));		
-	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &this->shared_secret);
-
-	this->logger->log(this->logger, CONTROL | MOST, "Going to derive all secrets from shared secret");	
-	this->ike_sa->compute_secrets(this->ike_sa,this->shared_secret,this->sent_nonce, this->received_nonce);
-
-	/* build the complete IKE_AUTH request */
-	status = this->build_ike_auth_request (this,&request);
+	status = this->process_nonce_payload (this,nonce_payload);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not build request message");
-		return DELETE_ME;
+		return status;
 	}
 	
+	status = this->process_sa_payload (this,sa_payload);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	
+	status = this->process_ke_payload (this,ke_payload);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+
+	this->logger->log(this->logger, CONTROL|MOST, "Going to build empty message");
+	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &request);
+	
+	/* build ID payload */
+	status = this->build_id_payload(this, &id_payload,request);
+	if (status != SUCCESS)
+	{
+		request->destroy(request);
+		return status;
+	}
+
+	/* build AUTH payload */
+	status = this->build_auth_payload(this,(id_payload_t *) id_payload, request);
+	if (status != SUCCESS)
+	{
+		request->destroy(request);
+		return status;
+	}
+	
+	/* build SA payload */	
+	status = this->build_sa_payload(this, request);
+	if (status != SUCCESS)
+	{
+		request->destroy(request);
+		return status;
+	}
+	
+	/* build TSi payload */
+	status = this->build_tsi_payload(this, request);
+	if (status != SUCCESS)
+	{
+		request->destroy(request);
+		return status;
+	}
+	
+	/* build TSr payload */
+	status = this->build_tsr_payload(this, request);
+	if (status != SUCCESS)
+	{
+		request->destroy(request);
+		return status;
+	}	
 	
 	/* message can now be sent (must not be destroyed) */
 	status = this->ike_sa->send_request(this->ike_sa, request);
@@ -436,76 +458,116 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	return SUCCESS;
 }
 
+
 /**
- * implements private_ike_sa_init_requested_t.build_ike_auth_request
+ * Implementation of private_ike_sa_init_requested_t.process_nonce_payload.
  */
-static status_t build_ike_auth_request (private_ike_sa_init_requested_t *this, message_t **request)
+status_t process_nonce_payload (private_ike_sa_init_requested_t *this, nonce_payload_t *nonce_payload)
 {
-	payload_t *payload;
-	message_t *message;
+	allocator_free(this->received_nonce.ptr);
+	nonce_payload->get_nonce(nonce_payload, &(this->received_nonce));
+	return SUCCESS;
+}
+
+
+/**
+ * Implementation of private_ike_sa_init_requested_t.process_sa_payload.
+ */
+status_t process_sa_payload (private_ike_sa_init_requested_t *this, sa_payload_t *sa_payload)
+{
+	ike_proposal_t selected_proposal;
+	ike_proposal_t *ike_proposals;
+	init_config_t *init_config;
+	size_t proposal_count;
 	status_t status;
 	
-	/* going to build message */
-	this->logger->log(this->logger, CONTROL|MOST, "Going to build empty message");
-	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &message);
+	init_config = this->ike_sa->get_init_config(this->ike_sa);
 	
-	/* build id payload */
-	this->build_id_payload(this, &payload);
-	this->logger->log(this->logger, CONTROL|MOST, "add ID payload to message");
-	message->add_payload(message, payload);
-
-	/* build auth payload */
-	status = this->build_auth_payload(this, &payload,(id_payload_t *) payload);
+	/* get the list of selected proposals */ 
+	status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals,&proposal_count);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not create auth payload");
-		message->destroy(message);
-		return status;
+		this->logger->log(this->logger, ERROR | MORE, "SA payload does not contain IKE proposals");
+		return DELETE_ME;	
+	}
+	/* the peer has to select only one proposal */
+	if (proposal_count != 1)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "More then 1 proposal (%d) selected!",proposal_count);
+		allocator_free(ike_proposals);
+		return DELETE_ME;							
 	}
 	
-	this->logger->log(this->logger, CONTROL|MOST, "add AUTH payload to message");
-	message->add_payload(message, payload);
+	/* now let the configuration-manager check the selected proposals*/
+	this->logger->log(this->logger, CONTROL | MOST, "Check selected proposal");
+	status = init_config->select_proposal (init_config,ike_proposals,1,&selected_proposal);
+	allocator_free(ike_proposals);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Selected proposal not a suggested one! Peer is trying to trick me!");
+		return DELETE_ME;
+	}
+				
+	status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,&selected_proposal);	
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR | MORE, "Transform objects could not be created from selected proposal");
+		return DELETE_ME;
+	}
+	return SUCCESS;
+}
+
+/**
+ * Implementation of private_ike_sa_init_requested_t.process_ke_payload.
+ */
+status_t process_ke_payload (private_ike_sa_init_requested_t *this, ke_payload_t *ke_payload)
+{
+	chunk_t shared_secret;
+	status_t status;
 	
-	/* build sa payload */
-	this->build_sa_payload(this, &payload);
-	this->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
-	message->add_payload(message, payload);
+	this->diffie_hellman->set_other_public_value(this->diffie_hellman, ke_payload->get_key_exchange_data(ke_payload));
 	
-	/* build tsi payload */
-	this->build_tsi_payload(this, &payload);
-	this->logger->log(this->logger, CONTROL|MOST, "add TSi payload to message");
-	message->add_payload(message, payload);	
+	/* store shared secret  
+	 * status of dh object does not have to get checked cause other key is set
+	 */
+	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
+	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &shared_secret);		
+	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &shared_secret);
+
+	this->logger->log(this->logger, CONTROL | MOST, "Going to derive all secrets from shared secret");	
+	this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->sent_nonce, this->received_nonce);
 	
-	/* build tsr payload */
-	this->build_tsr_payload(this, &payload);
-	this->logger->log(this->logger, CONTROL|MOST, "add TSr payload to message");
-	message->add_payload(message, payload);	
+	allocator_free_chunk(&(shared_secret));
 	
-	*request = message;
 	return SUCCESS;
 }
 
 /**
  * Implementation of private_ike_sa_init_requested_t.build_id_payload.
  */
-static void build_id_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+static status_t build_id_payload (private_ike_sa_init_requested_t *this,id_payload_t **id_payload, message_t *request)
 {
 	sa_config_t *sa_config;
-	id_payload_t *id_payload;
+	id_payload_t *new_id_payload;
 	identification_t *identification;
 	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	/* identification_t object gets NOT cloned here */
 	identification = sa_config->get_my_id(sa_config);
-	id_payload = id_payload_create_from_identification(TRUE,identification);
+	new_id_payload = id_payload_create_from_identification(TRUE,identification);
 	
-	*payload = (payload_t *) id_payload;
+	this->logger->log(this->logger, CONTROL|MOST, "Add ID payload to message");
+	request->add_payload(request,(payload_t *) new_id_payload);
+	
+	*id_payload = new_id_payload;
+	
+	return SUCCESS;
 }
 
 /**
  * Implementation of private_ike_sa_init_requested_t.build_auth_payload.
  */
-static status_t build_auth_payload (private_ike_sa_init_requested_t *this, payload_t **payload,id_payload_t *my_id_payload)
+static status_t build_auth_payload (private_ike_sa_init_requested_t *this, id_payload_t *my_id_payload, message_t *request)
 {
 	authenticator_t *authenticator;
 	auth_payload_t *auth_payload;
@@ -517,17 +579,19 @@ static status_t build_auth_payload (private_ike_sa_init_requested_t *this, paylo
 	
 	if (status != SUCCESS)
 	{
-		return status;		
+		return DELETE_ME;		
 	}
 	
-	*payload = (payload_t *) auth_payload;
+	this->logger->log(this->logger, CONTROL|MOST, "Add AUTH payload to message");
+	request->add_payload(request,(payload_t *) auth_payload);
+	
 	return SUCCESS;
 }
 
 /**
  * Implementation of private_ike_sa_init_requested_t.build_sa_payload.
  */
-static void build_sa_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message_t *request)
 {
 	child_proposal_t *proposals;
 	sa_payload_t *sa_payload;
@@ -544,13 +608,16 @@ static void build_sa_payload (private_ike_sa_init_requested_t *this, payload_t *
 	sa_payload = sa_payload_create_from_child_proposals(proposals, proposal_count);
 	allocator_free(proposals);
 
-	*payload = (payload_t *) sa_payload;
+	this->logger->log(this->logger, CONTROL|MOST, "Add SA payload to message");
+	request->add_payload(request,(payload_t *) sa_payload);
+	
+	return SUCCESS;
 }
 
 /**
  * Implementation of private_ike_sa_init_requested_t.build_tsi_payload.
  */
-static void build_tsi_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+static status_t build_tsi_payload (private_ike_sa_init_requested_t *this, message_t *request)
 {
 	traffic_selector_t **traffic_selectors;
 	size_t traffic_selectors_count;
@@ -568,14 +635,17 @@ static void build_tsi_payload (private_ike_sa_init_requested_t *this, payload_t 
 		ts->destroy(ts);
 	}	
 	allocator_free(traffic_selectors);
-
-	*payload = (payload_t *) ts_payload;
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Add TSi payload to message");
+	request->add_payload(request,(payload_t *) ts_payload);
+	
+	return SUCCESS;
 }
 
 /**
  * Implementation of private_ike_sa_init_requested_t.build_tsr_payload.
  */
-static void build_tsr_payload (private_ike_sa_init_requested_t *this, payload_t **payload)
+static status_t build_tsr_payload (private_ike_sa_init_requested_t *this, message_t *request)
 {
 	traffic_selector_t **traffic_selectors;
 	size_t traffic_selectors_count;
@@ -594,12 +664,15 @@ static void build_tsr_payload (private_ike_sa_init_requested_t *this, payload_t 
 	}	
 	allocator_free(traffic_selectors);
 
-	*payload = (payload_t *) ts_payload;
+	this->logger->log(this->logger, CONTROL|MOST, "Add TSr payload to message");
+	request->add_payload(request,(payload_t *) ts_payload);
+	
+	return SUCCESS;
 }
 
 
 /**
- * Implements state_t.get_state
+ * Implementation of state_t.get_state.
  */
 static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
 {
@@ -607,7 +680,7 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
 }
 
 /**
- * Implements private_ike_sa_init_requested_t.destroy_after_state_change
+ * Implementation of private_ike_sa_init_requested_t.destroy_after_state_change.
  */
 static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 {
@@ -615,8 +688,6 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 	
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret");	
-	allocator_free_chunk(&(this->shared_secret));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy ike_sa_init_request_data");	
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
@@ -624,7 +695,7 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 }
 
 /**
- * Implements state_t.get_state
+ * Implementation state_t.destroy.
  */
 static void destroy(private_ike_sa_init_requested_t *this)
 {
@@ -636,8 +707,6 @@ static void destroy(private_ike_sa_init_requested_t *this)
 	allocator_free(this->sent_nonce.ptr);
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
 	allocator_free(this->received_nonce.ptr);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy shared secret (secrets allready derived)");
-	allocator_free_chunk(&(this->shared_secret));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy ike_sa_init_request_data");	
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
 	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
@@ -657,18 +726,19 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
 	
 	/* private functions */
-	this->build_ike_auth_request = build_ike_auth_request;
-	this->build_id_payload = build_id_payload;
+	this->destroy_after_state_change = destroy_after_state_change;
+	this->process_nonce_payload = process_nonce_payload;
+	this->process_sa_payload = process_sa_payload;
+	this->process_ke_payload = process_ke_payload;
 	this->build_auth_payload = build_auth_payload;
-	this->build_sa_payload = build_sa_payload;
 	this->build_tsi_payload = build_tsi_payload;
 	this->build_tsr_payload = build_tsr_payload;
-	this->destroy_after_state_change = destroy_after_state_change;
+	this->build_id_payload = build_id_payload;
+	this->build_sa_payload = build_sa_payload;
 	
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->received_nonce = CHUNK_INITIALIZER;
-	this->shared_secret = CHUNK_INITIALIZER;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->diffie_hellman = diffie_hellman;
 	this->sent_nonce = sent_nonce;
