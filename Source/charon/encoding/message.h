@@ -38,7 +38,15 @@ typedef struct message_t message_t;
 /**
  * @brief This class is used to represent an IKEv2-Message.
  *
- * An IKEv2-Message is either a request or response.
+ * The message handles parsing and generation of payloads
+ * via parser_t/generator_t. Encryption is done transparently
+ * via the encryption_payload_t. A set of rules for messages
+ * and payloads does check parsed messages.
+ * 
+ * @b Constructors:
+ * - message_create()
+ * - message_create_from_packet()
+ * - message_create_notify_reply()
  *
  * @ingroup encoding
  */
@@ -159,6 +167,12 @@ struct message_t {
 
 	/**
 	 * @brief Append a payload to the message.
+	 * 
+	 * If the payload must be encrypted is not specified here. Encryption
+	 * of payloads is evaluated via internal rules for the messages and
+	 * is done before generation. The order of payloads may change, since
+	 * all payloads to encrypt are added to the encryption payload, which is 
+	 * always the last one.
 	 *
 	 * @param this 			message_t object
 	 * @param payload 		payload to append
@@ -166,7 +180,11 @@ struct message_t {
 	void (*add_payload) (message_t *this, payload_t *payload);
 
 	/**
-	 * @brief Parses header of message
+	 * @brief Parses header of message.
+	 * 
+	 * Begins parisng of a message created via message_create_from_packet().
+	 * The parsing context is stored, so a subsequent call to parse_body()
+	 * will continue the parsing process.
 	 *
 	 * @param this 		message_t object
 	 * @return
@@ -181,42 +199,53 @@ struct message_t {
 	 * 
 	 * The body gets not only parsed, but rather it gets verified. 
 	 * All payloads are verified if they are allowed to exist in the message 
-	 * of this type and if their own structure is ok.
+	 * of this type and if their own structure is ok. 
+	 * If there are encrypted payloads, they get decrypted via the supplied 
+	 * crypter. Also the message integrity gets verified with the supplied
+	 * signer.
+	 * Crypter/signer can be omitted (by passing NULL) when no encryption 
+	 * payload is expected.
 	 *
 	 * @param this 		message_t object
+	 * @param crypter	crypter to decrypt encryption payloads
+	 * @param signer	signer to verifiy a message with an encryption payload
 	 * @return
 	 * 					- SUCCESS if header could be parsed
-	 * 					- NOT_SUPPORTED if unsupported payload are contained in body
+	 * 					- NOT_SUPPORTED if ciritcal unknown payloads found
 	 * 					- FAILED if message type is not suppported!
 	 *					- PARSE_ERROR if corrupted/invalid data found
 	 * 					- VERIFY_ERROR if verification of some payload failed
+	 * 					- INVALID_STATE if crypter/signer not supplied, but needed
 	 */
 	status_t (*parse_body) (message_t *this, crypter_t *crypter, signer_t *signer);
 
 	/**
-	 * @brief Generates the UDP packet of specific message
+	 * @brief Generates the UDP packet of specific message.
+	 * 
+	 * Payloads which must be encrypted are generated first and added to
+	 * an encryption payload. This encryption payload will get encrypted via 
+	 * the supplied crypter. Then all other payloads and the header get generated.
+	 * After that, the checksum is added to the encryption payload over the full 
+	 * message.
+	 * Crypter/signer can be omitted (by passing NULL) when no encryption 
+	 * payload is expected.
 	 *
 	 * @param this 		message_t object
+	 * @param crypter	crypter to use when a payload must be encrypted
+	 * @param signer	signer to build a mac
 	 * @return
 	 * 					- SUCCESS if packet could be generated
-	 * 					- EXCHANGE_TYPE_NOT_SET if exchange type is currently not set
-	 * ....
+	 * 					- INVALID_STATE if exchange type is currently not set
+	 * 					- NOT_FOUND if no rules found for message generation
+	 * 					- INVALID_STATE if crypter/signer not supplied but needed.
 	 */	
 	status_t (*generate) (message_t *this, crypter_t *crypter, signer_t *signer, packet_t **packet);
-	
+
 	/**
-	 * Verifies the structure of the message_t object. 
+	 * @brief Gets the source host informations. 
 	 * 
-	 * The payloads are checked for the correct occurence count.
-	 *
-	 * @param this 		message_t object
-	 */
-	status_t (*verify) (message_t *this);
-	
-	/**
-	 * Gets the source host informations. 
-	 * 
-	 * @warning Returned host_t object is not getting cloned.
+	 * @warning Returned host_t object is not getting cloned, 
+	 * do not destroy nor modify.
 	 *
 	 * @param this 		message_t object
 	 * @return			host_t object representing source host
@@ -224,7 +253,7 @@ struct message_t {
 	host_t * (*get_source) (message_t *this);
 	
 	/**
-	 * Sets the source host informations. 
+	 * @brief Sets the source host informations. 
 	 * 
 	 * @warning host_t object is not getting cloned and gets destroyed by
 	 * 			message_t.destroy or next call of message_t.set_source.
@@ -235,9 +264,10 @@ struct message_t {
 	void (*set_source) (message_t *this, host_t *host);
 
 	/**
-	 * Gets the destination host informations. 
+	 * @brief Gets the destination host informations. 
 	 * 
-	 * @warning Returned host_t object is not getting cloned.
+	 * @warning Returned host_t object is not getting cloned, 
+	 * do not destroy nor modify.
 	 *
 	 * @param this 		message_t object
 	 * @return			host_t object representing destination host
@@ -245,7 +275,7 @@ struct message_t {
 	host_t * (*get_destination) (message_t *this);
 
 	/**
-	 * Sets the destination host informations. 
+	 * @brief Sets the destination host informations. 
 	 * 
 	 * @warning host_t object is not getting cloned and gets destroyed by
 	 * 			message_t.destroy or next call of message_t.set_destination.
@@ -256,10 +286,10 @@ struct message_t {
 	void (*set_destination) (message_t *this, host_t *host);
 	
 	/**
-	 * Returns an iterator on all stored payloads.
+	 * @brief Returns an iterator on all stored payloads.
 	 * 
 	 * @warning Don't insert payloads over this iterator. 
-	 * 			Use message_t.add_payload instead.
+	 * 			Use add_payload() instead.
 	 *
 	 * @param this 		message_t object
 	 * @return			iterator_t object which has to get destroyd by the caller
@@ -292,7 +322,7 @@ struct message_t {
 };
 
 /**
- * Creates an message_t object from a incoming UDP Packet.
+ * @brief Creates an message_t object from a incoming UDP Packet.
  * 
  * @warning the given packet_t object is not copied and gets 
  *			destroyed in message_t's destroy call.
@@ -302,9 +332,9 @@ struct message_t {
  * - exchange_type is set to NOT_SET
  * - original_initiator is set to TRUE
  * - is_request is set to TRUE
+ * Call message_t.parse_header afterwards.
  * 
- * @param packet		packet_t object which is assigned to message					  
- * 
+ * @param packet		packet_t object which is assigned to message	
  * @return 				created message_t object
  * 
  * @ingroup encoding
@@ -313,7 +343,7 @@ message_t * message_create_from_packet(packet_t *packet);
 
 
 /**
- * Creates an empty message_t object.
+ * @brief Creates an empty message_t object.
  *
  * - exchange_type is set to NOT_SET
  * - original_initiator is set to TRUE
@@ -326,7 +356,7 @@ message_t * message_create_from_packet(packet_t *packet);
 message_t * message_create();
 
 /**
- * Creates an message_t object of type reply containing a notify payload.
+ * @brief Creates an message_t object of type reply containing a notify payload.
  *
  * @return created message_t object
  *

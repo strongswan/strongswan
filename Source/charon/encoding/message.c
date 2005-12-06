@@ -35,6 +35,7 @@
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/encryption_payload.h>
+#include <encoding/payloads/unknown_payload.h>
 
 /**
  * Max number of notify payloads per IKEv2 Message
@@ -42,13 +43,15 @@
 #define MAX_NOTIFY_PAYLOADS 10
 
 
-typedef struct supported_payload_entry_t supported_payload_entry_t;
+typedef struct payload_rule_t payload_rule_t;
 
 /**
- * Supported payload entry used in message_rule_t.
- * 
+ * A payload rule defines the rules for a payload
+ * in a specific message rule. It defines if and how 
+ * many times a payload must/can occur in a message
+ * and if it must be encrypted.
  */
-struct supported_payload_entry_t {
+struct payload_rule_t {
 	/**
 	 * Payload type.
 	 */
@@ -65,21 +68,24 @@ struct supported_payload_entry_t {
 	 size_t max_occurence;
 	 
 	 /**
-	  * TRUE if payload has to get encrypted
+	  * TRUE if payload must be encrypted
 	  */
 	 bool encrypted;
 	 
 	 /**
-	  * Verifying can stop after checking this payload.
+	  * If this payload occurs, the message rule is
+	  * fullfilled in any case. This applies e.g. to 
+	  * notify_payloads.
 	  */
-	 bool can_be_last;
+	 bool sufficient;
 };
 
 typedef struct message_rule_t message_rule_t;
 
 /**
- * Message Rule used to find out which payloads 
- * are supported by each message type.
+ * A message rule defines the kind of a message,
+ * if it has encrypted contents and a list
+ * of payload rules.
  * 
  */
 struct message_rule_t {
@@ -98,22 +104,21 @@ struct message_rule_t {
 	 */
 	bool encrypted_content;
 	
-	 /**
-	  * Number of supported payloads.
-	  */
-	 size_t supported_payloads_count;
+	/**
+	 * Number of payload rules which will follow
+	 */
+	size_t payload_rule_count;
 	 
 	/**
-	 * Pointer to first supported payload entry.
+	 * Pointer to first payload rule
 	 */
-	 supported_payload_entry_t *supported_payloads;
+	payload_rule_t *payload_rules;
 };
 
 /**
  * Message rule for IKE_SA_INIT from initiator.
  */
-static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
-{
+static payload_rule_t ike_sa_init_i_payload_rules[] = {
 	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,FALSE,FALSE},
 	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
 	{KEY_EXCHANGE,1,1,FALSE,FALSE},
@@ -123,8 +128,7 @@ static supported_payload_entry_t supported_ike_sa_init_i_payloads[] =
 /**
  * Message rule for IKE_SA_INIT from responder.
  */
-static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
-{
+static payload_rule_t ike_sa_init_r_payload_rules[] = {
 	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,FALSE,TRUE},
 	{SECURITY_ASSOCIATION,1,1,FALSE,FALSE},
 	{KEY_EXCHANGE,1,1,FALSE,FALSE},
@@ -134,8 +138,7 @@ static supported_payload_entry_t supported_ike_sa_init_r_payloads[] =
 /**
  * Message rule for IKE_AUTH from initiator.
  */
-static supported_payload_entry_t supported_ike_auth_i_payloads[] =
-{
+static payload_rule_t ike_auth_i_payload_rules[] = {
 	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
 	{ID_INITIATOR,1,1,TRUE,FALSE},
 	{CERTIFICATE,0,1,TRUE,FALSE},
@@ -145,13 +148,13 @@ static supported_payload_entry_t supported_ike_auth_i_payloads[] =
 	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE,FALSE},
+	{CONFIGURATION,0,1,TRUE,FALSE},
 };
 
 /**
  * Message rule for IKE_AUTH from responder.
  */
-static supported_payload_entry_t supported_ike_auth_r_payloads[] =
-{
+static payload_rule_t ike_auth_r_payload_rules[] = {
 	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
 	{CERTIFICATE,0,1,TRUE,FALSE},
 	{ID_RESPONDER,1,1,TRUE,FALSE},
@@ -159,33 +162,17 @@ static supported_payload_entry_t supported_ike_auth_r_payloads[] =
 	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_INITIATOR,1,1,TRUE,FALSE},
 	{TRAFFIC_SELECTOR_RESPONDER,1,1,TRUE,FALSE},
+	{CONFIGURATION,0,1,TRUE,FALSE},
 };
 
 /**
  * Message rules, defines allowed payloads.
  */
 static message_rule_t message_rules[] = {
-	{IKE_SA_INIT,TRUE,FALSE,(sizeof(supported_ike_sa_init_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_i_payloads},
-	{IKE_SA_INIT,FALSE,FALSE,(sizeof(supported_ike_sa_init_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_sa_init_r_payloads},
-	{IKE_AUTH,TRUE,TRUE,(sizeof(supported_ike_auth_i_payloads)/sizeof(supported_payload_entry_t)),supported_ike_auth_i_payloads},
-	{IKE_AUTH,FALSE,TRUE,(sizeof(supported_ike_auth_r_payloads)/sizeof(supported_payload_entry_t)),supported_ike_auth_r_payloads}
-};
-
-typedef struct payload_entry_t payload_entry_t;
-
-/**
- * Entry for a payload in the internal used linked list.
- * 
- */
-struct payload_entry_t {
-	/**
-	 * Type of payload.
-	 */
-	payload_type_t payload_type;
-	/**
-	 * Data struct holding the data of given payload.
-	 */
-	void *data_struct;
+	{IKE_SA_INIT,TRUE,FALSE,(sizeof(ike_sa_init_i_payload_rules)/sizeof(payload_rule_t)),ike_sa_init_i_payload_rules},
+	{IKE_SA_INIT,FALSE,FALSE,(sizeof(ike_sa_init_r_payload_rules)/sizeof(payload_rule_t)),ike_sa_init_r_payload_rules},
+	{IKE_AUTH,TRUE,TRUE,(sizeof(ike_auth_i_payload_rules)/sizeof(payload_rule_t)),ike_auth_i_payload_rules},
+	{IKE_AUTH,FALSE,TRUE,(sizeof(ike_auth_r_payload_rules)/sizeof(payload_rule_t)),ike_auth_r_payload_rules}
 };
 
 
@@ -222,8 +209,7 @@ struct private_message_t {
 	exchange_type_t exchange_type;
 
 	/**
-	 * TRUE if message is request.
-	 * FALSE if message is reply.
+	 * TRUE if message is a request, FALSE if a reply.
 	 */
 	bool is_request;
 	
@@ -238,9 +224,7 @@ struct private_message_t {
 	ike_sa_id_t *ike_sa_id;
 	
 	/**
-	 * Assigned UDP packet.
-	 * 
-	 * Stores incoming packet or last generated one.
+	 * Assigned UDP packet, stores incoming packet or last generated one.
 	 */
 	packet_t *packet;
 	 
@@ -255,38 +239,38 @@ struct private_message_t {
 	parser_t *parser;
 	
 	/**
+	 * The message rule for this message instance
+	 */
+	message_rule_t *message_rule;
+	
+	/**
 	 * Assigned logger.
 	 */
 	logger_t *logger;
 	
 	/**
-	 * Gets a list of supported payloads of this message type.
+	 * Sets the private message_rule member to the rule which 
+	 * applies to this message. Must be called before get_payload_rule().
 	 * 
 	 * @param this					calling object
-	 * @param[out] message_rule		pointer is set to the message_rule 
-	 * 								of current message type
-	 * 
 	 * @return
 	 * 								- SUCCESS
-	 *								- NOT_FOUND if no message rule 
-	 * 								  for specific message type could be found
+	 *								- NOT_FOUND if no message rule applies to this message.
 	 */
-	status_t (*get_message_rule) (private_message_t *this, message_rule_t **message_rule);
+	status_t (*set_message_rule) (private_message_t *this);
 
 	/**
-	 * Gets the supported_payload_entry_t for a specific message_rule_t and payload type.
+	 * Gets the payload_rule_t for a specific message_rule_t and payload type.
 	 * 
 	 * @param this					calling object
-	 * @param message_rule			message rule
 	 * @param payload_type			payload type
-	 * @param[out] payload_entry	returned payload_entry_t
-	 * 
+	 * @param[out] payload_rule		returned payload_rule_t
 	 * @return
 	 * 								- SUCCESS
-	 *								- NOT_FOUND if no message rule 
-	 * 								  for specific message type could be found
+	 *								- NOT_FOUND if payload not defined in current message rule
+	 * 								- INVALID_STATE if message rule is not set via set_message_rule()
 	 */	
-	status_t (*get_supported_payload_entry) (private_message_t *this, message_rule_t *message_rule,payload_type_t payload_type, supported_payload_entry_t **payload_entry);
+	status_t (*get_payload_rule) (private_message_t *this, payload_type_t payload_type, payload_rule_t **payload_rule);
 	
 	/**
 	 * Encrypts all payloads which has to get encrypted.
@@ -296,24 +280,40 @@ struct private_message_t {
 	 * @param this			calling object
 	 * @param crypter		crypter_t object
 	 * @param signer		signer_t object
+	 * @return
+	 * 						- SUCCESS
+	 * 						- INVALID_STATE if no crypter/signer supplied but needed
 	 */
 	status_t (*encrypt_payloads) (private_message_t *this,crypter_t *crypter, signer_t* signer);
 	
 	/**
-	 * Decrypts encrypted contents and also verifies all payloads.
+	 * Decrypts encrypted contents, and checks if a payload is encrypted if it has to be.
 	 * 
 	 * @param this			calling object
 	 * @param crypter		crypter_t object
 	 * @param signer		signer_t object
+	 * @return
+	 * 						- SUCCESS
+	 * 						- FAILED if decryption not successfull
+	 * 						- INVALID_STATE if no crypter/signer supplied but needed
 	 */
-	status_t (*decrypt_and_verify_payloads) (private_message_t *this,crypter_t *crypter, signer_t* signer);	
+	status_t (*decrypt_payloads) (private_message_t *this,crypter_t *crypter, signer_t* signer);
+	
+	/**
+	 * Verifies the message. Checks for payloads count.
+	 * 
+	 * @param 				calling object
+	 * @return
+	 * 						- SUCCESS if message valid, or
+	 * 						- FAILED if message does not align with message rules.
+	 */
+	status_t (*verify) (private_message_t *this);	
 };
 
 /**
- * Implementation of private_message_t.get_supported_payloads.
+ * Implementation of private_message_t.set_message_rule.
  */
-
-static  status_t get_message_rule (private_message_t *this, message_rule_t **message_rule)
+static  status_t set_message_rule(private_message_t *this)
 {
 	int i;
 		
@@ -323,31 +323,31 @@ static  status_t get_message_rule (private_message_t *this, message_rule_t **mes
 			(this->is_request == message_rules[i].is_request))
 		{
 			/* found rule for given exchange_type*/
-			*message_rule = &(message_rules[i]);
+			this->message_rule = &(message_rules[i]);
 			return SUCCESS;
 		}
 	}
-	*message_rule = NULL;
+	this->message_rule = NULL;
 	return NOT_FOUND;
 }
 
 /**
- * Implementation of private_message_t.get_supported_payload_entry.
+ * Implementation of private_message_t.get_payload_rule.
  */
-static status_t get_supported_payload_entry (private_message_t *this, message_rule_t *message_rule,payload_type_t payload_type, supported_payload_entry_t **payload_entry)
+static status_t get_payload_rule(private_message_t *this, payload_type_t payload_type, payload_rule_t **payload_rule)
 {
 	int i;
 	
-	for (i = 0; i < message_rule->supported_payloads_count;i++)
+	for (i = 0; i < this->message_rule->payload_rule_count;i++)
 	{
-		if (message_rule->supported_payloads[i].payload_type == payload_type)
+		if (this->message_rule->payload_rules[i].payload_type == payload_type)
 		{
-			*payload_entry = &(message_rule->supported_payloads[i]);
+			*payload_rule = &(this->message_rule->payload_rules[i]);
 			return SUCCESS;
 		}
 	}
 	
-	*payload_entry = NULL;
+	*payload_rule = NULL;
 	return NOT_FOUND;
 }
 
@@ -541,7 +541,6 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	ike_header_t *ike_header;
 	payload_t *payload, *next_payload;
 	iterator_t *iterator;
-	message_rule_t *message_rule;
 	status_t status;
 	
 	this->logger->log(this->logger, CONTROL, "Generating message of type %s, contains %d payloads",
@@ -550,27 +549,32 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Exchange type %s is not defined",mapping_find(exchange_type_m,this->exchange_type));
+		this->logger->log(this->logger, ERROR | MORE, "Exchange type %s is not defined",
+							mapping_find(exchange_type_m,this->exchange_type));
 		return INVALID_STATE;
-	}
-	
-	status = this->get_message_rule(this, &message_rule);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR | MORE, "Message rule could not be found for exchange type %s",
-						  mapping_find(exchange_type_m,this->exchange_type));
-		return status;
 	}
 	
 	if (this->packet->source == NULL ||
 		this->packet->destination == NULL) 
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Source/destination not defined");
+		this->logger->log(this->logger, ERROR|MORE, "%s not defined",
+							!this->packet->source ? "source" : "destination");
 		return INVALID_STATE;
 	}
 	
+	/* set the rules for this messge */
+	status = this->set_message_rule(this);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "No message rules specified for a %s %s",
+						  mapping_find(exchange_type_m,this->exchange_type),
+						  this->is_request ? "request" : "response");
+		return NOT_SUPPORTED;
+	}
+	
+	
 	/* going to encrypt all content which have to be encrypted */
-	status = this->encrypt_payloads(this,crypter,signer);
+	status = this->encrypt_payloads(this, crypter, signer);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Could not encrypt payloads");
@@ -591,9 +595,9 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	
 	payload = (payload_t*)ike_header;
 
-	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	
-	/* generate every payload expect last one*/
+	/* generate every payload expect last one, this is doen later*/
+	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	while(iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&next_payload);
@@ -634,7 +638,8 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	/* clone packet for caller */
 	*packet = this->packet->clone(this->packet);
 	
-	this->logger->log(this->logger, CONTROL, "Message of type %s generated successfully",mapping_find(exchange_type_m,this->exchange_type));
+	this->logger->log(this->logger, CONTROL, "Message of type %s generated successfully",
+						mapping_find(exchange_type_m,this->exchange_type));
 	return SUCCESS;
 }
 
@@ -699,11 +704,22 @@ static status_t parse_header(private_message_t *this)
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(&(ike_header->payload_interface));
 	
-	this->logger->log(this->logger, CONTROL, "Parsed a %s %s", mapping_find(exchange_type_m, this->exchange_type),
+	this->logger->log(this->logger, CONTROL, "Parsed a %s %s", 
+						mapping_find(exchange_type_m, this->exchange_type),
 						this->is_request ? "request" : "response");
 	
-	ike_header->destroy(ike_header);	
-	return SUCCESS;	
+	ike_header->destroy(ike_header);					
+	
+	/* get the rules for this messge */
+	status = this->set_message_rule(this);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "No message rules specified for a %s %s",
+						  mapping_find(exchange_type_m,this->exchange_type),
+						  this->is_request ? "request" : "response");
+	}
+	
+	return status;	
 }
 
 /**
@@ -712,11 +728,14 @@ static status_t parse_header(private_message_t *this)
 static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t *signer)
 {
 	status_t status = SUCCESS;
-	payload_type_t current_payload_type = this->first_payload;
+	payload_type_t current_payload_type;
+		
+	current_payload_type = this->first_payload;	
 		
 	this->logger->log(this->logger, CONTROL|MORE, "Parsing body of message, first payload %s",
 					  mapping_find(payload_type_m, current_payload_type));
 
+	/* parse payload for payload, while there are more available */
 	while ((current_payload_type != NO_PAYLOAD))
 	{
 		payload_t *current_payload;
@@ -724,6 +743,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		this->logger->log(this->logger, CONTROL|MOST, "Start parsing payload of type %s", 
 							mapping_find(payload_type_m, current_payload_type));
 		
+		/* parse current payload */
 		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
 		if (status != SUCCESS)
 		{
@@ -734,6 +754,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		this->logger->log(this->logger, CONTROL|MOST, "Verify payload of type %s", 
 							mapping_find(payload_type_m, current_payload_type));
 		
+		/* verify it, stop parsig if its invalid */
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
@@ -747,7 +768,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 							mapping_find(payload_type_m, current_payload_type));
 		this->payloads->insert_last(this->payloads,current_payload);
 		
-		/* stop if an encryption payload found */
+		/* an encryption payload is the last one, so STOP here. decryption is done later */
 		if (current_payload_type == ENCRYPTED)
 		{
 			this->logger->log(this->logger, CONTROL|MOST, "Payload of type encrypted found. Stop parsing.", 
@@ -764,78 +785,91 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 						this->is_request ? "request" : "response",
 						this->payloads->get_count(this->payloads));
 
-	status = this->decrypt_and_verify_payloads(this,crypter,signer);
+	/* */
+	if (current_payload_type == ENCRYPTED)
+	status = this->decrypt_payloads(this,crypter,signer);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not decrypt and verify payloads");
+		this->logger->log(this->logger, ERROR, "Could not decrypt payloads");
 		return status;
 	}
 	
-	return SUCCESS;
-
+	status = this->verify(this);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Verification of message failed");
+	}
+	return status;
 }
 
 /**
- * Implementation of message_t.verify.
+ * Implementation of private_message_t.verify.
  */
 static status_t verify(private_message_t *this)
 {
 	int i;
-	status_t status;
 	iterator_t *iterator;
-	message_rule_t *message_rule;
 	size_t total_found_payloads = 0;
 	
 	this->logger->log(this->logger, CONTROL|MORE, "Verifying message structure");
-	
-	status = this->get_message_rule(this, &message_rule);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR | MORE, "Message rule could not be found for exchange type %s",
-						  mapping_find(exchange_type_m,this->exchange_type));
-		return status;
-	}
 
 	iterator = this->payloads->create_iterator(this->payloads,TRUE);
 	/* check for payloads with wrong count*/
-	for (i = 0; i < message_rule->supported_payloads_count;i++)
+	for (i = 0; i < this->message_rule->payload_rule_count;i++)
 	{
 		size_t found_payloads = 0;
 	
 		/* check all payloads for specific rule */
 		iterator->reset(iterator);
+		
 		while(iterator->has_next(iterator))
 		{
 			payload_t *current_payload;
-			iterator->current(iterator,(void **)&current_payload);
+			payload_type_t current_payload_type;
 			
-			if (current_payload->get_type(current_payload) == message_rule->supported_payloads[i].payload_type)
+			iterator->current(iterator,(void **)&current_payload);
+			current_payload_type = current_payload->get_type(current_payload);
+			
+			if (current_payload_type == UNKNOWN_PAYLOAD)
+			{
+				/* unknown payloads are ignored, IF they are not critical */
+				unknown_payload_t *unknown_payload = (unknown_payload_t*)current_payload;
+				if (unknown_payload->is_critical(unknown_payload))
+				{
+					this->logger->log(this->logger, ERROR, "%s (%d) is not supported, but its critical!",
+									  mapping_find(payload_type_m, current_payload_type), current_payload_type);
+					iterator->destroy(iterator);
+					return NOT_SUPPORTED;	
+				}
+			}
+			else if (current_payload_type == this->message_rule->payload_rules[i].payload_type)
 			{
 				found_payloads++;
 				total_found_payloads++;
 				this->logger->log(this->logger, CONTROL | MOST, "Found payload of type %s",
-							  mapping_find(payload_type_m,message_rule->supported_payloads[i].payload_type));
-
+							  mapping_find(payload_type_m, this->message_rule->payload_rules[i].payload_type));
+	
 				/* as soon as ohe payload occures more then specified, the verification fails */
-				if (found_payloads > message_rule->supported_payloads[i].max_occurence)
+				if (found_payloads > this->message_rule->payload_rules[i].max_occurence)
 				{
 					this->logger->log(this->logger, ERROR, "Payload of type %s more than %d times (%d) occured in current message",
-									  mapping_find(payload_type_m,current_payload->get_type(current_payload)),
-									  message_rule->supported_payloads[i].max_occurence,found_payloads);
+									  mapping_find(payload_type_m, current_payload_type),
+									  this->message_rule->payload_rules[i].max_occurence, found_payloads);
 					iterator->destroy(iterator);
-					return NOT_SUPPORTED;					
+					return FAILED;					
 				}
 			}
 		}
-		if (found_payloads < message_rule->supported_payloads[i].min_occurence)
+
+		if (found_payloads < this->message_rule->payload_rules[i].min_occurence)
 		{
 			this->logger->log(this->logger, ERROR, "Payload of type %s not occured %d times (%d)",
-							  mapping_find(payload_type_m,message_rule->supported_payloads[i].payload_type),
-							  message_rule->supported_payloads[i].min_occurence,found_payloads);
+							  mapping_find(payload_type_m, this->message_rule->payload_rules[i].payload_type),
+							  this->message_rule->payload_rules[i].min_occurence, found_payloads);
 			iterator->destroy(iterator);
-			return NOT_SUPPORTED;
+			return FAILED;
 		}
-		if ((message_rule->supported_payloads[i].can_be_last) && (this->payloads->get_count(this->payloads) == total_found_payloads))
+		if ((this->message_rule->payload_rules[i].sufficient) && (this->payloads->get_count(this->payloads) == total_found_payloads))
 		{
 			iterator->destroy(iterator);
 			return SUCCESS;	
@@ -849,29 +883,20 @@ static status_t verify(private_message_t *this)
 /**
  * Implementation of private_message_t.decrypt_and_verify_payloads.
  */
-static status_t decrypt_and_verify_payloads (private_message_t *this,crypter_t *crypter, signer_t* signer)
+static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, signer_t* signer)
 {
 	bool current_payload_was_encrypted = FALSE;
-	payload_t *last_payload = NULL;
-	message_rule_t *message_rule;
+	payload_t *previous_payload = NULL;
 	int payload_number = 1;
 	iterator_t *iterator;
 	status_t status;
-	
-	status = this->get_message_rule(this, &message_rule);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR | MORE, "Message rule could not be found for exchange type %s",
-						  mapping_find(exchange_type_m,this->exchange_type));
-		return status;
-	}
 
 	iterator = this->payloads->create_iterator(this->payloads,TRUE);
 
 	/* process each payload and decrypt a encryption payload */
 	while(iterator->has_next(iterator))
 	{
-		supported_payload_entry_t *supported_payload_entry;
+		payload_rule_t *payload_rule;
 		payload_type_t current_payload_type;
 		payload_t *current_payload;
 
@@ -888,28 +913,18 @@ static status_t decrypt_and_verify_payloads (private_message_t *this,crypter_t *
 			encryption_payload_t *encryption_payload;
 			payload_t *current_encrypted_payload;
 			
+			encryption_payload = (encryption_payload_t*)current_payload;
 			
 			this->logger->log(this->logger, CONTROL | MORE, "Found an encryption payload");
-	
-			if (!message_rule->encrypted_content)
-			{
-				this->logger->log(this->logger, ERROR | MORE, "Encrypted payload not allowed for this message type");
-				iterator->destroy(iterator);
-				/* encrypted payload is not last one */
-				return FAILED;
-			}
-			
+
 			if (payload_number != this->payloads->get_count(this->payloads))
 			{
+				/* encrypted payload is not last one */
 				this->logger->log(this->logger, ERROR | MORE, "Encrypted payload is not last payload");
 				iterator->destroy(iterator);
-				/* encrypted payload is not last one */
 				return FAILED;
 			}
-			
-			iterator->current(iterator,(void **)&encryption_payload);
-			
-			/* encrypt payload */			
+			/* decrypt */			
 			encryption_payload->set_transforms(encryption_payload, crypter, signer);
 			this->logger->log(this->logger, CONTROL | MORE, "Verify signature of encryption payload");
 			status = encryption_payload->verify_signature(encryption_payload, this->packet->data);
@@ -929,54 +944,37 @@ static status_t decrypt_and_verify_payloads (private_message_t *this,crypter_t *
 				return status;
 			}
 			
-			/* needed to later find out if a payload has to be encrypted or not */
+			/* needed later to find out if a payload was encrypted */
 			current_payload_was_encrypted = TRUE;
-				
+			
+			/* check if there are payloads contained in the encryption payload */
 			if (encryption_payload->get_payload_count(encryption_payload) == 0)
 			{
-				this->logger->log(this->logger, CONTROL | MORE, "Encrypted payload is empty");
+				this->logger->log(this->logger, CONTROL | MOST, "Encrypted payload is empty");
+				/* remove the encryption payload, is not needed anymore */
 				iterator->remove(iterator);
-				encryption_payload->destroy(encryption_payload);
 				/* encrypted payload contains no other payload */
 				current_payload_type = NO_PAYLOAD;
-				if (last_payload == NULL)
-				{
-					/* encrypted content was the only payload in IKEv2-Message 
-					 * Set the first payload to the first payload of encrypted ones */
-					this->first_payload = current_payload_type;
-				}
-				else
-				{
-					/* another payload was here before the encrypted content
-					 * Set the next payload of proceeding payload 
-					 * to the first payload of encrypted ones */
-					last_payload->set_next_type(last_payload,current_payload_type);
-				}
-				break;
-
 			}
-	
-			this->logger->log(this->logger, CONTROL | MORE, "Encrypted payload is not empty");
-			
-			/* encryption_payload is replaced with first encrypted payload*/
-			encryption_payload->remove_first_payload(encryption_payload, &current_encrypted_payload);
-			
-			this->logger->log(this->logger, CONTROL | MORE, "Replace encrypted payload with payload of type %s.",
-								mapping_find(payload_type_m,current_encrypted_payload->get_type(current_encrypted_payload)));
-			iterator->replace(iterator,NULL,(void *) current_encrypted_payload);
-			current_payload_type = current_encrypted_payload->get_type(current_encrypted_payload);
-			if (last_payload == NULL)
+			else
 			{
-				/* encrypted content was the only payload in IKEv2-Message 
-				 * Set the first payload to the first payload of encrypted ones */
+				this->logger->log(this->logger, CONTROL | MOST, "Encrypted payload is not empty");
+				/* encryption_payload is replaced with first payload contained in encryption_payload */
+				encryption_payload->remove_first_payload(encryption_payload, &current_encrypted_payload);
+				iterator->replace(iterator,NULL,(void *) current_encrypted_payload);
+				current_payload_type = current_encrypted_payload->get_type(current_encrypted_payload);
+			}
+			
+			/* is the current paylad the first in the message? */
+			if (previous_payload == NULL)
+			{
+				/* yes, set the first payload type of the message to the current type */
 				this->first_payload = current_payload_type;
 			}
 			else
 			{
-				/* another payload was here before the encrypted content
-				 * Set the next payload of proceeding payload 
-				 * to the first payload of encrypted ones */
-				last_payload->set_next_type(last_payload,current_payload_type);
+				/* no, set the next_type of the previous payload to the current type */
+				previous_payload->set_next_type(previous_payload, current_payload_type);
 			}
 			
 			/* all encrypted payloads are added to the payload list */
@@ -987,37 +985,41 @@ static status_t decrypt_and_verify_payloads (private_message_t *this,crypter_t *
 				this->payloads->insert_last(this->payloads,current_encrypted_payload);
 			}
 			
-			/* encryption payload is not needed anymore cause all payloads are 
-			 * moved to internal payload list */
-			encryption_payload->destroy(encryption_payload);				
-
-				
+			/* encryption payload is processed, payloads are moved. Destroy it. */
+			encryption_payload->destroy(encryption_payload);	
 		}
 
-		status = this->get_supported_payload_entry(this,message_rule,current_payload_type,&supported_payload_entry);
-		if (status != SUCCESS)
+		/* we allow unknown payloads of any type and don't bother if it was encrypted. Not our problem. */
+		if (current_payload_type != UNKNOWN_PAYLOAD)
 		{
-			/* payload type not supported */
-			this->logger->log(this->logger, ERROR | MORE, "Payload type %s not allowed",mapping_find(payload_type_m,current_payload_type));
-			iterator->destroy(iterator);
-			return status;
+			/* get the ruleset for found payload */
+			status = this->get_payload_rule(this, current_payload_type, &payload_rule);
+			if (status != SUCCESS)
+			{
+				/* payload is not allowed */
+				this->logger->log(this->logger, ERROR | MORE, "Payload type %s not allowed",mapping_find(payload_type_m,current_payload_type));
+				iterator->destroy(iterator);
+				return status;
+			}
+			
+			/* check if the payload was encrypted, and if it should been have encrypted */
+			if (payload_rule->encrypted != current_payload_was_encrypted)
+			{
+				/* payload was not encrypted, but should have been. or vice-versa */
+				this->logger->log(this->logger, ERROR | MORE, "Payload type %s should be %s!", 
+									mapping_find(payload_type_m,current_payload_type),
+									(payload_rule->encrypted) ? "encrypted": "not encrypted");
+				iterator->destroy(iterator);
+				return FAILED;
+			}
 		}
-		
-		if (supported_payload_entry->encrypted != current_payload_was_encrypted)
-		{
-			/* payload type not supported */
-			this->logger->log(this->logger, ERROR | MORE, "Payload type %s should be %s!", 
-								mapping_find(payload_type_m,current_payload_type),
-								(supported_payload_entry->encrypted) ? "encrypted": "not encrypted");
-			iterator->destroy(iterator);
-			return status;
-		}
+		/* advance to the next payload */
 		payload_number++;
 		/* is stored to set next payload in case of found encryption payload */
-		last_payload = current_payload;
+		previous_payload = current_payload;
 	}
 	iterator->destroy(iterator);
-	return this->public.verify(&(this->public));
+	return SUCCESS;
 }
 
 /**
@@ -1026,19 +1028,10 @@ static status_t decrypt_and_verify_payloads (private_message_t *this,crypter_t *
 static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, signer_t* signer)
 {
 	encryption_payload_t *encryption_payload = NULL;
-	message_rule_t *message_rule;
 	status_t status;
 	linked_list_t *all_payloads;
 	
-	status = this->get_message_rule(this, &message_rule);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR | MORE, "Message rule could not be found for exchange type %s",
-						  mapping_find(exchange_type_m,this->exchange_type));
-		return status;
-	}
-	
-	if (!message_rule->encrypted_content)
+	if (!this->message_rule->encrypted_content)
 	{
 		this->logger->log(this->logger, CONTROL | MORE, "Message doesn't have to be encrypted");
 		/* message contains no content to encrypt */
@@ -1059,17 +1052,17 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 	this->logger->log(this->logger, CONTROL | MOST, "Check each payloads if they have to get encrypted");
 	while (all_payloads->get_count(all_payloads) > 0)
 	{
-		supported_payload_entry_t *supported_payload_entry;
+		payload_rule_t *payload_rule;
 		payload_t *current_payload;
 		bool to_encrypt = FALSE;
 		
 		all_payloads->remove_first(all_payloads,(void **)&current_payload);
 		this->logger->log(this->logger, CONTROL | MOST, "Get rule for payload %s", mapping_find(payload_type_m,current_payload->get_type(current_payload)));
 		
-		status = this->get_supported_payload_entry(this,message_rule,current_payload->get_type(current_payload),&supported_payload_entry);
+		status = this->get_payload_rule(this,current_payload->get_type(current_payload),&payload_rule);
 		/* for payload types which are not found in supported payload list, it is presumed 
 		 * that they don't have to be encrypted */
-		if ((status == SUCCESS) && (supported_payload_entry->encrypted))
+		if ((status == SUCCESS) && (payload_rule->encrypted))
 		{
 			this->logger->log(this->logger, CONTROL | MOST, "Payload %s has to get encrypted", 
 							  mapping_find(payload_type_m,current_payload->get_type(current_payload)));
@@ -1125,7 +1118,7 @@ static void destroy (private_message_t *this)
 {
 	iterator_t *iterator;
 	
-	this->logger->log(this->logger, CONTROL | MOST, "Going to destroy message_t object");
+	this->logger->log(this->logger, CONTROL|ALL, "Going to destroy message_t object");
 	
 	this->packet->destroy(this->packet);
 
@@ -1139,7 +1132,7 @@ static void destroy (private_message_t *this)
 	{
 		payload_t *payload;
 		iterator->current(iterator, (void**)&payload);	
-		this->logger->log(this->logger, CONTROL|MOST, "Destroying payload of type %s", 
+		this->logger->log(this->logger, CONTROL|ALL, "Destroying payload of type %s", 
 							mapping_find(payload_type_m, payload->get_type(payload)));
 		payload->destroy(payload);
 	}
@@ -1181,7 +1174,6 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_payload_iterator = (iterator_t * (*) (message_t *)) get_payload_iterator;
 	this->public.parse_header = (status_t (*) (message_t *)) parse_header;
 	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
-	this->public.verify =  (status_t (*) (message_t*)) verify;
 	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;
 	this->public.get_packet_data = (chunk_t (*) (message_t *this)) get_packet_data;
 	this->public.destroy = (void(*)(message_t*))destroy;
@@ -1194,16 +1186,18 @@ message_t *message_create_from_packet(packet_t *packet)
  	this->message_id = 0;
 
 	/* private functions */
-	this->get_message_rule = get_message_rule;
-	this->get_supported_payload_entry = get_supported_payload_entry;
+	this->set_message_rule = set_message_rule;
+	this->get_payload_rule = get_payload_rule;
 	this->encrypt_payloads = encrypt_payloads;
-	this->decrypt_and_verify_payloads = decrypt_and_verify_payloads;
+	this->decrypt_payloads = decrypt_payloads;
+	this->verify = verify;
 
 	/* private values */
 	if (packet == NULL)
 	{
 		packet = packet_create();	
 	}
+	this->message_rule = NULL;
 	this->packet = packet;
 	this->payloads = linked_list_create();
 	

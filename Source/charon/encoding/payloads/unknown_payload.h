@@ -27,73 +27,52 @@
 #include <encoding/payloads/payload.h>
 
 /**
- * Length of a default payload header.
+ * Header length of the unknown payload.
  * 
  * @ingroup payloads
  */
-#define DEFAULT_PAYLOAD_HEADER_LENGTH 4
+#define UNKNOWN_PAYLOAD_HEADER_LENGTH 4
 
 
 typedef struct unknown_payload_t unknown_payload_t;
 
 /**
- * Object representing an unknown IKEv2 payload.
+ * @brief Payload which can't be processed further.
+ * 
+ * When the parser finds an unknown payload, he builds an instance of
+ * this class. This allows further processing of this payload, such as
+ * a check for the critical bit in the header.
+ * 
+ * @b Constructors:
+ * - unknown_payload_create()
  * 
  * @ingroup payloads
- * 
  */
 struct unknown_payload_t {
+	
 	/**
 	 * The payload_t interface.
 	 */
 	payload_t payload_interface;
 	
 	/**
-	 * @brief Set the Data of the unknown payload.
+	 * @brief Get the raw data of this payload, without 
+	 * the generic payload header.
 	 * 
-	 * Data are getting cloned.
-	 *
-	 * @param this 			calling unknown_payload_t object
-	 * @param data			data following the header as chunk_t
-	 */
-	void (*set_data) (unknown_payload_t *this, chunk_t data);
-	
-	/**
-	 * @brief Get the data of the message.
-	 * 
-	 * Returned data are a copy of the internal one.
-	 *
-	 * @param this 			calling unknown_payload_t object
-	 * @return				data as chunk_t
-	 */
-	chunk_t (*get_data_clone) (unknown_payload_t *this);
-	
-	/**
-	 * @brief Get the data of the message.
-	 * 
-	 * Returned data are NOT copied.
+	 * Returned data are NOT copied and must not be freed.
 	 *
 	 * @param this 			calling unknown_payload_t object
 	 * @return				data as chunk_t
 	 */
 	chunk_t (*get_data) (unknown_payload_t *this);
-
-	/**
-	 * @brief Set the real Type of this payload.
-	 *
-	 * @param this 			calling unknown_payload_t object
-	 * @param type			real type of this payload.
-	 */
-	
-	void (*set_real_type) (unknown_payload_t *this,payload_type_t type);
 	
 	/**
-	 * @brief Get the real Type of this payload.
+	 * @brief Get the critical flag.
 	 *
-	 * @param this 			calling unknown_payload_t object
-	 * @return				real type of this payload.
+	 * @param this			calling unknown_payload_t object
+	 * @return				TRUE if payload is critical, FALSE if not
 	 */
-	payload_type_t (*get_real_type) (unknown_payload_t *this);
+	bool (*is_critical) (unknown_payload_t *this);
 	
 	/**
 	 * @brief Destroys an unknown_payload_t object.

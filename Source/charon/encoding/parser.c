@@ -51,6 +51,7 @@
 #include <encoding/payloads/cp_payload.h>
 #include <encoding/payloads/configuration_attribute.h>
 #include <encoding/payloads/eap_payload.h>
+#include <encoding/payloads/unknown_payload.h>
 
 
 typedef struct private_parser_t private_parser_t;
@@ -587,6 +588,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	int rule_number;
 	encoding_rule_t *rule;
 	
+	/* create instance of the payload to parse */
+	pld = payload_create(payload_type);
+	
 	this->logger->log(this->logger, CONTROL|MORE, "parsing %s payload, %d bytes left", 
 						mapping_find(payload_type_m, payload_type),
 						this->input_roof-this->byte_pos);
@@ -594,18 +598,17 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	this->logger->log_bytes(this->logger, RAW, "parsing payload from", this->byte_pos, 
 								this->input_roof-this->byte_pos);
 	
-	/* ok, do the parsing */
-	pld = payload_create(payload_type);
-	if (pld == NULL)
+	if (pld->get_type(pld) == UNKNOWN_PAYLOAD)
 	{
-		this->logger->log(this->logger, ERROR, "  payload %s not supported", mapping_find(payload_type_m, payload_type));
-		return NOT_SUPPORTED;	
+		this->logger->log(this->logger, ERROR|MORE, "  payload type %d is unknown, handling as %s",
+							payload_type, mapping_find(payload_type_m, UNKNOWN_PAYLOAD));
 	}
+	
 	/* base pointer for output, avoids casting in every rule */
 	output = pld;
 	
+	/* parse the payload with its own rulse */
 	pld->get_encoding_rules(pld, &(this->rules), &rule_count);
-	
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
 	{
 		rule = &(this->rules[rule_number]);
@@ -968,6 +971,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			{
 				size_t traffic_selectors_length = payload_length - TS_PAYLOAD_HEADER_LENGTH;
 				if (this->parse_list(this, rule_number, output + rule->offset, TRAFFIC_SELECTOR_SUBSTRUCTURE, traffic_selectors_length) != SUCCESS) 
+				{
+					pld->destroy(pld);
+					return PARSE_ERROR;
+				}
+				break;							
+			}
+			case UNKNOWN_PAYLOAD:
+			{
+				size_t unknown_payload_data_length = payload_length - UNKNOWN_PAYLOAD_HEADER_LENGTH;
+				if (this->parse_chunk(this, rule_number, output + rule->offset, unknown_payload_data_length) != SUCCESS) 
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;

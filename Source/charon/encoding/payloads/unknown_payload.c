@@ -29,9 +29,9 @@ typedef struct private_unknown_payload_t private_unknown_payload_t;
 
 /**
  * Private data of an unknown_payload_t object.
- * 
  */
 struct private_unknown_payload_t {
+	
 	/**
 	 * Public unknown_payload_t interface.
 	 */
@@ -40,7 +40,7 @@ struct private_unknown_payload_t {
 	/**
 	 * Next payload type.
 	 */
-	u_int8_t  next_payload;
+	u_int8_t next_payload;
 
 	/**
 	 * Critical flag.
@@ -53,18 +53,13 @@ struct private_unknown_payload_t {
 	u_int16_t payload_length;
 	
 	/**
-	 * Type of this payload.
-	 */
-	payload_type_t payload_type;
-	
-	/**
 	 * The contained data.
 	 */
 	chunk_t data;
 };
 
 /**
- * Encoding rules to parse or generate a EAP payload.
+ * Encoding rules to parse an payload which is not further specified.
  * 
  * The defined offsets are the positions in a object of type 
  * private_unknown_payload_t.
@@ -86,7 +81,7 @@ encoding_rule_t unknown_payload_encodings[] = {
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_unknown_payload_t, payload_length)},
 	/* some unknown data bytes, length is defined in PAYLOAD_LENGTH */
-	{ UNKNOWN_DATA,	offsetof(private_unknown_payload_t, data) 			}
+	{ UNKNOWN_DATA,		offsetof(private_unknown_payload_t, data) 		}
 };
 
 /*
@@ -110,7 +105,7 @@ static status_t verify(private_unknown_payload_t *this)
 }
 
 /**
- * Implementation of unknown_payload_t.get_encoding_rules.
+ * Implementation of payload_t.get_encoding_rules.
  */
 static void get_encoding_rules(private_unknown_payload_t *this, encoding_rule_t **rules, size_t *rule_count)
 {
@@ -143,22 +138,6 @@ static void set_next_type(private_unknown_payload_t *this,payload_type_t type)
 }
 
 /**
- * Implementation of unknown_payload_t.set_real_type.
- */
-static void set_real_type(private_unknown_payload_t *this,payload_type_t type)
-{
-	this->payload_type = type;
-}
-
-/**
- * Implementation of unknown_payload_t.get_real_type.
- */
-static payload_type_t get_real_type(private_unknown_payload_t *this)
-{
-	return this->payload_type;
-}
-
-/**
  * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_unknown_payload_t *this)
@@ -167,17 +146,11 @@ static size_t get_length(private_unknown_payload_t *this)
 }
 
 /**
- * Implementation of unknown_payload_t.set_data.
+ * Implementation of unknown_payload_t.get_data.
  */
-static void set_data (private_unknown_payload_t *this, chunk_t data)
+static bool is_critical(private_unknown_payload_t *this)
 {
-	if (this->data.ptr != NULL)
-	{
-		allocator_free_chunk(&(this->data));
-	}
-	this->data.ptr = allocator_clone_bytes(data.ptr,data.len);
-	this->data.len = data.len;
-	this->payload_length = DEFAULT_PAYLOAD_HEADER_LENGTH + this->data.len;
+	return this->critical;	
 }
 
 /**
@@ -186,21 +159,6 @@ static void set_data (private_unknown_payload_t *this, chunk_t data)
 static chunk_t get_data (private_unknown_payload_t *this)
 {
 	return (this->data);
-}
-
-/**
- * Implementation of unknown_payload_t.get_data_clone.
- */
-static chunk_t get_data_clone (private_unknown_payload_t *this)
-{
-	chunk_t cloned_data;
-	if (this->data.ptr == NULL)
-	{
-		return (this->data);
-	}
-	cloned_data.ptr = allocator_clone_bytes(this->data.ptr,this->data.len);
-	cloned_data.len = this->data.len;
-	return cloned_data;
 }
 
 /**
@@ -234,17 +192,13 @@ unknown_payload_t *unknown_payload_create()
 	
 	/* public functions */
 	this->public.destroy = (void (*) (unknown_payload_t *)) destroy;
-	this->public.set_real_type = (void (*) (unknown_payload_t *,payload_type_t)) set_real_type;
-	this->public.get_real_type = (payload_type_t (*) (unknown_payload_t *)) get_real_type;
-	this->public.set_data = (void (*) (unknown_payload_t *,chunk_t)) set_data;
-	this->public.get_data_clone = (chunk_t (*) (unknown_payload_t *)) get_data_clone;
+	this->public.is_critical = (bool (*) (unknown_payload_t *)) is_critical;
 	this->public.get_data = (chunk_t (*) (unknown_payload_t *)) get_data;
 	
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
-	this->payload_type = NO_PAYLOAD;
-	this->payload_length = DEFAULT_PAYLOAD_HEADER_LENGTH;
+	this->payload_length = UNKNOWN_PAYLOAD_HEADER_LENGTH;
 	this->data = CHUNK_INITIALIZER;
 
 	return (&(this->public));

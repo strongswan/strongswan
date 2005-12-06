@@ -1,7 +1,7 @@
 /**
  * @file payload.c
  * 
- * @brief Generic payload interface
+ * @brief Generic constructor to the payload_t interface.
  * 
  * 
  */
@@ -122,12 +122,10 @@ payload_t *payload_create(payload_type_t type)
 			return (payload_t*)configuration_attribute_create();
 		case EXTENSIBLE_AUTHENTICATION:
 			return (payload_t*)eap_payload_create();
-		case UNKNOWN_PAYLOAD:
-			return (payload_t*)unknown_payload_create();
 		case ENCRYPTED:
 			return (payload_t*)encryption_payload_create();
 		default:
-			return NULL;
+			return (payload_t*)unknown_payload_create();
 	}
 }
 

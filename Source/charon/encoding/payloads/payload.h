@@ -1,7 +1,7 @@
 /**
  * @file payload.h
  * 
- * @brief Generic payload interface.
+ * @brief Interface payload_t.
  * 
  * 
  */
@@ -32,8 +32,7 @@
 typedef enum payload_type_t payload_type_t;
 
 /**
- * Payload-Types of a IKEv2-Message.
- * 
+ * @brief Payload-Types of a IKEv2-Message.
  * 
  * Header and substructures are also defined as 
  * payload types with values from PRIVATE USE space.
@@ -43,87 +42,87 @@ typedef enum payload_type_t payload_type_t;
 enum payload_type_t{
 
 	/**
-	 * NO_PAYLOAD
+	 * End of payload list in next_payload
 	 */
 	NO_PAYLOAD = 0,
 	
 	/**
-	 * SA
+	 * The security association (SA) payload containing proposals.
 	 */
 	SECURITY_ASSOCIATION = 33,
 
 	/**
-	 * KE
+	 * The key exchange (KE) payload containing diffie-hellman values.
 	 */
 	KEY_EXCHANGE = 34,
 
 	/**
-	 * IDi
+	 * Identification for the original initiator (IDi).
 	 */
 	ID_INITIATOR = 35,
 
 	/**
-	 * IDr
+	 * Identification for the original responder (IDr).
 	 */
 	ID_RESPONDER = 36,
 
 	/**
-	 * CERT
+	 * Certificate payload with certificates (CERT).
 	 */
 	CERTIFICATE = 37,
 
 	/**
-	 * CERTREQ
+	 * Certificate request payload (CERTREQ).
 	 */
 	CERTIFICATE_REQUEST = 38,
 
 	/**
-	 * AUTH
+	 * Authentication payload contains auth data (AUTH).
 	 */
 	AUTHENTICATION = 39,
 
 	/**
-	 * Ni, Nr
+	 * Nonces, for initator and responder (Ni, Nr, N)
 	 */
 	NONCE = 40,
 
 	/**
-	 * N
+	 * Notif paylaod (N).
 	 */
 	NOTIFY = 41,
 
 	/**
-	 * D
+	 * Delete payload (D)
 	 */
 	DELETE = 42,
 
 	/**
-	 * V
+	 * Vendor id paylpoad (V).
 	 */
 	VENDOR_ID = 43,
 
 	/**
-	 * TSi
+	 * Traffic selector for the original initiator (TSi).
 	 */
 	TRAFFIC_SELECTOR_INITIATOR = 44,
 
 	/**
-	 * TSr
+	 * Traffic selector for the original responser (TSr).
 	 */
 	TRAFFIC_SELECTOR_RESPONDER = 45,
 
 	/**
-	 * E
+	 * Encryption payload, contains other payloads (E).
 	 */
 	ENCRYPTED = 46,
 
 	/**
-	 * CP
+	 * Configuration payload (CP).
 	 */
 	CONFIGURATION = 47,
 
 	/**
-	 * EAP
+	 * Extensible authentication payload (EAP).
 	 */
 	EXTENSIBLE_AUTHENTICATION = 48,
 	
@@ -185,8 +184,8 @@ enum payload_type_t{
 };
 
 
-/*
- * Build string mapping array for payload_type_t.
+/**
+ * String mappings for payload_type_t.
  */
 extern mapping_t payload_type_m[];
 
@@ -194,21 +193,21 @@ extern mapping_t payload_type_m[];
 typedef struct payload_t payload_t;
 
 /**
- * @brief Generic interface for all payload types (inclusive 
- * header and substructures).
+ * @brief Generic interface for all payload types (incl.header and substructures).
+ * 
+ * To handle all kinds of payloads on a generic way, this interface must
+ * be implemented by every payload. This allows parser_t/generator_t a simple
+ * handling of all payloads.
+ * 
+ * @b Constructors:
+ * - payload_create() with the payload to instanciate.
  * 
  * @ingroup payloads
  */
 struct payload_t {
-	/**
-	 * @brief Destroys a payload and all included substructures.
-	 *
-	 * @param this 	payload to destroy
-	 */
-	void (*destroy) (payload_t *this);
 	
 	/**
-	 * @brief Get encoding rules for this payload
+	 * @brief Get encoding rules for this payload.
 	 *
 	 * @param this 				calling object
 	 * @param[out] rules		location to store pointer of first rule
@@ -217,7 +216,7 @@ struct payload_t {
 	void (*get_encoding_rules) (payload_t *this, encoding_rule_t **rules, size_t *rule_count);
 
 	/**
-	 * @brief get type of payload
+	 * @brief Get type of payload.
 	 *
 	 * @param this 				calling object
 	 * @return 					type of this payload
@@ -225,7 +224,7 @@ struct payload_t {
 	payload_type_t (*get_type) (payload_t *this);
 
 	/**
-	 * @brief get type of next payload or zero if this is the last one
+	 * @brief Get type of next payload or NO_PAYLOAD (0) if this is the last one.
 	 *
 	 * @param this 				calling object
 	 * @return 					type of next payload
@@ -233,7 +232,7 @@ struct payload_t {
 	payload_type_t (*get_next_type) (payload_t *this);
 	
 	/**
-	 * @brief set type of next payload
+	 * @brief Set type of next payload.
 	 *
 	 * @param this 				calling object
 	 * @param type 				type of next payload
@@ -241,7 +240,7 @@ struct payload_t {
 	void (*set_next_type) (payload_t *this,payload_type_t type);
 
 	/**
-	 * @brief get length of payload 
+	 * @brief Get length of payload.
 	 *
 	 * @param this 				calling object
 	 * @return 					length of this payload
@@ -249,7 +248,7 @@ struct payload_t {
 	size_t (*get_length) (payload_t *this);
 	
 	/**
-	 * @brief Verifies payload structure and makes consistence check
+	 * @brief Verifies payload structure and makes consistence check.
 	 *
 	 * @param this 				calling object
 	 * @return 					
@@ -257,18 +256,25 @@ struct payload_t {
 	 * 							- FAILED if consistence not given
 	 */
 	status_t (*verify) (payload_t *this);
+	
+	/**
+	 * @brief Destroys a payload and all included substructures.
+	 *
+	 * @param this 				payload to destroy
+	 */
+	void (*destroy) (payload_t *this);
 };
 
 /**
  * @brief Create an empty payload.
  * 
  * Useful for the parser, who wants a generic constructor for all payloads.
- * It supports all payload_t methods.
+ * It supports all payload_t methods. If a payload type is not known, 
+ * an unknwon_paylod is created with the chunk of data in it.
  * 
  * @param type		type of the payload to create
  * @return			created payload
  */
- 
 payload_t *payload_create(payload_type_t type);
 
 #endif /*PAYLOAD_H_*/
