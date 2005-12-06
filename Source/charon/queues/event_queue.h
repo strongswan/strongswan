@@ -32,9 +32,17 @@ typedef struct event_queue_t event_queue_t;
 
 /**
  * @brief Event-Queue used to store timed events.
+ * 
+ * Added events are sorted. The get method blocks until
+ * the time is elapsed to process the next event. The get 
+ * method is called from the scheduler_t thread, which
+ * will add the jobs to to job_queue_t for further processing.
  *
  * Although the event-queue is based on a linked_list_t
  * all access functions are thread-save implemented.
+ * 
+ * @b Constructors:
+ * - event_queue_create()
  * 
  * @ingroup queues
  */
@@ -93,15 +101,14 @@ struct event_queue_t {
 	 * after calling this function.
 	 *
 	 * @param event_queue 	calling object
-	 * @returns				always SUCCESS
 	 */
 	void (*destroy) (event_queue_t *event_queue);
 };
 
 /**
- * @brief Creates an empty event_queue
+ * @brief Creates an empty event_queue.
  *
- * @returns		event_queue
+ * @returns event_queue_t object
  * 
  * @ingroup queues
  */

@@ -30,10 +30,14 @@
 typedef struct send_queue_t send_queue_t;
 
 /**
- * @brief Send-Queue
- *
+ * @brief The send queue stores packet for the sender_t instance.
+ * 
+ * The sender_t will send them consequently over the wire.
  * Although the send-queue is based on a linked_list_t
  * all access functions are thread-save implemented.
+ * 
+ * @b Constructors:
+ * - send_queue_create()
  * 
  * @ingroup queues
  */
@@ -87,7 +91,7 @@ struct send_queue_t {
 /**
  * @brief Creates an empty send_queue_t.
  *
- * @return send_queue_t empty send_queue_t
+ * @return send_queue_t object
  * 
  * @ingroup queues
  */

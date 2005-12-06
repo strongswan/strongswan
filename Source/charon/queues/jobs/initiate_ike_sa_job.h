@@ -28,7 +28,13 @@
 typedef struct initiate_ike_sa_job_t initiate_ike_sa_job_t;
 
 /**
- * Object representing an INITIATE_IKE_SA Job
+ * @brief Class representing an INITIATE_IKE_SA Job.
+ * 
+ * This job is created if an IKE_SA should be iniated. This 
+ * happens form a user request, or via the kernel interface.
+ * 
+ * @b Constructors:
+ * - initiate_ike_sa_job_create()
  * 
  * @ingroup jobs
  */
@@ -39,14 +45,14 @@ struct initiate_ike_sa_job_t {
 	job_t job_interface;
 	
 	/**
-	 * @brief Returns the currently set configuration name for this job
+	 * @brief Returns the currently set configuration name for this job.
 	 * 	
 	 * @warning Returned name is not copied.
 	 * 
 	 * @param this 	calling initiate_ike_sa_job_t object
 	 * @return 		name of the configuration
 	 */
-	char * (*get_configuration_name) (initiate_ike_sa_job_t *this);
+	char *(*get_configuration_name) (initiate_ike_sa_job_t *this);
 
 	/**
 	 * @brief Destroys an initiate_ike_sa_job_t object.

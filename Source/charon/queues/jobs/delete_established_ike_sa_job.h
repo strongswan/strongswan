@@ -33,6 +33,9 @@ typedef struct delete_established_ike_sa_job_t delete_established_ike_sa_job_t;
 /**
  * @brief Class representing an DELETE_ESTABLISHED_IKE_SA Job.
  * 
+ * This job initiates the deletion of an IKE_SA. The SA
+ * to delete is specified via an ike_sa_id_t.
+ * 
  * @b Constructors:
  *  - delete_established_ike_sa_job_create()
  * 
@@ -66,7 +69,7 @@ struct delete_established_ike_sa_job_t {
  * @brief Creates a job of type DELETE_ESTABLISHED_IKE_SA.
  * 
  * @param ike_sa_id		id of the IKE_SA to delete
- * @return				created delete_established_ike_sa_job_t object
+ * @return				delete_established_ike_sa_job_t object
  * 
  * @ingroup jobs
  */

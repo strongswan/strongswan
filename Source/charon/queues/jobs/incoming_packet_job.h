@@ -31,7 +31,13 @@
 typedef struct incoming_packet_job_t incoming_packet_job_t;
 
 /**
- * @brief Object representing an INCOMING_PACKET Job.
+ * @brief Class representing an INCOMING_PACKET Job.
+ * 
+ * An incoming pack job is created from the receiver, which has
+ * read a packet to process from the socket.
+ * 
+ * @b Constructors:
+ * - incoming_packet_job_create()
  * 
  * @ingroup jobs
  */

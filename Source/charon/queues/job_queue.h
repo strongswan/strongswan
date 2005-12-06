@@ -29,17 +29,22 @@
 typedef struct job_queue_t job_queue_t;
 
 /**
- * @brief Job-Queue
+ * @brief The job queue stores jobs, which will be processed by the thread_pool_t.
  *
+ * Jobs are added from various sources, from the threads and 
+ * from the event_queue_t.
  * Although the job-queue is based on a linked_list_t
  * all access functions are thread-save implemented.
+ * 
+ * @b Constructors:
+ * - job_queue_create()
  * 
  * @ingroup queues
  */
 struct job_queue_t {
 
 	/**
-	 * @brief returns number of jobs in queue
+	 * @brief Returns number of jobs in queue.
 	 *
 	 * @param job_queue_t 	calling object
 	 * @returns 			number of items in queue
@@ -47,7 +52,7 @@ struct job_queue_t {
 	int (*get_count) (job_queue_t *job_queue);
 
 	/**
-	 * @brief get the next job from the queue
+	 * @brief Get the next job from the queue.
 	 *
 	 * If the queue is empty, this function blocks until a job can be returned.
 	 * After using, the returned job has to get destroyed by the caller.
@@ -59,7 +64,7 @@ struct job_queue_t {
 	job_t *(*get) (job_queue_t *job_queue);
 
 	/**
-	 * @brief adds a job to the queue
+	 * @brief Adds a job to the queue.
 	 *
 	 * This function is non blocking and adds a job_t to the list.
 	 * The specific job object has to get destroyed by the thread which
@@ -71,7 +76,7 @@ struct job_queue_t {
 	void (*add) (job_queue_t *job_queue, job_t *job);
 
 	/**
-	 * @brief destroys a job_queue object
+	 * @brief Destroys a job_queue object.
 	 *
 	 * @warning The caller of this function has to make sure
 	 * that no thread is going to add or get a job from the job_queue
@@ -85,7 +90,7 @@ struct job_queue_t {
 /**
  * @brief Creates an empty job_queue.
  *
- * @return job_queue_t empty job_queue
+ * @return job_queue_t object
  * 
  * @ingroup queues
  */

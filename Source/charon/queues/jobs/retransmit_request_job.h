@@ -31,7 +31,14 @@
 typedef struct retransmit_request_job_t retransmit_request_job_t;
 
 /**
- * Object representing an RETRANSMIT_REQUEST Job.
+ * @brief Class representing an RETRANSMIT_REQUEST Job.
+ * 
+ * This job is scheduled every time a request is sent over the
+ * wire. If the response to the request is not received at schedule
+ * time, the retransmission will be initiated.
+ * 
+ * @b Constructors:
+ * - retransmit_request_job_create()
  * 
  * @ingroup jobs
  */

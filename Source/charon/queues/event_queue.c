@@ -90,7 +90,7 @@ static event_t *event_create(timeval_t time, job_t *job)
 typedef struct private_event_queue_t private_event_queue_t;
 
 /**
- * @brief Private Variables and Functions of event_queue_t class.
+ * Private Variables and Functions of event_queue_t class.
  *
  */
 struct private_event_queue_t {
@@ -342,7 +342,7 @@ event_queue_t *event_queue_create()
 	this->public.add_relative = (void (*) (event_queue_t *event_queue, job_t *job, u_int32_t ms)) add_relative;
 	this->public.destroy = (void (*) (event_queue_t *event_queue)) event_queue_destroy;
 
-	this->list = linked_list_create();;
+	this->list = linked_list_create();
 	pthread_mutex_init(&(this->mutex), NULL);
 	pthread_cond_init(&(this->condvar), NULL);
 

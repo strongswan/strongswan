@@ -36,12 +36,17 @@ typedef struct private_job_queue_t private_job_queue_t;
  *
  */
 struct private_job_queue_t {
+	
+	/**
+	 * public members
+	 */
  	job_queue_t public;
 
 	/**
 	 * The jobs are stored in a linked list
 	 */
 	linked_list_t *list;
+	
 	/**
 	 * access to linked_list is locked through this mutex
 	 */

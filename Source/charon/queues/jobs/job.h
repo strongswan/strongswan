@@ -32,6 +32,8 @@ typedef enum job_type_t job_type_t;
 /**
  * @brief Definition of the various job types.
  * 
+ * @todo add more jobs, such as rekeying.
+ * 
  * @ingroup jobs
  */
 enum job_type_t {
@@ -52,8 +54,8 @@ enum job_type_t {
 	 * 
 	 * Job is implemented in class type initiate_ike_sa_job_t
 	 */
-	
 	INITIATE_IKE_SA,
+	
 	/** 
 	 * Delete an ike sa which is still not established.
 	 * 
@@ -67,13 +69,12 @@ enum job_type_t {
 	 * Job is implemented in class type delete_established_ike_sa_job_t
 	 */	
 	DELETE_ESTABLISHED_IKE_SA
-	
-	
-	/* more job types have to be inserted here */
 };
 
 /**
  * string mappings for job_type_t
+ * 
+ * @ingroup jobs
  */
 extern mapping_t job_type_m[];
 
@@ -84,6 +85,9 @@ typedef struct job_t job_t;
  * @brief Job-Interface as it is stored in the job queue.
  * 
  * A job consists of a job-type and one or more assigned values.
+ * 
+ * @b Constructors:
+ * - None, use specific implementation of the interface.
  * 
  * @ingroup jobs
  */

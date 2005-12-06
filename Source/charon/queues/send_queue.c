@@ -30,7 +30,7 @@
 
 typedef struct private_send_queue_t private_send_queue_t;
 
- /**
+/**
  * @brief Private Variables and Functions of send_queue class
  *
  */
@@ -70,7 +70,7 @@ static int get_count(private_send_queue_t *this)
 	return count;
 }
 
- /**
+/**
  * implements send_queue_t.get
  */
 static packet_t *get(private_send_queue_t *this)
@@ -96,7 +96,7 @@ static packet_t *get(private_send_queue_t *this)
 	return packet;
 }
 
- /**
+/**
  * implements send_queue_t.add
  */
 static void add(private_send_queue_t *this, packet_t *packet)
@@ -107,7 +107,7 @@ static void add(private_send_queue_t *this, packet_t *packet)
 	pthread_mutex_unlock(&(this->mutex));
 }
 
- /**
+/**
  * implements send_queue_t.destroy
  */
 static void destroy (private_send_queue_t *this)
@@ -133,7 +133,7 @@ static void destroy (private_send_queue_t *this)
 	allocator_free(this);
 }
 
- /*
+/*
  *
  * Documented in header
  */
