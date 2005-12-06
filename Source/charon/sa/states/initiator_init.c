@@ -53,7 +53,7 @@ struct private_initiator_init_t {
 	
 	/**
 	 * Diffie hellman object used to generate public DH value.
-	 * This objet is passed to the next state of type ike_sa_init_requested_t.
+	 * This objet is passed to the next state of type IKE_SA_INIT_REQUESTED.
 	 */
 	diffie_hellman_t *diffie_hellman;
 	
@@ -64,57 +64,46 @@ struct private_initiator_init_t {
 	
 	/**
 	 * DH group priority used to get dh_group_number from configuration manager.
-	 * This priority is passed to the next state of type ike_sa_init_requested_t.
+	 * This priority is passed to the next state of type IKE_SA_INIT_REQUESTED.
 	 */
 	u_int16_t dh_group_priority;
 	
 	/**
 	 * Sent nonce.
-	 * This nonce is passed to the next state of type ike_sa_init_requested_t.
+	 * This nonce is passed to the next state of type IKE_SA_INIT_REQUESTED.
 	 */
 	chunk_t sent_nonce;
 
 	/**
-	 * Logger used to log :-)
+	 * Assigned logger.
 	 * 
 	 * Is logger of ike_sa!
 	 */
 	logger_t *logger;
 	
 	/**
-	 * Builds the IKE_SA_INIT request message.
-	 * 
-	 * @param this		calling object
-	 * @param message	the created message will be stored at this location
-	 */
-	void (*build_ike_sa_init_request) (private_initiator_init_t *this, message_t **message);
-	
-	/**
 	 * Builds the SA payload for this state.
 	 * 
 	 * @param this		calling object
-	 * @param payload	The generated SA payload object of type ke_payload_t is 
-	 * 					stored at this location.
+	 * @param request	message_t object to add the SA payload
 	 */
-	void (*build_sa_payload) (private_initiator_init_t *this, payload_t **payload);
+	void (*build_sa_payload) (private_initiator_init_t *this, message_t *request);
 
 	/**
 	 * Builds the KE payload for this state.
 	 * 
 	 * @param this		calling object
-	 * @param payload	The generated KE payload object of type ke_payload_t is 
-	 * 					stored at this location.
+	 * @param request	message_t object to add the KE payload
 	 */
-	void (*build_ke_payload) (private_initiator_init_t *this, payload_t **payload);
+	void (*build_ke_payload) (private_initiator_init_t *this, message_t *request);
 	
 	/**
 	 * Builds the NONCE payload for this state.
 	 * 
 	 * @param this		calling object
-	 * @param payload	The generated NONCE payload object of type ke_payload_t is 
-	 * 					stored at this location.
+	 * @param request	message_t object to add the NONCE payload
 	 */
-	void (*build_nonce_payload) (private_initiator_init_t *this, payload_t **payload);	
+	void (*build_nonce_payload) (private_initiator_init_t *this,message_t *request);	
 	
 	/**
 	 * Destroy function called internally of this class after state change to state 
@@ -181,7 +170,6 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	ike_sa_init_requested_t *next_state;
 	chunk_t ike_sa_init_request_data;
 	init_config_t *init_config;
-	randomizer_t *randomizer;
 	ike_sa_id_t *ike_sa_id;
 	message_t *message;
 	status_t status;
@@ -203,16 +191,19 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	
 	this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
 
-	this->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for nonce");
-	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
+	/* going to build message */
+	this->logger->log(this->logger, CONTROL|MOST, "Going to build message");
+	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, TRUE, &message);
 	
-	allocator_free_chunk(&(this->sent_nonce));
+	/* build SA payload */		
+	this->build_sa_payload(this, message);
 	
-	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
+	/* build KE payload */
+	this->build_ke_payload(this, message);
+	
+	/* build Nonce payload */
+	this->build_nonce_payload(this,message);
 
-	this->logger->log(this->logger, RAW|MOST, "Nonce",&(this->sent_nonce));
-
-	this->build_ike_sa_init_request (this,&message);
 
 	/* message can now be sent (must not be destroyed) */
 	status = this->ike_sa->send_request(this->ike_sa, message);
@@ -243,46 +234,16 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 }
 
 /**
- * implements private_initiator_init_t.build_ike_sa_init_request
+ * Implementation of private_initiator_init_t.build_sa_payload.
  */
-static void build_ike_sa_init_request (private_initiator_init_t *this, message_t **request)
-{
-	payload_t *payload;
-	message_t *message;
-	
-	/* going to build message */
-	this->logger->log(this->logger, CONTROL|MOST, "Going to build message");
-	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, TRUE, &message);
-	
-	/* build SA payload */		
-	this->build_sa_payload(this, &payload);
-	this->logger->log(this->logger, CONTROL|MOST, "add SA payload to message");
-	message->add_payload(message, payload);
-	
-	/* build KE payload */
-	this->build_ke_payload(this, &payload);
-	this->logger->log(this->logger, CONTROL|MOST, "add KE payload to message");
-	message->add_payload(message, payload);
-	
-	/* build Nonce payload */
-	this->build_nonce_payload(this, &payload);
-	this->logger->log(this->logger, CONTROL|MOST, "add nonce payload to message");
-	message->add_payload(message, payload);
-	
-	*request = message;
-}
-
-/**
- * implements private_initiator_init_t.build_sa_payload
- */
-static void build_sa_payload(private_initiator_init_t *this, payload_t **payload)
+static void build_sa_payload(private_initiator_init_t *this, message_t *request)
 {
 	sa_payload_t* sa_payload;
 	size_t proposal_count;
 	ike_proposal_t *proposals;
 	init_config_t *init_config;
 	
-	this->logger->log(this->logger, CONTROL|MORE, "building sa payload");
+	this->logger->log(this->logger, CONTROL|MORE, "Building SA payload");
 	
 	init_config = this->ike_sa->get_init_config(this->ike_sa);
 
@@ -291,18 +252,20 @@ static void build_sa_payload(private_initiator_init_t *this, payload_t **payload
 	sa_payload = sa_payload_create_from_ike_proposals(proposals,proposal_count);	
 
 	allocator_free(proposals);
-	*payload = (payload_t *) sa_payload;	
+
+	this->logger->log(this->logger, CONTROL|MOST, "Add SA payload to message");
+	request->add_payload(request, (payload_t *) sa_payload);
 }
 
 /**
- * implements private_initiator_init_t.build_ke_payload
+ * Implementation of private_initiator_init_t.build_ke_payload.
  */
-static void build_ke_payload(private_initiator_init_t *this, payload_t **payload)
+static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 {
 	ke_payload_t *ke_payload;
 	chunk_t key_data;
 	
-	this->logger->log(this->logger, CONTROL|MORE, "building ke payload");
+	this->logger->log(this->logger, CONTROL|MORE, "Building KE payload");
 	
 	this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
 
@@ -311,27 +274,38 @@ static void build_ke_payload(private_initiator_init_t *this, payload_t **payload
 	ke_payload->set_key_exchange_data(ke_payload, key_data);
 	
 	allocator_free_chunk(&key_data);
-	*payload = (payload_t *) ke_payload;
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Add KE payload to message");
+	request->add_payload(request, (payload_t *) ke_payload);
 }
 
 /**
- * implements private_initiator_init_t.build_nonce_payload
+ * Implementation of private_initiator_init_t.build_nonce_payload.
  */
-static void build_nonce_payload(private_initiator_init_t *this, payload_t **payload)
+static void build_nonce_payload(private_initiator_init_t *this, message_t *request)
 {
 	nonce_payload_t *nonce_payload;
+	randomizer_t *randomizer;
 	
-	this->logger->log(this->logger, CONTROL|MORE, "building nonce payload");
+	this->logger->log(this->logger, CONTROL|MORE, "Building NONCE payload");
+	
+	this->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for NONCE");
+	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
+	
+	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
+
+	this->logger->log(this->logger, RAW|MOST, "Initiator NONCE",&(this->sent_nonce));
 	
 	nonce_payload = nonce_payload_create();
 	
 	nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
 	
-	*payload = (payload_t *) nonce_payload;
+	this->logger->log(this->logger, CONTROL|MOST, "Add NONCE payload to message");
+	request->add_payload(request, (payload_t *) nonce_payload);
 }
 
 /**
- * Implements state_t.get_state
+ * Implementation of state_t.process_message.
  */
 static status_t process_message(private_initiator_init_t *this, message_t *message)
 {
@@ -340,7 +314,7 @@ static status_t process_message(private_initiator_init_t *this, message_t *messa
 }
 
 /**
- * Implements state_t.get_state
+ * Implementation of state_t.get_state.
  */
 static ike_sa_state_t get_state(private_initiator_init_t *this)
 {
@@ -348,14 +322,11 @@ static ike_sa_state_t get_state(private_initiator_init_t *this)
 }
 
 /**
- * Implements state_t.get_state
+ * Implementation of state_t.destroy.
  */
 static void destroy(private_initiator_init_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy initiator_init_t state object");
-
-	/* destroy stored proposal */
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
 
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
@@ -372,14 +343,11 @@ static void destroy(private_initiator_init_t *this)
 }
 
 /**
- * Implements private_initiator_init_t.destroy_after_state_change
+ * Implementation of private_initiator_init_t.destroy_after_state_change
  */
 static void destroy_after_state_change (private_initiator_init_t *this)
 {
 	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy initiator_init_t state object");
-	
-	/* destroy stored proposal */
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy stored proposals");
 	allocator_free(this);
 }
 
@@ -401,7 +369,6 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	
 	/* private functions */
 	this->destroy_after_state_change = destroy_after_state_change;
-	this->build_ike_sa_init_request = build_ike_sa_init_request;
 	this->build_nonce_payload = build_nonce_payload;
 	this->build_sa_payload = build_sa_payload;
 	this->build_ke_payload = build_ke_payload;
@@ -411,6 +378,7 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	this->dh_group_priority = 1;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->sent_nonce = CHUNK_INITIALIZER;
+	this->diffie_hellman = NULL;
 
 	return &(this->public);
 }

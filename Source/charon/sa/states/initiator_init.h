@@ -31,41 +31,50 @@
 typedef struct initiator_init_t initiator_init_t;
 
 /**
- * @brief This class represents an IKE_SA state when initializing.
- * a connection as initiator
+ * @brief This class represents an IKE_SA state when 
+ * initializing a connection as initiator.
+ * 
+ * @b Constructors:
+ *  - initiator_init_create() 
  * 
  * @ingroup states
  */
 struct initiator_init_t {
 	/**
-	 * methods of the state_t interface
+	 * The state_t interface.
 	 */
 	state_t state_interface;
 	
 	/**
-	 * Initiate a new connection with given configuration name
+	 * Initiate a new connection with given configuration name.
 	 * 
 	 * @param this 			calling object
-	 * 
 	 * @param name 			name of the configuration
-	 * @return				TODO
+	 * @return				
+	 * 						- SUCCESS
+	 * 						- DELETE_ME if something failed (see log for error)
 	 */
 	status_t (*initiate_connection) (initiator_init_t *this, char *name);
 	
 	/**
-	 * Retries to initiate a new connection with another dh_group_priority
+	 * Retry to initiate a new connection with a specific dh_group_priority.
+	 * 
+	 * The dh_group_priority is starting at 1.
 	 * 
 	 * @param this 				calling object
 	 * @param dh_group_priority	dh group priority to try with
-	 * @return					TODO
+	 * @return				
+	 * 							- SUCCESS
+	 * 							- DELETE_ME if something failed (see log for error)
 	 */
 	status_t (*retry_initiate_connection) (initiator_init_t *this, int dh_group_priority);
 };
 
 /**
- * @brief Constructor of class initiator_init_t
+ * @brief Constructor of class initiator_init_t.
  * 
- * @param ike_sa assigned IKE_SA
+ * @param ike_sa 	assigned IKE_SA
+ * @return			created initiator_init_t object
  * 
  * @ingroup states
  */
