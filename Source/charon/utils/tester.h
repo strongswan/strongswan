@@ -30,6 +30,7 @@
 
 typedef struct test_t test_t;
 
+/* must be defined here cause it is used in test_t */
 typedef struct tester_t tester_t;
 
 /**
@@ -44,6 +45,7 @@ struct test_t {
 	 * @param tester		associated tester_t object
 	 */
 	void (*test_function) (tester_t * tester);
+	
 	/**
 	 * Name of the test.
 	 */
@@ -51,18 +53,21 @@ struct test_t {
 };
 
 /**
- * A tester class to perform tests.
+ * @brief A class to perform tests.
+ * 
+ * @b Constructors:
+ *  - tester_create()
  * 
  * @ingroup utils
  */
 struct tester_t {
 
 	/**
-	 * @brief Tests all testcases in array tests with specific tester_t object.
+	 * @brief Test all testcases in array tests with specific tester_t object.
 	 *
 	 * @param tester 	tester_t object
  	 * @param tests		pointer	to an array of test_t-pointers.
- 	 * 			      	The last item has to be NULL.
+ 	 * 			      	The last item has to be NULL to mark end of array.
 	 */
 	void (*perform_tests) (tester_t *tester,test_t **tests);
 
@@ -101,7 +106,7 @@ struct tester_t {
 	void (*assert_false) (tester_t *tester, bool to_be_false, char *assert_name);
 
 	/**
-	 * @brief Destroys a tester_t object
+	 * @brief Destroys a tester_t object.
 	 *
 	 * @param tester 	tester_t object
 	 */
@@ -115,7 +120,7 @@ struct tester_t {
  * @param display_succeeded_asserts has to be TRUE, if all asserts should be displayed,
  * 									FALSE otherwise
  *
- * @return							- tester_t object
+ * @return							tester_t object
  * 
  * @ingroup utils
  */

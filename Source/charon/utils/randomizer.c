@@ -29,15 +29,17 @@
 #include "randomizer.h"
 
 #include <utils/allocator.h>
+#include <daemon.h>
 
 typedef struct private_randomizer_t private_randomizer_t;
 
 /**
- * Private data of an randomizer_t object
+ * Private data of an randomizer_t object.
  */
 struct private_randomizer_t {
+
 	/**
-	 * Public interface.
+	 * Public randomizer_t interface.
 	 */
 	randomizer_t public;
 	
@@ -45,16 +47,13 @@ struct private_randomizer_t {
 	 * @brief Reads a specific number of bytes from random or pseudo random device.
 	 * 
 	 * @param this					calling object
-	 * @param pseudo_random			TRUE, if pseudo random bytes should be read,
+	 * @param pseudo_random			TRUE, if from pseudo random bytes should be read,
 	 * 								FALSE for true random bytes
 	 * @param bytes					number of bytes to read
 	 * @param[out] buffer			pointer to buffer where to write the data in.
 	 * 								Size of buffer has to be at least bytes.
-	 * @return
-	 * 								- SUCCESS
-	 * 								- FAILED if random device could not be opened
 	 */
-	status_t (*get_bytes_from_device) (private_randomizer_t *this,bool pseudo_random, size_t bytes, u_int8_t *buffer);
+	void (*get_bytes_from_device) (private_randomizer_t *this,bool pseudo_random, size_t bytes, u_int8_t *buffer);
 		
 	/**
 	 * Random device name.
@@ -71,7 +70,7 @@ struct private_randomizer_t {
 /**
  * Implementation of private_randomizer_t.get_bytes_from_device.
  */
-static status_t get_bytes_from_device(private_randomizer_t *this,bool pseudo_random, size_t bytes, u_int8_t *buffer)
+static void get_bytes_from_device(private_randomizer_t *this,bool pseudo_random, size_t bytes, u_int8_t *buffer)
 {
 	/* number of bytes already done */
 	size_t ndone;
@@ -85,31 +84,30 @@ static status_t get_bytes_from_device(private_randomizer_t *this,bool pseudo_ran
 	// open device
 	device = open(device_name, 0);
 	if (device < 0) {
-		return FAILED;
+		charon->kill(charon,"Random device could not be opened");
 	}
 	ndone = 0;
 	
-	// read until nbytes are read
+	/* read until nbytes are read */
 	while (ndone < bytes)
 	{
 		got = read(device, buffer + ndone, bytes - ndone);
 		if (got < 0) {
-			return FAILED;
+			charon->kill(charon,"Read from random device failed");
 		}
 		if (got == 0) {
-			return FAILED;
+			charon->kill(charon,"Read from random device failed");
 		}
 		ndone += got;
 	}
-	// close device
+	/* close device */
 	close(device);
-	return SUCCESS;
 }
 
 /**
  * Implementation of randomizer_t.get_random_bytes.
  */
-static status_t get_random_bytes(private_randomizer_t *this,size_t bytes, u_int8_t *buffer)
+static void get_random_bytes(private_randomizer_t *this,size_t bytes, u_int8_t *buffer)
 {
 	return (this->get_bytes_from_device(this, FALSE, bytes, buffer));
 }
@@ -117,40 +115,30 @@ static status_t get_random_bytes(private_randomizer_t *this,size_t bytes, u_int8
 /**
  * Implementation of randomizer_t.allocate_random_bytes.
  */
-static status_t allocate_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
+static void allocate_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
 {
 	chunk->len = bytes;
 	chunk->ptr = allocator_alloc(bytes);
-	if (chunk->ptr == NULL)
-	{
-		return OUT_OF_RES;
-	}	
 	return (this->get_bytes_from_device(this, FALSE, bytes, chunk->ptr));
 }
 
 /**
  * Implementation of randomizer_t.get_pseudo_random_bytes.
  */
-static status_t get_pseudo_random_bytes(private_randomizer_t *this,size_t bytes, u_int8_t *buffer)
+static void get_pseudo_random_bytes(private_randomizer_t *this,size_t bytes, u_int8_t *buffer)
 {
 	return (this->get_bytes_from_device(this, TRUE, bytes, buffer));
 }
 
-
 /**
  * Implementation of randomizer_t.allocate_pseudo_random_bytes.
  */
-static status_t allocate_pseudo_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
+static void allocate_pseudo_random_bytes(private_randomizer_t *this, size_t bytes, chunk_t *chunk)
 {
 	chunk->len = bytes;
 	chunk->ptr = allocator_alloc(bytes);
-	if (chunk->ptr == NULL)
-	{
-		return OUT_OF_RES;
-	}	
 	return (this->get_bytes_from_device(this, TRUE, bytes, chunk->ptr));
 }
-
 
 /**
  * Implementation of randomizer_t.destroy.
@@ -178,10 +166,10 @@ randomizer_t *randomizer_create_on_devices(char * random_dev_name,char * prandom
 	private_randomizer_t *this = allocator_alloc_thing(private_randomizer_t);
 
 	/* public functions */
-	this->public.get_random_bytes = (status_t (*) (randomizer_t *,size_t, u_int8_t *)) get_random_bytes;
-	this->public.allocate_random_bytes = (status_t (*) (randomizer_t *,size_t, chunk_t *)) allocate_random_bytes;
-	this->public.get_pseudo_random_bytes = (status_t (*) (randomizer_t *,size_t, u_int8_t *)) get_pseudo_random_bytes;
-	this->public.allocate_pseudo_random_bytes = (status_t (*) (randomizer_t *,size_t, chunk_t *)) allocate_pseudo_random_bytes;
+	this->public.get_random_bytes = (void (*) (randomizer_t *,size_t, u_int8_t *)) get_random_bytes;
+	this->public.allocate_random_bytes = (void (*) (randomizer_t *,size_t, chunk_t *)) allocate_random_bytes;
+	this->public.get_pseudo_random_bytes = (void (*) (randomizer_t *,size_t, u_int8_t *)) get_pseudo_random_bytes;
+	this->public.allocate_pseudo_random_bytes = (void (*) (randomizer_t *,size_t, chunk_t *)) allocate_pseudo_random_bytes;
 	this->public.destroy = (void (*) (randomizer_t *))destroy;
 	
 	/* private functions */
@@ -190,7 +178,6 @@ randomizer_t *randomizer_create_on_devices(char * random_dev_name,char * prandom
 	/* private fields */
 	this->random_dev_name = allocator_alloc(strlen(random_dev_name) + 1);
 	strcpy(this->random_dev_name,random_dev_name);
-	
 	this->pseudo_random_dev_name = allocator_alloc(strlen(prandom_dev_name) + 1);
 	strcpy(this->pseudo_random_dev_name,prandom_dev_name);	
 	

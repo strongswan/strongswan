@@ -36,18 +36,16 @@
 typedef struct private_tester_t private_tester_t;
 
 /**
- * @brief Private Variables and Functions of tester class.
+ * @brief Private Data of tester_t class.
  *
  */
 struct private_tester_t {
  	
  	/**
- 	 * Public interface.
+ 	 * Public interface of tester_t.
  	 */
  	tester_t public;
 
-
-	/* Private functions */
 	/**
 	 * Runs a specific test.
 	 * 
@@ -55,17 +53,31 @@ struct private_tester_t {
 	 * @param test_function		test function to perform
 	 * @param test_name			name for the given test
 	 */
-	void (*run_test) (tester_t *tester, void (*test_function) (tester_t * tester), char * test_name);
+	void (*run_test) (private_tester_t *tester, void (*test_function) (tester_t * tester), char * test_name);
+	
+	/**
+	 * Returns the difference of to timeval structs in microseconds.
+	 *
+	 * @warning this function is also defined in the event queue
+	 * 			in later improvements, this function can be added to a general
+	 *          class type!
+	 *
+	 * @param end_time 		end time
+	 * @param start_time 	start time
+	 * 
+	 * @TODO make object function or move to utils!
+	 *
+	 * @return difference in microseconds
+	 */
+	long (*time_difference) (private_tester_t *tester,struct timeval *end_time, struct timeval *start_time);
 
-
-	/* Private values */
 	/**
 	 * Output is written into this file.
 	 */
  	FILE* output;
  	
  	/**
- 	 * Number of runned tests.
+ 	 * Number of already performed tests.
  	 */
  	int tests_count;
  	
@@ -75,17 +87,17 @@ struct private_tester_t {
  	int failed_tests_count;
  	
  	/**
- 	 * Number of failed asserts in curret test.
+ 	 * Number of failed asserts in current test.
  	 */ 
  	int failed_asserts_count;
  	
  	/**
- 	 * TRUE if succeeded asserts should also be written to output.
+ 	 * TRUE if also succeeded asserts should be written to output.
  	 */
  	bool display_succeeded_asserts;
  	
  	/**
- 	 * Mutex to make this object thread-save.
+ 	 * Mutex to make this class thread-save.
  	 */
  	pthread_mutex_t mutex;
 };
@@ -93,9 +105,8 @@ struct private_tester_t {
 /**
  * Implementation of tester_t.perform_tests.
  */
-static void perform_tests(tester_t *tester,test_t **tests)
+static void perform_tests(private_tester_t *this,test_t **tests)
 {
-	private_tester_t *this =(private_tester_t*) tester;
 	int current_test = 0;
 	fprintf(this->output,"\nStart testing...\n\n");
 	fprintf(this->output,"_____________________________________________________________________\n");
@@ -104,7 +115,7 @@ static void perform_tests(tester_t *tester,test_t **tests)
 
 	while (tests[current_test] != NULL)
 	{
-		this->run_test(tester,tests[current_test]->test_function,tests[current_test]->test_name);
+		this->run_test(this,tests[current_test]->test_function,tests[current_test]->test_name);
 		current_test++;
 	}
 	fprintf(this->output,"=====================================================================\n");
@@ -115,10 +126,10 @@ static void perform_tests(tester_t *tester,test_t **tests)
 /**
  * Implementation of tester_t.perform_test.
  */
-static void perform_test(tester_t *tester, test_t *test)
+static void perform_test(private_tester_t *this, test_t *test)
 {
 	test_t *tests[] = {test, NULL};
-	return (perform_tests(tester,tests));
+	return (perform_tests(this,tests));
 }
 
 /**
@@ -135,7 +146,7 @@ static void perform_test(tester_t *tester, test_t *test)
  *
  * @return difference in microseconds
  */
-static long time_difference(struct timeval *end_time, struct timeval *start_time)
+static long time_difference(private_tester_t *this,struct timeval *end_time, struct timeval *start_time)
 {
 	long seconds, microseconds;
 
@@ -148,18 +159,17 @@ static long time_difference(struct timeval *end_time, struct timeval *start_time
 /**
  * Implementation of private_tester_t.run_test.
  */
-static void run_test(tester_t *tester, void (*test_function) (tester_t * tester), char * test_name)
+static void run_test(private_tester_t *this, void (*test_function) (tester_t * tester), char * test_name)
 {
 	struct timeval start_time, end_time;
 	long timediff;
-	private_tester_t *this = (private_tester_t *) tester;
 	this->tests_count++;
 	this->failed_asserts_count = 0;
 	fprintf(this->output,"%-55s\n", test_name);
 	gettimeofday(&start_time,NULL);
-	test_function(tester);
+	test_function(&(this->public));
 	gettimeofday(&end_time,NULL);
-	timediff = time_difference(&end_time, &start_time);
+	timediff = this->time_difference(this,&end_time, &start_time);
 
 	if (this->failed_asserts_count > 0)
 	{
@@ -178,10 +188,8 @@ static void run_test(tester_t *tester, void (*test_function) (tester_t * tester)
 /**
  * Implementation of tester_t.assert_true.
  */
-static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
+static void assert_true(private_tester_t *this, bool to_be_true,char * assert_name)
 {
-	private_tester_t *this = (private_tester_t *) tester;
-
 	if (assert_name == NULL)
 	{
 		assert_name = "unknown";
@@ -205,15 +213,15 @@ static void assert_true(tester_t *tester, bool to_be_true,char * assert_name)
 /**
  * Implementation of tester_t.assert_false.
  */
-static void assert_false(tester_t *tester, bool to_be_false,char * assert_name)
+static void assert_false(private_tester_t *this, bool to_be_false,char * assert_name)
 {
-	tester->assert_true(tester,(!to_be_false),assert_name);
+	this->public.assert_true(&(this->public),(!to_be_false),assert_name);
 }
 
 /**
  * Implementation of tester_t.destroy.
  */
-static void destroy(tester_t *tester)
+static void destroy(private_tester_t *tester)
 {
 	private_tester_t *this = (private_tester_t*) tester;
 	pthread_mutex_destroy(&(this->mutex));
@@ -227,14 +235,18 @@ tester_t *tester_create(FILE *output, bool display_succeeded_asserts)
 {
 	private_tester_t *this = allocator_alloc_thing(private_tester_t);
 
-	this->public.destroy = destroy;
-	this->public.perform_tests = perform_tests;
-	this->public.perform_test = perform_test;
-	this->public.assert_true = assert_true;
-	this->public.assert_false = assert_false;
-
-
+	/* public functions */
+	this->public.destroy = (void (*) (tester_t *))destroy;
+	this->public.perform_tests = (void (*) (tester_t *, test_t**)) perform_tests;
+	this->public.perform_test = (void (*) (tester_t *, test_t*))perform_test;
+	this->public.assert_true =  (void (*) (tester_t *, bool, char*)) assert_true;
+	this->public.assert_false = (void (*) (tester_t *, bool, char*)) assert_false;
+	
+	/* private functions */
 	this->run_test = run_test;
+	this->time_difference = time_difference;
+	
+	/* private data */
 	this->display_succeeded_asserts = display_succeeded_asserts;
 	this->failed_tests_count = 0;
 	this->tests_count = 0;
