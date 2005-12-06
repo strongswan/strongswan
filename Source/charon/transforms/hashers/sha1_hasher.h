@@ -33,7 +33,7 @@ typedef struct sha1_hasher_t sha1_hasher_t;
  * SHA1 algorithm.
  * 
  * @b Constructors:
- * - hasher_create() using HASH_SHA1
+ * - hasher_create() using HASH_SHA1 as algorithm
  * - sha1_hasher_create()
  * 
  * @see hasher_t
@@ -43,7 +43,7 @@ typedef struct sha1_hasher_t sha1_hasher_t;
 struct sha1_hasher_t {
 	
 	/**
-	 * generic hasher_t interface for this hasher
+	 * Generic hasher_t interface for this hasher.
 	 */
 	hasher_t hasher_interface;
 };

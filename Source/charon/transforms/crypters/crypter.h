@@ -1,7 +1,7 @@
 /**
  * @file crypter.h
  * 
- * @brief Interface of crypter_t
+ * @brief Interface crypter_t
  * 
  */
 

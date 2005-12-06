@@ -33,7 +33,7 @@ typedef struct md5_hasher_t md5_hasher_t;
  * MD5 algorithm.
  * 
  * @b Constructors:
- * - hasher_create() using HASH_MD5
+ * - hasher_create() using HASH_MD5 as algorithm
  * - md5_hasher_create()
  * 
  * @see hasher_t
@@ -43,7 +43,7 @@ typedef struct md5_hasher_t md5_hasher_t;
 struct md5_hasher_t {
 	
 	/**
-	 * generic hasher_t interface for this hasher
+	 * Generic hasher_t interface for this hasher.
 	 */
 	hasher_t hasher_interface;
 };

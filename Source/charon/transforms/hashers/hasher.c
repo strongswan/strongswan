@@ -1,7 +1,7 @@
 /**
  * @file hasher.c
  * 
- * @brief Generic constructor for hasher_t
+ * @brief Generic constructor for hasher_t.
  * 
  */
 
@@ -27,7 +27,7 @@
 #include <transforms/hashers/md5_hasher.h>
 
 /**
- * mappings for hash_algorithm_t
+ * String mappings for hash_algorithm_t.
  */
 mapping_t hash_algorithm_m[] = {
 	{HASH_MD2,"HASH_MD2"},
@@ -40,7 +40,7 @@ mapping_t hash_algorithm_m[] = {
 };
 
 /*
- * Described in header
+ * Described in header.
  */
 hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
 {

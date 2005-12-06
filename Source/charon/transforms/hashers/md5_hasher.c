@@ -100,16 +100,16 @@ Rotation is separate from addition to prevent recomputation.
 typedef struct private_md5_hasher_t private_md5_hasher_t;
 
 /**
- * private data structure with hasing context
+ * Private data structure with hasing context.
  */
 struct private_md5_hasher_t {
 	/**
-	 * public interface for this hasher
+	 * Public interface for this hasher.
 	 */
 	md5_hasher_t public;
 	
 	/*
-	 * state of the hasher
+	 * State of the hasher.
 	 */
 	u_int32_t state[5];
     u_int32_t count[2];
@@ -311,7 +311,7 @@ static void MD5Final (private_md5_hasher_t *this, u_int8_t digest[16])
 
 
 /**
- * implementation of hasher_t.get_hash for md5
+ * Implementation of hasher_t.get_hash.
  */
 static void get_hash(private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
 {
@@ -325,7 +325,7 @@ static void get_hash(private_md5_hasher_t *this, chunk_t chunk, u_int8_t *buffer
 
 
 /**
- * implementation of hasher_t.allocate_hash for md5
+ * Implementation of hasher_t.allocate_hash.
  */
 static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
@@ -345,7 +345,7 @@ static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *ha
 }
 	
 /**
- * implementation of hasher_t.get_block_size for md5
+ * Implementation of hasher_t.get_block_size.
  */
 static size_t get_block_size(private_md5_hasher_t *this)
 {
@@ -353,7 +353,7 @@ static size_t get_block_size(private_md5_hasher_t *this)
 }
 
 /**
- * implementation of hasher_t.reset for md5
+ * Implementation of hasher_t.reset.
  */
 static void reset(private_md5_hasher_t *this)
 {
@@ -366,7 +366,7 @@ static void reset(private_md5_hasher_t *this)
 }
 
 /**
- * implementation of hasher_t.destroy for md5
+ * Implementation of hasher_t.destroy.
  */
 static void destroy(private_md5_hasher_t *this)
 {
@@ -374,7 +374,7 @@ static void destroy(private_md5_hasher_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 md5_hasher_t *md5_hasher_create()
 {

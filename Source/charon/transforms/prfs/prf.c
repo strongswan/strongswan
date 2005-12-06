@@ -28,7 +28,7 @@
 
 
 /** 
- * string mappings for encryption_algorithm_t
+ * String mappings for encryption_algorithm_t.
  */
 mapping_t pseudo_random_function_m[] = {
 {PRF_UNDEFINED, "PRF_UNDEFINED"},
@@ -39,9 +39,8 @@ mapping_t pseudo_random_function_m[] = {
 {MAPPING_END, NULL}
 };
 
-
 /*
- * Described in header
+ * Described in header.
  */
 prf_t *prf_create(pseudo_random_function_t pseudo_random_function)
 {

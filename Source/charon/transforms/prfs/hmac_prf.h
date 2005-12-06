@@ -1,7 +1,7 @@
 /**
  * @file hmac_prf.h
  * 
- * @brief Interface for hmac_prf_t.
+ * @brief Interface of hmac_prf_t.
  * 
  */
 
@@ -31,10 +31,13 @@ typedef struct hmac_prf_t hmac_prf_t;
 
 /**
  * @brief Implementation of prf_t interface using the
- * a HMAC algorithm.
+ * HMAC algorithm.
  * 
  * This simply wraps a hmac_t in a prf_t. More a question of
- * interface matchig.
+ * interface matching.
+ * 
+ * @b Constructors:
+ *  - hmac_prf_create()
  * 
  * @ingroup prfs
  */
@@ -47,11 +50,11 @@ struct hmac_prf_t {
 };
 
 /**
- * @brief Creates a new hmac_prf_t object
+ * @brief Creates a new hmac_prf_t object.
  * 
  * @param hash_algorithm	hmac's hash algorithm
  * @return
- * 							- hmac_prf_t if successfully
+ * 							- hmac_prf_t object
  * 							- NULL if hash not supported
  * 
  * @ingroup prfs

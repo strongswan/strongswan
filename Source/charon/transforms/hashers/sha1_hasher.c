@@ -55,16 +55,16 @@
 typedef struct private_sha1_hasher_t private_sha1_hasher_t;
 
 /**
- * private data structure with hasing context
+ * Private data structure with hasing context.
  */
 struct private_sha1_hasher_t {
 	/**
-	 * public interface for this hasher
+	 * Public interface for this hasher.
 	 */
 	sha1_hasher_t public;
 	
 	/*
-	 * state of the hasher
+	 * State of the hasher.
 	 */
 	u_int32_t state[5];
     u_int32_t count[2];
@@ -185,7 +185,7 @@ static void SHA1Final(private_sha1_hasher_t *this, u_int8_t *digest)
 
 
 /**
- * implementation of hasher_t.get_hash for sha1
+ * Implementation of hasher_t.get_hash.
  */
 static void get_hash(private_sha1_hasher_t *this, chunk_t chunk, u_int8_t *buffer)
 {
@@ -199,7 +199,7 @@ static void get_hash(private_sha1_hasher_t *this, chunk_t chunk, u_int8_t *buffe
 
 
 /**
- * implementation of hasher_t.allocate_hash for sha1
+ * Implementation of hasher_t.allocate_hash.
  */
 static void allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *hash)
 {
@@ -219,7 +219,7 @@ static void allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *h
 }
 	
 /**
- * implementation of hasher_t.get_block_size for sha1
+ * Implementation of hasher_t.get_block_size.
  */
 static size_t get_block_size(private_sha1_hasher_t *this)
 {
@@ -227,7 +227,7 @@ static size_t get_block_size(private_sha1_hasher_t *this)
 }
 	
 /**
- * implementation of hasher_t.reset for sha1
+ * Implementation of hasher_t.reset.
  */
 static void reset(private_sha1_hasher_t *this)
 {
@@ -240,7 +240,7 @@ static void reset(private_sha1_hasher_t *this)
     this->count[1] = 0;
 }
 /**
- * implementation of hasher_t.destroy for sha1
+ * Implementation of hasher_t.destroy.
  */
 static void destroy(private_sha1_hasher_t *this)
 {
@@ -249,15 +249,11 @@ static void destroy(private_sha1_hasher_t *this)
 
 
 /*
- * Described in header
+ * Described in header.
  */
 sha1_hasher_t *sha1_hasher_create()
 {
 	private_sha1_hasher_t *this = allocator_alloc_thing(private_sha1_hasher_t);
-	if (this == NULL)
-	{
-		return NULL;	
-	}
 	
 	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
 	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;

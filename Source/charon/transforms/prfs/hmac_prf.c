@@ -25,22 +25,26 @@
 #include <utils/allocator.h>
 #include <transforms/hmac.h>
 
+
 typedef struct private_hmac_prf_t private_hmac_prf_t;
 
+/**
+ * Private data of a hma_prf_t object.
+ */
 struct private_hmac_prf_t {
 	/**
-	 * public interface for this prf
+	 * Public hmac_prf_t interface.
 	 */
 	hmac_prf_t public;	
 	
 	/**
-	 * hmac to use for generation
+	 * Hmac to use for generation.
 	 */
 	hmac_t *hmac;
 };
 
 /**
- * implementation of prf_t.get_bytes
+ * Implementation of prf_t.get_bytes.
  */
 static void get_bytes(private_hmac_prf_t *this, chunk_t seed, u_int8_t *buffer)
 {
@@ -48,7 +52,7 @@ static void get_bytes(private_hmac_prf_t *this, chunk_t seed, u_int8_t *buffer)
 }
 
 /**
- * implementation of prf_t.allocate_bytes
+ * Implementation of prf_t.allocate_bytes.
  */
 static void allocate_bytes(private_hmac_prf_t *this, chunk_t seed, chunk_t *chunk)
 {
@@ -56,7 +60,7 @@ static void allocate_bytes(private_hmac_prf_t *this, chunk_t seed, chunk_t *chun
 }
 
 /**
- * implementation of prf_t.get_block_size
+ * Implementation of prf_t.get_block_size.
  */
 static size_t get_block_size(private_hmac_prf_t *this)
 {
@@ -64,7 +68,7 @@ static size_t get_block_size(private_hmac_prf_t *this)
 }
 
 /**
- * implementation of prf_t.set_key
+ * Implementation of prf_t.set_key.
  */
 static void set_key(private_hmac_prf_t *this, chunk_t key)
 {
@@ -72,7 +76,7 @@ static void set_key(private_hmac_prf_t *this, chunk_t key)
 }
 
 /**
- * implementation of prf_t.destroy
+ * Implementation of prf_t.destroy.
  */
 static void destroy(private_hmac_prf_t *this)
 {
@@ -81,7 +85,7 @@ static void destroy(private_hmac_prf_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 hmac_prf_t *hmac_prf_create(hash_algorithm_t hash_algorithm)
 {
