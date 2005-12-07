@@ -281,7 +281,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
 	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
 	this->public.state_interface.destroy(&(this->public.state_interface));
-	
+			
 	my_host = this->ike_sa->get_my_host(this->ike_sa);
 	other_host = this->ike_sa->get_other_host(this->ike_sa);
 	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s", 
@@ -478,7 +478,8 @@ static status_t process_notify_payload(private_ike_auth_requested_t *this, notif
 			}
 			else
 			{
-				this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an unknown notify (%d), ignored.", notify_message_type);
+				this->logger->log(this->logger, CONTROL, "IKE_AUTH reply contained an unknown notify (%d), ignored.", 
+									notify_message_type);
 				return SUCCESS;
 			}
 		}

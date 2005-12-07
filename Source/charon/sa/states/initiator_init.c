@@ -154,7 +154,8 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->dh_group_number = init_config->get_dh_group_number(init_config,this->dh_group_priority);
 	if (this->dh_group_number == MODP_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Diffie hellman group could not be retrieved with priority %d", this->dh_group_priority);
+		this->logger->log(this->logger, AUDIT, "Could not find a matching diffie hellman group after %d. try. Aborting.", 
+							this->dh_group_priority);
 		return DELETE_ME;
 	}
 	
@@ -185,7 +186,8 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	this->dh_group_number = init_config->get_dh_group_number(init_config,dh_group_priority);
 	if (this->dh_group_number == MODP_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Diffie hellman group could not be retrieved with priority %d", dh_group_priority);
+		this->logger->log(this->logger, AUDIT, "Could not find a matching diffie hellman group after %d. try. Aborting.", 
+							this->dh_group_priority);
 		return DELETE_ME;
 	}
 	
@@ -209,7 +211,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	status = this->ike_sa->send_request(this->ike_sa, message);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not send request message");
+		this->logger->log(this->logger, AUDIT, "Unable to initiate connection, could not send message. Aborting");
 		message->destroy(message);
 		return DELETE_ME;
 	}
@@ -221,12 +223,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	/* state can now be changed */
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Create next state object");
 	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_priority, this->diffie_hellman, this->sent_nonce,ike_sa_init_request_data);
-
-	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
-
-	/* state has NOW changed :-) */
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
 	this->destroy_after_state_change(this);
@@ -309,7 +306,7 @@ static void build_nonce_payload(private_initiator_init_t *this, message_t *reque
  */
 static status_t process_message(private_initiator_init_t *this, message_t *message)
 {
-	this->logger->log(this->logger, ERROR|LEVEL1, "In state INITIATOR_INIT no message is processed");
+	this->logger->log(this->logger, ERROR, "In state INITIATOR_INIT no message is processed");
 	return FAILED;
 }
 
@@ -326,17 +323,17 @@ static ike_sa_state_t get_state(private_initiator_init_t *this)
  */
 static void destroy(private_initiator_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy initiator_init_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL3, "Going to destroy initiator_init_t state object");
 
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy diffie_hellman_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy diffie_hellman_t object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
 	if (this->sent_nonce.ptr != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL2, "Free memory of sent nonce");
+		this->logger->log(this->logger, CONTROL | LEVEL3, "Free memory of sent nonce");
 		allocator_free(this->sent_nonce.ptr);
 	}
 	allocator_free(this);
@@ -347,7 +344,7 @@ static void destroy(private_initiator_init_t *this)
  */
 static void destroy_after_state_change (private_initiator_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy initiator_init_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL3, "Going to destroy initiator_init_t state object");
 	allocator_free(this);
 }
 

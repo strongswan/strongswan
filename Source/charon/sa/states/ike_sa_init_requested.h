@@ -38,6 +38,8 @@ typedef struct ike_sa_init_requested_t ike_sa_init_requested_t;
  * @b Constructors:
  *  - ike_sa_init_requested_create()
  * 
+ * @todo Include valid child sa SPIs in proposal
+ * 
  * @ingroup states
  */
 struct ike_sa_init_requested_t {

@@ -252,7 +252,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
+				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring payload %s (%d)", 
 									mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
 				break;
 			}

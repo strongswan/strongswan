@@ -121,6 +121,14 @@ struct private_responder_init_t {
 	status_t (*build_nonce_payload) (private_responder_init_t *this,nonce_payload_t *nonce_request, message_t *response);	
 	
 	/**
+	 * Sends a IKE_SA_INIT reply containing a notify payload.
+	 * 
+	 * @param this				calling object
+	 * @param notify_payload 	notify_payload to process
+	 */
+	status_t (*process_notify_payload) (private_responder_init_t *this, notify_payload_t *notify_payload);
+	
+	/**
 	 * Destroy function called internally of this class after change 
 	 * to state IKE_SA_INIT_RESPONDED succeeded.
 	 * 
@@ -129,15 +137,6 @@ struct private_responder_init_t {
 	 * @param this		calling object
 	 */
 	void (*destroy_after_state_change) (private_responder_init_t *this);
-	
-	/**
-	 * Sends a IKE_SA_INIT reply containing a notify payload.
-	 * 
-	 * @param this		calling object
-	 * @param type		type of notify message
-	 * @param data		data of notify message
-	 */
-	void (*send_notify_reply) (private_responder_init_t *this,notify_message_type_t type, chunk_t data);
 
 };
 
@@ -149,11 +148,11 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	ike_sa_init_responded_t *next_state;
 	chunk_t ike_sa_init_response_data;
 	chunk_t ike_sa_init_request_data;
-	nonce_payload_t *nonce_request;
+	sa_payload_t *sa_request = NULL;
+	ke_payload_t *ke_request = NULL;
+	nonce_payload_t *nonce_request = NULL;
 	host_t *source, *destination;
 	init_config_t *init_config;
-	sa_payload_t *sa_request;
-	ke_payload_t *ke_request;
 	chunk_t shared_secret;
 	iterator_t *payloads;
 	message_t *response;
@@ -166,7 +165,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	if (!message->get_request(message))
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Only requests of type IKE_SA_INIT supported in state responder_init");
+		this->logger->log(this->logger, ERROR | LEVEL1, "IKE_SA_INIT responses not allowed state ike_sa_init_responded");
 		return DELETE_ME;
 	}
 	
@@ -178,8 +177,8 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	if (status != SUCCESS)
 	{
 		/* no configuration matches given host */
-		this->logger->log(this->logger, ERROR | LEVEL1, "No INIT configuration found for given remote and local hosts");
-		this->send_notify_reply(this,NO_PROPOSAL_CHOSEN,CHUNK_INITIALIZER);
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request does not match any available configuration. Deleting IKE_SA");
+		this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
 		return DELETE_ME;
 	}
 	this->ike_sa->set_init_config(this->ike_sa,init_config);
@@ -193,15 +192,13 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	{
 		if (status == NOT_SUPPORTED)
 		{
-			this->logger->log(this->logger, ERROR | LEVEL1, "Message contains unsupported payload with critical flag set");
-			/**
-			 * TODO send unsupported type.
-			 */
-			this->send_notify_reply(this,UNSUPPORTED_CRITICAL_PAYLOAD,CHUNK_INITIALIZER);
+			this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request contains unsupported payload with critical flag set. "
+													"Deleting IKE_SA");
+			this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, UNSUPPORTED_CRITICAL_PAYLOAD, CHUNK_INITIALIZER);
 		}
 		else
 		{
-			this->logger->log(this->logger, ERROR | LEVEL1, "Could not parse body of request message");
+			this->logger->log(this->logger, AUDIT, "Unable to parse IKE_SA_INIT request. Deleting IKE_SA");
 		}
 		return DELETE_ME;
 	}
@@ -233,36 +230,30 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			case NOTIFY:
 			{
 				notify_payload_t *notify_payload = (notify_payload_t *) payload;
-				this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
-								  mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)),
-								  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
-								  
-				if (notify_payload->get_protocol_id(notify_payload) != IKE)
+				status = this->process_notify_payload(this, notify_payload);
+				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, ERROR | LEVEL1, "Notify not for IKE protocol.");
 					payloads->destroy(payloads);
-					return DELETE_ME;	
-				}
-				switch (notify_payload->get_notify_message_type(notify_payload))
-				{
-					default:
-					{
-						this->logger->log(this->logger, CONTROL|LEVEL1, "Processing of notify type %s not yet implemented",
-											mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)));
-						break;
-					}
+					return status;	
 				}
 			}
 			default:
 			{
-				this->logger->log(this->logger, CONTROL | LEVEL1, "Processing of Payload with Type number %d not implemented",payload->get_type(payload));
+				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring payload %s (%d)", 
+									mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
 				break;
 			}
 		}
 	}
 	payloads->destroy(payloads);
 	
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to process received payloads");
+	/* check if we have all payloads */
+	if (!(sa_request && ke_request && nonce_request))
+	{
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain all required payloads. Deleting IKE_SA");
+		return DELETE_ME;
+	}
+	
 	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
 	
 	status = this->build_sa_payload(this, sa_request, response);
@@ -300,7 +291,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	status = this->ike_sa->send_response(this->ike_sa, response);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not send response message");
+		this->logger->log(this->logger, AUDIT, "Unable to send IKE_SA_INIT response. Deleting IKE_SA");
 		response->destroy(response);
 		return DELETE_ME;
 	}
@@ -312,14 +303,11 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	ike_sa_init_response_data = response->get_packet_data(response);
 	ike_sa_init_request_data = message->get_packet_data(message);
 
-	next_state = ike_sa_init_responded_create(this->ike_sa, this->received_nonce, this->sent_nonce,ike_sa_init_request_data,ike_sa_init_response_data);
+	next_state = ike_sa_init_responded_create(this->ike_sa, this->received_nonce, this->sent_nonce,ike_sa_init_request_data,
+												ike_sa_init_response_data);
 	
 	/* state can now be changed */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t *) next_state);
-	/* state has NOW changed :-) */
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Changed state of IKE_SA from %s to %s",mapping_find(ike_sa_state_m,RESPONDER_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_RESPONDED) );
-
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
 	this->destroy_after_state_change(this);	
 	
 	return SUCCESS;
@@ -344,8 +332,8 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 	status = sa_request->get_ike_proposals (sa_request, &ike_proposals,&proposal_count);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "SA payload does not contain IKE proposals");
-		this->send_notify_reply(this,NO_PROPOSAL_CHOSEN,CHUNK_INITIALIZER);
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain any proposals. Deleting IKE_SA");
+		this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
 		return DELETE_ME;	
 	}
 
@@ -353,8 +341,8 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 	allocator_free(ike_proposals);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "No proposal of suggested proposals selected");
-		this->send_notify_reply(this,NO_PROPOSAL_CHOSEN,CHUNK_INITIALIZER);
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain any acceptable proposals. Deleting IKE_SA");
+		this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
 		return DELETE_ME;
 	}
 	
@@ -363,7 +351,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 	status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,&(selected_proposal));	
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Transform objects could not be created from selected proposal");
+		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
 		return DELETE_ME;
 	}
 	
@@ -392,7 +380,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 				
 	if (group == MODP_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Diffie hellman group set to undefined!");
+		this->logger->log(this->logger, AUDIT, "No diffie hellman group to select. Deleting IKE_SA");
 		return DELETE_ME;
 	}
 	if (this->dh_group_number != group)
@@ -401,12 +389,12 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 		chunk_t accepted_group_chunk;
 		/* group not same as selected one 
 		 * Maybe key exchange payload is before SA payload */
-		this->logger->log(this->logger, ERROR | LEVEL1, "Diffie hellman group not as in selected proposal!");
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain a acceptable diffie hellman group. Deleting IKE_SA");
 		
 		accepted_group = htons(this->dh_group_number);
 		accepted_group_chunk.ptr = (u_int8_t*) &(accepted_group);
 		accepted_group_chunk.len = 2;
-		this->send_notify_reply(this,INVALID_KE_PAYLOAD,accepted_group_chunk);
+		this->ike_sa->send_notify(this->ike_sa,IKE_SA_INIT,INVALID_KE_PAYLOAD,accepted_group_chunk);
 		return DELETE_ME;
 	}
 			
@@ -414,7 +402,8 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	dh = diffie_hellman_create(group);
 	if (dh == NULL)
 	{
-		this->logger->log(this->logger, ERROR, "Could not generate DH object with group %d",mapping_find(diffie_hellman_group_m,group) );
+		this->logger->log(this->logger, AUDIT, "Could not generate DH object with group %d. Deleting IKE_SA",
+							mapping_find(diffie_hellman_group_m,group) );
 		return DELETE_ME;
 	}
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Set other DH public value");
@@ -440,7 +429,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 }
 
 /**
- * Implementation of private_initiator_init_t.build_nonce_payload.
+ * Implementation of private_responder_init_t.build_nonce_payload.
  */
 static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload_t *nonce_request, message_t *response)
 {
@@ -469,6 +458,32 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 	return SUCCESS;
 }
 
+/**
+ * Implementation of private_responder_init_t.process_notify_payload.
+ */
+static status_t process_notify_payload(private_responder_init_t *this, notify_payload_t *notify_payload)
+{
+	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
+	
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
+						  mapping_find(notify_message_type_m, notify_message_type),
+						  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
+								  
+	if (notify_payload->get_protocol_id(notify_payload) != IKE)
+	{
+		this->logger->log(this->logger, ERROR | LEVEL1, "Notify reply not for IKE protocol.");
+		return FAILED;	
+	}
+	switch (notify_message_type)
+	{
+		default:
+		{
+				this->logger->log(this->logger, CONTROL, "IKE_SA_INIT request contained a notify (%d), ignored.", 
+									notify_message_type);
+			return SUCCESS;
+		}
+	}	
+}
 
 /**
  * Implementation of  state_t.get_state.
@@ -476,44 +491,6 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 static ike_sa_state_t get_state(private_responder_init_t *this)
 {
 	return RESPONDER_INIT;
-}
-
-/**
- * Implementation of private_initiator_init_t.send_notify_reply.
- */
-static void send_notify_reply (private_responder_init_t *this,notify_message_type_t type, chunk_t data)
-{
-	notify_payload_t *payload;
-	message_t *response;
-	packet_t *packet;
-	status_t status;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message with notify payload");
-	/* set up the reply */
-	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
-	payload = notify_payload_create_from_protocol_and_type(IKE,type);
-	if ((data.ptr != NULL) && (data.len > 0))
-	{
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Add Data to notify payload");
-		payload->set_notification_data(payload,data);
-	}
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add Notify payload to message");
-	response->add_payload(response,(payload_t *) payload);
-	
-	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Gnerate packet from message");
-	status = response->generate(response, NULL, NULL, &packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
-		return;
-	}
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add packet to global send queue");
-	charon->send_queue->add(charon->send_queue, packet);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy message");
-	response->destroy(response);
 }
 
 /**
@@ -572,7 +549,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->build_ke_payload = build_ke_payload;
 	this->build_nonce_payload = build_nonce_payload;
 	this->destroy_after_state_change = destroy_after_state_change;
-	this->send_notify_reply = send_notify_reply;
+	this->process_notify_payload = process_notify_payload;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

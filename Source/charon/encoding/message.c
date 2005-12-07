@@ -787,7 +787,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		this->logger->log(this->logger, ERROR, "Verification of message failed");
 	}
 	
-	this->logger->log(this->logger, CONTROL, "Message a %s %s contains %d payloads", 
+	this->logger->log(this->logger, CONTROL, "Message %s %s contains %d payloads", 
 					mapping_find(exchange_type_m, this->exchange_type),
 					this->is_request ? "request" : "response",
 					this->payloads->get_count(this->payloads));
