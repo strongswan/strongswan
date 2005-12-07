@@ -26,7 +26,7 @@
 #include <encoding/message.h>
 #include <sa/ike_sa.h>
 
-void test_ike_sa(tester_t *tester)
+void test_ike_sa(protected_tester_t *tester)
 {
 	ike_sa_t *ike_sa;
 	ike_sa_id_t *ike_sa_id;

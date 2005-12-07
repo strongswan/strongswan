@@ -33,6 +33,6 @@
  * 
  * @ingroup testcases
  */
-void test_prf_plus(tester_t *tester);
+void test_prf_plus(protected_tester_t *tester);
 
 #endif /*PRF_PLUS_TEST_H_*/

@@ -29,7 +29,7 @@
 /*
  * Description in header file
  */
-void test_thread_pool(tester_t *tester)
+void test_thread_pool(protected_tester_t *tester)
 {
 	size_t desired_pool_size = 10;
 	size_t pool_size;

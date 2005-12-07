@@ -28,10 +28,10 @@
 #include <types.h>
 
 
-typedef struct test_t test_t;
-
 /* must be defined here cause it is used in test_t */
-typedef struct tester_t tester_t;
+typedef struct protected_tester_t protected_tester_t;
+
+typedef struct test_t test_t;
 
 /**
  * @brief Representing a specified test.
@@ -44,13 +44,16 @@ struct test_t {
 	 * 
 	 * @param tester		associated tester_t object
 	 */
-	void (*test_function) (tester_t * tester);
+	void (*test_function) (protected_tester_t * tester);
 	
 	/**
 	 * Name of the test.
 	 */
 	char * test_name;
 };
+
+
+typedef struct tester_t tester_t;
 
 /**
  * @brief A class to perform tests.
@@ -61,7 +64,6 @@ struct test_t {
  * @ingroup utils
  */
 struct tester_t {
-
 	/**
 	 * @brief Test all testcases in array tests with specific tester_t object.
 	 *
@@ -80,38 +82,55 @@ struct tester_t {
  	void (*perform_test) (tester_t *tester, test_t *test);
 
 	/**
-	 * Is called in a testcase to check a specific situation for TRUE.
-	 *
-	 * Log-Values to the tester output are protected from multiple access.
-	 *
-	 * @warning This function should only be called in a test_function.
-	 *
-	 * @param this 			tester_t object
-	 * @param to_be_true 	assert which has to be TRUE
-	 * @param assert_name	name of the assertion
-	 */
-	void (*assert_true) (tester_t *tester, bool to_be_true, char *assert_name);
-
-	/**
-	 * Is called in a testcase to check a specific situation for FALSE.
-	 *
-	 * Log-Values to the tester output are protected from multiple access.
-	 *
-	 * @warning This function should only be called in a test_function.
-	 *
-	 * @param this 			tester_t object
-	 * @param to_be_false 	assert which has to be FALSE
-	 * @param assert_name	name of the assertion
-	 */
-	void (*assert_false) (tester_t *tester, bool to_be_false, char *assert_name);
-
-	/**
 	 * @brief Destroys a tester_t object.
 	 *
 	 * @param tester 	tester_t object
 	 */
 	void (*destroy) (tester_t *tester);
 };
+
+
+/**
+ * @brief A class used in a specific testcase.
+ * 
+ * For each testcase an object of this type is passed to the testfunction. The testfunction uses this 
+ * object to check specific asserts with protected_tester_t.assert_true and protected_tester_t.assert_false.
+ * 
+ * @b Constructors:
+ *  - tester_create()
+ * 
+ * @ingroup utils
+ */
+struct protected_tester_t {
+	
+	/**
+	 * Public functions of a tester_t object
+	 */
+	tester_t public;
+	
+	/**
+	 * @brief Is called in a testcase to check a specific situation for TRUE.
+	 *
+	 * Log-Values to the tester output are protected from multiple access.
+	 *
+	 * @param this 			tester_t object
+	 * @param to_be_true 	assert which has to be TRUE
+	 * @param assert_name	name of the assertion
+	 */
+	void (*assert_true) (protected_tester_t *tester, bool to_be_true, char *assert_name);
+
+	/**
+	 * @brief Is called in a testcase to check a specific situation for FALSE.
+	 *
+	 * Log-Values to the tester output are protected from multiple access.
+	 *
+	 * @param this 			tester_t object
+	 * @param to_be_false 	assert which has to be FALSE
+	 * @param assert_name	name of the assertion
+	 */
+	void (*assert_false) (protected_tester_t *tester, bool to_be_false, char *assert_name);
+};
+
 
 /**
  * @brief Creates a tester_t object used to perform tests with.

@@ -34,7 +34,7 @@
  * 
  * @ingroup testcases
  */
-void test_hmac_sha1(tester_t *tester);
+void test_hmac_sha1(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the hmac functionality
@@ -44,6 +44,6 @@ void test_hmac_sha1(tester_t *tester);
  * 
  * @ingroup testcases
  */
-void test_hmac_md5(tester_t *tester);
+void test_hmac_md5(protected_tester_t *tester);
 
 #endif /*HMAC_TEST_H_*/

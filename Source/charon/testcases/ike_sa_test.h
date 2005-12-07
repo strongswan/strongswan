@@ -28,10 +28,10 @@
 /**
  * @brief Test function used to test the ike_sa_t functionality.
  *
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_ike_sa(tester_t *tester);
+void test_ike_sa(protected_tester_t *tester);
 
 #endif /*IKE_SA_TEST_H_*/

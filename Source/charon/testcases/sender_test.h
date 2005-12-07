@@ -32,6 +32,6 @@
  * 
  * @ingroup testcases
  */
-void test_sender(tester_t *tester);
+void test_sender(protected_tester_t *tester);
 
 #endif /*SENDER_TEST_H_*/

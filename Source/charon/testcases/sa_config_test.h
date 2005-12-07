@@ -29,11 +29,11 @@
 /**
  * @brief Test function used to test the sa_config_t functionality.
  *
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_sa_config(tester_t *tester);
+void test_sa_config(protected_tester_t *tester);
 
 #endif //_SA_CONFIG_TEST_H_
 

@@ -32,7 +32,7 @@
 /* 
  * described in Header-File
  */
-void test_diffie_hellman(tester_t *tester)
+void test_diffie_hellman(protected_tester_t *tester)
 {
 	diffie_hellman_t *my_diffie_hellman, *other_diffie_hellman;
 	logger_t *logger;

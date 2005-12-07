@@ -33,7 +33,7 @@
 /*
  * Described in header.
  */
-void test_hmac_md5_signer(tester_t *tester)
+void test_hmac_md5_signer(protected_tester_t *tester)
 {
 	/* Test cases from RFC2202
 	 * 
@@ -116,7 +116,7 @@ void test_hmac_md5_signer(tester_t *tester)
 /*
  * Described in header.
  */
-void test_hmac_sha1_signer(tester_t *tester)
+void test_hmac_sha1_signer(protected_tester_t *tester)
 {
 	/*
 	 * test_case =     7

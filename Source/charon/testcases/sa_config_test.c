@@ -33,7 +33,7 @@
 /**
  * Described in header.
  */
-void test_sa_config(tester_t *tester)
+void test_sa_config(protected_tester_t *tester)
 {
 	sa_config_t *sa_config;	
 	traffic_selector_t *ts_policy[3], *ts_request[4], *ts_reference[3], **ts_result;

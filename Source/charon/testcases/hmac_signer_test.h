@@ -32,7 +32,7 @@
  * 
  * @ingroup testcases
  */
-void test_hmac_md5_signer(tester_t *tester);
+void test_hmac_md5_signer(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the hmac sign functionality using SHA1.
@@ -41,6 +41,6 @@ void test_hmac_md5_signer(tester_t *tester);
  * 
  * @ingroup testcases
  */
-void test_hmac_sha1_signer(tester_t *tester);
+void test_hmac_sha1_signer(protected_tester_t *tester);
 
 #endif //_HMAC_SIGNER_TEST_H_

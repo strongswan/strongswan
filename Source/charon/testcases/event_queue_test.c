@@ -50,7 +50,7 @@
 typedef struct event_queue_test_s event_queue_test_t;
 
 struct event_queue_test_s{
-	tester_t *tester;
+	protected_tester_t *tester;
 	event_queue_t *event_queue;
 
 	/**
@@ -88,7 +88,7 @@ static void event_queue_insert_thread(event_queue_test_t * testinfos)
 }
 
 
-void test_event_queue(tester_t *tester)
+void test_event_queue(protected_tester_t *tester)
 {
 	event_queue_t * event_queue = event_queue_create();
 	event_queue_test_t testinfos;

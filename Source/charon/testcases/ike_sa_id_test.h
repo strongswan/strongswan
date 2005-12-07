@@ -35,6 +35,6 @@
  * 
  * @ingroup testcases
  */
-void test_ike_sa_id(tester_t *tester);
+void test_ike_sa_id(protected_tester_t *tester);
 
 #endif /*IKE_SA_ID_TEST_H_*/

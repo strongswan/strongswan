@@ -34,7 +34,7 @@
 /* 
  * described in Header-File
  */
-void test_prime_pool(tester_t *tester)
+void test_prime_pool(protected_tester_t *tester)
 {
 	mpz_t p1, p2, p3, p4;
 	prime_pool_t *prime_pool;

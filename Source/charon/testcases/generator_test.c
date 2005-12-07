@@ -51,7 +51,7 @@
 /*
  * Described in Header 
  */
-void test_generator_with_header_payload(tester_t *tester)
+void test_generator_with_header_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	ike_header_t *header_data;
@@ -136,7 +136,7 @@ void test_generator_with_header_payload(tester_t *tester)
 /*
  * Described in header
  */ 
-void test_generator_with_transform_attribute(tester_t *tester)
+void test_generator_with_transform_attribute(protected_tester_t *tester)
 {
 	generator_t *generator;
 	transform_attribute_t *attribute;
@@ -232,7 +232,7 @@ void test_generator_with_transform_attribute(tester_t *tester)
 /*
  * Described in header
  */ 
-void test_generator_with_transform_substructure(tester_t *tester)
+void test_generator_with_transform_substructure(protected_tester_t *tester)
 {
 	generator_t *generator;
 	transform_attribute_t *attribute1, *attribute2;
@@ -302,7 +302,7 @@ void test_generator_with_transform_substructure(tester_t *tester)
 /*
  * Described in header
  */ 
-void test_generator_with_proposal_substructure(tester_t *tester)
+void test_generator_with_proposal_substructure(protected_tester_t *tester)
 {
 	generator_t *generator;
 	transform_attribute_t *attribute1, *attribute2, *attribute3;
@@ -417,7 +417,7 @@ void test_generator_with_proposal_substructure(tester_t *tester)
 /*
  * Described in header
  */ 
-void test_generator_with_sa_payload(tester_t *tester)
+void test_generator_with_sa_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	transform_attribute_t *attribute1, *attribute2, *attribute3;
@@ -786,7 +786,7 @@ void test_generator_with_sa_payload(tester_t *tester)
 /*
  * Described in header
  */ 
-void test_generator_with_ke_payload(tester_t *tester)
+void test_generator_with_ke_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	ke_payload_t *ke_payload;
@@ -841,7 +841,7 @@ void test_generator_with_ke_payload(tester_t *tester)
 /*
  * Described in header
  */ 
-void test_generator_with_notify_payload(tester_t *tester)
+void test_generator_with_notify_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	notify_payload_t *notify_payload;
@@ -901,7 +901,7 @@ void test_generator_with_notify_payload(tester_t *tester)
 /*
  * Described in header
  */ 
-void test_generator_with_nonce_payload(tester_t *tester)
+void test_generator_with_nonce_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	nonce_payload_t *nonce_payload;
@@ -955,7 +955,7 @@ void test_generator_with_nonce_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_id_payload(tester_t *tester)
+void test_generator_with_id_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	id_payload_t *id_payload;
@@ -1008,7 +1008,7 @@ void test_generator_with_id_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_auth_payload(tester_t *tester)
+void test_generator_with_auth_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	auth_payload_t *auth_payload;
@@ -1061,7 +1061,7 @@ void test_generator_with_auth_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_ts_payload(tester_t *tester)
+void test_generator_with_ts_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	ts_payload_t *ts_payload;
@@ -1145,7 +1145,7 @@ void test_generator_with_ts_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_cert_payload(tester_t *tester)
+void test_generator_with_cert_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	cert_payload_t *cert_payload;
@@ -1197,7 +1197,7 @@ void test_generator_with_cert_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_certreq_payload(tester_t *tester)
+void test_generator_with_certreq_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	certreq_payload_t *certreq_payload;
@@ -1249,7 +1249,7 @@ void test_generator_with_certreq_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_delete_payload(tester_t *tester)
+void test_generator_with_delete_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	delete_payload_t *delete_payload;
@@ -1303,7 +1303,7 @@ void test_generator_with_delete_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_vendor_id_payload(tester_t *tester)
+void test_generator_with_vendor_id_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	vendor_id_payload_t *vendor_id_payload;
@@ -1352,7 +1352,7 @@ void test_generator_with_vendor_id_payload(tester_t *tester)
 /*
  * Described in header
  */ 
-void test_generator_with_cp_payload(tester_t *tester)
+void test_generator_with_cp_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	configuration_attribute_t *attribute1, *attribute2;
@@ -1426,7 +1426,7 @@ void test_generator_with_cp_payload(tester_t *tester)
 /*
  * Described in header.
  */ 
-void test_generator_with_eap_payload(tester_t *tester)
+void test_generator_with_eap_payload(protected_tester_t *tester)
 {
 	generator_t *generator;
 	eap_payload_t *eap_payload;

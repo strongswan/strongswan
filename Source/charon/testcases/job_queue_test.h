@@ -35,6 +35,6 @@
  * 
  * @ingroup testcases
  */
-void test_job_queue(tester_t *tester);
+void test_job_queue(protected_tester_t *tester);
 
 #endif /*JOB_QUEUE_TEST_H_*/

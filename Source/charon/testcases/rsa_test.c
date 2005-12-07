@@ -32,7 +32,7 @@
 /* 
  * described in Header-File
  */
-void test_rsa(tester_t *tester)
+void test_rsa(protected_tester_t *tester)
 {
 	rsa_private_key_t *private_key;
 	rsa_public_key_t *public_key;

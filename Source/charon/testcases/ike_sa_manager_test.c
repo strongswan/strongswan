@@ -31,7 +31,7 @@
 
 
 static struct ike_sa_manager_test_struct_s {
-	tester_t *tester;
+	protected_tester_t *tester;
 	ike_sa_manager_t *isam;
 } td;
 
@@ -62,7 +62,7 @@ static void test3_thread(ike_sa_id_t *ike_sa_id)
 
 	
 
-void test_ike_sa_manager(tester_t *tester)
+void test_ike_sa_manager(protected_tester_t *tester)
 {
 	status_t status;
 	u_int64_t initiator, responder;

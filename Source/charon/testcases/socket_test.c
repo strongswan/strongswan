@@ -31,7 +31,7 @@
 /*
  * Description in header file
  */
-void test_socket(tester_t *tester)
+void test_socket(protected_tester_t *tester)
 {
 	int packet_count = 5;
 	int current;

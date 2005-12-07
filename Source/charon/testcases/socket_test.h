@@ -32,7 +32,7 @@
  * 
  * @ingroup testcases
  */
-void test_socket(tester_t *tester);
+void test_socket(protected_tester_t *tester);
 
 
 #endif /*SOCKET_TEST_H_*/

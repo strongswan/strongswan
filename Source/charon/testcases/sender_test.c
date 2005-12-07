@@ -47,7 +47,7 @@
  */
 #define DESTINATION_IP "127.0.0.1"
 
-void test_sender(tester_t *tester)
+void test_sender(protected_tester_t *tester)
 {
 	int i;
 	sender_t *sender;

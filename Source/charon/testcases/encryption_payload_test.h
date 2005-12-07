@@ -32,6 +32,6 @@
  * 
  * @ingroup testcases
  */
-void test_encryption_payload(tester_t *tester);
+void test_encryption_payload(protected_tester_t *tester);
 
 #endif /*ENCRYPTION_PAYLOAD_TEST_H_*/

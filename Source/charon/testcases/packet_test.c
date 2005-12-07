@@ -33,7 +33,7 @@
 /*
  * Described in Header 
  */
-void test_packet(tester_t *tester)
+void test_packet(protected_tester_t *tester)
 {
 	packet_t *packet = packet_create();
 	packet_t *packet2;

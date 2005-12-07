@@ -48,7 +48,7 @@
 /*
  * Described in Header 
  */
-void test_parser_with_header_payload(tester_t *tester)
+void test_parser_with_header_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	ike_header_t *ike_header;
@@ -97,7 +97,7 @@ void test_parser_with_header_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_sa_payload(tester_t *tester)
+void test_parser_with_sa_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	sa_payload_t *sa_payload;
@@ -411,7 +411,7 @@ void test_parser_with_sa_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_nonce_payload(tester_t *tester)
+void test_parser_with_nonce_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	nonce_payload_t *nonce_payload;
@@ -449,7 +449,7 @@ void test_parser_with_nonce_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_id_payload(tester_t *tester)
+void test_parser_with_id_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	id_payload_t *id_payload;
@@ -490,7 +490,7 @@ void test_parser_with_id_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_ke_payload(tester_t *tester)
+void test_parser_with_ke_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	ke_payload_t *ke_payload;
@@ -530,7 +530,7 @@ void test_parser_with_ke_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_notify_payload(tester_t *tester)
+void test_parser_with_notify_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	notify_payload_t *notify_payload;
@@ -575,7 +575,7 @@ void test_parser_with_notify_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_auth_payload(tester_t *tester)
+void test_parser_with_auth_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	auth_payload_t *auth_payload;
@@ -614,7 +614,7 @@ void test_parser_with_auth_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_ts_payload(tester_t *tester)
+void test_parser_with_ts_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	ts_payload_t *ts_payload;
@@ -701,7 +701,7 @@ void test_parser_with_ts_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_cert_payload(tester_t *tester)
+void test_parser_with_cert_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	cert_payload_t *cert_payload;
@@ -740,7 +740,7 @@ void test_parser_with_cert_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_certreq_payload(tester_t *tester)
+void test_parser_with_certreq_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	certreq_payload_t *certreq_payload;
@@ -779,7 +779,7 @@ void test_parser_with_certreq_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_delete_payload(tester_t *tester)
+void test_parser_with_delete_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	delete_payload_t *delete_payload;
@@ -822,7 +822,7 @@ void test_parser_with_delete_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_vendor_id_payload(tester_t *tester)
+void test_parser_with_vendor_id_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	vendor_id_payload_t *vendor_id_payload;
@@ -860,7 +860,7 @@ void test_parser_with_vendor_id_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_cp_payload(tester_t *tester)
+void test_parser_with_cp_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	cp_payload_t *cp_payload;
@@ -930,7 +930,7 @@ void test_parser_with_cp_payload(tester_t *tester)
 /*
  * Described in Header 
  */
-void test_parser_with_eap_payload(tester_t *tester)
+void test_parser_with_eap_payload(protected_tester_t *tester)
 {
 	parser_t *parser;
 	eap_payload_t *eap_payload;

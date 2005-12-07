@@ -31,7 +31,7 @@
 /* 
  * described in Header-File
  */
-void test_prf_plus(tester_t *tester)
+void test_prf_plus(protected_tester_t *tester)
 {
 	prf_plus_t *prf_plus;
 	prf_t *prf;
@@ -72,7 +72,7 @@ void test_prf_plus(tester_t *tester)
 	prf->destroy(prf);
 }
 
-void test_prf_plus_md5(tester_t *tester)
+void test_prf_plus_md5(protected_tester_t *tester)
 {
 	/* md5 test data 
 	u_int8_t nonce[] = {

@@ -38,7 +38,7 @@
  * 
  * @ingroup testcases
  */
-void test_linked_list(tester_t *tester);
+void test_linked_list(protected_tester_t *tester);
 
 /**
  * @brief Test function for the type linked_list_t and its iterator.
@@ -53,7 +53,7 @@ void test_linked_list(tester_t *tester);
  * 
  * @ingroup testcases
  */
-void test_linked_list_iterator(tester_t *tester);
+void test_linked_list_iterator(protected_tester_t *tester);
 
 /**
  * @brief Test function for the type linked_list_t and its insert and remove
@@ -69,6 +69,6 @@ void test_linked_list_iterator(tester_t *tester);
  * 
  * @ingroup testcases
  */
-void test_linked_list_insert_and_remove(tester_t *tester);
+void test_linked_list_insert_and_remove(protected_tester_t *tester);
 
 #endif /*LINKED_LIST_TEST_H_*/

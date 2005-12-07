@@ -35,7 +35,7 @@
 /* 
  * described in Header-File
  */
-void test_encryption_payload(tester_t *tester)
+void test_encryption_payload(protected_tester_t *tester)
 {
 	encryption_payload_t *encryption_payload;
 	nonce_payload_t *nonce_payload; 

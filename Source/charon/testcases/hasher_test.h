@@ -35,7 +35,7 @@
  * 
  * @ingroup testcases
  */
-void test_sha1_hasher(tester_t *tester);
+void test_sha1_hasher(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the Md5-hasher functionality.
@@ -44,6 +44,6 @@ void test_sha1_hasher(tester_t *tester);
  * 
  * @ingroup testcases
  */
-void test_md5_hasher(tester_t *tester);
+void test_md5_hasher(protected_tester_t *tester);
 
 #endif /*HASHER_TEST_H_*/

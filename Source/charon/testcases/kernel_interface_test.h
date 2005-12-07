@@ -32,7 +32,7 @@
  * 
  * @ingroup testcases
  */
-void test_kernel_interface(tester_t *tester);
+void test_kernel_interface(protected_tester_t *tester);
 
 
 #endif /*KERNEL_INTERFACE_TEST_H_*/

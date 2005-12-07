@@ -29,7 +29,7 @@
 /**
  * Described in header.
  */
-void test_init_config(tester_t *tester)
+void test_init_config(protected_tester_t *tester)
 {
 	init_config_t *init_config = init_config_create("192.168.0.1","192.168.0.2",500,500);
 	ike_proposal_t prop1, prop2, prop3, prop4, selected_one;

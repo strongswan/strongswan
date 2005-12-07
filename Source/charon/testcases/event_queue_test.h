@@ -34,6 +34,6 @@
  * 
  * @ingroup testcases
  */
-void test_event_queue(tester_t *tester);
+void test_event_queue(protected_tester_t *tester);
 
 #endif /*EVENT_QUEUE_TEST_H_*/

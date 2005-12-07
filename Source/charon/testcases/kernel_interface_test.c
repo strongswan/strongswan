@@ -33,7 +33,7 @@
 /* 
  * described in Header-File
  */
-void test_kernel_interface(tester_t *tester)
+void test_kernel_interface(protected_tester_t *tester)
 {
 	kernel_interface_t *kernel_interface;
 	u_int32_t spi;

@@ -28,10 +28,10 @@
 /**
  * @brief Test function used to test the packet_t functionality.
  *
- * @param tester 	associated tester_t object
+ * @param tester 	associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_packet(tester_t *tester);
+void test_packet(protected_tester_t *tester);
 
 #endif /*PACKET_TEST_H_*/

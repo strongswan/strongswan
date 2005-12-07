@@ -36,9 +36,9 @@ typedef struct send_queue_test_s send_queue_test_t;
 
 struct send_queue_test_s{
 	/**
-	 * Associated tester_t object
+	 * Associated protected_tester_t object
 	 */
-	tester_t *tester;
+	protected_tester_t *tester;
 
 	/**
 	 * Queue to test
@@ -95,7 +95,7 @@ static void test_send_queue_receiver(send_queue_test_t * testinfo)
 /*
  * description is in header file
  */
-void test_send_queue(tester_t *tester)
+void test_send_queue(protected_tester_t *tester)
 {
 	int desired_value, i;
 	int sender_count = 10;

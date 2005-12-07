@@ -35,7 +35,7 @@
  * 
  * @ingroup testcases
  */
-void test_rsa(tester_t *tester);
+void test_rsa(protected_tester_t *tester);
 
 
 #endif /*RSA_TEST_H*/

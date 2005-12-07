@@ -28,156 +28,156 @@
 /**
  * @brief Test function used to test the generator with header payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_header_payload(tester_t *tester);
+void test_generator_with_header_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with transform attribute payload.
  *
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_transform_attribute(tester_t *tester);
+void test_generator_with_transform_attribute(protected_tester_t *tester);
 
 
 /**
  * @brief Test function used to test the generator with transform substructure payload.
  *
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_transform_substructure(tester_t *tester);
+void test_generator_with_transform_substructure(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with proposal substructure payload.
  *
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_proposal_substructure(tester_t *tester);
+void test_generator_with_proposal_substructure(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with SA payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_sa_payload(tester_t *tester);
+void test_generator_with_sa_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with KE payload.
  *
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_ke_payload(tester_t *tester);
+void test_generator_with_ke_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with Notify payload.
  *
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_notify_payload(tester_t *tester);
+void test_generator_with_notify_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with Nonce payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_nonce_payload(tester_t *tester);
+void test_generator_with_nonce_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with ID payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_id_payload(tester_t *tester);
+void test_generator_with_id_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with AUTH payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_auth_payload(tester_t *tester);
+void test_generator_with_auth_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with TS payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_ts_payload(tester_t *tester);
+void test_generator_with_ts_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with CERT payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_cert_payload(tester_t *tester);
+void test_generator_with_cert_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with CERTREQ payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_certreq_payload(tester_t *tester);
+void test_generator_with_certreq_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with DELETE payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_delete_payload(tester_t *tester);
+void test_generator_with_delete_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with VENDOR ID payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_vendor_id_payload(tester_t *tester);
+void test_generator_with_vendor_id_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with CP payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_cp_payload(tester_t *tester);
+void test_generator_with_cp_payload(protected_tester_t *tester);
 
 /**
  * @brief Test function used to test the generator with EAP payload.
  * 
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_generator_with_eap_payload(tester_t *tester);
+void test_generator_with_eap_payload(protected_tester_t *tester);
 
 
 #endif /*GENERATOR_TEST_H_*/

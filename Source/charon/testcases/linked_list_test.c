@@ -29,7 +29,7 @@
  /*
  * Description in header-file
  */
-void test_linked_list(tester_t *tester)
+void test_linked_list(protected_tester_t *tester)
 {
 	void *test_value = NULL;
 
@@ -122,7 +122,7 @@ void test_linked_list(tester_t *tester)
  /*
  * Description in header-file
  */
-void test_linked_list_iterator(tester_t *tester)
+void test_linked_list_iterator(protected_tester_t *tester)
 {
 	void * value;
 
@@ -187,7 +187,7 @@ void test_linked_list_iterator(tester_t *tester)
  /*
  * Description in header-file
  */
-void test_linked_list_insert_and_remove(tester_t *tester)
+void test_linked_list_insert_and_remove(protected_tester_t *tester)
 {
 	void *value;
 	iterator_t * iterator;

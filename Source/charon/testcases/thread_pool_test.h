@@ -32,6 +32,6 @@
  * 
  * @ingroup testcases
  */
-void test_thread_pool(tester_t *tester);
+void test_thread_pool(protected_tester_t *tester);
 
 #endif /*THREAD_POOL_TEST_H_*/

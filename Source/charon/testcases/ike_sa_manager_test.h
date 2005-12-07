@@ -28,11 +28,11 @@
 /**
  * @brief Test function used to test the ike_sa_manager_t functionality.
  *
- * @param tester associated tester_t object
+ * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_ike_sa_manager(tester_t *tester);
+void test_ike_sa_manager(protected_tester_t *tester);
 
 
 

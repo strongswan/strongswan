@@ -32,6 +32,6 @@
  * 
  * @ingroup testcases
  */
-void test_scheduler(tester_t *tester);
+void test_scheduler(protected_tester_t *tester);
 
 #endif /*SCHEDULER_TEST_H_*/

@@ -42,9 +42,9 @@ typedef struct private_tester_t private_tester_t;
 struct private_tester_t {
  	
  	/**
- 	 * Public interface of tester_t.
+ 	 * Protected interface of tester_t.
  	 */
- 	tester_t public;
+ 	protected_tester_t protected;
 
 	/**
 	 * Runs a specific test.
@@ -53,7 +53,7 @@ struct private_tester_t {
 	 * @param test_function		test function to perform
 	 * @param test_name			name for the given test
 	 */
-	void (*run_test) (private_tester_t *tester, void (*test_function) (tester_t * tester), char * test_name);
+	void (*run_test) (private_tester_t *tester, void (*test_function) (protected_tester_t * tester), char * test_name);
 	
 	/**
 	 * Returns the difference of to timeval structs in microseconds.
@@ -159,7 +159,7 @@ static long time_difference(private_tester_t *this,struct timeval *end_time, str
 /**
  * Implementation of private_tester_t.run_test.
  */
-static void run_test(private_tester_t *this, void (*test_function) (tester_t * tester), char * test_name)
+static void run_test(private_tester_t *this, void (*test_function) (protected_tester_t * tester), char * test_name)
 {
 	struct timeval start_time, end_time;
 	long timediff;
@@ -167,7 +167,7 @@ static void run_test(private_tester_t *this, void (*test_function) (tester_t * t
 	this->failed_asserts_count = 0;
 	fprintf(this->output,"%-55s\n", test_name);
 	gettimeofday(&start_time,NULL);
-	test_function(&(this->public));
+	test_function(&(this->protected));
 	gettimeofday(&end_time,NULL);
 	timediff = this->time_difference(this,&end_time, &start_time);
 
@@ -215,7 +215,7 @@ static void assert_true(private_tester_t *this, bool to_be_true,char * assert_na
  */
 static void assert_false(private_tester_t *this, bool to_be_false,char * assert_name)
 {
-	this->public.assert_true(&(this->public),(!to_be_false),assert_name);
+	this->protected.assert_true(&(this->protected),(!to_be_false),assert_name);
 }
 
 /**
@@ -236,11 +236,11 @@ tester_t *tester_create(FILE *output, bool display_succeeded_asserts)
 	private_tester_t *this = allocator_alloc_thing(private_tester_t);
 
 	/* public functions */
-	this->public.destroy = (void (*) (tester_t *))destroy;
-	this->public.perform_tests = (void (*) (tester_t *, test_t**)) perform_tests;
-	this->public.perform_test = (void (*) (tester_t *, test_t*))perform_test;
-	this->public.assert_true =  (void (*) (tester_t *, bool, char*)) assert_true;
-	this->public.assert_false = (void (*) (tester_t *, bool, char*)) assert_false;
+	this->protected.public.destroy = (void (*) (tester_t *))destroy;
+	this->protected.public.perform_tests = (void (*) (tester_t *, test_t**)) perform_tests;
+	this->protected.public.perform_test = (void (*) (tester_t *, test_t*))perform_test;
+	this->protected.assert_true =  (void (*) (protected_tester_t *, bool, char*)) assert_true;
+	this->protected.assert_false = (void (*) (protected_tester_t *, bool, char*)) assert_false;
 	
 	/* private functions */
 	this->run_test = run_test;
@@ -253,5 +253,5 @@ tester_t *tester_create(FILE *output, bool display_succeeded_asserts)
 	this->output = output;
 	pthread_mutex_init(&(this->mutex),NULL);
 
-	return &(this->public);
+	return &(this->protected.public);
 }

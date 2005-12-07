@@ -33,7 +33,7 @@
  * 
  * @ingroup testcases
  */
-void test_prime_pool(tester_t *tester);
+void test_prime_pool(protected_tester_t *tester);
 
 
 #endif /*PRIME_POOL_TEST_H*/

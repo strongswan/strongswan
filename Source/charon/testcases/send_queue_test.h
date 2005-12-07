@@ -35,6 +35,6 @@
  * 
  * @ingroup testcases
  */
-void test_send_queue(tester_t *tester);
+void test_send_queue(protected_tester_t *tester);
 
 #endif /*SEND_QUEUE_TEST_H_*/

@@ -38,7 +38,7 @@
  * This one uses relative time events, which are not that exact.
  * Test may fail on too slow machines.
  */
-void test_scheduler(tester_t *tester)
+void test_scheduler(protected_tester_t *tester)
 {
 	int job_count = 5;
 	job_t *jobs[job_count];

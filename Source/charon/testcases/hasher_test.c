@@ -30,7 +30,7 @@
 /* 
  * described in Header-File
  */
-void test_md5_hasher(tester_t *tester)
+void test_md5_hasher(protected_tester_t *tester)
 {
 	/*
 	 * Test vectors from RFC1321:
@@ -96,7 +96,7 @@ void test_md5_hasher(tester_t *tester)
 /* 
  * described in Header-File
  */
-void test_sha1_hasher(tester_t *tester)
+void test_sha1_hasher(protected_tester_t *tester)
 {
 	/*
 	* 	Test Vectors (from FIPS PUB 180-1)

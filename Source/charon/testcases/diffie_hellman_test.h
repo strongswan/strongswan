@@ -32,6 +32,6 @@
  * 
  * @ingroup testcases
  */
-void test_diffie_hellman(tester_t *tester);
+void test_diffie_hellman(protected_tester_t *tester);
 
 #endif /*DIFFIE_HELLMAN_TEST_H_*/

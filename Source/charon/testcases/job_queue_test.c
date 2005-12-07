@@ -39,7 +39,7 @@ typedef struct job_queue_test_s job_queue_test_t;
  *
  */
 struct job_queue_test_s{
-	tester_t *tester;
+	protected_tester_t *tester;
 	job_queue_t *job_queue;
 	/**
 	 * number of items to be inserted in the job-queue
@@ -87,7 +87,7 @@ static void test_job_queue_receiver(job_queue_test_t * testinfo)
 /*
  * description is in header file
  */
-void test_job_queue(tester_t *tester)
+void test_job_queue(protected_tester_t *tester)
 {
 	int desired_value, i;
 	int sender_count = 10;

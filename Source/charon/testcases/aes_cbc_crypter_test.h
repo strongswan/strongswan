@@ -33,6 +33,6 @@
  * 
  * @ingroup testcases
  */
-void test_aes_cbc_crypter(tester_t *tester);
+void test_aes_cbc_crypter(protected_tester_t *tester);
 
 #endif //_AES_CBC_CRYPTER_TEST_H_

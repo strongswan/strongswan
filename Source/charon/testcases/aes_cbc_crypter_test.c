@@ -27,7 +27,7 @@
 #include <utils/allocator.h>
 #include <daemon.h>
 
-void test_aes_cbc_crypter(tester_t *tester)
+void test_aes_cbc_crypter(protected_tester_t *tester)
 {
 	/*
 	 * Test 1 of RFC3602
