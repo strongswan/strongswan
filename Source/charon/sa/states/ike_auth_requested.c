@@ -407,8 +407,7 @@ static status_t process_ts_payload(private_ike_auth_requested_t *this, bool ts_i
 	/* check if the responder selected valid proposals */
 	if (ts_selected_count != ts_received_count)
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained not offered traffic selectors. Deleting IKE_SA");
-		status = DELETE_ME;	
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained not offered traffic selectors.");
 	}
 	
 	/* cleanup */

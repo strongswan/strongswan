@@ -128,7 +128,7 @@ encoding_rule_t ts_payload_encodings[] = {
 static status_t verify(private_ts_payload_t *this)
 {
 	iterator_t *iterator;
-	status_t status = FAILED;
+	status_t status = SUCCESS;
 	
 	if (this->critical)
 	{
@@ -340,7 +340,7 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length =TS_PAYLOAD_HEADER_LENGTH;
 	this->is_initiator = is_initiator;
-	this->number_of_traffic_selectors=0;
+	this->number_of_traffic_selectors = 0;
 	this->traffic_selectors = linked_list_create();  
 
 	return &(this->public);

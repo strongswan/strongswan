@@ -292,20 +292,22 @@ static void load_default_config (private_configuration_manager_t *this)
 	proposals[0].integrity_algorithm_key_length = 16;
 	proposals[0].pseudo_random_function = PRF_HMAC_MD5;
 	proposals[0].pseudo_random_function_key_length = 16;
-	proposals[0].diffie_hellman_group = MODP_1024_BIT;
+	proposals[0].diffie_hellman_group = MODP_768_BIT;
 	
 	proposals[1] = proposals[0];
 	proposals[1].integrity_algorithm = AUTH_HMAC_SHA1_96;
 	proposals[1].integrity_algorithm_key_length = 20;
 	proposals[1].pseudo_random_function = PRF_HMAC_SHA1;
 	proposals[1].pseudo_random_function_key_length = 20;
+	proposals[1].diffie_hellman_group = MODP_1024_BIT;
 
-	init_config1->add_proposal(init_config1,1,proposals[0]);
 	init_config1->add_proposal(init_config1,1,proposals[1]);
-	init_config2->add_proposal(init_config2,1,proposals[0]);
+	init_config1->add_proposal(init_config1,1,proposals[0]);
 	init_config2->add_proposal(init_config2,1,proposals[1]);
-	init_config3->add_proposal(init_config3,1,proposals[0]);
+	init_config2->add_proposal(init_config2,1,proposals[0]);
 	init_config3->add_proposal(init_config3,1,proposals[1]);
+	init_config3->add_proposal(init_config3,1,proposals[0]);
+
 	
 	sa_config1 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
 								  ID_IPV4_ADDR, "152.96.193.131",

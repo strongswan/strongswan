@@ -414,9 +414,13 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	}
 	else
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any proposals. Deleting IKE_SA");
-		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
-		status = DELETE_ME;
+		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any proposals. Don't create CHILD_SA.");
+/*		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
+		status = DELETE_ME; */
+		sa_response = sa_payload_create();
+		response->add_payload(response, (payload_t*)sa_response);
+		
+		status = SUCCESS;
 	}
 	
 	
@@ -484,7 +488,9 @@ static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_
 	}
 	if(ts_selected_count == 0)
 	{
-		status = DELETE_ME;	
+		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any traffic selectors.");
+		ts_response = ts_payload_create(ts_initiator);
+		response->add_payload(response, (payload_t*)ts_response);
 	}
 	else
 	{
