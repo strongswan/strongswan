@@ -67,8 +67,7 @@ struct authenticator_t {
 	 * @todo Document RSA error status types
 	 * 
 	 * @return
-	 * 								- SUCCESS if verification could be processed
-	 * 									(does not mean the data could be verified)
+	 * 								- SUCCESS if verification successful
 	 * 								- FAILED if verification failed
 	 * 								- NOT_SUPPORTED if AUTH method not supported
 	 * 								- NOT_FOUND if the data for specific AUTH method could not be found 

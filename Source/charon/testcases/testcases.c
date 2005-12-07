@@ -59,7 +59,6 @@
 #include <testcases/init_config_test.h>
 #include <testcases/sa_config_test.h>
 #include <testcases/rsa_test.h>
-#include <testcases/prime_pool_test.h>
 #include <testcases/kernel_interface_test.h>
 
 /* output for test messages */
@@ -124,7 +123,6 @@ test_t encryption_payload_test = {test_encryption_payload, "encryption payload t
 test_t init_config_test = {test_init_config, "init_config_t test"};
 test_t sa_config_test = {test_sa_config, "sa_config_t test"};
 test_t rsa_test = {test_rsa, "RSA private/public key test"};
-test_t prime_pool_test = {test_prime_pool, "Prime pool"};
 test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 
 
@@ -136,7 +134,6 @@ static void daemon_kill(daemon_t *this, char* none)
 	this->socket->destroy(this->socket);
 	this->ike_sa_manager->destroy(this->ike_sa_manager);
 	this->job_queue->destroy(this->job_queue);
-	this->prime_pool->destroy(this->prime_pool);
 	this->event_queue->destroy(this->event_queue);
 	this->send_queue->destroy(this->send_queue);
 	this->configuration_manager->destroy(this->configuration_manager);
@@ -161,7 +158,6 @@ daemon_t *daemon_create()
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
 	charon->send_queue = send_queue_create();
-	charon->prime_pool = prime_pool_create(0);
 	charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT,HALF_OPEN_IKE_SA_TIMEOUT);
 	charon->sender = NULL;
 	charon->receiver = NULL;
@@ -236,7 +232,6 @@ int main()
 		&init_config_test,
 		&sa_config_test,
 		&rsa_test,
-		&prime_pool_test,
 		NULL
 	};
 	
@@ -252,7 +247,7 @@ int main()
 	
 
 	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&packet_test); 
+//	tester->perform_test(tester,&rsa_test); 
 	
 	
 	tester->destroy(tester);

@@ -58,7 +58,7 @@ void test_rsa(protected_tester_t *tester)
 	
 	private_key = rsa_private_key_create();
 	
-	private_key->generate_key(private_key, 1024);
+	private_key->generate_key(private_key, 512);
 	
 	status = private_key->build_emsa_pkcs1_signature(private_key, HASH_MD5, data, &signature);
 	tester->assert_true(tester, status == SUCCESS, "build emsa_pkcs1_signature");

@@ -123,7 +123,48 @@ struct private_rsa_private_key_t {
 	 */
 	chunk_t (*rsasp1) (private_rsa_private_key_t *this, chunk_t data);
 	
+	/**
+	 * @brief Generate a prime value.
+	 * 
+	 * @param this		calling object
+	 * @param prime_size size of the prime, in bytes
+	 * @param[out] prime uninitialized mpz
+	 */
+	void (*compute_prime) (private_rsa_private_key_t *this, size_t prime_size, mpz_t *prime);
+	
 };
+
+/**
+ * Implementation of private_rsa_private_key_t.compute_prime.
+ */
+static void compute_prime(private_rsa_private_key_t *this, size_t prime_size, mpz_t *prime)
+{
+	randomizer_t *randomizer;
+	chunk_t random_bytes;
+	
+	randomizer = randomizer_create();
+	mpz_init(*prime);
+	
+	do
+	{
+		randomizer->allocate_random_bytes(randomizer, prime_size, &random_bytes);
+		
+		/* make sure most significant bit is set */
+		random_bytes.ptr[0] = random_bytes.ptr[0] | 0x80;
+		
+		/* convert chunk to mpz value */
+		mpz_import(*prime, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
+
+		/* get next prime */
+		mpz_nextprime (*prime, *prime);
+
+		allocator_free(random_bytes.ptr);
+	}
+	/* check if it isnt too large */
+	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
+	
+	randomizer->destroy(randomizer);
+}
 
 /**
  * Implementation of private_rsa_private_key_t.rsadp and private_rsa_private_key_t.rsasp1.
@@ -406,8 +447,8 @@ static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
 	mpz_init(coeff);
 	
 	/* Get values of primes p and q  */
-	charon->prime_pool->get_prime(charon->prime_pool, key_size/2, &p);
-	charon->prime_pool->get_prime(charon->prime_pool, key_size/2, &q);
+	this->compute_prime(this, key_size/2, &p);
+	this->compute_prime(this, key_size/2, &q);
 
 	/* Swapping Primes so p is larger then q */
 	if (mpz_cmp(p, q) < 0) 					
@@ -541,6 +582,7 @@ rsa_private_key_t *rsa_private_key_create(hash_algorithm_t hash_algoritm)
 	/* private functions */
 	this->rsadp = rsadp;
 	this->rsasp1 = rsadp; /* same algorithm */
+	this->compute_prime = compute_prime;
 	
 	this->is_key_set = FALSE;
 	
