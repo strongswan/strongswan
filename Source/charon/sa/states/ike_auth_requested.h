@@ -39,6 +39,10 @@ typedef struct ike_auth_requested_t ike_auth_requested_t;
  * @ Constructors:
  *  - ike_auth_requested_create()
  * 
+ * @todo handle certificate payloads
+ * 
+ * @todo setup child SAs, if requested
+ * 
  * @ingroup states
  */
 struct ike_auth_requested_t {
@@ -55,7 +59,7 @@ struct ike_auth_requested_t {
  * @param ike_sa					assigned ike_sa object
  * @param sent_nonce				Sent nonce value in IKE_SA_INIT request
  * @param received_nonce			Received nonce value in IKE_SA_INIT response
- * @param ike_sa_init_reply_data		binary representation of IKE_SA_INIT reply 
+ * @param ike_sa_init_reply_data	binary representation of IKE_SA_INIT reply 
  * @return							created ike_auth_requested_t object
  * 
  * @ingroup states

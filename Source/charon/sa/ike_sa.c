@@ -845,6 +845,45 @@ static status_t send_response (private_ike_sa_t *this,message_t * message)
 }
 
 /**
+ * Implementation of of private_responder_init_t.send_notify_reply.
+ */
+static void send_notify(private_ike_sa_t *this, exchange_type_t exchange_type, notify_message_type_t type, chunk_t data)
+{
+	notify_payload_t *payload;
+	message_t *response;
+	packet_t *packet;
+	status_t status;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message with notify payload");
+	/* set up the reply */
+	this->protected.build_message(&(this->protected), exchange_type, FALSE, &response);
+	payload = notify_payload_create_from_protocol_and_type(IKE,type);
+	if ((data.ptr != NULL) && (data.len > 0))
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Add Data to notify payload");
+		payload->set_notification_data(payload,data);
+	}
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add Notify payload to message");
+	response->add_payload(response,(payload_t *) payload);
+	
+	/* generate packet */	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Gnerate packet from message");
+	status = response->generate(response, this->crypter_responder, this->signer_responder, &packet);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1, "Could not generate notify message");
+		response->destroy(response);
+		return;
+	}
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add packet to global send queue");
+	charon->send_queue->add(charon->send_queue, packet);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy message");
+	response->destroy(response);
+}
+
+/**
  * Implementation of protected_ike_sa_t.set_last_replied_message_id.
  */
 static void set_last_replied_message_id (private_ike_sa_t *this,u_int32_t message_id)
@@ -1050,6 +1089,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_randomizer = (randomizer_t *(*) (protected_ike_sa_t *)) get_randomizer;
 	this->protected.send_request = (status_t (*) (protected_ike_sa_t *,message_t *)) send_request;
 	this->protected.send_response = (status_t (*) (protected_ike_sa_t *,message_t *)) send_response;
+	this->protected.send_notify = (void (*)(protected_ike_sa_t*,exchange_type_t,notify_message_type_t,chunk_t)) send_notify;
 	this->protected.create_transforms_from_proposal = (status_t (*) (protected_ike_sa_t *,ike_proposal_t *)) create_transforms_from_proposal;
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
 	this->protected.get_crypter_initiator = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_initiator;

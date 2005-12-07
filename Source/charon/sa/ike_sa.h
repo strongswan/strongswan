@@ -288,6 +288,16 @@ struct protected_ike_sa_t {
 	 * 							- FAILED if message id is not next expected one
 	 */
 	status_t (*send_response) (protected_ike_sa_t *this,message_t * message);
+
+	/**
+	 * @brief Send a notify reply message.
+	 * 
+	 * @param this 				calling object
+	 * @param exchange_type		type of exchange in which the notify should be wrapped
+	 * @param type				type of the notify message to send
+	 * @param data				notification data
+	 */
+	void (*send_notify) (protected_ike_sa_t *this, exchange_type_t exchange_type, notify_message_type_t type, chunk_t data);
 	
 	/**
 	 * @brief Get the internal stored randomizer_t object.

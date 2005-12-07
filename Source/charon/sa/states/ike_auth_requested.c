@@ -123,7 +123,18 @@ struct private_ike_auth_requested_t {
 	 * 						- DELETE_ME
 	 */
 	status_t (*process_ts_payload) (private_ike_auth_requested_t *this, bool ts_initiator, ts_payload_t *ts_payload);
-	 
+	
+	/**
+	 * Process a notify payload
+	 * 
+	 * @param this			calling object
+	 * @param ts_initiator	TRUE if TS payload is TSi, FALSE for TSr
+	 * @param ts_payload	TS payload of responder
+	 *
+	 * 						- SUCCESS
+	 * 						- DELETE_ME
+	 */
+	status_t (*process_notify_payload) (private_ike_auth_requested_t *this, notify_payload_t *notify_payload);
 };
 
 
@@ -132,14 +143,15 @@ struct private_ike_auth_requested_t {
  */
 static status_t process_message(private_ike_auth_requested_t *this, message_t *ike_auth_reply)
 {
-	ts_payload_t *tsi_payload, *tsr_payload;
+	ts_payload_t *tsi_payload = NULL, *tsr_payload = NULL;
 	id_payload_t *idr_payload = NULL;
-	auth_payload_t *auth_payload;
-	sa_payload_t *sa_payload;
-	iterator_t *payloads;
-	crypter_t *crypter;
-	signer_t *signer;
+	auth_payload_t *auth_payload = NULL;
+	sa_payload_t *sa_payload = NULL;
+	iterator_t *payloads = NULL;
+	crypter_t *crypter = NULL;
+	signer_t *signer = NULL;
 	status_t status;
+	host_t *my_host, *other_host;
 	
 	if (ike_auth_reply->get_exchange_type(ike_auth_reply) != IKE_AUTH)
 	{
@@ -150,7 +162,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	
 	if (ike_auth_reply->get_request(ike_auth_reply))
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Only responses of type IKE_AUTH supported in state ike_auth_requested");
+		this->logger->log(this->logger, ERROR | LEVEL1, "IKE_AUTH requests not allowed state ike_sa_init_responded");
 		return FAILED;
 	}
 	
@@ -162,13 +174,15 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	status = ike_auth_reply->parse_body(ike_auth_reply, crypter, signer);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Could not parse body of request message");
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply decryption faild. Ignoring message");
 		return status;
 	}
 	
 	this->sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	
-	/* iterate over incoming payloads. Message is verified, we can be sure there are the required payloads */
+	/* we collect all payloads, which are processed later. Notify's are processed 
+	 * in place, since we don't know how may are there.
+	 */
 	payloads = ike_auth_reply->get_payload_iterator(ike_auth_reply);
 	while (payloads->has_next(payloads))
 	{
@@ -192,11 +206,6 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 				sa_payload = (sa_payload_t*)payload;
 				break;
 			}
-			case CERTIFICATE:
-			{
-				/* TODO handle cert payloads */
-				break;
-			}
 			case TRAFFIC_SELECTOR_INITIATOR:
 			{
 				tsi_payload = (ts_payload_t*)payload;				
@@ -210,116 +219,73 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 			case NOTIFY:
 			{
 				notify_payload_t *notify_payload = (notify_payload_t *) payload;
-				
-				
-				this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
-								  mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)),
-								  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
-								  
-				if (notify_payload->get_protocol_id(notify_payload) != IKE)
+				/* handle the notify directly, abort if no further processing required */
+				status = this->process_notify_payload(this, notify_payload);
+				if (status != SUCCESS)
 				{
-					this->logger->log(this->logger, ERROR | LEVEL1, "Notify reply not for IKE protocol");
 					payloads->destroy(payloads);
-					return DELETE_ME;	
+					return status;
 				}
-				
-				switch (notify_payload->get_notify_message_type(notify_payload))
-				{
-					case INVALID_SYNTAX:
-					{
-						this->logger->log(this->logger, ERROR, "Going to destroy IKE_SA");
-						payloads->destroy(payloads);
-						return DELETE_ME;	
-						
-					}
-					case AUTHENTICATION_FAILED:
-					{
-						this->logger->log(this->logger, ERROR, "Keys invalid?. Going to destroy IKE_SA");
-						payloads->destroy(payloads);
-						return DELETE_ME;	
-						
-					}
-					case SINGLE_PAIR_REQUIRED:
-					{
-						this->logger->log(this->logger, ERROR, "Please reconfigure CHILD_SA. Going to destroy IKE_SA");
-						payloads->destroy(payloads);
-						return DELETE_ME;		
-					}
-					default:
-					{
-						/*
-						 * - In case of unknown error: IKE_SA gets destroyed.
-						 * - In case of unknown status: logging
-						 * 
-						 */
-						notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
-						if (notify_message_type < 16383)
-						{
-							this->logger->log(this->logger, ERROR, "Notify error type %d not recognized in state IKE_AUTH_REQUESTED.",
-											  notify_message_type);
-							payloads->destroy(payloads);
-							return DELETE_ME;	
-
-						}
-						else
-						{
-							this->logger->log(this->logger, ERROR, "Notify status type %d not handled in state IKE_AUTH_REQUESTED.",
-											  notify_message_type);
-							break;
-						}
-					}
-				}
+			}
+			case CERTIFICATE:
+			{
+				/* TODO handle cert payloads */
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "Payload id %d not handled in state IKE_AUTH_REQUESTED", payload->get_type(payload));
+				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
+									mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
 				break;
 			}
 		}
 	}
 	/* iterator can be destroyed */
 	payloads->destroy(payloads);
+	
+	/* check if we have all payloads */
+	if (!(idr_payload && sa_payload && auth_payload && tsi_payload && tsr_payload))
+	{
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply did not contain all required payloads. Deleting IKE_SA");
+		return DELETE_ME;
+	}
 
 	/* process all payloads */
 	status = this->process_idr_payload(this, idr_payload);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Processing idr payload failed");
 		return status;
 	}
 	status = this->process_sa_payload(this, sa_payload);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Processing sa payload failed");
 		return status;
 	}
 	status = this->process_auth_payload(this, auth_payload,idr_payload);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Processing auth payload failed");
 		return status;
 	}
 	status = this->process_ts_payload(this, TRUE, tsi_payload);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Processing tsi payload failed");
 		return status;
 	}
 	status = this->process_ts_payload(this, FALSE, tsr_payload);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Processing tsr payload failed");
 		return status;
 	}
 
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_auth_reply->get_message_id(ike_auth_reply));
-	this->logger->log(this->logger, CONTROL | LEVEL1, "IKE_AUTH response successfully handled. IKE_SA established.");
-	
 	/* create new state */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
 	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
-
 	this->public.state_interface.destroy(&(this->public.state_interface));
+	
+	my_host = this->ike_sa->get_my_host(this->ike_sa);
+	other_host = this->ike_sa->get_other_host(this->ike_sa);
+	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s", 
+						my_host->get_address(my_host), other_host->get_address(other_host));
 	return SUCCESS;
 }
 
@@ -335,20 +301,20 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 	configured_other_id = this->sa_config->get_other_id(this->sa_config);
 	if (configured_other_id)
 	{
-		this->logger->log(this->logger, CONTROL, "configured ID: %s, ID of responder: %s",
+		this->logger->log(this->logger, CONTROL|LEVEL1, "configured ID: %s, ID of responder: %s",
 							configured_other_id->get_string(configured_other_id),
 							other_id->get_string(other_id));
 
 		if (!other_id->equals(other_id, configured_other_id))
 		{
 			other_id->destroy(other_id);
-			this->logger->log(this->logger, ERROR, "IKE_AUTH reply didn't contain requested id");
+			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not requested ID. Deleting IKE_SA");
 			return DELETE_ME;	
 		}
 	}
 	
 	other_id->destroy(other_id);
-	/* TODO do we have to store other_id  somewhere ? */
+	/* TODO do we have to store other_id somewhere ? */
 	return SUCCESS;
 }
 
@@ -369,20 +335,21 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 	status = sa_payload->get_child_proposals(sa_payload, &proposals, &proposal_count);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "responders sa payload contained no proposals");
-		return DELETE_ME;
+		/* there are no proposals. This is possible if the requester doesn't want to setup a child sa */
+		this->logger->log(this->logger, CONTROL, "Responders SA_PAYLOAD contained no proposals, no CHILD_SA is built");
+		return SUCCESS;
 	}
 	if (proposal_count > 1)
 	{
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply's SA_PAYLOAD contained more than one proposal. Deleting IKE_SA");
 		allocator_free(proposals);
-		this->logger->log(this->logger, ERROR, "responders sa payload contained more than one proposal");
 		return DELETE_ME;
 	}
 	
 	proposal_chosen = this->sa_config->select_proposal(this->sa_config, ah_spi, esp_spi, proposals, proposal_count);
 	if (proposal_chosen == NULL)
 	{
-		this->logger->log(this->logger, ERROR, "responder selected an not offered proposal");
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not offered proposal. Deleting IKE_SA");
 		allocator_free(proposals);
 		return DELETE_ME;
 	}
@@ -404,18 +371,16 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
 	authenticator_t *authenticator;
 	status_t status;
 		
-	/* TODO VERIFY auth here */
 	authenticator = authenticator_create(this->ike_sa);
-
 	status = authenticator->verify_auth_data(authenticator,auth_payload,this->ike_sa_init_reply_data,this->sent_nonce,other_id_payload,FALSE);
 	authenticator->destroy(authenticator);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not verify AUTH data. Error status: %s",mapping_find(status_m,status));
+		this->logger->log(this->logger, AUDIT, "Verification of IKE_AUTH reply failed. Deleting IKE_SA");
 		return DELETE_ME;	
 	}
 
-	this->logger->log(this->logger, CONTROL | LEVEL1, "AUTH data verified");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "AUTH data verified successfully");
 	return SUCCESS;	
 }
 
@@ -442,7 +407,7 @@ static status_t process_ts_payload(private_ike_auth_requested_t *this, bool ts_i
 	/* check if the responder selected valid proposals */
 	if (ts_selected_count != ts_received_count)
 	{
-		this->logger->log(this->logger, ERROR, "responder selected invalid traffic selectors");
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained not offered traffic selectors. Deleting IKE_SA");
 		status = DELETE_ME;	
 	}
 	
@@ -461,6 +426,66 @@ static status_t process_ts_payload(private_ike_auth_requested_t *this, bool ts_i
 	allocator_free(ts_selected);
 	return status;
 }
+
+/**
+ * Implements private_ike_auth_requested_t.process_notify_payload
+ */
+static status_t process_notify_payload(private_ike_auth_requested_t *this, notify_payload_t *notify_payload)
+{
+	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
+	
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
+							  mapping_find(notify_message_type_m, notify_message_type),
+							  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
+							  
+	if (notify_payload->get_protocol_id(notify_payload) != IKE)
+	{
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a notify for an invalid protocol. Deleting IKE_SA");
+		return DELETE_ME;
+	}
+	
+	switch (notify_message_type)
+	{
+		case INVALID_SYNTAX:
+		{
+			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an INVALID_SYNTAX notify. Deleting IKE_SA");
+			return DELETE_ME;	
+			
+		}
+		case AUTHENTICATION_FAILED:
+		{
+			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an AUTHENTICATION_FAILED notify. Deleting IKE_SA");
+			return DELETE_ME;	
+			
+		}
+		case SINGLE_PAIR_REQUIRED:
+		{
+			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a SINGLE_PAIR_REQUIRED notify. Deleting IKE_SA");
+			return DELETE_ME;		
+		}
+		default:
+		{
+			/*
+			 * - In case of unknown error: IKE_SA gets destroyed.
+			 * - In case of unknown status: logging
+			 */
+			
+			if (notify_message_type < 16383)
+			{
+				this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an unknown notify error (%d). Deleting IKE_SA",
+								  notify_message_type);
+				return DELETE_ME;	
+
+			}
+			else
+			{
+				this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an unknown notify (%d), ignored.", notify_message_type);
+				return SUCCESS;
+			}
+		}
+	}	
+}
+
 /**
  * Implements state_t.get_state
  */
@@ -498,6 +523,7 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk
 	this->process_sa_payload = process_sa_payload;
 	this->process_auth_payload = process_auth_payload;
 	this->process_ts_payload = process_ts_payload;
+	this->process_notify_payload = process_notify_payload;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

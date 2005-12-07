@@ -39,6 +39,10 @@ typedef struct ike_sa_init_responded_t ike_sa_init_responded_t;
  * @b Constructors:
  *  - ike_sa_init_response_data()
  * 
+ * @todo Implement handling of SET_WINDOW_SIZE notify
+ * 
+ * @todo Implement handling of INITIAL_CONTACT notify
+ * 
  * @ingroup states
  */
 struct ike_sa_init_responded_t {

@@ -32,6 +32,15 @@ typedef struct ike_sa_established_t ike_sa_established_t;
  * @brief This class represents an the state of an established
  * IKE_SA.
  * 
+ * @b Constructors:
+ * - ike_sa_established_create()
+ * 
+ * @todo Implement handling of CREATE_CHILD_SA requests
+ * 
+ * @todo Implement initialization of CREATE_CHILD_SA requests
+ * 
+ * @todo Implement handling of any other message
+ * 
  * @ingroup states
  */
 struct ike_sa_established_t {
@@ -43,7 +52,7 @@ struct ike_sa_established_t {
 };
 
 /**
- * Constructor of class ike_sa_established_t
+ * @brief Constructor of class ike_sa_established_t
  * 
  * @param ike_sa 	assigned ike_sa
  * @return			created ike_sa_established_t object
