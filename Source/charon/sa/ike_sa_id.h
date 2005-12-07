@@ -21,121 +21,126 @@
  */
 
 
-#ifndef IKE_SA_ID_H_
-#define IKE_SA_ID_H_
+#ifndef _IKE_SA_ID_H_
+#define _IKE_SA_ID_H_
 
-#include "types.h"
+#include <types.h>
+
 
 typedef struct ike_sa_id_t ike_sa_id_t;
 
 /**
- * @brief This class is used to identify an IKE_SA.
+ * @brief An object of type ike_sa_id_t is used to identify an IKE_SA.
  *
  * An IKE_SA is identified by its initiator and responder spi's.
  * Additionaly it contains the role of the actual running IKEv2-Daemon
- * for the specific IKE_SA.
+ * for the specific IKE_SA (original initiator or responder).
+ * 
+ * @b Constructors:
+ *  - ike_sa_id_create()
  * 
  * @ingroup sa
  */
 struct ike_sa_id_t {
 
 	/**
-	 * @brief Sets the SPI of the responder.
+	 * @brief Set the SPI of the responder.
 	 *
 	 * This function is called when a request or reply of a IKE_SA_INIT is received.
 	 *
-	 * @param this 				ike_sa_id_t object
+	 * @param this 				calling object
 	 * @param responder_spi 	SPI of responder to set
 	 */
 	void (*set_responder_spi) (ike_sa_id_t *this, u_int64_t responder_spi);
 
 	/**
-	 * @brief Sets the SPI of the initiator.
+	 * @brief Set the SPI of the initiator.
 	 *
-	 *
-	 * @param this 				ike_sa_id_t object
+	 * @param this 				calling object
 	 * @param initiator_spi 	SPI to set
 	 */
 	void (*set_initiator_spi) (ike_sa_id_t *this, u_int64_t initiator_spi);
 
 	/**
-	 * @brief Returns the initiator spi.
+	 * @brief Get the initiator SPI.
 	 *
-	 * @param this 				ike_sa_id_t object
-	 * @return 					spi of the initiator
+	 * @param this 				calling object
+	 * @return 					SPI of the initiator
 	 */
 	u_int64_t (*get_initiator_spi) (ike_sa_id_t *this);
 
 	/**
-	 * @brief Returns the responder spi.
+	 * @brief Get the responder SPI.
 	 *
-	 * @param this 				ike_sa_id_t object
-	 * @return 					spi of the responder
+	 * @param this 				calling object
+	 * @return 					SPI of the responder
 	 */
 	u_int64_t (*get_responder_spi) (ike_sa_id_t *this);
 
 	/**
-	 * @brief Check if two ike_sa_ids are equal.
+	 * @brief Check if two ike_sa_id_t objects are equal.
+	 * 
+	 * Two ike_sa_id_t objects are equal if both SPI values and the role matches.
 	 *
-	 * @param this 				ike_sa_id_t object
- 	 * @param other 			ike_sa_id object to check if equal
- 	 * @return 					TRUE if given ike_sa_ids are equal, FALSE otherwise
+	 * @param this 				calling object
+ 	 * @param other 			ike_sa_id_t object to check if equal
+ 	 * @return 					TRUE if given ike_sa_id_t are equal, FALSE otherwise
 	 */
 	bool (*equals) (ike_sa_id_t *this, ike_sa_id_t *other);
 
 	/**
-	 * @brief Replace the values of a given ike_sa_id_t object with values.
+	 * @brief Replace all values of a given ike_sa_id_t object with values.
 	 * from another ike_sa_id_t object.
+	 * 
+	 * After calling this function, both objects are equal.
 	 *
-	 * @param this 				ike_sa_id_t object
- 	 * @param other 			ike_sa_id_t object which values will be taken
+	 * @param this 				calling object
+ 	 * @param other 			ike_sa_id_t object from which values will be taken
 	 */
 	void (*replace_values) (ike_sa_id_t *this, ike_sa_id_t *other);
 
 	/**
-	 * @brief gets the initiator flag.
+	 * @brief Get the initiator flag.
 	 *
-	 * @param this 				ike_sa_id_t object
+	 * @param this 				calling object
 	 * @return 					TRUE if we are the original initator
 	 */
 	bool (*is_initiator) (ike_sa_id_t *this);
 
 	/**
-	 * @brief switches the initiator flag.
+	 * @brief Switche the original initiator flag.
 	 * 
-	 * @param this 				ike_sa_id_t object
-	 * @return 					TRUE if we are the original initator after switch
+	 * @param this 				calling object
+	 * @return 					TRUE if we are the original initator after switch, FALSE otherwise
 	 */
 	bool (*switch_initiator) (ike_sa_id_t *this);
 
 	/**
 	 * @brief Clones a given ike_sa_id_t object.
 	 *
-	 * @param this				ike_sa_id_t object
-	 * @return 					cloned ike_sa_id
+	 * @param this				calling object
+	 * @return 					cloned ike_sa_id_t object
 	 */
 	ike_sa_id_t *(*clone) (ike_sa_id_t *this);
 
 	/**
-	 * @brief Destroys a ike_sa_id_tobject.
+	 * @brief Destroys an ike_sa_id_t object.
 	 *
-	 * @param this 				ike_sa_id_t object
+	 * @param this 				calling object
 	 */
 	void (*destroy) (ike_sa_id_t *this);
 };
 
 /**
- * @brief Creates an ike_sa_id_t object with specific spi's and defined role
+ * @brief Creates an ike_sa_id_t object with specific SPI's and defined role.
  *
- * @warning The initiator SPI and role is not changeable after initiating a ike_sa_id object
- * 
- * @param initiator_spi			initiators spi
- * @param responder_spi			responders spi
+ * @param initiator_spi			initiators SPI
+ * @param responder_spi			responders SPI
  * @param is_initiator			TRUE if we are the original initiator
- * @return						created ike_sa_id_t object
+ * @return						ike_sa_id_t object
  * 
  * @ingroup sa
  */
 ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi, bool is_initiaor);
 
-#endif /*IKE_SA_ID_H_*/
+#endif /*_IKE_SA_ID_H_*/
