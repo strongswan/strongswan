@@ -182,7 +182,6 @@ static void initialize(private_daemon_t *this)
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();
-	this->public.prime_pool = prime_pool_create(PRIME_PRE_COMPUTATION_LIMIT);
 	this->public.thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
 }
 
@@ -206,10 +205,6 @@ static void destroy(private_daemon_t *this)
 	if (this->public.thread_pool != NULL)
 	{
 		this->public.thread_pool->destroy(this->public.thread_pool);	
-	}
-	if (this->public.prime_pool != NULL)
-	{
-		this->public.prime_pool->destroy(this->public.prime_pool);	
 	}
 	if (this->public.job_queue != NULL)
 	{

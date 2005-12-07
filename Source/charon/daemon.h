@@ -26,7 +26,6 @@
 #include <threads/sender.h>
 #include <threads/receiver.h>
 #include <threads/scheduler.h>
-#include <threads/prime_pool.h>
 #include <threads/thread_pool.h>
 #include <network/socket.h>
 #include <sa/ike_sa_manager.h>
@@ -150,11 +149,6 @@ struct daemon_t {
 	 * The Thread pool managing the worker threads.
 	 */
 	thread_pool_t *thread_pool;
-	
-	/**
-	 * Low-priority thread which generates primes.
-	 */
-	prime_pool_t *prime_pool;
 	
 	/**
 	 * @brief Shut down the daemon.
