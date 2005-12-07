@@ -55,8 +55,6 @@ static void test3_thread(ike_sa_id_t *ike_sa_id)
 	
 	status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
 	td.tester->assert_true(td.tester, (status == NOT_FOUND), "IKE_SA already deleted");
-	
-	ike_sa_id->destroy(ike_sa_id);
 }
 
 
@@ -160,22 +158,14 @@ void test_ike_sa_manager(protected_tester_t *tester)
 	/* Third Test:
 	 * put in a lot of IKE_SAs, check it out, set a thread waiting
 	 * and destroy the manager...
-	 */
-	
-	memset(&initiator, 0, sizeof(initiator));
-	memset(&responder, 0, sizeof(responder));
-	
+	 */	
 	thread_count = sa_count;
 	
 	for (i = 0; i < sa_count; i++) 
-	{
-		initiator = i + 1;
-		ike_sa_id = ike_sa_id_create(initiator, responder, FALSE);
-		
-		status = td.isam->checkout(td.isam, ike_sa_id, &ike_sa);
-		tester->assert_true(tester, (status == SUCCESS), "checkout unexisting IKE_SA 3");
+	{		
+		td.isam->create_and_checkout(td.isam, &ike_sa);
 
-		if (pthread_create(&threads[i], NULL, (void*(*)(void*))test3_thread, (void*)ike_sa_id))
+		if (pthread_create(&threads[i], NULL, (void*(*)(void*))test3_thread, (void*)ike_sa->get_id(ike_sa)))
 		{
 			/* failed, decrease list */
 			thread_count--;
@@ -191,7 +181,5 @@ void test_ike_sa_manager(protected_tester_t *tester)
 	{
 		pthread_join(threads[i], NULL);
 	}
-	
-	
 }
 
