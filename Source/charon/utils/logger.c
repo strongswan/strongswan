@@ -97,6 +97,10 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
 	{
 		log_type = '?';
 	}
+	else if (loglevel & AUDIT)
+	{
+		log_type = '>';
+	}
 	else
 	{
 		log_type = '-';

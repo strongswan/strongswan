@@ -24,16 +24,16 @@
 #define _AUTHENTICATOR_H_
 
 #include <types.h>
+#include <sa/ike_sa.h>
+#include <network/packet.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/id_payload.h>
-#include <network/packet.h>
-#include <sa/ike_sa.h>
 
 
 typedef struct authenticator_t authenticator_t;
 
 /**
- * @brief Class authenticator_t. Used to authenticate a peer.
+ * @brief Class used to authenticate a peer.
  * 
  * Currently the following two AUTH methods are supported:
  *  - SHARED_KEY_MESSAGE_INTEGRITY_CODE
@@ -41,7 +41,10 @@ typedef struct authenticator_t authenticator_t;
  * 
  * This class retrieves needed data for specific AUTH methods (RSA keys, shared secrets, etc.)
  * over an internal stored protected_ike_sa_t object or directly from the configuration_manager_t over
- * the daemon_t object charon.
+ * the daemon_t object "charon".
+ * 
+ * @b Constructors:
+ *  - authenticator_create()
  * 
  * @ingroup sa
  */
@@ -55,18 +58,21 @@ struct authenticator_t {
 	 * - the nonce value sent to the other peer
 	 * - the ID payload of the other peer
 	 *
-	 * @param this 					authenticator_t object
+	 * @param this 					calling object
 	 * @param last_received_packet	binary representation of the last received IKEv2-Message
-	 * @param my_nonce				The sent nonce (without payload header)
-	 * @param other_id_payload		The ID payload received from other peer
-	 * @param initiator				Type of other peer. TRUE, if it is original initiator, FALSE otherwise
+	 * @param my_nonce				the sent nonce (without payload header)
+	 * @param other_id_payload		the ID payload received from other peer
+	 * @param initiator				type of other peer. TRUE, if it is original initiator, FALSE otherwise
+	 * 
+	 * @todo Document RSA error status types
 	 * 
 	 * @return
-	 * 								- SUCCESS if verification could be processed (does not mean the data could be verified)
+	 * 								- SUCCESS if verification could be processed
+	 * 									(does not mean the data could be verified)
 	 * 								- FAILED if verification failed
 	 * 								- NOT_SUPPORTED if AUTH method not supported
-	 * 								- NOT_FOUND if the data for specific AUTH method could not be found (e.g. shared secret, rsa key)
-	 * 								- TODO rsa errors!!
+	 * 								- NOT_FOUND if the data for specific AUTH method could not be found 
+	 * 									(e.g. shared secret, rsa key)
 	 */
 	status_t (*verify_auth_data) (authenticator_t *this,
 									auth_payload_t *auth_payload, 
@@ -83,18 +89,19 @@ struct authenticator_t {
 	 * - the nonce value received from the other peer
 	 * - the ID payload of myself
 	 * 
-	 * @param this 					authenticator_t object
+	 * @param this 					calling object
 	 * @param[out] auth_payload		The object of typee auth_payload_t will be created at pointing location
 	 * @param last_sent_packet		binary representation of the last sent IKEv2-Message
-	 * @param other_nonce			The received nonce (without payload header)
-	 * @param my_id_payload			The ID payload going to send to other peer
-	 * @param initiator				Type of myself. TRUE, if I'm original initiator, FALSE otherwise
-
+	 * @param other_nonce			the received nonce (without payload header)
+	 * @param my_id_payload			the ID payload going to send to other peer
+	 * @param initiator				type of myself. TRUE, if I'm original initiator, FALSE otherwise
+	 *
+	 * @todo Document RSA error status types
+	 * 
 	 * @return
 	 * 								- SUCCESS if authentication data could be computed
 	 * 								- NOT_SUPPORTED if AUTH method not supported
 	 * 								- NOT_FOUND if the data for AUTH method could not be found
-	 * 								- TODO rsa errors!!
 	 */
 	status_t (*compute_auth_data) (authenticator_t *this,
 									auth_payload_t **auth_payload,
@@ -106,7 +113,7 @@ struct authenticator_t {
 	/**
 	 * @brief Destroys a authenticator_t object.
 	 *
-	 * @param this 			authenticator_t object
+	 * @param this 			calling object
 	 */
 	void (*destroy) (authenticator_t *this);
 };
@@ -116,12 +123,14 @@ struct authenticator_t {
  * 
  * @warning: The following functions of the assigned protected_ike_sa_t object 
  * must return a valid value:
- * - protected_ike_sa_t.get_sa_config
- * - protected_ike_sa_t.get_prf
- * - protected_ike_sa_t.get_logger
+ *  - protected_ike_sa_t.get_sa_config
+ *  - protected_ike_sa_t.get_prf
+ *  - protected_ike_sa_t.get_logger
  * This preconditions are not given in IKE_SA states INITIATOR_INIT or RESPONDER_INIT!
  * 
  * @param ike_sa		object of type protected_ike_sa_t
+ * 
+ * @return				authenticator_t object
  * 
  * @ingroup sa
  */

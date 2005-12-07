@@ -39,41 +39,48 @@ typedef struct ike_sa_entry_t ike_sa_entry_t;
  */
 struct ike_sa_entry_t {
 	/**
-	 * destructor, also destroys ike_sa
+	 * Destructor, also destroys associated ike_sa_t object.
 	 */
 	status_t (*destroy) (ike_sa_entry_t *this);
+	
 	/**
-	 * Number of threads waiting for this ike_sa
+	 * Number of threads waiting for this ike_sa_t object.
 	 */
 	int waiting_threads;
+	
 	/**
-	 * condvar where threads can wait until it's free again
+	 * Condvar where threads can wait until ike_sa_t object is free for use again.
 	 */
 	pthread_cond_t condvar;
+	
 	/**
-	 * is this ike_sa currently checked out?
+	 * Is this ike_sa currently checked out?
 	 */
 	bool checked_out;
+	
 	/**
 	 * Does this SA drives out new threads?
 	 */
 	bool driveout_new_threads;
+	
 	/**
 	 * Does this SA drives out waiting threads?
 	 */
 	bool driveout_waiting_threads;
+	
 	/**
-	 * identifiaction of ike_sa (SPIs)
+	 * Identifiaction of an IKE_SA (SPIs).
 	 */
 	ike_sa_id_t *ike_sa_id;
+	
 	/**
-	 * the contained ike_sa
+	 * The contained ike_sa_t object.
 	 */
 	ike_sa_t *ike_sa;
 };
 
 /**
- * Implements ike_sa_entry_t.destroy.
+ * Implementation of ike_sa_entry_t.destroy.
  */
 static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
 {
@@ -85,12 +92,12 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
 }
 
 /**
- * @brief creates a new entry for the ike_sa list
+ * @brief Creates a new entry for the ike_sa_t list.
  *
  * This constructor additionaly creates a new and empty SA.
  *
- * @param ike_sa_id		the associated ike_sa_id_t, will be cloned
- * @return				created entry, with ike_sa and ike_sa_id
+ * @param ike_sa_id		The associated ike_sa_id_t, will be cloned
+ * @return				ike_sa_entry_t object
  */
 static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 {
@@ -116,36 +123,37 @@ static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 	return this;
 }
 
+
 typedef struct private_ike_sa_manager_t private_ike_sa_manager_t;
 
 /**
- * Additional private members to ike_sa_manager_t
+ * Additional private members of ike_sa_manager_t.
  */
 struct private_ike_sa_manager_t {
 	/**
-	 * Public members
+	 * Public interface of ike_sa_manager_t.
 	 */
 	 ike_sa_manager_t public;
 
 	/**
-	 * @brief get next spi
+	 * @brief Get next spi.
 	 *
-	 * we give out SPIs incremental.
-	 *
+	 * We give out SPIs incremental starting at 1.
+	 * 
 	 * @param this			the ike_sa_manager
 	 * @return 				the next spi
 	 */
 	u_int64_t (*get_next_spi) (private_ike_sa_manager_t *this);
 
 	/**
-	 * @brief find the ike_sa_entry in the list by SPIs.
+	 * @brief Find the ike_sa_entry_t object in the list by SPIs.
 	 *
 	 * This function simply iterates over the linked list. A hash-table
 	 * would be more efficient when storing a lot of IKE_SAs...
 	 *
-	 * @param this			the ike_sa_manager containing the list
+	 * @param this			calling object
 	 * @param ike_sa_id		id of the ike_sa, containing SPIs
-	 * @param entry[out]	pointer to set to the found entry
+	 * @param[out] entry	pointer to set to the found entry
 	 * @return				
 	 * 						- SUCCESS when found,
 	 * 						- NOT_FOUND when no such ike_sa_id in list
@@ -153,14 +161,14 @@ struct private_ike_sa_manager_t {
 	 status_t (*get_entry_by_id) (private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_entry_t **entry);
 
 	 /**
-	 * @brief find the ike_sa_entry in the list by pointer to SA.
+	 * @brief Find the ike_sa_entry_t in the list by pointer to SA.
 	 *
 	 * This function simply iterates over the linked list. A hash-table
 	 * would be more efficient when storing a lot of IKE_SAs...
 	 *
-	 * @param this			the ike_sa_manager containing the list
-	 * @param ike_sa			pointer to the ike_sa
-	 * @param entry[out]		pointer to set to the found entry
+	 * @param this			calling object
+	 * @param ike_sa		pointer to the ike_sa
+	 * @param[out] entry	pointer to set to the found entry
 	 * @return				
 	 * 						- SUCCESS when found,
 	 * 						- NOT_FOUND when no such ike_sa_id in list
@@ -168,9 +176,9 @@ struct private_ike_sa_manager_t {
 	 status_t (*get_entry_by_sa) (private_ike_sa_manager_t *this, ike_sa_t *ike_sa, ike_sa_entry_t **entry);
 	 
 	 /**
-	  * @brief delete an entry from the linked list
+	  * @brief Felete an entry from the linked list.
 	  *
-	  * @param this		the ike_sa_manager containing the list
+	  * @param this			calling object
 	  * @param entry		entry to delete
 	  * @return				
 	  * 					- SUCCESS when found,
@@ -179,28 +187,28 @@ struct private_ike_sa_manager_t {
 	 status_t (*delete_entry) (private_ike_sa_manager_t *this, ike_sa_entry_t *entry);
 
 	 /**
-	  * lock for exclusivly accessing the manager
+	  * Lock for exclusivly accessing the manager.
 	  */
 	 pthread_mutex_t mutex;
 
 	 /**
-	  * Logger used for this IKE SA Manager
+	  * Logger used for this IKE SA Manager.
 	  */
 	 logger_t *logger;
 
 	 /**
-	  * Linked list with entries for the ike_sa
+	  * Linked list with entries for the ike_sa_t objects.
 	  */
 	 linked_list_t *ike_sa_list;
 	 
 	 /**
-	  * Next SPI, needed for incremental creation of SPIs
+	  * Next SPI, needed for incremental creation of SPIs.
 	  */
 	 u_int64_t next_spi;
 };
 
 /**
- * Implements private_ike_sa_manager_t.get_entry_by_id.
+ * Implementation of private_ike_sa_manager_t.get_entry_by_id.
  */
 static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_entry_t **entry)
 {
@@ -256,7 +264,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 }
 
 /**
- * Implements private_ike_sa_manager_t.get_entry_by_sa.
+ * Implementation of private_ike_sa_manager_t.get_entry_by_sa.
  */
 static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa, ike_sa_entry_t **entry)
 {
@@ -288,7 +296,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 }
 
 /**
- * Implements private_ike_sa_manager_s.delete_entry.
+ * Implementation of private_ike_sa_manager_s.delete_entry.
  */
 static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *entry)
 {
@@ -319,7 +327,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 
 
 /**
- * Implements private_ike_sa_manager_t.get_next_spi.
+ * Implementation of private_ike_sa_manager_t.get_next_spi.
  */
 static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 {
@@ -333,7 +341,7 @@ static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 }
 
 /**
- * Implementation of ike_sa_manager.create_and_checkout.
+ * Implementation of of ike_sa_manager.create_and_checkout.
  */
 static void create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa)
 {
@@ -363,7 +371,7 @@ static void create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa
 }
 
 /**
- * Implementation of ike_sa_manager.checkout.
+ * Implementation of of ike_sa_manager.checkout.
  */
 static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_t **ike_sa)
 {
@@ -482,7 +490,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 }
 
 /**
- * Implements ike_sa_manager_t.checkin.
+ * Implementation of ike_sa_manager_t.checkin.
  */
 static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
@@ -519,7 +527,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 
 
 /**
- * Implements ike_sa_manager_t.checkin_and_delete.
+ * Implementation of ike_sa_manager_t.checkin_and_delete.
  */
 static status_t checkin_and_delete(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
@@ -564,7 +572,7 @@ static status_t checkin_and_delete(private_ike_sa_manager_t *this, ike_sa_t *ike
 }
 
 /**
- * Implements ike_sa_manager_t.delete.
+ * Implementation of ike_sa_manager_t.delete.
  */
 static status_t delete(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 {
@@ -607,7 +615,7 @@ static status_t delete(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 }
 
 /**
- * Implements ike_sa_manager_t.destroy.
+ * Implementation of ike_sa_manager_t.destroy.
  */
 static void destroy(private_ike_sa_manager_t *this)
 {
@@ -666,7 +674,7 @@ static void destroy(private_ike_sa_manager_t *this)
 }
 
 /*
- * Described in header
+ * Described in header.
  */
 ike_sa_manager_t *ike_sa_manager_create()
 {

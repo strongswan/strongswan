@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef IKE_SA_MANAGER_H_
-#define IKE_SA_MANAGER_H_
+#ifndef _IKE_SA_MANAGER_H_
+#define _IKE_SA_MANAGER_H_
 
 #include <types.h>
 #include <sa/ike_sa.h>
@@ -30,7 +30,7 @@
 typedef struct ike_sa_manager_t ike_sa_manager_t;
 
 /**
- * @brief The IKE_SA-Manager manages the IKE_SAs ;-).
+ * @brief The IKE_SA-Manager is responsible for managing all initiated and responded IKE_SA's.
  *
  * To avoid access from multiple threads, IKE_SAs must be checked out from
  * the manager, and checked in after usage. 
@@ -39,6 +39,8 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  * @todo checking of double-checkouts from the same threads would be nice.
  * This could be done by comparing thread-ids via pthread_self()...
  * 
+ * @todo Managing of ike_sa_t objects in a hash table instead of linked list.
+ * 
  * @b Constructors:
  * - ike_sa_manager_create()
  * 
@@ -46,7 +48,7 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  */
 struct ike_sa_manager_t {
 	/**
-	 * @brief Checkout an IKE_SA, create it when necesarry
+	 * @brief Checkout an IKE_SA, create it when necesarry.
 	 * 
 	 * Checks out a SA by its ID. An SA will be created, when:
 	 * - Responder SPI is not set (when received an IKE_SA_INIT from initiator)
@@ -69,11 +71,8 @@ struct ike_sa_manager_t {
 	/**
 	 * @brief Create and checkout an IKE_SA as original initator.
 	 * 
-	 * Creates and checks out a SA as initiator. An SA will be created, when:
+	 * Creates and checks out a SA as initiator.
 	 * Management of SPIs is the managers job, he will set it.
-	 * 
-	 * @warning checking out two times without checking in will
-	 * result in a deadlock!
 	 * 
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa[out] 		checked out SA
@@ -81,7 +80,7 @@ struct ike_sa_manager_t {
 	void (*create_and_checkout) (ike_sa_manager_t* ike_sa_manager,ike_sa_t **ike_sa);
  
 	/**
-	 * @brief Checkin the SA after usage
+	 * @brief Checkin the SA after usage.
 	 * 
 	 * @warning the SA pointer MUST NOT be used after checkin! 
 	 * The SA must be checked out again!
@@ -95,7 +94,7 @@ struct ike_sa_manager_t {
 	 */
 	status_t (*checkin) (ike_sa_manager_t* ike_sa_manager, ike_sa_t *ike_sa);
 	/**
-	 * @brief delete a SA, wich was not checked out
+	 * @brief Delete a SA, which was not checked out.
 	 * 
 	 * @warning do not use this when the SA is already checked out, this will
 	 * deadlock!
@@ -109,7 +108,7 @@ struct ike_sa_manager_t {
 	status_t (*delete) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *ike_sa_id);
 	
 	/**
-	 * @brief delete a checked out SA
+	 * @brief Delete a checked out SA.
 	 *
 	 * @param ike_sa_manager 	the manager object
 	 * @param ike_sa			SA to delete
@@ -120,9 +119,9 @@ struct ike_sa_manager_t {
 	status_t (*checkin_and_delete) (ike_sa_manager_t* ike_sa_manager, ike_sa_t *ike_sa);
 	
 	/**
-	 * @brief Destroys the manager with all associated SAs
+	 * @brief Destroys the manager with all associated SAs.
 	 * 
-	 * Threads will be driven out, so all SAs can be deleted cleanly
+	 * Threads will be driven out, so all SAs can be deleted cleanly.
 	 * 
 	 * @param ike_sa_manager the manager object
 	 */
@@ -130,12 +129,12 @@ struct ike_sa_manager_t {
 };
 
 /**
- * @brief Create a manager
+ * @brief Create a manager.
  * 
- * @returns ike_sa_manager_t object
+ * @returns 	ike_sa_manager_t object
  * 
  * @ingroup sa
  */
 ike_sa_manager_t *ike_sa_manager_create();
 
-#endif /*IKE_SA_MANAGER_H_*/
+#endif /*_IKE_SA_MANAGER_H_*/

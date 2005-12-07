@@ -1,7 +1,7 @@
 /**
  * @file authenticator.c
  *
- * @brief Implementation of authenticator.
+ * @brief Implementation of authenticator_t.
  *
  */
 
@@ -35,6 +35,7 @@
  */
 #define IKE_V2_KEY_PAD_LEN strlen(IKE_V2_KEY_PAD)
 
+
 typedef struct private_authenticator_t private_authenticator_t;
 
 /**
@@ -65,7 +66,7 @@ struct private_authenticator_t {
 	logger_t *logger;
 	
 	/**
-	 * Creates the octets which are signed (RSA) or MACed (shared secret) as described in section 
+	 * @brief Creates the octets which are signed (RSA) or MACed (shared secret) as described in section 
 	 * 2.15 of draft.
 	 * 
 	 * @param this				calling object
@@ -77,10 +78,14 @@ struct private_authenticator_t {
 	 * @return					octets as described in section 2.15. Memory gets allocated and has to get 
 	 * 							destroyed by caller.
 	 */
-	chunk_t (*allocate_octets) (private_authenticator_t *this,chunk_t last_message, chunk_t other_nonce,id_payload_t *my_id, bool initiator);
+	chunk_t (*allocate_octets) (private_authenticator_t *this,
+								chunk_t last_message,
+								chunk_t other_nonce,
+								id_payload_t *my_id,
+								bool initiator);
 	
 	/**
-	 * Creates the AUTH data using auth method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
+	 * @brief Creates the AUTH data using auth method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
 	 * 
 	 * @param this				calling object
 	 * @param last_message		the last message
@@ -88,17 +93,28 @@ struct private_authenticator_t {
 	 * @param nonce				Nonce data to include in auth data compution
 	 * @param id_payload		id_payload_t object representing an ID payload
 	 * @param initiator			Type of peer. TRUE, if it is original initiator, FALSE otherwise
-	 * @param shared_secret		shared secret as chunk_t. If shared secret is a string, the NULL termination is not included.
-	 * @return					AUTH data as dscribed in section 2.15 for AUTH method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
+	 * @param shared_secret		shared secret as chunk_t. If shared secret is a string,
+	 * 							the NULL termination is not included.
+	 * @return					AUTH data as dscribed in section 2.15 for 
+	 * 							AUTH method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
 	 * 							Memory gets allocated and has to get destroyed by caller.
 	 */
-	chunk_t (*allocate_auth_data_with_preshared_secret) (private_authenticator_t *this,chunk_t last_message, chunk_t nonce,id_payload_t *id_payload, bool initiator,chunk_t preshared_secret);
+	chunk_t (*allocate_auth_data_with_preshared_secret) (private_authenticator_t *this,
+															chunk_t last_message,
+															chunk_t nonce,
+															id_payload_t *id_payload,
+															bool initiator,
+															chunk_t preshared_secret);
 };
 
 /**
  * Implementation of private_authenticator_t.allocate_octets.
  */
-static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_message, chunk_t other_nonce,id_payload_t *my_id, bool initiator)
+static chunk_t allocate_octets(private_authenticator_t *this,
+								chunk_t last_message, 
+								chunk_t other_nonce,
+								id_payload_t *my_id,
+								bool initiator)
 {
 	chunk_t id_chunk = my_id->get_data(my_id);
 	u_int8_t id_with_header[4 + id_chunk.len];
@@ -148,7 +164,12 @@ static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_messag
 /**
  * Implementation of private_authenticator_t.allocate_auth_data_with_preshared_secret.
  */
-static chunk_t allocate_auth_data_with_preshared_secret (private_authenticator_t *this,chunk_t last_message, chunk_t nonce,id_payload_t *id_payload, bool initiator,chunk_t preshared_secret)
+static chunk_t allocate_auth_data_with_preshared_secret (private_authenticator_t *this,
+															chunk_t last_message,
+															chunk_t nonce,
+															id_payload_t *id_payload,
+															bool initiator,
+															chunk_t preshared_secret)
 {
 	chunk_t key_pad = {ptr: IKE_V2_KEY_PAD, len:IKE_V2_KEY_PAD_LEN};
 	u_int8_t key_buffer[this->prf->get_block_size(this->prf)];
@@ -174,7 +195,12 @@ static chunk_t allocate_auth_data_with_preshared_secret (private_authenticator_t
 /**
  * Implementation of authenticator_t.verify_auth_data.
  */
-static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *auth_payload, chunk_t last_received_packet,chunk_t my_nonce,id_payload_t *other_id_payload,bool initiator)
+static status_t verify_auth_data (private_authenticator_t *this,
+									auth_payload_t *auth_payload,
+									chunk_t last_received_packet,
+									chunk_t my_nonce,
+									id_payload_t *other_id_payload,
+									bool initiator)
 {
 	switch(auth_payload->get_auth_method(auth_payload))
 	{
@@ -185,14 +211,21 @@ static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *
 			chunk_t preshared_secret;
 			status_t status;
 						
-			status = charon->configuration_manager->get_shared_secret(charon->configuration_manager,other_id,&preshared_secret);
+			status = charon->configuration_manager->get_shared_secret(charon->configuration_manager,
+																		other_id,
+																		&preshared_secret);
 			other_id->destroy(other_id);
 			if (status != SUCCESS)
 			{
 				return status;	
 			}
 			
-			chunk_t my_auth_data = this->allocate_auth_data_with_preshared_secret(this,last_received_packet,my_nonce,other_id_payload,initiator,preshared_secret);
+			chunk_t my_auth_data = this->allocate_auth_data_with_preshared_secret(this,
+																					last_received_packet,
+																					my_nonce,
+																					other_id_payload,
+																					initiator,
+																					preshared_secret);
 			
 			if (auth_data.len != my_auth_data.len)
 			{
@@ -219,7 +252,9 @@ static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *
 			
 			auth_data = auth_payload->get_data(auth_payload);
 			
-			status = charon->configuration_manager->get_rsa_public_key(charon->configuration_manager, other_id, &public_key);
+			status = charon->configuration_manager->get_rsa_public_key(charon->configuration_manager,
+																		other_id,
+																		&public_key);
 			other_id->destroy(other_id);
 			if (status != SUCCESS)
 			{
@@ -243,7 +278,12 @@ static status_t verify_auth_data (private_authenticator_t *this,auth_payload_t *
 /**
  * Implementation of authenticator_t.compute_auth_data.
  */
-static status_t compute_auth_data (private_authenticator_t *this,auth_payload_t **auth_payload, chunk_t last_sent_packet,chunk_t other_nonce,id_payload_t *my_id_payload,bool initiator)
+static status_t compute_auth_data (private_authenticator_t *this,
+									auth_payload_t **auth_payload,
+									chunk_t last_sent_packet,
+									chunk_t other_nonce,
+									id_payload_t *my_id_payload,
+									bool initiator)
 {
 	sa_config_t *sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	
@@ -255,7 +295,9 @@ static status_t compute_auth_data (private_authenticator_t *this,auth_payload_t 
 			chunk_t preshared_secret;
 			status_t status;		
 
-			status = charon->configuration_manager->get_shared_secret(charon->configuration_manager,my_id,&preshared_secret);
+			status = charon->configuration_manager->get_shared_secret(charon->configuration_manager,
+																		my_id,
+																		&preshared_secret);
 
 			my_id->destroy(my_id);
 			if (status != SUCCESS)
@@ -263,7 +305,12 @@ static status_t compute_auth_data (private_authenticator_t *this,auth_payload_t 
 				return status;	
 			}
 			
-			chunk_t auth_data = this->allocate_auth_data_with_preshared_secret(this,last_sent_packet,other_nonce,my_id_payload,initiator,preshared_secret);
+			chunk_t auth_data = this->allocate_auth_data_with_preshared_secret(this,
+																				last_sent_packet,
+																				other_nonce,
+																				my_id_payload,
+																				initiator,
+																				preshared_secret);
 
 			*auth_payload = auth_payload_create();
 			(*auth_payload)->set_auth_method((*auth_payload),SHARED_KEY_MESSAGE_INTEGRITY_CODE);
@@ -279,7 +326,9 @@ static status_t compute_auth_data (private_authenticator_t *this,auth_payload_t 
 			status_t status;
 			chunk_t octets, auth_data;
 			
-			status = charon->configuration_manager->get_rsa_private_key(charon->configuration_manager, my_id, &private_key);
+			status = charon->configuration_manager->get_rsa_private_key(charon->configuration_manager,
+																		my_id,
+																		&private_key);
 			my_id->destroy(my_id);
 			if (status != SUCCESS)
 			{

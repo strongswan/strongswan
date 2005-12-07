@@ -21,8 +21,8 @@
  */
 
 
-#ifndef CHILD_SA_H_
-#define CHILD_SA_H_
+#ifndef _CHILD_SA_H_
+#define _CHILD_SA_H_
 
 #include <types.h>
 #include <transforms/prf_plus.h>
@@ -70,4 +70,4 @@ struct child_sa_t {
  */
 child_sa_t * child_sa_create(protocol_id_t protocol_id, prf_plus_t *prf_plus);
 
-#endif /*CHILD_SA_H_*/
+#endif /*_CHILD_SA_H_*/

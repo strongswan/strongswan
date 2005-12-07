@@ -1,7 +1,7 @@
 /**
  * @file ike_sa.h
  *
- * @brief Interface of ike_sa_id_t.
+ * @brief Interface of ike_sa_t.
  *
  */
 
@@ -36,19 +36,23 @@
 #include <transforms/signers/signer.h>
 
 /**
- * Nonce size in bytes of all sent nonces
+ * Nonce size in bytes for nonces sending to other peer.
+ * 
+ * @warning Nonce size MUST be between 16 and 256 bytes.
  * 
  * @ingroup sa
  */
 #define NONCE_SIZE 16
 
+
 typedef struct ike_sa_t ike_sa_t;
 
 /**
- * @brief Class ike_sa_t. An object of this type is managed by an
- * ike_sa_manager_t object and represents an IKE_SA. Message processing
- * is split up in different states. They will handle all related things
- * for their state.
+ * @brief Class ike_sa_t representing an IKE_SA. 
+ * 
+ * An object of this type is managed by an ike_sa_manager_t object 
+ * and represents an IKE_SA. Message processing is split up in different states. 
+ * They will handle all related things for the state they represent.
  * 
  * @b Constructors:
  * - ike_sa_create()
@@ -58,11 +62,14 @@ typedef struct ike_sa_t ike_sa_t;
 struct ike_sa_t {
 
 	/**
-	 * @brief Processes a incoming IKEv2-Message of type message_t
+	 * @brief Processes a incoming IKEv2-Message of type message_t.
 	 *
 	 * @param this ike_sa_t object object
  	 * @param[in] message message_t object to process
-	 * @return SUCCESSFUL if succeeded, FAILED otherwise
+	 * @return 				
+	 * 						- SUCCESS
+	 * 						- FAILED
+	 * 						- DELETE_ME if this IKE_SA MUST be deleted
 	 */
 	status_t (*process_message) (ike_sa_t *this,message_t *message);
 
@@ -74,7 +81,7 @@ struct ike_sa_t {
 	 * @return				
 	 * 						- SUCCESS if initialization started
 	 * 						- FAILED if in wrong state
-	 * 						- DELETE_ME if initialization faild and SA should be deleted
+	 * 						- DELETE_ME if initialization failed and IKE_SA MUST be deleted
 	 */
 	status_t (*initialize_connection) (ike_sa_t *this, char *name);
 	
@@ -91,8 +98,10 @@ struct ike_sa_t {
 
 	/**
 	 * @brief Get the id of the SA.
+	 * 
+	 * Returned ike_sa_id_t object is not getting cloned!
 	 *
-	 * @param this 			ike_sa_t object object
+	 * @param this 			calling object
 	 * @return 				ike_sa's ike_sa_id_t
 	 */
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
@@ -100,7 +109,7 @@ struct ike_sa_t {
 	/**
 	 * @brief Get the state of type of associated state object.
 	 *
-	 * @param this 			ike_sa_t object object
+	 * @param this 			calling object
 	 * @return 				state of IKE_SA
 	 */
 	ike_sa_state_t (*get_state) (ike_sa_t *this);
@@ -108,7 +117,7 @@ struct ike_sa_t {
 	/**
 	 * @brief Destroys a ike_sa_t object.
 	 *
-	 * @param this 			ike_sa_t object
+	 * @param this 			calling object
 	 */
 	void (*destroy) (ike_sa_t *this);
 };
@@ -117,27 +126,27 @@ struct ike_sa_t {
 typedef struct protected_ike_sa_t protected_ike_sa_t;
 
 /**
- * @brief Protected data of an ike_sa_t object.
+ * @brief Protected functions of an ike_sa_t object.
  * 
- * This members should only be accessed from 
- * the varius state classes.
+ * This members are only accessed out from 
+ * the various state_t implementations.
  * 
  * @ingroup sa
  */
 struct protected_ike_sa_t {
 
 	/**
-	 * Public part of a ike_sa_t object
+	 * Public interface of an ike_sa_t object.
 	 */
 	ike_sa_t public;
 	
 	/**
-	 * Builds an empty IKEv2-Message and fills in default informations.
+	 * @brief Build an empty IKEv2-Message and fills in default informations.
 	 * 
 	 * Depending on the type of message (request or response), the message id is 
 	 * either message_id_out or message_id_in.
 	 * 
-	 * Used in every state.
+	 * Used in state_t Implementation to build an empty IKEv2-Message.
 	 * 
 	 * @param this				calling object
 	 * @param type				exchange type of new message
@@ -147,17 +156,25 @@ struct protected_ike_sa_t {
 	void (*build_message) (protected_ike_sa_t *this, exchange_type_t type, bool request, message_t **message);
 
 	/**
-	 * Initiate a new connection with given configuration name
+	 * @brief Compute the shared secrets needed for encryption, signing, etc.
+	 * 
+	 * Preconditions:
+	 *  - Call of function protected_ike_sa_t.create_transforms_from_proposal
 	 * 
 	 * @param this 				calling object
 	 * @param dh_shared_secret	shared secret of diffie hellman exchange
 	 * @param initiator_nonce	nonce of initiator
 	 * @param responder_nonce	nonce of responder
 	 */
-	void (*compute_secrets) (protected_ike_sa_t *this,chunk_t dh_shared_secret,chunk_t initiator_nonce, chunk_t responder_nonce);
+	void (*compute_secrets) (protected_ike_sa_t *this,
+								chunk_t dh_shared_secret,
+								chunk_t initiator_nonce,
+								chunk_t responder_nonce);
 	
 	/**
-	 * Gets the internal stored logger_t object for given ike_sa_t object.
+	 * @brief Get the internal stored logger_t object for given ike_sa_t object.
+	 * 
+	 * @warning Returned logger_t object is original one and managed by this object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to the internal stored logger_t object
@@ -165,9 +182,7 @@ struct protected_ike_sa_t {
 	logger_t *(*get_logger) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the internal stored init_config_t object.
-	 * 
-	 * Returned value has to get checked for NULL value!
+	 * @brief Get the internal stored init_config_t object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to the internal stored init_config_t object
@@ -175,7 +190,7 @@ struct protected_ike_sa_t {
 	init_config_t *(*get_init_config) (protected_ike_sa_t *this);
 	
 	/**
-	 * Sets the internal init_config_t object.
+	 * @brief Set the internal init_config_t object.
 	 * 
 	 * @param this 				calling object
 	 * @param init_config		object of type init_config_t
@@ -183,9 +198,7 @@ struct protected_ike_sa_t {
 	void (*set_init_config) (protected_ike_sa_t *this,init_config_t *init_config);
 	
 	/**
-	 * Gets the internal stored sa_config_t object.
-	 * 
-	 * Returned value has to get checked for NULL value!
+	 * @brief Get the internal stored sa_config_t object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to the internal stored sa_config_t object
@@ -193,7 +206,7 @@ struct protected_ike_sa_t {
 	sa_config_t *(*get_sa_config) (protected_ike_sa_t *this);
 	
 	/**
-	 * Sets the internal sa_config_t object.
+	 * @brief Set the internal sa_config_t object.
 	 * 
 	 * @param this 				calling object
 	 * @param sa_config			object of type sa_config_t
@@ -201,7 +214,7 @@ struct protected_ike_sa_t {
 	void (*set_sa_config) (protected_ike_sa_t *this,sa_config_t *sa_config);
 
 	/**
-	 * Gets the internal stored host_t object for my host.
+	 * @brief Get the internal stored host_t object for my host.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to the internal stored host_t object
@@ -209,7 +222,7 @@ struct protected_ike_sa_t {
 	host_t *(*get_my_host) (protected_ike_sa_t *this);
 
 	/**
-	 * Gets the internal stored host_t object for other host.
+	 * @brief Get the internal stored host_t object for other host.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to the internal stored host_t object
@@ -217,7 +230,7 @@ struct protected_ike_sa_t {
 	host_t *(*get_other_host) (protected_ike_sa_t *this);
 	
 	/**
-	 * Sets the internal stored host_t object for my host.
+	 * @brief Set the internal stored host_t object for my host.
 	 * 
 	 * Allready existing object gets destroyed. object gets not cloned!
 	 * 
@@ -227,7 +240,7 @@ struct protected_ike_sa_t {
 	void (*set_my_host) (protected_ike_sa_t *this,host_t * my_host);
 
 	/**
-	 * Sets the internal stored host_t object for other host.
+	 * @brief Set the internal stored host_t object for other host.
 	 * 
 	 * Allready existing object gets destroyed. object gets not cloned!
 	 * 
@@ -237,8 +250,8 @@ struct protected_ike_sa_t {
 	void (*set_other_host) (protected_ike_sa_t *this,host_t *other_host);
 	
 	/**
-	 * Creates all needed transform objects for given ike_sa_t using 
-	 * the informations stored in a ike_proposal_t object
+	 * @brief Create all needed transform objects for this IKE_SA using 
+	 * the informations stored in a ike_proposal_t object.
 	 * 
 	 * Allready existing objects get destroyed.
 	 * 
@@ -249,11 +262,11 @@ struct protected_ike_sa_t {
 	status_t (*create_transforms_from_proposal) (protected_ike_sa_t *this,ike_proposal_t * proposal);
 	
 	/**
-	 * Sends the next request message.
+	 * @brief Send the next request message.
 	 * 
 	 * Also the first retransmit job is created.
 	 * 
-	 * Stored requested message gets destroyed. object gets not cloned!
+	 * Last stored requested message gets destroyed. Object gets not cloned!
 	 * 
 	 * @param this 				calling object
 	 * @param message			pointer to the message which should be sent
@@ -264,9 +277,9 @@ struct protected_ike_sa_t {
 	status_t (*send_request) (protected_ike_sa_t *this,message_t * message);
 
 	/**
-	 * Sends the next response message.
+	 * @brief Send the next response message.
 	 * 
-	 * Stored responded message gets destroyed. object gets not cloned!
+	 * Last stored responded message gets destroyed. Object gets not cloned!
 	 * 
 	 * @param this 				calling object
 	 * @param message			pointer to the message which should be sent
@@ -277,7 +290,7 @@ struct protected_ike_sa_t {
 	status_t (*send_response) (protected_ike_sa_t *this,message_t * message);
 	
 	/**
-	 * Gets the internal stored randomizer_t object.
+	 * @brief Get the internal stored randomizer_t object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to the internal randomizer_t object
@@ -285,10 +298,10 @@ struct protected_ike_sa_t {
 	randomizer_t *(*get_randomizer) (protected_ike_sa_t *this);
 	
 	/**
-	 * Sets the new state_t object of the IKE_SA object.
+	 * @brief Set the new state_t object of the IKE_SA object.
 	 * 
 	 * The old state_t object gets not destroyed. It's the callers duty to 
-	 * make sure old state is destroyed (Normally the old state is the caller ).
+	 * make sure old state is destroyed (Normally the old state is the caller).
 	 * 
 	 * @param this 				calling object
 	 * @param state				pointer to the new state_t object
@@ -296,7 +309,7 @@ struct protected_ike_sa_t {
 	void (*set_new_state) (protected_ike_sa_t *this,state_t *state);
 	
 	/**
-	 * Sets the last replied message id.
+	 * @brief Set the last replied message id.
 	 * 
 	 * @param this 				calling object
 	 * @param message_id		message id
@@ -304,7 +317,7 @@ struct protected_ike_sa_t {
 	void (*set_last_replied_message_id) (protected_ike_sa_t *this,u_int32_t message_id);
 	
 	/**
-	 * Gets the internal stored initiator crypter_t object.
+	 * @brief Get the internal stored initiator crypter_t object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to crypter_t object
@@ -312,7 +325,7 @@ struct protected_ike_sa_t {
 	crypter_t *(*get_crypter_initiator) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the internal stored initiator signer object.
+	 * @brief Get the internal stored initiator signer_t object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to signer_t object
@@ -320,7 +333,7 @@ struct protected_ike_sa_t {
 	signer_t *(*get_signer_initiator) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the internal stored responder crypter_t object.
+	 * @brief Get the internal stored responder crypter_t object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to crypter_t object
@@ -328,7 +341,7 @@ struct protected_ike_sa_t {
 	crypter_t *(*get_crypter_responder) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the internal stored responder signer object.
+	 * @brief Get the internal stored responder signer object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to signer_t object
@@ -336,7 +349,7 @@ struct protected_ike_sa_t {
 	signer_t *(*get_signer_responder) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the internal stored prf_t object.
+	 * @brief Get the internal stored prf_t object.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to prf_t object
@@ -344,7 +357,7 @@ struct protected_ike_sa_t {
 	prf_t *(*get_prf) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the last responded message.
+	 * @brief Get the last responded message.
 	 *  
 	 * @param this 				calling object
 	 * @return					
@@ -354,7 +367,7 @@ struct protected_ike_sa_t {
 	message_t *(*get_last_responded_message) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the last requested message.
+	 * @brief Get the last requested message.
 	 *  
 	 * @param this 				calling object
 	 * @return					
@@ -364,7 +377,7 @@ struct protected_ike_sa_t {
 	message_t *(*get_last_requested_message) (protected_ike_sa_t *this);
 
 	/**
-	 * Gets the Shared key SK_pr.
+	 * @brief Get the Shared key SK_pr.
 	 * 
 	 * Returned value is not cloned!
 	 * 
@@ -374,25 +387,24 @@ struct protected_ike_sa_t {
 	chunk_t (*get_key_pr) (protected_ike_sa_t *this);
 	
 	/**
-	 * Gets the Shared key SK_pi.
+	 * @brief Get the Shared key SK_pi.
 	 * 
 	 * Returned value is not cloned!
 	 * 
 	 * @param this 				calling object
-	 * @return					SK_pr key
+	 * @return					SK_pi key
 	 */
 	chunk_t (*get_key_pi) (protected_ike_sa_t *this);
 
 	/**
-	 * Resets message id counters and does destroy stored received and sent messages.
+	 * @brief Resets message counters and does destroy stored received and sent messages.
 	 * 
 	 * @param this 				calling object
 	 */	
 	void (*reset_message_buffers) (protected_ike_sa_t *this);
 	
 	/**
-	 * Creates a job of type DELETE_ESTABLISHED_IKE_SA for the current IKE_SA.
-	 * 
+	 * @brief Creates a job of type DELETE_ESTABLISHED_IKE_SA for the current IKE_SA.
 	 * 
 	 * @param this 				calling object
 	 * @param timeout			timeout after the IKE_SA gets deleted
@@ -402,17 +414,15 @@ struct protected_ike_sa_t {
 };
 
 
-
 /**
- * Creates an ike_sa_t object with a specific ike_sa_id_t object
+ * @brief Creates an ike_sa_t object with a specific ID.
+ * 
+ * @warning the Content of internal ike_sa_id_t object can change over time
+ * 			e.g. when a IKE_SA_INIT has been finished.
  *
  * @param[in] ike_sa_id 	ike_sa_id_t object to associate with new IKE_SA.
  *				 			The object is internal getting cloned
  *							and so has to be destroyed by the caller.
- *
- * @warning the Content of internal ike_sa_id_t object can change over time
- * 			e.g. when a IKE_SA_INIT has been finished.
- *
  * @return 					ike_sa_t object
  * 
  * @ingroup sa
