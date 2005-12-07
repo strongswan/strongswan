@@ -1,7 +1,7 @@
 /**
  * @file state.c
  * 
- * @brief Interface additions to ike_sa_sate_t.
+ * @brief Interface state_t.
  * 
  */
 
@@ -24,7 +24,7 @@
 
 
 /**
- * string mappings for ike_sa_state 
+ * String mappings for ike_sa_state_t.
  */
 mapping_t ike_sa_state_m[] = {
 	{INITIATOR_INIT, "INITIATOR_INIT"},
