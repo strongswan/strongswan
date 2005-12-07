@@ -268,7 +268,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	status = this->build_sa_payload(this, sa_request, response);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Building SA payload failed");
 		response->destroy(response);
 		return status;
 	}
@@ -276,7 +275,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	status = this->build_ke_payload(this, ke_request, response);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Building KE payload failed");
 		response->destroy(response);
 		return status;
 	}
@@ -284,7 +282,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	status = this->build_nonce_payload(this, nonce_request, response);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Building NONCE payload failed");
 		response->destroy(response);
 		return status;
 	}
