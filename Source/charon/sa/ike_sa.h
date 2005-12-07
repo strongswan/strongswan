@@ -46,7 +46,12 @@ typedef struct ike_sa_t ike_sa_t;
 
 /**
  * @brief Class ike_sa_t. An object of this type is managed by an
- * ike_sa_manager_t object and represents an IKE_SA.
+ * ike_sa_manager_t object and represents an IKE_SA. Message processing
+ * is split up in different states. They will handle all related things
+ * for their state.
+ * 
+ * @b Constructors:
+ * - ike_sa_create()
  * 
  * @ingroup sa
  */
@@ -66,7 +71,10 @@ struct ike_sa_t {
 	 * 
 	 * @param this 			calling object
 	 * @param name 			name of the configuration
-	 * @return				TODO
+	 * @return				
+	 * 						- SUCCESS if initialization started
+	 * 						- FAILED if in wrong state
+	 * 						- DELETE_ME if initialization faild and SA should be deleted
 	 */
 	status_t (*initialize_connection) (ike_sa_t *this, char *name);
 	
@@ -105,9 +113,8 @@ struct ike_sa_t {
 	void (*destroy) (ike_sa_t *this);
 };
 
+
 typedef struct protected_ike_sa_t protected_ike_sa_t;
-
-
 
 /**
  * @brief Protected data of an ike_sa_t object.
@@ -356,7 +363,6 @@ struct protected_ike_sa_t {
 	 */
 	message_t *(*get_last_requested_message) (protected_ike_sa_t *this);
 
-
 	/**
 	 * Gets the Shared key SK_pr.
 	 * 
@@ -407,7 +413,7 @@ struct protected_ike_sa_t {
  * @warning the Content of internal ike_sa_id_t object can change over time
  * 			e.g. when a IKE_SA_INIT has been finished.
  *
- * @return 					created ike_sa_t object
+ * @return 					ike_sa_t object
  * 
  * @ingroup sa
  */

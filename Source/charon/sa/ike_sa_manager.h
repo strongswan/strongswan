@@ -37,7 +37,10 @@ typedef struct ike_sa_manager_t ike_sa_manager_t;
  * The manager also handles deletion of SAs.
  *
  * @todo checking of double-checkouts from the same threads would be nice.
- * This could be by comparing thread-ids via pthread_self()...
+ * This could be done by comparing thread-ids via pthread_self()...
+ * 
+ * @b Constructors:
+ * - ike_sa_manager_create()
  * 
  * @ingroup sa
  */
@@ -129,7 +132,7 @@ struct ike_sa_manager_t {
 /**
  * @brief Create a manager
  * 
- * @returns 	the created manager
+ * @returns ike_sa_manager_t object
  * 
  * @ingroup sa
  */

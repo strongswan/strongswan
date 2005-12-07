@@ -398,11 +398,6 @@ static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chun
 	chunk_t prf_plus_seed;
 	prf_plus_t *prf_plus;
 
-	
-	/**
-	 * TODO check length fo specific prfs
-	 */
-
 	/* first is initiator */
 	memcpy(concatenated_nonces.ptr,initiator_nonce.ptr,initiator_nonce.len);
 	/* second is responder */

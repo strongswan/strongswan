@@ -238,13 +238,14 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		return status;	
 	}
 	
+	/* because I am original initiator i have to update the responder SPI to the new one */	
+	responder_spi = ike_sa_init_reply->get_responder_spi(ike_sa_init_reply);
+	
 	if (responder_spi == 0)
 	{
 		this->logger->log(this->logger, ERROR | MORE, "Responder SPI still zero");
 		return FAILED;
 	}
-	/* because I am original initiator i have to update the responder SPI to the new one */	
-	responder_spi = ike_sa_init_reply->get_responder_spi(ike_sa_init_reply);
 	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
 	ike_sa_id->set_responder_spi(ike_sa_id,responder_spi);
 	

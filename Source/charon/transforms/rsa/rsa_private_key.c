@@ -279,6 +279,15 @@ static status_t set_key(private_rsa_private_key_t *this, chunk_t key)
 	exp2.ptr = key.ptr + this->k * 6;
 	coeff.ptr = key.ptr + this->k * 7;
 	
+	mpz_init(this->n);
+	mpz_init(this->e);
+	mpz_init(this->p);
+	mpz_init(this->q);
+	mpz_init(this->d);
+	mpz_init(this->exp1);
+	mpz_init(this->exp2);
+	mpz_init(this->coeff);
+	
 	mpz_import(this->n, this->k, 1, 1, 1, 0, n.ptr);
 	mpz_import(this->e, this->k, 1, 1, 1, 0, e.ptr);
 	mpz_import(this->p, this->k, 1, 1, 1, 0, p.ptr);

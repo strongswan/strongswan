@@ -538,11 +538,11 @@ static void destroy(private_diffie_hellman_t *this)
 	mpz_clear(this->modulus);
 	mpz_clear(this->my_prime);
 	mpz_clear(this->my_public_value);
+	mpz_clear(this->other_public_value);
 
 	if (this->shared_secret_is_computed)
 	{
 		/* other public value gets initialized together with shared secret */
-		mpz_clear(this->other_public_value);
 		mpz_clear(this->shared_secret);
 	}
 	allocator_free(this);
@@ -569,6 +569,8 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	
 	/* private variables */
 	this->dh_group_number = dh_group_number;
+	mpz_init(this->modulus);
+	mpz_init(this->other_public_value);
 	
 	/* set this->modulus */	
 	if (this->set_modulus(this) != SUCCESS)

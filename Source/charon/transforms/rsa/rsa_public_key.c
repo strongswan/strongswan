@@ -285,6 +285,9 @@ static status_t set_key(private_rsa_public_key_t *this, chunk_t key)
 	e.len = n.len;
 	e.ptr = key.ptr + n.len;
 	
+	mpz_init(this->n);
+	mpz_init(this->e);
+	
 	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
 	mpz_import(this->e, n.len, 1, 1, 1, 0, e.ptr);
 	
