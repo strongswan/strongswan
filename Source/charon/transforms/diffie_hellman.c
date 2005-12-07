@@ -381,9 +381,9 @@ struct private_diffie_hellman_t {
 	u_int16_t generator;
 
 	/**
-	 * My prime .
+	 * My private value .
 	 */
-	mpz_t my_prime;
+	mpz_t my_private_value;
 	
 	/**
 	 * My public value.
@@ -486,7 +486,7 @@ static void compute_shared_secret (private_diffie_hellman_t *this)
 	/* initialize my public value */
 	mpz_init(this->shared_secret);
 	/* calculate my public value */
-	mpz_powm(this->shared_secret,this->other_public_value,this->my_prime,this->modulus);
+	mpz_powm(this->shared_secret,this->other_public_value,this->my_private_value,this->modulus);
 	
 	this->shared_secret_is_computed = TRUE;
 }
@@ -502,7 +502,7 @@ static void compute_public_value (private_diffie_hellman_t *this)
 	/* initialize my public value */
 	mpz_init(this->my_public_value);
 	/* calculate my public value */
-	mpz_powm(this->my_public_value,generator,this->my_prime,this->modulus);
+	mpz_powm(this->my_public_value,generator,this->my_private_value,this->modulus);
 	/* generator not used anymore */
 	mpz_clear(generator);
 }
@@ -536,7 +536,7 @@ static status_t get_shared_secret(private_diffie_hellman_t *this,chunk_t *secret
 static void destroy(private_diffie_hellman_t *this)
 {
 	mpz_clear(this->modulus);
-	mpz_clear(this->my_prime);
+	mpz_clear(this->my_private_value);
 	mpz_clear(this->my_public_value);
 	mpz_clear(this->other_public_value);
 
@@ -554,6 +554,8 @@ static void destroy(private_diffie_hellman_t *this)
 diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 {
 	private_diffie_hellman_t *this = allocator_alloc_thing(private_diffie_hellman_t);
+	randomizer_t *randomizer;
+	chunk_t random_bytes;
 
 	/* public functions */
 	this->public.get_shared_secret = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_shared_secret;
@@ -571,15 +573,26 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	this->dh_group_number = dh_group_number;
 	mpz_init(this->modulus);
 	mpz_init(this->other_public_value);
-	
+	mpz_init(this->my_private_value);
+		
 	/* set this->modulus */	
 	if (this->set_modulus(this) != SUCCESS)
 	{
 		allocator_free(this);
 		return NULL;
 	}
+	randomizer = randomizer_create();
+	if (randomizer == NULL)
+	{
+		allocator_free(this);
+		return NULL;
+	}
+	randomizer->allocate_pseudo_random_bytes(randomizer, this->modulus_length, &random_bytes);
 	
-	charon->prime_pool->get_prime(charon->prime_pool, this->modulus_length, &(this->my_prime));
+	mpz_import(this->my_private_value, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
+	allocator_free_chunk(&random_bytes);
+	
+	randomizer->destroy(randomizer);
 	
 	this->compute_public_value(this);
 	
