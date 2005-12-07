@@ -103,7 +103,8 @@ static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_messag
 	chunk_t id_chunk = my_id->get_data(my_id);
 	u_int8_t id_with_header[4 + id_chunk.len];
 	/*
-	 * IKEv2 for linux is not compatible with IKEv2 Draft and so not compatible with this
+	 * IKEv2 for linux (http://sf.net/projects/ikev2/) 
+	 * is not compatible with IKEv2 Draft and so not compatible with this
 	 * implementation, cause AUTH data are computed without
 	 * ID type and the three reserved bytes.
 	 */
