@@ -141,7 +141,7 @@ static chunk_t allocate_octets(private_authenticator_t *this,chunk_t last_messag
 	current_pos += other_nonce.len;
 	this->prf->get_bytes(this->prf,id_with_header_chunk,current_pos);
 	
-	this->logger->log_chunk(this->logger,RAW | MOST, "Octets (Mesage + Nonce + prf(Sk_px,Idx)",&octets);
+	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Octets (Mesage + Nonce + prf(Sk_px,Idx)",&octets);
 	return octets;
 }
 
@@ -166,7 +166,7 @@ static chunk_t allocate_auth_data_with_preshared_secret (private_authenticator_t
 	this->prf->set_key(this->prf,key);
 	this->prf->allocate_bytes(this->prf,octets,&auth_data);
 	allocator_free_chunk(&octets);
-	this->logger->log_chunk(this->logger,RAW | MOST, "Authenticated data",&auth_data);
+	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Authenticated data",&auth_data);
 
 	return auth_data;
 }

@@ -341,7 +341,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				u_int8_t low_val = *(this->out_position) & 0x0F;
 				/* highval is set, low_val is not changed */
 				*(this->out_position) = high_val | low_val;
-				this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
+				this->logger->log(this->logger, RAW|LEVEL2, "   => 0x%x", *(this->out_position));
 				/* write position is not changed, just bit position is moved */
 				this->current_bit = 4;
 			}
@@ -352,7 +352,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				/* lowval of current byte in buffer has to be set to the new value*/
 				u_int low_val = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
 				*(this->out_position) = high_val | low_val;
-				this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
+				this->logger->log(this->logger, RAW|LEVEL2, "   => 0x%x", *(this->out_position));
 				this->out_position++;
 				this->current_bit = 0;
 
@@ -370,7 +370,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 		{
 			/* 8 bit values are written as they are */
 			*this->out_position = *((u_int8_t *)(this->data_struct + offset));
-			this->logger->log(this->logger, RAW|MOST, "   => 0x%x", *(this->out_position));
+			this->logger->log(this->logger, RAW|LEVEL2, "   => 0x%x", *(this->out_position));
 			this->out_position++;
 			break;
 
@@ -392,7 +392,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			int16_val = int16_val & 0xFF7F;
 			
 			int16_val = int16_val | attribute_format_flag;
-			this->logger->log(this->logger, RAW|MOST, "   => 0x%x", int16_val);
+			this->logger->log(this->logger, RAW|LEVEL2, "   => 0x%x", int16_val);
 			/* write bytes to buffer (set bit is overwritten)*/				
 			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 			this->current_bit = 0;
@@ -403,14 +403,14 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 		case CONFIGURATION_ATTRIBUTE_LENGTH:
 		{
 			u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
-			this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int16_val, sizeof(int16_val));
+			this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)&int16_val, sizeof(int16_val));
 			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 			break;
 		}
 		case U_INT_32:
 		{
 			u_int32_t int32_val = htonl(*((u_int32_t*)(this->data_struct + offset)));
-			this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)&int32_val, sizeof(int32_val));
+			this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)&int32_val, sizeof(int32_val));
 			this->write_bytes_to_buffer(this,&int32_val,sizeof(u_int32_t));
 			break;
 		}
@@ -419,8 +419,8 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			/* 64 bit integers are written as two 32 bit integers */
 			u_int32_t int32_val_low = htonl(*((u_int32_t*)(this->data_struct + offset)));
 			u_int32_t int32_val_high = htonl(*((u_int32_t*)(this->data_struct + offset) + 1));
-			this->logger->log_bytes(this->logger, RAW|MOST, "   => (low)", (void*)&int32_val_low, sizeof(int32_val_low));
-			this->logger->log_bytes(this->logger, RAW|MOST, "   => (high)", (void*)&int32_val_high, sizeof(int32_val_high));
+			this->logger->log_bytes(this->logger, RAW|LEVEL2, "   => (low)", (void*)&int32_val_low, sizeof(int32_val_low));
+			this->logger->log_bytes(this->logger, RAW|LEVEL2, "   => (high)", (void*)&int32_val_high, sizeof(int32_val_high));
 			/* TODO add support for big endian machines */
 			this->write_bytes_to_buffer(this,&int32_val_high,sizeof(u_int32_t));
 			this->write_bytes_to_buffer(this,&int32_val_low,sizeof(u_int32_t));
@@ -431,7 +431,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 		{
 			/* 64 bit are written as they come :-) */
 			this->write_bytes_to_buffer(this,(this->data_struct + offset),sizeof(u_int64_t));
-			this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)(this->data_struct + offset), sizeof(u_int64_t));
+			this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)(this->data_struct + offset), sizeof(u_int64_t));
 			break;
 		}
 		default:
@@ -516,7 +516,7 @@ static void generate_flag (private_generator_t *this,u_int32_t offset)
 	*(this->out_position) = *(this->out_position) | flag;
 	
 	
-	this->logger->log(this->logger, RAW|MOST, "   => 0x0%x", *(this->out_position));
+	this->logger->log(this->logger, RAW|LEVEL2, "   => 0x0%x", *(this->out_position));
 
 	this->current_bit++;
 	if (this->current_bit >= 8)
@@ -540,7 +540,7 @@ static void generate_from_chunk (private_generator_t *this,u_int32_t offset)
 	/* position in buffer */
 	chunk_t *attribute_value = (chunk_t *)(this->data_struct + offset);
 	
-	this->logger->log_chunk(this->logger, RAW|MOST, "   =>", attribute_value);
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "   =>", attribute_value);
 	
 	/* use write_bytes_to_buffer function to do the job */
 	this->write_bytes_to_buffer(this,attribute_value->ptr,attribute_value->len);
@@ -558,7 +558,7 @@ static void make_space_available (private_generator_t *this, size_t bits)
 		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
 		size_t out_position_offset = ((this->out_position) - (this->buffer));
 
-		this->logger->log(this->logger, CONTROL|ALL, "increased gen buffer from %d to %d byte", 
+		this->logger->log(this->logger, CONTROL|LEVEL3, "increased gen buffer from %d to %d byte", 
 							old_buffer_size, new_buffer_size);
 		
 		/* Reallocate space for new buffer */
@@ -655,7 +655,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 	
 	payload_start = this->out_position;
 	
-	this->logger->log(this->logger, CONTROL|MORE, "generating payload of type %s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "generating payload of type %s",
 											mapping_find(payload_type_m,payload_type));
 	
 	/* each payload has its own encoding rules */
@@ -663,7 +663,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 
 	for (i = 0; i < rule_count;i++)
 	{
-		this->logger->log(this->logger, CONTROL|MOST, "  generating rule %d %s",
+		this->logger->log(this->logger, CONTROL|LEVEL2, "  generating rule %d %s",
 							i, mapping_find(encoding_type_m,rules[i].type));
 		switch (rules[i].type)
 		{
@@ -964,7 +964,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			{
 				if (this->attribute_format == FALSE)
 				{
-					this->logger->log(this->logger, CONTROL|ALL, "attribute value has not fixed size");
+					this->logger->log(this->logger, CONTROL|LEVEL3, "attribute value has not fixed size");
 					/* the attribute value is generated */
 					this->generate_from_chunk(this,rules[i].offset);
 				}
@@ -1017,7 +1017,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				return;
 		}
 	}
-	this->logger->log_bytes(this->logger, RAW|MORE, "generated data for this payload",
+	this->logger->log_bytes(this->logger, RAW|LEVEL1, "generated data for this payload",
 							payload_start, this->out_position-payload_start);
 }
 

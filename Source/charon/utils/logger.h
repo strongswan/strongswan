@@ -53,31 +53,39 @@ enum logger_level_t {
 	 */
 	ERROR = 2,
 	/**
+	 * Logs important for the sysadmin.
+	 */
+	AUDIT = 4,
+	/**
 	 * Raw data dumps.
 	 */
-	RAW = 4,
+	RAW = 8,
 	/**
 	 * Private data dumps.
 	 */
-	PRIVATE = 8,
+	PRIVATE = 16,
 	
 	/**
-	 * Use more detailed output for those above.
+	 * Log most important output, can be omitted.
 	 */
-	MORE = 16, 
+	LEVEL0 = 0,
 	/**
-	 * Use even more detailed output.
+	 * Log more detailed output.
 	 */
-	MOST = MORE + 32,
+	LEVEL1 = 32, 
 	/**
-	 * Use full detailed output.
+	 * Log even more detailed output.
 	 */
-	ALL = MOST + 64,
+	LEVEL2 = LEVEL1 + 64,
+	/**
+	 * Use maximum detailed output.
+	 */
+	LEVEL3 = LEVEL2 + 128,
 	
 	/**
 	 * Summary for all types with all detail-levels.
 	 */
-	FULL = ALL + CONTROL + ERROR + RAW + PRIVATE
+	FULL = LEVEL3 + CONTROL + ERROR + RAW + PRIVATE + AUDIT
 };
 
 typedef struct logger_t logger_t;

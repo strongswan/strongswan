@@ -77,12 +77,12 @@ static void get_events(private_scheduler_t * this)
 
 	for (;;)
 	{
-		this->logger->log(this->logger, CONTROL|MOST, "Waiting for next event...");
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Waiting for next event...");
 		/* get a job, this block until one is available */
 		current_job = charon->event_queue->get(charon->event_queue);
 		/* queue the job in the job queue, workers will eat them */
 		charon->job_queue->add(charon->job_queue, current_job);
-		this->logger->log(this->logger, CONTROL | MORE, "Got event, added job %s to job-queue.", 
+		this->logger->log(this->logger, CONTROL | LEVEL1, "Got event, added job %s to job-queue.", 
 						  mapping_find(job_type_m, current_job->get_type(current_job)));
 	}
 }
@@ -92,11 +92,11 @@ static void get_events(private_scheduler_t * this)
  */
 static void destroy(private_scheduler_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to terminate scheduler thread");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to terminate scheduler thread");
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
-	this->logger->log(this->logger, CONTROL | MORE, "Scheduler thread terminated");	
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Scheduler thread terminated");	
 	
 	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 

@@ -143,14 +143,14 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	
 	if (ike_auth_reply->get_exchange_type(ike_auth_reply) != IKE_AUTH)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_auth_requested",
+		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state ike_auth_requested",
 							mapping_find(exchange_type_m,ike_auth_reply->get_exchange_type(ike_auth_reply)));
 		return FAILED;
 	}
 	
 	if (ike_auth_reply->get_request(ike_auth_reply))
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Only responses of type IKE_AUTH supported in state ike_auth_requested");
+		this->logger->log(this->logger, ERROR | LEVEL1, "Only responses of type IKE_AUTH supported in state ike_auth_requested");
 		return FAILED;
 	}
 	
@@ -162,7 +162,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	status = ike_auth_reply->parse_body(ike_auth_reply, crypter, signer);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Could not parse body of request message");
+		this->logger->log(this->logger, ERROR | LEVEL1, "Could not parse body of request message");
 		return status;
 	}
 	
@@ -212,13 +212,13 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 				notify_payload_t *notify_payload = (notify_payload_t *) payload;
 				
 				
-				this->logger->log(this->logger, CONTROL|MORE, "Process notify type %s for protocol %s",
+				this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
 								  mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)),
 								  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
 								  
 				if (notify_payload->get_protocol_id(notify_payload) != IKE)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "Notify reply not for IKE protocol");
+					this->logger->log(this->logger, ERROR | LEVEL1, "Notify reply not for IKE protocol");
 					payloads->destroy(payloads);
 					return DELETE_ME;	
 				}
@@ -313,7 +313,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	}
 
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_auth_reply->get_message_id(ike_auth_reply));
-	this->logger->log(this->logger, CONTROL | MORE, "IKE_AUTH response successfully handled. IKE_SA established.");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "IKE_AUTH response successfully handled. IKE_SA established.");
 	
 	/* create new state */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
@@ -415,7 +415,7 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
 		return DELETE_ME;	
 	}
 
-	this->logger->log(this->logger, CONTROL | MORE, "AUTH data verified");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "AUTH data verified");
 	return SUCCESS;	
 }
 

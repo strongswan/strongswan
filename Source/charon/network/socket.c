@@ -77,7 +77,7 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	pkt->set_source(pkt, source);
 	pkt->set_destination(pkt, dest);
 
-	this->logger->log(this->logger, CONTROL|MORE, "going to read from socket");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "going to read from socket");
 	/* do the read */
 	data.len = recvfrom(this->socket_fd, buffer, MAX_PACKET, 0,
 						source->get_sockaddr(source), 

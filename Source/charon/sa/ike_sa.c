@@ -295,7 +295,7 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	if (is_request && (message_id == (this->message_id_in - 1)))
 	{
 		/* Message can be resent ! */
-		this->logger->log(this->logger, CONTROL|MORE, "Resent request detected. Send stored reply.");
+		this->logger->log(this->logger, CONTROL|LEVEL1, "Resent request detected. Send stored reply.");
 		return (this->resend_last_reply(this));
 	}
 	
@@ -305,7 +305,7 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 		/* In a request, the message has to be this->message_id_in (other case is already handled) */
 		if (message_id != this->message_id_in)
 		{
-			this->logger->log(this->logger, ERROR | MORE, "Message request with message id %d received, but %d expected",message_id,this->message_id_in);
+			this->logger->log(this->logger, ERROR | LEVEL1, "Message request with message id %d received, but %d expected",message_id,this->message_id_in);
 			return FAILED;
 		}
 	}
@@ -314,7 +314,7 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 		/* In a reply, the message has to be this->message_id_out -1 cause it is the reply to the last sent message*/
 		if (message_id != (this->message_id_out - 1))
 		{
-			this->logger->log(this->logger, ERROR | MORE, "Message reply with message id %d received, but %d expected",message_id,this->message_id_in);
+			this->logger->log(this->logger, ERROR | LEVEL1, "Message reply with message id %d received, but %d expected",message_id,this->message_id_in);
 			return FAILED;
 		}
 	}
@@ -334,7 +334,7 @@ static void build_message(private_ike_sa_t *this, exchange_type_t type, bool req
 {
 	message_t *new_message; 
 
-	this->logger->log(this->logger, CONTROL|MOST, "Build empty message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Build empty message");
 	new_message = message_create();	
 	new_message->set_source(new_message, this->me.host->clone(this->me.host));
 	new_message->set_destination(new_message, this->other.host->clone(this->other.host));
@@ -403,7 +403,7 @@ static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chun
 	/* second is responder */
 	memcpy(concatenated_nonces.ptr + initiator_nonce.len,responder_nonce.ptr,responder_nonce.len);
 
-	this->logger->log_chunk(this->logger, RAW | MOST, "Nonce data", &concatenated_nonces);
+	this->logger->log_chunk(this->logger, RAW | LEVEL2, "Nonce data", &concatenated_nonces);
 
 	/* Status of set_key is not checked */
 	this->prf->set_key(this->prf,concatenated_nonces);
@@ -424,13 +424,13 @@ static void compute_secrets(private_ike_sa_t *this,chunk_t dh_shared_secret,chun
 	responder_spi = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
 	memcpy(prf_plus_seed.ptr + initiator_nonce.len + responder_nonce.len + 8,&responder_spi,8);
 	
-	this->logger->log_chunk(this->logger, PRIVATE | MORE, "Keyseed", &skeyseed);
-	this->logger->log_chunk(this->logger, PRIVATE | MORE, "PRF+ Seed", &prf_plus_seed);
+	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "Keyseed", &skeyseed);
+	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "PRF+ Seed", &prf_plus_seed);
 
-	this->logger->log(this->logger, CONTROL | MOST, "Set new key of prf object");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Set new key of prf object");
 	this->prf->set_key(this->prf,skeyseed);
  
-	this->logger->log(this->logger, CONTROL | MOST, "Create new prf+ object");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Create new prf+ object");
 	prf_plus = prf_plus_create(this->prf, prf_plus_seed);
 	allocator_free_chunk(&prf_plus_seed);
 	
@@ -470,7 +470,7 @@ static status_t resend_last_reply(private_ike_sa_t *this)
 {
 	packet_t *packet;
 	
-	this->logger->log(this->logger, CONTROL | MORE, "Going to retransmit last reply");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to retransmit last reply");
 	packet = this->last_responded_message->get_packet(this->last_responded_message);
 	charon->send_queue->add(charon->send_queue, packet);
 
@@ -499,7 +499,7 @@ status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
 		return NOT_FOUND;
 	}
 	
-	this->logger->log(this->logger, CONTROL | MORE, "Going to retransmit message with id %d",message_id);
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to retransmit message with id %d",message_id);
 	packet = this->last_requested_message->get_packet(this->last_requested_message);
 	charon->send_queue->add(charon->send_queue, packet);
 	
@@ -619,11 +619,11 @@ static chunk_t get_key_pi (private_ike_sa_t *this)
  */
 static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_proposal_t *proposal)
 {
-	this->logger->log(this->logger, CONTROL|MORE, "Going to create transform objects for proposal");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Going to create transform objects for proposal");
 	
-	this->logger->log(this->logger, CONTROL|MORE, "Encryption algorithm: %s with keylength %d",mapping_find(encryption_algorithm_m,proposal->encryption_algorithm),proposal->encryption_algorithm_key_length);
-	this->logger->log(this->logger, CONTROL|MORE, "integrity algorithm: %s with keylength %d",mapping_find(integrity_algorithm_m,proposal->integrity_algorithm),proposal->integrity_algorithm_key_length);
-	this->logger->log(this->logger, CONTROL|MORE, "prf: %s with keylength %d",mapping_find(pseudo_random_function_m,proposal->pseudo_random_function),proposal->pseudo_random_function_key_length);
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Encryption algorithm: %s with keylength %d",mapping_find(encryption_algorithm_m,proposal->encryption_algorithm),proposal->encryption_algorithm_key_length);
+	this->logger->log(this->logger, CONTROL|LEVEL1, "integrity algorithm: %s with keylength %d",mapping_find(integrity_algorithm_m,proposal->integrity_algorithm),proposal->integrity_algorithm_key_length);
+	this->logger->log(this->logger, CONTROL|LEVEL1, "prf: %s with keylength %d",mapping_find(pseudo_random_function_m,proposal->pseudo_random_function),proposal->pseudo_random_function_key_length);
 	
 	if (this->prf != NULL)
 	{
@@ -632,7 +632,7 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_prop
 	this->prf = prf_create(proposal->pseudo_random_function);
 	if (this->prf == NULL)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "prf not supported!");
+		this->logger->log(this->logger, ERROR|LEVEL1, "prf not supported!");
 		return FAILED;
 	}
 	
@@ -643,7 +643,7 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_prop
 	this->crypter_initiator = crypter_create(proposal->encryption_algorithm,proposal->encryption_algorithm_key_length);
 	if (this->crypter_initiator == NULL)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "encryption algorithm %s not supported!",
+		this->logger->log(this->logger, ERROR|LEVEL1, "encryption algorithm %s not supported!",
 						  mapping_find(encryption_algorithm_m,proposal->encryption_algorithm));
 		return FAILED;
 	}
@@ -662,7 +662,7 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_prop
 	this->signer_initiator = signer_create(proposal->integrity_algorithm);
 	if (this->signer_initiator == NULL)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "integrity algorithm not supported!");
+		this->logger->log(this->logger, ERROR|LEVEL1, "integrity algorithm not supported!");
 		return FAILED;
 	}
 	
@@ -733,7 +733,7 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 	}
 
 	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|MOST, "Generate packet from message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Generate packet from message");
 
 	status = message->generate(message, this->crypter_initiator,this->signer_initiator, &packet);
 	if (status != SUCCESS)
@@ -742,7 +742,7 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 		return FAILED;
 	}
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add packet to global send queue");
 	charon->send_queue->add(charon->send_queue, packet);
 	
 	if (this->last_requested_message != NULL)
@@ -751,7 +751,7 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 		this->last_requested_message->destroy(this->last_requested_message);
 	}	
 
-	this->logger->log(this->logger, CONTROL|MOST, "replace last requested message with new one");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "replace last requested message with new one");
 	this->last_requested_message = message;
 	
 	retransmit_job = retransmit_request_job_create(this->message_id_out,this->ike_sa_id);
@@ -760,17 +760,17 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 	
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, CONTROL|MOST, "No retransmit job for message created!");
+		this->logger->log(this->logger, CONTROL|LEVEL2, "No retransmit job for message created!");
 		retransmit_job->destroy(retransmit_job);
 	}
 	else
 	{
-		this->logger->log(this->logger, CONTROL|MOST, "Request will be retransmitted in %d ms.",timeout);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Request will be retransmitted in %d ms.",timeout);
 		charon->event_queue->add_relative(charon->event_queue,(job_t *) retransmit_job,timeout);
 	}
 	
 	/* message counter can now be increased */
-	this->logger->log(this->logger, CONTROL|MOST, "Increase message counter for outgoing messages from %d",this->message_id_out);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Increase message counter for outgoing messages from %d",this->message_id_out);
 	this->message_id_out++;
 	return SUCCESS;	
 }
@@ -785,7 +785,7 @@ static status_t send_response (private_ike_sa_t *this,message_t * message)
 	
 	if (message->get_message_id(message) != this->message_id_in)
 	{
-		this->logger->log(this->logger, CONTROL|MOST, "Message could not be sent cause id was not as expected");
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Message could not be sent cause id was not as expected");
 		return FAILED;	
 	}
 	
@@ -796,7 +796,7 @@ static status_t send_response (private_ike_sa_t *this,message_t * message)
 		return FAILED;
 	}
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add packet to global send queue");
 	charon->send_queue->add(charon->send_queue, packet);
 	
 	if (this->last_responded_message != NULL)
@@ -805,11 +805,11 @@ static status_t send_response (private_ike_sa_t *this,message_t * message)
 		this->last_responded_message->destroy(this->last_responded_message);
 	}
 	
-	this->logger->log(this->logger, CONTROL|MOST, "replace last responded message with new one");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "replace last responded message with new one");
 	this->last_responded_message = message;
 
 	/* message counter can now be increased */
-	this->logger->log(this->logger, CONTROL|MOST, "Increase message counter for incoming messages");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Increase message counter for incoming messages");
 	this->message_id_in++;
 
 	return SUCCESS;
@@ -849,7 +849,7 @@ static ike_sa_state_t get_state (private_ike_sa_t *this)
  */
 static void reset_message_buffers (private_ike_sa_t *this)
 {
-	this->logger->log(this->logger, CONTROL|MOST, "Reset message counters and destroy stored messages");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Reset message counters and destroy stored messages");
 	/* destroy stored requested message */
 	if (this->last_requested_message != NULL)
 	{
@@ -873,7 +873,7 @@ static void create_delete_established_ike_sa_job (private_ike_sa_t *this,u_int32
 {
 	job_t *delete_job;
 
-	this->logger->log(this->logger, CONTROL | MORE, "Going to create job to delete established IKE_SA in %d ms", timeout);
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to create job to delete established IKE_SA in %d ms", timeout);
 
 	delete_job = (job_t *) delete_established_ike_sa_job_create(this->ike_sa_id);
 	charon->event_queue->add_relative(charon->event_queue,delete_job, timeout);
@@ -884,13 +884,13 @@ static void create_delete_established_ike_sa_job (private_ike_sa_t *this,u_int32
  */
 static void destroy (private_ike_sa_t *this)
 {
-	this->logger->log(this->logger, CONTROL|MOST, "Going to destroy IKE SA %llu:%llu, role %s", 
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to destroy IKE SA %llu:%llu, role %s", 
 					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
 					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 
 	/* destroy child sa's */
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy all child_sa's");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy all child_sa's");
 	while (this->child_sas->get_count(this->child_sas) > 0)
 	{
 		void *child_sa;
@@ -902,79 +902,79 @@ static void destroy (private_ike_sa_t *this)
 	}
 	this->child_sas->destroy(this->child_sas);
 
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy secrets");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy secrets");
 	allocator_free(this->secrets.d_key.ptr);
 	allocator_free(this->secrets.pi_key.ptr);
 	allocator_free(this->secrets.pr_key.ptr);
 	
 	if (this->crypter_initiator != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy initiator crypter_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy initiator crypter_t object");
 		this->crypter_initiator->destroy(this->crypter_initiator);
 	}
 	
 	if (this->crypter_responder != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy responder crypter_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy responder crypter_t object");
 		this->crypter_responder->destroy(this->crypter_responder);
 	}
 	
 	if (this->signer_initiator != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy initiator signer_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy initiator signer_t object");
 		this->signer_initiator->destroy(this->signer_initiator);
 	}
 
 	if (this->signer_responder != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy responder signer_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy responder signer_t object");
 		this->signer_responder->destroy(this->signer_responder);
 	}
 	
 	if (this->prf != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy prf_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy prf_t object");
 		this->prf->destroy(this->prf);
 	}
 	
 	/* destroy ike_sa_id */
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy ike_sa_id object");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy ike_sa_id object");
 	this->ike_sa_id->destroy(this->ike_sa_id);
 
 	/* destroy stored requested message */
 	if (this->last_requested_message != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy last requested message");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy last requested message");
 		this->last_requested_message->destroy(this->last_requested_message);
 	}
 	
 	/* destroy stored responded messages */
 	if (this->last_responded_message != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy last responded message");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy last responded message");
 		this->last_responded_message->destroy(this->last_responded_message);
 	}
 	
 	/* destroy stored host_t objects */
 	if (this->me.host != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy my host_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy my host_t object");
 		this->me.host->destroy(this->me.host);
 	}
 	
 	/* destroy stored host_t objects */
 	if (this->other.host != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy other host_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy other host_t object");
 		this->other.host->destroy(this->other.host);
 	}
 		
 	this->randomizer->destroy(this->randomizer);
 
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy current state object");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy current state object");
 	this->current_state->destroy(this->current_state);
 	
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy logger of IKE_SA");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy logger of IKE_SA");
 	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);

@@ -102,15 +102,15 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
 		log_type = '-';
 	}
 	
-	if (loglevel & (ALL - MOST))
+	if (loglevel & (LEVEL3 - LEVEL2))
 	{
 		log_details = '3';
 	}
-	else if (loglevel & (MOST - MORE))
+	else if (loglevel & (LEVEL2 - LEVEL1))
 	{
 		log_details = '2';
 	}
-	else if (loglevel & MORE)
+	else if (loglevel & LEVEL1)
 	{
 		log_details = '1';
 	}

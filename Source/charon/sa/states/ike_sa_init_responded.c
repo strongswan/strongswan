@@ -157,14 +157,14 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 
 	if (request->get_exchange_type(request) != IKE_AUTH)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_sa_init_responded",
+		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state ike_sa_init_responded",
 							mapping_find(exchange_type_m,request->get_exchange_type(request)));
 		return FAILED;
 	}
 	
 	if (!request->get_request(request))
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Only requests of type IKE_AUTH supported in state ike_sa_init_responded");
+		this->logger->log(this->logger, ERROR | LEVEL1, "Only requests of type IKE_AUTH supported in state ike_sa_init_responded");
 		return FAILED;
 	}
 	
@@ -177,7 +177,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	{
 		if (status == NOT_SUPPORTED)
 		{
-			this->logger->log(this->logger, ERROR | MORE, "Message contains unsupported payload with critical flag set");
+			this->logger->log(this->logger, ERROR | LEVEL1, "Message contains unsupported payload with critical flag set");
 			/**
 			 * TODO send unsupported type.
 			 */
@@ -186,7 +186,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		}
 		else
 		{
-			this->logger->log(this->logger, ERROR | MORE, "Could not parse body of request message");
+			this->logger->log(this->logger, ERROR | LEVEL1, "Could not parse body of request message");
 		}
 		return status;
 	}
@@ -223,13 +223,13 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 			case CERTIFICATE:
 			{
 				/* TODO handle cert payloads */
-				this->logger->log(this->logger, ERROR | MORE, "Payload type CERTIFICATE currently not supported and so not handled");
+				this->logger->log(this->logger, ERROR | LEVEL1, "Payload type CERTIFICATE currently not supported and so not handled");
 				break;
 			}
 			case CERTIFICATE_REQUEST:
 			{
 				/* TODO handle certrequest payloads */
-				this->logger->log(this->logger, ERROR | MORE, "Payload type CERTIFICATE_REQUEST currently not supported and so not handled");
+				this->logger->log(this->logger, ERROR | LEVEL1, "Payload type CERTIFICATE_REQUEST currently not supported and so not handled");
 				break;
 			}
 			case TRAFFIC_SELECTOR_INITIATOR:
@@ -246,13 +246,13 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 			{
 				notify_payload_t *notify_payload = (notify_payload_t *) payload;
 
-				this->logger->log(this->logger, CONTROL|MORE, "Process notify type %s for protocol %s",
+				this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
 								  mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)),
 								  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
 								  
 				if (notify_payload->get_protocol_id(notify_payload) != IKE)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "Notify not for IKE protocol.");
+					this->logger->log(this->logger, ERROR | LEVEL1, "Notify not for IKE protocol.");
 					payloads->destroy(payloads);
 					return DELETE_ME;	
 				}
@@ -268,7 +268,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 					 */
 					default:
 					{
-						this->logger->log(this->logger, CONTROL|MORE, "Handling of notify type %s not implemented",
+						this->logger->log(this->logger, CONTROL|LEVEL1, "Handling of notify type %s not implemented",
 										  notify_payload->get_notify_message_type(notify_payload));
 					}
 				}
@@ -326,7 +326,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		return status;
 	}		
 
-	this->logger->log(this->logger, CONTROL | MORE, "IKE_AUTH request successfully handled. Sending reply.");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "IKE_AUTH request successfully handled. Sending reply.");
 	status = this->ike_sa->send_response(this->ike_sa, response);
 
 	/* message can now be sent (must not be destroyed) */
@@ -459,7 +459,7 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 		/*
 		 * Send notify message of type AUTHENTICATION_FAILED 
 		 */
-		this->logger->log(this->logger, CONTROL | MORE, "Send notify message of type AUTHENTICATION_FAILED");
+		this->logger->log(this->logger, CONTROL | LEVEL1, "Send notify message of type AUTHENTICATION_FAILED");
 		this->send_notify_reply (this,AUTHENTICATION_FAILED,CHUNK_INITIALIZER);		
 		return DELETE_ME;
 	}
@@ -535,31 +535,33 @@ static void send_notify_reply (private_ike_sa_init_responded_t *this,notify_mess
 	packet_t *packet;
 	status_t status;
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Going to build message with notify payload");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message with notify payload");
 	/* set up the reply */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, FALSE, &response);
 	payload = notify_payload_create_from_protocol_and_type(IKE,type);
 	if ((data.ptr != NULL) && (data.len > 0))
 	{
-		this->logger->log(this->logger, CONTROL|MOST, "Add Data to notify payload");
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Add Data to notify payload");
 		payload->set_notification_data(payload,data);
 	}
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add Notify payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add Notify payload to message");
 	response->add_payload(response,(payload_t *) payload);
 	
 	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|MOST, "Gnerate packet from message");
-	status = response->generate(response, NULL, NULL, &packet);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Gnerate packet from message");
+	status = response->generate(response, this->ike_sa->get_crypter_responder(this->ike_sa), 
+								this->ike_sa->get_signer_responder(this->ike_sa), &packet);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
+		response->destroy(response);
 		return;
 	}
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add packet to global send queue");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add packet to global send queue");
 	charon->send_queue->add(charon->send_queue, packet);
-	this->logger->log(this->logger, CONTROL|MOST, "Destroy message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy message");
 	response->destroy(response);
 }
 
@@ -576,15 +578,15 @@ static ike_sa_state_t get_state(private_ike_sa_init_responded_t *this)
  */
 static void destroy(private_ike_sa_init_responded_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy ike_sa_init_responded_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy ike_sa_init_responded_t state object");
 	
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy received nonce");
 	allocator_free_chunk(&(this->received_nonce));
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy sent nonce");
 	allocator_free_chunk(&(this->sent_nonce));
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy IKE_SA_INIT response octets");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy IKE_SA_INIT response octets");
 	allocator_free_chunk(&(this->ike_sa_init_response_data));
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy IKE_SA_INIT request octets");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy IKE_SA_INIT request octets");
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
 
 	allocator_free(this);

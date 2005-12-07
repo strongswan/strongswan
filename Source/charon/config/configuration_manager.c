@@ -360,7 +360,7 @@ static void load_default_config (private_configuration_manager_t *this)
 	this->add_new_configuration(this,"localhost",init_config3,sa_config3);
 
 	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.130","verschluesselt");
-	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.131","verschluesselt");
+	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.131","scheisen");
 	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "127.0.0.1","verschluesselt");
 	
 	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "127.0.0.1", public_key_1, 256);
@@ -379,7 +379,7 @@ static status_t get_init_config_for_host (private_configuration_manager_t *this,
 	
 	iterator = this->configurations->create_iterator(this->configurations,TRUE);
 	
-	this->logger->log(this->logger, CONTROL|MORE, "getting config for hosts %s - %s", 
+	this->logger->log(this->logger, CONTROL|LEVEL1, "getting config for hosts %s - %s", 
 						my_host->get_address(my_host), other_host->get_address(other_host));
 	
 	while (iterator->has_next(iterator))
@@ -396,7 +396,7 @@ static status_t get_init_config_for_host (private_configuration_manager_t *this,
 		/* first check if ip is equal */
 		if(config_other_host->ip_is_equal(config_other_host,other_host))
 		{
-			this->logger->log(this->logger, CONTROL|MOST, "config entry with remote host %s", 
+			this->logger->log(this->logger, CONTROL|LEVEL2, "config entry with remote host %s", 
 						config_other_host->get_address(config_other_host));
 			/* could be right one, check my_host for default route*/
 			if (config_my_host->is_default_route(config_my_host))
@@ -749,9 +749,9 @@ static u_int32_t get_half_open_ike_sa_timeout (private_configuration_manager_t *
  */
 static void destroy(private_configuration_manager_t *this)
 {
-	this->logger->log(this->logger,CONTROL | MORE, "Going to destroy configuration manager ");
+	this->logger->log(this->logger,CONTROL | LEVEL1, "Going to destroy configuration manager ");
 
-	this->logger->log(this->logger,CONTROL | MOST, "Destroy configuration entries");
+	this->logger->log(this->logger,CONTROL | LEVEL2, "Destroy configuration entries");
 	while (this->configurations->get_count(this->configurations) > 0)
 	{
 		configuration_entry_t *entry;
@@ -760,7 +760,7 @@ static void destroy(private_configuration_manager_t *this)
 	}
 	this->configurations->destroy(this->configurations);
 
-	this->logger->log(this->logger,CONTROL | MOST, "Destroy sa_config_t objects");	
+	this->logger->log(this->logger,CONTROL | LEVEL2, "Destroy sa_config_t objects");	
 	while (this->sa_configs->get_count(this->sa_configs) > 0)
 	{
 		sa_config_t *sa_config;
@@ -770,7 +770,7 @@ static void destroy(private_configuration_manager_t *this)
 
 	this->sa_configs->destroy(this->sa_configs);
 	
-	this->logger->log(this->logger,CONTROL | MOST, "Destroy init_config_t objects");
+	this->logger->log(this->logger,CONTROL | LEVEL2, "Destroy init_config_t objects");
 	while (this->init_configs->get_count(this->init_configs) > 0)
 	{
 		init_config_t *init_config;
@@ -789,7 +789,7 @@ static void destroy(private_configuration_manager_t *this)
 	}
 	this->preshared_secrets->destroy(this->preshared_secrets);
 
-	this->logger->log(this->logger,CONTROL | MOST, "Destroy rsa private keys");	
+	this->logger->log(this->logger,CONTROL | LEVEL2, "Destroy rsa private keys");	
 	while (this->rsa_private_keys->get_count(this->rsa_private_keys) > 0)
 	{
 		rsa_private_key_entry_t *entry;
@@ -800,7 +800,7 @@ static void destroy(private_configuration_manager_t *this)
 	}
 	this->rsa_private_keys->destroy(this->rsa_private_keys);
 
-	this->logger->log(this->logger,CONTROL | MOST, "Destroy rsa public keys");
+	this->logger->log(this->logger,CONTROL | LEVEL2, "Destroy rsa public keys");
 	while (this->rsa_public_keys->get_count(this->rsa_public_keys) > 0)
 	{
 		rsa_public_key_entry_t *entry;
@@ -811,7 +811,7 @@ static void destroy(private_configuration_manager_t *this)
 	}
 	this->rsa_public_keys->destroy(this->rsa_public_keys);
 		
-	this->logger->log(this->logger,CONTROL | MOST, "Destroy assigned logger");
+	this->logger->log(this->logger,CONTROL | LEVEL2, "Destroy assigned logger");
 	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 	allocator_free(this);
 }

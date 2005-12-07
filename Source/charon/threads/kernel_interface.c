@@ -386,7 +386,7 @@ static void receive_messages(private_kernel_interface_t *this)
 			pthread_mutex_lock(&(this->mutex));
 			this->responses->insert_last(this->responses, (void*)listed_response);
 			pthread_mutex_unlock(&(this->mutex));
-			/* signal ALL waiting threads */
+			/* signal LEVEL3 waiting threads */
 			pthread_cond_broadcast(&(this->condvar));
 		}
 		/* get the next one */

@@ -288,7 +288,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	/* build payload chunk */
 	this->generate(this);
 	
-	this->logger->log(this->logger, CONTROL|MOST, "encrypting payloads");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "encrypting payloads");
 	
 	/* build padding */
 	block_size = this->crypter->get_block_size(this->crypter);
@@ -315,7 +315,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	allocator_free(to_crypt.ptr);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "encryption failed");
+		this->logger->log(this->logger, ERROR|LEVEL1, "encryption failed");
 		allocator_free(iv.ptr);
 		return status;
 	}
@@ -344,7 +344,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	status_t status;
 	
 	
-	this->logger->log(this->logger, CONTROL|MOST, "decrypting encryption payload");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "decrypting encryption payload");
 	
 	if (this->signer == NULL || this->crypter == NULL)
 	{
@@ -366,7 +366,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	 */
 	if (concatenated.len < iv.len)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "could not decrypt, invalid input");
+		this->logger->log(this->logger, ERROR|LEVEL1, "could not decrypt, invalid input");
 		return FAILED;
 	}
 	
@@ -376,7 +376,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	status = this->crypter->decrypt(this->crypter, concatenated, iv, &(this->decrypted));
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "could not decrypt, decryption failed");
+		this->logger->log(this->logger, ERROR|LEVEL1, "could not decrypt, decryption failed");
 		return FAILED;
 	}
 	
@@ -389,14 +389,14 @@ static status_t decrypt(private_encryption_payload_t *this)
 	/* check size again */
 	if (padding_length > concatenated.len || this->decrypted.len < 0)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "decryption failed, invalid padding length found. Invalid key?");
+		this->logger->log(this->logger, ERROR|LEVEL1, "decryption failed, invalid padding length found. Invalid key?");
 		/* decryption failed :-/ */
 		return FAILED;
 	}
 	
 	/* free padding */
 	this->decrypted.ptr = allocator_realloc(this->decrypted.ptr, this->decrypted.len);
-	this->logger->log(this->logger, CONTROL|MOST, "decryption successful, trying to parse content");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "decryption successful, trying to parse content");
 	return (this->parse(this));
 }
 
@@ -426,7 +426,7 @@ static status_t build_signature(private_encryption_payload_t *this, chunk_t data
 	sig.len = this->signer->get_block_size(this->signer);
 	data_without_sig.len -= sig.len;
 	sig.ptr = data.ptr + data_without_sig.len;
-	this->logger->log(this->logger, CONTROL|MOST, "building signature");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "building signature");
 	this->signer->get_signature(this->signer, data_without_sig, sig.ptr);
 	return SUCCESS;
 }
@@ -448,7 +448,7 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 	sig.len = this->signer->get_block_size(this->signer);
 	if (data.len <= sig.len)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "unable to verify signature, invalid input");
+		this->logger->log(this->logger, ERROR|LEVEL1, "unable to verify signature, invalid input");
 		return FAILED;
 	}
 	sig.ptr = data.ptr + data.len - sig.len;
@@ -460,11 +460,11 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 	
 	if (!valid)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "signature verification failed");
+		this->logger->log(this->logger, ERROR|LEVEL1, "signature verification failed");
 		return FAILED;
 	}
 	
-	this->logger->log(this->logger, CONTROL|MOST, "signature verification successful");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "signature verification successful");
 	return SUCCESS;
 }
 
@@ -492,7 +492,7 @@ static void generate(private_encryption_payload_t *this)
 	else
 	{
 		/* no paylads? */
-		this->logger->log(this->logger, CONTROL|MORE, "generating contained payloads, but no available");
+		this->logger->log(this->logger, CONTROL|LEVEL1, "generating contained payloads, but no available");
 		allocator_free(this->decrypted.ptr);
 		this->decrypted = CHUNK_INITIALIZER;
 		iterator->destroy(iterator);
@@ -520,7 +520,7 @@ static void generate(private_encryption_payload_t *this)
 	
 	generator->write_to_chunk(generator, &(this->decrypted));
 	generator->destroy(generator);
-	this->logger->log(this->logger, CONTROL|MORE, "successfully generated content in encrpytion payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "successfully generated content in encrpytion payload");
 }
 
 /**
@@ -559,7 +559,7 @@ static status_t parse(private_encryption_payload_t *this)
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR|MORE, "%s verification failed: %s", 
+			this->logger->log(this->logger, ERROR|LEVEL1, "%s verification failed: %s", 
 								mapping_find(payload_type_m,current_payload->get_type(current_payload)),
 								mapping_find(status_m, status));
 			current_payload->destroy(current_payload);
@@ -573,7 +573,7 @@ static status_t parse(private_encryption_payload_t *this)
 		this->payloads->insert_last(this->payloads,current_payload);
 	}
 	parser->destroy(parser);
-	this->logger->log(this->logger, CONTROL|MORE, "succesfully parsed content of encryption payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "succesfully parsed content of encryption payload");
 	return SUCCESS;
 }
 

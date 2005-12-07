@@ -219,14 +219,14 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 	if (ike_sa_init_reply->get_exchange_type(ike_sa_init_reply) != IKE_SA_INIT)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Message of type %s not supported in state ike_sa_init_requested",
+		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state ike_sa_init_requested",
 							mapping_find(exchange_type_m,ike_sa_init_reply->get_exchange_type(ike_sa_init_reply)));
 		return FAILED;
 	}
 	
 	if (ike_sa_init_reply->get_request(ike_sa_init_reply))
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Only responses of type IKE_SA_INIT supported in state ike_sa_init_requested");
+		this->logger->log(this->logger, ERROR | LEVEL1, "Only responses of type IKE_SA_INIT supported in state ike_sa_init_requested");
 		return FAILED;
 	}
 	
@@ -234,7 +234,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	status = ike_sa_init_reply->parse_body(ike_sa_init_reply, NULL, NULL);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Parsing of body returned error: %s",mapping_find(status_m,status));
+		this->logger->log(this->logger, ERROR | LEVEL1, "Parsing of body returned error: %s",mapping_find(status_m,status));
 		return status;	
 	}
 	
@@ -243,7 +243,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	
 	if (responder_spi == 0)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Responder SPI still zero");
+		this->logger->log(this->logger, ERROR | LEVEL1, "Responder SPI still zero");
 		return FAILED;
 	}
 	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
@@ -259,7 +259,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		payload_t *payload;
 		payloads->current(payloads, (void**)&payload);
 		
-		this->logger->log(this->logger, CONTROL|MORE, "Processing payload %s", mapping_find(payload_type_m, payload->get_type(payload)));
+		this->logger->log(this->logger, CONTROL|LEVEL1, "Processing payload %s", mapping_find(payload_type_m, payload->get_type(payload)));
 		switch (payload->get_type(payload))
 		{
 			case NOTIFY:
@@ -267,13 +267,13 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				notify_payload_t *notify_payload = (notify_payload_t *) payload;
 				
 				
-				this->logger->log(this->logger, CONTROL|MORE, "Process notify type %s for protocol %s",
+				this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
 								  mapping_find(notify_message_type_m, notify_payload->get_notify_message_type(notify_payload)),
 								  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
 								  
 				if (notify_payload->get_protocol_id(notify_payload) != IKE)
 				{
-					this->logger->log(this->logger, ERROR | MORE, "Notify reply not for IKE protocol.");
+					this->logger->log(this->logger, ERROR | LEVEL1, "Notify reply not for IKE protocol.");
 					payloads->destroy(payloads);
 					return FAILED;	
 				}
@@ -299,7 +299,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 						this->logger->log(this->logger, ERROR, "Selected DH group is not the one in the proposal selected by the responder!");
 						payloads->destroy(payloads);						
 						/* Going to change state back to initiator_init_t */
-						this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+						this->logger->log(this->logger, CONTROL|LEVEL2, "Create next state object");
 						initiator_init_state = initiator_init_create(this->ike_sa);
 
 						/* buffer of sent and received messages has to get reseted */
@@ -309,10 +309,10 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 						this->ike_sa->set_new_state(this->ike_sa,(state_t *) initiator_init_state);
 
 						/* state has NOW changed :-) */
-						this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
+						this->logger->log(this->logger, CONTROL|LEVEL1, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
 
-						this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
-						this->logger->log(this->logger, CONTROL|MOST, "Going to retry initialization of connection");
+						this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
+						this->logger->log(this->logger, CONTROL|LEVEL2, "Going to retry initialization of connection");
 						new_dh_group_priority = this->dh_group_priority + 1;
 						
 						this->public.state_interface.destroy(&(this->public.state_interface));
@@ -388,7 +388,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		return status;
 	}
 
-	this->logger->log(this->logger, CONTROL|MOST, "Going to build empty message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build empty message");
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &request);
 	
 	/* build ID payload */
@@ -445,16 +445,16 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	ike_sa_init_reply_data = ike_sa_init_reply->get_packet_data(ike_sa_init_reply);
 
 	/* state can now be changed */
-	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Create next state object");
 	next_state = ike_auth_requested_create(this->ike_sa,this->sent_nonce,this->received_nonce,ike_sa_init_reply_data);
 
 	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 
 	/* state has NOW changed :-) */
-	this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED),mapping_find(ike_sa_state_m,IKE_AUTH_REQUESTED) );
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED),mapping_find(ike_sa_state_m,IKE_AUTH_REQUESTED) );
 
-	this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
 	this->destroy_after_state_change(this);
 	return SUCCESS;
 }
@@ -488,31 +488,31 @@ status_t process_sa_payload (private_ike_sa_init_requested_t *this, sa_payload_t
 	status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals,&proposal_count);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "SA payload does not contain IKE proposals");
+		this->logger->log(this->logger, ERROR | LEVEL1, "SA payload does not contain IKE proposals");
 		return DELETE_ME;	
 	}
 	/* the peer has to select only one proposal */
 	if (proposal_count != 1)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "More then 1 proposal (%d) selected!",proposal_count);
+		this->logger->log(this->logger, ERROR | LEVEL1, "More then 1 proposal (%d) selected!",proposal_count);
 		allocator_free(ike_proposals);
 		return DELETE_ME;							
 	}
 	
 	/* now let the configuration-manager check the selected proposals*/
-	this->logger->log(this->logger, CONTROL | MOST, "Check selected proposal");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Check selected proposal");
 	status = init_config->select_proposal (init_config,ike_proposals,1,&selected_proposal);
 	allocator_free(ike_proposals);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Selected proposal not a suggested one! Peer is trying to trick me!");
+		this->logger->log(this->logger, ERROR | LEVEL1, "Selected proposal not a suggested one! Peer is trying to trick me!");
 		return DELETE_ME;
 	}
 				
 	status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,&selected_proposal);	
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Transform objects could not be created from selected proposal");
+		this->logger->log(this->logger, ERROR | LEVEL1, "Transform objects could not be created from selected proposal");
 		return DELETE_ME;
 	}
 	return SUCCESS;
@@ -531,11 +531,11 @@ status_t process_ke_payload (private_ike_sa_init_requested_t *this, ke_payload_t
 	/* store shared secret  
 	 * status of dh object does not have to get checked cause other key is set
 	 */
-	this->logger->log(this->logger, CONTROL | MOST, "Retrieve shared secret and store it");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Retrieve shared secret and store it");
 	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &shared_secret);		
 	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &shared_secret);
 
-	this->logger->log(this->logger, CONTROL | MOST, "Going to derive all secrets from shared secret");	
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Going to derive all secrets from shared secret");	
 	this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->sent_nonce, this->received_nonce);
 	
 	allocator_free_chunk(&(shared_secret));
@@ -557,7 +557,7 @@ static status_t build_id_payload (private_ike_sa_init_requested_t *this,id_paylo
 	identification = sa_config->get_my_id(sa_config);
 	new_id_payload = id_payload_create_from_identification(TRUE,identification);
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add ID payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add ID payload to message");
 	request->add_payload(request,(payload_t *) new_id_payload);
 	
 	*id_payload = new_id_payload;
@@ -583,7 +583,7 @@ static status_t build_auth_payload (private_ike_sa_init_requested_t *this, id_pa
 		return DELETE_ME;		
 	}
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add AUTH payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add AUTH payload to message");
 	request->add_payload(request,(payload_t *) auth_payload);
 	
 	return SUCCESS;
@@ -609,7 +609,7 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 	sa_payload = sa_payload_create_from_child_proposals(proposals, proposal_count);
 	allocator_free(proposals);
 
-	this->logger->log(this->logger, CONTROL|MOST, "Add SA payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add SA payload to message");
 	request->add_payload(request,(payload_t *) sa_payload);
 	
 	return SUCCESS;
@@ -637,7 +637,7 @@ static status_t build_tsi_payload (private_ike_sa_init_requested_t *this, messag
 	}	
 	allocator_free(traffic_selectors);
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add TSi payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add TSi payload to message");
 	request->add_payload(request,(payload_t *) ts_payload);
 	
 	return SUCCESS;
@@ -665,7 +665,7 @@ static status_t build_tsr_payload (private_ike_sa_init_requested_t *this, messag
 	}	
 	allocator_free(traffic_selectors);
 
-	this->logger->log(this->logger, CONTROL|MOST, "Add TSr payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add TSr payload to message");
 	request->add_payload(request,(payload_t *) ts_payload);
 	
 	return SUCCESS;
@@ -685,13 +685,13 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
  */
 static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy state of type ike_sa_init_requested_t after state change.");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy state of type ike_sa_init_requested_t after state change.");
 	
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy ike_sa_init_request_data");	
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy ike_sa_init_request_data");	
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy object itself");
 	allocator_free(this);	
 }
 
@@ -700,17 +700,17 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
  */
 static void destroy(private_ike_sa_init_requested_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy state of type ike_sa_init_requested_t");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy state of type ike_sa_init_requested_t");
 	
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie hellman object");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy sent nonce");	
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy sent nonce");	
 	allocator_free(this->sent_nonce.ptr);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy received nonce");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy received nonce");
 	allocator_free(this->received_nonce.ptr);
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy ike_sa_init_request_data");	
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy ike_sa_init_request_data");	
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
-	this->logger->log(this->logger, CONTROL | MOST, "Destroy object itself");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy object itself");
 	allocator_free(this);
 }
 

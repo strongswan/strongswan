@@ -79,7 +79,7 @@ static void send_packets(private_sender_t * this)
 	while (1)
 	{
 		current_packet = charon->send_queue->get(charon->send_queue);
-		this->logger->log(this->logger, CONTROL|MORE, "Got a packet, sending it");
+		this->logger->log(this->logger, CONTROL|LEVEL1, "Got a packet, sending it");
 		status = charon->socket->send(charon->socket,current_packet);
 		if (status != SUCCESS)
 		{
@@ -95,11 +95,11 @@ static void send_packets(private_sender_t * this)
  */
 static void destroy(private_sender_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to terminate sender thread");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to terminate sender thread");
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
-	this->logger->log(this->logger, CONTROL | MORE, "Sender thread terminated");	
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Sender thread terminated");	
 	
 	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 

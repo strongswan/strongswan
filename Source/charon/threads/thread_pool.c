@@ -151,7 +151,7 @@ static void process_jobs(private_thread_pool_t *this)
 		
 		job = charon->job_queue->get(charon->job_queue);
 		job_type = job->get_type(job);
-		this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Process job of type %s", 
+		this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Process job of type %s", 
 								 mapping_find(job_type_m,job_type));
 		gettimeofday(&start_time,NULL);
 		switch (job_type)
@@ -195,7 +195,7 @@ static void process_jobs(private_thread_pool_t *this)
 		}
 		gettimeofday(&end_time,NULL);
 		
-		this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Processed job of type %s in %d us",
+		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL2, "Processed job of type %s in %d us",
 									mapping_find(job_type_m,job_type),
 									(((end_time.tv_sec - start_time.tv_sec) * 1000000) + (end_time.tv_usec - start_time.tv_usec)));
 
@@ -227,7 +227,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 		return;										
 	}
 				
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Message is a %s %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Message is a %s %s", 
 							 mapping_find(exchange_type_m, message->get_exchange_type(message)),
 							 message->get_request(message) ? "request" : "reply");
 				
@@ -235,7 +235,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 			(message->get_minor_version(message) != IKE_MINOR_VERSION))
 
 	{
-		this->worker_logger->log(this->worker_logger, ERROR | MOST, "IKE version %d.%d not supported", 
+		this->worker_logger->log(this->worker_logger, ERROR | LEVEL2, "IKE version %d.%d not supported", 
 								 message->get_major_version(message),
 								 message->get_minor_version(message));	
 		/*
@@ -276,7 +276,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 			
 	ike_sa_id->switch_initiator(ike_sa_id);
 				
-	this->worker_logger->log(this->worker_logger, CONTROL|ALL, "Checking out IKE SA %lld:%lld, role %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "Checking out IKE SA %lld:%lld, role %s", 
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
@@ -297,7 +297,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 
 	if (status == CREATED)
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL|ALL, "Create Job to delete half open IKE_SA.");
+		this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "Create Job to delete half open IKE_SA.");
 		this->create_delete_half_open_ike_sa_job(this,ike_sa_id,charon->configuration_manager->get_half_open_ike_sa_timeout(charon->configuration_manager));
 	}
 
@@ -307,7 +307,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 		this->worker_logger->log(this->worker_logger, ERROR, "Message could not be processed by IKE SA");
 	}
 				
-	this->worker_logger->log(this->worker_logger, CONTROL|ALL, "%s IKE SA %lld:%lld, role %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "%s IKE SA %lld:%lld, role %s", 
 							 (status == DELETE_ME) ? "Checkin and delete" : "Checkin",
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
@@ -345,7 +345,7 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 	status_t status;
 	
 	
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Create and checking out IKE SA");
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Create and checking out IKE SA");
 	
 	charon->ike_sa_manager->create_and_checkout(charon->ike_sa_manager, &ike_sa);
 	
@@ -360,10 +360,10 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 		return;
 	}
 
-	this->worker_logger->log(this->worker_logger, CONTROL|ALL, "Create Job to delete half open IKE_SA.");
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "Create Job to delete half open IKE_SA.");
 	this->create_delete_half_open_ike_sa_job(this,ike_sa->get_id(ike_sa),charon->configuration_manager->get_half_open_ike_sa_timeout(charon->configuration_manager));
 	
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Checking in IKE SA");
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Checking in IKE SA");
 	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	if (status != SUCCESS)
 	{
@@ -383,7 +383,7 @@ static void process_delete_half_open_ike_sa_job(private_thread_pool_t *this, del
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
 	if ((status != SUCCESS) && (status != CREATED))
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL | ALL, "IKE SA seems to be allready deleted and so doesn't have to be deleted");
+		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL3, "IKE SA seems to be allready deleted and so doesn't have to be deleted");
 		return;
 	}
 	
@@ -428,7 +428,7 @@ static void process_delete_established_ike_sa_job(private_thread_pool_t *this, d
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
 	if ((status != SUCCESS) && (status != CREATED))
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL | ALL, "IKE SA seems to be allready deleted and so doesn't have to be deleted");
+		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL3, "IKE SA seems to be allready deleted and so doesn't have to be deleted");
 		return;
 	}
 
@@ -472,7 +472,7 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 	ike_sa_t *ike_sa;
 	status_t status;
 										
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Checking out IKE SA %lld:%lld, role %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Checking out IKE SA %lld:%lld, role %s", 
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
@@ -489,11 +489,11 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 				
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL | ALL, "Message doesn't have to be retransmitted");
+		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL3, "Message doesn't have to be retransmitted");
 		stop_retransmitting = TRUE;
 	}
 				
-	this->worker_logger->log(this->worker_logger, CONTROL|MOST, "Checkin IKE SA %lld:%lld, role %s", 
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Checkin IKE SA %lld:%lld, role %s", 
 							 ike_sa_id->get_initiator_spi(ike_sa_id),
 							 ike_sa_id->get_responder_spi(ike_sa_id),
 							 ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
@@ -514,7 +514,7 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 	status = charon->configuration_manager->get_retransmit_timeout (charon->configuration_manager,job->get_retransmit_count(job),&timeout);
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Message will not be anymore retransmitted");
+		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL2, "Message will not be anymore retransmitted");
 		job->destroy(job);
 		/*
 		 * TODO delete IKE_SA ? 
@@ -533,7 +533,7 @@ static void create_delete_half_open_ike_sa_job(private_thread_pool_t *this,ike_s
 {
 	job_t *delete_job;
 
-	this->worker_logger->log(this->worker_logger, CONTROL | MOST, "Going to create job to delete half open IKE_SA in %d ms", delay);
+	this->worker_logger->log(this->worker_logger, CONTROL | LEVEL2, "Going to create job to delete half open IKE_SA in %d ms", delay);
 
 	delete_job = (job_t *) delete_half_open_ike_sa_job_create(ike_sa_id);
 	charon->event_queue->add_relative(charon->event_queue,delete_job, delay);

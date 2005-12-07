@@ -225,7 +225,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) == ike_sa_id->get_initiator_spi(ike_sa_id))
 				&& (ike_sa_id->is_initiator(ike_sa_id) == current->ike_sa_id->is_initiator(current->ike_sa_id)))
 			{
-		 		this->logger->log(this->logger,CONTROL | MOST,"Found entry by initiator spi %d",ike_sa_id->get_initiator_spi(ike_sa_id));
+		 		this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by initiator spi %d",ike_sa_id->get_initiator_spi(ike_sa_id));
 				*entry = current;
 				status = SUCCESS;
 				break;
@@ -236,7 +236,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) == ike_sa_id->get_initiator_spi(ike_sa_id))
 				&& (ike_sa_id->is_initiator(ike_sa_id) == current->ike_sa_id->is_initiator(current->ike_sa_id)))
 			{
-		 		this->logger->log(this->logger,CONTROL | MOST,"Found entry by initiator spi %d",ike_sa_id->get_initiator_spi(ike_sa_id));
+		 		this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by initiator spi %d",ike_sa_id->get_initiator_spi(ike_sa_id));
 				*entry = current;
 				status = SUCCESS;
 				break;
@@ -244,7 +244,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 		}
 		if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
 		{
-			this->logger->log(this->logger,CONTROL | MOST,"Found entry by full ID");
+			this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by full ID");
 			*entry = current;
 			status = SUCCESS;
 			break;
@@ -276,7 +276,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 		/* only pointers are compared */
 		if (current->ike_sa == ike_sa)
 		{
-	 		this->logger->log(this->logger,CONTROL | MOST,"Found entry by pointer");
+	 		this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by pointer");
 			*entry = current;
 			status = SUCCESS;
 			break;
@@ -306,7 +306,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 		iterator->current(iterator, (void**)&current);
 		if (current == entry) 
 		{
-	 		this->logger->log(this->logger,CONTROL | MOST,"Found entry by pointer. Going to delete it.");
+	 		this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by pointer. Going to delete it.");
 			iterator->remove(iterator);
 			entry->destroy(entry);
 			status = SUCCESS;
@@ -355,7 +355,7 @@ static void create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa
 	this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
 
 	/* check ike_sa out */
-	this->logger->log(this->logger,CONTROL | MORE ,"New IKE_SA created and added to list of known IKE_SA's");
+	this->logger->log(this->logger,CONTROL | LEVEL1 ,"New IKE_SA created and added to list of known IKE_SA's");
 	new_ike_sa_entry->checked_out = TRUE;
 	*ike_sa = new_ike_sa_entry->ike_sa;
 
@@ -392,7 +392,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		 	/* can we give this ike_sa out to new requesters?*/
 		 	if (entry->driveout_new_threads)
 		 	{
-		 		this->logger->log(this->logger,CONTROL|MORE,"Drive out new thread for existing IKE_SA");
+		 		this->logger->log(this->logger,CONTROL|LEVEL1,"Drive out new thread for existing IKE_SA");
 		 		/* no we can't */
 		 		retval = NOT_FOUND;
 		 	}
@@ -415,12 +415,12 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 				{
 					/* we must signal here, others are interested that we leave */
 					pthread_cond_signal(&(entry->condvar));
-					this->logger->log(this->logger,CONTROL|MORE,"Drive out waiting thread for existing IKE_SA");
+					this->logger->log(this->logger,CONTROL|LEVEL1,"Drive out waiting thread for existing IKE_SA");
 					retval = NOT_FOUND;
 				}
 				else
 				{
-					this->logger->log(this->logger,CONTROL|MOST,"IKE SA successfully checked out");
+					this->logger->log(this->logger,CONTROL|LEVEL2,"IKE SA successfully checked out");
 					/* ok, this IKE_SA is finally ours */
 					entry->checked_out = TRUE;
 					*ike_sa = entry->ike_sa;
@@ -431,7 +431,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		}
 		else
 		{
-			this->logger->log(this->logger,ERROR | MORE,"IKE SA not stored in known IKE_SA list");
+			this->logger->log(this->logger,ERROR | LEVEL1,"IKE SA not stored in known IKE_SA list");
 			/* looks like there is no such IKE_SA, better luck next time... */
 			/* DON'T use return, we must unlock the mutex! */
 			retval = NOT_FOUND;
@@ -462,7 +462,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
 		
 		/* check ike_sa out */
-		this->logger->log(this->logger,CONTROL | MORE ,"IKE_SA added to list of known IKE_SA's");
+		this->logger->log(this->logger,CONTROL | LEVEL1 ,"IKE_SA added to list of known IKE_SA's");
 		new_ike_sa_entry->checked_out = TRUE;
 		*ike_sa = new_ike_sa_entry->ike_sa;
 		
@@ -471,7 +471,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 	else
 	{
 		/* responder set, initiator not: here is something seriously wrong! */
- 		this->logger->log(this->logger,ERROR | MORE, "Invalid IKE_SA SPI's");
+ 		this->logger->log(this->logger,ERROR | LEVEL1, "Invalid IKE_SA SPI's");
 		/* DON'T use return, we must unlock the mutex! */
 		retval = INVALID_ARG;
 	}
@@ -503,14 +503,14 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
 		/* signal waiting threads */
 		entry->checked_out = FALSE;
-		this->logger->log(this->logger,CONTROL | MORE,"Checkin of IKE_SA successful.");
+		this->logger->log(this->logger,CONTROL | LEVEL1,"Checkin of IKE_SA successful.");
 		pthread_cond_signal(&(entry->condvar));
 	 	retval = SUCCESS;
 	}
 	else
 	{
 		this->logger->log(this->logger,ERROR,"Fatal Error: Tried to checkin nonexisting IKE_SA");
-		/* this SA is no more, this REALLY should not happen */
+		/* this SA is no more, this RELEVEL3Y should not happen */
 		retval = NOT_FOUND;
 	}
 	pthread_mutex_unlock(&(this->mutex));
@@ -550,7 +550,7 @@ static status_t checkin_and_delete(private_ike_sa_manager_t *this, ike_sa_t *ike
 		}
 		/* ok, we are alone now, no threads waiting in the entry's condvar */
 		this->delete_entry(this, entry);
-		this->logger->log(this->logger,CONTROL | MORE,"Checkin and delete of IKE_SA successful");
+		this->logger->log(this->logger,CONTROL | LEVEL1,"Checkin and delete of IKE_SA successful");
 		retval = SUCCESS;
 	}
 	else
@@ -593,7 +593,7 @@ static status_t delete(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 		}
 		/* ok, we are alone now, no threads waiting in the entry's condvar */
 		this->delete_entry(this, entry);
-		this->logger->log(this->logger,CONTROL | MORE,"Delete of IKE_SA successful");
+		this->logger->log(this->logger,CONTROL | LEVEL1,"Delete of IKE_SA successful");
 		retval = SUCCESS;
 	}
 	else
@@ -618,12 +618,12 @@ static void destroy(private_ike_sa_manager_t *this)
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	this->logger->log(this->logger,CONTROL | MORE,"Going to destroy IKE_SA manager and all managed IKE_SA's");
+	this->logger->log(this->logger,CONTROL | LEVEL1,"Going to destroy IKE_SA manager and all managed IKE_SA's");
 	
 	/* Step 1: drive out all waiting threads  */
 	iterator = list->create_iterator(list, TRUE);
 
-	this->logger->log(this->logger,CONTROL | MOST,"Set driveout flags for all stored IKE_SA's");
+	this->logger->log(this->logger,CONTROL | LEVEL2,"Set driveout flags for all stored IKE_SA's");
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&entry);
@@ -632,7 +632,7 @@ static void destroy(private_ike_sa_manager_t *this)
 		entry->driveout_waiting_threads = TRUE;	
 	}
 
-	this->logger->log(this->logger,CONTROL | MOST,"Wait for all threads to leave IKE_SA's");
+	this->logger->log(this->logger,CONTROL | LEVEL2,"Wait for all threads to leave IKE_SA's");
 	/* Step 2: wait until all are gone */
 	iterator->reset(iterator);
 	while (iterator->has_next(iterator))
@@ -646,7 +646,7 @@ static void destroy(private_ike_sa_manager_t *this)
 			pthread_cond_wait(&(entry->condvar), &(this->mutex));		
 		}
 	}
-	this->logger->log(this->logger,CONTROL | MOST,"Delete all IKE_SA's");
+	this->logger->log(this->logger,CONTROL | LEVEL2,"Delete all IKE_SA's");
 	/* Step 3: delete all entries */
 	iterator->destroy(iterator);
 
@@ -656,7 +656,7 @@ static void destroy(private_ike_sa_manager_t *this)
 		this->delete_entry(this, entry);
 	}
 	list->destroy(list);
-	this->logger->log(this->logger,CONTROL | MOST,"IKE_SA's deleted");
+	this->logger->log(this->logger,CONTROL | LEVEL2,"IKE_SA's deleted");
 	pthread_mutex_unlock(&(this->mutex));
 
 	/* destroy logger at end */

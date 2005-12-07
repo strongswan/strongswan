@@ -81,7 +81,7 @@ static void receive_packets(private_receiver_t * this)
 	{
 		while (charon->socket->receive(charon->socket,&current_packet) == SUCCESS)
 		{
-			this->logger->log(this->logger, CONTROL | MORE, "Creating job from packet");
+			this->logger->log(this->logger, CONTROL | LEVEL1, "Creating job from packet");
 			current_job = (job_t *) incoming_packet_job_create(current_packet);
 
 			charon->job_queue->add(charon->job_queue,current_job);
@@ -97,11 +97,11 @@ static void receive_packets(private_receiver_t * this)
  */
 static void destroy(private_receiver_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to terminate receiver thread");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to terminate receiver thread");
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
-	this->logger->log(this->logger, CONTROL | MORE, "Receiver thread terminated");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Receiver thread terminated");
 		
 	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 

@@ -246,7 +246,7 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 {
 	if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  not enough input to parse rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, 
 							this->rules[rule_number].type));
 		return PARSE_ERROR;
@@ -279,7 +279,7 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 	
 	if (output_pos != NULL)
 	{
-		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
 	}
 	
 	return SUCCESS;
@@ -292,7 +292,7 @@ static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *o
 {
 	if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  not enough input to parse rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, 
 							this->rules[rule_number].type));
 		return PARSE_ERROR;
@@ -309,7 +309,7 @@ static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *o
 	if (output_pos != NULL)
 	{
 		*output_pos = *(this->byte_pos);
-		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
 	}
 	this->byte_pos++;
 	
@@ -323,7 +323,7 @@ static status_t parse_uint15(private_parser_t *this, int rule_number, u_int16_t 
 {
 	if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  not enough input to parse rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, 
 							this->rules[rule_number].type));
 		return PARSE_ERROR;
@@ -339,7 +339,7 @@ static status_t parse_uint15(private_parser_t *this, int rule_number, u_int16_t 
 	if (output_pos != NULL)
 	{
 		*output_pos = ntohs(*((u_int16_t*)this->byte_pos)) & ~0x8000;
-		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
 	this->bit_pos = 0;
@@ -354,7 +354,7 @@ static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t 
 {
 	if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  not enough input to parse rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
@@ -370,7 +370,7 @@ static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t 
 	{
 		*output_pos = ntohs(*((u_int16_t*)this->byte_pos));
 		
-		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
 	
@@ -383,7 +383,7 @@ static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t 
 {
 	if (this->byte_pos + sizeof(u_int32_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  not enough input to parse rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
@@ -399,7 +399,7 @@ static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t 
 	{
 		*output_pos = ntohl(*((u_int32_t*)this->byte_pos));
 		
-		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
 	}
 	this->byte_pos += 4;
 	
@@ -413,7 +413,7 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 {
 	if (this->byte_pos + sizeof(u_int64_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  not enough input to parse rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
@@ -431,7 +431,7 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 		*(output_pos + 1) = ntohl(*((u_int32_t*)this->byte_pos));
 		*output_pos = ntohl(*(((u_int32_t*)this->byte_pos) + 1));
 		
-		this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)output_pos, 8);
+		this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)output_pos, 8);
 	}
 	this->byte_pos += 8;
 
@@ -445,7 +445,7 @@ static status_t parse_bytes (private_parser_t *this, int rule_number, u_int8_t *
 {
 	if (this->byte_pos + bytes > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  not enough input to parse rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
@@ -462,7 +462,7 @@ static status_t parse_bytes (private_parser_t *this, int rule_number, u_int8_t *
 	{
 		memcpy(output_pos,this->byte_pos,bytes);
 		
-		this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)output_pos, bytes);
+		this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)output_pos, bytes);
 	}
 	this->byte_pos += bytes;
 	
@@ -476,7 +476,7 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 {
 	if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  not enough input to parse rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
 		return PARSE_ERROR;
 	}
@@ -493,7 +493,7 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 			*output_pos = TRUE;
 		}
 		
-		this->logger->log(this->logger, RAW|MOST, "   => %d", *output_pos);
+		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
 	}
 	this->bit_pos = (this->bit_pos + 1) % 8;
 	if (this->bit_pos == 0) 
@@ -513,7 +513,7 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 	
 	if (length < 0)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  invalid length for rule %d %s", 
+		this->logger->log(this->logger, ERROR|LEVEL1, "  invalid length for rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
 		return PARSE_ERROR;	
 	}
@@ -530,7 +530,7 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 		u_int8_t *pos_before = this->byte_pos;
 		payload_t *payload;
 		status_t status;
-		this->logger->log(this->logger, CONTROL|MORE, "  %d bytes left, parsing recursivly %s", 
+		this->logger->log(this->logger, CONTROL|LEVEL1, "  %d bytes left, parsing recursivly %s", 
 							length, mapping_find(payload_type_m, payload_type));
 		status = this->public.parse_payload((parser_t*)this, payload_type, &payload);
 		if (status != SUCCESS)
@@ -570,7 +570,7 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 		memcpy(output_pos->ptr, this->byte_pos, length);
 	}
 	this->byte_pos += length;
-	this->logger->log_bytes(this->logger, RAW|MOST, "   =>", (void*)output_pos->ptr, length);
+	this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)output_pos->ptr, length);
 	
 	return SUCCESS;
 }
@@ -591,7 +591,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	/* create instance of the payload to parse */
 	pld = payload_create(payload_type);
 	
-	this->logger->log(this->logger, CONTROL|MORE, "parsing %s payload, %d bytes left", 
+	this->logger->log(this->logger, CONTROL|LEVEL1, "parsing %s payload, %d bytes left", 
 						mapping_find(payload_type_m, payload_type),
 						this->input_roof-this->byte_pos);
 	
@@ -600,7 +600,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	
 	if (pld->get_type(pld) == UNKNOWN_PAYLOAD)
 	{
-		this->logger->log(this->logger, ERROR|MORE, "  payload type %d is unknown, handling as %s",
+		this->logger->log(this->logger, ERROR|LEVEL1, "  payload type %d is unknown, handling as %s",
 							payload_type, mapping_find(payload_type_m, UNKNOWN_PAYLOAD));
 	}
 	
@@ -612,7 +612,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
 	{
 		rule = &(this->rules[rule_number]);
-		this->logger->log(this->logger, CONTROL|MOST, "  parsing rule %d %s", 
+		this->logger->log(this->logger, CONTROL|LEVEL2, "  parsing rule %d %s", 
 							rule_number, mapping_find(encoding_type_m, rule->type));
 		switch (rule->type)
 		{

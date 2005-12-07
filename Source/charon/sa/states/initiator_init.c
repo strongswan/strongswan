@@ -131,7 +131,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	status = charon->configuration_manager->get_init_config_for_name(charon->configuration_manager,name,&init_config);
 	if (status != SUCCESS)
 	{	
-		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve INIT configuration informations for %s",name);
+		this->logger->log(this->logger, ERROR | LEVEL1, "Could not retrieve INIT configuration informations for %s",name);
 		return DELETE_ME;
 	}
 	
@@ -141,7 +141,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	
 	if (status != SUCCESS)
 	{	
-		this->logger->log(this->logger, ERROR | MORE, "Could not retrieve SA configuration informations for %s",name);
+		this->logger->log(this->logger, ERROR | LEVEL1, "Could not retrieve SA configuration informations for %s",name);
 		return DELETE_ME;
 	}
 	
@@ -154,7 +154,7 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->dh_group_number = init_config->get_dh_group_number(init_config,this->dh_group_priority);
 	if (this->dh_group_number == MODP_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be retrieved with priority %d", this->dh_group_priority);
+		this->logger->log(this->logger, ERROR | LEVEL1, "Diffie hellman group could not be retrieved with priority %d", this->dh_group_priority);
 		return DELETE_ME;
 	}
 	
@@ -185,14 +185,14 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	this->dh_group_number = init_config->get_dh_group_number(init_config,dh_group_priority);
 	if (this->dh_group_number == MODP_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | MORE, "Diffie hellman group could not be retrieved with priority %d", dh_group_priority);
+		this->logger->log(this->logger, ERROR | LEVEL1, "Diffie hellman group could not be retrieved with priority %d", dh_group_priority);
 		return DELETE_ME;
 	}
 	
 	this->diffie_hellman = diffie_hellman_create(this->dh_group_number);
 
 	/* going to build message */
-	this->logger->log(this->logger, CONTROL|MOST, "Going to build message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message");
 	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, TRUE, &message);
 	
 	/* build SA payload */		
@@ -219,16 +219,16 @@ status_t retry_initiate_connection (private_initiator_init_t *this, int dh_group
 	ike_sa_init_request_data = message->get_packet_data(message);
 
 	/* state can now be changed */
-	this->logger->log(this->logger, CONTROL|MOST, "Create next state object");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Create next state object");
 	next_state = ike_sa_init_requested_create(this->ike_sa, this->dh_group_priority, this->diffie_hellman, this->sent_nonce,ike_sa_init_request_data);
 
 	/* state can now be changed */ 
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 
 	/* state has NOW changed :-) */
-	this->logger->log(this->logger, CONTROL|MORE, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Changed state of IKE_SA from %s to %s", mapping_find(ike_sa_state_m,INITIATOR_INIT),mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED) );
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Destroy old sate object");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
 	this->destroy_after_state_change(this);
 	return SUCCESS;
 }
@@ -243,7 +243,7 @@ static void build_sa_payload(private_initiator_init_t *this, message_t *request)
 	ike_proposal_t *proposals;
 	init_config_t *init_config;
 	
-	this->logger->log(this->logger, CONTROL|MORE, "Building SA payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Building SA payload");
 	
 	init_config = this->ike_sa->get_init_config(this->ike_sa);
 
@@ -253,7 +253,7 @@ static void build_sa_payload(private_initiator_init_t *this, message_t *request)
 
 	allocator_free(proposals);
 
-	this->logger->log(this->logger, CONTROL|MOST, "Add SA payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add SA payload to message");
 	request->add_payload(request, (payload_t *) sa_payload);
 }
 
@@ -265,7 +265,7 @@ static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 	ke_payload_t *ke_payload;
 	chunk_t key_data;
 	
-	this->logger->log(this->logger, CONTROL|MORE, "Building KE payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Building KE payload");
 	
 	this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
 
@@ -275,7 +275,7 @@ static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 	
 	allocator_free_chunk(&key_data);
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add KE payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add KE payload to message");
 	request->add_payload(request, (payload_t *) ke_payload);
 }
 
@@ -287,20 +287,20 @@ static void build_nonce_payload(private_initiator_init_t *this, message_t *reque
 	nonce_payload_t *nonce_payload;
 	randomizer_t *randomizer;
 	
-	this->logger->log(this->logger, CONTROL|MORE, "Building NONCE payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Building NONCE payload");
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Get pseudo random bytes for NONCE");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Get pseudo random bytes for NONCE");
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
 	
 	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
 
-	this->logger->log(this->logger, RAW|MOST, "Initiator NONCE",&(this->sent_nonce));
+	this->logger->log(this->logger, RAW|LEVEL2, "Initiator NONCE",&(this->sent_nonce));
 	
 	nonce_payload = nonce_payload_create();
 	
 	nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
 	
-	this->logger->log(this->logger, CONTROL|MOST, "Add NONCE payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add NONCE payload to message");
 	request->add_payload(request, (payload_t *) nonce_payload);
 }
 
@@ -309,7 +309,7 @@ static void build_nonce_payload(private_initiator_init_t *this, message_t *reque
  */
 static status_t process_message(private_initiator_init_t *this, message_t *message)
 {
-	this->logger->log(this->logger, ERROR|MORE, "In state INITIATOR_INIT no message is processed");
+	this->logger->log(this->logger, ERROR|LEVEL1, "In state INITIATOR_INIT no message is processed");
 	return FAILED;
 }
 
@@ -326,17 +326,17 @@ static ike_sa_state_t get_state(private_initiator_init_t *this)
  */
 static void destroy(private_initiator_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy initiator_init_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy initiator_init_t state object");
 
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Destroy diffie_hellman_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy diffie_hellman_t object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
 	if (this->sent_nonce.ptr != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | MOST, "Free memory of sent nonce");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "Free memory of sent nonce");
 		allocator_free(this->sent_nonce.ptr);
 	}
 	allocator_free(this);
@@ -347,7 +347,7 @@ static void destroy(private_initiator_init_t *this)
  */
 static void destroy_after_state_change (private_initiator_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | MORE, "Going to destroy initiator_init_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy initiator_init_t state object");
 	allocator_free(this);
 }
 
