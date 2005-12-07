@@ -28,25 +28,23 @@
 typedef struct private_child_sa_t private_child_sa_t;
 
 /**
- * Private data of an child_sa_t object
+ * Private data of a child_sa_t object.
  */
 struct private_child_sa_t {
 	/**
-	 * Public part of a child_sa object
+	 * Public interface of child_sa_t.
 	 */
 	child_sa_t public;
 	
 	/**
-	 * type of this child sa, ESP or AH
+	 * Type of this child sa, ESP or AH.
 	 */
-	protocol_id_t sa_type;
-	
-	
+	protocol_id_t sa_type;	
 };
 
 
 /**
- * implements child_sa_t.clone.
+ * Implementation of child_sa_t.get_spi.
  */
 static u_int32_t get_spi(private_child_sa_t *this)
 {
@@ -54,7 +52,7 @@ static u_int32_t get_spi(private_child_sa_t *this)
 }
 
 /**
- * implements child_sa_t.clone.
+ * Implementation of child_sa_t.destroy.
  */
 static void destroy(private_child_sa_t *this)
 {
@@ -62,21 +60,18 @@ static void destroy(private_child_sa_t *this)
 }
 
 /*
- * Described in Header-File
+ * Described in header.
  */
 child_sa_t * child_sa_create(protocol_id_t sa_type, prf_plus_t *prf_plus)
 {
 	private_child_sa_t *this = allocator_alloc_thing(private_child_sa_t);
 
-	/* Public functions */
+	/* public functions */
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*))get_spi;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
 	this->sa_type = sa_type;
-	
-
-	
 	
 	return (&this->public);
 }
