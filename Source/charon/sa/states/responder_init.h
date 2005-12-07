@@ -48,6 +48,15 @@ struct responder_init_t {
 /**
  * Constructor of class responder_init_t.
  * 
+ * The following functions of the assigned protected_ike_sa_t object are being called with 
+ * valid values after successfully processing a received message and before changing
+ * to next state IKE_SA_INIT_RESPONDED:
+ *  - protected_ike_sa_t.set_init_config()
+ *  - protected_ike_sa_t.set_my_host()
+ *  - protected_ike_sa_t.set_other_host()
+ *  - protected_ike_sa_t.compute_secrets()
+ *  - protected_ike_sa_t.create_transforms_from_proposal()
+ * 
  * @param ike_sa 	assigned IKE_SA
  * 
  * @return 			responder_init_t object
