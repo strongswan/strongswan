@@ -74,6 +74,9 @@ typedef struct crypter_t crypter_t;
  * @todo Distinguish between block_size and key_size, since not all
  * algorithms use key_size == block_size (e.g. 3DES).
  * 
+ * @todo Add a getter which says if an algorithm uses fixed key size, needed for
+ * tranform_attribute encoding.
+ * 
  * @ingroup crypters
  */
 struct crypter_t {
