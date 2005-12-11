@@ -40,12 +40,18 @@ typedef struct kernel_interface_t kernel_interface_t;
 struct kernel_interface_t {
 
 	/**
-	 * Not yet fully implemented!
+	 * @brief Get a SPI from the kernel
+	 * 
+	 * @todo Fix spi range
 	 */
 	status_t (*get_spi) (kernel_interface_t *this, host_t *src, host_t *dest, protocol_id_t protocol, bool tunnel_mode, u_int32_t *spi);
 	
 	/**
-	 * Not yet fully implemented!
+	 * @brief Create an SA.
+	 * 
+	 * @todo Fix reqid and replay_window params
+	 * 
+	 * @todo Cleanup method params
 	 */
 	status_t (*add_sa)(kernel_interface_t *this,
 						host_t *me, 
@@ -60,7 +66,6 @@ struct kernel_interface_t {
 						size_t int_size,
 						chunk_t int_key,
 						bool replace);
-	
 	
 	/**
 	 * @brief Destroys a kernel_interface object.

@@ -39,6 +39,9 @@
 
 typedef struct netlink_message_t netlink_message_t;
 
+/**
+ * Representation of ANY netlink message used
+ */
 struct netlink_message_t {
 	
 	/**
@@ -58,6 +61,9 @@ struct netlink_message_t {
 
 typedef struct netlink_algo_t netlink_algo_t;
 
+/**
+ * Add length and type to xfrm_algo
+ */
 struct netlink_algo_t {
 	u_int16_t length;
 	u_int16_t type;
@@ -80,7 +86,6 @@ struct private_kernel_interface_t {
  	 * Netlink communication socket.
  	 */
  	int socket;
- 	int bc_socket;
 
 	pid_t pid;
  	/**
@@ -107,7 +112,6 @@ struct private_kernel_interface_t {
  	 * Condvar allows signaling of threads waiting for a reply.
  	 */
  	pthread_cond_t condvar;
- 	logger_t *logger;
  	
  	/**
  	 * Function for the thread, receives messages.
@@ -115,7 +119,7 @@ struct private_kernel_interface_t {
  	void (*receive_messages) (private_kernel_interface_t *this);
  	
  	/**
- 	 * Sends a netlink_message_t down to the kernel.
+ 	 * Sends a netlink_message_t down to the kernel and wait for reply.
  	 */
  	status_t (*send_message) (private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response);
 };
@@ -258,18 +262,10 @@ static status_t add_sa(	private_kernel_interface_t *this,
     	allocator_free(response);
     	return FAILED;	
     }
-
-	printf("received message type: %d\n", response->hdr.nlmsg_type);
-	
-	if (response->hdr.nlmsg_type == NLMSG_ERROR)
-	{
-		printf("received error: %s\n", strerror(-response->e.error));
-	}
 	
     allocator_free(response);
     return SUCCESS;
 }
-
 
 
 static status_t send_message(private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response)
@@ -311,17 +307,17 @@ static status_t send_message(private_kernel_interface_t *this, netlink_message_t
 			if (listed_response->hdr.nlmsg_seq == request->hdr.nlmsg_seq)
 			{
 				/* matches our request, this is the reply */
-	 				*response = listed_response;
-	 				found = TRUE;
-	 				break;
-	 			}
-	 		}
-	 		iterator->destroy(iterator);
-	 		
-	 		if (found)
-	 		{
-	 			break;	
-	 		}
+	 			*response = listed_response;
+	 			found = TRUE;
+	 			break;
+ 			}
+ 		}
+ 		iterator->destroy(iterator);
+ 		
+ 		if (found)
+ 		{
+ 			break;	
+ 		}
 		/* we should time out, if something goes wrong */
 		pthread_cond_wait(&(this->condvar), &(this->mutex));
 	}
@@ -363,14 +359,14 @@ static void receive_messages(private_kernel_interface_t *this)
 			}
 			if (addr.nl_pid != 0)
 			{
-				/* not interested, try another one */
+				/* not from kernel. not interested, try another one */
 			    continue;
 			}
 			break;
 		}
 		
 		/* got a valid message.
-		 * requests are handled on or own, 
+		 * requests are handled on our own, 
 		 * responses are listed for the requesters
 		 */
 		if (response.hdr.nlmsg_flags & NLM_F_REQUEST)
@@ -386,7 +382,7 @@ static void receive_messages(private_kernel_interface_t *this)
 			pthread_mutex_lock(&(this->mutex));
 			this->responses->insert_last(this->responses, (void*)listed_response);
 			pthread_mutex_unlock(&(this->mutex));
-			/* signal LEVEL3 waiting threads */
+			/* signal ALL waiting threads */
 			pthread_cond_broadcast(&(this->condvar));
 		}
 		/* get the next one */
@@ -444,7 +440,6 @@ kernel_interface_t *kernel_interface_create()
 		charon->kill(charon, "Unable to create netlink thread");
 	}
 	
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, TESTER, NULL);
 	charon->logger_manager->enable_logger_level(charon->logger_manager, TESTER, FULL);
 	return (&this->public);
 }
