@@ -447,7 +447,8 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH request verification failed. Deleting IKE_SA");
-		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, AUTHENTICATION_FAILED, CHUNK_INITIALIZER);		
+		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, AUTHENTICATION_FAILED, CHUNK_INITIALIZER);
+		authenticator->destroy(authenticator);
 		return DELETE_ME;
 	}
 		
@@ -522,11 +523,6 @@ static status_t process_notify_payload(private_ike_sa_init_responded_t *this, no
 					  mapping_find(notify_message_type_m, notify_message_type),
 					  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
 					  
-	if (notify_payload->get_protocol_id(notify_payload) != IKE)
-	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUTH request contained a notify for an invalid protocol.");
-		return DELETE_ME;	
-	}
 	switch (notify_message_type)
 	{
 		case SET_WINDOW_SIZE:

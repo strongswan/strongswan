@@ -25,6 +25,7 @@
 #include <utils/linked_list.h>
 #include <utils/allocator.h>
 #include <utils/identification.h>
+#include <utils/logger.h>
 
 typedef struct private_sa_config_t private_sa_config_t;
 
@@ -242,27 +243,56 @@ static child_proposal_t *select_proposal(private_sa_config_t *this, u_int8_t ah_
 	iterator_t *iterator;
 	child_proposal_t *current_proposal, *selected_proposal;
 	int i;
+/*	logger_t *logger = logger_create("SA Config",FULL,FALSE,stdout); */
+	
 	
 	/* iterate over all stored proposals */
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current_proposal);
+	/*	
+		logger->log(logger,FULL,"ESP integrity algorithm: %s, keylength: %d", mapping_find(integrity_algorithm_m,current_proposal->esp.integrity_algorithm),current_proposal->esp.integrity_algorithm_key_size);
+		logger->log(logger,FULL,"ESP diffie_hellman_group: %s", mapping_find(diffie_hellman_group_m,current_proposal->esp.diffie_hellman_group));
+		logger->log(logger,FULL,"ESP extended_sequence_numbers: %s", mapping_find(extended_sequence_numbers_m,current_proposal->esp.extended_sequence_numbers));
+		logger->log(logger,FULL,"ESP encryption_algorithm: %s keylength: %d", mapping_find(encryption_algorithm_m,current_proposal->esp.encryption_algorithm),current_proposal->esp.encryption_algorithm_key_size);
+*/
+		
+		
 		/* copy and break if a proposal matches */
 		for (i = 0; i < count; i++)
 		{
+/*			if (supplied[i].esp.is_set)
+			{
+				logger->log(logger,FULL,"ESP integrity algorithm: %s, keylength: %d", mapping_find(integrity_algorithm_m,supplied[i].esp.integrity_algorithm),supplied[i].esp.integrity_algorithm_key_size);
+				logger->log(logger,FULL,"ESP diffie_hellman_group: %s", mapping_find(diffie_hellman_group_m,supplied[i].esp.diffie_hellman_group));
+				logger->log(logger,FULL,"ESP extended_sequence_numbers: %s", mapping_find(extended_sequence_numbers_m,supplied[i].esp.extended_sequence_numbers));
+				logger->log(logger,FULL,"ESP encryption_algorithm: %s keylength: %d", mapping_find(encryption_algorithm_m,supplied[i].esp.encryption_algorithm),supplied[i].esp.encryption_algorithm_key_size);
+			}
+
+			if (supplied[i].ah.is_set)
+			{
+				logger->log(logger,FULL,"AH integrity algorithm: %s, keylength: %d", mapping_find(integrity_algorithm_m,supplied[i].ah.integrity_algorithm),supplied[i].ah.integrity_algorithm_key_size);
+				logger->log(logger,FULL,"AH diffie_hellman_group: %s", mapping_find(diffie_hellman_group_m,supplied[i].ah.diffie_hellman_group));
+				logger->log(logger,FULL,"AH extended_sequence_numbers: %s", mapping_find(extended_sequence_numbers_m,supplied[i].ah.extended_sequence_numbers));
+			}*/
+		
+			
 			if (this->proposal_equals(this, &(supplied[i]), current_proposal))
 			{
 				selected_proposal = allocator_alloc(sizeof(child_proposal_t));
 				*selected_proposal = *current_proposal;
 				memcpy(selected_proposal->ah.spi, ah_spi, 4);
 				memcpy(selected_proposal->ah.spi, esp_spi, 4);
+/*				logger->destroy(logger);*/
 				iterator->destroy(iterator);
 				return selected_proposal;
 			}
 		}
 	}
 	iterator->destroy(iterator);
+	
+/*	logger->destroy(logger); */
 	return NULL;
 }
 

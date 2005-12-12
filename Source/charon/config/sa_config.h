@@ -42,6 +42,9 @@ typedef struct child_proposal_t child_proposal_t;
  * A proposal for a child sa contains data for 
  * AH, ESP, or both.
  * 
+ * @todo Currently the amount of tranforms with same type in a proposal is limited to 1.
+ * 		 Support of more transforms with same type has to be added.
+ * 
  * @ingroup config
  */
 struct child_proposal_t {

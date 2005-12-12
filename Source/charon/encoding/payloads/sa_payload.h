@@ -56,6 +56,8 @@ typedef struct sa_payload_t sa_payload_t;
  * - sa_payload_create_from_ike_proposals()
  * - sa_payload_create_from_child_proposal()
  * 
+ * @todo Add support of algorithms without specified keylength in get_child_proposals and get_ike_proposals.
+ * 
  * @ingroup payloads
  */
 struct sa_payload_t {

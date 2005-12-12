@@ -278,9 +278,8 @@ static status_t get_ike_proposals (private_sa_payload_t *this,ike_proposal_t ** 
 		iterator->current(iterator,(void **)&(current_proposal));
 		if (current_proposal->get_protocol_id(current_proposal) == IKE)
 		{
-			/* a ike proposal consists of 4 transforms and an empty spi*/
-			if ((current_proposal->get_transform_count(current_proposal) != 4) ||
-			    (current_proposal->get_spi_size(current_proposal) != 0))
+			/* a ike proposal consists of an empty spi*/
+			if (current_proposal->get_spi_size(current_proposal) != 0)
 		    {
 		    	iterator->destroy(iterator);
 		    	return FAILED;
@@ -445,10 +444,13 @@ static status_t get_child_proposals (private_sa_payload_t *this,child_proposal_t
 	current_suite_number = 1;
 	tmp_proposals[current_suite_number - 1].ah.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
 	tmp_proposals[current_suite_number - 1].ah.diffie_hellman_group = MODP_UNDEFINED;
-
+	tmp_proposals[current_suite_number - 1].ah.integrity_algorithm = AUTH_UNDEFINED;
+	tmp_proposals[current_suite_number - 1].ah.is_set = FALSE;
+	
 	tmp_proposals[current_suite_number - 1].esp.integrity_algorithm = AUTH_UNDEFINED;
 	tmp_proposals[current_suite_number - 1].esp.diffie_hellman_group = MODP_UNDEFINED;
 	tmp_proposals[current_suite_number - 1].esp.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
+	tmp_proposals[current_suite_number - 1].esp.is_set = FALSE;
 	
 	/* create from each proposal_substructure a child_proposal_t data area*/
 	while (iterator->has_next(iterator))

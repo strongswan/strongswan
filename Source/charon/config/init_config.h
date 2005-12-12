@@ -37,6 +37,9 @@ typedef struct ike_proposal_t ike_proposal_t;
 /**
  * @brief Represents a Proposal used in IKE_SA_INIT phase.
  * 
+ * @todo Currently the amount of tranforms with same type in a IKE proposal is limited to 1.
+ * 		 Support of more transforms with same type has to be added.
+ * 
  * @ingroup config
  */
 struct ike_proposal_t {

@@ -246,8 +246,8 @@ int main()
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
-	tester->perform_tests(tester,all_tests);
-//	tester->perform_test(tester,&rsa_test); 
+//	tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&linked_list_insert_and_remove_test); 
 	
 	
 	tester->destroy(tester);
