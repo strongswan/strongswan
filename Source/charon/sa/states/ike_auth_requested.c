@@ -278,14 +278,16 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_auth_reply->get_message_id(ike_auth_reply));
 	/* create new state */
-	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
-	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
-	this->public.state_interface.destroy(&(this->public.state_interface));
-			
+				
 	my_host = this->ike_sa->get_my_host(this->ike_sa);
 	other_host = this->ike_sa->get_other_host(this->ike_sa);
-	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s", 
-						my_host->get_address(my_host), other_host->get_address(other_host));
+	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s, authenticated peer with %s", 
+						my_host->get_address(my_host), other_host->get_address(other_host),
+						mapping_find(auth_method_m, auth_payload->get_auth_method(auth_payload)));
+						
+	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
+	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+	this->public.state_interface.destroy(&(this->public.state_interface));
 	return SUCCESS;
 }
 
@@ -336,7 +338,7 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 	if (status != SUCCESS)
 	{
 		/* there are no proposals. This is possible if the requester doesn't want to setup a child sa */
-		this->logger->log(this->logger, CONTROL, "Responders SA_PAYLOAD contained no proposals, no CHILD_SA is built");
+		this->logger->log(this->logger, AUDIT, "IKE_AUH reply did not contain any proposals. Don't create CHILD_SA");
 		return SUCCESS;
 	}
 	if (proposal_count > 1)

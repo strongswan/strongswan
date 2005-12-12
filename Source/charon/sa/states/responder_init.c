@@ -557,6 +557,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->sent_nonce = CHUNK_INITIALIZER;
 	this->received_nonce = CHUNK_INITIALIZER;
 	this->dh_group_number = MODP_UNDEFINED;
+	this->diffie_hellman = NULL;
 
 	return &(this->public);
 }

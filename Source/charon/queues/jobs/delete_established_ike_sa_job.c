@@ -61,9 +61,8 @@ static ike_sa_id_t *get_ike_sa_id(private_delete_established_ike_sa_job_t *this)
 /**
  * Implementation of job_t.destroy.
  */
-static void destroy(job_t *job)
+static void destroy(private_delete_established_ike_sa_job_t *this)
 {
-	private_delete_established_ike_sa_job_t *this = (private_delete_established_ike_sa_job_t *) job;
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	allocator_free(this);
 }
@@ -79,7 +78,7 @@ delete_established_ike_sa_job_t *delete_established_ike_sa_job_create(ike_sa_id_
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
 	/* same as destroy */
 	this->public.job_interface.destroy_all = (void (*) (job_t *)) destroy;
-	this->public.job_interface.destroy = destroy;
+	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
 	
 	/* public functions */
 	this->public.get_ike_sa_id = (ike_sa_id_t * (*)(delete_established_ike_sa_job_t *)) get_ike_sa_id;

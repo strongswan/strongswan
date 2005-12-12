@@ -651,7 +651,12 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 			new_dh_group_priority = this->dh_group_priority + 1;
 			
 			this->public.state_interface.destroy(&(this->public.state_interface));
-			return (initiator_init_state->retry_initiate_connection (initiator_init_state,new_dh_group_priority));
+			if (initiator_init_state->retry_initiate_connection (initiator_init_state,new_dh_group_priority) != SUCCESS)
+			{
+				return DELETE_ME;
+			}
+			return FAILED;
+
 		}
 		default:
 		{

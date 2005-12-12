@@ -313,15 +313,15 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		return DELETE_ME;
 	}
 	
-	/* create new state */
-	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
-	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
-	this->public.state_interface.destroy(&(this->public.state_interface));
-	
-	my_host = this->ike_sa->get_my_host(this->ike_sa);
+	/* create new state */my_host = this->ike_sa->get_my_host(this->ike_sa);
 	other_host = this->ike_sa->get_other_host(this->ike_sa);
-	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s", 
-						my_host->get_address(my_host), other_host->get_address(other_host));
+	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s, authenticated peer with %s", 
+						my_host->get_address(my_host), other_host->get_address(other_host),
+						mapping_find(auth_method_m, auth_request->get_auth_method(auth_request)));
+						
+	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
+	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+	this->public.state_interface.destroy(&(this->public.state_interface));
 
 	return SUCCESS;
 }
@@ -404,6 +404,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		{
 			sa_response = sa_payload_create_from_child_proposals(proposal_chosen, 1);
 			response->add_payload(response, (payload_t*)sa_response);
+			allocator_free(proposal_chosen);
 		}
 		else
 		{
@@ -411,21 +412,16 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 			this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
 			status = DELETE_ME;	
 		}
+		allocator_free(proposals);
 	}
 	else
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any proposals. Don't create CHILD_SA.");
-/*		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
-		status = DELETE_ME; */
+		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any proposals. Don't create CHILD_SA");
 		sa_response = sa_payload_create();
 		response->add_payload(response, (payload_t*)sa_response);
 		
 		status = SUCCESS;
 	}
-	
-	
-	allocator_free(proposal_chosen);
-	allocator_free(proposals);
 	
 	return status;
 }

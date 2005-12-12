@@ -761,6 +761,7 @@ sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, si
 		proposal_substructure = proposal_substructure_create();
 		proposal_substructure->set_protocol_id(proposal_substructure,IKE);
 		proposal_substructure->set_proposal_number(proposal_substructure,(i + 1));
+		
 
 		/* create transform substructures to hold each specific transform for an ike proposal */
 		encryption_algorithm = transform_substructure_create_type(ENCRYPTION_ALGORITHM,proposals[i].encryption_algorithm,proposals[i].encryption_algorithm_key_length);

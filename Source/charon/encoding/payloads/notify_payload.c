@@ -395,6 +395,7 @@ notify_payload_t *notify_payload_create()
 	this->notify_message_type = 0;
 	this->spi.ptr = NULL;
 	this->spi.len = 0;
+	this->spi_size = 0;
 	this->notification_data.ptr = NULL;
 	this->notification_data.len = 0;
 

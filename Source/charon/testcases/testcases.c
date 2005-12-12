@@ -241,13 +241,13 @@ int main()
 	daemon_create();
  
 	charon->logger_manager->disable_logger_level(charon->logger_manager,TESTER,FULL);
-	//charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW);
+	/* charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW); */
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
-//	tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&linked_list_insert_and_remove_test); 
+	tester->perform_tests(tester,all_tests);
+	/* tester->perform_test(tester,&linked_list_insert_and_remove_test); */
 	
 	
 	tester->destroy(tester);

@@ -274,15 +274,16 @@ u_int8_t private_key_2[];
  */
 static void load_default_config (private_configuration_manager_t *this)
 {
-	init_config_t *init_config1, *init_config2, *init_config3;
-	ike_proposal_t proposals[2];
+	init_config_t *init_config1, *init_config2, *init_config3, *init_config4;
+	ike_proposal_t proposals[4];
 	child_proposal_t child_proposals[1];
-	sa_config_t *sa_config1, *sa_config2, *sa_config3;
+	sa_config_t *sa_config1, *sa_config2, *sa_config3, *sa_config4;
 	traffic_selector_t *ts;
 	
 	init_config1 = init_config_create("0.0.0.0","152.96.193.131",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config2 = init_config_create("0.0.0.0","152.96.193.130",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config3 = init_config_create("0.0.0.0","127.0.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config4 = init_config_create("0.0.0.0","127.0.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
 	
 
@@ -299,7 +300,13 @@ static void load_default_config (private_configuration_manager_t *this)
 	proposals[1].integrity_algorithm_key_length = 20;
 	proposals[1].pseudo_random_function = PRF_HMAC_SHA1;
 	proposals[1].pseudo_random_function_key_length = 20;
-	proposals[1].diffie_hellman_group = MODP_1024_BIT;
+	proposals[1].diffie_hellman_group = MODP_2048_BIT;
+	
+	
+	proposals[2] = proposals[1];
+	proposals[2].diffie_hellman_group = MODP_4096_BIT;
+	proposals[3] = proposals[1];
+	proposals[3].diffie_hellman_group = MODP_2048_BIT;
 
 	init_config1->add_proposal(init_config1,1,proposals[1]);
 	init_config1->add_proposal(init_config1,1,proposals[0]);
@@ -307,7 +314,8 @@ static void load_default_config (private_configuration_manager_t *this)
 	init_config2->add_proposal(init_config2,1,proposals[0]);
 	init_config3->add_proposal(init_config3,1,proposals[1]);
 	init_config3->add_proposal(init_config3,1,proposals[0]);
-
+	init_config4->add_proposal(init_config4,1,proposals[3]);
+	init_config4->add_proposal(init_config4,1,proposals[2]);
 	
 	sa_config1 = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
 								  ID_IPV4_ADDR, "152.96.193.131",
@@ -324,14 +332,22 @@ static void load_default_config (private_configuration_manager_t *this)
 
 	sa_config2->add_traffic_selector_initiator(sa_config2,ts);
 	sa_config2->add_traffic_selector_responder(sa_config2,ts);
-
+								  
 	sa_config3 = sa_config_create(ID_IPV4_ADDR, "127.0.0.1", 
 								  ID_IPV4_ADDR, "127.0.0.1",
-								  RSA_DIGITAL_SIGNATURE,
+								  SHARED_KEY_MESSAGE_INTEGRITY_CODE,
 								  30000);
 
 	sa_config3->add_traffic_selector_initiator(sa_config3,ts);
 	sa_config3->add_traffic_selector_responder(sa_config3,ts);
+								  
+	sa_config4 = sa_config_create(ID_IPV4_ADDR, "127.0.0.1", 
+								  ID_IPV4_ADDR, "127.0.0.1",
+								  RSA_DIGITAL_SIGNATURE,
+								  30000);
+
+	sa_config4->add_traffic_selector_initiator(sa_config4,ts);
+	sa_config4->add_traffic_selector_responder(sa_config4,ts);
 	
 	ts->destroy(ts);
 	
@@ -360,10 +376,13 @@ static void load_default_config (private_configuration_manager_t *this)
 
 	this->add_new_configuration(this,"pinflb31",init_config1,sa_config1);
 	this->add_new_configuration(this,"pinflb30",init_config2,sa_config2);
-	this->add_new_configuration(this,"localhost",init_config3,sa_config3);
+	this->add_new_configuration(this,"localhost-shared",init_config3,sa_config3);
+	this->add_new_configuration(this,"localhost-rsa",init_config3,sa_config4);
+	this->add_new_configuration(this,"localhost-bad_dh_group",init_config4, sa_config3);
+	
 
 	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.130","verschluesselt");
-	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.131","scheisen");
+	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "152.96.193.131","verschluesselt");
 	this->add_new_preshared_secret(this,ID_IPV4_ADDR, "127.0.0.1","verschluesselt");
 	
 	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "127.0.0.1", public_key_1, 256);
@@ -598,7 +617,7 @@ static void add_new_configuration (private_configuration_manager_t *this, char *
 		this->sa_configs->insert_first(this->sa_configs,sa_config);
 	}
 
-	this->configurations->insert_first(this->configurations,configuration_entry_create(name,init_config,sa_config));
+	this->configurations->insert_last(this->configurations,configuration_entry_create(name,init_config,sa_config));
 }
 
 /**
