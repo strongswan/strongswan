@@ -65,11 +65,12 @@ struct private_daemon_t {
 	void (*run) (private_daemon_t *this);
 	
 	/**
-	 * A routine to add jobs for testing.
+	 * A routine to add job for testing.
 	 * 
-	 * @param this 	calling object
+	 * @param this 					calling object
+	 * @param configuration_name 	name of configuration to use for initialization
 	 */
-	void (*build_test_jobs) (private_daemon_t *this);
+	void (*build_test_job) (private_daemon_t *this,char *configuration_name);
 	
 	/**
 	 * Initialize the daemon.
@@ -154,19 +155,18 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 }
 
 /**
- * Implementation of private_daemon_t.build_test_jobs.
+ * Implementation of private_daemon_t.build_test_job.
  */
-static void build_test_jobs(private_daemon_t *this)
+static void build_test_job(private_daemon_t *this, char *configuration_name)
 {	
-	char *config_name;
 	initiate_ike_sa_job_t *initiate_job;
 	
-	config_name = "localhost-rsa";
-	/* config_name = "localhost-shared"; */
-	/* config_name = "localhost-bad_dh_group"; */
+	/* configuration_name = "localhost-rsa"; */
+	/* configuration_name = "localhost-shared"; */
+	/* configuration_name = "localhost-bad_dh_group"; */
 	
 		
-	initiate_job = initiate_ike_sa_job_create(config_name);
+	initiate_job = initiate_ike_sa_job_create(configuration_name);
 	
 	this->public.event_queue->add_relative(this->public.event_queue, (job_t*)initiate_job, 2000);
 
@@ -254,7 +254,7 @@ private_daemon_t *daemon_create()
 	/* assign methods */
 	this->run = run;
 	this->destroy = destroy;
-	this->build_test_jobs = build_test_jobs;
+	this->build_test_job = build_test_job;
 	this->initialize = initialize;
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
 	
@@ -301,7 +301,11 @@ int main(int argc, char *argv[])
 	
 	private_charon->initialize(private_charon);
 	
-	private_charon->build_test_jobs(private_charon);
+	if (argc == 2)
+	{
+		private_charon->build_test_job(private_charon,argv[1]);
+	}
+
 	
 	private_charon->run(private_charon);
 	
