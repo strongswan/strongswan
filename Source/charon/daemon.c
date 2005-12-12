@@ -161,8 +161,7 @@ static void build_test_jobs(private_daemon_t *this)
 	char *config_name;
 	initiate_ike_sa_job_t *initiate_job;
 	
-	config_name = "pinflb30";
-//	config_name = "localhost-rsa";
+	config_name = "localhost-rsa";
 	/* config_name = "localhost-shared"; */
 	/* config_name = "localhost-bad_dh_group"; */
 	

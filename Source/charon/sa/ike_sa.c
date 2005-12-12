@@ -794,6 +794,8 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 {
 	retransmit_request_job_t *retransmit_job;
 	u_int32_t timeout;
+	crypter_t *crypter;
+	signer_t *signer;
 	packet_t *packet;
 	status_t status;
 	
@@ -807,7 +809,18 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 	/* generate packet */	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Generate packet from message");
 
-	status = message->generate(message, this->crypter_initiator,this->signer_initiator, &packet);
+	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		crypter = this->crypter_initiator;
+		signer = this->signer_initiator;
+	}
+	else
+	{
+		crypter = this->crypter_responder;
+		signer =this->signer_responder;
+	}
+	
+	status = message->generate(message, crypter,signer, &packet);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
@@ -857,6 +870,8 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
  */
 static status_t send_response (private_ike_sa_t *this,message_t * message)
 {
+	crypter_t *crypter;
+	signer_t *signer;
 	packet_t *packet;
 	status_t status;
 	
@@ -866,7 +881,19 @@ static status_t send_response (private_ike_sa_t *this,message_t * message)
 		return FAILED;	
 	}
 	
-	status = message->generate(message, this->crypter_responder,this->signer_responder, &packet);
+
+	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		crypter = this->crypter_initiator;
+		signer = this->signer_initiator;
+	}
+	else
+	{
+		crypter = this->crypter_responder;
+		signer =this->signer_responder;
+	}
+	
+	status = message->generate(message, crypter,signer, &packet);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
