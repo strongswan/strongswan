@@ -76,6 +76,7 @@ struct private_ike_sa_established_t {
 static status_t process_message(private_ike_sa_established_t *this, message_t *message)
 {
 	delete_payload_t *delete_request = NULL;
+	ike_sa_id_t *ike_sa_id;
 	iterator_t *payloads;
 	message_t *response;
 	crypter_t *crypter;
@@ -95,9 +96,19 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 		return FAILED;
 	}
 	
+	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
+	
 	/* get signer for verification and crypter for decryption */
-	signer = this->ike_sa->get_signer_responder(this->ike_sa);
-	crypter = this->ike_sa->get_crypter_responder(this->ike_sa);
+	if (!ike_sa_id->is_initiator(ike_sa_id))
+	{
+		crypter = this->ike_sa->get_crypter_initiator(this->ike_sa);
+		signer = this->ike_sa->get_signer_initiator(this->ike_sa);
+	}
+	else
+	{
+		crypter = this->ike_sa->get_crypter_responder(this->ike_sa);
+		signer = this->ike_sa->get_signer_responder(this->ike_sa);
+	}
 	
 	/* parse incoming message */
 	status = message->parse_body(message, crypter, signer);

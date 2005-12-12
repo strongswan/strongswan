@@ -381,6 +381,9 @@ static void send_delete_ike_sa_request (private_ike_sa_t *this)
 {
 	message_t *informational_request;
 	delete_payload_t *delete_payload;
+	crypter_t *crypter;
+	signer_t *signer;
+	packet_t *packet;
 	status_t status;
 	
 	if (this->current_state->get_state(this->current_state) != IKE_SA_ESTABLISHED)
@@ -396,12 +399,28 @@ static void send_delete_ike_sa_request (private_ike_sa_t *this)
 		
 	informational_request->add_payload(informational_request,(payload_t *)delete_payload);
 	
-	status = this->protected.send_request(&(this->protected), informational_request);
+	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
+	{
+		crypter = this->crypter_initiator;
+		signer = this->signer_initiator;
+	}
+	else
+	{
+		crypter = this->crypter_responder;
+		signer = this->signer_responder;
+	}
+	
+	status = informational_request->generate(informational_request,
+											 crypter,
+											 signer, &packet);
+	informational_request->destroy(informational_request);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Unable to send INFORMATIONAL DELETE request");
-		informational_request->destroy(informational_request);
+		this->logger->log(this->logger, ERROR, "Could not generate packet from message");
+		return ;
 	}
+	
+	charon->send_queue->add(charon->send_queue,packet);
 }
 
 /**
