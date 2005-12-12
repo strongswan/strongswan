@@ -95,6 +95,15 @@ struct ike_sa_t {
 	 * 						- NOT_FOUND if request doesn't have to be retransmited
 	 */
 	status_t (*retransmit_request) (ike_sa_t *this, u_int32_t message_id);
+	
+	/**
+	 * @brief Sends a request to delete IKE_SA.
+	 * 
+	 * Only supported in state IKE_SA_ESTABLISHED
+	 * 
+	 * @param this 			calling object
+	 */
+	void (*send_delete_ike_sa_request) (ike_sa_t *this);
 
 	/**
 	 * @brief Get the id of the SA.

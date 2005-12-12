@@ -35,6 +35,7 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/ke_payload.h>
+#include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/transform_substructure.h>
 #include <encoding/payloads/transform_attribute.h>
 #include <sa/states/initiator_init.h>
@@ -371,6 +372,36 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	
 	status = current_state->initiate_connection(current_state,name);
 	return status;
+}
+
+/**
+ * Implementation of ike_sa_t.send_delete_ike_sa_request.
+ */
+static void send_delete_ike_sa_request (private_ike_sa_t *this)
+{
+	message_t *informational_request;
+	delete_payload_t *delete_payload;
+	status_t status;
+	
+	if (this->current_state->get_state(this->current_state) != IKE_SA_ESTABLISHED)
+	{
+		return;
+	}
+	
+	/* build empty INFORMATIONAL message */
+	this->protected.build_message(&(this->protected), INFORMATIONAL, TRUE, &informational_request);
+	
+	delete_payload = delete_payload_create();
+	delete_payload->set_protocol_id(delete_payload,IKE);
+		
+	informational_request->add_payload(informational_request,(payload_t *)delete_payload);
+	
+	status = this->protected.send_request(&(this->protected), informational_request);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, AUDIT, "Unable to send INFORMATIONAL DELETE request");
+		informational_request->destroy(informational_request);
+	}
 }
 
 /**
@@ -868,7 +899,7 @@ static void send_notify(private_ike_sa_t *this, exchange_type_t exchange_type, n
 	response->add_payload(response,(payload_t *) payload);
 	
 	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Gnerate packet from message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Generate packet from message");
 	status = response->generate(response, this->crypter_responder, this->signer_responder, &packet);
 	if (status != SUCCESS)
 	{
@@ -1069,6 +1100,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t *this)) get_state;
+	this->protected.public.send_delete_ike_sa_request = (void (*)(ike_sa_t*)) send_delete_ike_sa_request;
 	this->protected.public.destroy = (void(*)(ike_sa_t*))destroy;
 	
 	/* protected functions */

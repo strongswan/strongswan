@@ -165,6 +165,27 @@ static payload_rule_t ike_auth_r_payload_rules[] = {
 	{CONFIGURATION,0,1,TRUE,FALSE},
 };
 
+
+/**
+ * Message rule for INFORMATIONAL from initiator.
+ */
+static payload_rule_t informational_i_payload_rules[] = {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
+	{CONFIGURATION,0,1,TRUE,FALSE},
+	{DELETE,0,1,TRUE,FALSE},
+	
+};
+
+/**
+ * Message rule for INFORMATIONAL from responder.
+ */
+static payload_rule_t informational_r_payload_rules[] = {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
+	{CONFIGURATION,0,1,TRUE,FALSE},
+	{DELETE,0,1,TRUE,FALSE},
+};
+
+
 /**
  * Message rules, defines allowed payloads.
  */
@@ -172,7 +193,9 @@ static message_rule_t message_rules[] = {
 	{IKE_SA_INIT,TRUE,FALSE,(sizeof(ike_sa_init_i_payload_rules)/sizeof(payload_rule_t)),ike_sa_init_i_payload_rules},
 	{IKE_SA_INIT,FALSE,FALSE,(sizeof(ike_sa_init_r_payload_rules)/sizeof(payload_rule_t)),ike_sa_init_r_payload_rules},
 	{IKE_AUTH,TRUE,TRUE,(sizeof(ike_auth_i_payload_rules)/sizeof(payload_rule_t)),ike_auth_i_payload_rules},
-	{IKE_AUTH,FALSE,TRUE,(sizeof(ike_auth_r_payload_rules)/sizeof(payload_rule_t)),ike_auth_r_payload_rules}
+	{IKE_AUTH,FALSE,TRUE,(sizeof(ike_auth_r_payload_rules)/sizeof(payload_rule_t)),ike_auth_r_payload_rules},
+	{INFORMATIONAL,TRUE,TRUE,(sizeof(informational_i_payload_rules)/sizeof(payload_rule_t)),informational_i_payload_rules},
+	{INFORMATIONAL,FALSE,TRUE,(sizeof(informational_r_payload_rules)/sizeof(payload_rule_t)),informational_r_payload_rules}
 };
 
 
@@ -1042,6 +1065,8 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		this->payloads->remove_first(this->payloads,&current_payload);
 		all_payloads->insert_last(all_payloads,current_payload);
 	}
+	
+	encryption_payload = encryption_payload_create();
 
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Check each payloads if they have to get encrypted");
 	while (all_payloads->get_count(all_payloads) > 0)
@@ -1072,10 +1097,6 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		
 		if (to_encrypt)
 		{
-			if (encryption_payload == NULL)
-			{
-				encryption_payload = encryption_payload_create();
-			}
 			this->logger->log(this->logger, CONTROL | LEVEL2, "Insert payload %s to encryption payload", 
 							  mapping_find(payload_type_m,current_payload->get_type(current_payload)));
 
@@ -1090,15 +1111,12 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 	}
 
 	status = SUCCESS;
-	if (encryption_payload != NULL)
-	{
-		this->logger->log(this->logger, CONTROL | LEVEL2, "Set transforms for encryption payload ");
-		encryption_payload->set_transforms(encryption_payload,crypter,signer);
-		this->logger->log(this->logger, CONTROL | LEVEL1, "Encrypt all payloads of encrypted payload");
-		status = encryption_payload->encrypt(encryption_payload);
-		this->logger->log(this->logger, CONTROL | LEVEL2, "Add encrypted payload to payload list");
-		this->public.add_payload(&(this->public), (payload_t*)encryption_payload);
-	}
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Set transforms for encryption payload ");
+	encryption_payload->set_transforms(encryption_payload,crypter,signer);
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Encrypt all payloads of encrypted payload");
+	status = encryption_payload->encrypt(encryption_payload);
+	this->logger->log(this->logger, CONTROL | LEVEL2, "Add encrypted payload to payload list");
+	this->public.add_payload(&(this->public), (payload_t*)encryption_payload);
 	
 	all_payloads->destroy(all_payloads);
 	

@@ -745,15 +745,19 @@ static status_t get_rsa_private_key(private_configuration_manager_t *this, ident
  */
 static status_t get_retransmit_timeout (private_configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
 {
+	int new_timeout = this->first_retransmit_timeout, i;
 	if ((retransmit_count > this->max_retransmit_count) && (this->max_retransmit_count != 0))
 	{
 		return FAILED;
 	}
 	
-	/**
-	 * TODO implement a good retransmit policy
-	 */
-	*timeout = this->first_retransmit_timeout * (retransmit_count + 1);
+
+	for (i = 0; i < retransmit_count; i++)
+	{
+		new_timeout *= 2;
+	}
+	
+	*timeout = new_timeout;
 	
 	return SUCCESS;
 }

@@ -127,11 +127,11 @@ struct private_ike_auth_requested_t {
 	/**
 	 * Process a notify payload
 	 * 
-	 * @param this			calling object
-	 * @param ts_initiator	TRUE if TS payload is TSi, FALSE for TSr
-	 * @param ts_payload	TS payload of responder
+	 * @param this				calling object
+	 * @param notify_payload	notify payload
 	 *
 	 * 						- SUCCESS
+	 * 						- FAILED
 	 * 						- DELETE_ME
 	 */
 	status_t (*process_notify_payload) (private_ike_auth_requested_t *this, notify_payload_t *notify_payload);
@@ -174,7 +174,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	status = ike_auth_reply->parse_body(ike_auth_reply, crypter, signer);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply decryption faild. Ignoring message");
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply decryption failed. Ignoring message");
 		return status;
 	}
 	

@@ -444,9 +444,8 @@ static void process_delete_established_ike_sa_job(private_thread_pool_t *this, d
 		}
 		default:
 		{
-			/*
-			 * TODO Send delete notify
-			 */
+			this->worker_logger->log(this->worker_logger, CONTROL, "Send delete request for IKE_SA.");			
+			ike_sa->send_delete_ike_sa_request(ike_sa);
 			break;
 		}
 	}
