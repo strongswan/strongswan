@@ -292,7 +292,7 @@ static void load_default_config (private_configuration_manager_t *this)
 	proposals[0].integrity_algorithm_key_length = 16;
 	proposals[0].pseudo_random_function = PRF_HMAC_MD5;
 	proposals[0].pseudo_random_function_key_length = 16;
-	proposals[0].diffie_hellman_group = MODP_768_BIT;
+	proposals[0].diffie_hellman_group = MODP_1024_BIT;
 	
 	proposals[1] = proposals[0];
 	proposals[1].integrity_algorithm = AUTH_HMAC_SHA1_96;
@@ -336,17 +336,18 @@ static void load_default_config (private_configuration_manager_t *this)
 	ts->destroy(ts);
 	
 	/* ah and esp prop */
-	child_proposals[0].ah.is_set = TRUE;
-	child_proposals[0].ah.integrity_algorithm = AUTH_HMAC_MD5_96;
-	child_proposals[0].ah.integrity_algorithm_key_size = 16;
+	child_proposals[0].ah.is_set = FALSE;
+	child_proposals[0].ah.integrity_algorithm = AUTH_HMAC_SHA1_96;
+	child_proposals[0].ah.integrity_algorithm_key_size = 20;
 	child_proposals[0].ah.diffie_hellman_group = MODP_1024_BIT;
 	child_proposals[0].ah.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
 
 	child_proposals[0].esp.is_set = TRUE;
-	child_proposals[0].esp.diffie_hellman_group = MODP_1024_BIT;
+	child_proposals[0].esp.diffie_hellman_group = MODP_UNDEFINED;
 	child_proposals[0].esp.encryption_algorithm = ENCR_AES_CBC;
 	child_proposals[0].esp.encryption_algorithm_key_size = 16;
-	child_proposals[0].esp.integrity_algorithm = AUTH_UNDEFINED;
+	child_proposals[0].esp.integrity_algorithm = AUTH_HMAC_SHA1_96;
+	child_proposals[0].esp.integrity_algorithm_key_size = 20;
 	child_proposals[0].esp.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
 	child_proposals[0].esp.spi[0] = 2;
 	child_proposals[0].esp.spi[1] = 2;
