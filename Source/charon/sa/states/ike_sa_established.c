@@ -162,13 +162,6 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 		status = this->build_delete_payload(this, delete_request, response);
 		if (status == DELETE_ME)
 		{
-			status = this->ike_sa->send_response(this->ike_sa, response);
-			if (status != SUCCESS)
-			{
-				this->logger->log(this->logger, AUDIT, "Unable to send INFORMATIONAL reply");
-				response->destroy(response);
-				return FAILED;
-			}
 			response->destroy(response);
 			return status;
 		}
@@ -192,15 +185,9 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
  */
 static status_t build_delete_payload (private_ike_sa_established_t *this, delete_payload_t *request, message_t *response_message)
 {
-	delete_payload_t *response;
 	if (request->get_protocol_id(request) == IKE)
 	{
-		this->logger->log(this->logger, AUDIT, "DELETE request for IKE_SA received. Create delete reply.");
-		
-		response = delete_payload_create();
-		response->set_protocol_id(response,IKE);
-		
-		response_message->add_payload(response_message,(payload_t *)response);
+		this->logger->log(this->logger, AUDIT, "DELETE request for IKE_SA received. Don't reply.");
 		/* IKE_SA has to get deleted */
 		return DELETE_ME;
 	}
