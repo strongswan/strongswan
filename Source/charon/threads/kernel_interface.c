@@ -8,6 +8,9 @@
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2003 Herbert Xu.
+ * 
+ * Contains modified parts from pluto.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -127,11 +130,11 @@ struct private_kernel_interface_t {
 mapping_t kernel_encryption_algs_m[] = {
 	{ENCR_DES_IV64, ""},
 	{ENCR_DES, "des"},
-	{ENCR_3DES, "3des"},
+	{ENCR_3DES, "des3_ede"},
 	{ENCR_RC5, ""},
-	{ENCR_IDEA, ""},
-	{ENCR_CAST, ""},
-	{ENCR_BLOWFISH, ""},
+	{ENCR_IDEA, "idea"},
+	{ENCR_CAST, "cast128"},
+	{ENCR_BLOWFISH, "blowfish"},
 	{ENCR_3IDEA, ""},
 	{ENCR_DES_IV32, ""},
 	{ENCR_NULL, ""},
