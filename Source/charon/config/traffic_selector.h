@@ -193,9 +193,9 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
  * 
  * @param protocol 		protocol for this ts, such as TCP or UDP
  * @param type			type of following addresses, such as TS_IPV4_ADDR_RANGE
- * @param from_addr		start of address range, network order
+ * @param from_address	start of address range, network order
  * @param from_port		port number, host order
- * @param to_addr		end of address range as string, network
+ * @param to_address	end of address range as string, network
  * @param to_port		port number, host order
  * @return
  * 						- traffic_selector_t object

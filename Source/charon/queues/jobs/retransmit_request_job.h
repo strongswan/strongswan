@@ -1,5 +1,5 @@
 /**
- * @file retransmit_request_job.c
+ * @file retransmit_request_job.h
  * 
  * @brief Interface of retransmit_request_job_t.
  * 

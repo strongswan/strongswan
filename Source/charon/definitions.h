@@ -61,25 +61,25 @@
 
 
 /**
- * @defgroup config
+ * @defgroup config config
  * 
  * Classes implementing configuration related things.
  */
 
 /**
- * @defgroup encoding
+ * @defgroup encoding encoding
  * 
  * Classes used to encode and decode IKEv2 messages.
  */
 
 /**
- * @defgroup network
+ * @defgroup network network
  * 
  * Classes for network relevant stuff.
  */
  
  /**
- * @defgroup payloads
+ * @defgroup payloads payloads
  * 
  * Classes representing specific IKEv2 payloads.
  * 
@@ -87,14 +87,14 @@
  */
 
 /**
- * @defgroup sa
+ * @defgroup sa sa
  * 
  * Security association and helper classes.
  */
 
 
 /**
- * @defgroup states
+ * @defgroup states states
  *
  * Varius states in which an IKE SA can be.
  *
@@ -102,13 +102,13 @@
  */
 
 /**
- * @defgroup queues
+ * @defgroup queues queues
  * 
  * Different kind of queues.
  */
  
  /**
-  * @defgroup jobs
+  * @defgroup jobs jobs
   * 
   * Jobs used in job queue and event queue.
   * 
@@ -116,19 +116,19 @@
   */
 
 /**
- * @defgroup testcases
+ * @defgroup testcases testcases
  * 
  * Testcases used to test the different classes in seperate module tests.
  */
 
 /**
- * @defgroup transforms
+ * @defgroup transforms transforms
  * 
  * Transform algorithms of different kind.
  */
  
 /**
- * @defgroup rsa
+ * @defgroup rsa rsa
  * 
  * RSA public key algorithm.
  * 
@@ -136,7 +136,7 @@
  */
  
 /**
- * @defgroup prfs
+ * @defgroup prfs prfs
  * 
  * Pseudo random functions.
  * 
@@ -144,7 +144,7 @@
  */
 
 /**
- * @defgroup signers
+ * @defgroup signers signers
  * 
  * Symmetric signing algorithms, used to ensure message integrity.
  * 
@@ -152,7 +152,7 @@
  */
 
 /**
- * @defgroup crypters
+ * @defgroup crypters crypters
  * 
  * Symmetric encryption algorithms, used to encrypt and decrypt.
  * 
@@ -160,21 +160,21 @@
  */
  
 /**
- * @defgroup hashers
+ * @defgroup hashers hashers
  * 
  * Hashing algorithms.
  * 
  * @ingroup transforms
  */
  
- /**
- * @defgroup utils
+/**
+ * @defgroup utils utils
  * 
  * Generic helper classes.
  */
   
 /**
- * @defgroup threads
+ * @defgroup threads threads
  * 
  * Threaded classes, which will do their job alone.
  */

@@ -58,7 +58,7 @@ struct ike_sa_init_responded_t {
  * 
  * @param ike_sa 						assigned IKE_SA
  * @param received_nonce				received nonce data in IKE_SA_INIT request
- * @param received_nonce				sent nonce data in IKE_SA_INIT response
+ * @param sent_nonce					sent nonce data in IKE_SA_INIT response
  * @param ike_sa_init_request_data		binary representation of received IKE_SA_INIT request
  * @param ike_sa_init_response_data		binary representation of sent IKE_SA_INIT response
  * 

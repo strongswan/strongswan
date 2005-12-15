@@ -68,7 +68,7 @@ struct iterator_t {
 	status_t (*current) (iterator_t *this, void **value);
 	
 	/**
-	 * @biref Inserts a new item before the given iterator position.
+	 * @brief Inserts a new item before the given iterator position.
 	 * 
 	 * The iterator position is not changed after inserting
 	 * 
@@ -93,7 +93,7 @@ struct iterator_t {
 	 * The iterator position is not changed after replacing.
 	 * 
 	 * @param this 			calling iterator
-	 * @param[out]old_item  old value will be written here(can be NULL)
+	 * @param[out] old_item	old value will be written here(can be NULL)
 	 * @param[in] new_item  new value
 	 * 
 	 * @return 

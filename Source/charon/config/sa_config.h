@@ -99,8 +99,8 @@ struct sa_config_t {
 	 * 
 	 * Returned object is not getting cloned.
 	 * 
-	 * @param this					calling object
-	 * @return						own id
+	 * @param this			calling object
+	 * @return				own id
 	 */
 	identification_t *(*get_my_id) (sa_config_t *this);
 	
@@ -109,23 +109,23 @@ struct sa_config_t {
 	 *
 	 * Returned object is not getting cloned.
 	 * 
-	 * @param this					calling object
-	 * @return						other id
+	 * @param this			calling object
+	 * @return				other id
 	 */
 	identification_t *(*get_other_id) (sa_config_t *this);
 	
 	/**
 	 * @brief Get authentication method to use for IKE_AUTH.
 	 * 
-	 * @param this					calling object
-	 * @return						authentication methood
+	 * @param this			calling object
+	 * @return				authentication methood
 	 */
 	auth_method_t (*get_auth_method) (sa_config_t *this);
 	
 	/**
 	 * @brief Get lifetime of IKE_SA in milliseconds.
 	 * 
-	 * @return IKE_SA lifetime in milliseconds.
+	 * @return 				IKE_SA lifetime in milliseconds.
 	 */
 	u_int32_t (*get_ike_sa_lifetime) (sa_config_t *this);
 	
@@ -138,9 +138,9 @@ struct sa_config_t {
 	 * @warning Resulting pointer array must be freed!
 	 * @warning Traffic selectors in array must be destroyed!
 	 * 
-	 * @param this					calling object
-	 * @param[out]traffic_selectors	pointer where traffic selectors will be allocated
-	 * @return						number of returned traffic selectors
+	 * @param this						calling object
+	 * @param[out] traffic_selectors	pointer where traffic selectors will be allocated
+	 * @return							number of returned traffic selectors
 	 */
 	size_t (*get_traffic_selectors_initiator) (sa_config_t *this, traffic_selector_t **traffic_selectors[]);
 	
@@ -154,9 +154,9 @@ struct sa_config_t {
 	 * @warning Resulting pointer array must be freed!
 	 * @warning Traffic selectors in array must be destroyed!
 	 * 
-	 * @param this					calling object
-	 * @param[out]traffic_selectors	pointer where traffic selectors will be allocated
-	 * @return						number of returned traffic selectors
+	 * @param this						calling object
+	 * @param[out] traffic_selectors	pointer where traffic selectors will be allocated
+	 * @return							number of returned traffic selectors
 	 */
 	size_t (*get_traffic_selectors_responder) (sa_config_t *this, traffic_selector_t **traffic_selectors[]);
 	
@@ -169,11 +169,11 @@ struct sa_config_t {
 	 * @warning Resulting pointer array must be freed!
 	 * @warning Traffic selectors in array must be destroyed!
 	 * 
-	 * @param this					calling object
-	 * @param supplied				pointer to an array of ts to select from.
-	 * @param count					number of ts stored at supplied
-	 * @param[out]traffic_selectors	pointer where selected traffic selectors will be allocated
-	 * @return						number of selected traffic selectors
+	 * @param this						calling object
+	 * @param supplied					pointer to an array of ts to select from.
+	 * @param count						number of ts stored at supplied
+	 * @param[out] traffic_selectors	pointer where selected traffic selectors will be allocated
+	 * @return							number of selected traffic selectors
 	 */
 	size_t (*select_traffic_selectors_initiator) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
 		
@@ -186,11 +186,11 @@ struct sa_config_t {
 	 * @warning Resulting pointer array must be freed!
 	 * @warning Traffic selectors in array must be destroyed!
 	 * 
-	 * @param this					calling object
-	 * @param supplied				pointer to an array of ts to select from.
-	 * @param count					number of ts stored at supplied
-	 * @param[out]traffic_selectors	pointer where selected traffic selectors will be allocated
-	 * @return						number of selected traffic selectors
+	 * @param this						calling object
+	 * @param supplied					pointer to an array of ts to select from.
+	 * @param count						number of ts stored at supplied
+	 * @param[out] traffic_selectors	pointer where selected traffic selectors will be allocated
+	 * @return							number of selected traffic selectors
 	 */
 	size_t (*select_traffic_selectors_responder) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
 	
@@ -199,9 +199,9 @@ struct sa_config_t {
 	 * 
 	 * @warning Resulting array must be freed!
 	 * 
-	 * @param this					calling object
-	 * @param[out]traffic_selectors	pointer where proposals will be allocated
-	 * @return						number of allocated proposals
+	 * @param this						calling object
+	 * @param[out] traffic_selectors	pointer where proposals will be allocated
+	 * @return							number of allocated proposals
 	 */
 	size_t (*get_proposals) (sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t *proposals[]);
 	

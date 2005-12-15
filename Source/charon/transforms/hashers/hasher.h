@@ -91,7 +91,7 @@ struct hasher_t {
 	 * 
 	 * @param this			calling object
 	 * @param data			data to hash
-	 * @param [out]hash		pointer where the hash will be written
+	 * @param[out] hash		pointer where the hash will be written
 	 */
 	void (*get_hash) (hasher_t *this, chunk_t data, u_int8_t *hash);
 	
@@ -104,7 +104,7 @@ struct hasher_t {
 	 * 
 	 * @param this			calling object
 	 * @param data			chunk with data to hash
-	 * @param [out]hash		chunk which will hold allocated hash
+	 * @param[out] hash		chunk which will hold allocated hash
 	 */
 	void (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
 	

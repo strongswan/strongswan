@@ -1,5 +1,5 @@
 /**
- * @file generator.h
+ * @file generator_test.h
  * 
  * @brief Tests for the generator_t class.
  * 

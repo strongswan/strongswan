@@ -107,7 +107,8 @@ struct ts_payload_t {
 	 * @brief Create an array of the nested traffic_selector_t's.
 	 * 
 	 * @warning Array must be freed after usage.
-	 * @warnging traffic selector must be destroyed after usage.
+	 * 
+	 * @warning traffic selector must be destroyed after usage.
 	 *
 	 * @param this 			calling ts_payload_t object
 	 * @param[out]			address of the array of traffic_selectors will be written here.
@@ -141,9 +142,11 @@ ts_payload_t *ts_payload_create(bool is_initiator);
  * 
  * 
  * @param is_initiator	
- * 						- TRUE if this payload is of type TSi
- * 						- FALSE if this payload is of type TSr
- * @return				ts_payload_t object
+ * 							- TRUE if this payload is of type TSi
+ * 							- FALSE if this payload is of type TSr
+ * @param traffic_selectors	an array of traffic_selector_t-pointers
+ * @param count				number of pointers in the array
+ * @return					ts_payload_t object
  * 
  * @ingroup payloads
  */

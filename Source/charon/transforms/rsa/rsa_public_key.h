@@ -49,7 +49,7 @@ typedef struct rsa_public_key_t rsa_public_key_t;
 struct rsa_public_key_t {
 
 	/**
-	 * @bief Verify a EMSA-PKCS1 encodined signature.
+	 * @brief Verify a EMSA-PKCS1 encodined signature.
 	 * 
 	 * Processes the supplied signature with the RSAVP1 function,
 	 * selects the hash algorithm form the resultign ASN1-OID and

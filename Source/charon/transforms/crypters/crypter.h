@@ -87,7 +87,7 @@ struct crypter_t {
 	 * @param this				calling object
 	 * @param data				data to encrypt
 	 * @param iv				initializing vector
-	 * @param [out]encrypted	pointer where the encrypted bytes will be written
+	 * @param[out] encrypted	pointer where the encrypted bytes will be written
 	 * @return
 	 * 							- SUCCESS
 	 * 							- INVALID_ARG if data size not a multiple of block size
@@ -101,7 +101,7 @@ struct crypter_t {
 	 * @param this				calling object
 	 * @param data				data to decrypt
 	 * @param iv				initializing vector
-	 * @param [out]encrypted	pointer where the decrypted bytes will be written
+	 * @param[out] encrypted	pointer where the decrypted bytes will be written
 	 * @return
 	 * 							- SUCCESS
 	 * 							- INVALID_ARG if data size not a multiple of block size

@@ -48,7 +48,7 @@ typedef struct rsa_private_key_t rsa_private_key_t;
 struct rsa_private_key_t {
 
 	/**
-	 * @bief Build a signature over a chunk using EMSA-PKCS1 encoding.
+	 * @brief Build a signature over a chunk using EMSA-PKCS1 encoding.
 	 * 
 	 * This signature creates a hash using the specified hash algorithm, concatenates
 	 * it with an ASN1-OID of the hash algorithm and runs the RSASP1 function

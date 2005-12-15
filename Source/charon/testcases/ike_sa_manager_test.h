@@ -1,5 +1,5 @@
 /**
- * @file ike_sa_manager_test.c
+ * @file ike_sa_manager_test.h
  *
  * @brief Tests for the ike_sa_manager_t class.
  *

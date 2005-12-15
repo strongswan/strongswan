@@ -136,7 +136,7 @@ struct ike_sa_id_t {
  *
  * @param initiator_spi			initiators SPI
  * @param responder_spi			responders SPI
- * @param is_initiator			TRUE if we are the original initiator
+ * @param is_initiaor			TRUE if we are the original initiator
  * @return						ike_sa_id_t object
  * 
  * @ingroup sa

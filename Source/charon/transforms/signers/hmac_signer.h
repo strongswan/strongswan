@@ -45,7 +45,7 @@ struct hmac_signer_t {
 /**
  * @brief Creates a new hmac_signer_t.
  * 
- * @param hash_algorithm	Hash algorithm to use with signer
+ * @param hash_algoritm		Hash algorithm to use with signer
  * @return					
  * 							- hmac_signer_t
  * 							- NULL if hash algorithm not supported
