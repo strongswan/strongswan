@@ -32,6 +32,7 @@
 #include <transforms/signers/signer.h>
 #include <transforms/prfs/prf.h>
 #include <transforms/crypters/crypter.h>
+#include <config/child_proposal.h>
 
 
 /**
@@ -48,49 +49,6 @@
  */
 #define TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH 8
 
-
-typedef enum transform_type_t transform_type_t;
-
-/**
- * Type of a transform, as in IKEv2 draft 3.3.2.
- * 
- * @ingroup payloads
- */
-enum transform_type_t {
-	UNDEFINED_TRANSFORM_TYPE = 241,
-	ENCRYPTION_ALGORITHM = 1,
-	PSEUDO_RANDOM_FUNCTION = 2,
-	INTEGRITY_ALGORITHM = 3,
-	DIFFIE_HELLMAN_GROUP = 4,
-	EXTENDED_SEQUENCE_NUMBERS = 5
-};
-
-/** 
- * String mappings for transform_type_t.
- * 
- * @ingroup payloads
- */
-extern mapping_t transform_type_m[];
-
-
-typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
-
-/** 
- * Extended sequence numbers, as in IKEv2 draft 3.3.2.
- * 
- * @ingroup payloads
- */
-enum extended_sequence_numbers_t {
-	NO_EXT_SEQ_NUMBERS = 0,
-	EXT_SEQ_NUMBERS = 1
-};
-
-/** 
- * String mappings for extended_sequence_numbers_t.
- * 
- * @ingroup payloads
- */
-extern mapping_t extended_sequence_numbers_m[];
 
 typedef struct transform_substructure_t transform_substructure_t;
 

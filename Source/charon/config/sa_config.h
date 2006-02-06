@@ -32,49 +32,8 @@
 #include <transforms/signers/signer.h>
 #include <transforms/diffie_hellman.h>
 #include <config/traffic_selector.h>
+#include <config/child_proposal.h>
 
-
-typedef struct child_proposal_t child_proposal_t;
-
-/**
- * @brief Storage structure for a proposal for a child sa.
- * 
- * A proposal for a child sa contains data for 
- * AH, ESP, or both.
- * 
- * @todo Currently the amount of tranforms with same type in a proposal is limited to 1.
- * 		 Support of more transforms with same type has to be added.
- * 
- * @ingroup config
- */
-struct child_proposal_t {
-	
-	/**
-	 * Data for AH, if set.
-	 */
-	struct {
-		bool is_set;
-		integrity_algorithm_t integrity_algorithm;
-		size_t integrity_algorithm_key_size;
-		diffie_hellman_group_t diffie_hellman_group;
-		extended_sequence_numbers_t extended_sequence_numbers;
-		u_int8_t spi[4];
-	} ah;
-	
-	/**
-	 * Data for ESP, if set.
-	 */
-	struct {
-		bool is_set;
-		encryption_algorithm_t encryption_algorithm;
-		size_t encryption_algorithm_key_size;
-		integrity_algorithm_t integrity_algorithm;
-		size_t integrity_algorithm_key_size;
-		diffie_hellman_group_t diffie_hellman_group;
-		extended_sequence_numbers_t extended_sequence_numbers;
-		u_int8_t spi[4];
-	} esp;
-};
 
 
 typedef struct sa_config_t sa_config_t;
@@ -195,30 +154,27 @@ struct sa_config_t {
 	size_t (*select_traffic_selectors_responder) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
 	
 	/**
-	 * @brief Get the list of proposals for this config.
+	 * @brief Get an iterator for the internally stored proposals.
 	 * 
-	 * @warning Resulting array must be freed!
-	 * 
-	 * @param this						calling object
-	 * @param[out] traffic_selectors	pointer where proposals will be allocated
-	 * @return							number of allocated proposals
-	 */
-	size_t (*get_proposals) (sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t *proposals[]);
-	
-	/**
-	 * @brief Select a proposal from a supplied list
-	 * 
-	 * @warning Resulting array must be freed!
+	 * @warning Items are still owned by sa_config and MUST NOT
+	 *			be manipulated or freed!
 	 * 
 	 * @param this					calling object
-	 * @param supplied				pointer to an array of proposals to select from.
-	 * @param count					number of proposals stored at supplied
-	 * @return						the selected proposal
+	 * @return						iterator for the proposals
 	 */
-	child_proposal_t* (*select_proposal) (sa_config_t *this, u_int8_t ah_spi[4], u_int8_t esp_spi[4], child_proposal_t *supplied, size_t count);
+	iterator_t *(*create_proposal_iterator) (sa_config_t *this);
 	
 	/**
-	 * @brief Add a traffic selector to the list for initiator. 
+	 * @brief Select a proposal from a supplied list.
+	 * 
+	 * @param this					calling object
+	 * @param proposals				list from from wich proposals are selected
+	 * @return						selected proposal, or NULL if nothing matches
+	 */
+	child_proposal_t *(*select_proposal) (sa_config_t *this, linked_list_t *proposals);
+	
+	/**
+	 * @brief Add a traffic selector to the list for initiator.
 	 * 
 	 * Added proposal will be cloned.
 	 * 
@@ -246,7 +202,6 @@ struct sa_config_t {
 	 * 
 	 * The proposals are stored by priority, first added
 	 * is the most prefered.
-	 * Added proposal will be cloned.
 	 * 
 	 * @warning Do not add while other threads are reading.
 	 * 

@@ -26,6 +26,7 @@
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_substructure.h>
+#include <config/child_proposal.h>
 #include <utils/linked_list.h>
 
 
@@ -36,27 +37,6 @@
  */
 #define PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH 8
 
-
-typedef enum protocol_id_t protocol_id_t;
-
-/**
- * Protocol ID of a proposal.
- * 
- * @ingroup payloads
- */
-enum protocol_id_t {
-	UNDEFINED_PROTOCOL_ID = 201,
-	IKE = 1,
-	AH = 2,
-	ESP = 3,
-};
-
-/** 
- * String mappings for protocol_id_t.
- * 
- * @ingroup payloads
- */
-extern mapping_t protocol_id_m[];
 
 typedef struct proposal_substructure_t proposal_substructure_t;
 
@@ -217,6 +197,23 @@ struct proposal_substructure_t {
  * @ingroup payloads
  */
 proposal_substructure_t *proposal_substructure_create();
+
+/**
+ * @brief Creates a proposal substructure from a child_proposal.
+ * 
+ * Since a child proposal may contain data for both AH and ESP, 
+ * the protocol must be specified. If the proposal does not contain
+ * data for proto, NULL is returned. Call twice, once with AH, once 
+ * with ESP, with the same proposal to build the two substructures 
+ * for it.
+ * 
+ * @param proposal		proposal to build a substruct out of it
+ * @param proto			for which protocol the substructure should be built
+ * @return 				proposal_substructure_t object, or NULL
+ * 
+ * @ingroup payloads
+ */
+proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_proposal_t *proposal, protocol_id_t proto);
 
 
 #endif /*PROPOSAL_SUBSTRUCTURE_H_*/

@@ -37,17 +37,6 @@
  */
 #define PROPOSAL_TYPE_VALUE 2
 
-/** 
- * String mappings for protocol_id_t.
- */
-mapping_t protocol_id_m[] = {
-	{UNDEFINED_PROTOCOL_ID, "UNDEFINED_PROTOCOL_ID"},
-	{IKE, "IKE"},
-	{AH, "AH"},
-	{ESP, "ESP"},
-	{MAPPING_END, NULL}
-};
-
 
 typedef struct private_proposal_substructure_t private_proposal_substructure_t;
 
@@ -413,7 +402,7 @@ static size_t get_transform_count (private_proposal_substructure_t *this)
  */
 static size_t get_spi_size (private_proposal_substructure_t *this)
 {
-	return 	this->spi.len;
+	return this->spi.len;
 }
 
 /**
@@ -499,6 +488,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_type;
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	
+	
 	/* public functions */
 	this->public.create_transform_substructure_iterator = (iterator_t* (*) (proposal_substructure_t *,bool)) create_transform_substructure_iterator;
 	this->public.add_transform_substructure = (void (*) (proposal_substructure_t *,transform_substructure_t *)) add_transform_substructure;
@@ -529,8 +519,65 @@ proposal_substructure_t *proposal_substructure_create()
 	this->spi_size = 0;
 	this->spi.ptr = NULL;
 	this->spi.len = 0;
-
+	
 	this->transforms = linked_list_create();
-
+	
 	return (&(this->public));
+}
+
+/*
+ * Described in header.
+ */
+proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_proposal_t *proposal, protocol_id_t *proto)
+{
+	private_proposal_substructure_t *this = (private_proposal_substructure_t*)proposal_substructure_create();
+	iterator_t *iterator;
+	algorithm_t *algo;
+	transform_substructure_t *transform;
+	
+	/* encryption algorithm is only availble in ESP */
+	if (proto == ESP)
+	{
+		iterator = proposal->create_algorithm_iterator(proposal, proto, ENCRYPTION_ALGORITHM);
+		while (iterator->has_next(iterator))
+		{
+			iterator->current(iterator, (void**)&algo);
+			transform = transform_substructure_create_type(ENCRYPTION_ALGORITHM, algo->algorithm, algo->key_size);
+			this->public.add_transform_substructure(&(this->public), transform);
+		}
+		iterator->destroy(iterator);
+	}
+	
+	/* integrity algorithms */
+	iterator = proposal->create_algorithm_iterator(proposal, proto, INTEGRITY_ALGORITHM);
+	while (iterator->has_next(iterator))
+	{
+		algorithm_t *algo;
+		iterator->current(iterator, (void**)&algo);
+		transform = transform_substructure_create_type(INTEGRITY_ALGORITHM, algo->algorithm, algo->key_size);
+		this->public.add_transform_substructure(&(this->public), transform);
+	}
+	iterator->destroy(iterator);
+	
+	/* dh groups */
+	iterator = proposal->create_algorithm_iterator(proposal, proto, DIFFIE_HELLMAN_GROUP);
+	while (iterator->has_next(iterator))
+	{
+		algorithm_t *algo;
+		iterator->current(iterator, (void**)&algo);
+		transform = transform_substructure_create_type(DIFFIE_HELLMAN_GROUP, algo->algorithm, 0);
+		this->public.add_transform_substructure(&(this->public), transform);
+	}
+	iterator->destroy(iterator);
+	
+	/* extended sequence numbers */
+	iterator = proposal->create_algorithm_iterator(proposal, proto, EXTENDED_SEQUENCE_NUMBERS);
+	while (iterator->has_next(iterator))
+	{
+		algorithm_t *algo;
+		iterator->current(iterator, (void**)&algo);
+		transform = transform_substructure_create_type(EXTENDED_SEQUENCE_NUMBERS, algo->algorithm, 0);
+		this->public.add_transform_substructure(&(this->public), transform);
+	}
+	iterator->destroy(iterator);
 }

@@ -80,29 +80,6 @@ struct private_transform_substructure_t {
 };
 
 
-/** 
- * String mappings for transform_type_t.
- */
-mapping_t transform_type_m[] = {
-	{UNDEFINED_TRANSFORM_TYPE, "UNDEFINED_TRANSFORM_TYPE"},
-	{ENCRYPTION_ALGORITHM, "ENCRYPTION_ALGORITHM"},
-	{PSEUDO_RANDOM_FUNCTION, "PSEUDO_RANDOM_FUNCTION"},
-	{INTEGRITY_ALGORITHM, "INTEGRITY_ALGORITHM"},
-	{DIFFIE_HELLMAN_GROUP, "DIFFIE_HELLMAN_GROUP"},
-	{EXTENDED_SEQUENCE_NUMBERS, "EXTENDED_SEQUENCE_NUMBERS"},
-	{MAPPING_END, NULL}
-};
-
-
-/** 
- * String mappings for extended_sequence_numbers_t.
- */
-mapping_t extended_sequence_numbers_m[] = {
-	{NO_EXT_SEQ_NUMBERS, "NO_EXT_SEQ_NUMBERS"},
-	{EXT_SEQ_NUMBERS, "EXT_SEQ_NUMBERS"},
-	{MAPPING_END, NULL}
-};
-
 /**
  * Encoding rules to parse or generate a Transform substructure.
  * 

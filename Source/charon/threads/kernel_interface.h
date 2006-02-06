@@ -54,18 +54,18 @@ struct kernel_interface_t {
 	 * @todo Cleanup method params
 	 */
 	status_t (*add_sa)(kernel_interface_t *this,
-						host_t *me, 
-						host_t *other, 
-						u_int32_t spi, 
-						int protocol, 
-						bool tunnel_mode,
-						encryption_algorithm_t enc_alg,
-						size_t enc_size,
-						chunk_t enc_key,
-						integrity_algorithm_t int_alg,
-						size_t int_size,
-						chunk_t int_key,
-						bool replace);
+				host_t *me, 
+				host_t *other,
+				u_int32_t spi,
+				int protocol,
+				bool tunnel_mode,
+				encryption_algorithm_t enc_alg,
+				size_t enc_size,
+				chunk_t enc_key,
+				integrity_algorithm_t int_alg,
+				size_t int_size,
+				chunk_t int_key,
+				bool replace);
 	
 	/**
 	 * @brief Destroys a kernel_interface object.

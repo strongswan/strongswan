@@ -258,6 +258,34 @@ static void add_proposal_substructure (private_sa_payload_t *this,proposal_subst
 }
 
 /**
+ * Implementation of sa_payload_t.add_child_proposal.
+ */
+static void add_child_proposal(private_sa_payload_t *this, child_proposal_t *proposal)
+{
+	proposal_substructure_t *substructure;
+	protocol_id_t proto;
+	
+	/* watch out to build the substructures in the right order */
+	proto = proposal->get_first_protocol(proposal);
+	if (proto != AH && proto != ESP)
+	{
+		return;
+	}
+	substructure = proposal_substructure_create_from_child_proposal(proposal, proto);
+	add_proposal_substructure(this, substructure);
+	
+	/* first is done, now do the (possible) other */
+	proto = proposal->get_second_protocol(proposal);
+	if (proto != AH && proto != ESP)
+	{
+		return;
+	}
+	substructure = proposal_substructure_create_from_child_proposal(proposal, proto);
+	add_proposal_substructure(this, substructure);
+}
+
+
+/**
  * Implementation of sa_payload_t.get_ike_proposals.
  */
 static status_t get_ike_proposals (private_sa_payload_t *this,ike_proposal_t ** proposals, size_t *proposal_count)
@@ -267,7 +295,6 @@ static status_t get_ike_proposals (private_sa_payload_t *this,ike_proposal_t ** 
 	iterator_t *iterator;
 	ike_proposal_t *tmp_proposals;
 	
-		
 	iterator = this->proposals->create_iterator(this->proposals,TRUE);
 	
 	/* first find out the number of ike proposals and check their number of transforms and 
