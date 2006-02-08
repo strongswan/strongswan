@@ -63,8 +63,8 @@ struct proposal_substructure_t {
 	 * 			When deleting any transform over this iterator, call 
 	 * 			get_size to make sure the length and number values are ok.
 	 *
-	 * @param this 			calling proposal_substructure_t object
-	 * @param[in] forward 	iterator direction (TRUE: front to end)
+	 * @param this			calling proposal_substructure_t object
+	 * @param forward		iterator direction (TRUE: front to end)
 	 * @return				created iterator_t object
 	 */
 	iterator_t * (*create_transform_substructure_iterator) (proposal_substructure_t *this, bool forward);
@@ -84,7 +84,7 @@ struct proposal_substructure_t {
 	 * @brief Sets the proposal number of current proposal.
 	 *
 	 * @param this 		calling proposal_substructure_t object
-	 * @param id			proposal number to set
+	 * @param id		proposal number to set
 	 */
 	void (*set_proposal_number) (proposal_substructure_t *this,u_int8_t proposal_number);
 	
@@ -172,6 +172,8 @@ struct proposal_substructure_t {
 	 * @param spi	chunk_t pointing to the value to set
 	 */
 	void (*set_spi) (proposal_substructure_t *this, chunk_t spi);
+	
+	void (*add_to_child_proposal) (proposal_substructure_t *this, child_proposal_t *proposal);
 
 	/**
 	 * @brief Clones an proposal_substructure_t object.

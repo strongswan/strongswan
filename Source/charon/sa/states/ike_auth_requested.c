@@ -325,42 +325,34 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
  */
 static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payload_t *sa_payload)
 {
-	child_proposal_t *proposals, *proposal_chosen;
-	size_t proposal_count;
-	status_t status;
-	
-	/* dummy spis, until we have a child sa to request them */
-	u_int8_t ah_spi[4] = {0x01, 0x02, 0x03, 0x04};
-	u_int8_t esp_spi[4] = {0x05, 0x06, 0x07, 0x08};
-	
-	/* check selected proposal */
-	status = sa_payload->get_child_proposals(sa_payload, &proposals, &proposal_count);
-	if (status != SUCCESS)
+	child_proposal_t *proposal;
+	linked_list_t *proposal_list;
+	/* TODO fix mem allocation */
+	/* TODO child sa stuff */
+	/* get selected proposal */
+	proposal_list = sa_payload->get_child_proposals(sa_payload);
+	/* check count of proposals */
+	if (proposal_list->get_count(proposal_list) == 0)
 	{
-		/* there are no proposals. This is possible if the requester doesn't want to setup a child sa */
-		this->logger->log(this->logger, AUDIT, "IKE_AUH reply did not contain any proposals. Don't create CHILD_SA");
+		/* no proposal? we accept this, no child sa is built */
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply's SA_PAYLOAD didn't contain any proposals. No CHILD_SA created",
+						  proposal_list->get_count(proposal_list));
 		return SUCCESS;
 	}
-	if (proposal_count > 1)
+	if (proposal_list->get_count(proposal_list) > 1)
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply's SA_PAYLOAD contained more than one proposal. Deleting IKE_SA");
-		allocator_free(proposals);
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply's SA_PAYLOAD contained %d proposal. Deleting IKE_SA",
+						  proposal_list->get_count(proposal_list));
 		return DELETE_ME;
 	}
 	
-	proposal_chosen = this->sa_config->select_proposal(this->sa_config, ah_spi, esp_spi, proposals, proposal_count);
-	if (proposal_chosen == NULL)
+	/* we have to re-check here if other's selection is valid */
+	proposal = this->sa_config->select_proposal(this->sa_config, proposal_list);
+	if (proposal == NULL)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not offered proposal. Deleting IKE_SA");
-		allocator_free(proposals);
 		return DELETE_ME;
 	}
-	else
-	{
-		allocator_free(proposal_chosen);
-	}
-	
-	allocator_free(proposals);
 	
 	return SUCCESS;
 }

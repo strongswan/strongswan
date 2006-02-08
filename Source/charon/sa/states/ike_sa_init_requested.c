@@ -521,20 +521,15 @@ static status_t build_auth_payload (private_ike_sa_init_requested_t *this, id_pa
  */
 static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message_t *request)
 {
-	child_proposal_t *proposals;
+	linked_list_t *proposal_list;
 	sa_payload_t *sa_payload;
-	sa_config_t *sa_config;
-	size_t proposal_count;
-	/*
-	 * TODO: get SPIs from kernel
-	 */
-	u_int8_t esp_spi[4] = {0x01,0x01,0x01,0x01};
-	u_int8_t ah_spi[4] = {0x01,0x01,0x01,0x01};
-
+	sa_config_t *sa_config;	
+	POS;
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	proposal_count = sa_config->get_proposals(sa_config,ah_spi,esp_spi,&proposals);
-	sa_payload = sa_payload_create_from_child_proposals(proposals, proposal_count);
-	allocator_free(proposals);
+	proposal_list = sa_config->get_proposals(sa_config);
+	sa_payload = sa_payload_create_from_child_proposals(proposal_list);
+	/* TODO: fix mem allocation */
+	/* TODO child sa stuff */
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add SA payload to message");
 	request->add_payload(request,(payload_t *) sa_payload);

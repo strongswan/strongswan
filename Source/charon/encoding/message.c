@@ -759,6 +759,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		
 		/* parse current payload */
 		status = this->parser->parse_payload(this->parser,current_payload_type,(payload_t **) &current_payload);
+		
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Payload type %s could not be parsed",

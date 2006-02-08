@@ -554,7 +554,6 @@ static status_t parse(private_encryption_payload_t *this)
 			parser->destroy(parser);
 			return PARSE_ERROR;
 		}
-		
 
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)

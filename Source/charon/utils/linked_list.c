@@ -360,6 +360,23 @@ static int get_count(private_linked_list_t *this)
 	return this->count;
 }
 
+/**
+ * Implementation of linked_list_t.call_on_items.
+ */
+static void call_on_items(private_linked_list_t *this, void(*func)(void*))
+{
+	iterator_t *iterator;
+	void *item;
+	
+	iterator = this->public.create_iterator(&(this->public),TRUE);
+	
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, &item);
+		(*func)(item);
+	}
+	iterator->destroy(iterator);
+}
 
 /**
  * Implementation of linked_list_t.insert_first.
@@ -408,7 +425,10 @@ static status_t remove_first(private_linked_list_t *this, void **item)
 	}
 	this->first = element->next;
 
-	*item = element->value;
+	if (item != NULL)
+	{
+		*item = element->value;
+	}
 
 	this->count--;
 
@@ -478,7 +498,10 @@ static status_t remove_last(private_linked_list_t *this, void **item)
 	}
 	this->last = element->previous;
 
-	*item = element->value;
+	if (item != NULL)
+	{
+		*item = element->value;
+	}
 
 	this->count--;
 
@@ -649,6 +672,7 @@ linked_list_t *linked_list_create()
 
 	this->public.get_count = (int (*) (linked_list_t *)) get_count;
 	this->public.create_iterator = (iterator_t * (*) (linked_list_t *,bool )) create_iterator;
+	this->public.call_on_items = (void (*) (linked_list_t *, void(*func)(void*)))call_on_items;
 	this->public.get_first = (status_t (*) (linked_list_t *, void **item)) get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *, void **item)) get_last;
 	this->public.insert_first = (void (*) (linked_list_t *, void *item)) insert_first;

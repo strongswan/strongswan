@@ -208,9 +208,9 @@ static size_t select_traffic_selectors(private_sa_config_t *this, linked_list_t 
 /**
  * Implementation of sa_config_t.get_proposal_iterator
  */
-static iterator_t *create_proposal_iterator(private_sa_config_t *this)
+static linked_list_t *get_proposals(private_sa_config_t *this)
 {
-	return this->proposals->create_iterator(this->proposals, TRUE);
+	return this->proposals;
 }
 
 /**
@@ -334,7 +334,7 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	this->public.select_traffic_selectors_initiator = (size_t(*)(sa_config_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]))select_traffic_selectors_initiator;
 	this->public.get_traffic_selectors_responder = (size_t(*)(sa_config_t*,traffic_selector_t**[]))get_traffic_selectors_responder;
 	this->public.select_traffic_selectors_responder = (size_t(*)(sa_config_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]))select_traffic_selectors_responder;
-	this->public.create_proposal_iterator = (iterator_t*(*)(sa_config_t*))create_proposal_iterator;
+	this->public.get_proposals = (linked_list_t*(*)(sa_config_t*))get_proposals;
 	this->public.select_proposal = (child_proposal_t*(*)(sa_config_t*,linked_list_t*))select_proposal;
 	this->public.add_traffic_selector_initiator = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector_initiator;
 	this->public.add_traffic_selector_responder = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector_responder;

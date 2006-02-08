@@ -150,7 +150,6 @@ static status_t verify(private_sa_payload_t *this)
 		}
 		else if (current_proposal->get_proposal_number(current_proposal) < proposal_number)
 		{
-			iterator->destroy(iterator);
 			/* must not be smaller then proceeding one */
 			status = FAILED;
 			break;
@@ -263,25 +262,19 @@ static void add_proposal_substructure (private_sa_payload_t *this,proposal_subst
 static void add_child_proposal(private_sa_payload_t *this, child_proposal_t *proposal)
 {
 	proposal_substructure_t *substructure;
-	protocol_id_t proto;
+	protocol_id_t proto[2];
+	u_int i;
 	
-	/* watch out to build the substructures in the right order */
-	proto = proposal->get_first_protocol(proposal);
-	if (proto != AH && proto != ESP)
+	/* build the substructures for every protocol */
+	proposal->get_protocols(proposal, proto);
+	for (i = 0; i<2; i++)
 	{
-		return;
+		if (proto[i] != UNDEFINED_PROTOCOL_ID)
+		{
+			substructure = proposal_substructure_create_from_child_proposal(proposal, proto[i]);
+			add_proposal_substructure(this, substructure);
+		}
 	}
-	substructure = proposal_substructure_create_from_child_proposal(proposal, proto);
-	add_proposal_substructure(this, substructure);
-	
-	/* first is done, now do the (possible) other */
-	proto = proposal->get_second_protocol(proposal);
-	if (proto != AH && proto != ESP)
-	{
-		return;
-	}
-	substructure = proposal_substructure_create_from_child_proposal(proposal, proto);
-	add_proposal_substructure(this, substructure);
 }
 
 
@@ -422,297 +415,36 @@ static status_t get_ike_proposals (private_sa_payload_t *this,ike_proposal_t ** 
 /**
  * Implementation of sa_payload_t.get_child_proposals.
  */
-static status_t get_child_proposals (private_sa_payload_t *this,child_proposal_t ** proposals, size_t *proposal_count)
+static linked_list_t *get_child_proposals(private_sa_payload_t *this)
 {
-	int found_child_proposals = 0;
-	int found_suites = 1;
-	int current_suite_number = 0;
-	
+	int proposal_struct_number = 0;
 	iterator_t *iterator;
-	child_proposal_t *tmp_proposals;
+	child_proposal_t *proposal;
+	linked_list_t *proposal_list;
 	
+	/* this list will hold our proposals */
+	proposal_list = linked_list_create();
+	
+	/* iterate over structures, one OR MORE structures will result in a child_proposal */
 	iterator = this->proposals->create_iterator(this->proposals,TRUE);
-	
-	/* first find out the number of child proposals and check their number of transforms and 
-	 * if the SPI is 4 byte long!*/
- 	current_suite_number = 1;
 	while (iterator->has_next(iterator))
 	{
-		proposal_substructure_t *current_proposal;
-		iterator->current(iterator,(void **)&(current_proposal));
-		if ((current_proposal->get_protocol_id(current_proposal) == AH) ||
-			(current_proposal->get_protocol_id(current_proposal) == ESP))
-		{
-			if (current_proposal->get_spi_size(current_proposal) != 4)
-		    {
-		    	iterator->destroy(iterator);
-		    	return FAILED;
-		    }
-			if (current_proposal->get_proposal_number(current_proposal) == (current_suite_number + 1))
-			{
-				found_suites++;
-				current_suite_number = current_proposal->get_proposal_number(current_proposal);
-			}	
-			found_child_proposals++;
-		}
-	}
-	iterator->reset(iterator);
-	
-	if (found_child_proposals == 0)
-	{
-		iterator->destroy(iterator);
-		return NOT_FOUND;
-	}
-	
-	/* allocate memory to hold each proposal as child_proposal_t */
-
-	tmp_proposals = allocator_alloc(found_child_proposals * sizeof(child_proposal_t));
-	
-	current_suite_number = 1;
-	tmp_proposals[current_suite_number - 1].ah.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
-	tmp_proposals[current_suite_number - 1].ah.diffie_hellman_group = MODP_UNDEFINED;
-	tmp_proposals[current_suite_number - 1].ah.integrity_algorithm = AUTH_UNDEFINED;
-	tmp_proposals[current_suite_number - 1].ah.is_set = FALSE;
-	
-	tmp_proposals[current_suite_number - 1].esp.integrity_algorithm = AUTH_UNDEFINED;
-	tmp_proposals[current_suite_number - 1].esp.diffie_hellman_group = MODP_UNDEFINED;
-	tmp_proposals[current_suite_number - 1].esp.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
-	tmp_proposals[current_suite_number - 1].esp.is_set = FALSE;
-	
-	/* create from each proposal_substructure a child_proposal_t data area*/
-	while (iterator->has_next(iterator))
-	{
-		proposal_substructure_t *current_proposal;
-		iterator->current(iterator,(void **)&(current_proposal));
+		proposal_substructure_t *proposal_struct;
+		iterator->current(iterator,(void **)&(proposal_struct));
 		
-		if (current_proposal->get_proposal_number(current_proposal) == (current_suite_number + 1))
+		if (proposal_struct->get_proposal_number(proposal_struct) > proposal_struct_number)
 		{
-			current_suite_number++;
-			if (current_suite_number > found_suites)
-			{
-				/* inconsistent situation */
-				return FAILED;
-			}
-			tmp_proposals[current_suite_number - 1].ah.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
-			tmp_proposals[current_suite_number - 1].ah.diffie_hellman_group = MODP_UNDEFINED;
-
-			tmp_proposals[current_suite_number - 1].esp.integrity_algorithm = AUTH_UNDEFINED;
-			tmp_proposals[current_suite_number - 1].esp.diffie_hellman_group = MODP_UNDEFINED;
-			tmp_proposals[current_suite_number - 1].esp.extended_sequence_numbers = NO_EXT_SEQ_NUMBERS;
+			/* here starts a new proposal, create a new one and add it to the list */
+			proposal_struct_number = proposal_struct->get_proposal_number(proposal_struct);
+			proposal = child_proposal_create(proposal_struct_number);
+			proposal_list->insert_last(proposal_list, proposal);
 		}
-				
-		if (current_proposal->get_protocol_id(current_proposal) == AH)
-		{
-			bool integrity_algorithm_found = FALSE;
-			bool diffie_hellman_group_found = FALSE;
-			bool extended_sequence_numbers_found = FALSE;
-			iterator_t *transforms;
-			status_t status;
-			
-			chunk_t spi;
-
-			tmp_proposals[current_suite_number - 1].ah.is_set = TRUE;
-
-			spi = current_proposal->get_spi(current_proposal);
-			memcpy(tmp_proposals[current_suite_number - 1].ah.spi,spi.ptr,min(spi.len,4));
-
-			transforms = current_proposal->create_transform_substructure_iterator(current_proposal,TRUE);
-			while (transforms->has_next(transforms))
-			{
-				transform_substructure_t *current_transform;
-				transforms->current(transforms,(void **)&(current_transform));
-				
-				switch (current_transform->get_transform_type(current_transform))
-				{
-					case INTEGRITY_ALGORITHM:
-					{
-						u_int16_t key_size;
-						
-						if (integrity_algorithm_found)
-						{
-								transforms->destroy(transforms);
-								iterator->destroy(iterator);
-								allocator_free(tmp_proposals);
-								return FAILED;
-						}
-						tmp_proposals[current_suite_number - 1].ah.integrity_algorithm = current_transform->get_transform_id(current_transform);
-						status = current_transform->get_key_length(current_transform,&key_size);
-						tmp_proposals[current_suite_number - 1].ah.integrity_algorithm_key_size = key_size;
-						if (status == SUCCESS)
-						{
-							integrity_algorithm_found = TRUE;
-						}
-						break;
-					}
-					case EXTENDED_SEQUENCE_NUMBERS:
-					{
-						if (extended_sequence_numbers_found)
-						{
-								transforms->destroy(transforms);
-								iterator->destroy(iterator);
-								allocator_free(tmp_proposals);
-								return FAILED;
-						}
-						tmp_proposals[current_suite_number - 1].ah.extended_sequence_numbers = current_transform->get_transform_id(current_transform);
-						extended_sequence_numbers_found = TRUE;
-						break;
-					}
-					case DIFFIE_HELLMAN_GROUP:
-					{
-						if (diffie_hellman_group_found)
-						{
-								transforms->destroy(transforms);
-								iterator->destroy(iterator);
-								allocator_free(tmp_proposals);
-								return FAILED;
-						}
-						tmp_proposals[current_suite_number - 1].ah.diffie_hellman_group = current_transform->get_transform_id(current_transform);
-						diffie_hellman_group_found = TRUE;
-						break;
-					}
-					default:
-					{
-						/* not a transform of an child proposal. return here */
-						transforms->destroy(transforms);
-						iterator->destroy(iterator);
-						allocator_free(tmp_proposals);
-						return FAILED;
-					}
-				}
-				
-			}
-			transforms->destroy(transforms);
-
-			if (!integrity_algorithm_found)
-			{
-				/* one of needed transforms could not be found */
-				iterator->reset(iterator);
-				allocator_free(tmp_proposals);
-				return FAILED;
-			}
-		}
-		else if (current_proposal->get_protocol_id(current_proposal) == ESP)
-		{
-			bool encryption_algorithm_found = FALSE;
-			bool integrity_algorithm_found = FALSE;
-			bool diffie_hellman_group_found = FALSE;
-			bool extended_sequence_numbers_found = FALSE;
-			iterator_t *transforms;
-			status_t status;
-			chunk_t spi;
-
-			spi = current_proposal->get_spi(current_proposal);
-			memcpy(tmp_proposals[current_suite_number - 1].esp.spi,spi.ptr,min(spi.len,4));
-			tmp_proposals[current_suite_number - 1].esp.is_set = TRUE;
-
-
-			transforms = current_proposal->create_transform_substructure_iterator(current_proposal,TRUE);
-			while (transforms->has_next(transforms))
-			{
-				transform_substructure_t *current_transform;
-				transforms->current(transforms,(void **)&(current_transform));
-								
-				switch (current_transform->get_transform_type(current_transform))
-				{
-					case ENCRYPTION_ALGORITHM:
-					{
-						u_int16_t key_size;
-						
-						if (encryption_algorithm_found)
-						{
-								transforms->destroy(transforms);
-								iterator->destroy(iterator);
-								allocator_free(tmp_proposals);
-								return FAILED;
-						}
-						tmp_proposals[current_suite_number - 1].esp.encryption_algorithm = current_transform->get_transform_id(current_transform);
-						status = current_transform->get_key_length(current_transform,&key_size);
-						tmp_proposals[current_suite_number - 1].esp.encryption_algorithm_key_size = key_size;
-						if (status == SUCCESS)
-						{
-							encryption_algorithm_found = TRUE;
-						}
-						break;
-					}
-					case INTEGRITY_ALGORITHM:
-					{
-						u_int16_t key_size;
-						
-						if (integrity_algorithm_found)
-						{
-								transforms->destroy(transforms);
-								iterator->destroy(iterator);
-								allocator_free(tmp_proposals);
-								return FAILED;
-						}
-						tmp_proposals[current_suite_number - 1].esp.integrity_algorithm = current_transform->get_transform_id(current_transform);
-						status = current_transform->get_key_length(current_transform,&key_size);
-						tmp_proposals[current_suite_number - 1].esp.integrity_algorithm_key_size = key_size;
-						if (status == SUCCESS)
-						{
-							integrity_algorithm_found = TRUE;
-						}
-						break;
-					}
-					case EXTENDED_SEQUENCE_NUMBERS:
-					{
-						if (extended_sequence_numbers_found)
-						{
-								transforms->destroy(transforms);
-								iterator->destroy(iterator);
-								allocator_free(tmp_proposals);
-								return FAILED;
-						}
-						tmp_proposals[current_suite_number - 1].esp.extended_sequence_numbers = current_transform->get_transform_id(current_transform);
-						extended_sequence_numbers_found = TRUE;
-						break;
-					}
-					case DIFFIE_HELLMAN_GROUP:
-					{
-						if (diffie_hellman_group_found)
-						{
-								transforms->destroy(transforms);
-								iterator->destroy(iterator);
-								allocator_free(tmp_proposals);
-								return FAILED;
-						}
-						tmp_proposals[current_suite_number - 1].esp.diffie_hellman_group = current_transform->get_transform_id(current_transform);
-						diffie_hellman_group_found = TRUE;
-						break;
-					}
-					default:
-					{
-						/* not a transform of an child proposal. return here */
-						transforms->destroy(transforms);
-						iterator->destroy(iterator);
-						allocator_free(tmp_proposals);
-						return FAILED;
-					}
-				}
-				
-			}
-			transforms->destroy(transforms);
-			
-
-			if (!encryption_algorithm_found)
-			{
-				/* one of needed transforms could not be found */
-				iterator->reset(iterator);
-				allocator_free(tmp_proposals);
-				return FAILED;
-			}
-			
-		}
+		/* proposal_substructure_t does the dirty work and builds up the proposal */
+		proposal_struct->add_to_child_proposal(proposal_struct, proposal);
 	}
-
-	iterator->destroy(iterator);	
-	
-	*proposals = tmp_proposals;
-	*proposal_count = found_suites;
-
-	return SUCCESS;
+	iterator->destroy(iterator);
+	return proposal_list;
 }
-
 
 /**
  * Implementation of private_sa_payload_t.compute_length.
@@ -753,7 +485,7 @@ sa_payload_t *sa_payload_create()
 	this->public.create_proposal_substructure_iterator = (iterator_t* (*) (sa_payload_t *,bool)) create_proposal_substructure_iterator;
 	this->public.add_proposal_substructure = (void (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
 	this->public.get_ike_proposals = (status_t (*) (sa_payload_t *, ike_proposal_t **, size_t *)) get_ike_proposals;
-	this->public.get_child_proposals = (status_t (*) (sa_payload_t *, child_proposal_t **, size_t *)) get_child_proposals;
+	this->public.get_child_proposals = (linked_list_t* (*) (sa_payload_t *)) get_child_proposals;
 	this->public.destroy = (void (*) (sa_payload_t *)) destroy;
 	
 	/* private functions */
@@ -813,88 +545,18 @@ sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, si
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create_from_child_proposals(child_proposal_t *proposals, size_t proposal_count)
-{	
-	int i;
-	sa_payload_t *sa_payload= sa_payload_create();
+sa_payload_t *sa_payload_create_from_child_proposals(linked_list_t *proposals)
+{
+	iterator_t *iterator;
+	child_proposal_t *proposal;
+	sa_payload_t *sa_payload = sa_payload_create();
 	
-	for (i = 0; i < proposal_count; i++)
+	/* add every payload from the list */
+	iterator = proposals->create_iterator(proposals, TRUE);
+	while (iterator->has_next(iterator))
 	{
-		/* first the AH part is created */
-		if (proposals[i].ah.is_set)
-		{
-			transform_substructure_t *integrity_algorithm;
-			proposal_substructure_t *proposal_substructure;	
-			chunk_t spi;
-			
-			proposal_substructure = proposal_substructure_create();
-			proposal_substructure->set_protocol_id(proposal_substructure,AH);
-			proposal_substructure->set_proposal_number(proposal_substructure,(i + 1));
-			spi.ptr = proposals[i].ah.spi;
-			spi.len = 4;
-			proposal_substructure->set_spi(proposal_substructure,spi);
-			
-			integrity_algorithm = transform_substructure_create_type(INTEGRITY_ALGORITHM,proposals[i].ah.integrity_algorithm,proposals[i].ah.integrity_algorithm_key_size);
-			proposal_substructure->add_transform_substructure(proposal_substructure,integrity_algorithm);
-			if (proposals[i].ah.diffie_hellman_group != MODP_UNDEFINED)
-			{
-				transform_substructure_t *diffie_hellman_group;
-				diffie_hellman_group = transform_substructure_create_type(DIFFIE_HELLMAN_GROUP,proposals[i].ah.diffie_hellman_group,0);
-				proposal_substructure->add_transform_substructure(proposal_substructure,diffie_hellman_group);
-				
-			}
-			if (proposals[i].ah.extended_sequence_numbers == EXT_SEQ_NUMBERS)
-			{
-				transform_substructure_t *extended_sequence_numbers;
-				extended_sequence_numbers = transform_substructure_create_type(EXTENDED_SEQUENCE_NUMBERS,proposals[i].ah.extended_sequence_numbers,0);
-				proposal_substructure->add_transform_substructure(proposal_substructure,extended_sequence_numbers);
-			}
-
-			sa_payload->add_proposal_substructure(sa_payload,proposal_substructure);	
-		}
-
-		/* then the ESP part is created */
-		if (proposals[i].esp.is_set)
-		{
-			transform_substructure_t *encryption_algorithm;
-			proposal_substructure_t *proposal_substructure;	
-			chunk_t spi;
-			
-			proposal_substructure = proposal_substructure_create();
-			proposal_substructure->set_protocol_id(proposal_substructure,ESP);
-			proposal_substructure->set_proposal_number(proposal_substructure,(i + 1));
-			spi.ptr = proposals[i].esp.spi;
-			spi.len = 4;
-			proposal_substructure->set_spi(proposal_substructure,spi);
-			
-			encryption_algorithm = transform_substructure_create_type(ENCRYPTION_ALGORITHM,proposals[i].esp.encryption_algorithm,proposals[i].esp.encryption_algorithm_key_size);
-			proposal_substructure->add_transform_substructure(proposal_substructure,encryption_algorithm);
-			
-			if (proposals[i].esp.integrity_algorithm != AUTH_UNDEFINED)
-			{
-				transform_substructure_t *integrity_algorithm;
-				integrity_algorithm = transform_substructure_create_type(INTEGRITY_ALGORITHM,proposals[i].esp.integrity_algorithm,proposals[i].esp.integrity_algorithm_key_size);
-				proposal_substructure->add_transform_substructure(proposal_substructure,integrity_algorithm);
-				
-			}
-			
-			if (proposals[i].esp.diffie_hellman_group != MODP_UNDEFINED)
-			{
-				transform_substructure_t *diffie_hellman_group;
-				diffie_hellman_group = transform_substructure_create_type(DIFFIE_HELLMAN_GROUP,proposals[i].esp.diffie_hellman_group,0);
-				proposal_substructure->add_transform_substructure(proposal_substructure,diffie_hellman_group);
-				
-			}
-			if (proposals[i].esp.extended_sequence_numbers == EXT_SEQ_NUMBERS)
-			{
-				transform_substructure_t *extended_sequence_numbers;
-				extended_sequence_numbers = transform_substructure_create_type(EXTENDED_SEQUENCE_NUMBERS,proposals[i].esp.extended_sequence_numbers,0);
-				proposal_substructure->add_transform_substructure(proposal_substructure,extended_sequence_numbers);
-			}
-
-			sa_payload->add_proposal_substructure(sa_payload,proposal_substructure);			
-		}
-		
+		iterator->current(iterator, (void**)&proposal);
+		add_child_proposal((private_sa_payload_t*)sa_payload, proposal);
 	}
 	
 	return sa_payload;

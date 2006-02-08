@@ -424,8 +424,8 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	transform_substructure_t *transform1, *transform2;
 	proposal_substructure_t *proposal1, *proposal2;
 	ike_proposal_t *ike_proposals;
-	size_t child_proposal_count;
-	child_proposal_t *child_proposals;
+	linked_list_t *list;
+	child_proposal_t *child_proposal1, *child_proposal2;
 	size_t ike_proposal_count;
 	sa_payload_t *sa_payload;
 	ike_header_t *ike_header;
@@ -655,52 +655,32 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
 
-	child_proposal_count = 2;
-	child_proposals = allocator_alloc(child_proposal_count * (sizeof(child_proposal_t)));
-
-	child_proposals[0].ah.is_set = TRUE;
-	child_proposals[0].ah.integrity_algorithm = AUTH_HMAC_MD5_96;
-	child_proposals[0].ah.integrity_algorithm_key_size = 20;
-	child_proposals[0].ah.diffie_hellman_group = MODP_2048_BIT;
-	child_proposals[0].ah.extended_sequence_numbers = EXT_SEQ_NUMBERS;
-	child_proposals[0].ah.spi[0] = 1;
-	child_proposals[0].ah.spi[1] = 1;
-	child_proposals[0].ah.spi[2] = 1;
-	child_proposals[0].ah.spi[3] = 1;
-
-	child_proposals[0].esp.is_set = TRUE;
-	child_proposals[0].esp.diffie_hellman_group = MODP_1024_BIT;
-	child_proposals[0].esp.encryption_algorithm = ENCR_AES_CBC;
-	child_proposals[0].esp.encryption_algorithm_key_size = 32;
-	child_proposals[0].esp.integrity_algorithm = AUTH_UNDEFINED;
-	child_proposals[0].esp.spi[0] = 2;
-	child_proposals[0].esp.spi[1] = 2;
-	child_proposals[0].esp.spi[2] = 2;
-	child_proposals[0].esp.spi[3] = 2;
+	child_proposal1 = child_proposal_create(1);
 	
-	child_proposals[1].ah.is_set = TRUE;
-	child_proposals[1].ah.integrity_algorithm = AUTH_HMAC_MD5_96;
-	child_proposals[1].ah.integrity_algorithm_key_size = 20;
-	child_proposals[1].ah.diffie_hellman_group = MODP_2048_BIT;
-	child_proposals[1].ah.extended_sequence_numbers = EXT_SEQ_NUMBERS;
-	child_proposals[1].ah.spi[0] = 1;
-	child_proposals[1].ah.spi[1] = 1;
-	child_proposals[1].ah.spi[2] = 1;
-	child_proposals[1].ah.spi[3] = 1;
-
-	child_proposals[1].esp.is_set = TRUE;
-	child_proposals[1].esp.diffie_hellman_group = MODP_1024_BIT;
-	child_proposals[1].esp.encryption_algorithm = ENCR_AES_CBC;
-	child_proposals[1].esp.encryption_algorithm_key_size = 32;
-	child_proposals[1].esp.integrity_algorithm = AUTH_HMAC_MD5_96;
-	child_proposals[1].esp.integrity_algorithm_key_size = 20;
-	child_proposals[1].esp.spi[0] = 2;
-	child_proposals[1].esp.spi[1] = 2;
-	child_proposals[1].esp.spi[2] = 2;
-	child_proposals[1].esp.spi[3] = 2;	
+	child_proposal1->add_algorithm(child_proposal1, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	child_proposal1->add_algorithm(child_proposal1, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	child_proposal1->add_algorithm(child_proposal1, AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
+	child_proposal1->set_spi(child_proposal1, AH, 0x01010101l);
+	
+	child_proposal1->add_algorithm(child_proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
+	child_proposal1->add_algorithm(child_proposal1, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	child_proposal1->set_spi(child_proposal1, ESP, 0x02020202);
 	
 	
-	sa_payload = sa_payload_create_from_child_proposals(child_proposals,child_proposal_count);
+	child_proposal2->add_algorithm(child_proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	child_proposal2->add_algorithm(child_proposal2, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	child_proposal2->add_algorithm(child_proposal2, AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
+	child_proposal2->set_spi(child_proposal2, AH, 0x01010101);
+	
+	child_proposal2->add_algorithm(child_proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
+	child_proposal2->add_algorithm(child_proposal2, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	child_proposal2->add_algorithm(child_proposal2, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	child_proposal2->set_spi(child_proposal2, ESP, 0x02020202);
+	
+	list->insert_last(list, (void*)child_proposal1);
+	list->insert_last(list, (void*)child_proposal2);
+	
+	sa_payload = sa_payload_create_from_child_proposals(list);
 	tester->assert_true(tester,(sa_payload != NULL), "sa_payload create check");
 
 	generator->generate_payload(generator,(payload_t *)sa_payload);
@@ -774,7 +754,9 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
 	sa_payload->destroy(sa_payload);
-	allocator_free(child_proposals);
+	child_proposal1->destroy(child_proposal1);
+	child_proposal2->destroy(child_proposal2);
+	list->destroy(list);
 	allocator_free_chunk(&generated_data);
 	generator->destroy(generator);
 	

@@ -64,6 +64,22 @@ struct linked_list_t {
 	 * @return				new iterator_t object
 	 */
 	iterator_t * (*create_iterator) (linked_list_t *linked_list, bool forward);
+	
+	/**
+	 * @brief Call a function with list element as argument.
+	 * 
+	 * This method accepts a function, which will be called for 
+	 * each list element once. The function must accept the list
+	 * element as the first argument. Handy for destruction of
+	 * list elements.
+	 * 
+	 * @todo Additional vararg which are passed to the 
+	 *		 function would be nice...
+	 * 
+	 * @param linked_list 	calling object
+	 * @param func			function to call
+	 */
+	void (*call_on_items) (linked_list_t *linked_list, void(*func)(void*));
 
 	/**
 	 * @brief Inserts a new item at the beginning of the list.
@@ -77,7 +93,7 @@ struct linked_list_t {
 	 * @brief Removes the first item in the list and returns its value.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[out] item 	returned value of first item
+	 * @param[out] item 	returned value of first item, or NULL
 	 * @return
 	 * 						- SUCCESS
 	 * 						- NOT_FOUND, if list is empty
@@ -143,7 +159,7 @@ struct linked_list_t {
 	 * @brief Removes the last item in the list and returns its value.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[out] item		item returned value of last item
+	 * @param[out] item		returned value of last item, or NULL
 	 * @return
 	 * 						- SUCCESS
 	 * 						- NOT_FOUND if list is empty
@@ -154,7 +170,7 @@ struct linked_list_t {
 	 * @brief Returns the value of the last list item without removing it.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param[out] item		item returned value of last item
+	 * @param[out] item		returned value of last item
 	 * @return
 	 * 						- SUCCESS
 	 * 						- NOT_FOUND if list is empty

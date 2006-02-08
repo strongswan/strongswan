@@ -58,6 +58,7 @@
 #include <testcases/encryption_payload_test.h>
 #include <testcases/init_config_test.h>
 #include <testcases/sa_config_test.h>
+#include <testcases/child_proposal_test.h>
 #include <testcases/rsa_test.h>
 #include <testcases/kernel_interface_test.h>
 
@@ -122,6 +123,7 @@ test_t hmac_signer_test2 = {test_hmac_sha1_signer, "HMAC SHA1 signer test"};
 test_t encryption_payload_test = {test_encryption_payload, "encryption payload test"};
 test_t init_config_test = {test_init_config, "init_config_t test"};
 test_t sa_config_test = {test_sa_config, "sa_config_t test"};
+test_t child_proposal_test = {test_child_proposal, "child_proposal_t test"};
 test_t rsa_test = {test_rsa, "RSA private/public key test"};
 test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 
@@ -136,7 +138,7 @@ static void daemon_kill(daemon_t *this, char* none)
 	this->job_queue->destroy(this->job_queue);
 	this->event_queue->destroy(this->event_queue);
 	this->send_queue->destroy(this->send_queue);
-	this->configuration_manager->destroy(this->configuration_manager);
+	//this->configuration_manager->destroy(this->configuration_manager);
 	allocator_free(charon);
 }
 
@@ -153,12 +155,12 @@ daemon_t *daemon_create()
 	charon->kill = daemon_kill;
 	
 	charon->logger_manager = logger_manager_create(0);
-	charon->socket = socket_create(4600);
+	charon->socket = socket_create(4510);
 	charon->ike_sa_manager = ike_sa_manager_create();
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
 	charon->send_queue = send_queue_create();
-	charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT,HALF_OPEN_IKE_SA_TIMEOUT);
+	//charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT,HALF_OPEN_IKE_SA_TIMEOUT);
 	charon->sender = NULL;
 	charon->receiver = NULL;
 	charon->scheduler = NULL;
@@ -231,6 +233,7 @@ int main()
 		&encryption_payload_test,
 		&init_config_test,
 		&sa_config_test,
+		&child_proposal_test,
 		&rsa_test,
 		NULL
 	};
@@ -247,7 +250,7 @@ int main()
 	
 
 	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&kernel_interface_test);
+	tester->perform_test(tester,&child_proposal_test);
 	
 	
 	tester->destroy(tester);

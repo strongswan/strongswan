@@ -144,7 +144,7 @@ static status_t verify(private_transform_substructure_t *this)
 			}
 			break;
 		}
-		case	 PSEUDO_RANDOM_FUNCTION:
+		case PSEUDO_RANDOM_FUNCTION:
 		{
 			if ((this->transform_id < PRF_HMAC_MD5) || (this->transform_id > PRF_AES128_CBC))
 			{

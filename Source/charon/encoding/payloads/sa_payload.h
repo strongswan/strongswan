@@ -111,14 +111,9 @@ struct sa_payload_t {
 	/**
 	 * @brief Creates an array of child_proposal_t's in this SA payload.
 	 * 
-	 * @param proposals			the pointer to the first entry of child_proposal_t's is set
-	 * @param proposal_count	the number of found proposals is written at this location
-	 * @return
-	 * 							- SUCCESS if child proposals could be found
-	 * 							- NOT_FOUND if no child proposal could be found
-	 * 							- FAILED if a proposal does not contain all needed transforms
+	 * @return					a list containing child_proposal_t s
 	 */
-	status_t (*get_child_proposals) (sa_payload_t *this, child_proposal_t **proposals, size_t *proposal_count);	
+	linked_list_t *(*get_child_proposals) (sa_payload_t *this);
 	
 	/**
 	 * @brief Add a child proposal (AH/ESP) to the payload.
@@ -156,5 +151,6 @@ sa_payload_t *sa_payload_create();
  */
 sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, size_t proposal_count);
 
+sa_payload_t *sa_payload_create_from_child_proposals(linked_list_t *proposals);
 
 #endif /*SA_PAYLOAD_H_*/

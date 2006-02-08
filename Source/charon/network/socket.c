@@ -164,7 +164,7 @@ socket_t *socket_create(u_int16_t port)
 	
 	/* create default ipv4 socket */
 	this->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
-	if (this->socket_fd < 0) 
+	if (this->socket_fd < 0)
 	{
 		this->logger->log(this->logger, ERROR, "unable to open socket: %s", strerror(errno));
 		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);

@@ -106,8 +106,6 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 	iterator_t *proposals, *transforms, *attributes;
     ike_proposal_t *ike_proposals;
     size_t ike_proposal_count;
-    child_proposal_t *child_proposals;
-    size_t child_proposal_count;
 	
 	/* first test generic parsing functionality */
 		
@@ -352,7 +350,7 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 
 	status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals, &ike_proposal_count);	
 	tester->assert_false(tester,(status == SUCCESS),"get ike proposals call check");
-	
+	/*
 	status = sa_payload->get_child_proposals (sa_payload, &child_proposals, &child_proposal_count);	
 	tester->assert_true(tester,(status == SUCCESS),"get child proposals call check");	
 	
@@ -398,12 +396,12 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(child_proposals[1].esp.spi[1] == 2),"spi check");
 	tester->assert_true(tester,(child_proposals[1].esp.spi[2] == 2),"spi check");
 	tester->assert_true(tester,(child_proposals[1].esp.spi[3] == 2),"spi check");
-
+	
 	if (status == SUCCESS)
 	{
 		allocator_free(child_proposals);
 	}
-
+	*/
 	
 	sa_payload->destroy(sa_payload);
 }

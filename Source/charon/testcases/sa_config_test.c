@@ -37,12 +37,11 @@ void test_sa_config(protected_tester_t *tester)
 {
 	sa_config_t *sa_config;	
 	traffic_selector_t *ts_policy[3], *ts_request[4], *ts_reference[3], **ts_result;
-	child_proposal_t prop[3], *prop_result;
+	child_proposal_t *proposal1, *proposal2, *proposal3, *proposal_sel;
+	linked_list_t *list;
 	size_t count;
 	logger_t *logger;
 	ts_payload_t *ts_payload;
-	
-	u_int8_t spi[4] = {0x01,0x02,0x03,0x04};
 	
 	logger = charon->logger_manager->create_logger(charon->logger_manager, TESTER, NULL);
 	logger->disable_level(logger, FULL);
@@ -61,43 +60,29 @@ void test_sa_config(protected_tester_t *tester)
 	 */
 	
 	/* esp only prop */
-	prop[0].ah.is_set = FALSE;
-	prop[0].esp.is_set = TRUE;
-	prop[0].esp.encryption_algorithm = ENCR_AES_CBC;
-	prop[0].esp.encryption_algorithm_key_size = 16;
+	proposal1 = child_proposal_create(1);
+	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	
 	/* ah only prop */
-	prop[1].esp.is_set = FALSE;
-	prop[1].ah.is_set = TRUE;
-	prop[1].ah.integrity_algorithm = AUTH_HMAC_SHA1_96;
-	prop[1].ah.integrity_algorithm_key_size = 20;
+	proposal2 = child_proposal_create(2);
+	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
 	
 	/* ah and esp prop */
-	prop[2].esp.is_set = TRUE;
-	prop[2].esp.encryption_algorithm = ENCR_3DES;
-	prop[2].esp.encryption_algorithm_key_size = 16;
-	prop[2].ah.is_set = TRUE;
-	prop[2].ah.integrity_algorithm = AUTH_HMAC_MD5_96;
-	prop[2].ah.integrity_algorithm_key_size = 20;
+	proposal3 = child_proposal_create(3);
+	proposal3->add_algorithm(proposal3, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 16);
+	proposal3->add_algorithm(proposal3, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
 	
 	
-	sa_config->add_proposal(sa_config, &prop[0]);
-	sa_config->add_proposal(sa_config, &prop[1]);
-	sa_config->add_proposal(sa_config, &prop[2]);
+	sa_config->add_proposal(sa_config, proposal1);
+	sa_config->add_proposal(sa_config, proposal2);
+	sa_config->add_proposal(sa_config, proposal3);
 
 	
-	count = sa_config->get_proposals(sa_config, spi, spi, &prop_result);
-	tester->assert_true(tester, (count == 3), "proposal count");
-	allocator_free(prop_result);
+	list = sa_config->get_proposals(sa_config);
+	tester->assert_true(tester, (list->get_count(list) == 3), "proposal count");
 	
 	
-		
-	prop_result = sa_config->select_proposal(sa_config, spi, spi, &prop[1], 2);
-	tester->assert_true(tester, prop_result->esp.is_set == prop[1].esp.is_set, "esp.is_set");
-	tester->assert_true(tester, prop_result->ah.integrity_algorithm == prop[1].ah.integrity_algorithm, "ah.integrity_algorithm");
-	tester->assert_true(tester, prop_result->ah.integrity_algorithm_key_size == prop[1].ah.integrity_algorithm_key_size, "ah.integrity_algorithm_key_size");
-	tester->assert_true(tester, memcmp(prop_result->ah.spi, spi, 4) == 0, "spi");
-	allocator_free(prop_result);
+	//proposal_sel = sa_config->select_proposal(sa_config, list);
 
 	
 	/* 

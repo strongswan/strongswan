@@ -51,7 +51,7 @@
 /**
  * UDP Port on which the daemon will listen for incoming traffic.
  */
-#define IKEV2_UDP_PORT 500
+#define IKEV2_UDP_PORT 4501
 
 /**
  * @brief First retransmit timeout in milliseconds.
@@ -73,19 +73,13 @@
  */
 #define MAX_RETRANSMIT_COUNT 0
 
-
-/**
- * Max number of primes to precompute per prime type.
- */
-#define PRIME_PRE_COMPUTATION_LIMIT 5
-
 /**
  * @brief Default loglevel for every logger context.
  * 
  * This is the maximum allowed level for ever context, the definiton
  * of the context may be less verbose.
  */
-#define DEFAULT_LOGLEVEL CONTROL | ERROR | AUDIT
+#define DEFAULT_LOGLEVEL CONTROL | ERROR | AUDIT | FULL
 
 
 typedef struct daemon_t daemon_t;

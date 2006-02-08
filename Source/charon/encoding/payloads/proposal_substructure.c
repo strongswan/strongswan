@@ -406,6 +406,33 @@ static size_t get_spi_size (private_proposal_substructure_t *this)
 }
 
 /**
+ * Implementation of proposal_substructure_t.add_to_child_proposal.
+ */
+void add_to_child_proposal(private_proposal_substructure_t *this, child_proposal_t *proposal)
+{
+	iterator_t *iterator = this->transforms->create_iterator(this->transforms, TRUE);
+	
+	proposal->set_spi(proposal, this->protocol_id, *((u_int32_t*)this->spi.ptr));
+	
+	while (iterator->has_next(iterator))
+	{
+		transform_substructure_t *transform;
+		transform_type_t transform_type;
+		u_int16_t transform_id;
+		u_int16_t key_length = 0;
+		
+		iterator->current(iterator, (void**)&transform);
+		
+		transform_type = transform->get_transform_type(transform);
+		transform_id = transform->get_transform_id(transform);
+		transform->get_key_length(transform, &key_length);
+		
+		proposal->add_algorithm(proposal, this->protocol_id, transform_type, transform_id, key_length);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of proposal_substructure_t.clone.
  */
 static private_proposal_substructure_t* clone(private_proposal_substructure_t *this)
@@ -498,14 +525,13 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
 	this->public.get_info_for_transform_type = 	(status_t (*) (proposal_substructure_t *,transform_type_t,u_int16_t *, u_int16_t *))get_info_for_transform_type;
 	this->public.set_is_last_proposal = (void (*) (proposal_substructure_t *,bool)) set_is_last_proposal;
-	
+	this->public.add_to_child_proposal = (void (*) (proposal_substructure_t*,child_proposal_t*))add_to_child_proposal;
 	this->public.set_spi = (void (*) (proposal_substructure_t *,chunk_t))set_spi;
 	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
 	this->public.get_transform_count = (size_t (*) (proposal_substructure_t *)) get_transform_count;
 	this->public.get_spi_size = (size_t (*) (proposal_substructure_t *)) get_spi_size;	
 	this->public.clone = (proposal_substructure_t * (*) (proposal_substructure_t *)) clone;
 	this->public.destroy = (void (*) (proposal_substructure_t *)) destroy;
-	
 	
 	/* private functions */
 	this->compute_length = compute_length;
@@ -528,25 +554,31 @@ proposal_substructure_t *proposal_substructure_create()
 /*
  * Described in header.
  */
-proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_proposal_t *proposal, protocol_id_t *proto)
+proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_proposal_t *proposal, protocol_id_t proto)
 {
 	private_proposal_substructure_t *this = (private_proposal_substructure_t*)proposal_substructure_create();
 	iterator_t *iterator;
 	algorithm_t *algo;
 	transform_substructure_t *transform;
 	
+	/* take over general infos */
+	this->spi_size = proto == IKE ? 8 : 4;
+	this->spi.len = this->spi_size;
+	this->spi.ptr = allocator_alloc(this->spi_size);
+	*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal, proto);
+	this->proposal_number = proposal->get_number(proposal);
+	this->protocol_id = proto;
+	
+	
 	/* encryption algorithm is only availble in ESP */
-	if (proto == ESP)
+	iterator = proposal->create_algorithm_iterator(proposal, proto, ENCRYPTION_ALGORITHM);
+	while (iterator->has_next(iterator))
 	{
-		iterator = proposal->create_algorithm_iterator(proposal, proto, ENCRYPTION_ALGORITHM);
-		while (iterator->has_next(iterator))
-		{
-			iterator->current(iterator, (void**)&algo);
-			transform = transform_substructure_create_type(ENCRYPTION_ALGORITHM, algo->algorithm, algo->key_size);
-			this->public.add_transform_substructure(&(this->public), transform);
-		}
-		iterator->destroy(iterator);
+		iterator->current(iterator, (void**)&algo);
+		transform = transform_substructure_create_type(ENCRYPTION_ALGORITHM, algo->algorithm, algo->key_size);
+		this->public.add_transform_substructure(&(this->public), transform);
 	}
+	iterator->destroy(iterator);
 	
 	/* integrity algorithms */
 	iterator = proposal->create_algorithm_iterator(proposal, proto, INTEGRITY_ALGORITHM);
@@ -555,6 +587,17 @@ proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_
 		algorithm_t *algo;
 		iterator->current(iterator, (void**)&algo);
 		transform = transform_substructure_create_type(INTEGRITY_ALGORITHM, algo->algorithm, algo->key_size);
+		this->public.add_transform_substructure(&(this->public), transform);
+	}
+	iterator->destroy(iterator);
+	
+	/* prf algorithms */
+	iterator = proposal->create_algorithm_iterator(proposal, proto, PSEUDO_RANDOM_FUNCTION);
+	while (iterator->has_next(iterator))
+	{
+		algorithm_t *algo;
+		iterator->current(iterator, (void**)&algo);
+		transform = transform_substructure_create_type(PSEUDO_RANDOM_FUNCTION, algo->algorithm, algo->key_size);
 		this->public.add_transform_substructure(&(this->public), transform);
 	}
 	iterator->destroy(iterator);
@@ -580,4 +623,6 @@ proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_
 		this->public.add_transform_substructure(&(this->public), transform);
 	}
 	iterator->destroy(iterator);
+	
+	return &(this->public);
 }

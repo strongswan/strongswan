@@ -272,7 +272,6 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, FALSE, &response);
 	
 	/* add payloads to it */
-	
 	status = this->build_idr_payload(this, idi_request, idr_request, response,&idr_response);
 	if (status != SUCCESS)
 	{
@@ -387,43 +386,42 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
  */
 static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *response)
 {
-	child_proposal_t *proposals, *proposal_chosen;
-	size_t proposal_count;
-	status_t status;
+	child_proposal_t *proposal;
+	linked_list_t *proposal_list, *dummy_list;
 	sa_payload_t *sa_response;
 	
-	/* dummy spis, until we have a child sa to request them */
-	u_int8_t ah_spi[4] = {0x01, 0x02, 0x03, 0x04};
-	u_int8_t esp_spi[4] = {0x05, 0x06, 0x07, 0x08};
+	POS;
+	/* TODO: fix mem */
+	/* TODO: child sa stuff */
 	
-	status = request->get_child_proposals(request, &proposals, &proposal_count);
-	if (status == SUCCESS)
+	/* get proposals from request */
+	proposal_list = request->get_child_proposals(request);
+	if (proposal_list->get_count(proposal_list) == 0)
 	{
-		proposal_chosen = this->sa_config->select_proposal(this->sa_config, ah_spi, esp_spi, proposals, proposal_count);
-		if (proposal_chosen != NULL)
-		{
-			sa_response = sa_payload_create_from_child_proposals(proposal_chosen, 1);
-			response->add_payload(response, (payload_t*)sa_response);
-			allocator_free(proposal_chosen);
-		}
-		else
-		{
-			this->logger->log(this->logger, AUDIT, "IKE_AUTH request did not contain any proposals we accept. Deleting IKE_SA");
-			this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
-			status = DELETE_ME;	
-		}
-		allocator_free(proposals);
-	}
-	else
-	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any proposals. Don't create CHILD_SA");
+		/* if the other side did not offer any proposals, we do not create child sa's */
+		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any proposals. No CHILD_SA created");
 		sa_response = sa_payload_create();
 		response->add_payload(response, (payload_t*)sa_response);
-		
-		status = SUCCESS;
+		return SUCCESS;
+	}
+	/* now select a proposal */
+	proposal = this->sa_config->select_proposal(this->sa_config, proposal_list);
+	if (proposal == NULL)
+	{
+		POS;
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH request did not contain any proposals we accept. Deleting IKE_SA");
+		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
+		return DELETE_ME;	
 	}
 	
-	return status;
+	/* we need a dummy list to build an sa payload from ONE proposal */
+	dummy_list = linked_list_create();
+	dummy_list->insert_last(dummy_list, (void*)proposal);
+	sa_response = sa_payload_create_from_child_proposals(dummy_list);
+	dummy_list->destroy(dummy_list);
+	response->add_payload(response, (payload_t*)sa_response);
+	
+	return SUCCESS;
 }
 
 /**

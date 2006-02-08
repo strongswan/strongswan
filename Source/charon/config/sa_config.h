@@ -154,15 +154,18 @@ struct sa_config_t {
 	size_t (*select_traffic_selectors_responder) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
 	
 	/**
-	 * @brief Get an iterator for the internally stored proposals.
+	 * @brief Get the list of internally stored proposals.
 	 * 
-	 * @warning Items are still owned by sa_config and MUST NOT
+	 * Rembember: sa_config_t does store proposals for AH/ESP, 
+	 * IKE proposals are in the init_config_t
+	 * 
+	 * @warning List and Items are still owned by sa_config and MUST NOT
 	 *			be manipulated or freed!
 	 * 
 	 * @param this					calling object
-	 * @return						iterator for the proposals
+	 * @return						lists with proposals
 	 */
-	iterator_t *(*create_proposal_iterator) (sa_config_t *this);
+	linked_list_t *(*get_proposals) (sa_config_t *this);
 	
 	/**
 	 * @brief Select a proposal from a supplied list.
