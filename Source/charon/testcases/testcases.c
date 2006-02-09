@@ -250,7 +250,7 @@ int main()
 	
 
 	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&child_proposal_test);
+	tester->perform_test(tester,&kernel_interface_test);
 	
 	
 	tester->destroy(tester);

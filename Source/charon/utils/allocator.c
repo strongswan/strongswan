@@ -96,6 +96,16 @@ struct private_allocator_t
 	 */
 	pthread_mutex_t mutex;
 	
+	/** 
+	 * Number of allocations done
+	 */
+	u_int32_t allocs;
+	
+	/**
+	 * Number of frees done
+	 */
+	u_int32_t frees;
+	
 	/**
 	 * Allocates memory with LEAK_DETECTION and 
 	 * returns an empty data area filled with zeros.
@@ -115,8 +125,10 @@ struct private_allocator_t
  */
 static void *allocate_special(private_allocator_t *this,size_t bytes, char * file,int line, bool use_mutex)
 {
-    memory_hdr_t *allocated_memory = malloc(sizeof(memory_hdr_t) + bytes);;
-  
+    memory_hdr_t *allocated_memory = malloc(sizeof(memory_hdr_t) + bytes);
+	
+	this->allocs++;
+	
 	if (allocated_memory == NULL)
     {
     		/* TODO LOG this case */
@@ -127,7 +139,7 @@ static void *allocate_special(private_allocator_t *this,size_t bytes, char * fil
     {
 	    pthread_mutex_lock( &(this->mutex));
     }
-	   
+	
     allocated_memory->info.line = line;
     allocated_memory->info.filename = file;
     allocated_memory->info.size_of_memory = bytes;
@@ -145,7 +157,7 @@ static void *allocate_special(private_allocator_t *this,size_t bytes, char * fil
     {
 	    pthread_mutex_unlock(&(this->mutex));
     }
-    
+	
     /* real memory starts after header */
     return (allocated_memory+1);
 }
@@ -178,11 +190,13 @@ static void free_pointer(allocator_t *allocator, void * pointer)
 {
 	private_allocator_t *this = (private_allocator_t *) allocator;
     memory_hdr_t *allocated_memory;
+	
 
     if (pointer == NULL)
     {
 	    	return;	
     }
+	this->frees++;
 	pthread_mutex_lock( &(this->mutex));
     allocated_memory = ((memory_hdr_t *)pointer) - 1;
 
@@ -294,13 +308,14 @@ static void allocator_report_memory_leaks(allocator_t *allocator)
 	if (p == NULL || pprev->info.filename != p->info.filename)
 	{
 	    if (n != 1)
-		fprintf(stderr,"LEAK: \"%lu * File %s, Line %d\"\n", n, pprev->info.filename,pprev->info.line);
+		fprintf(stderr,"LEAK: \"%lu * %s, line %d\"\n", n, pprev->info.filename,pprev->info.line);
 	    else
-		fprintf(stderr,"LEAK: \"%s, Line %d\"\n", pprev->info.filename,pprev->info.line);
+		fprintf(stderr,"LEAK: \"%s, line %d\"\n", pprev->info.filename,pprev->info.line);
 	    n = 0;
 	}
     }
-    pthread_mutex_unlock( &(this->mutex));
+	pthread_mutex_unlock( &(this->mutex));
+	fprintf(stderr, "Allocator statistics: %d allocs, %d frees\n", this->allocs, this->frees);
 }
 
 /** 
@@ -318,7 +333,9 @@ static private_allocator_t allocator = {
  			 report_memory_leaks: allocator_report_memory_leaks},
 	allocations: NULL,
 	allocate_special : allocate_special,
-	mutex: PTHREAD_MUTEX_INITIALIZER
+	mutex: PTHREAD_MUTEX_INITIALIZER,
+	allocs: 0,
+	frees: 0
 };
 
 

@@ -209,7 +209,7 @@ static status_t add_sa(	private_kernel_interface_t *this,
 						bool replace)
 {
     netlink_message_t request, *response;
-    
+	POS;
     memset(&request, 0, sizeof(request));
     
     request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;

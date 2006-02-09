@@ -70,4 +70,14 @@ struct child_sa_t {
  */
 child_sa_t * child_sa_create(protocol_id_t protocol_id, prf_plus_t *prf_plus);
 
+/**
+ * @brief Constructor to create a new CHILD_SA.
+ * 
+ * @param protocol_id	protocol id (AH or ESP) of CHILD_SA
+ * @param prf_plus		prf_plus_t object use to derive shared secrets
+ * @return				child_sa_t object
+ * @ingroup sa
+ */
+child_sa_t * child_sa_create_with_spi(protocol_id_t protocol_id, prf_plus_t *prf_plus);
+
 #endif /*_CHILD_SA_H_*/

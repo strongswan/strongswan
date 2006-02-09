@@ -187,7 +187,8 @@ static void initialize(private_daemon_t *this)
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();
-	this->public.thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);	
+	this->public.kernel_interface = kernel_interface_create();
+	this->public.thread_pool = thread_pool_create(NUMBER_OF_WORKING_THREADS);
 }
 
 /**
@@ -195,6 +196,10 @@ static void initialize(private_daemon_t *this)
  */
 static void destroy(private_daemon_t *this)
 {
+	if (this->public.kernel_interface != NULL)
+	{
+		this->public.kernel_interface->destroy(this->public.kernel_interface);
+	}
 	if (this->public.receiver != NULL)
 	{
 		this->public.receiver->destroy(this->public.receiver);
@@ -272,6 +277,7 @@ private_daemon_t *daemon_create()
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;
+	this->public.kernel_interface = NULL;
 	this->public.thread_pool = NULL;
 	
 	this->main_thread_id = pthread_self();

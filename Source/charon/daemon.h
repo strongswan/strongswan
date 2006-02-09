@@ -26,6 +26,7 @@
 #include <threads/sender.h>
 #include <threads/receiver.h>
 #include <threads/scheduler.h>
+#include <threads/kernel_interface.h>
 #include <threads/thread_pool.h>
 #include <network/socket.h>
 #include <sa/ike_sa_manager.h>
@@ -145,16 +146,21 @@ struct daemon_t {
 	thread_pool_t *thread_pool;
 	
 	/**
+	 * Kernel Interface to communicate with kernel
+	 */
+	kernel_interface_t *kernel_interface;
+	
+	/**
 	 * @brief Shut down the daemon.
 	 * 
 	 * @param this		the daemon to kill
-	 * @param reason	describition why it will be killed
+	 * @param reason	describtion why it will be killed
 	 */
 	void (*kill) (daemon_t *this, char *reason);
 };
 
 /**
- * One and only instance of the daemon.
+ * The one and only instance of the daemon.
  */
 extern daemon_t *charon;
 

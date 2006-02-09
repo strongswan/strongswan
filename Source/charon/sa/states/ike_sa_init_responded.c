@@ -445,6 +445,27 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	response->add_payload(response, (payload_t*)sa_response);
 	proposal->destroy(proposal);
 	
+	/* install child SAs for AH and esp */
+// 	algorithm_t *encr, *integ;
+// 	char enc_key_buffer[] = "123";
+// 	chunk_t enc_key = {ptr: enc_key_buffer, len: 4};
+// 	char int_key_buffer[] = "345";
+// 	chunk_t int_key = {ptr: int_key_buffer, len: 4};
+// 	proposal->get_algorithm(proposal, ESP, ENCRYPTION_ALGORITHM, &encr);
+// 	proposal->get_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, &integ);
+// 	
+// 	charon->kernel_interface->add_sa(charon->kernel_interface, 
+// 									 this->ike_sa->get_my_host(this->ike_sa),
+// 									 this->ike_sa->get_other_host(this->ike_sa),
+// 									 proposal->get_spi(proposal, AH),
+// 									 AH,
+// 									 TRUE, 
+// 									 encr->algorithm, encr->key_size, enc_key,
+// 									 integ->algorithm, integ->key_size, int_key,
+// 									 TRUE);
+// 	
+// 	POS;
+	
 	return SUCCESS;
 }
 

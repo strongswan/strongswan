@@ -376,6 +376,14 @@ struct protected_ike_sa_t {
 	prf_t *(*get_prf) (protected_ike_sa_t *this);
 	
 	/**
+	 * @brief Get the prf-object, which is used to derive keys for child SAs.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to prf_t object
+	 */
+	prf_t *(*get_child_prf) (protected_ike_sa_t *this);
+	
+	/**
 	 * @brief Get the last responded message.
 	 *  
 	 * @param this 				calling object

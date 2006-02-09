@@ -221,6 +221,20 @@ struct private_ike_sa_t {
 	prf_t *prf;
 	
 	/**
+	 * Prf function for derivating keymat child SAs
+	 * 
+	 * Gets set in states:
+	 *  - IKE_SA_INIT_REQUESTED
+	 *  - RESPONDER_INIT
+	 * 
+	 * Available in states:
+	 *  - IKE_SA_INIT_RESPONDED
+	 *  - IKE_AUTH_REQUESTED
+	 *   -IKE_SA_ESTABLISHED
+	 */
+	prf_t *child_prf;
+	
+	/**
 	 * Shared secrets which have to be stored.
 	 * 
 	 * Are getting set in states:
@@ -233,11 +247,6 @@ struct private_ike_sa_t {
 	 *   -IKE_SA_ESTABLISHED
 	 */
 	struct {
-		/**
-		 * Key used for deriving other keys
-		 */
-		chunk_t d_key;
-
 		/**
 		 * Key for generating auth payload (initiator)
 		 */
@@ -439,6 +448,8 @@ static void compute_secrets(private_ike_sa_t *this,
 							chunk_t initiator_nonce,
 							chunk_t responder_nonce)
 {
+	u_int8_t d_buffer[this->child_prf->get_block_size(this->child_prf)];
+	chunk_t d_key = {ptr: d_buffer, len: sizeof(d_buffer)};
 	u_int8_t ei_buffer[this->crypter_initiator->get_block_size(this->crypter_initiator)];
 	chunk_t ei_key = {ptr: ei_buffer, len: sizeof(ei_buffer)};
 	u_int8_t er_buffer[this->crypter_responder->get_block_size(this->crypter_responder)];
@@ -493,8 +504,9 @@ static void compute_secrets(private_ike_sa_t *this,
 	allocator_free_chunk(&prf_plus_seed);
 	
 	
-	prf_plus->allocate_bytes(prf_plus,this->prf->get_block_size(this->prf),&(this->secrets.d_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", &(this->secrets.d_key));
+	prf_plus->get_bytes(prf_plus,d_key.len,d_buffer);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", &(d_key));
+	this->child_prf->set_key(this->child_prf, d_key);
 
 	prf_plus->get_bytes(prf_plus,ai_key.len,ai_buffer);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &(ai_key));
@@ -660,6 +672,14 @@ static prf_t *get_prf (private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.get_prf.
+ */
+static prf_t *get_child_prf (private_ike_sa_t *this)
+{
+	return this->child_prf;
+}
+
+/**
  * Implementation of protected_ike_sa_t.get_key_pr.
  */
 static chunk_t get_key_pr (private_ike_sa_t *this)
@@ -702,6 +722,13 @@ static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_prop
 	{
 		this->logger->log(this->logger, ERROR|LEVEL1, "PRF %s not supported!",
 							mapping_find(pseudo_random_function_m,proposal->pseudo_random_function));
+		return FAILED;
+	}
+	this->child_prf = prf_create(proposal->pseudo_random_function);
+	if (this->child_prf == NULL)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1, "PRF %s not supported!",
+						  mapping_find(pseudo_random_function_m,proposal->pseudo_random_function));
 		return FAILED;
 	}
 	
@@ -1056,7 +1083,6 @@ static void destroy (private_ike_sa_t *this)
 	this->child_sas->destroy(this->child_sas);
 
 	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy secrets");
-	allocator_free(this->secrets.d_key.ptr);
 	allocator_free(this->secrets.pi_key.ptr);
 	allocator_free(this->secrets.pr_key.ptr);
 	
@@ -1088,6 +1114,11 @@ static void destroy (private_ike_sa_t *this)
 	{
 		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy prf_t object");
 		this->prf->destroy(this->prf);
+	}
+	if (this->child_prf != NULL)
+	{
+		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy child_prf object");
+		this->child_prf->destroy(this->child_prf);
 	}
 	
 	/* destroy ike_sa_id */
@@ -1153,6 +1184,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.build_message = (void (*) (protected_ike_sa_t *, exchange_type_t , bool , message_t **)) build_message;
 	this->protected.compute_secrets = (void (*) (protected_ike_sa_t *,chunk_t ,chunk_t , chunk_t )) compute_secrets;
 	this->protected.get_prf = (prf_t *(*) (protected_ike_sa_t *)) get_prf;	
+	this->protected.get_child_prf = (prf_t *(*) (protected_ike_sa_t *)) get_child_prf;	
 	this->protected.get_key_pr = (chunk_t (*) (protected_ike_sa_t *)) get_key_pr;	
 	this->protected.get_key_pi = (chunk_t (*) (protected_ike_sa_t *)) get_key_pi;	
 	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;		
@@ -1198,7 +1230,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->message_id_out = 0;
 	this->message_id_in = 0;
 	this->last_replied_message_id = -1;
-	this->secrets.d_key = CHUNK_INITIALIZER;
 	this->secrets.pi_key = CHUNK_INITIALIZER;
 	this->secrets.pr_key = CHUNK_INITIALIZER;
 	this->crypter_initiator = NULL;
@@ -1206,6 +1237,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->signer_initiator = NULL;
 	this->signer_responder = NULL;
 	this->prf = NULL;
+	this->child_prf = NULL;
 	this->init_config = NULL;
 	this->sa_config = NULL;
 	
