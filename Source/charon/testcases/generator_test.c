@@ -680,7 +680,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	list->insert_last(list, (void*)child_proposal1);
 	list->insert_last(list, (void*)child_proposal2);
 	
-	sa_payload = sa_payload_create_from_child_proposals(list);
+	sa_payload = sa_payload_create_from_child_proposal_list(list);
 	tester->assert_true(tester,(sa_payload != NULL), "sa_payload create check");
 
 	generator->generate_payload(generator,(payload_t *)sa_payload);

@@ -165,6 +165,20 @@ struct child_proposal_t {
 	 * @return						iterator over algorithms
 	 */
 	iterator_t *(*create_algorithm_iterator) (child_proposal_t *this, protocol_id_t proto, transform_type_t type);
+	
+	/**
+	 * @brief Get the algorithm for a type to use.
+	 * 
+	 * If there are multiple algorithms, only the first is returned.
+	 * Result is still owned by child_proposal, do not modify!
+	 * 
+	 * @param this					calling object
+	 * @param proto					desired protocol
+	 * @param type					kind of algorithm
+	 * @param[out] algo				pointer which receives algorithm and key size
+	 * @return						TRUE if algorithm of this kind available
+	 */
+	bool (*get_algorithm) (child_proposal_t *this, protocol_id_t proto, transform_type_t type, algorithm_t** algo);
 
 	/**
 	 * @brief Compare two proposal, and select a matching subset.

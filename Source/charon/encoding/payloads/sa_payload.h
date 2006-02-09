@@ -151,6 +151,8 @@ sa_payload_t *sa_payload_create();
  */
 sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, size_t proposal_count);
 
-sa_payload_t *sa_payload_create_from_child_proposals(linked_list_t *proposals);
+sa_payload_t *sa_payload_create_from_child_proposal_list(linked_list_t *proposals);
+
+sa_payload_t *sa_payload_create_from_child_proposal(child_proposal_t *proposal);
 
 #endif /*SA_PAYLOAD_H_*/

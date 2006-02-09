@@ -38,7 +38,8 @@ void test_sa_config(protected_tester_t *tester)
 	sa_config_t *sa_config;	
 	traffic_selector_t *ts_policy[3], *ts_request[4], *ts_reference[3], **ts_result;
 	child_proposal_t *proposal1, *proposal2, *proposal3, *proposal_sel;
-	linked_list_t *list;
+	linked_list_t *proposals_list;
+	iterator_t *iterator;
 	size_t count;
 	logger_t *logger;
 	ts_payload_t *ts_payload;
@@ -78,12 +79,54 @@ void test_sa_config(protected_tester_t *tester)
 	sa_config->add_proposal(sa_config, proposal3);
 
 	
-	list = sa_config->get_proposals(sa_config);
-	tester->assert_true(tester, (list->get_count(list) == 3), "proposal count");
+	proposals_list = sa_config->get_proposals(sa_config);
+	tester->assert_true(tester, (proposals_list->get_count(proposals_list) == 3), "proposal count");
 	
 	
-	//proposal_sel = sa_config->select_proposal(sa_config, list);
+	proposals_list = linked_list_create();
+	proposal1 = child_proposal_create(1);
+	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
+	proposal2 = child_proposal_create(2);
+	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 16);
+	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 0);
+	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	
+	proposals_list->insert_last(proposals_list, proposal1);
+	proposals_list->insert_last(proposals_list, proposal2);
+	
+	proposal_sel = sa_config->select_proposal(sa_config, proposals_list);
+	tester->assert_false(tester, proposal_sel == NULL, "proposal select");
+	/* check ESP encryption algo */
+	iterator = proposal_sel->create_algorithm_iterator(proposal_sel, ESP, ENCRYPTION_ALGORITHM);
+	tester->assert_false(tester, iterator == NULL, "algorithm select ESP");
+	while (iterator->has_next(iterator))
+	{
+		algorithm_t *algo;
+		iterator->current(iterator, (void**)&algo);
+		tester->assert_true(tester, algo->algorithm == ENCR_3DES, "ESP encryption algo");
+		tester->assert_true(tester, algo->key_size == 16, "ESP encryption keysize");
+	}
+	iterator->destroy(iterator);
+	iterator = proposal_sel->create_algorithm_iterator(proposal_sel, AH, INTEGRITY_ALGORITHM);
+	/* check AH integrity algo */
+	tester->assert_false(tester, iterator == NULL, "algorithm select AH");
+	while (iterator->has_next(iterator))
+	{
+		algorithm_t *algo;
+		iterator->current(iterator, (void**)&algo);
+		tester->assert_true(tester, algo->algorithm == AUTH_HMAC_MD5_96, "ESP encryption algo");
+		tester->assert_true(tester, algo->key_size == 20, "ESP encryption keysize");
+	}
+	iterator->destroy(iterator);
+	
+	proposal_sel->destroy(proposal_sel);
 
+	/* cleanup */
+	proposal1->destroy(proposal1);
+	proposal1->destroy(proposal2);
+	proposals_list->destroy(proposals_list);
 	
 	/* 
 	 * test traffic selection getting and matching 

@@ -523,11 +523,11 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 {
 	linked_list_t *proposal_list;
 	sa_payload_t *sa_payload;
-	sa_config_t *sa_config;	
-	POS;
+	sa_config_t *sa_config;
+	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	proposal_list = sa_config->get_proposals(sa_config);
-	sa_payload = sa_payload_create_from_child_proposals(proposal_list);
+	sa_payload = sa_payload_create_from_child_proposal_list(proposal_list);
 	/* TODO: fix mem allocation */
 	/* TODO child sa stuff */
 

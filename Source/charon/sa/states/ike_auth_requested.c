@@ -327,8 +327,11 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 {
 	child_proposal_t *proposal;
 	linked_list_t *proposal_list;
+	protocol_id_t proto;
+	
 	/* TODO fix mem allocation */
 	/* TODO child sa stuff */
+	
 	/* get selected proposal */
 	proposal_list = sa_payload->get_child_proposals(sa_payload);
 	/* check count of proposals */
@@ -352,6 +355,25 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not offered proposal. Deleting IKE_SA");
 		return DELETE_ME;
+	}
+	this->logger->log(this->logger, CONTROL|LEVEL1, "selected proposals:");
+	for (proto = AH; proto <= ESP; proto++)
+	{
+		transform_type_t types[] = {ENCRYPTION_ALGORITHM, INTEGRITY_ALGORITHM, DIFFIE_HELLMAN_GROUP, EXTENDED_SEQUENCE_NUMBERS};
+		mapping_t *mappings[] = {encryption_algorithm_m, integrity_algorithm_m, diffie_hellman_group_m, extended_sequence_numbers_m};
+		algorithm_t *algo;
+		int i;
+		for (i = 0; i<sizeof(types)/sizeof(transform_type_t); i++)
+		{
+			if (proposal->get_algorithm(proposal, proto, types[i], &algo))
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL1, "%s: using %s %s (keysize: %d)",
+								  mapping_find(protocol_id_m, proto),
+								  mapping_find(transform_type_m, types[i]),
+								  mapping_find(mappings[i], algo->algorithm),
+								  algo->key_size);
+			}
+		}
 	}
 	
 	return SUCCESS;

@@ -387,10 +387,10 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *response)
 {
 	child_proposal_t *proposal;
-	linked_list_t *proposal_list, *dummy_list;
+	linked_list_t *proposal_list;
 	sa_payload_t *sa_response;
+	protocol_id_t proto;
 	
-	POS;
 	/* TODO: fix mem */
 	/* TODO: child sa stuff */
 	
@@ -404,21 +404,37 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		response->add_payload(response, (payload_t*)sa_response);
 		return SUCCESS;
 	}
+
 	/* now select a proposal */
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Selecting proposals:");
 	proposal = this->sa_config->select_proposal(this->sa_config, proposal_list);
 	if (proposal == NULL)
 	{
-		POS;
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH request did not contain any proposals we accept. Deleting IKE_SA");
 		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
 		return DELETE_ME;	
 	}
+	for (proto = AH; proto <= ESP; proto++)
+	{
+		transform_type_t types[] = {ENCRYPTION_ALGORITHM, INTEGRITY_ALGORITHM, DIFFIE_HELLMAN_GROUP, EXTENDED_SEQUENCE_NUMBERS};
+		mapping_t *mappings[] = {encryption_algorithm_m, integrity_algorithm_m, diffie_hellman_group_m, extended_sequence_numbers_m};
+		algorithm_t *algo;
+		int i;
+		for (i = 0; i<sizeof(types)/sizeof(transform_type_t); i++)
+		{
+			if (proposal->get_algorithm(proposal, proto, types[i], &algo))
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL1, "%s: using %s %s (keysize: %d)",
+									mapping_find(protocol_id_m, proto),
+									mapping_find(transform_type_m, types[i]),
+									mapping_find(mappings[i], algo->algorithm),
+									algo->key_size);
+			}
+		}
+	}
 	
-	/* we need a dummy list to build an sa payload from ONE proposal */
-	dummy_list = linked_list_create();
-	dummy_list->insert_last(dummy_list, (void*)proposal);
-	sa_response = sa_payload_create_from_child_proposals(dummy_list);
-	dummy_list->destroy(dummy_list);
+	/* create payload with selected propsal */
+	sa_response = sa_payload_create_from_child_proposal(proposal);
 	response->add_payload(response, (payload_t*)sa_response);
 	
 	return SUCCESS;

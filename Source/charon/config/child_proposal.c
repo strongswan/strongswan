@@ -216,6 +216,45 @@ static void add_algorithm(private_child_proposal_t *this, protocol_id_t proto, t
 }
 
 /**
+ * Implements child_proposal_t.get_algorithm.
+ */
+static bool get_algorithm(private_child_proposal_t *this, protocol_id_t proto, transform_type_t type, algorithm_t** algo)
+{
+	linked_list_t * list;
+	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
+	
+	if (proto_proposal == NULL)
+	{
+		return FALSE;
+	}
+	switch (type)
+	{
+		case ENCRYPTION_ALGORITHM:
+			list = proto_proposal->encryption_algos;
+			break;
+		case INTEGRITY_ALGORITHM:
+			list = proto_proposal->integrity_algos;
+			break;
+		case PSEUDO_RANDOM_FUNCTION:
+			list = proto_proposal->prf_algos;
+			break;
+		case DIFFIE_HELLMAN_GROUP:
+			list = proto_proposal->dh_groups;
+			break;
+		case EXTENDED_SEQUENCE_NUMBERS:
+			list = proto_proposal->esns;
+			break;
+		default:
+			return FALSE;
+	}
+	if (list->get_first(list, (void**)algo) != SUCCESS)
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Implements child_proposal_t.create_algorithm_iterator.
  */
 static iterator_t *create_algorithm_iterator(private_child_proposal_t *this, protocol_id_t proto, transform_type_t type)
@@ -224,7 +263,7 @@ static iterator_t *create_algorithm_iterator(private_child_proposal_t *this, pro
 	if (proto_proposal == NULL)
 	{
 		return NULL;
-	}	
+	}
 	
 	switch (type)
 	{
@@ -242,13 +281,12 @@ static iterator_t *create_algorithm_iterator(private_child_proposal_t *this, pro
 			break;
 	}
 	return NULL;
-	
 }
 
 /**
  * Find a matching alg/keysize in two linked lists
  */
-static bool select_algo(linked_list_t *first, linked_list_t *second, u_int16_t *alg, size_t *key_size)
+static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, u_int16_t *alg, size_t *key_size)
 {
 	iterator_t *first_iter, *second_iter;
 	algorithm_t *first_alg, *second_alg;
@@ -256,7 +294,7 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, u_int16_t *
 	/* if in both are zero algorithms specified, we HAVE a match */
 	if (first->get_count(first) == 0 && second->get_count(second) == 0)
 	{
-		*alg = 0;
+		*add = FALSE;
 		return TRUE;
 	}
 	
@@ -276,6 +314,7 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, u_int16_t *
 				/* ok, we have an algorithm */
 				*alg = first_alg->algorithm;
 				*key_size = first_alg->key_size;
+				*add = TRUE;
 				first_iter->destroy(first_iter);
 				second_iter->destroy(second_iter);
 				return TRUE;
@@ -299,6 +338,7 @@ static child_proposal_t *select_proposal(private_child_proposal_t *this, private
 	iterator_t *iterator;
 	protocol_proposal_t *this_prop, *other_prop;
 	protocol_id_t proto;
+	bool add;
 	
 	/* empty proposal? no match */
 	if (this->protocol_proposals->get_count(this->protocol_proposals) == 0 ||
@@ -332,9 +372,9 @@ static child_proposal_t *select_proposal(private_child_proposal_t *this, private
 		}
 		
 		/* select encryption algorithm */
-		if (select_algo(this_prop->encryption_algos, other_prop->encryption_algos, &algo, &key_size))
+		if (select_algo(this_prop->encryption_algos, other_prop->encryption_algos, &add, &algo, &key_size))
 		{
-			if (algo)
+			if (add)
 			{
 				selected->add_algorithm(selected, proto, ENCRYPTION_ALGORITHM, algo, key_size);
 			}
@@ -346,9 +386,9 @@ static child_proposal_t *select_proposal(private_child_proposal_t *this, private
 			return NULL;
 		}
 		/* select integrity algorithm */
-		if (select_algo(this_prop->integrity_algos, other_prop->integrity_algos, &algo, &key_size))
+		if (select_algo(this_prop->integrity_algos, other_prop->integrity_algos, &add, &algo, &key_size))
 		{
-			if (algo)
+			if (add)
 			{
 				selected->add_algorithm(selected, proto, INTEGRITY_ALGORITHM, algo, key_size);
 			}
@@ -360,9 +400,9 @@ static child_proposal_t *select_proposal(private_child_proposal_t *this, private
 			return NULL;
 		}
 		/* select prf algorithm */
-		if (select_algo(this_prop->prf_algos, other_prop->prf_algos, &algo, &key_size))
+		if (select_algo(this_prop->prf_algos, other_prop->prf_algos, &add, &algo, &key_size))
 		{
-			if (algo)
+			if (add)
 			{
 				selected->add_algorithm(selected, proto, PSEUDO_RANDOM_FUNCTION, algo, key_size);
 			}
@@ -374,9 +414,9 @@ static child_proposal_t *select_proposal(private_child_proposal_t *this, private
 			return NULL;
 		}
 		/* select a DH-group */
-		if (select_algo(this_prop->dh_groups, other_prop->dh_groups, &algo, &key_size))
+		if (select_algo(this_prop->dh_groups, other_prop->dh_groups, &add, &algo, &key_size))
 		{
-			if (algo)
+			if (add)
 			{
 				selected->add_algorithm(selected, proto, DIFFIE_HELLMAN_GROUP, algo, 0);
 			}
@@ -388,9 +428,9 @@ static child_proposal_t *select_proposal(private_child_proposal_t *this, private
 			return NULL;
 		}
 		/* select if we use ESNs */
-		if (select_algo(this_prop->esns, other_prop->esns, &algo, &key_size))
+		if (select_algo(this_prop->esns, other_prop->esns, &add, &algo, &key_size))
 		{
-			if (algo)
+			if (add)
 			{
 				selected->add_algorithm(selected, proto, EXTENDED_SEQUENCE_NUMBERS, algo, 0);
 			}
@@ -526,6 +566,7 @@ child_proposal_t *child_proposal_create(u_int8_t number)
 	
 	this->public.add_algorithm = (void (*)(child_proposal_t*,protocol_id_t,transform_type_t,u_int16_t,size_t))add_algorithm;
 	this->public.create_algorithm_iterator = (iterator_t* (*)(child_proposal_t*,protocol_id_t,transform_type_t))create_algorithm_iterator;
+	this->public.get_algorithm = (bool (*)(child_proposal_t*,protocol_id_t,transform_type_t,algorithm_t**))get_algorithm;
 	this->public.select = (child_proposal_t* (*)(child_proposal_t*,child_proposal_t*))select_proposal;
 	this->public.get_number = (u_int8_t (*)(child_proposal_t*))get_number;
 	this->public.get_protocols = (void(*)(child_proposal_t *this, protocol_id_t ids[2]))get_protocols;

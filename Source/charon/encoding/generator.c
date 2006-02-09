@@ -633,7 +633,7 @@ static void write_to_chunk (private_generator_t *this,chunk_t *data)
 	memcpy(data->ptr,this->buffer,data_length);
 	data->len = data_length;
 	
-	this->logger->log_chunk(this->logger, RAW, "generated data of this parser", data);
+	this->logger->log_chunk(this->logger, RAW|LEVEL3, "generated data of this generator", data);
 }
 
 /**
@@ -1017,7 +1017,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				return;
 		}
 	}
-	this->logger->log_bytes(this->logger, RAW|LEVEL1, "generated data for this payload",
+	this->logger->log_bytes(this->logger, RAW|LEVEL3, "generated data for this payload",
 							payload_start, this->out_position-payload_start);
 }
 

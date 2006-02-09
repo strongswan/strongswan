@@ -307,11 +307,13 @@ static void load_default_config (private_configuration_manager_t *this)
 	/* ah and esp prop */
 	child_proposal = child_proposal_create(1);
 	
-	//child_proposal->add_algorithm(child_proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
-	//child_proposal->add_algorithm(child_proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	//child_proposal->add_algorithm(child_proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+	child_proposal->add_algorithm(child_proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	child_proposal->add_algorithm(child_proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	child_proposal->add_algorithm(child_proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 
 	child_proposal->add_algorithm(child_proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	child_proposal->add_algorithm(child_proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 32);
+	child_proposal->add_algorithm(child_proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
 	child_proposal->add_algorithm(child_proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
 	child_proposal->add_algorithm(child_proposal, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
 	child_proposal->add_algorithm(child_proposal, ESP, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);

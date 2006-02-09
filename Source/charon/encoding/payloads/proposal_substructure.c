@@ -569,7 +569,6 @@ proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_
 	this->proposal_number = proposal->get_number(proposal);
 	this->protocol_id = proto;
 	
-	
 	/* encryption algorithm is only availble in ESP */
 	iterator = proposal->create_algorithm_iterator(proposal, proto, ENCRYPTION_ALGORITHM);
 	while (iterator->has_next(iterator))

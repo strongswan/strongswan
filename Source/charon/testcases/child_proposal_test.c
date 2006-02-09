@@ -35,6 +35,8 @@ void test_child_proposal(protected_tester_t *tester)
 {
 	child_proposal_t *proposal1, *proposal2, *proposal3;
 	iterator_t *iterator;
+	algorithm_t *algo;
+	bool result;
 
 	proposal1 = child_proposal_create(1);
 	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
@@ -50,29 +52,28 @@ void test_child_proposal(protected_tester_t *tester)
 	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_3IDEA, 0);
 	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	proposal2->add_algorithm(proposal2, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	//proposal1->add_algorithm(proposal2, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal1->add_algorithm(proposal2, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
 	
 	/* ah and esp prop */
 	proposal3 = proposal1->select(proposal1, proposal2);
 	tester->assert_false(tester, proposal3 == NULL, "proposal select");
 	if (proposal3)
 	{
-		iterator = proposal3->create_algorithm_iterator(proposal3, ESP, ENCRYPTION_ALGORITHM);
-		tester->assert_false(tester, iterator == NULL, "encryption algo select");
-		while(iterator->has_next(iterator))
-		{
-			algorithm_t *algo;
-			iterator->current(iterator, (void**)&algo);
-			tester->assert_true(tester, algo->algorithm == ENCR_AES_CBC, "encryption algo");
-			tester->assert_true(tester, algo->key_size == 16, "encryption keylen");
-		}
-		iterator->destroy(iterator);
+		result = proposal3->get_algorithm(proposal3, ESP, ENCRYPTION_ALGORITHM, &algo);
+		tester->assert_true(tester, result, "encryption algo select");
+		tester->assert_true(tester, algo->algorithm == ENCR_AES_CBC, "encryption algo");
+		tester->assert_true(tester, algo->key_size == 16, "encryption keylen");
+		
+		
+		result = proposal3->get_algorithm(proposal3, ESP, INTEGRITY_ALGORITHM, &algo);
+		tester->assert_true(tester, result, "integrity algo select");
+		tester->assert_true(tester, algo->algorithm == AUTH_HMAC_MD5_96, "integrity algo");
+		tester->assert_true(tester, algo->key_size == 20, "integrity keylen");
 		
 		iterator = proposal3->create_algorithm_iterator(proposal3, ESP, INTEGRITY_ALGORITHM);
 		tester->assert_false(tester, iterator == NULL, "integrity algo select");
 		while(iterator->has_next(iterator))
 		{
-			algorithm_t *algo;
 			iterator->current(iterator, (void**)&algo);
 			tester->assert_true(tester, algo->algorithm == AUTH_HMAC_MD5_96, "integrity algo");
 			tester->assert_true(tester, algo->key_size == 20, "integrity keylen");
@@ -83,7 +84,6 @@ void test_child_proposal(protected_tester_t *tester)
 		tester->assert_false(tester, iterator == NULL, "dh group algo select");
 		while(iterator->has_next(iterator))
 		{
-			algorithm_t *algo;
 			iterator->current(iterator, (void**)&algo);
 			tester->assert_true(tester, algo->algorithm == MODP_1024_BIT, "dh group algo");
 			tester->assert_true(tester, algo->key_size == 0, "dh gorup keylen");

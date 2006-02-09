@@ -175,6 +175,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 			log_thread_ids = TRUE;
 			break;
 		case IKE_SA:
+			logger_level |= LEVEL1;
 			log_thread_ids = TRUE;
 			break;
 		case CONFIGURATION_MANAGER:

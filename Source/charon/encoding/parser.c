@@ -595,7 +595,7 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 						mapping_find(payload_type_m, payload_type),
 						this->input_roof-this->byte_pos);
 	
-	this->logger->log_bytes(this->logger, RAW, "parsing payload from", this->byte_pos, 
+	this->logger->log_bytes(this->logger, RAW|LEVEL3, "parsing payload from", this->byte_pos, 
 								this->input_roof-this->byte_pos);
 	
 	if (pld->get_type(pld) == UNKNOWN_PAYLOAD)
