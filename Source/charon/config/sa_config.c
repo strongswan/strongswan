@@ -287,25 +287,22 @@ static status_t destroy(private_sa_config_t *this)
 	
 	
 	/* delete proposals */
-	while(this->proposals->get_count(this->proposals) > 0)
+	while(this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
 	{
-		this->proposals->remove_last(this->proposals, (void**)&proposal);
 		proposal->destroy(proposal);
 	}
 	this->proposals->destroy(this->proposals);
 	
 	/* delete traffic selectors */
-	while(this->ts_initiator->get_count(this->ts_initiator) > 0)
+	while(this->ts_initiator->remove_last(this->ts_initiator, (void**)&traffic_selector) == SUCCESS)
 	{
-		this->ts_initiator->remove_last(this->ts_initiator, (void**)&traffic_selector);
 		traffic_selector->destroy(traffic_selector);
 	}
 	this->ts_initiator->destroy(this->ts_initiator);
 	
 	/* delete traffic selectors */
-	while(this->ts_responder->get_count(this->ts_responder) > 0)
+	while(this->ts_responder->remove_last(this->ts_responder, (void**)&traffic_selector) == SUCCESS)
 	{
-		this->ts_responder->remove_last(this->ts_responder, (void**)&traffic_selector);
 		traffic_selector->destroy(traffic_selector);
 	}
 	this->ts_responder->destroy(this->ts_responder);

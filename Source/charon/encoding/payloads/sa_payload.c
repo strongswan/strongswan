@@ -558,6 +558,7 @@ sa_payload_t *sa_payload_create_from_child_proposal_list(linked_list_t *proposal
 		iterator->current(iterator, (void**)&proposal);
 		add_child_proposal((private_sa_payload_t*)sa_payload, proposal);
 	}
+	iterator->destroy(iterator);
 	
 	return sa_payload;
 }

@@ -525,10 +525,11 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 	sa_payload_t *sa_payload;
 	sa_config_t *sa_config;
 	
+	/* get proposals form config, add to payload */
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	proposal_list = sa_config->get_proposals(sa_config);
 	sa_payload = sa_payload_create_from_child_proposal_list(proposal_list);
-	/* TODO: fix mem allocation */
+
 	/* TODO child sa stuff */
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add SA payload to message");

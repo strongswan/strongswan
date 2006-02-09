@@ -473,9 +473,10 @@ static void get_protocols(private_child_proposal_t *this, protocol_id_t ids[2])
 		if (i>1)
 		{
 			/* should not happen, but who knows */
-			return;
+			break;
 		}
 	}
+	iterator->destroy(iterator);
 }
 
 /**

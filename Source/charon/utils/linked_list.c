@@ -156,7 +156,42 @@ struct private_iterator_t {
 /**
  * Implementation of iterator_t.has_next.
  */
-bool iterator_has_next(private_iterator_t *this)
+static bool iterate(private_iterator_t *this, void** value)
+{
+	if (this->list->count == 0)
+	{
+		return FALSE;
+	}
+	if (this->current == NULL)
+	{
+		this->current = (this->forward) ? this->list->first : this->list->last;
+		*value = this->current->value;
+		return TRUE;
+	}
+	if (this->forward)
+	{
+		if (this->current->next == NULL)
+		{
+			return FALSE;
+		}
+		this->current = this->current->next;
+		*value = this->current->value;
+		return TRUE;
+	}
+	/* backward */
+	if (this->current->previous == NULL)
+	{
+		return FALSE;
+	}
+	this->current = this->current->previous;
+	*value = this->current->value;
+	return TRUE;
+}
+
+/**
+ * Implementation of iterator_t.has_next.
+ */
+static bool iterator_has_next(private_iterator_t *this)
 {
 	if (this->list->count == 0)
 	{
@@ -632,6 +667,7 @@ static iterator_t *create_iterator (private_linked_list_t *linked_list,bool forw
 {
 	private_iterator_t *this = allocator_alloc_thing(private_iterator_t);
 
+	this->public.iterate = (bool (*) (iterator_t *this, void **value)) iterate;
 	this->public.has_next = (bool (*) (iterator_t *this)) iterator_has_next;
 	this->public.current = (status_t (*) (iterator_t *this, void **value)) iterator_current;
 	this->public.insert_before = (void (*) (iterator_t *this, void *item)) insert_before;

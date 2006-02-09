@@ -386,12 +386,11 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
  */
 static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *response)
 {
-	child_proposal_t *proposal;
+	child_proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
 	sa_payload_t *sa_response;
 	protocol_id_t proto;
 	
-	/* TODO: fix mem */
 	/* TODO: child sa stuff */
 	
 	/* get proposals from request */
@@ -402,12 +401,20 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any proposals. No CHILD_SA created");
 		sa_response = sa_payload_create();
 		response->add_payload(response, (payload_t*)sa_response);
+		proposal_list->destroy(proposal_list);
 		return SUCCESS;
 	}
 
 	/* now select a proposal */
 	this->logger->log(this->logger, CONTROL|LEVEL1, "Selecting proposals:");
 	proposal = this->sa_config->select_proposal(this->sa_config, proposal_list);
+	/* list is not needed anymore */
+	while (proposal_list->remove_last(proposal_list, (void**)&proposal_tmp) == SUCCESS)
+	{
+		proposal_tmp->destroy(proposal_tmp);
+	}
+	proposal_list->destroy(proposal_list);
+	/* do we have a proposal */
 	if (proposal == NULL)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH request did not contain any proposals we accept. Deleting IKE_SA");
@@ -436,6 +443,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	/* create payload with selected propsal */
 	sa_response = sa_payload_create_from_child_proposal(proposal);
 	response->add_payload(response, (payload_t*)sa_response);
+	proposal->destroy(proposal);
 	
 	return SUCCESS;
 }

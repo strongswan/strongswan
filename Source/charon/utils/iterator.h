@@ -44,6 +44,19 @@ typedef struct iterator_t iterator_t;
 struct iterator_t {
 
 	/**
+	 * @brief Iterate over all items.
+	 * 
+	 * The easy way to iterate over items.
+	 * 
+	 * @param this 			calling object
+	 * @param[out] value 	item
+	 * @return
+	 * 						- TRUE, if more elements are avaiable,
+	 * 						- FALSE otherwise
+	 */
+	bool (*iterate) (iterator_t *this, void** value);
+
+	/**
 	 * @brief Moves to the next element, if available.
 	 * 
 	 * A newly created iterator_t object doesn't point to any item.

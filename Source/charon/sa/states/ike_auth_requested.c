@@ -325,32 +325,42 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
  */
 static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payload_t *sa_payload)
 {
-	child_proposal_t *proposal;
+	child_proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
 	protocol_id_t proto;
 	
-	/* TODO fix mem allocation */
-	/* TODO child sa stuff */
-	
-	/* get selected proposal */
+	/* get his selected proposal */
 	proposal_list = sa_payload->get_child_proposals(sa_payload);
 	/* check count of proposals */
 	if (proposal_list->get_count(proposal_list) == 0)
 	{
-		/* no proposal? we accept this, no child sa is built */
+		/* no proposal? we accept this, but no child sa is built */
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply's SA_PAYLOAD didn't contain any proposals. No CHILD_SA created",
 						  proposal_list->get_count(proposal_list));
+		proposal_list->destroy(proposal_list);
 		return SUCCESS;
 	}
 	if (proposal_list->get_count(proposal_list) > 1)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply's SA_PAYLOAD contained %d proposal. Deleting IKE_SA",
 						  proposal_list->get_count(proposal_list));
+		while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
+		{
+			proposal->destroy(proposal);
+		}
+		proposal_list->destroy(proposal_list);
 		return DELETE_ME;
 	}
 	
 	/* we have to re-check here if other's selection is valid */
 	proposal = this->sa_config->select_proposal(this->sa_config, proposal_list);
+	/* list not needed anymore */
+	while (proposal_list->remove_last(proposal_list, (void**)&proposal_tmp) == SUCCESS)
+	{
+		proposal_tmp->destroy(proposal_tmp);
+	}
+	proposal_list->destroy(proposal_list);
+	/* got a match? */
 	if (proposal == NULL)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not offered proposal. Deleting IKE_SA");
@@ -375,6 +385,9 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 			}
 		}
 	}
+	
+	/* TODO: Proposal? child_sa */
+	proposal->destroy(proposal);
 	
 	return SUCCESS;
 }
