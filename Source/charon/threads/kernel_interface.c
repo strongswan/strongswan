@@ -195,17 +195,15 @@ static status_t get_spi(private_kernel_interface_t *this, host_t *src, host_t *d
 }
 
 static status_t add_sa(	private_kernel_interface_t *this,
-						host_t *me, 
-						host_t *other, 
-						u_int32_t spi, 
-						int protocol, 
+						host_t *me,
+						host_t *other,
+						u_int32_t spi,
+						int protocol,
 						bool tunnel_mode,
 						encryption_algorithm_t enc_alg,
-						size_t enc_size,
-						chunk_t enc_key,
+						chunk_t encryption_key,
 						integrity_algorithm_t int_alg,
-						size_t int_size,
-						chunk_t int_key,
+						chunk_t integrity_key,
 						bool replace)
 {
     netlink_message_t request, *response;
@@ -236,11 +234,11 @@ static status_t add_sa(	private_kernel_interface_t *this,
 		netlink_algo_t *nla = (netlink_algo_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
     	
     	nla->type = XFRMA_ALG_CRYPT;
-    	nla->length = sizeof(netlink_algo_t) + enc_size;
-		nla->algo.alg_key_len = enc_size * 8;
+		nla->length = sizeof(netlink_algo_t) + encryption_key.len;
+		nla->algo.alg_key_len = encryption_key.len * 8;
 		
 		strcpy(nla->algo.alg_name, mapping_find(kernel_encryption_algs_m, enc_alg));
-		memcpy(nla->algo.alg_key, enc_key.ptr, enc_key.len);
+		memcpy(nla->algo.alg_key, encryption_key.ptr, encryption_key.len);
 
 		request.hdr.nlmsg_len += nla->length;
     }
@@ -250,10 +248,10 @@ static status_t add_sa(	private_kernel_interface_t *this,
 		netlink_algo_t *nla = (netlink_algo_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
 		
 		nla->type = XFRMA_ALG_AUTH;
-    	nla->length = sizeof(netlink_algo_t) + int_size;
-		nla->algo.alg_key_len = int_size * 8;
+		nla->length = sizeof(netlink_algo_t) + integrity_key.len;
+		nla->algo.alg_key_len = integrity_key.len * 8;
 		strcpy(nla->algo.alg_name, mapping_find(kernel_integrity_algs_m, int_alg));
-		memcpy(nla->algo.alg_key, int_key.ptr, int_key.len);
+		memcpy(nla->algo.alg_key, integrity_key.ptr, integrity_key.len);
 
 		request.hdr.nlmsg_len += nla->length;
     }
@@ -416,7 +414,7 @@ kernel_interface_t *kernel_interface_create()
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,bool,u_int32_t*))get_spi;
 	
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,int,bool,encryption_algorithm_t,size_t,chunk_t,integrity_algorithm_t,size_t,chunk_t,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,int,bool,encryption_algorithm_t,chunk_t,integrity_algorithm_t,chunk_t,bool))add_sa;
 	
 	
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
