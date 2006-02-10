@@ -33,6 +33,7 @@
 #include <transforms/crypters/crypter.h>
 #include <sa/states/ike_sa_established.h>
 #include <sa/authenticator.h>
+#include <sa/child_sa.h>
 
 typedef struct private_ike_auth_requested_t private_ike_auth_requested_t;
 
@@ -327,7 +328,9 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 {
 	child_proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
-	protocol_id_t proto;
+	child_sa_t *child_sa;
+	chunk_t seed;
+	prf_plus_t *prf_plus;
 	
 	/* get his selected proposal */
 	proposal_list = sa_payload->get_child_proposals(sa_payload);
@@ -366,27 +369,18 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not offered proposal. Deleting IKE_SA");
 		return DELETE_ME;
 	}
-	this->logger->log(this->logger, CONTROL|LEVEL1, "selected proposals:");
-	for (proto = AH; proto <= ESP; proto++)
-	{
-		transform_type_t types[] = {ENCRYPTION_ALGORITHM, INTEGRITY_ALGORITHM, DIFFIE_HELLMAN_GROUP, EXTENDED_SEQUENCE_NUMBERS};
-		mapping_t *mappings[] = {encryption_algorithm_m, integrity_algorithm_m, diffie_hellman_group_m, extended_sequence_numbers_m};
-		algorithm_t *algo;
-		int i;
-		for (i = 0; i<sizeof(types)/sizeof(transform_type_t); i++)
-		{
-			if (proposal->get_algorithm(proposal, proto, types[i], &algo))
-			{
-				this->logger->log(this->logger, CONTROL|LEVEL1, "%s: using %s %s (keysize: %d)",
-								  mapping_find(protocol_id_m, proto),
-								  mapping_find(transform_type_m, types[i]),
-								  mapping_find(mappings[i], algo->algorithm),
-								  algo->key_size);
-			}
-		}
-	}
+
+	/* install child SAs for AH and esp */
+	seed = allocator_alloc_as_chunk(this->sent_nonce.len + this->received_nonce.len);
+	memcpy(seed.ptr, this->sent_nonce.ptr, this->sent_nonce.len);
+	memcpy(seed.ptr + this->sent_nonce.len, this->received_nonce.ptr, this->received_nonce.len);
+	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
+	allocator_free_chunk(&seed);
 	
-	/* TODO: Proposal? child_sa */
+	child_sa = child_sa_create(proposal, prf_plus);
+	prf_plus->destroy(prf_plus);
+	child_sa->destroy(child_sa);
+	
 	proposal->destroy(proposal);
 	
 	return SUCCESS;

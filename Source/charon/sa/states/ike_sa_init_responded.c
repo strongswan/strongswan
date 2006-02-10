@@ -25,6 +25,7 @@
 #include <daemon.h>
 #include <utils/allocator.h>
 #include <sa/authenticator.h>
+#include <sa/child_sa.h>
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/id_payload.h>
@@ -389,7 +390,9 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	child_proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
 	sa_payload_t *sa_response;
-	protocol_id_t proto;
+	child_sa_t *child_sa;
+	prf_plus_t *prf_plus;
+	chunk_t seed;
 	
 	/* TODO: child sa stuff */
 	
@@ -421,51 +424,23 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
 		return DELETE_ME;	
 	}
-	for (proto = AH; proto <= ESP; proto++)
-	{
-		transform_type_t types[] = {ENCRYPTION_ALGORITHM, INTEGRITY_ALGORITHM, DIFFIE_HELLMAN_GROUP, EXTENDED_SEQUENCE_NUMBERS};
-		mapping_t *mappings[] = {encryption_algorithm_m, integrity_algorithm_m, diffie_hellman_group_m, extended_sequence_numbers_m};
-		algorithm_t *algo;
-		int i;
-		for (i = 0; i<sizeof(types)/sizeof(transform_type_t); i++)
-		{
-			if (proposal->get_algorithm(proposal, proto, types[i], &algo))
-			{
-				this->logger->log(this->logger, CONTROL|LEVEL1, "%s: using %s %s (keysize: %d)",
-									mapping_find(protocol_id_m, proto),
-									mapping_find(transform_type_m, types[i]),
-									mapping_find(mappings[i], algo->algorithm),
-									algo->key_size);
-			}
-		}
-	}
 	
 	/* create payload with selected propsal */
 	sa_response = sa_payload_create_from_child_proposal(proposal);
 	response->add_payload(response, (payload_t*)sa_response);
-	proposal->destroy(proposal);
 	
 	/* install child SAs for AH and esp */
-// 	algorithm_t *encr, *integ;
-// 	char enc_key_buffer[] = "123";
-// 	chunk_t enc_key = {ptr: enc_key_buffer, len: 4};
-// 	char int_key_buffer[] = "345";
-// 	chunk_t int_key = {ptr: int_key_buffer, len: 4};
-// 	proposal->get_algorithm(proposal, ESP, ENCRYPTION_ALGORITHM, &encr);
-// 	proposal->get_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, &integ);
-// 	
-// 	charon->kernel_interface->add_sa(charon->kernel_interface, 
-// 									 this->ike_sa->get_my_host(this->ike_sa),
-// 									 this->ike_sa->get_other_host(this->ike_sa),
-// 									 proposal->get_spi(proposal, AH),
-// 									 AH,
-// 									 TRUE, 
-// 									 encr->algorithm, encr->key_size, enc_key,
-// 									 integ->algorithm, integ->key_size, int_key,
-// 									 TRUE);
-// 	
-// 	POS;
+	seed = allocator_alloc_as_chunk(this->received_nonce.len + this->sent_nonce.len);
+	memcpy(seed.ptr, this->received_nonce.ptr, this->received_nonce.len);
+	memcpy(seed.ptr + this->received_nonce.len, this->sent_nonce.ptr, this->sent_nonce.len);
+	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
+	allocator_free_chunk(&seed);
 	
+	child_sa = child_sa_create(proposal, prf_plus);
+	prf_plus->destroy(prf_plus);
+	child_sa->destroy(child_sa);
+	
+	proposal->destroy(proposal);	
 	return SUCCESS;
 }
 

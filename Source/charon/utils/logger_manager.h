@@ -40,6 +40,7 @@ enum logger_context_t {
 	GENERATOR,
 	IKE_SA,
 	IKE_SA_MANAGER,
+	CHILD_SA,
 	MESSAGE,
 	THREAD_POOL,
 	WORKER,
@@ -51,7 +52,6 @@ enum logger_context_t {
 	DAEMON,
 	CONFIGURATION_MANAGER,
 	ENCRYPTION_PAYLOAD,
-	PRIME_POOL,
 };
 
 

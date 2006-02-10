@@ -33,7 +33,6 @@ typedef struct child_sa_t child_sa_t;
 /**
  * @brief Represents a CHILD_SA between to hosts.
  * 
- * An IKE_SA must already be established.
  * 
  * @b Constructors:
  *  - child_sa_create
@@ -68,16 +67,6 @@ struct child_sa_t {
  * @return				child_sa_t object
  * @ingroup sa
  */
-child_sa_t * child_sa_create(protocol_id_t protocol_id, prf_plus_t *prf_plus);
-
-/**
- * @brief Constructor to create a new CHILD_SA.
- * 
- * @param protocol_id	protocol id (AH or ESP) of CHILD_SA
- * @param prf_plus		prf_plus_t object use to derive shared secrets
- * @return				child_sa_t object
- * @ingroup sa
- */
-child_sa_t * child_sa_create_with_spi(protocol_id_t protocol_id, prf_plus_t *prf_plus);
+child_sa_t * child_sa_create(child_proposal_t *proposal, prf_plus_t *prf_plus);
 
 #endif /*_CHILD_SA_H_*/

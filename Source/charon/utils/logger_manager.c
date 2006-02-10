@@ -35,6 +35,7 @@ mapping_t logger_context_t_mappings[] = {
 	{GENERATOR, "GENRAT"},
 	{IKE_SA, "IKE_SA"},
 	{IKE_SA_MANAGER, "ISAMGR"},
+	{CHILD_SA, "CHLDSA"},
 	{MESSAGE, "MESSAG"},
 	{THREAD_POOL, "THPOOL"},
 	{WORKER, "WORKER"},
@@ -46,7 +47,6 @@ mapping_t logger_context_t_mappings[] = {
 	{DAEMON, "DAEMON"},
 	{CONFIGURATION_MANAGER, "CONFIG"},
 	{ENCRYPTION_PAYLOAD, "ENCPLD"},
-	{PRIME_POOL, "PRIMEP"},
 	{MAPPING_END, NULL},
 };
 
@@ -178,6 +178,10 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 			logger_level |= LEVEL1;
 			log_thread_ids = TRUE;
 			break;
+		case CHILD_SA:
+			logger_level |= LEVEL1|PRIVATE;
+			log_thread_ids = TRUE;
+			break;
 		case CONFIGURATION_MANAGER:
 			log_thread_ids = TRUE;
 			break;
@@ -197,8 +201,6 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 			log_thread_ids = TRUE;
 			break;
 		case THREAD_POOL:
-			break;
-		case PRIME_POOL:
 			break;
 		case SCHEDULER:
 			logger_level = 0;

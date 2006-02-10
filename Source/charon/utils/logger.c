@@ -173,12 +173,7 @@ static void logg(private_logger_t *this, logger_level_t loglevel, char *format, 
 static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len)
 {
 	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	
-	/* since me can't do multi-line output to syslog, 
-	 * we must do multiple syslogs. To avoid
-	 * problems in output order, lock this by a mutex.
-	 */
-	pthread_mutex_lock(&mutex);
+
 	
 	if ((this->level & loglevel) == loglevel)
 	{
@@ -187,6 +182,13 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 		char *buffer_pos;
 		char *bytes_pos, *bytes_roof;
 		int i;
+		int line_start = 0;
+			
+		/* since me can't do multi-line output to syslog, 
+		* we must do multiple syslogs. To avoid
+		* problems in output order, lock this by a mutex.
+		*/
+		pthread_mutex_lock(&mutex);
 		
 		
 		format = "%s (%d bytes)";
@@ -217,12 +219,13 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 				buffer_pos = buffer;
 				if (this->output == NULL)
 				{
-					syslog(LOG_INFO, "| %s", buffer);	
+					syslog(LOG_INFO, "[=>] [%5d ] %s", line_start, buffer);	
 				}
 				else
 				{
-					fprintf(this->output, "| %s\n", buffer);
+					fprintf(this->output, "[=>] [%5d ] %s\n", line_start, buffer);
 				}
+				line_start += 16;
 			}
 			else if ((i % 8) == 0)
 			{
@@ -249,15 +252,15 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 			buffer_pos = buffer;
 			if (this->output == NULL)
 			{		
-				syslog(LOG_INFO, "| %s", buffer);
+				syslog(LOG_INFO, "[=>] [%5d ] %s", line_start, buffer);
 			}
 			else
 			{
-				fprintf(this->output, "| %s\n", buffer);
+				fprintf(this->output, "[=>] [%5d ] %s\n", line_start, buffer);
 			}
 		}
+		pthread_mutex_unlock(&mutex);
 	}
-	pthread_mutex_unlock(&mutex);
 }
 
 /**
