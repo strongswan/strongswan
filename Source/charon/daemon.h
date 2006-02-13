@@ -52,7 +52,7 @@
 /**
  * UDP Port on which the daemon will listen for incoming traffic.
  */
-#define IKEV2_UDP_PORT 4501
+#define IKEV2_UDP_PORT 500
 
 /**
  * @brief First retransmit timeout in milliseconds.

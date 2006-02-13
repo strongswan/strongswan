@@ -274,13 +274,14 @@ u_int8_t private_key_2[];
  */
 static void load_default_config (private_configuration_manager_t *this)
 {
-	init_config_t *init_config;
+	init_config_t *init_config_a, *init_config_b;
 	ike_proposal_t proposals;
 	child_proposal_t *child_proposal;
-	sa_config_t *sa_config;
+	sa_config_t *sa_config_a, *sa_config_b;
 	traffic_selector_t *ts;
 	
-	init_config = init_config_create("0.0.0.0","127.0.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config_a = init_config_create("0.0.0.0","192.168.0.3",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config_b = init_config_create("0.0.0.0","192.168.0.2",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	
 	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
 	
@@ -292,23 +293,34 @@ static void load_default_config (private_configuration_manager_t *this)
 	proposals.pseudo_random_function_key_length = 16;
 	proposals.diffie_hellman_group = MODP_1024_BIT;
 
-	init_config->add_proposal(init_config,1,proposals);
+	init_config_a->add_proposal(init_config_a,1,proposals);
+	init_config_b->add_proposal(init_config_b,1,proposals);
 								  
-	sa_config = sa_config_create(ID_IPV4_ADDR, "127.0.0.1", 
-								 ID_IPV4_ADDR, "127.0.0.1",
+	sa_config_a = sa_config_create(ID_IPV4_ADDR, "192.168.0.2", 
+								 ID_IPV4_ADDR, "192.168.0.3",
+								 RSA_DIGITAL_SIGNATURE,
+								 30000);
+								  
+	sa_config_b = sa_config_create(ID_IPV4_ADDR, "192.168.0.3", 
+								 ID_IPV4_ADDR, "192.168.0.2",
 								 RSA_DIGITAL_SIGNATURE,
 								 30000);
 
-	sa_config->add_traffic_selector_initiator(sa_config,ts);
-	sa_config->add_traffic_selector_responder(sa_config,ts);
+	sa_config_a->add_traffic_selector_initiator(sa_config_a,ts);
+	sa_config_a->add_traffic_selector_responder(sa_config_a,ts);
+	
+	sa_config_b->add_traffic_selector_initiator(sa_config_b,ts);
+	sa_config_b->add_traffic_selector_responder(sa_config_b,ts);
 	
 	ts->destroy(ts);
 	
-	/* ah and esp prop */
+	/* child proposal for alice */
 	child_proposal = child_proposal_create(1);
 	
 	child_proposal->add_algorithm(child_proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	child_proposal->add_algorithm(child_proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
 	child_proposal->add_algorithm(child_proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	child_proposal->add_algorithm(child_proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
 	child_proposal->add_algorithm(child_proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 
 	child_proposal->add_algorithm(child_proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
@@ -318,17 +330,35 @@ static void load_default_config (private_configuration_manager_t *this)
 	child_proposal->add_algorithm(child_proposal, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
 	child_proposal->add_algorithm(child_proposal, ESP, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 	
-	sa_config->add_proposal(sa_config, child_proposal);
+	sa_config_a->add_proposal(sa_config_a, child_proposal);
+	
+	/* child proposal for bob */
+	child_proposal = child_proposal_create(1);
+	
+	child_proposal->add_algorithm(child_proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	child_proposal->add_algorithm(child_proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	child_proposal->add_algorithm(child_proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 
-	this->add_new_configuration(this,"localhost",init_config,sa_config);
+	child_proposal->add_algorithm(child_proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	child_proposal->add_algorithm(child_proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	child_proposal->add_algorithm(child_proposal, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	child_proposal->add_algorithm(child_proposal, ESP, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+	
+	sa_config_b->add_proposal(sa_config_b, child_proposal);
+	
+	
+	
+
+	this->add_new_configuration(this,"bob",init_config_a,sa_config_a);
+	this->add_new_configuration(this,"alice",init_config_b,sa_config_b);
 	
 
 	//this->add_new_preshared_secret(this,ID_IPV4_ADDR, "192.168.1.2","verschluesselt");
 	
-	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "127.0.0.1", public_key_1, 256);
-	//this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "192.168.1.1", public_key_2, 256);
-	this->add_new_rsa_private_key(this,ID_IPV4_ADDR, "127.0.0.1", private_key_1, 1024);
-	//this->add_new_rsa_private_key(this,ID_IPV4_ADDR, "192.168.1.1", private_key_2, 1024);
+	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "192.168.0.2", public_key_1, 256);
+	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "192.168.0.3", public_key_2, 256);
+	this->add_new_rsa_private_key(this,ID_IPV4_ADDR, "192.168.0.2", private_key_1, 1024);
+	this->add_new_rsa_private_key(this,ID_IPV4_ADDR, "192.168.0.3", private_key_2, 1024);
 }
 
 /**

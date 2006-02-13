@@ -178,7 +178,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	{
 		/* no configuration matches given host */
 		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request does not match any available configuration. Deleting IKE_SA");
-		this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
+		/* TODO: inform requestor */
 		return DELETE_ME;
 	}
 	this->ike_sa->set_init_config(this->ike_sa,init_config);
