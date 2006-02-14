@@ -422,11 +422,9 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	generator_t *generator;
 	transform_attribute_t *attribute1, *attribute2, *attribute3;
 	transform_substructure_t *transform1, *transform2;
-	proposal_substructure_t *proposal1, *proposal2;
-	ike_proposal_t *ike_proposals;
+	proposal_substructure_t *proposal_str1, *proposal_str2;
 	linked_list_t *list;
-	child_proposal_t *child_proposal1, *child_proposal2;
-	size_t ike_proposal_count;
+	proposal_t *proposal1, *proposal2;
 	sa_payload_t *sa_payload;
 	ike_header_t *ike_header;
 	
@@ -488,30 +486,30 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	logger->log(logger,CONTROL,"transforms created");
 	
 	/* create proposal 1 */
-	proposal1 = proposal_substructure_create();
+	proposal_str1 = proposal_substructure_create();
 	tester->assert_true(tester,(proposal1 != NULL), "proposal create check");
 	
 	stringval = "ABCDEFGH";
 	data.ptr = (void *) stringval;
 	data.len = 8;
 	
-	proposal1->add_transform_substructure(proposal1,transform1);
-	proposal1->add_transform_substructure(proposal1,transform2);
-	proposal1->set_spi(proposal1,data);
-	proposal1->set_proposal_number(proposal1,7);
-	proposal1->set_protocol_id(proposal1,4);
+	proposal_str1->add_transform_substructure(proposal_str1,transform1);
+	proposal_str1->add_transform_substructure(proposal_str1,transform2);
+	proposal_str1->set_spi(proposal_str1,data);
+	proposal_str1->set_proposal_number(proposal_str1,7);
+	proposal_str1->set_protocol_id(proposal_str1,4);
 	
 	/* create proposal 2 */
-	proposal2 = proposal_substructure_create();
-	tester->assert_true(tester,(proposal2 != NULL), "proposal create check");
-	proposal2->set_proposal_number(proposal2,7);
-	proposal2->set_protocol_id(proposal2,5);
+	proposal_str2 = proposal_substructure_create();
+	tester->assert_true(tester,(proposal_str2 != NULL), "proposal create check");
+	proposal_str2->set_proposal_number(proposal_str2,7);
+	proposal_str2->set_protocol_id(proposal_str2,5);
 
 	/* create sa_payload */
 	sa_payload = sa_payload_create();
 	
-	sa_payload->add_proposal_substructure(sa_payload,proposal1);
-	sa_payload->add_proposal_substructure(sa_payload,proposal2);
+	sa_payload->add_proposal_substructure(sa_payload,proposal_str1);
+	sa_payload->add_proposal_substructure(sa_payload,proposal_str2);
 	
 	ike_header = ike_header_create();
 	ike_header->set_initiator_spi(ike_header,0x22000054231234LL);
@@ -581,26 +579,22 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
 
-	ike_proposal_count = 2;
-	ike_proposals = allocator_alloc(ike_proposal_count * (sizeof(ike_proposal_t)));
+	proposal1 = proposal_create(1);
+	proposal1->add_algorithm(proposal1, IKE, ENCRYPTION_ALGORITHM, 1, 20);
+	proposal1->add_algorithm(proposal1, IKE, PSEUDO_RANDOM_FUNCTION, 2, 22);
+	proposal1->add_algorithm(proposal1, IKE, INTEGRITY_ALGORITHM, 3, 24);
+	proposal1->add_algorithm(proposal1, IKE, DIFFIE_HELLMAN_GROUP, 4, 0);
 	
-	ike_proposals[0].encryption_algorithm = 1;
-	ike_proposals[0].encryption_algorithm_key_length = 20;
-	ike_proposals[0].pseudo_random_function = 2;
-	ike_proposals[0].pseudo_random_function_key_length = 22;
-	ike_proposals[0].integrity_algorithm = 3;
-	ike_proposals[0].integrity_algorithm_key_length = 24;
-	ike_proposals[0].diffie_hellman_group = 4;
+	proposal2 = proposal_create(2);
+	proposal2->add_algorithm(proposal2, IKE, ENCRYPTION_ALGORITHM, 5, 26);
+	proposal2->add_algorithm(proposal2, IKE, PSEUDO_RANDOM_FUNCTION, 6, 28);
+	proposal2->add_algorithm(proposal2, IKE, INTEGRITY_ALGORITHM, 7, 30);
+	proposal2->add_algorithm(proposal2, IKE, DIFFIE_HELLMAN_GROUP, 8, 0);
 
-	ike_proposals[1].encryption_algorithm = 5;
-	ike_proposals[1].encryption_algorithm_key_length = 26;
-	ike_proposals[1].pseudo_random_function = 6;
-	ike_proposals[1].pseudo_random_function_key_length = 28;
-	ike_proposals[1].integrity_algorithm = 7;
-	ike_proposals[1].integrity_algorithm_key_length = 30;
-	ike_proposals[1].diffie_hellman_group = 8;
-	
-	sa_payload = sa_payload_create_from_ike_proposals(ike_proposals,ike_proposal_count);
+	list = linked_list_create();
+	list->insert_last(list, (void*)proposal1);
+	list->insert_last(list, (void*)proposal2);
+	sa_payload = sa_payload_create_from_proposal_list(list);
 	tester->assert_true(tester,(sa_payload != NULL), "sa_payload create check");
 
 	generator->generate_payload(generator,(payload_t *)sa_payload);
@@ -643,7 +637,9 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data");
 
 	sa_payload->destroy(sa_payload);
-	allocator_free(ike_proposals);
+	list->destroy(list);
+	proposal1->destroy(proposal1);
+	proposal2->destroy(proposal2);
 	allocator_free_chunk(&generated_data);
 	generator->destroy(generator);
 	
@@ -655,32 +651,32 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
 
-	child_proposal1 = child_proposal_create(1);
+	proposal1 = proposal_create(1);
 	
-	child_proposal1->add_algorithm(child_proposal1, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	child_proposal1->add_algorithm(child_proposal1, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	child_proposal1->add_algorithm(child_proposal1, AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
-	child_proposal1->set_spi(child_proposal1, AH, 0x01010101l);
+	proposal1->add_algorithm(proposal1, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal1->add_algorithm(proposal1, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	proposal1->add_algorithm(proposal1, AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
+	proposal1->set_spi(proposal1, AH, 0x01010101l);
 	
-	child_proposal1->add_algorithm(child_proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
-	child_proposal1->add_algorithm(child_proposal1, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	child_proposal1->set_spi(child_proposal1, ESP, 0x02020202);
+	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
+	proposal1->add_algorithm(proposal1, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal1->set_spi(proposal1, ESP, 0x02020202);
 	
 	
-	child_proposal2->add_algorithm(child_proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	child_proposal2->add_algorithm(child_proposal2, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	child_proposal2->add_algorithm(child_proposal2, AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
-	child_proposal2->set_spi(child_proposal2, AH, 0x01010101);
+	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal2->add_algorithm(proposal2, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	proposal2->add_algorithm(proposal2, AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
+	proposal2->set_spi(proposal2, AH, 0x01010101);
 	
-	child_proposal2->add_algorithm(child_proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
-	child_proposal2->add_algorithm(child_proposal2, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	child_proposal2->add_algorithm(child_proposal2, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	child_proposal2->set_spi(child_proposal2, ESP, 0x02020202);
+	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
+	proposal2->add_algorithm(proposal2, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal2->add_algorithm(proposal2, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal2->set_spi(proposal2, ESP, 0x02020202);
 	
-	list->insert_last(list, (void*)child_proposal1);
-	list->insert_last(list, (void*)child_proposal2);
+	list->insert_last(list, (void*)proposal1);
+	list->insert_last(list, (void*)proposal2);
 	
-	sa_payload = sa_payload_create_from_child_proposal_list(list);
+	sa_payload = sa_payload_create_from_proposal_list(list);
 	tester->assert_true(tester,(sa_payload != NULL), "sa_payload create check");
 
 	generator->generate_payload(generator,(payload_t *)sa_payload);
@@ -754,8 +750,8 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
 	sa_payload->destroy(sa_payload);
-	child_proposal1->destroy(child_proposal1);
-	child_proposal2->destroy(child_proposal2);
+	proposal1->destroy(proposal1);
+	proposal2->destroy(proposal2);
 	list->destroy(list);
 	allocator_free_chunk(&generated_data);
 	generator->destroy(generator);

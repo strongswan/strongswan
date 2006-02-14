@@ -70,7 +70,7 @@ static void destroy(private_child_sa_t *this)
 /*
  * Described in header.
  */
-child_sa_t * child_sa_create(child_proposal_t *proposal, prf_plus_t *prf_plus)
+child_sa_t * child_sa_create(proposal_t *proposal, prf_plus_t *prf_plus)
 {
 	private_child_sa_t *this = allocator_alloc_thing(private_child_sa_t);
 	u_int i;

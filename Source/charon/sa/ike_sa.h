@@ -163,22 +163,6 @@ struct protected_ike_sa_t {
 	 * @param message			new message is stored at this location
 	 */
 	void (*build_message) (protected_ike_sa_t *this, exchange_type_t type, bool request, message_t **message);
-
-	/**
-	 * @brief Compute the shared secrets needed for encryption, signing, etc.
-	 * 
-	 * Preconditions:
-	 *  - Call of function protected_ike_sa_t.create_transforms_from_proposal
-	 * 
-	 * @param this 				calling object
-	 * @param dh_shared_secret	shared secret of diffie hellman exchange
-	 * @param initiator_nonce	nonce of initiator
-	 * @param responder_nonce	nonce of responder
-	 */
-	void (*compute_secrets) (protected_ike_sa_t *this,
-								chunk_t dh_shared_secret,
-								chunk_t initiator_nonce,
-								chunk_t responder_nonce);
 	
 	/**
 	 * @brief Get the internal stored logger_t object for given ike_sa_t object.
@@ -259,16 +243,20 @@ struct protected_ike_sa_t {
 	void (*set_other_host) (protected_ike_sa_t *this,host_t *other_host);
 	
 	/**
-	 * @brief Create all needed transform objects for this IKE_SA using 
-	 * the informations stored in a ike_proposal_t object.
+	 * @brief Derive all keys and create the transforms for IKE communication.
 	 * 
+	 * Keys are derived using the diffie hellman secret, nonces and internal
+	 * stored SPIs. 
 	 * Allready existing objects get destroyed.
 	 * 
 	 * @param this 				calling object
-	 * @param proposal			proposal used to get informations for transform
-	 * 							objects (algorithms, key lengths, etc.)
+	 * @param proposal			proposal which contains algorithms to use
+	 * @param dh				diffie hellman object with shared secret
+	 * @param nonce_i			initiators nonce
+	 * @param nonce_r			responders nonce
 	 */
-	status_t (*create_transforms_from_proposal) (protected_ike_sa_t *this,ike_proposal_t * proposal);
+	status_t (*build_transforms) (protected_ike_sa_t *this, proposal_t* proposal,
+								 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
 	
 	/**
 	 * @brief Send the next request message.
@@ -368,7 +356,7 @@ struct protected_ike_sa_t {
 	signer_t *(*get_signer_responder) (protected_ike_sa_t *this);
 	
 	/**
-	 * @brief Get the internal stored prf_t object.
+	 * @brief Get the multi purpose prf.
 	 * 
 	 * @param this 				calling object
 	 * @return					pointer to prf_t object
@@ -382,6 +370,22 @@ struct protected_ike_sa_t {
 	 * @return					pointer to prf_t object
 	 */
 	prf_t *(*get_child_prf) (protected_ike_sa_t *this);
+	
+	/**
+	 * @brief Get the prf used for authentication of initiator.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to prf_t object
+	 */
+	prf_t *(*get_prf_auth_i) (protected_ike_sa_t *this);
+	
+	/**
+	 * @brief Get the prf used for authentication of responder.
+	 * 
+	 * @param this 				calling object
+	 * @return					pointer to prf_t object
+	 */
+	prf_t *(*get_prf_auth_r) (protected_ike_sa_t *this);
 	
 	/**
 	 * @brief Get the last responded message.
@@ -402,26 +406,6 @@ struct protected_ike_sa_t {
 	 * 							- NULL if no last request available
 	 */
 	message_t *(*get_last_requested_message) (protected_ike_sa_t *this);
-
-	/**
-	 * @brief Get the Shared key SK_pr.
-	 * 
-	 * Returned value is not cloned!
-	 * 
-	 * @param this 				calling object
-	 * @return					SK_pr key
-	 */
-	chunk_t (*get_key_pr) (protected_ike_sa_t *this);
-	
-	/**
-	 * @brief Get the Shared key SK_pi.
-	 * 
-	 * Returned value is not cloned!
-	 * 
-	 * @param this 				calling object
-	 * @return					SK_pi key
-	 */
-	chunk_t (*get_key_pi) (protected_ike_sa_t *this);
 
 	/**
 	 * @brief Resets message counters and does destroy stored received and sent messages.

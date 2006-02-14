@@ -32,7 +32,7 @@
 #include <transforms/signers/signer.h>
 #include <transforms/prfs/prf.h>
 #include <transforms/crypters/crypter.h>
-#include <config/child_proposal.h>
+#include <config/proposal.h>
 
 
 /**

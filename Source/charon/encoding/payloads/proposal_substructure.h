@@ -26,7 +26,7 @@
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_substructure.h>
-#include <config/child_proposal.h>
+#include <config/proposal.h>
 #include <utils/linked_list.h>
 
 
@@ -173,7 +173,7 @@ struct proposal_substructure_t {
 	 */
 	void (*set_spi) (proposal_substructure_t *this, chunk_t spi);
 	
-	void (*add_to_child_proposal) (proposal_substructure_t *this, child_proposal_t *proposal);
+	void (*add_to_proposal) (proposal_substructure_t *this, proposal_t *proposal);
 
 	/**
 	 * @brief Clones an proposal_substructure_t object.
@@ -201,7 +201,7 @@ struct proposal_substructure_t {
 proposal_substructure_t *proposal_substructure_create();
 
 /**
- * @brief Creates a proposal substructure from a child_proposal.
+ * @brief Creates a proposal substructure from a proposal.
  * 
  * Since a child proposal may contain data for both AH and ESP, 
  * the protocol must be specified. If the proposal does not contain
@@ -215,7 +215,7 @@ proposal_substructure_t *proposal_substructure_create();
  * 
  * @ingroup payloads
  */
-proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_proposal_t *proposal, protocol_id_t proto);
+proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal, protocol_id_t proto);
 
 
 #endif /*PROPOSAL_SUBSTRUCTURE_H_*/

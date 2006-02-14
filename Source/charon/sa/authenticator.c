@@ -116,6 +116,7 @@ static chunk_t allocate_octets(private_authenticator_t *this,
 								id_payload_t *my_id,
 								bool initiator)
 {
+	prf_t *prf;
 	chunk_t id_chunk = my_id->get_data(my_id);
 	u_int8_t id_with_header[4 + id_chunk.len];
 	/*
@@ -139,23 +140,22 @@ static chunk_t allocate_octets(private_authenticator_t *this,
 	
 	if (initiator)
 	{
-		this->prf->set_key(this->prf,this->ike_sa->get_key_pi(this->ike_sa));
+		prf = this->ike_sa->get_prf_auth_i(this->ike_sa);
 	}
 	else
 	{
-		this->prf->set_key(this->prf,this->ike_sa->get_key_pr(this->ike_sa));
+		prf = this->ike_sa->get_prf_auth_r(this->ike_sa);
 	}
-
 	
 	/* 4 bytes are id type and reserved fields of id payload */
-	octets.len = last_message.len + other_nonce.len + this->prf->get_block_size(this->prf);
+	octets.len = last_message.len + other_nonce.len + prf->get_block_size(prf);
 	octets.ptr = allocator_alloc(octets.len);
 	current_pos = octets.ptr;
 	memcpy(current_pos,last_message.ptr,last_message.len);
 	current_pos += last_message.len;
 	memcpy(current_pos,other_nonce.ptr,other_nonce.len);
 	current_pos += other_nonce.len;
-	this->prf->get_bytes(this->prf,id_with_header_chunk,current_pos);
+	prf->get_bytes(prf, id_with_header_chunk, current_pos);
 	
 	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Octets (Mesage + Nonce + prf(Sk_px,Idx)",&octets);
 	return octets;

@@ -116,8 +116,8 @@ TEST_OBJS+= $(BUILD_DIR)sa_config_test.o
 $(BUILD_DIR)sa_config_test.o :		$(TESTCASES_DIR)sa_config_test.c $(TESTCASES_DIR)sa_config_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
 
-TEST_OBJS+= $(BUILD_DIR)child_proposal_test.o
-$(BUILD_DIR)child_proposal_test.o :	$(TESTCASES_DIR)child_proposal_test.c $(TESTCASES_DIR)child_proposal_test.h
+TEST_OBJS+= $(BUILD_DIR)proposal_test.o
+$(BUILD_DIR)proposal_test.o :		$(TESTCASES_DIR)proposal_test.c $(TESTCASES_DIR)proposal_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
 
 TEST_OBJS+= $(BUILD_DIR)rsa_test.o

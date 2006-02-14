@@ -54,9 +54,9 @@ typedef struct sa_payload_t sa_payload_t;
  * @b Constructors:
  * - sa_payload_create()
  * - sa_payload_create_from_ike_proposals()
- * - sa_payload_create_from_child_proposal()
+ * - sa_payload_create_from_proposal()
  * 
- * @todo Add support of algorithms without specified keylength in get_child_proposals and get_ike_proposals.
+ * @todo Add support of algorithms without specified keylength in get_proposals and get_ike_proposals.
  * 
  * @ingroup payloads
  */
@@ -91,36 +91,20 @@ struct sa_payload_t {
 	 * @param proposal  		proposal_substructure_t object to add
 	 */
 	void (*add_proposal_substructure) (sa_payload_t *this,proposal_substructure_t *proposal);
-	
+
 	/**
-	 * @brief Creates an array of ike_proposal_t's in this SA payload.
+	 * @brief Gets the proposals in this payload as a list.
 	 * 
-	 * An IKE proposal consist of transform of type ENCRYPTION_ALGORITHM,
-	 * PSEUDO_RANDOM_FUNCTION, INTEGRITY_ALGORITHM and DIFFIE_HELLMAN_GROUP
-	 * 
-	 * @param proposals			the pointer to the first entry of ike_proposal_t's is set
-	 * @param proposal_count	the number of found proposals is written at this location
-	 * @return
-	 * 							- SUCCESS if an IKE proposal could be found
-	 * 							- NOT_FOUND if no IKE proposal could be found
-	 * 							- FAILED if a proposal does not contain all needed transforms
-	 * 							  for a IKE_PROPOSAL 
+	 * @return					a list containing proposal_t s
 	 */
-	status_t (*get_ike_proposals) (sa_payload_t *this, ike_proposal_t **proposals, size_t *proposal_count);
-	
-	/**
-	 * @brief Creates an array of child_proposal_t's in this SA payload.
-	 * 
-	 * @return					a list containing child_proposal_t s
-	 */
-	linked_list_t *(*get_child_proposals) (sa_payload_t *this);
+	linked_list_t *(*get_proposals) (sa_payload_t *this);
 	
 	/**
 	 * @brief Add a child proposal (AH/ESP) to the payload.
 	 * 
 	 * @param proposal			child proposal to add to the payload
 	 */
-	void (*add_child_proposal) (sa_payload_t *this, child_proposal_t *proposal);
+	void (*add_proposal) (sa_payload_t *this, proposal_t *proposal);
 	
 	/**
 	 * @brief Destroys an sa_payload_t object.
@@ -140,19 +124,26 @@ struct sa_payload_t {
 sa_payload_t *sa_payload_create();
 
 /**
- * @brief Creates a sa_payload_t object from array of ike_proposal_t's.
+ * @brief Creates a sa_payload_t object from a list of proposals.
  * 
- * @return					created sa_payload_t object
- * @param proposals			pointer to first proposal in array of type ike_proposal_t
- * @param proposal_count	number of ike_proposal_t's in array
+ * @param proposals			list of proposals to build the payload from
  * @return					sa_payload_t object
  * 
  * @ingroup payloads
  */
-sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, size_t proposal_count);
+sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals);
 
-sa_payload_t *sa_payload_create_from_child_proposal_list(linked_list_t *proposals);
-
-sa_payload_t *sa_payload_create_from_child_proposal(child_proposal_t *proposal);
+/**
+ * @brief Creates a sa_payload_t object from a single proposal.
+ * 
+ * This is only for convenience. Use sa_payload_create_from_proposal_list
+ * if you want to add more than one proposal.
+ * 
+ * @param proposal			proposal from which the payload should be built.
+ * @return					sa_payload_t object
+ * 
+ * @ingroup payloads
+ */
+sa_payload_t *sa_payload_create_from_proposal(proposal_t *proposal);
 
 #endif /*SA_PAYLOAD_H_*/

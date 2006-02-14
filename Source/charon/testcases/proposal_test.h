@@ -1,7 +1,7 @@
 /**
- * @file child_proposal_test.h
+ * @file proposal_test.h
  *
- * @brief Tests for the child_proposal_t class.
+ * @brief Tests for the proposal_t class.
  *
  */
 
@@ -27,13 +27,13 @@
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the child_proposal_t functionality.
+ * @brief Test function used to test the proposal_t functionality.
  *
  * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_child_proposal(protected_tester_t *tester);
+void test_proposal(protected_tester_t *tester);
 
 #endif //CHILD_PROPOSAL_TEST_H_
 

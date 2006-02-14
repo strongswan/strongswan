@@ -57,15 +57,6 @@ struct private_ike_sa_t {
 	 * Protected part of a ike_sa_t object.
 	 */
 	protected_ike_sa_t protected;
-
-	/**
-	 * Resends the last sent reply.
-	 * 
-	 * @param this 				calling object
-	 */
-	status_t (*resend_last_reply) (private_ike_sa_t *this);
-
-	/* private values */
 	
 	/**
 	 * Identifier for the current IKE_SA.
@@ -152,112 +143,43 @@ struct private_ike_sa_t {
 	
 	/**
 	 * Crypter object for initiator.
-	 * 
-	 * Gets set in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - RESPONDER_INIT
-	 * 
-	 * Available in states:
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
 	 */
 	crypter_t *crypter_initiator;
 	
 	/**
 	 * Crypter object for responder.
-	 * 
-	 * Gets set in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - RESPONDER_INIT
-	 * 
-	 * Available in states:
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
 	 */
 	crypter_t *crypter_responder;
 	
 	/**
 	 * Signer object for initiator.
-	 * 
-	 * Gets set in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - RESPONDER_INIT
-	 * 
-	 * Available in states:
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
 	 */
 	signer_t *signer_initiator;
 	
 	/**
 	 * Signer object for responder.
-	 * 
-	 * Gets set in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - RESPONDER_INIT
-	 * 
-	 * Available in states:
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
 	 */
 	signer_t *signer_responder;
 	
 	/**
-	 * Prf function.
-	 * 
-	 * Gets set in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - RESPONDER_INIT
-	 * 
-	 * Available in states:
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
+	 * Multi purpose prf, set key, use it, forget it
 	 */
 	prf_t *prf;
 	
 	/**
 	 * Prf function for derivating keymat child SAs
-	 * 
-	 * Gets set in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - RESPONDER_INIT
-	 * 
-	 * Available in states:
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
 	 */
 	prf_t *child_prf;
 	
 	/**
-	 * Shared secrets which have to be stored.
-	 * 
-	 * Are getting set in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - RESPONDER_INIT
-	 * 
-	 * Available in states:
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
+	 * PRF, with key set to pi_key, used for authentication
 	 */
-	struct {
-		/**
-		 * Key for generating auth payload (initiator)
-		 */
-		chunk_t pi_key;	
+	prf_t *prf_auth_i;
 
-		/**
-		 * Key for generating auth payload (responder)
-		 */
-		chunk_t pr_key;	
-
-	} secrets;
+	/**
+	 * PRF, with key set to pr_key, used for authentication
+	 */
+	prf_t *prf_auth_r;
 
 	/**
 	 * Next message id to receive.
@@ -278,6 +200,13 @@ struct private_ike_sa_t {
 	 * A logger for this IKE_SA.
 	 */
 	logger_t *logger;
+
+	/**
+	 * Resends the last sent reply.
+	 * 
+	 * @param this 				calling object
+	 */
+	status_t (*resend_last_reply) (private_ike_sa_t *this);
 };
 
 /**
@@ -441,103 +370,6 @@ static ike_sa_id_t* get_id(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.compute_secrets.
- */
-static void compute_secrets(private_ike_sa_t *this,
-							chunk_t dh_shared_secret,
-							chunk_t initiator_nonce,
-							chunk_t responder_nonce)
-{
-	u_int8_t d_buffer[this->child_prf->get_block_size(this->child_prf)];
-	chunk_t d_key = {ptr: d_buffer, len: sizeof(d_buffer)};
-	u_int8_t ei_buffer[this->crypter_initiator->get_block_size(this->crypter_initiator)];
-	chunk_t ei_key = {ptr: ei_buffer, len: sizeof(ei_buffer)};
-	u_int8_t er_buffer[this->crypter_responder->get_block_size(this->crypter_responder)];
-	chunk_t er_key = {ptr: er_buffer, len: sizeof(er_buffer)};
-	u_int8_t ai_buffer[this->signer_initiator->get_key_size(this->signer_initiator)];
-	chunk_t ai_key = {ptr: ai_buffer, len: sizeof(ai_buffer)};
-	u_int8_t ar_buffer[this->signer_responder->get_key_size(this->signer_responder)];
-	chunk_t ar_key = {ptr: ar_buffer, len: sizeof(ar_buffer)};
-	u_int8_t concatenated_nonces_buffer[initiator_nonce.len + responder_nonce.len];
-	chunk_t concatenated_nonces = {ptr: concatenated_nonces_buffer, len : sizeof(concatenated_nonces_buffer)};
-	u_int8_t skeyseed_buffer[this->prf->get_block_size(this->prf)];
-	chunk_t skeyseed = {ptr: skeyseed_buffer, len: sizeof(skeyseed_buffer)};
-	u_int64_t initiator_spi;
-	u_int64_t responder_spi;
-	chunk_t prf_plus_seed;
-	prf_plus_t *prf_plus;
-
-	/* first is initiator */
-	memcpy(concatenated_nonces.ptr,initiator_nonce.ptr,initiator_nonce.len);
-	/* second is responder */
-	memcpy(concatenated_nonces.ptr + initiator_nonce.len,responder_nonce.ptr,responder_nonce.len);
-
-	this->logger->log_chunk(this->logger, RAW | LEVEL2, "Nonce data", &concatenated_nonces);
-
-	/* Status of set_key is not checked */
-	this->prf->set_key(this->prf,concatenated_nonces);
-
-	this->prf->get_bytes(this->prf,dh_shared_secret,skeyseed_buffer);
-
-	prf_plus_seed.len = (initiator_nonce.len + responder_nonce.len + 16);
-	prf_plus_seed.ptr = allocator_alloc(prf_plus_seed.len);
-	
-	/* first is initiator */
-	memcpy(prf_plus_seed.ptr,initiator_nonce.ptr,initiator_nonce.len);
-	/* second is responder */
-	memcpy(prf_plus_seed.ptr + initiator_nonce.len,responder_nonce.ptr,responder_nonce.len);
-	/* third is initiator spi */
-	initiator_spi = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
-	memcpy(prf_plus_seed.ptr + initiator_nonce.len + responder_nonce.len,&initiator_spi,8);
-	/* fourth is responder spi */
-	responder_spi = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
-	memcpy(prf_plus_seed.ptr + initiator_nonce.len + responder_nonce.len + 8,&responder_spi,8);
-	
-	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "Keyseed", &skeyseed);
-	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "PRF+ Seed", &prf_plus_seed);
-
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Set new key of prf object");
-	this->prf->set_key(this->prf,skeyseed);
- 
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Create new prf+ object");
-	prf_plus = prf_plus_create(this->prf, prf_plus_seed);
-	allocator_free_chunk(&prf_plus_seed);
-	
-	
-	prf_plus->get_bytes(prf_plus,d_key.len,d_buffer);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", &(d_key));
-	this->child_prf->set_key(this->child_prf, d_key);
-
-	prf_plus->get_bytes(prf_plus,ai_key.len,ai_buffer);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &(ai_key));
-	this->signer_initiator->set_key(this->signer_initiator,ai_key);
-
-	prf_plus->get_bytes(prf_plus,ar_key.len,ar_buffer);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", &(ar_key));
-	this->signer_responder->set_key(this->signer_responder,ar_key);
-
-	prf_plus->get_bytes(prf_plus,ei_key.len,ei_buffer);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", &(ei_key));
-	this->crypter_initiator->set_key(this->crypter_initiator,ei_key);
-	
-	prf_plus->get_bytes(prf_plus,er_key.len,er_buffer);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", &(er_key));
-	this->crypter_responder->set_key(this->crypter_responder,er_key);
-
-	prf_plus->allocate_bytes(prf_plus,
-								this->crypter_responder->get_block_size(this->crypter_responder),
-								&(this->secrets.pi_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", &(this->secrets.pi_key));
-	
-	prf_plus->allocate_bytes(prf_plus,
-								this->crypter_responder->get_block_size(this->crypter_responder),
-								&(this->secrets.pr_key));
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pr secret", &(this->secrets.pr_key));
-	
-	prf_plus->destroy(prf_plus);
-}
-
-/**
  * Implementation of private_ike_sa_t.resend_last_reply.
  */
 static status_t resend_last_reply(private_ike_sa_t *this)
@@ -680,97 +512,209 @@ static prf_t *get_child_prf (private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_key_pr.
+ * Implementation of protected_ike_sa_t.get_prf_auth_i.
  */
-static chunk_t get_key_pr (private_ike_sa_t *this)
+static prf_t *get_prf_auth_i (private_ike_sa_t *this)
 {
-	return this->secrets.pr_key;
+	return this->prf_auth_i;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.get_prf_auth_r.
+ */
+static prf_t *get_prf_auth_r (private_ike_sa_t *this)
+{
+	return this->prf_auth_r;
 }
 
 
 /**
- * Implementation of protected_ike_sa_t.get_key_pi.
+ * Implementation of protected_ike_sa_t.build_transforms.
  */
-static chunk_t get_key_pi (private_ike_sa_t *this)
+static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
 {
-	return this->secrets.pi_key;
-}
-
-/**
- * Implementation of protected_ike_sa_t.set_prf.
- */
-static status_t create_transforms_from_proposal (private_ike_sa_t *this,ike_proposal_t *proposal)
-{
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to create transform objects for proposal");
+	chunk_t nonces, nonces_spis, skeyseed, key, secret;
+	u_int64_t spi_i, spi_r;
+	prf_plus_t *prf_plus;
+	algorithm_t *algo;
+	size_t key_size;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Encryption algorithm: %s with keylength %d",
-						mapping_find(encryption_algorithm_m,proposal->encryption_algorithm),
-						proposal->encryption_algorithm_key_length);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Integrity algorithm: %s with keylength %d",
-						mapping_find(integrity_algorithm_m,proposal->integrity_algorithm),
-						proposal->integrity_algorithm_key_length);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "PRF: %s with keylength %d",
-						mapping_find(pseudo_random_function_m,proposal->pseudo_random_function),
-						proposal->pseudo_random_function_key_length);
-	
+	/*
+	 * Build the PRF+ instance for deriving keys
+	 */
 	if (this->prf != NULL)
 	{
 		this->prf->destroy(this->prf);
 	}
-	this->prf = prf_create(proposal->pseudo_random_function);
+	proposal->get_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, &algo);
+	if (algo == NULL)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL2, "No PRF algoithm selected!?");
+		return FAILED;
+	}
+	this->prf = prf_create(algo->algorithm);
 	if (this->prf == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "PRF %s not supported!",
-							mapping_find(pseudo_random_function_m,proposal->pseudo_random_function));
-		return FAILED;
-	}
-	this->child_prf = prf_create(proposal->pseudo_random_function);
-	if (this->child_prf == NULL)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "PRF %s not supported!",
-						  mapping_find(pseudo_random_function_m,proposal->pseudo_random_function));
+		this->logger->log(this->logger, ERROR|LEVEL1, 
+						  "PSEUDO_RANDOM_FUNCTION %s not supported!",
+						  mapping_find(pseudo_random_function_m, algo->algorithm));
 		return FAILED;
 	}
 	
-	if (this->crypter_initiator != NULL)
-	{
-		this->crypter_initiator->destroy(this->crypter_initiator);
-	}
-	this->crypter_initiator = crypter_create(proposal->encryption_algorithm,
-												proposal->encryption_algorithm_key_length);
-	if (this->crypter_initiator == NULL)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "Encryption algorithm %s not supported!",
-						  mapping_find(encryption_algorithm_m,proposal->encryption_algorithm));
-		return FAILED;
-	}
+	/* concatenate nonces =  nonce_i | nonce_r */
+	nonces = allocator_alloc_as_chunk(nonce_i.len + nonce_r.len);
+	memcpy(nonces.ptr, nonce_i.ptr, nonce_i.len);
+	memcpy(nonces.ptr + nonce_i.len, nonce_r.ptr, nonce_r.len);
 
-	if (this->crypter_responder != NULL)
-	{
-		this->crypter_responder->destroy(this->crypter_responder);
-	}
-	this->crypter_responder = crypter_create(proposal->encryption_algorithm,
-												proposal->encryption_algorithm_key_length);
-	/* check must not be done again */
+	/* concatenate prf_seed = nonce_i | nonce_r | spi_i | spi_r */
+	nonces_spis = allocator_alloc_as_chunk(nonces.len + 16);
+	memcpy(nonces_spis.ptr, nonces.ptr, nonces.len);
+	spi_i = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
+	spi_r = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
+	memcpy(nonces_spis.ptr + nonces.len, &spi_i, 8);
+	memcpy(nonces_spis.ptr + nonces.len + 8, &spi_r, 8);
 	
+	/* SKEYSEED = prf(Ni | Nr, g^ir) */
+	dh->get_shared_secret(dh, &secret);
+	this->logger->log_chunk(this->logger, PRIVATE, "Shared Diffie Hellman secret", &secret);
+	this->prf->set_key(this->prf, nonces);
+	this->prf->allocate_bytes(this->prf, secret, &skeyseed);
+	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "SKEYSEED", &skeyseed);
+	allocator_free_chunk(&secret);
+
+	/* prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr )
+	 * = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr
+	 *
+	 * we use the prf directly for prf+ 
+	 */
+	this->prf->set_key(this->prf, skeyseed);
+	prf_plus = prf_plus_create(this->prf, nonces_spis);
+	
+	/* clean up unused stuff */
+	allocator_free_chunk(&nonces);
+	allocator_free_chunk(&nonces_spis);
+	allocator_free_chunk(&skeyseed);
+	
+	
+	/*
+	 * We now can derive all of our key. We build the transforms 
+	 * directly.
+	 */
+	
+	
+	/* SK_d used for prf+ to derive keys for child SAs */
+	this->child_prf = prf_create(algo->algorithm);
+	key_size = this->child_prf->get_key_size(this->child_prf);
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", &key);
+	this->child_prf->set_key(this->child_prf, key);
+	allocator_free_chunk(&key);
+	
+	
+	/* SK_ai/SK_ar used for integrity protection */
+	proposal->get_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, &algo);
+	if (algo == NULL)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL2, "No integrity algoithm selected?!");
+		return FAILED;
+	}
 	if (this->signer_initiator != NULL)
 	{
 		this->signer_initiator->destroy(this->signer_initiator);
 	}
-	this->signer_initiator = signer_create(proposal->integrity_algorithm);
-	if (this->signer_initiator == NULL)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "Integrity algorithm %s not supported!",
-							mapping_find(integrity_algorithm_m,proposal->integrity_algorithm));
-		return FAILED;
-	}
-	
 	if (this->signer_responder != NULL)
 	{
 		this->signer_responder->destroy(this->signer_responder);
 	}
-	this->signer_responder = signer_create(proposal->integrity_algorithm);
+	
+	this->signer_initiator = signer_create(algo->algorithm);
+	this->signer_responder = signer_create(algo->algorithm);
+	if (this->signer_initiator == NULL || this->signer_responder == NULL)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1, 
+						  "INTEGRITY_ALGORITHM %s not supported!",
+						  mapping_find(integrity_algorithm_m,algo->algorithm));
+		return FAILED;
+	}
+	key_size = this->signer_initiator->get_key_size(this->signer_initiator);
+	
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &key);
+	this->signer_initiator->set_key(this->signer_initiator, key);
+	allocator_free_chunk(&key);
 
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", &key);
+	this->signer_responder->set_key(this->signer_responder, key);
+	allocator_free_chunk(&key);
+	
+	
+	/* SK_ei/SK_er used for encryption */
+	proposal->get_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, &algo);
+	if (algo == NULL)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL2, "No encryption algoithm selected!?");
+		return FAILED;
+	}
+	if (this->crypter_initiator != NULL)
+	{
+		this->crypter_initiator->destroy(this->crypter_initiator);
+	}
+	if (this->crypter_responder != NULL)
+	{
+		this->crypter_responder->destroy(this->crypter_responder);
+	}
+	
+	this->crypter_initiator = crypter_create(algo->algorithm, algo->key_size);
+	this->crypter_responder = crypter_create(algo->algorithm, algo->key_size);
+	if (this->crypter_initiator == NULL || this->crypter_responder == NULL)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1, 
+						  "ENCRYPTION_ALGORITHM %s (key size %d) not supported!",
+						  mapping_find(encryption_algorithm_m, algo->algorithm),
+						  algo->key_size);
+		return FAILED;
+	}
+	key_size = this->crypter_initiator->get_key_size(this->crypter_initiator);
+	
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", &key);
+	this->crypter_initiator->set_key(this->crypter_initiator, key);
+	allocator_free_chunk(&key);
+	
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", &key);
+	this->crypter_responder->set_key(this->crypter_responder, key);
+	allocator_free_chunk(&key);
+	
+	/* SK_pi/SK_pr used for authentication */
+	proposal->get_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, &algo);
+	if (this->prf_auth_i != NULL)
+	{
+		this->prf_auth_i->destroy(this->prf_auth_i);
+	}
+	if (this->prf_auth_r != NULL)
+	{
+		this->prf_auth_r->destroy(this->prf_auth_r);
+	}
+	
+	this->prf_auth_i = prf_create(algo->algorithm);
+	this->prf_auth_r = prf_create(algo->algorithm);
+	
+	key_size = this->prf_auth_i->get_key_size(this->prf_auth_i);
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", &key);
+	this->prf_auth_i->set_key(this->prf_auth_i, key);
+	allocator_free_chunk(&key);
+	
+	prf_plus->allocate_bytes(prf_plus, key_size, &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pr secret", &key);
+	this->prf_auth_r->set_key(this->prf_auth_r, key);
+	allocator_free_chunk(&key);
+	
+	/* all done, prf_plus not needed anymore */
+	prf_plus->destroy(prf_plus);
+	
 	return SUCCESS;
 }
 
@@ -1081,10 +1025,6 @@ static void destroy (private_ike_sa_t *this)
 		/* destroy child sa */
 	}
 	this->child_sas->destroy(this->child_sas);
-
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy secrets");
-	allocator_free(this->secrets.pi_key.ptr);
-	allocator_free(this->secrets.pr_key.ptr);
 	
 	if (this->crypter_initiator != NULL)
 	{
@@ -1119,6 +1059,14 @@ static void destroy (private_ike_sa_t *this)
 	{
 		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy child_prf object");
 		this->child_prf->destroy(this->child_prf);
+	}
+	if (this->prf_auth_i != NULL)
+	{
+		this->prf_auth_i->destroy(this->prf_auth_i);
+	}
+	if (this->prf_auth_r != NULL)
+	{
+		this->prf_auth_r->destroy(this->prf_auth_r);
 	}
 	
 	/* destroy ike_sa_id */
@@ -1182,11 +1130,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	
 	/* protected functions */
 	this->protected.build_message = (void (*) (protected_ike_sa_t *, exchange_type_t , bool , message_t **)) build_message;
-	this->protected.compute_secrets = (void (*) (protected_ike_sa_t *,chunk_t ,chunk_t , chunk_t )) compute_secrets;
 	this->protected.get_prf = (prf_t *(*) (protected_ike_sa_t *)) get_prf;	
-	this->protected.get_child_prf = (prf_t *(*) (protected_ike_sa_t *)) get_child_prf;	
-	this->protected.get_key_pr = (chunk_t (*) (protected_ike_sa_t *)) get_key_pr;	
-	this->protected.get_key_pi = (chunk_t (*) (protected_ike_sa_t *)) get_key_pi;	
+	this->protected.get_child_prf = (prf_t *(*) (protected_ike_sa_t *)) get_child_prf;
+	this->protected.get_prf_auth_i = (prf_t *(*) (protected_ike_sa_t *)) get_prf_auth_i;
+	this->protected.get_prf_auth_r = (prf_t *(*) (protected_ike_sa_t *)) get_prf_auth_r;
 	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;		
 	this->protected.set_init_config = (void (*) (protected_ike_sa_t *,init_config_t *)) set_init_config;
 	this->protected.get_init_config = (init_config_t *(*) (protected_ike_sa_t *)) get_init_config;
@@ -1200,7 +1147,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.send_request = (status_t (*) (protected_ike_sa_t *,message_t *)) send_request;
 	this->protected.send_response = (status_t (*) (protected_ike_sa_t *,message_t *)) send_response;
 	this->protected.send_notify = (void (*)(protected_ike_sa_t*,exchange_type_t,notify_message_type_t,chunk_t)) send_notify;
-	this->protected.create_transforms_from_proposal = (status_t (*) (protected_ike_sa_t *,ike_proposal_t *)) create_transforms_from_proposal;
+	this->protected.build_transforms = (status_t (*) (protected_ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t)) build_transforms;
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
 	this->protected.get_crypter_initiator = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_initiator;
 	this->protected.get_signer_initiator = (signer_t *(*) (protected_ike_sa_t *)) get_signer_initiator;	
@@ -1230,13 +1177,13 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->message_id_out = 0;
 	this->message_id_in = 0;
 	this->last_replied_message_id = -1;
-	this->secrets.pi_key = CHUNK_INITIALIZER;
-	this->secrets.pr_key = CHUNK_INITIALIZER;
 	this->crypter_initiator = NULL;
 	this->crypter_responder = NULL;
 	this->signer_initiator = NULL;
 	this->signer_responder = NULL;
 	this->prf = NULL;
+	this->prf_auth_i = NULL;
+	this->prf_auth_r = NULL;
 	this->child_prf = NULL;
 	this->init_config = NULL;
 	this->sa_config = NULL;

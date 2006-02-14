@@ -58,7 +58,7 @@
 #include <testcases/encryption_payload_test.h>
 #include <testcases/init_config_test.h>
 #include <testcases/sa_config_test.h>
-#include <testcases/child_proposal_test.h>
+#include <testcases/proposal_test.h>
 #include <testcases/rsa_test.h>
 #include <testcases/kernel_interface_test.h>
 
@@ -123,7 +123,7 @@ test_t hmac_signer_test2 = {test_hmac_sha1_signer, "HMAC SHA1 signer test"};
 test_t encryption_payload_test = {test_encryption_payload, "encryption payload test"};
 test_t init_config_test = {test_init_config, "init_config_t test"};
 test_t sa_config_test = {test_sa_config, "sa_config_t test"};
-test_t child_proposal_test = {test_child_proposal, "child_proposal_t test"};
+test_t proposal_test = {test_proposal, "proposal_t test"};
 test_t rsa_test = {test_rsa, "RSA private/public key test"};
 test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 
@@ -233,7 +233,7 @@ int main()
 		&encryption_payload_test,
 		&init_config_test,
 		&sa_config_test,
-		&child_proposal_test,
+		&proposal_test,
 		&rsa_test,
 		NULL
 	};
@@ -249,8 +249,8 @@ int main()
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
-	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&kernel_interface_test);
+	tester->perform_tests(tester,all_tests);
+	//tester->perform_test(tester,&kernel_interface_test);
 	
 	
 	tester->destroy(tester);

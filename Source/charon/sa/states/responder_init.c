@@ -80,6 +80,11 @@ struct private_responder_init_t {
 	chunk_t received_nonce;
 	
 	/**
+	 * Selected proposal
+	 */
+	proposal_t *proposal;
+	
+	/**
 	 * Logger used to log data .
 	 * 
 	 * Is logger of ike_sa!
@@ -153,7 +158,6 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	nonce_payload_t *nonce_request = NULL;
 	host_t *source, *destination;
 	init_config_t *init_config;
-	chunk_t shared_secret;
 	iterator_t *payloads;
 	message_t *response;
 	status_t status;
@@ -275,17 +279,15 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	{
 		response->destroy(response);
 		return status;
-	}
+	}	
 	
-	/* store shared secret  */
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Retrieve shared secret and store it");
-	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &shared_secret);
-	this->logger->log_chunk(this->logger, PRIVATE, "Shared Diffie Hellman secret", &shared_secret);
-
-	this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->received_nonce, this->sent_nonce);
-
-	/* not used anymore */
-	allocator_free_chunk(&shared_secret);
+	/* derive all the keys used in the IKE_SA */
+	status = this->ike_sa->build_transforms(this->ike_sa, this->proposal, this->diffie_hellman, this->received_nonce, this->sent_nonce);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
+		return DELETE_ME;
+	}
 	
 	/* message can now be sent (must not be destroyed) */
 	status = this->ike_sa->send_response(this->ike_sa, response);
@@ -318,47 +320,40 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
  */
 static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa_request, message_t *response)
 {
-	ike_proposal_t selected_proposal;
-	ike_proposal_t *ike_proposals;
+	proposal_t *proposal;
+	linked_list_t *proposal_list;
 	init_config_t *init_config;
 	sa_payload_t* sa_payload;
-	size_t proposal_count;
-	status_t status;
+	algorithm_t *algo;
 
 	init_config = this->ike_sa->get_init_config(this->ike_sa);
 
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Process received SA payload");
+	
 	/* get the list of suggested proposals */ 
-	status = sa_request->get_ike_proposals (sa_request, &ike_proposals,&proposal_count);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain any proposals. Deleting IKE_SA");
-		this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
-		return DELETE_ME;	
-	}
+	proposal_list = sa_request->get_proposals (sa_request);
 
-	status = init_config->select_proposal(init_config, ike_proposals,proposal_count,&(selected_proposal));
-	allocator_free(ike_proposals);
-	if (status != SUCCESS)
+	/* select proposal */
+	this->proposal = init_config->select_proposal(init_config, proposal_list);
+	while(proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
+	{
+		proposal->destroy(proposal);
+	}
+	proposal_list->destroy(proposal_list);
+	if (this->proposal == NULL)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain any acceptable proposals. Deleting IKE_SA");
 		this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
 		return DELETE_ME;
 	}
-	
-	this->dh_group_number = selected_proposal.diffie_hellman_group;
-	
-	status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,&(selected_proposal));	
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
-		return DELETE_ME;
-	}
+	/* get selected DH group to force policy, this is very restrictive!? */
+	this->proposal->get_algorithm(this->proposal, IKE, DIFFIE_HELLMAN_GROUP, &algo);
+	this->dh_group_number = algo->algorithm;
 	
 	this->logger->log(this->logger, CONTROL | LEVEL2, "SA Payload processed");
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Building SA payload");
-	sa_payload = sa_payload_create_from_ike_proposals(&(selected_proposal),1);	
+	sa_payload = sa_payload_create_from_proposal(this->proposal);	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "add SA payload to message");
 	response->add_payload(response,(payload_t *) sa_payload);
 	
@@ -383,6 +378,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 		this->logger->log(this->logger, AUDIT, "No diffie hellman group to select. Deleting IKE_SA");
 		return DELETE_ME;
 	}
+	
 	if (this->dh_group_number != group)
 	{
 		u_int16_t accepted_group;
@@ -510,6 +506,10 @@ static void destroy(private_responder_init_t *this)
 		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy diffie_hellman_t hellman object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
+	if (this->proposal)
+	{
+		this->proposal->destroy(this->proposal);
+	}
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy object");
 	allocator_free(this);
 }
@@ -526,6 +526,10 @@ static void destroy_after_state_change (private_responder_init_t *this)
 	{
 		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy diffie_hellman_t object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
+	}
+	if (this->proposal)
+	{
+		this->proposal->destroy(this->proposal);
 	}
 	
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy object");	
@@ -558,6 +562,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->received_nonce = CHUNK_INITIALIZER;
 	this->dh_group_number = MODP_UNDEFINED;
 	this->diffie_hellman = NULL;
+	this->proposal = NULL;
 
 	return &(this->public);
 }

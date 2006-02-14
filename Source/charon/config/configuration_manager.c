@@ -275,27 +275,32 @@ u_int8_t private_key_2[];
 static void load_default_config (private_configuration_manager_t *this)
 {
 	init_config_t *init_config_a, *init_config_b;
-	ike_proposal_t proposals;
-	child_proposal_t *child_proposal;
+	proposal_t *proposal;
 	sa_config_t *sa_config_a, *sa_config_b;
 	traffic_selector_t *ts;
 	
 	init_config_a = init_config_create("0.0.0.0","192.168.0.3",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	init_config_b = init_config_create("0.0.0.0","192.168.0.2",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	
-	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
+	/* IKE proposals for alice */
+	proposal = proposal_create(1);
+	proposal->add_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	POS;
+	proposal->add_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 16);
+	POS;
+	proposal->add_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 16);
+	proposal->add_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal->add_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	init_config_a->add_proposal(init_config_a, proposal);
 	
-	proposals.encryption_algorithm = ENCR_AES_CBC;
-	proposals.encryption_algorithm_key_length = 16;
-	proposals.integrity_algorithm = AUTH_HMAC_MD5_96;
-	proposals.integrity_algorithm_key_length = 16;
-	proposals.pseudo_random_function = PRF_HMAC_MD5;
-	proposals.pseudo_random_function_key_length = 16;
-	proposals.diffie_hellman_group = MODP_1024_BIT;
-
-	init_config_a->add_proposal(init_config_a,1,proposals);
-	init_config_b->add_proposal(init_config_b,1,proposals);
-								  
+	/* IKE proposals for bob */
+	proposal = proposal_create(1);
+	proposal->add_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 16);
+	proposal->add_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 16);
+	proposal->add_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	init_config_b->add_proposal(init_config_b, proposal);
+ 	
 	sa_config_a = sa_config_create(ID_IPV4_ADDR, "192.168.0.2", 
 								 ID_IPV4_ADDR, "192.168.0.3",
 								 RSA_DIGITAL_SIGNATURE,
@@ -305,46 +310,46 @@ static void load_default_config (private_configuration_manager_t *this)
 								 ID_IPV4_ADDR, "192.168.0.2",
 								 RSA_DIGITAL_SIGNATURE,
 								 30000);
-
+	
+	/* traffic selectors */
+	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
 	sa_config_a->add_traffic_selector_initiator(sa_config_a,ts);
 	sa_config_a->add_traffic_selector_responder(sa_config_a,ts);
-	
 	sa_config_b->add_traffic_selector_initiator(sa_config_b,ts);
 	sa_config_b->add_traffic_selector_responder(sa_config_b,ts);
-	
 	ts->destroy(ts);
 	
 	/* child proposal for alice */
-	child_proposal = child_proposal_create(1);
+	proposal = proposal_create(1);
 	
-	child_proposal->add_algorithm(child_proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
-	child_proposal->add_algorithm(child_proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	child_proposal->add_algorithm(child_proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	child_proposal->add_algorithm(child_proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	child_proposal->add_algorithm(child_proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+	proposal->add_algorithm(proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	proposal->add_algorithm(proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal->add_algorithm(proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal->add_algorithm(proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	proposal->add_algorithm(proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 
-	child_proposal->add_algorithm(child_proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	child_proposal->add_algorithm(child_proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 32);
-	child_proposal->add_algorithm(child_proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	child_proposal->add_algorithm(child_proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
-	child_proposal->add_algorithm(child_proposal, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	child_proposal->add_algorithm(child_proposal, ESP, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+	proposal->add_algorithm(proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 32);
+	proposal->add_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal->add_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	proposal->add_algorithm(proposal, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal->add_algorithm(proposal, ESP, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 	
-	sa_config_a->add_proposal(sa_config_a, child_proposal);
+	sa_config_a->add_proposal(sa_config_a, proposal);
 	
 	/* child proposal for bob */
-	child_proposal = child_proposal_create(1);
+	proposal = proposal_create(1);
 	
-	child_proposal->add_algorithm(child_proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
-	child_proposal->add_algorithm(child_proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	child_proposal->add_algorithm(child_proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+	proposal->add_algorithm(proposal, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	proposal->add_algorithm(proposal, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal->add_algorithm(proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 
-	child_proposal->add_algorithm(child_proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	child_proposal->add_algorithm(child_proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	child_proposal->add_algorithm(child_proposal, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	child_proposal->add_algorithm(child_proposal, ESP, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+	proposal->add_algorithm(proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal->add_algorithm(proposal, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal->add_algorithm(proposal, ESP, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 	
-	sa_config_b->add_proposal(sa_config_b, child_proposal);
+	sa_config_b->add_proposal(sa_config_b, proposal);
 	
 	
 	

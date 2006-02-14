@@ -531,6 +531,14 @@ static status_t get_shared_secret(private_diffie_hellman_t *this,chunk_t *secret
 }
 
 /**
+ * Implementation of diffie_hellman_t.get_dh_group.
+ */
+static diffie_hellman_group_t get_dh_group(private_diffie_hellman_t *this)
+{
+	return this->dh_group_number;
+}
+
+/**
  * Implementation of diffie_hellman_t.destroy.
  */
 static void destroy(private_diffie_hellman_t *this)
@@ -562,6 +570,7 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	this->public.set_other_public_value = (void (*)(diffie_hellman_t *, chunk_t )) set_other_public_value;
 	this->public.get_other_public_value = (status_t (*)(diffie_hellman_t *, chunk_t *)) get_other_public_value;
 	this->public.get_my_public_value = (void (*)(diffie_hellman_t *, chunk_t *)) get_my_public_value;
+	this->public.get_dh_group = (diffie_hellman_group_t (*)(diffie_hellman_t *)) get_dh_group;
 	this->public.destroy = (void (*)(diffie_hellman_t *)) destroy;
 	
 	/* private functions */

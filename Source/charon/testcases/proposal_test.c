@@ -1,7 +1,7 @@
 /**
- * @file child_proposal_test.c
+ * @file proposal_test.c
  *
- * @brief Tests for the child_proposal_t class.
+ * @brief Tests for the proposal_t class.
  *
  */
 
@@ -20,10 +20,10 @@
  * for more details.
  */
 
-#include "child_proposal_test.h"
+#include "proposal_test.h"
 
 #include <daemon.h>
-#include <config/child_proposal.h>
+#include <config/proposal.h>
 #include <utils/allocator.h>
 #include <utils/logger.h>
 
@@ -31,14 +31,14 @@
 /**
  * Described in header.
  */
-void test_child_proposal(protected_tester_t *tester)
+void test_proposal(protected_tester_t *tester)
 {
-	child_proposal_t *proposal1, *proposal2, *proposal3;
+	proposal_t *proposal1, *proposal2, *proposal3;
 	iterator_t *iterator;
 	algorithm_t *algo;
 	bool result;
 
-	proposal1 = child_proposal_create(1);
+	proposal1 = proposal_create(1);
 	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
 	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
 	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
@@ -48,7 +48,7 @@ void test_child_proposal(protected_tester_t *tester)
 	proposal1->add_algorithm(proposal1, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
 	proposal1->add_algorithm(proposal1, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
 	
-	proposal2 = child_proposal_create(2);
+	proposal2 = proposal_create(2);
 	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_3IDEA, 0);
 	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	proposal2->add_algorithm(proposal2, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);

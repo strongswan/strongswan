@@ -70,17 +70,14 @@ struct private_ike_sa_init_requested_t {
 	chunk_t received_nonce;
 	
 	/**
+	 * Selected proposal
+	 */
+	proposal_t *proposal;
+	
+	/**
 	 * Packet data of ike_sa_init request
 	 */
 	chunk_t ike_sa_init_request_data;
-	
-	/**
-	 * DH group priority used to get dh_group_number from configuration manager.
-	 * 
-	 * Is passed to the next state object of type INITATOR_INIT if the selected group number 
-	 * is not the same as in the peers selected proposal.
-	 */
-	u_int16_t dh_group_priority;
 	
 	/**
 	 * Assigned logger
@@ -329,7 +326,15 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	{
 		return status;
 	}
-
+	
+	/* derive all the keys used in the IKE_SA */
+	status = this->ike_sa->build_transforms(this->ike_sa, this->proposal, this->diffie_hellman, this->sent_nonce, this->received_nonce);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
+		return DELETE_ME;
+	}
+	
 	/*  build empty message */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &request);
 	
@@ -402,45 +407,39 @@ status_t process_nonce_payload (private_ike_sa_init_requested_t *this, nonce_pay
  */
 status_t process_sa_payload (private_ike_sa_init_requested_t *this, sa_payload_t *sa_payload)
 {
-	ike_proposal_t selected_proposal;
-	ike_proposal_t *ike_proposals;
+	proposal_t *proposal;
+	linked_list_t *proposal_list;
 	init_config_t *init_config;
-	size_t proposal_count;
-	status_t status;
 	
 	init_config = this->ike_sa->get_init_config(this->ike_sa);
 	
-	/* get the list of selected proposals */ 
-	status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals,&proposal_count);
-	if (status != SUCCESS)
+	/* get the list of selected proposals, the peer has to select only one proposal */
+	proposal_list = sa_payload->get_proposals (sa_payload);
+	if (proposal_list->get_count(proposal_list) != 1)
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT response did not contain any proposals. Deleting IKE_SA");
-		return DELETE_ME;	
-	}
-	/* the peer has to select only one proposal */
-	if (proposal_count != 1)
-	{
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT response contained more than one proposal. Deleting IKE_SA");
-		allocator_free(ike_proposals);
-		return DELETE_ME;							
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT response did not contain a single proposal. Deleting IKE_SA");
+		while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
+		{
+			proposal->destroy(proposal);
+		}
+		proposal_list->destroy(proposal_list);
+		return DELETE_ME;
 	}
 	
-	/* now let the configuration-manager check the selected proposals*/
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Check selected proposal");
-	status = init_config->select_proposal (init_config,ike_proposals,1,&selected_proposal);
-	allocator_free(ike_proposals);
-	if (status != SUCCESS)
+	/* we have to re-check if the others selection is valid */
+	this->proposal = init_config->select_proposal(init_config, proposal_list);
+	while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
+	{
+		proposal->destroy(proposal);
+	}
+	proposal_list->destroy(proposal_list);
+	
+	if (this->proposal == NULL)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT response contained selected proposal we did not offer. Deleting IKE_SA");
 		return DELETE_ME;
 	}
-				
-	status = this->ike_sa->create_transforms_from_proposal(this->ike_sa,&selected_proposal);	
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
-		return DELETE_ME;
-	}
+	
 	return SUCCESS;
 }
 
@@ -448,23 +447,8 @@ status_t process_sa_payload (private_ike_sa_init_requested_t *this, sa_payload_t
  * Implementation of private_ike_sa_init_requested_t.process_ke_payload.
  */
 status_t process_ke_payload (private_ike_sa_init_requested_t *this, ke_payload_t *ke_payload)
-{
-	chunk_t shared_secret;
-	status_t status;
-	
+{	
 	this->diffie_hellman->set_other_public_value(this->diffie_hellman, ke_payload->get_key_exchange_data(ke_payload));
-	
-	/* store shared secret  
-	 * status of dh object does not have to get checked cause other key is set
-	 */
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Retrieve shared secret and store it");
-	status = this->diffie_hellman->get_shared_secret(this->diffie_hellman, &shared_secret);		
-	this->logger->log_chunk(this->logger, PRIVATE, "Shared secret", &shared_secret);
-
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Going to derive all secrets from shared secret");	
-	this->ike_sa->compute_secrets(this->ike_sa,shared_secret,this->sent_nonce, this->received_nonce);
-	
-	allocator_free_chunk(&(shared_secret));
 	
 	return SUCCESS;
 }
@@ -528,7 +512,7 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 	/* get proposals form config, add to payload */
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	proposal_list = sa_config->get_proposals(sa_config);
-	sa_payload = sa_payload_create_from_child_proposal_list(proposal_list);
+	sa_payload = sa_payload_create_from_proposal_list(proposal_list);
 
 	/* TODO child sa stuff */
 
@@ -625,9 +609,25 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 		case INVALID_KE_PAYLOAD:
 		{
 			initiator_init_t *initiator_init_state;
-			u_int16_t new_dh_group_priority;
+			chunk_t notify_data;
+			diffie_hellman_group_t dh_group;
+			init_config_t *init_config;
 			
-			this->logger->log(this->logger, ERROR|LEVEL1, "Selected DH group is not the one in the proposal selected by the responder!");
+			notify_data = notify_payload->get_notification_data(notify_payload);
+			dh_group = ntohs(*((u_int16_t*)notify_data.ptr));
+			
+			this->logger->log(this->logger, ERROR|LEVEL1, "Peer wouldn't accept DH group, it requested %s!",
+							  mapping_find(diffie_hellman_group_m, dh_group));
+			/* check if we can accept this dh group */
+			init_config = this->ike_sa->get_init_config(this->ike_sa);
+			if (!init_config->check_dh_group(init_config, dh_group))
+			{
+				this->logger->log(this->logger, AUDIT, 
+								  "Peer does only accept DH group %s, which we do not accept! Aborting",
+								  mapping_find(diffie_hellman_group_m, dh_group));
+				return DELETE_ME;
+			}
+			
 			/* Going to change state back to initiator_init_t */
 			this->logger->log(this->logger, CONTROL|LEVEL2, "Create next state object");
 			initiator_init_state = initiator_init_create(this->ike_sa);
@@ -644,15 +644,13 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 
 			this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
 			this->logger->log(this->logger, CONTROL|LEVEL2, "Going to retry initialization of connection");
-			new_dh_group_priority = this->dh_group_priority + 1;
 			
 			this->public.state_interface.destroy(&(this->public.state_interface));
-			if (initiator_init_state->retry_initiate_connection (initiator_init_state,new_dh_group_priority) != SUCCESS)
+			if (initiator_init_state->retry_initiate_connection (initiator_init_state, dh_group) != SUCCESS)
 			{
 				return DELETE_ME;
 			}
 			return FAILED;
-
 		}
 		default:
 		{
@@ -676,7 +674,6 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 	}
 }
 
-
 /**
  * Implementation of state_t.get_state.
  */
@@ -690,14 +687,13 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
  */
 static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Going to destroy state of type ike_sa_init_requested_t after state change.");
-	
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy ike_sa_init_request_data");	
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy object itself");
-	allocator_free(this);	
+	if (this->proposal)
+	{
+		this->proposal->destroy(this->proposal);
+	}
+	allocator_free(this);
 }
 
 /**
@@ -705,24 +701,21 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
  */
 static void destroy(private_ike_sa_init_requested_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Going to destroy state of type ike_sa_init_requested_t");
-	
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy diffie hellman object");
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy sent nonce");	
 	allocator_free(this->sent_nonce.ptr);
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy received nonce");
 	allocator_free(this->received_nonce.ptr);
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy ike_sa_init_request_data");	
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy object itself");
+	if (this->proposal)
+	{
+		this->proposal->destroy(this->proposal);
+	}
 	allocator_free(this);
 }
 
 /* 
  * Described in header.
  */
-ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, u_int16_t dh_group_priority, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce,chunk_t ike_sa_init_request_data)
+ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce,chunk_t ike_sa_init_request_data)
 {
 	private_ike_sa_init_requested_t *this = allocator_alloc_thing(private_ike_sa_init_requested_t);
 	
@@ -748,9 +741,9 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->received_nonce = CHUNK_INITIALIZER;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	this->diffie_hellman = diffie_hellman;
+	this->proposal = NULL;
 	this->sent_nonce = sent_nonce;
 	this->ike_sa_init_request_data = ike_sa_init_request_data;
-	this->dh_group_priority = dh_group_priority;
 	
 	return &(this->public);
 }

@@ -32,97 +32,48 @@
 void test_init_config(protected_tester_t *tester)
 {
 	init_config_t *init_config = init_config_create("192.168.0.1","192.168.0.2",500,500);
-	ike_proposal_t prop1, prop2, prop3, prop4, selected_one;
-	ike_proposal_t *proposal_list;
-	size_t proposal_count;
+	proposal_t *prop1, *prop2, *prop3, *prop4, *selected_one;
+	linked_list_t *list;
 	status_t status;
 
-	prop1.encryption_algorithm = ENCR_AES_CBC;
-	prop1.encryption_algorithm_key_length = 20;
-	prop1.integrity_algorithm = AUTH_HMAC_SHA1_96;
-	prop1.integrity_algorithm_key_length = 20;
-	prop1.pseudo_random_function = PRF_HMAC_SHA1;
-	prop1.pseudo_random_function_key_length = 20;
-	prop1.diffie_hellman_group = MODP_2048_BIT;
+	prop1 = proposal_create(1);
+	prop1->add_algorithm(prop1, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
+	prop1->add_algorithm(prop1, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	prop1->add_algorithm(prop1, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 20);
+	prop1->add_algorithm(prop1, IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
 	
-	prop2 = prop1;
-	prop2.pseudo_random_function = PRF_HMAC_MD5;
-	prop2.diffie_hellman_group = MODP_1024_BIT;
+	prop2 = proposal_create(2);
+	prop2->add_algorithm(prop2, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
+	prop2->add_algorithm(prop2, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	prop2->add_algorithm(prop2, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 20);
+	prop2->add_algorithm(prop2, IKE, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
 	
-	prop3 = prop1;
-	prop3.encryption_algorithm = ENCR_DES;
-	prop3.diffie_hellman_group = MODP_768_BIT;
+	prop3 = proposal_create(3);
+	prop3->add_algorithm(prop3, IKE, ENCRYPTION_ALGORITHM, ENCR_DES, 20);
+	prop3->add_algorithm(prop3, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	prop3->add_algorithm(prop3, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 20);
+	prop3->add_algorithm(prop3, IKE, DIFFIE_HELLMAN_GROUP, MODP_768_BIT, 0);
 	
-	prop4 = prop1;
+	prop4 = proposal_create(4);
+	prop4->add_algorithm(prop4, IKE, ENCRYPTION_ALGORITHM, ENCR_3DES, 20);
+	prop4->add_algorithm(prop4, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	prop4->add_algorithm(prop4, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_TIGER, 20);
+	prop4->add_algorithm(prop4, IKE, DIFFIE_HELLMAN_GROUP, MODP_768_BIT, 0);
 	
-	prop4.encryption_algorithm = ENCR_3DES;
-	prop4.pseudo_random_function = PRF_HMAC_TIGER;
+	init_config->add_proposal(init_config, prop1);
+	init_config->add_proposal(init_config, prop2);
+	init_config->add_proposal(init_config, prop3);
+	init_config->add_proposal(init_config, prop4);
 	
-	init_config->add_proposal(init_config,1,prop1);
-	init_config->add_proposal(init_config,1,prop2);
-	init_config->add_proposal(init_config,3,prop3);
-	init_config->add_proposal(init_config,2,prop4);
+	list = init_config->get_proposals(init_config);
 	
-	proposal_count = init_config->get_proposals(init_config,&proposal_list);
-	
-	tester->assert_true(tester,(proposal_count == 4), "proposal count check ");
-	
-	tester->assert_true(tester,(proposal_list[0].encryption_algorithm == ENCR_AES_CBC), "encryption algorithm check 1");
-	tester->assert_true(tester,(proposal_list[0].pseudo_random_function == PRF_HMAC_MD5), "prf check 1");
+	tester->assert_true(tester,(list->get_count(list) == 4), "proposal count check ");
 
-	tester->assert_true(tester,(proposal_list[1].encryption_algorithm == ENCR_3DES), "encryption algorithm check 2");
-	tester->assert_true(tester,(proposal_list[1].pseudo_random_function == PRF_HMAC_TIGER), "prf check 2");
-	
-	tester->assert_true(tester,(proposal_list[2].encryption_algorithm == ENCR_AES_CBC), "encryption algorithm check 3");
-	tester->assert_true(tester,(proposal_list[2].pseudo_random_function == PRF_HMAC_SHA1), "prf check 3");
-
-	tester->assert_true(tester,(proposal_list[3].encryption_algorithm == ENCR_DES), "encryption algorithm check 4");
-	tester->assert_true(tester,(proposal_list[3].pseudo_random_function == PRF_HMAC_SHA1), "prf check 4");
-	
-	
 	
 	/* going to check proposals */
-	status = init_config->select_proposal(init_config,proposal_list,proposal_count,&selected_one);
-	tester->assert_true(tester,(status == SUCCESS), "select proposal call check 1");
-
-	tester->assert_true(tester,(selected_one.encryption_algorithm == ENCR_AES_CBC), "encryption algorithm check");
-	tester->assert_true(tester,(selected_one.pseudo_random_function == PRF_HMAC_MD5), "prf check");
-
-	proposal_list[0].encryption_algorithm = ENCR_DES_IV32;	
+	/* TODO test?*/
 	
-	status = init_config->select_proposal(init_config,proposal_list,proposal_count,&selected_one);
-	tester->assert_true(tester,(status == SUCCESS), "select proposal call check 2");
-
-	tester->assert_true(tester,(selected_one.encryption_algorithm == ENCR_3DES), "encryption algorithm check");
-	tester->assert_true(tester,(selected_one.pseudo_random_function == PRF_HMAC_TIGER), "prf check");
-
-	proposal_list[1].pseudo_random_function = PRF_AES128_CBC;
-	
-	status = init_config->select_proposal(init_config,proposal_list,proposal_count,&selected_one);
-	tester->assert_true(tester,(status == SUCCESS), "select proposal call check 3");
-
-	tester->assert_true(tester,(selected_one.encryption_algorithm == ENCR_AES_CBC), "encryption algorithm check");
-	tester->assert_true(tester,(selected_one.pseudo_random_function == PRF_HMAC_SHA1), "prf check");
-
-	proposal_list[2].pseudo_random_function = PRF_AES128_CBC;
-	
-	status = init_config->select_proposal(init_config,proposal_list,proposal_count,&selected_one);
-	tester->assert_true(tester,(status == SUCCESS), "select proposal call check 4");
-
-	tester->assert_true(tester,(selected_one.encryption_algorithm == ENCR_DES), "encryption algorithm check");
-	tester->assert_true(tester,(selected_one.pseudo_random_function == PRF_HMAC_SHA1), "prf check");
-
-	proposal_list[3].pseudo_random_function = PRF_AES128_CBC;
-	
-	status = init_config->select_proposal(init_config,proposal_list,proposal_count,&selected_one);
-	tester->assert_true(tester,(status == NOT_FOUND), "select proposal call check 5");
-
-	tester->assert_true(tester,(init_config->get_dh_group_number(init_config,1) == MODP_1024_BIT), "get DH group number call check 1");
-	tester->assert_true(tester,(init_config->get_dh_group_number(init_config,2) == MODP_2048_BIT), "get DH group number call check 2");
-	tester->assert_true(tester,(init_config->get_dh_group_number(init_config,3) == MODP_2048_BIT), "get DH group number call check 3");
-	tester->assert_true(tester,(init_config->get_dh_group_number(init_config,4) == MODP_768_BIT), "get DH group number call check 4");	
-	
-	allocator_free(proposal_list);
+	list->destroy(list);
 	
 	init_config->destroy(init_config);
 }

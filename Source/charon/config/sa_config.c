@@ -216,10 +216,10 @@ static linked_list_t *get_proposals(private_sa_config_t *this)
 /**
  * Implementation of sa_config_t.select_proposal
  */
-static child_proposal_t *select_proposal(private_sa_config_t *this, linked_list_t *proposals)
+static proposal_t *select_proposal(private_sa_config_t *this, linked_list_t *proposals)
 {
 	iterator_t *stored_iter, *supplied_iter;
-	child_proposal_t *stored, *supplied, *selected;
+	proposal_t *stored, *supplied, *selected;
 	
 	stored_iter = this->proposals->create_iterator(this->proposals, TRUE);
 	supplied_iter = proposals->create_iterator(proposals, TRUE);
@@ -272,7 +272,7 @@ static void add_traffic_selector_responder(private_sa_config_t *this, traffic_se
 /**
  * Implementation of sa_config_t.add_proposal
  */
-static void add_proposal(private_sa_config_t *this, child_proposal_t *proposal)
+static void add_proposal(private_sa_config_t *this, proposal_t *proposal)
 {
 	this->proposals->insert_last(this->proposals, (void*)proposal);
 }
@@ -282,7 +282,7 @@ static void add_proposal(private_sa_config_t *this, child_proposal_t *proposal)
  */
 static status_t destroy(private_sa_config_t *this)
 {	
-	child_proposal_t *proposal;
+	proposal_t *proposal;
 	traffic_selector_t *traffic_selector;
 	
 	
@@ -332,10 +332,10 @@ sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other
 	this->public.get_traffic_selectors_responder = (size_t(*)(sa_config_t*,traffic_selector_t**[]))get_traffic_selectors_responder;
 	this->public.select_traffic_selectors_responder = (size_t(*)(sa_config_t*,traffic_selector_t*[],size_t,traffic_selector_t**[]))select_traffic_selectors_responder;
 	this->public.get_proposals = (linked_list_t*(*)(sa_config_t*))get_proposals;
-	this->public.select_proposal = (child_proposal_t*(*)(sa_config_t*,linked_list_t*))select_proposal;
+	this->public.select_proposal = (proposal_t*(*)(sa_config_t*,linked_list_t*))select_proposal;
 	this->public.add_traffic_selector_initiator = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector_initiator;
 	this->public.add_traffic_selector_responder = (void(*)(sa_config_t*,traffic_selector_t*))add_traffic_selector_responder;
-	this->public.add_proposal = (void(*)(sa_config_t*,child_proposal_t*))add_proposal;
+	this->public.add_proposal = (void(*)(sa_config_t*,proposal_t*))add_proposal;
 	this->public.destroy = (void(*)(sa_config_t*))destroy;
 	
 	/* apply init values */

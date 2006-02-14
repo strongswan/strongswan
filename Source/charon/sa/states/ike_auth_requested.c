@@ -326,14 +326,14 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
  */
 static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payload_t *sa_payload)
 {
-	child_proposal_t *proposal, *proposal_tmp;
+	proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
 	child_sa_t *child_sa;
 	chunk_t seed;
 	prf_plus_t *prf_plus;
 	
 	/* get his selected proposal */
-	proposal_list = sa_payload->get_child_proposals(sa_payload);
+	proposal_list = sa_payload->get_proposals(sa_payload);
 	/* check count of proposals */
 	if (proposal_list->get_count(proposal_list) == 0)
 	{

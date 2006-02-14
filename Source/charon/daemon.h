@@ -97,7 +97,6 @@ struct daemon_t {
 	/**
 	 * A send_queue_t instance.
 	 */
-	 
 	send_queue_t *send_queue;
 	
 	/**

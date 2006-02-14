@@ -41,6 +41,8 @@
 #define AES_KS_LENGTH   120
 #define AES_RC_LENGTH    29
 
+#define AES_BLOCK_SIZE 16
+
 typedef struct private_aes_cbc_crypter_t private_aes_cbc_crypter_t;
 
 /**
@@ -63,47 +65,48 @@ struct private_aes_cbc_crypter_t {
 	/**
 	 * The number of cipher rounds.
 	 */
-    u_int32_t    aes_Nrnd;
-    
-    /**
-     * The encryption key schedule.
-     */
-    u_int32_t    aes_e_key[AES_KS_LENGTH];
-    /**
-     * The decryption key schedule.
-     */
-    u_int32_t    aes_d_key[AES_KS_LENGTH];   
-    
-    /**
-     * The number of columns in the cipher state.
-     */
-    u_int32_t    aes_Ncol;	
+	u_int32_t    aes_Nrnd;
+	
+	/**
+	* The encryption key schedule.
+	*/
+	u_int32_t    aes_e_key[AES_KS_LENGTH];
 
-    /**
-     * Blocksize of this AES cypher object.
-     */
-    u_int32_t    blocksize;	
-    
-    /**
-     * Decrypts a block.
-     * 
-     * No memory gets allocated.
-     * 
-     * @param this			calling object
-     * @param[in] in_blk	block to decrypt
-     * @param[out] out_blk	decrypted data are written to this location
-     */
- 	void (*decrypt_block) (const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);
- 
-    /**
-     * Encrypts a block.
-     * 
-     * No memory gets allocated.
-     * 
-     * @param this			calling object
-     * @param[in] in_blk	block to encrypt
-     * @param[out] out_blk	encrypted data are written to this location
-     */	
+	/**
+	* The decryption key schedule.
+	*/
+	u_int32_t    aes_d_key[AES_KS_LENGTH];
+	
+	/**
+	* The number of columns in the cipher state.
+	*/
+	u_int32_t    aes_Ncol;
+	
+	/**
+	* Key size of this AES cypher object.
+	*/
+	u_int32_t    key_size;
+	
+	/**
+	* Decrypts a block.
+	* 
+	* No memory gets allocated.
+	* 
+	* @param this			calling object
+	* @param[in] in_blk	block to decrypt
+	* @param[out] out_blk	decrypted data are written to this location
+	*/
+	void (*decrypt_block) (const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);
+	
+	/**
+	* Encrypts a block.
+	* 
+	* No memory gets allocated.
+	* 
+	* @param this			calling object
+	* @param[in] in_blk	block to encrypt
+	* @param[out] out_blk	encrypted data are written to this location
+	*/
 	void (*encrypt_block) (const private_aes_cbc_crypter_t *this, const unsigned char in_blk[], unsigned char out_blk[]);
 };
 
@@ -1464,7 +1467,15 @@ static status_t encrypt (private_aes_cbc_crypter_t *this, chunk_t data, chunk_t 
  */
 static size_t get_block_size (private_aes_cbc_crypter_t *this)
 {
-	return this->blocksize;
+	return AES_BLOCK_SIZE;
+}
+
+/**
+ * Implementation of crypter_t.get_key_size.
+ */
+static size_t get_key_size (private_aes_cbc_crypter_t *this)
+{
+	return this->key_size;
 }
 
 /**
@@ -1475,7 +1486,7 @@ static status_t set_key (private_aes_cbc_crypter_t *this, chunk_t key)
 	u_int32_t    *kf, *kt, rci, f = 0;
 	u_int8_t *in_key = key.ptr;
 	
-	if (key.len != this->blocksize)
+	if (key.len != this->key_size)
 	{
 		return INVALID_ARG;
 	}
@@ -1574,37 +1585,38 @@ static void destroy (private_aes_cbc_crypter_t *this)
 /*
  * Described in header
  */
-aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize)
+aes_cbc_crypter_t *aes_cbc_crypter_create(size_t key_size)
 {
 	private_aes_cbc_crypter_t *this = allocator_alloc_thing(private_aes_cbc_crypter_t);
-
+	
 	#if !defined(FIXED_TABLES)
-    if(!tab_gen) { gen_tabs(); tab_gen = 1; }
+	if(!tab_gen) { gen_tabs(); tab_gen = 1; }
 	#endif
-
-    switch(blocksize) {
-    case 32:        /* bytes */
-        this->aes_Ncol = 8;
-        this->aes_Nkey = 8;
-        this->blocksize = blocksize;
-        break;
-    case 24:        /* bytes */
-        this->aes_Ncol = 6;
-        this->aes_Nkey = 6;
-        this->blocksize = blocksize;
-        break;
-    case 16:        /* bytes */
-    default:
-        this->aes_Ncol = 4;
-        this->aes_Nkey = 4;
-        this->blocksize = 16;
-        break;
-    }
-
+	
+	this->key_size = key_size;
+	switch(key_size) {
+	case 32:        /* bytes */
+		this->aes_Ncol = 8;
+		this->aes_Nkey = 8;
+		break;
+	case 24:        /* bytes */
+		this->aes_Ncol = 6;
+		this->aes_Nkey = 6;
+		break;
+	case 16:        /* bytes */
+		this->aes_Ncol = 4;
+		this->aes_Nkey = 4;
+		break;
+	default:
+		allocator_free(this);
+		return NULL;
+	}
+	
 	/* functions of crypter_t interface */	
 	this->public.crypter_interface.encrypt = (status_t (*) (crypter_t *, chunk_t,chunk_t, chunk_t *)) encrypt;
 	this->public.crypter_interface.decrypt = (status_t (*) (crypter_t *, chunk_t , chunk_t, chunk_t *)) decrypt;
 	this->public.crypter_interface.get_block_size = (size_t (*) (crypter_t *)) get_block_size;
+	this->public.crypter_interface.get_key_size = (size_t (*) (crypter_t *)) get_key_size;
 	this->public.crypter_interface.set_key = (status_t (*) (crypter_t *,chunk_t)) set_key;
 	this->public.crypter_interface.destroy = (void (*) (crypter_t *)) destroy;
 	

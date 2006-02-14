@@ -32,7 +32,7 @@
 #include <transforms/signers/signer.h>
 #include <transforms/diffie_hellman.h>
 #include <config/traffic_selector.h>
-#include <config/child_proposal.h>
+#include <config/proposal.h>
 
 
 
@@ -174,7 +174,7 @@ struct sa_config_t {
 	 * @param proposals				list from from wich proposals are selected
 	 * @return						selected proposal, or NULL if nothing matches
 	 */
-	child_proposal_t *(*select_proposal) (sa_config_t *this, linked_list_t *proposals);
+	proposal_t *(*select_proposal) (sa_config_t *this, linked_list_t *proposals);
 	
 	/**
 	 * @brief Add a traffic selector to the list for initiator.
@@ -211,7 +211,7 @@ struct sa_config_t {
 	 * @param this					calling object
 	 * @param proposal				proposal to add
 	 */
-	void (*add_proposal) (sa_config_t *this, child_proposal_t *proposal);
+	void (*add_proposal) (sa_config_t *this, proposal_t *proposal);
 	
 	/**
 	 * @brief Destroys the config object

@@ -49,13 +49,13 @@ mapping_t encryption_algorithm_m[] = {
 /* 
  * Described in header.
  */
-crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm,size_t blocksize)
+crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t key_size)
 {
 	switch (encryption_algorithm)
 	{
 		case ENCR_AES_CBC:
 		{
-			return (crypter_t*)aes_cbc_crypter_create(blocksize);
+			return (crypter_t*)aes_cbc_crypter_create(key_size);
 		}
 		default:
 			return NULL;

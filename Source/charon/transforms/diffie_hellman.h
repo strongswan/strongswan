@@ -117,6 +117,14 @@ struct diffie_hellman_t {
 	 * @param[out] 				public_value public value of caller is stored at this location
 	 */
 	void (*get_my_public_value) (diffie_hellman_t *this, chunk_t *public_value);
+	
+	/**
+	 * @brief Get the DH group used.
+	 * 
+	 * @param this 				calling diffie_hellman_t object
+	 * @return					DH group set in construction
+	 */
+	diffie_hellman_group_t (*get_dh_group) (diffie_hellman_t *this);
 
 	/**
 	 * @brief Destroys an diffie_hellman_t object.

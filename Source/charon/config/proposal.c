@@ -1,7 +1,7 @@
 /**
- * @file child_proposal.c
+ * @file proposal.c
  * 
- * @brief Implementation of child_proposal_t.
+ * @brief Implementation of proposal_t.
  * 
  */
 
@@ -20,7 +20,7 @@
  * for more details.
  */
 
-#include "child_proposal.h"
+#include "proposal.h"
 
 #include <utils/linked_list.h>
 #include <utils/allocator.h>
@@ -105,17 +105,17 @@ struct protocol_proposal_t {
 };
 
 
-typedef struct private_child_proposal_t private_child_proposal_t;
+typedef struct private_proposal_t private_proposal_t;
 
 /**
- * Private data of an child_proposal_t object
+ * Private data of an proposal_t object
  */
-struct private_child_proposal_t {
+struct private_proposal_t {
 
 	/**
 	 * Public part
 	 */
-	child_proposal_t public;
+	proposal_t public;
 	
 	/**
 	 * number of this proposal, as used in the payload
@@ -131,7 +131,7 @@ struct private_child_proposal_t {
 /**
  * Look up a protocol_proposal, or create one if necessary...
  */
-static protocol_proposal_t *get_protocol_proposal(private_child_proposal_t *this, protocol_id_t proto, bool create)
+static protocol_proposal_t *get_protocol_proposal(private_proposal_t *this, protocol_id_t proto, bool create)
 {
 	protocol_proposal_t *proto_proposal = NULL, *current_proto_proposal;;
 	iterator_t *iterator;
@@ -187,9 +187,9 @@ static void add_algo(linked_list_t *list, u_int8_t algo, size_t key_size)
 }
 
 /**
- * Implements child_proposal_t.add_algorithm
+ * Implements proposal_t.add_algorithm
  */
-static void add_algorithm(private_child_proposal_t *this, protocol_id_t proto, transform_type_t type, u_int16_t algo, size_t key_size)
+static void add_algorithm(private_proposal_t *this, protocol_id_t proto, transform_type_t type, u_int16_t algo, size_t key_size)
 {
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, TRUE);
 	
@@ -216,9 +216,9 @@ static void add_algorithm(private_child_proposal_t *this, protocol_id_t proto, t
 }
 
 /**
- * Implements child_proposal_t.get_algorithm.
+ * Implements proposal_t.get_algorithm.
  */
-static bool get_algorithm(private_child_proposal_t *this, protocol_id_t proto, transform_type_t type, algorithm_t** algo)
+static bool get_algorithm(private_proposal_t *this, protocol_id_t proto, transform_type_t type, algorithm_t** algo)
 {
 	linked_list_t * list;
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
@@ -255,9 +255,9 @@ static bool get_algorithm(private_child_proposal_t *this, protocol_id_t proto, t
 }
 
 /**
- * Implements child_proposal_t.create_algorithm_iterator.
+ * Implements proposal_t.create_algorithm_iterator.
  */
-static iterator_t *create_algorithm_iterator(private_child_proposal_t *this, protocol_id_t proto, transform_type_t type)
+static iterator_t *create_algorithm_iterator(private_proposal_t *this, protocol_id_t proto, transform_type_t type)
 {
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
 	if (proto_proposal == NULL)
@@ -328,11 +328,11 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, 
 }
 
 /**
- * Implements child_proposal_t.select.
+ * Implements proposal_t.select.
  */
-static child_proposal_t *select_proposal(private_child_proposal_t *this, private_child_proposal_t *other)
+static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t *other)
 {
-	child_proposal_t *selected;
+	proposal_t *selected;
 	u_int16_t algo;
 	size_t key_size;
 	iterator_t *iterator;
@@ -353,7 +353,7 @@ static child_proposal_t *select_proposal(private_child_proposal_t *this, private
 		return NULL;
 	}
 	
-	selected = child_proposal_create(this->number);
+	selected = proposal_create(this->number);
 	
 	/* iterate over supplied proposals */
 	iterator = other->protocol_proposals->create_iterator(other->protocol_proposals, TRUE);
@@ -448,17 +448,17 @@ static child_proposal_t *select_proposal(private_child_proposal_t *this, private
 }
 
 /**
- * Implements child_proposal_t.get_number.
+ * Implements proposal_t.get_number.
  */
-static u_int8_t get_number(private_child_proposal_t *this)
+static u_int8_t get_number(private_proposal_t *this)
 {
 	return this->number;
 }
 
 /**
- * Implements child_proposal_t.get_protocols.
+ * Implements proposal_t.get_protocols.
  */
-static void get_protocols(private_child_proposal_t *this, protocol_id_t ids[2])
+static void get_protocols(private_proposal_t *this, protocol_id_t ids[2])
 {
 	iterator_t *iterator = this->protocol_proposals->create_iterator(this->protocol_proposals, TRUE);
 	u_int i = 0;
@@ -480,9 +480,9 @@ static void get_protocols(private_child_proposal_t *this, protocol_id_t ids[2])
 }
 
 /**
- * Implements child_proposal_t.set_spi.
+ * Implements proposal_t.set_spi.
  */
-static void set_spi(private_child_proposal_t *this, protocol_id_t proto, u_int64_t spi)
+static void set_spi(private_proposal_t *this, protocol_id_t proto, u_int64_t spi)
 {
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
 	if (proto_proposal)
@@ -500,9 +500,9 @@ static void set_spi(private_child_proposal_t *this, protocol_id_t proto, u_int64
 }
 
 /**
- * Implements child_proposal_t.get_spi.
+ * Implements proposal_t.get_spi.
  */
-static u_int64_t get_spi(private_child_proposal_t *this, protocol_id_t proto)
+static u_int64_t get_spi(private_proposal_t *this, protocol_id_t proto)
 {
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
 	if (proto_proposal)
@@ -535,9 +535,9 @@ static void free_algo_list(linked_list_t *list)
 }
 
 /**
- * Implements child_proposal_t.destroy.
+ * Implements proposal_t.destroy.
  */
-static void destroy(private_child_proposal_t *this)
+static void destroy(private_proposal_t *this)
 {
 	while(this->protocol_proposals->get_count(this->protocol_proposals) > 0)
 	{
@@ -561,19 +561,19 @@ static void destroy(private_child_proposal_t *this)
 /*
  * Describtion in header-file
  */
-child_proposal_t *child_proposal_create(u_int8_t number)
+proposal_t *proposal_create(u_int8_t number)
 {
-	private_child_proposal_t *this = allocator_alloc_thing(private_child_proposal_t);
+	private_proposal_t *this = allocator_alloc_thing(private_proposal_t);
 	
-	this->public.add_algorithm = (void (*)(child_proposal_t*,protocol_id_t,transform_type_t,u_int16_t,size_t))add_algorithm;
-	this->public.create_algorithm_iterator = (iterator_t* (*)(child_proposal_t*,protocol_id_t,transform_type_t))create_algorithm_iterator;
-	this->public.get_algorithm = (bool (*)(child_proposal_t*,protocol_id_t,transform_type_t,algorithm_t**))get_algorithm;
-	this->public.select = (child_proposal_t* (*)(child_proposal_t*,child_proposal_t*))select_proposal;
-	this->public.get_number = (u_int8_t (*)(child_proposal_t*))get_number;
-	this->public.get_protocols = (void(*)(child_proposal_t *this, protocol_id_t ids[2]))get_protocols;
-	this->public.set_spi = (void(*)(child_proposal_t*,protocol_id_t,u_int64_t spi))set_spi;
-	this->public.get_spi = (u_int64_t(*)(child_proposal_t*,protocol_id_t))get_spi;
-	this->public.destroy = (void(*)(child_proposal_t*))destroy;
+	this->public.add_algorithm = (void (*)(proposal_t*,protocol_id_t,transform_type_t,u_int16_t,size_t))add_algorithm;
+	this->public.create_algorithm_iterator = (iterator_t* (*)(proposal_t*,protocol_id_t,transform_type_t))create_algorithm_iterator;
+	this->public.get_algorithm = (bool (*)(proposal_t*,protocol_id_t,transform_type_t,algorithm_t**))get_algorithm;
+	this->public.select = (proposal_t* (*)(proposal_t*,proposal_t*))select_proposal;
+	this->public.get_number = (u_int8_t (*)(proposal_t*))get_number;
+	this->public.get_protocols = (void(*)(proposal_t *this, protocol_id_t ids[2]))get_protocols;
+	this->public.set_spi = (void(*)(proposal_t*,protocol_id_t,u_int64_t spi))set_spi;
+	this->public.get_spi = (u_int64_t(*)(proposal_t*,protocol_id_t))get_spi;
+	this->public.destroy = (void(*)(proposal_t*))destroy;
 	
 	/* init private members*/
 	this->number = number;

@@ -257,9 +257,9 @@ static void add_proposal_substructure (private_sa_payload_t *this,proposal_subst
 }
 
 /**
- * Implementation of sa_payload_t.add_child_proposal.
+ * Implementation of sa_payload_t.add_proposal.
  */
-static void add_child_proposal(private_sa_payload_t *this, child_proposal_t *proposal)
+static void add_proposal(private_sa_payload_t *this, proposal_t *proposal)
 {
 	proposal_substructure_t *substructure;
 	protocol_id_t proto[2];
@@ -271,161 +271,26 @@ static void add_child_proposal(private_sa_payload_t *this, child_proposal_t *pro
 	{
 		if (proto[i] != UNDEFINED_PROTOCOL_ID)
 		{
-			substructure = proposal_substructure_create_from_child_proposal(proposal, proto[i]);
+			substructure = proposal_substructure_create_from_proposal(proposal, proto[i]);
 			add_proposal_substructure(this, substructure);
 		}
 	}
 }
 
-
 /**
- * Implementation of sa_payload_t.get_ike_proposals.
+ * Implementation of sa_payload_t.get_proposals.
  */
-static status_t get_ike_proposals (private_sa_payload_t *this,ike_proposal_t ** proposals, size_t *proposal_count)
-{
-	int found_ike_proposals = 0;
-	int current_proposal_number = 0;
-	iterator_t *iterator;
-	ike_proposal_t *tmp_proposals;
-	
-	iterator = this->proposals->create_iterator(this->proposals,TRUE);
-	
-	/* first find out the number of ike proposals and check their number of transforms and 
-	 * if the SPI is empty!*/
-	while (iterator->has_next(iterator))
-	{
-		proposal_substructure_t *current_proposal;
-		iterator->current(iterator,(void **)&(current_proposal));
-		if (current_proposal->get_protocol_id(current_proposal) == IKE)
-		{
-			/* a ike proposal consists of an empty spi*/
-			if (current_proposal->get_spi_size(current_proposal) != 0)
-		    {
-		    	iterator->destroy(iterator);
-		    	return FAILED;
-		    }
-			
-			found_ike_proposals++;
-		}
-	}
-	iterator->reset(iterator);
-	
-	if (found_ike_proposals == 0)
-	{
-		iterator->destroy(iterator);
-		return NOT_FOUND;
-	}
-	
-	/* allocate memory to hold each proposal as ike_proposal_t */
-	
-	tmp_proposals = allocator_alloc(found_ike_proposals * sizeof(ike_proposal_t));
-	
-	/* create from each proposal_substructure a ike_proposal_t data area*/
-	while (iterator->has_next(iterator))
-	{
-		proposal_substructure_t *current_proposal;
-		iterator->current(iterator,(void **)&(current_proposal));
-		if (current_proposal->get_protocol_id(current_proposal) == IKE)
-		{
-			bool encryption_algorithm_found = FALSE;
-			bool integrity_algorithm_found = FALSE;
-			bool pseudo_random_function_found = FALSE;
-			bool diffie_hellman_group_found = FALSE;
-			status_t status;
-			iterator_t *transforms;
-			
-			transforms = current_proposal->create_transform_substructure_iterator(current_proposal,TRUE);
-			while (transforms->has_next(transforms))
-			{
-				transform_substructure_t *current_transform;
-				transforms->current(transforms,(void **)&(current_transform));
-				
-				switch (current_transform->get_transform_type(current_transform))
-				{
-					case ENCRYPTION_ALGORITHM:
-					{
-						tmp_proposals[current_proposal_number].encryption_algorithm = current_transform->get_transform_id(current_transform);
-						status = current_transform->get_key_length(current_transform,&(tmp_proposals[current_proposal_number].encryption_algorithm_key_length));
-						if (status == SUCCESS)
-						{
-							encryption_algorithm_found = TRUE;
-						}
-						break;
-					}
-					case INTEGRITY_ALGORITHM:
-					{
-						tmp_proposals[current_proposal_number].integrity_algorithm = current_transform->get_transform_id(current_transform);
-						status = current_transform->get_key_length(current_transform,&(tmp_proposals[current_proposal_number].integrity_algorithm_key_length));
-						if (status == SUCCESS)
-						{
-							integrity_algorithm_found = TRUE;
-						}
-						break;
-					}
-					case PSEUDO_RANDOM_FUNCTION:
-					{
-						tmp_proposals[current_proposal_number].pseudo_random_function = current_transform->get_transform_id(current_transform);
-						status = current_transform->get_key_length(current_transform,&(tmp_proposals[current_proposal_number].pseudo_random_function_key_length));
-						if (status == SUCCESS)
-						{
-							pseudo_random_function_found = TRUE;
-						}
-						break;
-					}
-					case DIFFIE_HELLMAN_GROUP:
-					{
-						tmp_proposals[current_proposal_number].diffie_hellman_group = current_transform->get_transform_id(current_transform);
-						diffie_hellman_group_found = TRUE;
-						break;
-					}
-					default:
-					{
-						/* not a transform of an ike proposal. Break here */
-						break;
-					}
-				}
-				
-			}
-
-			transforms->destroy(transforms);
-			
-			if ((!encryption_algorithm_found) ||
-				(!integrity_algorithm_found) ||
-				(!pseudo_random_function_found) ||
-				(!diffie_hellman_group_found))
-			{
-				/* one of needed transforms could not be found */
-				iterator->reset(iterator);
-				allocator_free(tmp_proposals);
-				return FAILED;
-			}
-			
-			current_proposal_number++;
-		}
-	}
-
-	iterator->destroy(iterator);	
-	
-	*proposals = tmp_proposals;
-	*proposal_count = found_ike_proposals;
-
-	return SUCCESS;
-}
-
-/**
- * Implementation of sa_payload_t.get_child_proposals.
- */
-static linked_list_t *get_child_proposals(private_sa_payload_t *this)
+static linked_list_t *get_proposals(private_sa_payload_t *this)
 {
 	int proposal_struct_number = 0;
 	iterator_t *iterator;
-	child_proposal_t *proposal;
+	proposal_t *proposal;
 	linked_list_t *proposal_list;
 	
 	/* this list will hold our proposals */
 	proposal_list = linked_list_create();
 	
-	/* iterate over structures, one OR MORE structures will result in a child_proposal */
+	/* iterate over structures, one OR MORE structures will result in a proposal */
 	iterator = this->proposals->create_iterator(this->proposals,TRUE);
 	while (iterator->has_next(iterator))
 	{
@@ -436,11 +301,11 @@ static linked_list_t *get_child_proposals(private_sa_payload_t *this)
 		{
 			/* here starts a new proposal, create a new one and add it to the list */
 			proposal_struct_number = proposal_struct->get_proposal_number(proposal_struct);
-			proposal = child_proposal_create(proposal_struct_number);
+			proposal = proposal_create(proposal_struct_number);
 			proposal_list->insert_last(proposal_list, proposal);
 		}
 		/* proposal_substructure_t does the dirty work and builds up the proposal */
-		proposal_struct->add_to_child_proposal(proposal_struct, proposal);
+		proposal_struct->add_to_proposal(proposal_struct, proposal);
 	}
 	iterator->destroy(iterator);
 	return proposal_list;
@@ -484,8 +349,7 @@ sa_payload_t *sa_payload_create()
 	/* public functions */
 	this->public.create_proposal_substructure_iterator = (iterator_t* (*) (sa_payload_t *,bool)) create_proposal_substructure_iterator;
 	this->public.add_proposal_substructure = (void (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
-	this->public.get_ike_proposals = (status_t (*) (sa_payload_t *, ike_proposal_t **, size_t *)) get_ike_proposals;
-	this->public.get_child_proposals = (linked_list_t* (*) (sa_payload_t *)) get_child_proposals;
+	this->public.get_proposals = (linked_list_t* (*) (sa_payload_t *)) get_proposals;
 	this->public.destroy = (void (*) (sa_payload_t *)) destroy;
 	
 	/* private functions */
@@ -503,52 +367,10 @@ sa_payload_t *sa_payload_create()
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create_from_ike_proposals(ike_proposal_t *proposals, size_t proposal_count)
-{
-	int i;
-	sa_payload_t *sa_payload= sa_payload_create();
-	
-	for (i = 0; i < proposal_count; i++)
-	{
-		proposal_substructure_t *proposal_substructure;
-		transform_substructure_t *encryption_algorithm;
-		transform_substructure_t *integrity_algorithm;
-		transform_substructure_t *pseudo_random_function;
-		transform_substructure_t *diffie_hellman_group;
-		
-		/* create proposal substructure */
-		proposal_substructure = proposal_substructure_create();
-		proposal_substructure->set_protocol_id(proposal_substructure,IKE);
-		proposal_substructure->set_proposal_number(proposal_substructure,(i + 1));
-		
-
-		/* create transform substructures to hold each specific transform for an ike proposal */
-		encryption_algorithm = transform_substructure_create_type(ENCRYPTION_ALGORITHM,proposals[i].encryption_algorithm,proposals[i].encryption_algorithm_key_length);
-		proposal_substructure->add_transform_substructure(proposal_substructure,encryption_algorithm);
-		
-		pseudo_random_function = transform_substructure_create_type(PSEUDO_RANDOM_FUNCTION,proposals[i].pseudo_random_function,proposals[i].pseudo_random_function_key_length);
-		proposal_substructure->add_transform_substructure(proposal_substructure,pseudo_random_function);
-
-		integrity_algorithm = transform_substructure_create_type(INTEGRITY_ALGORITHM,proposals[i].integrity_algorithm,proposals[i].integrity_algorithm_key_length);
-		proposal_substructure->add_transform_substructure(proposal_substructure,integrity_algorithm);
-
-		diffie_hellman_group = transform_substructure_create_type(DIFFIE_HELLMAN_GROUP,proposals[i].diffie_hellman_group,0);
-		proposal_substructure->add_transform_substructure(proposal_substructure,diffie_hellman_group);
-		
-		/* add proposal to sa payload */
-		sa_payload->add_proposal_substructure(sa_payload,proposal_substructure);
-	}
-	
-	return sa_payload;
-}
-
-/*
- * Described in header.
- */
-sa_payload_t *sa_payload_create_from_child_proposal_list(linked_list_t *proposals)
+sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals)
 {
 	iterator_t *iterator;
-	child_proposal_t *proposal;
+	proposal_t *proposal;
 	sa_payload_t *sa_payload = sa_payload_create();
 	
 	/* add every payload from the list */
@@ -556,7 +378,7 @@ sa_payload_t *sa_payload_create_from_child_proposal_list(linked_list_t *proposal
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&proposal);
-		add_child_proposal((private_sa_payload_t*)sa_payload, proposal);
+		add_proposal((private_sa_payload_t*)sa_payload, proposal);
 	}
 	iterator->destroy(iterator);
 	
@@ -566,11 +388,11 @@ sa_payload_t *sa_payload_create_from_child_proposal_list(linked_list_t *proposal
 /*
  * Described in header.
  */
-sa_payload_t *sa_payload_create_from_child_proposal(child_proposal_t *proposal)
+sa_payload_t *sa_payload_create_from_proposal(proposal_t *proposal)
 {
 	sa_payload_t *sa_payload = sa_payload_create();
 	
-	add_child_proposal((private_sa_payload_t*)sa_payload, proposal);
+	add_proposal((private_sa_payload_t*)sa_payload, proposal);
 	
 	return sa_payload;
 }

@@ -180,8 +180,22 @@ static status_t verify(private_notify_payload_t *this)
 		return FAILED;
 	}
 	
-	/* notify message types and data is not getting checked in here */
+	/* TODO: Check all kinds of notify */
 	
+	if (this->notify_message_type == INVALID_KE_PAYLOAD)
+	{
+		/* check notification data */
+		diffie_hellman_group_t dh_group;
+		if (this->notification_data.len != 2)
+		{
+			return FAILED;
+		}
+		dh_group = ntohs(*((u_int16_t*)this->notification_data.ptr));
+		if (dh_group < MODP_1024_BIT || dh_group > MODP_8192_BIT)
+		{
+			return FAILED;
+		}
+	}
 	return SUCCESS;
 }
 

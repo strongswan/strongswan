@@ -48,14 +48,14 @@ struct aes_cbc_crypter_t {
 /**
  * @brief Constructor to create aes_cbc_crypter_t objects.
  * 
- * If an unvalid blocksize is specified, 16 is selected.
+ * Supported key sizes are: 16, 24 or 32. 
  * 
- * @param blocksize		block size of AES crypter
- * 						(16, 24 or 32 are supported)
- * 						Default size is set to 16.
- * @return				aes_cbc_crypter_t object
+ * @param key_size		key size in bytes
+ * @return				
+ * 						- aes_cbc_crypter_t object
+ * 						- NULL if key size not supported
  */
-aes_cbc_crypter_t *aes_cbc_crypter_create(size_t blocksize);
+aes_cbc_crypter_t *aes_cbc_crypter_create(size_t key_size);
 
 
 #endif //_AES_CRYPTER_H_

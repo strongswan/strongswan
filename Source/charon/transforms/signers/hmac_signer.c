@@ -109,6 +109,7 @@ static bool verify_signature (private_hmac_signer_t *this, chunk_t data, chunk_t
  */
 static size_t get_key_size (private_hmac_signer_t *this)
 {
+	/* for HMAC signer, IKEv2 uses block size as key size */
 	return this->hmac_prf->get_block_size(this->hmac_prf);
 }
 

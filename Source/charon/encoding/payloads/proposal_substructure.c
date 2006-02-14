@@ -406,9 +406,9 @@ static size_t get_spi_size (private_proposal_substructure_t *this)
 }
 
 /**
- * Implementation of proposal_substructure_t.add_to_child_proposal.
+ * Implementation of proposal_substructure_t.add_to_proposal.
  */
-void add_to_child_proposal(private_proposal_substructure_t *this, child_proposal_t *proposal)
+void add_to_proposal(private_proposal_substructure_t *this, proposal_t *proposal)
 {
 	iterator_t *iterator = this->transforms->create_iterator(this->transforms, TRUE);
 	
@@ -525,7 +525,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
 	this->public.get_info_for_transform_type = 	(status_t (*) (proposal_substructure_t *,transform_type_t,u_int16_t *, u_int16_t *))get_info_for_transform_type;
 	this->public.set_is_last_proposal = (void (*) (proposal_substructure_t *,bool)) set_is_last_proposal;
-	this->public.add_to_child_proposal = (void (*) (proposal_substructure_t*,child_proposal_t*))add_to_child_proposal;
+	this->public.add_to_proposal = (void (*) (proposal_substructure_t*,proposal_t*))add_to_proposal;
 	this->public.set_spi = (void (*) (proposal_substructure_t *,chunk_t))set_spi;
 	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
 	this->public.get_transform_count = (size_t (*) (proposal_substructure_t *)) get_transform_count;
@@ -554,7 +554,7 @@ proposal_substructure_t *proposal_substructure_create()
 /*
  * Described in header.
  */
-proposal_substructure_t *proposal_substructure_create_from_child_proposal(child_proposal_t *proposal, protocol_id_t proto)
+proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal, protocol_id_t proto)
 {
 	private_proposal_substructure_t *this = (private_proposal_substructure_t*)proposal_substructure_create();
 	iterator_t *iterator;

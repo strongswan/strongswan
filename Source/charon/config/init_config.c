@@ -87,108 +87,111 @@ static host_t * get_other_host_clone (private_init_config_t *this)
 }
 
 /**
- * Implementation of init_config_t.get_dh_group_number.
- */
-static diffie_hellman_group_t get_dh_group_number (private_init_config_t *this,size_t priority)
-{
-	ike_proposal_t *ike_proposal;
-	
-	if ((this->proposals->get_count(this->proposals) == 0) || (this->proposals->get_count(this->proposals) < priority))
-	{
-		return MODP_UNDEFINED;
-	}
-	
-	this->proposals->get_at_position(this->proposals,(priority -1),(void **) &ike_proposal);
-	
-	return (ike_proposal->diffie_hellman_group);
-}
-
-/**
  * Implementation of init_config_t.get_proposals.
  */
-static size_t get_proposals (private_init_config_t *this,ike_proposal_t **proposals)
+static linked_list_t* get_proposals (private_init_config_t *this)
 {
-	iterator_t *iterator;
-	ike_proposal_t *current_proposal;
-	int i = 0;
-	ike_proposal_t *proposal_array;
-	
-	proposal_array = allocator_alloc(this->proposals->get_count(this->proposals) * sizeof(ike_proposal_t));
-		
-	iterator = this->proposals->create_iterator(this->proposals,TRUE);
-	
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator,(void **) &current_proposal);
-		proposal_array[i] = (*current_proposal);
-		i++;
-	}
-	iterator->destroy(iterator);
-	
-	*proposals = proposal_array;
-	return this->proposals->get_count(this->proposals);
+	return this->proposals;
 }
 	
 /**
  * Implementation of init_config_t.select_proposal.
  */
-static status_t select_proposal (private_init_config_t *this, ike_proposal_t *proposals, size_t proposal_count, ike_proposal_t *selected_proposal)
+static proposal_t *select_proposal(private_init_config_t *this, linked_list_t *proposals)
 {
-	iterator_t * my_iterator;
-	int i;
-	ike_proposal_t *my_current_proposal;
-
-	my_iterator = this->proposals->create_iterator(this->proposals,TRUE);
-
+	iterator_t *stored_iter, *supplied_iter;
+	proposal_t *stored, *supplied, *selected;
 	
-	for (i = 0; i < proposal_count; i++)
+	stored_iter = this->proposals->create_iterator(this->proposals, TRUE);
+	supplied_iter = proposals->create_iterator(proposals, TRUE);
+	
+	/* compare all stored proposals with all supplied. Stored ones are preferred. */
+	while (stored_iter->has_next(stored_iter))
 	{
-		my_iterator->reset(my_iterator);
-		while (my_iterator->has_next(my_iterator))
+		supplied_iter->reset(supplied_iter);
+		stored_iter->current(stored_iter, (void**)&stored);
+
+		while (supplied_iter->has_next(supplied_iter))
 		{
-			my_iterator->current(my_iterator,(void **) &my_current_proposal);
-		
-			/* memcmp doesn't work here */
-			if ((proposals[i].encryption_algorithm == my_current_proposal->encryption_algorithm) &&
-				(proposals[i].encryption_algorithm_key_length == my_current_proposal->encryption_algorithm_key_length) &&
-				(proposals[i].integrity_algorithm == my_current_proposal->integrity_algorithm) &&
-				(proposals[i].integrity_algorithm_key_length == my_current_proposal->integrity_algorithm_key_length) &&
-				(proposals[i].pseudo_random_function == my_current_proposal->pseudo_random_function) &&
-				(proposals[i].pseudo_random_function_key_length == my_current_proposal->pseudo_random_function_key_length) &&
-				(proposals[i].diffie_hellman_group == my_current_proposal->diffie_hellman_group))
+			supplied_iter->current(supplied_iter, (void**)&supplied);
+			selected = stored->select(stored, supplied);
+			if (selected)
 			{
-				/* found a matching proposal */
-				*selected_proposal = *my_current_proposal;
-				my_iterator->destroy(my_iterator);
-				return SUCCESS;
+				/* they match, return */
+				stored_iter->destroy(stored_iter);
+				supplied_iter->destroy(supplied_iter);
+				return selected;
 			}
-			
-		}				
+		}
 	}
 	
-	my_iterator->destroy(my_iterator);
-	return NOT_FOUND;
+	/* no proposal match :-(, will result in a NO_PROPOSAL_CHOSEN... */
+	stored_iter->destroy(stored_iter);
+	supplied_iter->destroy(supplied_iter);
+	
+	return NULL;
 }
 
 /**
- * Implementation of init_config_t.destroy.
+ * Implementation of init_config_t.add_proposal.
  */
-static void add_proposal (private_init_config_t *this,size_t priority, ike_proposal_t proposal)
+static void add_proposal (private_init_config_t *this, proposal_t *proposal)
 {
-	ike_proposal_t * new_proposal = allocator_alloc(sizeof(ike_proposal_t));
-	status_t status;
-	
-	*new_proposal = proposal;
-	 
-	
-	if (priority > this->proposals->get_count(this->proposals))
-	{
-		this->proposals->insert_last(this->proposals,new_proposal);
-		return;
-	}
-	
-	status = this->proposals->insert_at_position(this->proposals,(priority - 1),new_proposal);
+	this->proposals->insert_last(this->proposals, proposal);
+}
 
+/**
+ * Implementation of init_config_t.get_dh_group.
+ */
+static diffie_hellman_group_t get_dh_group(private_init_config_t *this)
+{
+	iterator_t *iterator;
+	proposal_t *proposal;
+	algorithm_t *algo;
+	
+	iterator = this->proposals->create_iterator(this->proposals, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&proposal);
+		proposal->get_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, &algo);
+		if (algo)
+		{
+			iterator->destroy(iterator);
+			return algo->algorithm;
+		}
+	}
+	iterator->destroy(iterator);
+	return MODP_UNDEFINED;
+}
+
+/**
+ * Implementation of init_config_t.check_dh_group.
+ */
+static bool check_dh_group(private_init_config_t *this, diffie_hellman_group_t dh_group)
+{
+	iterator_t *prop_iter, *alg_iter;
+	proposal_t *proposal;
+	algorithm_t *algo;
+	
+	prop_iter = this->proposals->create_iterator(this->proposals, TRUE);
+	while (prop_iter->has_next(prop_iter))
+	{
+		prop_iter->current(prop_iter, (void**)&proposal);
+		alg_iter = proposal->create_algorithm_iterator(proposal, IKE, DIFFIE_HELLMAN_GROUP);
+		while (alg_iter->has_next(alg_iter))
+		{
+			alg_iter->current(alg_iter, (void**)&algo);
+			if (algo->algorithm == dh_group)
+			{
+				prop_iter->destroy(prop_iter);
+				alg_iter->destroy(alg_iter);
+				return TRUE;
+			}
+		}
+	}
+	prop_iter->destroy(prop_iter);
+	alg_iter->destroy(alg_iter);
+	return FALSE;
 }
 
 /**
@@ -196,12 +199,11 @@ static void add_proposal (private_init_config_t *this,size_t priority, ike_propo
  */
 static void destroy (private_init_config_t *this)
 {
-	ike_proposal_t *proposal;
+	proposal_t *proposal;
 	
-	while (this->proposals->get_count(this->proposals) > 0)
+	while (this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
 	{
-		this->proposals->remove_first(this->proposals,(void **) &proposal);
-		allocator_free(proposal);
+		proposal->destroy(proposal);
 	}
 	this->proposals->destroy(this->proposals);
 	
@@ -222,10 +224,11 @@ init_config_t * init_config_create(char * my_ip, char *other_ip, u_int16_t my_po
 	this->public.get_other_host = (host_t*(*)(init_config_t*))get_other_host;
 	this->public.get_my_host_clone = (host_t*(*)(init_config_t*))get_my_host_clone;
 	this->public.get_other_host_clone = (host_t*(*)(init_config_t*))get_other_host_clone;
-	this->public.get_dh_group_number = (diffie_hellman_group_t (*)(init_config_t*,size_t))get_dh_group_number;
-	this->public.get_proposals = (size_t(*)(init_config_t*,ike_proposal_t**))get_proposals;
-	this->public.select_proposal = (status_t(*)(init_config_t*,ike_proposal_t*,size_t,ike_proposal_t*))select_proposal;
-	this->public.add_proposal = (void(*)(init_config_t*, size_t, ike_proposal_t)) add_proposal;
+	this->public.get_proposals = (linked_list_t*(*)(init_config_t*))get_proposals;
+	this->public.select_proposal = (proposal_t*(*)(init_config_t*,linked_list_t*))select_proposal;
+	this->public.add_proposal = (void(*)(init_config_t*, proposal_t*)) add_proposal;
+	this->public.get_dh_group = (diffie_hellman_group_t(*)(init_config_t*)) get_dh_group;
+	this->public.check_dh_group = (bool(*)(init_config_t*,diffie_hellman_group_t)) check_dh_group;
 	this->public.destroy = (void(*)(init_config_t*))destroy;
 	
 	/* private variables */

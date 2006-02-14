@@ -68,6 +68,15 @@ static size_t get_block_size(private_hmac_prf_t *this)
 }
 
 /**
+ * Implementation of prf_t.get_block_size.
+ */
+static size_t get_key_size(private_hmac_prf_t *this)
+{
+	/* for HMAC prfs, IKEv2 uses block size as key size */
+	return this->hmac->get_block_size(this->hmac);
+}
+
+/**
  * Implementation of prf_t.set_key.
  */
 static void set_key(private_hmac_prf_t *this, chunk_t key)
@@ -94,6 +103,7 @@ hmac_prf_t *hmac_prf_create(hash_algorithm_t hash_algorithm)
 	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
 	this->public.prf_interface.allocate_bytes = (void (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
 	this->public.prf_interface.get_block_size = (size_t (*) (prf_t*))get_block_size;
+	this->public.prf_interface.get_key_size = (size_t (*) (prf_t*))get_key_size;
 	this->public.prf_interface.set_key = (void (*) (prf_t *,chunk_t))set_key;
 	this->public.prf_interface.destroy = (void (*) (prf_t *))destroy;
 	

@@ -67,6 +67,6 @@ struct child_sa_t {
  * @return				child_sa_t object
  * @ingroup sa
  */
-child_sa_t * child_sa_create(child_proposal_t *proposal, prf_plus_t *prf_plus);
+child_sa_t * child_sa_create(proposal_t *proposal, prf_plus_t *prf_plus);
 
 #endif /*_CHILD_SA_H_*/

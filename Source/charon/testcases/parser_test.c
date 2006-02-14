@@ -104,8 +104,6 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 	status_t status;
 	chunk_t sa_chunk, sa_chunk2, sa_chunk3;
 	iterator_t *proposals, *transforms, *attributes;
-    ike_proposal_t *ike_proposals;
-    size_t ike_proposal_count;
 	
 	/* first test generic parsing functionality */
 		
@@ -242,7 +240,7 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 
 	status = sa_payload->payload_interface.verify(&(sa_payload->payload_interface));
 	tester->assert_true(tester,(status == SUCCESS),"verify call check");
-
+	/*
 	status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals, &ike_proposal_count);	
 	tester->assert_true(tester,(status == SUCCESS),"get ike proposals call check");	
 	
@@ -268,6 +266,7 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 	{
 		allocator_free(ike_proposals);
 	}
+	*/
 	sa_payload->destroy(sa_payload);
 	
 	/* now test SA functionality after parsing an SA payload with child sa proposals*/
@@ -347,59 +346,59 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 
 	status = sa_payload->payload_interface.verify(&(sa_payload->payload_interface));
 	tester->assert_true(tester,(status == SUCCESS),"verify call check");
-
+/*
 	status = sa_payload->get_ike_proposals (sa_payload, &ike_proposals, &ike_proposal_count);	
 	tester->assert_false(tester,(status == SUCCESS),"get ike proposals call check");
-	/*
-	status = sa_payload->get_child_proposals (sa_payload, &child_proposals, &child_proposal_count);	
+	
+	status = sa_payload->get_proposals (sa_payload, &proposals, &proposal_count);	
 	tester->assert_true(tester,(status == SUCCESS),"get child proposals call check");	
 	
 
-	tester->assert_true(tester,(child_proposal_count == 2),"child proposal count check");
-	tester->assert_true(tester,(child_proposals[0].ah.is_set == TRUE),"is ah set check");
-	tester->assert_true(tester,(child_proposals[0].ah.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
-	tester->assert_true(tester,(child_proposals[0].ah.integrity_algorithm_key_size == 20),"integrity_algorithm_key_size check");
-	tester->assert_true(tester,(child_proposals[0].ah.diffie_hellman_group == MODP_2048_BIT),"diffie_hellman_group check");
-	tester->assert_true(tester,(child_proposals[0].ah.extended_sequence_numbers == EXT_SEQ_NUMBERS),"extended_sequence_numbers check");
-	tester->assert_true(tester,(child_proposals[0].ah.spi[0] == 1),"spi check");
-	tester->assert_true(tester,(child_proposals[0].ah.spi[1] == 1),"spi check");
-	tester->assert_true(tester,(child_proposals[0].ah.spi[2] == 1),"spi check");
-	tester->assert_true(tester,(child_proposals[0].ah.spi[3] == 1),"spi check");
+	tester->assert_true(tester,(proposal_count == 2),"child proposal count check");
+	tester->assert_true(tester,(proposals[0].ah.is_set == TRUE),"is ah set check");
+	tester->assert_true(tester,(proposals[0].ah.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
+	tester->assert_true(tester,(proposals[0].ah.integrity_algorithm_key_size == 20),"integrity_algorithm_key_size check");
+	tester->assert_true(tester,(proposals[0].ah.diffie_hellman_group == MODP_2048_BIT),"diffie_hellman_group check");
+	tester->assert_true(tester,(proposals[0].ah.extended_sequence_numbers == EXT_SEQ_NUMBERS),"extended_sequence_numbers check");
+	tester->assert_true(tester,(proposals[0].ah.spi[0] == 1),"spi check");
+	tester->assert_true(tester,(proposals[0].ah.spi[1] == 1),"spi check");
+	tester->assert_true(tester,(proposals[0].ah.spi[2] == 1),"spi check");
+	tester->assert_true(tester,(proposals[0].ah.spi[3] == 1),"spi check");
 	
-	tester->assert_true(tester,(child_proposals[0].esp.is_set == TRUE),"is ah set check");
-	tester->assert_true(tester,(child_proposals[0].esp.encryption_algorithm == ENCR_AES_CBC),"integrity_algorithm check");
-	tester->assert_true(tester,(child_proposals[0].esp.encryption_algorithm_key_size == 32),"integrity_algorithm_key_size check");
-	tester->assert_true(tester,(child_proposals[0].esp.diffie_hellman_group == MODP_1024_BIT),"diffie_hellman_group check");
-	tester->assert_true(tester,(child_proposals[0].esp.integrity_algorithm == AUTH_UNDEFINED),"integrity_algorithm check");
-	tester->assert_true(tester,(child_proposals[0].esp.spi[0] == 2),"spi check");
-	tester->assert_true(tester,(child_proposals[0].esp.spi[1] == 2),"spi check");
-	tester->assert_true(tester,(child_proposals[0].esp.spi[2] == 2),"spi check");
-	tester->assert_true(tester,(child_proposals[0].esp.spi[3] == 2),"spi check");
+	tester->assert_true(tester,(proposals[0].esp.is_set == TRUE),"is ah set check");
+	tester->assert_true(tester,(proposals[0].esp.encryption_algorithm == ENCR_AES_CBC),"integrity_algorithm check");
+	tester->assert_true(tester,(proposals[0].esp.encryption_algorithm_key_size == 32),"integrity_algorithm_key_size check");
+	tester->assert_true(tester,(proposals[0].esp.diffie_hellman_group == MODP_1024_BIT),"diffie_hellman_group check");
+	tester->assert_true(tester,(proposals[0].esp.integrity_algorithm == AUTH_UNDEFINED),"integrity_algorithm check");
+	tester->assert_true(tester,(proposals[0].esp.spi[0] == 2),"spi check");
+	tester->assert_true(tester,(proposals[0].esp.spi[1] == 2),"spi check");
+	tester->assert_true(tester,(proposals[0].esp.spi[2] == 2),"spi check");
+	tester->assert_true(tester,(proposals[0].esp.spi[3] == 2),"spi check");
 
-	tester->assert_true(tester,(child_proposals[1].ah.is_set == TRUE),"is ah set check");
-	tester->assert_true(tester,(child_proposals[1].ah.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
-	tester->assert_true(tester,(child_proposals[1].ah.integrity_algorithm_key_size == 20),"integrity_algorithm_key_size check");
-	tester->assert_true(tester,(child_proposals[1].ah.diffie_hellman_group == MODP_2048_BIT),"diffie_hellman_group check");
-	tester->assert_true(tester,(child_proposals[1].ah.extended_sequence_numbers == EXT_SEQ_NUMBERS),"extended_sequence_numbers check");
-	tester->assert_true(tester,(child_proposals[1].ah.spi[0] == 1),"spi check");
-	tester->assert_true(tester,(child_proposals[1].ah.spi[1] == 1),"spi check");
-	tester->assert_true(tester,(child_proposals[1].ah.spi[2] == 1),"spi check");
-	tester->assert_true(tester,(child_proposals[1].ah.spi[3] == 1),"spi check");	
+	tester->assert_true(tester,(proposals[1].ah.is_set == TRUE),"is ah set check");
+	tester->assert_true(tester,(proposals[1].ah.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
+	tester->assert_true(tester,(proposals[1].ah.integrity_algorithm_key_size == 20),"integrity_algorithm_key_size check");
+	tester->assert_true(tester,(proposals[1].ah.diffie_hellman_group == MODP_2048_BIT),"diffie_hellman_group check");
+	tester->assert_true(tester,(proposals[1].ah.extended_sequence_numbers == EXT_SEQ_NUMBERS),"extended_sequence_numbers check");
+	tester->assert_true(tester,(proposals[1].ah.spi[0] == 1),"spi check");
+	tester->assert_true(tester,(proposals[1].ah.spi[1] == 1),"spi check");
+	tester->assert_true(tester,(proposals[1].ah.spi[2] == 1),"spi check");
+	tester->assert_true(tester,(proposals[1].ah.spi[3] == 1),"spi check");	
 
-	tester->assert_true(tester,(child_proposals[1].esp.is_set == TRUE),"is ah set check");
-	tester->assert_true(tester,(child_proposals[1].esp.encryption_algorithm == ENCR_AES_CBC),"integrity_algorithm check");
-	tester->assert_true(tester,(child_proposals[1].esp.encryption_algorithm_key_size == 32),"integrity_algorithm_key_size check");
-	tester->assert_true(tester,(child_proposals[1].esp.diffie_hellman_group == MODP_1024_BIT),"diffie_hellman_group check");
-	tester->assert_true(tester,(child_proposals[1].esp.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
-	tester->assert_true(tester,(child_proposals[1].esp.integrity_algorithm_key_size == 20),"integrity_algorithm check");
-	tester->assert_true(tester,(child_proposals[1].esp.spi[0] == 2),"spi check");
-	tester->assert_true(tester,(child_proposals[1].esp.spi[1] == 2),"spi check");
-	tester->assert_true(tester,(child_proposals[1].esp.spi[2] == 2),"spi check");
-	tester->assert_true(tester,(child_proposals[1].esp.spi[3] == 2),"spi check");
+	tester->assert_true(tester,(proposals[1].esp.is_set == TRUE),"is ah set check");
+	tester->assert_true(tester,(proposals[1].esp.encryption_algorithm == ENCR_AES_CBC),"integrity_algorithm check");
+	tester->assert_true(tester,(proposals[1].esp.encryption_algorithm_key_size == 32),"integrity_algorithm_key_size check");
+	tester->assert_true(tester,(proposals[1].esp.diffie_hellman_group == MODP_1024_BIT),"diffie_hellman_group check");
+	tester->assert_true(tester,(proposals[1].esp.integrity_algorithm == AUTH_HMAC_MD5_96),"integrity_algorithm check");
+	tester->assert_true(tester,(proposals[1].esp.integrity_algorithm_key_size == 20),"integrity_algorithm check");
+	tester->assert_true(tester,(proposals[1].esp.spi[0] == 2),"spi check");
+	tester->assert_true(tester,(proposals[1].esp.spi[1] == 2),"spi check");
+	tester->assert_true(tester,(proposals[1].esp.spi[2] == 2),"spi check");
+	tester->assert_true(tester,(proposals[1].esp.spi[3] == 2),"spi check");
 	
 	if (status == SUCCESS)
 	{
-		allocator_free(child_proposals);
+		allocator_free(proposals);
 	}
 	*/
 	

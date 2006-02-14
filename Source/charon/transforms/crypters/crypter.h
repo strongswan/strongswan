@@ -33,11 +33,7 @@ typedef enum encryption_algorithm_t encryption_algorithm_t;
  * Currently only the following algorithms are implemented and therefore supported:
  * - ENCR_AES_CBC
  * 
- * @b Constructors:
- *  - crypter_create()
- *  - aes_cbc_crypter_create()
- * 
- * @todo Implement more enryption algorithm, especially 3DES
+ * @todo Implement more enryption algorithms, such as 3DES
  * 
  * @ingroup crypters
  */
@@ -71,18 +67,14 @@ typedef struct crypter_t crypter_t;
 /**
  * @brief Generic interface for symmetric encryption algorithms.
  * 
- * @todo Distinguish between block_size and key_size, since not all
- * algorithms use key_size == block_size (e.g. 3DES).
- * 
- * @todo Add a getter which says if an algorithm uses fixed key size, needed for
- * tranform_attribute encoding.
+ * @b Constructors:
+ *  - crypter_create()
  * 
  * @ingroup crypters
  */
 struct crypter_t {
 	/**
-	 * @brief Encrypt a chunk of data and allocate space for 
-	 * the encrypted value.
+	 * @brief Encrypt a chunk of data and allocate space for the encrypted value.
 	 * 
 	 * @param this				calling object
 	 * @param data				data to encrypt
@@ -95,8 +87,7 @@ struct crypter_t {
 	status_t (*encrypt) (crypter_t *this, chunk_t data, chunk_t iv, chunk_t *encrypted);
 	
 	/**
-	 * @brief Decrypt a chunk of data and allocate space for 
-	 * the decrypted value.
+	 * @brief Decrypt a chunk of data and allocate space for the decrypted value.
 	 * 
 	 * @param this				calling object
 	 * @param data				data to decrypt
@@ -115,6 +106,14 @@ struct crypter_t {
 	 * @return					block size in bytes
 	 */
 	size_t (*get_block_size) (crypter_t *this);
+
+	/**
+	 * @brief Get the key size of this crypter_t object.
+	 * 
+	 * @param this				calling object
+	 * @return					key size in bytes
+	 */
+	size_t (*get_key_size) (crypter_t *this);
 	
 	/**
 	 * @brief Set the key for this crypter_t object.
@@ -123,7 +122,7 @@ struct crypter_t {
 	 * @param key				key to set
 	 * @return
 	 * 							- SUCCESS
-	 * 							- INVALID_ARG if key size != block size
+	 * 							- INVALID_ARG if key length invalid
 	 */
 	status_t (*set_key) (crypter_t *this, chunk_t key);
 	
@@ -141,12 +140,14 @@ struct crypter_t {
  * Currently only the following algorithms are implemented and therefore supported:
  * - ENCR_AES_CBC
  * 
+ * The key_size is ignored for algorithms with fixed key size.
+ * 
  * @param encryption_algorithm	Algorithm to use for crypter
- * @param blocksize 			block size in bytes
+ * @param key_size 				size of the key in bytes
  * @return
  * 								- crypter_t object
- * 								- NULL if encryption algorithm or blocksize is not supported
+ * 								- NULL if encryption algorithm/key_size is not supported
  */
-crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t blocksize);
+crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t key_size);
 
 #endif /*CRYPTER_H_*/

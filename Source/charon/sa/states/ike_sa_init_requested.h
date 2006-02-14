@@ -53,7 +53,6 @@ struct ike_sa_init_requested_t {
  * Constructor of class ike_sa_init_requested_t.
  * 
  * @param ike_sa 					assigned ike_sa
- * @param dh_group_priority			the last used priority number to get the DH group for request
  * @param diffie_hellman			diffie_hellman object use to retrieve shared secret
  * @param sent_nonce				Sent nonce value
  * @param ike_sa_init_request_data	the binary representation of the IKE_SA_INIT request message
@@ -62,7 +61,6 @@ struct ike_sa_init_requested_t {
  * @ingroup states
  */
 ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa,
-														u_int16_t dh_group_priority,
 														diffie_hellman_t *diffie_hellman,
 														chunk_t sent_nonce,
 														chunk_t ike_sa_init_request_data);

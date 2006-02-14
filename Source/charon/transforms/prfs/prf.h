@@ -98,6 +98,14 @@ struct prf_t {
 	size_t (*get_block_size) (prf_t *this);
 	
 	/**
+	 * @brief Get the key size of this prf_t object.
+	 * 
+	 * @param this			calling object
+	 * @return				key size in bytes
+	 */
+	size_t (*get_key_size) (prf_t *this);
+	
+	/**
 	 * @brief Set the key for this prf_t object.
 	 * 
 	 * @param this			calling object

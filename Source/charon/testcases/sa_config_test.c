@@ -37,7 +37,7 @@ void test_sa_config(protected_tester_t *tester)
 {
 	sa_config_t *sa_config;	
 	traffic_selector_t *ts_policy[3], *ts_request[4], *ts_reference[3], **ts_result;
-	child_proposal_t *proposal1, *proposal2, *proposal3, *proposal_sel;
+	proposal_t *proposal1, *proposal2, *proposal3, *proposal_sel;
 	linked_list_t *proposals_list;
 	iterator_t *iterator;
 	size_t count;
@@ -61,15 +61,15 @@ void test_sa_config(protected_tester_t *tester)
 	 */
 	
 	/* esp only prop */
-	proposal1 = child_proposal_create(1);
+	proposal1 = proposal_create(1);
 	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	
 	/* ah only prop */
-	proposal2 = child_proposal_create(2);
+	proposal2 = proposal_create(2);
 	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
 	
 	/* ah and esp prop */
-	proposal3 = child_proposal_create(3);
+	proposal3 = proposal_create(3);
 	proposal3->add_algorithm(proposal3, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 16);
 	proposal3->add_algorithm(proposal3, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
 	
@@ -84,9 +84,9 @@ void test_sa_config(protected_tester_t *tester)
 	
 	
 	proposals_list = linked_list_create();
-	proposal1 = child_proposal_create(1);
+	proposal1 = proposal_create(1);
 	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
-	proposal2 = child_proposal_create(2);
+	proposal2 = proposal_create(2);
 	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 16);
 	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 0);

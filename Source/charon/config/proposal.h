@@ -1,7 +1,7 @@
 /**
- * @file child_proposal.h
+ * @file proposal.h
  * 
- * @brief Interface of child_proposal_t.
+ * @brief Interface of proposal_t.
  *
  */
 
@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _CHILD_PROPOSAL_H_
-#define _CHILD_PROPOSAL_H_
+#ifndef _PROPOSAL_H_
+#define _PROPOSAL_H_
 
 #include <types.h>
 #include <utils/identification.h>
@@ -117,22 +117,22 @@ struct algorithm_t {
 	u_int16_t key_size;
 };
 
-typedef struct child_proposal_t child_proposal_t;
+typedef struct proposal_t proposal_t;
 
 /**
  * @brief Stores a proposal for a child SA.
  * 
- * A child_proposal may contain more than one algorithm
+ * A proposal may contain more than one algorithm
  * of the same kind. ONE of them can be selected.
  *
  * @warning This class is NOT thread-save!
  * 
  * @b Constructors:
- *   - child_proposal_create()
+ *   - proposal_create()
  * 
  * @ingroup config
  */
-struct child_proposal_t {
+struct proposal_t {
 	
 	/**
 	 * @brief Add an algorithm to the proposal.
@@ -154,7 +154,7 @@ struct child_proposal_t {
 	 * @param alg					identifier for algorithm
 	 * @param key_size				key size to use
 	 */
-	void (*add_algorithm) (child_proposal_t *this, protocol_id_t proto, transform_type_t type, u_int16_t alg, size_t key_size);
+	void (*add_algorithm) (proposal_t *this, protocol_id_t proto, transform_type_t type, u_int16_t alg, size_t key_size);
 	
 	/**
 	 * @brief Get an iterator over algorithms for a specifc protocol/algo type.
@@ -164,13 +164,13 @@ struct child_proposal_t {
 	 * @param type					kind of algorithm
 	 * @return						iterator over algorithms
 	 */
-	iterator_t *(*create_algorithm_iterator) (child_proposal_t *this, protocol_id_t proto, transform_type_t type);
+	iterator_t *(*create_algorithm_iterator) (proposal_t *this, protocol_id_t proto, transform_type_t type);
 	
 	/**
 	 * @brief Get the algorithm for a type to use.
 	 * 
 	 * If there are multiple algorithms, only the first is returned.
-	 * Result is still owned by child_proposal, do not modify!
+	 * Result is still owned by proposal, do not modify!
 	 * 
 	 * @param this					calling object
 	 * @param proto					desired protocol
@@ -178,7 +178,7 @@ struct child_proposal_t {
 	 * @param[out] algo				pointer which receives algorithm and key size
 	 * @return						TRUE if algorithm of this kind available
 	 */
-	bool (*get_algorithm) (child_proposal_t *this, protocol_id_t proto, transform_type_t type, algorithm_t** algo);
+	bool (*get_algorithm) (proposal_t *this, protocol_id_t proto, transform_type_t type, algorithm_t** algo);
 
 	/**
 	 * @brief Compare two proposal, and select a matching subset.
@@ -193,7 +193,7 @@ struct child_proposal_t {
 	 * 								- selected proposal, if possible
 	 * 								- NULL, if proposals don't match
 	 */
-	child_proposal_t *(*select) (child_proposal_t *this, child_proposal_t *other);
+	proposal_t *(*select) (proposal_t *this, proposal_t *other);
 	
 	/**
 	 * @brief Get the number set on construction.
@@ -201,7 +201,7 @@ struct child_proposal_t {
 	 * @param this				calling object
 	 * @return 					number
 	 */
-	u_int8_t (*get_number) (child_proposal_t *this);
+	u_int8_t (*get_number) (proposal_t *this);
 	
 	/**
 	 * @brief Get the protocol ids in the proposals.
@@ -212,7 +212,7 @@ struct child_proposal_t {
 	 * @param this				calling object
 	 * @param ids 				array of protocol ids, 
 	 */
-	void (*get_protocols) (child_proposal_t *this, protocol_id_t ids[2]);
+	void (*get_protocols) (proposal_t *this, protocol_id_t ids[2]);
 	
 	/**
 	 * @brief Get the spi for a specific protocol.
@@ -221,7 +221,7 @@ struct child_proposal_t {
 	 * @param proto				AH/ESP
 	 * @return					spi for proto
 	 */
-	u_int64_t (*get_spi) (child_proposal_t *this, protocol_id_t proto);
+	u_int64_t (*get_spi) (proposal_t *this, protocol_id_t proto);
 	
 	/**
 	 * @brief Set the spi for a specific protocol.
@@ -230,24 +230,24 @@ struct child_proposal_t {
 	 * @param proto 			AH/ESP
 	 * @param spi				spi to set for proto
 	 */
-	void (*set_spi) (child_proposal_t *this, protocol_id_t proto, u_int64_t spi);
+	void (*set_spi) (proposal_t *this, protocol_id_t proto, u_int64_t spi);
 	
 	/**
 	 * @brief Destroys the proposal object.
 	 * 
 	 * @param this				calling object
 	 */
-	void (*destroy) (child_proposal_t *this);
+	void (*destroy) (proposal_t *this);
 };
 
 /**
  * @brief Create a child proposal for AH and/or ESP.
  * 
  * @param number			number of the proposal, as in the payload
- * @return 					child_proposal_t object
+ * @return 					proposal_t object
  * 
  * @ingroup config
  */
-child_proposal_t *child_proposal_create(u_int8_t number);
+proposal_t *proposal_create(u_int8_t number);
 
-#endif //_CHILD_PROPOSAL_H_
+#endif //_PROPOSAL_H_

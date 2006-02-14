@@ -387,7 +387,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
  */
 static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *response)
 {
-	child_proposal_t *proposal, *proposal_tmp;
+	proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
 	sa_payload_t *sa_response;
 	child_sa_t *child_sa;
@@ -397,7 +397,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	/* TODO: child sa stuff */
 	
 	/* get proposals from request */
-	proposal_list = request->get_child_proposals(request);
+	proposal_list = request->get_proposals(request);
 	if (proposal_list->get_count(proposal_list) == 0)
 	{
 		/* if the other side did not offer any proposals, we do not create child sa's */
@@ -426,7 +426,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	}
 	
 	/* create payload with selected propsal */
-	sa_response = sa_payload_create_from_child_proposal(proposal);
+	sa_response = sa_payload_create_from_proposal(proposal);
 	response->add_payload(response, (payload_t*)sa_response);
 	
 	/* install child SAs for AH and esp */
