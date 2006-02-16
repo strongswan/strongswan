@@ -425,10 +425,6 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		return DELETE_ME;	
 	}
 	
-	/* create payload with selected propsal */
-	sa_response = sa_payload_create_from_proposal(proposal);
-	response->add_payload(response, (payload_t*)sa_response);
-	
 	/* install child SAs for AH and esp */
 	seed = allocator_alloc_as_chunk(this->received_nonce.len + this->sent_nonce.len);
 	memcpy(seed.ptr, this->received_nonce.ptr, this->received_nonce.len);
@@ -436,10 +432,22 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 	allocator_free_chunk(&seed);
 	
-	child_sa = child_sa_create(proposal, prf_plus);
-	prf_plus->destroy(prf_plus);
-	child_sa->destroy(child_sa);
+	child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
+							   this->ike_sa->get_other_host(this->ike_sa));
+	if (child_sa->add(child_sa, proposal, prf_plus) != SUCCESS)
+	{
+		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+		prf_plus->destroy(prf_plus);
+		proposal->destroy(proposal);
+		return DELETE_ME;
+	}
+	this->ike_sa->add_child_sa(this->ike_sa, child_sa);
 	
+	/* create payload with selected propsal */
+	sa_response = sa_payload_create_from_proposal(proposal);
+	response->add_payload(response, (payload_t*)sa_response);
+	
+	prf_plus->destroy(prf_plus);
 	proposal->destroy(proposal);	
 	return SUCCESS;
 }

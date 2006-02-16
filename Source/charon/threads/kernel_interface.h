@@ -54,8 +54,8 @@ struct kernel_interface_t {
 	 * @todo Cleanup method params
 	 */
 	status_t (*add_sa)(kernel_interface_t *this,
-				host_t *me,
-				host_t *other,
+				host_t *src,
+				host_t *dst,
 				u_int32_t spi,
 				int protocol,
 				bool tunnel_mode,

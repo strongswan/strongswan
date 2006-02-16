@@ -27,10 +27,11 @@
 #include <encoding/message.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <sa/ike_sa_id.h>
+#include <sa/child_sa.h>
+#include <sa/states/state.h>
 #include <config/configuration_manager.h>
 #include <utils/logger.h>
 #include <utils/randomizer.h>
-#include <sa/states/state.h>
 #include <transforms/prfs/prf.h>
 #include <transforms/crypters/crypter.h>
 #include <transforms/signers/signer.h>
@@ -386,6 +387,14 @@ struct protected_ike_sa_t {
 	 * @return					pointer to prf_t object
 	 */
 	prf_t *(*get_prf_auth_r) (protected_ike_sa_t *this);
+	
+	/**
+	 * @brief Associates a child SA to this IKE SA
+	 * 
+	 * @param this 				calling object
+	 * @param child_sa			child_sa to add
+	 */
+	void (*add_child_sa) (protected_ike_sa_t *this, child_sa_t *child_sa);
 	
 	/**
 	 * @brief Get the last responded message.

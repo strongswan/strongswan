@@ -50,6 +50,11 @@ struct child_sa_t {
 	 * @return 			4 Byte SPI value
 	 */
 	u_int32_t (*get_spi) (child_sa_t *this);
+	
+	
+	status_t (*alloc)(child_sa_t *this, linked_list_t* proposals);
+	status_t (*add)(child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus);
+	status_t (*update)(child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus);
 
 	/**
 	 * @brief Destroys a child_sa.
@@ -67,6 +72,6 @@ struct child_sa_t {
  * @return				child_sa_t object
  * @ingroup sa
  */
-child_sa_t * child_sa_create(proposal_t *proposal, prf_plus_t *prf_plus);
+child_sa_t * child_sa_create(host_t *me, host_t *other);
 
 #endif /*_CHILD_SA_H_*/

@@ -39,14 +39,29 @@ struct private_child_sa_t {
 	child_sa_t public;
 	
 	/**
+	 * IP of this peer
+	 */
+	host_t *me;
+	
+	/**
+	 * IP of other peer
+	 */
+	host_t *other;
+	
+	/**
+	 * Security parameter index for AH protocol, 0 if not used
+	 */
+	u_int32_t ah_spi;
+	
+	/**
+	 * Security parameter index for ESP protocol, 0 if not used
+	 */
+	u_int32_t esp_spi;
+	
+	/**
 	 * CHILD_SAs own logger
 	 */
 	logger_t *logger;
-	
-	/**
-	 * Protocols used in this SA
-	 */
-	protocol_id_t protocols[2];
 };
 
 
@@ -56,6 +71,243 @@ struct private_child_sa_t {
 static u_int32_t get_spi(private_child_sa_t *this)
 {
 	return 0;
+}
+
+/**
+ * Implements child_sa_t.alloc
+ */
+static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
+{
+	protocol_id_t protocols[2];
+	iterator_t *iterator;
+	proposal_t *proposal;
+	status_t status;
+	u_int i;
+	
+	/* iterator through proposals */
+	iterator = proposals->create_iterator(proposals, TRUE);
+	while(iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&proposal);
+		proposal->get_protocols(proposal, protocols);
+	
+		/* check all protocols */
+		for (i = 0; i<2; i++)
+		{
+			switch (protocols[i])
+			{
+				case AH:
+					/* do we already have an spi for AH?*/
+					if (this->ah_spi == 0)
+					{
+						/* nope, get one */
+						status = charon->kernel_interface->get_spi(
+											charon->kernel_interface,
+											this->me, this->other,
+											AH, FALSE,
+											&(this->ah_spi));
+					}
+					/* update proposal */
+					proposal->set_spi(proposal, AH, (u_int64_t)this->ah_spi);
+					break;
+				case ESP:
+					/* do we already have an spi for ESP?*/
+					if (this->esp_spi == 0)
+					{
+						/* nope, get one */
+						status = charon->kernel_interface->get_spi(
+											charon->kernel_interface,
+											this->me, this->other,
+											ESP, FALSE,
+											&(this->esp_spi));
+					}
+					/* update proposal */
+					proposal->set_spi(proposal, ESP, (u_int64_t)this->esp_spi);
+					break;
+				default:
+					break;
+			}
+			if (status != SUCCESS)
+			{
+				iterator->destroy(iterator);
+				return FAILED;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	return SUCCESS;
+}
+
+static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus, bool mine)
+{
+	protocol_id_t protocols[2];
+	u_int32_t spi;
+	encryption_algorithm_t enc_algo;
+	integrity_algorithm_t int_algo;
+	chunk_t enc_key, int_key;
+	algorithm_t *algo;
+	crypter_t *crypter;
+	signer_t *signer;
+	size_t key_size;
+	host_t *src;
+	host_t *dst;
+	status_t status;
+	u_int i;
+	
+	/* we must assign the roles to correctly set up the SAs */
+ 	if (mine)
+ 	{
+ 		src = this->me;
+ 		dst = this->other;
+ 	}
+ 	else
+ 	{
+ 		dst = this->me;
+ 		src = this->other;
+ 	}
+	
+	proposal->get_protocols(proposal, protocols);
+	/* derive keys in order as protocols appear */
+	for (i = 0; i<2; i++)
+	{
+		if (protocols[i] != UNDEFINED_PROTOCOL_ID)
+		{
+			
+			/* now we have to decide which spi to use. Use self allocated, if "mine",
+			 * or the one in the proposal, if not "mine" (others). */
+			if (mine)
+			{
+				if (protocols[i] == AH)
+				{
+					spi = this->ah_spi;
+				}
+				else
+				{
+					spi = this->esp_spi;
+				}
+			}
+			else /* use proposals spi */
+			{
+				spi = proposal->get_spi(proposal, protocols[i]);
+			}
+			
+			/* derive encryption key first */
+			if (proposal->get_algorithm(proposal, protocols[i], ENCRYPTION_ALGORITHM, &algo))
+			{
+				enc_algo = algo->algorithm;
+				this->logger->log(this->logger, CONTROL|LEVEL1, "%s for %s: using %s %s, ",
+								  mapping_find(protocol_id_m, protocols[i]),
+								  mine ? "me" : "other",
+								  mapping_find(transform_type_m, ENCRYPTION_ALGORITHM),
+								  mapping_find(encryption_algorithm_m, enc_algo));
+				
+				/* we must create a (unused) crypter, since its the only way to get the size
+				 * of the key. This is not so nice, since charon must support all algorithms
+				 * the kernel supports...
+				 * TODO: build something of a encryption algorithm lookup function 
+				 */
+				crypter = crypter_create(enc_algo, algo->key_size);
+				key_size = crypter->get_key_size(crypter);
+				crypter->destroy(crypter);
+				prf_plus->allocate_bytes(prf_plus, key_size, &enc_key);
+				this->logger->log_chunk(this->logger, PRIVATE, "key:", &enc_key);
+			}
+			else
+			{
+				enc_algo = ENCR_UNDEFINED;
+			}
+			
+			/* derive integrity key */
+			if (proposal->get_algorithm(proposal, protocols[i], INTEGRITY_ALGORITHM, &algo))
+			{
+				int_algo = algo->algorithm;
+				this->logger->log(this->logger, CONTROL|LEVEL1, "%s for %s: using %s %s,",
+								  mapping_find(protocol_id_m, protocols[i]),
+								  mine ? "me" : "other",
+								  mapping_find(transform_type_m, INTEGRITY_ALGORITHM),
+								  mapping_find(integrity_algorithm_m, algo->algorithm));
+				
+				signer = signer_create(int_algo);
+				key_size = signer->get_key_size(signer);
+				signer->destroy(signer);
+				prf_plus->allocate_bytes(prf_plus, key_size, &int_key);
+				this->logger->log_chunk(this->logger, PRIVATE, "key:", &int_key);
+			}
+			else
+			{
+				int_algo = AUTH_UNDEFINED;
+			}
+			/* send keys down to kernel */
+			this->logger->log(this->logger, CONTROL|LEVEL1, 
+							  "installing 0x%.8x for %s, src %s dst %s",
+							  ntohl(spi), mapping_find(protocol_id_m, protocols[i]), 
+							  src->get_address(src), dst->get_address(dst));
+			status = charon->kernel_interface->add_sa(charon->kernel_interface,
+													  src, dst,
+													  spi, protocols[i], FALSE,
+													  enc_algo, enc_key,
+													  int_algo, int_key, mine);
+			/* clean up for next round */
+			if (enc_algo != ENCR_UNDEFINED)
+			{
+				allocator_free_chunk(&enc_key);
+			}
+			if (int_algo != AUTH_UNDEFINED)
+			{
+				allocator_free_chunk(&int_key);
+			}
+			
+			if (status != SUCCESS)
+			{
+				return FAILED;
+			}
+			
+		}
+	}
+	return SUCCESS;
+}
+
+static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus)
+{
+	linked_list_t *list;
+	
+	/* install others (initiators) SAs*/
+	if (install(this, proposal, prf_plus, FALSE) != SUCCESS)
+	{
+		return FAILED;
+	}
+	
+	/* get SPIs for our SAs */
+	list = linked_list_create();
+	list->insert_last(list, proposal);
+	if (alloc(this, list) != SUCCESS)
+	{
+		list->destroy(list);
+		return FAILED;
+	}
+	list->destroy(list);
+	
+	/* install our (responders) SAs */
+	if (install(this, proposal, prf_plus, TRUE) != SUCCESS)
+	{
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
+static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus)
+{
+	/* install our (initator) SAs */
+	if (install(this, proposal, prf_plus, TRUE) != SUCCESS)
+	{
+		return FAILED;
+	}
+	/* install his (responder) SAs */
+	if (install(this, proposal, prf_plus, FALSE) != SUCCESS)
+	{
+		return FAILED;
+	}
+	return SUCCESS;
 }
 
 /**
@@ -70,54 +322,23 @@ static void destroy(private_child_sa_t *this)
 /*
  * Described in header.
  */
-child_sa_t * child_sa_create(proposal_t *proposal, prf_plus_t *prf_plus)
+child_sa_t * child_sa_create(host_t *me, host_t* other)
 {
 	private_child_sa_t *this = allocator_alloc_thing(private_child_sa_t);
-	u_int i;
 
 	/* public functions */
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*))get_spi;
+	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
+	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
+	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
 	this->logger = charon->logger_manager->create_logger(charon->logger_manager, CHILD_SA, NULL);
-	proposal->get_protocols(proposal, this->protocols);
-	
-	/* derive keys */
-	for (i = 0; i<2; i++)
-	{
-		if (this->protocols[i] != UNDEFINED_PROTOCOL_ID)
-		{
-			algorithm_t *algo;
-			chunk_t key;
-			
-			/* get encryption key */
-			if (proposal->get_algorithm(proposal, this->protocols[i], ENCRYPTION_ALGORITHM, &algo))
-			{
-				this->logger->log(this->logger, CONTROL|LEVEL1, "%s: using %s %s, ",
-								  mapping_find(protocol_id_m, this->protocols[i]),
-								  mapping_find(transform_type_m, ENCRYPTION_ALGORITHM),
-								  mapping_find(encryption_algorithm_m, algo->algorithm));
-				
-				prf_plus->allocate_bytes(prf_plus, algo->key_size, &key);
-				this->logger->log_chunk(this->logger, PRIVATE, "key:", &key);
-				allocator_free_chunk(&key);
-			}
-			
-			/* get integrity key */
-			if (proposal->get_algorithm(proposal, this->protocols[i], INTEGRITY_ALGORITHM, &algo))
-			{
-				this->logger->log(this->logger, CONTROL|LEVEL1, "%s: using %s %s,",
-								  mapping_find(protocol_id_m, this->protocols[i]),
-								  mapping_find(transform_type_m, INTEGRITY_ALGORITHM),
-								  mapping_find(integrity_algorithm_m, algo->algorithm));
-				
-				prf_plus->allocate_bytes(prf_plus, algo->key_size, &key);
-				this->logger->log_chunk(this->logger, PRIVATE, "key:", &key);
-				allocator_free_chunk(&key);
-			}
-		}
-	}
+	this->me = me;
+	this->other = other;
+	this->ah_spi = 0;
+	this->esp_spi = 0;
 	
 	return (&this->public);
 }

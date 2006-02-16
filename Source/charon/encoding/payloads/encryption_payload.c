@@ -289,6 +289,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	this->generate(this);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "encrypting payloads");
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data to encrypt", &this->decrypted);
 	
 	/* build padding */
 	block_size = this->crypter->get_block_size(this->crypter);
@@ -307,6 +308,8 @@ static status_t encrypt(private_encryption_payload_t *this)
 	iv.len = block_size;
 	randomizer->allocate_pseudo_random_bytes(randomizer, iv.len, &iv);
 	randomizer->destroy(randomizer);
+	
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before encryption with padding", &to_crypt);
 		
 	/* encrypt to_crypt chunk */
 	allocator_free(this->encrypted.ptr);
@@ -319,6 +322,8 @@ static status_t encrypt(private_encryption_payload_t *this)
 		allocator_free(iv.ptr);
 		return status;
 	}
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after encryption", &result);
+	
 	
 	/* build encrypted result with iv and signature */
 	this->encrypted.len = iv.len + result.len + this->signer->get_block_size(this->signer);
@@ -331,6 +336,8 @@ static status_t encrypt(private_encryption_payload_t *this)
 	
 	allocator_free(result.ptr);
 	allocator_free(iv.ptr);
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after encryption with IV and (invalid) signature", &this->encrypted);
+	
 	return SUCCESS;
 }
 
@@ -345,6 +352,8 @@ static status_t decrypt(private_encryption_payload_t *this)
 	
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "decrypting encryption payload");
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before decryption with IV and (invalid) signature", &this->encrypted);
+	
 	
 	if (this->signer == NULL || this->crypter == NULL)
 	{
@@ -373,12 +382,16 @@ static status_t decrypt(private_encryption_payload_t *this)
 	/* free previus data, if any */
 	allocator_free(this->decrypted.ptr);
 	
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before decryption", &concatenated);
+	
 	status = this->crypter->decrypt(this->crypter, concatenated, iv, &(this->decrypted));
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL1, "could not decrypt, decryption failed");
 		return FAILED;
 	}
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after decryption with padding", &this->decrypted);
+	
 	
 	/* get padding length, sits just bevore signature */
 	padding_length = *(this->decrypted.ptr + this->decrypted.len - 1);
@@ -396,6 +409,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	
 	/* free padding */
 	this->decrypted.ptr = allocator_realloc(this->decrypted.ptr, this->decrypted.len);
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after decryption without padding", &this->decrypted);
 	this->logger->log(this->logger, CONTROL|LEVEL2, "decryption successful, trying to parse content");
 	return (this->parse(this));
 }

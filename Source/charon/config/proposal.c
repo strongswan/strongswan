@@ -339,6 +339,7 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	protocol_proposal_t *this_prop, *other_prop;
 	protocol_id_t proto;
 	bool add;
+	u_int64_t spi;
 	
 	/* empty proposal? no match */
 	if (this->protocol_proposals->get_count(this->protocol_proposals) == 0 ||
@@ -443,6 +444,19 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 		}
 	}
 	iterator->destroy(iterator);
+	
+	/* apply spis from "other" */
+	spi = other->public.get_spi(&(other->public), AH);
+	if (spi)
+	{
+		selected->set_spi(selected, AH, spi);
+	}
+	spi = other->public.get_spi(&(other->public), ESP);
+	if (spi)
+	{
+		selected->set_spi(selected, ESP, spi);
+	}
+	
 	/* everything matched, return new proposal */
 	return selected;
 }
@@ -487,7 +501,7 @@ static void set_spi(private_proposal_t *this, protocol_id_t proto, u_int64_t spi
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
 	if (proto_proposal)
 	{
-		if (proto == IKE)
+		if (proto == AH || proto == ESP)
 		{
 			*((u_int32_t*)proto_proposal->spi.ptr) = (u_int32_t)spi;
 		}
@@ -495,7 +509,6 @@ static void set_spi(private_proposal_t *this, protocol_id_t proto, u_int64_t spi
 		{
 			*((u_int64_t*)proto_proposal->spi.ptr) = spi;
 		}
-		
 	}
 }
 
@@ -507,7 +520,7 @@ static u_int64_t get_spi(private_proposal_t *this, protocol_id_t proto)
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
 	if (proto_proposal)
 	{
-		if (proto == IKE)
+		if (proto == AH || proto == ESP)
 		{
 			return (u_int64_t)*((u_int32_t*)proto_proposal->spi.ptr);
 		}

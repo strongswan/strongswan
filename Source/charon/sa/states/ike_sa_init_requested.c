@@ -80,6 +80,11 @@ struct private_ike_sa_init_requested_t {
 	chunk_t ike_sa_init_request_data;
 	
 	/**
+	 * Created child sa, if any
+	 */
+	child_sa_t *child_sa;
+	
+	/**
 	 * Assigned logger
 	 * 
 	 * Is logger of ike_sa!
@@ -186,8 +191,6 @@ struct private_ike_sa_init_requested_t {
 	/**
 	 * Destroy function called internally of this class after state change to 
 	 * state IKE_AUTH_REQUESTED succeeded. 
-	 * 
-	 * In case of state change to INITIATOR_INIT the default destroy function gets called.
 	 * 
 	 * This destroy function does not destroy objects which were passed to the new state.
 	 * 
@@ -383,7 +386,8 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	ike_sa_init_reply_data = ike_sa_init_reply->get_packet_data(ike_sa_init_reply);
 
 	/* state can now be changed */
-	next_state = ike_auth_requested_create(this->ike_sa,this->sent_nonce,this->received_nonce,ike_sa_init_reply_data);
+	next_state = ike_auth_requested_create(this->ike_sa, this->sent_nonce, this->received_nonce,
+										   ike_sa_init_reply_data, this->child_sa);
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 
 	this->destroy_after_state_change(this);
@@ -512,9 +516,21 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 	/* get proposals form config, add to payload */
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
 	proposal_list = sa_config->get_proposals(sa_config);
+	/* build child sa */
+	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
+									 this->ike_sa->get_other_host(this->ike_sa));
+	if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
+	{
+		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+		return DELETE_ME;
+	}
+	
+	/* TODO:
+	 * Huston, we've got a problem here. Since SPIs are stored in
+	 * the proposal, and these proposals are shared across configs,
+	 * there may be some threading issues... fix it!
+	 */
 	sa_payload = sa_payload_create_from_proposal_list(proposal_list);
-
-	/* TODO child sa stuff */
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add SA payload to message");
 	request->add_payload(request,(payload_t *) sa_payload);
@@ -705,6 +721,10 @@ static void destroy(private_ike_sa_init_requested_t *this)
 	allocator_free(this->sent_nonce.ptr);
 	allocator_free(this->received_nonce.ptr);
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
+	if (this->child_sa)
+	{
+		this->child_sa->destroy(this->child_sa);
+	}
 	if (this->proposal)
 	{
 		this->proposal->destroy(this->proposal);
@@ -743,6 +763,7 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->diffie_hellman = diffie_hellman;
 	this->proposal = NULL;
 	this->sent_nonce = sent_nonce;
+	this->child_sa = NULL;
 	this->ike_sa_init_request_data = ike_sa_init_request_data;
 	
 	return &(this->public);

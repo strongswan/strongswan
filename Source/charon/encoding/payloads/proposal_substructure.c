@@ -226,6 +226,7 @@ static void set_next_type(private_proposal_substructure_t *this,payload_type_t t
  */
 static size_t get_length(private_proposal_substructure_t *this)
 {
+	this->compute_length(this);
 	return this->proposal_length;
 }
 
@@ -384,9 +385,8 @@ static void compute_length (private_proposal_substructure_t *this)
 	iterator->destroy(iterator);
 	
 	length += this->spi.len;
-	this->transforms_count= transforms_count;
-	this->proposal_length = length;	
-
+	this->transforms_count = transforms_count;
+	this->proposal_length = length;
 }
 
 /**
@@ -411,8 +411,8 @@ static size_t get_spi_size (private_proposal_substructure_t *this)
 void add_to_proposal(private_proposal_substructure_t *this, proposal_t *proposal)
 {
 	iterator_t *iterator = this->transforms->create_iterator(this->transforms, TRUE);
+	u_int32_t spi;
 	
-	proposal->set_spi(proposal, this->protocol_id, *((u_int32_t*)this->spi.ptr));
 	
 	while (iterator->has_next(iterator))
 	{
@@ -430,6 +430,10 @@ void add_to_proposal(private_proposal_substructure_t *this, proposal_t *proposal
 		proposal->add_algorithm(proposal, this->protocol_id, transform_type, transform_id, key_length);
 	}
 	iterator->destroy(iterator);
+	
+	spi = *((u_int32_t*)this->spi.ptr);
+	
+	proposal->set_spi(proposal, this->protocol_id, spi);
 }
 
 /**
@@ -561,14 +565,6 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	algorithm_t *algo;
 	transform_substructure_t *transform;
 	
-	/* take over general infos */
-	this->spi_size = proto == IKE ? 8 : 4;
-	this->spi.len = this->spi_size;
-	this->spi.ptr = allocator_alloc(this->spi_size);
-	*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal, proto);
-	this->proposal_number = proposal->get_number(proposal);
-	this->protocol_id = proto;
-	
 	/* encryption algorithm is only availble in ESP */
 	iterator = proposal->create_algorithm_iterator(proposal, proto, ENCRYPTION_ALGORITHM);
 	while (iterator->has_next(iterator))
@@ -622,6 +618,14 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 		this->public.add_transform_substructure(&(this->public), transform);
 	}
 	iterator->destroy(iterator);
+	
+	/* take over general infos */
+	this->spi_size = proto == IKE ? 8 : 4;
+	this->spi.len = this->spi_size;
+	this->spi.ptr = allocator_alloc(this->spi_size);
+	*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal, proto);
+	this->proposal_number = proposal->get_number(proposal);
+	this->protocol_id = proto;
 	
 	return &(this->public);
 }

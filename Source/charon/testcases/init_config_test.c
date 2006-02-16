@@ -32,9 +32,9 @@
 void test_init_config(protected_tester_t *tester)
 {
 	init_config_t *init_config = init_config_create("192.168.0.1","192.168.0.2",500,500);
-	proposal_t *prop1, *prop2, *prop3, *prop4, *selected_one;
+	proposal_t *prop1, *prop2, *prop3, *prop4;//, *selected_one;
 	linked_list_t *list;
-	status_t status;
+	//status_t status;
 
 	prop1 = proposal_create(1);
 	prop1->add_algorithm(prop1, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);

@@ -417,7 +417,7 @@ status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
  */
 static void set_new_state (private_ike_sa_t *this, state_t *state)
 {
-	this->logger->log(this->logger, CONTROL, "Change current state %s to %s",
+	this->logger->log(this->logger, CONTROL, "statechange: %s => %s",
 					  mapping_find(ike_sa_state_m,this->current_state->get_state(this->current_state)),
 					  mapping_find(ike_sa_state_m,state->get_state(state)));
 	this->current_state = state;
@@ -964,6 +964,14 @@ static ike_sa_state_t get_state (private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.get_state.
+ */
+static void add_child_sa (private_ike_sa_t *this, child_sa_t *child_sa)
+{
+	this->child_sas->insert_last(this->child_sas, child_sa);
+}
+
+/**
  * Implementation of protected_ike_sa_t.reset_message_buffers.
  */
 static void reset_message_buffers (private_ike_sa_t *this)
@@ -1008,21 +1016,17 @@ static void create_delete_established_ike_sa_job (private_ike_sa_t *this,u_int32
  */
 static void destroy (private_ike_sa_t *this)
 {
+	child_sa_t *child_sa;
+	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to destroy IKE SA %llu:%llu, role %s", 
 					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
 					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 
 	/* destroy child sa's */
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy all child_sa's");
-	while (this->child_sas->get_count(this->child_sas) > 0)
+	while (this->child_sas->remove_last(this->child_sas, (void**)&child_sa) == SUCCESS)
 	{
-		void *child_sa;
-		if (this->child_sas->remove_first(this->child_sas, &child_sa) != SUCCESS)
-		{
-			break;
-		}
-		/* destroy child sa */
+		child_sa->destroy(child_sa);
 	}
 	this->child_sas->destroy(this->child_sas);
 	
@@ -1134,7 +1138,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_child_prf = (prf_t *(*) (protected_ike_sa_t *)) get_child_prf;
 	this->protected.get_prf_auth_i = (prf_t *(*) (protected_ike_sa_t *)) get_prf_auth_i;
 	this->protected.get_prf_auth_r = (prf_t *(*) (protected_ike_sa_t *)) get_prf_auth_r;
-	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;		
+	this->protected.add_child_sa = (void (*) (protected_ike_sa_t*,child_sa_t*)) add_child_sa;
+	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;
 	this->protected.set_init_config = (void (*) (protected_ike_sa_t *,init_config_t *)) set_init_config;
 	this->protected.get_init_config = (init_config_t *(*) (protected_ike_sa_t *)) get_init_config;
 	this->protected.set_sa_config = (void (*) (protected_ike_sa_t *,sa_config_t *)) set_sa_config;

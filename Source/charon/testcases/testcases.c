@@ -61,6 +61,7 @@
 #include <testcases/proposal_test.h>
 #include <testcases/rsa_test.h>
 #include <testcases/kernel_interface_test.h>
+#include <testcases/child_sa_test.h>
 
 /* output for test messages */
 extern FILE * stderr;
@@ -126,6 +127,7 @@ test_t sa_config_test = {test_sa_config, "sa_config_t test"};
 test_t proposal_test = {test_proposal, "proposal_t test"};
 test_t rsa_test = {test_rsa, "RSA private/public key test"};
 test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
+test_t child_sa_test = {test_child_sa, "Child SA"};
 
 
 daemon_t* charon;
@@ -138,6 +140,7 @@ static void daemon_kill(daemon_t *this, char* none)
 	this->job_queue->destroy(this->job_queue);
 	this->event_queue->destroy(this->event_queue);
 	this->send_queue->destroy(this->send_queue);
+	this->kernel_interface->destroy(this->kernel_interface);
 	//this->configuration_manager->destroy(this->configuration_manager);
 	allocator_free(charon);
 }
@@ -160,6 +163,7 @@ daemon_t *daemon_create()
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
 	charon->send_queue = send_queue_create();
+	charon->kernel_interface = kernel_interface_create();
 	//charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT,HALF_OPEN_IKE_SA_TIMEOUT);
 	charon->sender = NULL;
 	charon->receiver = NULL;
@@ -237,6 +241,8 @@ int main()
 		&rsa_test,
 		NULL
 	};
+	/* get rid of compiler warning ;-) */
+	*all_tests = *all_tests;
 	
 	/* allocator needs initialization */
 	allocator_init();
@@ -244,13 +250,14 @@ int main()
 	daemon_create();
  
 	charon->logger_manager->disable_logger_level(charon->logger_manager,TESTER,FULL);
+	charon->logger_manager->enable_logger_level(charon->logger_manager,CHILD_SA,FULL);
 	/* charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW); */
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
-	tester->perform_tests(tester,all_tests);
-	//tester->perform_test(tester,&kernel_interface_test);
+	//tester->perform_tests(tester,all_tests);
+	tester->perform_test(tester,&child_sa_test);
 	
 	
 	tester->destroy(tester);

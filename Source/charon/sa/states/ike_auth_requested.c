@@ -71,6 +71,11 @@ struct private_ike_auth_requested_t {
 	 * IKE_SA_INIT-Request in binary form.
 	 */
 	chunk_t ike_sa_init_reply_data;
+	
+	/**
+	 * Child sa created in ike_sa_init_requested
+	 */
+	child_sa_t *child_sa;
 	 
 	/**
 	 * Assigned Logger.
@@ -136,6 +141,16 @@ struct private_ike_auth_requested_t {
 	 * 						- DELETE_ME
 	 */
 	status_t (*process_notify_payload) (private_ike_auth_requested_t *this, notify_payload_t *notify_payload);
+	
+	/**
+	 * Destroy function called internally of this class after state change to 
+	 * state IKE_SA_ESTABLISHED succeeded. 
+	 * 
+	 * This destroy function does not destroy objects which were passed to the new state.
+	 * 
+	 * @param this		calling object
+	 */
+	void (*destroy_after_state_change) (private_ike_auth_requested_t *this);
 };
 
 
@@ -288,7 +303,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 						
 	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
-	this->public.state_interface.destroy(&(this->public.state_interface));
+	this->destroy_after_state_change(this);
 	return SUCCESS;
 }
 
@@ -328,7 +343,6 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 {
 	proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
-	child_sa_t *child_sa;
 	chunk_t seed;
 	prf_plus_t *prf_plus;
 	
@@ -377,10 +391,19 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 	allocator_free_chunk(&seed);
 	
-	child_sa = child_sa_create(proposal, prf_plus);
-	prf_plus->destroy(prf_plus);
-	child_sa->destroy(child_sa);
+	if (this->child_sa)
+	{
+		if (this->child_sa->update(this->child_sa, proposal, prf_plus) != SUCCESS)
+		{
+			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+			prf_plus->destroy(prf_plus);
+			proposal->destroy(proposal);
+			return DELETE_ME;
+		}
+		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
+	}
 	
+	prf_plus->destroy(prf_plus);
 	proposal->destroy(proposal);
 	
 	return SUCCESS;
@@ -524,6 +547,20 @@ static void destroy(private_ike_auth_requested_t *this)
 {
 	allocator_free_chunk(&(this->received_nonce));
 	allocator_free_chunk(&(this->sent_nonce));
+	allocator_free_chunk(&(this->ike_sa_init_reply_data));
+	if (this->child_sa)
+	{
+		this->child_sa->destroy(this->child_sa);
+	}
+	allocator_free(this);
+}
+/**
+ * Implements protected_ike_sa_t.destroy_after_state_change
+ */
+static void destroy_after_state_change(private_ike_auth_requested_t *this)
+{
+	allocator_free_chunk(&(this->received_nonce));
+	allocator_free_chunk(&(this->sent_nonce));
 	allocator_free_chunk(&(this->ike_sa_init_reply_data));	
 	allocator_free(this);
 }
@@ -531,7 +568,7 @@ static void destroy(private_ike_auth_requested_t *this)
 /* 
  * Described in header.
  */
-ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk_t sent_nonce,chunk_t received_nonce,chunk_t ike_sa_init_reply_data)
+ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk_t sent_nonce,chunk_t received_nonce,chunk_t ike_sa_init_reply_data, child_sa_t *child_sa)
 {
 	private_ike_auth_requested_t *this = allocator_alloc_thing(private_ike_auth_requested_t);
 
@@ -541,12 +578,12 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk
 	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
 	
 	/* private functions */
-	
 	this->process_idr_payload = process_idr_payload;
 	this->process_sa_payload = process_sa_payload;
 	this->process_auth_payload = process_auth_payload;
 	this->process_ts_payload = process_ts_payload;
 	this->process_notify_payload = process_notify_payload;
+	this->destroy_after_state_change = destroy_after_state_change;
 	
 	/* private data */
 	this->ike_sa = ike_sa;
@@ -554,6 +591,7 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk
 	this->sent_nonce = sent_nonce;
 	this->ike_sa_init_reply_data = ike_sa_init_reply_data;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
+	this->child_sa = child_sa;
 	
 	return &(this->public);
 }

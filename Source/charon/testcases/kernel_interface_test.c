@@ -65,10 +65,10 @@ void test_kernel_interface(protected_tester_t *tester)
 
 
 
-	//status = kernel_interface->get_spi(kernel_interface, me, other, 50, TRUE, &spi);
-	//tester->assert_true(tester, status == SUCCESS, "spi get");
+	status = kernel_interface->get_spi(kernel_interface, me, other, 50, FALSE, &spi);
+	tester->assert_true(tester, status == SUCCESS, "spi get");
 
-	status = kernel_interface->add_sa(kernel_interface, me, other, spi, 50, TRUE, ENCR_AES_CBC, enc_key,AUTH_HMAC_MD5_96,inc_key,TRUE);	
+	status = kernel_interface->add_sa(kernel_interface, me, other, spi, 50, FALSE, ENCR_AES_CBC, enc_key,AUTH_UNDEFINED,inc_key,TRUE);	
 	tester->assert_true(tester, status == SUCCESS, "build sa");
 	
 

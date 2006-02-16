@@ -40,6 +40,10 @@
 #include <utils/linked_list.h>
 
 
+#define KERNEL_ESP 50
+#define KERNEL_AH 51
+
+
 typedef struct netlink_message_t netlink_message_t;
 
 /**
@@ -83,48 +87,48 @@ struct private_kernel_interface_t {
 	/**
 	 * Public part of the kernel_interface_t object.
 	 */
- 	kernel_interface_t public;
- 	
- 	/**
- 	 * Netlink communication socket.
- 	 */
- 	int socket;
-
+	kernel_interface_t public;
+	
+	/**
+	 * Netlink communication socket.
+	 */
+	int socket;
+	
 	pid_t pid;
- 	/**
- 	 * Sequence number for messages.
- 	 */
- 	u_int32_t seq;
- 	
- 	/** 
- 	 * List of responded messages.
- 	 */
- 	linked_list_t *responses;
- 	
- 	/**
- 	 * Thread which receives messages.
- 	 */
- 	pthread_t thread;
- 	
- 	/**
- 	 * Mutex locks access to replies list.
- 	 */
- 	pthread_mutex_t mutex;
- 	
- 	/**
- 	 * Condvar allows signaling of threads waiting for a reply.
- 	 */
- 	pthread_cond_t condvar;
- 	
- 	/**
- 	 * Function for the thread, receives messages.
- 	 */
- 	void (*receive_messages) (private_kernel_interface_t *this);
- 	
- 	/**
- 	 * Sends a netlink_message_t down to the kernel and wait for reply.
- 	 */
- 	status_t (*send_message) (private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response);
+	/**
+	 * Sequence number for messages.
+	 */
+	u_int32_t seq;
+	
+	/** 
+	 * List of responded messages.
+	 */
+	linked_list_t *responses;
+	
+	/**
+	 * Thread which receives messages.
+	 */
+	pthread_t thread;
+	
+	/**
+	 * Mutex locks access to replies list.
+	 */
+	pthread_mutex_t mutex;
+	
+	/**
+	 * Condvar allows signaling of threads waiting for a reply.
+	 */
+	pthread_cond_t condvar;
+	
+	/**
+	 * Function for the thread, receives messages.
+	 */
+	void (*receive_messages) (private_kernel_interface_t *this);
+	
+	/**
+	 * Sends a netlink_message_t down to the kernel and wait for reply.
+	 */
+	status_t (*send_message) (private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response);
 };
 
 mapping_t kernel_encryption_algs_m[] = {
@@ -157,41 +161,42 @@ static status_t get_spi(private_kernel_interface_t *this, host_t *src, host_t *d
 {
 	netlink_message_t request, *response;
 	
-    memset(&request, 0, sizeof(request));
-    request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.spi)));
-    request.hdr.nlmsg_flags = NLM_F_REQUEST;
-    request.hdr.nlmsg_type = XFRM_MSG_ALLOCSPI;
+	memset(&request, 0, sizeof(request));
+	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.spi)));
+	request.hdr.nlmsg_flags = NLM_F_REQUEST;
+	request.hdr.nlmsg_type = XFRM_MSG_ALLOCSPI;
 	request.spi.info.saddr = src->get_xfrm_addr(src);
 	request.spi.info.id.daddr = dest->get_xfrm_addr(dest);
-    request.spi.info.mode = tunnel_mode;
-    request.spi.info.id.proto = protocol;
-    request.spi.info.family = PF_INET;
-    request.spi.min = 100;
-    request.spi.max = 200;
-
-   	if (this->send_message(this, &request, &response) != SUCCESS)
-   	{
-   		return FAILED;
-   	}
-    
-    if (response->hdr.nlmsg_type == NLMSG_ERROR)
-    {
-    	return FAILED;
-    }
-    
-    if (response->hdr.nlmsg_type != XFRM_MSG_NEWSA)
-    {
-    	return FAILED;
-    }
-    else if (response->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(response->sa)))
-    {
+	request.spi.info.mode = tunnel_mode;
+	/* TODO: this should be done with getprotobyname() */
+	request.spi.info.id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
+	request.spi.info.family = PF_INET;
+	request.spi.min = 100;
+	request.spi.max = 200;
+	
+	if (this->send_message(this, &request, &response) != SUCCESS)
+	{
 		return FAILED;
-    }
+	}
+	
+	if (response->hdr.nlmsg_type == NLMSG_ERROR)
+	{
+		return FAILED;
+	}
+	
+	if (response->hdr.nlmsg_type != XFRM_MSG_NEWSA)
+	{
+		return FAILED;
+	}
+	else if (response->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(response->sa)))
+	{
+		return FAILED;
+	}
 	
 	*spi = response->sa.id.spi;
 	allocator_free(response);
-
-    return SUCCESS;
+	
+	return SUCCESS;
 }
 
 static status_t add_sa(	private_kernel_interface_t *this,
@@ -206,45 +211,46 @@ static status_t add_sa(	private_kernel_interface_t *this,
 						chunk_t integrity_key,
 						bool replace)
 {
-    netlink_message_t request, *response;
-	POS;
-    memset(&request, 0, sizeof(request));
-    
-    request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-    request.hdr.nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
-
-    request.sa.saddr = me->get_xfrm_addr(me);
-    request.sa.id.daddr = other->get_xfrm_addr(other);
-
-    request.sa.id.spi = spi;
-    request.sa.id.proto = protocol;
-    request.sa.family = me->get_family(me);
-    request.sa.mode = tunnel_mode;
-    request.sa.replay_window = 0; //sa->replay_window; ???
-    request.sa.reqid = 0; //sa->reqid; ???
-    request.sa.lft.soft_byte_limit = XFRM_INF;
-    request.sa.lft.soft_packet_limit = XFRM_INF;
-    request.sa.lft.hard_byte_limit = XFRM_INF;
-    request.sa.lft.hard_packet_limit = XFRM_INF;
-
-    request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.sa)));
-
-    if (enc_alg != ENCR_UNDEFINED)
-    {
+	netlink_message_t request, *response;
+	memset(&request, 0, sizeof(request));
+	
+	
+	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	request.hdr.nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+	
+	request.sa.saddr = me->get_xfrm_addr(me);
+	request.sa.id.daddr = other->get_xfrm_addr(other);
+	
+	request.sa.id.spi = spi;
+	/* TODO: this should be done with getprotobyname() */
+	request.sa.id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
+	request.sa.family = me->get_family(me);
+	request.sa.mode = tunnel_mode;
+	request.sa.replay_window = 0; //sa->replay_window; ???
+	request.sa.reqid = 0; //sa->reqid; ???
+	request.sa.lft.soft_byte_limit = XFRM_INF;
+	request.sa.lft.soft_packet_limit = XFRM_INF;
+	request.sa.lft.hard_byte_limit = XFRM_INF;
+	request.sa.lft.hard_packet_limit = XFRM_INF;
+	
+	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.sa)));
+	
+	if (enc_alg != ENCR_UNDEFINED)
+	{
 		netlink_algo_t *nla = (netlink_algo_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
-    	
-    	nla->type = XFRMA_ALG_CRYPT;
+		
+		nla->type = XFRMA_ALG_CRYPT;
 		nla->length = sizeof(netlink_algo_t) + encryption_key.len;
 		nla->algo.alg_key_len = encryption_key.len * 8;
 		
 		strcpy(nla->algo.alg_name, mapping_find(kernel_encryption_algs_m, enc_alg));
 		memcpy(nla->algo.alg_key, encryption_key.ptr, encryption_key.len);
-
+	
 		request.hdr.nlmsg_len += nla->length;
-    }
-
-    if (int_alg != AUTH_UNDEFINED)
-    {
+	}
+	
+	if (int_alg != AUTH_UNDEFINED)
+	{
 		netlink_algo_t *nla = (netlink_algo_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
 		
 		nla->type = XFRMA_ALG_AUTH;
@@ -252,20 +258,20 @@ static status_t add_sa(	private_kernel_interface_t *this,
 		nla->algo.alg_key_len = integrity_key.len * 8;
 		strcpy(nla->algo.alg_name, mapping_find(kernel_integrity_algs_m, int_alg));
 		memcpy(nla->algo.alg_key, integrity_key.ptr, integrity_key.len);
-
-		request.hdr.nlmsg_len += nla->length;
-    }
-    
-	/* add IPComp */
-    
-    if (this->send_message(this, &request, &response) != SUCCESS)
-    {
-    	allocator_free(response);
-    	return FAILED;	
-    }
 	
-    allocator_free(response);
-    return SUCCESS;
+		request.hdr.nlmsg_len += nla->length;
+	}
+	
+	/* add IPComp here*/
+	
+	if (this->send_message(this, &request, &response) != SUCCESS)
+	{
+		allocator_free(response);
+		return FAILED;	
+	}
+	
+	allocator_free(response);
+	return SUCCESS;
 }
 
 
@@ -276,7 +282,7 @@ static status_t send_message(private_kernel_interface_t *this, netlink_message_t
 	
 	request->hdr.nlmsg_seq = ++this->seq;
 	request->hdr.nlmsg_pid = this->pid;
-
+	
 	memset(&addr, 0, sizeof(struct sockaddr_nl));
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = 0;
@@ -308,17 +314,17 @@ static status_t send_message(private_kernel_interface_t *this, netlink_message_t
 			if (listed_response->hdr.nlmsg_seq == request->hdr.nlmsg_seq)
 			{
 				/* matches our request, this is the reply */
-	 			*response = listed_response;
-	 			found = TRUE;
-	 			break;
- 			}
- 		}
- 		iterator->destroy(iterator);
- 		
- 		if (found)
- 		{
- 			break;	
- 		}
+				*response = listed_response;
+				found = TRUE;
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+		
+		if (found)
+		{
+			break;
+		}
 		/* we should time out, if something goes wrong */
 		pthread_cond_wait(&(this->condvar), &(this->mutex));
 	}
@@ -330,16 +336,16 @@ static status_t send_message(private_kernel_interface_t *this, netlink_message_t
 
 
 static void receive_messages(private_kernel_interface_t *this)
-{	
+{
 	while(TRUE) 
 	{
 		netlink_message_t response, *listed_response;
 		while (TRUE)
 		{
-	    	struct sockaddr_nl addr;
+			struct sockaddr_nl addr;
 			socklen_t addr_length;
 			size_t length;
-	
+			
 			addr_length = sizeof(addr);
 			
 			response.hdr.nlmsg_type = XFRM_MSG_NEWSA;
@@ -347,11 +353,11 @@ static void receive_messages(private_kernel_interface_t *this)
 			if (length < 0)
 			{
 				if (errno == EINTR)
-		    	{
-		    		/* interrupted, try again */
+				{
+					/* interrupted, try again */
 					continue;
-		    	}
-		    	charon->kill(charon, "receiving from netlink socket failed");
+				}
+				charon->kill(charon, "receiving from netlink socket failed");
 			}
 			if (!NLMSG_OK(&response.hdr, length))
 			{
@@ -361,7 +367,7 @@ static void receive_messages(private_kernel_interface_t *this)
 			if (addr.nl_pid != 0)
 			{
 				/* not from kernel. not interested, try another one */
-			    continue;
+				continue;
 			}
 			break;
 		}

@@ -341,7 +341,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				u_int8_t low_val = *(this->out_position) & 0x0F;
 				/* highval is set, low_val is not changed */
 				*(this->out_position) = high_val | low_val;
-				this->logger->log(this->logger, RAW|LEVEL2, "   => 0x%x", *(this->out_position));
+				this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *(this->out_position));
 				/* write position is not changed, just bit position is moved */
 				this->current_bit = 4;
 			}
@@ -352,7 +352,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				/* lowval of current byte in buffer has to be set to the new value*/
 				u_int low_val = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
 				*(this->out_position) = high_val | low_val;
-				this->logger->log(this->logger, RAW|LEVEL2, "   => 0x%x", *(this->out_position));
+				this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *(this->out_position));
 				this->out_position++;
 				this->current_bit = 0;
 
@@ -370,7 +370,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 		{
 			/* 8 bit values are written as they are */
 			*this->out_position = *((u_int8_t *)(this->data_struct + offset));
-			this->logger->log(this->logger, RAW|LEVEL2, "   => 0x%x", *(this->out_position));
+			this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *(this->out_position));
 			this->out_position++;
 			break;
 
@@ -392,7 +392,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			int16_val = int16_val & 0xFF7F;
 			
 			int16_val = int16_val | attribute_format_flag;
-			this->logger->log(this->logger, RAW|LEVEL2, "   => 0x%x", int16_val);
+			this->logger->log(this->logger, RAW|LEVEL2, "   => %d", int16_val);
 			/* write bytes to buffer (set bit is overwritten)*/				
 			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 			this->current_bit = 0;
@@ -516,7 +516,7 @@ static void generate_flag (private_generator_t *this,u_int32_t offset)
 	*(this->out_position) = *(this->out_position) | flag;
 	
 	
-	this->logger->log(this->logger, RAW|LEVEL2, "   => 0x0%x", *(this->out_position));
+	this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *(this->out_position));
 
 	this->current_bit++;
 	if (this->current_bit >= 8)
@@ -1017,6 +1017,8 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				return;
 		}
 	}
+	this->logger->log(this->logger, CONTROL|LEVEL2, "generating %s payload finished.", 
+					  mapping_find(payload_type_m, payload_type));
 	this->logger->log_bytes(this->logger, RAW|LEVEL3, "generated data for this payload",
 							payload_start, this->out_position-payload_start);
 }

@@ -343,7 +343,6 @@ static void compute_length (private_transform_substructure_t *this)
 	iterator->destroy(iterator);
 	
 	this->transform_length = length;
-		
 }
 
 /**
@@ -476,20 +475,13 @@ transform_substructure_t *transform_substructure_create_type(transform_type_t tr
 	transform->set_transform_type(transform,transform_type);
 	transform->set_transform_id(transform,transform_id);
 	
-	switch (transform_type)
+	/* a keylength attribute is only created for AES encryption */
+	if (transform_type == ENCRYPTION_ALGORITHM &&
+		transform_id == ENCR_AES_CBC)
 	{
-		case ENCRYPTION_ALGORITHM:
-		case PSEUDO_RANDOM_FUNCTION:
-		case INTEGRITY_ALGORITHM:
-		{
-			transform_attribute_t *attribute = transform_attribute_create_key_length(key_length);
-			transform->add_transform_attribute(transform,attribute);
-			break;
-		}
-		default:
-		{
-			/* no keylength attribute is created */
-		}
-	}	
+		transform_attribute_t *attribute = transform_attribute_create_key_length(key_length);
+		transform->add_transform_attribute(transform,attribute);		
+	}
+
 	return transform;
 }
