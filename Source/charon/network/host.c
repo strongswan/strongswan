@@ -319,3 +319,26 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 	allocator_free(this);
 	return NULL;
 }
+
+/*
+ * Described in header.
+ */
+host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
+{
+	chunk_t address;
+	
+	switch (sockaddr->sa_family)
+	{
+		/* IPv4 */
+		case AF_INET:
+		{
+			struct sockaddr_in *sin = (struct sockaddr_in *)sockaddr;
+			address.ptr = (void*)&(sin->sin_addr.s_addr);
+			address.len = 4;
+			return host_create_from_chunk(AF_INET, address, ntohs(sin->sin_port));
+		}
+		default:
+			return NULL;
+	}
+}
+

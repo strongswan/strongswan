@@ -209,6 +209,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case RECEIVER:
 			break;
 		case SOCKET:
+			logger_level |= FULL;
 			break;
 		case DAEMON:
 			break;

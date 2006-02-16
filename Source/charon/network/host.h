@@ -45,6 +45,7 @@ typedef struct host_t host_t;
  * @b Constructors:
  * - host_create()
  * - host_create_from_chunk()
+ * - host_create_from_sockaddr()
  * 
  * @todo Add IPv6 support
  * 
@@ -166,7 +167,7 @@ struct host_t {
 };
 
 /**
- * @brief Constructor to create a host_t object
+ * @brief Constructor to create a host_t object from an address string
  * 
  * Currently supports only IPv4!
  *
@@ -182,7 +183,7 @@ struct host_t {
 host_t *host_create(int family, char *address, u_int16_t port);
 
 /**
- * @brief Constructor to create a host_t object
+ * @brief Constructor to create a host_t object from an address chunk
  * 
  * Currently supports only IPv4!
  *
@@ -196,6 +197,20 @@ host_t *host_create(int family, char *address, u_int16_t port);
  * @ingroup network
  */
 host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
+
+/**
+ * @brief Constructor to create a host_t object from a sockaddr struct
+ * 
+ * Currently supports only IPv4!
+ *
+ * @param sockaddr		sockaddr struct which contains family, address and port
+ * @return 				
+ * 						- host_t object 
+ * 						- NULL, if family not supported.
+ * 
+ * @ingroup network
+ */
+host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
 
 
 #endif /*HOST_H_*/

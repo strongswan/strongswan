@@ -279,13 +279,14 @@ static void load_default_config (private_configuration_manager_t *this)
 	sa_config_t *sa_config_a, *sa_config_b;
 	traffic_selector_t *ts;
 	
-	init_config_a = init_config_create("0.0.0.0","192.168.0.3",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
-	init_config_b = init_config_create("0.0.0.0","192.168.0.2",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config_a = init_config_create("192.168.0.2","192.168.0.3",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config_b = init_config_create("192.168.0.3","192.168.0.2",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	
 	/* IKE proposals for alice */
 	proposal = proposal_create(1);
 	proposal->add_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	proposal->add_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+	proposal->add_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
 	proposal->add_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
 	proposal->add_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
 	proposal->add_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
@@ -294,7 +295,8 @@ static void load_default_config (private_configuration_manager_t *this)
 	/* IKE proposals for bob */
 	proposal = proposal_create(1);
 	proposal->add_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	proposal->add_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+	proposal->add_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
+	proposal->add_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
 	proposal->add_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
 	proposal->add_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
 	init_config_b->add_proposal(init_config_b, proposal);
@@ -346,7 +348,7 @@ static void load_default_config (private_configuration_manager_t *this)
 // 	proposal->add_algorithm(proposal, AH, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 
 	proposal->add_algorithm(proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	proposal->add_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+	proposal->add_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
 	proposal->add_algorithm(proposal, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
 	proposal->add_algorithm(proposal, ESP, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 	
