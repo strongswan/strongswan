@@ -59,19 +59,15 @@ struct private_child_sa_t {
 	u_int32_t esp_spi;
 	
 	/**
+	 * reqid used for this child_sa
+	 */
+	u_int32_t reqid;
+	
+	/**
 	 * CHILD_SAs own logger
 	 */
 	logger_t *logger;
 };
-
-
-/**
- * Implementation of child_sa_t.get_spi.
- */
-static u_int32_t get_spi(private_child_sa_t *this)
-{
-	return 0;
-}
 
 /**
  * Implements child_sa_t.alloc
@@ -244,7 +240,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 							  src->get_address(src), dst->get_address(dst));
 			status = charon->kernel_interface->add_sa(charon->kernel_interface,
 													  src, dst,
-													  spi, protocols[i], FALSE,
+													  spi, protocols[i],
+													  this->reqid,
 													  enc_algo, enc_key,
 													  int_algo, int_key, mine);
 			/* clean up for next round */
@@ -261,6 +258,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 			{
 				return FAILED;
 			}
+			
 			
 		}
 	}
@@ -292,6 +290,7 @@ static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *
 	{
 		return FAILED;
 	}
+	
 	return SUCCESS;
 }
 
@@ -307,6 +306,73 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_
 	{
 		return FAILED;
 	}
+	
+	return SUCCESS;
+}
+
+static status_t add_policy(private_child_sa_t *this, linked_list_t *my_ts, linked_list_t *other_ts)
+{
+	traffic_selector_t *local_ts, *remote_ts;
+	host_t *my_net, *other_net;
+	u_int8_t my_mask, other_mask;
+	int family;
+	chunk_t from_addr, to_addr;
+	u_int16_t from_port, to_port;
+	
+	my_ts->get_first(my_ts, (void**)&local_ts);
+	other_ts->get_first(other_ts, (void**)&remote_ts);
+	
+		
+	family = local_ts->get_type(local_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
+	from_addr = local_ts->get_from_address(local_ts);
+	//to_addr = local_ts->get_to_address(local_ts);
+	from_port = local_ts->get_from_port(local_ts);
+	to_port = local_ts->get_to_port(local_ts);
+	if (from_port != to_port)
+	{
+		from_port = 0;
+	}
+	my_net = host_create_from_chunk(family, from_addr, from_port);
+	allocator_free_chunk(&from_addr);
+	my_mask = 16;
+	
+	family = remote_ts->get_type(remote_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
+	from_addr = remote_ts->get_from_address(remote_ts);
+	//to_addr = remote_ts->get_to_address(remote_ts);
+	from_port = remote_ts->get_from_port(remote_ts);
+	to_port = remote_ts->get_to_port(remote_ts);
+	if (from_port != to_port)
+	{
+		from_port = 0;
+	}
+	other_net = host_create_from_chunk(family, from_addr, from_port);
+	allocator_free_chunk(&from_addr);
+	other_mask = 16;
+	
+	charon->kernel_interface->add_policy(charon->kernel_interface,
+										this->me, this->other,
+										my_net, other_net,
+										my_mask, other_mask,
+										XFRM_POLICY_OUT,
+										0, this->ah_spi, this->esp_spi,
+										this->reqid);
+	
+	charon->kernel_interface->add_policy(charon->kernel_interface,
+										 this->me, this->other,
+										 other_net, my_net,
+										 other_mask, my_mask,
+										 XFRM_POLICY_IN,
+										 0, this->ah_spi, this->esp_spi,
+										 this->reqid);
+	
+	charon->kernel_interface->add_policy(charon->kernel_interface,
+										 this->me, this->other,
+										 other_net, my_net,
+										 other_mask, my_mask,
+										 XFRM_POLICY_FWD,
+										 0, this->ah_spi, this->esp_spi,
+										 this->reqid);
+	
 	return SUCCESS;
 }
 
@@ -324,13 +390,14 @@ static void destroy(private_child_sa_t *this)
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other)
 {
+	static u_int32_t reqid = 123;
 	private_child_sa_t *this = allocator_alloc_thing(private_child_sa_t);
 
 	/* public functions */
-	this->public.get_spi = (u_int32_t(*)(child_sa_t*))get_spi;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
+	this->public.add_policy = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policy;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
@@ -339,6 +406,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other)
 	this->other = other;
 	this->ah_spi = 0;
 	this->esp_spi = 0;
+	this->reqid = reqid++;
 	
 	return (&this->public);
 }

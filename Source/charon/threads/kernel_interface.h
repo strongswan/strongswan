@@ -23,6 +23,7 @@
 #ifndef KERNEL_INTERFACE_H_
 #define KERNEL_INTERFACE_H_
 
+#include <linux/xfrm.h>
 
 #include <network/host.h>
 #include <encoding/payloads/proposal_substructure.h>
@@ -44,7 +45,11 @@ struct kernel_interface_t {
 	 * 
 	 * @todo Fix spi range
 	 */
-	status_t (*get_spi) (kernel_interface_t *this, host_t *src, host_t *dest, protocol_id_t protocol, bool tunnel_mode, u_int32_t *spi);
+	status_t (*get_spi) (kernel_interface_t *this, 
+				host_t *src, host_t *dest, 
+				protocol_id_t protocol, 
+				u_int32_t reqid,
+				u_int32_t *spi);
 	
 	/**
 	 * @brief Create an SA.
@@ -54,16 +59,23 @@ struct kernel_interface_t {
 	 * @todo Cleanup method params
 	 */
 	status_t (*add_sa)(kernel_interface_t *this,
-				host_t *src,
-				host_t *dst,
+				host_t *src, host_t *dst,
 				u_int32_t spi,
-				int protocol,
-				bool tunnel_mode,
+				protocol_id_t protocol,
+				u_int32_t reqid,
 				encryption_algorithm_t enc_alg,
 				chunk_t encryption_key,
 				integrity_algorithm_t int_alg,
 				chunk_t integrity_key,
 				bool replace);
+	
+	status_t (*add_policy) (kernel_interface_t *this, 
+				host_t *me, host_t *other, 
+				host_t *src, host_t *dst,
+				u_int8_t src_hostbits, u_int8_t dst_hostbits,
+				int direction, int upper_proto, 
+				bool ah, bool esp,
+				u_int32_t reqid);
 	
 	/**
 	 * @brief Destroys a kernel_interface object.

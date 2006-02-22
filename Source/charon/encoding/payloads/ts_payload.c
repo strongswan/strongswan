@@ -243,26 +243,23 @@ static iterator_t * create_traffic_selector_substructure_iterator (private_ts_pa
 /**
  * Implementation of ts_payload_t.get_traffic_selectors.
  */
-static size_t get_traffic_selectors(private_ts_payload_t *this, traffic_selector_t **traffic_selectors[])
+static linked_list_t *get_traffic_selectors(private_ts_payload_t *this)
 {
-	traffic_selector_t **ts;
+	traffic_selector_t *ts;
 	iterator_t *iterator;
-	int i = 0;
+	linked_list_t *ts_list = linked_list_create();
 	
-	ts = allocator_alloc(sizeof(traffic_selector_t*) * this->number_of_traffic_selectors);
 	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		traffic_selector_substructure_t *ts_substructure;
 		iterator->current(iterator, (void**)&ts_substructure);
-		ts[i] = ts_substructure->get_traffic_selector(ts_substructure);
-		i++;
+		ts = ts_substructure->get_traffic_selector(ts_substructure);
+		ts_list->insert_last(ts_list, (void*)ts);
 	}
 	iterator->destroy(iterator);
 	
-	/* return values */
-	*traffic_selectors = ts;
-	return this->number_of_traffic_selectors;
+	return ts_list;
 }
 
 /**
@@ -330,7 +327,7 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 	this->public.set_initiator = (void (*) (ts_payload_t *,bool)) set_initiator;
 	this->public.add_traffic_selector_substructure = (void (*) (ts_payload_t *,traffic_selector_substructure_t *)) add_traffic_selector_substructure;
 	this->public.create_traffic_selector_substructure_iterator = (iterator_t* (*) (ts_payload_t *,bool)) create_traffic_selector_substructure_iterator;
-	this->public.get_traffic_selectors = (size_t (*) (ts_payload_t *, traffic_selector_t**[])) get_traffic_selectors;
+	this->public.get_traffic_selectors = (linked_list_t *(*) (ts_payload_t *)) get_traffic_selectors;
 	
 	/* private functions */
 	this->compute_length = compute_length;
@@ -349,19 +346,23 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 /*
  * Described in header
  */
-ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, traffic_selector_t *traffic_selectors[], size_t count)
+ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, linked_list_t *traffic_selectors)
 {
-	int i;
+	iterator_t *iterator;
+	traffic_selector_t *ts;
+	traffic_selector_substructure_t *ts_substructure;
 	private_ts_payload_t *this;
 	
 	this = (private_ts_payload_t*)ts_payload_create(is_initiator);
 	
-	for (i = 0; i < count; i++)
+	iterator = traffic_selectors->create_iterator(traffic_selectors, TRUE);
+	while (iterator->has_next(iterator))
 	{
-		traffic_selector_substructure_t *ts_substructure;
-		ts_substructure = traffic_selector_substructure_create_from_traffic_selector(traffic_selectors[i]);
+		iterator->current(iterator, (void**)&ts);
+		ts_substructure = traffic_selector_substructure_create_from_traffic_selector(ts);
 		this->public.add_traffic_selector_substructure(&(this->public), ts_substructure);
 	}
+	iterator->destroy(iterator);
 	
 	return &(this->public);
 }

@@ -37,7 +37,7 @@ void test_kernel_interface(protected_tester_t *tester)
 {
 	kernel_interface_t *kernel_interface;
 	u_int32_t spi;
-	host_t *me, *other;
+	host_t *me, *other, *left, *right;
 	status_t status;
 	
 	u_int8_t enc_key_bytes[] = {
@@ -60,20 +60,25 @@ void test_kernel_interface(protected_tester_t *tester)
 	
 	kernel_interface = kernel_interface_create();
 	
-	me = host_create(AF_INET, "127.0.0.1", 0);
-	other = host_create(AF_INET, "127.0.0.1", 0);
-
-
-
-	status = kernel_interface->get_spi(kernel_interface, me, other, 50, FALSE, &spi);
+	me = host_create(AF_INET, "192.168.0.2", 0);
+	other = host_create(AF_INET, "192.168.0.3", 0);
+	 
+	status = kernel_interface->get_spi(kernel_interface, me, other, 50, 1234, &spi);
 	tester->assert_true(tester, status == SUCCESS, "spi get");
-
-	status = kernel_interface->add_sa(kernel_interface, me, other, spi, 50, FALSE, ENCR_AES_CBC, enc_key,AUTH_UNDEFINED,inc_key,TRUE);	
-	tester->assert_true(tester, status == SUCCESS, "build sa");
 	
-
+	status = kernel_interface->add_sa(kernel_interface, me, other, spi, 50, 1234, ENCR_AES_CBC, enc_key,AUTH_UNDEFINED,inc_key,TRUE);	
+	tester->assert_true(tester, status == SUCCESS, "add sa");
+	
+	left = host_create(AF_INET, "10.1.0.0", 0);
+	right = host_create(AF_INET, "10.2.0.0", 0);
+	
+	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0, TRUE, FALSE, 1234);
+	tester->assert_true(tester, status == SUCCESS, "add policy");
+	
 	me->destroy(me);
 	other->destroy(other);
+	left->destroy(left);
+	right->destroy(right);
 	
 	kernel_interface->destroy(kernel_interface);
 	

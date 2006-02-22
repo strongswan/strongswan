@@ -120,8 +120,12 @@ struct algorithm_t {
 typedef struct proposal_t proposal_t;
 
 /**
- * @brief Stores a proposal for a child SA.
+ * @brief Stores a set of algorithms used for an SA.
  * 
+ * A proposal stores algorithms for a specific 
+ * protocol. It can store algorithms for more than
+ * one protocol (e.g. AH and ESP). Then the proposal
+ * means both protocols must be used.
  * A proposal may contain more than one algorithm
  * of the same kind. ONE of them can be selected.
  *
@@ -140,8 +144,8 @@ struct proposal_t {
 	 * The algorithms are stored by priority, first added
 	 * is the most preferred.
 	 * Key size is only needed for encryption algorithms
-	 * with variable key size (such as AES), or integrity
-	 * algorithms.
+	 * with variable key size (such as AES). Must be set
+	 * to zero if key size is not specified.
 	 * The alg parameter accepts encryption_algorithm_t,
 	 * integrity_algorithm_t, dh_group_number_t and
 	 * extended_sequence_numbers_t.
@@ -242,6 +246,10 @@ struct proposal_t {
 
 /**
  * @brief Create a child proposal for AH and/or ESP.
+ * 
+ * Since the order of multiple proposals is important for
+ * key derivation, we must assign them numbers as they
+ * appear in the raw payload. Numbering starts at 1.
  * 
  * @param number			number of the proposal, as in the payload
  * @return 					proposal_t object

@@ -543,22 +543,13 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
  */
 static status_t build_tsi_payload (private_ike_sa_init_requested_t *this, message_t *request)
 {
-	traffic_selector_t **traffic_selectors;
-	size_t traffic_selectors_count;
+	linked_list_t *ts_list;
 	ts_payload_t *ts_payload;
 	sa_config_t *sa_config;
 	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	traffic_selectors_count = sa_config->get_traffic_selectors_initiator(sa_config,&traffic_selectors);
-	ts_payload = ts_payload_create_from_traffic_selectors(TRUE,traffic_selectors, traffic_selectors_count);
-	
-	/* cleanup traffic selectors */
-	while(traffic_selectors_count--) 
-	{
-		traffic_selector_t *ts = *traffic_selectors + traffic_selectors_count;
-		ts->destroy(ts);
-	}	
-	allocator_free(traffic_selectors);
+	ts_list = sa_config->get_my_traffic_selectors(sa_config);
+	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_list);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add TSi payload to message");
 	request->add_payload(request,(payload_t *) ts_payload);
@@ -571,22 +562,13 @@ static status_t build_tsi_payload (private_ike_sa_init_requested_t *this, messag
  */
 static status_t build_tsr_payload (private_ike_sa_init_requested_t *this, message_t *request)
 {
-	traffic_selector_t **traffic_selectors;
-	size_t traffic_selectors_count;
+	linked_list_t *ts_list;
 	ts_payload_t *ts_payload;
 	sa_config_t *sa_config;
 	
 	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	traffic_selectors_count = sa_config->get_traffic_selectors_responder(sa_config,&traffic_selectors);
-	ts_payload = ts_payload_create_from_traffic_selectors(FALSE,traffic_selectors, traffic_selectors_count);
-	
-	/* cleanup traffic selectors */
-	while(traffic_selectors_count--) 
-	{
-		traffic_selector_t *ts = *traffic_selectors + traffic_selectors_count;
-		ts->destroy(ts);
-	}	
-	allocator_free(traffic_selectors);
+	ts_list = sa_config->get_other_traffic_selectors(sa_config);
+	ts_payload = ts_payload_create_from_traffic_selectors(FALSE, ts_list);
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add TSr payload to message");
 	request->add_payload(request,(payload_t *) ts_payload);

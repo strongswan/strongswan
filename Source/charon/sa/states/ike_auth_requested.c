@@ -73,6 +73,21 @@ struct private_ike_auth_requested_t {
 	chunk_t ike_sa_init_reply_data;
 	
 	/**
+	 * Proposal to setup CHILD_SA
+	 */
+	proposal_t *proposal;
+	
+	/**
+	 * Traffic selectors applicable at our site
+	 */
+	linked_list_t *my_ts;
+	
+	/**
+	 * Traffic selectors applicable at remote site
+	 */
+	linked_list_t *other_ts;
+	
+	/**
 	 * Child sa created in ike_sa_init_requested
 	 */
 	child_sa_t *child_sa;
@@ -168,6 +183,8 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	signer_t *signer = NULL;
 	status_t status;
 	host_t *my_host, *other_host;
+	chunk_t seed;
+	prf_plus_t *prf_plus;
 	
 	if (ike_auth_reply->get_exchange_type(ike_auth_reply) != IKE_AUTH)
 	{
@@ -291,10 +308,46 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	{
 		return status;
 	}
-
+	
+	/* install child SAs for AH and esp */
+	if (!this->child_sa)
+	{
+		this->logger->log(this->logger, CONTROL, "No CHILD_SA requested, no CHILD_SA built");
+	}
+	if (!this->proposal)
+	{
+		this->logger->log(this->logger, CONTROL, "Proposal negotiation failed, no CHILD_SA built");
+	}
+	else if (this->my_ts->get_count(this->my_ts) == 0 || this->other_ts->get_count(this->other_ts) == 0)
+	{
+		this->logger->log(this->logger, CONTROL, "Traffic selector negotiation failed, no CHILD_SA built");
+	}
+	else
+	{
+		seed = allocator_alloc_as_chunk(this->sent_nonce.len + this->received_nonce.len);
+		memcpy(seed.ptr, this->sent_nonce.ptr, this->sent_nonce.len);
+		memcpy(seed.ptr + this->sent_nonce.len, this->received_nonce.ptr, this->received_nonce.len);
+		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
+		allocator_free_chunk(&seed);
+		
+		status = this->child_sa->update(this->child_sa, this->proposal, prf_plus);
+		prf_plus->destroy(prf_plus);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+			return DELETE_ME;
+		}
+		status = this->child_sa->add_policy(this->child_sa, this->my_ts, this->other_ts);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy! Deleting IKE_SA");
+			return DELETE_ME;
+		}
+		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
+	}
+	
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_auth_reply->get_message_id(ike_auth_reply));
 	/* create new state */
-				
 	my_host = this->ike_sa->get_my_host(this->ike_sa);
 	other_host = this->ike_sa->get_other_host(this->ike_sa);
 	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s, authenticated peer with %s", 
@@ -343,8 +396,6 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 {
 	proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
-	chunk_t seed;
-	prf_plus_t *prf_plus;
 	
 	/* get his selected proposal */
 	proposal_list = sa_payload->get_proposals(sa_payload);
@@ -383,28 +434,9 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not offered proposal. Deleting IKE_SA");
 		return DELETE_ME;
 	}
-
-	/* install child SAs for AH and esp */
-	seed = allocator_alloc_as_chunk(this->sent_nonce.len + this->received_nonce.len);
-	memcpy(seed.ptr, this->sent_nonce.ptr, this->sent_nonce.len);
-	memcpy(seed.ptr + this->sent_nonce.len, this->received_nonce.ptr, this->received_nonce.len);
-	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
-	allocator_free_chunk(&seed);
 	
-	if (this->child_sa)
-	{
-		if (this->child_sa->update(this->child_sa, proposal, prf_plus) != SUCCESS)
-		{
-			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
-			prf_plus->destroy(prf_plus);
-			proposal->destroy(proposal);
-			return DELETE_ME;
-		}
-		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
-	}
-	
-	prf_plus->destroy(prf_plus);
-	proposal->destroy(proposal);
+	/* apply proposal */
+	this->proposal = proposal;
 	
 	return SUCCESS;
 }
@@ -435,41 +467,36 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
  */
 static status_t process_ts_payload(private_ike_auth_requested_t *this, bool ts_initiator, ts_payload_t *ts_payload)
 {
-	traffic_selector_t **ts_received, **ts_selected;
-	size_t ts_received_count, ts_selected_count;
-	status_t status = SUCCESS;
+	linked_list_t *ts_received, *ts_selected;
+	traffic_selector_t *ts;
 	
 	/* get ts form payload */
-	ts_received_count = ts_payload->get_traffic_selectors(ts_payload, &ts_received);
+	ts_received = ts_payload->get_traffic_selectors(ts_payload);
 	/* select ts depending on payload type */
 	if (ts_initiator)
 	{
-		ts_selected_count = this->sa_config->select_traffic_selectors_initiator(this->sa_config, ts_received, ts_received_count, &ts_selected);
+		ts_selected = this->sa_config->select_my_traffic_selectors(this->sa_config, ts_received);
+		this->my_ts = ts_selected;
 	}
 	else
 	{
-		ts_selected_count = this->sa_config->select_traffic_selectors_responder(this->sa_config, ts_received, ts_received_count, &ts_selected);
+		ts_selected = this->sa_config->select_other_traffic_selectors(this->sa_config, ts_received);
+		this->other_ts = ts_selected;
 	}
 	/* check if the responder selected valid proposals */
-	if (ts_selected_count != ts_received_count)
+	if (ts_selected->get_count(ts_selected) != ts_received->get_count(ts_received))
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained not offered traffic selectors.");
 	}
 	
 	/* cleanup */
-	while(ts_received_count--) 
+	while (ts_received->remove_last(ts_received, (void**)&ts) == SUCCESS)
 	{
-		traffic_selector_t *ts = *ts_received + ts_received_count;
 		ts->destroy(ts);
 	}
-	allocator_free(ts_received);
-	while(ts_selected_count--) 
-	{
-		traffic_selector_t *ts = *ts_selected + ts_selected_count;
-		ts->destroy(ts);
-	}
-	allocator_free(ts_selected);
-	return status;
+	ts_received->destroy(ts_received);
+
+	return SUCCESS;
 }
 
 /**
@@ -552,6 +579,28 @@ static void destroy(private_ike_auth_requested_t *this)
 	{
 		this->child_sa->destroy(this->child_sa);
 	}
+	if (this->my_ts)
+	{
+		traffic_selector_t *ts;
+		while (this->my_ts->remove_last(this->my_ts, (void**)&ts) == SUCCESS)
+		{
+			ts->destroy(ts);
+		}
+		this->my_ts->destroy(this->my_ts);
+	}
+	if (this->other_ts)
+	{
+		traffic_selector_t *ts;
+		while (this->other_ts->remove_last(this->other_ts, (void**)&ts) == SUCCESS)
+		{
+			ts->destroy(ts);
+		}
+		this->other_ts->destroy(this->other_ts);
+	}
+	if (this->proposal)
+	{
+		this->proposal->destroy(this->proposal);
+	}
 	allocator_free(this);
 }
 /**
@@ -561,7 +610,29 @@ static void destroy_after_state_change(private_ike_auth_requested_t *this)
 {
 	allocator_free_chunk(&(this->received_nonce));
 	allocator_free_chunk(&(this->sent_nonce));
-	allocator_free_chunk(&(this->ike_sa_init_reply_data));	
+	allocator_free_chunk(&(this->ike_sa_init_reply_data));
+	if (this->my_ts)
+	{
+		traffic_selector_t *ts;
+		while (this->my_ts->remove_last(this->my_ts, (void**)&ts) == SUCCESS)
+		{
+			ts->destroy(ts);
+		}
+		this->my_ts->destroy(this->my_ts);
+	}
+	if (this->other_ts)
+	{
+		traffic_selector_t *ts;
+		while (this->other_ts->remove_last(this->other_ts, (void**)&ts) == SUCCESS)
+		{
+			ts->destroy(ts);
+		}
+		this->other_ts->destroy(this->other_ts);
+	}
+	if (this->proposal)
+	{
+		this->proposal->destroy(this->proposal);
+	}
 	allocator_free(this);
 }
 
@@ -591,6 +662,9 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk
 	this->sent_nonce = sent_nonce;
 	this->ike_sa_init_reply_data = ike_sa_init_reply_data;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
+	this->my_ts = NULL;
+	this->other_ts = NULL;
+	this->proposal = NULL;
 	this->child_sa = child_sa;
 	
 	return &(this->public);

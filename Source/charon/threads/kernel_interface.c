@@ -26,7 +26,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
-#include <linux/xfrm.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -43,6 +42,34 @@
 #define KERNEL_ESP 50
 #define KERNEL_AH 51
 
+#define SPD_PRIORITY 1024
+
+
+typedef struct xfrm_data_t xfrm_data_t;
+
+/**
+ * Lenght/Type/data struct for userdata in xfrm
+ */
+struct xfrm_data_t {
+	/**
+	 * length of the data
+	 */
+	u_int16_t length;
+	/**
+	 * type of data 
+	 */
+	u_int16_t type;
+	/**
+	 * and the data itself, for different purposes
+	 */
+	union {
+		/* algorithm */
+		struct xfrm_algo algo;
+		/* policy tmpl */
+		struct xfrm_user_tmpl tmpl[2];
+	};
+};
+
 
 typedef struct netlink_message_t netlink_message_t;
 
@@ -57,25 +84,24 @@ struct netlink_message_t {
 	struct nlmsghdr hdr;
 
 	union {
+		/* error message */
 		struct nlmsgerr e;
-		struct xfrm_userspi_info spi;			    
+		/* message for spi allocation */
+		struct xfrm_userspi_info spi;
+		/* message for SA installation */
 		struct {
 			struct xfrm_usersa_info sa;
-			u_int8_t data[512];
+		};
+		/* message for policy manipulation */
+		struct xfrm_userpolicy_id id;
+		/* message for policy installation */
+		struct {
+			struct xfrm_userpolicy_info policy;
 		};
 	};
+	u_int8_t data[512];
 };
 
-typedef struct netlink_algo_t netlink_algo_t;
-
-/**
- * Add length and type to xfrm_algo
- */
-struct netlink_algo_t {
-	u_int16_t length;
-	u_int16_t type;
-	struct xfrm_algo algo;
-};
 
 typedef struct private_kernel_interface_t private_kernel_interface_t;
 
@@ -157,9 +183,13 @@ mapping_t kernel_integrity_algs_m[] = {
 };
 
 
-static status_t get_spi(private_kernel_interface_t *this, host_t *src, host_t *dest, protocol_id_t protocol, bool tunnel_mode, u_int32_t *spi)
+static status_t get_spi(private_kernel_interface_t *this, 
+						host_t *src, host_t *dest, 
+						protocol_id_t protocol, u_int32_t reqid,
+						u_int32_t *spi)
 {
 	netlink_message_t request, *response;
+	status_t status = SUCCESS;
 	
 	memset(&request, 0, sizeof(request));
 	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.spi)));
@@ -167,8 +197,8 @@ static status_t get_spi(private_kernel_interface_t *this, host_t *src, host_t *d
 	request.hdr.nlmsg_type = XFRM_MSG_ALLOCSPI;
 	request.spi.info.saddr = src->get_xfrm_addr(src);
 	request.spi.info.id.daddr = dest->get_xfrm_addr(dest);
-	request.spi.info.mode = tunnel_mode;
-	/* TODO: this should be done with getprotobyname() */
+	request.spi.info.mode = TRUE; /* tunnel mode */
+	request.spi.info.reqid = reqid;
 	request.spi.info.id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
 	request.spi.info.family = PF_INET;
 	request.spi.min = 100;
@@ -176,27 +206,25 @@ static status_t get_spi(private_kernel_interface_t *this, host_t *src, host_t *d
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
-		return FAILED;
+		status = FAILED;
 	}
-	
-	if (response->hdr.nlmsg_type == NLMSG_ERROR)
+	else if (response->hdr.nlmsg_type == NLMSG_ERROR)
 	{
-		return FAILED;
+		status = FAILED;
 	}
-	
-	if (response->hdr.nlmsg_type != XFRM_MSG_NEWSA)
+	else if (response->hdr.nlmsg_type != XFRM_MSG_NEWSA)
 	{
-		return FAILED;
+		status = FAILED;
 	}
 	else if (response->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(response->sa)))
 	{
-		return FAILED;
+		status = FAILED;
 	}
 	
 	*spi = response->sa.id.spi;
 	allocator_free(response);
 	
-	return SUCCESS;
+	return status;
 }
 
 static status_t add_sa(	private_kernel_interface_t *this,
@@ -204,7 +232,7 @@ static status_t add_sa(	private_kernel_interface_t *this,
 						host_t *other,
 						u_int32_t spi,
 						int protocol,
-						bool tunnel_mode,
+						u_int32_t reqid,
 						encryption_algorithm_t enc_alg,
 						chunk_t encryption_key,
 						integrity_algorithm_t int_alg,
@@ -213,7 +241,7 @@ static status_t add_sa(	private_kernel_interface_t *this,
 {
 	netlink_message_t request, *response;
 	memset(&request, 0, sizeof(request));
-	
+	status_t status;
 	
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	request.hdr.nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
@@ -222,12 +250,11 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	request.sa.id.daddr = other->get_xfrm_addr(other);
 	
 	request.sa.id.spi = spi;
-	/* TODO: this should be done with getprotobyname() */
 	request.sa.id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
 	request.sa.family = me->get_family(me);
-	request.sa.mode = tunnel_mode;
+	request.sa.mode = TRUE; /* tunnel mode */
 	request.sa.replay_window = 0; //sa->replay_window; ???
-	request.sa.reqid = 0; //sa->reqid; ???
+	request.sa.reqid = reqid;
 	request.sa.lft.soft_byte_limit = XFRM_INF;
 	request.sa.lft.soft_packet_limit = XFRM_INF;
 	request.sa.lft.hard_byte_limit = XFRM_INF;
@@ -237,41 +264,137 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	
 	if (enc_alg != ENCR_UNDEFINED)
 	{
-		netlink_algo_t *nla = (netlink_algo_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
+		xfrm_data_t *data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
 		
-		nla->type = XFRMA_ALG_CRYPT;
-		nla->length = sizeof(netlink_algo_t) + encryption_key.len;
-		nla->algo.alg_key_len = encryption_key.len * 8;
+		data->type = XFRMA_ALG_CRYPT;
+		data->length = 4 + sizeof(data->algo) + encryption_key.len;
+		data->algo.alg_key_len = encryption_key.len * 8;
 		
-		strcpy(nla->algo.alg_name, mapping_find(kernel_encryption_algs_m, enc_alg));
-		memcpy(nla->algo.alg_key, encryption_key.ptr, encryption_key.len);
+		strcpy(data->algo.alg_name, mapping_find(kernel_encryption_algs_m, enc_alg));
+		memcpy(data->algo.alg_key, encryption_key.ptr, encryption_key.len);
 	
-		request.hdr.nlmsg_len += nla->length;
+		request.hdr.nlmsg_len += data->length;
 	}
 	
 	if (int_alg != AUTH_UNDEFINED)
 	{
-		netlink_algo_t *nla = (netlink_algo_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
+		xfrm_data_t *data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
 		
-		nla->type = XFRMA_ALG_AUTH;
-		nla->length = sizeof(netlink_algo_t) + integrity_key.len;
-		nla->algo.alg_key_len = integrity_key.len * 8;
-		strcpy(nla->algo.alg_name, mapping_find(kernel_integrity_algs_m, int_alg));
-		memcpy(nla->algo.alg_key, integrity_key.ptr, integrity_key.len);
+		data->type = XFRMA_ALG_AUTH;
+		data->length = 4 + sizeof(data->algo) + integrity_key.len;
+		data->algo.alg_key_len = integrity_key.len * 8;
+		strcpy(data->algo.alg_name, mapping_find(kernel_integrity_algs_m, int_alg));
+		memcpy(data->algo.alg_key, integrity_key.ptr, integrity_key.len);
 	
-		request.hdr.nlmsg_len += nla->length;
+		request.hdr.nlmsg_len += data->length;
 	}
 	
 	/* add IPComp here*/
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
-		allocator_free(response);
-		return FAILED;	
+		status = FAILED;
+	}
+	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
+	{
+		status = FAILED;
+	}
+	else if (response->e.error)
+	{
+		status = FAILED;
 	}
 	
 	allocator_free(response);
 	return SUCCESS;
+}
+
+static status_t add_policy(private_kernel_interface_t *this, 
+						  host_t *me, host_t *other, 
+						  host_t *src, host_t *dst,
+						  u_int8_t src_hostbits, u_int8_t dst_hostbits,
+						  int direction, int upper_proto, 
+						  bool ah, bool esp,
+						  u_int32_t reqid)
+{
+	netlink_message_t request, *response;
+	status_t status = SUCCESS;
+	
+	memset(&request, 0, sizeof(request));
+	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+
+	request.policy.sel.sport = htons(src->get_port(src));
+	request.policy.sel.dport = htons(dst->get_port(dst));
+	request.policy.sel.sport_mask = (request.policy.sel.sport) ? ~0 : 0;
+	request.policy.sel.dport_mask = (request.policy.sel.dport) ? ~0 : 0;
+	request.policy.sel.saddr = src->get_xfrm_addr(src);
+	request.policy.sel.daddr = dst->get_xfrm_addr(dst);
+	request.policy.sel.prefixlen_s = src_hostbits;
+	request.policy.sel.prefixlen_d = dst_hostbits;
+	request.policy.sel.proto = upper_proto;
+	request.policy.sel.family = src->get_family(src);
+	
+	request.policy.dir = direction;
+	request.policy.priority = SPD_PRIORITY;
+	request.policy.action = XFRM_POLICY_ALLOW;
+	request.policy.share = XFRM_SHARE_ANY;
+	
+	request.policy.lft.soft_byte_limit = XFRM_INF;
+	request.policy.lft.soft_packet_limit = XFRM_INF;
+	request.policy.lft.hard_byte_limit = XFRM_INF;
+	request.policy.lft.hard_packet_limit = XFRM_INF;
+
+	request.hdr.nlmsg_type = XFRM_MSG_NEWPOLICY;
+	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.policy)));
+	
+	if (esp || ah)
+	{
+		xfrm_data_t *data;
+		int tmpl_pos = 0;
+		data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
+		data->type = XFRMA_TMPL;
+		if (esp)
+		{
+			data->tmpl[tmpl_pos].reqid = reqid;
+			data->tmpl[tmpl_pos].id.proto = KERNEL_ESP;
+			data->tmpl[tmpl_pos].aalgos = data->tmpl[tmpl_pos].ealgos = data->tmpl[tmpl_pos].calgos = ~0;
+			data->tmpl[tmpl_pos].mode = TRUE;
+	 
+			data->tmpl[tmpl_pos].saddr = me->get_xfrm_addr(me);
+			data->tmpl[tmpl_pos].id.daddr = me->get_xfrm_addr(other);
+			
+			tmpl_pos++;
+		}	
+		if (ah)
+		{
+			data->tmpl[tmpl_pos].reqid = reqid;
+			data->tmpl[tmpl_pos].id.proto = KERNEL_AH;
+			data->tmpl[tmpl_pos].aalgos = data->tmpl[tmpl_pos].ealgos = data->tmpl[tmpl_pos].calgos = ~0;
+			data->tmpl[tmpl_pos].mode = TRUE;
+	 
+			data->tmpl[tmpl_pos].saddr = me->get_xfrm_addr(me);
+			data->tmpl[tmpl_pos].id.daddr = other->get_xfrm_addr(other);
+			
+			tmpl_pos++;
+		}
+		data->length = 4 + sizeof(struct xfrm_user_tmpl) * tmpl_pos;
+		request.hdr.nlmsg_len += data->length;
+	}
+	
+	if (this->send_message(this, &request, &response) != SUCCESS)
+	{
+		status = FAILED;
+	}
+	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
+	{
+		status = FAILED;
+	}
+	else if (response->e.error)
+	{
+		status = FAILED;
+	}
+	
+	allocator_free(response);
+	return status;
 }
 
 
@@ -418,11 +541,9 @@ kernel_interface_t *kernel_interface_create()
 	private_kernel_interface_t *this = allocator_alloc_thing(private_kernel_interface_t);
 	
 	/* public functions */
-	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,bool,u_int32_t*))get_spi;
-	
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,int,bool,encryption_algorithm_t,chunk_t,integrity_algorithm_t,chunk_t,bool))add_sa;
-	
-	
+	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,encryption_algorithm_t,chunk_t,integrity_algorithm_t,chunk_t,bool))add_sa;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,bool,bool,u_int32_t))add_policy;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
 
 	/* private members */
@@ -446,6 +567,10 @@ kernel_interface_t *kernel_interface_create()
 		allocator_free(this);
 		charon->kill(charon, "Unable to create netlink thread");
 	}
+	
+	//host_t *all = host_create(AF_INET, "0.0.0.0", 500);
+	//add_policy(this, all, all, all, all, 0, 0, XFRM_POLICY_OUT, 17, FALSE, FALSE, 0);
+	
 	
 	charon->logger_manager->enable_logger_level(charon->logger_manager, TESTER, FULL);
 	return (&this->public);

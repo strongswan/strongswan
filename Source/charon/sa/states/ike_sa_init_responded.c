@@ -79,6 +79,21 @@ struct private_ike_sa_init_responded_t {
 	sa_config_t *sa_config;
 	
 	/**
+	 * Proposal selected for CHILD_SA
+	 */
+	proposal_t *proposal;
+	
+	/**
+	 * Traffic selectors applicable at our site
+	 */
+	linked_list_t *my_ts;
+	
+	/**
+	 * Traffic selectors applicable at remote site
+	 */
+	linked_list_t *other_ts;
+	
+	/**
 	 * Assigned logger.
 	 * 
 	 * Is logger of ike_sa!
@@ -157,8 +172,11 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	signer_t *signer;
 	status_t status;
 	host_t *my_host, *other_host;
-
-
+	chunk_t seed;
+	prf_plus_t *prf_plus;
+	child_sa_t *child_sa;
+	
+	
 	if (request->get_exchange_type(request) != IKE_AUTH)
 	{
 		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state ike_sa_init_responded",
@@ -313,7 +331,44 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		return DELETE_ME;
 	}
 	
-	/* create new state */my_host = this->ike_sa->get_my_host(this->ike_sa);
+	/* install child SAs for AH and esp */
+	if (!this->proposal)
+	{
+		this->logger->log(this->logger, CONTROL, "Proposal negotiation failed, no CHILD_SA built");
+	}
+	else if (this->my_ts->get_count(this->my_ts) == 0 || this->other_ts->get_count(this->other_ts) == 0)
+	{
+		this->logger->log(this->logger, CONTROL, "Traffic selector negotiation failed, no CHILD_SA built");
+	}
+	else
+	{
+		seed = allocator_alloc_as_chunk(this->received_nonce.len + this->sent_nonce.len);
+		memcpy(seed.ptr, this->received_nonce.ptr, this->received_nonce.len);
+		memcpy(seed.ptr + this->received_nonce.len, this->sent_nonce.ptr, this->sent_nonce.len);
+		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
+		allocator_free_chunk(&seed);
+		
+		child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
+								this->ike_sa->get_other_host(this->ike_sa));
+		
+		status = child_sa->add(child_sa, this->proposal, prf_plus);
+		prf_plus->destroy(prf_plus);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+			return DELETE_ME;
+		}
+		status = child_sa->add_policy(child_sa, this->my_ts, this->other_ts);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy! Deleting IKE_SA");
+			return DELETE_ME;
+		}
+		this->ike_sa->add_child_sa(this->ike_sa, child_sa);
+	}
+	
+	/* create new state */
+	my_host = this->ike_sa->get_my_host(this->ike_sa);
 	other_host = this->ike_sa->get_other_host(this->ike_sa);
 	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s, authenticated peer with %s", 
 						my_host->get_address(my_host), other_host->get_address(other_host),
@@ -390,11 +445,6 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
 	sa_payload_t *sa_response;
-	child_sa_t *child_sa;
-	prf_plus_t *prf_plus;
-	chunk_t seed;
-	
-	/* TODO: child sa stuff */
 	
 	/* get proposals from request */
 	proposal_list = request->get_proposals(request);
@@ -425,30 +475,12 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		return DELETE_ME;	
 	}
 	
-	/* install child SAs for AH and esp */
-	seed = allocator_alloc_as_chunk(this->received_nonce.len + this->sent_nonce.len);
-	memcpy(seed.ptr, this->received_nonce.ptr, this->received_nonce.len);
-	memcpy(seed.ptr + this->received_nonce.len, this->sent_nonce.ptr, this->sent_nonce.len);
-	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
-	allocator_free_chunk(&seed);
-	
-	child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
-							   this->ike_sa->get_other_host(this->ike_sa));
-	if (child_sa->add(child_sa, proposal, prf_plus) != SUCCESS)
-	{
-		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
-		prf_plus->destroy(prf_plus);
-		proposal->destroy(proposal);
-		return DELETE_ME;
-	}
-	this->ike_sa->add_child_sa(this->ike_sa, child_sa);
+	/* apply proposal */
+	this->proposal = proposal;
 	
 	/* create payload with selected propsal */
 	sa_response = sa_payload_create_from_proposal(proposal);
 	response->add_payload(response, (payload_t*)sa_response);
-	
-	prf_plus->destroy(prf_plus);
-	proposal->destroy(proposal);	
 	return SUCCESS;
 }
 
@@ -462,8 +494,6 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 	status_t status;
 	
 	authenticator = authenticator_create(this->ike_sa);
-
-
 	status =  authenticator->verify_auth_data(authenticator,auth_request, this->ike_sa_init_request_data,this->sent_nonce,other_id_payload,TRUE);
 	
 	if (status != SUCCESS)
@@ -474,7 +504,6 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 		return DELETE_ME;
 	}
 		
-
 	status = authenticator->compute_auth_data(authenticator,&auth_reply, this->ike_sa_init_response_data,this->received_nonce,my_id_payload,FALSE);
 	authenticator->destroy(authenticator);
 	if (status != SUCCESS)
@@ -483,7 +512,7 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 		return DELETE_ME;
 		
 	}
-
+	
 	response->add_payload(response, (payload_t *)auth_reply);
 	return SUCCESS;	
 }
@@ -493,47 +522,35 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
  */
 static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_initiator, ts_payload_t *request, message_t* response)
 {
-	traffic_selector_t **ts_received, **ts_selected;
-	size_t ts_received_count, ts_selected_count;
+	linked_list_t *ts_received, *ts_selected;
+	traffic_selector_t *ts;
 	status_t status = SUCCESS;
 	ts_payload_t *ts_response;
 
 	/* build a reply payload with selected traffic selectors */
-	ts_received_count = request->get_traffic_selectors(request, &ts_received);
+	ts_received = request->get_traffic_selectors(request);
 	/* select ts depending on payload type */
 	if (ts_initiator)
 	{
-		ts_selected_count = this->sa_config->select_traffic_selectors_initiator(this->sa_config, ts_received, ts_received_count, &ts_selected);
+		ts_selected = this->sa_config->select_other_traffic_selectors(this->sa_config, ts_received);
+		this->other_ts = ts_selected;
 	}
 	else
 	{
-		ts_selected_count = this->sa_config->select_traffic_selectors_responder(this->sa_config, ts_received, ts_received_count, &ts_selected);
-	}
-	if(ts_selected_count == 0)
-	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any traffic selectors.");
-		ts_response = ts_payload_create(ts_initiator);
-		response->add_payload(response, (payload_t*)ts_response);
-	}
-	else
-	{
-		ts_response = ts_payload_create_from_traffic_selectors(ts_initiator, ts_selected, ts_selected_count);
-		response->add_payload(response, (payload_t*)ts_response);
+		ts_selected = this->sa_config->select_my_traffic_selectors(this->sa_config, ts_received);
+		this->my_ts = ts_selected;
 	}
 	
+	ts_response = ts_payload_create_from_traffic_selectors(ts_initiator, ts_selected);
+	response->add_payload(response, (payload_t*)ts_response);
+	
 	/* cleanup */
-	while(ts_received_count--) 
+	while (ts_received->remove_last(ts_received, (void**)&ts) == SUCCESS)
 	{
-		traffic_selector_t *ts = *ts_received + ts_received_count;
 		ts->destroy(ts);
 	}
-	allocator_free(ts_received);
-	while(ts_selected_count--) 
-	{
-		traffic_selector_t *ts = *ts_selected + ts_selected_count;
-		ts->destroy(ts);
-	}
-	allocator_free(ts_selected);
+	ts_received->destroy(ts_received);
+	
 	return status;
 }
 
@@ -577,16 +594,32 @@ static ike_sa_state_t get_state(private_ike_sa_init_responded_t *this)
  */
 static void destroy(private_ike_sa_init_responded_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Going to destroy ike_sa_init_responded_t state object");
-	
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy received nonce");
 	allocator_free_chunk(&(this->received_nonce));
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy sent nonce");
 	allocator_free_chunk(&(this->sent_nonce));
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy IKE_SA_INIT response octets");
 	allocator_free_chunk(&(this->ike_sa_init_response_data));
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy IKE_SA_INIT request octets");
 	allocator_free_chunk(&(this->ike_sa_init_request_data));
+	if (this->my_ts)
+	{
+		traffic_selector_t *ts;
+		while (this->my_ts->remove_last(this->my_ts, (void**)&ts) == SUCCESS)
+		{
+			ts->destroy(ts);
+		}
+		this->my_ts->destroy(this->my_ts);
+	}
+	if (this->other_ts)
+	{
+		traffic_selector_t *ts;
+		while (this->other_ts->remove_last(this->other_ts, (void**)&ts) == SUCCESS)
+		{
+			ts->destroy(ts);
+		}
+		this->other_ts->destroy(this->other_ts);
+	}
+	if (this->proposal)
+	{
+		this->proposal->destroy(this->proposal);
+	}
 
 	allocator_free(this);
 }
@@ -616,6 +649,9 @@ ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa
 	this->sent_nonce = sent_nonce;
 	this->ike_sa_init_response_data = ike_sa_init_response_data;
 	this->ike_sa_init_request_data = ike_sa_init_request_data;
+	this->my_ts = NULL;
+	this->other_ts = NULL;
+	this->proposal = NULL;
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	
 	return &(this->public);

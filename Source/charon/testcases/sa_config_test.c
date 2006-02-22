@@ -163,18 +163,18 @@ void test_sa_config(protected_tester_t *tester)
 	/* icmp request, should be discarded */
 	ts_request[3] = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
 	
-	sa_config->add_traffic_selector_initiator(sa_config, ts_policy[0]);
-	sa_config->add_traffic_selector_initiator(sa_config, ts_policy[1]);
-	sa_config->add_traffic_selector_initiator(sa_config, ts_policy[2]);
+	sa_config->add_my_traffic_selector(sa_config, ts_policy[0]);
+	sa_config->add_my_traffic_selector(sa_config, ts_policy[1]);
+	sa_config->add_my_traffic_selector(sa_config, ts_policy[2]);
 	
-	count = sa_config->get_traffic_selectors_initiator(sa_config, &ts_result);
+	count = sa_config->get_my_traffic_selectors(sa_config, &ts_result);
 	tester->assert_true(tester, (count == 3), "ts get count");
 	ts_result[0]->destroy(ts_result[0]);
 	ts_result[0]->destroy(ts_result[1]);
 	ts_result[0]->destroy(ts_result[2]);
 	allocator_free(ts_result);
 	
-	count = sa_config->select_traffic_selectors_initiator(sa_config, &ts_request[0], 4, &ts_result);
+	count = sa_config->select_my_traffic_selectors(sa_config, &ts_request[0], 4, &ts_result);
 	tester->assert_true(tester, (count == 3), "ts select count");
 	
 	

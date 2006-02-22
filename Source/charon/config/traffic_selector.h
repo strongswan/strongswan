@@ -24,6 +24,7 @@
 #define _TRAFFIC_SELECTOR_H_
 
 #include <types.h>
+#include <network/host.h>
 
 typedef enum ts_type_t ts_type_t;
 
@@ -33,7 +34,8 @@ typedef enum ts_type_t ts_type_t;
  * @ingroup config
  */
 enum ts_type_t {
-	/*
+	
+	/**
 	 * A range of IPv4 addresses, represented by two four (4) octet
      * values.  The first value is the beginning IPv4 address
      * (inclusive) and the second value is the ending IPv4 address
@@ -41,7 +43,8 @@ enum ts_type_t {
      * addresses are considered to be within the list.
      */
 	TS_IPV4_ADDR_RANGE = 7,
-	/*
+	
+	/**
 	 * A range of IPv6 addresses, represented by two sixteen (16)
      * octet values.  The first value is the beginning IPv6 address
      * (inclusive) and the second value is the ending IPv6 address
@@ -75,7 +78,7 @@ struct traffic_selector_t {
 	
 	/**
 	 * @brief Compare two traffic selectors, and create a new one
-	 * which is the largest subset of bouth (subnet & port).
+	 * which is the largest subset of both (subnet & port).
 	 * 
 	 * Resulting traffic_selector is newly created and must be destroyed.
 	 * 

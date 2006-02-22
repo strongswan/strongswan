@@ -53,22 +53,14 @@ struct private_traffic_selector_t {
 	 * begin of address range 
 	 */
 	union {
-		struct {
-			u_int32_t from_addr_ipv4;
-		};
-		struct {
-		};
+		u_int32_t from_addr_ipv4;
 	};
 	
 	/**
 	 * end of address range 
 	 */
 	union {
-		struct {
-			u_int32_t to_addr_ipv4;
-		};
-		struct {
-		};
+		u_int32_t to_addr_ipv4;
 	};
 	
 	/**
@@ -334,7 +326,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->public.get_from_port = (u_int16_t(*)(traffic_selector_t*))get_from_port;
 	this->public.get_to_port = (u_int16_t(*)(traffic_selector_t*))get_to_port;	
 	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;	
-	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;	
+	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
 	

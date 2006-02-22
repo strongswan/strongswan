@@ -89,69 +89,49 @@ struct sa_config_t {
 	u_int32_t (*get_ike_sa_lifetime) (sa_config_t *this);
 	
 	/**
-	 * @brief Get configured traffic selectors for initiator site.
+	 * @brief Get configured traffic selectors for our site.
 	 * 
-	 * Returns a pointer to an allocated array, in which
-	 * pointers to traffic selectors are stored.
-	 * 
-	 * @warning Resulting pointer array must be freed!
-	 * @warning Traffic selectors in array must be destroyed!
+	 * Returns a list with all traffic selectors for the local
+	 * site. List and items MUST NOT be freed nor modified.
 	 * 
 	 * @param this						calling object
-	 * @param[out] traffic_selectors	pointer where traffic selectors will be allocated
-	 * @return							number of returned traffic selectors
+	 * @return							list with traffic selectors
 	 */
-	size_t (*get_traffic_selectors_initiator) (sa_config_t *this, traffic_selector_t **traffic_selectors[]);
+	linked_list_t *(*get_my_traffic_selectors) (sa_config_t *this);
 	
 		
 	/**
-	 * @brief Get configured traffic selectors for responder site.
+	 * @brief Get configured traffic selectors for others site.
 	 * 
-	 * Returns a pointer to an allocated array, in which
-	 * pointers to traffic selectors are stored.
-	 * 
-	 * @warning Resulting pointer array must be freed!
-	 * @warning Traffic selectors in array must be destroyed!
+	 * Returns a list with all traffic selectors for the remote
+	 * site. List and items MUST NOT be freed nor modified.
 	 * 
 	 * @param this						calling object
-	 * @param[out] traffic_selectors	pointer where traffic selectors will be allocated
-	 * @return							number of returned traffic selectors
+	 * @return							list with traffic selectors
 	 */
-	size_t (*get_traffic_selectors_responder) (sa_config_t *this, traffic_selector_t **traffic_selectors[]);
+	linked_list_t *(*get_other_traffic_selectors) (sa_config_t *this);
 	
 	/**
-	 * @brief Select traffic selectors from a supplied list for initiator.
+	 * @brief Select traffic selectors from a supplied list for local site.
 	 * 
-	 * Returns a pointer to an allocated array, in which
-	 * pointers to traffic selectors are stored.
-	 * 
-	 * @warning Resulting pointer array must be freed!
-	 * @warning Traffic selectors in array must be destroyed!
+	 * Resulted list and traffic selectors must be destroyed after usage.
 	 * 
 	 * @param this						calling object
-	 * @param supplied					pointer to an array of ts to select from.
-	 * @param count						number of ts stored at supplied
-	 * @param[out] traffic_selectors	pointer where selected traffic selectors will be allocated
-	 * @return							number of selected traffic selectors
+	 * @param supplied					linked list with traffic selectors
+	 * @return							list containing the selected traffic selectors
 	 */
-	size_t (*select_traffic_selectors_initiator) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
+	linked_list_t *(*select_my_traffic_selectors) (sa_config_t *this, linked_list_t *supplied);
 		
 	/**
-	 * @brief Select traffic selectors from a supplied list for responder.
+	 * @brief Select traffic selectors from a supplied list for remote site.
 	 * 
-	 * Returns a pointer to an allocated array, in which
-	 * pointers to traffic selectors are stored.
-	 * 
-	 * @warning Resulting pointer array must be freed!
-	 * @warning Traffic selectors in array must be destroyed!
+	 * Resulted list and traffic selectors must be destroyed after usage.
 	 * 
 	 * @param this						calling object
-	 * @param supplied					pointer to an array of ts to select from.
-	 * @param count						number of ts stored at supplied
-	 * @param[out] traffic_selectors	pointer where selected traffic selectors will be allocated
-	 * @return							number of selected traffic selectors
+	 * @param supplied					linked list with traffic selectors
+	 * @return							list containing the selected traffic selectors
 	 */
-	size_t (*select_traffic_selectors_responder) (sa_config_t *this, traffic_selector_t *supplied[], size_t count, traffic_selector_t **selected[]);
+	linked_list_t *(*select_other_traffic_selectors) (sa_config_t *this, linked_list_t *supplied);
 	
 	/**
 	 * @brief Get the list of internally stored proposals.
@@ -177,28 +157,28 @@ struct sa_config_t {
 	proposal_t *(*select_proposal) (sa_config_t *this, linked_list_t *proposals);
 	
 	/**
-	 * @brief Add a traffic selector to the list for initiator.
+	 * @brief Add a traffic selector to the list for local site.
 	 * 
-	 * Added proposal will be cloned.
+	 * After add, proposal is owned by sa_config.
 	 * 
 	 * @warning Do not add while other threads are reading.
 	 * 
 	 * @param this					calling object
 	 * @param traffic_selector		traffic_selector to add
 	 */
-	void (*add_traffic_selector_initiator) (sa_config_t *this, traffic_selector_t *traffic_selector);
+	void (*add_my_traffic_selector) (sa_config_t *this, traffic_selector_t *traffic_selector);
 	
 	/**
-	 * @brief Add a traffic selector to the list for responder. 
+	 * @brief Add a traffic selector to the list for remote site.
 	 * 
-	 * Added proposal will be cloned.
+	 * After add, proposal is owned by sa_config.
 	 * 
 	 * @warning Do not add while other threads are reading.
 	 * 
 	 * @param this					calling object
 	 * @param traffic_selector		traffic_selector to add
 	 */
-	void (*add_traffic_selector_responder) (sa_config_t *this, traffic_selector_t *traffic_selector);
+	void (*add_other_traffic_selector) (sa_config_t *this, traffic_selector_t *traffic_selector);
 	
 	/**
 	 * @brief Add a proposal to the list. 
