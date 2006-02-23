@@ -288,12 +288,12 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	{
 		return status;
 	}
-	status = this->process_sa_payload(this, sa_payload);
+	status = this->process_auth_payload(this, auth_payload,idr_payload);
 	if (status != SUCCESS)
 	{
 		return status;
 	}
-	status = this->process_auth_payload(this, auth_payload,idr_payload);
+	status = this->process_sa_payload(this, sa_payload);
 	if (status != SUCCESS)
 	{
 		return status;

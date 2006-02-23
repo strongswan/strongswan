@@ -310,6 +310,32 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_
 	return SUCCESS;
 }
 
+static u_int8_t get_mask(chunk_t start, chunk_t end)
+{
+	int byte, bit, mask = 0;
+	
+	if (start.len != end.len)
+	{
+		return 0;
+	}
+	for (byte = 0; byte < start.len; byte++)
+	{
+		for (bit = 7; bit >= 0; bit--)
+		{
+			if ((*(start.ptr + byte) | (1<<bit)) ==
+				(*(end.ptr + byte) | (1<<bit)))
+			{
+				mask++;
+			}
+			else
+			{
+				return mask;
+			}
+		}
+	}
+	return start.len * 8;
+}
+
 static status_t add_policy(private_child_sa_t *this, linked_list_t *my_ts, linked_list_t *other_ts)
 {
 	traffic_selector_t *local_ts, *remote_ts;
@@ -318,14 +344,14 @@ static status_t add_policy(private_child_sa_t *this, linked_list_t *my_ts, linke
 	int family;
 	chunk_t from_addr, to_addr;
 	u_int16_t from_port, to_port;
+	status_t status;
 	
 	my_ts->get_first(my_ts, (void**)&local_ts);
 	other_ts->get_first(other_ts, (void**)&remote_ts);
-	
 		
 	family = local_ts->get_type(local_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
 	from_addr = local_ts->get_from_address(local_ts);
-	//to_addr = local_ts->get_to_address(local_ts);
+	to_addr = local_ts->get_to_address(local_ts);
 	from_port = local_ts->get_from_port(local_ts);
 	to_port = local_ts->get_to_port(local_ts);
 	if (from_port != to_port)
@@ -333,12 +359,13 @@ static status_t add_policy(private_child_sa_t *this, linked_list_t *my_ts, linke
 		from_port = 0;
 	}
 	my_net = host_create_from_chunk(family, from_addr, from_port);
+	my_mask = get_mask(from_addr, to_addr);
 	allocator_free_chunk(&from_addr);
-	my_mask = 16;
+	allocator_free_chunk(&to_addr);
 	
 	family = remote_ts->get_type(remote_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
 	from_addr = remote_ts->get_from_address(remote_ts);
-	//to_addr = remote_ts->get_to_address(remote_ts);
+	to_addr = remote_ts->get_to_address(remote_ts);
 	from_port = remote_ts->get_from_port(remote_ts);
 	to_port = remote_ts->get_to_port(remote_ts);
 	if (from_port != to_port)
@@ -346,10 +373,11 @@ static status_t add_policy(private_child_sa_t *this, linked_list_t *my_ts, linke
 		from_port = 0;
 	}
 	other_net = host_create_from_chunk(family, from_addr, from_port);
+	other_mask = get_mask(from_addr, to_addr);
 	allocator_free_chunk(&from_addr);
-	other_mask = 16;
+	allocator_free_chunk(&to_addr);
 	
-	charon->kernel_interface->add_policy(charon->kernel_interface,
+	status = charon->kernel_interface->add_policy(charon->kernel_interface,
 										this->me, this->other,
 										my_net, other_net,
 										my_mask, other_mask,
@@ -357,23 +385,23 @@ static status_t add_policy(private_child_sa_t *this, linked_list_t *my_ts, linke
 										0, this->ah_spi, this->esp_spi,
 										this->reqid);
 	
-	charon->kernel_interface->add_policy(charon->kernel_interface,
-										 this->me, this->other,
+	status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+										 this->other, this->me,
 										 other_net, my_net,
 										 other_mask, my_mask,
 										 XFRM_POLICY_IN,
 										 0, this->ah_spi, this->esp_spi,
 										 this->reqid);
 	
-	charon->kernel_interface->add_policy(charon->kernel_interface,
-										 this->me, this->other,
+	status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+										 this->other, this->me,
 										 other_net, my_net,
 										 other_mask, my_mask,
 										 XFRM_POLICY_FWD,
 										 0, this->ah_spi, this->esp_spi,
 										 this->reqid);
 	
-	return SUCCESS;
+	return status;
 }
 
 /**
