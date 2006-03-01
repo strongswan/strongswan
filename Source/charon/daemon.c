@@ -196,6 +196,10 @@ static void initialize(private_daemon_t *this)
  */
 static void destroy(private_daemon_t *this)
 {
+	if (this->public.ike_sa_manager != NULL)
+	{
+		this->public.ike_sa_manager->destroy(this->public.ike_sa_manager);
+	}
 	if (this->public.kernel_interface != NULL)
 	{
 		this->public.kernel_interface->destroy(this->public.kernel_interface);
@@ -231,10 +235,6 @@ static void destroy(private_daemon_t *this)
 	if (this->public.socket != NULL)
 	{
 		this->public.socket->destroy(this->public.socket);
-	}
-	if (this->public.ike_sa_manager != NULL)
-	{
-		this->public.ike_sa_manager->destroy(this->public.ike_sa_manager);
 	}
 	if (this->public.configuration_manager != NULL)
 	{

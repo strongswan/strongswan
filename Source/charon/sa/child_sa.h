@@ -107,7 +107,7 @@ struct child_sa_t {
 	 * @param other_ts	traffic selectors for remote site
 	 * @return			SUCCESS or FAILED
 	 */	
-	status_t (*add_policy) (child_sa_t *this, linked_list_t *my_ts, linked_list_t *other_ts);
+	status_t (*add_policies) (child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list);
 	
 	/**
 	 * @brief Destroys a child_sa.

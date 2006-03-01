@@ -346,10 +346,12 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	else if (this->my_ts->get_count(this->my_ts) == 0 || this->other_ts->get_count(this->other_ts) == 0)
 	{
 		this->logger->log(this->logger, CONTROL, "Traffic selector negotiation failed, no CHILD_SA built");
+		this->child_sa->destroy(this->child_sa);
+		this->child_sa = NULL;
 	}
 	else
 	{
-		status = this->child_sa->add_policy(this->child_sa, this->my_ts, this->other_ts);
+		status = this->child_sa->add_policies(this->child_sa, this->my_ts, this->other_ts);
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy! Deleting IKE_SA");
@@ -365,7 +367,6 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 						my_host->get_address(my_host), other_host->get_address(other_host),
 						mapping_find(auth_method_m, auth_request->get_auth_method(auth_request)));
 						
-	this->ike_sa->create_delete_established_ike_sa_job(this->ike_sa,this->sa_config->get_ike_sa_lifetime(this->sa_config));
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
 	this->destroy_after_state_change(this);
 

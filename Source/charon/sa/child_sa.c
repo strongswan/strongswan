@@ -27,6 +27,41 @@
 #include <daemon.h>
 
 
+typedef struct policy_t policy_t;
+
+/**
+ * Struct used to store information for a policy. This
+ * is needed since we must provide all this information
+ * for deleting a policy...
+ */
+struct policy_t {
+	
+	/**
+	 * Network on local side
+	 */
+	host_t *my_net;
+	
+	/**
+	 * Network on remote side
+	 */
+	host_t *other_net;
+	
+	/**
+	 * Number of bits for local network (subnet size)
+	 */
+	u_int8_t my_net_mask;
+	
+	/**
+	 * Number of bits for remote network (subnet size)
+	 */
+	u_int8_t other_net_mask;
+	
+	/**
+	 * Protocol for this policy, such as TCP/UDP/ICMP...
+	 */
+	int upper_proto;
+};
+
 typedef struct private_child_sa_t private_child_sa_t;
 
 /**
@@ -49,14 +84,29 @@ struct private_child_sa_t {
 	host_t *other;
 	
 	/**
-	 * Security parameter index for AH protocol, 0 if not used
+	 * Local security parameter index for AH protocol, 0 if not used
 	 */
-	u_int32_t ah_spi;
+	u_int32_t my_ah_spi;
 	
 	/**
-	 * Security parameter index for ESP protocol, 0 if not used
+	 * Local security parameter index for ESP protocol, 0 if not used
 	 */
-	u_int32_t esp_spi;
+	u_int32_t my_esp_spi;
+	
+	/**
+	 * Remote security parameter index for AH protocol, 0 if not used
+	 */
+	u_int32_t other_ah_spi;
+	
+	/**
+	 * Remote security parameter index for ESP protocol, 0 if not used
+	 */
+	u_int32_t other_esp_spi;
+	
+	/**
+	 * List containing policy_id_t objects 
+	 */
+	linked_list_t *policies;
 	
 	/**
 	 * reqid used for this child_sa
@@ -94,31 +144,31 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 			{
 				case AH:
 					/* do we already have an spi for AH?*/
-					if (this->ah_spi == 0)
+					if (this->my_ah_spi == 0)
 					{
 						/* nope, get one */
 						status = charon->kernel_interface->get_spi(
 											charon->kernel_interface,
 											this->me, this->other,
 											AH, FALSE,
-											&(this->ah_spi));
+											&(this->my_ah_spi));
 					}
 					/* update proposal */
-					proposal->set_spi(proposal, AH, (u_int64_t)this->ah_spi);
+					proposal->set_spi(proposal, AH, (u_int64_t)this->my_ah_spi);
 					break;
 				case ESP:
 					/* do we already have an spi for ESP?*/
-					if (this->esp_spi == 0)
+					if (this->my_esp_spi == 0)
 					{
 						/* nope, get one */
 						status = charon->kernel_interface->get_spi(
 											charon->kernel_interface,
 											this->me, this->other,
 											ESP, FALSE,
-											&(this->esp_spi));
+											&(this->my_esp_spi));
 					}
 					/* update proposal */
-					proposal->set_spi(proposal, ESP, (u_int64_t)this->esp_spi);
+					proposal->set_spi(proposal, ESP, (u_int64_t)this->my_esp_spi);
 					break;
 				default:
 					break;
@@ -175,16 +225,24 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 			{
 				if (protocols[i] == AH)
 				{
-					spi = this->ah_spi;
+					spi = this->my_ah_spi;
 				}
 				else
 				{
-					spi = this->esp_spi;
+					spi = this->my_esp_spi;
 				}
 			}
 			else /* use proposals spi */
 			{
 				spi = proposal->get_spi(proposal, protocols[i]);
+				if (protocols[i] == AH)
+				{
+					this->other_ah_spi = spi;
+				}
+				else
+				{
+					this->other_esp_spi = spi;
+				}
 			}
 			
 			/* derive encryption key first */
@@ -336,72 +394,102 @@ static u_int8_t get_mask(chunk_t start, chunk_t end)
 	return start.len * 8;
 }
 
-static status_t add_policy(private_child_sa_t *this, linked_list_t *my_ts, linked_list_t *other_ts)
+static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list)
 {
-	traffic_selector_t *local_ts, *remote_ts;
-	host_t *my_net, *other_net;
-	u_int8_t my_mask, other_mask;
-	int family;
-	chunk_t from_addr, to_addr;
-	u_int16_t from_port, to_port;
-	status_t status;
+	iterator_t *my_iter, *other_iter;
+	traffic_selector_t *my_ts, *other_ts;
 	
-	my_ts->get_first(my_ts, (void**)&local_ts);
-	other_ts->get_first(other_ts, (void**)&remote_ts);
+	/* iterate over both lists */
+	my_iter = my_ts_list->create_iterator(my_ts_list, TRUE);
+	other_iter = other_ts_list->create_iterator(other_ts_list, TRUE);
+	while (my_iter->has_next(my_iter))
+	{
+		my_iter->current(my_iter, (void**)&my_ts);
+		other_iter->reset(other_iter);
+		while (other_iter->has_next(other_iter))
+		{
+			/* set up policies for every entry in my_ts_list to every entry in other_ts_list */
+			int family;
+			chunk_t from_addr, to_addr;
+			u_int16_t from_port, to_port;
+			policy_t *policy;
+			status_t status;
+			
+			other_iter->current(other_iter, (void**)&other_ts);
+			
+			/* only set up policies if protocol matches */
+			if (my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts))
+			{
+				continue;
+			}
+			policy = allocator_alloc_thing(policy_t);
+			policy->upper_proto = my_ts->get_protocol(my_ts);
 		
-	family = local_ts->get_type(local_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
-	from_addr = local_ts->get_from_address(local_ts);
-	to_addr = local_ts->get_to_address(local_ts);
-	from_port = local_ts->get_from_port(local_ts);
-	to_port = local_ts->get_to_port(local_ts);
-	if (from_port != to_port)
-	{
-		from_port = 0;
+			/* calculate net and ports for local side */
+			family = my_ts->get_type(my_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
+			from_addr = my_ts->get_from_address(my_ts);
+			to_addr = my_ts->get_to_address(my_ts);
+			from_port = my_ts->get_from_port(my_ts);
+			to_port = my_ts->get_to_port(my_ts);
+			from_port = (from_port != to_port) ? 0 : from_port;
+			policy->my_net = host_create_from_chunk(family, from_addr, from_port);
+			policy->my_net_mask = get_mask(from_addr, to_addr);
+			allocator_free_chunk(&from_addr);
+			allocator_free_chunk(&to_addr);
+			
+			/* calculate net and ports for remote side */
+			family = other_ts->get_type(other_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
+			from_addr = other_ts->get_from_address(other_ts);
+			to_addr = other_ts->get_to_address(other_ts);
+			from_port = other_ts->get_from_port(other_ts);
+			to_port = other_ts->get_to_port(other_ts);
+			from_port = (from_port != to_port) ? 0 : from_port;
+			policy->other_net = host_create_from_chunk(family, from_addr, from_port);
+			policy->other_net_mask = get_mask(from_addr, to_addr);
+			allocator_free_chunk(&from_addr);
+			allocator_free_chunk(&to_addr);
+	
+			/* install 3 policies: out, in and forward */
+			status = charon->kernel_interface->add_policy(charon->kernel_interface,
+					this->me, this->other,
+					policy->my_net, policy->other_net,
+					policy->my_net_mask, policy->other_net_mask,
+					XFRM_POLICY_OUT, policy->upper_proto,
+					this->my_ah_spi, this->my_esp_spi,
+					this->reqid);
+	
+			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+					this->other, this->me,
+					policy->other_net, policy->my_net,
+					policy->other_net_mask, policy->my_net_mask,
+					XFRM_POLICY_IN, policy->upper_proto,
+					this->my_ah_spi, this->my_esp_spi,
+					this->reqid);
+	
+			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
+					this->other, this->me,
+					policy->other_net, policy->my_net,
+					policy->other_net_mask, policy->my_net_mask,
+					XFRM_POLICY_FWD, policy->upper_proto,
+					this->my_ah_spi, this->my_esp_spi,
+					this->reqid);
+			
+			if (status != SUCCESS)
+			{
+				my_iter->destroy(my_iter);
+				other_iter->destroy(other_iter);
+				allocator_free(policy);
+				return status;
+			}
+			
+			/* add it to the policy list, since we want to know which policies we own */
+			this->policies->insert_last(this->policies, policy);
+		}
 	}
-	my_net = host_create_from_chunk(family, from_addr, from_port);
-	my_mask = get_mask(from_addr, to_addr);
-	allocator_free_chunk(&from_addr);
-	allocator_free_chunk(&to_addr);
-	
-	family = remote_ts->get_type(remote_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
-	from_addr = remote_ts->get_from_address(remote_ts);
-	to_addr = remote_ts->get_to_address(remote_ts);
-	from_port = remote_ts->get_from_port(remote_ts);
-	to_port = remote_ts->get_to_port(remote_ts);
-	if (from_port != to_port)
-	{
-		from_port = 0;
-	}
-	other_net = host_create_from_chunk(family, from_addr, from_port);
-	other_mask = get_mask(from_addr, to_addr);
-	allocator_free_chunk(&from_addr);
-	allocator_free_chunk(&to_addr);
-	
-	status = charon->kernel_interface->add_policy(charon->kernel_interface,
-										this->me, this->other,
-										my_net, other_net,
-										my_mask, other_mask,
-										XFRM_POLICY_OUT,
-										0, this->ah_spi, this->esp_spi,
-										this->reqid);
-	
-	status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-										 this->other, this->me,
-										 other_net, my_net,
-										 other_mask, my_mask,
-										 XFRM_POLICY_IN,
-										 0, this->ah_spi, this->esp_spi,
-										 this->reqid);
-	
-	status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-										 this->other, this->me,
-										 other_net, my_net,
-										 other_mask, my_mask,
-										 XFRM_POLICY_FWD,
-										 0, this->ah_spi, this->esp_spi,
-										 this->reqid);
-	
-	return status;
+
+	my_iter->destroy(my_iter);
+	other_iter->destroy(other_iter);
+	return SUCCESS;
 }
 
 /**
@@ -409,6 +497,50 @@ static status_t add_policy(private_child_sa_t *this, linked_list_t *my_ts, linke
  */
 static void destroy(private_child_sa_t *this)
 {
+	/* delete all policys in the kernel */
+	policy_t *policy;
+	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
+	{
+		charon->kernel_interface->del_policy(charon->kernel_interface,
+											 this->me, this->other,
+											 policy->my_net, policy->other_net,
+											 policy->my_net_mask, policy->other_net_mask,
+											 XFRM_POLICY_OUT, policy->upper_proto);
+		
+		charon->kernel_interface->del_policy(charon->kernel_interface,
+											 this->other, this->me,
+											 policy->other_net, policy->my_net,
+											 policy->other_net_mask, policy->my_net_mask,
+											 XFRM_POLICY_IN, policy->upper_proto);
+		
+		charon->kernel_interface->del_policy(charon->kernel_interface,
+											 this->other, this->me,
+											 policy->other_net, policy->my_net,
+											 policy->other_net_mask, policy->my_net_mask,
+											 XFRM_POLICY_FWD, policy->upper_proto);
+		
+		policy->my_net->destroy(policy->my_net);
+		policy->other_net->destroy(policy->other_net);
+		allocator_free(policy);
+	}
+	this->policies->destroy(this->policies);
+	
+	/* delete SAs in the kernel, if they are set up */
+	if (this->my_ah_spi)
+	{
+		charon->kernel_interface->del_sa(charon->kernel_interface,
+										 this->other, this->my_ah_spi, AH);
+		charon->kernel_interface->del_sa(charon->kernel_interface,
+										 this->me, this->other_ah_spi, AH);
+	}
+	if (this->my_esp_spi)
+	{
+		charon->kernel_interface->del_sa(charon->kernel_interface,
+										 this->other, this->my_esp_spi, ESP);
+		charon->kernel_interface->del_sa(charon->kernel_interface,
+										 this->me, this->other_esp_spi, ESP);
+	}
+	
 	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 	allocator_free(this);
 }
@@ -418,23 +550,26 @@ static void destroy(private_child_sa_t *this)
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other)
 {
-	static u_int32_t reqid = 123;
+	static u_int32_t reqid = 1;
 	private_child_sa_t *this = allocator_alloc_thing(private_child_sa_t);
 
 	/* public functions */
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
-	this->public.add_policy = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policy;
+	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
 	this->logger = charon->logger_manager->create_logger(charon->logger_manager, CHILD_SA, NULL);
 	this->me = me;
 	this->other = other;
-	this->ah_spi = 0;
-	this->esp_spi = 0;
+	this->my_ah_spi = 0;
+	this->my_esp_spi = 0;
+	this->other_ah_spi = 0;
+	this->other_esp_spi = 0;
 	this->reqid = reqid++;
+	this->policies = linked_list_create();
 	
 	return (&this->public);
 }

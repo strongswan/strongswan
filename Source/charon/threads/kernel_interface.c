@@ -88,16 +88,14 @@ struct netlink_message_t {
 		struct nlmsgerr e;
 		/* message for spi allocation */
 		struct xfrm_userspi_info spi;
+		/* message for SA manipulation */
+		struct xfrm_usersa_id sa_id;
 		/* message for SA installation */
-		struct {
-			struct xfrm_usersa_info sa;
-		};
+		struct xfrm_usersa_info sa;
 		/* message for policy manipulation */
-		struct xfrm_userpolicy_id id;
+		struct xfrm_userpolicy_id policy_id;
 		/* message for policy installation */
-		struct {
-			struct xfrm_userpolicy_info policy;
-		};
+		struct xfrm_userpolicy_info policy;
 	};
 	u_int8_t data[512];
 };
@@ -308,6 +306,43 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	return SUCCESS;
 }
 
+static status_t del_sa(	private_kernel_interface_t *this,
+						host_t *dst,
+						u_int32_t spi,
+						protocol_id_t protocol)
+{
+	netlink_message_t request, *response;
+	memset(&request, 0, sizeof(request));
+	status_t status;
+	
+	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	request.hdr.nlmsg_type = XFRM_MSG_DELSA;
+	
+	request.sa_id.daddr = dst->get_xfrm_addr(dst);
+	
+	request.sa_id.spi = spi;
+	request.sa_id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
+	request.sa_id.family = dst->get_family(dst);
+	
+	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.sa_id)));
+	
+	if (this->send_message(this, &request, &response) != SUCCESS)
+	{
+		status = FAILED;
+	}
+	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
+	{
+		status = FAILED;
+	}
+	else if (response->e.error)
+	{
+		status = FAILED;
+	}
+	
+	allocator_free(response);
+	return SUCCESS;
+}
+
 static status_t add_policy(private_kernel_interface_t *this, 
 						  host_t *me, host_t *other, 
 						  host_t *src, host_t *dst,
@@ -332,7 +367,10 @@ static status_t add_policy(private_kernel_interface_t *this,
 	request.policy.sel.prefixlen_d = dst_hostbits;
 	request.policy.sel.proto = upper_proto;
 	request.policy.sel.family = src->get_family(src);
-	
+
+	request.hdr.nlmsg_type = XFRM_MSG_NEWPOLICY;
+	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.policy)));
+
 	request.policy.dir = direction;
 	request.policy.priority = SPD_PRIORITY;
 	request.policy.action = XFRM_POLICY_ALLOW;
@@ -342,9 +380,6 @@ static status_t add_policy(private_kernel_interface_t *this,
 	request.policy.lft.soft_packet_limit = XFRM_INF;
 	request.policy.lft.hard_byte_limit = XFRM_INF;
 	request.policy.lft.hard_packet_limit = XFRM_INF;
-
-	request.hdr.nlmsg_type = XFRM_MSG_NEWPOLICY;
-	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.policy)));
 	
 	if (esp || ah)
 	{
@@ -358,7 +393,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 			data->tmpl[tmpl_pos].id.proto = KERNEL_ESP;
 			data->tmpl[tmpl_pos].aalgos = data->tmpl[tmpl_pos].ealgos = data->tmpl[tmpl_pos].calgos = ~0;
 			data->tmpl[tmpl_pos].mode = TRUE;
-	 
+			
 			data->tmpl[tmpl_pos].saddr = me->get_xfrm_addr(me);
 			data->tmpl[tmpl_pos].id.daddr = me->get_xfrm_addr(other);
 			
@@ -370,7 +405,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 			data->tmpl[tmpl_pos].id.proto = KERNEL_AH;
 			data->tmpl[tmpl_pos].aalgos = data->tmpl[tmpl_pos].ealgos = data->tmpl[tmpl_pos].calgos = ~0;
 			data->tmpl[tmpl_pos].mode = TRUE;
-	 
+			
 			data->tmpl[tmpl_pos].saddr = me->get_xfrm_addr(me);
 			data->tmpl[tmpl_pos].id.daddr = other->get_xfrm_addr(other);
 			
@@ -379,6 +414,51 @@ static status_t add_policy(private_kernel_interface_t *this,
 		data->length = 4 + sizeof(struct xfrm_user_tmpl) * tmpl_pos;
 		request.hdr.nlmsg_len += data->length;
 	}
+	
+	if (this->send_message(this, &request, &response) != SUCCESS)
+	{
+		status = FAILED;
+	}
+	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
+	{
+		status = FAILED;
+	}
+	else if (response->e.error)
+	{
+		status = FAILED;
+	}
+	
+	allocator_free(response);
+	return status;
+}
+
+static status_t del_policy(private_kernel_interface_t *this, 
+						   host_t *me, host_t *other, 
+						   host_t *src, host_t *dst,
+						   u_int8_t src_hostbits, u_int8_t dst_hostbits,
+						   int direction, int upper_proto)
+{
+	netlink_message_t request, *response;
+	status_t status = SUCCESS;
+	
+	memset(&request, 0, sizeof(request));
+	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+
+	request.policy_id.sel.sport = htons(src->get_port(src));
+	request.policy_id.sel.dport = htons(dst->get_port(dst));
+	request.policy_id.sel.sport_mask = (request.policy.sel.sport) ? ~0 : 0;
+	request.policy_id.sel.dport_mask = (request.policy.sel.dport) ? ~0 : 0;
+	request.policy_id.sel.saddr = src->get_xfrm_addr(src);
+	request.policy_id.sel.daddr = dst->get_xfrm_addr(dst);
+	request.policy_id.sel.prefixlen_s = src_hostbits;
+	request.policy_id.sel.prefixlen_d = dst_hostbits;
+	request.policy_id.sel.proto = upper_proto;
+	request.policy_id.sel.family = src->get_family(src);
+	
+	request.policy_id.dir = direction;
+
+	request.hdr.nlmsg_type = XFRM_MSG_DELPOLICY;
+	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.policy_id)));
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
@@ -533,6 +613,8 @@ static void destroy(private_kernel_interface_t *this)
 	allocator_free(this);
 }
 
+#define ASSIGN(member, function) member = (void*)function
+
 /*
  * Described in header.
  */
@@ -544,6 +626,9 @@ kernel_interface_t *kernel_interface_create()
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,encryption_algorithm_t,chunk_t,integrity_algorithm_t,chunk_t,bool))add_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,bool,bool,u_int32_t))add_policy;
+	ASSIGN(this->public.del_sa, del_sa);
+	ASSIGN(this->public.del_policy, del_policy);
+	
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
 
 	/* private members */

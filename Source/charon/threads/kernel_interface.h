@@ -69,6 +69,11 @@ struct kernel_interface_t {
 				chunk_t integrity_key,
 				bool replace);
 	
+	status_t (*del_sa) (kernel_interface_t *this,
+				host_t *dst,
+				u_int32_t spi,
+				protocol_id_t protocol);
+	
 	status_t (*add_policy) (kernel_interface_t *this, 
 				host_t *me, host_t *other, 
 				host_t *src, host_t *dst,
@@ -76,6 +81,12 @@ struct kernel_interface_t {
 				int direction, int upper_proto, 
 				bool ah, bool esp,
 				u_int32_t reqid);
+	
+	status_t (*del_policy) (kernel_interface_t *this, 
+				host_t *me, host_t *other,
+				host_t *src, host_t *dst,
+				u_int8_t src_hostbits, u_int8_t dst_hostbits,
+				int direction, int upper_proto);
 	
 	/**
 	 * @brief Destroys a kernel_interface object.
