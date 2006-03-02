@@ -312,23 +312,15 @@ static void load_default_config (private_configuration_manager_t *this)
 								 30000);
 	
 	/* traffic selectors alice */
-	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "10.1.0.0", 0, "10.1.255.255", 65535);
+	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "10.1.0.0", 0, "10.1.255.255", 65535);
 	sa_config_a->add_my_traffic_selector(sa_config_a,ts);
-	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "10.2.0.0", 0, "10.2.255.255", 65535);
-	sa_config_a->add_other_traffic_selector(sa_config_a,ts);
-	ts = traffic_selector_create_from_string(6, TS_IPV4_ADDR_RANGE, "10.1.0.0", 0, "10.1.255.255", 65535);
-	sa_config_a->add_my_traffic_selector(sa_config_a,ts);
-	ts = traffic_selector_create_from_string(6, TS_IPV4_ADDR_RANGE, "10.2.0.1", 22, "10.2.0.1", 22);
+	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "10.2.0.0", 0, "10.2.255.255", 65535);
 	sa_config_a->add_other_traffic_selector(sa_config_a,ts);
 	
 	/* traffic selectors bob */
-	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "10.2.0.0", 0, "10.2.255.255", 65535);
+	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "10.2.0.0", 0, "10.2.255.255", 65535);
 	sa_config_b->add_my_traffic_selector(sa_config_b,ts);
-	ts = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "10.1.0.0", 0, "10.1.255.255", 65535);
-	sa_config_b->add_other_traffic_selector(sa_config_b,ts);
-	ts = traffic_selector_create_from_string(6, TS_IPV4_ADDR_RANGE, "10.2.0.0", 0, "10.2.255.255", 65535);
-	sa_config_b->add_my_traffic_selector(sa_config_b,ts);
-	ts = traffic_selector_create_from_string(6, TS_IPV4_ADDR_RANGE, "10.1.0.0", 0, "10.1.255.255", 65535);
+	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE, "10.1.0.0", 0, "10.1.255.255", 65535);
 	sa_config_b->add_other_traffic_selector(sa_config_b,ts);
 	
 	/* child proposal for alice */
@@ -369,8 +361,8 @@ static void load_default_config (private_configuration_manager_t *this)
 	
 	
 
-	this->add_new_configuration(this,"bob",init_config_a,sa_config_a);
-	this->add_new_configuration(this,"alice",init_config_b,sa_config_b);
+	this->add_new_configuration(this,"sun",init_config_a,sa_config_a);
+	this->add_new_configuration(this,"moon",init_config_b,sa_config_b);
 	
 
 	//this->add_new_preshared_secret(this,ID_IPV4_ADDR, "192.168.1.2","verschluesselt");

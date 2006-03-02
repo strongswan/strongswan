@@ -44,28 +44,34 @@
 
 #define SPD_PRIORITY 1024
 
+#define XFRM_DATA_LENGTH 512
+
 
 typedef struct xfrm_data_t xfrm_data_t;
 
 /**
  * Lenght/Type/data struct for userdata in xfrm
+ * We dont use the "I-don't-know-where-they-come-from"-structs
+ * used in the kernel.
  */
 struct xfrm_data_t {
 	/**
 	 * length of the data
 	 */
 	u_int16_t length;
+	
 	/**
 	 * type of data 
 	 */
 	u_int16_t type;
+	
 	/**
 	 * and the data itself, for different purposes
 	 */
 	union {
-		/* algorithm */
+		/** algorithm */
 		struct xfrm_algo algo;
-		/* policy tmpl */
+		/** policy tmpl */
 		struct xfrm_user_tmpl tmpl[2];
 	};
 };
@@ -84,20 +90,20 @@ struct netlink_message_t {
 	struct nlmsghdr hdr;
 
 	union {
-		/* error message */
+		/** error message */
 		struct nlmsgerr e;
-		/* message for spi allocation */
+		/** message for spi allocation */
 		struct xfrm_userspi_info spi;
-		/* message for SA manipulation */
+		/** message for SA manipulation */
 		struct xfrm_usersa_id sa_id;
-		/* message for SA installation */
+		/** message for SA installation */
 		struct xfrm_usersa_info sa;
-		/* message for policy manipulation */
+		/** message for policy manipulation */
 		struct xfrm_userpolicy_id policy_id;
-		/* message for policy installation */
+		/** message for policy installation */
 		struct xfrm_userpolicy_info policy;
 	};
-	u_int8_t data[512];
+	u_int8_t data[XFRM_DATA_LENGTH];
 };
 
 
@@ -155,6 +161,12 @@ struct private_kernel_interface_t {
 	status_t (*send_message) (private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response);
 };
 
+/**
+ * In the kernel, algorithms are identified as strings, we use our
+ * mapping functions...
+ * Algorithms for encryption.
+ * TODO: Add missing algorithm strings
+ */
 mapping_t kernel_encryption_algs_m[] = {
 	{ENCR_DES_IV64, ""},
 	{ENCR_DES, "des"},
@@ -170,7 +182,12 @@ mapping_t kernel_encryption_algs_m[] = {
 	{ENCR_AES_CTR, ""},
 	{MAPPING_END, NULL}
 };
-
+/**
+ * In the kernel, algorithms are identified as strings, we use our
+ * mapping functions...
+ * Algorithms for integrity protection.
+ * TODO: Add missing algorithm strings
+ */
 mapping_t kernel_integrity_algs_m[] = {
 	{AUTH_HMAC_MD5_96, "md5"},
 	{AUTH_HMAC_SHA1_96, "sha1"},
@@ -180,7 +197,9 @@ mapping_t kernel_integrity_algs_m[] = {
 	{MAPPING_END, NULL}
 };
 
-
+/**
+ * Implementation of kernel_interface_t.get_spi.
+ */
 static status_t get_spi(private_kernel_interface_t *this, 
 						host_t *src, host_t *dest, 
 						protocol_id_t protocol, u_int32_t reqid,
@@ -199,8 +218,8 @@ static status_t get_spi(private_kernel_interface_t *this,
 	request.spi.info.reqid = reqid;
 	request.spi.info.id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
 	request.spi.info.family = PF_INET;
-	request.spi.min = 100;
-	request.spi.max = 200;
+	request.spi.min = 0xc0000000;
+	request.spi.max = 0xcFFFFFFF;
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
@@ -225,6 +244,9 @@ static status_t get_spi(private_kernel_interface_t *this,
 	return status;
 }
 
+/**
+ * Implementation of kernel_interface_t.add_sa.
+ */
 static status_t add_sa(	private_kernel_interface_t *this,
 						host_t *me,
 						host_t *other,
@@ -267,11 +289,13 @@ static status_t add_sa(	private_kernel_interface_t *this,
 		data->type = XFRMA_ALG_CRYPT;
 		data->length = 4 + sizeof(data->algo) + encryption_key.len;
 		data->algo.alg_key_len = encryption_key.len * 8;
-		
+		request.hdr.nlmsg_len += data->length;
+		if (request.hdr.nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
 		strcpy(data->algo.alg_name, mapping_find(kernel_encryption_algs_m, enc_alg));
 		memcpy(data->algo.alg_key, encryption_key.ptr, encryption_key.len);
-	
-		request.hdr.nlmsg_len += data->length;
 	}
 	
 	if (int_alg != AUTH_UNDEFINED)
@@ -281,13 +305,16 @@ static status_t add_sa(	private_kernel_interface_t *this,
 		data->type = XFRMA_ALG_AUTH;
 		data->length = 4 + sizeof(data->algo) + integrity_key.len;
 		data->algo.alg_key_len = integrity_key.len * 8;
+		request.hdr.nlmsg_len += data->length;
+		if (request.hdr.nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
 		strcpy(data->algo.alg_name, mapping_find(kernel_integrity_algs_m, int_alg));
 		memcpy(data->algo.alg_key, integrity_key.ptr, integrity_key.len);
-	
-		request.hdr.nlmsg_len += data->length;
 	}
 	
-	/* add IPComp here*/
+	/* TODO: add IPComp here*/
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
@@ -343,6 +370,9 @@ static status_t del_sa(	private_kernel_interface_t *this,
 	return SUCCESS;
 }
 
+/**
+ * Implementation of kernel_interface_t.add_policy.
+ */
 static status_t add_policy(private_kernel_interface_t *this, 
 						  host_t *me, host_t *other, 
 						  host_t *src, host_t *dst,
@@ -432,6 +462,9 @@ static status_t add_policy(private_kernel_interface_t *this,
 	return status;
 }
 
+/**
+ * Implementation of kernel_interface_t.del_policy.
+ */
 static status_t del_policy(private_kernel_interface_t *this, 
 						   host_t *me, host_t *other, 
 						   host_t *src, host_t *dst,
@@ -477,7 +510,9 @@ static status_t del_policy(private_kernel_interface_t *this,
 	return status;
 }
 
-
+/**
+ * Implementation of private_kernel_interface_t.send_message.
+ */
 static status_t send_message(private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response)
 {
 	size_t length;
@@ -528,7 +563,7 @@ static status_t send_message(private_kernel_interface_t *this, netlink_message_t
 		{
 			break;
 		}
-		/* we should time out, if something goes wrong */
+		/* TODO: we should time out, if something goes wrong!??? */
 		pthread_cond_wait(&(this->condvar), &(this->mutex));
 	}
 	
@@ -537,7 +572,9 @@ static status_t send_message(private_kernel_interface_t *this, netlink_message_t
 	return SUCCESS;
 }
 
-
+/**
+ * Implementation of private_kernel_interface_t.receive_messages.
+ */
 static void receive_messages(private_kernel_interface_t *this)
 {
 	while(TRUE) 
@@ -599,8 +636,6 @@ static void receive_messages(private_kernel_interface_t *this)
 	}
 }
 
-
-
 /**
  * Implementation of kernel_interface_t.destroy.
  */
@@ -613,8 +648,6 @@ static void destroy(private_kernel_interface_t *this)
 	allocator_free(this);
 }
 
-#define ASSIGN(member, function) member = (void*)function
-
 /*
  * Described in header.
  */
@@ -626,8 +659,8 @@ kernel_interface_t *kernel_interface_create()
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,encryption_algorithm_t,chunk_t,integrity_algorithm_t,chunk_t,bool))add_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,bool,bool,u_int32_t))add_policy;
-	ASSIGN(this->public.del_sa, del_sa);
-	ASSIGN(this->public.del_policy, del_policy);
+	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
+	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int))del_policy;
 	
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
 
@@ -652,10 +685,6 @@ kernel_interface_t *kernel_interface_create()
 		allocator_free(this);
 		charon->kill(charon, "Unable to create netlink thread");
 	}
-	
-	//host_t *all = host_create(AF_INET, "0.0.0.0", 500);
-	//add_policy(this, all, all, all, all, 0, 0, XFRM_POLICY_OUT, 17, FALSE, FALSE, 0);
-	
 	
 	charon->logger_manager->enable_logger_level(charon->logger_manager, TESTER, FULL);
 	return (&this->public);

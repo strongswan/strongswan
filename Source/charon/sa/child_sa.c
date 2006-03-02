@@ -550,7 +550,7 @@ static void destroy(private_child_sa_t *this)
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other)
 {
-	static u_int32_t reqid = 1;
+	static u_int32_t reqid = 0xc0000000;
 	private_child_sa_t *this = allocator_alloc_thing(private_child_sa_t);
 
 	/* public functions */

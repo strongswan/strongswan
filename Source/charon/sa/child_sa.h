@@ -47,6 +47,8 @@ typedef struct child_sa_t child_sa_t;
  * - B sends the updated proposal to A
  * - A calls child_sa_t.update to update the already allocated SPIs with the chosen proposal
  * 
+ * Once SAs are set up, policies can be added using add_policies.
+ * 
  * 
  * @b Constructors:
  *  - child_sa_create()
