@@ -58,7 +58,7 @@ extern mapping_t protocol_id_m[];
 typedef enum transform_type_t transform_type_t;
 
 /**
- * Type of a transform, as in IKEv2 draft 3.3.2.
+ * Type of a transform, as in IKEv2 RFC 3.3.2.
  * 
  * @ingroup payloads
  */
@@ -82,7 +82,7 @@ extern mapping_t transform_type_m[];
 typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
 
 /** 
- * Extended sequence numbers, as in IKEv2 draft 3.3.2.
+ * Extended sequence numbers, as in IKEv2 RFC 3.3.2.
  * 
  * @ingroup payloads
  */

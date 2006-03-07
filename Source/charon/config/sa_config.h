@@ -99,7 +99,6 @@ struct sa_config_t {
 	 */
 	linked_list_t *(*get_my_traffic_selectors) (sa_config_t *this);
 	
-		
 	/**
 	 * @brief Get configured traffic selectors for others site.
 	 * 

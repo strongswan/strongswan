@@ -30,7 +30,7 @@
 typedef enum transform_attribute_type_t transform_attribute_type_t;
 
 /**
- * Type of the attribute, as in IKEv2 draft 3.3.5.
+ * Type of the attribute, as in IKEv2 RFC 3.3.5.
  * 
  * @ingroup payloads
  */

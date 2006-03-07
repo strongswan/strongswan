@@ -28,7 +28,7 @@
 #include <queues/job_queue.h>
 #include <queues/event_queue.h>
 #include <queues/send_queue.h>
-#include <config/configuration_manager.h>
+#include <config/configuration.h>
 #include <sa/ike_sa_manager.h>
 #include <network/socket.h>
 #include <utils/logger_manager.h>
@@ -141,7 +141,7 @@ static void daemon_kill(daemon_t *this, char* none)
 	this->event_queue->destroy(this->event_queue);
 	this->send_queue->destroy(this->send_queue);
 	this->kernel_interface->destroy(this->kernel_interface);
-	//this->configuration_manager->destroy(this->configuration_manager);
+	//this->configuration->destroy(this->configuration);
 	allocator_free(charon);
 }
 
@@ -164,7 +164,7 @@ daemon_t *daemon_create()
 	charon->event_queue = event_queue_create();
 	charon->send_queue = send_queue_create();
 	charon->kernel_interface = kernel_interface_create();
-	//charon->configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT,HALF_OPEN_IKE_SA_TIMEOUT);
+	//charon->configuration = configuration_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT,HALF_OPEN_IKE_SA_TIMEOUT);
 	charon->sender = NULL;
 	charon->receiver = NULL;
 	charon->scheduler = NULL;

@@ -39,7 +39,7 @@ typedef struct vendor_id_payload_t vendor_id_payload_t;
 /**
  * @brief Class representing an IKEv2 VENDOR ID payload.
  * 
- * The VENDOR ID payload format is described in draft section 3.12.
+ * The VENDOR ID payload format is described in RFC section 3.12.
  * 
  * @b Constructors:
  * - vendor_id_payload_create()

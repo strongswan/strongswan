@@ -1,7 +1,7 @@
 /**
- * @file configuration_manager.c
+ * @file static_configuration.c
  * 
- * @brief Implementation of configuration_manager_t.
+ * @brief Implementation of static_configuration_t.
  * 
  */
 
@@ -22,11 +22,30 @@
 
 #include <stdlib.h>
 
-#include "configuration_manager.h"
+#include "static_configuration.h"
 
 #include <types.h>
 #include <daemon.h>
 #include <utils/allocator.h>
+
+/**
+ * First retransmit timeout in milliseconds.
+ * 
+ * Timeout value is increasing in each retransmit round.
+ */
+#define RETRANSMIT_TIMEOUT 3000
+
+/**
+ * Timeout in milliseconds after that a half open IKE_SA gets deleted.
+ */
+#define HALF_OPEN_IKE_SA_TIMEOUT 30000
+
+/**
+ * Max retransmit count.
+ * 0 for infinite. The max time a half open IKE_SA is alive is set by 
+ * RETRANSMIT_TIMEOUT.
+ */
+#define MAX_RETRANSMIT_COUNT 0
 
 
 typedef struct preshared_secret_entry_t preshared_secret_entry_t;
@@ -150,17 +169,17 @@ configuration_entry_t * configuration_entry_create(char * name, init_config_t * 
 	return entry;
 }
 
-typedef struct private_configuration_manager_t private_configuration_manager_t;
+typedef struct private_static_configuration_t private_static_configuration_t;
 
 /**
- * Private data of an configuration_manager_t object.
+ * Private data of an static_configuration_t object.
  */
-struct private_configuration_manager_t {
+struct private_static_configuration_t {
 
 	/**
-	 * Public part of configuration_manager_t object.
+	 * Public part of static_configuration_t object.
 	 */
-	configuration_manager_t public;
+	static_configuration_t public;
 
 	/**
 	 * Holding all configurations.
@@ -221,7 +240,7 @@ struct private_configuration_manager_t {
 	 * @param init_config		init_config_t object
 	 * @param sa_config			sa_config_t object
 	 */
-	void (*add_new_configuration) (private_configuration_manager_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config);
+	void (*add_new_configuration) (private_static_configuration_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config);
 	
 	/**
 	 * Adds a new preshared secret.
@@ -231,7 +250,7 @@ struct private_configuration_manager_t {
 	 * @param id_string			identification as string
 	 * @param preshared_secret	preshared secret as string
 	 */
-	void (*add_new_preshared_secret) (private_configuration_manager_t *this,id_type_t type, char *id_string, char *preshared_secret);
+	void (*add_new_preshared_secret) (private_static_configuration_t *this,id_type_t type, char *id_string, char *preshared_secret);
 	
 	/**
 	 * Adds a new rsa private key.
@@ -242,7 +261,7 @@ struct private_configuration_manager_t {
 	 * @param key_pos			location of key
 	 * @param key_len			length of key
 	 */
-	void (*add_new_rsa_private_key) (private_configuration_manager_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
+	void (*add_new_rsa_private_key) (private_static_configuration_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
 	
 	/**
 	 * Adds a new rsa public key.
@@ -253,14 +272,14 @@ struct private_configuration_manager_t {
 	 * @param key_pos			location of key
 	 * @param key_len			length of key
 	 */
-	void (*add_new_rsa_public_key) (private_configuration_manager_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
+	void (*add_new_rsa_public_key) (private_static_configuration_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
 	
 	/**
 	 * Load default configuration.
 	 * 
 	 * @param this				calling object
 	 */
-	void (*load_default_config) (private_configuration_manager_t *this);
+	void (*load_default_config) (private_static_configuration_t *this);
 };
 
 
@@ -270,17 +289,17 @@ u_int8_t public_key_2[];
 u_int8_t private_key_2[];
 
 /**
- * Implementation of private_configuration_manager_t.load_default_config.
+ * Implementation of private_static_configuration_t.load_default_config.
  */
-static void load_default_config (private_configuration_manager_t *this)
+static void load_default_config (private_static_configuration_t *this)
 {
 	init_config_t *init_config_a, *init_config_b;
 	proposal_t *proposal;
 	sa_config_t *sa_config_a, *sa_config_b;
 	traffic_selector_t *ts;
 	
-	init_config_a = init_config_create("192.168.0.1","192.168.0.2",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
-	init_config_b = init_config_create("192.168.0.2","192.168.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config_a = init_config_create("0.0.0.0","192.168.0.2",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	init_config_b = init_config_create("0.0.0.0","192.168.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
 	
 	/* IKE proposals for alice */
 	proposal = proposal_create(1);
@@ -358,15 +377,10 @@ static void load_default_config (private_configuration_manager_t *this)
 	
 	sa_config_b->add_proposal(sa_config_b, proposal);
 	
-	
-	
-
 	this->add_new_configuration(this,"sun",init_config_a,sa_config_a);
 	this->add_new_configuration(this,"moon",init_config_b,sa_config_b);
 	
-
 	//this->add_new_preshared_secret(this,ID_IPV4_ADDR, "192.168.1.2","verschluesselt");
-	
 	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "192.168.0.1", public_key_1, 256);
 	this->add_new_rsa_public_key(this,ID_IPV4_ADDR, "192.168.0.2", public_key_2, 256);
 	this->add_new_rsa_private_key(this,ID_IPV4_ADDR, "192.168.0.1", private_key_1, 1024);
@@ -374,9 +388,9 @@ static void load_default_config (private_configuration_manager_t *this)
 }
 
 /**
- * Implementation of configuration_manager_t.get_init_config_for_host.
+ * Implementation of static_configuration_t.get_init_config_for_host.
  */
-static status_t get_init_config_for_host (private_configuration_manager_t *this, host_t *my_host, host_t *other_host,init_config_t **init_config)
+static status_t get_init_config_for_host (private_static_configuration_t *this, host_t *my_host, host_t *other_host,init_config_t **init_config)
 {
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -446,9 +460,9 @@ static status_t get_init_config_for_host (private_configuration_manager_t *this,
 }
 
 /**
- * Implementation of configuration_manager_t.get_init_config_for_name.
+ * Implementation of static_configuration_t.get_init_config_for_name.
  */
-static status_t get_init_config_for_name (private_configuration_manager_t *this, char *name, init_config_t **init_config)
+static status_t get_init_config_for_name (private_static_configuration_t *this, char *name, init_config_t **init_config)
 {
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -476,9 +490,9 @@ static status_t get_init_config_for_name (private_configuration_manager_t *this,
 }
 	
 /**
- * Implementation of configuration_manager_t.get_sa_config_for_name.
+ * Implementation of static_configuration_t.get_sa_config_for_name.
  */
-static status_t get_sa_config_for_name (private_configuration_manager_t *this, char *name, sa_config_t **sa_config)
+static status_t get_sa_config_for_name (private_static_configuration_t *this, char *name, sa_config_t **sa_config)
 {
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -505,9 +519,9 @@ static status_t get_sa_config_for_name (private_configuration_manager_t *this, c
 }
 
 /**
- * Implementation of configuration_manager_t.get_sa_config_for_init_config_and_id.
+ * Implementation of static_configuration_t.get_sa_config_for_init_config_and_id.
  */
-static status_t get_sa_config_for_init_config_and_id (private_configuration_manager_t *this, init_config_t *init_config, identification_t *other_id, identification_t *my_id,sa_config_t **sa_config)
+static status_t get_sa_config_for_init_config_and_id (private_static_configuration_t *this, init_config_t *init_config, identification_t *other_id, identification_t *my_id,sa_config_t **sa_config)
 {	
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -556,9 +570,9 @@ static status_t get_sa_config_for_init_config_and_id (private_configuration_mana
 }
 
 /**
- * Implementation of private_configuration_manager_t.add_new_configuration.
+ * Implementation of private_static_configuration_t.add_new_configuration.
  */
-static void add_new_configuration (private_configuration_manager_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config)
+static void add_new_configuration (private_static_configuration_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config)
 {
 	iterator_t *iterator;
 	bool found;
@@ -603,9 +617,9 @@ static void add_new_configuration (private_configuration_manager_t *this, char *
 }
 
 /**
- * Implementation of private_configuration_manager_t.add_new_preshared_secret.
+ * Implementation of private_static_configuration_t.add_new_preshared_secret.
  */
-static void add_new_preshared_secret (private_configuration_manager_t *this,id_type_t type, char *id_string, char *preshared_secret)
+static void add_new_preshared_secret (private_static_configuration_t *this,id_type_t type, char *id_string, char *preshared_secret)
 {
 	preshared_secret_entry_t *entry = allocator_alloc_thing(preshared_secret_entry_t);
 	
@@ -618,9 +632,9 @@ static void add_new_preshared_secret (private_configuration_manager_t *this,id_t
 }
 
 /**
- * Implementation of private_configuration_manager_t.add_new_preshared_secret.
+ * Implementation of private_static_configuration_t.add_new_preshared_secret.
  */
-static void add_new_rsa_public_key (private_configuration_manager_t *this, id_type_t type, char *id_string, u_int8_t* key_pos, size_t key_len)
+static void add_new_rsa_public_key (private_static_configuration_t *this, id_type_t type, char *id_string, u_int8_t* key_pos, size_t key_len)
 {
 	chunk_t key;
 	key.ptr = key_pos;
@@ -636,9 +650,9 @@ static void add_new_rsa_public_key (private_configuration_manager_t *this, id_ty
 }
 
 /**
- * Implementation of private_configuration_manager_t.add_new_preshared_secret.
+ * Implementation of private_static_configuration_t.add_new_preshared_secret.
  */
-static void add_new_rsa_private_key (private_configuration_manager_t *this, id_type_t type, char *id_string, u_int8_t* key_pos, size_t key_len)
+static void add_new_rsa_private_key (private_static_configuration_t *this, id_type_t type, char *id_string, u_int8_t* key_pos, size_t key_len)
 {
 	chunk_t key;
 	key.ptr = key_pos;
@@ -654,9 +668,9 @@ static void add_new_rsa_private_key (private_configuration_manager_t *this, id_t
 }
 
 /**
- * Implementation of configuration_manager_t.get_shared_secret.
+ * Implementation of static_configuration_t.get_shared_secret.
  */
-static status_t get_shared_secret(private_configuration_manager_t *this, identification_t *identification, chunk_t *preshared_secret)
+static status_t get_shared_secret(private_static_configuration_t *this, identification_t *identification, chunk_t *preshared_secret)
 {
 	iterator_t *iterator;
 	
@@ -677,9 +691,9 @@ static status_t get_shared_secret(private_configuration_manager_t *this, identif
 }
 
 /**
- * Implementation of configuration_manager_t.get_shared_secret.
+ * Implementation of static_configuration_t.get_shared_secret.
  */
-static status_t get_rsa_public_key(private_configuration_manager_t *this, identification_t *identification, rsa_public_key_t **public_key)
+static status_t get_rsa_public_key(private_static_configuration_t *this, identification_t *identification, rsa_public_key_t **public_key)
 {
 	iterator_t *iterator;
 	
@@ -700,9 +714,9 @@ static status_t get_rsa_public_key(private_configuration_manager_t *this, identi
 }
 
 /**
- * Implementation of configuration_manager_t.get_shared_secret.
+ * Implementation of static_configuration_t.get_shared_secret.
  */
-static status_t get_rsa_private_key(private_configuration_manager_t *this, identification_t *identification, rsa_private_key_t **private_key)
+static status_t get_rsa_private_key(private_static_configuration_t *this, identification_t *identification, rsa_private_key_t **private_key)
 {
 	iterator_t *iterator;
 	
@@ -723,9 +737,9 @@ static status_t get_rsa_private_key(private_configuration_manager_t *this, ident
 }
 
 /**
- * Implementation of configuration_manager_t.get_retransmit_timeout.
+ * Implementation of static_configuration_t.get_retransmit_timeout.
  */
-static status_t get_retransmit_timeout (private_configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
+static status_t get_retransmit_timeout (private_static_configuration_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
 {
 	int new_timeout = this->first_retransmit_timeout, i;
 	if ((retransmit_count > this->max_retransmit_count) && (this->max_retransmit_count != 0))
@@ -745,19 +759,19 @@ static status_t get_retransmit_timeout (private_configuration_manager_t *this, u
 }
 
 /**
- * Implementation of configuration_manager_t.get_half_open_ike_sa_timeout.
+ * Implementation of static_configuration_t.get_half_open_ike_sa_timeout.
  */
-static u_int32_t get_half_open_ike_sa_timeout (private_configuration_manager_t *this)
+static u_int32_t get_half_open_ike_sa_timeout (private_static_configuration_t *this)
 {
 	return this->half_open_ike_sa_timeout;
 }
 
 /**
- * Implementation of configuration_manager_t.destroy.
+ * Implementation of static_configuration_t.destroy.
  */
-static void destroy(private_configuration_manager_t *this)
+static void destroy(private_static_configuration_t *this)
 {
-	this->logger->log(this->logger,CONTROL | LEVEL1, "Going to destroy configuration manager ");
+	this->logger->log(this->logger,CONTROL | LEVEL1, "Going to destroy configuration backend ");
 
 	this->logger->log(this->logger,CONTROL | LEVEL2, "Destroy configuration entries");
 	while (this->configurations->get_count(this->configurations) > 0)
@@ -827,21 +841,21 @@ static void destroy(private_configuration_manager_t *this)
 /*
  * Described in header-file
  */
-configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count, u_int32_t half_open_ike_sa_timeout)
+static_configuration_t *static_configuration_create()
 {
-	private_configuration_manager_t *this = allocator_alloc_thing(private_configuration_manager_t);
+	private_static_configuration_t *this = allocator_alloc_thing(private_static_configuration_t);
 
 	/* public functions */
-	this->public.destroy = (void(*)(configuration_manager_t*))destroy;
-	this->public.get_init_config_for_name = (status_t (*) (configuration_manager_t *, char *, init_config_t **)) get_init_config_for_name;
-	this->public.get_init_config_for_host = (status_t (*) (configuration_manager_t *, host_t *, host_t *,init_config_t **)) get_init_config_for_host;
-	this->public.get_sa_config_for_name =(status_t (*) (configuration_manager_t *, char *, sa_config_t **)) get_sa_config_for_name;
-	this->public.get_sa_config_for_init_config_and_id =(status_t (*) (configuration_manager_t *, init_config_t *, identification_t *, identification_t *,sa_config_t **)) get_sa_config_for_init_config_and_id;
-	this->public.get_retransmit_timeout = (status_t (*) (configuration_manager_t *, u_int32_t retransmit_count, u_int32_t *timeout))get_retransmit_timeout;
-	this->public.get_half_open_ike_sa_timeout = (u_int32_t (*) (configuration_manager_t *)) get_half_open_ike_sa_timeout;
-	this->public.get_shared_secret = (status_t (*) (configuration_manager_t *, identification_t *, chunk_t *))get_shared_secret;
-	this->public.get_rsa_private_key = (status_t (*) (configuration_manager_t *, identification_t *, rsa_private_key_t**))get_rsa_private_key;
-	this->public.get_rsa_public_key = (status_t (*) (configuration_manager_t *, identification_t *, rsa_public_key_t**))get_rsa_public_key;
+	this->public.configuration_interface.destroy = (void(*)(configuration_t*))destroy;
+	this->public.configuration_interface.get_init_config_for_name = (status_t (*) (configuration_t *, char *, init_config_t **)) get_init_config_for_name;
+	this->public.configuration_interface.get_init_config_for_host = (status_t (*) (configuration_t *, host_t *, host_t *,init_config_t **)) get_init_config_for_host;
+	this->public.configuration_interface.get_sa_config_for_name =(status_t (*) (configuration_t *, char *, sa_config_t **)) get_sa_config_for_name;
+	this->public.configuration_interface.get_sa_config_for_init_config_and_id =(status_t (*) (configuration_t *, init_config_t *, identification_t *, identification_t *,sa_config_t **)) get_sa_config_for_init_config_and_id;
+	this->public.configuration_interface.get_retransmit_timeout = (status_t (*) (configuration_t *, u_int32_t retransmit_count, u_int32_t *timeout))get_retransmit_timeout;
+	this->public.configuration_interface.get_half_open_ike_sa_timeout = (u_int32_t (*) (configuration_t *)) get_half_open_ike_sa_timeout;
+	this->public.configuration_interface.get_shared_secret = (status_t (*) (configuration_t *, identification_t *, chunk_t *))get_shared_secret;
+	this->public.configuration_interface.get_rsa_private_key = (status_t (*) (configuration_t *, identification_t *, rsa_private_key_t**))get_rsa_private_key;
+	this->public.configuration_interface.get_rsa_public_key = (status_t (*) (configuration_t *, identification_t *, rsa_public_key_t**))get_rsa_public_key;
 	
 	/* private functions */
 	this->load_default_config = load_default_config;
@@ -851,16 +865,16 @@ configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit
 	this->add_new_rsa_private_key = add_new_rsa_private_key;
 	
 	/* private variables */
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager,CONFIGURATION_MANAGER,NULL);
+	this->logger = charon->logger_manager->create_logger(charon->logger_manager,CONFIG,NULL);
 	this->configurations = linked_list_create();
 	this->sa_configs = linked_list_create();
 	this->init_configs = linked_list_create();
 	this->preshared_secrets = linked_list_create();
 	this->rsa_private_keys = linked_list_create();
 	this->rsa_public_keys = linked_list_create();
-	this->max_retransmit_count = max_retransmit_count;
-	this->first_retransmit_timeout = first_retransmit_timeout;
-	this->half_open_ike_sa_timeout = half_open_ike_sa_timeout;
+	this->max_retransmit_count = MAX_RETRANSMIT_COUNT;
+	this->first_retransmit_timeout = RETRANSMIT_TIMEOUT;
+	this->half_open_ike_sa_timeout = HALF_OPEN_IKE_SA_TIMEOUT;
 	
 	this->load_default_config(this);
 

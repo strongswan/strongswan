@@ -49,7 +49,7 @@ typedef enum notify_message_type_t notify_message_type_t;
 /** 
  * @brief Notify message types.
  * 
- * See IKEv2 draft 3.10.1.
+ * See IKEv2 RFC 3.10.1.
  * 
  * @ingroup payloads
  */

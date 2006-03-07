@@ -38,7 +38,7 @@ typedef struct nonce_payload_t nonce_payload_t;
 /**
  * Object representing an IKEv2 Nonce payload.
  * 
- * The Nonce payload format is described in draft section 3.3.
+ * The Nonce payload format is described in RFC section 3.3.
  * 
  * @b Constructors:
  * - nonce_payload_create()

@@ -50,7 +50,7 @@ enum logger_context_t {
 	SOCKET,
 	TESTER,
 	DAEMON,
-	CONFIGURATION_MANAGER,
+	CONFIG,
 	ENCRYPTION_PAYLOAD,
 };
 

@@ -484,6 +484,10 @@ static void set_sa_config (private_ike_sa_t *this,sa_config_t * sa_config)
  */
 static void set_my_host (private_ike_sa_t *this, host_t *my_host)
 {
+	if (this->me.host)
+	{
+		this->me.host->destroy(this->me.host);
+	}
 	this->me.host = my_host;
 }
 
@@ -492,6 +496,10 @@ static void set_my_host (private_ike_sa_t *this, host_t *my_host)
  */
 static void set_other_host (private_ike_sa_t *this, host_t *other_host)
 {
+	if (this->other.host)
+	{
+		this->other.host->destroy(this->other.host);
+	}
 	this->other.host = other_host;
 }
 
@@ -814,7 +822,7 @@ static status_t send_request (private_ike_sa_t *this,message_t * message)
 	
 	retransmit_job = retransmit_request_job_create(this->message_id_out,this->ike_sa_id);
 	
-	status = charon->configuration_manager->get_retransmit_timeout (charon->configuration_manager,
+	status = charon->configuration->get_retransmit_timeout (charon->configuration,
 												retransmit_job->get_retransmit_count(retransmit_job),&timeout);
 	
 	if (status != SUCCESS)

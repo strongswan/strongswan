@@ -29,7 +29,7 @@
 typedef enum integrity_algorithm_t integrity_algorithm_t;
 
 /**
- * @brief Integrity algorithm, as in IKEv2 draft 3.3.2.
+ * @brief Integrity algorithm, as in IKEv2 RFC 3.3.2.
  * 
  * Currently only the following algorithms are implemented and therefore supported:
  * - AUTH_HMAC_MD5_96

@@ -31,7 +31,7 @@
 /**
  * @brief Maximum size of a packet.
  * 
- * 3000 Bytes should be sufficient, see IKEv2 draft.
+ * 3000 Bytes should be sufficient, see IKEv2 RFC.
  * 
  * @ingroup network
  */
@@ -41,16 +41,24 @@
 typedef struct socket_t socket_t;
 
 /**
- * @brief Abstraction of one (ipv4), or in future, of multiple sockets.
+ * @brief Abstraction all sockets (currently IPv4 only).
  *
- * Receiver reads from here, sender writes to here.
+ * All available IPv4 sockets are bound and the receive function
+ * reads from them. To allow binding of other daemons (pluto) to
+ * UDP/500, this implementation uses RAW sockets. An installed
+ * "Linux socket filter" filters out all non-IKEv2 traffic and handles
+ * just IKEv2 messages. An other daemon (pluto) must handle all traffic
+ * seperatly, e.g. ignore IKEv2 traffic, since charon handles that. 
  * 
  * @b Constructors:
  * - socket_create()
  * 
  * @todo add IPv6 support
  * 
- * @todo allow listening/sending to multiple sockets, depending on address
+ * @todo We currently use multiple sockets for historic reasons. With the
+ * new RAW socket mechanism, we could use just one socket and filter
+ * addresses in userspace (or via linux socket filter). This would allow 
+ * realtime interface/address management in a easy way...
  * 
  * @ingroup network
  */
@@ -58,9 +66,8 @@ struct socket_t {
 	/**
 	 * @brief Receive a packet.
 	 * 
-	 * reads a packet from one of the sockets.
-	 * source will be set, dest not implemented
-	 * 
+	 * Reads a packet from the socket and sets source/dest
+	 * appropriately.
 	 * 
 	 * @param sock			socket_t object to work on
 	 * @param packet		pinter gets address from allocated packet_t
@@ -73,8 +80,9 @@ struct socket_t {
 	/**
 	 * @brief Send a packet.
 	 * 
-	 * sends a packet via desired socket.
-	 * uses source and dest in packet.
+	 * Sends a packet to the net using destination from the packet.
+	 * Packet is sent using default routing mechanisms, thus the 
+	 * source address in packet is ignored.
 	 * 
 	 * @param sock			socket_t object to work on
 	 * @param packet[out]	packet_t to send
@@ -95,10 +103,10 @@ struct socket_t {
 };
 
 /**
- * @brief socket_t constructor.
+ * @brief Create a socket_t, wich binds multiple sockets.
  * 
  * currently creates one socket, listening on all addresses
- * on port.
+ * on "port".
  *  
  * @param port				port to bind socket to
  * @return  				socket_t object

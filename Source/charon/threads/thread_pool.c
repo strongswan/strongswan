@@ -298,7 +298,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 	if (status == CREATED)
 	{
 		this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "Create Job to delete half open IKE_SA.");
-		this->create_delete_half_open_ike_sa_job(this,ike_sa_id,charon->configuration_manager->get_half_open_ike_sa_timeout(charon->configuration_manager));
+		this->create_delete_half_open_ike_sa_job(this,ike_sa_id,charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
 	}
 
 	status = ike_sa->process_message(ike_sa, message);				
@@ -349,25 +349,25 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 	
 	charon->ike_sa_manager->create_and_checkout(charon->ike_sa_manager, &ike_sa);
 	
-	this->worker_logger->log(this->worker_logger, CONTROL, "Initializing connection \"%s\"", 
+	this->worker_logger->log(this->worker_logger, CONTROL, "Initiating connection \"%s\"", 
 							 job->get_configuration_name(job));
 	status = ike_sa->initialize_connection(ike_sa, job->get_configuration_name(job));
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "%s: By initialize_conection, going to delete IKE_SA.", 
+		this->worker_logger->log(this->worker_logger, ERROR, "Initiation returned %s, going to delete IKE_SA.", 
 								 mapping_find(status_m, status));
 		charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
 		return;
 	}
 
 	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "Create Job to delete half open IKE_SA.");
-	this->create_delete_half_open_ike_sa_job(this,ike_sa->get_id(ike_sa),charon->configuration_manager->get_half_open_ike_sa_timeout(charon->configuration_manager));
+	this->create_delete_half_open_ike_sa_job(this,ike_sa->get_id(ike_sa),charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
 	
 	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Checking in IKE SA");
 	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	if (status != SUCCESS)
 	{
-		this->worker_logger->log(this->worker_logger, ERROR, "%s: Could not checkin IKE_SA.", 
+		this->worker_logger->log(this->worker_logger, ERROR, "Could not checkin IKE_SA (%s)", 
 								 mapping_find(status_m, status));
 	}
 }
@@ -510,7 +510,7 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 	}
 	
 	job->increase_retransmit_count(job);
-	status = charon->configuration_manager->get_retransmit_timeout (charon->configuration_manager,job->get_retransmit_count(job),&timeout);
+	status = charon->configuration->get_retransmit_timeout (charon->configuration,job->get_retransmit_count(job),&timeout);
 	if (status != SUCCESS)
 	{
 		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL2, "Message will not be anymore retransmitted");

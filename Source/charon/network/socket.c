@@ -34,12 +34,51 @@
 #include <fcntl.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <linux/filter.h>
 
 #include "socket.h"
 
 #include <daemon.h>
 #include <utils/allocator.h>
 #include <utils/logger_manager.h>
+
+
+#define IP_HEADER_LENGTH 20
+#define UDP_HEADER_LENGTH 8
+
+
+/**
+ * This filter code filters out all non-IKEv2 traffic on 
+ * a SOCK_RAW IP_PROTP_UDP socket. Handling of other
+ * IKE versions is done in pluto.
+ */
+struct sock_filter ikev2_filter_code[] = 
+{
+	/* Protocol must be UDP */
+	BPF_STMT(BPF_LD+BPF_B+BPF_ABS, 9),
+	BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IPPROTO_UDP, 0, 7),
+	/* Destination Port must be 500 */
+	BPF_STMT(BPF_LD+BPF_H+BPF_ABS, 22),
+	BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 500, 0, 5),
+	/* IKE version must be 2.0 */
+	BPF_STMT(BPF_LD+BPF_B+BPF_ABS, 45),
+	BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x20, 0, 3),
+	/* packet length is length in IKEv2 header + ip header + udp header */
+	BPF_STMT(BPF_LD+BPF_W+BPF_ABS, 52),
+	BPF_STMT(BPF_ALU+BPF_ADD+BPF_K, IP_HEADER_LENGTH + UDP_HEADER_LENGTH),
+	BPF_STMT(BPF_RET+BPF_A, 0),
+	/* packet doesn't match IKEv2, ignore */
+	BPF_STMT(BPF_RET+BPF_K, 0),
+};
+
+/**
+ * Filter struct to use with setsockopt
+ */
+struct sock_fprog ikev2_filter = {
+	sizeof(ikev2_filter_code) / sizeof(struct sock_filter),
+	ikev2_filter_code
+};
 
 
 typedef struct interface_t interface_t;
@@ -52,7 +91,7 @@ struct interface_t {
 	/**
 	 * Name of the interface
 	 */
-	char name[IFNAMSIZ+1];
+	char name[IFNAMSIZ];
 	
 	/**
 	 * Associated socket
@@ -98,10 +137,6 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 	host_t *source, *dest;
 	int bytes_read = 0;
 	
-	source = host_create(AF_INET, "0.0.0.0", 0);
-	dest = host_create(AF_INET, "0.0.0.0", 0);
-	pkt->set_source(pkt, source);
-	pkt->set_destination(pkt, dest);
 	
 	while (bytes_read >= 0)
 	{
@@ -124,7 +159,7 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 			}
 		}
 		iterator->destroy(iterator);
-	
+		
 		/* add packet destroy handler for cancellation, enable cancellation */
 		pthread_cleanup_push((void(*)(void*))pkt->destroy, (void*)pkt);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
@@ -136,12 +171,6 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 		pthread_setcancelstate(oldstate, NULL);
 		pthread_cleanup_pop(0);
 		
-		if (bytes_read  < 0)
-		{
-			this->logger->log(this->logger, ERROR, "error reading from socket: %s", strerror(errno));
-			continue;
-		}
-	
 		/* read on the first nonblocking socket */
 		bytes_read = 0;
 		iterator = this->interfaces->create_iterator(this->interfaces, TRUE);
@@ -151,28 +180,41 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 			if (FD_ISSET(interface->socket_fd, &readfds))
 			{
 				/* do the read */
-				bytes_read = recvfrom(interface->socket_fd, buffer, MAX_PACKET, 0,
-									source->get_sockaddr(source), 
-									source->get_sockaddr_len(source));
-				getsockname(interface->socket_fd, dest->get_sockaddr(dest), dest->get_sockaddr_len(dest));
+				bytes_read = recv(interface->socket_fd, buffer, MAX_PACKET, 0);
 				break;
 			}
 		}
 		iterator->destroy(iterator);
-		if (bytes_read > 0)
+		
+		if (bytes_read  < 0)
 		{
+			this->logger->log(this->logger, ERROR, "error reading from socket: %s", strerror(errno));
+			continue;
+		}
+		if (bytes_read > IP_HEADER_LENGTH + UDP_HEADER_LENGTH)
+		{
+			/* read source/dest from raw IP/UDP header */
+			chunk_t source_chunk = {buffer + 12, 4};
+			chunk_t dest_chunk = {buffer + 16, 4};
+			u_int16_t source_port = ntohs(*(u_int16_t*)(buffer + 20));
+			u_int16_t dest_port = ntohs(*(u_int16_t*)(buffer + 22));
+			source = host_create_from_chunk(AF_INET, source_chunk, source_port);
+			dest = host_create_from_chunk(AF_INET, dest_chunk, dest_port);
+			pkt->set_source(pkt, source);
+			pkt->set_destination(pkt, dest);
 			break;
 		}
+		this->logger->log(this->logger, ERROR|LEVEL1, "too short packet received");
 	}
 	
-	this->logger->log(this->logger, CONTROL, "received packet from %s:%d",
-						source->get_address(source), 
-						source->get_port(source));
+	this->logger->log(this->logger, CONTROL, "received packet: from %s:%d to %s:%d",
+					  source->get_address(source), source->get_port(source),
+					  dest->get_address(dest), dest->get_port(dest));
 
 	/* fill in packet */
-	data.len = bytes_read;
+	data.len = bytes_read - IP_HEADER_LENGTH - UDP_HEADER_LENGTH;
 	data.ptr = allocator_alloc(data.len);
-	memcpy(data.ptr, buffer, data.len);
+	memcpy(data.ptr, buffer + IP_HEADER_LENGTH + UDP_HEADER_LENGTH, data.len);
 	pkt->set_data(pkt, data);
 
 	/* return packet */
@@ -291,7 +333,7 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 		}
 		
 		/* set up interface socket */
-		skt = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		skt = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
 		if (socket < 0)
 		{
 			this->logger->log(this->logger, ERROR, "unable to open interface socket!");
@@ -311,12 +353,21 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 			close(skt);
 			continue;
 		}
+			
+		if (setsockopt(skt, SOL_SOCKET, SO_ATTACH_FILTER, &ikev2_filter, sizeof(ikev2_filter)) < 0)
+		{
+			this->logger->log(this->logger, ERROR, "unable to attack IKEv2 filter to interface socket!");
+			close(skt);
+			continue;
+		}
 		
 		/* add socket with interface name to list */
 		interface = allocator_alloc_thing(interface_t);
  		memcpy(interface->name, buf[i].ifr_name, IFNAMSIZ);
- 		interface->name[IFNAMSIZ] = '\0';
+ 		interface->name[IFNAMSIZ-1] = '\0';
 		interface->socket_fd = skt;
+		this->logger->log(this->logger, CONTROL, "listening on %s (%s)",
+						  interface->name, inet_ntoa(current->sin_addr));
 		this->interfaces->insert_last(this->interfaces, (void*)interface);
 	}
 	

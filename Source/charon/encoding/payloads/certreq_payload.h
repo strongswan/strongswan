@@ -40,7 +40,7 @@ typedef struct certreq_payload_t certreq_payload_t;
 /**
  * @brief Class representing an IKEv2 CERTREQ payload.
  * 
- * The CERTREQ payload format is described in draft section 3.7.
+ * The CERTREQ payload format is described in RFC section 3.7.
  * This is just a dummy implementation to fullfill the standards
  * requirements. A full implementation would offer setters/getters
  * for the different encoding types.

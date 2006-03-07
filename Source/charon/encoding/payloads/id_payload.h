@@ -41,7 +41,7 @@ typedef struct id_payload_t id_payload_t;
 /**
  * Object representing an IKEv2 ID payload.
  * 
- * The ID payload format is described in draft section 3.5.
+ * The ID payload format is described in RFC section 3.5.
  * 
  * @b Constructors:
  * - id_payload_create_from_identification()

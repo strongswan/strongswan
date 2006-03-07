@@ -41,7 +41,7 @@ typedef struct delete_payload_t delete_payload_t;
 /**
  * @brief Class representing an IKEv2 DELETE payload.
  * 
- * The DELETE payload format is described in draft section 3.11.
+ * The DELETE payload format is described in RFC section 3.11.
  * 
  * @b Constructors:
  * - delete_payload_create()

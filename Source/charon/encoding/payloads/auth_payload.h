@@ -44,19 +44,19 @@ typedef enum auth_method_t auth_method_t;
  */
 enum auth_method_t {
 	/**
-	 * Computed as specified in section 2.15 of draft using 
+	 * Computed as specified in section 2.15 of RFC using 
 	 * an RSA private key over a PKCS#1 padded hash.
 	 */
 	RSA_DIGITAL_SIGNATURE = 1,
 	
 	/* Computed as specified in
-     * section 2.15 of draft using the shared key associated with the identity
+     * section 2.15 of RFC using the shared key associated with the identity
      * in the ID payload and the negotiated prf function
      */
 	SHARED_KEY_MESSAGE_INTEGRITY_CODE = 2,
 	
 	/* Computed as specified in section
-     * 2.15 of draft using a DSS private key over a SHA-1 hash.
+	* 2.15 of RFC using a DSS private key over a SHA-1 hash.
      */
     DSS_DIGITAL_SIGNATURE = 3,
 };
@@ -74,7 +74,7 @@ typedef struct auth_payload_t auth_payload_t;
 /**
  * @brief Class representing an IKEv2 AUTH payload.
  * 
- * The AUTH payload format is described in draft section 3.8.
+ * The AUTH payload format is described in RFC section 3.8.
  * 
  * @b Constructors:
  * - auth_payload_create()

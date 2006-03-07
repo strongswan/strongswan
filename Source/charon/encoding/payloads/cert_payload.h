@@ -37,7 +37,7 @@
 typedef enum cert_encoding_t cert_encoding_t;
 
 /**
- * @brief Certificate encoding, as described in IKEv2 draft section 3.6
+ * @brief Certificate encoding, as described in IKEv2 RFC section 3.6
  * 
  * @ingroup payloads
  */
@@ -69,7 +69,7 @@ typedef struct cert_payload_t cert_payload_t;
 /**
  * @brief Class representing an IKEv2 CERT payload.
  * 
- * The CERT payload format is described in draft section 3.6.
+ * The CERT payload format is described in RFC section 3.6.
  * This is just a dummy implementation to fullfill the standards
  * requirements. A full implementation would offer setters/getters
  * for the different encoding types.

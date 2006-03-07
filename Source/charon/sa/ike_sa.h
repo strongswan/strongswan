@@ -29,7 +29,7 @@
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <sa/states/state.h>
-#include <config/configuration_manager.h>
+#include <config/configuration.h>
 #include <utils/logger.h>
 #include <utils/randomizer.h>
 #include <transforms/prfs/prf.h>

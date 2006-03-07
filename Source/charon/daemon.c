@@ -29,6 +29,8 @@
 #include <types.h>
 #include <utils/allocator.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
+#include <config/static_configuration.h>
+#include <config/starter_configuration.h>
 
 
 typedef struct private_daemon_t private_daemon_t;
@@ -182,7 +184,7 @@ static void initialize(private_daemon_t *this)
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.send_queue = send_queue_create();
-	this->public.configuration_manager = configuration_manager_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT, HALF_OPEN_IKE_SA_TIMEOUT);
+	this->public.configuration = (configuration_t*)static_configuration_create();
 	
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
@@ -236,9 +238,9 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.socket->destroy(this->public.socket);
 	}
-	if (this->public.configuration_manager != NULL)
+	if (this->public.configuration != NULL)
 	{
-		this->public.configuration_manager->destroy(this->public.configuration_manager);
+		this->public.configuration->destroy(this->public.configuration);
 	}
 	
 	this->public.logger_manager->destroy(this->public.logger_manager);
@@ -273,7 +275,7 @@ private_daemon_t *daemon_create()
 	this->public.job_queue = NULL;
 	this->public.event_queue = NULL;
 	this->public.send_queue = NULL;
-	this->public.configuration_manager = NULL;
+	this->public.configuration = NULL;
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;

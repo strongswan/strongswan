@@ -39,7 +39,7 @@
 typedef enum configuration_attribute_type_t configuration_attribute_type_t;
 
 /**
- * Type of the attribute, as in IKEv2 draft 3.15.1.
+ * Type of the attribute, as in IKEv2 RFC 3.15.1.
  * 
  * @ingroup payloads
  */

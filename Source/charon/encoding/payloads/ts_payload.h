@@ -43,7 +43,7 @@ typedef struct ts_payload_t ts_payload_t;
 /**
  * @brief Class representing an IKEv2 TS payload.
  * 
- * The TS payload format is described in draft section 3.13.
+ * The TS payload format is described in RFC section 3.13.
  * 
  * @b Constructors:
  * - ts_payload_create()

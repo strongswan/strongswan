@@ -67,7 +67,7 @@ struct private_authenticator_t {
 	
 	/**
 	 * @brief Creates the octets which are signed (RSA) or MACed (shared secret) as described in section 
-	 * 2.15 of draft.
+	 * 2.15 of RFC.
 	 * 
 	 * @param this				calling object
 	 * @param last_message		the last message to include in created octets 
@@ -211,7 +211,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			chunk_t preshared_secret;
 			status_t status;
 						
-			status = charon->configuration_manager->get_shared_secret(charon->configuration_manager,
+			status = charon->configuration->get_shared_secret(charon->configuration,
 																		other_id,
 																		&preshared_secret);
 			other_id->destroy(other_id);
@@ -252,7 +252,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			
 			auth_data = auth_payload->get_data(auth_payload);
 			
-			status = charon->configuration_manager->get_rsa_public_key(charon->configuration_manager,
+			status = charon->configuration->get_rsa_public_key(charon->configuration,
 																		other_id,
 																		&public_key);
 			other_id->destroy(other_id);
@@ -295,7 +295,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			chunk_t preshared_secret;
 			status_t status;		
 
-			status = charon->configuration_manager->get_shared_secret(charon->configuration_manager,
+			status = charon->configuration->get_shared_secret(charon->configuration,
 																		my_id,
 																		&preshared_secret);
 
@@ -326,7 +326,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			status_t status;
 			chunk_t octets, auth_data;
 			
-			status = charon->configuration_manager->get_rsa_private_key(charon->configuration_manager,
+			status = charon->configuration->get_rsa_private_key(charon->configuration,
 																		my_id,
 																		&private_key);
 			my_id->destroy(my_id);

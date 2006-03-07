@@ -177,7 +177,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	source = message->get_source(message);
 	destination = message->get_destination(message);
 
-	status = charon->configuration_manager->get_init_config_for_host(charon->configuration_manager,destination,source,&init_config);
+	status = charon->configuration->get_init_config_for_host(charon->configuration,destination,source,&init_config);
 	if (status != SUCCESS)
 	{
 		/* no configuration matches given host */

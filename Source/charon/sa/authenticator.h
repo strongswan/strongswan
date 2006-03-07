@@ -40,7 +40,7 @@ typedef struct authenticator_t authenticator_t;
  *  - RSA_DIGITAL_SIGNATURE
  * 
  * This class retrieves needed data for specific AUTH methods (RSA keys, shared secrets, etc.)
- * over an internal stored protected_ike_sa_t object or directly from the configuration_manager_t over
+ * over an internal stored protected_ike_sa_t object or directly from the configuration_t over
  * the daemon_t object "charon".
  * 
  * @b Constructors:

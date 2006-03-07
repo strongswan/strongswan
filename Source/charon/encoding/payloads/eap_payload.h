@@ -39,7 +39,7 @@ typedef struct eap_payload_t eap_payload_t;
 /**
  * @brief Class representing an IKEv2 EAP payload.
  * 
- * The EAP payload format is described in draft section 3.16.
+ * The EAP payload format is described in RFC section 3.16.
  * 
  * @b Constructors:
  * - eap_payload_create()

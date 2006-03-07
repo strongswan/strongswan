@@ -273,7 +273,7 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	request.sa.id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
 	request.sa.family = me->get_family(me);
 	request.sa.mode = TRUE; /* tunnel mode */
-	request.sa.replay_window = 0; //sa->replay_window; ???
+	request.sa.replay_window = 32;
 	request.sa.reqid = reqid;
 	request.sa.lft.soft_byte_limit = XFRM_INF;
 	request.sa.lft.soft_packet_limit = XFRM_INF;

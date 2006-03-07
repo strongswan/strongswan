@@ -33,7 +33,7 @@ typedef enum diffie_hellman_group_t diffie_hellman_group_t;
  * 
  * The modulus (or group) to use for a Diffie-Hellman calculation.
  * 
- * See IKEv2 draft 3.3.2 and RFC 3526.
+ * See IKEv2 RFC 3.3.2 and RFC 3526.
  * 
  * @warning Use of big modulus sizes can be cpu consuming.
  * 

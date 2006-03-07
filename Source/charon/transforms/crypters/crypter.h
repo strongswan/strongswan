@@ -28,7 +28,7 @@
 typedef enum encryption_algorithm_t encryption_algorithm_t;
 
 /**
- * @brief Encryption algorithm, as in IKEv2 draft 3.3.2.
+ * @brief Encryption algorithm, as in IKEv2 RFC 3.3.2.
  * 
  * Currently only the following algorithms are implemented and therefore supported:
  * - ENCR_AES_CBC

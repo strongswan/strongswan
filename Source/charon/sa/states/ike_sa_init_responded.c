@@ -391,7 +391,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 
 	/* build new sa config */
 	init_config = this->ike_sa->get_init_config(this->ike_sa);
-	status = charon->configuration_manager->get_sa_config_for_init_config_and_id(charon->configuration_manager,init_config, other_id,my_id, &(this->sa_config));
+	status = charon->configuration->get_sa_config_for_init_config_and_id(charon->configuration,init_config, other_id,my_id, &(this->sa_config));
 	if (status != SUCCESS)
 	{	
 		if (my_id)

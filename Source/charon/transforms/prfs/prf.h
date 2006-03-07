@@ -28,7 +28,7 @@
 typedef enum pseudo_random_function_t pseudo_random_function_t;
 
 /**
- * @brief Pseudo random function, as in IKEv2 draft 3.3.2.
+ * @brief Pseudo random function, as in IKEv2 RFC 3.3.2.
  * 
  * Currently only the following algorithms are implemented and therefore supported:
  * - PRF_HMAC_MD5

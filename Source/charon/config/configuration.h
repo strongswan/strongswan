@@ -1,7 +1,7 @@
 /**
- * @file configuration_manager.h
+ * @file configuration.h
  * 
- * @brief Interface of configuration_manager_t.
+ * @brief Interface configuration_t.
  *  
  */
 
@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef CONFIGURATION_MANAGER_H_
-#define CONFIGURATION_MANAGER_H_
+#ifndef CONFIGURATION_H_
+#define CONFIGURATION_H_
 
 #include <types.h>
 #include <config/init_config.h>
@@ -30,26 +30,30 @@
 #include <transforms/rsa/rsa_public_key.h>
 
 
-typedef struct configuration_manager_t configuration_manager_t;
+typedef struct configuration_t configuration_t;
 
 /**
- * @brief Manages all configuration aspects of the daemon.
+ * @brief The interface for a configuration backend.
+ * 
+ * Multiple backends for the configuration are conceivable:
+ * - ipsec starter from pluto
+ * - own file backend
+ * - multiple database backends
+ * - LDAP backend?
  * 
  * @b Constructors:
- * 	- configuration_manager_create()
- * 
- * @todo Build a (file) backend for the configuration manager.
+ * 	- configuration_create()
  * 
  * @ingroup config
  */
-struct configuration_manager_t { 
+struct configuration_t { 
 
 	/**
 	 * @brief Returns the configuration information needed for IKE_SA_INIT exchange 
 	 * for a specific configuration name.
 	 * 
 	 * The returned init_config_t object MUST NOT be destroyed cause it's managed by 
-	 * this configuration_manager_t object.
+	 * this configuration_t object.
 	 * 
 	 * @param this				calling object
 	 * @param name				name of the configuration
@@ -59,14 +63,14 @@ struct configuration_manager_t {
 	 * 							- NOT_FOUND
 	 * 							- SUCCESS
 	 */
-	status_t (*get_init_config_for_name) (configuration_manager_t *this, char *name, init_config_t **init_config);
+	status_t (*get_init_config_for_name) (configuration_t *this, char *name, init_config_t **init_config);
 
 	/**
 	 * @brief Returns the configuration information needed for IKE_SA_INIT exchange 
 	 * for specific host informations.
 	 * 
 	 * The returned init_config_t object MUST NOT be destroyed cause it's managed by 
-	 * this configuration_manager_t object.
+	 * this configuration_t object.
 	 * 
 	 * @param this				calling object
 	 * @param my_host			my host informations
@@ -77,14 +81,14 @@ struct configuration_manager_t {
 	 * 							- NOT_FOUND
 	 * 							- SUCCESS
 	 */	
-	status_t (*get_init_config_for_host) (configuration_manager_t *this, host_t *my_host, host_t *other_host,init_config_t **init_config);
+	status_t (*get_init_config_for_host) (configuration_t *this, host_t *my_host, host_t *other_host,init_config_t **init_config);
 	
 	/**
 	 * @brief Returns the configuration information needed after IKE_SA_INIT exchange 
 	 * for a specific configuration name.
 	 * 
 	 * The returned sa_config_t object MUST NOT be destroyed cause it's managed by 
-	 * this configuration_manager_t object.
+	 * this configuration_t object.
 	 * 
 	 * @param this				calling object
 	 * @param name				name of the configuration
@@ -94,14 +98,14 @@ struct configuration_manager_t {
 	 * 				- NOT_FOUND
 	 * 				- SUCCESS
 	 */
-	status_t (*get_sa_config_for_name) (configuration_manager_t *this, char *name, sa_config_t **sa_config);
+	status_t (*get_sa_config_for_name) (configuration_t *this, char *name, sa_config_t **sa_config);
 	
 	/**
 	 * @brief Returns the configuration information needed after IKE_SA_INIT exchange 
 	 * for specific init_config_t and ID data.
 	 * 
 	 * The returned sa_config_t object MUST NOT be destroyed cause it's managed by 
-	 * this configuration_manager_t object.
+	 * this configuration_t object.
 	 * 
 	 * @param this				calling object
 	 * @param init_config		init_config_t object
@@ -113,12 +117,12 @@ struct configuration_manager_t {
 	 * 							- NOT_FOUND
 	 * 							- SUCCESS
 	 */	
-	status_t (*get_sa_config_for_init_config_and_id) (configuration_manager_t *this, init_config_t *init_config, identification_t *other_id, identification_t *my_id,sa_config_t **sa_config);
+	status_t (*get_sa_config_for_init_config_and_id) (configuration_t *this, init_config_t *init_config, identification_t *other_id, identification_t *my_id,sa_config_t **sa_config);
 
 	/**
 	 * @brief Returns the retransmit timeout.
 	 * 
-	 * The timeout values are managed by the configuration manager.
+	 * The timeout values are managed by the configuration.
 	 * 
 	 * @param this				calling object
 	 * @param retransmit_count	number of times a message was retransmitted so far
@@ -128,7 +132,7 @@ struct configuration_manager_t {
 	 * 							- FAILED, if the message should not be retransmitted
 	 * 							- SUCCESS
 	 */
-	status_t (*get_retransmit_timeout) (configuration_manager_t *this, u_int32_t retransmit_count, u_int32_t *timeout);
+	status_t (*get_retransmit_timeout) (configuration_t *this, u_int32_t retransmit_count, u_int32_t *timeout);
 	
 	/**
 	 * @brief Returns the timeout for an half open IKE_SA in ms.
@@ -143,13 +147,13 @@ struct configuration_manager_t {
 	 * @param this				calling object
 	 * @return					timeout in milliseconds (ms)
 	 */	
-	u_int32_t (*get_half_open_ike_sa_timeout) (configuration_manager_t *this);
+	u_int32_t (*get_half_open_ike_sa_timeout) (configuration_t *this);
 	
 	/**
 	 * @brief Returns the preshared secret of a specific ID.
 	 * 
 	 * The returned preshared secret MUST NOT be destroyed cause it's managed by 
-	 * this configuration_manager_t object.
+	 * this configuration_t object.
 	 * 
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the ID.
@@ -159,13 +163,13 @@ struct configuration_manager_t {
 	 * 								- NOT_FOUND	if no preshared secrets for specific ID could be found
 	 * 								- SUCCESS
 	 */	
-	status_t (*get_shared_secret) (configuration_manager_t *this, identification_t *identification, chunk_t *preshared_secret);
+	status_t (*get_shared_secret) (configuration_t *this, identification_t *identification, chunk_t *preshared_secret);
 	
 	/**
 	 * @brief Returns the RSA public key of a specific ID.
 	 * 
 	 * The returned rsa_public_key_t object MUST NOT be destroyed cause it's managed by 
-	 * this configuration_manager_t object.
+	 * this configuration_t object.
 	 * 
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the ID.
@@ -175,13 +179,13 @@ struct configuration_manager_t {
 	 * 								- NOT_FOUND	if no key is configured for specific id
 	 * 								- SUCCESS
 	 */	
-	status_t (*get_rsa_public_key) (configuration_manager_t *this, identification_t *identification, rsa_public_key_t **public_key);
+	status_t (*get_rsa_public_key) (configuration_t *this, identification_t *identification, rsa_public_key_t **public_key);
 	
 	/**
 	 * @brief Returns the RSA private key of a specific ID.
 	 * 
 	 * The returned rsa_private_key_t object MUST NOT be destroyed cause it's managed by 
-	 * this configuration_manager_t object.
+	 * this configuration_t object.
 	 * 
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the ID.
@@ -191,26 +195,14 @@ struct configuration_manager_t {
 	 * 								- NOT_FOUND	if no key is configured for specific id
 	 * 								- SUCCESS
 	 */	
-	status_t (*get_rsa_private_key) (configuration_manager_t *this, identification_t *identification, rsa_private_key_t **private_key);
+	status_t (*get_rsa_private_key) (configuration_t *this, identification_t *identification, rsa_private_key_t **private_key);
 
 	/**
-	 * @brief Destroys a configuration_manager_t object.
+	 * @brief Destroys a configuration_t object.
 	 * 
 	 * @param this 					calling object
 	 */
-	void (*destroy) (configuration_manager_t *this);
+	void (*destroy) (configuration_t *this);
 };
 
-/**
- * @brief Creates the mighty configuration manager.
- * 
- * @param first_retransmit_timeout 	first retransmit timeout in milliseconds
- * @param max_retransmit_count		max number of tries to retransmitted a requests (0 for infinite)
- * @param half_open_ike_sa_timeout  timeout after that a half open IKE_SA gets deleted
- * @return 							configuration_manager_t object
- * 
- * @ingroup config
- */
-configuration_manager_t *configuration_manager_create(u_int32_t first_retransmit_timeout,u_int32_t max_retransmit_count, u_int32_t half_open_ike_sa_timeout);
-
-#endif /*CONFIGURATION_MANAGER_H_*/
+#endif /*CONFIGURATION_H_*/

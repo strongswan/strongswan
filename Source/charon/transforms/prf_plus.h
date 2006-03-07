@@ -30,12 +30,12 @@
 typedef struct prf_plus_t prf_plus_t;
 
 /**
- * @brief Implementation of the prf+ function described in IKEv2 draft.
+ * @brief Implementation of the prf+ function described in IKEv2 RFC.
  *
  * This class implements the prf+ algorithm. Internally it uses a pseudo random
  * function, which implements the prf_t interface.
  * 
- * See IKEv2 draft 2.13.
+ * See IKEv2 RFC 2.13.
  * 
  * @b Constructors:
  *  - prf_plus_create()

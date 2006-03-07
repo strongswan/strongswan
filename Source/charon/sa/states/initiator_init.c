@@ -118,14 +118,14 @@ static status_t initiate_connection (private_initiator_init_t *this, char *name)
 	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
 	
 	/* get configs */
-	status = charon->configuration_manager->get_init_config_for_name(charon->configuration_manager,name,&init_config);
+	status = charon->configuration->get_init_config_for_name(charon->configuration,name,&init_config);
 	if (status != SUCCESS)
 	{	
 		this->logger->log(this->logger, ERROR | LEVEL1, "Could not retrieve INIT configuration informations for %s",name);
 		return DELETE_ME;
 	}
 	this->ike_sa->set_init_config(this->ike_sa,init_config);
-	status = charon->configuration_manager->get_sa_config_for_name(charon->configuration_manager,name,&sa_config);
+	status = charon->configuration->get_sa_config_for_name(charon->configuration,name,&sa_config);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR | LEVEL1, "Could not retrieve SA configuration informations for %s",name);

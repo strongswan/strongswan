@@ -34,7 +34,7 @@
 #include <queues/job_queue.h>
 #include <queues/event_queue.h>
 #include <utils/logger_manager.h>
-#include <config/configuration_manager.h>
+#include <config/configuration.h>
 
 /**
  * Name of the daemon.
@@ -53,26 +53,6 @@
  * UDP Port on which the daemon will listen for incoming traffic.
  */
 #define IKEV2_UDP_PORT 500
-
-/**
- * @brief First retransmit timeout in milliseconds.
- * 
- * Timeout value is increasing in each retransmit round.
- */
-#define RETRANSMIT_TIMEOUT 3000
-
-/**
- * Timeout in milliseconds after that a half open IKE_SA gets deleted.
- */
-#define HALF_OPEN_IKE_SA_TIMEOUT 30000
-
-/**
- * @brief Max retransmit count.
- * 
- * 0 for infinite. The max time a half open IKE_SA is alive is set by 
- * RETRANSMIT_TIMEOUT.
- */
-#define MAX_RETRANSMIT_COUNT 0
 
 /**
  * @brief Default loglevel for every logger context.
@@ -120,9 +100,9 @@ struct daemon_t {
 	ike_sa_manager_t *ike_sa_manager;
 	
 	/**
-	 * A configuration_manager_t instance.
+	 * A configuration_t instance.
 	 */
-	configuration_manager_t *configuration_manager;
+	configuration_t *configuration;
 	
 	/**
 	 * The Sender-Thread.

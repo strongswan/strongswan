@@ -213,6 +213,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	u_int64_t responder_spi;
 	ike_sa_id_t *ike_sa_id;
 	iterator_t *payloads;
+	host_t *me;
 
 	message_t *request;
 	status_t status;
@@ -337,6 +338,10 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
 		return DELETE_ME;
 	}
+	
+	/* apply the address on wich we really received the packet */
+	me = ike_sa_init_reply->get_destination(ike_sa_init_reply);
+	this->ike_sa->set_my_host(this->ike_sa, me->clone(me)); 
 	
 	/*  build empty message */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &request);

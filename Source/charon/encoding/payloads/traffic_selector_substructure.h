@@ -41,7 +41,7 @@ typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
 /**
  * @brief Class representing an IKEv2 TRAFFIC SELECTOR.
  * 
- * The TRAFFIC SELECTOR format is described in draft section 3.13.1.
+ * The TRAFFIC SELECTOR format is described in RFC section 3.13.1.
  * 
  * @b Constructors:
  * - traffic_selector_substructure_create()
