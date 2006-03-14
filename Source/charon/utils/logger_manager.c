@@ -22,7 +22,8 @@
  
  
 #include "logger_manager.h"
- 
+
+#include <daemon.h>
 #include <definitions.h>
 #include <utils/allocator.h>
 #include <utils/linked_list.h>
@@ -160,11 +161,11 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 	context_name = mapping_find(logger_context_t_mappings,context);
 	
 	/* output to stdout, since we are debugging all days */
-	output = stdout;
+	output = LOG_OUTPUT;
 	
 	/* defaults */
 	log_thread_ids = FALSE;
-	logger_level = this->public.get_logger_level(&(this->public),context);;
+	logger_level = this->public.get_logger_level(&(this->public),context);
 
 	switch(context)
 	{

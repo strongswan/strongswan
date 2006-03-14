@@ -1,7 +1,7 @@
 /**
- * @file starter_configuration.c
+ * @file stroke_configuration.c
  * 
- * @brief Implementation of starter_configuration_t.
+ * @brief Implementation of stroke_configuration_t.
  * 
  */
 
@@ -30,12 +30,12 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include "starter_configuration.h"
+#include "stroke_configuration.h"
 
 #include <types.h>
 #include <daemon.h>
 #include <utils/allocator.h>
-
+#include <queues/jobs/initiate_ike_sa_job.h>
 
 /**
  * First retransmit timeout in milliseconds.
@@ -57,7 +57,7 @@
 #define MAX_RETRANSMIT_COUNT 0
 
 
-struct sockaddr_un socket_addr = { AF_UNIX, "/var/run/pluto.ctl"};
+struct sockaddr_un socket_addr = { AF_UNIX, "/var/run/charon.ctl"};
 
 
 typedef struct preshared_secret_entry_t preshared_secret_entry_t;
@@ -182,17 +182,17 @@ static configuration_entry_t * configuration_entry_create(char * name, init_conf
 	return entry;
 }
 
-typedef struct private_starter_configuration_t private_starter_configuration_t;
+typedef struct private_stroke_configuration_t private_stroke_configuration_t;
 
 /**
- * Private data of an starter_configuration_t object.
+ * Private data of an stroke_configuration_t object.
  */
-struct private_starter_configuration_t {
+struct private_stroke_configuration_t {
 
 	/**
-	 * Public part of starter_configuration_t object.
+	 * Public part of stroke_configuration_t object.
 	 */
-	starter_configuration_t public;
+	stroke_configuration_t public;
 
 	/**
 	 * Holding all configurations.
@@ -257,7 +257,7 @@ struct private_starter_configuration_t {
 	 * @param init_config		init_config_t object
 	 * @param sa_config			sa_config_t object
 	 */
-	void (*add_new_configuration) (private_starter_configuration_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config);
+	void (*add_new_configuration) (private_stroke_configuration_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config);
 	
 	/**
 	 * Adds a new preshared secret.
@@ -267,7 +267,7 @@ struct private_starter_configuration_t {
 	 * @param id_string			identification as string
 	 * @param preshared_secret	preshared secret as string
 	 */
-	void (*add_new_preshared_secret) (private_starter_configuration_t *this,id_type_t type, char *id_string, char *preshared_secret);
+	void (*add_new_preshared_secret) (private_stroke_configuration_t *this,id_type_t type, char *id_string, char *preshared_secret);
 	
 	/**
 	 * Adds a new rsa private key.
@@ -278,7 +278,7 @@ struct private_starter_configuration_t {
 	 * @param key_pos			location of key
 	 * @param key_len			length of key
 	 */
-	void (*add_new_rsa_private_key) (private_starter_configuration_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
+	void (*add_new_rsa_private_key) (private_stroke_configuration_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
 	
 	/**
 	 * Adds a new rsa public key.
@@ -289,17 +289,39 @@ struct private_starter_configuration_t {
 	 * @param key_pos			location of key
 	 * @param key_len			length of key
 	 */
-	void (*add_new_rsa_public_key) (private_starter_configuration_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
+	void (*add_new_rsa_public_key) (private_stroke_configuration_t *this,id_type_t type, char *id_string, u_int8_t *key_pos, size_t key_len);
 	
-	void (*whack_receive) (private_starter_configuration_t *this);
+	void (*whack_receive) (private_stroke_configuration_t *this);
 };
 
-/**
- * Implementation of private_starter_configuration_t.listen.
- */
-static void whack_receive(private_starter_configuration_t *this)
+extern u_int8_t public_key_1[];
+extern u_int8_t private_key_1[];
+extern u_int8_t public_key_2[];
+extern u_int8_t private_key_2[];
+
+static void fix_string(stroke_msg_t *msg, char **string)
 {
-	u_int8_t buffer[5000];
+	/* check for sanity of string pointer and string */
+	if (string < (char**)msg ||
+		string > (char**)msg + sizeof(stroke_msg_t) ||
+		*string < (char*)msg->buffer - (u_int)msg ||
+		*string > (char*)(u_int)msg->length)
+	{
+		*string = "(invalid char* in stroke msg)";
+	}
+	else
+	{
+		*string = (char*)msg + (u_int)*string;
+	}
+}
+
+/**
+ * Implementation of private_stroke_configuration_t.listen.
+ */
+static void whack_receive(private_stroke_configuration_t *this)
+{
+	stroke_msg_t *msg;
+	u_int16_t msg_length;
 	struct sockaddr_un whackaddr;
 	int whackaddrlen = sizeof(whackaddr);
 	ssize_t n;
@@ -311,33 +333,121 @@ static void whack_receive(private_starter_configuration_t *this)
 	
 		if (whackfd < 0)
 		{
-			this->logger->log(this->logger, ERROR, "accept() failed in whack_handle()");
+			this->logger->log(this->logger, ERROR, "accepting stroke connection failed");
 			continue;
 		}
-		if (fcntl(whackfd, F_SETFD, FD_CLOEXEC) < 0)
+		
+		/* peek the length */
+		n = recv(whackfd, &msg_length, sizeof(msg_length), MSG_PEEK);
+		if (n != sizeof(msg_length))
 		{
-			this->logger->log(this->logger, ERROR, "failed to set CLOEXEC in whack_handle()");
+			this->logger->log(this->logger, ERROR, "reading lenght of stroke message failed");
 			close(whackfd);
 			continue;
 		}
-	
-		n = read(whackfd, &buffer, sizeof(buffer));
-	
-		if (n == -1)
+		
+		/* read message */
+		msg = allocator_alloc(msg_length);
+		n = recv(whackfd, msg, msg_length, 0);
+		if (n != msg_length)
 		{
-			this->logger->log(this->logger, ERROR, "read() failed in whack_handle()");
+			this->logger->log(this->logger, ERROR, "reading stroke message failed");
 			close(whackfd);
 			continue;
 		}
-		this->logger->log_bytes(this->logger, CONTROL, "Whackinput", buffer, n);
+		
+		this->logger->log_bytes(this->logger, RAW|LEVEL1, "Whackinput", (void*)msg, msg_length);
+		
+		switch (msg->type)
+		{
+			case STR_INITIATE:
+			{
+				initiate_ike_sa_job_t *job;
+				fix_string(msg, &(msg->initiate.name));
+				this->logger->log(this->logger, CONTROL|LEVEL1, "received stroke: initiate \"%s\"", msg->initiate.name);
+				job = initiate_ike_sa_job_create(msg->initiate.name);
+				charon->job_queue->add(charon->job_queue, (job_t*)job);
+				break;
+			}
+			case STR_INSTALL:
+			{
+				fix_string(msg, &(msg->install.name));
+				this->logger->log(this->logger, CONTROL|LEVEL1, "received stroke: install \"%s\"", msg->install.name);
+				break;
+			}
+			case STR_ADD_CONN:
+			{
+				sa_config_t *sa_config;
+				init_config_t *init_config;
+				host_t *me, *other;
+				proposal_t *proposal;
+				traffic_selector_t *ts;
+				
+				this->logger->log(this->logger, CONTROL|LEVEL1, "my id is: \"%p\"", msg->add_conn.me.id);
+				this->logger->log(this->logger, CONTROL|LEVEL1, "other id is: \"%p\"", msg->add_conn.other.id);
+				fix_string(msg, &msg->add_conn.name);
+				fix_string(msg, &msg->add_conn.me.id);
+				fix_string(msg, &msg->add_conn.other.id);
+				this->logger->log(this->logger, CONTROL|LEVEL1, "received stroke: add connection \"%s\"", msg->add_conn.name);
+				
+				msg->add_conn.me.address.v4.sin_port = htons(500);
+				msg->add_conn.other.address.v4.sin_port = htons(500);
+				me = host_create_from_sockaddr(&msg->add_conn.me.address.saddr);
+				other = host_create_from_sockaddr(&msg->add_conn.other.address.saddr);
+				
+				init_config = init_config_create(me, other);
+				proposal = proposal_create(1);
+				proposal->add_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+				proposal->add_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+				proposal->add_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
+				proposal->add_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+				init_config->add_proposal(init_config, proposal);
+				
+				this->logger->log(this->logger, CONTROL|LEVEL1, "my id is: \"%s\"", msg->add_conn.me.id);
+				this->logger->log(this->logger, CONTROL|LEVEL1, "other id is: \"%s\"", msg->add_conn.other.id);
+				
+				sa_config = sa_config_create(ID_IPV4_ADDR, msg->add_conn.me.id,
+											 ID_IPV4_ADDR, msg->add_conn.other.id,
+											 SHARED_KEY_MESSAGE_INTEGRITY_CODE, 30000);
+				
+				this->add_new_preshared_secret(this, ID_IPV4_ADDR, "192.168.0.1","verschluesselt");
+				this->add_new_preshared_secret(this, ID_IPV4_ADDR, "192.168.0.2","verschluesselt");
+				
+				proposal = proposal_create(1);
+				proposal->add_algorithm(proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+				proposal->add_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+				sa_config->add_proposal(sa_config, proposal);
+				
+				me = host_create_from_sockaddr(&msg->add_conn.me.subnet.saddr);
+				ts = traffic_selector_create_from_subnet(me, msg->add_conn.me.subnet_netbits);
+				sa_config->add_my_traffic_selector(sa_config,ts);
+				chunk_t chunk = ts->get_to_address(ts);
+				this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "my toaddr", &chunk);
+				other = host_create_from_sockaddr(&msg->add_conn.other.subnet.saddr);
+				ts = traffic_selector_create_from_subnet(other, msg->add_conn.other.subnet_netbits);
+				sa_config->add_other_traffic_selector(sa_config,ts);
+				chunk = ts->get_to_address(ts);
+				this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "other toaddr", &chunk);
+				
+				this->add_new_configuration(this, msg->add_conn.name, init_config, sa_config);
+				this->logger->log(this->logger, CONTROL|LEVEL1, "connection added \"%s\"", msg->add_conn.name);
+				
+				break;
+			}
+			case STR_DEL_CONN:
+			default:
+				this->logger->log(this->logger, ERROR, "received invalid stroke");
+		}
+		
+		allocator_free(msg);
 	}
 }
 
 
 /**
- * Implementation of starter_configuration_t.get_init_config_for_host.
+ * Implementation of stroke_configuration_t.get_init_config_for_host.
  */
-static status_t get_init_config_for_host (private_starter_configuration_t *this, host_t *my_host, host_t *other_host,init_config_t **init_config)
+static status_t get_init_config_for_host (private_stroke_configuration_t *this, host_t *my_host, host_t *other_host,init_config_t **init_config)
 {
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -407,9 +517,9 @@ static status_t get_init_config_for_host (private_starter_configuration_t *this,
 }
 
 /**
- * Implementation of starter_configuration_t.get_init_config_for_name.
+ * Implementation of stroke_configuration_t.get_init_config_for_name.
  */
-static status_t get_init_config_for_name (private_starter_configuration_t *this, char *name, init_config_t **init_config)
+static status_t get_init_config_for_name (private_stroke_configuration_t *this, char *name, init_config_t **init_config)
 {
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -437,9 +547,9 @@ static status_t get_init_config_for_name (private_starter_configuration_t *this,
 }
 	
 /**
- * Implementation of starter_configuration_t.get_sa_config_for_name.
+ * Implementation of stroke_configuration_t.get_sa_config_for_name.
  */
-static status_t get_sa_config_for_name (private_starter_configuration_t *this, char *name, sa_config_t **sa_config)
+static status_t get_sa_config_for_name (private_stroke_configuration_t *this, char *name, sa_config_t **sa_config)
 {
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -466,9 +576,9 @@ static status_t get_sa_config_for_name (private_starter_configuration_t *this, c
 }
 
 /**
- * Implementation of starter_configuration_t.get_sa_config_for_init_config_and_id.
+ * Implementation of stroke_configuration_t.get_sa_config_for_init_config_and_id.
  */
-static status_t get_sa_config_for_init_config_and_id (private_starter_configuration_t *this, init_config_t *init_config, identification_t *other_id, identification_t *my_id,sa_config_t **sa_config)
+static status_t get_sa_config_for_init_config_and_id (private_stroke_configuration_t *this, init_config_t *init_config, identification_t *other_id, identification_t *my_id,sa_config_t **sa_config)
 {	
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -517,9 +627,9 @@ static status_t get_sa_config_for_init_config_and_id (private_starter_configurat
 }
 
 /**
- * Implementation of private_starter_configuration_t.add_new_configuration.
+ * Implementation of private_stroke_configuration_t.add_new_configuration.
  */
-static void add_new_configuration (private_starter_configuration_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config)
+static void add_new_configuration (private_stroke_configuration_t *this, char *name, init_config_t *init_config, sa_config_t *sa_config)
 {
 	iterator_t *iterator;
 	bool found;
@@ -564,9 +674,9 @@ static void add_new_configuration (private_starter_configuration_t *this, char *
 }
 
 /**
- * Implementation of private_starter_configuration_t.add_new_preshared_secret.
+ * Implementation of private_stroke_configuration_t.add_new_preshared_secret.
  */
-static void add_new_preshared_secret (private_starter_configuration_t *this,id_type_t type, char *id_string, char *preshared_secret)
+static void add_new_preshared_secret (private_stroke_configuration_t *this,id_type_t type, char *id_string, char *preshared_secret)
 {
 	preshared_secret_entry_t *entry = allocator_alloc_thing(preshared_secret_entry_t);
 	
@@ -579,9 +689,9 @@ static void add_new_preshared_secret (private_starter_configuration_t *this,id_t
 }
 
 /**
- * Implementation of private_starter_configuration_t.add_new_preshared_secret.
+ * Implementation of private_stroke_configuration_t.add_new_preshared_secret.
  */
-static void add_new_rsa_public_key (private_starter_configuration_t *this, id_type_t type, char *id_string, u_int8_t* key_pos, size_t key_len)
+static void add_new_rsa_public_key (private_stroke_configuration_t *this, id_type_t type, char *id_string, u_int8_t* key_pos, size_t key_len)
 {
 	chunk_t key;
 	key.ptr = key_pos;
@@ -597,9 +707,9 @@ static void add_new_rsa_public_key (private_starter_configuration_t *this, id_ty
 }
 
 /**
- * Implementation of private_starter_configuration_t.add_new_preshared_secret.
+ * Implementation of private_stroke_configuration_t.add_new_preshared_secret.
  */
-static void add_new_rsa_private_key (private_starter_configuration_t *this, id_type_t type, char *id_string, u_int8_t* key_pos, size_t key_len)
+static void add_new_rsa_private_key (private_stroke_configuration_t *this, id_type_t type, char *id_string, u_int8_t* key_pos, size_t key_len)
 {
 	chunk_t key;
 	key.ptr = key_pos;
@@ -615,9 +725,9 @@ static void add_new_rsa_private_key (private_starter_configuration_t *this, id_t
 }
 
 /**
- * Implementation of starter_configuration_t.get_shared_secret.
+ * Implementation of stroke_configuration_t.get_shared_secret.
  */
-static status_t get_shared_secret(private_starter_configuration_t *this, identification_t *identification, chunk_t *preshared_secret)
+static status_t get_shared_secret(private_stroke_configuration_t *this, identification_t *identification, chunk_t *preshared_secret)
 {
 	iterator_t *iterator;
 	
@@ -638,9 +748,9 @@ static status_t get_shared_secret(private_starter_configuration_t *this, identif
 }
 
 /**
- * Implementation of starter_configuration_t.get_shared_secret.
+ * Implementation of stroke_configuration_t.get_shared_secret.
  */
-static status_t get_rsa_public_key(private_starter_configuration_t *this, identification_t *identification, rsa_public_key_t **public_key)
+static status_t get_rsa_public_key(private_stroke_configuration_t *this, identification_t *identification, rsa_public_key_t **public_key)
 {
 	iterator_t *iterator;
 	
@@ -661,9 +771,9 @@ static status_t get_rsa_public_key(private_starter_configuration_t *this, identi
 }
 
 /**
- * Implementation of starter_configuration_t.get_shared_secret.
+ * Implementation of stroke_configuration_t.get_shared_secret.
  */
-static status_t get_rsa_private_key(private_starter_configuration_t *this, identification_t *identification, rsa_private_key_t **private_key)
+static status_t get_rsa_private_key(private_stroke_configuration_t *this, identification_t *identification, rsa_private_key_t **private_key)
 {
 	iterator_t *iterator;
 	
@@ -684,9 +794,9 @@ static status_t get_rsa_private_key(private_starter_configuration_t *this, ident
 }
 
 /**
- * Implementation of starter_configuration_t.get_retransmit_timeout.
+ * Implementation of stroke_configuration_t.get_retransmit_timeout.
  */
-static status_t get_retransmit_timeout (private_starter_configuration_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
+static status_t get_retransmit_timeout (private_stroke_configuration_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
 {
 	int new_timeout = this->first_retransmit_timeout, i;
 	if ((retransmit_count > this->max_retransmit_count) && (this->max_retransmit_count != 0))
@@ -706,17 +816,17 @@ static status_t get_retransmit_timeout (private_starter_configuration_t *this, u
 }
 
 /**
- * Implementation of starter_configuration_t.get_half_open_ike_sa_timeout.
+ * Implementation of stroke_configuration_t.get_half_open_ike_sa_timeout.
  */
-static u_int32_t get_half_open_ike_sa_timeout (private_starter_configuration_t *this)
+static u_int32_t get_half_open_ike_sa_timeout (private_stroke_configuration_t *this)
 {
 	return this->half_open_ike_sa_timeout;
 }
 
 /**
- * Implementation of starter_configuration_t.destroy.
+ * Implementation of stroke_configuration_t.destroy.
  */
-static void destroy(private_starter_configuration_t *this)
+static void destroy(private_stroke_configuration_t *this)
 {
 	this->logger->log(this->logger,CONTROL | LEVEL1, "Going to destroy configuration backend ");
 
@@ -790,9 +900,9 @@ static void destroy(private_starter_configuration_t *this)
 /*
  * Described in header-file
  */
-starter_configuration_t *starter_configuration_create()
+stroke_configuration_t *stroke_configuration_create()
 {
-	private_starter_configuration_t *this = allocator_alloc_thing(private_starter_configuration_t);
+	private_stroke_configuration_t *this = allocator_alloc_thing(private_stroke_configuration_t);
 	mode_t old;
 	bool on = TRUE;
 

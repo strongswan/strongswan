@@ -233,26 +233,22 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 				
 	if ((message->get_major_version(message) != IKE_MAJOR_VERSION) || 
 			(message->get_minor_version(message) != IKE_MINOR_VERSION))
-
 	{
 		this->worker_logger->log(this->worker_logger, ERROR | LEVEL2, "IKE version %d.%d not supported", 
-								 message->get_major_version(message),
-								 message->get_minor_version(message));	
+									message->get_major_version(message),
+									message->get_minor_version(message));	
 		/*
-		 * TODO send notify reply of type INVALID_MAJOR_VERSION for requests of type IKE_SA_INIT.
-		 * 
 		 * This check is not handled in state_t object of IKE_SA to increase speed.
 		 */
-		 if ((message->get_exchange_type(message) == IKE_SA_INIT) && (message->get_request(message)))
-		 {
-		 	message_t *response;
-	 		message->get_ike_sa_id(message, &ike_sa_id);
-	 		ike_sa_id->switch_initiator(ike_sa_id);
-		 	response = message_create_notify_reply(message->get_destination(message),
-		 										   message->get_source(message),
-		 										   IKE_SA_INIT,
-		 										   FALSE,ike_sa_id,INVALID_MAJOR_VERSION);
-
+		if ((message->get_exchange_type(message) == IKE_SA_INIT) && (message->get_request(message)))
+			{
+			message_t *response;
+			message->get_ike_sa_id(message, &ike_sa_id);
+			ike_sa_id->switch_initiator(ike_sa_id);
+			response = message_create_notify_reply(message->get_destination(message),
+													message->get_source(message),
+													IKE_SA_INIT,
+													FALSE,ike_sa_id,INVALID_MAJOR_VERSION);
 			message->destroy(message);
 			ike_sa_id->destroy(ike_sa_id);
 			status = response->generate(response, NULL, NULL, &packet);
@@ -266,10 +262,9 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 			charon->send_queue->add(charon->send_queue, packet);
 			response->destroy(response);
 			return;
-		 }
- 		message->destroy(message);
-		
-		 return;
+		}
+		message->destroy(message);
+		return;
 	}
 				
 	message->get_ike_sa_id(message, &ike_sa_id);

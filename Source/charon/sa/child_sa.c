@@ -368,32 +368,6 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_
 	return SUCCESS;
 }
 
-static u_int8_t get_mask(chunk_t start, chunk_t end)
-{
-	int byte, bit, mask = 0;
-	
-	if (start.len != end.len)
-	{
-		return 0;
-	}
-	for (byte = 0; byte < start.len; byte++)
-	{
-		for (bit = 7; bit >= 0; bit--)
-		{
-			if ((*(start.ptr + byte) | (1<<bit)) ==
-				(*(end.ptr + byte) | (1<<bit)))
-			{
-				mask++;
-			}
-			else
-			{
-				return mask;
-			}
-		}
-	}
-	return start.len * 8;
-}
-
 static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list)
 {
 	iterator_t *my_iter, *other_iter;
@@ -410,7 +384,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 		{
 			/* set up policies for every entry in my_ts_list to every entry in other_ts_list */
 			int family;
-			chunk_t from_addr, to_addr;
+			chunk_t from_addr;
 			u_int16_t from_port, to_port;
 			policy_t *policy;
 			status_t status;
@@ -428,26 +402,22 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			/* calculate net and ports for local side */
 			family = my_ts->get_type(my_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
 			from_addr = my_ts->get_from_address(my_ts);
-			to_addr = my_ts->get_to_address(my_ts);
 			from_port = my_ts->get_from_port(my_ts);
 			to_port = my_ts->get_to_port(my_ts);
 			from_port = (from_port != to_port) ? 0 : from_port;
 			policy->my_net = host_create_from_chunk(family, from_addr, from_port);
-			policy->my_net_mask = get_mask(from_addr, to_addr);
+			policy->my_net_mask = my_ts->get_netmask(my_ts);
 			allocator_free_chunk(&from_addr);
-			allocator_free_chunk(&to_addr);
 			
 			/* calculate net and ports for remote side */
 			family = other_ts->get_type(other_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
 			from_addr = other_ts->get_from_address(other_ts);
-			to_addr = other_ts->get_to_address(other_ts);
 			from_port = other_ts->get_from_port(other_ts);
 			to_port = other_ts->get_to_port(other_ts);
 			from_port = (from_port != to_port) ? 0 : from_port;
 			policy->other_net = host_create_from_chunk(family, from_addr, from_port);
-			policy->other_net_mask = get_mask(from_addr, to_addr);
+			policy->other_net_mask = other_ts->get_netmask(other_ts);
 			allocator_free_chunk(&from_addr);
-			allocator_free_chunk(&to_addr);
 	
 			/* install 3 policies: out, in and forward */
 			status = charon->kernel_interface->add_policy(charon->kernel_interface,

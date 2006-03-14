@@ -215,7 +215,7 @@ static void destroy (private_init_config_t *this)
 /**
  * Described in header.
  */
-init_config_t * init_config_create(char * my_ip, char *other_ip, u_int16_t my_port, u_int16_t other_port)
+init_config_t * init_config_create(host_t *me, host_t *other)
 {
 	private_init_config_t *this = allocator_alloc_thing(private_init_config_t);
 
@@ -232,8 +232,8 @@ init_config_t * init_config_create(char * my_ip, char *other_ip, u_int16_t my_po
 	this->public.destroy = (void(*)(init_config_t*))destroy;
 	
 	/* private variables */
-	this->my_host = host_create(AF_INET,my_ip, my_port);
-	this->other_host = host_create(AF_INET,other_ip, other_port);
+	this->my_host = me;
+	this->other_host = other;
 		
 	this->proposals = linked_list_create();
 

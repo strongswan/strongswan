@@ -159,7 +159,6 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	if (dh_group == MODP_UNDEFINED)
 	{
 		this->logger->log(this->logger, AUDIT, "No DH group acceptable for initialization, Aborting");
-		message->destroy(message);
 		return DELETE_ME;
 	}
 	
@@ -280,7 +279,7 @@ static void build_nonce_payload(private_initiator_init_t *this, message_t *reque
  */
 static status_t process_message(private_initiator_init_t *this, message_t *message)
 {
-	this->logger->log(this->logger, ERROR, "In state INITIATOR_INIT no message is processed");
+	this->logger->log(this->logger, ERROR, "In state INITIATOR_INIT, no message is processed");
 	return FAILED;
 }
 
@@ -302,12 +301,10 @@ static void destroy(private_initiator_init_t *this)
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy diffie_hellman_t object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
 	if (this->sent_nonce.ptr != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Free memory of sent nonce");
 		allocator_free(this->sent_nonce.ptr);
 	}
 	allocator_free(this);

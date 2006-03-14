@@ -48,15 +48,6 @@ struct private_ike_sa_established_t {
 	logger_t *logger;
 	
 	/**
-	 * Process received DELETE payload and build DELETE payload for INFORMATIONAL response.
-	 * 
-	 * @param this			calling object
-	 * @param request		DELETE payload received in INFORMATIONAL request
-	 * @param response		The created DELETE payload is added to this message_t object
-	 */
-	status_t (*build_delete_payload) (private_ike_sa_established_t *this, delete_payload_t *request, message_t *response);
-	
-	/**
 	 * Process a notify payload
 	 * 
 	 * @param this				calling object
@@ -145,6 +136,7 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 			case DELETE:
 			{
 				delete_request = (delete_payload_t *) payload;
+				break;
 			}
 			default:
 			{
@@ -158,15 +150,20 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 	payloads->destroy(payloads);
 	
 	if (delete_request)
-	{
-		status = this->build_delete_payload(this, delete_request, response);
-		if (status == DELETE_ME)
+	{	
+		if (delete_request->get_protocol_id(delete_request) == IKE)
 		{
+			this->logger->log(this->logger, AUDIT, "DELETE request for IKE_SA received");
 			response->destroy(response);
-			return status;
+			return DELETE_ME;
+		}
+		else
+		{
+			this->logger->log(this->logger, AUDIT, "DELETE request for CHILD_SA received. Ignored");
+			response->destroy(response);
+			return SUCCESS;
 		}
 	}
-	
 	
 	status = this->ike_sa->send_response(this->ike_sa, response);
 	/* message can now be sent (must not be destroyed) */
@@ -177,23 +174,6 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 		return FAILED;
 	}
 	
-	return SUCCESS;
-}
-
-/**
- * Implementation of private_ike_sa_established_t.build_sa_payload;
- */
-static status_t build_delete_payload (private_ike_sa_established_t *this, delete_payload_t *request, message_t *response_message)
-{
-	if (request->get_protocol_id(request) == IKE)
-	{
-		this->logger->log(this->logger, AUDIT, "DELETE request for IKE_SA received. Don't reply.");
-		/* IKE_SA has to get deleted */
-		return DELETE_ME;
-	}
-
-	this->logger->log(this->logger, AUDIT, "DELETE payload for CHILD_SAs not supported and handled.");
-
 	return SUCCESS;
 }
 
@@ -250,7 +230,6 @@ ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa)
 	
 	/* private functions */
 	this->process_notify_payload = process_notify_payload;
-	this->build_delete_payload = build_delete_payload;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

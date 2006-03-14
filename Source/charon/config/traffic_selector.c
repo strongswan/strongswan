@@ -50,14 +50,14 @@ struct private_traffic_selector_t {
 	u_int8_t protocol;
 	
 	/** 
-	 * begin of address range 
+	 * begin of address range, host order
 	 */
 	union {
 		u_int32_t from_addr_ipv4;
 	};
 	
 	/**
-	 * end of address range 
+	 * end of address range, host order
 	 */
 	union {
 		u_int32_t to_addr_ipv4;
@@ -75,7 +75,7 @@ struct private_traffic_selector_t {
 };
 
 /**
- * internal generic constructor 
+ * internal generic constructor
  */
 static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts_type_t type, u_int16_t from_port, u_int16_t to_port);
 
@@ -207,6 +207,36 @@ static u_int8_t get_protocol(private_traffic_selector_t *this)
 }
 
 /**
+ * Implements traffic_selector_t.get_netmask.
+ */
+static u_int8_t get_netmask(private_traffic_selector_t *this)
+{
+	switch (this->type)
+	{
+		case TS_IPV4_ADDR_RANGE:
+		{
+			u_int32_t from, to, bit;
+			from = htonl(this->from_addr_ipv4);
+			to = htonl(this->to_addr_ipv4);
+			printf("%x - %x\n", from, to);
+			for (bit = 0; bit < 32; bit++)
+			{				
+				if ((1<<bit & from) != (1<<bit & to))
+				{
+					return bit;
+				}
+			}
+			return 0;
+		}
+		case TS_IPV6_ADDR_RANGE:
+		default:
+		{
+			return 0;
+		}
+	}
+}
+
+/**
  * Implements traffic_selector_t.clone.
  */
 static traffic_selector_t *clone(private_traffic_selector_t *this)
@@ -270,9 +300,38 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
 	return (&this->public);
 }
 
+/*
+ * see header
+ */
+traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits)
+{
+	private_traffic_selector_t *this = traffic_selector_create(0, 0, 0, 65535);
+
+	switch (net->get_family(net))
+	{
+		case AF_INET:
+		{
+			chunk_t from;
+			
+			this->type = TS_IPV4_ADDR_RANGE;
+			from = net->get_address_as_chunk(net);
+			this->from_addr_ipv4 = ntohl(*((u_int32_t*)from.ptr));
+			this->to_addr_ipv4 = this->from_addr_ipv4 | ((1 << (32 - netbits)) - 1);
+			allocator_free_chunk(&from);
+			break;	
+		}
+		case AF_INET6:
+		default:
+		{
+			allocator_free(this);
+			return NULL;	
+		}
+	}
+	return (&this->public);
+}
 
 /*
- * Described in header-file
+ * see header
  */
 traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_type_t type, char *from_addr, u_int16_t from_port, char *to_addr, u_int16_t to_port)
 {
@@ -327,6 +386,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->public.get_to_port = (u_int16_t(*)(traffic_selector_t*))get_to_port;	
 	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;	
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
+	this->public.get_netmask = (u_int8_t(*)(traffic_selector_t*))get_netmask;
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
 	
@@ -337,4 +397,3 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	
 	return this;
 }
-

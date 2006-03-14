@@ -66,11 +66,13 @@ typedef struct traffic_selector_t traffic_selector_t;
  * @brief Object representing a traffic selector entry.
  * 
  * A traffic selector defines an range of addresses
- * and a range of ports. 
+ * and a range of ports. IPv6 is not fully supported yet.
  * 
  * @b Constructors:
  * - traffic_selector_create_from_bytes()
  * - traffic_selector_create_from_string()
+ * 
+ * @todo Add IPv6 support
  * 
  * @ingroup config
  */
@@ -161,6 +163,18 @@ struct traffic_selector_t {
 	 * @return			protocol id
 	 */
 	u_int8_t (*get_protocol) (traffic_selector_t *this);
+		
+	/**
+	 * @brief Get the netmask of the address range.
+	 * 
+	 * Returns the number of bits associated to the subnet.
+	 * (As the "24" in "192.168.0.0/24"). This is approximated
+	 * if the address range is not a complete subnet!
+	 * 
+	 * @param this		calling obect
+	 * @return			netmask as "bits for subnet"
+	 */
+	u_int8_t (*get_netmask) (traffic_selector_t *this);
 	
 	/**
 	 * @brief Destroys the ts object
@@ -207,5 +221,7 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
  * @ingroup config
  */
 traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from_address, int16_t from_port, chunk_t to_address, u_int16_t to_port);
+
+traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits);
 
 #endif //_TRAFFIC_SELECTOR_H_

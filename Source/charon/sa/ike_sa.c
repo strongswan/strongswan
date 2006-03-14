@@ -1031,45 +1031,36 @@ static void destroy (private_ike_sa_t *this)
 					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
 					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 
-	/* destroy child sa's */
+	/* inform other peer of delete */
+	send_delete_ike_sa_request(this);
+	
 	while (this->child_sas->remove_last(this->child_sas, (void**)&child_sa) == SUCCESS)
 	{
 		child_sa->destroy(child_sa);
 	}
 	this->child_sas->destroy(this->child_sas);
-	
 	if (this->crypter_initiator != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy initiator crypter_t object");
 		this->crypter_initiator->destroy(this->crypter_initiator);
 	}
-	
 	if (this->crypter_responder != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy responder crypter_t object");
 		this->crypter_responder->destroy(this->crypter_responder);
 	}
-	
 	if (this->signer_initiator != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy initiator signer_t object");
 		this->signer_initiator->destroy(this->signer_initiator);
 	}
-
 	if (this->signer_responder != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy responder signer_t object");
 		this->signer_responder->destroy(this->signer_responder);
 	}
-	
 	if (this->prf != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy prf_t object");
 		this->prf->destroy(this->prf);
 	}
 	if (this->child_prf != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy child_prf object");
 		this->child_prf->destroy(this->child_prf);
 	}
 	if (this->prf_auth_i != NULL)
@@ -1080,45 +1071,25 @@ static void destroy (private_ike_sa_t *this)
 	{
 		this->prf_auth_r->destroy(this->prf_auth_r);
 	}
-	
-	/* destroy ike_sa_id */
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy ike_sa_id object");
 	this->ike_sa_id->destroy(this->ike_sa_id);
-
-	/* destroy stored requested message */
 	if (this->last_requested_message != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy last requested message");
 		this->last_requested_message->destroy(this->last_requested_message);
 	}
-	
-	/* destroy stored responded messages */
 	if (this->last_responded_message != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy last responded message");
 		this->last_responded_message->destroy(this->last_responded_message);
 	}
-	
-	/* destroy stored host_t objects */
 	if (this->me.host != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy my host_t object");
 		this->me.host->destroy(this->me.host);
 	}
-	
-	/* destroy stored host_t objects */
 	if (this->other.host != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy other host_t object");
 		this->other.host->destroy(this->other.host);
 	}
-		
 	this->randomizer->destroy(this->randomizer);
-
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy current state object");
 	this->current_state->destroy(this->current_state);
-	
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Destroy logger of IKE_SA");
 	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);

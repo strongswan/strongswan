@@ -69,6 +69,12 @@ typedef struct logger_manager_t logger_manager_t;
  * 
  * @see logger_t
  * 
+ * @todo We currently give out a new instance for every logger requested.
+ * This is unnecessary. One logger for each class would be sufficient.
+ * 
+ * @todo We could remove logger naming (additional to classes), since we have
+ * never used it (and probably never will).
+ * 
  * @ingroup utils
  */
 struct logger_manager_t {

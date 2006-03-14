@@ -297,9 +297,15 @@ static void load_default_config (private_static_configuration_t *this)
 	proposal_t *proposal;
 	sa_config_t *sa_config_a, *sa_config_b;
 	traffic_selector_t *ts;
+	host_t *alice, *bob, *any;
 	
-	init_config_a = init_config_create("0.0.0.0","192.168.0.2",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
-	init_config_b = init_config_create("0.0.0.0","192.168.0.1",IKEV2_UDP_PORT,IKEV2_UDP_PORT);
+	bob = host_create(AF_INET, "192.168.0.2", IKEV2_UDP_PORT);
+	any = host_create(AF_INET, "0.0.0.0", IKEV2_UDP_PORT);
+	init_config_a = init_config_create(any, bob);
+	
+	alice = host_create(AF_INET, "192.168.0.1", IKEV2_UDP_PORT);
+	any = host_create(AF_INET, "0.0.0.0", IKEV2_UDP_PORT);
+	init_config_b = init_config_create(any, alice);
 	
 	/* IKE proposals for alice */
 	proposal = proposal_create(1);

@@ -55,6 +55,16 @@
 #define IKEV2_UDP_PORT 500
 
 /**
+ * PID file, in which charon stores its process id
+ */
+#define PID_FILE "/var/run/charon.pid"
+
+/**
+ * Output of log, use NULL for syslog
+ */
+#define LOG_OUTPUT NULL
+
+/**
  * @brief Default loglevel for every logger context.
  * 
  * This is the maximum allowed level for ever context, the definiton

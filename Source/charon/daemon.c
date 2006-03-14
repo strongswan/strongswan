@@ -23,6 +23,9 @@
 #include <stdio.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "daemon.h" 
 
@@ -30,7 +33,7 @@
 #include <utils/allocator.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 #include <config/static_configuration.h>
-#include <config/starter_configuration.h>
+#include <config/stroke_configuration.h>
 
 
 typedef struct private_daemon_t private_daemon_t;
@@ -145,6 +148,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	{
 		/* initialization failed, terminate daemon */
 		this->destroy(this);
+		unlink(PID_FILE);
 		exit(-1);
 	}
 	else
@@ -184,7 +188,7 @@ static void initialize(private_daemon_t *this)
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.send_queue = send_queue_create();
-	this->public.configuration = (configuration_t*)static_configuration_create();
+	this->public.configuration = (configuration_t*)stroke_configuration_create();
 	
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
@@ -300,24 +304,40 @@ private_daemon_t *daemon_create()
 int main(int argc, char *argv[])
 {
 	private_daemon_t *private_charon;
+	FILE *pid_file;
+	struct stat stb;
 	
 	/* allocation needs initialization, before any allocs are done */
 	allocator_init();
-	
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
+		
+	/* check/setup PID file */
+	if (stat(PID_FILE, &stb) == 0)
+	{
+		private_charon->logger->log(private_charon->logger, ERROR, 
+									"charon already running (\""PID_FILE"\" exists)");
+		private_charon->destroy(private_charon);
+		exit(-1);
+	}
+	pid_file = fopen(PID_FILE, "w");
+	if (pid_file)
+	{
+		fprintf(pid_file, "%d\n", getpid());
+		fclose(pid_file);
+	}
 	
+	/* initialize and run daemon*/
 	private_charon->initialize(private_charon);
-	
 	if (argc == 2)
 	{
 		private_charon->build_test_job(private_charon,argv[1]);
 	}
-
-	
 	private_charon->run(private_charon);
 	
+	/* normal termination, cleanup and exit */
 	private_charon->destroy(private_charon);
+	unlink(PID_FILE);
 	
 #ifdef LEAK_DETECTIVE
 	report_memory_leaks(void);

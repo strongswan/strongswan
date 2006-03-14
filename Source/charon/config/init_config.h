@@ -148,12 +148,18 @@ struct init_config_t {
 };
 
 /**
- * @brief Creates a init_config_t object.
+ * @brief Creates a init_config_t object from two host_t's.
  * 
+ * Supplied hosts become owned by init_config, so 
+ * do not modify or destroy them after a call to 
+ * init_config_create_from_hosts().
+ * 
+ * @param me		host_t object representing local address
+ * @param other		host_t object representing remote address
  * @return init_config_t object.
  * 
  * @ingroup config
  */
-init_config_t * init_config_create(char *my_ip, char *other_ip, u_int16_t my_port, u_int16_t other_port);
+init_config_t * init_config_create(host_t *me, host_t *other);
 
-#endif //_INIT_CONFIG_H_
+#endif /* _INIT_CONFIG_H_ */
