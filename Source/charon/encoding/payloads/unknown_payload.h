@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _UNKNOWN_PAYLOAD_H_
-#define _UNKNOWN_PAYLOAD_H_
+#ifndef UNKNOWN_PAYLOAD_H_
+#define UNKNOWN_PAYLOAD_H_
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
@@ -92,4 +92,4 @@ struct unknown_payload_t {
 unknown_payload_t *unknown_payload_create();
 
 
-#endif //_UNKNOWN_PAYLOAD_H_
+#endif /* UNKNOWN_PAYLOAD_H_ */

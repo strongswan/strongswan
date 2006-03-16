@@ -76,7 +76,7 @@ struct private_ike_sa_init_responded_t {
 	/**
 	 * SA config to use.
 	 */
-	sa_config_t *sa_config;
+	policy_t *policy;
 	
 	/**
 	 * CHILD_SA, if set up
@@ -182,7 +182,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	signer_t *signer;
 	status_t status;
 	host_t *my_host, *other_host;
-	
+	connection_t *connection;
 	
 	if (request->get_exchange_type(request) != IKE_AUTH)
 	{
@@ -361,8 +361,9 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	}
 	
 	/* create new state */
-	my_host = this->ike_sa->get_my_host(this->ike_sa);
-	other_host = this->ike_sa->get_other_host(this->ike_sa);
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	my_host = connection->get_my_host(connection);
+	other_host = connection->get_other_host(connection);
 	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s, authenticated peer with %s", 
 						my_host->get_address(my_host), other_host->get_address(other_host),
 						mapping_find(auth_method_m, auth_request->get_auth_method(auth_request)));
@@ -379,8 +380,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payload_t *request_idi, id_payload_t *request_idr, message_t *response,id_payload_t **response_idr)
 {
 	identification_t *other_id, *my_id = NULL;
-	init_config_t *init_config;
-	status_t status;
+	connection_t *connection;
 	id_payload_t *idr_response;
 	
 	other_id = request_idi->get_identification(request_idi);
@@ -390,19 +390,19 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	}
 
 	/* build new sa config */
-	init_config = this->ike_sa->get_init_config(this->ike_sa);
-	status = charon->configuration->get_sa_config_for_init_config_and_id(charon->configuration,init_config, other_id,my_id, &(this->sa_config));
-	if (status != SUCCESS)
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	this->policy = charon->policies->get_policy(charon->policies, my_id, other_id);
+	if (this->policy == NULL)
 	{	
 		if (my_id)
 		{
-			this->logger->log(this->logger, AUDIT, "IKE_AUTH request uses IDs %s to %s, which we have no config for", 
+			this->logger->log(this->logger, AUDIT, "IKE_AUTH request uses IDs %s to %s, which we have no policy for", 
 							other_id->get_string(other_id),my_id->get_string(my_id));
 			my_id->destroy(my_id);	
 		}
 		else
 		{
-			this->logger->log(this->logger, AUDIT, "IKE_AUTH request uses ID %s, which we have no config for", 
+			this->logger->log(this->logger, AUDIT, "IKE_AUTH request uses ID %s, which we have no policy for", 
 							other_id->get_string(other_id));
 		}
 		other_id->destroy(other_id);
@@ -416,10 +416,10 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	other_id->destroy(other_id);
 	
 	/* get my id, if not requested */
-	my_id = this->sa_config->get_my_id(this->sa_config);	
+	my_id = this->policy->get_my_id(this->policy);	
 	
-	/* set sa_config in ike_sa for other states */
-	this->ike_sa->set_sa_config(this->ike_sa, this->sa_config);
+	/* set policy in ike_sa for other states */
+	this->ike_sa->set_policy(this->ike_sa, this->policy);
 	
 	/*  build response */
 	idr_response = id_payload_create_from_identification(FALSE, my_id);
@@ -440,6 +440,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	chunk_t seed;
 	prf_plus_t *prf_plus;
 	status_t status;
+	connection_t *connection;
 	
 	/* get proposals from request */
 	proposal_list = request->get_proposals(request);
@@ -455,7 +456,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 
 	/* now select a proposal */
 	this->logger->log(this->logger, CONTROL|LEVEL1, "Selecting proposals:");
-	proposal = this->sa_config->select_proposal(this->sa_config, proposal_list);
+	proposal = this->policy->select_proposal(this->policy, proposal_list);
 	/* list is not needed anymore */
 	while (proposal_list->remove_last(proposal_list, (void**)&proposal_tmp) == SUCCESS)
 	{
@@ -476,9 +477,10 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	memcpy(seed.ptr + this->received_nonce.len, this->sent_nonce.ptr, this->sent_nonce.len);
 	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 	allocator_free_chunk(&seed);
-		
-	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
-									 this->ike_sa->get_other_host(this->ike_sa));
+	
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	this->child_sa = child_sa_create(connection->get_my_host(connection),
+									 connection->get_other_host(connection));
 		
 	status = this->child_sa->add(this->child_sa, proposal, prf_plus);
 	prf_plus->destroy(prf_plus);
@@ -543,12 +545,12 @@ static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_
 	/* select ts depending on payload type */
 	if (ts_initiator)
 	{
-		ts_selected = this->sa_config->select_other_traffic_selectors(this->sa_config, ts_received);
+		ts_selected = this->policy->select_other_traffic_selectors(this->policy, ts_received);
 		this->other_ts = ts_selected;
 	}
 	else
 	{
-		ts_selected = this->sa_config->select_my_traffic_selectors(this->sa_config, ts_received);
+		ts_selected = this->policy->select_my_traffic_selectors(this->policy, ts_received);
 		this->my_ts = ts_selected;
 	}
 	

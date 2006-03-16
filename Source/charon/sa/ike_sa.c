@@ -95,7 +95,7 @@ struct private_ike_sa_t {
 	 *  - IKE_AUTH_REQUESTED
 	 *   -IKE_SA_ESTABLISHED
 	 */
-	init_config_t *init_config;
+	connection_t *connection;
 	
 	/**
 	 * SA configuration, needed for all other exchanges after IKE_SA_INIT exchange.
@@ -108,7 +108,7 @@ struct private_ike_sa_t {
 	 *  - IKE_AUTH_REQUESTED
 	 *   -IKE_SA_ESTABLISHED
 	 */
-	sa_config_t *sa_config;
+	policy_t *policy;
 	
 	/**
 	 * This SA's source for random data.
@@ -126,20 +126,6 @@ struct private_ike_sa_t {
 	 * The ast requested message.
 	 */
 	message_t *last_requested_message;
-	
-	/**
-	 * Informations of this host.
-	 */
-	struct {
-		host_t *host;
-	} me;
-
-	/**
-	 * Informations of the other host.
-	 */	
-	struct {
-		host_t *host;
-	} other;
 	
 	/**
 	 * Crypter object for initiator.
@@ -276,12 +262,16 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
  */
 static void build_message(private_ike_sa_t *this, exchange_type_t type, bool request, message_t **message)
 {
-	message_t *new_message; 
+	message_t *new_message;
+	host_t *me, *other;
+	
+	me = this->connection->get_my_host(this->connection);
+	other = this->connection->get_other_host(this->connection);
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Build empty message");
 	new_message = message_create();	
-	new_message->set_source(new_message, this->me.host->clone(this->me.host));
-	new_message->set_destination(new_message, this->other.host->clone(this->other.host));
+	new_message->set_source(new_message, me->clone(me));
+	new_message->set_destination(new_message, other->clone(other));
 	new_message->set_exchange_type(new_message, type);
 	new_message->set_request(new_message, request);
 	new_message->set_message_id(new_message, (request) ? this->message_id_out : this->message_id_in);
@@ -291,12 +281,11 @@ static void build_message(private_ike_sa_t *this, exchange_type_t type, bool req
 }
 
 /**
- * Implementation of protected_ike_sa_t.process_configuration.
+ * Implementation of protected_ike_sa_t.initiate_connection.
  */
-static status_t initialize_connection(private_ike_sa_t *this, char *name)
+static status_t initiate_connection(private_ike_sa_t *this, connection_t *connection)
 {
 	initiator_init_t *current_state;
-	status_t status;
 
 	/* Work is done in state object of type INITIATOR_INIT. All other states are not 
 	 * initial states and so don't have a initialize_connection function */
@@ -308,8 +297,7 @@ static status_t initialize_connection(private_ike_sa_t *this, char *name)
 	
 	current_state = (initiator_init_t *) this->current_state;
 	
-	status = current_state->initiate_connection(current_state,name);
-	return status;
+	return current_state->initiate_connection(current_state, connection);
 }
 
 /**
@@ -432,75 +420,35 @@ static logger_t *get_logger (private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_my_host.
+ * Implementation of protected_ike_sa_t.get_connection.
  */
-static host_t *get_my_host (private_ike_sa_t *this)
+static connection_t *get_connection (private_ike_sa_t *this)
 {
-	return this->me.host;
+	return this->connection;
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_other_host.
+ * Implementation of protected_ike_sa_t.set_connection.
  */
-static host_t *get_other_host (private_ike_sa_t *this)
+static void set_connection (private_ike_sa_t *this,connection_t * connection)
 {
-	return this->other.host;
+	this->connection = connection;
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_init_config.
+ * Implementation of protected_ike_sa_t.get_policy.
  */
-static init_config_t *get_init_config (private_ike_sa_t *this)
+static policy_t *get_policy (private_ike_sa_t *this)
 {
-	return this->init_config;
+	return this->policy;
 }
 
 /**
- * Implementation of protected_ike_sa_t.set_init_config.
+ * Implementation of protected_ike_sa_t.set_policy.
  */
-static void set_init_config (private_ike_sa_t *this,init_config_t * init_config)
+static void set_policy (private_ike_sa_t *this,policy_t * policy)
 {
-	this->init_config = init_config;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_sa_config.
- */
-static sa_config_t *get_sa_config (private_ike_sa_t *this)
-{
-	return this->sa_config;
-}
-
-/**
- * Implementation of protected_ike_sa_t.set_sa_config.
- */
-static void set_sa_config (private_ike_sa_t *this,sa_config_t * sa_config)
-{
-	this->sa_config = sa_config;
-}
-
-/**
- * Implementation of protected_ike_sa_t.set_my_host.
- */
-static void set_my_host (private_ike_sa_t *this, host_t *my_host)
-{
-	if (this->me.host)
-	{
-		this->me.host->destroy(this->me.host);
-	}
-	this->me.host = my_host;
-}
-
-/**
- * Implementation of protected_ike_sa_t.set_other_host.
- */
-static void set_other_host (private_ike_sa_t *this, host_t *other_host)
-{
-	if (this->other.host)
-	{
-		this->other.host->destroy(this->other.host);
-	}
-	this->other.host = other_host;
+	this->policy = policy;
 }
 
 /**
@@ -584,10 +532,10 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	/* SKEYSEED = prf(Ni | Nr, g^ir) */
 	dh->get_shared_secret(dh, &secret);
-	this->logger->log_chunk(this->logger, PRIVATE, "Shared Diffie Hellman secret", &secret);
+	this->logger->log_chunk(this->logger, PRIVATE, "Shared Diffie Hellman secret", secret);
 	this->prf->set_key(this->prf, nonces);
 	this->prf->allocate_bytes(this->prf, secret, &skeyseed);
-	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "SKEYSEED", &skeyseed);
+	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "SKEYSEED", skeyseed);
 	allocator_free_chunk(&secret);
 
 	/* prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr )
@@ -614,7 +562,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	this->child_prf = prf_create(algo->algorithm);
 	key_size = this->child_prf->get_key_size(this->child_prf);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", key);
 	this->child_prf->set_key(this->child_prf, key);
 	allocator_free_chunk(&key);
 	
@@ -647,12 +595,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	key_size = this->signer_initiator->get_key_size(this->signer_initiator);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", key);
 	this->signer_initiator->set_key(this->signer_initiator, key);
 	allocator_free_chunk(&key);
 
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", key);
 	this->signer_responder->set_key(this->signer_responder, key);
 	allocator_free_chunk(&key);
 	
@@ -686,12 +634,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	key_size = this->crypter_initiator->get_key_size(this->crypter_initiator);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", key);
 	this->crypter_initiator->set_key(this->crypter_initiator, key);
 	allocator_free_chunk(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", key);
 	this->crypter_responder->set_key(this->crypter_responder, key);
 	allocator_free_chunk(&key);
 	
@@ -711,12 +659,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	key_size = this->prf_auth_i->get_key_size(this->prf_auth_i);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", key);
 	this->prf_auth_i->set_key(this->prf_auth_i, key);
 	allocator_free_chunk(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pr secret", &key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pr secret", key);
 	this->prf_auth_r->set_key(this->prf_auth_r, key);
 	allocator_free_chunk(&key);
 	
@@ -1005,21 +953,6 @@ static void reset_message_buffers (private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.create_delete_established_ike_sa_job.
- */
-static void create_delete_established_ike_sa_job (private_ike_sa_t *this,u_int32_t timeout)
-{
-	job_t *delete_job;
-
-	this->logger->log(this->logger, CONTROL | LEVEL1,
-						"Going to create job to delete established IKE_SA in %d ms",
-						timeout);
-
-	delete_job = (job_t *) delete_established_ike_sa_job_create(this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue,delete_job, timeout);
-}
-
-/**
  * Implementation of protected_ike_sa_t.destroy.
  */
 static void destroy (private_ike_sa_t *this)
@@ -1080,14 +1013,6 @@ static void destroy (private_ike_sa_t *this)
 	{
 		this->last_responded_message->destroy(this->last_responded_message);
 	}
-	if (this->me.host != NULL)
-	{
-		this->me.host->destroy(this->me.host);
-	}
-	if (this->other.host != NULL)
-	{
-		this->other.host->destroy(this->other.host);
-	}
 	this->randomizer->destroy(this->randomizer);
 	this->current_state->destroy(this->current_state);
 	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
@@ -1104,7 +1029,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 
 	/* Public functions */
 	this->protected.public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
-	this->protected.public.initialize_connection = (status_t(*)(ike_sa_t*, char*)) initialize_connection;
+	this->protected.public.initiate_connection = (status_t(*)(ike_sa_t*,connection_t*)) initiate_connection;
 	this->protected.public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t *this)) get_state;
@@ -1119,14 +1044,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_prf_auth_r = (prf_t *(*) (protected_ike_sa_t *)) get_prf_auth_r;
 	this->protected.add_child_sa = (void (*) (protected_ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;
-	this->protected.set_init_config = (void (*) (protected_ike_sa_t *,init_config_t *)) set_init_config;
-	this->protected.get_init_config = (init_config_t *(*) (protected_ike_sa_t *)) get_init_config;
-	this->protected.set_sa_config = (void (*) (protected_ike_sa_t *,sa_config_t *)) set_sa_config;
-	this->protected.get_sa_config = (sa_config_t *(*) (protected_ike_sa_t *)) get_sa_config;
-	this->protected.get_my_host = (host_t *(*) (protected_ike_sa_t *)) get_my_host;
-	this->protected.get_other_host = (host_t *(*) (protected_ike_sa_t *)) get_other_host;
-	this->protected.set_my_host = (void(*) (protected_ike_sa_t *,host_t *)) set_my_host;
-	this->protected.set_other_host = (void(*) (protected_ike_sa_t *, host_t *)) set_other_host;
+	this->protected.set_connection = (void (*) (protected_ike_sa_t *,connection_t *)) set_connection;
+	this->protected.get_connection = (connection_t *(*) (protected_ike_sa_t *)) get_connection;
+	this->protected.set_policy = (void (*) (protected_ike_sa_t *,policy_t *)) set_policy;
+	this->protected.get_policy = (policy_t *(*) (protected_ike_sa_t *)) get_policy;
 	this->protected.get_randomizer = (randomizer_t *(*) (protected_ike_sa_t *)) get_randomizer;
 	this->protected.send_request = (status_t (*) (protected_ike_sa_t *,message_t *)) send_request;
 	this->protected.send_response = (status_t (*) (protected_ike_sa_t *,message_t *)) send_response;
@@ -1140,7 +1061,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t *)) reset_message_buffers;
 	this->protected.get_last_responded_message = (message_t * (*) (protected_ike_sa_t *this)) get_last_responded_message;
 	this->protected.get_last_requested_message = (message_t * (*) (protected_ike_sa_t *this)) get_last_requested_message;
-	this->protected.create_delete_established_ike_sa_job = (void (*) (protected_ike_sa_t *this,u_int32_t)) create_delete_established_ike_sa_job;
 	
 	this->protected.set_last_replied_message_id = (void (*) (protected_ike_sa_t *,u_int32_t)) set_last_replied_message_id;
 	
@@ -1154,8 +1074,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->child_sas = linked_list_create();
 	this->randomizer = randomizer_create();
 	
-	this->me.host = NULL;
-	this->other.host = NULL;
 	this->last_requested_message = NULL;
 	this->last_responded_message = NULL;
 	this->message_id_out = 0;
@@ -1169,8 +1087,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->prf_auth_i = NULL;
 	this->prf_auth_r = NULL;
 	this->child_prf = NULL;
-	this->init_config = NULL;
-	this->sa_config = NULL;
+	this->connection = NULL;
+	this->policy = NULL;
 	
 	/* at creation time, IKE_SA is in a initiator state */
 	if (ike_sa_id->is_initiator(ike_sa_id))

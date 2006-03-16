@@ -55,7 +55,7 @@ struct private_ike_auth_requested_t {
 	/**
 	 * SA config, just a copy of the one stored in the ike_sa.
 	 */
-	sa_config_t *sa_config; 
+	policy_t *policy; 
 	
 	/**
 	 * Received nonce from responder.
@@ -185,6 +185,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	host_t *my_host, *other_host;
 	chunk_t seed;
 	prf_plus_t *prf_plus;
+	connection_t *connection;
 	
 	if (ike_auth_reply->get_exchange_type(ike_auth_reply) != IKE_AUTH)
 	{
@@ -211,7 +212,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 		return status;
 	}
 	
-	this->sa_config = this->ike_sa->get_sa_config(this->ike_sa);
+	this->policy = this->ike_sa->get_policy(this->ike_sa);
 	
 	/* we collect all payloads, which are processed later. Notify's are processed 
 	 * in place, since we don't know how may are there.
@@ -352,8 +353,9 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_auth_reply->get_message_id(ike_auth_reply));
 	/* create new state */
-	my_host = this->ike_sa->get_my_host(this->ike_sa);
-	other_host = this->ike_sa->get_other_host(this->ike_sa);
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	my_host = connection->get_my_host(connection);
+	other_host = connection->get_other_host(connection);
 	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s, authenticated peer with %s", 
 						my_host->get_address(my_host), other_host->get_address(other_host),
 						mapping_find(auth_method_m, auth_payload->get_auth_method(auth_payload)));
@@ -372,7 +374,7 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 	
 	other_id = idr_payload->get_identification(idr_payload);
 
-	configured_other_id = this->sa_config->get_other_id(this->sa_config);
+	configured_other_id = this->policy->get_other_id(this->policy);
 	if (configured_other_id)
 	{
 		this->logger->log(this->logger, CONTROL|LEVEL1, "configured ID: %s, ID of responder: %s",
@@ -424,7 +426,7 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 	}
 	
 	/* we have to re-check here if other's selection is valid */
-	proposal = this->sa_config->select_proposal(this->sa_config, proposal_list);
+	proposal = this->policy->select_proposal(this->policy, proposal_list);
 	/* list not needed anymore */
 	while (proposal_list->remove_last(proposal_list, (void**)&proposal_tmp) == SUCCESS)
 	{
@@ -478,12 +480,12 @@ static status_t process_ts_payload(private_ike_auth_requested_t *this, bool ts_i
 	/* select ts depending on payload type */
 	if (ts_initiator)
 	{
-		ts_selected = this->sa_config->select_my_traffic_selectors(this->sa_config, ts_received);
+		ts_selected = this->policy->select_my_traffic_selectors(this->policy, ts_received);
 		this->my_ts = ts_selected;
 	}
 	else
 	{
-		ts_selected = this->sa_config->select_other_traffic_selectors(this->sa_config, ts_received);
+		ts_selected = this->policy->select_other_traffic_selectors(this->policy, ts_received);
 		this->other_ts = ts_selected;
 	}
 	/* check if the responder selected valid proposals */

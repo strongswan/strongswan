@@ -35,7 +35,7 @@
  */
 void test_proposal(protected_tester_t *tester);
 
-#endif //CHILD_PROPOSAL_TEST_H_
+#endif /* CHILD_PROPOSAL_TEST_H_ */
 
 
 

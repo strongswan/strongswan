@@ -21,8 +21,8 @@
  * for more details.
  */
 
-#ifndef _AES_CRYPTER_H_
-#define _AES_CRYPTER_H_
+#ifndef AES_CBC_CRYPTER_H_
+#define AES_CBC_CRYPTER_H_
 
 #include <transforms/crypters/crypter.h>
 
@@ -58,4 +58,4 @@ struct aes_cbc_crypter_t {
 aes_cbc_crypter_t *aes_cbc_crypter_create(size_t key_size);
 
 
-#endif //_AES_CRYPTER_H_
+#endif /* AES_CBC_CRYPTER_H_ */

@@ -214,6 +214,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	ike_sa_id_t *ike_sa_id;
 	iterator_t *payloads;
 	host_t *me;
+	connection_t *connection;
 
 	message_t *request;
 	status_t status;
@@ -340,8 +341,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	}
 	
 	/* apply the address on wich we really received the packet */
+	connection = this->ike_sa->get_connection(this->ike_sa);
 	me = ike_sa_init_reply->get_destination(ike_sa_init_reply);
-	this->ike_sa->set_my_host(this->ike_sa, me->clone(me)); 
+	connection->update_my_host(connection, me->clone(me));
 	
 	/*  build empty message */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &request);
@@ -418,9 +420,9 @@ status_t process_sa_payload (private_ike_sa_init_requested_t *this, sa_payload_t
 {
 	proposal_t *proposal;
 	linked_list_t *proposal_list;
-	init_config_t *init_config;
+	connection_t *connection;
 	
-	init_config = this->ike_sa->get_init_config(this->ike_sa);
+	connection = this->ike_sa->get_connection(this->ike_sa);
 	
 	/* get the list of selected proposals, the peer has to select only one proposal */
 	proposal_list = sa_payload->get_proposals (sa_payload);
@@ -436,7 +438,7 @@ status_t process_sa_payload (private_ike_sa_init_requested_t *this, sa_payload_t
 	}
 	
 	/* we have to re-check if the others selection is valid */
-	this->proposal = init_config->select_proposal(init_config, proposal_list);
+	this->proposal = connection->select_proposal(connection, proposal_list);
 	while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
 	{
 		proposal->destroy(proposal);
@@ -467,13 +469,13 @@ status_t process_ke_payload (private_ike_sa_init_requested_t *this, ke_payload_t
  */
 static status_t build_id_payload (private_ike_sa_init_requested_t *this,id_payload_t **id_payload, message_t *request)
 {
-	sa_config_t *sa_config;
+	policy_t *policy;
 	id_payload_t *new_id_payload;
 	identification_t *identification;
 	
-	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
+	policy = this->ike_sa->get_policy(this->ike_sa);
 	/* identification_t object gets NOT cloned here */
-	identification = sa_config->get_my_id(sa_config);
+	identification = policy->get_my_id(policy);
 	new_id_payload = id_payload_create_from_identification(TRUE,identification);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add ID payload to message");
@@ -516,14 +518,16 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 {
 	linked_list_t *proposal_list;
 	sa_payload_t *sa_payload;
-	sa_config_t *sa_config;
+	policy_t *policy;
+	connection_t *connection;
 	
 	/* get proposals form config, add to payload */
-	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	proposal_list = sa_config->get_proposals(sa_config);
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	proposal_list = policy->get_proposals(policy);
 	/* build child sa */
-	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
-									 this->ike_sa->get_other_host(this->ike_sa));
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	this->child_sa = child_sa_create(connection->get_my_host(connection),
+									 connection->get_other_host(connection));
 	if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
@@ -550,10 +554,10 @@ static status_t build_tsi_payload (private_ike_sa_init_requested_t *this, messag
 {
 	linked_list_t *ts_list;
 	ts_payload_t *ts_payload;
-	sa_config_t *sa_config;
+	policy_t *policy;
 	
-	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	ts_list = sa_config->get_my_traffic_selectors(sa_config);
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	ts_list = policy->get_my_traffic_selectors(policy);
 	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_list);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add TSi payload to message");
@@ -569,10 +573,10 @@ static status_t build_tsr_payload (private_ike_sa_init_requested_t *this, messag
 {
 	linked_list_t *ts_list;
 	ts_payload_t *ts_payload;
-	sa_config_t *sa_config;
+	policy_t *policy;
 	
-	sa_config = this->ike_sa->get_sa_config(this->ike_sa);
-	ts_list = sa_config->get_other_traffic_selectors(sa_config);
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	ts_list = policy->get_other_traffic_selectors(policy);
 	ts_payload = ts_payload_create_from_traffic_selectors(FALSE, ts_list);
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add TSr payload to message");
@@ -614,7 +618,7 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 			initiator_init_t *initiator_init_state;
 			chunk_t notify_data;
 			diffie_hellman_group_t dh_group;
-			init_config_t *init_config;
+			connection_t *connection;
 			
 			notify_data = notify_payload->get_notification_data(notify_payload);
 			dh_group = ntohs(*((u_int16_t*)notify_data.ptr));
@@ -622,8 +626,8 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 			this->logger->log(this->logger, ERROR|LEVEL1, "Peer wouldn't accept DH group, it requested %s!",
 							  mapping_find(diffie_hellman_group_m, dh_group));
 			/* check if we can accept this dh group */
-			init_config = this->ike_sa->get_init_config(this->ike_sa);
-			if (!init_config->check_dh_group(init_config, dh_group))
+			connection = this->ike_sa->get_connection(this->ike_sa);
+			if (!connection->check_dh_group(connection, dh_group))
 			{
 				this->logger->log(this->logger, AUDIT, 
 								  "Peer does only accept DH group %s, which we do not accept! Aborting",

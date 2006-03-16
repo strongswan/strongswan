@@ -28,6 +28,7 @@
 #include <threads/scheduler.h>
 #include <threads/kernel_interface.h>
 #include <threads/thread_pool.h>
+#include <threads/stroke.h>
 #include <network/socket.h>
 #include <sa/ike_sa_manager.h>
 #include <queues/send_queue.h>
@@ -35,6 +36,9 @@
 #include <queues/event_queue.h>
 #include <utils/logger_manager.h>
 #include <config/configuration.h>
+#include <config/connection_store.h>
+#include <config/policy_store.h>
+#include <config/credential_store.h>
 
 /**
  * Name of the daemon.
@@ -62,7 +66,7 @@
 /**
  * Output of log, use NULL for syslog
  */
-#define LOG_OUTPUT NULL
+#define LOG_OUTPUT stdout
 
 /**
  * @brief Default loglevel for every logger context.
@@ -115,6 +119,21 @@ struct daemon_t {
 	configuration_t *configuration;
 	
 	/**
+	 * A connection_store_t instance.
+	 */
+	connection_store_t *connections;
+	
+	/**
+	 * A policy_store_t instance.
+	 */
+	policy_store_t *policies;
+	
+	/**
+	 * A credential_store_t instance.
+	 */
+	credential_store_t *credentials;
+	
+	/**
 	 * The Sender-Thread.
  	 */
 	sender_t *sender;
@@ -138,6 +157,11 @@ struct daemon_t {
 	 * Kernel Interface to communicate with kernel
 	 */
 	kernel_interface_t *kernel_interface;
+	
+	/**
+	 * IPC interface, as whack in pluto
+	 */
+	stroke_t *stroke;
 	
 	/**
 	 * @brief Shut down the daemon.

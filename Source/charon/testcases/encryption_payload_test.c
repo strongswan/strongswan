@@ -65,7 +65,7 @@ void test_encryption_payload(protected_tester_t *tester)
 	nonce.ptr = "test text und so...";
 	nonce.len = strlen(nonce.ptr) +1;
 	
-	logger->log_chunk(logger, RAW, "nonce", &nonce);
+	logger->log_chunk(logger, RAW, "nonce", nonce);
 	
 	encryption_payload = encryption_payload_create();
 	nonce_payload = nonce_payload_create();
@@ -92,10 +92,10 @@ void test_encryption_payload(protected_tester_t *tester)
 	generator->generate_payload(generator, (payload_t*)encryption_payload);
 	
 	generator->write_to_chunk(generator, &data);
-	logger->log_chunk(logger, RAW, "generated data", &data);
+	logger->log_chunk(logger, RAW, "generated data", data);
 	
 	encryption_payload->build_signature(encryption_payload, data);
-	logger->log_chunk(logger, RAW, "generated data", &data);
+	logger->log_chunk(logger, RAW, "generated data", data);
 	
 	encryption_payload->destroy(encryption_payload);
 	
@@ -126,7 +126,7 @@ void test_encryption_payload(protected_tester_t *tester)
 	tester->assert_true(tester, (got_nonce.len == nonce.len), "decrypted nonce");
 	tester->assert_false(tester, memcmp(nonce.ptr, got_nonce.ptr, nonce.len), "decrypted nonce");
 	
-	logger->log_chunk(logger, RAW, "nonce", &got_nonce);
+	logger->log_chunk(logger, RAW, "nonce", got_nonce);
 	
 	allocator_free(data.ptr);
 	allocator_free(got_nonce.ptr);

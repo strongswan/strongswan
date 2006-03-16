@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _HMAC_SIGNER_TEST_H_
-#define _HMAC_SIGNER_TEST_H_
+#ifndef HMAC_SIGNER_TEST_H_
+#define HMAC_SIGNER_TEST_H_
 
 #include <utils/tester.h>
 
@@ -43,4 +43,4 @@ void test_hmac_md5_signer(protected_tester_t *tester);
  */
 void test_hmac_sha1_signer(protected_tester_t *tester);
 
-#endif //_HMAC_SIGNER_TEST_H_
+#endif /* HMAC_SIGNER_TEST_H_ */

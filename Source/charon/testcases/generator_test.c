@@ -88,7 +88,7 @@ void test_generator_with_header_payload(protected_tester_t *tester)
 
 	logger->log_bytes(logger,RAW,"expected header",expected_generation,sizeof(expected_generation));
 	tester->assert_true(tester,(generated_data.len == sizeof(expected_generation)), "compare generated data length");
-	logger->log_chunk(logger,RAW,"generated header",&generated_data);		
+	logger->log_chunk(logger,RAW,"generated header",generated_data);		
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data 1");
 	allocator_free_chunk(&generated_data);
 	
@@ -122,7 +122,7 @@ void test_generator_with_header_payload(protected_tester_t *tester)
 	
 	logger->log_bytes(logger,RAW,"expected header",expected_generation2,sizeof(expected_generation2));
 	
-	logger->log_chunk(logger,RAW,"generated header",&generated_data);
+	logger->log_chunk(logger,RAW,"generated header",generated_data);
 
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data 2");
 	allocator_free_chunk(&generated_data);
@@ -152,7 +152,7 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 	attribute = transform_attribute_create();
 	generator->generate_payload(generator,(payload_t *)attribute);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated attribute",generated_data);	
 
 	u_int8_t expected_generation[] = {
 		0x80,0x00,0x00,0x00,
@@ -176,7 +176,7 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)attribute);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated attribute",generated_data);	
 
 	u_int8_t expected_generation2[] = {
 		0x80,0x00,0x16,0x88,
@@ -205,7 +205,7 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 
 	generator->generate_payload(generator,(payload_t *)attribute);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated attribute",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated attribute",generated_data);	
 
 	u_int8_t expected_generation3[] = {
 		0x01,0xC8,0x00,0x19,
@@ -278,7 +278,7 @@ void test_generator_with_transform_substructure(protected_tester_t *tester)
 
 	generator->generate_payload(generator,(payload_t *)transform);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated transform",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated transform",generated_data);	
 
 	u_int8_t expected_generation3[] = {
 		0x00,0x00,0x00,0x18,
@@ -378,7 +378,7 @@ void test_generator_with_proposal_substructure(protected_tester_t *tester)
 
 	generator->generate_payload(generator,(payload_t *)proposal);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated transform",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated transform",generated_data);	
 
 	u_int8_t expected_generation[] = {
 		/* proposal header */
@@ -523,7 +523,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	generator->generate_payload(generator,(payload_t *)ike_header);
 	generator->generate_payload(generator,(payload_t *)sa_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated transform",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated transform",generated_data);	
 
 	u_int8_t expected_generation[] = {
 		/* sa payload header */
@@ -599,7 +599,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 
 	generator->generate_payload(generator,(payload_t *)sa_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated",generated_data);	
 
 	u_int8_t expected_generation2[] = {	
 		0x00,0x00,0x00,0x6C, /* payload header*/
@@ -681,7 +681,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 
 	generator->generate_payload(generator,(payload_t *)sa_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated",generated_data);	
 
 	u_int8_t expected_generation3[] = {	
 		0x00,0x00,0x00,0xA0, /* payload header*/
@@ -790,7 +790,7 @@ void test_generator_with_ke_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)ke_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 
 	u_int8_t expected_generation[] = {
 		/* payload header */
@@ -849,7 +849,7 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)notify_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 
 	u_int8_t expected_generation[] = {
 		/* payload header */
@@ -903,7 +903,7 @@ void test_generator_with_nonce_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)nonce_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 
 	u_int8_t expected_generation[] = {
@@ -958,7 +958,7 @@ void test_generator_with_id_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)id_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 
 	u_int8_t expected_generation[] = {
@@ -1011,7 +1011,7 @@ void test_generator_with_auth_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)auth_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 
 	u_int8_t expected_generation[] = {
@@ -1087,7 +1087,7 @@ void test_generator_with_ts_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)ts_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 
 	u_int8_t expected_generation[] = {
@@ -1148,7 +1148,7 @@ void test_generator_with_cert_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)cert_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 	u_int8_t expected_generation[] = {
 		/* payload header */
@@ -1200,7 +1200,7 @@ void test_generator_with_certreq_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)certreq_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 	u_int8_t expected_generation[] = {
 		/* payload header */
@@ -1254,7 +1254,7 @@ void test_generator_with_delete_payload(protected_tester_t *tester)
 	
 	generator->generate_payload(generator,(payload_t *)delete_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 	u_int8_t expected_generation[] = {
 		/* payload header */
@@ -1304,7 +1304,7 @@ void test_generator_with_vendor_id_payload(protected_tester_t *tester)
 	vendor_id_payload->set_data(vendor_id_payload,data);	
 	generator->generate_payload(generator,(payload_t *)vendor_id_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 	u_int8_t expected_generation[] = {
 		/* payload header */
@@ -1375,7 +1375,7 @@ void test_generator_with_cp_payload(protected_tester_t *tester)
 
 	generator->generate_payload(generator,(payload_t *)configuration);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated configuration",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated configuration",generated_data);	
 
 	u_int8_t expected_generation3[] = {
 		/* cp payload header */
@@ -1427,7 +1427,7 @@ void test_generator_with_eap_payload(protected_tester_t *tester)
 	eap_payload->set_message(eap_payload,message);	
 	generator->generate_payload(generator,(payload_t *)eap_payload);
 	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated payload",&generated_data);	
+	logger->log_chunk(logger,RAW,"generated payload",generated_data);	
 	
 	u_int8_t expected_generation[] = {
 		/* payload header */

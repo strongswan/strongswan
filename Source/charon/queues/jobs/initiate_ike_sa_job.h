@@ -24,6 +24,8 @@
 
 #include <types.h>
 #include <queues/jobs/job.h>
+#include <config/connection.h>
+
 
 typedef struct initiate_ike_sa_job_t initiate_ike_sa_job_t;
 
@@ -31,7 +33,7 @@ typedef struct initiate_ike_sa_job_t initiate_ike_sa_job_t;
  * @brief Class representing an INITIATE_IKE_SA Job.
  * 
  * This job is created if an IKE_SA should be iniated. This 
- * happens form a user request, or via the kernel interface.
+ * happens via a user request, or via the kernel interface.
  * 
  * @b Constructors:
  * - initiate_ike_sa_job_create()
@@ -45,14 +47,12 @@ struct initiate_ike_sa_job_t {
 	job_t job_interface;
 	
 	/**
-	 * @brief Returns the currently set configuration name for this job.
-	 * 	
-	 * @warning Returned name is not copied.
+	 * @brief Returns the connection_t to initialize
 	 * 
 	 * @param this 	calling initiate_ike_sa_job_t object
-	 * @return 		name of the configuration
+	 * @return 		connection_t
 	 */
-	char *(*get_configuration_name) (initiate_ike_sa_job_t *this);
+	connection_t *(*get_connection) (initiate_ike_sa_job_t *this);
 
 	/**
 	 * @brief Destroys an initiate_ike_sa_job_t object.
@@ -65,11 +65,11 @@ struct initiate_ike_sa_job_t {
 /**
  * @brief Creates a job of type INITIATE_IKE_SA.
  * 
- * @param configuration_name		name of the configuration to initiate IKE_SA with
- * @return							initiate_ike_sa_job_t object
+ * @param connection	connection_t to initializes
+ * @return				initiate_ike_sa_job_t object
  * 
  * @ingroup jobs
  */
-initiate_ike_sa_job_t *initiate_ike_sa_job_create(char *configuration_name);
+initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection);
 
 #endif /*INITIATE_IKE_SA_JOB_H_*/

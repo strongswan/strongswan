@@ -35,6 +35,8 @@
 #include <transforms/prfs/prf.h>
 #include <transforms/crypters/crypter.h>
 #include <transforms/signers/signer.h>
+#include <config/connection.h>
+#include <config/policy.h>
 
 /**
  * Nonce size in bytes for nonces sending to other peer.
@@ -75,16 +77,19 @@ struct ike_sa_t {
 	status_t (*process_message) (ike_sa_t *this,message_t *message);
 
 	/**
-	 * @brief Initiate a new connection with given configuration name.
+	 * @brief Initiate a new connection with given connection_t object.
+	 * 
+	 * The connection_t object is owned by the IKE_SA after the call, so
+	 * do not modify or destroy it.
 	 * 
 	 * @param this 			calling object
-	 * @param name 			name of the configuration
+	 * @param connection	connection to initiate
 	 * @return				
 	 * 						- SUCCESS if initialization started
 	 * 						- FAILED if in wrong state
 	 * 						- DELETE_ME if initialization failed and IKE_SA MUST be deleted
 	 */
-	status_t (*initialize_connection) (ike_sa_t *this, char *name);
+	status_t (*initiate_connection) (ike_sa_t *this, connection_t *connection);
 	
 	/**
 	 * @brief Retransmits a request.
@@ -176,72 +181,36 @@ struct protected_ike_sa_t {
 	logger_t *(*get_logger) (protected_ike_sa_t *this);
 	
 	/**
-	 * @brief Get the internal stored init_config_t object.
+	 * @brief Get the internal stored connection_t object.
 	 * 
 	 * @param this 				calling object
-	 * @return					pointer to the internal stored init_config_t object
+	 * @return					pointer to the internal stored connection_t object
 	 */
-	init_config_t *(*get_init_config) (protected_ike_sa_t *this);
+	connection_t *(*get_connection) (protected_ike_sa_t *this);
 	
 	/**
-	 * @brief Set the internal init_config_t object.
+	 * @brief Set the internal connection object.
 	 * 
 	 * @param this 				calling object
-	 * @param init_config		object of type init_config_t
+	 * @param connection		object of type connection_t
 	 */
-	void (*set_init_config) (protected_ike_sa_t *this,init_config_t *init_config);
+	void (*set_connection) (protected_ike_sa_t *this, connection_t *connection);
 	
 	/**
-	 * @brief Get the internal stored sa_config_t object.
+	 * @brief Get the internal stored policy object.
 	 * 
 	 * @param this 				calling object
-	 * @return					pointer to the internal stored sa_config_t object
+	 * @return					pointer to the internal stored policy_t object
 	 */
-	sa_config_t *(*get_sa_config) (protected_ike_sa_t *this);
+	policy_t *(*get_policy) (protected_ike_sa_t *this);
 	
 	/**
-	 * @brief Set the internal sa_config_t object.
+	 * @brief Set the internal policy_t object.
 	 * 
 	 * @param this 				calling object
-	 * @param sa_config			object of type sa_config_t
+	 * @param policy			object of type policy_t
 	 */
-	void (*set_sa_config) (protected_ike_sa_t *this,sa_config_t *sa_config);
-
-	/**
-	 * @brief Get the internal stored host_t object for my host.
-	 * 
-	 * @param this 				calling object
-	 * @return					pointer to the internal stored host_t object
-	 */
-	host_t *(*get_my_host) (protected_ike_sa_t *this);
-
-	/**
-	 * @brief Get the internal stored host_t object for other host.
-	 * 
-	 * @param this 				calling object
-	 * @return					pointer to the internal stored host_t object
-	 */
-	host_t *(*get_other_host) (protected_ike_sa_t *this);
-	
-	/**
-	 * @brief Set the internal stored host_t object for my host.
-	 * 
-	 * Allready existing object gets destroyed. object gets not cloned!
-	 * 
-	 * @param this 				calling object
-	 * @param my_host			pointer to the new host_t object
-	 */
-	void (*set_my_host) (protected_ike_sa_t *this,host_t * my_host);
-
-	/**
-	 * @brief Set the internal stored host_t object for other host.
-	 * 
-	 * Allready existing object gets destroyed. object gets not cloned!
-	 * 
-	 * @param this 				calling object
-	 * @param other_host			pointer to the new host_t object
-	 */
-	void (*set_other_host) (protected_ike_sa_t *this,host_t *other_host);
+	void (*set_policy) (protected_ike_sa_t *this,policy_t *policy);
 	
 	/**
 	 * @brief Derive all keys and create the transforms for IKE communication.
@@ -422,15 +391,6 @@ struct protected_ike_sa_t {
 	 * @param this 				calling object
 	 */	
 	void (*reset_message_buffers) (protected_ike_sa_t *this);
-	
-	/**
-	 * @brief Creates a job of type DELETE_ESTABLISHED_IKE_SA for the current IKE_SA.
-	 * 
-	 * @param this 				calling object
-	 * @param timeout			timeout after the IKE_SA gets deleted
-	 * 
-	 */	
-	void (*create_delete_established_ike_sa_job) (protected_ike_sa_t *this,u_int32_t timeout);
 };
 
 

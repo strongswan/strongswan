@@ -1,7 +1,7 @@
 /**
- * @file init_config_test.c
+ * @file connection_test.c
  *
- * @brief Tests for the init_config_t class.
+ * @brief Tests for the connection_t class.
  *
  */
 
@@ -20,23 +20,25 @@
  * for more details.
  */
 
-#include "init_config_test.h"
+#include "connection_test.h"
 
-#include <config/init_config.h>
+#include <config/connection.h>
 #include <utils/allocator.h>
+#include <transforms/prfs/prf.h>
 
 
 /**
  * Described in header.
  */
-void test_init_config(protected_tester_t *tester)
+void test_connection(protected_tester_t *tester)
 {
 	host_t *alice = host_create(AF_INET, "192.168.0.1", 500);
 	host_t *bob = host_create(AF_INET, "192.168.0.2", 500);
-	init_config_t *init_config = init_config_create(alice, bob);
-	proposal_t *prop1, *prop2, *prop3, *prop4;//, *selected_one;
+	identification_t *alice_id = identification_create_from_string(AF_INET, "192.168.0.1");
+	identification_t *bob_id = identification_create_from_string(AF_INET, "192.168.0.2");
+	connection_t *connection = connection_create(alice, bob, alice_id, bob_id, RSA_DIGITAL_SIGNATURE);
+	proposal_t *prop1, *prop2, *prop3, *prop4;
 	linked_list_t *list;
-	//status_t status;
 
 	prop1 = proposal_create(1);
 	prop1->add_algorithm(prop1, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
@@ -62,12 +64,12 @@ void test_init_config(protected_tester_t *tester)
 	prop4->add_algorithm(prop4, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_TIGER, 20);
 	prop4->add_algorithm(prop4, IKE, DIFFIE_HELLMAN_GROUP, MODP_768_BIT, 0);
 	
-	init_config->add_proposal(init_config, prop1);
-	init_config->add_proposal(init_config, prop2);
-	init_config->add_proposal(init_config, prop3);
-	init_config->add_proposal(init_config, prop4);
+	connection->add_proposal(connection, prop1);
+	connection->add_proposal(connection, prop2);
+	connection->add_proposal(connection, prop3);
+	connection->add_proposal(connection, prop4);
 	
-	list = init_config->get_proposals(init_config);
+	list = connection->get_proposals(connection);
 	
 	tester->assert_true(tester,(list->get_count(list) == 4), "proposal count check ");
 
@@ -77,5 +79,5 @@ void test_init_config(protected_tester_t *tester)
 	
 	list->destroy(list);
 	
-	init_config->destroy(init_config);
+	connection->destroy(connection);
 }

@@ -27,8 +27,6 @@
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <utils/linked_list.h>
-#include <config/init_config.h>
-#include <config/sa_config.h>
 
 /**
  * Critical flag must not be set.

@@ -1,7 +1,7 @@
 /**
- * @file sa_config_test.c
+ * @file policy_test.c
  *
- * @brief Tests for the sa_config_t class.
+ * @brief Tests for the policy_t class.
  *
  */
 
@@ -20,10 +20,10 @@
  * for more details.
  */
 
-#include "sa_config_test.h"
+#include "policy_test.h"
 
 #include <daemon.h>
-#include <config/sa_config.h>
+#include <config/policy.h>
 #include <config/traffic_selector.h>
 #include <utils/allocator.h>
 #include <utils/logger.h>
@@ -33,25 +33,25 @@
 /**
  * Described in header.
  */
-void test_sa_config(protected_tester_t *tester)
+void test_policy(protected_tester_t *tester)
 {
-	sa_config_t *sa_config;	
+	policy_t *policy;	
 // 	traffic_selector_t *ts;
 // 	linked_list_t *ts_stored, *ts_supplied, *ts_selected, *ts_expected;
 	proposal_t *proposal1, *proposal2, *proposal3, *proposal_sel;
 	linked_list_t *proposals_list;
 	iterator_t *iterator;
 	logger_t *logger;
+	identification_t *alice, *bob;
 	
 	logger = charon->logger_manager->create_logger(charon->logger_manager, TESTER, NULL);
 	logger->disable_level(logger, FULL);
 	
-	sa_config = sa_config_create(ID_IPV4_ADDR, "152.96.193.130", 
-								 ID_IPV4_ADDR, "152.96.193.131",
-								 RSA_DIGITAL_SIGNATURE,
-								 30000);
+	alice = identification_create_from_string(ID_IPV4_ADDR, "152.96.193.131");
+	bob = identification_create_from_string(ID_IPV4_ADDR, "152.96.193.130");
+	policy = policy_create(alice, bob);
 	
-	tester->assert_true(tester, (sa_config != NULL), "sa_config construction");
+	tester->assert_true(tester, (policy != NULL), "policy construction");
 
 	
 	/* 
@@ -73,12 +73,12 @@ void test_sa_config(protected_tester_t *tester)
 	proposal3->add_algorithm(proposal3, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
 	
 	
-	sa_config->add_proposal(sa_config, proposal1);
-	sa_config->add_proposal(sa_config, proposal2);
-	sa_config->add_proposal(sa_config, proposal3);
+	policy->add_proposal(policy, proposal1);
+	policy->add_proposal(policy, proposal2);
+	policy->add_proposal(policy, proposal3);
 
 	
-	proposals_list = sa_config->get_proposals(sa_config);
+	proposals_list = policy->get_proposals(policy);
 	tester->assert_true(tester, (proposals_list->get_count(proposals_list) == 3), "proposal count");
 	
 	
@@ -95,7 +95,7 @@ void test_sa_config(protected_tester_t *tester)
 	proposals_list->insert_last(proposals_list, proposal1);
 	proposals_list->insert_last(proposals_list, proposal2);
 	
-	proposal_sel = sa_config->select_proposal(sa_config, proposals_list);
+	proposal_sel = policy->select_proposal(policy, proposals_list);
 	tester->assert_false(tester, proposal_sel == NULL, "proposal select");
 	/* check ESP encryption algo */
 	iterator = proposal_sel->create_algorithm_iterator(proposal_sel, ESP, ENCRYPTION_ALGORITHM);
@@ -164,18 +164,18 @@ void test_sa_config(protected_tester_t *tester)
 // 	/* icmp request, should be discarded */
 // 	ts_request[3] = traffic_selector_create_from_string(1, TS_IPV4_ADDR_RANGE, "0.0.0.0", 0, "255.255.255.255", 65535);
 // 	
-// 	sa_config->add_my_traffic_selector(sa_config, ts_policy[0]);
-// 	sa_config->add_my_traffic_selector(sa_config, ts_policy[1]);
-// 	sa_config->add_my_traffic_selector(sa_config, ts_policy[2]);
+// 	policy->add_my_traffic_selector(policy, ts_policy[0]);
+// 	policy->add_my_traffic_selector(policy, ts_policy[1]);
+// 	policy->add_my_traffic_selector(policy, ts_policy[2]);
 // 	
-// 	count = sa_config->get_my_traffic_selectors(sa_config, &ts_result);
+// 	count = policy->get_my_traffic_selectors(policy, &ts_result);
 // 	tester->assert_true(tester, (count == 3), "ts get count");
 // 	ts_result[0]->destroy(ts_result[0]);
 // 	ts_result[0]->destroy(ts_result[1]);
 // 	ts_result[0]->destroy(ts_result[2]);
 // 	allocator_free(ts_result);
 // 	
-// 	count = sa_config->select_my_traffic_selectors(sa_config, &ts_request[0], 4, &ts_result);
+// 	count = policy->select_my_traffic_selectors(policy, &ts_request[0], 4, &ts_result);
 // 	tester->assert_true(tester, (count == 3), "ts select count");
 // 	
 // 	
@@ -207,10 +207,10 @@ void test_sa_config(protected_tester_t *tester)
 // 		u_int16_t tp_ref = ts_reference[i]->get_to_port(ts_reference[i]);
 // 
 // 		
-// 		logger->log_chunk(logger, RAW, "from address result", &fa_res);
-// 		logger->log_chunk(logger, RAW, "from address reference", &fa_ref);
-// 		logger->log_chunk(logger, RAW, "to address result", &ta_res);
-// 		logger->log_chunk(logger, RAW, "to address reference", &ta_ref);
+// 		logger->log_chunk(logger, RAW, "from address result", fa_res);
+// 		logger->log_chunk(logger, RAW, "from address reference", fa_ref);
+// 		logger->log_chunk(logger, RAW, "to address result", ta_res);
+// 		logger->log_chunk(logger, RAW, "to address reference", ta_ref);
 // 		tester->assert_true(tester, fa_res.len == fa_ref.len, "from address len");
 // 		tester->assert_false(tester, memcmp(fa_res.ptr, fa_ref.ptr,fa_res.len), "from address value");
 // 		tester->assert_true(tester, ta_res.len == ta_ref.len, "to address len");
@@ -243,5 +243,5 @@ void test_sa_config(protected_tester_t *tester)
 // 	ts_reference[2]->destroy(ts_reference[2]);
 // 	ts_request[3]->destroy(ts_request[3]);
 
-	sa_config->destroy(sa_config);
+	policy->destroy(policy);
 }

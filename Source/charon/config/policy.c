@@ -1,7 +1,7 @@
 /**
- * @file sa_config.c
+ * @file policy.c
  * 
- * @brief Implementation of sa_config_t.
+ * @brief Implementation of policy_t.
  * 
  */
 
@@ -20,24 +20,24 @@
  * for more details.
  */
 
-#include "sa_config.h"
+#include "policy.h"
 
 #include <utils/linked_list.h>
 #include <utils/allocator.h>
 #include <utils/identification.h>
 #include <utils/logger.h>
 
-typedef struct private_sa_config_t private_sa_config_t;
+typedef struct private_policy_t private_policy_t;
 
 /**
- * Private data of an sa_config_t object
+ * Private data of an policy_t object
  */
-struct private_sa_config_t {
+struct private_policy_t {
 
 	/**
 	 * Public part
 	 */
-	sa_config_t public;
+	policy_t public;
 	
 	/**
 	 * id to use to identify us
@@ -48,16 +48,6 @@ struct private_sa_config_t {
 	 * allowed id for other
 	 */
 	identification_t *other_id;
-	
-	/**
-	 * authentification method to use
-	 */
-	auth_method_t auth_method;
-	
-	/**
-	 * Lifetime of IKE_SA in milliseconds.
-	 */
-	u_int32_t ike_sa_lifetime;
 	
 	/**
 	 * list for all proposals
@@ -77,76 +67,60 @@ struct private_sa_config_t {
 	/**
 	 * select_traffic_selectors for both
 	 */
-	linked_list_t *(*select_traffic_selectors) (private_sa_config_t *,linked_list_t*,linked_list_t*);
+	linked_list_t *(*select_traffic_selectors) (private_policy_t *,linked_list_t*,linked_list_t*);
 };
 
 /**
- * Implementation of sa_config_t.get_my_id
+ * Implementation of policy_t.get_my_id
  */
-static identification_t *get_my_id(private_sa_config_t *this)
+static identification_t *get_my_id(private_policy_t *this)
 {
 	return this->my_id;
 }
 
 /**
- * Implementation of sa_config_t.get_other_id
+ * Implementation of policy_t.get_other_id
  */
-static identification_t *get_other_id(private_sa_config_t *this)
+static identification_t *get_other_id(private_policy_t *this)
 {
 	return this->other_id;
 }
 
 /**
- * Implementation of sa_config_t.get_auth_method.
+ * Implementation of policy_t.get_my_traffic_selectors
  */
-static auth_method_t get_auth_method(private_sa_config_t *this)
-{
-	return this->auth_method;
-}
-
-/**
- * Implementation of sa_config_t.get_ike_sa_lifetime.
- */
-static u_int32_t get_ike_sa_lifetime (private_sa_config_t *this)
-{
-	return this->ike_sa_lifetime;
-}
-
-/**
- * Implementation of sa_config_t.get_my_traffic_selectors
- */
-static linked_list_t *get_my_traffic_selectors(private_sa_config_t *this)
+static linked_list_t *get_my_traffic_selectors(private_policy_t *this)
 {
 	return this->my_ts;
 }
 
 /**
- * Implementation of sa_config_t.get_other_traffic_selectors
+ * Implementation of policy_t.get_other_traffic_selectors
  */
-static linked_list_t *get_other_traffic_selectors(private_sa_config_t *this, traffic_selector_t **traffic_selectors[])
+static linked_list_t *get_other_traffic_selectors(private_policy_t *this, traffic_selector_t **traffic_selectors[])
 {
 	return this->other_ts;
 }
 
 /**
- * Implementation of private_sa_config_t.select_my_traffic_selectors
+ * Implementation of private_policy_t.select_my_traffic_selectors
  */
-static linked_list_t *select_my_traffic_selectors(private_sa_config_t *this, linked_list_t *supplied)
+static linked_list_t *select_my_traffic_selectors(private_policy_t *this, linked_list_t *supplied)
 {
 	return this->select_traffic_selectors(this, this->my_ts, supplied);
 }
 
 /**
- * Implementation of private_sa_config_t.select_other_traffic_selectors
+ * Implementation of private_policy_t.select_other_traffic_selectors
  */
-static linked_list_t *select_other_traffic_selectors(private_sa_config_t *this, linked_list_t *supplied)
+static linked_list_t *select_other_traffic_selectors(private_policy_t *this, linked_list_t *supplied)
 {
 	return this->select_traffic_selectors(this, this->other_ts, supplied);
 }
 /**
- * Implementation of private_sa_config_t.select_traffic_selectors
+ * Implementation of private_policy_t.select_traffic_selectors
  */
-static linked_list_t *select_traffic_selectors(private_sa_config_t *this, linked_list_t *stored, linked_list_t *supplied)
+static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_list_t *stored, linked_list_t *supplied)
 {
 	iterator_t *supplied_iter, *stored_iter;
 	traffic_selector_t *supplied_ts, *stored_ts, *selected_ts;
@@ -182,17 +156,17 @@ static linked_list_t *select_traffic_selectors(private_sa_config_t *this, linked
 }
 
 /**
- * Implementation of sa_config_t.get_proposal_iterator
+ * Implementation of policy_t.get_proposal_iterator
  */
-static linked_list_t *get_proposals(private_sa_config_t *this)
+static linked_list_t *get_proposals(private_policy_t *this)
 {
 	return this->proposals;
 }
 
 /**
- * Implementation of sa_config_t.select_proposal
+ * Implementation of policy_t.select_proposal
  */
-static proposal_t *select_proposal(private_sa_config_t *this, linked_list_t *proposals)
+static proposal_t *select_proposal(private_policy_t *this, linked_list_t *proposals)
 {
 	iterator_t *stored_iter, *supplied_iter;
 	proposal_t *stored, *supplied, *selected;
@@ -228,33 +202,33 @@ static proposal_t *select_proposal(private_sa_config_t *this, linked_list_t *pro
 }
 
 /**
- * Implementation of sa_config_t.add_my_traffic_selector
+ * Implementation of policy_t.add_my_traffic_selector
  */
-static void add_my_traffic_selector(private_sa_config_t *this, traffic_selector_t *traffic_selector)
+static void add_my_traffic_selector(private_policy_t *this, traffic_selector_t *traffic_selector)
 {
 	this->my_ts->insert_last(this->my_ts, (void*)traffic_selector);
 }
 
 /**
- * Implementation of sa_config_t.add_other_traffic_selector
+ * Implementation of policy_t.add_other_traffic_selector
  */
-static void add_other_traffic_selector(private_sa_config_t *this, traffic_selector_t *traffic_selector)
+static void add_other_traffic_selector(private_policy_t *this, traffic_selector_t *traffic_selector)
 {
 	this->other_ts->insert_last(this->other_ts, (void*)traffic_selector);
 }
 
 /**
- * Implementation of sa_config_t.add_proposal
+ * Implementation of policy_t.add_proposal
  */
-static void add_proposal(private_sa_config_t *this, proposal_t *proposal)
+static void add_proposal(private_policy_t *this, proposal_t *proposal)
 {
 	this->proposals->insert_last(this->proposals, (void*)proposal);
 }
 
 /**
- * Implements sa_config_t.destroy.
+ * Implements policy_t.destroy.
  */
-static status_t destroy(private_sa_config_t *this)
+static status_t destroy(private_policy_t *this)
 {	
 	proposal_t *proposal;
 	traffic_selector_t *traffic_selector;
@@ -292,48 +266,33 @@ static status_t destroy(private_sa_config_t *this)
 /*
  * Described in header-file
  */
-sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other_id_type, char *other_id, auth_method_t auth_method, u_int32_t ike_sa_lifetime)
+policy_t *policy_create(identification_t *my_id, identification_t *other_id)
 {
-	private_sa_config_t *this = allocator_alloc_thing(private_sa_config_t);
+	private_policy_t *this = allocator_alloc_thing(private_policy_t);
 
 	/* public functions */
-	this->public.get_my_id = (identification_t*(*)(sa_config_t*))get_my_id;
-	this->public.get_other_id = (identification_t*(*)(sa_config_t*))get_other_id;
-	this->public.get_auth_method = (auth_method_t(*)(sa_config_t*))get_auth_method;
-	this->public.get_ike_sa_lifetime = (u_int32_t(*)(sa_config_t*))get_ike_sa_lifetime;
-	this->public.get_my_traffic_selectors = (linked_list_t*(*)(sa_config_t*))get_my_traffic_selectors;
-	this->public.select_my_traffic_selectors = (linked_list_t*(*)(sa_config_t*,linked_list_t*))select_my_traffic_selectors;
-	this->public.get_other_traffic_selectors = (linked_list_t*(*)(sa_config_t*))get_other_traffic_selectors;
-	this->public.select_other_traffic_selectors = (linked_list_t*(*)(sa_config_t*,linked_list_t*))select_other_traffic_selectors;
-	this->public.get_proposals = (linked_list_t*(*)(sa_config_t*))get_proposals;
-	this->public.select_proposal = (proposal_t*(*)(sa_config_t*,linked_list_t*))select_proposal;
-	this->public.add_my_traffic_selector = (void(*)(sa_config_t*,traffic_selector_t*))add_my_traffic_selector;
-	this->public.add_other_traffic_selector = (void(*)(sa_config_t*,traffic_selector_t*))add_other_traffic_selector;
-	this->public.add_proposal = (void(*)(sa_config_t*,proposal_t*))add_proposal;
-	this->public.destroy = (void(*)(sa_config_t*))destroy;
+	this->public.get_my_id = (identification_t*(*)(policy_t*))get_my_id;
+	this->public.get_other_id = (identification_t*(*)(policy_t*))get_other_id;
+	this->public.get_my_traffic_selectors = (linked_list_t*(*)(policy_t*))get_my_traffic_selectors;
+	this->public.select_my_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*))select_my_traffic_selectors;
+	this->public.get_other_traffic_selectors = (linked_list_t*(*)(policy_t*))get_other_traffic_selectors;
+	this->public.select_other_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*))select_other_traffic_selectors;
+	this->public.get_proposals = (linked_list_t*(*)(policy_t*))get_proposals;
+	this->public.select_proposal = (proposal_t*(*)(policy_t*,linked_list_t*))select_proposal;
+	this->public.add_my_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_my_traffic_selector;
+	this->public.add_other_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_other_traffic_selector;
+	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
+	this->public.destroy = (void(*)(policy_t*))destroy;
 	
 	/* apply init values */
-	this->my_id = identification_create_from_string(my_id_type, my_id);
-	if (this->my_id == NULL)
-	{
-		allocator_free(this);
-		return NULL;
-	}
-	this->other_id = identification_create_from_string(other_id_type, other_id);
-	if (this->my_id == NULL)
-	{
-		this->other_id->destroy(this->other_id);
-		allocator_free(this);
-		return NULL;
-	}
+	this->my_id = my_id;
+	this->other_id = other_id;
 	
 	/* init private members*/
 	this->select_traffic_selectors = select_traffic_selectors;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
-	this->auth_method = auth_method;
-	this->ike_sa_lifetime = ike_sa_lifetime;
 
 	return (&this->public);
 }

@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _AES_CBC_CRYPTER_TEST_H_
-#define _AES_CBC_CRYPTER_TEST_H_
+#ifndef AES_CBC_CRYPTER_TEST_H_
+#define AES_CBC_CRYPTER_TEST_H_
 
 #include <transforms/crypters/aes_cbc_crypter.h>
 #include <utils/tester.h>
@@ -35,4 +35,4 @@
  */
 void test_aes_cbc_crypter(protected_tester_t *tester);
 
-#endif //_AES_CBC_CRYPTER_TEST_H_
+#endif /* AES_CBC_CRYPTER_TEST_H_ */

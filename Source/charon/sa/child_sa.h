@@ -21,8 +21,8 @@
  */
 
 
-#ifndef _CHILD_SA_H_
-#define _CHILD_SA_H_
+#ifndef CHILD_SA_H_
+#define CHILD_SA_H_
 
 #include <types.h>
 #include <transforms/prf_plus.h>
@@ -130,4 +130,4 @@ struct child_sa_t {
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other);
 
-#endif /*_CHILD_SA_H_*/
+#endif /*CHILD_SA_H_*/

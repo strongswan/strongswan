@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _VENDOR_ID_PAYLOAD_H_
-#define _VENDOR_ID_PAYLOAD_H_
+#ifndef VENDOR_ID_PAYLOAD_H_
+#define VENDOR_ID_PAYLOAD_H_
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
@@ -100,4 +100,4 @@ struct vendor_id_payload_t {
 vendor_id_payload_t *vendor_id_payload_create();
 
 
-#endif //_VENDOR_ID_PAYLOAD_H_
+#endif /* VENDOR_ID_PAYLOAD_H_ */

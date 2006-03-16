@@ -40,9 +40,9 @@ struct private_initiate_ike_sa_job_t {
 	initiate_ike_sa_job_t public;
 	
 	/**
-	 * Name of the assigned configuration
+	 * associated connection object to initiate
 	 */
-	char *configuration_name;
+	connection_t *connection;
 };
 
 
@@ -57,41 +57,46 @@ static job_type_t get_type(private_initiate_ike_sa_job_t *this)
 /**
  * Implements initiate_ike_sa_job_t.get_configuration_name.
  */
-static char *get_configuration_name(private_initiate_ike_sa_job_t *this)
+static connection_t *get_connection(private_initiate_ike_sa_job_t *this)
 {
-	return this->configuration_name;
+	return this->connection;
 }
 
 /**
  * Implements job_t.destroy.
  */
-static void destroy(job_t *job)
+static void destroy_all(private_initiate_ike_sa_job_t *this)
 {
-	private_initiate_ike_sa_job_t *this = (private_initiate_ike_sa_job_t *) job;
-	allocator_free(this->configuration_name);
+	this->connection->destroy(this->connection);
+	allocator_free(this);
+}
+
+/**
+ * Implements job_t.destroy.
+ */
+static void destroy(private_initiate_ike_sa_job_t *this)
+{
 	allocator_free(this);
 }
 
 /*
  * Described in header
  */
-initiate_ike_sa_job_t *initiate_ike_sa_job_create(char *configuration_name)
+initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection)
 {
 	private_initiate_ike_sa_job_t *this = allocator_alloc_thing(private_initiate_ike_sa_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
-	/* same as destroy */
-	this->public.job_interface.destroy_all = (void (*) (job_t *)) destroy;
-	this->public.job_interface.destroy = destroy;
+	this->public.job_interface.destroy_all = (void (*) (job_t *)) destroy_all;
+	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
 	
 	/* public functions */
-	this->public.get_configuration_name = (char * (*)(initiate_ike_sa_job_t *)) get_configuration_name;
+	this->public.get_connection = (connection_t* (*)(initiate_ike_sa_job_t *)) get_connection;
 	this->public.destroy = (void (*)(initiate_ike_sa_job_t *)) destroy;
 	
 	/* private variables */
-	this->configuration_name = allocator_alloc(strlen(configuration_name) + 1);
-	strcpy(this->configuration_name,configuration_name);
+	this->connection = connection;
 	
 	return &(this->public);
 }

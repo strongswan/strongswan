@@ -33,3 +33,7 @@ $(BUILD_DIR)thread_pool.o :		$(THREADS_DIR)thread_pool.c $(THREADS_DIR)thread_po
 OBJS+= $(BUILD_DIR)kernel_interface.o
 $(BUILD_DIR)kernel_interface.o :$(THREADS_DIR)kernel_interface.c $(THREADS_DIR)kernel_interface.h
 								$(CC) $(CFLAGS) -c -o $@ $<
+								
+OBJS+= $(BUILD_DIR)stroke.o
+$(BUILD_DIR)stroke.o :			$(THREADS_DIR)stroke.c $(THREADS_DIR)stroke.h
+								$(CC) $(CFLAGS) -c -o $@ $<

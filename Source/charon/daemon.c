@@ -31,9 +31,7 @@
 
 #include <types.h>
 #include <utils/allocator.h>
-#include <queues/jobs/initiate_ike_sa_job.h>
-#include <config/static_configuration.h>
-#include <config/stroke_configuration.h>
+#include <threads/stroke.h>
 
 
 typedef struct private_daemon_t private_daemon_t;
@@ -68,14 +66,6 @@ struct private_daemon_t {
 	 * @param this 	calling object
 	 */
 	void (*run) (private_daemon_t *this);
-	
-	/**
-	 * A routine to add job for testing.
-	 * 
-	 * @param this 					calling object
-	 * @param configuration_name 	name of configuration to use for initialization
-	 */
-	void (*build_test_job) (private_daemon_t *this,char *configuration_name);
 	
 	/**
 	 * Initialize the daemon.
@@ -161,34 +151,20 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 }
 
 /**
- * Implementation of private_daemon_t.build_test_job.
- */
-static void build_test_job(private_daemon_t *this, char *configuration_name)
-{	
-	initiate_ike_sa_job_t *initiate_job;
-	
-	/* configuration_name = "localhost-rsa"; */
-	/* configuration_name = "localhost-shared"; */
-	/* configuration_name = "localhost-bad_dh_group"; */
-	
-		
-	initiate_job = initiate_ike_sa_job_create(configuration_name);
-	
-	this->public.event_queue->add_relative(this->public.event_queue, (job_t*)initiate_job, 2000);
-
-}
-
-/**
  * Implementation of private_daemon_t.initialize.
  */
 static void initialize(private_daemon_t *this)
 {
+	this->public.configuration = configuration_create();
 	this->public.socket = socket_create(IKEV2_UDP_PORT);
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.send_queue = send_queue_create();
-	this->public.configuration = (configuration_t*)stroke_configuration_create();
+	this->public.stroke = stroke_create();
+	this->public.connections = &this->public.stroke->connections;
+	this->public.policies = &this->public.stroke->policies;
+	this->public.credentials = &this->public.stroke->credentials;
 	
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
@@ -246,6 +222,22 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.configuration->destroy(this->public.configuration);
 	}
+	if (this->public.credentials != NULL)
+	{
+		this->public.credentials->destroy(this->public.credentials);
+	}
+	if (this->public.connections != NULL)
+	{
+		this->public.connections->destroy(this->public.connections);
+	}
+	if (this->public.policies != NULL)
+	{
+		this->public.policies->destroy(this->public.policies);
+	}
+	if (this->public.stroke != NULL)
+	{
+		this->public.stroke->destroy(this->public.stroke);
+	}
 	
 	this->public.logger_manager->destroy(this->public.logger_manager);
 	allocator_free(this);
@@ -265,7 +257,6 @@ private_daemon_t *daemon_create()
 	/* assign methods */
 	this->run = run;
 	this->destroy = destroy;
-	this->build_test_job = build_test_job;
 	this->initialize = initialize;
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
 	
@@ -280,11 +271,15 @@ private_daemon_t *daemon_create()
 	this->public.event_queue = NULL;
 	this->public.send_queue = NULL;
 	this->public.configuration = NULL;
+	this->public.credentials = NULL;
+	this->public.connections = NULL;
+	this->public.policies = NULL;
 	this->public.sender= NULL;
 	this->public.receiver = NULL;
 	this->public.scheduler = NULL;
 	this->public.kernel_interface = NULL;
 	this->public.thread_pool = NULL;
+	this->public.stroke = NULL;
 	
 	this->main_thread_id = pthread_self();
 	
@@ -329,10 +324,6 @@ int main(int argc, char *argv[])
 	
 	/* initialize and run daemon*/
 	private_charon->initialize(private_charon);
-	if (argc == 2)
-	{
-		private_charon->build_test_job(private_charon,argv[1]);
-	}
 	private_charon->run(private_charon);
 	
 	/* normal termination, cleanup and exit */

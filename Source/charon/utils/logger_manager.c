@@ -165,7 +165,7 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 	
 	/* defaults */
 	log_thread_ids = FALSE;
-	logger_level = this->public.get_logger_level(&(this->public),context);
+	logger_level = this->public.get_logger_level(&(this->public), context);
 
 	switch(context)
 	{
@@ -176,15 +176,12 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 			log_thread_ids = TRUE;
 			break;
 		case IKE_SA:
-			logger_level |= LEVEL1;
 			log_thread_ids = TRUE;
 			break;
 		case CHILD_SA:
-			logger_level |= LEVEL1;
 			log_thread_ids = TRUE;
 			break;
 		case CONFIG:
-			logger_level |= FULL;
 			log_thread_ids = TRUE;
 			break;
 		case MESSAGE:
@@ -205,14 +202,12 @@ static logger_t *create_logger(private_logger_manager_t *this, logger_context_t 
 		case THREAD_POOL:
 			break;
 		case SCHEDULER:
-			logger_level = 0;
 			break;
 		case SENDER:
 			break;
 		case RECEIVER:
 			break;
 		case SOCKET:
-			logger_level |= FULL;
 			break;
 		case DAEMON:
 			break;

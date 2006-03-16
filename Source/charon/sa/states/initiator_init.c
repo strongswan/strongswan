@@ -108,40 +108,39 @@ struct private_initiator_init_t {
 /**
  * Implementation of initiator_init_t.initiate_connection.
  */
-static status_t initiate_connection (private_initiator_init_t *this, char *name)
+static status_t initiate_connection (private_initiator_init_t *this, connection_t *connection)
 {
-	init_config_t *init_config;
-	sa_config_t *sa_config;
-	status_t status;
+	policy_t *policy;
 	diffie_hellman_group_t dh_group;
+	host_t *my_host, *other_host;
+	identification_t *my_id, *other_id;
 	
-	this->logger->log(this->logger, CONTROL, "Initializing connection %s",name);
+	my_host = connection->get_my_host(connection);
+	other_host = connection->get_other_host(connection);
+	my_id = connection->get_my_id(connection);
+	other_id = connection->get_other_id(connection);
 	
-	/* get configs */
-	status = charon->configuration->get_init_config_for_name(charon->configuration,name,&init_config);
-	if (status != SUCCESS)
-	{	
-		this->logger->log(this->logger, ERROR | LEVEL1, "Could not retrieve INIT configuration informations for %s",name);
-		return DELETE_ME;
-	}
-	this->ike_sa->set_init_config(this->ike_sa,init_config);
-	status = charon->configuration->get_sa_config_for_name(charon->configuration,name,&sa_config);
-	if (status != SUCCESS)
+	this->logger->log(this->logger, CONTROL, "Initiating connection between %s (%s) - %s (%s)",
+					  my_id->get_string(my_id), my_host->get_address(my_host),
+					  other_id->get_string(other_id), other_host->get_address(other_host));
+	
+	this->ike_sa->set_connection(this->ike_sa, connection);
+	
+	/* get policy */
+	policy = charon->policies->get_policy(charon->policies, my_id, other_id);
+	if (policy == NULL)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Could not retrieve SA configuration informations for %s",name);
+		this->logger->log(this->logger, ERROR | LEVEL1, "Could not get a policy for '%s - %s', aborting",
+						  my_id->get_string(my_id), other_id->get_string(other_id));
 		return DELETE_ME;
 	}
-	this->ike_sa->set_sa_config(this->ike_sa,sa_config);
-	
-	/* host informations are read from configuration */	
-	this->ike_sa->set_other_host(this->ike_sa,init_config->get_other_host_clone(init_config));
-	this->ike_sa->set_my_host(this->ike_sa,init_config->get_my_host_clone(init_config));
+	this->ike_sa->set_policy(this->ike_sa,policy);
 	
 	/* we must guess now a DH group. For that we choose our most preferred group */
-	dh_group = init_config->get_dh_group(init_config);
+	dh_group = connection->get_dh_group(connection);
 	
 	/* next step is done in retry_initiate_connection */
-	return this->public.retry_initiate_connection(&(this->public), dh_group);
+	return this->public.retry_initiate_connection(&this->public, dh_group);
 }
 
 /**
@@ -151,7 +150,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 {
 	ike_sa_init_requested_t *next_state;
 	chunk_t ike_sa_init_request_data;
-	init_config_t *init_config;
+	connection_t *connection;
 	ike_sa_id_t *ike_sa_id;
 	message_t *message;
 	status_t status;
@@ -162,7 +161,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 		return DELETE_ME;
 	}
 	
-	init_config = this->ike_sa->get_init_config(this->ike_sa);
+	connection = this->ike_sa->get_connection(this->ike_sa);
 	this->diffie_hellman = diffie_hellman_create(dh_group);
 	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
 	ike_sa_id->set_responder_spi(ike_sa_id,0);
@@ -211,13 +210,13 @@ static void build_sa_payload(private_initiator_init_t *this, message_t *request)
 {
 	sa_payload_t* sa_payload;
 	linked_list_t *proposal_list;
-	init_config_t *init_config;
+	connection_t *connection;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1, "Building SA payload");
 	
-	init_config = this->ike_sa->get_init_config(this->ike_sa);
+	connection = this->ike_sa->get_connection(this->ike_sa);
 
-	proposal_list = init_config->get_proposals(init_config);
+	proposal_list = connection->get_proposals(connection);
 	
 	sa_payload = sa_payload_create_from_proposal_list(proposal_list);	
 
@@ -332,7 +331,7 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
 	
 	/* public functions */
-	this->public.initiate_connection = (status_t (*)(initiator_init_t *, char *)) initiate_connection;
+	this->public.initiate_connection = (status_t (*)(initiator_init_t *, connection_t*)) initiate_connection;
 	this->public.retry_initiate_connection = (status_t (*)(initiator_init_t *, int )) retry_initiate_connection;
 	
 	/* private functions */

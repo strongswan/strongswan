@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _CONFIGURATION_ATTRIBUTE_H_
-#define _CONFIGURATION_ATTRIBUTE_H_
+#ifndef CONFIGURATION_ATTRIBUTE_H_
+#define CONFIGURATION_ATTRIBUTE_H_
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
@@ -146,4 +146,4 @@ struct configuration_attribute_t {
  */
 configuration_attribute_t *configuration_attribute_create();
 
-#endif /*_CONFIGURATION_ATTRIBUTE_H_*/
+#endif /* CONFIGURATION_ATTRIBUTE_H_*/

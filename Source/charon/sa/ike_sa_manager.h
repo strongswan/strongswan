@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _IKE_SA_MANAGER_H_
-#define _IKE_SA_MANAGER_H_
+#ifndef IKE_SA_MANAGER_H_
+#define IKE_SA_MANAGER_H_
 
 #include <types.h>
 #include <sa/ike_sa.h>
@@ -137,4 +137,4 @@ struct ike_sa_manager_t {
  */
 ike_sa_manager_t *ike_sa_manager_create();
 
-#endif /*_IKE_SA_MANAGER_H_*/
+#endif /*IKE_SA_MANAGER_H_*/

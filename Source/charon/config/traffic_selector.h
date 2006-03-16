@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _TRAFFIC_SELECTOR_H_
-#define _TRAFFIC_SELECTOR_H_
+#ifndef TRAFFIC_SELECTOR_H_
+#define TRAFFIC_SELECTOR_H_
 
 #include <types.h>
 #include <network/host.h>
@@ -224,4 +224,4 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
 
 traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits);
 
-#endif //_TRAFFIC_SELECTOR_H_
+#endif /* TRAFFIC_SELECTOR_H_ */

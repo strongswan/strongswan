@@ -149,4 +149,4 @@ ts_payload_t *ts_payload_create(bool is_initiator);
 ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, linked_list_t *traffic_selectors);
 
 
-#endif //TS_PAYLOAD_H_
+#endif /* TS_PAYLOAD_H_ */

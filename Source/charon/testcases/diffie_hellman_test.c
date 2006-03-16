@@ -49,10 +49,10 @@ void test_diffie_hellman(protected_tester_t *tester)
 	tester->assert_true(tester,(other_diffie_hellman != NULL), "create call check");	
 
 	my_diffie_hellman->get_my_public_value(my_diffie_hellman,&my_public_value);
-	logger->log_chunk(logger,RAW,"My public value",&my_public_value);
+	logger->log_chunk(logger,RAW,"My public value",my_public_value);
 
 	other_diffie_hellman->get_my_public_value(other_diffie_hellman,&other_public_value);
-	logger->log_chunk(logger,RAW,"Other public value",&other_public_value);
+	logger->log_chunk(logger,RAW,"Other public value",other_public_value);
 
 	my_diffie_hellman->set_other_public_value(my_diffie_hellman,other_public_value);
 	other_diffie_hellman->set_other_public_value(other_diffie_hellman,my_public_value);
@@ -61,10 +61,10 @@ void test_diffie_hellman(protected_tester_t *tester)
 	allocator_free(other_public_value.ptr);
 	
 	tester->assert_true(tester,(	my_diffie_hellman->get_shared_secret(my_diffie_hellman,&my_secret) == SUCCESS), "get_shared_secret call check");
-	logger->log_chunk(logger,RAW,"My shared secret",&my_secret);
+	logger->log_chunk(logger,RAW,"My shared secret",my_secret);
 
 	tester->assert_true(tester,(	other_diffie_hellman->get_shared_secret(other_diffie_hellman,&other_secret) == SUCCESS), "get_shared_secret call check");
-	logger->log_chunk(logger,RAW,"Other shared secret",&other_secret);
+	logger->log_chunk(logger,RAW,"Other shared secret",other_secret);
 	
 	tester->assert_true(tester,(	memcmp(my_secret.ptr,other_secret.ptr,other_secret.len) == 0), "shared secret same value check");
 	

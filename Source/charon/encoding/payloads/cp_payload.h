@@ -27,7 +27,6 @@
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/configuration_attribute.h>
 #include <utils/linked_list.h>
-#include <config/init_config.h>
 
 /**
  * CP_PAYLOAD length in bytes without any proposal substructure.

@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _CERT_PAYLOAD_H_
-#define _CERT_PAYLOAD_H_
+#ifndef CERT_PAYLOAD_H_
+#define CERT_PAYLOAD_H_
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
@@ -152,4 +152,4 @@ struct cert_payload_t {
 cert_payload_t *cert_payload_create();
 
 
-#endif //_CERT_PAYLOAD_H_
+#endif /* CERT_PAYLOAD_H_ */

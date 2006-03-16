@@ -157,7 +157,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	ke_payload_t *ke_request = NULL;
 	nonce_payload_t *nonce_request = NULL;
 	host_t *source, *destination;
-	init_config_t *init_config;
+	connection_t *connection;
 	iterator_t *payloads;
 	message_t *response;
 	status_t status;
@@ -177,18 +177,15 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	source = message->get_source(message);
 	destination = message->get_destination(message);
 
-	status = charon->configuration->get_init_config_for_host(charon->configuration,destination,source,&init_config);
-	if (status != SUCCESS)
+	connection = charon->connections->get_connection_by_hosts(charon->connections, destination, source);
+	if (connection == NULL)
 	{
-		/* no configuration matches given host */
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request does not match any available configuration. Deleting IKE_SA");
+		/* no configuration matches given hosts */
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request does not match any available connection. Deleting IKE_SA");
 		/* TODO: inform requestor */
 		return DELETE_ME;
 	}
-	this->ike_sa->set_init_config(this->ike_sa,init_config);
-	
-	this->ike_sa->set_my_host(this->ike_sa, destination->clone(destination));
-	this->ike_sa->set_other_host(this->ike_sa, source->clone(source));
+	this->ike_sa->set_connection(this->ike_sa,connection);
 	
 	/* parse incoming message */
 	status = message->parse_body(message, NULL, NULL);
@@ -322,11 +319,11 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 {
 	proposal_t *proposal;
 	linked_list_t *proposal_list;
-	init_config_t *init_config;
+	connection_t *connection;
 	sa_payload_t* sa_payload;
 	algorithm_t *algo;
 
-	init_config = this->ike_sa->get_init_config(this->ike_sa);
+	connection = this->ike_sa->get_connection(this->ike_sa);
 
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Process received SA payload");
 	
@@ -334,7 +331,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 	proposal_list = sa_request->get_proposals (sa_request);
 
 	/* select proposal */
-	this->proposal = init_config->select_proposal(init_config, proposal_list);
+	this->proposal = connection->select_proposal(connection, proposal_list);
 	while(proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
 	{
 		proposal->destroy(proposal);

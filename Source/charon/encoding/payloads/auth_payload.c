@@ -25,16 +25,6 @@
 #include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 
-/** 
- * String mappings for auth_method_t.
- */
-mapping_t auth_method_m[] = {
-	{RSA_DIGITAL_SIGNATURE, "RSA_DIGITAL_SIGNATURE"},
-	{SHARED_KEY_MESSAGE_INTEGRITY_CODE, "SHARED_KEY_MESSAGE_INTEGRITY_CODE"},
-	{DSS_DIGITAL_SIGNATURE, "DSS_DIGITAL_SIGNATURE"},
-	{MAPPING_END, NULL}
-};
-
 
 typedef struct private_auth_payload_t private_auth_payload_t;
 

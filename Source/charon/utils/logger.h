@@ -136,9 +136,9 @@ struct logger_t {
 	 * @param this 		logger_t object
 	 * @param loglevel 	or'ed set of logger_level_t's
 	 * @param label 	a labeling name, logged with the bytes
-	 * @param chunk		pointer to a chunk to log
+	 * @param chunk		chunk to log
 	 */
-	void (*log_chunk) (logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk);
+	void (*log_chunk) (logger_t *this, logger_level_t loglevel, char *label, chunk_t chunk);
 
 	/**
 	 * @brief Enables a loglevel for the current logger_t object.

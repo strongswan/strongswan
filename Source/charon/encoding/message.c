@@ -652,7 +652,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	/* clone packet for caller */
 	*packet = this->packet->clone(this->packet);
 	
-	this->logger->log(this->logger, CONTROL, "Message of type %s generated successfully",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Message of type %s generated successfully",
 						mapping_find(exchange_type_m,this->exchange_type));
 	return SUCCESS;
 }

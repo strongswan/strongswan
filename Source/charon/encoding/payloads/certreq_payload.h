@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _CERTREQ_PAYLOAD_H_
-#define _CERTREQ_PAYLOAD_H_
+#ifndef CERTREQ_PAYLOAD_H_
+#define CERTREQ_PAYLOAD_H_
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
@@ -122,4 +122,4 @@ struct certreq_payload_t {
 certreq_payload_t *certreq_payload_create();
 
 
-#endif //_CERTREQ_PAYLOAD_H_
+#endif /* CERTREQ_PAYLOAD_H_ */

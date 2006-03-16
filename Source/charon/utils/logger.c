@@ -266,9 +266,9 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 /**
  * Implementation of logger_t.log_chunk.
  */
-static void log_chunk(logger_t *this, logger_level_t loglevel, char *label, chunk_t *chunk)
+static void log_chunk(logger_t *this, logger_level_t loglevel, char *label, chunk_t chunk)
 {
-	this->log_bytes(this, loglevel, label, chunk->ptr, chunk->len);
+	this->log_bytes(this, loglevel, label, chunk.ptr, chunk.len);
 }
 
 /**

@@ -70,6 +70,8 @@ struct private_identification_t {
 	id_type_t type;
 };
 
+static private_identification_t *identification_create();
+
 /**
  * Implementation of identification_t.get_encoding.
  */
@@ -114,6 +116,21 @@ static bool equals (private_identification_t *this,private_identification_t *oth
 }
 
 /**
+ * Implementation of identification_t.clone.
+ */
+static identification_t *clone(private_identification_t *this)
+{
+	private_identification_t *clone = identification_create();
+	
+	clone->type = this->type;
+	clone->encoded = allocator_clone_chunk(this->encoded);
+	clone->string = allocator_alloc(strlen(this->string) + 1);
+	strcpy(clone->string, this->string);
+	
+	return &clone->public;
+}
+
+/**
  * Implementation of identification_t.destroy.
  */
 static void destroy(private_identification_t *this)
@@ -136,6 +153,7 @@ static private_identification_t *identification_create()
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
 	this->public.get_string = (char* (*) (identification_t*))get_string;
+	this->public.clone = (identification_t* (*) (identification_t*))clone;
 	this->public.destroy = (void (*) (identification_t*))destroy;
 	
 	this->string = NULL;
@@ -143,6 +161,7 @@ static private_identification_t *identification_create()
 	
 	return this;
 }
+
 
 /*
  * Described in header.

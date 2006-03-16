@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _RESEND_MESSAGE_JOB_H_
-#define _RESEND_MESSAGE_JOB_H_
+#ifndef RESEND_MESSAGE_JOB_H_
+#define RESEND_MESSAGE_JOB_H_
 
 #include <types.h>
 #include <queues/jobs/job.h>
@@ -102,4 +102,4 @@ struct retransmit_request_job_t {
  */
 retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa_id);
 
-#endif //_RESEND_MESSAGE_JOB_H_
+#endif /* RESEND_MESSAGE_JOB_H_ */

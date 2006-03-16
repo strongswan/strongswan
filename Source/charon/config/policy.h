@@ -1,7 +1,7 @@
 /**
- * @file sa_config.h
+ * @file policy.h
  * 
- * @brief Interface of sa_config_t.
+ * @brief Interface of policy_t.
  *  
  */
 
@@ -20,38 +20,30 @@
  * for more details.
  */
 
-#ifndef _SA_CONFIG_H_
-#define _SA_CONFIG_H_
+#ifndef POLICY_H_
+#define POLICY_H_
 
 #include <types.h>
 #include <utils/identification.h>
-#include <encoding/payloads/auth_payload.h>
-#include <encoding/payloads/transform_substructure.h>
-#include <network/host.h>
-#include <transforms/crypters/crypter.h>
-#include <transforms/signers/signer.h>
-#include <transforms/diffie_hellman.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
+#include <encoding/payloads/auth_payload.h>
 
 
-
-typedef struct sa_config_t sa_config_t;
+typedef struct policy_t policy_t;
 
 /**
- * @brief Stores configuration of an initialized connection.
+ * @brief A policy_t defines the policies to apply to CHILD_SAs.
  * 
- * During the IKE_AUTH phase, we have enough data to specify a 
- * configuration. 
- * 
- * @warning This config is not thread save.
+ * The given two IDs identify a policy. These rules define how
+ * child SAs may be set up and which traffic may be IPsec'ed.
  * 
  * @b Constructors:
- *   - sa_config_create()
+ *   - policy_create()
  * 
  * @ingroup config
  */
-struct sa_config_t {
+struct policy_t {
 	
 	/**
 	 * @brief Get own id to use for identification.
@@ -61,7 +53,7 @@ struct sa_config_t {
 	 * @param this			calling object
 	 * @return				own id
 	 */
-	identification_t *(*get_my_id) (sa_config_t *this);
+	identification_t *(*get_my_id) (policy_t *this);
 	
 	/**
 	 * @brief Get id of communication partner.
@@ -71,22 +63,7 @@ struct sa_config_t {
 	 * @param this			calling object
 	 * @return				other id
 	 */
-	identification_t *(*get_other_id) (sa_config_t *this);
-	
-	/**
-	 * @brief Get authentication method to use for IKE_AUTH.
-	 * 
-	 * @param this			calling object
-	 * @return				authentication methood
-	 */
-	auth_method_t (*get_auth_method) (sa_config_t *this);
-	
-	/**
-	 * @brief Get lifetime of IKE_SA in milliseconds.
-	 * 
-	 * @return 				IKE_SA lifetime in milliseconds.
-	 */
-	u_int32_t (*get_ike_sa_lifetime) (sa_config_t *this);
+	identification_t *(*get_other_id) (policy_t *this);
 	
 	/**
 	 * @brief Get configured traffic selectors for our site.
@@ -97,7 +74,7 @@ struct sa_config_t {
 	 * @param this						calling object
 	 * @return							list with traffic selectors
 	 */
-	linked_list_t *(*get_my_traffic_selectors) (sa_config_t *this);
+	linked_list_t *(*get_my_traffic_selectors) (policy_t *this);
 	
 	/**
 	 * @brief Get configured traffic selectors for others site.
@@ -108,7 +85,7 @@ struct sa_config_t {
 	 * @param this						calling object
 	 * @return							list with traffic selectors
 	 */
-	linked_list_t *(*get_other_traffic_selectors) (sa_config_t *this);
+	linked_list_t *(*get_other_traffic_selectors) (policy_t *this);
 	
 	/**
 	 * @brief Select traffic selectors from a supplied list for local site.
@@ -119,7 +96,7 @@ struct sa_config_t {
 	 * @param supplied					linked list with traffic selectors
 	 * @return							list containing the selected traffic selectors
 	 */
-	linked_list_t *(*select_my_traffic_selectors) (sa_config_t *this, linked_list_t *supplied);
+	linked_list_t *(*select_my_traffic_selectors) (policy_t *this, linked_list_t *supplied);
 		
 	/**
 	 * @brief Select traffic selectors from a supplied list for remote site.
@@ -130,21 +107,21 @@ struct sa_config_t {
 	 * @param supplied					linked list with traffic selectors
 	 * @return							list containing the selected traffic selectors
 	 */
-	linked_list_t *(*select_other_traffic_selectors) (sa_config_t *this, linked_list_t *supplied);
+	linked_list_t *(*select_other_traffic_selectors) (policy_t *this, linked_list_t *supplied);
 	
 	/**
 	 * @brief Get the list of internally stored proposals.
 	 * 
-	 * Rembember: sa_config_t does store proposals for AH/ESP, 
-	 * IKE proposals are in the init_config_t
+	 * Rembember: policy_t does store proposals for AH/ESP, 
+	 * IKE proposals are in the connection_t
 	 * 
-	 * @warning List and Items are still owned by sa_config and MUST NOT
+	 * @warning List and Items are still owned by policy and MUST NOT
 	 *			be manipulated or freed!
 	 * 
 	 * @param this					calling object
 	 * @return						lists with proposals
 	 */
-	linked_list_t *(*get_proposals) (sa_config_t *this);
+	linked_list_t *(*get_proposals) (policy_t *this);
 	
 	/**
 	 * @brief Select a proposal from a supplied list.
@@ -153,31 +130,31 @@ struct sa_config_t {
 	 * @param proposals				list from from wich proposals are selected
 	 * @return						selected proposal, or NULL if nothing matches
 	 */
-	proposal_t *(*select_proposal) (sa_config_t *this, linked_list_t *proposals);
+	proposal_t *(*select_proposal) (policy_t *this, linked_list_t *proposals);
 	
 	/**
 	 * @brief Add a traffic selector to the list for local site.
 	 * 
-	 * After add, proposal is owned by sa_config.
+	 * After add, proposal is owned by policy.
 	 * 
 	 * @warning Do not add while other threads are reading.
 	 * 
 	 * @param this					calling object
 	 * @param traffic_selector		traffic_selector to add
 	 */
-	void (*add_my_traffic_selector) (sa_config_t *this, traffic_selector_t *traffic_selector);
+	void (*add_my_traffic_selector) (policy_t *this, traffic_selector_t *traffic_selector);
 	
 	/**
 	 * @brief Add a traffic selector to the list for remote site.
 	 * 
-	 * After add, proposal is owned by sa_config.
+	 * After add, proposal is owned by policy.
 	 * 
 	 * @warning Do not add while other threads are reading.
 	 * 
 	 * @param this					calling object
 	 * @param traffic_selector		traffic_selector to add
 	 */
-	void (*add_other_traffic_selector) (sa_config_t *this, traffic_selector_t *traffic_selector);
+	void (*add_other_traffic_selector) (policy_t *this, traffic_selector_t *traffic_selector);
 	
 	/**
 	 * @brief Add a proposal to the list. 
@@ -190,30 +167,25 @@ struct sa_config_t {
 	 * @param this					calling object
 	 * @param proposal				proposal to add
 	 */
-	void (*add_proposal) (sa_config_t *this, proposal_t *proposal);
+	void (*add_proposal) (policy_t *this, proposal_t *proposal);
 	
 	/**
 	 * @brief Destroys the config object
 	 * 
 	 * @param this				calling object
 	 */
-	void (*destroy) (sa_config_t *this);
+	void (*destroy) (policy_t *this);
 };
 
 /**
  * @brief Create a configuration object for IKE_AUTH and later.
  * 
- * @param my_id_type		type of my identification
- * @param my_id 			my identification as string
- * @param other_id_type		type of other identification
- * @param other_id 			other identification as string
- * @param auth_method		Method of authentication
- * @param ike_sa_lifetime	lifetime of this IKE_SA in milliseconds. IKE_SA will be deleted
- * 							after this lifetime!
- * @return 					sa_config_t object
+ * @param my_id 			identification_t for ourselves
+ * @param other_id 			identification_t for the remote guy
+ * @return 					policy_t object
  * 
  * @ingroup config
  */
-sa_config_t *sa_config_create(id_type_t my_id_type, char *my_id, id_type_t other_id_type, char *other_id, auth_method_t auth_method, u_int32_t ike_sa_lifetime);
+policy_t *policy_create(identification_t *my_id, identification_t *other_id);
 
-#endif //_SA_CONFIG_H_
+#endif /* POLICY_H_ */

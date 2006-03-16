@@ -21,11 +21,12 @@
  */
 
 
-#ifndef _AUTH_PAYLOAD_H_
-#define _AUTH_PAYLOAD_H_
+#ifndef AUTH_PAYLOAD_H_
+#define AUTH_PAYLOAD_H_
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
+#include <config/connection.h>
 
 /**
  * Length of a auth payload without the auth data in bytes.
@@ -33,40 +34,6 @@
  * @ingroup payloads
  */
 #define AUTH_PAYLOAD_HEADER_LENGTH 8
-
-
-typedef enum auth_method_t auth_method_t;
-
-/**
- * AUTH Method of a AUTH payload.
- * 
- * @ingroup payloads
- */
-enum auth_method_t {
-	/**
-	 * Computed as specified in section 2.15 of RFC using 
-	 * an RSA private key over a PKCS#1 padded hash.
-	 */
-	RSA_DIGITAL_SIGNATURE = 1,
-	
-	/* Computed as specified in
-     * section 2.15 of RFC using the shared key associated with the identity
-     * in the ID payload and the negotiated prf function
-     */
-	SHARED_KEY_MESSAGE_INTEGRITY_CODE = 2,
-	
-	/* Computed as specified in section
-	* 2.15 of RFC using a DSS private key over a SHA-1 hash.
-     */
-    DSS_DIGITAL_SIGNATURE = 3,
-};
-
-/**
- * string mappings for auth method.
- * 
- * @ingroup payloads
- */
-extern mapping_t auth_method_m[];
 
 
 typedef struct auth_payload_t auth_payload_t;
@@ -152,4 +119,4 @@ struct auth_payload_t {
 auth_payload_t *auth_payload_create();
 
 
-#endif //_AUTH_PAYLOAD_H_
+#endif /* AUTH_PAYLOAD_H_ */

@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _DELETE_PAYLOAD_H_
-#define _DELETE_PAYLOAD_H_
+#ifndef DELETE_PAYLOAD_H_
+#define DELETE_PAYLOAD_H_
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
@@ -153,4 +153,4 @@ struct delete_payload_t {
 delete_payload_t *delete_payload_create();
 
 
-#endif //_DELETE_PAYLOAD_H_
+#endif /* DELETE_PAYLOAD_H_ */

@@ -340,13 +340,10 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 	status_t status;
 	
 	
-	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Create and checking out IKE SA");
-	
+	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Creating and checking out IKE SA");
 	charon->ike_sa_manager->create_and_checkout(charon->ike_sa_manager, &ike_sa);
 	
-	this->worker_logger->log(this->worker_logger, CONTROL, "Initiating connection \"%s\"", 
-							 job->get_configuration_name(job));
-	status = ike_sa->initialize_connection(ike_sa, job->get_configuration_name(job));
+	status = ike_sa->initiate_connection(ike_sa, job->get_connection(job));
 	if (status != SUCCESS)
 	{
 		this->worker_logger->log(this->worker_logger, ERROR, "Initiation returned %s, going to delete IKE_SA.", 

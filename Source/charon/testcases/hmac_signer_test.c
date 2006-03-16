@@ -96,8 +96,8 @@ void test_hmac_md5_signer(protected_tester_t *tester)
 		signer->allocate_signature(signer, data[i], &signature[i]);
 		tester->assert_true(tester, signature[i].len == 12, "chunk len");
 		tester->assert_true(tester, (memcmp(signature[i].ptr, reference[i].ptr, 12) == 0), "hmac value");
-		logger->log_chunk(logger,RAW,"expected signature:",&reference[i]);
-		logger->log_chunk(logger,RAW,"signature:",&signature[i]);
+		logger->log_chunk(logger,RAW,"expected signature:",reference[i]);
+		logger->log_chunk(logger,RAW,"signature:",signature[i]);
 		allocator_free(signature[i].ptr);
 		valid = signer->verify_signature(signer, data[i],reference[i]);
 		tester->assert_true(tester, (valid == TRUE), "Signature valid check");
@@ -194,8 +194,8 @@ void test_hmac_sha1_signer(protected_tester_t *tester)
 		signer->allocate_signature(signer, data[i], &signature[i]);
 		tester->assert_true(tester, signature[i].len == 12, "chunk len");
 		tester->assert_true(tester, (memcmp(signature[i].ptr, reference[i].ptr, 12) == 0), "hmac value");
-		logger->log_chunk(logger,RAW,"expected signature:",&reference[i]);
-		logger->log_chunk(logger,RAW,"signature:",&signature[i]);
+		logger->log_chunk(logger,RAW,"expected signature:",reference[i]);
+		logger->log_chunk(logger,RAW,"signature:",signature[i]);
 		allocator_free(signature[i].ptr);
 		valid = signer->verify_signature(signer, data[i],reference[i]);
 		tester->assert_true(tester, (valid == TRUE), "Signature valid check");

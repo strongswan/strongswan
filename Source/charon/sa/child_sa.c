@@ -27,14 +27,14 @@
 #include <daemon.h>
 
 
-typedef struct policy_t policy_t;
+typedef struct sa_policy_t sa_policy_t;
 
 /**
  * Struct used to store information for a policy. This
  * is needed since we must provide all this information
  * for deleting a policy...
  */
-struct policy_t {
+struct sa_policy_t {
 	
 	/**
 	 * Network on local side
@@ -264,7 +264,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 				key_size = crypter->get_key_size(crypter);
 				crypter->destroy(crypter);
 				prf_plus->allocate_bytes(prf_plus, key_size, &enc_key);
-				this->logger->log_chunk(this->logger, PRIVATE, "key:", &enc_key);
+				this->logger->log_chunk(this->logger, PRIVATE, "key:", enc_key);
 			}
 			else
 			{
@@ -285,7 +285,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 				key_size = signer->get_key_size(signer);
 				signer->destroy(signer);
 				prf_plus->allocate_bytes(prf_plus, key_size, &int_key);
-				this->logger->log_chunk(this->logger, PRIVATE, "key:", &int_key);
+				this->logger->log_chunk(this->logger, PRIVATE, "key:", int_key);
 			}
 			else
 			{
@@ -386,7 +386,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			int family;
 			chunk_t from_addr;
 			u_int16_t from_port, to_port;
-			policy_t *policy;
+			sa_policy_t *policy;
 			status_t status;
 			
 			other_iter->current(other_iter, (void**)&other_ts);
@@ -396,7 +396,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			{
 				continue;
 			}
-			policy = allocator_alloc_thing(policy_t);
+			policy = allocator_alloc_thing(sa_policy_t);
 			policy->upper_proto = my_ts->get_protocol(my_ts);
 		
 			/* calculate net and ports for local side */
@@ -468,7 +468,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 static void destroy(private_child_sa_t *this)
 {
 	/* delete all policys in the kernel */
-	policy_t *policy;
+	sa_policy_t *policy;
 	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
 	{
 		charon->kernel_interface->del_policy(charon->kernel_interface,

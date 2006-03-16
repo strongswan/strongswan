@@ -1,7 +1,7 @@
 /**
- * @file sa_config_test.h
+ * @file policy_test.h
  *
- * @brief Tests for the sa_config_t class.
+ * @brief Tests for the policy_t class.
  *
  */
 
@@ -21,21 +21,21 @@
  */
 
 
-#ifndef _SA_CONFIG_TEST_H_
-#define _SA_CONFIG_TEST_H_
+#ifndef SA_CONFIG_TEST_H_
+#define SA_CONFIG_TEST_H_
 
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the sa_config_t functionality.
+ * @brief Test function used to test the policy_t functionality.
  *
  * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_sa_config(protected_tester_t *tester);
+void test_policy(protected_tester_t *tester);
 
-#endif //_SA_CONFIG_TEST_H_
+#endif /* SA_CONFIG_TEST_H_ */
 
 
 

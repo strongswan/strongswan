@@ -21,8 +21,8 @@
  */
 
 
-#ifndef _IKE_SA_ID_H_
-#define _IKE_SA_ID_H_
+#ifndef IKE_SA_ID_H_
+#define IKE_SA_ID_H_
 
 #include <types.h>
 
@@ -143,4 +143,4 @@ struct ike_sa_id_t {
  */
 ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi, bool is_initiaor);
 
-#endif /*_IKE_SA_ID_H_*/
+#endif /*IKE_SA_ID_H_*/

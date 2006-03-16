@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _PROPOSAL_H_
-#define _PROPOSAL_H_
+#ifndef PROPOSAL_H_
+#define PROPOSAL_H_
 
 #include <types.h>
 #include <utils/identification.h>
@@ -258,4 +258,4 @@ struct proposal_t {
  */
 proposal_t *proposal_create(u_int8_t number);
 
-#endif //_PROPOSAL_H_
+#endif /* PROPOSAL_H_ */

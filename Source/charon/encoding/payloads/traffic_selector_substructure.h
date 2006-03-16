@@ -168,4 +168,4 @@ traffic_selector_substructure_t *traffic_selector_substructure_create();
 traffic_selector_substructure_t *traffic_selector_substructure_create_from_traffic_selector(traffic_selector_t *traffic_selector);
 
 
-#endif //TRAFFIC_SELECTOR_SUBSTRUCTURE_H_
+#endif /* /TRAFFIC_SELECTOR_SUBSTRUCTURE_H_ */

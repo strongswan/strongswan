@@ -230,20 +230,20 @@ status_t sender(private_socket_t *this, packet_t *packet)
 {
 	ssize_t bytes_sent;
 	chunk_t data;
-	host_t *source, *dest;
+	host_t *src, *dst;
 	
-	source = packet->get_source(packet);
-	dest = packet->get_destination(packet);
+	src = packet->get_source(packet);
+	dst = packet->get_destination(packet);
 	data = packet->get_data(packet);
 
-	this->logger->log(this->logger, CONTROL, "sending packet to %s:%d",
-						dest->get_address(dest),
-						dest->get_port(dest));
+	this->logger->log(this->logger, CONTROL, "sending packet: from %s:%d to %s:%d",
+					  src->get_address(src), src->get_port(src),
+					  dst->get_address(dst), dst->get_port(dst));
 	
 	/* send data */
 	/* TODO: should we send via the interface we received the packet? */
 	bytes_sent = sendto(this->master_fd, data.ptr, data.len, 0, 
-						dest->get_sockaddr(dest), *(dest->get_sockaddr_len(dest)));
+						dst->get_sockaddr(dst), *(dst->get_sockaddr_len(dst)));
 
 	if (bytes_sent != data.len)
 	{
@@ -285,7 +285,7 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 	addr.sin_port = htons(port);
 	if (bind(this->master_fd,(struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
-		this->logger->log(this->logger, ERROR, "unable to bind master socket!");
+		this->logger->log(this->logger, ERROR, "unable to bind master socket: %s!", strerror(errno));
 		return FAILED;
 	}
 

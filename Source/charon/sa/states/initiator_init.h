@@ -46,15 +46,15 @@ struct initiator_init_t {
 	state_t state_interface;
 	
 	/**
-	 * Initiate a new connection with given configuration name.
+	 * Initiate a new connection with given connection_t object.
 	 * 
 	 * @param this 			calling object
-	 * @param name 			name of the configuration
+	 * @param connection	connection to initiate
 	 * @return				
 	 * 						- SUCCESS
-	 * 						- DELETE_ME if something failed (see log for error)
+	 * 						- DELETE_ME if something failed
 	 */
-	status_t (*initiate_connection) (initiator_init_t *this, char *name);
+	status_t (*initiate_connection) (initiator_init_t *this, connection_t *connection);
 	
 	/**
 	 * Retry to initiate a new connection with a specific dh_group_priority.

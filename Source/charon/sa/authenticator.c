@@ -28,12 +28,7 @@
 /**
  * Key pad for the AUTH method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
  */
-#define IKE_V2_KEY_PAD "Key Pad for IKEv2"
-
-/**
- * Length of key pad in bytes.
- */
-#define IKE_V2_KEY_PAD_LEN strlen(IKE_V2_KEY_PAD)
+#define IKEV2_KEY_PAD "Key Pad for IKEv2"
 
 
 typedef struct private_authenticator_t private_authenticator_t;
@@ -49,7 +44,7 @@ struct private_authenticator_t {
 	authenticator_t public;
 
 	/**
-	 * Assigned IKE_SA. Needed to get objects of type prf_t, sa_config_t and logger_t.
+	 * Assigned IKE_SA. Needed to get objects of type prf_t and logger_t.
 	 */
 	protected_ike_sa_t *ike_sa;
 	
@@ -99,12 +94,12 @@ struct private_authenticator_t {
 	 * 							AUTH method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
 	 * 							Memory gets allocated and has to get destroyed by caller.
 	 */
-	chunk_t (*allocate_auth_data_with_preshared_secret) (private_authenticator_t *this,
-															chunk_t last_message,
-															chunk_t nonce,
-															id_payload_t *id_payload,
-															bool initiator,
-															chunk_t preshared_secret);
+	chunk_t (*build_preshared_secret_signature) (private_authenticator_t *this,
+												 chunk_t last_message,
+												 chunk_t nonce,
+												 id_payload_t *id_payload,
+												 bool initiator,
+												 chunk_t preshared_secret);
 };
 
 /**
@@ -157,37 +152,34 @@ static chunk_t allocate_octets(private_authenticator_t *this,
 	current_pos += other_nonce.len;
 	prf->get_bytes(prf, id_with_header_chunk, current_pos);
 	
-	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Octets (Mesage + Nonce + prf(Sk_px,Idx)",&octets);
+	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Octets (Mesage + Nonce + prf(Sk_px,Idx)",octets);
 	return octets;
 }
 
 /**
- * Implementation of private_authenticator_t.allocate_auth_data_with_preshared_secret.
+ * Implementation of private_authenticator_t.build_preshared_secret_signature.
  */
-static chunk_t allocate_auth_data_with_preshared_secret (private_authenticator_t *this,
+static chunk_t build_preshared_secret_signature(private_authenticator_t *this,
 															chunk_t last_message,
 															chunk_t nonce,
 															id_payload_t *id_payload,
 															bool initiator,
 															chunk_t preshared_secret)
 {
-	chunk_t key_pad = {ptr: IKE_V2_KEY_PAD, len:IKE_V2_KEY_PAD_LEN};
+	chunk_t key_pad = {ptr: IKEV2_KEY_PAD, len:strlen(IKEV2_KEY_PAD)};
 	u_int8_t key_buffer[this->prf->get_block_size(this->prf)];
 	chunk_t key = {ptr: key_buffer, len: sizeof(key_buffer)};
 	chunk_t auth_data;
 
 	chunk_t octets = this->allocate_octets(this,last_message,nonce,id_payload,initiator);
 	
-	/*
-	 * AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) 
-	 */
-
-	this->prf->set_key(this->prf,preshared_secret);
-	this->prf->get_bytes(this->prf,key_pad,key_buffer);
-	this->prf->set_key(this->prf,key);
-	this->prf->allocate_bytes(this->prf,octets,&auth_data);
+	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
+	this->prf->set_key(this->prf, preshared_secret);
+	this->prf->get_bytes(this->prf, key_pad, key_buffer);
+	this->prf->set_key(this->prf, key);
+	this->prf->allocate_bytes(this->prf, octets, &auth_data);
 	allocator_free_chunk(&octets);
-	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Authenticated data",&auth_data);
+	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Authenticated data",auth_data);
 
 	return auth_data;
 }
@@ -211,28 +203,28 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			chunk_t preshared_secret;
 			status_t status;
 						
-			status = charon->configuration->get_shared_secret(charon->configuration,
-																		other_id,
-																		&preshared_secret);
+			status = charon->credentials->get_shared_secret(charon->credentials,
+															other_id,
+															&preshared_secret);
 			other_id->destroy(other_id);
 			if (status != SUCCESS)
 			{
 				return status;	
 			}
 			
-			chunk_t my_auth_data = this->allocate_auth_data_with_preshared_secret(this,
-																					last_received_packet,
-																					my_nonce,
-																					other_id_payload,
-																					initiator,
-																					preshared_secret);
+			chunk_t my_auth_data = this->build_preshared_secret_signature(this,
+																				  last_received_packet,
+																				  my_nonce,
+																				  other_id_payload,
+																				  initiator,
+																				  preshared_secret);
 			
 			if (auth_data.len != my_auth_data.len)
 			{
 				allocator_free_chunk(&my_auth_data);
 				return FAILED;
 			}
-			if (memcmp(auth_data.ptr,my_auth_data.ptr,my_auth_data.len) == 0)
+			if (memcmp(auth_data.ptr,my_auth_data.ptr, my_auth_data.len) == 0)
 			{
 				status = SUCCESS;
 			}
@@ -252,16 +244,16 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			
 			auth_data = auth_payload->get_data(auth_payload);
 			
-			status = charon->configuration->get_rsa_public_key(charon->configuration,
-																		other_id,
-																		&public_key);
+			status = charon->credentials->get_rsa_public_key(charon->credentials,
+															other_id,
+															&public_key);
 			other_id->destroy(other_id);
 			if (status != SUCCESS)
 			{
 				return status;	
 			}
 			
-			octets = this->allocate_octets(this,last_received_packet,my_nonce,other_id_payload,initiator);
+			octets = this->allocate_octets(this,last_received_packet, my_nonce,other_id_payload, initiator);
 			
 			status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
 			
@@ -285,19 +277,20 @@ static status_t compute_auth_data (private_authenticator_t *this,
 									id_payload_t *my_id_payload,
 									bool initiator)
 {
-	sa_config_t *sa_config = this->ike_sa->get_sa_config(this->ike_sa);
+	connection_t *connection = this->ike_sa->get_connection(this->ike_sa);
 	
-	switch(sa_config->get_auth_method(sa_config))
+	switch(connection->get_auth_method(connection))
 	{
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
 		{
-			identification_t *my_id =my_id_payload->get_identification(my_id_payload);
+			identification_t *my_id = my_id_payload->get_identification(my_id_payload);
 			chunk_t preshared_secret;
-			status_t status;		
+			status_t status;
+			chunk_t auth_data;
 
-			status = charon->configuration->get_shared_secret(charon->configuration,
-																		my_id,
-																		&preshared_secret);
+			status = charon->credentials->get_shared_secret(charon->credentials,
+															my_id,
+															&preshared_secret);
 
 			my_id->destroy(my_id);
 			if (status != SUCCESS)
@@ -305,16 +298,11 @@ static status_t compute_auth_data (private_authenticator_t *this,
 				return status;	
 			}
 			
-			chunk_t auth_data = this->allocate_auth_data_with_preshared_secret(this,
-																				last_sent_packet,
-																				other_nonce,
-																				my_id_payload,
-																				initiator,
-																				preshared_secret);
-
+			auth_data = this->build_preshared_secret_signature(this, last_sent_packet, other_nonce,
+															   my_id_payload, initiator, preshared_secret);
 			*auth_payload = auth_payload_create();
-			(*auth_payload)->set_auth_method((*auth_payload),SHARED_KEY_MESSAGE_INTEGRITY_CODE);
-			(*auth_payload)->set_data((*auth_payload),auth_data);
+			(*auth_payload)->set_auth_method(*auth_payload, SHARED_KEY_MESSAGE_INTEGRITY_CODE);
+			(*auth_payload)->set_data(*auth_payload, auth_data);
 
 			allocator_free_chunk(&auth_data);
 			return SUCCESS;
@@ -326,9 +314,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			status_t status;
 			chunk_t octets, auth_data;
 			
-			status = charon->configuration->get_rsa_private_key(charon->configuration,
-																		my_id,
-																		&private_key);
+			status = charon->credentials->get_rsa_private_key(charon->credentials, my_id, &private_key);
 			my_id->destroy(my_id);
 			if (status != SUCCESS)
 			{
@@ -345,8 +331,8 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			}
 			
 			*auth_payload = auth_payload_create();
-			(*auth_payload)->set_auth_method((*auth_payload), RSA_DIGITAL_SIGNATURE);
-			(*auth_payload)->set_data((*auth_payload),auth_data);
+			(*auth_payload)->set_auth_method(*auth_payload, RSA_DIGITAL_SIGNATURE);
+			(*auth_payload)->set_data(*auth_payload, auth_data);
 
 			allocator_free_chunk(&auth_data);
 			return SUCCESS;
@@ -380,7 +366,7 @@ authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa)
 	
 	/* private functions */
 	this->allocate_octets = allocate_octets;
-	this->allocate_auth_data_with_preshared_secret = allocate_auth_data_with_preshared_secret;
+	this->build_preshared_secret_signature = build_preshared_secret_signature;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

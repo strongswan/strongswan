@@ -71,6 +71,7 @@ static void event_queue_insert_thread(event_queue_test_t * testinfos)
 	timeval_t time;
 	job_t * job;
 	int i,j;
+	connection_t *connection;
 
 	gettimeofday(&current_time,NULL);
 	for (i = 0; i < testinfos->insert_times_count;i++)
@@ -78,7 +79,7 @@ static void event_queue_insert_thread(event_queue_test_t * testinfos)
 
 		for (j = 0; j < testinfos->entries_per_time;j++)
 		{
-			job = (job_t *) initiate_ike_sa_job_create("testvalue");
+			job = (job_t *) initiate_ike_sa_job_create(connection);
 			time.tv_usec = 0;
 			time.tv_sec = current_time.tv_sec + i;
 

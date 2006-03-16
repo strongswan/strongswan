@@ -35,7 +35,7 @@
  */
 void test_child_sa(protected_tester_t *tester);
 
-#endif //CHILD_SA_TEST_H_
+#endif /* CHILD_SA_TEST_H_ */
 
 
 

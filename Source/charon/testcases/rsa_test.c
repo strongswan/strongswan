@@ -71,8 +71,8 @@ void test_rsa(protected_tester_t *tester)
 	public_key->get_key(public_key, &public_key_chunk);
 	private_key->get_key(private_key, &private_key_chunk);
 	
-	logger->log_chunk(logger, RAW, "Public Key", &public_key_chunk);
-	logger->log_chunk(logger, RAW, "Private Key", &private_key_chunk);
+	logger->log_chunk(logger, RAW, "Public Key", public_key_chunk);
+	logger->log_chunk(logger, RAW, "Private Key", private_key_chunk);
 	
 	
 	allocator_free(public_key_chunk.ptr);

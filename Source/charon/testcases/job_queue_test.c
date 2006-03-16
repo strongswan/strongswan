@@ -62,7 +62,7 @@ static void test_job_queue_sender(job_queue_test_t * testinfo)
 	int i;
 	for (i = 0; i < testinfo->insert_item_count; i++)
 	{
-		job_t *job = (job_t *) initiate_ike_sa_job_create("test");
+		job_t *job = (job_t *) initiate_ike_sa_job_create(NULL);
 		testinfo->job_queue->add(testinfo->job_queue,job);
 	}
 }

@@ -21,8 +21,8 @@
  */
 
 
-#ifndef _IDENTIFICATION_H_
-#define _IDENTIFICATION_H_
+#ifndef IDENTIFICATION_H_
+#define IDENTIFICATION_H_
 
 
 #include "types.h"
@@ -120,7 +120,7 @@ struct identification_t {
 	 * 
 	 * @warning Result points to internal data, do NOT free!
 	 * 
-	 * @param this		the identification_t_object
+	 * @param this		the identification_t object
 	 * @return 			a chunk containing the encoded bytes
 	 */
 	chunk_t (*get_encoding) (identification_t *this);
@@ -128,7 +128,7 @@ struct identification_t {
 	/**
 	 * @brief Get the type of this identification.
 	 * 
-	 * @param this		the identification_t_object
+	 * @param this		the identification_t object
 	 * @return 			id_type_t
 	 */
 	id_type_t (*get_type) (identification_t *this);
@@ -138,7 +138,7 @@ struct identification_t {
 	 * 
 	 * @warning Result points to internal data, do NOT free!
 	 * 
-	 * @param this		the identification_t_object
+	 * @param this		the identification_t object
 	 * @return 			string
 	 */
 	char *(*get_string) (identification_t *this);
@@ -146,11 +146,19 @@ struct identification_t {
 	/**
 	 * @brief Check if two identification_t objects are equal.
 	 * 
-	 * @param this		the identification_t_object
-	 * @param other		other identification_t_object
+	 * @param this		the identification_t object
+	 * @param other		other identification_t object
 	 * @return 			TRUE if the IDs are equal
 	 */
 	bool (*equals) (identification_t *this,identification_t *other);
+	
+	/**
+	 * @brief Clone a identification_t instance.
+	 * 
+	 * @param this		the identification_t object to clone
+	 * @return 			clone of this
+	 */
+	identification_t *(*clone) (identification_t *this);
 
 	/**
 	 * @brief Destroys a identification_t object.
@@ -186,4 +194,4 @@ identification_t * identification_create_from_string(id_type_t type, char *strin
 identification_t * identification_create_from_encoding(id_type_t type, chunk_t encoded);
 
 
-#endif //_IDENTIFICATION_H_
+#endif /* IDENTIFICATION_H_ */

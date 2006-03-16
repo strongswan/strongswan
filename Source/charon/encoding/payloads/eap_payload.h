@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _EAP_PAYLOAD_H_
-#define _EAP_PAYLOAD_H_
+#ifndef EAP_PAYLOAD_H_
+#define EAP_PAYLOAD_H_
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
@@ -102,4 +102,4 @@ struct eap_payload_t {
 eap_payload_t *eap_payload_create();
 
 
-#endif //_EAP_PAYLOAD_H_
+#endif /* EAP_PAYLOAD_H_ */

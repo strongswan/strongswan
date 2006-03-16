@@ -1,7 +1,7 @@
 /**
- * @file init_config_test.h
+ * @file connection_test.h
  *
- * @brief Tests for the init_config_t class.
+ * @brief Tests for the connection_t class.
  *
  */
 
@@ -21,18 +21,18 @@
  */
 
 
-#ifndef _INIT_CONFIG_TEST_H_
-#define _INIT_CONFIG_TEST_H_
+#ifndef INIT_CONFIG_TEST_H_
+#define INIT_CONFIG_TEST_H_
 
 #include <utils/tester.h>
 
 /**
- * @brief Test function used to test the init_config_t functionality.
+ * @brief Test function used to test the connection_t functionality.
  *
  * @param tester associated protected_tester_t object
  * 
  * @ingroup testcases
  */
-void test_init_config(protected_tester_t *tester);
+void test_connection(protected_tester_t *tester);
 
-#endif //_INIT_CONFIG_TEST_H_
+#endif /* INIT_CONFIG_TEST_H_ */

@@ -540,7 +540,7 @@ static void generate_from_chunk (private_generator_t *this,u_int32_t offset)
 	/* position in buffer */
 	chunk_t *attribute_value = (chunk_t *)(this->data_struct + offset);
 	
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "   =>", attribute_value);
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, "   =>", *attribute_value);
 	
 	/* use write_bytes_to_buffer function to do the job */
 	this->write_bytes_to_buffer(this,attribute_value->ptr,attribute_value->len);
@@ -633,7 +633,7 @@ static void write_to_chunk (private_generator_t *this,chunk_t *data)
 	memcpy(data->ptr,this->buffer,data_length);
 	data->len = data_length;
 	
-	this->logger->log_chunk(this->logger, RAW|LEVEL3, "generated data of this generator", data);
+	this->logger->log_chunk(this->logger, RAW|LEVEL3, "generated data of this generator", *data);
 }
 
 /**

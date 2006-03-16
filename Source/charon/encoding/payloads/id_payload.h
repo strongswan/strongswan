@@ -21,8 +21,8 @@
  */
 
 
-#ifndef _ID_PAYLOAD_H_
-#define _ID_PAYLOAD_H_
+#ifndef ID_PAYLOAD_H_
+#define ID_PAYLOAD_H_
 
 #include <types.h>
 #include <utils/identification.h>
@@ -169,4 +169,4 @@ id_payload_t *id_payload_create_from_identification(bool is_initiator,identifica
 
 
 
-#endif //_ID_PAYLOAD_H_
+#endif /* ID_PAYLOAD_H_ */

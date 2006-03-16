@@ -218,7 +218,6 @@ static u_int8_t get_netmask(private_traffic_selector_t *this)
 			u_int32_t from, to, bit;
 			from = htonl(this->from_addr_ipv4);
 			to = htonl(this->to_addr_ipv4);
-			printf("%x - %x\n", from, to);
 			for (bit = 0; bit < 32; bit++)
 			{				
 				if ((1<<bit & from) != (1<<bit & to))

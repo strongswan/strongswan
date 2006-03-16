@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef _AUTHENTICATOR_H_
-#define _AUTHENTICATOR_H_
+#ifndef AUTHENTICATOR_H_
+#define AUTHENTICATOR_H_
 
 #include <types.h>
 #include <sa/ike_sa.h>
@@ -122,7 +122,7 @@ struct authenticator_t {
  * 
  * @warning: The following functions of the assigned protected_ike_sa_t object 
  * must return a valid value:
- *  - protected_ike_sa_t.get_sa_config
+ *  - protected_ike_sa_t.get_policy
  *  - protected_ike_sa_t.get_prf
  *  - protected_ike_sa_t.get_logger
  * This preconditions are not given in IKE_SA states INITIATOR_INIT or RESPONDER_INIT!
@@ -135,4 +135,4 @@ struct authenticator_t {
  */
 authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa);
 
-#endif //_AUTHENTICATOR_H_
+#endif /* AUTHENTICATOR_H_ */
