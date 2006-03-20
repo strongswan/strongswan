@@ -169,12 +169,27 @@ struct traffic_selector_t {
 	 * 
 	 * Returns the number of bits associated to the subnet.
 	 * (As the "24" in "192.168.0.0/24"). This is approximated
-	 * if the address range is not a complete subnet!
+	 * if the address range is not a complete subnet! Since Linux
+	 * does not support full IP address ranges (yet), we can't do this
+	 * (much) better.
 	 * 
 	 * @param this		calling obect
 	 * @return			netmask as "bits for subnet"
 	 */
 	u_int8_t (*get_netmask) (traffic_selector_t *this);
+		
+	/**
+	 * @brief Update the address of a traffic selector.
+	 * 
+	 * Update the address range of a traffic selector, 
+	 * if the current address is 0.0.0.0. The new address range
+	 * starts from the supplied address and also ends there 
+	 * (which means it is a one-host-address-range ;-).
+	 * 
+	 * @param this		calling obect
+	 * @param host		host_t specifying the address range
+	 */
+	void (*update_address_range) (traffic_selector_t *this, host_t* host);
 	
 	/**
 	 * @brief Destroys the ts object
@@ -222,6 +237,22 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
  */
 traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from_address, int16_t from_port, chunk_t to_address, u_int16_t to_port);
 
+/**
+ * @brief Create a new traffic selector defining a whole subnet.
+ * 
+ * In most cases, definition of a traffic selector for full subnets
+ * is sufficient. This constructor creates a traffic selector for
+ * all protocols, all ports and the address range specified by the
+ * subnet.
+ * 
+ * @param net			subnet to use
+ * @param netbits		size of the subnet, as used in e.g. 192.168.0.0/24 notation
+ * @return
+ * 						- traffic_selector_t object
+ * 						- NULL if address family of net not supported
+ *
+ * @ingroup config
+ */
 traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits);
 
 #endif /* TRAFFIC_SELECTOR_H_ */

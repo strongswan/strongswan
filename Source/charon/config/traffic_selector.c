@@ -225,12 +225,30 @@ static u_int8_t get_netmask(private_traffic_selector_t *this)
 					return bit;
 				}
 			}
-			return 0;
+			return 32;
 		}
 		case TS_IPV6_ADDR_RANGE:
 		default:
 		{
 			return 0;
+		}
+	}
+}
+
+/**
+ * Implements traffic_selector_t.update_address_range.
+ */
+static void update_address_range(private_traffic_selector_t *this, host_t *host)
+{
+	if (host->get_family(host) == AF_INET &&
+		this->type == TS_IPV4_ADDR_RANGE)
+	{
+		if (this->from_addr_ipv4 == 0)
+		{
+			chunk_t from = host->get_address_as_chunk(host);
+			this->from_addr_ipv4 = ntohl(*((u_int32_t*)from.ptr));
+			this->to_addr_ipv4 = this->from_addr_ipv4;
+			allocator_free_chunk(&from);
 		}
 	}
 }
@@ -315,7 +333,15 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t ne
 			this->type = TS_IPV4_ADDR_RANGE;
 			from = net->get_address_as_chunk(net);
 			this->from_addr_ipv4 = ntohl(*((u_int32_t*)from.ptr));
-			this->to_addr_ipv4 = this->from_addr_ipv4 | ((1 << (32 - netbits)) - 1);
+			if (this->from_addr_ipv4 == 0)
+			{
+				/* use /32 for 0.0.0.0 */
+				this->to_addr_ipv4 = 0xFFFFFF;
+			}
+			else
+			{
+				this->to_addr_ipv4 = this->from_addr_ipv4 | ((1 << (32 - netbits)) - 1);
+			}
 			allocator_free_chunk(&from);
 			break;	
 		}
@@ -386,6 +412,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;	
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
 	this->public.get_netmask = (u_int8_t(*)(traffic_selector_t*))get_netmask;
+	this->public.update_address_range = (void(*)(traffic_selector_t*,host_t*))update_address_range;
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
 	

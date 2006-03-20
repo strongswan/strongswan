@@ -33,7 +33,7 @@ typedef struct connection_store_t connection_store_t;
  * @brief The interface for a store of connection_t's.
  * 
  * @b Constructors:
- * 	- connection_store_create()
+ * 	- stroke_create()
  * 
  * @ingroup config
  */
@@ -42,6 +42,8 @@ struct connection_store_t {
 	/**
 	 * @brief Returns a connection definition identified by two IDs.
 	 * 
+	 * This call is usefull to get a connection identified by addresses.
+	 * It may be used after kernel request for traffic protection.
 	 * The returned connection gets created/cloned and therefore must
 	 * be destroyed after usage.
 	 * 
@@ -57,6 +59,8 @@ struct connection_store_t {
 	/**
 	 * @brief Returns a connection definition identified by two hosts.
 	 * 
+	 * This call is useful to get a connection which is identified by IDs
+	 * rather than addresses, e.g. for connection setup on user request.
 	 * The returned connection gets created/cloned and therefore must
 	 * be destroyed after usage.
 	 * 

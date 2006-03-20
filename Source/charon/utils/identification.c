@@ -116,6 +116,28 @@ static bool equals (private_identification_t *this,private_identification_t *oth
 }
 
 /**
+ * Implementation of identification_t.belongs_to.
+ */
+static bool belongs_to(private_identification_t *this, private_identification_t *other)
+{
+	if (this->public.equals(&this->public, &other->public))
+	{
+		return TRUE;
+	}
+	
+	if (this->type == other->type && this->type == ID_IPV4_ADDR)
+	{
+		/* is this %any (0.0.0.0)?*/
+		if (*((u_int32_t*)this->encoded.ptr) == 0)
+		{
+			return TRUE;
+		}
+		/* TODO: Do we need subnet support? */
+	}
+	return FALSE;
+}
+
+/**
  * Implementation of identification_t.clone.
  */
 static identification_t *clone(private_identification_t *this)
@@ -150,6 +172,7 @@ static private_identification_t *identification_create()
 	private_identification_t *this = allocator_alloc_thing(private_identification_t);
 	
 	this->public.equals = (bool (*) (identification_t*,identification_t*))equals;
+	this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to;
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
 	this->public.get_string = (char* (*) (identification_t*))get_string;

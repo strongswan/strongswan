@@ -30,10 +30,10 @@
 typedef struct policy_store_t policy_store_t;
 
 /**
- * @brief The interface for a store of polcy_t's.
+ * @brief The interface for a store of policy_t's.
  * 
  * @b Constructors:
- * - policy_store_create()
+ * - stroke_create()
  * 
  * @ingroup config
  */
@@ -41,6 +41,9 @@ struct policy_store_t {
 
 	/**
 	 * @brief Returns a policy identified by two IDs.
+	 * 
+	 * The returned policy gets created/cloned and therefore must be
+	 * destroyed by the caller.
 	 * 
 	 * @param this		calling object
 	 * @param my_id		own ID of the policy

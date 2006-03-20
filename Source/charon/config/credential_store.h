@@ -34,7 +34,7 @@ typedef struct credential_store_t credential_store_t;
  * @brief The interface for a credential_store backend.
  * 
  * @b Constructors:
- * 	- credential_store_create()
+ * 	- stroke_create()
  * 
  * @ingroup config
  */
@@ -43,8 +43,7 @@ struct credential_store_t {
 	/**
 	 * @brief Returns the preshared secret of a specific ID.
 	 * 
-	 * The returned preshared secret MUST NOT be destroyed cause it's managed by 
-	 * this credential_store_t object.
+	 * The returned chunk must be destroyed by the caller after usage.
 	 * 
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the secret.
@@ -59,8 +58,7 @@ struct credential_store_t {
 	/**
 	 * @brief Returns the RSA public key of a specific ID.
 	 * 
-	 * The returned rsa_public_key_t object MUST NOT be destroyed cause it's managed by 
-	 * this credential_store_t object.
+	 * The returned rsa_public_key_t must be destroyed by the caller after usage.
 	 * 
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the key.
@@ -75,8 +73,7 @@ struct credential_store_t {
 	/**
 	 * @brief Returns the RSA private key of a specific ID.
 	 * 
-	 * The returned rsa_private_key_t object MUST NOT be destroyed cause it's managed by 
-	 * this credential_store_t object.
+	 * The returned rsa_private_key_t must be destroyed by the caller after usage.
 	 * 
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the key

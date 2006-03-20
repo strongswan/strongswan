@@ -66,7 +66,7 @@
 /**
  * Output of log, use NULL for syslog
  */
-#define LOG_OUTPUT stdout
+#define LOG_OUTPUT NULL
 
 /**
  * @brief Default loglevel for every logger context.

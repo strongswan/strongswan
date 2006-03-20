@@ -352,16 +352,17 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	}
 	
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_auth_reply->get_message_id(ike_auth_reply));
+	
 	/* create new state */
+	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+	this->destroy_after_state_change(this);
+	
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	my_host = connection->get_my_host(connection);
 	other_host = connection->get_other_host(connection);
-	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s, authenticated peer with %s", 
-						my_host->get_address(my_host), other_host->get_address(other_host),
-						mapping_find(auth_method_m, auth_payload->get_auth_method(auth_payload)));
-						
-	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
-	this->destroy_after_state_change(this);
+	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s", 
+					  my_host->get_address(my_host), other_host->get_address(other_host));
+	
 	return SUCCESS;
 }
 

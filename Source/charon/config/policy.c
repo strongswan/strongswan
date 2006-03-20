@@ -87,6 +87,57 @@ static identification_t *get_other_id(private_policy_t *this)
 }
 
 /**
+ * Implementation of policy_t.update_my_id
+ */
+static void update_my_id(private_policy_t *this, identification_t *my_id)
+{
+	this->my_id->destroy(this->my_id);
+	this->my_id = my_id;
+}
+
+/**
+ * Implementation of policy_t.update_other_id
+ */
+static void update_other_id(private_policy_t *this, identification_t *other_id)
+{
+	this->other_id->destroy(this->other_id);
+	this->other_id = other_id;
+}
+
+/** 
+ * Helper function which does the work for policy_t.update_my_ts and update_other_ts
+ */
+static void update_ts(linked_list_t* list, host_t *new_host)
+{
+	traffic_selector_t *ts;
+	iterator_t *iterator;
+	 
+	iterator = list->create_iterator(list, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&ts);
+		ts->update_address_range(ts, new_host);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * Implementation of policy_t.update_my_id
+ */
+static void update_my_ts(private_policy_t *this, host_t *my_host)
+{
+	update_ts(this->my_ts, my_host);
+}
+
+/**
+ * Implementation of policy_t.update_other_ts
+ */
+static void update_other_ts(private_policy_t *this, host_t *my_host)
+{
+	update_ts(this->other_ts, my_host);
+}
+
+/**
  * Implementation of policy_t.get_my_traffic_selectors
  */
 static linked_list_t *get_my_traffic_selectors(private_policy_t *this)
@@ -263,6 +314,50 @@ static status_t destroy(private_policy_t *this)
 	return SUCCESS;
 }
 
+/**
+ * Implements policy_t.clone.
+ */
+static policy_t *clone(private_policy_t *this)
+{
+	private_policy_t *clone = (private_policy_t*)policy_create(this->my_id->clone(this->my_id), 
+															   this->other_id->clone(this->other_id));
+	iterator_t *iterator;
+	proposal_t *proposal;
+	traffic_selector_t *ts;
+	
+	/* clone all proposals */
+	iterator = this->proposals->create_iterator(this->proposals, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&proposal);
+		proposal = proposal->clone(proposal);
+		clone->proposals->insert_last(clone->proposals, (void*)proposal);
+	}
+	iterator->destroy(iterator);
+	
+	/* clone all local traffic selectors */
+	iterator = this->my_ts->create_iterator(this->my_ts, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&ts);
+		ts = ts->clone(ts);
+		clone->my_ts->insert_last(clone->my_ts, (void*)ts);
+	}
+	iterator->destroy(iterator);
+	
+	/* clone all remote traffic selectors */
+	iterator = this->other_ts->create_iterator(this->other_ts, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&ts);
+		ts = ts->clone(ts);
+		clone->other_ts->insert_last(clone->other_ts, (void*)ts);
+	}
+	iterator->destroy(iterator);
+	
+	return &clone->public;
+}
+
 /*
  * Described in header-file
  */
@@ -273,6 +368,10 @@ policy_t *policy_create(identification_t *my_id, identification_t *other_id)
 	/* public functions */
 	this->public.get_my_id = (identification_t*(*)(policy_t*))get_my_id;
 	this->public.get_other_id = (identification_t*(*)(policy_t*))get_other_id;
+	this->public.update_my_id = (void(*)(policy_t*,identification_t*))update_my_id;
+	this->public.update_other_id = (void(*)(policy_t*,identification_t*))update_other_id;
+	this->public.update_my_ts = (void(*)(policy_t*,host_t*))update_my_ts;
+	this->public.update_other_ts = (void(*)(policy_t*,host_t*))update_other_ts;
 	this->public.get_my_traffic_selectors = (linked_list_t*(*)(policy_t*))get_my_traffic_selectors;
 	this->public.select_my_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*))select_my_traffic_selectors;
 	this->public.get_other_traffic_selectors = (linked_list_t*(*)(policy_t*))get_other_traffic_selectors;
@@ -282,6 +381,7 @@ policy_t *policy_create(identification_t *my_id, identification_t *other_id)
 	this->public.add_my_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_my_traffic_selector;
 	this->public.add_other_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_other_traffic_selector;
 	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
+	this->public.clone = (policy_t*(*)(policy_t*))clone;
 	this->public.destroy = (void(*)(policy_t*))destroy;
 	
 	/* apply init values */

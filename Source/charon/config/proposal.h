@@ -237,6 +237,14 @@ struct proposal_t {
 	void (*set_spi) (proposal_t *this, protocol_id_t proto, u_int64_t spi);
 	
 	/**
+	 * @brief Clone a proposal.
+	 * 
+	 * @param this				proposal to clone
+	 * @return					clone of it
+	 */
+	proposal_t *(*clone) (proposal_t *this);
+	
+	/**
 	 * @brief Destroys the proposal object.
 	 * 
 	 * @param this				calling object

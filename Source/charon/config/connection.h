@@ -123,7 +123,7 @@ struct connection_t {
 	/**
 	 * @brief Update address of my host.
 	 * 
-	 * It may be necessary to uptdate this address, as it 
+	 * It may be necessary to uptdate own address, as it 
 	 * is set to the default route (0.0.0.0) in some cases.
 	 * Old host is destroyed, new one NOT cloned.
 	 * 
@@ -131,6 +131,18 @@ struct connection_t {
 	 * @param my_host	new host to set as my_host
 	 */
 	void (*update_my_host) (connection_t *this, host_t *my_host);
+
+	/**
+	 * @brief Update address of remote host.
+	 * 
+	 * It may be necessary to uptdate remote address, as a
+	 * connection may define %any (0.0.0.0) or a subnet.
+	 * Old host is destroyed, new one NOT cloned.
+	 * 
+	 * @param this		calling object
+	 * @param my_host	new host to set as other_host
+	 */
+	void (*update_other_host) (connection_t *this, host_t *other_host);
 	
 	/**
 	 * @brief Returns a list of all supported proposals.
@@ -191,6 +203,14 @@ struct connection_t {
 	 * @return						TRUE if group acceptable
 	 */
 	bool (*check_dh_group) (connection_t *this, diffie_hellman_group_t dh_group);
+	
+	/**
+	 * @brief Clone a connection_t object.
+	 * 
+	 * @param this	connection to clone
+	 * @return		clone of it
+	 */
+	connection_t *(*clone) (connection_t *this);
 	
 	/**
 	 * @brief Destroys a connection_t object.

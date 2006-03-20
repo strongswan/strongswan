@@ -215,6 +215,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	iterator_t *payloads;
 	host_t *me;
 	connection_t *connection;
+	policy_t *policy;
 
 	message_t *request;
 	status_t status;
@@ -344,6 +345,8 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	me = ike_sa_init_reply->get_destination(ike_sa_init_reply);
 	connection->update_my_host(connection, me->clone(me));
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	policy->update_my_ts(policy, me);
 	
 	/*  build empty message */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &request);

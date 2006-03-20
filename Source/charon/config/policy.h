@@ -64,6 +64,56 @@ struct policy_t {
 	 * @return				other id
 	 */
 	identification_t *(*get_other_id) (policy_t *this);
+
+	/**
+	 * @brief Update own ID.
+	 * 
+	 * It may be necessary to uptdate own ID, as it 
+	 * is set to %any or to e.g. *@strongswan.org in 
+	 * some cases.
+	 * Old ID is destroyed, new one NOT cloned.
+	 * 
+	 * @param this		calling object
+	 * @param my_id		new ID to set as my_id
+	 */
+	void (*update_my_id) (policy_t *this, identification_t *my_id);
+
+	/**
+	 * @brief Update others ID.
+	 * 
+	 * It may be necessary to uptdate others ID, as it 
+	 * is set to %any or to e.g. *@strongswan.org in 
+	 * some cases.
+	 * Old ID is destroyed, new one NOT cloned.
+	 * 
+	 * @param this		calling object
+	 * @param other_id	new ID to set as other_id
+	 */
+	void (*update_other_id) (policy_t *this, identification_t *other_id);
+
+	/**
+	 * @brief Update own address in traffic selectors.
+	 * 
+	 * Update own 0.0.0.0 address in traffic selectors
+	 * with supplied one. The size of the subnet will be
+	 * set to /32.
+	 * 
+	 * @param this		calling object
+	 * @param my_host	new address to set in traffic selectors
+	 */
+	void (*update_my_ts) (policy_t *this, host_t *my_host);
+
+	/**
+	 * @brief Update others address in traffic selectors.
+	 * 
+	 * Update remote 0.0.0.0 address in traffic selectors
+	 * with supplied one. The size of the subnet will be
+	 * set to /32.
+	 * 
+	 * @param this		calling object
+	 * @param other_host	new address to set in traffic selectors
+	 */
+	void (*update_other_ts) (policy_t *this, host_t *other_host);
 	
 	/**
 	 * @brief Get configured traffic selectors for our site.
@@ -170,7 +220,15 @@ struct policy_t {
 	void (*add_proposal) (policy_t *this, proposal_t *proposal);
 	
 	/**
-	 * @brief Destroys the config object
+	 * @brief Clone a policy.
+	 * 
+	 * @param this				policy to clone
+	 * @return					clone of it
+	 */
+	policy_t *(*clone) (policy_t *this);
+	
+	/**
+	 * @brief Destroys the policy object
 	 * 
 	 * @param this				calling object
 	 */

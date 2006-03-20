@@ -153,6 +153,20 @@ struct identification_t {
 	bool (*equals) (identification_t *this,identification_t *other);
 	
 	/**
+	 * @brief Check if an ID belongs to a wildcard ID.
+	 * 
+	 * An identification_t may contain wildcards, such as
+	 * *@strongswan.org. This call checks if a given ID
+	 * (e.g. tester@strongswan.org) belongs to a such wildcard
+	 * ID. Returns TRUE if IDs are identical.
+	 * 
+	 * @param this		the ID containing a wildcard
+	 * @param other		the ID without wildcard
+	 * @return 			TRUE if other belongs to this
+	 */
+	bool (*belongs_to) (identification_t *this, identification_t *other);
+	
+	/**
 	 * @brief Clone a identification_t instance.
 	 * 
 	 * @param this		the identification_t object to clone

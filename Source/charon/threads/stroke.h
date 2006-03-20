@@ -60,20 +60,10 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 			struct {
-				union {
-					u_int16_t family;
-					struct sockaddr saddr;
-					struct sockaddr_in v4;
-					struct sockaddr_in6 v6;
-				} address;
 				char *id;
-				union {
-					u_int16_t family;
-					struct sockaddr saddr;
-					struct sockaddr_in v4;
-					struct sockaddr_in6 v6;
-				} subnet;
-				u_int8_t subnet_netbits;
+				char *address;
+				char *subnet;
+				u_int8_t subnet_mask;
 			} me, other;
 		} add_conn;
 	};
@@ -99,10 +89,12 @@ typedef struct stroke_t stroke_t;
  * stroke_t.interface_xy to access the specific interface! You have
  * been warned...
  * 
+ * @todo Add clean thread cancellation
+ * 
  * @b Constructors:
  * - stroke_create()
  * 
- * @ingroup config
+ * @ingroup threads
  */
 struct stroke_t {
 
@@ -135,7 +127,7 @@ struct stroke_t {
  * 
  * @return stroke_t object
  * 
- * @ingroup config
+ * @ingroup threads
  */
 stroke_t *stroke_create();
 

@@ -114,6 +114,15 @@ static void update_my_host(private_connection_t *this, host_t *my_host)
 }
 
 /**
+ * Implementation of connection_t.update_other_host.
+ */
+static void update_other_host(private_connection_t *this, host_t *other_host)
+{
+	this->other_host->destroy(this->other_host);
+	this->other_host = other_host;
+}
+
+/**
  * Implementation of connection_t.get_other_host.
  */
 static host_t * get_other_host (private_connection_t *this)
@@ -238,6 +247,33 @@ static bool check_dh_group(private_connection_t *this, diffie_hellman_group_t dh
 }
 
 /**
+ * Implementation of connection_t.clone.
+ */
+static connection_t *clone(private_connection_t *this)
+{
+	iterator_t *iterator;
+	proposal_t *proposal;
+	private_connection_t *clone = (private_connection_t*)connection_create(
+			this->my_host->clone(this->my_host),
+			this->other_host->clone(this->other_host),
+			this->my_id->clone(this->my_id),
+			this->other_id->clone(this->other_id),
+			this->auth_method);
+	
+	/* clone all proposals */
+	iterator = this->proposals->create_iterator(this->proposals, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&proposal);
+		proposal = proposal->clone(proposal);
+		clone->proposals->insert_last(clone->proposals, (void*)proposal);
+	}
+	iterator->destroy(iterator);
+	
+	return &clone->public;
+}
+
+/**
  * Implementation of connection_t.destroy.
  */
 static void destroy (private_connection_t *this)
@@ -269,6 +305,7 @@ connection_t * connection_create(host_t *my_host, host_t *other_host, identifica
 	this->public.get_other_id = (identification_t*(*)(connection_t*))get_other_id;
 	this->public.get_my_host = (host_t*(*)(connection_t*))get_my_host;
 	this->public.update_my_host = (void(*)(connection_t*,host_t*))update_my_host;
+	this->public.update_other_host = (void(*)(connection_t*,host_t*))update_other_host;
 	this->public.get_other_host = (host_t*(*)(connection_t*))get_other_host;
 	this->public.get_proposals = (linked_list_t*(*)(connection_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(connection_t*,linked_list_t*))select_proposal;
@@ -276,6 +313,7 @@ connection_t * connection_create(host_t *my_host, host_t *other_host, identifica
 	this->public.get_auth_method = (auth_method_t(*)(connection_t*)) get_auth_method;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(connection_t*)) get_dh_group;
 	this->public.check_dh_group = (bool(*)(connection_t*,diffie_hellman_group_t)) check_dh_group;
+	this->public.clone = (connection_t*(*)(connection_t*))clone;
 	this->public.destroy = (void(*)(connection_t*))destroy;
 	
 	/* private variables */

@@ -210,8 +210,8 @@ static status_t process_message (private_ike_sa_t *this, message_t *message)
 	is_request = message->get_request(message);
 	exchange_type = message->get_exchange_type(message);
 
-	this->logger->log(this->logger, CONTROL, "Process %s message of exchange type %s",
-					  (is_request) ? "REQUEST" : "RESPONSE",mapping_find(exchange_type_m,exchange_type));
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Process %s of exchange type %s",
+					  (is_request) ? "request" : "response",mapping_find(exchange_type_m,exchange_type));
 
 	message_id = message->get_message_id(message);
 
@@ -966,53 +966,61 @@ static void destroy (private_ike_sa_t *this)
 
 	/* inform other peer of delete */
 	send_delete_ike_sa_request(this);
-	
 	while (this->child_sas->remove_last(this->child_sas, (void**)&child_sa) == SUCCESS)
 	{
 		child_sa->destroy(child_sa);
 	}
 	this->child_sas->destroy(this->child_sas);
-	if (this->crypter_initiator != NULL)
+	
+	if (this->crypter_initiator)
 	{
 		this->crypter_initiator->destroy(this->crypter_initiator);
 	}
-	if (this->crypter_responder != NULL)
+	if (this->crypter_responder)
 	{
 		this->crypter_responder->destroy(this->crypter_responder);
 	}
-	if (this->signer_initiator != NULL)
+	if (this->signer_initiator)
 	{
 		this->signer_initiator->destroy(this->signer_initiator);
 	}
-	if (this->signer_responder != NULL)
+	if (this->signer_responder)
 	{
 		this->signer_responder->destroy(this->signer_responder);
 	}
-	if (this->prf != NULL)
+	if (this->prf)
 	{
 		this->prf->destroy(this->prf);
 	}
-	if (this->child_prf != NULL)
+	if (this->child_prf)
 	{
 		this->child_prf->destroy(this->child_prf);
 	}
-	if (this->prf_auth_i != NULL)
+	if (this->prf_auth_i)
 	{
 		this->prf_auth_i->destroy(this->prf_auth_i);
 	}
-	if (this->prf_auth_r != NULL)
+	if (this->prf_auth_r)
 	{
 		this->prf_auth_r->destroy(this->prf_auth_r);
 	}
-	this->ike_sa_id->destroy(this->ike_sa_id);
-	if (this->last_requested_message != NULL)
+	if (this->connection)
+	{
+		this->connection->destroy(this->connection);
+	}
+	if (this->policy)
+	{
+		this->policy->destroy(this->policy);
+	}
+	if (this->last_requested_message)
 	{
 		this->last_requested_message->destroy(this->last_requested_message);
 	}
-	if (this->last_responded_message != NULL)
+	if (this->last_responded_message)
 	{
 		this->last_responded_message->destroy(this->last_responded_message);
 	}
+	this->ike_sa_id->destroy(this->ike_sa_id);
 	this->randomizer->destroy(this->randomizer);
 	this->current_state->destroy(this->current_state);
 	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);

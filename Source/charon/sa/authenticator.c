@@ -206,9 +206,9 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			status = charon->credentials->get_shared_secret(charon->credentials,
 															other_id,
 															&preshared_secret);
-			other_id->destroy(other_id);
 			if (status != SUCCESS)
 			{
+				other_id->destroy(other_id);
 				return status;	
 			}
 			
@@ -218,20 +218,26 @@ static status_t verify_auth_data (private_authenticator_t *this,
 																				  other_id_payload,
 																				  initiator,
 																				  preshared_secret);
+			allocator_free_chunk(&preshared_secret);
 			
 			if (auth_data.len != my_auth_data.len)
 			{
 				allocator_free_chunk(&my_auth_data);
-				return FAILED;
+				status = FAILED;
 			}
-			if (memcmp(auth_data.ptr,my_auth_data.ptr, my_auth_data.len) == 0)
+			else if (memcmp(auth_data.ptr,my_auth_data.ptr, my_auth_data.len) == 0)
 			{
+				this->logger->log(this->logger, CONTROL, "Authentication of %s with preshared secret successful",
+										other_id->get_string(other_id));
 				status = SUCCESS;
 			}
 			else
 			{
+				this->logger->log(this->logger, CONTROL, "Authentication of %s with preshared secret failed",
+										other_id->get_string(other_id));
 				status = FAILED;
 			}
+			other_id->destroy(other_id);
 			allocator_free_chunk(&my_auth_data);
 			return status;
 		}
@@ -247,16 +253,28 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			status = charon->credentials->get_rsa_public_key(charon->credentials,
 															other_id,
 															&public_key);
-			other_id->destroy(other_id);
 			if (status != SUCCESS)
 			{
+				other_id->destroy(other_id);
 				return status;	
 			}
 			
 			octets = this->allocate_octets(this,last_received_packet, my_nonce,other_id_payload, initiator);
 			
 			status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
+			if (status == SUCCESS)
+			{
+				this->logger->log(this->logger, CONTROL, "Authentication of %s with RSA successful",
+										other_id->get_string(other_id));
+			}
+			else
+			{
+				this->logger->log(this->logger, CONTROL, "Authentication of %s with RSA failed",
+										other_id->get_string(other_id));
+			}
 			
+			public_key->destroy(public_key);
+			other_id->destroy(other_id);
 			allocator_free_chunk(&octets);
 			return status;
 		}
@@ -300,6 +318,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			
 			auth_data = this->build_preshared_secret_signature(this, last_sent_packet, other_nonce,
 															   my_id_payload, initiator, preshared_secret);
+			allocator_free_chunk(&preshared_secret);
 			*auth_payload = auth_payload_create();
 			(*auth_payload)->set_auth_method(*auth_payload, SHARED_KEY_MESSAGE_INTEGRITY_CODE);
 			(*auth_payload)->set_data(*auth_payload, auth_data);
@@ -334,6 +353,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			(*auth_payload)->set_auth_method(*auth_payload, RSA_DIGITAL_SIGNATURE);
 			(*auth_payload)->set_data(*auth_payload, auth_data);
 
+			private_key->destroy(private_key);
 			allocator_free_chunk(&auth_data);
 			return SUCCESS;
 		}

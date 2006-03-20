@@ -178,6 +178,7 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 	if ((this->level & loglevel) == loglevel)
 	{
 		char buffer[MAX_LOG];
+		char ascii_buffer[17];
 		char *format;
 		char *buffer_pos;
 		char *bytes_pos, *bytes_roof;
@@ -207,6 +208,7 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 		bytes_pos = bytes;
 		bytes_roof = bytes + len;
 		buffer_pos = buffer;
+		memset(ascii_buffer, 0, 17);
 
 		for (i = 1; bytes_pos < bytes_roof; i++)
 		{
@@ -219,28 +221,32 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 				buffer_pos = buffer;
 				if (this->output == NULL)
 				{
-					syslog(LOG_INFO, "[=>] [%5d ] %s", line_start, buffer);	
+					syslog(LOG_INFO, "[=>] [%5d ] %s %s", line_start, buffer, ascii_buffer);	
 				}
 				else
 				{
-					fprintf(this->output, "[=>] [%5d ] %s\n", line_start, buffer);
+					fprintf(this->output, "[=>] [%5d ] %s %s\n", line_start, buffer, ascii_buffer);
 				}
+				memset(ascii_buffer, 0, 16);
 				line_start += 16;
-			}
-			else if ((i % 8) == 0)
-			{
-				*buffer_pos++ = ' ';
-				*buffer_pos++ = ' ';
-				*buffer_pos++ = ' ';
 			}
 			else if ((i % 4) == 0)
 			{
 				*buffer_pos++ = ' ';
-				*buffer_pos++ = ' ';
+		//		*buffer_pos++ = ' ';
 			}
 			else 
 			{	
 				*buffer_pos++ = ' ';
+			}
+			
+			if (*bytes_pos > 31 && *bytes_pos < 127)
+			{
+				ascii_buffer[(i % 16)] = *bytes_pos;
+			}
+			else
+			{
+				ascii_buffer[(i % 16)] = '*';
 			}
 			
 			bytes_pos++;
@@ -252,11 +258,11 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 			buffer_pos = buffer;
 			if (this->output == NULL)
 			{		
-				syslog(LOG_INFO, "[=>] [%5d ] %s", line_start, buffer);
+				syslog(LOG_INFO, "[=>] [%5d ] %s %16s", line_start, buffer, ascii_buffer);
 			}
 			else
 			{
-				fprintf(this->output, "[=>] [%5d ] %s\n", line_start, buffer);
+				fprintf(this->output, "[=>] [%5d ] %s %16s\n", line_start, buffer, ascii_buffer);
 			}
 		}
 		pthread_mutex_unlock(&mutex);

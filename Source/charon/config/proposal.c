@@ -533,6 +533,50 @@ static u_int64_t get_spi(private_proposal_t *this, protocol_id_t proto)
 }
 
 /**
+ * Clone a algorithm list
+ */
+static void clone_algo_list(linked_list_t *list, linked_list_t *clone_list)
+{
+	algorithm_t *algo, *clone_algo;
+	iterator_t *iterator = list->create_iterator(list, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&algo);
+		clone_algo = allocator_alloc_thing(algorithm_t);
+		memcpy(clone_algo, algo, sizeof(algorithm_t));
+		clone_list->insert_last(clone_list, (void*)clone_algo);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * Implements proposal_t.clone
+ */
+static proposal_t *clone(private_proposal_t *this)
+{
+	private_proposal_t *clone = (private_proposal_t*)proposal_create(this->number);
+	
+	iterator_t *iterator = this->protocol_proposals->create_iterator(this->protocol_proposals, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		protocol_proposal_t *proto_prop, *clone_proto_prop;
+		iterator->current(iterator, (void**)&proto_prop);
+		
+		clone_proto_prop = get_protocol_proposal(clone, proto_prop->protocol, TRUE);
+		memcpy(clone_proto_prop->spi.ptr, proto_prop->spi.ptr, clone_proto_prop->spi.len);
+		
+		clone_algo_list(proto_prop->encryption_algos, clone_proto_prop->encryption_algos);
+		clone_algo_list(proto_prop->integrity_algos, clone_proto_prop->integrity_algos);
+		clone_algo_list(proto_prop->prf_algos, clone_proto_prop->prf_algos);
+		clone_algo_list(proto_prop->dh_groups, clone_proto_prop->dh_groups);
+		clone_algo_list(proto_prop->esns, clone_proto_prop->esns);
+	}
+	iterator->destroy(iterator);
+	
+	return &clone->public;
+}
+
+/**
  * Frees all list items and destroys the list
  */
 static void free_algo_list(linked_list_t *list)
@@ -586,6 +630,7 @@ proposal_t *proposal_create(u_int8_t number)
 	this->public.get_protocols = (void(*)(proposal_t *this, protocol_id_t ids[2]))get_protocols;
 	this->public.set_spi = (void(*)(proposal_t*,protocol_id_t,u_int64_t spi))set_spi;
 	this->public.get_spi = (u_int64_t(*)(proposal_t*,protocol_id_t))get_spi;
+	this->public.clone = (proposal_t*(*)(proposal_t*))clone;
 	this->public.destroy = (void(*)(proposal_t*))destroy;
 	
 	/* init private members*/

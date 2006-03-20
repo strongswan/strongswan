@@ -247,10 +247,9 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 				sa_request = (sa_payload_t*)payload;
 				break;
 			}
-
 			case TRAFFIC_SELECTOR_INITIATOR:
 			{
-				tsi_request = (ts_payload_t*)payload;				
+				tsi_request = (ts_payload_t*)payload;
 				break;	
 			}
 			case TRAFFIC_SELECTOR_RESPONDER:
@@ -360,16 +359,15 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	}
 	
-	/* create new state */
+	/* create new state */						
+	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+	this->destroy_after_state_change(this);
+	
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	my_host = connection->get_my_host(connection);
 	other_host = connection->get_other_host(connection);
-	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s, authenticated peer with %s", 
-						my_host->get_address(my_host), other_host->get_address(other_host),
-						mapping_find(auth_method_m, auth_request->get_auth_method(auth_request)));
-						
-	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
-	this->destroy_after_state_change(this);
+	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s", 
+					  my_host->get_address(my_host), other_host->get_address(other_host));
 
 	return SUCCESS;
 }
@@ -396,13 +394,13 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	{	
 		if (my_id)
 		{
-			this->logger->log(this->logger, AUDIT, "IKE_AUTH request uses IDs %s to %s, which we have no policy for", 
+			this->logger->log(this->logger, AUDIT, "We don't have a policy for IDs %s - %s. Deleting IKE_SA", 
 							other_id->get_string(other_id),my_id->get_string(my_id));
 			my_id->destroy(my_id);	
 		}
 		else
 		{
-			this->logger->log(this->logger, AUDIT, "IKE_AUTH request uses ID %s, which we have no policy for", 
+			this->logger->log(this->logger, AUDIT, "We don't have a policy for remote ID %s. Deleting IKE_SA", 
 							other_id->get_string(other_id));
 		}
 		other_id->destroy(other_id);
@@ -416,7 +414,10 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	other_id->destroy(other_id);
 	
 	/* get my id, if not requested */
-	my_id = this->policy->get_my_id(this->policy);	
+	my_id = this->policy->get_my_id(this->policy);
+	
+	/* update others traffic selectors with actually used address */
+	this->policy->update_other_ts(this->policy, response->get_destination(response));
 	
 	/* set policy in ike_sa for other states */
 	this->ike_sa->set_policy(this->ike_sa, this->policy);
