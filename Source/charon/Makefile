@@ -12,7 +12,17 @@
 # for more details.
 #
 
+FREESWANSRCDIR=../..
+# include strongswan Makefile, if charon sits in its tree
+ifeq ($(shell ls $(FREESWANSRCDIR)/Makefile.inc 2>&1), ../../Makefile.inc)
+  include ${FREESWANSRCDIR}/Makefile.inc
+endif
+
 BUILD_DIR= ./bin/
+
+BINNAMECHARON= $(BUILD_DIR)charon
+BINNAMESTROKE= $(BUILD_DIR)stroke
+BINNAMETEST= $(BUILD_DIR)run_tests
 
 MAIN_DIR= ./
 
@@ -23,9 +33,14 @@ CFLAGS+= -I. -Wall -g -DLEAK_DETECTIVE
 # objects is extended by each included Makefile
 OBJS= 
 
-all : 			build_dir $(BUILD_DIR)charon $(BUILD_DIR)run_tests
+all : 			build_dir $(BINNAMECHARON) $(BINNAMESTROKE)
 
-doxygen : 
+programs :		all
+
+test :			build_dir $(BINNAMETEST)
+			$(BINNAMETEST)
+
+apidoc : 
 			doxygen Doxyfile
 
 
@@ -40,28 +55,45 @@ include $(MAIN_DIR)utils/Makefile.utils
 
 
 build_dir:
-							mkdir -p $(BUILD_DIR)
+				mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)daemon.o :		daemon.c daemon.h 
-							$(CC) $(CFLAGS) -c -o $@ $<
+				$(CC) $(CFLAGS) -c -o $@ $<
 
 OBJS+=$(BUILD_DIR)types.o
 $(BUILD_DIR)types.o :		types.c types.h
-							$(CC) $(CFLAGS) -c -o $@ $<
+				$(CC) $(CFLAGS) -c -o $@ $<
 
 OBJS+=$(BUILD_DIR)definitions.o
 $(BUILD_DIR)definitions.o :	definitions.c definitions.h
-							$(CC) $(CFLAGS) -c -o $@ $<
+				$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)charon :		$(OBJS) $(BUILD_DIR)daemon.o
-							$(CC) $(LDFLAGS) $(OBJS) $(BUILD_DIR)daemon.o -o $@
+$(BINNAMECHARON) :		$(OBJS) $(BUILD_DIR)daemon.o
+				$(CC) $(LDFLAGS) $(OBJS) $(BUILD_DIR)daemon.o -o $@
+
+$(BINNAMESTROKE) :		stroke.c
+				$(CC) $(LDFLAGS) $(CFLAGS) stroke.c -o $@
 
 TEST_OBJS = $(OBJS)
 include $(MAIN_DIR)testcases/Makefile.testcases	
 
 $(BUILD_DIR)run_tests :		$(TEST_OBJS)
-							$(CC) $(LDFLAGS) $(TEST_OBJS) -o $@
+				$(CC) $(LDFLAGS) $(TEST_OBJS) -o $@
+
+install :			$(BINNAMECHARON)
+				$(INSTALL) $(INSTBINFLAGS) $(BINNAMECHARON) $(BINNAMESTROKE) $(LIBEXECDIR)
+				
+install_file_list:
+				@echo $(LIBEXECDIR)/charon
+				@echo $(LIBEXECDIR)/stroke
 
 clean : 		
-							rm -f $(TEST_OBJS) $(BUILD_DIR)charon $(BUILD_DIR)run_tests $(BUILD_DIR)daemon.o; \
-							rmdir --ignore-fail-on-non-empty $(BUILD_DIR)
+				rm -fR $(BUILD_DIR); rm -Rf doc/api
+				
+cleanall: clean
+
+distclean: clean
+
+mostlyclean: clean
+
+realclean: clean
