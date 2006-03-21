@@ -1,0 +1,867 @@
+diff -Naur strongswan-2.6.3/Makefile.inc strongswan-2.6.3-charon/Makefile.inc
+--- strongswan-2.6.3/Makefile.inc	2006-01-25 18:23:15.000000000 +0100
++++ strongswan-2.6.3-charon/Makefile.inc	2006-03-21 09:26:23.000000000 +0100
+@@ -284,6 +284,9 @@
+ # include PKCS11-based smartcard support
+ USE_SMARTCARD?=false
+ 
++# support IKEv2 via charon
++USE_IKEV2?=true
++
+ # Default PKCS11 library
+ # Uncomment this line if using OpenSC <= 0.9.6
+ PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
+diff -Naur strongswan-2.6.3/programs/Makefile strongswan-2.6.3-charon/programs/Makefile
+--- strongswan-2.6.3/programs/Makefile	2006-01-01 16:14:08.000000000 +0100
++++ strongswan-2.6.3-charon/programs/Makefile	2006-03-21 09:26:23.000000000 +0100
+@@ -32,6 +32,10 @@
+ SUBDIRS+=showpolicy
+ endif
+ 
++ifeq ($(USE_IKEV2),true)
++SUBDIRS+=charon
++endif
++
+ def:
+ 	@echo "Please read doc/intro.html or INSTALL before running make"
+ 	@false
+diff -Naur strongswan-2.6.3/programs/ipsec/ipsec.in strongswan-2.6.3-charon/programs/ipsec/ipsec.in
+--- strongswan-2.6.3/programs/ipsec/ipsec.in	2006-03-09 21:09:33.000000000 +0100
++++ strongswan-2.6.3-charon/programs/ipsec/ipsec.in	2006-03-21 09:49:10.000000000 +0100
+@@ -123,6 +123,10 @@
+ down)
+ 	shift
+ 	$IPSEC_EXECDIR/whack --name "$1" --terminate
++	if test -e $IPSEC_EXECDIR/stroke
++	then
++	    $IPSEC_EXECDIR/stroke --name "$1" --terminate
++	fi
+ 	exit 0
+ 	;;
+ listalgs|listpubkeys|listcerts|listcacerts|\
+@@ -134,11 +138,19 @@
+ 	op="$1"
+ 	shift
+         $IPSEC_EXECDIR/whack "$@" "--$op"
++	if test -e $IPSEC_EXECDIR/stroke
++	then
++            $IPSEC_EXECDIR/stroke "$@" "--$op"
++        fi
+ 	exit 0
+ 	;;
+ ready)
+ 	shift
+ 	$IPSEC_EXECDIR/whack --listen
++	if test -e $IPSEC_EXECDIR/stroke
++	then
++	    $IPSEC_EXECDIR/stroke --listen
++	fi
+ 	exit 0
+ 	;;
+ reload)
+@@ -180,8 +192,16 @@
+ 	if test $# -eq 0
+ 	then
+ 	    $IPSEC_EXECDIR/whack "--$op"
++	    if test -e $IPSEC_EXECDIR/stroke
++	    then
++	    	$IPSEC_EXECDIR/stroke "--$op"
++	    fi
+ 	else
+ 	    $IPSEC_EXECDIR/whack --name "$1" "--$op"
++	    if test -e $IPSEC_EXECDIR/stroke
++	    then
++		$IPSEC_EXECDIR/stroke --name "$1" "--$op"
++	    fi
+ 	fi
+ 	exit 0
+ 	;;
+diff -Naur strongswan-2.6.3/programs/pluto/Makefile strongswan-2.6.3-charon/programs/pluto/Makefile
+--- strongswan-2.6.3/programs/pluto/Makefile	2006-01-25 18:22:19.000000000 +0100
++++ strongswan-2.6.3-charon/programs/pluto/Makefile	2006-03-21 10:00:41.000000000 +0100
+@@ -170,6 +170,11 @@
+   LIBSPLUTO+= -ldl
+ endif
+ 
++# enable IKEv2 support
++ifeq ($(USE_IKEV2),true)
++  DEFINES+= -DIKEV2
++endif
++
+ # This compile option activates the leak detective
+ ifeq ($(USE_LEAK_DETECTIVE),true)
+   DEFINES+= -DLEAK_DETECTIVE
+diff -Naur strongswan-2.6.3/programs/pluto/demux.c strongswan-2.6.3-charon/programs/pluto/demux.c
+--- strongswan-2.6.3/programs/pluto/demux.c	2005-02-18 22:08:59.000000000 +0100
++++ strongswan-2.6.3-charon/programs/pluto/demux.c	2006-03-21 09:26:24.000000000 +0100
+@@ -1229,6 +1229,15 @@
+ 	if (md->packet_pbs.roof - md->packet_pbs.cur >= (ptrdiff_t)isakmp_hdr_desc.size)
+ 	{
+ 	    struct isakmp_hdr *hdr = (struct isakmp_hdr *)md->packet_pbs.cur;
++#ifdef IKEV2
++	    if ((hdr->isa_version >> ISA_MAJ_SHIFT) == 0x2 &&
++			(hdr->isa_version & ISA_MIN_MASK) == 0x0)
++	    {
++		/* IKEv2 is handled from charon, ignore */
++		return;
++	    }
++	    else 
++#endif /* IKEV2 */
+ 	    if ((hdr->isa_version >> ISA_MAJ_SHIFT) != ISAKMP_MAJOR_VERSION)
+ 	    {
+ 		SEND_NOTIFICATION(INVALID_MAJOR_VERSION);
+diff -Naur strongswan-2.6.3/programs/starter/Makefile strongswan-2.6.3-charon/programs/starter/Makefile
+--- strongswan-2.6.3/programs/starter/Makefile	2006-02-17 20:34:02.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/Makefile	2006-03-21 09:26:24.000000000 +0100
+@@ -34,6 +34,11 @@
+   DEFINES+= -DLEAK_DETECTIVE
+ endif
+ 
++# Enable charon support
++ifeq ($(USE_IKEV2),true)
++  DEFINES+= -DIKEV2
++endif
++
+ INCLUDES=-I${FREESWANDIR}/linux/include
+ CFLAGS=$(DEFINES) $(INCLUDES) -Wall
+ CFLAGS+=-DIPSEC_EXECDIR=\"${FINALLIBEXECDIR}\" -DIPSEC_CONFDDIR=\"${FINALCONFDDIR}\"
+@@ -46,6 +51,11 @@
+      starterwhack.o klips.o netkey.o interfaces.o exec.o cmp.o confread.o \
+      loglite.o ${PLUTO_OBJS}
+ 
++# Build charon-only objs
++ifeq ($(USE_IKEV2),true)
++  OBJS+= invokecharon.o starterstroke.o
++endif
++
+ DISTSRC=$(OBJS:.o=.c)
+ DISTSRC+=cmp.h confread.h confwrite.h exec.h files.h interfaces.h klips.h netkey.h
+ DISTSRC+=parser.h args.h invokepluto.h starterwhack.h keywords.h keywords.txt
+diff -Naur strongswan-2.6.3/programs/starter/args.c strongswan-2.6.3-charon/programs/starter/args.c
+--- strongswan-2.6.3/programs/starter/args.c	2006-03-10 21:37:10.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/args.c	2006-03-21 09:26:24.000000000 +0100
+@@ -86,6 +86,10 @@
+ 
+ static const char *LST_keyexchange[] = {
+     "ike",
++#ifdef IKEV2
++    "ikev1",
++    "ikev2",
++#endif /* IKEV2 */
+      NULL
+ };
+ 
+diff -Naur strongswan-2.6.3/programs/starter/files.h strongswan-2.6.3-charon/programs/starter/files.h
+--- strongswan-2.6.3/programs/starter/files.h	2006-02-04 19:52:58.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/files.h	2006-03-21 09:26:24.000000000 +0100
+@@ -37,8 +37,15 @@
+ #define SECRETS_FILE	IPSEC_CONFDIR"/ipsec.secrets"
+ 
+ #define PLUTO_CMD       IPSEC_EXECDIR"/pluto"
+-#define CTL_FILE        DEFAULT_CTLBASE CTL_SUFFIX
+-#define PID_FILE        DEFAULT_CTLBASE PID_SUFFIX
++#define PLUTO_CTL_FILE  DEFAULT_CTLBASE CTL_SUFFIX
++#define PLUTO_PID_FILE  DEFAULT_CTLBASE PID_SUFFIX
++
++#ifdef IKEV2
++#define CHARON_CMD		IPSEC_EXECDIR"/charon"
++#define CHARON_BASE		"/var/run/charon"
++#define CHARON_CTL_FILE CHARON_BASE CTL_SUFFIX
++#define CHARON_PID_FILE CHARON_BASE PID_SUFFIX
++#endif /* IKEV2 */
+ 
+ #define DYNIP_DIR       "/var/run/dynip"
+ #define INFO_FILE       "/var/run/ipsec.info"
+diff -Naur strongswan-2.6.3/programs/starter/invokecharon.c strongswan-2.6.3-charon/programs/starter/invokecharon.c
+--- strongswan-2.6.3/programs/starter/invokecharon.c	1970-01-01 01:00:00.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/invokecharon.c	2006-03-21 09:26:24.000000000 +0100
+@@ -0,0 +1,168 @@
++/* strongSwan charon launcher
++ * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
++ * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
++ *
++ * Ported from invokepluto.c to fit charons needs.
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ *
++ * RCSID $Id: invokecharon.c $
++ */
++
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <unistd.h>
++#include <signal.h>
++#include <string.h>
++#include <stdlib.h>
++#include <errno.h>
++
++#include <freeswan.h>
++
++#include "../pluto/constants.h"
++#include "../pluto/defs.h"
++#include "../pluto/log.h"
++
++#include "confread.h"
++#include "invokecharon.h"
++#include "files.h"
++
++static int _charon_pid = 0;
++static int _stop_requested;
++
++pid_t
++starter_charon_pid(void)
++{
++    return _charon_pid;
++}
++
++void
++starter_charon_sigchild(pid_t pid)
++{
++	if (pid == _charon_pid)
++    {
++		_charon_pid = 0;
++	if (!_stop_requested)
++	{
++	    plog("charon has died -- restart scheduled (%dsec)"
++		, CHARON_RESTART_DELAY);
++	    alarm(CHARON_RESTART_DELAY);   // restart in 5 sec
++	}
++	unlink(CHARON_PID_FILE);
++    }
++}
++
++int
++starter_stop_charon (void)
++{
++    pid_t pid;
++    int i;
++
++    pid = _charon_pid;
++    if (pid)
++    {
++	_stop_requested = 1;
++
++	/* be more and more aggressive */
++	for (i = 0; i < 20 && (pid = _charon_pid) != 0; i++)
++	{
++		if (i == 0)
++			kill(pid, SIGINT);
++	    else if (i < 10)
++			kill(pid, SIGTERM);
++	    else
++			kill(pid, SIGKILL);
++	    usleep(20000);
++	}
++	if (_charon_pid == 0)
++	    return 0;
++	plog("starter_stop_charon(): can't stop charon !!!");
++	return -1;
++    }
++    else
++    {
++	plog("stater_stop_charon(): charon is not started...");
++    }
++    return -1;
++}
++
++
++int
++starter_start_charon (starter_config_t *cfg, bool debug)
++{
++	int pid, i;
++	struct stat stb;    
++	char *arg[] = {
++		CHARON_CMD, NULL
++	};
++	
++    if (_charon_pid)
++    {
++	plog("starter_start_charon(): charon already started...");
++	return -1;
++    }
++    else
++    {
++	unlink(CHARON_CTL_FILE);
++	_stop_requested = 0;
++
++	pid = fork();
++	switch (pid)
++	{
++	case -1:
++	    plog("can't fork(): %s", strerror(errno));
++	    return -1;
++	case 0:
++	    /* child */
++	    setsid();
++	    sigprocmask(SIG_SETMASK, 0, NULL);
++		execv(arg[0], arg);
++		plog("can't execv(%s,...): %s", arg[0], strerror(errno));
++	    exit(1);
++	default:
++	    /* father */
++		_charon_pid = pid;
++		for (i = 0; i < 50 && _charon_pid; i++)
++	    {
++		/* wait for charon */
++		usleep(20000);
++		if (stat(CHARON_PID_FILE, &stb) == 0)
++		{
++		    DBG(DBG_CONTROL,
++			DBG_log("charon (%d) started", _charon_pid)
++		    )
++		    return 0;
++		}
++	    }
++	    if (_charon_pid)
++	    {
++		/* If charon is started but with no ctl file, stop it */
++		plog("charon too long to start... - kill kill");
++		for (i = 0; i < 20 && (pid = _charon_pid) != 0; i++)
++		{
++			if (i == 0)
++			kill(pid, SIGINT);
++		    else if (i < 10)
++			kill(pid, SIGTERM);
++		    else
++			kill(pid, SIGKILL);
++		    usleep(20000);
++		}
++	    }
++	    else
++	    {
++		plog("charon refused to be started");
++	    }
++	    return -1;
++	}
++    }
++    return -1;
++}
+diff -Naur strongswan-2.6.3/programs/starter/invokecharon.h strongswan-2.6.3-charon/programs/starter/invokecharon.h
+--- strongswan-2.6.3/programs/starter/invokecharon.h	1970-01-01 01:00:00.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/invokecharon.h	2006-03-21 09:26:24.000000000 +0100
+@@ -0,0 +1,31 @@
++/* strongSwan charon launcher
++ * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
++ * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
++ *
++ * Ported from invokepluto.h to fit charons needs.
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ *
++ * RCSID $Id: invokecharon.h $
++ */
++
++#ifndef _STARTER_CHARON_H_
++#define _STARTER_CHARON_H_
++
++#define CHARON_RESTART_DELAY    5
++
++extern void starter_charon_sigchild (pid_t pid);
++extern pid_t starter_charon_pid (void);
++extern int starter_stop_charon (void);
++extern int starter_start_charon(struct starter_config *cfg, bool debug);
++
++#endif /* _STARTER_CHARON_H_ */
++
+diff -Naur strongswan-2.6.3/programs/starter/invokepluto.c strongswan-2.6.3-charon/programs/starter/invokepluto.c
+--- strongswan-2.6.3/programs/starter/invokepluto.c	2006-02-17 22:41:50.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/invokepluto.c	2006-03-21 09:26:24.000000000 +0100
+@@ -54,7 +54,7 @@
+ 		, PLUTO_RESTART_DELAY);
+ 	    alarm(PLUTO_RESTART_DELAY);   // restart in 5 sec
+ 	}
+-	unlink(PID_FILE);
++	unlink(PLUTO_PID_FILE);
+     }
+ }
+ 
+@@ -203,7 +203,7 @@
+     }
+     else
+     {
+-	unlink(CTL_FILE);
++	unlink(PLUTO_CTL_FILE);
+ 	_stop_requested = 0;
+ 
+ 	if (cfg->setup.prepluto)
+@@ -252,7 +252,7 @@
+ 	    {
+ 		/* wait for pluto */
+ 		usleep(20000);
+-		if (stat(CTL_FILE, &stb) == 0)
++		if (stat(PLUTO_CTL_FILE, &stb) == 0)
+ 		{
+ 		    DBG(DBG_CONTROL,
+ 			DBG_log("pluto (%d) started", _pluto_pid)
+diff -Naur strongswan-2.6.3/programs/starter/starter.c strongswan-2.6.3-charon/programs/starter/starter.c
+--- strongswan-2.6.3/programs/starter/starter.c	2006-02-15 19:37:46.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/starter.c	2006-03-21 09:26:24.000000000 +0100
+@@ -37,6 +37,7 @@
+ #include "files.h"
+ #include "starterwhack.h"
+ #include "invokepluto.h"
++#include "invokecharon.h"
+ #include "klips.h"
+ #include "netkey.h"
+ #include "cmp.h"
+@@ -47,6 +48,9 @@
+ #define FLAG_ACTION_RELOAD        0x04
+ #define FLAG_ACTION_QUIT          0x08
+ #define FLAG_ACTION_LISTEN        0x10
++#ifdef IKEV2
++#define FLAG_ACTION_START_CHARON  0x20
++#endif /* IKEV2 */
+ 
+ static unsigned int _action_ = 0;
+ 
+@@ -65,6 +69,10 @@
+ 	    {
+ 		if (pid == starter_pluto_pid())
+ 		    name = " (Pluto)";
++#ifdef IKEV2
++		if (pid == starter_charon_pid())
++		    name = " (Charon)";
++#endif /* IKEV2 */
+ 		if (WIFSIGNALED(status))
+ 		    DBG(DBG_CONTROL,
+ 			DBG_log("child %d%s has been killed by sig %d\n",
+@@ -87,6 +95,10 @@
+ 
+ 		if (pid == starter_pluto_pid())
+ 		    starter_pluto_sigchild(pid);
++#ifdef IKEV2
++		if (pid == starter_charon_pid())
++		    starter_charon_sigchild(pid);
++#endif /* IKEV2 */
+ 	    }
+ 	}
+ 	break;
+@@ -97,6 +109,9 @@
+ 
+     case SIGALRM:
+ 	_action_ |= FLAG_ACTION_START_PLUTO;
++#ifdef IKEV2
++	_action_ |= FLAG_ACTION_START_CHARON;
++#endif /* IKEV2 */
+ 	break;
+ 
+     case SIGHUP:
+@@ -193,6 +208,9 @@
+     signal(SIGQUIT, fsig);
+     signal(SIGALRM, fsig);
+     signal(SIGUSR1, fsig);
++	
++	
++	plog("Starting strongSwan IPsec %s [starter]...", ipsec_version_code());
+ 
+     /* verify that we can start */
+     if (getuid() != 0)
+@@ -201,12 +219,24 @@
+ 	exit(1);
+     }
+ 
+-    if (stat(PID_FILE, &stb) == 0)
++    if (stat(PLUTO_PID_FILE, &stb) == 0)
+     {
+-	plog("pluto is already running (%s exists) -- aborting", PID_FILE);
+-	exit(1);
++	plog("pluto is already running (%s exists) -- skipping pluto start", PLUTO_PID_FILE);
+     }
+-
++    else
++    {
++	_action_ |= FLAG_ACTION_START_PLUTO;
++    }
++#ifdef IKEV2
++    if (stat(CHARON_PID_FILE, &stb) == 0)
++    {
++	plog("charon is already running (%s exists) -- skipping charon start", CHARON_PID_FILE);
++    }
++    else
++    {
++	_action_ |= FLAG_ACTION_START_CHARON;
++    }
++#endif /* IKEV2 */
+     if (stat(DEV_RANDOM, &stb) != 0)
+     {
+ 	plog("unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
+@@ -247,7 +277,11 @@
+ 
+     last_reload = time(NULL);
+ 
+-    plog("Starting strongSwan IPsec %s [starter]...", ipsec_version_code());
++    if (stat(MY_PID_FILE, &stb) == 0)
++    {
++	plog("starter is already running (%s exists) -- no fork done", MY_PID_FILE);
++	exit(0);
++    }
+ 
+     /* fork if we're not debugging stuff */
+     if (!no_fork)
+@@ -296,17 +330,19 @@
+ 		      , &cfg->defaultroute);
+     }
+ 
+-    _action_ = FLAG_ACTION_START_PLUTO;
+-
+     for (;;)
+     {
+ 	/*
+-	 * Stop pluto (if started) and exit
+-         */
++	 * Stop pluto/charon (if started) and exit
++	 */
+ 	if (_action_ & FLAG_ACTION_QUIT)
+ 	{
+ 	    if (starter_pluto_pid())
+ 		starter_stop_pluto();
++#ifdef IKEV2
++		if (starter_charon_pid())
++		starter_stop_charon();
++#endif IKEV2
+ 	    if (has_netkey)
+ 		starter_netkey_cleanup();
+ 	    else
+@@ -337,6 +373,9 @@
+ 		    if (conn->state == STATE_ADDED)
+ 		    {
+ 			starter_whack_del_conn(conn);
++#ifdef IKEV2
++			starter_stroke_del_conn(conn);
++#endif /* IKEV2 */
+ 			conn->state = STATE_TO_ADD;
+ 		    }
+ 		}
+@@ -427,6 +466,9 @@
+ 		    {
+ 			if (conn->state == STATE_ADDED)
+ 			    starter_whack_del_conn(conn);
++#ifdef IKEV2
++			    starter_stroke_del_conn(conn);
++#endif /* IKEV2 */
+ 		    }
+ 
+ 		    /* Look for new ca sections that are already loaded */
+@@ -502,6 +544,27 @@
+ 		    conn->state = STATE_TO_ADD;
+ 	    }
+ 	}
++	
++#ifdef IKEV2
++	/*
++	 * Start charon
++	 */
++	if (_action_ & FLAG_ACTION_START_CHARON)
++	{
++		if (starter_charon_pid() == 0)
++		{
++			DBG(DBG_CONTROL,
++				DBG_log("Attempting to start charon...")
++			   )
++			if (starter_start_charon(cfg, no_fork) != 0)
++			{
++				/* schedule next try */
++				alarm(PLUTO_RESTART_DELAY);
++			}
++		}
++		_action_ &= ~FLAG_ACTION_START_CHARON;
++	}
++#endif /* IKEV2 */
+ 
+ 	/*
+ 	 * Tell pluto to reread its interfaces
+@@ -536,11 +599,36 @@
+ 			conn->id = id++;
+ 		    }
+ 		    starter_whack_add_conn(conn);
++#ifdef IKEV2
++		    starter_stroke_add_conn(conn);
++#endif /* IKEV2 */
+ 		    conn->state = STATE_ADDED;
+ 		    if (conn->startup == STARTUP_START)
+-			starter_whack_initiate_conn(conn);
++		    {
++#ifdef IKEV2
++			if (conn->keyexchange == 2)
++			{
++			    starter_stroke_initiate_conn(conn);
++			}
++			else
++#endif /* IKEV2 */
++			{
++			    starter_whack_initiate_conn(conn);
++			}
++		    }
+ 		    else if (conn->startup == STARTUP_ROUTE)
+-			starter_whack_route_conn(conn);
++		    {
++#ifdef IKEV2
++			if (conn->keyexchange == 2)
++			{
++				starter_stroke_route_conn(conn);
++			}
++			else
++#endif /* IKEV2 */
++			{
++				starter_whack_route_conn(conn);	
++			}
++		    }
+ 		}
+ 	    }
+ 	}
+diff -Naur strongswan-2.6.3/programs/starter/starterstroke.c strongswan-2.6.3-charon/programs/starter/starterstroke.c
+--- strongswan-2.6.3/programs/starter/starterstroke.c	1970-01-01 01:00:00.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/starterstroke.c	2006-03-21 09:26:24.000000000 +0100
+@@ -0,0 +1,193 @@
++/* Stroke for charon is the counterpart to whack from pluto
++ * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ *
++ * RCSID $Id: starterstroke.c $
++ */
++
++#include <sys/types.h>
++#include <sys/socket.h>
++#include <sys/un.h>
++#include <linux/stddef.h>
++#include <unistd.h>
++#include <stdlib.h>
++#include <errno.h>
++#include <netinet/in.h>
++#include <arpa/inet.h>
++
++#include <freeswan.h>
++
++#include "../pluto/constants.h"
++#include "../pluto/defs.h"
++#include "../pluto/log.h"
++
++#include "starterstroke.h"
++#include "confread.h"
++#include "files.h"
++
++typedef struct stroke_msg_t stroke_msg_t;
++
++struct stroke_msg_t {
++	/* length of this message with all strings */
++	u_int16_t length;
++	/* type of the message */
++	enum {
++		/* initiate a connection */
++		STR_INITIATE,
++		/* install SPD entries for a connection */
++		STR_INSTALL,
++		/* add a connection */
++		STR_ADD_CONN,
++		/* delete a connection */
++		STR_DEL_CONN,
++		/* more to come */
++	} type;
++	union {
++		/* data for STR_INITIATE, STR_INSTALL */
++		struct {
++			char *name;
++		} initiate, install;
++		/* data for STR_ADD_CONN */
++		struct {
++			char *name;
++			struct {
++				char *id;
++				char *address;
++				char *subnet;
++				u_int8_t subnet_mask;
++			} me, other;
++		} add_conn;
++	};
++	u_int8_t buffer[];
++};
++
++static char* push_string(stroke_msg_t **strm, char *string)
++{
++	stroke_msg_t *stroke_msg;
++	size_t string_length;
++	
++	if (string == NULL)
++	{
++		return NULL;
++	}
++	stroke_msg = *strm;
++	string_length = strlen(string) + 1;
++	stroke_msg->length += string_length;
++	
++	stroke_msg = realloc(stroke_msg, stroke_msg->length);
++	strcpy((char*)stroke_msg + stroke_msg->length - string_length, string);
++	
++	*strm = stroke_msg;
++	return (char*)(u_int)stroke_msg->length - string_length;
++}
++
++static int
++send_stroke_msg (stroke_msg_t *msg)
++{
++	struct sockaddr_un ctl_addr = { AF_UNIX, CHARON_CTL_FILE };
++	int sock;
++	
++	sock = socket(AF_UNIX, SOCK_STREAM, 0);
++	if (sock < 0)
++	{
++	plog("socket() failed: %s", strerror(errno));
++	return -1;
++	}
++	if (connect(sock, (struct sockaddr *)&ctl_addr,
++	offsetof(struct sockaddr_un, sun_path) + strlen(ctl_addr.sun_path)) < 0)
++	{
++	plog("connect(charon_ctl) failed: %s", strerror(errno));
++	close(sock);
++	return -1;
++	}
++	
++	/* send message */
++	if (write(sock, msg, msg->length) != msg->length)
++	{
++	plog("write(charon_ctl) failed: %s", strerror(errno));
++	close(sock);
++	return -1;
++	}
++	
++	close(sock);
++	return 0;
++}
++
++static char *
++connection_name(starter_conn_t *conn)
++{
++    /* if connection name is '%auto', create a new name like conn_xxxxx */
++    static char buf[32];
++
++    if (streq(conn->name, "%auto"))
++    {
++	sprintf(buf, "conn_%ld", conn->id);
++	return buf;
++    }
++    return conn->name;
++}
++
++
++int starter_stroke_add_conn(starter_conn_t *conn)
++{
++	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
++	int res;
++	
++	msg->length = sizeof(stroke_msg_t);
++	msg->type = STR_ADD_CONN;
++	
++	msg->add_conn.name = push_string(&msg, connection_name(conn));
++	
++	msg->add_conn.me.id = push_string(&msg, conn->left.id);
++	msg->add_conn.me.address = push_string(&msg, inet_ntoa(conn->left.addr.u.v4.sin_addr));
++	msg->add_conn.me.subnet = push_string(&msg, inet_ntoa(conn->left.subnet.addr.u.v4.sin_addr));
++	msg->add_conn.me.subnet_mask = conn->left.subnet.maskbits;
++	
++	msg->add_conn.other.id = push_string(&msg, conn->right.id);
++	msg->add_conn.other.address = push_string(&msg, inet_ntoa(conn->right.addr.u.v4.sin_addr));
++	msg->add_conn.other.subnet = push_string(&msg, inet_ntoa(conn->right.subnet.addr.u.v4.sin_addr));
++	msg->add_conn.other.subnet_mask = conn->right.subnet.maskbits;
++	
++	res = send_stroke_msg(msg);
++	free(msg);
++	return res;
++}
++
++int starter_stroke_del_conn(starter_conn_t *conn)
++{
++	return 0;
++}
++int starter_stroke_route_conn(starter_conn_t *conn)
++{
++	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
++	int res;
++	
++	msg->length = sizeof(stroke_msg_t);
++	msg->type = STR_INSTALL;
++	msg->install.name = push_string(&msg, connection_name(conn));
++	res = send_stroke_msg(msg);
++	free(msg);
++	return res;
++}
++
++int starter_stroke_initiate_conn(starter_conn_t *conn)
++{
++	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
++	int res;
++	
++	msg->length = sizeof(stroke_msg_t);
++	msg->type = STR_INITIATE;
++	msg->initiate.name = push_string(&msg, connection_name(conn));
++	res = send_stroke_msg(msg);
++	free(msg);
++	return res;
++}
+diff -Naur strongswan-2.6.3/programs/starter/starterstroke.h strongswan-2.6.3-charon/programs/starter/starterstroke.h
+--- strongswan-2.6.3/programs/starter/starterstroke.h	1970-01-01 01:00:00.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/starterstroke.h	2006-03-21 09:26:24.000000000 +0100
+@@ -0,0 +1,27 @@
++/* Stroke for charon is the counterpart to whack from pluto
++ * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ *
++ * RCSID $Id: starterstroke.h $
++ */
++
++#ifndef _STARTER_STROKE_H_
++#define _STARTER_STROKE_H_
++
++#include "confread.h"
++
++extern int starter_stroke_add_conn(starter_conn_t *conn);
++extern int starter_stroke_del_conn(starter_conn_t *conn);
++extern int starter_stroke_route_conn(starter_conn_t *conn);
++extern int starter_stroke_initiate_conn(starter_conn_t *conn);
++
++#endif /* _STARTER_STROKE_H_ */
+diff -Naur strongswan-2.6.3/programs/starter/starterwhack.c strongswan-2.6.3-charon/programs/starter/starterwhack.c
+--- strongswan-2.6.3/programs/starter/starterwhack.c	2006-02-08 21:56:07.000000000 +0100
++++ strongswan-2.6.3-charon/programs/starter/starterwhack.c	2006-03-21 09:26:24.000000000 +0100
+@@ -54,7 +54,7 @@
+ static int
+ send_whack_msg (whack_message_t *msg)
+ {
+-    struct sockaddr_un ctl_addr = { AF_UNIX, CTL_FILE };
++    struct sockaddr_un ctl_addr = { AF_UNIX, PLUTO_CTL_FILE };
+     int sock;
+     ssize_t len;
+     char *str_next, *str_roof;
