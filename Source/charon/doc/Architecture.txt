@@ -1,0 +1,122 @@
+ strongSwans overall design
+============================
+
+IKEv1 and IKEv2 is handled in different keying daemons. The ole IKEv1 stuff is
+completely handled in pluto, as it was all the times. IKEv2 is handled in the
+new keying daemon, which is called charon. 
+Daemon control is done over unix sockets. Pluto uses whack, as it did all the
+times. Charon uses another socket interface, called stroke. Stroke uses another
+format as whack and therefore is not compatible to whack. The starter utility,
+wich does fast configuration parsing, speaks both the protocols, whack and
+stroke. It also handles daemon startup and termination. 
+Pluto uses starter for some commans, for other it uses the whack utility. To be
+as close to pluto as possible, charon has the same split up of commands to
+starter and stroke. All commands are wrapped together in the ipsec script, which
+allows transparent control of both daemons.
+
+         +-----------------------------------------+
+         ¦                  ipsec                  ¦
+         +-----+--------------+---------------+----+
+               ¦              ¦               ¦
+               ¦              ¦               ¦
+               ¦        +-----+-----+         ¦
+         +-----+----+   ¦           ¦   +-----+----+
+         ¦          ¦   ¦  starter  ¦   ¦          ¦
+         ¦  stroke  ¦   ¦           ¦   ¦   whack  ¦
+         ¦          ¦   +---+--+----+   ¦          ¦
+         +------+---+       ¦  ¦        +--+-------+
+                ¦           ¦  ¦           ¦
+            +---+------+    ¦  ¦    +------+--+
+            ¦          ¦    ¦  ¦    ¦         ¦
+            ¦  charon  +----+  +----+  pluto  ¦
+            ¦          ¦            ¦         ¦
+            +-----+----+            +----+----+
+                  ¦                      ¦
+            +-----+----+                 ¦
+            ¦    LSF   ¦                 ¦
+            +-----+----+                 ¦
+                  ¦                      ¦
+            +-----+----+            +----+----+
+            ¦ RAW Sock ¦            ¦ UDP/500 ¦
+            +----------+            +---------+
+
+Since IKEv2 uses the same port as IKEv1, both daemons must listen to UDP port
+500. Under Linux, there is no clean way to set up two sockets at the same port.
+To reslove this problem, charon uses a RAW socket, as they are used in network
+sniffers. An installed Linux Socket Filter (LSF) filters out all none-IKEv2
+traffic. Pluto receives any IKE message, independant of charons behavior.
+Therefore plutos behavior is changed to discard any IKEv2 traffic silently.
+
+
+ IKEv2 keying daemon: charon
+=============================
+
+All IKEv2 stuff is handled in charon. It uses a newer and more flexible
+architecture than pluto. Charon uses a thread-pool, which allows parallel
+execution SA-management. Beside the thread-pool, there are some special purpose
+threads which do their job for the common health of the daemon.
+
+                       +------+
+                       ¦ E  Q ¦
+                       ¦ v  u ¦---+                   +------+  +------+
+                       ¦ e  e ¦   ¦                   ¦      ¦  ¦ IKE- ¦
+                       ¦ n  u ¦  +----------+         ¦      ¦--¦ SA   ¦
+                       ¦ t  e ¦  ¦          ¦         ¦ I  M ¦  +------+
+     +------------+    ¦ -    ¦  ¦ Sceduler ¦         ¦ K  A ¦
+     ¦  receiver  ¦    +------+  ¦          ¦         ¦ E  N ¦  +------+
+     +----+-------+              +----------+         ¦ -  A ¦  ¦ IKE- ¦
+          ¦      ¦     +------+   ¦                   ¦ S  G ¦--¦ SA   ¦
+  +-------+--+   +-----¦ J  Q ¦---+  +------------+   ¦ A  E ¦  +------+
+ -¦  socket  ¦         ¦ o  u ¦      ¦            ¦   ¦ -  R ¦
+  +-------+--+         ¦ b  e ¦      ¦   Thread-  ¦   ¦      ¦
+          ¦            ¦ -  u ¦      ¦   Pool     ¦   ¦      ¦
+     +----+-------+    ¦    e ¦------¦            ¦---¦      ¦
+     ¦   sender   ¦    +------+      +------------+   +------+
+     +----+-------+
+          ¦            +------+
+          ¦            ¦ S  Q ¦
+          ¦            ¦ e  u ¦
+          ¦            ¦ n  e ¦
+          ¦            ¦ d  u ¦
+          ¦            ¦ -  e ¦
+          ¦            +--+---+
+          ¦               ¦
+          +---------------+
+
+The thread-pool is the heart of the architecture. It processes jobs from a
+(fully synchronized) job-queue. Mostly, a job is associated with a specific
+IKE SA. These IKE SAs are synchronized, only one thread can work one an IKE SA.
+This makes it unnecesary to use further synchronisation methods once a IKE SA
+is checked out. The (rather complex) synchronization of IKE SAs is completely
+don in the IKE SA manager.
+The sceduler is responsible for event firing. It waits until a event in the
+(fully synchronized) event-queue is ready for processing and pushes the event
+down to the job-queue. A thread form the pool will pick it up as quick as
+possible. Every thread can queue events or jobs. Furter, an event can place a
+packet in the send-queue. The sender thread waits for those packets and sends
+them over the wire, via the socket. The receiver does exactly the opposite of
+the sender. It waits on the socket, reads in packets an places them on the
+job-queue for further processing by a thread from the pool.
+There are even more threads, not drawn in the upper scheme. The stroke thread
+is responsible for reading and processessing commands from another process. The
+kernel interface thread handles communication from and to the kernel via a
+netlink socket. It waits for kernel events and processes them appropriately.
+The configuration architecture for charon is complex, but is flexible and
+extensible. All configuration stuff is split up in multiple parts:
+
+connection      Defines a connection between two hosts. Proposals define with
+                wich algorithms a IKE SA should be set up.
+policy          Defines the rules to apply ontop of a connection. A policy is
+                defined between two IDs. Proposals and traffic selectors allow
+                fine grained configuration of the CHILD SAs (AH and ESP) to set
+                up.
+credential      A credential something used for authentication, such as a
+                preshared key, a RSA private or public key, certificate, ...
+configuration   The configuration itself handles daemon related configuration
+                stuff, such as interface binding or logging settings.
+
+These configuration types are defined as interfaces, and are currently
+implemented only in the stroke class. Through the modular design, parts can be
+replaced with more powerful backends, such as a RADIUS server for the
+credentials, a SQL database for the connections, policy definitions on an LDAP
+server, and so on...
