@@ -296,11 +296,7 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 		this->create_delete_half_open_ike_sa_job(this,ike_sa_id,charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
 	}
 
-	status = ike_sa->process_message(ike_sa, message);				
-	if ((status != SUCCESS) && (status != DELETE_ME))
-	{
-		this->worker_logger->log(this->worker_logger, ERROR, "Message could not be processed by IKE SA");
-	}
+	status = ike_sa->process_message(ike_sa, message);
 				
 	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "%s IKE SA %lld:%lld, role %s", 
 							 (status == DELETE_ME) ? "Checkin and delete" : "Checkin",
@@ -558,8 +554,6 @@ static void destroy(private_thread_pool_t *this)
 	}	
 
 	/* free mem */
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->pool_logger);
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->worker_logger);
 	allocator_free(this->threads);
 	allocator_free(this);
 }
@@ -589,9 +583,9 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	
 	this->threads = allocator_alloc(sizeof(pthread_t) * pool_size);
 
-	this->pool_logger = charon->logger_manager->create_logger(charon->logger_manager,THREAD_POOL,NULL);
+	this->pool_logger = charon->logger_manager->get_logger(charon->logger_manager, THREAD_POOL);
 
-	this->worker_logger = charon->logger_manager->create_logger(charon->logger_manager,WORKER,NULL);
+	this->worker_logger = charon->logger_manager->get_logger(charon->logger_manager, WORKER);
 	
 	/* try to create as many threads as possible, up tu pool_size */
 	for (current = 0; current < pool_size; current++) 
@@ -606,8 +600,6 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 			if (current == 0) 
 			{
 				this->pool_logger->log(this->pool_logger, ERROR, "Could not create any thread");
-				charon->logger_manager->destroy_logger(charon->logger_manager, this->pool_logger);
-				charon->logger_manager->destroy_logger(charon->logger_manager, this->worker_logger);
 				allocator_free(this->threads);
 				allocator_free(this);
 				return NULL;

@@ -111,11 +111,6 @@ encoding_rule_t nonce_payload_encodings[] = {
  */
 static status_t verify(private_nonce_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
 	if ((this->nonce.len < 16) || ((this->nonce.len > 256)))
 	{
 		/* nonce length is wrong */

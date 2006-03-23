@@ -53,7 +53,7 @@ void test_rsa(protected_tester_t *tester)
 	data.ptr = test_data;
 	data.len = sizeof(test_data);
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager, TESTER, NULL);
+	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
 	logger->disable_level(logger, FULL);
 	
 	private_key = rsa_private_key_create();

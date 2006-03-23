@@ -216,7 +216,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 	request.spi.info.id.daddr = dest->get_xfrm_addr(dest);
 	request.spi.info.mode = TRUE; /* tunnel mode */
 	request.spi.info.reqid = reqid;
-	request.spi.info.id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
+	request.spi.info.id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	request.spi.info.family = PF_INET;
 	request.spi.min = 0xc0000000;
 	request.spi.max = 0xcFFFFFFF;
@@ -270,7 +270,7 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	request.sa.id.daddr = other->get_xfrm_addr(other);
 	
 	request.sa.id.spi = spi;
-	request.sa.id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
+	request.sa.id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	request.sa.family = me->get_family(me);
 	request.sa.mode = TRUE; /* tunnel mode */
 	request.sa.replay_window = 32;
@@ -348,7 +348,7 @@ static status_t del_sa(	private_kernel_interface_t *this,
 	request.sa_id.daddr = dst->get_xfrm_addr(dst);
 	
 	request.sa_id.spi = spi;
-	request.sa_id.proto = (protocol == ESP) ? KERNEL_ESP : KERNEL_AH;
+	request.sa_id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	request.sa_id.family = dst->get_family(dst);
 	
 	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.sa_id)));
@@ -686,6 +686,6 @@ kernel_interface_t *kernel_interface_create()
 		charon->kill(charon, "Unable to create netlink thread");
 	}
 	
-	charon->logger_manager->enable_logger_level(charon->logger_manager, TESTER, FULL);
+	charon->logger_manager->enable_log_level(charon->logger_manager, TESTER, FULL);
 	return (&this->public);
 }

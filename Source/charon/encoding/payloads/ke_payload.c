@@ -123,12 +123,6 @@ encoding_rule_t ke_payload_encodings[] = {
  */
 static status_t verify(private_ke_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
-	
 	/* dh group is not verified in here */
 	return SUCCESS;
 }

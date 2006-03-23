@@ -1029,7 +1029,6 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 static status_t destroy(private_generator_t *this)
 {
 	allocator_free(this->buffer);
-	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 	allocator_free(this);
 	return SUCCESS;
 }
@@ -1073,7 +1072,7 @@ generator_t *generator_create()
 	this->current_bit = 0;
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager,GENERATOR,NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, GENERATOR);
 
 	return &(this->public);
 }

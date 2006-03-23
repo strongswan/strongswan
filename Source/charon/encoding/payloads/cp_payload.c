@@ -139,12 +139,6 @@ static status_t verify(private_cp_payload_t *this)
 {
 	status_t status = SUCCESS;
 	iterator_t *iterator;
-	
-	if (this->critical)
-	{
-		/* critical bit set! */
-		return FAILED;
-	}
 
 	iterator = this->attributes->create_iterator(this->attributes,TRUE);
 	

@@ -102,8 +102,6 @@ static void destroy(private_receiver_t *this)
 
 	pthread_join(this->assigned_thread, NULL);
 	this->logger->log(this->logger, CONTROL | LEVEL1, "Receiver thread terminated");
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);
 }
@@ -118,12 +116,11 @@ receiver_t * receiver_create()
 	this->public.destroy = (void(*)(receiver_t*)) destroy;
 	this->receive_packets = receive_packets;
 	
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, RECEIVER, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, RECEIVER);
 	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->receive_packets, this) != 0)
 	{
 		this->logger->log(this->logger, ERROR, "Receiver thread could not be started");
-		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
 		charon->kill(charon, "Unable to create receiver thread");
 	}

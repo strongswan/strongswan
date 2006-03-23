@@ -93,6 +93,15 @@ struct socket_t {
 	status_t (*send) (socket_t *sock, packet_t *packet);
 	
 	/**
+	 * @brief Check if socket listens on an address.
+	 * 
+	 * @param sock			socket_t object to work on
+	 * @param host			address to check
+	 * @return 				TRUE if listening on host, FALSE otherwise
+	 */
+	bool (*is_listening_on) (socket_t *sock, host_t *host);
+	
+	/**
 	 * @brief Destroy sockets.
 	 * 
 	 * close sockets and destroy socket_t object

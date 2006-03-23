@@ -25,6 +25,7 @@
 
 #include "notify_payload.h"
 
+#include <daemon.h>
 #include <encoding/payloads/encodings.h>
 #include <utils/allocator.h>
 
@@ -105,6 +106,11 @@ struct private_notify_payload_t {
 	chunk_t notification_data;
 	
 	/**
+	 * Assigned logger
+	 */
+	logger_t *logger;
+	
+	/**
 	 * @brief Computes the length of this payload.
 	 *
 	 * @param this 	calling private_ke_payload_t object
@@ -169,11 +175,6 @@ encoding_rule_t notify_payload_encodings[] = {
  */
 static status_t verify(private_notify_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
 	if (this->protocol_id > 3)
 	{
 		/* reserved for future use */
@@ -191,9 +192,20 @@ static status_t verify(private_notify_payload_t *this)
 			return FAILED;
 		}
 		dh_group = ntohs(*((u_int16_t*)this->notification_data.ptr));
-		if (dh_group < MODP_1024_BIT || dh_group > MODP_8192_BIT)
+		switch (dh_group)
 		{
-			return FAILED;
+			case MODP_768_BIT:
+			case MODP_1024_BIT:
+			case MODP_1536_BIT:
+			case MODP_2048_BIT:
+			case MODP_3072_BIT:
+			case MODP_4096_BIT:
+			case MODP_6144_BIT:
+			case MODP_8192_BIT:
+				break;
+			default:
+				this->logger->log(this->logger, ERROR, "Bad DH group (%d)", dh_group);
+				return FAILED;
 		}
 	}
 	return SUCCESS;
@@ -402,7 +414,7 @@ notify_payload_t *notify_payload_create()
 	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
-	this->critical = NOTIFY_PAYLOAD_CRITICAL_FLAG;
+	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = NOTIFY_PAYLOAD_HEADER_LENGTH;
 	this->protocol_id = 0;
@@ -412,6 +424,7 @@ notify_payload_t *notify_payload_create()
 	this->spi_size = 0;
 	this->notification_data.ptr = NULL;
 	this->notification_data.len = 0;
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, PAYLOAD);
 
 	return (&(this->public));
 }

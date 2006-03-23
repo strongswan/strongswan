@@ -30,13 +30,6 @@
 #include <utils/linked_list.h>
 
 /**
- * Critical flag must not be set.
- * 
- * @ingroup payloads
- */
-#define NOTIFY_PAYLOAD_CRITICAL_FLAG FALSE;
-
-/**
  * Notify payload length in bytes without any spi and notification data.
  * 
  * @ingroup payloads

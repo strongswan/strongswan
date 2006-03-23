@@ -205,7 +205,7 @@ static diffie_hellman_group_t get_dh_group(private_connection_t *this)
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&proposal);
-		proposal->get_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, &algo);
+		proposal->get_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, &algo);
 		if (algo)
 		{
 			iterator->destroy(iterator);
@@ -229,7 +229,7 @@ static bool check_dh_group(private_connection_t *this, diffie_hellman_group_t dh
 	while (prop_iter->has_next(prop_iter))
 	{
 		prop_iter->current(prop_iter, (void**)&proposal);
-		alg_iter = proposal->create_algorithm_iterator(proposal, IKE, DIFFIE_HELLMAN_GROUP);
+		alg_iter = proposal->create_algorithm_iterator(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP);
 		while (alg_iter->has_next(alg_iter))
 		{
 			alg_iter->current(alg_iter, (void**)&algo);

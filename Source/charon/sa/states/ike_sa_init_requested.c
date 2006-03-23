@@ -294,8 +294,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				if (status != SUCCESS)
 				{
 					payloads->destroy(payloads);
-					return status;	
+					return status;
 				}
+				break;
 			}
 			default:
 			{
@@ -537,11 +538,6 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 		return DELETE_ME;
 	}
 	
-	/* TODO:
-	 * Huston, we've got a problem here. Since SPIs are stored in
-	 * the proposal, and these proposals are shared across configs,
-	 * there may be some threading issues... fix it!
-	 */
 	sa_payload = sa_payload_create_from_proposal_list(proposal_list);
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add SA payload to message");
@@ -595,15 +591,9 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 {
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
-						  mapping_find(notify_message_type_m, notify_message_type),
-						  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
-								  
-	if (notify_payload->get_protocol_id(notify_payload) != IKE)
-	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Notify reply not for IKE protocol.");
-		return FAILED;	
-	}
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
+					  mapping_find(notify_message_type_m, notify_message_type));
+	
 	switch (notify_message_type)
 	{
 		case NO_PROPOSAL_CHOSEN:
@@ -620,16 +610,24 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 		{
 			initiator_init_t *initiator_init_state;
 			chunk_t notify_data;
-			diffie_hellman_group_t dh_group;
+			diffie_hellman_group_t dh_group, old_dh_group;
 			connection_t *connection;
 			
+			connection = this->ike_sa->get_connection(this->ike_sa);
+			old_dh_group = connection->get_dh_group(connection);
 			notify_data = notify_payload->get_notification_data(notify_payload);
 			dh_group = ntohs(*((u_int16_t*)notify_data.ptr));
 			
-			this->logger->log(this->logger, ERROR|LEVEL1, "Peer wouldn't accept DH group, it requested %s!",
+			/* TODO:
+			 * We are very restrictive here: If the other didn't accept
+			 * our DH group, and we do not accept his offer, continuation
+			 * is cancelled...
+			 */
+			
+			this->logger->log(this->logger, AUDIT, "Peer didn't accept %s, it requested %s!",
+							  mapping_find(diffie_hellman_group_m, old_dh_group),
 							  mapping_find(diffie_hellman_group_m, dh_group));
 			/* check if we can accept this dh group */
-			connection = this->ike_sa->get_connection(this->ike_sa);
 			if (!connection->check_dh_group(connection, dh_group))
 			{
 				this->logger->log(this->logger, AUDIT, 
@@ -649,9 +647,6 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 			this->ike_sa->set_new_state(this->ike_sa,(state_t *) initiator_init_state);
 
 			/* state has NOW changed :-) */
-			this->logger->log(this->logger, CONTROL|LEVEL1, "Changed state of IKE_SA from %s to %s", 
-								mapping_find(ike_sa_state_m,INITIATOR_INIT), mapping_find(ike_sa_state_m,IKE_SA_INIT_REQUESTED));
-
 			this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
 			this->logger->log(this->logger, CONTROL|LEVEL2, "Going to retry initialization of connection");
 			

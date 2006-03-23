@@ -224,7 +224,7 @@ static void stroke_receive(private_stroke_t *this)
 			continue;
 		}
 		
-		this->logger->log_bytes(this->logger, CONTROL, "stroke message", (void*)msg, msg_length);
+		this->logger->log_bytes(this->logger, RAW, "stroke message", (void*)msg, msg_length);
 		
 		switch (msg->type)
 		{
@@ -327,35 +327,70 @@ static void stroke_receive(private_stroke_t *this)
 					break;
 				}
 				
-				this->logger->log(this->logger, CONTROL, "my ID %s, others ID %s",
-								  my_id->get_string(my_id),
-								  other_id->get_string(other_id));
+				my_ts = traffic_selector_create_from_subnet(my_subnet, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet_mask : 32);
+				my_subnet->destroy(my_subnet);
+				other_ts = traffic_selector_create_from_subnet(other_subnet, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet_mask : 32);
+				other_subnet->destroy(other_subnet);
+				
+				if (charon->socket->is_listening_on(charon->socket, other_host))
+				{
+					this->logger->log(this->logger, CONTROL|LEVEL1, "left is other host, switching");
+					
+					host_t *tmp_host = my_host;
+					identification_t *tmp_id = my_id;
+					traffic_selector_t *tmp_ts = my_ts;
+					
+					my_host = other_host;
+					other_host = tmp_host;
+					my_id = other_id;
+					other_id = tmp_id;
+					my_ts = other_ts;
+					other_ts = tmp_ts;
+				}
+				else if (charon->socket->is_listening_on(charon->socket, my_host))
+				{
+					this->logger->log(this->logger, CONTROL|LEVEL1, "left is own host, not switching");
+				}
+				else
+				{
+					this->logger->log(this->logger, ERROR, "left nor right host is our, aborting");
+					
+					my_host->destroy(my_host);
+					other_host->destroy(other_host);
+					my_id->destroy(my_id);
+					other_id->destroy(other_id);
+					my_ts->destroy(my_ts);
+					other_ts->destroy(other_ts);
+					break;
+				}
 				
 				connection = connection_create(my_host, other_host, my_id->clone(my_id), other_id->clone(other_id), SHARED_KEY_MESSAGE_INTEGRITY_CODE);
 				proposal = proposal_create(1);
-				proposal->add_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-				proposal->add_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
-				proposal->add_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
-				proposal->add_algorithm(proposal, IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+				proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_1536_BIT, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
+				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
 				connection->add_proposal(connection, proposal);
 				
 				policy = policy_create(my_id, other_id);
 				proposal = proposal_create(1);
-				proposal->add_algorithm(proposal, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-				proposal->add_algorithm(proposal, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+				proposal->add_algorithm(proposal, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+				proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+				proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
 				policy->add_proposal(policy, proposal);
-				
-				my_ts = traffic_selector_create_from_subnet(my_subnet, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet_mask : 32);
-				my_subnet->destroy(my_subnet);
 				policy->add_my_traffic_selector(policy, my_ts);
-				other_ts = traffic_selector_create_from_subnet(other_subnet, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet_mask : 32);
-				other_subnet->destroy(other_subnet);
 				policy->add_other_traffic_selector(policy, other_ts);
 				
 				this->configurations->insert_last(this->configurations, 
 						configuration_entry_create(msg->add_conn.name, connection, policy));
 				
-				this->logger->log(this->logger, CONTROL, "connection \"%s\" added (%d in store)", 
+				this->logger->log(this->logger, CONTROL|LEVEL1, "connection \"%s\" added (%d in store)", 
 								  msg->add_conn.name,
 								  this->configurations->get_count(this->configurations));
 				break;
@@ -395,7 +430,7 @@ static connection_t *get_connection_by_hosts(connection_store_t *store, host_t *
 		config_other_host = entry->connection->get_other_host(entry->connection);
 
 		/* first check if ip is equal */
-		if(config_other_host->ip_is_equal(config_other_host, other_host))
+		if(config_other_host->ip_equals(config_other_host, other_host))
 		{
 			this->logger->log(this->logger, CONTROL|LEVEL2, "config entry with remote host %s", 
 						config_other_host->get_address(config_other_host));
@@ -406,7 +441,7 @@ static connection_t *get_connection_by_hosts(connection_store_t *store, host_t *
 				break;
 			}
 			/* check now if host informations are the same */
-			else if (config_my_host->ip_is_equal(config_my_host,my_host))
+			else if (config_my_host->ip_equals(config_my_host,my_host))
 			{
 				found = entry->connection->clone(entry->connection);
 				break;
@@ -425,7 +460,7 @@ static connection_t *get_connection_by_hosts(connection_store_t *store, host_t *
 				break;
 			}
 			/* check now if host informations are the same */
-			else if (config_my_host->ip_is_equal(config_my_host,my_host))
+			else if (config_my_host->ip_equals(config_my_host,my_host))
 			{
 				found = entry->connection->clone(entry->connection);
 				break;
@@ -562,7 +597,7 @@ static policy_t *get_policy(policy_store_t *store,identification_t *my_id, ident
  */	
 static status_t get_shared_secret(credential_store_t *this, identification_t *identification, chunk_t *preshared_secret)
 {
-	char *secret = "schluessel";
+	char *secret = "schluessel\n";
 	preshared_secret->ptr = secret;
 	preshared_secret->len = strlen(secret) + 1;
 	
@@ -613,7 +648,6 @@ static void destroy(private_stroke_t *this)
 	}
 	this->rsa_public_keys->destroy(this->rsa_public_keys);
 
-	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 	close(this->socket);
 	unlink(socket_addr.sun_path);
 	allocator_free(this);
@@ -653,14 +687,13 @@ stroke_t *stroke_create()
 	this->stroke_receive = stroke_receive;
 	this->get_connection_by_name = get_connection_by_name;
 	
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager,CONFIG,NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, CONFIG);
 	
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (this->socket == -1)
 	{
 		this->logger->log(this->logger, ERROR, "could not create whack socket");
-		charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 		allocator_free(this);
 		return NULL;
 	}
@@ -669,7 +702,6 @@ stroke_t *stroke_create()
 	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, "could not bind stroke socket: %s", strerror(errno));
-		charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 		close(this->socket);
 		allocator_free(this);
 		return NULL;
@@ -679,7 +711,6 @@ stroke_t *stroke_create()
 	if (listen(this->socket, 0) < 0)
 	{
 		this->logger->log(this->logger, ERROR, "could not listen on stroke socket: %s", strerror(errno));
-		charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 		close(this->socket);
 		unlink(socket_addr.sun_path);
 		allocator_free(this);
@@ -690,7 +721,6 @@ stroke_t *stroke_create()
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->stroke_receive, this) != 0)
 	{
 		this->logger->log(this->logger, ERROR, "Could not spawn stroke thread");
-		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		close(this->socket);
 		unlink(socket_addr.sun_path);
 		allocator_free(this);

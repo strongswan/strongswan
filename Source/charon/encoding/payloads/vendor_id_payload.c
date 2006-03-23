@@ -102,12 +102,6 @@ encoding_rule_t vendor_id_payload_encodings[] = {
  */
 static status_t verify(private_vendor_id_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
-
 	return SUCCESS;
 }
 

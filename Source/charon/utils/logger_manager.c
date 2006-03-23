@@ -33,28 +33,49 @@
  */
 mapping_t logger_context_t_mappings[] = {
 	{PARSER, "PARSER"},
-	{GENERATOR, "GENRAT"},
+	{GENERATOR, "GENERATOR"},
 	{IKE_SA, "IKE_SA"},
-	{IKE_SA_MANAGER, "ISAMGR"},
-	{CHILD_SA, "CHLDSA"},
-	{MESSAGE, "MESSAG"},
-	{THREAD_POOL, "THPOOL"},
+	{IKE_SA_MANAGER, "IKE_SA_MANAGER"},
+	{CHILD_SA, "CHILD_SA"},
+	{MESSAGE, "MESSAGE"},
+	{THREAD_POOL, "THREAD_POOL"},
 	{WORKER, "WORKER"},
-	{SCHEDULER, "SCHEDU"},
+	{SCHEDULER, "SCHEDULER"},
 	{SENDER, "SENDER"},
-	{RECEIVER, "RECEVR"},
+	{RECEIVER, "RECEIVER"},
 	{SOCKET, "SOCKET"},
 	{TESTER, "TESTER"},
 	{DAEMON, "DAEMON"},
 	{CONFIG, "CONFIG"},
-	{ENCRYPTION_PAYLOAD, "ENCPLD"},
+	{ENCRYPTION_PAYLOAD, "ENCRYPTION_PAYLOAD"},
+	{PAYLOAD, "PAYLOAD"},
 	{MAPPING_END, NULL},
 };
 
-/** 
- * Maximum length of a logger name in bytes.
- */
-#define MAX_LOGGER_NAME 45
+struct {
+	char *name;
+	log_level_t level;
+	bool log_thread_ids;
+	FILE *output;
+} logger_defaults[] = {
+	{ "PARSR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* PARSER */
+	{ "GNRAT", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* GENERATOR */
+	{ "IKESA", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* IKE_SA */
+	{ "SAMGR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* IKE_SA_MANAGER */
+	{ "CHDSA", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* CHILD_SA */
+	{ "MESSG", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* MESSAGE */
+	{ "TPOOL", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, NULL}, /* THREAD_POOL */
+	{ "WORKR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* WORKER */
+	{ "SCHED", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, NULL}, /* SCHEDULER */
+	{ "SENDR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, NULL}, /* SENDER */
+	{ "RECVR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, NULL}, /* RECEIVER */
+	{ "SOCKT", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, NULL}, /* SOCKET */
+	{ "TESTR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, NULL}, /* TESTER */
+	{ "DAEMN", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, NULL}, /* DAEMON */
+	{ "CONFG", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* CONFIG */
+	{ "ENCPL", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* ENCRYPTION_PAYLOAD */
+	{ "PAYLD", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* PAYLOAD */
+};
 
 
 typedef struct private_logger_manager_t private_logger_manager_t;
@@ -69,372 +90,78 @@ struct private_logger_manager_t {
 	logger_manager_t public;
 
 	/**
-	 * List of managed loggers.
+	 * Array of loggers, one for each context
 	 */
-	linked_list_t *loggers;
-	
-	/**
-	 * Log Levels.
-	 */
-	linked_list_t *logger_levels;
-	
-	/**
-	 * Used to manage logger list.
-	 */
-	pthread_mutex_t mutex;
-	
-	/**
-	 * Default logger level for a created logger used 
-	 * if no specific logger_level is set.
-	 */
-	logger_level_t default_log_level;
-	
-	/**
-	 * Sets set logger_level of a specific context.
-	 * 
-	 * @param this 			calling object
-	 * @param context 		context to set level
- 	 * @param logger_level 	logger_level to set
- 	 * @param enable 		enable specific level or disable it
-	 */
-	void (*set_logger_level) (private_logger_manager_t *this, 
-							  logger_context_t context,
-							  logger_level_t logger_level,
-							  bool enable);
+	logger_t *loggers[LOGGER_CONTEXT_ROOF];
 	
 };
 
-
-typedef struct logger_levels_entry_t logger_levels_entry_t;
-
 /**
- * Entry in the logger_levels linked list.
- * 
- * This entry specifies the current log level for 
- * logger_t objects in specific context.
+ * Implementation of logger_manager_t.get_logger.
  */
-struct logger_levels_entry_t {
-	/**
-	 * Logger context.
-	 */
-	logger_context_t context;
-	
-	/**
-	 * Logger level of logger context.
-	 */
-	logger_level_t level;
-};
-
-
-typedef struct loggers_entry_t loggers_entry_t;
-
-/**
- * Entry in the loggers linked list.
- * 
- * @todo Replace loggers_entry_t with logger_t and add get_context() function to logger_t class.
- */
-struct loggers_entry_t {
-	/**
-	 * Logger context.
-	 */
-	logger_context_t context;
-	/**
-	 * Assigned logger
-	 */
-	logger_t *logger;
-};
-
-/**
- * Implementation of logger_manager_t.create_logger.
- */
-static logger_t *create_logger(private_logger_manager_t *this, logger_context_t context, char * name)
+static logger_t *get_logger(private_logger_manager_t *this, logger_context_t context)
 {
-	
-	char * context_name;
-	bool log_thread_ids = TRUE;
-	FILE * output = NULL;
-	char buffer[MAX_LOGGER_NAME];
-	loggers_entry_t *entry;
-	logger_t *logger;
-	logger_level_t logger_level = 0;
-	
-	context_name = mapping_find(logger_context_t_mappings,context);
-	
-	/* output to stdout, since we are debugging all days */
-	output = LOG_OUTPUT;
-	
-	/* defaults */
-	log_thread_ids = FALSE;
-	logger_level = this->public.get_logger_level(&(this->public), context);
-
-	switch(context)
-	{
-		case TESTER:
-			output = stdout;
-			break;
-		case IKE_SA_MANAGER:
-			log_thread_ids = TRUE;
-			break;
-		case IKE_SA:
-			log_thread_ids = TRUE;
-			break;
-		case CHILD_SA:
-			log_thread_ids = TRUE;
-			break;
-		case CONFIG:
-			log_thread_ids = TRUE;
-			break;
-		case MESSAGE:
-			log_thread_ids = TRUE;
-			break;
-		case ENCRYPTION_PAYLOAD:
-			log_thread_ids = TRUE;
-			break;
-		case GENERATOR:
-			log_thread_ids = TRUE;
-			break;
-		case PARSER:
-			log_thread_ids = TRUE;
-			break;
-		case WORKER:
-			log_thread_ids = TRUE;
-			break;
-		case THREAD_POOL:
-			break;
-		case SCHEDULER:
-			break;
-		case SENDER:
-			break;
-		case RECEIVER:
-			break;
-		case SOCKET:
-			break;
-		case DAEMON:
-			break;
-	}
-	
-	/* logger manager is thread save */
-	pthread_mutex_lock(&(this->mutex));
-	if (name != NULL)
-	{
-		snprintf(buffer, MAX_LOGGER_NAME, "%s - %s",context_name,name);
-			/* create logger with default log_level */
-		logger = logger_create(buffer,logger_level,log_thread_ids,output);
-	}
-	else
-	{
-		logger = logger_create(context_name,logger_level,log_thread_ids,output);
-	}
-	
-
-	entry = allocator_alloc_thing(loggers_entry_t);
-
-	entry->context = context;
-	entry->logger = logger;
-
-	this->loggers->insert_last(this->loggers,entry);
-
-	pthread_mutex_unlock(&(this->mutex));
-	return logger;
-	
+	return this->loggers[context];
 }
 
 /**
- * Implementation of logger_manager_t.get_logger_level.
+ * Implementation of logger_manager_t.get_log_level.
  */
-static logger_level_t get_logger_level (private_logger_manager_t *this, logger_context_t context)
+static log_level_t get_log_level (private_logger_manager_t *this, logger_context_t context)
 {
-	iterator_t *iterator;
-	/* set logger_level to default logger_level */
-	logger_level_t logger_level = this->default_log_level;
-
-	pthread_mutex_lock(&(this->mutex));
-
-	iterator = this->logger_levels->create_iterator(this->logger_levels,TRUE);
-	/* check for existing logger_level entry */
-	while (iterator->has_next(iterator))
-	{
-		logger_levels_entry_t * entry;
-		iterator->current(iterator,(void **)&entry);
-		if (entry->context == context)
-		{
-			logger_level = entry->level;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-
-	pthread_mutex_unlock(&(this->mutex));
-	return logger_level;
+	return this->loggers[context]->get_level(this->loggers[context]);
 }
 
 /**
- * Implementation of logger_manager_t.destroy_logger.
+ * Implementation of private_logger_manager_t.enable_log_level.
  */
-static void destroy_logger(private_logger_manager_t *this,logger_t *logger)
+static void enable_log_level(private_logger_manager_t *this, logger_context_t context, log_level_t level)
 {
-	iterator_t *iterator;
-	
-	pthread_mutex_lock(&(this->mutex));
-	
-	iterator = this->loggers->create_iterator(this->loggers,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		loggers_entry_t * entry;
-		iterator->current(iterator,(void **)&entry);
-		if (entry->logger == logger)
-		{
-			iterator->remove(iterator);
-			allocator_free(entry);
-			logger->destroy(logger);
-			break; 
-		}
-	}
-	iterator->destroy(iterator);
-	pthread_mutex_unlock(&(this->mutex));
+	this->loggers[context]->enable_level(this->loggers[context], level);
 }
 
 /**
- * Implementation of private_logger_manager_t.set_logger_level.
+ * Implementation of private_logger_manager_t.disable_log_level.
  */
-static void set_logger_level(private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level,bool enable)
+static void disable_log_level(private_logger_manager_t *this, logger_context_t context, log_level_t level)
 {
-	iterator_t *iterator;
-	bool found = FALSE;
-	
-	pthread_mutex_lock(&(this->mutex));
-	iterator = this->logger_levels->create_iterator(this->logger_levels,TRUE);
-
-	/* find existing logger_level entry */
-	while (iterator->has_next(iterator))
-	{	
-		logger_levels_entry_t * entry;
-		iterator->current(iterator,(void **)&entry);
-		if (entry->context == context)
-		{
-			if (enable)
-			{
-				entry->level |= logger_level;
-			}
-			else
-			{
-				entry->level &= ~logger_level;
-			}
-			found = TRUE;
-			break; 
-		}
-	}
-	iterator->destroy(iterator);
-	
-	if (!found)
-	{
-		/* logger_levels entry not existing for current context */
-		logger_levels_entry_t *entry = allocator_alloc_thing(logger_levels_entry_t);
-
-		entry->context = context;
-		entry->level = 	(enable) ? logger_level : (this->default_log_level & (~logger_level));
-
-		this->logger_levels->insert_last(this->logger_levels,entry);
-	}
-	
-	iterator = this->loggers->create_iterator(this->loggers,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		loggers_entry_t * entry;
-		iterator->current(iterator,(void **)&entry);
-
-		if (entry->context == context)
-		{
-			if (enable)
-			{
-				entry->logger->enable_level(entry->logger,logger_level);
-			}
-			else
-			{
-				entry->logger->disable_level(entry->logger,logger_level);
-			}
-			
-		}
-	}
-	iterator->destroy(iterator);
-	
-	pthread_mutex_unlock(&(this->mutex));
+	this->loggers[context]->disable_level(this->loggers[context], level);
 }
 
-/**
- * Implementation of logger_manager_t.enable_logger_level.
- */
-static void enable_logger_level(private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level)
-{
-	return set_logger_level(this,context,logger_level,TRUE);
-}
-
-/**
- * Implementation of logger_manager_t.disable_logger_level.
- */
-static void disable_logger_level(private_logger_manager_t *this, logger_context_t context,logger_level_t logger_level)
-{
-	return set_logger_level(this,context,logger_level,FALSE);
-}
 
 /**
  * Implementation of logger_manager_t.destroy.
  */
 static void destroy(private_logger_manager_t *this)
 {
-
-	while (this->loggers->get_count(this->loggers) > 0)
+	int i;
+	for (i = 0; i < LOGGER_CONTEXT_ROOF; i++)
 	{
-		loggers_entry_t *current_entry;
-		
-		this->loggers->remove_first(this->loggers,(void **)&current_entry);
-		
-		/* destroy logger object */
-		current_entry->logger->destroy(current_entry->logger);
-		
-		/* entry can be destroyed */
-		allocator_free(current_entry);	
+		this->loggers[i]->destroy(this->loggers[i]);
 	}
-	
-	while (this->logger_levels->get_count(this->logger_levels) > 0)
-	{
-		logger_levels_entry_t *current_entry;
-		
-		this->logger_levels->remove_first(this->logger_levels,(void **)&current_entry);
-		
-		/* entry can be destroyed */
-		allocator_free(current_entry);
-	}
-	
-	this->loggers->destroy(this->loggers);
-	this->logger_levels->destroy(this->logger_levels);
-	pthread_mutex_destroy(&(this->mutex));
-	
 	allocator_free(this);
 }
 
 /*
  * Described in header.
  */
-logger_manager_t *logger_manager_create(logger_level_t default_log_level)
+logger_manager_t *logger_manager_create(log_level_t default_log_level)
 {
 	private_logger_manager_t *this = allocator_alloc_thing(private_logger_manager_t);
+	int i;
 	
-	this->public.create_logger = (logger_t *(*)(logger_manager_t*,logger_context_t context, char *))create_logger;
-	this->public.destroy_logger = (void(*)(logger_manager_t*,logger_t *logger))destroy_logger;
+	this->public.get_logger = (logger_t *(*)(logger_manager_t*,logger_context_t context))get_logger;
+	this->public.get_log_level = (log_level_t (*)(logger_manager_t *, logger_context_t)) get_log_level;
+	this->public.enable_log_level = (void (*)(logger_manager_t *, logger_context_t, log_level_t)) enable_log_level;
+	this->public.disable_log_level = (void (*)(logger_manager_t *, logger_context_t, log_level_t)) disable_log_level;
 	this->public.destroy = (void(*)(logger_manager_t*))destroy;
-	this->public.get_logger_level = (logger_level_t (*)(logger_manager_t *, logger_context_t)) get_logger_level;
-	this->public.enable_logger_level = (void (*)(logger_manager_t *, logger_context_t,logger_level_t)) enable_logger_level;
-	this->public.disable_logger_level = (void (*)(logger_manager_t *, logger_context_t,logger_level_t)) disable_logger_level;
-	this->set_logger_level = (void (*)(private_logger_manager_t *, logger_context_t,logger_level_t,bool)) set_logger_level;
 	
-	/* private variables */
-	this->loggers = linked_list_create();
-	this->logger_levels = linked_list_create();
-	this->default_log_level = default_log_level;
+	for (i = 0; i < LOGGER_CONTEXT_ROOF; i++)
+	{
+		this->loggers[i] = logger_create(logger_defaults[i].name, logger_defaults[i].level, 
+										 logger_defaults[i].log_thread_ids, logger_defaults[i].output);
+	}
 	
-	pthread_mutex_init(&(this->mutex), NULL);
-
-	return (logger_manager_t*)this;
+	return &this->public;
 }
 

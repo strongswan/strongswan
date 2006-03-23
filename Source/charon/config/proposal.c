@@ -32,10 +32,10 @@
  * String mappings for protocol_id_t.
  */
 mapping_t protocol_id_m[] = {
-	{UNDEFINED_PROTOCOL_ID, "UNDEFINED_PROTOCOL_ID"},
-	{IKE, "IKE"},
-	{AH, "AH"},
-	{ESP, "ESP"},
+	{PROTO_NONE, "PROTO_NONE"},
+	{PROTO_IKE, "PROTO_IKE"},
+	{PROTO_AH, "PROTO_AH"},
+	{PROTO_ESP, "PROTO_ESP"},
 	{MAPPING_END, NULL}
 };
 
@@ -159,7 +159,7 @@ static protocol_proposal_t *get_protocol_proposal(private_proposal_t *this, prot
 		proto_proposal->prf_algos = linked_list_create();
 		proto_proposal->dh_groups = linked_list_create();
 		proto_proposal->esns = linked_list_create();
-		if (proto == IKE)
+		if (proto == PROTO_IKE)
 		{
 			proto_proposal->spi.len = 8;
 		}
@@ -446,15 +446,15 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	iterator->destroy(iterator);
 	
 	/* apply spis from "other" */
-	spi = other->public.get_spi(&(other->public), AH);
+	spi = other->public.get_spi(&(other->public), PROTO_AH);
 	if (spi)
 	{
-		selected->set_spi(selected, AH, spi);
+		selected->set_spi(selected, PROTO_AH, spi);
 	}
-	spi = other->public.get_spi(&(other->public), ESP);
+	spi = other->public.get_spi(&(other->public), PROTO_ESP);
 	if (spi)
 	{
-		selected->set_spi(selected, ESP, spi);
+		selected->set_spi(selected, PROTO_ESP, spi);
 	}
 	
 	/* everything matched, return new proposal */
@@ -477,8 +477,8 @@ static void get_protocols(private_proposal_t *this, protocol_id_t ids[2])
 	iterator_t *iterator = this->protocol_proposals->create_iterator(this->protocol_proposals, TRUE);
 	u_int i = 0;
 	
-	ids[0] = UNDEFINED_PROTOCOL_ID;
-	ids[1] = UNDEFINED_PROTOCOL_ID;
+	ids[0] = PROTO_NONE;
+	ids[1] = PROTO_NONE;
 	while (iterator->has_next(iterator))
 	{
 		protocol_proposal_t *proto_prop;
@@ -501,7 +501,7 @@ static void set_spi(private_proposal_t *this, protocol_id_t proto, u_int64_t spi
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
 	if (proto_proposal)
 	{
-		if (proto == AH || proto == ESP)
+		if (proto == PROTO_AH || proto == PROTO_ESP)
 		{
 			*((u_int32_t*)proto_proposal->spi.ptr) = (u_int32_t)spi;
 		}
@@ -520,7 +520,7 @@ static u_int64_t get_spi(private_proposal_t *this, protocol_id_t proto)
 	protocol_proposal_t *proto_proposal = get_protocol_proposal(this, proto, FALSE);
 	if (proto_proposal)
 	{
-		if (proto == AH || proto == ESP)
+		if (proto == PROTO_AH || proto == PROTO_ESP)
 		{
 			return (u_int64_t)*((u_int32_t*)proto_proposal->spi.ptr);
 		}

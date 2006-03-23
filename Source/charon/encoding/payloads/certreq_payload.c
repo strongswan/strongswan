@@ -109,11 +109,6 @@ encoding_rule_t certreq_payload_encodings[] = {
  */
 static status_t verify(private_certreq_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
 	if ((this->cert_encoding == 0) ||
 		((this->cert_encoding >= 14) && (this->cert_encoding <= 200)))
 	{

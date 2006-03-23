@@ -1027,7 +1027,6 @@ static void reset_context (private_parser_t *this)
  */
 static void destroy(private_parser_t *this)
 {
-	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
 	allocator_free(this);	
 }
 
@@ -1038,7 +1037,7 @@ parser_t *parser_create(chunk_t data)
 {
 	private_parser_t *this = allocator_alloc_thing(private_parser_t);
 	
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, PARSER, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, PARSER);
 	
 	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**)) parse_payload;
 	this->public.reset_context = (void(*)(parser_t*)) reset_context;

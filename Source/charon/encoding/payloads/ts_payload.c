@@ -130,11 +130,6 @@ static status_t verify(private_ts_payload_t *this)
 	iterator_t *iterator;
 	status_t status = SUCCESS;
 	
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
 	if (this->number_of_traffic_selectors != (this->traffic_selectors->get_count(this->traffic_selectors)))
 	{
 		/* must be the same */

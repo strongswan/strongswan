@@ -96,9 +96,7 @@ static void destroy(private_scheduler_t *this)
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Scheduler thread terminated");	
-	
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Scheduler thread terminated");
 
 	allocator_free(this);
 }
@@ -113,13 +111,12 @@ scheduler_t * scheduler_create()
 	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	this->get_events = get_events;
 	
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, SCHEDULER, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, SCHEDULER);
 	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->get_events, this) != 0)
 	{
 		/* thread could not be created  */
 		this->logger->log(this->logger, ERROR, "Scheduler thread could not be created!");
-		charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 		allocator_free(this);
 		charon->kill(charon, "Unable to create scheduler thread");
 	}

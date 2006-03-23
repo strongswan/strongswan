@@ -142,7 +142,7 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 		{
 			switch (protocols[i])
 			{
-				case AH:
+				case PROTO_AH:
 					/* do we already have an spi for AH?*/
 					if (this->my_ah_spi == 0)
 					{
@@ -150,13 +150,13 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 						status = charon->kernel_interface->get_spi(
 											charon->kernel_interface,
 											this->me, this->other,
-											AH, FALSE,
+											PROTO_AH, FALSE,
 											&(this->my_ah_spi));
 					}
 					/* update proposal */
-					proposal->set_spi(proposal, AH, (u_int64_t)this->my_ah_spi);
+					proposal->set_spi(proposal, PROTO_AH, (u_int64_t)this->my_ah_spi);
 					break;
-				case ESP:
+				case PROTO_ESP:
 					/* do we already have an spi for ESP?*/
 					if (this->my_esp_spi == 0)
 					{
@@ -164,11 +164,11 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 						status = charon->kernel_interface->get_spi(
 											charon->kernel_interface,
 											this->me, this->other,
-											ESP, FALSE,
+											PROTO_ESP, FALSE,
 											&(this->my_esp_spi));
 					}
 					/* update proposal */
-					proposal->set_spi(proposal, ESP, (u_int64_t)this->my_esp_spi);
+					proposal->set_spi(proposal, PROTO_ESP, (u_int64_t)this->my_esp_spi);
 					break;
 				default:
 					break;
@@ -216,14 +216,14 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	/* derive keys in order as protocols appear */
 	for (i = 0; i<2; i++)
 	{
-		if (protocols[i] != UNDEFINED_PROTOCOL_ID)
+		if (protocols[i] != PROTO_NONE)
 		{
 			
 			/* now we have to decide which spi to use. Use self allocated, if "mine",
 			 * or the one in the proposal, if not "mine" (others). */
 			if (mine)
 			{
-				if (protocols[i] == AH)
+				if (protocols[i] == PROTO_AH)
 				{
 					spi = this->my_ah_spi;
 				}
@@ -235,7 +235,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 			else /* use proposals spi */
 			{
 				spi = proposal->get_spi(proposal, protocols[i]);
-				if (protocols[i] == AH)
+				if (protocols[i] == PROTO_AH)
 				{
 					this->other_ah_spi = spi;
 				}
@@ -499,19 +499,17 @@ static void destroy(private_child_sa_t *this)
 	if (this->my_ah_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->other, this->my_ah_spi, AH);
+										 this->other, this->my_ah_spi, PROTO_AH);
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->me, this->other_ah_spi, AH);
+										 this->me, this->other_ah_spi, PROTO_AH);
 	}
 	if (this->my_esp_spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->other, this->my_esp_spi, ESP);
+										 this->other, this->my_esp_spi, PROTO_ESP);
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->me, this->other_esp_spi, ESP);
+										 this->me, this->other_esp_spi, PROTO_ESP);
 	}
-	
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 	allocator_free(this);
 }
 
@@ -531,7 +529,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other)
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, CHILD_SA, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, CHILD_SA);
 	this->me = me;
 	this->other = other;
 	this->my_ah_spi = 0;

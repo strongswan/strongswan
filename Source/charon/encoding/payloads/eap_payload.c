@@ -101,11 +101,6 @@ encoding_rule_t eap_payload_encodings[] = {
  */
 static status_t verify(private_eap_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
 	return SUCCESS;
 }
 

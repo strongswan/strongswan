@@ -77,10 +77,10 @@ static int send_stroke_msg (stroke_msg_t *msg)
 }
 
 static int add_connection(char *name,
-				   char *my_id, char *other_id, 
-				   char *my_addr, char *other_addr, 
-				   char *my_net, char *other_net,
-				   u_int8_t my_netmask, u_int8_t other_netmask)
+						  char *my_id, char *other_id, 
+						  char *my_addr, char *other_addr, 
+						  char *my_net, char *other_net,
+						  u_int8_t my_netmask, u_int8_t other_netmask)
 {
 	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
 	int res;

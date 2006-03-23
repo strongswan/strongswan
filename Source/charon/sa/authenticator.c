@@ -125,9 +125,6 @@ static chunk_t allocate_octets(private_authenticator_t *this,
 	chunk_t octets;
 	
 	id_with_header[0] = my_id->get_id_type(my_id);
-	/* TODO:
-	 * Reserved bytes are not in any case zero.
-	 */
 	id_with_header[1] = 0x00;
 	id_with_header[2] = 0x00;
 	id_with_header[3] = 0x00;
@@ -213,11 +210,11 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			}
 			
 			chunk_t my_auth_data = this->build_preshared_secret_signature(this,
-																				  last_received_packet,
-																				  my_nonce,
-																				  other_id_payload,
-																				  initiator,
-																				  preshared_secret);
+																		  last_received_packet,
+																		  my_nonce,
+																		  other_id_payload,
+																		  initiator,
+																		  preshared_secret);
 			allocator_free_chunk(&preshared_secret);
 			
 			if (auth_data.len != my_auth_data.len)
@@ -251,8 +248,8 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			auth_data = auth_payload->get_data(auth_payload);
 			
 			status = charon->credentials->get_rsa_public_key(charon->credentials,
-															other_id,
-															&public_key);
+															 other_id,
+															 &public_key);
 			if (status != SUCCESS)
 			{
 				other_id->destroy(other_id);
@@ -393,5 +390,5 @@ authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa)
 	this->prf = this->ike_sa->get_prf(this->ike_sa);
 	this->logger = this->ike_sa->get_logger(this->ike_sa);
 	
-	return 	&(this->public);
+	return &(this->public);
 }

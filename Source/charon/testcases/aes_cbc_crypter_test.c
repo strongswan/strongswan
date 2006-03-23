@@ -53,7 +53,7 @@ void test_aes_cbc_crypter(protected_tester_t *tester)
 	chunk_t decrypted1;
  	logger_t *logger;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"AES CBC");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	 	 
 	crypter = (crypter_t *) aes_cbc_crypter_create(16);
   	tester->assert_true(tester, (crypter != NULL), "create call test");
@@ -198,7 +198,5 @@ void test_aes_cbc_crypter(protected_tester_t *tester)
 	allocator_free_chunk(&decrypted3);
 	
 	crypter->destroy(crypter);
-	
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);
 }
 

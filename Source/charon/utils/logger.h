@@ -28,7 +28,7 @@
 #include <types.h>
 
 
-typedef enum logger_level_t logger_level_t;
+typedef enum log_level_t log_level_t;
 
 /**
  * @brief Log Levels supported by the logger object.
@@ -43,7 +43,7 @@ typedef enum logger_level_t logger_level_t;
  * 
  * @ingroup utils
  */
-enum logger_level_t {
+enum log_level_t {
 	/**
 	 * Control flow.
 	 */
@@ -107,11 +107,11 @@ struct logger_t {
 	 * the log is done.
 	 *
 	 * @param this 		logger_t object
-	 * @param loglevel 	or'ed set of logger_level_t's
+	 * @param loglevel 	or'ed set of log_level_t's
 	 * @param format 	printf like format string
 	 * @param ... 		printf like parameters
 	 */
-	void (*log) (logger_t *this, logger_level_t log_level, char *format, ...);
+	void (*log) (logger_t *this, log_level_t log_level, char *format, ...);
 
 	/**
 	 * @brief Log some bytes, useful for debugging.
@@ -120,12 +120,12 @@ struct logger_t {
 	 * the log is done.
 	 *
 	 * @param this 		logger_t object
-	 * @param loglevel 	or'ed set of logger_level_t's
+	 * @param loglevel 	or'ed set of log_level_t's
 	 * @param label 	a labeling name, logged with the bytes
 	 * @param bytes 	pointer to the bytes to dump
 	 * @param len	 	number of bytes to dump
 	 */
-	void (*log_bytes) (logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len);
+	void (*log_bytes) (logger_t *this, log_level_t loglevel, char *label, char *bytes, size_t len);
 
 	/**
 	 * @brief Log a chunk, useful for debugging.
@@ -134,27 +134,35 @@ struct logger_t {
 	 * the log is done.
 	 *
 	 * @param this 		logger_t object
-	 * @param loglevel 	or'ed set of logger_level_t's
+	 * @param loglevel 	or'ed set of log_level_t's
 	 * @param label 	a labeling name, logged with the bytes
 	 * @param chunk		chunk to log
 	 */
-	void (*log_chunk) (logger_t *this, logger_level_t loglevel, char *label, chunk_t chunk);
+	void (*log_chunk) (logger_t *this, log_level_t loglevel, char *label, chunk_t chunk);
 
 	/**
 	 * @brief Enables a loglevel for the current logger_t object.
 	 *
-	 * @param 			this logger_t object
-	 * @param 			log_level loglevel to enable
+	 * @param this 		logger_t object
+	 * @param log_level loglevel to enable
 	 */
-	void (*enable_level) (logger_t *this, logger_level_t log_level);
+	void (*enable_level) (logger_t *this, log_level_t log_level);
 
 	/**
 	 * @brief Disables a loglevel for the current logger_t object.
 	 *
-	 * @param 			this logger_t object
-	 * @param 			log_level loglevel to enable
+	 * @param this 		logger_t object
+	 * @param log_level loglevel to enable
 	 */
-	void (*disable_level) (logger_t *this, logger_level_t log_level);
+	void (*disable_level) (logger_t *this, log_level_t log_level);
+
+	/**
+	 * @brief Get the currently used loglevel.
+	 *
+	 * @param this 		logger_t object
+	 * @return			currently used loglevel
+	 */
+	log_level_t (*get_level) (logger_t *this);
 
 	/**
 	 * @brief Destroys a logger_t object.
@@ -175,7 +183,7 @@ struct logger_t {
  * 
  * @ingroup utils
  */
-logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output);
+logger_t *logger_create(char *logger_name, log_level_t log_level, bool log_thread_id, FILE * output);
 
 
 #endif /*LOGGER_H_*/

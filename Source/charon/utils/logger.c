@@ -51,7 +51,7 @@ struct private_logger_t {
 	/**
 	 * Detail-level of logger.
 	 */
-	logger_level_t level;
+	log_level_t level;
 	/**
 	 * Name of logger.
 	 */
@@ -72,13 +72,13 @@ struct private_logger_t {
 	 * 
 	 * @warning: buffer must be at least have MAX_LOG size.
 	 */
-	void (*prepend_prefix) (private_logger_t *this, logger_level_t loglevel, char *string, char *buffer);
+	void (*prepend_prefix) (private_logger_t *this, log_level_t loglevel, char *string, char *buffer);
 };
 
 /**
  * Implementation of private_logger_t.prepend_prefix.
  */
-static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char *string, char *buffer)
+static void prepend_prefix(private_logger_t *this, log_level_t loglevel, char *string, char *buffer)
 {
 	char log_type, log_details;
 	if (loglevel & CONTROL)
@@ -138,7 +138,7 @@ static void prepend_prefix(private_logger_t *this, logger_level_t loglevel, char
  *
  * Yes, logg is wrong written :-).
  */
-static void logg(private_logger_t *this, logger_level_t loglevel, char *format, ...)
+static void logg(private_logger_t *this, log_level_t loglevel, char *format, ...)
 {
 	if ((this->level & loglevel) == loglevel)
 	{
@@ -170,7 +170,7 @@ static void logg(private_logger_t *this, logger_level_t loglevel, char *format, 
 /**
  * Implementation of logger_t.log_bytes.
  */
-static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *label, char *bytes, size_t len)
+static void log_bytes(private_logger_t *this, log_level_t loglevel, char *label, char *bytes, size_t len)
 {
 	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -272,7 +272,7 @@ static void log_bytes(private_logger_t *this, logger_level_t loglevel, char *lab
 /**
  * Implementation of logger_t.log_chunk.
  */
-static void log_chunk(logger_t *this, logger_level_t loglevel, char *label, chunk_t chunk)
+static void log_chunk(logger_t *this, log_level_t loglevel, char *label, chunk_t chunk)
 {
 	this->log_bytes(this, loglevel, label, chunk.ptr, chunk.len);
 }
@@ -280,7 +280,7 @@ static void log_chunk(logger_t *this, logger_level_t loglevel, char *label, chun
 /**
  * Implementation of logger_t.enable_level.
  */
-static void enable_level(private_logger_t *this, logger_level_t log_level)
+static void enable_level(private_logger_t *this, log_level_t log_level)
 {
 	this->level |= log_level;
 }
@@ -288,9 +288,17 @@ static void enable_level(private_logger_t *this, logger_level_t log_level)
 /**
  * Implementation of logger_t.disable_level.
  */
-static void disable_level(private_logger_t *this, logger_level_t log_level)
+static void disable_level(private_logger_t *this, log_level_t log_level)
 {
 	this->level &= ~log_level;
+}
+
+/**
+ * Implementation of logger_t.get_level.
+ */
+static log_level_t get_level(private_logger_t *this)
+{
+	return this->level;
 }
 
 /**
@@ -305,16 +313,17 @@ static void destroy(private_logger_t *this)
 /*
  * Described in header.
  */	
-logger_t *logger_create(char *logger_name, logger_level_t log_level, bool log_thread_id, FILE * output)
+logger_t *logger_create(char *logger_name, log_level_t log_level, bool log_thread_id, FILE * output)
 {
 	private_logger_t *this = allocator_alloc_thing(private_logger_t);
 	
 	/* public functions */
-	this->public.log = (void(*)(logger_t*,logger_level_t,char*,...))logg;
-	this->public.log_bytes = (void(*)(logger_t*, logger_level_t, char*,char*,size_t))log_bytes;
+	this->public.log = (void(*)(logger_t*,log_level_t,char*,...))logg;
+	this->public.log_bytes = (void(*)(logger_t*, log_level_t, char*,char*,size_t))log_bytes;
 	this->public.log_chunk = log_chunk;
-	this->public.enable_level = (void(*)(logger_t*,logger_level_t))enable_level;
-	this->public.disable_level = (void(*)(logger_t*,logger_level_t))disable_level;
+	this->public.enable_level = (void(*)(logger_t*,log_level_t))enable_level;
+	this->public.disable_level = (void(*)(logger_t*,log_level_t))disable_level;
+	this->public.get_level = (log_level_t(*)(logger_t*))get_level;
 	this->public.destroy = (void(*)(logger_t*))destroy;
 
 	/* private functions */

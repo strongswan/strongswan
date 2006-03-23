@@ -512,15 +512,8 @@ static status_t process_notify_payload(private_ike_auth_requested_t *this, notif
 {
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
-							  mapping_find(notify_message_type_m, notify_message_type),
-							  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
-							  
-	if (notify_payload->get_protocol_id(notify_payload) != IKE)
-	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a notify for an invalid protocol. Deleting IKE_SA");
-		return DELETE_ME;
-	}
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
+							  mapping_find(notify_message_type_m, notify_message_type));
 	
 	switch (notify_message_type)
 	{

@@ -119,11 +119,6 @@ encoding_rule_t id_payload_encodings[] = {
  */
 static status_t verify(private_id_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
 	if ((this->id_type == 0) ||
 		(this->id_type == 4) ||
 		((this->id_type >= 6) && (this->id_type <= 8)) ||

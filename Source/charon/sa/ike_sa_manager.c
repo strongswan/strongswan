@@ -667,9 +667,6 @@ static void destroy(private_ike_sa_manager_t *this)
 	this->logger->log(this->logger,CONTROL | LEVEL2,"IKE_SA's deleted");
 	pthread_mutex_unlock(&(this->mutex));
 
-	/* destroy logger at end */
-	charon->logger_manager->destroy_logger(charon->logger_manager,this->logger);
-
 	allocator_free(this);
 }
 
@@ -695,7 +692,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->delete_entry = delete_entry;
 
 	/* initialize private variables */
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager,IKE_SA_MANAGER,NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA_MANAGER);
 	
 	this->ike_sa_list = linked_list_create();
 

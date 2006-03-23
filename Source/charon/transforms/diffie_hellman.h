@@ -35,8 +35,6 @@ typedef enum diffie_hellman_group_t diffie_hellman_group_t;
  * 
  * See IKEv2 RFC 3.3.2 and RFC 3526.
  * 
- * @warning Use of big modulus sizes can be cpu consuming.
- * 
  * @ingroup transforms
  */
 enum diffie_hellman_group_t {

@@ -249,9 +249,9 @@ int main()
  
 	daemon_create();
  
-	charon->logger_manager->disable_logger_level(charon->logger_manager,TESTER,FULL);
-	charon->logger_manager->enable_logger_level(charon->logger_manager,CHILD_SA,FULL);
-	/* charon->logger_manager->enable_logger_level(charon->logger_manager,TESTER,RAW); */
+	charon->logger_manager->disable_log_level(charon->logger_manager,TESTER,FULL);
+	charon->logger_manager->enable_log_level(charon->logger_manager,CHILD_SA,FULL);
+	/* charon->logger_manager->enable_log_level(charon->logger_manager,TESTER,RAW); */
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	

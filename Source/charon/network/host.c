@@ -208,11 +208,10 @@ static private_host_t *clone(private_host_t *this)
 	return new;
 }
 
-
 /**
- * Impelements host_t.equals
+ * Impelements host_t.ip_equals
  */
-static bool ip_is_equal(private_host_t *this, private_host_t *other)
+static bool ip_equals(private_host_t *this, private_host_t *other)
 {
 	switch (this->family)
 	{
@@ -221,6 +220,27 @@ static bool ip_is_equal(private_host_t *this, private_host_t *other)
 		{
 			if ((this->address4.sin_family == other->address4.sin_family) &&
 				(this->address4.sin_addr.s_addr == other->address4.sin_addr.s_addr))
+			{
+				return TRUE;	
+			}
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Impelements host_t.equals
+ */
+static bool equals(private_host_t *this, private_host_t *other)
+{
+	switch (this->family)
+	{
+		/* IPv4 */
+		case AF_INET:
+		{
+			if ((this->address4.sin_family == other->address4.sin_family) &&
+				(this->address4.sin_addr.s_addr == other->address4.sin_addr.s_addr) &&
+				(this->address4.sin_port == other->address4.sin_port))
 			{
 				return TRUE;	
 			}
@@ -253,7 +273,8 @@ static private_host_t *host_create_empty()
 	this->public.get_address = (char* (*) (host_t *))get_address;
 	this->public.get_address_as_chunk = (chunk_t (*) (host_t *)) get_address_as_chunk;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
-	this->public.ip_is_equal = (bool (*) (host_t *,host_t *)) ip_is_equal;
+	this->public.ip_equals = (bool (*) (host_t *,host_t *)) ip_equals;
+	this->public.equals = (bool (*) (host_t *,host_t *)) equals;
 	this->public.is_default_route = (bool (*) (host_t *)) is_default_route;
 	this->public.destroy = (void (*) (host_t*))destroy;
 	

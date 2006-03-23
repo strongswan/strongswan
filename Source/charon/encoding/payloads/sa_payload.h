@@ -29,13 +29,6 @@
 #include <utils/linked_list.h>
 
 /**
- * Critical flag must not be set.
- * 
- * @ingroup payloads
- */
-#define SA_PAYLOAD_CRITICAL_FLAG FALSE;
-
-/**
  * SA_PAYLOAD length in bytes without any proposal substructure.
  * 
  * @ingroup payloads

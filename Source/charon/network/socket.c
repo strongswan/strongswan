@@ -97,6 +97,11 @@ struct interface_t {
 	 * Associated socket
 	 */
 	int socket_fd;
+	
+	/**
+	 * Host with listening address
+	 */
+	host_t *address;
 };
 
 typedef struct private_socket_t private_socket_t;
@@ -366,8 +371,9 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
  		memcpy(interface->name, buf[i].ifr_name, IFNAMSIZ);
  		interface->name[IFNAMSIZ-1] = '\0';
 		interface->socket_fd = skt;
+		interface->address = host_create_from_sockaddr((struct sockaddr*)current);
 		this->logger->log(this->logger, CONTROL, "listening on %s (%s)",
-						  interface->name, inet_ntoa(current->sin_addr));
+						  interface->name, interface->address->get_address(interface->address));
 		this->interfaces->insert_last(this->interfaces, (void*)interface);
 	}
 	
@@ -380,18 +386,47 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 }
 
 /**
+ * implementation of socket_t.is_listening_on
+ */
+static bool is_listening_on(private_socket_t *this, host_t *host)
+{
+	iterator_t *iterator;
+	
+	/* listening on 0.0.0.0 is always TRUE */
+	if (host->is_default_route(host))
+	{
+		return TRUE;
+	}
+	
+	/* compare host with all interfaces */
+	iterator = this->interfaces->create_iterator(this->interfaces, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		interface_t *interface;
+		iterator->current(iterator, (void**)&interface);
+		if (host->equals(host, interface->address))
+		{
+			iterator->destroy(iterator);
+			return TRUE;
+		}
+	}
+	iterator->destroy(iterator);
+	return FALSE;
+}
+
+/**
  * implementation of socket_t.destroy
  */
-void destroy(private_socket_t *this)
+static void destroy(private_socket_t *this)
 {
 	interface_t *interface;
 	while (this->interfaces->remove_last(this->interfaces, (void**)&interface) == SUCCESS)
 	{
+		interface->address->destroy(interface->address);
 		close(interface->socket_fd);
 		allocator_free(interface);
 	}
 	this->interfaces->destroy(this->interfaces);
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 	close(this->master_fd);
 	allocator_free(this);
 }
@@ -406,9 +441,10 @@ socket_t *socket_create(u_int16_t port)
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
+	this->public.is_listening_on = (bool (*)(socket_t*,host_t*))is_listening_on;
 	this->public.destroy = (void(*)(socket_t*)) destroy;
 	
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, SOCKET, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, SOCKET);
 	this->interfaces = linked_list_create();
 	
 	if (build_interface_list(this, port) != SUCCESS)

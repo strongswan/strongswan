@@ -56,7 +56,7 @@ void test_hmac_md5_signer(protected_tester_t *tester)
  	logger_t *logger;
  	bool valid;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"HMAC MD5 96");
+	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
 	
 	signer_t *signer = (signer_t *)	signer_create(AUTH_HMAC_MD5_96);
 	tester->assert_true(tester, (signer != NULL), "signer create call check");
@@ -104,12 +104,8 @@ void test_hmac_md5_signer(protected_tester_t *tester)
 
 		valid = signer->verify_signature(signer, data[i],wrong_reference[i]);
 		tester->assert_true(tester, (valid == FALSE), "Signature not valid check");
- 	}
-	
-	
-
+	}
 	signer->destroy(signer);	
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);
 }
 
 
@@ -138,7 +134,7 @@ void test_hmac_sha1_signer(protected_tester_t *tester)
  	logger_t *logger;
  	bool valid;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"HMAC SHA1 96");
+	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
 	
 	signer_t *signer = (signer_t *)	signer_create(AUTH_HMAC_SHA1_96);
 	tester->assert_true(tester, (signer != NULL), "signer create call check");

@@ -638,7 +638,6 @@ static void destroy(private_encryption_payload_t *this)
 		current_payload->destroy(current_payload);
 	}
 	this->payloads->destroy(this->payloads);
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 	allocator_free(this->encrypted.ptr);
 	allocator_free(this->decrypted.ptr);
 	allocator_free(this);
@@ -677,10 +676,10 @@ encryption_payload_t *encryption_payload_create()
 	this->compute_length = compute_length;
 	this->generate = generate;
 	this->parse = parse;
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, ENCRYPTION_PAYLOAD, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, ENCRYPTION_PAYLOAD);
 	
 	/* set default values of the fields */
-	this->critical = TRUE;
+	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = ENCRYPTION_PAYLOAD_HEADER_LENGTH;
 	this->encrypted = CHUNK_INITIALIZER;

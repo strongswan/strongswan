@@ -99,9 +99,7 @@ static void destroy(private_sender_t *this)
 	pthread_cancel(this->assigned_thread);
 
 	pthread_join(this->assigned_thread, NULL);
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Sender thread terminated");	
-	
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Sender thread terminated");
 
 	allocator_free(this);
 }
@@ -116,7 +114,7 @@ sender_t * sender_create()
 	this->send_packets = send_packets;
 	this->public.destroy = (void(*)(sender_t*)) destroy;
 	
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, SENDER, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, SENDER);
 
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->send_packets, this) != 0)
 	{

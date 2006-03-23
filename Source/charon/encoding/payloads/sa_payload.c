@@ -118,12 +118,6 @@ static status_t verify(private_sa_payload_t *this)
 	status_t status = SUCCESS;
 	iterator_t *iterator;
 	bool first = TRUE;
-	
-	if (this->critical)
-	{
-		/* critical bit set! */
-		return FAILED;
-	}
 
 	/* check proposal numbering */		
 	iterator = this->proposals->create_iterator(this->proposals,TRUE);
@@ -269,7 +263,7 @@ static void add_proposal(private_sa_payload_t *this, proposal_t *proposal)
 	proposal->get_protocols(proposal, proto);
 	for (i = 0; i<2; i++)
 	{
-		if (proto[i] != UNDEFINED_PROTOCOL_ID)
+		if (proto[i] != PROTO_NONE)
 		{
 			substructure = proposal_substructure_create_from_proposal(proposal, proto[i]);
 			add_proposal_substructure(this, substructure);
@@ -356,7 +350,7 @@ sa_payload_t *sa_payload_create()
 	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
-	this->critical = SA_PAYLOAD_CRITICAL_FLAG;
+	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = SA_PAYLOAD_HEADER_LENGTH;
 

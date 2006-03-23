@@ -151,7 +151,7 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 	
 	if (delete_request)
 	{	
-		if (delete_request->get_protocol_id(delete_request) == IKE)
+		if (delete_request->get_protocol_id(delete_request) == PROTO_IKE)
 		{
 			this->logger->log(this->logger, AUDIT, "DELETE request for IKE_SA received");
 			response->destroy(response);

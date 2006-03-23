@@ -321,7 +321,7 @@ static void send_delete_ike_sa_request (private_ike_sa_t *this)
 	this->protected.build_message(&(this->protected), INFORMATIONAL, TRUE, &informational_request);
 	
 	delete_payload = delete_payload_create();
-	delete_payload->set_protocol_id(delete_payload,IKE);
+	delete_payload->set_protocol_id(delete_payload, PROTO_IKE);
 		
 	informational_request->add_payload(informational_request,(payload_t *)delete_payload);
 	
@@ -502,7 +502,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	{
 		this->prf->destroy(this->prf);
 	}
-	proposal->get_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, &algo);
+	proposal->get_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, &algo);
 	if (algo == NULL)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No PRF algoithm selected!?");
@@ -568,7 +568,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	
 	/* SK_ai/SK_ar used for integrity protection */
-	proposal->get_algorithm(proposal, IKE, INTEGRITY_ALGORITHM, &algo);
+	proposal->get_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, &algo);
 	if (algo == NULL)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No integrity algoithm selected?!");
@@ -606,7 +606,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	
 	/* SK_ei/SK_er used for encryption */
-	proposal->get_algorithm(proposal, IKE, ENCRYPTION_ALGORITHM, &algo);
+	proposal->get_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, &algo);
 	if (algo == NULL)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No encryption algoithm selected!?");
@@ -644,7 +644,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	allocator_free_chunk(&key);
 	
 	/* SK_pi/SK_pr used for authentication */
-	proposal->get_algorithm(proposal, IKE, PSEUDO_RANDOM_FUNCTION, &algo);
+	proposal->get_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, &algo);
 	if (this->prf_auth_i != NULL)
 	{
 		this->prf_auth_i->destroy(this->prf_auth_i);
@@ -861,7 +861,7 @@ static void send_notify(private_ike_sa_t *this, exchange_type_t exchange_type, n
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message with notify payload");
 	/* set up the reply */
 	this->protected.build_message(&(this->protected), exchange_type, FALSE, &response);
-	payload = notify_payload_create_from_protocol_and_type(IKE,type);
+	payload = notify_payload_create_from_protocol_and_type(PROTO_IKE, type);
 	if ((data.ptr != NULL) && (data.len > 0))
 	{
 		this->logger->log(this->logger, CONTROL|LEVEL2, "Add Data to notify payload");
@@ -1023,7 +1023,6 @@ static void destroy (private_ike_sa_t *this)
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	this->randomizer->destroy(this->randomizer);
 	this->current_state->destroy(this->current_state);
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 
 	allocator_free(this);
 }
@@ -1076,7 +1075,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->resend_last_reply = resend_last_reply;
 
 	/* initialize private fields */
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, IKE_SA, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
 	
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();

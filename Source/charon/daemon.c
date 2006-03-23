@@ -262,7 +262,7 @@ private_daemon_t *daemon_create()
 	
 	/* first build a logger */
 	this->public.logger_manager = logger_manager_create(DEFAULT_LOGLEVEL);
-	this->logger = (this->public.logger_manager)->create_logger(this->public.logger_manager, DAEMON, NULL);
+	this->logger = (this->public.logger_manager)->get_logger(this->public.logger_manager, DAEMON);
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;

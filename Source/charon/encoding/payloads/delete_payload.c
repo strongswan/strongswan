@@ -121,11 +121,6 @@ encoding_rule_t delete_payload_encodings[] = {
  */
 static status_t verify(private_delete_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
 	if ((this->protocol_id == 0) ||
 		(this->protocol_id > 3))
 	{
@@ -136,7 +131,7 @@ static status_t verify(private_delete_payload_t *this)
 	{
 		return FAILED;
 	}
-	if ((this->protocol_id == IKE) && (this->spis.len != 0))
+	if ((this->protocol_id == PROTO_IKE) && (this->spis.len != 0))
 	{
 		/* IKE deletion has no spi assigned! */
 		return FAILED;
@@ -318,7 +313,7 @@ delete_payload_t *delete_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length =DELETE_PAYLOAD_HEADER_LENGTH;
-	this->protocol_id = UNDEFINED_PROTOCOL_ID;
+	this->protocol_id = PROTO_NONE;
 	this->spi_size = 0;
 	this->spi_count = 0;
 	this->spis = CHUNK_INITIALIZER;

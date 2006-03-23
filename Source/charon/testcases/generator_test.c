@@ -58,7 +58,7 @@ void test_generator_with_header_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"header payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
 	
 	header_data = ike_header_create();
 	header_data->set_initiator_spi(header_data,1);
@@ -129,7 +129,6 @@ void test_generator_with_header_payload(protected_tester_t *tester)
 
 	header_data->destroy(header_data);
 	
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);
 	generator->destroy(generator);
 }
 
@@ -143,7 +142,7 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"transform_attribute payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
 	
 	
 	/* test empty attribute */
@@ -222,9 +221,6 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	attribute->destroy(attribute);
 	generator->destroy(generator);
-		
-
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 
@@ -241,7 +237,7 @@ void test_generator_with_transform_substructure(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"transform substr.");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -293,9 +289,6 @@ void test_generator_with_transform_substructure(protected_tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	transform->destroy(transform);
 	generator->destroy(generator);
-	
-	
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 
@@ -312,7 +305,7 @@ void test_generator_with_proposal_substructure(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"transform substr.");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -409,9 +402,6 @@ void test_generator_with_proposal_substructure(protected_tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	proposal->destroy(proposal);
 	generator->destroy(generator);
-	
-	
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -432,7 +422,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with SA Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -756,9 +746,6 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	generator->destroy(generator);
 	
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
-	
 }
 
 /*
@@ -772,7 +759,7 @@ void test_generator_with_ke_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t key_exchange_data;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with KE Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -811,8 +798,6 @@ void test_generator_with_ke_payload(protected_tester_t *tester)
 	
 	ke_payload->destroy(ke_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 	
 }
 
@@ -827,7 +812,7 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t spi,notification_data;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with Notify Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -871,9 +856,6 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	
 	notify_payload->destroy(notify_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
-	
 }
 
 /*
@@ -887,7 +869,7 @@ void test_generator_with_nonce_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t nonce;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with Nonce Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -925,9 +907,6 @@ void test_generator_with_nonce_payload(protected_tester_t *tester)
 	
 	nonce_payload->destroy(nonce_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
-	
 }
 
 /*
@@ -941,7 +920,7 @@ void test_generator_with_id_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t id;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with ID Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -979,8 +958,6 @@ void test_generator_with_id_payload(protected_tester_t *tester)
 	
 	id_payload->destroy(id_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -994,7 +971,7 @@ void test_generator_with_auth_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t auth;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with AUTH Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1032,8 +1009,6 @@ void test_generator_with_auth_payload(protected_tester_t *tester)
 	
 	auth_payload->destroy(auth_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -1048,7 +1023,7 @@ void test_generator_with_ts_payload(protected_tester_t *tester)
 	logger_t *logger;
 	chunk_t generated_data;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with TS Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1116,8 +1091,6 @@ void test_generator_with_ts_payload(protected_tester_t *tester)
 	
 	ts_payload->destroy(ts_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -1131,7 +1104,7 @@ void test_generator_with_cert_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t cert;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with CERT Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1168,8 +1141,6 @@ void test_generator_with_cert_payload(protected_tester_t *tester)
 	
 	cert_payload->destroy(cert_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -1183,7 +1154,7 @@ void test_generator_with_certreq_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t certreq;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with CERTREQ Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1220,8 +1191,6 @@ void test_generator_with_certreq_payload(protected_tester_t *tester)
 	
 	certreq_payload->destroy(certreq_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -1235,7 +1204,7 @@ void test_generator_with_delete_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t spis;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with DELETE Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1274,8 +1243,6 @@ void test_generator_with_delete_payload(protected_tester_t *tester)
 	
 	delete_payload->destroy(delete_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -1289,7 +1256,7 @@ void test_generator_with_vendor_id_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t data;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with VENDOR ID Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1323,8 +1290,6 @@ void test_generator_with_vendor_id_payload(protected_tester_t *tester)
 	
 	vendor_id_payload->destroy(vendor_id_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -1339,7 +1304,7 @@ void test_generator_with_cp_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"CP Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1396,9 +1361,6 @@ void test_generator_with_cp_payload(protected_tester_t *tester)
 	allocator_free_chunk(&generated_data);
 	configuration->destroy(configuration);
 	generator->destroy(generator);
-	
-	
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }
 
 /*
@@ -1412,7 +1374,7 @@ void test_generator_with_eap_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t message;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager,TESTER,"Message with EAP Payload");
+	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();

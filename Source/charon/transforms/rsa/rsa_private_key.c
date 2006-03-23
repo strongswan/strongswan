@@ -39,6 +39,21 @@ extern u_int8_t sha256_oid[19];
 extern u_int8_t sha384_oid[19];
 extern u_int8_t sha512_oid[19];
 
+/*
+asn1_module_t rsa_private_key_module = {
+	{ASN1_SEQUENCE, 0, 0, 0},
+	{	ASN1_INTEGER, 0, 		offsetof(private_rsa_private_key, version), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key, n), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key, e), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key, d), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key, p), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key, q), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key, exp1), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key, exp2), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key, coeff), 0},
+	{ASN1_END, 0, 0, 0},
+};*/
+
 /**
  *  Public exponent to use for key generation.
  */
@@ -55,6 +70,11 @@ struct private_rsa_private_key_t {
 	 * Public interface for this signer.
 	 */
 	rsa_private_key_t public;
+	
+	/**
+	 * Version of key, as encoded in PKCS#1
+	 */
+	u_int version;
 	
 	/**
 	 * Is the key already set ?

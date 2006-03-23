@@ -155,7 +155,16 @@ struct host_t {
 	 * @param other			the other to compare
 	 * @return				TRUE if addresses are equal.
 	 */
-	bool (*ip_is_equal) (host_t *this, host_t *other);
+	bool (*ip_equals) (host_t *this, host_t *other);
+		
+	/** 
+	 * @brief Compare two hosts, with port.
+	 * 
+	 * @param this			object to compare
+	 * @param other			the other to compare
+	 * @return				TRUE if addresses and ports are equal.
+	 */
+	bool (*equals) (host_t *this, host_t *other);
 	
 	/** 
 	 * @brief Destroy this host object

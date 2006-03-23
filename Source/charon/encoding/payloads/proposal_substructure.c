@@ -620,7 +620,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	iterator->destroy(iterator);
 	
 	/* take over general infos */
-	this->spi_size = proto == IKE ? 8 : 4;
+	this->spi_size = proto == PROTO_IKE ? 8 : 4;
 	this->spi.len = this->spi_size;
 	this->spi.ptr = allocator_alloc(this->spi_size);
 	*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal, proto);

@@ -344,7 +344,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 		return DELETE_ME;
 	}
 	/* get selected DH group to force policy, this is very restrictive!? */
-	this->proposal->get_algorithm(this->proposal, IKE, DIFFIE_HELLMAN_GROUP, &algo);
+	this->proposal->get_algorithm(this->proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, &algo);
 	this->dh_group_number = algo->algorithm;
 	
 	this->logger->log(this->logger, CONTROL | LEVEL2, "SA Payload processed");
@@ -458,11 +458,10 @@ static status_t process_notify_payload(private_responder_init_t *this, notify_pa
 {
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
-						  mapping_find(notify_message_type_m, notify_message_type),
-						  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
+						  mapping_find(notify_message_type_m, notify_message_type));
 								  
-	if (notify_payload->get_protocol_id(notify_payload) != IKE)
+	if (notify_payload->get_protocol_id(notify_payload) != PROTO_IKE)
 	{
 		this->logger->log(this->logger, ERROR | LEVEL1, "Notify reply not for IKE protocol.");
 		return FAILED;	

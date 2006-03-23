@@ -746,7 +746,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		
 	current_payload_type = this->first_payload;	
 		
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Parsing body of message, first payload %s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Parsing body of message, first payload is %s",
 					  mapping_find(payload_type_m, current_payload_type));
 
 	/* parse payload for payload, while there are more available */
@@ -754,7 +754,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	{
 		payload_t *current_payload;
 		
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Start parsing payload of type %s", 
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Start parsing a %s payload", 
 							mapping_find(payload_type_m, current_payload_type));
 		
 		/* parse current payload */
@@ -774,21 +774,21 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Payload type %s verification failed",
+			this->logger->log(this->logger, ERROR, "%s payload verification failed",
 								mapping_find(payload_type_m,current_payload_type));
 			current_payload->destroy(current_payload);
 			status = VERIFY_ERROR;
 			return status;
 		}
 		
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Payload verified. Adding to payload list", 
+		this->logger->log(this->logger, CONTROL|LEVEL2, "%s payload verified. Adding to payload list", 
 							mapping_find(payload_type_m, current_payload_type));
 		this->payloads->insert_last(this->payloads,current_payload);
 		
 		/* an encryption payload is the last one, so STOP here. decryption is done later */
 		if (current_payload_type == ENCRYPTED)
 		{
-			this->logger->log(this->logger, CONTROL|LEVEL2, "Payload of type encrypted found. Stop parsing", 
+			this->logger->log(this->logger, CONTROL|LEVEL2, "%s payload found. Stop parsing", 
 								mapping_find(payload_type_m, current_payload_type));			
 			break;	
 		}
@@ -1153,7 +1153,6 @@ static void destroy (private_message_t *this)
 	iterator->destroy(iterator);
 	this->payloads->destroy(this->payloads);
 	this->parser->destroy(this->parser);
-	charon->logger_manager->destroy_logger(charon->logger_manager, this->logger);
 	
 	allocator_free(this);
 }
@@ -1218,7 +1217,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	/* parser is created from data of packet */
  	this->parser = parser_create(this->packet->get_data(this->packet));
 		
-	this->logger = charon->logger_manager->create_logger(charon->logger_manager, MESSAGE, NULL);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, MESSAGE);
 
 	return (&this->public);
 }
@@ -1246,7 +1245,7 @@ message_t *message_create_notify_reply(host_t *source, host_t *destination, exch
 	message->set_message_id(message,0);
 	message->set_ike_sa_id(message, ike_sa_id);
 	
-	payload = notify_payload_create_from_protocol_and_type(IKE,notify_type);
+	payload = notify_payload_create_from_protocol_and_type(PROTO_IKE, notify_type);
 	message->add_payload(message,(payload_t *) payload);
 	
 	return message;

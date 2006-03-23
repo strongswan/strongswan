@@ -41,10 +41,10 @@ typedef enum protocol_id_t protocol_id_t;
  * @ingroup config
  */
 enum protocol_id_t {
-	UNDEFINED_PROTOCOL_ID = 201,
-	IKE = 1,
-	AH = 2,
-	ESP = 3,
+	PROTO_NONE = 0,
+	PROTO_IKE = 1,
+	PROTO_AH = 2,
+	PROTO_ESP = 3,
 };
 
 /** 

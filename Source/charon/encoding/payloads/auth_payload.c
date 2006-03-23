@@ -116,11 +116,6 @@ encoding_rule_t auth_payload_encodings[] = {
  */
 static status_t verify(private_auth_payload_t *this)
 {
-	if (this->critical)
-	{
-		/* critical bit is set! */
-		return FAILED;
-	}
 	if ((this->auth_method == 0) ||
 		((this->auth_method >= 4) && (this->auth_method <= 200)))
 	{

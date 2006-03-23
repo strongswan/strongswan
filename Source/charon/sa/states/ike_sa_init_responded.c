@@ -572,9 +572,8 @@ static status_t process_notify_payload(private_ike_sa_init_responded_t *this, no
 {
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
-					  mapping_find(notify_message_type_m, notify_message_type),
-					  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
+					  mapping_find(notify_message_type_m, notify_message_type));
 					  
 	switch (notify_message_type)
 	{

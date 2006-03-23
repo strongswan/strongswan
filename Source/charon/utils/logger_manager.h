@@ -36,7 +36,7 @@ typedef enum logger_context_t logger_context_t;
  * @ingroup utils
  */
 enum logger_context_t {
-	PARSER,
+	PARSER = 0,
 	GENERATOR,
 	IKE_SA,
 	IKE_SA_MANAGER,
@@ -52,6 +52,8 @@ enum logger_context_t {
 	DAEMON,
 	CONFIG,
 	ENCRYPTION_PAYLOAD,
+	PAYLOAD,
+	LOGGER_CONTEXT_ROOF,
 };
 
 
@@ -69,23 +71,12 @@ typedef struct logger_manager_t logger_manager_t;
  * 
  * @see logger_t
  * 
- * @todo We currently give out a new instance for every logger requested.
- * This is unnecessary. One logger for each class would be sufficient.
- * 
- * @todo We could remove logger naming (additional to classes), since we have
- * never used it (and probably never will).
- * 
  * @ingroup utils
  */
 struct logger_manager_t {
 	
 	/**
 	 * @brief Gets a logger_t object for a specific logger context.
-	 * 
-	 * @warning Objects of type logger_t which are not destroyed over function
-	 * #logger_manager_t.destroy_logger are destroyed in logger_managers 
-	 * destroy function. Don't use logger_t's own destroy function with 
-	 * managed logger_t objects.
 	 *
 	 * @param this			logger_manager_t object
 	 * @param context		logger_context to use the logger for
@@ -93,37 +84,25 @@ struct logger_manager_t {
 	 * 						and has not to be specified (so NULL is allowed)
 	 * @return				logger_t object
 	 */
-	logger_t *(*create_logger) (logger_manager_t *this, logger_context_t context, char *name);
+	logger_t *(*get_logger) (logger_manager_t *this, logger_context_t context);
 	
 	/**
-	 * @brief Destroys a logger_t object which is not used anymore.
-	 * 
-	 * Objects of type logger_t which are not destroyed over function
-	 * #logger_manager_t.destroy_logger are destroyed in logger_managers 
-	 * destroy function.
-	 *
-	 * @param this		logger_manager_t object
-	 * @param logger	pointer to the logger which has to be destroyed
-	 */
-	void (*destroy_logger) (logger_manager_t *this,logger_t *logger);
-	
-	/**
-	 * Returns the set logger_level of a specific context or 0.
+	 * Returns the set log_level of a specific context or 0.
 	 * 
 	 * @param this 			calling object
 	 * @param context 		context to check level
-	 * @return				logger_level for the given logger_context
+	 * @return				log_level for the given logger_context
 	 */
-	logger_level_t (*get_logger_level) (logger_manager_t *this, logger_context_t context);
+	log_level_t (*get_log_level) (logger_manager_t *this, logger_context_t context);
 	
 	/**
 	 * Enables a logger level of a specific context.
 	 * 
 	 * @param this 			calling object
 	 * @param context 		context to set level
- 	 * @param logger_level 	logger level to eanble
+ 	 * @param log_level 	logger level to eanble
 	 */
-	void (*enable_logger_level) (logger_manager_t *this, logger_context_t context,logger_level_t logger_level);
+	void (*enable_log_level) (logger_manager_t *this, logger_context_t context,log_level_t log_level);
 		
 
 	/**
@@ -131,9 +110,9 @@ struct logger_manager_t {
 	 * 
 	 * @param this 			calling object
 	 * @param context 		context to set level
- 	 * @param logger_level 	logger level to disable
+ 	 * @param log_level 	logger level to disable
 	 */
-	void (*disable_logger_level) (logger_manager_t *this, logger_context_t context,logger_level_t logger_level);
+	void (*disable_log_level) (logger_manager_t *this, logger_context_t context,log_level_t log_level);
 
 
 	/**
@@ -154,7 +133,7 @@ struct logger_manager_t {
  * 
  * @ingroup utils
  */
-logger_manager_t *logger_manager_create(logger_level_t default_log_level);
+logger_manager_t *logger_manager_create(log_level_t default_log_level);
 
 
 #endif /*LOGGER_MANAGER_H_*/

@@ -60,7 +60,7 @@ void test_encryption_payload(protected_tester_t *tester)
 	key.ptr = key_bytes;
 	key.len = sizeof(key_bytes);
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager, TESTER, NULL);
+	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
 	
 	nonce.ptr = "test text und so...";
 	nonce.len = strlen(nonce.ptr) +1;

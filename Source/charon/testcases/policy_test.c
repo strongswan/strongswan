@@ -44,7 +44,7 @@ void test_policy(protected_tester_t *tester)
 	logger_t *logger;
 	identification_t *alice, *bob;
 	
-	logger = charon->logger_manager->create_logger(charon->logger_manager, TESTER, NULL);
+	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
 	logger->disable_level(logger, FULL);
 	
 	alice = identification_create_from_string(ID_IPV4_ADDR, "152.96.193.131");
