@@ -61,16 +61,16 @@ void test_policy(protected_tester_t *tester)
 	
 	/* esp only prop */
 	proposal1 = proposal_create(1);
-	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	
 	/* ah only prop */
 	proposal2 = proposal_create(2);
-	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	proposal2->add_algorithm(proposal2, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
 	
 	/* ah and esp prop */
 	proposal3 = proposal_create(3);
-	proposal3->add_algorithm(proposal3, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 16);
-	proposal3->add_algorithm(proposal3, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal3->add_algorithm(proposal3, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 16);
+	proposal3->add_algorithm(proposal3, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
 	
 	
 	policy->add_proposal(policy, proposal1);
@@ -84,13 +84,13 @@ void test_policy(protected_tester_t *tester)
 	
 	proposals_list = linked_list_create();
 	proposal1 = proposal_create(1);
-	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
 	proposal2 = proposal_create(2);
-	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 16);
-	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 0);
-	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
-	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 16);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 0);
+	proposal2->add_algorithm(proposal2, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	proposal2->add_algorithm(proposal2, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
 	
 	proposals_list->insert_last(proposals_list, proposal1);
 	proposals_list->insert_last(proposals_list, proposal2);
@@ -98,7 +98,7 @@ void test_policy(protected_tester_t *tester)
 	proposal_sel = policy->select_proposal(policy, proposals_list);
 	tester->assert_false(tester, proposal_sel == NULL, "proposal select");
 	/* check ESP encryption algo */
-	iterator = proposal_sel->create_algorithm_iterator(proposal_sel, ESP, ENCRYPTION_ALGORITHM);
+	iterator = proposal_sel->create_algorithm_iterator(proposal_sel, PROTO_ESP, ENCRYPTION_ALGORITHM);
 	tester->assert_false(tester, iterator == NULL, "algorithm select ESP");
 	while (iterator->has_next(iterator))
 	{
@@ -108,7 +108,7 @@ void test_policy(protected_tester_t *tester)
 		tester->assert_true(tester, algo->key_size == 16, "ESP encryption keysize");
 	}
 	iterator->destroy(iterator);
-	iterator = proposal_sel->create_algorithm_iterator(proposal_sel, AH, INTEGRITY_ALGORITHM);
+	iterator = proposal_sel->create_algorithm_iterator(proposal_sel, PROTO_AH, INTEGRITY_ALGORITHM);
 	/* check AH integrity algo */
 	tester->assert_false(tester, iterator == NULL, "algorithm select AH");
 	while (iterator->has_next(iterator))

@@ -39,38 +39,38 @@ void test_proposal(protected_tester_t *tester)
 	bool result;
 
 	proposal1 = proposal_create(1);
-	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
-	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
-	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 0);
-	proposal1->add_algorithm(proposal1, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
-	proposal1->add_algorithm(proposal1, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	proposal1->add_algorithm(proposal1, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	proposal1->add_algorithm(proposal1, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 0);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 20);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal1->add_algorithm(proposal1, PROTO_AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal1->add_algorithm(proposal1, PROTO_AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
 	
 	proposal2 = proposal_create(2);
-	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_3IDEA, 0);
-	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	proposal2->add_algorithm(proposal2, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	proposal1->add_algorithm(proposal2, AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_3IDEA, 0);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal1->add_algorithm(proposal2, PROTO_AH, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
 	
 	/* ah and esp prop */
 	proposal3 = proposal1->select(proposal1, proposal2);
 	tester->assert_false(tester, proposal3 == NULL, "proposal select");
 	if (proposal3)
 	{
-		result = proposal3->get_algorithm(proposal3, ESP, ENCRYPTION_ALGORITHM, &algo);
+		result = proposal3->get_algorithm(proposal3, PROTO_ESP, ENCRYPTION_ALGORITHM, &algo);
 		tester->assert_true(tester, result, "encryption algo select");
 		tester->assert_true(tester, algo->algorithm == ENCR_AES_CBC, "encryption algo");
 		tester->assert_true(tester, algo->key_size == 16, "encryption keylen");
 		
 		
-		result = proposal3->get_algorithm(proposal3, ESP, INTEGRITY_ALGORITHM, &algo);
+		result = proposal3->get_algorithm(proposal3, PROTO_ESP, INTEGRITY_ALGORITHM, &algo);
 		tester->assert_true(tester, result, "integrity algo select");
 		tester->assert_true(tester, algo->algorithm == AUTH_HMAC_MD5_96, "integrity algo");
 		tester->assert_true(tester, algo->key_size == 20, "integrity keylen");
 		
-		iterator = proposal3->create_algorithm_iterator(proposal3, ESP, INTEGRITY_ALGORITHM);
+		iterator = proposal3->create_algorithm_iterator(proposal3, PROTO_ESP, INTEGRITY_ALGORITHM);
 		tester->assert_false(tester, iterator == NULL, "integrity algo select");
 		while(iterator->has_next(iterator))
 		{
@@ -80,7 +80,7 @@ void test_proposal(protected_tester_t *tester)
 		}
 		iterator->destroy(iterator);
 		
-		iterator = proposal3->create_algorithm_iterator(proposal3, AH, DIFFIE_HELLMAN_GROUP );
+		iterator = proposal3->create_algorithm_iterator(proposal3, PROTO_AH, DIFFIE_HELLMAN_GROUP );
 		tester->assert_false(tester, iterator == NULL, "dh group algo select");
 		while(iterator->has_next(iterator))
 		{

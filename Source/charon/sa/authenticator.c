@@ -388,7 +388,7 @@ authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa)
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->prf = this->ike_sa->get_prf(this->ike_sa);
-	this->logger = this->ike_sa->get_logger(this->ike_sa);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
 	
 	return &(this->public);
 }

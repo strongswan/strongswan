@@ -22,6 +22,7 @@
  
 #include "ike_sa_established.h"
 
+#include <daemon.h>
 #include <utils/allocator.h>
 #include <encoding/payloads/delete_payload.h>
 
@@ -233,7 +234,7 @@ ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->logger = ike_sa->get_logger(ike_sa);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
 	
 	return &(this->public);
 }

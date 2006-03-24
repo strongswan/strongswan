@@ -660,7 +660,7 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk
 	this->received_nonce = received_nonce;
 	this->sent_nonce = sent_nonce;
 	this->ike_sa_init_reply_data = ike_sa_init_reply_data;
-	this->logger = this->ike_sa->get_logger(this->ike_sa);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
 	this->my_ts = NULL;
 	this->other_ts = NULL;
 	this->proposal = NULL;

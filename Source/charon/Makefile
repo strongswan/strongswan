@@ -52,6 +52,7 @@ include $(MAIN_DIR)sa/Makefile.sa
 include $(MAIN_DIR)threads/Makefile.threads
 include $(MAIN_DIR)transforms/Makefile.transforms
 include $(MAIN_DIR)utils/Makefile.utils	
+include $(MAIN_DIR)asn1/Makefile.asn1	
 
 
 build_dir:

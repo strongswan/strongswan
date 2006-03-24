@@ -27,16 +27,17 @@
 #include <daemon.h>
 #include <utils/allocator.h>
 #include <transforms/hashers/hasher.h>
+#include <asn1/der_decoder.h>
 
 /* 
- * Since we don't have an ASN1 parser/generator,
+ * For simplicity,
  * we use these predefined values for
- * hash algorithm oids. These also contain
+ * hash algorithm OIDs. These also contain
  * the length of the following hash.
  * These values are also used in rsa_private_key.c.
  */
 
-u_int8_t md2_oid[18] = {
+u_int8_t md2_oid[] = {
 	0x30,0x20,0x30,0x0c,0x06,0x08,0x2a,0x86,
 	0x48,0x86,0xf7,0x0d,0x02,0x02,0x05,0x00,
 	0x04,0x10
@@ -92,6 +93,7 @@ struct private_rsa_public_key_t {
 	 * Public modulus.
 	 */
 	mpz_t n;
+	
 	/**
 	 * Public exponent.
 	 */
@@ -122,7 +124,17 @@ struct private_rsa_public_key_t {
 };
 
 /**
- * Implementation of private_rsa_public_key_t.rsadp and private_rsa_public_key_t.rsavp1
+ * Rules for de-/encoding of a public key from/in ASN1 
+ */
+static asn1_rule_t rsa_public_key_rules[] = {
+	{ASN1_SEQUENCE, 0, 0, 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_public_key_t, n), 0},
+	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_public_key_t, e), 0},
+	{ASN1_END, 0, 0, 0},
+};
+
+/**
+ * Implementation of private_rsa_public_key_t.rsaep and private_rsa_public_key_t.rsavp1
  */
 static chunk_t rsaep(private_rsa_public_key_t *this, chunk_t data)
 {
@@ -146,7 +158,7 @@ static chunk_t rsaep(private_rsa_public_key_t *this, chunk_t data)
 }
 
 /**
- * Implementation of rsa_public_key.verify_emsa_signature.
+ * Implementation of rsa_public_key.verify_emsa_pkcs1_signature.
  */
 static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chunk_t data, chunk_t signature)
 {
@@ -278,25 +290,20 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
  */
 static status_t set_key(private_rsa_public_key_t *this, chunk_t key)
 {
-	chunk_t n, e;
+	der_decoder_t *dd;
+	status_t status;
 	
-	n.len = key.len/2;
-	n.ptr = key.ptr;
-	e.len = n.len;
-	e.ptr = key.ptr + n.len;
+	dd = der_decoder_create(rsa_public_key_rules);
 	
-	mpz_init(this->n);
-	mpz_init(this->e);
-	
-	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
-	mpz_import(this->e, n.len, 1, 1, 1, 0, e.ptr);
-	
-	this->k = n.len;
-	
-	this->is_key_set = TRUE;
-	
-	return SUCCESS;
-}	
+	status = dd->decode(dd, key, this);
+	if (status == SUCCESS)
+	{
+		this->is_key_set = TRUE;
+		this->k = mpz_sizeinbase(this->n, 2) / 8;
+	}
+	dd->destroy(dd);
+	return status;
+}
 
 	
 /**
@@ -347,11 +354,8 @@ static status_t save_key(private_rsa_public_key_t *this, char *file)
  */
 static void destroy(private_rsa_public_key_t *this)
 {
-	if (this->is_key_set)
-	{
-		mpz_clear(this->n);
-		mpz_clear(this->e);
-	}
+	mpz_clear(this->n);
+	mpz_clear(this->e);
 	allocator_free(this);
 }
 
@@ -374,6 +378,8 @@ rsa_public_key_t *rsa_public_key_create()
 	this->rsaep = rsaep;
 	this->rsavp1 = rsaep; /* same algorithm */
 	
+	mpz_init(this->n);
+	mpz_init(this->e);
 	this->is_key_set = FALSE;
 	
 	return &(this->public);

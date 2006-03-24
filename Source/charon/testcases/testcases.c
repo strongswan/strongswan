@@ -62,6 +62,7 @@
 #include <testcases/rsa_test.h>
 #include <testcases/kernel_interface_test.h>
 #include <testcases/child_sa_test.h>
+#include <testcases/der_decoder_test.h>
 
 /* output for test messages */
 extern FILE * stderr;
@@ -128,6 +129,7 @@ test_t proposal_test = {test_proposal, "proposal_t test"};
 test_t rsa_test = {test_rsa, "RSA private/public key test"};
 test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 test_t child_sa_test = {test_child_sa, "Child SA"};
+test_t der_decoder_test = {test_der_decoder, "DER decoder"};
 
 
 daemon_t* charon;
@@ -135,7 +137,7 @@ daemon_t* charon;
 static void daemon_kill(daemon_t *this, char* none)
 {
 	this->logger_manager->destroy(this->logger_manager);
-	this->socket->destroy(this->socket);
+	//this->socket->destroy(this->socket);
 	this->ike_sa_manager->destroy(this->ike_sa_manager);
 	this->job_queue->destroy(this->job_queue);
 	this->event_queue->destroy(this->event_queue);
@@ -158,7 +160,7 @@ daemon_t *daemon_create()
 	charon->kill = daemon_kill;
 	
 	charon->logger_manager = logger_manager_create(0);
-	charon->socket = socket_create(4510);
+	//charon->socket = socket_create(4510);
 	charon->ike_sa_manager = ike_sa_manager_create();
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
@@ -250,14 +252,13 @@ int main()
 	daemon_create();
  
 	charon->logger_manager->disable_log_level(charon->logger_manager,TESTER,FULL);
-	charon->logger_manager->enable_log_level(charon->logger_manager,CHILD_SA,FULL);
-	/* charon->logger_manager->enable_log_level(charon->logger_manager,TESTER,RAW); */
+	charon->logger_manager->enable_log_level(charon->logger_manager,DER_DECODER,FULL);
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 
 	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&kernel_interface_test);
+	tester->perform_test(tester,&rsa_test);
 	
 	
 	tester->destroy(tester);

@@ -1,0 +1,24 @@
+# Copyright (C) 2005 Jan Hutter, Martin Willi
+# Hochschule fuer Technik Rapperswil
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+
+ASN1_DIR= $(MAIN_DIR)asn1/
+
+
+OBJS+= $(BUILD_DIR)asn1.o
+$(BUILD_DIR)asn1.o :						$(ASN1_DIR)asn1.c $(ASN1_DIR)asn1.h
+											$(CC) $(CFLAGS) -c -o $@ $<
+											
+OBJS+= $(BUILD_DIR)der_decoder.o
+$(BUILD_DIR)der_decoder.o :					$(ASN1_DIR)der_decoder.c $(ASN1_DIR)der_decoder.h
+											$(CC) $(CFLAGS) -c -o $@ $<

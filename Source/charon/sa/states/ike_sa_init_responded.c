@@ -696,7 +696,7 @@ ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa
 	this->my_ts = NULL;
 	this->other_ts = NULL;
 	this->child_sa = NULL;
-	this->logger = this->ike_sa->get_logger(this->ike_sa);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
 	
 	return &(this->public);
 }

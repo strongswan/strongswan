@@ -412,14 +412,6 @@ static void set_new_state (private_ike_sa_t *this, state_t *state)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_logger.
- */
-static logger_t *get_logger (private_ike_sa_t *this)
-{
-	return this->logger;
-}
-
-/**
  * Implementation of protected_ike_sa_t.get_connection.
  */
 static connection_t *get_connection (private_ike_sa_t *this)
@@ -1050,7 +1042,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_prf_auth_i = (prf_t *(*) (protected_ike_sa_t *)) get_prf_auth_i;
 	this->protected.get_prf_auth_r = (prf_t *(*) (protected_ike_sa_t *)) get_prf_auth_r;
 	this->protected.add_child_sa = (void (*) (protected_ike_sa_t*,child_sa_t*)) add_child_sa;
-	this->protected.get_logger = (logger_t *(*) (protected_ike_sa_t *)) get_logger;
 	this->protected.set_connection = (void (*) (protected_ike_sa_t *,connection_t *)) set_connection;
 	this->protected.get_connection = (connection_t *(*) (protected_ike_sa_t *)) get_connection;
 	this->protected.set_policy = (void (*) (protected_ike_sa_t *,policy_t *)) set_policy;

@@ -1,12 +1,12 @@
 /**
- * @file rsa_private_key.c
+ * @file certificate.c
  * 
- * @brief Implementation of rsa_private_key_t.
+ * @brief Implementation of certificate_t.
  * 
  */
 
 /*
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -22,146 +22,78 @@
 
 #include <gmp.h>
 
-#include "rsa_private_key.h"
+#include "certificate.h"
 
 #include <daemon.h>
 #include <utils/allocator.h>
 #include <asn1/der_decoder.h>
 
 
-/* 
- * Oids for hash algorithms are defined in
- * rsa_public_key.c.
- */
-extern u_int8_t md2_oid[18];
-extern u_int8_t md5_oid[18];
-extern u_int8_t sha1_oid[15];
-extern u_int8_t sha256_oid[19];
-extern u_int8_t sha384_oid[19];
-extern u_int8_t sha512_oid[19];
-
+typedef struct private_certificate_t private_certificate_t;
 
 /**
- *  Public exponent to use for key generation.
+ * Private data of a certificate_t object.
  */
-#define PUBLIC_EXPONENT 0x10001
-
-
-typedef struct private_rsa_private_key_t private_rsa_private_key_t;
-
-/**
- * Private data of a rsa_private_key_t object.
- */
-struct private_rsa_private_key_t {
+struct private_certificate_t {
 	/**
 	 * Public interface for this signer.
 	 */
-	rsa_private_key_t public;
-	
-	/**
-	 * Version of key, as encoded in PKCS#1
-	 */
-	u_int version;
-	
-	/**
-	 * Is the key already set ?
-	 */
-	bool is_key_set;
-	
-	/**
-	 * Public modulus.
-	 */
-	mpz_t n;
-	
-	/**
-	 * Public exponent.
-	 */
-	mpz_t e;
-	
-	/**
-	 * Private prime 1.
-	 */
-	mpz_t p;
-	
-	/**
-	 * Private Prime 2.
-	 */
-	mpz_t q;
-	
-	/**
-	 * Private exponent.
-	 */
-	mpz_t d;
-	
-	/**
-	 * Private exponent 1.
-	 */
-	mpz_t exp1;
-	
-	/**
-	 * Private exponent 2.
-	 */
-	mpz_t exp2;
-	
-	/**
-	 * Private coefficient.
-	 */
-	mpz_t coeff;
-	
-	/**
-	 * Keysize in bytes.
-	 */
-	size_t k;
-	
-	/**
-	 * @brief Implements the RSADP algorithm specified in PKCS#1.
-	 * 
-	 * @param this		calling object
-	 * @param data		data to process
-	 * @return			processed data
-	 */
-	chunk_t (*rsadp) (private_rsa_private_key_t *this, chunk_t data);
-		
-	/**
-	 * @brief Implements the RSASP1 algorithm specified in PKCS#1.
-	 * @param this		calling object
-	 * @param data		data to process
-	 * @return			processed data
-	 */
-	chunk_t (*rsasp1) (private_rsa_private_key_t *this, chunk_t data);
-	
-	/**
-	 * @brief Generate a prime value.
-	 * 
-	 * @param this		calling object
-	 * @param prime_size size of the prime, in bytes
-	 * @param[out] prime uninitialized mpz
-	 */
-	void (*compute_prime) (private_rsa_private_key_t *this, size_t prime_size, mpz_t *prime);
-	
+	certificate_t public;
+};
+
+#define OSET(x) offsetof(private_certiciate_t, x)
+
+/**
+ * Rules for de-/encoding of a certificate from/in ASN1 
+ */
+static asn1_rule_t certificate_rules[] = {
+	{ASN1_SEQUENCE, 			0, 				0,					0					}, /* certificate */
+	{ ASN1_SEQUENCE, 			0, 				0,					0					}, /*  tbsCertificate */
+	{  ASN1_TAG_E_0, 			ASN1_DEFAULT, 	OSET(version),		0					}, /*   EXPLICIT version DEFAULT v1(0) */
+	{   ASN1_INTEGER, 			0,				OSET(version),		0					},
+	{  ASN1_INTEGER, 			0, 				OSET(serial),		0					}, /*  serialNumber */
+	{  ASN1_SEQUENCE, 			0, 				0,					0					}, /*  signature */
+	{   ASN1_OID, 				0, 				OSET(sign_alg),		0					}, /*   algorithm */
+	{  ASN1_END, 				0, 				0,					0					}, /*  signature */
+	{  ASN1_CHOICE, 			0, 				0,					0					}, /*  issuer */
+	{   ASN1_SEQUENCE, 			ASN1_OF, 		0,					0					},
+	/* name */
+	{   ASN1_END, 				0, 				0,					0					},
+	{  ASN1_END, 				0, 				0,					0					}, /*  issuer */
+	{  ASN1_SEQUENCE, 			0, 				0,					0					}, /*  validity */
+	{   ASN1_CHOICE, 			0, 				0,					0					}, /*   notBefore */
+	{    ASN1_UTCTIME, 			0, 				OSET(not_before),	0					}, /*    utcTime */
+	{    ASN1_GENERALIZEDTIME, 	0, 				OSET(not_before),	0					}, /*    generalTime */
+	{   ASN1_END, 				0, 				0,					0					}, /*   notBefore */
+	{   ASN1_CHOICE, 			0, 				0,					0					}, /*   notAfter */
+	{    ASN1_UTCTIME, 			0, 				OSET(not_after),	0					}, /*    utcTime */
+	{    ASN1_GENERALIZEDTIME, 	0, 				OSET(not_after),	0					}, /*    generalTime */
+	{   ASN1_END, 				0, 				0,					0					}, /*   notAfter */
+	{  ASN1_END, 				0, 				0,					0					}, /*  validity */
+	{  ASN1_CHOICE, 			0, 				0,					0					}, /*  subject */
+	{   ASN1_SEQUENCE, 			ASN1_OF, 		0,					0					},
+	/* name */
+	{   ASN1_END, 				0, 				0,					0					},
+	{  ASN1_END, 				0, 				0,					0					}, /*  subject */
+	{  ASN1_SEQUENCE, 			0, 				0,					0					}, /*  subjectPublicKeyInfo */
+	{   ASN1_OID, 				0, 				OSET(pubkey_alg),	0					}, /*   algorithm */
+	{   ASN1_BITSTRING, 		0, 				OSET(pubkey),		0					}, /*   subjectPublicKey */
+	{  ASN1_END, 				0, 				0,					0					}, /*  subjectPublicKeyInfo */
+	{  ASN1_TAG_I_1,			ASN1_OPTIONAL,	0,					OSET(has_issuer_uid)}, /*  IMPLICIT issuerUniqueID OPTIONAL */
+	{   ASN1_BITSTRING,			0,				OSET(issuer_uid),	0					},
+	{  ASN1_TAG_I_2,			ASN1_OPTIONAL,	0,					OSET(has_subject_uid)},/*  IMPLICIT subjectUniqueID OPTIONAL */
+	{   ASN1_BITSTRING,			0,				OSET(subject_uid),	0					},
+	{  ASN1_TAG_E_3,			ASN1_OPTIONAL,	0,					0					}, /*  EXPLICIT extensions OPTIONAL*/
+	{   ASN1_SEQUENCE,			ASN1_OF,		0,					0					},
+	/* extension */
+	{   ASN1_END				0,				0,					0,					}, /*  extensions */
+	{ ASN1_END, 				0, 				0,					0					}, /* certificate */
 };
 
 /**
- * Rules for de-/encoding of a private key from/in ASN1 
+ * Implementation of private_certificate_t.compute_prime.
  */
-static asn1_rule_t rsa_private_key_rules[] = {
-	{ASN1_SEQUENCE, 0, 0, 0},
-	{	ASN1_INTEGER, 0, 		offsetof(private_rsa_private_key_t, version), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, n), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, e), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, d), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, p), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, q), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, exp1), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, exp2), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, coeff), 0},
-	{ASN1_END, 0, 0, 0},
-};
-
-/**
- * Implementation of private_rsa_private_key_t.compute_prime.
- */
-static void compute_prime(private_rsa_private_key_t *this, size_t prime_size, mpz_t *prime)
+static void compute_prime(private_certificate_t *this, size_t prime_size, mpz_t *prime)
 {
 	randomizer_t *randomizer;
 	chunk_t random_bytes;
@@ -191,9 +123,9 @@ static void compute_prime(private_rsa_private_key_t *this, size_t prime_size, mp
 }
 
 /**
- * Implementation of private_rsa_private_key_t.rsadp and private_rsa_private_key_t.rsasp1.
+ * Implementation of private_certificate_t.rsadp and private_certificate_t.rsasp1.
  */
-static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
+static chunk_t rsadp(private_certificate_t *this, chunk_t data)
 {
 	mpz_t t1, t2;
 	chunk_t decrypted;
@@ -223,9 +155,9 @@ static chunk_t rsadp(private_rsa_private_key_t *this, chunk_t data)
 }
 
 /**
- * Implementation of rsa_private_key.build_emsa_signature.
+ * Implementation of certificate.build_emsa_signature.
  */
-static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature)
+static status_t build_emsa_pkcs1_signature(private_certificate_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature)
 {
 	hasher_t *hasher;
 	chunk_t hash;
@@ -319,14 +251,14 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 
 	
 /**
- * Implementation of rsa_private_key.set_key.
+ * Implementation of certificate.set_key.
  */
-static status_t set_key(private_rsa_private_key_t *this, chunk_t key)
+static status_t set_key(private_certificate_t *this, chunk_t key)
 {
 	der_decoder_t *dd;
 	status_t status;
 	
-	dd = der_decoder_create(rsa_private_key_rules);
+	dd = der_decoder_create(certificate_rules);
 	
 	status = dd->decode(dd, key, this);
 	if (status == SUCCESS)
@@ -339,9 +271,9 @@ static status_t set_key(private_rsa_private_key_t *this, chunk_t key)
 }
 
 /**
- * Implementation of rsa_private_key.get_key.
+ * Implementation of certificate.get_key.
  */
-static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
+static status_t get_key(private_certificate_t *this, chunk_t *key)
 {
 	if (!this->is_key_set)
 	{
@@ -391,25 +323,25 @@ static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
 }
 	
 /**
- * Implementation of rsa_private_key.load_key.
+ * Implementation of certificate.load_key.
  */
-static status_t load_key(private_rsa_private_key_t *this, char *file)
+static status_t load_key(private_certificate_t *this, char *file)
 {
 	return NOT_SUPPORTED;
 }
 
 /**
- * Implementation of rsa_private_key.save_key.
+ * Implementation of certificate.save_key.
  */
-static status_t save_key(private_rsa_private_key_t *this, char *file)
+static status_t save_key(private_certificate_t *this, char *file)
 {
 	return NOT_SUPPORTED;
 }
 
 /**
- * Implementation of rsa_private_key.generate_key.
+ * Implementation of certificate.generate_key.
  */
-static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
+static status_t generate_key(private_certificate_t *this, size_t key_size)
 {
 	mpz_t p, q, n, e, d, exp1, exp2, coeff;
 	mpz_t m, q1, t;
@@ -499,9 +431,9 @@ static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
 }
 
 /**
- * Implementation of rsa_private_key.get_public_key.
+ * Implementation of certificate.get_public_key.
  */
-rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
+rsa_public_key_t *get_public_key(private_certificate_t *this)
 {
 	rsa_public_key_t *public_key;
 	//chunk_t key;
@@ -535,9 +467,9 @@ rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
 
 
 /**
- * Implementation of rsa_private_key.destroy.
+ * Implementation of certificate.destroy.
  */
-static void destroy(private_rsa_private_key_t *this)
+static void destroy(private_certificate_t *this)
 {
 	mpz_clear(this->n);
 	mpz_clear(this->e);
@@ -553,19 +485,19 @@ static void destroy(private_rsa_private_key_t *this)
 /*
  * Described in header.
  */
-rsa_private_key_t *rsa_private_key_create(hash_algorithm_t hash_algoritm)
+certificate_t *certificate_create(hash_algorithm_t hash_algoritm)
 {
-	private_rsa_private_key_t *this = allocator_alloc_thing(private_rsa_private_key_t);
+	private_certificate_t *this = allocator_alloc_thing(private_certificate_t);
 	
 	/* public functions */
-	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
-	this->public.set_key = (status_t (*) (rsa_private_key_t*,chunk_t))set_key;
-	this->public.get_key = (status_t (*) (rsa_private_key_t*,chunk_t*))get_key;
-	this->public.load_key = (status_t (*) (rsa_private_key_t*,char*))load_key;
-	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
-	this->public.generate_key = (status_t (*) (rsa_private_key_t*,size_t))generate_key;
-	this->public.get_public_key = (rsa_public_key_t *(*) (rsa_private_key_t*))get_public_key;
-	this->public.destroy = (void (*) (rsa_private_key_t*))destroy;
+	this->public.build_emsa_pkcs1_signature = (status_t (*) (certificate_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
+	this->public.set_key = (status_t (*) (certificate_t*,chunk_t))set_key;
+	this->public.get_key = (status_t (*) (certificate_t*,chunk_t*))get_key;
+	this->public.load_key = (status_t (*) (certificate_t*,char*))load_key;
+	this->public.save_key = (status_t (*) (certificate_t*,char*))save_key;
+	this->public.generate_key = (status_t (*) (certificate_t*,size_t))generate_key;
+	this->public.get_public_key = (rsa_public_key_t *(*) (certificate_t*))get_public_key;
+	this->public.destroy = (void (*) (certificate_t*))destroy;
 	
 	/* private functions */
 	this->rsadp = rsadp;

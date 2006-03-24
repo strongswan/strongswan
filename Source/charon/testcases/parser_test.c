@@ -805,7 +805,7 @@ void test_parser_with_delete_payload(protected_tester_t *tester)
 		return;	
 	}
 	result = delete_payload->get_spis(delete_payload);
-	tester->assert_true(tester,(delete_payload->get_protocol_id(delete_payload) == ESP), "is ESP protocol");
+	tester->assert_true(tester,(delete_payload->get_protocol_id(delete_payload) == PROTO_ESP), "is ESP protocol");
 	tester->assert_true(tester,(delete_payload->get_spi_size(delete_payload) == 3), "SPI size check");
 	tester->assert_true(tester,(delete_payload->get_spi_count(delete_payload) == 4), "SPI count check");
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");

@@ -748,7 +748,7 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->received_nonce = CHUNK_INITIALIZER;
-	this->logger = this->ike_sa->get_logger(this->ike_sa);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
 	this->diffie_hellman = diffie_hellman;
 	this->proposal = NULL;
 	this->sent_nonce = sent_nonce;

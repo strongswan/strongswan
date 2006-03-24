@@ -54,10 +54,10 @@ void test_child_sa(protected_tester_t *tester)
 	remote_sa = child_sa_create(remote_me, remote_other);
 	
 	proposal1 = proposal_create(1);
-	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	
 	proposal2 = proposal_create(2);
-	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+	proposal2->add_algorithm(proposal2, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
 	
 	list = linked_list_create();
 	list->insert_last(list, proposal1);

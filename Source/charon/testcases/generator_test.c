@@ -570,16 +570,16 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	
 
 	proposal1 = proposal_create(1);
-	proposal1->add_algorithm(proposal1, IKE, ENCRYPTION_ALGORITHM, 1, 20);
-	proposal1->add_algorithm(proposal1, IKE, PSEUDO_RANDOM_FUNCTION, 2, 22);
-	proposal1->add_algorithm(proposal1, IKE, INTEGRITY_ALGORITHM, 3, 24);
-	proposal1->add_algorithm(proposal1, IKE, DIFFIE_HELLMAN_GROUP, 4, 0);
+	proposal1->add_algorithm(proposal1, PROTO_IKE, ENCRYPTION_ALGORITHM, 1, 20);
+	proposal1->add_algorithm(proposal1, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, 2, 22);
+	proposal1->add_algorithm(proposal1, PROTO_IKE, INTEGRITY_ALGORITHM, 3, 24);
+	proposal1->add_algorithm(proposal1, PROTO_IKE, DIFFIE_HELLMAN_GROUP, 4, 0);
 	
 	proposal2 = proposal_create(2);
-	proposal2->add_algorithm(proposal2, IKE, ENCRYPTION_ALGORITHM, 5, 26);
-	proposal2->add_algorithm(proposal2, IKE, PSEUDO_RANDOM_FUNCTION, 6, 28);
-	proposal2->add_algorithm(proposal2, IKE, INTEGRITY_ALGORITHM, 7, 30);
-	proposal2->add_algorithm(proposal2, IKE, DIFFIE_HELLMAN_GROUP, 8, 0);
+	proposal2->add_algorithm(proposal2, PROTO_IKE, ENCRYPTION_ALGORITHM, 5, 26);
+	proposal2->add_algorithm(proposal2, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, 6, 28);
+	proposal2->add_algorithm(proposal2, PROTO_IKE, INTEGRITY_ALGORITHM, 7, 30);
+	proposal2->add_algorithm(proposal2, PROTO_IKE, DIFFIE_HELLMAN_GROUP, 8, 0);
 
 	list = linked_list_create();
 	list->insert_last(list, (void*)proposal1);
@@ -643,25 +643,25 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 
 	proposal1 = proposal_create(1);
 	
-	proposal1->add_algorithm(proposal1, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	proposal1->add_algorithm(proposal1, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	proposal1->add_algorithm(proposal1, AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
-	proposal1->set_spi(proposal1, AH, 0x01010101l);
+	proposal1->add_algorithm(proposal1, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal1->add_algorithm(proposal1, PROTO_AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	proposal1->add_algorithm(proposal1, PROTO_AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
+	proposal1->set_spi(proposal1, PROTO_AH, 0x01010101l);
 	
-	proposal1->add_algorithm(proposal1, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
-	proposal1->add_algorithm(proposal1, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	proposal1->set_spi(proposal1, ESP, 0x02020202);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
+	proposal1->add_algorithm(proposal1, PROTO_ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal1->set_spi(proposal1, PROTO_ESP, 0x02020202);
 	
 	
-	proposal2->add_algorithm(proposal2, AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	proposal2->add_algorithm(proposal2, AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	proposal2->add_algorithm(proposal2, AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
-	proposal2->set_spi(proposal2, AH, 0x01010101);
+	proposal2->add_algorithm(proposal2, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal2->add_algorithm(proposal2, PROTO_AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	proposal2->add_algorithm(proposal2, PROTO_AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
+	proposal2->set_spi(proposal2, PROTO_AH, 0x01010101);
 	
-	proposal2->add_algorithm(proposal2, ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
-	proposal2->add_algorithm(proposal2, ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	proposal2->add_algorithm(proposal2, ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	proposal2->set_spi(proposal2, ESP, 0x02020202);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
+	proposal2->add_algorithm(proposal2, PROTO_ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal2->set_spi(proposal2, PROTO_ESP, 0x02020202);
 	
 	list->insert_last(list, (void*)proposal1);
 	list->insert_last(list, (void*)proposal2);
@@ -1216,7 +1216,7 @@ void test_generator_with_delete_payload(protected_tester_t *tester)
 	spis.ptr = "123456789012";
 	spis.len = strlen(spis.ptr);
 
-	delete_payload->set_protocol_id(delete_payload,AH);
+	delete_payload->set_protocol_id(delete_payload, PROTO_AH);
 	delete_payload->set_spi_count(delete_payload,3);
 	delete_payload->set_spi_size(delete_payload,4);
 	delete_payload->set_spis(delete_payload,spis);
@@ -1408,6 +1408,4 @@ void test_generator_with_eap_payload(protected_tester_t *tester)
 	
 	eap_payload->destroy(eap_payload);
 	generator->destroy(generator);
-		
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);	
 }

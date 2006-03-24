@@ -342,7 +342,7 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->logger = this->ike_sa->get_logger(this->ike_sa);
+	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
 	this->sent_nonce = CHUNK_INITIALIZER;
 	this->diffie_hellman = NULL;
 

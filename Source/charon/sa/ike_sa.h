@@ -171,16 +171,6 @@ struct protected_ike_sa_t {
 	void (*build_message) (protected_ike_sa_t *this, exchange_type_t type, bool request, message_t **message);
 	
 	/**
-	 * @brief Get the internal stored logger_t object for given ike_sa_t object.
-	 * 
-	 * @warning Returned logger_t object is original one and managed by this object.
-	 * 
-	 * @param this 				calling object
-	 * @return					pointer to the internal stored logger_t object
-	 */
-	logger_t *(*get_logger) (protected_ike_sa_t *this);
-	
-	/**
 	 * @brief Get the internal stored connection_t object.
 	 * 
 	 * @param this 				calling object

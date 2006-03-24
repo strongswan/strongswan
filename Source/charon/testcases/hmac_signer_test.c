@@ -201,6 +201,4 @@ void test_hmac_sha1_signer(protected_tester_t *tester)
  	}
 	
 	signer->destroy(signer);
-	charon->logger_manager->destroy_logger(charon->logger_manager,logger);
-
 }
