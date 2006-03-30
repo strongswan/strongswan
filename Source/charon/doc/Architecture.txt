@@ -4,8 +4,8 @@
 IKEv1 and IKEv2 is handled in different keying daemons. The ole IKEv1 stuff is
 completely handled in pluto, as it was all the times. IKEv2 is handled in the
 new keying daemon, which is called charon. 
-Daemon control is done over unix sockets. Pluto uses whack, as it did all the
-times. Charon uses another socket interface, called stroke. Stroke uses another
+Daemon control is done over unix sockets. Pluto uses whack, as it did for years.
+Charon uses another socket interface, called stroke. Stroke uses another
 format as whack and therefore is not compatible to whack. The starter utility,
 wich does fast configuration parsing, speaks both the protocols, whack and
 stroke. It also handles daemon startup and termination. 

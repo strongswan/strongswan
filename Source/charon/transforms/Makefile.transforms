@@ -31,3 +31,7 @@ $(BUILD_DIR)hmac.o :			$(TRANSFORMS_DIR)hmac.c $(TRANSFORMS_DIR)hmac.h
 OBJS+= $(BUILD_DIR)prf_plus.o
 $(BUILD_DIR)prf_plus.o :		$(TRANSFORMS_DIR)prf_plus.c $(TRANSFORMS_DIR)prf_plus.h
 								$(CC) $(CFLAGS) -c -o $@ $<
+
+OBJS+= $(BUILD_DIR)certificate.o
+$(BUILD_DIR)certificate.o :		$(TRANSFORMS_DIR)certificate.c $(TRANSFORMS_DIR)certificate.h
+								$(CC) $(CFLAGS) -c -o $@ $<

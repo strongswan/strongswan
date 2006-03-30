@@ -38,10 +38,12 @@ typedef struct rsa_private_key_t rsa_private_key_t;
  * 
  * @b Constructors:
  *  - rsa_private_key_create()
+ *  - rsa_private_key_create_from_chunk()
+ *  - rsa_private_key_create_from_file()
  * 
  * @see rsa_public_key_t
  * 
- * @todo Implement proper key set/get load/save methods using ASN1.
+ * @todo Implement get_key(), save_key(), get_public_key()
  *
  * @ingroup rsa
  */
@@ -66,26 +68,9 @@ struct rsa_private_key_t {
 	status_t (*build_emsa_pkcs1_signature) (rsa_private_key_t *this, hash_algorithm_t hash_algorithm, chunk_t data, chunk_t *signature);
 	
 	/**
-	 * @brief Set the key.
-	 * 
-	 * Currently uses a proprietary format which is only inteded
-	 * for testing. This should be replaced with a proper
-	 * ASN1 encoded key format, when charon gets the ASN1 
-	 * capabilities.
-	 * 
-	 * @param this				calling object
-	 * @param key				key (in a propriarity format)
-	 * @return					currently SUCCESS in any case
-	 */
-	status_t (*set_key) (rsa_private_key_t *this, chunk_t key);
-	
-	/**
 	 * @brief Gets the key.
 	 * 
-	 * Currently uses a proprietary format which is only inteded
-	 * for testing. This should be replaced with a proper
-	 * ASN1 encoded key format, when charon gets the ASN1 
-	 * capabilities.
+	 * UNIMPLEMENTED!
 	 * 
 	 * @param this				calling object
 	 * @param key				key (in a propriarity format)
@@ -94,17 +79,6 @@ struct rsa_private_key_t {
 	 * 							- INVALID_STATE, if key not set
 	 */
 	status_t (*get_key) (rsa_private_key_t *this, chunk_t *key);
-	
-	/**
-	 * @brief Loads a key from a file.
-	 * 
-	 * Not implemented!
-	 * 
-	 * @param this				calling object
-	 * @param file				file from which key should be read
-	 * @return					NOT_SUPPORTED
-	 */
-	status_t (*load_key) (rsa_private_key_t *this, char *file);
 	
 	/**
 	 * @brief Saves a key to a file.
@@ -140,6 +114,18 @@ struct rsa_private_key_t {
 	rsa_public_key_t *(*get_public_key) (rsa_private_key_t *this);
 	
 	/**
+	 * @brief Check if a private key belongs to a public key.
+	 * 
+	 * Compares the public part of the private key with the
+	 * public key, return TRUE if it equals.
+	 * 
+	 * @param this				private key
+	 * @param public			public key
+	 * @return					TRUE, if keys belong together
+	 */
+	bool (*belongs_to) (rsa_private_key_t *this, rsa_public_key_t *public);
+	
+	/**
 	 * @brief Destroys the private key.
 	 * 
 	 * @param this				private key to destroy
@@ -148,13 +134,44 @@ struct rsa_private_key_t {
 };
 
 /**
- * @brief Create a new rsa_private_key without
- * any key inside.
+ * @brief Generate a new RSA key with specified key lenght.
  * 
- * @return created rsa_private_key_t.
+ * @param key_size			size of the key in bits
+ * @return 					generated rsa_private_key_t.
  * 
  * @ingroup rsa
  */
-rsa_private_key_t *rsa_private_key_create();
+rsa_private_key_t *rsa_private_key_create(size_t key_size);
+
+/**
+ * @brief Load an RSA private key from a chunk.
+ * 
+ * Load a key from a chunk, encoded as described in PKCS#1
+ * (ASN1 DER encoded).
+ * 
+ * @param chunk				chunk containing the DER encoded key
+ * @return 					loaded rsa_private_key_t, or NULL
+ * 
+ * @ingroup rsa
+ */
+rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t chunk);
+
+/**
+ * @brief Load an RSA private key from a file.
+ * 
+ * Load a key from a file, which is either in a unencrypted binary
+ * format (DER), or in a (encrypted) PEM format. The supplied 
+ * passphrase is used to decrypt an ecrypted key.
+ * 
+ * @param filename			filename which holds the key
+ * @param passphrase		optional passphase for decryption
+ * @return 					loaded rsa_private_key_t, or NULL
+ * 
+ * @todo Implement PEM file loading
+ * @todo Implement key decryption
+ * 
+ * @ingroup rsa
+ */
+rsa_private_key_t *rsa_private_key_create_from_file(char *filename, char *passphrase);
 
 #endif /*RSA_PRIVATE_KEY_H_*/

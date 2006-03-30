@@ -78,7 +78,7 @@ $(BINNAMESTROKE) :		stroke.c
 TEST_OBJS = $(OBJS)
 include $(MAIN_DIR)testcases/Makefile.testcases	
 
-$(BUILD_DIR)run_tests :		$(TEST_OBJS)
+$(BUILD_DIR)run_tests :		build_dir $(TEST_OBJS)
 				$(CC) $(LDFLAGS) $(TEST_OBJS) -o $@
 
 install :			$(BINNAMECHARON)

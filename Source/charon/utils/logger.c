@@ -192,7 +192,7 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, char *label,
 		pthread_mutex_lock(&mutex);
 		
 		
-		format = "%s (%d bytes)";
+		format = "%s (%d bytes @%p)";
 		this->prepend_prefix(this, loglevel, format, buffer);
 
 		if (this->output == NULL)
@@ -201,7 +201,7 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, char *label,
 		}
 		else
 		{
-			fprintf(this->output, buffer, label, len);
+			fprintf(this->output, buffer, label, len, bytes);
 			fprintf(this->output, "\n");
 		}
 	
@@ -294,6 +294,14 @@ static void disable_level(private_logger_t *this, log_level_t log_level)
 }
 
 /**
+ * Implementation of logger_t.set_output.
+ */
+static void set_output(private_logger_t *this, FILE * output)
+{
+	this->output = output;
+}
+
+/**
  * Implementation of logger_t.get_level.
  */
 static log_level_t get_level(private_logger_t *this)
@@ -324,6 +332,7 @@ logger_t *logger_create(char *logger_name, log_level_t log_level, bool log_threa
 	this->public.enable_level = (void(*)(logger_t*,log_level_t))enable_level;
 	this->public.disable_level = (void(*)(logger_t*,log_level_t))disable_level;
 	this->public.get_level = (log_level_t(*)(logger_t*))get_level;
+	this->public.set_output = (void(*)(logger_t*,FILE*))set_output;
 	this->public.destroy = (void(*)(logger_t*))destroy;
 
 	/* private functions */

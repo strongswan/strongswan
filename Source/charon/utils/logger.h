@@ -157,6 +157,16 @@ struct logger_t {
 	void (*disable_level) (logger_t *this, log_level_t log_level);
 
 	/**
+	 * @brief Set the output of the logger.
+	 * 
+	 * Use NULL for syslog.
+	 *
+	 * @param this 		logger_t object
+	 * @param output	file, where log output should be written
+	 */
+	void (*set_output) (logger_t *this, FILE *output);
+
+	/**
 	 * @brief Get the currently used loglevel.
 	 *
 	 * @param this 		logger_t object

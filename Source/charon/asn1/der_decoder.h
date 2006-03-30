@@ -29,15 +29,29 @@
 typedef struct der_decoder_t der_decoder_t;
 
 /**
- * @brief Decode der_encoded bytes to usable structures.
+ * @brief Decode ASN1 DER encoded chunks.
  * 
  * @b Constructors:
  *  - der_decoder_create()
+ * 
+ * @todo A lot.
  * 
  * @ingroup asn1
  */
 struct der_decoder_t {
 	
+	/**
+	 * @brief Decode a chunk of bytes to a data structure
+	 *
+	 * @param der_decoder 	calling object
+	 * @param input			chunk of data to decode
+	 * @param output		data structure where decoded data is written
+	 * @return
+	 * 						- PARSE_ERROR
+	 * 						- FAILED
+	 * 						- NOT_SUPPORTED
+	 * 						- or SUCCESS sometimes
+	 */
 	status_t (*decode) (der_decoder_t *this, chunk_t input, void *output);
 
 	/**
@@ -52,7 +66,11 @@ struct der_decoder_t {
 /**
  * @brief Create a der_decoder instance.
  * 
- * @return	der_decoder_t object
+ * The instance needs ASN1 rules to know how to decode
+ * data...
+ * 
+ * @param rules		set of ASN1 coding rules
+ * @return			der_decoder_t object
  * 
  * @ingroup ans1
  */

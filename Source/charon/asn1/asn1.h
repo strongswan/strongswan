@@ -1,7 +1,7 @@
 /**
  * @file asn1.h
  *
- * @brief Definition of asn1_type_t and asn1_rule_t.
+ * @brief Definition of asn1_rule_t and other ASN1 stuff.
  *
  */
 
@@ -27,12 +27,20 @@
 
 typedef enum asn1_type_t asn1_type_t;
 
+/**
+ * @brief Real and some special ASN1 types.
+ * 
+ * @ingroup asn1
+ */
 enum asn1_type_t {
+	/**
+	 * End of a sequence, set, choice
+	 */
 	ASN1_END = 0x00,
 	ASN1_BOOLEAN = 0x01,
 	ASN1_INTEGER = 0x02,
-	ASN1_BIT_STRING = 0x03,
-	ASN1_OCTET_STRING = 0x04,
+	ASN1_BITSTRING = 0x03,
+	ASN1_OCTETSTRING = 0x04,
 	ASN1_NULL = 0x05,
 	ASN1_OID = 0x06,
 	ASN1_ENUMERATED = 0x0A,
@@ -52,6 +60,9 @@ enum asn1_type_t {
 	ASN1_CONSTRUCTED = 0x20,
 	ASN1_SEQUENCE = 0x30,
 	ASN1_SET = 0x31,
+	/**
+	 * EXCPLICIT tags 
+	 */
 	ASN1_TAG_E_0 = 0xA0,
 	ASN1_TAG_E_1 = 0xA1,
 	ASN1_TAG_E_2 = 0xA2,
@@ -60,6 +71,10 @@ enum asn1_type_t {
 	ASN1_TAG_E_5 = 0xA5,
 	ASN1_TAG_E_6 = 0xA6,
 	ASN1_TAG_E_7 = 0xA7,
+	/**
+	 * IMPLICIT tags 
+	 */
+	ASN1_TAG_I_0 = 0x80,
 	ASN1_TAG_I_1 = 0x81,
 	ASN1_TAG_I_2 = 0x82,
 	ASN1_TAG_I_3 = 0x83,
@@ -67,24 +82,70 @@ enum asn1_type_t {
 	ASN1_TAG_I_5 = 0x85,
 	ASN1_TAG_I_6 = 0x86,
 	ASN1_TAG_I_7 = 0x87,
+	/**
+	 * Begin of a choice
+	 */
+	ASN1_CHOICE = 0xFE,
+	/**
+	 * ANY type
+	 */
+	ASN1_ANY = 0xFF,
 };
 
+/**
+ * String mappings for asn1_type_t
+ */
 extern mapping_t asn1_type_m[];
+
 
 typedef enum asn1_flag_t asn1_flag_t;
 
+/**
+ * @brief Flags used to build ASN1 rules.
+ * 
+ * @ingroup asn1
+ */
 enum asn1_flag_t {
+	/**
+	 * Field is optional
+	 */
 	ASN1_OPTIONAL = 0x01,
+	/**
+	 * Field has a default value and is therefore optional
+	 */
 	ASN1_DEFAULT = 0x02,
+	/**
+	 * Convert this INTEGER to an mpz_t
+	 */
 	ASN1_MPZ = 0x04,
+	/**
+	 * SEQUENCE or SET OF
+	 */
 	ASN1_OF = 0x08,
+	/**
+	 * Parse this Sequence in a RAW chunk too.
+	 * Used for crypto calculations...
+	 */
+	ASN1_RAW = 0x10,
 };
 
+/**
+ * String mappings for asn1_flag_t
+ */
 extern mapping_t asn1_flag_m[];
 
 
 typedef struct asn1_rule_t asn1_rule_t;
 
+/**
+ * @brief Single rule of a complet ruleset.
+ * 
+ * This rule containing a type, flags and additional
+ * data allow modellation of complex ASN1 structures and
+ * allow their en- and decoding...
+ * 
+ * @ingroup asn1
+ */
 struct asn1_rule_t {
 	/** 
 	 * ASN1 type 
@@ -98,18 +159,13 @@ struct asn1_rule_t {
 	 * offset of data in structure 
 	 */
 	u_int data_offset;
-// 	union {
-		/** 
-		 * offset to a boolean, which says if optional 
-		 * data is available at data_offset. Used if
-		 * flags & ASN1_OPTIONAL.
-		 */
-// 		u_int available_offset;
-		/**
-		 * default value, used if flags & ASN1_DEFAULT
-		 */
-		u_int default_value;
-// 	};
+	/**
+	 * offset to a boolean, which says if optional 
+	 * data is available at data_offset. Used if
+	 * flags & ASN1_OPTIONAL.
+	 * default value, used if flags & ASN1_DEFAULT
+	 */
+	u_int additional;
 };
 
 

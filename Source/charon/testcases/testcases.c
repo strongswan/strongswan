@@ -63,6 +63,7 @@
 #include <testcases/kernel_interface_test.h>
 #include <testcases/child_sa_test.h>
 #include <testcases/der_decoder_test.h>
+#include <testcases/certificate_test.h>
 
 /* output for test messages */
 extern FILE * stderr;
@@ -130,6 +131,7 @@ test_t rsa_test = {test_rsa, "RSA private/public key test"};
 test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 test_t child_sa_test = {test_child_sa, "Child SA"};
 test_t der_decoder_test = {test_der_decoder, "DER decoder"};
+test_t certificate_test = {test_certificate, "X509 Certificate"};
 
 
 daemon_t* charon;
@@ -251,12 +253,11 @@ int main()
  
 	daemon_create();
  
-	charon->logger_manager->disable_log_level(charon->logger_manager,TESTER,FULL);
-	charon->logger_manager->enable_log_level(charon->logger_manager,DER_DECODER,FULL);
+	//charon->logger_manager->enable_log_level(charon->logger_manager, ALL_LOGGERS, FULL);
+	charon->logger_manager->set_output(charon->logger_manager, ALL_LOGGERS, stdout);
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
-
 	//tester->perform_tests(tester,all_tests);
 	tester->perform_test(tester,&rsa_test);
 	

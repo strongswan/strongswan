@@ -21,6 +21,8 @@
  */
  
 #include <gmp.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "rsa_public_key.h"
 
@@ -85,11 +87,6 @@ struct private_rsa_public_key_t {
 	rsa_public_key_t public;
 	
 	/**
-	 * Is the key already set ?
-	 */
-	bool is_key_set;
-	
-	/**
 	 * Public modulus.
 	 */
 	mpz_t n;
@@ -123,6 +120,24 @@ struct private_rsa_public_key_t {
 	chunk_t (*rsavp1) (private_rsa_public_key_t *this, chunk_t data);
 };
 
+
+typedef struct rsa_public_key_info_t rsa_public_key_info_t;
+
+/**
+ * KeyInfo, as it appears in a public key file
+ */
+struct rsa_public_key_info_t {
+	/**
+	 * Algorithm for this key
+	 */
+	chunk_t algorithm_oid;
+	
+	/**
+	 * Public key, parseable with rsa_public_key_rules
+	 */
+	chunk_t public_key;
+};
+
 /**
  * Rules for de-/encoding of a public key from/in ASN1 
  */
@@ -132,6 +147,21 @@ static asn1_rule_t rsa_public_key_rules[] = {
 	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_public_key_t, e), 0},
 	{ASN1_END, 0, 0, 0},
 };
+
+/**
+ * Rules for de-/encoding of a PublicKeyInfo from/in ASN1 
+ */
+static asn1_rule_t rsa_public_key_info_rules[] = {
+	{ASN1_SEQUENCE, 0, 0, 0},
+	{	ASN1_SEQUENCE, 0, 0, 0},
+	{		ASN1_OID, 0, offsetof(rsa_public_key_info_t, algorithm_oid), 0},
+	{		ASN1_NULL, 0, 0, 0},
+	{	ASN1_END, 0, 0, 0},
+	{	ASN1_BITSTRING, 0, offsetof(rsa_public_key_info_t, public_key), 0},
+	{ASN1_END, 0, 0, 0},
+};
+
+private_rsa_public_key_t *rsa_public_key_create_empty();
 
 /**
  * Implementation of private_rsa_public_key_t.rsaep and private_rsa_public_key_t.rsavp1
@@ -166,11 +196,6 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	chunk_t hash;
 	chunk_t em;
 	u_int8_t *pos;
-	
-	if(!this->is_key_set)
-	{
-		return INVALID_STATE;	
-	}
 	
 	if (signature.len > this->k)
 	{
@@ -286,36 +311,10 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 }
 	
 /**
- * Implementation of rsa_public_key.set_key.
- */
-static status_t set_key(private_rsa_public_key_t *this, chunk_t key)
-{
-	der_decoder_t *dd;
-	status_t status;
-	
-	dd = der_decoder_create(rsa_public_key_rules);
-	
-	status = dd->decode(dd, key, this);
-	if (status == SUCCESS)
-	{
-		this->is_key_set = TRUE;
-		this->k = mpz_sizeinbase(this->n, 2) / 8;
-	}
-	dd->destroy(dd);
-	return status;
-}
-
-	
-/**
  * Implementation of rsa_public_key.get_key.
  */
 static status_t get_key(private_rsa_public_key_t *this, chunk_t *key)
-{
-	if (!this->is_key_set)
-	{
-		return INVALID_STATE;	
-	}
-	
+{	
 	chunk_t n, e;
 
 	n.len = this->k;
@@ -332,14 +331,6 @@ static status_t get_key(private_rsa_public_key_t *this, chunk_t *key)
 	
 	return SUCCESS;
 }
-	
-/**
- * Implementation of rsa_public_key.load_key.
- */
-static status_t load_key(private_rsa_public_key_t *this, char *file)
-{
-	return NOT_SUPPORTED;
-}
 
 /**
  * Implementation of rsa_public_key.save_key.
@@ -347,6 +338,28 @@ static status_t load_key(private_rsa_public_key_t *this, char *file)
 static status_t save_key(private_rsa_public_key_t *this, char *file)
 {
 	return NOT_SUPPORTED;
+}
+
+/**
+ * Implementation of rsa_public_key.get_modulus.
+ */
+static mpz_t *get_modulus(private_rsa_public_key_t *this)
+{
+	return &this->n;
+}
+
+/**
+ * Implementation of rsa_public_key.clone.
+ */
+static rsa_public_key_t* _clone(private_rsa_public_key_t *this)
+{
+	private_rsa_public_key_t *clone = rsa_public_key_create_empty();
+	
+	mpz_init_set(clone->n, this->n);
+	mpz_init_set(clone->e, this->e);
+	clone->k = this->k;
+	
+	return &clone->public;
 }
 
 /**
@@ -359,28 +372,97 @@ static void destroy(private_rsa_public_key_t *this)
 	allocator_free(this);
 }
 
-/*
- * Described in header.
+/**
+ * Generic private constructor
  */
-rsa_public_key_t *rsa_public_key_create()
+private_rsa_public_key_t *rsa_public_key_create_empty()
 {
 	private_rsa_public_key_t *this = allocator_alloc_thing(private_rsa_public_key_t);
 	
 	/* public functions */
 	this->public.verify_emsa_pkcs1_signature = (status_t (*) (rsa_public_key_t*,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
-	this->public.set_key = (status_t (*) (rsa_public_key_t*,chunk_t))set_key;
 	this->public.get_key = (status_t (*) (rsa_public_key_t*,chunk_t*))get_key;
-	this->public.load_key = (status_t (*) (rsa_public_key_t*,char*))load_key;
 	this->public.save_key = (status_t (*) (rsa_public_key_t*,char*))save_key;
+	this->public.get_modulus = (mpz_t *(*) (rsa_public_key_t*))get_modulus;
+	this->public.clone = (rsa_public_key_t* (*) (rsa_public_key_t*))_clone;
 	this->public.destroy = (void (*) (rsa_public_key_t*))destroy;
 	
 	/* private functions */
 	this->rsaep = rsaep;
 	this->rsavp1 = rsaep; /* same algorithm */
 	
+	return this;
+}
+	
+/*
+ * See header
+ */
+rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t chunk)
+{
+	der_decoder_t *dd;
+	status_t status;
+	private_rsa_public_key_t *this;
+	
+	this = rsa_public_key_create_empty();
 	mpz_init(this->n);
 	mpz_init(this->e);
-	this->is_key_set = FALSE;
 	
-	return &(this->public);
+	dd = der_decoder_create(rsa_public_key_rules);
+	status = dd->decode(dd, chunk, this);
+	dd->destroy(dd);
+	if (status != SUCCESS)
+	{
+		destroy(this);
+		return NULL;
+	}
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
+	return &this->public;
+}
+
+/*
+ * See header
+ */
+rsa_public_key_t *rsa_public_key_create_from_file(char *filename)
+{
+	struct stat stb;
+	FILE *file;
+	char *buffer;
+	chunk_t chunk;
+	rsa_public_key_info_t key_info = {CHUNK_INITIALIZER, CHUNK_INITIALIZER};
+	der_decoder_t *dd;
+	status_t status;
+	rsa_public_key_t *public_key = NULL;
+	
+	if (stat(filename, &stb) == -1)
+	{
+		return NULL;
+	}
+	
+	buffer = alloca(stb.st_size);
+	
+	file = fopen(filename, "r");
+	if (file == NULL)
+	{
+		return NULL;
+	}
+	
+	if (fread(buffer, stb.st_size, 1, file) != 1)
+	{
+		return NULL;
+	}
+	
+	chunk.ptr = buffer;
+	chunk.len = stb.st_size;
+	
+	/* parse public key info first */
+	dd = der_decoder_create(rsa_public_key_info_rules);
+	status = dd->decode(dd, chunk, &key_info);
+	dd->destroy(dd);
+	allocator_free_chunk(&key_info.algorithm_oid);
+	if (status == SUCCESS)
+	{
+		public_key = rsa_public_key_create_from_chunk(chunk);
+	}
+	allocator_free_chunk(&key_info.public_key);
+	return public_key;
 }

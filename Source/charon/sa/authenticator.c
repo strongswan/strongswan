@@ -205,6 +205,8 @@ static status_t verify_auth_data (private_authenticator_t *this,
 															&preshared_secret);
 			if (status != SUCCESS)
 			{
+				this->logger->log(this->logger, ERROR|LEVEL1, "No shared secret found for %s",
+								  other_id->get_string(other_id));
 				other_id->destroy(other_id);
 				return status;	
 			}
@@ -252,6 +254,8 @@ static status_t verify_auth_data (private_authenticator_t *this,
 															 &public_key);
 			if (status != SUCCESS)
 			{
+				this->logger->log(this->logger, ERROR|LEVEL1, "No RSA public key found for %s",
+								  other_id->get_string(other_id));
 				other_id->destroy(other_id);
 				return status;	
 			}
@@ -307,11 +311,14 @@ static status_t compute_auth_data (private_authenticator_t *this,
 															my_id,
 															&preshared_secret);
 
-			my_id->destroy(my_id);
 			if (status != SUCCESS)
 			{
+				this->logger->log(this->logger, ERROR|LEVEL1, "No shared secret found for %s",
+								  my_id->get_string(my_id));
+				my_id->destroy(my_id);
 				return status;	
 			}
+			my_id->destroy(my_id);
 			
 			auth_data = this->build_preshared_secret_signature(this, last_sent_packet, other_nonce,
 															   my_id_payload, initiator, preshared_secret);
@@ -331,11 +338,14 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			chunk_t octets, auth_data;
 			
 			status = charon->credentials->get_rsa_private_key(charon->credentials, my_id, &private_key);
-			my_id->destroy(my_id);
 			if (status != SUCCESS)
 			{
+				this->logger->log(this->logger, ERROR|LEVEL1, "No RSA private key found for %s",
+								  my_id->get_string(my_id));
+				my_id->destroy(my_id);
 				return status;	
 			}
+			my_id->destroy(my_id);
 			
 			octets = this->allocate_octets(this,last_sent_packet,other_nonce,my_id_payload,initiator);
 			

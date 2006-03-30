@@ -36,6 +36,7 @@ typedef enum logger_context_t logger_context_t;
  * @ingroup utils
  */
 enum logger_context_t {
+	ALL_LOGGERS = -1,
 	PARSER = 0,
 	GENERATOR,
 	IKE_SA,
@@ -89,7 +90,7 @@ struct logger_manager_t {
 	logger_t *(*get_logger) (logger_manager_t *this, logger_context_t context);
 	
 	/**
-	 * Returns the set log_level of a specific context or 0.
+	 * @brief Returns the set log_level of a specific context.
 	 * 
 	 * @param this 			calling object
 	 * @param context 		context to check level
@@ -98,29 +99,42 @@ struct logger_manager_t {
 	log_level_t (*get_log_level) (logger_manager_t *this, logger_context_t context);
 	
 	/**
-	 * Enables a logger level of a specific context.
+	 * @brief Enables a logger level of a specific context.
+	 * 
+	 * Use context ALL_LOGGERS to manipulate all loggers.
 	 * 
 	 * @param this 			calling object
 	 * @param context 		context to set level
  	 * @param log_level 	logger level to eanble
 	 */
 	void (*enable_log_level) (logger_manager_t *this, logger_context_t context,log_level_t log_level);
-		
-
+	
 	/**
-	 * Disables a logger level of a specific context.
+	 * @brief Disables a logger level of a specific context.
+	 * 
+	 * Use context ALL_LOGGERS to manipulate all loggers.
 	 * 
 	 * @param this 			calling object
 	 * @param context 		context to set level
- 	 * @param log_level 	logger level to disable
+	 * @param log_level 	logger level to disable
 	 */
 	void (*disable_log_level) (logger_manager_t *this, logger_context_t context,log_level_t log_level);
-
-
+	
+	/**
+	 * @brief Sets the output of a logger.
+	 * 
+	 * Use context ALL_LOGGERS to redirect all loggers.
+	 * 
+	 * @param this 			calling object
+	 * @param context 		context to set output
+	 * @param log_level 	logger level to disable
+	 */
+	void (*set_output) (logger_manager_t *this, logger_context_t context, FILE *output);
+	
 	/**
 	 * @brief Destroys a logger_manager_t object.
 	 * 
-	 * All remaining managed logger_t objects are also destroyed.
+	 * All managed logger_t objects are also destroyed.
 	 *
 	 * @param this		logger_manager_t object
 	 */

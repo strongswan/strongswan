@@ -26,7 +26,6 @@
 #include <types.h>
 #include <definitions.h>
 #include <transforms/rsa/rsa_public_key.h>
-#include <transforms/hashers/hasher.h>
 
 
 typedef struct certificate_t certificate_t;
@@ -34,12 +33,10 @@ typedef struct certificate_t certificate_t;
 /**
  * @brief X509 certificate.
  * 
- * Currently only supports signing using EMSA encoding.
- * 
  * @b Constructors:
- *  - certificate_create()
+ *  - certificate_create_from_chunk()
  *
- * @ingroup rsa
+ * @ingroup transforms
  */
 struct certificate_t {
 
@@ -60,13 +57,14 @@ struct certificate_t {
 };
 
 /**
- * @brief Create a new certificate without
- * any key inside.
+ * @brief Read a certificate from a blob.
  * 
  * @return created certificate_t.
  * 
- * @ingroup rsa
+ * @ingroup transforms
  */
-certificate_t *certificate_create();
+certificate_t *certificate_create_from_chunk(chunk_t chunk);
+
+certificate_t *certificate_create_from_file(char *filename);
 
 #endif /* CERTIFICATE_H_ */

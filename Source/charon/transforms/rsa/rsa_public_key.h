@@ -38,11 +38,13 @@ typedef struct rsa_public_key_t rsa_public_key_t;
  * the EMSA encoding (see PKCS1)
  * 
  * @b Constructors:
- * - rsa_public_key_create()
+ * - rsa_public_key_create_from_chunk()
+ * - rsa_public_key_create_from_file()
+ * - rsa_private_key_t.get_public_key()
  * 
  * @see rsa_private_key_t
  * 
- * @todo Implement proper key set/get load/save methods using ASN1.
+ * @todo Implement getkey() and savekey()
  * 
  * @ingroup rsa
  */
@@ -55,7 +57,7 @@ struct rsa_public_key_t {
 	 * selects the hash algorithm form the resultign ASN1-OID and
 	 * verifies the hash against the supplied data.
 	 * 
-	 * @param this				rsa_private_key to use
+	 * @param this				rsa_public_key to use
 	 * @param data				data to sign
 	 * @param signature			signature to verify
 	 * @return
@@ -66,20 +68,6 @@ struct rsa_public_key_t {
 	 * 							- FAILED if signature invalid or unable to verify
 	 */
 	status_t (*verify_emsa_pkcs1_signature) (rsa_public_key_t *this, chunk_t data, chunk_t signature);
-	
-	/**
-	 * @brief Set the key.
-	 * 
-	 * Currently uses a proprietary format which is only inteded
-	 * for testing. This should be replaced with a proper
-	 * ASN1 encoded key format, when charon gets the ASN1 
-	 * capabilities.
-	 * 
-	 * @param this				calling object
-	 * @param key				key (in a propriarity format)
-	 * @return					currently SUCCESS in any case
-	 */
-	status_t (*set_key) (rsa_public_key_t *this, chunk_t key);
 	
 	/**
 	 * @brief Gets the key.
@@ -98,17 +86,6 @@ struct rsa_public_key_t {
 	status_t (*get_key) (rsa_public_key_t *this, chunk_t *key);
 	
 	/**
-	 * @brief Loads a key from a file.
-	 * 
-	 * Not implemented!
-	 * 
-	 * @param this				calling object
-	 * @param file				file from which key should be read
-	 * @return					NOT_SUPPORTED
-	 */
-	status_t (*load_key) (rsa_public_key_t *this, char *file);
-	
-	/**
 	 * @brief Saves a key to a file.
 	 * 
 	 * Not implemented!
@@ -120,6 +97,22 @@ struct rsa_public_key_t {
 	status_t (*save_key) (rsa_public_key_t *this, char *file);
 	
 	/**
+	 * @brief Get the modulus of the key.
+	 * 
+	 * @param this				calling object
+	 * @return					modulus (n) of the key
+	 */
+	mpz_t *(*get_modulus) (rsa_public_key_t *this);
+	
+	/**
+	 * @brief Clone the public key.
+	 * 
+	 * @param this				public key to clone
+	 * @return					clone of this
+	 */
+	rsa_public_key_t *(*clone) (rsa_public_key_t *this);
+	
+	/**
 	 * @brief Destroys the public key.
 	 * 
 	 * @param this				public key to destroy
@@ -128,12 +121,33 @@ struct rsa_public_key_t {
 };
 
 /**
- * @brief Create a public key without any key inside.
+ * @brief Load an RSA public key from a chunk.
  * 
- * @return created rsa_public_key_t.
+ * Load a key from a chunk, encoded in the more frequently
+ * used PublicKeyInfo struct (ASN1 DER encoded).
+ * 
+ * @param chunk				chunk containing the DER encoded key
+ * @return 					loaded rsa_public_key_t, or NULL
+ * 
+ * @todo Check OID in PublicKeyInfo
  * 
  * @ingroup rsa
  */
-rsa_public_key_t *rsa_public_key_create();
+rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t chunk);
+
+/**
+ * @brief Load an RSA public key from a file.
+ * 
+ * Load a key from a file, which is either in binary
+ * format (DER), or in PEM format. 
+ * 
+ * @param filename			filename which holds the key
+ * @return 					loaded rsa_public_key_t, or NULL
+ * 
+ * @todo Implement PEM file loading
+ * 
+ * @ingroup rsa
+ */
+rsa_public_key_t *rsa_public_key_create_from_file(char *filename);
 
 #endif /*RSA_PUBLIC_KEY_H_*/

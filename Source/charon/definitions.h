@@ -166,6 +166,13 @@
  * 
  * @ingroup transforms
  */
+/**
+ * @defgroup asn1 asn1
+ * 
+ * ASN1 structure definition, en-/decoder of for DER
+ * 
+ * @todo Implement a der_encoder_t class.
+ */
  
 /**
  * @defgroup utils utils

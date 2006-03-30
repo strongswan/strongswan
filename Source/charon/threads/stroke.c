@@ -27,6 +27,7 @@
 #include <sys/un.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
 
@@ -34,6 +35,7 @@
 
 #include <types.h>
 #include <daemon.h>
+#include <transforms/certificate.h>
 #include <utils/allocator.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 
@@ -53,7 +55,7 @@ struct configuration_entry_t {
 	
 	/**
 	 * Configuration name.
-	 * 
+	 *
 	 */
 	char *name;
 	
@@ -68,6 +70,16 @@ struct configuration_entry_t {
 	policy_t *policy;
 	
 	/**
+	 * Public key of other peer
+	 */
+	rsa_public_key_t *public_key;
+	
+	/**
+	 * Own private key
+	 */
+	rsa_private_key_t *private_key;
+	
+	/**
 	 * Destroys a configuration_entry_t
 	 */
 	void (*destroy) (configuration_entry_t *this);
@@ -80,6 +92,10 @@ static void configuration_entry_destroy (configuration_entry_t *this)
 {
 	this->connection->destroy(this->connection);
 	this->policy->destroy(this->policy);
+	if (this->public_key)
+	{
+		this->public_key->destroy(this->public_key);
+	}
 	allocator_free(this->name);
 	allocator_free(this);
 }
@@ -87,7 +103,8 @@ static void configuration_entry_destroy (configuration_entry_t *this)
 /**
  * Creates a configuration_entry_t object.
  */
-static configuration_entry_t * configuration_entry_create(char *name, connection_t* connection, policy_t *policy)
+static configuration_entry_t * configuration_entry_create(char *name, connection_t* connection, policy_t *policy, 
+														  rsa_private_key_t *private_key, rsa_public_key_t *public_key)
 {
 	configuration_entry_t *entry = allocator_alloc_thing(configuration_entry_t);
 
@@ -97,6 +114,8 @@ static configuration_entry_t * configuration_entry_create(char *name, connection
 	/* private data */
 	entry->connection = connection;
 	entry->policy = policy;
+	entry->public_key = public_key;
+	entry->private_key = private_key;
 	entry->name = allocator_alloc(strlen(name) + 1);
 	strcpy(entry->name, name);
 	
@@ -123,12 +142,7 @@ struct private_stroke_t {
 	/**
 	 * The list of RSA private keys accessible through crendial_store_t interface
 	 */
-	linked_list_t *rsa_private_keys;
-	
-	/**
-	 * The list of RSA public keys accessible through crendial_store_t interface
-	 */
-	linked_list_t *rsa_public_keys;
+	linked_list_t *private_keys;
 
 	/**
 	 * Assigned logger_t object.
@@ -158,8 +172,8 @@ struct private_stroke_t {
 
 /**
  * Helper function which corrects the string pointers
- * in a stroke_msg_t. Strings in a stroke_msg sent over wire
- * contain RELATIVE addresses (relative to the beginning of the
+ * in a stroke_msg_t. Strings in a stroke_msg sent over "wire"
+ * contains RELATIVE addresses (relative to the beginning of the
  * stroke_msg). They must be corrected if they reach our address
  * space...
  */
@@ -181,6 +195,69 @@ static void pop_string(stroke_msg_t *msg, char **string)
 	{
 		*string = (char*)msg + (u_int)*string;
 	}
+}
+
+/**
+ * Find the private key for a public key
+ */
+static rsa_private_key_t *find_private_key(private_stroke_t *this, rsa_public_key_t *public_key)
+{
+	rsa_private_key_t *private_key = NULL;
+	iterator_t *iterator;
+	
+	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&private_key);
+		if (private_key->belongs_to(private_key, public_key))
+		{
+			break;
+		}	
+	}
+	iterator->destroy(iterator);
+	return private_key;
+}
+
+/**
+ * Load all private keys form "/etc/ipsec.d/private/"
+ */
+static void load_private_keys(private_stroke_t *this)
+{
+	struct dirent* entry;
+	struct stat stb;
+	DIR* dir;
+	rsa_private_key_t *key;
+	
+	/* currently only unencrypted binary DER files are loaded */
+	dir = opendir(PRIVATE_KEY_DIR);
+	if (dir == NULL || chdir(PRIVATE_KEY_DIR) == -1) {
+		this->logger->log(this->logger, ERROR, "error opening private key directory \"%s\"", PRIVATE_KEY_DIR);
+		return;
+	}
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (stat(entry->d_name, &stb) == -1)
+		{
+			continue;
+		}
+		/* try to parse all regular files */
+		if (stb.st_mode & S_IFREG)
+		{
+			key = rsa_private_key_create_from_file(entry->d_name, NULL);
+			if (key)
+			{
+				this->private_keys->insert_last(this->private_keys, (void*)key);
+				this->logger->log(this->logger, CONTROL|LEVEL1, "loaded private key \"%s%s\"", 
+								  PRIVATE_KEY_DIR, entry->d_name);
+			}
+			else
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL1, "private key \"%s%s\" invalid, skipped", 
+								  PRIVATE_KEY_DIR, entry->d_name);
+			}
+		}
+	}
+	closedir(dir);
 }
 
 /**
@@ -232,6 +309,7 @@ static void stroke_receive(private_stroke_t *this)
 			{
 				initiate_ike_sa_job_t *job;
 				connection_t *connection;
+				
 				pop_string(msg, &(msg->initiate.name));
 				this->logger->log(this->logger, CONTROL, "received stroke: initiate \"%s\"", msg->initiate.name);
 				connection = this->get_connection_by_name(this, msg->initiate.name);
@@ -260,12 +338,17 @@ static void stroke_receive(private_stroke_t *this)
 				host_t *my_host, *other_host, *my_subnet, *other_subnet;
 				proposal_t *proposal;
 				traffic_selector_t *my_ts, *other_ts;
+				certificate_t *my_cert, *other_cert;
+				rsa_private_key_t *private_key = NULL;
+				rsa_public_key_t *public_key = NULL;
 				
 				pop_string(msg, &msg->add_conn.name);
 				pop_string(msg, &msg->add_conn.me.address);
 				pop_string(msg, &msg->add_conn.other.address);
 				pop_string(msg, &msg->add_conn.me.id);
 				pop_string(msg, &msg->add_conn.other.id);
+				pop_string(msg, &msg->add_conn.me.cert);
+				pop_string(msg, &msg->add_conn.other.cert);
 				pop_string(msg, &msg->add_conn.me.subnet);
 				pop_string(msg, &msg->add_conn.other.subnet);
 				
@@ -339,6 +422,7 @@ static void stroke_receive(private_stroke_t *this)
 					host_t *tmp_host = my_host;
 					identification_t *tmp_id = my_id;
 					traffic_selector_t *tmp_ts = my_ts;
+					char *tmp_cert = msg->add_conn.me.cert;
 					
 					my_host = other_host;
 					other_host = tmp_host;
@@ -346,6 +430,8 @@ static void stroke_receive(private_stroke_t *this)
 					other_id = tmp_id;
 					my_ts = other_ts;
 					other_ts = tmp_ts;
+					msg->add_conn.me.cert = msg->add_conn.other.cert;
+					msg->add_conn.other.cert = tmp_cert;
 				}
 				else if (charon->socket->is_listening_on(charon->socket, my_host))
 				{
@@ -364,7 +450,8 @@ static void stroke_receive(private_stroke_t *this)
 					break;
 				}
 				
-				connection = connection_create(my_host, other_host, my_id->clone(my_id), other_id->clone(other_id), SHARED_KEY_MESSAGE_INTEGRITY_CODE);
+				connection = connection_create(my_host, other_host, my_id->clone(my_id), other_id->clone(other_id), 
+											   RSA_DIGITAL_SIGNATURE);
 				proposal = proposal_create(1);
 				proposal->add_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 				proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
@@ -387,8 +474,44 @@ static void stroke_receive(private_stroke_t *this)
 				policy->add_my_traffic_selector(policy, my_ts);
 				policy->add_other_traffic_selector(policy, other_ts);
 				
+				
+				chdir(CERTIFICATE_DIR);
+				my_cert = certificate_create_from_file(msg->add_conn.me.cert);
+				if (my_cert == NULL)
+				{
+					this->logger->log(this->logger, ERROR, "loading own certificate \"%s%s\" failed", 
+									  CERTIFICATE_DIR, msg->add_conn.me.cert);
+				}
+				else
+				{
+					private_key = find_private_key(this, my_cert->get_public_key(my_cert));
+					if (private_key)
+					{
+						this->logger->log(this->logger, CONTROL|LEVEL1, "found private key for certificate \"%s%s\"", 
+										  CERTIFICATE_DIR, msg->add_conn.me.cert);
+					}
+					else
+					{
+						this->logger->log(this->logger, ERROR, "no private key for certificate \"%s%s\" found", 
+										  CERTIFICATE_DIR, msg->add_conn.me.cert);
+					}
+				}
+				other_cert = certificate_create_from_file(msg->add_conn.other.cert);
+				if (other_cert == NULL)
+				{
+					this->logger->log(this->logger, ERROR, "loading peers certificate \"%s%s\" failed", 
+									  CERTIFICATE_DIR, msg->add_conn.other.cert);
+				}
+				else
+				{
+					public_key = other_cert->get_public_key(other_cert);
+					this->logger->log(this->logger, CONTROL|LEVEL1, "loaded certificate \"%s%s\" (%p)", 
+									  CERTIFICATE_DIR, msg->add_conn.other.cert, public_key);
+					
+				}
+				
 				this->configurations->insert_last(this->configurations, 
-						configuration_entry_create(msg->add_conn.name, connection, policy));
+						configuration_entry_create(msg->add_conn.name, connection, policy, private_key, public_key));
 				
 				this->logger->log(this->logger, CONTROL|LEVEL1, "connection \"%s\" added (%d in store)", 
 								  msg->add_conn.name,
@@ -404,7 +527,6 @@ static void stroke_receive(private_stroke_t *this)
 		allocator_free(msg);
 	}
 }
-
 
 /**
  * Implementation of connection_store_t.get_connection_by_hosts.
@@ -608,17 +730,63 @@ static status_t get_shared_secret(credential_store_t *this, identification_t *id
 /**
  * Implementation of credential_store_t.get_rsa_public_key.
  */
-static status_t get_rsa_public_key(credential_store_t *this, identification_t *identification, rsa_public_key_t **public_key)
+static status_t get_rsa_public_key(credential_store_t *store, identification_t *identification, rsa_public_key_t **public_key)
 {
-	return FAILED;
+	private_stroke_t *this = (private_stroke_t*)((u_int8_t*)store - offsetof(stroke_t, credentials));
+	iterator_t *iterator;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Looking for public key for %s",
+					  identification->get_string(identification));
+	iterator = this->configurations->create_iterator(this->configurations, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		configuration_entry_t *config;
+		iterator->current(iterator, (void**)&config);
+		identification_t *stored = config->policy->get_other_id(config->policy);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "there is one for %s",
+						  stored->get_string(stored));
+		if (identification->equals(identification, stored))
+		{
+			this->logger->log(this->logger, CONTROL|LEVEL2, "found a match: %p",
+							  config->public_key);
+			if (config->public_key)
+			{
+				iterator->destroy(iterator);
+				*public_key = config->public_key;
+				return SUCCESS;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	return NOT_FOUND;
 }
 
 /**
  * Implementation of credential_store_t.get_rsa_private_key.
  */
-static status_t get_rsa_private_key(credential_store_t *this, identification_t *identification, rsa_private_key_t **private_key)
+static status_t get_rsa_private_key(credential_store_t *store, identification_t *identification, rsa_private_key_t **private_key)
 {
-	return FAILED;
+	private_stroke_t *this = (private_stroke_t*)((u_int8_t*)store - offsetof(stroke_t, credentials));
+	iterator_t *iterator;
+	
+	iterator = this->configurations->create_iterator(this->configurations, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		configuration_entry_t *config;
+		iterator->current(iterator, (void**)&config);
+		identification_t *stored = config->policy->get_my_id(config->policy);
+		if (identification->equals(identification, stored))
+		{
+			if (config->private_key)
+			{
+				iterator->destroy(iterator);
+				*private_key = config->private_key;
+				return SUCCESS;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	return NOT_FOUND;
 }
 
 /**
@@ -627,7 +795,6 @@ static status_t get_rsa_private_key(credential_store_t *this, identification_t *
 static void destroy(private_stroke_t *this)
 {
 	configuration_entry_t *entry;
-	rsa_public_key_t *pub_key;
 	rsa_private_key_t *priv_key;
 	
 	while (this->configurations->remove_first(this->configurations, (void **)&entry) == SUCCESS)
@@ -636,17 +803,11 @@ static void destroy(private_stroke_t *this)
 	}
 	this->configurations->destroy(this->configurations);
 	
-	while (this->rsa_private_keys->remove_first(this->rsa_private_keys, (void **)&priv_key) == SUCCESS)
+	while (this->private_keys->remove_first(this->private_keys, (void **)&priv_key) == SUCCESS)
 	{
 		priv_key->destroy(priv_key);
 	}
-	this->rsa_private_keys->destroy(this->rsa_private_keys);
-	
-	while (this->rsa_public_keys->remove_first(this->rsa_public_keys, (void **)&pub_key) == SUCCESS)
-	{
-		pub_key->destroy(pub_key);
-	}
-	this->rsa_public_keys->destroy(this->rsa_public_keys);
+	this->private_keys->destroy(this->private_keys);
 
 	close(this->socket);
 	unlink(socket_addr.sun_path);
@@ -729,8 +890,9 @@ stroke_t *stroke_create()
 	
 	/* private variables */
 	this->configurations = linked_list_create();
-	this->rsa_private_keys = linked_list_create();
-	this->rsa_public_keys = linked_list_create();
+	this->private_keys = linked_list_create();
+	
+	load_private_keys(this);
 	
 	return (&this->public);
 }

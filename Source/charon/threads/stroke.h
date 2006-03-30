@@ -29,6 +29,9 @@
 
 
 #define STROKE_SOCKET "/var/run/charon.ctl"
+#define IPSEC_DIR "/etc/ipsec.d/"
+#define PRIVATE_KEY_DIR IPSEC_DIR "private/"
+#define CERTIFICATE_DIR IPSEC_DIR "certs/"
 
 /**
  * @brief A stroke message sent over the unix socket.
@@ -61,6 +64,7 @@ struct stroke_msg_t {
 			char *name;
 			struct {
 				char *id;
+				char *cert;
 				char *address;
 				char *subnet;
 				u_int8_t subnet_mask;

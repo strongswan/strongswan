@@ -21,6 +21,8 @@
  */
 
 #include <gmp.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "rsa_private_key.h"
 
@@ -62,11 +64,6 @@ struct private_rsa_private_key_t {
 	 * Version of key, as encoded in PKCS#1
 	 */
 	u_int version;
-	
-	/**
-	 * Is the key already set ?
-	 */
-	bool is_key_set;
 	
 	/**
 	 * Public modulus.
@@ -317,37 +314,11 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 	return SUCCESS;	
 }
 
-	
-/**
- * Implementation of rsa_private_key.set_key.
- */
-static status_t set_key(private_rsa_private_key_t *this, chunk_t key)
-{
-	der_decoder_t *dd;
-	status_t status;
-	
-	dd = der_decoder_create(rsa_private_key_rules);
-	
-	status = dd->decode(dd, key, this);
-	if (status == SUCCESS)
-	{
-		this->is_key_set = TRUE;
-		this->k = mpz_sizeinbase(this->n, 2) / 8;
-	}
-	dd->destroy(dd);
-	return status;
-}
-
 /**
  * Implementation of rsa_private_key.get_key.
  */
 static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
-{
-	if (!this->is_key_set)
-	{
-		return INVALID_STATE;	
-	}
-	
+{	
 	chunk_t n, e, p, q, d, exp1, exp2, coeff;
 
 	n.len = this->k;
@@ -389,14 +360,6 @@ static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
 	
 	return SUCCESS;
 }
-	
-/**
- * Implementation of rsa_private_key.load_key.
- */
-static status_t load_key(private_rsa_private_key_t *this, char *file)
-{
-	return NOT_SUPPORTED;
-}
 
 /**
  * Implementation of rsa_private_key.save_key.
@@ -407,18 +370,31 @@ static status_t save_key(private_rsa_private_key_t *this, char *file)
 }
 
 /**
- * Implementation of rsa_private_key.generate_key.
+ * Implementation of rsa_private_key.get_public_key.
  */
-static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
+rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
 {
-	mpz_t p, q, n, e, d, exp1, exp2, coeff;
-	mpz_t m, q1, t;
-	
-	if (key_size < 0) 
+	return NULL;
+}
+
+/**
+ * Implementation of rsa_private_key.belongs_to.
+ */
+bool belongs_to(private_rsa_private_key_t *this, rsa_public_key_t *public)
+{
+	if (mpz_cmp(this->n, *public->get_modulus(public)) == 0)
 	{
-		return INVALID_ARG;
+		return TRUE;
 	}
-	
+	return FALSE;
+}
+
+
+/**
+ * Implementation of rsa_private_key.destroy.
+ */
+static void destroy(private_rsa_private_key_t *this)
+{
 	mpz_clear(this->n);
 	mpz_clear(this->e);
 	mpz_clear(this->p);
@@ -427,6 +403,42 @@ static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
 	mpz_clear(this->exp1);
 	mpz_clear(this->exp2);
 	mpz_clear(this->coeff);
+	allocator_free(this);
+}
+
+/**
+ * Internal generic constructor
+ */
+static private_rsa_private_key_t *rsa_private_key_create_empty()
+{
+	private_rsa_private_key_t *this = allocator_alloc_thing(private_rsa_private_key_t);
+	
+	/* public functions */
+	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
+	this->public.get_key = (status_t (*) (rsa_private_key_t*,chunk_t*))get_key;
+	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
+	this->public.get_public_key = (rsa_public_key_t *(*) (rsa_private_key_t*))get_public_key;
+	this->public.belongs_to = (bool (*) (rsa_private_key_t*,rsa_public_key_t*))belongs_to;
+	this->public.destroy = (void (*) (rsa_private_key_t*))destroy;
+	
+	/* private functions */
+	this->rsadp = rsadp;
+	this->rsasp1 = rsadp; /* same algorithm */
+	this->compute_prime = compute_prime;
+	
+	return this;
+}
+
+/*
+ * See header
+ */
+rsa_private_key_t *rsa_private_key_create(size_t key_size)
+{
+	mpz_t p, q, n, e, d, exp1, exp2, coeff;
+	mpz_t m, q1, t;
+	private_rsa_private_key_t *this;
+	
+	this = rsa_private_key_create_empty();
 	
 	key_size = key_size / 8;
 	
@@ -491,86 +503,21 @@ static status_t generate_key(private_rsa_private_key_t *this, size_t key_size)
 	*(this->coeff) = *coeff;
 	
 	/* set key size in bytes */
-	
-	this->is_key_set = TRUE;
 	this->k = key_size;
 	
-	return SUCCESS;
-}
-
-/**
- * Implementation of rsa_private_key.get_public_key.
- */
-rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
-{
-	rsa_public_key_t *public_key;
-	//chunk_t key;
-	
-	public_key = rsa_public_key_create();
-	
-	if (this->is_key_set)
-	{	
-	
-		chunk_t n, e, key;
-
-		n.len = this->k;
-		n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, this->n);
-		e.len = this->k;
-		e.ptr = mpz_export(NULL, NULL, 1, e.len, 1, 0, this->e);
-		
-		key.len = this->k * 2;
-		key.ptr = allocator_alloc(key.len);
-		memcpy(key.ptr, n.ptr, n.len);
-		memcpy(key.ptr + n.len, e.ptr, e.len);
-		allocator_free(n.ptr);
-		allocator_free(e.ptr);
-		
-		public_key->set_key(public_key, key);
-		allocator_free(key.ptr);
-
-	}
-	
-	return public_key;
-}
-
-
-/**
- * Implementation of rsa_private_key.destroy.
- */
-static void destroy(private_rsa_private_key_t *this)
-{
-	mpz_clear(this->n);
-	mpz_clear(this->e);
-	mpz_clear(this->p);
-	mpz_clear(this->q);
-	mpz_clear(this->d);
-	mpz_clear(this->exp1);
-	mpz_clear(this->exp2);
-	mpz_clear(this->coeff);
-	allocator_free(this);
+	return &this->public;
 }
 
 /*
- * Described in header.
+ * see header
  */
-rsa_private_key_t *rsa_private_key_create(hash_algorithm_t hash_algoritm)
+rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t chunk)
 {
-	private_rsa_private_key_t *this = allocator_alloc_thing(private_rsa_private_key_t);
+	private_rsa_private_key_t *this;
+	der_decoder_t *dd;
+	status_t status;
 	
-	/* public functions */
-	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
-	this->public.set_key = (status_t (*) (rsa_private_key_t*,chunk_t))set_key;
-	this->public.get_key = (status_t (*) (rsa_private_key_t*,chunk_t*))get_key;
-	this->public.load_key = (status_t (*) (rsa_private_key_t*,char*))load_key;
-	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
-	this->public.generate_key = (status_t (*) (rsa_private_key_t*,size_t))generate_key;
-	this->public.get_public_key = (rsa_public_key_t *(*) (rsa_private_key_t*))get_public_key;
-	this->public.destroy = (void (*) (rsa_private_key_t*))destroy;
-	
-	/* private functions */
-	this->rsadp = rsadp;
-	this->rsasp1 = rsadp; /* same algorithm */
-	this->compute_prime = compute_prime;
+	this = rsa_private_key_create_empty();
 	
 	mpz_init(this->n);
 	mpz_init(this->e);
@@ -580,7 +527,49 @@ rsa_private_key_t *rsa_private_key_create(hash_algorithm_t hash_algoritm)
 	mpz_init(this->exp1);
 	mpz_init(this->exp2);
 	mpz_init(this->coeff);
-	this->is_key_set = FALSE;
 	
-	return &(this->public);
+	dd = der_decoder_create(rsa_private_key_rules);
+	status = dd->decode(dd, chunk, this);
+	dd->destroy(dd);
+	if (status != SUCCESS)
+	{
+		destroy(this);
+		return NULL;
+	}
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
+	return &this->public;
+}
+
+/*
+ * see header
+ */
+rsa_private_key_t *rsa_private_key_create_from_file(char *filename, char *passphrase)
+{
+	chunk_t chunk;
+	struct stat stb;
+	FILE *file;
+	char *buffer;
+	
+	if (stat(filename, &stb) == -1)
+	{
+		return NULL;
+	}
+	
+	buffer = alloca(stb.st_size);
+	
+	file = fopen(filename, "r");
+	if (file == NULL)
+	{
+		return NULL;
+	}
+	
+	if (fread(buffer, stb.st_size, 1, file) != 1)
+	{
+		return NULL;
+	}
+	
+	chunk.ptr = buffer;
+	chunk.len = stb.st_size;
+	
+	return rsa_private_key_create_from_chunk(chunk);
 }

@@ -77,8 +77,8 @@ struct {
 	{ "CONFG", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* CONFIG */
 	{ "ENCPL", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* ENCRYPTION_PAYLOAD */
 	{ "PAYLD", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* PAYLOAD */
-	{ "DERDC", ERROR|CONTROL|AUDIT|RAW|PRIVATE|LEVEL3,	TRUE,  NULL}, /* DER_DECODER */
-	{ "DEREC", ERROR|CONTROL|AUDIT|RAW|PRIVATE|LEVEL3,	TRUE,  NULL}, /* DER_ENCODER */
+	{ "DERDC", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* DER_DECODER */
+	{ "DEREC", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  NULL}, /* DER_ENCODER */
 };
 
 
@@ -120,16 +120,54 @@ static log_level_t get_log_level (private_logger_manager_t *this, logger_context
  * Implementation of private_logger_manager_t.enable_log_level.
  */
 static void enable_log_level(private_logger_manager_t *this, logger_context_t context, log_level_t level)
-{
-	this->loggers[context]->enable_level(this->loggers[context], level);
+{	
+	if (context == ALL_LOGGERS)
+	{
+		for (context = 0; context < LOGGER_CONTEXT_ROOF; context++)
+		{
+			this->loggers[context]->enable_level(this->loggers[context], level);
+		}
+	}
+	else
+	{
+		this->loggers[context]->enable_level(this->loggers[context], level);
+	}
 }
 
 /**
  * Implementation of private_logger_manager_t.disable_log_level.
  */
 static void disable_log_level(private_logger_manager_t *this, logger_context_t context, log_level_t level)
+{	
+	if (context == ALL_LOGGERS)
+	{
+		for (context = 0; context < LOGGER_CONTEXT_ROOF; context++)
+		{
+			this->loggers[context]->disable_level(this->loggers[context], level);
+		}
+	}
+	else
+	{
+		this->loggers[context]->disable_level(this->loggers[context], level);
+	}
+}
+
+/**
+ * Implementation of private_logger_manager_t.set_output.
+ */
+static void set_output(private_logger_manager_t *this, logger_context_t context, FILE *output)
 {
-	this->loggers[context]->disable_level(this->loggers[context], level);
+	if (context == ALL_LOGGERS)
+	{
+		for (context = 0; context < LOGGER_CONTEXT_ROOF; context++)
+		{
+			this->loggers[context]->set_output(this->loggers[context], output);
+		}
+	}
+	else
+	{
+		this->loggers[context]->set_output(this->loggers[context], output);
+	}
 }
 
 
@@ -158,6 +196,7 @@ logger_manager_t *logger_manager_create(log_level_t default_log_level)
 	this->public.get_log_level = (log_level_t (*)(logger_manager_t *, logger_context_t)) get_log_level;
 	this->public.enable_log_level = (void (*)(logger_manager_t *, logger_context_t, log_level_t)) enable_log_level;
 	this->public.disable_log_level = (void (*)(logger_manager_t *, logger_context_t, log_level_t)) disable_log_level;
+	this->public.set_output = (void (*)(logger_manager_t *, logger_context_t, FILE*)) set_output;
 	this->public.destroy = (void(*)(logger_manager_t*))destroy;
 	
 	for (i = 0; i < LOGGER_CONTEXT_ROOF; i++)
