@@ -9,35 +9,35 @@ Charon uses another socket interface, called stroke. Stroke uses another
 format as whack and therefore is not compatible to whack. The starter utility,
 wich does fast configuration parsing, speaks both the protocols, whack and
 stroke. It also handles daemon startup and termination. 
-Pluto uses starter for some commans, for other it uses the whack utility. To be
+Pluto uses starter for some commands, for other it uses the whack utility. To be
 as close to pluto as possible, charon has the same split up of commands to
 starter and stroke. All commands are wrapped together in the ipsec script, which
 allows transparent control of both daemons.
 
          +-----------------------------------------+
-         ¦                  ipsec                  ¦
+         |                  ipsec                  |
          +-----+--------------+---------------+----+
-               ¦              ¦               ¦
-               ¦              ¦               ¦
-               ¦        +-----+-----+         ¦
-         +-----+----+   ¦           ¦   +-----+----+
-         ¦          ¦   ¦  starter  ¦   ¦          ¦
-         ¦  stroke  ¦   ¦           ¦   ¦   whack  ¦
-         ¦          ¦   +---+--+----+   ¦          ¦
-         +------+---+       ¦  ¦        +--+-------+
-                ¦           ¦  ¦           ¦
-            +---+------+    ¦  ¦    +------+--+
-            ¦          ¦    ¦  ¦    ¦         ¦
-            ¦  charon  +----+  +----+  pluto  ¦
-            ¦          ¦            ¦         ¦
+               |              |               |
+               |              |               |
+               |        +-----+-----+         |
+         +-----+----+   |           |   +-----+----+
+         |          |   |  starter  |   |          |
+         |  stroke  |   |           |   |   whack  |
+         |          |   +---+--+----+   |          |
+         +------+---+       |  |        +--+-------+
+                |           |  |           |
+            +---+------+    |  |    +------+--+
+            |          |    |  |    |         |
+            |  charon  +----+  +----+  pluto  |
+            |          |            |         |
             +-----+----+            +----+----+
-                  ¦                      ¦
-            +-----+----+                 ¦
-            ¦    LSF   ¦                 ¦
-            +-----+----+                 ¦
-                  ¦                      ¦
+                  |                      |
+            +-----+----+                 |
+            |    LSF   |                 |
+            +-----+----+                 |
+                  |                      |
             +-----+----+            +----+----+
-            ¦ RAW Sock ¦            ¦ UDP/500 ¦
+            | RAW Sock |            | UDP/500 |
             +----------+            +---------+
 
 Since IKEv2 uses the same port as IKEv1, both daemons must listen to UDP port
@@ -60,28 +60,28 @@ execution SA-management. Beside the thread-pool, there are some special purpose
 threads which do their job for the common health of the daemon.
 
                        +------+
-                       ¦ E  Q ¦
-                       ¦ v  u ¦---+                   +------+  +------+
-                       ¦ e  e ¦   ¦                   ¦      ¦  ¦ IKE- ¦
-                       ¦ n  u ¦  +-----------+        ¦      ¦--¦ SA   ¦
-                       ¦ t  e ¦  ¦           ¦        ¦ I  M ¦  +------+
-     +------------+    ¦ -    ¦  ¦ Scheduler ¦        ¦ K  a ¦
-     ¦  receiver  ¦    +------+  ¦           ¦        ¦ E  n ¦  +------+
-     +----+-------+              +-----------+        ¦ -  a ¦  ¦ IKE- ¦
-          ¦      ¦     +------+   ¦                   ¦ S  g ¦--¦ SA   ¦
-  +-------+--+   +-----¦ J  Q ¦---+  +------------+   ¦ A  e ¦  +------+
- -¦  socket  ¦         ¦ o  u ¦      ¦            ¦   ¦ -  r ¦
-  +-------+--+         ¦ b  e ¦      ¦   Thread-  ¦   ¦      ¦
-          ¦            ¦ -  u ¦      ¦   Pool     ¦   ¦      ¦
-     +----+-------+    ¦    e ¦------¦            ¦---¦      ¦
-     ¦   sender   ¦    +------+      +------------+   +------+
+                       | E  Q |
+                       | v  u |---+                   +------+  +------+
+                       | e  e |   |                   |      |  | IKE- |
+                       | n  u |  +-----------+        |      |--| SA   |
+                       | t  e |  |           |        | I  M |  +------+
+     +------------+    | -    |  | Scheduler |        | K  a |
+     |  receiver  |    +------+  |           |        | E  n |  +------+
+     +----+-------+              +-----------+        | -  a |  | IKE- |
+          |      |     +------+   |                   | S  g |--| SA   |
+  +-------+--+   +-----| J  Q |---+  +------------+   | A  e |  +------+
+ -|  socket  |         | o  u |      |            |   | -  r |
+  +-------+--+         | b  e |      |   Thread-  |   |      |
+          |            | -  u |      |   Pool     |   |      |
+     +----+-------+    |    e |------|            |---|      |
+     |   sender   |    +------+      +------------+   +------+
      +----+-------+
-          ¦            +------+
-          ¦            ¦ S  Q ¦
-          ¦            ¦ e  u ¦
-          ¦            ¦ n  e ¦
-          +------------¦ d  u ¦
-                       ¦ -  e ¦
+          |            +------+
+          |            | S  Q |
+          |            | e  u |
+          |            | n  e |
+          +------------| d  u |
+                       | -  e |
                        +--+---+
 
 The thread-pool is the heart of the architecture. It processes jobs from a

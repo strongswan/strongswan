@@ -31,7 +31,6 @@
 
 #include <types.h>
 #include <utils/allocator.h>
-#include <threads/stroke.h>
 
 
 typedef struct private_daemon_t private_daemon_t;

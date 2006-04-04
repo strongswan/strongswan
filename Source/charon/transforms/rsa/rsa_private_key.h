@@ -126,6 +126,14 @@ struct rsa_private_key_t {
 	bool (*belongs_to) (rsa_private_key_t *this, rsa_public_key_t *public);
 	
 	/**
+	 * @brief Clone the private key.
+	 * 
+	 * @param this				private key to clone
+	 * @return					clone of this
+	 */
+	rsa_private_key_t *(*clone) (rsa_private_key_t *this);
+	
+	/**
 	 * @brief Destroys the private key.
 	 * 
 	 * @param this				private key to destroy

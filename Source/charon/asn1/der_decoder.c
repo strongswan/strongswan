@@ -48,7 +48,7 @@ struct private_der_decoder_t {
 	asn1_rule_t *rule;
 	
 	/**
-	 * First rule of the hole ruleset
+	 * First rule of the whole ruleset
 	 */
 	asn1_rule_t *first_rule;
 	
@@ -273,6 +273,11 @@ status_t read_bitstring(private_der_decoder_t *this, chunk_t data)
 	data.ptr += 1;
 	data.len -= 1;
 	
+	if (data.len < 1)
+	{
+		return FAILED;
+	}
+	
 	chunk_t *chunk = (chunk_t*)((u_int8_t*)this->output + this->rule->data_offset);
 	
 	*chunk = allocator_clone_chunk(data);
@@ -301,6 +306,11 @@ u_int32_t read_length(chunk_t *data)
 {
 	u_int8_t n;
 	size_t len;
+	
+	if (data->len < 1)
+	{
+		return -1;
+	}
 	
 	/* read first octet of length field */
 	n = *data->ptr;

@@ -1,0 +1,41 @@
+ TODO-List for charon
+======================
+
++ = done, - = todo, ordered by priority
+
++ private key loading: der, without passphrase
++ load all private keys from ipsec.d/private/ in stroke.c
++ handle leftcert and rightcert in starterstroke.c/stroke.c
++ load specified certs in stroke.c
++ extract public keys from certs
++ public key authentication
++ release for Andreas
+
++ stroke loglevels
++ stroke up
++ ike_sa_manager checkout_by_hosts
++ stroke down
+- stroke output redirection
+- stroke status
+
+- libx509
+  - new charon build - libstrong?
+    - transforms
+    - utils (plus host)
+  - integrate asn1 parser/oid (asn1/oid)
+  - integrate PEM loading (pem)
+  - ... (more to come, for sure)
+
+- ipsec.secrets parsing
+
+- certificate DN parsing
+- certificate subjectAltName parsing
+- certificate lookup via ID
+- certificate validation/chaining
+- certificate exchange
+
+- trapping
+
+- delete notify, when to send?
+- notifys on connection setup failure
+- create child sa message

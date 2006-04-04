@@ -34,6 +34,6 @@ OBJS+= $(BUILD_DIR)kernel_interface.o
 $(BUILD_DIR)kernel_interface.o :$(THREADS_DIR)kernel_interface.c $(THREADS_DIR)kernel_interface.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)stroke.o
-$(BUILD_DIR)stroke.o :			$(THREADS_DIR)stroke.c $(THREADS_DIR)stroke.h
+OBJS+= $(BUILD_DIR)stroke_interface.o
+$(BUILD_DIR)stroke_interface.o :$(THREADS_DIR)stroke_interface.c $(THREADS_DIR)stroke_interface.h
 								$(CC) $(CFLAGS) -c -o $@ $<

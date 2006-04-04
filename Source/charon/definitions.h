@@ -59,6 +59,60 @@
  #error "BYTE_ORDER must be defined"
 #endif
 
+/**
+ * @mainpage
+ *
+ * @section Threading Architecture
+ *
+ * All IKEv2 stuff is handled in charon. It uses a newer and more flexible
+ * architecture than pluto. Charon uses a thread-pool, which allows parallel
+ * execution SA-management. Beside the thread-pool, there are some special purpose
+ * threads which do their job for the common health of the daemon.
+   @verbatim 
+                         +------+
+                         | E  Q |
+                         | v  u |---+                   +------+  +------+
+                         | e  e |   |                   |      |  | IKE- |
+                         | n  u |  +-----------+        |      |--| SA   |
+                         | t  e |  |           |        | I  M |  +------+
+       +------------+    | -    |  | Scheduler |        | K  a |
+       |  receiver  |    +------+  |           |        | E  n |  +------+
+       +----+-------+              +-----------+        | -  a |  | IKE- |
+            |      |     +------+   |                   | S  g |--| SA   |
+    +-------+--+   +-----| J  Q |---+  +------------+   | A  e |  +------+
+   -|  socket  |         | o  u |      |            |   | -  r |
+    +-------+--+         | b  e |      |   Thread-  |   |      |
+            |            | -  u |      |   Pool     |   |      |
+       +----+-------+    |    e |------|            |---|      |
+       |   sender   |    +------+      +------------+   +------+
+       +----+-------+
+            |            +------+
+            |            | S  Q |
+            |            | e  u |
+            |            | n  e |
+            +------------| d  u |
+                         | -  e |
+                         +--+---+
+   @endverbatim
+ * The thread-pool is the heart of the architecture. It processes jobs from a
+ * (fully synchronized) job-queue. Mostly, a job is associated with a specific
+ * IKE SA. These IKE SAs are synchronized, only one thread can work one an IKE SA.
+ * This makes it unnecesary to use further synchronisation methods once a IKE SA
+ * is checked out. The (rather complex) synchronization of IKE SAs is completely
+ * done in the IKE SA manager.
+ * The sceduler is responsible for event firing. It waits until a event in the
+ * (fully synchronized) event-queue is ready for processing and pushes the event
+ * down to the job-queue. A thread form the pool will pick it up as quick as
+ * possible. Every thread can queue events or jobs. Furter, an event can place a
+ * packet in the send-queue. The sender thread waits for those packets and sends
+ * them over the wire, via the socket. The receiver does exactly the opposite of
+ * the sender. It waits on the socket, reads in packets an places them on the
+ * job-queue for further processing by a thread from the pool.
+ * There are even more threads, not drawn in the upper scheme. The stroke thread
+ * is responsible for reading and processessing commands from another process. The
+ * kernel interface thread handles communication from and to the kernel via a
+ * netlink socket. It waits for kernel events and processes them appropriately.
+ */
 
 /**
  * @defgroup config config

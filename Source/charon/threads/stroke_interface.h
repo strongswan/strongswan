@@ -28,51 +28,9 @@
 #include <config/credential_store.h>
 
 
-#define STROKE_SOCKET "/var/run/charon.ctl"
 #define IPSEC_DIR "/etc/ipsec.d/"
 #define PRIVATE_KEY_DIR IPSEC_DIR "private/"
 #define CERTIFICATE_DIR IPSEC_DIR "certs/"
-
-/**
- * @brief A stroke message sent over the unix socket.
- * 
- */
-typedef struct stroke_msg_t stroke_msg_t;
-
-struct stroke_msg_t {
-	/* length of this message with all strings */
-	u_int16_t length;
-	/* type of the message */
-	enum {
-		/* initiate a connection */
-		STR_INITIATE,
-		/* install SPD entries for a connection */
-		STR_INSTALL,
-		/* add a connection */
-		STR_ADD_CONN,
-		/* delete a connection */
-		STR_DEL_CONN,
-		/* more to come */
-	} type;
-	union {
-		/* data for STR_INITIATE, STR_INSTALL */
-		struct {
-			char *name;
-		} initiate, install;
-		/* data for STR_ADD_CONN */
-		struct {
-			char *name;
-			struct {
-				char *id;
-				char *cert;
-				char *address;
-				char *subnet;
-				u_int8_t subnet_mask;
-			} me, other;
-		} add_conn;
-	};
-	u_int8_t buffer[];
-};
 
 
 typedef struct stroke_t stroke_t;

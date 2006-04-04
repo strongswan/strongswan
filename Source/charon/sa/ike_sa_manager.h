@@ -78,7 +78,37 @@ struct ike_sa_manager_t {
 	 * @param ike_sa[out] 		checked out SA
 	 */
 	void (*create_and_checkout) (ike_sa_manager_t* ike_sa_manager,ike_sa_t **ike_sa);
- 
+	
+	/**
+	 * @brief Check out an IKE_SA, defined be the two peers.
+	 * 
+	 * Checking out an IKE_SA by their peer addresses may be necessary
+	 * for kernel traps, status querying and so on... one of the hosts
+	 * may be 0.0.0.0 (defaultroute/any), but not both.
+	 * 
+	 * @param ike_sa_manager 	the manager object
+	 * @param me				host on local side
+	 * @param other				host on remote side
+	 * @param ike_sa[out] 		checked out SA
+	 * @return
+	 * 							- NOT_FOUND, if no such SA found
+	 * 							- SUCCESS, if SA found and ike_sa set appropriatly
+	 */
+	status_t (*checkout_by_hosts) (ike_sa_manager_t* ike_sa_manager, host_t *me, host_t *other, ike_sa_t **ike_sa);
+	
+	/**
+	 * @brief Get a list of all IKE_SA SAs currently set up.
+	 * 
+	 * The resulting list with all IDs must be destroyd by 
+	 * the caller. There is no guarantee an ike_sa with the 
+	 * corrensponding ID really exists, since it may be deleted
+	 * in the meantime by another thread.
+	 * 
+	 * @param ike_sa_manager 	the manager object
+	 * @return					a list with ike_sa_id_t s
+	 */
+	linked_list_t *(*get_ike_sa_list) (ike_sa_manager_t* ike_sa_manager);
+	
 	/**
 	 * @brief Checkin the SA after usage.
 	 * 
@@ -93,6 +123,7 @@ struct ike_sa_manager_t {
 	 * 							- NOT_FOUND when not found (shouldn't happen!)
 	 */
 	status_t (*checkin) (ike_sa_manager_t* ike_sa_manager, ike_sa_t *ike_sa);
+	
 	/**
 	 * @brief Delete a SA, which was not checked out.
 	 * 

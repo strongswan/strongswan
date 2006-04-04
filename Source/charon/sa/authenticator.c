@@ -353,7 +353,8 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			allocator_free_chunk(&octets);
 			if (status != SUCCESS)
 			{
-				return status;	
+				private_key->destroy(private_key);
+				return status;
 			}
 			
 			*auth_payload = auth_payload_create();

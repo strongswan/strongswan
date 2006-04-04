@@ -145,7 +145,6 @@ static rsa_public_key_t *get_public_key(private_certificate_t *this)
 	return this->public_key->clone(this->public_key);
 }
 
-
 /**
  * Implementation of certificate.destroy.
  */

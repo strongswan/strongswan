@@ -288,7 +288,7 @@ static status_t initiate_connection(private_ike_sa_t *this, connection_t *connec
 	initiator_init_t *current_state;
 
 	/* Work is done in state object of type INITIATOR_INIT. All other states are not 
-	 * initial states and so don't have a initialize_connection function */
+	 * initial states and so don't have a initiate_connection function */
 	
 	if (this->current_state->get_state(this->current_state) != INITIATOR_INIT)
 	{
@@ -350,11 +350,27 @@ static void send_delete_ike_sa_request (private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_id.
+ * Implementation of ike_sa_t.get_id.
  */
 static ike_sa_id_t* get_id(private_ike_sa_t *this)
 {
 	return this->ike_sa_id;
+}
+
+/**
+ * Implementation of ike_sa_t.get_my_host.
+ */
+static host_t* get_my_host(private_ike_sa_t *this)
+{
+	return this->connection->get_my_host(this->connection);;
+}
+
+/**
+ * Implementation of ike_sa_t.get_other_host.
+ */
+static host_t* get_other_host(private_ike_sa_t *this)
+{
+	return this->connection->get_other_host(this->connection);;
 }
 
 /**
@@ -998,6 +1014,12 @@ static void destroy (private_ike_sa_t *this)
 	}
 	if (this->connection)
 	{
+		host_t *me, *other;
+		me = this->connection->get_my_host(this->connection);
+		other = this->connection->get_other_host(this->connection);
+		
+		this->logger->log(this->logger, AUDIT, "IKE_SA deleted between %s - %s", 
+						  me->get_address(me), other->get_address(other));
 		this->connection->destroy(this->connection);
 	}
 	if (this->policy)
@@ -1030,6 +1052,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->protected.public.initiate_connection = (status_t(*)(ike_sa_t*,connection_t*)) initiate_connection;
 	this->protected.public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
+	this->protected.public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
+	this->protected.public.get_other_host = (host_t*(*)(ike_sa_t*)) get_other_host;
 	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t *this)) get_state;
 	this->protected.public.send_delete_ike_sa_request = (void (*)(ike_sa_t*)) send_delete_ike_sa_request;

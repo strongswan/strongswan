@@ -31,8 +31,9 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include "stroke.h"
+#include "stroke_interface.h"
 
+#include <stroke.h>
 #include <types.h>
 #include <daemon.h>
 #include <transforms/certificate.h>
@@ -145,12 +146,17 @@ struct private_stroke_t {
 	linked_list_t *private_keys;
 
 	/**
-	 * Assigned logger_t object.
+	 * Assigned logger_t object in charon.
 	 */
 	logger_t *logger;
+	
+	/**
+	 * Logger which logs to stroke
+	 */
+	logger_t *stroke_logger;
 		
 	/**
-	 * Unix socket to use for communication
+	 * Unix socket to listen for strokes
 	 */
 	int socket;
 	
@@ -261,6 +267,420 @@ static void load_private_keys(private_stroke_t *this)
 }
 
 /**
+ * Add a connection to the configuration list
+ */
+static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
+{
+	connection_t *connection;
+	policy_t *policy;
+	identification_t *my_id, *other_id;
+	host_t *my_host, *other_host, *my_subnet, *other_subnet;
+	proposal_t *proposal;
+	traffic_selector_t *my_ts, *other_ts;
+	certificate_t *my_cert, *other_cert;
+	rsa_private_key_t *private_key = NULL;
+	rsa_public_key_t *public_key = NULL;
+				
+	pop_string(msg, &msg->add_conn.name);
+	pop_string(msg, &msg->add_conn.me.address);
+	pop_string(msg, &msg->add_conn.other.address);
+	pop_string(msg, &msg->add_conn.me.id);
+	pop_string(msg, &msg->add_conn.other.id);
+	pop_string(msg, &msg->add_conn.me.cert);
+	pop_string(msg, &msg->add_conn.other.cert);
+	pop_string(msg, &msg->add_conn.me.subnet);
+	pop_string(msg, &msg->add_conn.other.subnet);
+				
+	this->logger->log(this->logger, CONTROL, "received stroke: add connection \"%s\"", msg->add_conn.name);
+				
+	my_host = host_create(AF_INET, msg->add_conn.me.address, 500);
+	if (my_host == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.me.address);
+		return;
+	}
+	other_host = host_create(AF_INET, msg->add_conn.other.address, 500);
+	if (other_host == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.other.address);
+		my_host->destroy(my_host);
+		return;
+	}
+	my_id = identification_create_from_string(ID_IPV4_ADDR, 
+											  *msg->add_conn.me.id ? msg->add_conn.me.id : msg->add_conn.me.address);
+	if (my_id == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.me.id);
+		my_host->destroy(my_host);
+		other_host->destroy(other_host);
+		return;
+	}
+	other_id = identification_create_from_string(ID_IPV4_ADDR, 
+			*msg->add_conn.other.id ? msg->add_conn.other.id : msg->add_conn.other.address);
+	if (other_id == NULL)
+	{
+		my_host->destroy(my_host);
+		other_host->destroy(other_host);
+		my_id->destroy(my_id);
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.other.id);
+		return;
+	}
+				
+	my_subnet = host_create(AF_INET, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet : msg->add_conn.me.address, 500);
+	if (my_subnet == NULL)
+	{
+		my_host->destroy(my_host);
+		other_host->destroy(other_host);
+		my_id->destroy(my_id);
+		other_id->destroy(other_id);
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid subnet: %s", msg->add_conn.me.subnet);
+		return;
+	}
+				
+	other_subnet = host_create(AF_INET, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet : msg->add_conn.other.address, 500);
+	if (other_subnet == NULL)
+	{
+		my_host->destroy(my_host);
+		other_host->destroy(other_host);
+		my_id->destroy(my_id);
+		other_id->destroy(other_id);
+		my_subnet->destroy(my_subnet);
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid subnet: %s", msg->add_conn.me.subnet);
+		return;
+	}
+				
+	my_ts = traffic_selector_create_from_subnet(my_subnet, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet_mask : 32);
+	my_subnet->destroy(my_subnet);
+	other_ts = traffic_selector_create_from_subnet(other_subnet, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet_mask : 32);
+	other_subnet->destroy(other_subnet);
+				
+	if (charon->socket->is_listening_on(charon->socket, other_host))
+	{
+		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is other host, switching");
+					
+		host_t *tmp_host = my_host;
+		identification_t *tmp_id = my_id;
+		traffic_selector_t *tmp_ts = my_ts;
+		char *tmp_cert = msg->add_conn.me.cert;
+					
+		my_host = other_host;
+		other_host = tmp_host;
+		my_id = other_id;
+		other_id = tmp_id;
+		my_ts = other_ts;
+		other_ts = tmp_ts;
+		msg->add_conn.me.cert = msg->add_conn.other.cert;
+		msg->add_conn.other.cert = tmp_cert;
+	}
+	else if (charon->socket->is_listening_on(charon->socket, my_host))
+	{
+		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is own host, not switching");
+	}
+	else
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "left nor right host is our, aborting");
+					
+		my_host->destroy(my_host);
+		other_host->destroy(other_host);
+		my_id->destroy(my_id);
+		other_id->destroy(other_id);
+		my_ts->destroy(my_ts);
+		other_ts->destroy(other_ts);
+		return;
+	}
+	
+				
+	connection = connection_create(my_host, other_host, my_id->clone(my_id), other_id->clone(other_id), 
+								   RSA_DIGITAL_SIGNATURE);
+	proposal = proposal_create(1);
+	proposal->add_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+	proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+	proposal->add_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
+	proposal->add_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
+	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_1536_BIT, 0);
+	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
+	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
+	connection->add_proposal(connection, proposal);
+				
+	policy = policy_create(my_id, other_id);
+	proposal = proposal_create(1);
+	proposal->add_algorithm(proposal, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+	proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+	policy->add_proposal(policy, proposal);
+	policy->add_my_traffic_selector(policy, my_ts);
+	policy->add_other_traffic_selector(policy, other_ts);
+				
+				
+	chdir(CERTIFICATE_DIR);
+	my_cert = certificate_create_from_file(msg->add_conn.me.cert);
+	if (my_cert == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "loading own certificate \"%s%s\" failed", 
+						  CERTIFICATE_DIR, msg->add_conn.me.cert);
+	}
+	else
+	{
+		public_key = my_cert->get_public_key(my_cert);
+		private_key = find_private_key(this, public_key);
+		public_key->destroy(public_key);
+		if (private_key)
+		{
+			this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "found private key for certificate \"%s%s\"", 
+							  CERTIFICATE_DIR, msg->add_conn.me.cert);
+		}
+		else
+		{
+			this->stroke_logger->log(this->stroke_logger, ERROR, "no private key for certificate \"%s%s\" found", 
+							  CERTIFICATE_DIR, msg->add_conn.me.cert);
+		}
+		my_cert->destroy(my_cert);
+	}
+	other_cert = certificate_create_from_file(msg->add_conn.other.cert);
+	public_key = NULL;
+	if (other_cert == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "loading peers certificate \"%s%s\" failed", 
+						  CERTIFICATE_DIR, msg->add_conn.other.cert);
+	}
+	else
+	{
+		public_key = other_cert->get_public_key(other_cert);
+		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "loaded certificate \"%s%s\" (%p)", 
+						  CERTIFICATE_DIR, msg->add_conn.other.cert, public_key);
+		other_cert->destroy(other_cert);
+	}
+				
+	this->configurations->insert_last(this->configurations, 
+									  configuration_entry_create(msg->add_conn.name, connection, policy, private_key, public_key));
+				
+	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "connection \"%s\" added (%d in store)", 
+					  msg->add_conn.name,
+					  this->configurations->get_count(this->configurations));
+}
+
+/**
+ * initiate a connection by name
+ */
+static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
+{
+	initiate_ike_sa_job_t *job;
+	connection_t *connection;
+				
+	pop_string(msg, &(msg->initiate.name));
+	this->logger->log(this->logger, CONTROL, "received stroke: initiate \"%s\"", msg->initiate.name);
+	connection = this->get_connection_by_name(this, msg->initiate.name);
+	if (connection == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "could not find a connection named \"%s\"", msg->initiate.name);
+	}
+	else
+	{
+		job = initiate_ike_sa_job_create(connection->clone(connection));
+		charon->job_queue->add(charon->job_queue, (job_t*)job);
+	}
+}
+
+/**
+ * terminate a connection by name
+ */
+static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
+{
+	connection_t *connection;
+	ike_sa_t *ike_sa;
+	host_t *my_host, *other_host;
+	status_t status;
+	
+	pop_string(msg, &(msg->terminate.name));
+	this->logger->log(this->logger, CONTROL, "received stroke: terminate \"%s\"", msg->terminate.name);
+	connection = this->get_connection_by_name(this, msg->terminate.name);
+	
+	if (connection)
+	{
+		my_host = connection->get_my_host(connection);
+		other_host = connection->get_other_host(connection);
+		
+		status = charon->ike_sa_manager->checkout_by_hosts(charon->ike_sa_manager,
+												  my_host, other_host, &ike_sa);
+		
+		if (status == SUCCESS)
+		{
+			this->stroke_logger->log(this->stroke_logger, CONTROL, "deleting IKE SA between %s - %s",
+							my_host->get_address(my_host), other_host->get_address(other_host));
+		
+			charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
+		}
+		else
+		{
+			this->stroke_logger->log(this->stroke_logger, ERROR, "no active connection found between %s - %s",
+							  my_host->get_address(my_host), other_host->get_address(other_host));
+		}
+	}
+	else
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "could not find a connection named \"%s\"", msg->terminate.name);
+	}
+	
+}
+
+/**
+ * show status of (established) connections
+ */
+static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
+{
+	linked_list_t *list;
+	iterator_t *iterator;
+	status_t status;
+	
+	
+	list = charon->ike_sa_manager->get_ike_sa_list(charon->ike_sa_manager);
+	iterator = list->create_iterator(list, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		ike_sa_id_t *ike_sa_id;
+		ike_sa_t *ike_sa;
+		iterator->current(iterator, (void**)&ike_sa_id);
+		
+		status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id, &ike_sa);
+		if (status == SUCCESS)
+		{
+			host_t *me, *other;
+			me = ike_sa->get_my_host(ike_sa);
+			other = ike_sa->get_other_host(ike_sa);
+			
+			
+			this->stroke_logger->log(this->stroke_logger, CONTROL, "IKE SA in state %s as %s",
+									 mapping_find(ike_sa_state_m, ike_sa->get_state(ike_sa)),
+									 ike_sa_id->is_initiator ? "initiator" : "responder");
+			
+			this->stroke_logger->log(this->stroke_logger, CONTROL, " SPIs: %15lld - %-15lld",
+									 ike_sa_id->get_initiator_spi(ike_sa_id),
+									 ike_sa_id->get_responder_spi(ike_sa_id));
+			
+
+			this->stroke_logger->log(this->stroke_logger, CONTROL, " Addr: %15s - %-15s",
+									 me->get_address(me), other->get_address(other));
+						
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		}
+		
+		ike_sa_id->destroy(ike_sa_id);
+	}
+	iterator->destroy(iterator);
+	list->destroy(list);
+}
+
+logger_context_t get_context(char *context)
+{
+	if      (strcasecmp(context, "ALL") == 0) return ALL_LOGGERS;
+	else if (strcasecmp(context, "PARSR") == 0) return PARSER;
+	else if (strcasecmp(context, "GNRAT") == 0) return GENERATOR;
+	else if (strcasecmp(context, "IKESA") == 0) return IKE_SA;
+	else if (strcasecmp(context, "SAMGR") == 0) return IKE_SA_MANAGER;
+	else if (strcasecmp(context, "CHDSA") == 0) return CHILD_SA;
+	else if (strcasecmp(context, "MESSG") == 0) return MESSAGE;
+	else if (strcasecmp(context, "TPOOL") == 0) return THREAD_POOL;
+	else if (strcasecmp(context, "WORKR") == 0) return WORKER;
+	else if (strcasecmp(context, "SCHED") == 0) return SCHEDULER;
+	else if (strcasecmp(context, "SENDR") == 0) return SENDER;
+	else if (strcasecmp(context, "RECVR") == 0) return RECEIVER;
+	else if (strcasecmp(context, "SOCKT") == 0) return SOCKET;
+	else if (strcasecmp(context, "TESTR") == 0) return TESTER;
+	else if (strcasecmp(context, "DAEMN") == 0) return DAEMON;
+	else if (strcasecmp(context, "CONFG") == 0) return CONFIG;
+	else if (strcasecmp(context, "ENCPL") == 0) return ENCRYPTION_PAYLOAD;
+	else if (strcasecmp(context, "PAYLD") == 0) return PAYLOAD;
+	else return -2;
+}
+
+/**
+ * set the type of logged messages in a context
+ */
+static void stroke_logtype(private_stroke_t *this, stroke_msg_t *msg)
+{
+	pop_string(msg, &(msg->logtype.context));
+	pop_string(msg, &(msg->logtype.type));
+	
+	this->logger->log(this->logger, CONTROL, "received stroke: logtype for %s", msg->logtype.context);
+	
+	log_level_t level;
+	logger_context_t context = get_context(msg->logtype.context);
+	if (context == -2)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid context (%s)!", msg->logtype.context);
+		return;
+	}
+	
+	if      (strcasecmp(msg->logtype.type, "CONTROL") == 0) level = CONTROL;
+	else if (strcasecmp(msg->logtype.type, "ERROR") == 0) level = ERROR;
+	else if (strcasecmp(msg->logtype.type, "AUDIT") == 0) level = AUDIT;
+	else if (strcasecmp(msg->logtype.type, "RAW") == 0) level = RAW;
+	else if (strcasecmp(msg->logtype.type, "PRIVATE") == 0) level = PRIVATE;
+	else
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid type (%s)!", msg->logtype.type);
+		return;
+	}
+	
+	if (msg->logtype.enable)
+	{
+		charon->logger_manager->enable_log_level(charon->logger_manager,
+												 context, level);
+	}
+	else
+	{
+		charon->logger_manager->disable_log_level(charon->logger_manager,
+				context, level);
+	}
+}
+
+/**
+ * set the verbosity of a logger
+ */
+static void stroke_loglevel(private_stroke_t *this, stroke_msg_t *msg)
+{
+	pop_string(msg, &(msg->loglevel.context));
+	
+	this->logger->log(this->logger, CONTROL, "received stroke: log_level for %s", msg->loglevel.context);
+	
+	log_level_t level;
+	logger_context_t context = get_context(msg->loglevel.context);
+	
+	if (context == -2)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid context (%s)!", msg->loglevel.context);
+		return;
+	}
+	
+	if (msg->loglevel.level == 0)
+	{
+		level = LEVEL0;
+	}
+	else if (msg->loglevel.level == 1)
+	{
+		level = LEVEL1;
+	}
+	else if (msg->loglevel.level == 2)
+	{
+		level = LEVEL2;
+	}
+	else if (msg->loglevel.level == 3)
+	{
+		level = LEVEL3;
+	}
+	else 
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid level (%d)!", msg->loglevel.level);
+		return;
+	}
+	
+	charon->logger_manager->enable_log_level(charon->logger_manager, context, level);
+}
+
+/**
  * Implementation of private_stroke_t.stroke_receive.
  */
 static void stroke_receive(private_stroke_t *this)
@@ -271,6 +691,7 @@ static void stroke_receive(private_stroke_t *this)
 	int strokeaddrlen = sizeof(strokeaddr);
 	ssize_t bytes_read;
 	int strokefd;
+	FILE *strokefile;
 	
 	while (1)
 	{
@@ -278,7 +699,7 @@ static void stroke_receive(private_stroke_t *this)
 	
 		if (strokefd < 0)
 		{
-			this->logger->log(this->logger, ERROR, "accepting stroke connection failed");
+			this->logger->log(this->logger, ERROR, "accepting stroke connection failed: %s", strerror(errno));
 			continue;
 		}
 		
@@ -296,10 +717,21 @@ static void stroke_receive(private_stroke_t *this)
 		bytes_read = recv(strokefd, msg, msg_length, 0);
 		if (bytes_read != msg_length)
 		{
-			this->logger->log(this->logger, ERROR, "reading stroke message failed");
+			this->logger->log(this->logger, ERROR, "reading stroke message failed: %s");
 			close(strokefd);
 			continue;
 		}
+		
+		strokefile = fdopen(dup(strokefd), "w");
+		if (strokefile == NULL)
+		{
+			this->logger->log(this->logger, ERROR, "opening stroke output channel failed:", strerror(errno));
+			close(strokefd);
+			allocator_free(msg);
+			continue;
+		}
+		
+		this->stroke_logger = logger_create("-", CONTROL|ERROR, FALSE, strokefile);
 		
 		this->logger->log_bytes(this->logger, RAW, "stroke message", (void*)msg, msg_length);
 		
@@ -307,222 +739,39 @@ static void stroke_receive(private_stroke_t *this)
 		{
 			case STR_INITIATE:
 			{
-				initiate_ike_sa_job_t *job;
-				connection_t *connection;
-				
-				pop_string(msg, &(msg->initiate.name));
-				this->logger->log(this->logger, CONTROL, "received stroke: initiate \"%s\"", msg->initiate.name);
-				connection = this->get_connection_by_name(this, msg->initiate.name);
-				if (connection == NULL)
-				{
-					this->logger->log(this->logger, ERROR, "could not find a connection named \"%s\"", msg->initiate.name);
-				}
-				else
-				{
-					job = initiate_ike_sa_job_create(connection);
-					charon->job_queue->add(charon->job_queue, (job_t*)job);
-				}
+				stroke_initiate(this, msg);
 				break;
 			}
-			case STR_INSTALL:
+			case STR_TERMINATE:
 			{
-				pop_string(msg, &(msg->install.name));
-				this->logger->log(this->logger, CONTROL, "received stroke: install \"%s\"", msg->install.name);
+				stroke_terminate(this, msg);
+				break;
+			}
+			case STR_STATUS:
+			{
+				stroke_status(this, msg);
 				break;
 			}
 			case STR_ADD_CONN:
 			{
-				connection_t *connection;
-				policy_t *policy;
-				identification_t *my_id, *other_id;
-				host_t *my_host, *other_host, *my_subnet, *other_subnet;
-				proposal_t *proposal;
-				traffic_selector_t *my_ts, *other_ts;
-				certificate_t *my_cert, *other_cert;
-				rsa_private_key_t *private_key = NULL;
-				rsa_public_key_t *public_key = NULL;
-				
-				pop_string(msg, &msg->add_conn.name);
-				pop_string(msg, &msg->add_conn.me.address);
-				pop_string(msg, &msg->add_conn.other.address);
-				pop_string(msg, &msg->add_conn.me.id);
-				pop_string(msg, &msg->add_conn.other.id);
-				pop_string(msg, &msg->add_conn.me.cert);
-				pop_string(msg, &msg->add_conn.other.cert);
-				pop_string(msg, &msg->add_conn.me.subnet);
-				pop_string(msg, &msg->add_conn.other.subnet);
-				
-				this->logger->log(this->logger, CONTROL, "received stroke: add connection \"%s\"", msg->add_conn.name);
-				
-				my_host = host_create(AF_INET, msg->add_conn.me.address, 500);
-				if (my_host == NULL)
-				{
-					this->logger->log(this->logger, ERROR, "received invalid host: %s", msg->add_conn.me.address);
-					break;
-				}
-				other_host = host_create(AF_INET, msg->add_conn.other.address, 500);
-				if (other_host == NULL)
-				{
-					this->logger->log(this->logger, ERROR, "received invalid host: %s", msg->add_conn.other.address);
-					my_host->destroy(my_host);
-					break;
-				}
-				my_id = identification_create_from_string(ID_IPV4_ADDR, 
-						*msg->add_conn.me.id ? msg->add_conn.me.id : msg->add_conn.me.address);
-				if (my_id == NULL)
-				{
-					this->logger->log(this->logger, ERROR, "received invalid id: %s", msg->add_conn.me.id);
-					my_host->destroy(my_host);
-					other_host->destroy(other_host);
-					break;
-				}
-				other_id = identification_create_from_string(ID_IPV4_ADDR, 
-						*msg->add_conn.other.id ? msg->add_conn.other.id : msg->add_conn.other.address);
-				if (other_id == NULL)
-				{
-					my_host->destroy(my_host);
-					other_host->destroy(other_host);
-					my_id->destroy(my_id);
-					this->logger->log(this->logger, ERROR, "received invalid id: %s", msg->add_conn.other.id);
-					break;
-				}
-				
-				my_subnet = host_create(AF_INET, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet : msg->add_conn.me.address, 500);
-				if (my_subnet == NULL)
-				{
-					my_host->destroy(my_host);
-					other_host->destroy(other_host);
-					my_id->destroy(my_id);
-					other_id->destroy(other_id);
-					this->logger->log(this->logger, ERROR, "received invalid subnet: %s", msg->add_conn.me.subnet);
-					break;
-				}
-				
-				other_subnet = host_create(AF_INET, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet : msg->add_conn.other.address, 500);
-				if (other_subnet == NULL)
-				{
-					my_host->destroy(my_host);
-					other_host->destroy(other_host);
-					my_id->destroy(my_id);
-					other_id->destroy(other_id);
-					my_subnet->destroy(my_subnet);
-					this->logger->log(this->logger, ERROR, "received invalid subnet: %s", msg->add_conn.me.subnet);
-					break;
-				}
-				
-				my_ts = traffic_selector_create_from_subnet(my_subnet, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet_mask : 32);
-				my_subnet->destroy(my_subnet);
-				other_ts = traffic_selector_create_from_subnet(other_subnet, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet_mask : 32);
-				other_subnet->destroy(other_subnet);
-				
-				if (charon->socket->is_listening_on(charon->socket, other_host))
-				{
-					this->logger->log(this->logger, CONTROL|LEVEL1, "left is other host, switching");
-					
-					host_t *tmp_host = my_host;
-					identification_t *tmp_id = my_id;
-					traffic_selector_t *tmp_ts = my_ts;
-					char *tmp_cert = msg->add_conn.me.cert;
-					
-					my_host = other_host;
-					other_host = tmp_host;
-					my_id = other_id;
-					other_id = tmp_id;
-					my_ts = other_ts;
-					other_ts = tmp_ts;
-					msg->add_conn.me.cert = msg->add_conn.other.cert;
-					msg->add_conn.other.cert = tmp_cert;
-				}
-				else if (charon->socket->is_listening_on(charon->socket, my_host))
-				{
-					this->logger->log(this->logger, CONTROL|LEVEL1, "left is own host, not switching");
-				}
-				else
-				{
-					this->logger->log(this->logger, ERROR, "left nor right host is our, aborting");
-					
-					my_host->destroy(my_host);
-					other_host->destroy(other_host);
-					my_id->destroy(my_id);
-					other_id->destroy(other_id);
-					my_ts->destroy(my_ts);
-					other_ts->destroy(other_ts);
-					break;
-				}
-				
-				connection = connection_create(my_host, other_host, my_id->clone(my_id), other_id->clone(other_id), 
-											   RSA_DIGITAL_SIGNATURE);
-				proposal = proposal_create(1);
-				proposal->add_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-				proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
-				proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
-				proposal->add_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
-				proposal->add_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
-				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_1536_BIT, 0);
-				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
-				proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
-				connection->add_proposal(connection, proposal);
-				
-				policy = policy_create(my_id, other_id);
-				proposal = proposal_create(1);
-				proposal->add_algorithm(proposal, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-				proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
-				proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
-				policy->add_proposal(policy, proposal);
-				policy->add_my_traffic_selector(policy, my_ts);
-				policy->add_other_traffic_selector(policy, other_ts);
-				
-				
-				chdir(CERTIFICATE_DIR);
-				my_cert = certificate_create_from_file(msg->add_conn.me.cert);
-				if (my_cert == NULL)
-				{
-					this->logger->log(this->logger, ERROR, "loading own certificate \"%s%s\" failed", 
-									  CERTIFICATE_DIR, msg->add_conn.me.cert);
-				}
-				else
-				{
-					private_key = find_private_key(this, my_cert->get_public_key(my_cert));
-					if (private_key)
-					{
-						this->logger->log(this->logger, CONTROL|LEVEL1, "found private key for certificate \"%s%s\"", 
-										  CERTIFICATE_DIR, msg->add_conn.me.cert);
-					}
-					else
-					{
-						this->logger->log(this->logger, ERROR, "no private key for certificate \"%s%s\" found", 
-										  CERTIFICATE_DIR, msg->add_conn.me.cert);
-					}
-				}
-				other_cert = certificate_create_from_file(msg->add_conn.other.cert);
-				if (other_cert == NULL)
-				{
-					this->logger->log(this->logger, ERROR, "loading peers certificate \"%s%s\" failed", 
-									  CERTIFICATE_DIR, msg->add_conn.other.cert);
-				}
-				else
-				{
-					public_key = other_cert->get_public_key(other_cert);
-					this->logger->log(this->logger, CONTROL|LEVEL1, "loaded certificate \"%s%s\" (%p)", 
-									  CERTIFICATE_DIR, msg->add_conn.other.cert, public_key);
-					
-				}
-				
-				this->configurations->insert_last(this->configurations, 
-						configuration_entry_create(msg->add_conn.name, connection, policy, private_key, public_key));
-				
-				this->logger->log(this->logger, CONTROL|LEVEL1, "connection \"%s\" added (%d in store)", 
-								  msg->add_conn.name,
-								  this->configurations->get_count(this->configurations));
+				stroke_add_conn(this, msg);
 				break;
 			}
-			case STR_DEL_CONN:
+			case STR_LOGTYPE:
+			{
+				stroke_logtype(this, msg);
+				break;
+			}
+			case STR_LOGLEVEL:
+			{
+				stroke_loglevel(this, msg);
+				break;
+			}
 			default:
 				this->logger->log(this->logger, ERROR, "received invalid stroke");
 		}
-		
+		this->stroke_logger->destroy(this->stroke_logger);
+		fclose(strokefile);
 		close(strokefd);
 		allocator_free(msg);
 	}
@@ -657,7 +906,7 @@ static connection_t *get_connection_by_name(private_stroke_t *this, char *name)
 		if (strcmp(entry->name,name) == 0)
 		{
 			/* found configuration */
-			found = entry->connection->clone(entry->connection);
+			found = entry->connection;
 			break;
 		}
 	}
@@ -752,7 +1001,7 @@ static status_t get_rsa_public_key(credential_store_t *store, identification_t *
 			if (config->public_key)
 			{
 				iterator->destroy(iterator);
-				*public_key = config->public_key;
+				*public_key = config->public_key->clone(config->public_key);
 				return SUCCESS;
 			}
 		}
@@ -780,7 +1029,7 @@ static status_t get_rsa_private_key(credential_store_t *store, identification_t 
 			if (config->private_key)
 			{
 				iterator->destroy(iterator);
-				*private_key = config->private_key;
+				*private_key = config->private_key->clone(config->private_key);
 				return SUCCESS;
 			}
 		}

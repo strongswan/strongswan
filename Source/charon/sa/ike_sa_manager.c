@@ -490,6 +490,91 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 }
 
 /**
+ * Implementation of of ike_sa_manager.checkout_by_hosts.
+ */
+static status_t checkout_by_hosts(private_ike_sa_manager_t *this, host_t *me, host_t *other, ike_sa_t **ike_sa)
+{
+	iterator_t *iterator;
+	ike_sa_id_t *ike_sa_id = NULL;
+	
+	pthread_mutex_lock(&(this->mutex));
+	
+	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		ike_sa_entry_t *current;
+		host_t *sa_me, *sa_other;
+		
+		iterator->current(iterator, (void**)&current);
+		sa_me = current->ike_sa->get_my_host(current->ike_sa);
+		sa_other = current->ike_sa->get_other_host(current->ike_sa);
+		
+		/* one end may be default/any, but not both */
+		if (me->is_default_route(me))
+		{
+			if (other->is_default_route(other))
+			{
+				break;
+			}
+			if (other->equals(other, sa_other))
+			{
+				/* other matches */
+				ike_sa_id = current->ike_sa_id;
+			}
+		}
+		else if (other->is_default_route(other))
+		{
+			if (me->equals(me, sa_me))
+			{
+				/* ME matches */
+				ike_sa_id = current->ike_sa_id;
+			}
+		}
+		else
+		{
+			if (me->equals(me, sa_me) && other->equals(other, sa_other))
+			{
+				/* both matches */
+				ike_sa_id = current->ike_sa_id;
+			}
+		}
+	}
+	iterator->destroy(iterator);
+	pthread_mutex_unlock(&(this->mutex));
+	
+	if (ike_sa_id)
+	{
+		/* checkout is done in the checkout function, since its rather complex */
+		return checkout(this, ike_sa_id, ike_sa);
+	}
+	return NOT_FOUND;
+}
+
+/**
+ * Implementation of ike_sa_manager_t.get_ike_sa_list.
+ */
+linked_list_t *get_ike_sa_list(private_ike_sa_manager_t* this)
+{
+	linked_list_t *list;
+	iterator_t *iterator;
+	
+	pthread_mutex_lock(&(this->mutex));
+	
+	list = linked_list_create();
+	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		ike_sa_entry_t *entry;
+		iterator->current(iterator, (void**)&entry);
+		list->insert_last(list, (void*)entry->ike_sa_id->clone(entry->ike_sa_id));
+	}
+	iterator->destroy(iterator);
+	
+	pthread_mutex_unlock(&(this->mutex));
+	return list;
+}
+
+/**
  * Implementation of ike_sa_manager_t.checkin.
  */
 static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
@@ -518,7 +603,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	else
 	{
 		this->logger->log(this->logger,ERROR,"Fatal Error: Tried to checkin nonexisting IKE_SA");
-		/* this SA is no more, this RELEVEL3Y should not happen */
+		/* this SA is no more, this REALLY should not happen */
 		retval = NOT_FOUND;
 	}
 	pthread_mutex_unlock(&(this->mutex));
@@ -679,11 +764,13 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	/* assign public functions */
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
-	this->public.create_and_checkout = (void(*)(ike_sa_manager_t*, ike_sa_t **sa))create_and_checkout;
-	this->public.checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t *sa_id, ike_sa_t **sa))checkout;
-	this->public.checkin = (status_t(*)(ike_sa_manager_t*, ike_sa_t *sa))checkin;
-	this->public.delete = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t *sa_id))delete;
-	this->public.checkin_and_delete = (status_t(*)(ike_sa_manager_t*, ike_sa_t *ike_sa))checkin_and_delete;
+	this->public.create_and_checkout = (void(*)(ike_sa_manager_t*,ike_sa_t**))create_and_checkout;
+	this->public.checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t*,ike_sa_t**))checkout;
+	this->public.checkout_by_hosts = (status_t(*)(ike_sa_manager_t*,host_t*,host_t*,ike_sa_t**))checkout_by_hosts;
+	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;
+	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
+	this->public.delete = (status_t(*)(ike_sa_manager_t*,ike_sa_id_t*))delete;
+	this->public.checkin_and_delete = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_delete;
 
 	/* initialize private functions */
 	this->get_next_spi = get_next_spi;

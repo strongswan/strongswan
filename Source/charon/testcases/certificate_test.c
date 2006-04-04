@@ -85,14 +85,11 @@ static char certificate_buffer[] = {
  */
 void test_certificate(protected_tester_t *tester)
 {
-	//chunk_t certificate = {certificate_buffer, sizeof(certificate_buffer)};
+	chunk_t certificate = {certificate_buffer, sizeof(certificate_buffer)};
 	
-	//certificate_t *cert = certificate_create_from_chunk(certificate);
+	certificate_t *cert = certificate_create_from_chunk(certificate);
 	
-	certificate_t *cert = certificate_create_from_file("myCert.der");
+	//certificate_t *cert = certificate_create_from_file("myCert.der");
 	
 	cert->destroy(cert);
 }
-
-
-

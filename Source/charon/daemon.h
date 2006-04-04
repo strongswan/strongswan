@@ -28,7 +28,7 @@
 #include <threads/scheduler.h>
 #include <threads/kernel_interface.h>
 #include <threads/thread_pool.h>
-#include <threads/stroke.h>
+#include <threads/stroke_interface.h>
 #include <network/socket.h>
 #include <sa/ike_sa_manager.h>
 #include <queues/send_queue.h>

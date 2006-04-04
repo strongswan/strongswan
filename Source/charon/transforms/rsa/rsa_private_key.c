@@ -155,6 +155,8 @@ static asn1_rule_t rsa_private_key_rules[] = {
 	{ASN1_END, 0, 0, 0},
 };
 
+static private_rsa_private_key_t *rsa_private_key_create_empty();
+
 /**
  * Implementation of private_rsa_private_key_t.compute_prime.
  */
@@ -389,6 +391,25 @@ bool belongs_to(private_rsa_private_key_t *this, rsa_public_key_t *public)
 	return FALSE;
 }
 
+/**
+ * Implementation of rsa_private_key.clone.
+ */
+static rsa_private_key_t* _clone(private_rsa_private_key_t *this)
+{
+	private_rsa_private_key_t *clone = rsa_private_key_create_empty();
+	
+	mpz_init_set(clone->n, this->n);
+	mpz_init_set(clone->e, this->e);
+	mpz_init_set(clone->p, this->p);
+	mpz_init_set(clone->q, this->q);
+	mpz_init_set(clone->d, this->d);
+	mpz_init_set(clone->exp1, this->exp1);
+	mpz_init_set(clone->exp2, this->exp2);
+	mpz_init_set(clone->coeff, this->coeff);
+	clone->k = this->k;
+	
+	return &clone->public;
+}
 
 /**
  * Implementation of rsa_private_key.destroy.
@@ -419,6 +440,7 @@ static private_rsa_private_key_t *rsa_private_key_create_empty()
 	this->public.save_key = (status_t (*) (rsa_private_key_t*,char*))save_key;
 	this->public.get_public_key = (rsa_public_key_t *(*) (rsa_private_key_t*))get_public_key;
 	this->public.belongs_to = (bool (*) (rsa_private_key_t*,rsa_public_key_t*))belongs_to;
+	this->public.clone = (rsa_private_key_t*(*)(rsa_private_key_t*))_clone;
 	this->public.destroy = (void (*) (rsa_private_key_t*))destroy;
 	
 	/* private functions */

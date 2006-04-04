@@ -120,6 +120,22 @@ struct ike_sa_t {
 	 * @return 				ike_sa's ike_sa_id_t
 	 */
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
+
+	/**
+	 * @brief Get local peer address of the IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @return 				local host_t
+	 */
+	host_t* (*get_my_host) (ike_sa_t *this);
+
+	/**
+	 * @brief Get remote peer address of the IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @return 				remote host_t
+	 */
+	host_t* (*get_other_host) (ike_sa_t *this);
 	
 	/**
 	 * @brief Get the state of type of associated state object.
