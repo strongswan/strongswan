@@ -20,8 +20,8 @@
  * for more details.
  */
 
-#ifndef STROKE_H_
-#define STROKE_H_
+#ifndef STROKE_INTERFACE_H_
+#define STROKE_INTERFACE_H_
 
 #include <config/policy_store.h>
 #include <config/connection_store.h>
@@ -93,4 +93,4 @@ struct stroke_t {
  */
 stroke_t *stroke_create();
 
-#endif /* STROKE_H_ */
+#endif /* STROKE_INTERFACE_H_ */

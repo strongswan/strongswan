@@ -15,8 +15,8 @@
 + stroke up
 + ike_sa_manager checkout_by_hosts
 + stroke down
-- stroke output redirection
-- stroke status
++ stroke output redirection
++ stroke status
 
 - libx509
   - new charon build - libstrong?
