@@ -24,7 +24,7 @@
 #define TRAFFIC_SELECTOR_H_
 
 #include <types.h>
-#include <network/host.h>
+#include <utils/host.h>
 
 typedef enum ts_type_t ts_type_t;
 

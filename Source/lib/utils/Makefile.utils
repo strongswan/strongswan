@@ -1,0 +1,48 @@
+# Copyright (C) 2005 Jan Hutter, Martin Willi
+# Hochschule fuer Technik Rapperswil
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+
+UTILS_DIR= $(LIB_DIR)utils/
+
+
+LIB_OBJS+= $(BUILD_DIR)allocator.o
+$(BUILD_DIR)allocator.o :		$(UTILS_DIR)allocator.c $(UTILS_DIR)allocator.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+LIB_OBJS+= $(BUILD_DIR)linked_list.o
+$(BUILD_DIR)linked_list.o :		$(UTILS_DIR)linked_list.c $(UTILS_DIR)linked_list.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+								
+LIB_OBJS+= $(BUILD_DIR)logger.o
+$(BUILD_DIR)logger.o :			$(UTILS_DIR)logger.c $(UTILS_DIR)logger.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+LIB_OBJS+= $(BUILD_DIR)logger_manager.o
+$(BUILD_DIR)logger_manager.o :	$(UTILS_DIR)logger_manager.c $(UTILS_DIR)logger_manager.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+LIB_OBJS+= $(BUILD_DIR)randomizer.o
+$(BUILD_DIR)randomizer.o :		$(UTILS_DIR)randomizer.c $(UTILS_DIR)randomizer.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+LIB_OBJS+= $(BUILD_DIR)tester.o
+$(BUILD_DIR)tester.o :			$(UTILS_DIR)tester.c $(UTILS_DIR)tester.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+LIB_OBJS+= $(BUILD_DIR)identification.o
+$(BUILD_DIR)identification.o :	$(UTILS_DIR)identification.c $(UTILS_DIR)identification.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+LIB_OBJS+= $(BUILD_DIR)host.o
+$(BUILD_DIR)host.o :			$(UTILS_DIR)host.c $(UTILS_DIR)host.h
+								$(CC) $(CFLAGS) -c -o $@ $<

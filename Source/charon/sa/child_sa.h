@@ -25,7 +25,7 @@
 #define CHILD_SA_H_
 
 #include <types.h>
-#include <transforms/prf_plus.h>
+#include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 
 typedef struct child_sa_t child_sa_t;

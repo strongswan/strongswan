@@ -28,7 +28,7 @@
 #include <sa/states/ike_sa_init_requested.h>
 #include <utils/allocator.h>
 #include <queues/jobs/retransmit_request_job.h>
-#include <transforms/diffie_hellman.h>
+#include <crypto/diffie_hellman.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
@@ -92,7 +92,7 @@ struct private_initiator_init_t {
 	 * @param this		calling object
 	 * @param request	message_t object to add the NONCE payload
 	 */
-	void (*build_nonce_payload) (private_initiator_init_t *this,message_t *request);	
+	status_t (*build_nonce_payload) (private_initiator_init_t *this,message_t *request);	
 	
 	/**
 	 * Destroy function called internally of this class after state change to state 
@@ -177,9 +177,14 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	this->build_ke_payload(this, message);
 	
 	/* build Nonce payload */
-	this->build_nonce_payload(this,message);
-
-
+	status = this->build_nonce_payload(this, message);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Building nonce payload failed. Aborting");
+		message->destroy(message);
+		return DELETE_ME;
+	}
+	
 	/* message can now be sent (must not be destroyed) */
 	status = this->ike_sa->send_request(this->ike_sa, message);
 	if (status != SUCCESS)
@@ -251,17 +256,22 @@ static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 /**
  * Implementation of private_initiator_init_t.build_nonce_payload.
  */
-static void build_nonce_payload(private_initiator_init_t *this, message_t *request)
+static status_t build_nonce_payload(private_initiator_init_t *this, message_t *request)
 {
 	nonce_payload_t *nonce_payload;
 	randomizer_t *randomizer;
+	status_t status;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1, "Building NONCE payload");
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Get pseudo random bytes for NONCE");
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
 	
-	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
+	status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
+	if (status != SUCCESS)
+	{
+		return status;
+	}
 
 	this->logger->log(this->logger, RAW|LEVEL2, "Initiator NONCE",&(this->sent_nonce));
 	
@@ -271,6 +281,7 @@ static void build_nonce_payload(private_initiator_init_t *this, message_t *reque
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add NONCE payload to message");
 	request->add_payload(request, (payload_t *) nonce_payload);
+	return SUCCESS;
 }
 
 /**

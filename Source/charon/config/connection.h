@@ -24,11 +24,11 @@
 #define CONNECTION_H_
 
 #include <types.h>
-#include <network/host.h>
+#include <utils/host.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 #include <config/proposal.h>
-#include <transforms/diffie_hellman.h>
+#include <crypto/diffie_hellman.h>
 
 
 typedef enum auth_method_t auth_method_t;

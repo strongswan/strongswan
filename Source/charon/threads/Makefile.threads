@@ -12,28 +12,28 @@
 # for more details.
 #
 
-THREADS_DIR= $(MAIN_DIR)threads/
+THREADS_DIR= $(CHARON_DIR)threads/
 
-OBJS+= $(BUILD_DIR)receiver.o
+CHARON_OBJS+= $(BUILD_DIR)receiver.o
 $(BUILD_DIR)receiver.o :		$(THREADS_DIR)receiver.c $(THREADS_DIR)receiver.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)scheduler.o
+CHARON_OBJS+= $(BUILD_DIR)scheduler.o
 $(BUILD_DIR)scheduler.o :		$(THREADS_DIR)scheduler.c $(THREADS_DIR)scheduler.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)sender.o
+CHARON_OBJS+= $(BUILD_DIR)sender.o
 $(BUILD_DIR)sender.o :			$(THREADS_DIR)sender.c $(THREADS_DIR)sender.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)thread_pool.o
+CHARON_OBJS+= $(BUILD_DIR)thread_pool.o
 $(BUILD_DIR)thread_pool.o :		$(THREADS_DIR)thread_pool.c $(THREADS_DIR)thread_pool.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)kernel_interface.o
+CHARON_OBJS+= $(BUILD_DIR)kernel_interface.o
 $(BUILD_DIR)kernel_interface.o :$(THREADS_DIR)kernel_interface.c $(THREADS_DIR)kernel_interface.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)stroke_interface.o
+CHARON_OBJS+= $(BUILD_DIR)stroke_interface.o
 $(BUILD_DIR)stroke_interface.o :$(THREADS_DIR)stroke_interface.c $(THREADS_DIR)stroke_interface.h
 								$(CC) $(CFLAGS) -c -o $@ $<

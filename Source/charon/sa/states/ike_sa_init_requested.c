@@ -31,7 +31,7 @@
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ts_payload.h>
-#include <transforms/diffie_hellman.h>
+#include <crypto/diffie_hellman.h>
 #include <sa/states/ike_auth_requested.h>
 #include <sa/states/initiator_init.h>
 #include <sa/authenticator.h>

@@ -23,8 +23,8 @@
 #define ENCRYPTION_PAYLOAD_H_
 
 #include <types.h>
-#include <transforms/crypters/crypter.h>
-#include <transforms/signers/signer.h>
+#include <crypto/crypters/crypter.h>
+#include <crypto/signers/signer.h>
 #include <encoding/payloads/payload.h>
 #include <utils/linked_list.h>
 

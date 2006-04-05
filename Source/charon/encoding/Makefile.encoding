@@ -12,17 +12,17 @@
 # for more details.
 #
 
-ENCODING_DIR= $(MAIN_DIR)encoding/
+ENCODING_DIR= $(CHARON_DIR)encoding/
 
-OBJS+= $(BUILD_DIR)generator.o
+CHARON_OBJS+= $(BUILD_DIR)generator.o
 $(BUILD_DIR)generator.o :		$(ENCODING_DIR)generator.c $(ENCODING_DIR)generator.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)parser.o
+CHARON_OBJS+= $(BUILD_DIR)parser.o
 $(BUILD_DIR)parser.o :			$(ENCODING_DIR)parser.c $(ENCODING_DIR)parser.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)message.o
+CHARON_OBJS+= $(BUILD_DIR)message.o
 $(BUILD_DIR)message.o :			$(ENCODING_DIR)message.c $(ENCODING_DIR)message.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 

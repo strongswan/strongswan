@@ -30,7 +30,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
-#include <transforms/diffie_hellman.h>
+#include <crypto/diffie_hellman.h>
 
 
 typedef struct private_responder_init_t private_responder_init_t;
@@ -428,6 +428,7 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 {
 	nonce_payload_t *nonce_payload;
 	randomizer_t *randomizer;
+	status_t status;
 
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Process received NONCE payload");
 	allocator_free(this->received_nonce.ptr);
@@ -439,7 +440,11 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Create new NONCE value.");	
 	
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
-	randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
+	status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
+	if (status != SUCCESS)
+	{
+		return status;
+	}
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Building NONCE payload");
 	nonce_payload = nonce_payload_create();

@@ -1,0 +1,25 @@
+# Copyright (C) 2006 Martin Willi
+# Hochschule fuer Technik Rapperswil
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+CHARON_DIR= $(MAIN_DIR)charon/
+
+$(BUILD_DIR)daemon.o :			$(CHARON_DIR)daemon.c $(CHARON_DIR)daemon.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+
+include $(CHARON_DIR)network/Makefile.network
+include $(CHARON_DIR)config/Makefile.config
+include $(CHARON_DIR)encoding/Makefile.encoding
+include $(CHARON_DIR)queues/Makefile.queues
+include $(CHARON_DIR)sa/Makefile.sa
+include $(CHARON_DIR)threads/Makefile.threads

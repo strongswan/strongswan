@@ -29,9 +29,9 @@
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
 #include <utils/randomizer.h>
-#include <transforms/diffie_hellman.h>
-#include <transforms/prf_plus.h>
-#include <transforms/crypters/crypter.h>
+#include <crypto/diffie_hellman.h>
+#include <crypto/prf_plus.h>
+#include <crypto/crypters/crypter.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/ke_payload.h>

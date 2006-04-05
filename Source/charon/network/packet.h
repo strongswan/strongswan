@@ -25,7 +25,7 @@
 
 
 #include <types.h>
-#include <network/host.h>
+#include <utils/host.h>
 
 
 typedef struct packet_t packet_t;

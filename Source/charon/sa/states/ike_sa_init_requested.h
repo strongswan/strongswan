@@ -27,7 +27,7 @@
 #include <types.h>
 #include <sa/ike_sa.h>
 #include <sa/states/state.h>
-#include <transforms/diffie_hellman.h>
+#include <crypto/diffie_hellman.h>
 
 typedef struct ike_sa_init_requested_t ike_sa_init_requested_t;
 

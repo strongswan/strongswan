@@ -14,30 +14,30 @@
 
 STATES_DIR= $(SA_DIR)states/
 
-OBJS+= $(BUILD_DIR)ike_auth_requested.o
+CHARON_OBJS+= $(BUILD_DIR)ike_auth_requested.o
 $(BUILD_DIR)ike_auth_requested.o :		$(STATES_DIR)ike_auth_requested.c $(STATES_DIR)ike_auth_requested.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)ike_sa_established.o
+CHARON_OBJS+= $(BUILD_DIR)ike_sa_established.o
 $(BUILD_DIR)ike_sa_established.o :		$(STATES_DIR)ike_sa_established.c $(STATES_DIR)ike_sa_established.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)ike_sa_init_requested.o
+CHARON_OBJS+= $(BUILD_DIR)ike_sa_init_requested.o
 $(BUILD_DIR)ike_sa_init_requested.o :	$(STATES_DIR)ike_sa_init_requested.c $(STATES_DIR)ike_sa_init_requested.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)ike_sa_init_responded.o
+CHARON_OBJS+= $(BUILD_DIR)ike_sa_init_responded.o
 $(BUILD_DIR)ike_sa_init_responded.o :	$(STATES_DIR)ike_sa_init_responded.c $(STATES_DIR)ike_sa_init_responded.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)initiator_init.o
+CHARON_OBJS+= $(BUILD_DIR)initiator_init.o
 $(BUILD_DIR)initiator_init.o :			$(STATES_DIR)initiator_init.c $(STATES_DIR)initiator_init.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 										
-OBJS+= $(BUILD_DIR)responder_init.o
+CHARON_OBJS+= $(BUILD_DIR)responder_init.o
 $(BUILD_DIR)responder_init.o :			$(STATES_DIR)responder_init.c $(STATES_DIR)responder_init.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 										
-OBJS+= $(BUILD_DIR)state.o
+CHARON_OBJS+= $(BUILD_DIR)state.o
 $(BUILD_DIR)state.o :					$(STATES_DIR)state.c $(STATES_DIR)state.h
 										$(CC) $(CFLAGS) -c -o $@ $<

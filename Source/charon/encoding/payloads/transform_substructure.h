@@ -28,10 +28,10 @@
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_attribute.h>
 #include <utils/linked_list.h>
-#include <transforms/diffie_hellman.h>
-#include <transforms/signers/signer.h>
-#include <transforms/prfs/prf.h>
-#include <transforms/crypters/crypter.h>
+#include <crypto/diffie_hellman.h>
+#include <crypto/signers/signer.h>
+#include <crypto/prfs/prf.h>
+#include <crypto/crypters/crypter.h>
 #include <config/proposal.h>
 
 

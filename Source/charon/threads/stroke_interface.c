@@ -36,7 +36,7 @@
 #include <stroke.h>
 #include <types.h>
 #include <daemon.h>
-#include <transforms/certificate.h>
+#include <crypto/certificate.h>
 #include <utils/allocator.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 

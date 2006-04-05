@@ -12,17 +12,17 @@
 # for more details.
 #
 
-QUEUES_DIR= $(MAIN_DIR)queues/
+QUEUES_DIR= $(CHARON_DIR)queues/
 
-OBJS+= $(BUILD_DIR)event_queue.o
+CHARON_OBJS+= $(BUILD_DIR)event_queue.o
 $(BUILD_DIR)event_queue.o :		$(QUEUES_DIR)event_queue.c $(QUEUES_DIR)event_queue.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)job_queue.o
+CHARON_OBJS+= $(BUILD_DIR)job_queue.o
 $(BUILD_DIR)job_queue.o :		$(QUEUES_DIR)job_queue.c $(QUEUES_DIR)job_queue.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)send_queue.o
+CHARON_OBJS+= $(BUILD_DIR)send_queue.o
 $(BUILD_DIR)send_queue.o :		$(QUEUES_DIR)send_queue.c $(QUEUES_DIR)send_queue.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 

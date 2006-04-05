@@ -25,7 +25,7 @@
 
 #include <linux/xfrm.h>
 
-#include <network/host.h>
+#include <utils/host.h>
 #include <encoding/payloads/proposal_substructure.h>
 
 typedef struct kernel_interface_t kernel_interface_t;

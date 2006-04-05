@@ -32,9 +32,9 @@
 #include <config/configuration.h>
 #include <utils/logger.h>
 #include <utils/randomizer.h>
-#include <transforms/prfs/prf.h>
-#include <transforms/crypters/crypter.h>
-#include <transforms/signers/signer.h>
+#include <crypto/prfs/prf.h>
+#include <crypto/crypters/crypter.h>
+#include <crypto/signers/signer.h>
 #include <config/connection.h>
 #include <config/policy.h>
 

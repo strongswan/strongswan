@@ -14,27 +14,27 @@
 
 JOBS_DIR= $(QUEUES_DIR)jobs/
 
-OBJS+= $(BUILD_DIR)delete_half_open_ike_sa_job.o
+CHARON_OBJS+= $(BUILD_DIR)delete_half_open_ike_sa_job.o
 $(BUILD_DIR)delete_half_open_ike_sa_job.o :	$(JOBS_DIR)delete_half_open_ike_sa_job.c $(JOBS_DIR)delete_half_open_ike_sa_job.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)delete_established_ike_sa_job.o
+CHARON_OBJS+= $(BUILD_DIR)delete_established_ike_sa_job.o
 $(BUILD_DIR)delete_established_ike_sa_job.o :	$(JOBS_DIR)delete_established_ike_sa_job.c $(JOBS_DIR)delete_established_ike_sa_job.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)incoming_packet_job.o
+CHARON_OBJS+= $(BUILD_DIR)incoming_packet_job.o
 $(BUILD_DIR)incoming_packet_job.o :		$(JOBS_DIR)incoming_packet_job.c $(JOBS_DIR)incoming_packet_job.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)initiate_ike_sa_job.o
+CHARON_OBJS+= $(BUILD_DIR)initiate_ike_sa_job.o
 $(BUILD_DIR)initiate_ike_sa_job.o :		$(JOBS_DIR)initiate_ike_sa_job.c $(JOBS_DIR)initiate_ike_sa_job.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)retransmit_request_job.o
+CHARON_OBJS+= $(BUILD_DIR)retransmit_request_job.o
 $(BUILD_DIR)retransmit_request_job.o :	$(JOBS_DIR)retransmit_request_job.c $(JOBS_DIR)retransmit_request_job.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)job.o
+CHARON_OBJS+= $(BUILD_DIR)job.o
 $(BUILD_DIR)job.o :						$(JOBS_DIR)job.c $(JOBS_DIR)job.h
 										$(CC) $(CFLAGS) -c -o $@ $<
 								

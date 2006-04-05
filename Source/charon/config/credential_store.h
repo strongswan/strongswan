@@ -24,8 +24,8 @@
 #define CREDENTIAL_STORE_H_
 
 #include <types.h>
-#include <transforms/rsa/rsa_private_key.h>
-#include <transforms/rsa/rsa_public_key.h>
+#include <crypto/rsa/rsa_private_key.h>
+#include <crypto/rsa/rsa_public_key.h>
 
 
 typedef struct credential_store_t credential_store_t;

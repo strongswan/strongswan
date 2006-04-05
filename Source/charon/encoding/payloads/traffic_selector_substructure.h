@@ -26,7 +26,7 @@
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
-#include <network/host.h>
+#include <utils/host.h>
 #include <config/traffic_selector.h>
 
 /**

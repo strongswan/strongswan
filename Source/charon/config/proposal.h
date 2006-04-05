@@ -26,10 +26,10 @@
 #include <types.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
-#include <network/host.h>
-#include <transforms/crypters/crypter.h>
-#include <transforms/signers/signer.h>
-#include <transforms/diffie_hellman.h>
+#include <utils/host.h>
+#include <crypto/crypters/crypter.h>
+#include <crypto/signers/signer.h>
+#include <crypto/diffie_hellman.h>
 #include <config/traffic_selector.h>
 
 

@@ -12,25 +12,25 @@
 # for more details.
 #
 
-SA_DIR= $(MAIN_DIR)sa/
+SA_DIR= $(CHARON_DIR)sa/
 
-OBJS+= $(BUILD_DIR)ike_sa_id.o
+CHARON_OBJS+= $(BUILD_DIR)ike_sa_id.o
 $(BUILD_DIR)ike_sa_id.o :		$(SA_DIR)ike_sa_id.c $(SA_DIR)ike_sa_id.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)ike_sa_manager.o
+CHARON_OBJS+= $(BUILD_DIR)ike_sa_manager.o
 $(BUILD_DIR)ike_sa_manager.o :	$(SA_DIR)ike_sa_manager.c $(SA_DIR)ike_sa_manager.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
-OBJS+= $(BUILD_DIR)ike_sa.o
+CHARON_OBJS+= $(BUILD_DIR)ike_sa.o
 $(BUILD_DIR)ike_sa.o :			$(SA_DIR)ike_sa.c $(SA_DIR)ike_sa.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)authenticator.o
+CHARON_OBJS+= $(BUILD_DIR)authenticator.o
 $(BUILD_DIR)authenticator.o :	$(SA_DIR)authenticator.c $(SA_DIR)authenticator.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 								
-OBJS+= $(BUILD_DIR)child_sa.o
+CHARON_OBJS+= $(BUILD_DIR)child_sa.o
 $(BUILD_DIR)child_sa.o :		$(SA_DIR)child_sa.c $(SA_DIR)child_sa.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 

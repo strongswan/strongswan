@@ -34,7 +34,7 @@
 #include <encoding/parser.h>
 #include <utils/iterator.h>
 #include <utils/randomizer.h>
-#include <transforms/signers/signer.h>
+#include <crypto/signers/signer.h>
 
 
 
@@ -294,7 +294,12 @@ static status_t encrypt(private_encryption_payload_t *this)
 	/* build padding */
 	block_size = this->crypter->get_block_size(this->crypter);
 	padding.len = block_size - ((this->decrypted.len + 1) %  block_size);
-	randomizer->allocate_pseudo_random_bytes(randomizer, padding.len, &padding);
+	status = randomizer->allocate_pseudo_random_bytes(randomizer, padding.len, &padding);
+	if (status != SUCCESS)
+	{
+		randomizer->destroy(randomizer);
+		return status;
+	}
 	
 	/* concatenate payload data, padding, padding len */
 	to_crypt.len = this->decrypted.len + padding.len + 1;
@@ -306,8 +311,14 @@ static status_t encrypt(private_encryption_payload_t *this)
 		
 	/* build iv */
 	iv.len = block_size;
-	randomizer->allocate_pseudo_random_bytes(randomizer, iv.len, &iv);
+	status = randomizer->allocate_pseudo_random_bytes(randomizer, iv.len, &iv);
 	randomizer->destroy(randomizer);
+	if (status != SUCCESS)
+	{
+		allocator_free_chunk(&to_crypt);
+		allocator_free_chunk(&padding);
+		return status;
+	}
 	
 	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before encryption with padding", to_crypt);
 		

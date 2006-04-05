@@ -1,0 +1,5 @@
+ Known bugs in charon
+======================
+
+- intiating the same connection twice makes trouble.
+- 
