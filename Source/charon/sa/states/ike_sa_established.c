@@ -23,7 +23,6 @@
 #include "ike_sa_established.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <encoding/payloads/delete_payload.h>
 
 
@@ -214,7 +213,7 @@ static ike_sa_state_t get_state(private_ike_sa_established_t *this)
  */
 static void destroy(private_ike_sa_established_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /* 
@@ -222,7 +221,7 @@ static void destroy(private_ike_sa_established_t *this)
  */
 ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa)
 {
-	private_ike_sa_established_t *this = allocator_alloc_thing(private_ike_sa_established_t);
+	private_ike_sa_established_t *this = malloc_thing(private_ike_sa_established_t);
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
@@ -234,7 +233,7 @@ ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &(this->public);
 }

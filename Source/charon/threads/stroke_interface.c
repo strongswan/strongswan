@@ -37,7 +37,6 @@
 #include <types.h>
 #include <daemon.h>
 #include <crypto/certificate.h>
-#include <utils/allocator.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 
 
@@ -97,8 +96,8 @@ static void configuration_entry_destroy (configuration_entry_t *this)
 	{
 		this->public_key->destroy(this->public_key);
 	}
-	allocator_free(this->name);
-	allocator_free(this);
+	free(this->name);
+	free(this);
 }
 
 /**
@@ -107,7 +106,7 @@ static void configuration_entry_destroy (configuration_entry_t *this)
 static configuration_entry_t * configuration_entry_create(char *name, connection_t* connection, policy_t *policy, 
 														  rsa_private_key_t *private_key, rsa_public_key_t *public_key)
 {
-	configuration_entry_t *entry = allocator_alloc_thing(configuration_entry_t);
+	configuration_entry_t *entry = malloc_thing(configuration_entry_t);
 
 	/* functions */
 	entry->destroy = configuration_entry_destroy;
@@ -117,7 +116,7 @@ static configuration_entry_t * configuration_entry_create(char *name, connection
 	entry->policy = policy;
 	entry->public_key = public_key;
 	entry->private_key = private_key;
-	entry->name = allocator_alloc(strlen(name) + 1);
+	entry->name = malloc(strlen(name) + 1);
 	strcpy(entry->name, name);
 	
 	return entry;
@@ -627,13 +626,11 @@ static void stroke_logtype(private_stroke_t *this, stroke_msg_t *msg)
 	
 	if (msg->logtype.enable)
 	{
-		charon->logger_manager->enable_log_level(charon->logger_manager,
-												 context, level);
+		logger_manager->enable_log_level(logger_manager, context, level);
 	}
 	else
 	{
-		charon->logger_manager->disable_log_level(charon->logger_manager,
-				context, level);
+		logger_manager->disable_log_level(logger_manager, context, level);
 	}
 }
 
@@ -677,7 +674,7 @@ static void stroke_loglevel(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	
-	charon->logger_manager->enable_log_level(charon->logger_manager, context, level);
+	logger_manager->enable_log_level(logger_manager, context, level);
 }
 
 /**
@@ -692,11 +689,18 @@ static void stroke_receive(private_stroke_t *this)
 	ssize_t bytes_read;
 	int strokefd;
 	FILE *strokefile;
+	int oldstate;
+	
+	/* disable cancellation by default */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
 	while (1)
 	{
+		/* wait for connections, but allow thread to terminate */
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 		strokefd = accept(this->socket, (struct sockaddr *)&strokeaddr, &strokeaddrlen);
-	
+		pthread_setcancelstate(oldstate, NULL);
+		
 		if (strokefd < 0)
 		{
 			this->logger->log(this->logger, ERROR, "accepting stroke connection failed: %s", strerror(errno));
@@ -713,7 +717,7 @@ static void stroke_receive(private_stroke_t *this)
 		}
 		
 		/* read message */
-		msg = allocator_alloc(msg_length);
+		msg = malloc(msg_length);
 		bytes_read = recv(strokefd, msg, msg_length, 0);
 		if (bytes_read != msg_length)
 		{
@@ -727,7 +731,7 @@ static void stroke_receive(private_stroke_t *this)
 		{
 			this->logger->log(this->logger, ERROR, "opening stroke output channel failed:", strerror(errno));
 			close(strokefd);
-			allocator_free(msg);
+			free(msg);
 			continue;
 		}
 		
@@ -773,7 +777,7 @@ static void stroke_receive(private_stroke_t *this)
 		this->stroke_logger->destroy(this->stroke_logger);
 		fclose(strokefile);
 		close(strokefd);
-		allocator_free(msg);
+		free(msg);
 	}
 }
 
@@ -972,7 +976,7 @@ static status_t get_shared_secret(credential_store_t *this, identification_t *id
 	preshared_secret->ptr = secret;
 	preshared_secret->len = strlen(secret) + 1;
 	
-	*preshared_secret = allocator_clone_chunk(*preshared_secret);
+	*preshared_secret = chunk_clone(*preshared_secret);
 	return SUCCESS;
 }
 
@@ -1046,6 +1050,9 @@ static void destroy(private_stroke_t *this)
 	configuration_entry_t *entry;
 	rsa_private_key_t *priv_key;
 	
+	pthread_cancel(this->assigned_thread);
+	pthread_join(this->assigned_thread, NULL);
+	
 	while (this->configurations->remove_first(this->configurations, (void **)&entry) == SUCCESS)
 	{
 		entry->destroy(entry);
@@ -1060,7 +1067,7 @@ static void destroy(private_stroke_t *this)
 
 	close(this->socket);
 	unlink(socket_addr.sun_path);
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -1078,7 +1085,7 @@ void do_nothing(void *nothing)
  */
 stroke_t *stroke_create()
 {
-	private_stroke_t *this = allocator_alloc_thing(private_stroke_t);
+	private_stroke_t *this = malloc_thing(private_stroke_t);
 	mode_t old;
 
 	/* public functions */
@@ -1097,14 +1104,14 @@ stroke_t *stroke_create()
 	this->stroke_receive = stroke_receive;
 	this->get_connection_by_name = get_connection_by_name;
 	
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, CONFIG);
+	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 	
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (this->socket == -1)
 	{
 		this->logger->log(this->logger, ERROR, "could not create whack socket");
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	
@@ -1113,7 +1120,7 @@ stroke_t *stroke_create()
 	{
 		this->logger->log(this->logger, ERROR, "could not bind stroke socket: %s", strerror(errno));
 		close(this->socket);
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	umask(old);
@@ -1123,7 +1130,7 @@ stroke_t *stroke_create()
 		this->logger->log(this->logger, ERROR, "could not listen on stroke socket: %s", strerror(errno));
 		close(this->socket);
 		unlink(socket_addr.sun_path);
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	
@@ -1133,7 +1140,7 @@ stroke_t *stroke_create()
 		this->logger->log(this->logger, ERROR, "Could not spawn stroke thread");
 		close(this->socket);
 		unlink(socket_addr.sun_path);
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	

@@ -20,9 +20,9 @@
  * for more details.
  */
 
-#include "vendor_id_payload.h"
+#include <stddef.h>
 
-#include <utils/allocator.h>
+#include "vendor_id_payload.h"
 
 
 typedef struct private_vendor_id_payload_t private_vendor_id_payload_t;
@@ -153,9 +153,9 @@ static void set_data (private_vendor_id_payload_t *this, chunk_t data)
 {
 	if (this->vendor_id_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->vendor_id_data));
+		chunk_free(&(this->vendor_id_data));
 	}
-	this->vendor_id_data.ptr = allocator_clone_bytes(data.ptr,data.len);
+	this->vendor_id_data.ptr = clalloc(data.ptr,data.len);
 	this->vendor_id_data.len = data.len;
 	this->payload_length = VENDOR_ID_PAYLOAD_HEADER_LENGTH + this->vendor_id_data.len;
 }
@@ -178,7 +178,7 @@ static chunk_t get_data_clone (private_vendor_id_payload_t *this)
 	{
 		return (this->vendor_id_data);
 	}
-	cloned_data.ptr = allocator_clone_bytes(this->vendor_id_data.ptr,this->vendor_id_data.len);
+	cloned_data.ptr = clalloc(this->vendor_id_data.ptr,this->vendor_id_data.len);
 	cloned_data.len = this->vendor_id_data.len;
 	return cloned_data;
 }
@@ -190,9 +190,9 @@ static void destroy(private_vendor_id_payload_t *this)
 {
 	if (this->vendor_id_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->vendor_id_data));
+		chunk_free(&(this->vendor_id_data));
 	}
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -200,7 +200,7 @@ static void destroy(private_vendor_id_payload_t *this)
  */
 vendor_id_payload_t *vendor_id_payload_create()
 {
-	private_vendor_id_payload_t *this = allocator_alloc_thing(private_vendor_id_payload_t);
+	private_vendor_id_payload_t *this = malloc_thing(private_vendor_id_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

@@ -26,7 +26,6 @@
 #include <daemon.h>
 #include <sa/states/state.h>
 #include <sa/states/ike_sa_init_requested.h>
-#include <utils/allocator.h>
 #include <queues/jobs/retransmit_request_job.h>
 #include <crypto/diffie_hellman.h>
 #include <encoding/payloads/sa_payload.h>
@@ -247,7 +246,7 @@ static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 	ke_payload->set_dh_group_number(ke_payload, dh_group);
 	ke_payload->set_key_exchange_data(ke_payload, key_data);
 	
-	allocator_free_chunk(&key_data);
+	chunk_free(&key_data);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add KE payload to message");
 	request->add_payload(request, (payload_t *) ke_payload);
@@ -315,9 +314,9 @@ static void destroy(private_initiator_init_t *this)
 	}
 	if (this->sent_nonce.ptr != NULL)
 	{
-		allocator_free(this->sent_nonce.ptr);
+		free(this->sent_nonce.ptr);
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -326,7 +325,7 @@ static void destroy(private_initiator_init_t *this)
 static void destroy_after_state_change (private_initiator_init_t *this)
 {
 	this->logger->log(this->logger, CONTROL | LEVEL3, "Going to destroy initiator_init_t state object");
-	allocator_free(this);
+	free(this);
 }
 
 /* 
@@ -334,7 +333,7 @@ static void destroy_after_state_change (private_initiator_init_t *this)
  */
 initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 {
-	private_initiator_init_t *this = allocator_alloc_thing(private_initiator_init_t);
+	private_initiator_init_t *this = malloc_thing(private_initiator_init_t);
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
@@ -353,7 +352,7 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	this->sent_nonce = CHUNK_INITIALIZER;
 	this->diffie_hellman = NULL;
 

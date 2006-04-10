@@ -26,7 +26,6 @@
 #include "event_queue.h"
 
 #include <types.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 
@@ -64,7 +63,7 @@ struct event_t{
  */
 static void event_destroy(event_t *event)
 {
-	allocator_free(event);
+	free(event);
 }
 
 /**
@@ -77,7 +76,7 @@ static void event_destroy(event_t *event)
  */
 static event_t *event_create(timeval_t time, job_t *job)
 {
-	event_t *this = allocator_alloc_thing(event_t);
+	event_t *this = malloc_thing(event_t);
 
 	this->destroy = event_destroy;
 	this->time = time;
@@ -326,7 +325,7 @@ static void event_queue_destroy(private_event_queue_t *this)
 
 	pthread_cond_destroy(&(this->condvar));
 
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -334,7 +333,7 @@ static void event_queue_destroy(private_event_queue_t *this)
  */
 event_queue_t *event_queue_create()
 {
-	private_event_queue_t *this = allocator_alloc_thing(private_event_queue_t);
+	private_event_queue_t *this = malloc_thing(private_event_queue_t);
 
 	this->public.get_count = (int (*) (event_queue_t *event_queue)) get_count;
 	this->public.get = (job_t *(*) (event_queue_t *event_queue)) get;

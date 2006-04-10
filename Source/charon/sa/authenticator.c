@@ -20,9 +20,10 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "authenticator.h"
 
-#include <utils/allocator.h>
 #include <daemon.h>
 
 /**
@@ -141,7 +142,7 @@ static chunk_t allocate_octets(private_authenticator_t *this,
 	
 	/* 4 bytes are id type and reserved fields of id payload */
 	octets.len = last_message.len + other_nonce.len + prf->get_block_size(prf);
-	octets.ptr = allocator_alloc(octets.len);
+	octets.ptr = malloc(octets.len);
 	current_pos = octets.ptr;
 	memcpy(current_pos,last_message.ptr,last_message.len);
 	current_pos += last_message.len;
@@ -175,7 +176,7 @@ static chunk_t build_preshared_secret_signature(private_authenticator_t *this,
 	this->prf->get_bytes(this->prf, key_pad, key_buffer);
 	this->prf->set_key(this->prf, key);
 	this->prf->allocate_bytes(this->prf, octets, &auth_data);
-	allocator_free_chunk(&octets);
+	chunk_free(&octets);
 	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Authenticated data",auth_data);
 
 	return auth_data;
@@ -217,11 +218,11 @@ static status_t verify_auth_data (private_authenticator_t *this,
 																		  other_id_payload,
 																		  initiator,
 																		  preshared_secret);
-			allocator_free_chunk(&preshared_secret);
+			chunk_free(&preshared_secret);
 			
 			if (auth_data.len != my_auth_data.len)
 			{
-				allocator_free_chunk(&my_auth_data);
+				chunk_free(&my_auth_data);
 				status = FAILED;
 			}
 			else if (memcmp(auth_data.ptr,my_auth_data.ptr, my_auth_data.len) == 0)
@@ -237,7 +238,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 				status = FAILED;
 			}
 			other_id->destroy(other_id);
-			allocator_free_chunk(&my_auth_data);
+			chunk_free(&my_auth_data);
 			return status;
 		}
 		case RSA_DIGITAL_SIGNATURE:
@@ -276,7 +277,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			
 			public_key->destroy(public_key);
 			other_id->destroy(other_id);
-			allocator_free_chunk(&octets);
+			chunk_free(&octets);
 			return status;
 		}
 		default:
@@ -322,12 +323,12 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			
 			auth_data = this->build_preshared_secret_signature(this, last_sent_packet, other_nonce,
 															   my_id_payload, initiator, preshared_secret);
-			allocator_free_chunk(&preshared_secret);
+			chunk_free(&preshared_secret);
 			*auth_payload = auth_payload_create();
 			(*auth_payload)->set_auth_method(*auth_payload, SHARED_KEY_MESSAGE_INTEGRITY_CODE);
 			(*auth_payload)->set_data(*auth_payload, auth_data);
 
-			allocator_free_chunk(&auth_data);
+			chunk_free(&auth_data);
 			return SUCCESS;
 		}
 		case RSA_DIGITAL_SIGNATURE:
@@ -350,7 +351,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			octets = this->allocate_octets(this,last_sent_packet,other_nonce,my_id_payload,initiator);
 			
 			status = private_key->build_emsa_pkcs1_signature(private_key, HASH_SHA1, octets, &auth_data);
-			allocator_free_chunk(&octets);
+			chunk_free(&octets);
 			if (status != SUCCESS)
 			{
 				private_key->destroy(private_key);
@@ -362,7 +363,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			(*auth_payload)->set_data(*auth_payload, auth_data);
 
 			private_key->destroy(private_key);
-			allocator_free_chunk(&auth_data);
+			chunk_free(&auth_data);
 			return SUCCESS;
 		}
 		default:
@@ -377,7 +378,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
  */
 static void destroy (private_authenticator_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -385,7 +386,7 @@ static void destroy (private_authenticator_t *this)
  */
 authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa)
 {
-	private_authenticator_t *this = allocator_alloc_thing(private_authenticator_t);
+	private_authenticator_t *this = malloc_thing(private_authenticator_t);
 
 	/* Public functions */
 	this->public.destroy = (void(*)(authenticator_t*))destroy;
@@ -399,7 +400,7 @@ authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa)
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->prf = this->ike_sa->get_prf(this->ike_sa);
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &(this->public);
 }

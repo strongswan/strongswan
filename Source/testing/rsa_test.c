@@ -25,7 +25,6 @@
 #include "rsa_test.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 #include <crypto/certificate.h>
 
@@ -159,7 +158,7 @@ void test_rsa(protected_tester_t *tester)
 	data.ptr = test_data;
 	data.len = sizeof(test_data);
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
+	logger = logger_manager->get_logger(logger_manager, TESTER);
 	logger->disable_level(logger, FULL);
 	
 	/* key generation and signing */
@@ -175,7 +174,7 @@ void test_rsa(protected_tester_t *tester)
 // 	status = public_key->verify_emsa_pkcs1_signature(public_key, data, signature);
 // 	tester->assert_true(tester, status == SUCCESS, "verify emsa_pkcs1_signature (genkey)");	
 // 	
-// 	allocator_free(signature.ptr);
+// 	free(signature.ptr);
 // 	
 // 	private_key->destroy(private_key);
 // 	public_key->destroy(public_key);
@@ -191,7 +190,7 @@ void test_rsa(protected_tester_t *tester)
 	status = public_key->verify_emsa_pkcs1_signature(public_key, data, signature);
 	tester->assert_true(tester, status == SUCCESS, "verify emsa_pkcs1_signature (setkey)");
 	
-	allocator_free(signature.ptr);
+	free(signature.ptr);
 	
 	/* key comparison */
 	tester->assert_true(tester, private_key->belongs_to(private_key, public_key), "key belongs to");
@@ -218,7 +217,7 @@ void test_rsa(protected_tester_t *tester)
 	status = public_key->verify_emsa_pkcs1_signature(public_key, data, signature);
 	tester->assert_true(tester, status == SUCCESS, "verify emsa_pkcs1_signature (loadkey)");
 	
-	allocator_free(signature.ptr);
+	free(signature.ptr);
 	
 	certificate->destroy(certificate);
 	public_key->destroy(public_key);

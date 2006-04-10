@@ -24,7 +24,6 @@
  
 #include "aes_cbc_crypter_test.h"
 
-#include <utils/allocator.h>
 #include <daemon.h>
 
 void test_aes_cbc_crypter(protected_tester_t *tester)
@@ -53,7 +52,7 @@ void test_aes_cbc_crypter(protected_tester_t *tester)
 	chunk_t decrypted1;
  	logger_t *logger;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	 	 
 	crypter = (crypter_t *) aes_cbc_crypter_create(16);
   	tester->assert_true(tester, (crypter != NULL), "create call test");
@@ -68,14 +67,14 @@ void test_aes_cbc_crypter(protected_tester_t *tester)
 	logger->log_chunk(logger,RAW,"encrypted :", encrypted1);
 	
 	tester->assert_true(tester, (crypter->decrypt(crypter,encrypted1,iv1_chunk,&decrypted1) == SUCCESS), "decrypt call test");
-	allocator_free_chunk(&encrypted1);
+	chunk_free(&encrypted1);
 
 	tester->assert_true(tester, (memcmp(decrypted1.ptr, plaintext1, 16) == 0), "decrypted value");
 	
 	logger->log_chunk(logger,RAW,"expected decrypted :", data1);
 	logger->log_chunk(logger,RAW,"decrypted :", decrypted1);
 	
-	allocator_free_chunk(&decrypted1);
+	chunk_free(&decrypted1);
 	 
 	crypter->destroy(crypter);
 	
@@ -123,14 +122,14 @@ void test_aes_cbc_crypter(protected_tester_t *tester)
 	logger->log_chunk(logger,RAW,"encrypted :", encrypted2);
 	
 	tester->assert_true(tester, (crypter->decrypt(crypter,encrypted2,iv2_chunk,&decrypted2) == SUCCESS), "decrypt call test");
-	allocator_free_chunk(&encrypted2);
+	chunk_free(&encrypted2);
 
 	tester->assert_true(tester, (memcmp(decrypted2.ptr, plaintext2, 32) == 0), "decrypted value");
 	
 	logger->log_chunk(logger,RAW,"expected decrypted :", data2);
 	logger->log_chunk(logger,RAW,"decrypted :", decrypted2);
 	
-	allocator_free_chunk(&decrypted2);
+	chunk_free(&decrypted2);
 
 	crypter->destroy(crypter);
 	 
@@ -188,14 +187,14 @@ void test_aes_cbc_crypter(protected_tester_t *tester)
 	logger->log_chunk(logger,RAW,"encrypted :", encrypted3);
 	
 	tester->assert_true(tester, (crypter->decrypt(crypter,encrypted3,iv3_chunk,&decrypted3) == SUCCESS), "decrypt call test");
-	allocator_free_chunk(&encrypted3);
+	chunk_free(&encrypted3);
 
 	tester->assert_true(tester, (memcmp(decrypted3.ptr, plaintext3, 64) == 0), "decrypted value");
 	
 	logger->log_chunk(logger,RAW,"expected decrypted :", data3);
 	logger->log_chunk(logger,RAW,"decrypted :", decrypted3);
 	
-	allocator_free_chunk(&decrypted3);
+	chunk_free(&decrypted3);
 	
 	crypter->destroy(crypter);
 }

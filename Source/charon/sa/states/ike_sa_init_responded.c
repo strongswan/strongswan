@@ -19,11 +19,12 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
+#include <string.h>
+
 #include "ike_sa_init_responded.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <sa/authenticator.h>
 #include <sa/child_sa.h>
 #include <encoding/payloads/ts_payload.h>
@@ -473,11 +474,11 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	}
 	
 	/* set up child sa */
-	seed = allocator_alloc_as_chunk(this->received_nonce.len + this->sent_nonce.len);
+	seed = chunk_alloc(this->received_nonce.len + this->sent_nonce.len);
 	memcpy(seed.ptr, this->received_nonce.ptr, this->received_nonce.len);
 	memcpy(seed.ptr + this->received_nonce.len, this->sent_nonce.ptr, this->sent_nonce.len);
 	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
-	allocator_free_chunk(&seed);
+	chunk_free(&seed);
 	
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	this->child_sa = child_sa_create(connection->get_my_host(connection),
@@ -607,10 +608,10 @@ static ike_sa_state_t get_state(private_ike_sa_init_responded_t *this)
  */
 static void destroy(private_ike_sa_init_responded_t *this)
 {
-	allocator_free_chunk(&(this->received_nonce));
-	allocator_free_chunk(&(this->sent_nonce));
-	allocator_free_chunk(&(this->ike_sa_init_response_data));
-	allocator_free_chunk(&(this->ike_sa_init_request_data));
+	chunk_free(&(this->received_nonce));
+	chunk_free(&(this->sent_nonce));
+	chunk_free(&(this->ike_sa_init_response_data));
+	chunk_free(&(this->ike_sa_init_request_data));
 	if (this->my_ts)
 	{
 		traffic_selector_t *ts;
@@ -634,17 +635,17 @@ static void destroy(private_ike_sa_init_responded_t *this)
 		this->child_sa->destroy(this->child_sa);
 	}
 
-	allocator_free(this);
+	free(this);
 }
 /**
  * Implementation of private_ike_sa_init_responded.destroy_after_state_change.
  */
 static void destroy_after_state_change(private_ike_sa_init_responded_t *this)
 {
-	allocator_free_chunk(&(this->received_nonce));
-	allocator_free_chunk(&(this->sent_nonce));
-	allocator_free_chunk(&(this->ike_sa_init_response_data));
-	allocator_free_chunk(&(this->ike_sa_init_request_data));
+	chunk_free(&(this->received_nonce));
+	chunk_free(&(this->sent_nonce));
+	chunk_free(&(this->ike_sa_init_response_data));
+	chunk_free(&(this->ike_sa_init_request_data));
 	if (this->my_ts)
 	{
 		traffic_selector_t *ts;
@@ -664,7 +665,7 @@ static void destroy_after_state_change(private_ike_sa_init_responded_t *this)
 		this->other_ts->destroy(this->other_ts);
 	}
 
-	allocator_free(this);
+	free(this);
 }
 
 /* 
@@ -672,7 +673,7 @@ static void destroy_after_state_change(private_ike_sa_init_responded_t *this)
  */
 ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa, chunk_t received_nonce, chunk_t sent_nonce,chunk_t ike_sa_init_request_data, chunk_t ike_sa_init_response_data)
 {
-	private_ike_sa_init_responded_t *this = allocator_alloc_thing(private_ike_sa_init_responded_t);
+	private_ike_sa_init_responded_t *this = malloc_thing(private_ike_sa_init_responded_t);
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
@@ -696,7 +697,7 @@ ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa
 	this->my_ts = NULL;
 	this->other_ts = NULL;
 	this->child_sa = NULL;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &(this->public);
 }

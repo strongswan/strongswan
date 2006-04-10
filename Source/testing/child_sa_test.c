@@ -24,7 +24,6 @@
 
 #include <daemon.h>
 #include <sa/child_sa.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 
 

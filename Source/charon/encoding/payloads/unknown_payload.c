@@ -20,9 +20,10 @@
  * for more details.
  */
 
+#include <stddef.h>
+
 #include "unknown_payload.h"
 
-#include <utils/allocator.h>
 
 
 typedef struct private_unknown_payload_t private_unknown_payload_t;
@@ -169,10 +170,10 @@ static void destroy(private_unknown_payload_t *this)
 {
 	if (this->data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->data));
+		chunk_free(&(this->data));
 	}
 	
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -180,7 +181,7 @@ static void destroy(private_unknown_payload_t *this)
  */
 unknown_payload_t *unknown_payload_create()
 {
-	private_unknown_payload_t *this = allocator_alloc_thing(private_unknown_payload_t);
+	private_unknown_payload_t *this = malloc_thing(private_unknown_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

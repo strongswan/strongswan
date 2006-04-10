@@ -25,7 +25,6 @@
 #include <daemon.h>
 #include <sa/states/state.h>
 #include <sa/states/ike_sa_init_responded.h>
-#include <utils/allocator.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
@@ -413,7 +412,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	ke_payload = ke_payload_create();
 	ke_payload->set_key_exchange_data(ke_payload,key_data);
 	ke_payload->set_dh_group_number(ke_payload, this->dh_group_number);
-	allocator_free_chunk(&key_data);
+	chunk_free(&key_data);
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add KE payload to message");
 	response->add_payload(response,(payload_t *) ke_payload);
@@ -431,7 +430,7 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 	status_t status;
 
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Process received NONCE payload");
-	allocator_free(this->received_nonce.ptr);
+	free(this->received_nonce.ptr);
 	this->received_nonce = CHUNK_INITIALIZER;
 
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Get NONCE value and store it");
@@ -498,9 +497,9 @@ static void destroy(private_responder_init_t *this)
 	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy responder init state object");
 	
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy sent nonce");
-	allocator_free_chunk(&(this->sent_nonce));
+	chunk_free(&(this->sent_nonce));
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy received nonce");
-	allocator_free_chunk(&(this->received_nonce));
+	chunk_free(&(this->received_nonce));
 
 	if (this->diffie_hellman != NULL)
 	{
@@ -512,7 +511,7 @@ static void destroy(private_responder_init_t *this)
 		this->proposal->destroy(this->proposal);
 	}
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy object");
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -534,7 +533,7 @@ static void destroy_after_state_change (private_responder_init_t *this)
 	}
 	
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy object");	
-	allocator_free(this);
+	free(this);
 }
 
 /* 
@@ -542,7 +541,7 @@ static void destroy_after_state_change (private_responder_init_t *this)
  */
 responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 {
-	private_responder_init_t *this = allocator_alloc_thing(private_responder_init_t);
+	private_responder_init_t *this = malloc_thing(private_responder_init_t);
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
@@ -558,7 +557,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	this->sent_nonce = CHUNK_INITIALIZER;
 	this->received_nonce = CHUNK_INITIALIZER;
 	this->dh_group_number = MODP_UNDEFINED;

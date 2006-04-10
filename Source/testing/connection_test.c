@@ -23,7 +23,6 @@
 #include "connection_test.h"
 
 #include <config/connection.h>
-#include <utils/allocator.h>
 #include <crypto/prfs/prf.h>
 
 

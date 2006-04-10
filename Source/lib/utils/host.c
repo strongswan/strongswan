@@ -20,9 +20,9 @@
  * for more details.
  */
 
-#include "host.h"
+#include <string.h>
 
-#include <utils/allocator.h>
+#include "host.h"
 
 
 typedef struct private_host_t private_host_t;
@@ -114,9 +114,9 @@ static char *get_address(private_host_t *this)
 			/* we need to clone it, since inet_ntoa overwrites 
 			 * internal buffer on subsequent calls
 			 */
-			allocator_free(this->string);
+			free(this->string);
 			string = inet_ntoa(this->address4.sin_addr);
-			this->string = allocator_alloc(strlen(string)+1);
+			this->string = malloc(strlen(string)+1);
 			strcpy(this->string, string);
 			return this->string;
 		}
@@ -139,7 +139,7 @@ static chunk_t get_address_as_chunk(private_host_t *this)
 		case AF_INET: 
 		{
 			/* allocate 4 bytes for IPV4 address*/
-			address.ptr = allocator_alloc(4);
+			address.ptr = malloc(4);
 			address.len = 4;
 			memcpy(address.ptr,&(this->address4.sin_addr.s_addr),4);
 		}
@@ -196,13 +196,13 @@ static u_int16_t get_port(private_host_t *this)
  */
 static private_host_t *clone(private_host_t *this)
 {
-	private_host_t *new = allocator_alloc_thing(private_host_t);
+	private_host_t *new = malloc_thing(private_host_t);
 	
 		
 	memcpy(new, this, sizeof(private_host_t));
 	if (this->string)
 	{
-		new->string = allocator_alloc(strlen(this->string)+1);
+		new->string = malloc(strlen(this->string)+1);
 		strcpy(new->string, this->string);
 	}
 	return new;
@@ -254,8 +254,8 @@ static bool equals(private_host_t *this, private_host_t *other)
  */
 static void destroy(private_host_t *this)
 {
-	allocator_free(this->string);
-	allocator_free(this);
+	free(this->string);
+	free(this);
 }
 
 /**
@@ -263,7 +263,7 @@ static void destroy(private_host_t *this)
  */
 static private_host_t *host_create_empty()
 {
-	private_host_t *this = allocator_alloc_thing(private_host_t);
+	private_host_t *this = malloc_thing(private_host_t);
 	
 	this->public.get_sockaddr = (sockaddr_t* (*) (host_t*))get_sockaddr;
 	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
@@ -305,7 +305,7 @@ host_t *host_create(int family, char *address, u_int16_t port)
 		}
 		default:
 		{
-			allocator_free(this);
+			free(this);
 			return NULL;
 
 		}
@@ -337,7 +337,7 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 			return &(this->public);
 		}
 	}
-	allocator_free(this);
+	free(this);
 	return NULL;
 }
 

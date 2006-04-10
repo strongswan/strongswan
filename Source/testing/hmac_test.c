@@ -25,7 +25,6 @@
 #include "hmac_test.h"
 
 #include <crypto/hmac.h>
-#include <utils/allocator.h>
 
 
 /* 
@@ -176,7 +175,7 @@ void test_hmac_sha1(protected_tester_t *tester)
 		
 		tester->assert_true(tester, digest[i].len == 20, "chunk len");
 		tester->assert_false(tester, memcmp(digest[i].ptr, reference[i].ptr, 20), "hmac value");
-		allocator_free(digest[i].ptr);
+		free(digest[i].ptr);
  	}
  	
  	/*
@@ -216,7 +215,7 @@ void test_hmac_sha1(protected_tester_t *tester)
 	
 	tester->assert_true(tester, digest[3].len == 20, "chunk len append mode");
 	tester->assert_false(tester, memcmp(digest[3].ptr, reference[3].ptr, 20), "hmac value append mode");
-	allocator_free(digest[3].ptr);
+	free(digest[3].ptr);
 }
 
 /* 
@@ -364,7 +363,7 @@ void test_hmac_md5(protected_tester_t *tester)
 		hmac->destroy(hmac);
 		tester->assert_true(tester, digest[i].len == 16, "chunk len");
 		tester->assert_false(tester, memcmp(digest[i].ptr, reference[i].ptr, 16), "hmac value");
-		allocator_free(digest[i].ptr);
+		free(digest[i].ptr);
  	}
  	
  	/*
@@ -405,5 +404,5 @@ void test_hmac_md5(protected_tester_t *tester)
 	
 	tester->assert_true(tester, digest[3].len == 16, "chunk len append mode");
 	tester->assert_false(tester, memcmp(digest[3].ptr, reference[3].ptr, 16), "hmac value append mode");
-	allocator_free(digest[3].ptr);
+	free(digest[3].ptr);
 }

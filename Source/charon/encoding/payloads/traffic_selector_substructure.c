@@ -23,7 +23,6 @@
 #include "traffic_selector_substructure.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 /** 
@@ -254,7 +253,7 @@ static void set_start_host (private_traffic_selector_substructure_t *this,host_t
 	this->start_port = start_host->get_port(start_host);
 	if (this->starting_address.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->starting_address));
+		chunk_free(&(this->starting_address));
 	}
 	this->starting_address = start_host->get_address_as_chunk(start_host);
 	this->compute_length(this);
@@ -276,7 +275,7 @@ static void set_end_host (private_traffic_selector_substructure_t *this,host_t *
 	this->end_port = end_host->get_port(end_host);
 	if (this->ending_address.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->ending_address));
+		chunk_free(&(this->ending_address));
 	}
 	this->ending_address = end_host->get_address_as_chunk(end_host);
 	this->compute_length(this);
@@ -307,9 +306,9 @@ void compute_length(private_traffic_selector_substructure_t *this)
  */
 static void destroy(private_traffic_selector_substructure_t *this)
 {
-	allocator_free(this->starting_address.ptr);
-	allocator_free(this->ending_address.ptr);
-	allocator_free(this);	
+	free(this->starting_address.ptr);
+	free(this->ending_address.ptr);
+	free(this);	
 }
 
 /*
@@ -317,7 +316,7 @@ static void destroy(private_traffic_selector_substructure_t *this)
  */
 traffic_selector_substructure_t *traffic_selector_substructure_create()
 {
-	private_traffic_selector_substructure_t *this = allocator_alloc_thing(private_traffic_selector_substructure_t);
+	private_traffic_selector_substructure_t *this = malloc_thing(private_traffic_selector_substructure_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

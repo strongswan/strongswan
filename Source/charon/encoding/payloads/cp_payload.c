@@ -19,14 +19,12 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-/* offsetof macro */
+
 #include <stddef.h>
 
 #include "cp_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 
@@ -265,7 +263,7 @@ static status_t destroy(private_cp_payload_t *this)
 	}
 	this->attributes->destroy(this->attributes);
 	
-	allocator_free(this);
+	free(this);
 	
 	return SUCCESS;
 }
@@ -275,7 +273,7 @@ static status_t destroy(private_cp_payload_t *this)
  */
 cp_payload_t *cp_payload_create()
 {
-	private_cp_payload_t *this = allocator_alloc_thing(private_cp_payload_t);
+	private_cp_payload_t *this = malloc_thing(private_cp_payload_t);
 	
 	/* public interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

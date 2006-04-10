@@ -23,7 +23,6 @@
  
 #include "aes_cbc_crypter.h"
 
-#include <utils/allocator.h>
 
 
 /*
@@ -1385,7 +1384,7 @@ static status_t decrypt (private_aes_cbc_crypter_t *this, chunk_t data, chunk_t 
 		return INVALID_ARG;
 	}
 	
-	decrypted->ptr = allocator_alloc(data.len);
+	decrypted->ptr = malloc(data.len);
 	if (decrypted->ptr == NULL)
 	{
 		return OUT_OF_RES;
@@ -1433,7 +1432,7 @@ static status_t encrypt (private_aes_cbc_crypter_t *this, chunk_t data, chunk_t 
 		return INVALID_ARG;
 	}
 	
-	encrypted->ptr = allocator_alloc(data.len);
+	encrypted->ptr = malloc(data.len);
 	if (encrypted->ptr == NULL)
 	{
 		return OUT_OF_RES;
@@ -1579,7 +1578,7 @@ static status_t set_key (private_aes_cbc_crypter_t *this, chunk_t key)
  */
 static void destroy (private_aes_cbc_crypter_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -1587,7 +1586,7 @@ static void destroy (private_aes_cbc_crypter_t *this)
  */
 aes_cbc_crypter_t *aes_cbc_crypter_create(size_t key_size)
 {
-	private_aes_cbc_crypter_t *this = allocator_alloc_thing(private_aes_cbc_crypter_t);
+	private_aes_cbc_crypter_t *this = malloc_thing(private_aes_cbc_crypter_t);
 	
 	#if !defined(FIXED_TABLES)
 	if(!tab_gen) { gen_tabs(); tab_gen = 1; }
@@ -1608,7 +1607,7 @@ aes_cbc_crypter_t *aes_cbc_crypter_create(size_t key_size)
 		this->aes_Nkey = 4;
 		break;
 	default:
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	

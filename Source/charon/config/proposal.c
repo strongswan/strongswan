@@ -20,10 +20,11 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "proposal.h"
 
 #include <utils/linked_list.h>
-#include <utils/allocator.h>
 #include <utils/identification.h>
 #include <utils/logger.h>
 
@@ -152,7 +153,7 @@ static protocol_proposal_t *get_protocol_proposal(private_proposal_t *this, prot
 	if (!proto_proposal && create)
 	{
 		/* nope, create a new one */
-		proto_proposal = allocator_alloc_thing(protocol_proposal_t);
+		proto_proposal = malloc_thing(protocol_proposal_t);
 		proto_proposal->protocol = proto;
 		proto_proposal->encryption_algos = linked_list_create();
 		proto_proposal->integrity_algos = linked_list_create();
@@ -167,7 +168,7 @@ static protocol_proposal_t *get_protocol_proposal(private_proposal_t *this, prot
 		{
 			proto_proposal->spi.len = 4;
 		}
-		proto_proposal->spi.ptr = allocator_alloc(proto_proposal->spi.len);
+		proto_proposal->spi.ptr = malloc(proto_proposal->spi.len);
 		/* add to the list */
 		this->protocol_proposals->insert_last(this->protocol_proposals, (void*)proto_proposal);
 	}
@@ -179,7 +180,7 @@ static protocol_proposal_t *get_protocol_proposal(private_proposal_t *this, prot
  */
 static void add_algo(linked_list_t *list, u_int8_t algo, size_t key_size)
 {
-	algorithm_t *algo_key = allocator_alloc_thing(algorithm_t);
+	algorithm_t *algo_key = malloc_thing(algorithm_t);
 	
 	algo_key->algorithm = algo;
 	algo_key->key_size = key_size;
@@ -542,7 +543,7 @@ static void clone_algo_list(linked_list_t *list, linked_list_t *clone_list)
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&algo);
-		clone_algo = allocator_alloc_thing(algorithm_t);
+		clone_algo = malloc_thing(algorithm_t);
 		memcpy(clone_algo, algo, sizeof(algorithm_t));
 		clone_list->insert_last(clone_list, (void*)clone_algo);
 	}
@@ -586,7 +587,7 @@ static void free_algo_list(linked_list_t *list)
 	while(list->get_count(list) > 0)
 	{
 		list->remove_last(list, (void**)&algo);
-		allocator_free(algo);
+		free(algo);
 	}
 	list->destroy(list);
 }
@@ -607,12 +608,12 @@ static void destroy(private_proposal_t *this)
 		free_algo_list(proto_prop->dh_groups);
 		free_algo_list(proto_prop->esns);
 		
-		allocator_free(proto_prop->spi.ptr);
-		allocator_free(proto_prop);
+		free(proto_prop->spi.ptr);
+		free(proto_prop);
 	}
 	this->protocol_proposals->destroy(this->protocol_proposals);
 	
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -620,7 +621,7 @@ static void destroy(private_proposal_t *this)
  */
 proposal_t *proposal_create(u_int8_t number)
 {
-	private_proposal_t *this = allocator_alloc_thing(private_proposal_t);
+	private_proposal_t *this = malloc_thing(private_proposal_t);
 	
 	this->public.add_algorithm = (void (*)(proposal_t*,protocol_id_t,transform_type_t,u_int16_t,size_t))add_algorithm;
 	this->public.create_algorithm_iterator = (iterator_t* (*)(proposal_t*,protocol_id_t,transform_type_t))create_algorithm_iterator;

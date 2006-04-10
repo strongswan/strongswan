@@ -30,7 +30,6 @@
 #include "logger.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 
 /**
  * Maximum length of a log entry (only used for logger_s.log).
@@ -314,8 +313,8 @@ static log_level_t get_level(private_logger_t *this)
  */
 static void destroy(private_logger_t *this)
 {
-	allocator_free(this->name);
-	allocator_free(this);
+	free(this->name);
+	free(this);
 }
 
 /*
@@ -323,7 +322,7 @@ static void destroy(private_logger_t *this)
  */	
 logger_t *logger_create(char *logger_name, log_level_t log_level, bool log_thread_id, FILE * output)
 {
-	private_logger_t *this = allocator_alloc_thing(private_logger_t);
+	private_logger_t *this = malloc_thing(private_logger_t);
 	
 	/* public functions */
 	this->public.log = (void(*)(logger_t*,log_level_t,char*,...))logg;
@@ -346,7 +345,7 @@ logger_t *logger_create(char *logger_name, log_level_t log_level, bool log_threa
 	/* private variables */
 	this->level = log_level;
 	this->log_thread_id = log_thread_id;
-	this->name = allocator_alloc(strlen(logger_name) + 1);
+	this->name = malloc(strlen(logger_name) + 1);
 
 	strcpy(this->name,logger_name);
 	this->output = output;

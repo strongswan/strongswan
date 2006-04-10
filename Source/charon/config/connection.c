@@ -22,7 +22,6 @@
 
 #include "connection.h"
 
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 #include <utils/logger.h>
 
@@ -290,7 +289,7 @@ static void destroy (private_connection_t *this)
 	this->other_host->destroy(this->other_host);
 	this->my_id->destroy(this->my_id);
 	this->other_id->destroy(this->other_id);
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -298,7 +297,7 @@ static void destroy (private_connection_t *this)
  */
 connection_t * connection_create(host_t *my_host, host_t *other_host, identification_t *my_id, identification_t *other_id, auth_method_t auth_method)
 {
-	private_connection_t *this = allocator_alloc_thing(private_connection_t);
+	private_connection_t *this = malloc_thing(private_connection_t);
 
 	/* public functions */
 	this->public.get_my_id = (identification_t*(*)(connection_t*))get_my_id;

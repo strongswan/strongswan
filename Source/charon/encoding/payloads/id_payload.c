@@ -20,10 +20,11 @@
  * for more details.
  */
 
+#include <stddef.h>
+
 #include "id_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 
 typedef struct private_id_payload_t private_id_payload_t;
 
@@ -202,9 +203,9 @@ static void set_data (private_id_payload_t *this, chunk_t data)
 {
 	if (this->id_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->id_data));
+		chunk_free(&(this->id_data));
 	}
-	this->id_data.ptr = allocator_clone_bytes(data.ptr,data.len);
+	this->id_data.ptr = clalloc(data.ptr,data.len);
 	this->id_data.len = data.len;
 	this->payload_length = ID_PAYLOAD_HEADER_LENGTH + this->id_data.len;
 }
@@ -228,7 +229,7 @@ static chunk_t get_data_clone (private_id_payload_t *this)
 	{
 		return (this->id_data);
 	}
-	cloned_data.ptr = allocator_clone_bytes(this->id_data.ptr,this->id_data.len);
+	cloned_data.ptr = clalloc(this->id_data.ptr,this->id_data.len);
 	cloned_data.len = this->id_data.len;
 	return cloned_data;
 }
@@ -264,9 +265,9 @@ static void destroy(private_id_payload_t *this)
 {
 	if (this->id_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->id_data));
+		chunk_free(&(this->id_data));
 	}
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -274,7 +275,7 @@ static void destroy(private_id_payload_t *this)
  */
 id_payload_t *id_payload_create(bool is_initiator)
 {
-	private_id_payload_t *this = allocator_alloc_thing(private_id_payload_t);
+	private_id_payload_t *this = malloc_thing(private_id_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

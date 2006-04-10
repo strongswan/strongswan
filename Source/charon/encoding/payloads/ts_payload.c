@@ -20,10 +20,11 @@
  * for more details.
  */
 
+#include <stddef.h>
+
 #include "ts_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 typedef struct private_ts_payload_t private_ts_payload_t;
@@ -297,7 +298,7 @@ static void destroy(private_ts_payload_t *this)
 	
 	this->traffic_selectors->destroy(this->traffic_selectors);
 		
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -305,7 +306,7 @@ static void destroy(private_ts_payload_t *this)
  */
 ts_payload_t *ts_payload_create(bool is_initiator)
 {
-	private_ts_payload_t *this = allocator_alloc_thing(private_ts_payload_t);
+	private_ts_payload_t *this = malloc_thing(private_ts_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

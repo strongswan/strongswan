@@ -68,9 +68,12 @@ typedef struct logger_manager_t logger_manager_t;
  * The logger manager manages all logger_t object in a list and
  * allows their manipulation. Via a logger_context_t, the loglevel
  * of a specific logging type can be adjusted at runtime.
+ * This class differs from others, as it has no constructor or destroy
+ * function. The one and only instance "logger_manager" is created at
+ * library start and destroyed at exit.
  * 
  * @b Constructors:
- *  - logger_manager_create()
+ *  - none, logger_manager is an instance
  * 
  * @see logger_t
  * 
@@ -130,26 +133,11 @@ struct logger_manager_t {
 	 * @param log_level 	logger level to disable
 	 */
 	void (*set_output) (logger_manager_t *this, logger_context_t context, FILE *output);
-	
-	/**
-	 * @brief Destroys a logger_manager_t object.
-	 * 
-	 * All managed logger_t objects are also destroyed.
-	 *
-	 * @param this		logger_manager_t object
-	 */
-	void (*destroy) (logger_manager_t *this);
 };
 
 /**
- * @brief Constructor to create a logger_manager_t object.
- *
- * @param default_log_level 	default log level for all context
- * @return 						logger_manager_t object
- * 
- * @ingroup utils
+ * The single and global instance of the logger_manager
  */
-logger_manager_t *logger_manager_create(log_level_t default_log_level);
-
+extern logger_manager_t *logger_manager;
 
 #endif /*LOGGER_MANAGER_H_*/

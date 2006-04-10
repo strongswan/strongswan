@@ -23,7 +23,6 @@
 
 #include "der_encoder.h"
 
-#include <utils/allocator.h>
 #include <daemon.h>
 
 
@@ -197,7 +196,7 @@ static status_t decode(private_der_encoder_t *this, chunk_t input, void *output)
  */
 static void destroy(private_der_encoder_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -205,14 +204,14 @@ static void destroy(private_der_encoder_t *this)
  */
 der_encoder_t *der_encoder_create(asn1_rule_t *rules)
 {
-	private_der_encoder_t *this = allocator_alloc_thing(private_der_encoder_t);
+	private_der_encoder_t *this = malloc_thing(private_der_encoder_t);
 	
 	/* public functions */
 	this->public.decode = (status_t (*) (der_encoder_t*,chunk_t,void*))decode;
 	this->public.destroy = (void (*) (der_encoder_t*))destroy;
 	
 	this->first_rule = rules;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, DER_DECODER);
+	this->logger = logger_manager>logger_manager->get_logger(logger_manager>logger_manager, DER_DECODER);
 	
 	return &(this->public);
 }

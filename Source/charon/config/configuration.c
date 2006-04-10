@@ -25,7 +25,6 @@
 #include "configuration.h"
 
 #include <types.h>
-#include <utils/allocator.h>
 
 /**
  * First retransmit timeout in milliseconds.
@@ -94,7 +93,7 @@ static u_int32_t get_half_open_ike_sa_timeout (private_configuration_t *this)
  */
 static void destroy(private_configuration_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -102,7 +101,7 @@ static void destroy(private_configuration_t *this)
  */
 configuration_t *configuration_create()
 {
-	private_configuration_t *this = allocator_alloc_thing(private_configuration_t);
+	private_configuration_t *this = malloc_thing(private_configuration_t);
 	
 	/* public functions */
 	this->public.destroy = (void(*)(configuration_t*))destroy;

@@ -25,7 +25,6 @@
 #include <daemon.h>
 #include <config/policy.h>
 #include <config/traffic_selector.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 #include <encoding/payloads/ts_payload.h>
 
@@ -44,7 +43,7 @@ void test_policy(protected_tester_t *tester)
 	logger_t *logger;
 	identification_t *alice, *bob;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
+	logger = logger_manager->get_logger(logger_manager, TESTER);
 	logger->disable_level(logger, FULL);
 	
 	alice = identification_create_from_string(ID_IPV4_ADDR, "152.96.193.131");
@@ -173,7 +172,7 @@ void test_policy(protected_tester_t *tester)
 // 	ts_result[0]->destroy(ts_result[0]);
 // 	ts_result[0]->destroy(ts_result[1]);
 // 	ts_result[0]->destroy(ts_result[2]);
-// 	allocator_free(ts_result);
+// 	free(ts_result);
 // 	
 // 	count = policy->select_my_traffic_selectors(policy, &ts_request[0], 4, &ts_result);
 // 	tester->assert_true(tester, (count == 3), "ts select count");
@@ -186,7 +185,7 @@ void test_policy(protected_tester_t *tester)
 // 	ts_result[0]->destroy(ts_result[0]);
 // 	ts_result[0]->destroy(ts_result[1]); 
 // 	ts_result[0]->destroy(ts_result[2]);
-// 	allocator_free(ts_result);
+// 	free(ts_result);
 // 	
 // 	/* get them again out of the payload */
 // 	count = ts_payload->get_traffic_selectors(ts_payload, &ts_result);
@@ -219,10 +218,10 @@ void test_policy(protected_tester_t *tester)
 // 		tester->assert_true(tester, fp_res == fp_ref, "from port");
 // 		tester->assert_true(tester, tp_res == tp_ref, "to port");
 // 		
-// 		allocator_free(fa_res.ptr);
-// 		allocator_free(fa_ref.ptr);
-// 		allocator_free(ta_res.ptr);
-// 		allocator_free(ta_ref.ptr);
+// 		free(fa_res.ptr);
+// 		free(fa_ref.ptr);
+// 		free(ta_res.ptr);
+// 		free(ta_ref.ptr);
 // 	}
 // 
 // 
@@ -230,7 +229,7 @@ void test_policy(protected_tester_t *tester)
 // 	ts_result[0]->destroy(ts_result[0]);
 // 	ts_result[0]->destroy(ts_result[1]); 
 // 	ts_result[0]->destroy(ts_result[2]);
-// 	allocator_free(ts_result);	
+// 	free(ts_result);	
 // 	
 // 	ts_policy[0]->destroy(ts_policy[0]);
 // 	ts_policy[1]->destroy(ts_policy[1]);

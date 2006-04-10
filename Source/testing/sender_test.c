@@ -30,7 +30,6 @@
 #include <network/socket.h>
 #include <queues/send_queue.h>
 #include <queues/job_queue.h>
-#include <utils/allocator.h>
 
 /**
  * Number of packets to send by sender-thread
@@ -60,8 +59,8 @@ void test_sender(protected_tester_t *tester)
 	{
 		packet = packet_create(AF_INET);
 		packet->set_destination(packet, host_create(AF_INET,DESTINATION_IP,PORT_TO_SEND));
-		packet_data.ptr = allocator_alloc_thing(int);
 		packet_data.len = ( sizeof(int));
+		packet_data.ptr = malloc(packet_data.len);
 		*((int *) (packet_data.ptr)) = i;
 		packet->set_data(packet, packet_data);
 		charon->send_queue->add(charon->send_queue,packet);

@@ -23,10 +23,11 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "sha1_hasher.h"
 
 #include <definitions.h>
-#include <utils/allocator.h>
 
 #define BLOCK_SIZE_SHA1 20
 
@@ -208,7 +209,7 @@ static void allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *h
 	SHA1Update(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
 	{	
-		allocated_hash.ptr = allocator_alloc(BLOCK_SIZE_SHA1);
+		allocated_hash.ptr = malloc(BLOCK_SIZE_SHA1);
 		allocated_hash.len = BLOCK_SIZE_SHA1;
 		
 		SHA1Final(this, allocated_hash.ptr);
@@ -244,7 +245,7 @@ static void reset(private_sha1_hasher_t *this)
  */
 static void destroy(private_sha1_hasher_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 
@@ -253,7 +254,7 @@ static void destroy(private_sha1_hasher_t *this)
  */
 sha1_hasher_t *sha1_hasher_create()
 {
-	private_sha1_hasher_t *this = allocator_alloc_thing(private_sha1_hasher_t);
+	private_sha1_hasher_t *this = malloc_thing(private_sha1_hasher_t);
 	
 	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
 	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;

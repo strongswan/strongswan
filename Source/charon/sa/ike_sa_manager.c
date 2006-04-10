@@ -27,7 +27,6 @@
 
 #include <daemon.h>
 #include <sa/ike_sa_id.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 #include <utils/logger_manager.h>
 #include <utils/linked_list.h>
@@ -87,7 +86,7 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
 	/* also destroy IKE SA */
 	this->ike_sa->destroy(this->ike_sa);
 	this->ike_sa_id->destroy(this->ike_sa_id);
-	allocator_free(this);
+	free(this);
 	return SUCCESS;
 }
 
@@ -101,7 +100,7 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
  */
 static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
 {
-	ike_sa_entry_t *this = allocator_alloc_thing(ike_sa_entry_t);
+	ike_sa_entry_t *this = malloc_thing(ike_sa_entry_t);
 
 	/* destroy function */
 	this->destroy = ike_sa_entry_destroy;
@@ -752,7 +751,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	this->logger->log(this->logger,CONTROL | LEVEL2,"IKE_SA's deleted");
 	pthread_mutex_unlock(&(this->mutex));
 
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -760,7 +759,7 @@ static void destroy(private_ike_sa_manager_t *this)
  */
 ike_sa_manager_t *ike_sa_manager_create()
 {
-	private_ike_sa_manager_t *this = allocator_alloc_thing(private_ike_sa_manager_t);
+	private_ike_sa_manager_t *this = malloc_thing(private_ike_sa_manager_t);
 
 	/* assign public functions */
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
@@ -779,7 +778,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->delete_entry = delete_entry;
 
 	/* initialize private variables */
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA_MANAGER);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA_MANAGER);
 	
 	this->ike_sa_list = linked_list_create();
 

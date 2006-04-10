@@ -23,7 +23,6 @@
 #include "retransmit_request_job.h"
 
 
-#include <utils/allocator.h>
 
 
 typedef struct private_retransmit_request_job_t private_retransmit_request_job_t;
@@ -101,7 +100,7 @@ static u_int32_t get_message_id(private_retransmit_request_job_t *this)
 static void destroy(private_retransmit_request_job_t *this)
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -109,7 +108,7 @@ static void destroy(private_retransmit_request_job_t *this)
  */
 retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa_id)
 {
-	private_retransmit_request_job_t *this = allocator_alloc_thing(private_retransmit_request_job_t);
+	private_retransmit_request_job_t *this = malloc_thing(private_retransmit_request_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;

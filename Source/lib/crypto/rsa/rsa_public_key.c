@@ -23,11 +23,11 @@
 #include <gmp.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "rsa_public_key.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <crypto/hashers/hasher.h>
 #include <asn1/der_decoder.h>
 
@@ -215,7 +215,7 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	if ((*(em.ptr) != 0x00) ||
 		(*(em.ptr+1) != 0x01))
 	{
-		allocator_free(em.ptr);
+		free(em.ptr);
 		return FAILED;
 	}
 	
@@ -232,7 +232,7 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 		else if (*pos != 0xFF)
 		{
 			/* bad padding, decryption failed ?!*/
-			allocator_free(em.ptr);
+			free(em.ptr);
 			return FAILED;	
 		}
 		pos++;
@@ -241,7 +241,7 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	if (pos + 20 > em.ptr + em.len)
 	{
 		/* not enought room for oid compare */
-		allocator_free(em.ptr);
+		free(em.ptr);
 		return FAILED;	
 	}
 	
@@ -279,14 +279,14 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	if (hasher == NULL)
 	{
 		/* not supported hash algorithm */
-		allocator_free(em.ptr);
+		free(em.ptr);
 		return NOT_SUPPORTED;	
 	}
 	
 	if (pos + hasher->get_block_size(hasher) != em.ptr + em.len)
 	{
 		/* bad length */
-		allocator_free(em.ptr);
+		free(em.ptr);
 		hasher->destroy(hasher);
 		return FAILED;	
 	}
@@ -298,15 +298,15 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	if (memcmp(hash.ptr, pos, hash.len) != 0)
 	{
 		/* hash does not equal */
-		allocator_free(hash.ptr);
-		allocator_free(em.ptr);
+		free(hash.ptr);
+		free(em.ptr);
 		return FAILED;	
 			
 	}
 	
 	/* seems good */
-	allocator_free(hash.ptr);
-	allocator_free(em.ptr);
+	free(hash.ptr);
+	free(em.ptr);
 	return SUCCESS;	
 }
 	
@@ -323,11 +323,11 @@ static status_t get_key(private_rsa_public_key_t *this, chunk_t *key)
 	e.ptr = mpz_export(NULL, NULL, 1, e.len, 1, 0, this->e);
 	
 	key->len = this->k * 2;
-	key->ptr = allocator_alloc(key->len);
+	key->ptr = malloc(key->len);
 	memcpy(key->ptr, n.ptr, n.len);
 	memcpy(key->ptr + n.len, e.ptr, e.len);
-	allocator_free(n.ptr);
-	allocator_free(e.ptr);
+	free(n.ptr);
+	free(e.ptr);
 	
 	return SUCCESS;
 }
@@ -369,7 +369,7 @@ static void destroy(private_rsa_public_key_t *this)
 {
 	mpz_clear(this->n);
 	mpz_clear(this->e);
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -377,7 +377,7 @@ static void destroy(private_rsa_public_key_t *this)
  */
 private_rsa_public_key_t *rsa_public_key_create_empty()
 {
-	private_rsa_public_key_t *this = allocator_alloc_thing(private_rsa_public_key_t);
+	private_rsa_public_key_t *this = malloc_thing(private_rsa_public_key_t);
 	
 	/* public functions */
 	this->public.verify_emsa_pkcs1_signature = (status_t (*) (rsa_public_key_t*,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
@@ -458,11 +458,11 @@ rsa_public_key_t *rsa_public_key_create_from_file(char *filename)
 	dd = der_decoder_create(rsa_public_key_info_rules);
 	status = dd->decode(dd, chunk, &key_info);
 	dd->destroy(dd);
-	allocator_free_chunk(&key_info.algorithm_oid);
+	chunk_free(&key_info.algorithm_oid);
 	if (status == SUCCESS)
 	{
 		public_key = rsa_public_key_create_from_chunk(chunk);
 	}
-	allocator_free_chunk(&key_info.public_key);
+	chunk_free(&key_info.public_key);
 	return public_key;
 }

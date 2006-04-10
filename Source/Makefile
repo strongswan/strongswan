@@ -27,9 +27,9 @@ BINNAMELIB=  $(BUILD_DIR)libstrong.so
 
 MAIN_DIR= ./
 
-LDFLAGS= -lgmp -lpthread 
+LDFLAGS= -ldl -lgmp -lpthread -rdynamic
 
-CFLAGS= -Icharon -Ilib -Istroke -Wall -g -fPIC -DLEAK_DETECTIVE 
+CFLAGS= -Icharon -Ilib -Istroke -Wall -g -fPIC -fomit-frame-pointer -DLEAK_DETECTIVE 
 
 # objects is extended by each included Makefile
 CHARON_OBJS=
@@ -58,13 +58,13 @@ build_dir:
 							mkdir -p $(BUILD_DIR)
 							
 $(BINNAMELIB) :				build_dir $(LIB_OBJS)
-							$(CC) -shared $(LIB_OBJS) $(LDFLAGS) -o $@
+							$(CC) -shared $(LIB_OBJS) -o $@
 
 $(BINNAMECHARON) :			build_dir $(CHARON_OBJS) $(BINNAMELIB) $(BUILD_DIR)daemon.o
-							$(CC) $(LDFLAGS) -L./bin -lstrong $(CHARON_OBJS) $(BUILD_DIR)daemon.o -o $@
+							$(CC) -ldl -lgmp -rdynamic -L./bin -lstrong -lpthread $(CHARON_OBJS) $(BUILD_DIR)daemon.o -o $@
 
 $(BINNAMETEST) :			build_dir $(CHARON_OBJS) $(TEST_OBJS) $(BINNAMELIB) $(BUILD_DIR)testcases.o
-							$(CC) $(LDFLAGS) -L./bin -lstrong $(CHARON_OBJS) $(TEST_OBJS) $(BUILD_DIR)testcases.o -o $@
+							$(CC) -L./bin -lstrong  $(LDFLAGS) $(CHARON_OBJS) $(TEST_OBJS) $(BUILD_DIR)testcases.o -o $@
 
 $(BINNAMESTROKE) :			build_dir $(BINNAMELIB) $(BUILD_DIR)stroke.o
 							$(CC) $(LDFLAGS) $(CFLAGS) $(BUILD_DIR)stroke.o -o $@

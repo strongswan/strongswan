@@ -20,9 +20,9 @@
  * for more details.
  */
 
-#include "eap_payload.h"
+#include <stddef.h>
 
-#include <utils/allocator.h>
+#include "eap_payload.h"
 
 
 typedef struct private_eap_payload_t private_eap_payload_t;
@@ -152,9 +152,9 @@ static void set_message (private_eap_payload_t *this, chunk_t message)
 {
 	if (this->message.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->message));
+		chunk_free(&(this->message));
 	}
-	this->message.ptr = allocator_clone_bytes(message.ptr,message.len);
+	this->message.ptr = clalloc(message.ptr,message.len);
 	this->message.len = message.len;
 	this->payload_length = EAP_PAYLOAD_HEADER_LENGTH + this->message.len;
 }
@@ -177,7 +177,7 @@ static chunk_t get_message_clone (private_eap_payload_t *this)
 	{
 		return (this->message);
 	}
-	cloned_message.ptr = allocator_clone_bytes(this->message.ptr,this->message.len);
+	cloned_message.ptr = clalloc(this->message.ptr,this->message.len);
 	cloned_message.len = this->message.len;
 	return cloned_message;
 }
@@ -189,10 +189,10 @@ static void destroy(private_eap_payload_t *this)
 {
 	if (this->message.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->message));
+		chunk_free(&(this->message));
 	}
 	
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -200,7 +200,7 @@ static void destroy(private_eap_payload_t *this)
  */
 eap_payload_t *eap_payload_create()
 {
-	private_eap_payload_t *this = allocator_alloc_thing(private_eap_payload_t);
+	private_eap_payload_t *this = malloc_thing(private_eap_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

@@ -23,7 +23,6 @@
 #include "auth_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 
 
 typedef struct private_auth_payload_t private_auth_payload_t;
@@ -189,9 +188,9 @@ static void set_data (private_auth_payload_t *this, chunk_t data)
 {
 	if (this->auth_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->auth_data));
+		chunk_free(&(this->auth_data));
 	}
-	this->auth_data.ptr = allocator_clone_bytes(data.ptr,data.len);
+	this->auth_data.ptr = clalloc(data.ptr,data.len);
 	this->auth_data.len = data.len;
 	this->payload_length = AUTH_PAYLOAD_HEADER_LENGTH + this->auth_data.len;
 }
@@ -214,7 +213,7 @@ static chunk_t get_data_clone (private_auth_payload_t *this)
 	{
 		return (this->auth_data);
 	}
-	cloned_data.ptr = allocator_clone_bytes(this->auth_data.ptr,this->auth_data.len);
+	cloned_data.ptr = clalloc(this->auth_data.ptr,this->auth_data.len);
 	cloned_data.len = this->auth_data.len;
 	return cloned_data;
 }
@@ -226,10 +225,10 @@ static void destroy(private_auth_payload_t *this)
 {
 	if (this->auth_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->auth_data));
+		chunk_free(&(this->auth_data));
 	}
 	
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -237,7 +236,7 @@ static void destroy(private_auth_payload_t *this)
  */
 auth_payload_t *auth_payload_create()
 {
-	private_auth_payload_t *this = allocator_alloc_thing(private_auth_payload_t);
+	private_auth_payload_t *this = malloc_thing(private_auth_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

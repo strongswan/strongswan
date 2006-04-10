@@ -20,10 +20,10 @@
  * for more details.
  */
 
+#include <string.h>
 
 #include "prf_plus.h"
 
-#include <utils/allocator.h>
 #include <definitions.h>
 
 typedef struct private_prf_plus_t private_prf_plus_t;
@@ -102,7 +102,7 @@ static void get_bytes(private_prf_plus_t *this, size_t length, u_int8_t *buffer)
  */	
 static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chunk)
 {
-	chunk->ptr = allocator_alloc(length);
+	chunk->ptr = malloc(length);
 	chunk->len = length;
 	this->public.get_bytes(&(this->public), length, chunk->ptr);
 }
@@ -112,9 +112,9 @@ static void allocate_bytes(private_prf_plus_t *this, size_t length, chunk_t *chu
  */
 static void destroy(private_prf_plus_t *this)
 {
-	allocator_free(this->buffer.ptr);
-	allocator_free(this->seed.ptr);
-	allocator_free(this);
+	free(this->buffer.ptr);
+	free(this->seed.ptr);
+	free(this);
 }
 
 /*
@@ -125,7 +125,7 @@ prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed)
 	private_prf_plus_t *this;
 	chunk_t appending_chunk;
 	
-	this = allocator_alloc_thing(private_prf_plus_t);
+	this = malloc_thing(private_prf_plus_t);
 
 	/* set public methods */
 	this->public.get_bytes = (void (*)(prf_plus_t *,size_t,u_int8_t*))get_bytes;
@@ -137,12 +137,12 @@ prf_plus_t *prf_plus_create(prf_t *prf, chunk_t seed)
 	
 	/* allocate buffer for prf output */
 	this->buffer.len = prf->get_block_size(prf);
-	this->buffer.ptr = allocator_alloc(this->buffer.len);
+	this->buffer.ptr = malloc(this->buffer.len);
 
 	this->appending_octet = 0x01;
 	
 	/* clone seed */
-	this->seed.ptr = allocator_clone_bytes(seed.ptr, seed.len);
+	this->seed.ptr = clalloc(seed.ptr, seed.len);
 	this->seed.len = seed.len;
 
 	/* do the first run */

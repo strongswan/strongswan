@@ -26,7 +26,6 @@
 #include "socket_test.h"
 
 #include <network/socket.h>
-#include <utils/allocator.h>
 
 /*
  * Description in header file
@@ -41,7 +40,7 @@ void test_socket(protected_tester_t *tester)
 	chunk_t data;
 
 
-	data.ptr = allocator_alloc(strlen(test_string) + 1);
+	data.ptr = malloc(strlen(test_string) + 1);
 	memcpy(data.ptr,test_string,strlen(test_string) + 1);
 	data.len = strlen(test_string) + 1;
 

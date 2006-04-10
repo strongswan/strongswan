@@ -28,7 +28,6 @@
 
 #include "randomizer.h"
 
-#include <utils/allocator.h>
 
 typedef struct private_randomizer_t private_randomizer_t;
 
@@ -66,7 +65,7 @@ static status_t get_bytes_from_device(private_randomizer_t *this,bool pseudo_ran
 	size_t got;
 	char * device_name;
 
-	device_name = pseudo_random ? RANDOM_DEVICE : PSEUDO_RANDOM_DEVICE;
+	device_name = pseudo_random ? PSEUDO_RANDOM_DEVICE : RANDOM_DEVICE;
 
 	device = open(device_name, 0);
 	if (device < 0) {
@@ -103,11 +102,11 @@ static status_t allocate_random_bytes(private_randomizer_t *this, size_t bytes, 
 {
 	status_t status;
 	chunk->len = bytes;
-	chunk->ptr = allocator_alloc(bytes);
+	chunk->ptr = malloc(bytes);
 	status = this->get_bytes_from_device(this, FALSE, bytes, chunk->ptr);
 	if (status != SUCCESS)
 	{
-		allocator_free(chunk->ptr);
+		free(chunk->ptr);
 	}
 	return status;
 }
@@ -127,11 +126,11 @@ static status_t allocate_pseudo_random_bytes(private_randomizer_t *this, size_t 
 {
 	status_t status;
 	chunk->len = bytes;
-	chunk->ptr = allocator_alloc(bytes);
+	chunk->ptr = malloc(bytes);
 	status = this->get_bytes_from_device(this, TRUE, bytes, chunk->ptr);
 	if (status != SUCCESS)
 	{
-		allocator_free(chunk->ptr);
+		free(chunk->ptr);
 	}
 	return status;
 }
@@ -141,7 +140,7 @@ static status_t allocate_pseudo_random_bytes(private_randomizer_t *this, size_t 
  */
 static void destroy(private_randomizer_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -149,7 +148,7 @@ static void destroy(private_randomizer_t *this)
  */
 randomizer_t *randomizer_create(void)
 {
-	private_randomizer_t *this = allocator_alloc_thing(private_randomizer_t);
+	private_randomizer_t *this = malloc_thing(private_randomizer_t);
 
 	/* public functions */
 	this->public.get_random_bytes = (status_t (*) (randomizer_t *,size_t, u_int8_t *)) get_random_bytes;

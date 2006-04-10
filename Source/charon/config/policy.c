@@ -23,7 +23,6 @@
 #include "policy.h"
 
 #include <utils/linked_list.h>
-#include <utils/allocator.h>
 #include <utils/identification.h>
 #include <utils/logger.h>
 
@@ -310,7 +309,7 @@ static status_t destroy(private_policy_t *this)
 	this->my_id->destroy(this->my_id);
 	this->other_id->destroy(this->other_id);
 	
-	allocator_free(this);
+	free(this);
 	return SUCCESS;
 }
 
@@ -363,7 +362,7 @@ static policy_t *clone(private_policy_t *this)
  */
 policy_t *policy_create(identification_t *my_id, identification_t *other_id)
 {
-	private_policy_t *this = allocator_alloc_thing(private_policy_t);
+	private_policy_t *this = malloc_thing(private_policy_t);
 
 	/* public functions */
 	this->public.get_my_id = (identification_t*(*)(policy_t*))get_my_id;

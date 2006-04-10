@@ -31,7 +31,6 @@
 #include <queues/job_queue.h>
 #include <queues/jobs/job.h>
 #include <queues/jobs/incoming_packet_job.h>
-#include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
 
@@ -103,7 +102,7 @@ static void destroy(private_receiver_t *this)
 	pthread_join(this->assigned_thread, NULL);
 	this->logger->log(this->logger, CONTROL | LEVEL1, "Receiver thread terminated");
 
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -111,17 +110,17 @@ static void destroy(private_receiver_t *this)
  */
 receiver_t * receiver_create()
 {
-	private_receiver_t *this = allocator_alloc_thing(private_receiver_t);
+	private_receiver_t *this = malloc_thing(private_receiver_t);
 
 	this->public.destroy = (void(*)(receiver_t*)) destroy;
 	this->receive_packets = receive_packets;
 	
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, RECEIVER);
+	this->logger = logger_manager->get_logger(logger_manager, RECEIVER);
 	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->receive_packets, this) != 0)
 	{
 		this->logger->log(this->logger, ERROR, "Receiver thread could not be started");
-		allocator_free(this);
+		free(this);
 		charon->kill(charon, "Unable to create receiver thread");
 	}
 

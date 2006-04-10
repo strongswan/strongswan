@@ -23,8 +23,6 @@
 
 #include "packet.h"
 
-#include <utils/allocator.h>
-
 
 typedef struct private_packet_t private_packet_t;
 
@@ -107,7 +105,7 @@ static chunk_t get_data(private_packet_t *this)
  */
 static void set_data(private_packet_t *this, chunk_t data)
 {
-	allocator_free(this->data.ptr);
+	free(this->data.ptr);
 	this->data = data;
 }
 
@@ -124,8 +122,8 @@ static void destroy(private_packet_t *this)
 	{
 		this->destination->destroy(this->destination);
 	}
-	allocator_free(this->data.ptr);
-	allocator_free(this);
+	free(this->data.ptr);
+	free(this);
 }
 
 /**
@@ -156,7 +154,7 @@ static packet_t *clone(private_packet_t *this)
 	/* only clone existing chunks :-) */
 	if (this->data.ptr != NULL)
 	{
-		other->data.ptr = allocator_clone_bytes(this->data.ptr,this->data.len);
+		other->data.ptr = clalloc(this->data.ptr,this->data.len);
 		other->data.len = this->data.len;
 	}
 	else
@@ -172,7 +170,7 @@ static packet_t *clone(private_packet_t *this)
  */
 packet_t *packet_create()
 {
-	private_packet_t *this = allocator_alloc_thing(private_packet_t);
+	private_packet_t *this = malloc_thing(private_packet_t);
 
 	this->public.set_data = (void(*) (packet_t *,chunk_t)) set_data;
 	this->public.get_data = (chunk_t(*) (packet_t *)) get_data;

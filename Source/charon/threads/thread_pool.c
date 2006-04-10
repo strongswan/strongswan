@@ -35,7 +35,6 @@
 #include <queues/jobs/initiate_ike_sa_job.h>
 #include <queues/jobs/retransmit_request_job.h>
 #include <encoding/payloads/notify_payload.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 
 
@@ -292,8 +291,10 @@ static void process_incoming_packet_job(private_thread_pool_t *this, incoming_pa
 
 	if (status == CREATED)
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "Create Job to delete half open IKE_SA.");
-		this->create_delete_half_open_ike_sa_job(this,ike_sa_id,charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
+		this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, 
+								 "Create Job to delete half open IKE_SA.");
+		this->create_delete_half_open_ike_sa_job(this,ike_sa_id, 
+				charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
 	}
 
 	status = ike_sa->process_message(ike_sa, message);
@@ -349,7 +350,8 @@ static void process_initiate_ike_sa_job(private_thread_pool_t *this, initiate_ik
 	}
 
 	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL3, "Create Job to delete half open IKE_SA.");
-	this->create_delete_half_open_ike_sa_job(this,ike_sa->get_id(ike_sa),charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
+	this->create_delete_half_open_ike_sa_job(this,ike_sa->get_id(ike_sa),
+											 charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
 	
 	this->worker_logger->log(this->worker_logger, CONTROL|LEVEL2, "Checking in IKE SA");
 	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
@@ -543,19 +545,25 @@ static void destroy(private_thread_pool_t *this)
 	int current;
 	/* flag thread for termination */
 	for (current = 0; current < this->pool_size; current++) {
-		this->pool_logger->log(this->pool_logger, CONTROL, "cancelling worker a thread #%d", current+1);
+		this->pool_logger->log(this->pool_logger, CONTROL, "cancelling worker thread #%d", current+1);
 		pthread_cancel(this->threads[current]);
 	}
 	
 	/* wait for all threads */
 	for (current = 0; current < this->pool_size; current++) {
-		pthread_join(this->threads[current], NULL);
-		this->pool_logger->log(this->pool_logger, CONTROL, "worker thread #%d terminated", current+1);
-	}	
+		if (pthread_join(this->threads[current], NULL) == 0)
+		{
+			this->pool_logger->log(this->pool_logger, CONTROL, "worker thread #%d terminated", current+1);
+		}
+		else
+		{
+			this->pool_logger->log(this->pool_logger, ERROR, "could not terminate worker thread #%d", current+1);
+		}
+	}
 
 	/* free mem */
-	allocator_free(this->threads);
-	allocator_free(this);
+	free(this->threads);
+	free(this);
 }
 
 /*
@@ -565,7 +573,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 {
 	int current;
 	
-	private_thread_pool_t *this = allocator_alloc_thing(private_thread_pool_t);
+	private_thread_pool_t *this = malloc_thing(private_thread_pool_t);
 	
 	/* fill in public fields */
 	this->public.destroy = (void(*)(thread_pool_t*))destroy;
@@ -581,11 +589,11 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	
 	this->pool_size = pool_size;
 	
-	this->threads = allocator_alloc(sizeof(pthread_t) * pool_size);
+	this->threads = malloc(sizeof(pthread_t) * pool_size);
 
-	this->pool_logger = charon->logger_manager->get_logger(charon->logger_manager, THREAD_POOL);
+	this->pool_logger = logger_manager->get_logger(logger_manager, THREAD_POOL);
 
-	this->worker_logger = charon->logger_manager->get_logger(charon->logger_manager, WORKER);
+	this->worker_logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	/* try to create as many threads as possible, up tu pool_size */
 	for (current = 0; current < pool_size; current++) 
@@ -600,8 +608,8 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 			if (current == 0) 
 			{
 				this->pool_logger->log(this->pool_logger, ERROR, "Could not create any thread");
-				allocator_free(this->threads);
-				allocator_free(this);
+				free(this->threads);
+				free(this);
 				return NULL;
 			}
 			/* not all threads could be created, but at least one :-/ */

@@ -23,10 +23,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 #include "identification.h"
-
-#include <utils/allocator.h>
 
 /** 
  * String mappings for id_type_t.
@@ -145,8 +144,8 @@ static identification_t *clone(private_identification_t *this)
 	private_identification_t *clone = identification_create();
 	
 	clone->type = this->type;
-	clone->encoded = allocator_clone_chunk(this->encoded);
-	clone->string = allocator_alloc(strlen(this->string) + 1);
+	clone->encoded = chunk_clone(this->encoded);
+	clone->string = malloc(strlen(this->string) + 1);
 	strcpy(clone->string, this->string);
 	
 	return &clone->public;
@@ -157,9 +156,9 @@ static identification_t *clone(private_identification_t *this)
  */
 static void destroy(private_identification_t *this)
 {
-	allocator_free(this->string);
-	allocator_free(this->encoded.ptr);
-	allocator_free(this);	
+	free(this->string);
+	free(this->encoded.ptr);
+	free(this);	
 }
 
 /*
@@ -169,7 +168,7 @@ static void destroy(private_identification_t *this)
  */
 static private_identification_t *identification_create()
 {
-	private_identification_t *this = allocator_alloc_thing(private_identification_t);
+	private_identification_t *this = malloc_thing(private_identification_t);
 	
 	this->public.equals = (bool (*) (identification_t*,identification_t*))equals;
 	this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to;
@@ -200,15 +199,15 @@ identification_t *identification_create_from_string(id_type_t type, char *string
 		{
 			/* convert string */
 			this->encoded.len = 4;
-			this->encoded.ptr = allocator_alloc(this->encoded.len);
+			this->encoded.ptr = malloc(this->encoded.len);
 			if (inet_aton(string, ((struct in_addr*)(this->encoded.ptr))) == 0)
 			{
-				allocator_free(this->encoded.ptr);
-				allocator_free(this);
+				free(this->encoded.ptr);
+				free(this);
 				return NULL;
 			}
 			/* clone string */
-			this->string = allocator_alloc(strlen(string)+1);
+			this->string = malloc(strlen(string)+1);
 			strcpy(this->string, string);
 			return &(this->public);
 		}
@@ -221,7 +220,7 @@ identification_t *identification_create_from_string(id_type_t type, char *string
 		default:
 		{
 			/* not supported */
-			allocator_free(this);
+			free(this);
 			return NULL;
 		}
 	}
@@ -235,7 +234,7 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 	char *string;
 	private_identification_t *this = identification_create();
 	
-	this->encoded = allocator_clone_chunk(encoded);
+	this->encoded = chunk_clone(encoded);
 	
 	this->type = type;
 	switch (type)
@@ -284,7 +283,7 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 	/* build string, must be cloned since 
 	 * inet_ntoa points to a subsequently 
 	 * overwritten buffer */
-	this->string = allocator_alloc(strlen(string)+1);
+	this->string = malloc(strlen(string)+1);
 	strcpy(this->string, string);
 	
 	return &(this->public);

@@ -19,15 +19,14 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-/* offsetof macro */
+
 #include <stddef.h>
+#include <string.h>
 
 #include "encryption_payload.h"
 
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 #include <utils/logger.h>
 #include <encoding/generator.h>
@@ -303,7 +302,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	
 	/* concatenate payload data, padding, padding len */
 	to_crypt.len = this->decrypted.len + padding.len + 1;
-	to_crypt.ptr = allocator_alloc(to_crypt.len);
+	to_crypt.ptr = malloc(to_crypt.len);
 
 	memcpy(to_crypt.ptr, this->decrypted.ptr, this->decrypted.len);
 	memcpy(to_crypt.ptr + this->decrypted.len, padding.ptr, padding.len);
@@ -315,22 +314,22 @@ static status_t encrypt(private_encryption_payload_t *this)
 	randomizer->destroy(randomizer);
 	if (status != SUCCESS)
 	{
-		allocator_free_chunk(&to_crypt);
-		allocator_free_chunk(&padding);
+		chunk_free(&to_crypt);
+		chunk_free(&padding);
 		return status;
 	}
 	
 	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before encryption with padding", to_crypt);
 		
 	/* encrypt to_crypt chunk */
-	allocator_free(this->encrypted.ptr);
+	free(this->encrypted.ptr);
 	status = this->crypter->encrypt(this->crypter, to_crypt, iv, &result);
-	allocator_free(padding.ptr);
-	allocator_free(to_crypt.ptr);
+	free(padding.ptr);
+	free(to_crypt.ptr);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL1, "encryption failed");
-		allocator_free(iv.ptr);
+		free(iv.ptr);
 		return status;
 	}
 	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after encryption", result);
@@ -338,15 +337,15 @@ static status_t encrypt(private_encryption_payload_t *this)
 	
 	/* build encrypted result with iv and signature */
 	this->encrypted.len = iv.len + result.len + this->signer->get_block_size(this->signer);
-	allocator_free(this->encrypted.ptr);
-	this->encrypted.ptr = allocator_alloc(this->encrypted.len);
+	free(this->encrypted.ptr);
+	this->encrypted.ptr = malloc(this->encrypted.len);
 	
 	/* fill in result, signature is left out */
 	memcpy(this->encrypted.ptr, iv.ptr, iv.len);
 	memcpy(this->encrypted.ptr + iv.len, result.ptr, result.len);
 	
-	allocator_free(result.ptr);
-	allocator_free(iv.ptr);
+	free(result.ptr);
+	free(iv.ptr);
 	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after encryption with IV and (invalid) signature", this->encrypted);
 	
 	return SUCCESS;
@@ -391,7 +390,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	}
 	
 	/* free previus data, if any */
-	allocator_free(this->decrypted.ptr);
+	free(this->decrypted.ptr);
 	
 	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before decryption", concatenated);
 	
@@ -419,7 +418,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	}
 	
 	/* free padding */
-	this->decrypted.ptr = allocator_realloc(this->decrypted.ptr, this->decrypted.len);
+	this->decrypted.ptr = realloc(this->decrypted.ptr, this->decrypted.len);
 	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after decryption without padding", this->decrypted);
 	this->logger->log(this->logger, CONTROL|LEVEL2, "decryption successful, trying to parse content");
 	return (this->parse(this));
@@ -518,7 +517,7 @@ static void generate(private_encryption_payload_t *this)
 	{
 		/* no paylads? */
 		this->logger->log(this->logger, CONTROL|LEVEL1, "generating contained payloads, but no available");
-		allocator_free(this->decrypted.ptr);
+		free(this->decrypted.ptr);
 		this->decrypted = CHUNK_INITIALIZER;
 		iterator->destroy(iterator);
 		return;
@@ -541,7 +540,7 @@ static void generate(private_encryption_payload_t *this)
 	generator->generate_payload(generator, current_payload);
 	
 	/* free already generated data */
-	allocator_free(this->decrypted.ptr);
+	free(this->decrypted.ptr);
 	
 	generator->write_to_chunk(generator, &(this->decrypted));
 	generator->destroy(generator);
@@ -649,9 +648,9 @@ static void destroy(private_encryption_payload_t *this)
 		current_payload->destroy(current_payload);
 	}
 	this->payloads->destroy(this->payloads);
-	allocator_free(this->encrypted.ptr);
-	allocator_free(this->decrypted.ptr);
-	allocator_free(this);
+	free(this->encrypted.ptr);
+	free(this->decrypted.ptr);
+	free(this);
 }
 
 /*
@@ -659,7 +658,7 @@ static void destroy(private_encryption_payload_t *this)
  */
 encryption_payload_t *encryption_payload_create()
 {
-	private_encryption_payload_t *this = allocator_alloc_thing(private_encryption_payload_t);
+	private_encryption_payload_t *this = malloc_thing(private_encryption_payload_t);
 	
 	/* payload_t interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
@@ -687,7 +686,7 @@ encryption_payload_t *encryption_payload_create()
 	this->compute_length = compute_length;
 	this->generate = generate;
 	this->parse = parse;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, ENCRYPTION_PAYLOAD);
+	this->logger = logger_manager->get_logger(logger_manager, ENCRYPTION_PAYLOAD);
 	
 	/* set default values of the fields */
 	this->critical = FALSE;

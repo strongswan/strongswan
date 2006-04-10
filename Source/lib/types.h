@@ -146,6 +146,27 @@ struct chunk_t {
 extern chunk_t CHUNK_INITIALIZER;
 
 /**
+ * Clone chunk contents in a newly allocated chunk
+ */
+chunk_t chunk_clone(chunk_t chunk);
+
+/**
+ * Free contents of a chunk
+ */
+void chunk_free(chunk_t *chunk);
+
+/**
+ * Allocate a chunk
+ */
+chunk_t chunk_alloc(size_t bytes);
+
+/**
+ * Clone a data to a newly allocated buffer
+ */
+void *clalloc(void *pointer, size_t size);
+
+
+/**
  * General purpose boolean type.
  */
 typedef int bool;

@@ -19,8 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
- /* offsetof macro */
+
 #include <stddef.h>
 
 #include "transform_substructure.h"
@@ -28,7 +27,6 @@
 #include <encoding/payloads/transform_attribute.h>
 #include <encoding/payloads/encodings.h>
 #include <types.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 
@@ -420,7 +418,7 @@ static void destroy(private_transform_substructure_t *this)
 	}
 	this->attributes->destroy(this->attributes);
 	
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -428,7 +426,7 @@ static void destroy(private_transform_substructure_t *this)
  */
 transform_substructure_t *transform_substructure_create()
 {
-	private_transform_substructure_t *this = allocator_alloc_thing(private_transform_substructure_t);
+	private_transform_substructure_t *this = malloc_thing(private_transform_substructure_t);
 
 	/* payload interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

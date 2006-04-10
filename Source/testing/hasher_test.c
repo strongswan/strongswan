@@ -21,10 +21,8 @@
  */
 
 #include <string.h>
- 
-#include "hasher_test.h"
 
-#include <utils/allocator.h>
+#include "hasher_test.h"
 
 
 /* 
@@ -89,7 +87,7 @@ void test_md5_hasher(protected_tester_t *tester)
 	hasher->allocate_hash(hasher, abcd, &hash_chunk);
 	tester->assert_true(tester, hash_chunk.len == 16, "hash len");
 	tester->assert_false(tester, memcmp(hash_chunk.ptr, hash_abcd, hash_chunk.len), "hash for abcd...");
-	allocator_free(hash_chunk.ptr);
+	free(hash_chunk.ptr);
 	hasher->destroy(hasher);
 }
 
@@ -150,7 +148,7 @@ void test_sha1_hasher(protected_tester_t *tester)
 	hasher->allocate_hash(hasher, abcdb, &hash_chunk);
 	tester->assert_true(tester, hash_chunk.len == 20, "chunk len");
 	tester->assert_false(tester, memcmp(hash_chunk.ptr, hash_abcdb, hash_chunk.len), "hash for abcdb...");
-	allocator_free(hash_chunk.ptr);
+	free(hash_chunk.ptr);
 	
 	/* updating, using "aaaaaaa..." */
 	hasher->reset(hasher);

@@ -19,15 +19,14 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-/* offsetof macro */
+
+#include <string.h>
 #include <stddef.h>
 
 #include "transform_attribute.h"
 
 #include <encoding/payloads/encodings.h>
 #include <types.h>
-#include <utils/allocator.h>
 
 typedef struct private_transform_attribute_t private_transform_attribute_t;
 
@@ -170,7 +169,7 @@ static void set_value_chunk(private_transform_attribute_t *this, chunk_t value)
 	if (this->attribute_value.ptr != NULL)
 	{
 		/* free existing value */
-		allocator_free(this->attribute_value.ptr);
+		free(this->attribute_value.ptr);
 		this->attribute_value.ptr = NULL;
 		this->attribute_value.len = 0;
 		
@@ -178,7 +177,7 @@ static void set_value_chunk(private_transform_attribute_t *this, chunk_t value)
 	
 	if (value.len > 2)
 	{
-		this->attribute_value.ptr = allocator_clone_bytes(value.ptr,value.len);
+		this->attribute_value.ptr = clalloc(value.ptr,value.len);
 		this->attribute_value.len = value.len;
 		this->attribute_length_or_value = value.len;
 		/* attribute has not a fixed length */
@@ -198,7 +197,7 @@ static void set_value(private_transform_attribute_t *this, u_int16_t value)
 	if (this->attribute_value.ptr != NULL)
 	{
 		/* free existing value */
-		allocator_free(this->attribute_value.ptr);
+		free(this->attribute_value.ptr);
 		this->attribute_value.ptr = NULL;
 		this->attribute_value.len = 0;
 		
@@ -267,7 +266,7 @@ static transform_attribute_t * clone(private_transform_attribute_t *this)
 	
 	if (!new_clone->attribute_format)
 	{
-		new_clone->attribute_value.ptr = allocator_clone_bytes(this->attribute_value.ptr,this->attribute_value.len);		
+		new_clone->attribute_value.ptr = clalloc(this->attribute_value.ptr,this->attribute_value.len);		
 		new_clone->attribute_value.len = this->attribute_value.len;
 	}
 	
@@ -281,9 +280,9 @@ static void destroy(private_transform_attribute_t *this)
 {
 	if (this->attribute_value.ptr != NULL)
 	{
-		allocator_free(this->attribute_value.ptr);
+		free(this->attribute_value.ptr);
 	}	
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -291,7 +290,7 @@ static void destroy(private_transform_attribute_t *this)
  */
 transform_attribute_t *transform_attribute_create()
 {
-	private_transform_attribute_t *this = allocator_alloc_thing(private_transform_attribute_t);
+	private_transform_attribute_t *this = malloc_thing(private_transform_attribute_t);
 
 	/* payload interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

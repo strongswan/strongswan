@@ -19,11 +19,12 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
+#include <string.h>
+
 #include "ike_auth_requested.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/id_payload.h>
@@ -329,11 +330,11 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	}
 	else
 	{
-		seed = allocator_alloc_as_chunk(this->sent_nonce.len + this->received_nonce.len);
+		seed = chunk_alloc(this->sent_nonce.len + this->received_nonce.len);
 		memcpy(seed.ptr, this->sent_nonce.ptr, this->sent_nonce.len);
 		memcpy(seed.ptr + this->sent_nonce.len, this->received_nonce.ptr, this->received_nonce.len);
 		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
-		allocator_free_chunk(&seed);
+		chunk_free(&seed);
 		
 		status = this->child_sa->update(this->child_sa, this->proposal, prf_plus);
 		prf_plus->destroy(prf_plus);
@@ -571,9 +572,9 @@ static ike_sa_state_t get_state(private_ike_auth_requested_t *this)
  */
 static void destroy(private_ike_auth_requested_t *this)
 {
-	allocator_free_chunk(&(this->received_nonce));
-	allocator_free_chunk(&(this->sent_nonce));
-	allocator_free_chunk(&(this->ike_sa_init_reply_data));
+	chunk_free(&(this->received_nonce));
+	chunk_free(&(this->sent_nonce));
+	chunk_free(&(this->ike_sa_init_reply_data));
 	if (this->child_sa)
 	{
 		this->child_sa->destroy(this->child_sa);
@@ -600,16 +601,16 @@ static void destroy(private_ike_auth_requested_t *this)
 	{
 		this->proposal->destroy(this->proposal);
 	}
-	allocator_free(this);
+	free(this);
 }
 /**
  * Implements protected_ike_sa_t.destroy_after_state_change
  */
 static void destroy_after_state_change(private_ike_auth_requested_t *this)
 {
-	allocator_free_chunk(&(this->received_nonce));
-	allocator_free_chunk(&(this->sent_nonce));
-	allocator_free_chunk(&(this->ike_sa_init_reply_data));
+	chunk_free(&(this->received_nonce));
+	chunk_free(&(this->sent_nonce));
+	chunk_free(&(this->ike_sa_init_reply_data));
 	if (this->my_ts)
 	{
 		traffic_selector_t *ts;
@@ -632,7 +633,7 @@ static void destroy_after_state_change(private_ike_auth_requested_t *this)
 	{
 		this->proposal->destroy(this->proposal);
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /* 
@@ -640,7 +641,7 @@ static void destroy_after_state_change(private_ike_auth_requested_t *this)
  */
 ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk_t sent_nonce,chunk_t received_nonce,chunk_t ike_sa_init_reply_data, child_sa_t *child_sa)
 {
-	private_ike_auth_requested_t *this = allocator_alloc_thing(private_ike_auth_requested_t);
+	private_ike_auth_requested_t *this = malloc_thing(private_ike_auth_requested_t);
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
@@ -660,7 +661,7 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk
 	this->received_nonce = received_nonce;
 	this->sent_nonce = sent_nonce;
 	this->ike_sa_init_reply_data = ike_sa_init_reply_data;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	this->my_ts = NULL;
 	this->other_ts = NULL;
 	this->proposal = NULL;

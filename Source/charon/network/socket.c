@@ -40,7 +40,6 @@
 #include "socket.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
 
@@ -218,7 +217,7 @@ status_t receiver(private_socket_t *this, packet_t **packet)
 
 	/* fill in packet */
 	data.len = bytes_read - IP_HEADER_LENGTH - UDP_HEADER_LENGTH;
-	data.ptr = allocator_alloc(data.len);
+	data.ptr = malloc(data.len);
 	memcpy(data.ptr, buffer + IP_HEADER_LENGTH + UDP_HEADER_LENGTH, data.len);
 	pkt->set_data(pkt, data);
 
@@ -367,7 +366,7 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 		}
 		
 		/* add socket with interface name to list */
-		interface = allocator_alloc_thing(interface_t);
+		interface = malloc_thing(interface_t);
  		memcpy(interface->name, buf[i].ifr_name, IFNAMSIZ);
  		interface->name[IFNAMSIZ-1] = '\0';
 		interface->socket_fd = skt;
@@ -424,11 +423,11 @@ static void destroy(private_socket_t *this)
 	{
 		interface->address->destroy(interface->address);
 		close(interface->socket_fd);
-		allocator_free(interface);
+		free(interface);
 	}
 	this->interfaces->destroy(this->interfaces);
 	close(this->master_fd);
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -436,7 +435,7 @@ static void destroy(private_socket_t *this)
  */
 socket_t *socket_create(u_int16_t port)
 {
-	private_socket_t *this = allocator_alloc_thing(private_socket_t);
+	private_socket_t *this = malloc_thing(private_socket_t);
 
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
@@ -444,7 +443,7 @@ socket_t *socket_create(u_int16_t port)
 	this->public.is_listening_on = (bool (*)(socket_t*,host_t*))is_listening_on;
 	this->public.destroy = (void(*)(socket_t*)) destroy;
 	
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, SOCKET);
+	this->logger = logger_manager->get_logger(logger_manager, SOCKET);
 	this->interfaces = linked_list_create();
 	
 	if (build_interface_list(this, port) != SUCCESS)

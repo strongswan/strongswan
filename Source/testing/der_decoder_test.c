@@ -24,7 +24,6 @@
 
 #include <daemon.h>
 #include <asn1/der_decoder.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 
 

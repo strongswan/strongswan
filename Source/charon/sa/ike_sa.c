@@ -19,13 +19,13 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+#include <string.h>
 
 #include "ike_sa.h"
 
 #include <types.h>
 #include <daemon.h>
 #include <definitions.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
 #include <utils/randomizer.h>
@@ -526,12 +526,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	}
 	
 	/* concatenate nonces =  nonce_i | nonce_r */
-	nonces = allocator_alloc_as_chunk(nonce_i.len + nonce_r.len);
+	nonces = chunk_alloc(nonce_i.len + nonce_r.len);
 	memcpy(nonces.ptr, nonce_i.ptr, nonce_i.len);
 	memcpy(nonces.ptr + nonce_i.len, nonce_r.ptr, nonce_r.len);
 
 	/* concatenate prf_seed = nonce_i | nonce_r | spi_i | spi_r */
-	nonces_spis = allocator_alloc_as_chunk(nonces.len + 16);
+	nonces_spis = chunk_alloc(nonces.len + 16);
 	memcpy(nonces_spis.ptr, nonces.ptr, nonces.len);
 	spi_i = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
 	spi_r = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
@@ -544,7 +544,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	this->prf->set_key(this->prf, nonces);
 	this->prf->allocate_bytes(this->prf, secret, &skeyseed);
 	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "SKEYSEED", skeyseed);
-	allocator_free_chunk(&secret);
+	chunk_free(&secret);
 
 	/* prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr )
 	 * = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr
@@ -555,9 +555,9 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	prf_plus = prf_plus_create(this->prf, nonces_spis);
 	
 	/* clean up unused stuff */
-	allocator_free_chunk(&nonces);
-	allocator_free_chunk(&nonces_spis);
-	allocator_free_chunk(&skeyseed);
+	chunk_free(&nonces);
+	chunk_free(&nonces_spis);
+	chunk_free(&skeyseed);
 	
 	
 	/*
@@ -572,7 +572,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", key);
 	this->child_prf->set_key(this->child_prf, key);
-	allocator_free_chunk(&key);
+	chunk_free(&key);
 	
 	
 	/* SK_ai/SK_ar used for integrity protection */
@@ -605,12 +605,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", key);
 	this->signer_initiator->set_key(this->signer_initiator, key);
-	allocator_free_chunk(&key);
+	chunk_free(&key);
 
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", key);
 	this->signer_responder->set_key(this->signer_responder, key);
-	allocator_free_chunk(&key);
+	chunk_free(&key);
 	
 	
 	/* SK_ei/SK_er used for encryption */
@@ -644,12 +644,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", key);
 	this->crypter_initiator->set_key(this->crypter_initiator, key);
-	allocator_free_chunk(&key);
+	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", key);
 	this->crypter_responder->set_key(this->crypter_responder, key);
-	allocator_free_chunk(&key);
+	chunk_free(&key);
 	
 	/* SK_pi/SK_pr used for authentication */
 	proposal->get_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, &algo);
@@ -669,12 +669,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", key);
 	this->prf_auth_i->set_key(this->prf_auth_i, key);
-	allocator_free_chunk(&key);
+	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pr secret", key);
 	this->prf_auth_r->set_key(this->prf_auth_r, key);
-	allocator_free_chunk(&key);
+	chunk_free(&key);
 	
 	/* all done, prf_plus not needed anymore */
 	prf_plus->destroy(prf_plus);
@@ -1038,7 +1038,7 @@ static void destroy (private_ike_sa_t *this)
 	this->randomizer->destroy(this->randomizer);
 	this->current_state->destroy(this->current_state);
 
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -1046,7 +1046,7 @@ static void destroy (private_ike_sa_t *this)
  */
 ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 {
-	private_ike_sa_t *this = allocator_alloc_thing(private_ike_sa_t);
+	private_ike_sa_t *this = malloc_thing(private_ike_sa_t);
 
 	/* Public functions */
 	this->protected.public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
@@ -1090,7 +1090,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->resend_last_reply = resend_last_reply;
 
 	/* initialize private fields */
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();

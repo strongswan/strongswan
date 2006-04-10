@@ -24,7 +24,6 @@
 
 #include "parser_test.h"
 
-#include <utils/allocator.h>
 #include <utils/logger_manager.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
@@ -264,7 +263,7 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 	
 	if (status == SUCCESS)
 	{
-		allocator_free(ike_proposals);
+		free(ike_proposals);
 	}
 	*/
 	sa_payload->destroy(sa_payload);
@@ -398,7 +397,7 @@ void test_parser_with_sa_payload(protected_tester_t *tester)
 	
 	if (status == SUCCESS)
 	{
-		allocator_free(proposals);
+		free(proposals);
 	}
 	*/
 	
@@ -440,7 +439,7 @@ void test_parser_with_nonce_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(result.len == 16), "parsed nonce lenght");
 	tester->assert_false(tester,(memcmp(nonce_bytes + 4, result.ptr, result.len)), "parsed nonce data");
 	nonce_payload->destroy(nonce_payload);
-	allocator_free_chunk(&result);
+	chunk_free(&result);
 }
 
 /*
@@ -480,7 +479,7 @@ void test_parser_with_id_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
 	tester->assert_false(tester,(memcmp(id_bytes + 8, result.ptr, result.len)), "parsed nonce data");
 	id_payload->destroy(id_payload);
-	allocator_free_chunk(&result);
+	chunk_free(&result);
 }
 
 
@@ -605,7 +604,7 @@ void test_parser_with_auth_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
 	tester->assert_false(tester,(memcmp(auth_bytes + 8, result.ptr, result.len)), "parsed nonce data");
 	auth_payload->destroy(auth_payload);
-	allocator_free_chunk(&result);
+	chunk_free(&result);
 }
 
 /*
@@ -731,7 +730,7 @@ void test_parser_with_cert_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
 	tester->assert_false(tester,(memcmp(cert_bytes + 5, result.ptr, result.len)), "parsed data");
 	cert_payload->destroy(cert_payload);
-	allocator_free_chunk(&result);
+	chunk_free(&result);
 }
 
 /*
@@ -770,7 +769,7 @@ void test_parser_with_certreq_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
 	tester->assert_false(tester,(memcmp(certreq_bytes + 5, result.ptr, result.len)), "parsed data");
 	certreq_payload->destroy(certreq_payload);
-	allocator_free_chunk(&result);
+	chunk_free(&result);
 }
 
 /*

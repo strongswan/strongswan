@@ -22,13 +22,13 @@
 
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 #include "parser.h"
 
 #include <types.h>
 #include <definitions.h>
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 #include <utils/linked_list.h>
 #include <encoding/payloads/encodings.h>
@@ -566,7 +566,7 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 	if (output_pos != NULL)
 	{
 		output_pos->len = length;
-		output_pos->ptr = allocator_alloc(length);
+		output_pos->ptr = malloc(length);
 		memcpy(output_pos->ptr, this->byte_pos, length);
 	}
 	this->byte_pos += length;
@@ -1027,7 +1027,7 @@ static void reset_context (private_parser_t *this)
  */
 static void destroy(private_parser_t *this)
 {
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -1035,9 +1035,9 @@ static void destroy(private_parser_t *this)
  */
 parser_t *parser_create(chunk_t data)
 {
-	private_parser_t *this = allocator_alloc_thing(private_parser_t);
+	private_parser_t *this = malloc_thing(private_parser_t);
 	
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, PARSER);
+	this->logger = logger_manager->get_logger(logger_manager, PARSER);
 	
 	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**)) parse_payload;
 	this->public.reset_context = (void(*)(parser_t*)) reset_context;

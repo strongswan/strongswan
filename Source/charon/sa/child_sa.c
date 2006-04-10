@@ -23,7 +23,6 @@
 #include "child_sa.h"
 
 
-#include <utils/allocator.h>
 #include <daemon.h>
 
 
@@ -305,11 +304,11 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 			/* clean up for next round */
 			if (enc_algo != ENCR_UNDEFINED)
 			{
-				allocator_free_chunk(&enc_key);
+				chunk_free(&enc_key);
 			}
 			if (int_algo != AUTH_UNDEFINED)
 			{
-				allocator_free_chunk(&int_key);
+				chunk_free(&int_key);
 			}
 			
 			if (status != SUCCESS)
@@ -396,7 +395,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			{
 				continue;
 			}
-			policy = allocator_alloc_thing(sa_policy_t);
+			policy = malloc_thing(sa_policy_t);
 			policy->upper_proto = my_ts->get_protocol(my_ts);
 		
 			/* calculate net and ports for local side */
@@ -407,7 +406,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			from_port = (from_port != to_port) ? 0 : from_port;
 			policy->my_net = host_create_from_chunk(family, from_addr, from_port);
 			policy->my_net_mask = my_ts->get_netmask(my_ts);
-			allocator_free_chunk(&from_addr);
+			chunk_free(&from_addr);
 			
 			/* calculate net and ports for remote side */
 			family = other_ts->get_type(other_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
@@ -417,7 +416,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			from_port = (from_port != to_port) ? 0 : from_port;
 			policy->other_net = host_create_from_chunk(family, from_addr, from_port);
 			policy->other_net_mask = other_ts->get_netmask(other_ts);
-			allocator_free_chunk(&from_addr);
+			chunk_free(&from_addr);
 	
 			/* install 3 policies: out, in and forward */
 			status = charon->kernel_interface->add_policy(charon->kernel_interface,
@@ -448,7 +447,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			{
 				my_iter->destroy(my_iter);
 				other_iter->destroy(other_iter);
-				allocator_free(policy);
+				free(policy);
 				return status;
 			}
 			
@@ -491,7 +490,7 @@ static void destroy(private_child_sa_t *this)
 		
 		policy->my_net->destroy(policy->my_net);
 		policy->other_net->destroy(policy->other_net);
-		allocator_free(policy);
+		free(policy);
 	}
 	this->policies->destroy(this->policies);
 	
@@ -510,7 +509,7 @@ static void destroy(private_child_sa_t *this)
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 										 this->me, this->other_esp_spi, PROTO_ESP);
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -519,7 +518,7 @@ static void destroy(private_child_sa_t *this)
 child_sa_t * child_sa_create(host_t *me, host_t* other)
 {
 	static u_int32_t reqid = 0xc0000000;
-	private_child_sa_t *this = allocator_alloc_thing(private_child_sa_t);
+	private_child_sa_t *this = malloc_thing(private_child_sa_t);
 
 	/* public functions */
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
@@ -529,7 +528,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other)
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, CHILD_SA);
+	this->logger = logger_manager->get_logger(logger_manager, CHILD_SA);
 	this->me = me;
 	this->other = other;
 	this->my_ah_spi = 0;

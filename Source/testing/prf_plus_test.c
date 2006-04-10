@@ -25,7 +25,6 @@
 #include "prf_plus_test.h"
 
 #include <crypto/prf_plus.h>
-#include <utils/allocator.h>
 
 
 /* 

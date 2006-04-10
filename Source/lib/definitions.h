@@ -202,11 +202,26 @@
  */
 #define POS printf("%s, line %d\n", __FILE__, __LINE__)
 
+
+
+
 /**
- * Papping entry which defines the end of a mapping_t array.
+ * Macro to allocate a type as chunk_t.
+ * 
+ * @param thing 	object on which a sizeof is performed
+ * @return 			chunk_t pointing to allocated memory
+ */
+#define malloc_thing(thing) ((thing*)malloc(sizeof(thing)))
+
+
+
+
+
+
+/**
+ * Mapping entry which defines the end of a mapping_t array.
  */
 #define MAPPING_END (-1)
-
 
 typedef struct mapping_t mapping_t;
 

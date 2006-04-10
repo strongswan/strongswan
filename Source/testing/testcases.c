@@ -32,7 +32,6 @@
 #include <sa/ike_sa_manager.h>
 #include <network/socket.h>
 #include <utils/logger_manager.h>
-#include <utils/allocator.h>
 #include <utils/tester.h>
 #include "linked_list_test.h"
 #include "thread_pool_test.h"
@@ -64,6 +63,7 @@
 #include "child_sa_test.h"
 #include "der_decoder_test.h"
 #include "certificate_test.h"
+#include "leak_detective_test.h"
 
 /* output for test messages */
 extern FILE * stderr;
@@ -132,13 +132,13 @@ test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 test_t child_sa_test = {test_child_sa, "Child SA"};
 test_t der_decoder_test = {test_der_decoder, "DER decoder"};
 test_t certificate_test = {test_certificate, "X509 Certificate"};
+test_t leak_detective_test = {test_leak_detective, "LEAK detective"};
 
 
 daemon_t* charon;
 
 static void daemon_kill(daemon_t *this, char* none)
 {
-	this->logger_manager->destroy(this->logger_manager);
 	//this->socket->destroy(this->socket);
 	this->ike_sa_manager->destroy(this->ike_sa_manager);
 	this->job_queue->destroy(this->job_queue);
@@ -146,7 +146,7 @@ static void daemon_kill(daemon_t *this, char* none)
 	this->send_queue->destroy(this->send_queue);
 	this->kernel_interface->destroy(this->kernel_interface);
 	//this->configuration->destroy(this->configuration);
-	allocator_free(charon);
+	free(charon);
 }
 
 /**
@@ -156,12 +156,11 @@ static void daemon_kill(daemon_t *this, char* none)
  */
 daemon_t *daemon_create()
 {	
-	charon = allocator_alloc_thing(daemon_t);
+	charon = malloc_thing(daemon_t);
 		
 	/* assign methods */
 	charon->kill = daemon_kill;
 	
-	charon->logger_manager = logger_manager_create(0);
 	//charon->socket = socket_create(4510);
 	charon->ike_sa_manager = ike_sa_manager_create();
 	charon->job_queue = job_queue_create();
@@ -247,29 +246,21 @@ int main()
 	};
 	/* get rid of compiler warning ;-) */
 	*all_tests = *all_tests;
-	
-	/* allocator needs initialization */
-	allocator_init();
  
 	daemon_create();
  
-	//charon->logger_manager->enable_log_level(charon->logger_manager, ALL_LOGGERS, FULL);
-	charon->logger_manager->set_output(charon->logger_manager, ALL_LOGGERS, stdout);
+	//logger_manager->enable_log_level(logger_manager, ALL_LOGGERS, FULL);
+	logger_manager->set_output(logger_manager, ALL_LOGGERS, stdout);
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&rsa_test);
+	tester->perform_test(tester,&leak_detective_test);
 	
 	
 	tester->destroy(tester);
 	
 	charon->kill(charon, NULL);
-	
-#ifdef LEAK_DETECTIVE
-	/* Leaks are reported on stderr */
-	report_memory_leaks(void);
-#endif
 	
 	return 0;
 }

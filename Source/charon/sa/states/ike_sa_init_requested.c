@@ -23,7 +23,6 @@
 #include "ike_sa_init_requested.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
@@ -411,7 +410,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
  */
 status_t process_nonce_payload (private_ike_sa_init_requested_t *this, nonce_payload_t *nonce_payload)
 {
-	allocator_free(this->received_nonce.ptr);
+	free(this->received_nonce.ptr);
 	this->received_nonce = nonce_payload->get_nonce(nonce_payload);
 	return SUCCESS;
 }
@@ -693,12 +692,12 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
 static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 {
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	allocator_free_chunk(&(this->ike_sa_init_request_data));
+	chunk_free(&(this->ike_sa_init_request_data));
 	if (this->proposal)
 	{
 		this->proposal->destroy(this->proposal);
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -707,9 +706,9 @@ static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 static void destroy(private_ike_sa_init_requested_t *this)
 {
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	allocator_free(this->sent_nonce.ptr);
-	allocator_free(this->received_nonce.ptr);
-	allocator_free_chunk(&(this->ike_sa_init_request_data));
+	free(this->sent_nonce.ptr);
+	free(this->received_nonce.ptr);
+	chunk_free(&(this->ike_sa_init_request_data));
 	if (this->child_sa)
 	{
 		this->child_sa->destroy(this->child_sa);
@@ -718,7 +717,7 @@ static void destroy(private_ike_sa_init_requested_t *this)
 	{
 		this->proposal->destroy(this->proposal);
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /* 
@@ -726,7 +725,7 @@ static void destroy(private_ike_sa_init_requested_t *this)
  */
 ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa, diffie_hellman_t *diffie_hellman, chunk_t sent_nonce,chunk_t ike_sa_init_request_data)
 {
-	private_ike_sa_init_requested_t *this = allocator_alloc_thing(private_ike_sa_init_requested_t);
+	private_ike_sa_init_requested_t *this = malloc_thing(private_ike_sa_init_requested_t);
 	
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
@@ -748,7 +747,7 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->received_nonce = CHUNK_INITIALIZER;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, IKE_SA);
+	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	this->diffie_hellman = diffie_hellman;
 	this->proposal = NULL;
 	this->sent_nonce = sent_nonce;

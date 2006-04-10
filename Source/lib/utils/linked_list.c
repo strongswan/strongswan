@@ -24,8 +24,6 @@
 
 #include "linked_list.h"
 
-#include <utils/allocator.h>
-
 
 
 typedef struct linked_list_element_t linked_list_element_t;
@@ -69,7 +67,7 @@ struct linked_list_element_t {
  */
 static void linked_list_element_destroy(linked_list_element_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -83,7 +81,7 @@ static void linked_list_element_destroy(linked_list_element_t *this)
 
 linked_list_element_t *linked_list_element_create(void *value)
 {
-	linked_list_element_t *this = allocator_alloc_thing(linked_list_element_t);
+	linked_list_element_t *this = malloc_thing(linked_list_element_t);
 
 	this->destroy = linked_list_element_destroy;
 
@@ -384,7 +382,7 @@ static void insert_after(private_iterator_t * iterator, void *item)
  */
 static void iterator_destroy(private_iterator_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -665,7 +663,7 @@ static status_t get_last(private_linked_list_t *this, void **item)
  */
 static iterator_t *create_iterator (private_linked_list_t *linked_list,bool forward)
 {
-	private_iterator_t *this = allocator_alloc_thing(private_iterator_t);
+	private_iterator_t *this = malloc_thing(private_iterator_t);
 
 	this->public.iterate = (bool (*) (iterator_t *this, void **value)) iterate;
 	this->public.has_next = (bool (*) (iterator_t *this)) iterator_has_next;
@@ -696,7 +694,7 @@ static void linked_list_destroy(private_linked_list_t *this)
 		/* values are not destroyed so memory leaks are possible
 		 * if list is not empty when deleting */
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -704,7 +702,7 @@ static void linked_list_destroy(private_linked_list_t *this)
  */
 linked_list_t *linked_list_create()
 {
-	private_linked_list_t *this = allocator_alloc_thing(private_linked_list_t);
+	private_linked_list_t *this = malloc_thing(private_linked_list_t);
 
 	this->public.get_count = (int (*) (linked_list_t *)) get_count;
 	this->public.create_iterator = (iterator_t * (*) (linked_list_t *,bool )) create_iterator;

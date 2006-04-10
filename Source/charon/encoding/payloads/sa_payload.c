@@ -19,14 +19,12 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-/* offsetof macro */
+
 #include <stddef.h>
 
 #include "sa_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 
@@ -176,7 +174,7 @@ static status_t destroy(private_sa_payload_t *this)
 	}
 	this->proposals->destroy(this->proposals);
 	
-	allocator_free(this);
+	free(this);
 	
 	return SUCCESS;
 }
@@ -329,7 +327,7 @@ static void compute_length (private_sa_payload_t *this)
  */
 sa_payload_t *sa_payload_create()
 {
-	private_sa_payload_t *this = allocator_alloc_thing(private_sa_payload_t);
+	private_sa_payload_t *this = malloc_thing(private_sa_payload_t);
 	
 	/* public interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

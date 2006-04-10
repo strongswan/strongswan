@@ -25,7 +25,6 @@
 
 #include <daemon.h>
 #include <threads/kernel_interface.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 #include <utils/host.h>
 

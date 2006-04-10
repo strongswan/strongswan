@@ -26,7 +26,6 @@
 
 #include <daemon.h>
 #include <encoding/generator.h>
-#include <utils/allocator.h>
 #include <utils/logger_manager.h>
 #include <utils/logger.h>
 #include <encoding/payloads/encodings.h>
@@ -58,7 +57,7 @@ void test_generator_with_header_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
+	logger = logger_manager->get_logger(logger_manager, TESTER);
 	
 	header_data = ike_header_create();
 	header_data->set_initiator_spi(header_data,1);
@@ -90,7 +89,7 @@ void test_generator_with_header_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(generated_data.len == sizeof(expected_generation)), "compare generated data length");
 	logger->log_chunk(logger,RAW,"generated header",generated_data);		
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data 1");
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	generator->destroy(generator);
 
@@ -125,7 +124,7 @@ void test_generator_with_header_payload(protected_tester_t *tester)
 	logger->log_chunk(logger,RAW,"generated header",generated_data);
 
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data 2");
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 
 	header_data->destroy(header_data);
 	
@@ -142,7 +141,7 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
+	logger = logger_manager->get_logger(logger_manager, TESTER);
 	
 	
 	/* test empty attribute */
@@ -157,7 +156,7 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 		0x80,0x00,0x00,0x00,
 	};
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	attribute->destroy(attribute);
 	generator->destroy(generator);
 	
@@ -182,7 +181,7 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 	};
 	tester->assert_true(tester,(memcmp(expected_generation2,generated_data.ptr,sizeof(expected_generation2)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	attribute->destroy(attribute);
 	generator->destroy(generator);
 
@@ -218,7 +217,7 @@ void test_generator_with_transform_attribute(protected_tester_t *tester)
 	};
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	attribute->destroy(attribute);
 	generator->destroy(generator);
 }
@@ -237,7 +236,7 @@ void test_generator_with_transform_substructure(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -286,7 +285,7 @@ void test_generator_with_transform_substructure(protected_tester_t *tester)
 	};
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	transform->destroy(transform);
 	generator->destroy(generator);
 }
@@ -305,7 +304,7 @@ void test_generator_with_proposal_substructure(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -399,7 +398,7 @@ void test_generator_with_proposal_substructure(protected_tester_t *tester)
 
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	proposal->destroy(proposal);
 	generator->destroy(generator);
 }
@@ -422,7 +421,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -557,7 +556,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	ike_header->destroy(ike_header);
 	sa_payload->destroy(sa_payload);
 	generator->destroy(generator);
@@ -630,7 +629,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	list->destroy(list);
 	proposal1->destroy(proposal1);
 	proposal2->destroy(proposal2);
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	generator->destroy(generator);
 	
 	
@@ -743,7 +742,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	proposal1->destroy(proposal1);
 	proposal2->destroy(proposal2);
 	list->destroy(list);
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	generator->destroy(generator);
 	
 }
@@ -759,7 +758,7 @@ void test_generator_with_ke_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t key_exchange_data;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -794,7 +793,7 @@ void test_generator_with_ke_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);	
+	chunk_free(&generated_data);	
 	
 	ke_payload->destroy(ke_payload);
 	generator->destroy(generator);
@@ -812,7 +811,7 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t spi,notification_data;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -852,7 +851,7 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);	
+	chunk_free(&generated_data);	
 	
 	notify_payload->destroy(notify_payload);
 	generator->destroy(generator);
@@ -869,7 +868,7 @@ void test_generator_with_nonce_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t nonce;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -902,7 +901,7 @@ void test_generator_with_nonce_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	
 	nonce_payload->destroy(nonce_payload);
@@ -920,7 +919,7 @@ void test_generator_with_id_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t id;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -954,7 +953,7 @@ void test_generator_with_id_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	id_payload->destroy(id_payload);
 	generator->destroy(generator);
@@ -971,7 +970,7 @@ void test_generator_with_auth_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t auth;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1005,7 +1004,7 @@ void test_generator_with_auth_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	auth_payload->destroy(auth_payload);
 	generator->destroy(generator);
@@ -1023,7 +1022,7 @@ void test_generator_with_ts_payload(protected_tester_t *tester)
 	logger_t *logger;
 	chunk_t generated_data;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1087,7 +1086,7 @@ void test_generator_with_ts_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	ts_payload->destroy(ts_payload);
 	generator->destroy(generator);
@@ -1104,7 +1103,7 @@ void test_generator_with_cert_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t cert;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1137,7 +1136,7 @@ void test_generator_with_cert_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	cert_payload->destroy(cert_payload);
 	generator->destroy(generator);
@@ -1154,7 +1153,7 @@ void test_generator_with_certreq_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t certreq;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1187,7 +1186,7 @@ void test_generator_with_certreq_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	certreq_payload->destroy(certreq_payload);
 	generator->destroy(generator);
@@ -1204,7 +1203,7 @@ void test_generator_with_delete_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t spis;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1239,7 +1238,7 @@ void test_generator_with_delete_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	delete_payload->destroy(delete_payload);
 	generator->destroy(generator);
@@ -1256,7 +1255,7 @@ void test_generator_with_vendor_id_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t data;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1286,7 +1285,7 @@ void test_generator_with_vendor_id_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	vendor_id_payload->destroy(vendor_id_payload);
 	generator->destroy(generator);
@@ -1304,7 +1303,7 @@ void test_generator_with_cp_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	logger_t *logger;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1358,7 +1357,7 @@ void test_generator_with_cp_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	configuration->destroy(configuration);
 	generator->destroy(generator);
 }
@@ -1374,7 +1373,7 @@ void test_generator_with_eap_payload(protected_tester_t *tester)
 	chunk_t generated_data;
 	chunk_t message;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
 	/* create generator */
 	generator = generator_create();
@@ -1404,7 +1403,7 @@ void test_generator_with_eap_payload(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(expected_generation,generated_data.ptr,sizeof(expected_generation)) == 0), "compare generated data");
 
-	allocator_free_chunk(&generated_data);
+	chunk_free(&generated_data);
 	
 	eap_payload->destroy(eap_payload);
 	generator->destroy(generator);

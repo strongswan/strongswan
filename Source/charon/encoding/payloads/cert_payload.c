@@ -20,9 +20,9 @@
  * for more details.
  */
 
-#include "cert_payload.h"
+#include <stddef.h>
 
-#include <utils/allocator.h>
+#include "cert_payload.h"
 
 
 /** 
@@ -202,9 +202,9 @@ static void set_data (private_cert_payload_t *this, chunk_t data)
 {
 	if (this->cert_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->cert_data));
+		chunk_free(&(this->cert_data));
 	}
-	this->cert_data.ptr = allocator_clone_bytes(data.ptr,data.len);
+	this->cert_data.ptr = clalloc(data.ptr,data.len);
 	this->cert_data.len = data.len;
 	this->payload_length = CERT_PAYLOAD_HEADER_LENGTH + this->cert_data.len;
 }
@@ -227,7 +227,7 @@ static chunk_t get_data_clone (private_cert_payload_t *this)
 	{
 		return (this->cert_data);
 	}
-	cloned_data.ptr = allocator_clone_bytes(this->cert_data.ptr,this->cert_data.len);
+	cloned_data.ptr = clalloc(this->cert_data.ptr,this->cert_data.len);
 	cloned_data.len = this->cert_data.len;
 	return cloned_data;
 }
@@ -239,10 +239,10 @@ static void destroy(private_cert_payload_t *this)
 {
 	if (this->cert_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->cert_data));
+		chunk_free(&(this->cert_data));
 	}
 	
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -250,7 +250,7 @@ static void destroy(private_cert_payload_t *this)
  */
 cert_payload_t *cert_payload_create()
 {
-	private_cert_payload_t *this = allocator_alloc_thing(private_cert_payload_t);
+	private_cert_payload_t *this = malloc_thing(private_cert_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

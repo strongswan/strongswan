@@ -20,9 +20,9 @@
  * for more details.
  */
 
-#include "delete_payload.h"
+#include <stddef.h>
 
-#include <utils/allocator.h>
+#include "delete_payload.h"
 
 
 typedef struct private_delete_payload_t private_delete_payload_t;
@@ -238,9 +238,9 @@ static void set_spis (private_delete_payload_t *this, chunk_t spis)
 {
 	if (this->spis.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->spis));
+		chunk_free(&(this->spis));
 	}
-	this->spis.ptr = allocator_clone_bytes(spis.ptr,spis.len);
+	this->spis.ptr = clalloc(spis.ptr,spis.len);
 	this->spis.len = spis.len;
 	this->payload_length = DELETE_PAYLOAD_HEADER_LENGTH + this->spis.len;
 }
@@ -263,7 +263,7 @@ static chunk_t get_spis_clone (private_delete_payload_t *this)
 	{
 		return (this->spis);
 	}
-	cloned_spis.ptr = allocator_clone_bytes(this->spis.ptr,this->spis.len);
+	cloned_spis.ptr = clalloc(this->spis.ptr,this->spis.len);
 	cloned_spis.len = this->spis.len;
 	return cloned_spis;
 }
@@ -275,10 +275,10 @@ static void destroy(private_delete_payload_t *this)
 {
 	if (this->spis.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->spis));
+		chunk_free(&(this->spis));
 	}
 	
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -286,7 +286,7 @@ static void destroy(private_delete_payload_t *this)
  */
 delete_payload_t *delete_payload_create()
 {
-	private_delete_payload_t *this = allocator_alloc_thing(private_delete_payload_t);
+	private_delete_payload_t *this = malloc_thing(private_delete_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

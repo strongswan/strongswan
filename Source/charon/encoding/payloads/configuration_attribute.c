@@ -19,15 +19,13 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-/* offsetof macro */
+
 #include <stddef.h>
 
 #include "configuration_attribute.h"
 
 #include <encoding/payloads/encodings.h>
 #include <types.h>
-#include <utils/allocator.h>
 
 
 typedef struct private_configuration_attribute_t private_configuration_attribute_t;
@@ -196,10 +194,10 @@ static void set_value(private_configuration_attribute_t *this, chunk_t value)
 	if (this->attribute_value.ptr != NULL)
 	{
 		/* free existing value */
-		allocator_free_chunk(&(this->attribute_value));		
+		chunk_free(&(this->attribute_value));		
 	}
 	
-	this->attribute_value.ptr = allocator_clone_bytes(value.ptr,value.len);
+	this->attribute_value.ptr = clalloc(value.ptr,value.len);
 	this->attribute_value.len = value.len;
 	
 	this->attribute_length = this->attribute_value.len;
@@ -246,9 +244,9 @@ static void destroy(private_configuration_attribute_t *this)
 {
 	if (this->attribute_value.ptr != NULL)
 	{
-		allocator_free(this->attribute_value.ptr);
+		free(this->attribute_value.ptr);
 	}	
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -256,7 +254,7 @@ static void destroy(private_configuration_attribute_t *this)
  */
 configuration_attribute_t *configuration_attribute_create()
 {
-	private_configuration_attribute_t *this = allocator_alloc_thing(private_configuration_attribute_t);
+	private_configuration_attribute_t *this = malloc_thing(private_configuration_attribute_t);
 
 	/* payload interface */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

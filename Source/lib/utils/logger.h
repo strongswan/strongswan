@@ -38,7 +38,7 @@ typedef enum log_level_t log_level_t;
  * - levels to specify the detail-level of the log
  * 
  * Use combinations of these to build detailed loglevels, such
- * as CONTROL|MORE fore a detailed cotrol level, or
+ * as CONTROL|LEVEL2 fore a detailed cotrol level, or
  * use RAW to see all raw data dumps (except private).
  * 
  * @ingroup utils
@@ -189,7 +189,7 @@ struct logger_t {
  * @param log_level		or'ed set of log_levels to assign to the new logger_t object
  * @param log_thread_id	TRUE if thread id should also be logged
  * @param output		FILE * if log has to go on a file output, NULL for syslog
- * @return 				logger_t object 
+ * @return 				logger_t object
  * 
  * @ingroup utils
  */

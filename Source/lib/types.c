@@ -19,7 +19,9 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
+#include <string.h>
+
 #include "types.h"
 
 
@@ -46,3 +48,56 @@ mapping_t status_m[] = {
  * Empty chunk.
  */
 chunk_t CHUNK_INITIALIZER = {NULL,0};
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_clone(chunk_t chunk)
+{
+	chunk_t clone = CHUNK_INITIALIZER;
+	
+	if (chunk.ptr && chunk.len > 0)
+	{
+		clone.ptr = malloc(chunk.len);
+		clone.len = chunk.len;
+		memcpy(clone.ptr, chunk.ptr, chunk.len);
+	}
+	
+	return clone;
+}
+
+/**
+ * Described in header.
+ */
+void chunk_free(chunk_t *chunk)
+{
+	free(chunk->ptr);
+	chunk->ptr = NULL;
+	chunk->len = 0;
+}
+
+/**
+ * Described in header.
+ */
+chunk_t chunk_alloc(size_t bytes)
+{
+	chunk_t new_chunk;
+	new_chunk.ptr = malloc(bytes);
+	new_chunk.len = bytes;
+	return new_chunk;
+}
+
+
+/**
+ * Described in header.
+ */
+void *clalloc(void * pointer, size_t size)
+{
+	
+	void *data;
+	data = malloc(size);
+	
+	memcpy(data, pointer,size);
+	
+	return (data);
+}

@@ -118,19 +118,6 @@
  */
 #define PID_FILE "/var/run/charon.pid"
 
-/**
- * Output of log, use NULL for syslog
- */
-#define LOG_OUTPUT NULL
-
-/**
- * @brief Default loglevel for every logger context.
- * 
- * This is the maximum allowed level for ever context, the definiton
- * of the context may be less verbose.
- */
-#define DEFAULT_LOGLEVEL CONTROL | ERROR | AUDIT
-
 
 typedef struct daemon_t daemon_t;
 
@@ -157,11 +144,6 @@ struct daemon_t {
 	 * A event_queue_t instance.
 	 */
 	event_queue_t *event_queue;
-	
-	/**
-	 * A logger_manager_t instance.
-	 */
-	logger_manager_t *logger_manager;
 
 	/**
 	 * A ike_sa_manager_t instance.

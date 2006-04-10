@@ -20,9 +20,9 @@
  * for more details.
  */
 
-#include "certreq_payload.h"
+#include <stddef.h>
 
-#include <utils/allocator.h>
+#include "certreq_payload.h"
 
 
 typedef struct private_certreq_payload_t private_certreq_payload_t;
@@ -182,9 +182,9 @@ static void set_data (private_certreq_payload_t *this, chunk_t data)
 {
 	if (this->certreq_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->certreq_data));
+		chunk_free(&(this->certreq_data));
 	}
-	this->certreq_data.ptr = allocator_clone_bytes(data.ptr,data.len);
+	this->certreq_data.ptr = clalloc(data.ptr,data.len);
 	this->certreq_data.len = data.len;
 	this->payload_length = CERTREQ_PAYLOAD_HEADER_LENGTH + this->certreq_data.len;
 }
@@ -207,7 +207,7 @@ static chunk_t get_data_clone (private_certreq_payload_t *this)
 	{
 		return (this->certreq_data);
 	}
-	cloned_data.ptr = allocator_clone_bytes(this->certreq_data.ptr,this->certreq_data.len);
+	cloned_data.ptr = clalloc(this->certreq_data.ptr,this->certreq_data.len);
 	cloned_data.len = this->certreq_data.len;
 	return cloned_data;
 }
@@ -219,10 +219,10 @@ static void destroy(private_certreq_payload_t *this)
 {
 	if (this->certreq_data.ptr != NULL)
 	{
-		allocator_free_chunk(&(this->certreq_data));
+		chunk_free(&(this->certreq_data));
 	}
 	
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -230,7 +230,7 @@ static void destroy(private_certreq_payload_t *this)
  */
 certreq_payload_t *certreq_payload_create()
 {
-	private_certreq_payload_t *this = allocator_alloc_thing(private_certreq_payload_t);
+	private_certreq_payload_t *this = malloc_thing(private_certreq_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

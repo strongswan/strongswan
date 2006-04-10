@@ -19,14 +19,12 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-/* offsetof macro */
+
 #include <stddef.h>
 
 #include "ke_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 
 
 typedef struct private_ke_payload_t private_ke_payload_t;
@@ -134,9 +132,9 @@ static void destroy(private_ke_payload_t *this)
 {
 	if (this->key_exchange_data.ptr != NULL)
 	{
-		allocator_free(this->key_exchange_data.ptr);
+		free(this->key_exchange_data.ptr);
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -212,13 +210,13 @@ static void set_key_exchange_data(private_ke_payload_t *this, chunk_t key_exchan
 	if (this->key_exchange_data.ptr != NULL)
 	{
 		/* free existing value */
-		allocator_free(this->key_exchange_data.ptr);
+		free(this->key_exchange_data.ptr);
 		this->key_exchange_data.ptr = NULL;
 		this->key_exchange_data.len = 0;
 		
 	}
 	
-	this->key_exchange_data.ptr = allocator_clone_bytes(key_exchange_data.ptr,key_exchange_data.len);
+	this->key_exchange_data.ptr = clalloc(key_exchange_data.ptr,key_exchange_data.len);
 
 	this->key_exchange_data.len = key_exchange_data.len;
 	this->compute_length(this);
@@ -245,7 +243,7 @@ static void set_dh_group_number(private_ke_payload_t *this, diffie_hellman_group
  */
 ke_payload_t *ke_payload_create()
 {
-	private_ke_payload_t *this = allocator_alloc_thing(private_ke_payload_t);
+	private_ke_payload_t *this = malloc_thing(private_ke_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

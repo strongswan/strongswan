@@ -19,8 +19,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
- /* offsetof macro */
+
 #include <stddef.h>
 
 #include "proposal_substructure.h"
@@ -28,7 +27,6 @@
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/transform_substructure.h>
 #include <types.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 
@@ -307,13 +305,13 @@ static void set_spi (private_proposal_substructure_t *this, chunk_t spi)
 	/* first delete already set spi value */
 	if (this->spi.ptr != NULL)
 	{
-		allocator_free(this->spi.ptr);
+		free(this->spi.ptr);
 		this->spi.ptr = NULL;
 		this->spi.len = 0;
 		this->compute_length(this);
 	}
 	
-	this->spi.ptr = allocator_clone_bytes(spi.ptr,spi.len);
+	this->spi.ptr = clalloc(spi.ptr,spi.len);
 	this->spi.len = spi.len;
 	this->spi_size = spi.len;
 	this->compute_length(this);
@@ -452,7 +450,7 @@ static private_proposal_substructure_t* clone(private_proposal_substructure_t *t
 	new_clone->spi_size = this->spi_size;
 	if (this->spi.ptr != NULL)
 	{
-		new_clone->spi.ptr = allocator_clone_bytes(this->spi.ptr,this->spi.len);
+		new_clone->spi.ptr = clalloc(this->spi.ptr,this->spi.len);
 		new_clone->spi.len = this->spi.len;
 	}
 
@@ -495,10 +493,10 @@ static status_t destroy(private_proposal_substructure_t *this)
 	
 	if (this->spi.ptr != NULL)
 	{
-		allocator_free(this->spi.ptr);
+		free(this->spi.ptr);
 	}
 	
-	allocator_free(this);
+	free(this);
 	
 	return SUCCESS;
 }
@@ -508,7 +506,7 @@ static status_t destroy(private_proposal_substructure_t *this)
  */
 proposal_substructure_t *proposal_substructure_create()
 {
-	private_proposal_substructure_t *this = allocator_alloc_thing(private_proposal_substructure_t);
+	private_proposal_substructure_t *this = malloc_thing(private_proposal_substructure_t);
 
 	/* interface functions */	
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
@@ -622,7 +620,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	/* take over general infos */
 	this->spi_size = proto == PROTO_IKE ? 8 : 4;
 	this->spi.len = this->spi_size;
-	this->spi.ptr = allocator_alloc(this->spi_size);
+	this->spi.ptr = malloc(this->spi_size);
 	*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal, proto);
 	this->proposal_number = proposal->get_number(proposal);
 	this->protocol_id = proto;

@@ -33,7 +33,6 @@
 #include <queues/job_queue.h>
 #include <queues/jobs/incoming_packet_job.h>
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 
 /**
  * Number of packets to send by sender-thread
@@ -64,8 +63,8 @@ void test_receiver(protected_tester_t *tester)
 	{
 		packet = packet_create();
 		packet->set_destination(packet, host_create(AF_INET,DESTINATION_IP,PORT_TO_SEND));
-		test_data.ptr = allocator_alloc_thing(int);
-		test_data.len = ( sizeof(int));
+		test_data.len = (sizeof(int));
+		test_data.ptr = malloc(test_data.len);
 		*((int *) (test_data.ptr)) = i;
 		packet->set_data(packet, test_data);
 		charon->socket->send(charon->socket, packet);

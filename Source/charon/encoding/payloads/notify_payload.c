@@ -19,15 +19,13 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-/* offsetof macro */
+
 #include <stddef.h>
 
 #include "notify_payload.h"
 
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 
 /** 
  * String mappings for notify_message_type_t.
@@ -321,13 +319,13 @@ static void set_spi(private_notify_payload_t *this, chunk_t spi)
 	if (this->spi.ptr != NULL)
 	{
 		/* free existing value */
-		allocator_free(this->spi.ptr);
+		free(this->spi.ptr);
 		this->spi.ptr = NULL;
 		this->spi.len = 0;
 		
 	}
 	
-	this->spi.ptr = allocator_clone_bytes(spi.ptr,spi.len);
+	this->spi.ptr = clalloc(spi.ptr,spi.len);
 
 	this->spi.len = spi.len;
 	this->spi_size = spi.len;
@@ -352,13 +350,13 @@ static status_t set_notification_data(private_notify_payload_t *this, chunk_t no
 	if (this->notification_data.ptr != NULL)
 	{
 		/* free existing value */
-		allocator_free(this->notification_data.ptr);
+		free(this->notification_data.ptr);
 		this->notification_data.ptr = NULL;
 		this->notification_data.len = 0;
 		
 	}
 	
-	this->notification_data.ptr = allocator_clone_bytes(notification_data.ptr,notification_data.len);
+	this->notification_data.ptr = clalloc(notification_data.ptr,notification_data.len);
 	this->notification_data.len = notification_data.len;
 	this->compute_length(this);
 	
@@ -372,14 +370,14 @@ static status_t destroy(private_notify_payload_t *this)
 {
 	if (this->notification_data.ptr != NULL)
 	{
-		allocator_free(this->notification_data.ptr);
+		free(this->notification_data.ptr);
 	}
 	if (this->spi.ptr != NULL)
 	{
-		allocator_free(this->spi.ptr);
+		free(this->spi.ptr);
 	}
 
-	allocator_free(this);
+	free(this);
 	return SUCCESS;
 }
 
@@ -388,7 +386,7 @@ static status_t destroy(private_notify_payload_t *this)
  */
 notify_payload_t *notify_payload_create()
 {
-	private_notify_payload_t *this = allocator_alloc_thing(private_notify_payload_t);
+	private_notify_payload_t *this = malloc_thing(private_notify_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
@@ -424,7 +422,7 @@ notify_payload_t *notify_payload_create()
 	this->spi_size = 0;
 	this->notification_data.ptr = NULL;
 	this->notification_data.len = 0;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, PAYLOAD);
+	this->logger = logger_manager->get_logger(logger_manager, PAYLOAD);
 
 	return (&(this->public));
 }

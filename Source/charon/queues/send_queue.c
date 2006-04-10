@@ -24,7 +24,6 @@
 
 #include "send_queue.h"
 
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 
@@ -130,7 +129,7 @@ static void destroy (private_send_queue_t *this)
 
 	pthread_cond_destroy(&(this->condvar));
 
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -139,7 +138,7 @@ static void destroy (private_send_queue_t *this)
  */
 send_queue_t *send_queue_create()
 {
-	private_send_queue_t *this = allocator_alloc_thing(private_send_queue_t);
+	private_send_queue_t *this = malloc_thing(private_send_queue_t);
 	
 	this->public.get_count = (int(*)(send_queue_t*)) get_count;
 	this->public.get = (packet_t*(*)(send_queue_t*)) get;

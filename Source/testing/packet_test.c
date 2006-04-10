@@ -26,7 +26,6 @@
 
 #include <daemon.h>
 #include <network/packet.h>
-#include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
 
@@ -41,7 +40,7 @@ void test_packet(protected_tester_t *tester)
 	char *string_to_copy = "aha, soso";
 	
 	data.len = strlen(string_to_copy) + 1;
-	data.ptr = allocator_alloc(data.len);
+	data.ptr = malloc(data.len);
 	memcpy(data.ptr, string_to_copy, data.len);
 	
 	packet->set_data(packet, data);

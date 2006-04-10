@@ -15,10 +15,6 @@
 UTILS_DIR= $(LIB_DIR)utils/
 
 
-LIB_OBJS+= $(BUILD_DIR)allocator.o
-$(BUILD_DIR)allocator.o :		$(UTILS_DIR)allocator.c $(UTILS_DIR)allocator.h
-								$(CC) $(CFLAGS) -c -o $@ $<
-
 LIB_OBJS+= $(BUILD_DIR)linked_list.o
 $(BUILD_DIR)linked_list.o :		$(UTILS_DIR)linked_list.c $(UTILS_DIR)linked_list.h
 								$(CC) $(CFLAGS) -c -o $@ $<
@@ -45,4 +41,8 @@ $(BUILD_DIR)identification.o :	$(UTILS_DIR)identification.c $(UTILS_DIR)identifi
 
 LIB_OBJS+= $(BUILD_DIR)host.o
 $(BUILD_DIR)host.o :			$(UTILS_DIR)host.c $(UTILS_DIR)host.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
+LIB_OBJS+= $(BUILD_DIR)leak_detective.o
+$(BUILD_DIR)leak_detective.o :	$(UTILS_DIR)leak_detective.c $(UTILS_DIR)leak_detective.h
 								$(CC) $(CFLAGS) -c -o $@ $<

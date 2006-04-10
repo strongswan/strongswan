@@ -27,7 +27,6 @@
 #include "certificate.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <asn1/der_decoder.h>
 
 
@@ -151,10 +150,10 @@ static rsa_public_key_t *get_public_key(private_certificate_t *this)
 static void destroy(private_certificate_t *this)
 {
 	this->public_key->destroy(this->public_key);
-	allocator_free(this->pubkey.ptr);
-	allocator_free(this->signature.ptr);
-	allocator_free(this->tbs_cert.ptr);
-	allocator_free(this);
+	free(this->pubkey.ptr);
+	free(this->signature.ptr);
+	free(this->tbs_cert.ptr);
+	free(this);
 }
 
 /*
@@ -162,7 +161,7 @@ static void destroy(private_certificate_t *this)
  */
 certificate_t *certificate_create_from_chunk(chunk_t chunk)
 {
-	private_certificate_t *this = allocator_alloc_thing(private_certificate_t);
+	private_certificate_t *this = malloc_thing(private_certificate_t);
 	der_decoder_t *dd;
 	
 	/* public functions */
@@ -178,7 +177,7 @@ certificate_t *certificate_create_from_chunk(chunk_t chunk)
 	
 	if (dd->decode(dd, chunk, this) != SUCCESS)
 	{
-		allocator_free(this);
+		free(this);
 		dd->destroy(dd);
 		return NULL;
 	}
@@ -187,8 +186,8 @@ certificate_t *certificate_create_from_chunk(chunk_t chunk)
 	this->public_key = rsa_public_key_create_from_chunk(this->pubkey);
 	if (this->public_key == NULL)
 	{
-		allocator_free(this->pubkey.ptr);
-		allocator_free(this);
+		free(this->pubkey.ptr);
+		free(this);
 		return NULL;
 	}
 	
@@ -220,8 +219,10 @@ certificate_t *certificate_create_from_file(char *filename)
 	
 	if (fread(buffer, stb.st_size, 1, file) == -1)
 	{
+		fclose(file);
 		return NULL;
 	}
+	fclose(file);
 	
 	chunk.ptr = buffer;
 	chunk.len = stb.st_size;

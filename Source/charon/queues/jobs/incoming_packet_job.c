@@ -23,7 +23,6 @@
 
 #include "incoming_packet_job.h"
 
-#include <utils/allocator.h>
 
 
 typedef struct private_incoming_packet_job_t private_incoming_packet_job_t;
@@ -68,7 +67,7 @@ static void destroy_all(private_incoming_packet_job_t *this)
 	{
 		this->packet->destroy(this->packet);
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -77,7 +76,7 @@ static void destroy_all(private_incoming_packet_job_t *this)
 static void destroy(job_t *job)
 {
 	private_incoming_packet_job_t *this = (private_incoming_packet_job_t *) job;
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -85,7 +84,7 @@ static void destroy(job_t *job)
  */
 incoming_packet_job_t *incoming_packet_job_create(packet_t *packet)
 {
-	private_incoming_packet_job_t *this = allocator_alloc_thing(private_incoming_packet_job_t);
+	private_incoming_packet_job_t *this = malloc_thing(private_incoming_packet_job_t);
 
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;

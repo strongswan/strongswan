@@ -26,11 +26,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <execinfo.h>
 
 #include "daemon.h" 
 
 #include <types.h>
-#include <utils/allocator.h>
 
 
 typedef struct private_daemon_t private_daemon_t;
@@ -90,7 +90,14 @@ daemon_t *charon;
  * Implementation of private_daemon_t.run.
  */
 static void run(private_daemon_t *this)
-{	
+{
+	/* reselect signals for this thread */
+	sigemptyset(&(this->signal_set));
+	sigaddset(&(this->signal_set), SIGINT); 
+	sigaddset(&(this->signal_set), SIGHUP); 
+	sigaddset(&(this->signal_set), SIGTERM); 
+	pthread_sigmask(SIG_BLOCK, &(this->signal_set), 0);
+	
 	while(TRUE)
 	{
 		int signal_number;
@@ -237,12 +244,32 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.stroke->destroy(this->public.stroke);
 	}
-	
-	this->public.logger_manager->destroy(this->public.logger_manager);
-	allocator_free(this);
+	free(this);
 }
 
+void signal_handler(int signal)
+{
+	void *array[20];
+	size_t size;
+	char **strings;
+	size_t i;
+	logger_t *logger;
 
+	size = backtrace(array, 20);
+	strings = backtrace_symbols(array, size);
+	logger = logger_manager->get_logger(logger_manager, DAEMON);
+
+	logger->log(logger, ERROR, "Thread %u received SIGSEGV. Dumping %d frames from stack:", pthread_self(), size);
+
+	for (i = 0; i < size; i++)
+	{
+		logger->log(logger, ERROR, "\t%s", strings[i]);
+	}
+
+	free (strings);
+	
+	charon->kill(charon, "SIGSEGV received");
+}
 
 /**
  * @brief Create the daemon.
@@ -251,17 +278,14 @@ static void destroy(private_daemon_t *this)
  */
 private_daemon_t *daemon_create()
 {	
-	private_daemon_t *this = allocator_alloc_thing(private_daemon_t);
+	private_daemon_t *this = malloc_thing(private_daemon_t);
+	struct sigaction action;
 		
 	/* assign methods */
 	this->run = run;
 	this->destroy = destroy;
 	this->initialize = initialize;
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
-	
-	/* first build a logger */
-	this->public.logger_manager = logger_manager_create(DEFAULT_LOGLEVEL);
-	this->logger = (this->public.logger_manager)->get_logger(this->public.logger_manager, DAEMON);
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
@@ -282,13 +306,22 @@ private_daemon_t *daemon_create()
 	
 	this->main_thread_id = pthread_self();
 	
-	/* setup signal handling */
+	/* setup signal handling for all threads */
 	sigemptyset(&(this->signal_set));
+	sigaddset(&(this->signal_set), SIGSEGV);
 	sigaddset(&(this->signal_set), SIGINT); 
 	sigaddset(&(this->signal_set), SIGHUP); 
 	sigaddset(&(this->signal_set), SIGTERM); 
 	pthread_sigmask(SIG_BLOCK, &(this->signal_set), 0);
 	
+	/* setup SIGSEGV handler for all threads */
+	action.sa_handler = signal_handler;
+	action.sa_mask = this->signal_set;
+	action.sa_flags = 0;
+	if (sigaction(SIGSEGV, &action, NULL) == -1)
+	{
+		this->logger->log(this->logger, ERROR, "signal handler setup for SIGSEGV failed");
+	}
 	return this;
 }
 
@@ -296,15 +329,15 @@ private_daemon_t *daemon_create()
  * Main function, manages the daemon.
  */
 int main(int argc, char *argv[])
-{
+{	
 	private_daemon_t *private_charon;
 	FILE *pid_file;
 	struct stat stb;
 	
-	/* allocation needs initialization, before any allocs are done */
-	allocator_init();
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
+	
+	private_charon->logger = logger_manager->get_logger(logger_manager, DAEMON);
 		
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
@@ -321,18 +354,15 @@ int main(int argc, char *argv[])
 		fclose(pid_file);
 	}
 	
-	/* initialize and run daemon*/
+	/* initialize and run daemon */
 	private_charon->initialize(private_charon);
 	private_charon->run(private_charon);
 	
 	/* normal termination, cleanup and exit */
 	private_charon->destroy(private_charon);
 	unlink(PID_FILE);
-	
-#ifdef LEAK_DETECTIVE
-	report_memory_leaks(void);
-#endif
 
-	exit(0);
+	return 0;
 }
+
 

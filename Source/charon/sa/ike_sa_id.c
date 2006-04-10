@@ -23,7 +23,6 @@
 
 #include "ike_sa_id.h"
 
-#include <utils/allocator.h>
 
 
 typedef struct private_ike_sa_id_t private_ike_sa_id_t;
@@ -155,7 +154,7 @@ static ike_sa_id_t* clone(private_ike_sa_id_t *this)
  */
 static void destroy(private_ike_sa_id_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -163,7 +162,7 @@ static void destroy(private_ike_sa_id_t *this)
  */
 ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi, bool is_initiator_flag)
 {
-	private_ike_sa_id_t *this = allocator_alloc_thing(private_ike_sa_id_t);
+	private_ike_sa_id_t *this = malloc_thing(private_ike_sa_id_t);
 
 	/* public functions */
 	this->public.set_responder_spi = (void(*)(ike_sa_id_t*,u_int64_t)) set_responder_spi;

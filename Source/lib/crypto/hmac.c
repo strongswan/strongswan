@@ -19,10 +19,9 @@
  * for more details.
  */
 
+#include <string.h>
 
 #include "hmac.h"
-
-#include <utils/allocator.h>
 
 
 typedef struct private_hmac_t private_hmac_t;
@@ -111,7 +110,7 @@ static void allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 	else
 	{
 		out->len = this->h->get_block_size(this->h);
-		out->ptr = allocator_alloc(out->len);
+		out->ptr = malloc(out->len);
 		this->hmac.get_mac(&(this->hmac), data, out->ptr);
 	}
 }
@@ -163,9 +162,9 @@ static void set_key(private_hmac_t *this, chunk_t key)
 static void destroy(private_hmac_t *this)
 {
 	this->h->destroy(this->h);
-	allocator_free(this->opaded_key.ptr);
-	allocator_free(this->ipaded_key.ptr);
-	allocator_free(this);
+	free(this->opaded_key.ptr);
+	free(this->ipaded_key.ptr);
+	free(this);
 }
 
 /*
@@ -175,7 +174,7 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 {
 	private_hmac_t *this;
 	
-	this = allocator_alloc_thing(private_hmac_t);
+	this = malloc_thing(private_hmac_t);
 
 	/* set hmac_t methods */
 	this->hmac.get_mac = (void (*)(hmac_t *,chunk_t,u_int8_t*))get_mac;
@@ -192,7 +191,7 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 			this->b = 64;
 			break;
 		default:
-			allocator_free(this);
+			free(this);
 			return NULL;	
 	}
 		
@@ -200,10 +199,10 @@ hmac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	this->h = hasher_create(hash_algorithm);
 
 	/* build ipad and opad */
-	this->opaded_key.ptr = allocator_alloc(this->b);
+	this->opaded_key.ptr = malloc(this->b);
 	this->opaded_key.len = this->b;
 
-	this->ipaded_key.ptr = allocator_alloc(this->b);
+	this->ipaded_key.ptr = malloc(this->b);
 	this->ipaded_key.len = this->b;
 
 	return &(this->hmac);

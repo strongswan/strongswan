@@ -30,7 +30,6 @@
 
 #include <types.h>
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
 #include <encoding/payloads/payload.h>
@@ -562,7 +561,7 @@ static void make_space_available (private_generator_t *this, size_t bits)
 							old_buffer_size, new_buffer_size);
 		
 		/* Reallocate space for new buffer */
-		this->buffer = allocator_realloc(this->buffer,new_buffer_size);
+		this->buffer = realloc(this->buffer,new_buffer_size);
 
 		this->out_position = (this->buffer + out_position_offset);
 		this->roof_position = (this->buffer + new_buffer_size);
@@ -629,7 +628,7 @@ static void write_to_chunk (private_generator_t *this,chunk_t *data)
 
 	if (this->current_bit > 0)
 	data_length++;
-	data->ptr = allocator_alloc(data_length);
+	data->ptr = malloc(data_length);
 	memcpy(data->ptr,this->buffer,data_length);
 	data->len = data_length;
 	
@@ -1028,8 +1027,8 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
  */
 static status_t destroy(private_generator_t *this)
 {
-	allocator_free(this->buffer);
-	allocator_free(this);
+	free(this->buffer);
+	free(this);
 	return SUCCESS;
 }
 
@@ -1040,7 +1039,7 @@ generator_t *generator_create()
 {
 	private_generator_t *this;
 
-	this = allocator_alloc_thing(private_generator_t);
+	this = malloc_thing(private_generator_t);
 
 	/* initiate public functions */
 	this->public.generate_payload = (void(*)(generator_t*, payload_t *)) generate_payload;
@@ -1063,7 +1062,7 @@ generator_t *generator_create()
 
 
 	/* allocate memory for buffer */
-	this->buffer = allocator_alloc(GENERATOR_DATA_BUFFER_SIZE);
+	this->buffer = malloc(GENERATOR_DATA_BUFFER_SIZE);
 
 	/* initiate private variables */
 	this->out_position = this->buffer;
@@ -1072,7 +1071,7 @@ generator_t *generator_create()
 	this->current_bit = 0;
 	this->last_payload_length_position_offset = 0;
 	this->header_length_position_offset = 0;
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, GENERATOR);
+	this->logger = logger_manager->get_logger(logger_manager, GENERATOR);
 
 	return &(this->public);
 }

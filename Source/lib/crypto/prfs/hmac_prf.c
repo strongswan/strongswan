@@ -22,7 +22,6 @@
 
 #include "hmac_prf.h"
 
-#include <utils/allocator.h>
 #include <crypto/hmac.h>
 
 
@@ -89,7 +88,7 @@ static void set_key(private_hmac_prf_t *this, chunk_t key)
  */
 static void destroy(private_hmac_prf_t *this)
 {
-	allocator_free(this);
+	free(this);
 	this->hmac->destroy(this->hmac);
 }
 
@@ -98,7 +97,7 @@ static void destroy(private_hmac_prf_t *this)
  */
 hmac_prf_t *hmac_prf_create(hash_algorithm_t hash_algorithm)
 {
-	private_hmac_prf_t *this = allocator_alloc_thing(private_hmac_prf_t);
+	private_hmac_prf_t *this = malloc_thing(private_hmac_prf_t);
 	
 	this->public.prf_interface.get_bytes = (void (*) (prf_t *,chunk_t,u_int8_t*))get_bytes;
 	this->public.prf_interface.allocate_bytes = (void (*) (prf_t*,chunk_t,chunk_t*))allocate_bytes;
@@ -110,7 +109,7 @@ hmac_prf_t *hmac_prf_create(hash_algorithm_t hash_algorithm)
 	this->hmac = hmac_create(hash_algorithm);
 	if (this->hmac == NULL)
 	{
-		allocator_free(this);
+		free(this);
 		return NULL;	
 	}
 	

@@ -35,7 +35,6 @@
 #include "kernel_interface.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 
@@ -239,7 +238,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 	}
 	
 	*spi = response->sa.id.spi;
-	allocator_free(response);
+	free(response);
 	
 	return status;
 }
@@ -329,7 +328,7 @@ static status_t add_sa(	private_kernel_interface_t *this,
 		status = FAILED;
 	}
 	
-	allocator_free(response);
+	free(response);
 	return SUCCESS;
 }
 
@@ -366,7 +365,7 @@ static status_t del_sa(	private_kernel_interface_t *this,
 		status = FAILED;
 	}
 	
-	allocator_free(response);
+	free(response);
 	return SUCCESS;
 }
 
@@ -458,7 +457,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 		status = FAILED;
 	}
 	
-	allocator_free(response);
+	free(response);
 	return status;
 }
 
@@ -506,7 +505,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 		status = FAILED;
 	}
 	
-	allocator_free(response);
+	free(response);
 	return status;
 }
 
@@ -623,7 +622,7 @@ static void receive_messages(private_kernel_interface_t *this)
 		else
 		{
 			/* add response to queue */			
-			listed_response = allocator_alloc(sizeof(response));
+			listed_response = malloc(sizeof(response));
 			memcpy(listed_response, &response, sizeof(response));
 
 			pthread_mutex_lock(&(this->mutex));
@@ -645,7 +644,7 @@ static void destroy(private_kernel_interface_t *this)
 	pthread_join(this->thread, NULL);
 	close(this->socket);
 	this->responses->destroy(this->responses);
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -653,7 +652,7 @@ static void destroy(private_kernel_interface_t *this)
  */
 kernel_interface_t *kernel_interface_create()
 {
-	private_kernel_interface_t *this = allocator_alloc_thing(private_kernel_interface_t);
+	private_kernel_interface_t *this = malloc_thing(private_kernel_interface_t);
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
@@ -675,17 +674,17 @@ kernel_interface_t *kernel_interface_create()
 	this->socket = socket(PF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 	if (this->socket <= 0)
 	{
-		allocator_free(this);
+		free(this);
 		charon->kill(charon, "Unable to create netlink socket");	
 	}
 	
 	if (pthread_create(&(this->thread), NULL, (void*(*)(void*))this->receive_messages, this) != 0)
 	{
 		close(this->socket);
-		allocator_free(this);
+		free(this);
 		charon->kill(charon, "Unable to create netlink thread");
 	}
 	
-	charon->logger_manager->enable_log_level(charon->logger_manager, TESTER, FULL);
+	logger_manager->enable_log_level(logger_manager, TESTER, FULL);
 	return (&this->public);
 }

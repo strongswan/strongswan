@@ -28,7 +28,6 @@
 
 #include "tester.h"
 
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 #include <queues/job_queue.h>
 
@@ -225,7 +224,7 @@ static void destroy(private_tester_t *tester)
 {
 	private_tester_t *this = (private_tester_t*) tester;
 	pthread_mutex_destroy(&(this->mutex));
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -233,7 +232,7 @@ static void destroy(private_tester_t *tester)
  */
 tester_t *tester_create(FILE *output, bool display_succeeded_asserts)
 {
-	private_tester_t *this = allocator_alloc_thing(private_tester_t);
+	private_tester_t *this = malloc_thing(private_tester_t);
 
 	/* public functions */
 	this->protected.public.destroy = (void (*) (tester_t *))destroy;

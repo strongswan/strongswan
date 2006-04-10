@@ -26,7 +26,6 @@
 #include "hmac_signer_test.h"
 
 #include <crypto/signers/signer.h>
-#include <utils/allocator.h>
 #include <daemon.h>
 
 
@@ -56,7 +55,7 @@ void test_hmac_md5_signer(protected_tester_t *tester)
  	logger_t *logger;
  	bool valid;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
+	logger = logger_manager->get_logger(logger_manager, TESTER);
 	
 	signer_t *signer = (signer_t *)	signer_create(AUTH_HMAC_MD5_96);
 	tester->assert_true(tester, (signer != NULL), "signer create call check");
@@ -98,7 +97,7 @@ void test_hmac_md5_signer(protected_tester_t *tester)
 		tester->assert_true(tester, (memcmp(signature[i].ptr, reference[i].ptr, 12) == 0), "hmac value");
 		logger->log_chunk(logger,RAW,"expected signature:",reference[i]);
 		logger->log_chunk(logger,RAW,"signature:",signature[i]);
-		allocator_free(signature[i].ptr);
+		free(signature[i].ptr);
 		valid = signer->verify_signature(signer, data[i],reference[i]);
 		tester->assert_true(tester, (valid == TRUE), "Signature valid check");
 
@@ -134,7 +133,7 @@ void test_hmac_sha1_signer(protected_tester_t *tester)
  	logger_t *logger;
  	bool valid;
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
+	logger = logger_manager->get_logger(logger_manager, TESTER);
 	
 	signer_t *signer = (signer_t *)	signer_create(AUTH_HMAC_SHA1_96);
 	tester->assert_true(tester, (signer != NULL), "signer create call check");
@@ -192,7 +191,7 @@ void test_hmac_sha1_signer(protected_tester_t *tester)
 		tester->assert_true(tester, (memcmp(signature[i].ptr, reference[i].ptr, 12) == 0), "hmac value");
 		logger->log_chunk(logger,RAW,"expected signature:",reference[i]);
 		logger->log_chunk(logger,RAW,"signature:",signature[i]);
-		allocator_free(signature[i].ptr);
+		free(signature[i].ptr);
 		valid = signer->verify_signature(signer, data[i],reference[i]);
 		tester->assert_true(tester, (valid == TRUE), "Signature valid check");
 

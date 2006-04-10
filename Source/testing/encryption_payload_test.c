@@ -19,12 +19,13 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
+#include <string.h>
+
 #include "encryption_payload_test.h"
 
 #include <daemon.h>
 #include <utils/logger_manager.h>
-#include <utils/allocator.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 #include <encoding/payloads/encryption_payload.h>
@@ -60,10 +61,10 @@ void test_encryption_payload(protected_tester_t *tester)
 	key.ptr = key_bytes;
 	key.len = sizeof(key_bytes);
 	
-	logger = charon->logger_manager->get_logger(charon->logger_manager, TESTER);
+	logger = logger_manager->get_logger(logger_manager, TESTER);
 	
 	nonce.ptr = "test text und so...";
-	nonce.len = strlen(nonce.ptr) +1;
+	nonce.len = strlen(nonce.ptr) + 1;
 	
 	logger->log_chunk(logger, RAW, "nonce", nonce);
 	
@@ -128,8 +129,8 @@ void test_encryption_payload(protected_tester_t *tester)
 	
 	logger->log_chunk(logger, RAW, "nonce", got_nonce);
 	
-	allocator_free(data.ptr);
-	allocator_free(got_nonce.ptr);
+	free(data.ptr);
+	free(got_nonce.ptr);
 	encryption_payload->destroy(encryption_payload);
 	crypter->destroy(crypter);
 	signer->destroy(signer);

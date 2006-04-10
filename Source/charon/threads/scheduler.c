@@ -27,7 +27,6 @@
 
 #include <daemon.h>
 #include <definitions.h>
-#include <utils/allocator.h>
 #include <utils/logger_manager.h>
 #include <queues/job_queue.h>
 
@@ -98,7 +97,7 @@ static void destroy(private_scheduler_t *this)
 	pthread_join(this->assigned_thread, NULL);
 	this->logger->log(this->logger, CONTROL | LEVEL1, "Scheduler thread terminated");
 
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -106,18 +105,18 @@ static void destroy(private_scheduler_t *this)
  */
 scheduler_t * scheduler_create()
 {
-	private_scheduler_t *this = allocator_alloc_thing(private_scheduler_t);
+	private_scheduler_t *this = malloc_thing(private_scheduler_t);
 
 	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	this->get_events = get_events;
 	
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, SCHEDULER);
+	this->logger = logger_manager->get_logger(logger_manager, SCHEDULER);
 	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->get_events, this) != 0)
 	{
 		/* thread could not be created  */
 		this->logger->log(this->logger, ERROR, "Scheduler thread could not be created!");
-		allocator_free(this);
+		free(this);
 		charon->kill(charon, "Unable to create scheduler thread");
 	}
 

@@ -24,7 +24,6 @@
 
 #include <daemon.h>
 #include <crypto/certificate.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 
 

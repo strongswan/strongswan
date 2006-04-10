@@ -23,11 +23,11 @@
 #include <gmp.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "rsa_private_key.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <asn1/der_decoder.h>
 
 
@@ -188,7 +188,7 @@ static status_t compute_prime(private_rsa_private_key_t *this, size_t prime_size
 		/* get next prime */
 		mpz_nextprime (*prime, *prime);
 		
-		allocator_free(random_bytes.ptr);
+		free(random_bytes.ptr);
 	}
 	/* check if it isnt too large */
 	while (((mpz_sizeinbase(*prime, 2) + 7) / 8) > prime_size);
@@ -301,7 +301,7 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 	 * T = oid || hash
 	 */
 	em.len = this->k;
-	em.ptr = allocator_alloc(em.len);
+	em.ptr = malloc(em.len);
 	
 	/* fill em with padding */
 	memset(em.ptr, 0xFF, em.len);
@@ -318,8 +318,8 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 	/* build signature */
 	*signature = this->rsasp1(this, em);
 	
-	allocator_free(hash.ptr);
-	allocator_free(em.ptr);
+	free(hash.ptr);
+	free(em.ptr);
 	
 	return SUCCESS;	
 }
@@ -349,7 +349,7 @@ static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
 	coeff.ptr = mpz_export(NULL, NULL, 1, coeff.len, 1, 0, this->coeff);
 	
 	key->len = this->k * 8;
-	key->ptr = allocator_alloc(key->len);
+	key->ptr = malloc(key->len);
 	memcpy(key->ptr + this->k * 0, n.ptr , n.len);
 	memcpy(key->ptr + this->k * 1, e.ptr, e.len);
 	memcpy(key->ptr + this->k * 2, p.ptr, p.len);
@@ -359,14 +359,14 @@ static status_t get_key(private_rsa_private_key_t *this, chunk_t *key)
 	memcpy(key->ptr + this->k * 6, exp2.ptr, exp2.len);
 	memcpy(key->ptr + this->k * 7, coeff.ptr, coeff.len);
 	
-	allocator_free(n.ptr);
-	allocator_free(e.ptr);
-	allocator_free(p.ptr);
-	allocator_free(q.ptr);
-	allocator_free(d.ptr);
-	allocator_free(exp1.ptr);
-	allocator_free(exp2.ptr);
-	allocator_free(coeff.ptr);
+	free(n.ptr);
+	free(e.ptr);
+	free(p.ptr);
+	free(q.ptr);
+	free(d.ptr);
+	free(exp1.ptr);
+	free(exp2.ptr);
+	free(coeff.ptr);
 	
 	return SUCCESS;
 }
@@ -432,7 +432,7 @@ static void destroy(private_rsa_private_key_t *this)
 	mpz_clear(this->exp1);
 	mpz_clear(this->exp2);
 	mpz_clear(this->coeff);
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -440,7 +440,7 @@ static void destroy(private_rsa_private_key_t *this)
  */
 static private_rsa_private_key_t *rsa_private_key_create_empty()
 {
-	private_rsa_private_key_t *this = allocator_alloc_thing(private_rsa_private_key_t);
+	private_rsa_private_key_t *this = malloc_thing(private_rsa_private_key_t);
 	
 	/* public functions */
 	this->public.build_emsa_pkcs1_signature = (status_t (*) (rsa_private_key_t*,hash_algorithm_t,chunk_t,chunk_t*))build_emsa_pkcs1_signature;
@@ -474,13 +474,13 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	/* Get values of primes p and q  */
 	if (this->compute_prime(this, key_size/2, &p) != SUCCESS)
 	{
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}	
 	if (this->compute_prime(this, key_size/2, &q) != SUCCESS)
 	{
 		mpz_clear(p);
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	
@@ -605,8 +605,10 @@ rsa_private_key_t *rsa_private_key_create_from_file(char *filename, char *passph
 	
 	if (fread(buffer, stb.st_size, 1, file) != 1)
 	{
+		fclose(file);
 		return NULL;
 	}
+	fclose(file);
 	
 	chunk.ptr = buffer;
 	chunk.len = stb.st_size;

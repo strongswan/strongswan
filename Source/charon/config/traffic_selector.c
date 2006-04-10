@@ -23,9 +23,9 @@
 #include "traffic_selector.h"
 
 #include <utils/linked_list.h>
-#include <utils/allocator.h>
 #include <utils/identification.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 typedef struct private_traffic_selector_t private_traffic_selector_t;
 
@@ -133,7 +133,7 @@ static chunk_t get_from_address(private_traffic_selector_t *this)
 		{
 			u_int32_t network;
 			from_addr.len = sizeof(network);
-			from_addr.ptr = allocator_alloc(from_addr.len);
+			from_addr.ptr = malloc(from_addr.len);
 			/* chunk must contain network order, convert! */
 			network = htonl(this->from_addr_ipv4);
 			memcpy(from_addr.ptr, &network, from_addr.len);
@@ -160,7 +160,7 @@ static chunk_t get_to_address(private_traffic_selector_t *this)
 		{
 			u_int32_t network;
 			to_addr.len = sizeof(network);
-			to_addr.ptr = allocator_alloc(to_addr.len);
+			to_addr.ptr = malloc(to_addr.len);
 			/* chunk must contain network order, convert! */
 			network = htonl(this->to_addr_ipv4);
 			memcpy(to_addr.ptr, &network, to_addr.len);
@@ -248,7 +248,7 @@ static void update_address_range(private_traffic_selector_t *this, host_t *host)
 			chunk_t from = host->get_address_as_chunk(host);
 			this->from_addr_ipv4 = ntohl(*((u_int32_t*)from.ptr));
 			this->to_addr_ipv4 = this->from_addr_ipv4;
-			allocator_free_chunk(&from);
+			chunk_free(&from);
 		}
 	}
 }
@@ -271,7 +271,7 @@ static traffic_selector_t *clone(private_traffic_selector_t *this)
 		case TS_IPV6_ADDR_RANGE:
 		default:
 		{
-			allocator_free(this);
+			free(this);
 			return NULL;	
 		}
 	}
@@ -282,7 +282,7 @@ static traffic_selector_t *clone(private_traffic_selector_t *this)
  */
 static void destroy(private_traffic_selector_t *this)
 {	
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -299,7 +299,7 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
 		{
 			if (from_addr.len != 4 || to_addr.len != 4)
 			{
-				allocator_free(this);
+				free(this);
 				return NULL;	
 			}
 			/* chunk contains network order, convert! */
@@ -310,7 +310,7 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
 		case TS_IPV6_ADDR_RANGE:
 		default:
 		{
-			allocator_free(this);
+			free(this);
 			return NULL;	
 		}
 	}
@@ -342,13 +342,13 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t ne
 			{
 				this->to_addr_ipv4 = this->from_addr_ipv4 | ((1 << (32 - netbits)) - 1);
 			}
-			allocator_free_chunk(&from);
+			chunk_free(&from);
 			break;	
 		}
 		case AF_INET6:
 		default:
 		{
-			allocator_free(this);
+			free(this);
 			return NULL;	
 		}
 	}
@@ -373,12 +373,12 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
 		{
 			if (inet_aton(from_addr, (struct in_addr*)&(this->from_addr_ipv4)) == 0)
 			{
-				allocator_free(this);
+				free(this);
 				return NULL;
 			}
 			if (inet_aton(to_addr, (struct in_addr*)&(this->to_addr_ipv4)) == 0)
 			{
-				allocator_free(this);
+				free(this);
 				return NULL;
 			}
 			/* convert to host order, inet_aton has network order */
@@ -388,7 +388,7 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
 		}
 		case TS_IPV6_ADDR_RANGE:
 		{
-			allocator_free(this);
+			free(this);
 			return NULL;	
 		}
 	}
@@ -401,7 +401,7 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
  */
 static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts_type_t type, u_int16_t from_port, u_int16_t to_port)
 {
-	private_traffic_selector_t *this = allocator_alloc_thing(private_traffic_selector_t);
+	private_traffic_selector_t *this = malloc_thing(private_traffic_selector_t);
 
 	/* public functions */
 	this->public.get_subset = (traffic_selector_t*(*)(traffic_selector_t*,traffic_selector_t*))get_subset;

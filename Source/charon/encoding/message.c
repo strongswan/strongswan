@@ -30,7 +30,6 @@
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 #include <utils/linked_list.h>
-#include <utils/allocator.h>
 #include <utils/logger_manager.h>
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
@@ -670,7 +669,7 @@ static packet_t *get_packet (private_message_t *this)
  */
 static chunk_t get_packet_data (private_message_t *this)
 {
-	return allocator_clone_chunk(this->packet->get_data(this->packet));
+	return chunk_clone(this->packet->get_data(this->packet));
 }
 
 /**
@@ -1154,7 +1153,7 @@ static void destroy (private_message_t *this)
 	this->payloads->destroy(this->payloads);
 	this->parser->destroy(this->parser);
 	
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -1162,7 +1161,7 @@ static void destroy (private_message_t *this)
  */
 message_t *message_create_from_packet(packet_t *packet)
 {
-	private_message_t *this = allocator_alloc_thing(private_message_t);
+	private_message_t *this = malloc_thing(private_message_t);
 
 	/* public functions */
 	this->public.set_major_version = (void(*)(message_t*, u_int8_t))set_major_version;
@@ -1217,7 +1216,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	/* parser is created from data of packet */
  	this->parser = parser_create(this->packet->get_data(this->packet));
 		
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, MESSAGE);
+	this->logger = logger_manager->get_logger(logger_manager, MESSAGE);
 
 	return (&this->public);
 }

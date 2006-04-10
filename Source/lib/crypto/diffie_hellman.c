@@ -28,7 +28,6 @@
 #include "diffie_hellman.h"
 
 #include <daemon.h>
-#include <utils/allocator.h>
 #include <utils/randomizer.h>
 
 
@@ -553,7 +552,7 @@ static void destroy(private_diffie_hellman_t *this)
 		/* other public value gets initialized together with shared secret */
 		mpz_clear(this->shared_secret);
 	}
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -561,7 +560,7 @@ static void destroy(private_diffie_hellman_t *this)
  */
 diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 {
-	private_diffie_hellman_t *this = allocator_alloc_thing(private_diffie_hellman_t);
+	private_diffie_hellman_t *this = malloc_thing(private_diffie_hellman_t);
 	randomizer_t *randomizer;
 	chunk_t random_bytes;
 
@@ -587,24 +586,24 @@ diffie_hellman_t *diffie_hellman_create(diffie_hellman_group_t dh_group_number)
 	/* set this->modulus */	
 	if (this->set_modulus(this) != SUCCESS)
 	{
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	randomizer = randomizer_create();
 	if (randomizer == NULL)
 	{
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	if (randomizer->allocate_pseudo_random_bytes(randomizer, this->modulus_length, &random_bytes) != SUCCESS)
 	{
 		randomizer->destroy(randomizer);
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	
 	mpz_import(this->my_private_value, random_bytes.len, 1, 1, 1, 0, random_bytes.ptr);
-	allocator_free_chunk(&random_bytes);
+	chunk_free(&random_bytes);
 	
 	randomizer->destroy(randomizer);
 	

@@ -26,7 +26,6 @@
 #include "ike_header.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 
 
 typedef struct private_ike_header_t private_ike_header_t;
@@ -324,7 +323,7 @@ static void set_message_id(private_ike_header_t *this, u_int32_t message_id)
  */
 static void destroy(ike_header_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -365,7 +364,7 @@ static size_t get_length(payload_t *this)
  */
 ike_header_t *ike_header_create()
 {
-	private_ike_header_t *this = allocator_alloc_thing(private_ike_header_t);
+	private_ike_header_t *this = malloc_thing(private_ike_header_t);
 	
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
 	this->public.payload_interface.get_encoding_rules = get_encoding_rules;

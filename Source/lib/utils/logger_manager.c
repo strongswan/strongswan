@@ -25,7 +25,6 @@
 
 #include <daemon.h>
 #include <definitions.h>
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 /**
@@ -54,33 +53,30 @@ mapping_t logger_context_t_mappings[] = {
 	{MAPPING_END, NULL},
 };
 
-#define DEFAULT_OUTPUT NULL
-
 struct {
 	char *name;
 	log_level_t level;
 	bool log_thread_ids;
-	FILE *output;
 } logger_defaults[] = {
-	{ "PARSR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* PARSER */
-	{ "GNRAT", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* GENERATOR */
-	{ "IKESA", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* IKE_SA */
-	{ "SAMGR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* IKE_SA_MANAGER */
-	{ "CHDSA", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* CHILD_SA */
-	{ "MESSG", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* MESSAGE */
-	{ "TPOOL", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, DEFAULT_OUTPUT}, /* THREAD_POOL */
-	{ "WORKR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* WORKER */
-	{ "SCHED", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, DEFAULT_OUTPUT}, /* SCHEDULER */
-	{ "SENDR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, DEFAULT_OUTPUT}, /* SENDER */
-	{ "RECVR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, DEFAULT_OUTPUT}, /* RECEIVER */
-	{ "SOCKT", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, DEFAULT_OUTPUT}, /* SOCKET */
-	{ "TESTR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, DEFAULT_OUTPUT}, /* TESTER */
-	{ "DAEMN", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE, DEFAULT_OUTPUT}, /* DAEMON */
-	{ "CONFG", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* CONFIG */
-	{ "ENCPL", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* ENCRYPTION_PAYLOAD */
-	{ "PAYLD", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* PAYLOAD */
-	{ "DERDC", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* DER_DECODER */
-	{ "DEREC", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE,  DEFAULT_OUTPUT}, /* DER_ENCODER */
+	{ "PARSR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* PARSER */
+	{ "GNRAT", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* GENERATOR */
+	{ "IKESA", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* IKE_SA */
+	{ "SAMGR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* IKE_SA_MANAGER */
+	{ "CHDSA", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* CHILD_SA */
+	{ "MESSG", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* MESSAGE */
+	{ "TPOOL", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE}, /* THREAD_POOL */
+	{ "WORKR", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* WORKER */
+	{ "SCHED", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE}, /* SCHEDULER */
+	{ "SENDR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE}, /* SENDER */
+	{ "RECVR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE}, /* RECEIVER */
+	{ "SOCKT", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE}, /* SOCKET */
+	{ "TESTR", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE}, /* TESTER */
+	{ "DAEMN", ERROR|CONTROL|AUDIT|LEVEL0,	FALSE}, /* DAEMON */
+	{ "CONFG", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* CONFIG */
+	{ "ENCPL", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* ENCRYPTION_PAYLOAD */
+	{ "PAYLD", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* PAYLOAD */
+	{ "DERDC", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* DER_DECODER */
+	{ "DEREC", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* DER_ENCODER */
 };
 
 
@@ -99,8 +95,17 @@ struct private_logger_manager_t {
 	 * Array of loggers, one for each context
 	 */
 	logger_t *loggers[LOGGER_CONTEXT_ROOF];
-	
 };
+
+/**
+ * The one and only instance of the logger manager
+ */
+static private_logger_manager_t private_logger_manager;
+
+/**
+ * Exported pointer for the logger manager
+ */
+logger_manager_t *logger_manager = (logger_manager_t *)&private_logger_manager;
 
 /**
  * Implementation of logger_manager_t.get_logger.
@@ -174,39 +179,36 @@ static void set_output(private_logger_manager_t *this, logger_context_t context,
 
 
 /**
- * Implementation of logger_manager_t.destroy.
+ * Creates the instance of the logger manager at library startup
  */
-static void destroy(private_logger_manager_t *this)
+void __attribute__ ((constructor)) logger_manager_create()
+{
+	int i;
+	
+	logger_manager->get_logger = (logger_t *(*)(logger_manager_t*,logger_context_t context))get_logger;
+	logger_manager->get_log_level = (log_level_t (*)(logger_manager_t *, logger_context_t)) get_log_level;
+	logger_manager->enable_log_level = (void (*)(logger_manager_t *, logger_context_t, log_level_t)) enable_log_level;
+	logger_manager->disable_log_level = (void (*)(logger_manager_t *, logger_context_t, log_level_t)) disable_log_level;
+	logger_manager->set_output = (void (*)(logger_manager_t *, logger_context_t, FILE*)) set_output;
+	
+	for (i = 0; i < LOGGER_CONTEXT_ROOF; i++)
+	{
+		private_logger_manager.loggers[i] = logger_create(logger_defaults[i].name,
+														  logger_defaults[i].level, 
+														  logger_defaults[i].log_thread_ids, 
+														  stdout);
+	}
+	
+}
+
+/**
+ * Destroy the logger manager at library exit
+ */
+void __attribute__ ((destructor)) logger_manager_destroy()
 {
 	int i;
 	for (i = 0; i < LOGGER_CONTEXT_ROOF; i++)
 	{
-		this->loggers[i]->destroy(this->loggers[i]);
+		private_logger_manager.loggers[i]->destroy(private_logger_manager.loggers[i]);
 	}
-	allocator_free(this);
 }
-
-/*
- * Described in header.
- */
-logger_manager_t *logger_manager_create(log_level_t default_log_level)
-{
-	private_logger_manager_t *this = allocator_alloc_thing(private_logger_manager_t);
-	int i;
-	
-	this->public.get_logger = (logger_t *(*)(logger_manager_t*,logger_context_t context))get_logger;
-	this->public.get_log_level = (log_level_t (*)(logger_manager_t *, logger_context_t)) get_log_level;
-	this->public.enable_log_level = (void (*)(logger_manager_t *, logger_context_t, log_level_t)) enable_log_level;
-	this->public.disable_log_level = (void (*)(logger_manager_t *, logger_context_t, log_level_t)) disable_log_level;
-	this->public.set_output = (void (*)(logger_manager_t *, logger_context_t, FILE*)) set_output;
-	this->public.destroy = (void(*)(logger_manager_t*))destroy;
-	
-	for (i = 0; i < LOGGER_CONTEXT_ROOF; i++)
-	{
-		this->loggers[i] = logger_create(logger_defaults[i].name, logger_defaults[i].level, 
-										 logger_defaults[i].log_thread_ids, stdout);//logger_defaults[i].output);
-	}
-	
-	return &this->public;
-}
-

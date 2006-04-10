@@ -20,9 +20,10 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "hmac_signer.h"
 
-#include <utils/allocator.h>
 #include <crypto/prfs/hmac_prf.h>
 
 /**
@@ -70,7 +71,7 @@ static void allocate_signature (private_hmac_signer_t *this, chunk_t data, chunk
 	
 	this->hmac_prf->get_bytes(this->hmac_prf,data,full_mac);
 
-	signature.ptr = allocator_alloc(BLOCK_SIZE);
+	signature.ptr = malloc(BLOCK_SIZE);
 	signature.len = BLOCK_SIZE;
 	
 	/* copy signature */
@@ -135,7 +136,7 @@ static void set_key (private_hmac_signer_t *this, chunk_t key)
 static status_t destroy(private_hmac_signer_t *this)
 {
 	this->hmac_prf->destroy(this->hmac_prf);
-	allocator_free(this);
+	free(this);
 	return SUCCESS;
 }
 
@@ -144,14 +145,14 @@ static status_t destroy(private_hmac_signer_t *this)
  */
 hmac_signer_t *hmac_signer_create(hash_algorithm_t hash_algoritm)
 {
-	private_hmac_signer_t *this = allocator_alloc_thing(private_hmac_signer_t);
+	private_hmac_signer_t *this = malloc_thing(private_hmac_signer_t);
 
 	this->hmac_prf = (prf_t *) hmac_prf_create(hash_algoritm);
 	
 	if (this->hmac_prf == NULL)
 	{
 		/* algorithm not supported */
-		allocator_free(this);
+		free(this);
 		return NULL;
 	}
 	

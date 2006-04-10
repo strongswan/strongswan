@@ -26,7 +26,6 @@
 #include "nonce_payload.h"
 
 #include <encoding/payloads/encodings.h>
-#include <utils/allocator.h>
 
 
 typedef struct private_nonce_payload_t private_nonce_payload_t;
@@ -125,7 +124,7 @@ static status_t verify(private_nonce_payload_t *this)
  */
 static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
 {
-	this->nonce.ptr = allocator_clone_bytes(nonce.ptr, nonce.len);
+	this->nonce.ptr = clalloc(nonce.ptr, nonce.len);
 	this->nonce.len = nonce.len;
 	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + nonce.len;
 	return SUCCESS;
@@ -137,7 +136,7 @@ static status_t set_nonce(private_nonce_payload_t *this, chunk_t nonce)
 static chunk_t get_nonce(private_nonce_payload_t *this)
 {
 	chunk_t nonce;
-	nonce.ptr = allocator_clone_bytes(this->nonce.ptr,this->nonce.len);
+	nonce.ptr = clalloc(this->nonce.ptr,this->nonce.len);
 	nonce.len = this->nonce.len;
 	return nonce;
 }
@@ -199,10 +198,10 @@ static void destroy(private_nonce_payload_t *this)
 {
 	if (this->nonce.ptr != NULL)
 	{
-		allocator_free(this->nonce.ptr);
+		free(this->nonce.ptr);
 	}
 	
-	allocator_free(this);	
+	free(this);	
 }
 
 /*
@@ -210,7 +209,7 @@ static void destroy(private_nonce_payload_t *this)
  */
 nonce_payload_t *nonce_payload_create()
 {
-	private_nonce_payload_t *this = allocator_alloc_thing(private_nonce_payload_t);
+	private_nonce_payload_t *this = malloc_thing(private_nonce_payload_t);
 
 	/* interface functions */
 	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;

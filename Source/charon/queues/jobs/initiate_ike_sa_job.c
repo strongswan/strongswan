@@ -25,7 +25,6 @@
 
 #include "initiate_ike_sa_job.h"
 
-#include <utils/allocator.h>
 
 
 typedef struct private_initiate_ike_sa_job_t private_initiate_ike_sa_job_t;
@@ -68,7 +67,7 @@ static connection_t *get_connection(private_initiate_ike_sa_job_t *this)
 static void destroy_all(private_initiate_ike_sa_job_t *this)
 {
 	this->connection->destroy(this->connection);
-	allocator_free(this);
+	free(this);
 }
 
 /**
@@ -76,7 +75,7 @@ static void destroy_all(private_initiate_ike_sa_job_t *this)
  */
 static void destroy(private_initiate_ike_sa_job_t *this)
 {
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -84,7 +83,7 @@ static void destroy(private_initiate_ike_sa_job_t *this)
  */
 initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection)
 {
-	private_initiate_ike_sa_job_t *this = allocator_alloc_thing(private_initiate_ike_sa_job_t);
+	private_initiate_ike_sa_job_t *this = malloc_thing(private_initiate_ike_sa_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;

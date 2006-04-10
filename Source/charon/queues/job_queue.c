@@ -25,7 +25,6 @@
 
 #include "job_queue.h"
 
-#include <utils/allocator.h>
 #include <utils/linked_list.h>
 
 
@@ -130,7 +129,7 @@ static void job_queue_destroy (private_job_queue_t *this)
 
 	pthread_cond_destroy(&(this->condvar));
 
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -139,7 +138,7 @@ static void job_queue_destroy (private_job_queue_t *this)
  */
 job_queue_t *job_queue_create()
 {
-	private_job_queue_t *this = allocator_alloc_thing(private_job_queue_t);
+	private_job_queue_t *this = malloc_thing(private_job_queue_t);
 
 	this->public.get_count = (int(*)(job_queue_t*))get_count;
 	this->public.get = (job_t*(*)(job_queue_t*))get;

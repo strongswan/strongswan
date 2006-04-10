@@ -24,7 +24,6 @@
 
 #include <daemon.h>
 #include <config/proposal.h>
-#include <utils/allocator.h>
 #include <utils/logger.h>
 
 

@@ -23,10 +23,10 @@
  */
 
 #include <gmp.h>
+#include <string.h>
 
 #include "der_decoder.h"
 
-#include <utils/allocator.h>
 #include <daemon.h>
 
 
@@ -280,7 +280,7 @@ status_t read_bitstring(private_der_decoder_t *this, chunk_t data)
 	
 	chunk_t *chunk = (chunk_t*)((u_int8_t*)this->output + this->rule->data_offset);
 	
-	*chunk = allocator_clone_chunk(data);
+	*chunk = chunk_clone(data);
 	
 	this->logger->log_chunk(this->logger, CONTROL|LEVEL2, "ASN1_BITSTRING", data);
 	return SUCCESS;
@@ -293,7 +293,7 @@ status_t read_any(private_der_decoder_t *this, chunk_t data)
 {	
 	chunk_t *chunk = (chunk_t*)((u_int8_t*)this->output + this->rule->data_offset);
 	
-	*chunk = allocator_clone_chunk(data);
+	*chunk = chunk_clone(data);
 	
 	this->logger->log_chunk(this->logger, CONTROL|LEVEL2, "ASN1_ANY", data);
 	return SUCCESS;
@@ -481,7 +481,7 @@ status_t decode(private_der_decoder_t *this, chunk_t input, void *output)
 static void destroy(private_der_decoder_t *this)
 {
 	this->logger->destroy(this->logger);
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -489,7 +489,7 @@ static void destroy(private_der_decoder_t *this)
  */
 der_decoder_t *der_decoder_create(asn1_rule_t *rules)
 {
-	private_der_decoder_t *this = allocator_alloc_thing(private_der_decoder_t);
+	private_der_decoder_t *this = malloc_thing(private_der_decoder_t);
 	
 	/* public functions */
 	this->public.decode = (status_t (*) (der_decoder_t*,chunk_t,void*))decode;

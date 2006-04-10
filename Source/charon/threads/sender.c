@@ -29,7 +29,6 @@
 #include <network/socket.h>
 #include <network/packet.h>
 #include <queues/send_queue.h>
-#include <utils/allocator.h>
 #include <utils/logger_manager.h>
 
 
@@ -101,7 +100,7 @@ static void destroy(private_sender_t *this)
 	pthread_join(this->assigned_thread, NULL);
 	this->logger->log(this->logger, CONTROL | LEVEL1, "Sender thread terminated");
 
-	allocator_free(this);
+	free(this);
 }
 
 /*
@@ -109,17 +108,17 @@ static void destroy(private_sender_t *this)
  */
 sender_t * sender_create()
 {
-	private_sender_t *this = allocator_alloc_thing(private_sender_t);
+	private_sender_t *this = malloc_thing(private_sender_t);
 
 	this->send_packets = send_packets;
 	this->public.destroy = (void(*)(sender_t*)) destroy;
 	
-	this->logger = charon->logger_manager->get_logger(charon->logger_manager, SENDER);
+	this->logger = logger_manager->get_logger(logger_manager, SENDER);
 
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->send_packets, this) != 0)
 	{
 		this->logger->log(this->logger, ERROR, "Sender thread could not be created");
-		allocator_free(this);
+		free(this);
 		charon->kill(charon, "Unable to create sender thread");
 	}
 

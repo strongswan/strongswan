@@ -19,15 +19,15 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
-#include "diffie_hellman_test.h"
 
-#include <crypto/diffie_hellman.h>
+#include <string.h>
+
+#include "diffie_hellman_test.h"
 
 #include <daemon.h>
 #include <utils/logger_manager.h>
-#include <utils/allocator.h>
 #include <encoding/payloads/transform_substructure.h>
+#include <crypto/diffie_hellman.h>
 
 /* 
  * described in Header-File
@@ -39,7 +39,7 @@ void test_diffie_hellman(protected_tester_t *tester)
 	chunk_t my_public_value, other_public_value;
 	chunk_t my_secret, other_secret;
 
-	logger = charon->logger_manager->get_logger(charon->logger_manager,TESTER);
+	logger = logger_manager->get_logger(logger_manager,TESTER);
 
 
 	my_diffie_hellman = diffie_hellman_create(MODP_1024_BIT);
@@ -57,8 +57,8 @@ void test_diffie_hellman(protected_tester_t *tester)
 	my_diffie_hellman->set_other_public_value(my_diffie_hellman,other_public_value);
 	other_diffie_hellman->set_other_public_value(other_diffie_hellman,my_public_value);
 
-	allocator_free(my_public_value.ptr);
-	allocator_free(other_public_value.ptr);
+	free(my_public_value.ptr);
+	free(other_public_value.ptr);
 	
 	tester->assert_true(tester,(my_diffie_hellman->get_shared_secret(my_diffie_hellman,&my_secret) == SUCCESS), "get_shared_secret call check");
 	logger->log_chunk(logger,RAW,"My shared secret",my_secret);
@@ -68,8 +68,8 @@ void test_diffie_hellman(protected_tester_t *tester)
 	
 	tester->assert_true(tester,(memcmp(my_secret.ptr,other_secret.ptr,other_secret.len) == 0), "shared secret same value check");
 	
-	allocator_free(my_secret.ptr);
-	allocator_free(other_secret.ptr);	
+	free(my_secret.ptr);
+	free(other_secret.ptr);	
 		
 	my_diffie_hellman->destroy(my_diffie_hellman);
 	other_diffie_hellman->destroy(other_diffie_hellman);
