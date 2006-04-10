@@ -28,7 +28,7 @@
 #include "rsa_private_key.h"
 
 #include <daemon.h>
-#include <asn1/der_decoder.h>
+#include <asn1-pluto/asn1-pluto.h>
 
 
 /* 
@@ -138,6 +138,8 @@ struct private_rsa_private_key_t {
 	
 };
 
+#if 0 
+Not used yet, since we use plutos ASN1 stuff
 /**
  * Rules for de-/encoding of a private key from/in ASN1 
  */
@@ -154,6 +156,51 @@ static asn1_rule_t rsa_private_key_rules[] = {
 	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, coeff), 0},
 	{ASN1_END, 0, 0, 0},
 };
+#endif
+
+struct {
+	const char *name;
+	size_t offset;
+} RSA_private_field[] = {
+	{ "Modulus",         offsetof(private_rsa_private_key_t, n) },
+	{ "PublicExponent",  offsetof(private_rsa_private_key_t, e) },
+	{ "PrivateExponent", offsetof(private_rsa_private_key_t, d) },
+	{ "Prime1",          offsetof(private_rsa_private_key_t, p) },
+	{ "Prime2",          offsetof(private_rsa_private_key_t, q) },
+	{ "Exponent1",       offsetof(private_rsa_private_key_t, exp1) },
+	{ "Exponent2",       offsetof(private_rsa_private_key_t, exp2) },
+	{ "Coefficient",     offsetof(private_rsa_private_key_t, coeff) },
+};
+
+/* ASN.1 definition of a PKCS#1 RSA private key */
+
+static const asn1Object_t privkeyObjects[] = {
+	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
+	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
+	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
+	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  3 */
+	{ 1,   "privateExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  4 */
+	{ 1,   "prime1",			ASN1_INTEGER,      ASN1_BODY }, /*  5 */
+	{ 1,   "prime2",			ASN1_INTEGER,      ASN1_BODY }, /*  6 */
+	{ 1,   "exponent1",			ASN1_INTEGER,      ASN1_BODY }, /*  7 */
+	{ 1,   "exponent2",			ASN1_INTEGER,      ASN1_BODY }, /*  8 */
+	{ 1,   "coefficient",		ASN1_INTEGER,      ASN1_BODY }, /*  9 */
+	{ 1,   "otherPrimeInfos",	ASN1_SEQUENCE,     ASN1_OPT |
+												   ASN1_LOOP }, /* 10 */
+	{ 2,     "otherPrimeInfo",	ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
+	{ 3,       "prime",			ASN1_INTEGER,      ASN1_BODY }, /* 12 */
+	{ 3,       "exponent",		ASN1_INTEGER,      ASN1_BODY }, /* 13 */
+	{ 3,       "coefficient",	ASN1_INTEGER,      ASN1_BODY }, /* 14 */
+	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }  /* 15 */
+};
+
+#define PKCS1_PRIV_KEY_VERSION		 1
+#define PKCS1_PRIV_KEY_MODULUS		 2
+#define PKCS1_PRIV_KEY_PUB_EXP		 3
+#define PKCS1_PRIV_KEY_COEFF		 9
+#define PKCS1_PRIV_KEY_ROOF			16
+
+
 
 static private_rsa_private_key_t *rsa_private_key_create_empty();
 
@@ -548,6 +595,9 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	return &this->public;
 }
 
+
+#if 0 
+NOT used yet, since we use plutos ASN1 parser for now
 /*
  * see header
  */
@@ -578,6 +628,152 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t chunk)
 	}
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
 	return &this->public;
+}
+#endif
+
+static status_t check(private_rsa_private_key_t *this)
+{
+	mpz_t t, u, q1;
+	status_t status = SUCCESS;
+	
+	/* PKCS#1 1.5 section 6 requires modulus to have at least 12 octets.
+	 * We actually require more (for security).
+	 */
+	if (this->k < 512/8)
+		return FAILED;
+	
+	/* we picked a max modulus size to simplify buffer allocation */
+	if (this->k > 8192/8)
+		return FAILED;
+	
+	mpz_init(t);
+	mpz_init(u);
+	mpz_init(q1);
+	
+	/* check that n == p * q */
+	mpz_mul(u, this->p, this->q);
+	if (mpz_cmp(u, this->n) != 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that e divides neither p-1 nor q-1 */
+	mpz_sub_ui(t, this->p, 1);
+	mpz_mod(t, t, this->e);
+	if (mpz_cmp_ui(t, 0) == 0)
+	{
+		status = FAILED;
+	}
+	
+	mpz_sub_ui(t, this->q, 1);
+	mpz_mod(t, t, this->e);
+	if (mpz_cmp_ui(t, 0) == 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that d is e^-1 (mod lcm(p-1, q-1)) */
+	/* see PKCS#1v2, aka RFC 2437, for the "lcm" */
+	mpz_sub_ui(q1, this->q, 1);
+	mpz_sub_ui(u, this->p, 1);
+	mpz_gcd(t, u, q1);		/* t := gcd(p-1, q-1) */
+	mpz_mul(u, u, q1);		/* u := (p-1) * (q-1) */
+	mpz_divexact(u, u, t);	/* u := lcm(p-1, q-1) */
+	
+	mpz_mul(t, this->d, this->e);
+	mpz_mod(t, t, u);
+	if (mpz_cmp_ui(t, 1) != 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that exp1 is d mod (p-1) */
+	mpz_sub_ui(u, this->p, 1);
+	mpz_mod(t, this->d, u);
+	if (mpz_cmp(t, this->exp1) != 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that exp2 is d mod (q-1) */
+	mpz_sub_ui(u, this->q, 1);
+	mpz_mod(t, this->d, u);
+	if (mpz_cmp(t, this->exp2) != 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that coeff is (q^-1) mod p */
+	mpz_mul(t, this->coeff, this->q);
+	mpz_mod(t, t, this->p);
+	if (mpz_cmp_ui(t, 1) != 0)
+	{
+		status = FAILED;
+	}
+	
+	mpz_clear(t);
+	mpz_clear(u);
+	mpz_clear(q1);
+	return status;
+}
+
+/*
+ *  Parses a PKCS#1 private key
+ */
+rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
+{
+	asn1_ctx_t ctx;
+	chunk_t object;
+	u_int level;
+	int objectID = 0;
+	private_rsa_private_key_t *this;
+	
+	this = rsa_private_key_create_empty();
+	
+	mpz_init(this->n);
+	mpz_init(this->e);
+	mpz_init(this->p);
+	mpz_init(this->q);
+	mpz_init(this->d);
+	mpz_init(this->exp1);
+	mpz_init(this->exp2);
+	mpz_init(this->coeff);
+	
+	asn1_init(&ctx, blob, 0, FALSE);
+	
+	while (objectID < PKCS1_PRIV_KEY_ROOF) 
+	{
+		if (!extract_object(privkeyObjects, &objectID, &object, &level, &ctx))
+		{
+			return FALSE;
+		}
+		if (objectID == PKCS1_PRIV_KEY_VERSION)
+		{
+			if (object.len > 0 && *object.ptr != 0)
+			{
+				destroy(this);
+				return NULL;
+			}
+		}
+		else if (objectID >= PKCS1_PRIV_KEY_MODULUS &&
+					   objectID <= PKCS1_PRIV_KEY_COEFF)
+		{
+			mpz_t *u = (mpz_t *) ((char *)this
+					+ RSA_private_field[objectID - PKCS1_PRIV_KEY_MODULUS].offset);
+			
+			mpz_import(*u, object.len, 1, 1, 1, 0, object.ptr);
+		}
+		objectID++;
+	}
+	if (check(this) != SUCCESS)
+	{
+		destroy(this);
+		return NULL;
+	}
+	else
+	{
+		return &this->public;
+	}
 }
 
 /*

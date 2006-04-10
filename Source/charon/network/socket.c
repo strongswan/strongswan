@@ -448,6 +448,8 @@ socket_t *socket_create(u_int16_t port)
 	
 	if (build_interface_list(this, port) != SUCCESS)
 	{
+		this->interfaces->destroy(this->interfaces);
+		free(this);
 		charon->kill(charon, "could not bind any interface!");
 	}
 

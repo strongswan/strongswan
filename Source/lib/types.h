@@ -146,6 +146,11 @@ struct chunk_t {
 extern chunk_t CHUNK_INITIALIZER;
 
 /**
+ * Initialize a chunk to a static buffer
+ */
+#define chunk_from_buf(str) { str, sizeof(str) }
+
+/**
  * Clone chunk contents in a newly allocated chunk
  */
 chunk_t chunk_clone(chunk_t chunk);

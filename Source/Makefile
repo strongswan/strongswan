@@ -29,7 +29,7 @@ MAIN_DIR= ./
 
 LDFLAGS= -ldl -lgmp -lpthread -rdynamic
 
-CFLAGS= -Icharon -Ilib -Istroke -Wall -g -fPIC -fomit-frame-pointer -DLEAK_DETECTIVE 
+CFLAGS= -Icharon -Ilib -Istroke -Wall -g -fPIC -DLEAK_DETECTIVE 
 
 # objects is extended by each included Makefile
 CHARON_OBJS=

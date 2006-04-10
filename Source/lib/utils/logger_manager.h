@@ -56,6 +56,7 @@ enum logger_context_t {
 	PAYLOAD,
 	DER_DECODER,
 	DER_ENCODER,
+	ASN1,
 	LOGGER_CONTEXT_ROOF,
 };
 

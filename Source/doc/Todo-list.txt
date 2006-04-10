@@ -22,12 +22,12 @@
   + new charon build - libstrong?
     + transforms
     + utils (plus host)
-    - doxygen fixes (two doxyfiles?)
-    - allocator cleanup (used in lib, charon and pluto(!))
-    - logger reimplementation? (one logger for lib, charon, pluto)
+    + logger_manager instance in lib
+    + leak detective usable for charon and pluto and anything else
+    - doxygen fixes (multiple doxyfiles?)
   - integrate asn1 parser/oid (asn1/oid)
   - integrate PEM loading (pem)
-  - ... (more to come, for sure)
+  - ... (more to come)
 
 - ipsec.secrets parsing
 
@@ -42,3 +42,5 @@
 - delete notify, when to send?
 - notifys on connection setup failure
 - create child sa message
+
+- new build environment (autotools?)
