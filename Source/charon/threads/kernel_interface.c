@@ -123,7 +123,11 @@ struct private_kernel_interface_t {
 	 */
 	int socket;
 	
+	/**
+	 * Process id of kernel thread
+	 */
 	pid_t pid;
+	
 	/**
 	 * Sequence number for messages.
 	 */
@@ -148,6 +152,11 @@ struct private_kernel_interface_t {
 	 * Condvar allows signaling of threads waiting for a reply.
 	 */
 	pthread_cond_t condvar;
+	
+	/**
+	 * Logger for XFRM stuff
+	 */
+	logger_t *logger;
 	
 	/**
 	 * Function for the thread, receives messages.
@@ -196,6 +205,7 @@ mapping_t kernel_integrity_algs_m[] = {
 	{MAPPING_END, NULL}
 };
 
+
 /**
  * Implementation of kernel_interface_t.get_spi.
  */
@@ -206,6 +216,9 @@ static status_t get_spi(private_kernel_interface_t *this,
 {
 	netlink_message_t request, *response;
 	status_t status = SUCCESS;
+	
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "getting spi");
 	
 	memset(&request, 0, sizeof(request));
 	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.spi)));
@@ -222,22 +235,29 @@ static status_t get_spi(private_kernel_interface_t *this,
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
-		status = FAILED;
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
+		return FAILED;
 	}
 	else if (response->hdr.nlmsg_type == NLMSG_ERROR)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_ALLOCSPI got an error: %s",
+						  strerror(-response->e.error));
 		status = FAILED;
 	}
 	else if (response->hdr.nlmsg_type != XFRM_MSG_NEWSA)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_ALLOCSPI got a unknown reply");
 		status = FAILED;
 	}
 	else if (response->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(response->sa)))
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_ALLOCSPI got an invalid reply");
 		status = FAILED;
 	}
-	
-	*spi = response->sa.id.spi;
+	else
+	{
+		*spi = response->sa.id.spi;
+	}
 	free(response);
 	
 	return status;
@@ -260,7 +280,9 @@ static status_t add_sa(	private_kernel_interface_t *this,
 {
 	netlink_message_t request, *response;
 	memset(&request, 0, sizeof(request));
-	status_t status;
+	status_t status = SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "adding SA");
 	
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	request.hdr.nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
@@ -317,19 +339,23 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
-		status = FAILED;
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
+		return FAILED;
 	}
 	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWSA not acknowledged");
 		status = FAILED;
 	}
 	else if (response->e.error)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWSA got error %s",
+						  strerror(-response->e.error));
 		status = FAILED;
 	}
 	
 	free(response);
-	return SUCCESS;
+	return status;
 }
 
 static status_t del_sa(	private_kernel_interface_t *this,
@@ -339,7 +365,9 @@ static status_t del_sa(	private_kernel_interface_t *this,
 {
 	netlink_message_t request, *response;
 	memset(&request, 0, sizeof(request));
-	status_t status;
+	status_t status = SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting SA");
 	
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	request.hdr.nlmsg_type = XFRM_MSG_DELSA;
@@ -354,7 +382,7 @@ static status_t del_sa(	private_kernel_interface_t *this,
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
-		status = FAILED;
+		return FAILED;
 	}
 	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
 	{
@@ -366,7 +394,7 @@ static status_t del_sa(	private_kernel_interface_t *this,
 	}
 	
 	free(response);
-	return SUCCESS;
+	return status;
 }
 
 /**
@@ -382,6 +410,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 {
 	netlink_message_t request, *response;
 	status_t status = SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "adding policy");
 	
 	memset(&request, 0, sizeof(request));
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -446,14 +476,18 @@ static status_t add_policy(private_kernel_interface_t *this,
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
-		status = FAILED;
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
+		return FAILED;
 	}
 	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY not acknowledged");
 		status = FAILED;
 	}
 	else if (response->e.error)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY got error %s",
+						  strerror(-response->e.error));
 		status = FAILED;
 	}
 	
@@ -472,6 +506,9 @@ static status_t del_policy(private_kernel_interface_t *this,
 {
 	netlink_message_t request, *response;
 	status_t status = SUCCESS;
+	
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting policy");
 	
 	memset(&request, 0, sizeof(request));
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -494,7 +531,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
-		status = FAILED;
+		return FAILED;
 	}
 	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
 	{
@@ -668,23 +705,25 @@ kernel_interface_t *kernel_interface_create()
 	this->send_message = send_message;
 	this->pid = getpid();
 	this->responses = linked_list_create();
+	this->logger = logger_manager->get_logger(logger_manager, XFRM);
 	pthread_mutex_init(&(this->mutex),NULL);
 	pthread_cond_init(&(this->condvar),NULL);
 	this->seq = 0;
 	this->socket = socket(PF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 	if (this->socket <= 0)
 	{
+		this->responses->destroy(this->responses);
 		free(this);
 		charon->kill(charon, "Unable to create netlink socket");	
 	}
 	
 	if (pthread_create(&(this->thread), NULL, (void*(*)(void*))this->receive_messages, this) != 0)
 	{
+		this->responses->destroy(this->responses);
 		close(this->socket);
 		free(this);
 		charon->kill(charon, "Unable to create netlink thread");
 	}
 	
-	logger_manager->enable_log_level(logger_manager, TESTER, FULL);
 	return (&this->public);
 }

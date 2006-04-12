@@ -27,6 +27,7 @@
 
 #include <utils/logger.h>
 
+#define INITIAL_LOG_OUTPUT stderr
 
 typedef enum logger_context_t logger_context_t;
 
@@ -57,6 +58,7 @@ enum logger_context_t {
 	DER_DECODER,
 	DER_ENCODER,
 	ASN1,
+	XFRM,
 	LOGGER_CONTEXT_ROOF,
 };
 

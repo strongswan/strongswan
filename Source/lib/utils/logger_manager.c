@@ -78,7 +78,8 @@ struct {
 	{ "PAYLD", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* PAYLOAD */
 	{ "DERDC", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* DER_DECODER */
 	{ "DEREC", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* DER_ENCODER */
-	{ "ASN_1", ERROR|CONTROL|AUDIT|RAW|LEVEL3,	TRUE }, /* ASN1 */
+	{ "ASN_1", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* ASN1 */
+	{ "XFRM ", ERROR|CONTROL|AUDIT|LEVEL0,	TRUE }, /* XFRM */
 };
 
 
@@ -198,7 +199,7 @@ void __attribute__ ((constructor)) logger_manager_create()
 		private_logger_manager.loggers[i] = logger_create(logger_defaults[i].name,
 														  logger_defaults[i].level, 
 														  logger_defaults[i].log_thread_ids, 
-														  stdout);
+														  INITIAL_LOG_OUTPUT);
 	}
 	
 }

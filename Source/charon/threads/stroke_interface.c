@@ -210,14 +210,18 @@ static rsa_private_key_t *find_private_key(private_stroke_t *this, rsa_public_ke
 	rsa_private_key_t *private_key = NULL;
 	iterator_t *iterator;
 	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Looking up private key by public key...");
+	
 	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&private_key);
 		if (private_key->belongs_to(private_key, public_key))
 		{
+			this->logger->log(this->logger, CONTROL|LEVEL2, "found a match");
 			break;
-		}	
+		}
+		this->logger->log(this->logger, CONTROL|LEVEL2, "this one did not match");
 	}
 	iterator->destroy(iterator);
 	return private_key;
@@ -257,7 +261,7 @@ static void load_private_keys(private_stroke_t *this)
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL1, "private key \"%s%s\" invalid, skipped", 
+				this->logger->log(this->logger, ERROR, "private key \"%s%s\" invalid, skipped", 
 								  PRIVATE_KEY_DIR, entry->d_name);
 			}
 		}
@@ -641,7 +645,7 @@ static void stroke_loglevel(private_stroke_t *this, stroke_msg_t *msg)
 {
 	pop_string(msg, &(msg->loglevel.context));
 	
-	this->logger->log(this->logger, CONTROL, "received stroke: log_level for %s", msg->loglevel.context);
+	this->logger->log(this->logger, CONTROL, "received stroke: loglevel for %s", msg->loglevel.context);
 	
 	log_level_t level;
 	logger_context_t context = get_context(msg->loglevel.context);

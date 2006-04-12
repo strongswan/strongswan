@@ -124,11 +124,11 @@ static void prepend_prefix(private_logger_t *this, log_level_t loglevel, char *s
 	
 	if (this->log_thread_id)
 	{
-		snprintf(buffer, MAX_LOG, "[%c%c] [%s] @%u %s", log_type, log_details, this->name, (int)pthread_self(), string);
+		snprintf(buffer, MAX_LOG, "[%c%c:%s] @%u %s", log_type, log_details, this->name, (int)pthread_self(), string);
 	}
 	else
 	{
-		snprintf(buffer, MAX_LOG, "[%c%c] [%s] %s", log_type, log_details, this->name, string);
+		snprintf(buffer, MAX_LOG, "[%c%c:%s] %s", log_type, log_details, this->name, string);
 	}
 }
 
@@ -220,11 +220,11 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, char *label,
 				buffer_pos = buffer;
 				if (this->output == NULL)
 				{
-					syslog(LOG_INFO, "[=>] [%5d] %s %s", line_start, buffer, ascii_buffer);	
+					syslog(LOG_INFO, "[  :%5d] %s %s", line_start, buffer, ascii_buffer);	
 				}
 				else
 				{
-					fprintf(this->output, "[=>] [%5d] %s %s\n", line_start, buffer, ascii_buffer);
+					fprintf(this->output, "[  :%5d] %s %s\n", line_start, buffer, ascii_buffer);
 				}
 				memset(ascii_buffer, 0, 16);
 				line_start += 16;
@@ -257,11 +257,11 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, char *label,
 			buffer_pos = buffer;
 			if (this->output == NULL)
 			{		
-				syslog(LOG_INFO, "[=>] [%5d] %s %16s", line_start, buffer, ascii_buffer);
+				syslog(LOG_INFO, "[  :%5d] %s %16s", line_start, buffer, ascii_buffer);
 			}
 			else
 			{
-				fprintf(this->output, "[=>] [%5d] %s %16s\n", line_start, buffer, ascii_buffer);
+				fprintf(this->output, "[  :%5d] %s %16s\n", line_start, buffer, ascii_buffer);
 			}
 		}
 		pthread_mutex_unlock(&mutex);
