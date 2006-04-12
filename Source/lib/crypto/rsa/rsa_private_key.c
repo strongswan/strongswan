@@ -28,7 +28,12 @@
 #include "rsa_private_key.h"
 
 #include <daemon.h>
-#include <asn1-pluto/asn1-pluto.h>
+#ifdef NEW_ASN1
+# include <asn1/asn1.h>
+# include <asn1/der_decoder.h>
+#else
+# include <asn1-pluto/asn1-pluto.h>
+#endif
 
 
 /* 
@@ -138,8 +143,7 @@ struct private_rsa_private_key_t {
 	
 };
 
-#if 0 
-Not used yet, since we use plutos ASN1 stuff
+#ifdef NEW_ASN1
 /**
  * Rules for de-/encoding of a private key from/in ASN1 
  */
@@ -156,8 +160,7 @@ static asn1_rule_t rsa_private_key_rules[] = {
 	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, coeff), 0},
 	{ASN1_END, 0, 0, 0},
 };
-#endif
-
+#else
 struct {
 	const char *name;
 	size_t offset;
@@ -199,7 +202,7 @@ static const asn1Object_t privkeyObjects[] = {
 #define PKCS1_PRIV_KEY_PUB_EXP		 3
 #define PKCS1_PRIV_KEY_COEFF		 9
 #define PKCS1_PRIV_KEY_ROOF			16
-
+#endif
 
 
 static private_rsa_private_key_t *rsa_private_key_create_empty();
@@ -447,6 +450,100 @@ static bool belongs_to(private_rsa_private_key_t *this, rsa_public_key_t *public
 }
 
 /**
+ * Check the loaded key if it is valid and usable
+ * TODO: Log errors
+ */
+static status_t check(private_rsa_private_key_t *this)
+{
+	mpz_t t, u, q1;
+	status_t status = SUCCESS;
+	
+	/* PKCS#1 1.5 section 6 requires modulus to have at least 12 octets.
+	* We actually require more (for security).
+	*/
+	if (this->k < 512/8)
+	{
+		return FAILED;
+	}
+	
+	/* we picked a max modulus size to simplify buffer allocation */
+	if (this->k > 8192/8)
+	{
+		return FAILED;
+	}
+	
+	mpz_init(t);
+	mpz_init(u);
+	mpz_init(q1);
+	
+	/* check that n == p * q */
+	mpz_mul(u, this->p, this->q);
+	if (mpz_cmp(u, this->n) != 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that e divides neither p-1 nor q-1 */
+	mpz_sub_ui(t, this->p, 1);
+	mpz_mod(t, t, this->e);
+	if (mpz_cmp_ui(t, 0) == 0)
+	{
+		status = FAILED;
+	}
+	
+	mpz_sub_ui(t, this->q, 1);
+	mpz_mod(t, t, this->e);
+	if (mpz_cmp_ui(t, 0) == 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that d is e^-1 (mod lcm(p-1, q-1)) */
+	/* see PKCS#1v2, aka RFC 2437, for the "lcm" */
+	mpz_sub_ui(q1, this->q, 1);
+	mpz_sub_ui(u, this->p, 1);
+	mpz_gcd(t, u, q1);		/* t := gcd(p-1, q-1) */
+	mpz_mul(u, u, q1);		/* u := (p-1) * (q-1) */
+	mpz_divexact(u, u, t);	/* u := lcm(p-1, q-1) */
+	
+	mpz_mul(t, this->d, this->e);
+	mpz_mod(t, t, u);
+	if (mpz_cmp_ui(t, 1) != 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that exp1 is d mod (p-1) */
+	mpz_sub_ui(u, this->p, 1);
+	mpz_mod(t, this->d, u);
+	if (mpz_cmp(t, this->exp1) != 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that exp2 is d mod (q-1) */
+	mpz_sub_ui(u, this->q, 1);
+	mpz_mod(t, this->d, u);
+	if (mpz_cmp(t, this->exp2) != 0)
+	{
+		status = FAILED;
+	}
+	
+	/* check that coeff is (q^-1) mod p */
+	mpz_mul(t, this->coeff, this->q);
+	mpz_mod(t, t, this->p);
+	if (mpz_cmp_ui(t, 1) != 0)
+	{
+		status = FAILED;
+	}
+	
+	mpz_clear(t);
+	mpz_clear(u);
+	mpz_clear(q1);
+	return status;
+}
+
+/**
  * Implementation of rsa_private_key.clone.
  */
 static rsa_private_key_t* _clone(private_rsa_private_key_t *this)
@@ -595,9 +692,7 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	return &this->public;
 }
 
-
-#if 0 
-NOT used yet, since we use plutos ASN1 parser for now
+#ifdef NEW_ASN1
 /*
  * see header
  */
@@ -627,98 +722,20 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t chunk)
 		return NULL;
 	}
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
-	return &this->public;
+	
+	if (check(this) != SUCCESS)
+	{
+		destroy(this);
+		return NULL;
+	}
+	else
+	{
+		return &this->public;
+	}
 }
-#endif
-
-static status_t check(private_rsa_private_key_t *this)
-{
-	mpz_t t, u, q1;
-	status_t status = SUCCESS;
-	
-	/* PKCS#1 1.5 section 6 requires modulus to have at least 12 octets.
-	 * We actually require more (for security).
-	 */
-	if (this->k < 512/8)
-		return FAILED;
-	
-	/* we picked a max modulus size to simplify buffer allocation */
-	if (this->k > 8192/8)
-		return FAILED;
-	
-	mpz_init(t);
-	mpz_init(u);
-	mpz_init(q1);
-	
-	/* check that n == p * q */
-	mpz_mul(u, this->p, this->q);
-	if (mpz_cmp(u, this->n) != 0)
-	{
-		status = FAILED;
-	}
-	
-	/* check that e divides neither p-1 nor q-1 */
-	mpz_sub_ui(t, this->p, 1);
-	mpz_mod(t, t, this->e);
-	if (mpz_cmp_ui(t, 0) == 0)
-	{
-		status = FAILED;
-	}
-	
-	mpz_sub_ui(t, this->q, 1);
-	mpz_mod(t, t, this->e);
-	if (mpz_cmp_ui(t, 0) == 0)
-	{
-		status = FAILED;
-	}
-	
-	/* check that d is e^-1 (mod lcm(p-1, q-1)) */
-	/* see PKCS#1v2, aka RFC 2437, for the "lcm" */
-	mpz_sub_ui(q1, this->q, 1);
-	mpz_sub_ui(u, this->p, 1);
-	mpz_gcd(t, u, q1);		/* t := gcd(p-1, q-1) */
-	mpz_mul(u, u, q1);		/* u := (p-1) * (q-1) */
-	mpz_divexact(u, u, t);	/* u := lcm(p-1, q-1) */
-	
-	mpz_mul(t, this->d, this->e);
-	mpz_mod(t, t, u);
-	if (mpz_cmp_ui(t, 1) != 0)
-	{
-		status = FAILED;
-	}
-	
-	/* check that exp1 is d mod (p-1) */
-	mpz_sub_ui(u, this->p, 1);
-	mpz_mod(t, this->d, u);
-	if (mpz_cmp(t, this->exp1) != 0)
-	{
-		status = FAILED;
-	}
-	
-	/* check that exp2 is d mod (q-1) */
-	mpz_sub_ui(u, this->q, 1);
-	mpz_mod(t, this->d, u);
-	if (mpz_cmp(t, this->exp2) != 0)
-	{
-		status = FAILED;
-	}
-	
-	/* check that coeff is (q^-1) mod p */
-	mpz_mul(t, this->coeff, this->q);
-	mpz_mod(t, t, this->p);
-	if (mpz_cmp_ui(t, 1) != 0)
-	{
-		status = FAILED;
-	}
-	
-	mpz_clear(t);
-	mpz_clear(u);
-	mpz_clear(q1);
-	return status;
-}
-
+#else
 /*
- *  Parses a PKCS#1 private key
+ * see header
  */
 rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 {
@@ -745,6 +762,7 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 	{
 		if (!extract_object(privkeyObjects, &objectID, &object, &level, &ctx))
 		{
+			destroy(this);
 			return FALSE;
 		}
 		if (objectID == PKCS1_PRIV_KEY_VERSION)
@@ -765,6 +783,9 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 		}
 		objectID++;
 	}
+	
+	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
+	
 	if (check(this) != SUCCESS)
 	{
 		destroy(this);
@@ -775,9 +796,11 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 		return &this->public;
 	}
 }
+#endif
 
 /*
  * see header
+ * TODO: PEM files
  */
 rsa_private_key_t *rsa_private_key_create_from_file(char *filename, char *passphrase)
 {

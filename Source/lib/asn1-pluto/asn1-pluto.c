@@ -572,3 +572,168 @@ bool is_asn1(chunk_t blob)
 	}
 	return TRUE;
 }
+
+/*
+ * codes ASN.1 lengths up to a size of 16'777'215 bytes
+ */
+void code_asn1_length(size_t length, chunk_t *code)
+{
+	if (length < 128)
+	{
+		code->ptr[0] = length;
+		code->len = 1;
+	}
+	else if (length < 256)
+	{
+		code->ptr[0] = 0x81;
+		code->ptr[1] = (u_char) length;
+		code->len = 2;
+	}
+	else if (length < 65536)
+	{
+		code->ptr[0] = 0x82;
+		code->ptr[1] = length >> 8;
+		code->ptr[2] = length & 0x00ff;
+		code->len = 3;
+	}
+	else
+	{
+		code->ptr[0] = 0x83;
+		code->ptr[1] = length >> 16;
+		code->ptr[2] = (length >> 8) & 0x00ff;
+		code->ptr[3] = length & 0x0000ff;
+		code->len = 4;
+	}
+}
+
+/*
+ * build an empty asn.1 object with tag and length fields already filled in
+ */
+u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen)
+{
+	u_char length_buf[4];
+	chunk_t length = { length_buf, 0 };
+	u_char *pos;
+	
+	/* code the asn.1 length field */
+	code_asn1_length(datalen, &length);
+	
+	/* allocate memory for the asn.1 TLV object */
+	object->len = 1 + length.len + datalen;
+	object->ptr = malloc(object->len);
+	
+	/* set position pointer at the start of the object */
+	pos = object->ptr;
+	
+	/* copy the asn.1 tag field and advance the pointer */
+	*pos++ = type;
+	
+	/* copy the asn.1 length field and advance the pointer */
+	memcpy(pos, length.ptr, length.len); 
+	pos += length.len;
+	
+	return pos;
+}
+
+/*
+ * build a simple ASN.1 object
+ */
+chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
+{
+	chunk_t object;
+	
+	u_char *pos = build_asn1_object(&object, tag, content.len);
+	memcpy(pos, content.ptr, content.len); 
+	pos += content.len;
+	
+	return object;
+}
+
+/* Build an ASN.1 object from a variable number of individual chunks.
+ * Depending on the mode, chunks either are moved ('m') or copied ('c').
+ */
+chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
+{
+	chunk_t construct;
+	va_list chunks;
+	u_char *pos;
+	int i;
+	int count = strlen(mode);
+	
+	/* sum up lengths of individual chunks */ 
+	va_start(chunks, mode);
+	construct.len = 0;
+	for (i = 0; i < count; i++)
+	{
+		chunk_t ch = va_arg(chunks, chunk_t);
+		construct.len += ch.len;
+	}
+	va_end(chunks);
+	
+	/* allocate needed memory for construct */
+	pos = build_asn1_object(&construct, type, construct.len);
+	
+	/* copy or move the chunks */
+	va_start(chunks, mode);
+	for (i = 0; i < count; i++)
+	{
+		chunk_t ch = va_arg(chunks, chunk_t);
+		
+		switch (*mode++)
+		{
+			case 'm':
+				memcpy(pos, ch.ptr, ch.len); 
+				pos += ch.len;
+				free(ch.ptr);
+				break;
+			case 'c':
+			default:
+				memcpy(pos, ch.ptr, ch.len); 
+				pos += ch.len;
+		}
+	}
+	va_end(chunks);
+	
+	return construct;
+}
+
+/*
+ * convert a MP integer into a DER coded ASN.1 object
+ */
+chunk_t asn1_integer_from_mpz(const mpz_t value)
+{
+	size_t bits = mpz_sizeinbase(value, 2);  /* size in bits */
+	chunk_t n;
+	n.len = 1 + bits / 8;  /* size in bytes */	
+	n.ptr = mpz_export(NULL, NULL, 1, n.len, 1, 0, value);
+	
+	return asn1_wrap(ASN1_INTEGER, "m", n);
+}
+
+/*
+ *  convert a date into ASN.1 UTCTIME or GENERALIZEDTIME format
+ */
+chunk_t timetoasn1(const time_t *time, asn1_t type)
+{
+	int offset;
+	const char *format;
+	char buf[TIMETOA_BUF];
+	chunk_t formatted_time;
+	struct tm *t = gmtime(time);
+	
+	if (type == ASN1_GENERALIZEDTIME)
+	{
+		format = "%04d%02d%02d%02d%02d%02dZ";
+		offset = 1900;
+	}
+	else /* ASN1_UTCTIME */
+	{
+		format = "%02d%02d%02d%02d%02d%02dZ";
+		offset = (t->tm_year < 100)? 0 : -100;
+	}
+	sprintf(buf, format, t->tm_year + offset, t->tm_mon + 1, t->tm_mday
+			, t->tm_hour, t->tm_min, t->tm_sec);
+	formatted_time.ptr = buf;
+	formatted_time.len = strlen(buf);
+	return asn1_simple_object(type, formatted_time);
+}

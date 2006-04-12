@@ -103,7 +103,6 @@ typedef struct {
 } asn1_ctx_t;
 
 /* some common prefabricated ASN.1 constants */
-
 extern const chunk_t ASN1_INTEGER_0;
 extern const chunk_t ASN1_INTEGER_1;
 extern const chunk_t ASN1_INTEGER_2;
@@ -115,6 +114,8 @@ extern const chunk_t ASN1_rsaEncryption_id;
 extern const chunk_t ASN1_md5WithRSA_id;
 extern const chunk_t ASN1_sha1WithRSA_id;
 
+#define TIMETOA_BUF 30
+
 extern chunk_t asn1_algorithmIdentifier(int oid);
 extern int known_oid(chunk_t object);
 extern u_int asn1_length(chunk_t *blob);
@@ -125,5 +126,12 @@ extern bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t
 extern bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name);
 extern int parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters);
 extern bool is_asn1(chunk_t blob);
+
+extern void code_asn1_length(size_t length, chunk_t *code);
+extern u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen);
+extern chunk_t asn1_integer_from_mpz(const mpz_t value);
+extern chunk_t asn1_simple_object(asn1_t tag, chunk_t content);
+extern chunk_t asn1_wrap(asn1_t type, const char *mode, ...);
+extern chunk_t timetoasn1(const time_t *time, asn1_t type);
 
 #endif /* _ASN1_H */

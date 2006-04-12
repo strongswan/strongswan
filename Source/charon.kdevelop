@@ -13,6 +13,9 @@
       <mainprogram>Source</mainprogram>
       <directoryradio>executable</directoryradio>
     </run>
+    <general>
+      <activedir></activedir>
+    </general>
   </kdevcustomproject>
   <kdevdebugger>
     <general>

@@ -37,6 +37,7 @@
  * hash algorithm OIDs. These also contain
  * the length of the following hash.
  * These values are also used in rsa_private_key.c.
+ * TODO: We may move them in asn1 sometime...
  */
 
 u_int8_t md2_oid[] = {

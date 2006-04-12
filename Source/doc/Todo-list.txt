@@ -1,7 +1,7 @@
- TODO-List for charon
+ Todo-List for charon
 ======================
 
-+ = done, - = todo, ordered by priority
++ = done, / = partial, - = todo, ordered by priority
 
 + private key loading: der, without passphrase
 + load all private keys from ipsec.d/private/ in stroke.c
@@ -24,10 +24,13 @@
     + utils (plus host)
     + logger_manager instance in lib
     + leak detective usable for charon and pluto and anything else
-    - doxygen fixes (multiple doxyfiles?)
-  - integrate asn1 parser/oid (asn1/oid)
-  - integrate PEM loading (pem)
-  - ... (more to come)
+    - doxygen split (charon/lib)
+  + integrate asn1 parser/oid (asn1/oid)
+  + integrate basic PEM loading
+  - 
+  - implement 3DES to load encrypted pem files
+  - port x509 stuff
+  - 
 
 - ipsec.secrets parsing
 
@@ -38,7 +41,6 @@
 - certificate exchange
 
 - trapping
-
 - delete notify, when to send?
 - notifys on connection setup failure
 - create child sa message
