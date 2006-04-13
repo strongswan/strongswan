@@ -263,12 +263,11 @@ void signal_handler(int signal)
 
 	for (i = 0; i < size; i++)
 	{
-		logger->log(logger, ERROR, "\t%s", strings[i]);
+		logger->log(logger, ERROR, "    %s", strings[i]);
 	}
-
 	free (strings);
-	
-	charon->kill(charon, "SIGSEGV received");
+	/* kill ourselve the hard way, anything other may result in more SIGSEGVs*/
+	kill(getpid(), SIGKILL);
 }
 
 /**

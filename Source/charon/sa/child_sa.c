@@ -447,6 +447,8 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			{
 				my_iter->destroy(my_iter);
 				other_iter->destroy(other_iter);
+				policy->my_net->destroy(policy->my_net);
+				policy->other_net->destroy(policy->other_net);
 				free(policy);
 				return status;
 			}

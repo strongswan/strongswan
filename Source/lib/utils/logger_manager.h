@@ -59,6 +59,7 @@ enum logger_context_t {
 	DER_ENCODER,
 	ASN1,
 	XFRM,
+	LEAK_DETECT,
 	LOGGER_CONTEXT_ROOF,
 };
 

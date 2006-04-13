@@ -23,21 +23,33 @@
 #include "leak_detective_test.h"
 
 
+void *mem_a, *mem_b, *mem_c;
+
 void a()
 {
-	malloc(4);
+	mem_a = malloc(4);
 }
 
 void b()
 {
 	a();
-	malloc(5);
+	mem_b = malloc(5);
 }
 
 void c()
 {
 	b();
-	malloc(6);
+	mem_c = malloc(6);
+}
+
+void recursive(int depth)
+{
+	void *tiny = malloc(1);
+	if (--depth > 0)
+	{
+		recursive(depth);
+	}
+	free(tiny);
 }
 
 
@@ -59,5 +71,9 @@ void test_leak_detective(protected_tester_t *tester)
 	free(m3);
 	free(m1);
 	
-	//c();
+	c();
+	free(mem_a);
+	free(mem_c);
+	free(mem_b);
+	recursive(10000);
 }
