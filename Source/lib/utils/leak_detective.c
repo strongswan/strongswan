@@ -30,10 +30,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <dlfcn.h>
+#include <unistd.h>
 
 #include "leak_detective.h"
 
 #include <types.h>
+#include <utils/logger_manager.h>
 
 #ifdef LEAK_DETECTIVE
 
@@ -42,6 +44,10 @@
  */
 #define MEMORY_HEADER_MAGIC 0xF1367ADF
 
+/**
+ * logger for the leak detective
+ */
+logger_t *logger;
 
 static void install_hooks(void);
 static void uninstall_hooks(void);
@@ -103,37 +109,39 @@ memory_header_t first_header = {
  */
 void *old_malloc_hook, *old_realloc_hook, *old_free_hook;
 
-
+/**
+ * Mutex to exclusivly uninstall hooks, access heap list
+ */
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+void (*__malloc_initialize_hook) (void) = install_hooks;
 
 /**
  * log stack frames queried by backtrace()
  * TODO: Dump symbols of static functions!!!
  */
-void log_stack_frames(void *stack_frames, int stack_frame_count)
+void log_stack_frames(void **stack_frames, int stack_frame_count)
 {
 	char **strings;
 	size_t i;
 
 	strings = backtrace_symbols (stack_frames, stack_frame_count);
 
-	printf("  dumping %d stack frames.\n", stack_frame_count);
+	logger->log(logger, ERROR, "  dumping %d stack frame addresses.", stack_frame_count);
 
 	for (i = 0; i < stack_frame_count; i++)
 	{
-		printf ("    %s\n", strings[i]);
+		logger->log(logger, ERROR, "    %s", strings[i]);
 	}
 	free (strings);
 }
-
-void (*__malloc_initialize_hook) (void) = install_hooks;
 
 /**
  * Installs the malloc hooks, enables leak detection
  */
 void install_hooks()
 {
+	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
 	old_malloc_hook = __malloc_hook;
 	old_realloc_hook = __realloc_hook;
 	old_free_hook = __free_hook;
@@ -200,10 +208,10 @@ static void free_hook(void *ptr, const void *caller)
 		pthread_mutex_unlock(&mutex);
 		/* TODO: Since we get a lot of theses from the pthread lib, its deactivated for now... */
 		return;
-		printf("freeing of invalid memory (%p)\n", ptr);
+		logger->log(logger, ERROR, "freeing of invalid memory (%p)", ptr);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
-		kill(0, SIGSEGV);
+		kill(getpid(), SIGKILL);
 		return;
 	}
 	/* remove magic from hdr */
@@ -239,10 +247,10 @@ static void *realloc_hook(void *old, size_t bytes, const void *caller)
 	}
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		printf("reallocation of invalid memory (%p)\n", old);
+		logger->log(logger, ERROR, "reallocation of invalid memory (%p)", old);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
-		kill(0, SIGSEGV);
+		kill(getpid(), SIGKILL);
 		return NULL;
 	}
 	
@@ -264,20 +272,20 @@ void __attribute__ ((destructor)) report_leaks()
 	
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
-		printf("Leak (%d bytes at %p)\n", hdr->bytes, hdr + 1);
+		logger->log(logger, ERROR, "Leak (%d bytes at %p)", hdr->bytes, hdr + 1);
 		log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
 		leaks++;
 	}
 	switch (leaks)
 	{
 		case 0:
-			printf("No leaks detected\n");
+			logger->log(logger, CONTROL, "No leaks detected");
 			break;
 		case 1:
-			printf("One leak detected\n");
+			logger->log(logger, ERROR, "One leak detected");
 			break;
 		default:
-			printf("%d leaks detected\n", leaks);
+			logger->log(logger, ERROR, "%d leaks detected", leaks);
 			break;
 	}
 }
@@ -304,13 +312,18 @@ char *inet_ntoa(struct in_addr in)
 	handle = dlopen("libc.so.6", RTLD_LAZY);
 	if (handle == NULL)
 	{
-		kill(0, SIGSEGV);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		kill(getpid(), SIGSEGV);
 	}
 	_inet_ntoa = dlsym(handle, "inet_ntoa");
 	
 	if (_inet_ntoa == NULL)
 	{
-		kill(0, SIGSEGV);
+		dlclose(handle);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		kill(getpid(), SIGSEGV);
 	}
 	result = _inet_ntoa(in);
 	dlclose(handle);
@@ -336,13 +349,18 @@ int pthread_create(pthread_t *__restrict __threadp, __const pthread_attr_t *__re
 	handle = dlopen("libpthread.so.0", RTLD_LAZY);
 	if (handle == NULL)
 	{
-		kill(0, SIGSEGV);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		kill(getpid(), SIGSEGV);
 	}
 	_pthread_create = dlsym(handle, "pthread_create");
 	
 	if (_pthread_create == NULL)
 	{
-		kill(0, SIGSEGV);
+		dlclose(handle);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		kill(getpid(), SIGSEGV);
 	}
 	result = _pthread_create(__threadp, __attr, __start_routine, __arg);
 	dlclose(handle);
@@ -364,13 +382,18 @@ time_t mktime(struct tm *tm)
 	handle = dlopen("libc.so.6", RTLD_LAZY);
 	if (handle == NULL)
 	{
-		kill(0, SIGSEGV);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		kill(getpid(), SIGSEGV);
 	}
 	_mktime = dlsym(handle, "mktime");
 
 	if (_mktime == NULL)
 	{
-		kill(0, SIGSEGV);
+		dlclose(handle);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		kill(getpid(), SIGSEGV);
 	}
 	result = _mktime(tm);
 	dlclose(handle);

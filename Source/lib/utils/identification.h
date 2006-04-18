@@ -85,6 +85,21 @@ enum id_type_t {
 };
 
 /**
+ * Old pluto id format
+ * 
+ * @deprecated Do not use any more, only here for pluto.
+ */
+// struct id {
+// 	/** ID_* value, pluto pendant to id_type_t */
+// 	int kind;
+// 	/** ID_IPV4_ADDR, ID_IPV6_ADDR */
+// 	ip_address ip_addr;
+// 	/** ID_FQDN, ID_USER_FQDN (with @) */
+// 	/** ID_KEY_ID, ID_DER_ASN_DN       */
+// 	chunk_t name;
+// };
+
+/**
  * String mappings for id_type_t.
  */
 extern mapping_t id_type_m[];
@@ -144,6 +159,17 @@ struct identification_t {
 	char *(*get_string) (identification_t *this);
 	
 	/**
+	 * @brief Get the id in the format used in pluto.
+	 * 
+	 * We do this in pluto style here, which means no memory
+	 * is allocated.
+	 * 
+	 * @param this		the identification_t object
+	 * @return 			string
+	 */
+	// void (*get_pluto_id) (identification_t *this, struct id *pluto_id);
+	
+	/**
 	 * @brief Check if two identification_t objects are equal.
 	 * 
 	 * @param this		the identification_t object
@@ -195,7 +221,6 @@ struct identification_t {
  */
 identification_t * identification_create_from_string(id_type_t type, char *string);
 
-
 /**
  * @brief Creates an identification_t object from an encoded chunk.
  * 
@@ -206,6 +231,19 @@ identification_t * identification_create_from_string(id_type_t type, char *strin
  * @ingroup utils
  */
 identification_t * identification_create_from_encoding(id_type_t type, chunk_t encoded);
+
+/**
+ * @brief Creates an identification_t object from the old pluto id format.
+ * 
+ * Pluto uses struct id for identification stuff. Since we need to convert from
+ * this format to our identification_t, we need this special constructor.
+ * 
+ * @param id		old pluto format id
+ * @return			identification_t object
+ * 
+ * @ingroup utils
+ */
+// identification_t * identification_create_from_pluto_id(struct id *pluto_id);
 
 
 #endif /* IDENTIFICATION_H_ */

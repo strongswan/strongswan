@@ -26,6 +26,8 @@
 #include <types.h>
 #include <definitions.h>
 #include <crypto/rsa/rsa_public_key.h>
+#include <utils/identification.h>
+#include <utils/iterator.h>
 
 
 typedef struct certificate_t certificate_t;
@@ -47,6 +49,14 @@ struct certificate_t {
 	 * @return					public_key
 	 */
 	rsa_public_key_t *(*get_public_key) (certificate_t *this);
+
+	identification_t *(*get_issuer) (certificate_t *this);
+	identification_t *(*get_subject) (certificate_t *this);
+	iterator_t *(*create_subjectaltname_iter) (certificate_t *this);
+	iterator_t *(*create_issueraltname_iter) (certificate_t *this);
+	bool (*belongs_to) (certificate_t *this, identification_t *subject);
+	bool (*issued_by) (certificate_t *this, identification_t *issuer);
+	bool (*validate) (certificate_t *this, rsa_public_key_t *signer);
 	
 	/**
 	 * @brief Destroys the private key.
