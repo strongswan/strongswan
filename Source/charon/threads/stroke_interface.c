@@ -36,7 +36,7 @@
 #include <stroke.h>
 #include <types.h>
 #include <daemon.h>
-#include <crypto/certificate.h>
+#include <crypto/x509.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 
 
@@ -280,7 +280,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
-	certificate_t *my_cert, *other_cert;
+	x509_t *my_cert, *other_cert;
 	rsa_private_key_t *private_key = NULL;
 	rsa_public_key_t *public_key = NULL;
 				
@@ -419,7 +419,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 				
 				
 	chdir(CERTIFICATE_DIR);
-	my_cert = certificate_create_from_file(msg->add_conn.me.cert);
+	my_cert = x509_create_from_file(msg->add_conn.me.cert);
 	if (my_cert == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "loading own certificate \"%s%s\" failed", 
@@ -442,7 +442,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		}
 		my_cert->destroy(my_cert);
 	}
-	other_cert = certificate_create_from_file(msg->add_conn.other.cert);
+	other_cert = x509_create_from_file(msg->add_conn.other.cert);
 	public_key = NULL;
 	if (other_cert == NULL)
 	{

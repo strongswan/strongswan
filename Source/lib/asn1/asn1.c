@@ -17,7 +17,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "asn1-pluto.h"
+#include "asn1.h"
 #include "oid.h"
 
 #include <utils/logger_manager.h>

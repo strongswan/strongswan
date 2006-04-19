@@ -28,13 +28,7 @@
 #include "rsa_private_key.h"
 
 #include <daemon.h>
-#ifdef NEW_ASN1
-# include <asn1/asn1.h>
-# include <asn1/der_decoder.h>
-#else
-# include <asn1-pluto/asn1-pluto.h>
-#endif
-
+#include <asn1/asn1.h>
 
 /* 
  * Oids for hash algorithms are defined in
@@ -143,41 +137,8 @@ struct private_rsa_private_key_t {
 	
 };
 
-#ifdef NEW_ASN1
-/**
- * Rules for de-/encoding of a private key from/in ASN1 
- */
-static asn1_rule_t rsa_private_key_rules[] = {
-	{ASN1_SEQUENCE, 0, 0, 0},
-	{	ASN1_INTEGER, 0, 		offsetof(private_rsa_private_key_t, version), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, n), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, e), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, d), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, p), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, q), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, exp1), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, exp2), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_private_key_t, coeff), 0},
-	{ASN1_END, 0, 0, 0},
-};
-#else
-struct {
-	const char *name;
-	size_t offset;
-} RSA_private_field[] = {
-	{ "Modulus",         offsetof(private_rsa_private_key_t, n) },
-	{ "PublicExponent",  offsetof(private_rsa_private_key_t, e) },
-	{ "PrivateExponent", offsetof(private_rsa_private_key_t, d) },
-	{ "Prime1",          offsetof(private_rsa_private_key_t, p) },
-	{ "Prime2",          offsetof(private_rsa_private_key_t, q) },
-	{ "Exponent1",       offsetof(private_rsa_private_key_t, exp1) },
-	{ "Exponent2",       offsetof(private_rsa_private_key_t, exp2) },
-	{ "Coefficient",     offsetof(private_rsa_private_key_t, coeff) },
-};
-
 /* ASN.1 definition of a PKCS#1 RSA private key */
-
-static const asn1Object_t privkeyObjects[] = {
+static const asn1Object_t privkey_objects[] = {
 	{ 0, "RSAPrivateKey",		ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
 	{ 1,   "version",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
 	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  2 */
@@ -197,13 +158,16 @@ static const asn1Object_t privkeyObjects[] = {
 	{ 1,   "end opt or loop",	ASN1_EOC,          ASN1_END  }  /* 15 */
 };
 
-#define PKCS1_PRIV_KEY_VERSION		 1
-#define PKCS1_PRIV_KEY_MODULUS		 2
-#define PKCS1_PRIV_KEY_PUB_EXP		 3
-#define PKCS1_PRIV_KEY_COEFF		 9
-#define PKCS1_PRIV_KEY_ROOF			16
-#endif
-
+#define PRIV_KEY_VERSION		 1
+#define PRIV_KEY_MODULUS		 2
+#define PRIV_KEY_PUB_EXP		 3
+#define PRIV_KEY_PRIV_EXP		 4
+#define PRIV_KEY_PRIME1			 5
+#define PRIV_KEY_PRIME2			 6
+#define PRIV_KEY_EXP1			 7
+#define PRIV_KEY_EXP2			 8
+#define PRIV_KEY_COEFF			 9
+#define PRIV_KEY_ROOF			16
 
 static private_rsa_private_key_t *rsa_private_key_create_empty();
 
@@ -628,7 +592,6 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 		return NULL;
 	}
 	
-	
 	mpz_init(t);	
 	mpz_init(n);
 	mpz_init(d);
@@ -636,7 +599,6 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	mpz_init(exp2);
 	mpz_init(coeff);
 	
-
 	/* Swapping Primes so p is larger then q */
 	if (mpz_cmp(p, q) < 0)
 	{
@@ -692,48 +654,6 @@ rsa_private_key_t *rsa_private_key_create(size_t key_size)
 	return &this->public;
 }
 
-#ifdef NEW_ASN1
-/*
- * see header
- */
-rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t chunk)
-{
-	private_rsa_private_key_t *this;
-	der_decoder_t *dd;
-	status_t status;
-	
-	this = rsa_private_key_create_empty();
-	
-	mpz_init(this->n);
-	mpz_init(this->e);
-	mpz_init(this->p);
-	mpz_init(this->q);
-	mpz_init(this->d);
-	mpz_init(this->exp1);
-	mpz_init(this->exp2);
-	mpz_init(this->coeff);
-	
-	dd = der_decoder_create(rsa_private_key_rules);
-	status = dd->decode(dd, chunk, this);
-	dd->destroy(dd);
-	if (status != SUCCESS)
-	{
-		destroy(this);
-		return NULL;
-	}
-	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
-	
-	if (check(this) != SUCCESS)
-	{
-		destroy(this);
-		return NULL;
-	}
-	else
-	{
-		return &this->public;
-	}
-}
-#else
 /*
  * see header
  */
@@ -758,28 +678,46 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 	
 	asn1_init(&ctx, blob, 0, FALSE);
 	
-	while (objectID < PKCS1_PRIV_KEY_ROOF) 
+	while (objectID < PRIV_KEY_ROOF) 
 	{
-		if (!extract_object(privkeyObjects, &objectID, &object, &level, &ctx))
+		if (!extract_object(privkey_objects, &objectID, &object, &level, &ctx))
 		{
 			destroy(this);
 			return FALSE;
 		}
-		if (objectID == PKCS1_PRIV_KEY_VERSION)
+		switch (objectID)
 		{
-			if (object.len > 0 && *object.ptr != 0)
-			{
-				destroy(this);
-				return NULL;
-			}
-		}
-		else if (objectID >= PKCS1_PRIV_KEY_MODULUS &&
-					   objectID <= PKCS1_PRIV_KEY_COEFF)
-		{
-			mpz_t *u = (mpz_t *) ((char *)this
-					+ RSA_private_field[objectID - PKCS1_PRIV_KEY_MODULUS].offset);
-			
-			mpz_import(*u, object.len, 1, 1, 1, 0, object.ptr);
+			case PRIV_KEY_VERSION:
+				if (object.len > 0 && *object.ptr != 0)
+				{
+					destroy(this);
+					return NULL;
+				}
+				break;
+			case PRIV_KEY_MODULUS:
+				mpz_import(this->n, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_PUB_EXP:
+				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_PRIV_EXP:
+				mpz_import(this->d, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_PRIME1:
+				mpz_import(this->p, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_PRIME2:
+				mpz_import(this->q, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_EXP1:
+				mpz_import(this->exp1, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_EXP2:
+				mpz_import(this->exp2, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PRIV_KEY_COEFF:
+				mpz_import(this->coeff, object.len, 1, 1, 1, 0, object.ptr);
+				break;
 		}
 		objectID++;
 	}
@@ -796,7 +734,6 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 		return &this->public;
 	}
 }
-#endif
 
 /*
  * see header

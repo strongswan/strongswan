@@ -25,4 +25,3 @@ $(BUILD_DIR)definitions.o :		$(LIB_DIR)definitions.c $(LIB_DIR)definitions.h
 include $(MAIN_DIR)lib/crypto/Makefile.transforms
 include $(MAIN_DIR)lib/utils/Makefile.utils
 include $(MAIN_DIR)lib/asn1/Makefile.asn1
-include $(MAIN_DIR)lib/asn1-pluto/Makefile.asn1

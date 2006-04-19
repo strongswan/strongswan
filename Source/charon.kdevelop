@@ -14,7 +14,7 @@
       <directoryradio>executable</directoryradio>
     </run>
     <general>
-      <activedir></activedir>
+      <activedir/>
     </general>
   </kdevcustomproject>
   <kdevdebugger>

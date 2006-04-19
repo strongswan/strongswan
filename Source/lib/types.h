@@ -31,6 +31,13 @@
 #include <definitions.h>
 
 
+/**
+ * General purpose boolean type.
+ */
+typedef int bool;
+#define FALSE	0
+#define TRUE	1
+
 typedef enum status_t status_t;
 
 /**
@@ -166,16 +173,15 @@ void chunk_free(chunk_t *chunk);
 chunk_t chunk_alloc(size_t bytes);
 
 /**
+ * Compare two chunks for equality,
+ * NULL chunks are never equal.
+ */
+bool chunk_equals(chunk_t a, chunk_t b);
+
+/**
  * Clone a data to a newly allocated buffer
  */
 void *clalloc(void *pointer, size_t size);
 
-
-/**
- * General purpose boolean type.
- */
-typedef int bool;
-#define FALSE	0
-#define TRUE	1
 
 #endif /*TYPES_H_*/

@@ -86,7 +86,7 @@ void test_certificate(protected_tester_t *tester)
 {
 	chunk_t certificate = {certificate_buffer, sizeof(certificate_buffer)};
 	
-	certificate_t *cert = certificate_create_from_chunk(certificate);
+	x509_t *cert = x509_create_from_chunk(certificate);
 	
 	//certificate_t *cert = certificate_create_from_file("myCert.der");
 	

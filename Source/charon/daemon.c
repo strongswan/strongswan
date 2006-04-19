@@ -266,7 +266,7 @@ void signal_handler(int signal)
 		logger->log(logger, ERROR, "    %s", strings[i]);
 	}
 	free (strings);
-	/* kill ourselve the hard way, anything other may result in more SIGSEGVs*/
+	logger->log(logger, ERROR, "Killing ourself hard after SIGSEGV");
 	kill(getpid(), SIGKILL);
 }
 

@@ -137,7 +137,7 @@ void test_rsa(protected_tester_t *tester)
 {
 	rsa_private_key_t *private_key;
 	rsa_public_key_t *public_key;
-	certificate_t *certificate;
+	x509_t *certificate;
 	chunk_t data, signature;
 	chunk_t der_private_key = {private_key_buffer, sizeof(private_key_buffer)};
 	chunk_t der_public_key = {public_key_buffer, sizeof(public_key_buffer)};

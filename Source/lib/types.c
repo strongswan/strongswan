@@ -87,13 +87,25 @@ chunk_t chunk_alloc(size_t bytes)
 	return new_chunk;
 }
 
+/**
+ * Described in header.
+ */
+bool chunk_equals(chunk_t a, chunk_t b)
+{
+	if (a.ptr == NULL || b.ptr == NULL ||
+		a.len != b.len ||
+		memcmp(a.ptr, b.ptr, a.len) != 0)
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
 
 /**
  * Described in header.
  */
 void *clalloc(void * pointer, size_t size)
 {
-	
 	void *data;
 	data = malloc(size);
 	

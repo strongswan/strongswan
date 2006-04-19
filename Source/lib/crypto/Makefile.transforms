@@ -32,6 +32,6 @@ LIB_OBJS+= $(BUILD_DIR)prf_plus.o
 $(BUILD_DIR)prf_plus.o :		$(CRYPTO_DIR)prf_plus.c $(CRYPTO_DIR)prf_plus.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
-LIB_OBJS+= $(BUILD_DIR)certificate.o
-$(BUILD_DIR)certificate.o :		$(CRYPTO_DIR)certificate.c $(CRYPTO_DIR)certificate.h
+LIB_OBJS+= $(BUILD_DIR)x509.o
+$(BUILD_DIR)x509.o :			$(CRYPTO_DIR)x509.c $(CRYPTO_DIR)x509.h
 								$(CC) $(CFLAGS) -c -o $@ $<

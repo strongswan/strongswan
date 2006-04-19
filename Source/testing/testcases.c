@@ -61,7 +61,6 @@
 #include "rsa_test.h"
 #include "kernel_interface_test.h"
 #include "child_sa_test.h"
-#include "der_decoder_test.h"
 #include "certificate_test.h"
 #include "leak_detective_test.h"
 
@@ -130,7 +129,6 @@ test_t proposal_test = {test_proposal, "proposal_t test"};
 test_t rsa_test = {test_rsa, "RSA private/public key test"};
 test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 test_t child_sa_test = {test_child_sa, "Child SA"};
-test_t der_decoder_test = {test_der_decoder, "DER decoder"};
 test_t certificate_test = {test_certificate, "X509 Certificate"};
 test_t leak_detective_test = {test_leak_detective, "LEAK detective"};
 
@@ -255,7 +253,7 @@ int main()
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&leak_detective_test);
+	tester->perform_test(tester,&certificate_test);
 	
 	
 	tester->destroy(tester);

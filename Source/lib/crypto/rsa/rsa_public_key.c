@@ -29,7 +29,7 @@
 
 #include <daemon.h>
 #include <crypto/hashers/hasher.h>
-#include <asn1/der_decoder.h>
+#include <asn1/asn1.h>
 
 /* 
  * For simplicity,
@@ -75,6 +75,17 @@ u_int8_t sha512_oid[] = {
 	0x00,0x04,0x40
 };
 
+/* ASN.1 definition public key */
+static const asn1Object_t pubkey_objects[] = {
+	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
+	{ 1,   "modulus",			ASN1_INTEGER,      ASN1_BODY }, /*  1 */
+	{ 1,   "publicExponent",	ASN1_INTEGER,      ASN1_BODY }, /*  2 */
+};
+
+#define PUB_KEY_RSA_PUBLIC_KEY		0
+#define PUB_KEY_MODULUS				1
+#define PUB_KEY_EXPONENT			2
+#define PUB_KEY_ROOF				3
 
 typedef struct private_rsa_public_key_t private_rsa_public_key_t;
 
@@ -137,29 +148,6 @@ struct rsa_public_key_info_t {
 	 * Public key, parseable with rsa_public_key_rules
 	 */
 	chunk_t public_key;
-};
-
-/**
- * Rules for de-/encoding of a public key from/in ASN1 
- */
-static asn1_rule_t rsa_public_key_rules[] = {
-	{ASN1_SEQUENCE, 0, 0, 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_public_key_t, n), 0},
-	{	ASN1_INTEGER, ASN1_MPZ, offsetof(private_rsa_public_key_t, e), 0},
-	{ASN1_END, 0, 0, 0},
-};
-
-/**
- * Rules for de-/encoding of a PublicKeyInfo from/in ASN1 
- */
-static asn1_rule_t rsa_public_key_info_rules[] = {
-	{ASN1_SEQUENCE, 0, 0, 0},
-	{	ASN1_SEQUENCE, 0, 0, 0},
-	{		ASN1_OID, 0, offsetof(rsa_public_key_info_t, algorithm_oid), 0},
-	{		ASN1_NULL, 0, 0, 0},
-	{	ASN1_END, 0, 0, 0},
-	{	ASN1_BITSTRING, 0, offsetof(rsa_public_key_info_t, public_key), 0},
-	{ASN1_END, 0, 0, 0},
 };
 
 private_rsa_public_key_t *rsa_public_key_create_empty();
@@ -398,24 +386,39 @@ private_rsa_public_key_t *rsa_public_key_create_empty()
 /*
  * See header
  */
-rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t chunk)
+rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
 {
-	der_decoder_t *dd;
-	status_t status;
+	asn1_ctx_t ctx;
+	chunk_t object;
+	u_int level;
+	int objectID = 0;
 	private_rsa_public_key_t *this;
 	
 	this = rsa_public_key_create_empty();
 	mpz_init(this->n);
 	mpz_init(this->e);
 	
-	dd = der_decoder_create(rsa_public_key_rules);
-	status = dd->decode(dd, chunk, this);
-	dd->destroy(dd);
-	if (status != SUCCESS)
+	asn1_init(&ctx, blob, 0, FALSE);
+	
+	while (objectID < PUB_KEY_ROOF) 
 	{
-		destroy(this);
-		return NULL;
+		if (!extract_object(pubkey_objects, &objectID, &object, &level, &ctx))
+		{
+			destroy(this);
+			return FALSE;
+		}
+		switch (objectID)
+		{
+			case PUB_KEY_MODULUS:
+				mpz_import(this->n, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+			case PUB_KEY_EXPONENT:
+				mpz_import(this->e, object.len, 1, 1, 1, 0, object.ptr);
+				break;
+		}
+		objectID++;
 	}
+	
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
 	return &this->public;
 }
@@ -429,10 +432,6 @@ rsa_public_key_t *rsa_public_key_create_from_file(char *filename)
 	FILE *file;
 	char *buffer;
 	chunk_t chunk;
-	rsa_public_key_info_t key_info = {CHUNK_INITIALIZER, CHUNK_INITIALIZER};
-	der_decoder_t *dd;
-	status_t status;
-	rsa_public_key_t *public_key = NULL;
 	
 	if (stat(filename, &stb) == -1)
 	{
@@ -455,15 +454,5 @@ rsa_public_key_t *rsa_public_key_create_from_file(char *filename)
 	chunk.ptr = buffer;
 	chunk.len = stb.st_size;
 	
-	/* parse public key info first */
-	dd = der_decoder_create(rsa_public_key_info_rules);
-	status = dd->decode(dd, chunk, &key_info);
-	dd->destroy(dd);
-	chunk_free(&key_info.algorithm_oid);
-	if (status == SUCCESS)
-	{
-		public_key = rsa_public_key_create_from_chunk(chunk);
-	}
-	chunk_free(&key_info.public_key);
-	return public_key;
+	return rsa_public_key_create_from_chunk(chunk);
 }
