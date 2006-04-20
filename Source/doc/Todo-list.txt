@@ -18,31 +18,30 @@
 + stroke output redirection
 + stroke status
 
-- libx509
++ libx509
   + new charon build - libstrong?
     + transforms
     + utils (plus host)
     + logger_manager instance in lib
     + leak detective usable for charon and pluto and anything else
-    - doxygen split (charon/lib)
   + integrate asn1 parser/oid (asn1/oid)
   + integrate basic PEM loading
-  - 
-  - implement 3DES to load encrypted pem files
-  - port x509 stuff
-  - 
+  + port x509 stuff 
+
+- doxygen cleanup (charon/lib)
+
+- implement 3DES to load encrypted pem files
 
 - ipsec.secrets parsing
 
-- certificate DN parsing
-- certificate subjectAltName parsing
-- certificate lookup via ID
-- certificate validation/chaining
-- certificate exchange
+- useable certificate support
+  - certificate lookup via ID
+  - certificate validation/chaining
+  - certificate exchange
 
 - trapping
 - delete notify, when to send?
 - notifys on connection setup failure
-- create child sa message
+- create child sa message/rekeying
 
 - new build environment (autotools?)
