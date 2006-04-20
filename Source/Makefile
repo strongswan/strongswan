@@ -28,7 +28,7 @@ BINNAMELIB=  $(BUILD_DIR)libstrongswan.so
 MAIN_DIR= ./
 
 CFLAGS= -Icharon -Ilib -Istroke -fPIC -Wall -g -DLEAK_DETECTIVE
-# CFLAGS= -Icharon -Ilib -Istroke -fPIC -O3
+#CFLAGS= -Icharon -Ilib -Istroke -fPIC -O3
 
 # objects is extended by each included Makefile
 CHARON_OBJS=

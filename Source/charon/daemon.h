@@ -41,9 +41,11 @@
 #include <config/credential_store.h>
 
 /**
- * @mainpage
+ * @defgroup charon charon
  *
- * @section Threading Architecture
+ * @brief IKEv2 keying daemon.
+ *
+ * @section Architecture
  *
  * All IKEv2 stuff is handled in charon. It uses a newer and more flexible
  * architecture than pluto. Charon uses a thread-pool, which allows parallel
@@ -96,7 +98,83 @@
  */
 
 /**
+ * @defgroup config config
+ *
+ * Classes implementing configuration related things.
+ *
+ * @ingroup charon
+ */
+
+/**
+ * @defgroup encoding encoding
+ *
+ * Classes used to encode and decode IKEv2 messages.
+ *
+ * @ingroup charon
+ */
+
+ /**
+ * @defgroup payloads payloads
+ *
+ * Classes representing specific IKEv2 payloads.
+ *
+ * @ingroup encoding
+ */
+
+/**
+ * @defgroup network network
+ *
+ * Classes for network relevant stuff.
+ *
+ * @ingroup charon
+ */
+
+/**
+ * @defgroup queues queues
+ *
+ * Different kind of queues
+ * (thread save lists).
+ *
+ * @ingroup charon
+ */
+
+/**
+ * @defgroup jobs jobs
+ *
+ * Jobs used in job queue and event queue.
+ *
+ * @ingroup queues
+ */
+
+/**
+ * @defgroup sa sa
+ *
+ * Security associations for IKE and IPSec,
+ * and some helper classes.
+ *
+ * @ingroup charon
+ */
+
+/**
+ * @defgroup states states
+ *
+ * Varius states in which an IKE SA can be.
+ *
+ * @ingroup sa
+ */
+
+/**
+ * @defgroup threads threads
+ *
+ * Threaded classes, which will do their job alone.
+ *
+ * @ingroup charon
+ */
+
+/**
  * Name of the daemon.
+ * 
+ * @ingroup charon
  */
 #define DAEMON_NAME "charon"
 
@@ -105,16 +183,22 @@
  * 
  * There are several other threads, this defines
  * only the number of threads in thread_pool_t.
+ * 
+ * @ingroup charon
  */
 #define NUMBER_OF_WORKING_THREADS 4
 
 /**
  * UDP Port on which the daemon will listen for incoming traffic.
+ * 
+ * @ingroup charon
  */
 #define IKEV2_UDP_PORT 500
 
 /**
  * PID file, in which charon stores its process id
+ * 
+ * @ingroup charon
  */
 #define PID_FILE "/var/run/charon.pid"
 
@@ -123,6 +207,8 @@ typedef struct daemon_t daemon_t;
 
 /**
  * @brief Main class of daemon, contains some globals.
+ * 
+ * @ingroup charon
  */ 
 struct daemon_t {
 	/**

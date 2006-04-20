@@ -1,7 +1,7 @@
 /**
  * @file leak_detective.c
  * 
- * @brief Implementation of leak_detective_t.
+ * @brief Allocation hooks to find memory leaks.
  */
 
 /*
@@ -31,7 +31,6 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <syslog.h>
-#define __USE_GNU /* needed for recursiv mutex initializer */
 #include <pthread.h>
 
 #include "leak_detective.h"
@@ -120,8 +119,7 @@ static bool installed = FALSE;
 /**
  * Mutex to exclusivly uninstall hooks, access heap list
  */
-static pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 /**

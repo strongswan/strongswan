@@ -3,6 +3,7 @@
 
 + = done, / = partial, - = todo, ordered by priority
 
+
 + private key loading: der, without passphrase
 + load all private keys from ipsec.d/private/ in stroke.c
 + handle leftcert and rightcert in starterstroke.c/stroke.c
@@ -28,7 +29,7 @@
   + integrate basic PEM loading
   + port x509 stuff 
 
-- doxygen cleanup (charon/lib)
++ doxygen cleanup (charon/lib)
 
 - implement 3DES to load encrypted pem files
 

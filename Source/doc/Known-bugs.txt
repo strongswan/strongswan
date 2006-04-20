@@ -3,3 +3,4 @@
 
 - intiating the same connection twice makes trouble
 - leak_detective gets confused from libpthread (invalid frees)
+- installing to many SAs in the kernel at the same time causes troubles. Threading issue?

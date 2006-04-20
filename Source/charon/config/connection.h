@@ -156,7 +156,7 @@ struct connection_t {
 	linked_list_t *(*get_proposals) (connection_t *this);
 	
 	/**
-	 * @brief Adds a proposal to the list..
+	 * @brief Adds a proposal to the list.
 	 * 
 	 * The first added proposal has the highest priority, the last
 	 * added the lowest.

@@ -60,133 +60,6 @@
 #endif
 
 
-
-/**
- * @defgroup config config
- * 
- * Classes implementing configuration related things.
- */
-
-/**
- * @defgroup encoding encoding
- * 
- * Classes used to encode and decode IKEv2 messages.
- */
-
-/**
- * @defgroup network network
- * 
- * Classes for network relevant stuff.
- */
- 
- /**
- * @defgroup payloads payloads
- * 
- * Classes representing specific IKEv2 payloads.
- * 
- * @ingroup encoding
- */
-
-/**
- * @defgroup sa sa
- * 
- * Security association and helper classes.
- */
-
-
-/**
- * @defgroup states states
- *
- * Varius states in which an IKE SA can be.
- *
- * @ingroup sa
- */
-
-/**
- * @defgroup queues queues
- * 
- * Different kind of queues.
- */
- 
- /**
-  * @defgroup jobs jobs
-  * 
-  * Jobs used in job queue and event queue.
-  * 
-  * @ingroup queues
-  */
-
-/**
- * @defgroup testcases testcases
- * 
- * Testcases used to test the different classes in seperate module tests.
- */
-
-/**
- * @defgroup transforms transforms
- * 
- * Transform algorithms of different kind.
- */
- 
-/**
- * @defgroup rsa rsa
- * 
- * RSA public key algorithm.
- * 
- * @ingroup transforms
- */
- 
-/**
- * @defgroup prfs prfs
- * 
- * Pseudo random functions.
- * 
- * @ingroup transforms
- */
-
-/**
- * @defgroup signers signers
- * 
- * Symmetric signing algorithms, used to ensure message integrity.
- * 
- * @ingroup transforms
- */
-
-/**
- * @defgroup crypters crypters
- * 
- * Symmetric encryption algorithms, used to encrypt and decrypt.
- * 
- * @ingroup transforms
- */
- 
-/**
- * @defgroup hashers hashers
- * 
- * Hashing algorithms.
- * 
- * @ingroup transforms
- */
-/**
- * @defgroup asn1 asn1
- * 
- * ASN1 structure definition, en-/decoder of for DER
- * 
- * @todo Implement a der_encoder_t class.
- */
- 
-/**
- * @defgroup utils utils
- * 
- * Generic helper classes.
- */
-  
-/**
- * @defgroup threads threads
- * 
- * Threaded classes, which will do their job alone.
- */
- 
 /**
  * Macro gives back larger of two values.
  */
@@ -202,20 +75,13 @@
  */
 #define POS printf("%s, line %d\n", __FILE__, __LINE__)
 
-
-
-
 /**
- * Macro to allocate a type as chunk_t.
+ * Macro to allocate a sized type.
  * 
  * @param thing 	object on which a sizeof is performed
- * @return 			chunk_t pointing to allocated memory
+ * @return 			poiner to allocated memory
  */
 #define malloc_thing(thing) ((thing*)malloc(sizeof(thing)))
-
-
-
-
 
 
 /**

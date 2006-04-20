@@ -23,7 +23,7 @@ $(BUILD_DIR)definitions.o :		$(LIB_DIR)definitions.c $(LIB_DIR)definitions.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
 LIB_OBJS+= $(BUILD_DIR)library.o
-$(BUILD_DIR)library.o :			$(LIB_DIR)library.c
+$(BUILD_DIR)library.o :			$(LIB_DIR)library.c $(LIB_DIR)library.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
 include $(MAIN_DIR)lib/crypto/Makefile.transforms

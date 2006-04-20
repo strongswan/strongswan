@@ -173,6 +173,16 @@ struct proposal_substructure_t {
 	 */
 	void (*set_spi) (proposal_substructure_t *this, chunk_t spi);
 	
+	/**
+	 * @brief Add this proposal_substructure to a proposal.
+	 * 
+	 * Since a proposal_t may contain the data of multiple
+	 * proposal_sbustructure_t's, it may be necessary to call
+	 * the function multiple times with the same proposal.
+	 * 
+	 * @param this 		calling proposal_substructure_t object
+	 * @param proposal	proposal where the data should be added
+	 */
 	void (*add_to_proposal) (proposal_substructure_t *this, proposal_t *proposal);
 
 	/**

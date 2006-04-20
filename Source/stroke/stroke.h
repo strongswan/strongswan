@@ -23,14 +23,17 @@
 #ifndef STROKE_H_
 #define STROKE_H_
 
+/**
+ * Socket which is used to communicate between charon and stroke
+ */
 #define STROKE_SOCKET "/var/run/charon.ctl"
+
+
+typedef struct stroke_msg_t stroke_msg_t;
 
 /**
  * @brief A stroke message sent over the unix socket.
- * 
  */
-typedef struct stroke_msg_t stroke_msg_t;
-
 struct stroke_msg_t {
 	/* length of this message with all strings */
 	u_int16_t length;

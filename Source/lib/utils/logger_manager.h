@@ -145,8 +145,16 @@ struct logger_manager_t {
  */
 extern logger_manager_t *logger_manager;
 
+/**
+ * Initialize the logger manager with all its logger.
+ * Has to be called before logger_manager is accessed.
+ */
 void logger_manager_init();
 
+/**
+ * Free any resources hold by the logger manager. Do
+ * not access logger_manager after this call.
+ */
 void logger_manager_cleanup();
 
 #endif /*LOGGER_MANAGER_H_*/
