@@ -20,7 +20,6 @@
  */
 
 #include <stddef.h>
-#include <pthread.h>
 #include <string.h>
 #include <stdio.h>
 #include <malloc.h>
@@ -31,6 +30,9 @@
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#include <syslog.h>
+#define __USE_GNU
+#include <pthread.h>
 
 #include "leak_detective.h"
 
@@ -108,13 +110,22 @@ memory_header_t first_header = {
  * standard hooks, used to temparily remove hooking
  */
 void *old_malloc_hook, *old_realloc_hook, *old_free_hook;
+static bool installed = FALSE;
 
 /**
  * Mutex to exclusivly uninstall hooks, access heap list
  */
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
-void (*__malloc_initialize_hook) (void) = install_hooks;
+/**
+ * Setup leak detective at malloc initialization 
+ */
+void setup_leak_detective()
+{
+	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
+	install_hooks();
+}
+void (*__malloc_initialize_hook) (void) = setup_leak_detective;
 
 /**
  * log stack frames queried by backtrace()
@@ -141,13 +152,16 @@ void log_stack_frames(void **stack_frames, int stack_frame_count)
  */
 void install_hooks()
 {
-	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
-	old_malloc_hook = __malloc_hook;
-	old_realloc_hook = __realloc_hook;
-	old_free_hook = __free_hook;
-	__malloc_hook = malloc_hook;
-	__realloc_hook = realloc_hook;
-	__free_hook = free_hook;
+	if (!installed)
+	{
+		old_malloc_hook = __malloc_hook;
+		old_realloc_hook = __realloc_hook;
+		old_free_hook = __free_hook;
+		__malloc_hook = malloc_hook;
+		__realloc_hook = realloc_hook;
+		__free_hook = free_hook;
+		installed = TRUE;
+	}
 }
 
 /**
@@ -155,8 +169,13 @@ void install_hooks()
  */
 void uninstall_hooks()
 {
-	__malloc_hook = old_malloc_hook;
-	__free_hook = old_free_hook;
+	if (installed)
+	{
+		__malloc_hook = old_malloc_hook;
+		__free_hook = old_free_hook;
+		__realloc_hook = old_realloc_hook;
+		installed = FALSE;
+	}
 }
 
 /**
@@ -270,12 +289,17 @@ void __attribute__ ((destructor)) report_leaks()
 	memory_header_t *hdr;
 	int leaks = 0;
 	
+	/* reaquire a logger is necessary, this will force ((destructor))
+	 * order to work correctly */
+	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
+	
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
 		logger->log(logger, ERROR, "Leak (%d bytes at %p)", hdr->bytes, hdr + 1);
 		log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
 		leaks++;
 	}
+	
 	switch (leaks)
 	{
 		case 0:
@@ -400,6 +424,37 @@ time_t mktime(struct tm *tm)
 	install_hooks();
 	pthread_mutex_unlock(&mutex);
 	return result;
+}
+
+void vsyslog (int __pri, __const char *__fmt, __gnuc_va_list __ap)
+{
+	void (*_vsyslog) (int __pri, __const char *__fmt, __gnuc_va_list __ap);
+	void *handle;
+
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+
+	handle = dlopen("libc.so.6", RTLD_LAZY);
+	if (handle == NULL)
+	{
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		kill(getpid(), SIGSEGV);
+	}
+	_vsyslog = dlsym(handle, "vsyslog");
+
+	if (_vsyslog == NULL)
+	{
+		dlclose(handle);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
+		kill(getpid(), SIGSEGV);
+	}
+	_vsyslog(__pri, __fmt, __ap);
+	dlclose(handle);
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return;
 }
 
 #endif /* LEAK_DETECTION */

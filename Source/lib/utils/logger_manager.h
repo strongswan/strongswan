@@ -27,7 +27,7 @@
 
 #include <utils/logger.h>
 
-#define INITIAL_LOG_OUTPUT stderr
+#define INITIAL_LOG_OUTPUT stdout
 
 typedef enum logger_context_t logger_context_t;
 
@@ -77,7 +77,7 @@ typedef struct logger_manager_t logger_manager_t;
  * library start and destroyed at exit.
  * 
  * @b Constructors:
- *  - none, logger_manager is an instance
+ *  - none, logger_manager is the single instance
  * 
  * @see logger_t
  * 

@@ -1638,6 +1638,8 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->subjectAltName = NULL;
 	this->crlDistributionPoints = NULL;
 	
+	logger = logger_manager->get_logger(logger_manager, ASN1);
+	
 	if (!parse_x509cert(chunk, 0, this))
 	{
 		destroy(this);

@@ -71,10 +71,12 @@ $(BINNAMESTROKE) :			build_dir $(BINNAMELIB) $(BUILD_DIR)stroke.o
 
 install :					$(BINNAMECHARON) $(BINNAMESTROKE)
 							$(INSTALL) $(INSTBINFLAGS) $(BINNAMECHARON) $(BINNAMESTROKE) $(LIBEXECDIR)
+							$(INSTALL) $(INSTBINFLAGS) $(BINNAMELIB) $(SHAREDLIBDIR)
 				
 install_file_list:
 							@echo $(LIBEXECDIR)/charon
 							@echo $(LIBEXECDIR)/stroke
+							@echo $(SHAREDLIBDIR)/libstrongswan.so
 
 clean : 		
 							rm -fR $(BUILD_DIR)

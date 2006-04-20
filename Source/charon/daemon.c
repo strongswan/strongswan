@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <execinfo.h>
+#include <string.h>
 
 #include "daemon.h" 
 
@@ -332,6 +333,16 @@ int main(int argc, char *argv[])
 	private_daemon_t *private_charon;
 	FILE *pid_file;
 	struct stat stb;
+	int i;
+	
+	/* trivial argument parsing */
+	for (i = 1; i < argc; i++)
+	{
+		if (strcmp(argv[i], "--use-syslog") == 0)
+		{
+			logger_manager->set_output(logger_manager, ALL_LOGGERS, NULL);
+		}
+	}
 	
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
