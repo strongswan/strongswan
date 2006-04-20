@@ -27,9 +27,8 @@ BINNAMELIB=  $(BUILD_DIR)libstrongswan.so
 
 MAIN_DIR= ./
 
-LDFLAGS= -ldl -lgmp -lpthread -rdynamic
-
-CFLAGS= -Icharon -Ilib -Istroke -Wall -g -fPIC -DLEAK_DETECTIVE
+CFLAGS= -Icharon -Ilib -Istroke -fPIC -Wall -g -DLEAK_DETECTIVE
+# CFLAGS= -Icharon -Ilib -Istroke -fPIC -O3
 
 # objects is extended by each included Makefile
 CHARON_OBJS=
@@ -58,10 +57,10 @@ build_dir:
 							mkdir -p $(BUILD_DIR)
 							
 $(BINNAMELIB) :				build_dir $(LIB_OBJS)
-							$(CC) -shared $(LIB_OBJS) -o $@
+							$(CC) -ldl -lgmp -lpthread -shared $(LIB_OBJS) -o $@
 
 $(BINNAMECHARON) :			build_dir $(CHARON_OBJS) $(BINNAMELIB) $(BUILD_DIR)daemon.o
-							$(CC) -ldl -lgmp -rdynamic -L./bin -lstrongswan -lpthread $(CHARON_OBJS) $(BUILD_DIR)daemon.o -o $@
+							$(CC) -L./bin -lstrongswan $(CHARON_OBJS) $(BUILD_DIR)daemon.o -o $@
 
 $(BINNAMETEST) :			build_dir $(CHARON_OBJS) $(TEST_OBJS) $(BINNAMELIB) $(BUILD_DIR)testcases.o
 							$(CC) -L./bin -lstrongswan  $(LDFLAGS) $(CHARON_OBJS) $(TEST_OBJS) $(BUILD_DIR)testcases.o -o $@

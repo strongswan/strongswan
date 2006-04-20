@@ -187,7 +187,7 @@ static void set_output(private_logger_manager_t *this, logger_context_t context,
 /**
  * Creates the instance of the logger manager at library startup
  */
-void __attribute__ ((constructor)) logger_manager_create()
+void logger_manager_init()
 {
 	int i;
 	
@@ -210,7 +210,7 @@ void __attribute__ ((constructor)) logger_manager_create()
 /**
  * Destroy the logger manager at library exit
  */
-void __attribute__ ((destructor)) logger_manager_destroy()
+void logger_manager_cleanup()
 {
 	int i;
 	for (i = 0; i < LOGGER_CONTEXT_ROOF; i++)

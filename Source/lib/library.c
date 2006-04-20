@@ -1,11 +1,12 @@
 /**
- * @file leak_detective.h
+ * @file library.c
  * 
- * @brief malloc/free hooks to detect leaks.
+ * @brief Library (de-)initialization.
+ * 
  */
 
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,32 +20,23 @@
  * for more details.
  */
 
-#ifndef LEAK_DETECTIVE_H_
-#define LEAK_DETECTIVE_H_
-
-
-#ifdef LEAK_DETECTIVE
+#include <utils/logger_manager.h>
+#include <utils/leak_detective.h>
 
 /**
- * Max number of stack frames to include in a backtrace.
+ * Called whenever the library is linked from a process
  */
-#define STACK_FRAMES_COUNT 30
+void __attribute__ ((constructor)) library_init()
+{
+	logger_manager_init();
+	leak_detective_init();	
+}
 
 /**
- * Initialize leak detective, activates it
+ * Called whenever the library is unlinked from a process
  */
-void leak_detective_init();
-
-/**
- * Cleanup leak detective, deactivates it
- */
-void leak_detective_cleanup();
-
-#else /* !LEAK_DETECTIVE */
-
-#define leak_detective_init() {}
-#define leak_detective_cleanup() {}
-
-#endif /* LEAK_DETECTIVE */
-
-#endif /* LEAK_DETECTIVE_H_ */
+void __attribute__ ((destructor)) library_cleanup()
+{
+	leak_detective_cleanup();
+	logger_manager_cleanup();
+}

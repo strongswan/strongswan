@@ -31,7 +31,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <syslog.h>
-#define __USE_GNU
+#define __USE_GNU /* needed for recursiv mutex initializer */
 #include <pthread.h>
 
 #include "leak_detective.h"
@@ -46,16 +46,12 @@
  */
 #define MEMORY_HEADER_MAGIC 0xF1367ADF
 
-/**
- * logger for the leak detective
- */
-logger_t *logger;
-
 static void install_hooks(void);
 static void uninstall_hooks(void);
 static void *malloc_hook(size_t, const void *);
 static void *realloc_hook(void *, size_t, const void *);
 static void free_hook(void*, const void *);
+static void load_excluded_functions();
 
 typedef struct memory_header_t memory_header_t;
 
@@ -98,7 +94,7 @@ struct memory_header_t {
  * first mem header is just a dummy to chain 
  * the others on it...
  */
-memory_header_t first_header = {
+static memory_header_t first_header = {
 	magic: MEMORY_HEADER_MAGIC,
 	bytes: 0,
 	stack_frame_count: 0,
@@ -107,31 +103,32 @@ memory_header_t first_header = {
 };
 
 /**
+ * logger for the leak detective
+ */
+static logger_t *logger;
+
+/**
  * standard hooks, used to temparily remove hooking
  */
-void *old_malloc_hook, *old_realloc_hook, *old_free_hook;
+static void *old_malloc_hook, *old_realloc_hook, *old_free_hook;
+
+/**
+ * are the hooks currently installed? 
+ */
 static bool installed = FALSE;
 
 /**
  * Mutex to exclusivly uninstall hooks, access heap list
  */
-pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+static pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 
-/**
- * Setup leak detective at malloc initialization 
- */
-void setup_leak_detective()
-{
-	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
-	install_hooks();
-}
-void (*__malloc_initialize_hook) (void) = setup_leak_detective;
+
 
 /**
  * log stack frames queried by backtrace()
  * TODO: Dump symbols of static functions!!!
  */
-void log_stack_frames(void **stack_frames, int stack_frame_count)
+static void log_stack_frames(void **stack_frames, int stack_frame_count)
 {
 	char **strings;
 	size_t i;
@@ -148,9 +145,41 @@ void log_stack_frames(void **stack_frames, int stack_frame_count)
 }
 
 /**
+ * Report leaks at library destruction
+ */
+void report_leaks()
+{
+	memory_header_t *hdr;
+	int leaks = 0;
+	
+	/* reaquire a logger is necessary, this will force ((destructor))
+	* order to work correctly */
+	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
+	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
+	{
+		logger->log(logger, ERROR, "Leak (%d bytes at %p)", hdr->bytes, hdr + 1);
+		log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
+		leaks++;
+	}
+		
+	switch (leaks)
+	{
+		case 0:
+			logger->log(logger, CONTROL, "No leaks detected");
+			break;
+		case 1:
+			logger->log(logger, ERROR, "One leak detected");
+			break;
+		default:
+			logger->log(logger, ERROR, "%d leaks detected", leaks);
+			break;
+	}
+}
+
+/**
  * Installs the malloc hooks, enables leak detection
  */
-void install_hooks()
+static void install_hooks()
 {
 	if (!installed)
 	{
@@ -167,7 +196,7 @@ void install_hooks()
 /**
  * Uninstalls the malloc hooks, disables leak detection
  */
-void uninstall_hooks()
+static void uninstall_hooks()
 {
 	if (installed)
 	{
@@ -181,7 +210,7 @@ void uninstall_hooks()
 /**
  * Hook function for malloc()
  */
-static void *malloc_hook(size_t bytes, const void *caller)
+void *malloc_hook(size_t bytes, const void *caller)
 {
 	memory_header_t *hdr;
 	
@@ -209,7 +238,7 @@ static void *malloc_hook(size_t bytes, const void *caller)
 /**
  * Hook function for free()
  */
-static void free_hook(void *ptr, const void *caller)
+void free_hook(void *ptr, const void *caller)
 {
 	void *stack_frames[STACK_FRAMES_COUNT];
 	int stack_frame_count;
@@ -225,12 +254,11 @@ static void free_hook(void *ptr, const void *caller)
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
 		pthread_mutex_unlock(&mutex);
-		/* TODO: Since we get a lot of theses from the pthread lib, its deactivated for now... */
+		/* TODO: since pthread_join cannot be excluded cleanly, we are not whining about bad frees */
 		return;
 		logger->log(logger, ERROR, "freeing of invalid memory (%p)", ptr);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
-		kill(getpid(), SIGKILL);
 		return;
 	}
 	/* remove magic from hdr */
@@ -252,7 +280,7 @@ static void free_hook(void *ptr, const void *caller)
 /**
  * Hook function for realloc()
  */
-static void *realloc_hook(void *old, size_t bytes, const void *caller)
+void *realloc_hook(void *old, size_t bytes, const void *caller)
 {
 	void *new;
 	memory_header_t *hdr = old - sizeof(memory_header_t);
@@ -281,81 +309,100 @@ static void *realloc_hook(void *old, size_t bytes, const void *caller)
 	return new;
 }
 
+
 /**
- * Report leaks at library destruction
+ * Setup leak detective
  */
-void __attribute__ ((destructor)) report_leaks()
+void leak_detective_init()
 {
-	memory_header_t *hdr;
-	int leaks = 0;
-	
-	/* reaquire a logger is necessary, this will force ((destructor))
-	 * order to work correctly */
 	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
+	load_excluded_functions();
+	install_hooks();
+}
+
+/**
+ * Clean up leak detective
+ */
+void leak_detective_cleanup()
+{
+	report_leaks();
+	uninstall_hooks();
+}
+
+
+/**
+ * The following glibc functions are excluded from leak detection, since
+ * they use static allocated buffers or other ugly allocation hacks.
+ * For this to work, the linker must link libstrongswan preferred to
+ * the other (overriden) libs.
+ */
+struct excluded_function {
+	char *lib_name;
+	char *function_name;
+	void *handle;
+	void *lib_function;
+} excluded_functions[] = {
+	{"libc.so.6", 		"inet_ntoa", 			NULL, NULL},
+	{"libpthread.so.0", "pthread_create", 		NULL, NULL},
+	{"libpthread.so.0", "pthread_cancel", 		NULL, NULL},
+	{"libpthread.so.0", "pthread_join", 		NULL, NULL},
+	{"libpthread.so.0", "_pthread_cleanup_push",NULL, NULL},
+	{"libpthread.so.0", "_pthread_cleanup_pop",	NULL, NULL},
+	{"libc.so.6", 		"mktime", 				NULL, NULL},
+	{"libc.so.6", 		"vsyslog", 				NULL, NULL},
+};
+#define INET_NTOA				0
+#define PTHREAD_CREATE			1
+#define PTHREAD_CANCEL			2
+#define PTHREAD_JOIN			3
+#define PTHREAD_CLEANUP_PUSH	4
+#define PTHREAD_CLEANUP_POP		5
+#define MKTIME					6
+#define VSYSLOG					7
+
+
+/**
+ * Load libraries and function pointers for excluded functions
+ */
+static void load_excluded_functions()
+{
+	int i;
 	
-	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
+	for (i = 0; i < sizeof(excluded_functions)/sizeof(struct excluded_function); i++)
 	{
-		logger->log(logger, ERROR, "Leak (%d bytes at %p)", hdr->bytes, hdr + 1);
-		log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
-		leaks++;
-	}
-	
-	switch (leaks)
-	{
-		case 0:
-			logger->log(logger, CONTROL, "No leaks detected");
-			break;
-		case 1:
-			logger->log(logger, ERROR, "One leak detected");
-			break;
-		default:
-			logger->log(logger, ERROR, "%d leaks detected", leaks);
-			break;
+		void *handle, *function;
+		handle = dlopen(excluded_functions[i].lib_name, RTLD_LAZY);
+		if (handle == NULL)
+		{
+			kill(getpid(), SIGSEGV);
+		}
+		
+		function = dlsym(handle, excluded_functions[i].function_name);
+		
+		if (function  == NULL)
+		{
+			dlclose(handle);
+			kill(getpid(), SIGSEGV);
+		}
+		excluded_functions[i].handle = handle;
+		excluded_functions[i].lib_function = function;
 	}
 }
 
-/*
- * The following glibc functions are excluded from leak detection, since
- * they use static allocated buffers or other ugly allocation hacks.
- * The Makefile links theses function preferred to their counterparts
- * in the target lib...
- * TODO: Generic handling would be nice, with a list of blacklisted
- * functions.
- */
-
-
 char *inet_ntoa(struct in_addr in)
 {
-	char *(*_inet_ntoa)(struct in_addr);
-	void *handle;
+	char *(*_inet_ntoa)(struct in_addr) = excluded_functions[INET_NTOA].lib_function;
 	char *result;
 	
 	pthread_mutex_lock(&mutex);
 	uninstall_hooks();
 	
-	handle = dlopen("libc.so.6", RTLD_LAZY);
-	if (handle == NULL)
-	{
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		kill(getpid(), SIGSEGV);
-	}
-	_inet_ntoa = dlsym(handle, "inet_ntoa");
-	
-	if (_inet_ntoa == NULL)
-	{
-		dlclose(handle);
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		kill(getpid(), SIGSEGV);
-	}
 	result = _inet_ntoa(in);
-	dlclose(handle);
+	
 	install_hooks();
 	pthread_mutex_unlock(&mutex);
 	return result;
 }
-
 
 int pthread_create(pthread_t *__restrict __threadp, __const pthread_attr_t *__restrict __attr, 
 					void *(*__start_routine) (void *), void *__restrict __arg)
@@ -363,64 +410,97 @@ int pthread_create(pthread_t *__restrict __threadp, __const pthread_attr_t *__re
 	int (*_pthread_create) (pthread_t *__restrict __threadp,
 						__const pthread_attr_t *__restrict __attr,
 						void *(*__start_routine) (void *),
-						void *__restrict __arg);
-	void *handle;
+						void *__restrict __arg) = excluded_functions[PTHREAD_CREATE].lib_function;
 	int result;
 	
 	pthread_mutex_lock(&mutex);
 	uninstall_hooks();
 	
-	handle = dlopen("libpthread.so.0", RTLD_LAZY);
-	if (handle == NULL)
-	{
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		kill(getpid(), SIGSEGV);
-	}
-	_pthread_create = dlsym(handle, "pthread_create");
-	
-	if (_pthread_create == NULL)
-	{
-		dlclose(handle);
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		kill(getpid(), SIGSEGV);
-	}
 	result = _pthread_create(__threadp, __attr, __start_routine, __arg);
-	dlclose(handle);
+	
 	install_hooks();
 	pthread_mutex_unlock(&mutex);
 	return result;
 }
 
 
+int pthread_cancel(pthread_t __th)
+{
+	int (*_pthread_cancel) (pthread_t) = excluded_functions[PTHREAD_CANCEL].lib_function;
+	int result;
+	
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+	
+	result = _pthread_cancel(__th);
+	
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return result;
+}
+
+/* TODO: join has probs, since it dellocates memory 
+ * allocated (somewhere) with leak_detective :-(.
+ * We should exclude all pthread_ functions to fix it !? 
+int pthread_join(pthread_t __th, void **__thread_return)
+{
+	int (*_pthread_join) (pthread_t, void **) = excluded_functions[PTHREAD_JOIN].lib_function;
+	int result;
+	
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+	
+	result = _pthread_join(__th, __thread_return);
+	
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return result;
+}
+
+void _pthread_cleanup_push (struct _pthread_cleanup_buffer *__buffer,
+								   void (*__routine) (void *),
+								   void *__arg)
+{
+	int (*__pthread_cleanup_push) (struct _pthread_cleanup_buffer *__buffer,
+									void (*__routine) (void *),
+									void *__arg) = 
+			excluded_functions[PTHREAD_CLEANUP_PUSH].lib_function;
+	
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+	
+	__pthread_cleanup_push(__buffer, __routine, __arg);
+	
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return;
+}
+	
+void _pthread_cleanup_pop (struct _pthread_cleanup_buffer *__buffer, int __execute)
+{
+	int (*__pthread_cleanup_pop) (struct _pthread_cleanup_buffer *__buffer, int __execute) = 
+			excluded_functions[PTHREAD_CLEANUP_POP].lib_function;
+	
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+	
+	__pthread_cleanup_pop(__buffer, __execute);
+	
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return;
+}*/
+
 time_t mktime(struct tm *tm)
 {
-	time_t (*_mktime)(struct tm *tm);
+	time_t (*_mktime)(struct tm *tm) = excluded_functions[MKTIME].lib_function;
 	time_t result;
-	void *handle;
 
 	pthread_mutex_lock(&mutex);
 	uninstall_hooks();
-
-	handle = dlopen("libc.so.6", RTLD_LAZY);
-	if (handle == NULL)
-	{
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		kill(getpid(), SIGSEGV);
-	}
-	_mktime = dlsym(handle, "mktime");
-
-	if (_mktime == NULL)
-	{
-		dlclose(handle);
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		kill(getpid(), SIGSEGV);
-	}
+		
 	result = _mktime(tm);
-	dlclose(handle);
+	
 	install_hooks();
 	pthread_mutex_unlock(&mutex);
 	return result;
@@ -428,30 +508,13 @@ time_t mktime(struct tm *tm)
 
 void vsyslog (int __pri, __const char *__fmt, __gnuc_va_list __ap)
 {
-	void (*_vsyslog) (int __pri, __const char *__fmt, __gnuc_va_list __ap);
-	void *handle;
+	void (*_vsyslog) (int __pri, __const char *__fmt, __gnuc_va_list __ap) = excluded_functions[VSYSLOG].lib_function;
 
 	pthread_mutex_lock(&mutex);
 	uninstall_hooks();
-
-	handle = dlopen("libc.so.6", RTLD_LAZY);
-	if (handle == NULL)
-	{
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		kill(getpid(), SIGSEGV);
-	}
-	_vsyslog = dlsym(handle, "vsyslog");
-
-	if (_vsyslog == NULL)
-	{
-		dlclose(handle);
-		install_hooks();
-		pthread_mutex_unlock(&mutex);
-		kill(getpid(), SIGSEGV);
-	}
+	
 	_vsyslog(__pri, __fmt, __ap);
-	dlclose(handle);
+	
 	install_hooks();
 	pthread_mutex_unlock(&mutex);
 	return;

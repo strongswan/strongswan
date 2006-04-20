@@ -78,6 +78,7 @@ typedef struct logger_manager_t logger_manager_t;
  * 
  * @b Constructors:
  *  - none, logger_manager is the single instance
+ *    use logger_manager_init/logger_manager_cleanup
  * 
  * @see logger_t
  * 
@@ -143,5 +144,9 @@ struct logger_manager_t {
  * The single and global instance of the logger_manager
  */
 extern logger_manager_t *logger_manager;
+
+void logger_manager_init();
+
+void logger_manager_cleanup();
 
 #endif /*LOGGER_MANAGER_H_*/

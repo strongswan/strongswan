@@ -22,6 +22,10 @@ LIB_OBJS+= $(BUILD_DIR)definitions.o
 $(BUILD_DIR)definitions.o :		$(LIB_DIR)definitions.c $(LIB_DIR)definitions.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
+LIB_OBJS+= $(BUILD_DIR)library.o
+$(BUILD_DIR)library.o :			$(LIB_DIR)library.c
+								$(CC) $(CFLAGS) -c -o $@ $<
+
 include $(MAIN_DIR)lib/crypto/Makefile.transforms
 include $(MAIN_DIR)lib/utils/Makefile.utils
 include $(MAIN_DIR)lib/asn1/Makefile.asn1
