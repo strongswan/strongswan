@@ -63,6 +63,7 @@
 #include "child_sa_test.h"
 #include "certificate_test.h"
 #include "leak_detective_test.h"
+#include "identification_test.h"
 
 /* output for test messages */
 extern FILE * stderr;
@@ -131,6 +132,7 @@ test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
 test_t child_sa_test = {test_child_sa, "Child SA"};
 test_t certificate_test = {test_certificate, "X509 Certificate"};
 test_t leak_detective_test = {test_leak_detective, "LEAK detective"};
+test_t identification_test = {test_identification, "identification"};
 
 
 daemon_t* charon;

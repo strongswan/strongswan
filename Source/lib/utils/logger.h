@@ -27,7 +27,6 @@
 
 #include <types.h>
 
-
 typedef enum log_level_t log_level_t;
 
 /**

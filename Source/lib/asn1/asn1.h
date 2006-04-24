@@ -20,6 +20,7 @@
 #include <gmp.h>
 
 #include <types.h>
+#include <asn1/oid.h>
 
 
 /* Defines some primitive ASN1 types */

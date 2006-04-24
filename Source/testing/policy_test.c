@@ -46,8 +46,8 @@ void test_policy(protected_tester_t *tester)
 	logger = logger_manager->get_logger(logger_manager, TESTER);
 	logger->disable_level(logger, FULL);
 	
-	alice = identification_create_from_string(ID_IPV4_ADDR, "152.96.193.131");
-	bob = identification_create_from_string(ID_IPV4_ADDR, "152.96.193.130");
+	alice = identification_create_from_string("152.96.193.131");
+	bob = identification_create_from_string("152.96.193.130");
 	policy = policy_create(alice, bob);
 	
 	tester->assert_true(tester, (policy != NULL), "policy construction");

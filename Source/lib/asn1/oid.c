@@ -172,23 +172,26 @@ const oid_t oid_names[] = {
   {                0x03,       0, 0, "id-SHA-512"             },  /* 159 */
   {        0x86,               0, 1, ""                       },  /* 160 */
   {          0xf8,             0, 1, ""                       },  /* 161 */
-  {            0x42,         171, 1, "netscape"               },  /* 162 */
+  {            0x42,         174, 1, "netscape"               },  /* 162 */
   {              0x01,       169, 1, ""                       },  /* 163 */
   {                0x01,     165, 0, "nsCertType"             },  /* 164 */
   {                0x03,     166, 0, "nsRevocationUrl"        },  /* 165 */
   {                0x04,     167, 0, "nsCaRevocationUrl"      },  /* 166 */
   {                0x08,     168, 0, "nsCaPolicyUrl"          },  /* 167 */
   {                0x0d,       0, 0, "nsComment"              },  /* 168 */
-  {              0x04,         0, 1, "policy"                 },  /* 169 */
-  {                0x01,       0, 0, "nsSGC"                  },  /* 170 */
-  {            0x45,           0, 1, "verisign"               },  /* 171 */
-  {              0x01,         0, 1, "pki"                    },  /* 172 */
-  {                0x09,       0, 1, "attributes"             },  /* 173 */
-  {                  0x02,   175, 0, "messageType"            },  /* 174 */
-  {                  0x03,   176, 0, "pkiStatus"              },  /* 175 */
-  {                  0x04,   177, 0, "failInfo"               },  /* 176 */
-  {                  0x05,   178, 0, "senderNonce"            },  /* 177 */
-  {                  0x06,   179, 0, "recipientNonce"         },  /* 178 */
-  {                  0x07,   180, 0, "transID"                },  /* 179 */
-  {                  0x08,     0, 0, "extensionReq"           }   /* 180 */
+  {              0x03,       172, 1, "directory"              },  /* 169 */
+  {                0x01,       0, 1, ""                       },  /* 170 */
+  {                  0x03,     0, 0, "employeeNumber"         },  /* 171 */
+  {              0x04,         0, 1, "policy"                 },  /* 172 */
+  {                0x01,       0, 0, "nsSGC"                  },  /* 173 */
+  {            0x45,           0, 1, "verisign"               },  /* 174 */
+  {              0x01,         0, 1, "pki"                    },  /* 175 */
+  {                0x09,       0, 1, "attributes"             },  /* 176 */
+  {                  0x02,   178, 0, "messageType"            },  /* 177 */
+  {                  0x03,   179, 0, "pkiStatus"              },  /* 178 */
+  {                  0x04,   180, 0, "failInfo"               },  /* 179 */
+  {                  0x05,   181, 0, "senderNonce"            },  /* 180 */
+  {                  0x06,   182, 0, "recipientNonce"         },  /* 181 */
+  {                  0x07,   183, 0, "transID"                },  /* 182 */
+  {                  0x08,     0, 0, "extensionReq"           }   /* 183 */
 };

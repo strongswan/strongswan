@@ -137,3 +137,7 @@ $(BUILD_DIR)certificate_test.o :	$(TESTCASES_DIR)certificate_test.c $(TESTCASES_
 TEST_OBJS+= $(BUILD_DIR)leak_detective_test.o
 $(BUILD_DIR)leak_detective_test.o :	$(TESTCASES_DIR)leak_detective_test.c $(TESTCASES_DIR)leak_detective_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
+
+TEST_OBJS+= $(BUILD_DIR)identification_test.o
+$(BUILD_DIR)identification_test.o :	$(TESTCASES_DIR)identification_test.c $(TESTCASES_DIR)identification_test.h
+									$(CC) $(CFLAGS) -c -o $@ $<

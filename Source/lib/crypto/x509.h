@@ -58,14 +58,22 @@ struct x509_t {
 	/**
 	 * @brief Get the certificate issuers ID.
 	 * 
-	 * @todo implement!
+	 * The resulting ID is always a identification_t
+	 * of type ID_DER_ASN1_DN.
+	 * 
+	 * @param this				calling object
+	 * @return					issuers ID
 	 */
 	identification_t *(*get_issuer) (x509_t *this);
 		
 	/**
 	 * @brief Get the subjects ID.
 	 * 
-	 * @todo implement!
+	 * The resulting ID is always a identification_t
+	 * of type ID_DER_ASN1_DN. 
+	 * 
+	 * @param this				calling object
+	 * @return					subjects ID
 	 */
 	identification_t *(*get_subject) (x509_t *this);
 	

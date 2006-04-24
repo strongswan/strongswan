@@ -27,18 +27,18 @@
     + leak detective usable for charon and pluto and anything else
   + integrate asn1 parser/oid (asn1/oid)
   + integrate basic PEM loading
-  + port x509 stuff 
+  + port x509 stuff
 
 + doxygen cleanup (charon/lib)
 
-- implement 3DES to load encrypted pem files
-
-- ipsec.secrets parsing
-
 - useable certificate support
-  - certificate lookup via ID
+  + more id types (use atodn from pluto)
+  - rewrite certificate storage the clean way
   - certificate validation/chaining
   - certificate exchange
+
+- implement 3DES to load encrypted pem files
+- ipsec.secrets parsing
 
 - trapping
 - delete notify, when to send?

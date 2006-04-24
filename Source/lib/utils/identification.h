@@ -31,11 +31,7 @@ typedef enum id_type_t id_type_t;
 
 /**
  * @brief ID Types in a ID payload.
- * 
- * @see 
- * 			- identification_t
- * 			- id_payload_t
- * 
+ *
  * @ingroup utils
  */
 enum id_type_t {
@@ -81,7 +77,12 @@ enum id_type_t {
      * specific information necessary to do certain proprietary
      * types of identification.
      */
-	ID_KEY_ID = 11
+	ID_KEY_ID = 11,
+	
+	/**
+	 * Special type of PRIVATE USE which matches to any other id.
+	 */
+	ID_ANY = 201,
 };
 
 /**
@@ -95,20 +96,20 @@ typedef struct identification_t identification_t;
  * @brief Generic identification, such as used in ID payload.
  * 
  * The following types are possible:
- * - ID_IPV4_ADDR 
- * - ID_FQDN*
- * - ID_RFC822_ADDR*
- * - ID_IPV6_ADDR*
- * - ID_DER_ASN1_DN*
- * - ID_DER_ASN1_GN*
- * - ID_KEY_ID*
- * (* = string conversion not supported)
+ * - ID_IPV4_ADDR
+ * - ID_FQDN
+ * - ID_RFC822_ADDR
+ * - ID_IPV6_ADDR
+ * - ID_DER_ASN1_DN
+ * - ID_DER_ASN1_GN
+ * - ID_KEY_ID
  * 
  * @b Constructors:
  * - identification_create_from_string()
  * - identification_create_from_encoding()
  * 
- * @todo Support for other ID types then ID_IPV4_ADDR. 
+ * @todo Support for ID_DER_ASN1_GN is minimal right now. Comparison
+ * between them and ID_IPV4_ADDR/RFC822_ADDR would be nice.
  *
  * @ingroup utils
  */
@@ -158,10 +159,13 @@ struct identification_t {
 	 * An identification_t may contain wildcards, such as
 	 * *@strongswan.org. This call checks if a given ID
 	 * (e.g. tester@strongswan.org) belongs to a such wildcard
-	 * ID. Returns TRUE if IDs are identical.
+	 * ID. Returns TRUE if
+	 * - IDs are identical
+	 * - other is of type ID_ANY
+	 * - other contains a wildcard and matches this
 	 * 
-	 * @param this		the ID containing a wildcard
-	 * @param other		the ID without wildcard
+	 * @param this		the ID without wildcard
+	 * @param other		the ID containing a wildcard
 	 * @return 			TRUE if other belongs to this
 	 */
 	bool (*belongs_to) (identification_t *this, identification_t *other);
@@ -185,15 +189,31 @@ struct identification_t {
 /**
  * @brief Creates an identification_t object from a string.
  * 
- * @param type		type of this id, such as ID_IPV4_ADDR
  * @param string	input string, which will be converted
  * @return
  * 					- created identification_t object, or
- * 					- NULL if type not supported.
+ * 					- NULL if unsupported string supplied.
+ *
+ * The input string may be e.g. one of the following:
+ * - ID_IPV4_ADDR:		192.168.0.1
+ * - ID_IPV6_ADDR:		2001:0db8:85a3:08d3:1319:8a2e:0370:7345
+ * - ID_FQDN:			@www.strongswan.org (@indicates FQDN)
+ * - ID_RFC822_ADDR:	alice@wonderland.org
+ * - ID_DER_ASN1_DN:	C=CH, O=Linux strongSwan, CN=bob
+ *
+ * In favour of pluto, domainnames are prepended with an @, since
+ * pluto resolves domainnames without an @ to IPv4 addresses. Since
+ * we use a seperate host_t class for addresses, this doesn't
+ * make sense for us.
  * 
+ * A distinguished name may contain one or more of the following RDNs:
+ * ND, UID, DC, CN, S, SN, serialNumber, C, L, ST, O, OU, T, D,
+ * N, G, I, ID, EN, EmployeeNumber, E, Email, emailAddress, UN, 
+ * unstructuredName, TCGID.
+ *
  * @ingroup utils
  */
-identification_t * identification_create_from_string(id_type_t type, char *string);
+identification_t * identification_create_from_string(char *string);
 
 /**
  * @brief Creates an identification_t object from an encoded chunk.
@@ -201,7 +221,10 @@ identification_t * identification_create_from_string(id_type_t type, char *strin
  * @param type		type of this id, such as ID_IPV4_ADDR
  * @param encoded	encoded bytes, such as from identification_t.get_encoding
  * @return			identification_t object
- * 
+ *
+ * In contrast to identification_create_from_string(), this constructor never
+ * returns NULL, even when the conversion to a sring representation fails.
+ *
  * @ingroup utils
  */
 identification_t * identification_create_from_encoding(id_type_t type, chunk_t encoded);

@@ -29,7 +29,6 @@
 
 #include "logger.h"
 
-#include <daemon.h>
 
 /**
  * Maximum length of a log entry (only used for logger_s.log).

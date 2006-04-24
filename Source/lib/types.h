@@ -30,7 +30,6 @@
 
 #include <definitions.h>
 
-
 /**
  * General purpose boolean type.
  */

@@ -167,6 +167,9 @@
                 0x04         "nsCaRevocationUrl"	OID_NS_CA_REVOCATION_URL
                 0x08         "nsCaPolicyUrl"		OID_NS_CA_POLICY_URL
                 0x0d         "nsComment"		OID_NS_COMMENT
+              0x03           "directory"
+                0x01         ""
+                  0x03       "employeeNumber"
               0x04           "policy"
                 0x01         "nsSGC"
             0x45             "verisign"

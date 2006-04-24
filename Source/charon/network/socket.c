@@ -133,7 +133,7 @@ struct private_socket_t{
 /**
  * implementation of socket_t.receive
  */
-status_t receiver(private_socket_t *this, packet_t **packet)
+static status_t receiver(private_socket_t *this, packet_t **packet)
 {
 	char buffer[MAX_PACKET];
 	chunk_t data;

@@ -26,7 +26,7 @@
 
 #include <daemon.h>
 #include <utils/logger.h>
-#include <crypto/certificate.h>
+#include <crypto/x509.h>
 
 char private_key_buffer[] = {
 	0x30,0x82,0x04,0xa2,0x02,0x00,0x02,0x82,0x01,0x00,0x6f,0x25,0x74,0x63,0x2a,0x2f,
@@ -205,7 +205,7 @@ void test_rsa(protected_tester_t *tester)
 	/* key loading */
 	private_key = rsa_private_key_create_from_file("alice.der", NULL);
 	tester->assert_true(tester, private_key != NULL, "loading private key from file");
-	certificate = certificate_create_from_file("alice-cert.der");
+	certificate = x509_create_from_file("alice-cert.der");
 	tester->assert_true(tester, public_key != NULL, "loading certificate from file");
 	public_key = certificate->get_public_key(certificate);
 	tester->assert_true(tester, public_key != NULL, "loading public key from certificate");

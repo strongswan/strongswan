@@ -20,12 +20,13 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "certificate_test.h"
 
 #include <daemon.h>
-#include <crypto/certificate.h>
+#include <crypto/x509.h>
 #include <utils/logger.h>
-
 
 
 static char certificate_buffer[] = {
@@ -85,10 +86,27 @@ static char certificate_buffer[] = {
 void test_certificate(protected_tester_t *tester)
 {
 	chunk_t certificate = {certificate_buffer, sizeof(certificate_buffer)};
+	identification_t *id;
+	x509_t *cert;
 	
-	x509_t *cert = x509_create_from_chunk(certificate);
-	
-	//certificate_t *cert = certificate_create_from_file("myCert.der");
-	
+	cert = x509_create_from_chunk(certificate);
+	id = cert->get_subject(cert);
+	tester->assert_true(tester, strcmp(id->get_string(id), "C=CH, O=Linux strongSwan, CN=maeno") == 0, "subject");
+	id = cert->get_issuer(cert);
+	tester->assert_true(tester, strcmp(id->get_string(id), "C=CH, O=Linux strongSwan, CN=maeno") == 0, "issuer");
 	cert->destroy(cert);
+	/*
+	cert = x509_create_from_file("scripts/complex1.der");
+	id = cert->get_subject(cert);
+	printf("Subject: %s\n", id->get_string(id));
+	id = cert->get_issuer(cert);
+	printf("Issuer: %s\n", id->get_string(id));
+	cert->destroy(cert);
+	
+	cert = x509_create_from_file("scripts/complex2.der");
+	id = cert->get_subject(cert);
+	printf("Subject: %s\n", id->get_string(id));
+	id = cert->get_issuer(cert);
+	printf("Issuer: %s\n", id->get_string(id));
+	cert->destroy(cert);*/
 }

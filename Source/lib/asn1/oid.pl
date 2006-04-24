@@ -30,6 +30,8 @@ print OID_H "/* Object identifiers (OIDs) used by FreeS/WAN\n",
 	    " * ", $automatic, "\n",
 	    " * ", $warning, "\n",
 	    " */\n\n",
+	    "#ifndef OID_H_\n",
+	    "#define OID_H_\n\n",
 	    "typedef struct {\n",
 	    "    u_char octet;\n",
 	    "    u_int  next;\n",
@@ -72,6 +74,8 @@ while ($line = <SRC>)
     }
     $counter++;
 }
+
+print OID_H "\n#endif /* OID_H_ */\n";
 
 close SRC;
 close OID_H;

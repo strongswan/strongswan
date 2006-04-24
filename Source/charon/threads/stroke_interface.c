@@ -309,8 +309,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		my_host->destroy(my_host);
 		return;
 	}
-	my_id = identification_create_from_string(ID_IPV4_ADDR, 
-											  *msg->add_conn.me.id ? msg->add_conn.me.id : msg->add_conn.me.address);
+	my_id = identification_create_from_string(*msg->add_conn.me.id ? 
+												msg->add_conn.me.id : msg->add_conn.me.address);
 	if (my_id == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.me.id);
@@ -318,8 +318,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		other_host->destroy(other_host);
 		return;
 	}
-	other_id = identification_create_from_string(ID_IPV4_ADDR, 
-			*msg->add_conn.other.id ? msg->add_conn.other.id : msg->add_conn.other.address);
+	other_id = identification_create_from_string(*msg->add_conn.other.id ? 
+			msg->add_conn.other.id : msg->add_conn.other.address);
 	if (other_id == NULL)
 	{
 		my_host->destroy(my_host);
@@ -328,7 +328,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.other.id);
 		return;
 	}
-				
+	
 	my_subnet = host_create(AF_INET, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet : msg->add_conn.me.address, 500);
 	if (my_subnet == NULL)
 	{
@@ -339,7 +339,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid subnet: %s", msg->add_conn.me.subnet);
 		return;
 	}
-				
+	
 	other_subnet = host_create(AF_INET, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet : msg->add_conn.other.address, 500);
 	if (other_subnet == NULL)
 	{

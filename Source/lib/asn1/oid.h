@@ -5,6 +5,9 @@
  * Do not edit manually!
  */
 
+#ifndef OID_H_
+#define OID_H_
+
 typedef struct {
     u_char octet;
     u_int  next;
@@ -67,9 +70,11 @@ extern const oid_t oid_names[];
 #define OID_NS_CA_REVOCATION_URL	166
 #define OID_NS_CA_POLICY_URL		167
 #define OID_NS_COMMENT			168
-#define OID_PKI_MESSAGE_TYPE		174
-#define OID_PKI_STATUS			175
-#define OID_PKI_FAIL_INFO		176
-#define OID_PKI_SENDER_NONCE		177
-#define OID_PKI_RECIPIENT_NONCE		178
-#define OID_PKI_TRANS_ID		179
+#define OID_PKI_MESSAGE_TYPE		177
+#define OID_PKI_STATUS			178
+#define OID_PKI_FAIL_INFO		179
+#define OID_PKI_SENDER_NONCE		180
+#define OID_PKI_RECIPIENT_NONCE		181
+#define OID_PKI_TRANS_ID		182
+
+#endif /* OID_H_ */
