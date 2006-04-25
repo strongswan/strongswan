@@ -23,14 +23,9 @@
 #ifndef STROKE_INTERFACE_H_
 #define STROKE_INTERFACE_H_
 
-#include <config/policy_store.h>
-#include <config/connection_store.h>
-#include <config/credential_store.h>
-
-
-#define IPSEC_DIR "/etc/ipsec.d/"
-#define PRIVATE_KEY_DIR IPSEC_DIR "private/"
-#define CERTIFICATE_DIR IPSEC_DIR "certs/"
+#include <config/policies/policy_store.h>
+#include <config/connections/connection_store.h>
+#include <config/credentials/credential_store.h>
 
 
 typedef struct stroke_t stroke_t;
@@ -59,11 +54,6 @@ typedef struct stroke_t stroke_t;
  * @ingroup threads
  */
 struct stroke_t {
-
-	/**
-	 * Implements connection_store_t interface
-	 */
-	connection_store_t connections;
 	
 	/**
 	 * Implements policy_store_t interface

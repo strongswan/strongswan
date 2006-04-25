@@ -883,7 +883,8 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	/* we do not use a per-instance logger right now, since its not always accessible */
 	logger = logger_manager->get_logger(logger_manager, ASN1);
 	
-	if (!parse_x509cert(chunk, 0, this))
+	if (!is_asn1(chunk) ||
+		!parse_x509cert(chunk, 0, this))
 	{
 		destroy(this);
 		return NULL;

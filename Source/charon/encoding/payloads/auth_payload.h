@@ -26,7 +26,7 @@
 
 #include <types.h>
 #include <encoding/payloads/payload.h>
-#include <config/connection.h>
+#include <config/connections/connection.h>
 
 /**
  * Length of a auth payload without the auth data in bytes.

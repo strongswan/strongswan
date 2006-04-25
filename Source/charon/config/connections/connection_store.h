@@ -24,7 +24,7 @@
 #define CONNECTION_STORE_H_
 
 #include <types.h>
-#include <config/connection.h>
+#include <config/connections/connection.h>
 
 
 typedef struct connection_store_t connection_store_t;
@@ -33,17 +33,17 @@ typedef struct connection_store_t connection_store_t;
  * @brief The interface for a store of connection_t's.
  * 
  * @b Constructors:
- * 	- stroke_create()
+ *	- stroke_create()
  * 
  * @ingroup config
  */
-struct connection_store_t { 
+struct connection_store_t {
 
 	/**
 	 * @brief Returns a connection definition identified by two IDs.
 	 * 
-	 * This call is usefull to get a connection identified by addresses.
-	 * It may be used after kernel request for traffic protection.
+	 * This call is useful to get a connection which is identified by IDs
+	 * rather than addresses, e.g. for connection setup on user request.
 	 * The returned connection gets created/cloned and therefore must
 	 * be destroyed after usage.
 	 * 
@@ -59,8 +59,8 @@ struct connection_store_t {
 	/**
 	 * @brief Returns a connection definition identified by two hosts.
 	 * 
-	 * This call is useful to get a connection which is identified by IDs
-	 * rather than addresses, e.g. for connection setup on user request.
+	 * This call is usefull to get a connection identified by addresses.
+	 * It may be used after kernel request for traffic protection.
 	 * The returned connection gets created/cloned and therefore must
 	 * be destroyed after usage.
 	 * 
@@ -74,6 +74,20 @@ struct connection_store_t {
 	connection_t *(*get_connection_by_hosts) (connection_store_t *this, host_t *my_host, host_t *other_host);
 
 	/**
+	 * @brief Add a connection to the store.
+	 * 
+	 * After a successful call, the connection is owned by the store and may 
+	 * not be manipulated nor destroyed.
+	 * 
+	 * @param this				calling object
+	 * @param connection		connection to add
+	 * @return
+	 * 							- SUCCESS, or
+	 * 							- FAILED
+	 */
+	status_t (*add_connection) (connection_store_t *this, connection_t *connection);
+	
+	/**
 	 * @brief Destroys a connection_store_t object.
 	 * 
 	 * @param this 					calling object
@@ -81,4 +95,4 @@ struct connection_store_t {
 	void (*destroy) (connection_store_t *this);
 };
 
-#endif /*CONNECTION_STORE_H_*/
+#endif /* CONNECTION_STORE_H_ */

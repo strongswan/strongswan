@@ -327,7 +327,6 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 	memcpy(em.ptr + em.len - hash.len, hash.ptr, hash.len);
 	/* set oid */
 	memcpy(em.ptr + em.len - hash.len - oid.len, oid.ptr, oid.len);
-
 	
 	/* build signature */
 	*signature = this->rsasp1(this, em);

@@ -35,8 +35,8 @@
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
-#include <config/connection.h>
-#include <config/policy.h>
+#include <config/connections/connection.h>
+#include <config/policies/policy.h>
 
 /**
  * Nonce size in bytes for nonces sending to other peer.
@@ -136,6 +136,22 @@ struct ike_sa_t {
 	 * @return 				remote host_t
 	 */
 	host_t* (*get_other_host) (ike_sa_t *this);
+
+	/**
+	 * @brief Get own ID of the IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @return 				local identification_t
+	 */
+	identification_t* (*get_my_id) (ike_sa_t *this);
+
+	/**
+	 * @brief Get remote ID the IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @return 				remote identification_t
+	 */
+	identification_t* (*get_other_id) (ike_sa_t *this);
 	
 	/**
 	 * @brief Get the state of type of associated state object.

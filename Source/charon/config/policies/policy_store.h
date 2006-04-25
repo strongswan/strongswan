@@ -24,7 +24,7 @@
 #define POLICY_STORE_H_
 
 #include <types.h>
-#include <config/policy.h>
+#include <config/policies/policy.h>
 
 
 typedef struct policy_store_t policy_store_t;
@@ -53,6 +53,17 @@ struct policy_store_t {
 	 * 					- NULL otherwise
 	 */
 	policy_t *(*get_policy) (policy_store_t *this, identification_t *my_id, identification_t *other_id);
+
+	/**
+	 * @brief Add a policy to the list.
+	 * 
+	 * The policy is owned by the store after the call. Do
+	 * not modify nor free.
+	 * 
+	 * @param this		calling object
+	 * @param policy	policy to add
+	 */
+	void (*add_policy) (policy_store_t *this, policy_t *policy);
 	
 	/**
 	 * @brief Destroys a policy_store_t object.

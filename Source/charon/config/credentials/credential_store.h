@@ -26,6 +26,7 @@
 #include <types.h>
 #include <crypto/rsa/rsa_private_key.h>
 #include <crypto/rsa/rsa_public_key.h>
+#include <utils/identification.h>
 
 
 typedef struct credential_store_t credential_store_t;
@@ -48,10 +49,12 @@ struct credential_store_t {
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the secret.
 	 * @param[out] preshared_secret	the preshared secret will be written there.
-	 * 
-	 * @return		
+	 * @return
 	 * 								- NOT_FOUND	if no preshared secrets for specific ID could be found
 	 * 								- SUCCESS
+	 *
+	 * @todo We should use two IDs to query shared secrets, since we want to use different
+	 * keys for different peers...
 	 */	
 	status_t (*get_shared_secret) (credential_store_t *this, identification_t *identification, chunk_t *preshared_secret);
 	
@@ -62,13 +65,9 @@ struct credential_store_t {
 	 * 
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the key.
-	 * @param[out] public_key		the public key will be written there
-	 * 
-	 * @return		
-	 * 								- NOT_FOUND	if no key is configured for specific id
-	 * 								- SUCCESS
-	 */	
-	status_t (*get_rsa_public_key) (credential_store_t *this, identification_t *identification, rsa_public_key_t **public_key);
+	 * @return						public key, or NULL if not found
+	 */
+	rsa_public_key_t * (*get_rsa_public_key) (credential_store_t *this, identification_t *identification);
 	
 	/**
 	 * @brief Returns the RSA private key of a specific ID.
@@ -77,13 +76,9 @@ struct credential_store_t {
 	 * 
 	 * @param this					calling object
 	 * @param identification		identification_t object identifiying the key
-	 * @param[out] private_key		the private key will be written there
-	 * 
-	 * @return		
-	 * 								- NOT_FOUND	if no key is configured for specific id
-	 * 								- SUCCESS
+	 * @return						private key, or NULL if not found
 	 */	
-	status_t (*get_rsa_private_key) (credential_store_t *this, identification_t *identification, rsa_private_key_t **private_key);
+	rsa_private_key_t *(*get_rsa_private_key) (credential_store_t *this, identification_t *identification);
 
 	/**
 	 * @brief Destroys a credential_store_t object.

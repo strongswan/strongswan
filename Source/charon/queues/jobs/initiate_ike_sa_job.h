@@ -24,7 +24,7 @@
 
 #include <types.h>
 #include <queues/jobs/job.h>
-#include <config/connection.h>
+#include <config/connections/connection.h>
 
 
 typedef struct initiate_ike_sa_job_t initiate_ike_sa_job_t;

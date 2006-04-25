@@ -250,15 +250,14 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			
 			auth_data = auth_payload->get_data(auth_payload);
 			
-			status = charon->credentials->get_rsa_public_key(charon->credentials,
-															 other_id,
-															 &public_key);
-			if (status != SUCCESS)
+			public_key = charon->credentials->get_rsa_public_key(charon->credentials,
+															 other_id);
+			if (public_key == NULL)
 			{
 				this->logger->log(this->logger, ERROR|LEVEL1, "No RSA public key found for %s",
 								  other_id->get_string(other_id));
 				other_id->destroy(other_id);
-				return status;	
+				return NOT_FOUND;	
 			}
 			
 			octets = this->allocate_octets(this,last_received_packet, my_nonce,other_id_payload, initiator);
@@ -338,13 +337,13 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			status_t status;
 			chunk_t octets, auth_data;
 			
-			status = charon->credentials->get_rsa_private_key(charon->credentials, my_id, &private_key);
-			if (status != SUCCESS)
+			private_key = charon->credentials->get_rsa_private_key(charon->credentials, my_id);
+			if (private_key == NULL)
 			{
 				this->logger->log(this->logger, ERROR|LEVEL1, "No RSA private key found for %s",
 								  my_id->get_string(my_id));
 				my_id->destroy(my_id);
-				return status;	
+				return NOT_FOUND;	
 			}
 			my_id->destroy(my_id);
 			

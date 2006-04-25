@@ -22,7 +22,7 @@
 
 #include "connection_test.h"
 
-#include <config/connection.h>
+#include <config/connections/connection.h>
 #include <crypto/prfs/prf.h>
 
 

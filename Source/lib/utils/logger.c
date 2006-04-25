@@ -35,6 +35,10 @@
  */
 #define MAX_LOG 8192
 
+/**
+ * Maximum number of logged bytes pre line
+ */
+#define MAX_BYTES 16
 
 typedef struct private_logger_t private_logger_t;
 
@@ -70,13 +74,13 @@ struct private_logger_t {
 	 * 
 	 * @warning: buffer must be at least have MAX_LOG size.
 	 */
-	void (*prepend_prefix) (private_logger_t *this, log_level_t loglevel, char *string, char *buffer);
+	void (*prepend_prefix) (private_logger_t *this, log_level_t loglevel, const char *string, char *buffer);
 };
 
 /**
  * Implementation of private_logger_t.prepend_prefix.
  */
-static void prepend_prefix(private_logger_t *this, log_level_t loglevel, char *string, char *buffer)
+static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const char *string, char *buffer)
 {
 	char log_type, log_details;
 	if (loglevel & CONTROL)
@@ -168,55 +172,62 @@ static void logg(private_logger_t *this, log_level_t loglevel, char *format, ...
 /**
  * Implementation of logger_t.log_bytes.
  */
-static void log_bytes(private_logger_t *this, log_level_t loglevel, char *label, char *bytes, size_t len)
+static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *label, const char *bytes, size_t len)
 {
 	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-	
 	if ((this->level & loglevel) == loglevel)
 	{
 		char buffer[MAX_LOG];
-		char ascii_buffer[17];
-		char *format;
-		char *buffer_pos;
-		char *bytes_pos, *bytes_roof;
-		int i;
+		char ascii_buffer[MAX_BYTES+1];
+
+		char *buffer_pos = buffer;
+		const char format[] = "%s   %d bytes @ %p";
+		const char *bytes_pos  = bytes;
+		const char *bytes_roof = bytes + len;
+
 		int line_start = 0;
-			
+		int i = 0;
+
 		/* since me can't do multi-line output to syslog, 
 		* we must do multiple syslogs. To avoid
 		* problems in output order, lock this by a mutex.
 		*/
 		pthread_mutex_lock(&mutex);
-		
-		
-		format = "%s (%d bytes @%p)";
+
 		this->prepend_prefix(this, loglevel, format, buffer);
 
 		if (this->output == NULL)
 		{
-			syslog(LOG_INFO, buffer, label, len);	
+			syslog(LOG_INFO, buffer, label, len, bytes);
 		}
 		else
 		{
 			fprintf(this->output, buffer, label, len, bytes);
 			fprintf(this->output, "\n");
 		}
-	
-		bytes_pos = bytes;
-		bytes_roof = bytes + len;
-		buffer_pos = buffer;
-		memset(ascii_buffer, 0, 17);
 
-		for (i = 1; bytes_pos < bytes_roof; i++)
+		while (bytes_pos < bytes_roof)
 		{
 			static char hexdig[] = "0123456789ABCDEF";
+
 			*buffer_pos++ = hexdig[(*bytes_pos >> 4) & 0xF];
 			*buffer_pos++ = hexdig[ *bytes_pos       & 0xF];
-			if ((i % 16) == 0) 
+
+			ascii_buffer[i++] = (*bytes_pos > 31 && *bytes_pos < 127)
+				? *bytes_pos : '.';
+
+			if (++bytes_pos == bytes_roof || i == MAX_BYTES) 
 			{
+				int padding = 3 * (MAX_BYTES - i);
+
+				while (padding--)
+				{
+					*buffer_pos++ = ' ';
+				}
 				*buffer_pos++ = '\0';
-				buffer_pos = buffer;
+				ascii_buffer[i] = '\0';
+
 				if (this->output == NULL)
 				{
 					syslog(LOG_INFO, "[  :%5d] %s %s", line_start, buffer, ascii_buffer);	
@@ -225,42 +236,13 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, char *label,
 				{
 					fprintf(this->output, "[  :%5d] %s %s\n", line_start, buffer, ascii_buffer);
 				}
-				memset(ascii_buffer, 0, 16);
+				buffer_pos = buffer;
 				line_start += 16;
-			}
-			else if ((i % 4) == 0)
-			{
-				*buffer_pos++ = ' ';
-		//		*buffer_pos++ = ' ';
+				i = 0;
 			}
 			else 
 			{	
 				*buffer_pos++ = ' ';
-			}
-			
-			if (*bytes_pos > 31 && *bytes_pos < 127)
-			{
-				ascii_buffer[(i % 16)] = *bytes_pos;
-			}
-			else
-			{
-				ascii_buffer[(i % 16)] = '*';
-			}
-			
-			bytes_pos++;
-		}
-		
-		*buffer_pos++ = '\0';
-		if (buffer_pos > buffer + 1)
-		{
-			buffer_pos = buffer;
-			if (this->output == NULL)
-			{		
-				syslog(LOG_INFO, "[  :%5d] %s %16s", line_start, buffer, ascii_buffer);
-			}
-			else
-			{
-				fprintf(this->output, "[  :%5d] %s %16s\n", line_start, buffer, ascii_buffer);
 			}
 		}
 		pthread_mutex_unlock(&mutex);

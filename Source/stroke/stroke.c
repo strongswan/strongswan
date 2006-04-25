@@ -91,7 +91,6 @@ static int send_stroke_msg (stroke_msg_t *msg)
 
 static int add_connection(char *name,
 						  char *my_id, char *other_id, 
-						  char *my_cert, char *other_cert,
 						  char *my_addr, char *other_addr,
 						  char *my_net, char *other_net,
 						  u_int my_netmask, u_int other_netmask)
@@ -105,16 +104,16 @@ static int add_connection(char *name,
 	msg->add_conn.name = push_string(&msg, name);
 	
 	msg->add_conn.me.id = push_string(&msg, my_id);
-	msg->add_conn.me.cert = push_string(&msg, my_cert);
 	msg->add_conn.me.address = push_string(&msg, my_addr);
 	msg->add_conn.me.subnet = push_string(&msg, my_net);
 	msg->add_conn.me.subnet_mask = my_netmask;
+	msg->add_conn.me.cert = NULL;
 	
 	msg->add_conn.other.id = push_string(&msg, other_id);
-	msg->add_conn.other.cert = push_string(&msg, other_cert);
 	msg->add_conn.other.address = push_string(&msg, other_addr);
 	msg->add_conn.other.subnet = push_string(&msg, other_net);
 	msg->add_conn.other.subnet_mask = other_netmask;
+	msg->add_conn.other.cert = NULL;
 	
 	res = send_stroke_msg(msg);
 	free(msg);
@@ -201,11 +200,9 @@ static void exit_usage(char *error)
 {
 	printf("Usage:\n");
 	printf("  Add a connection:\n");
-	printf("    stroke add NAME MY_ID OTHER_ID MY_CERT OTHER_CERT\\\n");
-	printf("           MY_ADDR OTHER_ADDR MY_NET OTHER_NET\\\n");
-	printf("           MY_NETBITS OTHER_NETBITS\n");
-	printf("    where: ID is any IKEv2 ID (currently only IPv4 adresses\n");
-	printf("           CERT is a certificate filename\n");
+	printf("    stroke add NAME MY_ID OTHER_ID MY_ADDR OTHER_ADDR\\\n");
+	printf("           MY_NET OTHER_NET MY_NETBITS OTHER_NETBITS\n");
+	printf("    where: ID is any IKEv2 ID \n");
 	printf("           ADDR is a IPv4 address\n");
 	printf("           NET is a IPv4 address of the subnet to tunnel\n");
 	printf("           NETBITS is the size of the subnet, as the \"24\" in 192.168.0.0/24\n");
@@ -264,7 +261,7 @@ int main(int argc, char *argv[])
 	}
 	else if (strcmp(argv[1], "add") == 0)
 	{
-		if (argc < 13)
+		if (argc < 11)
 		{
 			exit_usage("\"add\" needs more parameters...");
 		}
@@ -272,8 +269,7 @@ int main(int argc, char *argv[])
 							 argv[3], argv[4], 
 							 argv[5], argv[6], 
 							 argv[7], argv[8], 
-							 argv[9], argv[10], 
-							 atoi(argv[11]), atoi(argv[12])); 
+							 atoi(argv[9]), atoi(argv[10]));
 	}
 	else if (strcmp(argv[1], "logtype") == 0)
 	{
@@ -296,9 +292,5 @@ int main(int argc, char *argv[])
 		exit_usage(NULL);
 	}
 	
-	if (res)
-	{
-		exit_error("communication with charon failed!\n");
-	}
-	return 0;
+	return res;
 }

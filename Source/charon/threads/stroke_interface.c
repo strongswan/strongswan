@@ -42,20 +42,15 @@
 
 struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
 
-typedef struct configuration_entry_t configuration_entry_t;
+typedef struct connection_entry_t connection_entry_t;
 
 /**
- * A configuration entry combines a configuration name with a connection
- * and a policy.
- * 
- * @b Constructors:
- *  - configuration_entry_create()
+ * A connection entry combines a connection name with a connection.
  */
-struct configuration_entry_t {
+struct connection_entry_t {
 	
 	/**
-	 * Configuration name.
-	 *
+	 * connection name.
 	 */
 	char *name;
 	
@@ -63,64 +58,8 @@ struct configuration_entry_t {
 	 * Configuration for IKE_SA_INIT exchange.
 	 */
 	connection_t *connection;
-
-	/**
-	 * Configuration for all phases after IKE_SA_INIT exchange.
-	 */
-	policy_t *policy;
-	
-	/**
-	 * Public key of other peer
-	 */
-	rsa_public_key_t *public_key;
-	
-	/**
-	 * Own private key
-	 */
-	rsa_private_key_t *private_key;
-	
-	/**
-	 * Destroys a configuration_entry_t
-	 */
-	void (*destroy) (configuration_entry_t *this);
 };
 
-/**
- * Implementation of configuration_entry_t.destroy.
- */
-static void configuration_entry_destroy (configuration_entry_t *this)
-{
-	this->connection->destroy(this->connection);
-	this->policy->destroy(this->policy);
-	if (this->public_key)
-	{
-		this->public_key->destroy(this->public_key);
-	}
-	free(this->name);
-	free(this);
-}
-
-/**
- * Creates a configuration_entry_t object.
- */
-static configuration_entry_t * configuration_entry_create(char *name, connection_t* connection, policy_t *policy, 
-														  rsa_private_key_t *private_key, rsa_public_key_t *public_key)
-{
-	configuration_entry_t *entry = malloc_thing(configuration_entry_t);
-
-	/* functions */
-	entry->destroy = configuration_entry_destroy;
-
-	/* private data */
-	entry->connection = connection;
-	entry->policy = policy;
-	entry->public_key = public_key;
-	entry->private_key = private_key;
-	entry->name = malloc(strlen(name) + 1);
-	strcpy(entry->name, name);
-	
-	return entry;
-}
 
 typedef struct private_stroke_t private_stroke_t;
 
@@ -135,14 +74,9 @@ struct private_stroke_t {
 	stroke_t public;
 
 	/**
-	 * Holding all configurations.
+	 * Holding all connections as connection_entry_t's.
 	 */
-	linked_list_t *configurations;
-	
-	/**
-	 * The list of RSA private keys accessible through crendial_store_t interface
-	 */
-	linked_list_t *private_keys;
+	linked_list_t *connections;
 
 	/**
 	 * Assigned logger_t object in charon.
@@ -203,73 +137,6 @@ static void pop_string(stroke_msg_t *msg, char **string)
 }
 
 /**
- * Find the private key for a public key
- */
-static rsa_private_key_t *find_private_key(private_stroke_t *this, rsa_public_key_t *public_key)
-{
-	rsa_private_key_t *private_key = NULL;
-	iterator_t *iterator;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Looking up private key by public key...");
-	
-	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&private_key);
-		if (private_key->belongs_to(private_key, public_key))
-		{
-			this->logger->log(this->logger, CONTROL|LEVEL2, "found a match");
-			break;
-		}
-		this->logger->log(this->logger, CONTROL|LEVEL2, "this one did not match");
-	}
-	iterator->destroy(iterator);
-	return private_key;
-}
-
-/**
- * Load all private keys form "/etc/ipsec.d/private/"
- */
-static void load_private_keys(private_stroke_t *this)
-{
-	struct dirent* entry;
-	struct stat stb;
-	DIR* dir;
-	rsa_private_key_t *key;
-	
-	/* currently only unencrypted binary DER files are loaded */
-	dir = opendir(PRIVATE_KEY_DIR);
-	if (dir == NULL || chdir(PRIVATE_KEY_DIR) == -1) {
-		this->logger->log(this->logger, ERROR, "error opening private key directory \"%s\"", PRIVATE_KEY_DIR);
-		return;
-	}
-	while ((entry = readdir(dir)) != NULL)
-	{
-		if (stat(entry->d_name, &stb) == -1)
-		{
-			continue;
-		}
-		/* try to parse all regular files */
-		if (stb.st_mode & S_IFREG)
-		{
-			key = rsa_private_key_create_from_file(entry->d_name, NULL);
-			if (key)
-			{
-				this->private_keys->insert_last(this->private_keys, (void*)key);
-				this->logger->log(this->logger, CONTROL|LEVEL1, "loaded private key \"%s%s\"", 
-								  PRIVATE_KEY_DIR, entry->d_name);
-			}
-			else
-			{
-				this->logger->log(this->logger, ERROR, "private key \"%s%s\" invalid, skipped", 
-								  PRIVATE_KEY_DIR, entry->d_name);
-			}
-		}
-	}
-	closedir(dir);
-}
-
-/**
  * Add a connection to the configuration list
  */
 static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
@@ -280,9 +147,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
-	x509_t *my_cert, *other_cert;
-	rsa_private_key_t *private_key = NULL;
-	rsa_public_key_t *public_key = NULL;
+	connection_entry_t *entry;
+	x509_t *cert;
 				
 	pop_string(msg, &msg->add_conn.name);
 	pop_string(msg, &msg->add_conn.me.address);
@@ -360,12 +226,12 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	if (charon->socket->is_listening_on(charon->socket, other_host))
 	{
 		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is other host, switching");
-					
+		
 		host_t *tmp_host = my_host;
 		identification_t *tmp_id = my_id;
 		traffic_selector_t *tmp_ts = my_ts;
 		char *tmp_cert = msg->add_conn.me.cert;
-					
+		
 		my_host = other_host;
 		other_host = tmp_host;
 		my_id = other_id;
@@ -382,7 +248,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	else
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "left nor right host is our, aborting");
-					
+		
 		my_host->destroy(my_host);
 		other_host->destroy(other_host);
 		my_id->destroy(my_id);
@@ -392,7 +258,39 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	
-				
+	if (msg->add_conn.me.cert)
+	{
+		char file[128];
+		snprintf(file, sizeof(file), "%s%s", CERTIFICATE_DIR,  msg->add_conn.me.cert);
+		cert = x509_create_from_file(file);
+		if (cert)
+		{
+			my_id->destroy(my_id);
+			my_id = cert->get_subject(cert);
+			my_id = my_id->clone(my_id);
+			cert->destroy(cert);
+			this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, 
+									"defined a valid certificate, using its ID \"%s\"",
+									my_id->get_string(my_id));
+		}
+	}
+	if (msg->add_conn.other.cert)
+	{
+		char file[128];
+		snprintf(file, sizeof(file), "%s%s", CERTIFICATE_DIR,  msg->add_conn.other.cert);
+		cert = x509_create_from_file(file);
+		if (cert)
+		{
+			other_id->destroy(other_id);
+			other_id = cert->get_subject(cert);
+			other_id = other_id->clone(other_id);
+			cert->destroy(cert);
+			this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, 
+									 "defined a valid certificate, using its ID \"%s\"",
+									 other_id->get_string(other_id));
+		}
+	}
+	
 	connection = connection_create(my_host, other_host, my_id->clone(my_id), other_id->clone(other_id), 
 								   RSA_DIGITAL_SIGNATURE);
 	proposal = proposal_create(1);
@@ -407,7 +305,14 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
 	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
 	connection->add_proposal(connection, proposal);
-				
+	/* add in our list, so we can manipulate the connection further via name */
+	entry = malloc_thing(connection_entry_t);
+	entry->name = strdup(msg->add_conn.name);
+	entry->connection = connection;
+	this->connections->insert_last(this->connections, entry);
+	/* add to global connection list */
+	charon->connections->add_connection(charon->connections, connection);
+	
 	policy = policy_create(my_id, other_id);
 	proposal = proposal_create(1);
 	proposal->add_algorithm(proposal, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
@@ -416,53 +321,10 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	policy->add_proposal(policy, proposal);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
-				
-				
-	chdir(CERTIFICATE_DIR);
-	my_cert = x509_create_from_file(msg->add_conn.me.cert);
-	if (my_cert == NULL)
-	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "loading own certificate \"%s%s\" failed", 
-						  CERTIFICATE_DIR, msg->add_conn.me.cert);
-	}
-	else
-	{
-		public_key = my_cert->get_public_key(my_cert);
-		private_key = find_private_key(this, public_key);
-		public_key->destroy(public_key);
-		if (private_key)
-		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "found private key for certificate \"%s%s\"", 
-							  CERTIFICATE_DIR, msg->add_conn.me.cert);
-		}
-		else
-		{
-			this->stroke_logger->log(this->stroke_logger, ERROR, "no private key for certificate \"%s%s\" found", 
-							  CERTIFICATE_DIR, msg->add_conn.me.cert);
-		}
-		my_cert->destroy(my_cert);
-	}
-	other_cert = x509_create_from_file(msg->add_conn.other.cert);
-	public_key = NULL;
-	if (other_cert == NULL)
-	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "loading peers certificate \"%s%s\" failed", 
-						  CERTIFICATE_DIR, msg->add_conn.other.cert);
-	}
-	else
-	{
-		public_key = other_cert->get_public_key(other_cert);
-		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "loaded certificate \"%s%s\" (%p)", 
-						  CERTIFICATE_DIR, msg->add_conn.other.cert, public_key);
-		other_cert->destroy(other_cert);
-	}
-				
-	this->configurations->insert_last(this->configurations, 
-									  configuration_entry_create(msg->add_conn.name, connection, policy, private_key, public_key));
-				
-	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "connection \"%s\" added (%d in store)", 
-					  msg->add_conn.name,
-					  this->configurations->get_count(this->configurations));
+	/* add to global policy list */
+	charon->policies->add_policy(charon->policies, policy);
+	
+	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "connection \"%s\" added", msg->add_conn.name);
 }
 
 /**
@@ -550,22 +412,30 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 		status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id, &ike_sa);
 		if (status == SUCCESS)
 		{
-			host_t *me, *other;
-			me = ike_sa->get_my_host(ike_sa);
-			other = ike_sa->get_other_host(ike_sa);
+			host_t *my_host, *other_host;
+			identification_t *my_id, *other_id;
+			my_host = ike_sa->get_my_host(ike_sa);
+			other_host = ike_sa->get_other_host(ike_sa);
+			my_id = ike_sa->get_my_id(ike_sa);
+			other_id = ike_sa->get_other_id(ike_sa);
 			
+			this->stroke_logger->log(this->stroke_logger, CONTROL, "IKE_SA in state %s ",
+									 mapping_find(ike_sa_state_m, ike_sa->get_state(ike_sa)));
 			
-			this->stroke_logger->log(this->stroke_logger, CONTROL, "IKE SA in state %s as %s",
-									 mapping_find(ike_sa_state_m, ike_sa->get_state(ike_sa)),
-									 ike_sa_id->is_initiator ? "initiator" : "responder");
-			
-			this->stroke_logger->log(this->stroke_logger, CONTROL, " SPIs: %15lld - %-15lld",
-									 ike_sa_id->get_initiator_spi(ike_sa_id),
+			this->stroke_logger->log(this->stroke_logger, CONTROL, " SPIs: %lld",
+									 ike_sa_id->get_initiator_spi(ike_sa_id));
+			this->stroke_logger->log(this->stroke_logger, CONTROL, "       %lld",
 									 ike_sa_id->get_responder_spi(ike_sa_id));
 			
-
-			this->stroke_logger->log(this->stroke_logger, CONTROL, " Addr: %15s - %-15s",
-									 me->get_address(me), other->get_address(other));
+			this->stroke_logger->log(this->stroke_logger, CONTROL, " Addr: %s",
+									 my_host->get_address(my_host));
+			this->stroke_logger->log(this->stroke_logger, CONTROL, "       %s",
+									 other_host->get_address(other_host));
+			
+			this->stroke_logger->log(this->stroke_logger, CONTROL, " ID:   %s",
+									 my_id->get_string(my_id));
+			this->stroke_logger->log(this->stroke_logger, CONTROL, "       %s",
+									 other_id->get_string(other_id));
 						
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
@@ -785,117 +655,6 @@ static void stroke_receive(private_stroke_t *this)
 	}
 }
 
-/**
- * Implementation of connection_store_t.get_connection_by_hosts.
- */
-static connection_t *get_connection_by_hosts(connection_store_t *store, host_t *my_host, host_t *other_host)
-{
-	private_stroke_t *this = (private_stroke_t*)((u_int8_t*)store - offsetof(stroke_t, connections));
-	iterator_t *iterator;
-	connection_t *found = NULL;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "getting config for hosts %s - %s", 
-					  my_host->get_address(my_host), other_host->get_address(other_host));
-	
-	iterator = this->configurations->create_iterator(this->configurations,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		configuration_entry_t *entry;
-		host_t *config_my_host, *config_other_host;
-		
-		iterator->current(iterator,(void **) &entry);
-
-		config_my_host = entry->connection->get_my_host(entry->connection);
-		config_other_host = entry->connection->get_other_host(entry->connection);
-
-		/* first check if ip is equal */
-		if(config_other_host->ip_equals(config_other_host, other_host))
-		{
-			this->logger->log(this->logger, CONTROL|LEVEL2, "config entry with remote host %s", 
-						config_other_host->get_address(config_other_host));
-			/* could be right one, check my_host for default route*/
-			if (config_my_host->is_default_route(config_my_host))
-			{
-				found = entry->connection->clone(entry->connection);
-				break;
-			}
-			/* check now if host informations are the same */
-			else if (config_my_host->ip_equals(config_my_host,my_host))
-			{
-				found = entry->connection->clone(entry->connection);
-				break;
-			}
-			
-		}
-		/* Then check for wildcard hosts!
-		 * TODO
-		 * actually its only checked if other host with default route can be found! */
-		else if (config_other_host->is_default_route(config_other_host))
-		{
-			/* could be right one, check my_host for default route*/
-			if (config_my_host->is_default_route(config_my_host))
-			{
-				found = entry->connection->clone(entry->connection);
-				break;
-			}
-			/* check now if host informations are the same */
-			else if (config_my_host->ip_equals(config_my_host,my_host))
-			{
-				found = entry->connection->clone(entry->connection);
-				break;
-			}
-		}
-	}
-	iterator->destroy(iterator);
-	
-	/* apply hosts as they are supplied since my_host may be %defaultroute, and other_host may be %any. */
-	if (found)
-	{
-		found->update_my_host(found, my_host->clone(my_host));
-		found->update_other_host(found, other_host->clone(other_host));
-	}
-	
-	return found;
-}
-
-/**
- * Implementation of connection_store_t.get_connection_by_ids.
- */
-static connection_t *get_connection_by_ids(connection_store_t *store, identification_t *my_id, identification_t *other_id)
-{
-	private_stroke_t *this = (private_stroke_t*)((u_int8_t*)store - offsetof(stroke_t, connections));
-	iterator_t *iterator;
-	connection_t *found = NULL;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "getting config for ids %s - %s", 
-					  my_id->get_string(my_id), other_id->get_string(other_id));
-	
-	iterator = this->configurations->create_iterator(this->configurations,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		configuration_entry_t *entry;
-		identification_t *config_my_id, *config_other_id;
-		
-		iterator->current(iterator,(void **) &entry);
-		
-		config_my_id = entry->connection->get_my_id(entry->connection);
-		config_other_id = entry->connection->get_other_id(entry->connection);
-
-		/* first check if ids are equal 
-		* TODO: Add wildcard checks */
-		if (config_other_id->equals(config_other_id, other_id) &&
-			config_my_id->equals(config_my_id, my_id))
-		{
-			this->logger->log(this->logger, CONTROL|LEVEL2, "config entry with remote id %s", 
-							  config_other_id->get_string(config_other_id));
-			found = entry->connection->clone(entry->connection);
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	return found;
-}
 
 /**
  * Implementation of private_stroke_t.get_connection_by_name.
@@ -905,10 +664,10 @@ static connection_t *get_connection_by_name(private_stroke_t *this, char *name)
 	iterator_t *iterator;
 	connection_t *found = NULL;
 	
-	iterator = this->configurations->create_iterator(this->configurations, TRUE);
+	iterator = this->connections->create_iterator(this->connections, TRUE);
 	while (iterator->has_next(iterator))
 	{
-		configuration_entry_t *entry;
+		connection_entry_t *entry;
 		iterator->current(iterator,(void **) &entry);
 
 		if (strcmp(entry->name,name) == 0)
@@ -924,165 +683,28 @@ static connection_t *get_connection_by_name(private_stroke_t *this, char *name)
 }
 
 /**
- * Implementation of policy_store_t.get_policy.
- */
-static policy_t *get_policy(policy_store_t *store,identification_t *my_id, identification_t *other_id)
-{	
-	private_stroke_t *this = (private_stroke_t*)((u_int8_t*)store - offsetof(stroke_t, policies));
-	iterator_t *iterator;
-	policy_t *found = NULL;
-	
-	iterator = this->configurations->create_iterator(this->configurations, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		configuration_entry_t *entry;
-		iterator->current(iterator,(void **) &entry);
-		identification_t *config_my_id = entry->policy->get_my_id(entry->policy);
-		identification_t *config_other_id = entry->policy->get_other_id(entry->policy);
-		
-		/* check other host first */
-		if (config_other_id->belongs_to(config_other_id, other_id))
-		{		
-			/* get it if my_id not specified */
-			if (my_id == NULL)
-			{
-				found = entry->policy->clone(entry->policy);
-				break;
-			}
-
-			if (config_my_id->belongs_to(config_my_id, my_id))
-			{
-				found = entry->policy->clone(entry->policy);
-				break;
-			}
-		}
-	}
-	iterator->destroy(iterator);
-	
-	/* apply IDs as they are requsted, since they may be configured as %any or such */
-	if (found)
-	{
-		if (my_id)
-		{
-			found->update_my_id(found, my_id->clone(my_id));
-		}
-		found->update_other_id(found, other_id->clone(other_id));
-	}
-	return found;
-}
-
-/**
- * Implementation of credential_store_t.get_shared_secret.
- */	
-static status_t get_shared_secret(credential_store_t *this, identification_t *identification, chunk_t *preshared_secret)
-{
-	char *secret = "schluessel\n";
-	preshared_secret->ptr = secret;
-	preshared_secret->len = strlen(secret) + 1;
-	
-	*preshared_secret = chunk_clone(*preshared_secret);
-	return SUCCESS;
-}
-
-/**
- * Implementation of credential_store_t.get_rsa_public_key.
- */
-static status_t get_rsa_public_key(credential_store_t *store, identification_t *identification, rsa_public_key_t **public_key)
-{
-	private_stroke_t *this = (private_stroke_t*)((u_int8_t*)store - offsetof(stroke_t, credentials));
-	iterator_t *iterator;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Looking for public key for %s",
-					  identification->get_string(identification));
-	iterator = this->configurations->create_iterator(this->configurations, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		configuration_entry_t *config;
-		iterator->current(iterator, (void**)&config);
-		identification_t *stored = config->policy->get_other_id(config->policy);
-		this->logger->log(this->logger, CONTROL|LEVEL2, "there is one for %s",
-						  stored->get_string(stored));
-		if (identification->equals(identification, stored))
-		{
-			this->logger->log(this->logger, CONTROL|LEVEL2, "found a match: %p",
-							  config->public_key);
-			if (config->public_key)
-			{
-				iterator->destroy(iterator);
-				*public_key = config->public_key->clone(config->public_key);
-				return SUCCESS;
-			}
-		}
-	}
-	iterator->destroy(iterator);
-	return NOT_FOUND;
-}
-
-/**
- * Implementation of credential_store_t.get_rsa_private_key.
- */
-static status_t get_rsa_private_key(credential_store_t *store, identification_t *identification, rsa_private_key_t **private_key)
-{
-	private_stroke_t *this = (private_stroke_t*)((u_int8_t*)store - offsetof(stroke_t, credentials));
-	iterator_t *iterator;
-	
-	iterator = this->configurations->create_iterator(this->configurations, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		configuration_entry_t *config;
-		iterator->current(iterator, (void**)&config);
-		identification_t *stored = config->policy->get_my_id(config->policy);
-		if (identification->equals(identification, stored))
-		{
-			if (config->private_key)
-			{
-				iterator->destroy(iterator);
-				*private_key = config->private_key->clone(config->private_key);
-				return SUCCESS;
-			}
-		}
-	}
-	iterator->destroy(iterator);
-	return NOT_FOUND;
-}
-
-/**
  * Implementation of stroke_t.destroy.
  */
 static void destroy(private_stroke_t *this)
 {
-	configuration_entry_t *entry;
-	rsa_private_key_t *priv_key;
+	connection_entry_t *entry;
 	
 	pthread_cancel(this->assigned_thread);
 	pthread_join(this->assigned_thread, NULL);
 	
-	while (this->configurations->remove_first(this->configurations, (void **)&entry) == SUCCESS)
+	while (this->connections->remove_first(this->connections, (void **)&entry) == SUCCESS)
 	{
-		entry->destroy(entry);
+		/* connection is destroyed by global list */
+		free(entry->name);
+		free(entry);
 	}
-	this->configurations->destroy(this->configurations);
-	
-	while (this->private_keys->remove_first(this->private_keys, (void **)&priv_key) == SUCCESS)
-	{
-		priv_key->destroy(priv_key);
-	}
-	this->private_keys->destroy(this->private_keys);
+	this->connections->destroy(this->connections);
 
 	close(this->socket);
 	unlink(socket_addr.sun_path);
 	free(this);
 }
 
-/**
- * Dummy function which does nothing.
- * Used for connection_store_t.destroy and policy_store_t.destroy,
- * since destruction is done in store_t's destructor...
- */
-void do_nothing(void *nothing)
-{
-	return;
-}
 
 /*
  * Described in header-file
@@ -1093,15 +715,6 @@ stroke_t *stroke_create()
 	mode_t old;
 
 	/* public functions */
-	this->public.connections.get_connection_by_ids = get_connection_by_ids;
-	this->public.connections.get_connection_by_hosts = get_connection_by_hosts;
-	this->public.connections.destroy = (void (*) (connection_store_t*))do_nothing;
-	this->public.policies.get_policy = get_policy;
-	this->public.policies.destroy = (void (*) (policy_store_t*))do_nothing;
-	this->public.credentials.get_shared_secret = (status_t (*)(credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
-	this->public.credentials.get_rsa_public_key = (status_t (*)(credential_store_t*,identification_t*,rsa_public_key_t**))get_rsa_public_key;
-	this->public.credentials.get_rsa_private_key = (status_t (*)(credential_store_t*,identification_t*,rsa_private_key_t**))get_rsa_private_key;
-	this->public.credentials.destroy = (void (*) (credential_store_t*))do_nothing;
 	this->public.destroy = (void (*)(stroke_t*))destroy;
 	
 	/* private functions */
@@ -1149,10 +762,7 @@ stroke_t *stroke_create()
 	}
 	
 	/* private variables */
-	this->configurations = linked_list_create();
-	this->private_keys = linked_list_create();
-	
-	load_private_keys(this);
+	this->connections = linked_list_create();
 	
 	return (&this->public);
 }

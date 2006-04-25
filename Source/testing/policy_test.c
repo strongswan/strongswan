@@ -23,7 +23,7 @@
 #include "policy_test.h"
 
 #include <daemon.h>
-#include <config/policy.h>
+#include <config/policies/policy.h>
 #include <config/traffic_selector.h>
 #include <utils/logger.h>
 #include <encoding/payloads/ts_payload.h>

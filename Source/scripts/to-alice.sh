@@ -4,18 +4,17 @@
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
 # add connection to alice
-MY_ADDR=192.168.0.2      # Address of local peer, also used as ID
-OTHER_ADDR=192.168.0.1   # Address of remote peer, also used as ID
-MY_CERT=bob.der          # own certificate
-OTHER_CERT=alice.der     # certificate for remote peer
-MY_NET=10.2.0.0          # protected local subnet
-OTHER_NET=10.1.0.0       # protected remote subnet
-MY_BITS=16               # size of subnet
-OTHER_BITS=16            # size of subnet
-CONN_NAME=to-alice       # connection name
+MY_ADDR=192.168.0.2                           # Address of local peer
+OTHER_ADDR=192.168.0.1                        # Address of remote peer
+MY_ID="C=CH, O=Linux strongSwan, CN=bob"      # ID of local peer
+OTHER_ID="C=CH, O=Linux strongSwan, CN=alice" # ID of remote peer
+MY_NET=10.2.0.0                               # protected local subnet
+OTHER_NET=10.1.0.0                            # protected remote subnet
+MY_BITS=16                                    # size of subnet
+OTHER_BITS=16                                 # size of subnet
+CONN_NAME=to-alice                            # connection name
 
-bin/stroke add $CONN_NAME $MY_ADDR $OTHER_ADDR $MY_CERT $OTHER_CERT \
-               $MY_ADDR $OTHER_ADDR $MY_NET $OTHER_NET $MY_BITS $OTHER_BITS
+bin/stroke add $CONN_NAME "$MY_ID" "$OTHER_ID" $MY_ADDR $OTHER_ADDR $MY_NET $OTHER_NET $MY_BITS $OTHER_BITS
 
 # initiate
 i=0

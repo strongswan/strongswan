@@ -32,6 +32,9 @@
 #include "daemon.h" 
 
 #include <types.h>
+#include <config/connections/local_connection_store.h>
+#include <config/credentials/local_credential_store.h>
+#include <config/policies/local_policy_store.h>
 
 
 typedef struct private_daemon_t private_daemon_t;
@@ -162,17 +165,25 @@ static void kill_daemon(private_daemon_t *this, char *reason)
  */
 static void initialize(private_daemon_t *this)
 {
+	local_credential_store_t* cred_store;
+	
 	this->public.configuration = configuration_create();
 	this->public.socket = socket_create(IKEV2_UDP_PORT);
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.send_queue = send_queue_create();
-	this->public.stroke = stroke_create();
-	this->public.connections = &this->public.stroke->connections;
-	this->public.policies = &this->public.stroke->policies;
-	this->public.credentials = &this->public.stroke->credentials;
+	this->public.connections = (connection_store_t*)local_connection_store_create();
+	this->public.policies = (policy_store_t*)local_policy_store_create();
+	this->public.credentials = (credential_store_t*)(cred_store = local_credential_store_create());
 	
+	/* load keys & certs */
+	cred_store->load_certificates(cred_store, CERTIFICATE_DIR);
+	cred_store->load_private_keys(cred_store, PRIVATE_KEY_DIR);
+	
+	
+	/* start building threads, we are multi-threaded NOW */
+	this->public.stroke = stroke_create();
 	this->public.sender = sender_create();
 	this->public.receiver = receiver_create();
 	this->public.scheduler = scheduler_create();

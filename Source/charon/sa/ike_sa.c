@@ -374,6 +374,22 @@ static host_t* get_other_host(private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of ike_sa_t.get_my_id.
+ */
+static identification_t* get_my_id(private_ike_sa_t *this)
+{
+	return this->connection->get_my_id(this->connection);;
+}
+
+/**
+ * Implementation of ike_sa_t.get_other_id.
+ */
+static identification_t* get_other_id(private_ike_sa_t *this)
+{
+	return this->connection->get_other_id(this->connection);;
+}
+
+/**
  * Implementation of private_ike_sa_t.resend_last_reply.
  */
 static status_t resend_last_reply(private_ike_sa_t *this)
@@ -1054,6 +1070,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->protected.public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
 	this->protected.public.get_other_host = (host_t*(*)(ike_sa_t*)) get_other_host;
+	this->protected.public.get_my_id = (identification_t*(*)(ike_sa_t*)) get_my_id;
+	this->protected.public.get_other_id = (identification_t*(*)(ike_sa_t*)) get_other_id;
 	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t *this)) get_state;
 	this->protected.public.send_delete_ike_sa_request = (void (*)(ike_sa_t*)) send_delete_ike_sa_request;

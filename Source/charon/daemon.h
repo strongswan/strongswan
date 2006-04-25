@@ -36,9 +36,9 @@
 #include <queues/event_queue.h>
 #include <utils/logger_manager.h>
 #include <config/configuration.h>
-#include <config/connection_store.h>
-#include <config/policy_store.h>
-#include <config/credential_store.h>
+#include <config/connections/connection_store.h>
+#include <config/policies/policy_store.h>
+#include <config/credentials/credential_store.h>
 
 /**
  * @defgroup charon charon
@@ -201,6 +201,27 @@
  * @ingroup charon
  */
 #define PID_FILE "/var/run/charon.pid"
+
+/**
+ * Directory of IPsec relevant files
+ * 
+ * @ingroup charon
+ */
+#define IPSEC_DIR "/etc/ipsec.d/"
+
+/**
+ * Directory for private keys
+ * 
+ * @ingroup charon
+ */
+#define PRIVATE_KEY_DIR IPSEC_DIR "private/"
+
+/**
+ * Directory for trusted certificates
+ * 
+ * @ingroup charon
+ */
+#define CERTIFICATE_DIR IPSEC_DIR "certs/"
 
 
 typedef struct daemon_t daemon_t;

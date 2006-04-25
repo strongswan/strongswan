@@ -16,7 +16,13 @@ FREESWANSRCDIR=../..
 # include strongswan Makefile, if charon sits in its tree
 ifeq ($(shell ls $(FREESWANSRCDIR)/Makefile.inc 2>&1), ../../Makefile.inc)
   include ${FREESWANSRCDIR}/Makefile.inc
+else
+  # use leak detective by default
+  USE_LEAK_DETECTIVE?=true
 endif
+
+
+
 
 BUILD_DIR= ./bin/
 
@@ -27,8 +33,10 @@ BINNAMELIB=  $(BUILD_DIR)libstrongswan.so
 
 MAIN_DIR= ./
 
-CFLAGS= -Icharon -Ilib -Istroke -fPIC -Wall -g -DLEAK_DETECTIVE
-#CFLAGS= -Icharon -Ilib -Istroke -fPIC -O3
+CFLAGS= -Icharon -Ilib -Istroke -fPIC -Wall -g
+ifeq ($(USE_LEAK_DETECTIVE),true)
+  CFLAGS+= -DLEAK_DETECTIVE
+endif
 
 # objects is extended by each included Makefile
 CHARON_OBJS=

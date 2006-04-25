@@ -31,9 +31,10 @@
 
 + doxygen cleanup (charon/lib)
 
-- useable certificate support
+/ useable certificate support
   + more id types (use atodn from pluto)
-  - rewrite certificate storage the clean way
+  + rewrite certificate storage the clean way
+  - further subjectAltName support
   - certificate validation/chaining
   - certificate exchange
 
