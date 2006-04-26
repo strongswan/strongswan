@@ -37,6 +37,7 @@
 #include <crypto/signers/signer.h>
 #include <config/connections/connection.h>
 #include <config/policies/policy.h>
+#include <utils/logger.h>
 
 /**
  * Nonce size in bytes for nonces sending to other peer.
@@ -160,6 +161,18 @@ struct ike_sa_t {
 	 * @return 				state of IKE_SA
 	 */
 	ike_sa_state_t (*get_state) (ike_sa_t *this);
+	
+	/**
+	 * @brief Log the status of a the ike sa to a logger.
+	 *
+	 * The status of the IKE SA and all child SAs is logged.
+	 * Supplying NULL as logger uses the internal child_sa logger
+	 * to do the logging.
+	 *
+	 * @param this 		calling object
+	 * @param logger	logger to use for logging
+	 */	
+	void (*log_status) (ike_sa_t *this, logger_t *logger);
 
 	/**
 	 * @brief Destroys a ike_sa_t object.

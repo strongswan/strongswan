@@ -408,38 +408,15 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 		ike_sa_id_t *ike_sa_id;
 		ike_sa_t *ike_sa;
 		iterator->current(iterator, (void**)&ike_sa_id);
-		
+		/* TODO: A log_status method (as in IKE_SA/CHILD_SA) would be better than checking
+		 * out every single IKE...
+		 */
 		status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id, &ike_sa);
 		if (status == SUCCESS)
 		{
-			host_t *my_host, *other_host;
-			identification_t *my_id, *other_id;
-			my_host = ike_sa->get_my_host(ike_sa);
-			other_host = ike_sa->get_other_host(ike_sa);
-			my_id = ike_sa->get_my_id(ike_sa);
-			other_id = ike_sa->get_other_id(ike_sa);
-			
-			this->stroke_logger->log(this->stroke_logger, CONTROL, "IKE_SA in state %s ",
-									 mapping_find(ike_sa_state_m, ike_sa->get_state(ike_sa)));
-			
-			this->stroke_logger->log(this->stroke_logger, CONTROL, " SPIs: %lld",
-									 ike_sa_id->get_initiator_spi(ike_sa_id));
-			this->stroke_logger->log(this->stroke_logger, CONTROL, "       %lld",
-									 ike_sa_id->get_responder_spi(ike_sa_id));
-			
-			this->stroke_logger->log(this->stroke_logger, CONTROL, " Addr: %s",
-									 my_host->get_address(my_host));
-			this->stroke_logger->log(this->stroke_logger, CONTROL, "       %s",
-									 other_host->get_address(other_host));
-			
-			this->stroke_logger->log(this->stroke_logger, CONTROL, " ID:   %s",
-									 my_id->get_string(my_id));
-			this->stroke_logger->log(this->stroke_logger, CONTROL, "       %s",
-									 other_id->get_string(other_id));
-						
+			ike_sa->log_status(ike_sa, this->stroke_logger);
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}
-		
 		ike_sa_id->destroy(ike_sa_id);
 	}
 	iterator->destroy(iterator);

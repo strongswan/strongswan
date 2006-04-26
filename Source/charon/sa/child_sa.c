@@ -20,8 +20,9 @@
  * for more details.
  */
 
-#include "child_sa.h"
+#include <netdb.h>
 
+#include "child_sa.h"
 
 #include <daemon.h>
 
@@ -464,6 +465,48 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 }
 
 /**
+ * Implementation of child_sa_t.log_status.
+ */
+static void log_status(private_child_sa_t *this, logger_t *logger)
+{
+	iterator_t *iterator;
+	sa_policy_t *policy;
+	struct protoent *proto;
+	char proto_buf[16] = "";
+	char *proto_name = proto_buf;
+	
+	if (logger == NULL)
+	{
+		logger = this->logger;
+	}
+	logger->log(logger, CONTROL, "  protected with ESP (%x/%x), AH (%x,%x); traffic:",
+				htons(this->my_esp_spi), htons(this->other_esp_spi), 
+				htons(this->my_ah_spi), htons(this->other_ah_spi));
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&policy);
+		if (policy->upper_proto)
+		{
+			proto = getprotobynumber(policy->upper_proto);
+			if (proto)
+			{
+				proto_name = proto->p_name;
+			}
+			else
+			{
+				snprintf(proto_buf, sizeof(proto_buf), "<%d>", policy->upper_proto);
+			}
+		}
+		logger->log(logger, CONTROL, "    %s/%d===%s===%s/%d",
+					policy->my_net->get_address(policy->my_net), policy->my_net_mask,
+					proto_name,
+					policy->other_net->get_address(policy->other_net), policy->other_net_mask);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of child_sa_t.destroy.
  */
 static void destroy(private_child_sa_t *this)
@@ -527,6 +570,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other)
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
+	this->public.log_status = (void (*)(child_sa_t*, logger_t*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */

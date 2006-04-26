@@ -27,6 +27,7 @@
 #include <types.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
+#include <utils/logger.h>
 
 typedef struct child_sa_t child_sa_t;
 
@@ -110,6 +111,19 @@ struct child_sa_t {
 	 * @return			SUCCESS or FAILED
 	 */	
 	status_t (*add_policies) (child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list);
+	
+	/**
+	 * @brief Log the status of a child_sa to a logger.
+	 *
+	 * The status of ESP/AH SAs is logged with the supplied logger in
+	 * a human readable form.
+	 * Supplying NULL as logger uses the internal child_sa logger
+	 * to do the logging.
+	 *
+	 * @param this 		calling object
+	 * @param logger	logger to use for logging
+	 */	
+	void (*log_status) (child_sa_t *this, logger_t *logger);
 	
 	/**
 	 * @brief Destroys a child_sa.

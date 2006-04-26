@@ -977,6 +977,43 @@ static void reset_message_buffers (private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.log_status.
+ */
+static void log_status(private_ike_sa_t *this, logger_t *logger)
+{
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	
+	host_t *my_host    = this->connection->get_my_host(this->connection);
+	host_t *other_host = this->connection->get_other_host(this->connection);
+
+	identification_t *my_id    = this->connection->get_my_id(this->connection);
+	identification_t *other_id = this->connection->get_other_id(this->connection);
+	
+	if (logger == NULL)
+	{
+		logger = this->logger;
+	}
+	logger->log(logger, CONTROL, "IKE_SA in state %s, SPIs: %lld %lld",
+				mapping_find(ike_sa_state_m, this->current_state->get_state(this->current_state)),
+				this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
+				this->ike_sa_id->get_responder_spi(this->ike_sa_id));
+	logger->log(logger, CONTROL, "%s[%s]...%s[%s]; tunnels:",
+				my_host->get_address(my_host),
+				my_id->get_string(my_id),
+				other_host->get_address(other_host),
+				other_id->get_string(other_id));
+	
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&child_sa);
+		child_sa->log_status(child_sa, logger);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of protected_ike_sa_t.destroy.
  */
 static void destroy (private_ike_sa_t *this)
@@ -1075,6 +1112,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t *this)) get_state;
 	this->protected.public.send_delete_ike_sa_request = (void (*)(ike_sa_t*)) send_delete_ike_sa_request;
+	this->protected.public.log_status = (void (*) (ike_sa_t*,logger_t*))log_status;
 	this->protected.public.destroy = (void(*)(ike_sa_t*))destroy;
 	
 	/* protected functions */
