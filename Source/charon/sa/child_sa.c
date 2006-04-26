@@ -472,7 +472,7 @@ static void log_status(private_child_sa_t *this, logger_t *logger)
 	iterator_t *iterator;
 	sa_policy_t *policy;
 	struct protoent *proto;
-	char proto_buf[16] = "";
+	char proto_buf[8] = "";
 	char *proto_name = proto_buf;
 	
 	if (logger == NULL)
@@ -480,8 +480,8 @@ static void log_status(private_child_sa_t *this, logger_t *logger)
 		logger = this->logger;
 	}
 	logger->log(logger, CONTROL, "  protected with ESP (%x/%x), AH (%x,%x); traffic:",
-				htons(this->my_esp_spi), htons(this->other_esp_spi), 
-				htons(this->my_ah_spi), htons(this->other_ah_spi));
+				htonl(this->my_esp_spi), htonl(this->other_esp_spi), 
+				htonl(this->my_ah_spi), htonl(this->other_ah_spi));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->has_next(iterator))
 	{
