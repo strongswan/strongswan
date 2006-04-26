@@ -354,12 +354,14 @@ int main(int argc, char *argv[])
 			logger_manager->set_output(logger_manager, ALL_LOGGERS, NULL);
 		}
 	}
-	
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
 	
 	private_charon->logger = logger_manager->get_logger(logger_manager, DAEMON);
 		
+	/* initialize daemon */
+	private_charon->initialize(private_charon);
+	
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
 	{
@@ -375,8 +377,7 @@ int main(int argc, char *argv[])
 		fclose(pid_file);
 	}
 	
-	/* initialize and run daemon */
-	private_charon->initialize(private_charon);
+	/* run daemon */
 	private_charon->run(private_charon);
 	
 	/* normal termination, cleanup and exit */
