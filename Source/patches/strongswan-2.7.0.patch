@@ -1,6 +1,6 @@
-diff -Naur strongswan-2.6.4/Makefile.inc strongswan-2.6.4-charon/Makefile.inc
---- strongswan-2.6.4/Makefile.inc	2006-01-25 18:23:15.000000000 +0100
-+++ strongswan-2.6.4-charon/Makefile.inc	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/Makefile.inc strongswan-2.7.0-charon/Makefile.inc
+--- strongswan-2.7.0/Makefile.inc	2006-01-25 18:23:15.000000000 +0100
++++ strongswan-2.7.0-charon/Makefile.inc	2006-04-27 09:25:22.000000000 +0200
 @@ -84,6 +84,8 @@
  FINALLIBDIR=$(INC_USRLOCAL)/lib/ipsec
  LIBDIR=$(DESTDIR)$(FINALLIBDIR)
@@ -20,9 +20,9 @@ diff -Naur strongswan-2.6.4/Makefile.inc strongswan-2.6.4-charon/Makefile.inc
  # Default PKCS11 library
  # Uncomment this line if using OpenSC <= 0.9.6
  PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
-diff -Naur strongswan-2.6.4/programs/Makefile strongswan-2.6.4-charon/programs/Makefile
---- strongswan-2.6.4/programs/Makefile	2006-01-01 16:14:08.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/Makefile	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/Makefile strongswan-2.7.0-charon/programs/Makefile
+--- strongswan-2.7.0/programs/Makefile	2006-04-17 13:04:45.000000000 +0200
++++ strongswan-2.7.0-charon/programs/Makefile	2006-04-27 09:25:22.000000000 +0200
 @@ -32,6 +32,10 @@
  SUBDIRS+=showpolicy
  endif
@@ -34,21 +34,29 @@ diff -Naur strongswan-2.6.4/programs/Makefile strongswan-2.6.4-charon/programs/M
  def:
  	@echo "Please read doc/intro.html or INSTALL before running make"
  	@false
-diff -Naur strongswan-2.6.4/programs/ipsec/ipsec.in strongswan-2.6.4-charon/programs/ipsec/ipsec.in
---- strongswan-2.6.4/programs/ipsec/ipsec.in	2006-03-09 21:09:33.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/ipsec/ipsec.in	2006-04-19 14:22:26.000000000 +0200
-@@ -123,6 +123,10 @@
+diff -Naur strongswan-2.7.0/programs/ipsec/ipsec.in strongswan-2.7.0-charon/programs/ipsec/ipsec.in
+--- strongswan-2.7.0/programs/ipsec/ipsec.in	2006-03-09 21:09:33.000000000 +0100
++++ strongswan-2.7.0-charon/programs/ipsec/ipsec.in	2006-04-27 09:27:27.000000000 +0200
+@@ -26,6 +26,7 @@
+ export IPSEC_DIR IPSEC_CONFS IPSEC_LIBDIR IPSEC_EXECDIR
+ 
+ IPSEC_STARTER_PID="/var/run/starter.pid"
++IPSEC_CHARON_PID="/var/run/charon.pid"
+ 
+ # standardize PATH, and export it for everything else's benefit
+ PATH="${IPSEC_SBINDIR}":/sbin:/usr/sbin:/usr/local/bin:/bin:/usr/bin
+@@ -123,6 +124,10 @@
  down)
  	shift
  	$IPSEC_EXECDIR/whack --name "$1" --terminate
-+	if test -e $IPSEC_EXECDIR/stroke
++	if test -e $IPSEC_CHARON_PID
 +	then
 +	    $IPSEC_EXECDIR/stroke down "$1"
 +	fi
  	exit 0
  	;;
  listalgs|listpubkeys|listcerts|listcacerts|\
-@@ -134,6 +138,10 @@
+@@ -134,6 +139,10 @@
  	op="$1"
  	shift
          $IPSEC_EXECDIR/whack "$@" "--$op"
@@ -59,37 +67,37 @@ diff -Naur strongswan-2.6.4/programs/ipsec/ipsec.in strongswan-2.6.4-charon/prog
  	exit 0
  	;;
  ready)
-@@ -180,8 +188,16 @@
+@@ -180,8 +189,16 @@
  	if test $# -eq 0
  	then
  	    $IPSEC_EXECDIR/whack "--$op"
 +	    if test -e $IPSEC_EXECDIR/stroke
 +	    then
-+	    	$IPSEC_EXECDIR/stroke "$op"
++	    	$IPSEC_EXECDIR/stroke status
 +	    fi
  	else
  	    $IPSEC_EXECDIR/whack --name "$1" "--$op"
-+	    if test -e $IPSEC_EXECDIR/stroke
++	    if test -e $IPSEC_CHARON_PID
 +	    then
-+		$IPSEC_EXECDIR/stroke "$op" "$1"
++		$IPSEC_EXECDIR/stroke status
 +	    fi
  	fi
  	exit 0
  	;;
-@@ -198,6 +214,10 @@
+@@ -198,6 +215,10 @@
  up)
  	shift
  	$IPSEC_EXECDIR/whack --name "$1" --initiate
-+	if test -e $IPSEC_EXECDIR/stroke
++	if test -e $IPSEC_CHARON_PID
 +	then
 +	    $IPSEC_EXECDIR/stroke up "$1"
 +	fi
  	exit 0
  	;;
  update)
-diff -Naur strongswan-2.6.4/programs/pluto/Makefile strongswan-2.6.4-charon/programs/pluto/Makefile
---- strongswan-2.6.4/programs/pluto/Makefile	2006-01-25 18:22:19.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/pluto/Makefile	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/pluto/Makefile strongswan-2.7.0-charon/programs/pluto/Makefile
+--- strongswan-2.7.0/programs/pluto/Makefile	2006-01-25 18:22:19.000000000 +0100
++++ strongswan-2.7.0-charon/programs/pluto/Makefile	2006-04-27 09:25:22.000000000 +0200
 @@ -170,6 +170,11 @@
    LIBSPLUTO+= -ldl
  endif
@@ -102,9 +110,9 @@ diff -Naur strongswan-2.6.4/programs/pluto/Makefile strongswan-2.6.4-charon/prog
  # This compile option activates the leak detective
  ifeq ($(USE_LEAK_DETECTIVE),true)
    DEFINES+= -DLEAK_DETECTIVE
-diff -Naur strongswan-2.6.4/programs/pluto/demux.c strongswan-2.6.4-charon/programs/pluto/demux.c
---- strongswan-2.6.4/programs/pluto/demux.c	2005-02-18 22:08:59.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/pluto/demux.c	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/pluto/demux.c strongswan-2.7.0-charon/programs/pluto/demux.c
+--- strongswan-2.7.0/programs/pluto/demux.c	2005-02-18 22:08:59.000000000 +0100
++++ strongswan-2.7.0-charon/programs/pluto/demux.c	2006-04-27 09:25:22.000000000 +0200
 @@ -1229,6 +1229,15 @@
  	if (md->packet_pbs.roof - md->packet_pbs.cur >= (ptrdiff_t)isakmp_hdr_desc.size)
  	{
@@ -121,9 +129,9 @@ diff -Naur strongswan-2.6.4/programs/pluto/demux.c strongswan-2.6.4-charon/progr
  	    if ((hdr->isa_version >> ISA_MAJ_SHIFT) != ISAKMP_MAJOR_VERSION)
  	    {
  		SEND_NOTIFICATION(INVALID_MAJOR_VERSION);
-diff -Naur strongswan-2.6.4/programs/starter/Makefile strongswan-2.6.4-charon/programs/starter/Makefile
---- strongswan-2.6.4/programs/starter/Makefile	2006-02-17 20:34:02.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/Makefile	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/Makefile strongswan-2.7.0-charon/programs/starter/Makefile
+--- strongswan-2.7.0/programs/starter/Makefile	2006-02-17 20:34:02.000000000 +0100
++++ strongswan-2.7.0-charon/programs/starter/Makefile	2006-04-27 09:25:22.000000000 +0200
 @@ -34,6 +34,11 @@
    DEFINES+= -DLEAK_DETECTIVE
  endif
@@ -148,9 +156,9 @@ diff -Naur strongswan-2.6.4/programs/starter/Makefile strongswan-2.6.4-charon/pr
  DISTSRC=$(OBJS:.o=.c)
  DISTSRC+=cmp.h confread.h confwrite.h exec.h files.h interfaces.h klips.h netkey.h
  DISTSRC+=parser.h args.h invokepluto.h starterwhack.h keywords.h keywords.txt
-diff -Naur strongswan-2.6.4/programs/starter/args.c strongswan-2.6.4-charon/programs/starter/args.c
---- strongswan-2.6.4/programs/starter/args.c	2006-03-10 21:37:10.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/args.c	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/args.c strongswan-2.7.0-charon/programs/starter/args.c
+--- strongswan-2.7.0/programs/starter/args.c	2006-04-17 12:32:36.000000000 +0200
++++ strongswan-2.7.0-charon/programs/starter/args.c	2006-04-27 09:25:22.000000000 +0200
 @@ -86,6 +86,10 @@
  
  static const char *LST_keyexchange[] = {
@@ -162,9 +170,9 @@ diff -Naur strongswan-2.6.4/programs/starter/args.c strongswan-2.6.4-charon/prog
       NULL
  };
  
-diff -Naur strongswan-2.6.4/programs/starter/files.h strongswan-2.6.4-charon/programs/starter/files.h
---- strongswan-2.6.4/programs/starter/files.h	2006-02-04 19:52:58.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/files.h	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/files.h strongswan-2.7.0-charon/programs/starter/files.h
+--- strongswan-2.7.0/programs/starter/files.h	2006-02-04 19:52:58.000000000 +0100
++++ strongswan-2.7.0-charon/programs/starter/files.h	2006-04-27 09:25:22.000000000 +0200
 @@ -37,8 +37,15 @@
  #define SECRETS_FILE	IPSEC_CONFDIR"/ipsec.secrets"
  
@@ -183,9 +191,9 @@ diff -Naur strongswan-2.6.4/programs/starter/files.h strongswan-2.6.4-charon/pro
  
  #define DYNIP_DIR       "/var/run/dynip"
  #define INFO_FILE       "/var/run/ipsec.info"
-diff -Naur strongswan-2.6.4/programs/starter/invokecharon.c strongswan-2.6.4-charon/programs/starter/invokecharon.c
---- strongswan-2.6.4/programs/starter/invokecharon.c	1970-01-01 01:00:00.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/invokecharon.c	2006-04-20 08:14:25.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/invokecharon.c strongswan-2.7.0-charon/programs/starter/invokecharon.c
+--- strongswan-2.7.0/programs/starter/invokecharon.c	1970-01-01 01:00:00.000000000 +0100
++++ strongswan-2.7.0-charon/programs/starter/invokecharon.c	2006-04-27 09:25:22.000000000 +0200
 @@ -0,0 +1,174 @@
 +/* strongSwan charon launcher
 + * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
@@ -361,9 +369,9 @@ diff -Naur strongswan-2.6.4/programs/starter/invokecharon.c strongswan-2.6.4-cha
 +    }
 +    return -1;
 +}
-diff -Naur strongswan-2.6.4/programs/starter/invokecharon.h strongswan-2.6.4-charon/programs/starter/invokecharon.h
---- strongswan-2.6.4/programs/starter/invokecharon.h	1970-01-01 01:00:00.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/invokecharon.h	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/invokecharon.h strongswan-2.7.0-charon/programs/starter/invokecharon.h
+--- strongswan-2.7.0/programs/starter/invokecharon.h	1970-01-01 01:00:00.000000000 +0100
++++ strongswan-2.7.0-charon/programs/starter/invokecharon.h	2006-04-27 09:25:22.000000000 +0200
 @@ -0,0 +1,31 @@
 +/* strongSwan charon launcher
 + * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
@@ -396,9 +404,9 @@ diff -Naur strongswan-2.6.4/programs/starter/invokecharon.h strongswan-2.6.4-cha
 +
 +#endif /* _STARTER_CHARON_H_ */
 +
-diff -Naur strongswan-2.6.4/programs/starter/invokepluto.c strongswan-2.6.4-charon/programs/starter/invokepluto.c
---- strongswan-2.6.4/programs/starter/invokepluto.c	2006-02-17 22:41:50.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/invokepluto.c	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/invokepluto.c strongswan-2.7.0-charon/programs/starter/invokepluto.c
+--- strongswan-2.7.0/programs/starter/invokepluto.c	2006-02-17 22:41:50.000000000 +0100
++++ strongswan-2.7.0-charon/programs/starter/invokepluto.c	2006-04-27 09:25:22.000000000 +0200
 @@ -54,7 +54,7 @@
  		, PLUTO_RESTART_DELAY);
  	    alarm(PLUTO_RESTART_DELAY);   // restart in 5 sec
@@ -426,9 +434,9 @@ diff -Naur strongswan-2.6.4/programs/starter/invokepluto.c strongswan-2.6.4-char
  		{
  		    DBG(DBG_CONTROL,
  			DBG_log("pluto (%d) started", _pluto_pid)
-diff -Naur strongswan-2.6.4/programs/starter/starter.c strongswan-2.6.4-charon/programs/starter/starter.c
---- strongswan-2.6.4/programs/starter/starter.c	2006-02-15 19:37:46.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/starter.c	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/starter.c strongswan-2.7.0-charon/programs/starter/starter.c
+--- strongswan-2.7.0/programs/starter/starter.c	2006-02-15 19:37:46.000000000 +0100
++++ strongswan-2.7.0-charon/programs/starter/starter.c	2006-04-27 09:25:22.000000000 +0200
 @@ -37,6 +37,7 @@
  #include "files.h"
  #include "starterwhack.h"
@@ -642,9 +650,9 @@ diff -Naur strongswan-2.6.4/programs/starter/starter.c strongswan-2.6.4-charon/p
  		}
  	    }
  	}
-diff -Naur strongswan-2.6.4/programs/starter/starterstroke.c strongswan-2.6.4-charon/programs/starter/starterstroke.c
---- strongswan-2.6.4/programs/starter/starterstroke.c	1970-01-01 01:00:00.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/starterstroke.c	2006-04-19 14:28:33.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/starterstroke.c strongswan-2.7.0-charon/programs/starter/starterstroke.c
+--- strongswan-2.7.0/programs/starter/starterstroke.c	1970-01-01 01:00:00.000000000 +0100
++++ strongswan-2.7.0-charon/programs/starter/starterstroke.c	2006-04-27 09:25:22.000000000 +0200
 @@ -0,0 +1,161 @@
 +/* Stroke for charon is the counterpart to whack from pluto
 + * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
@@ -807,9 +815,9 @@ diff -Naur strongswan-2.6.4/programs/starter/starterstroke.c strongswan-2.6.4-ch
 +	free(msg);
 +	return res;
 +}
-diff -Naur strongswan-2.6.4/programs/starter/starterstroke.h strongswan-2.6.4-charon/programs/starter/starterstroke.h
---- strongswan-2.6.4/programs/starter/starterstroke.h	1970-01-01 01:00:00.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/starterstroke.h	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/starterstroke.h strongswan-2.7.0-charon/programs/starter/starterstroke.h
+--- strongswan-2.7.0/programs/starter/starterstroke.h	1970-01-01 01:00:00.000000000 +0100
++++ strongswan-2.7.0-charon/programs/starter/starterstroke.h	2006-04-27 09:25:22.000000000 +0200
 @@ -0,0 +1,27 @@
 +/* Stroke for charon is the counterpart to whack from pluto
 + * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
@@ -838,9 +846,9 @@ diff -Naur strongswan-2.6.4/programs/starter/starterstroke.h strongswan-2.6.4-ch
 +extern int starter_stroke_initiate_conn(starter_conn_t *conn);
 +
 +#endif /* _STARTER_STROKE_H_ */
-diff -Naur strongswan-2.6.4/programs/starter/starterwhack.c strongswan-2.6.4-charon/programs/starter/starterwhack.c
---- strongswan-2.6.4/programs/starter/starterwhack.c	2006-02-08 21:56:07.000000000 +0100
-+++ strongswan-2.6.4-charon/programs/starter/starterwhack.c	2006-04-19 14:22:26.000000000 +0200
+diff -Naur strongswan-2.7.0/programs/starter/starterwhack.c strongswan-2.7.0-charon/programs/starter/starterwhack.c
+--- strongswan-2.7.0/programs/starter/starterwhack.c	2006-04-17 12:32:36.000000000 +0200
++++ strongswan-2.7.0-charon/programs/starter/starterwhack.c	2006-04-27 09:25:22.000000000 +0200
 @@ -54,7 +54,7 @@
  static int
  send_whack_msg (whack_message_t *msg)
