@@ -60,7 +60,7 @@ diff -Naur strongswan-2.7.0/programs/ipsec/ipsec.in strongswan-2.7.0-charon/prog
  	op="$1"
  	shift
          $IPSEC_EXECDIR/whack "$@" "--$op"
-+	if test -e $IPSEC_EXECDIR/stroke
++	if test -e $IPSEC_CHARON_PID
 +	then
 +            $IPSEC_EXECDIR/stroke "$op"
 +        fi
@@ -71,15 +71,15 @@ diff -Naur strongswan-2.7.0/programs/ipsec/ipsec.in strongswan-2.7.0-charon/prog
  	if test $# -eq 0
  	then
  	    $IPSEC_EXECDIR/whack "--$op"
-+	    if test -e $IPSEC_EXECDIR/stroke
++	    if test -e $IPSEC_CHARON_PID
 +	    then
-+	    	$IPSEC_EXECDIR/stroke status
++	    	$IPSEC_EXECDIR/stroke "$op"
 +	    fi
  	else
  	    $IPSEC_EXECDIR/whack --name "$1" "--$op"
 +	    if test -e $IPSEC_CHARON_PID
 +	    then
-+		$IPSEC_EXECDIR/stroke status
++	    	$IPSEC_EXECDIR/stroke "$op" "$1"
 +	    fi
  	fi
  	exit 0
