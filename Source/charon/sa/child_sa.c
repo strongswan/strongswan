@@ -479,7 +479,7 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 	{
 		logger = this->logger;
 	}
-	logger->log(logger, CONTROL|LEVEL1, "\"%s\":   protected with ESP (%x/%x), AH (%x,%x):",
+	logger->log(logger, CONTROL|LEVEL1, "\"%s\":   protected with ESP (0x%x/0x%x), AH (0x%x,0x%x):",
 				name,
 				htonl(this->my_esp_spi), htonl(this->other_esp_spi), 
 				htonl(this->my_ah_spi), htonl(this->other_ah_spi));

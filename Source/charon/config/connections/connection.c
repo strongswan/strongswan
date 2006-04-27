@@ -111,6 +111,24 @@ static identification_t *get_other_id(private_connection_t *this)
 }
 
 /**
+ * Implementation of connection_t.update_my_id
+ */
+static void update_my_id(private_connection_t *this, identification_t *my_id)
+{
+	this->my_id->destroy(this->my_id);
+	this->my_id = my_id;
+}
+
+/**
+ * Implementation of connection_t.update_other_id
+ */
+static void update_other_id(private_connection_t *this, identification_t *other_id)
+{
+	this->other_id->destroy(this->other_id);
+	this->other_id = other_id;
+}
+
+/**
  * Implementation of connection_t.get_my_host.
  */
 static host_t * get_my_host (private_connection_t *this)
@@ -305,6 +323,7 @@ static void destroy (private_connection_t *this)
 	this->other_host->destroy(this->other_host);
 	this->my_id->destroy(this->my_id);
 	this->other_id->destroy(this->other_id);
+	free(this->name);
 	free(this);
 }
 
@@ -322,6 +341,8 @@ connection_t * connection_create(char *name, host_t *my_host, host_t *other_host
 	this->public.get_my_host = (host_t*(*)(connection_t*))get_my_host;
 	this->public.update_my_host = (void(*)(connection_t*,host_t*))update_my_host;
 	this->public.update_other_host = (void(*)(connection_t*,host_t*))update_other_host;
+	this->public.update_my_id = (void(*)(connection_t*,identification_t*))update_my_id;
+	this->public.update_other_id = (void(*)(connection_t*,identification_t*))update_other_id;
 	this->public.get_other_host = (host_t*(*)(connection_t*))get_other_host;
 	this->public.get_proposals = (linked_list_t*(*)(connection_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(connection_t*,linked_list_t*))select_proposal;

@@ -36,7 +36,7 @@
 #define MAX_LOG 8192
 
 /**
- * Maximum number of logged bytes pre line
+ * Maximum number of logged bytes per line
  */
 #define MAX_BYTES 16
 
@@ -68,40 +68,35 @@ struct private_logger_t {
 	 * Should a thread_id be included in the log?
 	 */
 	bool log_thread_id;
-	
-	/**
-	 * Applies a prefix to string and stores it in buffer.
-	 * 
-	 * @warning: buffer must be at least have MAX_LOG size.
-	 */
-	void (*prepend_prefix) (private_logger_t *this, log_level_t loglevel, const char *string, char *buffer);
 };
 
 /**
- * Implementation of private_logger_t.prepend_prefix.
+ * prepend the logging prefix to string and store it in buffer
  */
 static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const char *string, char *buffer)
 {
 	char log_type, log_details;
+	char thread_id[10] = "";
+
 	if (loglevel & CONTROL)
 	{
-		log_type = '~';
+		log_type = 'C';
 	}
 	else if (loglevel & ERROR)
 	{
-		log_type = '!';
+		log_type = 'E';
 	}
 	else if (loglevel & RAW)
 	{
-		log_type = '#';
+		log_type = 'R';
 	}
 	else if (loglevel & PRIVATE)
 	{
-		log_type = '?';
+		log_type = 'P';
 	}
 	else if (loglevel & AUDIT)
 	{
-		log_type = '>';
+		log_type = 'A';
 	}
 	else
 	{
@@ -127,20 +122,29 @@ static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const c
 	
 	if (this->log_thread_id)
 	{
-		snprintf(buffer, MAX_LOG, "[%c%c:%s] @%u %s", log_type, log_details, this->name, (int)pthread_self(), string);
+		snprintf(thread_id, sizeof(thread_id), " @%d", (int)pthread_self());
 	}
-	else
+	snprintf(buffer, MAX_LOG, "[%c%c:%s]%s %s", log_type, log_details, this->name, thread_id, string);
+}
+
+/**
+ * Convert a charon-loglevel to a syslog priority
+ */
+static int get_priority(log_level_t loglevel)
+{
+	if (loglevel & AUDIT)
 	{
-		snprintf(buffer, MAX_LOG, "[%c%c:%s] %s", log_type, log_details, this->name, string);
+		return LOG_AUTHPRIV|LOG_INFO;
 	}
+	return LOG_DAEMON|LOG_DEBUG;
 }
 
 /**
  * Implementation of logger_t.log.
  *
- * Yes, logg is wrong written :-).
+ * Yes, logg is written wrong :-).
  */
-static void logg(private_logger_t *this, log_level_t loglevel, char *format, ...)
+static void logg(private_logger_t *this, log_level_t loglevel, const char *format, ...)
 {
 	if ((this->level & loglevel) == loglevel)
 	{
@@ -151,15 +155,15 @@ static void logg(private_logger_t *this, log_level_t loglevel, char *format, ...
 		if (this->output == NULL)
 		{
 			/* syslog */
-			this->prepend_prefix(this, loglevel, format, buffer);
+			prepend_prefix(this, loglevel, format, buffer);
 			va_start(args, format);
-			vsyslog(LOG_INFO, buffer, args);
+			vsyslog(get_priority(loglevel), buffer, args);
 			va_end(args);
 		}
 		else
 		{
 			/* File output */
-			this->prepend_prefix(this, loglevel, format, buffer);
+			prepend_prefix(this, loglevel, format, buffer);
 			va_start(args, format);
 			vfprintf(this->output, buffer, args);
 			va_end(args);
@@ -178,16 +182,22 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 	if ((this->level & loglevel) == loglevel)
 	{
+		char thread_id[10] = "";
 		char buffer[MAX_LOG];
 		char ascii_buffer[MAX_BYTES+1];
 
 		char *buffer_pos = buffer;
-		const char format[] = "%s   %d bytes @ %p";
+		const char format[] = "%s  %d bytes @ %p";
 		const char *bytes_pos  = bytes;
 		const char *bytes_roof = bytes + len;
 
 		int line_start = 0;
 		int i = 0;
+
+		if (this->log_thread_id)
+		{
+			snprintf(thread_id, sizeof(thread_id), " @%d", (int)pthread_self());
+		}
 
 		/* since me can't do multi-line output to syslog, 
 		* we must do multiple syslogs. To avoid
@@ -195,11 +205,11 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 		*/
 		pthread_mutex_lock(&mutex);
 
-		this->prepend_prefix(this, loglevel, format, buffer);
+		prepend_prefix(this, loglevel, format, buffer);
 
 		if (this->output == NULL)
 		{
-			syslog(LOG_INFO, buffer, label, len, bytes);
+			syslog(get_priority(loglevel), buffer, label, len, bytes);
 		}
 		else
 		{
@@ -230,14 +240,14 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 				if (this->output == NULL)
 				{
-					syslog(LOG_INFO, "[  :%5d] %s %s", line_start, buffer, ascii_buffer);	
+					syslog(get_priority(loglevel), "[  :%5d]%s   %s  %s", line_start, thread_id, buffer, ascii_buffer);	
 				}
 				else
 				{
-					fprintf(this->output, "[  :%5d] %s %s\n", line_start, buffer, ascii_buffer);
+					fprintf(this->output, "[  :%5d]%s   %s  %s\n", line_start, thread_id, buffer, ascii_buffer);
 				}
 				buffer_pos = buffer;
-				line_start += 16;
+				line_start += MAX_BYTES;
 				i = 0;
 			}
 			else 
@@ -252,7 +262,7 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 /**
  * Implementation of logger_t.log_chunk.
  */
-static void log_chunk(logger_t *this, log_level_t loglevel, char *label, chunk_t chunk)
+static void log_chunk(logger_t *this, log_level_t loglevel, const char *label, chunk_t chunk)
 {
 	this->log_bytes(this, loglevel, label, chunk.ptr, chunk.len);
 }
@@ -306,17 +316,14 @@ logger_t *logger_create(char *logger_name, log_level_t log_level, bool log_threa
 	private_logger_t *this = malloc_thing(private_logger_t);
 	
 	/* public functions */
-	this->public.log = (void(*)(logger_t*,log_level_t,char*,...))logg;
-	this->public.log_bytes = (void(*)(logger_t*, log_level_t, char*,char*,size_t))log_bytes;
+	this->public.log = (void(*)(logger_t*,log_level_t,const char*,...))logg;
+	this->public.log_bytes = (void(*)(logger_t*, log_level_t, const char*, const char*,size_t))log_bytes;
 	this->public.log_chunk = log_chunk;
 	this->public.enable_level = (void(*)(logger_t*,log_level_t))enable_level;
 	this->public.disable_level = (void(*)(logger_t*,log_level_t))disable_level;
 	this->public.get_level = (log_level_t(*)(logger_t*))get_level;
 	this->public.set_output = (void(*)(logger_t*,FILE*))set_output;
 	this->public.destroy = (void(*)(logger_t*))destroy;
-
-	/* private functions */
-	this->prepend_prefix = prepend_prefix;
 
 	if (logger_name == NULL)
 	{
@@ -330,11 +337,6 @@ logger_t *logger_create(char *logger_name, log_level_t log_level, bool log_threa
 
 	strcpy(this->name,logger_name);
 	this->output = output;
-	
-	if (output == NULL)
-	{
-		//openlog(DAEMON_NAME, 0, LOG_DAEMON);
-	}
 	
 	return (logger_t*)this;
 }

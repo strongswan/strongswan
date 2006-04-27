@@ -312,7 +312,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	else
 	{
-		job = initiate_ike_sa_job_create(connection->clone(connection));
+		job = initiate_ike_sa_job_create(connection);
 		charon->job_queue->add(charon->job_queue, (job_t*)job);
 	}
 }

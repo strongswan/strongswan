@@ -808,6 +808,19 @@ static char *get_string(private_identification_t *this)
 }
 
 /**
+ * Implementation of identification_t.contains_wildcards.
+ */
+static bool contains_wildcards(private_identification_t *this)
+{
+	if (this->type == ID_ANY ||
+		memchr(this->encoded.ptr, '*', this->encoded.len) != NULL)
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Default implementation of identification_t.equals and identification_t.belongs_to.
  * compares encoded chunk for equality.
  */
@@ -839,6 +852,11 @@ static bool equals_dn(private_identification_t *this, private_identification_t *
 static bool belongs_to_wc_string(private_identification_t *this, private_identification_t *other)
 {
 	char *this_str, *other_str, *pos;
+	
+	if (other->type == ID_ANY)
+	{
+		return TRUE;
+	}
 	
 	if (this->type == other->type)
 	{
@@ -875,11 +893,15 @@ static bool belongs_to_wc_string(private_identification_t *this, private_identif
 
 /**
  * Special implementation of identification_t.belongs_to for ID_ANY.
- * ANY matches any, even ANY, thats why its there...
+ * ANY matches only another ANY, but nothing other
  */
 static bool belongs_to_any(private_identification_t *this, private_identification_t *other)
-{
-	return TRUE;
+{	
+	if (other->type == ID_ANY)
+	{
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -889,6 +911,11 @@ static bool belongs_to_any(private_identification_t *this, private_identificatio
 static bool belongs_to_dn(private_identification_t *this, private_identification_t *other)
 {
 	int wildcards;
+	
+	if (other->type == ID_ANY)
+	{
+		return TRUE;
+	}
 	
 	if (this->type == other->type)
 	{
@@ -932,6 +959,7 @@ static private_identification_t *identification_create()
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
 	this->public.get_string = (char* (*) (identification_t*))get_string;
+	this->public.contains_wildcards = (bool (*) (identification_t *this))contains_wildcards;
 	this->public.clone = (identification_t* (*) (identification_t*))clone;
 	this->public.destroy = (void (*) (identification_t*))destroy;
 	/* we use these as defaults, the may be overloaded for special ID types */

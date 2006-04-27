@@ -171,6 +171,18 @@ struct identification_t {
 	bool (*belongs_to) (identification_t *this, identification_t *other);
 	
 	/**
+	 * @brief Check if an ID is a wildcard ID.
+	 *
+	 * If the ID represents multiple IDs (with wildcards, or
+	 * as the type ID_ANY), TRUE is returned. If it is unique,
+	 * FALSE is returned.
+	 * 
+	 * @param this		identification_t object
+	 * @return 			TRUE if ID contains wildcards
+	 */
+	bool (*contains_wildcards) (identification_t *this);
+	
+	/**
 	 * @brief Clone a identification_t instance.
 	 * 
 	 * @param this		the identification_t object to clone

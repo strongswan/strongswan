@@ -110,7 +110,7 @@ struct logger_t {
 	 * @param format 	printf like format string
 	 * @param ... 		printf like parameters
 	 */
-	void (*log) (logger_t *this, log_level_t log_level, char *format, ...);
+	void (*log) (logger_t *this, log_level_t log_level, const char *format, ...);
 
 	/**
 	 * @brief Log some bytes, useful for debugging.
@@ -124,7 +124,7 @@ struct logger_t {
 	 * @param bytes 	pointer to the bytes to dump
 	 * @param len	 	number of bytes to dump
 	 */
-	void (*log_bytes) (logger_t *this, log_level_t loglevel, char *label, char *bytes, size_t len);
+	void (*log_bytes) (logger_t *this, log_level_t loglevel, const char *label, const char *bytes, size_t len);
 
 	/**
 	 * @brief Log a chunk, useful for debugging.
@@ -137,7 +137,7 @@ struct logger_t {
 	 * @param label 	a labeling name, logged with the bytes
 	 * @param chunk		chunk to log
 	 */
-	void (*log_chunk) (logger_t *this, log_level_t loglevel, char *label, chunk_t chunk);
+	void (*log_chunk) (logger_t *this, log_level_t loglevel, const char *label, chunk_t chunk);
 
 	/**
 	 * @brief Enables a loglevel for the current logger_t object.

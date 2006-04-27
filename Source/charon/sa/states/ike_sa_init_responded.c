@@ -382,39 +382,31 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	connection_t *connection;
 	id_payload_t *idr_response;
 	
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	
+	/* update adresses, as connection may contain wildcards, or wrong IDs */
 	other_id = request_idi->get_identification(request_idi);
 	if (request_idr)
 	{
 		my_id = request_idr->get_identification(request_idr);
+		connection->update_my_id(connection, my_id);
 	}
+	else
+	{
+		my_id = connection->get_my_id(connection);
+	}
+	connection->update_other_id(connection, other_id);
 
 	/* build new sa config */
-	connection = this->ike_sa->get_connection(this->ike_sa);
 	this->policy = charon->policies->get_policy(charon->policies, my_id, other_id);
 	if (this->policy == NULL)
-	{	
-		if (my_id)
-		{
-			this->logger->log(this->logger, AUDIT, "We don't have a policy for IDs %s - %s. Deleting IKE_SA", 
-							other_id->get_string(other_id),my_id->get_string(my_id));
-			my_id->destroy(my_id);	
-		}
-		else
-		{
-			this->logger->log(this->logger, AUDIT, "We don't have a policy for remote ID %s. Deleting IKE_SA", 
-							other_id->get_string(other_id));
-		}
-		other_id->destroy(other_id);
+	{
+		this->logger->log(this->logger, AUDIT, "We don't have a policy for IDs %s - %s. Deleting IKE_SA", 
+						  my_id->get_string(my_id), other_id->get_string(other_id));
 		return DELETE_ME;
 	}
 	
-	if (my_id)
-	{
-		my_id->destroy(my_id);
-	}
-	other_id->destroy(other_id);
-	
-	/* get my id, if not requested */
+	/* get my id from policy, which must contain a fully qualified valid id */
 	my_id = this->policy->get_my_id(this->policy);
 	
 	/* update others traffic selectors with actually used address */

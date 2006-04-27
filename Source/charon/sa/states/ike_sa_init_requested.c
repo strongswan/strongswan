@@ -135,6 +135,19 @@ struct private_ike_sa_init_requested_t {
 	status_t (*build_id_payload) (private_ike_sa_init_requested_t *this,id_payload_t **id_payload, message_t *response);
 	
 	/**
+	 * Build IDr payload for IKE_AUTH request.
+	 * 
+	 * Only built when the ID of the responder contains no wildcards.
+	 * 
+	 * @param this				calling object
+	 * @param response			created payload will be added to this message_t object
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED
+	 */
+	status_t (*build_idr_payload) (private_ike_sa_init_requested_t *this, message_t *response);
+	
+	/**
 	 * Build AUTH payload for IKE_AUTH request.
 	 * 
 	 * @param this				calling object
@@ -351,13 +364,19 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	/*  build empty message */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &request);
 	
-	status = this->build_id_payload(this, &id_payload,request);
+	status = this->build_id_payload(this, &id_payload, request);
+	if (status != SUCCESS)
+	{
+		request->destroy(request);
+		return status;
+	}	
+	status = this->build_idr_payload(this, request);
 	if (status != SUCCESS)
 	{
 		request->destroy(request);
 		return status;
 	}
-	status = this->build_auth_payload(this,(id_payload_t *) id_payload, request);
+	status = this->build_auth_payload(this, (id_payload_t*)id_payload, request);
 	if (status != SUCCESS)
 	{
 		request->destroy(request);
@@ -477,15 +496,35 @@ static status_t build_id_payload (private_ike_sa_init_requested_t *this,id_paylo
 	identification_t *identification;
 	
 	policy = this->ike_sa->get_policy(this->ike_sa);
-	/* identification_t object gets NOT cloned here */
 	identification = policy->get_my_id(policy);
-	new_id_payload = id_payload_create_from_identification(TRUE,identification);
+	new_id_payload = id_payload_create_from_identification(TRUE, identification);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add ID payload to message");
 	request->add_payload(request,(payload_t *) new_id_payload);
 	
 	*id_payload = new_id_payload;
 	
+	return SUCCESS;
+}
+
+/**
+ * Implementation of private_ike_sa_init_requested_t.build_idr_payload.
+ */
+static status_t build_idr_payload (private_ike_sa_init_requested_t *this, message_t *request)
+{
+	policy_t *policy;
+	id_payload_t *idr_payload;
+	identification_t *identification;
+	
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	identification = policy->get_other_id(policy);
+	if (!identification->contains_wildcards(identification))
+	{
+		idr_payload = id_payload_create_from_identification(FALSE, identification);
+	
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Add IDr payload to message");
+		request->add_payload(request,(payload_t *) idr_payload);
+	}
 	return SUCCESS;
 }
 
@@ -741,6 +780,7 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->build_tsi_payload = build_tsi_payload;
 	this->build_tsr_payload = build_tsr_payload;
 	this->build_id_payload = build_id_payload;
+	this->build_idr_payload = build_idr_payload;
 	this->build_sa_payload = build_sa_payload;
 	this->process_notify_payload = process_notify_payload;
 	

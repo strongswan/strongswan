@@ -66,7 +66,7 @@ static policy_t *get_policy(private_local_policy_store_t *this, identification_t
 	iterator_t *iterator;
 	policy_t *current, *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL0, "Looking for policy for IDs %s - %s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Looking for policy for IDs %s - %s",
 					  my_id ? my_id->get_string(my_id) : "%any",
 					  other_id->get_string(other_id));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -76,7 +76,7 @@ static policy_t *get_policy(private_local_policy_store_t *this, identification_t
 		identification_t *config_my_id = current->get_my_id(current);
 		identification_t *config_other_id = current->get_other_id(current);
 		
-		this->logger->log(this->logger, CONTROL|LEVEL0, "Found one for %s - %s",
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Found one for %s - %s",
 						  config_my_id->get_string(config_my_id),
 						  config_other_id->get_string(config_other_id));
 		
@@ -84,11 +84,6 @@ static policy_t *get_policy(private_local_policy_store_t *this, identification_t
 		if (other_id->belongs_to(other_id, config_other_id))
 		{
 			/* get it if my_id not specified */
-			if (my_id == NULL)
-			{
-				found = current->clone(current);
-				break;
-			}
 			if (my_id->belongs_to(my_id, config_my_id))
 			{
 				found = current->clone(current);
@@ -101,10 +96,7 @@ static policy_t *get_policy(private_local_policy_store_t *this, identification_t
 	/* apply IDs as they are requsted, since they may be configured as %any or such */
 	if (found)
 	{
-		if (my_id)
-		{
-			found->update_my_id(found, my_id->clone(my_id));
-		}
+		found->update_my_id(found, my_id->clone(my_id));
 		found->update_other_id(found, other_id->clone(other_id));
 	}
 	return found;

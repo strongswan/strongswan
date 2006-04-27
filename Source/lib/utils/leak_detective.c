@@ -253,7 +253,7 @@ void free_hook(void *ptr, const void *caller)
 	{
 		pthread_mutex_unlock(&mutex);
 		/* TODO: since pthread_join cannot be excluded cleanly, we are not whining about bad frees */
-		//return;
+		return;
 		logger->log(logger, ERROR, "freeing of invalid memory (%p)", ptr);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
@@ -404,41 +404,41 @@ char *inet_ntoa(struct in_addr in)
 	return result;
 }
 
-// int pthread_create(pthread_t *__restrict __threadp, __const pthread_attr_t *__restrict __attr, 
-// 					void *(*__start_routine) (void *), void *__restrict __arg)
-// {
-// 	int (*_pthread_create) (pthread_t *__restrict __threadp,
-// 						__const pthread_attr_t *__restrict __attr,
-// 						void *(*__start_routine) (void *),
-// 						void *__restrict __arg) = excluded_functions[PTHREAD_CREATE].lib_function;
-// 	int result;
-// 	
-// 	pthread_mutex_lock(&mutex);
-// 	uninstall_hooks();
-// 	
-// 	result = _pthread_create(__threadp, __attr, __start_routine, __arg);
-// 	
-// 	install_hooks();
-// 	pthread_mutex_unlock(&mutex);
-// 	return result;
-// }
-// 
-// 
-// int pthread_cancel(pthread_t __th)
-// {
-// 	int (*_pthread_cancel) (pthread_t) = excluded_functions[PTHREAD_CANCEL].lib_function;
-// 	int result;
-// 	
-// 	pthread_mutex_lock(&mutex);
-// 	uninstall_hooks();
-// 	
-// 	result = _pthread_cancel(__th);
-// 	
-// 	install_hooks();
-// 	pthread_mutex_unlock(&mutex);
-// 	return result;
-// }
-// 
+int pthread_create(pthread_t *__restrict __threadp, __const pthread_attr_t *__restrict __attr, 
+					void *(*__start_routine) (void *), void *__restrict __arg)
+{
+	int (*_pthread_create) (pthread_t *__restrict __threadp,
+						__const pthread_attr_t *__restrict __attr,
+						void *(*__start_routine) (void *),
+						void *__restrict __arg) = excluded_functions[PTHREAD_CREATE].lib_function;
+	int result;
+	
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+	
+	result = _pthread_create(__threadp, __attr, __start_routine, __arg);
+	
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return result;
+}
+
+
+int pthread_cancel(pthread_t __th)
+{
+	int (*_pthread_cancel) (pthread_t) = excluded_functions[PTHREAD_CANCEL].lib_function;
+	int result;
+	
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+	
+	result = _pthread_cancel(__th);
+	
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return result;
+}
+
 // /* TODO: join has probs, since it dellocates memory 
 //  * allocated (somewhere) with leak_detective :-(.
 //  * We should exclude all pthread_ functions to fix it !? */

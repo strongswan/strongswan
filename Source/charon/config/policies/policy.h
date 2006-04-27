@@ -79,7 +79,7 @@ struct policy_t {
 	void (*update_my_id) (policy_t *this, identification_t *my_id);
 
 	/**
-	 * @brief Update others id.
+	 * @brief Update others ID.
 	 * 
 	 * It may be necessary to uptdate others ID, as it 
 	 * is set to %any or to e.g. *@strongswan.org in 

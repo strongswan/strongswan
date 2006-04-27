@@ -373,26 +373,26 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 static status_t process_idr_payload(private_ike_auth_requested_t *this, id_payload_t *idr_payload)
 {
 	identification_t *other_id, *configured_other_id;
+	connection_t *connection;
 	
 	other_id = idr_payload->get_identification(idr_payload);
-
 	configured_other_id = this->policy->get_other_id(this->policy);
-	if (configured_other_id)
+	
+	this->logger->log(this->logger, CONTROL|LEVEL1, "configured ID: %s, ID of responder: %s",
+						configured_other_id->get_string(configured_other_id),
+						other_id->get_string(other_id));
+	
+	if (!other_id->belongs_to(other_id, configured_other_id))
 	{
-		this->logger->log(this->logger, CONTROL|LEVEL1, "configured ID: %s, ID of responder: %s",
-							configured_other_id->get_string(configured_other_id),
-							other_id->get_string(other_id));
-
-		if (!other_id->equals(other_id, configured_other_id))
-		{
-			other_id->destroy(other_id);
-			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not requested ID. Deleting IKE_SA");
-			return DELETE_ME;	
-		}
+		other_id->destroy(other_id);
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not acceptable ID. Deleting IKE_SA");
+		return DELETE_ME;
 	}
 	
-	other_id->destroy(other_id);
-	/* TODO do we have to store other_id somewhere ? */
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	connection->update_other_id(connection, other_id->clone(other_id));
+	
+	this->policy->update_other_id(this->policy, other_id);
 	return SUCCESS;
 }
 

@@ -143,6 +143,32 @@ struct connection_t {
 	 * @param my_host	new host to set as other_host
 	 */
 	void (*update_other_host) (connection_t *this, host_t *other_host);
+
+	/**
+	 * @brief Update own ID.
+	 * 
+	 * It may be necessary to uptdate own ID, as it 
+	 * is set to %any or to e.g. *@strongswan.org in 
+	 * some cases.
+	 * Old ID is destroyed, new one NOT cloned.
+	 * 
+	 * @param this		calling object
+	 * @param my_id		new ID to set as my_id
+	 */
+	void (*update_my_id) (connection_t *this, identification_t *my_id);
+
+	/**
+	 * @brief Update others ID.
+	 * 
+	 * It may be necessary to uptdate others ID, as it 
+	 * is set to %any or to e.g. *@strongswan.org in 
+	 * some cases.
+	 * Old ID is destroyed, new one NOT cloned.
+	 * 
+	 * @param this		calling object
+	 * @param other_id	new ID to set as other_id
+	 */
+	void (*update_other_id) (connection_t *this, identification_t *other_id);
 	
 	/**
 	 * @brief Returns a list of all supported proposals.
