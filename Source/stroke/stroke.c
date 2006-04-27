@@ -146,13 +146,21 @@ static int terminate_connection(char *name)
 	return res;
 }
 
-static int show_status()
+static int show_status(char *mode, char *connection)
 {
 	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
 	int res;
 	
 	msg->length = sizeof(stroke_msg_t);
-	msg->type = STR_STATUS;
+	if (strcmp(mode, "statusall") == 0)
+	{
+		msg->type = STR_STATUS_ALL;
+	}
+	else
+	{
+		msg->type = STR_STATUS;
+	}
+	msg->status.name = push_string(&msg, connection);
 	res = send_stroke_msg(msg);
 	free(msg);
 	return res;
@@ -240,7 +248,7 @@ int main(int argc, char *argv[])
 	if (strcmp(argv[1], "status") == 0 || 
 		strcmp(argv[1], "statusall") == 0)
 	{
-		res = show_status();
+		res = show_status(argv[1], argc > 2 ? argv[2] : NULL);
 	}
 	
 	else if (strcmp(argv[1], "up") == 0)

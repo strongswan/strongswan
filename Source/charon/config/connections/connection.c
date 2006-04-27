@@ -20,6 +20,8 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "connection.h"
 
 #include <utils/linked_list.h>
@@ -48,6 +50,11 @@ struct private_connection_t {
 	 */
 	connection_t public;
 
+	/**
+	 * Name of the connection
+	 */
+	char *name;
+	
 	/**
 	 * ID of us
 	 */
@@ -78,6 +85,14 @@ struct private_connection_t {
 	 */
 	linked_list_t *proposals;
 };
+
+/**
+ * Implementation of connection_t.get_name.
+ */
+static char *get_name (private_connection_t *this)
+{
+	return this->name;
+}
 
 /**
  * Implementation of connection_t.get_my_id.
@@ -253,6 +268,7 @@ static connection_t *clone(private_connection_t *this)
 	iterator_t *iterator;
 	proposal_t *proposal;
 	private_connection_t *clone = (private_connection_t*)connection_create(
+			this->name,
 			this->my_host->clone(this->my_host),
 			this->other_host->clone(this->other_host),
 			this->my_id->clone(this->my_id),
@@ -295,11 +311,12 @@ static void destroy (private_connection_t *this)
 /**
  * Described in header.
  */
-connection_t * connection_create(host_t *my_host, host_t *other_host, identification_t *my_id, identification_t *other_id, auth_method_t auth_method)
+connection_t * connection_create(char *name, host_t *my_host, host_t *other_host, identification_t *my_id, identification_t *other_id, auth_method_t auth_method)
 {
 	private_connection_t *this = malloc_thing(private_connection_t);
 
 	/* public functions */
+	this->public.get_name = (char*(*)(connection_t*))get_name;
 	this->public.get_my_id = (identification_t*(*)(connection_t*))get_my_id;
 	this->public.get_other_id = (identification_t*(*)(connection_t*))get_other_id;
 	this->public.get_my_host = (host_t*(*)(connection_t*))get_my_host;
@@ -316,6 +333,7 @@ connection_t * connection_create(host_t *my_host, host_t *other_host, identifica
 	this->public.destroy = (void(*)(connection_t*))destroy;
 	
 	/* private variables */
+	this->name = strdup(name);
 	this->my_host = my_host;
 	this->other_host = other_host;
 	this->my_id = my_id;

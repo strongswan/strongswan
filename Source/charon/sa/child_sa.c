@@ -467,7 +467,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 /**
  * Implementation of child_sa_t.log_status.
  */
-static void log_status(private_child_sa_t *this, logger_t *logger)
+static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 {
 	iterator_t *iterator;
 	sa_policy_t *policy;
@@ -479,7 +479,8 @@ static void log_status(private_child_sa_t *this, logger_t *logger)
 	{
 		logger = this->logger;
 	}
-	logger->log(logger, CONTROL, "  protected with ESP (%x/%x), AH (%x,%x); traffic:",
+	logger->log(logger, CONTROL|LEVEL1, "\"%s\":   protected with ESP (%x/%x), AH (%x,%x):",
+				name,
 				htonl(this->my_esp_spi), htonl(this->other_esp_spi), 
 				htonl(this->my_ah_spi), htonl(this->other_ah_spi));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -498,7 +499,8 @@ static void log_status(private_child_sa_t *this, logger_t *logger)
 				snprintf(proto_buf, sizeof(proto_buf), "<%d>", policy->upper_proto);
 			}
 		}
-		logger->log(logger, CONTROL, "    %s/%d===%s===%s/%d",
+		logger->log(logger, CONTROL, "\"%s\":     %s/%d==%s==%s/%d",
+					name,
 					policy->my_net->get_address(policy->my_net), policy->my_net_mask,
 					proto_name,
 					policy->other_net->get_address(policy->other_net), policy->other_net_mask);
@@ -570,7 +572,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other)
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
-	this->public.log_status = (void (*)(child_sa_t*, logger_t*))log_status;
+	this->public.log_status = (void (*)(child_sa_t*, logger_t*, char*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */

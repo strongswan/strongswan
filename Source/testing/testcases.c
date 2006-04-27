@@ -41,7 +41,6 @@
 #include "socket_test.h"
 #include "sender_test.h"
 #include "scheduler_test.h"
-#include "receiver_test.h"
 #include "ike_sa_id_test.h"
 #include "ike_sa_test.h"
 #include "ike_sa_manager_test.h"
@@ -78,7 +77,6 @@ test_t socket_test = {test_socket,"Socket"};
 test_t thread_pool_test = {test_thread_pool,"Thread Pool"};
 test_t sender_test = {test_sender,"Sender"};
 test_t scheduler_test = {test_scheduler,"Scheduler"};
-test_t receiver_test = {test_receiver,"Receiver"};
 test_t ike_sa_id_test = {test_ike_sa_id,"IKE_SA-Identifier"};
 test_t ike_sa_test = {test_ike_sa,"IKE_SA"};
 test_t ike_sa_manager_test = {test_ike_sa_manager, "IKE_SA-Manager"};
@@ -161,7 +159,7 @@ daemon_t *daemon_create()
 	/* assign methods */
 	charon->kill = daemon_kill;
 	
-	//charon->socket = socket_create(4510);
+	charon->socket = socket_create(500);
 	charon->ike_sa_manager = ike_sa_manager_create();
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
@@ -192,7 +190,6 @@ int main()
 		&scheduler_test,
 		&socket_test,
 		&sender_test,
-		&receiver_test,
 		&ike_sa_id_test,
 		&ike_sa_test,
 		&generator_test1,
@@ -254,8 +251,8 @@ int main()
 	
 	tester_t *tester = tester_create(test_output, FALSE);
 	
-	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&certificate_test);
+	tester->perform_tests(tester,all_tests);
+	//tester->perform_test(tester,&sender_test);
 	
 	
 	tester->destroy(tester);

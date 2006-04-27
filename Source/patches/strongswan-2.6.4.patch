@@ -65,13 +65,13 @@ diff -Naur strongswan-2.6.4/programs/ipsec/ipsec.in strongswan-2.6.4-charon/prog
  	    $IPSEC_EXECDIR/whack "--$op"
 +	    if test -e $IPSEC_EXECDIR/stroke
 +	    then
-+	    	$IPSEC_EXECDIR/stroke status
++	    	$IPSEC_EXECDIR/stroke "$op"
 +	    fi
  	else
  	    $IPSEC_EXECDIR/whack --name "$1" "--$op"
 +	    if test -e $IPSEC_EXECDIR/stroke
 +	    then
-+		$IPSEC_EXECDIR/stroke status
++		$IPSEC_EXECDIR/stroke "$op" "$1"
 +	    fi
  	fi
  	exit 0

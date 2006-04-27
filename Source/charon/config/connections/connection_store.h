@@ -72,7 +72,21 @@ struct connection_store_t {
 	 * 							- NULL otherwise
 	 */
 	connection_t *(*get_connection_by_hosts) (connection_store_t *this, host_t *my_host, host_t *other_host);
-
+	
+	/**
+	 * @brief Returns a connection identified by its name.
+	 * 
+	 * This call is usefull to get a connection identified its
+	 * name, as on an connection setup.
+	 * 
+	 * @param this				calling object
+	 * @param name				name of the connection to get
+	 * @return		
+	 * 							- connection_t, if found
+	 * 							- NULL otherwise
+	 */
+	connection_t *(*get_connection_by_name) (connection_store_t *this, char *name);
+	
 	/**
 	 * @brief Add a connection to the store.
 	 * 

@@ -574,6 +574,27 @@ linked_list_t *get_ike_sa_list(private_ike_sa_manager_t* this)
 }
 
 /**
+ * Implementation of ike_sa_manager_t.log_status.
+ */
+static void log_status(private_ike_sa_manager_t* this, logger_t* logger, char* name)
+{
+	iterator_t *iterator;
+	
+	pthread_mutex_lock(&(this->mutex));
+	
+	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		ike_sa_entry_t *entry;
+		iterator->current(iterator, (void**)&entry);
+		entry->ike_sa->log_status(entry->ike_sa, logger, name);
+	}
+	iterator->destroy(iterator);
+	
+	pthread_mutex_unlock(&(this->mutex));
+}
+
+/**
  * Implementation of ike_sa_manager_t.checkin.
  */
 static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
@@ -767,6 +788,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t*,ike_sa_t**))checkout;
 	this->public.checkout_by_hosts = (status_t(*)(ike_sa_manager_t*,host_t*,host_t*,ike_sa_t**))checkout_by_hosts;
 	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;
+	this->public.log_status = (void(*)(ike_sa_manager_t*,logger_t*,char*))log_status;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
 	this->public.delete = (status_t(*)(ike_sa_manager_t*,ike_sa_id_t*))delete;
 	this->public.checkin_and_delete = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_delete;

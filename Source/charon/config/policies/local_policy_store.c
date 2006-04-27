@@ -66,6 +66,9 @@ static policy_t *get_policy(private_local_policy_store_t *this, identification_t
 	iterator_t *iterator;
 	policy_t *current, *found = NULL;
 	
+	this->logger->log(this->logger, CONTROL|LEVEL0, "Looking for policy for IDs %s - %s",
+					  my_id ? my_id->get_string(my_id) : "%any",
+					  other_id->get_string(other_id));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->has_next(iterator))
 	{
@@ -73,8 +76,12 @@ static policy_t *get_policy(private_local_policy_store_t *this, identification_t
 		identification_t *config_my_id = current->get_my_id(current);
 		identification_t *config_other_id = current->get_other_id(current);
 		
+		this->logger->log(this->logger, CONTROL|LEVEL0, "Found one for %s - %s",
+						  config_my_id->get_string(config_my_id),
+						  config_other_id->get_string(config_other_id));
+		
 		/* check other host first */
-		if (config_other_id->belongs_to(config_other_id, other_id))
+		if (other_id->belongs_to(other_id, config_other_id))
 		{
 			/* get it if my_id not specified */
 			if (my_id == NULL)
@@ -82,7 +89,7 @@ static policy_t *get_policy(private_local_policy_store_t *this, identification_t
 				found = current->clone(current);
 				break;
 			}
-			if (config_my_id->belongs_to(config_my_id, my_id))
+			if (my_id->belongs_to(my_id, config_my_id))
 			{
 				found = current->clone(current);
 				break;

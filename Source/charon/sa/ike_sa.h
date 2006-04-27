@@ -153,6 +153,19 @@ struct ike_sa_t {
 	 * @return 				remote identification_t
 	 */
 	identification_t* (*get_other_id) (ike_sa_t *this);
+
+	/**
+	 * @brief Get the connection of the IKE_SA.
+	 * 
+	 * The internal used connection specification 
+	 * can be queried to get some data of an IKE_SA.
+	 * The connection is still owned to the IKE_SA
+	 * and must not be manipulated.
+	 *
+	 * @param this 			calling object
+	 * @return 				connection_t
+	 */
+	connection_t* (*get_connection) (ike_sa_t *this);
 	
 	/**
 	 * @brief Get the state of type of associated state object.
@@ -167,12 +180,14 @@ struct ike_sa_t {
 	 *
 	 * The status of the IKE SA and all child SAs is logged.
 	 * Supplying NULL as logger uses the internal child_sa logger
-	 * to do the logging.
+	 * to do the logging. The log is only done if the supplied
+	 * connection name is NULL or matches the connections name.
 	 *
 	 * @param this 		calling object
 	 * @param logger	logger to use for logging
+	 * @param name		name of the connection
 	 */	
-	void (*log_status) (ike_sa_t *this, logger_t *logger);
+	void (*log_status) (ike_sa_t *this, logger_t *logger, char *name);
 
 	/**
 	 * @brief Destroys a ike_sa_t object.

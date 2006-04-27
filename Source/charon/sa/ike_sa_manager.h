@@ -25,6 +25,7 @@
 
 #include <types.h>
 #include <sa/ike_sa.h>
+#include <utils/logger.h>
 
 
 typedef struct ike_sa_manager_t ike_sa_manager_t;
@@ -58,7 +59,7 @@ struct ike_sa_manager_t {
 	 * @warning checking out two times without checking in will
 	 * result in a deadlock!
 	 * 
-	 * @param ike_sa_manager 	the manager object
+	 * @param this 				the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier, will be updated
 	 * @param ike_sa[out] 		checked out SA
 	 * @returns 					
@@ -66,7 +67,7 @@ struct ike_sa_manager_t {
 	 * 							- NOT_FOUND when no such SA is available
 	 * 							- CREATED if a new IKE_SA got created
 	 */
-	status_t (*checkout) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *sa_id, ike_sa_t **ike_sa);
+	status_t (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id, ike_sa_t **ike_sa);
 	
 	/**
 	 * @brief Create and checkout an IKE_SA as original initator.
@@ -74,10 +75,10 @@ struct ike_sa_manager_t {
 	 * Creates and checks out a SA as initiator.
 	 * Management of SPIs is the managers job, he will set it.
 	 * 
-	 * @param ike_sa_manager 	the manager object
+	 * @param this			 	the manager object
 	 * @param ike_sa[out] 		checked out SA
 	 */
-	void (*create_and_checkout) (ike_sa_manager_t* ike_sa_manager,ike_sa_t **ike_sa);
+	void (*create_and_checkout) (ike_sa_manager_t* this,ike_sa_t **ike_sa);
 	
 	/**
 	 * @brief Check out an IKE_SA, defined be the two peers.
@@ -86,7 +87,7 @@ struct ike_sa_manager_t {
 	 * for kernel traps, status querying and so on... one of the hosts
 	 * may be 0.0.0.0 (defaultroute/any), but not both.
 	 * 
-	 * @param ike_sa_manager 	the manager object
+	 * @param this			 	the manager object
 	 * @param me				host on local side
 	 * @param other				host on remote side
 	 * @param ike_sa[out] 		checked out SA
@@ -94,7 +95,7 @@ struct ike_sa_manager_t {
 	 * 							- NOT_FOUND, if no such SA found
 	 * 							- SUCCESS, if SA found and ike_sa set appropriatly
 	 */
-	status_t (*checkout_by_hosts) (ike_sa_manager_t* ike_sa_manager, host_t *me, host_t *other, ike_sa_t **ike_sa);
+	status_t (*checkout_by_hosts) (ike_sa_manager_t* this, host_t *me, host_t *other, ike_sa_t **ike_sa);
 	
 	/**
 	 * @brief Get a list of all IKE_SA SAs currently set up.
@@ -104,10 +105,23 @@ struct ike_sa_manager_t {
 	 * corrensponding ID really exists, since it may be deleted
 	 * in the meantime by another thread.
 	 * 
-	 * @param ike_sa_manager 	the manager object
+	 * @param this			 	the manager object
 	 * @return					a list with ike_sa_id_t s
 	 */
-	linked_list_t *(*get_ike_sa_list) (ike_sa_manager_t* ike_sa_manager);
+	linked_list_t *(*get_ike_sa_list) (ike_sa_manager_t* this);
+	
+	/**
+	 * @brief Log the status of the IKE_SA's in the manager.
+	 *
+	 * A informational log is done to the supplied logger. If logger is 
+	 * NULL, an internal logger is used. If a name is supplied,
+	 * only connections with the matching name will be logged.
+	 * 
+	 * @param this			 	the manager object
+	 * @param logger			logger to do the log, or NULL
+	 * @param name				name of a connection, or NULL
+	 */
+	void (*log_status) (ike_sa_manager_t* this, logger_t* logger, char* name);
 	
 	/**
 	 * @brief Checkin the SA after usage.
@@ -115,14 +129,14 @@ struct ike_sa_manager_t {
 	 * @warning the SA pointer MUST NOT be used after checkin! 
 	 * The SA must be checked out again!
 	 *  
-	 * @param ike_sa_manager 	the manager object
+	 * @param this			 	the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier, will be updated
 	 * @param ike_sa[out]		checked out SA
 	 * @returns 				
 	 * 							- SUCCESS if checked in
 	 * 							- NOT_FOUND when not found (shouldn't happen!)
 	 */
-	status_t (*checkin) (ike_sa_manager_t* ike_sa_manager, ike_sa_t *ike_sa);
+	status_t (*checkin) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
 	 * @brief Delete a SA, which was not checked out.
@@ -130,33 +144,33 @@ struct ike_sa_manager_t {
 	 * @warning do not use this when the SA is already checked out, this will
 	 * deadlock!
 	 *  
-	 * @param ike_sa_manager 	the manager object
+	 * @param this			 	the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier
 	 * @returns 				
 	 * 							- SUCCESS if found
 	 * 							- NOT_FOUND when no such SA is available
 	 */
-	status_t (*delete) (ike_sa_manager_t* ike_sa_manager, ike_sa_id_t *ike_sa_id);
+	status_t (*delete) (ike_sa_manager_t* this, ike_sa_id_t *ike_sa_id);
 	
 	/**
 	 * @brief Delete a checked out SA.
 	 *
-	 * @param ike_sa_manager 	the manager object
+	 * @param this			 	the manager object
 	 * @param ike_sa			SA to delete
 	 * @returns 				
 	 * 							- SUCCESS if found
 	 * 							- NOT_FOUND when no such SA is available
 	 */
-	status_t (*checkin_and_delete) (ike_sa_manager_t* ike_sa_manager, ike_sa_t *ike_sa);
+	status_t (*checkin_and_delete) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
 	 * @brief Destroys the manager with all associated SAs.
 	 * 
 	 * Threads will be driven out, so all SAs can be deleted cleanly.
 	 * 
-	 * @param ike_sa_manager the manager object
+	 * @param this				 the manager object
 	 */
-	void (*destroy) (ike_sa_manager_t *ike_sa_manager);
+	void (*destroy) (ike_sa_manager_t *this);
 };
 
 /**

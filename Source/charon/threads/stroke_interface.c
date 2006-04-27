@@ -42,24 +42,6 @@
 
 struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
 
-typedef struct connection_entry_t connection_entry_t;
-
-/**
- * A connection entry combines a connection name with a connection.
- */
-struct connection_entry_t {
-	
-	/**
-	 * connection name.
-	 */
-	char *name;
-	
-	/**
-	 * Configuration for IKE_SA_INIT exchange.
-	 */
-	connection_t *connection;
-};
-
 
 typedef struct private_stroke_t private_stroke_t;
 
@@ -72,11 +54,6 @@ struct private_stroke_t {
 	 * Public part of stroke_t object.
 	 */
 	stroke_t public;
-
-	/**
-	 * Holding all connections as connection_entry_t's.
-	 */
-	linked_list_t *connections;
 
 	/**
 	 * Assigned logger_t object in charon.
@@ -102,11 +79,6 @@ struct private_stroke_t {
 	 * Read from the socket and handle stroke messages
 	 */
 	void (*stroke_receive) (private_stroke_t *this);
-	
-	/**
-	 * find a connection in the config list by name 
-	 */
-	connection_t *(*get_connection_by_name) (private_stroke_t *this, char *name);
 };
 
 /**
@@ -147,7 +119,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
-	connection_entry_t *entry;
 	x509_t *cert;
 				
 	pop_string(msg, &msg->add_conn.name);
@@ -291,7 +262,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		}
 	}
 	
-	connection = connection_create(my_host, other_host, my_id->clone(my_id), other_id->clone(other_id), 
+	connection = connection_create(msg->add_conn.name, 
+								   my_host, other_host, 
+								   my_id->clone(my_id), other_id->clone(other_id), 
 								   RSA_DIGITAL_SIGNATURE);
 	proposal = proposal_create(1);
 	proposal->add_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
@@ -305,11 +278,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
 	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
 	connection->add_proposal(connection, proposal);
-	/* add in our list, so we can manipulate the connection further via name */
-	entry = malloc_thing(connection_entry_t);
-	entry->name = strdup(msg->add_conn.name);
-	entry->connection = connection;
-	this->connections->insert_last(this->connections, entry);
 	/* add to global connection list */
 	charon->connections->add_connection(charon->connections, connection);
 	
@@ -337,7 +305,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 				
 	pop_string(msg, &(msg->initiate.name));
 	this->logger->log(this->logger, CONTROL, "received stroke: initiate \"%s\"", msg->initiate.name);
-	connection = this->get_connection_by_name(this, msg->initiate.name);
+	connection = charon->connections->get_connection_by_name(charon->connections, msg->initiate.name);
 	if (connection == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "could not find a connection named \"%s\"", msg->initiate.name);
@@ -361,13 +329,15 @@ static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
 	
 	pop_string(msg, &(msg->terminate.name));
 	this->logger->log(this->logger, CONTROL, "received stroke: terminate \"%s\"", msg->terminate.name);
-	connection = this->get_connection_by_name(this, msg->terminate.name);
+	connection = charon->connections->get_connection_by_name(charon->connections, msg->terminate.name);
 	
 	if (connection)
 	{
 		my_host = connection->get_my_host(connection);
 		other_host = connection->get_other_host(connection);
 		
+		/* TODO: Do this directly by name now */
+		/* TODO: terminate any instance of the name */
 		status = charon->ike_sa_manager->checkout_by_hosts(charon->ike_sa_manager,
 												  my_host, other_host, &ike_sa);
 		
@@ -396,31 +366,11 @@ static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
  */
 static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 {
-	linked_list_t *list;
-	iterator_t *iterator;
-	status_t status;
-	
-	
-	list = charon->ike_sa_manager->get_ike_sa_list(charon->ike_sa_manager);
-	iterator = list->create_iterator(list, TRUE);
-	while (iterator->has_next(iterator))
+	if (msg->status.name)
 	{
-		ike_sa_id_t *ike_sa_id;
-		ike_sa_t *ike_sa;
-		iterator->current(iterator, (void**)&ike_sa_id);
-		/* TODO: A log_status method (as in IKE_SA/CHILD_SA) would be better than checking
-		 * out every single IKE...
-		 */
-		status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id, &ike_sa);
-		if (status == SUCCESS)
-		{
-			ike_sa->log_status(ike_sa, this->stroke_logger);
-			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		}
-		ike_sa_id->destroy(ike_sa_id);
+		pop_string(msg, &(msg->status.name));
 	}
-	iterator->destroy(iterator);
-	list->destroy(list);
+	charon->ike_sa_manager->log_status(charon->ike_sa_manager, this->stroke_logger, msg->status.name);
 }
 
 logger_context_t get_context(char *context)
@@ -607,6 +557,12 @@ static void stroke_receive(private_stroke_t *this)
 				stroke_status(this, msg);
 				break;
 			}
+			case STR_STATUS_ALL:
+			{
+				this->stroke_logger->enable_level(this->stroke_logger, LEVEL1);
+				stroke_status(this, msg);
+				break;
+			}
 			case STR_ADD_CONN:
 			{
 				stroke_add_conn(this, msg);
@@ -632,50 +588,14 @@ static void stroke_receive(private_stroke_t *this)
 	}
 }
 
-
-/**
- * Implementation of private_stroke_t.get_connection_by_name.
- */
-static connection_t *get_connection_by_name(private_stroke_t *this, char *name)
-{
-	iterator_t *iterator;
-	connection_t *found = NULL;
-	
-	iterator = this->connections->create_iterator(this->connections, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		connection_entry_t *entry;
-		iterator->current(iterator,(void **) &entry);
-
-		if (strcmp(entry->name,name) == 0)
-		{
-			/* found configuration */
-			found = entry->connection;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	
-	return found;
-}
-
 /**
  * Implementation of stroke_t.destroy.
  */
 static void destroy(private_stroke_t *this)
 {
-	connection_entry_t *entry;
 	
 	pthread_cancel(this->assigned_thread);
 	pthread_join(this->assigned_thread, NULL);
-	
-	while (this->connections->remove_first(this->connections, (void **)&entry) == SUCCESS)
-	{
-		/* connection is destroyed by global list */
-		free(entry->name);
-		free(entry);
-	}
-	this->connections->destroy(this->connections);
 
 	close(this->socket);
 	unlink(socket_addr.sun_path);
@@ -696,7 +616,6 @@ stroke_t *stroke_create()
 	
 	/* private functions */
 	this->stroke_receive = stroke_receive;
-	this->get_connection_by_name = get_connection_by_name;
 	
 	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 	
@@ -737,9 +656,6 @@ stroke_t *stroke_create()
 		free(this);
 		return NULL;
 	}
-	
-	/* private variables */
-	this->connections = linked_list_create();
 	
 	return (&this->public);
 }

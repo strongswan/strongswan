@@ -86,10 +86,6 @@ TEST_OBJS+= $(BUILD_DIR)packet_test.o
 $(BUILD_DIR)packet_test.o :			$(TESTCASES_DIR)packet_test.c $(TESTCASES_DIR)packet_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<
 									
-TEST_OBJS+= $(BUILD_DIR)receiver_test.o
-$(BUILD_DIR)receiver_test.o :		$(TESTCASES_DIR)receiver_test.c $(TESTCASES_DIR)receiver_test.h
-									$(CC) $(CFLAGS) -c -o $@ $<
-									
 TEST_OBJS+= $(BUILD_DIR)ike_sa_test.o
 $(BUILD_DIR)ike_sa_test.o :			$(TESTCASES_DIR)ike_sa_test.c $(TESTCASES_DIR)ike_sa_test.h
 									$(CC) $(CFLAGS) -c -o $@ $<

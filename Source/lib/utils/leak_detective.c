@@ -253,7 +253,7 @@ void free_hook(void *ptr, const void *caller)
 	{
 		pthread_mutex_unlock(&mutex);
 		/* TODO: since pthread_join cannot be excluded cleanly, we are not whining about bad frees */
-		return;
+		//return;
 		logger->log(logger, ERROR, "freeing of invalid memory (%p)", ptr);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
@@ -323,8 +323,8 @@ void leak_detective_init()
  */
 void leak_detective_cleanup()
 {
-	report_leaks();
 	uninstall_hooks();
+	report_leaks();
 }
 
 
@@ -348,6 +348,7 @@ struct excluded_function {
 	{"libpthread.so.0", "_pthread_cleanup_pop",	NULL, NULL},
 	{"libc.so.6", 		"mktime", 				NULL, NULL},
 	{"libc.so.6", 		"vsyslog", 				NULL, NULL},
+	{"libc.so.6", 		"strerror", 			NULL, NULL},
 };
 #define INET_NTOA				0
 #define PTHREAD_CREATE			1
@@ -357,6 +358,7 @@ struct excluded_function {
 #define PTHREAD_CLEANUP_POP		5
 #define MKTIME					6
 #define VSYSLOG					7
+#define STRERROR				8
 
 
 /**
@@ -402,92 +404,92 @@ char *inet_ntoa(struct in_addr in)
 	return result;
 }
 
-int pthread_create(pthread_t *__restrict __threadp, __const pthread_attr_t *__restrict __attr, 
-					void *(*__start_routine) (void *), void *__restrict __arg)
-{
-	int (*_pthread_create) (pthread_t *__restrict __threadp,
-						__const pthread_attr_t *__restrict __attr,
-						void *(*__start_routine) (void *),
-						void *__restrict __arg) = excluded_functions[PTHREAD_CREATE].lib_function;
-	int result;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	result = _pthread_create(__threadp, __attr, __start_routine, __arg);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
-}
-
-
-int pthread_cancel(pthread_t __th)
-{
-	int (*_pthread_cancel) (pthread_t) = excluded_functions[PTHREAD_CANCEL].lib_function;
-	int result;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	result = _pthread_cancel(__th);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
-}
-
-/* TODO: join has probs, since it dellocates memory 
- * allocated (somewhere) with leak_detective :-(.
- * We should exclude all pthread_ functions to fix it !? 
-int pthread_join(pthread_t __th, void **__thread_return)
-{
-	int (*_pthread_join) (pthread_t, void **) = excluded_functions[PTHREAD_JOIN].lib_function;
-	int result;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	result = _pthread_join(__th, __thread_return);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
-}
-
-void _pthread_cleanup_push (struct _pthread_cleanup_buffer *__buffer,
-								   void (*__routine) (void *),
-								   void *__arg)
-{
-	int (*__pthread_cleanup_push) (struct _pthread_cleanup_buffer *__buffer,
-									void (*__routine) (void *),
-									void *__arg) = 
-			excluded_functions[PTHREAD_CLEANUP_PUSH].lib_function;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	__pthread_cleanup_push(__buffer, __routine, __arg);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return;
-}
-	
-void _pthread_cleanup_pop (struct _pthread_cleanup_buffer *__buffer, int __execute)
-{
-	int (*__pthread_cleanup_pop) (struct _pthread_cleanup_buffer *__buffer, int __execute) = 
-			excluded_functions[PTHREAD_CLEANUP_POP].lib_function;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	__pthread_cleanup_pop(__buffer, __execute);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return;
-}*/
+// int pthread_create(pthread_t *__restrict __threadp, __const pthread_attr_t *__restrict __attr, 
+// 					void *(*__start_routine) (void *), void *__restrict __arg)
+// {
+// 	int (*_pthread_create) (pthread_t *__restrict __threadp,
+// 						__const pthread_attr_t *__restrict __attr,
+// 						void *(*__start_routine) (void *),
+// 						void *__restrict __arg) = excluded_functions[PTHREAD_CREATE].lib_function;
+// 	int result;
+// 	
+// 	pthread_mutex_lock(&mutex);
+// 	uninstall_hooks();
+// 	
+// 	result = _pthread_create(__threadp, __attr, __start_routine, __arg);
+// 	
+// 	install_hooks();
+// 	pthread_mutex_unlock(&mutex);
+// 	return result;
+// }
+// 
+// 
+// int pthread_cancel(pthread_t __th)
+// {
+// 	int (*_pthread_cancel) (pthread_t) = excluded_functions[PTHREAD_CANCEL].lib_function;
+// 	int result;
+// 	
+// 	pthread_mutex_lock(&mutex);
+// 	uninstall_hooks();
+// 	
+// 	result = _pthread_cancel(__th);
+// 	
+// 	install_hooks();
+// 	pthread_mutex_unlock(&mutex);
+// 	return result;
+// }
+// 
+// /* TODO: join has probs, since it dellocates memory 
+//  * allocated (somewhere) with leak_detective :-(.
+//  * We should exclude all pthread_ functions to fix it !? */
+// int pthread_join(pthread_t __th, void **__thread_return)
+// {
+// 	int (*_pthread_join) (pthread_t, void **) = excluded_functions[PTHREAD_JOIN].lib_function;
+// 	int result;
+// 	
+// 	pthread_mutex_lock(&mutex);
+// 	uninstall_hooks();
+// 	
+// 	result = _pthread_join(__th, __thread_return);
+// 	
+// 	install_hooks();
+// 	pthread_mutex_unlock(&mutex);
+// 	return result;
+// }
+// 
+// void _pthread_cleanup_push (struct _pthread_cleanup_buffer *__buffer,
+// 								   void (*__routine) (void *),
+// 								   void *__arg)
+// {
+// 	int (*__pthread_cleanup_push) (struct _pthread_cleanup_buffer *__buffer,
+// 									void (*__routine) (void *),
+// 									void *__arg) = 
+// 			excluded_functions[PTHREAD_CLEANUP_PUSH].lib_function;
+// 	
+// 	pthread_mutex_lock(&mutex);
+// 	uninstall_hooks();
+// 	
+// 	__pthread_cleanup_push(__buffer, __routine, __arg);
+// 	
+// 	install_hooks();
+// 	pthread_mutex_unlock(&mutex);
+// 	return;
+// }
+// 	
+// void _pthread_cleanup_pop (struct _pthread_cleanup_buffer *__buffer, int __execute)
+// {
+// 	int (*__pthread_cleanup_pop) (struct _pthread_cleanup_buffer *__buffer, int __execute) = 
+// 			excluded_functions[PTHREAD_CLEANUP_POP].lib_function;
+// 	
+// 	pthread_mutex_lock(&mutex);
+// 	uninstall_hooks();
+// 	
+// 	__pthread_cleanup_pop(__buffer, __execute);
+// 	
+// 	install_hooks();
+// 	pthread_mutex_unlock(&mutex);
+// 	return;
+// }
 
 time_t mktime(struct tm *tm)
 {
@@ -516,6 +518,23 @@ void vsyslog (int __pri, __const char *__fmt, __gnuc_va_list __ap)
 	install_hooks();
 	pthread_mutex_unlock(&mutex);
 	return;
+}
+
+
+
+char *strerror(int errnum)
+{
+	char* (*_strerror) (int) = excluded_functions[STRERROR].lib_function;
+	char *result;
+
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+	
+	result = _strerror(errnum);
+	
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return result;
 }
 
 #endif /* LEAK_DETECTION */

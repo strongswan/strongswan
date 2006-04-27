@@ -51,6 +51,8 @@ struct stroke_msg_t {
 		STR_TERMINATE,
 		/* show connection status */
 		STR_STATUS,
+		/* show verbose connection status */
+		STR_STATUS_ALL,
 		/* set a log type to log/not log */
 		STR_LOGTYPE,
 		/* set the verbosity of a logging context */
@@ -61,7 +63,7 @@ struct stroke_msg_t {
 		/* data for STR_INITIATE, STR_INSTALL, STR_UP, STR_DOWN */
 		struct {
 			char *name;
-		} initiate, install, terminate;
+		} initiate, install, terminate, status;
 		/* data for STR_ADD_CONN */
 		struct {
 			char *name;

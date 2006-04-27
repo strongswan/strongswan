@@ -207,21 +207,21 @@
  * 
  * @ingroup charon
  */
-#define IPSEC_DIR "/etc/ipsec.d/"
+#define IPSEC_DIR "/etc/ipsec.d"
 
 /**
  * Directory for private keys
  * 
  * @ingroup charon
  */
-#define PRIVATE_KEY_DIR IPSEC_DIR "private/"
+#define PRIVATE_KEY_DIR IPSEC_DIR "/private"
 
 /**
  * Directory for trusted certificates
  * 
  * @ingroup charon
  */
-#define CERTIFICATE_DIR IPSEC_DIR "certs/"
+#define CERTIFICATE_DIR IPSEC_DIR "/certs"
 
 
 typedef struct daemon_t daemon_t;

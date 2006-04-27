@@ -979,10 +979,23 @@ static void reset_message_buffers (private_ike_sa_t *this)
 /**
  * Implementation of protected_ike_sa_t.log_status.
  */
-static void log_status(private_ike_sa_t *this, logger_t *logger)
+static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
+	
+	/* only log if name == NULL or name == connection_name */
+	if (name)
+	{
+		if (strcmp(this->connection->get_name(this->connection), name) != 0)
+		{
+			return;
+		}
+	}
+	else
+	{
+		name = this->connection->get_name(this->connection);
+	}
 	
 	host_t *my_host    = this->connection->get_my_host(this->connection);
 	host_t *other_host = this->connection->get_other_host(this->connection);
@@ -994,11 +1007,13 @@ static void log_status(private_ike_sa_t *this, logger_t *logger)
 	{
 		logger = this->logger;
 	}
-	logger->log(logger, CONTROL, "IKE_SA in state %s, SPIs: %lld %lld",
+	logger->log(logger, CONTROL|LEVEL1, "\"%s\": IKE_SA in state %s, SPIs: %llx %llx",
+				name,
 				mapping_find(ike_sa_state_m, this->current_state->get_state(this->current_state)),
 				this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 				this->ike_sa_id->get_responder_spi(this->ike_sa_id));
-	logger->log(logger, CONTROL, "%s[%s]...%s[%s]; tunnels:",
+	logger->log(logger, CONTROL, "\"%s\": %s[%s]...%s[%s]",
+				name,
 				my_host->get_address(my_host),
 				my_id->get_string(my_id),
 				other_host->get_address(other_host),
@@ -1008,7 +1023,7 @@ static void log_status(private_ike_sa_t *this, logger_t *logger)
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&child_sa);
-		child_sa->log_status(child_sa, logger);
+		child_sa->log_status(child_sa, logger, name);
 	}
 	iterator->destroy(iterator);
 }
@@ -1109,10 +1124,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.get_other_host = (host_t*(*)(ike_sa_t*)) get_other_host;
 	this->protected.public.get_my_id = (identification_t*(*)(ike_sa_t*)) get_my_id;
 	this->protected.public.get_other_id = (identification_t*(*)(ike_sa_t*)) get_other_id;
+	this->protected.public.get_connection = (connection_t*(*)(ike_sa_t*)) get_connection;
 	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t *this)) get_state;
 	this->protected.public.send_delete_ike_sa_request = (void (*)(ike_sa_t*)) send_delete_ike_sa_request;
-	this->protected.public.log_status = (void (*) (ike_sa_t*,logger_t*))log_status;
+	this->protected.public.log_status = (void (*) (ike_sa_t*,logger_t*,char*))log_status;
 	this->protected.public.destroy = (void(*)(ike_sa_t*))destroy;
 	
 	/* protected functions */

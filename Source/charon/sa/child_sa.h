@@ -118,12 +118,14 @@ struct child_sa_t {
 	 * The status of ESP/AH SAs is logged with the supplied logger in
 	 * a human readable form.
 	 * Supplying NULL as logger uses the internal child_sa logger
-	 * to do the logging.
+	 * to do the logging. The name is only a log-prefix without further
+	 * meaning.
 	 *
 	 * @param this 		calling object
 	 * @param logger	logger to use for logging
+	 * @param name		connection name
 	 */	
-	void (*log_status) (child_sa_t *this, logger_t *logger);
+	void (*log_status) (child_sa_t *this, logger_t *logger, char *name);
 	
 	/**
 	 * @brief Destroys a child_sa.

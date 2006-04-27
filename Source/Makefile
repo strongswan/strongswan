@@ -17,11 +17,13 @@ FREESWANSRCDIR=../..
 ifeq ($(shell ls $(FREESWANSRCDIR)/Makefile.inc 2>&1), ../../Makefile.inc)
   include ${FREESWANSRCDIR}/Makefile.inc
 else
-  # use leak detective by default
-  USE_LEAK_DETECTIVE?=true
+# Defaults if not using strongswan defines
+  USE_LEAK_DETECTIVE?=false
+  INSTALL=install
+  INSTBINFLAGS=-b --suffix=.old
+  LIBEXECDIR=/usr/local/libexec/ipsec
+  SHAREDLIBDIR=/usr/local/lib
 endif
-
-
 
 
 BUILD_DIR= ./bin/
@@ -65,7 +67,7 @@ build_dir:
 							mkdir -p $(BUILD_DIR)
 							
 $(BINNAMELIB) :				build_dir $(LIB_OBJS)
-							$(CC) -ldl -lgmp -lpthread -shared $(LIB_OBJS) -o $@
+							$(CC) -lpthread -ldl -lgmp -shared $(LIB_OBJS) -o $@
 
 $(BINNAMECHARON) :			build_dir $(CHARON_OBJS) $(BINNAMELIB) $(BUILD_DIR)daemon.o
 							$(CC) -L./bin -lstrongswan $(CHARON_OBJS) $(BUILD_DIR)daemon.o -o $@

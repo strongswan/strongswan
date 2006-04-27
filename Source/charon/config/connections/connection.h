@@ -186,6 +186,17 @@ struct connection_t {
 	auth_method_t (*get_auth_method) (connection_t *this);
 	
 	/**
+	 * @brief Get the connection name.
+	 * 
+	 * Name must not be freed, since it points to 
+	 * internal data.
+	 * 
+	 * @param this			calling object
+	 * @return				name of the connection
+	 */
+	char* (*get_name) (connection_t *this);
+	
+	/**
 	 * @brief Get the DH group to use for connection initialization.
 	 * 
 	 * @param this					calling object
@@ -225,8 +236,9 @@ struct connection_t {
  * 
  * Supplied hosts/IDs become owned by connection, so 
  * do not modify or destroy them after a call to 
- * connection_create().
- * 
+ * connection_create(). Name gets cloned internally.
+ *
+ * @param name			connection identifier
  * @param my_host		host_t representing local address
  * @param other_host	host_t representing remote address
  * @param my_id			identification_t for me
@@ -236,7 +248,8 @@ struct connection_t {
  * 
  * @ingroup config
  */
-connection_t * connection_create(host_t *my_host, host_t *other_host,
+connection_t * connection_create(char *name, 
+								 host_t *my_host, host_t *other_host,
 								 identification_t *my_id, 
 								 identification_t *other_id,
 								 auth_method_t auth_method);

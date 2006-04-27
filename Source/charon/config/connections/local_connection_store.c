@@ -20,6 +20,8 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "local_connection_store.h"
 
 #include <utils/linked_list.h>
@@ -159,9 +161,32 @@ static connection_t *get_connection_by_ids(private_local_connection_store_t *thi
 }
 
 /**
+ * Implementation of connection_store_t.get_connection_by_name.
+ */
+static connection_t *get_connection_by_name(private_local_connection_store_t *this, char *name)
+{
+	iterator_t *iterator;
+	connection_t *current, *found = NULL;
+	
+	iterator = this->connections->create_iterator(this->connections, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&current);
+		if (strcmp(name, current->get_name(current)) == 0)
+		{
+			found = current->clone(current);
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	
+	return found;
+}
+
+/**
  * Implementation of connection_store_t.add_connection.
  */
-status_t add_connection(private_local_connection_store_t *this, connection_t *connection)
+static status_t add_connection(private_local_connection_store_t *this, connection_t *connection)
 {
 	this->connections->insert_last(this->connections, connection);
 	return SUCCESS;
@@ -191,6 +216,7 @@ local_connection_store_t * local_connection_store_create()
 
 	this->public.connection_store.get_connection_by_hosts = (connection_t*(*)(connection_store_t*,host_t*,host_t*))get_connection_by_hosts;
 	this->public.connection_store.get_connection_by_ids = (connection_t*(*)(connection_store_t*,identification_t*,identification_t*))get_connection_by_ids;
+	this->public.connection_store.get_connection_by_name = (connection_t*(*)(connection_store_t*,char*))get_connection_by_name;
 	this->public.connection_store.add_connection = (status_t(*)(connection_store_t*,connection_t*))add_connection;
 	this->public.connection_store.destroy = (void(*)(connection_store_t*))destroy;
 	
