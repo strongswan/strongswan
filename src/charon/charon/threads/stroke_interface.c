@@ -232,7 +232,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	if (msg->add_conn.me.cert)
 	{
 		char file[128];
-		snprintf(file, sizeof(file), "%s%s", CERTIFICATE_DIR,  msg->add_conn.me.cert);
+		snprintf(file, sizeof(file), "%s/%s", CERTIFICATE_DIR,  msg->add_conn.me.cert);
 		cert = x509_create_from_file(file);
 		if (cert)
 		{
@@ -240,15 +240,15 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			my_id = cert->get_subject(cert);
 			my_id = my_id->clone(my_id);
 			cert->destroy(cert);
-			this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, 
-									"defined a valid certificate, using its ID \"%s\"",
-									my_id->get_string(my_id));
+			this->logger->log(this->logger, CONTROL, 
+							  "defined a valid certificate, using its ID \"%s\"",
+							  my_id->get_string(my_id));
 		}
 	}
 	if (msg->add_conn.other.cert)
 	{
 		char file[128];
-		snprintf(file, sizeof(file), "%s%s", CERTIFICATE_DIR,  msg->add_conn.other.cert);
+		snprintf(file, sizeof(file), "%s/%s", CERTIFICATE_DIR,  msg->add_conn.other.cert);
 		cert = x509_create_from_file(file);
 		if (cert)
 		{
@@ -256,9 +256,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			other_id = cert->get_subject(cert);
 			other_id = other_id->clone(other_id);
 			cert->destroy(cert);
-			this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, 
-									 "defined a valid certificate, using its ID \"%s\"",
-									 other_id->get_string(other_id));
+			this->logger->log(this->logger, CONTROL, 
+							  "defined a valid certificate, using its ID \"%s\"",
+							  other_id->get_string(other_id));
 		}
 	}
 	
@@ -536,6 +536,7 @@ static void stroke_receive(private_stroke_t *this)
 			continue;
 		}
 		
+		/* TODO: BAD: does not work for starter, charon crashes!! FIX this */
 		this->stroke_logger = logger_create("-", CONTROL|ERROR, FALSE, strokefile);
 		
 		this->logger->log_bytes(this->logger, RAW, "stroke message", (void*)msg, msg_length);
