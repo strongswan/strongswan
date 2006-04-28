@@ -179,6 +179,10 @@ scencrypt|scdecrypt)
         $IPSEC_EXECDIR/whack "--$op" "$@"
 	exit 0
 	;;
+secrets)
+        $IPSEC_EXECDIR/whack --rereadsecrets
+        exit 0
+        ;;
 start)
 	shift
 	exec $IPSEC_EXECDIR/starter "$@"
