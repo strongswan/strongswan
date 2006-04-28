@@ -20,7 +20,7 @@ export FREESWANSRCDIR
 include Makefile.inc
 
 # directories visited by all recursion
-SUBDIRS=lib programs linux
+SUBDIRS=lib src linux
 
 # declaration for make's benefit
 .PHONY:	programs install clean distclean \
