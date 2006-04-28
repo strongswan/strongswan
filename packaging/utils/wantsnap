@@ -1,0 +1,3 @@
+#! /bin/sh
+umask 002
+id -un >>~build/WANTSNAP/dosnap

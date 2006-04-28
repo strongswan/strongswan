@@ -1,0 +1,2339 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="policygroups.html">Previous</A>
+<A HREF="manpages.html">Next</A>
+<HR>
+<H1><A NAME="5">FreeS/WAN FAQ</A></H1>
+<P>This is a collection of questions and answers, mostly taken from the
+ FreeS/WAN<A href="mail.html"> mailing list</A>. See the project<A href="http://www.freeswan.org/">
+ web site</A> for more information. All the FreeS/WAN documentation is
+ online there.</P>
+<P>Contributions to the FAQ are welcome. Please send them to the project<A
+href="mail.html"> mailing list</A>.</P>
+<HR>
+<H2><A name="questions">Index of FAQ questions</A></H2>
+<UL>
+<LI><A href="#whatzit">What is FreeS/WAN?</A></LI>
+<LI><A href="#problems">How do I report a problem or seek help?</A></LI>
+<LI><A href="#generic">Can I get ...</A>
+<UL>
+<LI><A href="#lemme_out">... an off-the-shelf system that includes
+ FreeS/WAN?</A></LI>
+<LI><A href="#contractor">... contractors or staff who know FreeS/WAN?</A>
+</LI>
+<LI><A href="#commercial">... commercial support?</A></LI>
+</UL>
+</LI>
+<LI><A href="#release">Release questions</A>
+<UL>
+<LI><A href="#rel.current">What is the current release?</A></LI>
+<LI><A href="#relwhen">When is the next release?</A></LI>
+<LI><A href="#rel.bugs">Are there known bugs in the current release?</A></LI>
+</UL>
+</LI>
+<LI><A href="mod_cons">Modifications and contributions</A>
+<UL>
+<LI><A href="#modify.faq">Can I modify FreeS/WAN to ...?</A></LI>
+<LI><A href="#contrib.faq">Can I contribute to the project?</A></LI>
+<LI><A href="#ddoc.faq">Is there detailed design documentation?</A></LI>
+</UL>
+</LI>
+<LI><A href="#interact">Will FreeS/WAN work in my environment?</A>
+<UL>
+<LI><A href="#interop.faq">Can FreeS/WAN talk to ... ?</A></LI>
+<LI><A href="#old_to_new">Can different FreeS/WAN versions talk to each
+ other?</A></LI>
+<LI><A href="#faq.bandwidth">Is there a limit on throughput?</A></LI>
+<LI><A href="#faq.number">Is there a limit on number of connections?</A></LI>
+<LI><A href="#faq.speed">Is a ... fast enough to handle FreeS/WAN with
+ my loads?</A></LI>
+</UL>
+</LI>
+<LI><A href="#work_on">Will FreeS/WAN work on ...</A>
+<UL>
+<LI><A href="#versions">... my version of Linux?</A></LI>
+<LI><A href="#nonIntel.faq">... non-Intel CPUs?</A></LI>
+<LI><A href="#multi.faq">... multiprocessors?</A></LI>
+<LI><A href="#k.old">... an older kernel?</A></LI>
+<LI><A href="#k.versions">... the latest kernel version?</A></LI>
+<LI><A href="#interface.faq">... unusual network hardware?</A></LI>
+<LI><A href="#vlan">... a VLAN (802.1q) network?</A></LI>
+</UL>
+</LI>
+<LI><A href="#features.faq">Does FreeS/WAN support ...</A>
+<UL>
+<LI><A href="#VPN.faq">... site-to-site VPN applications</A></LI>
+<LI><A href="#warrior.faq">... remote users connecting to a LAN</A></LI>
+<LI><A href="#road.shared.possible">... remote users using shared secret
+ authentication?</A></LI>
+<LI><A href="#wireless.faq">... wireless networks</A></LI>
+<LI><A href="#PKIcert">... X.509 or other PKI certificates?</A></LI>
+<LI><A href="#Radius">... user authentication (Radius, SecureID, Smart
+ Card ...)?</A></LI>
+<LI><A href="#NATtraversal">... NAT traversal</A></LI>
+<LI><A href="#virtID">... assigning a &quot;virtual identity&quot; to a remote
+ system?</A></LI>
+<LI><A href="#noDES.faq">... single DES encryption?</A></LI>
+<LI><A href="#AES.faq">... AES encryption?</A></LI>
+<LI><A href="#other.cipher">... other encryption algorithms?</A></LI>
+</UL>
+</LI>
+<LI><A href="#canI">Can I ...</A>
+<UL>
+<LI><A href="#policy.preconfig">...use policy groups along with
+ explicitly configured connections?</A></LI>
+<LI><A href="#policy.off">...turn off policy groups?</A></LI>
+
+<!--
+      <li><a href="#policy.otherinterface">...use policy groups
+      on an interface other than <VAR>%defaultroute</VAR>?</a></li>
+-->
+<LI><A href="#reload">... reload connection info without restarting?</A></LI>
+<LI><A href="#masq.faq">... use several masqueraded subnets?</A></LI>
+<LI><A href="#dup_route">... use subnets masqueraded to the same
+ addresses?</A></LI>
+<LI><A href="#road.masq">... assign a road warrior an address on my net
+ (a virtual identity)?</A></LI>
+<LI><A href="#road.many">... support many road warriors with one
+ gateway?</A></LI>
+<LI><A href="#road.PSK">... have many road warriors using shared secret
+ authentication?</A></LI>
+<LI><A href="#QoS">... use Quality of Service routing with FreeS/WAN?</A>
+</LI>
+<LI><A href="#deadtunnel">... recognise dead tunnels and shut them down?</A>
+</LI>
+<LI><A href="#demanddial">... build IPsec tunnels over a demand-dialed
+ link?</A></LI>
+<LI><A href="#GRE">... build GRE, L2TP or PPTP tunnels over IPsec?</A></LI>
+<LI><A href="#NetBIOS">... use Network Neighborhood (Samba, NetBIOS)
+ over IPsec?</A></LI>
+</UL>
+</LI>
+<LI><A href="#setup.faq">Life's little mysteries</A>
+<UL>
+<LI><A href="#cantping">I cannot ping ....</A></LI>
+<LI><A href="#forever">It takes forever to ...</A></LI>
+<LI><A href="#route">I send packets to the tunnel with route(8) but they
+ vanish</A></LI>
+<LI><A href="#down_route">When a tunnel goes down, packets vanish</A></LI>
+<LI><A href="#firewall_ate">The firewall ate my packets!</A></LI>
+<LI><A href="#dropconn">Dropped connections</A></LI>
+<LI><A href="#defaultroutegone">Disappearing %defaultroute</A></LI>
+<LI><A href="#tcpdump.faq">TCPdump on the gateway shows strange things</A>
+</LI>
+<LI><A href="#no_trace">Traceroute does not show anything between the
+ gateways</A></LI>
+</UL>
+</LI>
+<LI><A href="#man4debug">Testing in stages (or .... works but ...
+ doesn't)</A>
+<UL>
+<LI><A href="#nomanual">Manually keyed connections don't work</A></LI>
+<LI><A href="#spi_error">One manual connection works, but second one
+ fails</A></LI>
+<LI><A href="#man_no_auto">Manual connections work, but automatic keying
+ doesn't</A></LI>
+<LI><A href="#nocomp">IPsec works, but connections using compression
+ fail</A></LI>
+<LI><A href="#pmtu.broken">Small packets work, but large transfers fail</A>
+</LI>
+<LI><A href="#subsub">Subnet-to-subnet works, but tests from the
+ gateways don't</A></LI>
+</UL>
+</LI>
+<LI><A href="#compile.faq">Compilation problems</A>
+<UL>
+<LI><A href="#gmp.h_missing">gmp.h: No such file or directory</A></LI>
+<LI><A href="#noVM">... virtual memory exhausted</A></LI>
+</UL>
+</LI>
+<LI><A href="#error">Interpreting error messages</A>
+<UL>
+<LI><A href="#route-client">route-client (or host) exited with status 7</A>
+</LI>
+<LI><A href="#unreachable">SIOCADDRT:Network is unreachable</A></LI>
+<LI><A href="#modprobe">ipsec_setup: modprobe: Can't locate moduleipsec</A>
+</LI>
+<LI><A href="#noKLIPS">ipsec_setup: Fatal error, kernel appears to lack
+ KLIPS</A></LI>
+<LI><A href="#noDNS">ipsec_setup: ... failure to fetch key for ... from
+ DNS</A></LI>
+<LI><A href="#dup_address">ipsec_setup: ... interfaces ... and ... share
+ address ...</A></LI>
+<LI><A href="#kflags">ipsec_setup: Cannot adjust kernel flags</A></LI>
+<LI><A href="#message_num">Message numbers (MI3, QR1, et cetera) in
+ Pluto messages</A></LI>
+<LI><A href="#conn_name">Connection names in Pluto error messages</A></LI>
+<LI><A href="#cantorient">Pluto: ... can't orient connection</A></LI>
+<LI><A href="#no.interface">... we have no ipsecN interface for either
+ end of this connection</A></LI>
+<LI><A href="#noconn">Pluto: ... no connection is known</A></LI>
+<LI><A href="#nosuit">Pluto: ... no suitable connection ...</A></LI>
+<LI><A href="#noconn.auth">Pluto: ... no connection has been authorized</A>
+</LI>
+<LI><A href="#noDESsupport">Pluto: ... OAKLEY_DES_CBC is not supported.</A>
+</LI>
+<LI><A href="#notransform">Pluto: ... no acceptable transform</A></LI>
+<LI><A href="#rsasigkey">rsasigkey dumps core</A></LI>
+<LI><A href="#sig4">!Pluto failure!: ... exited with ... signal 4</A></LI>
+<LI><A href="#econnrefused">ECONNREFUSED error message</A></LI>
+<LI><A href="#no_eroute">klips_debug: ... no eroute!</A></LI>
+<LI><A href="#SAused">... trouble writing to /dev/ipsec ... SA already
+ in use</A></LI>
+<LI><A href="#ignore">... ignoring ... payload</A></LI>
+<LI><A href="#unknown_rightcert">unknown parameter name &quot;rightcert&quot;</A></LI>
+</UL>
+</LI>
+<LI><A href="#spam">Why don't you restrict the mailing lists to reduce
+ spam?</A></LI>
+</UL>
+<HR>
+<H2><A name="whatzit">What is FreeS/WAN?</A></H2>
+<P>FreeS/WAN is a Linux implementation of the<A href="glossary.html#IPSEC">
+ IPsec</A> protocols, providing security services at the IP (Internet
+ Protocol) level of the network.</P>
+<P>For more detail, see our<A href="intro.html"> introduction</A>
+ document or the FreeS/WAN project<A href="http://www.freeswan.org/">
+ web site</A>.</P>
+<P>To start setting it up, go to our<A href="quickstart.html">
+ quickstart guide</A>.</P>
+<P>Our<A href="web.html"> web links</A> document has information on<A href="web.html#implement">
+ IPsec for other systems</A>.</P>
+<H2><A name="problems">How do I report a problem or seek help?</A></H2>
+<DL>
+<DT>Read our<A href="trouble.html"> troubleshooting</A> document.</DT>
+<DD>
+<P>It may guide you to a solution. If not, see its<A href="trouble.html#prob.report">
+ problem reporting</A> section.</P>
+<P>Basically, what it says is<STRONG> give us the output from<VAR> ipsec
+ barf</VAR> from both gateways</STRONG>. Without full information, we
+ cannot diagnose a problem. However,<VAR> ipsec barf</VAR> produces a
+ lot of output. If at all possible,<STRONG> please make barfs accessible
+ via the web or FTP</STRONG> rather than sending enormous mail messages.</P>
+</DD>
+<DT><STRONG>Use the<A href="mail.html"> users mailing list</A> for
+ problem reports</STRONG>, rather than mailing developers directly.</DT>
+<DD>
+<UL>
+<LI>This gives you access to more expertise, including users who may
+ have encountered and solved the same problems.</LI>
+<LI>It is more likely to get a quick response. Developers may get behind
+ on email, or even ignore it entirely for a while, but a list message
+ (given a reasonable Subject: line) is certain to be read by a fair
+ number of people within hours.</LI>
+<LI>It may also be important because of<A href="politics.html#exlaw">
+ cryptography export laws</A>. A US citizen who provides technical
+ assistance to foreign cryptographic work might be charged under the
+ arms export regulations. Such a charge would be easier to defend if the
+ discussion took place on a public mailing list than if it were done in
+ private mail.</LI>
+</UL>
+</DD>
+<DT>Try irc.freenode.net#freeswan.</DT>
+<DD>
+<P>FreeS/WAN developers, volunteers and users can often be found there.
+ Be patient and be prepared to provide lots of information to support
+ your question.</P>
+<P>If your question was really interesting, and you found an answer,
+ please share that with the class by posting to the<A href="mail.html">
+ users mailing list</A>. That way others with the same problem can find
+ your answer in the archives.</P>
+</DD>
+<DT>Premium support is also available.</DT>
+<DD>
+<P>See the next several questions.</P>
+</DD>
+</DL>
+<H2><A name="generic">Can I get ...</A></H2>
+<H3><A name="lemme_out">Can I get an off-the-shelf system that includes
+ FreeS/WAN?</A></H3>
+<P>There are a number of Linux distributions or firewall products which
+ include FreeS/WAN. See this<A href="intro.html#products"> list</A>.
+ Using one of these, chosen to match your requirements and budget, may
+ save you considerable time and effort.</P>
+<P>If you don't know your requirements, start by reading Schneier's<A href="biblio.html#secrets">
+ Secrets and Lies</A>. That gives the best overview of security issues I
+ have seen. Then consider hiring a consultant (see next question) to
+ help define your requirements.</P>
+<H3><A name="consultant">Can I hire consultants or staff who know
+ FreeS/WAN?</A></H3>
+<P>If you want the help of a contractor, or to hire staff with FreeS/WAN
+ expertise, you could:</P>
+<UL>
+<LI>check availability in your area through your local Linux User Group
+ (<A href="http://lugww.counter.li.org/">LUG Index</A>)</LI>
+<LI>try asking on our<A href="mail.html"> mailing list</A></LI>
+</UL>
+<P>For companies offerring support, see the next question.</P>
+<H3><A name="commercial">Can I get commercial support?</A></H3>
+<P>Many of the distributions or firewall products which include
+ FreeS/WAN (see this<A href="intro.html#products"> list</A>) come with
+ commercial support or have it available as an option.</P>
+<P>Various companies specialize in commercial support of open source
+ software. Our project leader was a founder of the first such company,
+ Cygnus Support. It has since been bought by<A href="http://www.redhat.com">
+ Redhat</A>. Another such firm is<A href="http://www.linuxcare.com">
+ Linuxcare</A>.</P>
+<H2><A name="release">Release questions</A></H2>
+<H3><A name="rel.current">What is the current release?</A></H3>
+<P>The current release is the highest-numbered tarball on our<A href="ftp://ftp.xs4all.nl/pub/crypto/freeswan">
+ distribution site</A>. Almost always, any of<A href="intro.html#mirrors">
+ the mirrors</A> will have the same file, though perhaps not for a day
+ or so after a release.</P>
+<P>Unfortunately, the web site is not always updated as quickly as it
+ should be.</P>
+<H3><A name="relwhen">When is the next release?</A></H3>
+<P>We try to do a release approximately every six to eight weeks.</P>
+<P>If pre-release tests fail and the fix appears complex, or more
+ generally if the code does not appear stable when a release is
+ scheduled, we will just skip that release.</P>
+<P>For serious bugs, we may bring out an extra bug-fix release. These
+ get numbers in the normal release series. For example, there was a bug
+ found in FreeS/WAN 1.6, so we did another release less than two weeks
+ later. The bug-fix release was called 1.7.</P>
+<H3><A name="rel.bugs">Are there known bugs in the current release?</A></H3>
+<P>Any problems we are aware of at the time of a release are documented
+ in the<A href="../BUGS"> BUGS</A> file for that release. You should
+ also look at the<A href="../CHANGES"> CHANGES</A> file.</P>
+<P>Bugs discovered after a release are discussed on the<A href="mail.html">
+ mailing lists</A>. The easiest way to check for any problems in the
+ current code would be to peruse the<A href="http://lists.freeswan.org/pipermail/briefs">
+ List In Brief</A>.</P>
+<H2><A name="mod_cons">Modifications and contributions</A></H2>
+<H3><A name="modify.faq">Can I modify FreeS/WAN to ...?</A></H3>
+<P>You are free to modify FreeS/WAN in any way. See the discussion of<A href="intro.html#licensing">
+ licensing</A> in our introduction document.</P>
+<P>Before investing much energy in any such project, we suggest that you</P>
+<UL>
+<LI>check the list of<A href="web.html#patch"> existing patches</A></LI>
+<LI>post something about your project to the<A href="mail.html"> design
+ mailing list</A></LI>
+</UL>
+<P>This may prevent duplicated effort, or lead to interesting
+ collaborations.</P>
+<H3><A name="contrib.faq">Can I contribute to the project?</A></H3>
+ In general, we welcome contributions from the community. Various
+ contributed patches, either to fix bugs or to add features, have been
+ incorporated into our distribution. Other patches, not yet included in
+ the distribution, are listed in our<A href="web.html#patch"> web links</A>
+ section.
+<P>Users have also contributed heavily to documentation, both by
+ creating their own<A href="intro.html#howto"> HowTos</A> and by posting
+ things on the<A href="mail.html"> mailing lists</A> which I have quoted
+ in these HTML docs.</P>
+<P>There are, however, some caveats.</P>
+<P>FreeS/WAN is being implemented in Canada, by Canadians, largely to
+ ensure that is it is entirely free of export restrictions. See this<A href="politics.html#status">
+ discussion</A>. We<STRONG> cannot accept code contributions from US
+ residents or citizens</STRONG>, not even one-line bugs fixes. The
+ reasons for this were recently discussed extensively on the mailing
+ list, in a thread starting<A href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2001/01/msg00111.html">
+ here</A>.</P>
+<P>Not all contributions are of interest to us. The project has a set of
+ fairly ambitious and quite specific goals, described in our<A href="intro.html#goals">
+ introduction</A>. Contributions that lead toward these goals are likely
+ to be welcomed enthusiastically. Other contributions may be seen as
+ lower priority, or even as a distraction.</P>
+<P>Discussion of possible contributions takes place on the<A href="mail.html">
+ design mailing list</A>.</P>
+<H3><A name="ddoc.faq">Is there detailed design documentation?</A></H3>
+ There are:
+<UL>
+<LI><A href="rfc.html">RFCs</A> specifying the protocols we implement</LI>
+<LI><A href="manpages.html">man pages</A> for our utilities, library
+ functions and file formats</LI>
+<LI>comments in the source code</LI>
+<LI><A href="index.html">HTML documentation</A> written primarily for
+ users</LI>
+<LI>archived discussions from the<A href="mail.html"> mailing lists</A></LI>
+<LI>other papers mentioned in our<A href="intro.html#applied">
+ introduction</A></LI>
+</UL>
+<P>The only formal design documents are a few papers in the last
+ category above. All the other categories, however, have things to say
+ about design as well.</P>
+<H2><A name="interact">Will FreeS/WAN work in my environment?</A></H2>
+<H3><A name="interop.faq">Can FreeS/WAN talk to ...?</A></H3>
+<P>The IPsec protocols are designed to support interoperation. In
+ theory, any two IPsec implementations should be able to talk to each
+ other. In practice, it is considerably more complex. We have a whole<A href="interop.html">
+ interoperation document</A> devoted to this problem.</P>
+<P>An important part of that document is links to the many<A href="interop.html#otherpub">
+ user-written HowTos</A> on interoperation between FreeS/WAN and various
+ other implementations. Often the users know more than the developers
+ about these issues (and almost always more than me :-), so these
+ documents may be your best resource.</P>
+<H3><A name="old_to_new">Can different FreeS/WAN versions talk to each
+ other?</A></H3>
+<P>Linux FreeS/WAN can interoperate with many IPsec implementations,
+ including earlier versions of Linux FreeS/WAN itself.</P>
+<P>In a few cases, there are some complications. See our<A href="interop.html#oldswan">
+ interoperation</A> document for details.</P>
+<H3><A name="faq.bandwidth">Is there a limit on throughput?</A></H3>
+<P>There is no hard limit, but see below.</P>
+<H3><A name="faq.number">Is there a limit on number of tunnels?</A></H3>
+<P>There is no hard limit, but see next question.</P>
+<H3><A name="faq.speed">Is a ... fast enough to handle FreeS/WAN with my
+ loads?</A></H3>
+<P>A quick summary:</P>
+<DL>
+<DT>Even a limited machine can be useful</DT>
+<DD>A 486 can handle a T1, ADSL or cable link, though the machine may be
+ breathing hard.</DD>
+<DT>A mid-range PC (say 800 MHz with good network cards) can do a lot of
+ IPsec</DT>
+<DD>With up to roughly 50 tunnels and aggregate bandwidth of 20 Megabits
+ per second, it willl have cycles left over for other tasks.</DD>
+<DT>There are limits</DT>
+<DD>Even a high end CPU will not come close to handling a fully loaded
+ 100 Mbit/second Ethernet link.
+<P>Beyond about 50 tunnels it needs careful management.</P>
+</DD>
+</DL>
+<P>See our<A href="performance.html"> FreeS/WAN performance</A> document
+ for details.</P>
+<H2><A name="work_on">Will FreeS/WAN work on ... ?</A></H2>
+<H3><A name="versions">Will FreeS/WAN run on my version of Linux?</A></H3>
+<P>We build and test on Redhat distributions, but FreeS/WAN runs just
+ fine on several other distributions, sometimes with minor fiddles to
+ adapt to the local environment. Details are in our<A href="compat.html#otherdist">
+ compatibility</A> document. Also, some distributions or products come
+ with<A href="intro.html#products"> FreeS/WAN included</A>.</P>
+<H3><A name="nonIntel.faq">Will FreeS/WAN run on non-Intel CPUs?</A></H3>
+<P>FreeS/WAN is<STRONG> intended to run on all CPUs Linux supports</STRONG>
+. We know of it being used in production on x86, ARM, Alpha and MIPS. It
+ has also had successful tests on PPC and SPARC, though we don't know of
+ actual use there. Details are in our<A href="compat.html#CPUs">
+ compatibility</A> document.</P>
+<H3><A name="multi.faq">Will FreeS/WAN run on multiprocessors?</A></H3>
+<P>FreeS/WAN is designed to work on any SMP architecture Linux supports,
+ and has been tested successfully on at least dual processor Intel
+ architecture machines. Details are in our<A href="compat.html#multiprocessor">
+ compatibility</A> document.</P>
+<H3><A name="k.old">Will FreeS/WAN work on an older kernel?</A></H3>
+<P>It might, but we strongly recommend using a recent 2.2 or 2.4 series
+ kernel. Sometimes the newer versions include security fixes which can
+ be quite important on a gateway.</P>
+<P>Also, we use recent kernels for development and testing, so those are
+ better tested and, if you do encounter a problem, more easily
+ supported. If something breaks applying recent FreeS/WAN patches to an
+ older kernel, then &quot;update your kernel&quot; is almost certain to be the
+ first thing we suggest. It may be the only suggestion we have.</P>
+<P>The precise kernel versions supported by a particular FreeS/WAN
+ release are given in the<A href="XX"> README</A> file of that release.</P>
+<P>See the following question for more on kernels.</P>
+<H3><A name="k.versions">Will FreeS/WAN run on the latest kernel
+ version?</A></H3>
+<P>Sometimes yes, but quite often, no.</P>
+<P>Kernel versions supported are given in the<A href="../README"> README</A>
+ file of each FreeS/WAN release. Typically, they are whatever production
+ kernels were current at the time of our release (or shortly before; we
+ might release for kernel<VAR> n</VAR> just as Linus releases<VAR> n+1</VAR>
+). Often FreeS/WAN will work on slightly later kernels as well, but of
+ course this cannot be guaranteed.</P>
+<P>For example, FreeS/WAN 1.91 was released for kernels 2.2.19 or 2.4.5,
+ the current kernels at the time. It also worked on 2.4.6, 2.4.7 and
+ 2.4.8, but 2.4.9 had changes that caused compilation errors if it was
+ patched with FreeS/WAN 1.91.</P>
+<P>When such changes appear, we put a fix in the FreeS/WAN snapshots,
+ and distribute it with our next release. However, this is not a high
+ priority for us, and it may take anything from a few days to several
+ weeks for such a problem to find its way to the top of our kernel
+ programmer's To-Do list. In the meanwhile, you have two choices:</P>
+<UL>
+<LI>either stick with a slightly older kernel, even if it is not the
+ latest and greatest. This is recommended for production systems; new
+ versions may have new bugs.</LI>
+<LI>or fix the problem yourself and send us a patch, via the<A href="mail.html">
+ Users mailing list</A>.</LI>
+</UL>
+<P>We don't even try to keep up with kernel changes outside the main 2.2
+ and 2.4 branches, such as the 2.4.x-ac patched versions from Alan Cox
+ or the 2.5 series of development kernels. We'd rather work on
+ developing the FreeS/WAN code than on chasing these moving targets. We
+ are, however, happy to get patches for problems discovered there.</P>
+<P>See also the<A href="install.html#choosek"> Choosing a kernel</A>
+ section of our installation document.</P>
+<H3><A name="interface.faq">Will FreeS/WAN work on unusual network
+ hardware?</A></H3>
+<P>IPsec is designed to work over any network that IP works over, and
+ FreeS/WAN is intended to work over any network interface hardware that
+ Linux supports.</P>
+<P>If you have working IP on some unusual interface -- perhaps Arcnet,
+ Token Ring, ATM or Gigabit Ethernet -- then IPsec should &quot;just work&quot;.</P>
+<P>That said, practice is sometimes less tractable than theory. Our
+ testing is done almost entirely on:</P>
+<UL>
+<LI>10 or 100 Mbit Ethernet</LI>
+<LI>ADSL or cable connections, with and without PPPoE</LI>
+<LI>IEEE 802.11 wireless LANs (see<A href="#wireless.faq"> below</A>)</LI>
+</UL>
+<P>If you have some other interface, especially an uncommon one, it is
+ entirely possible you will get bitten either by a FreeS/WAN bug which
+ our testing did not turn up, or by a bug in the driver that shows up
+ only with our loads.</P>
+<P>If IP works on your interface and FreeS/WAN doesn't, seek help on the<A
+href="mail.html"> mailing lists</A>.</P>
+<P>Another FAQ section describes<A href="#pmtu.broken"> MTU problems</A>
+. These are a possibility for some interfaces.</P>
+<H3><A name="vlan">Will FreeS/WAN work on a VLAN (802.1q) network?</A></H3>
+<P> Yes, FreeSwan works fine, though some network drivers have problems
+ with jumbo sized ethernet frames. If you used interfaces=%defaultroute
+ you do not need to change anything, but if you specified an interface
+ (eg eth0) then remember you must change that to reflect the VLAN
+ interface (eg eth0.2 for VLAN ID 2).</P>
+<P> The &quot;eepro100&quot; module is known to be broken, use the e100 driver for
+ those cards instead (included in 2.4 as 'alternative driver' for the
+ Intel EtherExpressPro/100.</P>
+<P> You do not need to change any MTU setting (those are workarounds
+ that are only needed for buggy drivers)</P>
+<P><EM>This FAQ contributed by Paul Wouters.</EM></P>
+<H2><A name="features.faq">Does FreeS/WAN support ...</A></H2>
+<P>For a discussion of which parts of the IPsec specifications FreeS/WAN
+ does and does not implement, see our<A href="compat.html#spec">
+ compatibility</A> document.</P>
+<P>For information on some often-requested features, see below.</P>
+<H3><A name="VPN.faq"></A>Does FreeS/WAN support site-to-site VPN (<A HREF="glossary.html#VPN">
+Virtual Private Network</A>) applications?</H3>
+<P>Absolutely. See this FreeS/WAN-FreeS/WAN<A HREF="config.html">
+ configuration example</A>. If only one site is using FreeS/WAN, there
+ may be a relevant HOWTO on our<A HREF="interop.html"> interop page</A>.</P>
+<H3><A name="warrior.faq">Does FreeS/WAN support remote users connecting
+ to a LAN?</A></H3>
+<P>Yes. We call the remote users &quot;Road Warriors&quot;. Check out our
+ FreeS/WAN-FreeS/WAN<A HREF="config.html#config.rw"> Road Warrior
+ Configuration Example</A>.</P>
+<P>If your Road Warrior is a Windows or Mac PC, you may need to install
+ an IPsec implementation on that machine. Our<A HREF="interop.html">
+ interop</A> page lists many available brands, and features links to
+ several HOWTOs.</P>
+<H3><A name="road.shared.possible">Does FreeS/WAN support remote users
+ using shared secret authentication?</A></H3>
+<P><STRONG>Yes, but</STRONG> there are severe restrictions, so<STRONG>
+ we strongly recommend using</STRONG><A href="glossary.html#RSA"><STRONG>
+ RSA</STRONG></A><STRONG> keys for</STRONG><A href="glossary.html#authentication">
+<STRONG> authentication</STRONG></A><STRONG> instead</STRONG>.</P>
+<P>See this<A href="#road.PSK"> FAQ question</A>.</P>
+<H3><A name="wireless.faq">Does FreeS/WAN support wireless networks?</A></H3>
+<P>Yes, it is a common practice to use IPsec over wireless networks
+ because their built-in encryption,<A href="glossary.html#WEP"> WEP</A>,
+ is insecure.</P>
+<P>There is some<A href="adv_config.html#wireless.config"> discussion</A>
+ in our advanced configuration document. See also the<A HREF="http://www.wavesec.org">
+ WaveSEC site</A>.</P>
+<H3><A name="PKIcert">Does FreeS/WAN support X.509 or other PKI
+ certificates?</A></H3>
+<P>Vanilla FreeS/WAN does not support X.509, but Andreas Steffen and
+ others have provided a popular, well-supported X.509 patch.</P>
+<UL>
+<LI><A HREF="http://www.strongsec.com/freeswan">patch</A></LI>
+<LI><A HREF="http://www.freeswan.ca">Super FreeS/WAN</A> incorporates
+ this and other user-contributed patches.</LI>
+<LI> Kai Martius'<A HREF="http://www.strongsec.com/freeswan/install.htm">
+ X.509 Installation and Configuration Guide</A></LI>
+</UL>
+<P> Linux FreeS/WAN features<A HREF="quickstart.html"> Opportunistic
+ Encryption</A>, an alternative Public Key Infrastructure based on
+ Secure DNS.</P>
+<H3><A name="Radius">Does FreeS/WAN support user authentication (Radius,
+ SecureID, Smart Card...)?</A></H3>
+<P>Andreas Steffen's<A HREF="http://www.strongsec.com/freeswan"> X.509
+ patch</A> (v. 1.42+) supports Smart Cards. The patch does not ship with
+ vanilla FreeS/WAN, but will be incorporated into<A HREF="http://www.freeswan.ca/">
+ Super FreeS/WAN 2.01+</A>. The patch implements the PCKS#15
+ Cryptographic Token Information Format Standard, using the OpenSC
+ smartcard library functions.</P>
+<P>Older news:</P>
+<P>A user-supported patch to FreeS/WAN 1.3, for smart card style
+ authentication, is available on<A HREF="http://alcatraz.webcriminals.com/~bastiaan/ipsec">
+ Bastiaan's site</A>. It supports skeyid and ibutton. This patch is not
+ part of Super FreeS/WAN.</P>
+<P>For a while progress on this front was impeded by a lack of standard.
+ The IETF<A href="http://www.ietf.org/html.charters/ipsra-charter.html">
+ working group</A> has now nearly completed its recommended solution to
+ the problem; meanwhile several vendors have implemented various things.</P>
+
+<!--
+<p>The <a href="web.html#patch">patches</a> section of our web links document
+has links to some user work on this.</p>
+-->
+<P>Of course, there are various ways to avoid any requirement for user
+ authentication in IPsec. Consider the situation where road warriors
+ build IPsec tunnels to your office net and you are considering
+ requiring user authentication during tunnel negotiation. Alternatives
+ include:</P>
+<UL>
+<LI>If you can trust the road warrior machines, then set them up so that
+ only authorised users can create tunnels. If your road warriors use
+ laptops, consider the possibility of theft.</LI>
+<LI>If the tunnel only provides access to particular servers and you can
+ trust those servers, then set the servers up to require user
+ authentication.</LI>
+</UL>
+<P>If either of those is trustworthy, it is not clear that you need user
+ authentication in IPsec.</P>
+<H3><A name="NATtraversal">Does FreeS/WAN support NAT traversal?</A></H3>
+<P>Vanilla FreeS/WAN does not, but thanks to Mathieu Lafon and Arkoon
+ Network Security, there's a patch to support this.</P>
+<UL>
+<LI><A HREF="http://open-source.arkoon.net">patch and documentation</A></LI>
+<LI><A HREF="http://www.freeswan.ca">Super FreeS/WAN</A> incorporates
+ this and other user-contributed patches.</LI>
+</UL>
+<P>The NAT traversal patch has some issues with PSKs, so you may wish to
+ authenticate with RSA keys, or X.509 (requires a patch which is also
+ included in Super FreeS/WAN). Doing the latter also has advantages when
+ dealing with large numbers of clients who may be behind NAT; instead of
+ having to make an individual Roadwarrior connection for each virtual
+ IP, you can use the &quot;rightsubnetwithin&quot; parameter to specify a range.
+ See<A HREF="http://www.strongsec.com/freeswan/install.htm#section_4.4">
+ these<VAR> rightsubnetwithin</VAR> instructions</A>.</P>
+<H3><A name="virtID">Does FreeS/WAN support assigning a &quot;virtual
+ identity&quot; to a remote system?</A></H3>
+<P>Some IPsec implementations allow you to make the source address on
+ packets sent by a Road Warrior machine be something other than the
+ address of its interface to the Internet. This is sometimes described
+ as assigning a virtual identity to that machine.</P>
+<P>FreeS/WAN does not directly support this, but it can be done. See
+ this<A href="#road.masq"> FAQ question</A>.</P>
+<H3><A name="noDES.faq">Does FreeS/WAN support single DES encryption?</A>
+</H3>
+<P><STRONG>No</STRONG>, single DES is not used either at the<A href="glossary.html#IKE">
+ IKE</A> level for negotiating connections or at the<A href="glossary.html#IPsec">
+ IPsec</A> level for actually building them.</P>
+<P>Single DES is<A href="politics.html#desnotsecure"> insecure</A>. As
+ we see it, it is more important to deliver real security than to comply
+ with a standard which has been subverted into allowing use of
+ inadequate methods. See this<A href="politics.html#weak"> discussion</A>
+.</P>
+<P>If you want to interoperate with an IPsec implementation which offers
+ only DES, see our<A href="interop.html#noDES"> interoperation</A>
+ document.</P>
+<H3><A name="AES.faq">Does FreeS/WAN support AES encryption?</A></H3>
+<P><A href="glossary.html#AES">AES</A> is a new US government<A href="glossary.html#block">
+ block cipher</A> standard to replace the obsolete<A href="glossary.html#DES">
+ DES</A>.</P>
+<P>At time of writing (March 2002), the FreeS/WAN distribution does not
+ yet support AES but user-written<A href="web.html#patch"> patches</A>
+ are available to add it. Our kernel programmer is working on
+ integrating those patches into the distribution, and there is active
+ discussion of this on the design mailimg list.</P>
+<H3><A name="other.cipher">Does FreeS/WAN support other encryption
+ algorithms?</A></H3>
+<P>Currently<A href="glossary.html#3DES"> triple DES</A> is the only
+ cipher supported. AES will almost certainly be added (see previous
+ question), and it is likely that in the process we will also add the
+ other two AES finalists with open licensing, Twofish and Serpent.</P>
+<P>We are extremely reluctant to add other ciphers. This would make both
+ use and maintenance of FreeS/WAN more complex without providing any
+ clear benefit. Complexity is emphatically not desirable in a security
+ product.</P>
+<P>Various users have written patches to add other ciphers. We provide<A href="web.html#patch">
+ links</A> to these.</P>
+<H2><A name="canI">Can I ...</A></H2>
+<H3><A name="policy.preconfig">Can I use policy groups along with
+ explicitly configured connections?</A></H3>
+<P>Yes, you can, so long as you pay attention to the selection rule,
+ which can be summarized &quot;the most specific connection wins&quot;. We
+ describe the rule in our<A HREF="policygroups.html#policy.group.notes">
+ policy groups</A> document, and provide a more technical explanation in<A
+HREF="manpage.d/ipsec.conf.5.html"> man ipsec.conf</A>.</P>
+<P>A good guideline: If you have a regular connection defined in<VAR>
+ ipsec.conf</VAR>, ensure that a subset of that connection is not listed
+ in a less restrictive policy group. Otherwise, FreeS/WAN will use the
+ subset, with its more specific source/destination pair.</P>
+<P>Here's an example. Suppose you are the system administrator at
+ 192.0.2.2. You have this connection in ipsec.conf:<VAR> ipsec.conf</VAR>
+:</P>
+<PRE>conn net-to-net
+    left=192.0.2.2           # you are here
+    right=192.0.2.8
+    rightsubnet=192.0.2.96/27
+    ....
+</PRE>
+<P>If you then place a host or net within<VAR> rightsubnet</VAR>, (let's
+ say 192.0.2.98) in<VAR> private-or-clear</VAR>, you may find that
+ 192.0.2.2 at times communicates in the clear with 192.0.2.98. That's
+ consistent with the rule, but may be contrary to your expectations.</P>
+<P>On the other hand, it's safe to put a larger subnet in a less
+ restrictive policy group file. If<VAR> private-or-clear</VAR> contains
+ 192.0.2.0/24, then the more specific<VAR> net-to-net</VAR> connection
+ is used for any communication to 192.0.2.96/27. The more general policy
+ applies only to communication with hosts or subnets in 192.0.2.0/24
+ without a more specific policy or connection.</P>
+<H3><A name="policy.off">Can I turn off policy groups?</A></H3>
+<P>Yes. Use<A HREF="policygroups.html#disable_policygroups"> these
+ instructions</A>.</P>
+
+<!--
+<h3><a name="policy.otherinterface">Can I use policy groups
+ on an interface other than <VAR>%defaultroute</VAR>?</a></h3>
+
+<p>??<p>
+-->
+<H3><A name="reload">Can I reload connection info without restarting?</A>
+</H3>
+<P>Yes, you can do this. Here are the details, in a mailing list message
+ from Pluto programmer Hugh Redelmeier:</P>
+<PRE>| How can I reload config's without restarting all of pluto and klips?  I am using
+| FreeSWAN -&gt; PGPNet in a medium sized production environment, and would like to be
+| able to add new connections ( i am using include config/* ) without dropping current
+| SA's.
+| 
+| Can this be done?
+| 
+| If not, are there plans to add this kind of feature?
+
+        ipsec auto --add whatever
+This will look in the usual place (/etc/ipsec.conf) for a conn named
+whatever and add it.
+
+If you added new secrets, you need to do
+        ipsec auto --rereadsecrets
+before Pluto needs to know those secrets.
+
+| I have looked (perhaps not thoroughly enough tho) to see how to do this:
+
+There may be more bits to look for, depending on what you are trying
+to do.</PRE>
+<P>Another useful command here is<VAR> ipsec auto --replace &lt;conn_name&gt;</VAR>
+ which re-reads data for a named connection.</P>
+<H3><A name="masq.faq">Can I use several masqueraded subnets?</A></H3>
+<P>Yes. This is done all the time. See the discussion in our<A href="config.html#route_or_not">
+ setup</A> document. The only restriction is that the subnets on the two
+ ends must not overlap. See the next question.</P>
+<P>Here is a mailing list message on the topic. The user incorrectly
+ thinks you need a 2.4 kernel for this -- actually various people have
+ been doing it on 2.0 and 2.2 for quite some time -- but he has it right
+ for 2.4.</P>
+<PRE>Subject: Double NAT and freeswan working :)
+   Date: Sun, 11 Mar 2001
+   From: Paul Wouters &lt;paul@xtdnet.nl&gt;
+
+Just to share my pleasure, and make an entry for people who are searching
+the net on how to do this. Here's the very simple solution to have a double
+NAT'ed network working with freeswan. (Not sure if this is old news, but I'm
+not on the list (too much spam) and I didn't read this in any HOWTO/FAQ/doc
+on the freeswan site yet (Sandy, put it in! :)
+
+10.0.0.0/24 --- 10.0.0.1 a.b.c.d  ---- a.b.c.e {internet} ----+
+                                                              |
+10.0.1.0/24 --- 10.0.1.1 f.g.h.i  ---- f.g.h.j {internet} ----+
+
+the goal is to have the first network do a VPN to the second one, yet also
+have NAT in place for connections not destinated for the other side of the
+NAT. Here the two Linux security gateways have one real IP number (cable
+modem, dialup, whatever.
+
+The problem with NAT is you don't want packets from 10.*.*.* to 10.*.*.*
+to be NAT'ed. While with Linux 2.2, you can't, with Linux 2.4 you can.
+
+(This has been tested and works for 2.4.2 with Freeswan snapshot2001mar8b)
+
+relevant parts of /etc/ipsec.conf:
+
+        left=f.g.h.i
+        leftsubnet=10.0.1.0/24
+        leftnexthop=f.g.h.j
+        leftfirewall=yes
+        leftid=@firewall.netone.nl
+        leftrsasigkey=0x0........
+        right=a.b.c.d
+        rightsubnet=10.0.0.0/24
+        rightnexthop=a.b.c.e
+        rightfirewall=yes
+        rightid=@firewall.nettwo.nl
+        rightrsasigkey=0x0......
+        # To authorize this connection, but not actually start it, at startup,
+        # uncomment this.
+        auto=add
+
+and now the real trick. Setup the NAT correctly on both sites:
+
+iptables -t nat -F
+iptables -t nat -A POSTROUTING -o eth0 -d \! 10.0.0.0/8 -j MASQUERADE
+
+This tells the NAT code to only do NAT for packets with destination other then
+10.* networks. note the backslash to mask the exclamation mark to protect it
+against the shell.
+
+Happy painting :)
+
+Paul</PRE>
+<H3><A name="dup_route">Can I use subnets masqueraded to the same
+ addresses?</A></H3>
+<P><STRONG>No.</STRONG> The notion that IP addresses are unique is one
+ of the fundamental principles of the IP protocol. Messing with it is
+ exceedingly perilous.</P>
+<P>Fairly often a situation comes up where a company has several
+ branches, all using the same<A href="glossary.html#non-routable">
+ non-routable addresses</A>, perhaps 192.168.0.0/24. This works fine as
+ long as those nets are kept distinct. The<A href="glossary.html#masq">
+ IP masquerading</A> on their firewalls ensures that packets reaching
+ the Internet carry the firewall address, not the private address.</P>
+<P>This can break down when IPsec enters the picture. FreeS/WAN builds a
+ tunnel that pokes through both masquerades and delivers packets from<VAR>
+ leftsubnet</VAR> to<VAR> rightsubnet</VAR> and vice versa. For this to
+ work, the two subnets<EM> must</EM> be distinct.</P>
+<P>There are several solutions to this problem.</P>
+<P>Usually, you<STRONG> re-number the subnets</STRONG>. Perhaps the
+ Vancouver office becomes 192.168.101.0/24, Calgary 192.168.102.0/24 and
+ so on. FreeS/WAN can happily handle this. With, for example<VAR>
+ leftsubnet=192.168.101.0/24</VAR> and<VAR> rightsubnet=192.168.102.0/24</VAR>
+ in a connection description, any machine in Calgary can talk to any
+ machine in Vancouver. If you want to be more restrictive and use
+ something like<VAR> leftsubnet=192.168.101.128/25</VAR> and<VAR>
+ rightsubnet=192.168.102.240/28</VAR> so only certain machines on each
+ end have access to the tunnel, that's fine too.</P>
+<P>You could also<STRONG> split the subnet</STRONG> into smaller ones,
+ for example using<VAR> 192.168.1.0/25</VAR> in Vancouver and<VAR>
+ rightsubnet=192.168.0.128/25</VAR> in Calgary.</P>
+<P>Alternately, you can just<STRONG> give up routing</STRONG> directly
+ to machines on the subnets. Omit the<VAR> leftsubnet</VAR> and<VAR>
+ rightsubnet</VAR> parameters from your connection descriptions. Your
+ IPsec tunnels will then run between the public interfaces of the two
+ firewalls. Packets will be masqueraded both before they are put into
+ tunnels and after they emerge. Your Vancouver client machines will see
+ only one Calgary machine, the firewall.</P>
+<H3><A name="road.masq">Can I assign a road warrior an address on my net
+ (a virtual identity)?</A></H3>
+<P>Often it would be convenient to be able to give a Road Warrior an IP
+ address which appears to be on the local network. Some IPsec
+ implementations have support for this, sometimes calling the feature
+ &quot;virtual identity&quot;.</P>
+<P>Currently (Sept 2002) FreeS/WAN does not support this, and we have no
+ definite plans to add it. The difficulty is that is not yet a standard
+ mechanism for it. There is an Internet Draft for a method of doing it
+ using<A href="glossary.html#DHCP"> DHCP</A> which looks promising.
+ FreeS/WAN may support that in a future release.</P>
+<P>In the meanwhile, you can do it yourself using the Linux iproute2(8)
+ facilities. Details are in<A href="http://www.av8n.com/vpn/iproute2.htm">
+ this paper</A>.</P>
+<P>Another method has also been discussed on the mailing list.:</P>
+<UL>
+<LI>You can use a variant of the<A href="adv_config.html#extruded.config">
+ extruded subnet</A> procedure.</LI>
+<LI>You have to avoid having the road warrior's assigned address within
+ the range you actually use at home base. See previous question.</LI>
+<LI>On the other hand, you want the roadwarrior's address to be within
+ the range that<EM> seems</EM> to be on your network.</LI>
+</UL>
+<P>For example, you might have:</P>
+<DL>
+<DT>leftsubnet=a.b.c.0/25</DT>
+<DD>head office network</DD>
+<DT>rightsubnet=a.b.c.129/32</DT>
+<DD>extruded to a road warrior. Note that this is not in a.b.c.0/25</DD>
+<DT>a.b.c.0/24</DT>
+<DD>whole network, including both the above</DD>
+</DL>
+<P>You then set up routing so that the office machines use the IPsec
+ gateway as their route to a.b.c.128/25. The leftsubnet parameter tells
+ the road warriors to use tunnels to reach a.b.c.0/25, so you should
+ have two-way communication. Depending or your network and applications,
+ there may be some additional work to do on DNS or Windows configuration</P>
+<H3><A name="road.many">Can I support many road warriors with one
+ gateway?</A></H3>
+<P>Yes. This is easily done, using</P>
+<DL>
+<DT>either RSA authentication</DT>
+<DD>standard in the FreeS/WAN distribution</DD>
+<DT>or X.509 certificates</DT>
+<DD>requires<A href="#PKIcert"> Super FreeS/WAN or a patch</A>.</DD>
+</DL>
+<P>In either case, each Road Warrior must have a different key or
+ certificate.</P>
+<P>It is also possible using pre-shared key authentication, though we
+ don't recommend this; see the<A href="#road.PSK"> next question</A> for
+ details.</P>
+<P>If you expect to have more than a few dozen Road Warriors connecting
+ simultaneously, you may need a fairly powerful gateway machine. See our
+ document on<A href="performance.html"> FreeS/WAN performance</A>.</P>
+<H3><A name="road.PSK">Can I have many road warriors using shared secret
+ authentication?</A></H3>
+<P><STRONG>Yes, but avoid it if possible</STRONG>.</P>
+<P>You can have multiple Road Warriors using shared secret
+ authentication<STRONG> only if they all use the same secret</STRONG>.
+ You must also set:</P>
+<P></P>
+<PRE>   uniqueids=no   </PRE>
+<P>in the connection definition.</P>
+<P>Why it's less secure:</P>
+<UL>
+<LI>If you have many users, it becomes almost certain the secret will
+ leak</LI>
+<LI>The secret becomes quite valuable to an attacker</LI>
+<LI>All users authenticate the same way, so the gateway cannot tell them
+ apart for logging or access control purposes</LI>
+<LI>Changing the secret is difficult. You have to securely notify all
+ users.</LI>
+<LI>If you find out the secret has been compromised, you can change it,
+ but then what? None of your users can connect without the new secret.
+ How will you notify them all, quickly and securely, without using the
+ VPN?</LI>
+</UL>
+<P>This is a designed-in limitation of the<A href="glossary.html#IKE">
+ IKE</A> key negotiation protocol, not a problem with our
+ implementation.</P>
+<P><STRONG>We very strongly recommend that you avoid using shared secret
+ authentication for multiple Road Warriors.</STRONG> Use RSA
+ authentication instead.</P>
+<P>The longer story: When using shared secrets, the protocol requires
+ that the responding gateway be able to determine which secret to use at
+ a time when all it knows about the initiator is an IP address. This
+ works fine if you know the initiator's address in advance and can use
+ it to look up the appropiriate secret. However, it fails for Road
+ Warriors since the gateway cannot know their IP addresses in advance.</P>
+<P>With RSA signatures (or certificates) the protocol is slightly
+ different. The initiator provides an identifier early in the exchange
+ and the responder can use that identifier to look up the correct key or
+ certificate. See<A href="#road.many"> above</A>.</P>
+<H3><A name="QoS">Can I use Quality of Service routing with FreeS/WAN?</A>
+</H3>
+<P>From project technical lead Henry Spencer:</P>
+<PRE>&gt; Do QoS add to FreeS/WAN?
+&gt; For example integrating DiffServ and FreeS/WAN?
+
+With a current version of FreeS/WAN, you will have to add hidetos=no to
+the config-setup section of your configuration file.  By default, the TOS
+field of tunnel packets is zeroed; with hidetos=no, it is copied from the
+packet inside.  (This is a modest security hole, which is why it is no
+longer the default.)
+
+DiffServ does not interact well with tunneling in general.  Ways of
+improving this are being studied.</PRE>
+<P>Copying the<A href="glossary.html#TOS"> TOS</A> (type of service)
+ information from the encapsulated packet to the outer header reveals
+ the TOS information to an eavesdropper. This does not tell him much,
+ but it might be of use in<A href="glossary.html#traffic"> traffic
+ analysis</A>. Since we do not have to give it to him, our default is
+ not to.</P>
+<P>Even with the TOS hidden, you can still:</P>
+<UL>
+<LI>apply QOS rules to the tunneled (ESP) packets; for example, by
+ giving ESP packets a certain priority.</LI>
+<LI>apply QOS rules to the packets as they enter or exit the tunnel via
+ an IPsec virtual interface (eg.<VAR> ipsec0</VAR>).</LI>
+</UL>
+<P>See<A href="manpage.d/ipsec.conf.5.html"> ipsec.conf(5)</A> for more
+ on the<VAR> hidetos=</VAR> parameter.</P>
+<H3><A name="deadtunnel">Can I recognise dead tunnels and shut them
+ down?</A></H3>
+<P>There is no general mechanism to do this is in the IPsec protocols.</P>
+<P>From time to time, there is discussion on the IETF Working Group<A href="mail.html#ietf">
+ mailing list</A> of adding a &quot;keep-alive&quot; mechanism (which some say
+ should be called &quot;make-dead&quot;), but it is a fairly complex problem and
+ no consensus has been reached on whether or how it should be done.</P>
+<P>The protocol does have optional<A href="#ignore"> delete-SA</A>
+ messages which one side can send when it closes a connection in hopes
+ this will cause the other side to do the same. FreeS/WAN does not
+ currently support these. In any case, they would not solve the problem
+ since:</P>
+<UL>
+<LI>a gateway that crashes or hangs would not send the messages</LI>
+<LI>the sender is not required to send them</LI>
+<LI>they are not authenticated, so any receiver that trusts them leaves
+ itself open to a<A href="glossary.html#DOS"> denial of service</A>
+ attack</LI>
+<LI>the receiver is not required to do anything about them</LI>
+<LI>the receiver cannot acknowledge them; the protocol provides no
+ mechanism for that</LI>
+<LI>since they are not acknowledged, the sender cannot rely on them</LI>
+</UL>
+<P>However, connections do have limited lifetimes and you can control
+ how many attempts your gateway makes to rekey before giving up. For
+ example, you can set:</P>
+<PRE>conn default
+        keyingtries=3
+        keylife=30m</PRE>
+<P>With these settings old connections will be cleaned up. Within 30
+ minutes of the other end dying, rekeying will be attempted. If it
+ succeeds, the new connection replaces the old one. If it fails, no new
+ connection is created. Either way, the old connection is taken down
+ when its lifetime expires.</P>
+<P>Here is a mailing list message on the topic from FreeS/WAN tech
+ support person Claudia Schmeing:</P>
+<PRE>You ask how to determine whether a tunnel is redundant:
+
+&gt; Can anybody explain the best way to determine this. Esp when a RW has
+&gt; disconnected? I thought 'ipsec auto --status' might be one way.
+
+If a tunnel goes down from one end, Linux FreeS/WAN on the
+other end has no way of knowing this until it attempts to rekey.
+Once it tries to rekey and fails, it will 'know' that the tunnel is 
+down.
+
+Because it doesn't have a way of knowing the state until this point, 
+it will also not be able to tell you the state via ipsec auto --status.
+
+&gt; However, comparing output from a working tunnel with that of one that
+&gt; was closed 
+&gt; did not show clearly show tunnel status.
+
+If your tunnel is down but not 'unrouted' (see man ipsec_auto), you
+should not be able to ping the opposite side of the tunnel. You can
+use this as an indicator of tunnel status.
+
+On a related note, you may be interested to know that as of 1.7, 
+redundant tunnels caused by RW disconnections are likely to be 
+less of a pain. From doc/CHANGES:
+
+    There is a new configuration parameter, uniqueids, to control a new Pluto
+    option:  when a new connection is negotiated with the same ID as an old
+    one, the old one is deleted immediately.  This should help eliminate
+    dangling Road Warrior connections when the same Road Warrior reconnects. 
+    It thus requires that IDs not be shared by hosts (a previously legal but
+    probably useless capability).  NOTE WELL:  the sample ipsec.conf now has
+    uniqueids=yes in its config-setup section.
+
+
+Cheers,
+
+Claudia</PRE>
+<H3><A name="demanddial">Can I build IPsec tunnels over a demand-dialed
+ link?</A></H3>
+<P>This is possible, but not easy. FreeS/WAN technical lead Henry
+ Spencer wrote:</P>
+<PRE>&gt; 5. If the ISDN link goes down in between and is reestablished, the SAs
+&gt; are still up but the eroute are deleted and the IPsec interface shows
+&gt; garbage (with ifconfig)
+&gt; 6. Only restarting IPsec will bring the VPN back online.
+
+This one is awkward to solve.  If the real interface that the IPsec
+interface is mounted on goes down, it takes most of the IPsec machinery
+down with it, and a restart is the only good way to recover. 
+
+The only really clean fix, right now, is to split the machines in two: 
+
+1. A minimal machine serves as the network router, and only it is aware
+that the link goes up and down. 
+
+2. The IPsec is done on a separate gateway machine, which thinks it has
+a permanent network connection, via the router.
+
+This is clumsy but it does work.  Trying to do both functions within a
+single machine is tricky.  There is a software package (diald) which will
+give the illusion of a permanent connection for demand-dialed modem
+connections; I don't know whether it's usable for ISDN, or whether it can
+be made to cooperate properly with FreeS/WAN. 
+
+Doing a restart each time the interface comes up *does* work, although it
+is a bit painful.  I did that with PPP when I was running on a modem link;
+it wasn't hard to arrange the PPP scripts to bring IPsec up and down at
+the right times.  (I'd meant to investigate diald but never found time.)
+
+In principle you don't need to do a complete restart on reconnect, but you
+do have to rebuild some things, and we have no nice clean way of doing
+only the necessary parts.</PRE>
+<P>In the same thread, one user commented:</P>
+<PRE>Subject: Re: linux-ipsec: IPsec and Dial Up Connections
+   Date: Wed, 22 Nov 2000
+   From: Andy Bradford &lt;andyb@calderasystems.com&gt;
+
+On Wed, 22 Nov 2000 19:47:11 +0100, Philip Reetz wrote:
+
+&gt; Are there any ideas what might be the cause of the problem and any way
+&gt; to work around it.
+&gt; Any help is highly appreciated.
+
+On my laptop, when using ppp there is a ip-up script in /etc/ppp that 
+will be executed each time that the ppp interface is brought up.  
+Likewise there is an ip-down script that is called when it is taken 
+down.  You might consider custimzing those to stop and start FreeS/WAN 
+with each connection.  I believe that ISDN uses the same files, though 
+I could be wrong---there should be something similar though.</PRE>
+<H3><A name="GRE">Can I build GRE, L2TP or PPTP tunnels over IPsec?</A></H3>
+<P>Yes. Normally this is not necessary, but it is useful in a few
+ special cases. For example, if you must route non-IP packets such as
+ IPX, you will need to use a tunneling protocol that can route these
+ packets. IPsec can be layered around it for extra security. Another
+ example: you can provide failover protection for high availability (HA)
+ environments by combining IPsec with other tools. Ken Bantoft describes
+ one such setup in<A HREF="http://www.freeswan.ca/docs/HA"> Using
+ FreeS/WAN with Linux-HA, GRE, OSPF and BGP for enterprise grade VPN
+ solutions</A>.</P>
+<P>GRE over IPsec is covered as part of<A HREF="http://www.freeswan.ca/docs/HA">
+ that document</A>.<A href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2000/07/msg00209.html">
+ Here are links</A> to other GRE resources. Jacco de Leuw has created<A HREF="http://www.jacco2.dds.nl/networking/">
+ this page on L2TP over IPsec</A> with instructions for FreeS/WAN and
+ several other brands of IPsec software.</P>
+<P>Please let us know of other useful links via the<A HREF="mail.html">
+ mailing lists</A>.</P>
+<H3><A name="NetBIOS">... use Network Neighborhood (Samba, NetBIOS) over
+ IPsec?</A></H3>
+<P>Your local PC needs to know how to translate NetBIOS names to IP
+ addresses. It may do this either via a local LMHOSTS file, or using a
+ local or remote WINS server. The WINS server is preferable since it
+ provides a centralized source of the information to the entire network.
+ To use a WINS server over the<A HREF="glossary.html#VPN"> VPN</A> (or
+ any IP-based network), you must enable &quot;NetBIOS over TCP&quot;.</P>
+<P><A HREF="http://www.samba.org">Samba</A> can emulate a WINS server on
+ Linux.</P>
+<P> See also several discussions in our<A HREF="http://lists.freeswan.org/pipermail/users/2002-September/thread.html">
+ September 2002 Users archives</A></P>
+<H2><A name="setup.faq">Life's little mysteries</A></H2>
+<P>FreeS/WAN is a fairly complex product. (Neither the networks it runs
+ on nor the protocols it uses are simple, so it could hardly be
+ otherwise.) It therefore sometimes exhibits behaviour which can be
+ somewhat confusing, or has problems which are not easy to diagnose.
+ This section tries to explain those problems.</P>
+<P>Setup and configuration of FreeS/WAN are covered in other
+ documentation sections:</P>
+<UL>
+<LI><A href="quickstart.html">basic setup and configuration</A></LI>
+<LI><A href="adv_config.html">advanced configuration</A></LI>
+<LI><A href="trouble.html">Troubleshooting</A></LI>
+</UL>
+<P>However, we also list some of the commonest problems here.</P>
+<H3><A name="cantping">I cannot ping ....</A></H3>
+<P>This question is dealt with in the advanced configuration section
+ under the heading<A href="adv_config.html#multitunnel"> multiple
+ tunnels</A>.</P>
+<P>The standard subnet-to-subnet tunnel protects traffic<STRONG> only
+ between the subnets</STRONG>. To test it, you must use pings that go
+ from one subnet to the other.</P>
+<P>For example, suppose you have:</P>
+<PRE>      subnet a.b.c.0/24
+             |
+      eth1 = a.b.c.1
+         gate1
+      eth0 = 192.0.2.8
+             |
+
+       ~ internet ~
+
+             |
+      eth0 = 192.0.2.11
+         gate2
+      eth1 = x.y.z.1
+              |
+       subnet x.y.z.0/24</PRE>
+<P>and the connection description:</P>
+<PRE>conn abc-xyz
+     left=192.0.2.8
+     leftsubnet=a.b.c.0/24
+     right=192.0.2.11
+     rightsubnet=x.y.z.0/24</PRE>
+<P>You can test this connection description only by sending a ping that
+ will actually go through the tunnel. Assuming you have machines at
+ addresses a.b.c.2 and x.y.z.2, pings you might consider trying are:</P>
+<DL>
+<DT>ping from x.y.z.2 to a.b.c.2 or vice versa</DT>
+<DD>Succeeds if tunnel is working. This is the<STRONG> only valid test
+ of the tunnel</STRONG>.</DD>
+<DT>ping from gate2 to a.b.c.2 or vice versa</DT>
+<DD><STRONG>Does not use tunnel</STRONG>. gate2 is not on protected
+ subnet.</DD>
+<DT>ping from gate1 to x.y.z.2 or vice versa</DT>
+<DD><STRONG>Does not use tunnel</STRONG>. gate1 is not on protected
+ subnet.</DD>
+<DT>ping from gate1 to gate2 or vice versa</DT>
+<DD><STRONG>Does not use tunnel</STRONG>. Neither gate is on a protected
+ subnet.</DD>
+</DL>
+<P>Only the first of these is a useful test of this tunnel. The others
+ do not use the tunnel. Depending on other details of your setup and
+ routing, they:</P>
+<UL>
+<LI>either fail, telling you nothing about the tunnel</LI>
+<LI>or succeed, telling you nothing about the tunnel since these packets
+ use some other route</LI>
+</UL>
+<P>In some cases, you may be able to get around this. For the example
+ network above, you could use:</P>
+<PRE>        ping -I a.b.c.1 x.y.z.1</PRE>
+<P>Both the adresses given are within protected subnets, so this should
+ go through the tunnel.</P>
+<P>If required, you can build additional tunnels so that all the
+ machines involved can talk to all the others. See<A href="adv_config.html#multitunnel">
+ multiple tunnels</A> in the advanced configuration document for
+ details.</P>
+<H3><A name="forever">It takes forever to ...</A></H3>
+<P>Users fairly often report various problems involving long delays,
+ sometimes on tunnel setup and sometimes on operations done through the
+ tunnel, occasionally on simple things like ping or more often on more
+ complex operations like doing NFS or Samba through the tunnel.</P>
+<P>Almost always, these turn out to involve failure of a DNS lookup. The
+ timeouts waiting for DNS are typically set long so that you won't time
+ out when a query involves multiple lookups or long paths. Genuine
+ failures therefore produce long delays before they are detected.</P>
+<P>A mailing list message from project technical lead Henry Spencer:</P>
+<PRE>&gt; ... when i run /etc/rc.d/init.d/ipsec start, i get:
+&gt; ipsec_setup: Starting FreeS/WAN IPsec 1.5...
+&gt; and it just sits there, doesn't give back my bash prompt.
+
+Almost certainly, the problem is that you're using DNS names in your
+ipsec.conf, but DNS lookups are not working for some reason.  You will
+get your prompt back... eventually.  But the DNS timeouts are long.
+Doing something about this is on our list, but it is not easy.</PRE>
+<P>In the meanwhile, we recommend that connection descriptions in<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A> use numeric IP addresses rather than names which will
+ require a DNS lookup.</P>
+<P>Names that do not require a lookup are fine. For example:</P>
+<UL>
+<LI>a road warrior might use the identity<VAR>
+ rightid=@lancelot.example.org</VAR></LI>
+<LI>the gateway might use<VAR> leftid=@camelot.example.org</VAR></LI>
+</UL>
+<P>These are fine. The @ sign prevents any DNS lookup. However, do not
+ attempt to give the gateway address as<VAR> left=camelot.example.org</VAR>
+. That requires a lookup.</P>
+<P>A post from one user after solving a problem with long delays:</P>
+<PRE>Subject: Final Answer to Delay!!!
+   Date: Mon, 19 Feb 2001
+   From: &quot;Felippe Solutions&quot; &lt;felippe@solutionstecnologia.com.br&gt;
+
+Sorry people, but seems like the Delay problem had nothing to do with
+freeswan.
+
+The problem was DNS as some people sad from the beginning, but not the way
+they thought it was happening. Samba, ssh, telnet and other apps try to
+reverse lookup addresses when you use IP numbers (Stupid that ahh).
+
+I could ping very fast because I always ping with &quot;-n&quot; option, but I don't
+know the option on the other apps to stop reverse addressing so I don't use
+it.</PRE>
+<P>This post is fairly typical. These problems are often tricky and
+ frustrating to diagnose, and most turn out to be DNS-related.</P>
+<P>One suggestion for diagnosis: test with both names and addresses if
+ possible. For example, try all of:</P>
+<UL>
+<LI>ping<VAR> address</VAR></LI>
+<LI>ping -n<VAR> address</VAR></LI>
+<LI>ping<VAR> name</VAR></LI>
+</UL>
+<P>If these behave differently, the problem must be DNS-related since
+ the three commands do exactly the same thing except for DNS lookups.</P>
+<H3><A name="route">I send packets to the tunnel with route(8) but they
+ vanish</A></H3>
+<P>IPsec connections are designed to carry only packets travelling
+ between pre-defined connection endpoints. As project technical lead
+ Henry Spencer put it:</P>
+<BLOCKQUOTE> IPsec tunnels are not just virtual wires; they are virtual
+ wires with built-in access controls. Negotiation of an IPsec tunnel
+ includes negotiation of access rights for it, which don't include
+ packets to/from other IP addresses. (The protocols themselves are quite
+ inflexible about this, so there are limits to what we can do about it.)</BLOCKQUOTE>
+<P>For fairly obvious security reasons, and to comply with the IPsec
+ RFCs,<A href="glossary.html#KLIPS"> KLIPS</A> drops any packets it
+ receives that are not allowed on the tunnels currently defined. So if
+ you send it packets with<VAR> route(8)</VAR>, and suitable tunnels are
+ not defined, the packets vanish. Whether this is reported in the logs
+ depends on the setting of<VAR> klipsdebug</VAR> in your<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A> file.</P>
+<P>To rescue vanishing packets, you must ensure that suitable tunnels
+ for them exist, by editing the connection descriptions in<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A>. For example, supposing you have a simple setup:</P>
+<PRE>         leftsubnet -- leftgateway === internet === roadwarrior</PRE>
+<P>If you want to give the roadwarrior access to some resource that is
+ located behind the left gateway but is not in the currently defined
+ left subnet, then the usual procedure is to define an additional tunnel
+ for those packets by creating a new connection description.</P>
+<P>In some cases, it may be easier to alter an existing connection
+ description, enlarging the definition of<VAR> leftsubnet</VAR>. For
+ example, instead of two connection descriptions with 192.168.8.0/24 and
+ 192.168.9.0/24 as their<VAR> leftsubnet</VAR> parameters, you can use a
+ single description with 192.168.8.0/23.</P>
+<P>If you have multiple endpoints on each side, you need to ensure that
+ there is a route for each pair of endpoints. See this<A href="adv_config.html#multitunnel">
+ example</A>.</P>
+<H3><A name="down_route">When a tunnel goes down, packets vanish</A></H3>
+<P>This is a special case of the vanishing packet problem described in
+ the previous question. Whenever KLIPS sees packets for which it does
+ not have a tunnel, it drops them.</P>
+<P>When a tunnel goes away, either because negotiations with the other
+ gateway failed or because you gave an<VAR> ipsec auto --down</VAR>
+ command, the route to its other end is left pointing into KLIPS, and
+ KLIPS will drop packets it has no tunnel for.</P>
+<P>This is a documented design decision, not a bug. FreeS/WAN must not
+ automatically adjust things to send packets via another route. The
+ other route might be insecure.</P>
+<P>Of course, re-routing may be necessary in many cases. In those cases,
+ you have to do it manually or via scripts. We provide the<VAR> ipsec
+ auto --unroute</VAR> command for these cases.</P>
+<P>From<A href="manpage.d/ipsec_auto.8.html"> ipsec_auto(8)</A>:</P>
+<BLOCKQUOTE> Normally, pluto establishes a route to the destination
+ specified for a connection as part of the --up operation. However, the
+ route and only the route can be established with the --route operation.
+ Until and unless an actual connection is established, this discards any
+ packets sent there, which may be preferable to having them sent
+ elsewhere based on a more general route (e.g., a default route).</BLOCKQUOTE><BLOCKQUOTE>
+ Normally, pluto's route to a destination remains in place when a --down
+ operation is used to take the connection down (or if connection setup,
+ or later automatic rekeying, fails). This permits establishing a new
+ connection (perhaps using a different specification; the route is
+ altered as necessary) without having a ``window'' in which packets
+ might go elsewhere based on a more general route. Such a route can be
+ removed using the --unroute operation (and is implicitly removed by
+ --delete).</BLOCKQUOTE>
+<P>See also this mailing list<A href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2000/11/msg00523.html">
+ message</A>.</P>
+<H3><A name="firewall_ate">The firewall ate my packets!</A></H3>
+<P>If firewalls filter out:</P>
+<UL>
+<LI>either the UDP port 500 packets used in IKE negotiations</LI>
+<LI>or the ESP and AH (protocols 50 and 51) packets used to implement
+ the IPsec tunnel</LI>
+</UL>
+<P>then IPsec cannot work. The first thing to check if packets seem to
+ be vanishing is the firewall rules on the two gateway machines and any
+ other machines along the path that you have access to.</P>
+<P>For details, see our document on<A href="firewall.html"> firewalls</A>
+.</P>
+<P>Some advice from technical lead Henry Spencer on diagnosing such
+ problems:</P>
+<PRE>&gt; &gt; Packets vanishing between the hardware interface and the ipsecN interface
+&gt; &gt; is usually the result of firewalls not being configured to let them in...
+&gt; 
+&gt; Thanks for the suggestion. If only it were that simple! My ipchains startup
+&gt; script does take care of that, but just in case I manually inserted rules 
+&gt; accepting everything from london on dublin. No difference.
+
+The other thing to check is whether the &quot;RX packets dropped&quot; count on the
+ipsecN interface (run &quot;ifconfig ipsecN&quot;, for N=1 or whatever, to see the
+counts) is rising.  If so, then there's some sort of configuration mismatch
+between the two ends, and IPsec itself is rejecting them.  If none of the
+ipsecN counts is rising, then the packets are never reaching the IPsec
+machinery, and the problem is almost certainly in firewalls etc.</PRE>
+<H3><A name="dropconn">Dropped connections</A></H3>
+<P>Networks being what they are, IPsec connections can be broken for any
+ number of reasons, ranging from hardware failures to various software
+ problems such as the path MTU problems discussed<A href="#pmtu.broken">
+ elsewhere in the FAQ</A>. Fortunately, various diagnostic tools exist
+ that help you sort out many of the possible problems.</P>
+<P>There is one situation, however, where FreeS/WAN (using default
+ settings) may destroy a connection for no readily apparent reason. This
+ occurs when things are<STRONG> misconfigured</STRONG> so that<STRONG>
+ two tunnels</STRONG> from the same gateway expect<STRONG> the same
+ subnet on the far end</STRONG>.</P>
+<P>In this situation, the first tunnel comes up fine and works until the
+ second is established. At that point, because of the way we track
+ connections internally, the first tunnel ceases to exist as far as this
+ gateway is concerned. Of course the far end does not know that, and a
+ storm of error messages appears on both systems as it tries to use the
+ tunnel.</P>
+<P>If the far end gives up, goes back to square one and negotiates a new
+ tunnel, then that wipes out the second tunnel and ...</P>
+<P>The solution is simple.<STRONG> Do not build multiple conn
+ descriptions with the same remote subnet</STRONG>.</P>
+<P>This is actually intended to be a feature, rather than a bug.
+ Consider the situation where a single remote system goes down, then
+ comes back up and reconnects to the gateway. It is useful to have the
+ gateway tear down the old tunnel and recover resources when the
+ reconnection is made. It recognises that situation by checking the
+ remote subnet for each tunnel it builds and discarding duplicates. This
+ works fine as long as you don't configure multiple tunnels with the
+ same remote subnet.</P>
+<P>If this behaviour is inconvenient for you, you can disable it by
+ setting<VAR> uniqueids=no</VAR> in<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A>.</P>
+<H3><A name="defaultroutegone">Disappearing %defaultroute</A></H3>
+<P>When an underlying connection (eg. ppp) goes down, FreeS/WAN will not
+ recover properly without a little help. Here are the symptoms that
+ FreeS/WAN user Michael Carmody noticed:</P>
+<PRE>
+&gt; After about 24 hours the freeswan connection takes over the default route.
+&gt; 
+&gt; i.e instead of deafult gateway pointing to the router via eth0, it becomes a 
+&gt; pointer to the router via ipsec0.
+ 
+&gt; All internet access is then lost as all replies (and not just the link I 
+&gt; wanted) are routed out ipsec0 and the router doesn't respond to the ipsec 
+&gt; traffic.
+</PRE>
+<P>If you're using a FreeS/WAN 2.x/KLIPS system, simply re-attach the
+ IPsec virtual interface with<EM> ipsec tnconfig</EM> command such as:</P>
+<PRE>    ipsec tnconfig --attach --virtual ipsec0 --physical ppp0</PRE>
+<P>In your command, name the physical and virtual interfaces as they
+ appear paired on your system during regular uptime. For a system with
+ several physical/virtual interface pairs on flaky links, you'll need
+ more than one such command. If you're using FreeS/WAN 1.x, you must
+ restart FreeS/WAN, which is more time consuming.</P>
+<P><A href="http://lists.freeswan.org/pipermail/design/2002-July/003070.html">
+ Here</A> is a script which can help to automate the process of
+ FreeS/WAN restart at need. It could easily be adapted to use tnconfig
+ instead.</P>
+<H3><A name="tcpdump.faq">TCPdump on the gateway shows strange things</A>
+</H3>
+ As another user pointed out, keeping the connect
+<P>Attempting to look at IPsec packets by running monitoring tools on
+ the IPsec gateway machine can produce silly results. That machine is
+ mangling the packets for IPsec, and possibly for firewall or NAT
+ purposes as well. If the internals of the machine's IP stack are not
+ what the monitoring tool expects, then the tool can misinterpret them
+ and produce nonsense output.</P>
+<P>See our<A href="testing.html#tcpdump.test"> testing</A> document for
+ more detail.</P>
+<H3><A name="no_trace">Traceroute does not show anything between the
+ gateways</A></H3>
+<P>As far as traceroute can see, the two gateways are one hop apart; the
+ data packet goes directly from one to the other through the tunnel. Of
+ course the outer packets that implement the tunnel pass through
+ whatever lies between the gateways, but those packets are built and
+ dismantled by the gateways. Traceroute does not see them and cannot
+ report anything about their path.</P>
+<P>Here is a mailing list message with more detail.</P>
+<PRE>Date: Mon, 14 May 2001
+To: linux-ipsec@freeswan.org
+From: &quot;John S. Denker&quot; &lt;jsd@research.att.com&lt;
+Subject: Re: traceroute: one virtual hop
+
+At 02:20 PM 5/14/01 -0400, Claudia Schmeing wrote:
+&gt;
+&gt;&gt; &gt; A bonus question: traceroute in subnet to subnet enviroment looks like:
+&gt;&gt; &gt; 
+&gt;&gt; &gt; traceroute to andris.dmz (172.20.24.10), 30 hops max, 38 byte packets
+&gt;&gt; &gt; 1  drama (172.20.1.1)  0.716 ms  0.942 ms  0.434 ms
+&gt;&gt; &gt; 2  * * *
+&gt;&gt; &gt; 3  andris.dmz (172.20.24.10)  73.576 ms  78.858 ms  79.434 ms
+&gt;&gt; &gt; 
+&gt;&gt; &gt; Why aren't there the other hosts which take part in the delivery during 
+&gt;    * * * ?
+&gt;
+&gt;If there is an ipsec tunnel between GateA and Gate B, this tunnel forms a 
+&gt;'virtual wire'.  When it is tunneled, the original packet becomes an inner 
+&gt;packet, and new ESP and/or AH headers are added to create an outer packet 
+&gt;around it. You can see an example of how this is done for AH at 
+&gt;doc/ipsec.html#AH . For ESP it is similar.
+&gt;
+&gt;Think about the packet's path from the inner packet's perspective.
+&gt;It leaves the subnet, goes into the tunnel, and re-emerges in the second
+&gt;subnet. This perspective is also the only one available to the
+&gt;'traceroute' command when the IPSec tunnel is up.
+
+Claudia got this exactly right.  Let me just expand on a couple of points:
+
+*) GateB is exactly one (virtual) hop away from GateA.  This is how it
+would be if there were a physically private wire from A to B.  The
+virtually private connection should work the same, and it does.
+
+*) While the information is in transit from GateA to GateB, the hop count
+of the outer header (the &quot;envelope&quot;) is being decremented.  The hop count
+of the inner header (the &quot;contents&quot; of the envelope) is not decremented and
+should not be decremented.  The hop count of the outer header is not
+derived from and should not be derived from the hop count of the inner header.
+
+Indeed, even if the packets did time out in transit along the tunnel, there
+would be no way for traceroute to find out what happened.  Just as
+information cannot leak _out_ of the tunnel to the outside, information
+cannot leak _into_ the tunnel from outside, and this includes ICMP messages
+from routers along the path.
+
+There are some cases where one might wish for information about what is
+happening at the IP layer (below the tunnel layer) -- but the protocol
+makes no provision for this.  This raises all sorts of conceptual issues.
+AFAIK nobody has ever cared enough to really figure out what _should_
+happen, let alone implement it and standardize it.
+
+*) I consider the &quot;* * *&quot; to be a slight bug.  One might wish for it to be
+replaced by &quot;GateB GateB GateB&quot;.  It has to do with treating host-to-subnet
+traffic different from subnet-to-subnet traffic (and other gory details).
+I fervently hope KLIPS2 will make this problem go away.
+
+*) If you want to ask questions about the link from GateA to GateB at the
+IP level (below the tunnel level), you have to ssh to GateA and launch a
+traceroute from there.</PRE>
+<H2><A name="man4debug">Testing in stages</A></H2>
+<P>It is often useful in debugging to test things one at a time:</P>
+<UL>
+<LI>disable IPsec entirely, for example by turning it off with
+ chkconfig(8), and make sure routing works</LI>
+<LI>Once that works, try a manually keyed connection. This does not
+ require key negotiation between Pluto and the key daemon on the other
+ end.</LI>
+<LI>Once that works, try automatically keyed connections</LI>
+<LI>Once IPsec works, add packet compression</LI>
+<LI>Once everything seems to work, try stress tests with large
+ transfers, many connections, frequent re-keying, ...</LI>
+</UL>
+<P>FreeS/WAN releases are tested for all of these, so you can be
+ reasonably certain they<EM> can</EM> do them all. Of course, that does
+ not mean they<EM> will</EM> on the first try, especially if you have
+ some unusual configuration.</P>
+<P>The rest of this section gives information on diagnosing the problem
+ when each of the above steps fails.</P>
+<H3><A name="nomanual">Manually keyed connections don't work</A></H3>
+<P>Suspect one of:</P>
+<UL>
+<LI>mis-configuration of IPsec system in the /etc/ipsec.conf file
+<BR> common errors are incorrect interface or next hop information</LI>
+<LI>mis-configuration of manual connection in the /etc/ipsec.conf file</LI>
+<LI>routing problems causing IPsec packets to be lost</LI>
+<LI>bugs in KLIPS</LI>
+<LI>mismatch between the transforms we support and those another IPsec
+ implementation offers.</LI>
+</UL>
+<H3><A name="spi_error">One manual connection works, but second one
+ fails</A></H3>
+<P>This is a fairly common problem when attempting to configure multiple
+ manually keyed connections from a single gateway.</P>
+<P>Each connection must be identified by a unique<A href="glossary.html#SPI">
+ SPI</A> value. For automatic connections, these values are assigned
+ automatically. For manual connections, you must set them with<VAR> spi=</VAR>
+ statements in<A href="manpage.d/ipsec.conf.5.html"> ipsec.conf(5)</A>.</P>
+<P>Each manual connection must have a unique SPI value in the range
+ 0x100 to 0x999. Two or more with the same value will fail. For details,
+ see our doc section<A href="adv_config.html#prodman"> Using manual
+ keying in production</A> and the man page<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A>.</P>
+<H3><A name="man_no_auto">Manual connections work, but automatic keying
+ doesn't</A></H3>
+<P>The most common reason for this behaviour is a firewall dropping the
+ UDP port 500 packets used in key negotiation.</P>
+<P>Other possibilities:</P>
+<UL>
+<LI>mis-configuration of auto connection in the /etc/ipsec.conf file.
+<P>One common configuration error is forgetting that you need<VAR>
+ auto=add</VAR> to load the connection description on the receiving end
+ so it recognises the connection when the other end asks for it.</P>
+</LI>
+<LI>error in shared secret in /etc/ipsec.secrets</LI>
+<LI>one gateway lacks a route to the other so Pluto's UDP packets are
+ lost</LI>
+<LI>bugs in Pluto</LI>
+<LI>incompatibilities between Pluto's<A href="glossary.html#IKE"> IKE</A>
+ implementation and the IKE at the other end of the tunnel.
+<P>Some possibile problems are discussed in out<A href="interop.html#interop.problem">
+ interoperation</A> document.</P>
+</LI>
+</UL>
+<H3><A name="nocomp">IPsec works, but connections using compression fail</A>
+</H3>
+<P>When we first added compression, we saw some problems:</P>
+<UL>
+<LI>compatibility issues with other implementations. We followed the
+ RFCs and omitted some extra material that many compression libraries
+ add by default. Some other implementations left the extras in</LI>
+<LI>bugs in assembler compression routines on non-Intel CPUs. The
+ workaround is to use C code instead of possibly problematic assembler.</LI>
+</UL>
+<P>We have not seen either problem in some time (at least six months as
+ I write in March 2002), but if you have some unusual configuration then
+ you may see them.</P>
+<H3><A name="pmtu.broken">Small packets work, but large transfers fail</A>
+</H3>
+<P>If tests with ping(1) and a small packet size succeed, but tests or
+ transfers with larger packet sizes fail, suspect problems with packet
+ fragmentation and perhaps<A href="glossary.html#pathMTU"> path MTU
+ discovery</A>.</P>
+<P>Our<A href="trouble.html#bigpacket"> troubleshooting document</A>
+ covers these problems. Information on the underlying mechanism is in
+ our<A href="background.html#MTU.trouble"> background</A> document.</P>
+<H3><A name="subsub">Subnet-to-subnet works, but tests from the gateways
+ don't</A></H3>
+<P>This is described under<A href="#cantping"> I cannot ping...</A>
+ above.</P>
+<H2><A name="compile.faq">Compilation problems</A></H2>
+<H3><A name="gmp.h_missing">gmp.h: No such file or directory</A></H3>
+<P>Pluto needs the GMP (<STRONG>G</STRONG>NU</P>
+<P><STRONG>M</STRONG>ulti-<STRONG>P</STRONG>recision) library for the
+ large integer calculations it uses in<A href="glossary.html#public">
+ public key</A> cryptography. This error message indicates a failure to
+ find the library. You must install it before Pluto will compile.</P>
+<P>The GMP library is included in most Linux distributions. Typically,
+ there are two RPMs, libgmp and libgmp-devel, You need to<EM> install
+ both</EM>, either from your distribution CDs or from your vendor's web
+ site.</P>
+<P>On Debian, a mailing list message reports that the command to give is<VAR>
+ apt-get install gmp2</VAR>.</P>
+<P>For more information and the latest version, see the<A href="http://www.swox.com/gmp/">
+ GMP home page</A>.</P>
+<H3><A name="noVM">... virtual memory exhausted</A></H3>
+<P>We have had several reports of this message appearing, all on SPARC
+ Linux. Here is a mailing message on a solution:</P>
+<PRE>&gt; ipsec_sha1.c: In function `SHA1Transform':
+&gt; ipsec_sha1.c:95: virtual memory exhausted
+
+I'm seeing exactly the same problem on an Ultra with 256MB ram and 500
+MB swap.  Except I am compiling version 1.5 and its Red Hat 6.2.
+
+I can get around this by using -O instead of -O2 for the optimization
+level.  So it is probably a bug in the optimizer on the sparc complier. 
+I'll try and chase this down on the sparc lists.</PRE>
+<H2><A name="error">Interpreting error messages</A></H2>
+<H3><A name="route-client">route-client (or host) exited with status 7</A>
+</H3>
+<P>Here is a discussion of this error from FreeS/WAN &quot;listress&quot; (mailing
+ list tech support person) Claudia Schmeing. The &quot;FAQ on the network
+ unreachable error&quot; which she refers to is the next question below.</P>
+<PRE>&gt; I reached the point where the two boxes (both on dial-up connections, but
+&gt; treated as static IPs by getting the IP and editing ipsec.conf after the
+&gt; connection is established) to the point where they exchange some info, but I
+&gt; get an error like &quot;route-client command exited with status 7 \n internal
+&gt; error&quot;.
+&gt; Where can I find a description of this error?
+
+In general, if the FAQ doesn't cover it, you can search the mailing list 
+archives - I like to use
+http://www.sandelman.ottawa.on.ca/linux-ipsec/
+but you can see doc/mail.html for different archive formats.
+
+
+Your error comes from the _updown script, which performs some
+routing and firewall functions to help Linux FreeS/WAN. More info
+is available at doc/firewall.html and man ipsec.conf. Its routing
+is integral to the health of Linux FreeS/WAN; it also provides facility
+to insert custom firewall rules to be executed when you create or destroy
+a connection.
+
+Yours is, of course, a routing error. You can be fairly sure the routing 
+machinery is saying &quot;network is unreachable&quot;. There's a FAQ on the 
+&quot;network is unreachable&quot; error, but more information is available now; read on.
+
+If your _updown script is recent (for example if it shipped with 
+Linux FreeS/WAN 1.91), you will see another debugging line in your logs 
+that looks something like this:
+
+&gt; output: /usr/local/lib/ipsec/_updown: `route add -net 128.174.253.83 
+&gt; netmask 255.255.255.255 dev ipsec0 gw 66.92.93.161' failed
+
+This is, of course, the system route command that exited with status 7, 
+(ie. failed). Man route for details. Seeing the command typed out yields 
+more information. If your _updown script is older, you may wish to update 
+it to show the command explicitly.
+
+Three parameters fed to the route command: net, netmask and gw [gateway] 
+are derived from things you've put in ipsec.conf.
+
+Net and netmask are derived from the peer's IP and mask. In more detail:
+
+You may see a routing error when routing to a client (ie. subnet), or 
+to a host (IPSec gateway or freestanding host; a box that does IPSec for
+itself). In _updown, the &quot;route-client&quot; section  is responsible to set up 
+the route for IPSec'd (usually, read 'tunneled') packets headed to a 
+peer subnet. Similarly, route-host routes IPSec'd packets to a peer host
+or IPSec gateway.
+
+When routing to a 'client', net and netmask are ipsec.conf's left- or 
+rightsubnet (whichever is not local). Similarly, when routing to a 
+'host' the net is left or right. Host netmask is always /32, indicating a 
+single machine.
+
+Gw is nexthop's value. Again, the value in question is left- or rightnexthop,
+whichever is local. Where left/right or left-/rightnexthop has the special 
+value %defaultroute (described in man ipsec.conf), gw will automagically get
+the value of the next hop on the default route.
+
+Q: &quot;What's a nexthop and why do I need one?&quot;
+
+A: 'nexthop' is a routing kluge; its value is the next hop away
+   from the machine that's doing IPSec, and toward your IPSec peer. 
+   You need it to get the processed packets out of the local system and 
+   onto the wire. While we often route other packets through the machine 
+   that's now doing IPSec, and are done with it, this does not suffice here. 
+   After packets are processed with IPSec, this machine needs to know where 
+   they go next. Of course using the 'IPSec gateway' as their routing gateway 
+   would cause an infinite loop! [To visualize this, see the packet flow 
+   diagram at doc/firewall.html.] To avoid this, we route packets through 
+   the next hop down their projected path.
+
+Now that you know the background, consider:
+1. Did you test routing between the gateways in the absence of Linux
+   FreeS/WAN, as recommended? You need to ensure the two machines that
+   will be running Linux FreeS/WAN can route to one another before trying to 
+   make a secure connection.
+2. Is there anything obviously wrong with the sense of your route command?
+
+Normally, this problem is caused by an incorrect local nexthop parameter.
+Check out the use of %defaultroute, described in man ipsec.conf. This is
+a simple way to set nexthop for most people. To figure nexthop out by hand,
+traceroute in-the-clear to your IPSec peer. Nexthop is the traceroute's 
+first hop after your IPSec gateway.</PRE>
+<H3><A name="unreachable">SIOCADDRT:Network is unreachable</A></H3>
+<P>This message is not from FreeS/WAN, but from the Linux IP stack
+ itself. That stack is seeing packets it has no route for, either
+ because your routing was broken before FreeS/WAN started or because
+ FreeS/WAN's changes broke it.</P>
+<P>Here is a message from Claudia suggesting ways to diagnose and fix
+ such problems:</P>
+<PRE>You write,
+&gt; I have correctly installed freeswan-1.8 on RH7.0 kernel 2.2.17, but when 
+&gt; I setup a VPN connection with the other machine(RH5.2 Kernel 2.0.36 
+&gt; freeswan-1.0, it works well.) it told me that 
+&gt; &quot;SIOCADDRT:Network is unreachable&quot;!  But the network connection is no 
+&gt; problem.
+
+Often this error is the result of a misconfiguration. 
+
+Be sure that you can route successfully in the absence of Linux
+FreeS/WAN. (You say this is no problem, so proceed to the next step.)
+
+Use a custom copy of the default updownscript. Do not change the route 
+commands, but add a diagnostic message revealing the exact text of the 
+route command. Is there a problem with the sense of the route command
+that you can see? If so, then re-examine those ipsec.conf settings
+that are being sent to the route command. 
+
+You may wish to use the ipsec auto --route and --unroute commands to 
+troubleshoot the problem. See man ipsec_auto for details.</PRE>
+<P>Since the above message was written, we have modified the updown
+ script to provide a better diagnostic for this problem. Check<VAR>
+ /var/log/messages</VAR>.</P>
+<P>See also the FAQ question<A href="#route-client"> route-client (or
+ host) exited with status 7</A>.</P>
+<H3><A name="modprobe">ipsec_setup: modprobe: Can't locate module ipsec</A>
+</H3>
+<H3><A name="noKLIPS">ipsec_setup: Fatal error, kernel appears to lack
+ KLIPS</A></H3>
+<P>These messages indicate an installation failure. The kernel you are
+ running does not contain the<A href="glossary.html#KLIPS"> KLIPS
+ (kernel IPsec)</A> code.</P>
+<P>Note that the &quot;modprobe: Can't locate module ipsec&quot; message appears
+ even if you are not using modules. If there is no KLIPS in your kernel,
+ FreeS/WAN tries to load it as a module. If that fails, you get this
+ message.</P>
+<P>Commands you can quickly try are:</P>
+<DL>
+<DT><VAR>uname -a</VAR></DT>
+<DD>to get details, including compilation date and time, of the
+ currently running kernel</DD>
+<DT><VAR>ls /</VAR></DT>
+<DT><VAR>ls /boot</VAR></DT>
+<DD>to ensure a new kernel is where it should be. If kernel compilation
+ puts it in<VAR> /</VAR> but<VAR> lilo</VAR> wants it in<VAR> /boot</VAR>
+, then you should uncomment the<VAR> INSTALL_PATH=/boot</VAR> line in
+ the kernel<VAR> Makefile</VAR>.</DD>
+<DT><VAR>more /etc/lilo.conf</VAR></DT>
+<DD>to see that<VAR> lilo</VAR> has correct information</DD>
+<DT><VAR>lilo</VAR></DT>
+<DD>to ensure that information in<VAR> /etc/lilo.conf</VAR> has been
+ transferred to the boot sector</DD>
+</DL>
+<P>If those don't find the problem, you have to go back and check
+ through the<A href="install.html"> install</A> procedure to see what
+ was missed.</P>
+<P>Here is one of Claudia's messages on the topic:</P>
+<PRE>&gt; I tried to install freeswan 1.8 on my mandrake 7.2 test box. ...
+
+&gt; It does show version and some output for whack.
+
+Yes, because the Pluto (daemon) part of ipsec is installed correctly, but
+as we see below the kernel portion is not.
+
+&gt; However, I get the following from /var/log/messages:
+&gt; 
+&gt; Mar 11 22:11:55 pavillion ipsec_setup: Starting FreeS/WAN IPsec 1.8...
+&gt; Mar 11 22:12:02 pavillion ipsec_setup: modprobe: Can't locate module ipsec
+&gt; Mar 11 22:12:02 pavillion ipsec_setup: Fatal error, kernel appears to lack
+&gt; KLIPS.
+
+This is your problem. You have not successfully installed a kernel with
+IPSec machinery in it. 
+
+Did you build Linux FreeS/WAN as a module? If so, you need to ensure that 
+your new module has been installed in the directory where your kernel 
+loader normally finds your modules. If not, you need to ensure
+that the new IPSec-enabled kernel is being loaded correctly.
+
+See also doc/install.html, and INSTALL in the distro.</PRE>
+<H3><A name="noDNS">ipsec_setup: ... failure to fetch key for ... from
+ DNS</A></H3>
+<P>Quoting Henry:</P>
+<PRE>Note that by default, FreeS/WAN is now set up to
+     (a) authenticate with RSA keys, and
+     (b) fetch the public key of the far end from DNS.
+Explicit attention to  ipsec.conf will be needed if you want
+to do something different.</PRE>
+<P>and Claudia, responding to the same user:</P>
+<PRE>You write,
+
+&gt;       My current setup in ipsec.conf is leftrsasigkey=%dns I have 
+&gt; commented this and authby=rsasig out. I am able to get ipsec running, 
+&gt; but what I find is that the documentation only specifies for %dns are 
+&gt; there any other values that can be placed in this variable other than 
+&gt; %dns and the key? I am also assuming that this is where I would place 
+&gt; my public key for the left and right side as well is this correct?
+
+Valid values for authby= are rsasig and secret, which entail authentication
+by RSA signature or by shared secret, respectively. Because you have 
+commented authby=rsasig out, you are using the default value of authby=secret. 
+
+When using RSA signatures, there are two ways to get the public key for the
+IPSec peer: either copy it directly into *rsasigkey= in ipsec.conf, or
+fetch it from dns. The magic value %dns for *rsasigkey parameters says to 
+try to fetch the peer's key from dns.
+
+For any parameters, you may find their significance and special values in
+man ipsec.conf. If you are setting up keys or secrets, be sure also to
+reference man ipsec.secrets.</PRE>
+<H3><A name="dup_address">ipsec_setup: ... interfaces ... and ... share
+ address ...</A></H3>
+<P>This is a fatal error. FreeS/WAN cannot cope with two or more
+ interfaces using the same IP address. You must re-configure to avoid
+ this.</P>
+<P>A mailing list message on the topic from Pluto developer Hugh
+ Redelmeier:</P>
+<PRE>| I'm trying to get freeswan working between two machine where one has a ppp
+| interface.
+| I've already suceeded with  two machines with ethernet ports but  the ppp
+| interface is causing me problems.
+|  basically when I run ipsec start  i get
+| ipsec_setup: Starting FreeS/WAN IPsec 1.7...
+| ipsec_setup: 003 IP interfaces ppp1 and ppp0 share address 192.168.0.10!
+| ipsec_setup: 003 IP interfaces ppp1 and ppp2 share address 192.168.0.10!
+| ipsec_setup: 003 IP interfaces ppp0 and ppp2 share address 192.168.0.10!
+| ipsec_setup: 003 no public interfaces found
+|
+| followed by lots of cannot work out interface for connection messages
+|
+| now I can specify the interface in ipsec.conf to be ppp0 , but this does
+| not affect the above behaviour. A quick look in server.c indicates that the
+| interfaces value  is not used but some sort of raw detect happens.
+|
+| I guess I could prevent the formation of the extra ppp interfaces or
+| allocate them different ip but I'd  rather not. if at all possible. Any
+| suggestions please.
+
+Pluto won't touch an interface that shares an IP address with another.
+This will eventually change, but it probably won't happen soon.
+
+For now, you will have to give the ppp1 and ppp2 different addresses.</PRE>
+<H3><A name="kflags">ipsec_setup: Cannot adjust kernel flags</A></H3>
+<P>A mailing list message form technical lead Henry Spencer:</P>
+<PRE>&gt; When FreeS/WAN IPsec 1.7 is starting on my 2.0.38 Linux kernel the following
+&gt; error message is generated:
+&gt; ipsec_setup: Cannot adjust kernel flags, no /proc/sys/net/ipsec directory!
+&gt; What is supposed to create this directory and how can I fix this problem?
+
+I think that directory is a 2.2ism, although I'm not certain (I don't have
+a 2.0.xx system handy any more for testing).  Without it, some of the
+ipsec.conf config-setup flags won't work, but otherwise things should
+function. </PRE>
+<P>You also need to enable the<VAR> /proc</VAR> filesystem in your
+ kernel configuration for these operations to work.</P>
+<H3><A name="message_num">Message numbers (MI3, QR1, et cetera) in Pluto
+ messages</A></H3>
+<P>Pluto messages often indicate where Pluto is in the IKE protocols.
+ The letters indicate<STRONG> M</STRONG>ain mode or<STRONG> Q</STRONG>
+uick mode and<STRONG> I</STRONG>nitiator or<STRONG> R</STRONG>esponder.
+ The numerals are message sequence numbers. For more detail, see our<A href="ipsec.html#sequence">
+ IPsec section</A>.</P>
+<H3><A name="conn_name">Connection names in Pluto error messages</A></H3>
+<P>From Pluto programmer Hugh Redelmeier:</P>
+<PRE>| Jan 17 16:21:10 remus Pluto[13631]: &quot;jumble&quot; #1: responding to Main Mode from Road Warrior 130.205.82.46
+| Jan 17 16:21:11 remus Pluto[13631]: &quot;jumble&quot; #1: no suitable connection for peer @banshee.wittsend.com
+| 
+|     The connection &quot;jumble&quot; has nothing to do with the incoming
+| connection requests, which were meant for the connection &quot;banshee&quot;.
+
+You are right.  The message tells you which Connection Pluto is
+currently using, which need not be the right one.  It need not be the
+right one now for the negotiation to eventually succeed!  This is
+described in ipsec_pluto(8) in the section &quot;Road Warrior Support&quot;.
+
+There are two times when Pluto will consider switching Connections for
+a state object.  Both are in response to receiving ID payloads (one in
+Phase 1 / Main Mode and one in Phase 2 / Quick Mode).  The second is
+not unique to Road Warriors.  In fact, neither is the first any more
+(two connections for the same pair of hosts could differ in Phase 1 ID
+payload; probably nobody else has tried this).</PRE>
+<H3><A name="cantorient">Pluto: ... can't orient connection</A></H3>
+<P>Older versions of FreeS/WAN used this message. The same error now
+ gives the &quot;we have no ipsecN ...&quot; error described just below.</P>
+<H3><A name="no.interface">... we have no ipsecN interface for either
+ end of this connection</A></H3>
+<P>Your tunnel has no IP address which matches the IP address of any of
+ the available IPsec interfaces. Either you've misconfigured the
+ connection, or you need to define an appropriate IPsec interface
+ connection.<VAR> interfaces=%defaultroute</VAR> works in many cases.</P>
+<P>A longer story: Pluto needs to know whether it is running on the
+ machine which the connection description calls<VAR> left</VAR> or on<VAR>
+ right</VAR>. It figures that out by:</P>
+<UL>
+<LI>looking at the interfaces given in<VAR> interfaces=</VAR> lines in
+ the<VAR> config setup</VAR> section</LI>
+<LI>discovering the IP addresses for those interfaces</LI>
+<LI>searching for a match between those addresses and the ones given in<VAR>
+ left=</VAR> or<VAR> right=</VAR> lines.</LI>
+</UL>
+<P>Normally a match is found. Then Pluto knows where it is and can set
+ up other things (for example, if it is<VAR> left</VAR>) using
+ parameters such as<VAR> leftsubnet</VAR> and<VAR> leftnexthop</VAR>,
+ and sending its outgoing packets to<VAR> right</VAR>.</P>
+<P>If no match is found, it emits the above error message.</P>
+<H3><A name="noconn">Pluto: ... no connection is known</A></H3>
+<P>This error message occurs when a remote system attempts to negotiate
+ a connection and Pluto does not have a connection description that
+ matches what the remote system has requested. The most common cause is
+ a configuration error on one end or the other.</P>
+<P>Parameters involved in this match are<VAR> left</VAR>,<VAR> right</VAR>
+,<VAR> leftsubnet</VAR> and<VAR> rightsubnet</VAR>.</P>
+<P><STRONG>The match must be exact</STRONG>. For example, if your left
+ subnet is a.b.c.0/24 then neither a single machine in that net nor a
+ smaller subnet such as a.b.c.64/26 will be considered a match.</P>
+<P>The message can also occur when an appropriate description exists but
+ Pluto has not loaded it. Use an<VAR> auto=add</VAR> statement in the
+ connection description, or an<VAR> ipsec auto --add &lt;conn_name&gt;</VAR>
+ command, to correct this.</P>
+<P>An explanation from the Pluto developer:</P>
+<PRE>| Jul 12 15:00:22 sohar58 Pluto[574]: &quot;corp_road&quot; #2: cannot respond to IPsec
+| SA request because no connection is known for
+| 216.112.83.112/32===216.112.83.112...216.67.25.118
+
+This is the first message from the Pluto log showing a problem.  It
+means that PGPnet is trying to negotiate a set of SAs with this
+topology:
+
+216.112.83.112/32===216.112.83.112...216.67.25.118
+^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^   ^^^^^^^^^^^^^
+client on our side  our host         PGPnet host, no client
+
+None of the conns you showed look like this.
+
+Use
+        ipsec auto --status
+to see a snapshot of what connections are in pluto, what
+negotiations are going on, and what SAs are established.
+
+The leftsubnet= (client) in your conn is 216.112.83.64/26.  It must
+exactly match what pluto is looking for, and it does not.</PRE>
+<H3><A name="nosuit">Pluto: ... no suitable connection ...</A></H3>
+<P>This is similar to the<A href="#noconn"> no connection known</A>
+ error, but occurs at a different point in Pluto processing.</P>
+<P>Here is one of Claudia's messages explaining the problem:</P>
+<PRE>You write,
+
+&gt; What could be the reason of the following error? 
+&gt; &quot;no suitable connection for peer '@xforce'&quot;
+
+When a connection is initiated by the peer, Pluto must choose which entry in 
+the conf file best matches the incoming connection. A preliminary choice is 
+made on the basis of source and destination IPs, since that information is 
+available at that time. 
+
+A payload containing an ID arrives later in the negotiation. Based on this
+id and the *id= parameters, Pluto refines its conn selection. ...
+
+The message &quot;no suitable connection&quot; indicates that in this refining step,
+Pluto does not find a connection that matches that ID.
+
+Please see &quot;Selecting a connection when responding&quot; in man ipsec_pluto for
+more details.</PRE>
+<P>See also<A href="#conn_name"> Connection names in Pluto error
+ messages</A>.</P>
+<H3><A name="noconn.auth">Pluto: ... no connection has been authorized</A>
+</H3>
+<P>Here is one of Claudia's messages discussing this problem:</P>
+<PRE>You write,
+
+&gt;  May 22 10:46:31 debian Pluto[25834]: packet from x.y.z.p:10014: 
+&gt;  initial Main Mode message from x.y.z.p:10014 
+                            but no connection has been authorized
+
+This error occurs early in the connection negotiation process,
+at the first step of IKE negotiation (Main Mode), which is itself the 
+first of two negotiation phases involved in creating an IPSec connection.
+
+Here, Linux FreeS/WAN receives a packet from a potential peer, which 
+requests that they begin discussing a connection.
+
+The &quot;no connection has been authorized&quot; means that there is no connection 
+description in Linux FreeS/WAN's internal database that can be used to 
+link your ipsec interface with that peer.
+
+&quot;But of course I configured that connection!&quot; 
+
+It may be that the appropriate connection description exists in ipsec.conf 
+but has not been added to the database with ipsec auto --add myconn or the 
+auto=add method. Or, the connection description may be misconfigured.
+
+The only parameters that are relevant in this decision are left= and right= .
+Local and remote ports are also taken into account -- we see that the port 
+is printed in the message above -- but there is no way to control these
+in ipsec.conf.
+
+
+Failure at &quot;no connection has been authorized&quot; is similar to the
+&quot;no connection is known for...&quot; error in the FAQ, and the &quot;no suitable
+connection&quot; error described in the snapshot's FAQ. In all three cases,
+Linux FreeS/WAN is trying to match parameters received in the
+negotiation with the connection description in the local config file.
+
+As it receives more information, its matches take more parameters into 
+account, and become more precise:  first the pair of potential peers,
+then the peer IDs, then the endpoints (including any subnets).
+
+The &quot;no suitable connection for peer *&quot; occurs toward the end of IKE 
+(Main Mode) negotiation, when the IDs are matched.
+
+&quot;no connection is known for a/b===c...d&quot; is seen at the beginning of IPSec 
+(Quick Mode, phase 2) negotiation, when the connections are matched using
+left, right, and any information about the subnets.</PRE>
+<H3><A name="noDESsupport">Pluto: ... OAKLEY_DES_CBC is not supported.</A>
+</H3>
+<P>This message occurs when the other system attempts to negotiate a
+ connection using<A href="glossary.html#DES"> single DES</A>, which we
+ do not support because it is<A href="politics.html#desnotsecure">
+ insecure</A>.</P>
+<P>Our interoperation document has suggestions for<A href="interop.html#noDES">
+ how to deal with</A> systems that attempt to use single DES.</P>
+<H3><A name="notransform">Pluto: ... no acceptable transform</A></H3>
+<P>This message means that the other gateway has made a proposal for
+ connection parameters, but nothing they proposed is acceptable to
+ Pluto. Possible causes include:</P>
+<UL>
+<LI>misconfiguration on either end</LI>
+<LI>policy incompatibilities, for example we require encrypted
+ connections but they are trying to create one with just authentication</LI>
+<LI>interoperation problems, for example they offer only single DES and
+ FreeS/WAN does not support that. See<A href="interop.html#interop.problem">
+ discussion</A> in our interoperation document.</LI>
+</UL>
+<P>A more detailed explanation, from Pluto programmer Hugh Redelmeier:</P>
+<PRE>Background:
+
+When one IKE system (for example, Pluto) is negotiating with another
+to create an SA, the Initiator proposes a bunch of choices and the
+Responder replies with one that it has selected.
+
+The structure of the choices is fairly complicated.  An SA payload
+contains a list of lists of &quot;Proposals&quot;.  The outer list is a set of
+choices: the selection must be from one element of this list.
+
+Each of these elements is a list of Proposals.  A selection must be
+made from each of the elements of the inner list.  In other words,
+*all* of them apply (that is how, for example, both AH and ESP can
+apply at once).
+
+Within each of these Proposals is a list of Transforms.  For each
+Proposal selected, one Transform must be selected (in other words,
+each Proposal provides a choice of Transforms).
+
+Each Transform is made up of a list of Attributes describing, well,
+attributes.  Such as lifetime of the SA.  Such as algorithm to be
+used.  All the Attributes apply to a Transform.
+
+You will have noticed a pattern here: layers alternate between being
+disjunctions (&quot;or&quot;) and conjunctions (&quot;and&quot;).
+
+For Phase 1 / Main Mode (negotiating an ISAKMP SA), this structure is
+cut back.  There must be exactly one Proposal.  So this degenerates to
+a list of Transforms, one of which must be chosen.
+
+In your case, no proposal was considered acceptable to Pluto (the
+Responder).  So negotiation ceased.  Pluto logs the reason it rejects
+each Transform.  So look back in the log to see what is going wrong.</PRE>
+<H3><A name="rsasigkey">rsasigkey dumps core</A></H3>
+ A comment on this error from Henry:
+<PRE>On Fri, 29 Jun 2001, Rodrigo Gruppelli wrote:
+&gt; ...Well, it seem that there's
+&gt; another problem with it. When I try to generate a pair of RSA keys,
+&gt; rsasigkey cores dump...
+
+*That* is a neon sign flashing &quot;GMP LIBRARY IS BROKEN&quot;.  Rsasigkey calls
+GMP a lot, and our own library a little bit, and that's very nearly all it
+does.  Barring bugs in its code or our library -- which have happened, but
+not very often -- a problem in rsasigkey is a problem in GMP.</PRE>
+<P>See the next question for how to deal with GMP errors.</P>
+<H3><A name="sig4">!Pluto failure!: ... exited with ... signal 4</A></H3>
+<P>Pluto has died. Signal 4 is SIGILL, illegal instruction.</P>
+<P>The most likely cause is that your<A href="glossary.html#GMP"> GMP</A>
+ (GNU multi-precision) library is compiled for a different processor
+ than what you are running on. Pluto uses that library for its public
+ key calculations.</P>
+<P>Try getting the GMP sources and recompile for your processor type.
+ Most Linux distributions will include this source, or you can download
+ it from the<A href="http://www.swox.com/gmp/"> GMP home page</A>.</P>
+<H3><A name="econnrefused">ECONNREFUSED error message</A></H3>
+<P>From John Denker, on the mailing list:</P>
+<PRE>1)  The log message
+  some IKE message we sent has been rejected with 
+  ECONNREFUSED (kernel supplied no details)
+is much more suitable than the previous version.  Thanks.
+
+2) Minor suggestion for further improvement: it might be worth mentioning
+that the command
+  tcpdump -i eth1 icmp[0] != 8 and icmp[0] != 0
+is useful for tracking down the details in question.  We shouldn't expect
+all IPsec users to figure that out on their own.  The log message might
+even provide a hint as to where to look in the docs.</PRE>
+<P>Reply From Pluto developer Hugh Redelmeier</P>
+<PRE>Good idea.
+
+I've added a bit pluto(8)'s BUGS section along these lines.
+I didn't have the heart to lengthen this message.</PRE>
+<H3><A name="no_eroute">klips_debug: ... no eroute!</A></H3>
+<P>This message means<A href="glossary.html#KLIPS"> KLIPS</A> has
+ received a packet for which no IPsec tunnel has been defined.</P>
+<P>Here is a more detailed duscussion from the team's tech support
+ person Claudia Schmeing, responding to a query on the mailing list:</P>
+<PRE>&gt; Why ipsec reports no eroute! ???? IP Masq... is disabled.
+
+In general, more information is required so that people on the list may
+give you informed input. See doc/prob.report.</PRE>
+<P>The document she refers to has since been replaced by a<A href="trouble.html#prob.report">
+ section</A> of the troubleshooting document.</P>
+<PRE>However, I can make some general comments on this type of error.
+
+This error usually looks something like this (clipped from an archived
+message):
+
+&gt; ttl:64 proto:1 chk:45459 saddr:192.168.1.2 daddr:192.168.100.1
+&gt; ... klips_debug:ipsec_findroute: 192.168.1.2-&gt;192.168.100.1
+&gt; ... klips_debug:rj_match: * See if we match exactly as a host destination
+&gt; ... klips_debug:rj_match: ** try to match a leaf, t=0xc1a260b0
+&gt; ... klips_debug:rj_match: *** start searching up the tree, t=0xc1a260b0
+&gt; ... klips_debug:rj_match: **** t=0xc1a260c8
+&gt; ... klips_debug:rj_match: **** t=0xc1fe5960
+&gt; ... klips_debug:rj_match: ***** not found.
+&gt; ... klips_debug:ipsec_tunnel_start_xmit: Original head/tailroom: 2, 28
+&gt; ... klips_debug:ipsec_tunnel_start_xmit: no eroute!: ts=47.3030, dropping.
+
+
+What does this mean?
+- --------------------
+
+&quot;eroute&quot; stands for &quot;extended route&quot;, and is a special type of route 
+internal to Linux FreeS/WAN. For more information about this type of route, 
+see the section of man ipsec_auto on ipsec auto --route.
+
+&quot;no eroute!&quot; here means, roughly, that Linux FreeS/WAN cannot find an 
+appropriate tunnel that should have delivered this packet. Linux 
+FreeS/WAN therefore drops the packet, with the message &quot;no eroute! ...
+dropping&quot;, on the assumption that this packet is not a legitimate 
+transmission through a properly constructed tunnel.
+
+
+How does this situation come about?
+- -----------------------------------
+
+Linux FreeS/WAN has a number of connection descriptions defined in 
+ipsec.conf. These must be successfully brought &quot;up&quot; to form actual tunnels.
+(see doc/setup.html's step 15, man ipsec.conf and man ipsec_auto 
+for details).
+
+Such connections are often specific to the endpoints' IPs. However, in 
+some cases they may be more general, for example in the case of 
+Road Warriors where left or right is the special value %any.
+
+When Linux FreeS/WAN receives a packet, it verifies that the packet has
+come through a legitimate channel, by checking that there is an
+appropriate tunnel through which this packet might legitimately have
+arrived. This is the process we see above.
+
+First, it checks for an eroute that exactly matches the packet. In the 
+example above, we see it checking for a route that begins at 192.168.1.2
+and ends at 192.168.100.1. This search favours the most specific match that
+would apply to the route between these IPs. So, if there is a connection 
+description exactly matching these IPs, the search will end there. If not, 
+the code will search for a more general description matching the IPs.
+If there is no match, either specific or general, the packet will be
+dropped, as we see, above.
+
+Unless you are working with Road Warriors, only the first, specific part 
+of the matching process is likely to be relevant to you.
+
+
+&quot;But I defined the tunnel, and it came up, why do I have this error?&quot;
+- ---------------------------------------------------------------------
+
+One of the most common causes of this error is failure to specify enough
+connection descriptions to cover all needed tunnels between any two 
+gateways and their respective subnets. As you have noticed, troubleshooting
+this error may be complicated by the use of IP Masq. However, this error is
+not limited to cases where IP Masq is used. 
+
+See doc/configuration.html#multitunnel for a detailed example of the 
+solution to this type of problem.</PRE>
+<P>The documentation section she refers to is now<A href="adv_config.html#multitunnel">
+ here</A>.</P>
+<H3><A name="SAused">... trouble writing to /dev/ipsec ... SA already in
+ use</A></H3>
+<P>This error message occurs when two manual connections are set up with
+ the same SPI value.</P>
+<P>See the FAQ for<A href="#spi_error"> One manual connection works, but
+ second one fails</A>.</P>
+<H3><A name="ignore">... ignoring ... payload</A></H3>
+<P>This message is harmless. The IKE protocol provides for a number of
+ optional messages types:</P>
+<UL>
+<LI>delete SA</LI>
+<LI>initial contact</LI>
+<LI>vendor ID</LI>
+<LI>...</LI>
+</UL>
+<P>An implementation is never required to send these, but they are
+ allowed to. The receiver is not required to do anything with them.
+ FreeS/WAN ignores them, but notifies you via the logs.</P>
+<P>For the &quot;ignoring delete SA Payload&quot; message, see also our discussion
+ of cleaning up<A href="#deadtunnel"> dead tunnels</A>.</P>
+<H3><A name="unknown_rightcert">unknown parameter name &quot;rightcert&quot;</A></H3>
+<P>This message can appear when you've upgraded an X.509-enabled Linux
+ FreeS/WAN with a vanilla Linux FreeS/WAN. To use your X.509 configs you
+ will need to overwrite the new install with<A HREF="http://www.freeswan.ca">
+ Super FreeS/WAN</A>, or add the<A HREF="http://www.strongsec.ca/freeswan">
+ X.509 patch</A> by hand.</P>
+<H2><A name="spam">Why don't you restrict the mailing lists to reduce
+ spam?</A></H2>
+<P>As a matter of policy, some of our<A href="mail.html"> mailing lists</A>
+ need to be open to non-subscribers. Project management feel strongly
+ that maintaining this openness is more important than blocking spam.</P>
+<UL>
+<LI>Users should be able to get help or report bugs without subscribing.</LI>
+<LI>Even a user who is subscribed may not have access to his or her
+ subscribed account when he or she needs help, miles from home base in
+ the middle of setting up a client's gateway.</LI>
+<LI>There is arguably a legal requirement for this policy. A US resident
+ or citizen could be charged under munitions export laws for providing
+ technical assistance to a foreign cryptographic project. Such a charge
+ would be more easily defended if the discussion takes place in public,
+ on an open list.</LI>
+</UL>
+<P>This has been discussed several times at some length on the list. See
+ the<A href="mail.html#archive"> list archives</A>. Bringing the topic
+ up again is unlikely to be useful. Please don't. Or at the very least,
+ please don't without reading the archives and being certain that
+ whatever you are about to suggest has not yet been discussed.</P>
+<P>Project technical lead Henry Spencer summarised one discussion:</P>
+<BLOCKQUOTE> For the third and last time: this list *will* *not* do
+ address-based filtering. This is a policy decision, not an
+ implementation problem. The decision is final, and is not open to
+ discussion. This needs to be communicated better to people, and steps
+ are being taken to do that.</BLOCKQUOTE>
+<P>Adding this FAQ section is one of the steps he refers to.</P>
+<P>You have various options other than just putting up with the spam,
+ filtering it yourself, or unsubscribing:</P>
+<UL>
+<LI>subscribe only to one or both of our lists with restricted posting
+ rules:
+<UL>
+<LI><A href="mailto:briefs@lists.freeswan.org?body=subscribe">briefs</A>
+, weekly list summaries</LI>
+<LI><A href="mailto:announce@lists.freeswan.org?body=subscribe">announce</A>
+, project-related announcements</LI>
+</UL>
+</LI>
+<LI>read the other lists via the<A href="mail.html#archive"> archives</A>
+</LI>
+</UL>
+<P>A number of tools are available to filter mail.</P>
+<UL>
+<LI>Many mail readers include some filtering capability.</LI>
+<LI>Many Linux distributions include<A href="http://www.procmail.org/">
+ procmail(8)</A> for server-side filtering.</LI>
+<LI>The<A href="http://www.spambouncer.org/"> Spam Bouncer</A> is a set
+ of procmail(8) filters designed to combat spam.</LI>
+<LI>Roaring Penguin have a<A href="http://www.roaringpenguin.com/mimedefang/">
+ MIME defanger</A> that removes potentially dangerous attachments.</LI>
+</UL>
+<P>If you use your ISP's mail server rather than running your own,
+ consider suggesting to the ISP that they tag suspected spam as<A href="http://www.msen.com/1997/spam.html#SUSPECTED">
+ this ISP</A> does. They could just refuse mail from dubious sources,
+ but that is tricky and runs some risk of losing valuable mail or
+ senselessly annoying senders and their admins. However, they can safely
+ tag and deliver dubious mail. The tags can greatly assist your
+ filtering.</P>
+<P>For information on tracking down spammers, see these<A href="http://www.rahul.net/falk/#howtos">
+ HowTos</A>, or the<A href="http://www.sputum.com/index2.html"> Sputum</A>
+ site. Sputum have a Linux anti-spam screensaver available for download.</P>
+<P>Here is a more detailed message from Henry:</P>
+<PRE>On Mon, 15 Jan 2001, Jay Vaughan wrote:
+&gt; I know I'm flogging a dead horse here, but I'm curious as to the reasons for
+&gt; an aversion for a subscriber-only mailing list?
+
+Once again:  for legal reasons, it is important that discussions of these
+things be held in a public place -- the list -- and we do not want to
+force people to subscribe to the list just to ask one question, because
+that may be more than merely inconvenient for them.  There are also real
+difficulties with people who are temporarily forced to use alternate
+addresses; that is precisely the time when they may be most in need of
+help, yet a subscribers-only policy shuts them out.
+
+These issues do not apply to most mailing lists, but for a list that is
+(necessarily) the primary user support route for a crypto package, they
+are very important.  This is *not* an ordinary mailing list; it has to
+function under awkward constraints that make various simplistic solutions
+inapplicable or undesirable. 
+
+&gt; We're *ALL* sick of hearing about list management problems, not just you
+&gt; old-timers, so why don't you DO SOMETHING EFFECTIVE ABOUT IT...
+
+Because it's a lot harder than it looks, and many existing &quot;solutions&quot;
+have problems when examined closely.
+
+&gt; A suggestion for you, based on 10 years of experience with management of my
+&gt; own mailing lists would be to use mailman, which includes pretty much every
+&gt; feature under the sun that you guys need and want, plus some.  The URL for
+&gt; mailman...
+
+I assure you, we're aware of mailman.  Along with a whole bunch of others,
+including some you almost certainly have never heard of (I hadn't!).
+
+&gt; As for the argument that the list shouldn't be configured to enforce
+&gt; subscription - I contend that it *SHOULD* AT LEAST require manual address
+&gt; verification in order for posts to be redirected.
+
+You do realize, I hope, that interposing such a manual step might cause
+your government to decide that this is not truly a public forum, and thus
+you could go to jail if you don't get approval from them before mailing to
+it?  If you think this sounds irrational, your government is noted for
+making irrational decisions in this area; we can't assume that they will
+suddenly start being sensible.  See above about awkward constraints.  You
+may be willing to take the risk, but we can't, in good conscience, insist
+that all users with problems do so. 
+
+                                                          Henry Spencer
+                                                       henry@spsystems.net</PRE>
+<P>and a message on the topic from project leader John Gilmore:</P>
+<PRE>Subject: Re: The linux-ipsec list's topic
+   Date: Sat, 30 Dec 2000
+   From: John Gilmore &lt;gnu@toad.com&gt;
+
+I'll post this single message, once only, in this discussion, and then
+not burden the list with any further off-topic messages.  I encourage
+everyone on the list to restrain themself from posting ANY off-topic
+messages to the linux-ipsec list.
+
+The topic of the linux-ipsec mailing list is the FreeS/WAN software.
+
+I frequently see &quot;discussions about spam on a list&quot; overwhelm the
+volume of &quot;actual spam&quot; on a list. BOTH kinds of messages are
+off-topic messages.  Twenty anti-spam messages take just as long to
+detect and discard as twenty spam messages.
+
+The Linux-ipsec list encourages on-topic messages from people who have
+not joined the list itself.  We will not censor messages to the list
+based on where they originate, or what return address they contain.
+In other words, non-subscribers ARE allowed to post, and this will not
+change.  My own valid contributions have been rejected out-of-hand by
+too many other mailing lists for me to want to impose that censorship
+on anybody else's contributions.  And every day I see the damage that
+anti-spam zeal is causing in many other ways; that zeal is far more
+damaging to the culture of the Internet than the nuisance of spam.
+
+In general, it is the responsibility of recipients to filter,
+prioritize, or otherwise manage the handling of email that comes to
+them.  It is not the responsibility of the rest of the Internet
+community to refrain from sending messages to recipients that they
+might not want to see.  If your software infrastructure for managing
+your incoming email is insufficient, then improve it.  If you think
+the signal-to-noise ratio on linux-ipsec is too poor, then please
+unsubscribe.  But don't further increase the noise by posting to the
+linux-ipsec list about those topics.
+
+        John Gilmore
+        founder &amp; sponsor, FreeS/WAN project</PRE>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="policygroups.html">Previous</A>
+<A HREF="manpages.html">Next</A>
+</BODY>
+</HTML>

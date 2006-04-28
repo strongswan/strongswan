@@ -1,0 +1,1231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="umltesting.html">Previous</A>
+<A HREF="ipsec.html">Next</A>
+<HR>
+<H1><A name="politics">History and politics of cryptography</A></H1>
+<P>Cryptography has a long and interesting history, and has been the
+ subject of considerable political controversy.</P>
+<H2><A name="intro.politics">Introduction</A></H2>
+<H3><A NAME="26_1_1">History</A></H3>
+<P>The classic book on the history of cryptography is David Kahn's<A href="biblio.html#Kahn">
+ The Codebreakers</A>. It traces codes and codebreaking from ancient
+ Egypt to the 20th century.</P>
+<P>Diffie and Landau<A href="biblio.html#diffie"> Privacy on the Line:
+ The Politics of Wiretapping and Encryption</A> covers the history from
+ the First World War to the 1990s, with an emphasis on the US.</P>
+<H4>World War II</H4>
+<P>During the Second World War, the British &quot;Ultra&quot; project achieved one
+ of the greatest intelligence triumphs in the history of warfare,
+ breaking many Axis codes. One major target was the Enigma cipher
+ machine, a German device whose users were convinced it was unbreakable.
+ The American &quot;Magic&quot; project had some similar triumphs against Japanese
+ codes.</P>
+<P>There are many books on this period. See our bibliography for
+ several. Two I particularly like are:</P>
+<UL>
+<LI>Andrew Hodges has done a superb<A href="http://www.turing.org.uk/book/">
+ biography</A> of Alan Turing, a key player among the Ultra
+ codebreakers. Turing was also an important computer pioneer. The terms<A
+href="http://www.abelard.org/turpap/turpap.htm"> Turing test</A> and<A href="http://plato.stanford.edu/entries/turing-machine/">
+ Turing machine</A> are named for him, as is the<A href="http://www.acm.org">
+ ACM</A>'s highest technical<A href="http://www.acm.org/awards/taward.html">
+ award</A>.</LI>
+<LI>Neal Stephenson's<A href="biblio.html#neal"> Cryptonomicon</A> is a
+ novel with cryptography central to the plot. Parts of it take place
+ during WW II, other parts today.</LI>
+</UL>
+<P>Bletchley Park, where much of the Ultra work was done, now has a
+ museum and a<A href="http://www.bletchleypark.org.uk/"> web site</A>.</P>
+<P>The Ultra work introduced three major innovations.</P>
+<UL>
+<LI>The first break of Enigma was achieved by Polish Intelligence in
+ 1931. Until then most code-breakers had been linguists, but a different
+ approach was needed to break machine ciphers. Polish Intelligence
+ recruited bright young mathematicians to crack the &quot;unbreakable&quot;
+ Enigma. When war came in 1939, the Poles told their allies about this,
+ putting Britain on the road to Ultra. The British also adopted a
+ mathematical approach.</LI>
+<LI>Machines were extensively used in the attacks. First the Polish
+ &quot;Bombe&quot; for attacking Enigma, then British versions of it, then
+ machines such as Collosus for attacking other codes. By the end of the
+ war, some of these machines were beginning to closely resemble digital
+ computers. After the war, a team at Manchester University, several old
+ Ultra hands included, built one of the world's first actual
+ general-purpose digital computers.</LI>
+<LI>Ultra made codebreaking a large-scale enterprise, producing
+ intelligence on an industrial scale. This was not a &quot;black chamber&quot;,
+ not a hidden room in some obscure government building with a small crew
+ of code-breakers. The whole operation -- from wholesale interception of
+ enemy communications by stations around the world, through large-scale
+ code-breaking and analysis of the decrypted material (with an enormous
+ set of files for cross-referencing), to delivery of intelligence to
+ field commanders -- was huge, and very carefully managed.</LI>
+</UL>
+<P>So by the end of the war, Allied code-breakers were expert at
+ large-scale mechanised code-breaking. The payoffs were enormous.</P>
+<H4><A name="postwar">Postwar and Cold War</A></H4>
+<P>The wartime innovations were enthusiastically adopted by post-war and
+ Cold War signals intelligence agencies. Presumably many nations now
+ have some agency capable of sophisticated attacks on communications
+ security, and quite a few engage in such activity on a large scale.</P>
+<P>America's<A href="glossary.html#NSA"> NSA</A>, for example, is said
+ to be both the world's largest employer of mathematicians and the
+ world's largest purchaser of computer equipment. Such claims may be
+ somewhat exaggerated, but beyond doubt the NSA -- and similar agencies
+ in other countries -- have some excellent mathematicians, lots of
+ powerful computers, sophisticated software, and the organisation and
+ funding to apply them on a large scale. Details of the NSA budget are
+ secret, but there are some published<A href="http://www.fas.org/irp/nsa/nsabudget.html">
+ estimates</A>.</P>
+<P>Changes in the world's communications systems since WW II have
+ provided these agencies with new targets. Cracking the codes used on an
+ enemy's military or diplomatic communications has been common practice
+ for centuries. Extensive use of radio in war made large-scale attacks
+ such as Ultra possible. Modern communications make it possible to go
+ far beyond that. Consider listening in on cell phones, or intercepting
+ electronic mail, or tapping into the huge volumes of data on new media
+ such as fiber optics or satellite links. None of these targets existed
+ in 1950. All of them can be attacked today, and almost certainly are
+ being attacked.</P>
+<P>The Ultra story was not made public until the 1970s. Much of the
+ recent history of codes and code-breaking has not been made public, and
+ some of it may never be. Two important books are:</P>
+<UL>
+<LI>Bamford's<A href="biblio.html#puzzle"> The Puzzle Palace</A>, a
+ history of the NSA</LI>
+<LI>Hager's<A href="http://www.fas.org/irp/eprint/sp/index.html"> Secret
+ Power</A>, about the<A href="http://sg.yahoo.com/government/intelligence/echelon_network/">
+ Echelon</A> system -- the US, UK, Canada, Australia and New Zealand
+ co-operating to monitor much of the world's communications.</LI>
+</UL>
+<P>Note that these books cover only part of what is actually going on,
+ and then only the activities of nations open and democratic enough that
+ (some of) what they are doing can be discovered. A full picture,
+ including:</P>
+<UL>
+<LI>actions of the English-speaking democracies not covered in those
+ books</LI>
+<LI>actions of other more-or-less sane governments</LI>
+<LI>the activities of various more-or-less insane governments</LI>
+<LI>possibilities for unauthorized action by government employees</LI>
+<LI>possible actions by large non-government organisations:
+ corporations, criminals, or conspiracies</LI>
+</UL>
+<P>might be really frightening.</P>
+<H4><A name="recent">Recent history -- the crypto wars</A></H4>
+<P>Until quite recently, cryptography was primarily a concern of
+ governments, especially of the military, of spies, and of diplomats.
+ Much of it was extremely secret.</P>
+<P>In recent years, that has changed a great deal. With computers and
+ networking becoming ubiquitous, cryptography is now important to almost
+ everyone. Among the developments since the 1970s:</P>
+<UL>
+<LI>The US gov't established the Data Encryption Standard,<A href="glossary.html#DES">
+ DES</A>, a<A href="glossary.html#block"> block cipher</A> for
+ cryptographic protection of unclassfied documents.</LI>
+<LI>DES also became widely used in industry, especially regulated
+ industries such as banking.</LI>
+<LI>Other nations produced their own standards, such as<A href="glossary.html#GOST">
+ GOST</A> in the Soviet Union.</LI>
+<LI><A href="glossary.html#public">Public key</A> cryptography was
+ invented by Diffie and Hellman.</LI>
+<LI>Academic conferences such as<A href="http://www-cse.ucsd.edu/users/mihir/crypto2k.html">
+ Crypto</A> and<A href="http://www.esat.kuleuven.ac.be/cosic/eurocrypt2000/">
+ Eurocrypt</A> began.</LI>
+<LI>Several companies began offerring cryptographic products:<A href="glossary.html#RSAco">
+ RSA</A>,<A href="glossary.html#PGPI"> PGP</A>, the many vendors with<A href="glossary.html#PKI">
+ PKI</A> products, ...</LI>
+<LI>Cryptography appeared in other products: operating systems, word
+ processors, ...</LI>
+<LI>Network protocols based on crypto were developed:<A href="glossary.html#SSH">
+ SSH</A>,<A href="glossary.html#SSL"> SSL</A>,<A href="glossary.html#IPsec">
+ IPsec</A>, ...</LI>
+<LI>Crytography came into widespread use to secure bank cards,
+ terminals, ...</LI>
+<LI>The US government replaced<A href="glossary.html#DES"> DES</A> with
+ the much stronger Advanced Encryption Standard,<A href="glossary.html#AES">
+ AES</A></LI>
+</UL>
+<P>This has led to a complex ongoing battle between various mainly
+ government groups wanting to control the spread of crypto and various
+ others, notably the computer industry and the<A href="http://online.offshore.com.ai/security/">
+ cypherpunk</A> crypto advocates, wanting to encourage widespread use.</P>
+<P>Steven Levy has written a fine history of much of this, called<A href="biblio.html#crypto">
+ Crypto: How the Code rebels Beat the Government -- Saving Privacy in
+ the Digital Age</A>.</P>
+<P>The FreeS/WAN project is to a large extent an outgrowth of cypherpunk
+ ideas. Our reasons for doing the project can be seen in these quotes
+ from the<A href="http://www.eff.org/pub/Privacy/Crypto_misc/cypherpunk.manifesto">
+ Cypherpunk Manifesto</A>:</P>
+<BLOCKQUOTE> Privacy is necessary for an open society in the electronic
+ age. ...
+<P>We cannot expect governments, corporations, or other large, faceless
+ organizations to grant us privacy out of their beneficence. It is to
+ their advantage to speak of us, and we should expect that they will
+ speak. ...</P>
+<P>We must defend our own privacy if we expect to have any. ...</P>
+<P>Cypherpunks write code. We know that someone has to write software to
+ defend privacy, and since we can't get privacy unless we all do, we're
+ going to write it. We publish our code so that our fellow Cypherpunks
+ may practice and play with it. Our code is free for all to use,
+ worldwide. We don't much care if you don't approve of the software we
+ write. We know that software can't be destroyed and that a widely
+ dispersed system can't be shut down.</P>
+<P>Cypherpunks deplore regulations on cryptography, for encryption is
+ fundamentally a private act. ...</P>
+<P>For privacy to be widespread it must be part of a social contract.
+ People must come and together deploy these systems for the common good.
+ ...</P>
+</BLOCKQUOTE>
+<P>To quote project leader John Gilmore:</P>
+<BLOCKQUOTE> We are literally in a race between our ability to build and
+ deploy technology, and their ability to build and deploy laws and
+ treaties. Neither side is likely to back down or wise up until it has
+ definitively lost the race.</BLOCKQUOTE>
+<P>If FreeS/WAN reaches its goal of making<A href="intro.html#opp.intro">
+ opportunistic encryption</A> widespread so that secure communication
+ can become the default for a large part of the net, we will have struck
+ a major blow.</P>
+<H3><A name="intro.poli">Politics</A></H3>
+<P>The political problem is that nearly all governments want to monitor
+ their enemies' communications, and some want to monitor their citizens.
+ They may be very interested in protecting some of their own
+ communications, and often some types of business communication, but not
+ in having everyone able to communicate securely. They therefore attempt
+ to restrict availability of strong cryptography as much as possible.</P>
+<P>Things various governments have tried or are trying include:</P>
+<UL>
+<LI>Echelon, a monitor-the-world project of the US, UK, NZ, Australian
+ and Canadian<A href="glossary.html#SIGINT"> signals intelligence</A>
+ agencies. See this<A href="http://sg.yahoo.com/government/intelligence/echelon_network/">
+ collection</A> of links and this<A href="http://www.zdnet.com/zdnn/stories/news/0,4586,2640682,00.html">
+ story</A> on the French Parliament's reaction.</LI>
+<LI>Others governments may well have their own Echelon-like projects. To
+ quote the Dutch Minister of Defense, as reported in a German<A href="http://www.heise.de/tp/english/inhalt/te/4729/1.html">
+ magazine</A>:<BLOCKQUOTE> The government believes not only the
+ governments associated with Echelon are able to intercept communication
+ systems, but that it is an activity of the investigative authorities
+ and intelligence services of many countries with governments of
+ different political signature.</BLOCKQUOTE> Even if they have nothing
+ on the scale of Echelon, most intelligence agencies and police forces
+ certainly have some interception capability.</LI>
+<LI><A href="glossary.html#NSA">NSA</A> tapping of submarine
+ communication cables, described in<A href="http://www.zdnet.com/zdnn/stories/news/0,4586,2764372,00.html">
+ this article</A></LI>
+<LI>A proposal for international co-operation on<A href="http://www.heise.de/tp/english/special/enfo/4306/1.html">
+ Internet surveillance</A>.</LI>
+<LI>Alleged<A href="http://cryptome.org/nsa-sabotage.htm"> sabotage</A>
+ of security products by the<A href="glossary.html#NSA"> NSA</A> (the US
+ signals intelligence agency).</LI>
+<LI>The German armed forces and some government departments will stop
+ using American software for fear of NSA &quot;back doors&quot;, according to this<A
+href="http://www.theregister.co.uk/content/4/17679.html"> news story</A>
+.</LI>
+<LI>The British Regulation of Investigatory Powers bill. See this<A href="http://www.fipr.org/rip/index.html">
+ web page.</A> and perhaps this<A href="http://ars.userfriendly.org/cartoons/?id=20000806&amp;mode=classic">
+ cartoon</A>.</LI>
+<LI>A Russian<A href="http://www.eff.org/pub/Privacy/Foreign_and_local/Russia/russian_crypto_ban_english.edict">
+ ban</A> on cryptography</LI>
+<LI>Chinese<A href="http://www.eff.org/pub/Misc/Publications/Declan_McCullagh/www/global/china">
+ controls</A> on net use.</LI>
+<LI>The FBI's carnivore system for covert searches of email. See this<A href="http://www.zdnet.com/zdnn/stories/news/0,4586,2601502,00.html">
+ news coverage</A> and this<A href="http://www.crypto.com/papers/carnivore-risks.html">
+ risk assessment</A>. The government had an external review of some
+ aspects of this system done. See this<A href="http://www.crypto.com/papers/carnivore_report_comments.html">
+ analysis</A> of that review. Possible defenses against Carnivore
+ include:
+<UL>
+<LI><A href="glossary.html#PGP">PGP</A> for end-to-end mail encryption</LI>
+<LI><A href="http://www.home.aone.net.au/qualcomm/">secure sendmail</A>
+ for server-to-server encryption</LI>
+<LI>IPsec encryption on the underlying IP network</LI>
+</UL>
+</LI>
+<LI>export laws restricting strong cryptography as a munition. See<A href="#exlaw">
+ discussion</A> below.</LI>
+<LI>various attempts to convince people that fundamentally flawed
+ cryptography, such as encryption with a<A href="#escrow"> back door</A>
+ for government access to data or with<A href="#shortkeys"> inadequate
+ key lengths</A>, was adequate for their needs.</LI>
+</UL>
+<P>Of course governments are by no means the only threat to privacy and
+ security on the net. Other threats include:</P>
+<UL>
+<LI>industrial espionage, as for example in this<A href="http://www.zdnet.com/zdnn/stories/news/0,4586,2626931,00.html">
+ news story</A></LI>
+<LI>attacks by organised criminals, as in this<A href="http://www.sans.org/newlook/alerts/NTE-bank.htm">
+ large-scale attack</A></LI>
+<LI>collection of personal data by various companies.
+<UL>
+<LI>for example, consider the various corporate winners of Privacy
+ International's<A href="http://www.privacyinternational.org/bigbrother/">
+ Big Brother Awards</A>.</LI>
+<LI><A href="http://www.zeroknowledge.com">Zero Knowledge</A> sell tools
+ to defend against this</LI>
+</UL>
+</LI>
+<LI>individuals may also be a threat in a variety of ways and for a
+ variety of reasons</LI>
+<LI>in particular, an individual with access to government or industry
+ data collections could do considerable damage using that data in
+ unauthorized ways.</LI>
+</UL>
+<P>One<A href="http://www.zdnet.com/zdnn/stories/news/0,4586,2640674,00.html">
+ study</A> enumerates threats and possible responses for small and
+ medium businesses. VPNs are a key part of the suggested strategy.</P>
+<P>We consider privacy a human right. See the UN's<A href="http://www.un.org/Overview/rights.html">
+ Universal Declaration of Human Rights</A>, article twelve:</P>
+<BLOCKQUOTE> No one shall be subjected to arbitrary interference with
+ his privacy, family, home or correspondence, nor to attacks upon his
+ honor and reputation. Everyone has the right to the protection of the
+ law against such interference or attacks.</BLOCKQUOTE>
+<P>Our objective is to help make privacy possible on the Internet using
+ cryptography strong enough not even those well-funded government
+ agencies are likely to break it. If we can do that, the chances of
+ anyone else breaking it are negliible.</P>
+<H3><A NAME="26_1_3">Links</A></H3>
+<P>Many groups are working in different ways to defend privacy on the
+ net and elsewhere. Please consider contributing to one or more of these
+ groups:</P>
+<UL>
+<LI>the EFF's<A href="http://www.eff.org/crypto/"> Privacy Now!</A>
+ campaign</LI>
+<LI>the<A href="http://www.gilc.org"> Global Internet Liberty Campaign</A>
+</LI>
+<LI><A href="http://www.cpsr.org/program/privacy/privacy.html">Computer
+ Professionals for Social Responsibility</A></LI>
+</UL>
+<P>For more on these issues see:</P>
+<UL>
+<LI>Steven Levy (Newsweek's chief technology writer and author of the
+ classic &quot;Hackers&quot;) new book<A href="biblio.html#crypto"> Crypto: How
+ the Code Rebels Beat the Government--Saving Privacy in the Digital Age</A>
+</LI>
+<LI>Simson Garfinkel (Boston Globe columnist and author of books on<A href="biblio.html#PGP">
+ PGP</A> and<A href="biblio.html#practical"> Unix Security</A>) book<A href="biblio.html#Garfinkel">
+ Database Nation: the death of privacy in the 21st century</A></LI>
+</UL>
+<P>There are several collections of<A href="web.html#quotes"> crypto
+ quotes</A> on the net.</P>
+<P>See also the<A href="biblio.html"> bibliography</A> and our list of<A href="web.html#policy">
+ web references</A> on cryptography law and policy.</P>
+<H3><A NAME="26_1_4">Outline of this section</A></H3>
+<P>The remainder of this section includes two pieces of writing by our
+ project leader</P>
+<UL>
+<LI>his<A href="#gilmore"> rationale</A> for starting this</LI>
+<LI>another<A href="#policestate"> discussion</A> of project goals</LI>
+</UL>
+<P>and discussions of:</P>
+<UL>
+<LI><A href="#desnotsecure">why we do not use DES</A></LI>
+<LI><A href="#exlaw">cryptography export laws</A></LI>
+<LI>why<A href="#escrow"> government access to keys</A> is not a good
+ idea</LI>
+<LI>the myth that<A href="#shortkeys"> short keys</A> are adequate for
+ some security requirements</LI>
+</UL>
+<P>and a section on<A href="#press"> press coverage of FreeS/WAN</A>.</P>
+<H2><A name="leader">From our project leader</A></H2>
+<P>FreeS/WAN project founder John Gilmore wrote a web page about why we
+ are doing this. The version below is slightly edited, to fit this
+ format and to update some links. For a version without these edits, see
+ his<A href="http://www.toad.com/gnu/"> home page</A>.</P>
+<CENTER>
+<H3><A name="gilmore">Swan: Securing the Internet against Wiretapping</A>
+</H3>
+</CENTER>
+<P>My project for 1996 was to<B> secure 5% of the Internet traffic
+ against passive wiretapping</B>. It didn't happen in 1996, so I'm still
+ working on it in 1997, 1998, and 1999! If we get 5% in 1999 or 2000, we
+ can secure 20% the next year, against both active and passive attacks;
+ and 80% the following year. Soon the whole Internet will be private and
+ secure. The project is called S/WAN or S/Wan or Swan for Secure Wide
+ Area Network; since it's free software, we call it FreeSwan to
+ distinguish it from various commercial implementations.<A href="http://www.rsa.com/rsa/SWAN/">
+ RSA</A> came up with the term &quot;S/WAN&quot;. Our main web site is at<A href="http://www.freeswan.org/">
+ http://www.freeswan.org/</A>. Want to help?</P>
+<P>The idea is to deploy PC-based boxes that will sit between your local
+ area network and the Internet (near your firewall or router) which
+ opportunistically encrypt your Internet packets. Whenever you talk to a
+ machine (like a Web site) that doesn't support encryption, your traffic
+ goes out &quot;in the clear&quot; as usual. Whenever you connect to a machine
+ that does support this kind of encryption, this box automatically
+ encrypts all your packets, and decrypts the ones that come in. In
+ effect, each packet gets put into an &quot;envelope&quot; on one side of the net,
+ and removed from the envelope when it reaches its destination. This
+ works for all kinds of Internet traffic, including Web access, Telnet,
+ FTP, email, IRC, Usenet, etc.</P>
+<P>The encryption boxes are standard PC's that use freely available
+ Linux software that you can download over the Internet or install from
+ a cheap CDROM.</P>
+<P>This wasn't just my idea; lots of people have been working on it for
+ years. The encryption protocols for these boxes are called<A href="glossary.html#IPsec">
+ IPSEC (IP Security)</A>. They have been developed by the<A href="http://www.ietf.cnri.reston.va.us/html.charters/ipsec-charter.html">
+ IP Security Working Group</A> of the<A href="http://www.ietf.org/">
+ Internet Engineering Task Force</A>, and will be a standard part of the
+ next major version of the Internet protocols (<A href="http://playground.sun.com/pub/ipng/html/ipng-main.html">
+IPv6</A>). For today's (IP version 4) Internet, they are an option.</P>
+<P>The<A href="http://www.iab.org/iab"> Internet Architecture Board</A>
+ and<A href="http://www.ietf.org/"> Internet Engineering Steering Group</A>
+ have taken a<A href="iab-iesg.stmt"> strong stand</A> that the Internet
+ should use powerful encryption to provide security and privacy. I think
+ these protocols are the best chance to do that, because they can be
+ deployed very easily, without changing your hardware or software or
+ retraining your users. They offer the best security we know how to
+ build, using the Triple-DES, RSA, and Diffie-Hellman algorithms.</P>
+<P>This &quot;opportunistic encryption box&quot; offers the &quot;fax effect&quot;. As each
+ person installs one for their own use, it becomes more valuable for
+ their neighbors to install one too, because there's one more person to
+ use it with. The software automatically notices each newly installed
+ box, and doesn't require a network administrator to reconfigure it.
+ Instead of &quot;virtual private networks&quot; we have a &quot;REAL private network&quot;;
+ we add privacy to the real network instead of layering a
+ manually-maintained virtual network on top of an insecure Internet.</P>
+<H4>Deployment of IPSEC</H4>
+<P>The US government would like to control the deployment of IP Security
+ with its<A href="#exlaw"> crypto export laws</A>. This isn't a problem
+ for my effort, because the cryptographic work is happening outside the
+ United States. A foreign philanthropist, and others, have donated the
+ resources required to add these protocols to the Linux operating
+ system.<A href="http://www.linux.org/"> Linux</A> is a complete, freely
+ available operating system for IBM PC's and several kinds of
+ workstation, which is compatible with Unix. It was written by Linus
+ Torvalds, and is still maintained by a talented team of expert
+ programmers working all over the world and coordinating over the
+ Internet. Linux is distributed under the<A href="glossary.html#GPL">
+ GNU Public License</A>, which gives everyone the right to copy it,
+ improve it, give it to their friends, sell it commercially, or do just
+ about anything else with it, without paying anyone for the privilege.</P>
+<P>Organizations that want to secure their network will be able to put
+ two Ethernet cards into an IBM PC, install Linux on it from a $30 CDROM
+ or by downloading it over the net, and plug it in between their
+ Ethernet and their Internet link or firewall. That's all they'll have
+ to do to encrypt their Internet traffic everywhere outside their own
+ local area network.</P>
+<P>Travelers will be able to run Linux on their laptops, to secure their
+ connection back to their home network (and to everywhere else that they
+ connect to, such as customer sites). Anyone who runs Linux on a
+ standalone PC will also be able to secure their network connections,
+ without changing their application software or how they operate their
+ computer from day to day.</P>
+<P>There will also be numerous commercially available firewalls that use
+ this technology.<A href="http://www.rsa.com/"> RSA Data Security</A> is
+ coordinating the<A href="http://www.rsa.com/rsa/SWAN"> S/Wan (Secure
+ Wide Area Network)</A> project among more than a dozen vendors who use
+ these protocols. There's a<A href="http://www.rsa.com/rsa/SWAN/swan_test.htm">
+ compatability chart</A> that shows which vendors have tested their
+ boxes against which other vendors to guarantee interoperatility.</P>
+<P>Eventually it will also move into the operating systems and
+ networking protocol stacks of major vendors. This will probably take
+ longer, because those vendors will have to figure out what they want to
+ do about the export controls.</P>
+<H4>Current status</H4>
+<P>My initial goal of securing 5% of the net by Christmas '96 was not
+ met. It was an ambitious goal, and inspired me and others to work hard,
+ but was ultimately too ambitious. The protocols were in an early stage
+ of development, and needed a lot more protocol design before they could
+ be implemented. As of April 1999, we have released version 1.0 of the
+ software (<A href="ftp://ftp.xs4all.nl/freeswan/freeswan-1.0.tar.gz">
+freeswan-1.0.tar.gz</A>), which is suitable for setting up Virtual
+ Private Networks using shared secrets for authentication. It does not
+ yet do opportunistic encryption, or use DNSSEC for authentication;
+ those features are coming in a future release.</P>
+<DL>
+<DT>Protocols</DT>
+<DD>The low-level encrypted packet formats are defined. The system for
+ publishing keys and providing secure domain name service is defined.
+ The IP Security working group has settled on an NSA-sponsored protocol
+ for key agreement (called ISAKMP/Oakley), but it is still being worked
+ on, as the protocol and its documentation is too complex and
+ incomplete. There are prototype implementations of ISAKMP. The protocol
+ is not yet defined to enable opportunistic encryption or the use of
+ DNSSEC keys.</DD>
+<DT>Linux Implementation</DT>
+<DD>The Linux implementation has reached its first major release and is
+ ready for production use in manually-configured networks, using Linux
+ kernel version 2.0.36.</DD>
+<DT>Domain Name System Security</DT>
+<DD>There is now a release of BIND 8.2 that includes most DNS Security
+ features.
+<P>The first prototype implementation of Domain Name System Security was
+ funded by<A href="glossary.html#DARPA"> DARPA</A> as part of their<A href="http://www.darpa.mil/ito/research/is/index.html">
+ Information Survivability program</A>.<A href="http://www.tis.com">
+ Trusted Information Systems</A> wrote a modified version of<A href="http://www.isc.org/bind.html">
+ BIND</A>, the widely-used Berkeley implementation of the Domain Name
+ System.</P>
+<P>TIS, ISC, and I merged the prototype into the standard version of
+ BIND. The first production version that supports KEY and SIG records is<B>
+ bind-4.9.5</B>. This or any later version of BIND will do for
+ publishing keys. It is available from the<A href="http://www.isc.org/bind.html">
+ Internet Software Consortium</A>. This version of BIND is not
+ export-controlled since it does not contain any cryptography. Later
+ releases starting with BIND 8.2 include cryptography for authenticating
+ DNS records, which is also exportable. Better documentation is needed.</P>
+</DD>
+</DL>
+<H4>Why?</H4>
+<P>Because I can. I have made enough money from several successful
+ startup companies, that for a while I don't have to work to support
+ myself. I spend my energies and money creating the kind of world that
+ I'd like to live in and that I'd like my (future) kids to live in.
+ Keeping and improving on the civil rights we have in the United States,
+ as we move more of our lives into cyberspace, is a particular goal of
+ mine.</P>
+<H4>What You Can Do</H4>
+<DL>
+<DT>Install the latest BIND at your site.</DT>
+<DD>You won't be able to publish any keys for your domain, until you
+ have upgraded your copy of BIND. The thing you really need from it is
+ the new version of<I> named</I>, the Name Daemon, which knows about the
+ new KEY and SIG record types. So, download it from the<A href="http://www.isc.org/bind.html">
+ Internet Software Consortium</A> and install it on your name server
+ machine (or get your system administrator, or Internet Service
+ Provider, to install it). Both your primary DNS site and all of your
+ secondary DNS sites will need the new release before you will be able
+ to publish your keys. You can tell which sites this is by running the
+ Unix command &quot;dig MYDOMAIN ns&quot; and seeing which sites are mentioned in
+ your NS (name server) records.</DD>
+<DT>Set up a Linux system and run a 2.0.x kernel on it</DT>
+<DD>Get a machine running Linux (say the 5.2 release from<A href="http://www.redhat.com">
+ Red Hat</A>). Give the machine two Ethernet cards.</DD>
+<DT>Install the Linux IPSEC (Freeswan) software</DT>
+<DD>If you're an experienced sysadmin or Linux hacker, install the
+ freeswan-1.0 release, or any later release or snapshot. These releases
+ do NOT provide automated &quot;opportunistic&quot; operation; they must be
+ manually configured for each site you wish to encrypt with.</DD>
+<DT>Get on the linux-ipsec mailing list</DT>
+<DD>The discussion forum for people working on the project, and testing
+ the code and documentation, is: linux-ipsec@clinet.fi. To join this
+ mailing list, send email to<A href="mailto:linux-ipsec-REQUEST@clinet.fi">
+ linux-ipsec-REQUEST@clinet.fi</A> containing a line of text that says
+ &quot;subscribe linux-ipsec&quot;. (You can later get off the mailing list the
+ same way -- just send &quot;unsubscribe linux-ipsec&quot;).</DD>
+<P></P>
+<DT>Check back at this web page every once in a while</DT>
+<DD>I update this page periodically, and there may be new information in
+ it that you haven't seen. My intent is to send email to the mailing
+ list when I update the page in any significant way, so subscribing to
+ the list is an alternative.</DD>
+</DL>
+<P>Would you like to help? I can use people who are willing to write
+ documentation, install early releases for testing, write cryptographic
+ code outside the United States, sell pre-packaged software or systems
+ including this technology, and teach classes for network administrators
+ who want to install this technology. To offer to help, send me email at
+ gnu@toad.com. Tell me what country you live in and what your
+ citizenship is (it matters due to the export control laws; personally I
+ don't care). Include a copy of your resume and the URL of your home
+ page. Describe what you'd like to do for the project, and what you're
+ uniquely qualified for. Mention what other volunteer projects you've
+ been involved in (and how they worked out). Helping out will require
+ that you be able to commit to doing particular things, meet your
+ commitments, and be responsive by email. Volunteer projects just don't
+ work without those things.</P>
+<H4>Related projects</H4>
+<DL>
+<DT>IPSEC for NetBSD</DT>
+<DD>This prototype implementation of the IP Security protocols is for
+ another free operating system.<A href="ftp://ftp.funet.fi/pub/unix/security/net/ip/BSDipsec.tar.gz">
+ Download BSDipsec.tar.gz</A>.</DD>
+<DT>IPSEC for<A href="http://www.openbsd.org"> OpenBSD</A></DT>
+<DD>This prototype implementation of the IP Security protocols is for
+ yet another free operating system. It is directly integrated into the
+ OS release, since the OS is maintained in Canada, which has freedom of
+ speech in software.</DD>
+</DL>
+<H3><A name="policestate">Stopping wholesale monitoring</A></H3>
+<P>From a message project leader John Gilmore posted to the mailing
+ list:</P>
+<PRE>John Denker wrote:
+
+&gt; Indeed there are several ways in which the documentation overstates the 
+&gt; scope of what this project does -- starting with the name 
+&gt; FreeS/WAN.  There's a big difference between having an encrypted IP tunnel 
+&gt; versus having a Secure Wide-Area Network.  This software does a fine job of 
+&gt; the former, which is necessary but not sufficient for the latter.
+
+The goal of the project is to make it very hard to tap your wide area
+communications.  The current system provides very good protection
+against passive attacks (wiretapping and those big antenna farms).
+Active attacks, which involve the intruder sending packets to your
+system (like packets that break into sendmail and give them a root
+shell :-) are much harder to guard against.  Active attacks that
+involve sending people (breaking into your house and replacing parts
+of your computer with ones that transmit what you're doing) are also
+much harder to guard against.  Though we are putting effort into
+protecting against active attacks, it's a much bigger job than merely
+providing strong encryption.  It involves general computer security,
+and general physical security, which are two very expensive problems
+for even a site to solve, let alone to build into a whole society.
+
+The societal benefit of building an infrastructure that protects
+well against passive attacks is that it makes it much harder to do
+undetected bulk monitoring of the population.  It's a defense against
+police-states, not against policemen.
+
+Policemen can put in the effort required to actively attack sites that
+they have strong suspicions about.  But police states won't be able to
+build systems that automatically monitor everyone's communications.
+Either they will be able to monitor only a small subset of the
+populace (by targeting those who screwed up their passive security),
+or their monitoring activities will be detectable by those monitored
+(active attacks leave packet traces or footprints), which can then be
+addressed through the press and through political means if they become
+too widespread.
+
+FreeS/WAN does not protect very well against traffic analysis, which
+is a kind of widespread police-state style monitoring that still
+reveals significant information (who's talking to who) without
+revealing the contents of what was said.  Defenses against traffic
+analysis are an open research problem.  Zero Knowledge Systems is
+actively deploying a system designed to thwart it, designed by Ian
+Goldberg.  The jury is out on whether it actually works; a lot more
+experience with it will be needed.</PRE>
+<P>Notes on things mentioned in that message:</P>
+<UL>
+<LI>Denker is a co-author of a<A href="intro.html#applied"> paper</A> on
+ a large FreeS/WAN application.</LI>
+<LI>Information on Zero Knowledge is on their<A href="http://www.zks.net/">
+ web site</A>. Their Freedom product, designed to provide untracable
+ pseudonyms for use on the net, is no longer marketed.</LI>
+<LI>Another section of our documentation discusses ways to<A href="ipsec.html#traffic.resist">
+ resist traffic analysis</A>.</LI>
+</UL>
+<H2><A name="weak">Government promotion of weak crypto</A></H2>
+<P>Various groups, especially governments and especially the US
+ government, have a long history of advocating various forms of bogus
+ security.</P>
+<P>We regard bogus security as extremely dangerous. If users are
+ deceived into relying on bogus security, then they may be exposed to
+ large risks. They would be better off having no security and knowing
+ it. At least then they would be careful about what they said.</P>
+<P><STRONG>Avoiding bogus security is a key design criterion for
+ everything we do in FreeS/WAN</STRONG>. The most conspicuous example is
+ our refusal to support<A href="#desnotsecure"> single DES</A>. Other
+ IPsec &quot;features&quot; which we do not implement are discussed in our<A href="compat.html#dropped">
+ compatibility</A> document.</P>
+<H3><A name="escrow">Escrowed encryption</A></H3>
+<P>Various governments have made persistent attempts to encourage or
+ mandate &quot;escrowed encrytion&quot;, also called &quot;key recovery&quot;, or GAK for
+ &quot;government access to keys&quot;. The idea is that cryptographic keys be
+ held by some third party and turned over to law enforcement or security
+ agencies under some conditions.</P>
+<PRE>  Mary had a little key - she kept it in escrow,
+  and every thing that Mary said,
+  the feds were sure to know.</PRE>
+<P>A<A href="web.html#quotes"> crypto quotes</A> page attributes this to<A
+href="http://www.scramdisk.clara.net/"> Sam Simpson</A>.</P>
+<P>There is an excellent paper available on<A href="http://www.cdt.org/crypto/risks98/">
+ Risks of Escrowed Encryption</A>, from a group of cryptographic
+ luminaries which included our project leader.</P>
+<P>Like any unnecessary complication, GAK tends to weaken security of
+ any design it infects. For example:</P>
+<UL>
+<LI>Matt Blaze found a fatal flaw in the US government's Clipper chip
+ shortly after design information became public. See his paper &quot;Protocol
+ Failure in the Escrowed Encryption Standard&quot; on his<A href="http://www.crypto.com/papers/">
+ papers</A> page.</LI>
+<LI>a rather<A href="http://www.pgp.com/other/advisories/adk.asp"> nasty
+ bug</A> was found in the &quot;additional decryption keys&quot; &quot;feature&quot; of some
+ releases of<A href="glossary.html#PGP"> PGP</A></LI>
+</UL>
+<P>FreeS/WAN does not support escrowed encryption, and never will.</P>
+<H3><A name="shortkeys">Limited key lengths</A></H3>
+<P>Various governments, and some vendors, have also made persistent
+ attempts to convince people that:</P>
+<UL>
+<LI>weak systems are sufficient for some data</LI>
+<LI>strong cryptography should be reserved for cases where the extra
+ overheads are justified</LI>
+</UL>
+<P><STRONG>This is utter nonsense</STRONG>.</P>
+<P>Weak systems touted include:</P>
+<UL>
+<LI>the ludicrously weak (deliberately crippled) 40-bit ciphers that
+ until recently were all various<A href="#exlaw"> export laws</A>
+ allowed</LI>
+<LI>56-bit single DES, discussed<A href="#desnotsecure"> below</A></LI>
+<LI>64-bit symmetric ciphers and 512-bit RSA, the maximums for
+ unrestricted export under various current laws</LI>
+</UL>
+<P>The notion that choice of ciphers or keysize should be determined by
+ a trade-off between security requirements and overheads is pure
+ bafflegab.</P>
+<UL>
+<LI>For most<A href="glossary.html#symmetric"> symmetric ciphers</A>, it
+ is simply a lie. Any block cipher has some natural maximum keysize
+ inherent in the design -- 128 bits for<A href="glossary.html#IDEA">
+ IDEA</A> or<A href="glossary.html#CAST128"> CAST-128</A>, 256 for
+ Serpent or Twofish, 448 for<A href="glossary.html#Blowfish"> Blowfish</A>
+ and 2048 for<A href="glossary.html#RC4"> RC4</A>. Using a key size
+ smaller than that limit gives<EM> exactly zero</EM> savings in
+ overhead. The crippled 40-bit or 64-bit version of the cipher provides<EM>
+ no advantage whatsoever</EM>.</LI>
+<LI><A href="glossary.html#AES">AES</A> uses 10 rounds with 128-bit
+ keys, 12 rounds for 192-bit and 14 rounds for 256-bit, so there
+ actually is a small difference in overhead, but not enough to matter in
+ most applications.</LI>
+<LI>For<A href="glossary.html#3DES"> triple DES</A> there is a grain of
+ truth in the argument. 3DES is indeed three times slower than single
+ DES. However, the solution is not to use the insecure single DES, but
+ to pick a faster secure cipher.<A href="glossary.html#CAST128">
+ CAST-128</A>,<A href="glossary.html#Blowfish"> Blowfish</A> and the<A href="glossary.html#AES">
+ AES candidate</A> ciphers are are all considerably faster in software
+ than DES (let alone 3DES!), and apparently secure.</LI>
+<LI>For<A href="glossary.html#public"> public key</A> techniques, there
+ are extra overheads for larger keys, but they generally do not affect
+ overall performance significantly. Practical public key applications
+ are usually<A href="glossary.html#hybrid"> hybrid</A> systems in which
+ the bulk of the work is done by a symmetric cipher. The effect of
+ increasing the cost of the public key operations is typically
+ negligible because the public key operations use only a tiny fraction
+ of total resources.
+<P>For example, suppose public key operations use use 1% of the time in
+ a hybrid system and you triple the cost of public key operations. The
+ cost of symmetric cipher operations is unchanged at 99% of the original
+ total cost, so the overall effect is a jump from 99 + 1 = 100 to 99 + 3
+ = 102, a 2% rise in system cost.</P>
+</LI>
+</UL>
+<P>In short,<STRONG> there has never been any technical reason to use
+ inadequate ciphers</STRONG>. The only reason there has ever been for
+ anyone to use such ciphers is that government agencies want weak
+ ciphers used so that they can crack them. The alleged savings are
+ simply propaganda.</P>
+<PRE>   Mary had a little key (It's all she could export),
+   and all the email that she sent was opened at the Fort.</PRE>
+<P>A<A href="web.html#quotes"> crypto quotes</A> page attributes this to<A
+href="http://theory.lcs.mit.edu:80/~rivest/"> Ron Rivest</A>. NSA
+ headquarters is at Fort Meade, Maryland.</P>
+<P>Our policy in FreeS/WAN is to use only cryptographic components with
+ adequate keylength and no known weaknesses.</P>
+<UL>
+<LI>We do not implement single DES because it is clearly<A href="#desnotsecure">
+ insecure</A>, so implemeting it would violate our policy of avoiding
+ bogus security. Our default cipher is<A href="glossary.html#3DES"> 3DES</A>
+</LI>
+<LI>Similarly, we do not implement the 768-bit Group 1 for<A href="glossary.html#DH">
+ Diffie-Hellman</A> key negotiation. We provide only the 1024-bit Group
+ 2 and 1536-bit Group 5.</LI>
+</UL>
+<P>Detailed discussion of which IPsec features we implement or omit is
+ in out<A href="compat.html"> compatibility document</A>.</P>
+<P>These decisions imply that we cannot fully conform to the IPsec RFCs,
+ since those have DES as the only required cipher and Group 1 as the
+ only required DH group. (In our view, the standards were subverted into
+ offerring bogus security.) Fortunately, we can still interoperate with
+ most other IPsec implementations since nearly all implementers provide
+ at least 3DES and Group 2 as well.</P>
+<P>We hope that eventually the RFCs will catch up with our (and others')
+ current practice and reject dubious components. Some of our team and a
+ number of others are working on this in<A href="glossary.html#IETF">
+ IETF</A> working groups.</P>
+<H4>Some real trade-offs</H4>
+<P>Of course, making systems secure does involve costs, and trade-offs
+ can be made between cost and security. However, the real trade-offs
+ have nothing to do with using weaker ciphers.</P>
+<P>There can be substantial hardware and software costs. There are often
+ substantial training costs, both to train administrators and to
+ increase user awareness of security issues and procedures. There are
+ almost always substantial staff or contracting costs.</P>
+<P>Security takes staff time for planning, implementation, testing and
+ auditing. Some of the issues are subtle; you need good (hence often
+ expensive) people for this. You also need people to monitor your
+ systems and respond to problems. The best safe ever built is insecure
+ if an attacker can work on it for days without anyone noticing. Any
+ computer is insecure if the administrator is &quot;too busy&quot; to check the
+ logs.</P>
+<P>Moreover, someone in your organisation (or on contract to it) needs
+ to spend considerable time keeping up with new developments. EvilDoers<EM>
+ will</EM> know about new attacks shortly after they are found. You need
+ to know about them before your systems are attacked. If your vendor
+ provides a patch, you need to apply it. If the vendor does nothing, you
+ need to complain or start looking for another vendor.</P>
+<P>For a fairly awful example, see this<A href="http://www.sans.org/newlook/alerts/NTE-bank.htm">
+ report</A>. In that case over a million credit card numbers were taken
+ from e-commerce sites, using security flaws in Windows NT servers.
+ Microsoft had long since released patches for most or all of the flaws,
+ but the site administrators had not applied them.</P>
+<P>At an absolute minimum, you must do something about such issues<EM>
+ before</EM> an exploitation tool is posted to the net for downloading
+ by dozens of &quot;script kiddies&quot;. Such a tool might appear at any time
+ from the announcement of the security hole to several months later.
+ Once it appears, anyone with a browser and an attitude can break any
+ system whose administrators have done nothing about the flaw.</P>
+<P>Compared to those costs, cipher overheads are an insignificant factor
+ in the cost of security.</P>
+<P>The only thing using a weak cipher can do for you is to cause all
+ your other investment to be wasted.</P>
+<H2><A name="exlaw">Cryptography Export Laws</A></H2>
+<P>Many nations restrict the export of cryptography and some restrict
+ its use by their citizens or others within their borders.</P>
+<H3><A name="USlaw">US Law</A></H3>
+<P>US laws, as currently interpreted by the US government, forbid export
+ of most cryptographic software from the US in machine-readable form
+ without government permission. In general, the restrictions apply even
+ if the software is widely-disseminated or public-domain and even if it
+ came from outside the US originally. Cryptography is legally a munition
+ and export is tightly controlled under the<A href="glossary.html#EAR">
+ EAR</A> Export Administration Regulations.</P>
+<P>If you are a US citizen, your brain is considered US territory no
+ matter where it is physically located at the moment. The US believes
+ that its laws apply to its citizens everywhere, not just within the US.
+ Providing technical assistance or advice to foreign &quot;munitions&quot;
+ projects is illegal. The US government has very little sense of humor
+ about this issue and does not consider good intentions to be sufficient
+ excuse. Beware.</P>
+<P>The<A href="http://www.bxa.doc.gov/Encryption/"> official website</A>
+ for these regulations is run by the Commerce Department's Bureau of
+ Export Administration (BXA).</P>
+<P>The<A href="http://www.eff.org/bernstein/"> Bernstein case</A>
+ challenges the export restrictions on Constitutional grounds. Code is
+ speech so restrictions on export of code violate the First Amendment's
+ free speech provisions. This argument has succeeded in two levels of
+ court so far. It is quite likely to go on to the Supreme Court.</P>
+<P>The regulations were changed substantially in January 2000,
+ apparently as a government attempt to get off the hook in the Bernstein
+ case. It is now legal to export public domain source code for
+ encryption, provided you notify the<A href="glossary.html#BXA"> BXA</A>
+.</P>
+<P>There are, however, still restrictions in force. Moreover, the
+ regulations can still be changed again whenever the government chooses
+ to do so. Short of a Supreme Court ruling (in the Berstein case or
+ another) that overturns the regulations completely, the problem of
+ export regulation is not likely to go away in the forseeable future.</P>
+<H4><A name="UScontrib">US contributions to FreeS/WAN</A></H4>
+<P>The FreeS/WAN project<STRONG> cannot accept software contributions,<EM>
+ not even small bug fixes</EM>, from US citizens or residents</STRONG>.
+ We want it to be absolutely clear that our distribution is not subject
+ to US export law. Any contribution from an American might open that
+ question to a debate we'd prefer to avoid. It might also put the
+ contributor at serious legal risk.</P>
+<P>Of course Americans can still make valuable contributions (many
+ already have) by reporting bugs, or otherwise contributing to
+ discussions, on the project<A href="mail.html"> mailing list</A>. Since
+ the list is public, this is clearly constitutionally protected free
+ speech.</P>
+<P>Note, however, that the export laws restrict Americans from providing
+ technical assistance to foreign &quot;munitions&quot; projects. The government
+ might claim that private discussions or correspondence with FreeS/WAN
+ developers were covered by this. It is not clear what the courts would
+ do with such a claim, so we strongly encourage Americans to use the
+ list rather than risk the complications.</P>
+<H3><A name="wrong">What's wrong with restrictions on cryptography</A></H3>
+<P>Some quotes from prominent cryptography experts:</P>
+<BLOCKQUOTE> The real aim of current policy is to ensure the continued
+ effectiveness of US information warfare assets against individuals,
+ businesses and governments in Europe and elsewhere.
+<BR><A href="http://www.cl.cam.ac.uk/users/rja14"> Ross Anderson,
+ Cambridge University</A></BLOCKQUOTE><BLOCKQUOTE> If the government
+ were honest about its motives, then the debate about crypto export
+ policy would have ended years ago.
+<BR><A href="http://www.counterpane.com"> Bruce Schneier, Counterpane
+ Systems</A></BLOCKQUOTE><BLOCKQUOTE> The NSA regularly lies to people
+ who ask it for advice on export control. They have no reason not to;
+ accomplishing their goal by any legal means is fine by them. Lying by
+ government employees is legal.
+<BR> John Gilmore.</BLOCKQUOTE>
+<P>The Internet Architecture Board (IAB) and the Internet Engineering
+ Steering Group (IESG) made a<A href="iab-iesg.stmt"> strong statement</A>
+ in favour of worldwide access to strong cryptography. Essentially the
+ same statement is in the appropriately numbered<A href="ftp://ftp.isi.edu/in-notes/rfc1984.txt">
+ RFC 1984</A>. Two critical paragraphs are:</P>
+<BLOCKQUOTE> ... various governments have actual or proposed policies on
+ access to cryptographic technology ...
+<P>(a) ... export controls ...
+<BR> (b) ... short cryptographic keys ...
+<BR> (c) ... keys should be in the hands of the government or ...
+<BR> (d) prohibit the use of cryptology ...</P>
+<P>We believe that such policies are against the interests of consumers
+ and the business community, are largely irrelevant to issues of
+ military security, and provide only a marginal or illusory benefit to
+ law enforcement agencies, ...</P>
+<P>The IAB and IESG would like to encourage policies that allow ready
+ access to uniform strong cryptographic technology for all Internet
+ users in all countries.</P>
+</BLOCKQUOTE>
+<P>Our goal in the FreeS/WAN project is to build just such &quot;strong
+ cryptographic technology&quot; and to distribute it &quot;for all Internet users
+ in all countries&quot;.</P>
+<P>More recently, the same two bodies (IESG and IAB) have issued<A href="ftp://ftp.isi.edu/in-notes/rfc2804.txt">
+ RFC 2804</A> on why the IETF should not build wiretapping capabilities
+ into protocols for the convenience of security or law enforcement
+ agenicies. The abstract from that document is:</P>
+<BLOCKQUOTE> The Internet Engineering Task Force (IETF) has been asked
+ to take a position on the inclusion into IETF standards-track documents
+ of functionality designed to facilitate wiretapping.
+<P>This memo explains what the IETF thinks the question means, why its
+ answer is &quot;no&quot;, and what that answer means.</P>
+</BLOCKQUOTE> A quote from the debate leading up to that RFC:<BLOCKQUOTE>
+ We should not be building surveillance technology into standards. Law
+ enforcement was not supposed to be easy. Where it is easy, it's called
+ a police state.
+<BR> Jeff Schiller of MIT, in a discussion of FBI demands for wiretap
+ capability on the net, as quoted by<A href="http://www.wired.com/news/politics/0,1283,31895,00.html">
+ Wired</A>.</BLOCKQUOTE>
+<P>The<A href="http://www.ietf.org/mailman/listinfo/raven"> Raven</A>
+ mailing list was set up for this IETF discussion.</P>
+<P>Our goal is to go beyond that RFC and prevent Internet wiretapping
+ entirely.</P>
+<H3><A name="Wassenaar">The Wassenaar Arrangement</A></H3>
+<P>Restrictions on the export of cryptography are not just US policy,
+ though some consider the US at least partly to blame for the policies
+ of other nations in this area.</P>
+<P>A number of countries:</P>
+<P>Argentina, Australia, Austria, Belgium, Bulgaria, Canada, Czech
+ Republic, Denmark, Finland, France, Germany, Greece, Hungary, Ireland,
+ Italy, Japan, Luxembourg, Netherlands, New Zealand, Norway, Poland,
+ Portugal, Republic of Korea, Romania, Russian Federation, Slovak
+ Republic, Spain, Sweden, Switzerland, Turkey, Ukraine, United Kingdom
+ and United States</P>
+<P>have signed the Wassenaar Arrangement which restricts export of
+ munitions and other tools of war. Cryptographic sofware is covered
+ there.</P>
+<P>Wassenaar details are available from the<A href="http://www.wassenaar.org/">
+ Wassenaar Secretariat</A>, and elsewhere in a more readable<A href="http://www.fitug.de/news/wa/index.html">
+ HTML version</A>.</P>
+<P>For a critique see the<A href="http://www.gilc.org/crypto/wassenaar">
+ GILC site</A>:</P>
+<BLOCKQUOTE> The Global Internet Liberty Campaign (GILC) has begun a
+ campaign calling for the removal of cryptography controls from the
+ Wassenaar Arrangement.
+<P>The aim of the Wassenaar Arrangement is to prevent the build up of
+ military capabilities that threaten regional and international security
+ and stability . . .</P>
+<P>There is no sound basis within the Wassenaar Arrangement for the
+ continuation of any export controls on cryptographic products.</P>
+</BLOCKQUOTE>
+<P>We agree entirely.</P>
+<P>An interesting analysis of Wassenaar can be found on the<A href="http://www.cyber-rights.org/crypto/wassenaar.htm">
+ cyber-rights.org</A> site.</P>
+<H3><A name="status">Export status of Linux FreeS/WAN</A></H3>
+<P>We believe our software is entirely exempt from these controls since
+ the Wassenaar<A href="http://www.wassenaar.org/list/GTN%20and%20GSN%20-%2099.pdf">
+ General Software Note</A> says:</P>
+<BLOCKQUOTE> The Lists do not control &quot;software&quot; which is either:
+<OL>
+<LI>Generally available to the public by . . . retail . . . or</LI>
+<LI>&quot;In the public domain&quot;.</LI>
+</OL>
+</BLOCKQUOTE>
+<P>There is a note restricting some of this, but it is a sub-heading
+ under point 1, so it appears not to apply to public domain software.</P>
+<P>Their glossary defines &quot;In the public domain&quot; as:</P>
+<BLOCKQUOTE> . . . &quot;technology&quot; or &quot;software&quot; which has been made
+ available without restrictions upon its further dissemination.
+<P>N.B. Copyright restrictions do not remove &quot;technology&quot; or &quot;software&quot;
+ from being &quot;in the public domain&quot;.</P>
+</BLOCKQUOTE>
+<P>We therefore believe that software freely distributed under the<A href="glossary.html#GPL">
+ GNU Public License</A>, such as Linux FreeS/WAN, is exempt from
+ Wassenaar restrictions.</P>
+<P>Most of the development work is being done in Canada. Our
+ understanding is that the Canadian government accepts this
+ interpretation.</P>
+<UL>
+<LI>A web statement of<A href="http://www.dfait-maeci.gc.ca/~eicb/notices/ser113-e.htm">
+ Canadian policy</A> is available from the Department of Foreign Affairs
+ and International Trade.</LI>
+<LI>Another document from that department states that<A href="http://www.dfait-maeci.gc.ca/~eicb/export/gr1_e.htm">
+ public domain software</A> is exempt from the export controls.</LI>
+<LI>A researcher's<A href="http://insight.mcmaster.ca/org/efc/pages/doc/crypto-export.html">
+ analysis</A> of Canadian policy is also available.</LI>
+</UL>
+<P>Recent copies of the freely modifiable and distributable source code
+ exist in many countries. Citizens all over the world participate in its
+ use and evolution, and guard its ongoing distribution. Even if Canadian
+ policy were to change, the software would continue to evolve in
+ countries which do not restrict exports, and would continue to be
+ imported from there into unfree countries. &quot;The Net culture treats
+ censorship as damage, and routes around it.&quot;</P>
+<H3><A name="help">Help spread IPsec around</A></H3>
+<P>You can help. If you don't know of a Linux FreeS/WAN archive in your
+ own country, please download it now to your personal machine, and
+ consider making it publicly accessible if that doesn't violate your own
+ laws. If you have the resources, consider going one step further and
+ setting up a mirror site for the whole<A href="intro.html#munitions">
+ munitions</A> Linux crypto software archive.</P>
+<P>If you make Linux CD-ROMs, please consider including this code, in a
+ way that violates no laws (in a free country, or in a domestic-only CD
+ product).</P>
+<P>Please send a note about any new archive mirror sites or CD
+ distributions to linux-ipsec@clinet.fi so we can update the
+ documentation.</P>
+<P>Lists of current<A href="intro.html#sites"> mirror sites</A> and of<A href="intro.html#distwith">
+ distributions</A> which include FreeS/WAN are in our introduction
+ section.</P>
+<H2><A name="desnotsecure">DES is Not Secure</A></H2>
+<P>DES, the<STRONG> D</STRONG>ata<STRONG> E</STRONG>ncryption<STRONG> S</STRONG>
+tandard, can no longer be considered secure. While no major flaws in its
+ innards are known, it is fundamentally inadequate because its<STRONG>
+ 56-bit key is too short</STRONG>. It is vulnerable to<A href="glossary.html#brute">
+ brute-force search</A> of the whole key space, either by large
+ collections of general-purpose machines or even more quickly by
+ specialized hardware. Of course this also applies to<STRONG> any other
+ cipher with only a 56-bit key</STRONG>. The only reason anyone could
+ have for using a 56 or 64-bit key is to comply with various<A href="exportlaw.html">
+ export laws</A> intended to ensure the use of breakable ciphers.</P>
+<P>Non-government cryptologists have been saying DES's 56-bit key was
+ too short for some time -- some of them were saying it in the 70's when
+ DES became a standard -- but the US government has consistently
+ ridiculed such suggestions.</P>
+<P>A group of well-known cryptographers looked at key lengths in a<A href="http://www.counterpane.com/keylength.html">
+ 1996 paper</A>. They suggested a<EM> minimum</EM> of 75 bits to
+ consider an existing cipher secure and a<EM> minimum of 90 bits for new
+ ciphers</EM>. More recent papers, covering both<A href="glossary.html#symmetric">
+ symmetric</A> and<A href="glossary.html#public"> public key</A> systems
+ are at<A href="http://www.cryptosavvy.com/"> cryptosavvy.com</A> and<A href="http://www.rsasecurity.com/rsalabs/bulletins/bulletin13.html">
+ rsa.com</A>. For all algorithms, the minimum keylengths recommended in
+ such papers are significantly longer than the maximums allowed by
+ various export laws.</P>
+<P>In a<A href="http://www.privacy.nb.ca/cryptography/archives/cryptography/html/1998-09/0095.html">
+ 1998 ruling</A>, a German court described DES as &quot;out-of-date and not
+ safe enough&quot; and held a bank liable for using it.</P>
+<H3><A name="deshware">Dedicated hardware breaks DES in a few days</A></H3>
+<P>The question of DES security has now been settled once and for all.
+ In early 1998, the<A href="http://www.eff.org/"> Electronic Frontier
+ Foundation</A> built a<A href="http://www.eff.org/descracker.html">
+ DES-cracking machine</A>. It can find a DES key in an average of a few
+ days' search. The details of all this, including complete code listings
+ and complete plans for the machine, have been published in<A href="biblio.html#EFF">
+<CITE> Cracking DES</CITE></A>, by the Electronic Frontier Foundation.</P>
+<P>That machine cost just over $200,000 to design and build. &quot;Moore's
+ Law&quot; is that machines get faster (or cheaper, for the same speed) by
+ roughly a factor of two every 18 months. At that rate, their $200,000
+ in 1998 becomes $50,000 in 2001.</P>
+<P>However, Moore's Law is not exact and the $50,000 estimate does not
+ allow for the fact that a copy based on the published EFF design would
+ cost far less than the original. We cannot say exactly what such a
+ cracker would cost today, but it would likely be somewhere between
+ $10,000 and $100,000.</P>
+<P>A large corporation could build one of these out of petty cash. The
+ cost is low enough for a senior manager to hide it in a departmental
+ budget and avoid having to announce or justify the project. Any
+ government agency, from a major municipal police force up, could afford
+ one. Or any other group with a respectable budget -- criminal
+ organisations, political groups, labour unions, religious groups, ...
+ Or any millionaire with an obsession or a grudge, or just strange taste
+ in toys.</P>
+<P>One might wonder if a private security or detective agency would have
+ one for rent. They wouldn't need many clients to pay off that
+ investment.</P>
+<H3><A name="spooks">Spooks may break DES faster yet</A></H3>
+<P>As for the security and intelligence agencies of various nations,
+ they may have had DES crackers for years, and theirs may be much
+ faster. It is difficult to make most computer applications work well on
+ parallel machines, or to design specialised hardware to accelerate
+ them. Cipher-cracking is one of the very few exceptions. It is entirely
+ straightforward to speed up cracking by just adding hardware. Within
+ very broad limits, you can make it as fast as you like if you have the
+ budget. The EFF's $200,000 machine breaks DES in a few days. An<A href="http://www.planepage.com/">
+ aviation website</A> gives the cost of a B1 bomber as $200,000,000.
+ Spending that much, an intelligence agency could break DES in an
+ average time of<EM> six and a half minutes</EM>.</P>
+<P>That estimate assumes they use the EFF's 1998 technology and just
+ spend more money. They may have an attack that is superior to brute
+ force, they quite likely have better chip technology (Moore's law, a
+ bigger budget, and whatever secret advances they may have made) and of
+ course they may have spent the price of an aircraft carrier, not just
+ one aircraft.</P>
+<P>In short, we have<EM> no idea</EM> how quickly these organisations
+ can break DES. Unless they're spectacularly incompetent or horribly
+ underfunded, they can certainly break it, but we cannot guess how
+ quickly. Pick any time unit between days and milliseconds; none is
+ entirely unbelievable. More to the point, none of them is of any
+ comfort if you don't want such organisations reading your
+ communications.</P>
+<P>Note that this may be a concern even if nothing you do is a threat to
+ anyone's national security. An intelligence agency might well consider
+ it to be in their national interest for certain companies to do well.
+ If you're competing against such companies in a world market and that
+ agency can read your secrets, you have a serious problem.</P>
+<P>One might wonder about technology the former Soviet Union and its
+ allies developed for cracking DES during the Cold War. They must have
+ tried; the cipher was an American standard and widely used. Certainly
+ those countries have some fine mathematicians, and those agencies had
+ budget. How well did they succeed? Is their technology now for sale or
+ rent?</P>
+<H3><A name="desnet">Networks break DES in a few weeks</A></H3>
+<P>Before the definitive EFF effort, DES had been cracked several times
+ by people using many machines. See this<A href="http://www.distributed.net/pressroom/DESII-1-PR.html">
+ press release</A> for example.</P>
+<P>A major corporation, university, or government department could break
+ DES by using spare cycles on their existing collection of computers, by
+ dedicating a group of otherwise surplus machines to the problem, or by
+ combining the two approaches. It might take them weeks or months,
+ rather than the days required for the EFF machine, but they could do
+ it.</P>
+<P>What about someone working alone, without the resources of a large
+ organisation? For them, cracking DES will not be easy, but it may be
+ possible. A few thousand dollars buys a lot of surplus workstations. A
+ pile of such machines will certainly heat your garage nicely and might
+ break DES in a few months or years. Or enroll at a university and use
+ their machines. Or use an employer's machines. Or crack security
+ somewhere and steal the resources to crack a DES key. Or write a virus
+ that steals small amounts of resources on many machines. Or . . .</P>
+<P>None of these approaches are easy or break DES really quickly, but an
+ attacker only needs to find one that is feasible and breaks DES quickly
+ enough to be dangerous. How much would you care to bet that this will
+ be impossible if the attacker is clever and determined? How valuable is
+ your data? Are you authorised to risk it on a dubious bet?</P>
+<H3><A name="no_des">We disable DES</A></H3>
+<P>In short, it is now absolutely clear that<STRONG> DES is not secure</STRONG>
+ against</P>
+<UL>
+<LI>any<STRONG> well-funded opponent</STRONG></LI>
+<LI>any opponent (even a penniless one) with access (even stolen access)
+ to<STRONG> enough general purpose computers</STRONG></LI>
+</UL>
+<P>That is why<STRONG> Linux FreeS/WAN disables all transforms which use
+ plain DES</STRONG> for encryption.</P>
+<P>DES is in the source code, because we need DES to implement our
+ default encryption transform,<A href="glossary.html#3DES"> Triple DES</A>
+.<STRONG> We urge you not to use single DES</STRONG>. We do not provide
+ any easy way to enable it in FreeS/WAN, and our policy is to provide no
+ assistance to anyone wanting to do so.</P>
+<H3><A name="40joke">40-bits is laughably weak</A></H3>
+<P>The same is true, in spades, of ciphers -- DES or others -- crippled
+ by 40-bit keys, as many ciphers were required to be until recently
+ under various<A href="#exlaw"> export laws</A>. A brute force search of
+ such a cipher's keyspace is 2<SUP>16</SUP> times faster than a similar
+ search against DES. The EFF's machine can do a brute-force search of a
+ 40-bit key space in<EM> seconds</EM>. One contest to crack a 40-bit
+ cipher was won by a student<A href="http://catless.ncl.ac.uk/Risks/18.80.html#subj1">
+ using a few hundred idle machines at his university</A>. It took only
+ three and half hours.</P>
+<P>We do not, and will not, implement any 40-bit cipher.</P>
+<H3><A name="altdes">Triple DES is almost certainly secure</A></H3>
+<P><A href="glossary.html#3DES">Triple DES</A>, usually abbreviated
+ 3DES, applies DES three times, with three different keys. DES seems to
+ be basically an excellent cipher design; it has withstood several
+ decades of intensive analysis without any disastrous flaws being found.
+ It's only major flaw is that the small keyspace allows brute force
+ attacks to succeeed. Triple DES enlarges the key space to 168 bits,
+ making brute-force search a ridiculous impossibility.</P>
+<P>3DES is currently the only block cipher implemented in FreeS/WAN.
+ 3DES is, unfortunately, about 1/3 the speed of DES, but modern CPUs
+ still do it at quite respectable speeds. Some<A href="glossary.html#benchmarks">
+ speed measurements</A> for our code are available.</P>
+<H3><A name="aes.ipsec">AES in IPsec</A></H3>
+<P>The<A href="glossary.html#AES"> AES</A> project has chosen a
+ replacement for DES, a new standard cipher for use in non-classified US
+ government work and in regulated industries such as banking. This
+ cipher will almost certainly become widely used for many applications,
+ including IPsec.</P>
+<P>The winner, announced in October 2000 after several years of analysis
+ and discussion, was the<A href="http://www.esat.kuleuven.ac.be/~rijmen/rijndael/">
+ Rijndael</A> cipher from two Belgian designers.</P>
+<P>It is almost certain that FreeS/WAN will add AES support.<A href="web.html#patch">
+ AES patches</A> are already available.</P>
+<H2><A name="press">Press coverage of Linux FreeS/WAN:</A></H2>
+<H3><A NAME="26_6_1">FreeS/WAN 1.0 press</A></H3>
+<UL>
+<LI><A href="http://www.wired.com/news/news/technology/story/19136.html">
+Wired</A> &quot;Linux-Based Crypto Stops Snoops&quot;, James Glave April 15 1999</LI>
+<LI><A href="http://slashdot.org/articles/99/04/15/1851212.shtml">
+Slashdot</A></LI>
+<LI><A href="http://dgl.com/itinfo/1999/it990415.html">DGL</A>, Damar
+ Group Limited; looking at FreeS/WAN from a perspective of business
+ computing</LI>
+<LI><A href="http://linuxtoday.com/stories/5010.html">Linux Today</A></LI>
+<LI><A href="http://www.tbtf.com/archive/1999-04-21.html#Tcep">TBTF</A>,
+ Tasty Bits from the Technology Front</LI>
+<LI><A href="http://www.salonmagazine.com/tech/log/1999/04/16/encryption/index.html">
+Salon Magazine</A> &quot;Free Encryption Takes a Big Step&quot;</LI>
+</UL>
+<H3><A name="release">Press release for version 1.0</A></H3>
+<PRE>        Strong Internet Privacy Software Free for Linux Users Worldwide
+
+Toronto, ON, April 14, 1999 - 
+
+The Linux FreeS/WAN project today released free software to protect
+the privacy of Internet communications using strong encryption codes.
+FreeS/WAN automatically encrypts data as it crosses the Internet, to
+prevent unauthorized people from receiving or modifying it.  One
+ordinary PC per site runs this free software under Linux to become a
+secure gateway in a Virtual Private Network, without having to modify
+users' operating systems or application software.  The project built
+and released the software outside the United States, avoiding US
+government regulations which prohibit good privacy protection.
+FreeS/WAN version 1.0 is available immediately for downloading at
+http://www.xs4all.nl/~freeswan/.
+
+&quot;Today's FreeS/WAN release allows network administrators to build
+excellent secure gateways out of old PCs at no cost, or using a cheap
+new PC,&quot; said John Gilmore, the entrepreneur who instigated the
+project in 1996.  &quot;They can build operational experience with strong
+network encryption and protect their users' most important
+communications worldwide.&quot;
+
+&quot;The software was written outside the United States, and we do not
+accept contributions from US citizens or residents, so that it can be
+freely published for use in every country,&quot; said Henry Spencer, who
+built the release in Toronto, Canada.  &quot;Similar products based in the
+US require hard-to-get government export licenses before they can be
+provided to non-US users, and can never be simply published on a Web
+site.  Our product is freely available worldwide for immediate
+downloading, at no cost.&quot;
+
+FreeS/WAN provides privacy against both quiet eavesdropping (such as
+&quot;packet sniffing&quot;) and active attempts to compromise communications
+(such as impersonating participating computers).  Secure &quot;tunnels&quot; carry
+information safely across the Internet between locations such as a
+company's main office, distant sales offices, and roaming laptops.  This
+protects the privacy and integrity of all information sent among those
+locations, including sensitive intra-company email, financial transactions
+such as mergers and acquisitions, business negotiations, personal medical
+records, privileged correspondence with lawyers, and information about
+crimes or civil rights violations.  The software will be particularly
+useful to frequent wiretapping targets such as private companies competing
+with government-owned companies, civil rights groups and lawyers,
+opposition political parties, and dissidents. 
+
+FreeS/WAN provides privacy for Internet packets using the proposed
+standard Internet Protocol Security (IPSEC) protocols.  FreeS/WAN
+negotiates strong keys using Diffie-Hellman key agreement with 1024-bit
+keys, and encrypts each packet with 168-bit Triple-DES (3DES).  A modern
+$500 PC can set up a tunnel in less than a second, and can encrypt
+6 megabits of packets per second, easily handling the whole available
+bandwidth at the vast majority of Internet sites.  In preliminary testing,
+FreeS/WAN interoperated with 3DES IPSEC products from OpenBSD, PGP, SSH,
+Cisco, Raptor, and Xedia.  Since FreeS/WAN is distributed as source code,
+its innards are open to review by outside experts and sophisticated users,
+reducing the chance of undetected bugs or hidden security compromises.
+
+The software has been in development for several years.  It has been
+funded by several philanthropists interested in increased privacy on
+the Internet, including John Gilmore, co-founder of the Electronic
+Frontier Foundation, a leading online civil rights group.
+
+Press contacts:
+Hugh Daniel,   +1 408 353 8124, hugh@toad.com
+Henry Spencer, +1 416 690 6561, henry@spsystems.net
+
+* FreeS/WAN derives its name from S/WAN, which is a trademark of RSA Data
+  Security, Inc; used by permission.</PRE>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="umltesting.html">Previous</A>
+<A HREF="ipsec.html">Next</A>
+</BODY>
+</HTML>

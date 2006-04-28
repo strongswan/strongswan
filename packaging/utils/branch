@@ -1,0 +1,70 @@
+#! /bin/sh
+# branch release
+
+PATH=/bin:/usr/bin ; export PATH
+umask 022
+
+. $HOME/freeswan-regress-env.sh
+
+case "$1" in
+*.*)	;;
+*)	echo "Usage: $0 release [file...]" >&2 ; exit 2	;;
+esac
+
+rel="$1"
+shift
+tr="`echo $rel | tr '.' '_'`"
+pre=PRE$tr
+base=BASE$pre
+
+echo "generating key for branch"
+SNAPPGP=$SNAPSHOTSIGDIR/$base 
+# Note: PGPPATH is limited to 50 characters.
+PGPPATH=$SNAPPGP export PGPPATH
+mkdir -p $PGPPATH
+touch $PGPPATH/pgpdoc1.txt
+touch $PGPPATH/pgpdoc2.txt
+
+if [ ! -f $PGPPATH/secring.pgp ]
+then
+	echo "Please set userid to '<build+snap$tr@freeswan.org>'$PGPPATH"
+	pgp -kg
+
+	echo -n "Please insert release key floppy for signature"
+	read ans
+	mount /mnt/build
+	PGPPATH=/mnt/build/freeswan export PGPPATH
+
+	echo "Now signing key - please answer yes."
+	pgp $SNAPPGP/pubring.pgp
+
+	echo Please put key in $SNAPPGP/signedkey.asc
+	pgp -kxa build+snap$tr@freeswan.org
+ 
+	umount /mnt/build
+
+fi
+
+if [ ! -f snapshotsigs.pgp ]
+then
+	PGPPATH=$SNAPPGP export PGPPATH
+	echo "Now importing key"
+	pgp $SNAPPGP/signedkey.asc
+
+	cp $SNAPPGP/signedkey.asc snapshotsigs.pgp
+	cvs add snapshotsigs.pgp
+	cvs commit -m"Signing key for $rel" snapshotsigs.pgp
+fi
+
+echo -n "PGP finished, now budding, press enter"
+read ans
+
+echo "budding..."
+rm -f Makefile.ver
+cvs tag $opt -c $base $*
+echo
+echo "branching..."
+cvs tag $opt -b -r $base $pre $*
+
+
+

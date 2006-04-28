@@ -1,0 +1,23 @@
+MOD_BLOWFISH := ipsec_blowfish.o
+
+ALG_MODULES += $(MOD_BLOWFISH)
+ALG_SUBDIRS += libblowfish
+
+obj-$(CONFIG_IPSEC_ALG_BLOWFISH) += $(MOD_BLOWFISH)
+static_init-func-$(CONFIG_IPSEC_ALG_BLOWFISH)+= ipsec_blowfish_init
+alg_obj-$(CONFIG_IPSEC_ALG_BLOWFISH) += ipsec_alg_blowfish.o
+
+BLOWFISH_OBJS:= ipsec_alg_blowfish.o libblowfish/libblowfish.a
+
+$(MOD_BLOWFISH): libblowfish $(BLOWFISH_OBJS)
+	$(LD) -r $(BLOWFISH_OBJS) -o $@
+
+libblowfish : $(LIBCRYPTO)/libblowfish 
+	test -d $@ || mkdir $@ ;exit 0
+	test -d $@/asm || mkdir $@/asm;exit 0
+	cd $@ && ln -sf $?/Makefile $?/*.[chS] .
+	cd $@/asm && ln -sf $?/asm/*.pl .
+
+libblowfish/libblowfish.a:
+	( cd libblowfish && \
+		$(MAKE) CC='$(CC)' 'ARCH_ASM=$(ARCH_ASM)' CFLAGS='$(CFLAGS) $(EXTRA_CFLAGS)' EXTRA_CFLAGS='$(EXTRA_CFLAGS)' libblowfish.a ;)

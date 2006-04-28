@@ -1,0 +1,168 @@
+.TH IPSEC_SHOWHOSTKEY 8 "5 March 2002"
+.\" RCSID $Id: showhostkey.8,v 1.1 2004/03/15 20:35:31 as Exp $
+.SH NAME
+ipsec showhostkey \- show host's authentication key
+.SH SYNOPSIS
+.B ipsec
+.B showhostkey
+[
+.B \-\-key
+] [
+.B \-\-left
+] [
+.B \-\-right
+] [
+.B \-\-txt
+gateway
+] [
+.B \-\-dhclient
+] [
+.B \-\-file
+secretfile
+] [
+.B \-\-id
+identity
+]
+.SH DESCRIPTION
+.I Showhostkey
+outputs (on standard output) a public key suitable for this host,
+in the format specified,
+using the host key information stored in
+.IR /etc/ipsec.secrets .
+In general only the super-user can run this command,
+since only he can read
+.IR ipsec.secrets .
+.PP
+The
+.B \-\-txt
+option causes the output to be in opportunistic-encryption DNS TXT record
+format,
+with the specified
+.I gateway
+value.
+If information about how the key was generated is available,
+that is provided as a DNS-file comment.
+For example,
+.B "\-\-txt 10.11.12.13"
+might give (with the key data trimmed for clarity):
+.PP
+.nf
+  ; RSA 2048 bits   xy.example.com   Sat Apr 15 13:53:22 2000
+      IN TXT  "X-IPsec-Server(10)=10.11.12.13 AQOF8tZ2...+buFuFn/"
+.fi
+.PP
+No name is supplied in the TXT record
+because there are too many possibilities,
+depending on how it will be used.
+If the text string is longer than 255 bytes,
+it is split up into multiple strings (matching the restrictions of
+the DNS TXT binary format).
+If any split is needed, the first split will be at the start of the key:
+this increases the chances that later hand editing will work.
+.PP
+The
+.B \-\-left
+and
+.B \-\-right
+options cause the output to be in
+.IR ipsec.conf (5)
+format, as a
+.B leftrsasigkey
+or
+.B rightrsasigkey
+parameter respectively.
+Again, generation information is included if available.
+For example,
+.B \-\-left
+might give (with the key data trimmed down for clarity):
+.PP
+.nf
+  # RSA 2048 bits   xy.example.com   Sat Apr 15 13:53:22 2000
+  leftrsasigkey=0sAQOF8tZ2...+buFuFn/
+.fi
+.PP
+The
+.B \-\-dhclient
+option cause the output to be suitable for inclusion in
+.IR dhclient.conf (5)
+as part of configuring WAVEsec.
+See <http://www.wavesec.org>.
+.PP
+If
+.B \-\-key
+is specified,
+the output format is the text form of a DNS KEY record;
+the host name is the one included in the key information
+(or, if that is not available,
+the output of
+.BR "hostname\ \-\-fqdn" ),
+with a
+.B \&.
+appended.
+Again, generation information is included if available.
+For example (with the key data trimmed down for clarity):
+.PP
+.nf
+  ; RSA 2048 bits   xy.example.com   Sat Apr 15 13:53:22 2000
+  xy.example.com.   IN   KEY   0x4200 4 1 AQOF8tZ2...+buFuFn/
+.fi
+.PP
+Normally, the default key for this host
+(the one with no host identities specified for it) is the one extracted.
+The
+.B \-\-id
+option overrides this,
+causing extraction of the key labeled with the specified
+.IR identity ,
+if any.
+The specified
+.I identity
+must
+.I exactly
+match the identity in the file;
+in particular, the comparison is case-sensitive.
+.PP
+The
+.B \-\-file
+option overrides the default for where the key information should be
+found, and takes it from the specified
+.IR secretfile .
+.SH DIAGNOSTICS
+A complaint about ``no pubkey line found'' indicates that the
+host has a key but it was generated with an old version of FreeS/WAN
+and does not contain the information that
+.I showhostkey
+needs.
+.SH FILES
+/etc/ipsec.secrets
+.SH SEE ALSO
+ipsec.secrets(5), ipsec.conf(5), ipsec_rsasigkey(8)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org>
+by Henry Spencer.
+.SH BUGS
+Arguably,
+rather than just reporting the no-IN-KEY-line-found problem,
+.I showhostkey
+should be smart enough to run the existing key through
+.I rsasigkey
+with the
+.B \-\-oldkey
+option, to generate a suitable output line.
+.PP
+The need to specify the gateway address (etc.) for
+.B \-\-txt
+is annoying, but there is no good way to determine it automatically.
+.PP
+There should be a way to specify the priority value for TXT records;
+currently it is hardwired to
+.BR 10 .
+.PP
+The
+.B \-\-id
+option assumes that the
+.I identity
+appears on the same line as the
+.B ":\ RSA\ {"
+that begins the key proper.

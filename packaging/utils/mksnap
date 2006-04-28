@@ -1,0 +1,114 @@
+#!/usr/bin/perl
+# make snapshot of FreeSwan code
+# -l	local build only, do not transmit
+# -p nn	pre-nn version (where nn is a release like 1.00)
+# -d ddd	build as of date ddd (implies -l)
+
+require($ENV{'HOME'}."/bin/disttools.pl");
+
+&defvars;
+&suckvars;
+
+umask(022);
+
+$localdir=$ENV{'HOME'}."/archive";
+$ENV{'DEV_DIR'}=$localdir."/development";
+
+if(!defined($ENV{'USER'})) {
+	$ENV{'USER'}="build";
+}
+
+$tmpdir=$ENV{'BTMP'}."/".$ENV{'USER'}."/snapshots";
+
+$transmit=1;
+$symlink=0;
+$snapprefix="";
+$tarinfix="";
+$relopt="";
+$date="now";
+$lastrel=$ENV{'LASTREL'};
+$lastrel =~ y/\./\_/;
+
+while(@ARGV) {
+  $_=shift;
+
+  if(/^-l/) {
+    $transmit=0;
+
+  } elsif(/^-D/) {
+    $debug++;
+
+  } elsif(/^-S/) {
+    $symlink=1;
+
+  } elsif(/^-p/) {
+    $arg=shift;
+    $snapprefix="$arg-";
+
+  } elsif(/^-r/) {
+    $arg=shift;
+    ($lastrel=$arg) =~ y/\./\_/;
+    $relopt="-r PRE${lastrel}"
+
+#  } elsif(/^-d/) {
+#    $arg=shift;
+#    $transmit=0;
+#    $date=$arg;
+
+  } else {
+    print STDERR "mksnap:\n";
+    print STDERR "\t-l          do not transmit\n";
+    print STDERR "\t-p stuff    set snapshot prefix\n";
+    print STDERR "\t-r rel      set release branch\n";
+    print STDERR "\t-d date     set snapshot date\n";
+    exit;
+  }
+}
+
+$snapname=&snapname($snapprefix);
+
+#if($date ne "now") {
+#  $snapname="`echo $date | tr -d ' :'`"	;;
+#}
+
+$dirname="freeswan-snap".$snapname;
+$pkgname="snapshot-".$snapname;
+$tarname=$pkgname.".tar";
+
+&nicesystem("mkdir -p $tmpdir");
+print "BUILDING snapshot $dirname\n";
+if($transmit) {
+  print "WILL TRANSMIT TO $ENV{'DISTHOST'}\n"
+} else {
+  print "WILL NOT TRANSMIT\n";
+}
+
+&setuppgp($lastrel);
+
+&makedisttarfile($tmpdir, $pkgname, "$lastrel_$snapname", $dirname, $date, $relopt, 0);
+
+unlink("snapshot.tar.gz");
+&nicesystem("ln -s $tarname.gz snapshot.tar.gz") || die "failed to symlink to snapshot.tar.gz: $?\n";
+&nicesystem("md5sum snapshot.tar.gz >snapshot.tar.gz.md5") || die "failed to md5sum of snapshot.tar.gz: $?\n";
+
+&dopgpsig($pkgname);
+
+if($transmit) {
+  system("date");
+
+  &upload($pkgname, "snapshot");
+
+  print "Cleaning up old snapshots\n";
+
+  local($file, $localroot);
+  
+  $localroot=$ENV{'DEV_DIR'};
+
+  &nicesystem("cd $localroot && find . -name \"snapshot-*\" -print | grep -v $pkgname | xargs -r rm --");
+
+  &upsync;
+ 
+  system("date");
+}
+
+

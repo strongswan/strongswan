@@ -1,0 +1,3 @@
+if [ "$CONFIG_IPSEC_ALG" = "y" ]; then
+  dep_tristate '        CRYPTOAPI ciphers support (needs cryptoapi patch)' CONFIG_IPSEC_ALG_CRYPTOAPI $CONFIG_CRYPTO
+fi

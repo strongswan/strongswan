@@ -1,0 +1,182 @@
+# sample connections
+# This file is RCSID $Id: examples,v 1.1 2004/03/15 20:35:21 as Exp $
+
+
+
+# basic configuration
+config setup
+	# THIS SETTING MUST BE CORRECT or almost nothing will work.
+	interfaces="ipsec0=eth1 ipsec1=ppp0"
+	# Debug-logging controls:  "none" for (almost) none, "all" for lots.
+	klipsdebug=none
+	plutodebug=none
+	# Manual connections to be started at startup.
+	manualstart="test1 test2"
+	# Auto connections to be loaded into Pluto at startup.
+	plutoload="samplehth samplefire"
+	# Auto connections to be started at startup.
+	plutostart=samplefire
+
+
+
+# defaults for subsequent connection descriptions
+conn %default
+	# How persistent to be in (re)keying negotiations (0 means very).
+	keyingtries=0
+	# Parameters for manual-keying testing (DON'T USE OPERATIONALLY).
+	spi=0x200
+	esp=3des-md5-96
+	espenckey=0x01234567_89abcdef_02468ace_13579bdf_12345678_9abcdef0
+	espauthkey=0x12345678_9abcdef0_2468ace0_13579bdf
+	# key lifetime (before automatic rekeying)
+	keylife=8h
+
+
+
+# sample connection
+conn sample
+	# Left security gateway and subnet behind it.
+	left=10.0.0.1
+	leftsubnet=172.16.0.0/24
+	# Right security gateway and subnet behind it.
+	right=10.12.12.1
+	rightsubnet=192.168.0.0/24
+	# Authorize this connection, but don't actually start it, at startup.
+	auto=add
+
+# sample tunnel (manually or automatically keyed)
+# Here we just use ESP for both encryption and authentication, which is
+# the simplest and often the best method.
+conn sample
+	# left security gateway (public-network address)
+	left=10.0.0.1
+	# next hop to reach right
+	leftnexthop=10.44.55.66
+	# subnet behind left (omit if left end of the tunnel is just the s.g.)
+	leftsubnet=172.16.0.0/24
+	# right s.g., subnet behind it, and next hop to reach left
+	right=10.12.12.1
+	rightnexthop=10.88.77.66
+	rightsubnet=192.168.0.0/24
+	# (manual) SPI number
+	spi=0x200
+	# (manual) encryption/authentication algorithm and parameters to it
+	esp=3des-md5-96
+	espenckey=[192 bits]
+	espauthkey=[128 bits]
+
+# In the remaining examples, deviations from the sample-tunnel configuration
+# are marked with ###.
+
+# sample host-to-host tunnel (no subnets)
+# Here we assume (for purposes of illustration) that the hosts talk directly
+# to each other, so we don't need next-hop settings.
+conn samplehth
+	### left host (public-network address)
+	left=10.0.0.1
+	### next hop to reach right
+	leftnexthop=
+	### right host
+	right=10.12.12.1
+	### next hop to reach left
+	rightnexthop=
+	### (manual) SPI number
+	spi=0x300
+	# (manual) encryption/authentication algorithm and parameters to it
+	esp=3des-md5-96
+	espenckey=[192 bits]
+	espauthkey=[128 bits]
+
+# sample hybrid tunnel, with a host on one end and a subnet (behind a
+# security gateway) on the other
+# This case is also sometimes called "road warrior".
+conn samplehyb
+	### left host (public-network address)
+	left=10.0.0.1
+	# next hop to reach right
+	leftnexthop=10.44.55.66
+	# subnet behind left
+	leftsubnet=172.16.0.0/24
+	### right host, and next hop to reach left
+	right=10.12.12.1
+	rightnexthop=10.88.77.66
+	### (manual) SPI number
+	spi=0x400
+	# (manual) encryption/authentication algorithm and parameters to it
+	esp=3des-md5-96
+	espenckey=[192 bits]
+	espauthkey=[128 bits]
+
+# sample firewall-penetrating tunnel
+# Here we assume that firewalling is being done on the left side.
+conn samplefire
+	# left security gateway (public-network address)
+	left=10.0.0.1
+	# next hop to reach right
+	leftnexthop=10.44.55.66
+	# subnet behind left (omit if left end of the tunnel is just the s.g.)
+	leftsubnet=172.16.0.0/24
+	### left is firewalling for its subnet
+	leftfirewall=yes
+	# right s.g., subnet behind it, and next hop to reach left
+	right=10.12.12.1
+	rightnexthop=10.88.77.66
+	rightsubnet=192.168.0.0/24
+	### (manual) SPI number
+	spi=0x500
+	# (manual) encryption/authentication algorithm and parameters to it
+	esp=3des-md5-96
+	espenckey=[192 bits]
+	espauthkey=[128 bits]
+
+# sample transport-mode connection (which can only be host-to-host)
+# Here we use the whole nine yards, with encryption done by ESP and
+# authentication by AH; this perhaps is slightly preferable for transport
+# mode, where the IP headers are exposed.
+conn sampletm
+	### transport mode rather than tunnel
+	type=transport
+	### left host (public-network address)
+	left=10.0.0.1
+	# next hop to reach right
+	leftnexthop=10.44.55.66
+	### right host, and next hop to reach left
+	right=10.12.12.1
+	rightnexthop=10.88.77.66
+	### (manual) SPI number
+	spi=0x600
+	### (manual) encryption algorithm and parameters to it
+	esp=3des
+	espenckey=[192 bits]
+	### (manual) authentication algorithm and parameters to it
+	ah=hmac-md5
+	ahkey=[128 bits]
+	### (auto) authentication control
+	auth=ah
+
+# sample description with keys split out into a separate section
+# Normally the key section would go in a separate file, with tighter
+# permissions set on it.
+conn samplesep
+	# left security gateway (public-network address)
+	left=10.0.0.1
+	# next hop to reach right
+	leftnexthop=10.44.55.66
+	# subnet behind left (omit if left end of the tunnel is just the s.g.)
+	leftsubnet=172.16.0.0/24
+	# right s.g., subnet behind it, and next hop to reach left
+	right=10.12.12.1
+	rightnexthop=10.88.77.66
+	rightsubnet=192.168.0.0/24
+	### (manual) SPI number
+	spi=0x700
+	# (manual) encryption/authentication algorithm and parameters to it
+	esp=3des-md5-96
+	also=samplesep-keys
+
+# keys for the previous section
+# Normally this would go in a separate file, picked up using an include line,
+# to allow keeping the keys confidential.
+conn samplesep-keys
+	espenckey=[192 bits]
+	espauthkey=[128 bits]

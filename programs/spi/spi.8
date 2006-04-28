@@ -1,0 +1,525 @@
+.TH IPSEC_SPI 8 "23 Oct 2001"
+.\"
+.\" RCSID $Id: spi.8,v 1.1 2004/03/15 20:35:31 as Exp $
+.\"
+.SH NAME
+ipsec spi \- manage IPSEC Security Associations
+.SH SYNOPSIS
+.br
+Note: In the following,
+.br
+.B <SA>
+means:
+.B \-\-af
+(inet | inet6)
+.B \-\-edst
+daddr
+.B \-\-spi
+spi
+.B \-\-proto
+proto OR 
+.B \-\-said
+said,
+.br
+.B <life>
+means:
+.B \-\-life
+(soft | hard)\-(allocations | bytes | addtime | usetime | packets)=value[,...]
+.PP
+.B ipsec
+.B spi
+.PP
+.B ipsec
+.B spi
+.B <SA>
+.B \-\-src
+src
+.B \-\-ah
+.BR hmac-md5-96 | hmac-sha1-96
+[
+.B \-\-replay_window
+replayw ]
+[
+.B <life>
+]
+.B \-\-authkey
+akey
+.PP
+.B ipsec
+.B spi
+.B <SA>
+.B \-\-src
+src
+.B \-\-esp
+.BR 3des
+[
+.B \-\-replay_window
+replayw ]
+[
+.B <life>
+]
+.B \-\-enckey
+ekey
+.PP
+.B ipsec
+.B spi
+.B <SA>
+.B \-\-src
+src
+.B \-\-esp
+.BR 3des-md5-96 | 3des-sha1-96
+[
+.B \-\-replay_window
+replayw ]
+[
+.B <life>
+]
+.B \-\-enckey
+ekey
+.B \-\-authkey
+akey
+.PP
+.B ipsec
+.B spi
+.B <SA>
+.B \-\-src
+src
+.B \-\-comp
+.BR deflate
+.PP
+.B ipsec
+.B spi
+.B <SA>
+.B \-\-ip4
+.B \-\-src
+encap-src
+.B \-\-dst
+encap-dst
+.PP
+.B ipsec
+.B spi
+.B <SA>
+.B \-\-ip6
+.B \-\-src
+encap-src
+.B \-\-dst
+encap-dst
+.PP
+.B ipsec
+.B spi
+.B <SA>
+.B \-\-del
+.PP
+.B ipsec
+.B spi
+.B \-\-help
+.PP
+.B ipsec
+.B spi
+.B \-\-version
+.PP
+.B ipsec
+.B spi
+.B \-\-clear
+.PP
+.SH DESCRIPTION
+.I Spi
+creates and deletes IPSEC Security Associations.
+A Security Association (SA) is a transform through which packet
+contents are to be processed before being forwarded.
+A transform can be an IPv4-in-IPv4 or an IPv6-in-IPv6 encapsulation,
+an IPSEC Authentication Header (authentication with no encryption),
+or an IPSEC Encapsulation Security Payload (encryption, possibly
+including authentication).
+.PP
+When a packet is passed from a higher networking layer
+through an IPSEC virtual interface,
+a search in the extended routing table (see
+.IR ipsec_eroute (8))
+yields an effective destination address, a
+Security Parameters Index (SPI) and a IP protocol number.
+When an IPSEC packet arrives from the network,
+its ostensible destination, an SPI and an IP protocol
+specified by its outermost IPSEC header are used.
+The destination/SPI/protocol combination is used to select a relevant SA.
+(See
+.IR ipsec_spigrp (8)
+for discussion of how multiple transforms are combined.)
+.PP
+The
+.IR af ,
+.IR daddr ,
+.I spi
+and
+.I proto
+arguments specify the SA to be created or deleted.
+.I af
+is the address family (inet for IPv4, inet6 for IPv6).
+.I Daddr
+is a destination address
+in dotted-decimal notation for IPv4 
+or in a coloned hex notation for IPv6.
+.I Spi
+is a number, preceded by '0x' for hexadecimal,
+between
+.B 0x100
+and
+.BR 0xffffffff ;
+values from
+.B 0x0
+to
+.B 0xff
+are reserved.
+.I Proto
+is an ASCII string, "ah", "esp", "comp" or "tun", specifying the IP protocol.
+The protocol must agree with the algorithm selected.
+.PP
+Alternatively, the
+.I said
+argument can also specify an SA to be created or deleted.
+.I Said
+combines the three parameters above, such as: "tun.101@1.2.3.4" or "tun:101@1:2::3:4",
+where the address family is specified by "." for IPv4 and ":" for IPv6. The address
+family indicators substitute the "0x" for hexadecimal.
+.PP
+The source address,
+.IR src ,
+must also be provided for the inbound policy check to
+function.  The source address does not need to be included if inbound
+policy checking has been disabled.
+.PP
+Keys vectors must be entered as hexadecimal or base64 numbers.
+They should be cryptographically strong random numbers.
+.PP
+All hexadecimal numbers are entered as strings of hexadecimal digits
+(0-9 and a-f), without spaces, preceded by '0x', where each hexadecimal
+digit represents 4 bits.
+All base64 numbers are entered as strings of base64 digits
+ (0-9, A-Z, a-z, '+' and '/'), without spaces, preceded by '0s',
+where each hexadecimal digit represents 6 bits and '=' is used for padding.
+.PP
+The deletion of an SA which has been grouped will result in the entire chain
+being deleted.
+.PP
+The form with no additional arguments lists the contents of
+/proc/net/ipsec_spi.  The format of /proc/net/ipsec_spi is discussed in
+ipsec_spi(5).
+.PP
+The lifetime severity of
+.B soft
+sets a limit when the key management daemons are asked to rekey the SA.
+The lifetime severity of
+.B hard
+sets a limit when the SA must expire.
+The lifetime type
+.B allocations
+tells the system when to expire the SA because it is being shared by too many
+eroutes (not currently used).  The lifetime type of
+.B bytes
+tells the system to expire the SA after a certain number of bytes have been
+processed with that SA.  The lifetime type of
+.B addtime
+tells the system to expire the SA a certain number of seconds after the SA was
+installed.  The lifetime type of
+.B usetime
+tells the system to expire the SA a certain number of seconds after that SA has
+processed its first packet.  The lifetime type of
+.B packets
+tells the system to expire the SA after a certain number of packets have been
+processed with that SA.
+.SH OPTIONS
+.TP 10
+.B \-\-af
+specifies the address family (inet for IPv4, inet6 for IPv6)
+.TP
+.B \-\-edst
+specifies the effective destination
+.I daddr
+of the Security Association
+.TP
+.B \-\-spi
+specifies the Security Parameters Index
+.I spi
+of the Security Association
+.TP
+.B \-\-proto
+specifies the IP protocol
+.I proto
+of the Security Association
+.TP
+.B \-\-said
+specifies the Security Association in monolithic format
+.TP
+.B \-\-ah
+add an SA for an IPSEC Authentication Header,
+specified by the following transform identifier
+(\c
+.BR hmac-md5-96
+or
+.BR hmac-sha1-96 )
+(RFC2402, obsoletes RFC1826)
+.TP
+.B hmac-md5-96
+transform following the HMAC and MD5 standards,
+using a 128-bit
+.I key
+to produce a 96-bit authenticator (RFC2403)
+.TP
+.B hmac-sha1-96
+transform following the HMAC and SHA1 standards,
+using a 160-bit
+.I key
+to produce a 96-bit authenticator (RFC2404)
+.TP
+.B \-\-esp
+add an SA for an IPSEC Encapsulation Security Payload,
+specified by the following
+transform identifier (\c
+.BR 3des ,
+or
+.BR 3des-md5-96 )
+(RFC2406, obsoletes RFC1827)
+.TP
+.B 3des
+encryption transform following the Triple-DES standard in
+Cipher-Block-Chaining mode using a 64-bit
+.I iv
+(internally generated) and a 192-bit 3DES
+.I ekey
+(RFC2451)
+.TP
+.B 3des-md5-96
+encryption transform following the Triple-DES standard in
+Cipher-Block-Chaining mode with authentication provided by
+HMAC and MD5
+(96-bit authenticator),
+using a 64-bit
+.IR iv
+(internally generated), a 192-bit 3DES
+.I ekey
+and a 128-bit HMAC-MD5
+.I akey
+(RFC2451, RFC2403)
+.TP
+.B 3des-sha1-96
+encryption transform following the Triple-DES standard in
+Cipher-Block-Chaining mode with authentication provided by
+HMAC and SHA1
+(96-bit authenticator),
+using a 64-bit
+.IR iv
+(internally generated), a 192-bit 3DES
+.I ekey
+and a 160-bit HMAC-SHA1
+.I akey
+(RFC2451, RFC2404)
+.TP
+.BR \-\-replay_window " replayw"
+sets the replay window size; valid values are decimal, 1 to 64
+.TP
+.BR \-\-life " life_param[,life_param]"
+sets the lifetime expiry; the format of
+.B life_param
+consists of a comma-separated list of lifetime specifications without spaces;
+a lifetime specification is comprised of a severity of
+.BR soft " or " hard
+followed by a '-', followed by a lifetime type of
+.BR allocations ", " bytes ", " addtime ", " usetime " or " packets
+followed by an '=' and finally by a value
+.TP
+.B \-\-comp
+add an SA for IPSEC IP Compression,
+specified by the following
+transform identifier (\c
+.BR deflate )
+(RFC2393)
+.TP
+.B deflate
+compression transform following the patent-free Deflate compression algorithm
+(RFC2394)
+.TP
+.B \-\-ip4
+add an SA for an IPv4-in-IPv4
+tunnel from
+.I encap-src
+to
+.I encap-dst
+.TP
+.B \-\-ip6
+add an SA for an IPv6-in-IPv6
+tunnel from
+.I encap-src
+to
+.I encap-dst
+.TP
+.B \-\-src
+specify the source end of an IP-in-IP tunnel from
+.I encap-src
+to
+.I encap-dst
+and also specifies the source address of the Security Association to be
+used in inbound policy checking and must be the same address
+family as
+.I af
+and
+.I edst
+.TP
+.B \-\-dst
+specify the destination end of an IP-in-IP tunnel from
+.I encap-src
+to
+.I encap-dst
+.TP
+.B \-\-del
+delete the specified SA
+.TP
+.BR \-\-clear
+clears the table of
+.BR SA s
+.TP
+.BR \-\-help
+display synopsis
+.TP
+.BR \-\-version
+display version information
+.SH EXAMPLES
+To keep line lengths down and reduce clutter,
+some of the long keys in these examples have been abbreviated
+by replacing part of their text with
+.RI `` ... ''.
+Keys used when the programs are actually run must,
+of course, be the full length required for the particular algorithm.
+.LP
+.B "ipsec spi \-\-af inet \-\-edst gw2 \-\-spi 0x125 \-\-proto esp \e"
+.br
+.B "   \-\-src gw1 \e"
+.br
+.B "   \-\-esp 3des\-md5\-96 \e"
+.br
+.BI "\ \ \ \-\-enckey\ 0x6630" "..." "97ce\ \e"
+.br
+.BI "   \-\-authkey 0x9941" "..." "71df"
+.LP
+sets up an SA from
+.BR gw1
+to
+.BR gw2
+with an SPI of 
+.BR 0x125
+and protocol
+.BR ESP
+(50) using
+.BR 3DES
+encryption with integral
+.BR MD5-96
+authentication transform, using an encryption key of
+.BI 0x6630 ... 97ce
+and an authentication key of
+.BI 0x9941 ... 71df
+(see note above about abbreviated keys).
+.LP
+.B "ipsec spi \-\-af inet6 \-\-edst 3049:9::9000:3100 \-\-spi 0x150 \-\-proto ah \e"
+.br
+.B "   \-\-src 3049:9::9000:3101 \e"
+.br
+.B "   \-\-ah hmac\-md5\-96 \e"
+.br
+.BI "\ \ \ \-\-authkey\ 0x1234" "..." "2eda\ \e"
+.LP
+sets up an SA from
+.BR 3049:9::9000:3101
+to
+.BR 3049:9::9000:3100
+with an SPI of 
+.BR 0x150
+and protocol
+.BR AH
+(50) using
+.BR MD5-96
+authentication transform, using an authentication key of
+.BI 0x1234 ... 2eda
+(see note above about abbreviated keys).
+.LP
+.B "ipsec spi \-\-said tun.987@192.168.100.100 \-\-del "
+.LP
+deletes an SA to
+.BR 192.168.100.100
+with an SPI of 
+.BR 0x987
+and protocol
+.BR IPv4-in-IPv4
+(4).
+.LP
+.B "ipsec spi \-\-said tun:500@3049:9::1000:1 \-\-del "
+.LP
+deletes an SA to
+.BR 3049:9::1000:1
+with an SPI of 
+.BR 0x500
+and protocol
+.BR IPv6-in-IPv6
+(4).
+.LP
+.SH FILES
+/proc/net/ipsec_spi, /usr/local/bin/ipsec
+.SH "SEE ALSO"
+ipsec(8), ipsec_manual(8), ipsec_tncfg(8), ipsec_eroute(8),
+ipsec_spigrp(8), ipsec_klipsdebug(8), ipsec_spi(5)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org/>
+by Richard Guy Briggs.
+.SH BUGS
+The syntax is messy and the transform naming needs work.
+.\"
+.\" $Log: spi.8,v $
+.\" Revision 1.1  2004/03/15 20:35:31  as
+.\" added files from freeswan-2.04-x509-1.5.3
+.\"
+.\" Revision 1.32  2002/04/24 07:35:40  mcr
+.\" Moved from ./klips/utils/spi.8,v
+.\"
+.\" Revision 1.31  2001/11/06 20:18:47  rgb
+.\" Added lifetime parameters.
+.\"
+.\" Revision 1.30  2001/10/24 03:23:32  rgb
+.\" Added lifetime option and parameters.
+.\"
+.\" Revision 1.29  2001/05/30 08:14:04  rgb
+.\" Removed vestiges of esp-null transforms.
+.\"
+.\" Revision 1.28  2000/11/29 19:15:20  rgb
+.\" Add --src requirement for inbound policy routing.
+.\"
+.\" Revision 1.27  2000/09/17 18:56:48  rgb
+.\" Added IPCOMP support.
+.\"
+.\" Revision 1.26  2000/09/13 15:54:32  rgb
+.\" Added Gerhard's ipv6 updates.
+.\"
+.\" Revision 1.25  2000/09/12 22:36:45  rgb
+.\" Gerhard's IPv6 support.
+.\"
+.\" Revision 1.24  2000/06/30 18:21:55  rgb
+.\" Update SEE ALSO sections to include ipsec_version(5) and ipsec_pf_key(5)
+.\" and correct FILES sections to no longer refer to /dev/ipsec which has
+.\" been removed since PF_KEY does not use it.
+.\"
+.\" Revision 1.23  2000/06/21 16:54:57  rgb
+.\" Added 'no additional args' text for listing contents of
+.\" /proc/net/ipsec_* files.
+.\"
+.\" Revision 1.22  1999/08/11 08:35:16  rgb
+.\" Update, deleting references to obsolete and insecure algorithms.
+.\"
+.\" Revision 1.21  1999/07/19 18:53:55  henry
+.\" improve font usage in key abbreviations
+.\"
+.\" Revision 1.20  1999/07/19 18:50:09  henry
+.\" fix slightly-misformed comments
+.\" abbreviate long keys to avoid long-line complaints
+.\"
+.\" Revision 1.19  1999/04/06 04:54:38  rgb
+.\" Fix/Add RCSID Id: and Log: bits to make PHMDs happy.  This includes
+.\" patch shell fixes.
+.\"

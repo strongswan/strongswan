@@ -1,0 +1,143 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_PORTOF</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_PORTOF</H1>
+Section: C Library Functions (3)<BR>Updated: 8 Sept 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec portof - get port field of an ip_address
+<BR>
+
+ipsec setportof - set port field of an ip_address
+<BR>
+
+ipsec sockaddrof - get pointer to internal sockaddr of an ip_address
+<BR>
+
+ipsec sockaddrlenof - get length of internal sockaddr of an ip_address
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>int portof(const ip_address *src);</B>
+
+<BR>
+
+<B>void setportof(int port, ip_address *dst);</B>
+
+<BR>
+
+<B>struct sockaddr *sockaddrof(ip_address *src);</B>
+
+<BR>
+
+<B>size_t sockaddrlenof(const ip_address *src);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+The
+<B>&lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+internal type
+<I>ip_address</I>
+
+contains one of the
+<I>sockaddr</I>
+
+types internally.
+<I>Reliance on this feature is discouraged</I>,
+but it may occasionally be necessary.
+These functions provide low-level tools for this purpose.
+<P>
+
+<I>Portof</I>
+
+and
+<I>setportof</I>
+
+respectively read and write the port-number field of the internal
+<I>sockaddr</I>.
+
+The values are in network byte order.
+<P>
+
+<I>Sockaddrof</I>
+
+returns a pointer to the internal
+<I>sockaddr</I>,
+
+for passing to other functions.
+<P>
+
+<I>Sockaddrlenof</I>
+
+reports the size of the internal
+<I>sockaddr</I>,
+
+for use in storage allocation.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="inet.3.html">inet</A>(3), <A HREF="ipsec_initaddr.3.html">ipsec_initaddr</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>DIAGNOSTICS</H2>
+
+<I>Portof</I>
+
+returns
+<B>-1</B>,
+
+<I>sockaddrof</I>
+
+returns
+<B>NULL</B>,
+
+and
+<I>sockaddrlenof</I>
+
+returns
+<B>0</B>
+
+if an unknown address family is found within the
+<I>ip_address</I>.
+
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+These functions all depend on low-level details of the
+<I>ip_address</I>
+
+type, which are in principle subject to change.
+Avoid using them unless really necessary.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">DIAGNOSTICS</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

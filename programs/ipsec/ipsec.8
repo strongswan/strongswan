@@ -1,0 +1,336 @@
+.TH IPSEC 8 "9 February 2006"
+.\" RCSID $Id: ipsec.8,v 1.3 2006/02/09 19:47:38 as Exp $
+.SH NAME
+ipsec \- invoke IPsec utilities
+.SH SYNOPSIS
+.B ipsec
+command [ argument ...]
+.sp
+.B ipsec start|update|reload|restart|stop
+.sp
+.B ipsec up|down|route|unroute
+\fIconnectionname\fP
+.sp
+.B ipsec status|statusall
+[
+\fIconnectionname\fP
+]
+.sp
+.B ipsec listalgs|listpubkeys|listcerts
+[
+.B \-\-utc
+]
+.br
+.B ipsec listcacerts|listaacerts|listocspcerts
+[
+.B \-\-utc
+]
+.br
+.B ipsec listacerts|listgroups|listcainfos
+[
+.B \-\-utc
+]
+.br
+.B ipsec listcrls|listocsp|listcards|listall
+[
+.B \-\-utc
+]
+.sp
+.B ipsec rereadsecrets|rereadgroups
+.br
+.B ipsec rereadcacerts|rereadaacerts|rereadocspcerts
+.br
+.B ipsec rereadacerts|rereadcrls|rereadall
+.sp
+.B ipsec purgeocsp
+.sp
+.B ipsec
+[
+.B \-\-help
+] [
+.B \-\-version
+] [
+.B \-\-versioncode
+] [
+.B \-\-copyright
+]
+.br
+.B ipsec
+[
+.B \-\-directory
+] [
+.B \-\-confdir
+]
+.SH DESCRIPTION
+.I Ipsec
+invokes any of several utilities involved in controlling the IPsec
+encryption/authentication system,
+running the specified
+.I command
+with the specified
+.IR argument s
+as if it had been invoked directly.
+This largely eliminates possible name collisions with other software,
+and also permits some centralized services.
+.PP
+The commands
+.BR start ,
+.BR update ,
+.BR reload ,
+.BR restart ,
+and
+.BR stop
+are built-in and are used to control the
+.BR "ipsec starter"
+utility, an extremely fast replacement for the traditional
+.BR ipsec
+.BR setup
+script.
+.PP
+The commands
+.BR up,
+.BR down,
+.BR route,
+.BR unroute,
+.BR status,
+.BR statusall,
+.BR listalgs,
+.BR listpubkeys,
+.BR listcerts,
+.BR listcacerts,
+.BR listaacerts,
+.BR listocspcerts,
+.BR listacerts,
+.BR listgroups,
+.BR listcainfos,
+.BR listcrls,
+.BR listocsp,
+.BR listcards,
+.BR listall,
+.BR rereadsecrets,
+.BR rereadgroups,
+.BR rereadcacerts,
+.BR rereadaacerts,
+.BR rereadocspcerts,
+.BR rereadacerts,
+.BR rereadcrls,
+and
+.BR rereadall
+are also built-in and completely replace the corresponding
+.BR "ipsec auto"
+\-\-\fIoperation\fP"
+commands. Communication with the pluto daemon happens via the
+.BR "ipsec whack"
+socket interface.
+.PP
+In particular,
+.I ipsec
+supplies the invoked
+.I command
+with a suitable PATH environment variable,
+and also provides IPSEC_DIR,
+IPSEC_CONFS, and IPSEC_VERSION environment variables,
+containing respectively
+the full pathname of the directory where the IPsec utilities are stored,
+the full pathname of the directory where the configuration files live,
+and the IPsec version number.
+.PP
+.B "ipsec start"
+calls
+.BR "ipsec starter"
+which in turn starts \fIpluto\fR.
+.PP
+.B "ipsec update"
+sends a \fIHUP\fR signal to
+.BR "ipsec starter"
+which in turn determines any changes in \fIipsec.conf\fR
+and updates the configuration on the running \fIpluto\fR daemon, correspondingly.
+.PP
+.B "ipsec reload"
+sends a \fIUSR1\fR signal to
+.BR "ipsec starter"
+which in turn reloads the whole configuration on the running \fIpluto\fR daemon
+based on the actual \fIipsec.conf\fR.
+.PP
+.B "ipsec restart"
+executes
+.B "ipsec stop"
+followed by
+.BR "ipsec start".
+.PP
+.B "ipsec stop"
+stops \fIipsec\fR by sending a \fITERM\fR signal to
+.BR "ipsec starter".
+.PP
+.B "ipsec up"
+\fIname\fP tells the \fIpluto\fP daemon to start up connection \fIname\fP.
+.PP
+.B "ipsec down"
+\fIname\fP tells the \fIpluto\fP daemon to take down connection \fIname\fP.
+.PP
+.B "ipsec route"
+\fIname\fP tells the \fIpluto\fP daemon to install a route for connection
+\fIname\fP.
+.PP
+.B "ipsec unroute"
+\fIname\fP tells the \fIpluto\fP daemon to take down the route for connection
+\fIname\fP.
+.PP
+.B "ipsec status"
+[ \fIname\fP ]  gives concise status information either on connection
+\fIname\fP or if the \fIname\fP argument is lacking, on all connections.
+.PP
+.B "ipsec statusall"
+[ \fIname\fP ]  gives detailed status information either on connection
+\fIname\fP or if the \fIname\fP argument is lacking, on all connections.
+.PP
+.B "ipsec listalgs"
+returns a list all supported IKE encryption and hash algorithms, the available
+Diffie-Hellman groups, as well as all supported ESP encryption and authentication
+algorithms.
+.PP
+.B "ipsec listpubkeys"
+returns a list of RSA public keys that were either loaded in raw key format
+or extracted from X.509 and|or OpenPGP certificates.
+.PP
+.B "ipsec listcerts"
+returns a list of X.509 and|or OpenPGP certificates that were loaded locally
+by the \fIpluto\fP daemon.
+.PP
+.B "ipsec listcacerts"
+returns a list of X.509 Certification Authority (CA) certificates that were
+loaded locally by the \fIpluto\fP daemon from the \fI/etc/ipsec.d/cacerts/\fP
+directory or received in PKCS#7-wrapped certificate payloads via the  IKE
+protocol.
+.PP
+.B "ipsec listaacerts"
+returns a list of X.509 Authorization Authority (AA) certificates that were
+loaded locally by the \fIpluto\fP daemon from the \fI/etc/ipsec.d/aacerts/\fP
+directory.
+.PP
+.B "ipsec listocspcerts"
+returns a list of X.509 OCSP Signer certificates that were either loaded
+locally by the \fIpluto\fP daemon from the \fI/etc/ipsec.d/ocspcerts/\fP
+directory or were sent by an OCSP server.
+.PP
+.B "ipsec listacerts"
+returns a list of X.509 Attribute certificates that were loaded locally by
+the \fIpluto\fP daemon from the \fI/etc/ipsec.d/acerts/\fP directory.
+.PP
+.B "ipsec listgroups"
+returns a list of groups that are used to define user authorization profiles.
+.PP
+.B "ipsec listcainfos"
+returns certification authority information (CRL distribution points, OCSP URIs,
+LDAP servers) that were defined by
+.BR ca
+sections in \fIipsec.conf\fP.
+.PP
+.B "ipsec listcrls"
+returns a list of Certificate Revocation Lists (CRLs).
+.PP
+.B "ipsec listocsp"
+returns revocation information fetched from OCSP servers.
+.PP
+.B "ipsec listcards"
+returns a list of certificates residing on smartcards.
+.PP
+.B "ipsec listall"
+returns all information generated by the list commands above. Each list command 
+can be called with the
+\-\-url
+option which displays all dates in UTC instead of local time.
+.PP
+.B "ipsec rereadsecrets"
+flushes and rereads all secrets defined in \fIipsec.conf\fP.
+.PP
+.B "ipsec rereadcacerts"
+reads all certificate files contained in the \fI/etc/ipsec.d/cacerts\fP
+directory and adds them to \fIpluto\fP's list of Certification Authority (CA) certificates.
+.PP
+.B "ipsec rereadaacerts"
+reads all certificate files contained in the \fI/etc/ipsec.d/aacerts\fP
+directory and adds them to \fIpluto\fP's list of Authorization Authority (AA) certificates.
+.PP
+.B "ipsec rereadocspcerts" 
+reads all certificate files contained in the \fI/etc/ipsec.d/ocspcerts/\fP
+directory and adds them to \fIpluto\fP's list of OCSP signer certificates.
+.PP
+.B "ipsec rereadacerts"
+operation reads all certificate files contained in the  \fI/etc/ipsec.d/acerts/\fP
+directory and adds them to \fIpluto\fP's list of attribute certificates.
+.PP
+.B "ipsec rereadcrls"
+reads  all Certificate  Revocation Lists (CRLs) contained in the
+\fI/etc/ipsec.d/crls/\fP directory and adds them to \fIpluto\fP's list of CRLs.
+.PP
+.B "ipsec rereadall"
+is  equivalent  to  the  execution  of  \fBrereadsecrets\fP,
+\fBrereadcacerts\fP, \fBrereadaacerts\fP, \fBrereadocspcerts\fP,
+\fBrereadacerts\fP, and \fBrereadcrls\fP.
+.PP
+.B "ipsec \-\-help"
+lists the available commands.
+Most have their own manual pages, e.g.
+.IR ipsec_auto (8)
+for
+.IR auto .
+.PP
+.B "ipsec \-\-version"
+outputs version information about Linux strongSwan.
+A version code of the form ``U\fIxxx\fR/K\fIyyy\fR''
+indicates that the user-level utilities are version \fIxxx\fR
+but the kernel portion appears to be version \fIyyy\fR
+(this form is used only if the two disagree).
+.PP
+.B "ipsec \-\-versioncode"
+outputs \fIjust\fR the version code,
+with none of
+.BR \-\-version 's
+supporting information,
+for use by scripts.
+.PP
+.B "ipsec \-\-copyright"
+supplies boring copyright details.
+.PP
+.B "ipsec \-\-directory"
+reports where
+.I ipsec
+thinks the IPsec utilities are stored.
+.PP
+.B "ipsec \-\-confdir"
+reports where
+.I ipsec
+thinks the IPsec configuration files are stored.
+.SH FILES
+/usr/local/lib/ipsec	usual utilities directory
+.SH ENVIRONMENT
+.PP
+The following environment variables control where strongSwan finds its
+components.
+The
+.B ipsec
+command sets them if they are not already set.
+.nf
+.na
+IPSEC_EXECDIR	directory containing published commands
+IPSEC_LIBDIR	directory containing internal executables
+IPSEC_SBINDIR	directory containing \fBipsec\fP command
+IPSEC_CONFS	directory containing configuration files
+.ad
+.fi
+.SH SEE ALSO
+.hy 0
+.na
+ipsec.conf(5), ipsec.secrets(5),
+ipsec_barf(8),
+.ad
+.hy
+.PP
+.SH HISTORY
+Written for Linux FreeS/WAN
+<http://www.freeswan.org>
+by Henry Spencer.
+Updated and extended for Linux strongSwan
+<http://www.strongswan.org>
+by Andreas Steffen.

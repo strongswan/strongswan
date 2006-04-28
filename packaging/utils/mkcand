@@ -1,0 +1,126 @@
+#!/usr/bin/perl
+# mkcand m.nn
+# package candidate, leaving it in tmp directory
+
+require($ENV{'HOME'}."/bin/disttools.pl");
+
+&defvars;
+&suckvars;
+
+umask(022);
+
+$localdir=$ENV{'HOME'}."/archive";
+$ENV{'DEV_DIR'}=$localdir."/development";
+$tmpdir=$ENV{'BTMP'}."/".$ENV{'USER'}."/snapshots";
+
+$transmit=1;
+$snapprefix="";
+$tarinfix="";
+$date="now";
+$lastrel=$ENV{'LASTREL'};
+
+sub usage {
+    print STDERR "mkcand:\n";
+    print STDERR "\t-l          do not transmit\n";
+    print STDERR "\t-p name     set candidate name\n";
+    print STDERR "\t-r rel      set release branch\n";
+}
+
+while(@ARGV) {
+  $_=shift;
+
+  if(/^-l/) {
+    $transmit=0;
+
+  } elsif(/^-S/) {
+    $symlink=1;
+
+  } elsif(/^-p/) {
+    $rel=shift;
+    $snapprefix="pre$rel-";
+
+  } elsif(/^-r/) {
+    $arg=shift;
+    ($lastrel=$arg) =~ y/\./\_/;
+    $relopt="-r PRE${lastrel}"
+
+#  } elsif(/^-d/) {
+#    $arg=shift;
+#    $transmit=0;
+#    $date=$arg;
+
+  } else {
+    &usage;
+    exit;
+  }
+}
+
+
+
+if(!defined($relopt) ||
+   !defined($rel)) {
+	&usage;
+	exit;
+}
+
+if($rel < 2.00) {
+   undef(@supportedkernels);
+}
+
+
+$candname=&snapname($snapprefix);
+$dirname="freeswan-cand".$candname;
+# $pkgname="candidate-".$candname;
+$pkgname=$dirname;
+$tarname=$pkgname.".tar";
+$vername="cand-".$candname;
+
+&nicesystem("mkdir -p $tmpdir");
+print "BUILDING candidate $candname in $dirname\n";
+if($transmit) {
+  print "WILL TRANSMIT TO $ENV{'DISTHOST'}\n"
+} else {
+  print "WILL NOT TRANSMIT\n";
+}
+
+&setuppgp($lastrel);
+
+&makedisttarfile($tmpdir, $pkgname, $vername, $dirname, $date, $relopt, 1);
+
+unlink("CANDIDATE.tar.gz");
+&nicesystem("ln $tarname.gz CANDIDATE.tar.gz") || die "failed to symlink to CANDIDATE.tar.gz: $?\n";
+&nicesystem("md5sum CANDIDATE.tar.gz >CANDIDATE.tar.gz.md5") || die "failed to md5sum of CANDIDATE.tar.gz: $?\n";
+
+&dopgpsig($pkgname);
+
+&nicesystem("pgp -kxa $ENV{'PGPNAME'} $pkgname.tar.gz.pgpkey && chmod +r $pkgname.tar.gz.pgpkey.asc");
+
+if($transmit) {
+  system("date");
+
+  local($snapprefix);
+
+  &upload($pkgname);
+
+  if($symlink) {
+    &sendfiles("CANDIDATE.tar.gz.md5");
+
+    &remotecmd("cd ".$ENV{'DISTDIR'}." && ln -f -s $pkgname.tar.gz CANDIDATE.tar.gz && ln -f -s $tarname.gz.sig CANDIDATE.tar.gz.sig");
+
+    foreach $ver (@supportedkernels) {
+      &remotecmd("cd ".$ENV{'DISTDIR'}." && ln -f -s $pkgname$ver.patch.gz CAND.KERN$ver.gz && ln -f -s $tarname.gz.sig CAND.KERN$ver.gz.sig");
+    }
+  }
+
+  print "Cleaning up old candidates\n";
+
+  local($file, $localroot);
+  
+  $localroot=$ENV{'DEV_DIR'};
+  &nicesystem("cd $localroot && find . -mtime +3 | grep 'freeswan-cand$snapprefix' | xargs rm");
+
+  &upsync;
+ 
+  system("date");
+}
+

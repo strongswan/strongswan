@@ -1,0 +1,260 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html">
+  <title>Introduction to FreeS/WAN</title>
+  <meta name="keywords"
+  content="Linux, IPsec, VPN, security, encryption, cryptography, FreeS/WAN, FreeSWAN">
+  <!--
+
+  Written by Claudia Schmeing for the Linux FreeS/WAN project
+  Freely distributable under the GNU General Public License
+
+  More information at www.freeswan.org
+  Feedback to users@lists.freeswan.org
+
+  CVS information:
+  RCS ID:          $Id: upgrading.html,v 1.1 2004/03/15 20:35:24 as Exp $
+  Last changed:    $Date: 2004/03/15 20:35:24 $
+  Revision number: $Revision: 1.1 $
+
+  CVS revision numbers do not correspond to FreeS/WAN release numbers.
+  -->
+</head>
+
+<body>
+<A NAME="upgrading"></A><h1>Upgrading to FreeS/WAN 2.x</h1>
+
+
+<H2>New! Built in Opportunistic connections</H2>
+
+<P>Out of the box, FreeS/WAN 2.x will attempt to encrypt all your IP traffic.
+It will try to establish IPsec connections for:</P>
+<UL><LI>
+IP traffic from the Linux box on which you have installed FreeS/WAN, and</LI>
+<LI>
+outbound IP traffic routed through that Linux box (eg. from a protected subnet).</LI>
+</UL>
+<P>FreeS/WAN 2.x uses <STRONG>hidden, automatically enabled 
+ <VAR>ipsec.conf</VAR> connections</STRONG> to do this.</P>
+
+<P>This behaviour is part of our campaign to get Opportunistic 
+Encryption (OE) widespread in the Linux world, so that any two Linux boxes can
+encrypt to one another without prearrangement.
+There's one catch, however: you must <A HREF="quickstart.html#quickstart">set 
+up a few DNS records</A> 
+to distribute RSA public keys and (if applicable) IPsec gateway
+information.</P>
+
+<P>If you start FreeS/WAN before you have set up these DNS 
+records, your connectivity will be slow, and 
+messages relating to the built in connections will clutter your logs.
+If you are unable to set up DNS for OE, you will wish to 
+<A HREF="policygroups.html#disable_policygroups">disable the 
+hidden connections</A>.</P>
+
+<A NAME="upgrading.flagday"></A>
+
+<H3>Upgrading Opportunistic Encryption
+to 2.01 (or later)</H3>
+
+<P>As of FreeS/WAN 2.01, Opportunistic Encryption (OE)
+uses DNS TXT resource records (RRs) only (rather than TXT with KEY). 
+This change causes a "flag day". 
+Users of FreeS/WAN 2.00 (or earlier) OE who are upgrading may
+need to post additional resource records.
+</P>
+
+<P>If you are running 
+<A HREF="glossary.html#initiate-only">initiate-only OE</A>, 
+you <em>must</em> put up a TXT record in any forward domain as per our 
+<A HREF="quickstart.html#opp.client">quickstart instructions</A>. This
+replaces your old forward KEY.
+</P>
+
+<P>
+If you are running full OE, you require no updates. You already have 
+the needed TXT record in the reverse domain. 
+However, to facilitate future features, you
+may also wish to publish that TXT record in a forward domain as 
+instructed <A HREF="quickstart.html#opp.incoming">here</A>.
+</P>
+
+<P>If you are running OE on a gateway (and encrypting on behalf of subnetted
+boxes) you require no updates. 
+You already have the required TXT record in your gateway's reverse map,
+and the TXT records for any subnetted boxes require no updating.
+However, to facilitate future features, you may wish to publish your gateway's
+ TXT record in a forward domain as shown 
+<A HREF="quickstart.html#opp.incoming">here</A>.
+
+
+<P>
+During the transition, you may wish to leave any old KEY records up for
+some time. They will provide limited backward compatibility. 
+<!--
+For more
+detail on that compatibility, see <A HREF="oe.known-issues">Known Issues with
+OE</A>.
+-->
+</P>
+
+<H2>New! Policy Groups</H2>
+
+<P>We want to make it easy for you to declare security policy as it
+applies to IPsec connections.</P>
+
+<P>Policy Groups make it simple to say:
+</P>
+
+<UL>
+<LI>These are the folks I want to talk to in the clear.</LI>
+<LI>These spammers' domains -- I don't want to talk to them at all.</LI>
+<LI>To talk to the finance department, I must use IPsec.</LI>
+<LI>For any other communication, try to encrypt, but it's okay if we can't.</LI></UL>
+
+<P>FreeS/WAN then implements these policies, creating OE connections
+if and when needed.
+You can use Policy Groups along with connections you explicitly 
+define in ipsec.conf.</P>
+
+<P>For more information, see our
+<A HREF="policygroups.html">Policy Group HOWTO</A>.</P>
+
+
+<H2>New! Packetdefault Connection</H2>
+
+<P>Free/SWAN 2.x ships with the <STRONG>automatically enabled, hidden
+connection</STRONG> <VAR>packetdefault</VAR>. This configures
+a FreeS/WAN box as an OE gateway for any hosts located
+behind it. As mentioned above, you must configure some 
+<A HREF="quickstart.html">DNS records</A> for 
+OE to work.</P>
+<P>As the name implies, this connection functions as a default. If you
+have more specific connections, such as policy groups which configure 
+your FreeS/WAN box as an OE gateway for a local subnet, these 
+will apply before <VAR>packetdefault</VAR>. You can view 
+<VAR>packetdefault</VAR>'s specifics in 
+<A HREF="manpage.d/ipsec.conf.5.html">man ipsec.conf</A>.
+</P>
+
+
+<H2>FreeS/WAN now disables Reverse Path Filtering</H2>
+
+<P>FreeS/WAN often doesn't work with reverse path filtering. At
+start time, FreeS/WAN now turns rp_filter off, and logs a warning.</P>
+
+<P>FreeS/WAN does not turn it back on again. 
+You can do this yourself with a command like:</P>
+
+<PRE>   echo 1 > /proc/sys/net/ipv4/conf/eth0/rp_filter</PRE>
+
+<P>For eth0, substitute the interface which FreeS/WAN was affecting.</P>
+
+
+<A NAME="ipsec.conf_v2"></A><H2>Revised <VAR>ipsec.conf</VAR></H2>
+
+<H3>No promise of compatibility</H3>
+
+<P>The FreeS/WAN team promised config-file compatibility throughout
+the 1.x series. That means a 1.5 config file can be directly imported into
+a fresh 1.99 install with no problems.</P>
+
+<P>With FreeS/WAN 2.x, we've given ourselves permission to make the config
+file easier to use. The cost: some FreeS/WAN 1.x configurations will not
+work properly. Many of the new features are, however, backward compatible.</P>
+
+
+<H3>Most <VAR>ipsec.conf</VAR> files will work fine</H3>
+
+<P>... so long as you paste this line, <STRONG>with no preceding 
+whitespace</STRONG>,
+ at the top of your config file:
+</P>
+
+<PRE>    version 2</PRE>
+
+<H3>Backward compatibility patch</H3>
+
+<P>If the new defaults bite you, use 
+<A HREF="ipsec.conf.2_to_1">
+this <VAR>ipsec.conf</VAR> fragment</A> to simulate the old default values.</P>
+
+
+<H3>Details</H3>
+
+<P>
+We've obsoleted various directives which almost no one was using:
+</P>
+<PRE>    dump
+    plutobackgroundload
+    no_eroute_pass
+    lifetime
+    rekeystart
+    rekeytries</PRE>
+
+<P>For most of these, there is some other way to elicit the desired behaviour.
+See <A HREF="http://lists.freeswan.org/pipermail/design/2002-August/003243.html">
+this post</A>.
+
+<P>
+We've made some settings, which almost everyone was using, defaults.
+For example:
+</P>
+
+<PRE>    interfaces=%defaultroute
+    plutoload=%search
+    plutostart=%search
+    uniqueids=yes</PRE>
+
+<P>We've also changed some default values to help with OE and Policy Groups:</P>
+
+<PRE>    authby=rsasig   ## not secret!!!
+    leftrsasigkey=%dnsondemand ## looks up missing keys in DNS when needed.
+    rightrsasigkey=%dnsondemand</PRE>
+
+<P>
+Of course, you can still override any defaults by explictly declaring something
+else in your connection.
+</P>
+
+<P>  
+<A HREF="http://lists.freeswan.org/pipermail/design/2002-August/003243.html">A post with a list of many ipsec.conf changes.</A><BR>
+<A HREF="manpage.d/ipsec.conf.5.html">Current ipsec.conf manual.</A>
+</P>
+
+
+<A NAME="upgrading.rpms"></A><H3>Upgrading from 1.x RPMs to 2.x RPMs</H3>
+
+<P>Note: When upgrading from 1-series to 2-series RPMs, 
+<VAR>rpm -U</VAR> will not work.</P>
+
+<P>You must instead erase the 1.x RPMs, then install the 2.x set:</P>
+<PRE>    rpm -e freeswan</PRE>
+<PRE>    rpm -e freeswan-module</PRE>
+
+<P>On erasing, your old <VAR>ipsec.conf</VAR> should be moved to 
+<VAR>ipsec.conf.rpmsave</VAR>.
+Keep this. You will probably want to copy your existing connections to the 
+end of your new 2.x file.</P>
+
+<P>Install the RPMs suitable for your kernel version, such as:</P>
+<PRE>    rpm -ivh freeswan-module-2.04_2.4.20_20.9-0.i386.rpm</PRE>
+<PRE>    rpm -ivh freeswan-userland-2.04_2.4.20_20.9-0.i386.rpm</PRE>
+
+
+
+<P>Or, to splice the files:</P>
+
+<PRE>    cat /etc/ipsec.conf /etc/ipsec.conf.rpmsave > /etc/ipsec.conf.tmp
+    mv /etc/ipsec.conf.tmp /etc/ipsec.conf</PRE>
+
+<P>Then, remove the redundant <VAR>conn %default</VAR> and 
+<VAR>config setup</VAR>
+sections. Unless you have done any special configuring here, you'll likely
+want to remove the 1.x versions. Remove <VAR>conn OEself</VAR>, if
+present.</P>
+
+
+
+</body>
+</html>

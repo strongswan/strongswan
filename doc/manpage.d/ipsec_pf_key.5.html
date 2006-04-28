@@ -1,0 +1,176 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_PF_KEY</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_PF_KEY</H1>
+Section: File Formats (5)<BR>Updated: 29 Jun 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec_pf_key - lists PF_KEY sockets registered with KLIPS
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>cat</B>
+
+<B>/proc/net/pf_key</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>/proc/net/pf_key</I>
+
+is a read-only file which lists the presently open PF_KEY sockets on the
+local system and their parameters.
+<P>
+
+Each line lists one PF_KEY socket.
+A table entry consists of:
+<DL COMPACT>
+<DT>+<DD>
+sock pointer (sock)
+<DT>+<DD>
+PID of the socket owner (pid)
+<DT>+<DD>
+flag to indicate if the socket is dead (d)
+<DT>+<DD>
+socket wait queue (sleep)
+<DT>+<DD>
+socket pointer (socket)
+<DT>+<DD>
+next socket in chain (next)
+<DT>+<DD>
+previous socket in chain (prev)
+<DT>+<DD>
+last socket error (e)
+<DT>+<DD>
+pointer to destruct routine (destruct)
+<DT>+<DD>
+is this a reused socket (r)
+<DT>+<DD>
+has this socket been zapped (z)
+<DT>+<DD>
+socket family to which this socket belongs (fa)
+<DT>+<DD>
+local port number (n)
+<DT>+<DD>
+protocol version number (p)
+<DT>+<DD>
+Receive queue bytes committed (r)
+<DT>+<DD>
+Transmit queue bytes committed (w)
+<DT>+<DD>
+option memory allocations (o)
+<DT>+<DD>
+size of send buffer in bytes (sndbf)
+<DT>+<DD>
+timestamp in seconds (stamp)
+<DT>+<DD>
+socket flags (Flags)
+<DT>+<DD>
+socket type (Type)
+<DT>+<DD>
+connection state (St)
+<B>.SH</B>EXAMPLES
+
+<DT>
+<DD>
+<DT><B>c3b8c140 3553 0 c0599818 c05997fc        0        0 0        0 1 0 15 0 2 0 0 0 65535 0.103232 00000000 00000003 01</B>
+
+<DD>
+</DL>
+<P>
+
+shows that there is one pf_key socket set up that starts at
+<B>c3b8c140</B>,
+
+whose owning process has PID
+<B>3553</B>,
+
+the socket is not dead, its wait queue is at
+<B>c0599818</B>,
+
+whose owning socket is at
+<B>c05997fc</B>,
+
+with no other sockets in the chain, no errors, no destructor, it is a
+reused socket which has not been zapped, from protocol family
+<B>15</B>
+
+(PF_KEY), local port number
+<B>0</B>,
+
+protocol socket version
+<B>2</B>,
+
+no memory allocated to transmit, receive or option queues, a send buffer
+of almost
+<B>64kB</B>,
+
+a timestamp of
+<B>0.103232</B>,
+
+no flags set, type
+<B>3</B>,
+
+in state
+<B>1</B>.
+
+<A NAME="lbAE">&nbsp;</A>
+<H2>FILES</H2>
+
+/proc/net/pf_key
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.8.html">ipsec</A>(8), <A HREF="ipsec_manual.8.html">ipsec_manual</A>(8), <A HREF="ipsec_eroute.5.html">ipsec_eroute</A>(5), <A HREF="ipsec_spi.5.html">ipsec_spi</A>(5),
+<A HREF="ipsec_spigrp.5.html">ipsec_spigrp</A>(5), <A HREF="ipsec_klipsdebug.5.html">ipsec_klipsdebug</A>(5), <A HREF="ipsec_tncfg.8.html">ipsec_tncfg</A>(8), <A HREF="ipsec_version.5.html">ipsec_version</A>(5)
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org/">http://www.freeswan.org/</A>&gt;
+by Richard Guy Briggs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">FILES</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

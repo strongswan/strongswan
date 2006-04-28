@@ -1,0 +1,65 @@
+--- linux/Documentation/Configure.help.orig	Tue Jan  9 16:29:20 2001
++++ linux/Documentation/Configure.help	Fri Aug  9 14:47:14 2002
+@@ -4979,2 +4979,62 @@
+ 
++IP Security Protocol (IPSEC) (EXPERIMENTAL)
++CONFIG_IPSEC
++  This unit is experimental code.
++  Pick 'y' for static linking, 'm' for module support or 'n' for none.
++  This option adds support for network layer packet encryption and/or
++  authentication with participating hosts.    The standards start with:
++  RFCs 2411, 2407 and 2401.  Others are mentioned where they refer to
++  specific features below.  There are more pending which can be 
++  found at:  ftp://ftp.ietf.org/internet-drafts/draft-ietf-ipsec-*.
++  A description of each document can also be found at: 
++  http://ietf.org/ids.by.wg/ipsec.html.
++  Their charter can be found at: 
++  http://www.ietf.org/html.charters/ipsec-charter.html
++  Snapshots and releases of the current work can be found at: 
++  http://www.freeswan.org/
++
++IPSEC: IP-in-IP encapsulation
++CONFIG_IPSEC_IPIP
++  This option provides support for tunnel mode IPSEC.  It is recommended
++  to enable this.
++
++IPSEC: Authentication Header
++CONFIG_IPSEC_AH
++  This option provides support for the IPSEC Authentication Header
++  (IP protocol 51) which provides packet layer sender and content
++  authentication.  It is recommended to enable this.  RFC2402
++
++HMAC-MD5 algorithm
++CONFIG_IPSEC_AUTH_HMAC_MD5
++  Provides support for authentication using the HMAC MD5
++  algorithm with 96 bits of hash used as the authenticator.  RFC2403
++
++HMAC-SHA1 algorithm
++CONFIG_IPSEC_AUTH_HMAC_SHA1
++  Provides support for Authentication Header using the HMAC SHA1
++  algorithm with 96 bits of hash used as the authenticator.  RFC2404
++
++IPSEC: Encapsulating Security Payload
++CONFIG_IPSEC_ESP
++  This option provides support for the IPSEC Encapsulation Security
++  Payload (IP protocol 50) which provides packet layer content
++  hiding.  It is recommended to enable this.  RFC2406
++
++3DES algorithm
++CONFIG_IPSEC_ENC_3DES
++  Provides support for Encapsulation Security Payload protocol, using
++  the triple DES encryption algorithm.  RFC2451
++
++IPSEC Debugging Option
++CONFIG_IPSEC_DEBUG
++  Enables IPSEC kernel debugging.  It is further controlled by the
++  user space utility 'klipsdebug'.
++
++IPSEC Regression Testing option
++CONFIG_IPSEC_REGRESS
++  Enables IPSEC regression testing. Creates a number of switches in
++  /proc/sys/net/ipsec which cause various failure modes in KLIPS.
++  For more details see FreeSWAN source under 
++  testing/doc/regression_options.txt.
++
+ # need an empty line after last entry, for sed script in Configure.

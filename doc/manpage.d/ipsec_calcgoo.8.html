@@ -1,0 +1,78 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_CALCGOO</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_CALCGOO</H1>
+Section: Maintenance Commands (8)<BR>Updated: 8 June 2002<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec calcgoo - calculate hex value for matching modules and kernels
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>calcgoo</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>calcgoo</I>
+
+accepts the output of 
+<B>nm -ao</B>
+
+or 
+<B>/proc/ksyms</B>
+
+and extracts a release dependant list of symbols from it. The symbols
+are processed to extract the values assigned during the MODVERSIONS 
+process. This process makes sure that Linux modules are only loaded
+on matching kernels.
+
+This routine is used to find an appropriate module to match the currently
+running kernel by _startklips.
+<A NAME="lbAE">&nbsp;</A>
+<H2>FILES</H2>
+
+<PRE>
+/proc/ksyms
+</PRE>
+
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec__startklips.8.html">ipsec__startklips</A>(8), <A HREF="genksyms.8.html">genksyms</A>(8)
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org">http://www.freeswan.org</A>&gt;
+by Michael Richardson.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">FILES</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:17 GMT, November 11, 2003
+</BODY>
+</HTML>

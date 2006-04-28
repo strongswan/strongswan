@@ -1,0 +1,83 @@
+#!/bin/bash
+# Start up the specified UML instances and wait for them to finish booting
+#
+# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
+# Zuercher Hochschule Winterthur
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: start-testing,v 1.4 2004/12/07 18:04:57 as Exp $
+
+DIR=`dirname $0`
+
+source $DIR/scripts/function.sh
+
+[ -f $DIR/testing.conf ] || die "!! Configuration file 'testing.conf' not found"
+[ -d $DIR/hosts ] || die "Directory hosts cannot be found."
+
+source $DIR/testing.conf
+
+if [ "$#" -eq 0 ]
+then
+    HOSTS=$STRONGSWANHOSTS
+else
+    HOSTS=$*
+fi
+
+#####################################################
+# start the uml switches
+#
+cecho "Start the uml switches  (scripts/start-switches)"
+$DIR/scripts/start-switches
+
+
+#####################################################
+# start the uml instances
+#
+case $UMLSTARTMODE in
+    konsole)
+	cecho "Start the uml instances  (scripts/kstart-umls)"
+	$DIR/scripts/kstart-umls $HOSTS
+	;;
+    xterm)
+	cecho "Start the uml instances  (scripts/xstart-umls)"
+	$DIR/scripts/xstart-umls $HOSTS
+	;;
+    screen)
+	cecho "Start the uml instances  (scripts/start-umls)"
+	$DIR/scripts/start-umls $HOSTS
+	;;
+    *)
+        die "The start mode is unknown! Please set $UMLSTARTMODE properly."
+	;;
+esac
+
+
+#####################################################
+# do the automated testing
+#
+if [ $ENABLE_DO_TESTS = "yes" ]
+then
+   cecho "Run the automated tests (do-tests)"
+   $DIR/do-tests
+fi
+
+
+##############################################################################
+# stop all UML instances and switches
+#
+
+if [ $ENABLE_STOP_TESTING = "yes" ]
+then
+   cecho "Stopping all UML instances and switches (stop-testing)"
+   $DIR/stop-testing $HOSTS
+fi
+

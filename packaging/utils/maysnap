@@ -1,0 +1,41 @@
+#! /bin/sh
+# consider making snapshot of FreeSwan code
+
+who=mcr
+USER=build export USER
+
+. ~build/freeswan-regress-env.sh
+
+umask 022
+
+cd ~build/WANTSNAP
+
+if test ! -f dosnap
+then
+	exit 0
+fi
+
+set -x
+
+if test -f doingsnap
+then
+	echo "snapshot already in progress" | mail -s "snapshot averted" $who
+	exit 0
+fi
+
+echo $$ >doingsnap
+sort -u dosnap >/tmp/snap$$
+echo === >>/tmp/snap$$
+if ~build/bin/mksnap -S >>/tmp/snap$$ 2>&1
+then
+  #if ~build/bin/mksnap -r 1.97 -p pre1.98 >>/tmp/snap$$ 2>&1
+  #then
+	rm -f dosnap
+  #fi
+fi
+
+mail -s "snapshot report $reqd" $who </tmp/snap$$
+rm -f /tmp/snap$$ doingsnap
+
+find /btmp/build/snapshots -type f -ctime +5 -print | xargs -r rm
+

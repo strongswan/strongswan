@@ -1,0 +1,164 @@
+#!/bin/sh
+# Pluto database-loading script
+# Copyright (C) 1998, 1999, 2001  Henry Spencer.
+# 
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: _plutoload.in,v 1.2 2004/03/31 16:15:10 as Exp $
+#
+# exit status is 13 for protocol violation, that of Pluto otherwise
+
+me='ipsec _plutoload'		# for messages
+
+for dummy
+do
+	case "$1" in
+	--load)	plutoload="$2" ; shift	;;
+	--start)	plutostart="$2" ; shift	;;
+	--wait)	plutowait="$2" ; shift	;;
+	--post)	postpluto="$2" ; shift	;;
+	--)	shift ; break	;;
+	-*)	echo "$me: unknown option \`$1'" >&2 ; exit 2	;;
+	*)	break	;;
+	esac
+	shift
+done
+
+# load ca information
+eval `ipsec _confread --varprefix PLUTO --type ca --search auto add start`
+if test " $PLUTO_confreadstatus" != " "
+then
+	echo "auto=add/start search: $PLUTO_confreadstatus"
+	echo "unable to determine what ca information to add -- adding none"
+	caload=
+else
+	caload="$PLUTO_confreadnames"
+fi
+
+# searches, if needed
+# the way the searches were done ensures plutoload >= plutoroute >= plutostart
+
+# search for things to "ipsec auto --add": auto in "add" "route" "start"
+eval `ipsec _confread --varprefix PLUTO --search auto add route start`
+if test " $PLUTO_confreadstatus" != " "
+then
+	echo "auto=add/route/start search: $PLUTO_confreadstatus"
+	echo "unable to determine what conns to add -- adding none"
+	plutoload=
+else
+	plutoload="$PLUTO_confreadnames"
+fi
+
+# search for things to "ipsec auto --route": auto in  "route" "start"
+eval `ipsec _confread --varprefix PLUTO --search auto route start`
+if test " $PLUTO_confreadstatus" != " "
+then
+	echo "auto=route/start search: $PLUTO_confreadstatus"
+	echo "unable to determine what conns to route -- routing none"
+	plutoroute=
+else
+	plutoroute="$PLUTO_confreadnames"
+fi
+
+# search for things to "ipsec auto --up": auto in  "start"
+eval `ipsec _confread --varprefix PLUTO --search auto start`
+if test " $PLUTO_confreadstatus" != " "
+then
+	echo "auto=start search: $PLUTO_confreadstatus"
+	echo "unable to determine what conns to start -- starting none"
+	plutostart=
+else
+	plutostart="$PLUTO_confreadnames"
+fi
+
+# await Pluto's readiness (not likely to be an issue, but...)
+eofed=y
+while read saying
+do
+	case "$saying" in
+	'Pluto initialized')	eofed= ; break	;;	# NOTE BREAK OUT
+	*)	echo "pluto unexpectedly said \`$saying'"	;;
+	esac
+done
+if test "$eofed"
+then
+	echo "pluto died unexpectedly!?!"
+	exit 13
+fi
+
+# ca database load
+for tu in $caload
+do
+	ipsec auto --type ca --add $tu ||
+		echo "...could not add ca \"$tu\""
+done
+
+# conn database load
+for tu in $plutoload
+do
+	ipsec auto --add $tu ||
+		echo "...could not add conn \"$tu\""
+done
+
+# enable listening
+ipsec auto --ready
+
+# execute any post-startup cleanup
+if test " $postpluto" != " "
+then
+	$postpluto
+	st=$?
+	if test " $st" -ne 0
+	then
+		echo "...postpluto command exited with status $st"
+	fi
+fi
+
+# quickly establish routing
+for tu in $plutoroute
+do
+	ipsec auto --route $tu ||
+		echo "...could not route conn \"$tu\""
+done
+
+# tunnel initiation, which may take a while
+async=
+if test " $plutowait" = " no"
+then
+	async="--asynchronous"
+fi
+for tu in $plutostart
+do
+	ipsec auto --up $async $tu ||
+		echo "...could not start conn \"$tu\""
+done
+
+# report any further utterances, and watch for exit status
+eofed=y
+while read saying
+do
+	case "$saying" in
+	exit)	eofed= ; break	;;		# NOTE BREAK OUT
+	*)	echo "pluto unexpectedly says \`$saying'"	;;
+	esac
+done
+if test "$eofed"
+then
+	echo "pluto died without exit status!?!"
+	exit 13
+fi
+if read status
+then
+	exit $status
+else
+	echo "pluto yielded no exit status!?!"
+	exit 13
+fi

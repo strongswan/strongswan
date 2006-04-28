@@ -1,0 +1,353 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="testing.html">Previous</A>
+<A HREF="adv_config.html">Next</A>
+<HR>
+<H1><A name="kernelconfig">Kernel configuration for FreeS/WAN</A></H1>
+<P> This section lists many of the options available when configuring a
+ Linux kernel, and explains how they should be set on a FreeS/WAN IPsec
+ gateway.</P>
+<H2><A name="notall">Not everyone needs to worry about kernel
+ configuration</A></H2>
+<P>Note that in many cases you do not need to mess with these.</P>
+<P> You may have a Linux distribution which comes with FreeS/WAN
+ installed (see this<A href="intro.html#products"> list</A>). In that
+ case, you need not do a FreeS/WAN installation or a kernel
+ configuration. Of course, you might still want to configure and rebuild
+ your kernel to improve performance or security. This can be done with
+ standard tools described in the<A href="http://www.linuxdoc.org/HOWTO/Kernel-HOWTO.html">
+ Kernel HowTo</A>.</P>
+<P>If you need to install FreeS/WAN, then you do need to configure a
+ kernel. However, you may choose to do that using the simplest
+ procedure:</P>
+<UL>
+<LI>Configure, build and test a kernel for your system before adding
+ FreeS/WAN. See the<A href="http://www.linuxdoc.org/HOWTO/Kernel-HOWTO.html">
+ Kernel HowTo</A> for details.<STRONG> This step cannot be skipped</STRONG>
+. FreeS/WAN needs the results of your configuration.</LI>
+<LI>Then use FreeS/WAN's<VAR> make oldgo</VAR> command. This sets
+ everything FreeS/WAN needs and retains your values everywhere else.</LI>
+</UL>
+<P> This document is for those who choose to configure their FreeS/WAN
+ kernel themselves.</P>
+<H2><A name="assume">Assumptions and notation</A></H2>
+<P> Help text for most kernel options is included with the kernel files,
+ and is accessible from within the configuration utilities. We assume
+ you will refer to that, and to the<A href="http://www.linuxdoc.org/HOWTO/Kernel-HOWTO.html">
+ Kernel HowTo</A>, as necessary. This document covers only the
+ FreeS/WAN-specific aspects of the problem.</P>
+<P> To avoid duplication, this document section does not cover settings
+ for the additional IPsec-related kernel options which become available
+ after you have patched your kernel with FreeS/WAN patches. There is
+ help text for those available from within the configuration utility.</P>
+<P> We assume a common configuration in which the FreeS/WAN IPsec
+ gateway is also doing ipchains(8) firewalling for a local network, and
+ possibly masquerading as well.</P>
+<P> Some suggestions below are labelled as appropriate for &quot;a true
+ paranoid&quot;. By this we mean they may cause inconvenience and it is not
+ entirely clear they are necessary, but they appear to be the safest
+ choice. Not using them might entail some risk. Of course one suggested
+ mantra for security administrators is: &quot;I know I'm paranoid. I wonder
+ if I'm paranoid enough.&quot;</P>
+<H3><A name="labels">Labels used</A></H3>
+<P> Six labels are used to indicate how options should be set. We mark
+ the labels with [square brackets]. For two of these labels, you have no
+ choice:</P>
+<DL>
+<DT>[required]</DT>
+<DD>essential for FreeS/WAN operation.</DD>
+<DT>[incompatible]</DT>
+<DD>incompatible with FreeS/WAN.</DD>
+</DL>
+<P>those must be set correctly or FreeS/WAN will not work</P>
+<P>FreeS/WAN should work with any settings of the others, though of
+ course not all combinations have been tested. We do label these in
+ various ways, but<EM> these labels are only suggestions</EM>.</P>
+<DL>
+<DT>[recommended]</DT>
+<DD>useful on most FreeS/WAN gateways</DD>
+<DT>[disable]</DT>
+<DD>an unwelcome complication on a FreeS/WAN gateway.</DD>
+<DT>[optional]</DT>
+<DD>Your choice. We outline issues you might consider.</DD>
+<DT>[anything]</DT>
+<DD>This option has no direct effect on FreeS/WAN and related tools, so
+ you should be able to set it as you please.</DD>
+</DL>
+<P> Of course complexity is an enemy in any effort to build secure
+ systems.<STRONG> For maximum security, any feature that can reasonably
+ be turned off should be</STRONG>. &quot;If in doubt, leave it out.&quot;</P>
+<H2><A name="kernelopt">Kernel options for FreeS/WAN</A></H2>
+<P> Indentation is based on the nesting shown by 'make menuconfig' with
+ a 2.2.16 kernel for the i386 architecture.</P>
+<DL>
+<DT><A name="maturity">Code maturity and level options</A></DT>
+<DD>
+<DL>
+<DT><A name="devel">Prompt for development ... code/drivers</A></DT>
+<DD>[optional] If this is<VAR> no</VAR>, experimental drivers are not
+ shown in later menus.
+<P>For most FreeS/WAN work,<VAR> no</VAR> is the preferred setting.
+ Using new or untested components is too risky for a security gateway.</P>
+<P>However, for some hardware (such as the author's network cards) the
+ only drivers available are marked<VAR> new/experimental</VAR>. In such
+ cases, you must enable this option or your cards will not appear under
+ &quot;network device support&quot;. A true paranoid would leave this option off
+ and replace the cards.</P>
+</DD>
+<DT>Processor type and features</DT>
+<DD>[anything]</DD>
+<DT>Loadable module support</DT>
+<DD>
+<DL>
+<DT>Enable loadable module support</DT>
+<DD>[optional] A true paranoid would disable this. An attacker who has
+ root access to your machine can fairly easily install a bogus module
+ that does awful things, provided modules are enabled. A common tool for
+ attackers is a &quot;rootkit&quot;, a set of tools the attacker uses once he or
+ she has become root on your system. The kit introduces assorted
+ additional compromises so that the attacker will continue to &quot;own&quot; your
+ system despite most things you might do to recovery the situation. For
+ Linux, there is a tool called<A href="http://www.sans.org/newlook/resources/IDFAQ/knark.htm">
+ knark</A> which is basically a rootkit packaged as a kernel module.
+<P>With modules disabled, an attacker cannot install a bogus module. The
+ only way he can achieve the same effects is to install a new kernel and
+ reboot. This is considerably more likely to be noticed.</P>
+<P>Many FreeS/WAN gateways run with modules enabled. This simplifies
+ some administrative tasks and some ipchains features are available only
+ as modules. Once an enemy has root on your machine your security is
+ nil, so arguably defenses which come into play only in that situation
+ are pointless.</P>
+<P></P>
+</DD>
+<DT>Set version information ....</DT>
+<DD>[optional] This provides a check to prevent loading modules compiled
+ for a different kernel.</DD>
+<DT>Kernel module loader</DT>
+<DD>[disable] It gives little benefit on a typical FreeS/WAN gate and
+ entails some risk.</DD>
+</DL>
+</DD>
+<DT>General setup</DT>
+<DD>We list here only the options that matter for FreeS/WAN.
+<DL>
+<DT>Networking support</DT>
+<DD>[required]</DD>
+<DT>Sysctl interface</DT>
+<DD>[optional] If this option is turned on and the<VAR> /proc</VAR>
+ filesystem installed, then you can control various system behaviours by
+ writing to files under<VAR> /proc/sys</VAR>. For example:
+<PRE>        echo 1 &gt; /proc/sys/net/ipv4/ipforward</PRE>
+ turns IP forwarding on.
+<P>Disabling this option breaks many firewall scripts. A true paranoid
+ would disable it anyway since it might conceivably be of use to an
+ attacker.</P>
+</DD>
+</DL>
+</DD>
+<DT>Plug and Play support</DT>
+<DD>[anything]</DD>
+<DT>Block devices</DT>
+<DD>[anything]</DD>
+<DT>Networking options</DT>
+<DD>
+<DL>
+<DT>Packet socket</DT>
+<DD>[optional] This kernel feature supports tools such as tcpdump(8)
+ which communicate directly with network hardware, bypassing kernel
+ protocols. This is very much a two-edged sword:
+<UL>
+<LI>such tools can be very useful to the firewall admin, especially
+ during initial testing</LI>
+<LI>should an evildoer breach your firewall, such tools could give him
+ or her a great deal of information about the rest of your network</LI>
+</UL>
+ We recommend disabling this option on production gateways.</DD>
+<DT><A name="netlink">Kernel/User netlink socket</A></DT>
+<DD>[optional] Required if you want to use<A href="#adv"> advanced
+ router</A> features.</DD>
+<DT>Routing messages</DT>
+<DD>[optional]</DD>
+<DT>Netlink device emulation</DT>
+<DD>[optional]</DD>
+<DT>Network firewalls</DT>
+<DD>[recommended] You need this if the IPsec gateway also functions as a
+ firewall.
+<P>Even if the IPsec gateway is not your primary firewall, we suggest
+ setting this so that you can protect the gateway with at least basic
+ local packet filters.</P>
+</DD>
+<DT>Socket filtering</DT>
+<DD>[disable] This enables an older filtering interface. We suggest
+ using ipchains(8) instead. To do that, set the &quot;Network firewalls&quot;
+ option just above, and not this one.</DD>
+<DT>Unix domain sockets</DT>
+<DD>[required] These sockets are used for communication between the<A href="manpage.d/ipsec.8.html">
+ ipsec(8)</A> commands and the<A href="manpage.d/ipsec_pluto.8.html">
+ ipsec_pluto(8)</A> daemon.</DD>
+<DT>TCP/IP networking</DT>
+<DD>[required]
+<DL>
+<DT>IP: multicasting</DT>
+<DD>[anything]</DD>
+<DT><A name="adv">IP: advanced router</A></DT>
+<DD>[optional] This gives you policy routing, which some people have
+ used to good advantage in their scripts for FreeS/WAN gateway
+ management. It is not used in our distributed scripts, so not required
+ unless you want it for custom scripts. It requires the<A href="#netlink">
+ netlink</A> interface between kernel code and the iproute2(8) command.</DD>
+<DT>IP: kernel level autoconfiguration</DT>
+<DD>[disable] It gives little benefit on a typical FreeS/WAN gate and
+ entails some risk.</DD>
+<DT>IP: firewall packet netlink device</DT>
+<DD>[disable]</DD>
+<DT>IP: transparent proxy support</DT>
+<DD>[optional] This is required in some firewall configurations, but
+ should be disabled unless you have a definite need for it.</DD>
+<DT>IP: masquerading</DT>
+<DD>[optional] Required if you want to use<A href="glossary.html#non-routable">
+ non-routable</A> private IP addresses for your local network.</DD>
+<DT>IP: Optimize as router not host</DT>
+<DD>[recommended]</DD>
+<DT>IP: tunneling</DT>
+<DD>[required]</DD>
+<DT>IP: GRE tunnels over IP</DT>
+<DD>[anything]</DD>
+<DT>IP: aliasing support</DT>
+<DD>[anything]</DD>
+<DT>IP: ARP daemon support (EXPERIMENTAL)</DT>
+<DD>Not required on most systems, but might prove useful on
+ heavily-loaded gateways.</DD>
+<DT>IP: TCP syncookie support</DT>
+<DD>[recommended] It provides a defense against a<A href="glossary.html#DOS">
+ denial of service attack</A> which uses bogus TCP connection requests
+ to waste resources on the victim machine.</DD>
+<DT>IP: Reverse ARP</DT>
+<DD></DD>
+<DT>IP: large window support</DT>
+<DD>[recommended] unless you have less than 16 meg RAM</DD>
+</DL>
+</DD>
+<DT>IPv6</DT>
+<DD>[optional] FreeS/WAN does not currently support IPv6, though work on
+ integrating FreeS/WAN with the Linux IPv6 stack has begun.<A href="compat.html#ipv6">
+ Details</A>.
+<P> It should be possible to use IPv4 FreeS/WAN on a machine which also
+ does IPv6. This combination is not yet well tested. We would be quite
+ interested in hearing results from anyone expermenting with it, via the<A
+href="mail.html"> mailing list</A>.</P>
+<P> We do not recommend using IPv6 on production FreeS/WAN gateways
+ until more testing has been done.</P>
+</DD>
+<DT>Novell IPX</DT>
+<DD>[disable]</DD>
+<DT>Appletalk</DT>
+<DD>[disable] Quite a few Linux installations use IP but also have some
+ other protocol, such as Appletalk or IPX, for communication with local
+ desktop machines. In theory it should be possible to configure IPsec
+ for the IP side of things without interfering with the second protocol.
+<P>We do not recommend this. Keep the software on your gateway as simple
+ as possible. If you need a Linux-based Appletalk or IPX server, use a
+ separate machine.</P>
+</DD>
+</DL>
+</DD>
+<DT>Telephony support</DT>
+<DD>[anything]</DD>
+<DT>SCSI support</DT>
+<DD>[anything]</DD>
+<DT>I2O device support</DT>
+<DD>[anything]</DD>
+<DT>Network device support</DT>
+<DD>[anything] should work, but there are some points to note.
+<P>The development team test almost entirely on 10 or 100 megabit
+ Ethernet and modems. In principle, any device that can do IP should be
+ just fine for IPsec, but in the real world any device that has not been
+ well-tested is somewhat risky. By all means try it, but don't bet your
+ project on it until you have solid test results.</P>
+<P>If you disabled experimental drivers in the<A href="#maturity"> Code
+ maturity</A> section above, then those drivers will not be shown here.
+ Check that option before going off to hunt for missing drivers.</P>
+<P>If you want Linux to automatically find more than one ethernet
+ interface at boot time, you need to:</P>
+<UL>
+<LI>compile the appropriate driver(s) into your kernel. Modules will not
+ work for this</LI>
+<LI>add a line such as
+<PRE>
+   append=&quot;ether=0,0,eth0 ether=0,0,eth1&quot;
+</PRE>
+ to your /etc/lilo.conf file. In some cases you may need to specify
+ parameters such as IRQ or base address. The example uses &quot;0,0&quot; for
+ these, which tells the system to search. If the search does not succeed
+ on your hardware, then you should retry with explicit parameters. See
+ the lilo.conf(5) man page for details.</LI>
+<LI>run lilo(8)</LI>
+</UL>
+ Having Linux find the cards this way is not necessary, but is usually
+ more convenient than loading modules in your boot scripts.</DD>
+<DT>Amateur radio support</DT>
+<DD>[anything]</DD>
+<DT>IrDA (infrared) support</DT>
+<DD>[anything]</DD>
+<DT>ISDN subsystem</DT>
+<DD>[anything]</DD>
+<DT>Old CDROM drivers</DT>
+<DD>[anything]</DD>
+<DT>Character devices</DT>
+<DD>The only required character device is:
+<DL>
+<DT>random(4)</DT>
+<DD>[required] This is a source of<A href="glossary.html#random"> random</A>
+ numbers which are required for many cryptographic protocols, including
+ several used in IPsec.
+<P>If you are comfortable with C source code, it is likely a good idea
+ to go in and adjust the<VAR> #define</VAR> lines in<VAR>
+ /usr/src/linux/drivers/char/random.c</VAR> to ensure that all sources
+ of randomness are enabled. Relying solely on keyboard and mouse
+ randomness is dubious procedure for a gateway machine. You could also
+ increase the randomness pool size from the default 512 bytes (128
+ 32-bit words).</P>
+</DD>
+</DL>
+</DD>
+<DT>Filesystems</DT>
+<DD>[anything] should work, but we suggest limiting a gateway machine to
+ the standard Linux ext2 filesystem in most cases.</DD>
+<DT>Network filesystems</DT>
+<DD>[disable] These systems are an unnecessary risk on an IPsec gateway.</DD>
+<DT>Console drivers</DT>
+<DD>[anything]</DD>
+<DT>Sound</DT>
+<DD>[anything] should work, but we suggest enabling sound only if you
+ plan to use audible alarms for firewall problems.</DD>
+<DT>Kernel hacking</DT>
+<DD>[disable] This might be enabled on test machines, but should not be
+ on production gateways.</DD>
+</DL>
+</DD>
+</DL>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="testing.html">Previous</A>
+<A HREF="adv_config.html">Next</A>
+</BODY>
+</HTML>

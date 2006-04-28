@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML>
+  <HEAD>
+    <TITLE>Building a RedHat root image</TITLE>
+    <!-- Created by: Michael Richardson, 22-Nov-2001 -->
+    <!-- Changed by: Michael Richardson, 22-Nov-2001 -->
+
+
+  </HEAD>
+  <BODY>
+    <H1>Building a RedHat root image</H1>
+
+<P>
+The image required to use User-Mode-Linux is just a normal set of executables.
+These can be extracted from a RedHat distribution using the following proceedure.
+</P>
+
+<P>
+There is a script in testing/utils called <CODE>uml-rhroot.sh</CODE>. It takes
+two arguments:
+<UL>
+<LI> a directory in which to put resulting directory tree. 
+<LI> a directory tree containing the RedHat distribution RPMs. This may be
+  in one of three forms:
+<UL>
+<LI> a directory containing the directories "disc1" and "disc2". These 
+  could be ISO images that are mounted loopback via, for instance:
+<PRE>
+<CODE>
+mkdir -p /distros/redhat/7.2/disc1 /distros/redhat/7.2/disc1
+mount -t iso9660 -o loop,ro /distros/redhat/7.2/enigma-i386-disc1.iso /distros/redhat/7.2/disc1
+mount -t iso9660 -o loop,ro /distros/redhat/7.2/enigma-i386-disc2.iso /distros/redhat/7.2/disc2 
+</CODE>
+</PRE>
+or even two real CDroms mounted somewhere. In the example above, use "/distros/redhat/7.2" as the distribution directory.
+</LI>
+<LI> a directory containing a "merged" disc1 and disc2 as suggested by RedHat in <A HREF="http://www.redhat.com/docs/manuals/linux/RHL-7.2-Manual/install-guide/s1-install-network.html#S2-INSTALL-SETUPSERVER">http://www.redhat.com/docs/manuals/linux/RHL-7.2-Manual/install-guide/s1-install-network.html under "Setting up the Server"</A>.
+<LI> a directory containing all the required RPMs. (See <A HREF="uml-rhroot-list7.2.txt">list of RPMs</A>)</LI>
+</UL>
+</UL>
+</P>
+
+<P>The unpacked distribution will take approximately 133Mb. You will
+  want to locate this on the same partition as your intended root
+  trees for your User-Mode-Linux's as this will permit hard links to
+  be used, saving disk space.  
+</P>
+
+<P>
+  Because the RPM command used uses the chroot(2) system call and
+  needs to change ownership of the files that it creates, it must be
+  run as root. Afterward, you should chown the entire directory to the
+  userid that you will be using for testing (i.e. probably
+  yours). It should eventually suffices to make sure that you can read
+  every file.
+</P>
+
+<P>
+You should be able to chroot to this directory and run programs. If
+you can not at least run ls, then there is a problem.
+</P>
+<P>
+Expect a couple of errors about install-info.
+</P>
+
+<P>
+An example:
+<PRE>
+<CODE>
+Script started on Thu Nov 22 15:51:15 2001
+cassidy:/c2/user-mode-linux# df
+Filesystem           1k-blocks      Used Available Use% Mounted on
+/dev/hda1              3844408   1673528   1975584  46% /
+/dev/hda3             12495048   1823404  10036884  16% /home
+/dev/hdc1             10325748    805056   8996172   9% /c1
+/dev/hdc2             10325780   4815160   4986100  50% /c2
+/dev/hdc3             10325780   2972480   6828780  31% /c3
+/dev/hdc4              7495084   3059640   4054704  44% /c4
+/distros/redhat/7.2/enigma-i386-disc1.iso
+                        662072    662072         0 100% /distros/redhat/7.2/disc1
+/distros/redhat/7.2/enigma-i386-disc2.iso
+                        653740    653740         0 100% /distros/redhat/7.2/disc2
+cassidy:/c2/user-mode-linux# /c2/freeswan/sandbox-main/testing/utils/uml-rhroot.sh 
+Usage: /c2/freeswan/sandbox-main/testing/utils/uml-rhroot.sh rootdir cdimagedir
+cassidy:/c2/user-mode-linux# /c2/freeswan/sandbox-main/testing/utils/uml-rhroot.sh /c2/user-mode-linux/rpm-root/root /distros/redhat/7.2
+Assuming RH disc1 at /distros/redhat/7.2/disc1/RedHat/RPMS
+        and disc2 at /distros/redhat/7.2/disc2/RedHat/RPMS
+/var/tmp/rpm-tmp.99149: /sbin/install-info: No such file or directory
+error: execution of %post scriptlet from textutils-2.0.14-2 failed, exit status 127
+cat: /proc/mounts: No such file or directory
+warning: /var/lib/rpm/Basenames created as /var/lib/rpm/Basenames.rpmnew
+warning: /var/lib/rpm/Conflictname created as /var/lib/rpm/Conflictname.rpmnew
+warning: /var/lib/rpm/Group created as /var/lib/rpm/Group.rpmnew
+warning: /var/lib/rpm/Name created as /var/lib/rpm/Name.rpmnew
+warning: /var/lib/rpm/Packages created as /var/lib/rpm/Packages.rpmnew
+warning: /var/lib/rpm/Providename created as /var/lib/rpm/Providename.rpmnew
+warning: /var/lib/rpm/Requirename created as /var/lib/rpm/Requirename.rpmnew
+warning: /var/lib/rpm/Triggername created as /var/lib/rpm/Triggername.rpmnew
+You should now chown it to yourself.
+cassidy:/c2/user-mode-linux# chown -R mcr rpm-root/root
+cassidy:/c2/user-mode-linux# ls rpm-root/root
+bin   dev  home    lib	opt   root  tmp  var
+boot  etc  initrd  mnt	proc  sbin  usr
+cassidy:/c2/user-mode-linux# chroot rpm-root/root
+cassidy:/# ls
+bin   dev  home    lib  opt   root  tmp  var
+boot  etc  initrd  mnt  proc  sbin  usr
+cassidy:/# exit
+cassidy:/c2/user-mode-linux# exit
+Script done on Thu Nov 22 15:54:33 2001
+</CODE>
+</PRE>
+
+
+  </BODY>
+</HTML>

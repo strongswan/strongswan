@@ -1,0 +1,308 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="install.html">Previous</A>
+<A HREF="background.html">Next</A>
+<HR>
+<H1><A NAME="config">How to configure FreeS/WAN</A></H1>
+<P>This page will teach you how to configure a simple network-to-network
+ link or a Road Warrior connection between two Linux FreeS/WAN boxes.</P>
+<P>See also these related documents:</P>
+<UL>
+<LI>our<A HREF="quickstart.html#quickstart"> quickstart</A> guide to<A HREF="glossary.html#carpediem">
+ opportunistic encryption</A></LI>
+<LI>our guide to configuration with<A HREF="policygroups.html#policygroups">
+ policy groups</A></LI>
+<LI>our<A HREF="adv_config.html#adv_config"> advanced configuration</A>
+ document</LI>
+</UL>
+<P> The network-to-network setup allows you to connect two office
+ networks into one Virtual Private Network, while the Road Warrior
+ connection secures a laptop's telecommute to work. Our examples also
+ show the basic procedure on the Linux FreeS/WAN side where another
+ IPsec peer is in play.</P>
+<P> Shortcut to<A HREF="#config.netnet"> net-to-net</A>.
+<BR> Shortcut to<A HREF="#config.rw"> Road Warrior</A>.</P>
+<H2><A NAME="16_1">Requirements</A></H2>
+<P>To configure the network-to-network connection you must have:</P>
+<UL>
+<LI>two Linux gateways with static IPs</LI>
+<LI>a network behind each gate. Networks must have non-overlapping IP
+ ranges.</LI>
+<LI>Linux FreeS/WAN<A HREF="install.html#install"> installed</A> on both
+ gateways</LI>
+<LI><A HREF="http://www.tcpdump.org"><VAR>tcpdump</VAR></A> on the local
+ gate, to test the connection</LI>
+</UL>
+<P>For the Road Warrior you need:</P>
+<UL>
+<LI>one Linux box with a static IP</LI>
+<LI>a Linux laptop with a dynamic IP</LI>
+<LI>Linux FreeS/WAN installed on both</LI>
+<LI>for testing,<VAR> tcpdump</VAR> on your gateway or laptop</LI>
+</UL>
+<P>If both IPs are dynamic, your situation is a bit trickier. Your best
+ bet is a variation on the<A HREF="#config.rw"> Road Warrior</A>, as
+ described in<A HREF="http://lists.freeswan.org/archives/users/2003-October/msg00282.html">
+ this mailing list message</A>.</P>
+<H2><A name="config.netnet"></A>Net-to-Net connection</H2>
+<H3><A name="netnet.info.ex">Gather information</A></H3>
+<P>For each gateway, compile the following information:</P>
+<UL>
+<LI>gateway IP</LI>
+<LI>IP range of the subnet you will be protecting. This doesn't have to
+ be your whole physical subnet.</LI>
+<LI>a name by which that gateway can identify itself for IPsec
+ negotiations. Its form is a Fully Qualified Domain Name preceded by an
+ @ sign, ie. @xy.example.com.
+<BR> It does not need to be within a domain that you own. It can be a
+ made-up name.</LI>
+</UL>
+<H4>Get your leftrsasigkey</H4>
+<P>On your local Linux FreeS/WAN gateway, print your IPsec public key:</P>
+<PRE>    ipsec showhostkey --left</PRE>
+<P>The output should look like this (with the key shortened for easy
+ reading):</P>
+<PRE>    # RSA 2048 bits   xy.example.com   Fri Apr 26 15:01:41 2002
+    leftrsasigkey=0sAQOnwiBPt...</PRE>
+<P>Don't have a key? Use<A HREF="manpage.d/ipsec_newhostkey.8.html"><VAR>
+ ipsec newhostkey</VAR></A> to create one.</P>
+<H4>...and your rightrsasigkey</H4>
+<P>Get a console on the remote side:</P>
+<PRE>    ssh2 ab.example.com</PRE>
+<P>In that window, type:</P>
+<PRE>    ipsec showhostkey --right</PRE>
+<P>You'll see something like:</P>
+<PRE>    # RSA 2192 bits   ab.example.com   Thu May 16 15:26:20 2002
+    rightrsasigkey=0sAQOqH55O...</PRE>
+<H3><A NAME="16_2_2">Edit<VAR> /etc/ipsec.conf</VAR></A></H3>
+<P>Back on the local gate, copy our template to<VAR> /etc/ipsec.conf</VAR>
+. (on Mandrake,<VAR> /etc/freeswan/ipsec.conf</VAR>). Substitute the
+ information you've gathered for our example data.</P>
+<PRE>conn net-to-net
+    left=192.0.2.2                 # Local vitals
+    leftsubnet=192.0.2.128/29      # 
+    leftid=@xy.example.com         #   
+    leftrsasigkey=0s1LgR7/oUM...   #
+    leftnexthop=%defaultroute      # correct in many situations 
+    right=192.0.2.9                # Remote vitals
+    rightsubnet=10.0.0.0/24        #
+    rightid=@ab.example.com        # 
+    rightrsasigkey=0sAQOqH55O...   #
+    rightnexthop=%defaultroute     # correct in many situations
+    auto=add                       # authorizes but doesn't start this 
+                                   # connection at startup</PRE>
+<P> &quot;Left&quot; and &quot;right&quot; should represent the machines that have FreeS/WAN
+ installed on them, and &quot;leftsubnet&quot; and &quot;rightsubnet&quot; machines that are
+ being protected. /32 is assumed for left/right and left/rightsubnet
+ parameters.</P>
+<P>Copy<VAR> conn net-to-net</VAR> to the remote-side /etc/ipsec.conf.
+ If you've made no other modifications to either<VAR> ipsec.conf</VAR>,
+ simply:</P>
+<PRE>    scp2 ipsec.conf root@ab.example.com:/etc/ipsec.conf</PRE>
+<H3><A NAME="16_2_3">Start your connection</A></H3>
+<P>Locally, type:</P>
+<PRE>    ipsec auto --up net-to-net</PRE>
+<P>You should see:</P>
+<PRE>    104 &quot;net-net&quot; #223: STATE_MAIN_I1: initiate
+    106 &quot;net-net&quot; #223: STATE_MAIN_I2: sent MI2, expecting MR2
+    108 &quot;net-net&quot; #223: STATE_MAIN_I3: sent MI3, expecting MR3
+    004 &quot;net-net&quot; #223: STATE_MAIN_I4: ISAKMP SA established
+    112 &quot;net-net&quot; #224: STATE_QUICK_I1: initiate
+    004 &quot;net-net&quot; #224: STATE_QUICK_I2: sent QI2, IPsec SA established</PRE>
+<P>The important thing is<VAR> IPsec SA established</VAR>. If you're
+ unsuccessful, see our<A HREF="trouble.html#trouble"> troubleshooting
+ tips</A>.</P>
+<H3><A NAME="16_2_4">Do not MASQ or NAT packets to be tunneled</A></H3>
+<P>If you are using<A HREF="glossary.html#masq"> IP masquerade</A> or<A HREF="glossary.html#NAT.gloss">
+ Network Address Translation (NAT)</A> on either gateway, you must now
+ exempt the packets you wish to tunnel from this treatment. For example,
+ if you have a rule like:</P>
+<PRE>iptables -t nat -A POSTROUTING -o eth0 -s 10.0.0.0/24 -j MASQUERADE
+</PRE>
+<P>change it to something like:</P>
+<PRE>iptables -t nat -A POSTROUTING -o eth0 -s 10.0.0.0/24 -d \! 192.0.2.128/29 -j MASQUERADE</PRE>
+<P>This may be necessary on both gateways.</P>
+<H3><A NAME="16_2_5">Test your connection</A></H3>
+<P>Sit at one of your local subnet nodes (not the gateway), and ping a
+ subnet node on the other (again, not the gateway).</P>
+<PRE>    ping fileserver.toledo.example.com</PRE>
+<P>While still pinging, go to the local gateway and snoop your outgoing
+ interface, for example:</P>
+<PRE>    tcpdump -i ppp0</PRE>
+<P>You want to see ESP (Encapsulating Security Payload) packets moving<B>
+ back and forth</B> between the two gateways at the same frequency as
+ your pings:</P>
+<PRE>    19:16:32.046220 192.0.2.2 &gt; 192.0.2.9: ESP(spi=0x3be6c4dc,seq=0x3)
+    19:16:32.085630 192.0.2.9 &gt; 192.0.2.2: ESP(spi=0x5fdd1cf8,seq=0x6)</PRE>
+<P>If you see this, congratulations are in order! You have a tunnel
+ which will protect any IP data from one subnet to the other, as it
+ passes between the two gates. If not, go and<A HREF="trouble.html#trouble">
+ troubleshoot</A>.</P>
+<P>Note: your new tunnel protects only net-net traffic, not
+ gateway-gateway, or gateway-subnet. If you need this (for example, if
+ machines on one net need to securely contact a fileserver on the IPsec
+ gateway), you'll need to create<A HREF="adv_config.html#adv_config">
+ extra connections</A>.</P>
+<H3><A NAME="16_2_6">Finishing touches</A></H3>
+<P>Now that your connection works, name it something sensible, like:</P>
+<PRE>conn winstonnet-toledonet</PRE>
+<P>To have the tunnel come up on-boot, replace</P>
+<PRE>    auto=add</PRE>
+<P>with:</P>
+<PRE>    auto=start</PRE>
+<P>Copy these changes to the other side, for example:</P>
+<PRE>    scp2 ipsec.conf root@ab.example.com:/etc/ipsec.conf</PRE>
+<P>Enjoy!</P>
+<H2><A name="config.rw"></A>Road Warrior Configuration</H2>
+<H3><A name="rw.info.ex">Gather information</A></H3>
+<P>You'll need to know:</P>
+<UL>
+<LI>the gateway's static IP</LI>
+<LI>the IP range of the subnet behind that gateway</LI>
+<LI>a name by which each side can identify itself for IPsec
+ negotiations. Its form is a Fully Qualified Domain Name preceded by an
+ @ sign, ie. @road.example.com.
+<BR> It does not need to be within a domain that you own. It can be a
+ made-up name.</LI>
+</UL>
+<H4>Get your leftrsasigkey...</H4>
+<P>On your laptop, print your IPsec public key:</P>
+<PRE>    ipsec showhostkey --left</PRE>
+<P>The output should look like this (with the key shortened for easy
+ reading):</P>
+<PRE>    # RSA 2192 bits   road.example.com   Sun Jun  9 02:45:02 2002
+    leftrsasigkey=0sAQPIPN9uI...</PRE>
+<P>Don't have a key? See<A HREF="old_config.html#genrsakey"> these
+ instructions</A>.</P>
+<H4>...and your rightrsasigkey</H4>
+<P>Get a console on the gateway:</P>
+<PRE>    ssh2 xy.example.com</PRE>
+<P>View the gateway's public key with:</P>
+<PRE>    ipsec showhostkey --right</PRE>
+<P>This will yield something like</P>
+<PRE>    # RSA 2048 bits   xy.example.com   Fri Apr 26 15:01:41 2002
+    rightrsasigkey=0sAQOnwiBPt...</PRE>
+<H3><A NAME="16_3_2">Customize<VAR> /etc/ipsec.conf</VAR></A></H3>
+<P>On your laptop, copy this template to<VAR> /etc/ipsec.conf</VAR>. (on
+ Mandrake,<VAR> /etc/freeswan/ipsec.conf</VAR>). Substitute the
+ information you've gathered for our example data.</P>
+<PRE>conn road
+    left=%defaultroute             # Picks up our dynamic IP 
+    leftnexthop=%defaultroute      # 
+    leftid=@road.example.com       # Local information
+    leftrsasigkey=0sAQPIPN9uI...   #
+    right=192.0.2.10               # Remote information
+    rightsubnet=10.0.0.0/24        #
+    rightid=@xy.example.com        # 
+    rightrsasigkey=0sAQOnwiBPt...  #
+    auto=add                       # authorizes but doesn't start this
+                                   # connection at startup</PRE>
+<P>The template for the gateway is different. Notice how it reverses<VAR>
+ left</VAR> and<VAR> right</VAR>, in keeping with our convention that<STRONG>
+ L</STRONG>eft is<STRONG> L</STRONG>ocal,<STRONG> R</STRONG>ight<STRONG>
+ R</STRONG>emote. Be sure to switch your rsasigkeys in keeping with
+ this.</P>
+<PRE>    ssh2 xy.example.com
+    vi /etc/ipsec.conf</PRE>
+<P>and add:</P>
+<PRE>conn road
+    left=192.0.2.2                 # Gateway's information
+    leftid=@xy.example.com         #
+    leftsubnet=192.0.2.128/29      #
+    leftrsasigkey=0sAQOnwiBPt...   #
+    rightnexthop=%defaultroute     # correct in many situations
+    right=%any                     # Wildcard: we don't know the laptop's IP
+    rightid=@road.example.com      #
+    rightrsasigkey=0sAQPIPN9uI...  #
+    auto=add                       # authorizes but doesn't start this
+                                   # connection at startup</PRE>
+<H3><A NAME="16_3_3">Start your connection</A></H3>
+<P>You must start the connection from the Road Warrior side. On your
+ laptop, type:</P>
+<PRE>    ipsec auto --start net-to-net</PRE>
+<P>You should see:</P>
+<PRE>104 &quot;net-net&quot; #223: STATE_MAIN_I1: initiate
+106 &quot;road&quot; #301: STATE_MAIN_I2: sent MI2, expecting MR2
+108 &quot;road&quot; #301: STATE_MAIN_I3: sent MI3, expecting MR3
+004 &quot;road&quot; #301: STATE_MAIN_I4: ISAKMP SA established
+112 &quot;road&quot; #302: STATE_QUICK_I1: initiate
+004 &quot;road&quot; #302: STATE_QUICK_I2: sent QI2, IPsec SA established</PRE>
+<P>Look for<VAR> IPsec SA established</VAR>. If you're unsuccessful, see
+ our<A HREF="trouble.html#trouble"> troubleshooting tips</A>.</P>
+<H3><A NAME="16_3_4">Do not MASQ or NAT packets to be tunneled</A></H3>
+<P>If you are using<A HREF="glossary.html#masq"> IP masquerade</A> or<A HREF="glossary.html#NAT.gloss">
+ Network Address Translation (NAT)</A> on either gateway, you must now
+ exempt the packets you wish to tunnel from this treatment. For example,
+ if you have a rule like:</P>
+<PRE>iptables -t nat -A POSTROUTING -o eth0 -s 10.0.0.0/24 -j MASQUERADE
+</PRE>
+<P>change it to something like:</P>
+<PRE>iptables -t nat -A POSTROUTING -o eth0 -s 10.0.0.0/24 -d \! 192.0.2.128/29 -j MASQUERADE</PRE>
+<H3><A NAME="16_3_5">Test your connection</A></H3>
+<P>From your laptop, ping a subnet node behind the remote gateway. Do
+ not choose the gateway itself for this test.</P>
+<PRE>    ping ns.winston.example.com</PRE>
+<P>Snoop the packets exiting the laptop, with a command like:</P>
+<PRE>    tcpdump -i wlan0</PRE>
+<P>You have success if you see (Encapsulating Security Payload) packets
+ travelling<B> in both directions</B>:</P>
+<PRE>    19:16:32.046220 192.0.2.2 &gt; 192.0.2.9: ESP(spi=0x3be6c4dc,seq=0x3)
+    19:16:32.085630 192.0.2.9 &gt; 192.0.2.2: ESP(spi=0x5fdd1cf8,seq=0x6)</PRE>
+<P>If you do, great! Traffic between your Road Warrior and the net
+ behind your gateway is protected. If not, see our<A HREF="trouble.html#trouble">
+ troubleshooting hints</A>.</P>
+<P>Your new tunnel protects only traffic addressed to the net, not to
+ the IPsec gateway itself. If you need the latter, you'll want to make
+ an<A HREF="adv_config.html#adv_config"> extra tunnel.</A>.</P>
+<H3><A NAME="16_3_6">Finishing touches</A></H3>
+<P>On both ends, name your connection wisely, like:</P>
+<PRE>conn mike-to-office</PRE>
+<P><B>On the laptop only,</B> replace</P>
+<PRE>    auto=add</PRE>
+<P>with:</P>
+<PRE>    auto=start</PRE>
+<P>so that you'll be connected on-boot.</P>
+<P>Happy telecommuting!</P>
+<H3><A NAME="16_3_7">Multiple Road Warriors</A></H3>
+<P>If you're using RSA keys, as we did in this example, you can add as
+ many Road Warriors as you like. The left/rightid parameter lets Linux
+ FreeS/WAN distinguish between multiple Road Warrior peers, each with
+ its own public key.</P>
+<P>The situation is different for shared secrets (PSK). During a PSK
+ negotiation, ID information is not available at the time Pluto is
+ trying to determine which secret to use, so, effectively, you can only
+ define one Roadwarrior connection. All your PSK road warriors must
+ therefore share one secret.</P>
+<H2><A NAME="16_4">What next?</A></H2>
+<P>Using the principles illustrated here, you can try variations such
+ as:</P>
+<UL>
+<LI>a telecommuter with a static IP</LI>
+<LI>a road warrior with a subnet behind it</LI>
+</UL>
+<P>Or, look at some of our<A HREF="adv_config.html#adv_config"> more
+ complex configuration examples.</A>.</P>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="install.html">Previous</A>
+<A HREF="background.html">Next</A>
+</BODY>
+</HTML>

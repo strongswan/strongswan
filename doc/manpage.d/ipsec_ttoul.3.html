@@ -1,0 +1,310 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_TTOUL</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_TTOUL</H1>
+Section: C Library Functions (3)<BR>Updated: 16 Aug 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec ttoul, ultot - convert unsigned-long numbers to and from text
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>const char *ttoul(const char *src, size_t srclen,</B>
+
+<BR>
+&nbsp;
+<B>int base, unsigned long *n);</B>
+
+<BR>
+
+<B>size_t ultot(unsigned long n, int format, char *dst,</B>
+
+<BR>
+&nbsp;
+<B>size_t dstlen);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Ttoul</I>
+
+converts a text-string number into a binary
+<B>unsigned long</B>
+
+value.
+<I>Ultot</I>
+
+does the reverse conversion, back to a text version.
+<P>
+
+Numbers are specified in text as
+decimal (e.g.
+<B>123</B>),
+
+octal with a leading zero (e.g.
+<B>012</B>,
+
+which has value 10),
+or hexadecimal with a leading
+<B>0x</B>
+
+(e.g.
+<B>0x1f</B>,
+
+which has value 31)
+in either upper or lower case.
+<P>
+
+The
+<I>srclen</I>
+
+parameter of
+<I>ttoul</I>
+
+specifies the length of the string pointed to by
+<I>src</I>;
+
+it is an error for there to be anything else
+(e.g., a terminating NUL) within that length.
+As a convenience for cases where an entire NUL-terminated string is
+to be converted,
+a
+<I>srclen</I>
+
+value of
+<B>0</B>
+
+is taken to mean
+<B>strlen(src)</B>.
+
+<P>
+
+The
+<I>base</I>
+
+parameter of
+<I>ttoul</I>
+
+can be
+<B>8</B>,
+
+<B>10</B>,
+
+or
+<B>16</B>,
+
+in which case the number supplied is assumed to be of that form
+(and in the case of
+<B>16</B>,
+
+to lack any
+<B>0x</B>
+
+prefix).
+It can also be
+<B>0</B>,
+
+in which case the number is examined for a leading zero
+or a leading
+<B>0x</B>
+
+to determine its base.
+<P>
+
+The
+<I>dstlen</I>
+
+parameter of
+<I>ultot</I>
+
+specifies the size of the
+<I>dst</I>
+
+parameter;
+under no circumstances are more than
+<I>dstlen</I>
+
+bytes written to
+<I>dst</I>.
+
+A result which will not fit is truncated.
+<I>Dstlen</I>
+
+can be zero, in which case
+<I>dst</I>
+
+need not be valid and no result is written,
+but the return value is unaffected;
+in all other cases, the (possibly truncated) result is NUL-terminated.
+The
+<I>freeswan.h</I>
+
+header file defines a constant,
+<B>ULTOT_BUF</B>,
+
+which is the size of a buffer just large enough for worst-case results.
+<P>
+
+The
+<I>format</I>
+
+parameter of
+<I>ultot</I>
+
+must be one of:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>'o'</B><DD>
+octal conversion with leading
+<B>0</B>
+
+<DT><B>&nbsp;8</B><DD>
+octal conversion with no leading
+<B>0</B>
+
+<DT><B>'d'</B><DD>
+decimal conversion
+<DT><B>10</B><DD>
+same as
+<B>d</B>
+
+<DT><B>'x'</B><DD>
+hexadecimal conversion, including leading
+<B>0x</B>
+
+<DT><B>16</B><DD>
+hexadecimal conversion with no leading
+<B>0x</B>
+
+<DT><B>17</B><DD>
+like
+<B>16</B>
+
+except padded on left with
+<B>0</B>s
+
+to eight digits (full width of a 32-bit number)
+</DL>
+</DL>
+
+<P>
+
+<I>Ttoul</I>
+
+returns NULL for success and
+a pointer to a string-literal error message for failure;
+see DIAGNOSTICS.
+<I>Ultot</I>
+
+returns
+<B>0</B>
+
+for a failure, and otherwise
+returns the size of buffer which would 
+be needed to
+accommodate the full conversion result, including terminating NUL
+(it is the caller's responsibility to check this against the size of
+the provided buffer to determine whether truncation has occurred).
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="atol.3.html">atol</A>(3), <A HREF="strtoul.3.html">strtoul</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>DIAGNOSTICS</H2>
+
+Fatal errors in
+<I>ttoul</I>
+
+are:
+empty input;
+unknown
+<I>base</I>;
+
+non-digit character found;
+number too large for an
+<B>unsigned long</B>.
+
+<P>
+
+Fatal errors in
+<I>ultot</I>
+
+are:
+unknown
+<I>format</I>.
+
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+Conversion of
+<B>0</B>
+
+with format
+<B>o</B>
+
+yields
+<B>00</B>.
+
+<P>
+
+<I>Ultot</I>
+
+format
+<B>17</B>
+
+is a bit of a kludge.
+<P>
+
+The restriction of error reports to literal strings
+(so that callers don't need to worry about freeing them or copying them)
+does limit the precision of error reporting.
+<P>
+
+The error-reporting convention lends itself to slightly obscure code,
+because many readers will not think of NULL as signifying success.
+A good way to make it clearer is to write something like:
+<P>
+
+<DL COMPACT><DT><DD>
+<PRE>
+<B>const char *error;</B>
+
+<B>error = ttoul( /* ... */ );</B>
+<B>if (error != NULL) {</B>
+<B>        /* something went wrong */</B>
+</PRE>
+
+</DL>
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">DIAGNOSTICS</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

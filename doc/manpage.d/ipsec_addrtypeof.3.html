@@ -1,0 +1,232 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_INITADDR</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_INITADDR</H1>
+Section: C Library Functions (3)<BR>Updated: 11 Sept 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec initaddr - initialize an ip_address
+<BR>
+
+ipsec addrtypeof - get address type of an ip_address
+<BR>
+
+ipsec addrlenof - get length of address within an ip_address
+<BR>
+
+ipsec addrbytesof - get copy of address within an ip_address
+<BR>
+
+ipsec addrbytesptr - get pointer to address within an ip_address
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>const char *initaddr(const char *src, size_t srclen,</B>
+
+<BR>
+&nbsp;
+<B>int af, ip_address *dst);</B>
+
+<BR>
+
+<B>int addrtypeof(const ip_address *src);</B>
+
+<BR>
+
+<B>size_t addrlenof(const ip_address *src);</B>
+
+<BR>
+
+<B>size_t addrbytesof(const ip_address *src,</B>
+
+<BR>
+&nbsp;
+<B>unsigned char *dst, size_t dstlen);</B>
+
+<BR>
+
+<B>size_t addrbytesptr(const ip_address *src,</B>
+
+<BR>
+&nbsp;
+<B>const unsigned char **dst);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+The
+<B>&lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+library uses an internal type
+<I>ip_address</I>
+
+to contain one of the (currently two) types of IP address.
+These functions provide basic tools for creating and examining this type.
+<P>
+
+<I>Initaddr</I>
+
+initializes a variable
+<I>*dst</I>
+
+of type
+<I>ip_address</I>
+
+from an address
+(in network byte order,
+indicated by a pointer
+<I>src</I>
+
+and a length
+<I>srclen</I>)
+
+and an address family
+<I>af</I>
+
+(typically
+<B>AF_INET</B>
+
+or
+<B>AF_INET6</B>).
+
+The length must be consistent with the address family.
+<P>
+
+<I>Addrtypeof</I>
+
+returns the address type of an address,
+normally
+<B>AF_INET</B>
+
+or
+<B>AF_INET6</B>.
+
+(The
+<B>&lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+header file arranges to include the necessary headers for these
+names to be known.)
+<P>
+
+<I>Addrlenof</I>
+
+returns the size (in bytes) of the address within an
+<I>ip_address</I>,
+
+to permit storage allocation etc.
+<P>
+
+<I>Addrbytesof</I>
+
+copies the address within the
+<I>ip_address</I>
+
+<I>src</I>
+
+to the buffer indicated by the pointer
+<I>dst</I>
+
+and the length
+<I>dstlen</I>,
+
+and returns the address length (in bytes).
+If the address will not fit,
+as many bytes as will fit are copied;
+the returned length is still the full length.
+It is the caller's responsibility to check the
+returned value to ensure that there was enough room.
+<P>
+
+<I>Addrbytesptr</I>
+
+sets
+<I>*dst</I>
+
+to a pointer to the internal address within the
+<I>ip_address</I>,
+
+and returns the address length (in bytes).
+If
+<I>dst</I>
+
+is
+<B>NULL</B>,
+
+it just returns the address length.
+The pointer points to
+<B>const</B>
+
+to discourage misuse.
+<P>
+
+<I>Initaddr</I>
+
+returns
+<B>NULL</B>
+
+for success and
+a pointer to a string-literal error message for failure;
+see DIAGNOSTICS.
+<P>
+
+The functions which return
+<I>size_t</I>
+
+return
+<B>0</B>
+
+for a failure.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="inet.3.html">inet</A>(3), <A HREF="ipsec_ttoaddr.3.html">ipsec_ttoaddr</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>DIAGNOSTICS</H2>
+
+An unknown address family is a fatal error for any of these functions
+except
+<I>addrtypeof</I>.
+
+An address-size mismatch is a fatal error for
+<I>initaddr</I>.
+
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+<I>Addrtypeof</I>
+
+should probably have been named
+<I>addrfamilyof</I>.
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">DIAGNOSTICS</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:17 GMT, November 11, 2003
+</BODY>
+</HTML>

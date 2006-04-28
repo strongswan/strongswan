@@ -1,0 +1,106 @@
+The only delays are after START, and after CNAME.
+
+add the time to each line.
+
+put DNSSEC status on each line.
+
+The format of the replies is:
+
+    <ID> <TIME> <TTL> <TYPE> <TYPE-SPECIFIC> \n
+        ^- whitespace.
+
+ID is a unique number that identifies the transaction. It is determined
+by the caller. lwdnsq treats this ID as a string, and does nothing
+with it other than repeat it on each line.
+There is no predetermined bound on the length, but the total line
+length of input to lwdnsq must not exceed LWDNSQ_CMDBUF_LEN (1024).
+LWDNSQ_CMDBUF_LEN is defined in <freeswan.h>
+
+The output of lwdnsq is currently limited to LWDNSQ_RESULT_LEN_MAX (4096) byte
+lines.  LWDNSQ_RESULT_LEN_MAX is defined in <freeswan.h>
+
+Time is a decimal encoded integer, currently 32-bit time (time_t) since Unix
+epoch. On systems with a 64-bit time_t, it would be 64-bit in range.
+
+The TTL field gives the number of seconds that the result is valid for.
+(starting at the time given). If there is no useful TTL value for the
+record, it will be either "0".
+
+Type is a case-insensitive, one of:
+structure
+     START      (optional comments) acknowledges start of transaction
+     DONE	(optional comments) signals the end of data for a transaction
+
+errors
+     RETRY	same as for FATAL, but this implies that the data
+		was not found, but could be found later.
+
+     FATAL	Following this, is text detailing the fault,
+		in a human readable form.
+		"FATAL" results likely mean that the lwdnsq should
+		be restarted.
+
+     WARNING    Log this result, but do not cancel transaction.
+
+		Errors are still followed by "DONE".
+
+
+
+data answers
+     DNSSEC	followed by "OKAY" or "not present"
+     NAME	followed by canonical name for requested RR,
+		i.e. the result of any CNAMEs/DNAMEs that were chased
+		by the recursive resolving server.
+     CNAME	followed by the name which has been followed.
+     CNAMEFROM	the thing that was mapped
+     TXT	followed by RR-specific Presentation Format
+     SIG	"
+     A		"
+     AAAA	"
+     PTR	"
+     KEY	"
+     AD-TXT	followed by RR-specific Presentation Format - DNSSEC
+     TXT	followed by RR-specific Presentation Format - DNSSEC
+     AD-KEY	followed by RR-specific Presentation Format - DNSSEC
+     KEY	followed by RR-specific Presentation Format - DNSSEC
+
+If there is no data of the type requested, even after lwdnsq
+has attempted to follow CNAMEs, then there will be no resource
+records returned. This is the formal indication of the lack of
+the records, however, in addition, an error will be returned, of the type:
+       RETRY the record "foobar" does not have a RR resource record.
+
+The -ldns library from bind9 will deal with the presentation format,
+producing a structure breakout from it. The functions are:
+
+dns_rdata_fromtext(3)
+	Presentation Format -> Wire Format
+dns_rdata_tostruct(3)
+	Wire Format -> C-structure
+
+dns_rdata_totext(3)
+	Wire Format -> Presentation Format
+
+(Above from  .../src/bind-9.3.0s20020722/lib/dns/include/dns/rdata.h)
+
+The lwdnsq program uses dns_rdata_totext(3) to format the resource record
+(received from lwres in wire format) into its presentation format.
+
+The documentation is in the bind-9.3 source tree, in the header files.
+(They are likely all installed into the include directories).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

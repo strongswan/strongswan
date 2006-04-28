@@ -1,0 +1,264 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_KLIPSDEBUG</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_KLIPSDEBUG</H1>
+Section: Maintenance Commands (8)<BR>Updated: 21 Jun 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec klipsdebug - set KLIPS (kernel IPSEC support) debug features and level
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>klipsdebug</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>klipsdebug</B>
+
+<B>--set</B>
+
+flagname
+<P>
+
+<B>ipsec</B>
+
+<B>klipsdebug</B>
+
+<B>--clear</B>
+
+flagname
+<P>
+
+<B>ipsec</B>
+
+<B>klipsdebug</B>
+
+<B>--all</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>klipsdebug</B>
+
+<B>--none</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>klipsdebug</B>
+
+<B>--help</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>klipsdebug</B>
+
+<B>--version</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Klipsdebug</I>
+
+sets and clears flags that control
+various parts of the debugging output of Klips
+(the kernel portion of FreeS/WAN IPSEC).
+The form with no additional arguments lists the present contents of
+/proc/net/ipsec_klipsdebug.
+The
+<B>--set</B>
+
+form turns the specified flag on,
+while the
+<B>--clear</B>
+
+form turns the specified flag off.
+The 
+<B>--all</B>
+
+form 
+turns all flags on except verbose, while the
+<B>--none</B>
+
+form turns all flags off.
+<P>
+
+The current flag names are:
+<DL COMPACT>
+<DT><B>tunnel</B>
+
+<DD>
+tunnelling code
+<DT><B>tunnel-xmit</B>
+
+<DD>
+tunnelling transmit only code
+<DT><B>pfkey</B>
+
+<DD>
+userspace communication code
+<DT><B>xform</B>
+
+<DD>
+transform selection and manipulation code
+<DT><B>eroute</B>
+
+<DD>
+eroute table manipulation code
+<DT><B>spi</B>
+
+<DD>
+SA table manipulation code
+<DT><B>radij</B>
+
+<DD>
+radij tree manipulation code
+<DT><B>esp</B>
+
+<DD>
+encryptions transforms code
+<DT><B>ah</B>
+
+<DD>
+authentication transforms code
+<B>rcv</B>
+
+receive code
+<DT><B>ipcomp</B>
+
+<DD>
+ip compression transforms code
+<DT><B>verbose</B>
+
+<DD>
+give even more information, BEWARE:
+a)this will print authentication and encryption keys in the logs
+b)this will probably trample the 4k kernel printk buffer giving inaccurate output
+</DL>
+<P>
+
+All Klips debug output appears as
+<B>kernel.info</B>
+
+messages to
+<I><A HREF="syslogd.8.html">syslogd</A></I>(8).
+
+Most systems are set up
+to log these messages to
+<I>/var/log/messages</I>.
+
+Beware that
+<B>klipsdebug</B>
+
+<B>--all</B>
+
+produces a lot of output and the log file will grow quickly.
+<P>
+
+The file format for /proc/net/ipsec_klipsdebug is discussed in
+<A HREF="ipsec_klipsdebug.5.html">ipsec_klipsdebug</A>(5).
+<A NAME="lbAE">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+<DL COMPACT>
+<DT><B>klipsdebug --all</B>
+
+<DD>
+turns on all KLIPS debugging except verbose.
+<DT><B>klipsdebug --clear tunnel</B>
+
+<DD>
+turns off only the
+<B>tunnel</B>
+
+debugging messages.
+</DL>
+<P>
+
+<A NAME="lbAF">&nbsp;</A>
+<H2>FILES</H2>
+
+/proc/net/ipsec_klipsdebug, /usr/local/bin/ipsec
+<A NAME="lbAG">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.8.html">ipsec</A>(8), <A HREF="ipsec_manual.8.html">ipsec_manual</A>(8), <A HREF="ipsec_tncfg.8.html">ipsec_tncfg</A>(8), <A HREF="ipsec_eroute.8.html">ipsec_eroute</A>(8),
+<A HREF="ipsec_spi.8.html">ipsec_spi</A>(8), <A HREF="ipsec_spigrp.8.html">ipsec_spigrp</A>(8), <A HREF="ipsec_klipsdebug.5.html">ipsec_klipsdebug</A>(5)
+<A NAME="lbAH">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org/">http://www.freeswan.org/</A>&gt;
+by Richard Guy Briggs.
+<A NAME="lbAI">&nbsp;</A>
+<H2>BUGS</H2>
+
+It really ought to be possible to set or unset selective combinations
+of flags.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">EXAMPLES</A><DD>
+<DT><A HREF="#lbAF">FILES</A><DD>
+<DT><A HREF="#lbAG">SEE ALSO</A><DD>
+<DT><A HREF="#lbAH">HISTORY</A><DD>
+<DT><A HREF="#lbAI">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

@@ -1,0 +1,439 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_TTODATA</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_TTODATA</H1>
+Section: C Library Functions (3)<BR>Updated: 16 August 2003<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec ttodata, datatot - convert binary data bytes from and to text formats
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>const char *ttodata(const char *src, size_t srclen,</B>
+
+<BR>
+&nbsp;
+<B>int base, char *dst, size_t dstlen, size_t *lenp);</B>
+
+<BR>
+
+<B>const char *ttodatav(const char *src, size_t srclen,</B>
+
+<BR>
+&nbsp;
+<B>int base, char *dst, size_t dstlen, size_t *lenp,</B>
+
+<BR>
+&nbsp;
+<B>char *errp, size_t errlen, int flags);</B>
+
+<BR>
+
+<B>size_t datatot(const char *src, size_t srclen,</B>
+
+<BR>
+&nbsp;
+<B>int format, char *dst, size_t dstlen);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Ttodata</I>,
+
+<I>ttodatav</I>,
+
+and
+<I>datatot</I>
+
+convert arbitrary binary data (e.g. encryption or authentication keys)
+from and to more-or-less human-readable text formats.
+<P>
+
+Currently supported formats are hexadecimal, base64, and characters.
+<P>
+
+A hexadecimal text value begins with a
+<B>0x</B>
+
+(or
+<B>0X</B>)
+
+prefix and continues with two-digit groups
+of hexadecimal digits (0-9, and a-f or A-F),
+each group encoding the value of one binary byte, high-order digit first.
+A single
+<B>_</B>
+
+(underscore)
+between consecutive groups is ignored, permitting punctuation to improve 
+readability; doing this every eight digits seems about right.
+<P>
+
+A base64 text value begins with a
+<B>0s</B>
+
+(or
+<B>0S</B>)
+
+prefix 
+and continues with four-digit groups of base64 digits (A-Z, a-z, 0-9, +, and /),
+each group encoding the value of three binary bytes as described in
+section 6.8 of RFC 2045.
+If
+<B>flags</B>
+
+has the
+<B>TTODATAV_IGNORESPACE</B>
+
+bit on, blanks are ignore (after the prefix).
+Note that the last one or two digits of a base64 group can be
+<B>=</B>
+
+to indicate that fewer than three binary bytes are encoded.
+<P>
+
+A character text value begins with a
+<B>0t</B>
+
+(or
+<B>0T</B>)
+
+prefix
+and continues with text characters, each being the value of one binary byte. 
+<P>
+
+All these functions basically copy data from
+<I>src</I>
+
+(whose size is specified by
+<I>srclen</I>)
+
+to
+<I>dst</I>
+
+(whose size is specified by
+<I>dstlen</I>),
+
+doing the conversion en route.
+If the result will not fit in
+<I>dst</I>,
+
+it is truncated;
+under no circumstances are more than
+<I>dstlen</I>
+
+bytes of result written to
+<I>dst</I>.
+
+<I>Dstlen</I>
+
+can be zero, in which case
+<I>dst</I>
+
+need not be valid and no result bytes are written at all.
+<P>
+
+The
+<I>base</I>
+
+parameter of
+<I>ttodata</I>
+
+and
+<I>ttodatav</I>
+
+specifies what format the input is in;
+normally it should be
+<B>0</B>
+
+to signify that this gets figured out from the prefix.
+Values of
+<B>16</B>,
+
+<B>64</B>,
+
+and
+<B>256</B>
+
+respectively signify hexadecimal, base64, and character-text formats
+without prefixes.
+<P>
+
+The
+<I>format</I>
+
+parameter of
+<I>datatot</I>,
+
+a single character used as a type code,
+specifies which text format is wanted.
+The value
+<B>0</B>
+
+(not ASCII
+<B>'0'</B>,
+
+but a zero value) specifies a reasonable default.
+Other currently-supported values are:
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT><B>'x'</B>
+
+<DD>
+continuous lower-case hexadecimal with a
+<B>0x</B>
+
+prefix
+<DT><B>'h'</B>
+
+<DD>
+lower-case hexadecimal with a
+<B>0x</B>
+
+prefix and a
+<B>_</B>
+
+every eight digits
+<DT><B>':'</B>
+
+<DD>
+lower-case hexadecimal with no prefix and a
+<B>:</B>
+
+(colon) every two digits
+<DT><B>16</B>
+
+<DD>
+lower-case hexadecimal with no prefix or
+<B>_</B>
+
+<DT><B>'s'</B>
+
+<DD>
+continuous base64 with a
+<B>0s</B>
+
+prefix
+<DT><B>64</B>
+
+<DD>
+continuous base64 with no prefix
+</DL>
+</DL>
+
+<P>
+
+The default format is currently
+<B>'h'</B>.
+
+<P>
+
+<I>Ttodata</I>
+
+returns NULL for success and
+a pointer to a string-literal error message for failure;
+see DIAGNOSTICS.
+On success,
+if and only if
+<I>lenp</I>
+
+is non-NULL,
+<B>*lenp</B>
+
+is set to the number of bytes required to contain the full untruncated result.
+It is the caller's responsibility to check this against
+<I>dstlen</I>
+
+to determine whether he has obtained a complete result.
+The
+<B>*lenp</B>
+
+value is correct even if
+<I>dstlen</I>
+
+is zero, which offers a way to determine how much space would be needed
+before having to allocate any.
+<P>
+
+<I>Ttodatav</I>
+
+is just like
+<I>ttodata</I>
+
+except that in certain cases,
+if
+<I>errp</I>
+
+is non-NULL,
+the buffer pointed to by
+<I>errp</I>
+
+(whose length is given by
+<I>errlen</I>)
+
+is used to hold a more detailed error message.
+The return value is NULL for success,
+and is either
+<I>errp</I>
+
+or a pointer to a string literal for failure.
+If the size of the error-message buffer is
+inadequate for the desired message,
+<I>ttodatav</I>
+
+will fall back on returning a pointer to a literal string instead.
+The
+<I>freeswan.h</I>
+
+header file defines a constant
+<B>TTODATAV_BUF</B>
+
+which is the size of a buffer large enough for worst-case results.
+<P>
+
+The normal return value of
+<I>datatot</I>
+
+is the number of bytes required
+to contain the full untruncated result.
+It is the caller's responsibility to check this against
+<I>dstlen</I>
+
+to determine whether he has obtained a complete result.
+The return value is correct even if
+<I>dstlen</I>
+
+is zero, which offers a way to determine how much space would be needed
+before having to allocate any.
+A return value of
+<B>0</B>
+
+signals a fatal error of some kind
+(see DIAGNOSTICS).
+<P>
+
+A zero value for
+<I>srclen</I>
+
+in
+<I>ttodata</I>
+
+(but not
+<I>datatot</I>!)
+
+is synonymous with
+<B>strlen(src)</B>.
+
+A non-zero
+<I>srclen</I>
+
+in
+<I>ttodata</I>
+
+must not include the terminating NUL.
+<P>
+
+Unless
+<I>dstlen</I>
+
+is zero,
+the result supplied by
+<I>datatot</I>
+
+is always NUL-terminated,
+and its needed-size return value includes space for the terminating NUL.
+<P>
+
+Several obsolete variants of these functions
+(<I>atodata</I>,
+
+<I>datatoa</I>,
+
+<I>atobytes</I>,
+
+and
+<I>bytestoa</I>)
+
+are temporarily also supported.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="sprintf.3.html">sprintf</A>(3), <A HREF="ipsec_atoaddr.3.html">ipsec_atoaddr</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>DIAGNOSTICS</H2>
+
+Fatal errors in
+<I>ttodata</I>
+
+and
+<I>ttodatav</I>
+
+are:
+unknown characters in the input;
+unknown or missing prefix;
+unknown base;
+incomplete digit group;
+non-zero padding in a base64 less-than-three-bytes digit group;
+zero-length input.
+<P>
+
+Fatal errors in
+<I>datatot</I>
+
+are:
+unknown format code;
+zero-length input.
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+<I>Datatot</I>
+
+should have a format code to produce character-text output.
+<P>
+
+The
+<B>0s</B>
+
+and
+<B>0t</B>
+
+prefixes are the author's inventions and are not a standard
+of any kind.
+They have been chosen to avoid collisions with existing practice
+(some C implementations use
+<B>0b</B>
+
+for binary)
+and possible confusion with unprefixed hexadecimal.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">DIAGNOSTICS</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:17 GMT, November 11, 2003
+</BODY>
+</HTML>

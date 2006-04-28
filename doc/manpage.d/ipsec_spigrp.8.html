@@ -1,0 +1,280 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_SPIGRP</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_SPIGRP</H1>
+Section: Maintenance Commands (8)<BR>Updated: 21 Jun 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec spigrp - group/ungroup IPSEC Security Associations
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>spigrp</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>spigrp</B>
+
+[
+<B>--label</B>
+
+label ]
+af1 dst1 spi1 proto1 [ af2 dst2 spi2 proto2 [ af3 dst3 spi3 proto3 [ af4 dst4 spi4 proto4 ] ] ] 
+<P>
+
+<B>ipsec</B>
+
+<B>spigrp</B>
+
+[
+<B>--label</B>
+
+label ]
+<B>--said</B>
+
+SA1 [ SA2 [ SA3 [ SA4 ] ] ] 
+<P>
+
+<B>ipsec</B>
+
+<B>spigrp</B>
+
+<B>--help</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>spigrp</B>
+
+<B>--version</B>
+
+<P>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Spigrp</I>
+
+groups IPSEC Security Associations (SAs) together or ungroups
+previously grouped SAs.
+An entry in the IPSEC extended
+routing table can only point
+(via a destination address, a Security Parameters Index (SPI) and
+a protocol identifier) to one SA.
+If more than one transform must be applied to a given type of packet,
+this can be accomplished by setting up several SAs
+with the same destination address but potentially different SPIs and protocols,
+and grouping them with
+<I>spigrp</I>.
+
+<P>
+
+The SAs to be grouped,
+specified by destination address (DNS name lookup, IPv4 dotted quad or IPv6 coloned hex), SPI
+('0x'-prefixed hexadecimal number) and protocol (&quot;ah&quot;, &quot;esp&quot;, &quot;comp&quot; or &quot;tun&quot;),
+are listed from the inside transform to the
+outside;
+in other words, the transforms are applied in
+the order of the command line and removed in the reverse
+order.
+The resulting SA group is referred to by its first SA (by
+<I>af1</I>,
+
+<I>dst1</I>,
+
+<I>spi1</I>
+
+and
+<I>proto1</I>).
+
+<P>
+
+The --said option indicates that the SA IDs are to be specified as
+one argument each, in the format &lt;proto&gt;&lt;af&gt;&lt;spi&gt;@&lt;dest&gt;.  The SA IDs must
+all be specified as separate parameters without the --said option or
+all as monolithic parameters after the --said option.
+<P>
+
+The SAs must already exist and must not already
+be part of a group.
+<P>
+
+If
+<I>spigrp</I>
+
+is invoked with only one SA specification,
+it ungroups the previously-grouped set of SAs containing
+the SA specified.
+<P>
+
+The --label option identifies all responses from that command
+invocation with a user-supplied label, provided as an argument to the
+label option.  This can be helpful for debugging one invocation of the
+command out of a large number.
+<P>
+
+The command form with no additional arguments lists the contents of
+/proc/net/ipsec_spigrp.  The format of /proc/net/ipsec_spigrp is
+discussed in <A HREF="ipsec_spigrp.5.html">ipsec_spigrp</A>(5).
+<A NAME="lbAE">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+<DL COMPACT>
+<DT><B>ipsec spigrp inet gw2 0x113 tun inet gw2 0x115 esp inet gw2 0x116 ah</B>
+
+<DD>
+groups 3 SAs together, all destined for
+<B>gw2</B>,
+
+but with an IPv4-in-IPv4 tunnel SA applied first with SPI
+<B>0x113</B>,
+
+then an ESP header to encrypt the packet with SPI
+<B>0x115</B>,
+
+and finally an AH header to authenticate the packet with SPI
+<B>0x116</B>.
+
+</DL>
+<P>
+
+<DL COMPACT>
+<DT><B>ipsec spigrp --said tun.113@gw2 esp.115@gw2 ah.116@gw2 </B>
+
+<DD>
+groups 3 SAs together, all destined for
+<B>gw2</B>,
+
+but with an IPv4-in-IPv4 tunnel SA applied first with SPI
+<B>0x113</B>,
+
+then an ESP header to encrypt the packet with SPI
+<B>0x115</B>,
+
+and finally an AH header to authenticate the packet with SPI
+<B>0x116</B>.
+
+</DL>
+<P>
+
+<DL COMPACT>
+<DT><B>ipsec spigrp --said tun:<A HREF="mailto:233@3049">233@3049</A>:1::1 esp:<A HREF="mailto:235@3049">235@3049</A>:1::1 ah:<A HREF="mailto:236@3049">236@3049</A>:1::1 </B>
+
+<DD>
+groups 3 SAs together, all destined for
+<B>3049:1::1,</B>
+
+but with an IPv6-in-IPv6 tunnel SA applied first with SPI
+<B>0x233</B>,
+
+then an ESP header to encrypt the packet with SPI
+<B>0x235</B>,
+
+and finally an AH header to authenticate the packet with SPI
+<B>0x236</B>.
+
+</DL>
+<P>
+
+<DL COMPACT>
+<DT><B>ipsec spigrp inet6 3049:1::1 0x233 tun inet6 3049:1::1 0x235 esp inet6 3049:1::1 0x236 ah</B>
+
+<DD>
+groups 3 SAs together, all destined for
+<B>3049:1::1,</B>
+
+but with an IPv6-in-IPv6 tunnel SA applied first with SPI
+<B>0x233</B>,
+
+then an ESP header to encrypt the packet with SPI
+<B>0x235</B>,
+
+and finally an AH header to authenticate the packet with SPI
+<B>0x236</B>.
+
+</DL>
+<P>
+
+<A NAME="lbAF">&nbsp;</A>
+<H2>FILES</H2>
+
+/proc/net/ipsec_spigrp, /usr/local/bin/ipsec
+<A NAME="lbAG">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.8.html">ipsec</A>(8), <A HREF="ipsec_manual.8.html">ipsec_manual</A>(8), <A HREF="ipsec_tncfg.8.html">ipsec_tncfg</A>(8), <A HREF="ipsec_eroute.8.html">ipsec_eroute</A>(8),
+<A HREF="ipsec_spi.8.html">ipsec_spi</A>(8), <A HREF="ipsec_klipsdebug.8.html">ipsec_klipsdebug</A>(8), <A HREF="ipsec_spigrp.5.html">ipsec_spigrp</A>(5)
+<A NAME="lbAH">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org/">http://www.freeswan.org/</A>&gt;
+by Richard Guy Briggs.
+<A NAME="lbAI">&nbsp;</A>
+<H2>BUGS</H2>
+
+Yes, it really is limited to a maximum of four SAs,
+although admittedly it's hard to see why you would need more.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">EXAMPLES</A><DD>
+<DT><A HREF="#lbAF">FILES</A><DD>
+<DT><A HREF="#lbAG">SEE ALSO</A><DD>
+<DT><A HREF="#lbAH">HISTORY</A><DD>
+<DT><A HREF="#lbAI">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

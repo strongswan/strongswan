@@ -1,0 +1,48 @@
+#!/bin/sh
+
+# Assumes man2html command in path
+# That is a Perl script downloadable from
+# http://www.oac.uci.edu/indiv/ehood/man2html.html
+
+# also uses our man_xref utility
+
+case $# in
+2)	;;
+*)	echo "Usage: $0 mantree destdir" >&2 ; exit 2	;;
+esac
+
+mkdir -p $2
+rm -f $2/*
+
+# handle all sections just in case
+# only 3 5 8 expected 
+for i in `find $1 -name 'ipsec*.[1-9]'`
+do
+	b=`basename $i`
+	# then parse that into section number s
+	# and name n
+	case $b in
+		*.1)	s=1 ;;
+		*.2)	s=2 ;;
+		*.3)	s=3 ;;
+		*.4)	s=4 ;;
+		*.5)	s=5 ;;
+		*.6)	s=6 ;;
+		*.7)	s=7 ;;
+		*.8)	s=8 ;;
+		*.9)	s=9 ;;
+		*)	echo "$0 has lost its mind" ; exit 1 ;;
+	esac
+	n=`basename $b \.$s`
+	# the echos are a kluge
+	# without them, the first section head is not tagged
+	(echo ; echo ; man $s $n ) | man2html > $2/$b.html
+done
+# man2html doesn't convert man page cross-references such as
+# ipsec.conf(5) into HTML links
+# So post-process to do that.
+for i in $2/*.html
+do
+	../utils/man_xref $i > temp
+	mv temp $i
+done

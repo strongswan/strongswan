@@ -1,0 +1,458 @@
+#!/bin/bash
+# Automatically execute the strongSwan test cases
+#
+# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
+# Zuercher Hochschule Winterthur
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: do-tests,v 1.20 2006/02/08 21:27:59 as Exp $
+
+DIR=`dirname $0`
+
+source $DIR/scripts/function.sh
+
+[ -f $DIR/testing.conf ] || die "Configuration file 'testing.conf' not found"
+[ -d $DIR/hosts ] || die "Directory 'hosts' not found"
+[ -d $DIR/tests ] || die "Directory 'tests' not found"
+
+source $DIR/testing.conf
+
+
+##############################################################################
+# test if UMLs have been built at all
+#
+
+[ -d $BUILDDIR ] || die "Directory '$BUILDDIR' does not exist. Please run 'make-testing'first."
+
+
+##############################################################################
+# take care of new path and file variables
+#
+
+[ -d $TESTRESULTSDIR ] || mkdir $TESTRESULTSDIR
+
+TESTDATE=`date +%Y%m%d-%H%M`
+
+TODAYDIR=$TESTRESULTSDIR/$TESTDATE
+mkdir $TODAYDIR
+TESTRESULTSHTML=$TODAYDIR/index.html
+DEFAULTTESTSDIR=$UMLTESTDIR/testing/tests
+
+testnumber="0"
+failed_cnt="0"
+passed_cnt="0"
+
+
+##############################################################################
+# copy default tests to $BUILDDIR
+#
+
+TESTSDIR=$BUILDDIR/tests
+[ -d $TESTSDIR ] || mkdir $TESTSDIR
+rm -rf $TESTSDIR/*
+cp -rfp $DEFAULTTESTSDIR/* $TESTSDIR
+
+
+##############################################################################
+# assign IP for each host to hostname
+#
+
+for host in $STRONGSWANHOSTS
+do
+    eval ip_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+    case $host in
+    moon)
+        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_MOON $ip_moon $TESTSDIR
+        searchandreplace PH_IP1_MOON $ip1_moon $TESTSDIR
+        ;;
+    sun)
+        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_SUN $ip_sun $TESTSDIR
+        searchandreplace PH_IP1_SUN $ip1_sun $TESTSDIR
+        ;;
+    alice)
+        searchandreplace PH_IP_ALICE $ip_alice $TESTSDIR
+        ;;
+    venus)
+        searchandreplace PH_IP_VENUS $ip_venus $TESTSDIR
+        ;;
+    bob)
+        searchandreplace PH_IP_BOB $ip_bob $TESTSDIR
+        ;;
+    carol)
+        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_CAROL $ip_carol $TESTSDIR
+        searchandreplace PH_IP1_CAROL $ip1_carol $TESTSDIR
+        ;;
+    dave)
+        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_DAVE $ip_dave $TESTSDIR
+        searchandreplace PH_IP1_DAVE $ip1_dave $TESTSDIR
+        ;;
+    winnetou)
+        searchandreplace PH_IP_WINNETOU $ip_winnetou $TESTSDIR
+        ;;
+    esac
+done
+
+
+##############################################################################
+# create header for the results html file
+#
+
+KERNEL_VERSION=`basename $KERNEL .tar.bz2`
+IPSEC_VERSION=`basename $STRONGSWAN .tar.bz2`
+
+cat > $TESTRESULTSHTML <<@EOF
+<html>
+<head>
+  <title>strongSwan UML Testing</title>
+</head>
+<body>
+  <h2>strongSwan UML Testing</h2>
+  <table border="0" cellspacing="2">
+    <tr><td><b>Host:</b></td><td>`uname -a`</td></tr>
+    <tr><td><b>UML kernel: &nbsp;</b></td><td>$KERNEL_VERSION</td></tr>
+    <tr><td><b>IPsec:</b></td><td>$IPSEC_VERSION</td></tr>
+    <tr><td><b>Date:</b></td><td>$TESTDATE</td></tr>
+  </table>
+  <p>
+  <table border="0" width="500">
+    <thead align="left"><th>Number</th><th>Test</th><th>Result</th></thead>
+@EOF
+
+cecho "UML kernel: $KERNEL_VERSION"
+cecho "IPsec:      $IPSEC_VERSION"
+cecho "Date:       $TESTDATE"
+cecho ""
+
+
+##############################################################################
+# enter specific test directory
+#
+
+if [ $# -gt 0 ]
+then
+    TESTS=$*
+elif [ $SELECTEDTESTSONLY = "yes" ]
+then
+    # set internal field seperator
+    TESTS=$SELECTEDTESTS
+else
+    # set internal field seperator
+    TESTS="`ls $TESTSDIR`"
+fi
+
+for testname in $TESTS
+do
+    let "testnumber += 1"
+    cecho-n " $testnumber $testname.."
+    
+    if [ ! -d $TESTSDIR/${testname} ]
+    then
+	cecho "is missing..skipped"
+	continue
+    fi
+
+    [ -f $TESTSDIR/${testname}/description.txt ] || die "!! File 'description.txt' is missing"
+    [ -f $TESTSDIR/${testname}/test.conf ]       || die "!! File 'test.conf' is missing"
+    [ -f $TESTSDIR/${testname}/pretest.dat ]     || die "!! File 'pretest.dat' is missing"
+    [ -f $TESTSDIR/${testname}/posttest.dat ]    || die "!! File 'posttest.dat' is missing"
+    [ -f $TESTSDIR/${testname}/evaltest.dat ]    || die "!! File 'evaltest.dat' is missing"
+
+    TESTRESULTDIR=$TODAYDIR/$testname
+    mkdir $TESTRESULTDIR
+    CONSOLE_LOG=$TESTRESULTDIR/console.log
+    touch $CONSOLE_LOG
+
+
+    ##########################################################################
+    # copy test specific configurations to uml hosts and clear auth.log files
+    #
+
+    $DIR/scripts/load-testconfig $testname
+    source $TESTSDIR/$testname/test.conf
+
+    
+    ##########################################################################
+    # run tcpdump in the background
+    #
+
+    if [ "$TCPDUMPHOSTS" != "" ]
+    then
+        echo -e "TCPDUMP\n" >> $CONSOLE_LOG 2>&1
+
+        for host_iface in $TCPDUMPHOSTS
+        do
+	    host=`echo $host_iface | awk -F ":" '{print $1}'`
+	    iface=`echo $host_iface | awk -F ":" '{if ($2 != "") { print $2 } else { printf("eth0") }}'`
+	    tcpdump_cmd="tcpdump -i $iface not port ssh and not port domain and not arp > /tmp/tcpdump.log 2>&1 &"
+            echo "${host}# $tcpdump_cmd" >> $CONSOLE_LOG
+            ssh root@`eval echo \\\$ip_$host '$tcpdump_cmd'`
+	    eval TDUP_${host}="true"
+        done
+    fi
+
+    ##########################################################################
+    # execute pre-test commands
+    #
+
+    cecho-n "pre.."
+    echo -e "\nPRE-TEST\n" >> $CONSOLE_LOG 2>&1
+
+    eval `awk -F "::" '{
+	if ($2 != "")
+	{
+	    printf("echo \"%s# %s\"; ", $1, $2)
+	    printf("ssh root@\044ip_%s \"%s\"; ", $1, $2)
+	    printf("echo;\n")
+	}
+    }' $TESTSDIR/${testname}/pretest.dat` >> $CONSOLE_LOG 2>&1
+
+
+    ##########################################################################
+    # stop tcpdump
+    #
+
+    function stop_tcpdump {
+        echo "${1}# killall tcpdump" >> $CONSOLE_LOG
+        eval ssh root@\$ip_${1} killall tcpdump
+        eval TDUP_${1}="false"
+	echo ""
+    }
+
+
+    ##########################################################################
+    # get and evaluate test results
+    #
+
+    cecho-n "test.."
+    echo -e "\nTEST\n" >> $CONSOLE_LOG 2>&1
+
+    STATUS="passed"
+
+    eval `awk -F "::" '{
+	host=$1
+	command=$2
+	pattern=$3
+	hit=$4
+	if (command != "")
+	{
+	    if (command == "tcpdump")
+	    {
+		printf("if [ \044TDUP_%s == \"true\" ]; then stop_tcpdump %s; fi; \n", host, host)
+		printf("echo \"%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
+		printf("ssh root@\044ip_%s cat /tmp/tcpdump.log | grep \"%s\"; ", host, pattern)
+	    }
+	    else
+	    {
+		printf("echo \"%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
+		printf("ssh root@\044ip_%s %s | grep \"%s\"; ",  host, command, pattern)
+	    }
+	    printf("cmd_exit=\044?; ")
+	    printf("echo; ")
+	    printf("if [ \044cmd_exit -eq 0 -a \"%s\" = \"NO\"  ] ", hit)
+	    printf("|| [ \044cmd_exit -ne 0 -a \"%s\" = \"YES\" ] ", hit)
+	    printf("; then STATUS=\"failed\"; fi; \n")
+
+	}
+    }' $TESTSDIR/${testname}/evaltest.dat` >> $CONSOLE_LOG 2>&1
+
+
+    ##########################################################################
+    # set counters
+    #
+
+    if [ $STATUS = "failed" ]
+    then
+        let "failed_cnt += 1"
+    else
+        let "passed_cnt += 1"
+    fi
+
+
+    ##########################################################################
+    # log statusall and listall output
+    # get copies of ipsec.conf, ipsec.secrets
+    # create index.html for the given test case
+
+    cat > $TESTRESULTDIR/index.html <<@EOF
+<html>
+<head>
+  <title>Test $testname</title>
+</head>
+<body>
+<table border="0" width="600">
+  <tr><td>
+    <h2>Test $testname</h2>
+    <h3>Description</h3>
+@EOF
+
+    cat $TESTSDIR/${testname}/description.txt >> $TESTRESULTDIR/index.html
+
+    cat >> $TESTRESULTDIR/index.html <<@EOF
+    <ul>
+      <li><a href="console.log">console.log</a></li>
+    </ul>
+    <img src="../images/$DIAGRAM" alt="$UMLHOSTS">
+@EOF
+
+
+    for host in $IPSECHOSTS
+    do
+	eval HOSTLOGIN=root@\$ip_${host}
+
+	for command in statusall listall
+	do
+	    ssh $HOSTLOGIN ipsec $command \
+		> $TESTRESULTDIR/${host}.$command 2>/dev/null
+	done
+
+	for file in ipsec.conf ipsec.secrets
+	do
+	    scp $HOSTLOGIN:/etc/$file \
+		$TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
+	done
+
+	cat >> $TESTRESULTDIR/index.html <<@EOF
+    <h3>$host</h3>
+    <ul>
+      <li><a href="$host.ipsec.conf">ipsec.conf</a></li>
+      <li><a href="$host.ipsec.secrets">ipsec.secrets</a></li>
+      <li><a href="$host.statusall">ipsec statusall</a></li>
+      <li><a href="$host.listall">ipsec listall</a></li>
+      <li><a href="$host.auth.log">auth.log</a></li>
+    </ul>
+@EOF
+
+    done
+
+    cat >> $TESTRESULTDIR/index.html <<@EOF
+  </td></tr>
+  <tr><td align="right">
+    <b><a href="../index.html">Back</a></b>
+  </td></tr>
+</table>
+</body>
+</html>
+@EOF
+
+
+    ##########################################################################
+    # execute post-test commands
+    #
+
+    cecho-n "post.."
+    echo -e "\nPOST-TEST\n" >> $CONSOLE_LOG 2>&1
+
+    eval `awk -F "::" '{
+	if ($2 != "")
+	{
+	    printf("echo \"%s# %s\"; ", $1, $2)
+	    printf("ssh root@\044ip_%s \"%s\"; ", $1, $2)
+	    printf("echo;\n")
+	}
+    }' $TESTSDIR/${testname}/posttest.dat` >> $CONSOLE_LOG 2>&1
+
+
+    ##########################################################################
+    # get a copy of /var/log/auth.log
+    #
+
+    for host in $IPSECHOSTS
+    do
+	eval HOSTLOGIN=root@\$ip_${host}
+	ssh $HOSTLOGIN grep pluto /var/log/auth.log \
+	    > $TESTRESULTDIR/${host}.auth.log
+    done
+
+
+    ##########################################################################
+    # stop tcpdump if necessary
+    #
+
+    for host in $TCPDUMPHOSTS
+    do
+	if [ "`eval echo \\\$TDUP_${host}`" = "true" ]
+	then
+	    echo "${host}# killall tcpdump" >> $CONSOLE_LOG
+	    eval ssh root@\$ip_$host killall tcpdump
+	    eval TDUP_${host}="false"
+	fi
+    done
+
+
+    ##########################################################################
+    # copy default host config back if necessary
+    #
+
+    $DIR/scripts/restore-defaults $testname
+
+
+    ##########################################################################
+    # write test status to html file
+    #
+
+    cecho "$STATUS"
+    if [ $STATUS = "passed" ]
+    then
+        COLOR="green"
+    else
+        COLOR="red"
+    fi
+
+    cat >> $TESTRESULTSHTML << @EOF
+  <tr>
+    <td>$testnumber</td>
+    <td><a href="$testname/">$testname</a></td>
+    <td><a href="$testname/console.log"><font color="$COLOR">$STATUS</font></a></td>
+  </tr>
+@EOF
+
+done
+
+
+##############################################################################
+# finish the results html file
+#
+
+cat >> $TESTRESULTSHTML << @EOF
+  </table>
+  <p>
+  <b>Passed: &nbsp; $passed_cnt</b><br>
+  <b>Failed: &nbsp; $failed_cnt</b><br>
+  <p>
+</body>
+</html>
+@EOF
+
+cecho ""
+cecho "Passed:   $passed_cnt"
+cecho "Failed:   $failed_cnt"
+cecho ""
+
+
+##############################################################################
+# copy the test results to the apache server
+#
+
+HTDOCS="/var/www/localhost/htdocs"
+
+cecho-n "Copying test results to winnetou.."
+ssh root@${ip_winnetou} mkdir -p $HTDOCS/testresults > /dev/null 2>&1
+scp -r $TODAYDIR root@${ip_winnetou}:$HTDOCS/testresults > /dev/null 2>&1
+ssh root@${ip_winnetou} ln -s $HTDOCS/images $HTDOCS/testresults/$TESTDATE/images > /dev/null 2>&1
+cecho "done"
+cecho ""
+cecho "The results are available in $TODAYDIR"
+cecho "or via the link http://$ip_winnetou/testresults/$TESTDATE"

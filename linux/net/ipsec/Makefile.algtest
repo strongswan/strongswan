@@ -1,0 +1,125 @@
+IPSECVERSION=2.03
+# vim:aw:ai
+#
+# null-patch, non-root GNUmakefile addon for freeswan modules compilation
+# 
+# It will not "affect" normal KLIPS  building because this GNUmakefile
+# it's not copied to /usr/src/linux
+#
+# Author: JuanJo Ciarlante <jjo-ipsec@mendoza.gov.ar>
+# $Id: Makefile.algtest,v 1.2 2004/03/22 21:53:19 as Exp $
+#
+# 1) Copy me to linux/net/ipsec 
+# 2)  
+#     cd klibs/net/ipsec
+#     make prep TOPDIR=/path/to/usr/src/linux \
+#		[CONFIG=/path/to/.config | CONFIG=/dev/null]
+# 3)  
+#     make all TOPDIR=.... CONFIG=....
+#CONFIG_IPSEC_ENC_3DES=y
+#CONFIG_IPSEC_AUTH_HMAC_MD5=y
+#CONFIG_IPSEC_AUTH_HMAC_SHA1=y
+CONFIG_IPSEC_ALG_AES=m
+
+ifndef TOPDIR
+$(error You _must_ pass TOPDIR= and optionally CONFIG=)
+endif
+CONFIG=$(TOPDIR)/.config
+include $(CONFIG)
+
+ifdef CONFIG_USERMODE
+	ARCH=um
+endif
+CONFIG_IPSEC=m
+CONFIG_IPSEC_MODULE=y
+CONFIG_IPSEC_IPIP=y
+CONFIG_IPSEC_AH=y
+CONFIG_IPSEC_ESP=y
+CONFIG_IPSEC_ALG=y
+CONFIG_IPSEC_IPCOMP=y
+
+CONFIG_M586 :=$(shell uname -m | sed -n "s/i586/y/p" )
+CONFIG_M686 :=$(shell uname -m | sed -n "s/i686/y/p" )
+export CONFIG_M586 CONFIG_M686
+cflags-arch-$(CONFIG_M586) 		+= -march=i586
+cflags-arch-$(CONFIG_M586_TSC)		+= -march=i586
+cflags-arch-$(CONFIG_M686)		+= -march=i686
+cflags-arch-$(CONFIG_MPENTIUMIII)	+= -march=i686
+cflags-arch-$(CONFIG_MK7)		+= -march=i686 -malign-functions=4
+CFLAGS_ARCH := $(cflags-arch-y)
+
+ifndef $(CONFIG_SHELL)
+CONFIG_SHELL=/bin/bash
+endif
+export CONFIG_SHELL TOPDIR
+
+ifdef CONFIG_SMP
+EXTRA_CFLAGS += -D__SMP__
+EXTRA_AFLAGS += -D__SMP__
+endif
+
+CFLAGS_IPSEC:=\
+	-DMODVERSIONS \
+	-DCONFIG_IPSEC_MODULE=1\
+	-DCONFIG_IPSEC_IPIP=1\
+	-DCONFIG_IPSEC_AH=1\
+	-DCONFIG_IPSEC_ESP=1\
+	-DCONFIG_IPSEC_IPCOMP=1\
+	-DCONFIG_IPSEC_DEBUG=1 \
+	-DCONFIG_IPSEC_ALG=1 \
+
+#	-DCONFIG_IPSEC_DEBUG=1 \
+#
+cflags-ipsec-$(CONFIG_IPSEC_ENC_3DES)	+= -DCONFIG_IPSEC_ENC_3DES=1
+cflags-ipsec-$(CONFIG_IPSEC_ALG_AES)	+= -DCONFIG_IPSEC_ALG_AES=1
+cflags-ipsec-$(CONFIG_IPSEC_AUTH_HMAC_MD5)+= -DCONFIG_IPSEC_AUTH_HMAC_MD5=1
+cflags-ipsec-$(CONFIG_IPSEC_AUTH_HMAC_SHA1)+= -DCONFIG_IPSEC_AUTH_HMAC_SHA1=1
+CFLAGS_IPSEC+=$(cflags-ipsec-y)
+export CONFIG_IPSEC
+export CONFIG_IPSEC_MODULE
+
+
+# last bits over CFLAGS ...
+CFLAGS+=$(KINCLUDE) $(CFLAGS_IPSEC) $(CFLAGS_ARCH)  $(CFLAGS_KERNEL)
+EXTRA_CFLAGS:=-I$(LOCALKLIPS) -I$(IPSEC_ROOT)/lib 
+# libdes options: OPTS1
+OPTS1:=$(CFLAGS) $(EXTRA_CFLAGS)
+export OPTS1 CFLAGS
+
+#include Makefile
+KERNEL_CFLAGS= $(shell $(MAKE) -C $(TOPDIR) --no-print-directory -s -f Makefile ARCH=$(ARCH) MAKEFLAGS= script SCRIPT='@echo $$(CFLAGS)'   )
+
+MODULE_CFLAGS= $(shell $(MAKE) -C $(TOPDIR) --no-print-directory -s -f Makefile ARCH=$(ARCH) MAKEFLAGS= script SCRIPT='@echo $$(MODFLAGS)'  ) 
+
+
+ALGO_FLAGS=$(CFLAGS_IPSEC)
+export ALGO_FLAGS
+all: modules alg_modules
+modules:
+	$(MAKE) -C $(TOPDIR) SUBDIRS=$(PWD) modules 
+
+ifdef CONFIG_USERMODE
+local_modversions_h:
+	> local_modversions.h
+else
+local_modversions_h:
+	(echo "#ifndef _LINUX_MODVERSIONS_H";\
+	  echo "#define _LINUX_MODVERSIONS_H"; \
+	  echo "#include <linux/modsetver.h>"; \
+	  cd $(TOPDIR)/include/linux/modules; \
+	  perl -ne 'print "#define __ver_$$1\t$$2$$3\n#define $$1\t_set_ver($$1)\n" if (/ (.*)_R(smp)?([a-z0-9]{8})\W/);' /proc/ksyms ;\
+	  echo "#endif"; \
+	) > local_modversions.h
+endif
+un_local_modversions_h:
+	@rm -f local_modversions.h
+
+all_alg_modules:
+	(cd alg && \
+	        $(MAKE) CC='$(CC)' CFLAGS='$(CFLAGS) $(EXTRA_CFLAGS)' \
+		LIBCRYPTO=$(LOCALKLIPS)/../../../lib/libcrypto \
+		all_alg_modules;)
+
+.PHONY: local_modversions_h 
+
+

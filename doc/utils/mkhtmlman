@@ -1,0 +1,44 @@
+#!/bin/sh
+# gathers manpages up into dir, converts them to HTML, including interlinking
+# Assumes RedHat6.0 man2html available.
+
+PATH=/usr/local/bin:/bin:/usr/bin:/usr/contrib/bin:$PATH ; export PATH
+
+# note, this is always run from freeswan/doc.
+
+TOPDIR=..
+
+case $# in
+1)	exit 0	;;
+0)	echo "Usage: $0 destdir manpage ..." >&2 ; exit 1	;;
+esac
+
+dir=$1
+shift
+mkdir -p $dir
+rm -f $dir/*
+
+for f
+do
+	b=`basename $f`
+	case $b in
+	ipsec*)			;;	# ipsec.8, ipsec.conf.5, etc.
+	*)	b="ipsec_$b"	;;
+	esac
+	cp $f $dir/$b
+	$TOPDIR/packaging/utils/manlink $f | while read from to
+	do
+	    (cd $dir; ln -s ../$f $to)
+	done
+done
+
+# build the html (sed mess fixes overly-smart man2html's crud)
+refpat='"http://localhost/cgi-bin/man/man2html?\([1-8]\)+\([^"]*\)"'
+for f in $dir/*.[1-8]
+do
+	echo Processing $f
+	man2html <$f | sed 's;'"$refpat"';"\2.\1.html";g' >$f.html
+done
+
+# remove the source files (must wait until after all builds, due to symlinks)
+rm -f $dir/*.[1-8]

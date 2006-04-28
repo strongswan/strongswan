@@ -1,0 +1,401 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_RSASIGKEY</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_RSASIGKEY</H1>
+Section: Maintenance Commands (8)<BR>Updated: 22 July 2001<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec rsasigkey - generate RSA signature key
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>rsasigkey</B>
+
+[
+<B>--verbose</B>
+
+] [
+<B>--random</B>
+
+filename
+]
+<B>\</B>
+
+<BR>
+
+&nbsp;&nbsp;&nbsp;[
+<B>--rounds</B>
+
+nr
+] [
+<B>--hostname</B>
+
+host ] [
+<B>--noopt</B>
+
+] nbits
+<BR>
+
+<B>ipsec</B>
+
+<B>rsasigkey</B>
+
+[
+<B>--verbose</B>
+
+] [
+<B>--hostname</B>
+
+host ]
+<B>\</B>
+
+<BR>
+
+&nbsp;&nbsp;&nbsp;
+[
+<B>--noopt</B>
+
+]
+<B>--oldkey</B>
+
+file
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Rsasigkey</I>
+
+generates an RSA public/private key pair,
+suitable for digital signatures,
+of (exactly)
+<I>nbits</I>
+
+bits (that is, two primes each of exactly
+<I>nbits</I>/2
+
+bits,
+and related numbers)
+and emits it on standard output as ASCII (mostly hex) data.
+<I>nbits</I>
+
+must be a multiple of 16.
+<P>
+
+The public exponent is forced to the value
+<B>3</B>,
+
+which has important speed advantages for signature checking.
+Beware that the resulting keys have known weaknesses as encryption keys
+<I>and should not be used for that purpose</I>.
+<P>
+
+The
+<B>--verbose</B>
+
+option makes
+<I>rsasigkey</I>
+
+give a running commentary on standard error.
+By default, it works in silence until it is ready to generate output.
+<P>
+
+The
+<B>--random</B>
+
+option specifies a source for random bits.
+The default is
+<I>/dev/random</I>
+
+(see
+<I><A HREF="random.4.html">random</A></I>(4)).
+
+Normally,
+<I>rsasigkey</I>
+
+reads exactly
+<I>nbits</I>
+
+random bits from the source;
+in extremely-rare circumstances it may need more.
+<P>
+
+The
+<B>--rounds</B>
+
+option specifies the number of rounds to be done by the
+<I>mpz_probab_prime_p</I>
+
+probabilistic primality checker.
+The default, 30, is fairly rigorous and should not normally
+have to be overridden.
+<P>
+
+The
+<B>--hostname</B>
+
+option specifies what host name to use in
+the first line of the output (see below);
+the default is what
+<I><A HREF="gethostname.2.html">gethostname</A></I>(2)
+
+returns.
+<P>
+
+The
+<B>--noopt</B>
+
+option suppresses an optimization of the private key
+(to be precise, setting of the decryption exponent to
+<B>lcm(p-1,q-1)</B>
+
+rather than
+<B>(p-1)*(q-1)</B>)
+
+which speeds up operations on it slightly
+but can cause it to flunk a validity check in old RSA implementations
+(notably, obsolete versions of
+<I><A HREF="ipsec_pluto.8.html">ipsec_pluto</A></I>(8)).
+
+<P>
+
+The
+<B>--oldkey</B>
+
+option specifies that rather than generate a new key,
+<I>rsasigkey</I>
+
+should read an old key from the
+<I>file</I>
+
+(the name
+<B>-</B>
+
+means ``standard input'')
+and use that to generate its output.
+Input lines which do not look like
+<I>rsasigkey</I>
+
+output are silently ignored.
+This permits updating old keys to the current format.
+<P>
+
+The output format looks like this (with long numbers trimmed down
+for clarity):
+<P>
+
+
+<PRE>
+        # RSA 2048 bits   xy.example.com   Sat Apr 15 13:53:22 2000
+        # for signatures only, UNSAFE FOR ENCRYPTION
+        #pubkey=0sAQOF8tZ2NZt...Y1P+buFuFn/
+        Modulus: 0xcc2a86fcf440...cf1011abb82d1
+        PublicExponent: 0x03
+        # everything after this point is secret
+        PrivateExponent: 0x881c59fdf8...ab05c8c77d23
+        Prime1: 0xf49fd1f779...46504c7bf3
+        Prime2: 0xd5a9108453...321d43cb2b
+        Exponent1: 0xa31536a4fb...536d98adda7f7
+        Exponent2: 0x8e70b5ad8d...9142168d7dcc7
+        Coefficient: 0xafb761d001...0c13e98d98
+</PRE>
+
+<P>
+
+The first (comment) line,
+indicating the nature and date of the key,
+and giving a host name,
+is used by
+<I><A HREF="ipsec_showhostkey.8.html">ipsec_showhostkey</A></I>(8)
+
+when generating some forms of key output.
+<P>
+
+The commented-out
+<B>pubkey=</B>
+
+line contains the public key---the public exponent and the modulus---combined
+in approximately RFC 2537 format
+(the one deviation is that the combined value is given with a
+<B>0s</B>
+
+prefix, rather than in unadorned base-64),
+suitable for use in the
+<I>ipsec.conf</I>
+
+file.
+<P>
+
+The
+<B>Modulus</B>,
+
+<B>PublicExponent</B>,
+
+and
+<B>PrivateExponent</B>
+
+lines give the basic signing and verification data.
+<P>
+
+The
+<B>Prime1</B>
+
+and
+<B>Prime2</B>
+
+lines give the primes themselves (aka
+<I>p</I>
+
+and
+<I>q</I>),
+
+largest first.
+The
+<B>Exponent1</B>
+
+and
+<B>Exponent2</B>
+
+lines give
+the private exponent mod
+<I>p-1</I>
+
+and
+<I>q-1</I>
+
+respectively.
+The
+<B>Coefficient</B>
+
+line gives the Chinese Remainder Theorem coefficient,
+which is the inverse of
+<I>q</I>,
+
+mod
+<I>p</I>.
+
+These additional numbers (which must all be kept as secret as the
+private exponent) are precomputed aids to rapid signature generation.
+<P>
+
+No attempt is made to break long lines.
+<P>
+
+The US patent on the RSA algorithm expired 20 Sept 2000.
+<A NAME="lbAE">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+<DL COMPACT>
+<DT><B>ipsec rsasigkey --verbose 2192 &gt;mykey</B>
+
+<DD>
+generates a 2192-bit signature key and puts it in the file
+<I>mykey</I>,
+
+with running commentary on standard error.
+The file contents can be inserted verbatim into a suitable entry in the
+<I>ipsec.secrets</I>
+
+file (see
+<I><A HREF="ipsec.secrets.5.html">ipsec.secrets</A></I>(5)),
+
+and the public key can then be extracted and edited into the
+<I>ipsec.conf</I>
+
+file (see
+<I><A HREF="ipsec.conf.5.html">ipsec.conf</A></I>(5)).
+
+<DT><B>ipsec rsasigkey --verbose --oldkey oldie &gt;latest</B>
+
+<DD>
+takes the old signature key from file
+<I>oldie</I>
+
+and puts a version in the current format into the file
+<I>latest</I>,
+
+with running commentary on standard error.
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>FILES</H2>
+
+/dev/random
+<A NAME="lbAG">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="random.4.html">random</A>(4), <A HREF="ipsec_showhostkey.8.html">ipsec_showhostkey</A>(8)
+<BR>
+
+<I>Applied Cryptography</I>, 2nd. ed., by Bruce Schneier, Wiley 1996.
+<BR>
+
+RFCs 2537, 2313.
+<BR>
+
+<I>GNU MP, the GNU multiple precision arithmetic library, edition 2.0.2</I>,
+by Torbj Granlund.
+<A NAME="lbAH">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org">http://www.freeswan.org</A>&gt;
+by Henry Spencer.
+<A NAME="lbAI">&nbsp;</A>
+<H2>BUGS</H2>
+
+There is an internal limit on
+<I>nbits</I>,
+
+currently 20000.
+<P>
+
+<I>Rsasigkey</I>'s
+
+run time is difficult to predict,
+since
+<I>/dev/random</I>
+
+output can be arbitrarily delayed if
+the system's entropy pool is low on randomness,
+and the time taken by the search for primes is also somewhat unpredictable.
+A reasonably typical time for a 1024-bit key on a quiet 200MHz Pentium MMX
+with plenty of randomness available is 20 seconds,
+almost all of it in the prime searches.
+Generating a 2192-bit key on the same system usually takes several minutes.
+A 4096-bit key took an hour and a half of CPU time.
+<P>
+
+The
+<B>--oldkey</B>
+
+option does not check its input format as rigorously as it might.
+Corrupted
+<I>rsasigkey</I>
+
+output may confuse it.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">EXAMPLES</A><DD>
+<DT><A HREF="#lbAF">FILES</A><DD>
+<DT><A HREF="#lbAG">SEE ALSO</A><DD>
+<DT><A HREF="#lbAH">HISTORY</A><DD>
+<DT><A HREF="#lbAI">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

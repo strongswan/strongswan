@@ -1,0 +1,229 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_KLIPSDEBUG</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_KLIPSDEBUG</H1>
+Section: File Formats (5)<BR>Updated: 26 Jun 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec_klipsdebug - list KLIPS (kernel IPSEC support) debug features and level
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>klipsdebug</B>
+
+<P>
+
+<B>cat</B>
+
+<B>/proc/net/ipsec_klipsdebug</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>/proc/net/ipsec_klipsdebug</I>
+
+lists flags that control various parts of the debugging output of Klips
+(the kernel portion of FreeS/WAN IPSEC).
+At this point it is a read-only file.
+<P>
+
+A table entry consists of:
+<DL COMPACT>
+<DT>+<DD>
+a KLIPS debug variable
+<DT>+<DD>
+a '=' separator for visual and automated parsing between the variable
+name and its current value
+<DT>+<DD>
+hexadecimal bitmap of variable's flags.
+</DL>
+<P>
+
+The variable names roughly describe the scope of the debugging variable.
+Currently, no flags are documented or individually accessible yet except
+tunnel-xmit.
+
+<P>
+
+The variable names are:
+<DL COMPACT>
+<DT><B>tunnel</B>
+
+<DD>
+tunnelling code
+<DT><B>netlink</B>
+
+<DD>
+userspace communication code (obsolete)
+<DT><B>xform</B>
+
+<DD>
+transform selection and manipulation code
+<DT><B>eroute</B>
+
+<DD>
+eroute table manipulation code
+<DT><B>spi</B>
+
+<DD>
+SA table manipulation code
+<DT><B>radij</B>
+
+<DD>
+radij tree manipulation code
+<DT><B>esp</B>
+
+<DD>
+encryptions transforms code
+<DT><B>ah</B>
+
+<DD>
+authentication transforms code
+<DT><B>rcv</B>
+
+<DD>
+receive code
+<DT><B>ipcomp</B>
+
+<DD>
+ip compression transforms code
+<DT><B>verbose</B>
+
+<DD>
+give even more information, beware this will probably trample the 4k kernel printk buffer giving inaccurate output
+</DL>
+<P>
+
+All KLIPS debug output appears as
+<B>kernel.info</B>
+
+messages to
+<I><A HREF="syslogd.8.html">syslogd</A></I>(8).
+
+Most systems are set up
+to log these messages to
+<I>/var/log/messages</I>.
+
+<P>
+
+<A NAME="lbAE">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+<P>
+
+<B>debug_tunnel=00000010.</B>
+
+<BR>
+
+<B>debug_netlink=00000000.</B>
+
+<BR>
+
+<B>debug_xform=00000000.</B>
+
+<BR>
+
+<B>debug_eroute=00000000.</B>
+
+<BR>
+
+<B>debug_spi=00000000.</B>
+
+<BR>
+
+<B>debug_radij=00000000.</B>
+
+<BR>
+
+<B>debug_esp=00000000.</B>
+
+<BR>
+
+<B>debug_ah=00000000.</B>
+
+<BR>
+
+<B>debug_rcv=00000000.</B>
+
+<BR>
+
+<B>debug_pfkey=ffffffff.</B>
+
+<P>
+
+means that one
+<B>tunnel</B>
+
+flag has been set (tunnel-xmit),
+full
+<B>pfkey</B>
+
+sockets debugging has been set and everything else is not set.
+<P>
+
+<A NAME="lbAF">&nbsp;</A>
+<H2>FILES</H2>
+
+/proc/net/ipsec_klipsdebug, /usr/local/bin/ipsec
+<A NAME="lbAG">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.8.html">ipsec</A>(8), <A HREF="ipsec_manual.8.html">ipsec_manual</A>(8), <A HREF="ipsec_tncfg.8.html">ipsec_tncfg</A>(8), <A HREF="ipsec_eroute.8.html">ipsec_eroute</A>(8),
+<A HREF="ipsec_spi.8.html">ipsec_spi</A>(8), <A HREF="ipsec_spigrp.8.html">ipsec_spigrp</A>(8), <A HREF="ipsec_klipsdebug.5.html">ipsec_klipsdebug</A>(5), <A HREF="ipsec_version.5.html">ipsec_version</A>(5),
+<A HREF="ipsec_pf_key.5.html">ipsec_pf_key</A>(5)
+<A NAME="lbAH">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org/">http://www.freeswan.org/</A>&gt;
+by Richard Guy Briggs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">EXAMPLES</A><DD>
+<DT><A HREF="#lbAF">FILES</A><DD>
+<DT><A HREF="#lbAG">SEE ALSO</A><DD>
+<DT><A HREF="#lbAH">HISTORY</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

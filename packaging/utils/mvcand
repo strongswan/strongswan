@@ -1,0 +1,62 @@
+#! /bin/sh
+# mvcand
+# move packaged candidate to distribution site (password supplied manually)
+
+PATH=/bin:/usr/bin
+export PATH
+umask 022
+
+. $HOME/freeswan-regress-env.sh
+
+localplace=~build/archive
+site=freeswan@xs4.xs4all.nl
+place=FTP
+linkname=CANDIDATE.tar
+ssh=/usr/bin/ssh
+scp=/usr/bin/scp
+
+localonly=
+remove=yes
+for dummy
+do
+	case "$1" in
+	-l)	localonly=yes	;;
+	-k)	remove=		;;
+	--)	shift ; break	;;
+	-*)	echo "$0: unknown option \'$1'" >&2 ; exit 2	;;
+	*)	break		;;
+	esac
+	shift
+done
+
+case "$#" in
+0)	;;
+*)	echo "Usage: $0" >&2 ; exit	;;
+esac
+
+cd ~build/tmp
+tarname=`ls | sed -n '/^freeswan-.*\.gz$/s/\.gz$//p' | tail -1`
+echo "moving $tarname.gz"
+
+(
+	cd $localplace
+	rm -f freeswan-cand* $linkname.*
+	ln -s $tarname.gz $linkname.gz
+)
+cp -p $tarname.gz $tarname.gz.md5 $tarname.gz.sig CANDIDATE.tar.gz.md5 $localplace
+
+if test "$localonly"
+then
+	exit 0		# leaving the original around
+fi
+
+$ssh $site "cd $place ; rm -f freeswan-cand* $linkname.* ;
+			ln -s $tarname.gz $linkname.gz ;
+			ln -s $tarname.gz.sig $linkname.gz.sig"
+
+$scp -p $tarname.gz.md5 $tarname.gz.sig $tarname.gz CANDIDATE.tar.gz.md5 $site:$place
+
+if test "$remove"
+then
+	rm -f $tarname.*
+fi

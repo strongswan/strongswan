@@ -1,0 +1,184 @@
+0x02                         "ITU-T Administration"
+  0x82                       ""
+    0x06                     "Germany ITU-T member"
+      0x01                   "Deutsche Telekom AG"
+        0x0A                 ""
+          0x07               ""
+            0x14             "ND"
+0x09                         "data"
+  0x92                       ""
+    0x26                     ""
+      0x89                   ""
+        0x93                 ""
+          0xF2               ""
+            0x2C             ""
+              0x64           "pilot"
+                0x01         "pilotAttributeType"
+                  0x01       "UID"
+                  0x19       "DC"
+0x55                         "X.500"
+  0x04                       "X.509"
+    0x03                     "CN"
+    0x04                     "S"
+    0x05                     "SN"
+    0x06                     "C"
+    0x07                     "L"
+    0x08                     "ST"
+    0x0A                     "O"
+    0x0B                     "OU"
+    0x0C                     "T"
+    0x0D                     "D"
+    0x24                     "userCertificate"
+    0x29                     "N"
+    0x2A                     "G"
+    0x2B                     "I"
+    0x2D                     "ID"
+    0x48                     "role"			OID_ROLE
+  0x1D                       "id-ce"
+    0x09                     "subjectDirectoryAttrs"
+    0x0E                     "subjectKeyIdentifier"	OID_SUBJECT_KEY_ID
+    0x0F                     "keyUsage"
+    0x10                     "privateKeyUsagePeriod"
+    0x11                     "subjectAltName"		OID_SUBJECT_ALT_NAME
+    0x12                     "issuerAltName"
+    0x13                     "basicConstraints"		OID_BASIC_CONSTRAINTS
+    0x15                     "reasonCode"		OID_CRL_REASON_CODE
+    0x1F                     "crlDistributionPoints"	OID_CRL_DISTRIBUTION_POINTS
+    0x20                     "certificatePolicies"
+    0x23                     "authorityKeyIdentifier"	OID_AUTHORITY_KEY_ID
+    0x25                     "extendedKeyUsage"		OID_EXTENDED_KEY_USAGE
+    0x37                     "targetInformation"	OID_TARGET_INFORMATION
+    0x38                     "noRevAvail"		OID_NO_REV_AVAIL
+0x2A                         ""
+  0x86                       ""
+    0x48                     ""
+      0x86                   ""
+        0xF7                 ""
+          0x0D               "RSADSI"
+            0x01             "PKCS"
+              0x01           "PKCS-1"
+                0x01         "rsaEncryption"		OID_RSA_ENCRYPTION
+                0x02         "md2WithRSAEncryption"	OID_MD2_WITH_RSA
+                0x04         "md5WithRSAEncryption"	OID_MD5_WITH_RSA
+                0x05         "sha-1WithRSAEncryption"	OID_SHA1_WITH_RSA
+                0x0B         "sha256WithRSAEncryption"	OID_SHA256_WITH_RSA
+                0x0C         "sha384WithRSAEncryption"	OID_SHA384_WITH_RSA
+                0x0D         "sha512WithRSAEncryption"	OID_SHA512_WITH_RSA
+              0x07           "PKCS-7"
+                0x01         "data"			OID_PKCS7_DATA
+                0x02         "signedData"		OID_PKCS7_SIGNED_DATA
+                0x03         "envelopedData"		OID_PKCS7_ENVELOPED_DATA
+                0x04         "signedAndEnvelopedData"	OID_PKCS7_SIGNED_ENVELOPED_DATA
+                0x05         "digestedData"		OID_PKCS7_DIGESTED_DATA
+                0x06         "encryptedData"		OID_PKCS7_ENCRYPTED_DATA
+              0x09           "PKCS-9"
+                0x01         "E"			OID_PKCS9_EMAIL
+                0x02         "unstructuredName"
+                0x03         "contentType"		OID_PKCS9_CONTENT_TYPE
+                0x04         "messageDigest"		OID_PKCS9_MESSAGE_DIGEST
+                0x05         "signingTime"		OID_PKCS9_SIGNING_TIME
+                0x06         "counterSignature"
+                0x07         "challengePassword"
+                0x08         "unstructuredAddress"
+                0x0E         "extensionRequest"
+            0x02             "digestAlgorithm"
+              0x02           "md2"			OID_MD2
+              0x05           "md5"			OID_MD5
+            0x03             "encryptionAlgorithm"
+              0x07           "3des-ede-cbc"		OID_3DES_EDE_CBC
+0x2B                         ""
+  0x06                       "dod"
+    0x01                     "internet"
+      0x04                   "private"
+        0x01                 "enterprise"
+          0x82               ""
+            0x37             "Microsoft"
+              0x0A           ""
+                0x03         ""
+                  0x03       "msSGC"
+          0x89               ""
+            0x31             ""
+              0x01           ""
+                0x01         ""
+                  0x02       ""
+                    0x02     ""
+                    0x4B     "TCGID"
+      0x05                   "security"
+        0x05                 "mechanisms"
+          0x07               "id-pkix"
+            0x01             "id-pe"
+              0x01           "authorityInfoAccess"	OID_AUTHORITY_INFO_ACCESS
+            0x03             "id-kp"
+              0x01           "serverAuth"
+              0x02           "clientAuth"
+              0x03           "codeSigning"
+              0x04           "emailProtection"
+              0x05           "ipsecEndSystem"
+              0x06           "ipsecTunnel"
+              0x07           "ipsecUser"
+              0x08           "timeStamping"
+              0x09           "ocspSigning"		OID_OCSP_SIGNING
+            0x08             "id-otherNames"
+              0x05           "xmppAddr"			OID_XMPP_ADDR
+            0x0A             "id-aca"
+              0x01           "authenticationInfo"	OID_AUTHENTICATION_INFO
+              0x02           "accessIdentity"		OID_ACCESS_IDENTITY
+              0x03           "chargingIdentity"		OID_CHARGING_IDENTITY
+              0x04           "group"			OID_GROUP
+            0x30             "id-ad"
+              0x01           "ocsp"			OID_OCSP
+                0x01         "basic"			OID_BASIC
+                0x02         "nonce"			OID_NONCE
+                0x03         "crl"			OID_CRL
+                0x04         "response"			OID_RESPONSE
+                0x05         "noCheck"			OID_NO_CHECK
+                0x06         "archiveCutoff"		OID_ARCHIVE_CUTOFF
+                0x07         "serviceLocator"		OID_SERVICE_LOCATOR
+  0x0E                       "oiw"
+    0x03                     "secsig"
+      0x02                   "algorithms"
+        0x07                 "des-cbc"			OID_DES_CBC
+        0x1A                 "sha-1"			OID_SHA1
+        0x1D                 "sha-1WithRSASignature"	OID_SHA1_WITH_RSA_OIW
+  0x24                       "TeleTrusT"
+    0x03                     "algorithm"
+      0x03                   "signatureAlgorithm"
+        0x01                 "rsaSignature"
+          0x02               "rsaSigWithripemd160"
+          0x03               "rsaSigWithripemd128"
+          0x04               "rsaSigWithripemd256"
+0x60                         ""
+  0x86                       ""
+    0x48                     ""
+      0x01                   "organization"
+        0x65                 "gov"
+          0x03               "csor"
+            0x04             "nistalgorithm"
+              0x02           "hashalgs"
+                0x01         "id-SHA-256"
+                0x02         "id-SHA-384"
+                0x03         "id-SHA-512"
+        0x86                 ""
+          0xf8               ""
+            0x42             "netscape"
+              0x01           ""
+                0x01         "nsCertType"
+                0x03         "nsRevocationUrl"		OID_NS_REVOCATION_URL
+                0x04         "nsCaRevocationUrl"	OID_NS_CA_REVOCATION_URL
+                0x08         "nsCaPolicyUrl"		OID_NS_CA_POLICY_URL
+                0x0d         "nsComment"		OID_NS_COMMENT
+              0x03           "directory"
+                0x01         ""
+                  0x03       "employeeNumber"
+              0x04           "policy"
+                0x01         "nsSGC"
+            0x45             "verisign"
+              0x01           "pki"
+                0x09         "attributes"
+                  0x02       "messageType"		OID_PKI_MESSAGE_TYPE
+                  0x03       "pkiStatus"		OID_PKI_STATUS
+                  0x04       "failInfo"			OID_PKI_FAIL_INFO
+                  0x05       "senderNonce"		OID_PKI_SENDER_NONCE
+                  0x06       "recipientNonce"		OID_PKI_RECIPIENT_NONCE
+                  0x07       "transID"			OID_PKI_TRANS_ID
+                  0x08       "extensionReq"

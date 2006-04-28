@@ -1,0 +1,13 @@
+ALG:=sha2
+CONFIG_YES:=$(CONFIG_IKE_ALG_SHA2)
+DIR_SHA2:=$(LIBCRYPTO)/libsha2
+ALG_DIRS-$(CONFIG_YES) := $(ALG_DIRS-$(CONFIG_YES)) $(DIR_SHA2)
+ALG_LIBS-$(CONFIG_YES) := $(ALG_LIBS-$(CONFIG_YES)) $(DIR_SHA2)/libsha2.a
+ALG_SRCS-$(CONFIG_YES) := $(ALG_SRCS-$(CONFIG_YES)) ike_alg_$(ALG).c
+ALG_OBJS-$(CONFIG_YES) := $(ALG_OBJS-$(CONFIG_YES)) ike_alg_$(ALG).o
+
+$(DIR_SHA2)/libsha2.a:
+	make -C $(DIR_SHA2) libsha2.a
+
+ike_alg_$(ALG).o: ike_alg_$(ALG).c
+	$(CC) -I $(LIBCRYPTO) -I$(DIR_SHA2) $(COPTS) $(ALLFLAGS) -c $<

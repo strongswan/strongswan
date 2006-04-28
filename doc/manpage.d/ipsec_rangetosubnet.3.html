@@ -1,0 +1,116 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_RANGETOSUBNET</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_RANGETOSUBNET</H1>
+Section: C Library Functions (3)<BR>Updated: 8 Sept 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec rangetosubnet - convert address range to subnet
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>const char *rangetosubnet(const ip_address *start,</B>
+
+<BR>
+&nbsp;
+<B>const ip_address *stop, ip_subnet *dst);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Rangetosubnet</I>
+
+accepts two IP addresses which define an address range,
+from
+<I>start</I>
+
+to
+<I>stop</I>
+
+inclusive,
+and converts this to a subnet if possible.
+The addresses must both be IPv4 or both be IPv6,
+and the address family of the resulting subnet is the same.
+<P>
+
+<I>Rangetosubnet</I>
+
+returns NULL for success and
+a pointer to a string-literal error message for failure;
+see DIAGNOSTICS.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec_initsubnet.3.html">ipsec_initsubnet</A>(3), <A HREF="ipsec_ttosubnet.3.html">ipsec_ttosubnet</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>DIAGNOSTICS</H2>
+
+Fatal errors in
+<I>rangetosubnet</I>
+
+are:
+mixed address families;
+unknown address family;
+<I>start</I>
+
+and
+<I>stop</I>
+
+do not define a subnet.
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+The restriction of error reports to literal strings
+(so that callers don't need to worry about freeing them or copying them)
+does limit the precision of error reporting.
+<P>
+
+The error-reporting convention lends itself
+to slightly obscure code,
+because many readers will not think of NULL as signifying success.
+A good way to make it clearer is to write something like:
+<P>
+
+<DL COMPACT><DT><DD>
+<PRE>
+<B>const char *error;</B>
+
+<B>error = rangetosubnet( /* ... */ );</B>
+<B>if (error != NULL) {</B>
+<B>        /* something went wrong */</B>
+</PRE>
+
+</DL>
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">DIAGNOSTICS</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

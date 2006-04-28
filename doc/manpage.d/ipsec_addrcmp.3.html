@@ -1,0 +1,274 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_ANYADDR</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_ANYADDR</H1>
+Section: C Library Functions (3)<BR>Updated: 28 Nov 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec sameaddr - are two addresses the same?
+<BR>
+
+ipsec addrcmp - ordered comparison of addresses
+<BR>
+
+ipsec samesubnet - are two subnets the same?
+<BR>
+
+ipsec addrinsubnet - is an address within a subnet?
+<BR>
+
+ipsec subnetinsubnet - is a subnet within another subnet?
+<BR>
+
+ipsec subnetishost - is a subnet a single host?
+<BR>
+
+ipsec samesaid - are two SA IDs the same?
+<BR>
+
+ipsec sameaddrtype - are two addresses of the same address family?
+<BR>
+
+ipsec samesubnettype - are two subnets of the same address family?
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>int sameaddr(const ip_address *a, const ip_address *b);</B>
+
+<BR>
+
+<B>int addrcmp(const ip_address *a, const ip_address *b);</B>
+
+<BR>
+
+<B>int samesubnet(const ip_subnet *a, const ip_subnet *b);</B>
+
+<BR>
+
+<B>int addrinsubnet(const ip_address *a, const ip_subnet *s);</B>
+
+<BR>
+
+<B>int subnetinsubnet(const ip_subnet *a, const ip_subnet *b);</B>
+
+<BR>
+
+<B>int subnetishost(const ip_subnet *s);</B>
+
+<BR>
+
+<B>int samesaid(const ip_said *a, const ip_said *b);</B>
+
+<BR>
+
+<B>int sameaddrtype(const ip_address *a, const ip_address *b);</B>
+
+<BR>
+
+<B>int samesubnettype(const ip_subnet *a, const ip_subnet *b);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+These functions do various comparisons and tests on the
+<I>ip_address</I>
+
+type and
+<I>ip_subnet</I>
+
+types.
+<P>
+
+<I>Sameaddr</I>
+
+returns
+non-zero
+if addresses
+<I>a</I>
+
+and
+<I>b</I>
+
+are identical,
+and
+<B>0</B>
+
+otherwise.
+Addresses of different families are never identical.
+<P>
+
+<I>Addrcmp</I>
+
+returns
+<B>-1</B>,
+
+<B>0</B>,
+
+or
+<B>1</B>
+
+respectively
+if address
+<I>a</I>
+
+is less than, equal to, or greater than
+<I>b</I>.
+
+If they are not of the same address family,
+they are never equal;
+the ordering reported in this case is arbitrary
+(and probably not useful) but consistent.
+<P>
+
+<I>Samesubnet</I>
+
+returns
+non-zero
+if subnets
+<I>a</I>
+
+and
+<I>b</I>
+
+are identical,
+and
+<B>0</B>
+
+otherwise.
+Subnets of different address families are never identical.
+<P>
+
+<I>Addrinsubnet</I>
+
+returns
+non-zero
+if address
+<I>a</I>
+
+is within subnet
+<I>s</I>
+
+and
+<B>0</B>
+
+otherwise.
+An address is never within a
+subnet of a different address family.
+<P>
+
+<I>Subnetinsubnet</I>
+
+returns
+non-zero
+if subnet
+<I>a</I>
+
+is a subset of subnet
+<I>b</I>
+
+and
+<B>0</B>
+
+otherwise.
+A subnet is deemed to be a subset of itself.
+A subnet is never a subset of another
+subnet if their address families differ.
+<P>
+
+<I>Subnetishost</I>
+
+returns
+non-zero
+if subnet
+<I>s</I>
+
+is in fact only a single host,
+and
+<B>0</B>
+
+otherwise.
+<P>
+
+<I>Samesaid</I>
+
+returns
+non-zero
+if SA IDs
+<I>a</I>
+
+and
+<I>b</I>
+
+are identical,
+and
+<B>0</B>
+
+otherwise.
+<P>
+
+<I>Sameaddrtype</I>
+
+returns
+non-zero
+if addresses
+<I>a</I>
+
+and
+<I>b</I>
+
+are of the same address family,
+and
+<B>0</B>
+
+otherwise.
+<P>
+
+<I>Samesubnettype</I>
+
+returns
+non-zero
+if subnets
+<I>a</I>
+
+and
+<I>b</I>
+
+are of the same address family,
+and
+<B>0</B>
+
+otherwise.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="inet.3.html">inet</A>(3), <A HREF="ipsec_initaddr.3.html">ipsec_initaddr</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">HISTORY</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:17 GMT, November 11, 2003
+</BODY>
+</HTML>

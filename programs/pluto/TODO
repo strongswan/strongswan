@@ -1,0 +1,129 @@
+Pluto TODO list
+===============
+RCSID $Id: TODO,v 1.1 2004/03/15 20:35:28 as Exp $
+
+- should all log entries that are for errors say ERROR?
+
+- Add a "plug-in" facility so that others can add features without
+  changing the mainline code.  This is how X509/LDAP/biometric stuff
+  might be added.
+
+- (internal change only) routines for outputting payloads should plug
+  "np" into the previous payload so that a payload generating routine
+  need not know what the next payload will be.  This may be more bother
+  than it is worth.
+
+- notifications, in and out
+  + delete
+  + first contact
+  + last contact? (not part of drafts, but would be nice)
+
+- Make DNS usage for asynchronous (non-blocking)
+  + looking up KEY and TXT records during negotiation
+  + perhaps not for whack command arguments and ipsec.secrets since the
+    library code uses gethostbyname
+
+- check that ipsec auto and whack to agree on what is worth reporting
+
+- Should Pluto (rather than ipsec manual) install %passthrough conns?
+  That way Pluto would know of them.
+
+- For responding to Road Warriors, how can we decide if the RW has
+  gone away?  The rekeying event is perhaps too imprecise.  Even if
+  rekeying event is good enough, how do we know if the route should be
+  torn down?  Perhaps limiting a Phase 1 ID to one IP address would
+  help (limiting a client subnet to one peer already helps).  Perhaps
+  (in some rate-limited way) we can take an ICMP host unreachable
+  as a hint to do some authenticated and reliable probe.
+
+- it is annoying that Pluto and auto have different models for public keys.
+  + auto specifies one per connection
+  + Pluto allows one to be specified per id
+  Two connections with the same id are going to use the same key:
+  the one of the last conn to be added!
+
+  I think auto ought to be fixed.  It is hard for Pluto to warn when
+  there is a conflict since the deletion of a connection doesn't
+  prompt auto to tell pluto to delete the public key.
+
+- different connections with the same host IP addresses are randomly
+  interchangeable until the ID payload is received.  At least for the
+  Responder case (and eventually for the opportunistic Initiator).
+  Worse, all Road Warriors must be considered to have the
+  indistinguishable IP addresses.  This affects ISAKMP SA negotiation.
+  Currently, there is little flexibility in this negotiation, so the
+  problem is limited to the specification of acceptable authentication
+  method(s).  Correct, but more work than seems worthwhile, would be
+  to select the conn based on what is proposed.
+
+  Warning about such confusion at connection definition time isn't great
+  because there is no confusion when explicitly initiated (a particular
+  conn is specified).  Warning for a Road Warrior conn is possible
+  since it cannot be initiated (and has been implemented).
+
+- characterize and ameliorate DOS attacks.  Lots of rate limiting.
+
+- look at John Denker's wish list: http://www.quintillion.com/moat/wish.list
+
+- use of random numbers needs to be audited.
+
+- unknown (not just unimplemented) transforms cause a negotiation to
+  fail.  Only the transform should be rejected.
+
+- we need better policy control.  Our present flags need to be
+  modulated (forbid, allow, offer, require)
+
+- HS will specify how --copyright and --version should behave
+
+- HS will initiate project-wide terminology replacing ISAKMP SA, IPSEC
+  SA, Protection Suite, Phase 1, Main Mode, Phase 2, Quick Mode, ...
+  Simplicity and clarity will be a goal.
+
+- interface discovery ought to match what is specified in ipsec.conf.
+  This probably means grokking /proc/net/ipsec_tncfg.  Documented in
+  ipsec_tncfg(5).  This won't do for Hugh's debugging setup.
+
+
+Protocol Issues
+===============
+
+Notification and delete payloads seem to be "escape hatches" for the
+protocols.  As such, anything implemented using them seems to be
+kludged without being well designed or well situated or well
+constrained in the protocols.  Often the precise meaning (if any) or
+usage is under specified.  An implementation is allowed to ignore
+them, so they cannot really matter (but they too often do).  Their
+specification ought to be scrutinized by a protocol guru.
+
+Any extra payload in last main mode message is not protected (not
+authenticated by hash).
+
+Should notification payloads be interpreted before or after the normal
+payloads (i.e. understood in the context of, executed in the context of).
+
+What is the precise result of an INITIAL_CONNECTION?  What is a
+"system" (eg. does Phase 1 Identity count)?  What is "earlier" or
+"before" (simultaneous negotiation is possible, with time being only a
+partial order)?  Could it be used for FINAL_CONTACT (needed too)?
+
+Blasting out a pile of UDP messages, especially to a particular
+destination, is likely to provoke message loss.  The exchanges are
+just that, so they individually are self-throttling.  But what about
+multiple exchanges simultaneously?  What about notifications (example:
+when shutting down, a flurry of delete notifications are likely).
+Should the RFCs be designed to protect against this problem?
+
+draft-jenkins-ipsec-rekeying-03.txt rekeying is way too complicated.
+Our solution looks sound and simple (we have the Responder install the
+incoming IPSEC SA before sending its first reply).  In "2.2.1.4
+Responder Pre-Set-up Security Hole", the draft claims that setting up
+the IPSEC SA early leaves the Responder open to replay attacks.  I
+think that this is wrong: the Message Id, since it must not be reused,
+serves to prove that this isn't a replay.
+
+The details for notification messages suggested by
+draft-ietf-ipsec-notifymsg-02.txt are over-complicated, just to make
+them machine-comprehensible.  I think this is over-engineering,
+justified only if another level of negotiation is contemplated (ugh!).
+Plain text is probably sufficient for informing humans (I admit that
+there is a problem with I18N).

@@ -1,0 +1,458 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="interop.html">Previous</A>
+<A HREF="testing.html">Next</A>
+<HR>
+<H1><A name="performance">Performance of FreeS/WAN</A></H1>
+ The performance of FreeS/WAN is adequate for most applications.
+<P>In normal operation, the main concern is the overhead for encryption,
+ decryption and authentication of the actual IPsec (<A href="glossary.html#ESP">
+ESP</A> and/or<A href="glossary.html#AH"> AH</A>) data packets. Tunnel
+ setup and rekeying occur so much less frequently than packet processing
+ that, in general, their overheads are not worth worrying about.</P>
+<P>At startup, however, tunnel setup overheads may be significant. If
+ you reboot a gateway and it needs to establish many tunnels, expect
+ some delay. This and other issues for large gateways are discussed<A href="#biggate">
+ below</A>.</P>
+<H2><A name="pub.bench">Published material</A></H2>
+<P>The University of Wales at Aberystwyth has done quite detailed speed
+ tests and put<A href="http://tsc.llwybr.org.uk/public/reports/SWANTIME/">
+ their results</A> on the web.</P>
+<P>Davide Cerri's<A href="http://www.linux.it/~davide/doc/"> thesis (in
+ Italian)</A> includes performance results for FreeS/WAN and for<A href="glossary.html#TLS">
+ TLS</A>. He posted an<A href="http://lists.freeswan.org/pipermail/users/2001-December/006303.html">
+ English summary</A> on the mailing list.</P>
+<P>Steve Bellovin used one of AT&amp;T Research's FreeS/WAN gateways as his
+ data source for an analysis of the cache sizes required for key
+ swapping in IPsec. Available as<A href="http://www.research.att.com/~smb/talks/key-agility.email.txt">
+ text</A> or<A href="http://www.research.att.com/~smb/talks/key-agility.pdf">
+ PDF slides</A> for a talk on the topic.</P>
+<P>See also the NAI work mentioned in the next section.</P>
+<H2><A name="perf.estimate">Estimating CPU overheads</A></H2>
+<P>We can come up with a formula that roughly relates CPU speed to the
+ rate of IPsec processing possible. It is far from exact, but should be
+ usable as a first approximation.</P>
+<P>An analysis of authentication overheads for high-speed networks,
+ including some tests using FreeS/WAN, is on the<A href="http://www.pgp.com/research/nailabs/cryptographic/adaptive-cryptographic.asp">
+ NAI Labs site</A>. In particular, see figure 3 in this<A href="http://download.nai.com/products/media/pgp/pdf/acsa_final_report.pdf">
+ PDF document</A>. Their estimates of overheads, measured in Pentium II
+ cycles per byte processed are:</P>
+<TABLE align="center" border="1"><TBODY></TBODY>
+<TR><TH></TH><TH>IPsec</TH><TH>authentication</TH><TH>encryption</TH><TH>
+cycles/byte</TH></TR>
+<TR><TD>Linux IP stack alone</TD><TD>no</TD><TD>no</TD><TD>no</TD><TD align="right">
+5</TD></TR>
+<TR><TD>IPsec without crypto</TD><TD>yes</TD><TD>no</TD><TD>no</TD><TD align="right">
+11</TD></TR>
+<TR><TD>IPsec, authentication only</TD><TD>yes</TD><TD>SHA-1</TD><TD>no</TD><TD
+align="right">24</TD></TR>
+<TR><TD>IPsec with encryption</TD><TD>yes</TD><TD>yes</TD><TD>yes</TD><TD
+align="right">not tested</TD></TR>
+</TABLE>
+<P>Overheads for IPsec with encryption were not tested in the NAI work,
+ but Antoon Bosselaers'<A href="http://www.esat.kuleuven.ac.be/~bosselae/fast.html">
+ web page</A> gives cost for his optimised Triple DES implementation as
+ 928 Pentium cycles per block, or 116 per byte. Adding that to the 24
+ above, we get 140 cycles per byte for IPsec with encryption.</P>
+<P>At 140 cycles per byte, a 140 MHz machine can handle a megabyte -- 8
+ megabits -- per second. Speeds for other machines will be proportional
+ to this. To saturate a link with capacity C megabits per second, you
+ need a machine running at<VAR> C * 140/8 = C * 17.5</VAR> MHz.</P>
+<P>However, that estimate is not precise. It ignores the differences
+ between:</P>
+<UL>
+<LI>NAI's test packets and real traffic</LI>
+<LI>NAI's Pentium II cycles, Bosselaers' Pentium cycles, and your
+ machine's cycles</LI>
+<LI>different 3DES implementations</LI>
+<LI>SHA-1 and MD5</LI>
+</UL>
+<P>and does not account for some overheads you will almost certainly
+ have:</P>
+<UL>
+<LI>communication on the client-side interface</LI>
+<LI>switching between multiple tunnels -- re-keying, cache reloading and
+ so on</LI>
+</UL>
+<P>so we suggest using<VAR> C * 25</VAR> to get an estimate with a bit
+ of a built-in safety factor.</P>
+<P>This covers only IP and IPsec processing. If you have other loads on
+ your gateway -- for example if it is also working as a firewall -- then
+ you will need to add your own safety factor atop that.</P>
+<P>This estimate matches empirical data reasonably well. For example,
+ Metheringham's tests, described<A href="#klips.bench"> below</A>, show
+ a 733 topping out between 32 and 36 Mbit/second, pushing data as fast
+ as it can down a 100 Mbit link. Our formula suggests you need at least
+ an 800 to handle a fully loaded 32 Mbit link. The two results are
+ consistent.</P>
+<P>Some examples using this estimation method:</P>
+<TABLE align="center" border="1"><TBODY></TBODY>
+<TR><TH colspan="2">Interface</TH><TH colspan="3">Machine speed in MHz</TH>
+</TR>
+<TR><TH>Type</TH><TH>Mbit per
+<BR> second</TH><TH>Estimate
+<BR> Mbit*25</TH><TH>Minimum IPSEC gateway</TH><TH>Minimum with other
+ load
+<P>(e.g. firewall)</P>
+</TH></TR>
+<TR><TD>DSL</TD><TD align="right">1</TD><TD align="right">25 MHz</TD><TD rowspan="2">
+whatever you have</TD><TD rowspan="2">133, or better if you have it</TD></TR>
+<TR><TD>cable modem</TD><TD align="right">3</TD><TD align="right">75 MHz</TD>
+</TR>
+<TR><TD><STRONG>any link, light load</STRONG></TD><TD align="right"><STRONG>
+5</STRONG></TD><TD align="right">125 MHz</TD><TD>133</TD><TD>200+,<STRONG>
+ almost any surplus machine</STRONG></TD></TR>
+<TR><TD>Ethernet</TD><TD align="right">10</TD><TD align="right">250 MHz</TD><TD>
+surplus 266 or 300</TD><TD>500+</TD></TR>
+<TR><TD><STRONG>fast link, moderate load</STRONG></TD><TD align="right"><STRONG>
+20</STRONG></TD><TD align="right">500 MHz</TD><TD>500</TD><TD>800+,<STRONG>
+ any current off-the-shelf PC</STRONG></TD></TR>
+<TR><TD>T3 or E3</TD><TD align="right">45</TD><TD align="right">1125 MHz</TD><TD>
+1200</TD><TD>1500+</TD></TR>
+<TR><TD>fast Ethernet</TD><TD align="right">100</TD><TD align="right">
+2500 MHz</TD><TD align="center" colspan="2" rowspan="2">// not feasible
+ with 3DES in software on current machines //</TD></TR>
+<TR><TD>OC3</TD><TD align="right">155</TD><TD align="right">3875 MHz</TD>
+</TR>
+</TABLE>
+<P>Such an estimate is far from exact, but should be usable as minimum
+ requirement for planning. The key observations are:</P>
+<UL>
+<LI>older<STRONG> surplus machines</STRONG> are fine for IPsec gateways
+ at loads up to<STRONG> 5 megabits per second</STRONG> or so</LI>
+<LI>a<STRONG> mid-range new machine</STRONG> can handle IPsec at rates
+ up to<STRONG> 20 megabits per second</STRONG> or more</LI>
+</UL>
+<H3><A name="perf.more">Higher performance alternatives</A></H3>
+<P><A href="glossary.html#AES">AES</A> is a new US government block
+ cipher standard, designed to replace the obsolete<A href="glossary.html#DES">
+ DES</A>. If FreeS/WAN using<A href="glossary.html#3DES"> 3DES</A> is
+ not fast enough for your application, the AES<A href="web.html#patch">
+ patch</A> may help.</P>
+<P>To date (March 2002) we have had only one<A href="http://lists.freeswan.org/pipermail/users/2002-February/007771.html">
+ mailing list report</A> of measurements with the patch applied. It
+ indicates that, at least for the tested load on that user's network,<STRONG>
+ AES roughly doubles IPsec throughput</STRONG>. If further testing
+ confirms this, it may prove possible to saturate an OC3 link in
+ software on a high-end box.</P>
+<P>Also, some work is being done toward support of<A href="compat.html#hardware">
+ hardware IPsec acceleration</A> which might extend the range of
+ requirements FreeS/WAN could meet.</P>
+<H3><A NAME="11_2_2">Other considerations</A></H3>
+<P>CPU speed may be the main issue for IPsec performance, but of course
+ it isn't the only one.</P>
+<P>You need good ethernet cards or other network interface hardware to
+ get the best performance. See this<A href="http://www.ethermanage.com/ethernet/ethernet.html">
+ ethernet information</A> page and this<A href="http://www.scyld.com/diag">
+ Linux network driver</A> page.</P>
+<P>The current FreeS/WAN kernel code is largely single-threaded. It is
+ SMP safe, and will run just fine on a multiprocessor machine (<A href="compat.html#multiprocessor">
+discussion</A>), but the load within the kernel is not shared
+ effectively. This means that, for example to saturate a T3 -- which
+ needs about a 1200 MHz machine -- you cannot expect something like a
+ dual 800 to do the job.</P>
+<P>On the other hand, SMP machines do tend to share loads well so --
+ provided one CPU is fast enough for the IPsec work -- a multiprocessor
+ machine may be ideal for a gateway with a mixed load.</P>
+<H2><A name="biggate">Many tunnels from a single gateway</A></H2>
+<P>FreeS/WAN allows a single gateway machine to build tunnels to many
+ others. There may, however, be some problems for large numbers as
+ indicated in this message from the mailing list:</P>
+<PRE>Subject: Re: Maximum number of ipsec tunnels?
+   Date: Tue, 18 Apr 2000
+   From: &quot;John S. Denker&quot; &lt;jsd@research.att.com&gt;
+
+Christopher Ferris wrote:
+
+&gt;&gt; What are the maximum number ipsec tunnels FreeS/WAN can handle??
+
+Henry Spencer wrote:
+
+&gt;There is no particular limit.  Some of the setup procedures currently
+&gt;scale poorly to large numbers of connections, but there are (clumsy)
+&gt;workarounds for that now, and proper fixes are coming.
+
+1) &quot;Large&quot; numbers means anything over 50 or so.  I routinely run boxes
+with about 200 tunnels.  Once you get more than 50 or so, you need to worry
+about several scalability issues:
+
+a) You need to put a &quot;-&quot; sign in syslogd.conf, and rotate the logs daily
+not weekly.
+
+b) Processor load per tunnel is small unless the tunnel is not up, in which
+case a new half-key gets generated every 90 seconds, which can add up if
+you've got a lot of down tunnels.
+
+c) There's other bits of lore you need when running a large number of
+tunnels.  For instance, systematically keeping the .conf file free of
+conflicts requires tools that aren't shipped with the standard freeswan
+package.
+
+d) The pluto startup behavior is quadratic.  With 200 tunnels, this eats up
+several minutes at every restart.   I'm told fixes are coming soon.
+
+2) Other than item (1b), the CPU load depends mainly on the size of the
+pipe attached, not on the number of tunnels.
+</PRE>
+<P>It is worth noting that item (1b) applies only to repeated attempts
+ to re-key a data connection (IPsec SA, Phase 2) over an established
+ keying connection (ISAKMP SA, Phase 1). There are two ways to reduce
+ this overhead using settings in<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A>:</P>
+<UL>
+<LI>set<VAR> keyingtries</VAR> to some small value to limit repetitions</LI>
+<LI>set<VAR> keylife</VAR> to a short time so that a failing data
+ connection will be cleaned up when the keying connection is reset.</LI>
+</UL>
+<P>The overheads for establishing keying connections (ISAKMP SAs, Phase
+ 1) are lower because for these Pluto does not perform expensive
+ operations before receiving a reply from the peer.</P>
+<P>A gateway that does a lot of rekeying -- many tunnels and/or low
+ settings for tunnel lifetimes -- will also need a lot of<A href="glossary.html#random">
+ random numbers</A> from the random(4) driver.</P>
+<H2><A name="low-end">Low-end systems</A></H2>
+<P><EM>Even a 486 can handle a T1 line</EM>, according to this mailing
+ list message:</P>
+<PRE>Subject: Re: linux-ipsec: IPSec Masquerade
+   Date: Fri, 15 Jan 1999 11:13:22 -0500
+   From: Michael Richardson 
+
+. . . A 486/66 has been clocked by Phil Karn to do
+10Mb/s encryption.. that uses all the CPU, so half that to get some CPU,
+and you have 5Mb/s. 1/3 that for 3DES and you get 1.6Mb/s....</PRE>
+<P>and a piece of mail from project technical lead Henry Spencer:</P>
+<PRE>Oh yes, and a new timing point for Sandy's docs...  A P60 -- yes, a 60MHz
+Pentium, talk about antiques -- running a host-to-host tunnel to another
+machine shows an FTP throughput (that is, end-to-end results with a real
+protocol) of slightly over 5Mbit/s either way.  (The other machine is much
+faster, the network is 100Mbps, and the ether cards are good ones... so
+the P60 is pretty definitely the bottleneck.)</PRE>
+<P>From the above, and from general user experience as reported on the
+ list, it seems clear that a cheap surplus machine -- a reasonable 486,
+ a minimal Pentium box, a Sparc 5, ... -- can easily handle a home
+ office or a small company connection using any of:</P>
+<UL>
+<LI>ADSL service</LI>
+<LI>cable modem</LI>
+<LI>T1</LI>
+<LI>E1</LI>
+</UL>
+<P>If available, we suggest using a Pentium 133 or better. This should
+ ensure that, even under maximum load, IPsec will use less than half the
+ CPU cycles. You then have enough left for other things you may want on
+ your gateway -- firewalling, web caching, DNS and such.</P>
+<H2><A name="klips.bench">Measuring KLIPS</A></H2>
+<P>Here is some additional data from the mailing list.</P>
+<PRE>Subject: FreeSWAN (specically KLIPS) performance measurements
+   Date: Thu, 01 Feb 2001
+   From: Nigel Metheringham &lt;Nigel.Metheringham@intechnology.co.uk&gt;
+
+I've spent a happy morning attempting performance tests against KLIPS 
+(this is due to me not being able to work out the CPU usage of KLIPS so 
+resorting to the crude measurements of maximum throughput to give a 
+baseline to work out loading of a box).
+
+Measurements were done using a set of 4 boxes arranged in a line, each 
+connected to the next by 100Mbit duplex ethernet.  The inner 2 had an 
+ipsec tunnel between them (shared secret, but I was doing measurements 
+when the tunnel was up and running - keying should not be an issue 
+here).  The outer pair of boxes were traffic generators or traffic sink.
+
+The crypt boxes are Compaq DL380s - Uniprocessor PIII/733 with 256K 
+cache.  They have 128M main memory.  Nothing significant was running on 
+the boxes other than freeswan.  The kernel was a 2.2.19pre7 patched 
+with freeswan and ext3.
+
+Without an ipsec tunnel in the chain (ie the 2 inner boxes just being 
+100BaseT routers), throughput (measured with ttcp) was between 10644 
+and 11320 KB/sec
+
+With an ipsec tunnel in place, throughput was between 3268 and 3402 
+KB/sec
+
+These measurements are for data pushed across a TCP link, so the 
+traffic on the wire between the 2 ipsec boxes would have been higher 
+than this....
+
+vmstat (run during some other tests, so not affecting those figures) on 
+the encrypting box shows approx 50% system &amp; 50% idle CPU - which I 
+don't believe at all.  Interactive feel of the box was significantly 
+sluggish.
+
+I also tried running the kernel profiler (see man readprofile) during 
+test runs.
+
+A box doing primarily decrypt work showed basically nothing happening - 
+I assume interrupts were off.
+A box doing encrypt work showed the following:-
+ Ticks Function                                   Load
+ ~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    ~~~~~~
+   956 total                                      0.0010
+   532 des_encrypt2                               0.1330
+   110 MD5Transform                               0.0443
+    97 kmalloc                                    0.1880
+    39 des_encrypt3                               0.1336
+    23 speedo_interrupt                           0.0298
+    14 skb_copy_expand                            0.0250
+    13 ipsec_tunnel_start_xmit                    0.0009
+    13 Decode                                     0.1625
+    11 handle_IRQ_event                           0.1019
+    11 .des_ncbc_encrypt_end                      0.0229
+    10 speedo_start_xmit                          0.0188
+     9 satoa                                      0.0225
+     8 kfree                                      0.0118
+     8 ip_fragment                                0.0121
+     7 ultoa                                      0.0365
+     5 speedo_rx                                  0.0071
+     5 .des_encrypt2_end                          5.0000
+     4 _stext                                     0.0140
+     4 ip_fw_check                                0.0035
+     2 rj_match                                   0.0034
+     2 ipfw_output_check                          0.0200
+     2 inet_addr_type                             0.0156
+     2 eth_copy_and_sum                           0.0139
+     2 dev_get                                    0.0294
+     2 addrtoa                                    0.0143
+     1 speedo_tx_buffer_gc                        0.0024
+     1 speedo_refill_rx_buf                       0.0022
+     1 restore_all                                0.0667
+     1 number                                     0.0020
+     1 net_bh                                     0.0021
+     1 neigh_connected_output                     0.0076
+     1 MD5Final                                   0.0083
+     1 kmem_cache_free                            0.0016
+     1 kmem_cache_alloc                           0.0022
+     1 __kfree_skb                                0.0060
+     1 ipsec_rcv                                  0.0001
+     1 ip_rcv                                     0.0014
+     1 ip_options_fragment                        0.0071
+     1 ip_local_deliver                           0.0023
+     1 ipfw_forward_check                         0.0139
+     1 ip_forward                                 0.0011
+     1 eth_header                                 0.0040
+     1 .des_encrypt3_end                          0.0833
+     1 des_decrypt3                               0.0034
+     1 csum_partial_copy_generic                  0.0045
+     1 call_out_firewall                          0.0125
+
+Hope this data is helpful to someone... however the lack of visibility 
+into the decrypt side makes things less clear</PRE>
+<H2><A name="speed.compress">Speed with compression</A></H2>
+<P>Another user reported some results for connections with and without
+ IP compression:</P>
+<PRE>Subject: [Users] Speed with compression
+   Date: Fri, 29 Jun 2001
+   From: John McMonagle &lt;johnm@advocap.org&gt;
+
+Did a couple tests with compression using the new 1.91 freeswan.
+
+Running between 2 sites with cable modems.  Both  using approximately
+130 mhz pentium.
+
+Transferred files with ncftp.
+
+Compressed file was a 6mb compressed  installation file.
+Non compressed was 18mb /var/lib/rpm/packages.rpm
+
+                            Compressed vpn          regular vpn
+Compress file                42.59 kBs               42.08 kBs
+regular file                110.84 kBs               41.66 kBs
+
+Load  was about 0 either way.
+Ping times were very similar  a bit above 9 ms.
+
+Compression looks attractive to me.</PRE>
+ Later in the same thread, project technical lead Henry Spencer added:
+<PRE>&gt; is there a reason not to switch compression on?  I have large gateway boxes
+&gt; connecting 3 connections, one of them with a measly DS1 link...
+
+Run some timing tests with and without, with data and loads representative
+of what you expect in production.  That's the definitive way to decide. 
+If compression is a net loss, then obviously, leave it turned off.  If it
+doesn't make much difference, leave it off for simplicity and hence
+robustness.  If there's a substantial gain, by all means turn it on. 
+
+If both ends support compression and can successfully negotiate a
+compressed connection (trivially true if both are FreeS/WAN 1.91), then
+the crucial question is CPU cycles. 
+
+Compression has some overhead, so one question is whether *your* data
+compresses well enough to save you more CPU cycles (by reducing the volume
+of data going through CPU-intensive encryption/decryption) than it costs
+you.  Last time I ran such tests on data that was reasonably compressible
+but not deliberately contrived to be so, this generally was not true --
+compression cost extra CPU cycles -- so compression was worthwhile only if
+the link, not the CPU, was the bottleneck.  However, that was before the
+slow-compression bug was fixed.  I haven't had a chance to re-run those
+tests yet, but it sounds like I'd probably see a different result. </PRE>
+ The bug he refers to was a problem with the compression libraries that
+ had us using C code, rather than assembler, for compression. It was
+ fixed before 1.91.
+<H2><A name="methods">Methods of measuring</A></H2>
+<P>If you want to measure the loads FreeS/WAN puts on a system, note
+ that tools such as top or measurements such as load average are
+ more-or-less useless for this. They are not designed to measure
+ something that does most of its work inside the kernel.</P>
+<P>Here is a message from FreeS/WAN kernel programmer Richard Guy Briggs
+ on this:</P>
+<PRE>&gt; I have a batch of boxes doing Freeswan stuff.
+&gt; I want to measure the CPU loading of the Freeswan tunnels, but am 
+&gt; having trouble seeing how I get some figures out...
+&gt; 
+&gt;  - Keying etc is in userspace so will show up on the per-process
+&gt;    and load average etc (ie pluto's load)
+
+Correct.
+
+&gt;  - KLIPS is in the kernel space, and does not show up in load average
+&gt;    I think also that the KLIPS per-packet processing stuff is running
+&gt;    as part of an interrupt handler so it does not show up in the
+&gt;    /proc/stat system_cpu or even idle_cpu figures
+
+It is not running in interrupt handler.  It is in the bottom half.
+This is somewhere between user context (careful, this is not
+userspace!) and hardware interrupt context.
+
+&gt; Is this correct, and is there any means of instrumenting how much the 
+&gt; cpu is being loaded - I don't like the idea of a system running out of 
+&gt; steam whilst still showing 100% idle CPU :-)
+
+vmstat seems to do a fairly good job, but use a running tally to get a
+good idea.  A one-off call to vmstat gives different numbers than a
+running stat.  To do this, put an interval on your vmstat command
+line.</PRE>
+ and another suggestion from the same thread:
+<PRE>Subject: Re: Measuring the CPU usage of Freeswan
+   Date: Mon, 29 Jan 2001
+   From: Patrick Michael Kane &lt;modus@pr.es.to&gt;
+ 
+The only truly accurate way to accurately track FreeSWAN CPU usage is to use
+a CPU soaker. You run it on an unloaded system as a benchmark, then start up
+FreeSWAN and take the difference to determine how much FreeSWAN is eating.
+I believe someone has done this in the past, so you may find something in
+the FreeSWAN archives.  If not, someone recently posted a URL to a CPU
+soaker benchmark tool on linux-kernel.</PRE>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="interop.html">Previous</A>
+<A HREF="testing.html">Next</A>
+</BODY>
+</HTML>

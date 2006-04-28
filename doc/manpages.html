@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="faq.html">Previous</A>
+<A HREF="firewall.html">Next</A>
+<HR>
+<H1><A name="manpages">FreeS/WAN manual pages</A></H1>
+<P>The various components of Linux FreeS/WAN are of course documented in
+ standard Unix manual pages, accessible via the man(1) command.</P>
+<P>Links here take you to an HTML version of the man pages.</P>
+<H2><A name="man.file">Files</A></H2>
+<DL>
+<DT><A href="manpage.d/ipsec.conf.5.html">ipsec.conf(5)</A></DT>
+<DD>IPsec configuration and connections</DD>
+<DT><A href="manpage.d/ipsec.secrets.5.html">ipsec.secrets(5)</A></DT>
+<DD>secrets for IKE authentication, either pre-shared keys or RSA
+ private keys</DD>
+</DL>
+<P>These files are also discussed in the<A href="config.html">
+ configuration</A> section.</P>
+<H2><A name="man.command">Commands</A></H2>
+<P>Many users will never give most of the FreeS/WAN commands directly.
+ Configure the files listed above correctly and everything should be
+ automatic.</P>
+<P>The exceptions are commands for mainpulating the<A href="glossary.html#RSA">
+ RSA</A> keys used in Pluto authentication:</P>
+<DL>
+<DT><A href="manpage.d/ipsec_rsasigkey.8.html">ipsec_rsasigkey(8)</A></DT>
+<DD>generate keys</DD>
+<DT><A href="manpage.d/ipsec_newhostkey.8.html">ipsec_newhostkey(8)</A></DT>
+<DD>generate keys in a convenient format</DD>
+<DT><A href="manpage.d/ipsec_showhostkey.8.html">ipsec_showhostkey(8)</A>
+</DT>
+<DD>extract<A href="glossary.html#RSA"> RSA</A> keys from<A href="manpage.d/ipsec.secrets.5.html">
+ ipsec.secrets(5)</A> (or optionally, another file) and format them for
+ insertion in<A href="manpage.d/ipsec.conf.5.html"> ipsec.conf(5)</A> or
+ in DNS records</DD>
+</DL>
+<P>Note that:</P>
+<UL>
+<LI>These keys are for<STRONG> authentication only</STRONG>. They are<STRONG>
+ not secure for encryption</STRONG>.</LI>
+<LI>The utility uses random(4) as a source of<A href="glossary.html#random">
+ random numbers</A>. This may block for some time if there is not enough
+ activity on the machine to provide the required entropy. You may want
+ to give it some bogus activity such as random mouse movements or some
+ command such as<NOBR> <TT>du /usr &gt; /dev/null &amp;</TT>.</LI>
+</UL>
+<P>The following commands are fairly likely to be used, if only for
+ testing and status checks:</P>
+<DL>
+<DT><A href="manpage.d/ipsec.8.html">ipsec(8)</A></DT>
+<DD>invoke IPsec utilities</DD>
+<DT><A href="manpage.d/ipsec_setup.8.html">ipsec_setup(8)</A></DT>
+<DD>control IPsec subsystem</DD>
+<DT><A href="manpage.d/ipsec_auto.8.html">ipsec_auto(8)</A></DT>
+<DD>control automatically-keyed IPsec connections</DD>
+<DT><A href="manpage.d/ipsec_manual.8.html">ipsec_manual(8)</A></DT>
+<DD>take manually-keyed IPsec connections up and down</DD>
+<DT><A href="manpage.d/ipsec_ranbits.8.html">ipsec_ranbits(8)</A></DT>
+<DD>generate random bits in ASCII form</DD>
+<DT><A href="manpage.d/ipsec_look.8.html">ipsec_look(8)</A></DT>
+<DD>show minimal debugging information</DD>
+<DT><A href="manpage.d/ipsec_barf.8.html">ipsec_barf(8)</A></DT>
+<DD>spew out collected IPsec debugging information</DD>
+</DL>
+<P>The lower-level utilities listed below are normally invoked via
+ scripts listed above, but they can also be used directly when required.</P>
+<DL>
+<DT><A href="manpage.d/ipsec_eroute.8.html">ipsec_eroute(8)</A></DT>
+<DD>manipulate IPsec extended routing tables</DD>
+<DT><A href="manpage.d/ipsec_klipsdebug.8.html">ipsec_klipsdebug(8)</A></DT>
+<DD>set Klips (kernel IPsec support) debug features and level</DD>
+<DT><A href="manpage.d/ipsec_pluto.8.html">ipsec_pluto(8)</A></DT>
+<DD>IPsec IKE keying daemon</DD>
+<DT><A href="manpage.d/ipsec_spi.8.html">ipsec_spi(8)</A></DT>
+<DD>manage IPsec Security Associations</DD>
+<DT><A href="manpage.d/ipsec_spigrp.8.html">ipsec_spigrp(8)</A></DT>
+<DD>group/ungroup IPsec Security Associations</DD>
+<DT><A href="manpage.d/ipsec_tncfg.8.html">ipsec_tncfg(8)</A></DT>
+<DD>associate IPsec virtual interface with real interface</DD>
+<DT><A href="manpage.d/ipsec_whack.8.html">ipsec_whack(8)</A></DT>
+<DD>control interface for IPsec keying daemon</DD>
+</DL>
+<H2><A name="man.lib">Library routines</A></H2>
+<DL>
+<DT><A href="manpage.d/ipsec_atoaddr.3.html">ipsec_atoaddr(3)</A></DT>
+<DT><A href="manpage.d/ipsec_addrtoa.3.html">ipsec_addrtoa(3)</A></DT>
+<DD>convert Internet addresses to and from ASCII</DD>
+<DT><A href="manpage.d/ipsec_atosubnet.3.html">ipsec_atosubnet(3)</A></DT>
+<DT><A href="manpage.d/ipsec_subnettoa.3.html">ipsec_subnettoa(3)</A></DT>
+<DD>convert subnet/mask ASCII form to and from addresses</DD>
+<DT><A href="manpage.d/ipsec_atoasr.3.html">ipsec_atoasr(3)</A></DT>
+<DD>convert ASCII to Internet address, subnet, or range</DD>
+<DT><A href="manpage.d/ipsec_rangetoa.3.html">ipsec_rangetoa(3)</A></DT>
+<DD>convert Internet address range to ASCII</DD>
+<DT>ipsec_atodata(3)</DT>
+<DT><A href="manpage.d/ipsec_datatoa.3.html">ipsec_datatoa(3)</A></DT>
+<DD>convert binary data from and to ASCII formats</DD>
+<DT><A href="manpage.d/ipsec_atosa.3.html">ipsec_atosa(3)</A></DT>
+<DT><A href="manpage.d/ipsec_satoa.3.html">ipsec_satoa(3)</A></DT>
+<DD>convert IPsec Security Association IDs to and from ASCII</DD>
+<DT><A href="manpage.d/ipsec_atoul.3.html">ipsec_atoul(3)</A></DT>
+<DT><A href="manpage.d/ipsec_ultoa.3.html">ipsec_ultoa(3)</A></DT>
+<DD>convert unsigned-long numbers to and from ASCII</DD>
+<DT><A href="manpage.d/ipsec_goodmask.3.html">ipsec_goodmask(3)</A></DT>
+<DD>is this Internet subnet mask a valid one?</DD>
+<DT><A href="manpage.d/ipsec_masktobits.3.html">ipsec_masktobits(3)</A></DT>
+<DD>convert Internet subnet mask to bit count</DD>
+<DT><A href="manpage.d/ipsec_bitstomask.3.html">ipsec_bitstomask(3)</A></DT>
+<DD>convert bit count to Internet subnet mask</DD>
+<DT><A href="manpage.d/ipsec_optionsfrom.3.html">ipsec_optionsfrom(3)</A>
+</DT>
+<DD>read additional ``command-line'' options from file</DD>
+<DT><A href="manpage.d/ipsec_subnetof.3.html">ipsec_subnetof(3)</A></DT>
+<DD>given Internet address and subnet mask, return subnet number</DD>
+<DT><A href="manpage.d/ipsec_hostof.3.html">ipsec_hostof(3)</A></DT>
+<DD>given Internet address and subnet mask, return host part</DD>
+<DT><A href="manpage.d/ipsec_broadcastof.3.html">ipsec_broadcastof(3)</A>
+</DT>
+<DD>given Internet address and subnet mask, return broadcast address</DD>
+</DL>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="faq.html">Previous</A>
+<A HREF="firewall.html">Next</A>
+</BODY>
+</HTML>

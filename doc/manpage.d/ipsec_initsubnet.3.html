@@ -1,0 +1,238 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_INITSUBNET</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_INITSUBNET</H1>
+Section: C Library Functions (3)<BR>Updated: 12 March 2002<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec initsubnet - initialize an ip_subnet
+<BR>
+
+ipsec addrtosubnet - initialize a singleton ip_subnet
+<BR>
+
+ipsec subnettypeof - get address type of an ip_subnet
+<BR>
+
+ipsec masktocount - convert subnet mask to bit count
+<BR>
+
+ipsec networkof - get base address of an ip_subnet
+<BR>
+
+ipsec maskof - get subnet mask of an ip_subnet
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>const char *initsubnet(const ip_address *addr,</B>
+
+<BR>
+&nbsp;
+<B>int maskbits, int clash, ip_subnet *dst);</B>
+
+<BR>
+
+<B>const char *addrtosubnet(const ip_address *addr,</B>
+
+<BR>
+&nbsp;
+<B>ip_subnet *dst);</B>
+
+<P>
+<B>int subnettypeof(const ip_subnet *src);</B>
+
+<BR>
+
+<B>int masktocount(const ip_address *src);</B>
+
+<BR>
+
+<B>void networkof(const ip_subnet *src, ip_address *dst);</B>
+
+<BR>
+
+<B>void maskof(const ip_subnet *src, ip_address *dst);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+The
+<B>&lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+library uses an internal type
+<I>ip_subnet</I>
+
+to contain a description of an IP subnet
+(base address plus mask).
+These functions provide basic tools for creating and examining this type.
+<P>
+
+<I>Initsubnet</I>
+
+initializes a variable
+<I>*dst</I>
+
+of type
+<I>ip_subnet</I>
+
+from a base address and
+a count of mask bits.
+The
+<I>clash</I>
+
+parameter specifies what to do if the base address includes
+<B>1</B>
+
+bits outside the prefix specified by the mask
+(that is, in the ``host number'' part of the address):
+<DL COMPACT><DT><DD>
+<DL COMPACT>
+<DT>'0'<DD>
+zero out host-number bits
+<DT>'x'<DD>
+non-zero host-number bits are an error
+</DL>
+</DL>
+
+<P>
+
+<I>Initsubnet</I>
+
+returns
+<B>NULL</B>
+
+for success and
+a pointer to a string-literal error message for failure;
+see DIAGNOSTICS.
+<P>
+
+<I>Addrtosubnet</I>
+
+initializes an
+<I>ip_subnet</I>
+
+variable
+<I>*dst</I>
+
+to a ``singleton subnet'' containing the single address
+<I>*addr</I>.
+
+It returns
+<B>NULL</B>
+
+for success and
+a pointer to a string-literal error message for failure.
+<P>
+
+<I>Subnettypeof</I>
+
+returns the address type of a subnet,
+normally
+<B>AF_INET</B>
+
+or
+<B>AF_INET6</B>.
+
+(The
+<B>&lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+header file arranges to include the necessary headers for these
+names to be known.)
+<P>
+
+<I>Masktocount</I>
+
+converts a subnet mask, expressed as an address, to a bit count
+suitable for use with
+<I>initsubnet</I>.
+
+It returns
+<B>-1</B>
+
+for error; see DIAGNOSTICS.
+<P>
+
+<I>Networkof</I>
+
+fills in
+<I>*dst</I>
+
+with the base address of subnet
+<I>src</I>.
+
+<P>
+
+<I>Maskof</I>
+
+fills in
+<I>*dst</I>
+
+with the subnet mask of subnet
+<I>src</I>,
+
+expressed as an address.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="inet.3.html">inet</A>(3), <A HREF="ipsec_ttosubnet.3.html">ipsec_ttosubnet</A>(3), <A HREF="ipsec_rangetosubnet.3.html">ipsec_rangetosubnet</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>DIAGNOSTICS</H2>
+
+Fatal errors in
+<I>initsubnet</I>
+
+are:
+unknown address family;
+unknown
+<I>clash</I>
+
+value;
+impossible mask bit count;
+non-zero host-number bits and
+<I>clash</I>
+
+is
+<B>'x'</B>.
+
+Fatal errors in
+<I>addrtosubnet</I>
+
+are:
+unknown address family.
+Fatal errors in
+<I>masktocount</I>
+
+are:
+unknown address family;
+mask bits not contiguous.
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">DIAGNOSTICS</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:17 GMT, November 11, 2003
+</BODY>
+</HTML>

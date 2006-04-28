@@ -1,0 +1,4 @@
+carol::cat /var/log/auth.log::unable to locate my private key for RSA Signature::YES
+moon::cat /var/log/auth.log::ignoring informational payload, type AUTHENTICATION_FAILED::YES
+moon::ipsec status::rw.*STATE_MAIN_R3.*ISAKMP SA established::NO
+carol::ipsec status::home.*STATE_MAIN_I4.*ISAKMP SA established::NO

@@ -1,0 +1,905 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html">
+  <title>FreeS/WAN web links</title>
+  <meta name="keywords"
+  content="Linux, IPsec, VPN, security, FreeSWAN, links, web">
+  <!--
+
+  Written by Sandy Harris for the Linux FreeS/WAN project
+  Freely distributable under the GNU General Public License
+
+  More information at www.freeswan.org
+  Feedback to users@lists.freeswan.org
+
+  CVS information:
+  RCS ID:          $Id: web.html,v 1.1 2004/03/15 20:35:24 as Exp $
+  Last changed:    $Date: 2004/03/15 20:35:24 $
+  Revision number: $Revision: 1.1 $
+
+  CVS revision numbers do not correspond to FreeS/WAN release numbers.
+  -->
+</head>
+
+<body>
+<h1><a name="weblink">Web links</a></h1>
+
+<h2><a name="freeswan">The Linux FreeS/WAN Project</a></h2>
+
+<p>The main project web site is <a
+href="http://www.freeswan.org/">www.freeswan.org</a>.</p>
+
+<p>Links to other project-related <a href="intro.html#sites">sites</a> are
+provided in our introduction section.</p>
+
+<h3><a name="patch">Add-ons and patches for FreeS/WAN</a></h3>
+
+<p>Some user-contributed patches have been integrated into the FreeS/WAN
+distribution. For a variety of reasons, those listed below have not.</p>
+
+<p>Note that not all patches are a good idea.</p>
+<ul>
+  <li>There are a number of "features" of IPsec which we do not implement
+    because they reduce security. See this <a
+    href="compat.html#dropped">discussion</a>. We do not recommend using
+    patches that implement these. One example is aggressive mode.</li>
+  <li>We do not recommend adding "features" of any sort unless they are
+    clearly necessary, or at least have clear benefits. For example,
+    FreeS/WAN would not become more secure if it offerred a choice of 14
+    ciphers. If even one was flawed, it would certainly become less secure
+    for anyone using that cipher. Even with 14 wonderful ciphers, it would be
+    harder to maintain and administer, hence more vulnerable to various human
+    errors.</li>
+</ul>
+
+<p>This is not to say that patches are necessarily  bad, only that using them
+requires some deliberation. For example, there might be perfectly good
+reasons to add a specific cipher in your application: perhaps GOST to comply
+with government standards in Eastern Europe, or AES for performance
+benefits.</p>
+
+<h4>Current patches</h4>
+
+<p>Patches believed current::</p>
+<ul>
+  <li>patches for <a href="http://www.strongsec.com/freeswan/">X.509
+    certificate support</a>, also available from a <a
+    href="http://www.twi.ch/~sna/strongsec/freeswan/">mirror site</a></li>
+  <li>patches to add <a href="http://www.irrigacion.gov.ar/juanjo/ipsec">AES
+    and other ciphers</a>. There is preliminary data indicating AES gives a
+    substantial <a href="performance.html#perf.more">performance
+  gain</a>.</li>
+</ul>
+
+<p>There is also one add-on that takes the form of a modified FreeS/WAN
+distribution, rather than just patches to the standard distribution:</p>
+<ul>
+  <li><a href="http://www.ipv6.iabg.de/downloadframe/index.html">IPv6
+    support</a></li>
+</ul>
+
+<p>Before using any of the above,, check the <a href="mail.html">mailing
+lists</a> for news of newer versions and to see whether they have been
+incorporated into more recent versions of FreeS/WAN.</p>
+
+<h4>Older patches</h4>
+<ul>
+  <li><a href="http://sources.colubris.com/en/projects/FreeSWAN/">hardware
+    acceleration</a></li>
+  <li>a <a href="http://tzukanov.narod.ru/">series</a> of patches that
+    <ul>
+      <li>provide GOST, a Russian gov't. standard cipher, in MMX
+      assembler</li>
+      <li>add GOST to OpenSSL</li>
+      <li>add GOST to the International kernel patch</li>
+      <li>let FreeS/WAN use International kernel patch ciphers</li>
+    </ul>
+  </li>
+  <li>Neil Dunbar's patches for <a
+    href="ftp://hplose.hpl.hp.com/pub/nd/pluto-openssl.tar.gz">certificate
+    support</a>, using code from <a href="http://www.openssl.org">Open
+    SSL</a>.</li>
+  <li>Luc Lanthier's <a
+    href="ftp://ftp.netwinder.org/users/f/firesoul/">patches</a> for <a
+    href="glossary.html#PKIX">PKIX</a> support.</li>
+  <li><a href="ftp://ftp.heise.de/pub/ct/listings/9916-180.tgz">patches</a>
+    to add <a href="glossary.html#blowfish">Blowfish</a>, <a
+    href="glossary.html#IDEA">IDEA</a> and <a
+    href="glossary.html#CAST128">CAST-128</a> to FreeS/WAN</li>
+  <li>patches for FreeS/WAN 1.3, Pluto support for <a
+    href="http://alcatraz.webcriminals.com/~bastiaan/ipsec/">external
+    authentication</a>, for example with a smartcard or SKEYID.</li>
+  <li><a href="http://www.zengl.net/freeswan/download/">patches and
+    utilities</a> for using FreeS/WAN with PGPnet</li>
+  <li><a
+    href="http://www.freelith.com/lithworks/crypto/freeswan_patch.htm">Blowfish
+    encryption and Tiger hash</a></li>
+  <li><a
+    href="http://www.cendio.se/~bellman/aggressive-pluto.snap.tar.gz">patches</a>
+    for aggressive mode support</li>
+</ul>
+
+<p>These patches are for older versions of FreeS/WAN and will likely not work
+with the current version.  Older versions of FreeS/WAN may be available on
+some of the <a href="intro.html#sites">distribution sites</a>, but we
+recommend using the current release.</p>
+
+<h4><a name="VPN.masq">VPN masquerade patches</a></h4>
+
+<p>Finally, there are some patches to other code that may be useful with
+FreeS/WAN:</p>
+<ul>
+  <li>a <a
+    href="ftp://ftp.rubyriver.com/pub/jhardin/masquerade/ip_masq_vpn.html">patch</a>
+    to make IPsec, PPTP and SSH VPNs work through a Linux firewall with <a
+    href="glossary.html#masq">IP masquerade</a>.</li>
+  <li><a href="http://www.linuxdoc.org/HOWTO/VPN-Masquerade-HOWTO.html">Linux
+    VPN Masquerade HOWTO</a></li>
+</ul>
+
+<p>Note that this is not required if the same machine does IPsec and
+masquerading, only if you want a to locate your IPsec gateway on a
+masqueraded network. See our <a href="firewall.html#NAT">firewalls</a>
+document for discussion of why this is problematic.</p>
+
+<p>At last report, this patch could not co-exist with FreeS/WAN on the same
+machine.</p>
+
+<h3><a name="dist">Distributions including FreeS/WAN</a></h3>
+
+<p>The introductory section of our document set lists several <a
+href="intro.html#distwith">Linux distributions</a> which include
+FreeS/WAN.</p>
+
+<h3><a name="used">Things FreeS/WAN uses or could use</a></h3>
+<ul>
+  <li><a href="http://openpgp.net/random">/dev/random</a> support page,
+    discussion of and code for the Linux <a
+    href="glossary.html#random">random number driver</a>. Out-of-date when we
+    last checked (January 2000), but still useful.</li>
+  <li>other programs related to random numbers:
+    <ul>
+      <li><a href="http://www.mindrot.org/audio-entropyd.html">audio entropy
+        daemon</a> to gather noise from a sound card and feed it into
+        /dev/random</li>
+      <li>an <a href="http://www.lothar.com/tech/crypto/">entropy-gathering
+        daemon</a></li>
+      <li>a driver for the random number generator in recent <a
+        href="http://sourceforge.net/projects/gkernel/">Intel chipsets</a>.
+        This driver is included as standard in 2.4 kernels.</li>
+    </ul>
+  </li>
+  <li>a Linux <a href="http://www.marko.net/l2tp/">L2TP Daemon</a> which
+    might be useful for communicating with Windows 2000 which builds L2TP
+    tunnels over its IPsec connections</li>
+  <li>to use opportunistic encryption, you need a recent version of <a
+    href="glossary.html#BIND">BIND</a>. You can get one from the <a
+    href="http://www.isc.org">Internet Software Consortium</a> who maintain
+    BIND.</li>
+</ul>
+
+<h3><a name="alternatives">Other approaches to VPNs for Linux</a></h3>
+<ul>
+  <li>other Linux <a href="#linuxipsec">IPsec implementations</a></li>
+  <li><a href="http://www.tik.ee.ethz.ch/~skip/">ENskip</a>, a free
+    implementation of Sun's <a href="glossary.html#SKIP">SKIP</a>
+  protocol</li>
+  <li><a href="http://sunsite.auc.dk/vpnd/">vpnd</a>, a non-IPsec VPN daemon
+    for Linux which creates tunnels using <a
+    href="glossary.html#Blowfish">Blowfish</a> encryption</li>
+  <li><a href="http://www.winton.org.uk/zebedee/">Zebedee</a>, a simple GPLd
+    tunnel-building program with Linux and Win32 versions. The name is from
+    <strong>Z</strong>lib compression, <strong>B</strong>lowfish encryption
+    and <strong>D</strong>iffie-Hellman key exchange.</li>
+  <li>There are at least two  PPTP implementations for Linux
+    <ul>
+      <li>Moreton Bay's <a
+        href="http://www.moretonbay.com/vpn/pptp.html">PoPToP</a></li>
+      <li><a
+        href="http://cag.lcs.mit.edu/~cananian/Projects/PPTP/">PPTP-Linux</a></li>
+    </ul>
+  </li>
+  <li><a href="http://sites.inka.de/sites/bigred/devel/cipe.html">CIPE</a>
+    (crypto IP encapsulation) project, using their own lightweight protocol
+    to encrypt between routers</li>
+  <li><a href="http://tinc.nl.linux.org/">tinc</a>, a VPN Daemon</li>
+</ul>
+
+<p>There is a list of <a
+href="http://www.securityportal.com/lskb/10000000/kben10000005.html">Linux
+VPN</a> software in the <a
+href="http://www.securityportal.com/lskb/kben00000001.html">Linux Security
+Knowledge Base</a>.</p>
+
+<h2><a name="ipsec.link">The IPsec Protocols</a></h2>
+
+<h3><a name="general">General IPsec or VPN information</a></h3>
+<ul>
+  <li>The <a href="http://www.vpnc.org">VPN Consortium</a> is a group for
+    vendors of IPsec products. Among other things, they have a good
+    collection of <a href="http://www.vpnc.org/white-papers.html">IPsec white
+    papers</a>.</li>
+  <li>A VPN mailing list with a <a
+    href="http://kubarb.phsx.ukans.edu/~tbird/vpn.html">home page</a>, a FAQ,
+    some product comparisons, and many links.</li>
+  <li><a href="http://www.opus1.com/vpn/index.html">VPN pointer page</a></li>
+  <li>a <a href="http://www.epm.ornl.gov/~dunigan/vpn.html">collection</a> of
+    VPN links, and some explanation</li>
+</ul>
+
+<h3><a name="overview">IPsec overview documents or slide sets</a></h3>
+<ul>
+  <li>the FreeS/WAN <a href="ipsec.html">document section</a> on these
+    protocols</li>
+</ul>
+
+<h3><a name="otherlang">IPsec information in languages other than
+English</a></h3>
+<ul>
+  <li><a
+    href="http://www.imib.med.tu-dresden.de/imib/Internet/Literatur/ipsec-docu.html">German</a></li>
+  <li><a href="http://www.kame.net/index-j.html">Japanese</a></li>
+  <li>Feczak Szabolcs' thesis in <a
+    href="http://feczo.koli.kando.hu/vpn/">Hungarian</a></li>
+  <li>Davide Cerri's thesis and some presentation slides <a
+    href="http://www.linux.it/~davide/doc/">Italian</a></li>
+</ul>
+
+<h3><a name="RFCs1">RFCs and other reference documents</a></h3>
+<ul>
+  <li><a href="rfc.html">Our document</a> listing the RFCs relevant to Linux
+    FreeS/WAN and giving various ways of obtaining both RFCs and Internet
+    Drafts.</li>
+  <li><a href="http://www.vpnc.org/vpn-standards.html">VPN Standards</a> page
+    maintained by <a href="glossary.html#VPNC">VPNC</a>. This covers both
+    RFCs and Drafts, and classifies them in a fairly helpful way.</li>
+  <li><a href="http://www.rfc-editor.org">RFC archive</a></li>
+  <li><a href="http://www.ietf.org/ids.by.wg/ipsec.html">Internet Drafts</a>
+    related to IPsec</li>
+  <li>US government <a href="http://www.itl.nist.gov/div897/pubs"> site</a>
+    with their <a href="glossary.html#FIPS">FIPS</a> standards</li>
+  <li>Archives of the ipsec@tis.com mailing list where discussion of drafts
+    takes place.
+    <ul>
+      <li><a href="http://www.sandelman.ottawa.on.ca/ipsec">Eastern
+      Canada</a></li>
+      <li><a href="http://www.vpnc.org/ietf-ipsec">California</a>.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3><a name="analysis">Analysis and critiques of IPsec protocols</a></h3>
+<ul>
+  <li>Counterpane's <a
+    href="http://www.counterpane.com/ipsec.pdf">evaluation</a> of the
+    protocols</li>
+  <li>Simpson's <a
+    href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/1999/06/msg00319.html">IKE
+    Considered Dangerous</a> paper. Note that this is a link to an archive of
+    our mailing list. There are several replies in addition to the paper
+    itself.</li>
+  <li>Fate Labs <a href="http://www.fatelabs.com/loki-vpn.pdf">Virual Private
+    Problems: the Broken Dream</a></li>
+  <li>Catherine Meadows' paper <cite>Analysis of the Internet Key Exchange
+    Protocol Using the NRL Protocol Analyzer</cite>, in <a
+    href="http://chacs.nrl.navy.mil/publications/CHACS/1999/1999meadows-IEEE99.pdf">PDF</a>
+    or <a
+    href="http://chacs.nrl.navy.mil/publications/CHACS/1999/1999meadows-IEEE99.ps">Postscript</a>.</li>
+  <li>Perlman and Kaufmnan
+    <ul>
+      <li><a
+        href="http://snoopy.seas.smu.edu/ee8392_summer01/week7/perlman2.pdf">Key
+        Exchange in IPsec</a></li>
+      <li>a newer <a
+        href="http://sec.femto.org/wetice-2001/papers/radia-paper.pdf">PDF
+        paper</a>, <cite>Analysis of the IPsec Key Exchange
+      Standard</cite>.</li>
+    </ul>
+  </li>
+  <li>Bellovin's <a
+    href="http://www.research.att.com/~smb/papers/index.html">papers</a> page
+    including his:
+    <ul>
+      <li><cite>Security Problems in the TCP/IP Protocol Suite</cite>
+      (1989)</li>
+      <li><cite>Problem Areas for the IP Security Protocols</cite> (1996)</li>
+      <li><cite>Probable Plaintext Cryptanalysis of the IP Security
+        Protocols</cite> (1997)</li>
+    </ul>
+  </li>
+  <li>An <a href="http://www.lounge.org/ike_doi_errata.html">errata list</a>
+    for the IPsec RFCs.</li>
+</ul>
+
+<h3><a name="IP.background">Background information on IP</a></h3>
+<ul>
+  <li>An <a href="http://ipprimer.windsorcs.com/">IP tutorial</a> that seems
+    to be written mainly for Netware or Microsoft LAN admins entering a new
+    world</li>
+  <li><a href="http://www.iana.org">IANA</a>, Internet Assigned Numbers
+    Authority</li>
+  <li><a href="http://public.pacbell.net/dedicated/cidr.html">CIDR</a>,
+    Classless Inter-Domain Routing</li>
+  <li>Also see our <a href="biblio.html">bibliography</a></li>
+</ul>
+
+<h2><a name="implement">IPsec Implementations</a></h2>
+
+<h3><a name="linuxprod">Linux products</a></h3>
+
+<p>Vendors using FreeS/WAN in turnkey firewall or VPN products are listed in
+our <a href="intro.html#turnkey">introduction</a>.</p>
+
+<p>Other vendors have Linux IPsec products which, as far as we know, do not
+use FreeS/WAN</p>
+<ul>
+  <li><a href="http://www.redcreek.com/products/shareware.html">Redcreek</a>
+    provide an open source Linux driver for their PCI hardware VPN card. This
+    card has a 100 Mbit Ethernet port, an Intel 960 CPU plus more specialised
+    crypto chips, and claimed encryption performance of 45 Mbit/sec. The PC
+    sees it as an Ethernet board.</li>
+  <li><a href="http://linuxtoday.com/stories/8428.html?nn">Paktronix</a>
+    offer a Linux-based VPN with hardware encryption</li>
+  <li><a href="http://www.watchguard.com/">Watchguard</a> use Linux in their
+    Firebox product.</li>
+  <li><a href="http://www.entrust.com">Entrust</a> offer a developers'
+    toolkit for using their <a href="glossary.html#PKI">PKI</a> for IPsec
+    authentication</li>
+  <li>According to a report on our mailing list, <a
+    href="http://www.axent.com">Axent</a> have a Linux version of their
+    product.</li>
+</ul>
+
+<h3><a name="router">IPsec in router products</a></h3>
+
+<p>All the major router vendors support IPsec, at least in some models.</p>
+<ul>
+  <li><a href="http://www.cisco.com/warp/public/707/16.html">Cisco</a> IPsec
+    information</li>
+  <li>Ascend, now part of <a href="http://www.lucent.com/">Lucent</a>, have
+    some IPsec-based products</li>
+  <li><a href="http://www.nortelnetworks.com/">Bay Networks</a>, now part of
+    Nortel, use IPsec in their Contivity switch product line</li>
+  <li><a href="http://www.3com.com/products/enterprise.html">3Com</a> have a
+    number of VPN products, some using IPsec</li>
+</ul>
+
+<h3><a name="fw.web">IPsec in firewall products</a></h3>
+
+<p>Many firewall vendors offer IPsec, either as a standard part of their
+product, or an optional extra. A few we know about are:</p>
+<ul>
+  <li><a href="http://www.borderware.com/">Borderware</a></li>
+  <li><a href="http://www.ashleylaurent.com/vpn/ipsec_vpn.htm">Ashley
+    Laurent</a></li>
+  <li><a href="http://www.watchguard.com">Watchguard</a></li>
+  <li><a href="http://www.fx.dk/firewall/ipsec.html">Injoy</a> for OS/2</li>
+</ul>
+
+<p>Vendors using FreeS/WAN in turnkey firewall products are listed in our <a
+href="intro.html#turnkey">introduction</a>.</p>
+
+<h3><a name="ipsecos">Operating systems with IPsec support</a></h3>
+
+<p>All the major open source operating systems support IPsec. See below for
+details on <a href="#BSD">BSD-derived</a> Unix variants.</p>
+
+<p>Among commercial OS vendors, IPsec players include:</p>
+<ul>
+  <li><a
+    href="http://msdn.microsoft.com/isapi/msdnlib.idc?theURL=/library/backgrnd/html/msdn_ip_security.htm">Microsoft</a>
+    have put IPsec in their Windows 2000 and XP products</li>
+  <li><a
+    href="http://www.s390.ibm.com/stories/1999/os390v2r8_pr.html">IBM</a>
+    announce a release of OS390 with IPsec support via a crypto
+  co-processor</li>
+  <li><a
+    href="http://www.sun.com/solaris/ds/ds-security/ds-security.pdf">Sun</a>
+    include IPsec in Solaris 8</li>
+  <li><a
+    href="http://www.hp.com/security/products/extranet-security.html">Hewlett
+    Packard</a> offer IPsec for their Unix machines</li>
+  <li>Certicom have IPsec available for the <a
+    href="http://www.certicom.com/products/movian/movianvpn_tech.html">Palm</a>.</li>
+  <li>There were reports before the release that Apple's Mac OS X would have
+    IPsec support built in, but it did not seem to be there when we last
+    checked. If you find, it please let us know via the <a
+    href="mail.html">mailing list</a>.</li>
+</ul>
+
+<h3>IPsec on network cards</h3>
+
+<p>Network cards with built-in IPsec acceleration are available from at least
+Intel, 3Com and Redcreek.</p>
+
+<h3><a name="opensource">Open source IPsec implementations</a></h3>
+
+<h4><a name="linuxipsec">Other Linux IPsec implementations</a></h4>
+
+<p>We like to think of FreeS/WAN as <em>the</em> Linux IPsec implementation,
+but it is not the only one. Others we know of are:</p>
+<ul>
+  <li><a href="http://www.enst.fr/~beyssac/pipsec/">pipsecd</a>, a
+    lightweight implementation of IPsec for Linux. Does not require kernel
+    recompilation.</li>
+  <li>Petr Novak's <a href="ftp://ftp.eunet.cz/icz/ipnsec/">ipnsec</a>, based
+    on the OpenBSD IPsec code and using <a
+    href="glossary.html#photuris">Photuris</a> for key management</li>
+  <li>A now defunct project at <a
+    href="http://www.cs.arizona.edu/security/hpcc-blue/linux.html">U of
+    Arizona</a> (export controlled)</li>
+  <li><a href="http://snad.ncsl.nist.gov/cerberus">NIST Cerebus</a> (export
+    controlled)</li>
+</ul>
+
+<h4><a name="BSD">IPsec for BSD Unix</a></h4>
+<ul>
+  <li><a href="http://www.kame.net/project-overview.html">KAME</a>, several
+    large Japanese companies co-operating on IPv6 and IPsec</li>
+  <li><a href="http://web.mit.edu/network/isakmp">US Naval Research Lab</a>
+    implementation of IPv6 and of IPsec for IPv4 (export controlled)</li>
+  <li><a href="http://www.openbsd.org">OpenBSD</a> includes IPsec as a
+    standard part of the distribution</li>
+  <li><a href="http://www.r4k.net/ipsec">IPsec for FreeBSD</a></li>
+  <li>a <a href="http://www.netbsd.org/Documentation/network/ipsec/">FAQ</a>
+    on NetBSD's IPsec implementation</li>
+</ul>
+
+<h4><a name="misc">IPsec for other systems</a></h4>
+<ul>
+  <li><a href="http://www.tcm.hut.fi/Tutkimus/IPSEC/">Helsinki U of
+    Technolgy</a> have implemented IPsec for Solaris, Java and Macintosh</li>
+</ul>
+
+<h3><a name="interop.web">Interoperability</a></h3>
+
+<p>The IPsec protocols are designed so that different implementations should
+be able to work together. As they say "the devil is in the details". IPsec
+has a lot of details, but considerable success has been achieved.</p>
+
+<h4><a name="result">Interoperability results</a></h4>
+
+<p>Linux FreeS/WAN has been tested for interoperability with many other IPsec
+implementations. Results to date are in our <a
+href="interop.html">interoperability</a> section.</p>
+
+<p>Various other sites have information on interoperability between various
+IPsec implementations:</p>
+<ul>
+  <li><a href="http://www.opus1.com/vpn/atl99display.html">interop
+    results</a> from a bakeoff in Atlanta, September 1999.</li>
+  <li>a French company, HSC's, <a
+    href="http://www.hsc.fr/ressources/presentations/ipsec99/index.html.en">interoperability</a>
+    test data covers FreeS/WAN, Open BSD, KAME, Linux pipsecd, Checkpoint,
+    Red Creek Ravlin, and Cisco IOS</li>
+  <li><a href="http://www.icsa.net/">ICSA</a> offer certification programs
+    for various security-related products. See their list of <a
+    href="http://www.icsa.net/html/communities/ipsec/certification/certified_products/index.shtml">
+    certified IPsec</a> products. Linux FreeS/WAN is not currently on that
+    list, but several products with which we interoperate are.</li>
+  <li>VPNC have a page on why they are not yet doing <a
+    href="http://www.vpnc.org/interop.html">interoperability</a> testing and
+    a page on the <a href="http://www.vpnc.org/conformance.html">spec
+    conformance</a> testing that they are doing</li>
+  <li>a <a href="http://www.commweb.com/article/COM20000912S0009">review</a>
+    comparing a dozen commercial IPsec implemetations. Unfortunately, the
+    reviewers did not look at Open Source implementations such as FreeS/WAN
+    or OpenBSD.</li>
+  <li><a
+    href="http://www.tanu.org/~sakane/doc/public/report-ike-interop0007.html">results</a>
+    from interoperability tests at a conference. FreeS/WAN was not tested
+    there.</li>
+  <li>test results from the <a
+    href="http://www.hsc.fr/ressources/veille/ipsec/ipsec2000/">IPSEC
+    2000</a> conference</li>
+</ul>
+
+<h4><a name="test1">Interoperability test sites</a></h4>
+<ul>
+  <li><a href="http://www.tahi.org/">TAHI</a>, a Japanese IPv6 testing
+    project with free IPsec validation software</li>
+  <li><a href="http://ipsec-wit.antd.nist.gov">National Institute of
+    Standards and Technology</a></li>
+  <li><a href="http://isakmp-test.ssh.fi/">SSH Communications
+  Security</a></li>
+</ul>
+
+<h2><a name="linux.link">Linux links</a></h2>
+
+<h3><a name="linux.basic">Basic and tutorial Linux information</a></h3>
+<ul>
+  <li>Linux <a
+    href="http://linuxcentral.com/linux/LDP/LDP/gs/gs.html">Getting
+    Started</a> HOWTO document</li>
+  <li>A getting started guide from the <a
+    href="http://darkwing.uoregon.edu/~cchome/linuxgettingstarted.html">U of
+    Oregon</a></li>
+  <li>A large <a href="http://www.herring.org/techie.html">link
+    collection</a> which includes a lot of introductory and tutorial material
+    on Unix, Linux, the net, . . .</li>
+</ul>
+
+<h3><a name="general">General Linux sites</a></h3>
+<ul>
+  <li><a href="http://www.freshmeat.net">Freshmeat</a> Linux news</li>
+  <li><a href="http://slashdot.org">Slashdot</a> "News for Nerds"</li>
+  <li><a href="http://www.linux.org">Linux Online</a></li>
+  <li><a href="http://www.linuxhq.com">Linux HQ</a></li>
+  <li><a href="http://www.tux.org">tux.org</a></li>
+</ul>
+
+<h3><a name="docs.ldp">Documentation</a></h3>
+
+<p>Nearly any Linux documentation you are likely to want can be found at the
+<a href="http://metalab.unc.edu/LDP">Linux Documentation Project</a> or
+LDP.</p>
+<ul>
+  <li><a href="http://metalab.unc.edu/LDP/HOWTO/META-FAQ.html">Meta-FAQ</a>
+    guide to Linux information sources</li>
+  <li>The LDP's HowTo documents are a standard Linux reference. See this <a
+    href="http://www.linuxdoc.org/docs.html#howto">list</a>. Documents there
+    most relevant to a FreeS/WAN gateway are:
+    <ul>
+      <li><a href="http://metalab.unc.edu/LDP/HOWTO/Kernel-HOWTO.html">Kernel
+        HOWTO</a></li>
+      <li><a
+        href="http://metalab.unc.edu/LDP/HOWTO/Networking-Overview-HOWTO.html">Networking
+        Overview HOWTO</a></li>
+      <li><a
+        href="http://metalab.unc.edu/LDP/HOWTO/Security-HOWTO.html">Security
+        HOWTO</a></li>
+    </ul>
+  </li>
+  <li>The LDP do a series of Guides, book-sized publications with more detail
+    (and often more "why do it this way?") than the HowTos. See this <a
+    href="http://www.linuxdoc.org/guides.html">list</a>. Documents there most
+    relevant to a FreeS/WAN gateway are:
+    <ul>
+      <li><a href="http://www.tml.hut.fi/~viu/linux/sag/">System
+        Administrator's Guide</a></li>
+      <li><a href="http://www.linuxdoc.org/LDP/nag2/index.html">Network
+        Adminstrator's Guide</a></li>
+      <li><a href="http://www.seifried.org/lasg/">Linux Administrator's
+        Security Guide</a></li>
+    </ul>
+  </li>
+</ul>
+
+<p>You may not need to go to the LDP to get this material. Most Linux
+distributions include the HowTos on their CDs and several include the Guides
+as well. Also, most of the Guides and some collections of HowTos are
+available in book form from various publishers.</p>
+
+<p>Much of the LDP material is also available in languages other than
+English. See this <a href="http://www.linuxdoc.org/links/nenglish.html">LDP
+page</a>.</p>
+
+<h3><a name="advroute.web">Advanced routing</a></h3>
+
+<p>The Linux IP stack has some new features in 2.4 kernels. Some HowTos have
+been written:</p>
+<ul>
+  <li>several HowTos for the <a
+    href="http://netfilter.samba.org/unreliable-guides/">netfilter</a>
+    firewall code in newer kernels</li>
+  <li><a
+    href="http://www.ds9a.nl/2.4Networking/HOWTO//cvs/2.4routing/output/2.4networking.html">2.4
+    networking</a> HowTo</li>
+  <li><a
+    href="http://www.ds9a.nl/2.4Networking/HOWTO//cvs/2.4routing/output/2.4routing.html">2.4
+    routing</a> HowTo</li>
+</ul>
+
+<h3><a name="linsec">Security for Linux</a></h3>
+
+<p>See also the <a href="#docs.ldp">LDP material</a> above.</p>
+<ul>
+  <li><a
+    href="http://www.ecst.csuchico.edu/~dranch/LINUX/index-linux.html#trinityos">Trinity
+    OS guide to setting up Linux</a></li>
+  <li><a href="http://www.deter.com/unix">Unix security</a> page</li>
+  <li><a href="http://linux01.gwdg.de/~alatham/">PPDD</a> encrypting
+    filesystem</li>
+  <li><a href="http://EncryptionHOWTO.sourceforge.net/">Linux Encryption
+    HowTo</a> (outdated when last checked, had an Oct 2000 revision date in
+    March 2002)</li>
+</ul>
+
+<h3><a name="firewall.linux">Linux firewalls</a></h3>
+
+<p>Our <a href="firewall.html">FreeS/WAN and firewalls</a> document includes
+links to several sets of <a href="firewall.html#examplefw">scripts</a> known
+to work with FreeS/WAN.</p>
+
+<p>Other information sources:</p>
+<ul>
+  <li><a href="http://ipmasq.cjb.net/">IP Masquerade resource page</a></li>
+  <li><a href="http://netfilter.samba.org/unreliable-guides/">netfilter</a>
+    firewall code in 2.4 kernels</li>
+  <li>Our list of general <a href="#firewall.web">firewall references</a> on
+    the web</li>
+  <li><a href="http://users.dhp.com/~whisper/mason/">Mason</a>, a tool for
+    automatically configuring Linux firewalls</li>
+  <li>the web cache software <a href="http://www.squid-cache.org/">squid</a>
+    and <a href="http://www.squidguard.org/">squidguard</a> which turns Squid
+    into a filtering web proxy</li>
+</ul>
+
+<h3><a name="linux.misc">Miscellaneous Linux information</a></h3>
+<ul>
+  <li><a href="http://lwn.net/current/dists.php3">Linux distribution
+    vendors</a></li>
+  <li><a href="http://www.linux.org/groups/">Linux User Groups</a></li>
+</ul>
+
+<h2><a name="crypto.link">Crypto and security links</a></h2>
+
+<h3><a name="security">Crypto and security resources</a></h3>
+
+<h4><a name="std.links">The standard link collections</a></h4>
+
+<p>Two enormous collections of links, each the standard reference in its
+area:</p>
+<dl>
+  <dt>Gene Spafford's <a
+  href="http://www.cerias.purdue.edu/coast/hotlist/">COAST hotlist</a></dt>
+    <dd>Computer and network security.</dd>
+  <dt>Peter Gutmann's <a
+  href="http://www.cs.auckland.ac.nz/~pgut001/links.html">Encryption and
+  Security-related Resources</a></dt>
+    <dd>Cryptography.</dd>
+</dl>
+
+<h4><a name="FAQ">Frequently Asked Question (FAQ) documents</a></h4>
+<ul>
+  <li><a href="http://www.faqs.org/faqs/cryptography-faq/">Cryptography
+    FAQ</a></li>
+  <li><a href="http://www.interhack.net/pubs/fwfaq">Firewall FAQ</a></li>
+  <li><a href="http://www.whitefang.com/sup/secure-faq.html">Secure Unix
+    Programming FAQ</a></li>
+  <li>FAQs for specific programs are listed in the <a href="#tools">tools</a>
+    section below.</li>
+</ul>
+
+<h4><a name="cryptover">Tutorials</a></h4>
+<ul>
+  <li>Gary Kessler's <a
+    href="http://www.garykessler.net/library/crypto.html">Overview of
+    Cryptography</a></li>
+  <li>Terry Ritter's <a
+    href="http://www.ciphersbyritter.com/LEARNING.HTM">introduction</a></li>
+  <li>Peter Gutman's <a
+    href="http://www.cs.auckland.ac.nz/~pgut001/tutorial/index.html">cryptography</a>
+    tutorial (500 slides in PDF format)</li>
+  <li>Amir Herzberg of IBM's sildes for his course <a
+    href="http://www.hrl.il.ibm.com/mpay/course.html">Introduction to
+    Cryptography and Electronic Commerce</a></li>
+  <li>the <a href="http://www.gnupg.org/gph/en/manual/c173.html">concepts
+    section</a> of the <a href="glossary.html#GPG">GNU Privacy Guard</a>
+    documentation</li>
+  <li>Bruce Schneier's self-study <a
+    href="http://www.counterpane.com/self-study.html">cryptanalysis</a>
+  course</li>
+</ul>
+
+<p>See also the <a href="#interesting">interesting papers</a> section
+below.</p>
+
+<h4><a name="standards">Crypto and security standards</a></h4>
+<ul>
+  <li><a href="http://csrc.nist.gov/cc">Common Criteria</a>, new
+    international computer and network security standards to replace the
+    "Rainbow" series</li>
+  <li>AES <a href="http://csrc.nist.gov/encryption/aes/aes_home.htm">
+    Advanced Encryption Standard </a> which will replace DES</li>
+  <li><a href="http://grouper.ieee.org/groups/1363">IEEE P-1363 public key
+    standard</a></li>
+  <li>our collection of links for the <a href="#ipsec.link">IPsec</a>
+    standards</li>
+  <li>history of <a
+    href="http://www.visi.com/crypto/evalhist/index.html">formal
+    evaluation</a> of security policies and implementation</li>
+</ul>
+
+<h4><a name="quotes">Crypto quotes</a></h4>
+
+<p>There are several collections of cryptographic quotes on the net:</p>
+<ul>
+  <li><a href="http://www.eff.org/pub/EFF/quotes.eff">the EFF</a></li>
+  <li><a href="http://www.samsimpson.com/cquotes.php">Sam Simpson</a></li>
+  <li><a href="http://www.amk.ca/quotations/cryptography/page-1.html">AM
+    Kutchling</a></li>
+</ul>
+
+<h3><a name="policy">Cryptography law and policy</a></h3>
+
+<h4><a name="legal">Surveys of crypto law</a></h4>
+<ul>
+  <li>International survey of <a
+    href="http://cwis.kub.nl/~FRW/PEOPLE/koops/lawsurvy.htm"> crypto
+  law</a>.</li>
+  <li>International survey of <a
+    href="http://rechten.kub.nl/simone/ds-lawsu.htm"> digital signature
+    law</a></li>
+</ul>
+
+<h4><a name="oppose">Organisations opposing crypto restrictions</a></h4>
+<ul>
+  <li>The <a href="glossary.html#EFF">EFF</a>'s archives on <a
+    href="http://www.eff.org/pub/Privacy/">privacy</a> and <a
+    href="http://www.eff.org/pub/Privacy/ITAR_export/">export
+  control</a>.</li>
+  <li><a href="http://www.gilc.org">Global Internet Liberty Campaign</a></li>
+  <li><a href="http://www.cdt.org/crypto">Center for Democracy and
+    Technology</a></li>
+  <li><a href="http://www.privacyinternational.org/">Privacy
+    International</a>, who give out <a
+    href="http://www.bigbrotherawards.org/">Big Brother Awards</a> to snoopy
+    organisations</li>
+</ul>
+
+<h4><a name="other.policy">Other information on crypto policy</a></h4>
+<ul>
+  <li><a href="ftp://ftp.isi.edu/in-notes/rfc1984.txt">RFC 1984</a>, the <a
+    href="glossary.html#IAB">IAB</a> and <a
+    href="glossary.html#IESG">IESG</a> Statement on Cryptographic Technology
+    and the Internet.</li>
+  <li>John Young's collection of <a href="http://cryptome.org/">documents</a>
+    of interest to the cryptography, open government and privacy movements,
+    organized chronologically</li>
+  <li>AT&amp;T researcher Matt Blaze's Encryption, Privacy and Security <a
+    href="http://www.crypto.com">Resource Page</a></li>
+  <li>A good <a href="http://cryptome.org/crypto97-ne.htm">overview</a> of
+    the issues from Australia.</li>
+</ul>
+
+<p>See also our documentation section on the <a href="politics.html">history
+and politics</a> of cryptography.</p>
+
+<h3><a name="crypto.tech">Cryptography technical information</a></h3>
+
+<h4><a name="cryptolinks">Collections of crypto links</a></h4>
+<ul>
+  <li><a href="http://www.counterpane.com/hotlist.html">Counterpane</a></li>
+  <li><a href="http://www.cs.auckland.ac.nz/~pgut001/links.html">Peter
+    Gutman's links</a></li>
+  <li><a href="http://www.pca.dfn.de/eng/team/ske/pem-dok.html">PKI
+  links</a></li>
+  <li><a href="http://crypto.yashy.com/www/">Robert Guerra's links</a></li>
+</ul>
+
+<h4><a name="papers">Lists of online cryptography papers</a></h4>
+<ul>
+  <li><a href="http://www.counterpane.com/biblio">Counterpane</a></li>
+  <li><a
+    href="http://www.cryptography.com/resources/papers">cryptography.com</a></li>
+  <li><a href="http://www.cryptosoft.com/html/secpub.htm">Cryptosoft</a></li>
+</ul>
+
+<h4><a name="interesting">Particularly interesting papers</a></h4>
+
+<p>These papers emphasize important issues around the use of cryptography,
+and the design and management of secure systems.</p>
+<ul>
+  <li><a href="http://www.counterpane.com/keylength.html">Key length
+    requirements for security</a></li>
+  <li><a href="http://www.cl.cam.ac.uk/users/rja14/wcf.html">Why
+    Cryptosystems Fail</a></li>
+  <li><a href="http://www.cdt.org/crypto/risks98/">Risks of escrowed
+    encryption</a></li>
+  <li><a href="http://www.counterpane.com/pitfalls.html">Security pitfalls in
+    cryptography</a></li>
+  <li><a href="http://www.acm.org/classics/sep95">Reflections on Trusting
+    Trust</a>, Ken Thompson on Trojan horse design</li>
+  <li><a href="http://www.apache-ssl.org/disclosure.pdf">Security against
+    Compelled Disclosure</a>, how to maintain privacy in the face of legal or
+    other coersion</li>
+</ul>
+
+<h3><a name="compsec">Computer and network security</a></h3>
+
+<h4><a name="seclink">Security links</a></h4>
+<ul>
+  <li><a href="http://www.cs.purdue.edu/coast/hotlist">COAST Hotlist</a></li>
+  <li>DMOZ open directory project <a
+    href="http://dmoz.org/Computers/Security/">computer security</a>
+  links</li>
+  <li><a href="http://www-cse.ucsd.edu/users/bsy/sec.html">Bennet Yee</a></li>
+  <li>Mike Fuhr's <a
+    href="http://www.fuhr.org/~mfuhr/computers/security.html">link
+    collection</a></li>
+  <li><a href="http://www.networkintrusion.co.uk/">links</a> with an emphasis
+    on intrusion detection</li>
+</ul>
+
+<h4><a name="firewall.web">Firewall links</a></h4>
+<ul>
+  <li><a href="http://www.cs.purdue.edu/coast/firewalls">COAST
+  firewalls</a></li>
+  <li><a href="http://www.zeuros.co.uk">Firewalls Resource page</a></li>
+</ul>
+
+<h4><a name="vpn">VPN links</a></h4>
+<ul>
+  <li><a href="http://www.vpnc.org">VPN Consortium</a></li>
+  <li>First VPN's <a href="http://www.firstvpn.com/research/rhome.html">white
+    paper</a> collection</li>
+</ul>
+
+<h4><a name="tools">Security tools</a></h4>
+<ul>
+  <li>PGP -- mail encryption
+    <ul>
+      <li><a href="http://www.pgp.com/">PGP Inc.</a> (part of NAI) for
+        commercial versions</li>
+      <li><a href="http://web.mit.edu/network/pgp.html">MIT</a> distributes
+        the NAI product for non-commercial use</li>
+      <li><a href="http://www.pgpi.org/">international</a> distribution
+      site</li>
+      <li><a href="http://gnupg.org">GNU Privacy Guard (GPG)</a></li>
+      <li><a href="http://www.dk.pgp.net/pgpnet/pgp-faq/">PGP FAQ</a></li>
+    </ul>
+    A message in our mailing list archive has considerable detail on <a
+    href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2000/12/msg00029.html">available
+    versions</a> of PGP and on IPsec support in them.
+    <p><strong>Note:</strong> A fairly nasty bug exists in all commercial PGP
+    versions from 5.5 through 6.5.3. If you have one of those,
+    <strong>upgrade now</strong>.</p>
+  </li>
+  <li>SSH -- secure remote login
+    <ul>
+      <li><a href="http://www.ssh.fi">SSH Communications Security</a>, for
+        the original software. It is free for trial, academic and
+        non-commercial use.</li>
+      <li><a href="http://www.openssh.com/">Open SSH</a>, the Open BSD team's
+        free replacement</li>
+      <li><a href="http://www.freessh.org/">freessh.org</a>, links to free
+        implementations for many systems</li>
+      <li><a href="http://www.uni-karlsruhe.de/~ig25/ssh-faq">SSH FAQ</a></li>
+      <li><a
+        href="http://www.chiark.greenend.org.uk/~sgtatham/putty/">Putty</a>,
+        an SSH client for Windows</li>
+    </ul>
+  </li>
+  <li>Tripwire saves message digests of your system files. Re-calculate the
+    digests and compare to saved values to detect any file changes. There are
+    several versions available:
+    <ul>
+      <li><a href="http://www.tripwiresecurity.com/">commercial
+      version</a></li>
+      <li><a href="http://www.tripwire.org/">Open Source</a></li>
+    </ul>
+  </li>
+  <li><a href="http://www.snort.org">Snort</a> and <a
+    href="http://www.lids.org">LIDS</a> are intrusion detection system for
+    Linux</li>
+  <li><a href="http://www.fish.com/~zen/satan/satan.html">SATAN</a> System
+    Administrators Tool for Analysing Networks</li>
+  <li><a href="http://www.insecure.org/nmap/">NMAP</a> Network Mapper</li>
+  <li><a href="ftp://ftp.porcupine.org/pub/security/index.html">Wietse
+    Venema's page</a> with various tools</li>
+  <li><a href="http://ita.ee.lbl.gov/index.html">Internet Traffic
+    Archive</a>, various tools to analyze network traffic, mostly scripts to
+    organise and format tcpdump(8) output for specific purposes</li>
+  <li><a name="ssmail">ssmail -- sendmail patched to do</a> <a
+    href="glossary.html#carpediem">opportunistic encryption</a>
+    <ul>
+      <li><a href="http://www.home.aone.net.au/qualcomm/">web page</a> with
+        links to code and to a Usenix paper describing it, in PDF</li>
+    </ul>
+  </li>
+  <li><a href="http://www.openca.org/">Open CA</a> project to develop a
+    freely distributed <a href="glossary.html#CA">Certification Authority</a>
+    for building a open <a href="glossary.html#PKI">Public Key
+    Infrastructure</a>.</li>
+</ul>
+
+<h3><a name="people">Links to home pages</a></h3>
+
+<p>David Wagner at Berkeley provides a set of links to <a
+href="http://www.cs.berkeley.edu/~daw/people/crypto.html">home pages</a> of
+cryptographers, cypherpunks and computer security people.</p>
+</body>
+</html>

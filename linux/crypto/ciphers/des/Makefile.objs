@@ -1,0 +1,20 @@
+obj-$(CONFIG_IPSEC_ENC_3DES) += cbc_enc.o
+#obj-$(CONFIG_IPSEC_ENC_3DES) += des_opts.o
+obj-$(CONFIG_IPSEC_ENC_3DES) += ecb_enc.o
+#obj-$(CONFIG_IPSEC_ENC_3DES) += fcrypt.o
+obj-$(CONFIG_IPSEC_ENC_3DES) += set_key.o
+
+ifeq ($(strip ${SUBARCH}),)
+SUBARCH:=${ARCH}
+endif
+
+ifeq (${SUBARCH},i386)
+obj-$(CONFIG_IPSEC_ENC_3DES) += dx86unix.o
+else
+obj-$(CONFIG_IPSEC_ENC_3DES) += des_enc.o
+endif
+
+
+
+
+

@@ -1,0 +1,3 @@
+if [ "$CONFIG_IPSEC_ALG" = "y" ]; then
+  tristate '        BLOWFISH encryption algorithm' CONFIG_IPSEC_ALG_BLOWFISH
+fi

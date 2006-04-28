@@ -1,0 +1,80 @@
+#! /bin/sh
+# make backup of FreeSwan repository
+# -l	local build only, do not transmit
+
+#scphost=freeswan@xs1.xs4all.nl
+scphost=henry@adams.freeswan.org
+scpdir=backup
+pfile=~freeswan/etc/relpass
+ppfile=~freeswan/etc/bpp
+
+PATH=/bin:/usr/bin
+export PATH
+umask 077
+
+tmpdir=~freeswan/tmp
+tarname=freeswan.tar
+
+. ~freeswan/setup
+
+cd $tmpdir
+rm -f $tarname $tarname.gz
+touch $tarname
+
+cd ~freeswan
+tar -cf $tmpdir/$tarname `ls -a |
+	egrep -v '^(\.|\.\.|archive|\.nobak|\.ssh|\.ssh2|tmp)$'`
+
+cd $tmpdir
+gzip -9 $tarname
+ls -l $tarname.gz
+
+if test " $1" = " -l"
+then
+	exit 0
+fi
+
+echo updating >notice
+
+date
+expect -nN -c "
+	set scphost $scphost
+	set scpdir $scpdir
+	set pfile $pfile
+	set ppfile $ppfile
+	set tarname $tarname
+	"'
+	# canned procedure for scp copying
+	proc scp {from to} {
+		global p scphost scpdir
+		spawn scp2 -p -q $from $scphost:$scpdir/$to
+		set timeout -1
+		expect {
+		"word:" {
+			set fname $pfile
+			# fall out
+		}
+		{":} {
+			set fname $ppfile
+			# fall out
+		}
+		eof {
+			puts "eofed!"
+			return
+		}}
+		sleep 3
+		set f [open $fname r]
+		set p [read $f]
+		close $f
+		send "$p\r"
+		expect "\n"
+		expect eof
+		wait
+	}
+
+	scp notice $tarname.gz
+	scp $tarname.gz $tarname.gz
+	# done'
+date
+
+rm -f $tarname.gz

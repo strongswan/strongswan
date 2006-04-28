@@ -1,0 +1,105 @@
+%{
+/* strongSwan keywords
+ * Copyright (C) 2005 Andreas Steffen
+ * Hochschule fuer Technik Rapperswil, Switzerland
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ *
+ * RCSID $Id: keywords.txt,v 1.6 2006/04/17 10:30:27 as Exp $
+ */
+
+#include <string.h>
+
+#include "keywords.h"
+
+%}
+struct kw_entry {
+    char *name;
+    kw_token_t token;
+};
+%%
+interfaces,        KW_INTERFACES
+klipsdebug,        KW_KLIPSDEBUG
+plutodebug,        KW_PLUTODEBUG
+dumpdir,           KW_DUMPDIR
+prepluto,          KW_PREPLUTO
+postpluto,         KW_POSTPLUTO
+fragicmp,          KW_FRAGICMP
+packetdefault,     KW_PACKETDEFAULT
+hidetos,           KW_HIDETOS
+uniqueids,         KW_UNIQUEIDS
+overridemtu,       KW_OVERRIDEMTU
+crlcheckinterval,  KW_CRLCHECKINTERVAL
+cachecrls,         KW_CACHECRLS
+strictcrlpolicy,   KW_STRICTCRLPOLICY
+nocrsend,          KW_NOCRSEND
+nat_traversal,     KW_NAT_TRAVERSAL
+keep_alive,        KW_KEEP_ALIVE
+virtual_private,   KW_VIRTUAL_PRIVATE
+pkcs11module,      KW_PKCS11MODULE
+pkcs11keepstate,   KW_PKCS11KEEPSTATE
+pkcs11proxy,       KW_PKCS11PROXY
+keyexchange,       KW_KEYEXCHANGE
+type,              KW_TYPE
+pfs,               KW_PFS
+compress,          KW_COMPRESS
+auth,              KW_AUTH
+authby,            KW_AUTHBY
+keylife,           KW_KEYLIFE
+rekeymargin,       KW_REKEYMARGIN
+ikelifetime,       KW_IKELIFETIME
+keyingtries,       KW_KEYINGTRIES
+rekeyfuzz,         KW_REKEYFUZZ
+rekey,             KW_REKEY
+esp,               KW_ESP
+ike,               KW_IKE
+pfsgroup,          KW_PFSGROUP
+dpddelay,          KW_DPDDELAY
+dpdtimeout,        KW_DPDTIMEOUT
+dpdaction,         KW_DPDACTION
+cacert,            KW_CACERT
+ldaphost,          KW_LDAPHOST
+ldapbase,          KW_LDAPBASE
+crluri,            KW_CRLURI
+crluri2,           KW_CRLURI2
+ocspuri,           KW_OCSPURI
+left,              KW_LEFT
+leftnexthop,       KW_LEFTNEXTHOP
+leftsubnet,        KW_LEFTSUBNET
+leftsubnetwithin,  KW_LEFTSUBNETWITHIN
+leftprotoport,     KW_LEFTPROTOPORT
+leftsourceip,      KW_LEFTSOURCEIP
+leftfirewall,      KW_LEFTFIREWALL
+lefthostaccess,    KW_LEFTHOSTACCESS
+leftupdown,        KW_LEFTUPDOWN
+leftid,            KW_LEFTID
+leftrsasigkey,     KW_LEFTRSASIGKEY
+leftcert,          KW_LEFTCERT,
+leftsendcert,      KW_LEFTSENDCERT
+leftca,            KW_LEFTCA
+leftgroups,        KW_LEFTGROUPS
+right,             KW_RIGHT
+rightnexthop,      KW_RIGHTNEXTHOP
+rightsubnet,       KW_RIGHTSUBNET
+rightsubnetwithin, KW_RIGHTSUBNETWITHIN
+rightprotoport,    KW_RIGHTPROTOPORT
+rightsourceip,     KW_RIGHTSOURCEIP
+rightfirewall,     KW_RIGHTFIREWALL
+righthostaccess,   KW_RIGHTHOSTACCESS
+rightupdown,       KW_RIGHTUPDOWN
+rightid,           KW_RIGHTID
+rightrsasigkey,    KW_RIGHTRSASIGKEY
+rightcert,         KW_RIGHTCERT
+rightsendcert,     KW_RIGHTSENDCERT
+rightca,           KW_RIGHTCA
+rightgroups,       KW_RIGHTGROUPS
+also,              KW_ALSO
+auto,              KW_AUTO

@@ -1,0 +1,17 @@
+#! /bin/sh
+# recan release
+# run in a working directory to recan contents of same where necessary
+
+PATH=/bin:/usr/bin ; export PATH
+umask 022
+
+. ~freeswan/setup
+
+case $# in
+0)	echo "Usage: $0 release [file] ..." >&2 ; exit 2	;;
+esac
+
+tag="R`echo $1 | tr '.' '_'`"
+shift
+
+cvs tag -F -D now $tag $*

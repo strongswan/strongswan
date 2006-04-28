@@ -1,0 +1,659 @@
+<html><head><title>A method for storing IPsec keying material in DNS.</title>
+<STYLE type='text/css'>
+    .title { color: #990000; font-size: 22px; line-height: 22px; font-weight: bold; text-align: right;
+             font-family: helvetica, arial, sans-serif }
+    .filename { color: #666666; font-size: 18px; line-height: 28px; font-weight: bold; text-align: right;
+                  font-family: helvetica, arial, sans-serif }
+    p.copyright { color: #000000; font-size: 10px;
+                  font-family: verdana, charcoal, helvetica, arial, sans-serif }
+    p { margin-left: 2em; margin-right: 2em; }
+    li { margin-left: 3em;  }
+    ol { margin-left: 2em; margin-right: 2em; }
+    ul.text { margin-left: 2em; margin-right: 2em; }
+    pre { margin-left: 3em; color: #333333 }
+    ul.toc { color: #000000; line-height: 16px;
+             font-family: verdana, charcoal, helvetica, arial, sans-serif }
+    H3 { color: #333333; font-size: 16px; line-height: 16px; font-family: helvetica, arial, sans-serif }
+    H4 { color: #000000; font-size: 14px; font-family: helvetica, arial, sans-serif }
+    TD.header { color: #ffffff; font-size: 10px; font-family: arial, helvetica, san-serif; valign: top }
+    TD.author-text { color: #000000; font-size: 10px;
+                     font-family: verdana, charcoal, helvetica, arial, sans-serif }
+    TD.author { color: #000000; font-weight: bold; margin-left: 4em; font-size: 10px; font-family: verdana, charcoal, helvetica, arial, sans-serif }
+     A:link { color: #990000; font-weight: bold;
+              font-family: MS Sans Serif, verdana, charcoal, helvetica, arial, sans-serif }
+     A:visited { color: #333333; font-weight: bold;
+                 font-family: MS Sans Serif, verdana, charcoal, helvetica, arial, sans-serif }
+     A:name { color: #333333; font-weight: bold;
+              font-family: MS Sans Serif, verdana, charcoal, helvetica, arial, sans-serif }
+    .link2 { color:#ffffff; font-weight: bold; text-decoration: none;
+             font-family: monaco, charcoal, geneva, MS Sans Serif, helvetica, monotype, verdana, sans-serif;
+             font-size: 9px }
+    .RFC { color:#666666; font-weight: bold; text-decoration: none;
+           font-family: monaco, charcoal, geneva, MS Sans Serif, helvetica, monotype, verdana, sans-serif;
+           font-size: 9px }
+    .hotText { color:#ffffff; font-weight: normal; text-decoration: none;
+               font-family: charcoal, monaco, geneva, MS Sans Serif, helvetica, monotype, verdana, sans-serif;
+               font-size: 9px }
+</style>
+</head>
+<body bgcolor="#ffffff" text="#000000" alink="#000000" vlink="#666666" link="#990000">
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<table width="66%" border="0" cellpadding="0" cellspacing="0"><tr><td><table width="100%" border="0" cellpadding="2" cellspacing="1">
+<tr valign="top"><td width="33%" bgcolor="#666666" class="header">IPSECKEY WG</td><td width="33%" bgcolor="#666666" class="header">M. Richardson</td></tr>
+<tr valign="top"><td width="33%" bgcolor="#666666" class="header">Internet-Draft</td><td width="33%" bgcolor="#666666" class="header">SSW</td></tr>
+<tr valign="top"><td width="33%" bgcolor="#666666" class="header">Expires: March 4, 2004</td><td width="33%" bgcolor="#666666" class="header">September 4, 2003</td></tr>
+</table></td></tr></table>
+<div align="right"><font face="monaco, MS Sans Serif" color="#990000" size="+3"><b><br><span class="title">A method for storing IPsec keying material in DNS.</span></b></font></div>
+<div align="right"><font face="monaco, MS Sans Serif" color="#666666" size="+2"><b><span class="filename">draft-ietf-ipseckey-rr-07.txt</span></b></font></div>
+<font face="verdana, helvetica, arial, sans-serif" size="2">
+
+<h3>Status of this Memo</h3>
+<p>
+This document is an Internet-Draft and is in full conformance with all provisions of Section 10 of RFC2026.</p>
+<p>
+Internet-Drafts are working documents of the Internet Engineering
+Task Force (IETF), its areas, and its working groups.
+Note that other groups may also distribute working documents as
+Internet-Drafts.</p>
+<p>
+Internet-Drafts are draft documents valid for a maximum of six months
+and may be updated, replaced, or obsoleted by other documents at any time.
+It is inappropriate to use Internet-Drafts as reference material or to cite
+them other than as "work in progress."</p>
+<p>
+The list of current Internet-Drafts can be accessed at
+<a href='http://www.ietf.org/ietf/1id-abstracts.txt'>http://www.ietf.org/ietf/1id-abstracts.txt</a>.</p>
+<p>
+The list of Internet-Draft Shadow Directories can be accessed at
+<a href='http://www.ietf.org/shadow.html'>http://www.ietf.org/shadow.html</a>.</p>
+<p>
+This Internet-Draft will expire on March 4, 2004.</p>
+
+<h3>Copyright Notice</h3>
+<p>
+Copyright (C) The Internet Society (2003). All Rights Reserved.</p>
+
+<h3>Abstract</h3>
+
+<p>
+This document describes a new resource record for DNS. This record may be
+used to store public keys for use in IPsec systems. 
+
+</p>
+<p>
+This record replaces the functionality of the sub-type #1 of the KEY Resource
+Record, which has been obsoleted by RFC3445.
+
+</p><a name="toc"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<h3>Table of Contents</h3>
+<ul compact class="toc">
+<b><a href="#anchor1">1.</a>&nbsp;
+Introduction<br></b>
+<b><a href="#anchor2">1.1</a>&nbsp;
+Overview<br></b>
+<b><a href="#anchor3">1.2</a>&nbsp;
+Usage Criteria<br></b>
+<b><a href="#anchor4">2.</a>&nbsp;
+Storage formats<br></b>
+<b><a href="#anchor5">2.1</a>&nbsp;
+IPSECKEY RDATA format<br></b>
+<b><a href="#anchor6">2.2</a>&nbsp;
+RDATA format - precedence<br></b>
+<b><a href="#algotype">2.3</a>&nbsp;
+RDATA format - algorithm type<br></b>
+<b><a href="#gatewaytype">2.4</a>&nbsp;
+RDATA format - gateway type<br></b>
+<b><a href="#anchor7">2.5</a>&nbsp;
+RDATA format - gateway<br></b>
+<b><a href="#anchor8">2.6</a>&nbsp;
+RDATA format - public keys<br></b>
+<b><a href="#anchor9">3.</a>&nbsp;
+Presentation formats<br></b>
+<b><a href="#anchor10">3.1</a>&nbsp;
+Representation of IPSECKEY RRs<br></b>
+<b><a href="#anchor11">3.2</a>&nbsp;
+Examples<br></b>
+<b><a href="#anchor12">4.</a>&nbsp;
+Security Considerations<br></b>
+<b><a href="#anchor13">4.1</a>&nbsp;
+Active attacks against unsecured IPSECKEY resource records<br></b>
+<b><a href="#anchor14">5.</a>&nbsp;
+IANA Considerations<br></b>
+<b><a href="#anchor15">6.</a>&nbsp;
+Acknowledgments<br></b>
+<b><a href="#rfc.references1">&#167;</a>&nbsp;
+Normative references<br></b>
+<b><a href="#rfc.references2">&#167;</a>&nbsp;
+Non-normative references<br></b>
+<b><a href="#rfc.authors">&#167;</a>&nbsp;
+Author's Address<br></b>
+<b><a href="#rfc.copyright">&#167;</a>&nbsp;
+Full Copyright Statement<br></b>
+</ul>
+<br clear="all">
+
+<a name="anchor1"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<a name="rfc.section.1"></a><h3>1.&nbsp;Introduction</h3>
+
+<p>
+   The type number for the IPSECKEY RR is TBD.
+
+</p>
+<a name="rfc.section.1.1"></a><h4><a name="anchor2">1.1</a>&nbsp;Overview</h4>
+
+<p>
+   The IPSECKEY resource record (RR) is used to publish a public key that is
+   to be associated with a Domain Name System (DNS) name for use with the
+   IPsec protocol suite.  This can be the  public key of a host,
+   network, or application (in the case of per-port keying).
+
+</p>
+<p>
+      The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+      NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and
+      "OPTIONAL" in this document are to be interpreted as described in
+      RFC2119 <a href="#RFC2119">[8]</a>.
+
+</p>
+<a name="rfc.section.1.2"></a><h4><a name="anchor3">1.2</a>&nbsp;Usage Criteria</h4>
+
+<p>
+   An IPSECKEY resource record SHOULD be used in combination with DNSSEC
+unless some other means of authenticating the IPSECKEY resource record
+is available.
+
+</p>
+<p>  
+   It is expected that there will often be multiple IPSECKEY resource
+   records at the same name. This will be due to the presence
+   of multiple gateways and the need to rollover keys.
+
+
+</p>
+<p>
+   This resource record is class independent.
+
+</p>
+<a name="anchor4"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<a name="rfc.section.2"></a><h3>2.&nbsp;Storage formats</h3>
+
+<a name="rfc.section.2.1"></a><h4><a name="anchor5">2.1</a>&nbsp;IPSECKEY RDATA format</h4>
+
+<p>
+   The RDATA for an IPSECKEY RR consists of a precedence value, a public key,
+   algorithm type, and an optional gateway address.
+
+</p></font><pre>
+    0                   1                   2                   3  
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  precedence   | gateway type  |  algorithm  |     gateway     |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-------------+                 +
+   ~                            gateway                            ~
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                                                               /
+   /                          public key                           /
+   /                                                               /
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
+</pre><font face="verdana, helvetica, arial, sans-serif" size="2">
+
+<a name="rfc.section.2.2"></a><h4><a name="anchor6">2.2</a>&nbsp;RDATA format - precedence</h4>
+
+<p>
+This is an 8-bit precedence for this record. This is interpreted in
+the same way as the PREFERENCE field described in section
+3.3.9 of RFC1035 <a href="#RFC1035">[2]</a>. 
+
+</p>
+<p>
+Gateways listed in IPSECKEY records with  lower precedence are
+to be attempted first. Where there is a tie in precedence, the order
+should be non-deterministic.
+
+</p>
+<a name="rfc.section.2.3"></a><h4><a name="algotype">2.3</a>&nbsp;RDATA format - algorithm type</h4>
+
+<p>
+The algorithm type field identifies the public key's cryptographic
+algorithm and determines the format of the public key field.  
+
+</p>
+<p>
+A value of 0 indicates that no key is present.
+
+</p>
+<p>
+The following values are defined:
+  
+<blockquote class="text"><dl>
+<dt>1</dt>
+<dd>A DSA key is present, in the format defined in RFC2536 <a href="#RFC2536">[11]</a>
+</dd>
+<dt>2</dt>
+<dd>A RSA key is present, in the format defined in RFC3110 <a href="#RFC3110">[12]</a>
+</dd>
+</dl></blockquote><p>
+</p>
+<a name="rfc.section.2.4"></a><h4><a name="gatewaytype">2.4</a>&nbsp;RDATA format - gateway type</h4>
+
+<p>
+The gateway type field indicates the format of the information that
+is stored in the gateway field.
+
+</p>
+<p>
+The following values are defined:
+  
+<blockquote class="text"><dl>
+<dt>0</dt>
+<dd>No gateway is present
+</dd>
+<dt>1</dt>
+<dd>A 4-byte IPv4 address is present
+</dd>
+<dt>2</dt>
+<dd>A 16-byte IPv6 address is present
+</dd>
+<dt>3</dt>
+<dd>A wire-encoded domain name is present. The wire-encoded
+format is self-describing, so the length is implicit. The domain name
+MUST NOT be compressed.
+</dd>
+</dl></blockquote><p>
+</p>
+<a name="rfc.section.2.5"></a><h4><a name="anchor7">2.5</a>&nbsp;RDATA format - gateway</h4>
+
+<p>
+The gateway field indicates a gateway to which an IPsec tunnel may be
+created in order to reach the entity named by this resource record.
+
+</p>
+<p>
+There are three formats:
+
+</p>
+<p>
+A 32-bit IPv4 address is present in the gateway field. The data
+portion is an IPv4 address as described in section 3.4.1 of
+<a href="#RFC1035">RFC1035</a>[2].  This is a 32-bit number in network byte order.
+
+</p>
+<p>A 128-bit IPv6 address is present in the gateway field.
+The data portion is an IPv6 address as described in section 2.2 of
+<a href="#RFC1886">RFC1886</a>[7]. This is a 128-bit number in network byte order.
+
+</p>
+<p>
+The gateway field is a normal wire-encoded domain name, as described
+in section 3.3 of RFC1035 <a href="#RFC1035">[2]</a>. Compression MUST NOT be used. 
+
+</p>
+<a name="rfc.section.2.6"></a><h4><a name="anchor8">2.6</a>&nbsp;RDATA format - public keys</h4>
+
+<p>
+Both of the public key types defined in this document (RSA and DSA)
+inherit their public key formats from the corresponding KEY RR formats. 
+Specifically, the public key field contains the algorithm-specific
+portion of the KEY RR RDATA, which is all of the KEY RR DATA after the
+first four octets.  This is the same portion of the KEY RR that must be
+specified by documents that define a DNSSEC algorithm.  
+Those documents also specify a message digest to be used for generation
+of SIG RRs; that specification is not relevant for IPSECKEY RR.
+
+</p>
+<p>
+Future algorithms, if they are to be used by both DNSSEC (in the KEY
+RR) and IPSECKEY, are likely to use the same public key encodings in
+both records.  Unless otherwise specified, the IPSECKEY public key
+field will contain the algorithm-specific portion of the KEY RR RDATA
+for the corresponding algorithm.  The algorithm must still be
+designated for use by IPSECKEY, and an IPSECKEY algorithm type number
+(which might be different than the DNSSEC algorithm number) must be
+assigned to it.
+
+</p>
+<p>The DSA key format is defined in RFC2536 <a href="#RFC2536">[11]</a>
+</p>
+<p>The RSA key format is defined in RFC3110 <a href="#RFC3110">[12]</a>,
+with the following changes:
+</p>
+<p>
+The earlier definition of RSA/MD5 in RFC2065 limited the exponent and
+modulus to 2552 bits in length.  RFC3110 extended that limit to 4096
+bits for RSA/SHA1 keys.  The IPSECKEY RR imposes no length limit on
+RSA public keys, other than the 65535 octet limit imposed by the
+two-octet length encoding.  This length extension is applicable only
+to IPSECKEY and not to KEY RRs. 
+
+</p>
+<a name="anchor9"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<a name="rfc.section.3"></a><h3>3.&nbsp;Presentation formats</h3>
+
+<a name="rfc.section.3.1"></a><h4><a name="anchor10">3.1</a>&nbsp;Representation of IPSECKEY RRs</h4>
+
+<p>
+   IPSECKEY RRs may appear in a zone data master file.
+   The precedence, gateway type and algorithm and gateway fields are REQUIRED.
+   The base64 encoded public key block is OPTIONAL; if not present,
+   then the public key field of the resource record MUST be construed
+   as being zero octets in length.
+
+</p>
+<p>
+   The algorithm field is an unsigned integer. No mnemonics are defined.
+
+</p>
+<p>
+   If no gateway is to be indicated, then the gateway type field MUST
+   be zero, and the gateway field MUST be "."
+
+</p>
+<p>
+   The Public Key field is represented as a Base64 encoding of the
+   Public Key.  Whitespace is allowed within the Base64 text.  For a
+   definition of Base64 encoding, see
+<a href="#RFC1521">RFC1521</a>[3] Section 5.2.
+
+</p>
+<p>
+   The general presentation for the record as as follows:
+</p>
+</font><pre>
+IN     IPSECKEY ( precedence gateway-type algorithm
+                  gateway base64-encoded-public-key )
+</pre><font face="verdana, helvetica, arial, sans-serif" size="2">
+<p>
+
+</p>
+<a name="rfc.section.3.2"></a><h4><a name="anchor11">3.2</a>&nbsp;Examples</h4>
+
+<p> 
+An example of a node 192.0.2.38 that will accept IPsec tunnels on its
+own behalf.
+</p>
+</font><pre>
+38.2.0.192.in-addr.arpa. 7200 IN     IPSECKEY ( 10 1 2 
+                 192.0.2.38
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+</pre><font face="verdana, helvetica, arial, sans-serif" size="2">
+<p>
+
+</p>
+<p> 
+An example of a node, 192.0.2.38 that has published its key only.
+</p>
+</font><pre>
+38.2.0.192.in-addr.arpa. 7200 IN     IPSECKEY ( 10 0 2
+                 .
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+</pre><font face="verdana, helvetica, arial, sans-serif" size="2">
+<p>
+
+</p>
+<p> 
+An example of a node, 192.0.2.38 that has delegated authority to the node
+192.0.2.3.
+</p>
+</font><pre>
+38.2.0.192.in-addr.arpa. 7200 IN     IPSECKEY ( 10 1 2
+                 192.0.2.3
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+</pre><font face="verdana, helvetica, arial, sans-serif" size="2">
+<p>
+
+</p>
+<p> 
+An example of a node, 192.0.1.38 that has delegated authority to the node
+with the identity "mygateway.example.com".
+</p>
+</font><pre>
+38.1.0.192.in-addr.arpa. 7200 IN     IPSECKEY ( 10 3 2
+                 mygateway.example.com.
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+</pre><font face="verdana, helvetica, arial, sans-serif" size="2">
+<p>
+
+</p>
+<p> 
+An example of a node, 2001:0DB8:0200:1:210:f3ff:fe03:4d0 that has
+delegated authority to the node 2001:0DB8:c000:0200:2::1
+</p>
+</font><pre>
+$ORIGIN 1.0.0.0.0.0.2.8.B.D.0.1.0.0.2.ip6.int.
+0.d.4.0.3.0.e.f.f.f.3.f.0.1.2.0 7200 IN     IPSECKEY ( 10 2 2
+                 2001:0DB8:0:8002::2000:1
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+</pre><font face="verdana, helvetica, arial, sans-serif" size="2">
+<p>
+
+</p>
+<a name="anchor12"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<a name="rfc.section.4"></a><h3>4.&nbsp;Security Considerations</h3>
+
+<p>
+   This entire memo pertains to the provision of public keying material
+   for use by key management protocols such as ISAKMP/IKE (RFC2407)
+   <a href="#RFC2407">[9]</a>.
+
+</p>
+<p>
+The IPSECKEY resource record contains information that SHOULD be
+communicated to the end client in an integral fashion - i.e. free from
+modification. The form of this channel is up to the consumer of the
+data - there must be a trust relationship between the end consumer of this
+resource record and the server. This relationship may be end-to-end
+DNSSEC validation, a TSIG or SIG(0) channel to another secure source,
+a secure local channel on the host, or some combination of the above.
+
+</p>
+<p>
+The keying material provided by the IPSECKEY resource record is not
+sensitive to passive attacks. The keying material may be freely
+disclosed to any party without any impact on the security properties
+of the resulting IPsec session: IPsec and IKE provide for defense
+against both active and passive attacks.
+
+</p>
+<p>
+   Any user of this resource record MUST carefully document their trust
+   model, and why the trust model of DNSSEC is appropriate, if that is
+   the secure channel used.
+
+</p>
+<a name="rfc.section.4.1"></a><h4><a name="anchor13">4.1</a>&nbsp;Active attacks against unsecured IPSECKEY resource records</h4>
+
+<p>
+This section deals with active attacks against the DNS. These attacks
+require that DNS requests and responses be intercepted and changed.
+DNSSEC is designed to defend against attacks of this kind.
+
+</p>
+<p>
+The first kind of active attack is when the attacker replaces the
+keying material with either a key under its control or with garbage.
+
+</p>
+<p>
+If the attacker is not able to mount a subsequent 
+man-in-the-middle attack on the IKE negotiation after replacing the
+public key, then this will result in a denial of service, as the
+authenticator used by IKE would fail.  
+
+</p>
+<p>
+If the attacker is able to both to mount active attacks against DNS
+and is also in a position to perform a man-in-the-middle attack on IKE and
+IPsec negotiations, then the attacker will be in a position to compromise
+the resulting IPsec channel. Note that an attacker must be able to
+perform active DNS attacks on both sides of the IKE negotiation in
+order for this to succeed. 
+
+</p>
+<p>
+The second kind of active attack is one in which the attacker replaces
+the the gateway address to point to a node under the attacker's
+control. The attacker can then either replace the public key or remove
+it, thus providing an IPSECKEY record of its own to match the
+gateway address. 
+
+</p>
+<p>
+This later form creates a simple man-in-the-middle since the attacker
+can then create a second tunnel to the real destination. Note that, as before,
+this requires that the attacker also mount an active attack against
+the responder. 
+
+</p>
+<p>
+Note that the man-in-the-middle can not just forward cleartext
+packets to the original destination. While the destination may be
+willing to speak in the clear, replying to the original sender,
+the sender will have already created a policy expecting ciphertext.
+Thus, the attacker will need to intercept traffic from both sides. In some
+cases, the attacker may be able to accomplish the full intercept by use
+of Network Addresss/Port Translation (NAT/NAPT) technology.
+
+</p>
+<p>
+Note that the danger here only applies to cases where the gateway
+field of the IPSECKEY RR indicates a different entity than the owner
+name of the IPSECKEY RR.  In cases where the end-to-end integrity of
+the IPSECKEY RR is suspect, the end client MUST restrict its use
+of the IPSECKEY RR to cases where the RR owner name matches the
+content of the gateway field.
+
+</p>
+<a name="anchor14"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<a name="rfc.section.5"></a><h3>5.&nbsp;IANA Considerations</h3>
+
+<p>
+This document updates the IANA Registry for DNS Resource Record Types
+by assigning type X to the IPSECKEY record.  
+
+</p>
+<p>
+This document creates an IANA registry for the algorithm type field.
+
+</p>
+<p>
+Values 0, 1 and 2 are defined in <a href="#algotype">RDATA format - algorithm type</a>. Algorithm numbers
+3 through 255 can be assigned by IETF Consensus (<a href="#RFC2434">see RFC2434</a>[6]).
+
+</p>
+<p>
+This document creates an IANA registry for the gateway type field.
+
+</p>
+<p>
+Values 0, 1, 2 and 3 are defined in <a href="#gatewaytype">RDATA format - gateway type</a>.
+Algorithm numbers 4 through 255 can be assigned by
+Standards Action (<a href="#RFC2434">see RFC2434</a>[6]).
+
+</p>
+<a name="anchor15"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<a name="rfc.section.6"></a><h3>6.&nbsp;Acknowledgments</h3>
+
+<p>
+My thanks to Paul Hoffman, Sam Weiler, Jean-Jacques Puig, Rob Austein,
+and Olafur Gurmundsson who reviewed this document carefully.
+Additional thanks to Olafur Gurmundsson for a reference implementation.
+
+</p>
+<a name="rfc.references1"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<h3>Normative references</h3>
+<table width="99%" border="0">
+<tr><td class="author-text" valign="top"><b><a name="RFC1034">[1]</a></b></td>
+<td class="author-text">Mockapetris, P., "<a href="ftp://ftp.isi.edu/in-notes/rfc1034.txt">Domain names - concepts and facilities</a>", STD 13, RFC 1034, November 1987.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC1035">[2]</a></b></td>
+<td class="author-text"><a href="mailto:">Mockapetris, P.</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc1035.txt">Domain names - implementation and specification</a>", STD 13, RFC 1035, November 1987.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC1521">[3]</a></b></td>
+<td class="author-text"><a href="mailto:nsb@bellcore.com">Borenstein, N.</a> and <a href="mailto:">N. Freed</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc1521.txt">MIME (Multipurpose Internet Mail Extensions) Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>", RFC 1521, September 1993.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC2026">[4]</a></b></td>
+<td class="author-text"><a href="mailto:sob@harvard.edu">Bradner, S.</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc2026.txt">The Internet Standards Process -- Revision 3</a>", BCP 9, RFC 2026, October 1996.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC2065">[5]</a></b></td>
+<td class="author-text"><a href="mailto:dee@cybercash.com">Eastlake, D.</a> and <a href="mailto:charlie_kaufman@iris.com">C. Kaufman</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc2065.txt">Domain Name System Security Extensions</a>", RFC 2065, January 1997.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC2434">[6]</a></b></td>
+<td class="author-text"><a href="mailto:narten@raleigh.ibm.com">Narten, T.</a> and <a href="mailto:Harald@Alvestrand.no">H. Alvestrand</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc2434.txt">Guidelines for Writing an IANA Considerations Section in RFCs</a>", BCP 26, RFC 2434, October 1998.</td></tr>
+</table>
+
+<a name="rfc.references2"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<h3>Non-normative references</h3>
+<table width="99%" border="0">
+<tr><td class="author-text" valign="top"><b><a name="RFC1886">[7]</a></b></td>
+<td class="author-text"><a href="mailto:set@thumper.bellcore.com">Thomson, S.</a> and <a href="mailto:Christian.Huitema@MIRSA.INRIA.FR">C. Huitema</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc1886.txt">DNS Extensions to support IP version 6</a>", RFC 1886, December 1995.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC2119">[8]</a></b></td>
+<td class="author-text"><a href="mailto:-">Bradner, S.</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc2119.txt">Key words for use in RFCs to Indicate Requirement Levels</a>", BCP 14, RFC 2119, March 1997.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC2407">[9]</a></b></td>
+<td class="author-text"><a href="mailto:ddp@network-alchemy.com">Piper, D.</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc2407.txt">The Internet IP Security Domain of Interpretation for ISAKMP</a>", RFC 2407, November 1998.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC2535">[10]</a></b></td>
+<td class="author-text"><a href="mailto:dee3@us.ibm.com">Eastlake, D.</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc2535.txt">Domain Name System Security Extensions</a>", RFC 2535, March 1999.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC2536">[11]</a></b></td>
+<td class="author-text"><a href="mailto:dee3@us.ibm.com">Eastlake, D.</a>, "<a href="ftp://ftp.isi.edu/in-notes/rfc2536.txt">DSA KEYs and SIGs in the Domain Name System (DNS)</a>", RFC 2536, March 1999.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC3110">[12]</a></b></td>
+<td class="author-text">Eastlake, D., "<a href="ftp://ftp.isi.edu/in-notes/rfc3110.txt">RSA/SHA-1 SIGs and RSA KEYs in the Domain Name System (DNS)</a>", RFC 3110, May 2001.</td></tr>
+<tr><td class="author-text" valign="top"><b><a name="RFC3445">[13]</a></b></td>
+<td class="author-text">Massey, D. and S. Rose, "<a href="ftp://ftp.isi.edu/in-notes/rfc3445.txt">Limiting the Scope of the KEY Resource Record (RR)</a>", RFC 3445, December 2002.</td></tr>
+</table>
+
+<a name="rfc.authors"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<h3>Author's Address</h3>
+<table width="99%" border="0" cellpadding="0" cellspacing="0">
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Michael C. Richardson</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Sandelman Software Works</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">470 Dawson Avenue</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">Ottawa, ON  K1Z 5V7</td></tr>
+<tr><td class="author-text">&nbsp;</td>
+<td class="author-text">CA</td></tr>
+<tr><td class="author" align="right">EMail:&nbsp;</td>
+<td class="author-text"><a href="mailto:mcr@sandelman.ottawa.on.ca">mcr@sandelman.ottawa.on.ca</a></td></tr>
+<tr><td class="author" align="right">URI:&nbsp;</td>
+<td class="author-text"><a href="http://www.sandelman.ottawa.on.ca/">http://www.sandelman.ottawa.on.ca/</a></td></tr>
+</table>
+<a name="rfc.copyright"><br><hr size="1" shade="0"></a>
+<table border="0" cellpadding="0" cellspacing="2" width="30" height="15" align="right"><tr><td bgcolor="#990000" align="center" width="30" height="15"><a href="#toc" CLASS="link2"><font face="monaco, MS Sans Serif" color="#ffffff" size="1"><b>&nbsp;TOC&nbsp;</b></font></a><br></td></tr></table>
+<h3>Full Copyright Statement</h3>
+<p class='copyright'>
+Copyright (C) The Internet Society (2003). All Rights Reserved.</p>
+<p class='copyright'>
+This document and translations of it may be copied and furnished to
+others, and derivative works that comment on or otherwise explain it
+or assist in its implementation may be prepared, copied, published and
+distributed, in whole or in part, without restriction of any kind,
+provided that the above copyright notice and this paragraph are
+included on all such copies and derivative works. However, this
+document itself may not be modified in any way, such as by removing
+the copyright notice or references to the Internet Society or other
+Internet organizations, except as needed for the purpose of
+developing Internet standards in which case the procedures for
+copyrights defined in the Internet Standards process must be
+followed, or as required to translate it into languages other than
+English.</p>
+<p class='copyright'>
+The limited permissions granted above are perpetual and will not be
+revoked by the Internet Society or its successors or assigns.</p>
+<p class='copyright'>
+This document and the information contained herein is provided on an
+&quot;AS IS&quot; basis and THE INTERNET SOCIETY AND THE INTERNET ENGINEERING
+TASK FORCE DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION
+HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF
+MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.</p>
+<h3>Acknowledgement</h3>
+<p class='copyright'>
+Funding for the RFC Editor function is currently provided by the
+Internet Society.</p>
+</font></body></html>

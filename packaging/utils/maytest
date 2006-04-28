@@ -1,0 +1,42 @@
+#! /bin/sh
+# consider making snapshot of FreeSwan code
+
+who=mcr
+USER=build export USER
+
+. ~build/freeswan-regress-env.sh
+
+umask 022
+
+cd ~build/WANTSNAP
+
+if test ! -f dotest
+then
+	exit 0
+fi
+
+if test -f doingtest
+then
+	exit 0
+fi
+
+trap "rm -f ~build/WANTSNAP/doingtest ~build/WANTSNAP/dotest; exit 0" 0 1 2 15 
+
+set -x
+
+echo $$ >doingtest
+sort -u doingtest >/tmp/nightly$$
+echo === >>/tmp/test$$
+if ~build/bin/nightly.sh >>/tmp/snap$$ 2>&1
+then
+   rm -f doingtest
+   rm -f dotest
+fi
+
+mail -s "nightly test report $reqd" $who </tmp/nightly$$
+rm -f /tmp/nightly$$ dotest
+
+# kill any wayward linux processes
+killuml linux
+
+

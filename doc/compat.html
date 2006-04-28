@@ -1,0 +1,707 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="trouble.html">Previous</A>
+<A HREF="interop.html">Next</A>
+<HR>
+<H1><A name="compat">Linux FreeS/WAN Compatibility Guide</A></H1>
+<P>Much of this document is quoted directly from the Linux FreeS/WAN<A href="mail.html">
+ mailing list</A>. Thanks very much to the community of testers,
+ patchers and commenters there, especially the ones quoted below but
+ also various contributors we haven't quoted.</P>
+<H2><A name="spec">Implemented parts of the IPsec Specification</A></H2>
+<P>In general, do not expect Linux FreeS/WAN to do everything yet. This
+ is a work-in-progress and some parts of the IPsec specification are not
+ yet implemented.</P>
+<H3><A name="in">In Linux FreeS/WAN</A></H3>
+<P>Things we do, as of version 1.96:</P>
+<UL>
+<LI>key management methods
+<DL>
+<DT>manually keyed</DT>
+<DD>using keys stored in /etc/ipsec.conf</DD>
+<DT>automatically keyed</DT>
+<DD>Automatically negotiating session keys as required. All connections
+ are automatically re-keyed periodically. The<A href="glossary.html#Pluto">
+ Pluto</A> daemon implements this using the<A href="glossary.html#IKE">
+ IKE</A> protocol.</DD>
+</DL>
+</LI>
+<LI>Methods of authenticating gateways for IKE
+<DL>
+<DT>shared secrets</DT>
+<DD>stored in<A href="manpage.d/ipsec.secrets.5.html"> ipsec.secrets(5)</A>
+</DD>
+<DT><A href="glossary.html#RSA">RSA</A> signatures</DT>
+<DD>For details, see<A href="manpage.d/ipsec_pluto.8.html"> pluto(8)</A>
+.</DD>
+<DT>looking up RSA authentication keys from<A href="glossary.html#DNS">
+ DNS</A>.</DT>
+<DD>Note that this technique cannot be fully secure until<A href="glossary.html#SDNS">
+ secure DNS</A> is widely deployed.</DD>
+</DL>
+</LI>
+<LI>groups for<A href="glossary.html#DH"> Diffie-Hellman</A> key
+ negotiation
+<DL>
+<DT>group 2, modp 1024-bit</DT>
+<DT>group 5, modp 1536-bit</DT>
+<DD>We implement these two groups.
+<P>In negotiating a keying connection (ISAKMP SA, Phase 1) we propose
+ both groups when we are the initiator, and accept either when a peer
+ proposes them. Once the keying connection is made, we propose only the
+ alternative agreed there for data connections (IPsec SA's, Phase 2)
+ negotiated over that keying connection.</P>
+</DD>
+</DL>
+</LI>
+<LI>encryption transforms
+<DL>
+<DT><A href="glossary.html#DES">DES</A></DT>
+<DD>DES is in the source code since it is needed to implement 3DES, but
+ single DES is not made available to users because<A href="politics.html#desnotsecure">
+ DES is insecure</A>.</DD>
+<DT><A href="glossary.html#3DES">Triple DES</A></DT>
+<DD>implemented, and used as the default encryption in Linux FreeS/WAN.</DD>
+</DL>
+</LI>
+<LI>authentication transforms
+<DL>
+<DT><A href="glossary.html#HMAC">HMAC</A> using<A href="glossary.html#MD5">
+ MD5</A></DT>
+<DD>implemented, may be used in IKE or by by AH or ESP transforms.</DD>
+<DT><A href="glossary.html#HMAC">HMAC</A> using<A href="glossary.html#SHA">
+ SHA</A></DT>
+<DD>implemented, may be used in IKE or by AH or ESP transforms.</DD>
+</DL>
+<P>In negotiations, we propose both of these and accept either.</P>
+</LI>
+<LI>compression transforms
+<DL>
+<DT>IPComp</DT>
+<DD>IPComp as described in RFC 2393 was added for FreeS/WAN 1.6. Note
+ that Pluto becomes confused if you ask it to do IPComp when the kernel
+ cannot.</DD>
+</DL>
+</LI>
+</UL>
+<P>All combinations of implemented transforms are supported. Note that
+ some form of packet-level<STRONG> authentication is required whenever
+ encryption is used</STRONG>. Without it, the encryption will not be
+ secure.</P>
+<H3><A name="dropped">Deliberately omitted</A></H3>
+ We do not implement everything in the RFCs because some of those things
+ are insecure. See our discussions of avoiding<A href="politics.html#weak">
+ bogus security</A>.
+<P>Things we deliberately omit which are required in the RFCs are:</P>
+<UL>
+<LI>null encryption (to use ESP as an authentication-only service)</LI>
+<LI>single DES</LI>
+<LI>DH group 1, a 768-bit modp group</LI>
+</UL>
+<P>Since these are the only encryption algorithms and DH group the RFCs
+ require, it is possible in theory to have a standards-conforming
+ implementation which will not interpoperate with FreeS/WAN. Such an
+ implementation would be inherently insecure, so we do not consider this
+ a problem.</P>
+<P>Anyway, most implementations sensibly include more secure options as
+ well, so dropping null encryption, single DES and Group 1 does not
+ greatly hinder interoperation in practice.</P>
+<P>We also do not implement some optional features allowed by the RFCs:</P>
+<UL>
+<LI>aggressive mode for negotiation of the keying channel or ISAKMP SA.
+ This mode is a little faster than main mode, but exposes more
+ information to an eavesdropper.</LI>
+</UL>
+<P>In theory, this should cause no interoperation problems since all
+ implementations are required to support the more secure main mode,
+ whether or not they also allow aggressive mode.</P>
+<P>In practice, it does sometimes produce problems with implementations
+ such as Windows 2000 where aggressive mode is the default. Typically,
+ these are easily solved with a configuration change that overrides that
+ default.</P>
+<H3><A name="not">Not (yet) in Linux FreeS/WAN</A></H3>
+<P>Things we don't yet do, as of version 1.96:</P>
+<UL>
+<LI>key management methods
+<UL>
+<LI>authenticate key negotiations via local<A href="glossary.html#PKI">
+ PKI</A> server, but see links to user<A href="web.html#patch"> patches</A>
+</LI>
+<LI>authenticate key negotiations via<A href="glossary.html#SDNS">
+ secure DNS</A></LI>
+<LI>unauthenticated key management, using<A href="glossary.html#DH">
+ Diffie-Hellman</A> key agreement protocol without authentication.
+ Arguably, this would be worth doing since it is secure against all
+ passive attacks. On the other hand, it is vulnerable to an active<A href="glossary.html#middle">
+ man-in-the-middle attack</A>.</LI>
+</UL>
+</LI>
+<LI>encryption transforms
+<P>Currently<A href="glossary.html#3DES"> Triple DES</A> is the only
+ encryption method Pluto will negotiate.</P>
+<P>No additional encryption transforms are implemented, though the RFCs
+ allow them and some other IPsec implementations support various of
+ them. We are not eager to add more. See this<A href="faq.html#other.cipher">
+ FAQ question</A>.</P>
+<P><A href="glossary.html#AES">AES</A>, the successor to the DES
+ standard, is an excellent candidate for inclusion in FreeS/WAN, see
+ links to user<A href="web.html#patch"> patches</A>.</P>
+</LI>
+<LI>authentication transforms
+<P>No optional additional authentication transforms are currently
+ implemented. Likely<A href="glossary.html#SHA-256"> SHA-256, SHA-384
+ and SHA-512</A> will be added when AES is.</P>
+</LI>
+<LI>Policy checking on decrypted packets
+<P>To fully comply with the RFCs, it is not enough just to accept only
+ packets which survive any firewall rules in place to limit what IPsec
+ packets get in, and then pass KLIPS authentication. That is what
+ FreeS/WAN currently does.</P>
+<P>We should also apply additional tests, for example ensuring that all
+ packets emerging from a particular tunnel have source and destination
+ addresses that fall within the subnets defined for that tunnel, and
+ that packets with those addresses that did not emerge from the
+ appropriate tunnel are disallowed.</P>
+<P>This will be done as part of a KLIPS rewrite. See these<A href="intro.html#applied">
+ links</A> and the<A href="mail.html"> design mailing list</A> for
+ discussion.</P>
+</LI>
+</UL>
+<H2><A name="pfkey">Our PF-Key implementation</A></H2>
+<P>We use PF-key Version Two for communication between the KLIPS kernel
+ code and the Pluto Daemon. PF-Key v2 is defined by<A href="http://www.normos.org/ietf/rfc/rfc2367.txt">
+ RFC 2367</A>.</P>
+<P>The &quot;PF&quot; stands for Protocol Family. PF-Inet defines a
+ kernel/userspace interface for the TCP/IP Internet protocols (TCP/IP),
+ and other members of the PF series handle Netware, Appletalk, etc.
+ PF-Key is just a PF for key-related matters.</P>
+<H3><A name="pfk.port">PF-Key portability</A></H3>
+<P>PF-Key came out of Berkeley Unix work and is used in the various BSD
+ IPsec implementations, and in Solaris. This means there is some hope of
+ porting our Pluto(8) to one of the BSD distributions, or of running
+ their photurisd(8) on Linux if you prefer<A href="glossary.html#photuris">
+ Photuris</A> key management over IKE.</P>
+<P>It is, however, more complex than that. The PK-Key RFC deliberately
+ deals only with keying, not policy management. The three PF-Key
+ implementations we have looked at -- ours, OpenBSD and KAME -- all have
+ extensions to deal with security policy, and the extensions are
+ different. There have been discussions aimed at sorting out the
+ differences, perhaps for a version three PF-Key spec. All players are
+ in favour of this, but everyone involved is busy and it is not clear
+ whether or when these discussions might bear fruit.</P>
+<H2><A name="otherk">Kernels other than the latest 2.2.x and 2.4.y</A></H2>
+<P>We develop and test on Redhat Linux using the most recent kernel in
+ the 2.2 and 2.4 series. In general, we recommend you use the latest
+ kernel in one of those series. Complications and caveats are discussed
+ below.</P>
+<H3><A name="kernel.2.0">2.0.x kernels</A></H3>
+<P>Consider upgrading to the 2.2 kernel series. If you want to stay with
+ the 2.0 series, then we strongly recommend 2.0.39. Some useful security
+ patches were added in 2.0.38.</P>
+<P>Various versions of the code have run at various times on most 2.0.xx
+ kernels, but the current version is only lightly tested on 2.0.39, and
+ not at all on older kernels.</P>
+<P>Some of our patches for older kernels are shipped in 2.0.37 and
+ later, so they are no longer provided in FreeS/WAN. This means recent
+ versions of FreeS/WAN will probably not compile on anything earlier
+ than 2.0.37.</P>
+<H3><A name="kernel.production">2.2 and 2.4 kernels</A></H3>
+<DL>
+<DT>FreeS/WAN 1.0</DT>
+<DD>ran only on 2.0 kernels</DD>
+<DT>FreeS/WAN 1.1 to 1.8</DT>
+<DD>ran on 2.0 or 2.2 kernels
+<BR> ran on some development kernels, 2.3 or 2.4-test</DD>
+<DT>FreeS/WAN 1.9 to 1.96</DT>
+<DD>runs on 2.0, 2.2 or 2.4 kernels</DD>
+</DL>
+<P>In general,<STRONG> we suggest the latest 2.2 kernel or 2.4 for
+ production use</STRONG>.</P>
+<P>Of course no release can be guaranteed to run on kernels more recent
+ than it is, so quite often there will be no stable FreeS/WAN for the
+ absolute latest kernel. See the<A href="faq.html#k.versions"> FAQ</A>
+ for discussion.</P>
+<H2><A name="otherdist">Intel Linux distributions other than Redhat</A></H2>
+<P>We develop and test on Redhat 6.1 for 2.2 kernels, and on Redhat 7.1
+ or 7.2 for 2.4, so minor changes may be required for other
+ distributions.</P>
+<H3><A name="rh7">Redhat 7.0</A></H3>
+<P>There are some problems with FreeS/WAN on Redhat 7.0. They are
+ soluble, but we recommend you upgrade to a later Redhat instead..</P>
+<P>Redhat 7 ships with two compilers.</P>
+<UL>
+<LI>Their<VAR> gcc</VAR> is version 2.96. Various people, including the
+ GNU compiler developers and Linus, have said fairly emphatically that
+ using this was a mistake. 2.96 is a development version, not intended
+ for production use. In particular, it will not compile a Linux kernel.</LI>
+<LI>Redhat therefore also ship a separate compiler, which they call<VAR>
+ kgcc</VAR>, for compiling kernels.</LI>
+</UL>
+<P>Kernel Makefiles have<VAR> gcc</VAR> as a default, and must be
+ adjusted to use<VAR> kgcc</VAR> before a kernel will compile on 7.0.
+ This mailing list message gives details:</P>
+<PRE>Subject: Re: AW: Installing IPsec on Redhat 7.0
+   Date: Thu, 1 Feb 2001 14:32:52 -0200 (BRST)
+  From: Mads Rasmussen &lt;mads@cit.com.br&gt;
+ 
+&gt; From www.redhat.com/support/docs/gotchas/7.0/gotchas-7-6.html#ss6.1
+
+cd to /usr/src/linux and open the Makefile in your favorite editor. You
+will need to look for a line similar to this:
+
+CC = $(CROSS_COMPILE)gcc -D__KERNEL__ -I$(HPATH)
+
+This line specifies which C compiler to use to build the kernel. It should
+be changed to:
+
+CC = $(CROSS_COMPILE)kgcc -D__KERNEL__ -I$(HPATH)
+
+for Red Hat Linux 7. The kgcc compiler is egcs 2.91.66. From here you can
+proceed with the typical compiling steps.</PRE>
+<P>Check the<A href="mail.html"> mailing list</A> archive for more
+ recent news.</P>
+<H3><A name="suse">SuSE Linux</A></H3>
+<P>SuSE 6.3 and later versions, at least in Europe, ship with FreeS/WAN
+ included.</P>
+<P>FreeS/WAN packages distributed for SuSE 7.0-7.2 were somehow
+ miscompiled. You can find fixed packages on<A HREF="http://www.suse.de/~garloff/linux/FreeSWAN">
+ Kurt Garloff's page</A>.</P>
+<P>Here are some notes for an earlier SuSE version.</P>
+<H4>SuSE Linux 5.3</H4>
+<PRE>Date: Mon, 30 Nov 1998
+From: Peter Onion &lt;ponion@srd.bt.co.uk&gt;
+
+... I got Saturdays snapshot working between my two SUSE5.3 machines at home.
+
+The mods to the install process are quite simple.  From memory and looking at
+the files on the SUSE53 machine here at work....
+
+And extra link in each of the /etc/init.d/rc?.d directories called K35ipsec
+which SUSE use to shut a service down.
+
+A few mods in /etc/init.d/ipsec  to cope with the different places that SUSE
+put config info, and remove the inculsion of /etc/rc.d/init.d/functions and .
+/etc/sysconfig/network as they don't exists and 1st one isn't needed anyway.
+
+insert &quot;. /etc/rc.config&quot; to pick up the SUSE config info and use 
+
+  if test -n &quot;$NETCONFIG&quot; -a &quot;$NETCONFIG&quot; != &quot;YAST_ASK&quot; ; then
+
+to replace 
+
+  [ ${NETWORKING} = &quot;no&quot; ] &amp;&amp; exit 0
+
+Create /etc/sysconfig  as SUSE doesn't have one.
+
+I think that was all (but I prob forgot something)....</PRE>
+<P>You may also need to fiddle initialisation scripts to ensure that<VAR>
+ /var/run/pluto.pid</VAR> is removed when rebooting. If this file is
+ present, Pluto does not come up correctly.</P>
+<H3><A name="slack">Slackware</A></H3>
+<PRE>Subject: Re: linux-IPsec: Slackware distribution
+  Date:  Thu, 15 Apr 1999 12:07:01 -0700
+  From:  Evan Brewer &lt;dmessiah@silcon.com&gt;
+
+&gt; Very shortly, I will be needing to install IPsec on at least gateways that
+&gt; are running Slackware. . . .
+
+The only trick to getting it up is that on the slackware dist there is no
+init.d directory in /etc/rc.d .. so create one.  Then, what I do is take the
+IPsec startup script which normally gets put into the init.d directory, and
+put it in /etc/rc.d and name ir rc.ipsec .. then I symlink it to the file
+in init.d.  The only file in the dist you need to really edit is the
+utils/Makefile, setup4:
+
+Everything else should be just fine.</PRE>
+<P>A year or so later:</P>
+<PRE>Subject: Re: HTML Docs- Need some cleanup?
+   Date: Mon, 8 Jan 2001
+   From: Jody McIntyre &lt;jodym@oeone.com&gt;
+
+I have successfully installed FreeS/WAN on several Slackware 7.1 machines.
+FreeS/WAN installed its rc.ipsec file in /etc/rc.d.  I had to manually call
+this script from rc.inet2.  This seems to be an easier method than Evan
+Brewer's.</PRE>
+<H3><A name="deb">Debian</A></H3>
+<P>A recent (Nov 2001) mailing list points to a<A href="http://www.thing.dyndns.org/debian/vpn.htm">
+ web page</A> on setting up several types of tunnel, including IPsec, on
+ Debian.</P>
+<P>Some older information:</P>
+<PRE>Subject: FreeS/WAN 1.0 on Debian 2.1
+   Date: Tue, 20 Apr 1999
+  From:  Tim Miller &lt;cerebus+counterpane@haybaler.sackheads.org&gt;
+
+        Compiled and installed without error on a Debian 2.1 system
+with kernel-source-2.0.36 after pointing RCDIR in utils/Makefile to
+/etc/init.d.
+
+        /var/lock/subsys/ doesn't exist on Debian boxen, needs to be
+created; not a fatal error.
+
+        Finally, IPsec scripts appear to be dependant on GNU awk
+(gawk); the default Debian awk (mawk-1.3.3-2) had fatal difficulties.
+With gawk installed and /etc/alternatives/awk linked to /usr/bin/gawk
+operation appears flawless.</PRE>
+<P>The scripts in question have been modified since this was posted. Awk
+ versions should no longer be a problem.</P>
+<H3><A name="caldera">Caldera</A></H3>
+<PRE>Subject: Re: HTML Docs- Need some cleanup?
+   Date: Mon, 08 Jan 2001
+   From: Andy Bradford &lt;andyb@calderasystems.com&gt;
+
+On Sun, 07 Jan 2001 22:59:05 EST, Sandy Harris wrote:
+
+&gt;     Intel Linux distributions other than Redhat 5.x and 6.x 
+&gt;         Redhat 7.0 
+&gt;         SuSE Linux 
+&gt;             SuSE Linux 5.3 
+&gt;         Slackware 
+&gt;         Debian 
+
+Can you please include Caldera in this list?  I have tested it since 
+FreeS/Wan 1.1 and it works great with our systems---provided one 
+follows the FreeS/Wan documentation. :-)
+
+Thank you,
+Andy</PRE>
+<H2><A name="CPUs">CPUs other than Intel</A></H2>
+<P>FreeS/WAN has been run sucessfully on a number of different CPU
+ architectures. If you have tried it on one not listed here, please post
+ to the<A href="mail.html"> mailing list</A>.</P>
+<H3><A name=" strongarm">Corel Netwinder (StrongARM CPU)</A></H3>
+<PRE>Subject: linux-ipsec: Netwinder diffs
+Date: Wed, 06 Jan 1999
+From: rhatfield@plaintree.com
+
+I had a mistake in my IPsec-auto, so I got things working this morning.
+
+Following are the diffs for my changes.  Probably not the best and cleanest way 
+of doing it, but it works. . . . </PRE>
+<P>These diffs are in the 0.92 and later distributions, so these should
+ work out-of-the-box on Netwinder.</P>
+<H3><A name="yellowdog">Yellow Dog Linux on Power PC</A></H3>
+<PRE>Subject:  Compiling FreeS/WAN 1.1 on YellowDog Linux (PPC)
+   Date:  11 Dec 1999
+   From:  Darron Froese &lt;darron@fudgehead.com&gt;
+
+I'm summarizing here for the record - because it's taken me many hours to do
+this (multiple times) and because I want to see IPsec on more linuxes than
+just x86.
+
+Also, I can't remember if I actually did summarize it before... ;-) I'm
+working too many late hours.
+
+That said - here goes.
+
+1. Get your linux kernel and unpack into /usr/src/linux/ - I used 2.2.13.
+&lt;http://www.kernel.org/pub/linux/kernel/v2.2/linux-2.2.13.tar.bz2&gt;
+
+2. Get FreeS/WAN and unpack into /usr/src/freeswan-1.1
+&lt;ftp://ftp.xs4all.nl/pub/crypto/freeswan/freeswan-1.1.tar.gz&gt;
+
+3. Get the gmp src rpm from here:
+&lt;ftp://ftp.yellowdoglinux.com//pub/yellowdog/champion-1.1/SRPMS/SRPMS/gmp-2.0.2-9a.src.rpm&gt;
+
+4. Su to root and do this: rpm --rebuild gmp-2.0.2-9a.src.rpm
+
+You will see a lot of text fly by and when you start to see the rpm
+recompiling like this:
+
+Executing: %build
++ umask 022
++ cd /usr/src/redhat/BUILD
++ cd gmp-2.0.2
++ libtoolize --copy --force
+Remember to add `AM_PROG_LIBTOOL' to `configure.in'.
+You should add the contents of `/usr/share/aclocal/libtool.m4' to
+`aclocal.m4'.
++ CFLAGS=-O2 -fsigned-char
++ ./configure --prefix=/usr
+
+Hit Control-C to stop the rebuild. NOTE: We're doing this because for some
+reason the gmp source provided with FreeS/WAN 1.1 won't build properly on
+ydl.
+
+cd /usr/src/redhat/BUILD/
+cp -ar gmp-2.0.2 /usr/src/freeswan-1.1/
+cd /usr/src/freeswan-1.1/
+rm -rf gmp
+mv gmp-2.0.2 gmp
+
+5. Open the freeswan Makefile and change the line that says:
+KERNEL=$(b)zimage (or something like that) to
+KERNEL=vmlinux
+
+6. cd ../linux/
+
+7. make menuconfig
+Select an option or two and then exit - saving your changes.
+
+8. cd ../freeswan-1.1/ ; make menugo
+
+That will start the whole process going - once that's finished compiling,
+you have to install your new kernel and reboot.
+
+That should build FreeS/WAN on ydl (I tried it on 1.1).</PRE>
+ And a later message on the same topic:
+<PRE>Subject: Re: FreeS/WAN, PGPnet and E-mail
+   Date: Sat, 22 Jan 2000
+   From: Darron Froese &lt;darron@fudgehead.com&gt;
+
+on 1/22/00 6:47 PM, Philip Trauring at philip@trauring.com wrote:
+
+&gt; I have a PowerMac G3 ...
+
+The PowerMac G3 can run YDL 1.1 just fine. It should also be able to run
+FreeS/WAN 1.2patch1 with a couple minor modifications:
+
+1. In the Makefile it specifies a bzimage for the kernel compile - you have
+to change that to vmlinux for the PPC.
+
+2. The gmp source that comes with FreeS/WAN (for whatever reason) fails to
+compile. I have gotten around this by getting the gmp src rpm from here:
+
+ftp://ftp.yellowdoglinux.com//pub/yellowdog/champion-1.1/SRPMS/SRPMS/gmp-2.0.2-9a.src.rpm
+
+If you rip the source out of there - and place it where the gmp source
+resides it will compile just fine.</PRE>
+<P>FreeS/WAN no longer includes GMP source.</P>
+<H3><A name="mklinux">Mklinux</A></H3>
+<P>One user reports success on the Mach-based<STRONG> m</STRONG>icro<STRONG>
+k</STRONG>ernel Linux.</P>
+<PRE>Subject: Smiles on sparc and ppc
+   Date: Fri, 10 Mar 2000
+   From: Jake Hill &lt;jah@alien.bt.co.uk&gt;
+
+You may or may not be interested to know that I have successfully built
+FreeS/WAN on a number of non intel alpha architectures; namely on ppc
+and sparc and also on osfmach3/ppc (MkLinux). I can report that it just
+works, mostly, with few changes.</PRE>
+<H3><A name="alpha">Alpha 64-bit processors</A></H3>
+<PRE>Subject: IT WORKS (again) between intel &amp; alpha :-)))))
+   Date: Fri, 29 Jan 1999
+   From: Peter Onion &lt;ponion@srd.bt.co.uk&gt;
+
+Well I'm happy to report that I've got an IPsec connection between by intel &amp; alpha machines again :-))
+
+If you look back on this list to 7th of December I wrote...
+
+-On 07-Dec-98 Peter Onion wrote:
+-&gt; 
+-&gt; I've about had enuf of wandering around inside the kernel trying to find out
+-&gt; just what is corrupting outgoing packets...
+-
+-Its 7:30 in the evening .....
+-
+-I FIXED IT  :-))))))))))))))))))))))))))))))))
+-
+-It was my own fault :-((((((((((((((((((
+-
+-If you ask me very nicly I'll tell you where I was a little too over keen to
+-change unsigned long int __u32 :-)  OPSE ...
+-
+-So tomorrow it will full steam ahead to produce a set of diffs/patches against
+-0.91 
+-
+-Peter Onion.</PRE>
+<P>In general (there have been some glitches), FreeS/WAN has been
+ running on Alphas since then.</P>
+<H3><A name="SPARC">Sun SPARC processors</A></H3>
+<P>Several users have reported success with FreeS/WAN on SPARC Linux.
+ Here is one mailing list message:</P>
+<PRE>Subject: Smiles on sparc and ppc
+   Date: Fri, 10 Mar 2000
+   From: Jake Hill &lt;jah@alien.bt.co.uk&gt;
+
+You may or may not be interested to know that I have successfully built
+FreeS/WAN on a number of non intel alpha architectures; namely on ppc
+and sparc and also on osfmach3/ppc (MkLinux). I can report that it just
+works, mostly, with few changes.
+
+I have a question, before I make up some patches. I need to hack
+gmp/mpn/powerpc32/*.s to build them. Is this ok? The changes are
+trivial, but could I also use a different version of gmp? Is it vanilla
+here?
+
+I guess my only real headache is from ipchains, which appears to stop
+running when IPsec has been started for a while. This is with 2.2.14 on
+sparc.</PRE>
+<P>This message, from a different mailing list, may be relevant for
+ anyone working with FreeS/WAN on Suns:</P>
+<PRE>Subject: UltraSPARC DES assembler
+   Date: Thu, 13 Apr 2000
+   From: svolaf@inet.uni2.dk (Svend Olaf Mikkelsen)
+     To: coderpunks@toad.com
+
+An UltraSPARC assembler version of the LibDES/SSLeay/OpenSSL des_enc.c
+file is available at http://inet.uni2.dk/~svolaf/des.htm.
+
+This brings DES on UltraSPARC from slower than Pentium at the same
+clock speed to significantly faster.</PRE>
+<H3><A name="mips">MIPS processors</A></H3>
+<P>We know FreeS/WAN runs on at least some MIPS processors because<A href="http://www.lasat.com">
+ Lasat</A> manufacture an IPsec box based on an embedded MIPS running
+ Linux with FreeS/WAN. We have no details.</P>
+<H3><A name="crusoe">Transmeta Crusoe</A></H3>
+<P>The Merilus<A href="http://www.merilus.com/products/fc/index.shtml">
+ Firecard</A>, a Linux firewall on a PCI card, is based on a Crusoe
+ processor and supports FreeS/WAN.</P>
+<H3><A name="coldfire">Motorola Coldfire</A></H3>
+<PRE>Subject: Re: Crypto hardware support
+   Date: Mon, 03 Jul 2000
+   From: Dan DeVault &lt;devault@tampabay.rr.com&gt;
+
+.... I have been running
+uClinux with FreeS/WAN 1.4 on a system built by Moreton Bay  (
+http://www.moretonbay.com )  and it was using a Coldfire processor
+and was able to do the Triple DES encryption at just about
+1 mbit / sec rate.......  they put a Hi/Fn 7901 hardware encryption
+chip on their board and now their system does over 25 mbit of 3DES
+encryption........ pretty significant increase if you ask me.</PRE>
+<H2><A name="multiprocessor">Multiprocessor machines</A></H2>
+<P>FreeS/WAN is designed to work on SMP (symmetric multi-processing)
+ Linux machines and is regularly tested on dual processor x86 machines.</P>
+<P>We do not know of any testing on multi-processor machines with other
+ CPU architectures or with more than two CPUs. Anyone who does test
+ this, please report results to the<A href="mail.html"> mailing list</A>
+.</P>
+<P>The current design does not make particularly efficient use of
+ multiprocessor machines; some of the kernel work is single-threaded.</P>
+<H2><A name="hardware">Support for crypto hardware</A></H2>
+<P>Supporting hardware cryptography accelerators has not been a high
+ priority for the development team because it raises a number of fairly
+ complex issues:</P>
+<UL>
+<LI>Can you trust the hardware? If it is not Open Source, how do you
+ audit its security? Even if it is, how do you check that the design has
+ no concealed traps?</LI>
+<LI>If an interface is added for such hardware, can that interface be
+ subverted or misused?</LI>
+<LI>Is hardware acceleration actually a performance win? It clearly is
+ in many cases, but on a fast machine it might be better to use the CPU
+ for the encryption than to pay the overheads of moving data to and from
+ a crypto board.</LI>
+<LI>the current KLIPS code does not provide a clean interface for
+ hardware accelerators</LI>
+</UL>
+<P>That said, we have a<A href="#coldfire"> report</A> of FreeS/WAN
+ working with one crypto accelerator and some work is going on to modify
+ KLIPS to create a clean generic interface to such products. See this<A href="http://www.jukie.net/~bart/linux-ipsec/">
+ web page</A> for some of the design discussion.</P>
+<P>More recently, a patch to support some hardware accelerators has been
+ posted:</P>
+<PRE>Subject: [Design] [PATCH] H/W acceleration patch
+   Date: Tue, 18 Sep 2001
+   From: &quot;Martin Gadbois&quot; &lt;martin.gadbois@colubris.com&gt;
+ 
+Finally!!
+Here's a web site with H/W acceleration patch for FreeS/WAN 1.91, including
+S/W and Hifn 7901 crypto support.
+
+http://sources.colubris.com/
+
+Martin Gadbois</PRE>
+<P>Hardware accelerators could take performance well beyond what
+ FreeS/WAN can do in software (discussed<A href="performance.html"> here</A>
+). Here is some discussion off the IETF IPsec list, October 2001:</P>
+<PRE> ... Currently shipping chips deliver, 600 mbps throughput on a single
+ stream of 3DES IPsec traffic.  There are also chips that use multiple
+ cores to do 2.4 gbps.  We (Cavium) and others have announced even faster
+ chips. ... Mid 2002 versions will handle at line rate (OC48 and OC192)
+ IPsec and SSL/TLS traffic not only 3DES CBC but also AES and arc4.</PRE>
+<P>The patches to date support chips that have been in production for
+ some time, not the state-of-the-art latest-and-greatest devices
+ described in that post. However, they may still outperform software and
+ they almost certainly reduce CPU overhead.</P>
+<H2><A name="ipv6">IP version 6 (IPng)</A></H2>
+<P>The Internet currently runs on version four of the IP protocols. IPv4
+ is what is in the standard Linux IP stack, and what FreeS/WAN was built
+ for. In IPv4, IPsec is an optional feature.</P>
+<P>The next version of the IP protocol suite is version six, usually
+ abbreviated either as &quot;IPv6&quot; or as &quot;IPng&quot; for &quot;IP: the next
+ generation&quot;. For IPv6, IPsec is a required feature. Any machine doing
+ IPv6 is required to support IPsec, much as any machine doing (any
+ version of) IP is required to support ICMP.</P>
+<P>There is a Linux implementation of IPv6 in Linux kernels 2.2 and
+ above. For details, see the<A href="http://www.cs-ipv6.lancs.ac.uk/ipv6/systems/linux/faq/">
+ FAQ</A>. It does not yet support IPsec. The<A href="http://www.linux-ipv6.org/">
+ USAGI</A> project are also working on IPv6 for Linux.</P>
+<P>FreeS/WAN was originally built for the current standard, IPv4, but we
+ are interested in seeing it work with IPv6. Some progress has been
+ made, and a patched version with IPv6 support is<A href="http://www.ipv6.iabg.de/downloadframe/index.html">
+ available</A>. For more recent information, check the<A href="mail.html">
+ mailing list</A>.</P>
+<H3><A name="v6.back">IPv6 background</A></H3>
+<P>IPv6 has been specified by an IETF<A href="http://www.ietf.org/html.charters/ipngwg-charter.html">
+ working group</A>. The group's page lists over 30 RFCs to date, and
+ many Internet Drafts as well. The overview is<A href="http://www.ietf.org/rfc/rfc2460.txt">
+ RFC 2460</A>. Major features include:</P>
+<UL>
+<LI>expansion of the address space from 32 to 128 bits,</LI>
+<LI>changes to improve support for
+<UL>
+<LI>mobile IP</LI>
+<LI>automatic network configuration</LI>
+<LI>quality of service routing</LI>
+<LI>...</LI>
+</UL>
+</LI>
+<LI>improved security via IPsec</LI>
+</UL>
+<P>A number of projects are working on IPv6 implementation. A prominent
+ Open Source effort is<A href="http://www.kame.net/"> KAME</A>, a
+ collaboration among several large Japanese companies to implement IPv6
+ for Berkeley Unix. Other major players are also working on IPv6. For
+ example, see pages at:</P>
+<UL>
+<LI><A href="http://playground.sun.com/pub/ipng/html/ipng-main.html">Sun</A>
+</LI>
+<LI><A href="http://www.cisco.com/warp/public/732/ipv6/index.html">Cisco</A>
+</LI>
+<LI><A href="http://www.microsoft.com/windows2000/techinfo/howitworks/communications/networkbasics/IPv6.asp">
+Microsoft</A></LI>
+</UL>
+<P>The<A href="http://www.6bone.net/"> 6bone</A> (IPv6 backbone) testbed
+ network has been up for some time. There is an active<A href="http://www.ipv6.org/">
+ IPv6 user group</A>.</P>
+<P>One of the design goals for IPv6 was that it must be possible to
+ convert from v4 to v6 via a gradual transition process. Imagine the
+ mess if there were a &quot;flag day&quot; after which the entire Internet used
+ v6, and all software designed for v4 stopped working. Almost every
+ computer on the planet would need major software changes! There would
+ be huge costs to replace older equipment. Implementers would be worked
+ to death before &quot;the day&quot;, systems administrators and technical support
+ would be completely swamped after it. The bugs in every implementation
+ would all bite simultaneously. Large chunks of the net would almost
+ certainly be down for substantial time periods. ...</P>
+<P>Fortunately, the design avoids any &quot;flag day&quot;. It is therefore a
+ little tricky to tell how quickly IPv6 will take over. The transition
+ has certainly begun. For examples, see announcements from<A href="http://www.mailbase.ac.uk/lists/internet2/2000-03/0016.html">
+ NTT</A> and<A href="http://www.vnunet.com/News/1102383"> Nokia</A>.
+ However, it is not yet clear how quickly the process will gain
+ momentum, or when it will be completed. Likely large parts of the
+ Internet will remain with IPv4 for years to come.</P>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="trouble.html">Previous</A>
+<A HREF="interop.html">Next</A>
+</BODY>
+</HTML>

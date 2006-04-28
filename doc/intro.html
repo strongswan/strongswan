@@ -1,0 +1,733 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="upgrading.html">Next</A>
+<HR>
+<H1><A name="intro">Introduction</A></H1>
+<P>This section gives an overview of:</P>
+<UL>
+<LI>what IP Security (IPsec) does</LI>
+<LI>how IPsec works</LI>
+<LI>why we are implementing it for Linux</LI>
+<LI>how this implementation works</LI>
+</UL>
+<P>This section is intended to cover only the essentials,<EM> things you
+ should know before trying to use FreeS/WAN.</EM></P>
+<P>For more detailed background information, see the<A href="politics.html#politics">
+ history and politics</A> and<A href="ipsec.html#ipsec.detail"> IPsec
+ protocols</A> sections.</P>
+<H2><A name="ipsec.intro">IPsec, Security for the Internet Protocol</A></H2>
+<P>FreeS/WAN is a Linux implementation of the IPsec (IP security)
+ protocols. IPsec provides<A href="glossary.html#encryption"> encryption</A>
+ and<A href="glossary.html#authentication"> authentication</A> services
+ at the IP (Internet Protocol) level of the network protocol stack.</P>
+<P>Working at this level, IPsec can protect any traffic carried over IP,
+ unlike other encryption which generally protects only a particular
+ higher-level protocol --<A href="glossary.html#PGP"> PGP</A> for mail,<A
+href="glossary.html#SSH"> SSH</A> for remote login,<A href="glossary.html#SSL">
+ SSL</A> for web work, and so on. This approach has both considerable
+ advantages and some limitations. For discussion, see our<A href="ipsec.html#others">
+ IPsec section</A></P>
+<P>IPsec can be used on any machine which does IP networking. Dedicated
+ IPsec gateway machines can be installed wherever required to protect
+ traffic. IPsec can also run on routers, on firewall machines, on
+ various application servers, and on end-user desktop or laptop
+ machines.</P>
+<P>Three protocols are used</P>
+<UL>
+<LI><A href="glossary.html#AH">AH</A> (Authentication Header) provides a
+ packet-level authentication service</LI>
+<LI><A href="glossary.html#ESP">ESP</A> (Encapsulating Security Payload)
+ provides encryption plus authentication</LI>
+<LI><A href="glossary.html#IKE">IKE</A> (Internet Key Exchange)
+ negotiates connection parameters, including keys, for the other two</LI>
+</UL>
+<P>Our implementation has three main parts:</P>
+<UL>
+<LI><A href="glossary.html#KLIPS">KLIPS</A> (kernel IPsec) implements
+ AH, ESP, and packet handling within the kernel</LI>
+<LI><A href="glossary.html#Pluto">Pluto</A> (an IKE daemon) implements
+ IKE, negotiating connections with other systems</LI>
+<LI>various scripts provide an adminstrator's interface to the machinery</LI>
+</UL>
+<P>IPsec is optional for the current (version 4) Internet Protocol.
+ FreeS/WAN adds IPsec to the Linux IPv4 network stack. Implementations
+ of<A href="glossary.html#ipv6.gloss"> IP version 6</A> are required to
+ include IPsec. Work toward integrating FreeS/WAN into the Linux IPv6
+ stack has<A href="compat.html#ipv6"> started</A>.</P>
+<P>For more information on IPsec, see our<A href="ipsec.html#ipsec.detail">
+ IPsec protocols</A> section, our collection of<A href="web.html#ipsec.link">
+ IPsec links</A> or the<A href="rfc.html#RFC"> RFCs</A> which are the
+ official definitions of these protocols.</P>
+<H3><A name="intro.interop">Interoperating with other IPsec
+ implementations</A></H3>
+<P>IPsec is designed to let different implementations work together. We
+ provide:</P>
+<UL>
+<LI>a<A href="web.html#implement"> list</A> of some other
+ implementations</LI>
+<LI>information on<A href="interop.html#interop"> using FreeS/WAN with
+ other implementations</A></LI>
+</UL>
+<P>The VPN Consortium fosters cooperation among implementers and
+ interoperability among implementations. Their<A href="http://www.vpnc.org/">
+ web site</A> has much more information.</P>
+<H3><A name="advantages">Advantages of IPsec</A></H3>
+<P>IPsec has a number of security advantages. Here are some
+ independently written articles which discuss these:</P>
+<P><A HREF="http://www.sans.org/rr/"> SANS institute papers</A>. See the
+ section on Encryption &amp;VPNs.
+<BR><A HREF="http://www.cisco.com/en/US/netsol/ns110/ns170/ns171/ns128/networking_solutions_white_papers_list.html">
+ Cisco's white papers on &quot;Networking Solutions&quot;</A>.
+<BR><A HREF="http://iscs.sourceforge.net/HowWhyBrief/HowWhyBrief.html">
+ Advantages of ISCS (Linux Integrated Secure Communications System;
+ includes FreeS/WAN and other software)</A>.</P>
+<H3><A name="applications">Applications of IPsec</A></H3>
+<P>Because IPsec operates at the network layer, it is remarkably
+ flexible and can be used to secure nearly any type of Internet traffic.
+ Two applications, however, are extremely widespread:</P>
+<UL>
+<LI>a<A href="glossary.html#VPN"> Virtual Private Network</A>, or VPN,
+ allows multiple sites to communicate securely over an insecure Internet
+ by encrypting all communication between the sites.</LI>
+<LI>&quot;Road Warriors&quot; connect to the office from home, or perhaps from a
+ hotel somewhere</LI>
+</UL>
+<P>There is enough opportunity in these applications that vendors are
+ flocking to them. IPsec is being built into routers, into firewall
+ products, and into major operating systems, primarily to support these
+ applications. See our<A href="web.html#implement"> list</A> of
+ implementations for details.</P>
+<P>We support both of those applications, and various less common IPsec
+ applications as well, but we also add one of our own:</P>
+<UL>
+<LI>opportunistic encryption, the ability to set up FreeS/WAN gateways
+ so that any two of them can encrypt to each other, and will do so
+ whenever packets pass between them.</LI>
+</UL>
+<P>This is an extension we are adding to the protocols. FreeS/WAN is the
+ first prototype implementation, though we hope other IPsec
+ implementations will adopt the technique once we demonstrate it. See<A href="#goals">
+ project goals</A> below for why we think this is important.</P>
+<P>A somewhat more detailed description of each of these applications is
+ below. Our<A href="quickstart.html#quick_guide"> quickstart</A> section
+ will show you how to build each of them.</P>
+<H4><A name="makeVPN">Using secure tunnels to create a VPN</A></H4>
+<P>A VPN, or<STRONG> V</STRONG>irtual<STRONG> P</STRONG>rivate<STRONG> N</STRONG>
+etwork lets two networks communicate securely when the only connection
+ between them is over a third network which they do not trust.</P>
+<P>The method is to put a security gateway machine between each of the
+ communicating networks and the untrusted network. The gateway machines
+ encrypt packets entering the untrusted net and decrypt packets leaving
+ it, creating a secure tunnel through it.</P>
+<P>If the cryptography is strong, the implementation is careful, and the
+ administration of the gateways is competent, then one can reasonably
+ trust the security of the tunnel. The two networks then behave like a
+ single large private network, some of whose links are encrypted tunnels
+ through untrusted nets.</P>
+<P>Actual VPNs are often more complex. One organisation may have fifty
+ branch offices, plus some suppliers and clients, with whom it needs to
+ communicate securely. Another might have 5,000 stores, or 50,000
+ point-of-sale devices. The untrusted network need not be the Internet.
+ All the same issues arise on a corporate or institutional network
+ whenever two departments want to communicate privately with each other.</P>
+<P>Administratively, the nice thing about many VPN setups is that large
+ parts of them are static. You know the IP addresses of most of the
+ machines involved. More important, you know they will not change on
+ you. This simplifies some of the admin work. For cases where the
+ addresses do change, see the next section.</P>
+<H4><A name="road.intro">Road Warriors</A></H4>
+<P>The prototypical &quot;Road Warrior&quot; is a traveller connecting to home
+ base from a laptop machine. Administratively, most of the same problems
+ arise for a telecommuter connecting from home to the office, especially
+ if the telecommuter does not have a static IP address.</P>
+<P>For purposes of this document:</P>
+<UL>
+<LI>anyone with a dynamic IP address is a &quot;Road Warrior&quot;.</LI>
+<LI>any machine doing IPsec processing is a &quot;gateway&quot;. Think of the
+ single-user road warrior machine as a gateway with a degenerate subnet
+ (one machine, itself) behind it.</LI>
+</UL>
+<P>These require somewhat different setup than VPN gateways with static
+ addresses and with client systems behind them, but are basically not
+ problematic.</P>
+<P>There are some difficulties which appear for some road warrior
+ connections:</P>
+<UL>
+<LI>Road Wariors who get their addresses via DHCP may have a problem.
+ FreeS/WAN can quite happily build and use a tunnel to such an address,
+ but when the DHCP lease expires, FreeS/WAN does not know that. The
+ tunnel fails, and the only recovery method is to tear it down and
+ re-build it.</LI>
+<LI>If<A href="glossary.html#NAT.gloss"> Network Address Translation</A>
+ (NAT) is applied between the two IPsec Gateways, this breaks IPsec.
+ IPsec authenticates packets on an end-to-end basis, to ensure they are
+ not altered en route. NAT rewrites packets as they go by. See our<A href="firewall.html#NAT">
+ firewalls</A> document for details.</LI>
+</UL>
+<P>In most situations, however, FreeS/WAN supports road warrior
+ connections just fine.</P>
+<H4><A name="opp.intro">Opportunistic encryption</A></H4>
+<P>One of the reasons we are working on FreeS/WAN is that it gives us
+ the opportunity to add what we call opportuntistic encryption. This
+ means that any two FreeS/WAN gateways will be able to encrypt their
+ traffic, even if the two gateway administrators have had no prior
+ contact and neither system has any preset information about the other.</P>
+<P>Both systems pick up the authentication information they need from
+ the<A href="glossary.html#DNS"> DNS</A> (domain name service), the
+ service they already use to look up IP addresses. Of course the
+ administrators must put that information in the DNS, and must set up
+ their gateways with opportunistic encryption enabled. Once that is
+ done, everything is automatic. The gateways look for opportunities to
+ encrypt, and encrypt whatever they can. Whether they also accept
+ unencrypted communication is a policy decision the administrator can
+ make.</P>
+<P>This technique can give two large payoffs:</P>
+<UL>
+<LI>It reduces the administrative overhead for IPsec enormously. You
+ configure your gateway and thereafter everything is automatic. The need
+ to configure the system on a per-tunnel basis disappears. Of course,
+ FreeS/WAN allows specifically configured tunnels to co-exist with
+ opportunistic encryption, but we hope to make them unnecessary in most
+ cases.</LI>
+<LI>It moves us toward a more secure Internet, allowing users to create
+ an environment where message privacy is the default. All messages can
+ be encrypted, provided the other end is willing to co-operate. See our<A
+href="politics.html#politics"> history and politics of cryptography</A>
+ section for discussion of why we think this is needed.</LI>
+</UL>
+<P>Opportunistic encryption is not (yet?) a standard part of the IPsec
+ protocols, but an extension we are proposing and demonstrating. For
+ details of our design, see<A href="#applied"> links</A> below.</P>
+<P>Only one current product we know of implements a form of
+ opportunistic encryption.<A href="web.html#ssmail"> Secure sendmail</A>
+ will automatically encrypt server-to-server mail transfers whenever
+ possible.</P>
+<H3><A name="types">The need to authenticate gateways</A></H3>
+<P>A complication, which applies to any type of connection -- VPN, Road
+ Warrior or opportunistic -- is that a secure connection cannot be
+ created magically.<EM> There must be some mechanism which enables the
+ gateways to reliably identify each other.</EM> Without this, they
+ cannot sensibly trust each other and cannot create a genuinely secure
+ link.</P>
+<P>Any link they do create without some form of<A href="glossary.html#authentication">
+ authentication</A> will be vulnerable to a<A href="glossary.html#middle">
+ man-in-the-middle attack</A>. If<A href="glossary.html#alicebob"> Alice
+ and Bob</A> are the people creating the connection, a villian who can
+ re-route or intercept the packets can pose as Alice while talking to
+ Bob and pose as Bob while talking to Alice. Alice and Bob then both
+ talk to the man in the middle, thinking they are talking to each other,
+ and the villain gets everything sent on the bogus &quot;secure&quot; connection.</P>
+<P>There are two ways to build links securely, both of which exclude the
+ man-in-the middle:</P>
+<UL>
+<LI>with<STRONG> manual keying</STRONG>, Alice and Bob share a secret
+ key (which must be transmitted securely, perhaps in a note or via PGP
+ or SSH) to encrypt their messages. For FreeS/WAN, such keys are stored
+ in the<A href="manpage.d/ipsec.conf.5.html"> ipsec.conf(5)</A> file. Of
+ course, if an enemy gets the key, all is lost.</LI>
+<LI>with<STRONG> automatic keying</STRONG>, the two systems authenticate
+ each other and negotiate their own secret keys. The keys are
+ automatically changed periodically.</LI>
+</UL>
+<P>Automatic keying is much more secure, since if an enemy gets one key
+ only messages between the previous re-keying and the next are exposed.
+ It is therefore the usual mode of operation for most IPsec deployment,
+ and the mode we use in our setup examples. FreeS/WAN does support
+ manual keying for special circumstanes. See this<A href="adv_config.html#prodman">
+ section</A>.</P>
+<P>For automatic keying, the two systems must authenticate each other
+ during the negotiations. There is a choice of methods for this:</P>
+<UL>
+<LI>a<STRONG> shared secret</STRONG> provides authentication. If Alice
+ and Bob are the only ones who know a secret and Alice recives a message
+ which could not have been created without that secret, then Alice can
+ safely believe the message came from Bob.</LI>
+<LI>a<A href="glossary.html#public"> public key</A> can also provide
+ authentication. If Alice receives a message signed with Bob's private
+ key (which of course only he should know) and she has a trustworthy
+ copy of his public key (so that she can verify the signature), then she
+ can safely believe the message came from Bob.</LI>
+</UL>
+<P>Public key techniques are much preferable, for reasons discussed<A href="config.html#choose">
+ later</A>, and will be used in all our setup examples. FreeS/WAN does
+ also support auto-keying with shared secret authentication. See this<A href="adv_config.html#prodsecrets">
+ section</A>.</P>
+<H2><A name="project">The FreeS/WAN project</A></H2>
+<P>For complete information on the project, see our web site,<A href="http://liberty.freeswan.org">
+ freeswan.org</A>.</P>
+<P>In summary, we are implementing the<A href="glossary.html#IPsec">
+ IPsec</A> protocols for Linux and extending them to do<A href="glossary.html#carpediem">
+ opportunistic encryption</A>.</P>
+<H3><A name="goals">Project goals</A></H3>
+<P>Our overall goal in FreeS/WAN is to make the Internet more secure and
+ more private.</P>
+<P>Our IPsec implementation supports VPNs and Road Warriors of course.
+ Those are important applications. Many users will want FreeS/WAN to
+ build corporate VPNs or to provide secure remote access.</P>
+<P>However, our goals in building it go beyond that. We are trying to
+ help<STRONG> build security into the fabric of the Internet</STRONG> so
+ that anyone who choses to communicate securely can do so, as easily as
+ they can do anything else on the net.</P>
+<P>More detailed objectives are:</P>
+<UL>
+<LI>extend IPsec to do<A href="glossary.html#carpediem"> opportunistic
+ encryption</A> so that
+<UL>
+<LI>any two systems can secure their communications without a
+ pre-arranged connection</LI>
+<LI><STRONG>secure connections can be the default</STRONG>, falling back
+ to unencrypted connections only if:
+<UL>
+<LI><EM>both</EM> the partner is not set up to co-operate on securing
+ the connection</LI>
+<LI><EM>and</EM> your policy allows insecure connections</LI>
+</UL>
+</LI>
+<LI>a significant fraction of all Internet traffic is encrypted</LI>
+<LI>wholesale monitoring of the net (<A href="politics.html#intro.poli">
+examples</A>) becomes difficult or impossible</LI>
+</UL>
+</LI>
+<LI>help make IPsec widespread by providing an implementation with no
+ restrictions:
+<UL>
+<LI>freely available in source code under the<A href="glossary.html#GPL">
+ GNU General Public License</A></LI>
+<LI>running on a range of readily available hardware</LI>
+<LI>not subject to US or other nations'<A href="politics.html#exlaw">
+ export restrictions</A>.
+<BR> Note that in order to avoid<EM> even the appearance</EM> of being
+ subject to those laws, the project cannot accept software contributions
+ --<EM> not even one-line bug fixes</EM> -- from US residents or
+ citizens.</LI>
+</UL>
+</LI>
+<LI>provide a high-quality IPsec implementation for Linux
+<UL>
+<LI>portable to all CPUs Linux supports:<A href="compat.html#CPUs">
+ (current list)</A></LI>
+<LI>interoperable with other IPsec implementations:<A href="interop.html#interop">
+ (current list)</A></LI>
+</UL>
+</LI>
+</UL>
+<P>If we can get opportunistic encryption implemented and widely
+ deployed, then it becomes impossible for even huge well-funded agencies
+ to monitor the net.</P>
+<P>See also our section on<A href="politics.html#politics"> history and
+ politics</A> of cryptography, which includes our project leader's<A href="politics.html#gilmore">
+ rationale</A> for starting the project.</P>
+<H3><A name="staff">Project team</A></H3>
+<P>Two of the team are from the US and can therefore contribute no code:</P>
+<UL>
+<LI>John Gilmore: founder and policy-maker (<A href="http://www.toad.com/gnu/">
+home page</A>)</LI>
+<LI>Hugh Daniel: project manager, Most Demented Tester, and occasionally
+ Pointy-Haired Boss</LI>
+</UL>
+<P>The rest of the team are Canadians, working in Canada. (<A href="politics.html#status">
+Why Canada?</A>)</P>
+<UL>
+<LI>Hugh Redelmeier:<A href="glossary.html#Pluto"> Pluto daemon</A>
+ programmer</LI>
+<LI>Richard Guy Briggs:<A href="glossary.html#KLIPS"> KLIPS</A>
+ programmer</LI>
+<LI>Michael Richardson: hacker without portfolio</LI>
+<LI>Claudia Schmeing: documentation</LI>
+<LI>Sam Sgro: technical support via the<A href="mail.html#lists">
+ mailing lists</A></LI>
+</UL>
+<P>The project is funded by civil libertarians who consider our goals
+ worthwhile. Most of the team are paid for this work.</P>
+<P>People outside this core team have made substantial contributions.
+ See</P>
+<UL>
+<LI>our<A href="../CREDITS"> CREDITS</A> file</LI>
+<LI>the<A href="web.html#patch"> patches and add-ons</A> section of our
+ web references file</LI>
+<LI>lists below of user-written<A href="#howto"> HowTos</A> and<A href="#applied">
+ other papers</A></LI>
+</UL>
+<P>Additional contributions are welcome. See the<A href="faq.html#contrib.faq">
+ FAQ</A> for details.</P>
+<H2><A name="products">Products containing FreeS/WAN</A></H2>
+<P>Unfortunately the<A href="politics.html#exlaw"> export laws</A> of
+ some countries restrict the distribution of strong cryptography.
+ FreeS/WAN is therefore not in the standard Linux kernel and not in all
+ CD or web distributions.</P>
+<P>FreeS/WAN is, however, quite widely used. Products we know of that
+ use it are listed below. We would appreciate hearing, via the<A href="mail.html#lists">
+ mailing lists</A>, of any we don't know of.</P>
+<H3><A name="distwith">Full Linux distributions</A></H3>
+<P>FreeS/WAN is included in various general-purpose Linux distributions,
+ mostly from countries (shown in brackets) with more sensible laws:</P>
+<UL>
+<LI><A href="http://www.suse.com/">SuSE Linux</A> (Germany)</LI>
+<LI><A href="http://www.conectiva.com">Conectiva</A> (Brazil)</LI>
+<LI><A href="http://www.linux-mandrake.com/en/">Mandrake</A> (France)</LI>
+<LI><A href="http://www.debian.org">Debian</A></LI>
+<LI>the<A href="http://www.pld.org.pl/"> Polish(ed) Linux Distribution</A>
+ (Poland)</LI>
+<LI><A>Best Linux</A> (Finland)</LI>
+</UL>
+<P>For distributions which do not include FreeS/WAN and are not Redhat
+ (which we develop and test on), there is additional information in our<A
+href="compat.html#otherdist"> compatibility</A> section.</P>
+<P>The server edition of<A href="http://www.corel.com"> Corel</A> Linux
+ (Canada) also had FreeS/WAN, but Corel have dropped that product line.</P>
+<H3><A name="kernel_dist">Linux kernel distributions</A></H3>
+<UL>
+<LI><A href="http://sourceforge.net/projects/wolk/">Working Overloaded
+ Linux Kernel (WOLK)</A></LI>
+</UL>
+<H3><A name="office_dist">Office server distributions</A></H3>
+<P>FreeS/WAN is also included in several distributions aimed at the
+ market for turnkey business servers:</P>
+<UL>
+<LI><A href="http://www.e-smith.com/">e-Smith</A> (Canada), which has
+ recently been acquired and become the Network Server Solutions group of<A
+href="http://www.mitel.com/"> Mitel Networks</A> (Canada)</LI>
+<LI><A href="http://www.clarkconnect.org/">ClarkConnect</A> from Point
+ Clark Networks (Canada)</LI>
+<LI><A href="http://www.trustix.net/">Trustix Secure Linux</A> (Norway)</LI>
+</UL>
+<H3><A name="fw_dist">Firewall distributions</A></H3>
+<P>Several distributions intended for firewall and router applications
+ include FreeS/WAN:</P>
+<UL>
+<LI>The<A href="http://www.linuxrouter.org/"> Linux Router Project</A>
+ produces a Linux distribution that will boot from a single floppy. The<A
+href="http://leaf.sourceforge.net"> LEAF</A> firewall project provides
+ several different LRP-based firewall packages. At least one of them,
+ Charles Steinkuehler's Dachstein, includes FreeS/WAN with X.509
+ patches.</LI>
+<LI>there are several distributions bootable directly from CD-ROM,
+ usable on a machine without hard disk.
+<UL>
+<LI>Dachstein (see above) can be used this way</LI>
+<LI><A href="http://www.gibraltar.at/">Gibraltar</A> is based on Debian
+ GNU/Linux.</LI>
+<LI>at time of writing,<A href="www.xiloo.com"> Xiloo</A> is available
+ only in Chinese. An English version is expected.</LI>
+</UL>
+</LI>
+<LI><A href="http://www.astaro.com/products/index.html">Astaro Security
+ Linux</A> includes FreeS/WAN. It has some web-based tools for managing
+ the firewall that include FreeS/WAN configuration management.</LI>
+<LI><A href="http://www.linuxwall.de">Linuxwall</A></LI>
+<LI><A href="http://www.smoothwall.org/">Smoothwall</A></LI>
+<LI><A href="http://www.devil-linux.org/">Devil Linux</A></LI>
+<LI>Coyote Linux has a<A href="http://embedded.coyotelinux.com/wolverine/index.php">
+ Wolverine</A> firewall/VPN server</LI>
+</UL>
+<P>There are also several sets of scripts available for managing a
+ firewall which is also acting as a FreeS/WAN IPsec gateway. See this<A href="firewall.html#rules.pub">
+ list</A>.</P>
+<H3><A name="turnkey">Firewall and VPN products</A></H3>
+<P>Several vendors use FreeS/WAN as the IPsec component of a turnkey
+ firewall or VPN product.</P>
+<P>Software-only products:</P>
+<UL>
+<LI><A href="http://www.linuxmagic.com/vpn/index.html">Linux Magic</A>
+ offer a VPN/Firewall product using FreeS/WAN</LI>
+<LI>The Software Group's<A href="http://www.wanware.com/sentinet/">
+ Sentinet</A> product uses FreeS/WAN</LI>
+<LI><A href="http://www.merilus.com">Merilus</A> use FreeS/WAN in their
+ Gateway Guardian firewall product</LI>
+</UL>
+<P>Products that include the hardware:</P>
+<UL>
+<LI>The<A href="http://www.lasat.com"> LASAT SafePipe[tm]</A> series. is
+ an IPsec box based on an embedded MIPS running Linux with FreeS/WAN and
+ a web-config front end. This company also host our freeswan.org web
+ site.</LI>
+<LI>Merilus<A href="http://www.merilus.com/products/fc/index.shtml">
+ Firecard</A> is a Linux firewall on a PCI card.</LI>
+<LI><A href="http://www.kyzo.com/">Kyzo</A> have a &quot;pizza box&quot; product
+ line with various types of server, all running from flash. One of them
+ is an IPsec/PPTP VPN server</LI>
+<LI><A href="http://www.pfn.com">PFN</A> use FreeS/WAN in some of their
+ products</LI>
+</UL>
+<P><A href="www.rebel.com">Rebel.com</A>, makers of the Netwinder Linux
+ machines (ARM or Crusoe based), had a product that used FreeS/WAN. The
+ company is in receivership so the future of the Netwinder is at best
+ unclear.<A href="web.html#patch"> PKIX patches</A> for FreeS/WAN
+ developed at Rebel are listed in our web links document.</P>
+<H2><A name="docs">Information sources</A></H2>
+<H3><A name="docformats">This HowTo, in multiple formats</A></H3>
+<P>FreeS/WAN documentation up to version 1.5 was available only in HTML.
+ Now we ship two formats:</P>
+<UL>
+<LI>as HTML, one file for each doc section plus a global<A href="toc.html">
+ Table of Contents</A></LI>
+<LI><A href="HowTo.html">one big HTML file</A> for easy searching</LI>
+</UL>
+<P>and provide a Makefile to generate other formats if required:</P>
+<UL>
+<LI><A href="HowTo.pdf">PDF</A></LI>
+<LI><A href="HowTo.ps">Postscript</A></LI>
+<LI><A href="HowTo.txt">ASCII text</A></LI>
+</UL>
+<P>The Makefile assumes the htmldoc tool is available. You can download
+ it from<A href="http://www.easysw.com"> Easy Software</A>.</P>
+<P>All formats should be available at the following websites:</P>
+<UL>
+<LI><A href="http://www.freeswan.org/doc.html">FreeS/WAN project</A></LI>
+<LI><A href="http://www.linuxdoc.org">Linux Documentation Project</A></LI>
+</UL>
+<P>The distribution tarball has only the two HTML formats.</P>
+<P><STRONG>Note:</STRONG> If you need the latest doc version, for
+ example to see if anyone has managed to set up interoperation between
+ FreeS/WAN and whatever, then you should download the current snapshot.
+ What is on the web is documentation as of the last release. Snapshots
+ have all changes I've checked in to date.</P>
+<H3><A name="rtfm">RTFM (please Read The Fine Manuals)</A></H3>
+<P>As with most things on any Unix-like system, most parts of Linux
+ FreeS/WAN are documented in online manual pages. We provide a list of<A href="/mnt/floppy/manpages.html">
+ FreeS/WAN man pages</A>, with links to HTML versions of them.</P>
+<P>The man pages describing configuration files are:</P>
+<UL>
+<LI><A href="/mnt/floppy/manpage.d/ipsec.conf.5.html">ipsec.conf(5)</A></LI>
+<LI><A href="/mnt/floppy/manpage.d/ipsec.secrets.5.html">
+ipsec.secrets(5)</A></LI>
+</UL>
+<P>Man pages for common commands include:</P>
+<UL>
+<LI><A href="/mnt/floppy/manpage.d/ipsec.8.html">ipsec(8)</A></LI>
+<LI><A href="/mnt/floppy/manpage.d/ipsec_pluto.8.html">ipsec_pluto(8)</A>
+</LI>
+<LI><A href="/mnt/floppy/manpage.d/ipsec_newhostkey.8.html">
+ipsec_newhostkey(8)</A></LI>
+<LI><A href="/mnt/floppy/manpage.d/ipsec_auto.8.html">ipsec_auto(8)</A></LI>
+</UL>
+<P>You can read these either in HTML using the links above or with the<VAR>
+ man(1)</VAR> command.</P>
+<P>In the event of disagreement between this HTML documentation and the
+ man pages, the man pages are more likely correct since they are written
+ by the implementers. Please report any such inconsistency on the<A href="mail.html#lists">
+ mailing list</A>.</P>
+<H3><A name="text">Other documents in the distribution</A></H3>
+<P>Text files in the main distribution directory are README, INSTALL,
+ CREDITS, CHANGES, BUGS and COPYING.</P>
+<P>The Libdes encryption library we use has its own documentation. You
+ can find it in the library directory..</P>
+<H3><A name="assumptions">Background material</A></H3>
+<P>Throughout this documentation, I write as if the reader had at least
+ a general familiarity with Linux, with Internet Protocol networking,
+ and with the basic ideas of system and network security. Of course that
+ will certainly not be true for all readers, and quite likely not even
+ for a majority.</P>
+<P>However, I must limit amount of detail on these topics in the main
+ text. For one thing, I don't understand all the details of those topics
+ myself. Even if I did, trying to explain everything here would produce
+ extremely long and almost completely unreadable documentation.</P>
+<P>If one or more of those areas is unknown territory for you, there are
+ plenty of other resources you could look at:</P>
+<DL>
+<DT>Linux</DT>
+<DD>the<A href="http://www.linuxdoc.org"> Linux Documentation Project</A>
+ or a local<A href="http://www.linux.org/groups/"> Linux User Group</A>
+ and these<A href="web.html#linux.link"> links</A></DD>
+<DT>IP networks</DT>
+<DD>Rusty Russell's<A href="http://netfilter.samba.org/unreliable-guides/networking-concepts-HOWTO/index.html">
+ Networking Concepts HowTo</A> and these<A href="web.html#IP.background">
+ links</A></DD>
+<DT>Security</DT>
+<DD>Schneier's book<A href="biblio.html#secrets"> Secrets and Lies</A>
+ and these<A href="web.html#crypto.link"> links</A></DD>
+</DL>
+<P>Also, I do make an effort to provide some background material in
+ these documents. All the basic ideas behind IPsec and FreeS/WAN are
+ explained here. Explanations that do not fit in the main text, or that
+ not everyone will need, are often in the<A href="glossary.html#ourgloss">
+ glossary</A>, which is the largest single file in this document set.
+ There is also a<A href="background.html#background"> background</A>
+ file containing various explanations too long to fit in glossary
+ definitions. All files are heavily sprinkled with links to each other
+ and to the glossary.<STRONG> If some passage makes no sense to you, try
+ the links</STRONG>.</P>
+<P>For other reference material, see the<A href="biblio.html#biblio">
+ bibliography</A> and our collection of<A href="web.html#weblinks"> web
+ links</A>.</P>
+<P>Of course, no doubt I get this (and other things) wrong sometimes.
+ Feedback via the<A href="mail.html#lists"> mailing lists</A> is
+ welcome.</P>
+<H3><A name="archives">Archives of the project mailing list</A></H3>
+<P>Until quite recently, there was only one FreeS/WAN mailing list, and
+ archives of it were:</P>
+<UL>
+<LI><A href="http://www.sandelman.ottawa.on.ca/linux-ipsec">Canada</A></LI>
+<LI><A href="http://www.nexial.com">Holland</A></LI>
+</UL>
+ The two archives use completely different search engines. You might
+ want to try both.
+<P>More recently we have expanded to five lists, each with its own
+ archive.</P>
+<P><A href="mail.html#lists">More information</A> on mailing lists.</P>
+<H3><A name="howto">User-written HowTo information</A></H3>
+<P>Various user-written HowTo documents are available. The ones covering
+ FreeS/WAN-to-FreeS/WAN connections are:</P>
+<UL>
+<LI>Jean-Francois Nadeau's<A href="http://jixen.tripod.com/"> practical
+ configurations</A> document</LI>
+<LI>Jens Zerbst's HowTo on<A href="http://dynipsec.tripod.com/"> Using
+ FreeS/WAN with dynamic IP addresses</A>.</LI>
+<LI>an entry in Kurt Seifried's<A href="http://www.securityportal.com/lskb/kben00000013.html">
+ Linux Security Knowledge Base</A>.</LI>
+<LI>a section of David Ranch's<A href="http://www.ecst.csuchico.edu/~dranch/LINUX/index-linux.html#trinityos">
+ Trinity OS Guide</A></LI>
+<LI>a section in David Bander's book<A href="biblio.html#bander"> Linux
+ Security Toolkit</A></LI>
+</UL>
+<P>User-wriiten HowTo material may be<STRONG> especially helpful if you
+ need to interoperate with another IPsec implementation</STRONG>. We
+ have neither the equipment nor the manpower to test such
+ configurations. Users seem to be doing an admirable job of filling the
+ gaps.</P>
+<UL>
+<LI>list of user-written<A href="interop.html#otherpub"> interoperation
+ HowTos</A> in our interop document</LI>
+</UL>
+<P>Check what version of FreeS/WAN user-written documents cover. The
+ software is under active development and the current version may be
+ significantly different from what an older document describes.</P>
+<H3><A name="applied">Papers on FreeS/WAN</A></H3>
+<P>Two design documents show team thinking on new developments:</P>
+<UL>
+<LI><A href="opportunism.spec">Opportunistic Encryption</A> by technical
+ lead Henry Spencer and Pluto programmer Hugh Redelemeier</LI>
+<LI>discussion of<A href="http://www.sandelman.ottawa.on.ca/SSW/freeswan/klips2req/">
+ KLIPS redesign</A></LI>
+</UL>
+<P>Both documents are works in progress and are frequently revised. For
+ the latest version, see the<A href="mail.html#lists"> design mailing
+ list</A>. Comments should go to that list.</P>
+<P>There is now an<A href="http://www.ietf.org/internet-drafts/draft-richardson-ipsec-opportunistic-06.txt">
+ Internet Draft on Opportunistic Encryption</A> by Michael Richardson,
+ Hugh Redelmeier and Henry Spencer. This is a first step toward getting
+ the protocol standardised so there can be multiple implementations of
+ it. Discussion of it takes place on the<A href="http://www.ietf.org/html.charters/ipsec-charter.html">
+ IETF IPsec Working Group</A> mailing list.</P>
+<P>A number of papers giving further background on FreeS/WAN, or
+ exploring its future or its applications, are also available:</P>
+<UL>
+<LI>Both Henry and Richard gave talks on FreeS/WAN at the 2000<A href="http://www.linuxsymposium.org">
+ Ottawa Linux Symposium</A>.
+<UL>
+<LI>Richard's<A href="http://www.conscoop.ottawa.on.ca/rgb/freeswan/ols2k/">
+ slides</A></LI>
+<LI>Henry's paper</LI>
+<LI>MP3 audio of their talks is available from the<A href="http://www.linuxsymposium.org/">
+ conference page</A></LI>
+</UL>
+</LI>
+<LI><CITE>Moat: A Virtual Private Network Appliances and Services
+ Platform</CITE> is a paper about large-scale (a few 100 links) use of
+ FreeS/WAN in a production application at AT&amp;T Research. It is available
+ in Postscript or PDF from co-author Steve Bellovin's<A href="http://www.research.att.com/~smb/papers/index.html">
+ papers list page</A>.</LI>
+<LI>One of the Moat co-authors, John Denker, has also written
+<UL>
+<LI>a<A href="http://www.av8n.com/vpn/ipsec+routing.htm"> proposal</A>
+ for how future versions of FreeS/WAN might interact with routing
+ protocols</LI>
+<LI>a<A href="http://www.av8n.com/vpn/wishlist.htm"> wishlist</A> of
+ possible new features</LI>
+</UL>
+</LI>
+<LI>Bart Trojanowski's web page has a draft design for<A href="http://www.jukie.net/~bart/linux-ipsec/">
+ hardware acceleration</A> of FreeS/WAN</LI>
+</UL>
+<P>Several of these provoked interesting discussions on the mailing
+ lists, worth searching for in the<A href="mail.html#archive"> archives</A>
+.</P>
+<P>There are also several papers in languages other than English, see
+ our<A href="web.html#otherlang"> web links</A>.</P>
+<H3><A name="licensing">License and copyright information</A></H3>
+<P>All code and documentation written for this project is distributed
+ under either the GNU General Public License (<A href="glossary.html#GPL">
+GPL</A>) or the GNU Library General Public License. For details see the
+ COPYING file in the distribution.</P>
+<P>Not all code in the distribution is ours, however. See the CREDITS
+ file for details. In particular, note that the<A href="glossary.html#LIBDES">
+ Libdes</A> library and the version of<A href="glossary.html#MD5"> MD5</A>
+ that we use each have their own license.</P>
+<H2><A name="sites">Distribution sites</A></H2>
+<P>FreeS/WAN is available from a number of sites.</P>
+<H3><A NAME="1_5_1">Primary site</A></H3>
+<P>Our primary site, is at xs4all (Thanks, folks!) in Holland:</P>
+<UL>
+<LI><A href="http://www.xs4all.nl/~freeswan">HTTP</A></LI>
+<LI><A href="ftp://ftp.xs4all.nl/pub/crypto/freeswan">FTP</A></LI>
+</UL>
+<H3><A name="mirrors">Mirrors</A></H3>
+<P>There are also mirror sites all over the world:</P>
+<UL>
+<LI><A href="http://www.flora.org/freeswan">Eastern Canada</A> (limited
+ resouces)</LI>
+<LI><A href="ftp://ludwig.doculink.com/pub/freeswan/">Eastern Canada</A>
+ (has older versions too)</LI>
+<LI><A href="ftp://ntsc.notBSD.org/pub/crypto/freeswan/">Eastern Canada</A>
+ (has older versions too)</LI>
+<LI><A href="ftp://ftp.kame.net/pub/freeswan/">Japan</A></LI>
+<LI><A href="ftp://ftp.futuredynamics.com/freecrypto/FreeSWAN/">Hong
+ Kong</A></LI>
+<LI><A href="ftp://ipsec.dk/pub/freeswan/">Denmark</A></LI>
+<LI><A href="ftp://ftp.net.lut.ac.uk/freeswan">the UK</A></LI>
+<LI><A href="http://storm.alert.sk/comp/mirrors/freeswan/">Slovak
+ Republic</A></LI>
+<LI><A href="http://the.wiretapped.net/security/vpn-tunnelling/freeswan/">
+Australia</A></LI>
+<LI><A href="http://freeswan.technolust.cx/">technolust</A></LI>
+<LI><A href="http://freeswan.devguide.de/">Germany</A></LI>
+<LI>Ivan Moore's<A href="http://snowcrash.tdyc.com/freeswan/"> site</A></LI>
+<LI>the<A href="http://www.cryptoarchive.net/"> Crypto Archive</A> on
+ the<A href="http://www.securityportal.com/"> Security Portal</A> site</LI>
+<LI><A href="http://www.wiretapped.net/">Wiretapped.net</A> in Australia</LI>
+</UL>
+<P>Thanks to those folks as well.</P>
+<H3><A name="munitions">The &quot;munitions&quot; archive of Linux crypto software</A>
+</H3>
+<P>There is also an archive of Linux crypto software called &quot;munitions&quot;,
+ with its own mirrors in a number of countries. It includes FreeS/WAN,
+ though not always the latest version. Some of its sites are:</P>
+<UL>
+<LI><A href="http://munitions.vipul.net/">Germany</A></LI>
+<LI><A href="http://munitions.iglu.cjb.net/">Italy</A></LI>
+<LI><A href="http://munitions2.xs4all.nl/">Netherlands</A></LI>
+</UL>
+<P>Any of those will have a list of other &quot;munitions&quot; mirrors. There is
+ also a CD available.</P>
+<H2><A NAME="1_6">Links to other sections</A></H2>
+<P>For more detailed background information, see:</P>
+<UL>
+<LI><A href="politics.html#politics">history and politics</A> of
+ cryptography</LI>
+<LI><A href="ipsec.html#ipsec.detail">IPsec protocols</A></LI>
+</UL>
+<P>To begin working with FreeS/WAN, go to our<A href="quickstart.html#quick.guide">
+ quickstart</A> guide.</P>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="upgrading.html">Next</A>
+</BODY>
+</HTML>

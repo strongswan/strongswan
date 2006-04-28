@@ -1,0 +1,147 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_RANBITS</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_RANBITS</H1>
+Section: Maintenance Commands (8)<BR>Updated: 22 Aug 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec ranbits - generate random bits in ASCII form
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>ranbits</B>
+
+[
+<B>--quick</B>
+
+] [
+<B>--continuous</B>
+
+] [
+<B>--bytes</B>
+
+] nbits
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Ranbits</I>
+
+obtains
+<I>nbits</I>
+
+(rounded up to the nearest byte)
+high-quality random bits from
+<I><A HREF="random.4.html">random</A></I>(4),
+
+and emits them on standard output as an ASCII string.
+The default output format is
+<I><A HREF="datatot.3.html">datatot</A></I>(3)
+
+<B>h</B>
+
+format:
+lowercase hexadecimal with a
+<B>0x</B>
+
+prefix and an underscore every 32 bits.
+<P>
+
+The
+<B>--quick</B>
+
+option produces quick-and-dirty random bits:
+instead of using the high-quality random bits from
+<I>/dev/random</I>,
+
+which may take some time to supply the necessary bits if
+<I>nbits</I>
+
+is large,
+<I>ranbits</I>
+
+uses
+<I>/dev/urandom</I>,
+
+which yields prompt results but lower-quality randomness.
+<P>
+
+The
+<B>--continuous</B>
+
+option uses
+<I><A HREF="datatot.3.html">datatot</A></I>(3)
+
+<B>x</B>
+
+output format, like
+<B>h</B>
+
+but without the underscores.
+<P>
+
+The
+<B>--bytes</B>
+
+option causes
+<I>nbits</I>
+
+to be interpreted as a byte count rather than a bit count.
+<A NAME="lbAE">&nbsp;</A>
+<H2>FILES</H2>
+
+/dev/random, /dev/urandom
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec_datatot.3.html">ipsec_datatot</A>(3), <A HREF="random.4.html">random</A>(4)
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org">http://www.freeswan.org</A>&gt;
+by Henry Spencer.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+There is an internal limit on
+<I>nbits</I>,
+
+currently 20000.
+<P>
+
+Without
+<B>--quick</B>,
+
+<I>ranbits</I>'s
+
+run time is difficult to predict.
+A request for a large number of bits,
+at a time when the system's entropy pool is low on randomness,
+may take quite a while to satisfy.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">FILES</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

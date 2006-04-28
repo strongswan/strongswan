@@ -1,0 +1,767 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="manpages.html">Previous</A>
+<A HREF="trouble.html">Next</A>
+<HR>
+<H1><A name="firewall">FreeS/WAN and firewalls</A></H1>
+<P>FreeS/WAN, or other IPsec implementations, frequently run on gateway
+ machines, the same machines running firewall or packet filtering code.
+ This document discusses the relation between the two.</P>
+<P>The firewall code in 2.4 and later kernels is called Netfilter. The
+ user-space utility to manage a firewall is iptables(8). See the<A href="http://netfilter.samba.org">
+ netfilter/iptables web site</A> for details.</P>
+<H2><A name="filters">Filtering rules for IPsec packets</A></H2>
+<P>The basic constraint is that<STRONG> an IPsec gateway must have
+ packet filters that allow IPsec packets</STRONG>, at least when talking
+ to other IPsec gateways:</P>
+<UL>
+<LI>UDP port 500 for<A href="glossary.html#IKE"> IKE</A> negotiations</LI>
+<LI>protocol 50 if you use<A href="glossary.html#ESP"> ESP</A>
+ encryption and/or authentication (the typical case)</LI>
+<LI>protocol 51 if you use<A href="glossary.html#AH"> AH</A>
+ packet-level authentication</LI>
+</UL>
+<P>Your gateway and the other IPsec gateways it communicates with must
+ be able to exchange these packets for IPsec to work. Firewall rules
+ must allow UDP 500 and at least one of<A href="glossary.html#AH"> AH</A>
+ or<A href="glossary.html#ESP"> ESP</A> on the interface that
+ communicates with the other gateway.</P>
+<P>For nearly all FreeS/WAN applications, you must allow UDP port 500
+ and the ESP protocol.</P>
+<P>There are two ways to set this up:</P>
+<DL>
+<DT>easier but less flexible</DT>
+<DD>Just set up your firewall scripts at boot time to allow IPsec
+ packets to and from your gateway. Let FreeS/WAN reject any bogus
+ packets.</DD>
+<DT>more work, giving you more precise control</DT>
+<DD>Have the<A href="manpage.d/ipsec_pluto.8.html"> ipsec_pluto(8)</A>
+ daemon call scripts to adjust firewall rules dynamically as required.
+ This is done by naming the scripts in the<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A> variables<VAR> prepluto=</VAR>,<VAR> postpluto=</VAR>
+,<VAR> leftupdown=</VAR> and<VAR> rightupdown=</VAR>.</DD>
+</DL>
+<P>Both methods are described in more detail below.</P>
+<H2><A name="examplefw">Firewall configuration at boot</A></H2>
+<P>It is possible to set up both firewalling and IPsec with appropriate
+ scripts at boot and then not use<VAR> leftupdown=</VAR> and<VAR>
+ rightupdown=</VAR>, or use them only for simple up and down operations.</P>
+<P>Basically, the technique is</P>
+<UL>
+<LI>allow IPsec packets (typically, IKE on UDP port 500 plus ESP,
+ protocol 50)
+<UL>
+<LI>incoming, if the destination address is your gateway (and
+ optionally, only from known senders)</LI>
+<LI>outgoing, with the from address of your gateway (and optionally,
+ only to known receivers)</LI>
+</UL>
+</LI>
+<LI>let<A href="glossary.html#Pluto"> Pluto</A> deal with IKE</LI>
+<LI>let<A href="glossary.html#KLIPS"> KLIPS</A> deal with ESP</LI>
+</UL>
+<P>Since Pluto authenticates its partners during the negotiation, and
+ KLIPS drops packets for which no tunnel has been negotiated, this may
+ be all you need.</P>
+<H3><A name="simple.rules">A simple set of rules</A></H3>
+<P>In simple cases, you need only a few rules, as in this example:</P>
+<PRE># allow IPsec
+#
+# IKE negotiations
+iptables -I INPUT  -p udp --sport 500 --dport 500 -j ACCEPT
+iptables -I OUTPUT -p udp --sport 500 --dport 500 -j ACCEPT
+# ESP encryption and authentication
+iptables -I INPUT  -p 50 -j ACCEPT
+iptables -I OUTPUT -p 50 -j ACCEPT
+</PRE>
+<P>This should be all you need to allow IPsec through<VAR> lokkit</VAR>,
+ which ships with Red Hat 9, on its medium security setting. Once you've
+ tweaked to your satisfaction, save your active rule set with:</P>
+<PRE>service iptables save</PRE>
+<H3><A name="complex.rules">Other rules</A></H3>
+ You can add additional rules, or modify existing ones, to work with
+ IPsec and with your network and policies. We give a some examples in
+ this section.
+<P>However, while it is certainly possible to create an elaborate set of
+ rules yourself (please let us know via the<A href="mail.html"> mailing
+ list</A> if you do), it may be both easier and more secure to use a set
+ which has already been published and tested.</P>
+<P>The published rule sets we know of are described in the<A href="#rules.pub">
+ next section</A>.</P>
+<H4>Adding additional rules</H4>
+ If necessary, you can add additional rules to:
+<DL>
+<DT>reject IPsec packets that are not to or from known gateways</DT>
+<DD>This possibility is discussed in more detail<A href="#unknowngate">
+ later</A></DD>
+<DT>allow systems behind your gateway to build IPsec tunnels that pass
+ through the gateway</DT>
+<DD>This possibility is discussed in more detail<A href="#through">
+ later</A></DD>
+<DT>filter incoming packets emerging from KLIPS.</DT>
+<DD>Firewall rules can recognise packets emerging from IPsec. They are
+ marked as arriving on an interface such as<VAR> ipsec0</VAR>, rather
+ than<VAR> eth0</VAR>,<VAR> ppp0</VAR> or whatever.</DD>
+</DL>
+<P>It is therefore reasonably straightforward to filter these packets in
+ whatever way suits your situation.</P>
+<H4>Modifying existing rules</H4>
+<P>In some cases rules that work fine before you add IPsec may require
+ modification to work with IPsec.</P>
+<P>This is especially likely for rules that deal with interfaces on the
+ Internet side of your system. IPsec adds a new interface; often the
+ rules must change to take account of that.</P>
+<P>For example, consider the rules given in<A href="http://www.netfilter.org/documentation/HOWTO//packet-filtering-HOWTO-5.html">
+ this section</A> of the Netfilter documentation:</P>
+<PRE>Most people just have a single PPP connection to the Internet, and don't
+want anyone coming back into their network, or the firewall:
+
+    ## Insert connection-tracking modules (not needed if built into kernel).
+    # insmod ip_conntrack
+    # insmod ip_conntrack_ftp
+
+    ## Create chain which blocks new connections, except if coming from inside.
+    # iptables -N block
+    # iptables -A block -m state --state ESTABLISHED,RELATED -j ACCEPT
+    # iptables -A block -m state --state NEW -i ! ppp0 -j ACCEPT
+    # iptables -A block -j DROP
+
+    ## Jump to that chain from INPUT and FORWARD chains.
+    # iptables -A INPUT -j block
+    # iptables -A FORWARD -j block</PRE>
+<P>On an IPsec gateway, those rules may need to be modified. The above
+ allows new connections from<EM> anywhere except ppp0</EM>. That means
+ new connections from ipsec0 are allowed.</P>
+<P>Do you want to allow anyone who can establish an IPsec connection to
+ your gateway to initiate TCP connections to any service on your
+ network? Almost certainly not if you are using opportunistic
+ encryption. Quite possibly not even if you have only explicitly
+ configured connections.</P>
+<P>To disallow incoming connections from ipsec0, change the middle
+ section above to:</P>
+<PRE>    ## Create chain which blocks new connections, except if coming from inside.
+    # iptables -N block
+    # iptables -A block -m state --state ESTABLISHED,RELATED -j ACCEPT
+    # iptables -A block -m state --state NEW -i ppp+ -j DROP
+    # iptables -A block -m state --state NEW -i ipsec+ -j DROP
+    # iptables -A block -m state --state NEW -i -j ACCEPT
+    # iptables -A block -j DROP</PRE>
+<P>The original rules accepted NEW connections from anywhere except
+ ppp0. This version drops NEW connections from any PPP interface (ppp+)
+ and from any ipsec interface (ipsec+), then accepts the survivors.</P>
+<P>Of course, these are only examples. You will need to adapt them to
+ your own situation.</P>
+<H3><A name="rules.pub">Published rule sets</A></H3>
+<P>Several sets of firewall rules that work with FreeS/WAN are
+ available.</P>
+<H4><A name="Ranch.trinity">Scripts based on Ranch's work</A></H4>
+<P>One user, Rob Hutton, posted his boot time scripts to the mailing
+ list, and we included them in previous versions of this documentation.
+ They are still available from our<A href="http://www.freeswan.org/freeswan_trees/freeswan-1.5/doc/firewall.html#examplefw">
+ web site</A>. However, they were for an earlier FreeS/WAN version so we
+ no longer recommend them. Also, they had some bugs. See this<A href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2000/04/msg00316.html">
+ message</A>.</P>
+<P>Those scripts were based on David Ranch's scripts for his &quot;Trinity
+ OS&quot; for setting up a secure Linux. Check his<A href="http://www.ecst.csuchico.edu/~dranch/LINUX/index-linux.html">
+ home page</A> for the latest version and for information on his<A href="biblio.html#ranch">
+ book</A> on securing Linux. If you are going to base your firewalling
+ on Ranch's scripts, we recommend using his latest version, and sending
+ him any IPsec modifications you make for incorporation into later
+ versions.</P>
+<H4><A name="seawall">The Seattle firewall</A></H4>
+<P>We have had several mailing lists reports of good results using
+ FreeS/WAN with Seawall (the Seattle Firewall). See that project's<A href="http://seawall.sourceforge.net/">
+ home page</A> on Sourceforge.</P>
+<H4><A name="rcf">The RCF scripts</A></H4>
+<P>Another set of firewall scripts with IPsec support are the RCF or
+ rc.firewall scripts. See their<A href="http://jsmoriss.mvlan.net/linux/rcf.html">
+ home page</A>.</P>
+<H4><A name="asgard">Asgard scripts</A></H4>
+<P><A href="http://heimdall.asgardsrealm.net/linux/firewall/">Asgard's
+ Realm</A> has set of firewall scripts with FreeS/WAN support, for 2.4
+ kernels and iptables.</P>
+<H4><A name="user.scripts">User scripts from the mailing list</A></H4>
+<P>One user gave considerable detail on his scripts, including
+ supporting<A href="glossary.html#IPX"> IPX</A> through the tunnel. His
+ message was too long to conveniently be quoted here, so I've put it in
+ a<A href="user_examples.html"> separate file</A>.</P>
+<H2><A name="updown">Calling firewall scripts, named in ipsec.conf(5)</A>
+</H2>
+<P>The<A href="manpage.d/ipsec.conf.5.html"> ipsec.conf(5)</A>
+ configuration file has three pairs of parameters used to specify an
+ interface between FreeS/WAN and firewalling code.</P>
+<P>Note that using these is not required if you have a static firewall
+ setup. In that case, you just set your firewall up at boot time (in a
+ way that permits the IPsec connections you want) and do not change it
+ thereafter. Omit all the FreeS/WAN firewall parameters and FreeS/WAN
+ will not attempt to adjust firewall rules at all. See<A href="#examplefw">
+ above</A> for some information on appropriate scripts.</P>
+<P>However, if you want your firewall rules to change when IPsec
+ connections change, then you need to use these parameters.</P>
+<H3><A name="pre_post">Scripts called at IPsec start and stop</A></H3>
+<P>One pair of parmeters are set in the<VAR> config setup</VAR> section
+ of the<A href="manpage.d/ipsec.conf.5.html"> ipsec.conf(5)</A> file and
+ affect all connections:</P>
+<DL>
+<DT>prepluto=</DT>
+<DD>script to be called before<A href="manpage.d/ipsec_pluto.8.html">
+ pluto(8)</A> IKE daemon is started.</DD>
+<DT>postpluto=</DT>
+<DD>script to be called after<A href="manpage.d/ipsec_pluto.8.html">
+ pluto(8)</A> IKE daemon is stopped.</DD>
+</DL>
+ These parameters allow you to change firewall parameters whenever IPsec
+ is started or stopped.
+<P>They can also be used in other ways. For example, you might have<VAR>
+ prepluto</VAR> add a module to your kernel for the secure network
+ interface or make a dialup connection, and then have<VAR> postpluto</VAR>
+ remove the module or take the connection down.</P>
+<H3><A name="up_down">Scripts called at connection up and down</A></H3>
+<P>The other parameters are set in connection descriptions. They can be
+ set in individual connection descriptions, and could even call
+ different scripts for each connection for maximum flexibility. In most
+ applications, however, it makes sense to use only one script and to
+ call it from<VAR> conn %default</VAR> section so that it applies to all
+ connections.</P>
+<P>You can:</P>
+<DL>
+<DT><STRONG>either</STRONG></DT>
+<DD>set<VAR> leftfirewall=yes</VAR> or<VAR> rightfirewall=yes</VAR> to
+ use our supplied default script</DD>
+<DT><STRONG>or</STRONG></DT>
+<DD>assign a name in a<VAR> leftupdown=</VAR> or<VAR> rightupdown=</VAR>
+ line to use your own script</DD>
+</DL>
+<P>Note that<STRONG> only one of these should be used</STRONG>. You
+ cannot sensibly use both. Since<STRONG> our default script is obsolete</STRONG>
+ (designed for firewalls using<VAR> ipfwadm(8)</VAR> on 2.0 kernels),
+ most users who need this service will<STRONG> need to write a custom
+ script</STRONG>.</P>
+<H4><A name="fw.default">The default script</A></H4>
+<P>We supply a default script named<VAR> _updown</VAR>.</P>
+<DL>
+<DT>leftfirewall=</DT>
+<DD></DD>
+<DT>rightfirewall=</DT>
+<DD>indicates that the gateway is doing firewalling and that<A href="manpage.d/ipsec_pluto.8.html">
+ pluto(8)</A> should poke holes in the firewall as required.</DD>
+</DL>
+<P>Set these to<VAR> yes</VAR> and Pluto will call our default script<VAR>
+ _updown</VAR> with appropriate arguments whenever it:</P>
+<UL>
+<LI>starts or stops IPsec services</LI>
+<LI>brings a connection up or down</LI>
+</UL>
+<P>The supplied default<VAR> _updown</VAR> script is appropriate for
+ simple cases using the<VAR> ipfwadm(8)</VAR> firewalling package.</P>
+<H4><A name="userscript">User-written scripts</A></H4>
+<P>You can also write your own script and have Pluto call it. Just put
+ the script's name in one of these<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A> lines:</P>
+<DL>
+<DT>leftupdown=</DT>
+<DD></DD>
+<DT>rightupdown=</DT>
+<DD>specifies a script to call instead of our default script<VAR>
+ _updown</VAR>.</DD>
+</DL>
+<P>Your script should take the same arguments and use the same
+ environment variables as<VAR> _updown</VAR>. See the &quot;updown command&quot;
+ section of the<A href="manpage.d/ipsec_pluto.8.html"> ipsec_pluto(8)</A>
+ man page for details.</P>
+<P>Note that<STRONG> you should not modify our _updown script in place</STRONG>
+. If you did that, then upgraded FreeS/WAN, the upgrade would install a
+ new default script, overwriting your changes.</P>
+<H3><A name="ipchains.script">Scripts for ipchains or iptables</A></H3>
+<P>Our<VAR> _updown</VAR> is for firewalls using<VAR> ipfwadm(8)</VAR>,
+ the firewall code for the 2.0 series of Linux kernels. If you are using
+ the more recent packages<VAR> ipchains(8)</VAR> (for 2.2 kernels) or<VAR>
+ iptables(8)</VAR> (2.4 kernels), then you must do one of:</P>
+<UL>
+<LI>use static firewall rules which are set up at boot time as described<A
+href="#examplefw"> above</A> and do not need to be changed by Pluto</LI>
+<LI>limit yourself to ipchains(8)'s ipfwadm(8) emulation mode in order
+ to use our script</LI>
+<LI>write your own script and call it with<VAR> leftupdown</VAR> and<VAR>
+ rightupdown</VAR>.</LI>
+</UL>
+<P>You can write a script to do whatever you need with firewalling.
+ Specify its name in a<VAR> [left|right]updown=</VAR> parameter in<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A> and Pluto will automatically call it for you.</P>
+<P>The arguments Pluto passes such a script are the same ones it passes
+ to our default _updown script, so the best way to build yours is to
+ copy ours and modify the copy.</P>
+<P>Note, however, that<STRONG> you should not modify our _updown script
+ in place</STRONG>. If you did that, then upgraded FreeS/WAN, the
+ upgrade would install a new default script, overwriting your changes.</P>
+<H2><A name="NAT">A complication: IPsec vs. NAT</A></H2>
+<P><A href="glossary.html#NAT.gloss">Network Address Translation</A>,
+ also known as IP masquerading, is a method of allocating IP addresses
+ dynamically, typically in circumstances where the total number of
+ machines which need to access the Internet exceeds the supply of IP
+ addresses.</P>
+<P>Any attempt to perform NAT operations on IPsec packets<EM> between
+ the IPsec gateways</EM> creates a basic conflict:</P>
+<UL>
+<LI>IPsec wants to authenticate packets and ensure they are unaltered on
+ a gateway-to-gateway basis</LI>
+<LI>NAT rewrites packet headers as they go by</LI>
+<LI>IPsec authentication fails if packets are rewritten anywhere between
+ the IPsec gateways</LI>
+</UL>
+<P>For<A href="glossary.html#AH"> AH</A>, which authenticates parts of
+ the packet header including source and destination IP addresses, this
+ is fatal. If NAT changes those fields, AH authentication fails.</P>
+<P>For<A href="glossary.html#IKE"> IKE</A> and<A href="glossary.html#ESP">
+ ESP</A> it is not necessarily fatal, but is certainly an unwelcome
+ complication.</P>
+<H3><A name="nat_ok">NAT on or behind the IPsec gateway works</A></H3>
+<P>This problem can be avoided by having the masquerading take place<EM>
+ on or behind</EM> the IPsec gateway.</P>
+<P>This can be done physically with two machines, one physically behind
+ the other. A picture, using SG to indicate IPsec<STRONG> S</STRONG>
+ecurity<STRONG> G</STRONG>ateways, is:</P>
+<PRE>      clients --- NAT ----- SG ---------- SG
+                  two machines</PRE>
+<P>In this configuration, the actual client addresses need not be given
+ in the<VAR> leftsubnet=</VAR> parameter of the FreeS/WAN connection
+ description. The security gateway just delivers packets to the NAT box;
+ it needs only that machine's address. What that machine does with them
+ does not affect FreeS/WAN.</P>
+<P>A more common setup has one machine performing both functions:</P>
+<PRE>      clients ----- NAT/SG ---------------SG
+                  one machine</PRE>
+<P>Here you have a choice of techniques depending on whether you want to
+ make your client subnet visible to clients on the other end:</P>
+<UL>
+<LI>If you want the single gateway to behave like the two shown above,
+ with your clients hidden behind the NAT, then omit the<VAR> leftsubnet=</VAR>
+ parameter. It then defaults to the gateway address. Clients on the
+ other end then talk via the tunnel only to your gateway. The gateway
+ takes packets emerging from the tunnel, applies normal masquerading,
+ and forwards them to clients.</LI>
+<LI>If you want to make your client machines visible, then give the
+ client subnet addresses as the<VAR> leftsubnet=</VAR> parameter in the
+ connection description and
+<DL>
+<DT>either</DT>
+<DD>set<VAR> leftfirewall=yes</VAR> to use the default<VAR> updown</VAR>
+ script</DD>
+<DT>or</DT>
+<DD>use your own script by giving its name in a<VAR> leftupdown=</VAR>
+ parameter</DD>
+</DL>
+ These scripts are described in their own<A href="#updown"> section</A>.
+<P>In this case, no masquerading is done. Packets to or from the client
+ subnet are encrypted or decrypted without any change to their client
+ subnet addresses, although of course the encapsulating packets use
+ gateway addresses in their headers. Clients behind the right security
+ gateway see a route via that gateway to the left subnet.</P>
+</LI>
+</UL>
+<H3><A name="nat_bad">NAT between gateways is problematic</A></H3>
+<P>We recommend not trying to build IPsec connections which pass through
+ a NAT machine. This setup poses problems:</P>
+<PRE>      clients --- SG --- NAT ---------- SG</PRE>
+<P>If you must try it, some references are:</P>
+<UL>
+<LI>Jean_Francois Nadeau's document on doing<A href="http://jixen.tripod.com/#NATed gateways">
+ IPsec behind NAT</A></LI>
+<LI><A href="web.html#VPN.masq">VPN masquerade patches</A> to make a
+ Linux NAT box handle IPsec packets correctly</LI>
+</UL>
+<H3><A name="NAT.ref">Other references on NAT and IPsec</A></H3>
+<P>Other documents which may be relevant include:</P>
+<UL>
+<LI>an Internet Draft on<A href="http://search.ietf.org/internet-drafts/draft-aboba-nat-ipsec-04.txt">
+ IPsec and NAT</A> which may eventually evolve into a standard solution
+ for this problem.</LI>
+<LI>an informational<A href="http://www.cis.ohio-state.edu/rfc/rfc2709.txt">
+ RFC</A>,<CITE> Security Model with Tunnel-mode IPsec for NAT Domains</CITE>
+.</LI>
+<LI>an<A href="http://www.cisco.com/warp/public/759/ipj_3-4/ipj_3-4_nat.html">
+ article</A> in Cisco's<CITE> Internet Protocol Journal</CITE></LI>
+</UL>
+<H2><A name="complications">Other complications</A></H2>
+<P>Of course simply allowing UDP 500 and ESP packets is not the whole
+ story. Various other issues arise in making IPsec and packet filters
+ co-exist and even co-operate. Some of them are summarised below.</P>
+<H3><A name="through">IPsec<EM> through</EM></A> the gateway</H3>
+<P>Basic IPsec packet filtering rules deal only with packets addressed
+ to or sent from your IPsec gateway.</P>
+<P>It is a separate policy decision whether to permit such packets to
+ pass through the gateway so that client machines can build end-to-end
+ IPsec tunnels of their own. This may not be practical if you are using<A
+href="#NAT"> NAT (IP masquerade)</A> on your gateway, and may conflict
+ with some corporate security policies.</P>
+<P>Where possible, allowing this is almost certainly a good idea. Using
+ IPsec on an end-to-end basis is more secure than gateway-to-gateway.</P>
+<P>Doing it is quite simple. You just need firewall rules that allow UDP
+ port 500 and protocols 50 and 51 to pass through your gateway. If you
+ wish, you can of course restrict this to certain hosts.</P>
+<H3><A name="ipsec_only">Preventing non-IPsec traffic</A></H3>
+ You can also filter<EM> everything but</EM> UDP port 500 and ESP or AH
+ to restrict traffic to IPsec only, either for anyone communicating with
+ your host or just for specific partners.
+<P>One application of this is for the telecommuter who might have:</P>
+<PRE>     Sunset==========West------------------East ================= firewall --- the Internet
+         home network      untrusted net        corporate network</PRE>
+<P>The subnet on the right is 0.0.0.0/0, the whole Internet. The West
+ gateway is set up so that it allows only IPsec packets to East in or
+ out.</P>
+<P>This configuration is used in AT&amp;T Research's network. For details,
+ see the<A href="intro.html#applied"> papers</A> links in our
+ introduction.</P>
+<P>Another application would be to set up firewall rules so that an
+ internal machine, such as an employees-only web server, could not talk
+ to the outside world except via specific IPsec tunnels.</P>
+<H3><A name="unknowngate">Filtering packets from unknown gateways</A></H3>
+<P>It is possible to use firewall rules to restrict UDP 500, ESP and AH
+ packets so that these packets are accepted only from known gateways.
+ This is not strictly necessary since FreeS/WAN will discard packets
+ from unknown gateways. You might, however, want to do it for any of a
+ number of reasons. For example:</P>
+<UL>
+<LI>Arguably, &quot;belt and suspenders&quot; is the sensible approach to
+ security. If you can block a potential attack in two ways, use both.
+ The only question is whether to look for a third way after implementing
+ the first two.</LI>
+<LI>Some admins may prefer to use the firewall code this way because
+ they prefer firewall logging to FreeS/WAN's logging.</LI>
+<LI>You may need it to implement your security policy. Consider an
+ employee working at home, and a policy that says traffic from the home
+ system to the Internet at large must go first via IPsec to the
+ corporate LAN and then out to the Internet via the corporate firewall.
+ One way to do that is to make<VAR> ipsec0</VAR> the default route on
+ the home gateway and provide exceptions only for UDP 500 and ESP to the
+ corporate gateway. Everything else is then routed via the tunnel to the
+ corporate gateway.</LI>
+</UL>
+<P>It is not possible to use only static firewall rules for this
+ filtering if you do not know the other gateways' IP addresses in
+ advance, for example if you have &quot;road warriors&quot; who may connect from a
+ different address each time or if want to do<A href="glossary.html#carpediem">
+ opportunistic encryption</A> to arbitrary gateways. In these cases, you
+ can accept UDP 500 IKE packets from anywhere, then use the<A href="#updown">
+ updown</A> script feature of<A href="manpage.d/ipsec_pluto.8.html">
+ pluto(8)</A> to dynamically adjust firewalling for each negotiated
+ tunnel.</P>
+<P>Firewall packet filtering does not much reduce the risk of a<A href="glossary.html#DOS">
+ denial of service attack</A> on FreeS/WAN. The firewall can drop
+ packets from unknown gateways, but KLIPS does that quite efficiently
+ anyway, so you gain little. The firewall cannot drop otherwise
+ legitmate packets that fail KLIPS authentication, so it cannot protect
+ against an attack designed to exhaust resources by making FreeS/WAN
+ perform many expensive authentication operations.</P>
+<P>In summary, firewall filtering of IPsec packets from unknown gateways
+ is possible but not strictly necessary.</P>
+<H2><A name="otherfilter">Other packet filters</A></H2>
+<P>When the IPsec gateway is also acting as your firewall, other packet
+ filtering rules will be in play. In general, those are outside the
+ scope of this document. See our<A href="web.html#firewall.linux"> Linux
+ firewall links</A> for information. There are a few types of packet,
+ however, which can affect the operation of FreeS/WAN or of diagnostic
+ tools commonly used with it. These are discussed below.</P>
+<H3><A name="ICMP">ICMP filtering</A></H3>
+<P><A href="glossary.html#ICMP.gloss">ICMP</A> is the<STRONG> I</STRONG>
+nternet<STRONG> C</STRONG>ontrol<STRONG> M</STRONG>essage<STRONG> P</STRONG>
+rotocol. It is used for messages between IP implementations themselves,
+ whereas IP used is used between the clients of those implementations.
+ ICMP is, unsurprisingly, used for control messages. For example, it is
+ used to notify a sender that a desination is not reachable, or to tell
+ a router to reroute certain packets elsewhere.</P>
+<P>ICMP handling is tricky for firewalls.</P>
+<UL>
+<LI>You definitely want some ICMP messages to get through; things won't
+ work without them. For example, your clients need to know if some
+ destination they ask for is unreachable.</LI>
+<LI>On the other hand, you do equally definitely do not want untrusted
+ folk sending arbitrary control messages to your machines. Imagine what
+ someone moderately clever and moderately malicious could do to you,
+ given control of your network's routing.</LI>
+</UL>
+<P>ICMP does not use ports. Messages are distinguished by a &quot;message
+ type&quot; field and, for some types, by an additional &quot;code&quot; field. The
+ definitive list of types and codes is on the<A href="http://www.iana.org">
+ IANA</A> site.</P>
+<P>One expert uses this definition for ICMP message types to be dropped
+ at the firewall.</P>
+<PRE># ICMP types which lack socially redeeming value.
+#  5     Redirect
+#  9     Router Advertisement
+# 10     Router Selection
+# 15     Information Request
+# 16     Information Reply
+# 17     Address Mask Request
+# 18     Address Mask Reply
+
+badicmp='5 9 10 15 16 17 18'</PRE>
+<P>A more conservative approach would be to make a list of allowed types
+ and drop everything else.</P>
+<P>Whichever way you do it, your ICMP filtering rules on a FreeS/WAN
+ gateway should allow at least the following ICMP packet types:</P>
+<DL>
+<DT>echo (type 8)</DT>
+<DD></DD>
+<DT>echo reply (type 0)</DT>
+<DD>These are used by ping(1). We recommend allowing both types through
+ the tunnel and to or from your gateway's external interface, since
+ ping(1) is an essential testing tool.
+<P>It is fairly common for firewalls to drop ICMP echo packets addressed
+ to machines behind the firewall. If that is your policy, please create
+ an exception for such packets arriving via an IPsec tunnel, at least
+ during intial testing of those tunnels.</P>
+</DD>
+<DT>destination unreachable (type 3)</DT>
+<DD>This is used, with code 4 (Fragmentation Needed and Don't Fragment
+ was Set) in the code field, to control<A href="glossary.html#pathMTU">
+ path MTU discovery</A>. Since IPsec processing adds headers, enlarges
+ packets and may cause fragmentation, an IPsec gateway should be able to
+ send and receive these ICMP messages<STRONG> on both inside and outside
+ interfaces</STRONG>.</DD>
+</DL>
+<H3><A name="traceroute">UDP packets for traceroute</A></H3>
+<P>The traceroute(1) utility uses UDP port numbers from 33434 to
+ approximately 33633. Generally, these should be allowed through for
+ troubleshooting.</P>
+<P>Some firewalls drop these packets to prevent outsiders exploring the
+ protected network with traceroute(1). If that is your policy, consider
+ creating an exception for such packets arriving via an IPsec tunnel, at
+ least during intial testing of those tunnels.</P>
+<H3><A name="l2tp">UDP for L2TP</A></H3>
+<P> Windows 2000 does, and products designed for compatibility with it
+ may, build<A href="glossary.html#L2TP"> L2TP</A> tunnels over IPsec
+ connections.</P>
+<P>For this to work, you must allow UDP protocol 1701 packets coming out
+ of your tunnels to continue to their destination. You can, and probably
+ should, block such packets to or from your external interfaces, but
+ allow them from<VAR> ipsec0</VAR>.</P>
+<P>See also our Windows 2000<A href="interop.html#win2k"> interoperation
+ discussion</A>.</P>
+<H2><A name="packets">How it all works: IPsec packet details</A></H2>
+<P>IPsec uses three main types of packet:</P>
+<DL>
+<DT><A href="glossary.html#IKE">IKE</A> uses<STRONG> the UDP protocol
+ and port 500</STRONG>.</DT>
+<DD>Unless you are using only (less secure, not recommended) manual
+ keying, you need IKE to negotiate connection parameters, acceptable
+ algorithms, key sizes and key setup. IKE handles everything required to
+ set up, rekey, repair or tear down IPsec connections.</DD>
+<DT><A href="glossary.html#ESP">ESP</A> is<STRONG> protocol number 50</STRONG>
+</DT>
+<DD>This is required for encrypted connections.</DD>
+<DT><A href="glossary.html#AH">AH</A> is<STRONG> protocol number 51</STRONG>
+</DT>
+<DD>This can be used where only authentication, not encryption, is
+ required.</DD>
+</DL>
+<P>All of those packets should have appropriate IPsec gateway addresses
+ in both the to and from IP header fields. Firewall rules can check this
+ if you wish, though it is not strictly necessary. This is discussed in
+ more detail<A href="#unknowngate"> later</A>.</P>
+<P>IPsec processing of incoming packets authenticates them then removes
+ the ESP or AH header and decrypts if necessary. Successful processing
+ exposes an inner packet which is then delivered back to the firewall
+ machinery, marked as having arrived on an<VAR> ipsec[0-3]</VAR>
+ interface. Firewall rules can use that interface label to distinguish
+ these packets from unencrypted packets which are labelled with the
+ physical interface they arrived on (or perhaps with a non-IPsec virtual
+ interface such as<VAR> ppp0</VAR>).</P>
+<P>One of our users sent a mailing list message with a<A href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2000/12/msg00006.html">
+ diagram</A> of the packet flow.</P>
+<H3><A name="noport">ESP and AH do not have ports</A></H3>
+<P>Some protocols, such as TCP and UDP, have the notion of ports. Others
+ protocols, including ESP and AH, do not. Quite a few IPsec newcomers
+ have become confused on this point. There are no ports<EM> in</EM> the
+ ESP or AH protocols, and no ports used<EM> for</EM> them. For these
+ protocols,<EM> the idea of ports is completely irrelevant</EM>.</P>
+<H3><A name="header">Header layout</A></H3>
+<P>The protocol numbers for ESP or AH are used in the 'next header'
+ field of the IP header. On most non-IPsec packets, that field would
+ have one of:</P>
+<UL>
+<LI>1 for ICMP</LI>
+<LI>4 for IP-in-IP encapsulation</LI>
+<LI>6 for TCP</LI>
+<LI>17 for UDP</LI>
+<LI>... or one of about 100 other possibilities listed by<A href="http://www.iana.org">
+ IANA</A></LI>
+</UL>
+<P>Each header in the sequence tells what the next header will be. IPsec
+ adds headers for ESP or AH near the beginning of the sequence. The
+ original headers are kept and the 'next header' fields adjusted so that
+ all headers can be correctly interpreted.</P>
+<P>For example, using<STRONG> [</STRONG><STRONG> ]</STRONG> to indicate
+ data protected by ESP and unintelligible to an eavesdropper between the
+ gateways:</P>
+<UL>
+<LI>a simple packet might have only IP and TCP headers with:
+<UL>
+<LI>IP header says next header --&gt; TCP</LI>
+<LI>TCP header port number --&gt; which process to send data to</LI>
+<LI>data</LI>
+</UL>
+</LI>
+<LI>with ESP<A href="glossary.html#transport"> transport mode</A>
+ encapsulation, that packet would have:
+<UL>
+<LI>IP header says next header --&gt; ESP</LI>
+<LI>ESP header<STRONG> [</STRONG> says next --&gt; TCP</LI>
+<LI>TCP header port number --&gt; which process to send data to</LI>
+<LI>data<STRONG> ]</STRONG></LI>
+</UL>
+ Note that the IP header is outside ESP protection, visible to an
+ attacker, and that the final destination must be the gateway.</LI>
+<LI>with ESP in<A href="glossary.html#tunnel"> tunnel mode</A>, we might
+ have:
+<UL>
+<LI>IP header says next header --&gt; ESP</LI>
+<LI>ESP header<STRONG> [</STRONG> says next --&gt; IP</LI>
+<LI>IP header says next header --&gt; TCP</LI>
+<LI>TCP header port number --&gt; which process to send data to</LI>
+<LI>data<STRONG> ]</STRONG></LI>
+</UL>
+ Here the inner IP header is protected by ESP, unreadable by an
+ attacker. Also, the inner header can have a different IP address than
+ the outer IP header, so the decrypted packet can be routed from the
+ IPsec gateway to a final destination which may be another machine.</LI>
+</UL>
+<P>Part of the ESP header itself is encrypted, which is why the<STRONG>
+ [</STRONG> indicating protected data appears in the middle of some
+ lines above. The next header field of the ESP header is protected. This
+ makes<A href="glossary.html#traffic"> traffic analysis</A> more
+ difficult. The next header field would tell an eavesdropper whether
+ your packet was UDP to the gateway, TCP to the gateway, or encapsulated
+ IP. It is better not to give this information away. A clever attacker
+ may deduce some of it from the pattern of packet sizes and timings, but
+ we need not make it easy.</P>
+<P>IPsec allows various combinations of these to match local policies,
+ including combinations that use both AH and ESP headers or that nest
+ multiple copies of these headers.</P>
+<P>For example, suppose my employer has an IPsec VPN running between two
+ offices so all packets travelling between the gateways for those
+ offices are encrypted. If gateway policies allow it (The admins could
+ block UDP 500 and protocols 50 and 51 to disallow it), I can build an
+ IPsec tunnel from my desktop to a machine in some remote office. Those
+ packets will have one ESP header throughout their life, for my
+ end-to-end tunnel. For part of the route, however, they will also have
+ another ESP layer for the corporate VPN's encapsulation. The whole
+ header scheme for a packet on the Internet might be:</P>
+<UL>
+<LI>IP header (with gateway address) says next header --&gt; ESP</LI>
+<LI>ESP header<STRONG> [</STRONG> says next --&gt; IP</LI>
+<LI>IP header (with receiving machine address) says next header --&gt; ESP</LI>
+<LI>ESP header<STRONG> [</STRONG> says next --&gt; TCP</LI>
+<LI>TCP header port number --&gt; which process to send data to</LI>
+<LI>data<STRONG> ]]</STRONG></LI>
+</UL>
+<P>The first ESP (outermost) header is for the corporate VPN. The inner
+ ESP header is for the secure machine-to-machine link.</P>
+<H3><A name="dhr">DHR on the updown script</A></H3>
+<P>Here are some mailing list comments from<A href="manpage.d/ipsec_pluto.8.html">
+ pluto(8)</A> developer Hugh Redelmeier on an earlier draft of this
+ document:</P>
+<PRE>There are many important things left out
+
+- firewalling is important but must reflect (implement) policy.  Since
+  policy isn't the same for all our customers, and we're not experts,
+  we should concentrate on FW and MASQ interactions with FreeS/WAN.
+
+- we need a diagram to show packet flow WITHIN ONE MACHINE, assuming
+  IKE, IPsec, FW, and MASQ are all done on that machine.  The flow is
+  obvious if the components are run on different machines (trace the
+  cables).
+
+  IKE input:
+        + packet appears on public IF, as UDP port 500
+        + input firewalling rules are applied (may discard)
+        + Pluto sees the packet.
+
+  IKE output:
+        + Pluto generates the packet &amp; writes to public IF, UDP port 500
+        + output firewalling rules are applied (may discard)
+        + packet sent out public IF
+
+  IPsec input, with encapsulated packet, outer destination of this host:
+        + packet appears on public IF, protocol 50 or 51.  If this
+          packet is the result of decapsulation, it will appear
+          instead on the paired ipsec IF.
+        + input firewalling rules are applied (but packet is opaque)
+        + KLIPS decapsulates it, writes result to paired ipsec IF
+        + input firewalling rules are applied to resulting packet
+          as input on ipsec IF
+        + if the destination of the packet is this machine, the
+          packet is passed on to the appropriate protocol handler.
+          If the original packet was encapsulated more than once
+          and the new outer destination is this machine, that
+          handler will be KLIPS.
+        + otherwise:
+          * routing is done for the resulting packet.  This may well
+            direct it into KLIPS for encoding or encrypting.  What
+            happens then is described elsewhere.
+          * forwarding firewalling rules are applied
+          * output firewalling rules are applied
+          * the packet is sent where routing specified
+
+ IPsec input, with encapsulated packet, outer destination of another host:
+        + packet appears on some IF, protocol 50 or 51
+        + input firewalling rules are applied (but packet is opaque)
+        + routing selects where to send the packet
+        + forwarding firewalling rules are applied (but packet is opaque)
+        + packet forwarded, still encapsulated
+
+  IPsec output, from this host or from a client:
+        + if from a client, input firewalling rules are applied as the
+          packet arrives on the private IF
+        + routing directs the packet to an ipsec IF (this is how the
+          system decides KLIPS processing is required)
+        + if from a client, forwarding firewalling rules are applied
+        + KLIPS eroute mechanism matches the source and destination
+          to registered eroutes, yielding a SPI group.  This dictates
+          processing, and where the resulting packet is to be sent
+          (the destinations SG and the nexthop).
+        + output firewalling is not applied to the resulting
+          encapsulated packet
+
+- Until quite recently, KLIPS would double encapsulate packets that
+  didn't strictly need to be.  Firewalling should be prepared for
+  those packets showing up as ESP and AH protocol input packets on
+  an ipsec IF.
+
+- MASQ processing seems to be done as if it were part of the
+  forwarding firewall processing (this should be verified).
+
+- If a firewall is being used, it is likely the case that it needs to
+  be adjusted whenever IPsec SAs are added or removed.  Pluto invokes
+  a script to do this (and to adjust routing) at suitable times.  The
+  default script is only suitable for ipfwadm-managed firewalls.  Under
+  LINUX 2.2.x kernels, ipchains can be managed by ipfwadm (emulation),
+  but ipchains more powerful if manipulated using the ipchains command.
+  In this case, a custom updown script must be used.
+
+  We think that the flexibility of ipchains precludes us supplying an
+  updown script that would be widely appropriate.</PRE>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="manpages.html">Previous</A>
+<A HREF="trouble.html">Next</A>
+</BODY>
+</HTML>

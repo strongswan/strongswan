@@ -1,0 +1,149 @@
+# fairly minimal RPM spec file, does only packaging
+# Based on work by Paul Lahaie of Steamballoon.
+# This file is touched up by sed (in the Makefile) before it is actually used.
+Summary: Kernel with FreeS/WAN
+Name: freeswan
+Version: @IPSECVERSION@_@KERNELVERSION@
+Release: 0
+Copyright: GPL
+Source: freeswan-%{version}.tar.gz
+Group: System Environment/Daemons
+BuildRoot: /var/tmp/%{name}-%{PACKAGE_VERSION}-root
+%define __spec_install_post /usr/lib/rpm/brp-compress || :
+%define KernelVer @KERNELVERSIONORIG@
+Requires: ipsec-userland ipsec-kernel
+
+%package userland
+Summary: Kernel with FreeS/WAN
+Group: System Environment/Daemons
+Provides: ipsec-userland
+Requires: ipsec-kernel
+
+%package module
+Summary: FreeS/Wan kernel module
+Group:  System Environment/Kernel
+Provides: ipsec-kernel
+# do not make the dependancy circular for now.
+#Requires: ipsec-userland
+
+%description userland
+This package contains the daemons and userland tools for setting up
+FreeS/WAN on a freeswan enabled kernel.
+
+%description module
+This package contains only the ipsec module for the RedHat series of kernels.
+
+%description
+A dummy package that installs userland and kernel pieces.
+
+%prep
+
+%build
+
+%install
+
+%clean
+rm -rf ${RPM_BUILD_ROOT}
+
+%files userland
+%defattr(-,root,root)
+@PUBDIR@/ipsec
+@FINALBINDIR@/*
+@FINALLIBDIR@/*
+/etc/rc.d/init.d/ipsec
+
+%attr(0644,root,root)	%config	@FINALCONFDIR@/ipsec.conf
+%attr(0644,root,root)	%config @FINALCONFDDIR@/policies/clear
+%attr(0644,root,root)	%config @FINALCONFDDIR@/policies/private
+%attr(0644,root,root)	%config @FINALCONFDDIR@/policies/block
+%attr(0644,root,root)	%config @FINALCONFDDIR@/policies/private-or-clear
+%attr(0644,root,root)	%config @FINALCONFDDIR@/policies/clear-or-private
+
+%doc @MANTREE@/man3/*
+%doc @MANTREE@/man5/*
+%doc @MANTREE@/man8/*
+%doc @FINALEXAMPLECONFDIR@/*
+
+%files module
+%defattr (-,root,root)
+/lib/modules/%{KernelVer}/kernel/net/ipsec
+
+%pre userland
+if [ -f /etc/ipsec.conf ]
+then
+   cp -f --backup=t /etc/ipsec.conf /etc/ipsec.conf.prerpm > /dev/null 2> /dev/null
+fi
+
+%preun userland
+sh /etc/rc.d/init.d/ipsec stop || exit 0
+
+%postun module
+# This is a kludge to handle the fact that ipsec.o is not deleted
+# on plain jane RPM uninstall.
+for i in /lib/modules/*@KERNELVERSIONORIG@*
+   do
+    mv -f --backup=t "$i"/kernel/net/ipsec/ipsec.o "$i"/kernel/net/ipsec/ipsec.o.rpmbak > /dev/null 2> /dev/null
+   done || exit 0
+
+%post module
+# Same RPM uninstall kludge.
+for i in /lib/modules/*@KERNELVERSIONORIG@*
+   do
+    mv -f --backup=t "$i"/kernel/net/ipsec/ipsec.o "$i"/kernel/net/ipsec/ipsec.o.rpmbak > /dev/null 2> /dev/null
+   done
+echo "do not forget to install the userland utilities"
+exit 0
+
+%post userland
+chkconfig --add ipsec
+echo "invoke \"service ipsec start\" or reboot to begin"
+
+%changelog
+#
+# $Log: rpm.in,v $
+# Revision 1.1  2004/03/15 20:35:27  as
+# added files from freeswan-2.04-x509-1.5.3
+#
+# Revision 1.6  2003/01/30 23:31:34  sam
+#
+# dhr contributed changes. still may need modification, but I'm committing
+# before I leave.
+#
+# Revision 1.5  2003/01/14 22:03:44  sam
+# include policy files in RPM.
+#
+# Revision 1.4  2003/01/04 07:38:11  build
+# *** empty log message ***
+#
+# Revision 1.3  2002/12/12 05:45:41  sam
+# new template file from 1.99 pulled up in part
+#
+# Revision 1.2.2.1  2002/12/07 23:47:22  sam
+# merging in a few 1.99 rpm.in changes.
+#
+# Revision 1.2  2002/10/30 06:54:15  sam
+# Updates to take into account lib vs libexec - so we don't miss files.
+#
+# Revision 1.1  2002/10/06 08:35:54  sam
+# RPM template
+#
+# Revision 1.9  2002/06/16 21:53:49  mcr
+# 	added missing clauses to userland section.
+#
+# Revision 1.8  2002/06/16 20:18:41  mcr
+# 	2.00 series RPM will have a "freeswan-userland" rather than
+# 	a "freeswan-X" RPM. Among other things, it makes regexp easier
+# 	to locate the different pieces.
+#
+# Revision 1.7  2002/06/11 23:10:53  mcr
+# 	added dependancies from userland->kernel.
+# 	cross-dependancies considered but cause too much user pain.
+#
+# Revision 1.6  2002/06/09 15:46:41  mcr
+# 	move installed modules for make rpm to kernel versioned directory.
+#
+# Revision 1.5  2002/04/11 02:50:30  mcr
+# 	added %post to make ipsec start, and %post to shut it down.
+# 	added %changelog as well.
+#
+#

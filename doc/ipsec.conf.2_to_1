@@ -1,0 +1,22 @@
+version 2
+# If you put the preceding line in front of a 1.x ipsec.conf, 
+# it should work within 2.x.
+
+
+# Merge the following sections with your existing config setup
+# and conn %default.
+# Allot these values to any you have not explictly defined.
+
+config setup
+        interfaces=%none     # new default is %defaultroute
+        plutoload=%none     # new default is %search
+        plutostart=%none     # new default is %search
+
+conn %default
+        uniqueids=no     # new default is yes
+        keyingtries=3     # new default is %forever
+        disablearrivalcheck=yes     # new default is no
+        authby=secret     # new default is rsasig
+        leftrsasigkey=%none     # new default %dnsondemand
+        rightrsasigkey=%none     # new default %dnsondemand
+

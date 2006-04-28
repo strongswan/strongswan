@@ -1,0 +1,481 @@
+.TH IPSEC_AUTO 8 "17 December 2004"
+.\" RCSID $Id: auto.8,v 1.6 2004/12/17 22:34:38 as Exp $
+.SH NAME
+ipsec auto \- control automatically-keyed IPsec connections
+.SH SYNOPSIS
+.B ipsec
+.B auto
+[
+.B \-\-show
+] [
+.B \-\-showonly
+] [
+.B \-\-asynchronous
+]
+.br
+\ \ \ [
+.B \-\-config
+configfile
+] [
+.B \-\-verbose
+] [
+.B \-\-type conn
+]
+.br
+\ \ \ operation
+connection
+.sp
+.B ipsec
+.B auto
+[
+.B \-\-show
+] [
+.B \-\-showonly
+]
+.br
+\ \ \ [
+.B \-\-config
+configfile
+] [
+.B \-\-verbose
+]
+.B \-\-type ca
+.br
+\ \ \ operation
+ca
+.sp
+.B ipsec
+.B auto
+[
+.B \-\-show
+] [
+.B \-\-showonly
+] operation
+.SH DESCRIPTION
+.I Auto
+manipulates automatically-keyed strongSwan IPsec connections,
+setting them up and shutting them down
+based on the information in the IPsec configuration file.
+In the normal usage,
+.I connection
+is the name of a connection specification in the configuration file;
+.I ca
+is the name of a Certification Authority (CA) specification in the configuration file;
+.I operation
+is
+.BR \-\-add ,
+.BR \-\-delete ,
+.BR \-\-replace ,
+.BR \-\-up ,
+.BR \-\-down ,
+.BR \-\-route ,
+or
+.BR \-\-unroute .
+The
+.BR \-\-status
+and
+.BR \-\-statusall
+.I operations
+may take a
+.I connection
+name.
+The
+.BR \-\-ready ,
+.BR \-\-rereadsecrets ,
+.BR \-\-rereadgroups ,
+.BR \-\-rereadcacerts ,
+.BR \-\-rereadaacerts ,
+.BR \-\-rereadocspcerts ,
+.BR \-\-rereadacerts ,
+.BR \-\-rereadcrls ,
+.BR \-\-rereadall ,
+.BR \-\-listalgs ,
+.BR \-\-listpubkeys ,
+.BR \-\-listcerts ,
+.BR \-\-listcacerts ,
+.BR \-\-listaacerts ,
+.BR \-\-listocspcerts ,
+.BR \-\-listacerts ,
+.BR \-\-listgroups ,
+.BR \-\-listcainfos ,
+.BR \-\-listcrls ,
+.BR \-\-listocsp ,
+.BR \-\-listcards ,
+.BR \-\-listall ,
+and
+.BR \-\-purgeocsp
+.I operations
+do not take a connection name.
+.I Auto
+generates suitable
+commands and feeds them to a shell for execution.
+.PP
+The
+.B \-\-add
+operation adds a connection or ca specification to the internal database
+within
+.IR pluto ;
+it will fail if
+.I pluto
+already has a specification by that name.
+The
+.B \-\-delete
+operation deletes a connection or ca specification from
+.IR pluto 's
+internal database (also tearing down any connections based on it);
+it will fail if the specification does not exist.
+The
+.B \-\-replace
+operation is equivalent to
+.B \-\-delete
+(if there is already a specification by the given name)
+followed by
+.BR \-\-add ,
+and is a convenience for updating
+.IR pluto 's
+internal specification to match an external one.
+(Note that a
+.B \-\-rereadsecrets
+may also be needed.)
+The
+.B \-\-rereadgroups
+operation causes any changes to the policy group files to take effect
+(this is currently a synonym for
+.BR \-\-ready ,
+but that may change).
+None of the other operations alters the internal database.
+.PP
+The
+.B \-\-up
+operation asks
+.I pluto
+to establish a connection based on an entry in its internal database.
+The
+.B \-\-down
+operation tells
+.I pluto
+to tear down such a connection.
+.PP
+Normally,
+.I pluto
+establishes a route to the destination specified for a connection as
+part of the
+.B \-\-up
+operation.
+However, the route and only the route can be established with the
+.B \-\-route
+operation.
+Until and unless an actual connection is established,
+this discards any packets sent there,
+which may be preferable to having them sent elsewhere based on a more
+general route (e.g., a default route).
+.PP
+Normally,
+.IR pluto 's
+route to a destination remains in place when a
+.B \-\-down
+operation is used to take the connection down
+(or if connection setup, or later automatic rekeying, fails).
+This permits establishing a new connection (perhaps using a
+different specification; the route is altered as necessary)
+without having a ``window'' in which packets might go elsewhere
+based on a more general route.
+Such a route can be removed using the
+.B \-\-unroute
+operation
+(and is implicitly removed by
+.BR \-\-delete ).
+.PP
+The
+.B \-\-ready
+operation tells
+.I pluto
+to listen for connection-setup requests from other hosts.
+Doing an
+.B \-\-up
+operation before doing
+.B \-\-ready
+on both ends is futile and will not work,
+although this is now automated as part of IPsec startup and
+should not normally be an issue.
+.PP
+The
+.B \-\-status
+operation asks
+.I pluto
+for current connection status either for all connections 
+(no connection argument) or a for specified
+.I connection
+name. For more detailed information use
+.B \-\-statusall
+\. The output format is ad-hoc and likely to change.
+.PP
+The
+.B \-\-rereadsecrets
+operation tells
+.I pluto
+to re-read the
+.I /etc/ipsec.secrets
+secret-keys file,
+which it normally reads only at startup time.
+(This is currently a synonym for
+.BR \-\-ready ,
+but that may change.)
+.PP
+The
+.B \-\-rereadcacerts
+operation reads all certificate files contained in the
+.IR /etc/ipsec.d/cacerts
+directory and adds them to
+.IR pluto 's
+list of Certification Authority (CA) certificates.
+.PP
+The
+.B \-\-rereadaacerts
+operation reads all certificate files contained in the
+.IR /etc/ipsec.d/aacerts
+directory and adds them to
+.IR pluto 's
+list of Authorization Authority (AA) certificates.
+.PP
+The
+.B \-\-rereadocspcerts
+operation reads all certificate files contained in the
+.IR /etc/ipsec.d/ocspcerts
+directory and adds them to
+.IR pluto 's
+list of OCSP signer certificates.
+.PP
+The
+.B \-\-rereadacerts
+operation reads all certificate files contained in the
+.IR /etc/ipsec.d/acerts
+directory and adds them to
+.IR pluto 's
+list of attribute certificates.
+.PP
+The
+.B \-\-rereadcrls
+operation reads all certificate revocation list (CRL) files
+contained in the
+.IR /etc/ipsec.d/crls
+directory and adds them to
+.IR pluto 's
+list of CRLs.
+.PP
+The
+.B \-\-rereadall
+operation is equivalent to the execution of
+.BR \-\-rereadsecrets ,
+.BR \-\-rereadcacerts ,
+.BR \-\-rereadaacerts ,
+.BR \-\-rereadocspcerts ,
+.BR \-\-rereadacerts ,
+and
+.BR \-\-rereadcrls .
+.PP
+The
+.B \-\-listalgs
+operation lists all registed IKE encryption and hash algorithms,
+that are available to
+.IR pluto ,
+as well as the Diffie-Hellman (DH) groups.
+.PP
+The
+.B \-\-listpubkeys
+operation lists all RSA public keys either received from peers
+via the IKE protocol embedded in authenticated certificate payloads
+or loaded locally using the
+.BR rightcert  \ /
+.BR leftcert
+or
+.BR rightrsasigkey \ /
+.BR leftrsasigkey
+parameters in
+.IR ipsec.conf (5).
+.PP
+The
+.B \-\-listcerts
+operation lists all X.509 and OpenPGP certificates loaded locally using the
+.BR rightcert
+and
+.BR leftcert
+parameters in
+.IR ipsec.conf (5).
+.PP
+The
+.B \-\-listcacerts
+operation lists all X.509 CA certificates either loaded locally from the
+.IR /etc/ipsec.d/cacerts
+directory or received in PKCS#7-wrapped certificate payloads via
+the IKE protocol.
+.PP
+The
+.B \-\-listaacerts
+operation lists all X.509 AA certificates loaded locally from the
+.IR /etc/ipsec.d/aacerts
+directory.
+.PP
+The
+.B \-\-listocspcerts
+operation lists all OCSP signer certificates either loaded locally from the
+.IR /etc/ipsec.d/ocspcerts
+directory or received via the Online Certificate Status Protocol
+from an OCSP server.
+.PP
+The
+.B \-\-listacerts
+operation lists all X.509 attribute certificates loaded locally from the
+.IR /etc/ipsec.d/acerts
+directory.
+.PP
+The
+.B \-\-listgropus
+operation lists all groups that are either used in connection definitions in
+.IR ipsec.conf (5)
+or are embedded in loaded X.509 attributes certificates.
+.PP
+The
+.B \-\-listcainfos
+operation lists the certification authority information specified in the ca
+sections of
+.IR ipsec.conf (5).
+.PP
+The
+.B \-\-listcrls
+operation lists all Certificate Revocation Lists (CRLs) either loaded
+locally from the
+.IR /etc/ipsec.d/crls
+directory or fetched dynamically from an HTTP or LDAP server.
+.PP
+The
+.B \-\-listocsp
+operation lists the certicates status information fetched from
+OCSP servers.
+.PP
+The
+.B \-\-purgeocsp
+operation deletes any cached certificate status information and pending
+OCSP fetch requests.
+.PP
+The
+.B \-\-listcards
+operation lists information about attached smartcards or crypto tokens.
+.PP
+The
+.B \-\-listall
+operation is equivalent to the execution of
+.BR \-\-listalgs ,
+.BR \-\-listpubkeys ,
+.BR \-\-listcerts ,
+.BR \-\-listcacerts ,
+.BR \-\-listaacerts ,
+.BR \-\-listocspcerts ,
+.BR \-\-listacerts ,
+.BR \-\-listgroups ,
+.BR \-\-listcainfos ,
+.BR \-\-listcrls ,
+.BR \-\-listocsp ,
+and
+.BR \-\-listcards .
+.PP
+The
+.B \-\-show
+option turns on the
+.B \-x
+option of the shell used to execute the commands,
+so each command is shown as it is executed.
+.PP
+The
+.B \-\-showonly
+option causes
+.I auto
+to show the commands it would run, on standard output,
+and not run them.
+.PP
+The
+.B \-\-asynchronous
+option, applicable only to the
+.B up
+operation,
+tells
+.I pluto
+to attempt to establish the connection,
+but does not delay to report results.
+This is especially useful to start multiple connections in parallel
+when network links are slow.
+.PP
+The
+.B \-\-verbose
+option instructs
+.I auto
+to pass through all output from
+.IR ipsec_whack (8),
+including log output that is normally filtered out as uninteresting.
+.PP
+The
+.B \-\-config
+option specifies a non-standard location for the IPsec
+configuration file (default
+.IR /etc/ipsec.conf ).
+.PP
+See
+.IR ipsec.conf (5)
+for details of the configuration file.
+Apart from the basic parameters which specify the endpoints and routing
+of a connection (\fBleft\fR
+and
+.BR right ,
+plus possibly
+.BR leftsubnet ,
+.BR leftnexthop ,
+.BR leftfirewall ,
+their
+.B right
+equivalents,
+and perhaps
+.BR type ),
+an
+.I auto
+connection almost certainly needs a
+.B keyingtries
+parameter (since the
+.B keyingtries
+default is poorly chosen).
+.SH FILES
+.ta \w'/var/run/ipsec.info'u+4n
+/etc/ipsec.conf	default IPSEC configuration file
+.br
+/var/run/ipsec.info	\fB%defaultroute\fR information
+.SH SEE ALSO
+ipsec.conf(5), ipsec(8), ipsec_pluto(8), ipsec_whack(8), ipsec_manual(8)
+.SH HISTORY
+Written for the FreeS/WAN project
+<http://www.freeswan.org>
+by Henry Spencer.
+Extended for the strongSwan project
+<http://www.strongswan.org>
+by Andreas Steffen.
+.SH BUGS
+Although an
+.B \-\-up
+operation does connection setup on both ends,
+.B \-\-down
+tears only one end of the connection down
+(although the orphaned end will eventually time out).
+.PP
+There is no support for
+.B passthrough
+connections.
+.PP
+A connection description which uses
+.B %defaultroute
+for one of its
+.B nexthop
+parameters but not the other may be falsely
+rejected as erroneous in some circumstances.
+.PP
+The exit status of
+.B \-\-showonly
+does not always reflect errors discovered during processing of the request.
+(This is fine for human inspection, but not so good for use in scripts.)

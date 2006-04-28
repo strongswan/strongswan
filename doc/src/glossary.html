@@ -1,0 +1,2257 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html">
+  <title>FreeS/WAN glossary</title>
+  <meta name="keywords"
+  content="Linux, IPsec, VPN, security, FreeSWAN, glossary, cryptography">
+  <!--
+
+  Written by Sandy Harris for the Linux FreeS/WAN project
+  Freely distributable under the GNU General Public License
+
+  More information at www.freeswan.org
+  Feedback to users@lists.freeswan.org
+
+  CVS information:
+  RCS ID:          $Id: glossary.html,v 1.1 2004/03/15 20:35:24 as Exp $
+  Last changed:    $Date: 2004/03/15 20:35:24 $
+  Revision number: $Revision: 1.1 $
+
+  CVS revision numbers do not correspond to FreeS/WAN release numbers.
+  -->
+</head>
+
+<body>
+<h1><a name="ourgloss">Glossary for the Linux FreeS/WAN project</a></h1>
+
+<p>Entries are in alphabetical order. Some entries are only one line or one
+paragraph long. Others run to several paragraphs. I have tried to put the
+essential information in the first paragraph so you can skip the other
+paragraphs if that seems appropriate.</p>
+<hr>
+
+<h2><a name="jump">Jump to a letter in the glossary</a></h2>
+
+<center>
+<big><b><a href="#0">numeric</a> <a href="#A">A</a> <a href="#B">B</a> <a
+href="#C">C</a> <a href="#D">D</a> <a href="#E">E</a> <a href="#F">F</a> <a
+href="#G">G</a> <a href="#H">H</a> <a href="#I">I</a> <a href="#J">J</a> <a
+href="#K">K</a> <a href="#L">L</a> <a href="#M">M</a> <a href="#N">N</a> <a
+href="#O">O</a> <a href="#P">P</a> <a href="#Q">Q</a> <a href="#R">R</a> <a
+href="#S">S</a> <a href="#T">T</a> <a href="#U">U</a> <a href="#V">V</a> <a
+href="#W">W</a> <a href="#X">X</a> <a href="#Y">Y</a> <a
+href="#Z">Z</a></b></big></center>
+<hr>
+
+<h2><a name="gloss">Other glossaries</a></h2>
+
+<p>Other glossaries which overlap this one include:</p>
+<ul>
+  <li>The VPN Consortium's glossary of <a
+    href="http://www.vpnc.org/terms.html">VPN terms</a>.</li>
+  <li>glossary portion of the <a
+    href="http://www.rsa.com/rsalabs/faq/B.html">Cryptography FAQ</a></li>
+  <li>an extensive crytographic glossary on <a
+    href="http://www.ciphersbyritter.com/GLOSSARY.HTM">Terry Ritter's</a>
+    page.</li>
+  <li>The <a href="#NSA">NSA</a>'s <a
+    href="http://www.sans.org/newlook/resources/glossary.htm">glossary of
+    computer security</a> on the <a href="http://www.sans.org">SANS
+    Institute</a> site.</li>
+  <li>a small glossary for Internet Security at <a
+    href="http://www5.zdnet.com/pcmag/pctech/content/special/glossaries/internetsecurity.html">
+    PC magazine</a></li>
+  <li>The <a
+    href="http://www.visi.com/crypto/inet-crypto/glossary.html">glossary</a>
+    from Richard Smith's book <a href="#Smith">Internet Cryptography</a></li>
+</ul>
+
+<p>Several Internet glossaries are available as RFCs:</p>
+<ul>
+  <li><a href="http://www.rfc-editor.org/rfc/rfc1208.txt">Glossary of
+    Networking Terms</a></li>
+  <li><a href="http://www.rfc-editor.org/rfc/rfc1983.txt">Internet User's
+    Glossary</a></li>
+  <li><a href="http://www.rfc-editor.org/rfc/rfc2828.txt">Internet Security
+    Glossary</a></li>
+</ul>
+
+<p>More general glossary or dictionary information:</p>
+<ul>
+  <li>Free Online Dictionary of Computing (FOLDOC)
+    <ul>
+      <li><a href="http://www.nightflight.com/foldoc">North America</a></li>
+      <li><a
+      href="http://wombat.doc.ic.ac.uk/foldoc/index.html">Europe</a></li>
+      <li><a href="http://www.nue.org/foldoc/index.html">Japan</a></li>
+    </ul>
+    <p>There are many more mirrors of this dictionary.</p>
+  </li>
+  <li>The Jargon File, the definitive resource for hacker slang and folklore
+    <ul>
+      <li><a href="http://www.netmeg.net/jargon">North America</a></li>
+      <li><a href="http://info.wins.uva.nl/~mes/jargon/">Holland</a></li>
+      <li><a href="http://www.tuxedo.org/~esr/jargon">home page</a></li>
+    </ul>
+    <p>There are also many mirrors of this. See the home page for a list.</p>
+  </li>
+  <li>A general <a
+    href="http://www.trinity.edu/~rjensen/245glosf.htm#Navigate"> technology
+    glossary</a></li>
+  <li>An <a href="http://www.yourdictionary.com/">online dictionary resource
+    page</a> with pointers to many dictionaries for many languages</li>
+  <li>A <a href="http://www.onelook.com/">search engine</a> that accesses
+    several hundred online dictionaries</li>
+  <li>O'Reilly <a href="http://www.ora.com/reference/dictionary/">Dictionary
+    of PC Hardware and Data Communications Terms</a></li>
+  <li><a href="http://www.FreeSoft.org/CIE/index.htm">Connected</a> Internet
+    encyclopedia</li>
+  <li><a href="http://www.whatis.com/">whatis.com</a></li>
+</ul>
+<hr>
+
+<h2><a name="definitions">Definitions</a></h2>
+<dl>
+  <dt><a name="0">0</a></dt>
+  <dt><a name="3DES">3DES (Triple DES)</a></dt>
+    <dd>Using three <a href="#DES">DES</a> encryptions on a single data
+      block, with at least two different keys, to get higher security than is
+      available from a single DES pass. The three-key version of 3DES is the
+      default encryption algorithm for <a href="#FreeSWAN">Linux
+      FreeS/WAN</a>.
+      <p><a href="#IPSEC">IPsec</a> always does 3DES with three different
+      keys, as required by RFC 2451. For an explanation of the two-key
+      variant, see <a href="#2key">two key triple DES</a>. Both use an <a
+      href="#EDE">EDE</a> encrypt-decrypt-encrpyt sequence of operations.</p>
+      <p>Single <a href="#DES">DES</a> is <a
+      href="politics.html#desnotsecure">insecure</a>.</p>
+      <p>Double DES is ineffective. Using two 56-bit keys, one might expect
+      an attacker to have to do 2<sup>112</sup> work to break it. In fact,
+      only 2<sup>57</sup> work is required with a <a
+      href="#meet">meet-in-the-middle attack</a>, though a large amount of
+      memory is also required. Triple DES is vulnerable to a similar attack,
+      but that just reduces the work factor from the 2<sup>168</sup> one
+      might expect to 2<sup>112</sup>. That provides adequate protection
+      against <a href="#brute">brute force</a> attacks, and no better attack
+      is known.</p>
+      <p>3DES can be somewhat slow compared to other ciphers. It requires
+      three DES encryptions per block. DES was designed for hardware
+      implementation and includes some operations which are difficult in
+      software. However, the speed we get is quite acceptable for many uses.
+      See our <a href="performance.html">performance</a> document for
+      details.</p>
+    </dd>
+  <dt><a name="A">A</a></dt>
+  <dt><a name="active">Active attack</a></dt>
+    <dd>An attack in which the attacker does not merely eavesdrop (see <a
+      href="#passive">passive attack</a>) but takes action to change, delete,
+      reroute, add, forge or divert data. Perhaps the best-known active
+      attack is <a href="#middle">man-in-the-middle</a>. In general, <a
+      href="#authentication">authentication</a> is a useful defense against
+      active attacks.</dd>
+  <dt><a name="AES">AES</a></dt>
+    <dd>The <b>A</b>dvanced <b>E</b>ncryption <b>S</b>tandard -- a new <a
+      href="#block">block cipher</a> standard to replace <a
+      href="politics.html#desnotsecure">DES</a> -- developed by <a
+      href="#NIST">NIST</a>, the US National Institute of Standards and
+      Technology. DES used 64-bit blocks and a 56-bit key. AES ciphers use a
+      128-bit block and 128, 192 or 256-bit keys. The larger block size helps
+      resist <a href="#birthday">birthday attacks</a> while the large key
+      size prevents <a href="#brute">brute force attacks</a>.
+      <p>Fifteen proposals meeting NIST's basic criteria were submitted in
+      1998 and subjected to intense discussion and analysis, "round one"
+      evaluation. In August 1999, NIST narrowed the field to five "round two"
+      candidates:</p>
+      <ul>
+        <li><a href="http://www.research.ibm.com/security/mars.html">Mars</a>
+          from IBM</li>
+        <li><a href="http://www.rsa.com/rsalabs/aes/">RC6</a> from RSA</li>
+        <li><a
+          href="http://www.esat.kuleuven.ac.be/~rijmen/rijndael/">Rijndael</a>
+          from two Belgian researchers</li>
+        <li><a
+          href="http://www.cl.cam.ac.uk/~rja14/serpent.html">Serpent</a>, a
+          British-Norwegian-Israeli collaboration</li>
+        <li><a href="http://www.counterpane.com/twofish.html">Twofish</a>
+          from the consulting firm <a
+          href="http://www.counterpane.com">Counterpane</a></li>
+      </ul>
+      <p>Three of the five finalists -- Rijndael, Serpent and Twofish -- have
+      completely open licenses.</p>
+      <p>In October 2000, NIST announced the winner -- Rijndael.</p>
+      <p>For more information, see:</p>
+      <ul>
+        <li>NIST's <a
+          href="http://csrc.nist.gov/encryption/aes/aes_home.htm">AES home
+          page</a></li>
+        <li>the Block Cipher Lounge <a
+          href="http://www.ii.uib.no/~larsr/aes.html">AES page</a></li>
+        <li>Brian Gladman's <a
+          href="http://fp.gladman.plus.com/cryptography_technology/index.htm">code
+          and benchmarks</a></li>
+        <li>Helger Lipmaa's <a
+          href="http://www.tcs.hut.fi/~helger/aes/">survey of
+          implementations</a></li>
+      </ul>
+      <p>AES will be added to a future release of <a href="#FreeSWAN">Linux
+      FreeS/WAN</a>.  Likely we will add all three of the finalists with good
+      licenses. User-written <a href="web.html#patch">AES patches</a> are
+      already available.</p>
+      <p>Adding AES may also require adding stronger hashes, <a
+      href="#SHA-256">SHA-256, SHA-384 and SHA-512</a>.</p>
+    </dd>
+  <dt><a name="AH">AH</a></dt>
+    <dd>The <a href="#IPSEC">IPsec</a> <b>A</b>uthentication <b>H</b>eader,
+      added after the IP header. For details, see our <a
+      href="ipsec.html#AH.ipsec">IPsec</a> document and/or RFC 2402.</dd>
+  <dt><a name="alicebob">Alice and Bob</a></dt>
+    <dd>A and B, the standard example users in writing on cryptography and
+      coding theory. Carol and Dave join them for protocols which require
+      more players.
+      <p>Bruce Schneier extends these with many others such as Eve the
+      Eavesdropper and Victor the Verifier. His extensions seem to be in the
+      process of becoming standard as well. See page 23 of <a
+      href="biblio.html#schneier">Applied Cryptography</a></p>
+      <p>Alice and Bob have an amusing <a
+      href="http://www.conceptlabs.co.uk/alicebob.html"> biography</a> on the
+      web.</p>
+    </dd>
+  <dt>ARPA</dt>
+    <dd>see <a href="#DARPA">DARPA</a></dd>
+  <dt><a name="ASIO">ASIO</a></dt>
+    <dd>Australian Security Intelligence Organisation.</dd>
+  <dt>Asymmetric cryptography</dt>
+    <dd>See <a href="#public">public key cryptography</a>.</dd>
+  <dt><a name="authentication">Authentication</a></dt>
+    <dd>Ensuring that a message originated from the expected sender and has
+      not been altered on route. <a href="#IPSEC">IPsec</a> uses
+      authentication in two places:
+      <ul>
+        <li>peer authentication, authenticating the players in <a
+          href="#IKE">IKE</a>'s <a href="#DH">Diffie-Hellman</a> key
+          exchanges to prevent <a href="#middle">man-in-the-middle
+          attacks</a>. This can be done in a number of ways. The methods
+          supported by FreeS/WAN are discussed in our <a
+          href="adv_config.html#choose">advanced configuration</a>
+        document.</li>
+        <li>packet authentication, authenticating packets on an established
+          <a href="#SA">SA</a>, either with a separate <a
+          href="#AH">authentication header</a> or with the optional
+          authentication in the <a href="#ESP">ESP</a> protocol. In either
+          case, packet authentication uses a <a href="#HMAC">hashed message
+          athentication code</a> technique.</li>
+      </ul>
+      <p>Outside IPsec, passwords are perhaps the most common authentication
+      mechanism. Their function is essentially to authenticate the person's
+      identity to the system. Passwords are generally only as secure as the
+      network they travel over. If you send a cleartext password over a
+      tapped phone line or over a network with a packet sniffer on it, the
+      security provided by that password becomes zero. Sending an encrypted
+      password is no better; the attacker merely records it and reuses it at
+      his convenience. This is called a <a href="#replay">replay</a>
+      attack.</p>
+      <p>A common solution to this problem is a <a
+      href="#challenge">challenge-response</a> system. This defeats simple
+      eavesdropping and replay attacks. Of course an attacker might still try
+      to break the cryptographic algorithm used, or the <a
+      href="#random">random number</a> generator.</p>
+    </dd>
+  <dt><a name="auto">Automatic keying</a></dt>
+    <dd>A mode in which keys are automatically generated at connection
+      establisment and new keys automaically created periodically thereafter.
+      Contrast with <a href="#manual">manual keying</a> in which a single
+      stored key is used.
+      <p>IPsec uses the <a href="#DH">Diffie-Hellman key exchange
+      protocol</a> to create keys. An <a
+      href="#authentication">authentication</a> mechansim is required for
+      this. FreeS/WAN normally uses <a href="#RSA">RSA</a> for this. Other
+      methods supported are discussed in our <a
+      href="adv_config.html#choose">advanced configuration</a> document.</p>
+      <p>Having an attacker break the authentication is emphatically not a
+      good idea. An attacker that breaks authentication, and manages to
+      subvert some other network entities (DNS, routers or gateways), can use
+      a <a href="#middle">man-in-the middle attack</a> to break the security
+      of your IPsec connections.</p>
+      <p>However, having an attacker break the authentication in automatic
+      keying is not quite as bad as losing the key in manual keying.</p>
+      <ul>
+        <li>An attacker who reads /etc/ipsec.conf and gets the keys for a
+          manually keyed connection can, without further effort, read all
+          messages encrypted with those keys, including any old messages he
+          may have archived.</li>
+        <li>Automatic keying has a property called <a href="#PFS">perfect
+          forward secrecy</a>. An attacker who breaks the authentication gets
+          none of the automatically generated keys and cannot immediately
+          read any messages. He has to mount a successful <a
+          href="#middle">man-in-the-middle attack</a> in real time before he
+          can read anything. He cannot read old archived messages at all and
+          will not be able to read any future messages not caught by
+          man-in-the-middle tricks.</li>
+      </ul>
+      <p>That said, the secrets used for authentication, stored in <a
+      href="manpage.d/ipsec.secrets.5.html">ipsec.secrets(5)</a>, should
+      still be protected as tightly as cryptographic keys.</p>
+    </dd>
+  <dt><a name="B">B</a></dt>
+  <dt><a href="http://www.nortelnetworks.com">Bay Networks</a></dt>
+    <dd>A vendor of routers, hubs and related products, now a subsidiary of
+      Nortel. Interoperation between their IPsec products and Linux FreeS/WAN
+      was problematic at last report; see our <a
+      href="interop.html#bay">interoperation</a> section.</dd>
+  <dt><a name="benchmarks">benchmarks</a></dt>
+    <dd>Our default block cipher, <a href="#3DES">triple DES</a>, is slower
+      than many alternate ciphers that might be used. Speeds achieved,
+      however, seem adequate for many purposes. For example, the assembler
+      code from the <a href="#LIBDES">LIBDES</a> library we use encrypts 1.6
+      megabytes per second on a Pentium 200, according to the test program
+      supplied with the library.
+      <p>For more detail, see our document on <a
+      href="performance.html">FreeS/WAN performance</a>.</p>
+    </dd>
+  <dt><a name="BIND">BIND</a></dt>
+    <dd><b>B</b>erkeley <b>I</b>nternet <b>N</b>ame <b>D</b>aemon, a widely
+      used implementation of <a href="#DNS">DNS</a> (Domain Name Service).
+      See our bibliography for a <a href="#DNS">useful reference</a>. See the
+      <a href="http://www.isc.org/bind.html">BIND home page</a> for more
+      information and the latest version.</dd>
+  <dt><a name="birthday">Birthday attack</a></dt>
+    <dd>A cryptographic attack based on the mathematics exemplified by the <a
+      href="#paradox">birthday paradox</a>. This math turns up whenever the
+      question of two cryptographic operations producing the same result
+      becomes an issue:
+      <ul>
+        <li><a href="#collision">collisions</a> in <a href="#digest">message
+          digest</a> functions.</li>
+        <li>identical output blocks from a <a href="#block">block
+        cipher</a></li>
+        <li>repetition of a challenge in a <a
+          href="#challenge">challenge-response</a> system</li>
+      </ul>
+      <p>Resisting such attacks is part of the motivation for:</p>
+      <ul>
+        <li>hash algorithms such as <a href="#SHA">SHA</a> and <a
+          href="#RIPEMD">RIPEMD-160</a> giving a 160-bit result rather than
+          the 128 bits of <a href="#MD4">MD4</a>, <a href="#MD5">MD5</a> and
+          <a href="#RIPEMD">RIPEMD-128</a>.</li>
+        <li><a href="#AES">AES</a> block ciphers using a 128-bit block
+          instead of the 64-bit block of most current ciphers</li>
+        <li><a href="#IPSEC">IPsec</a> using a 32-bit counter for packets
+          sent on an <a href="#auto">automatically keyed</a> <a
+          href="#SA">SA</a> and requiring that the connection always be
+          rekeyed before the counter overflows.</li>
+      </ul>
+    </dd>
+  <dt><a name="paradox">Birthday paradox</a></dt>
+    <dd>Not really a paradox, just a rather counter-intuitive mathematical
+      fact. In a group of 23 people, the chance of a least one pair having
+      the same birthday is over 50%.
+      <p>The second person has 1 chance in 365 (ignoring leap years) of
+      matching the first. If they don't match, the third person's chances of
+      matching one of them are 2/365. The 4th, 3/365, and so on. The total of
+      these chances grows more quickly than one might guess.</p>
+    </dd>
+  <dt><a name="block">Block cipher</a></dt>
+    <dd>A <a href="#symmetric">symmetric cipher</a> which operates on
+      fixed-size blocks of plaintext, giving a block of ciphertext for each.
+      Contrast with <a href="#stream"> stream cipher</a>. Block ciphers can
+      be used in various <a href="#mode">modes</a> when multiple block are to
+      be encrypted.
+      <p><a href="#DES">DES</a> is among the the best known and widely used
+      block ciphers, but is now obsolete. Its 56-bit key size makes it <a
+      href="#desnotsecure">highly insecure</a> today. <a href="#3DES">Triple
+      DES</a> is the default block cipher for <a href="#FreeSWAN">Linux
+      FreeS/WAN</a>.</p>
+      <p>The current generation of block ciphers -- such as <a
+      href="#Blowfish">Blowfish</a>, <a href="#CAST128">CAST-128</a> and <a
+      href="#IDEA">IDEA</a> -- all use 64-bit blocks and 128-bit keys. The
+      next generation, <a href="#AES">AES</a>, uses 128-bit blocks and
+      supports key sizes up to 256 bits.</p>
+      <p>The <a href="http://www.ii.uib.no/~larsr/bc.html"> Block Cipher
+      Lounge</a> web site has more information.</p>
+    </dd>
+  <dt><a name="Blowfish">Blowfish</a></dt>
+    <dd>A <a href="#block">block cipher</a> using 64-bit blocks and keys of
+      up to 448 bits, designed by <a href="#schneier">Bruce Schneier</a> and
+      used in several products.
+      <p>This is not required by the <a href="#IPSEC">IPsec</a> RFCs and not
+      currently used in <a href="#FreeSWAN">Linux FreeS/WAN</a>.</p>
+    </dd>
+  <dt><a name="brute">Brute force attack (exhaustive search)</a></dt>
+    <dd>Breaking a cipher by trying all possible keys. This is always
+      possible in theory (except against a <a href="#OTP">one-time pad</a>),
+      but it becomes practical only if the key size is inadequate. For an
+      important example, see our document on the <a
+      href="#desnotsecure">insecurity of DES</a> with its 56-bit key. For an
+      analysis of key sizes required to resist plausible brute force attacks,
+      see <a href="http://www.counterpane.com/keylength.html">this paper</a>.
+      <p>Longer keys protect against brute force attacks. Each extra bit in
+      the key doubles the number of possible keys and therefore doubles the
+      work a brute force attack must do. A large enough key defeats
+      <strong>any</strong> brute force attack.</p>
+      <p>For example, the EFF's <a href="#EFF">DES Cracker</a> searches a
+      56-bit key space in an average of a few days. Let us assume an attacker
+      that can find a 64-bit key (256 times harder) by brute force search in
+      a second (a few hundred thousand times faster). For a 96-bit key, that
+      attacker needs 2<sup>32</sup> seconds, about 135 years. Against a
+      128-bit key, he needs 2<sup>32</sup> times that, over 500,000,000,000
+      years. Your data is then obviously secure against brute force attacks.
+      Even if our estimate of the attacker's speed is off by a factor of a
+      million, it still takes him over 500,000 years to crack a message.</p>
+      <p>This is why</p>
+      <ul>
+        <li>single <a href="#DES">DES</a> is now considered <a
+          href="#desnotsecure">dangerously insecure</a></li>
+        <li>all of the current generation of <a href="#block">block
+          ciphers</a> use a 128-bit or longer key</li>
+        <li><a href="#AES">AES</a> ciphers support keysizes 128, 192 and 256
+          bits</li>
+        <li>any cipher we add to Linux FreeS/WAN will have <em>at least</em>
+          a 128-bit key</li>
+      </ul>
+      <p><strong>Cautions:</strong><br>
+      <em>Inadequate keylength always indicates a weak cipher</em> but it is
+      important to note that <em>adequate keylength does not necessarily
+      indicate a strong cipher</em>. There are many attacks other than brute
+      force, and adequate keylength <em>only</em> guarantees resistance to
+      brute force. Any cipher, whatever its key size, will be weak if design
+      or implementation flaws allow other attacks.</p>
+      <p>Also, <em>once you have adequate keylength</em> (somewhere around 90
+      or 100 bits), <em>adding more key bits make no practical
+      difference</em>, even against brute force. Consider our 128-bit example
+      above that takes 500,000,000,000 years to break by brute force. We
+      really don't care how many zeroes there are on the end of that, as long
+      as the number remains ridiculously large. That is, we don't care
+      exactly how large the key is as long as it is large enough.</p>
+      <p>There may be reasons of convenience in the design of the cipher to
+      support larger keys. For example <a href="#Blowfish">Blowfish</a>
+      allows up to 448 bits and <a href="#RC4">RC4</a> up to 2048, but beyond
+      100-odd bits it makes no difference to practical security.</p>
+    </dd>
+  <dt>Bureau of Export Administration</dt>
+    <dd>see <a href="#BXA">BXA</a></dd>
+  <dt><a name="BXA">BXA</a></dt>
+    <dd>The US Commerce Department's <b>B</b>ureau of E<b>x</b>port
+      <b>A</b>dministration which administers the <a href="#EAR">EAR</a>
+      Export Administration Regulations controling the export of, among other
+      things, cryptography.</dd>
+  <dt><a name="C">C</a></dt>
+  <dt><a name="CA">CA</a></dt>
+    <dd><b>C</b>ertification <b>A</b>uthority, an entity in a <a
+      href="#PKI">public key infrastructure</a> that can certify keys by
+      signing them. Usually CAs form a hierarchy. The top of this hierarchy
+      is called the <a href="#rootCA">root CA</a>.
+      <p>See <a href="#web">Web of Trust</a> for an alternate model.</p>
+    </dd>
+  <dt><a name="CAST128">CAST-128</a></dt>
+    <dd>A <a href="#block">block cipher</a> using 64-bit blocks and 128-bit
+      keys, described in RFC 2144 and used in products such as <a
+      href="#Entrust">Entrust</a> and recent versions of <a
+      href="#PGP">PGP</a>.
+      <p>This is not required by the <a href="#IPSEC">IPsec</a> RFCs and not
+      currently used in <a href="#FreeSWAN">Linux FreeS/WAN</a>.</p>
+    </dd>
+  <dt>CAST-256</dt>
+    <dd><a href="#Entrust">Entrust</a>'s candidate cipher for the <a
+      href="#AES">AES standard</a>, largely based on the <a
+      href="#CAST128">CAST-128</a> design.</dd>
+  <dt><a name="CBC">CBC mode</a></dt>
+    <dd><b>C</b>ipher <b>B</b>lock <b>C</b>haining <a href="#mode">mode</a>,
+      a method of using a <a href="#block">block cipher</a> in which for each
+      block except the first, the result of the previous encryption is XORed
+      into the new block before it is encrypted. CBC is the mode used in <a
+      href="#IPSEC">IPsec</a>.
+      <p>An <a href="#IV">initialisation vector</a> (IV) must be provided. It
+      is XORed into the first block before encryption. The IV need not be
+      secret but should be different for each message and unpredictable.</p>
+    </dd>
+  <dt><a name="CIDR">CIDR</a></dt>
+    <dd><b>C</b>lassless <b>I</b>nter-<b>D</b>omain <b>R</b>outing,
+      an addressing scheme used to describe networks not
+      restricted to the old Class A, B, and C sizes.
+      A CIDR block is written
+      <VAR>address</VAR>/<VAR>mask</VAR>, where <VAR>address</VAR> is 
+      a 32-bit Internet address. 
+      The first <VAR>mask</VAR> bits of <VAR>address</VAR>
+      are part of the gateway address, while the remaining bits designate
+      other host addresses.
+      For example, the CIDR block 192.0.2.96/27 describes a network with 
+      gateway 
+      192.0.2.96, hosts 192.0.2.96 through 192.0.2.126 and broadcast 
+      192.0.2.127.
+      <p>FreeS/WAN policy group files accept CIDR blocks of the format
+      <VAR>address</VAR>/[<VAR>mask</VAR>], where <VAR>address</VAR> may
+      take the form <VAR>name.domain.tld</VAR>. An absent <VAR>mask</VAR>
+      is assumed to be /32.
+      </p> 
+    </dd>
+
+  <dt>Certification Authority</dt>
+    <dd>see <a href="#CA">CA</a></dd>
+  <dt><a name="challenge">Challenge-response authentication</a></dt>
+    <dd>An <a href="#authentication">authentication</a> system in which one
+      player generates a <a href="#random">random number</a>, encrypts it and
+      sends the result as a challenge. The other player decrypts and sends
+      back the result. If the result is correct, that proves to the first
+      player that the second player knew the appropriate secret, required for
+      the decryption. Variations on this technique exist using <a
+      href="#public">public key</a> or <a href="#symmetric">symmetric</a>
+      cryptography. Some provide two-way authentication, assuring each player
+      of the other's identity.
+      <p>This is more secure than passwords against two simple attacks:</p>
+      <ul>
+        <li>If cleartext passwords are sent across the wire (e.g. for
+          telnet), an eavesdropper can grab them. The attacker may even be
+          able to break into other systems if the user has chosen the same
+          password for them.</li>
+        <li>If an encrypted password is sent, an attacker can record the
+          encrypted form and use it later. This is called a replay
+        attack.</li>
+      </ul>
+      <p>A challenge-response system never sends a password, either cleartext
+      or encrypted.  An attacker cannot record the response to one challenge
+      and use it as a response to a later challenge. The random number is
+      different each time.</p>
+      <p>Of course an attacker might still try to break the cryptographic
+      algorithm used, or the <a href="#random">random number</a>
+      generator.</p>
+    </dd>
+  <dt><a name="mode">Cipher Modes</a></dt>
+    <dd>Different ways of using a block cipher when encrypting multiple
+      blocks.
+      <p>Four standard modes were defined for <a href="#DES">DES</a> in <a
+      href="#FIPS">FIPS</a> 81. They can actually be applied with any block
+      cipher.</p>
+
+      <table>
+        <tbody>
+          <tr>
+            <td></td>
+            <td><a href="#ECB">ECB</a></td>
+            <td>Electronic CodeBook</td>
+            <td>encrypt each block independently</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td><a href="#CBC">CBC</a></td>
+            <td>Cipher Block Chaining<br>
+            </td>
+            <td>XOR previous block ciphertext into new block plaintext before
+              encrypting new block</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>CFB</td>
+            <td>Cipher FeedBack</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>OFB</td>
+            <td>Output FeedBack</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <p><a href="#IPSEC">IPsec</a> uses <a href="#CBC">CBC</a> mode since
+      this is only marginally slower than <a href="#ECB">ECB</a> and is more
+      secure. In ECB mode the same plaintext always encrypts to the same
+      ciphertext, unless the key is changed. In CBC mode, this does not
+      occur.</p>
+      <p>Various other modes are also possible, but none of them are used in
+      IPsec.</p>
+    </dd>
+  <dt><a name="ciphertext">Ciphertext</a></dt>
+    <dd>The encrypted output of a cipher, as opposed to the unencrypted <a
+      href="#plaintext">plaintext</a> input.</dd>
+  <dt><a href="http://www.cisco.com">Cisco</a></dt>
+    <dd>A vendor of routers, hubs and related products. Their IPsec products
+      interoperate with Linux FreeS/WAN; see our <a
+      href="interop.html#Cisco">interop</a> section.</dd>
+  <dt><a name="client">Client</a></dt>
+    <dd>This term has at least two distinct uses in discussing IPsec:
+      <ul>
+        <li>The <strong>clients of an IPsec gateway</strong> are the machines
+          it protects, typically on one or more subnets behind the gateway.
+          In this usage, all the machines on an office network are clients of
+          that office's IPsec gateway. Laptop or home machines connecting to
+          the office, however, are <em>not</em> clients of that gateway. They
+          are remote gateways, running the other end of an IPsec connection.
+          Each of them is also its own client.</li>
+        <li><strong>IPsec client software</strong> is used to describe
+          software which runs on various standalone machines to let them
+          connect to IPsec networks. In this usage, a laptop or home machine
+          connecting to the office is a client, and the office gateway is the
+          server.</li>
+      </ul>
+      <p>We generally use the term in the first sense. Vendors of Windows
+      IPsec solutions often use it in the second. See this <a
+      href="interop.html#client.server">discussion</a>.</p>
+    </dd>
+  <dt><a name="cc">Common Criteria</a></dt>
+    <dd>A set of international security classifications which are replacing
+      the old US <a href="#rainbow">Rainbow Book</a> standards and similar
+      standards in other countries.
+      <p>Web references include this <a href="http://csrc.nist.gov/cc">US
+      government site</a> and this <a
+      href="http://www.commoncriteria.org">global home page</a>.</p>
+    </dd>
+  <dt>Conventional cryptography</dt>
+    <dd>See <a href="#symmetric">symmetric cryptography</a></dd>
+  <dt><a name="collision">Collision resistance</a></dt>
+    <dd>The property of a <a href="#digest">message digest</a> algorithm
+      which makes it hard for an attacker to find or construct two inputs
+      which hash to the same output.</dd>
+  <dt>Copyleft</dt>
+    <dd>see GNU <a href="#GPL">General Public License</a></dd>
+  <dt><a name="CSE">CSE</a></dt>
+    <dd><a href="http://www.cse-cst.gc.ca/">Communications Security
+      Establishment</a>, the Canadian organisation for <a
+      href="#SIGINT">signals intelligence</a>.</dd>
+  <dt><a name="D">D</a></dt>
+  <dt><a name="DARPA">DARPA (sometimes just ARPA)</a></dt>
+    <dd>The US government's <b>D</b>efense <b>A</b>dvanced <b>R</b>esearch
+      <b>P</b>rojects <b>A</b>gency. Projects they have funded over the years
+      have included the Arpanet which evolved into the Internet, the TCP/IP
+      protocol suite (as a replacement for the original Arpanet suite), the
+      Berkeley 4.x BSD Unix projects, and <a href="#SDNS">Secure DNS</a>.
+      <p>For current information, see their <a
+      href="http://www.darpa.mil/ito">web site</a>.</p>
+    </dd>
+  <dt><a name="DOS">Denial of service (DoS) attack</a></dt>
+    <dd>An attack that aims at denying some service to legitimate users of a
+      system, rather than providing a service to the attacker.
+      <ul>
+        <li>One variant is a flooding attack, overwhelming the system with
+          too many packets, to much email, or whatever.</li>
+        <li>A closely related variant is a resource exhaustion attack. For
+          example, consider a "TCP SYN flood" attack. Setting up a TCP
+          connection involves a three-packet exchange:
+          <ul>
+            <li>Initiator: Connection please (SYN)</li>
+            <li>Responder: OK (ACK)</li>
+            <li>Initiator: OK here too</li>
+          </ul>
+          <p>If the attacker puts bogus source information in the first
+          packet, such that the second is never delivered, the responder may
+          wait a long time for the third to come back. If responder has
+          already allocated memory for the connection data structures, and if
+          many of these bogus packets arrive, the responder may run out of
+          memory.</p>
+        </li>
+        <li>Another variant is to feed the system undigestible data, hoping
+          to make it sick. For example, IP packets are limited in size to 64K
+          bytes and a fragment carries information on where it starts within
+          that 64K and how long it is. The "ping of death" delivers fragments
+          that say, for example, that they start at 60K and are 20K long.
+          Attempting to re-assemble these without checking for overflow can
+          be fatal.</li>
+      </ul>
+      <p>The two example attacks discussed were both quite effective when
+      first discovered, capable of crashing or disabling many operating
+      systems. They were also well-publicised, and today far fewer systems
+      are vulnerable to them.</p>
+    </dd>
+  <dt><a name="DES">DES</a></dt>
+    <dd>The <b>D</b>ata <b>E</b>ncryption <b>S</b>tandard, a <a
+      href="#block">block cipher</a> with 64-bit blocks and a 56-bit key.
+      Probably the most widely used <a href="#symmetric">symmetric cipher</a>
+      ever devised. DES has been a US government standard for their own use
+      (only for unclassified data), and for some regulated industries such as
+      banking, since the late 70's. It is now being replaced by <a
+      href="#AES">AES</a>.
+      <p><a href="politics.html#desnotsecure">DES is seriously insecure
+      against current attacks.</a></p>
+      <p><a href="#FreeSWAN">Linux FreeS/WAN</a> does not include DES, even
+      though the RFCs specify it. <b>We strongly recommend that single DES
+      not be used.</b></p>
+      <p>See also <a href="#3DES">3DES</a> and <a href="#DESX">DESX</a>,
+      stronger ciphers based on DES.</p>
+    </dd>
+  <dt><a name="DESX">DESX</a></dt>
+    <dd>An improved <a href="#DES">DES</a> suggested by Ron Rivest of RSA
+      Data Security. It XORs extra key material into the text before and
+      after applying the DES cipher.
+      <p>This is not required by the <a href="#IPSEC">IPsec</a> RFCs and not
+      currently used in <a href="#FreeSWAN">Linux FreeS/WAN</a>. DESX would
+      be the easiest additional transform to add; there would be very little
+      code to write. It would be much faster than 3DES and almost certainly
+      more secure than DES. However, since it is not in the RFCs other IPsec
+      implementations cannot be expected to have it.</p>
+    </dd>
+  <dt>DH</dt>
+    <dd>see <a href="#DH">Diffie-Hellman</a></dd>
+  <dt><a name="DHCP">DHCP</a></dt>
+    <dd><strong>D</strong>ynamic <strong>H</strong>ost
+      <strong>C</strong>onfiguration <strong>P</strong>rotocol, a method of
+      assigning <a href="#dynamic">dynamic IP addresses</a>, and providing
+      additional information such as addresses of DNS servers and of
+      gateways. See this <a href="http://www.dhcp.org">DHCP resource
+    page.</a></dd>
+  <dt><a name="DH">Diffie-Hellman (DH) key exchange protocol</a></dt>
+    <dd>A protocol that allows two parties without any initial shared secret
+      to create one in a manner immune to eavesdropping. Once they have done
+      this, they can communicate privately by using that shared secret as a
+      key for a block cipher or as the basis for key exchange.
+      <p>The protocol is secure against all <a href="#passive">passive
+      attacks</a>, but it is not at all resistant to active <a
+      href="#middle">man-in-the-middle attacks</a>. If a third party can
+      impersonate Bob to Alice and vice versa, then no useful secret can be
+      created. Authentication of the participants is a prerequisite for safe
+      Diffie-Hellman key exchange. IPsec can use any of several <a
+      href="#authentication">authentication</a> mechanisims. Those supported
+      by FreeS/WAN are discussed in our <a
+      href="config.html#choose">configuration</a> section.</p>
+      <p>The Diffie-Hellman key exchange is based on the <a
+      href="#dlog">discrete logarithm</a> problem and is secure unless
+      someone finds an efficient solution to that problem.</p>
+      <p>Given a prime <var>p</var> and generator <var>g</var> (explained
+      under <a href="#dlog">discrete log</a> below), Alice:</p>
+      <ul>
+        <li>generates a random number <var>a</var></li>
+        <li>calculates <var>A = g^a modulo p</var></li>
+        <li>sends <var>A</var> to Bob</li>
+      </ul>
+      <p>Meanwhile Bob:</p>
+      <ul>
+        <li>generates a random number <var>b</var></li>
+        <li>calculates <var>B = g^b modulo p</var></li>
+        <li>sends <var>B</var> to Alice</li>
+      </ul>
+      <p>Now Alice and Bob can both calculate the shared secret <var>s =
+      g^(ab)</var>. Alice knows <var>a</var> and <var>B</var>, so she
+      calculates <var>s = B^a</var>. Bob knows <var>A</var> and <var>b</var>
+      so he calculates <var>s = A^b</var>.</p>
+      <p>An eavesdropper will know <var>p</var> and <var>g</var> since these
+      are made public, and can intercept <var>A</var> and <var>B</var> but,
+      short of solving the <a href="#dlog">discrete log</a> problem, these do
+      not let him or her discover the secret <var>s</var>.</p>
+    </dd>
+  <dt><a name="signature">Digital signature</a></dt>
+    <dd>Sender:
+      <ul>
+        <li>calculates a <a href="#digest">message digest</a> of a
+        document</li>
+        <li>encrypts the digest with his or her private key, using some <a
+          href="#public">public key cryptosystem</a>.</li>
+        <li>attaches the encrypted digest to the document as a signature</li>
+      </ul>
+      <p>Receiver:</p>
+      <ul>
+        <li>calculates a digest of the document (not including the
+        signature)</li>
+        <li>decrypts the signature with the signer's public key</li>
+        <li>verifies that the two results are identical</li>
+      </ul>
+      <p>If the public-key system is secure and the verification succeeds,
+      then the receiver knows</p>
+      <ul>
+        <li>that the document was not altered between signing and
+        verification</li>
+        <li>that the signer had access to the private key</li>
+      </ul>
+      <p>Such an encrypted message digest can be treated as a signature since
+      it cannot be created without <em>both</em> the document <em>and</em>
+      the private key which only the sender should possess. The <a
+      href="web.html#legal">legal issues</a> are complex, but several
+      countries are moving in the direction of legal recognition for digital
+      signatures.</p>
+    </dd>
+  <dt><a name="dlog">discrete logarithm problem</a></dt>
+    <dd>The problem of finding logarithms in a finite field. Given a field
+      defintion (such definitions always include some operation analogous to
+      multiplication) and two numbers, a base and a target, find the power
+      which the base must be raised to in order to yield the target.
+      <p>The discrete log problem is the basis of several cryptographic
+      systems, including the <a href="#DH">Diffie-Hellman</a> key exchange
+      used in the <a href="#IKE">IKE</a> protocol. The useful property is
+      that exponentiation is relatively easy but the inverse operation,
+      finding the logarithm, is hard. The cryptosystems are designed so that
+      the user does only easy operations (exponentiation in the field) but an
+      attacker must solve the hard problem (discrete log) to crack the
+      system.</p>
+      <p>There are several variants of the problem for different types of
+      field. The IKE/Oakley key determination protocol uses two variants,
+      either over a field modulo a prime or over a field defined by an
+      elliptic curve. We give an example modulo a prime below. For the
+      elliptic curve version, consult an advanced text such as <a
+      href="biblio.html#handbook">Handbook of Applied Cryptography</a>.</p>
+      <p>Given a prime <var>p</var>, a generator <var>g</var> for the field
+      modulo that prime, and a number <var>x</var> in the field, the problem
+      is to find <var>y</var> such that <var>g^y = x</var>.</p>
+      <p>For example, let p = 13. The field is then the integers from 0 to
+      12. Any integer equals one of these modulo 13. That is, the remainder
+      when any integer is divided by 13 must be one of these.</p>
+      <p>2 is a generator for this field.  That is, the powers of two modulo
+      13 run through all the non-zero numbers in the field. Modulo 13 we
+      have:</p>
+      <pre>          y      x
+        2^0  ==  1
+        2^1  ==  2
+        2^2  ==  4
+        2^3  ==  8
+        2^4  ==  3 that is, the remainder from 16/13 is 3
+        2^5  ==  6          the remainder from 32/13 is 6
+        2^6  == 12 and so on
+        2^7  == 11
+        2^8  ==  9
+        2^9  ==  5
+        2^10 == 10
+        2^11 ==  7
+        2^12 ==  1</pre>
+      <p>Exponentiation in such a field is not difficult. Given, say,
+      <nobr><var>y = 11</var>,</nobr>calculating <nobr><var>x =
+      7</var></nobr>is straightforward. One method is just to calculate
+      <nobr><var>2^11 = 2048</var>,</nobr>then <nobr><var>2048 mod 13 ==
+      7</var>.</nobr>When the field is modulo a large prime (say a few 100
+      digits) you need a silghtly cleverer method and even that is moderately
+      expensive in computer time, but the calculation is still not
+      problematic in any basic way.</p>
+      <p>The discrete log problem is the reverse. In our example, given
+      <nobr><var>x = 7</var>,</nobr>find the logarithm <nobr><var>y =
+      11</var>.</nobr>When the field is modulo a large prime (or is based on
+      a suitable elliptic curve), this is indeed problematic. No solution
+      method that is not catastrophically expensive is known. Quite a few
+      mathematicians have tackled this problem. No efficient method has been
+      found and mathematicians do not expect that one will be. It seems
+      likely no efficient solution to either of the main variants the
+      discrete log problem exists.</p>
+      <p>Note, however, that no-one has proven such methods do not exist. If
+      a solution to either variant were found, the security of any crypto
+      system using that variant would be destroyed.  This is one reason <a
+      href="#IKE">IKE</a> supports two variants. If one is broken, we can
+      switch to the other.</p>
+    </dd>
+  <dt><a name="discretionary">discretionary access control</a></dt>
+    <dd>access control mechanisms controlled by the user, for example Unix
+      rwx file permissions. These contrast with <a
+      href="#mandatory">mandatory access controls</a>.</dd>
+  <dt><a name="DNS">DNS</a></dt>
+    <dd><b>D</b>omain <b>N</b>ame <b>S</b>ervice, a distributed database
+      through which names are associated with numeric addresses and other
+      information in the Internet Protocol Suite. See also the <a
+      href="background.html#dns.background">DNS background</a> section of our
+      documentation.</dd>
+  <dt>DOS attack</dt>
+    <dd>see <a href="#DOS">Denial Of Service</a> attack</dd>
+  <dt><a name="dynamic">dynamic IP address</a></dt>
+    <dd>an IP address which is automatically assigned, either by <a
+      href="#DHCP">DHCP</a> or by some protocol such as <a
+      href="#PPP">PPP</a> or <a href="#PPPoE">PPPoE</a> which the machine
+      uses to connect to the Internet. This is the opposite of a <a
+      href="#static">static IP address</a>, pre-set on the machine
+    itself.</dd>
+  <dt><a name="E">E</a></dt>
+  <dt><a name="EAR">EAR</a></dt>
+    <dd>The US government's <b>E</b>xport <b>A</b>dministration
+      <b>R</b>egulations, administered by the <a href="#BXA">Bureau of Export
+      Administration</a>. These have replaced the earlier <a
+      href="#ITAR">ITAR</a> regulations as the controls on export of
+      cryptography.</dd>
+  <dt><a name="ECB">ECB mode</a></dt>
+    <dd><b>E</b>lectronic <b>C</b>ode<b>B</b>ook mode, the simplest way to
+      use a block cipher. See <a href="#mode">Cipher Modes</a>.</dd>
+  <dt><a name="EDE">EDE</a></dt>
+    <dd>The sequence of operations normally used in either the three-key
+      variant of <a href="#3DES">triple DES</a> used in <a
+      href="#IPSEC">IPsec</a> or the <a href="#2key">two-key</a> variant used
+      in some other systems.
+      <p>The sequence is:</p>
+      <ul>
+        <li><b>E</b>ncrypt with key1</li>
+        <li><b>D</b>ecrypt with key2</li>
+        <li><b>E</b>ncrypt with key3</li>
+      </ul>
+      <p>For the two-key version, key1=key3.</p>
+      <p>The "advantage" of this EDE order of operations is that it makes it
+      simple to interoperate with older devices offering only single DES. Set
+      key1=key2=key3 and you have the worst of both worlds, the overhead of
+      triple DES with the "security" of single DES. Since both the <a
+      href="politics.html#desnotsecure">security of single DES</a> and the
+      overheads of triple DES are seriously inferior to many other ciphers,
+      this is a spectacularly dubious "advantage".</p>
+    </dd>
+  <dt><a name="Entrust">Entrust</a></dt>
+    <dd>A Canadian company offerring enterprise <a href="#PKI">PKI</a>
+      products using <a href="#CAST128">CAST-128</a> symmetric crypto, <a
+      href="#RSA">RSA</a> public key and <a href="#X509">X.509</a>
+      directories. <a href="http://www.entrust.com">Web site</a></dd>
+  <dt><a name="EFF">EFF</a></dt>
+    <dd><a href="http://www.eff.org">Electronic Frontier Foundation</a>, an
+      advocacy group for civil rights in cyberspace.</dd>
+  <dt><a name="encryption">Encryption</a></dt>
+    <dd>Techniques for converting a readable message (<a
+      href="#plaintext">plaintext</a>) into apparently random material (<a
+      href="#ciphertext">ciphertext</a>) which cannot be read if intercepted.
+      A key is required to read the message.
+      <p>Major variants include <a href="#symmetric">symmetric</a> encryption
+      in which sender and receiver use the same secret key and <a
+      href="#public">public key</a> methods in which the sender uses one of a
+      matched pair of keys and the receiver uses the other. Many current
+      systems, including <a href="#IPSEC">IPsec</a>, are <a
+      href="#hybrid">hybrids</a> combining the two techniques.</p>
+    </dd>
+  <dt><a name="ESP">ESP</a></dt>
+    <dd><b>E</b>ncapsulated <b>S</b>ecurity <b>P</b>ayload, the <a
+      href="#IPSEC">IPsec</a> protocol which provides <a
+      href="#encryption">encryption</a>. It can also provide <a
+      href="#authentication">authentication</a> service and may be used with
+      null encryption (which we do not recommend). For details see our <a
+      href="ipsec.html#ESP.ipsec">IPsec</a> document and/or RFC 2406.</dd>
+  <dt><a name="#extruded">Extruded subnet</a></dt>
+    <dd>A situation in which something IP sees as one network is actually in
+      two or more places.
+      <p>For example, the Internet may route all traffic for a particular
+      company to that firm's corporate gateway. It then becomes the company's
+      problem to get packets to various machines on their <a
+      href="#subnet">subnets</a> in various departments. They may decide to
+      treat a branch office like a subnet, giving it IP addresses "on" their
+      corporate net. This becomes an extruded subnet.</p>
+      <p>Packets bound for it are delivered to the corporate gateway, since
+      as far as the outside world is concerned, that subnet is part of the
+      corporate network. However, instead of going onto the corporate LAN (as
+      they would for, say, the accounting department) they are then
+      encapsulated and sent back onto the Internet for delivery to the branch
+      office.</p>
+      <p>For information on doing this with Linux FreeS/WAN, look in our <a
+      href="adv_config.html#extruded.config">advanced configuration</a>
+      section.</p>
+    </dd>
+  <dt>Exhaustive search</dt>
+    <dd>See <a href="#brute">brute force attack</a>.</dd>
+  <dt><a name="F">F</a></dt>
+  <dt><a name="FIPS">FIPS</a></dt>
+    <dd><b>F</b>ederal <b>I</b>nformation <b>P</b>rocessing <b>S</b>tandard,
+      the US government's standards for products it buys. These are issued by
+      <a href="#NIST">NIST</a>. Among other things, <a href="#DES">DES</a>
+      and <a href="#SHA">SHA</a> are defined in FIPS documents. NIST have a
+      <a href="http://www.itl.nist.gov/div897/pubs">FIPS home page</a>.</dd>
+  <dt><a name="FSF">Free Software Foundation (FSF)</a></dt>
+    <dd>An organisation to promote free software, free in the sense of these
+      quotes from their web pages</dd>
+    <dd>
+      <blockquote>
+        "Free software" is a matter of liberty, not price. To understand the
+        concept, you should think of "free speech", not "free beer."
+        <p>"Free software" refers to the users' freedom to run, copy,
+        distribute, study, change and improve the software.</p>
+      </blockquote>
+      <p>See also <a href="#GNU">GNU</a>, <a href="#GPL">GNU General Public
+      License</a>, and <a href="http://www.fsf.org">the FSF site</a>.</p>
+    </dd>
+  <dt>FreeS/WAN</dt>
+    <dd>see <a href="#FreeSWAN">Linux FreeS/WAN</a></dd>
+  <dt><a name="fullnet">Fullnet</A></dt>
+    <dd>The CIDR block containing all IPs of its IP version. 
+    The <A HREF="#IPv4">IPv4</A> fullnet is written 0.0.0.0/0. 
+    Also known as "all" and "default",
+    fullnet may be used in a routing table 
+    to specify a default route, 
+    and in a FreeS/WAN 
+    <A HREF="policygroups.html#policygroups">policy group</A> file to 
+    specify a default IPsec policy.</dd>
+  <dt>FSF</dt>
+    <dd>see <a href="#FSF">Free software Foundation</a></dd>
+  <dt><a name="G">G</a></dt>
+  <dt><a name="GCHQ">GCHQ</a></dt>
+    <dd><a href="http://www.gchq.gov.uk">Government Communications
+      Headquarters</a>, the British organisation for <a
+      href="#SIGINT">signals intelligence</a>.</dd>
+  <dt>generator of a prime field</dt>
+    <dd>see <a href="#dlog">discrete logarithm problem</a></dd>
+  <dt><a name="GILC">GILC</a></dt>
+    <dd><a href="http://www.gilc.org">Global Internet Liberty Campaign</a>,
+      an international organisation advocating, among other things, free
+      availability of cryptography. They have a <a
+      href="http://www.gilc.org/crypto/wassenaar">campaign</a> to remove
+      cryptographic software from the <a href="#Wassenaar.gloss">Wassenaar
+      Arrangement</a>.</dd>
+  <dt>Global Internet Liberty Campaign</dt>
+    <dd>see <a href="#GILC">GILC</a>.</dd>
+  <dt><a name="GTR">Global Trust Register</a></dt>
+    <dd>An attempt to create something like a <a href="#rootCA">root CA</a>
+      for <a href="#PGP">PGP</a> by publishing both <a
+      href="biblio.html#GTR">as a book</a> and <a
+      href="http://www.cl.cam.ac.uk/Research/Security/Trust-Register"> on the
+      web</a> the fingerprints of a set of verified keys for well-known users
+      and organisations.</dd>
+  <dt><a name="GMP">GMP</a></dt>
+    <dd>The <b>G</b>NU <b>M</b>ulti-<b>P</b>recision library code, used in <a
+      href="#FreeSWAN">Linux FreeS/WAN</a> by <a href="#Pluto">Pluto</a> for
+      <a href="#public">public key</a> calculations. See the <a
+      href="http://www.swox.com/gmp">GMP  home page</a>.</dd>
+  <dt><a name="GNU">GNU</a></dt>
+    <dd><b>G</b>NU's <b>N</b>ot <b>U</b>nix, the <a href="#FSF">Free Software
+      Foundation's</a> project aimed at creating a free system with at least
+      the capabilities of Unix. <a href="#Linux">Linux</a> uses GNU utilities
+      extensively.</dd>
+  <dt><a name="#GOST">GOST</a></dt>
+    <dd>a Soviet government standard <a href="#block">block cipher</a>. <a
+      href="biblio.html#schneier">Applied Cryptography</a> has details.</dd>
+  <dt>GPG</dt>
+    <dd>see <a href="#GPG">GNU Privacy Guard</a></dd>
+  <dt><a name="GPL">GNU General Public License</a>(GPL, copyleft)</dt>
+    <dd>The license developed by the <a href="#FSF">Free Software
+      Foundation</a> under which <a href="#Linux">Linux</a>, <a
+      href="#FreeSWAN">Linux FreeS/WAN</a> and many other pieces of software
+      are distributed. The license allows anyone to redistribute and modify
+      the code, but forbids anyone from distributing executables without
+      providing access to source code. For more details see the file <a
+      href="../COPYING">COPYING</a> included with GPLed source distributions,
+      including ours, or <a href="http://www.fsf.org/copyleft/gpl.html"> the
+      GNU site's GPL page</a>.</dd>
+  <dt><a name="GPG">GNU Privacy Guard</a></dt>
+    <dd>An open source implementation of Open <a href="#PGP">PGP</a> as
+      defined in RFC 2440. See their <a href="http://www.gnupg.org">web
+      site</a></dd>
+  <dt>GPL</dt>
+    <dd>see <a href="#GPL">GNU General Public License</a>.</dd>
+  <dt><a name="H">H</a></dt>
+  <dt><a name="hash">Hash</a></dt>
+    <dd>see <a href="#digest">message digest</a></dd>
+  <dt><a name="HMAC">Hashed Message Authentication Code (HMAC)</a></dt>
+    <dd>using keyed <a href="#digest">message digest</a> functions to
+      authenticate a message. This differs from other uses of these functions:
+      <ul>
+        <li>In normal usage, the hash function's internal variable are
+          initialised in some standard way. Anyone can reproduce the hash to
+          check that the message has not been altered.</li>
+        <li>For HMAC usage, you initialise the internal variables from the
+          key. Only someone with the key can reproduce the hash. A successful
+          check of the hash indicates not only that the message is unchanged
+          but also that the creator knew the key.</li>
+      </ul>
+      <p>The exact techniques used in <a href="#IPSEC">IPsec</a> are defined
+      in RFC 2104. They are referred to as HMAC-MD5-96 and HMAC-SHA-96
+      because they output only 96 bits of the hash. This makes some attacks
+      on the hash functions harder.</p>
+    </dd>
+  <dt>HMAC</dt>
+    <dd>see <a href="#HMAC">Hashed Message Authentication Code</a></dd>
+  <dt>HMAC-MD5-96</dt>
+    <dd>see <a href="#HMAC">Hashed Message Authentication Code</a></dd>
+  <dt>HMAC-SHA-96</dt>
+    <dd>see <a href="#HMAC">Hashed Message Authentication Code</a></dd>
+  <dt><a name="hybrid">Hybrid cryptosystem</a></dt>
+    <dd>A system using both <a href="#public">public key</a> and <a
+      href="#symmetric">symmetric cipher</a> techniques. This works well.
+      Public key methods provide key management and <a
+      href="#signature">digital signature</a> facilities which are not
+      readily available using symmetric ciphers. The symmetric cipher,
+      however, can do the bulk of the encryption work much more efficiently
+      than public key methods.</dd>
+  <dt><a name="I">I</a></dt>
+  <dt><a name="IAB">IAB</a></dt>
+    <dd><a href="http://www.iab.org/iab">Internet Architecture Board</a>.</dd>
+  <dt><a name="ICMP.gloss">ICMP</a></dt>
+    <dd><strong>I</strong>nternet <strong>C</strong>ontrol
+      <strong>M</strong>essage <strong>P</strong>rotocol. This is used for
+      various IP-connected devices to manage the network.</dd>
+  <dt><a name="IDEA">IDEA</a></dt>
+    <dd><b>I</b>nternational <b>D</b>ata <b>E</b>ncrypion <b>A</b>lgorithm,
+      developed in Europe as an alternative to exportable American ciphers
+      such as <a href="#DES">DES</a> which were <a href="#desnotsecure">too
+      weak for serious use</a>. IDEA is a <a href="#block">block cipher</a>
+      using 64-bit blocks and 128-bit keys, and is used in products such as
+      <a href="#PGP">PGP</a>.
+      <p>IDEA is not required by the <a href="#IPSEC">IPsec</a> RFCs and not
+      currently used in <a href="#FreeSWAN">Linux FreeS/WAN</a>.</p>
+      <p>IDEA is patented and, with strictly limited exceptions for personal
+      use, using it requires a license from <a
+      href="http://www.ascom.com">Ascom</a>.</p>
+    </dd>
+  <dt><a name="IEEE">IEEE</a></dt>
+    <dd><a href="http://www.ieee.org">Institute of Electrical and Electronic
+      Engineers</a>, a professional association which, among other things,
+      sets some technical standards</dd>
+  <dt><a name="IESG">IESG</a></dt>
+    <dd><a href="http://www.iesg.org">Internet Engineering Steering
+    Group</a>.</dd>
+  <dt><a name="IETF">IETF</a></dt>
+    <dd><a href="http://www.ietf.org">Internet Engineering Task Force</a>,
+      the umbrella organisation whose various working groups make most of the
+      technical decisions for the Internet. The IETF <a
+      href="http://www.ietf.org/html.charters/ipsec-charter.html"> IPsec
+      working group</a> wrote the <a href="#RFC">RFCs</a> we are
+    implementing.</dd>
+  <dt><a name="IKE">IKE</a></dt>
+    <dd><b>I</b>nternet <b>K</b>ey <b>E</b>xchange, based on the <a
+      href="#DH">Diffie-Hellman</a> key exchange protocol. For details, see
+      RFC 2409 and our <a href="ipsec.html">IPsec</a> document. IKE is
+      implemented in <a href="#FreeSWAN">Linux FreeS/WAN</a> by the <a
+      href="#Pluto">Pluto daemon</a>.</dd>
+  <dt>IKE v2</dt>
+    <dd>A proposed replacement for <a href="#IKE">IKE</a>. There are other
+      candidates, such as <a href="#JFK">JFK</a>, and at time of writing
+      (March 2002) the choice between them has not yet been made and does not
+      appear imminent.</dd>
+  <dt><a name="iOE">iOE</a></dt>
+    <dd>See <A HREF="#initiate-only">Initiate-only opportunistic 
+     encryption</A>.</dd>
+  <dt><a name="IP">IP</a></dt>
+    <dd><b>I</b>nternet <b>P</b>rotocol.</dd>
+  <dt><a name="masq">IP masquerade</a></dt>
+    <dd>A mostly obsolete term for a method of allowing multiple machines to
+      communicate over the Internet when only one IP address is available for
+      their use. The more current term is Network Address Translation or <a
+      href="#NAT.gloss">NAT</a>.</dd>
+  <dt><a name="IPng">IPng</a></dt>
+    <dd>"IP the Next Generation", see <a href="#ipv6.gloss">IPv6</a>.</dd>
+  <dt><a name="IPv4">IPv4</a></dt>
+    <dd>The current version of the <a href="#IP">Internet protocol
+    suite</a>.</dd>
+  <dt><a name="ipv6.gloss">IPv6 (IPng)</a></dt>
+    <dd>Version six of the <a href="#IP">Internet protocol suite</a>,
+      currently being developed. It will replace the current <a
+      href="#IPv4">version four</a>. IPv6 has <a href="#IPSEC">IPsec</a> as a
+      mandatory component.
+      <p>See this <a
+      href="http://playground.sun.com/pub/ipng/html/ipng-main.html">web
+      site</a> for more details, and our <a
+      href="compat.html#ipv6">compatibility</a> document for information on
+      FreeS/WAN and the Linux implementation of IPv6.</p>
+    </dd>
+  <dt><a name="IPSEC">IPsec</a> or IPSEC</dt>
+    <dd><b>I</b>nternet <b>P</b>rotocol <b>SEC</b>urity, security functions
+      (<a href="#authentication">authentication</a> and <a
+      href="#encryption">encryption</a>) implemented at the IP level of the
+      protocol stack. It is optional for <a href="#IPv4">IPv4</a> and
+      mandatory for <a href="#ipv6.gloss">IPv6</a>.
+      <p>This is the standard <a href="#FreeSWAN">Linux FreeS/WAN</a> is
+      implementing. For more details, see our <a href="ipsec.html">IPsec
+      Overview</a>. For the standards, see RFCs listed in our <a
+      href="rfc.html#RFC">RFCs document</a>.</p>
+    </dd>
+  <dt><a name="IPX">IPX</a></dt>
+    <dd>Novell's Netware protocol tunnelled over an IP link. Our <a
+      href="firewall.html#user.scripts">firewalls</a> document includes an
+      example of using this through an IPsec tunnel.</dd>
+  <dt><a name="ISAKMP">ISAKMP</a></dt>
+    <dd><b>I</b>nternet <b>S</b>ecurity <b>A</b>ssociation and <b>K</b>ey
+      <b>M</b>anagement <b>P</b>rotocol, defined in RFC 2408.</dd>
+  <dt><a name="ITAR">ITAR</a></dt>
+    <dd><b>I</b>nternational <b>T</b>raffic in <b>A</b>rms
+      <b>R</b>egulations, US regulations administered by the State Department
+      which until recently limited export of, among other things,
+      cryptographic technology and software. ITAR still exists, but the
+      limits on cryptography have now been transferred to the <a
+      href="#EAR">Export Administration Regulations</a> under the Commerce
+      Department's <a href="#BXA">Bureau of Export Administration</a>.</dd>
+  <dt>IV</dt>
+    <dd>see <a href="#IV">Initialisation vector</a></dd>
+  <dt><a name="IV">Initialisation Vector (IV)</a></dt>
+    <dd>Some cipher <a href="#mode">modes</a>, including the <a
+      href="#CBC">CBC</a> mode which IPsec uses, require some extra data at
+      the beginning. This data is called the initialisation vector. It need
+      not be secret, but should be different for each message. Its function
+      is to prevent messages which begin with the same text from encrypting
+      to the same ciphertext. That might give an analyst an opening, so it is
+      best prevented.</dd>
+  <dt><a name="initiate-only">Initiate-only opportunistic 
+  encryption (iOE)</a></dt>
+    <dd>A form of 
+     <A HREF="#carpediem">opportunistic encryption</A> (OE) in which 
+     a host proposes opportunistic connections, but lacks the reverse DNS
+     records necessary to support incoming opportunistic connection requests.
+     Common among hosts on cable or pppoe connections where the system 
+     administrator does not have write access to the DNS reverse map
+     for the host's external IP.
+      <p>Configuring for initiate-only opportunistic encryption 
+       is described in our
+      <a href="quickstart.html#opp.client">quickstart</a> document.</p>
+    </dd>
+  <dt><a name="J">J</a></dt>
+  <dt><a name="JFK">JFK</a></dt>
+    <dd><strong>J</strong>ust <strong>F</strong>ast <strong>K</strong>eying,
+      a proposed simpler replacement for <a href="#IKE">IKE.</a></dd>
+  <dt><a name="K">K</a></dt>
+  <dt><a name="kernel">Kernel</a></dt>
+    <dd>The basic part of an operating system (e.g. Linux) which controls the
+      hardware and provides services to all other programs.
+      <p>In the Linux release numbering system, an even second digit as in
+      2.<strong>2</strong>.x indicates a stable or production kernel while an
+      odd number as in 2.<strong>3</strong>.x indicates an experimental or
+      development kernel. Most users should run a recent kernel version from
+      the production series. The development kernels are primarily for people
+      doing kernel development. Others should consider using development
+      kernels only if they have an urgent need for some feature not yet
+      available in production kernels.</p>
+    </dd>
+  <dt>Keyed message digest</dt>
+    <dd>See <a href="#HMAC">HMAC</a>.</dd>
+  <dt>Key length</dt>
+    <dd>see <a href="#brute">brute force attack</a></dd>
+  <dt><a name="KLIPS">KLIPS</a></dt>
+    <dd><b>K</b>erne<b>l</b> <b>IP</b> <b>S</b>ecurity, the <a
+      href="#FreeSWAN">Linux FreeS/WAN</a> project's changes to the <a
+      href="#Linux">Linux</a> kernel to support the <a
+      href="#IPSEC">IPsec</a> protocols.</dd>
+  <dt><a name="L">L</a></dt>
+  <dt><a name="LDAP">LDAP</a></dt>
+    <dd><b>L</b>ightweight <b>D</b>irectory <b>A</b>ccess <b>P</b>rotocol,
+      defined in RFCs 1777 and 1778,  a method of accessing information
+      stored in directories. LDAP is used by several <a href="#PKI">PKI</a>
+      implementations, often with X.501 directories and <a
+      href="#X509">X.509</a> certificates. It may also be used by <a
+      href="#IPSEC">IPsec</a> to obtain key certifications from those PKIs.
+      This is not yet implemented in <a href="#FreeSWAN">Linux
+    FreeS/WAN</a>.</dd>
+  <dt><a name="LIBDES">LIBDES</a></dt>
+    <dd>A publicly available library of <a href="#DES">DES</a> code, written
+      by Eric Young, which <a href="#FreeSWAN">Linux FreeS/WAN</a> uses in
+      both <a href="#KLIPS">KLIPS</a> and <a href="#Pluto">Pluto</a>.</dd>
+  <dt><a name="Linux">Linux</a></dt>
+    <dd>A freely available Unix-like operating system based on a kernel
+      originally written for the Intel 386 architecture by (then) student
+      Linus Torvalds. Once his 32-bit kernel was available, the <a
+      href="#GNU">GNU</a> utilities made it a usable system and contributions
+      from many others led to explosive growth.
+      <p>Today Linux is a complete Unix replacement available for several CPU
+      architectures -- Intel, DEC/Compaq Alpha, Power PC, both 32-bit SPARC
+      and the 64-bit UltraSPARC, SrongARM, . . . -- with support for multiple
+      CPUs on some architectures.</p>
+      <p><a href="#FreeSWAN">Linux FreeS/WAN</a> is intended to run on all
+      CPUs supported by Linux and is known to work on several. See our <a
+      href="compat.html#CPUs">compatibility</a> section for a list.</p>
+    </dd>
+  <dt><a name="FreeSWAN">Linux FreeS/WAN</a></dt>
+    <dd>Our implementation of the <a href="#IPSEC">IPsec</a> protocols,
+      intended to be freely redistributable source code with <a href="#GPL">a
+      GNU GPL license</a> and no constraints under US or other <a
+      href="politics.html#exlaw">export laws</a>. Linux FreeS/WAN is intended
+      to interoperate with other <a href="#IPSEC">IPsec</a> implementations.
+      The name is partly taken, with permission, from the <a
+      href="#SWAN">S/WAN</a> multi-vendor IPsec compatability effort. Linux
+      FreeS/WAN has two major components, <a href="#KLIPS">KLIPS</a> (KerneL
+      IPsec Support) and the <a href="#Pluto">Pluto</a> daemon which manages
+      the whole thing.
+      <p>See our <a href="ipsec.html">IPsec section</a> for more detail. For
+      the code see our <a href="http://freeswan.org"> primary site</a> or one
+      of the mirror sites on <a href="intro.html#mirrors">this list</a>.</p>
+    </dd>
+  <dt><a name="LSM">Linux Security Modules (LSM)</a></dt>
+    <dd>a project to create an interface in the Linux kernel that supports
+      plug-in modules for various security policies.
+      <p>This allows multiple security projects to take different approaches
+      to security enhancement without tying the kernel down to one particular
+      approach. As I understand the history, several projects were pressing
+      Linus to incorporate their changes, the various sets of changes were
+      incompatible, and his answer was more-or-less "a plague on all your
+      houses; I'll give you an interface, but I won't incorporate
+      anything".</p>
+      <p>It seems to be working. There is a fairly active <a
+      href="http://mail.wirex.com/mailman/listinfo/linux-security-module">LSM
+      mailing list</a>, and several projects are already using the
+      interface.</p>
+    </dd>
+  <dt>LSM</dt>
+    <dd>see <a href="#LSM">Linux Security Modules</a></dd>
+  <dt><a name="M">M</a></dt>
+  <dt><a name="list">Mailing list</a></dt>
+    <dd>The <a href="#FreeSWAN">Linux FreeS/WAN</a> project has several
+      public email lists for bug reports and software development
+      discussions. See our document on <a href="mail.html">mailing
+    lists</a>.</dd>
+  <dt><a name="middle">Man-in-the-middle attack</a></dt>
+    <dd>An <a href="#active">active attack</a> in which the attacker
+      impersonates each of the legitimate players in a protocol to the other.
+      <p>For example, if <a href="#alicebob">Alice and Bob</a> are
+      negotiating a key via the <a href="#DH">Diffie-Hellman</a> key
+      agreement, and are not using <a
+      href="#authentication">authentication</a> to be certain they are
+      talking to each other, then an attacker able to insert himself in the
+      communication path can deceive both players.</p>
+      <p>Call the attacker Mallory. For Bob, he pretends to be Alice. For
+      Alice, he pretends to be Bob. Two keys are then negotiated,
+      Alice-to-Mallory and Bob-to-Mallory. Alice and Bob each think the key
+      they have is Alice-to-Bob.</p>
+      <p>A message from Alice to Bob then goes to Mallory who decrypts it,
+      reads it and/or saves a copy, re-encrypts using the Bob-to-Mallory key
+      and sends it along to Bob. Bob decrypts successfully and sends a reply
+      which Mallory decrypts, reads, re-encrypts and forwards to Alice.</p>
+      <p>To make this attack effective, Mallory must</p>
+      <ul>
+        <li>subvert some part of the network in some way that lets him carry
+          out the deception<br>
+          possible targets: DNS, router, Alice or Bob's machine, mail server,
+          ...</li>
+        <li>beat any authentication mechanism Alice and Bob use<br>
+          strong authentication defeats the attack entirely; this is why <a
+          href="#IKE">IKE</a> requires authentication</li>
+        <li>work in real time, delivering messages without introducing a
+          delay large enough to alert the victims<br>
+          not hard if Alice and Bob are using email; quite difficult in some
+          situations.</li>
+      </ul>
+      <p>If he manages it, however, it is devastating. He not only gets to
+      read all the messages; he can alter messages, inject his own, forge
+      anything he likes, . . . In fact, he controls the communication
+      completely.</p>
+    </dd>
+  <dt><a name="mandatory">mandatory access control</a></dt>
+    <dd>access control mechanisims which are not settable by the user (see <a
+      href="#discretionary">discretionary access control</a>), but are
+      enforced by the system.
+      <p>For example, a document labelled "secret, zebra" might be readable
+      only by someone with secret clearance working on Project Zebra.
+      Ideally, the system will prevent any transfer outside those boundaries.
+      For example, even if you can read it, you should not be able to e-mail
+      it (unless the recipient is appropriately cleared) or print it (unless
+      certain printers are authorised for that classification).</p>
+      <p>Mandatory access control is a required feature for some levels of <a
+      href="#rainbow">Rainbow Book</a> or <a href="#cc">Common Criteria</a>
+      classification, but has not been widely used outside the military and
+      government. There is a good discussion of the issues in Anderson's <a
+      href="biblio.html#anderson">Security Engineering</a>.</p>
+      <p>The <a href="#SElinux">Security Enhanced Linux</a> project is adding
+      mandatory access control to Linux.</p>
+    </dd>
+  <dt><a name="manual">Manual keying</a></dt>
+    <dd>An IPsec mode in which the keys are provided by the administrator. In
+      FreeS/WAN, they are stored in /etc/ipsec.conf. The alternative, <a
+      href="#auto">automatic keying</a>, is preferred in most cases. See this
+      <a href="adv_config.html#man-auto">discussion</a>.</dd>
+  <dt><a name="MD4">MD4</a></dt>
+    <dd><a href="#digest">Message Digest Algorithm</a> Four from Ron Rivest
+      of <a href="#RSAco">RSA</a>. MD4 was widely used a few years ago, but
+      is now considered obsolete. It has been replaced by its descendants <a
+      href="#MD5">MD5</a> and <a href="#SHA">SHA</a>.</dd>
+  <dt><a name="MD5">MD5</a></dt>
+    <dd><a href="#digest">Message Digest Algorithm</a> Five from Ron Rivest
+      of <a href="#RSAco">RSA</a>, an improved variant of his <a
+      href="#MD4">MD4</a>. Like MD4, it produces a 128-bit hash. For details
+      see RFC 1321.
+      <p>MD5 is one of two message digest algorithms available in IPsec. The
+      other is <a href="#SHA">SHA</a>. SHA produces a longer hash and is
+      therefore more resistant to <a href="#birthday">birthday attacks</a>,
+      but this is not a concern for IPsec. The <a href="#HMAC">HMAC</a>
+      method used in IPsec is secure even if the underlying hash is not
+      particularly strong against this attack.</p>
+      <p>Hans Dobbertin found a weakness in MD5, and people often ask whether
+      this means MD5 is unsafe for IPsec. It doesn't. The IPsec RFCs discuss
+      Dobbertin's attack and conclude that it does not affect MD5 as used for
+      HMAC in IPsec.</p>
+    </dd>
+  <dt><a name="meet">Meet-in-the-middle attack</a></dt>
+    <dd>A divide-and-conquer attack which breaks a cipher into two parts,
+      works against each separately, and compares results. Probably the best
+      known example is an attack on double DES. This applies in principle to
+      any pair of block ciphers, e.g. to an encryption system using, say,
+      CAST-128 and Blowfish, but we will describe it for double DES.
+      <p>Double DES encryption and decryption can be written:</p>
+      <pre>        C = E(k2,E(k1,P))
+        P = D(k1,D(k2,C))</pre>
+      <p>Where C is ciphertext, P is plaintext, E is encryption, D is
+      decryption, k1 is one key, and k2 is the other key. If we know a P, C
+      pair, we can try and find the keys with a brute force attack, trying
+      all possible k1, k2 pairs. Since each key is 56 bits, there are
+      2<sup>112</sup> such pairs and this attack is painfully inefficient.</p>
+      <p>The meet-in-the middle attack re-writes the equations to calculate a
+      middle value M:</p>
+      <pre>        M = E(k1,P)
+        M = D(k2,C)</pre>
+      <p>Now we can try some large number of D(k2,C) decryptions with various
+      values of k2 and store the results in a table. Then start doing E(k1,P)
+      encryptions, checking each result to see if it is in the table.</p>
+      <p>With enough table space, this breaks double DES with
+      <nobr>2<sup>56</sup> + 2<sup>56</sup> = 2<sup>57</sup></nobr>work.
+      Against triple DES, you need <nobr>2<sup>56</sup> + 2<sup>112</sup> ~=
+      2<sup>112</sup></nobr>.</p>
+      <p>The memory requirements for such attacks can be prohibitive, but
+      there is a whole body of research literature on methods of reducing
+      them.</p>
+    </dd>
+  <dt><a name="digest">Message Digest Algorithm</a></dt>
+    <dd>An algorithm which takes a message as input and produces a hash or
+      digest of it, a fixed-length set of bits which depend on the message
+      contents in some highly complex manner. Design criteria include making
+      it extremely difficult for anyone to counterfeit a digest or to change
+      a message without altering its digest. One essential property is <a
+      href="#collision">collision resistance</a>. The main applications are
+      in message <a href="#authentication">authentication</a> and <a
+      href="#signature">digital signature</a> schemes. Widely used algorithms
+      include <a href="#MD5">MD5</a> and <a href="#SHA">SHA</a>. In IPsec,
+      message digests are used for <a href="#HMAC">HMAC</a> authentication of
+      packets.</dd>
+  <dt><a name="MTU">MTU</a></dt>
+    <dd><strong>M</strong>aximum <strong>T</strong>ransmission
+      <strong>U</strong>nit, the largest size of packet that can be sent over
+      a link. This is determined by the underlying network, but must be taken
+      account of at the IP level.
+      <p>IP packets, which can be up to 64K bytes each, must be packaged into
+      lower-level packets of the appropriate size for the underlying
+      network(s) and re-assembled on the other end. When a packet must pass
+      over multiple networks, each with its own MTU, and many of the MTUs are
+      unknown to the sender, this becomes a fairly complex problem. See <a
+      href="#pathMTU">path MTU discovery</a> for details.</p>
+      <p>Often the MTU is a few hundred bytes on serial links and 1500 on
+      Ethernet. There are, however, serial link protocols which use a larger
+      MTU to avoid fragmentation at the ethernet/serial boundary, and newer
+      (especially gigabit) Ethernet networks sometimes support much larger
+      packets because these are more efficient in some applications.</p>
+    </dd>
+  <dt><a name="N">N</a></dt>
+  <dt><a name="NAI">NAI</a></dt>
+    <dd><a href="http://www.nai.com">Network Associates</a>, a conglomerate
+      formed from <a href="#PGPI">PGP Inc.</a>, TIS (Trusted Information
+      Systems, a firewall vendor) and McAfee anti-virus products. Among other
+      things, they offer an IPsec-based VPN product.</dd>
+  <dt><a name="NAT.gloss">NAT</a></dt>
+    <dd><b>N</b>etwork <b>A</b>ddress <b>T</b>ranslation, a process by which
+      firewall machines may change the addresses on packets as they go
+      through. For discussion, see our <a
+      href="background.html#nat.background">background</a> section.</dd>
+  <dt><a name="NIST">NIST</a></dt>
+    <dd>The US <a href="http://www.nist.gov"> National Institute of Standards
+      and Technology</a>, responsible for <a href="#FIPS">FIPS standards</a>
+      including <a href="#DES">DES</a> and its replacement, <a
+      href="#AES">AES</a>.</dd>
+  <dt><a name="nonce">Nonce</a></dt>
+    <dd>A <a href="#random">random</a> value used in an <a
+      href="#authentication">authentication</a> protocol.</dd>
+  <dt></dt>
+  <dt><a name="non-routable">Non-routable IP address</a></dt>
+    <dd>An IP address not normally allowed in the "to" or "from" IP address
+      field header of IP packets.
+      <p>Almost invariably, the phrase "non-routable address" means one of
+      the addresses reserved by RFC 1918 for private networks:</p>
+      <ul>
+        <li>10.anything</li>
+        <li>172.x.anything with 16 &lt;= x &lt;= 31</li>
+        <li>192.168.anything</li>
+      </ul>
+      <p>These addresses are commonly used on private networks, e.g. behind a
+      Linux machines doing <a href="#masq">IP masquerade</a>. Machines within
+      the private network can address each other with these addresses. All
+      packets going outside that network, however, have these addresses
+      replaced before they reach the Internet.</p>
+      <p>If any packets using these addresses do leak out, they do not go
+      far. Most routers automatically discard all such packets.</p>
+      <p>Various other addresses -- the 127.0.0.0/8 block reserved for local
+      use, 0.0.0.0, various broadcast and network addresses -- cannot be
+      routed over the Internet, but are not normally included in the meaning
+      when the phrase "non-routable address" is used.</p>
+    </dd>
+  <dt><a name="NSA">NSA</a></dt>
+    <dd>The US <a href="http://www.nsa.gov"> National Security Agency</a>,
+      the American organisation for <a href="#SIGINT">signals
+      intelligence</a>, the protection of US government messages and the
+      interception and analysis of other messages. For details, see Bamford's
+      <a href="biblio.html#puzzle">"The Puzzle Palace"</a>.
+      <p>Some <a
+      href="http://www.gwu.edu/~nsarchiv/NSAEBB/NSAEBB23/index.html">history
+      of NSA</a> documents were declassified in response to a FOIA (Freedom
+      of Information Act) request.</p>
+    </dd>
+  <dt><a name="O">O</a></dt>
+  <dt><a name="oakley">Oakley</a></dt>
+    <dd>A key determination protocol, defined in RFC 2412.</dd>
+  <dt>Oakley groups</dt>
+    <dd>The groups used as the basis of <a href="#DH">Diffie-Hellman</a> key
+      exchange in the Oakley protocol, and in <a href="#IKE">IKE</a>. Four
+      were defined in the original RFC, and a fifth has been <a
+      href="http://www.lounge.org/ike_doi_errata.html">added since</a>.
+      <p>Linux FreeS/WAN currently supports the three groups based on finite
+      fields modulo a prime (Groups 1, 2 and 5) and does not support the
+      elliptic curve groups (3 and 4). For a description of the difference of
+      the types, see <a href="#dlog">discrete logarithms</a>.</p>
+    </dd>
+  <dt><a name="OTP">One time pad</a></dt>
+    <dd>A cipher in which the key is:
+      <ul>
+        <li>as long as the total set of messages to be enciphered</li>
+        <li>absolutely <a href="#random">random</a></li>
+        <li>never re-used</li>
+      </ul>
+      <p>Given those three conditions, it can easily be proved that the
+      cipher is perfectly secure, in the sense that an attacker with
+      intercepted message in hand has no better chance of guessing the
+      message than an attacker who has not intercepted the message and only
+      knows the message length. No such proof exists for any other cipher.</p>
+      <p>There are, however, several problems with this "perfect" cipher.</p>
+      <p>First, it is <strong>wildly impractical</strong> for most
+      applications. Key management is at best difficult, often completely
+      impossible.</p>
+      <p>Second, it is <strong>extremely fragile</strong>. Small changes
+      which violate the conditions listed above do not just weaken the cipher
+      liitle. Quite often they destroy its security completely.</p>
+      <ul>
+        <li>Re-using the pad weakens the cipher to the point where it can be
+          broken with pencil and paper. With a computer, the attack is
+          trivially easy.</li>
+        <li>Using <em>anything</em> less than truly <a
+          href="#random">random</a> numbers <em>completely</em> invalidates
+          the security proof.</li>
+        <li>In particular, using computer-generated pseudo-random numbers may
+          give an extremely weak cipher. It might also produce a good stream
+          cipher, if the pseudo-random generator is both well-designed and
+          properely seeded.</li>
+      </ul>
+      <p>Marketing claims about the "unbreakable" security of various
+      products which somewhat resemble one-time pads are common. Such claims
+      are one of the surest signs of cryptographic <a href="#snake">snake
+      oil</a>; most systems marketed with such claims are worthless.</p>
+      <p>Finally, even if the system is implemented and used correctly, it is
+      <strong>highly vulnerable to a substitution attack</strong>. If an
+      attacker knows some plaintext and has an intercepted message, he can
+      discover the pad.</p>
+      <ul>
+        <li>This does not matter if the attacker is just a <a
+          href="#passive">passive</a> eavesdropper. It gives him no plaintext
+          he didn't already know and we don't care that he learns a pad which
+          we will never re-use.</li>
+        <li>However, an <a href="#active">active</a> attacker who knows the
+          plaintext can recover the pad, then use it to encode with whatever
+          he chooses. If he can get his version delivered instead of yours,
+          this may be a disaster. If you send "attack at dawn", the delivered
+          message can be anything the same length -- perhaps "retreat to
+          east" or "shoot generals".</li>
+        <li>An active attacker with only a reasonable guess at the plaintext
+          can try the same attack. If the guess is correct, this works and
+          the attacker's bogus message is delivered. If the guess is wrong, a
+          garbled message is delivered.</li>
+      </ul>
+      <p>In general then, despite its theoretical perfection, the
+      one-time-pad has very limited practical application.</p>
+      <p>See also the <a href="http://pubweb.nfr.net/~mjr/pubs/otpfaq/">one
+      time pad FAQ</a>.</p>
+    </dd>
+  <dt><a name="carpediem">Opportunistic encryption (OE)</a></dt>
+    <dd>A situation in which any two IPsec-aware machines can secure their
+      communications, without a pre-shared secret and without a common <a
+      href="#PKI">PKI</a> or previous exchange of public keys. This is one of
+      the goals of the Linux FreeS/WAN project, discussed in our <a
+      href="intro.html#goals">introduction</a> section.
+      <p>Setting up for opportunistic encryption is described in our <a
+      href="quickstart.html#quickstart">quickstart</a> document.</p>
+    </dd>
+  <dt><a name="responder">Opportunistic responder</a></dt>
+    <dd>A host which accepts, but does not initiate, requests for 
+     <A HREF="#carpediem">opportunistic encryption</A> (OE). 
+     An opportunistic responder has enabled OE in its
+     <A HREF="#passive.OE">passive</A> form (pOE) only.
+     A web server or file server may be usefully set up as an opportunistic 
+      responder. 
+      <p>Configuring passive OE is described in our
+      <a href="policygroups.html#policygroups">policy groups</a> document.</p>
+    </dd>
+  <dt><a name="orange">Orange book</a></dt>
+    <dd>the most basic and best known of the US government's <a
+      href="#rainbow">Rainbow Book</a> series of computer security
+    standards.</dd>
+  <dt><a name="P">P</a></dt>
+  <dt><a name="P1363">P1363 standard</a></dt>
+    <dd>An <a href="#IEEE">IEEE</a> standard for public key cryptography. <a
+      href="http://grouper.ieee.org/groups/1363">Web page</a>.</dd>
+  <dt><a name="pOE">pOE</a></dt>
+    <dd>See <a href="#passive.OE">Passive opportunistic encryption</a>.</dd>
+  <dt><a name="passive">Passive attack</a></dt>
+    <dd>An attack in which the attacker only eavesdrops and attempts to
+      analyse intercepted messages, as opposed to an <a href="#active">active
+      attack</a> in which he diverts messages or generates his own.</dd>
+  <dt><a name="passive.OE">Passive opportunistic encryption (pOE)</a></dt>
+    <dd>A form of
+     <A HREF="#carpediem">opportunistic encryption</A> (OE) in which the
+     host will accept opportunistic connection requests, but will not 
+     initiate such requests. A host which runs OE in its passive form only 
+     is known as an <A HREF="#responder">opportunistic responder</A>.
+      <p>Configuring passive OE is described in our
+      <a href="policygroups.html#policygroups">policy groups</a> document.</p>
+    </dd>
+  <dt><a name="pathMTU">Path MTU discovery</a></dt>
+    <dd>The process of discovering the largest packet size which all links on
+      a path can handle without fragmentation -- that is, without any router
+      having to break the packet up into smaller pieces to match the <a
+      href="#MTU">MTU</a> of its outgoing link.
+      <p>This is done as follows:</p>
+      <ul>
+        <li>originator sends the largest packets allowed by <a
+          href="#MTU">MTU</a> of the first link, setting the DF
+          (<strong>d</strong>on't <strong>f</strong>ragment) bit in the
+          packet header</li>
+        <li>any router which cannot send the packet on (outgoing MTU is too
+          small for it, and DF prevents fragmenting it to match) sends back
+          an <a href="#ICMP.gloss">ICMP</a> packet reporting the problem</li>
+        <li>originator looks at ICMP message and tries a smaller size</li>
+        <li>eventually, you settle on a size that can pass all routers</li>
+        <li>thereafter, originator just sends that size and no-one has to
+          fragment</li>
+      </ul>
+      <p>Since this requires co-operation of many systems, and since the next
+      packet may travel a different path, this is one of the trickier areas
+      of IP programming. Bugs that have shown up over the years have
+      included:</p>
+      <ul>
+        <li>malformed ICMP messages</li>
+        <li>hosts that ignore or mishandle these ICMP messages</li>
+        <li>firewalls blocking the ICMP messages so host does not see
+        them</li>
+      </ul>
+      <p>Since IPsec adds a header, it increases packet size and may require
+      fragmentation even where incoming and outgoing MTU are equal.</p>
+    </dd>
+  <dt><a name="PFS">Perfect forward secrecy (PFS)</a></dt>
+    <dd>A property of systems such as <a href="#DH">Diffie-Hellman</a> key
+      exchange which use a long-term key (such as the shared secret in IKE)
+      and generate short-term keys as required. If an attacker who acquires
+      the long-term key <em>provably</em> can
+      <ul>
+        <li><em>neither</em> read previous messages which he may have
+        archived</li>
+        <li><em>nor</em> read future messages without performing additional
+          successful attacks</li>
+      </ul>
+      <p>then the system has PFS. The attacker needs the short-term keys in
+      order to read the trafiic and merely having the long-term key does not
+      allow him to infer those. Of course, it may allow him to conduct
+      another attack (such as <a href="#middle">man-in-the-middle</a>) which
+      gives him some short-term keys, but he does not automatically get them
+      just by acquiring the long-term key.</p>
+      <p>See also
+<a href="http://sandelman.ottawa.on.ca/ipsec/1996/08/msg00123.html">Phil 
+Karn's definition</a>.
+    </dd>
+  <dt>PFS</dt>
+    <dd>see Perfect Forward Secrecy</dd>
+  <dt><a name="PGP">PGP</a></dt>
+    <dd><b>P</b>retty <b>G</b>ood <b>P</b>rivacy, a personal encryption
+      system for email based on public key technology, written by Phil
+      Zimmerman.
+      <p>The 2.xx versions of PGP used the <a href="#RSA">RSA</a> public key
+      algorithm and used <a href="#IDEA">IDEA</a> as the symmetric cipher.
+      These versions are described in RFC 1991 and in <a
+      href="#PGP">Garfinkel's book</a>. Since version 5, the products from <a
+      href="#PGPI">PGP Inc</a>. have used <a href="#DH">Diffie-Hellman</a>
+      public key methods and <a href="#CAST128">CAST-128</a> symmetric
+      encryption. These can verify signatures from the 2.xx versions, but
+      cannot exchange encryted messages with them.</p>
+      <p>An <a href="#IETF">IETF</a> working group has issued RFC 2440 for an
+      "Open PGP" standard, similar to the 5.x versions. PGP Inc. staff were
+      among the authors. A free <a href="#GPG">Gnu Privacy Guard</a> based on
+      that standard is now available.</p>
+      <p>For more information on PGP, including how to obtain it, see our
+      cryptography <a href="web.html#tools">links</a>.</p>
+    </dd>
+  <dt><a name="PGPI">PGP Inc.</a></dt>
+    <dd>A company founded by Zimmerman, the author of <a href="#PGP">PGP</a>,
+      now a division of <a href="#NAI">NAI</a>. See the <a
+      href="http://www.pgp.com">corporate website</a>. Zimmerman left in
+      2001, and early in 2002 NAI announced that they would no longer sell
+      PGP..
+      <p>Versions 6.5 and later of the PGP product include PGPnet, an IPsec
+      client for Macintosh or for Windows 95/98/NT. See our <a
+      href="interop.html#pgpnet">interoperation documen</a>t.</p>
+    </dd>
+  <dt><a name="photuris">Photuris</a></dt>
+    <dd>Another key negotiation protocol, an alternative to <a
+      href="#IKE">IKE</a>, described in RFCs 2522 and 2523.</dd>
+  <dt><a name="PPP">PPP</a></dt>
+    <dd><b>P</b>oint-to-<b>P</b>oint <b>P</b>rotocol, originally a method of
+      connecting over modems or serial lines, but see also PPPoE.</dd>
+  <dt><a name="PPPoE">PPPoE</a></dt>
+    <dd><b>PPP</b> <b>o</b>ver <b>E</b>thernet, a somewhat odd protocol that
+      makes Ethernet look like a point-to-point serial link. It is widely
+      used for cable or ADSL Internet services, apparently mainly because it
+      lets the providers use access control and address assignmment
+      mechanisms developed for dialup networks. <a
+      href="http://www.roaringpenguin.com">Roaring Penguin</a> provide a
+      widely used Linux implementation.</dd>
+  <dt><a name="PPTP">PPTP</a></dt>
+    <dd><b>P</b>oint-to-<b>P</b>oint <b>T</b>unneling <b>P</b>rotocol, used
+      in some Microsoft VPN implementations. Papers discussing weaknesses in
+      it are on <a
+      href="http://www.counterpane.com/publish.html">counterpane.com</a>. It
+      is now largely obsolete, replaced by L2TP.</dd>
+  <dt><a name="PKI">PKI</a></dt>
+    <dd><b>P</b>ublic <b>K</b>ey <b>I</b>nfrastructure, the things an
+      organisation or community needs to set up in order to make <a
+      href="#public">public key</a> cryptographic technology a standard part
+      of their operating procedures.
+      <p>There are several PKI products on the market. Typically they use a
+      hierarchy of <a href="#CA">Certification Authorities (CAs)</a>. Often
+      they use <a href="#LDAP">LDAP</a> access to <a href="#X509">X.509</a>
+      directories to implement this.</p>
+      <p>See <a href="#web">Web of Trust</a> for a different sort of
+      infrastructure.</p>
+    </dd>
+  <dt><a name="PKIX">PKIX</a></dt>
+    <dd><b>PKI</b> e<b>X</b>change, an <a href="#IETF">IETF</a> standard that
+      allows <a href="#PKI">PKI</a>s to talk to each other.
+      <p>This is required, for example, when users of a corporate PKI need to
+      communicate with people at client, supplier or government
+      organisations, any of which may have a different PKI in place. I should
+      be able to talk to you securely whenever:</p>
+      <ul>
+        <li>your organisation and mine each have a PKI in place</li>
+        <li>you and I are each set up to use those PKIs</li>
+        <li>the two PKIs speak PKIX</li>
+        <li>the configuration allows the conversation</li>
+      </ul>
+      <p>At time of writing (March 1999), this is not yet widely implemented
+      but is under quite active development by several groups.</p>
+    </dd>
+  <dt><a name="plaintext">Plaintext</a></dt>
+    <dd>The unencrypted input to a cipher, as opposed to the encrypted <a
+      href="#ciphertext">ciphertext</a> output.</dd>
+  <dt><a name="Pluto">Pluto</a></dt>
+    <dd>The <a href="#FreeSWAN">Linux FreeS/WAN</a> daemon which handles key
+      exchange via the <a href="#IKE">IKE</a> protocol, connection
+      negotiation, and other higher-level tasks. Pluto calls the <a
+      href="#KLIPS">KLIPS</a> kernel code as required. For details, see the
+      manual page ipsec_pluto(8).</dd>
+  <dt><a name="public">Public Key Cryptography</a></dt>
+    <dd>In public key cryptography, keys are created in matched pairs.
+      Encrypt with one half of a pair and only the matching other half can
+      decrypt it. This contrasts with <a href="#symmetric">symmetric or
+      secret key cryptography</a> in which a single key known to both parties
+      is used for both encryption and decryption.
+      <p>One half of each pair, called the public key, is made public. The
+      other half, called the private key, is kept secret. Messages can then
+      be sent by anyone who knows the public key to the holder of the private
+      key. Encrypt with the public key and you know that only someone with
+      the matching private key can decrypt.</p>
+      <p>Public key techniques can be used to create <a
+      href="#signature">digital signatures</a> and to deal with key
+      management issues, perhaps the hardest part of effective deployment of
+      <a href="#symmetric"> symmetric ciphers</a>. The resulting <a
+      href="#hybrid">hybrid cryptosystems</a> use public key methods to
+      manage keys for symmetric ciphers.</p>
+      <p>Many organisations are currently creating <a href="#PKI">PKIs,
+      public key infrastructures</a> to make these benefits widely
+      available.</p>
+    </dd>
+  <dt>Public Key Infrastructure</dt>
+    <dd>see <a href="#PKI">PKI</a></dd>
+  <dt><a name="Q">Q</a></dt>
+  <dt><a name="R">R</a></dt>
+  <dt><a name="rainbow">Rainbow books</a></dt>
+    <dd>A set of US government standards for evaluation of "trusted computer
+      systems", of which the best known was the <a href="#orange">Orange
+      Book</a>. One fairly often hears references to "C2 security" or a
+      product "evaluated at B1". The Rainbow books define the standards
+      referred to in those comments.
+      <p>See this <a href="http://www.fas.org/irp/nsa/rainbow.htm">reference
+      page</a>.</p>
+      <p>The Rainbow books are now mainly obsolete, replaced by the
+      international <a href="#cc">Common Criteria</a> standards.</p>
+    </dd>
+  <dt><a name="random">Random</a></dt>
+    <dd>A remarkably tricky term, far too much so for me to attempt a
+      definition here. Quite a few cryptosystems have been broken via attacks
+      on weak random number generators, even when the rest of the system was
+      sound.
+      <p>See <a
+      href="http://nis.nsf.net/internet/documents/rfc/rfc1750.txt">RFC
+      1750</a> for the theory.</p>
+      <p>See the manual pages for <a
+      href="manpage.d/ipsec_ranbits.8.html">ipsec_ranbits(8)</a> and
+      ipsec_prng(3) for more on FreeS/WAN's use of randomness. Both depend on
+      the random(4) device driver..</p>
+      <p>A couple of years ago, there was extensive mailing list discussion
+      (archived <a
+      href="http://www.openpgp.net/random/index.html">here</a>)of Linux
+      /dev/random and FreeS/WAN.  Since then, the design of the random(4)
+      driver has changed considerably. Linux 2.4 kernels have the new
+      driver..</p>
+    </dd>
+  <dt>Raptor</dt>
+    <dd>A firewall product for Windows NT offerring IPsec-based VPN services.
+      Linux FreeS/WAN interoperates with Raptor; see our <a
+      href="interop.html#Raptor">interop</a> document for details. Raptor
+      have recently merged with Axent.</dd>
+  <dt><a name="RC4">RC4</a></dt>
+    <dd><b>R</b>ivest <b>C</b>ipher four, designed by Ron Rivest of <a
+      href="#RSAco">RSA</a> and widely used. Believed highly secure with
+      adequate key length, but often implemented with inadequate key length
+      to comply with export restrictions.</dd>
+  <dt><a name="RC6">RC6</a></dt>
+    <dd><b>R</b>ivest <b>C</b>ipher six, <a href="#RSAco">RSA</a>'s <a
+      href="#AES">AES</a> candidate cipher.</dd>
+  <dt><a name="replay">Replay attack</a></dt>
+    <dd>An attack in which the attacker records data and later replays it in
+      an attempt to deceive the recipient.</dd>
+  <dt><a name="reverse">Reverse map</a></dt>
+    <dd>In <a href="#DNS">DNS</a>, a table where IP addresses can be used as
+      the key for lookups which return a system name and/or other
+    information.</dd>
+  <dt>RFC</dt>
+    <dd><b>R</b>equest <b>F</b>or <b>C</b>omments, an Internet document. Some
+      RFCs are just informative. Others are standards.
+      <p>Our list of <a href="#IPSEC">IPsec</a> and other security-related
+      RFCs is <a href="rfc.html#RFC">here</a>, along with information on
+      methods of obtaining them.</p>
+    </dd>
+  <dt><a name="rijndael">Rijndael</a></dt>
+    <dd>a <a href="#block">block cipher</a> designed by two Belgian
+      cryptographers, winner of the US government's <a href="#AES">AES</a>
+      contest to pick a replacement for <a href="#DES">DES</a>. See the <a
+      href="http://www.esat.kuleuven.ac.be/~rijmen/rijndael">Rijndael home
+      page</a>.</dd>
+  <dt><a name="RIPEMD">RIPEMD</a></dt>
+    <dd>A <a href="#digest">message digest</a> algorithm. The current version
+      is RIPEMD-160 which gives a 160-bit hash.</dd>
+  <dt><a name="rootCA">Root CA</a></dt>
+    <dd>The top level <a href="#CA">Certification Authority</a> in a hierachy
+      of such authorities.</dd>
+  <dt><a name="routable">Routable IP address</a></dt>
+    <dd>Most IP addresses can be used as "to" and "from" addresses in packet
+      headers. These are the routable addresses; we expect routing to be
+      possible for them. If we send a packet to one of them, we expect (in
+      most cases; there are various complications) that it will be delivered
+      if the address is in use and will cause an <a
+      href="#ICMP.gloss">ICMP</a> error packet to come back to us if not.
+      <p>There are also several classes of <a
+      href="#non-routable">non-routable</a> IP addresses.</p>
+    </dd>
+  <dt><a name="RSA">RSA algorithm</a></dt>
+    <dd><b>R</b>ivest <b>S</b>hamir <b>A</b>dleman <a href="#public">public
+      key</a> algorithm, named for its three inventors. It is widely used and
+      likely to become moreso since it became free of patent encumbrances in
+      September 2000.
+      <p>RSA can be used to provide either <a
+      href="#encryption">encryption</a> or <a href="#signature">digital
+      signatures</a>. In IPsec, it is used only for signatures. These provide
+      gateway-to-gateway <a href="#authentication">authentication</a> for <a
+      href="#IKE">IKE </a>negotiations.</p>
+      <p>For a full explanation of the algorithm, consult one of the standard
+      references such as <a href="biblio.html#schneier">Applied
+      Cryptography</a>. A simple explanation is:</p>
+      <p>The great 17th century French mathematician <a
+      href="http://www-groups.dcs.st-andrews.ac.uk/~history/Mathematicians/Fermat.html">Fermat</a>
+      proved that,</p>
+      <p>for any prime p and number x, 0 &lt;= x &lt; p:</p>
+      <pre>        x^p == x         modulo p
+        x^(p-1) == 1     modulo p, non-zero x
+      </pre>
+      <p>From this it follows that if we have a pair of primes p, q and two
+      numbers e, d such that:</p>
+      <pre>        ed == 1          modulo lcm( p-1, q-1)
+      </pre>
+      where lcm() is least common multiple, then<br>
+      for all x, 0 &lt;= x &lt; pq:
+      <pre>      x^ed == x           modulo pq
+      </pre>
+      <p>So we construct such as set of numbers p, q, e, d and publish the
+      product N=pq and e as the public key. Using c for <a
+      href="#ciphertext">ciphertext</a> and i for the input <a
+      href="#plaintext">plaintext</a>, encryption is then:</p>
+      <pre>        c = i^e           modulo N
+      </pre>
+      <p>An attacker cannot deduce i from the cyphertext c, short of either
+      factoring N or solving the <a href="#dlog">discrete logarithm</a>
+      problem for this field. If p, q are large primes (hundreds or thousands
+      of bits) no efficient solution to either problem is known.</p>
+      <p>The receiver, knowing the private key (N and d), can readily recover
+      the plaintext p since:</p>
+      <pre>        c^d == (i^e)^d    modulo N
+            == i^ed       modulo N
+            == i          modulo N
+      </pre>
+      <p>This gives an effective public key technique, with only a couple of
+      problems. It uses a good deal of computer time, since calculations with
+      large integers are not cheap, and there is no proof it is necessarily
+      secure since no-one has proven either factoring or discrete log cannot
+      be done efficiently. Quite a few good mathematicians have tried both
+      problems, and no-one has announced success, but there is no proof they
+      are insoluble.</p>
+    </dd>
+  <dt><a name="RSAco">RSA Data Security</a></dt>
+    <dd>A company founded by the inventors of the <a href="#RSA">RSA</a>
+      public key algorithm.</dd>
+  <dt><a name="S">S</a></dt>
+  <dt><a name="SA">SA</a></dt>
+    <dd><b>S</b>ecurity <b>A</b>ssociation, the channel negotiated by the
+      higher levels of an <a href="#IPSEC">IPsec</a> implementation (<a
+      href="#IKE">IKE</a>) and used by the lower (<a href="#ESP">ESP</a> and
+      <a href="#AH">AH</a>). SAs are unidirectional; you need a pair of them
+      for two-way communication.
+      <p>An SA is defined by three things -- the destination, the protocol
+      (<a href="#AH">AH</a> or<a href="#ESP">ESP</a>) and the <a
+      href="SPI">SPI</a>, security parameters index. It is used as an index
+      to look up other things such as session keys and intialisation
+      vectors.</p>
+      <p>For more detail, see our section on <a href="ipsec.html">IPsec</a>
+      and/or RFC 2401.</p>
+    </dd>
+  <dt><a name="SElinux">SE Linux</a></dt>
+    <dd><strong>S</strong>ecurity <strong>E</strong>nhanced Linux, an <a
+      href="#NSA">NSA</a>-funded project to add <a
+      href="#mandatory">mandatory access control</a> to Linux. See the <a
+      href="http://www.nsa.gov/selinux">project home page</a>.
+      <p>According to their web pages, this work will include extending
+      mandatory access controls to IPsec tunnels.</p>
+      <p>Recent versions of SE Linux code use the <a href="#LSM">Linux
+      Security Module</a> interface.</p>
+    </dd>
+  <dt><a name="SDNS">Secure DNS</a></dt>
+    <dd>A version of the <a href="#DNS">DNS or Domain Name Service</a>
+      enhanced with authentication services. This is being designed by the <a
+      href="#IETF">IETF</a> DNS security <a
+      href="http://www.ietf.org/ids.by.wg/dnssec.html">working group</a>.
+      Check the <a href="http://www.isc.org/bind.html">Internet Software
+      Consortium</a> for information on implementation progress and for the
+      latest version of <a href="#BIND">BIND</a>. Another site has <a
+      href="http://www.toad.com/~dnssec">more information</a>.
+      <p><a href="#IPSEC">IPsec</a> can use this plus <a
+      href="#DH">Diffie-Hellman key exchange</a> to bootstrap itself. This
+      allows <a href="#carpediem">opportunistic encryption</a>. Any pair of
+      machines which can authenticate each other via DNS can communicate
+      securely, without either a pre-existing shared secret or a shared <a
+      href="#PKI">PKI</a>.</p>
+    </dd>
+  <dt>Secret key cryptography</dt>
+    <dd>See <a href="#symmetric">symmetric cryptography</a></dd>
+  <dt>Security Association</dt>
+    <dd>see <a href="#SA">SA</a></dd>
+  <dt>Security Enhanced Linux</dt>
+    <dd>see <a href="#SElinux">SE Linux</a></dd>
+  <dt><a name="sequence">Sequence number</a></dt>
+    <dd>A number added to a packet or message which indicates its position in
+      a sequence of packets or messages. This provides some security against
+      <a href="#replay">replay attacks</a>.
+      <p>For <a href="#auto">automatic keying</a> mode, the <a
+      href="#IPSEC">IPsec</a> RFCs require that the sender generate sequence
+      numbers for each packet, but leave it optional whether the receiver
+      does anything with them.</p>
+    </dd>
+  <dt><a name="SHA">SHA</a></dt>
+  <dt>SHA-1</dt>
+    <dd><b>S</b>ecure <b>H</b>ash <b>A</b>lgorithm, a <a
+      href="#digest">message digest algorithm</a> developed by the <a
+      href="#NSA">NSA</a> for use in the Digital Signature standard, <a
+      href="#FIPS">FIPS</a> number 186 from <a href="#NIST">NIST</a>. SHA is
+      an improved variant of <a href="#MD4">MD4</a> producing a 160-bit hash.
+      <p>SHA is one of two message digest algorithms available in IPsec. The
+      other is <a href="#MD5">MD5</a>. Some people do not trust SHA because
+      it was developed by the <a href="#NSA">NSA</a>. There is, as far as we
+      know, no cryptographic evidence that SHA is untrustworthy, but this
+      does not prevent that view from being strongly held.</p>
+      <p>The NSA made one small change after the release of the original SHA.
+      They did not give reasons. Iit may be a defense against some attack
+      they found and do not wish to disclose.  Technically the modified
+      algorithm should be called SHA-1, but since it has replaced the
+      original algorithm in nearly all applications, it is generally just
+      referred to as SHA..</p>
+    </dd>
+  <dt><a name="SHA-256">SHA-256</a></dt>
+  <dt>SHA-384</dt>
+  <dt>SHA-512</dt>
+    <dd>Newer variants of SHA designed to match the strength of the 128, 192
+      and 256-bit keys of <a href="#AES">AES</a>. The work to break an
+      encryption algorithm's strength by <a href="#brute">brute force</a> is
+      2 
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+        <msup>
+          <mi>keylength</mi>
+        </msup>
+      </math>
+       operations but a <a href="birthday">birthday attack </a>on a hash
+      needs only 2 
+      <math xmlns="http://www.w3.org/1998/Math/MathML">
+        <msup>
+          <mrow>
+            <mi>hashlength</mi>
+            <mo>/</mo>
+            <mn>2</mn>
+          </mrow>
+        </msup>
+      </math>
+       , so as a general rule you need a hash twice the size of the key to
+      get similar strength. SHA-256, SHA-384 and SHA-512 are designed to
+      match the 128, 192 and 256-bit key sizes of AES, respectively.</dd>
+  <dt><a name="SIGINT">Signals intelligence (SIGINT)</a></dt>
+    <dd>Activities of government agencies from various nations aimed at
+      protecting their own communications and reading those of others.
+      Cryptography, cryptanalysis, wiretapping, interception and monitoring
+      of various sorts of signals. The players include the American <a
+      href="#NSA">NSA</a>, British <a href="#GCHQ">GCHQ</a> and Canadian <a
+      href="#CSE">CSE</a>.</dd>
+  <dt><a name="SKIP">SKIP</a></dt>
+    <dd><b>S</b>imple <b>K</b>ey management for <b>I</b>nternet
+      <b>P</b>rotocols, an alternative to <a href="#IKE">IKE</a> developed by
+      Sun and being marketed by their <a
+      href="http://skip.incog.com">Internet Commerce Group</a>.</dd>
+  <dt><a name="snake">Snake oil</a></dt>
+    <dd>Bogus cryptography. See the <a
+      href="http://www.interhack.net/people/cmcurtin/snake-oil-faq.html">
+      Snake Oil FAQ</a> or <a
+      href="http://www.counterpane.com/crypto-gram-9902.html#snakeoil">this
+      paper</a> by Schneier.</dd>
+  <dt><a name="SPI">SPI</a></dt>
+    <dd><b>S</b>ecurity <b>P</b>arameter <b>I</b>ndex, an index used within
+      <a href="#IPSEC">IPsec</a> to keep connections distinct. A <a
+      href="#SA">Security Association (SA)</a> is defined by destination,
+      protocol and SPI. Without the SPI, two connections to the same gateway
+      using the same protocol could not be distinguished.
+      <p>For more detail, see our <a href="ipsec.html">IPsec</a> section
+      and/or RFC 2401.</p>
+    </dd>
+  <dt><a name="SSH">SSH</a></dt>
+    <dd><b>S</b>ecure <b>SH</b>ell, an encrypting replacement for the
+      insecure Berkeley commands whose names begin with "r" for "remote":
+      rsh, rlogin, etc.
+      <p>For more information on SSH, including how to obtain it, see our
+      cryptography <a href="web.html#tools">links</a>.</p>
+    </dd>
+  <dt><a name="SSHco">SSH Communications Security</a></dt>
+    <dd>A company founded by the authors of <a href="#SSH">SSH</a>. Offices
+      are in <a href="http://www.ssh.fi">Finland</a> and <a
+      href="http://www.ipsec.com">California</a>. They have a toolkit for
+      developers of IPsec applications.</dd>
+  <dt><a name="SSL">SSL</a></dt>
+    <dd><a href="http://home.netscape.com/eng/ssl3">Secure Sockets Layer</a>,
+      a set of encryption and authentication services for web browsers,
+      developed by Netscape. Widely used in Internet commerce. Also known as
+      <a href="#TLS">TLS</a>.</dd>
+  <dt>SSLeay</dt>
+    <dd>A free implementation of <a href="#SSL">SSL</a> by Eric Young (eay)
+      and others. Developed in Australia; not subject to US export
+    controls.</dd>
+  <dt><a name="static">static IP address</a></dt>
+    <dd>an IP adddress which is pre-set on the machine itself, as opposed to
+      a <a href="#dynamic">dynamic address</a> which is assigned by a <a
+      href="#DHCP">DHCP</a> server or obtained as part of the process of
+      establishing a <a href="#PPP">PPP</a> or <a href="#PPPoE">PPPoE</a>
+      connection</dd>
+  <dt><a name="stream">Stream cipher</a></dt>
+    <dd>A <a href="#symmetric">symmetric cipher</a> which produces a stream
+      of output which can be combined (often using XOR or bytewise addition)
+      with the plaintext to produce ciphertext. Contrasts with <a
+      href="#block">block cipher</a>.
+      <p><a href="#IPSEC">IPsec</a> does not use stream ciphers. Their main
+      application is link-level encryption, for example of voice, video or
+      data streams on a wire or a radio signal.</p>
+    </dd>
+  <dt><a name="subnet">subnet</a></dt>
+    <dd>A group of IP addresses which are logically one network, typically
+      (but not always) assigned to a group of physically connected machines.
+      The range of addresses in a subnet is described using a subnet mask.
+      See next entry.</dd>
+  <dt>subnet mask</dt>
+    <dd>A method of indicating the addresses included in a subnet. Here are
+      two equivalent examples:
+      <ul>
+        <li>101.101.101.0/24</li>
+        <li>101.101.101.0 with mask 255.255.255.0</li>
+      </ul>
+      <p>The '24' is shorthand for a mask with the top 24 bits one and the
+      rest zero. This is exactly the same as 255.255.255.0 which has three
+      all-ones bytes and one all-zeros byte.</p>
+      <p>These indicate that, for this range of addresses, the top 24 bits
+      are to be treated as naming a network (often referred to as "the
+      101.101.101.0/24 subnet") while most combinations of the low 8 bits can
+      be used to designate machines on that network. Two addresses are
+      reserved; 101.101.101.0 refers to the subnet rather than a specific
+      machine while 101.101.101.255 is a broadcast address. 1 to 254 are
+      available for machines.</p>
+      <p>It is common to find subnets arranged in a hierarchy. For example, a
+      large company might have a /16 subnet and allocate /24 subnets within
+      that to departments. An ISP might have a large subnet and allocate /26
+      subnets (64 addresses, 62 usable) to business customers and /29 subnets
+      (8 addresses, 6 usable) to residential clients.</p>
+    </dd>
+  <dt><a name="SWAN">S/WAN</a></dt>
+    <dd>Secure Wide Area Network, a project involving <a href="#RSAco">RSA
+      Data Security</a> and a number of other companies. The goal was to
+      ensure that all their <a href="#IPSEC">IPsec</a> implementations would
+      interoperate so that their customers can communicate with each other
+      securely.</dd>
+  <dt><a name="symmetric">Symmetric cryptography</a></dt>
+    <dd>Symmetric cryptography, also referred to as conventional or secret
+      key cryptography, relies on a <em>shared secret key</em>, identical for
+      sender and receiver. Sender encrypts with that key, receiver decrypts
+      with it. The idea is that an eavesdropper without the key be unable to
+      read the messages. There are two main types of symmetric cipher, <a
+      href="#block">block ciphers</a> and <a href="#stream">stream
+      ciphers</a>.
+      <p>Symmetric cryptography contrasts with <a href="#public">public
+      key</a> or asymmetric systems where the two players use different
+      keys.</p>
+      <p>The great difficulty in symmetric cryptography is, of course, key
+      management. Sender and receiver <em>must</em> have identical keys and
+      those keys <em>must</em> be kept secret from everyone else. Not too
+      much of a problem if only two people are involved and they can
+      conveniently meet privately or employ a trusted courier. Quite a
+      problem, though, in other circumstances.</p>
+      <p>It gets much worse if there are many people. An application might be
+      written to use only one key for communication among 100 people, for
+      example, but there would be serious problems. Do you actually trust all
+      of them that much? Do they trust each other that much? Should they?
+      What is at risk if that key is compromised? How are you  going to
+      distribute that key to everyone without risking its secrecy? What do
+      you do when one of them leaves the company? Will you even know?</p>
+      <p>On the other hand, if you need unique keys for every possible
+      connection between a group of 100, then each user must have 99 keys.
+      You need either 99*100/2 = 4950 <em>secure</em> key exchanges between
+      users or a central authority that <em>securely</em> distributes 100 key
+      packets, each with a different set of 99 keys.</p>
+      <p>Either of these is possible, though tricky, for 100 users. Either
+      becomes an administrative nightmare for larger numbers. Moreover, keys
+      <em>must</em> be changed regularly, so the problem of key distribution
+      comes up again and again. If you use the same key for many messages
+      then an attacker has more text to work with in an attempt to crack that
+      key. Moreover, one successful crack will give him or her the text of
+      all those messages.</p>
+      <p>In short, the <em>hardest part of conventional cryptography is key
+      management</em>. Today the standard solution is to build a <a
+      href="#hybrid">hybrid system</a> using <a href="#public">public key</a>
+      techniques to manage keys.</p>
+    </dd>
+  <dt><a name="T">T</a></dt>
+  <dt><a name="TIS">TIS</a></dt>
+    <dd>Trusted Information Systems, a firewall vendor now part of <a
+      href="#NAI">NAI</a>. Their Gauntlet product offers IPsec VPN services.
+      TIS implemented the first version of <a href="#SDNS">Secure DNS</a> on
+      a <a href="#DARPA">DARPA</a> contract.</dd>
+  <dt><a name="TLS">TLS</a></dt>
+    <dd><b>T</b>ransport <b>L</b>ayer <b>S</b>ecurity, a newer name for <a
+      href="#SSL">SSL</a>.</dd>
+  <dt><a name="TOS">TOS field</a></dt>
+    <dd>The <strong>T</strong>ype <strong>O</strong>f
+      <strong>S</strong>ervice field in an IP header, used to control
+      qualkity of service routing.</dd>
+  <dt><a name="traffic">Traffic analysis</a></dt>
+    <dd>Deducing useful intelligence from patterns of message traffic,
+      without breaking codes or reading the messages. In one case during
+      World War II, the British guessed an attack was coming because all
+      German radio traffic stopped. The "radio silence" order, intended to
+      preserve security, actually gave the game away.
+      <p>In an industrial espionage situation, one might deduce something
+      interesting just by knowing that company A and company B were talking,
+      especially if one were able to tell which departments were involved, or
+      if one already knew that A was looking for acquisitions and B was
+      seeking funds for expansion.</p>
+      <p>In general, traffic analysis by itself is not very useful. However,
+      in the context of a larger intelligence effort where quite a bit is
+      already known, it can be very useful. When you are solving a complex
+      puzzle, every little bit helps.</p>
+      <p><a href="#IPSEC">IPsec</a> itself does not defend against traffic
+      analysis, but carefully thought out systems using IPsec can provide at
+      least partial protection. In particular, one might want to encrypt more
+      traffic than was strictly necessary, route things in odd ways, or even
+      encrypt dummy packets, to confuse the analyst. We discuss this <a
+      href="ipsec.html#traffic.resist">here</a>.</p>
+    </dd>
+  <dt><a name="transport">Transport mode</a></dt>
+    <dd>An IPsec application in which the IPsec gateway is the destination of
+      the protected packets, a machine acts as its own gateway. Contrast with
+      <a href="#tunnel">tunnel mode</a>.</dd>
+  <dt>Triple DES</dt>
+    <dd>see <a href="#3DES">3DES</a></dd>
+  <dt><a name="TTL">TTL</a></dt>
+    <dd><strong>T</strong>ime <strong>T</strong>o <strong>L</strong>ive, used
+      to control <a href="#DNS">DNS</a> caching. Servers discard cached
+      records whose TTL expires</dd>
+  <dt><a name="tunnel">Tunnel mode</a></dt>
+    <dd>An IPsec application in which an IPsec gateway provides protection
+      for packets to and from other systems. Contrast with <a
+      href="#transport">transport mode</a>.</dd>
+  <dt><a name="2key">Two-key Triple DES</a></dt>
+    <dd>A variant of <a href="#3DES">triple DES or 3DES</a> in which only two
+      keys are used. As in the three-key version, the order of operations is
+      <a href="#EDE">EDE</a> or encrypt-decrypt-encrypt, but in the two-key
+      variant the first and third keys are the same.
+      <p>3DES with three keys has 3*56 = 168 bits of key but has only 112-bit
+      strength against a <a href="#meet">meet-in-the-middle</a> attack, so it
+      is possible that the two key version is just as strong. Last I looked,
+      this was an open question in the research literature.</p>
+      <p>RFC 2451 defines triple DES for <a href="#IPSEC">IPsec</a> as the
+      three-key variant. The two-key variant should not be used and is not
+      implemented directly in <a href="#FreeSWAN">Linux FreeS/WAN</a>. It
+      cannot be used in automatically keyed mode without major fiddles in the
+      source code. For manually keyed connections, you could make Linux
+      FreeS/WAN talk to a two-key implementation by setting two keys the same
+      in /etc/ipsec.conf.</p>
+    </dd>
+  <dt><a name="U">U</a></dt>
+  <dt><a name="V">V</a></dt>
+  <dt><a name="virtual">Virtual Interface</a></dt>
+    <dd>A <a href="#Linux">Linux</a> feature which allows one physical
+      network interface to have two or more IP addresses. See the <cite>Linux
+      Network Administrator's Guide</cite> in <a
+      href="biblio.html#kirch">book form</a> or <a
+      href="http://metalab.unc.edu/LDP/LDP/nag/node1.html">on the web</a> for
+      details.</dd>
+  <dt>Virtual Private Network</dt>
+    <dd>see <a href="#VPN">VPN</a></dd>
+  <dt><a name="VPN">VPN</a></dt>
+    <dd><b>V</b>irtual <b>P</b>rivate <b>N</b>etwork, a network which can
+      safely be used as if it were private, even though some of its
+      communication uses insecure connections. All traffic on those
+      connections is encrypted.
+      <p><a href="#IPSEC">IPsec</a> is not the only technique available for
+      building VPNs, but it is the only method defined by <a
+      href="#RFC">RFCs</a> and supported by many vendors. VPNs are by no
+      means the only thing you can do with IPsec, but they may be the most
+      important application for many users.</p>
+    </dd>
+  <dt><a name="VPNC">VPNC</a></dt>
+    <dd><a href="http://www.vpnc.org">Virtual Private Network Consortium</a>,
+      an association of vendors of VPN products.</dd>
+  <dt><a name="W">W</a></dt>
+  <dt><a name="Wassenaar.gloss">Wassenaar Arrangement</a></dt>
+    <dd>An international agreement restricting export of munitions and other
+      tools of war. Unfortunately, cryptographic software is also restricted
+      under the current version of the agreement. <a
+      href="politics.html#Wassenaar">Discussion</a>.</dd>
+  <dt><a name="web">Web of Trust</a></dt>
+    <dd><a href="#PGP">PGP</a>'s method of certifying keys. Any user can sign
+      a key; you decide which signatures or combinations of signatures to
+      accept as certification. This contrasts with the hierarchy of <a
+      href="#CA">CAs (Certification Authorities)</a> used in many <a
+      href="#PKI">PKIs (Public Key Infrastructures)</a>.
+      <p>See <a href="#GTR">Global Trust Register</a> for an interesting
+      addition to the web of trust.</p>
+    </dd>
+  <dt><a name="WEP">WEP (Wired Equivalent Privacy)</a></dt>
+    <dd>The cryptographic part of the <a href="#IEEE">IEEE</a> standard for
+      wireless LANs. As the name suggests, this is designed to be only as
+      secure as a normal wired ethernet. Anyone with a network conection can
+      tap it. Its advocates would claim this is good design, refusing to
+      build in complex features beyond the actual requirements.
+      <p>Critics refer to WEP as "Wire<em>tap</em> Equivalent Privacy", and
+      consider it a horribly flawed design based on bogus "requirements". You
+      do not control radio waves as you might control your wires, so the
+      metaphor in the rationale is utterly inapplicable. A security policy
+      that chooses not to invest resources in protecting against certain
+      attacks which can only be conducted by people physically plugged into
+      your LAN may or may not be reasonable. The same policy is completely
+      unreasonable when someone can "plug in" from a laptop half a block
+      away..</p>
+      <p>There has been considerable analysis indicating that WEP is
+      seriously flawed. A FAQ on attacks against WEP is available. Part of it
+      reads:</p>
+
+      <blockquote>
+        ... attacks are practical to mount using only inexpensive
+        off-the-shelf equipment. We recommend that anyone using an 802.11
+        wireless network not rely on WEP for security, and employ other
+        security measures to protect their wireless network. Note that our
+        attacks apply to both 40-bit and the so-called 128-bit versions of
+        WEP equally well.</blockquote>
+      <p>WEP appears to be yet another instance of governments, and
+      unfortunately some vendors and standards bodies, deliberately promoting
+      hopelessly flawed "security" products, apparently mainly for the
+      benefit of eavesdropping agencies. See this <a
+      href="politics.html#weak">discussion</a>.</p>
+    </dd>
+  <dt><a name="X">X</a></dt>
+  <dt><a name="X509">X.509</a></dt>
+    <dd>A standard from the <a href="http://www.itu.int">ITU (International
+      Telecommunication Union)</a>, for hierarchical directories with
+      authentication services, used in many <a href="#PKI">PKI</a>
+      implementations.
+      <p>Use of X.509 services, via the <a href="#LDAP">LDAP protocol</a>,
+      for certification of keys is allowed but not required by the <a
+      href="#IPSEC">IPsec</a> RFCs. It is not yet implemented in <a
+      href="#FreeSWAN">Linux FreeS/WAN</a>.</p>
+    </dd>
+  <dt>Xedia</dt>
+    <dd>A vendor of router and Internet access products, now part of Lucent.
+      Their QVPN products interoperate with Linux FreeS/WAN; see our <a
+      href="interop.html#Xedia">interop document</a>.</dd>
+  <dt><a name="Y">Y</a></dt>
+  <dt><a name="Z">Z</a></dt>
+</dl>
+</body>
+</html>

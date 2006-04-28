@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# wander through a FreeSWAN linux directory, comparing each file to 
+# a corresponding file in the argument $KERNELSRC directory, creating
+# a diff that can be used to update the FreeSWAN source tree.
+#
+# This script is useful if you have used "make kernelpatch" to patch 
+# a kernel, and then had to edit the source code in the kernel tree.
+#
+# $Id: kerneldiff,v 1.1 2004/03/15 20:35:27 as Exp $
+#
+
+KERNELSRC=$1
+shift
+
+(cd linux && find . -type f -print) | grep -v CVS | egrep -v './Makefile' | while read file 
+do 
+  base=`basename $file`
+  case $base in 
+    .cvsignore) ;;
+    .*.o.flags) ;;
+    *.o) ;;
+    *~) ;;
+    *.$patchname.patch) ;;
+    *.patch) ;;
+    *.orig) ;;
+    *.rej) ;;
+    version.c);;
+    *) diff -u linux/$file $KERNELSRC/$file ;;
+  esac
+done
+
+exit 0
+
+	

@@ -1,0 +1,107 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_SUBNETOF</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_SUBNETOF</H1>
+Section: C Library Functions (3)<BR>Updated: 11 June 2001<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec subnetof - given Internet address and subnet mask, return subnet number
+<BR>
+
+ipsec hostof - given Internet address and subnet mask, return host part
+<BR>
+
+ipsec broadcastof - given Internet address and subnet mask, return broadcast address
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>struct in_addr subnetof(struct in_addr addr,</B>
+
+<BR>
+&nbsp;
+<B>struct in_addr mask);</B>
+
+<BR>
+
+<B>struct in_addr hostof(struct in_addr addr,</B>
+
+<BR>
+&nbsp;
+<B>struct in_addr mask);</B>
+
+<BR>
+
+<B>struct in_addr broadcastof(struct in_addr addr,</B>
+
+<BR>
+&nbsp;
+<B>struct in_addr mask);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+These functions are obsolete; see
+<I><A HREF="ipsec_networkof.3.html">ipsec_networkof</A></I>(3)
+
+for their replacements.
+<P>
+
+<I>Subnetof</I>
+
+takes an Internet
+<I>address</I>
+
+and a subnet
+<I>mask</I>
+
+and returns the network part of the address
+(all in network byte order).
+<I>Hostof</I>
+
+similarly returns the host part, and
+<I>broadcastof</I>
+
+returns the broadcast address (all-1s convention) for the network.
+<P>
+
+These functions are provided to hide the Internet bit-munging inside
+an API, in hopes of easing the eventual transition to IPv6.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="inet.3.html">inet</A>(3), <A HREF="ipsec_atosubnet.3.html">ipsec_atosubnet</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<A NAME="lbAG">&nbsp;</A>
+<H2>BUGS</H2>
+
+Calling functions for this is more costly than doing it yourself.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">HISTORY</A><DD>
+<DT><A HREF="#lbAG">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:17 GMT, November 11, 2003
+</BODY>
+</HTML>

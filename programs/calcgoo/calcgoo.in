@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+
+$MODULE_GOO_LIST="@MODULE_GOO_LIST@";
+
+@goo = split(/\s+/,$MODULE_GOO_LIST);
+
+$sep="(";
+$goore=" ";
+
+#print "GOO: ",join('|',@goo),"\n";
+
+foreach $sym (@goo) {
+	$goore=${goore}.${sep}.${sym};
+	$sep="|";
+}
+$goore=${goore}.")_R(smp_){0,1}([0-9A-F]{8})";
+
+#print "GOORE: $goore\n";
+
+while(<>) {
+  chomp;
+  if(/$goore/io) {
+    $sym=$1;
+    $goosym=$3;
+    $bingoo=hex($goosym);
+    if($2 eq "smp_") {
+      $bingoo++;
+    }
+    #print STDERR "Processing $goosym (from $_)\n";
+    $bingoo{$sym}=$bingoo;
+  }
+}
+$wholegoo=0;
+foreach $sym (keys %bingoo) {
+  $wholegoo=$wholegoo ^ $bingoo{$sym};
+}
+print sprintf("%08x", $wholegoo)."\n";
+
+# Local variables::
+# mode: perl
+# End variables::
+
+

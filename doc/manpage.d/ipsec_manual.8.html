@@ -1,0 +1,414 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_MANUAL</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_MANUAL</H1>
+Section: Maintenance Commands (8)<BR>Updated: 17 July 2001<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec manual - take manually-keyed IPsec connections up and down
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>manual</B>
+
+[
+<B>--show</B>
+
+] [
+<B>--showonly</B>
+
+] [
+<B>--other</B>
+
+]
+<BR>
+
+&nbsp;&nbsp;&nbsp;[
+<B>--iam</B>
+
+address<B>@</B>interface
+
+] [
+<B>--config</B>
+
+configfile
+]
+<BR>
+
+&nbsp;&nbsp;&nbsp;operation connection
+<P>
+<B>ipsec</B>
+
+<B>manual</B>
+
+[
+<I>options</I>
+
+]
+<B>--union</B>
+
+operation part ...
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Manual</I>
+
+manipulates manually-keyed FreeS/WAN IPsec connections,
+setting them up and shutting them down,
+based on the information in the IPsec configuration file.
+In the normal usage,
+<I>connection</I>
+
+is the name of a connection specification in the configuration file;
+<I>operation</I>
+
+is
+<B>--up</B>,
+
+<B>--down</B>,
+
+<B>--route</B>,
+
+or
+<B>--unroute</B>.
+
+<I>Manual</I>
+
+generates setup (<B>--route</B>
+
+or
+<B>--up</B>)
+
+or
+teardown (<B>--down</B>
+
+or
+<B>--unroute</B>)
+
+commands for the connection and feeds them to a shell for execution.
+<P>
+
+The
+<B>--up</B>
+
+operation brings the specified connection up, including establishing a
+suitable route for it if necessary.
+<P>
+
+The
+<B>--route</B>
+
+operation just establishes the route for a connection.
+Unless and until an
+<B>--up</B>
+
+operation is done, packets routed by that route will simply be discarded.
+<P>
+
+The
+<B>--down</B>
+
+operation tears the specified connection down,
+<I>except</I>
+
+that it leaves the route in place.
+Unless and until an
+<B>--unroute</B>
+
+operation is done, packets routed by that route will simply be discarded.
+This permits establishing another connection to the same destination
+without any ``window'' in which packets can pass without encryption.
+<P>
+
+The
+<B>--unroute</B>
+
+operation (and only the
+<B>--unroute</B>
+
+operation) deletes any route established for a connection.
+<P>
+
+In the
+<B>--union</B>
+
+usage, each
+<I>part</I>
+
+is the name of a partial connection specification in the configuration file,
+and the union of all the partial specifications is the
+connection specification used.
+The effect is as if the contents of the partial specifications were
+concatenated together;
+restrictions on duplicate parameters, etc., do apply to the result.
+(The same effect can now be had, more gracefully, using the
+<B>also</B>
+
+parameter in connection descriptions;
+see
+<I><A HREF="ipsec.conf.5.html">ipsec.conf</A></I>(5)
+
+for details.)
+<P>
+
+The
+<B>--show</B>
+
+option turns on the
+<B>-x</B>
+
+option of the shell used to execute the commands,
+so each command is shown as it is executed.
+<P>
+
+The
+<B>--showonly</B>
+
+option causes
+<I>manual</I>
+
+to show the commands it would run, on standard output,
+and not run them.
+<P>
+
+The
+<B>--other</B>
+
+option causes
+<I>manual</I>
+
+to pretend it is the other end of the connection.
+This is probably not useful except in combination with
+<B>--showonly</B>.
+
+<P>
+
+The
+<B>--iam</B>
+
+option causes
+<I>manual</I>
+
+to believe it is running on the host with the specified IP
+<I>address</I>,
+
+and that it should use the specified
+<I>interface</I>
+
+(normally it determines all this automatically,
+based on what IPsec interfaces are up and how they are configured).
+<P>
+
+The
+<B>--config</B>
+
+option specifies a non-standard location for the FreeS/WAN IPsec
+configuration file (default
+<I>/etc/ipsec.conf</I>).
+
+<P>
+
+See
+<I><A HREF="ipsec.conf.5.html">ipsec.conf</A></I>(5)
+
+for details of the configuration file.
+Apart from the basic parameters which specify the endpoints and routing
+of a connection (<B>left</B>
+and
+<B>right</B>,
+
+plus possibly
+<B>leftsubnet</B>,
+
+<B>leftnexthop</B>,
+
+<B>leftfirewall</B>,
+
+their
+<B>right</B>
+
+equivalents,
+and perhaps
+<B>type</B>),
+
+a non-<B>passthrough</B>
+<I>manual</I>
+
+connection needs an
+<B>spi</B>
+
+or
+<B>spibase</B>
+
+parameter and some parameters specifying encryption, authentication, or
+both, most simply
+<B>esp</B>,
+
+<B>espenckey</B>,
+
+and
+<B>espauthkey</B>.
+
+Moderately-secure keys can be obtained from
+<I><A HREF="ipsec_ranbits.8.html">ipsec_ranbits</A></I>(8).
+
+For production use of manually-keyed connections,
+it is strongly recommended that the keys be kept in a separate file
+(with permissions
+<B>rw-------</B>)
+
+using the
+<B>include</B>
+
+and
+<B>also</B>
+
+facilities of the configuration file (see
+<I><A HREF="ipsec.conf.5.html">ipsec.conf</A></I>(5)).
+
+<P>
+
+If an
+<B>spi</B>
+
+parameter is given,
+<I>manual</I>
+
+uses that value as the SPI number for all the SAs
+(which are in separate number spaces anyway).
+If an
+<B>spibase</B>
+
+parameter is given instead,
+<I>manual</I>
+
+assigns SPI values by altering the bottom digit
+of that value;
+SAs going from left to right get even digits starting at 0,
+SAs going from right to left get odd digits starting at 1.
+Either way, it is suggested that manually-keyed connections use
+three-digit SPIs with the first digit non-zero,
+i.e. in the range
+<B>0x100</B>
+
+through
+<B>0xfff</B>;
+
+FreeS/WAN reserves those for manual keying and will not
+attempt to use them for automatic keying (unless requested to,
+presumably by a non-FreeS/WAN other end).
+<A NAME="lbAE">&nbsp;</A>
+<H2>FILES</H2>
+
+
+
+/etc/ipsec.conf<TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</TT>default IPsec configuration file<BR>
+<BR>
+
+/var/run/ipsec.info<TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</TT><B>%defaultroute</B> information<BR>
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.8.html">ipsec</A>(8), <A HREF="ipsec.conf.5.html">ipsec.conf</A>(5), <A HREF="ipsec_spi.8.html">ipsec_spi</A>(8), <A HREF="ipsec_eroute.8.html">ipsec_eroute</A>(8), <A HREF="ipsec_spigrp.8.html">ipsec_spigrp</A>(8),
+<A HREF="route.8.html">route</A>(8)
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org/">http://www.freeswan.org/</A>&gt;
+by Henry Spencer.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+It's not nearly as generous about the syntax of subnets,
+addresses, etc. as the usual FreeS/WAN user interfaces.
+Four-component dotted-decimal must be used for all addresses.
+It
+<I>is</I>
+
+smart enough to translate bit-count netmasks to dotted-decimal form.
+<P>
+
+If the connection specification for a connection is changed between an
+<B>--up</B>
+
+and the ensuing
+<B>--down</B>,
+
+chaos may ensue.
+<P>
+
+The
+<B>--up</B>
+
+operation is not smart enough to notice whether the connection is already up.
+<P>
+
+<I>Manual</I>
+
+is not smart enough to reject insecure combinations of algorithms,
+e.g. encryption with no authentication at all.
+<P>
+
+Any non-IPsec route to the other end which is replaced by the
+<B>--up</B>
+
+or
+<B>--route</B>
+
+operation will not be re-established by
+<B>--unroute</B>.
+
+Whether this is a feature or a bug depends on your viewpoint.
+<P>
+
+The optional parameters which
+override the automatic
+<B>spibase</B>-based
+
+SPI assignment are a messy area of the code and bugs are likely.
+<P>
+
+``Road warrior'' handling,
+and other special forms of setup which
+require negotiation between the two security gateways,
+inherently cannot be done with
+<I>manual</I>.
+
+<P>
+
+<I>Manual</I>
+
+generally lags behind
+<I>auto</I>
+
+in support of various features,
+even when implementation <I>would</I> be possible.
+For example, currently it does not do IPComp content compression.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">FILES</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

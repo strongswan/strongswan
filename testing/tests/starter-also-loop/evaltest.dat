@@ -1,0 +1,3 @@
+moon::cat /var/log/auth.log::detected also loop::YES
+moon::cat /var/log/auth.log::errors in config::YES
+

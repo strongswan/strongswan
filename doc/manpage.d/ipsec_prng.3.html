@@ -1,0 +1,204 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_PRNG</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_PRNG</H1>
+Section: C Library Functions (3)<BR>Updated: 1 April 2002<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec prng_init - initialize IPsec pseudorandom-number generator
+<BR>
+
+ipsec prng_bytes - get bytes from IPsec pseudorandom-number generator
+<BR>
+
+ipsec prng_final - close down IPsec pseudorandom-number generator
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>void prng_init(struct prng *prng,</B>
+
+<BR>
+&nbsp;
+<B>const unsigned char *key, size_t keylen);</B>
+
+<BR>
+
+<B>void prng_bytes(struct prng *prng, char *dst,</B>
+
+<BR>
+&nbsp;
+<B>size_t dstlen);</B>
+
+<BR>
+
+<B>unsigned long prng_count(struct prng *prng);</B>
+
+<BR>
+
+<B>void prng_final(struct prng *prng);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Prng_init</I>
+
+initializes a crypto-quality pseudo-random-number generator from a key;
+<I>prng_bytes</I>
+
+obtains pseudo-random bytes from it;
+<I>prng_count</I>
+
+reports the number of bytes extracted from it to date;
+<I>prng_final</I>
+
+closes it down.
+It is the user's responsibility to initialize a PRNG before using it,
+and not to use it again after it is closed down.
+<P>
+
+<I>Prng_init</I>
+
+initializes,
+or re-initializes,
+the specified
+<I>prng</I>
+
+from the
+<I>key</I>,
+
+whose length is given by
+<I>keylen</I>.
+
+The user must allocate the
+<B>struct prng</B>
+
+pointed to by
+<I>prng</I>.
+
+There is no particular constraint on the length of the key,
+although a key longer than 256 bytes is unnecessary because
+only the first 256 would be used.
+Initialization requires on the order of 3000 integer operations,
+independent of key length.
+<P>
+
+<I>Prng_bytes</I>
+
+obtains
+<I>dstlen</I>
+
+pseudo-random bytes from the PRNG and puts them in
+<I>buf</I>.
+
+This is quite fast,
+on the order of 10 integer operations per byte.
+<P>
+
+<I>Prng_count</I>
+
+reports the number of bytes obtained from the PRNG
+since it was (last) initialized.
+<P>
+
+<I>Prng_final</I>
+
+closes down a PRNG by
+zeroing its internal memory,
+obliterating all trace of the state used to generate its previous output.
+This requires on the order of 250 integer operations.
+<P>
+
+The
+<B>&lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+header file supplies the definition of the
+<B>prng</B>
+
+structure.
+Examination of its innards is discouraged, as they may change.
+<P>
+
+The PRNG algorithm
+used by these functions is currently identical to that of RC4(TM).
+This algorithm is cryptographically strong,
+sufficiently unpredictable that even a hostile observer will
+have difficulty determining the next byte of output from past history,
+provided it is initialized from a reasonably large key composed of
+highly random bytes (see
+<I><A HREF="random.4.html">random</A></I>(4)).
+
+The usual run of software pseudo-random-number generators
+(e.g.
+<I><A HREF="random.3.html">random</A></I>(3))
+
+are
+<I>not</I>
+
+cryptographically strong.
+<P>
+
+The well-known attacks against RC4(TM),
+e.g. as found in 802.11b's WEP encryption system,
+apply only if multiple PRNGs are initialized with closely-related keys
+(e.g., using a counter appended to a base key).
+If such keys are used, the first few hundred pseudo-random bytes
+from each PRNG should be discarded,
+to give the PRNGs a chance to randomize their innards properly.
+No useful attacks are known if the key is well randomized to begin with.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="random.3.html">random</A>(3), <A HREF="random.4.html">random</A>(4)
+<BR>
+
+Bruce Schneier,
+<I>Applied Cryptography</I>, 2nd ed., 1996, ISBN 0-471-11709-9,
+pp. 397-8.
+<A NAME="lbAF">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<A NAME="lbAG">&nbsp;</A>
+<H2>BUGS</H2>
+
+If an attempt is made to obtain more than 4e9 bytes
+between initializations,
+the PRNG will continue to work but
+<I>prng_count</I>'s
+
+output will stick at
+<B>4000000000</B>.
+
+Fixing this would require a longer integer type and does
+not seem worth the trouble,
+since you should probably re-initialize before then anyway...
+<P>
+
+``RC4'' is a trademark of RSA Data Security, Inc.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">HISTORY</A><DD>
+<DT><A HREF="#lbAG">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

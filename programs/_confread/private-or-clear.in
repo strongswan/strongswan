@@ -1,0 +1,14 @@
+# This file defines the set of CIDRs (network/mask-length) to which
+# communication should be private, if possible, but in the clear otherwise.
+#
+# If the target has a TXT (later IPSECKEY) record that specifies
+# authentication material, we will require private (i.e. encrypted)
+# communications.  If no such record is found, communications will be
+# in the clear.
+#
+# See @FINALDOCDIR@/policygroups.html for details.
+#
+# $Id: private-or-clear.in,v 1.1 2004/03/15 20:35:27 as Exp $
+#
+
+0.0.0.0/0

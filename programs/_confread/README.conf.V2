@@ -1,0 +1,103 @@
+Subject: [Design] changes to ipsec.conf
+# RCSID $Id: README.conf.V2,v 1.1 2004/03/15 20:35:27 as Exp $
+
+We are changing ipsec.conf for the 2.0 series of FreeS/WAN.
+
+OE is enabled by default.  This is accomplished by automatically
+defining a conn "OEself" UNLESS the sysadmin defines one with the same
+name:
+
+conn OEself
+	# authby=rsasig   # default
+	left=%defaultroute
+	leftrsasigkey=%dnsondemand	# default
+	right=%opportunistic
+	rightrsasigkey=%dnsondemand	# default
+	keyingtries=3
+	ikelifetime=1h
+	keylife=1h	# default
+	rekey=no
+	# disablearrivalcheck=no  # default
+	auto=route
+
+This will only work if %defaultroute works.
+The leftid will be the resulting IP address (won't work if
+you haven't filled in the reverse DNS entry).
+Unlike other conns, nothing in this implicit conn is changed by conn %default.
+
+We'd like a better name.  A conn name starting with % cannot be
+defined by the sysadmin, so that is out.  Names that haven't grabbed
+us: OEhost, OElocalhost, OEthishost, OEforself, OE4self.
+
+There is no requirement to have /etc/ipsec.conf.  If you do, the first
+significant line (non-blank, non-comment) must be (not indented):
+version 2.0
+This signifies that the file was intended for FreeS/WAN version 2.0.
+
+
+The following table shows most changes.  "-" means that the option
+doesn't exist.  "Recent Boilerplate" shows the effect of the "conn
+%default" in the automatically installed /etc/ipsec.conf (not
+installed if you already had one).
+
+Option		Old Default	Recent Boilerplate	New Default
+======		===========	==================	===========
+
+config setup:
+interfaces	""		%defaultroute		%defaultroute
+plutoload	""		%search			- [same as %search]
+plutostart	""		%search			- [same as %search]
+uniqueids	no		yes			yes
+rp_filter	-		-			0
+plutowait	yes		yes			no
+dump		no		no			- [use dumpdir]
+plutobackgroundload ignored	ignored			-
+no_eroute_pass	no		no			- [use packetdefault]
+
+conn %default:
+keyingtries	3		0			%forever [0 means this]
+disablearrivalcheck  yes	no			no
+authby		secret		rsasig			rsasig
+leftrsasigkey	""		%dnsondemand		%dnsondemand
+rightrsasigkey	""		%dnsondemand		%dnsondemand
+lifetime	==keylife	==keylife		- [use keylife]
+rekeystart	==rekeymargin	==rekeymargin		- [use rekeymargin]
+rekeytries	==keyingtries	==keyingtries		- [use keyingtries]
+
+======		===========	==================	===========
+Option		Old Default	Recent Boilerplate	New Default
+
+
+The auto= mechanism has been extended to support manual conns.  If you
+specify auto=manual in a conn, an "ipsec manual" will be performed on
+it at startup (ipsec setup start).
+
+
+There is a new config setup option "rp_filter".  It controls
+	/proc/sys/net/ipv4/conf/PHYS/rp_filter
+for each PHYSical IP interface used by FreeS/WAN.  Settings are:
+	%unchanged	do not touch (but warn if wrong)
+	0		set to 0; default; means: no filtering
+	1		set to 1; means: loose filter
+	2		set to 1; means: strict filter
+0 is often necessary for FreeS/WAN to function.  Some folks
+want other settings.  Shutting down FreeS/WAN does not restore
+the original value.
+
+Currently ikelife defaults to 1 hour and keylife defaults to 8 hours.
+There have been some rumblings that these are the wrong defaults, but
+it isn't clear what would be best.  Perhaps both should be closer.
+Any thoughts of what these should be?  Any Road Warrior or OE conn
+should probably have carefully thought-out values explicitly
+specified.  The settings don't matter much for VPN connections.
+
+keyingtries=%forever is the new improved notation for keyingtries=0.
+Eventually the 0 notation will be eliminated.
+
+Some options can now be set to %none to signify no setting.  Otherwise
+there would be no way for the user to override a default setting:
+	leftrsasigkey, rightrsasigkey [added in 1.98]
+	interfaces
+
+Hugh Redelmeier
+hugh@mimosa.com  voice: +1 416 482-8253

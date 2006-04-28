@@ -1,0 +1,354 @@
+.TH IPSEC_EROUTE 8 "21 Jun 2000"
+.\"
+.\" RCSID $Id: eroute.8,v 1.1 2004/03/15 20:35:27 as Exp $
+.\"
+.SH NAME
+ipsec eroute \- manipulate IPSEC extended routing tables
+.SH SYNOPSIS
+.B ipsec
+.B eroute
+.PP
+.B ipsec
+.B eroute
+.B \-\-add
+.B \-\-eraf (inet | inet6)
+.B \-\-src
+src/srcmaskbits|srcmask
+.B \-\-dst
+dst/dstmaskbits|dstmask
+[
+.B \-\-transport\-proto
+transport-protocol
+]
+[
+.B \-\-src\-port
+source-port
+]
+[
+.B \-\-dst\-port
+dest-port
+]
+<SAID>
+.PP
+.B ipsec
+.B eroute
+.B \-\-replace
+.B \-\-eraf (inet | inet6)
+.B \-\-src
+src/srcmaskbits|srcmask
+.B \-\-dst
+dst/dstmaskbits|dstmask
+[
+.B \-\-transport\-proto
+transport-protocol
+]
+[
+.B \-\-src\-port
+source-port
+]
+[
+.B \-\-dst\-port
+dest-port
+]
+<SAID>
+.PP
+.B ipsec
+.B eroute
+.B \-\-del
+.B \-\-eraf (inet | inet6)
+.B \-\-src
+src/srcmaskbits|srcmask
+.B \-\-dst
+dst/dstmaskbits|dstmask
+[
+.B \-\-transport\-proto
+transport-protocol
+]
+[
+.B \-\-src\-port
+source-port
+]
+[
+.B \-\-dst\-port
+dest-port
+]
+.PP
+.B ipsec
+.B eroute
+.B \-\-clear
+.PP
+.B ipsec
+.B eroute
+.B \-\-help
+.PP
+.B ipsec
+.B eroute
+.B \-\-version
+.PP
+Where <SAID> is
+.B \-\-af
+(inet | inet6)
+.B \-\-edst
+edst
+.B \-\-spi
+spi
+.B \-\-proto
+proto
+OR
+.B \-\-said
+said
+OR
+.B \-\-said
+.B (%passthrough | %passthrough4 | %passthrough6 | %drop | %reject | %trap | %hold | %pass )
+.SH DESCRIPTION
+.I Eroute
+manages the IPSEC extended routing tables,
+which control what (if any) processing is applied
+to non-encrypted packets arriving for IPSEC processing and forwarding.
+The form with no additional arguments lists the contents of
+/proc/net/ipsec_eroute.
+The
+.B \-\-add
+form adds a table entry, the
+.B \-\-replace
+form replaces a table entry, while the
+.B \-\-del
+form deletes one.  The
+.B \-\-clear
+form deletes the entire table.
+.PP
+A table entry consists of:
+.IP + 3
+source and destination addresses,
+with masks, source and destination ports and protocol
+for selection of packets.  The source and destination ports are only
+legal if the transport protocol is
+.BR TCP
+or
+.BR UDP.
+A port can be specified as either decimal, hexadecimal (leading 0x),
+octal (leading 0) or a name listed in the first column of /etc/services.
+A transport protocol can be specified as either decimal, hexadecimal
+(leading 0x), octal (leading 0) or a name listed in the first column
+of /etc/protocols.  If a transport protocol or port is not specified
+then it defaults to 0 which means all protocols or all ports
+respectively.
+.IP +
+Security Association IDentifier, comprised of:
+.IP + 6
+protocol
+(\fIproto\fR), indicating (together with the
+effective destination and the security parameters index)
+which Security Association should be used to process the packet
+.IP +
+address family
+(\fIaf\fR),
+.IP +
+Security Parameters Index
+(\fIspi\fR), indicating (together with the
+effective destination and protocol)
+which Security Association should be used to process the packet
+(must be larger than or equal to 0x100)
+.IP +
+effective destination
+(\fIedst\fR),
+where the packet should be forwarded after processing
+(normally the other security gateway)
+.IP + 3
+OR
+.IP + 6
+SAID
+(\fIsaid\fR), indicating 
+which Security Association should be used to process the packet
+.PP
+Addresses are written as IPv4 dotted quads or IPv6 coloned hex,
+protocol is one of "ah", "esp", "comp" or "tun" and SPIs are
+prefixed hexadecimal numbers where '.' represents IPv4 and ':'
+stands for IPv6.
+.PP
+SAIDs are written as "protoafSPI@address".  There are also 5
+"magic" SAIDs which have special meaning:
+.IP + 3
+.B %drop
+means that matches are to be dropped
+.IP +
+.B %reject
+means that matches are to be dropped and an ICMP returned, if
+possible to inform
+.IP +
+.B %trap
+means that matches are to trigger an ACQUIRE message to the Key
+Management daemon(s) and a hold eroute will be put in place to
+prevent subsequent packets also triggering ACQUIRE messages.
+.IP +
+.B %hold
+means that matches are to stored until the eroute is replaced or
+until that eroute gets reaped
+.IP +
+.B %pass
+means that matches are to allowed to pass without IPSEC processing
+.PP
+The format of /proc/net/ipsec_eroute is listed in ipsec_eroute(5).
+.br
+.ne 5
+.SH EXAMPLES
+.LP
+.B "ipsec eroute \-\-add \-\-eraf inet \-\-src 192.168.0.1/32 \e"
+.br
+.B "   \-\-dst 192.168.2.0/24 \-\-af inet \-\-edst 192.168.0.2 \e"
+.br
+.B "   \-\-spi 0x135 \-\-proto tun"
+.LP
+sets up an
+.BR eroute
+on a Security Gateway to protect traffic between the host
+.BR 192.168.0.1
+and the subnet
+.BR 192.168.2.0
+with
+.BR 24
+bits of subnet mask via Security Gateway
+.BR 192.168.0.2
+using the Security Association with address
+.BR 192.168.0.2 ,
+Security Parameters Index
+.BR 0x135
+and protocol
+.BR tun
+(50, IPPROTO_ESP).
+.LP
+.B "ipsec eroute \-\-add \-\-eraf inet6 \-\-src 3049:1::1/128 \e"
+.br
+.B "   \-\-dst 3049:2::/64 \-\-af inet6 \-\-edst 3049:1::2 \e"
+.br
+.B "   \-\-spi 0x145 \-\-proto tun"
+.LP
+sets up an
+.BR eroute
+on a Security Gateway to protect traffic between the host
+.BR 3049:1::1
+and the subnet
+.BR 3049:2::
+with
+.BR 64
+bits of subnet mask via Security Gateway
+.BR 3049:1::2
+using the Security Association with address
+.BR 3049:1::2 ,
+Security Parameters Index
+.BR 0x145
+and protocol
+.BR tun
+(50, IPPROTO_ESP).
+.LP
+.B "ipsec eroute \-\-replace \-\-eraf inet \-\-src company.com/24 \e"
+.br
+.B "   \-\-dst ftp.ngo.org/32 \-\-said tun.135@gw.ngo.org"
+.LP
+replaces an
+.BR eroute
+on a Security Gateway to protect traffic between the subnet
+.BR company.com 
+with
+.BR 24
+bits of subnet mask and the host
+.BR ftp.ngo.org
+via Security Gateway
+.BR gw.ngo.org
+using the Security Association with Security Association ID
+.BR tun0x135@gw.ngo.org
+.LP
+.B "ipsec eroute \-\-del \-\-eraf inet \-\-src company.com/24 \e"
+.br
+.B "   \-\-dst www.ietf.org/32 \-\-said %passthrough4"
+.LP
+deletes an
+.BR eroute
+on a Security Gateway that allowed traffic between the subnet
+.BR company.com 
+with
+.BR 24
+bits of subnet mask and the host
+.BR www.ietf.org
+to pass in the clear, unprocessed.
+.LP
+.B "ipsec eroute \-\-add \-\-eraf inet \-\-src company.com/24 \e"
+.br
+.B "   \-\-dst mail.ngo.org/32 \-\-transport-proto 6 \e"
+.br
+.B "   \-\-dst\-port 110 \-\-said tun.135@mail.ngo.org"
+.LP
+sets up an 
+.BR eroute
+on on a Security Gateway to protect only TCP traffic on port 110
+(pop3) between the subnet
+.BR company.com 
+with
+.BR 24
+bits of subnet mask and the host
+.BR ftp.ngo.org
+via Security Gateway
+.BR mail.ngo.org
+using the Security Association with Security Association ID
+.BR tun0x135@mail.ngo.org.
+Note that any other traffic bound for
+.BR mail.ngo.org
+that is routed via the ipsec device will be dropped.  If you wish to
+allow other traffic to pass through then you must add a %pass rule.
+For example the following rule when combined with the above will
+ensure that POP3 messages read from
+.BR mail.ngo.org
+will be encrypted but all other traffic to/from
+.BR mail.ngo.org
+will be in clear text.
+.LP
+.B "ipsec eroute \-\-add \-\-eraf inet \-\-src company.com/24 \e"
+.br
+.B "   \-\-dst mail.ngo.org/32 \-\-said %pass"
+.br
+.LP
+.SH FILES
+/proc/net/ipsec_eroute, /usr/local/bin/ipsec
+.SH "SEE ALSO"
+ipsec(8), ipsec_manual(8), ipsec_tncfg(8), ipsec_spi(8),
+ipsec_spigrp(8), ipsec_klipsdebug(8), ipsec_eroute(5)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org/>
+by Richard Guy Briggs.
+.\"
+.\" $Log: eroute.8,v $
+.\" Revision 1.1  2004/03/15 20:35:27  as
+.\" added files from freeswan-2.04-x509-1.5.3
+.\"
+.\" Revision 1.25  2002/04/24 07:35:38  mcr
+.\" Moved from ./klips/utils/eroute.8,v
+.\"
+.\" Revision 1.24  2001/02/26 19:58:49  rgb
+.\" Added a comment on the restriction of spi > 0x100.
+.\" Implement magic SAs %drop, %reject, %trap, %hold, %pass as part
+.\" of the new SPD and to support opportunistic.
+.\"
+.\" Revision 1.23  2000/09/17 18:56:48  rgb
+.\" Added IPCOMP support.
+.\"
+.\" Revision 1.22  2000/09/13 15:54:31  rgb
+.\" Added Gerhard's ipv6 updates.
+.\"
+.\" Revision 1.21  2000/06/30 18:21:55  rgb
+.\" Update SEE ALSO sections to include ipsec_version(5) and ipsec_pf_key(5)
+.\" and correct FILES sections to no longer refer to /dev/ipsec which has
+.\" been removed since PF_KEY does not use it.
+.\"
+.\" Revision 1.20  2000/06/21 16:54:57  rgb
+.\" Added 'no additional args' text for listing contents of
+.\" /proc/net/ipsec_* files.
+.\"
+.\" Revision 1.19  1999/07/19 18:47:24  henry
+.\" fix slightly-misformed comments
+.\"
+.\" Revision 1.18  1999/04/06 04:54:37  rgb
+.\" Fix/Add RCSID Id: and Log: bits to make PHMDs happy.  This includes
+.\" patch shell fixes.
+.\"
+.\"

@@ -1,0 +1,323 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="config.html">Previous</A>
+<A HREF="user_examples.html">Next</A>
+<HR>
+<H1><A name="background">Linux FreeS/WAN background</A></H1>
+<P>This section discusses a number of issues which have three things in
+ common:</P>
+<UL>
+<LI>They are not specifically FreeS/WAN problems</LI>
+<LI>You may have to understand them to get FreeS/WAN working right</LI>
+<LI>They are not simple questions</LI>
+</UL>
+<P>Grouping them here lets us provide the explanations some users will
+ need without unduly complicating the main text.</P>
+<P>The explanations here are intended to be adequate for FreeS/WAN
+ purposes (please comment to the<A href="mail.html"> users mailing list</A>
+ if you don't find them so), but they are not trying to be complete or
+ definitive. If you need more information, see the references provided
+ in each section.</P>
+<H2><A name="dns.background">Some DNS background</A></H2>
+<P><A href="glossary.html#carpediem">Opportunistic encryption</A>
+ requires that the gateway systems be able to fetch public keys, and
+ other IPsec-related information, from each other's DNS (Domain Name
+ Service) records.</P>
+<P><A href="glossary.html#DNS">DNS</A> is a distributed database that
+ maps names to IP addresses and vice versa.</P>
+<P>Much good reference material is available for DNS, including:</P>
+<UL>
+<LI>the<A href="http://www.linuxdoc.org/HOWTO/DNS-HOWTO.html"> DNS HowTo</A>
+</LI>
+<LI>the standard<A href="biblio.html#DNS.book"> DNS reference</A> book</LI>
+<LI><A href="http://www.linuxdoc.org/LDP/nag2/index.html">Linux Network
+ Administrator's Guide</A></LI>
+<LI><A href="http://www.nominum.com/resources/whitepapers/bind-white-paper.html">
+BIND overview</A></LI>
+<LI><A href="http://www.nominum.com/resources/documentation/Bv9ARM.pdf">
+BIND 9 Administrator's Reference</A></LI>
+</UL>
+<P>We give only a brief overview here, intended to help you use DNS for
+ FreeS/WAN purposes.</P>
+<H3><A name="forward.reverse">Forward and reverse maps</A></H3>
+<P>Although the implementation is distributed, it is often useful to
+ speak of DNS as if it were just two enormous tables:</P>
+<UL>
+<LI>the forward map: look up a name, get an IP address</LI>
+<LI>the reverse map: look up an IP address, get a name</LI>
+</UL>
+<P>Both maps can optionally contain additional data. For opportunistic
+ encryption, we insert the data need for IPsec authentication.</P>
+<P>A system named gateway.example.com with IP address 10.20.30.40 should
+ have at least two DNS records, one in each map:</P>
+<DL>
+<DT>gateway.example.com. IN A 10.20.30.40</DT>
+<DD>used to look up the name and get an IP address</DD>
+<DT>40.30.20.10.in-addr.arpa. IN PTR gateway.example.com.</DT>
+<DD>used for reverse lookups, looking up an address to get the
+ associated name. Notice that the digits here are in reverse order; the
+ actual address is 10.20.30.40 but we use 40.30.20.10 here.</DD>
+</DL>
+<H3><A NAME="17_1_2">Hierarchy and delegation</A></H3>
+<P>For both maps there is a hierarchy of DNS servers and a system of
+ delegating authority so that, for example:</P>
+<UL>
+<LI>the DNS administrator for example.com can create entries of the form<VAR>
+ name</VAR>.example.com</LI>
+<LI>the example.com admin cannot create an entry for counterexample.com;
+ only someone with authority for .com can do that</LI>
+<LI>an admin might have authority for 20.10.in-addr.arpa.</LI>
+<LI>in either map, authority can be delegated
+<UL>
+<LI>the example.com admin could give you authority for
+ westcoast.example.com</LI>
+<LI>the 20.10.in-addr.arpa admin could give you authority for
+ 30.20.10.in-addr.arpa</LI>
+</UL>
+</LI>
+</UL>
+<P>DNS zones are the units of delegation. There is a hierarchy of zones.</P>
+<H3><A NAME="17_1_3">Syntax of DNS records</A></H3>
+<P>Returning to the example records:</P>
+<PRE>        gateway.example.com. IN A 10.20.30.40
+        40.30.20.10.in-addr.arpa. IN PTR gateway.example.com.</PRE>
+<P>some syntactic details are:</P>
+<UL>
+<LI>the IN indicates that these records are for<STRONG> In</STRONG>
+ternet addresses</LI>
+<LI>The final periods in '.com.' and '.arpa.' are required. They
+ indicate the root of the domain name system.</LI>
+</UL>
+<P>The capitalised strings after IN indicate the type of record.
+ Possible types include:</P>
+<UL>
+<LI><STRONG>A</STRONG>ddress, for forward lookups</LI>
+<LI><STRONG>P</STRONG>oin<STRONG>T</STRONG>e<STRONG>R</STRONG>, for
+ reverse lookups</LI>
+<LI><STRONG>C</STRONG>anonical<STRONG> NAME</STRONG>, records to support
+ aliasing, multiple names for one address</LI>
+<LI><STRONG>M</STRONG>ail e<STRONG>X</STRONG>change, used in mail
+ routing</LI>
+<LI><STRONG>SIG</STRONG>nature, used in<A href="glossary.html#SDNS">
+ secure DNS</A></LI>
+<LI><STRONG>KEY</STRONG>, used in<A href="glossary.html#SDNS"> secure
+ DNS</A></LI>
+<LI><STRONG>T</STRONG>e<STRONG>XT</STRONG>, a multi-purpose record type</LI>
+</UL>
+<P>To set up for opportunistic encryption, you add some TXT records to
+ your DNS data. Details are in our<A href="quickstart.html"> quickstart</A>
+ document.</P>
+<H3><A NAME="17_1_4">Cacheing, TTL and propagation delay</A></H3>
+<P>DNS information is extensively cached. With no caching, a lookup by
+ your system of &quot;www.freeswan.org&quot; might involve:</P>
+<UL>
+<LI>your system asks your nameserver for &quot;www.freeswan.org&quot;</LI>
+<LI>local nameserver asks root server about &quot;.org&quot;, gets reply</LI>
+<LI>local nameserver asks .org nameserver about &quot;freeswan.org&quot;, gets
+ reply</LI>
+<LI>local nameserver asks freeswan.org nameserver about
+ &quot;www.freeswan.org&quot;, gets reply</LI>
+</UL>
+<P>However, this can be a bit inefficient. For example, if you are in
+ the Phillipines, the closest a root server is in Japan. That might send
+ you to a .org server in the US, and then to freeswan.org in Holland. If
+ everyone did all those lookups every time they clicked on a web link,
+ the net would grind to a halt.</P>
+<P>Nameservers therefore cache information they look up. When you click
+ on another link at www.freeswan.org, your local nameserver has the IP
+ address for that server in its cache, and no further lookups are
+ required.</P>
+<P>Intermediate results are also cached. If you next go to
+ lists.freeswan.org, your nameserver can just ask the freeswan.org
+ nameserver for that address; it does not need to query the root or .org
+ nameservers because it has a cached address for the freeswan.org zone
+ server.</P>
+<P>Of course, like any cacheing mechanism, this can create problems of
+ consistency. What if the administrator for freeswan.org changes the IP
+ address, or the authentication key, for www.freeswan.org? If you use
+ old information from the cache, you may get it wrong. On the other
+ hand, you cannot afford to look up fresh information every time. Nor
+ can you expect the freeswan.org server to notify you; that isn't in the
+ protocols.</P>
+<P>The solution that is in the protocols is fairly simple. Cacheable
+ records are marked with Time To Live (TTL) information. When the time
+ expires, the caching server discards the record. The next time someone
+ asks for it, the server fetches a fresh copy. Of course, a server may
+ also discard records before their TTL expires if it is running out of
+ cache space.</P>
+<P>This implies that there will be some delay before the new version of
+ a changed record propagates around the net. Until the TTLs on all
+ copies of the old record expire, some users will see it because that is
+ what is in their cache. Other users may see the new record immediately
+ because they don't have an old one cached.</P>
+<H2><A name="MTU.trouble">Problems with packet fragmentation</A></H2>
+<P>It seems, from mailing list reports, to be moderately common for
+ problems to crop up in which small packets pass through the IPsec
+ tunnels just fine but larger packets fail.</P>
+<P>These problems are caused by various devices along the way
+ mis-handling either packet fragments or<A href="glossary.html#pathMTU">
+ path MTU discovery</A>.</P>
+<P>IPsec makes packets larger by adding an ESP or AH header. This can
+ tickle assorted bugs in fragment handling in routers and firewalls, or
+ in path MTU discovery mechanisms, and cause a variety of symptoms which
+ are both annoying and, often, quite hard to diagnose.</P>
+<P>An explanation from project technical lead Henry Spencer:</P>
+<PRE>The problem is IP fragmentation; more precisely, the problem is that the
+second, third, etc. fragments of an IP packet are often difficult for
+filtering mechanisms to classify.
+
+Routers cannot rely on reassembling the packet, or remembering what was in
+earlier fragments, because the fragments may be out of order or may even
+follow different routes.  So any general, worst-case filtering decision
+pretty much has to be made on each fragment independently.  (If the router
+knows that it is the only route to the destination, so all fragments
+*must* pass through it, reassembly would be possible... but most routers
+don't want to bother with the complications of that.)
+
+All fragments carry roughly the original IP header, but any higher-level
+header is (for IP purposes) just the first part of the packet data... so
+only the first fragment carries that.  So, for example, on examining the
+second fragment of a TCP packet, you could tell that it's TCP, but not
+what port number it is destined for -- that information is in the TCP
+header, which appears in the first fragment only. 
+
+The result of this classification difficulty is that stupid routers and
+over-paranoid firewalls may just throw fragments away.  To get through
+them, you must reduce your MTU enough that fragmentation will not occur.
+(In some cases, they might be willing to attempt reassembly, but have very
+limited resources to devote to it, meaning that packets must be small and
+fragments few in number, leading to the same conclusion:  smaller MTU.)</PRE>
+<P>In addition to the problem Henry describes, you may also have trouble
+ with<A href="glossary.html#pathMTU"> path MTU discovery</A>.</P>
+<P>By default, FreeS/WAN uses a large<A href="glossary.html#MTU"> MTU</A>
+ for the ipsec device. This avoids some problems, but may complicate
+ others. Here's an explanation from Claudia:</P>
+<PRE>Here are a couple of pieces of background information. Apologies if you
+have seen these already. An excerpt from one of my old posts:
+
+    An MTU of 16260 on ipsec0 is usual. The IPSec device defaults to this 
+    high MTU so that it does not fragment incoming packets before encryption 
+    and encapsulation. If after IPSec processing packets are larger than 1500,
+    [ie. the mtu of eth0] then eth0 will fragment them. 
+
+    Adding IPSec headers adds a certain number of bytes to each packet. 
+    The MTU of the IPSec interface refers to the maximum size of the packet
+    before the IPSec headers are added. In some cases, people find it helpful 
+    to set ipsec0's MTU to 1500-(IPSec header size), which IIRC is about 1430.
+
+    That way, the resulting encapsulated packets don't exceed 1500. On most 
+    networks, packets less than 1500 will not need to be fragmented.
+
+and... (from Henry Spencer)
+
+    The way it *ought* to work is that the MTU advertised by the ipsecN
+    interface should be that of the underlying hardware interface, less a
+    pinch for the extra headers needed. 
+
+    Unfortunately, in certain situations this breaks many applications.
+    There is a widespread implicit assumption that the smallest MTUs are 
+    at the ends of paths, not in the middle, and another that MTUs are 
+    never less than 1500.  A lot of code is unprepared to handle paths 
+    where there is an &quot;interior minimum&quot; in the MTU, especially when it's 
+    less than 1500. So we advertise a big MTU and just let the resulting 
+    big packets fragment.
+
+This usually works, but we do get bitten in cases where some intermediate
+point can't handle all that fragmentation.  We can't win on this one.</PRE>
+<P>The MTU can be changed with an<VAR> overridemtu=</VAR> statement in
+ the<VAR> config setup</VAR> section of<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf.5</A>.</P>
+<P>For a discussion of MTU issues and some possible solutions using
+ Linux advanced routing facilities, see the<A href="http://www.linuxguruz.org/iptables/howto/2.4routing-15.html#ss15.6">
+ Linux 2.4 Advanced Routing HOWTO</A>. For a discussion of MTU and NAT
+ (Network Address Translation), see<A HREF="http://harlech.math.ucla.edu/services/ipsec.html">
+ James Carter's MTU notes</A>.</P>
+<H2><A name="nat.background">Network address translation (NAT)</A></H2>
+<P><STRONG>N</STRONG>etwork<STRONG> A</STRONG>ddress<STRONG> T</STRONG>
+ranslation is a service provided by some gateway machines. Calling it
+ NAPT (adding the word<STRONG> P</STRONG>ort) would be more precise, but
+ we will follow the widespread usage.</P>
+<P>A gateway doing NAT rewrites the headers of packets it is forwarding,
+ changing one or more of:</P>
+<UL>
+<LI>source address</LI>
+<LI>source port</LI>
+<LI>destination address</LI>
+<LI>destination port</LI>
+</UL>
+<P>On Linux 2.4, NAT services are provided by the<A href="http://netfilter.samba.org">
+ netfilter(8)</A> firewall code. There are several<A href="http://netfilter.samba.org/documentation/index.html#HOWTO">
+ Netfilter HowTos</A> including one on NAT.</P>
+<P>For older versions of Linux, this was referred to as &quot;IP masquerade&quot;
+ and different tools were used. See this<A href="http://www.e-infomax.com/ipmasq/">
+ resource page</A>.</P>
+<P>Putting an IPsec gateway behind a NAT gateway is not recommended. See
+ our<A href="firewall.html#NAT"> firewalls document</A>.</P>
+<H3><A NAME="17_3_1">NAT to non-routable addresses</A></H3>
+<P>The most common application of NAT uses private<A href="glossary.html#non-routable">
+ non-routable</A> addresses.</P>
+<P>Often a home or small office network will have:</P>
+<UL>
+<LI>one connection to the Internet</LI>
+<LI>one assigned publicly visible IP address</LI>
+<LI>several machines that all need access to the net</LI>
+</UL>
+<P>Of course this poses a problem since several machines cannot use one
+ address. The best solution might be to obtain more addresses, but often
+ this is impractical or uneconomical.</P>
+<P>A common solution is to have:</P>
+<UL>
+<LI><A href="glossary.html#non-routable">non-routable</A> addresses on
+ the local network</LI>
+<LI>the gateway machine doing NAT</LI>
+<LI>all packets going outside the LAN rewritten to have the gateway as
+ their source address</LI>
+</UL>
+<P>The client machines are set up with reserved<A href="glossary.html#non-routable">
+ non-routable</A> IP addresses defined in RFC 1918. The masquerading
+ gateway, the machine with the actual link to the Internet, rewrites
+ packet headers so that all packets going onto the Internet appear to
+ come from one IP address, that of its Internet interface. It then gets
+ all the replies, does some table lookups and more header rewriting, and
+ delivers the replies to the appropriate client machines.</P>
+<P>As far as anyone else on the Internet is concerned, the systems
+ behind the gateway are completely hidden. Only one machine with one IP
+ address is visible.</P>
+<P>For IPsec on such a gateway, you can entirely ignore the NAT in:</P>
+<UL>
+<LI><A href="manpage.d/ipsec.conf.5.html">ipsec.conf(5)</A></LI>
+<LI>firewall rules affecting your Internet-side interface</LI>
+</UL>
+<P>Those can be set up exactly as they would be if your gateway had no
+ other systems behind it.</P>
+<P>You do, however, have to take account of the NAT in firewall rules
+ which affect packet forwarding.</P>
+<H3><A NAME="17_3_2">NAT to routable addresses</A></H3>
+<P>NAT to routable addresses is also possible, but is less common and
+ may make for rather tricky routing problems. We will not discuss it
+ here. See the<A href="http://netfilter.samba.org/documentation/index.html#HOWTO">
+ Netfilter HowTos</A>.</P>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="config.html">Previous</A>
+<A HREF="user_examples.html">Next</A>
+</BODY>
+</HTML>

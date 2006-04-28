@@ -1,0 +1,34 @@
+.TH IPSEC_SHOWDEFAULTS 8 "23 Jan 2000"
+.\" RCSID $Id: showdefaults.8,v 1.1 2004/03/15 20:35:31 as Exp $
+.SH NAME
+ipsec showdefaults \- show %defaultroute defaults
+.SH SYNOPSIS
+.B ipsec
+.B showdefaults
+.SH DESCRIPTION
+.I Showdefaults
+outputs (on standard output) a terse description of the defaults
+used by the
+.B %defaultroute
+facilities in
+.IR ipsec_auto (8)
+and
+.IR ipsec_manual (8).
+.PP
+Beware that the exact output format is subject to change.
+.SH DIAGNOSTICS
+Normal exit status is 0.
+If no defaults are available,
+i.e. the
+.B interfaces
+parameter in
+.B "config setup"
+is not
+.BR %defaultroute ,
+produces a message on standard error and exits with status 1.
+.SH FILES
+/var/run/ipsec.info
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org>
+by Henry Spencer.

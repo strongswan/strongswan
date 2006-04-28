@@ -1,0 +1,523 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="umltesting.html">Previous</A>
+<A HREF="nightly.html">Next</A>
+<HR>
+<H1><A name="makecheck">How to configure to use &quot;make check&quot;</A></H1>
+<H2><A NAME="38_1">What is &quot;make check&quot;</A></H2>
+<P> &quot;make check&quot; is a target in the top level makefile. It takes care of
+ running a number of unit and system tests to confirm that FreeSWAN has
+ been compiled correctly, and that no new bugs have been introduced.</P>
+<P> As FreeSWAN contains both kernel and userspace components, doing
+ testing of FreeSWAN requires that the kernel be simulated. This is
+ typically difficult to do as a kernel requires that it be run on bare
+ hardware. A technology has emerged that makes this simpler. This is<A HREF="http://user-mode-linux.sourceforge.net">
+ User Mode Linux</A>.</P>
+<P> User-Mode Linux is a way to build a Linux kernel such that it can
+ run as a process under another Linux (or in the future other) kernel.
+ Presently, this can only be done for 2.4 guest kernels. The host kernel
+ can be 2.2 or 2.4.</P>
+<P> &quot;make check&quot; expects to be able to build User-Mode Linux kernels
+ with FreeSWAN included. To do this it needs to have some files
+ downloaded and extracted prior to running &quot;make check&quot;. This is
+ described in the<A HREF="umltesting.html"> UML testing</A> document.</P>
+<P> After having run the example in the UML testing document and
+ successfully brought up the four machine combination, you are ready to
+ use &quot;make check&quot;</P>
+<H2><A NAME="38_2">Running &quot;make check&quot;</A></H2>
+<P> &quot;make check&quot; works by walking the FreeSWAN source tree invoking the
+ &quot;check&quot; target at each node. At present there are tests defined only
+ for the <CODE>klips</CODE> directory. These tests will use the UML
+ infrastructure to test out pieces of the <CODE>klips</CODE> code.</P>
+<P> The results of the tests can be recorded. If the environment
+ variable <CODE>$REGRESSRESULTS</CODE> is non-null, then the results of
+ each test will be recorded. This can be used as part of a nightly
+ regression testing system, see<A HREF="nightly.html"> Nightly testing</A>
+ for more details.</P>
+<P> &quot;make check&quot; otherwise prints a minimal amount of output for each
+ test, and indicates pass/fail status of each test as they are run.
+ Failed tests do not cause failure of the target in the form of exit
+ codes.</P>
+<H1><A NAME="39">How to write a &quot;make check&quot; test</A></H1>
+<H2><A NAME="39_1">Structure of a test</A></H2>
+<P> Each test consists of a set of directories under <CODE>testing/</CODE>
+. There are directories for <CODE>klips</CODE>, <CODE>pluto</CODE>, <CODE>
+packaging</CODE> and <CODE>libraries</CODE>. Each directory has a list
+ of tests to run is stored in a file called <CODE>TESTLIST</CODE> in
+ that directory. e.g. <CODE>testing/klips/TESTLIST</CODE>.</P>
+<H2 NAME="TESTLIST"><A NAME="39_2">The TESTLIST</A></H2>
+<P> This isn't actually a shell script. It just looks like one. Some
+ tools other than /bin/sh process it. Lines that start with # are
+ comments.</P>
+<PRE>
+# test-kind     directory-containing-test       expectation     [PR#]
+</PRE>
+<P>The first word provides the test type, detailed below.</P>
+<P> The second word is the name of the test to run. This the directory
+ in which the test case is to be found..</P>
+<P>The third word may be one of:</P>
+<DL>
+<DT> blank/good</DT>
+<DD>the test is believed to function, report failure</DD>
+<DT> bad</DT>
+<DD> the test is known to fail, report unexpected success</DD>
+<DT> suspended</DT>
+<DD> the test should not be run</DD>
+</DL>
+<P> The fourth word may be a number, which is a PR# if the test is
+ failing.</P>
+<H2><A NAME="39_3">Test kinds</A></H2>
+ The test types are:
+<DL>
+<DT>skiptest</DT>
+<DD>means run no test.</DD>
+<DT>ctltest</DT>
+<DD>means run a single system without input/output.</DD>
+<DT>klipstest</DT>
+<DD>means run a single system with input/output networks</DD>
+<DT><A HREF="#umlplutotest">umlplutotest</A></DT>
+<DD>means run a pair of systems</DD>
+<DT><A HREF="#umlXhost">umlXhost</A></DT>
+<DD>run an arbitrary number of systems</DD>
+<DT>suntest (TBD)</DT>
+<DD>means run a quad of east/west/sunrise/sunset</DD>
+<DT>roadtest (TBD)</DT>
+<DD>means run a trio of east-sunrise + warrior</DD>
+<DT>extrudedtest (TBD)</DT>
+<DD>means run a quad of east-sunrise + warriorsouth + park</DD>
+<DT>mkinsttest</DT>
+<DD>a test of the &quot;make install&quot; machinery.</DD>
+<DT>kernel_test_patch</DT>
+<DD>a test of the &quot;make kernelpatch&quot; machinery.</DD>
+</DL>
+ Tests marked (TBD) have yet to be fully defined.
+<P> Each test directory has a file in it called <CODE>testparams.sh</CODE>
+. This file sets a number of environment variables to define the
+ parameters of the test.</P>
+<H2><A NAME="39_4">Common parameters</A></H2>
+<DL>
+<DT>TESTNAME</DT>
+<DD>the name of the test (repeated for checking purposes)</DD>
+<DT>TEST_TYPE</DT>
+<DD>the type of the test (repeat of type type above)</DD>
+<DT>TESTHOST</DT>
+<DD>the name of the UML machine to run for the test, typically &quot;east&quot; or
+ &quot;west&quot;</DD>
+<DT>TEST_PURPOSE</DT>
+<DD>The purpose of the test is one of:
+<DL>
+<DT>goal</DT>
+<DD>The goal purpose is where a test is defined for code that is not yet
+ finished. The test indicates when the goals have in fact been reached.</DD>
+<DT>regress</DT>
+<DD>This is a test to determine that a previously existing bug has been
+ repaired. This test will initially be created to reproduce the bug in
+ isolation, and then the bug will be fixed.</DD>
+<DT>exploit</DT>
+<DD>This is a set of packets/programs that causes a vulnerability to be
+ exposed. It is a specific variation of the regress option.</DD>
+</DL>
+</DD>
+<DT>TEST_GOAL_ITEM</DT>
+<DT></DT>
+<DD>in the case of a goal test, this is a reference to the requirements
+ document</DD>
+<DT>TEST_PROB_REPORT</DT>
+<DD>in the case of regression test, this the problem report number from
+ GNATS</DD>
+<DT>TEST_EXPLOIT_URL</DT>
+<DD>in the case of an exploit, this is a URL referencing the paper
+ explaining the origin of the test and the origin of exploit software</DD>
+<DT>REF_CONSOLE_OUTPUT</DT>
+<DD>a file in the test directory that contains the sanitized console
+ output against which to compare the output of the actual test.</DD>
+<DT>REF_CONSOLE_FIXUPS</DT>
+<DD>a list of scripts (found in <CODE>klips/test/fixups</CODE>) to apply
+ to sanitize the console output of the machine under test. These are
+ typically perl, awk or sed scripts that remove things in the kernel
+ output that change each time the test is run and/or compiled.</DD>
+<DT>INIT_SCRIPT</DT>
+<DD>
+<P>a file of commands that is fed into the virtual machine's console in
+ single user mode prior to starting the tests. This file will usually
+ set up any eroute's and SADB entries that are required for the test.</P>
+<P>Lines beginning with # are skipped. Blank lines are skipped.
+ Otherwise, a shell prompted is waited for each time (consisting of <CODE>
+\n#</CODE>) and then the command is sent. Note that the prompt is waited
+ for before the command and not after, so completion of the last command
+ in the script is not required. This is often used to invoke a program
+ to monitor the system, e.g. <CODE>ipsec pf_key</CODE>.</P>
+</DD>
+<DT>RUN_SCRIPT</DT>
+<DD>
+<P>a file of commands that is fed into the virtual machine's console in
+ single user mode, before the packets are sent. On single machine tests,
+ this script doesn't provide any more power than INIT_SCRIPT, but is
+ implemented for consistency's sake.</P>
+</DD>
+<DT>FINAL_SCRIPT</DT>
+<DD>
+<P>a file of commands that is fed into the virtual machine's console in
+ single user mode after the final packet is sent. Similar to
+ INIT_SCRIPT, above. If not specified, then the single command &quot;halt&quot; is
+ sent. If specified, then the script should end with a halt command to
+ nicely shutdown the UML.</P>
+</DD>
+<DT>CONSOLEDIFFDEBUG</DT>
+<DD>If set to &quot;true&quot; then the series of console fixups (see
+ REF_CONSOLE_FIXUPS) will be output after it is constructed. (It should
+ be set to &quot;false&quot;, or unset otherwise)</DD>
+<DT>NETJIGDEBUG</DT>
+<DD>If set to &quot;true&quot; then the series of console fixups (see
+ REF_CONSOLE_FIXUPS) will be output after it is constructed. (It should
+ be set to &quot;false&quot;, or unset otherwise)</DD>
+<DT>NETJIGTESTDEBUG</DT>
+<DD> If set to &quot;netjig&quot;, then the results of talking to the <CODE>
+uml_netjig</CODE> will be printed to stderr during the test. In
+ addition, the jig will be invoked with --debug, which causes it to log
+ its process ID, and wait 60 seconds before continuing. This can be used
+ if you are trying to debug the <CODE>uml_netjig</CODE> program itself.</DD>
+<DT>HOSTTESTDEBUG</DT>
+<DD> If set to &quot;hosttest&quot;, then the results of taling to the consoles of
+ the UMLs will be printed to stderr during the test.</DD>
+<DT>NETJIGWAITUSER</DT>
+<DD> If set to &quot;waituser&quot;, then the scripts will wait forever for user
+ input before they shut the tests down. Use this is if you are debugging
+ through the kernel.</DD>
+<DT>PACKETRATE</DT>
+<DD> A number, in miliseconds (default is 500ms) at which packets will
+ be replayed by the netjig.</DD>
+</DL>
+<H2><A NAME="39_5">KLIPStest paramaters</A></H2>
+<P> The klipstest function starts a program (<CODE>
+testing/utils/uml_netjig/uml_netjig</CODE>) to setup a bunch of I/O
+ sockets (that simulate network interfaces). It then exports the
+ references to these sockets to the environment and invokes (using
+ system()) a given script. It waits for the script to finish.</P>
+
+<!-- <IMG SRC="single_netjig.png" ALT="block diagram of uml_netjig"> -->
+<P> The script invoked (<CODE>testing/utils/host-test.tcl</CODE>) is a
+ TCL<A HREF="http://expect.nist.gov/"> expect</A> script that arranges
+ to start the UML and configure it appropriately for the test. The
+ configuration is done with the script given above for<VAR> INIT_SCRIPT</VAR>
+. The TCL script then forks, leaves the UML in the background and exits.
+ uml_netjig continues. It then starts listening to the simulated network
+ answering ARPs and inserting packets as appropriate.</P>
+<P> The klipstest function invokes <CODE>uml_netjig</CODE> with
+ arguments to capture output from network interface(s) and insert
+ packets as appropriate:</P>
+<DL>
+<DT>PUB_INPUT</DT>
+<DD>a<A HREF="http://www.tcpdump.org/"> pcap</A> file to feed in on the
+ public (encrypted) interface. (typically, eth1)</DD>
+<DT>PRIV_INPUT</DT>
+<DD>a pcap file to feed in on the private (plain-text) interface
+ (typically, eth0).</DD>
+<DT>REF_PUB_OUTPUT</DT>
+<DD>a text file containing tcpdump output. Packets on the public (eth1)
+ interface are captured to a<A HREF="http://www.tcpdump.org/"> pcap</A>
+ file by <CODE>uml_netjig</CODE>. The klipstest function then uses
+ tcpdump on the file to produce text output, which is compared to the
+ file given.</DD>
+<DT>REF_PUB_FILTER</DT>
+<DD>a program that will filter the TCPDUMP output to do further
+ processing. Defaults to &quot;cat&quot;.</DD>
+<DT>REF_PRIV_OUTPUT</DT>
+<DD>a text file containing tcpdump output. Packets on the private (eth0)
+ interface are captured and compared after conversion by tcpdump, as
+ with<VAR> REFPUBOUTPUT</VAR>.</DD>
+<DT>REF_PRIV_FILTER</DT>
+<DD>a program that will filter the TCPDUMP output to do further
+ processing. Defaults to &quot;cat&quot;.</DD>
+<DT>EXITONEMPTY</DT>
+<DD>a flag for <CODE>uml_netjig</CODE>. It should contain
+ &quot;--exitonempty&quot; of uml_netjig should exit when all of the input (<VAR>
+PUBINPUT</VAR>,<VAR>PRIVINPUT</VAR>) packets have been injected.</DD>
+<DT>ARPREPLY</DT>
+<DD>a flag for <CODE>uml_netjig</CODE>. It should contain &quot;--arpreply&quot;
+ if <CODE>uml_netjig</CODE> should reply to ARP requests. One will
+ typically set this to avoid having to fudge the ARP cache manually.</DD>
+<DT>TCPDUMPFLAGS</DT>
+<DD>a set of flags for the tcpdump used when converting captured output.
+ Typical values will include &quot;-n&quot; to turn off DNS, and often &quot;-E&quot; to set
+ the decryption key (tcpdump 3.7.1 and higher only) for ESP packets. The
+ &quot;-t&quot; flag (turn off timestamps) is provided automatically</DD>
+<DT>NETJIG_EXTRA</DT>
+<DD>additional comments to be sent to the netjig. This may arrange to
+ record or create additional networks, or may toggle options.</DD>
+</DL>
+<H2><A NAME="39_6">mkinsttest paramaters</A></H2>
+<P> The basic concept of the <CODE>mkinsttest</CODE> test type is that
+ it performs a &quot;make install&quot; to a temporary $DESTDIR. The resulting
+ tree can then be examined to determine if it was done properly. The
+ files can be uninstalled to determine if the file list was correct, or
+ the contents of files can be examined more precisely.</P>
+<DL>
+<DT>INSTALL_FLAGS</DT>
+<DD>If set, then an install will be done. This provides the set of flags
+ to provide for the install. The target to be used (usually &quot;install&quot;)
+ must be among the flags.</DD>
+<DT>POSTINSTALL_SCRIPT</DT>
+<DD>If set, a script to run after initial &quot;make install&quot;. Two arguments
+ are provided: an absolute path to the root of the FreeSWAN src tree,
+ and an absolute path to the temporary installation area.</DD>
+<DT>INSTALL2_FLAGS</DT>
+<DD>If set, a second install will be done using these flags. Similarly
+ to INSTALL_FLAGS, the target must be among the flags.</DD>
+<DT>UNINSTALL_FLAGS</DT>
+<DD>If set, an uninstall will be done using these flags. Similarly to
+ INSTALL_FLAGS, the target (usually &quot;uninstall&quot;) must be among the
+ flags.</DD>
+<DT>REF_FIND_f_l_OUTPUT</DT>
+<DD>If set, a <CODE>find $ROOT ( -type f -or -type -l )</CODE> will be
+ done to get a list of a real files and symlinks. The resulting file
+ will be compared to the file listed by this option.</DD>
+<DT>REF_FILE_CONTENTS</DT>
+<DD>If set, it should point to a file containing records for the form:
+<PRE>
+  
+<!--VARIABLE-->
+reffile</(null)>   
+<!--VARIABLE-->
+samplefile</(null)>
+</PRE>
+ one record per line. A diff between the provided reference file, and
+ the sample file (located in the temporary installation root) will be
+ done for each record.</DD>
+</DL>
+<H2><A NAME="39_7">rpm_build_install_test paramaters</A></H2>
+<P> The <CODE>rpm_build_install_test</CODE> type is to verify that the
+ proper packing list is produced by &quot;make rpm&quot;, and that the mechanisms
+ for building the kernel modules produce consistent results.</P>
+<DL>
+<DT>RPM_KERNEL_SOURCE</DT>
+<DD>Point to an extracted copy of the RedHat kernel source code.
+ Variables from the environment may be used.</DD>
+<DT>REF_RPM_CONTENTS</DT>
+<DD>This is a file containing one record per line. Each record consists
+ of a RPM name (may contain wildcards) and a filename to compare the
+ contents to. The RPM will be located and a file list will be produced
+ with rpm2cpio.</DD>
+</DL>
+<H2><A NAME="39_8">libtest paramaters</A></H2>
+<P> The libtest test is for testing library routines. The library file
+ is expected to provided an <CODE>#ifdef</CODE> by the name of<VAR>
+ library</VAR>
+<!--CODE_MAIN</CODE-->
+. The libtest type invokes the C compiler to compile this
+ file, links it against <CODE>libfreeswan.a</CODE> (to resolve any other
+ dependancies) and runs the test with the <CODE>-r</CODE> argument to
+ invoke a regression test.</(null)></P>
+<P>The library test case is expected to do a self-test, exiting with
+ status code 0 if everything is okay, and with non-zero otherwise. A
+ core dump (exit code greater than 128) is noted specifically.</P>
+<P> Unlike other tests, there are no subdirectories required, or other
+ parameters to set.</P>
+<H2 NAME="umlplutotest"><A NAME="39_9">umlplutotest paramaters</A></H2>
+<P> The umlplutotest function starts a pair of user mode line processes.
+ This is a 2-host version of umlXhost. The &quot;EAST&quot; and &quot;WEST&quot; slots are
+ defined.</P>
+<H2 NAME="umlXhost"><A NAME="39_10">umlXhost parameters</A></H2>
+<P> The umlXtest function starts an arbitrary number of user mode line
+ processes.</P>
+
+<!-- <IMG SRC="single_netjig.png" ALT="block diagram of uml_netjig"> -->
+<P> The script invoked (<CODE>testing/utils/Xhost-test.tcl</CODE>) is a
+ TCL<A HREF="http://expect.nist.gov/"> expect</A> script that arranges
+ to start each UML and configure it appropriately for the test. It then
+ starts listening (using uml_netjig) to the simulated network answering
+ ARPs and inserting packets as appropriate.</P>
+<P> umlXtest has a series of slots, each of which should be filled by a
+ host. The list of slots is controlled by the variable, XHOST_LIST. This
+ variable should be set to a space seperated list of slots. The former
+ umlplutotest is now implemented as a variation of the umlXhost test,
+ with XHOST_LIST=&quot;EAST WEST&quot;.</P>
+<P> For each host slot that is defined, a series of variables should be
+ filled in, defining what configuration scripts to use for that host.</P>
+<P> The following are used to control the console input and output to
+ the system. Where the string ${host} is present, the host slot should
+ be filled in. I.e. for the two host system with XHOST_LIST=&quot;EAST WEST&quot;,
+ then the variables: EAST_INIT_SCRIPT and WEST_INIT_SCRIPT will exist.</P>
+<DL>
+<DT>${host}HOST</DT>
+<DD>The name of the UML host which will fill this slot</DD>
+<DT>${host}_INIT_SCRIPT</DT>
+<DD>
+<P>a file of commands that is fed into the virtual machine's console in
+ single user mode prior to starting the tests. This file will usually
+ set up any eroute's and SADB entries that are required for the test.
+ Similar to INIT_SCRIPT, above.</P>
+</DD>
+<DT>${host}_RUN_SCRIPT</DT>
+<DD>
+<P>a file of commands that is fed into the virtual machine's console in
+ single user mode, before the packets are sent. This set of commands is
+ run after all of the virtual machines are initialized. I.e. after
+ EAST_INIT_SCRIPT<B> AND</B> WEST_INIT_SCRIPT. This script can therefore
+ do things that require that all machines are properly configured.</P>
+</DD>
+<DT>${host}_RUN2_SCRIPT</DT>
+<DD>
+<P>a file of commands that is fed into the virtual machine's console in
+ single user mode, after the packets are sent. This set of commands is
+ run before any of the virtual machines have been shut down. (I.e.
+ before EAST_FINAL_SCRIPT<B> AND</B> WEST_FINAL_SCRIPT.) This script can
+ therefore catch post-activity status reports.</P>
+</DD>
+<DT>${host}_FINAL_SCRIPT</DT>
+<DD>
+<P>a file of commands that is fed into the virtual machine's console in
+ single user mode after the final packet is sent. Similar to
+ INIT_SCRIPT, above. If not specified, then the single command &quot;halt&quot; is
+ sent. Note that when this script is run, the other virtual machines may
+ already have been killed. If specified, then the script should end with
+ a halt command to nicely shutdown the UML.</P>
+</DD>
+<DT>REF_${host}_CONSOLE_OUTPUT</DT>
+<DD>Similar to REF_CONSOLE_OUTPUT, above.</DD>
+</DL>
+<P>Some additional flags apply to all hosts:</P>
+<DL>
+<DT>REF_CONSOLE_FIXUPS</DT>
+<DD>a list of scripts (found in <CODE>klips/test/fixups</CODE>) to apply
+ to sanitize the console output of the machine under test. These are
+ typically perl, awk or sed scripts that remove things in the kernel
+ output that change each time the test is run and/or compiled.</DD>
+</DL>
+<P> In addition to input to the console, the networks may have input fed
+ to them:</P>
+<DL>
+<DT>EAST_INPUT/WEST_INPUT</DT>
+<DD>a<A HREF="http://www.tcpdump.org/"> pcap</A> file to feed in on the
+ private network side of each network. The &quot;EAST&quot; and &quot;WEST&quot; here refer
+ to the networks, not the hosts.</DD>
+<DT>REF_PUB_FILTER</DT>
+<DD>a program that will filter the TCPDUMP output to do further
+ processing. Defaults to &quot;cat&quot;.</DD>
+<DT>REF_EAST_FILTER/REF_WEST_FILTER</DT>
+<DD>a program that will filter the TCPDUMP output to do further
+ processing. Defaults to &quot;cat&quot;.</DD>
+&lt;
+<DT>TCPDUMPFLAGS</DT>
+<DD>a set of flags for the tcpdump used when converting captured output.
+ Typical values will include &quot;-n&quot; to turn off DNS, and often &quot;-E&quot; to set
+ the decryption key (tcpdump 3.7.1 and higher only) for ESP packets. The
+ &quot;-t&quot; flag (turn off timestamps) is provided automatically</DD>
+<DT>REF_EAST_OUTPUT/REF_WEST_OUTPUT</DT>
+<DD>a text file containing tcpdump output. Packets on the private (eth0)
+ interface are captured and compared after conversion by tcpdump, as
+ with<VAR> REF_PUB_OUTPUT</VAR>.</DD>
+<P> There are two additional environment variables that may be set on
+ the command line:</P>
+<DL>
+<DT> NETJIGVERBOSE=verbose export NETJIGVERBOSE</DT>
+<DD> If set, then the test output will be &quot;chatty&quot;, and let you know
+ what commands it is running, and as packets are sent. Without it set,
+ the output is limited to success/failure messages.</DD>
+<DT> NETJIGTESTDEBUG=netjig export NETJIGTESTDEBUG</DT>
+<DD> This will enable debugging of the communication with uml_netjig,
+ and turn on debugging in this utility. This does not imply
+ NETJIGVERBOSE.</DD>
+</DL>
+<DT> HOSTTESTDEBUG=hosttest export HOSTTESTDEBUG</DT>
+<DD> This will show all interactions with the user-mode-linux consoles</DD>
+</DL>
+<H2 NAME="kernelpatch"><A NAME="39_11">kernel_patch_test paramaters</A></H2>
+<P> The kernel_patch_test function takes some kernel source, copies it
+ with lndir, and then applies the patch as produced by &quot;make
+ kernelpatch&quot;.</P>
+<P> The following are used to control the input and output to the
+ system:</P>
+<DL>
+<DT>KERNEL_NAME</DT>
+<DD>the kernel name, typically something like &quot;linus&quot; or &quot;rh&quot;</DD>
+<DT>KERNEL_VERSION</DT>
+<DD>the kernel version number, as in &quot;2.2&quot; or &quot;2.4&quot;.</DD>
+<DT>KERNEL_${KERNEL_NAME}${KERNEL_VERSION}_SRC</DT>
+<DD>This variable should set in the environment, probably in
+ ~/freeswan-regress-env.sh. Examples of this variables would be
+ KERNEL_LINUS2_0_SRC or KERNEL_RH7_3_SRC. This variable should point to
+ an extracted copy of the kernel source in question.</DD>
+<DT>REF_PATCH_OUTPUT</DT>
+<DD>a copy of the patch output to compare against</DD>
+<DT>KERNEL_PATCH_LEAVE_SOURCE</DT>
+<DD>If set to a non-empty string, then the patched kernel source is not
+ removed at the end of the test. This will typically be set in the
+ environment while debugging.</DD>
+</DL>
+<H2 NAME="modtest"><A NAME="39_12">module_compile paramaters</A></H2>
+<P> The module_compile test attempts to build the KLIPS module against a
+ given set of kernel source. This is also done by the RPM tests, but in
+ a very specific manner.</P>
+<P> There are two variations of this test - one where the kernel either
+ doesn't need to be configured, or is already done, and tests were there
+ is a local configuration file.</P>
+<P> Where the kernel doesn't need to be configured, the kernel source
+ that is found is simply used. It may be a RedHat-style kernel, where
+ one can cause it to configure itself via rhconfig.h-style definitions.
+ Or, it may just be a kernel tree that has been configured.</P>
+<P> If the variable KERNEL_CONFIG_FILE is set, then a new directory is
+ created for the kernel source. It is populated with lndir(1). The
+ referenced file is then copied in as .config, and &quot;make oldconfig&quot; is
+ used to configure the kernel. This resulting kernel is then used as the
+ reference source.</P>
+<P> In all cases, the kernel source is found the same was for the
+ kernelpatch test, i.e. via KERNEL_VERSION/KERNEL_NAME and
+ KERNEL_${KERNEL_NAME}${KERNEL_VERSION}_SRC.</P>
+<P> Once there is kernel source, the module is compiled using the
+ top-level &quot;make module&quot; target.</P>
+<P> The test is considered successful if an executable is found in
+ OUTPUT/module/ipsec.o at the end of the test.</P>
+<DL>
+<DT>KERNEL_NAME</DT>
+<DD>the kernel name, typically something like &quot;linus&quot; or &quot;rh&quot;</DD>
+<DT>KERNEL_VERSION</DT>
+<DD>the kernel version number, as in &quot;2.2&quot; or &quot;2.4&quot;.</DD>
+<DT>KERNEL_${KERNEL_NAME}${KERNEL_VERSION}_SRC</DT>
+<DD>This variable should set in the environment, probably in
+ ~/freeswan-regress-env.sh. Examples of this variables would be
+ KERNEL_LINUS2_0_SRC or KERNEL_RH7_3_SRC. This variable should point to
+ an extracted copy of the kernel source in question.</DD>
+<DT>KERNEL_CONFIG_FILE</DT>
+<DD>The configuration file for the kernel.</DD>
+<DT>KERNEL_PATCH_LEAVE_SOURCE</DT>
+<DD>If set to a non-empty string, then the configured kernel source is
+ not removed at the end of the test. This will typically be set in the
+ environment while debugging.</DD>
+<DT>MODULE_DEF_INCLUDE</DT>
+<DD>The include file that will be used to configure the KLIPS module,
+ and possibly the kernel source.</DD>
+</DL>
+<H1><A NAME="40">Current pitfalls</A></H1>
+<DL>
+<DT> &quot;tcpdump dissector&quot; not available.</DT>
+<DD> This is a non-fatal warning. If uml_netjig is invoked with the -t
+ option, then it will attempt to use tcpdump's dissector to decode each
+ packet that it processes. The dissector is presently not available, so
+ this option it normally turned off at compile time. The dissector
+ library will be released with tcpdump version 4.0.</DD>
+</DL>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="umltesting.html">Previous</A>
+<A HREF="nightly.html">Next</A>
+</BODY>
+</HTML>

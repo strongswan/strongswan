@@ -1,0 +1,13 @@
+ALG:=twofish
+CONFIG_YES:=$(CONFIG_IKE_ALG_TWOFISH)
+DIR_TWOFISH:=$(LIBCRYPTO)/libtwofish
+ALG_DIRS-$(CONFIG_YES) := $(ALG_DIRS-$(CONFIG_YES)) $(DIR_TWOFISH)
+ALG_LIBS-$(CONFIG_YES) := $(ALG_LIBS-$(CONFIG_YES)) $(DIR_TWOFISH)/libtwofish.a
+ALG_SRCS-$(CONFIG_YES) := $(ALG_SRCS-$(CONFIG_YES)) ike_alg_$(ALG).c
+ALG_OBJS-$(CONFIG_YES) := $(ALG_OBJS-$(CONFIG_YES)) ike_alg_$(ALG).o
+
+$(DIR_TWOFISH)/libtwofish.a:
+	make -C $(DIR_TWOFISH) CFLAGS="$(CFLAGS)" libtwofish.a
+
+ike_alg_$(ALG).o: ike_alg_$(ALG).c
+	$(CC) -I $(LIBCRYPTO) -I$(DIR_TWOFISH) $(COPTS) $(ALLFLAGS) -c $<

@@ -1,0 +1,182 @@
+.TH IPSEC_OPTIONSFROM 3 "16 Oct 1998"
+.\" RCSID $Id: optionsfrom.3,v 1.1 2004/03/15 20:35:26 as Exp $
+.SH NAME
+ipsec optionsfrom \- read additional ``command-line'' options from file
+.SH SYNOPSIS
+.B "#include <freeswan.h>
+.sp
+.B "const char *optionsfrom(char *filename, int *argcp,"
+.ti +1c
+.B "char ***argvp, int optind, FILE *errsto);"
+.SH DESCRIPTION
+.I Optionsfrom
+is called from within a
+.IR getopt_long (3)
+scan,
+as the result of the appearance of an option (preferably
+.BR \-\-optionsfrom )
+to insert additional ``command-line'' arguments
+into the scan immediately after
+the option.
+Typically this would be done to pick up options which are
+security-sensitive and should not be visible to
+.IR ps (1)
+and similar commands,
+and hence cannot be supplied as part
+of the actual command line or the environment.
+.PP
+.I Optionsfrom
+reads the additional arguments from the specified
+.IR filename ,
+allocates a new argument vector to hold pointers to the existing
+arguments plus the new ones,
+and amends
+.I argc
+and
+.I argv
+(via the pointers
+.I argcp
+and
+.IR argvp ,
+which must point to the
+.I argc
+and
+.I argv
+being supplied to
+.IR getopt_long (3))
+accordingly.
+.I Optind
+must be the index, in the original argument vector,
+of the next argument.
+.PP
+If
+.I errsto
+is NULL,
+.I optionsfrom
+returns NULL for success and
+a pointer to a string-literal error message for failure;
+see DIAGNOSTICS.
+If
+.I errsto
+is non-NULL and an error occurs,
+.I optionsfrom
+prints a suitable complaint onto the
+.I errsto
+descriptor and invokes
+.I exit
+with an exit status of 2;
+this is a convenience for cases where more sophisticated
+responses are not required.
+.PP
+The text of existing arguments is not disturbed by
+.IR optionsfrom ,
+so pointers to them and into them remain valid.
+.PP
+The file of additional arguments is an ASCII text file.
+Lines consisting solely of white space,
+and lines beginning with
+.BR # ,
+are comments and are ignored.
+Otherwise, a line which does not begin with
+.BR \-
+is taken to be a single argument;
+if it both begins and ends with double-quote ("),
+those quotes are stripped off (note, no other processing is done within
+the line!).
+A line beginning with
+.B \-
+is considered to contain multiple arguments separated by white space.
+.PP
+Because
+.I optionsfrom
+reads its entire file before the
+.IR getopt_long (3)
+scan is resumed, an
+.I optionsfrom
+file can contain another
+.B \-\-optionsfrom
+option.
+Obviously, infinite loops are possible here.
+If
+.I errsto
+is non-NULL,
+.I optionsfrom
+considers it an error to be called more than 100 times.
+If
+.I errsto
+is NULL,
+loop detection is up to the caller
+(and the internal loop counter is zeroed out).
+.SH EXAMPLE
+A reasonable way to invoke
+.I optionsfrom
+would be like so:
+.PP
+.nf
+.ft B
+#include <getopt.h>
+
+struct option opts[] = {
+	/* ... */
+	"optionsfrom",	1,	NULL,	'+',
+	/* ... */
+};
+
+int
+main(argc, argv)
+int argc;
+char *argv[];
+{
+	int opt;
+	extern char *optarg;
+	extern int optind;
+
+	while ((opt = getopt_long(argc, argv, "", opts, NULL)) != EOF)
+		switch (opt) {
+		/* ... */
+		case '+':	/* optionsfrom */
+			optionsfrom(optarg, &argc, &argv, optind, stderr);
+			/* does not return on error */
+			break;
+		/* ... */
+		}
+	/* ... */
+.ft
+.fi
+.SH SEE ALSO
+getopt_long(3)
+.SH DIAGNOSTICS
+Errors in
+.I optionsfrom
+are:
+unable to open file;
+attempt to allocate temporary storage for argument or
+argument vector failed;
+read error in file;
+line too long.
+.SH HISTORY
+Written for the FreeS/WAN project by Henry Spencer.
+.SH BUGS
+The double-quote convention is rather simplistic.
+.PP
+Line length is currently limited to 1023 bytes,
+and there is no continuation convention.
+.PP
+The restriction of error reports to literal strings
+(so that callers don't need to worry about freeing them or copying them)
+does limit the precision of error reporting.
+.PP
+The error-reporting convention lends itself
+to slightly obscure code,
+because many readers will not think of NULL as signifying success.
+.PP
+There is a certain element of unwarranted chumminess with
+the insides of
+.IR getopt_long (3)
+here.
+No non-public interfaces are actually used, but
+.IR optionsfrom
+does rely on
+.IR getopt_long (3)
+being well-behaved in certain ways that are not actually
+promised by the specs.

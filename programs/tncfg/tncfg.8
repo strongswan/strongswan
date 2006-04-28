@@ -1,0 +1,113 @@
+.TH IPSEC_TNCFG 8 "21 Jun 2000"
+.\"
+.\" RCSID $Id: tncfg.8,v 1.1 2004/03/15 20:35:31 as Exp $
+.\"
+.SH NAME
+ipsec tncfg \- associate IPSEC virtual interface with physical interface
+.SH SYNOPSIS
+.B ipsec
+.B tncfg
+.PP
+.B ipsec
+.B tncfg
+.B \-\-attach
+.B \-\-virtual
+virtual
+.B \-\-physical
+physical
+.PP
+.B ipsec
+.B tncfg
+.B \-\-detach
+.B \-\-virtual
+virtual
+.PP
+.B ipsec
+.B tncfg
+.B \-\-clear
+.PP
+.B ipsec
+.B tncfg
+.B \-\-version
+.PP
+.B ipsec
+.B tncfg
+.B \-\-help
+.SH DESCRIPTION
+.I Tncfg
+attaches/detaches IPSEC virtual interfaces to/from
+physical interfaces,
+through which packets will be forwarded once processed by IPSEC.
+.PP
+The form with no additional arguments lists the contents of
+/proc/net/ipsec_tncfg.  The format of /proc/net/ipsec_tncfg is discussed
+in ipsec_tncfg(5).
+The
+.B \-\-attach
+form attaches the
+.I virtual
+interface to the
+.I physical
+one.
+The
+.B \-\-detach
+form detaches the
+.I virtual
+interface from whichever physical interface it is attached to.
+The
+.B \-\-clear
+form clears all the
+.I virtual
+interfaces from whichever physical interfaces they were attached to.
+.PP
+Virtual interfaces typically have names like
+.BR ipsec0 ,
+while physical interfaces typically have names like
+.B eth0
+or
+.BR ppp0 .
+.SH EXAMPLES
+.TP
+.B ipsec tncfg \-\-attach \-\-virtual ipsec0 \-\-physical eth0
+attaches the
+.B ipsec0
+virtual device to the
+.B eth0
+physical device.
+.LP
+.SH "FILES"
+/proc/net/ipsec_tncfg, /usr/local/bin/ipsec
+.SH "SEE ALSO"
+ipsec(8), ipsec_manual(8), ipsec_eroute(8), ipsec_spi(8),
+ipsec_spigrp(8), ipsec_klipsdebug(8), ipsec_tncfg(5)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org/>
+by Richard Guy Briggs.
+.\"
+.\" $Log: tncfg.8,v $
+.\" Revision 1.1  2004/03/15 20:35:31  as
+.\" added files from freeswan-2.04-x509-1.5.3
+.\"
+.\" Revision 1.15  2002/04/24 07:35:41  mcr
+.\" Moved from ./klips/utils/tncfg.8,v
+.\"
+.\" Revision 1.14  2000/09/12 13:09:04  rgb
+.\" Fixed real/physical discrepancy between tncfg.8 and tncfg.c.
+.\"
+.\" Revision 1.13  2000/06/30 18:21:55  rgb
+.\" Update SEE ALSO sections to include ipsec_version(5) and ipsec_pf_key(5)
+.\" and correct FILES sections to no longer refer to /dev/ipsec which has
+.\" been removed since PF_KEY does not use it.
+.\"
+.\" Revision 1.12  2000/06/21 16:54:58  rgb
+.\" Added 'no additional args' text for listing contents of
+.\" /proc/net/ipsec_* files.
+.\"
+.\" Revision 1.11  1999/07/19 18:47:25  henry
+.\" fix slightly-misformed comments
+.\"
+.\" Revision 1.10  1999/04/06 04:54:39  rgb
+.\" Fix/Add RCSID Id: and Log: bits to make PHMDs happy.  This includes
+.\" patch shell fixes.
+.\"

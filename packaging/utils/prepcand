@@ -1,0 +1,33 @@
+#! /bin/sh
+# prepcand m.nn
+# prepare candidate for building, must be done in top working dir
+
+PATH=/bin:/usr/bin
+export PATH
+umask 022
+
+case "$#:$1" in
+1:*.*)	;;
+*)	echo "Usage: $0 release" >&2 ; exit	;;
+esac
+
+rel="$1"
+tag="PRE`echo $rel | tr '.' '_'`"
+
+# update from snapshot form to candidate/release form, if necessary
+if egrep -q -e '^---$' README
+then
+	sed '1,/^---$/d' README | sed '1s/This is release xxx of Linux FreeS\/WAN/This is release '$rel' of Linux FreeS\/WAN/' > README.$$
+	mv README.$$ README
+	cvs -Q commit -m "update for candidates of release $rel" README
+fi
+
+if sed -n 1p CHANGES | egrep -q 'since last release'
+then
+	sed '1s/since last release/in '$rel'/' CHANGES >CHANGES.$$
+	mv CHANGES.$$ CHANGES
+	cvs -Q commit -m "update for candidates of release $rel" CHANGES
+fi
+
+echo "IPSECVERSION=$rel" >Makefile.ver
+cvs -Q commit -m "update for candidate of release $rel" Makefile

@@ -1,0 +1,65 @@
+# FreeS/WAN library
+# Copyright (C) 1998-2002  Henry Spencer.
+# 
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: Makefile.kernel,v 1.1 2004/03/15 20:35:24 as Exp $
+
+
+
+include ../Makefile.inc
+include ../Makefile.ver
+
+
+
+ifndef TOPDIR
+TOPDIR  := /usr/src/linux
+endif
+
+L_TARGET := libkernel.a
+
+obj-y := addrtoa.o datatot.o goodmask.o \
+	pfkey_v2_build.o pfkey_v2_debug.o pfkey_v2_ext_bits.o pfkey_v2_parse.o \
+	prng.o rangetoa.o satoa.o \
+	subnetof.o subnettoa.o ultoa.o version.o
+
+HDRS=freeswan.h internal.h
+
+EXTRA_CFLAGS += -I. $(KLIPSCOMPILE)
+
+EXTRA_CFLAGS += -Wall 
+#EXTRA_CFLAGS += -Wconversion 
+#EXTRA_CFLAGS += -Wmissing-prototypes 
+EXTRA_CFLAGS += -Wpointer-arith 
+#EXTRA_CFLAGS += -Wcast-qual 
+#EXTRA_CFLAGS += -Wmissing-declarations 
+EXTRA_CFLAGS += -Wstrict-prototypes
+#EXTRA_CFLAGS += -pedantic
+#EXTRA_CFLAGS += -W
+#EXTRA_CFLAGS += -Wwrite-strings 
+#EXTRA_CFLAGS += -Wbad-function-cast 
+
+active-objs     := $(sort $(obj-y) $(obj-m))
+L_OBJS          := $(obj-y)
+M_OBJS          := $(obj-m)
+MIX_OBJS        := $(filter $(export-objs), $(active-objs))
+
+include $(TOPDIR)/Rules.make
+
+$(obj-y):	$(HDRS)
+
+# build version.c using version number from Makefile.ver
+version.c:	version.in.c
+	sed '/"/s/xxx/$(IPSECVERSION)/' version.in.c >$@
+
+clean:
+	rm -f $(L_TARGET) *.o try* core *.core version.c
+	( cd des && $(MAKE) clean )

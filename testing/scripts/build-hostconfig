@@ -1,0 +1,103 @@
+#!/bin/bash
+# build the hosts configuration directory with the actual IP addresses
+#
+# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
+# Zuercher Hochschule Winterthur
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: build-hostconfig,v 1.3 2005/02/08 10:40:48 as Exp $
+
+DIR=`dirname $0`
+
+source $DIR/function.sh
+
+[ -f $DIR/../testing.conf ] || die "!! Configuration file 'testing.conf' not found"
+[ -d $DIR/../hosts ]        || die "!! Directory 'hosts' not found"
+
+source $DIR/../testing.conf
+
+if [ ! -d $BUILDDIR ]
+then
+    cecho " * Creating directory '$BUILDDIR'"
+    mkdir $BUILDDIR
+fi
+
+########################################
+# copy default host configs to $BUILDDIR
+#
+
+HOSTCONFIGDIR=${BUILDDIR}/hosts
+
+if [ -d $HOSTCONFIGDIR ]
+then
+    rm -r $HOSTCONFIGDIR
+fi
+
+mkdir $HOSTCONFIGDIR
+cp -rfp ${UMLTESTDIR}/testing/hosts $BUILDDIR
+
+cecho " * Copied default host config directory to '$HOSTCONFIGDIR'"
+
+########################################
+# assign IP for each host to hostname
+#
+
+cecho-n " * Generate default config for.."
+
+HOSTIP=`ifconfig eth0 |grep inet |sed -e "s/.*inet addr://" -e "s/  Bcast.*//"`
+
+for host in $STRONGSWANHOSTS
+do
+    cecho-n "${host}.."
+    eval ip_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+
+    [ "`eval echo \\\$ip_${host}`" != "$HOSTIP" ] || die "$host has the same IP as eth0 (Host)! Please change that."
+
+    case $host in
+    moon)
+        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        [ "`eval echo \\\$ip1_${host}`" != "$HOSTIP" ] || die "eth1 of $host has the same IP as eth0 (Host)! Please change that."
+        searchandreplace PH_IP_MOON $ip_moon $HOSTCONFIGDIR
+        searchandreplace PH_IP1_MOON $ip1_moon $HOSTCONFIGDIR
+        ;;
+    sun)
+        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        [ "`eval echo \\\$ip1_${host}`" != "$HOSTIP" ] || die "eth1 of $host has the same IP as eth0 (Host)! Please change that."
+        searchandreplace PH_IP_SUN $ip_sun $HOSTCONFIGDIR
+        searchandreplace PH_IP1_SUN $ip1_sun $HOSTCONFIGDIR
+        ;;
+    alice)
+        searchandreplace PH_IP_ALICE $ip_alice $HOSTCONFIGDIR
+        ;;
+    venus)
+        searchandreplace PH_IP_VENUS $ip_venus $HOSTCONFIGDIR
+        ;;
+    bob)
+        searchandreplace PH_IP_BOB $ip_bob $HOSTCONFIGDIR
+        ;;
+    carol)
+        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_CAROL $ip_carol $HOSTCONFIGDIR
+        searchandreplace PH_IP1_CAROL $ip1_carol $HOSTCONFIGDIR
+        ;;
+    dave)
+        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_DAVE $ip_dave $HOSTCONFIGDIR
+        searchandreplace PH_IP1_DAVE $ip1_dave $HOSTCONFIGDIR
+        ;;
+    winnetou)
+        searchandreplace PH_IP_WINNETOU $ip_winnetou $HOSTCONFIGDIR
+        ;;
+    esac
+done
+
+cecho "done"

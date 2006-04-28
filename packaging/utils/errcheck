@@ -1,0 +1,40 @@
+#! /bin/sh
+# internal utility for testing kernel make output for errors
+# Copyright (C) 1998, 1999  Henry Spencer.
+# 
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: errcheck,v 1.1 2004/03/15 20:35:27 as Exp $
+
+# the errors.[och] stuff is for math emulation
+# the HiSax nonsense is due to a Red Hat 5.2 botch
+# RH7.2 "make dep" builds stuff in drivers/macintosh (!!) using <asm/init.h>
+# Red Hat's 2.2.19 whines about function read_rx_long_length_errors in e100.c
+# 2.4.18: 53c700.h:40:2: #error "Config.in must define either CONFIG_53C700_IO_MAPPED or CONFIG_53C700_MEM_MAPPED to use this scsi core."
+oops="`sed -e 's/-Werror/-Weror/g' \
+	   -e '/errors*\.[och]/s/errors*\./eror./g' \
+	   -e '/scsi_error/s//scsi_eror/' \
+           -e '/KBUILD_BASENAME=errors/s/errors/eror/g' \
+	   -e '/#error .HiSax: No cards configured/s/error/eror/' \
+	   -e '/#error .<asm.init.h> should never be used/s/error/eror/' \
+	   -e '/53c700.h:[0-9:]* #error "Config.in must define either CONFIG_53C700_IO_MAPPED or CONFIG_53C700_MEM_MAPPED to use this scsi core."/s/error/eror/' \
+	   -e '/^e100.c: In function/s/length_errors/length_erors/' $* |
+	egrep -i 'error|\*\*\*' | egrep -v ': warning:'`"
+if test " $oops" != " "
+then
+	echo
+	echo "***ERRORS DETECTED in $* (examine file for details):"
+	echo "$oops"
+	echo
+	exit 1
+else
+	exit 0
+fi

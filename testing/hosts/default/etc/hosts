@@ -1,0 +1,34 @@
+# /etc/hosts:  This file describes a number of hostname-to-address
+#              mappings for the TCP/IP subsystem.  It is mostly
+#              used at boot time, when no name servers are running.
+#              On small systems, this file can be used instead of a
+#              "named" name server.  Just add the names, addresses
+#              and any aliases to this file...
+#
+
+127.0.0.1	localhost
+
+192.168.0.254	uml0.strongswan.org	uml0
+10.1.0.254	uml1.strongswan.org	uml1
+10.2.0.254	uml1.strongswan.org	uml2
+
+PH_IP_ALICE	alice.strongswan.org	alice
+PH_IP_VENUS	venus.strongswan.org	venus
+PH_IP1_MOON	moon1.strongswan.org	moon1
+PH_IP_MOON	moon.strongswan.org	moon
+PH_IP_CAROL	carol.strongswan.org	carol
+PH_IP1_CAROL	carol1.strongswan.org	carol1
+PH_IP_WINNETOU	winnetou.strongswan.org	winnetou crl.strongswan.org ocsp.strongswan.org ldap.strongswan.org
+PH_IP_DAVE	dave.strongswan.org	dave
+PH_IP1_DAVE	dave1.strongswan.org	dave1
+PH_IP_SUN	sun.strongswan.org	sun
+PH_IP1_SUN	sun1.strongswan.org	sun1
+PH_IP_BOB	bob.strongswan.org	bob
+
+# IPV6 versions of localhost and co
+::1 ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts

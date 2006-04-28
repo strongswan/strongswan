@@ -1,0 +1,105 @@
+<HTML>
+<HEAD>
+	<TITLE>Cross Compiling FreeS/WAN</TITLE>
+      <meta name="keywords" content="Linux, IPSEC, VPN, Security, FreeSWAN, cross, compile">
+<!--
+     Written by Ken Bantoft <ken@freeswan.ca> for the Linux FreeS/WAN project
+     Freely distributable under the GNU General Public License
+
+     More information at www.freeswan.org
+     Feedback to users@lists.freeswan.org
+
+CVS information:
+RCS ID:          $Id: crosscompile.html,v 1.1 2004/03/15 20:35:24 as Exp $
+Last changed:    $Date: 2004/03/15 20:35:24 $
+Revision number: $Revision: 1.1 $
+
+CVS revision numbers do not correspond to FreeS/WAN release numbers.
+-->
+ 
+</HEAD>
+<BODY>
+
+<H1><A NAME="guide"></A>Linux FreeS/WAN Cross Compiling Guide</H1>
+
+<H2><A NAME="overview"></A>Overview</H2>
+
+<P>
+This document provides general instructions on how to cross compile 
+FreeS/WAN, 
+that is - compile it for another architecture (eg: StrongARM)</P>
+<OL>
+	<LI><A HREF="#setup">Setting up your environment</A>.</LI>
+	<LI><A HREF="#building">Building</A>.</LI>
+	<LI><A HREF="#common">Common Problems</A>.</LI>
+</OL>
+<H2><A NAME="setup"></A>Setting up your Environment</H2>
+<H3>Enviroment Variables</H3>
+<P>There are a number of environment variables you can set to help facilitate
+cross compiling FreeS/WAN.  All examples will are using the bash shell. 
+</P>
+<P>The following is an example of the how to set the environment variables if
+you were cross compiling using the Embedix ARM toolchain, to build for an embedded
+device like the Sharp Zaurus.  Set these while you are in the FreeS/WAN directory.
+It is often simpler to put the entire list into a script (eg: cross-setup.sh), and 
+then "source cross-setup.sh" or similar.
+<pre>
+export ARCH=arm
+export CC=/opt/Embedix/tools/bin/arm-linux-gcc
+export LD=/opt/Embedix/tools/bin/arm-linux-ld
+export RANLIB=/opt/Embedix/tools/bin/arm-linux-ranlib 
+export AR=/opt/Embedix/tools/bin/arm-linux-ar 
+export AS=/opt/Embedix/tools/bin/arm-linux-as 
+export STRIP=/opt/Embedix/tools/bin/arm-linux-strip 
+export KERNELSRC=/zaurus/kernel-2.4.6
+export LD_LIBRARY_PATH=/opt/Embedix/tools/lib/gcc-lib/arm-linux/2.95.2/
+export PATH=$PATH:/opt/Embedix/tools/bin
+export DESTDIR=/zaurus/binaries
+</pre>
+In the example above, we setup all of the usual gcc + bin-utils programs, 
+as well as setting the LD_LIBRARY_PATH to our cross-compiled system libraries, 
+and DESTDIR to our output directory.
+</P>
+
+<H3>Kernel Source</H3>
+<P>Place a copy of the kernel source, setup for your target device somewhere on
+your filesystem and set KERNELSRC= to this directory.  You will need to prepare 
+your kernel source treefirst, by running "make menuconfig && make dep && make 
+modules".  Once this is done, you can move on to building FreeS/WAN</P>
+
+<H2><A NAME="building"></A>Building</H2>
+<H3>The Make Process</H3>
+<P>There are two parts to building FreeS/WAN - the userland programs and utilities, 
+and the ipsec.o kernel module.  Each can be built seperatly, making debugging the
+build process simpler.
+</P>
+<P>Step 1 is to run "make programs".  This will build the required libs 
+(libfreeswan.a) as well as all of the userland tools (pluto, whack, etc...).  
+Provided your environment variables are set correctly, you should see the output
+using your specified gcc (arm-linux-gcc for our example), ld, as, ar and 
+ranlib.</P>
+<P>If this completes successfully, you can run "make install" to install a copy of
+all of the binaries, man pages and other documentation to DESTDIR.</P>
+<P>Step 2 is to build the ipsec.o module.  This is done with "make oldmod", which
+should change into the KERNELSRC directory and then compile and link the required
+files to generate an ipsec.o file.  If this is successful, you will end up with an
+ipsec.o file in your FreeS/WAN directory, under linux/net/ipsec/.</P>
+<P>Remember to install this to /lib/modules/$kernelversion/kernel/net/ipsec/ on 
+your target machine.</P>
+
+
+
+<H2><A NAME="common"></A>Common Problems Building</H2>
+<P>Here is a list of common problems/errors you may run into when cross compiling
+FreeS/WAN.</P>
+<UL>
+<LI>gmp.h, libgmp not found, error with -lgmp.  All of these refer to the GNU Math 
+Precision Library.  You will need to have already built this for your target 
+system.  Place libgmp.so in LD_LIBRARY_PATH, and ensure the headers are in your
+include path as well.
+</UL>
+
+<P><BR><BR>
+</P>
+</BODY>
+</HTML>

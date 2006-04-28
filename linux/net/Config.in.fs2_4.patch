@@ -1,0 +1,13 @@
+--- linux/net/Config.in.orig	Fri Feb  9 14:34:13 2001
++++ linux/net/Config.in	Thu Feb 22 19:40:08 2001
+@@ -88,4 +88,10 @@
+ #bool 'Network code profiler' CONFIG_NET_PROFILE
+ endmenu
+
++tristate 'IP Security Protocol (strongSwan IPsec)' CONFIG_IPSEC
++define_tristate CONFIG_IPSEC m
++if [ "$CONFIG_IPSEC" != "n" ]; then
++  source net/ipsec/Config.in
++fi
++
+ endmenu

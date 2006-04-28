@@ -1,0 +1,196 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_NEWHOSTKEY</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_NEWHOSTKEY</H1>
+Section: Maintenance Commands (8)<BR>Updated: 4 March 2002<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec newhostkey - generate a new host authentication key
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>newhostkey</B>
+
+<B>--output</B>
+
+filename
+[
+<B>--quiet</B>
+
+]
+<B>\</B>
+
+<BR>
+
+
+[
+<B>--bits</B>
+
+n
+]
+[
+<B>--hostname</B>
+
+host
+]
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Newhostkey</I>
+
+outputs (into
+<I>filename</I>,
+
+which can be `<B>-</B>' for standard output)
+an RSA private key suitable for this host,
+in
+<I>/etc/ipsec.secrets</I>
+
+format
+(see
+<I><A HREF="ipsec.secrets.5.html">ipsec.secrets</A></I>(5)).
+
+Normally,
+<I>newhostkey</I>
+
+invokes
+<I>rsasigkey</I>
+
+(see
+<I><A HREF="ipsec_rsasigkey.8.html">ipsec_rsasigkey</A></I>(8))
+
+with the
+<B>--verbose</B>
+
+option, so a narrative of what is being done appears on standard error.
+<P>
+
+The
+<B>--output</B>
+
+specifier, although it is syntactically an option and can appear at
+any point among the options (it doesn't have to be first),
+is not optional.
+The specified
+<I>filename</I>
+
+is created under umask
+<B>077</B>
+
+if nonexistent;
+if it already exists and is non-empty,
+a warning message about that is sent to standard error,
+and the output is appended to the file.
+<P>
+
+The
+<B>--quiet</B>
+
+option suppresses both the
+<I>rsasigkey</I>
+
+narrative and the existing-file warning message.
+<P>
+
+The
+<B>--bits</B>
+
+option specifies the number of bits in the key;
+the current default is 2192 and we do not recommend use of anything
+shorter unless unusual constraints demand it.
+<P>
+
+The
+<B>--hostname</B>
+
+option is passed through to
+<I>rsasigkey</I>
+
+to tell it what host name to label the output with
+(via its
+<B>--hostname</B>
+
+option).
+<P>
+
+The output format is that of
+<I>rsasigkey</I>,
+
+with bracketing added to complete the
+<I>ipsec.secrets</I>
+
+format.
+In the usual case, where
+<I>ipsec.secrets</I>
+
+contains only the host's own private key,
+the output of
+<I>newhostkey</I>
+
+is sufficient as a complete
+<I>ipsec.secrets</I>
+
+file.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.secrets.5.html">ipsec.secrets</A>(5), <A HREF="ipsec_rsasigkey.8.html">ipsec_rsasigkey</A>(8)
+<A NAME="lbAF">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org">http://www.freeswan.org</A>&gt;
+by Henry Spencer.
+<A NAME="lbAG">&nbsp;</A>
+<H2>BUGS</H2>
+
+As with
+<I>rsasigkey</I>,
+
+the run time is difficult to predict,
+since depletion of the system's randomness pool can cause
+arbitrarily long waits for random bits,
+and the prime-number searches can also take unpredictable
+(and potentially large) amounts of CPU time.
+See
+<I><A HREF="ipsec_rsasigkey.8.html">ipsec_rsasigkey</A></I>(8)
+
+for some typical performance numbers.
+<P>
+
+A higher-level tool which could handle the clerical details
+of changing to a new key would be helpful.
+<P>
+
+The requirement for
+<B>--output</B>
+
+is a blemish,
+but private keys are extremely sensitive information
+and unusual precautions seem justified.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">HISTORY</A><DD>
+<DT><A HREF="#lbAG">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

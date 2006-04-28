@@ -1,0 +1,175 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_TNCFG</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_TNCFG</H1>
+Section: File Formats (5)<BR>Updated: 27 Jun 2000<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec_tncfg - lists IPSEC virtual interfaces attached to real interfaces
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>tncfg</B>
+
+<P>
+
+<B>cat</B>
+
+<B>/proc/net/ipsec_tncfg</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>/proc/net/ipsec_tncfg</I>
+
+is a read-only file which lists which IPSEC virtual interfaces are
+attached to which real interfaces, through which packets will be
+forwarded once processed by IPSEC.
+<P>
+
+Each line lists one ipsec I/F.
+A table entry consists of:
+<DL COMPACT>
+<DT>+<DD>
+an ipsec virtual I/F name
+<DT>+<DD>
+a visual and machine parsable separator '-&gt;', separating the virtual I/F
+and the physical I/F,
+<DT>+<DD>
+a physical I/F name, to which the ipsec virtual I/F is attached or NULL
+if it is not attached,
+<DT>+<DD>
+the keyword
+<B>mtu=</B>,
+
+<DT>+<DD>
+the MTU of the ipsec virtual I/F,
+<DT>+<DD>
+the automatically adjusted effective MTU for PMTU discovery, in brackets,
+<DT>+<DD>
+a visual and machine parsable separator '-&gt;', separating the virtual I/F
+MTU and the physical I/F MTU,
+<DT>+<DD>
+the MTU of the attached physical I/F.
+<B>.SH</B>EXAMPLES
+
+<DT><B>ipsec2 -&gt; eth3 mtu=16260(1443) -&gt; 1500</B>
+
+<DD>
+</DL>
+<P>
+
+shows that virtual device
+<B>ipsec2</B>
+
+with an MTU of
+<B>16260</B>
+
+is connected to physical device
+<B>eth3</B>
+
+with an MTU of
+<B>1500</B>
+
+and that the effective MTU as a result of PMTU discovery has been
+automatically set to
+<B>1443.</B>
+
+<DL COMPACT>
+<DT><B>ipsec0 -&gt; wvlan0 mtu=1400(16260) -&gt; 1500</B>
+
+<DD>
+</DL>
+<P>
+
+shows that virtual device
+<B>ipsec0</B>
+
+with an MTU of
+<B>1400</B>
+
+is connected to physical device
+<B>wvlan0</B>
+
+with an MTU of
+<B>1500</B>
+
+and no PMTU packets have gotten far enough to bump down the effective MTU
+from its default of 16260.
+<DL COMPACT>
+<DT><B>ipsec3 -&gt; NULL mtu=0(0) -&gt; 0</B>
+
+<DD>
+</DL>
+<P>
+
+shows that virtual device
+<B>ipsec3</B>
+
+is not connected to any physical device.
+<P>
+
+<A NAME="lbAE">&nbsp;</A>
+<H2>FILES</H2>
+
+/proc/net/ipsec_tncfg, /usr/local/bin/ipsec
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.8.html">ipsec</A>(8), <A HREF="ipsec_manual.8.html">ipsec_manual</A>(8), <A HREF="ipsec_eroute.5.html">ipsec_eroute</A>(5), <A HREF="ipsec_spi.5.html">ipsec_spi</A>(5),
+<A HREF="ipsec_spigrp.5.html">ipsec_spigrp</A>(5), <A HREF="ipsec_klipsdebug.5.html">ipsec_klipsdebug</A>(5), <A HREF="ipsec_tncfg.8.html">ipsec_tncfg</A>(8), <A HREF="ipsec_version.5.html">ipsec_version</A>(5),
+<A HREF="ipsec_pf_key.5.html">ipsec_pf_key</A>(5)
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org/">http://www.freeswan.org/</A>&gt;
+by Richard Guy Briggs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">FILES</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

@@ -1,0 +1,122 @@
+.TH IPSEC_PF_KEY 5 "29 Jun 2000"
+.\"
+.\" RCSID $Id: pf_key.5,v 1.1 2004/03/15 20:35:28 as Exp $
+.\"
+.SH NAME
+ipsec_pf_key \- lists PF_KEY sockets registered with KLIPS
+.SH SYNOPSIS
+.B cat
+.B /proc/net/pf_key
+.SH DESCRIPTION
+.I /proc/net/pf_key
+is a read-only file which lists the presently open PF_KEY sockets on the
+local system and their parameters.
+.PP
+Each line lists one PF_KEY socket.
+A table entry consists of:
+.IP + 3
+sock pointer (sock)
+.IP +
+PID of the socket owner (pid)
+.IP +
+flag to indicate if the socket is dead (d)
+.IP +
+socket wait queue (sleep)
+.IP +
+socket pointer (socket)
+.IP +
+next socket in chain (next)
+.IP +
+previous socket in chain (prev)
+.IP +
+last socket error (e)
+.IP +
+pointer to destruct routine (destruct)
+.IP +
+is this a reused socket (r)
+.IP +
+has this socket been zapped (z)
+.IP +
+socket family to which this socket belongs (fa)
+.IP +
+local port number (n)
+.IP +
+protocol version number (p)
+.IP +
+Receive queue bytes committed (r)
+.IP +
+Transmit queue bytes committed (w)
+.IP +
+option memory allocations (o)
+.IP +
+size of send buffer in bytes (sndbf)
+.IP +
+timestamp in seconds (stamp)
+.IP +
+socket flags (Flags)
+.IP +
+socket type (Type)
+.IP +
+connection state (St)
+.BR 
+.SH EXAMPLES
+.TP
+.\".B "sock     pid  d sleep    socket   next     prev     e destruct r z fa n p r w o sndbf stamp    Flags    Type     St"
+.TP
+.B c3b8c140 3553 0 c0599818 c05997fc        0        0 0        0 1 0 15 0 2 0 0 0 65535 0.103232 00000000 00000003 01
+.LP
+shows that there is one pf_key socket set up that starts at
+.BR c3b8c140 ,
+whose owning process has PID
+.BR 3553 ,
+the socket is not dead, its wait queue is at
+.BR c0599818 ,
+whose owning socket is at
+.BR c05997fc ,
+with no other sockets in the chain, no errors, no destructor, it is a
+reused socket which has not been zapped, from protocol family
+.BR 15
+(PF_KEY), local port number
+.BR 0 ,
+protocol socket version
+.BR 2 ,
+no memory allocated to transmit, receive or option queues, a send buffer
+of almost
+.BR 64kB ,
+a timestamp of
+.BR 0.103232 ,
+no flags set, type
+.BR 3 ,
+in state
+.BR 1 .
+.SH "FILES"
+/proc/net/pf_key
+.SH "SEE ALSO"
+ipsec(8), ipsec_manual(8), ipsec_eroute(5), ipsec_spi(5),
+ipsec_spigrp(5), ipsec_klipsdebug(5), ipsec_tncfg(8), ipsec_version(5)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org/>
+by Richard Guy Briggs.
+.\"
+.\" $Log: pf_key.5,v $
+.\" Revision 1.1  2004/03/15 20:35:28  as
+.\" added files from freeswan-2.04-x509-1.5.3
+.\"
+.\" Revision 1.4  2002/04/24 07:35:39  mcr
+.\" Moved from ./klips/utils/pf_key.5,v
+.\"
+.\" Revision 1.3  2001/01/23 23:51:49  rgb
+.\" Fix outdated references to /proc/net/ipsec_pf_key.
+.\"
+.\" Revision 1.2  2000/06/30 18:21:55  rgb
+.\" Update SEE ALSO sections to include ipsec_version(5) and ipsec_pf_key(5)
+.\" and correct FILES sections to no longer refer to /dev/ipsec which has
+.\" been removed since PF_KEY does not use it.
+.\"
+.\" Revision 1.1  2000/06/30 06:19:27  rgb
+.\" manpages for the last two /proc/net/ipsec* files that don't have a
+.\" corresponding utility.
+.\"
+.\"
+.\"

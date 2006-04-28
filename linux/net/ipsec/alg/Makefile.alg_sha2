@@ -1,0 +1,22 @@
+MOD_SHA2 := ipsec_sha2.o
+
+ALG_MODULES += $(MOD_SHA2)
+ALG_SUBDIRS += libsha2
+
+obj-$(CONFIG_IPSEC_ALG_SHA2) += $(MOD_SHA2)
+static_init-func-$(CONFIG_IPSEC_ALG_SHA2)+= ipsec_sha2_init
+alg_obj-$(CONFIG_IPSEC_ALG_SHA2) += ipsec_alg_sha2.o
+
+SHA2_OBJS := ipsec_alg_sha2.o libsha2/libsha2.a
+
+$(MOD_SHA2): libsha2 $(SHA2_OBJS)
+	$(LD) $(EXTRA_LDFLAGS) -r $(SHA2_OBJS) -o $@
+
+libsha2 : $(LIBCRYPTO)/libsha2 
+	test -d $@ || mkdir $@ ;exit 0
+	test -d $@/asm || mkdir $@/asm;exit 0
+	cd $@ && ln -sf $?/Makefile $?/*.[chS] .
+	
+libsha2/libsha2.a:
+	( cd libsha2 && \
+		$(MAKE) CC='$(CC)' CFLAGS='$(CFLAGS) $(EXTRA_CFLAGS)' EXTRA_CFLAGS='$(EXTRA_CFLAGS)' libsha2.a ;)

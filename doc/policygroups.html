@@ -1,0 +1,341 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="quickstart.html">Previous</A>
+<A HREF="faq.html">Next</A>
+<HR>
+<H1><A NAME="4">How to Configure Linux FreeS/WAN with Policy Groups</A></H1>
+<A NAME="policygroups"></A>
+<H2><A NAME="4_1">What are Policy Groups?</A></H2>
+<P><STRONG>Policy Groups</STRONG> are an elegant general mechanism to
+ configure FreeS/WAN. They are useful for many FreeS/WAN users.</P>
+<P>In previous FreeS/WAN versions, you needed to configure each IPsec
+ connection explicitly, on both local and remote hosts. This could
+ become complex.</P>
+<P>By contrast, Policy Groups allow you to set local IPsec policy for
+ lists of remote hosts and networks, simply by listing the hosts and
+ networks which you wish to have special treatment in one of several
+ Policy Group files. FreeS/WAN then internally creates the connections
+ needed to implement each policy.</P>
+<P>In the next section we describe our five Base Policy Groups, which
+ you can use to configure IPsec in many useful ways. Later, we will show
+ you how to create an IPsec VPN using one line of configuration for each
+ remote host or network.</P>
+<A NAME="builtin_policygroups"></A>
+<H3><A NAME="4_1_1">Built-In Security Options</A></H3>
+<P>FreeS/WAN offers these Base Policy Groups:</P>
+<DL>
+<DT>private</DT>
+<DD> FreeS/WAN only communicates privately with the listed<A HREF="glossary.html#CIDR">
+ CIDR</A> blocks. If needed, FreeS/WAN attempts to create a connection
+ opportunistically. If this fails, FreeS/WAN blocks communication.
+ Inbound blocking is assumed to be done by the firewall. FreeS/WAN
+ offers firewall hooks but no modern firewall rules to help with inbound
+ blocking.</DD>
+<DT>private-or-clear</DT>
+<DD> FreeS/WAN prefers private communication with the listed CIDR
+ blocks. If needed, FreeS/WAN attempts to create a connection
+ opportunistically. If this fails, FreeS/WAN allows traffic in the
+ clear.</DD>
+<DT>clear-or-private</DT>
+<DD> FreeS/WAN communicates cleartext with the listed CIDR blocks, but
+ also accepts inbound OE connection requests from them. Also known as<A HREF="glossary.html#passive.OE">
+ passive OE (pOE)</A>, this policy may be used to create an<A HREF="glossary.html#responder">
+ opportunistic responder</A>.</DD>
+<DT>clear</DT>
+<DD> FreeS/WAN only communicates cleartext with the listed CIDR blocks.</DD>
+<DT>block</DT>
+<DD>FreeS/WAN blocks traffic to and from and the listed CIDR blocks.
+ Inbound blocking is assumed to be done by the firewall. FreeS/WAN
+ offers firewall hooks but no modern firewall rules to help with inbound
+ blocking.
+<!-- also called "blockdrop".-->
+</DD>
+</DL>
+<A NAME="policy.group.notes"></A>
+<P>Notes:</P>
+<UL>
+<LI>Base Policy Groups apply to communication with this host only.</LI>
+<LI>The most specific rule (whether policy or pre-configured connection)
+ applies. This has several practical applications:
+<UL>
+<LI>If CIDR blocks overlap, FreeS/WAN chooses the most specific
+ applicable block.</LI>
+<LI>This decision also takes into account any pre-configured connections
+ you may have.</LI>
+<LI>If the most specific connection is a pre-configured connection, the
+ following procedure applies. If that connection is up, it will be used.
+ If it is routed, it will be brought up. If it is added, no action will
+ be taken.</LI>
+</UL>
+</LI>
+<LI>Base Policy Groups are created using built-in connections. Details
+ in<A HREF="manpage.d/ipsec.conf.5.html"> man ipsec.conf</A>.</LI>
+<LI>All Policy Groups are bidirectional.<A HREF="src/policy-groups-table.html">
+ This chart</A> shows some technical details. FreeS/WAN does not support
+ one-way encryption, since it can give users a false sense of security.</LI>
+</UL>
+<H2><A NAME="4_2">Using Policy Groups</A></H2>
+<P>The Base Policy Groups which build IPsec connections rely on
+ Opportunistic Encryption. To use the following examples, you must first
+ become OE-capable, as described in our<A HREF="quickstart.html#quickstart">
+ quickstart guide</A>.<A NAME="example1"></A></P>
+<H3><A NAME="4_2_1">Example 1: Using a Base Policy Group</A></H3>
+<P>Simply place CIDR blocks (<A HREF="#dnswarning">names</A>, IPs or IP
+ ranges) in /etc/ipsec.d/policies/<VAR>[groupname]</VAR>, and reread the
+ policy group files.</P>
+<P>For example, the<VAR> private-or-clear</VAR> policy tells FreeS/WAN
+ to prefer encrypted communication to the listed CIDR blocks. Failing
+ that, it allows talk in the clear.</P>
+<P>To make this your default policy, place<A HREF="glossary.html#fullnet">
+ fullnet</A> in the<VAR> private-or-clear</VAR> policy group file:</P>
+<PRE>    [root@xy root]# cat /etc/ipsec.d/policies/private-or-clear
+    # This file defines the set of CIDRs (network/mask-length) to which
+    # communication should be private, if possible, but in the clear otherwise.
+    ....
+    0.0.0.0/0</PRE>
+<P>and reload your policies with</P>
+<PRE>    ipsec auto --rereadgroups</PRE>
+<P>Use<A HREF="quickstart.html#opp.test"> this test</A> to verify
+ opportunistic connections.</P>
+<A NAME="example2"></A>
+<H3><A NAME="4_2_2">Example 2: Defining IPsec Security Policy with
+ Groups</A></H3>
+<P>Defining IPsec security policy with Base Policy Groups is like
+ creating a shopping list: just put CIDR blocks in the appropriate group
+ files. For example:</P>
+<PRE>    [root@xy root]# cd /etc/ipsec.d/policies
+    [root@xy policies]# cat private
+        192.0.2.96/27              # The finance department
+        192.0.2.192/29             # HR
+	192.0.2.12                 # HR gateway
+        irc.private.example.com    # Private IRC server
+  
+    [root@xy policies]# cat private-or-clear
+        0.0.0.0/0                  # My default policy: try to encrypt.
+
+    [root@xy policies]# cat clear
+        192.0.2.18/32              # My POP3 server
+        192.0.2.19/32              # My Web proxy
+
+    [root@xy policies]# cat block
+        spamsource.example.com</PRE>
+<P>To make these settings take effect, type:</P>
+<PRE>    ipsec auto --rereadgroups</PRE>
+<P>Notes:</P>
+<UL>
+<LI>For opportunistic connection attempts to succeed, all participating
+ FreeS/WAN hosts and gateways must be configured for OE.</LI>
+<LI>Examples 3 through 5 show how to implement a detailed<VAR> private</VAR>
+ policy.</LI>
+<LI><A NAME="dnswarning"></A><FONT COLOR="RED"> Warning:</FONT> Using
+ DNS names in policy files and ipsec.conf can be tricky. If the name
+ does not resolve, the policy will not be implemented for that name. It
+ is therefore safer either to use IPs, or to put any critical names in
+ /etc/hosts. We plan to implement periodic DNS retry to help with this.
+<BR> Names are resolved at FreeS/WAN startup, or when the policies are
+ reloaded. Unfortunately, name lookup can hold up the startup process.
+ If you have fast DNS servers, the problem may be less severe.</LI>
+</UL>
+<A HREF="example3"></A>
+<H3><A NAME="4_2_3">Example 3: Creating a Simple IPsec VPN with the<VAR>
+ private</VAR> Group</A></H3>
+<P>You can create an IPsec VPN between several hosts, with only one line
+ of configuration per host, using the<VAR> private</VAR> policy group.</P>
+<P>First, use our<A HREF="quickstart.html"> quickstart guide</A> to set
+ up each participating host with a FreeS/WAN install and OE.</P>
+<P>In one host's<VAR> /etc/ipsec.d/policies/private</VAR>, list the
+ peers to which you wish to protect traffic. For example:</P>
+<PRE>    [root@xy root]# cd /etc/ipsec.d/policies
+    [root@xy policies]# cat private
+        192.0.2.9              # several hosts at example.com
+        192.0.2.11             
+        192.0.2.12                 
+        irc.private.example.com 
+</PRE>
+<P>Copy the<VAR> private</VAR> file to each host. Remove the local host,
+ and add the initial host.</P>
+<PRE>    scp2 /etc/ipsec.d/policies/private root@192.0.2.12:/etc/ipsec.d/policies/private</PRE>
+<P>On each host, reread the policy groups with</P>
+<PRE>    ipsec auto --rereadgroups</PRE>
+<P>That's it! You're configured.</P>
+<P>Test by pinging between two hosts. After a second or two, traffic
+ should flow, and</P>
+<PRE>    ipsec eroute</PRE>
+<P>should yield something like</P>
+<PRE>    192.0.2.11/32   -&gt; 192.0.2.8/32  =&gt; tun0x149f@192.0.2.8</PRE>
+<P>where your host IPs are substituted for 192.0.2.11 and 192.0.2.8.</P>
+<P>If traffic does not flow, there may be an error in your OE setup.
+ Revisit our<A HREF="quickstart.html"> quickstart guide</A>.</P>
+<P>Our next two examples show you how to add subnets to this IPsec VPN.</P>
+<A NAME="example4"></A>
+<H3><A NAME="4_2_4">Example 4: New Policy Groups to Protect a Subnet</A></H3>
+<P>To protect traffic to a subnet behind your FreeS/WAN gateway, you'll
+ need additional DNS records, and new policy groups. To set up the DNS,
+ see our<A HREF="quickstart.html#opp.gate"> quickstart guide</A>. To
+ create five new policy groups for your subnet, copy these connections
+ to<VAR> /etc/ipsec.conf</VAR>. Substitute your subnet's IPs for
+ 192.0.2.128/29.</P>
+<PRE>
+conn private-net
+    also=private  # inherits settings (eg. auto=start) from built in conn
+    leftsubnet=192.0.2.128/29  # your subnet's IPs here
+
+conn private-or-clear-net
+    also=private-or-clear
+    leftsubnet=192.0.2.128/29
+
+conn clear-or-private-net
+    also=clear-or-private
+    leftsubnet=192.0.2.128/29
+
+conn clear-net
+    also=clear
+    leftsubnet=192.0.2.128/29
+
+conn block-net
+    also=block
+    leftsubnet=192.0.2.128/29
+</PRE>
+<P>Copy the gateway's files to serve as the initial policy group files
+ for the new groups:</P>
+<PRE>
+    cp -p /etc/ipsec.d/policies/private /etc/ipsec.d/policies/private-net
+    cp -p /etc/ipsec.d/policies/private-or-clear /etc/ipsec.d/policies/private-or-clear-net
+    cp -p /etc/ipsec.d/policies/clear-or-private /etc/ipsec.d/policies/clear-or-private-net
+    cp -p /etc/ipsec.d/policies/clear /etc/ipsec.d/policies/clear-net
+    cp -p /etc/ipsec.d/policies/block /etc/ipsec.d/policies/block
+</PRE>
+<P><STRONG>Tip: Since a missing policy group file is equivalent to a
+ file with no entries, you need only create files for the connections
+ you'll use.</STRONG></P>
+<P>To test one of your new groups, place the fullnet 0.0.0.0/0 in<VAR>
+ private-or-clear-net</VAR>. Perform the subnet test in<A HREF="quickstart.html#opp.test">
+ our quickstart guide</A>. You should see a connection, and</P>
+<PRE>    ipsec eroute</PRE>
+<P>should include an entry which mentions the subnet node's IP and the
+ OE test site IP, like this:</P>
+<PRE>    192.0.2.131/32   -&gt; 192.139.46.77/32  =&gt; tun0x149f@192.0.2.11</PRE>
+<A HREF="example5"></A>
+<H3><A NAME="4_2_5">Example 5: Adding a Subnet to the VPN</A></H3>
+<P>Suppose you wish to secure traffic to a subnet 192.0.2.192/29 behind
+ a FreeS/WAN box 192.0.2.12.</P>
+<P>First, add DNS entries to configure 192.0.2.12 as an opportunistic
+ gateway for that subnet. Instructions are in our<A HREF="quickstart.html#opp.gate">
+ quickstart guide</A>. Next, create a<VAR> private-net</VAR> group on
+ 192.0.2.12 as described in<A HREF="#example4"> Example 4</A>.</P>
+<P>On each other host, add the subnet 192.0.2.192/29 to<VAR> private</VAR>
+, yielding for example</P>
+<PRE>    [root@xy root]# cd /etc/ipsec.d/policies
+    [root@xy policies]# cat private
+        192.0.2.9              # several hosts at example.com
+        192.0.2.11
+        192.0.2.12             # HR department gateway
+        192.0.2.192/29         # HR subnet
+        irc.private.example.com
+</PRE>
+<P>and reread policy groups with</P>
+<PRE>    ipsec auto --rereadgroups</PRE>
+<P>That's all the configuration you need.</P>
+<P>Test your VPN by pinging from a machine on 192.0.2.192/29 to any
+ other host:</P>
+<PRE>    [root@192.0.2.194]# ping 192.0.2.11</PRE>
+<P>After a second or two, traffic should flow, and</P>
+<PRE>    ipsec eroute</PRE>
+<P>should yield something like</P>
+<PRE>    192.0.2.11/32   -&gt; 192.0.2.194/32  =&gt; tun0x149f@192.0.2.12
+</PRE>
+<P>Key:</P>
+<TABLE>
+<TR><TD>1.</TD><TD>192.0.2.11/32</TD><TD>Local start point of the
+ protected traffic.</TD></TR>
+<TR><TD>2.</TD><TD>192.0.2.194/32</TD><TD>Remote end point of the
+ protected traffic.</TD></TR>
+<TR><TD>3.</TD><TD>192.0.2.12</TD><TD>Remote FreeS/WAN node (gateway or
+ host). May be the same as (2).</TD></TR>
+<TR><TD>4.</TD><TD>[not shown]</TD><TD>Local FreeS/WAN node (gateway or
+ host), where you've produced the output. May be the same as (1).</TD></TR>
+</TABLE>
+<P>For additional assurance, you can verify with a packet sniffer that
+ the traffic is being encrypted.</P>
+<P>Note</P>
+<UL>
+<LI>Because strangers may also connect via OE, this type of VPN may
+ require a stricter firewalling policy than a conventional VPN.</LI>
+</UL>
+<H2><A NAME="4_3">Appendix</A></H2>
+<A NAME="hiddenconn"></A>
+<H3><A NAME="4_3_1">Our Hidden Connections</A></H3>
+<P>Our Base Policy Groups are created using hidden connections. These
+ are spelled out in<A HREF="manpage.d/ipsec.conf.5.html"> man ipsec.conf</A>
+ and defined in<VAR> /usr/local/lib/ipsec/_confread</VAR>.</P>
+<A NAME="custom_policygroups"></A>
+<H3><A NAME="4_3_2">Custom Policy Groups</A></H3>
+<P>A policy group is built using a special connection description in<VAR>
+ ipsec.conf</VAR>, which:</P>
+<UL>
+<LI>is<STRONG> generic</STRONG>. It uses<VAR>
+ right=[%group|%opportunisticgroup]</VAR> rather than specific IPs. The
+ connection is cloned for every name or IP range listed in its Policy
+ Group file.</LI>
+<LI>often has a<STRONG> failure rule</STRONG>. This rule, written<VAR>
+ failureshunt=[passthrough|drop|reject|none]</VAR>, tells FreeS/WAN what
+ to do with packets for these CIDRs if it fails to establish the
+ connection. Default is<VAR> none</VAR>.</LI>
+</UL>
+<P>To create a new group:</P>
+<OL>
+<LI>Create its connection definition in<VAR> ipsec.conf</VAR>.</LI>
+<LI>Create a Policy Group file in<VAR> /etc/ipsec.d/policies</VAR> with
+ the same name as your connection.</LI>
+<LI>Put a CIDR block in that file.</LI>
+<LI>Reread groups with<VAR> ipsec auto --rereadgroups</VAR>.</LI>
+<LI>Test:<VAR> ping</VAR> to activate any OE connection, and view
+ results with<VAR> ipsec eroute</VAR>.</LI>
+</OL>
+<A NAME="disable_oe"></A><A NAME="disable_policygroups"></A>
+<H3><A NAME="4_3_3">Disabling Opportunistic Encryption</A></H3>
+<P>To disable OE (eg. policy groups and packetdefault), cut and paste
+ the following lines to<VAR> /etc/ipsec.conf</VAR>:</P>
+<PRE>conn block
+    auto=ignore
+
+conn private
+    auto=ignore
+
+conn private-or-clear
+    auto=ignore
+
+conn clear-or-private
+    auto=ignore
+
+conn clear
+    auto=ignore
+
+conn packetdefault
+    auto=ignore</PRE>
+<P>Restart FreeS/WAN so that the changes take effect:</P>
+<PRE>    ipsec setup restart</PRE>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="quickstart.html">Previous</A>
+<A HREF="faq.html">Next</A>
+</BODY>
+</HTML>

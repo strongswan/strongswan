@@ -1,0 +1,1040 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="politics.html">Previous</A>
+<A HREF="mail.html">Next</A>
+<HR>
+<H1><A name="ipsec.detail">The IPsec protocols</A></H1>
+<P>This section provides information on the IPsec protocols which
+ FreeS/WAN implements. For more detail, see the<A href="rfc.html"> RFCs</A>
+.</P>
+<P>The basic idea of IPsec is to provide security functions,<A href="glossary.html#authentication">
+ authentication</A> and<A href="glossary.html#encryption"> encryption</A>
+, at the IP (Internet Protocol) level. This requires a higher-level
+ protocol (IKE) to set things up for the IP-level services (ESP and AH).</P>
+<H2><A NAME="27_1">Protocols and phases</A></H2>
+<P>Three protocols are used in an IPsec implementation:</P>
+<DL>
+<DT>ESP, Encapsulating Security Payload</DT>
+<DD>Encrypts and/or authenticates data</DD>
+<DT>AH, Authentication Header</DT>
+<DD>Provides a packet authentication service</DD>
+<DT>IKE, Internet Key Exchange</DT>
+<DD>Negotiates connection parameters, including keys, for the other two</DD>
+</DL>
+<P>The term &quot;IPsec&quot; (also written as IPSEC) is slightly ambiguous. In
+ some contexts, it includes all three of the above but in other contexts
+ it refers only to AH and ESP.</P>
+<P>There is more detail below, but a quick summary of how the whole
+ thing works is:</P>
+<DL>
+<DT>Phase one IKE (main mode exchange)</DT>
+<DD>sets up a keying channel (ISAKMP SA) between the two gateways</DD>
+<DT>Phase two IKE (quick mode exchange)</DT>
+<DD>sets up data channels (IPsec SAs)</DD>
+<DT>IPsec proper</DT>
+<DD>exchanges data using AH or ESP</DD>
+</DL>
+<P>Both phases of IKE are repeated periodically to automate re-keying.</P>
+<H2><A name="others">Applying IPsec</A></H2>
+<P>Authentication and encryption functions for network data can, of
+ course, be provided at other levels. Many security protocols work at
+ levels above IP.</P>
+<UL>
+<LI><A href="glossary.html#PGP">PGP</A> encrypts and authenticates mail
+ messages</LI>
+<LI><A href="glossary.html#SSH">SSH</A> authenticates remote logins and
+ then encrypts the session</LI>
+<LI><A href="glossary.html#SSL">SSL</A> or<A href="glossary.html#TLS">
+ TLS</A> provides security at the sockets layer, e.g. for secure web
+ browsing</LI>
+</UL>
+<P>and so on. Other techniques work at levels below IP. For example,
+ data on a communications circuit or an entire network can be encrypted
+ by specialised hardware. This is common practice in high-security
+ applications.</P>
+<H3><A name="advantages">Advantages of IPsec</A></H3>
+<P>There are, however, advantages to doing it at the IP level instead
+ of, or as well as, at other levels.</P>
+<P>IPsec is the<STRONG> most general way to provide these services for
+ the Internet</STRONG>.</P>
+<UL>
+<LI>Higher-level services protect a<EM> single protocol</EM>; for
+ example PGP protects mail.</LI>
+<LI>Lower level services protect a<EM> single medium</EM>; for example a
+ pair of encryption boxes on the ends of a line make wiretaps on that
+ line useless unless the attacker is capable of breaking the encryption.</LI>
+</UL>
+<P>IPsec, however, can protect<EM> any protocol</EM> running above IP
+ and<EM> any medium</EM> which IP runs over. More to the point, it can
+ protect a mixture of application protocols running over a complex
+ combination of media. This is the normal situation for Internet
+ communication; IPsec is the only general solution.</P>
+<P>IPsec can also provide some security services &quot;in the background&quot;,
+ with<STRONG> no visible impact on users</STRONG>. To use<A href="glossary.html#PGP">
+ PGP</A> encryption and signatures on mail, for example, the user must
+ at least:</P>
+<UL>
+<LI>remember his or her passphrase,</LI>
+<LI>keep it secure</LI>
+<LI>follow procedures to validate correspondents' keys</LI>
+</UL>
+<P>These systems can be designed so that the burden on users is not
+ onerous, but any system will place some requirements on users. No such
+ system can hope to be secure if users are sloppy about meeting those
+ requirements. The author has seen username and password stuck on
+ terminals with post-it notes in an allegedly secure environment, for
+ example.</P>
+<H3><A name="limitations">Limitations of IPsec</A></H3>
+<P>IPsec is designed to secure IP links between machines. It does that
+ well, but it is important to remember that there are many things it
+ does not do. Some of the important limitations are:</P>
+<DL>
+<DT><A name="depends">IPsec cannot be secure if your system isn't</A></DT>
+<DD>System security on IPsec gateway machines is an essential
+ requirement if IPsec is to function as designed. No system can be
+ trusted if the underlying machine has been subverted. See books on Unix
+ security such as<A href="biblio.html#practical"> Garfinkel and Spafford</A>
+ or our web references for<A href="web.html#linsec"> Linux security</A>
+ or more general<A href="web.html#compsec"> computer security</A>.
+<P>Of course, there is another side to this. IPsec can be a powerful
+ tool for improving system and network security. For example, requiring
+ packet authentication makes various spoofing attacks harder and IPsec
+ tunnels can be extremely useful for secure remote administration of
+ various things.</P>
+</DD>
+<DT><A name="not-end-to-end">IPsec is not end-to-end</A></DT>
+<DD>IPsec cannot provide the same end-to-end security as systems working
+ at higher levels. IPsec encrypts an IP connection between two machines,
+ which is quite a different thing than encrypting messages between users
+ or between applications.
+<P>For example, if you need mail encrypted from the sender's desktop to
+ the recipient's desktop and decryptable only by the recipient, use<A href="glossary.html#PGP">
+ PGP</A> or another such system. IPsec can encrypt any or all of the
+ links involved -- between the two mail servers, or between either
+ server and its clients. It could even be used to secure a direct IP
+ link from the sender's desktop machine to the recipient's, cutting out
+ any sort of network snoop. What it cannot ensure is end-to-end
+ user-to-user security. If only IPsec is used to secure mail, then
+ anyone with appropriate privileges on any machine where that mail is
+ stored (at either end or on any store-and-forward servers in the path)
+ can read it.</P>
+<P>In another common setup, IPsec encrypts packets at a security gateway
+ machine as they leave the sender's site and decrypts them on arrival at
+ the gateway to the recipient's site. This does provide a useful
+ security service -- only encrypted data is passed over the Internet --
+ but it does not even come close to providing an end-to-end service. In
+ particular, anyone with appropriate privileges on either site's LAN can
+ intercept the message in unencrypted form.</P>
+</DD>
+<DT><A name="notpanacea">IPsec cannot do everything</A></DT>
+<DD>IPsec also cannot provide all the functions of systems working at
+ higher levels of the protocol stack. If you need a document
+ electronically signed by a particular person, then you need his or her<A
+href="glossary.html#signature"> digital signature</A> and a<A href="glossary.html#public">
+ public key cryptosystem</A> to verify it with.
+<P>Note, however, that IPsec authentication of the underlying
+ communication can make various attacks on higher-level protocols more
+ difficult. In particular, authentication prevents<A href="glossary.html#middle">
+ man-in-the-middle attacks</A>.</P>
+</DD>
+<DT><A name="no_user">IPsec authenticates machines, not users</A></DT>
+<DD>IPsec uses strong authentication mechanisms to control which
+ messages go to which machines, but it does not have the concept of user
+ ID, which is vital to many other security mechansims and policies. This
+ means some care must be taken in fitting the various security
+ mechansims on a network together. For example, if you need to control
+ which users access your database server, you need some non-IPsec
+ mechansim for that. IPsec can control which machines connect to the
+ server, and can ensure that data transfer to those machines is done
+ securely, but that is all. Either the machines themselves must control
+ user access or there must be some form of user authentication to the
+ database, independent of IPsec.</DD>
+<DT><A name="DoS">IPsec does not stop denial of service attacks</A></DT>
+<DD><A href="glossary.html#DOS">Denial of service</A> attacks aim at
+ causing a system to crash, overload, or become confused so that
+ legitimate users cannot get whatever services the system is supposed to
+ provide. These are quite different from attacks in which the attacker
+ seeks either to use the service himself or to subvert the service into
+ delivering incorrect results.
+<P>IPsec shifts the ground for DoS attacks; the attacks possible against
+ systems using IPsec are different than those that might be used against
+ other systems. It does not, however, eliminate the possibility of such
+ attacks.</P>
+</DD>
+<DT><A name="traffic">IPsec does not stop traffic analysis</A></DT>
+<DD><A href="glossary.html#traffic">Traffic analysis</A> is the attempt
+ to derive intelligence from messages without regard for their contents.
+ In the case of IPsec, it would mean analysis based on things visible in
+ the unencrypted headers of encrypted packets -- source and destination
+ gateway addresses, packet size, et cetera. Given the resources to
+ acquire such data and some skill in analysing it (both of which any
+ national intelligence agency should have), this can be a very powerful
+ technique.
+<P>IPsec is not designed to defend against this. Partial defenses are
+ certainly possible, and some are<A href="#traffic.resist"> described
+ below</A>, but it is not clear that any complete defense can be
+ provided.</P>
+</DD>
+</DL>
+<H3><A name="uses">IPsec is a general mechanism for securing IP</A></H3>
+<P>While IPsec does not provide all functions of a mail encryption
+ package, it can encrypt your mail. In particular, it can ensure that
+ all mail passing between a pair or a group of sites is encrypted. An
+ attacker looking only at external traffic, without access to anything
+ on or behind the IPsec gateway, cannot read your mail. He or she is
+ stymied by IPsec just as he or she would be by<A href="glossary.html#PGP">
+ PGP</A>.</P>
+<P>The advantage is that IPsec can provide the same protection for<STRONG>
+ anything transmitted over IP</STRONG>. In a corporate network example,
+ PGP lets the branch offices exchange secure mail with head office. SSL
+ and SSH allow them to securely view web pages, connect as terminals to
+ machines, and so on. IPsec can support all those applications, plus
+ database queries, file sharing (NFS or Windows), other protocols
+ encapsulated in IP (Netware, Appletalk, ...), phone-over-IP,
+ video-over-IP, ... anything-over-IP. The only limitation is that IP
+ Multicast is not yet supported, though there are Internet Draft
+ documents for that.</P>
+<P>IPsec creates<STRONG> secure tunnels through untrusted networks</STRONG>
+. Sites connected by these tunnels form VPNs,<A href="glossary.html#VPN">
+ Virtual Private Networks</A>.</P>
+<P>IPsec gateways can be installed wherever they are required.</P>
+<UL>
+<LI>One organisation might choose to install IPsec only on firewalls
+ between their LANs and the Internet. This would allow them to create a
+ VPN linking several offices. It would provide protection against anyone
+ outside their sites.</LI>
+<LI>Another might install IPsec on departmental servers so everything on
+ the corporate backbone net was encrypted. This would protect messages
+ on that net from everyone except the sending and receiving department.</LI>
+<LI>Another might be less concerned with information secrecy and more
+ with controlling access to certain resources. They might use IPsec
+ packet authentication as part of an access control mechanism, with or
+ without also using the IPsec encryption service.</LI>
+<LI>It is even possible (assuming adequate processing power and an IPsec
+ implementation in each node) to make every machine its own IPsec
+ gateway so that everything on a LAN is encrypted. This protects
+ information from everyone outside the sending and receiving machine.</LI>
+<LI>These techniques can be combined in various ways. One might, for
+ example, require authentication everywhere on a network while using
+ encryption only for a few links.</LI>
+</UL>
+<P>Which of these, or of the many other possible variants, to use is up
+ to you.<STRONG> IPsec provides mechanisms; you provide the policy</STRONG>
+.</P>
+<P><STRONG>No end user action is required</STRONG> for IPsec security to
+ be used; they don't even have to know about it. The site
+ administrators, of course, do have to know about it and to put some
+ effort into making it work. Poor administration can compromise IPsec as
+ badly as the post-it notes mentioned above. It seems reasonable,
+ though, for organisations to hope their system administrators are
+ generally both more security-conscious than end users and more able to
+ follow computer security procedures. If not, at least there are fewer
+ of them to educate or replace.</P>
+<P>IPsec can be, and often should be, used with along with security
+ protocols at other levels. If two sites communicate with each other via
+ the Internet, then IPsec is the obvious way to protect that
+ communication. If two others have a direct link between them, either
+ link encryption or IPsec would make sense. Choose one or use both.
+ Whatever you use at and below the IP level, use other things as
+ required above that level. Whatever you use above the IP level,
+ consider what can be done with IPsec to make attacks on the higher
+ levels harder. For example,<A href="glossary.html#middle">
+ man-in-the-middle attacks</A> on various protocols become difficult if
+ authentication at packet level is in use on the potential victims'
+ communication channel.</P>
+<H3><A name="authonly">Using authentication without encryption</A></H3>
+<P>Where appropriate, IPsec can provide authentication without
+ encryption. One might do this, for example:</P>
+<UL>
+<LI>where the data is public but one wants to be sure of getting the
+ right data, for example on some web sites</LI>
+<LI>where encryption is judged unnecessary, for example on some company
+ or department LANs</LI>
+<LI>where strong encryption is provided at link level, below IP</LI>
+<LI>where strong encryption is provided in other protocols, above IP
+<BR> Note that IPsec authentication may make some attacks on those
+ protocols harder.</LI>
+</UL>
+<P>Authentication has lower overheads than encryption.</P>
+<P>The protocols provide four ways to build such connections, using
+ either an AH-only connection or ESP using null encryption, and in
+ either manually or automatically keyed mode. FreeS/WAN supports only
+ one of these, manually keyed AH-only connections, and<STRONG> we do not
+ recommend using that</STRONG>. Our reasons are discussed under<A href="#traffic.resist">
+ Resisting traffic analysis</A> a few sections further along.</P>
+<H3><A name="encnoauth">Encryption without authentication is dangerous</A>
+</H3>
+<P>Originally, the IPsec encryption protocol<A href="glossary.html#ESP">
+ ESP</A> didn't do integrity checking. It only did encryption. Steve
+ Bellovin found many ways to attack ESP used without authentication. See
+ his paper<A href="http://www.research.att.com/~smb/papers/badesp.ps">
+ Problem areas for the IP Security Protocols</A>. To make a secure
+ connection, you had to add an<A href="glossary.html#AH"> AH</A>
+ Authentication Header as well as ESP. Rather than incur the overhead of
+ several layers (and rather than provide an ESP layer that didn't
+ actually protect the traffic), the IPsec working group built integrity
+ and replay checking directly into ESP.</P>
+<P>Today, typical usage is one of:</P>
+<UL>
+<LI>ESP for encryption and authentication</LI>
+<LI>AH for authentication alone</LI>
+</UL>
+<P>Other variants are allowed by the standard, but not much used:</P>
+<DL>
+<DT>ESP encryption without authentication</DT>
+<DD><STRONG>Bellovin has demonstrated fatal flaws in this. Do not use.</STRONG>
+</DD>
+<DT>ESP encryption with AH authentication</DT>
+<DD>This has higher overheads than using the authentication in ESP, and
+ no obvious benefit in most cases. The exception might be a network
+ where AH authentication was widely or universally used. If you're going
+ to do AH to conform with network policy, why authenticate again in the
+ ESP layer?</DD>
+<DT>Authenticate twice, with AH and with ESP</DT>
+<DD>Why? Of course, some folk consider &quot;belt and suspenders&quot; the
+ sensible approach to security. If you're among them, you might use both
+ protocols here. You might also use both to satisfy different parts of a
+ security policy. For example, an organisation might require AH
+ authentication everywhere but two users within the organisation might
+ use ESP as well.</DD>
+<DT>ESP authentication without encryption</DT>
+<DD>The standard allows this, calling it &quot;null encryption&quot;. FreeS/WAN
+ does not support it. We recommend that you use AH instead if
+ authentication is all you require. AH authenticates parts of the IP
+ header, which ESP-null does not do.</DD>
+</DL>
+<P>Some of these variants cannot be used with FreeS/WAN because we do
+ not support ESP-null and do not support automatic keying of AH-only
+ connections.</P>
+<P>There are fairly frequent suggestions that AH be dropped entirely
+ from the IPsec specifications since ESP and null encryption can handle
+ that situation. It is not clear whether this will occur. My guess is
+ that it is unlikely.</P>
+<H3><A name="multilayer">Multiple layers of IPsec processing are
+ possible</A></H3>
+<P>The above describes combinations possible on a single IPsec
+ connection. In a complex network you may have several layers of IPsec
+ in play, with any of the above combinations at each layer.</P>
+<P>For example, a connection from a desktop machine to a database server
+ might require AH authentication. Working with other host, network and
+ database security measures, AH might be just the thing for access
+ control. You might decide not to use ESP encryption on such packets,
+ since it uses resources and might complicate network debugging. Within
+ the site where the server is, then, only AH would be used on those
+ packets.</P>
+<P>Users at another office, however, might have their whole connection
+ (AH headers and all) passing over an IPsec tunnel connecting their
+ office to the one with the database server. Such a tunnel should use
+ ESP encryption and authentication. You need authentication in this
+ layer because without authentication the encryption is vulnerable and
+ the gateway cannot verify the AH authentication. The AH is between
+ client and database server; the gateways aren't party to it.</P>
+<P>In this situation, some packets would get multiple layers of IPsec
+ applied to them, AH on an end-to-end client-to-server basis and ESP
+ from one office's security gateway to the other.</P>
+<H3><A name="traffic.resist">Resisting traffic analysis</A></H3>
+<P><A href="glossary.html#traffic">Traffic analysis</A> is the attempt
+ to derive useful intelligence from encrypted traffic without breaking
+ the encryption.</P>
+<P>Is your CEO exchanging email with a venture capital firm? With
+ bankruptcy trustees? With an executive recruiting agency? With the
+ holder of some important patents? If an eavesdropper learns about any
+ of those, then he has interesting intelligence on your company, whether
+ or not he can read the messages themselves.</P>
+<P>Even just knowing that there is network traffic between two sites may
+ tell an analyst something useful, especially when combined with
+ whatever other information he or she may have. For example, if you know
+ Company A is having cashflow problems and Company B is looking for
+ aquisitions, then knowing that packets are passing between the two is
+ interesting. It is more interesting if you can tell it is email, and
+ perhaps yet more if you know the sender and recipient.</P>
+<P>Except in the simplest cases, traffic analysis is hard to do well. It
+ requires both considerable resources and considerable analytic skill.
+ However, intelligence agencies of various nations have been doing it
+ for centuries and many of them are likely quite good at it by now.
+ Various commercial organisations, especially those working on &quot;targeted
+ marketing&quot; may also be quite good at analysing certain types of
+ traffic.</P>
+<P>In general, defending against traffic analysis is also difficult.
+ Inventing a really good defense could get you a PhD and some
+ interesting job offers.</P>
+<P>IPsec is not designed to stop traffic analysis and we know of no
+ plausible method of extending it to do so. That said, there are ways to
+ make traffic analysis harder. This section describes them.</P>
+<H4><A name="extra">Using &quot;unnecessary&quot; encryption</A></H4>
+<P>One might choose to use encryption even where it appears unnecessary
+ in order to make analysis more difficult. Consider two offices which
+ pass a small volume of business data between them using IPsec and also
+ transfer large volumes of Usenet news. At first glance, it would seem
+ silly to encrypt the newsfeed, except possibly for any newsgroups that
+ are internal to the company. Why encrypt data that is all publicly
+ available from many sites?</P>
+<P>However, if we encrypt a lot of news and send it down the same
+ connection as our business data, we make<A href="glossary.html#traffic">
+ traffic analysis</A> much harder. A snoop cannot now make inferences
+ based on patterns in the volume, direction, sizes, sender, destination,
+ or timing of our business messages. Those messages are hidden in a mass
+ of news messages encapsulated in the same way.</P>
+<P>If we're going to do this we need to ensure that keys change often
+ enough to remain secure even with high volumes and with the adversary
+ able to get plaintext of much of the data. We also need to look at
+ other attacks this might open up. For example, can the adversary use a
+ chosen plaintext attack, deliberately posting news articles which, when
+ we receive and encrypt them, will help break our encryption? Or can he
+ block our business data transmission by flooding us with silly news
+ articles? Or ...</P>
+<P>Also, note that this does not provide complete protection against
+ traffic analysis. A clever adversary might still deduce useful
+ intelligence from statistical analysis (perhaps comparing the input
+ newsfeed to encrypted output, or comparing the streams we send to
+ different branch offices), or by looking for small packets which might
+ indicate establishment of TCP connections, or ...</P>
+<P>As a general rule, though, to improve resistance to traffic analysis,
+ you should<STRONG> encrypt as much traffic as possible, not just as
+ much as seems necessary.</STRONG></P>
+<H4><A name="multi-encrypt">Using multiple encryption</A></H4>
+<P>This also applies to using multiple layers of encryption. If you have
+ an IPsec tunnel between two branch offices, it might appear silly to
+ send<A href="glossary.html#PGP"> PGP</A>-encrypted email through that
+ tunnel. However, if you suspect someone is snooping your traffic, then
+ it does make sense:</P>
+<UL>
+<LI>it protects the mail headers; they cannot even see who is mailing
+ who</LI>
+<LI>it protects against user bungles or software malfunctions that
+ accidentally send messages in the clear</LI>
+<LI>it makes any attack on the mail encryption much harder; they have to
+ break IPsec or break into your network before they can start on the
+ mail encryption</LI>
+</UL>
+<P>Similar arguments apply for<A href="glossary.html#SSL"> SSL</A>
+-encrypted web traffic or<A href="glossary.html#SSH"> SSH</A>-encrypted
+ remote login sessions, even for end-to-end IPsec tunnels between
+ systems in the two offices.</P>
+<H4><A name="fewer">Using fewer tunnels</A></H4>
+<P>It may also help to use fewer tunnels. For example, if all you
+ actually need encrypted is connections between:</P>
+<UL>
+<LI>mail servers at branch and head offices</LI>
+<LI>a few branch office users and the head office database server</LI>
+</UL>
+<P>You might build one tunnel per mail server and one per remote
+ database user, restricting traffic to those applications. This gives
+ the traffic analyst some information, however. He or she can
+ distinguish the tunnels by looking at information in the ESP header
+ and, given that distinction and the patterns of tunnel usage, might be
+ able to figure out something useful. Perhaps not, but why take the
+ risk?</P>
+<P>We suggest instead that you build one tunnel per branch office,
+ encrypting everything passing from head office to branches. This has a
+ number of advantages:</P>
+<UL>
+<LI>it is easier to build and administer</LI>
+<LI>it resists traffic analysis somewhat better</LI>
+<LI>it provides security for whatever you forgot. For example, if some
+ user at a remote office browses proprietary company data on some head
+ office web page (that the security people may not even know about!),
+ then that data is encrypted before it reaches the Internet.</LI>
+</UL>
+<P>Of course you might also want to add additional tunnels. For example,
+ if some of the database data is confidential and should not be exposed
+ even within the company, then you need protection from the user's
+ desktop to the database server. We suggest you do that in whatever way
+ seems appropriate -- IPsec, SSH or SSL might fit -- but, whatever you
+ choose, pass it between locations via a gateway-to-gateway IPsec tunnel
+ to provide some resistance to traffic analysis.</P>
+<H2><A name="primitives">Cryptographic components</A></H2>
+<P>IPsec combines a number of cryptographic techniques, all of them
+ well-known and well-analyzed. The overall design approach was
+ conservative; no new or poorly-understood components were included.</P>
+<P>This section gives a brief overview of each technique. It is intended
+ only as an introduction. There is more information, and links to
+ related topics, in our<A href="glossary.html"> glossary</A>. See also
+ our<A href="biblio.html"> bibliography</A> and cryptography<A href="web.html#crypto.link">
+ web links</A>.</P>
+<H3><A name="block.cipher">Block ciphers</A></H3>
+<P>The<A href="glossary.html#encryption"> encryption</A> in the<A href="glossary.html#ESP">
+ ESP</A> encapsulation protocol is done with a<A href="glossary.html#block">
+ block cipher</A>.</P>
+<P>We do not implement<A href="glossary.html#DES"> single DES</A>. It is<A
+href="politics.html#desnotsecure"> insecure</A>. Our default, and
+ currently only, block cipher is<A href="glossary.html#3DES"> triple DES</A>
+.</P>
+<P>The<A href="glossary.html#rijndael"> Rijndael</A> block cipher has
+ won the<A href="glossary.html#AES"> AES</A> competition to choose a
+ relacement for DES. It will almost certainly be added to FreeS/WAN and
+ to other IPsec implementations.<A href="web.html#patch"> Patches</A>
+ are already available.</P>
+<H3><A name="hash.ipsec">Hash functions</A></H3>
+<H4><A name="hmac.ipsec">The HMAC construct</A></H4>
+<P>IPsec packet authentication is done with the<A href="glossary.html#HMAC">
+ HMAC</A> construct. This is not just a hash of the packet data, but a
+ more complex operation which uses both a hashing algorithm and a key.
+ It therefore does more than a simple hash would. A simple hash would
+ only tell you that the packet data was not changed in transit, or that
+ whoever changed it also regenerated the hash. An HMAC also tells you
+ that the sender knew the HMAC key.</P>
+<P>For IPsec HMAC, the output of the hash algorithm is truncated to 96
+ bits. This saves some space in the packets. More important, it prevents
+ an attacker from seeing all the hash output bits and perhaps creating
+ some sort of attack based on that knowledge.</P>
+<H4>Choice of hash algorithm</H4>
+<P>The IPsec RFCs require two hash algorithms --<A href="glossary.html#MD5">
+ MD5</A> and<A href="glossary.html#SHA"> SHA-1</A> -- both of which
+ FreeS/WAN implements.</P>
+<P>Various other algorithms -- such as RIPEMD and Tiger -- are listed in
+ the RFCs as optional. None of these are in the FreeS/WAN distribution,
+ or are likely to be added, although user<A href="web.html#patch">
+ patches</A> exist for several of them.</P>
+<P>Additional hash algorithms --<A href="glossary.html#SHA-256">
+ SHA-256, SHA-384 and SHA-512</A> -- may be required to give hash
+ strength matching the strength of<A href="glossary.html#AES"> AES</A>.
+ These are likely to be added to FreeS/WAN along with AES.</P>
+<H3><A name="DH.keying">Diffie-Hellman key agreement</A></H3>
+<P>The<A href="glossary.html#DH"> Diffie-Hellman</A> key agreement
+ protocol allows two parties (A and B or<A href="glossary.html#alicebob">
+ Alice and Bob</A>) to agree on a key in such a way that an eavesdropper
+ who intercepts the entire conversation cannot learn the key.</P>
+<P>The protocol is based on the<A href="glossary.html#dlog"> discrete
+ logarithm</A> problem and is therefore thought to be secure.
+ Mathematicians have been working on that problem for years and seem no
+ closer to a solution, though there is no proof that an efficient
+ solution is impossible.</P>
+<H3><A name="RSA.auth">RSA authentication</A></H3>
+<P>The<A href="glossary.html#RSA"> RSA</A> algorithm (named for its
+ inventors -- Rivest, Shamir and Adleman) is a very widely used<A href="glossary.html#">
+ public key</A> cryptographic technique. It is used in IPsec as one
+ method of authenticating gateways for Diffie-Hellman key negotiation.</P>
+<H2><A name="structure">Structure of IPsec</A></H2>
+<P>There are three protocols used in an IPsec implementation:</P>
+<DL>
+<DT>ESP, Encapsulating Security Payload</DT>
+<DD>Encrypts and/or authenticates data</DD>
+<DT>AH, Authentication Header</DT>
+<DD>Provides a packet authentication service</DD>
+<DT>IKE, Internet Key Exchange</DT>
+<DD>Negotiates connection parameters, including keys, for the other two</DD>
+</DL>
+<P>The term &quot;IPsec&quot; is slightly ambiguous. In some contexts, it includes
+ all three of the above but in other contexts it refers only to AH and
+ ESP.</P>
+<H3><A name="IKE.ipsec">IKE (Internet Key Exchange)</A></H3>
+<P>The IKE protocol sets up IPsec (ESP or AH) connections after
+ negotiating appropriate parameters (algorithms to be used, keys,
+ connection lifetimes) for them. This is done by exchanging packets on
+ UDP port 500 between the two gateways.</P>
+<P>IKE (RFC 2409) was the outcome of a long, complex process in which
+ quite a number of protocols were proposed and debated. Oversimplifying
+ mildly, IKE combines:</P>
+<DL>
+<DT>ISAKMP (RFC 2408)</DT>
+<DD>The<STRONG> I</STRONG>nternet<STRONG> S</STRONG>ecurity<STRONG> A</STRONG>
+ssociation and<STRONG> K</STRONG>ey<STRONG> M</STRONG>anagement<STRONG>
+ P</STRONG>rotocol manages negotiation of connections and defines<A href="glossary.html#SA">
+ SA</A>s (Security Associations) as a means of describing connection
+ properties.</DD>
+<DT>IPsec DOI for ISAKMP (RFC 2407)</DT>
+<DD>A<STRONG> D</STRONG>omain<STRONG> O</STRONG>f<STRONG> I</STRONG>
+nterpretation fills in the details necessary to turn the rather abstract
+ ISAKMP protocol into a more tightly specified protocol, so it becomes
+ applicable in a particular domain.</DD>
+<DT>Oakley key determination protocol (RFC 2412)</DT>
+<DD>Oakley creates keys using the<A href="glossary.html#DH">
+ Diffie-Hellman</A> key agreement protocol.</DD>
+</DL>
+<P>For all the details, you would need to read the four<A href="rfc.html">
+ RFCs</A> just mentioned (over 200 pages) and a number of others. We
+ give a summary below, but it is far from complete.</P>
+<H4><A name="phases">Phases of IKE</A></H4>
+<P>IKE negotiations have two phases.</P>
+<DL>
+<DT>Phase one</DT>
+<DD>The two gateways negotiate and set up a two-way ISAKMP SA which they
+ can then use to handle phase two negotiations. One such SA between a
+ pair of gateways can handle negotiations for multiple tunnels.</DD>
+<DT>Phase two</DT>
+<DD>Using the ISAKMP SA, the gateways negotiate IPsec (ESP and/or AH)
+ SAs as required. IPsec SAs are unidirectional (a different key is used
+ in each direction) and are always negotiated in pairs to handle two-way
+ traffic. There may be more than one pair defined between two gateways.</DD>
+</DL>
+<P>Both of these phases use the UDP protocol and port 500 for their
+ negotiations.</P>
+<P>After both IKE phases are complete, you have IPsec SAs to carry your
+ encrypted data. These use the ESP or AH protocols. These protocols do
+ not have ports. Ports apply only to UDP or TCP.</P>
+<P>The IKE protocol is designed to be extremely flexible. Among the
+ things that can be negotiated (separately for each SA) are:</P>
+<UL>
+<LI>SA lifetime before rekeying</LI>
+<LI>encryption algorithm used. We currently support only<A href="glossary.html#3DES">
+ triple DES</A>. Single DES is<A href="politics.html#desnotsecure">
+ insecure</A>. The RFCs say you MUST do DES, SHOULD do 3DES and MAY do
+ various others. We do not do any of the others.</LI>
+<LI>authentication algorithms. We support<A href="glossary.html#MD5">
+ MD5</A> and<A href="glossary.html#SHA"> SHA</A>. These are the two the
+ RFCs require.</LI>
+<LI>choice of group for<A href="glossary.html#DH"> Diffie-Hellman</A>
+ key agreement. We currently support Groups 2 and 5 (which are defined
+ modulo primes of various lengths) and do not support Group 1 (defined
+ modulo a shorter prime, and therefore cryptographically weak) or groups
+ 3 and 4 (defined using elliptic curves). The RFCs require only Group 1.</LI>
+</UL>
+<P>The protocol also allows implementations to add their own encryption
+ algorithms, authentication algorithms or Diffie-Hellman groups. We do
+ not support any such extensions, but there are some<A href="web.html#patch">
+ patches</A> that do.</P>
+<P>There are a number of complications:</P>
+<UL>
+<LI>The gateways must be able to authenticate each other's identities
+ before they can create a secure connection. This host authentication is
+ part of phase one negotiations, and is a required prerequisite for
+ packet authentication used later. Host authentication can be done in a
+ variety of ways. Those supported by FreeS/WAN are discussed in our<A href="adv_config.html#auto-auth">
+ advanced configuration</A> document.</LI>
+<LI>Phase one can be done in two ways.
+<UL>
+<LI>Main Mode is required by the RFCs and supported in FreeS/WAN. It
+ uses a 6-packet exzchange.</LI>
+<LI>Aggressive Mode is somewhat faster (only 3 packets) but reveals more
+ to an eavesdropper. This is optional in the RFCs, not currently
+ supported by FreeS/WAN, and not likely to be.</LI>
+</UL>
+</LI>
+<LI>A new group exchange may take place after phase one but before phase
+ two, defining an additional group for use in the<A href="glossary.html#DH">
+ Diffie-Hellman</A> key agreement part of phase two. FreeS/WAN does not
+ currently support this.</LI>
+<LI>Phase two always uses Quick Mode, but there are two variants of
+ that:
+<UL>
+<LI>One variant provides<A href="glossary.html#PFS"> Perfect Forward
+ Secrecy (PFS)</A>. An attacker that obtains your long-term host
+ authentication key does not immediately get any of your short-term
+ packet encryption of packet authentication keys. He must conduct
+ another successful attack each time you rekey to get the short-term
+ keys. Having some short-term keys does not help him learn others. In
+ particular, breaking your system today does not let him read messages
+ he archived yestarday, assuming you've changed short-term keys in the
+ meanwhile. We enable PFS as the default.</LI>
+<LI>The other variant disables PFS and is therefore slightly faster. We
+ do not recommend this since it is less secure, but FreeS/WAN does
+ support it. You can enable it with a<VAR> pfs=no</VAR> statement in<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A>.</LI>
+<LI>The protocol provides no way to negotiate which variant will be
+ used. If one gateway is set for PFS and the other is not, the
+ negotiation fails. This has proved a fairly common source of
+ interoperation problems.</LI>
+</UL>
+</LI>
+<LI>Several types of notification message may be sent by either side
+ during either phase, or later. FreeS/WAN does not currently support
+ these, but they are a likely addition in future releases.</LI>
+<LI>There is a commit flag which may optionally be set on some messages.
+ The<A href="http://www.lounge.org/ike_doi_errata.html"> errata</A> page
+ for the RFCs includes two changes related to this, one to clarify the
+ description of its use and one to block a<A href="glossary.html#DOS">
+ denial of service</A> attack which uses it. We currently do not
+ implement this feature.</LI>
+</UL>
+<P>These complications can of course lead to problems, particularly when
+ two different implementations attempt to interoperate. For example, we
+ have seen problems such as:</P>
+<UL>
+<LI>Some implementations (often products crippled by<A href="politics.html#exlaw">
+ export laws</A>) have the insecure DES algorithm as their only
+ supported encryption method. Other parts of our documentation discuss
+ the<A href="politics.html#desnotsecure"> reasons we do not implement
+ single DES</A>, and<A href="interop.html#noDES"> how to cope with
+ crippled products</A>.</LI>
+<LI>Windows 2000 IPsec tries to negotiate using Aggressive Mode, which
+ we don't support. Later on, it uses the commit bit, which we also don't
+ support.</LI>
+<LI>Various implementations disable PFS by default, and therefore will
+ not talk to FreeS/WAN until you either turn on PFS on their end or turn
+ it off in FreeS/WAN with a<VAR> pfs=no</VAR> entry in the connection
+ description.</LI>
+<LI>FreeS/WAN's interaction with PGPnet is complicated by their use of
+ notification messages we do not yet support.</LI>
+</UL>
+<P>Despite this, we do interoperate successfully with many
+ implementations, including both Windows 2000 and PGPnet. Details are in
+ our<A href="interop.html"> interoperability</A> document.</P>
+<H4><A name="sequence">Sequence of messages in IKE</A></H4>
+<P>Each phase (see<A href="#phases"> previous section</A>)of IKE
+ involves a series of messages. In Pluto error messages, these are
+ abbreviated using:</P>
+<DL>
+<DT>M</DT>
+<DD><STRONG>M</STRONG>ain mode, settting up the keying channel (ISAKMP
+ SA)</DD>
+<DT>Q</DT>
+<DD><STRONG>Q</STRONG>uick mode, setting up the data channel (IPsec SA)</DD>
+<DT>I</DT>
+<DD><STRONG>I</STRONG>nitiator, the machine that starts the negotiation</DD>
+<DT>R</DT>
+<DD><STRONG>R</STRONG>esponder</DD>
+</DL>
+<P>For example, the six messages of a main mode negotiation, in
+ sequence, are labelled:</P>
+<PRE>       MI1 ----------&gt;
+           &lt;---------- MR1
+       MI2 ----------&gt; 
+           &lt;---------- MR2
+       MI3 ----------&gt;
+           &lt;---------- MR3</PRE>
+<H4><A name="struct.exchange">Structure of IKE messages</A></H4>
+<P>Here is our Pluto developer explaining some of this on the mailing
+ list:</P>
+<PRE>When one IKE system (for example, Pluto) is negotiating with another
+to create an SA, the Initiator proposes a bunch of choices and the
+Responder replies with one that it has selected.
+
+The structure of the choices is fairly complicated.  An SA payload
+contains a list of lists of &quot;Proposals&quot;.  The outer list is a set of
+choices: the selection must be from one element of this list.
+
+Each of these elements is a list of Proposals.  A selection must be
+made from each of the elements of the inner list.  In other words,
+*all* of them apply (that is how, for example, both AH and ESP can
+apply at once).
+
+Within each of these Proposals is a list of Transforms.  For each
+Proposal selected, one Transform must be selected (in other words,
+each Proposal provides a choice of Transforms).
+
+Each Transform is made up of a list of Attributes describing, well,
+attributes.  Such as lifetime of the SA.  Such as algorithm to be
+used.  All the Attributes apply to a Transform.
+
+You will have noticed a pattern here: layers alternate between being
+disjunctions (&quot;or&quot;) and conjunctions (&quot;and&quot;).
+
+For Phase 1 / Main Mode (negotiating an ISAKMP SA), this structure is
+cut back.  There must be exactly one Proposal.  So this degenerates to
+a list of Transforms, one of which must be chosen.</PRE>
+<H3><A name="services">IPsec Services, AH and ESP</A></H3>
+<P>IPsec offers two services,<A href="glossary.html#authentication">
+ authentication</A> and<A href="glossary.html#encryption"> encryption</A>
+. These can be used separately but are often used together.</P>
+<DL>
+<DT>Authentication</DT>
+<DD>Packet-level authentication allows you to be confident that a packet
+ came from a particular machine and that its contents were not altered
+ en route to you. No attempt is made to conceal or protect the contents,
+ only to assure their integrity. Packet authentication can be provided
+ separately using an<A href="glossary.html#AH"> Authentication Header</A>
+, described just below, or it can be included as part of the<A href="glossary.html#ESP">
+ ESP</A> (Encapsulated Security Payload) service, described in the
+ following section. That service offers encryption as well as
+ authentication. In either case, the<A href="glossary.html#HMAC"> HMAC</A>
+ construct is used as the authentication mechanism.
+<P>There is a separate authentication operation at the IKE level, in
+ which each gateway authenticates the other. This can be done in a
+ variety of ways.</P>
+</DD>
+<DT>Encryption</DT>
+<DD>Encryption allows you to conceal the contents of a message from
+ eavesdroppers.
+<P>In IPsec this is done using a<A href="glossary.html#block"> block
+ cipher</A> (normally<A href="glossary.html#3DES"> Triple DES</A> for
+ Linux). In the most used setup, keys are automatically negotiated, and
+ periodically re-negotiated, using the<A href="glossary.html#IKE"> IKE</A>
+ (Internet Key Exchange) protocol. In Linux FreeS/WAN this is handled by
+ the Pluto Daemon.</P>
+<P>The IPsec protocol offering encryption is<A href="glossary.html#ESP">
+ ESP</A>, Encapsulated Security Payload. It can also include a packet
+ authentication service.</P>
+</DD>
+</DL>
+<P>Note that<STRONG> encryption should always be used with some packet
+ authentication service</STRONG>. Unauthenticated encryption is
+ vulnerable to<A href="glossary.html#middle"> man-in-the-middle attacks</A>
+. Also note that encryption does not prevent<A href="glossary.html#traffic">
+ traffic analysis</A>.</P>
+<H3><A name="AH.ipsec">The Authentication Header (AH)</A></H3>
+<P>Packet authentication can be provided separately from encryption by
+ adding an authentication header (AH) after the IP header but before the
+ other headers on the packet. This is the subject of this section.
+ Details are in RFC 2402.</P>
+<P>Each of the several headers on a packet header contains a &quot;next
+ protocol&quot; field telling the system what header to look for next. IP
+ headers generally have either TCP or UDP in this field. When IPsec
+ authentication is used, the packet IP header has AH in this field,
+ saying that an Authentication Header comes next. The AH header then has
+ the next header type -- usually TCP, UDP or encapsulated IP.</P>
+<P>IPsec packet authentication can be added in transport mode, as a
+ modification of standard IP transport. This is shown in this diagram
+ from the RFC:</P>
+<PRE>                  BEFORE APPLYING AH
+            ----------------------------
+      IPv4  |orig IP hdr  |     |      |
+            |(any options)| TCP | Data |
+            ----------------------------
+
+                  AFTER APPLYING AH
+            ---------------------------------
+      IPv4  |orig IP hdr  |    |     |      |
+            |(any options)| AH | TCP | Data |
+            ---------------------------------
+            ||
+                 except for mutable fields</PRE>
+<P>Athentication can also be used in tunnel mode, encapsulating the
+ underlying IP packet beneath AH and an additional IP header.</P>
+<PRE>                         ||
+IPv4  | new IP hdr* |    | orig IP hdr*  |    |      |
+      |(any options)| AH | (any options) |TCP | Data |
+      ------------------------------------------------
+      ||
+      |           in the new IP hdr                  |</PRE>
+<P>This would normally be used in a gateway-to-gateway tunnel. The
+ receiving gateway then strips the outer IP header and the AH header and
+ forwards the inner IP packet.</P>
+<P>The mutable fields referred to are things like the time-to-live field
+ in the IP header. These cannot be included in authentication
+ calculations because they change as the packet travels.</P>
+<H4><A name="keyed">Keyed MD5 and Keyed SHA</A></H4>
+<P>The actual authentication data in the header is typically 96 bits and
+ depends both on a secret shared between sender and receiver and on
+ every byte of the data being authenticated. The technique used is<A href="glossary.html#HMAC">
+ HMAC</A>, defined in RFC 2104.</P>
+<P>The algorithms involved are the<A href="glossary.html#MD5"> MD5</A>
+ Message Digest Algorithm or<A href="glossary.html#SHA"> SHA</A>, the
+ Secure Hash Algorithm. For details on their use in this application,
+ see RFCs 2403 and 2404 respectively.</P>
+<P>For descriptions of the algorithms themselves, see RFC 1321 for MD5
+ and<A href="glossary.html#FIPS"> FIPS</A> (Federal Information
+ Processing Standard) number 186 from<A href="glossary.html#NIST"> NIST</A>
+, the US National Institute of Standards and Technology for SHA.<A href="biblio.html#schneier">
+<CITE> Applied Cryptography</CITE></A> covers both in some detail, MD5
+ starting on page 436 and SHA on 442.</P>
+<P>These algorithms are intended to make it nearly impossible for anyone
+ to alter the authenticated data in transit. The sender calculates a
+ digest or hash value from that data and includes the result in the
+ authentication header. The recipient does the same calculation and
+ compares results. For unchanged data, the results will be identical.
+ The hash algorithms are designed to make it extremely difficult to
+ change the data in any way and still get the correct hash.</P>
+<P>Since the shared secret key is also used in both calculations, an
+ interceptor cannot simply alter the authenticated data and change the
+ hash value to match. Without the key, he or she (or even the dreaded
+ They) cannot produce a usable hash.</P>
+<H4><A name="sequence">Sequence numbers</A></H4>
+<P>The authentication header includes a sequence number field which the
+ sender is required to increment for each packet. The receiver can
+ ignore it or use it to check that packets are indeed arriving in the
+ expected sequence.</P>
+<P>This provides partial protection against<A href="glossary.html#replay">
+ replay attacks</A> in which an attacker resends intercepted packets in
+ an effort to confuse or subvert the receiver. Complete protection is
+ not possible since it is necessary to handle legitmate packets which
+ are lost, duplicated, or delivered out of order, but use of sequence
+ numbers makes the attack much more difficult.</P>
+<P>The RFCs require that sequence numbers never cycle, that a new key
+ always be negotiated before the sequence number reaches 2^32-1. This
+ protects both against replays attacks using packets from a previous
+ cyclce and against<A href="glossary.html#birthday"> birthday attacks</A>
+ on the the packet authentication algorithm.</P>
+<P>In Linux FreeS/WAN, the sequence number is ignored for manually keyed
+ connections and checked for automatically keyed ones. In manual mode,
+ there is no way to negotiate a new key, or to recover from a sequence
+ number problem, so we don't use sequence numbers.</P>
+<H3><A name="ESP.ipsec">Encapsulated Security Payload (ESP)</A></H3>
+<P>The ESP protocol is defined in RFC 2406. It provides one or both of
+ encryption and packet authentication. It may be used with or without AH
+ packet authentication.</P>
+<P>Note that<STRONG> some form of packet authentication should<EM>
+ always</EM> be used whenever data is encrypted</STRONG>. Without
+ authentication, the encryption is vulnerable to active attacks which
+ may allow an enemy to break the encryption. ESP should<STRONG> always</STRONG>
+ either include its own authentication or be used with AH
+ authentication.</P>
+<P>The RFCs require support for only two mandatory encryption algorithms
+ --<A href="glossary.html#DES"> DES</A>, and null encryption -- and for
+ two authentication methods -- keyed MD5 and keyed SHA. Implementers may
+ choose to support additional algorithms in either category.</P>
+<P>The authentication algorithms are the same ones used in the IPsec<A href="glossary.html#AH">
+ authentication header</A>.</P>
+<P>We do not implement single DES since<A href="politics.html#desnotsecure">
+ DES is insecure</A>. Instead we provide<A href="glossary.html#3DES">
+ triple DES or 3DES</A>. This is currently the only encryption algorithm
+ supported.</P>
+<P>We do not implement null encryption since it is obviously insecure.</P>
+<H2><A name="modes">IPsec modes</A></H2>
+<P>IPsec can connect in two modes. Transport mode is a host-to-host
+ connection involving only two machines. In tunnel mode, the IPsec
+ machines act as gateways and trafiic for any number of client machines
+ may be carried.</P>
+<H3><A name="tunnel.ipsec">Tunnel mode</A></H3>
+<P>Security gateways are required to support tunnel mode connections. In
+ this mode the gateways provide tunnels for use by client machines
+ behind the gateways. The client machines need not do any IPsec
+ processing; all they have to do is route things to gateways.</P>
+<H3><A name="transport.ipsec">Transport mode</A></H3>
+<P>Host machines (as opposed to security gateways) with IPsec
+ implementations must also support transport mode. In this mode, the
+ host does its own IPsec processing and routes some packets via IPsec.</P>
+<H2><A name="parts">FreeS/WAN parts</A></H2>
+<H3><A name="KLIPS.ipsec">KLIPS: Kernel IPsec Support</A></H3>
+<P>KLIPS is<STRONG> K</STRONG>erne<STRONG>L</STRONG><STRONG> IP</STRONG>
+SEC<STRONG> S</STRONG>upport, the modifications necessary to support
+ IPsec within the Linux kernel. KILPS does all the actual IPsec
+ packet-handling, including</P>
+<UL>
+<LI>encryption</LI>
+<LI>packet authentication calculations</LI>
+<LI>creation of ESP and AH headers for outgoing packets</LI>
+<LI>interpretation of those headers on incoming packets</LI>
+</UL>
+<P>KLIPS also checks all non-IPsec packets to ensure they are not
+ bypassing IPsec security policies.</P>
+<H3><A name="Pluto.ipsec">The Pluto daemon</A></H3>
+<P><A href="manpage.d/ipsec_pluto.8.html">Pluto(8)</A> is a daemon which
+ implements the IKE protocol. It</P>
+<UL>
+<LI>handles all the Phase one ISAKMP SAs</LI>
+<LI>performs host authentication and negotiates with other gateways</LI>
+<LI>creates IPsec SAs and passes the data required to run them to KLIPS</LI>
+<LI>adjust routing and firewall setup to meet IPsec requirements. See
+ our<A href="firewall.html"> IPsec and firewalling</A> document for
+ details.</LI>
+</UL>
+<P>Pluto is controlled mainly by the<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A> configuration file.</P>
+<H3><A name="command">The ipsec(8) command</A></H3>
+<P>The<A href="manpage.d/ipsec.8.html"> ipsec(8)</A> command is a front
+ end shellscript that allows control over IPsec activity.</P>
+<H3><A name="ipsec.conf">Linux FreeS/WAN configuration file</A></H3>
+<P>The configuration file for Linux FreeS/WAN is</P>
+<PRE>        /etc/ipsec.conf</PRE>
+<P>For details see the<A href="manpage.d/ipsec.conf.5.html">
+ ipsec.conf(5)</A> manual page .</P>
+<H2><A name="key">Key management</A></H2>
+<P>There are several ways IPsec can manage keys. Not all are implemented
+ in Linux FreeS/WAN.</P>
+<H3><A name="current">Currently Implemented Methods</A></H3>
+<H4><A name="manual">Manual keying</A></H4>
+<P>IPsec allows keys to be manually set. In Linux FreeS/WAN, such keys
+ are stored with the connection definitions in /etc/ipsec.conf.</P>
+<P><A href="glossary.html#manual">Manual keying</A> is useful for
+ debugging since it allows you to test the<A href="glossary.html#KLIPS">
+ KLIPS</A> kernel IPsec code without the<A href="glossary.html#Pluto">
+ Pluto</A> daemon doing key negotiation.</P>
+<P>In general, however, automatic keying is preferred because it is more
+ secure.</P>
+<H4><A name="auto">Automatic keying</A></H4>
+<P>In automatic keying, the<A href="glossary.html#Pluto"> Pluto</A>
+ daemon negotiates keys using the<A href="glossary.html#IKE"> IKE</A>
+ Internet Key Exchange protocol. Connections are automatically re-keyed
+ periodically.</P>
+<P>This is considerably more secure than manual keying. In either case
+ an attacker who acquires a key can read every message encrypted with
+ that key, but automatic keys can be changed every few hours or even
+ every few minutes without breaking the connection or requiring
+ intervention by the system administrators. Manual keys can only be
+ changed manually; you need to shut down the connection and have the two
+ admins make changes. Moreover, they have to communicate the new keys
+ securely, perhaps with<A href="glossary.html#PGP"> PGP</A> or<A href="glossary.html#SSH">
+ SSH</A>. This may be possible in some cases, but as a general solution
+ it is expensive, bothersome and unreliable. Far better to let<A href="glossary.html#Pluto">
+ Pluto</A> handle these chores; no doubt the administrators have enough
+ to do.</P>
+<P>Also, automatic keying is inherently more secure against an attacker
+ who manages to subvert your gateway system. If manual keying is in use
+ and an adversary acquires root privilege on your gateway, he reads your
+ keys from /etc/ipsec.conf and then reads all messages encrypted with
+ those keys.</P>
+<P>If automatic keying is used, an adversary with the same privileges
+ can read /etc/ipsec.secrets, but this does not contain any keys, only
+ the secrets used to authenticate key exchanges. Having an adversary
+ able to authenticate your key exchanges need not worry you overmuch.
+ Just having the secrets does not give him any keys. You are still
+ secure against<A href="glossary.html#passive"> passive</A> attacks.
+ This property of automatic keying is called<A href="glossary.html#PFS">
+ perfect forward secrecy</A>, abbreviated PFS.</P>
+<P>Unfortunately, having the secrets does allow an<A href="glossary.html#active">
+ active attack</A>, specifically a<A href="glossary.html#middle">
+ man-in-the-middle</A> attack. Losing these secrets to an attacker may
+ not be quite as disastrous as losing the actual keys, but it is<EM>
+ still a serious security breach</EM>. These secrets should be guarded
+ as carefully as keys.</P>
+<H3><A name="notyet">Methods not yet implemented</A></H3>
+<H4><A name="noauth">Unauthenticated key exchange</A></H4>
+<P>It would be possible to exchange keys without authenticating the
+ players. This would support<A href="glossary.html#carpediem">
+ opportunistic encryption</A> -- allowing any two systems to encrypt
+ their communications without requiring a shared PKI or a previously
+ negotiated secret -- and would be secure against<A href="glossary.html#passive">
+ passive attacks</A>. It would, however, be highly vulnerable to active<A
+href="glossary.html#middle"> man-in-the-middle</A> attacks. RFC 2408
+ therefore specifies that all<A href="glossary.html#ISAKMP"> ISAKMP</A>
+ key management interactions<EM> must</EM> be authenticated.</P>
+<P>There is room for debate here. Should we provide immediate security
+ against<A href="glossary.html#passive"> passive attacks</A> and
+ encourage widespread use of encryption, at the expense of risking the
+ more difficult<A href="glossary.html#active"> active attacks</A>? Or
+ should we wait until we can implement a solution that can both be
+ widespread and offer security against active attacks?</P>
+<P>So far, we have chosen the second course, complying with the RFCs and
+ waiting for secure DNS (see<A href="glossary.html#DNS"> below</A>) so
+ that we can do<A href="glossary.html#carpediem"> opportunistic
+ encryption</A> right.</P>
+<H4><A name="DNS">Key exchange using DNS</A></H4>
+<P>The IPsec RFCs allow key exchange based on authentication services
+ provided by<A href="glossary.html#SDNS"> Secure DNS</A>. Once Secure
+ DNS service becomes widely available, we expect to make this the<EM>
+ primary key management method for Linux FreeS/WAN</EM>. It is the best
+ way we know of to support<A href="glossary.html#carpediem">
+ opportunistic encryption</A>, allowing two systems without a common PKI
+ or previous negotiation to secure their communication.</P>
+<P>We currently have code to acquire RSA keys from DNS but do not yet
+ have code to validate Secure DNS signatures.</P>
+<H4><A name="PKI">Key exchange using a PKI</A></H4>
+<P>The IPsec RFCs allow key exchange based on authentication services
+ provided by a<A href="glossary.html#PKI"> PKI</A> or Public Key
+ Infrastructure. With many vendors selling such products and many large
+ organisations building these infrastructures, this will clearly be an
+ important application of IPsec and one Linux FreeS/WAN will eventually
+ support.</P>
+<P>On the other hand, this is not as high a priority for Linux FreeS/WAN
+ as solutions based on<A href="glossary.html#SDNS"> secure DNS</A>. We
+ do not expect any PKI to become as universal as DNS.</P>
+<P>Some<A href="web.html#patch"> patches</A> to handle authentication
+ with X.509 certificates, which most PKIs use, are available.</P>
+<H4><A name="photuris">Photuris</A></H4>
+<P><A href="glossary.html#photuris">Photuris</A> is another key
+ management protocol, an alternative to IKE and ISAKMP, described in
+ RFCs 2522 and 2523 which are labelled &quot;experimental&quot;. Adding Photuris
+ support to Linux FreeS/WAN might be a good project for a volunteer. The
+ likely starting point would be the OpenBSD photurisd code.</P>
+<H4><A name="skip">SKIP</A></H4>
+<P><A href="glossary.html#SKIP">SKIP</A> is yet another key management
+ protocol, developed by Sun. At one point it was fairly widely used, but
+ it now seems moribund, displaced by IKE. Sun now (as of Solaris 8.0)
+ ship an IPsec implementation using IKE. We have no plans to implement
+ SKIP. If a user were to implement it, we would almost certainly not
+ want to add the code to our distribution.</P>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="politics.html">Previous</A>
+<A HREF="mail.html">Next</A>
+</BODY>
+</HTML>

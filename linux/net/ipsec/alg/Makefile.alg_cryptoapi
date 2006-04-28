@@ -1,0 +1,14 @@
+MOD_CRYPTOAPI := ipsec_cryptoapi.o
+
+ifneq ($(wildcard $(TOPDIR)/include/linux/crypto.h),)
+ALG_MODULES += $(MOD_CRYPTOAPI)
+obj-$(CONFIG_IPSEC_ALG_CRYPTOAPI) += $(MOD_CRYPTOAPI)
+static_init-func-$(CONFIG_IPSEC_ALG_CRYPTOAPI)+= ipsec_cryptoapi_init
+alg_obj-$(CONFIG_IPSEC_ALG_CRYPTOAPI) += ipsec_alg_cryptoapi.o
+else
+$(warning "Linux CryptoAPI (2.4.22+ or 2.6.x) not found, not building ipsec_cryptoapi.o")
+endif
+
+CRYPTOAPI_OBJS := ipsec_alg_cryptoapi.o 
+$(MOD_CRYPTOAPI): $(CRYPTOAPI_OBJS)
+	$(LD) -r $(CRYPTOAPI_OBJS) -o $@

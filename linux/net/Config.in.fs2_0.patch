@@ -1,0 +1,12 @@
+RCSID $Id: Config.in.fs2_0.patch,v 1.2 2004/03/30 14:15:03 as Exp $
+--- linux/net/Config.in.preipsec	Mon Jul 13 16:47:40 1998
++++ linux/net/Config.in	Thu Sep 16 11:26:31 1999
+@@ -24,4 +24,8 @@
+ if [ "$CONFIG_NETLINK" = "y" ]; then
+   bool 'Routing messages' CONFIG_RTNETLINK
+ fi
++tristate 'IP Security Protocol (strongSwan IPsec)' CONFIG_IPSEC
++if [ "$CONFIG_IPSEC" != "n" ]; then
++  source net/ipsec/Config.in
++fi
+ endmenu

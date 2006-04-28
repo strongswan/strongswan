@@ -1,0 +1,9 @@
+# shell file setting up environment for freeswan CVS access
+# This is here, rather than in .profiles, because Henry has local access
+# and doesn't want to duplicate this stuff.
+
+PATH=$PATH:/sandel/bin export PATH
+CVSROOT=/freeswan/MASTER
+CVSUMASK=002 
+
+export CVSROOT CVSUMASK

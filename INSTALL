@@ -1,0 +1,249 @@
+                 ---------------------------
+	          strongSwan - Installation
+                 ---------------------------
+
+
+Contents
+--------
+
+   1. Required packages
+   2. Optional packages
+   2.1 libcurl
+   2.2 OpenLDAP
+   2.3 PKCS#11 smartcard library modules
+   3. Building strongSwan with a Linux 2.4 kernel
+   4. Updating strongSwan with a Linux 2.4 kernel
+   5. Building strongSwan with a Linux 2.6 kernel
+
+
+1. Required packages
+   -----------------
+
+   In order to be able to build strongSwan you'll need the GNU Multiprecision
+   Arithmetic Library (GMP) available from http://www.swox.com/gmp/.
+
+   The libgmp library and the corresponding header file gmp.h are usually
+   included in the form of one or two packages in the major Linux
+   distributions (SuSE: gmp; Debian unstable:  libgmp3, libgmp3-dev).
+
+
+2. Optional packages
+   -----------------
+
+2.1 libcurl
+    -------
+
+   If you intend to dynamically fetch Certificate Revocation Lists (CRLs)
+   from an HTTP server or as an alternative want to use the Online
+   Certificate Status Protocol (OCSP) then you will need the  libcurl library
+   available from http://curl.haxx.se/.
+
+   In order to keep the library as compact as possible for use with strongSwan
+   you can build libcurl from the sources with the optimized options
+
+       ./configure --prefix=<dir> --without-ssl \
+                   --disable-ldap --disable-telnet \
+                   --disable-dict --disable-gopher \
+                   --disable-debug \
+                   --enable-nonblocking --enable-thread
+
+   As an alternative you can use the ready-made packages included with your
+   favorite Linux distribution (SuSE: curl, curl-devel).
+
+   In order to activate the use of the libcurl library in strongSwan you must
+   set the USE_LIBCURL option in "Makefile.inc":
+
+       # include libcurl support (CRL fetching, OCSP and SCEP)
+       USE_LIBCURL?=true
+
+   Under Gentoo emerge strongSwan with
+
+       USE="curl -ssl" emerge strongswan
+
+
+2.2 OpenLDAP
+    --------
+
+   If you intend to dynamically fetch Certificate Revocation Lists (CRLs)
+   from an LDAP server  then you will need the libldap library available
+   from http://www.openldap.org/.
+
+    OpenLDAP is usually included  with your Linux distribution. You will need
+   both the run-time and development environments (SuSE: openldap2,
+   openldap2-devel).
+
+   In order to activate the use of the libldap library in strongSwan you must
+   set the USE_LDAP option in "Makefile.inc":
+
+       # include LDAP support (CRL fetching)
+       USE_LDAP?=true
+
+   Depending upon whether your LDAP server understands the V3 (preferred) or
+   V2 LDAP protocol, uncomment one ot the two following lines:
+
+       # Uncomment to enable dynamic CRL fetching using LDAP V3
+       LDAP_VERSION=3
+       # Uncomment to enable dynamic CRL fetching using LDAP V2
+       #LDAP_VERSION=2
+
+   The latest OpenLDAP releases use the LDAP V3 protocol, whereas older
+   versions require LDAP V2.
+
+   Under Gentoo emerge strongSwan with
+
+       USE="ldap -ssl" emerge strongswan
+
+
+2.3 PKCS#11 smartcard library modules
+    ---------------------------------
+
+   If you want to securely store your X.509 certificates and private RSA keys
+   on a smart card or a USB crypto token then you will need a PKCS #11 library 
+   for the smart card of your choice. The OpenSC PKCS#11 library (use
+   versions >= 0.9.4) available from http://www.opensc.org/ supports quite a
+   selection of cards and tokens (e.g. Aladdin eToken Pro32k, Schlumberger
+   Cryptoflex e-gate, Oberthur AuthentIC,  etc.) but requires that a PKCS#15
+   directory structure be present on the smart card. But in principle
+   any other PKCS#11 library could be used since the PKCS#11 API hides the
+   internal data representation on the card.
+
+   For USB crypto token support you must add the OpenCT driver library
+   (version >= 0.6.2) from the OpenSC site, whereas for serial smartcard
+   readers you'll need the pcsc-lite library and the matching driver from the
+   M.U.S.C.L.E project http://www.linuxnet.com/ .
+
+   In order to activate the PKCS#11-based smartcard support in strongSwan
+   you must set the USE_SMARTCARD option in "Makefile.inc":
+
+       #include PKCS11-based smartcard support
+       USE_SMARTCARD?=true
+
+   During compilation no externel smart card libraries must be present.
+   strongSwan directly references a copy of the standard RSAREF pkcs11.h
+   header files stored in the pluto/rsaref sub directory. During compile
+   time a pathname to a default PKCS#11 dynamical library can be specified
+   in "Makefile.inc" 
+
+      # Uncomment this line if using OpenSC <= 0.9.6
+      PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
+      # Uncomment tis line if using OpenSC >= 0.10.0
+      #PKCS11_DEFAULT_LIB=\"usr/lib/opensc-pkcs11.so\"
+
+   This default path to the easily-obtainable OpenSC library module can be
+   simply overridden during run-time by specifying an alternative path in
+   ipsec.conf pointing to any dynamic PKCS#11 library of your choice.
+
+   config setup
+          pkcs11module="/usr/lib/xyz-pkcs11.so"
+
+   Under Gentoo emerge strongSwan with
+
+       USE="smartcard usb -pam -X" emerge strongswan
+
+
+3. Building strongSwan with a Linux 2.4 kernel
+   -------------------------------------------
+
+   * Building strongSwan with a Linux 2.4 kernel requires the presence of the
+     matching kernel sources referenced via the symbolic link /usr/src/linux.
+     The use of the vanilla kernel sources from ftp.kernel.org is strongly
+     recommended.
+
+     Before building strongSwan you must have compiled the kernel sources at
+     least once:
+
+         make menuconfig; make dep; make bzImage; make modules
+
+   * Now change into the  strongswan-2.x.x  source directory.
+
+     First uncomment any desired compile options in "programs/pluto/Makefile"
+     (see section 2. Optional packages).
+
+     Then in the top source directory type
+
+         make menumod
+
+     This command applies an ESP_IN_UDP encapsulation patch which is required
+     for NAT-Traversal to the kernel sources.
+
+     In the "Networking options" menu set
+
+         <M> IP Security Protocol (strongSwan IPsec)
+
+     in order to build KLIPS as a loadable kernel module "ipsec.o".  Do not
+     forget to save the modified configuration file when leaving "menumod".
+
+     The strongSwan userland programs are now automatically built and
+     installed, whereas the  ipsec.o  kernel module and the crypto modules
+     are only built and must be installed with the command
+
+         make minstall
+
+   * If you intend to use the NAT-Traversal feature then you must compile the
+     patched kernel sources again by executing
+
+         make bzImage
+
+     and then install and boot the modified kernel.
+
+   * Next add your connections to "/etc/ipsec.conf" and start strongSwan with
+
+         ipsec setup start
+
+
+4. Updating strongSwan with a Linux 2.4 kernel
+   -------------------------------------------
+
+   * If you have already successfully installed  strongSwan and want to update
+     to a newer version then the following shortcut can be taken:
+
+     First uncomment any desired compile options in "programs/pluto/Makefile"
+     (see section 2. Optional packages).
+
+     Then in the  strongwan-2.x.x  top directory type
+
+         make programs; make install
+
+     followed by
+
+         make module; make minstall
+
+   * You can then start the updated strongSwan version with
+
+         ipsec setup restart
+
+
+5. Building strongSwan with a Linux 2.6 kernel
+   -------------------------------------------
+
+   * Because the Linux 2.6 kernel comes with a built-in native IPsec stack,
+     you won't need to build the strongSwan kernel modules. Please make sure 
+     that the the following Linux 2.6 IPsec kernel modules are available:
+
+         o af_key
+         o ah4
+         o esp4
+         o ipcomp
+         o xfrm_user
+
+     Also the built-in kernel Cryptoapi modules with selected encryption and 
+     hash algorithms should be available.
+
+   * First uncomment any desired compile options in "programs/pluto/Makefile"
+     (see section 2. Optional packages).
+
+     Then in the  strongwan-2.x.x  top directory type
+
+         make programs
+
+     followed by
+
+         make install
+
+   * Next add your connections to "etc/ipsec.conf" and start strongSwan with
+
+         ipsec setup start
+
+-----------------------------------------------------------------------------
+
+This file is RCSID $Id: INSTALL,v 1.8 2006/01/22 16:22:23 as Exp $

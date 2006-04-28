@@ -1,0 +1,296 @@
+#! /bin/sh
+# dump assorted information of use in debugging
+# Copyright (C) 1998, 1999  Henry Spencer.
+# 
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: barf.in,v 1.4 2004/09/23 21:08:23 as Exp $
+
+IPSEC_NAME="strongSwan"
+
+KERNSRC=${KERNSRC-/usr/src/linux}
+LOGS=${LOGS-/var/log}
+CONFS=${IPSEC_CONFS-/etc}
+CONFDDIR=${IPSEC_CONFDDIR-/etc/ipsec.d}
+me="ipsec barf"
+
+# kludge to produce no barf output mentioning policygroups if none are present.
+# This will not catch ".file" policygroups. 
+PREPOLICIES=${CONFDDIR}/policies
+if [ `ls $PREPOLICIES 2> /dev/null | wc -l` -ne 0 ]
+then
+	POLICIES=$PREPOLICIES
+fi
+
+# message patterns that start relevant parts of logs
+fstart="Starting $IPSEC_NAME"
+pstart='Starting Pluto subsystem'
+
+case "$1" in
+--help)		echo "Usage: ipsec barf" ; exit 0	;;
+--version)	echo "$me $IPSEC_VERSION" ; exit 0	;;
+esac
+
+# make sure output is in English
+unset LANG LANGUAGE LC_ALL LC_MESSAGES
+
+# log-location guesser, results in $findlog_file and $findlog_startline
+# Fine point:  startline is the *last* line containing "string", or
+# failing that, the *first* line containing "fallbackstring".
+findlog() {		# findlog string fallbackstring possiblefile ...
+	s="$1"
+	shift
+	t="$1"
+	shift
+	# try the suggested files first
+	for f in $*
+	do
+		if test -r $LOGS/$f -a -f $LOGS/$f && egrep -q "$s" $LOGS/$f
+		then
+			# aha, this one has it
+			findlog_file=$LOGS/$f
+			findlog_startline=`egrep -n "$s" $LOGS/$f |
+				sed -n '$s/:.*//p'`
+			return 0
+		fi
+	done
+	for f in $*
+	do
+		if test -r $LOGS/$f -a -f $LOGS/$f && egrep -q "$t" $LOGS/$f
+		then
+			# aha, this one has it
+			findlog_file=$LOGS/$f
+			findlog_startline=`egrep -n "$t" $LOGS/$f |
+				sed -n '1s/:.*//p'`
+			return 0
+		fi
+	done
+	# nope, resort to a search, newest first, of uncompressed logs
+	for f in `ls -t $LOGS | egrep -v '^mail' | egrep -v '\.(gz|Z)$'`
+	do
+		if test -r $LOGS/$f -a ! -d $LOGS/$f && egrep -q "$s" $LOGS/$f
+		then
+			# found it
+			findlog_file=$LOGS/$f
+			findlog_startline=`egrep -n "$s" $LOGS/$f |
+				sed -n '$s/:.*//p'`
+			return 0
+		fi
+	done
+	for f in `ls -t $LOGS | egrep -v '^mail' | egrep -v '\.(gz|Z)$'`
+	do
+		if test -r $LOGS/$f -a -f $LOGS/$f && egrep -q "$t" $LOGS/$f
+		then
+			# found it
+			findlog_file=$LOGS/$f
+			findlog_startline=`egrep -n "$t" $LOGS/$f |
+				sed -n '1s/:.*//p'`
+			return 0
+		fi
+	done
+# 	echo "$0: unable to find $LOGS/$1 or local equivalent" >&2
+	findlog_file=/dev/null
+	findlog_startline=1		# arbitrary
+}
+
+# try to guess where logs are
+findlog "$fstart" "klips" messages syslog
+if test " $findlog_file" = " /dev/null" 
+then
+echo "Unable to find KLIPS messages, typically found in /var/log/messages or equivalent. You may need to run $IPSEC_NAME for the first time; alternatively, your log files have been emptied (ie, logwatch) or we do not understand your logging configuration."
+fi
+klog=$findlog_file
+kline=$findlog_startline
+
+findlog "$pstart" "Pluto" secure auth.log debug
+if test " $findlog_file" = " /dev/null" 
+then
+echo "Unable to find Pluto messages, typically found in /var/log/secure or equivalent. You may need to run $IPSEC_NAME for the first time; alternatively, your log files have been emptied (ie, logwatch) or we do not understand your logging configuration."
+fi 
+plog=$findlog_file
+pline=$findlog_startline
+
+# /lib/modules examiner
+modulegoo() {
+	set +x
+	for d in `ls /lib/modules`
+	do
+		if test -d /lib/modules/$d
+		then
+			f=/lib/modules/$d/$1
+			if test -f $f
+			then
+				nm -g $f | egrep "$2"
+			else
+				echo
+			fi | sed "s;^;$d: ;"
+		fi
+	done
+	set -x
+}
+
+# advanced shell deviousness to get dividers into output
+_________________________() {
+	$2	# something to do nothing and not echo anything
+}
+
+exec 2>&1		# stderr on stdout, so errors go into main output
+
+hostname ; date
+set -x
+_________________________ version
+ipsec --version
+_________________________ proc/version
+cat /proc/version
+_________________________ proc/net/ipsec_eroute
+sort -sg +3 /proc/net/ipsec_eroute || cat /proc/net/ipsec_eroute
+_________________________ netstat-rn
+netstat -nr
+_________________________ proc/net/ipsec_spi
+cat /proc/net/ipsec_spi
+_________________________ proc/net/ipsec_spigrp
+cat /proc/net/ipsec_spigrp
+_________________________ proc/net/ipsec_tncfg
+cat /proc/net/ipsec_tncfg
+_________________________ proc/net/pf_key
+cat /proc/net/pf_key
+_________________________ proc/net/pf_key-star
+( cd /proc/net && egrep '^' pf_key_* )
+_________________________ proc/sys/net/ipsec-star
+( cd /proc/sys/net/ipsec && egrep '^' * )
+_________________________ ipsec/statusall
+ipsec auto --statusall
+_________________________ ifconfig-a
+ifconfig -a
+_________________________ mii-tool
+if [ -x /sbin/mii-tool ] 
+then
+    /sbin/mii-tool -v
+elif [ -x /usr/sbin/mii-tool ] 
+then
+    /usr/sbin/mii-tool -v
+else
+    mii-tool -v
+fi
+_________________________ ipsec/directory
+ipsec --directory
+_________________________ hostname/fqdn
+hostname --fqdn
+_________________________ hostname/ipaddress
+hostname --ip-address
+_________________________ uptime
+uptime
+_________________________ ps
+# -i ppid picks up the header
+ps alxwf | egrep -i 'ppid|pluto|ipsec|klips'
+_________________________ ipsec/showdefaults
+ipsec showdefaults
+_________________________ ipsec/conf
+ipsec _include $CONFS/ipsec.conf | ipsec _keycensor
+_________________________ ipsec/secrets
+ipsec _include $CONFS/ipsec.secrets | ipsec _secretcensor
+_________________________ ipsec/listall
+ipsec auto --listall
+if [ $POLICIES ]
+then
+	for policy in $POLICIES/*; do base=`basename $policy`;
+	   _________________________ ipsec/policies/$base
+	   cat $policy
+	done
+fi
+_________________________ ipsec/ls-libdir
+ls -l ${IPSEC_LIBDIR-/usr/local/lib/ipsec}
+_________________________ ipsec/ls-execdir
+ls -l ${IPSEC_EXECDIR-/usr/local/libexec/ipsec}
+_________________________ ipsec/updowns
+for f in `ls ${IPSEC_EXECDIR-/usr/local/libexec/ipsec} | egrep updown`
+do
+	cat ${IPSEC_EXECDIR-/usr/local/libexec/ipsec}/$f
+done
+_________________________ proc/net/dev
+cat /proc/net/dev
+_________________________ proc/net/route
+cat /proc/net/route
+_________________________ proc/sys/net/ipv4/ip_forward
+cat /proc/sys/net/ipv4/ip_forward
+_________________________ proc/sys/net/ipv4/conf/star-rp_filter
+( cd /proc/sys/net/ipv4/conf && egrep '^' */rp_filter )
+_________________________ uname-a
+uname -a
+_________________________ redhat-release
+if test -r /etc/redhat-release
+then
+	cat /etc/redhat-release
+fi
+_________________________ proc/net/ipsec_version
+cat /proc/net/ipsec_version
+_________________________ iptables/list
+iptables -L -v -n
+_________________________ ipchains/list
+ipchains -L -v -n
+_________________________ ipfwadm/forward
+ipfwadm -F -l -n -e
+_________________________ ipfwadm/input
+ipfwadm -I -l -n -e
+_________________________ ipfwadm/output
+ipfwadm -O -l -n -e
+_________________________ iptables/nat
+iptables -t nat -L -v -n
+_________________________ ipchains/masq
+ipchains -M -L -v -n
+_________________________ ipfwadm/masq
+ipfwadm -M -l -n -e
+_________________________ iptables/mangle
+iptables -t mangle -L -v -n
+_________________________ proc/modules
+cat /proc/modules
+_________________________ proc/meminfo
+cat /proc/meminfo
+_________________________ dev/ipsec-ls
+ls -l /dev/ipsec*
+_________________________ proc/net/ipsec-ls
+ls -l /proc/net/ipsec_*
+_________________________ usr/src/linux/.config
+if test -f $KERNSRC/.config
+then
+	egrep 'IP|NETLINK' $KERNSRC/.config
+fi
+_________________________ etc/syslog.conf
+cat /etc/syslog.conf
+_________________________ etc/resolv.conf
+cat /etc/resolv.conf
+_________________________ lib/modules-ls
+ls -ltr /lib/modules
+_________________________ proc/ksyms-netif_rx
+egrep netif_rx /proc/ksyms
+_________________________ lib/modules-netif_rx
+modulegoo kernel/net/ipv4/ipip.o netif_rx
+_________________________ kern.debug
+if test -f $LOGS/kern.debug
+then
+	tail -100 $LOGS/kern.debug
+fi
+_________________________ klog
+sed -n $kline,'$'p $klog |
+	egrep -i 'ipsec|klips|pluto' |
+	case "$1" in
+	--short)	tail -500	;;
+	*)		cat		;;
+	esac
+_________________________ plog
+sed -n $pline,'$'p $plog |
+	egrep -i 'pluto' |
+	case "$1" in
+	--short)	tail -500	;;
+	*)		cat		;;
+	esac
+_________________________ date
+date

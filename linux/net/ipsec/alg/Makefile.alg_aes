@@ -1,0 +1,23 @@
+MOD_AES := ipsec_aes.o
+
+ALG_MODULES += $(MOD_AES)
+ALG_SUBDIRS += libaes
+
+obj-$(CONFIG_IPSEC_ALG_AES) += $(MOD_AES)
+static_init-func-$(CONFIG_IPSEC_ALG_AES)+= ipsec_aes_init
+alg_obj-$(CONFIG_IPSEC_ALG_AES) += ipsec_alg_aes.o
+
+AES_OBJS := ipsec_alg_aes.o libaes/libaes.a 
+
+$(MOD_AES): libaes $(AES_OBJS) 
+	$(LD) $(EXTRA_LDFLAGS) -r $(AES_OBJS) -o $@
+
+libaes: $(LIBCRYPTO)/libaes
+	test -d $@ || mkdir $@ ;exit 0
+	test -d $@/asm || mkdir $@/asm;exit 0
+	cd $@ && ln -sf $?/Makefile $?/*.[chS] .
+	cd $@/asm && ln -sf $?/asm/*.S .
+
+libaes/libaes.a: libaes
+	( cd libaes && \
+		$(MAKE) CC='$(CC)' 'ARCH_ASM=$(ARCH_ASM)' CFLAGS='$(CFLAGS) $(EXTRA_CFLAGS)' libaes.a ;)

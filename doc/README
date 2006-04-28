@@ -1,0 +1,39 @@
+This directory has the HTML FreeS/WAN documentation.
+
+Start from either of:
+
+	toc.html	table of contents for HTML docs
+	index.html	pointers to everything, including
+			 text files not in HTML docs
+
+The Makefile in this directory can generate various
+things from the HTML source:
+
+	./*.html	individual HTML files
+			with previous/contents/next links
+	toc.html	table of contents
+	HowTo.html	one big HTML file
+	HowTo.ps	Postscript
+	HowTo.pdf	PDF
+	HowTo.txt	ASCII text
+
+Not all of the above are in the shipped version. All but
+text are on our website, www.freeswan.org. To get PDF or
+Postscript, either grab them from the web or install
+htmldoc from www.easysw.com, then use the Makefile.
+
+Subdirectories are:
+	src/*.html		HTML source files
+	manpage.d/*.html	HTML versions of man pages
+
+You should not need to look at these, except for following
+links to HTML man pages.
+
+The Internet Drafts are natively in XML format. They have been 
+converted with Marshall Rose's xml2rfc.
+
+xml2rfc is available at xml.resource.org. 
+You may have to install the TclXML package by symlinking it into
+/usr/lib/tcl8.3 or some such.  
+
+

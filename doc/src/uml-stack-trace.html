@@ -1,0 +1,129 @@
+<PRE>
+To: Michael Richardson <mcr@sandelman.ottawa.on.ca>
+Cc: user-mode-linux-devel@lists.sourceforge.net
+From: Jeff Dike <jdike@karaya.com>
+Subject: [uml-devel] Re: stack trace
+Date: Mon, 16 Sep 2002 22:36:06 -0500
+
+mcr@sandelman.ottawa.on.ca said:
+> Can you post (on list or web site) a "script" output of you trying to
+> get the right stack out of a stuck uml (tracing myself)...? 
+
+Yup.  Here we go...
+
+Here, I attach to the tracing thread and get the stack of the current thread,
+which happens to be the idle thread.
+
+um 1013: gdb linux 14936
+GNU gdb 5.0rh-5 Red Hat Linux 7.1
+Copyright 2001 Free Software Foundation, Inc.
+GDB is free software, covered by the GNU General Public License, and you are
+welcome to change it and/or distribute copies of it under certain conditions.
+Type "show copying" to see the conditions.
+There is absolutely no warranty for GDB.  Type "show warranty" for details.
+This GDB was configured as "i386-redhat-linux"...
+/home/jdike/linux/2.4/um/14936: No such file or directory.
+Attaching to program: /home/jdike/linux/2.4/um/linux, process 14936
+0xa014efe9 in __wait4 ()
+
+# This is how you get the current task in the tracing thread - get_current()
+# only works in a kernel thread.
+(gdb) p (struct task_struct *)cpu_tasks[0].task
+$2 = (struct task_struct *) 0xa01c0000
+
+# Get the host pid of that task.
+(gdb) p $2.thread.extern_pid
+$3 = 14939
+
+# Get the current ip and sp.
+(gdb) shell cat /proc/14939/stat
+14939 (linux) T 14936 14936 883 34816 14936 64 5 3 806 7 62 12 0 0 9 0 0 2 
+588043 142770176 5008 4294967295 2684358656 2686348640 3221223520 2686205764
+                                                               sp ^^^^^^^^^^ 
+   2685727185 73728 201392128 167776768 268444672 3222308129 0 0 17 0
+ip ^^^^^^^^^^
+
+# the sp and ip are items 4 and 5 after the 4294967295 (on 2.2 hosts, that's
+2^31 - 1 rather than 2^32 - 1).
+
+(gdb) p/x 2686205764
+$4 = 0xa01c3f44
+(gdb) p/x 2685727185
+$5 = 0xa014f1d1
+
+# Where's the ip?
+(gdb) i sym 0xa014f1d1
+nanosleep + 17 in section .text
+
+# look at the stack around the sp
+(gdb) x/32x 0xa01c3f30
+0xa01c3f30 :     0x00000000      0x00000000      0xa01c3f60      0xa00020a8
+0xa01c3f40 :     0x00000004      0xa012e891      0xa01c3f58      0xa01c3f58
+0xa01c3f50 :     0xa01c3f70      0xa0023667      0x00000009      0x3b023380
+0xa01c3f60 :     0xa01c3fa0      0xa012a21d      0x0000000a      0xa01c0000
+0xa01c3f70 :     0xa01c3fa0      0xa012a213      0x00000003      0x00000024
+0xa01c3f80 :     0xa01c3fa0      0xa0011bc4      0xa012b25c      0x00000000
+0xa01c3f90 :     0xa01c3fb0      0x00000000      0xa01c3ffc      0x0000000d
+0xa01c3fa0 :     0xa01c3fb0      0xa000c50e      0xa01812e0      0xa01c3ffc
+
+# The trick here is to locate a frame near the current sp.  You're looking
+# for a consecutive pair of longwords (fp, ip) having the properties that:
+#	fp is on the current kernel stack and points further up it
+#	ip is a text address (if you can't recognize a UML text address by
+# sight, print out &_stext and &_etext)
+#
+# Starting at 0xa01c3f44, the first pair of works satisfying these requirements
+# is at 0xa01c3f50.
+# So, print that pair out as hex.
+(gdb) p/x *((int (*)[2])0xa01c3f50)
+$9 = {0xa01c3f70, 0xa0023667}
+
+# Now, we start climbing the stack.
+(gdb) p/x *((int (*)[2])$[0])
+$10 = {0xa01c3fa0, 0xa012a213}
+(gdb) 
+$11 = {0xa01c3fb0, 0xa000c50e}
+(gdb) 
+$12 = {0xa01c3fc0, 0xa000356d}
+(gdb) 
+$13 = {0xa01c3fd0, 0xa013082f}
+(gdb) 
+$14 = {0xa01c3ff0, 0xa012fbdd}
+# Stop when you see a NULL frame pointer or gdb bitches at you.
+(gdb) 
+$15 = {0x0, 0xa01513aa}
+
+# Now we get the symbolic version of the stack with 'i sym' of the second item
+# in each pair. 
+(gdb) i sym 0xa0023667
+check_pgt_cache + 23 in section .text
+(gdb) i sym 0xa012a213
+cpu_idle + 123 in section .text
+(gdb) i sym 0xa000c50e
+rest_init + 46 in section .text
+(gdb) i sym 0xa000356d
+start_kernel + 361 in section .text.init
+(gdb) i sym 0xa013082f
+start_kernel_proc + 63 in section .text
+(gdb) i sym 0xa012fbdd
+signal_tramp + 209 in section .text
+(gdb) i sym 0xa01513aa
+thread_start + 4 in section .text
+
+# You can also get line number information with 'i line'.
+(gdb) i line *0xa012a213
+Line 488 of "process_kern.c" starts at address 0xa012a213 <cpu_idle+123>
+   and ends at 0xa012a21d <cpu_idle+133>.
+(gdb) 
+
+
+-------------------------------------------------------
+Sponsored by: AMD - Your access to the experts on Hammer Technology! 
+Open Source & Linux Developers, register now for the AMD Developer 
+Symposium. Code: EX8664 http://www.developwithamd.com/developerlab
+_______________________________________________
+User-mode-linux-devel mailing list
+User-mode-linux-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/user-mode-linux-devel
+
+</PRE>

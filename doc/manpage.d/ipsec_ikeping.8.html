@@ -1,0 +1,137 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_IKEPING</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_IKEPING</H1>
+Section: Maintenance Commands (8)<BR>Updated: 23 Feb 2002<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec ikeping - send/receive ISAKMP/IKE echo requests/replies
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>ikeping</B>
+
+[
+<B>--listen</B>
+
+] [
+<B>--verbose</B>
+
+] [
+<B>--wait </B>
+
+time ] [
+<B>--exchangenum </B>
+
+num ] [
+<B>--ikeport </B>
+
+localport ] [
+<B>--ikeaddress </B>
+
+address ] [ 
+<B>--inet</B>
+
+] [
+<B>--inet6</B>
+
+] destaddr[/dstport] ...
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Ikeping</I>
+
+sends and receives ISAKMP/IKE echo request and echo reply packets. These
+packets are intended for diagnostics purposes, in a manner similar to 
+<I><A HREF="ping.8.html">ping</A></I>(8)
+
+does for ICMP echo request/reply packets.
+<P>
+
+At the time of this writing, the ISAKMP echo request/reply exchange is still
+an internet-draft, and is therefore completely non-standard.
+<P>
+
+<I>Ikeping</I>
+
+will bind to the local address given by 
+<B>--ikeaddress</B>
+
+and the port number given by
+<B>--ikeport</B>
+
+defaulting to the wildcard address and the ISAKMP port 500. An ISAKMP
+exchange of type 244 (a private use number) is sent to each of the
+address/ports listed on the command line. The exchange number may be
+overridden by the  
+<B>--exchangenum </B>
+
+option.
+<P>
+
+<I>Ikeping</I>
+
+then listens for replies, printing them as they are received. Replies
+are of exchange type 245 or the specified exchange number plus 1.
+<I>Ikeping </I>
+
+will keep listening until it either receives as many echo responses as it sent,
+or until the timeout period (10 seconds) has been reached. Receipt of a
+packet will reset the timer. The 
+<B>--wait</B>
+
+option can be used to specify a different timeout period. 
+<P>
+
+If the 
+<B>--listen</B>
+
+option is given, then 
+<I>ikeping</I>
+
+will not send any packets. Instead, it will listen for them and reply to
+each request received.
+<A NAME="lbAE">&nbsp;</A>
+<H2>FILES</H2>
+
+no external files
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ping.8.html">ping</A>(8), <A HREF="ipsec_pluto.8.html">ipsec_pluto</A>(8)
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org">http://www.freeswan.org</A>&gt;
+by Michael Richardson.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">FILES</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:17 GMT, November 11, 2003
+</BODY>
+</HTML>

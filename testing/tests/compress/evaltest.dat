@@ -1,0 +1,10 @@
+carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
+moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES
+moon::ipsec statusall::policy.*COMPRESS::YES
+carol::ipsec statusall::policy.*COMPRESS::YES
+moon::ipsec statusall::comp.::YES
+carol::ipsec statusall::comp.::YES
+carol::ping -n -c 2 -s 8184 -p deadbeef PH_IP_ALICE::8192 bytes from PH_IP_ALICE::YES
+moon::tcpdump::carol.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::moon.strongswan.org >  carol.strongswan.org: ESP::YES
+

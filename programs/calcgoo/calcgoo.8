@@ -1,0 +1,31 @@
+.TH IPSEC_CALCGOO 8 "8 June 2002"
+.\" RCSID $Id: calcgoo.8,v 1.1 2004/03/15 20:35:27 as Exp $
+.SH NAME
+ipsec calcgoo \- calculate hex value for matching modules and kernels
+.SH SYNOPSIS
+.B ipsec
+.B calcgoo
+.SH DESCRIPTION
+.I calcgoo
+accepts the output of 
+.B nm -ao
+or 
+.B /proc/ksyms
+and extracts a release dependant list of symbols from it. The symbols
+are processed to extract the values assigned during the MODVERSIONS 
+process. This process makes sure that Linux modules are only loaded
+on matching kernels.
+.P
+This routine is used to find an appropriate module to match the currently
+running kernel by _startklips.
+.SH FILES
+.nf
+/proc/ksyms
+.fi
+.SH "SEE ALSO"
+ipsec__startklips(8), genksyms(8)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org>
+by Michael Richardson.
+.SH BUGS

@@ -1,0 +1,297 @@
+<!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+            
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+            
+  <meta name="Author" content="Richard Guy Briggs">
+            
+  <meta name="GENERATOR" content="Mozilla/4.78 [en] (X11; U; Linux 2.4.18 i686) [Netscape]">
+  <title></title>
+</head>
+  <body>
+Policy Groups Table<br>
+<br>
+This table lists all the policy group combinations and expected packet flows.<br>
+<br>
+<br>
+   
+<table border="1" cols="14" width="100%" nosave="">
+   <tbody>
+      <tr>
+   <th bgcolor="#cccccc">policy</th>
+    <th bgcolor="#cccccc"><br>
+        </th>
+    <th bgcolor="#cccccc" colspan="2">none</th>
+      <th bgcolor="#cccccc" colspan="2">clear</th>
+      <th bgcolor="#cccccc" colspan="2">clear-or-private</th>
+      <th bgcolor="#cccccc" colspan="2">private-or-clear</th>
+      <th bgcolor="#cccccc" colspan="2">private</th>
+      <th bgcolor="#cccccc" colspan="2">block</th>
+     </tr>
+    <tr>
+   <th bgcolor="#cccccc"><br>
+        </th>
+    <th bgcolor="#cccccc">key?</th>
+    <th bgcolor="#cccccc">no</th>
+    <th bgcolor="#cccccc">yes</th>
+    <th bgcolor="#cccccc">no</th>
+    <th bgcolor="#cccccc">yes</th>
+    <th bgcolor="#cccccc">no</th>
+    <th bgcolor="#cccccc">yes</th>
+    <th bgcolor="#cccccc">no</th>
+    <th bgcolor="#cccccc">yes</th>
+    <th bgcolor="#cccccc">no</th>
+    <th bgcolor="#cccccc">yes</th>
+    <th bgcolor="#cccccc">no</th>
+    <th bgcolor="#cccccc">yes</th>
+   </tr>
+    <tr>
+   <th bgcolor="#cccccc" rowspan="2">none</th>
+    <th bgcolor="#cccccc">no</th>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+   </tr>
+    <tr>
+    <th bgcolor="#cccccc">yes</th>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c,f?</td>
+    <td>c,f?</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+   </tr>
+    <tr>
+   <th bgcolor="#cccccc" rowspan="2">clear</th>
+    <th bgcolor="#cccccc">no</th>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c,c(f?)</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+   </tr>
+    <tr>
+    <th bgcolor="#cccccc">yes</th>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c,f?</td>
+    <td>c,f?</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+   </tr>
+    <tr>
+   <th bgcolor="#cccccc" rowspan="2">clear-or-private</th>
+    <th bgcolor="#cccccc">no</th>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c,f?</td>
+    <td>c,c(f?)</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+    <td>c,f</td>
+   </tr>
+    <tr>
+    <th bgcolor="#cccccc">yes</th>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c</td>
+    <td>c,f?</td>
+    <td>c,e</td>
+    <td>c,f</td>
+    <td>c,e</td>
+    <td>c,f</td>
+    <td>c,f</td>
+   </tr>
+    <tr>
+   <th bgcolor="#cccccc" rowspan="2">private-or-clear</th>
+    <th bgcolor="#cccccc">no</th>
+    <td>t,c</td>
+    <td>t,f?</td>
+    <td>t,c</td>
+    <td>t,f?</td>
+    <td>t,c</td>
+    <td>t,f?</td>
+    <td>t,f?</td>
+    <td>t,f?</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+   </tr>
+    <tr>
+    <th bgcolor="#cccccc">yes</th>
+    <td>t,c</td>
+    <td>t,f?</td>
+    <td>t,c</td>
+    <td>t,f?</td>
+    <td>t,c</td>
+    <td>t,e</td>
+    <td>t,c(f?)</td>
+    <td>t,e</td>
+    <td>t,f</td>
+    <td>t,e</td>
+    <td>t,f</td>
+    <td>t,f</td>
+   </tr>
+    <tr>
+   <th bgcolor="#cccccc" rowspan="2">private</th>
+    <th bgcolor="#cccccc">no</th>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+   </tr>
+    <tr>
+    <th bgcolor="#cccccc">yes</th>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,f</td>
+    <td>t,e</td>
+    <td>t,f</td>
+    <td>t,e</td>
+    <td>t,f</td>
+    <td>t,e</td>
+    <td>t,f</td>
+    <td>t,f</td>
+   </tr>
+    <tr>
+   <th bgcolor="#cccccc" rowspan="2">block</th>
+    <th bgcolor="#cccccc">no</th>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+   </tr>
+    <tr>
+    <th bgcolor="#cccccc">yes</th>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+    <td>f</td>
+   </tr>
+         
+  </tbody>  
+</table>
+    <br>
+  &nbsp;   
+<table border="1" cols="2" nosave="">
+   <tbody>
+      <tr nosave="">
+   <th nosave="">legend</th>
+    <th>packet fate</th>
+   </tr>
+    <tr>
+   <td>c</td>
+    <td>clear</td>
+   </tr>
+    <tr>
+   <td>f</td>
+    <td>fail</td>
+   </tr>
+    <tr>
+   <td>e</td>
+    <td>encrypt</td>
+   </tr>
+    <tr>
+   <td>t</td>
+    <td>trap</td>
+   </tr>
+    <tr>
+      <td valign="Top">c,f<br>
+      </td>
+      <td valign="Top">first packet clear, then fail<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="Top">c,e<br>
+      </td>
+      <td valign="Top">first packet clear, then encrypt<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="Top">t,f<br>
+      </td>
+      <td valign="Top">trap, then fail<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="Top">t,c<br>
+      </td>
+      <td valign="Top">trap, then clear<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="Top">t,e<br>
+      </td>
+      <td valign="Top">trap, then encrypt<br>
+      </td>
+    </tr>
+         
+  </tbody>  
+</table>
+      
+</body>
+</html>

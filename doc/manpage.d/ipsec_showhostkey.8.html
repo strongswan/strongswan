@@ -1,0 +1,269 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_SHOWHOSTKEY</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_SHOWHOSTKEY</H1>
+Section: Maintenance Commands (8)<BR>Updated: 5 March 2002<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec showhostkey - show host's authentication key
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>ipsec</B>
+
+<B>showhostkey</B>
+
+[
+<B>--key</B>
+
+] [
+<B>--left</B>
+
+] [
+<B>--right</B>
+
+] [
+<B>--txt</B>
+
+gateway
+] [
+<B>--dhclient</B>
+
+] [
+<B>--file</B>
+
+secretfile
+] [
+<B>--id</B>
+
+identity
+]
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Showhostkey</I>
+
+outputs (on standard output) a public key suitable for this host,
+in the format specified,
+using the host key information stored in
+<I>/etc/ipsec.secrets</I>.
+
+In general only the super-user can run this command,
+since only he can read
+<I>ipsec.secrets</I>.
+
+<P>
+
+The
+<B>--txt</B>
+
+option causes the output to be in opportunistic-encryption DNS TXT record
+format,
+with the specified
+<I>gateway</I>
+
+value.
+If information about how the key was generated is available,
+that is provided as a DNS-file comment.
+For example,
+<B>--txt 10.11.12.13</B>
+
+might give (with the key data trimmed for clarity):
+<P>
+
+<PRE>
+  ; RSA 2048 bits   xy.example.com   Sat Apr 15 13:53:22 2000
+      IN TXT  &quot;X-IPsec-Server(10)=10.11.12.13 AQOF8tZ2...+buFuFn/&quot;
+</PRE>
+
+<P>
+
+No name is supplied in the TXT record
+because there are too many possibilities,
+depending on how it will be used.
+If the text string is longer than 255 bytes,
+it is split up into multiple strings (matching the restrictions of
+the DNS TXT binary format).
+If any split is needed, the first split will be at the start of the key:
+this increases the chances that later hand editing will work.
+<P>
+
+The
+<B>--left</B>
+
+and
+<B>--right</B>
+
+options cause the output to be in
+<I><A HREF="ipsec.conf.5.html">ipsec.conf</A></I>(5)
+
+format, as a
+<B>leftrsasigkey</B>
+
+or
+<B>rightrsasigkey</B>
+
+parameter respectively.
+Again, generation information is included if available.
+For example,
+<B>--left</B>
+
+might give (with the key data trimmed down for clarity):
+<P>
+
+<PRE>
+  # RSA 2048 bits   xy.example.com   Sat Apr 15 13:53:22 2000
+  leftrsasigkey=0sAQOF8tZ2...+buFuFn/
+</PRE>
+
+<P>
+
+The
+<B>--dhclient</B>
+
+option cause the output to be suitable for inclusion in
+<I><A HREF="dhclient.conf.5.html">dhclient.conf</A></I>(5)
+
+as part of configuring WAVEsec.
+See &lt;<A HREF="http://www.wavesec.org">http://www.wavesec.org</A>&gt;.
+<P>
+
+If
+<B>--key</B>
+
+is specified,
+the output format is the text form of a DNS KEY record;
+the host name is the one included in the key information
+(or, if that is not available,
+the output of
+<B>hostname&nbsp;--fqdn</B>),
+
+with a
+<B>.</B>
+
+appended.
+Again, generation information is included if available.
+For example (with the key data trimmed down for clarity):
+<P>
+
+<PRE>
+  ; RSA 2048 bits   xy.example.com   Sat Apr 15 13:53:22 2000
+  xy.example.com.   IN   KEY   0x4200 4 1 AQOF8tZ2...+buFuFn/
+</PRE>
+
+<P>
+
+Normally, the default key for this host
+(the one with no host identities specified for it) is the one extracted.
+The
+<B>--id</B>
+
+option overrides this,
+causing extraction of the key labeled with the specified
+<I>identity</I>,
+
+if any.
+The specified
+<I>identity</I>
+
+must
+<I>exactly</I>
+
+match the identity in the file;
+in particular, the comparison is case-sensitive.
+<P>
+
+The
+<B>--file</B>
+
+option overrides the default for where the key information should be
+found, and takes it from the specified
+<I>secretfile</I>.
+
+<A NAME="lbAE">&nbsp;</A>
+<H2>DIAGNOSTICS</H2>
+
+A complaint about ``no pubkey line found'' indicates that the
+host has a key but it was generated with an old version of FreeS/WAN
+and does not contain the information that
+<I>showhostkey</I>
+
+needs.
+<A NAME="lbAF">&nbsp;</A>
+<H2>FILES</H2>
+
+/etc/ipsec.secrets
+<A NAME="lbAG">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.secrets.5.html">ipsec.secrets</A>(5), <A HREF="ipsec.conf.5.html">ipsec.conf</A>(5), <A HREF="ipsec_rsasigkey.8.html">ipsec_rsasigkey</A>(8)
+<A NAME="lbAH">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org">http://www.freeswan.org</A>&gt;
+by Henry Spencer.
+<A NAME="lbAI">&nbsp;</A>
+<H2>BUGS</H2>
+
+Arguably,
+rather than just reporting the no-IN-KEY-line-found problem,
+<I>showhostkey</I>
+
+should be smart enough to run the existing key through
+<I>rsasigkey</I>
+
+with the
+<B>--oldkey</B>
+
+option, to generate a suitable output line.
+<P>
+
+The need to specify the gateway address (etc.) for
+<B>--txt</B>
+
+is annoying, but there is no good way to determine it automatically.
+<P>
+
+There should be a way to specify the priority value for TXT records;
+currently it is hardwired to
+<B>10</B>.
+
+<P>
+
+The
+<B>--id</B>
+
+option assumes that the
+<I>identity</I>
+
+appears on the same line as the
+<B>:&nbsp;RSA&nbsp;{</B>
+
+that begins the key proper.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">DIAGNOSTICS</A><DD>
+<DT><A HREF="#lbAF">FILES</A><DD>
+<DT><A HREF="#lbAG">SEE ALSO</A><DD>
+<DT><A HREF="#lbAH">HISTORY</A><DD>
+<DT><A HREF="#lbAI">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

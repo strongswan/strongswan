@@ -1,0 +1,43 @@
+                |
+                | IKE main mode 
+                |  phase 1
+                V
+        .-----------------.  
+        | unauthenticated | 
+        |     OE peer     |
+        `-----------------'
+                |
+                | lookup KEY RR in in-addr.arpa 
+                |             (if ID_IPV4_ADDR)
+                | lookup KEY RR in forward
+                |             (if ID_FQDN)
+                V
+        .-----------------.  RR not found
+        |   received DNS  |---------------> log failure
+        |     reply       | 
+        `----+--------+---'
+     phase 2 |        \      misformatted 
+    proposal |         `------------------> log failure
+             V
+    .----------------.
+    |  authenticated |  identical initiator 
+    |     OE peer    |--------------------> initiator 
+    `----------------'  connection found    state machine
+         |
+         | look for TXT record for initiator
+	 |
+         V  
+   .---------------.
+   |  authorized   |---------------------> log failure
+   |    OE peer    |
+   `---------------'
+         |
+         |
+         V
+    potential OE
+    connection in
+    initiator state
+	machine
+
+
+$Id: responderstate.txt,v 1.1 2004/03/15 20:35:24 as Exp $

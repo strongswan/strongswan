@@ -1,0 +1,332 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="performance.html">Previous</A>
+<A HREF="kernel.html">Next</A>
+<HR>
+<H1><A name="test.freeswan">Testing FreeS/WAN</A></H1>
+ This document discusses testing FreeS/WAN.
+<P>Not all types of testing are described here. Other parts of the
+ documentation describe some tests:</P>
+<DL>
+<DT><A href="install.html#testinstall">installation</A> document</DT>
+<DD>testing for a successful install</DD>
+<DT><A href="config.html#testsetup">configuration</A> document</DT>
+<DD>basic tests for a working configuration</DD>
+<DT><A href="web.html#interop.web">web links</A> document</DT>
+<DD>General information on tests for interoperability between various
+ IPsec implementations. This includes links to several test sites.</DD>
+<DT><A href="interop.html">interoperation</A> document.</DT>
+<DD>More specific information on FreeS/WAN interoperation with other
+ implementations.</DD>
+<DT><A href="performance.html">performance</A> document</DT>
+<DD>performance measurements</DD>
+</DL>
+<P>The test setups and procedures described here can also be used in
+ other testing, but this document focuses on testing the IPsec
+ functionality of FreeS/WAN.</P>
+<H2><A NAME="test.oe">Testing opportunistic connections</A></H2>
+<P>This section teaches you how to test your opportunistically encrypted
+ (OE) connections. To set up OE, please see the easy instructions in our<A
+HREF="quickstart.html"> quickstart guide</A>.</P>
+<H3><A NAME="12_1_1">Basic OE Test</A></H3>
+<P>This test is for basic OE functionality.
+<!-- You may use it on an 
+<A HREF="quickstart.html#oppo.client">initiate-only OE</A> box or a 
+<A HREF="quickstart.html#opp.incoming">full OE</A> box. -->
+ For additional tests, keep
+ reading.</P>
+<P>Be sure IPsec is running. You can see whether it is with:</P>
+<PRE>    ipsec setup status</PRE>
+<P>If need be, you can restart it with:</P>
+<PRE>    service ipsec restart</PRE>
+<P>Load a FreeS/WAN test website from the host on which you're running
+ FreeS/WAN. Note: the feds may be watching these sites. Type one of:</P>
+<P></P>
+<PRE>   links oetest.freeswan.org</PRE>
+<PRE>   links oetest.freeswan.nl</PRE>
+
+<!--<PRE>   links oetest.freeswan.ca</PRE>-->
+<P>A positive result looks like this:</P>
+<PRE>
+   You  seem  to  be  connecting  from:  192.0.2.11 which DNS says is:
+   gateway.example.com
+     _________________________________________________________________
+                                                                                
+   Status E-route
+   OE    enabled    16    192.139.46.73/32    -&gt;    192.0.2.11/32   =&gt;
+   tun0x2097@192.0.2.11
+   OE    enabled    176    192.139.46.77/32    -&gt;   192.0.2.11/32   =&gt;
+   tun0x208a@192.0.2.11
+</PRE>
+<P>If you see this, congratulations! Your OE box will now encrypt its
+ own traffic whenever it can. If you have difficulty, see our<A HREF="quickstart.html#oe.trouble">
+ OE troubleshooting tips</A>.</P>
+<H3><A NAME="12_1_2">OE Gateway Test</A></H3>
+<P>If you've set up FreeS/WAN to protect a subnet behind your gateway,
+ you'll need to run another simple test, which can be done from a
+ machine running any OS. That's right, your Windows box can be protected
+ by opportunistic encryption without any FreeS/WAN install or
+ configuration on that box. From<STRONG> each protected subnet node</STRONG>
+, load the FreeS/WAN website with:</P>
+<PRE>   links oetest.freeswan.org</PRE>
+<PRE>   links oetest.freeswan.nl</PRE>
+<P>A positive result looks like this:</P>
+<PRE>
+   You  seem  to  be  connecting  from:  192.0.2.98 which DNS says is:
+   box98.example.com
+     _________________________________________________________________
+                                                                                
+   Status E-route
+   OE    enabled    16    192.139.46.73/32    -&gt;    192.0.2.98/32   =&gt;
+   tun0x134ed@192.0.2.11
+   OE    enabled    176    192.139.46.77/32    -&gt;   192.0.2.11/32   =&gt;
+   tun0x134d2@192.0.2.11
+</PRE>
+<P>If you see this, congratulations! Your OE gateway will now encrypt
+ traffic for this subnet node whenever it can. If you have difficulty,
+ see our<A HREF="quickstart.html#oe.trouble"> OE troubleshooting tips</A>
+.</P>
+<H3><A NAME="12_1_3">Additional OE tests</A></H3>
+<P>When testing OE, you will often find it useful to execute this
+ command on the FreeS/WAN host:</P>
+<PRE>   ipsec eroute</PRE>
+<P>If you have established a connection (either for or for a subnet
+ node) you will see a result like:</P>
+<PRE>    192.0.2.11/32   -&gt; 192.139.46.73/32  =&gt; tun0x149f@192.139.46.38
+</PRE>
+<P>Key:</P>
+<TABLE>
+<TR><TD>1.</TD><TD>192.0.2.11/32</TD><TD>Local start point of the
+ protected traffic.</TD></TR>
+<TR><TD>2.</TD><TD>192.0.2.194/32</TD><TD>Remote end point of the
+ protected traffic.</TD></TR>
+<TR><TD>3.</TD><TD>192.0.48.38</TD><TD>Remote FreeS/WAN node (gateway or
+ host). May be the same as (2).</TD></TR>
+<TR><TD>4.</TD><TD>[not shown]</TD><TD>Local FreeS/WAN node (gateway or
+ host), where you've produced the output. May be the same as (1).</TD></TR>
+</TABLE>
+<P>For extra assurance, you may wish to use a packet sniffer such as<A HREF="http://www.tcpdump.org">
+ tcpdump</A> to verify that packets are being encrypted. You should see
+ output that indicates<STRONG> ESP</STRONG> encrypted data, for example:</P>
+<PRE>    02:17:47.353750 PPPoE  [ses 0x1e12] IP 154: xy.example.com &gt; oetest.freeswan.org: ESP(spi=0x87150d16,seq=0x55)</PRE>
+<H2><A name="test.uml">Testing with User Mode Linux</A></H2>
+<P><A href="http://user-mode-linux.sourceforge.net/">User Mode Linux</A>
+ allows you to run Linux as a user process on another Linux machine.</P>
+<P>As of 1.92, the distribution has a new directory named testing. It
+ contains a collection of test scripts and sample configurations. Using
+ these, you can bring up several copies of Linux in user mode and have
+ them build tunnels to each other. This lets you do some testing of a
+ FreeS/WAN configuration on a single machine.</P>
+<P>You need a moderately well-endowed machine for this to work well.
+ Each UML wants about 16 megs of memory by default, which is plenty for
+ FreeS/WAN usage. Typical regression testing only occasionally uses as
+ many as 4 UMLs. If one is doing nothing else with the machine (in
+ particular, not running X on it), then 128 megs and a 500MHz CPU are
+ fine.</P>
+ Documentation on these scripts is<A href="umltesting.html"> here</A>.
+ There is also documentation on automated testing<A href="makecheck.html">
+ here</A>.
+<H2><A name="testnet">Configuration for a testbed network</A></H2>
+<P>A common test setup is to put a machine with dual Ethernet cards in
+ between two gateways under test. You need at least five machines; two
+ gateways, two clients and a testing machine in the middle.</P>
+<P>The central machine both routes packets and provides a place to run
+ diagnostic software for checking IPsec packets. See next section for
+ discussion of<A href="faq.html#tcpdump.faq"> using tcpdump(8)</A> for
+ this.</P>
+<P>This makes things more complicated than if you just connected the two
+ gateway machines directly to each other, but it also makes your test
+ setup much more like the environment you actually use IPsec in. Those
+ environments nearly always involve routing, and quite a few apparent
+ IPsec failures turn out to be problems with routing or with firewalls
+ dropping packets. This approach lets you deal with those problems on
+ your test setup.</P>
+<P>What you end up with looks like:</P>
+<H3><A name="testbed">Testbed network</A></H3>
+<PRE>      subnet a.b.c.0/24
+             |
+      eth1 = a.b.c.1
+         gate1
+      eth0 = 192.168.p.1
+             |
+             |
+      eth0 = 192.168.p.2
+         route/monitor box
+      eth1 = 192.168.q.2
+             |
+             |
+      eth0 = 192.168.q.1
+         gate2
+      eth1 = x.y.z.1
+              |
+       subnet x.y.z.0/24</PRE>
+<PRE>Where p and q are any convenient values that do not interfere with other
+routes you may have. The ipsec.conf(5) file then has, among other things:</PRE>
+<PRE>conn abc-xyz
+      left=192.168.p.1
+      leftnexthop=192.168.p.2
+      right=192.168.q.1
+      rightnexthop=192.168.q.2</PRE>
+<P>Once that works, you can remove the &quot;route/monitor box&quot;, and connect
+ the two gateways to the Internet. The only parameters in ipsec.conf(5)
+ that need to change are the four shown above. You replace them with
+ values appropriate for your Internet connection, and change the eth0 IP
+ addresses and the default routes on both gateways.</P>
+<P>Note that nothing on either subnet needs to change. This lets you
+ test most of your IPsec setup before connecting to the insecure
+ Internet.</P>
+<H3><A name="tcpdump.test">Using packet sniffers in testing</A></H3>
+<P>A number of tools are available for looking at packets. We will
+ discuss using<A href="http://www.tcpdump.org/"> tcpdump(8)</A>, a
+ common Linux tool included in most distributions. Alternatives
+ offerring more-or-less the same functionality include:</P>
+<DL>
+<DT><A href="http://www.ethereal.com">Ethereal</A></DT>
+<DD>Several people on our mailing list report a preference for this over
+ tcpdump.</DD>
+<DT><A href="http://netgroup-serv.polito.it/windump/">windump</A></DT>
+<DD>a Windows version of tcpdump(8), possibly handy if you have Windows
+ boxes in your network</DD>
+<DT><A href="http://reptile.rug.ac.be/~coder/sniffit/sniffit.html">
+Sniffit</A></DT>
+<DD>A linux sniffer that we don't know much about. If you use it, please
+ comment on our mailing list.</DD>
+</DL>
+<P>See also this<A href="http://www.tlsecurity.net/unix/ids/sniffer/">
+ index</A> of packet sniffers.</P>
+<P>tcpdump(8) may misbehave if run on the gateways themselves. It is
+ designed to look into a normal IP stack and may become confused if you
+ ask it to display data from a stack which has IPsec in play.</P>
+<P>At one point, the problem was quite severe. Recent versions of
+ tcpdump, however, understand IPsec well enough to be usable on a
+ gateway. You can get the latest version from<A href="http://www.tcpdump.org/">
+ tcpdump.org</A>.</P>
+<P>Even with a recent tcpdump, some care is required. Here is part of a
+ post from Henry on the topic:</P>
+<PRE>&gt; a) data from sunset to sunrise or the other way is not being
+&gt; encrypted (I am using tcpdump (ver. 3.4) -x/ping -p to check
+&gt; packages) 
+
+What *interface* is tcpdump being applied to?  Use the -i option to
+control this.  It matters!  If tcpdump is looking at the ipsecN
+interfaces, e.g. ipsec0, then it is seeing the packets before they are
+encrypted or after they are decrypted, so of course they don't look
+encrypted.  You want to have tcpdump looking at the actual hardware
+interfaces, e.g. eth0. 
+
+Actually, the only way to be *sure* what you are sending on the wire is to
+have a separate machine eavesdropping on the traffic.  Nothing you can do
+on the machines actually running IPsec is 100% guaranteed reliable in this
+area (although tcpdump is a lot better now than it used to be).</PRE>
+<P>The most certain way to examine IPsec packets is to look at them on
+ the wire. For security, you need to be certain, so we recommend doing
+ that. To do so, you need a<STRONG> separate sniffer machine located
+ between the two gateways</STRONG>. This machine can be routing IPsec
+ packets, but it must not be an IPsec gateway. Network configuration for
+ such testing is discussed<A href="#testnet"> above</A>.</P>
+<P>Here's another mailing list message with advice on using tcpdump(8):</P>
+<PRE>Subject: RE: [Users] Encrypted???
+   Date: Thu, 29 Nov 2001
+   From: &quot;Joe Patterson&quot; &lt;jpatterson@asgardgroup.com&gt;
+
+tcpdump -nl -i $EXT-IF proto 50
+
+-nl tells it not to buffer output or resolve names (if you don't do that it
+may confuse you by not outputing anything for a while), -i $EXT-IF (replace
+with your external interface) tells it what interface to listen on, and
+proto 50 is ESP.  Use &quot;proto 51&quot; if for some odd reason you're using AH, and
+&quot;udp port 500&quot; if you want to see the isakmp key exchange/tunnel setup
+packets.
+
+You can also run `tcpdump -nl -i ipsec0` to see what traffic is on that
+virtual interface.  Anything you see there *should* be either encrypted or
+dropped (unless you've turned on some strange options in your ipsec.conf
+file)
+
+Another very handy thing is ethereal (http://www.ethereal.com/) which runs
+on just about anything, has a nice gui interface (or a nice text-based
+interface), and does a great job of protocol  breakdown.  For ESP and AH
+it'll basically just tell you that there's a packet of that protocol, and
+what the spi is, but for isakmp it'll actually show you a lot of the tunnel
+setup information (until it gets to the point in the protocol where isakmp
+is encrypted....)</PRE>
+<H2><A name="verify.crypt">Verifying encryption</A></H2>
+<P>The question of how to verify that messages are actually encrypted
+ has been extensively discussed on the mailing list. See this<A href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2000/07/msg00262.html">
+ thread</A>.</P>
+<P>If you just want to verify that packets are encrypted, look at them
+ with a packet sniffer (see<A href="#tcpdump.test"> previous section</A>
+) located between the gateways. The packets should, except for some of
+ the header information, be utterly unintelligible.<STRONG> The output
+ of good encryption looks<EM> exactly</EM> like random noise</STRONG>.</P>
+<P>A packet sniffer can only tell you that the data you looked at was
+ encrypted. If you have stronger requirements -- for example if your
+ security policy requires verification that plaintext is not leaked
+ during startup or under various anomolous conditions -- then you will
+ need to devise much more thorough tests. If you do that, please post
+ any results or methodological details which your security policy allows
+ you to make public.</P>
+<P>You can put recognizable data into ping packets with something like:</P>
+<PRE>        ping -p feedfacedeadbeef 11.0.1.1</PRE>
+<P>&quot;feedfacedeadbeef&quot; is a legal hexadecimal pattern that is easy to
+ pick out of hex dumps.</P>
+<P>For other protocols, you may need to check if you have encrypted data
+ or ASCII text. Encrypted data has approximately equal frequencies for
+ all 256 possible characters. ASCII text has most characters in the
+ printable range 0x20-0x7f, a few control characters less than 0x20, and
+ none at all in the range 0x80-0xff. 0x20, space, is a good character to
+ look for. In normal English text space occurs about once in seven
+ characters, versus about once in 256 for random or encrypted data.</P>
+<P>One thing to watch for: the output of good compression, like that of
+ good encryption, looks just like random noise. You cannot tell just by
+ looking at a data stream whether it has been compressed, encrypted, or
+ both. You need a little care not to mistake compressed data for
+ encrypted data in your testing.</P>
+<P>Note also that weak encryption also produces random-looking output.
+ You cannot tell whether the encryption is strong by looking at the
+ output. To be sure of that, you would need to have both the algorithms
+ and the implementation examined by experts.</P>
+<P>For IPsec, you can get partial assurance from interoperability tests.
+ See our<A href="interop.html"> interop</A> document. When twenty
+ products all claim to implement<A href="glossary.html#3DES"> 3DES</A>,
+ and they all talk to each other, you can be fairly sure they have it
+ right. Of course, you might wonder whether all the implementers are
+ consipring to trick you or, more plausibly, whether some
+ implementations might have &quot;back doors&quot; so they can get also it wrong
+ when required.. If you're seriously worried about things like that, you
+ need to get the code you use audited (good luck if it is not Open
+ Source), or perhaps to talk to a psychiatrist about treatments for
+ paranoia.</P>
+<H2><A name="mail.test">Mailing list pointers</A></H2>
+<P>Additional information on testing can be found in these<A href="mail.html">
+ mailing list</A> messages:</P>
+<UL>
+<LI>a user's detailed<A href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2000/11/msg00571.html">
+ setup diary</A> for his testbed network</LI>
+<LI>a FreeS/WAN team member's<A href="http://www.sandelman.ottawa.on.ca/linux-ipsec/html/2000/11/msg00425.html">
+ notes</A> from testing at an IPsec interop &quot;bakeoff&quot;</LI>
+</UL>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="performance.html">Previous</A>
+<A HREF="kernel.html">Next</A>
+</BODY>
+</HTML>

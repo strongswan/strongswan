@@ -1,0 +1,164 @@
+.TH IPSEC_KLIPSDEBUG 8 "21 Jun 2000"
+.\"
+.\" RCSID $Id: klipsdebug.8,v 1.1 2004/03/15 20:35:28 as Exp $
+.\"
+.SH NAME
+ipsec klipsdebug \- set KLIPS (kernel IPSEC support) debug features and level
+.SH SYNOPSIS
+.B ipsec
+.B klipsdebug
+.PP
+.B ipsec
+.B klipsdebug
+.B \-\-set
+flagname
+.PP
+.B ipsec
+.B klipsdebug
+.B \-\-clear
+flagname
+.PP
+.B ipsec
+.B klipsdebug
+.B \-\-all
+.PP
+.B ipsec
+.B klipsdebug
+.B \-\-none
+.PP
+.B ipsec
+.B klipsdebug
+.B \-\-help
+.PP
+.B ipsec
+.B klipsdebug
+.B \-\-version
+.SH DESCRIPTION
+.I Klipsdebug
+sets and clears flags that control
+various parts of the debugging output of Klips
+(the kernel portion of FreeS/WAN IPSEC).
+The form with no additional arguments lists the present contents of
+/proc/net/ipsec_klipsdebug.
+The
+.B \-\-set
+form turns the specified flag on,
+while the
+.B \-\-clear
+form turns the specified flag off.
+The 
+.B \-\-all
+form 
+turns all flags on except verbose, while the
+.B \-\-none
+form turns all flags off.
+.PP
+The current flag names are:
+.TP 8
+.B tunnel
+tunnelling code
+.TP
+.B tunnel-xmit
+tunnelling transmit only code
+.TP
+.B pfkey
+userspace communication code
+.TP
+.B xform
+transform selection and manipulation code
+.TP
+.B eroute
+eroute table manipulation code
+.TP
+.B spi
+SA table manipulation code
+.TP
+.B radij
+radij tree manipulation code
+.TP
+.B esp
+encryptions transforms code
+.TP
+.B ah
+authentication transforms code
+.B rcv
+receive code
+.TP
+.B ipcomp
+ip compression transforms code
+.TP
+.B verbose
+give even more information, BEWARE:
+a)this will print authentication and encryption keys in the logs
+b)this will probably trample the 4k kernel printk buffer giving inaccurate output
+.PP
+All Klips debug output appears as
+.B kernel.info
+messages to
+.IR syslogd (8).
+Most systems are set up
+to log these messages to
+.IR /var/log/messages .
+Beware that
+.B klipsdebug
+.B \-\-all
+produces a lot of output and the log file will grow quickly.
+.PP
+The file format for /proc/net/ipsec_klipsdebug is discussed in
+ipsec_klipsdebug(5).
+.SH EXAMPLES
+.TP
+.B klipsdebug \-\-all
+turns on all KLIPS debugging except verbose.
+.TP
+.B klipsdebug \-\-clear tunnel
+turns off only the
+.B tunnel
+debugging messages.
+.LP
+.SH FILES
+/proc/net/ipsec_klipsdebug, /usr/local/bin/ipsec
+.SH "SEE ALSO"
+ipsec(8), ipsec_manual(8), ipsec_tncfg(8), ipsec_eroute(8),
+ipsec_spi(8), ipsec_spigrp(8), ipsec_klipsdebug(5)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org/>
+by Richard Guy Briggs.
+.SH BUGS
+It really ought to be possible to set or unset selective combinations
+of flags.
+.\"
+.\" $Log: klipsdebug.8,v $
+.\" Revision 1.1  2004/03/15 20:35:28  as
+.\" added files from freeswan-2.04-x509-1.5.3
+.\"
+.\" Revision 1.18  2002/04/24 07:35:39  mcr
+.\" Moved from ./klips/utils/klipsdebug.8,v
+.\"
+.\" Revision 1.17  2000/10/10 20:10:19  rgb
+.\" Added support for debug_ipcomp and debug_verbose to klipsdebug.
+.\"
+.\" Revision 1.16  2000/08/18 17:33:11  rgb
+.\" Updated obsolete netlink reference and added pfkey and tunnel-xmit.
+.\"
+.\" Revision 1.15  2000/06/30 18:21:55  rgb
+.\" Update SEE ALSO sections to include ipsec_version(5) and ipsec_pf_key(5)
+.\" and correct FILES sections to no longer refer to /dev/ipsec which has
+.\" been removed since PF_KEY does not use it.
+.\"
+.\" Revision 1.14  2000/06/28 05:53:09  rgb
+.\" Mention that netlink is obsolete.
+.\"
+.\" Revision 1.13  2000/06/21 16:54:58  rgb
+.\" Added 'no additional args' text for listing contents of
+.\" /proc/net/ipsec_* files.
+.\"
+.\" Revision 1.12  1999/07/19 18:47:24  henry
+.\" fix slightly-misformed comments
+.\"
+.\" Revision 1.11  1999/04/06 04:54:37  rgb
+.\" Fix/Add RCSID Id: and Log: bits to make PHMDs happy.  This includes
+.\" patch shell fixes.
+.\"
+.\"

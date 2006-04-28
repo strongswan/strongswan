@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="rfc.html">Previous</A>
+<A HREF="umltesting.html">Next</A>
+<HR>
+<H1><A name="roadmap">Distribution Roadmap: What's Where in Linux
+ FreeS/WAN</A></H1>
+<P> This file is a guide to the locations of files within the FreeS/WAN
+ distribution. Everything described here should be on your system once
+ you download, gunzip, and untar the distribution.</P>
+<P>This distribution contains two major subsystems</P>
+<DL>
+<DT><A href="#klips.roadmap">KLIPS</A></DT>
+<DD>the kernel code</DD>
+<DT><A href="#pluto.roadmap">Pluto</A></DT>
+<DD>the user-level key-management daemon</DD>
+</DL>
+<P>plus assorted odds and ends.</P>
+<H2><A name="top">Top directory</A></H2>
+<P>The top directory has essential information in text files:</P>
+<DL>
+<DT>README</DT>
+<DD>introduction to the software</DD>
+<DT>INSTALL</DT>
+<DD>short experts-only installation procedures. More detalied procedures
+ are in<A href="install.html"> installation</A> and<A href="config.html">
+ configuration</A> HTML documents.</DD>
+<DT>BUGS</DT>
+<DD>major known bugs in the current release.</DD>
+<DT>CHANGES</DT>
+<DD>changes from previous releases</DD>
+<DT>CREDITS</DT>
+<DD>acknowledgement of contributors</DD>
+<DT>COPYING</DT>
+<DD>licensing and distribution information</DD>
+</DL>
+<H2><A name="doc">Documentation</A></H2>
+<P> The doc directory contains the bulk of the documentation, most of it
+ in HTML format. See the<A href="index.html"> index file</A> for
+ details.</P>
+<H2><A name="klips.roadmap">KLIPS: kernel IP security</A></H2>
+<P><A href="glossary.html#KLIPS"> KLIPS</A> is<STRONG> K</STRONG>erne<STRONG>
+L</STRONG><STRONG> IP</STRONG><STRONG> S</STRONG>ecurity. It lives in
+ the klips directory, of course.</P>
+<DL>
+<DT>klips/doc</DT>
+<DD>documentation</DD>
+<DT>klips/patches</DT>
+<DD>patches for existing kernel files</DD>
+<DT>klips/test</DT>
+<DD>test stuff</DD>
+<DT>klips/utils</DT>
+<DD>low-level user utilities</DD>
+<DT>klips/net/ipsec</DT>
+<DD>actual klips kernel files</DD>
+<DT>klips/src</DT>
+<DD>symbolic link to klips/net/ipsec
+<P>The &quot;make insert&quot; step of installation installs the patches and makes
+ a symbolic link from the kernel tree to klips/net/ipsec. The odd name
+ of klips/net/ipsec is dictated by some annoying limitations of the
+ scripts which build the Linux kernel. The symbolic-link business is a
+ bit messy, but all the alternatives are worse.</P>
+<P></P>
+</DD>
+<DT>klips/utils</DT>
+<DD>Utility programs:
+<P></P>
+<DL>
+<DT>eroute</DT>
+<DD>manipulate IPsec extended routing tables</DD>
+<DT>klipsdebug</DT>
+<DD>set Klips (kernel IPsec support) debug features and level</DD>
+<DT>spi</DT>
+<DD>manage IPsec Security Associations</DD>
+<DT>spigrp</DT>
+<DD>group/ungroup IPsec Security Associations</DD>
+<DT>tncfg</DT>
+<DD>associate IPsec virtual interface with real interface</DD>
+</DL>
+<P>These are all normally invoked by ipsec(8) with commands such as</P>
+<PRE>        ipsec tncfg <VAR>arguments</VAR></PRE>
+ There are section 8 man pages for all of these; the names have &quot;ipsec_&quot;
+ as a prefix, so your man command should be something like:
+<PRE>        man 8 ipsec_tncfg</PRE>
+</DD>
+</DL>
+<H2><A name="pluto.roadmap">Pluto key and connection management daemon</A>
+</H2>
+<P><A href="glossary.html#Pluto"> Pluto</A> is our key management and
+ negotiation daemon. It lives in the pluto directory, along with its
+ low-level user utility, whack.</P>
+<P> There are no subdirectories. Documentation is a man page,<A href="manpage.d/ipsec_pluto.8.html">
+ pluto.8</A>. This covers whack as well.</P>
+<H2><A name="utils">Utils</A></H2>
+<P> The utils directory contains a growing collection of higher-level
+ user utilities, the commands that administer and control the software.
+ Most of the things that you will actually have to run yourself are in
+ there.</P>
+<DL>
+<DT>ipsec</DT>
+<DD>invoke IPsec utilities
+<P>ipsec(8) is normally the only program installed in a standard
+ directory, /usr/local/sbin. It is used to invoke the others, both those
+ listed below and the ones in klips/utils mentioned above.</P>
+<P></P>
+</DD>
+<DT>auto</DT>
+<DD>control automatically-keyed IPsec connections</DD>
+<DT>manual</DT>
+<DD>take manually-keyed IPsec connections up and down</DD>
+<DT>barf</DT>
+<DD>generate copious debugging output</DD>
+<DT>look</DT>
+<DD>generate moderate amounts of debugging output</DD>
+</DL>
+<P> There are .8 manual pages for these. look is covered in barf.8. The
+ man pages have an &quot;ipsec_&quot; prefix so your man command should be
+ something like:</P>
+<PRE>
+        man 8 ipsec_auto
+</PRE>
+<P> Examples are in various files with names utils/*.eg</P>
+<H2><A name="lib">Libraries</A></H2>
+<H3><A name="fswanlib">FreeS/WAN Library</A></H3>
+<P> The lib directory is the FreeS/WAN library, also steadily growing,
+ used by both user-level and kernel code.
+<BR /> It includes section 3<A href="manpages.html"> man pages</A> for
+ the library routines.</P>
+<H3><A name="otherlib">Imported Libraries</A></H3>
+<H4>LibDES</H4>
+ The libdes library, originally from SSLeay, is used by both Klips and
+ Pluto for<A href="glossary.html#3DES"> Triple DES</A> encryption.
+ Single DES is not used because<A href="politics.html#desnotsecure"> it
+ is insecure</A>.
+<P> Note that this library has its own license, different from the<A href="glossary.html#GPL">
+ GPL</A> used for other code in FreeS/WAN.</P>
+<P> The library includes its own documentation.</P>
+<H4>GMP</H4>
+ The GMP (GNU multi-precision) library is used for multi-precision
+ arithmetic in Pluto's key-exchange code and public key code.
+<P> Older versions (up to 1.7) of FreeS/WAN included a copy of this
+ library in the FreeS/WAN distribution.</P>
+<P> Since 1.8, we have begun to rely on the system copy of GMP.</P>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="rfc.html">Previous</A>
+<A HREF="umltesting.html">Next</A>
+</BODY>
+</HTML>

@@ -1,0 +1,13 @@
+ALG:=blowfish
+CONFIG_YES:=$(CONFIG_IKE_ALG_BLOWFISH)
+DIR_BLOWFISH:=$(LIBCRYPTO)/libblowfish
+ALG_DIRS-$(CONFIG_YES) := $(ALG_DIRS-$(CONFIG_YES)) $(DIR_BLOWFISH)
+ALG_LIBS-$(CONFIG_YES) := $(ALG_LIBS-$(CONFIG_YES)) $(DIR_BLOWFISH)/libblowfish.a
+ALG_SRCS-$(CONFIG_YES) := $(ALG_SRCS-$(CONFIG_YES)) ike_alg_$(ALG).c
+ALG_OBJS-$(CONFIG_YES) := $(ALG_OBJS-$(CONFIG_YES)) ike_alg_$(ALG).o
+
+$(DIR_BLOWFISH)/libblowfish.a:
+	make -C $(DIR_BLOWFISH) CFLAGS="$(CFLAGS)" libblowfish.a
+
+ike_alg_$(ALG).o: ike_alg_$(ALG).c
+	$(CC) -I $(LIBCRYPTO) -I$(DIR_BLOWFISH) $(COPTS) $(ALLFLAGS) -c $<

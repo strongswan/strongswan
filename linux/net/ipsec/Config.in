@@ -1,0 +1,41 @@
+#
+# IPSEC configuration
+# Copyright (C) 1998, 1999, 2000,2001  Richard Guy Briggs.
+# 
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: Config.in,v 1.3 2004/03/30 21:11:11 as Exp $
+
+comment 'IPsec options (strongSwan)'
+
+bool '   IPSEC: IP-in-IP encapsulation (tunnel mode)' CONFIG_IPSEC_IPIP
+
+bool '   IPSEC: Authentication Header' CONFIG_IPSEC_AH
+if [ "$CONFIG_IPSEC_AH" = "y" -o "$CONFIG_IPSEC_ESP" = "y" ]; then
+  bool '      HMAC-MD5 authentication algorithm' CONFIG_IPSEC_AUTH_HMAC_MD5
+  bool '      HMAC-SHA1 authentication algorithm' CONFIG_IPSEC_AUTH_HMAC_SHA1
+fi
+
+bool '   IPSEC: Encapsulating Security Payload' CONFIG_IPSEC_ESP
+if [ "$CONFIG_IPSEC_ESP" = "y" ]; then
+  bool '      3DES encryption algorithm' CONFIG_IPSEC_ENC_3DES
+fi
+
+bool '   IPSEC Modular Extensions' CONFIG_IPSEC_ALG
+if [ "$CONFIG_IPSEC_ALG" != "n" ]; then
+	source net/ipsec/alg/Config.in
+fi
+
+bool '   IPSEC: IP Compression' CONFIG_IPSEC_IPCOMP
+
+bool '   IPSEC Debugging Option' CONFIG_IPSEC_DEBUG
+
+bool '   IPSEC NAT-Traversal' CONFIG_IPSEC_NAT_TRAVERSAL

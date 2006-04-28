@@ -1,0 +1,448 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_ATOADDR</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_ATOADDR</H1>
+Section: C Library Functions (3)<BR>Updated: 11 June 2001<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec atoaddr, addrtoa - convert Internet addresses to and from ASCII
+<BR>
+
+ipsec atosubnet, subnettoa - convert subnet/mask ASCII form to and from addresses
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<B>#include &lt;<A HREF="file:/usr/include/freeswan.h">freeswan.h</A>&gt;</B>
+
+<P>
+<B>const char *atoaddr(const char *src, size_t srclen,</B>
+
+<BR>
+&nbsp;
+<B>struct in_addr *addr);</B>
+
+<BR>
+
+<B>size_t addrtoa(struct in_addr addr, int format,</B>
+
+<BR>
+&nbsp;
+<B>char *dst, size_t dstlen);</B>
+
+<P>
+<B>const char *atosubnet(const char *src, size_t srclen,</B>
+
+<BR>
+&nbsp;
+<B>struct in_addr *addr, struct in_addr *mask);</B>
+
+<BR>
+
+<B>size_t subnettoa(struct in_addr addr, struct in_addr mask,</B>
+
+<BR>
+&nbsp;
+<B>int format, char *dst, size_t dstlen);</B>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+These functions are obsolete; see
+<I><A HREF="ipsec_ttoaddr.3.html">ipsec_ttoaddr</A></I>(3)
+
+for their replacements.
+<P>
+
+<I>Atoaddr</I>
+
+converts an ASCII name or dotted-decimal address into a binary address
+(in network byte order).
+<I>Addrtoa</I>
+
+does the reverse conversion, back to an ASCII dotted-decimal address.
+<I>Atosubnet</I>
+
+and
+<I>subnettoa</I>
+
+do likewise for the ``address/mask'' ASCII form used to write a
+specification of a subnet.
+<P>
+
+An address is specified in ASCII as a
+dotted-decimal address (e.g.
+<B>1.2.3.4</B>),
+
+an eight-digit network-order hexadecimal number with the usual C prefix (e.g.
+<B>0x01020304</B>,
+
+which is synonymous with
+<B>1.2.3.4</B>),
+
+an eight-digit host-order hexadecimal number with a
+<B>0h</B>
+
+prefix (e.g.
+<B>0h01020304</B>,
+
+which is synonymous with
+<B>1.2.3.4</B>
+
+on a big-endian host and
+<B>4.3.2.1</B>
+
+on a little-endian host),
+a DNS name to be looked up via
+<I><A HREF="gethostbyname.3.html">gethostbyname</A></I>(3),
+
+or an old-style network name to be looked up via
+<I><A HREF="getnetbyname.3.html">getnetbyname</A></I>(3).
+
+<P>
+
+A dotted-decimal address may be incomplete, in which case
+ASCII-to-binary conversion implicitly appends
+as many instances of
+<B>.0</B>
+
+as necessary to bring it up to four components.
+The components of a dotted-decimal address are always taken as
+decimal, and leading zeros are ignored.
+For example,
+<B>10</B>
+
+is synonymous with
+<B>10.0.0.0</B>,
+
+and
+<B>128.009.000.032</B>
+
+is synonymous with
+<B>128.9.0.32</B>
+
+(the latter example is verbatim from RFC 1166).
+The result of
+<I>addrtoa</I>
+
+is always complete and does not contain leading zeros.
+<P>
+
+The letters in
+a hexadecimal address may be uppercase or lowercase or any mixture thereof.
+Use of hexadecimal addresses is
+<B>strongly</B>
+
+<B>discouraged</B>;
+
+they are included only to save hassles when dealing with
+the handful of perverted programs which already print 
+network addresses in hexadecimal.
+<P>
+
+DNS names may be complete (optionally terminated with a ``.'')
+or incomplete, and are looked up as specified by local system configuration
+(see
+<I><A HREF="resolver.5.html">resolver</A></I>(5)).
+
+The
+<I>h_addr</I>
+
+value returned by
+<I><A HREF="gethostbyname.3.html">gethostbyname</A></I>(3)
+
+is used,
+so with current DNS implementations,
+the result when the name corresponds to more than one address is
+difficult to predict.
+Name lookup resorts to
+<I><A HREF="getnetbyname.3.html">getnetbyname</A></I>(3)
+
+only if
+<I><A HREF="gethostbyname.3.html">gethostbyname</A></I>(3)
+
+fails.
+<P>
+
+A subnet specification is of the form <I>network</I><B>/</B><I>mask</I>.
+The
+<I>network</I>
+
+and
+<I>mask</I>
+
+can be any form acceptable to
+<I>atoaddr</I>.
+
+In addition, the
+<I>mask</I>
+
+can be a decimal integer (leading zeros ignored) giving a bit count,
+in which case
+it stands for a mask with that number of high bits on and all others off
+(e.g.,
+<B>24</B>
+
+means
+<B>255.255.255.0</B>).
+
+In any case, the mask must be contiguous
+(a sequence of high bits on and all remaining low bits off).
+As a special case, the subnet specification
+<B>%default</B>
+
+is a synonym for
+<B>0.0.0.0/0</B>.
+
+<P>
+
+<I>Atosubnet</I>
+
+ANDs the mask with the address before returning,
+so that any non-network bits in the address are turned off
+(e.g.,
+<B>10.1.2.3/24</B>
+
+is synonymous with
+<B>10.1.2.0/24</B>).
+
+<I>Subnettoa</I>
+
+generates the decimal-integer-bit-count
+form of the mask,
+with no leading zeros,
+unless the mask is non-contiguous.
+<P>
+
+The
+<I>srclen</I>
+
+parameter of
+<I>atoaddr</I>
+
+and
+<I>atosubnet</I>
+
+specifies the length of the ASCII string pointed to by
+<I>src</I>;
+
+it is an error for there to be anything else
+(e.g., a terminating NUL) within that length.
+As a convenience for cases where an entire NUL-terminated string is
+to be converted,
+a
+<I>srclen</I>
+
+value of
+<B>0</B>
+
+is taken to mean
+<B>strlen(src)</B>.
+
+<P>
+
+The
+<I>dstlen</I>
+
+parameter of
+<I>addrtoa</I>
+
+and
+<I>subnettoa</I>
+
+specifies the size of the
+<I>dst</I>
+
+parameter;
+under no circumstances are more than
+<I>dstlen</I>
+
+bytes written to
+<I>dst</I>.
+
+A result which will not fit is truncated.
+<I>Dstlen</I>
+
+can be zero, in which case
+<I>dst</I>
+
+need not be valid and no result is written,
+but the return value is unaffected;
+in all other cases, the (possibly truncated) result is NUL-terminated.
+The
+<I>freeswan.h</I>
+
+header file defines constants,
+<B>ADDRTOA_BUF</B>
+
+and
+<B>SUBNETTOA_BUF</B>,
+
+which are the sizes of buffers just large enough for worst-case results.
+<P>
+
+The
+<I>format</I>
+
+parameter of
+<I>addrtoa</I>
+
+and
+<I>subnettoa</I>
+
+specifies what format is to be used for the conversion.
+The value
+<B>0</B>
+
+(not the ASCII character
+<B>'0'</B>,
+
+but a zero value)
+specifies a reasonable default,
+and is in fact the only format currently available.
+This parameter is a hedge against future needs.
+<P>
+
+The ASCII-to-binary functions return NULL for success and
+a pointer to a string-literal error message for failure;
+see DIAGNOSTICS.
+The binary-to-ASCII functions return
+<B>0</B>
+
+for a failure, and otherwise
+always return the size of buffer which would 
+be needed to
+accommodate the full conversion result, including terminating NUL;
+it is the caller's responsibility to check this against the size of
+the provided buffer to determine whether truncation has occurred.
+<A NAME="lbAE">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="inet.3.html">inet</A>(3)
+<A NAME="lbAF">&nbsp;</A>
+<H2>DIAGNOSTICS</H2>
+
+Fatal errors in
+<I>atoaddr</I>
+
+are:
+empty input;
+attempt to allocate temporary storage for a very long name failed;
+name lookup failed;
+syntax error in dotted-decimal form;
+dotted-decimal component too large to fit in 8 bits.
+<P>
+
+Fatal errors in
+<I>atosubnet</I>
+
+are:
+no
+<B>/</B>
+
+in
+<I>src</I>;
+
+<I>atoaddr</I>
+
+error in conversion of
+<I>network</I>
+
+or
+<I>mask</I>;
+
+bit-count mask too big;
+mask non-contiguous.
+<P>
+
+Fatal errors in
+<I>addrtoa</I>
+
+and
+<I>subnettoa</I>
+
+are:
+unknown format.
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the FreeS/WAN project by Henry Spencer.
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+The interpretation of incomplete dotted-decimal addresses
+(e.g.
+<B>10/24</B>
+
+means
+<B>10.0.0.0/24</B>)
+
+differs from that of some older conversion
+functions, e.g. those of
+<I><A HREF="inet.3.html">inet</A></I>(3).
+
+The behavior of the older functions has never been
+particularly consistent or particularly useful.
+<P>
+
+Ignoring leading zeros in dotted-decimal components and bit counts
+is arguably the most useful behavior in this application,
+but it might occasionally cause confusion with the historical use of leading 
+zeros to denote octal numbers.
+<P>
+
+It is barely possible that somebody, somewhere,
+might have a legitimate use for non-contiguous subnet masks.
+<P>
+
+<I><A HREF="Getnetbyname.3.html">Getnetbyname</A></I>(3)
+
+is a historical dreg.
+<P>
+
+The restriction of ASCII-to-binary error reports to literal strings
+(so that callers don't need to worry about freeing them or copying them)
+does limit the precision of error reporting.
+<P>
+
+The ASCII-to-binary error-reporting convention lends itself
+to slightly obscure code,
+because many readers will not think of NULL as signifying success.
+A good way to make it clearer is to write something like:
+<P>
+
+<DL COMPACT><DT><DD>
+<PRE>
+<B>const char *error;</B>
+
+<B>error = atoaddr( /* ... */ );</B>
+<B>if (error != NULL) {</B>
+<B>        /* something went wrong */</B>
+</PRE>
+
+</DL>
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">SEE ALSO</A><DD>
+<DT><A HREF="#lbAF">DIAGNOSTICS</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:17 GMT, November 11, 2003
+</BODY>
+</HTML>

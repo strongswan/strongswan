@@ -1,0 +1,144 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html">
+  <title>Quick FreeS/WAN installation and configuration</title>
+  <meta name="keywords"
+  content="Linux, IPsec, VPN, security, FreeSWAN, installation, quickstart">
+  <!--
+
+  Written by Sandy Harris for the Linux FreeS/WAN project
+  Revised by Claudia Schmeing for same
+  Freely distributable under the GNU General Public License
+
+  More information at www.freeswan.org
+  Feedback to users@lists.freeswan.org
+
+  This is a new file derived from:
+  RCS ID:          $Id: quickstart-configs.html,v 1.1 2004/03/15 20:35:24 as Exp $
+  Last changed:    $Date: 2004/03/15 20:35:24 $
+  Revision number: $Revision: 1.1 $
+
+  CVS revision numbers do not correspond to FreeS/WAN release numbers.
+  -->
+</head>
+<BODY>
+<H1><A name="quick_configs">FreeS/WAN quick start examples</A></H1>
+<P>These are sample 
+<A href="manpage.d/ipsec.conf.5.html">ipsec.conf(5)</A>
+configuration files for opportunistic encryption, with comments. Much of 
+this configuration will be unnecessary with the new defaults proposed
+for FreeS/WAN 2.x.</P>
+<P>Full instructions are in our
+<A href="quickstart.html#quickstart">quickstart guide</A>.
+
+<H2><A name="qc.opp.client">Configuration for Initiate-only Opportunistic Encryption</A></H2>
+<P>The ipsec.conf file for an initiate-only opportunistic setup is:</P>
+<PRE># general IPsec setup
+config setup
+        # Use the default interface
+        interfaces=%defaultroute
+        # Use auto= parameters in conn descriptions to control startup actions.
+        plutoload=%search
+        plutostart=%search
+        uniqueids=yes
+
+# defaults for subsequent connection descriptions
+conn %default
+        # How to authenticate gateways
+        authby=rsasig
+        # default is
+        # load connection description into Pluto's database
+        # so it can respond if another gatway initiates
+        # individual connection descriptions may override this
+        auto=add
+
+# description for opportunistic connections
+conn me-to-anyone
+        left=%defaultroute         # all connections should use default route
+        right=%opportunistic       # anyone we can authenticate
+        leftrsasigkey=%dnsondemand  # NEW: look up keys in DNS as-needed
+        rightrsasigkey=%dnsondemand # (not at connection load time)
+        rekey=no                   # let unused connections die
+        keylife=1h                 # short
+        auto=route                 # set up for opportunistic
+        leftid=@xy.example.com     # our identity for IPSec negotiations
+                                   # must match DNS and ipsec.secrets</PRE>
+
+<P>Normally, you need to do only two things:</P>
+<UL>
+  <LI>edit <VAR>leftid=</VAR></LI>
+  <LI>set <VAR>auto=route</VAR></LI>
+</UL>
+<P>
+ However, some people may need to customize the <VAR>interfaces=</VAR> line
+ in the "config setup" section. All other sections are identical for any
+ standalone machine doing opportunistic encryption.</P>
+<P>The @ sign in the <VAR>leftid=</VAR> makes the ID go "over the wire"
+ as a Fully Qualified Domain Name (FQDN).  Without it, an IP address would
+ be used and this won't work.</P>
+<P>The conn is not used to supply either public key. Your private key
+ is in <A href="manpage.d/ipsec.secrets.5.html">ipsec.secrets(5)</A>
+ and, for opportunistic encryption, the public keys for remote gateways
+ are all looked up in DNS.</P>
+<P>FreeS/WAN authenticates opportunistic encryption by <A href="#gen_rsa">RSA
+ signature</A> only, so "public key" and "private key" refer to these keys.</P>
+<P>While the <VAR>left</VAR> and <VAR>right</VAR> designations
+ here are arbitrary, we follow a convention of using <VAR>left</VAR> for
+ local and <VAR>right</VAR> for remote.</P>
+
+<P><A href="quickstart.html#config.opp.client">Continue configuring
+initiate-only opportunism.</A>
+
+<H2><A name="qc.incoming.opp.conf">ipsec.conf for Incoming Opportunistic Encryption</A></H2>
+Use the ipsec.conf above, except that the section describing opportunistic
+connections is now:</P>
+<PRE>
+# description for opportunistic connections
+conn me-to-anyone
+        left=%defaultroute         # all connections should use default route
+        right=%opportunistic       # anyone we can authenticate
+        leftrsasigkey=%dnsondemand  # NEW: look up keys in DNS as-needed
+        rightrsasigkey=%dnsondemand # (not at connection load time)
+        rekey=no                   # let unused connections die
+        keylife=1h                 # short
+        auto=route                 # set up for opportunistic</PRE>
+
+<P>Note that <VAR>leftid=</VAR> has been removed. With no explicit setting,
+<VAR>leftid=</VAR> defaults to the IP of your public interface.</P>
+
+<P><A href="quickstart.html#incoming.opp.conf">Continue configuring
+full opportunism.</A>
+
+
+<H2><A name="qc.gate.opp.conf">ipsec.conf for Opportunistic Gateway</A></H2>
+Use the ipsec.conf above, plus these connections:
+
+<PRE>conn subnet-to-anyone            # must be above me-to-anyone
+       also=me-to-anyone
+       leftsubnet=42.42.42.0/24
+
+conn me-to-anyone                # just like for full opportunism
+        left=%defaultroute
+        right=%opportunistic
+        leftrsasigkey=%dnsondemand
+        rightrsasigkey=%dnsondemand
+        keylife=1h
+        rekey=no
+        auto=route               # be sure this is enabled
+                                 # Note there is NO leftid= </PRE>
+
+
+<P>Note that a subnet described in ipsec.conf(5) need not correspond to a
+ physical network segment. This is discussed in more detail in our
+<A href="adv_config.html">advanced configuration</A> document.</P>
+
+<P>If required, a gateway can easily provide this service for more than one
+ subnet. You just add a connection description for each.</P>
+
+<P><A href="quickstart.html#config.opp.gate">Continue configuring an
+opportunistic gateway.</A>
+
+
+</BODY>
+</HTML>
+

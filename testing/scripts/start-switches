@@ -1,0 +1,39 @@
+#!/bin/bash
+# starts the UML switches
+#
+# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
+# Zuercher Hochschule Winterthur
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: start-switches,v 1.2 2004/12/19 19:17:25 as Exp $
+
+DIR=`dirname $0`
+
+source $DIR/function.sh
+
+[ -f $DIR/../testing.conf ] || die "Configuration file 'testing.conf' not found"
+
+source $DIR/../testing.conf
+
+for n in 0 1 2
+do
+    if [ `ps aux | grep uml_switch | grep umlswitch$n | wc -l` -eq 1 ]
+    then
+	cecho " * Great, umlswitch$n is already running!"
+    else
+	cecho-n " * Starting umlswitch$n.."
+	uml_switch -tap tap$n -unix /tmp/umlswitch$n >/dev/null </dev/null &
+	sleep 2
+	eval ifconfig "tap$n \$IFCONFIG_$n up"
+	cecho "done"
+    fi
+done

@@ -1,0 +1,560 @@
+<?xml version="1.0"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<?rfc toc="yes"?>
+
+<rfc ipr="full2026" docName="draft-ietf-ipseckey-rr-07.txt">
+
+<front>
+  <area>Security</area>
+  <workgroup>IPSECKEY WG</workgroup>
+  <title abbrev="ipsecrr">
+     A method for storing IPsec keying material in DNS.
+  </title>
+
+  <author initials="M." surname="Richardson" fullname="Michael C. Richardson">
+    <organization abbrev="SSW">Sandelman Software Works</organization>
+    <address>
+      <postal>   
+        <street>470 Dawson Avenue</street>
+        <city>Ottawa</city>
+        <region>ON</region>
+        <code>K1Z 5V7</code>
+        <country>CA</country>
+      </postal>
+      <email>mcr@sandelman.ottawa.on.ca</email>
+      <uri>http://www.sandelman.ottawa.on.ca/</uri>
+    </address>
+  </author>
+
+  <date month="September" year="2003" />
+
+<abstract>
+  <t>
+This document describes a new resource record for DNS. This record may be
+used to store public keys for use in IPsec systems. 
+</t>
+
+<t>
+This record replaces the functionality of the sub-type #1 of the KEY Resource
+Record, which has been obsoleted by RFC3445.
+</t>
+</abstract>
+
+</front>
+
+<middle>
+
+<section title="Introduction">
+<t>
+   The type number for the IPSECKEY RR is TBD.
+</t>
+
+<section title="Overview">
+<t>
+   The IPSECKEY resource record (RR) is used to publish a public key that is
+   to be associated with a Domain Name System (DNS) name for use with the
+   IPsec protocol suite.  This can be the  public key of a host,
+   network, or application (in the case of per-port keying).
+</t>
+
+<t>
+      The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+      NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and
+      "OPTIONAL" in this document are to be interpreted as described in
+      RFC2119 <xref target="RFC2119" />.
+</t>
+</section>
+
+<section title="Usage Criteria">
+<t>
+   An IPSECKEY resource record SHOULD be used in combination with DNSSEC
+unless some other means of authenticating the IPSECKEY resource record
+is available.
+</t>
+
+<t>  
+   It is expected that there will often be multiple IPSECKEY resource
+   records at the same name. This will be due to the presence
+   of multiple gateways and the need to rollover keys.
+
+</t>
+
+<t>
+   This resource record is class independent.
+</t>
+</section>
+</section>
+
+<section title="Storage formats">
+
+<section title="IPSECKEY RDATA format">
+
+<t>
+   The RDATA for an IPSECKEY RR consists of a precedence value, a public key,
+   algorithm type, and an optional gateway address.
+</t>
+
+<artwork><![CDATA[
+    0                   1                   2                   3  
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  precedence   | gateway type  |  algorithm  |     gateway     |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-------------+                 +
+   ~                            gateway                            ~
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                                                               /
+   /                          public key                           /
+   /                                                               /
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
+]]></artwork>
+</section>
+
+<section title="RDATA format - precedence">
+<t>
+This is an 8-bit precedence for this record. This is interpreted in
+the same way as the PREFERENCE field described in section
+3.3.9 of RFC1035 <xref target="RFC1035" />. 
+</t>
+<t>
+Gateways listed in IPSECKEY records with  lower precedence are
+to be attempted first. Where there is a tie in precedence, the order
+should be non-deterministic.
+</t>
+</section>
+
+<section anchor="algotype" title="RDATA format - algorithm type">
+<t>
+The algorithm type field identifies the public key's cryptographic
+algorithm and determines the format of the public key field.  
+</t>
+
+<t>
+A value of 0 indicates that no key is present.
+</t>
+
+<t>
+The following values are defined:
+  <list style="hanging">
+  <t hangText="1">A DSA key is present, in the format defined in RFC2536 <xref target="RFC2536" /></t>
+  <t hangText="2">A RSA key is present, in the format defined in RFC3110 <xref target="RFC3110" /></t>
+  </list>
+</t>
+
+</section>
+
+<section anchor="gatewaytype" title="RDATA format - gateway type">
+<t>
+The gateway type field indicates the format of the information that
+is stored in the gateway field.
+</t>
+
+<t>
+The following values are defined:
+  <list style="hanging">
+  <t hangText="0">No gateway is present</t>
+  <t hangText="1">A 4-byte IPv4 address is present</t>
+  <t hangText="2">A 16-byte IPv6 address is present</t>
+  <t hangText="3">A wire-encoded domain name is present. The wire-encoded
+format is self-describing, so the length is implicit. The domain name
+MUST NOT be compressed.</t>
+  </list>
+</t>
+
+</section>
+
+<section title="RDATA format - gateway">
+<t>
+The gateway field indicates a gateway to which an IPsec tunnel may be
+created in order to reach the entity named by this resource record.
+</t>
+<t>
+There are three formats:
+</t>
+
+<t>
+A 32-bit IPv4 address is present in the gateway field. The data
+portion is an IPv4 address as described in section 3.4.1 of
+<xref target="RFC1035">RFC1035</xref>.  This is a 32-bit number in network byte order.
+</t>
+
+<t>A 128-bit IPv6 address is present in the gateway field.
+The data portion is an IPv6 address as described in section 2.2 of
+<xref target="RFC1886">RFC1886</xref>. This is a 128-bit number in network byte order.
+</t>
+
+<t>
+The gateway field is a normal wire-encoded domain name, as described
+in section 3.3 of RFC1035 <xref target="RFC1035" />. Compression MUST NOT be used. 
+</t>
+
+</section>
+
+<section title="RDATA format - public keys">
+<t>
+Both of the public key types defined in this document (RSA and DSA)
+inherit their public key formats from the corresponding KEY RR formats. 
+Specifically, the public key field contains the algorithm-specific
+portion of the KEY RR RDATA, which is all of the KEY RR DATA after the
+first four octets.  This is the same portion of the KEY RR that must be
+specified by documents that define a DNSSEC algorithm.  
+Those documents also specify a message digest to be used for generation
+of SIG RRs; that specification is not relevant for IPSECKEY RR.
+</t>
+
+<t>
+Future algorithms, if they are to be used by both DNSSEC (in the KEY
+RR) and IPSECKEY, are likely to use the same public key encodings in
+both records.  Unless otherwise specified, the IPSECKEY public key
+field will contain the algorithm-specific portion of the KEY RR RDATA
+for the corresponding algorithm.  The algorithm must still be
+designated for use by IPSECKEY, and an IPSECKEY algorithm type number
+(which might be different than the DNSSEC algorithm number) must be
+assigned to it.
+</t>
+
+<t>The DSA key format is defined in RFC2536 <xref target="RFC2536" /></t>.
+
+<t>The RSA key format is defined in RFC3110 <xref target="RFC3110" />,
+with the following changes:</t>
+
+<t>
+The earlier definition of RSA/MD5 in RFC2065 limited the exponent and
+modulus to 2552 bits in length.  RFC3110 extended that limit to 4096
+bits for RSA/SHA1 keys.  The IPSECKEY RR imposes no length limit on
+RSA public keys, other than the 65535 octet limit imposed by the
+two-octet length encoding.  This length extension is applicable only
+to IPSECKEY and not to KEY RRs. 
+</t>
+
+</section>
+
+</section>
+
+
+
+<section title="Presentation formats">
+
+<section title="Representation of IPSECKEY RRs">
+<t>
+   IPSECKEY RRs may appear in a zone data master file.
+   The precedence, gateway type and algorithm and gateway fields are REQUIRED.
+   The base64 encoded public key block is OPTIONAL; if not present,
+   then the public key field of the resource record MUST be construed
+   as being zero octets in length.
+</t>
+<t>
+   The algorithm field is an unsigned integer. No mnemonics are defined.
+</t>
+<t>
+   If no gateway is to be indicated, then the gateway type field MUST
+   be zero, and the gateway field MUST be "."
+</t>
+
+<t>
+   The Public Key field is represented as a Base64 encoding of the
+   Public Key.  Whitespace is allowed within the Base64 text.  For a
+   definition of Base64 encoding, see
+<xref target="RFC1521">RFC1521</xref> Section 5.2.
+</t>
+
+   
+<t>
+   The general presentation for the record as as follows:
+<artwork><![CDATA[
+IN     IPSECKEY ( precedence gateway-type algorithm
+                  gateway base64-encoded-public-key )
+]]></artwork>
+</t>
+</section>
+
+
+<section title="Examples">
+<t> 
+An example of a node 192.0.2.38 that will accept IPsec tunnels on its
+own behalf.
+<artwork><![CDATA[
+38.2.0.192.in-addr.arpa. 7200 IN     IPSECKEY ( 10 1 2 
+                 192.0.2.38
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+]]></artwork>
+</t>
+
+<t> 
+An example of a node, 192.0.2.38 that has published its key only.
+<artwork><![CDATA[
+38.2.0.192.in-addr.arpa. 7200 IN     IPSECKEY ( 10 0 2
+                 .
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+]]></artwork>
+</t>
+
+<t> 
+An example of a node, 192.0.2.38 that has delegated authority to the node
+192.0.2.3.
+<artwork><![CDATA[
+38.2.0.192.in-addr.arpa. 7200 IN     IPSECKEY ( 10 1 2
+                 192.0.2.3
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+]]></artwork>
+</t>
+
+<t> 
+An example of a node, 192.0.1.38 that has delegated authority to the node
+with the identity "mygateway.example.com".
+<artwork><![CDATA[
+38.1.0.192.in-addr.arpa. 7200 IN     IPSECKEY ( 10 3 2
+                 mygateway.example.com.
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+]]></artwork>
+</t>
+
+<t> 
+An example of a node, 2001:0DB8:0200:1:210:f3ff:fe03:4d0 that has
+delegated authority to the node 2001:0DB8:c000:0200:2::1
+<artwork><![CDATA[
+$ORIGIN 1.0.0.0.0.0.2.8.B.D.0.1.0.0.2.ip6.int.
+0.d.4.0.3.0.e.f.f.f.3.f.0.1.2.0 7200 IN     IPSECKEY ( 10 2 2
+                 2001:0DB8:0:8002::2000:1
+                 AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== )
+]]></artwork>
+</t>
+
+</section>
+</section>
+
+<section title="Security Considerations">
+<t>
+   This entire memo pertains to the provision of public keying material
+   for use by key management protocols such as ISAKMP/IKE (RFC2407)
+   <xref target="RFC2407" />.
+</t>
+
+<t>
+The IPSECKEY resource record contains information that SHOULD be
+communicated to the end client in an integral fashion - i.e. free from
+modification. The form of this channel is up to the consumer of the
+data - there must be a trust relationship between the end consumer of this
+resource record and the server. This relationship may be end-to-end
+DNSSEC validation, a TSIG or SIG(0) channel to another secure source,
+a secure local channel on the host, or some combination of the above.
+</t>
+
+<t>
+The keying material provided by the IPSECKEY resource record is not
+sensitive to passive attacks. The keying material may be freely
+disclosed to any party without any impact on the security properties
+of the resulting IPsec session: IPsec and IKE provide for defense
+against both active and passive attacks.
+</t>
+
+<t>
+   Any user of this resource record MUST carefully document their trust
+   model, and why the trust model of DNSSEC is appropriate, if that is
+   the secure channel used.
+</t>
+
+<section title="Active attacks against unsecured IPSECKEY resource records">
+<t>
+This section deals with active attacks against the DNS. These attacks
+require that DNS requests and responses be intercepted and changed.
+DNSSEC is designed to defend against attacks of this kind.
+</t>
+
+<t>
+The first kind of active attack is when the attacker replaces the
+keying material with either a key under its control or with garbage.
+</t>
+
+<t>
+If the attacker is not able to mount a subsequent 
+man-in-the-middle attack on the IKE negotiation after replacing the
+public key, then this will result in a denial of service, as the
+authenticator used by IKE would fail.  
+</t>
+
+<t>
+If the attacker is able to both to mount active attacks against DNS
+and is also in a position to perform a man-in-the-middle attack on IKE and
+IPsec negotiations, then the attacker will be in a position to compromise
+the resulting IPsec channel. Note that an attacker must be able to
+perform active DNS attacks on both sides of the IKE negotiation in
+order for this to succeed. 
+</t>
+
+<t>
+The second kind of active attack is one in which the attacker replaces
+the the gateway address to point to a node under the attacker's
+control. The attacker can then either replace the public key or remove
+it, thus providing an IPSECKEY record of its own to match the
+gateway address. 
+</t>
+
+<t>
+This later form creates a simple man-in-the-middle since the attacker
+can then create a second tunnel to the real destination. Note that, as before,
+this requires that the attacker also mount an active attack against
+the responder. 
+</t>
+
+<t>
+Note that the man-in-the-middle can not just forward cleartext
+packets to the original destination. While the destination may be
+willing to speak in the clear, replying to the original sender,
+the sender will have already created a policy expecting ciphertext.
+Thus, the attacker will need to intercept traffic from both sides. In some
+cases, the attacker may be able to accomplish the full intercept by use
+of Network Addresss/Port Translation (NAT/NAPT) technology.
+</t>
+
+<t>
+Note that the danger here only applies to cases where the gateway
+field of the IPSECKEY RR indicates a different entity than the owner
+name of the IPSECKEY RR.  In cases where the end-to-end integrity of
+the IPSECKEY RR is suspect, the end client MUST restrict its use
+of the IPSECKEY RR to cases where the RR owner name matches the
+content of the gateway field.
+</t>
+</section>
+
+</section>
+
+<section title="IANA Considerations">
+<t>
+This document updates the IANA Registry for DNS Resource Record Types
+by assigning type X to the IPSECKEY record.  
+</t>
+
+<t>
+This document creates an IANA registry for the algorithm type field.
+</t>
+<t>
+Values 0, 1 and 2 are defined in <xref target="algotype" />. Algorithm numbers
+3 through 255 can be assigned by IETF Consensus (<xref target="RFC2434">see RFC2434</xref>).
+</t>
+
+<t>
+This document creates an IANA registry for the gateway type field.
+</t>
+<t>
+Values 0, 1, 2 and 3 are defined in <xref target="gatewaytype" />.
+Algorithm numbers 4 through 255 can be assigned by
+Standards Action (<xref target="RFC2434">see RFC2434</xref>).
+</t>
+
+
+
+</section>
+
+<section title="Acknowledgments">
+<t>
+My thanks to Paul Hoffman, Sam Weiler, Jean-Jacques Puig, Rob Austein,
+and Olafur Gurmundsson who reviewed this document carefully.
+Additional thanks to Olafur Gurmundsson for a reference implementation.
+</t>
+</section>
+
+</middle>
+
+<back>
+<references title="Normative references">
+<!-- DNSSEC -->
+<?rfc include="reference.RFC.1034" ?>
+<?rfc include="reference.RFC.1035" ?>
+<?rfc include="reference.RFC.1521" ?>
+<?rfc include="reference.RFC.2026" ?>
+<?rfc include="reference.RFC.2065" ?>
+<?rfc include="reference.RFC.2434" ?>
+</references>
+
+<references title="Non-normative references">
+<?rfc include="reference.RFC.1886" ?>
+<?rfc include="reference.RFC.2119" ?>
+<?rfc include="reference.RFC.2407" ?>
+<?rfc include="reference.RFC.2535" ?>
+<?rfc include="reference.RFC.2536" ?>
+<?rfc include="reference.RFC.3110" ?>
+<?rfc include="reference.RFC.3445" ?>
+</references>
+</back>
+</rfc>
+<!--
+  $Id: draft-richardson-ipsec-rr.xml,v 1.1 2004/03/15 20:35:24 as Exp $
+
+  $Log: draft-richardson-ipsec-rr.xml,v $
+  Revision 1.1  2004/03/15 20:35:24  as
+  added files from freeswan-2.04-x509-1.5.3
+
+  Revision 1.23  2003/09/04 23:26:09  mcr
+  	more nits.
+
+  Revision 1.22  2003/08/16 15:55:35  mcr
+  	fixed version to -06.
+
+  Revision 1.21  2003/08/16 15:52:32  mcr
+  	Sam's comments on IANA considerations.
+
+  Revision 1.20  2003/07/27 22:57:54  mcr
+  	updated document with new text about a seperate registry
+  	for the algorithm type.
+
+  Revision 1.19  2003/06/30 01:51:50  mcr
+  	minor typo fixes.
+
+  Revision 1.18  2003/06/16 17:45:00  mcr
+  	adjusted date on rev-04.
+
+  Revision 1.17  2003/06/16 17:41:30  mcr
+  	revision -04
+
+  Revision 1.16  2003/06/16 17:39:20  mcr
+  	adjusted typos, and adjusted IANA considerations.
+
+  Revision 1.15  2003/05/26 19:31:23  mcr
+  	updates to drafts - IPSEC RR - SC versions, and RFC3526
+  	reference in OE draft.
+
+  Revision 1.14  2003/05/23 13:57:40  mcr
+  	updated draft ##.
+
+  Revision 1.13  2003/05/23 13:54:45  mcr
+  	updated month on draft.
+
+  Revision 1.12  2003/05/21 15:42:49  mcr
+  	new SC section with comments from Rob Austein.
+
+  Revision 1.11  2003/05/20 20:52:22  mcr
+  	new security considerations section.
+
+  Revision 1.10  2003/05/20 19:07:47  mcr
+  	rewrote Security Considerations.
+
+  Revision 1.9  2003/05/20 18:17:09  mcr
+  	nits from Rob Austein.
+
+  Revision 1.8  2003/04/29 00:44:59  mcr
+  	updates according to WG consensus: restored three-way
+  	gateway field type.
+
+  Revision 1.7  2003/03/30 17:00:29  mcr
+  	updates according to community feedback.
+
+  Revision 1.6  2003/03/19 02:20:24  mcr
+  	updated draft based upon comments from working group
+
+  Revision 1.5  2003/02/23 22:39:22  mcr
+  	updates to IPSECKEY draft.
+
+  Revision 1.4  2003/02/21 04:39:04  mcr
+  	updated drafts, and added crosscompile.html
+
+  Revision 1.3  2003/01/17 16:26:34  mcr
+  	updated IPSEC KEY draft with restrictions.
+
+  Revision 1.2  2002/08/26 18:20:54  mcr
+  	updated documents
+
+  Revision 1.1  2002/08/10 20:05:33  mcr
+  	document proposing IPSECKEY Resource Record
+
+
+!>

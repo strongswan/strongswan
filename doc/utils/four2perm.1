@@ -1,0 +1,20 @@
+.TH FOUR2PERM 1 "August 1999"
+.\" RCSID $Id: four2perm.1,v 1.1 2004/03/15 20:35:24 as Exp $
+.SH NAME
+four2perm - generate permuted index from four-field lines
+.SH SYNOPSIS
+.B four2perm
+.SH DESCRIPTION
+.I four2perm
+expects input lines with four tab-separated fields, such as that
+created from HTML files by html2four(1). Given that, it does most
+of the work of generating a permuted index, gets things close
+enough that a simple pipeline through sort(1) and awk(1) can
+finish the job.
+.SH SEE ALSO
+.hy 0
+html2four(1)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.xs4all.nl/~freeswan/>
+by Sandy Harris.

@@ -1,0 +1,790 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_SPI</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_SPI</H1>
+Section: Maintenance Commands (8)<BR>Updated: 23 Oct 2001<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec spi - manage IPSEC Security Associations
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<BR>
+
+Note: In the following,
+<BR>
+
+<B>&lt;SA&gt;</B>
+
+means:
+<B>--af</B>
+
+(inet | inet6)
+<B>--edst</B>
+
+daddr
+<B>--spi</B>
+
+spi
+<B>--proto</B>
+
+proto OR 
+<B>--said</B>
+
+said,
+<BR>
+
+<B>&lt;life&gt;</B>
+
+means:
+<B>--life</B>
+
+(soft | hard)-(allocations | bytes | addtime | usetime | packets)=value[,...]
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>&lt;SA&gt;</B>
+
+<B>--src</B>
+
+src
+<B>--ah</B>
+
+<B>hmac-md5-96</B>|<B>hmac-sha1-96</B>
+
+[
+<B>--replay_window</B>
+
+replayw ]
+[
+<B>&lt;life&gt;</B>
+
+]
+<B>--authkey</B>
+
+akey
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>&lt;SA&gt;</B>
+
+<B>--src</B>
+
+src
+<B>--esp</B>
+
+<B>3des</B>
+
+[
+<B>--replay_window</B>
+
+replayw ]
+[
+<B>&lt;life&gt;</B>
+
+]
+<B>--enckey</B>
+
+ekey
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>&lt;SA&gt;</B>
+
+<B>--src</B>
+
+src
+<B>--esp</B>
+
+<B>3des-md5-96</B>|<B>3des-sha1-96</B>
+
+[
+<B>--replay_window</B>
+
+replayw ]
+[
+<B>&lt;life&gt;</B>
+
+]
+<B>--enckey</B>
+
+ekey
+<B>--authkey</B>
+
+akey
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>&lt;SA&gt;</B>
+
+<B>--src</B>
+
+src
+<B>--comp</B>
+
+<B>deflate</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>&lt;SA&gt;</B>
+
+<B>--ip4</B>
+
+<B>--src</B>
+
+encap-src
+<B>--dst</B>
+
+encap-dst
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>&lt;SA&gt;</B>
+
+<B>--ip6</B>
+
+<B>--src</B>
+
+encap-src
+<B>--dst</B>
+
+encap-dst
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>&lt;SA&gt;</B>
+
+<B>--del</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>--help</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>--version</B>
+
+<P>
+
+<B>ipsec</B>
+
+<B>spi</B>
+
+<B>--clear</B>
+
+<P>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>Spi</I>
+
+creates and deletes IPSEC Security Associations.
+A Security Association (SA) is a transform through which packet
+contents are to be processed before being forwarded.
+A transform can be an IPv4-in-IPv4 or an IPv6-in-IPv6 encapsulation,
+an IPSEC Authentication Header (authentication with no encryption),
+or an IPSEC Encapsulation Security Payload (encryption, possibly
+including authentication).
+<P>
+
+When a packet is passed from a higher networking layer
+through an IPSEC virtual interface,
+a search in the extended routing table (see
+<I><A HREF="ipsec_eroute.8.html">ipsec_eroute</A></I>(8))
+
+yields an effective destination address, a
+Security Parameters Index (SPI) and a IP protocol number.
+When an IPSEC packet arrives from the network,
+its ostensible destination, an SPI and an IP protocol
+specified by its outermost IPSEC header are used.
+The destination/SPI/protocol combination is used to select a relevant SA.
+(See
+<I><A HREF="ipsec_spigrp.8.html">ipsec_spigrp</A></I>(8)
+
+for discussion of how multiple transforms are combined.)
+<P>
+
+The
+<I>af</I>,
+
+<I>daddr</I>,
+
+<I>spi</I>
+
+and
+<I>proto</I>
+
+arguments specify the SA to be created or deleted.
+<I>af</I>
+
+is the address family (inet for IPv4, inet6 for IPv6).
+<I>Daddr</I>
+
+is a destination address
+in dotted-decimal notation for IPv4 
+or in a coloned hex notation for IPv6.
+<I>Spi</I>
+
+is a number, preceded by '0x' for hexadecimal,
+between
+<B>0x100</B>
+
+and
+<B>0xffffffff</B>;
+
+values from
+<B>0x0</B>
+
+to
+<B>0xff</B>
+
+are reserved.
+<I>Proto</I>
+
+is an ASCII string, &quot;ah&quot;, &quot;esp&quot;, &quot;comp&quot; or &quot;tun&quot;, specifying the IP protocol.
+The protocol must agree with the algorithm selected.
+<P>
+
+Alternatively, the
+<I>said</I>
+
+argument can also specify an SA to be created or deleted.
+<I>Said</I>
+
+combines the three parameters above, such as: &quot;<A HREF="mailto:tun.101@1.2.3.4">tun.101@1.2.3.4</A>&quot; or &quot;tun:101@1:2::3:4&quot;,
+where the address family is specified by &quot;.&quot; for IPv4 and &quot;:&quot; for IPv6. The address
+family indicators substitute the &quot;0x&quot; for hexadecimal.
+<P>
+
+The source address,
+<I>src</I>,
+
+must also be provided for the inbound policy check to
+function.  The source address does not need to be included if inbound
+policy checking has been disabled.
+<P>
+
+Keys vectors must be entered as hexadecimal or base64 numbers.
+They should be cryptographically strong random numbers.
+<P>
+
+All hexadecimal numbers are entered as strings of hexadecimal digits
+(0-9 and a-f), without spaces, preceded by '0x', where each hexadecimal
+digit represents 4 bits.
+All base64 numbers are entered as strings of base64 digits
+<BR>&nbsp;(0-9,&nbsp;A-Z,&nbsp;a-z,&nbsp;'+'&nbsp;and&nbsp;'/'),&nbsp;without&nbsp;spaces,&nbsp;preceded&nbsp;by&nbsp;'0s',
+where each hexadecimal digit represents 6 bits and '=' is used for padding.
+<P>
+
+The deletion of an SA which has been grouped will result in the entire chain
+being deleted.
+<P>
+
+The form with no additional arguments lists the contents of
+/proc/net/ipsec_spi.  The format of /proc/net/ipsec_spi is discussed in
+<A HREF="ipsec_spi.5.html">ipsec_spi</A>(5).
+<P>
+
+The lifetime severity of
+<B>soft</B>
+
+sets a limit when the key management daemons are asked to rekey the SA.
+The lifetime severity of
+<B>hard</B>
+
+sets a limit when the SA must expire.
+The lifetime type
+<B>allocations</B>
+
+tells the system when to expire the SA because it is being shared by too many
+eroutes (not currently used).  The lifetime type of
+<B>bytes</B>
+
+tells the system to expire the SA after a certain number of bytes have been
+processed with that SA.  The lifetime type of
+<B>addtime</B>
+
+tells the system to expire the SA a certain number of seconds after the SA was
+installed.  The lifetime type of
+<B>usetime</B>
+
+tells the system to expire the SA a certain number of seconds after that SA has
+processed its first packet.  The lifetime type of
+<B>packets</B>
+
+tells the system to expire the SA after a certain number of packets have been
+processed with that SA.
+<A NAME="lbAE">&nbsp;</A>
+<H2>OPTIONS</H2>
+
+<DL COMPACT>
+<DT><B>--af</B>
+
+<DD>
+specifies the address family (inet for IPv4, inet6 for IPv6)
+<DT><B>--edst</B>
+
+<DD>
+specifies the effective destination
+<I>daddr</I>
+
+of the Security Association
+<DT><B>--spi</B>
+
+<DD>
+specifies the Security Parameters Index
+<I>spi</I>
+
+of the Security Association
+<DT><B>--proto</B>
+
+<DD>
+specifies the IP protocol
+<I>proto</I>
+
+of the Security Association
+<DT><B>--said</B>
+
+<DD>
+specifies the Security Association in monolithic format
+<DT><B>--ah</B>
+
+<DD>
+add an SA for an IPSEC Authentication Header,
+specified by the following transform identifier
+(<B>hmac-md5-96</B>
+
+or
+<B>hmac-sha1-96</B>)
+
+(RFC2402, obsoletes RFC1826)
+<DT><B>hmac-md5-96</B>
+
+<DD>
+transform following the HMAC and MD5 standards,
+using a 128-bit
+<I>key</I>
+
+to produce a 96-bit authenticator (RFC2403)
+<DT><B>hmac-sha1-96</B>
+
+<DD>
+transform following the HMAC and SHA1 standards,
+using a 160-bit
+<I>key</I>
+
+to produce a 96-bit authenticator (RFC2404)
+<DT><B>--esp</B>
+
+<DD>
+add an SA for an IPSEC Encapsulation Security Payload,
+specified by the following
+transform identifier (<B>3des</B>,
+
+or
+<B>3des-md5-96</B>)
+
+(RFC2406, obsoletes RFC1827)
+<DT><B>3des</B>
+
+<DD>
+encryption transform following the Triple-DES standard in
+Cipher-Block-Chaining mode using a 64-bit
+<I>iv</I>
+
+(internally generated) and a 192-bit 3DES
+<I>ekey</I>
+
+(RFC2451)
+<DT><B>3des-md5-96</B>
+
+<DD>
+encryption transform following the Triple-DES standard in
+Cipher-Block-Chaining mode with authentication provided by
+HMAC and MD5
+(96-bit authenticator),
+using a 64-bit
+<I>iv</I>
+
+(internally generated), a 192-bit 3DES
+<I>ekey</I>
+
+and a 128-bit HMAC-MD5
+<I>akey</I>
+
+(RFC2451, RFC2403)
+<DT><B>3des-sha1-96</B>
+
+<DD>
+encryption transform following the Triple-DES standard in
+Cipher-Block-Chaining mode with authentication provided by
+HMAC and SHA1
+(96-bit authenticator),
+using a 64-bit
+<I>iv</I>
+
+(internally generated), a 192-bit 3DES
+<I>ekey</I>
+
+and a 160-bit HMAC-SHA1
+<I>akey</I>
+
+(RFC2451, RFC2404)
+<DT><B>--replay_window</B> replayw
+
+<DD>
+sets the replay window size; valid values are decimal, 1 to 64
+<DT><B>--life</B> life_param[,life_param]
+
+<DD>
+sets the lifetime expiry; the format of
+<B>life_param</B>
+
+consists of a comma-separated list of lifetime specifications without spaces;
+a lifetime specification is comprised of a severity of
+<B>soft</B> or <B>hard</B>
+
+followed by a '-', followed by a lifetime type of
+<B>allocations</B>, <B>bytes</B>, <B>addtime</B>, <B>usetime</B> or <B>packets</B>
+
+followed by an '=' and finally by a value
+<DT><B>--comp</B>
+
+<DD>
+add an SA for IPSEC IP Compression,
+specified by the following
+transform identifier (<B>deflate</B>)
+
+(RFC2393)
+<DT><B>deflate</B>
+
+<DD>
+compression transform following the patent-free Deflate compression algorithm
+(RFC2394)
+<DT><B>--ip4</B>
+
+<DD>
+add an SA for an IPv4-in-IPv4
+tunnel from
+<I>encap-src</I>
+
+to
+<I>encap-dst</I>
+
+<DT><B>--ip6</B>
+
+<DD>
+add an SA for an IPv6-in-IPv6
+tunnel from
+<I>encap-src</I>
+
+to
+<I>encap-dst</I>
+
+<DT><B>--src</B>
+
+<DD>
+specify the source end of an IP-in-IP tunnel from
+<I>encap-src</I>
+
+to
+<I>encap-dst</I>
+
+and also specifies the source address of the Security Association to be
+used in inbound policy checking and must be the same address
+family as
+<I>af</I>
+
+and
+<I>edst</I>
+
+<DT><B>--dst</B>
+
+<DD>
+specify the destination end of an IP-in-IP tunnel from
+<I>encap-src</I>
+
+to
+<I>encap-dst</I>
+
+<DT><B>--del</B>
+
+<DD>
+delete the specified SA
+<DT><B>--clear</B>
+
+<DD>
+clears the table of
+<B>SA</B>s
+
+<DT><B>--help</B>
+
+<DD>
+display synopsis
+<DT><B>--version</B>
+
+<DD>
+display version information
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+To keep line lengths down and reduce clutter,
+some of the long keys in these examples have been abbreviated
+by replacing part of their text with
+``<I>...</I>''.
+
+Keys used when the programs are actually run must,
+of course, be the full length required for the particular algorithm.
+<P>
+
+<B>ipsec spi --af inet --edst gw2 --spi 0x125 --proto esp \</B>
+
+<BR>
+
+<B>   --src gw1 \</B>
+
+<BR>
+
+<B>   --esp 3des-md5-96 \</B>
+
+<BR>
+
+<B>&nbsp;&nbsp;&nbsp;--enckey&nbsp;0x6630</B><I>...</I><B>97ce&nbsp;\</B>
+
+<BR>
+
+<B>   --authkey 0x9941</B><I>...</I><B>71df</B>
+
+<P>
+
+sets up an SA from
+<B>gw1</B>
+
+to
+<B>gw2</B>
+
+with an SPI of 
+<B>0x125</B>
+
+and protocol
+<B>ESP</B>
+
+(50) using
+<B>3DES</B>
+
+encryption with integral
+<B>MD5-96</B>
+
+authentication transform, using an encryption key of
+<B>0x6630</B><I>...</I><B>97ce</B>
+
+and an authentication key of
+<B>0x9941</B><I>...</I><B>71df</B>
+
+(see note above about abbreviated keys).
+<P>
+
+<B>ipsec spi --af inet6 --edst 3049:9::9000:3100 --spi 0x150 --proto ah \</B>
+
+<BR>
+
+<B>   --src 3049:9::9000:3101 \</B>
+
+<BR>
+
+<B>   --ah hmac-md5-96 \</B>
+
+<BR>
+
+<B>&nbsp;&nbsp;&nbsp;--authkey&nbsp;0x1234</B><I>...</I><B>2eda&nbsp;\</B>
+
+<P>
+
+sets up an SA from
+<B>3049:9::9000:3101</B>
+
+to
+<B>3049:9::9000:3100</B>
+
+with an SPI of 
+<B>0x150</B>
+
+and protocol
+<B>AH</B>
+
+(50) using
+<B>MD5-96</B>
+
+authentication transform, using an authentication key of
+<B>0x1234</B><I>...</I><B>2eda</B>
+
+(see note above about abbreviated keys).
+<P>
+
+<B>ipsec spi --said <A HREF="mailto:tun.987@192.168.100.100">tun.987@192.168.100.100</A> --del </B>
+
+<P>
+
+deletes an SA to
+<B>192.168.100.100</B>
+
+with an SPI of 
+<B>0x987</B>
+
+and protocol
+<B>IPv4-in-IPv4</B>
+
+(4).
+<P>
+
+<B>ipsec spi --said tun:<A HREF="mailto:500@3049">500@3049</A>:9::1000:1 --del </B>
+
+<P>
+
+deletes an SA to
+<B>3049:9::1000:1</B>
+
+with an SPI of 
+<B>0x500</B>
+
+and protocol
+<B>IPv6-in-IPv6</B>
+
+(4).
+<P>
+
+<A NAME="lbAG">&nbsp;</A>
+<H2>FILES</H2>
+
+/proc/net/ipsec_spi, /usr/local/bin/ipsec
+<A NAME="lbAH">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.8.html">ipsec</A>(8), <A HREF="ipsec_manual.8.html">ipsec_manual</A>(8), <A HREF="ipsec_tncfg.8.html">ipsec_tncfg</A>(8), <A HREF="ipsec_eroute.8.html">ipsec_eroute</A>(8),
+<A HREF="ipsec_spigrp.8.html">ipsec_spigrp</A>(8), <A HREF="ipsec_klipsdebug.8.html">ipsec_klipsdebug</A>(8), <A HREF="ipsec_spi.5.html">ipsec_spi</A>(5)
+<A NAME="lbAI">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org/">http://www.freeswan.org/</A>&gt;
+by Richard Guy Briggs.
+<A NAME="lbAJ">&nbsp;</A>
+<H2>BUGS</H2>
+
+The syntax is messy and the transform naming needs work.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS</A><DD>
+<DT><A HREF="#lbAF">EXAMPLES</A><DD>
+<DT><A HREF="#lbAG">FILES</A><DD>
+<DT><A HREF="#lbAH">SEE ALSO</A><DD>
+<DT><A HREF="#lbAI">HISTORY</A><DD>
+<DT><A HREF="#lbAJ">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

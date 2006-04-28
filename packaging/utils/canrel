@@ -1,0 +1,55 @@
+#! /bin/sh
+# canrel [-F] release
+# -F means override previous run
+# current versions in the repository are used
+# must be run in a release-branch CVS working directory with current top/*
+
+PATH=/bin:/usr/bin ; export PATH
+umask 022
+
+. ~build/freeswan-regress-env.sh
+
+opt=
+case "$1" in
+-F)	opt=-F ; shift	;;
+esac
+
+case "$#:$1" in
+1:*.*)	;;
+*)	echo "Usage: $0 release" >&2 ; exit 2	;;
+esac
+
+rel="$1"
+pretag="PRE`echo $rel | tr '.' '_'`"
+rtag="R`echo $rel | tr '.' '_'`"
+
+sed '1s/xxx/'"$rel"'/' README >README.$$
+if cmp -s README README.$$
+then
+	: already current, for some reason
+	rm -f README.$$
+else
+	mv README.$$ README
+	cvs -Q commit -m "update for release $rel" README
+fi
+sed '/=.*/s//='"$rel"'/' Makefile.ver >mversion.$$
+if cmp -s Makefile.ver mversion.$$
+then
+	: already current, for some reason
+	rm -f mversion.$$
+else
+	mv mversion.$$ Makefile.ver
+	cvs -Q commit -m "update for release $rel" Makefile.ver
+fi
+sed '1s/xxx/'"$rel"'/' CHANGES >CHANGES.$$
+if cmp -s CHANGES CHANGES.$$
+then
+	: already current, for some reason
+	rm -f CHANGES.$$
+else
+	mv CHANGES.$$ CHANGES
+	cvs -Q commit -m "update for release $rel" CHANGES
+fi
+cd ..
+
+cvs rtag $opt -r $pretag $rtag all

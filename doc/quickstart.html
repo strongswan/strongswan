@@ -1,0 +1,323 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="upgrading.html">Previous</A>
+<A HREF="policygroups.html">Next</A>
+<HR>
+<H1><A name="quickstart">Quickstart Guide to Opportunistic Encryption</A>
+</H1>
+<A name="quick_guide"></A>
+<H2><A name="opp.setup">Purpose</A></H2>
+<P>This page will get you started using Linux FreeS/WAN with
+ opportunistic encryption (OE). OE enables you to set up IPsec tunnels
+ without co-ordinating with another site administrator, and without hand
+ configuring each tunnel. If enough sites support OE, a &quot;FAX effect&quot;
+ occurs, and many of us can communicate without eavesdroppers.</P>
+<H3><A NAME="3_1_1">OE &quot;flag day&quot;</A></H3>
+<P>As of FreeS/WAN 2.01, OE uses DNS TXT resource records (RRs) only
+ (rather than TXT with KEY). This change causes a<A href="http://jargon.watson-net.com/jargon.asp?w=flag+day">
+ &quot;flag day&quot;</A>. Users of FreeS/WAN 2.00 (or earlier) OE who are
+ upgrading may require additional resource records, as detailed in our<A href="upgrading.html#upgrading.flagday">
+ upgrading document</A>. OE setup instructions here are for 2.02 or
+ later.</P>
+<H2><A name="opp.dns">Requirements</A></H2>
+<P>To set up opportunistic encryption, you will need:</P>
+<UL>
+<LI>a Linux box. For OE to the public Internet, this box must NOT be
+ behind<A HREF="glossary.html#NAT.gloss"> Network Address Translation</A>
+ (NAT).</LI>
+<LI>to install Linux FreeS/WAN 2.02 or later</LI>
+<LI>either control over your reverse DNS (for full opportunism) or the
+ ability to write to some forward domain (for initiator-only).<A HREF="http://www.fdns.net">
+ This free DNS service</A> explicitly supports forward TXT records for
+ FreeS/WAN use.</LI>
+<LI>(for full opportunism) a static IP</LI>
+</UL>
+<P>Note: Currently, only Linux FreeS/WAN supports opportunistic
+ encryption.</P>
+<H2><A name="easy.install">RPM install</A></H2>
+<P>Our instructions are for a recent Red Hat with a 2.4-series stock or
+ Red Hat updated kernel. For other ways to install, see our<A href="install.html#install">
+ install document</A>.</P>
+<H3><A NAME="3_3_1">Download RPMs</A></H3>
+<P>If we have prebuilt RPMs for your Red Hat system, this command will
+ get them:</P>
+<PRE>    ncftpget ftp://ftp.xs4all.nl/pub/crypto/freeswan/binaries/RedHat-RPMs/`uname -r | tr -d 'a-wy-z'`/\*</PRE>
+<P>If that fails, you will need to try<A HREF="install.html"> another
+ install method</A>. Our kernel modules<B> will only work on the Red Hat
+ kernel they were built for</B>, since they are very sensitive to small
+ changes in the kernel.</P>
+<P>If it succeeds, you will have userland tools, a kernel module, and an
+ RPM signing key:</P>
+<PRE>    freeswan-module-2.04_2.4.20_20.9-0.i386.rpm
+    freeswan-userland-2.04_2.4.20_20.9-0.i386.rpm
+    freeswan-rpmsign.asc</PRE>
+<H3><A NAME="3_3_2">Check signatures</A></H3>
+<P>If you're running RedHat 8.x or later, import the RPM signing key
+ into the RPM database:</P>
+<PRE>    rpm --import freeswan-rpmsign.asc</PRE>
+<P>For RedHat 7.x systems, you'll need to add it to your<A HREF="glossary.html#PGP">
+ PGP</A> keyring:</P>
+<PRE>    pgp -ka freeswan-rpmsign.asc</PRE>
+<P>Check the digital signatures on both RPMs using:</P>
+<PRE>    rpm --checksig freeswan*.rpm </PRE>
+<P>You should see that these signatures are good:</P>
+<PRE>    freeswan-module-2.04_2.4.20_20.9-0.i386.rpm: pgp md5 OK
+    freeswan-userland-2.04_2.4.20_20.9-0.i386.rpm: pgp md5 OK</PRE>
+<H3><A NAME="3_3_3">Install the RPMs</A></H3>
+<P>Become root:</P>
+<PRE>    su</PRE>
+<P>Install your RPMs with:</P>
+<P></P>
+<PRE>    rpm -ivh freeswan*.rpm</PRE>
+<P>If you're upgrading from FreeS/WAN 1.x RPMs, and have problems with
+ that command, see<A HREF="upgrading.html#upgrading.rpms"> this note</A>
+.</P>
+<P>Then, start FreeS/WAN:</P>
+<PRE>    service ipsec start</PRE>
+<H3><A name="testinstall">Test</A></H3>
+<P>To check that you have a successful install, run:</P>
+<PRE>    ipsec verify</PRE>
+<P>You should see as part of the<VAR> verify</VAR> output:</P>
+<PRE>
+    Checking your system to see if IPsec got installed and started correctly
+    Version check and ipsec on-path                             [OK]
+    Checking for KLIPS support in kernel                        [OK]
+    Checking for RSA private key (/etc/ipsec.secrets)           [OK]
+    Checking that pluto is running                              [OK]
+    ...</PRE>
+<P>If any of these first four checks fails, see our<A href="trouble.html#install.check">
+ troubleshooting guide</A>.</P>
+<H2><A name="opp.setups.list">Our Opportunistic Setups</A></H2>
+<H3><A NAME="3_4_1">Full or partial opportunism?</A></H3>
+<P>Determine the best form of opportunism your system can support.</P>
+<UL>
+<LI>For<A HREF="#opp.incoming"> full opportunism</A>, you'll need a
+ static IP and and either control over your reverse DNS or an ISP that
+ can add the required TXT record for you.</LI>
+<LI>If you have a dynamic IP, and/or write access to forward DNS only,
+ you can do<A HREF="#opp.client"> initiate-only opportunism</A></LI>
+<LI>To protect traffic bound for real IPs behind your gateway, use<A HREF="adv_config.html#opp.gate">
+ this form of full opportunism</A>.</LI>
+</UL>
+<H2><A name="opp.client">Initiate-only setup</A></H2>
+<H3><A NAME="3_5_1">Restrictions</A></H3>
+<P>When you set up initiate-only Opportunistic Encryption (iOE):</P>
+<UL>
+<LI>there will be<STRONG> no incoming connection requests</STRONG>; you
+ can initiate all the IPsec connections you need.</LI>
+<LI><STRONG>only one machine is visible</STRONG> on your end of the
+ connection.</LI>
+<LI>iOE also protects traffic on behalf of<A HREF="glossary.html#NAT.gloss">
+ NATted</A> hosts behind the iOE box.</LI>
+</UL>
+<P>You cannot network a group of initiator-only machines if none of
+ these is capable of responding to OE. If one is capable of responding,
+ you may be able to create a hub topology using routing.</P>
+<H3><A name="forward.dns">Create and publish a forward DNS record</A></H3>
+<H4>Find a domain you can use</H4>
+<P>Find a DNS forward domain (e.g. example.com) where you can publish
+ your key. You'll need access to the DNS zone files for that domain.
+ This is common for a domain you own. Some free DNS providers, such as<A HREF="http://www.fdns.net">
+ this one</A>, also provide this service.</P>
+<P>Dynamic IP users take note: the domain where you place your key need
+ not be associated with the IP address for your system, or even with
+ your system's usual hostname.</P>
+<H4>Choose your ID</H4>
+<P>Choose a name within that domain which you will use to identify your
+ machine. It's convenient if this can be the same as your hostname:</P>
+<PRE>    [root@xy root]# hostname --fqdn
+    xy.example.com</PRE>
+<P>This name in FQDN (fully-qualified domain name) format will be your
+ ID, for DNS key lookup and IPsec negotiation.</P>
+<H4>Create a forward TXT record</H4>
+<P>Generate a forward TXT record containing your system's public key
+ with a command like:</P>
+<PRE>    ipsec showhostkey --txt @xy.example.com</PRE>
+<P>using your chosen ID in place of xy.example.com. This command takes
+ the contents of /etc/ipsec.secrets and reformats it into something
+ usable by ISC's BIND. The result should look like this (with the key
+ data trimmed down for clarity):</P>
+<PRE>
+    ; RSA 2192 bits   xy.example.com   Thu Jan  2 12:41:44 2003
+        IN      TXT     &quot;X-IPsec-Server(10)=@xy.example.com&quot; 
+    &quot;AQOF8tZ2... ...+buFuFn/&quot;
+</PRE>
+<H4>Publish the forward TXT record</H4>
+<P>Insert the record into DNS, or have a system adminstrator do it for
+ you. It may take up to 48 hours for the record to propagate, but it's
+ usually much quicker.</P>
+<H3><A NAME="3_5_3">Test that your key has been published</A></H3>
+<P>Check your DNS work</P>
+<PRE>    ipsec verify --host xy.example.com</PRE>
+<P>As part of the<VAR> verify</VAR> output, you ought to see something
+ like:</P>
+<PRE>    ...
+    Looking for TXT in forward map: xy.example.com          [OK]
+    ...</PRE>
+<P>For this type of opportunism, only the forward test is relevant; you
+ can ignore the tests designed to find reverse records.</P>
+<H3><A NAME="3_5_4">Configure, if necessary</A></H3>
+<P> If your ID is the same as your hostname, you're ready to go.
+ FreeS/WAN will use its<A HREF="policygroups.html"> built-in connections</A>
+ to create your iOE functionality.</P>
+<P>If you have chosen a different ID, you must tell FreeS/WAN about it
+ via<A HREF="manpage.d/ipsec.conf.5.html"><VAR> ipsec.conf</VAR></A>:</P>
+<PRE>    config setup
+        myid=@myname.freedns.example.com</PRE>
+<P>and restart FreeS/WAN:</P>
+<PRE>    service ipsec restart</PRE>
+<P>The new ID will be applied to the built-in connections.</P>
+<P>Note: you can create more complex iOE configurations as explained in
+ our<A HREF="policygroups.html#policygroups"> policy groups document</A>
+, or disable OE using<A HREF="policygroups.html#disable_policygroups">
+ these instructions</A>.</P>
+<H3><A NAME="3_5_5">Test</A></H3>
+<P>That's it!<A HREF="#opp.test"> Test your connections</A>.</P>
+<A name="opp.incoming"></A>
+<H2><A NAME="3_6">Full Opportunism</A></H2>
+<P>Full opportunism allows you to initiate and receive opportunistic
+ connections on your machine.</P>
+<A name="incoming.opp.dns"></A>
+<H3><A NAME="3_6_1">Put a TXT record in a Forward Domain</A></H3>
+<P>To set up full opportunism, first<A HREF="#forward.dns"> set up a
+ forward TXT record</A> as for<A HREF="#opp.client"> initiator-only OE</A>
+, using an ID (for example, your hostname) that resolves to your IP. Do
+ not configure<VAR> /etc/ipsec.conf</VAR>, but continue with the
+ instructions for full opportunism, below.</P>
+<P>Note that this forward record is not currently necessary for full OE,
+ but will facilitate future features.</P>
+<A name="incoming.opp.dns"></A>
+<H3><A NAME="3_6_2">Put a TXT record in Reverse DNS</A></H3>
+<P>You must be able to publish your DNS RR directly in the reverse
+ domain. FreeS/WAN will not follow a PTR which appears in the reverse,
+ since a second lookup at connection start time is too costly.</P>
+<H4>Create a Reverse DNS TXT record</H4>
+<P>This record serves to publicize your FreeS/WAN public key. In
+ addition, it lets others know that this machine can receive
+ opportunistic connections, and asserts that the machine is authorized
+ to encrypt on its own behalf.</P>
+<P>Use the command:</P>
+<PRE>    ipsec showhostkey --txt 192.0.2.11</PRE>
+<P>where you replace 192.0.2.11 with your public IP.</P>
+<P>The record (with key shortened) looks like:</P>
+<PRE>    ; RSA 2048 bits  xy.example.com   Sat Apr 15 13:53:22 2000
+    IN TXT  &quot;X-IPsec-Server(10)=192.0.2.11&quot; &quot; AQOF8tZ2...+buFuFn/&quot;</PRE>
+<H4>Publish your TXT record</H4>
+<P>Send these records to your ISP, to be published in your IP's reverse
+ map. It may take up to 48 hours for these to propagate, but usually
+ takes much less time.</P>
+<H3><A NAME="3_6_3">Test your DNS record</A></H3>
+<P>Check your DNS work with</P>
+<PRE>    ipsec verify --host xy.example.com</PRE>
+<P>As part of the<VAR> verify</VAR> output, you ought to see something
+ like:</P>
+<PRE>    ...
+    Looking for TXT in reverse map: 11.2.0.192.in-addr.arpa [OK]
+    ...</PRE>
+<P>which indicates that you've passed the reverse-map test.</P>
+<H3><A NAME="3_6_4">No Configuration Needed</A></H3>
+<P>FreeS/WAN 2.x ships with full OE enabled, so you don't need to
+ configure anything. To enable OE out of the box, FreeS/WAN 2.x uses the
+ policy group<VAR> private-or-clear</VAR>, which creates IPsec
+ connections if possible (using OE if needed), and allows traffic in the
+ clear otherwise. You can create more complex OE configurations as
+ described in our<A HREF="policygroups.html#policygroups"> policy groups
+ document</A>, or disable OE using<A HREF="policygroups.html#disable_policygroups">
+ these instructions</A>.</P>
+<P>If you've previously configured for initiator-only opportunism,
+ remove<VAR> myid=</VAR> from<VAR> config setup</VAR>, so that peer
+ FreeS/WANs will look up your key by IP. Restart FreeS/WAN so that your
+ change will take effect, with</P>
+<PRE>    service ipsec restart</PRE>
+<H3><A NAME="3_6_5">Consider Firewalling</A></H3>
+<P>If you are running a default install of RedHat 8.x, take note: you
+ will need to alter your iptables rule setup to allow IPSec traffic
+ through your firewall. See<A HREF="firewall.html#simple.rules"> our
+ firewall document</A> for sample<VAR> iptables</VAR> rules.</P>
+<H3><A NAME="3_6_6">Test</A></H3>
+<P>That's it. Now,<A HREF="#opp.test"> test your connection</A>.</P>
+<H3><A NAME="3_6_7">Test</A></H3>
+<P>Instructions are in the next section.</P>
+<H2><A NAME="opp.test">Testing opportunistic connections</A></H2>
+<P>Be sure IPsec is running. You can see whether it is with:</P>
+<PRE>    ipsec setup status</PRE>
+<P>If need be, you can restart it with:</P>
+<PRE>    service ipsec restart</PRE>
+<P>Load a FreeS/WAN test website from the host on which you're running
+ FreeS/WAN. Note: the feds may be watching these sites. Type one of:</P>
+<P></P>
+<PRE>   links oetest.freeswan.org</PRE>
+<PRE>   links oetest.freeswan.nl</PRE>
+
+<!--<PRE>   links oetest.freeswan.ca</PRE>-->
+<P>A positive result looks like this:</P>
+<PRE>
+   You  seem  to  be  connecting  from:  192.0.2.11 which DNS says is:
+   gateway.example.com
+     _________________________________________________________________
+
+   Status E-route
+   OE    enabled    16    192.139.46.73/32    -&gt;    192.0.2.11/32   =&gt;
+   tun0x2097@192.0.2.11
+   OE    enabled    176    192.139.46.77/32    -&gt;   192.0.2.11/32   =&gt;
+   tun0x208a@192.0.2.11
+</PRE>
+<P>If you see this, congratulations! Your OE host or gateway will now
+ encrypt its own traffic whenever it can. For more OE tests, please see
+ our<A HREF="testing.html#test.oe"> testing document</A>. If you have
+ difficulty, see our<A HREF="#oe.trouble"> OE troubleshooting tips</A>.</P>
+<H2><A NAME="3_8">Now what?</A></H2>
+<P>Please see our<A HREF="policygroups.html"> policy groups document</A>
+ for more ways to set up Opportunistic Encryption.</P>
+<P>You may also wish to make some<A HREF="config.html"> pre-configured
+ connections</A>.</P>
+<H2><A NAME="3_9">Notes</A></H2>
+<UL>
+<LI>We assume some facts about your system in order to make
+ Opportunistic Encryption easier to configure. For example, we assume
+ that you wish to have FreeS/WAN secure your default interface.</LI>
+<LI>You may change this, and other settings, by altering the<VAR> config
+ setup</VAR> section in<VAR> /etc/ipsec.conf</VAR>.</LI>
+<LI>Note that the built-in connections used to build policy groups do
+ not inherit from<VAR> conn default</VAR>.</LI>
+
+<!--
+<LI>If you do not define your local identity
+(eg. <VAR>leftid</VAR>), this will be the IP address of your default
+FreeS/WAN interface.  
+-->
+<LI> If you fail to define your local identity and do not fill in your
+ reverse DNS entry, you will not be able to use OE.</LI>
+</UL>
+<A NAME="oe.trouble"></A>
+<H2><A NAME="3_10">Troubleshooting OE</A></H2>
+<P>See the OE troubleshooting hints in our<A HREF="trouble.html#oe.trouble">
+ troubleshooting guide</A>.</P>
+<A NAME="oe.known-issues"></A>
+<H2><A NAME="3_11">Known Issues</A></H2>
+<P>Please see<A HREF="opportunism.known-issues"> this list</A> of known
+ issues with Opportunistic Encryption.</P>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="upgrading.html">Previous</A>
+<A HREF="policygroups.html">Next</A>
+</BODY>
+</HTML>

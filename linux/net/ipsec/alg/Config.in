@@ -1,0 +1,7 @@
+#Placeholder
+source net/ipsec/alg/Config.alg_aes.in
+source net/ipsec/alg/Config.alg_blowfish.in
+source net/ipsec/alg/Config.alg_twofish.in
+source net/ipsec/alg/Config.alg_serpent.in
+source net/ipsec/alg/Config.alg_cryptoapi.in
+source net/ipsec/alg/Config.alg_sha2.in

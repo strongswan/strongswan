@@ -1,0 +1,174 @@
+#!/bin/bash
+# Create UML root filesystem
+#
+# Copyright (C) 2004  Eric Marchionni, Patrik Rayo
+# Zuercher Hochschule Winterthur
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: build-umlrootfs,v 1.11 2006/01/08 22:29:56 as Exp $
+
+DIR=`dirname $0`
+
+source $DIR/function.sh
+
+[ -f $DIR/../testing.conf ] || die "!! Configuration file 'testing.conf' not found"
+
+source $DIR/../testing.conf
+
+STRONGSWANVERSION=`basename $STRONGSWAN .tar.bz2`
+
+cecho-n " * Looking for strongSwan at '$STRONGSWAN'.."
+if [ -f "$STRONGSWAN" ]
+then
+    cecho "found it"
+    cecho " * strongSwan version is '$STRONGSWANVERSION'"
+else
+    cecho "none"
+    exit
+fi
+
+cecho-n " * Looking for gentoo root filesystem at '$ROOTFS'.."
+if [ -f "$ROOTFS" ]
+then
+    cecho "found it"
+else
+    cecho "none"
+    exit
+fi
+
+[ -d $BUILDDIR ] || die "!! Directory '$BUILDDIR' does not exist"
+
+HOSTCONFIGDIR=$BUILDDIR/hosts
+
+[ -d $HOSTCONFIGDIR ] || die "!! Directory '$HOSTCONFIGDIR' does not exist"
+
+LOGFILE=$BUILDDIR/testing.log
+
+if [ ! -f $LOGFILE ]
+then
+    cecho-n " * Logfile '$LOGFILE' does not exist..creating.."
+    touch $LOGFILE
+    cecho "done"
+fi
+
+ROOTFSDIR=$BUILDDIR/root-fs
+
+if [ ! -d $ROOTFSDIR ]
+then
+    cecho-n " * Root file system directory '$ROOTFSDIR' does not exist..creating.."
+    mkdir $ROOTFSDIR
+    cecho "done"
+fi
+
+cd $ROOTFSDIR
+
+LOOPDIR=$ROOTFSDIR/loop
+
+if [ ! -d $LOOPDIR ]
+then
+    mkdir $LOOPDIR
+fi
+
+######################################################
+# creating reiser-based uml root filesystem
+#
+
+cecho-n " * Building basic root filesystem (gentoo).."
+dd if=/dev/zero of=gentoo-fs count=$ROOTFSSIZE bs=1M >> $LOGFILE 2>&1
+mkreiserfs -q -f gentoo-fs       >> $LOGFILE 2>&1
+mount -o loop gentoo-fs $LOOPDIR >> $LOGFILE 2>&1
+tar xjpf $ROOTFS -C $LOOPDIR     >> $LOGFILE 2>&1
+cecho "done"
+
+
+######################################################
+# copying default /etc/hosts to the root filesystem
+#
+cecho " * Copying '$HOSTCONFIGDIR/default/etc/hosts' to the root filesystem"
+cp -fp $HOSTCONFIGDIR/default/etc/hosts $LOOPDIR/etc/hosts
+
+#
+#####################################################
+# extracting strongSwan into the root filesystem
+#
+
+cecho " * Extracting strongSwan into the root filesystem"
+tar xjf $STRONGSWAN -C $LOOPDIR/root >> $LOGFILE 2>&1
+
+
+######################################################
+# installing strongSwan and setting the local timezone
+#
+
+INSTALLSHELL=${LOOPDIR}/install.sh
+
+cecho " * Preparing strongSwan installation script"
+echo "ln -sf /usr/share/zoneinfo/${TZUML} /etc/localtime" >> $INSTALLSHELL
+
+if [ "$USE_LIBCURL" = "yes" ]
+then
+    echo "export USE_LIBCURL=true" >> $INSTALLSHELL
+fi
+
+if [ "$USE_LDAP" = "yes" ]
+then
+    echo "export USE_LDAP=true" >> $INSTALLSHELL
+fi
+
+echo "export USERCOMPILE=\'-DRANDOM_DEVICE=\\\"/dev/urandom\\\"\'" >> $INSTALLSHELL
+echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
+echo "make programs" >> $INSTALLSHELL
+echo "make install" >> $INSTALLSHELL
+
+cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot.."
+chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
+cecho "done"
+
+rm -f $INSTALLSHELL
+
+
+######################################################
+# copying the host's ssh public key
+#
+
+if [ ! -d $LOOPDIR/root/.ssh ]
+then
+    mkdir $LOOPDIR/root/.ssh
+fi
+cp ~/.ssh/id_rsa.pub $LOOPDIR/root/.ssh/authorized_keys
+
+######################################################
+# setup public key based login among all hosts
+#
+cp $LOOPDIR/etc/ssh/ssh_host_rsa_key $LOOPDIR/root/.ssh/id_rsa
+
+for host in $STRONGSWANHOSTS
+do
+    eval ip="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+    echo "$host,$ip `cat $HOSTCONFIGDIR/ssh_host_rsa_key.pub`" >> $LOOPDIR/root/.ssh/known_hosts
+    echo "`cat $HOSTCONFIGDIR/ssh_host_rsa_key.pub` root@$host" >> $LOOPDIR/root/.ssh/authorized_keys
+done
+
+######################################################
+# defining an empty modules.dep
+#
+
+if [ $UMLPATCH ]
+then
+    mkdir $LOOPDIR/lib/modules/`basename $UMLPATCH .bz2 | sed s/uml-patch-//`um
+    touch $LOOPDIR/lib/modules/`basename $UMLPATCH .bz2 | sed s/uml-patch-//`um/modules.dep
+else
+    mkdir $LOOPDIR/lib/modules/$KERNELVERSION
+    touch $LOOPDIR/lib/modules/$KERNELVERSION/modules.dep
+fi
+
+umount $LOOPDIR

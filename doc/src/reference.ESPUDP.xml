@@ -1,0 +1,34 @@
+<?xml version='1.0'?>
+<!DOCTYPE reference SYSTEM 'rfc2629.dtd'>
+
+<reference anchor='ESPUDP'>
+
+<front>
+<title abbrev='UDPESP'>UDP Encapsulation of IPsec Packets</title>
+<author initials='A.' surname='Huttunen' fullname='Ari Huttunen'>
+<organization>F-Secure Corporation</organization>
+<address>
+<postal>
+<street>Tammasaarenkatu 7</street>
+<street>FIN-00181 HELSINKI</street>
+<country>Finland</country></postal>
+<email>Ari.Huttunen@F-Secure.com</email></address></author>
+
+<author initials='W.' surname='Dixon' fullname='William Dixon'>
+<organization>Microsoft</organization>
+<address>
+<postal>
+<street>One Microsoft Way</street>
+<street>Redmond</street>
+<street>WA 98052</street>
+<country>USA</country></postal>
+<email>wdixon@microsoft.com</email></address></author>
+
+<date month='June' year='2001'></date>
+<area>Security</area>
+<keyword>IP security protocol</keyword>
+<keyword>IPSEC</keyword>
+<keyword>security</keyword></front>
+
+<seriesInfo name='ID' value='internet-draft (draft-ietf-ipsec-udp-encaps-00) (informative)' />
+</reference>

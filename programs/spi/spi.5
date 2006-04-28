@@ -1,0 +1,213 @@
+.TH IPSEC_SPI 5 "26 Jun 2000"
+.\"
+.\" RCSID $Id: spi.5,v 1.1 2004/03/15 20:35:31 as Exp $
+.\"
+.SH NAME
+ipsec_spi \- list IPSEC Security Associations
+.SH SYNOPSIS
+.B ipsec
+.B spi
+.PP
+.B cat
+.B /proc/net/ipsec_spi
+.PP
+.SH DESCRIPTION
+.I /proc/net/ipsec_spi
+is a read-only file that lists the current IPSEC Security Associations.
+A Security Association (SA) is a transform through which packet contents
+are to be processed before being forwarded.  A transform can be an
+IPv4-in-IPv4 or IPv6-in-IPv6 encapsulation, an IPSEC Authentication Header (authentication
+with no encryption), or an IPSEC Encapsulation Security Payload
+(encryption, possibly including authentication).
+.PP
+When a packet is passed from a higher networking layer through an IPSEC
+virtual interface, a search in the extended routing table (see
+.IR ipsec_eroute (5))
+yields
+a IP protocol number
+,
+a Security Parameters Index (SPI)
+and
+an effective destination address
+.
+When an IPSEC packet arrives from the network,
+its ostensible destination, an SPI and an IP protocol
+specified by its outermost IPSEC header are used.
+The destination/SPI/protocol combination is used to select a relevant SA.
+(See
+.IR ipsec_spigrp (5)
+for discussion of how multiple transforms are combined.)
+.PP
+An
+.I spi ,
+.I proto, 
+.I daddr
+and
+.IR address_family
+arguments specify an SAID.
+.I Proto
+is an ASCII string, "ah", "esp", "comp" or "tun", specifying the IP protocol.
+.I Spi
+is a number, preceded by '.' indicating hexadecimal and IPv4 or by ':' indicating hexadecimal and IPv6,
+where each hexadecimal digit represents 4 bits,
+between
+.B 0x100
+and
+.BR 0xffffffff ;
+values from
+.B 0x0
+to
+.B 0xff
+are reserved.
+.I Daddr
+is a dotted-decimal IPv4 destination address or a coloned hex IPv6 destination address.
+.PP
+An
+.I SAID
+combines the three parameters above, such as: "tun.101@1.2.3.4" for IPv4 or "tun:101@3049:1::1" for IPv6
+.PP
+A table entry consists of:
+.IP + 3
+.BR SAID
+.IP +
+<transform name (proto,encalg,authalg)>:
+.IP +
+direction (dir=)
+.IP +
+source address (src=)
+.IP +
+source and destination addresses and masks for inner header policy check
+addresses (policy=), as dotted-quads or coloned hex, separated by '->',
+for IPv4-in-IPv4 or IPv6-in-IPv6 SAs only
+.IP +
+initialisation vector length and value (iv_bits=, iv=) if non-zero
+.IP +
+out-of-order window size, number of out-of-order errors, sequence
+number, recently received packet bitmask, maximum difference between
+sequence numbers (ooowin=, ooo_errs=, seq=, bit=, max_seq_diff=) if SA
+is AH or ESP and if individual items are non-zero
+.IP +
+extra flags (flags=) if any are set
+.IP +
+authenticator length in bits (alen=) if non-zero
+.IP +
+authentication key length in bits (aklen=) if non-zero
+.IP +
+authentication errors (auth_errs=) if non-zero
+.IP +
+encryption key length in bits (eklen=) if non-zero
+.IP +
+encryption size errors (encr_size_errs=) if non-zero
+.IP +
+encryption padding error warnings (encr_pad_errs=) if non-zero
+.IP +
+lifetimes legend, c=Current status, s=Soft limit when exceeded will
+initiate rekeying, h=Hard limit will cause termination of SA (life(c,s,h)=)
+.IP + 6
+number of connections to which the SA is allocated (c), that will cause a
+rekey (s), that will cause an expiry (h) (alloc=), if any value is non-zero
+.IP +
+number of bytes processesd by this SA (c), that will cause a rekey (s), that
+will cause an expiry (h) (bytes=), if any value is non-zero
+.IP +
+time since the SA was added (c), until rekey (s), until expiry (h), in seconds (add=)
+.IP +
+time since the SA was first used (c), until rekey (s), until expiry (h), in seconds (used=),
+if any value is non-zero
+.IP +
+number of packets processesd by this SA (c), that will cause a rekey (s), that
+will cause an expiry (h) (packets=), if any value is non-zero
+.IP + 3
+time since the last packet was processed, in seconds (idle=), if SA has
+been used
+.IP
+average compression ratio (ratio=)
+.SH EXAMPLES
+.B "tun.12a@192.168.43.1 IPIP: dir=out src=192.168.43.2"
+.br
+.B "      life(c,s,h)=bytes(14073,0,0)add(269,0,0)"
+.br
+.B "      use(149,0,0)packets(14,0,0)"
+.br
+.B "      idle=23
+.LP
+is an outbound IPv4-in-IPv4 (protocol 4) tunnel-mode SA set up between machines
+192.168.43.2 and 192.168.43.1 with an SPI of 12a in hexadecimal that has
+passed about 14 kilobytes of traffic in 14 packets since it was created,
+269 seconds ago, first used 149 seconds ago and has been idle for 23
+seconds.
+.LP
+.B "esp:9a35fc02@3049:1::1 ESP_3DES_HMAC_MD5:"
+.br
+.B "      dir=in src=9a35fc02@3049:1::2"
+.br
+.B "      ooowin=32 seq=7149 bit=0xffffffff"
+.br
+.B "      alen=128 aklen=128 eklen=192"
+.br
+.B "      life(c,s,h)=bytes(1222304,0,0)add(4593,0,0)"
+.br
+.B "      use(3858,0,0)packets(7149,0,0)"
+.br
+.B "      idle=23"
+.LP
+is an inbound Encapsulating Security Payload (protocol 50) SA on machine
+3049:1::1 with an SPI of 9a35fc02 that uses 3DES as the encryption
+cipher, HMAC MD5 as the authentication algorithm, an out-of-order
+window of 32 packets, a present sequence number of 7149, every one of
+the last 32 sequence numbers was received, the authenticator length and
+keys is 128 bits, the encryption key is 192 bits (actually 168 for 3DES
+since 1 of 8 bits is a parity bit), has passed 1.2 Mbytes of data in
+7149 packets, was added 4593 seconds ago, first used
+3858 seconds ago and has been idle for 23 seconds.
+.LP
+.SH FILES
+/proc/net/ipsec_spi, /usr/local/bin/ipsec
+.SH "SEE ALSO"
+ipsec(8), ipsec_manual(8), ipsec_tncfg(5), ipsec_eroute(5),
+ipsec_spigrp(5), ipsec_klipsdebug(5), ipsec_spi(8), ipsec_version(5),
+ipsec_pf_key(5)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org/>
+by Richard Guy Briggs.
+.SH BUGS
+The add and use times are awkward, displayed in seconds since machine
+start.  It would be better to display them in seconds before now for
+human readability.
+.\"
+.\" $Log: spi.5,v $
+.\" Revision 1.1  2004/03/15 20:35:31  as
+.\" added files from freeswan-2.04-x509-1.5.3
+.\"
+.\" Revision 1.9  2002/04/24 07:35:39  mcr
+.\" Moved from ./klips/utils/spi.5,v
+.\"
+.\" Revision 1.8  2001/08/01 23:22:44  rgb
+.\" Fix inconsistancies between manpage and output.
+.\"
+.\" Revision 1.7  2000/11/30 16:47:28  rgb
+.\" Added src= to /proc/net/ipsec_spi manpage.
+.\"
+.\" Revision 1.6  2000/09/17 18:56:48  rgb
+.\" Added IPCOMP support.
+.\"
+.\" Revision 1.5  2000/09/13 15:54:32  rgb
+.\" Added Gerhard's ipv6 updates.
+.\"
+.\" Revision 1.4  2000/07/05 17:24:03  rgb
+.\" Updated for relative, rather than absolute values for addtime and
+.\" usetime.
+.\"
+.\" Revision 1.3  2000/06/30 18:21:55  rgb
+.\" Update SEE ALSO sections to include ipsec_version(5) and ipsec_pf_key(5)
+.\" and correct FILES sections to no longer refer to /dev/ipsec which has
+.\" been removed since PF_KEY does not use it.
+.\"
+.\" Revision 1.2  2000/06/28 12:44:12  henry
+.\" format touchup
+.\"
+.\" Revision 1.1  2000/06/28 05:43:00  rgb
+.\" Added manpages for all 5 klips utils.
+.\"
+.\"

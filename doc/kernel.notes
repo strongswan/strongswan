@@ -1,0 +1,173 @@
+Notes on Red Hat 5.2 kernel installation (See Addendum for RH6.1)
+=================================================================
+
+Warning: We (the FreeS/WAN Project http://www.xs4all.nl/~freeswan/)
+had nothing to do with designing the kernel installation process.  This
+document explains some tricky points that we wish we had been told.
+We don't know if these notes apply to systems other than Red Hat 5.2.
+This is meant as a supplement to other kernel install guides (such as
+the Red Hat 5.2 Installation Guide section 11.6).
+
+Goal: install a new kernel on RH5.2 in such a way that it doesn't
+interfere with any other kernels.  This should be repeatable: each new
+kernel should have this property.  Each should remain bootable.
+
+Problem: there are several components to a kernel, and each must be
+segregated.  How are the parts kept apart?  How are they found?
+
+All the parts live in the file system, so it all comes down to
+pathnames.  Well, except for the fiddly bits in /etc/lilo.conf.  What
+are the parts?
+
+	/lib/modules/VER/	directory for kernel modules
+	/boot/vmlinux-VER	the kernel
+	/boot/System.map-VER	the kernel symbol table
+	/boot/initrd-VER.img 	the initial ramdisk (for modules needed
+				at boot time -- usually not necessary)
+	/boot/boot.b		the second-stage loader
+	/boot/map		the map file, an index into system index for
+				all files used by boot loader (all kernels,
+				all initrds, perhaps /boot/boot.b, and itself)
+
+This list does not include /boot/module-info-VER.  That is supplied
+by RedHat, and it isn't clear to me how to build it or why.
+
+In each entry, I've used "VER" to signify a version number.  For
+RH-supplied kernels, these look like 2.0.36-0.7 (the original 5.2) or
+2.0.36-3 (the kernel updates).
+
+There are also symbolic links:
+	/lib/modules/preferred	created by /etc/rc.d/rc.sysinit
+	/boot/System.map	created by /etc/rc.d/rc.sysinit
+	/boot/module-info	created by /etc/rc.d/rc.sysinit
+	/vmlinuz		created by ???
+I don't know when the /vmlinuz symlink is set up and I don't know
+for what it is used.
+
+If you follow the RH procedures, documented in 11.6 of their Installation
+Guide, all your VERs will be 2.0.36.  This is very bad: all your builds
+will step on each other.  Worse, your new module directory will be half
+picked up when you boot a stock RH kernel binary! 
+
+It is important to know how the various parts of the built kernel are
+found at booting.
+
+- the kernel path is specified in the image= option in lilo.conf.
+  (Lilo.conf may specify several and one is selected at boot time
+  by default or user selection.)  The kernel is loaded by the
+  boot loader.
+
+- The initial ramdisk is a per-image option (initrd=) specified in
+  lilo.conf.  (It isn't described in the RH5.2 lilo.conf(5) manpage!).
+  The initial ramdisk is loaded into RAM by the boot loader.
+
+- Since the boot loader doesn't know about the file system, it needs a
+  map to figure out which absolute disk blocks to load, and where.
+  This is /boot/map.  It is built by the lilo command (also known as
+  the map installer).  It will have indices for the all the kernels
+  that can be booted, all their initial ram disks, perhaps
+  /boot/boot.b, and itself.  This is why moving the blocks of these
+  files throws off the boot loader -- lilo must be rerun after even a
+  cp command to one of them.
+
+- the modules directory is found two different ways.  Unfortunately,
+  they don't mesh properly:
+
+  + at boot time, /etc/rc.d/rc.sysinit tries to figure out the correct
+    subdirectory of /lib/modules, using the .rhkmvtag trick (see
+    later).  It then builds a symlink /lib/modules/preferred to
+    record this.  It also invokes depmod to build the module
+    dependency info.  At the same time, it creates the symlinks
+    /boot/System.map and /boot/module-info, using the inferred
+    value for VER!
+
+  + modprobe and friends stupidly look first in /lib/modules/2.0.36
+    (more precisely, /lib/modules/`uname -r`) and then in
+    /lib/modules/preferred.  So if there is a /lib/modules/2.0.36 and
+    it is the wrong one, you are in trouble.
+
+  If there is no /lib/modules/2.0.36, then both searches above will
+  agree (a very Good Thing).  So I recommend strongly that you not
+  have a /lib/boot/2.0.36 at boot time.  Unfortunately, you will get
+  one during the kernel install process.  Be sure to rename it.  I
+  suggest using 2.0.36-x (for some unique x) as VER.
+
+- Red Hat supplied /lib/modules/VER directories contain a hidden file
+  .rhkmvtag.  This file contains exactly one line.  This line is
+  exactly the same as the contents of /proc/version while the
+  corresponding kernel is running.  For the stock kernel, the line is:
+Linux version 2.0.36 (root@porky.redhat.com) (gcc version 2.7.2.3) #1 Tue Dec 29 13:11:13 EST 1998
+
+- At boot time, /etc/rc.d/rc.sysinit uses the .rhkmvtag files to
+  figure out which of the /lib/modules/* directories matches the
+  kernel.  If it could figure out the directory, it uses this
+  information to set the symlinks mentioned above.  It then runs
+  depmod to build the module dependency information (in
+  /lib/modules/preferred/modules.dep, if it created the
+  /lib/modules/preferred symlink).  I recommend looking at the code.
+
+- The documented kernel install procedures DO NOT fill in the
+  .rhkmvtag file for the new modules directory!  So you should do so
+  by hand.  You have to figure out what the contents should be.  Here
+  is is a command that will do the job, assuming that
+  /usr/src/linux/vmlinux is the kernel associated with
+  /lib/modules/2.0.36/:
+
+	strings /usr/src/linux/vmlinux \
+	| grep 'x version' >/lib/modules/2.0.36/.rhkmvtag
+
+I've recommended (above) that you use 2.0.36-x for VER when you install
+a kernel.  What should x be?  I have found that there is a hidden file
+/usr/src/linux/.version which contains a counter that gets incremented
+whenever you do a "make install" in the kernel (see target
+newversion).  There are some other times that it gets incremented, but
+I think that it all works out.  It also gets incorporated into the
+resulting kernel's /proc/version, prefixed with ``#''.  This makes it
+a natural.
+
+Here is a script to do the recommended renaming:
+
+   # VER will eventually need to be updated
+   VER=2.0.36
+   VERX=${VER}-`cat /usr/src/linux/.version`
+
+   strings /usr/src/linux/vmlinux | grep 'x version' >/lib/modules/$VER/.rhkmvtag
+   mv /lib/modules/$VER /lib/modules/$VERX
+   mv /boot/System.map-$VER /boot/System.map-$VERX
+   mv /boot/vmlinuz-$VER /boot/vmlinuz-$VERX
+
+And, if an initrd has been built (usually it is best to arrange not to
+use one -- see the Red Hat Installation Guide):
+
+   /sbin/mkinitrd /boot/initrd-$VERX.img $VERX
+
+Remember: a new lilo.conf entry is needed for the new kernel, and then
+the lilo command will need to be rerun.
+
+Now that kernel installs don't overwrite the results of previous ones,
+you will need to manually delete the components and their lilo entry
+to get rid of them.
+
+Please send comments, additions, and corrections to:
+
+Hugh Redelmeier
+hugh@mimosa.com  voice: +1 416 482-8253
+
+
+Addendum: Red Hat 6.1
+=====================
+
+The kernel supplied with RH6.1 kernel is out of date, so you might
+wish to use a newer one.
+
+Much of the description for 5.2 still applies, but the procedure is
+quite different because the .version file is no longer used.  Instead,
+the top-level Makefile contains a definition EXTRAVERSION which adds a
+qualifier to the version for most purposes.  No manual renaming is
+required.
+
+Before building the kernel, change EXTRAVERSION by editing
+/usr/src/linux/Makefile, and make an appropriate entry in /etc/lilo.conf.
+
+EXTRAVERSION is a feature of the standard kernel sources, not just the
+ones supplied by Red Hat.

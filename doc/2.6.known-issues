@@ -1,0 +1,112 @@
+Known issues with FreeS/WAN on a 2.6 kernel                   Claudia Schmeing
+-------------------------------------------
+
+
+This is an overview of known issues with FreeS/WAN on the 2.6 kernel codebase
+(also 2.5.x), which includes native Linux IPsec code.
+
+More information on the native IPsec code is available here:
+
+    http://lartc.org/howto/lartc.ipsec.html 
+
+Tools for use with that code are here:
+
+    http://ipsec-tools.sourceforge.net/
+
+
+* As of FreeS/WAN 2.03, FreeS/WAN ships with some support for the 2.6 kernel
+  IPsec code. In 2.03, this support is preliminary, but we expect to develop
+  it fully. Many thanks to Herbert Xu for the initial code patches.
+
+* Use the most recent Linux FreeS/WAN 2.x release from ftp.xs4all.nl 
+  to try our 2.6 kernel support.
+
+* The installation procedure for use with 2.6 kernel IPsec is a little 
+  different from a traditional FreeS/WAN installation. Please see
+  the latest doc/install.html.
+
+* Please see the design and users' mailing lists 
+  (http://www.freeswan.org/mail.html) for more detail and the latest reports.
+
+
+
+DESIGN-RELATED ISSUES
+
+
+* In 2.6, IPsec policies are detached from routing decisions. Because of this
+  design, Opportunistic Encryption on the local LAN will be possible with 2.6.
+
+  One side effect: When contacting a node on the local LAN which is protected
+  by gateway OE, you will get asymmetrical routing (one way through the gateway,
+  one way direct), and IPsec will drop the return packets.
+
+
+
+CURRENT ISSUES
+
+
+* For the moment, users wishing to test FreeS/WAN with 2.6 will require
+  ipsec-tools' "setkey" program. Though FreeS/WAN's keying daemon, Pluto,
+  directly sets IPsec policy, setkey is currently required to reset kernel SPD 
+  (Security Policy Database) states when Pluto restarts. We will likely add 
+  this basic functionality to an upcoming FreeS/WAN release.
+
+* State information is not available to the user, eg. ipsec 
+  eroute/ipsec spi/ipsec look do not work. The exception: ipsec auto --status 
+  This will be fixed in a future release.
+
+* If you're running Opportunistic Encryption, connectivity to new hosts will
+  immediately fail. You may receive a message similar to this:
+  
+     connect: Resource temporarily unavailable
+
+  The reason for this lies in the kernel code. Fairly complex discussion:
+
+      http://lists.freeswan.org/archives/design/2003-September/msg00073.html
+
+  As of 2.6.0-test6, this has not been fixed.
+
+* This initial connectivity failure has an unintended side effect on DNS queries. 
+  This will result in a rekey failure for OE connections; a %pass will be 
+  installed for your destination IP before a %pass is re-instituted to your 
+  DNS server. As a workaround, please add your DNS servers to 
+  /etc/ipsec.d/policies/clear. 
+
+* Packets on all interfaces are considered for OE, including loopback. If you're 
+  running a local nameserver, you'll still need to exempt localhost DNS traffic
+  as per the previous point. Since this traffic has a source of 127.0.0.1/32,
+  the "clear" policy group will not suffice; you'll need to add the following 
+  %passthrough conn to ipsec.conf:
+
+  conn exclude-lo
+          authby=never
+          left=127.0.0.1
+          leftsubnet=127.0.0.0/8
+          right=127.0.0.2
+          rightsubnet=127.0.0.0/8
+          type=passthrough
+          auto=route
+
+
+
+OLD ISSUES
+
+
+None, yet.
+
+
+
+RELATED DOCUMENTS
+
+
+FreeS/WAN Install web page        doc/install.html
+
+FreeS/WAN Install guide           INSTALL
+
+FreeS/WAN mailing list posts, including:
+
+    http://lists.freeswan.org/archives/design/2003-September/msg00057.html
+
+To sign up for our mailing lists, see http://www.freeswan.org/mail.html
+
+

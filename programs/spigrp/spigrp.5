@@ -1,0 +1,116 @@
+.TH IPSEC_SPIGRP 5 "27 Jun 2000"
+.\"
+.\" RCSID $Id: spigrp.5,v 1.1 2004/03/15 20:35:31 as Exp $
+.\"
+.SH NAME
+ipsec_spigrp \- list IPSEC Security Association groupings
+.SH SYNOPSIS
+.B ipsec
+.B spigrp
+.PP
+.B cat
+.B /proc/net/ipsec_spigrp
+.PP
+.SH DESCRIPTION
+.I /proc/net/ipsec_spigrp
+is a read-only file that lists groups of IPSEC Security Associations
+(SAs).
+.PP
+An entry in the IPSEC extended routing table can only point (via an
+SAID) to one SA.  If more than one transform must be applied to a given
+type of packet, this can be accomplished by setting up several SAs with
+the same destination address but potentially different SPIs and
+protocols, and grouping them with
+.IR ipsec_spigrp(8) .
+.PP
+The SA groups are listed, one line per connection/group, as a sequence
+of SAs to be applied (or that should have been applied, in the case of
+an incoming packet) from inside to outside the packet.  An SA is
+identified by its SAID, which consists of protocol ("ah", "esp", "comp" or
+"tun"), SPI (with '.' for IPv4 or ':' for IPv6 prefixed hexadecimal number ) and destination address
+(IPv4 dotted quad or IPv6 coloned hex) prefixed by '@', in the format <proto><af><spi>@<dest>.
+.SH EXAMPLES
+.TP
+.B tun.3d0@192.168.2.110
+.B comp.3d0@192.168.2.110
+.B esp.187a101b@192.168.2.110
+.B ah.187a101a@192.168.2.110 
+.LP
+is a group of 3 SAs, destined for 
+.BR 192.168.2.110
+with an IPv4-in-IPv4 tunnel SA applied first with an SPI of
+.BR 3d0
+in hexadecimal, followed by a Deflate compression header to compress
+the packet with CPI of
+.BR 3d0
+in hexadecimal, followed by an Encapsulating Security Payload header to
+encrypt the packet with SPI
+.BR 187a101b
+in hexadecimal, followed by an Authentication Header to authenticate the
+packet with SPI
+.BR 187a101a
+in hexadecimal, applied from inside to outside the packet.  This could
+be an incoming or outgoing group, depending on the address of the local
+machine.
+.LP
+.TP
+.B tun:3d0@3049:1::2
+.B comp:3d0@3049:1::2
+.B esp:187a101b@3049:1::2
+.B ah:187a101a@3049:1::2 
+.LP
+is a group of 3 SAs, destined for 
+.BR 3049:1::2
+with an IPv6-in-IPv6 tunnel SA applied first with an SPI of
+.BR 3d0
+in hexadecimal, followed by a Deflate compression header to compress
+the packet with CPI of
+.BR 3d0
+in hexadecimal, followed by an Encapsulating Security Payload header to
+encrypt the packet with SPI
+.BR 187a101b
+in hexadecimal, followed by an Authentication Header to authenticate the
+packet with SPI
+.BR 187a101a
+in hexadecimal, applied from inside to outside the packet.  This could
+be an incoming or outgoing group, depending on the address of the local
+machine.
+.LP
+.SH FILES
+/proc/net/ipsec_spigrp, /usr/local/bin/ipsec
+.SH "SEE ALSO"
+ipsec(8), ipsec_manual(8), ipsec_tncfg(5), ipsec_eroute(5),
+ipsec_spi(5), ipsec_klipsdebug(5), ipsec_spigrp(8), ipsec_version(5),
+ipsec_pf_key(5)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org/>
+by Richard Guy Briggs.
+.SH BUGS
+:-)
+.\"
+.\" $Log: spigrp.5,v $
+.\" Revision 1.1  2004/03/15 20:35:31  as
+.\" added files from freeswan-2.04-x509-1.5.3
+.\"
+.\" Revision 1.6  2002/04/24 07:35:40  mcr
+.\" Moved from ./klips/utils/spigrp.5,v
+.\"
+.\" Revision 1.5  2000/09/17 18:56:48  rgb
+.\" Added IPCOMP support.
+.\"
+.\" Revision 1.4  2000/09/13 15:54:32  rgb
+.\" Added Gerhard's ipv6 updates.
+.\"
+.\" Revision 1.3  2000/06/30 18:21:55  rgb
+.\" Update SEE ALSO sections to include ipsec_version(5) and ipsec_pf_key(5)
+.\" and correct FILES sections to no longer refer to /dev/ipsec which has
+.\" been removed since PF_KEY does not use it.
+.\"
+.\" Revision 1.2  2000/06/28 12:44:12  henry
+.\" format touchup
+.\"
+.\" Revision 1.1  2000/06/28 05:43:00  rgb
+.\" Added manpages for all 5 klips utils.
+.\"
+.\"

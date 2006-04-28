@@ -1,0 +1,71 @@
+.TH IPSEC_IKEPING 8 "23 Feb 2002"
+.\" RCSID $Id: ikeping.8,v 1.1 2004/03/15 20:35:27 as Exp $
+.SH NAME
+ipsec ikeping \- send/receive ISAKMP/IKE echo requests/replies
+.SH SYNOPSIS
+.B ipsec
+.B ikeping
+[
+.B \-\-listen
+] [
+.B \-\-verbose
+] [
+.B \-\-wait 
+time ] [
+.B \-\-exchangenum 
+num ] [
+.B \-\-ikeport 
+localport ] [
+.B \-\-ikeaddress 
+address ] [ 
+.B \-\-inet
+] [
+.B \-\-inet6
+] destaddr[/dstport] ...
+.SH DESCRIPTION
+.I Ikeping
+sends and receives ISAKMP/IKE echo request and echo reply packets. These
+packets are intended for diagnostics purposes, in a manner similar to 
+.IR ping (8)
+does for ICMP echo request/reply packets.
+.PP
+At the time of this writing, the ISAKMP echo request/reply exchange is still
+an internet-draft, and is therefore completely non-standard.
+.PP
+.I Ikeping
+will bind to the local address given by 
+.B \-\-ikeaddress
+and the port number given by
+.B \-\-ikeport
+defaulting to the wildcard address and the ISAKMP port 500. An ISAKMP
+exchange of type 244 (a private use number) is sent to each of the
+address/ports listed on the command line. The exchange number may be
+overridden by the  
+.B \-\-exchangenum 
+option.
+.PP
+.I Ikeping
+then listens for replies, printing them as they are received. Replies
+are of exchange type 245 or the specified exchange number plus 1.
+.I Ikeping 
+will keep listening until it either receives as many echo responses as it sent,
+or until the timeout period (10 seconds) has been reached. Receipt of a
+packet will reset the timer. The 
+.B \-\-wait
+option can be used to specify a different timeout period. 
+.PP
+If the 
+.B \-\-listen
+option is given, then 
+.I ikeping
+will not send any packets. Instead, it will listen for them and reply to
+each request received.
+.SH FILES
+no external files
+.SH SEE ALSO
+ping(8), ipsec_pluto(8)
+.SH HISTORY
+Written for the Linux FreeS/WAN project
+<http://www.freeswan.org>
+by Michael Richardson.
+.SH BUGS

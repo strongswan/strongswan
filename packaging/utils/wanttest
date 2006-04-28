@@ -1,0 +1,10 @@
+#! /bin/sh
+
+if [ -f ~build/WANTSNAP/doingtest ]
+then
+	echo Test already in progress.
+	exit 1
+fi
+
+umask 002
+id -un >>~build/WANTSNAP/dotest

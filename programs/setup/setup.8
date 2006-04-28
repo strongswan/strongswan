@@ -1,0 +1,142 @@
+.TH IPSEC_SETUP 8 "23 July 2001"
+.\" RCSID $Id: setup.8,v 1.1 2004/03/15 20:35:31 as Exp $
+.SH NAME
+ipsec setup \- control IPsec subsystem
+.SH SYNOPSIS
+.B ipsec
+.B setup
+[
+.B \-\-show
+|
+.B \-\-showonly
+]
+command
+.SH DESCRIPTION
+.I Setup
+controls the FreeS/WAN IPsec subsystem,
+including both the Klips kernel code and the Pluto key-negotiation daemon.
+(It is a synonym for the ``rc'' script for the subsystem;
+the system runs the equivalent of
+.B "ipsec setup start"
+at boot time,
+and
+.B "ipsec setup stop"
+at shutdown time, more or less.)
+.PP
+The action taken depends on the specific
+.IR command ,
+and on the contents of the
+.B config
+.B setup
+section of the
+IPsec configuration file (\c
+.IR /etc/ipsec.conf ,
+see
+.IR ipsec.conf (5)).
+Current
+.IR command s
+are:
+.TP 10
+.B start
+start Klips and Pluto,
+including setting up Klips to do crypto operations on the 
+interface(s) specified in the configuration file,
+and (if the configuration file so specifies)
+setting up manually-keyed connections and/or
+asking Pluto to negotiate automatically-keyed connections
+to other security gateways
+.TP
+.B stop
+shut down Klips and Pluto,
+including tearing down all existing crypto connections
+.TP
+.B restart
+equivalent to
+.B stop
+followed by
+.B start
+.TP
+.B status
+report the status of the subsystem;
+normally just reports
+.B "IPsec running"
+and
+.BR "pluto pid \fInnn\fP" ,
+or
+.BR "IPsec stopped" ,
+and exits with status 0,
+but will go into more detail (and exit with status 1)
+if something strange is found.
+(An ``illicit'' Pluto is one that does not match the process ID in
+Pluto's lock file;
+an ``orphaned'' Pluto is one with no lock file.)
+.PP
+The
+.B stop
+operation tries to clean up properly even if assorted accidents
+have occurred,
+e.g. Pluto having died without removing its lock file.
+If
+.B stop
+discovers that the subsystem is (supposedly) not running,
+it will complain,
+but will do its cleanup anyway before exiting with status 1.
+.PP
+Although a number of configuration-file parameters influence
+.IR setup 's
+operations, the key one is the
+.B interfaces
+parameter, which must be right or chaos will ensue.
+.PP
+The
+.B \-\-show
+and
+.B \-\-showonly
+options cause
+.I setup
+to display the shell commands that it would execute.
+.B \-\-showonly
+suppresses their execution.
+Only
+.BR start ,
+.BR stop ,
+and
+.B restart
+commands recognize these flags.
+.SH FILES
+.ta \w'/proc/sys/net/ipv4/ip_forward'u+2n
+/etc/rc.d/init.d/ipsec	the script itself
+.br
+/etc/init.d/ipsec	alternate location for the script
+.br
+/etc/ipsec.conf	IPsec configuration file
+.br
+/proc/sys/net/ipv4/ip_forward	forwarding control
+.br
+/var/run/ipsec.info	saved information
+.br
+/var/run/pluto.pid	Pluto lock file
+.br
+/var/run/ipsec_setup.pid	IPsec lock file
+.SH SEE ALSO
+ipsec.conf(5), ipsec(8), ipsec_manual(8), ipsec_auto(8), route(8)
+.SH DIAGNOSTICS
+All output from the commands
+.B start
+and
+.B stop
+goes both to standard
+output and to
+.IR syslogd (8),
+via
+.IR logger (1).
+Selected additional information is logged only to
+.IR syslogd (8).
+.SH HISTORY
+Written for the FreeS/WAN project
+<http://www.freeswan.org>
+by Henry Spencer.
+.SH BUGS
+Old versions of
+.IR logger (1)
+inject spurious extra newlines onto standard output.

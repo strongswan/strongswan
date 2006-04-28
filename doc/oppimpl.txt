@@ -1,0 +1,514 @@
+Implementing Opportunistic Encryption
+
+Henry Spencer & D. Hugh Redelmeier
+
+Version 4+, 15 Dec 2000
+
+
+
+Updates
+
+Major changes since last version:  "Negotiation Issues" section discussing
+some interoperability matters, plus some wording cleanup.  Some issues
+arising from discussions at OLS are not yet resolved, so there will almost
+certainly be another version soon.
+
+xxx incoming could be opportunistic or RW.  xxx any way of saving unaware
+implementations???  xxx compression needs mention.
+
+
+
+Introduction
+
+A major long-term goal of the FreeS/WAN project is opportunistic
+encryption:  a security gateway intercepts an outgoing packet aimed at a
+new remote host, and quickly attempts to negotiate an IPsec tunnel to that
+host's security gateway, so that traffic can be encrypted and
+authenticated without changes to the host software.  (This generalizes
+trivially to the end-to-end case where host and security gateway are one
+and the same.)  If the attempt fails, the packet (or a retry thereof)
+passes through in clear or is dropped, depending on local policy. 
+Prearranged tunnels bypass all this, so static VPNs can coexist with
+opportunistic encryption. 
+
+xxx here Although significant intelligence about all this is necessary at the
+initiator end, it's highly desirable for little or no special machinery
+to be needed at the responder end.  In particular, if none were needed,
+then a security gateway which knows nothing about opportunistic encryption
+could nevertheless participate in some opportunistic connections.
+
+IPSEC gives us the low-level mechanisms, and the key-exchange machinery,
+but there are some vague spots (to put it mildly) at higher levels.
+
+One constraint which deserves comment is that the process of tunnel setup
+should be quick.  Moreover, the decision that no tunnel can be created
+should also be quick, since that will be a common case, at least in the
+beginning.  People will be reluctant to use opportunistic encryption if it
+causes gross startup delays on every connection, even connections which see
+no benefit from it.  Win or lose, the process must be rapid.
+
+There's nothing much we can do to speed up the key exchange itself.  (The
+one thing which conceivably might be done is to use Aggressive Mode, which
+involves fewer round trips, but it has limitations and possible security
+problems, and we're reluctant to touch it.)  What we can do, is to make the
+other parts of the setup process as quick as possible.  This desire will
+come back to haunt us below. :-)
+
+A further note is that we must consider the processing at the responder
+end as well as the initiator end.
+
+Several pieces of new machinery are needed to make this work.  Here's a
+brief list, with details considered below.
+
++ Outgoing Packet Interception.  KLIPS needs to intercept packets which
+likely would benefit from tunnel setup, and bring them to Pluto's
+attention.  There needs to be enough memory in the process that the same
+tunnel doesn't get proposed too often (win or lose). 
+
++ Smart Connection Management.  Not only do we need to establish tunnels
+on request, once a tunnel is set up, it needs to be torn down eventually
+if it's not in use.  It's also highly desirable to detect the fact that it
+has stopped working, and do something useful.  Status changes should be
+coordinated between the two security gateways unless one has crashed,
+and even then, they should get back into sync eventually.
+
++ Security Gateway Discovery.  Given a packet destination, we must decide
+who to attempt to negotiate a tunnel with.  This must be done quickly, win
+or lose, and reliably even in the presence of diverse network setups.
+
++ Authentication Without Prearrangement.  We need to be sure we're really
+talking to the intended security gateway, without being able to prearrange
+any shared information.  He needs the same assurance about us.
+
++ More Flexible Policy.  In particular, the responding Pluto needs a way
+to figure out whether the connection it is being asked to make is okay.
+This isn't as simple as just searching our existing conn database -- we
+probably have to specify *classes* of legitimate connections.
+
+Conveniently, we have a three-letter acronym for each of these. :-)
+
+Note on philosophy:  we have deliberately avoided providing six different
+ways to do each step, in favor of specifying one good one.  Choices are
+provided only when they appear to be necessary.  (Or when we are not yet
+quite sure yet how best to do something...)
+
+
+
+OPI, SCM
+
+Smart Connection Management would be quite useful even by itself,
+requiring manual triggering.  (Right now, we do the manual triggering, but
+not the other parts of SCM.)  Outgoing Packet Interception fits together
+with SCM quite well, and improves its usefulness further.  Going through a
+connection's life cycle from the start... 
+
+OPI itself is relatively straightforward, aside from the nagging question
+of whether the intercepted packet is put on hold and then released, or
+dropped.  Putting it on hold is preferable; the alternative is to rely on
+the application or the transport layer re-trying.  The downside of packet
+hold is extra resources; the downside of packet dropping is that IPSEC
+knows *when* the packet can finally go out, and the higher layers don't. 
+Either way, life gets a little tricky because a quickly-retrying
+application may try more than once before we know for sure whether a
+tunnel can be set up, and something has to detect and filter out the
+duplications.  Some ARP implementations use the approach of keeping one
+packet for an as-yet-unresolved address, and throwing away any more that
+appear; that seems a reasonable choice.
+
+(Is it worth intercepting *incoming* packets, from the outside world, and
+attempting tunnel setup based on them?  Perhaps... if, and only if, we
+organize AWP so that non-opportunistic SGs can do it somehow.  Otherwise,
+if the other end has not initiated tunnel setup itself, it will not be
+prepared to do so at our request.)
+
+Once a tunnel is up, packets going into it naturally are not intercepted
+by OPI.  However, we need to do something about the flip side of this too: 
+after deciding that we *cannot* set up a tunnel, either because we don't
+have enough information or because the other security gateway is
+uncooperative, we have to remember that for a while, so we don't keep
+knocking on the same locked door.  One plausible way of doing that is to
+set up a bypass "tunnel" -- the equivalent of our current %passthrough
+connection -- and have it managed like a real SCM tunnel (finite lifespan
+etc.).  This sounds a bit heavyweight, but in practice, the alternatives
+all end up doing something very similar when examined closely.  Note that
+we need an extra variant of this, a block rather than a bypass, to cover
+the case where local policy dictates that packets *not* be passed through;
+we still have to remember the fact that we can't set up a real tunnel.
+
+When to tear tunnels down is a bit problematic, but if we're setting up a
+potentially unbounded number of them, we have to tear them down *somehow*
+*sometime*.  It seems fairly obvious that we set a tentative lifespan,
+probably fairly short (say 1min), and when it expires, we look to see if
+the tunnel is still in use (say, has had traffic in the last half of the
+lifespan).  If so, we assign it a somewhat longer lifespan (say 10min),
+after which we look again.  If not, we close it down.  (This lifespan is
+independent of key lifetime; it is just the time when the tunnel's future
+is next considered.  This should happen reasonably frequently, unlike
+rekeying, which is costly and shouldn't be too frequent.)  Multi-step
+backoff algorithms probably are not worth the trouble; looking every
+10min doesn't seem onerous.
+
+For the tunnel-expiry decision, we need to know how long it has been since
+the last traffic went through.  A more detailed history of the traffic
+does not seem very useful; a simple idle timer (or last-traffic timestamp)
+is both necessary and sufficient.  And KLIPS already has this.
+
+As noted, default initial lifespan should be short.  However, Pluto should
+keep a history of recently-closed tunnels, to detect cases where a tunnel
+is being repeatedly re-established and should be given a longer lifespan. 
+(Not only is tunnel setup costly, but it adds user-visible delay, so
+keeping a tunnel alive is preferable if we have reason to suspect more
+traffic soon.)  Any tunnel re-established within 10min of dying should have
+10min added to its initial lifespan.  (Just leaving all tunnels open longer
+is unappealing -- adaptive lifetimes which are sensitive to the behavior
+of a particular tunnel are wanted.  Tunnels are relatively cheap entities
+for us, but that is not necessarily true of all implementations, and there
+may also be administrative problems in sorting through large accumulations
+of idle tunnels.)
+
+It might be desirable to have detailed information about the initial
+packet when determining lifespans.  HTTP connections in particular are
+notoriously bursty and repetitive. 
+
+Arguably it would be nice to monitor TCP connection status.  A still-open
+TCP connection is almost a guarantee that more traffic is coming, while
+the closing of the only TCP connection through a tunnel is a good hint
+that none is.  But the monitoring is complex, and it doesn't seem worth
+the trouble. 
+
+IKE connections likewise should be torn down when it appears the need has
+passed.  They should linger longer than the last tunnel they administer,
+just in case they are needed again; the cost of retaining them is low.  An
+SG with only a modest number of them open might want to simply retain each
+until rekeying time, with more aggressive management cutting in only when
+the number gets large.  (They should be torn down eventually, if only to
+minimize the length of a status report, but rekeying is the only expensive
+event for them.)
+
+It's worth remembering that tunnels sometimes go down because the other
+end crashes, or disconnects, or has a network link break, and we don't get
+any notice of this in the general case.  (Even in the event of a crash and
+successful reboot, we won't hear about it unless the other end has
+specific reason to talk IKE to us immediately.)  Of course, we have to
+guard against being too quick to respond to temporary network outages,
+but it's not quite the same issue for us as for TCP, because we can tear
+down and then re-establish a tunnel without any user-visible effect except
+a pause in traffic.  And if the other end does go down and come back up,
+we and it can't communicate *at all* (except via IKE) until we tear down
+our tunnel.
+
+So... we need some kind of heartbeat mechanism.  Currently there is none
+in IKE, but there is discussion of changing that, and this seems like the
+best approach.  Doing a heartbeat at the IP level will not tell us about a
+crash/reboot event, and sending heartbeat packets through tunnels has
+various complications (they should stop at the far mouth of the tunnel
+instead of going on to a subnet; they should not count against idle
+timers; etc.).  Heartbeat exchanges obviously should be done only when
+there are tunnels established *and* there has been no recent incoming
+traffic through them.  It seems reasonable to do them at lifespan ends,
+subject to appropriate rate limiting when more than one tunnel goes to the
+same other SG.  When all traffic between the two ends is supposed to go
+via the tunnel, it might be reasonable to do a heartbeat -- subject to a
+rate limiter to avoid DOS attacks -- if the kernel sees a non-tunnel
+non-IKE packet from the other end. 
+
+If a heartbeat gets no response, try a few (say 3) pings to check IP
+connectivity; if one comes back, try another heartbeat; if it gets no
+response, the other end has rebooted, or otherwise been re-initialized,
+and its tunnels should be torn down.  If there's no response to the pings,
+note the fact and try the sequence again at the next lifespan end; if
+there's nothing then either, declare the tunnels dead. 
+
+Finally... except in cases where we've decided that the other end is dead
+or has rebooted, tunnel teardown should always be coordinated with the
+other end.  This means interpreting and sending Delete notifications, and
+also Initial-Contacts.  Receiving a Delete for the other party's tunnel
+SAs should lead us to tear down our end too -- SAs (SA bundles, really)
+need to be considered as paired bidirectional entities, even though the
+low-level protocols don't think of them that way. 
+
+
+
+SGD, AWP
+
+Given a packet destination, how do we decide who to (attempt to) negotiate
+a tunnel with?  And as a related issue, how do the negotiating parties
+authenticate each other?  DNSSEC obviously provides the tools for the
+latter, but how exactly do we use them?
+
+Having intercepted a packet, what we know is basically the IP addresses of
+source and destination (plus, in principle, some information about the
+desired communication, like protocol and port).  We might be able to map
+the source address to more information about the source, depending on how
+well we control our local networks, but we know nothing further about the
+destination. 
+
+The obvious first thing to do is a DNS reverse lookup on the destination
+address; that's about all we can do with available data.  Ideally, we'd
+like to get all necessary information with this one DNS lookup, because
+DNS lookups are time-consuming -- all the more so if they involve a DNSSEC
+signature-checking treewalk by the name server -- and we've got to hurry.
+While it is unusual for a reverse lookup to yield records other than PTR
+records (or possibly CNAME records, for RFC 2317 classless delegation),
+there's no reason why it can't.
+
+(For purposes like logging, a reverse lookup is usually followed by a
+forward lookup, to verify that the reverse lookup wasn't lying about the
+host name.  For our purposes, this is not vital, since we use stronger
+authentication methods anyway.)
+
+While we want to get as much data as possible (ideally all of it) from one
+lookup, it is useful to first consider how the necessary information would
+be obtained if DNS lookups were instantaneous.  Two pieces of information
+are absolutely vital at this point:  the IP address of the other end's
+security gateway, and the SG's public key*. 
+
+(* Actually, knowledge of the key can be postponed slightly -- it's not
+needed until the second exchange of the negotiations, while we can't even
+start negotiations without knowing the IP address.  The SG is not
+necessarily on the plain-IP route to the destination, especially when
+multiple SGs are present.)
+
+Given instantaneous DNS lookups, we would:
+
++ Start with a reverse lookup to turn the address into a name.
+
++ Look for something like RFC-2782 SRV records using the name, to find out
+who provides this particular service.  If none comes back, we can abandon
+the whole process. 
+
++ Select one SRV record, which gives us the name of a target host (plus
+possibly one or more addresses, if the name server has supplied address
+records as Additional Data for the SRV records -- this is recommended
+behavior but is not required). 
+
++ Use the target name to look up a suitable KEY record, and also address
+record(s) if they are still needed. 
+
+This gives us the desired address(es) and key.  However, it requires three
+lookups, and we don't even find out whether there's any point in trying
+until after the second.
+
+With real DNS lookups, which are far from instantaneous, some optimization
+is needed.  At the very least, typical cases should need fewer lookups.
+
+So when we do the reverse lookup on the IP address, instead of asking for
+PTR, we ask for TXT.  If we get none, we abandon opportunistic
+negotiation, and set up a bypass/block with a relatively long life (say
+6hr) because it's not worth trying again soon.  (Note, there needs to be a
+way to manually force an early retry -- say, by just clearing out all
+memory of a particular address -- to cover cases where a configuration
+error is discovered and fixed.)
+
+xxx need to discuss multi-string TXTs
+
+In the results, we look for at least one TXT record with content
+"X-IPsec-Server(nnn)=a.b.c.d kkk", following RFC 1464 attribute/value
+notation.  (The "X-" indicates that this is tentative and experimental;
+this design will probably need modification after initial experiments.)
+Again, if there is no such record, we abandon opportunistic negotiation. 
+
+"nnn" and the parentheses surrounding it are optional.  If present, it
+specifies a priority (low number high priority), as for MX records, to
+control the order in which multiple servers are tried.  If there are no
+priorities, or there are ties, pick one randomly.
+
+"a.b.c.d" is the dotted-decimal IP address of the SG.  (Suitable extensions
+for IPv6, when the time comes, are straightforward.)
+
+"kkk" is either an RSA-MD5 public key in base-64 notation, as in the text
+form of an RFC 2535 KEY record, or "@hhh".  In the latter case, hhh is a
+DNS name, under which one Host/Authentication/IPSEC/RSA-MD5 KEY record is
+present, giving the server's authentication key.  (The delay of the extra
+lookup is undesirable, but practical issues of key management may make it
+advisable not to duplicate the key itself in DNS entries for many
+clients.)
+
+It unfortunately does appear that the authentication key has to be
+associated with the server, not the client behind it.  At the time when
+the responder has to authenticate our SG, it does not know which of its
+clients we are interested in (i.e., which key to use), and there is no
+good way to tell it.  (There are some bad ways; this decision may merit
+re-examination after experimental use.)
+
+The responder authenticates our SG by doing a reverse lookup on its IP
+address to get a Host/Authentication/IPSEC/RSA-MD5 KEY record.  He can
+attempt this in parallel with the early parts of the negotiation (since he
+knows our SG IP address from the first negotiation packet), at the risk of
+having to abandon the attempt and do a different lookup if we use
+something different as our ID (see below).  Unfortunately, he doesn't yet
+know what client we will claim to represent, so he'll need to do another
+lookup as part of phase 2 negotiation (unless the client *is* our SG), to
+confirm that the client has a TXT X-IPsec-Server record pointing to our
+SG.  (Checking that the record specifies the same key is not important,
+since the responder already has a trustworthy key for our SG.)
+
+Also unfortunately, opportunistic tunnels can only have degenerate subnets
+(/32 subnets, containing one host) at their ends.  It's superficially
+attractive to negotiate broader connections... but without prearrangement,
+you don't know whether you can trust the other end's claim to have a
+specific subnet behind it.  Fixing this would require a way to do a
+reverse lookup on the *subnet* (you cannot trust information in DNS
+records for a name or a single address, which may be controlled by people
+who do not control the whole subnet) with both the address and the mask
+included in the name.  Except in the special case of a subnet masked on a
+byte boundary (in which case RFC 1035's convention of an incomplete
+in-addr.arpa name could be used), this would need extensions to the
+reverse-map name space, which is awkward, especially in the presence of
+RFC 2317 delegation.  (IPv6 delegation is more flexible and it might be
+easier there.)
+
+There is a question of what ID should be used in later steps of
+negotiation.  However, the desire not to put more DNS lookups in the
+critical path suggests avoiding the extra complication of varied IDs,
+except in the Road Warrior case (where an extra lookup is inevitable).
+Also, figuring out what such IDs *mean* gets messy.  To keep things simple,
+except in the RW case, all IDs should be IP addresses identical to those
+used in the packet headers.
+
+For Road Warrior, the RW must be the initiator, since the home-base SG has
+no idea what address the RW will appear at.  Moreover, in general the RW
+does not control the DNS entries for his address.  This inherently denies
+the home base any authentication of the RW's IP address; the most it can
+do is to verify an identity he provides, and perhaps decide whether it
+wishes to talk to someone with that identity, but this does not verify his
+right to use that IP address -- nothing can, really. 
+
+(That may sound like it would permit some man-in-the-middle attacks, but
+the RW can still do full authentication of the home base, so a man in the
+middle cannot successfully impersonate home base.  Furthermore, a man in
+the middle must impersonate both sides for the DH exchange to work.  So
+either way, the IKE negotiation falls apart.)
+
+A Road Warrior provides an FQDN ID, used for a forward lookup to obtain a
+Host/Authentication/IPSEC/RSA-MD5 KEY record.  (Note, an FQDN need not
+actually correspond to a host -- e.g., the DNS data for it need not
+include an A record.)  This suffices, since the RW is the initiator and
+the responder knows his address from his first packet.
+
+Certain situations where a host has a more-or-less permanent IP address,
+but does not control its DNS entries, must be treated essentially like
+Road Warrior.  It is unfortunate that DNS's old inverse-query feature
+cannot be used (nonrecursively) to ask the initiator's local DNS server
+whether it has a name for the address, because the address will almost
+always have been obtained from a DNS name lookup, and it might be a lookup
+of a name whose DNS entries the host *does* control.  (Real examples of
+this exist:  the host has a preferred name whose host-controlled entry
+includes an A record, but a reverse lookup on the address sends you to an
+ISP-controlled name whose entry has an A record but not much else.)  Alas,
+inverse query is long obsolete and is not widely implemented now. 
+
+There are some questions in failure cases.  If we cannot acquire the info
+needed to set up a tunnel, this is the no-tunnel-possible case.  If we
+reach an SG but negotiation fails, this too is the no-tunnel-possible
+case, with a relatively long bypass/block lifespan (say 1hr) since
+fruitless negotiations are expensive.  (In the multiple-SG case, it seems
+unlikely to be worthwhile to try other SGs just in case one of them might
+have a configuration permitting successful negotiation.)
+
+Finally, there is a sticky problem with timeouts.  If the other SG is down
+or otherwise inaccessible, in the worst case we won't hear about this
+except by not getting responses.  Some other, more pathological or even
+evil, failure cases can have the same result.  The problem is that in the
+case where a bypass is permitted, we want to decide whether a tunnel is
+possible quickly.  It gets even worse if there are multiple SGs, in which
+case conceivably we might want to try them all (since some SGs being up
+when others are down is much more likely than SGs differing in policy). 
+
+The patience setting needs to be configurable policy, with a reasonable
+default (to be determined by experiment).  If it expires, we simply have
+to declare the attempt a failure, and set up a bypass/block.  (Setting up
+a tentative bypass/block, and replacing it with a real tunnel if remaining
+attempts do produce one, looks attractive at first glance... but exposing
+the first few seconds of a connection is often almost as bad as exposing
+the whole thing!)  Such a bypass/block should have a short lifespan, say
+10min, because the SG(s) might be only temporarily unavailable.
+
+The flip side of IKE waiting for a timeout is that all other forms of
+feedback, e.g. "host not reachable", should be *ignored*, because you
+cannot trust them!  This may need kernel changes. 
+
+Can AWP be done by non-opportunistic SGs?  Probably not; existing SG
+implementations generally aren't prepared to do anything suitable, except
+perhaps via the messy business of certificates.  There is one borderline
+exception:  some implementations rely on LDAP for at least some of their
+information fetching, and it might be possible to substitute a custom LDAP
+server which does the right things for them.  Feasibility of this depends
+on details, which we don't know well enough. 
+
+[This could do with a full example, a complete packet by packet walkthrough
+including all DNS and IKE traffic.]
+
+
+
+MFP
+
+Our current conn database simply isn't flexible enough to cover all this
+properly.  In particular, the responding Pluto needs a way to figure out
+whether the connection it is being asked to make is legitimate.
+
+This is more subtle than it sounds, given the problem noted earlier, that
+there's no clear way to authenticate claims to represent a non-degenerate
+subnet.  Our database has to be able to say "a connection to any host in
+this subnet is okay" or "a connection to any subnet within this subnet is
+okay", rather than "a connection to exactly this subnet is okay".  (There
+is some analogy to the Road Warrior case here, which may be relevant.)
+This will require at least a re-interpretation of ipsec.conf.
+
+Interim stages of implementation of this will require a bit of thought.
+Notably, we need some way of dealing with the lack of fully signed DNSSEC
+records.  Without user interaction, probably the best we can do is to
+remember the results of old fetches, compare them to the results of new
+fetches, and complain and disbelieve all of it if there's a mismatch. 
+This does mean that somebody who gets fake data into our very first fetch
+will fool us, at least for a while, but that seems an acceptable tradeoff.
+
+
+
+Negotiation Issues
+
+There are various options which are nominally open to negotiation as part
+of setup, but which have to be nailed down at least well enough that
+opportunistic SGs can reliably interoperate.  Somewhat arbitrarily and
+tentatively, opportunistic SGs must support Main Mode, Oakley group 5 for
+D-H, 3DES encryption and MD5 authentication for both ISAKMP and IPsec SAs,
+RSA digital-signature authentication with keys between 2048 and 8192 bits,
+and ESP doing both encryption and authentication.  They must do key PFS
+in Quick Mode, but not identity PFS.
+
+
+
+What we need from DNS
+
+Fortunately, we don't need any new record types or suchlike to make this
+all work.  We do, however, need attention to a couple of areas in DNS
+implementation.
+
+First, size limits.  Although the information we directly need from a
+lookup is not enormous -- the only potentially-big item is the KEY record,
+and there should be only one of those -- there is still a problem with
+DNSSEC authentication signatures.  With a 2048-bit key and assorted
+supporting information, we will fill most of a 512-byte DNS UDP packet...
+and if the data is to have DNSSEC authentication, at least one quite large
+SIG record will come too.  Plus maybe a TSIG signature on the whole
+response, to authenticate it to our resolver.  So:  DNSSEC-capable name
+servers must fix the 512-byte UDP limit.  We're told there are provisions
+for this; implementation of them is mandatory. 
+
+Second, interface.  It is unclear how the resolver interface will let us
+ask for DNSSEC authentication.  We would prefer to ask for "authentication
+where possible", and get back the data with each item flagged by whether
+authentication was available (and successful!) or not available.  Having
+to ask separately for authenticated and non-authenticated data would
+probably be acceptable, *provided* both will be cached on the first
+request, so the two requests incur only one set of (non-local) network
+traffic.  Either way, we want to see the name server and resolver do this
+for us; that makes sense in any case, since it's important that
+verification be done somewhere where it can be cached, the more centrally
+the better. 
+
+Finally, a wistful note:  the ability to do a limited form of inverse
+queries (an almost forgotten feature), to ask the local name server which
+hostname it recently mapped to a particular address, would be quite
+helpful.  Note, this is *NOT* the same as a reverse lookup, and crude
+fakes like putting a dotted-decimal address in brackets do not suffice. 

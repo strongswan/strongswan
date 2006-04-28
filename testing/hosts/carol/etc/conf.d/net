@@ -1,0 +1,10 @@
+# /etc/conf.d/net:
+
+# This is basically the ifconfig argument without the ifconfig $iface
+#
+iface_lo="127.0.0.1 netmask 255.0.0.0"
+iface_eth0="PH_IP_CAROL broadcast 192.168.0.255 netmask 255.255.255.0"
+
+# For setting the default gateway
+#
+gateway="eth0/192.168.0.254"

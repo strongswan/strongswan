@@ -1,0 +1,150 @@
+
+include ${FREESWANSRCDIR}/Makefile.ver
+
+CFLAGS+=$(USERCOMPILE) -I${KLIPSINC}
+
+CFLAGS+= -Wall
+#CFLAGS+= -Wconversion
+#CFLAGS+= -Wmissing-prototypes
+CFLAGS+= -Wpointer-arith
+CFLAGS+= -Wcast-qual
+#CFLAGS+= -Wmissing-declarations
+CFLAGS+= -Wstrict-prototypes
+#CFLAGS+= -pedantic
+#CFLAGS+= -W
+#CFLAGS+= -Wwrite-strings
+CFLAGS+= -Wbad-function-cast 
+
+# die if there are any warnings
+ifndef WERROR
+WERROR:= -Werror
+endif
+
+#CFLAGS+= ${WERROR}
+
+ifneq ($(LD_LIBRARY_PATH),)
+LDFLAGS=-L$(LD_LIBRARY_PATH)
+endif
+
+MANDIR8=$(MANTREE)/man8
+MANDIR5=$(MANTREE)/man5
+
+ifndef PROGRAMDIR
+PROGRAMDIR=${LIBEXECDIR}
+endif
+
+ifndef MANPROGPREFIX
+MANPROGPREFIX=ipsec_
+endif
+
+ifndef CONFDSUBDIR
+CONFDSUBDIR=.
+endif
+
+all: $(PROGRAM)
+
+programs: all
+
+ifneq ($(PROGRAM),check)
+check: $(PROGRAM)
+endif
+
+
+ifneq ($(NOINSTALL),true)
+
+install:: $(PROGRAM) $(CONFFILES) $(EXTRA8MAN) $(EXTRA5MAN) $(EXTRA5PROC) $(LIBFILES) $(CONFDFILES)
+	@mkdir -p $(PROGRAMDIR) $(MANDIR8) $(MANDIR5) $(LIBDIR) $(CONFDIR) $(CONFDDIR) $(CONFDDIR)/$(CONFDSUBDIR) $(EXAMPLECONFDIR)
+	@if [ -n "$(PROGRAM)" ]; then $(INSTALL) $(INSTBINFLAGS) $(PROGRAM) $(PROGRAMDIR); fi
+	@$(foreach f, $(addsuffix .8, $(PROGRAM)), \
+		$(INSTALL) $(INSTMANFLAGS) $f $(MANDIR8)/$(MANPROGPREFIX)$f || exit 1; \
+	)
+	@$(foreach f, $(EXTRA8MAN), \
+		$(INSTALL) $(INSTMANFLAGS) $f $(MANDIR8)/ipsec_$f || exit 1; \
+	)
+	@$(foreach f, $(EXTRA5MAN), \
+		$(INSTALL) $(INSTMANFLAGS) $f $(MANDIR5)/$f || exit 1 ;\
+	)
+	@$(foreach f, $(EXTRA5PROC), \
+		$(INSTALL) $(INSTMANFLAGS) $f $(MANDIR5)/ipsec_$f || exit 1 ;\
+	)
+	@$(foreach f, $(LIBFILES), \
+		$(INSTALL) $(INSTCONFFLAGS) $f $(LIBDIR)/$f || exit 1 ;\
+	)
+	@$(foreach f, $(CONFFILES), \
+		if [ ! -f $(CONFDIR)/$f ]; then $(INSTALL) $(INSTCONFFLAGS) $f $(CONFDIR)/$f || exit 1; fi;\
+		$(INSTALL) $(INSTCONFFLAGS) $f $(EXAMPLECONFDIR)/$f-sample || exit 1; \
+	)
+	@$(foreach f, $(CONFDFILES), \
+		if [ ! -f $(CONFDDIR)/$(CONFDSUBDIR)/$f ]; then $(INSTALL) $(INSTCONFFLAGS) $f $(CONFDDIR)/$(CONFDSUBDIR)/$f || exit 1; fi;\
+	)
+
+install_file_list::
+	@if [ -n "$(PROGRAM)" ]; then echo $(PROGRAMDIR)/$(PROGRAM); fi
+	@$(foreach f, $(addsuffix .8, $(PROGRAM)), \
+		echo $(MANDIR8)/${MANPROGPREFIX}$f; \
+	)
+	@$(foreach f, $(EXTRA8MAN), \
+		echo $(MANDIR8)/ipsec_$f; \
+	)
+	@$(foreach f, $(EXTRA5MAN), \
+		echo $(MANDIR5)/$f;\
+	)
+	@$(foreach f, $(EXTRA5PROC), \
+		echo $(MANDIR5)/ipsec_$f; \
+	)
+	@$(foreach f, $(LIBFILES), \
+		echo $(LIBDIR)/$f;\
+	)
+	@$(foreach f, $(CONFFILES), \
+		echo $(CONFDIR)/$f;\
+		echo $(EXAMPLECONFDIR)/$f-sample;\
+	)
+	@$(foreach f, $(CONFDFILES), \
+		echo $(CONFDDIR)/${CONFDSUBDIR}/$f;\
+	)
+
+endif
+
+# cancel the rule that compiles directly
+%: %.c 
+
+%: %.o $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $@.o ${OBJS} $(LDFLAGS) $(LIBS)
+
+%: %.in ${FREESWANSRCDIR}/Makefile.inc ${FREESWANSRCDIR}/Makefile.ver
+	cat $< | sed -e "s/xxx/$(IPSECVERSION)/" \
+			-e "s:@IPSEC_DIR@:$(FINALBINDIR):" \
+			-e "s:@IPSEC_EXECDIR@:$(FINALLIBEXECDIR):" \
+			-e "s:@IPSEC_SBINDIR@:$(FINALSBINDIR):" \
+			-e "s:@IPSEC_LIBDIR@:$(FINALLIBDIR):" \
+			-e "s:@FINALCONFDIR@:$(FINALCONFDIR):" \
+			-e "s:@EXAMPLECONFDIR@:$(EXAMPLECONFDIR):" \
+			-e "s:@FINALDOCDIR@:$(FINALDOCDIR):" \
+			-e "s:@FINALEXAMPLECONFDIR@:$(FINALEXAMPLECONFDIR):" \
+			-e "s:@MODULE_GOO_LIST@:$(MODULE_GOO_LIST):" \
+			-e "s:@IPSEC_CONFS@:$(FINALCONFDIR):" \
+			-e "s:@IPSEC_CONFDDIR@:$(FINALCONFDDIR):" \
+			-e "s:@USE_IPROUTE2@:$(USE_IPROUTE2):" \
+			-e "s:@IPSEC_FIREWALLTYPE@:$(IPSEC_FIREWALLTYPE):" \
+	| cat >$@
+	if [ -x $< ]; then chmod +x $@; fi
+	if [ "${PROGRAM}.in" = $< ]; then chmod +x $@; fi
+
+cleanall: clean
+
+distclean: clean
+
+mostlyclean: clean
+
+realclean: clean
+
+clean::
+ifneq ($(strip $(PROGRAM)),)
+	@if [ -r $(PROGRAM).in ]; then rm -f $(PROGRAM); fi
+	@if [ -r $(PROGRAM).c ];  then rm -f $(PROGRAM); fi
+	@if [ -n "$(OBJS)" ];     then rm -f $(PROGRAM); fi
+endif
+	@rm -f *.o
+
+checkprograms:
+

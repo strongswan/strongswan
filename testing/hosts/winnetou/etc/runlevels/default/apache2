@@ -1,0 +1,78 @@
+#!/sbin/runscript
+# Copyright 1999-2004 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+opts="${opts} reload"
+
+[ "x${SERVERROOT}" != "x" ] && APACHE2_OPTS="${APACHE2_OPTS} -d ${SERVERROOT}"
+[ "x${CONFIGFILE}" != "x" ] && APACHE2_OPTS="${APACHE2_OPTS} -f ${CONFIGFILE}"
+[ "x${STARTUPERRORLOG}" != "x" ] && APACHE2_OPTS="${APACHE2_OPTS} -E ${STARTUPERRORLOG}"
+# set a default for PIDFILE/RESTARTSTYLE for those that FAILED to follow
+# instructiosn and update the conf.d/apache2 file.
+# (bug #38787)
+[ -z "${PIDFILE}" ] && PIDFILE=/var/run/apache2.pid
+[ -z "${RESTARTSTYLE}" ] && RESTARTSTYLE="graceful"
+
+checkconfig() {
+	local myconf="/etc/apache2/conf/apache2.conf"
+	if [ "x${CONFIGFILE}" != "x" ]; then
+		if [ ${CONFIGFILE:0:1} = "/" ]; then
+			myconf="${CONFIGFILE}"
+		else
+			myconf="${SERVERROOT:-/usr/lib/apache2}/${CONFIGFILE}"
+		fi
+	fi
+	if [ ! -r "${myconf}" ]; then
+		eerror "Unable to read configuration file: ${myconf}"
+		return 1
+	fi
+    if [ -z "${PIDFILE}" ]; then
+        eerror "\$PIDFILE is not set!"
+        eerror "Did you etc-update /etc/conf.d/apache2?"
+        return 1
+    fi
+    if [ -z "${RESTARTSTYLE}" ]; then
+        eerror "\$RESTARTSTYLE is not set!"
+        eerror "Did you etc-update /etc/conf.d/apache2?"
+        return 1
+    fi
+	/usr/sbin/apache2 -t ${APACHE2_OPTS} 1>/dev/null 2>&1
+	ret=$?
+	if [ $ret -ne 0 ]; then
+		eerror "Apache2 has detected a syntax error in your configuration files:"
+		/usr/sbin/apache2 -t ${APACHE2_OPTS}
+	fi
+	return $ret
+}
+
+depend() {
+	need net
+	use mysql dns logger netmount postgres
+	after sshd
+}
+
+start() {
+	checkconfig || return 1
+	ebegin "Starting apache2"
+	[ -f /var/log/apache2/ssl_scache ] && rm /var/log/apache2/ssl_scache
+	[ -f /usr/lib/apache2/build/envvars ] && . /usr/lib/apache2/build/envvars
+	env -i PATH=$PATH /sbin/start-stop-daemon --quiet \
+		--start --startas /usr/sbin/apache2 \
+		--pidfile ${PIDFILE} -- -k start ${APACHE2_OPTS}
+	eend $?
+}
+
+stop() {
+	ebegin "Stopping apache2"
+	/usr/sbin/apache2ctl stop >/dev/null
+	start-stop-daemon -o --quiet --stop --pidfile ${PIDFILE}
+	eend $?
+}
+
+reload() {
+	# restarting apache2 is much easier than apache1. The server handles most of the work for us. 
+	# see http://httpd.apache.org/docs-2.0/stopping.html for more details
+	ebegin "Restarting apache2"
+	/usr/sbin/apache2 ${APACHE2_OPTS} -k ${RESTARTSTYLE}
+	eend $?
+}

@@ -1,0 +1,33 @@
+#! /bin/sh
+# tattle [-f] subject address ...
+# report a freeswan CVS change made by someone other than "owner" of files
+
+PATH=/bin:/usr/bin ; export PATH
+
+noself=yes			# don't mail to person making change
+case "$1" in
+-f)	noself= ; shift	;;
+esac
+
+msg="freeswan commit: $1"
+shift
+
+them=
+if test "$noself"
+then
+	iam="`id -un`"
+	for who
+	do
+		if test " $who" != " $iam"
+		then
+			them="$them $who"
+		fi
+	done
+else
+	them="$*"
+fi
+
+if test " $them" != " "
+then
+	mail -s "$msg" $them
+fi

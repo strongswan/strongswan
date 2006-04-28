@@ -1,0 +1,9 @@
+athlon-smp	i386	i386
+athlon		i386	i386
+i386-smp	i386	i386
+i386		i386	i386
+i586-smp	i386	i386
+i586		i386	i386
+i686-smp	i386	i386
+i686-bigmem	i386	i386
+i686		i386	i386

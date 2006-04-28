@@ -1,0 +1,95 @@
+#!/usr/bin/perl
+# mkcand m.nn
+# package candidate, leaving it in tmp directory
+
+require($ENV{'HOME'}."/bin/disttools.pl");
+
+&defvars;
+&suckvars;
+
+umask(022);
+
+$localdir=$ENV{'HOME'}."/archive";
+
+$tmpdir=$ENV{'BTMP'}."/".$ENV{'USER'}."/snapshots";
+
+$transmit=1;
+$snapprefix="";
+$tarinfix="";
+$date="";
+$lastrel=$ENV{'LASTREL'};
+
+sub usage {
+    print STDERR "mkrel:\n";
+    print STDERR "\t-l          do not transmit\n";
+    print STDERR "\t-p name     set release name\n";
+    print STDERR "\t-r rel      set release branch\n";
+}
+
+while(@ARGV) {
+  $_=shift;
+
+  if(/^-l/) {
+    $transmit=0;
+
+  } elsif(/^-S/) {
+    $symlink=1;
+
+  } elsif(/^-p/) {
+    $rel=shift;
+    $snapprefix="pre$rel-";
+
+  } elsif(/^-r/) {
+    $arg=shift;
+    ($lastrel=$arg) =~ y/\./\_/;
+    $relopt="-r PRE${lastrel}"
+
+  } else {
+    &usage;
+    exit;
+  }
+}
+
+if(!defined($relopt) ||
+   !defined($rel)) {
+	&usage;
+	exit;
+}
+
+$dirname="freeswan-".$rel;
+$pkgname="freeswan-".$rel;
+$tarname=$pkgname.".tar";
+$vername=$rel;
+
+&nicesystem("mkdir -p $tmpdir");
+print "BUILDING release $rel in $dirname\n";
+if($transmit) {
+  print "WILL TRANSMIT TO $ENV{'DISTHOST'}\n"
+} else {
+  print "WILL NOT TRANSMIT\n";
+}
+
+$ENV{'PGPPATH'}="/mnt/build/freeswan";
+$ENV{'PGPNAME'}="build\@freeswan.org";
+
+&makedisttarfile($tmpdir, $pkgname, $vername, $dirname, $date, $relopt, 1);
+
+print "Please insert release key floppy for signature";
+$ans=<STDIN>;
+system("mount /mnt/build");
+&dopgpsig($pkgname);
+system("umount /mnt/build");
+
+if($transmit) {
+  print "Now transmitting to XS4all\n";
+  print "Starting on: ";
+  system("date");
+
+  &upload($pkgname);
+
+  &upsync;
+ 
+  print "Finished on: ";
+  system("date");
+}
+

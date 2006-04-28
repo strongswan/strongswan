@@ -1,0 +1,15 @@
+V	090909111334Z		01	unknown	/C=CH/O=Linux strongSwan/CN=mars.strongswan.org
+V	090909111553Z		02	unknown	/C=CH/O=Linux strongSwan/CN=sun.strongswan.org
+V	090909111725Z		03	unknown	/C=CH/O=Linux strongSwan/CN=moon.strongswan.org
+V	090909111826Z		04	unknown	/C=CH/O=Linux strongSwan/CN=venus.strongswan.org
+V	090909112439Z		05	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=alice@strongswan.org
+V	090909112534Z		06	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=bob@strongswan.org
+R	090909112548Z	041226135423Z	07	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=carol@strongswan.org
+V	090909112651Z		08	unknown	/C=CH/O=Linux strongSwan/OU=Accounting/CN=dave@strongswan.org
+V	091118162928Z		09	unknown	/C=CH/O=Linux strongSwan/OU=OCSP Signing Authority/CN=ocsp.strongswan.org
+V	091231214318Z		0A	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=carol@strongswan.org
+V	100216084430Z		0B	unknown	/C=CH/O=Linux strongSwan/OU=Authorization Authority/CN=aa@strongswan.org
+R	140321062536Z	050621195214Z	0C	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
+V	140321062916Z		0D	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=Sales CA
+V	100607191714Z		0E	unknown	/C=CH/O=Linux strongSwan/CN=winnetou.strongswan.org
+V	100620195806Z		0F	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA

@@ -1,0 +1,637 @@
+#! /bin/sh
+# user interface to manual keying
+# Copyright (C) 1998, 1999  Henry Spencer.
+# 
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: manual.in,v 1.1 2004/03/15 20:35:28 as Exp $
+
+me='ipsec manual'
+usage="Usage:
+  $me [--showonly] --{up|down|route|unroute} name
+  $me [--showonly] --{up|down|route|unroute} --union partname ... 
+
+  other options: [--config ipsecconfigfile] [--other] [--show]
+			[--iam ipaddress@interface]"
+
+# make sure outputs of (e.g.) ifconfig are in English
+unset LANG LANGUAGE LC_ALL LC_MESSAGES
+
+showonly=
+config=
+info=/var/run/ipsec.info
+shopts=
+other=0
+union=0
+noinclude=
+interfs=
+op=
+
+for dummy
+do
+	case "$1" in
+	--help)		echo "$usage" ; exit 0	;;
+	--version)	echo "$me $IPSEC_VERSION" ; exit 0	;;
+	--show)		shopts=-x		;;
+	--showonly)	showonly=yes		;;
+	--other)	other=1			;;
+	--union)	union=1			;;
+	--config)	config="--config $2" ; shift	;;
+	--noinclude)	noinclude=--noinclude	;;
+	--iam)		interfs="$2" ; shift	;;
+	--up|--down|--route|--unroute)
+			if test " $op" != " "
+			then
+				echo "$usage" >&2
+				exit 2
+			fi
+			op="$1"
+			;;
+	--)		shift ; break		;;
+	-*)		echo "$me: unknown option \`$1'" >&2 ; exit 2	;;
+	*)		break			;;
+	esac
+	shift
+done
+
+case "$op$#:$union" in
+[01]:*)		echo "$usage" >&2 ; exit 2	;;
+2:0)		echo "$me: warning: obsolete command syntax used" >&2
+		op="--$2"
+		names="$1"
+		;;
+[0-9]*:1)	;;
+--*)		if test $# -eq 0
+		then
+			echo "$usage" >&2
+			exit 2
+		fi
+		names="$*"
+		;;
+*)		echo "$usage" >&2 ; exit 2	;;
+esac
+if test " $op" = " "
+then
+	# --union obsolete-syntax case, op is last argument
+	echo "$me: warning: obsolete command syntax used" >&2
+	names=
+	prev=
+	for arg
+	do
+		names="$names $prev"
+		prev="$arg"
+	done
+	op="--$prev"
+fi
+case "$op" in
+--up|--down|--route|--unroute)		;;
+*)	echo "$usage" >&2 ; exit 2	;;
+esac
+
+case "$interfs" in
+'')	interfs="`ifconfig |
+		awk '	/^ipsec/ { interf = $1 ; next }
+			/^[^ \t]/ { interf = "" ; next }
+			/^[ \t]*inet addr/ {
+				sub(/:/, " ", $0)
+				if (interf != "")
+					print $3 "@" interf
+			 }' | tr '\n' ' '`"
+	;;
+esac
+
+if test -s $info
+then
+	. $info
+fi
+
+ipsec _confread $config $noinclude $names |
+awk '	BEGIN {
+		FS = "\t"
+		myname = "'"$me"'"
+		err = "cat >&2"
+		op = "'"$op"'"
+		other = '"$other"'
+		names = "'"$names"'"
+		interfs = "'"$interfs"'"
+		ni = split(interfs, terfs, " ")
+		if (ni == 0)
+			fail("no IPsec-enabled interfaces found")
+		for (i = 1; i <= ni; i++) {
+			nc = split(terfs[i], cpts, "@")
+			if (nc != 2)
+				fail("internal error on " terfs[i])
+			interface[cpts[1]] = cpts[2]
+		}
+		draddr = "'"$defaultrouteaddr"'"
+		drnexthop = "'"$defaultroutenexthop"'"
+		s[""] = ""
+		nlspi = 0
+		nrspi = 0
+		failed = 0
+		maskbits[0] = "0.0.0.0"
+		maskbits[1] = "128.0.0.0"
+		maskbits[2] = "192.0.0.0"
+		maskbits[3] = "224.0.0.0"
+		maskbits[4] = "240.0.0.0"
+		maskbits[5] = "248.0.0.0"
+		maskbits[6] = "252.0.0.0"
+		maskbits[7] = "254.0.0.0"
+		maskbits[8] = "255.0.0.0"
+		maskbits[9] = "255.128.0.0"
+		maskbits[10] = "255.192.0.0"
+		maskbits[11] = "255.224.0.0"
+		maskbits[12] = "255.240.0.0"
+		maskbits[13] = "255.248.0.0"
+		maskbits[14] = "255.252.0.0"
+		maskbits[15] = "255.254.0.0"
+		maskbits[16] = "255.255.0.0"
+		maskbits[17] = "255.255.128.0"
+		maskbits[18] = "255.255.192.0"
+		maskbits[19] = "255.255.224.0"
+		maskbits[20] = "255.255.240.0"
+		maskbits[21] = "255.255.248.0"
+		maskbits[22] = "255.255.252.0"
+		maskbits[23] = "255.255.254.0"
+		maskbits[24] = "255.255.255.0"
+		maskbits[25] = "255.255.255.128"
+		maskbits[26] = "255.255.255.192"
+		maskbits[27] = "255.255.255.224"
+		maskbits[28] = "255.255.255.240"
+		maskbits[29] = "255.255.255.248"
+		maskbits[30] = "255.255.255.252"
+		maskbits[31] = "255.255.255.254"
+		maskbits[32] = "255.255.255.255"
+	}
+	$1 == "=" {
+		next
+	}
+	$1 == "!" {
+		if ($2 != "")
+			fail($2)
+		next
+	}
+	$1 != ":" {
+		fail("internal error, unknown type code \"" $1 "\"")
+	}
+	{ s[$2] = $3 }
+	function q(s) {
+		return "\"" s "\""
+	}
+	function fail(m) {
+		print myname ": fatal error in " q(names) ": " m   |err
+		failed = 1
+		exit
+	}
+	function swap(k,   t, l, r) {
+		l = "left" k
+		r = "right" k
+		if ((l in s) && (r in s)) {
+			t = s[l]
+			s[l] = s[r]
+			s[r] = t
+		} else if (l in s) {	# but not r
+			s[r] = s[l]
+			delete s[l]
+		} else if (r in s) {	# but not l
+			s[l] = s[r]
+			delete s[r]
+		}
+	}
+	function yesno(k) {
+		if ((k in s) && s[k] != "yes" && s[k] != "no")
+			fail("parameter \"" k "\" must be \"yes\" or \"no\"")
+	}
+	function default(k, v) {
+		if (!(k in s))
+			s[k] = v
+	}
+	function need(k) {
+		if (!(k in s))
+			fail("connection has no \"" k "\" parameter specified")
+		if (s[k] == "")
+			fail("parameter \"" k "\" value must be non-empty")
+	}
+	function integer(k) {
+		if (!(k in s))
+			return
+		if (s[k] !~ /^[0-9]+$/)
+			fail("parameter \"" k "\" value must be integer")
+	}
+	function nexthopset(dir, val,   k) {
+		k = dir "nexthop"
+		if (k in s)
+			fail("non-default value of " k " is being overridden")
+		if (val != "")
+			s[k] = val
+		else if (k in s)
+			delete s[k]
+	}
+	function leftward(   t) {
+		nlspi++
+		if ("spi" in s)
+			return s["spi"]
+		t = spibase spil
+		spil += 2
+		return t
+	}
+	function rightward(   t) {
+		nrspi++
+		if ("spi" in s)
+			return s["spi"]
+		t = spibase spir
+		spir += 2
+		return t
+	}
+	function netfix(dir,   n, t) {
+		n = s[dir "subnet"]
+		if (n == "%default")
+			n = "0.0.0.0/0"
+		if (n !~ /\//)
+			fail(dir "subnet=" n " has no mask specified")
+		t = split(n, netfixarray, "/")
+		if (t != 2)
+			fail("bad syntax in " dir "subnet=" n)
+		s[dir "net"] = netfixarray[1]
+		s[dir "mask"] = mask(netfixarray[2])
+	}
+	function mask(m) {
+		if (m ~ /\./)
+			return m
+		if (!(m in maskbits))
+			fail("unknown mask syntax \"" m "\"")
+		return maskbits[m]
+	}
+	function bidir(name,   l, r) {
+		l = "left" name
+		r = "right" name
+		if (!(l in s) && (name in s))
+			s[l] = s[name]
+		if (!(r in s) && (name in s))
+			s[r] = s[name]
+		if ((l in s) != (r in s))
+			fail("must give both or neither \"" l "\" and \"" \
+									r "\"")
+	}
+	function espspi(src, dest, spi,   dir) {
+		if (!("esp" in s))
+			return
+		dir = (dest == me) ? "left" : "right"
+		print "ipsec spi --label", q(names), "--af inet",
+			"--said", ("esp" spi "@" dest), "\\"
+		print "\t--esp", s["esp"], "--src", src, "\\"
+		if ((dir "espauthkey") in s)
+			print "\t--authkey", s[dir "espauthkey"], "\\"
+		if ("espreplay_window" in s)
+			print "\t--replay_window", s["espreplay_window"], "\\"
+		if ((dir "espenckey") in s)
+			print "\t--enckey", s[dir "espenckey"], "&&"
+		else
+			print "\t&&"
+	}
+	function ahspi(src, dest, spi,   dir) {
+		if (!("ah" in s))
+			return
+		dir = (dest == me) ? "left" : "right"
+		if (!((dir "ahkey") in s))
+			fail("AH specified but no ahkey= given")
+		print "ipsec spi --label", q(names), "--af inet",
+			"--said", ("ah" spi "@" dest), "\\"
+		print "\t--ah", s["ah"], "--src", src, "\\"
+		if ("ahreplay_window" in s)
+			print "\t--replay_window", s["ahreplay_window"], "\\"
+		print "\t--authkey", s[dir "ahkey"], "&&"
+	}
+	# issue a suitable invocation of updown command
+	function updown(verb, suffix,   cmd) {
+		if ("leftupdown" in s) {
+			cmd = s["leftupdown"]
+			if (s["leftfirewall"] == "yes")
+				fail("cannot specify both updown and firewall")
+		} else {
+			cmd = "ipsec _updown"
+			if (s["leftfirewall"] == "yes")
+				cmd = cmd " ipfwadm"
+		}
+		print "PLUTO_VERB=" verb verbsuf " " cmd " " suffix
+	}
+	END {
+	#########
+	if (failed)
+		exit 1
+	default("type", "tunnel")
+	type = s["type"]
+	shunt = 0
+	if (type == "transport") {
+		if ("leftsubnet" in s)
+			fail("type=transport incompatible with leftsubnet")
+		if ("rightsubnet" in s)
+			fail("type=transport incompatible with rightsubnet")
+	} else if (type == "passthrough") {
+		shunt = 1;
+		p = "%pass"
+	} else if (type == "drop" || type == "reject") {
+		shunt = 1;
+		p = "%" type
+	} else if (type != "tunnel")
+		fail("only know how to do types tunnel/transport/passthrough")
+	if (shunt) {
+		if (("ah" in s) || ("esp" in s))
+			fail(type " connection may not specify AH or ESP")
+	} else {
+		if (!("ah" in s) && !("esp" in s))
+			fail("neither AH nor ESP specified for connection")
+	}
+
+	need("left")
+	need("right")
+	if (s["left"] == "%defaultroute") {
+		if (s["right"] == "%defaultroute")
+			fail("left and right cannot both be %defaultroute")
+		if (draddr == "")
+			fail("%defaultroute requested but not known")
+		s["left"] = draddr
+		nexthopset("left", drnexthop)
+	} else if (s["right"] == "%defaultroute") {
+		if (draddr == "")
+			fail("%defaultroute requested but not known")
+		s["right"] = draddr
+		nexthopset("right", drnexthop)
+	}
+
+	leftsub = ("leftsubnet" in s) ? 1 : 0
+	default("leftsubnet", s["left"] "/32")
+	rightsub = ("rightsubnet" in s) ? 1 : 0
+	default("rightsubnet", s["right"] "/32")
+	default("leftfirewall", "no")
+	default("rightfirewall", "no")
+	yesno("leftfirewall")
+	yesno("rightfirewall")
+	integer("espreplay_window")
+	if (("espreplay_window" in s) && s["espreplay_window"] == 0)
+		delete s["espreplay_window"]
+	integer("ahreplay_window")
+	if (("ahreplay_window" in s) && s["ahreplay_window"] == 0)
+		delete s["ahreplay_window"]
+	netfix("left")
+	netfix("right")
+
+	default("leftnexthop", s["right"])
+	default("rightnexthop", s["left"])
+	if (s["leftnexthop"] == s["left"])
+		fail("left and leftnexthop must not be the same")
+	if (s["rightnexthop"] == s["right"])
+		fail("right and rightnexthop must not be the same")
+
+	bidir("espenckey")
+	bidir("espauthkey")
+	bidir("ahkey")
+	if ("spi" in s && "spibase" in s)
+		fail("cannot specify both spi and spibase")
+	if (!shunt) {
+		if ("spibase" in s) {
+			b = s["spibase"]
+			if (b !~ /^0x[0-9a-fA-F]+0$/)
+				fail("bad syntax in spibase -- must be 0x...0")
+			spibase = substr(b, 1, length(b)-1)
+		} else {
+			need("spi")
+			if (s["spi"] !~ /^0x[0-9a-fA-F]+$/)
+				fail("bad syntax in spi -- must be 0x...")
+		}
+	}
+	spir = 0
+	spil = 1
+
+	# who am I?
+	me = ""
+	for (addr in interface) {
+		if (addr == s["left"] || addr == s["right"]) {
+			if (me != "")
+				fail("ambiguous:  could be on \"" iface \
+					"\" or \"" interface[addr] "\"")
+			me = addr
+			iface = interface[addr]
+		}
+	}
+	if (me == "")
+		fail("cannot find interface for " s["left"] " or " s["right"])
+	if (other) {
+		if (s["left"] == me)
+			me = s["right"]
+		else if (s["right"] == me)
+			me = s["left"]
+	}
+	havesubnet = leftsubnet
+	if (s["right"] == me) {
+		swap("")		# swaps "left" and "right"
+		swap("subnet")
+		swap("nexthop")
+		swap("net")
+		swap("mask")
+		swap("firewall")
+		swap("espspi")
+		swap("ahspi")
+		swap("espenckey")
+		swap("espauthkey")
+		swap("ahkey")
+		swap("updown")
+		t = spil
+		spil = spir
+		spir = t
+		havesubnet = rightsubnet
+	}
+	him = s["right"]
+
+	if (s["leftnexthop"] == "%defaultroute") {
+		if (drnexthop == "")
+			fail("%defaultroute requested but not known")
+		s["leftnexthop"] = drnexthop
+	}
+
+	tspi = rightward()
+	if (type == "tunnel") {
+		espi = rightward()
+		intspi = leftward()
+	} else
+		espi = tspi
+	if (s["rightespspi"] != "")
+		espi = s["rightespspi"]
+	respi = leftward()
+	if (s["leftespspi"] != "")
+		respi = s["leftespspi"]
+	if ("ah" in s) {
+		if ("esp" in s) {
+			aspi = rightward()
+			raspi = leftward()
+		} else {
+			aspi = espi
+			raspi = respi
+		}
+		if (s["rightahspi"] != "")
+			aspi = s["rightahspi"]
+		if (s["leftahspi"] != "")
+			raspi = s["leftahspi"]
+	}
+	routeid = "-net " s["rightnet"] " netmask " s["rightmask"]
+	if (s["rightmask"] == "255.255.255.255")
+		routeid = "-host " s["rightnet"]
+
+	print "PATH=\"'"$PATH"'\""
+	print "export PATH"
+	print "PLUTO_VERSION=1.1"
+	verbsuf = (havesubnet) ? "-client" : "-host"
+	print "PLUTO_CONNECTION=" q(names)
+	print "PLUTO_NEXT_HOP=" s["leftnexthop"]
+	print "PLUTO_INTERFACE=" iface
+	print "PLUTO_ME=" me
+	print "PLUTO_MY_CLIENT=" s["leftsubnet"]
+	print "PLUTO_MY_CLIENT_NET=" s["leftnet"]
+	print "PLUTO_MY_CLIENT_MASK=" s["leftmask"]
+	print "PLUTO_PEER=" him
+	print "PLUTO_PEER_CLIENT=" s["rightsubnet"]
+	print "PLUTO_PEER_CLIENT_NET=" s["rightnet"]
+	print "PLUTO_PEER_CLIENT_MASK=" s["rightmask"]
+	print "export PLUTO_VERSION PLUTO_CONNECTION PLUTO_NEXT_HOP"
+	print "export PLUTO_INTERFACE PLUTO_ME PLUTO_MY_CLIENT"
+	print "export PLUTO_MY_CLIENT_NET PLUTO_MY_CLIENT_MASK PLUTO_PEER"
+	print "export PLUTO_PEER_CLIENT PLUTO_PEER_CLIENT_NET"
+	print "export PLUTO_PEER_CLIENT_MASK"
+
+	if (op == "--up") {
+		print "{"
+		# first, the outbound SAs
+		if (type == "tunnel") {
+			print "ipsec spi --label", q(names), "--af inet",
+					"--said", ("tun" tspi "@" him), "\\"
+			print "\t--ip4", "--src", me, "--dst", him, "&&"
+		}
+		espspi(me, him, espi)
+		ahspi(me, him, aspi)
+		if (nrspi > 1) {
+			# group them
+			printf "ipsec spigrp --label %s --said ", q(names)
+			if (type == "tunnel")
+				printf "tun%s@%s ", tspi, him
+			if (("esp" in s))
+				printf "esp%s@%s ", espi, him
+			if ("ah" in s)
+				printf "ah%s@%s ", aspi, him
+			printf " &&\n"
+		}
+		# inbound SAs
+		if (type == "tunnel") {
+			print "ipsec spi --label", q(names), "--af inet",
+					"--said", ("tun" intspi "@" me), "\\"
+			print "\t--ip4", "--src", him, "--dst", me, "&&"
+		}
+		espspi(him, me, respi)
+		ahspi(him, me, raspi)
+		if (nlspi > 1) {
+			# group them
+			printf "ipsec spigrp --label %s --said ", q(names)
+			if (type == "tunnel")
+				printf "tun%s@%s ", intspi, me
+			if (("esp" in s))
+				printf "esp%s@%s ", respi, me
+			if ("ah" in s)
+				printf "ah%s@%s ", raspi, me
+			printf " &&\n"
+		}
+		# with the SAs in place, eroute to them
+		print "ipsec eroute --label", q(names),
+						"--eraf inet --replace", "\\"
+		if (!shunt) {
+			if (type == "tunnel")
+				p = "tun"
+			else if (("esp" in s))
+				p = "esp"
+			else
+				p = "ah"
+			p = p tspi "@" him
+		}
+		print "\t--src", s["leftsubnet"], "--dst", s["rightsubnet"],
+							"--said", p, "&&"
+		# with the eroute in place, NOW we can route to it
+		#print "{ route del", routeid, "2>/dev/null ; true ; } &&"
+		updown("prepare", "&&")
+		#print "route add", routeid, "dev", iface, "gw",
+		#					s["leftnexthop"], "&&"
+		updown("route", "&&")
+		# and with all processing in place, we can penetrate firewall
+		#if (s["leftfirewall"] == "yes") {
+		#	print "ipfwadm -F -i accept -b -S", s["leftsubnet"],
+		#				"-D", s["rightsubnet"], "&&"
+		#}
+		updown("up", "&&")
+		print "true"
+		print "} || {"
+	} else if (op == "--route") {
+		#print "{ route del", routeid, "2>/dev/null ; true ; } &&"
+		updown("prepare", "&&")
+		#print "route add", routeid, "dev", iface, "gw",
+		#					s["leftnexthop"]
+		updown("route")
+		exit 0
+	} else if (op == "--unroute") {
+		#print "route del", routeid, "dev", iface, "gw",
+		#					s["leftnexthop"]
+		updown("unroute")
+		exit 0
+	} else			# down
+		print "{"
+
+	# now do "down", unconditionally, since the desired output for "up"
+	# is { up && up && up && true } || { down ; down ; down }
+	# tear things down in fairly strict reverse order
+	#if (s["leftfirewall"] == "yes")
+	#	print "ipfwadm -F -d accept -b -S", s["leftsubnet"],
+	#					"-D", s["rightsubnet"]
+	updown("down")
+	#print "route del", routeid, "dev", iface, "gw", s["leftnexthop"]
+	print "# do not delete route"
+	print "ipsec eroute --label", q(names), "--eraf inet --del", "\\"
+	print "\t--src", s["leftsubnet"], "--dst", s["rightsubnet"]
+	#if ("ah" in s) {
+	#	print "ipsec spi --label", q(names), "--af inet", "--del",
+	#		"--said", ("ah" raspi "@" me)
+	#}
+	#if ("esp" in s) {
+	#	print "ipsec spi --label", q(names), "--af inet", "--del",
+	#		"--said", ("esp" respi "@" me)
+	#}
+	if (!shunt) {
+		if (type == "tunnel")
+			p = "tun"
+		else if (("esp" in s))
+			p = "esp"
+		else
+			p = "ah"
+		print "ipsec spi --label", q(names), "--af inet", "--del",
+				"--said", (p tspi "@" him),
+				"  # outbound"
+		print "ipsec spi --label", q(names), "--af inet", "--del",
+				"--said", (p intspi "@" me),
+				"  # inbound"
+	}
+
+	if (op == "--up")
+		print "} 2>/dev/null"
+	else
+		print "}"
+	#########
+	}' |
+if test $showonly
+then
+	cat
+else
+	sh $shopts
+fi

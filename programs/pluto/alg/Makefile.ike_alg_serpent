@@ -1,0 +1,13 @@
+ALG:=serpent
+CONFIG_YES:=$(CONFIG_IKE_ALG_SERPENT)
+DIR_SERPENT:=$(LIBCRYPTO)/libserpent
+ALG_DIRS-$(CONFIG_YES) := $(ALG_DIRS-$(CONFIG_YES)) $(DIR_SERPENT)
+ALG_LIBS-$(CONFIG_YES) := $(ALG_LIBS-$(CONFIG_YES)) $(DIR_SERPENT)/libserpent.a
+ALG_SRCS-$(CONFIG_YES) := $(ALG_SRCS-$(CONFIG_YES)) ike_alg_$(ALG).c
+ALG_OBJS-$(CONFIG_YES) := $(ALG_OBJS-$(CONFIG_YES)) ike_alg_$(ALG).o
+
+$(DIR_SERPENT)/libserpent.a:
+	make -C $(DIR_SERPENT) CFLAGS="$(CFLAGS)" libserpent.a
+
+ike_alg_$(ALG).o: ike_alg_$(ALG).c
+	$(CC) -I $(LIBCRYPTO) -I$(DIR_SERPENT) $(COPTS) $(ALLFLAGS) -c $<

@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD>
+<TITLE>Introduction to FreeS/WAN</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=iso-8859-1">
+<STYLE TYPE="text/css"><!--
+BODY { font-family: serif }
+H1 { font-family: sans-serif }
+H2 { font-family: sans-serif }
+H3 { font-family: sans-serif }
+H4 { font-family: sans-serif }
+H5 { font-family: sans-serif }
+H6 { font-family: sans-serif }
+SUB { font-size: smaller }
+SUP { font-size: smaller }
+PRE { font-family: monospace }
+--></STYLE>
+</HEAD>
+<BODY>
+<A HREF="toc.html">Contents</A>
+<A HREF="makecheck.html">Previous</A>
+<HR>
+<H1><A name="nightly">Nightly regression testing</A></H1>
+<P> The nightly regression testing system consists of several shell
+ scripts and some perl scripts. The goal is to check out a fresh tree,
+ run &quot;make check&quot; on it, record the results and summarize the results to
+ the team and to the web site.</P>
+<P> Output can be found on<A HREF="http://bugs.freeswan.org:81/"> adams</A>
+, although the tests are actually run on another project machine.</P>
+<H1><A name="nightlyhowto">How to setup the nightly build</A></H1>
+<P> The best way to do nightly testing is to setup a new account. We
+ call the account &quot;build&quot; - you could call it something else, but there
+ may still be some references to ~build in the scripts.</P>
+<H2><A NAME="42_1"> Files you need to know about</A></H2>
+<P> As few files as possible need to be extracted from the source tree -
+ files are run from the source tree whenever possible. However, there
+ are some bootstrap and configuration files that are necessary.</P>
+<P> There are 7 files in testing/utils that are involved:</P>
+<DL>
+<DT> nightly-sample.sh</DT>
+<DD> This is the root of the build process. This file should be copied
+ out of the CVS tree, to $HOME/bin/nightly.sh of the build account. This
+ file should be invoked from cron.</DD>
+<DT> freeswan-regress-env-sample.sh</DT>
+<DD> This file should be copied to $HOME/freeswan-regress-env.sh. It
+ should be edited to localize the values. See below.</DD>
+<DT> regress-cleanup.pl</DT>
+<DD> This file needs to be copied to $HOME/bin/regress-cleanup.pl. It is
+ invoked by the nightly file before doing anything else. It removes
+ previous nights builds in order to free up disk space for the build
+ about to be done.</DD>
+<DT> teammail-sample.sh</DT>
+<DD> A script used to send results email to the &quot;team&quot;. This sample
+ script could be copied to $HOME/bin/teammail.sh. This version will PGP
+ encrypt all the output to the team members. If this script is used,
+ then PGP will have to be properly setup to have the right keys.</DD>
+<DT> regress-nightly.sh</DT>
+<DD> This is the first stage of the nightly build. This stage will call
+ other scripts as appropriate, and will extract the source code from
+ CVS. This script should be copied to $HOME/bin/regress-nightly.sh</DD>
+<DT> regress-stage2.sh</DT>
+<DD> This is the second stage of the nightly build. It is called in
+ place. It essentially sets up the UML setup in umlsetup.sh, and calls
+ &quot;make check&quot;.</DD>
+<DT> regress-summarize-results.pl</DT>
+<DD> This script will summarize the results from the tests to a
+ permanent directory set by $REGRESSRESULTS. It is invoked from the
+ stage2 nightly script.</DD>
+<DT> regress-chart.sh</DT>
+<DD> This script is called at the end of the build process, and will
+ summarize each night's results (as saved into $REGRESSRESULTS by
+ regress-summarize-results.pl) as a chart using gnuplot. Note that this
+ requires at least gnuplot 3.7.2.</DD>
+</DL>
+<H2><A NAME="42_2">Configuring freeswan-regress-env.sh</A></H2>
+<P>For more info on KERNPOOL, UMLPATCH, BASICROOT and SHAREDIR, see<A HREF="umltesting.html">
+ User-Mode-Linux testing guide</A>.</P>
+<DL>
+<DT> KERNPOOL</DT>
+<DD> Extract copy of some kernel source to be used for UML builds</DD>
+<DT> UMLPATCH</DT>
+<DD> matching User-Mode-Linux patch.</DD>
+<DT> BASICROOT</DT>
+<DD> the root file system image (see<A HREF="umltesting.html">
+ User-Mode-Linux testing guide</A>).</DD>
+<DT> SHAREDIR=${BASICROOT}/usr/share</DT>
+<DD> The /usr/share to use.</DD>
+<DT> REGRESSTREE</DT>
+<DD> A directory in which to store the nightly regression results.
+ Directories will be created by date in this tree.</DD>
+<DT> TCPDUMP=tcpdump-3.7.1</DT>
+<DD> The path to the<A HREF="http://www.tcpdump.org/"> tcpdump</A> to
+ use. This must have crypto compiled in, and must be at least 3.7.1</DD>
+<DT> KERNEL_RH7_2_SRC=/a3/kernel_sources/linux-2.4.9-13/</DT>
+<DD> An extracted copy of the RedHat 7.2. kernel source. If set, then
+ the packaging/rpm-rh72-install-01 test will be run, and an RPM will be
+ built as a test.</DD>
+<DT> KERNEL_RH7_3_SRC=/a3/kernel_sources/rh/linux-2.4.18-5</DT>
+<DD> An extracted copy of the RedHat 7.3. kernel source. If set, then
+ the packaging/rpm-rh73-install-01 test will be run, and an RPM will be
+ built as a test.</DD>
+<DT> NIGHTLY_WATCHERS=&quot;userid,userid,userid&quot;</DT>
+<DD> The list of people who should receive nightly output. This is used
+ by teammail.sh</DD>
+<DT> FAILLINES=128</DT>
+<DD> How many lines of failed test output to include in the nightly
+ output</DD>
+<DT> PATH=$PATH:/sandel/bin export PATH</DT>
+<DD> You can also override the path if necessary here.</DD>
+<DT> CVSROOT=:pserver:anoncvs@ip212.xs4net.freeswan.org:/freeswan/MASTER</DT>
+<DD> The CVSROOT to use. This example may work for anonymous CVS, but
+ will be 12 hours behind the primary, and is still experimental</DD>
+<DT> SNAPSHOTSIGDIR=$HOME/snapshot-sig</DT>
+<DD> For the release tools, where to put the generated per-snapshot
+ signature keys</DD>
+<DT> LASTREL=1.97</DT>
+<DD> the name of the last release branch (to find the right per-snapshot
+ signature</DD>
+<DD></DD>
+</DL>
+<HR>
+<A HREF="toc.html">Contents</A>
+<A HREF="makecheck.html">Previous</A>
+</BODY>
+</HTML>

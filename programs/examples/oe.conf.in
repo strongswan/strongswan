@@ -1,0 +1,68 @@
+# defines default policy groups for Opportunistic Encryption (OE)
+#
+# RCSID $Id: oe.conf.in,v 1.1 2004/08/28 11:25:09 as Exp $
+
+conn packetdefault
+	type=tunnel
+	leftsubnet=0.0.0.0/0
+	right=%opportunistic
+	failureshunt=passthrough
+	keyingtries=3
+	ikelifetime=1h
+	keylife=1h
+	rekey=no
+	also=oe_defaults
+	auto=route
+
+conn clear
+	type=passthrough
+	authby=never
+	right=%group
+	also=oe_defaults
+	auto=route
+
+conn clear-or-private
+	type=passthrough
+	right=%opportunisticgroup
+	failureshunt=passthrough
+	keyingtries=3
+	ikelifetime=1h
+	keylife=1h
+	rekey=no
+	also=oe_defaults
+	auto=route
+
+conn private-or-clear
+	type=tunnel
+	right=%opportunisticgroup
+	failureshunt=passthrough
+	keyingtries=3
+	ikelifetime=1h
+	keylife=1h
+	rekey=no
+	also=oe_defaults
+	auto=route
+
+conn private
+	type=tunnel
+	right=%opportunisticgroup
+	failureshunt=drop
+	keyingtries=3
+	ikelifetime=1h
+	keylife=1h
+	rekey=no
+	also=oe_defaults
+	auto=route
+
+conn block
+	type=reject
+	authby=never
+	right=%group
+	also=oe_defaults
+	auto=route
+
+conn oe_defaults
+	left=%defaultroute
+	leftid=%myid
+	leftrsasigkey=%dnsondemand
+	rightrsasigkey=%dnsondemand

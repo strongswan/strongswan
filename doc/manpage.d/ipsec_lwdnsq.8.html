@@ -1,0 +1,400 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC LWDNSQ</TITLE>
+</HEAD><BODY>
+<H1>IPSEC LWDNSQ</H1>
+Section:  (8)<BR>Updated: <BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+lwdnsq - lookup items in DNS to help pluto (and others)
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<P>
+<PRE>
+<B>ipsec lwdnsq</B> lwdnsq [<B>--prompt</B>] [<B>--serial</B>]
+</PRE>
+
+<P>
+<PRE>
+<B>ipsec lwdnsq</B> lwdnsq [<B>--help</B>]
+</PRE>
+
+<P>
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<P>
+<P>
+
+The <B>ipsec lwdnsq</B> is a helper program that does DNS lookups for other programs. It implements an asynchronous interface on stdin/stdout, with an ASCII driven command language.
+<P>
+<P>
+
+If stdin is a tty or if the <B>--prompt</B> option is given, then it issues a prompt to the user. Otherwise, it is silent, except for results.
+<P>
+<P>
+
+The program will accept multiple queries concurrently, with each result being marked with the ID provided on the output. The IDs are strings.
+<P>
+<P>
+
+If the <B>--serial</B> option is given, then the program will not attempt to execute concurrent queries, but will serialize all input and output.
+<P>
+<A NAME="lbAE">&nbsp;</A>
+<H2>QUERY LANGUAGE</H2>
+
+<P>
+<P>
+
+There are eleven command that the program understands. This is to lookup different types of records in both the forward and reverse maps. Every query includes a queryid, which is returned in the output, on every single line to identify the transaction.
+<P>
+<A NAME="lbAF">&nbsp;</A>
+<H3>KEY queryid FQDN</H3>
+
+<P>
+<P>
+
+This request looks up the KEY resource record for the given <B>FQDN.</B>.
+<P>
+<A NAME="lbAG">&nbsp;</A>
+<H3>KEY4 queryid A.B.C.D</H3>
+
+<P>
+<P>
+
+This request looks up the KEY resource record found in the reverse map for the IP version 4 address <B>A.B.C.D</B>, i.e. it looks up D.C.B.A.in-addr.arpa.
+<P>
+<A NAME="lbAH">&nbsp;</A>
+<H3>KEY6 queryid A:B::C:D</H3>
+
+<P>
+<P>
+
+This request looks up the KEY resource record found in the reverse map for the IPv6 address <B>A:B::C:D</B>, i.e. it looks the 32-nibble long entry in ip6.arpa (and ip6.int).
+<P>
+<A NAME="lbAI">&nbsp;</A>
+<H3>TXT4 queryid A.B.C.D</H3>
+
+<P>
+<P>
+
+This request looks up the TXT resource record found in the reverse map for the IP version 4 address <B>A.B.C.D</B>, i.e. it looks up D.C.B.A.in-addr.arpa.
+<P>
+<A NAME="lbAJ">&nbsp;</A>
+<H3>TXT6 queryid A:B::C:D</H3>
+
+<P>
+<P>
+
+This request looks up the TXT resource record found in the reverse map for the IPv6 address <B>A:B::C:D</B>, i.e. it looks the 32-nibble long entry in ip6.arpa (and ip6.int).
+<P>
+<A NAME="lbAK">&nbsp;</A>
+<H3>KEY queryid FQDN</H3>
+
+<P>
+<P>
+
+This request looks up the IPSECKEY resource record for the given <B>FQDN.</B>. See note about IPSECKEY processing, below.
+<P>
+<A NAME="lbAL">&nbsp;</A>
+<H3>IPSECKEY4 queryid A.B.C.D</H3>
+
+<P>
+<P>
+
+This request looks up the IPSECKEY resource record found in the reverse map for the IP version 4 address <B>A.B.C.D</B>, i.e. it looks up D.C.B.A.in-addr.arpa. See special note about IPSECKEY processing, below.
+<P>
+<A NAME="lbAM">&nbsp;</A>
+<H3>IPSECKEY6 queryid A:B::C:D</H3>
+
+<P>
+<P>
+
+This request looks up the IPSECKEY resource record found in the reverse map for the IPv6 address <B>A:B::C:D</B>, i.e. it looks the 32-nibble long entry in ip6.arpa (and ip6.int). See special note about IPSECKEY processing, below.
+<P>
+<A NAME="lbAN">&nbsp;</A>
+<H3>OE4 queryid A.B.C.D</H3>
+
+<P>
+<P>
+
+This request looks an appropriate record for Opportunistic Encryption for the given IP address. This attempts to look for the delegation record. This may be one of IPSECKEY, KEY, or TXT record. Unless configured otherwise, (see OE4 Directives, below), then a query type of ANY will be used to retrieve all relevant records, and all will be returned.
+<P>
+<A NAME="lbAO">&nbsp;</A>
+<H3>OE6 queryid A:B::C:D</H3>
+
+<P>
+<P>
+
+This request looks an appropriate record for Opportunistic Encryption for the given IPv6 address. This attempts to look for the delegation record. This may be one of IPSECKEY, KEY, or TXT record. Unless configured otherwise, (see OE Directives, below), then a query type of ALL will be used to retrieve all relevant records, and all will be returned. i.e. it looks the 32-nibble long entry in ip6.arpa (and ip6.int).
+<P>
+<A NAME="lbAP">&nbsp;</A>
+<H3>A queryid FQDN</H3>
+
+<P>
+<P>
+
+This request looks up the A (IPv4) resource record for the given <B>FQDN.</B>.
+<P>
+<A NAME="lbAQ">&nbsp;</A>
+<H3>AAAA queryid FQDN</H3>
+
+<P>
+<P>
+
+This request looks up the AAAA (IPv6) resource record for the given <B>FQDN.</B>.
+<P>
+<A NAME="lbAR">&nbsp;</A>
+<H2>REPLIES TO QUERIES</H2>
+
+<P>
+<P>
+
+All replies from the queries are in the following format: 
+<P>
+<PRE>
+
+&lt;ID&gt; &lt;TIME&gt; &lt;TTL&gt; &lt;TYPE&gt; &lt;TYPE-SPECIFIC&gt; \n
+
+</PRE>
+
+<BR>&nbsp;&nbsp;
+<P>
+<DL COMPACT>
+<DT><I>ID</I><DD>
+this is the <B>queryid</B> value that was provided in the query. It is repeated on every line to permit the replies to be properly associated with the query. When the response is not ascribable to particular query (such as for a mis-formed query), then the query ID &quot;0&quot; will be used.
+<P>
+<DT><I>TIME</I><DD>
+this is the current time in seconds since epoch.
+<P>
+<DT><I>TTL</I><DD>
+for answers which have a time to live, this is the current value. The answer is valid for this number of seconds. If there is no useful value here, then the number 0 is used.
+<P>
+<DT><I>TYPE</I><DD>
+This is the type of the record that is being returned. The types are described in the next section. The TYPE specific data that follows is specific to the type.
+<BR>&nbsp;
+<P>
+</DL>
+<P>
+
+The replies are limited to 4096 bytes, a value defined as <B>LWDNSQ_RESULT_LEN_MAX</B>. This is defined in <I>freeswan.h</I>.
+<P>
+<P>
+
+All of the replies which include resource records use the standard presentation format (with no line feeds or carriage returns) in their answer.
+<P>
+<A NAME="lbAS">&nbsp;</A>
+<H3>START</H3>
+
+<P>
+<P>
+
+This reply indicates that a query has been received and has been started. It serves as an anchor point for timing, as well as an acknowledgement.
+<P>
+<A NAME="lbAT">&nbsp;</A>
+<H3>DONE</H3>
+
+<P>
+<P>
+
+This reply indicates that a query is entirely over, and no further information from this query will be sent.
+<P>
+<A NAME="lbAU">&nbsp;</A>
+<H3>RETRY</H3>
+
+<P>
+<P>
+
+This reply indicates that a query is entirely over, but that no data was found. The records may exist, but appropriate servers could not be reached.
+<P>
+<A NAME="lbAV">&nbsp;</A>
+<H3>FATAL</H3>
+
+<P>
+<P>
+
+This reply indicates that a query is entirely over, and that no data of the type requested could be found. There were no timeouts, and all servers were available and confirmed non-existances. There may be NXT records returned prior to this.
+<P>
+<A NAME="lbAW">&nbsp;</A>
+<H3>CNAME</H3>
+
+<P>
+<P>
+
+This is an interim reply, and indicates that a CNAME was found (and followed) while performing the query. The value of the CNAME is present in the type specific section.
+<P>
+<A NAME="lbAX">&nbsp;</A>
+<H3>CNAMEFROM</H3>
+
+<P>
+<P>
+
+This is an interim reply, and indicates that a CNAME was found. The original name that was queries for was not the canonical name, and this reply indicates the name that was actually followed.
+<P>
+<A NAME="lbAY">&nbsp;</A>
+<H3>NAME</H3>
+
+<P>
+<P>
+
+This is an interim reply. The original name that was queries for was not the canonical name. This reply indicates the canonical name.
+<P>
+<A NAME="lbAZ">&nbsp;</A>
+<H3>DNSSEC</H3>
+
+<P>
+<P>
+
+This is an interim reply. It is followed either by &quot;OKAY&quot; or &quot;not present. It indicates if DNSSEC was available on the reply.
+<P>
+<A NAME="lbBA">&nbsp;</A>
+<H3>TXT and AD-TXT</H3>
+
+<P>
+<P>
+
+This is an interim reply. If there are TXT resource records in the reply, then each one is presented using this type. If preceeded by AD-, then this record was signed with DNSSEC.
+<P>
+<A NAME="lbBB">&nbsp;</A>
+<H3>A and AD-A</H3>
+
+<P>
+<P>
+
+This is an interim reply. If there are A resource records in the reply, then each one is presented using this type. If preceeded by AD-, then this record was signed with DNSSEC.
+<P>
+<A NAME="lbBC">&nbsp;</A>
+<H3>AAAA and AD-AAAA</H3>
+
+<P>
+<P>
+
+This is an interim reply. If there are AAAA resource records in the reply, then each one is presented using this type. If preceeded by AD-, then this record was signed with DNSSEC.
+<P>
+<A NAME="lbBD">&nbsp;</A>
+<H3>PTR and AD-PTR</H3>
+
+<P>
+<P>
+
+This is an interim reply. If there are PTR resource records in the reply, then each one is presented using this type. If preceeded by AD-, then this record was signed with DNSSEC.
+<P>
+<A NAME="lbBE">&nbsp;</A>
+<H3>KEY and AD-KEY</H3>
+
+<P>
+<P>
+
+This is an interim reply. If there are KEY resource records in the reply, then each one is presented using this type. If preceeded by AD-, then this record was signed with DNSSEC.
+<P>
+<A NAME="lbBF">&nbsp;</A>
+<H3>IPSECKEY and AD-IPSECKEY</H3>
+
+<P>
+<P>
+
+This is an interim reply. If there are IPSEC resource records in the reply, then each one is presented using this type. If preceeded by AD-, then this record was signed with DNSSEC.
+<P>
+<A NAME="lbBG">&nbsp;</A>
+<H2>SPECIAL IPSECKEY PROCESSING</H2>
+
+<P>
+<P>
+
+At the time of this writing, the IPSECKEY resource record is not entirely specified. In particular no resource record number has been assigned. This program assumes that it is resource record number 45. If the file /etc/ipsec.d/lwdnsq.conf exists, and contains a line like 
+<P>
+<PRE>
+
+ipseckey_rr=<B>number</B>
+
+</PRE>
+
+<BR>&nbsp;then&nbsp;this&nbsp;number&nbsp;will&nbsp;be&nbsp;used&nbsp;instead.&nbsp;The&nbsp;file&nbsp;is&nbsp;read&nbsp;only&nbsp;once&nbsp;at&nbsp;startup.
+<P>
+<A NAME="lbBH">&nbsp;</A>
+<H2>OE DIRECTIVES</H2>
+
+<P>
+<P>
+
+If the file /etc/ipsec.d/lwdnsq.conf exists, and contains a line like 
+<P>
+<PRE>
+
+queryany=false
+
+</PRE>
+
+<BR>&nbsp;then&nbsp;instead&nbsp;of&nbsp;doing&nbsp;an&nbsp;ALL&nbsp;query&nbsp;when&nbsp;looking&nbsp;for&nbsp;OE&nbsp;delegation&nbsp;records,&nbsp;lwdnsq&nbsp;will&nbsp;do&nbsp;a&nbsp;series&nbsp;of&nbsp;queries.&nbsp;It&nbsp;will&nbsp;first&nbsp;look&nbsp;for&nbsp;IPSECKEY,&nbsp;and&nbsp;then&nbsp;TXT&nbsp;record.&nbsp;If&nbsp;it&nbsp;finds&nbsp;neither,&nbsp;it&nbsp;will&nbsp;then&nbsp;look&nbsp;for&nbsp;KEY&nbsp;records&nbsp;of&nbsp;all&nbsp;kinds,&nbsp;although&nbsp;they&nbsp;do&nbsp;not&nbsp;contain&nbsp;delegation&nbsp;information.
+<P>
+<A NAME="lbBI">&nbsp;</A>
+<H2>SPECIAL IPSECKEY PROCESSING</H2>
+
+<P>
+<PRE>
+
+/etc/ipsec.d/lwdnsq.conf
+
+</PRE>
+
+<P>
+<A NAME="lbBJ">&nbsp;</A>
+<H2>AUTHOR</H2>
+
+Michael Richardson &lt;<A HREF="mailto:mcr@sandelman.ottawa.on.ca">mcr@sandelman.ottawa.on.ca</A>&gt;.
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">QUERY LANGUAGE</A><DD>
+<DL>
+<DT><A HREF="#lbAF">KEY queryid FQDN</A><DD>
+<DT><A HREF="#lbAG">KEY4 queryid A.B.C.D</A><DD>
+<DT><A HREF="#lbAH">KEY6 queryid A:B::C:D</A><DD>
+<DT><A HREF="#lbAI">TXT4 queryid A.B.C.D</A><DD>
+<DT><A HREF="#lbAJ">TXT6 queryid A:B::C:D</A><DD>
+<DT><A HREF="#lbAK">KEY queryid FQDN</A><DD>
+<DT><A HREF="#lbAL">IPSECKEY4 queryid A.B.C.D</A><DD>
+<DT><A HREF="#lbAM">IPSECKEY6 queryid A:B::C:D</A><DD>
+<DT><A HREF="#lbAN">OE4 queryid A.B.C.D</A><DD>
+<DT><A HREF="#lbAO">OE6 queryid A:B::C:D</A><DD>
+<DT><A HREF="#lbAP">A queryid FQDN</A><DD>
+<DT><A HREF="#lbAQ">AAAA queryid FQDN</A><DD>
+</DL>
+<DT><A HREF="#lbAR">REPLIES TO QUERIES</A><DD>
+<DL>
+<DT><A HREF="#lbAS">START</A><DD>
+<DT><A HREF="#lbAT">DONE</A><DD>
+<DT><A HREF="#lbAU">RETRY</A><DD>
+<DT><A HREF="#lbAV">FATAL</A><DD>
+<DT><A HREF="#lbAW">CNAME</A><DD>
+<DT><A HREF="#lbAX">CNAMEFROM</A><DD>
+<DT><A HREF="#lbAY">NAME</A><DD>
+<DT><A HREF="#lbAZ">DNSSEC</A><DD>
+<DT><A HREF="#lbBA">TXT and AD-TXT</A><DD>
+<DT><A HREF="#lbBB">A and AD-A</A><DD>
+<DT><A HREF="#lbBC">AAAA and AD-AAAA</A><DD>
+<DT><A HREF="#lbBD">PTR and AD-PTR</A><DD>
+<DT><A HREF="#lbBE">KEY and AD-KEY</A><DD>
+<DT><A HREF="#lbBF">IPSECKEY and AD-IPSECKEY</A><DD>
+</DL>
+<DT><A HREF="#lbBG">SPECIAL IPSECKEY PROCESSING</A><DD>
+<DT><A HREF="#lbBH">OE DIRECTIVES</A><DD>
+<DT><A HREF="#lbBI">SPECIAL IPSECKEY PROCESSING</A><DD>
+<DT><A HREF="#lbBJ">AUTHOR</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

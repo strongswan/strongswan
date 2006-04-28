@@ -1,0 +1,8 @@
+Package: freeswan-module
+Priority: optional
+Section: Communications
+Version: VERSION
+Architecture: ARCH
+Maintainer: FreeS/WAN <users@lists.freeswan.org>
+Depends: freeswan
+Description: FreeS/WAN ipsec.o binary module

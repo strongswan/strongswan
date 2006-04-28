@@ -1,0 +1,4 @@
+# ssh environment file for freeswan CVS access
+# user .ssh directories have links to this, so this info is in one place
+CVSROOT=/home/freeswan/cvs
+CVSUMASK=002

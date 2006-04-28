@@ -1,0 +1,87 @@
+#! /bin/sh
+# quick look at current connections and related information
+# Copyright (C) 1998, 1999  Henry Spencer.
+# 
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# RCSID $Id: look.in,v 1.1 2004/03/15 20:35:28 as Exp $
+
+info=/var/run/ipsec.info
+me="ipsec look"
+
+case "$1" in
+--help)		echo "Usage: ipsec look" ; exit 0	;;
+--version)	echo "$me $IPSEC_VERSION" ; exit 0	;;
+esac
+
+# clear out variables that have strange effects on sort etc.
+unset LANG LANGUAGE LC_ALL LC_MESSAGES
+
+# Pick up IPsec configuration etc.
+eval `ipsec _confread --varprefix IPSEC --optional --type config setup`
+if test " $IPSEC_confreadstatus" != " "
+then
+	echo "$IPSEC_confreadstatus -- aborting" |
+		logger -s -p daemon.error -t ipsec_look
+	exit 1
+fi
+if test -s $info
+then
+	. $info
+fi
+
+# label it just to be sure
+echo "`hostname` `date`"
+
+# combine spigrp and eroute
+cat /proc/net/ipsec_spigrp /proc/net/ipsec_eroute |
+	awk '
+		function pad(subnet) {
+			sub("/", ".", subnet)
+			split(subnet, d, ".")
+			return sprintf("%03s%03s%03s%03s%03s", d[1], d[2],
+							d[3], d[4], d[5])
+		}
+		$2 == "->" {
+			printf "%s:%-18s -> %-18s => %s\n",
+				(pad($1) pad($3)),
+				$1, $3, (($5 in tun) ? tun[$5] : $5)
+			next
+		}
+		$3 == "->" {
+			printf "%s:%-18s -> %-18s => %s (%s)\n",
+				(pad($2) pad($4)),
+				$2, $4, (($6 in tun) ? tun[$6] : $6), $1
+			next
+		}
+		{ tun[$1] = $0 }
+	' | sort | sed 's/^[^:]*://'
+
+# tncfg (mostly as a divider line)
+egrep -v 'NULL[ \t]+mtu=0\(0\)[ \t]+->[ \t]+0' /proc/net/ipsec_tncfg |
+	paste -d % | sed 's/%/   /g' | sed 's/ -> /->/g'
+
+# SAs
+sort /proc/net/ipsec_spi
+
+# relevant routing information, including header line (which is good
+# enough as a separator, no need for another bar)
+pat="^Dest"
+if test " $defaultroutephys" != " "
+then
+	pat="$pat|$defaultroutephys\$|$defaultroutevirt\$"
+else
+	for i in `echo "$IPSECinterfaces" | tr '=' ' '`
+	do
+		pat="$pat|$i\$"
+	done
+fi
+netstat -nr | egrep "$pat" | sed '/^Dest/s/^/ /' | sort | sed '/^ Dest/s/ //'

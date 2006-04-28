@@ -1,0 +1,8 @@
+Package: freeswan
+Priority: optional
+Section: Communications
+Version: VERSION
+Architecture: ARCH
+Maintainer: FreeS/WAN <users@lists.freeswan.org>
+Depends: gawk libgmp
+Description: FreeS/WAN daemons and userland tools

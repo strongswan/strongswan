@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# This script expects the following variables to be in the environment:
+# DESTDIR
+# FREESWANSRCDIR
+# ARCH
+# IPSECVERSION
+
+#set -e
+
+cd $DESTDIR 
+rm -f *.tar.gz 
+
+mkdir -p $FREESWANSRCDIR/packaging/ipkg/ipkg
+cp $FREESWANSRCDIR/packaging/ipkg/debian-binary . 
+cp $FREESWANSRCDIR/packaging/ipkg/conffiles . 
+
+cat $FREESWANSRCDIR/packaging/ipkg/control-freeswan.dist | sed s/VERSION/$IPSECVERSION/ |sed s/ARCH/$ARCH/ > $FREESWANSRCDIR/packaging/ipkg/control-freeswan 
+
+cp $FREESWANSRCDIR/packaging/ipkg/control-freeswan control 
+
+tar -czf ./control.tar.gz ./conffiles ./control --owner=root --group=root 
+
+tar -czf ./data.tar.gz ./* --owner=root --group=root --exclude=control.tar.gz --exclude=conffiles --exclude=control --exclude=debian-binary 
+
+tar -czf $FREESWANSRCDIR/packaging/ipkg/ipkg/freeswan-utils-$IPSECVERSION.arm.ipk ./debian-binary ./control.tar.gz ./data.tar.gz --owner=root --group=root 
+mkdir -p $FREESWANSRCDIR/packaging/ipkg/kernel-module 
+cd $FREESWANSRCDIR/packaging/ipkg/kernel-module 
+
+rm -f *.tar.gz 
+cp $FREESWANSRCDIR/packaging/ipkg/debian-binary . 
+
+cat $FREESWANSRCDIR/packaging/ipkg/control-freeswan-module.dist | sed s/VERSION/$IPSECVERSION/ |sed s/ARCH/$ARCH/ > $FREESWANSRCDIR/packaging/ipkg/control-freeswan-module 
+
+cp $FREESWANSRCDIR/packaging/ipkg/control-freeswan-module control 
+
+tar czf ./control.tar.gz ./control --owner=root --group=root 
+
+tar czf ./data.tar.gz * --owner=root --group=root --exclude=control.tar.gz --exclude=control --exclude=debian-binary 
+
+tar czf $FREESWANSRCDIR/packaging/ipkg/ipkg/freeswan-module-$IPSECVERSION.arm.ipk ./debian-binary ./control.tar.gz ./data.tar.gz --owner=root --group=root 
+rm -rf $FREESWANSRCDIR/packaging/ipkg/ipkg/binaries/* 
+rm -rf $FREESWANSRCDIR/packaging/ipkg/ipkg/kernel-module/*

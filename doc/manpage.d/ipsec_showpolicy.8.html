@@ -1,0 +1,88 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of IPSEC_SHOWPOLICY</TITLE>
+</HEAD><BODY>
+<H1>IPSEC_SHOWPOLICY</H1>
+Section: Maintenance Commands (8)<BR>Updated: 7 May 2003<BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+ipsec showpolicy - dump policy of socket found as stdin
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<P>
+
+<B>ipsec</B>
+
+<B>showpolicy</B>
+
+<P>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<I>showpolicy</I>
+
+calls the 
+<I><A HREF="ipsec_policy_lookup.3.html">ipsec_policy_lookup</A></I>(3)
+
+function on the file description which is its stdin.
+<P>
+
+It then dumps the resulting query in a human readable form.
+<P>
+
+This is a test program. One might run it from inetd, via:
+<DL COMPACT>
+<DT>discard stream tcp nowait nobody /usr/local/libexec/ipsec/showpolicy showpolicy<DD>
+</DL>
+<A NAME="lbAE">&nbsp;</A>
+<H2>FILES</H2>
+
+/var/run/ipsecpolicy.ctl
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
+
+<A HREF="ipsec.8.html">ipsec</A>(8), <A HREF="ipsec_policy_query.3.html">ipsec_policy_query</A>(3), <A HREF="ipsec_pluto.8.html">ipsec_pluto</A>(8)
+<A NAME="lbAG">&nbsp;</A>
+<H2>HISTORY</H2>
+
+Written for the Linux FreeS/WAN project
+&lt;<A HREF="http://www.freeswan.org/">http://www.freeswan.org/</A>&gt;
+by Michael Richardson
+<A NAME="lbAH">&nbsp;</A>
+<H2>BUGS</H2>
+
+
+
+
+
+
+
+
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">FILES</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">HISTORY</A><DD>
+<DT><A HREF="#lbAH">BUGS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 21:40:18 GMT, November 11, 2003
+</BODY>
+</HTML>

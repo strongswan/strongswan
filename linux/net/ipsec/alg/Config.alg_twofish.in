@@ -1,0 +1,3 @@
+if [ "$CONFIG_IPSEC_ALG" = "y" ]; then
+  tristate '        TWOFISH encryption algorithm' CONFIG_IPSEC_ALG_TWOFISH
+fi

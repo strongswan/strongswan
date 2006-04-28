@@ -1,0 +1,5 @@
+moon::ipsec stop
+carol::ipsec stop
+winnetou::killall openssl
+carol::rm /etc/ipsec.d/private/*
+carol::rm /etc/ipsec.d/certs/*

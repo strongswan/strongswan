@@ -1,0 +1,65 @@
+#! /bin/sh
+# mvrel major minor
+# move packaged release to distribution site (password supplied manually)
+
+PATH=/bin:/usr/bin
+export PATH
+umask 022
+
+. $HOME/freeswan-regress-env.sh
+
+localplace=~build/archive
+site=freeswan@xs4.xs4all.nl
+place=FTP
+linkname=LATEST.tar
+ssh=/usr/bin/ssh
+scp=/usr/bin/scp
+
+localonly=
+remove=yes
+for dummy
+do
+	case "$1" in
+	-l)	localonly=yes	;;
+	-c)	site=adams.freeswan.org ; place=/home/team ; scp=scp2 ; ssh=ssh2	;;
+	-k)	remove=		;;
+	--)	shift ; break	;;
+	-*)	echo "$0: unknown option \'$1'" >&2 ; exit 2	;;
+	*)	break		;;
+	esac
+	shift
+done
+
+case "$#:$1" in
+1:*.*)	;;
+*)	echo "Usage: $0 [-l] [-c] release" >&2 ; exit	;;
+esac
+
+tarname=freeswan-$1.tar
+
+cd ~build/tmp
+if test ! -r $tarname.gz
+then
+	echo "$0: no $tarname.gz!" >&2
+	exit 1
+fi
+
+rm -f $localplace/$tarname.*
+cp -p $tarname.gz $tarname.gz.sig $localplace
+
+if test "$localonly"
+then
+	exit 0		# leaving the original around
+fi
+
+$ssh $site "cd $place ; rm -f $tarname.gz.sig $tarname.gz LATEST.* ;
+			rm -f CANDIDATE.* freeswan-cand* ;
+			mv freeswan-[0-9]* old ;
+			ln -s $tarname.gz LATEST.tar.gz ;
+			ln -s $tarname.gz.sig LATEST.tar.gz.sig"
+$scp -p $tarname.gz.sig $tarname.gz $site:$place
+
+if test "$remove"
+then
+	rm -f $tarname.*
+fi
