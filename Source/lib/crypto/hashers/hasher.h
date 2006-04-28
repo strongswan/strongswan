@@ -109,12 +109,12 @@ struct hasher_t {
 	void (*allocate_hash) (hasher_t *this, chunk_t data, chunk_t *hash);
 	
 	/**
-	 * @brief Get the block size of this hashing function.
+	 * @brief Get the size of the resulting hash.
 	 * 
 	 * @param this			calling object
-	 * @return				block size in bytes
+	 * @return				hash size in bytes
 	 */
-	size_t (*get_block_size) (hasher_t *this);
+	size_t (*get_hash_size) (hasher_t *this);
 	
 	/**
 	 * @brief Resets the hashers state, which allows

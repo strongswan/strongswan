@@ -272,7 +272,7 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 		return NOT_SUPPORTED;	
 	}
 	
-	if (pos + hasher->get_block_size(hasher) != em.ptr + em.len)
+	if (pos + hasher->get_hash_size(hasher) != em.ptr + em.len)
 	{
 		/* bad length */
 		free(em.ptr);

@@ -72,7 +72,7 @@ void test_md5_hasher(protected_tester_t *tester)
 	abcd.ptr = "abcdefghijklmnopqrstuvwxyz";
 	abcd.len = strlen(abcd.ptr);
 	
-	tester->assert_true(tester, hasher->get_block_size(hasher) == 16, "block size");
+	tester->assert_true(tester, hasher->get_hash_size(hasher) == 16, "block size");
 	
 	/* simple hashing, using empty */
 	hasher->get_hash(hasher, empty, hash_buffer);
@@ -137,7 +137,7 @@ void test_sha1_hasher(protected_tester_t *tester)
 	aaa.ptr = "aaaaaaaaaa"; /* 10 a's */
 	aaa.len = 10;
 	
-	tester->assert_true(tester, hasher->get_block_size(hasher) == 20, "block size");
+	tester->assert_true(tester, hasher->get_hash_size(hasher) == 20, "block size");
 	
 	/* simple hashing, using "abc" */
 	hasher->get_hash(hasher, abc, hash_buffer);

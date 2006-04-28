@@ -70,7 +70,7 @@ static void get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 	 * 
 	 */
 	
-	u_int8_t buffer[this->h->get_block_size(this->h)];
+	u_int8_t buffer[this->h->get_hash_size(this->h)];
 	chunk_t inner;
 	
 	if (out == NULL)
@@ -82,7 +82,7 @@ static void get_mac(private_hmac_t *this, chunk_t data, u_int8_t *out)
 	{
 		/* append and do outer hash */
 		inner.ptr = buffer;
-		inner.len = this->h->get_block_size(this->h);
+		inner.len = this->h->get_hash_size(this->h);
 		
 		/* complete inner */
 		this->h->get_hash(this->h, data, buffer);
@@ -109,7 +109,7 @@ static void allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
 	}
 	else
 	{
-		out->len = this->h->get_block_size(this->h);
+		out->len = this->h->get_hash_size(this->h);
 		out->ptr = malloc(out->len);
 		this->hmac.get_mac(&(this->hmac), data, out->ptr);
 	}
@@ -120,7 +120,7 @@ static void allocate_mac(private_hmac_t *this, chunk_t data, chunk_t *out)
  */
 static size_t get_block_size(private_hmac_t *this)
 {
-	return this->h->get_block_size(this->h);
+	return this->h->get_hash_size(this->h);
 }
 
 /**

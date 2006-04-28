@@ -172,7 +172,7 @@ static status_t pem_decrypt(chunk_t *blob, chunk_t *iv, char *passphrase)
 	
 	/* build key from passphrase and IV */
 	hasher = hasher_create(HASH_MD5);
-	hash.len = hasher->get_block_size(hasher);
+	hash.len = hasher->get_hash_size(hasher);
 	hash.ptr = alloca(hash.len);
 	hasher->get_hash(hasher, pass, NULL);
 	hasher->get_hash(hasher, *iv, hash.ptr);

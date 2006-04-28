@@ -346,9 +346,9 @@ static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *ha
 }
 	
 /**
- * Implementation of hasher_t.get_block_size.
+ * Implementation of hasher_t.get_hash_size.
  */
-static size_t get_block_size(private_md5_hasher_t *this)
+static size_t get_hash_size(private_md5_hasher_t *this)
 {
 	return BLOCK_SIZE_MD5;
 }
@@ -383,7 +383,7 @@ md5_hasher_t *md5_hasher_create()
 
 	this->public.hasher_interface.get_hash = (void (*) (hasher_t*, chunk_t, u_int8_t*))get_hash;
 	this->public.hasher_interface.allocate_hash = (void (*) (hasher_t*, chunk_t, chunk_t*))allocate_hash;
-	this->public.hasher_interface.get_block_size = (size_t (*) (hasher_t*))get_block_size;
+	this->public.hasher_interface.get_hash_size = (size_t (*) (hasher_t*))get_hash_size;
 	this->public.hasher_interface.reset = (void (*) (hasher_t*))reset;
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 	
