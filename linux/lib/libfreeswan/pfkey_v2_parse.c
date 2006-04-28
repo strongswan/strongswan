@@ -60,9 +60,9 @@ extern int debug_pfkey;
 # include <linux/errno.h>
 
 # include <freeswan.h>
-# include "programs/pluto/constants.h" 
-# include "programs/pluto/defs.h"  /* for PRINTF_LIKE */
-# include "programs/pluto/log.h"  /* for debugging and DBG_log */
+# include "src/pluto/constants.h" 
+# include "src/pluto/defs.h"  /* for PRINTF_LIKE */
+# include "src/pluto/log.h"  /* for debugging and DBG_log */
 
 /* #define PLUTO */
 
