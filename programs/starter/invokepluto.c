@@ -54,7 +54,7 @@ starter_pluto_sigchild(pid_t pid)
 		, PLUTO_RESTART_DELAY);
 	    alarm(PLUTO_RESTART_DELAY);   // restart in 5 sec
 	}
-	unlink(PID_FILE);
+	unlink(PLUTO_PID_FILE);
     }
 }
 
@@ -203,7 +203,7 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
     }
     else
     {
-	unlink(CTL_FILE);
+	unlink(PLUTO_CTL_FILE);
 	_stop_requested = 0;
 
 	if (cfg->setup.prepluto)
@@ -252,7 +252,7 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 	    {
 		/* wait for pluto */
 		usleep(20000);
-		if (stat(CTL_FILE, &stb) == 0)
+		if (stat(PLUTO_CTL_FILE, &stb) == 0)
 		{
 		    DBG(DBG_CONTROL,
 			DBG_log("pluto (%d) started", _pluto_pid)

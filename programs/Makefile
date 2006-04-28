@@ -32,6 +32,10 @@ ifeq ($(USE_IPSECPOLICY),true)
 SUBDIRS+=showpolicy
 endif
 
+ifeq ($(USE_IKEV2),true)
+SUBDIRS+=charon
+endif
+
 def:
 	@echo "Please read doc/intro.html or INSTALL before running make"
 	@false

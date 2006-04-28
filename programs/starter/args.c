@@ -86,6 +86,10 @@ static const char *LST_packetdefault[] = {
 
 static const char *LST_keyexchange[] = {
     "ike",
+#ifdef IKEV2
+    "ikev1",
+    "ikev2",
+#endif /* IKEV2 */
      NULL
 };
 

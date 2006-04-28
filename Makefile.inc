@@ -84,6 +84,8 @@ SBINDIR=$(DESTDIR)$(FINALSBINDIR)
 FINALLIBDIR=$(INC_USRLOCAL)/lib/ipsec
 LIBDIR=$(DESTDIR)$(FINALLIBDIR)
 
+# sharedlibdir is where shared libraries go
+SHAREDLIBDIR=$(DESTDIR)$(INC_USRLOCAL)/lib
 
 # where the appropriate manpage tree is located
 # location within INC_USRLOCAL
@@ -283,6 +285,9 @@ LDAP_VERSION=3
 
 # include PKCS11-based smartcard support
 USE_SMARTCARD?=false
+
+# support IKEv2 via charon
+USE_IKEV2?=true
 
 # Default PKCS11 library
 # Uncomment this line if using OpenSC <= 0.9.6

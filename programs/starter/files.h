@@ -37,8 +37,15 @@
 #define SECRETS_FILE	IPSEC_CONFDIR"/ipsec.secrets"
 
 #define PLUTO_CMD       IPSEC_EXECDIR"/pluto"
-#define CTL_FILE        DEFAULT_CTLBASE CTL_SUFFIX
-#define PID_FILE        DEFAULT_CTLBASE PID_SUFFIX
+#define PLUTO_CTL_FILE  DEFAULT_CTLBASE CTL_SUFFIX
+#define PLUTO_PID_FILE  DEFAULT_CTLBASE PID_SUFFIX
+
+#ifdef IKEV2
+#define CHARON_CMD		IPSEC_EXECDIR"/charon"
+#define CHARON_BASE		"/var/run/charon"
+#define CHARON_CTL_FILE CHARON_BASE CTL_SUFFIX
+#define CHARON_PID_FILE CHARON_BASE PID_SUFFIX
+#endif /* IKEV2 */
 
 #define DYNIP_DIR       "/var/run/dynip"
 #define INFO_FILE       "/var/run/ipsec.info"

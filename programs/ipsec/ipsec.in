@@ -26,6 +26,7 @@ IPSEC_DIR="$IPSEC_LIBDIR"
 export IPSEC_DIR IPSEC_CONFS IPSEC_LIBDIR IPSEC_EXECDIR
 
 IPSEC_STARTER_PID="/var/run/starter.pid"
+IPSEC_CHARON_PID="/var/run/charon.pid"
 
 # standardize PATH, and export it for everything else's benefit
 PATH="${IPSEC_SBINDIR}":/sbin:/usr/sbin:/usr/local/bin:/bin:/usr/bin
@@ -123,6 +124,10 @@ case "$1" in
 down)
 	shift
 	$IPSEC_EXECDIR/whack --name "$1" --terminate
+	if test -e $IPSEC_CHARON_PID
+	then
+	    $IPSEC_EXECDIR/stroke down "$1"
+	fi
 	exit 0
 	;;
 listalgs|listpubkeys|listcerts|listcacerts|\
@@ -134,6 +139,10 @@ rereadacerts|rereadcrls|rereadall)
 	op="$1"
 	shift
         $IPSEC_EXECDIR/whack "$@" "--$op"
+	if test -e $IPSEC_CHARON_PID
+	then
+            $IPSEC_EXECDIR/stroke "$op"
+        fi
 	exit 0
 	;;
 ready)
@@ -180,8 +189,16 @@ status|statusall)
 	if test $# -eq 0
 	then
 	    $IPSEC_EXECDIR/whack "--$op"
+	    if test -e $IPSEC_CHARON_PID
+	    then
+	    	$IPSEC_EXECDIR/stroke "$op"
+	    fi
 	else
 	    $IPSEC_EXECDIR/whack --name "$1" "--$op"
+	    if test -e $IPSEC_CHARON_PID
+	    then
+	    	$IPSEC_EXECDIR/stroke "$op" "$1"
+	    fi
 	fi
 	exit 0
 	;;
@@ -198,6 +215,10 @@ stop)
 up)
 	shift
 	$IPSEC_EXECDIR/whack --name "$1" --initiate
+	if test -e $IPSEC_CHARON_PID
+	then
+	    $IPSEC_EXECDIR/stroke up "$1"
+	fi
 	exit 0
 	;;
 update)

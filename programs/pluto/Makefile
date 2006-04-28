@@ -170,6 +170,11 @@ ifeq ($(USE_SMARTCARD),true)
   LIBSPLUTO+= -ldl
 endif
 
+# enable IKEv2 support
+ifeq ($(USE_IKEV2),true)
+  DEFINES+= -DIKEV2
+endif
+
 # This compile option activates the leak detective
 ifeq ($(USE_LEAK_DETECTIVE),true)
   DEFINES+= -DLEAK_DETECTIVE

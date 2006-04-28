@@ -37,6 +37,7 @@
 #include "files.h"
 #include "starterwhack.h"
 #include "invokepluto.h"
+#include "invokecharon.h"
 #include "klips.h"
 #include "netkey.h"
 #include "cmp.h"
@@ -47,6 +48,9 @@
 #define FLAG_ACTION_RELOAD        0x04
 #define FLAG_ACTION_QUIT          0x08
 #define FLAG_ACTION_LISTEN        0x10
+#ifdef IKEV2
+#define FLAG_ACTION_START_CHARON  0x20
+#endif /* IKEV2 */
 
 static unsigned int _action_ = 0;
 
@@ -65,6 +69,10 @@ fsig(int signal)
 	    {
 		if (pid == starter_pluto_pid())
 		    name = " (Pluto)";
+#ifdef IKEV2
+		if (pid == starter_charon_pid())
+		    name = " (Charon)";
+#endif /* IKEV2 */
 		if (WIFSIGNALED(status))
 		    DBG(DBG_CONTROL,
 			DBG_log("child %d%s has been killed by sig %d\n",
@@ -87,6 +95,10 @@ fsig(int signal)
 
 		if (pid == starter_pluto_pid())
 		    starter_pluto_sigchild(pid);
+#ifdef IKEV2
+		if (pid == starter_charon_pid())
+		    starter_charon_sigchild(pid);
+#endif /* IKEV2 */
 	    }
 	}
 	break;
@@ -97,6 +109,9 @@ fsig(int signal)
 
     case SIGALRM:
 	_action_ |= FLAG_ACTION_START_PLUTO;
+#ifdef IKEV2
+	_action_ |= FLAG_ACTION_START_CHARON;
+#endif /* IKEV2 */
 	break;
 
     case SIGHUP:
@@ -193,6 +208,9 @@ int main (int argc, char **argv)
     signal(SIGQUIT, fsig);
     signal(SIGALRM, fsig);
     signal(SIGUSR1, fsig);
+	
+	
+	plog("Starting strongSwan IPsec %s [starter]...", ipsec_version_code());
 
     /* verify that we can start */
     if (getuid() != 0)
@@ -201,12 +219,24 @@ int main (int argc, char **argv)
 	exit(1);
     }
 
-    if (stat(PID_FILE, &stb) == 0)
+    if (stat(PLUTO_PID_FILE, &stb) == 0)
     {
-	plog("pluto is already running (%s exists) -- aborting", PID_FILE);
-	exit(1);
+	plog("pluto is already running (%s exists) -- skipping pluto start", PLUTO_PID_FILE);
     }
-
+    else
+    {
+	_action_ |= FLAG_ACTION_START_PLUTO;
+    }
+#ifdef IKEV2
+    if (stat(CHARON_PID_FILE, &stb) == 0)
+    {
+	plog("charon is already running (%s exists) -- skipping charon start", CHARON_PID_FILE);
+    }
+    else
+    {
+	_action_ |= FLAG_ACTION_START_CHARON;
+    }
+#endif /* IKEV2 */
     if (stat(DEV_RANDOM, &stb) != 0)
     {
 	plog("unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
@@ -247,7 +277,11 @@ int main (int argc, char **argv)
 
     last_reload = time(NULL);
 
-    plog("Starting strongSwan IPsec %s [starter]...", ipsec_version_code());
+    if (stat(MY_PID_FILE, &stb) == 0)
+    {
+	plog("starter is already running (%s exists) -- no fork done", MY_PID_FILE);
+	exit(0);
+    }
 
     /* fork if we're not debugging stuff */
     if (!no_fork)
@@ -296,17 +330,19 @@ int main (int argc, char **argv)
 		      , &cfg->defaultroute);
     }
 
-    _action_ = FLAG_ACTION_START_PLUTO;
-
     for (;;)
     {
 	/*
-	 * Stop pluto (if started) and exit
-         */
+	 * Stop pluto/charon (if started) and exit
+	 */
 	if (_action_ & FLAG_ACTION_QUIT)
 	{
 	    if (starter_pluto_pid())
 		starter_stop_pluto();
+#ifdef IKEV2
+		if (starter_charon_pid())
+		starter_stop_charon();
+#endif IKEV2
 	    if (has_netkey)
 		starter_netkey_cleanup();
 	    else
@@ -337,6 +373,9 @@ int main (int argc, char **argv)
 		    if (conn->state == STATE_ADDED)
 		    {
 			starter_whack_del_conn(conn);
+#ifdef IKEV2
+			starter_stroke_del_conn(conn);
+#endif /* IKEV2 */
 			conn->state = STATE_TO_ADD;
 		    }
 		}
@@ -427,6 +466,9 @@ int main (int argc, char **argv)
 		    {
 			if (conn->state == STATE_ADDED)
 			    starter_whack_del_conn(conn);
+#ifdef IKEV2
+			    starter_stroke_del_conn(conn);
+#endif /* IKEV2 */
 		    }
 
 		    /* Look for new ca sections that are already loaded */
@@ -502,6 +544,27 @@ int main (int argc, char **argv)
 		    conn->state = STATE_TO_ADD;
 	    }
 	}
+	
+#ifdef IKEV2
+	/*
+	 * Start charon
+	 */
+	if (_action_ & FLAG_ACTION_START_CHARON)
+	{
+		if (starter_charon_pid() == 0)
+		{
+			DBG(DBG_CONTROL,
+				DBG_log("Attempting to start charon...")
+			   )
+			if (starter_start_charon(cfg, no_fork) != 0)
+			{
+				/* schedule next try */
+				alarm(PLUTO_RESTART_DELAY);
+			}
+		}
+		_action_ &= ~FLAG_ACTION_START_CHARON;
+	}
+#endif /* IKEV2 */
 
 	/*
 	 * Tell pluto to reread its interfaces
@@ -536,11 +599,36 @@ int main (int argc, char **argv)
 			conn->id = id++;
 		    }
 		    starter_whack_add_conn(conn);
+#ifdef IKEV2
+		    starter_stroke_add_conn(conn);
+#endif /* IKEV2 */
 		    conn->state = STATE_ADDED;
 		    if (conn->startup == STARTUP_START)
-			starter_whack_initiate_conn(conn);
+		    {
+#ifdef IKEV2
+			if (conn->keyexchange == 2)
+			{
+			    starter_stroke_initiate_conn(conn);
+			}
+			else
+#endif /* IKEV2 */
+			{
+			    starter_whack_initiate_conn(conn);
+			}
+		    }
 		    else if (conn->startup == STARTUP_ROUTE)
-			starter_whack_route_conn(conn);
+		    {
+#ifdef IKEV2
+			if (conn->keyexchange == 2)
+			{
+				starter_stroke_route_conn(conn);
+			}
+			else
+#endif /* IKEV2 */
+			{
+				starter_whack_route_conn(conn);	
+			}
+		    }
 		}
 	    }
 	}

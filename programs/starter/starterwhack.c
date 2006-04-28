@@ -54,7 +54,7 @@ pack_str (char **p, char **next, char **roof)
 static int
 send_whack_msg (whack_message_t *msg)
 {
-    struct sockaddr_un ctl_addr = { AF_UNIX, CTL_FILE };
+    struct sockaddr_un ctl_addr = { AF_UNIX, PLUTO_CTL_FILE };
     int sock;
     ssize_t len;
     char *str_next, *str_roof;

@@ -1196,6 +1196,21 @@ read_packet(struct msg_digest *md)
 	}
 #endif
 
+#ifdef IKEV2
+#define IKEV2_VERSION_OFFSET	17
+#define IKEV2_VERSION		0x20
+
+    /* ignore IKEv2 packets - they will be handled by charon */
+    if (pbs_room(&md->packet_pbs) > IKEV2_VERSION_OFFSET
+    &&  md->packet_pbs.start[IKEV2_VERSION_OFFSET] == IKEV2_VERSION)
+    {
+	DBG(DBG_CONTROLMORE,
+	    DBG_log("  ignoring IKEv2 packet")
+	)
+	return FALSE;
+    }
+#endif /* IKEV2 */
+
     return TRUE;
 }
 
@@ -1229,6 +1244,7 @@ process_packet(struct msg_digest **mdp)
 	if (md->packet_pbs.roof - md->packet_pbs.cur >= (ptrdiff_t)isakmp_hdr_desc.size)
 	{
 	    struct isakmp_hdr *hdr = (struct isakmp_hdr *)md->packet_pbs.cur;
+
 	    if ((hdr->isa_version >> ISA_MAJ_SHIFT) != ISAKMP_MAJOR_VERSION)
 	    {
 		SEND_NOTIFICATION(INVALID_MAJOR_VERSION);
