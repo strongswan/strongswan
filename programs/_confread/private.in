@@ -1,6 +1,0 @@
-# This file defines the set of CIDRs (network/mask-length) to which
-# communication should always be private (i.e. encrypted).
-# See @FINALDOCDIR@/policygroups.html for details.
-#
-# $Id: private.in,v 1.1 2004/03/15 20:35:27 as Exp $
-#

@@ -1,7 +1,0 @@
-_confread
-ipsec.conf
-block
-clear
-private
-clear-or-private
-private-or-clear
