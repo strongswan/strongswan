@@ -17,7 +17,7 @@
 FREESWANSRCDIR=..
 include ${FREESWANSRCDIR}/Makefile.inc
 
-SUBDIRS=pluto _copyright _updown _updown_espmark ipsec starter openac scepclient
+SUBDIRS=_copyright _updown _updown_espmark ipsec starter openac scepclient pluto
 
 ifeq ($(USE_IKEV2),true)
 SUBDIRS+=charon
