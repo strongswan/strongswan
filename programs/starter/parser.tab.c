@@ -99,7 +99,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: parser.tab.c,v 1.5 2006/03/28 22:32:49 as Exp $
+ * RCSID $Id: parser.y,v 1.6 2006/01/17 23:43:36 as Exp $
  */
 
 #include <stdio.h>

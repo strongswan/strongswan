@@ -314,13 +314,13 @@ install: all
 	$(INSTALL) $(INSTBINFLAGS) $(BINNAMEPLUTO) $(BINNAMEWHACK) $(LIBEXECDIR)
 	if $(USE_ADNS) ; then $(INSTALL) $(INSTBINFLAGS) $(BINNAMEADNS)                  $(LIBDIR) ; fi
 	$(INSTALL) $(INSTMANFLAGS) pluto.8 $(PMANDIR)/ipsec_pluto.8
-	sh ${FREESWANSRCDIR}/packaging/utils/manlink pluto.8 | \
+	sh ${FREESWANSRCDIR}/utils/manlink pluto.8 | \
 		while read from to ; \
 		do \
 			ln -s -f ipsec_$$from $(PMANDIR)/$$to; \
 		done
 	$(INSTALL) $(INSTMANFLAGS) ipsec.secrets.5 $(FMANDIR)
-	sh ${FREESWANSRCDIR}/packaging/utils/manlink ipsec.secrets.5 | \
+	sh ${FREESWANSRCDIR}/utils/manlink ipsec.secrets.5 | \
 		while read from to ; \
 		do \
 		 ln -s -f $$from $(FMANDIR)/$$to; \
@@ -331,13 +331,13 @@ install_file_list:
 	@if $(USE_ADNS) ; then echo $(LIBDIR)/$(BINNAMEADNS) ; fi
 	@echo $(LIBEXECDIR)/$(BINNAMEWHACK)
 	@echo $(PMANDIR)/ipsec_pluto.8
-	@sh ${FREESWANSRCDIR}/packaging/utils/manlink pluto.8 | \
+	@sh ${FREESWANSRCDIR}/utils/manlink pluto.8 | \
 		while read from to; \
 		do\
 			 echo $(PMANDIR)/$$to; \
 		done
 	@echo $(FMANDIR)/ipsec.secrets.5
-	@sh ${FREESWANSRCDIR}/packaging/utils/manlink ipsec.secrets.5 | \
+	@sh ${FREESWANSRCDIR}/utils/manlink ipsec.secrets.5 | \
 		while read from to; \
 		do \
 			echo $(FMANDIR)/$$to; \

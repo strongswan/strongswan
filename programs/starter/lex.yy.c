@@ -497,7 +497,7 @@ char *yytext;
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: lex.yy.c,v 1.4 2006/03/28 22:32:49 as Exp $
+ * RCSID $Id: parser.l,v 1.5 2006/03/28 22:32:33 as Exp $
  */
 
 #include <string.h>
@@ -1706,10 +1706,10 @@ YY_BUFFER_STATE yy_scan_buffer  (char * base, yy_size_t  size )
  * @note If you want to scan bytes that may contain NUL values, then use
  *       yy_scan_bytes() instead.
  */
-YY_BUFFER_STATE yy_scan_string (yyconst char * __yystr )
+YY_BUFFER_STATE yy_scan_string (yyconst char * yystr )
 {
     
-	return yy_scan_bytes(__yystr,strlen(__yystr) );
+	return yy_scan_bytes(yystr,strlen(yystr) );
 }
 
 /** Setup the input buffer state to scan the given bytes. The next call to yylex() will

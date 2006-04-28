@@ -76,7 +76,7 @@ install:
 	do \
 		$(INSTALL) $(INSTMANFLAGS) $(SRCDIR)/$$f $(MANDIR)/ipsec_$$f || exit 1 ; \
 	done
-	@$(FREESWANSRCDIR)/packaging/utils/manlink $(foreach man, $(MANS), ${SRCDIR}/$(man)) | \
+	@$(FREESWANSRCDIR)/utils/manlink $(foreach man, $(MANS), ${SRCDIR}/$(man)) | \
 	while read from to; \
 	do \
 		ln -s -f ipsec_$$from $(MANDIR)/$$to; \
@@ -88,7 +88,7 @@ install_file_list:
 	do \
 		echo $(MANDIR)/ipsec_$$f;\
 	done;
-	@$(FREESWANSRCDIR)/packaging/utils/manlink $(foreach man, $(MANS), ${SRCDIR}/$(man)) | \
+	@$(FREESWANSRCDIR)/utils/manlink $(foreach man, $(MANS), ${SRCDIR}/$(man)) | \
 	while read from to; \
 	do \
 		echo $(MANDIR)/$$to; \

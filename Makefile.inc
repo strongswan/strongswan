@@ -33,6 +33,9 @@ SHELL=/bin/sh
 
 ### paths within the source tree
 
+KLIPSINC=${FREESWANSRCDIR}/linux/include
+KLIPSSRC=${FREESWANSRCDIR}/linux/net/ipsec
+
 LIBFREESWANDIR=${FREESWANSRCDIR}/linux/lib/libfreeswan
 FREESWANLIB=${FREESWANSRCDIR}/lib/libfreeswan/libfreeswan.a
 
