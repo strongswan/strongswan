@@ -38,7 +38,6 @@
 #include "starterwhack.h"
 #include "invokepluto.h"
 #include "invokecharon.h"
-#include "klips.h"
 #include "netkey.h"
 #include "cmp.h"
 #include "interfaces.h"
@@ -158,7 +157,6 @@ int main (int argc, char **argv)
     struct timeval tv;
     unsigned long auto_update = 0;
     time_t last_reload;
-    bool has_netkey;
     bool no_fork = FALSE;
 
     /* global variables defined in log.h */
@@ -257,22 +255,10 @@ int main (int argc, char **argv)
     }
 
     /* determine if we have a native netkey IPsec stack */
-    has_netkey = starter_netkey_init();
-
-    if (!has_netkey)
+    if (!starter_netkey_init())
     {
-	/* determine if we have a KLIPS IPsec stack instead */
-	if (starter_klips_init())
-	{
-	    starter_klips_set_config(cfg);
-	    starter_ifaces_init();
-	    starter_ifaces_clear();
-	}
-	else
-	{
-	    plog("neither netkey nor KLIPS IPSec stack detected");
-	    exit(1);
-	}
+	plog("nor netkey IPSec stack detected");
+	exit(1);
     }
 
     last_reload = time(NULL);
@@ -322,14 +308,6 @@ int main (int argc, char **argv)
 	}
     }
 
-    if (!has_netkey)
-    {
-	starter_ifaces_load(cfg->setup.interfaces
-		      , cfg->setup.overridemtu
-		      , cfg->setup.nat_traversal
-		      , &cfg->defaultroute);
-    }
-
     for (;;)
     {
 	/*
@@ -343,13 +321,7 @@ int main (int argc, char **argv)
 		if (starter_charon_pid())
 		starter_stop_charon();
 #endif IKEV2
-	    if (has_netkey)
-		starter_netkey_cleanup();
-	    else
-	    {
-	        starter_ifaces_clear();
-		starter_klips_cleanup();
-	    }
+	    starter_netkey_cleanup();
 	    confread_free(cfg);
 	    unlink(MY_PID_FILE);
 	    unlink(INFO_FILE);
@@ -405,29 +377,10 @@ int main (int argc, char **argv)
 	    if (new_cfg)
 	    {
 		/* Switch to new config. New conn will be loaded below */
-		if (has_netkey)
+		if (!starter_cmp_defaultroute(&new_cfg->defaultroute
+		    , &cfg->defaultroute))
 		{
-		    if (!starter_cmp_defaultroute(&new_cfg->defaultroute
-						, &cfg->defaultroute))
-		    {
-			_action_ |= FLAG_ACTION_LISTEN;
-		    }
-		}
-		else
-		{
-		    if (!starter_cmp_klips(cfg, new_cfg))
-		    {
-			plog("KLIPS has changed");
-			starter_klips_set_config(new_cfg);
-		    }
-
-		    if (starter_ifaces_load(new_cfg->setup.interfaces
-					  , new_cfg->setup.overridemtu
-				          , new_cfg->setup.nat_traversal
-				          , &new_cfg->defaultroute))
-		    {
-			_action_ |= FLAG_ACTION_LISTEN;
-		    }
+		    _action_ |= FLAG_ACTION_LISTEN;
 		}
 
 		if (!starter_cmp_pluto(cfg, new_cfg)) 
@@ -517,8 +470,6 @@ int main (int argc, char **argv)
 		DBG(DBG_CONTROL,
 		    DBG_log("Attempting to start pluto...")
 		)
-		if (!has_netkey)
-		    starter_klips_clear();
 
 		if (starter_start_pluto(cfg, no_fork) == 0)
 		{

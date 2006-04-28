@@ -1,3 +1,0 @@
-if [ "$CONFIG_IPSEC_ALG" = "y" ]; then
-  tristate '        SERPENT encryption algorithm' CONFIG_IPSEC_ALG_SERPENT
-fi

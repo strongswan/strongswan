@@ -33,9 +33,6 @@ SHELL=/bin/sh
 
 ### paths within the source tree
 
-KLIPSINC=${FREESWANSRCDIR}/linux/include
-KLIPSSRC=${FREESWANSRCDIR}/linux/net/ipsec
-
 LIBFREESWANDIR=${FREESWANSRCDIR}/linux/lib/libfreeswan
 FREESWANLIB=${FREESWANSRCDIR}/lib/libfreeswan/libfreeswan.a
 
@@ -139,25 +136,6 @@ RCDIR=$(DESTDIR)$(FINALRCDIR)
 
 
 
-### kernel pathnames
-
-# Kernel location:  where patches are inserted, where kernel builds are done.
-
-# this is a hack using the wildcard to look for existence of a file/dir
-ifneq ($(wildcard /usr/src/linux-2.4),)
-KERNELSRC?=/usr/src/linux-2.4
-else
-KERNELSRC?=/usr/src/linux
-endif
-
-
-# where kernel configuration outputs are located
-KCFILE=$(KERNELSRC)/.config
-ACFILE=$(KERNELSRC)/include/linux/autoconf.h
-VERFILE=$(KERNELSRC)/include/linux/version.h
-
-
-
 ### misc installation stuff
 
 # what program to use when installing things
@@ -179,59 +157,6 @@ INSTCONFFLAGS=
 # extra compile flags, for userland and kernel stuff, e.g. -g for debug info
 # (caution, this stuff is still being sorted out, will change in future)
 USERCOMPILE?=-g -O3
-KLIPSCOMPILE=-O3
-
-# command used to link/copy KLIPS into kernel source tree
-# There are good reasons why this is "ln -s"; only people like distribution
-# builders should ever change it.
-KLIPSLINK=ln -s -f
-
-# extra options for use in kernel build
-KERNMAKEOPTS=
-
-# kernel Makefile targets to be done before build
-# Can be overridden if you are *sure* your kernel doesn't need them.  (2.2.xx
-# and later reportedly do not.)
-KERNDEP=dep
-KERNCLEAN=clean
-
-# kernel make name:  zImage for 2.0.xx, bzImage for 2.2.xx and later, and
-# boot on non-x86s (what ever happened to standards?)
-INC_B=$(shell test -d $(DIRIN22) && echo b)
-KERNEL=$(shell if expr " `uname -m`" : ' i.86' >/dev/null ; \
-	then echo $(INC_B)zImage ; \
-	else echo boot ; \
-	fi)
-
-# temporary directory to be used when building RPMs, and where to put the
-# resulting RPM tree
-RPMKERNDIR := $(shell echo `pwd`/tmp.rpmkernel)
-RPMTMPDIR := $(shell echo `pwd`/tmp.rpmbuild)
-RPMDEST := $(shell echo `pwd`/rpms)
-
-# Newer versions of RPM do not permit building of packages with the "rpm" 
-# command. For RedHat systems with older version of RPM, use:
-# RPMBUILD=rpm
-# instead.
-RPMBUILD=rpmbuild
-
-### paths to resources on the host system
-#
-# Set this to a RedHat kernel-sources RPM. This normally extracts into
-# /usr/src/linux-2.4, but you might have extracted it elsewhere with
-# rpm2cpio.
-#
-RH_KERNELSRC?=/usr/src/linux-2.4
-
-## build environment variations
-##
-
-# set this to a place where you have installed a bind9.3 
-# snapshot (20021115 or better). A bind 9.2, particularly a RedHat
-# installed one in RH 7.2, won't work - you wind up depending upon
-# openssl.
-
-BIND9STATICLIBDIR?=/usr/local/lib
 
 # FreeSWAN 3.x will require bind9. 
 USE_LWRES?=false
@@ -249,9 +174,6 @@ IPSEC_FIREWALLTYPE=iptables
 # whether or not to include ipsec policy code into pluto.
 # false for now, since it is still experimental.
 USE_IPSECPOLICY?=false
-
-# include IKEPING in the distribution
-USE_IKEPING?=false
 
 # include support for KEY RR 
 # this will become false in late 2003.
@@ -291,37 +213,14 @@ USE_IKEV2?=true
 
 # Default PKCS11 library
 # Uncomment this line if using OpenSC <= 0.9.6
-PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
+#PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
 # Uncomment this line if using OpenSC >= 0.10.0
-#PKCS11_DEFAULT_LIB=\"/usr/lib/opensc-pkcs11.so\"
+PKCS11_DEFAULT_LIB=\"/usr/lib/opensc-pkcs11.so\"
 # Uncomment and complete this line if using another default library
 #PKCS11_DEFAULT_LIB=\"/usr/lib/...\"
 
 # Enable the leak detective to find memory leaks
 USE_LEAK_DETECTIVE?=false
-
-# set this to space where a linked/configured tree can be created by
-# preprhkern4module. Only needed if you are going to be created RPMs
-# outside of a distribution (as the FS team does for RedHat).
-#RH_KERNELSRC_POOL=/c2/freeswan/rh_kern
-
-# the following is a list of symbols which will be used to construct
-# the module goo to identify which module goes with each kernel.
-MODULE_GOO_LIST=irq_stat netif_rx register_sysctl_table send_sig
-MODULE_GOO_LIST+=kmalloc __kfree_skb __ip_select_ident alloc_skb
-MODULE_GOO_LIST+=icmp_send ip_fragment sock_register 
-
-MODULE_DEF_INCLUDE=${FREESWANSRCDIR}/packaging/linus/config-all.h
-MODULE_DEFCONFIG?=${KLIPSSRC}/defconfig
-
-MODULE_FLAGS:=KLIPSMODULE=true TOPDIR=${KERNELSRC} -f ${MODULE_DEFCONFIG} -f Makefile
-
-# supply kernel-configuration ARCH defaults
-ifeq ($(ARCH),)
-ARCH := $(shell uname -m)
-endif
-# always sanitize $(ARCH)
-ARCH := $(shell echo $(ARCH) | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/)
 
 # export everything so that scripts can use them.
 export LIBFREESWANDIR FREESWANSRCDIR FREESWANLIB

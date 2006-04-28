@@ -17,20 +17,7 @@
 FREESWANSRCDIR=..
 include ${FREESWANSRCDIR}/Makefile.inc
 
-SUBDIRS=spi eroute spigrp tncfg klipsdebug pf_key proc pluto 
-SUBDIRS+=_confread _copyright _include _keycensor _plutoload _plutorun
-SUBDIRS+=_realsetup _secretcensor _startklips _updown _updown_espmark
-SUBDIRS+=auto barf ipsec look manual ranbits secrets starter
-SUBDIRS+=rsasigkey send-pr setup showdefaults showhostkey calcgoo mailkey
-SUBDIRS+=ikeping examples openac scepclient
-
-ifeq ($(USE_LWRES),true)
-SUBDIRS+=lwdnsq
-endif
-
-ifeq ($(USE_IPSECPOLICY),true)
-SUBDIRS+=showpolicy
-endif
+SUBDIRS=pluto _copyright _updown _updown_espmark ipsec starter openac scepclient
 
 ifeq ($(USE_IKEV2),true)
 SUBDIRS+=charon

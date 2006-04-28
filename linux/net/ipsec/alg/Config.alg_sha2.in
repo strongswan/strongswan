@@ -1,3 +1,0 @@
-if [ "$CONFIG_IPSEC_ALG" = "y" ]; then
-  tristate '        HMAC_SHA2 auth algorithm' CONFIG_IPSEC_ALG_SHA2
-fi
