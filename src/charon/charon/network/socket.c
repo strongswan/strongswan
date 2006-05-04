@@ -367,8 +367,7 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 		
 		/* add socket with interface name to list */
 		interface = malloc_thing(interface_t);
- 		memcpy(interface->name, buf[i].ifr_name, IFNAMSIZ);
- 		interface->name[IFNAMSIZ-1] = '\0';
+ 		strncpy(interface->name, buf[i].ifr_name, IFNAMSIZ);
 		interface->socket_fd = skt;
 		interface->address = host_create_from_sockaddr((struct sockaddr*)current);
 		this->logger->log(this->logger, CONTROL, "listening on %s (%s)",

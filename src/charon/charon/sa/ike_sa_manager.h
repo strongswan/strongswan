@@ -111,6 +111,15 @@ struct ike_sa_manager_t {
 	linked_list_t *(*get_ike_sa_list) (ike_sa_manager_t* this);
 	
 	/**
+	 * @brief Get a list of all IKE_SA SAs currently set up specified
+	 * by the connections name.
+	 * 
+	 * @param this			 	the manager object
+	 * @return					a list with ike_sa_id_t s
+	 */
+	linked_list_t *(*get_ike_sa_list_by_name) (ike_sa_manager_t* this, const char *name);
+	
+	/**
 	 * @brief Log the status of the IKE_SA's in the manager.
 	 *
 	 * A informational log is done to the supplied logger. If logger is 

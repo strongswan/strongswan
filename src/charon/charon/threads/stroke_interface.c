@@ -322,43 +322,27 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
  */
 static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
 {
-	connection_t *connection;
-	ike_sa_t *ike_sa;
-	host_t *my_host, *other_host;
-	status_t status;
+	linked_list_t *ike_sas;
+	iterator_t *iterator;
+	int instances = 0;
 	
 	pop_string(msg, &(msg->terminate.name));
 	this->logger->log(this->logger, CONTROL, "received stroke: terminate \"%s\"", msg->terminate.name);
-	connection = charon->connections->get_connection_by_name(charon->connections, msg->terminate.name);
 	
-	if (connection)
-	{
-		my_host = connection->get_my_host(connection);
-		other_host = connection->get_other_host(connection);
-		
-		/* TODO: Do this directly by name now */
-		/* TODO: terminate any instance of the name */
-		status = charon->ike_sa_manager->checkout_by_hosts(charon->ike_sa_manager,
-												  my_host, other_host, &ike_sa);
-		
-		if (status == SUCCESS)
-		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL, "deleting IKE SA between %s - %s",
-							my_host->get_address(my_host), other_host->get_address(other_host));
-		
-			charon->ike_sa_manager->checkin_and_delete(charon->ike_sa_manager, ike_sa);
-		}
-		else
-		{
-			this->stroke_logger->log(this->stroke_logger, ERROR, "no active connection found between %s - %s",
-							  my_host->get_address(my_host), other_host->get_address(other_host));
-		}
-	}
-	else
-	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "could not find a connection named \"%s\"", msg->terminate.name);
-	}
+	ike_sas = charon->ike_sa_manager->get_ike_sa_list_by_name(charon->ike_sa_manager, msg->terminate.name);
 	
+	iterator = ike_sas->create_iterator(ike_sas, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		ike_sa_id_t *ike_sa_id;
+		iterator->current(iterator, (void**)&ike_sa_id);
+		charon->ike_sa_manager->delete(charon->ike_sa_manager, ike_sa_id);
+		ike_sa_id->destroy(ike_sa_id);
+		instances++;
+	}
+	iterator->destroy(iterator);
+	ike_sas->destroy(ike_sas);
+	this->stroke_logger->log(this->stroke_logger, CONTROL, "terminated %d instances of %s", instances, msg->terminate.name);
 }
 
 /**
