@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2005 Jan Hutter, Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2001-2004 Andreas Steffen, Zuercher Hochschule Winterthur
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,14 +20,27 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include "asn1.h"
 #include "pem.h"
 #include "ttodata.h"
 
+#include <utils/lexparser.h>
+#include <utils/logger_manager.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 
+static logger_t *logger = NULL;
 
-/*
+/**
+ * initializes the PEM logger
+ */
+static void pem_init_logger()
+{
+	if (logger == NULL)
+		logger = logger_manager->get_logger(logger_manager, ASN1);
+}
+
+/**
  * check the presence of a pattern in a character string
  */
 static bool present(const char* pattern, chunk_t* ch)
@@ -44,15 +56,7 @@ static bool present(const char* pattern, chunk_t* ch)
 	return FALSE;
 }
 
-/*
- * compare string with chunk
- */
-static bool match(const char *pattern, const chunk_t *ch)
-{
-	return ch->len == strlen(pattern) && strncmp(pattern, ch->ptr, ch->len) == 0;
-}
-
-/*
+/**
  * find a boundary of the form -----tag name-----
  */
 static bool find_boundary(const char* tag, chunk_t *line)
@@ -73,6 +77,8 @@ static bool find_boundary(const char* tag, chunk_t *line)
 	{
 		if (present("-----", line))
 		{
+			logger->log(logger, CONTROL|LEVEL2,
+		 		"  -----%s %.*s-----", tag, (int)name.len, name.ptr);
 			return TRUE;
 		}
 		line->ptr++;  line->len--;  name.len++;
@@ -81,92 +87,15 @@ static bool find_boundary(const char* tag, chunk_t *line)
 }
 
 /*
- * eat whitespace
- */
-static void eat_whitespace(chunk_t *src)
-{
-	while (src->len > 0 && (*src->ptr == ' ' || *src->ptr == '\t'))
-	{
-		src->ptr++;  src->len--;
-	}
-}
-
-/*
- * extracts a token ending with a given termination symbol
- */
-static bool extract_token(chunk_t *token, char termination, chunk_t *src)
-{
-	u_char *eot = memchr(src->ptr, termination, src->len);
-	
-	/* initialize empty token */
-	*token = CHUNK_INITIALIZER;
-	
-	if (eot == NULL) /* termination symbol not found */
-	{
-		return FALSE;
-	}
-	
-	/* extract token */
-	token->ptr = src->ptr;
-	token->len = (u_int)(eot - src->ptr);
-	
-	/* advance src pointer after termination symbol */
-	src->ptr = eot + 1;
-	src->len -= (token->len + 1);
-	
-	return TRUE;
-}
-
-/*
- * extracts a name: value pair from the PEM header
- */
-static bool extract_parameter(chunk_t *name, chunk_t *value, chunk_t *line)
-{
-	/* extract name */
-	if (!extract_token(name,':', line))
-	{
-		return FALSE;
-	}
-	
-	eat_whitespace(line);
-	
-	/* extract value */
-	*value = *line;
-	return TRUE;
-}
-
-/*
- *  fetches a new line terminated by \n or \r\n
- */
-static bool fetchline(chunk_t *src, chunk_t *line)
-{
-	if (src->len == 0) /* end of src reached */
-		return FALSE;
-
-	if (extract_token(line, '\n', src))
-	{
-		if (line->len > 0 && *(line->ptr + line->len -1) == '\r')
-			line->len--;  /* remove optional \r */
-	}
-	else /*last line ends without newline */
-	{
-		*line = *src;
-		src->ptr += src->len;
-		src->len = 0;
-	}
-	return TRUE;
-}
-
-/*
  * decrypts a DES-EDE-CBC encrypted data block
  */
-static status_t pem_decrypt(chunk_t *blob, chunk_t *iv, char *passphrase)
+static err_t pem_decrypt(chunk_t *blob, chunk_t *iv, const char *passphrase)
 {
 	hasher_t *hasher;
 	crypter_t *crypter;
 	chunk_t hash;
 	chunk_t decrypted;
-	chunk_t pass = {passphrase, strlen(passphrase)};
+	chunk_t pass = {(char*)passphrase, strlen(passphrase)};
 	chunk_t key = {alloca(24), 24};
 	u_int8_t padding, *last_padding_pos, *first_padding_pos;
 	
@@ -203,11 +132,11 @@ static status_t pem_decrypt(chunk_t *blob, chunk_t *iv, char *passphrase)
 	while (--last_padding_pos > first_padding_pos)
 	{
 		if (*last_padding_pos != padding)
-			return FALSE;
+			return "invalid passphrase";
 	}
 	/* remove padding */
 	blob->len -= padding;
-	return TRUE;
+	return NULL;
 }
 
 /*  Converts a PEM encoded file into its binary form
@@ -215,7 +144,7 @@ static status_t pem_decrypt(chunk_t *blob, chunk_t *iv, char *passphrase)
  *  RFC 1421 Privacy Enhancement for Electronic Mail, February 1993
  *  RFC 934 Message Encapsulation, January 1985
  */
-status_t pemtobin(chunk_t *blob, char *pass)
+err_t pem_to_bin(chunk_t *blob, const char *passphrase, bool *pgp)
 {
 	typedef enum {
 		PEM_PRE    = 0,
@@ -243,6 +172,8 @@ status_t pemtobin(chunk_t *blob, char *pass)
 	/* zero size of IV */
 	iv.ptr = iv_buf;
 	iv.len = 0;
+
+	pem_init_logger();
 
 	while (fetchline(&src, &line))
 	{
@@ -277,8 +208,9 @@ status_t pemtobin(chunk_t *blob, char *pass)
 					continue;
 				}
 
-				/* we are looking for a name: value pair */
-				if (!extract_parameter(&name, &value, &line))
+				/* we are looking for a parameter: value pair */
+				logger->log(logger, CONTROL|LEVEL2, "  %.*s", (int)line.len, line.ptr);
+				if (!extract_parameter_value(&name, &value, &line))
 					continue;
 
 				if (match("Proc-Type", &name) && *value.ptr == '4')
@@ -294,12 +226,12 @@ status_t pemtobin(chunk_t *blob, char *pass)
 
 					/* we support DES-EDE3-CBC encrypted files, only */
 					if (!match("DES-EDE3-CBC", &dek))
-						return NOT_SUPPORTED;
+						return "encryption algorithm not supported";
 
 					eat_whitespace(&value);
 					ugh = ttodata(value.ptr, value.len, 16, iv.ptr, 16, &len);
 					if (ugh)
-						return PARSE_ERROR;
+						return "error in IV";
 
 					iv.len = len;
 				}
@@ -316,6 +248,17 @@ status_t pemtobin(chunk_t *blob, char *pass)
 					data = line;
 				}
 				
+				/* check for PGP armor checksum */
+				if (*data.ptr == '=')
+				{
+					*pgp = TRUE;
+					data.ptr++;
+					data.len--;
+					logger->log(logger, CONTROL|LEVEL2, "  Armor checksum: %.*s",
+								(int)data.len, data.ptr);
+		    		continue;
+				}
+
 				ugh = ttodata(data.ptr, data.len, 64, dst.ptr, blob->len - dst.len, &len);
 				if (ugh)
 				{
@@ -334,10 +277,68 @@ status_t pemtobin(chunk_t *blob, char *pass)
 	blob->len = dst.len;
 
 	if (state != PEM_POST)
-		return PARSE_ERROR;
+		return "file coded in unknown format, discarded";
 
-	if (encrypted)
-		return pem_decrypt(blob, &iv, pass);
+	return (encrypted)? pem_decrypt(blob, &iv, passphrase) : NULL;
+}
+
+/* load a coded key or certificate file with autodetection
+ * of binary DER or base64 PEM ASN.1 formats and armored PGP format
+ */
+bool pem_asn1_load_file(const char *filename, const char *passphrase,
+						const char *type, chunk_t *blob, bool *pgp)
+{
+	err_t ugh = NULL;
+
+	FILE *fd = fopen(filename, "r");
+
+	pem_init_logger();
+
+	if (fd)
+	{
+		int bytes;
+		fseek(fd, 0, SEEK_END );
+		blob->len = ftell(fd);
+		rewind(fd);
+		blob->ptr = malloc(blob->len);
+		bytes = fread(blob->ptr, 1, blob->len, fd);
+		fclose(fd);
+		logger->log(logger, CONTROL, "loaded %s file '%s' (%d bytes)", type, filename, bytes);
+
+		*pgp = FALSE;
+
+		/* try DER format */
+		if (is_asn1(*blob))
+		{
+			logger->log(logger, CONTROL|LEVEL1, "  file coded in DER format");
+			return TRUE;
+		}
+
+		/* try PEM format */
+		ugh = pem_to_bin(blob, passphrase, pgp);
+
+		if (ugh == NULL)
+		{
+			if (*pgp)
+			{
+				logger->log(logger, CONTROL|LEVEL1, "  file coded in armored PGP format");
+				return TRUE;
+			}
+			if (is_asn1(*blob))
+			{
+				logger->log(logger, CONTROL|LEVEL1, "  file coded in PEM format");
+				return TRUE;
+			}
+			ugh = "file coded in unknown format, discarded";
+		}
+
+		/* a conversion error has occured */
+		logger->log(logger, ERROR, "  %s", ugh);
+		chunk_free(blob);
+	}
 	else
-		return SUCCESS;
+	{
+		logger->log(logger, ERROR, "could not open %s file '%s'", type, filename);
+	}
+	return FALSE;
 }

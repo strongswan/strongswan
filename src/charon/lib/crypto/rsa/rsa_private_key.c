@@ -29,6 +29,7 @@
 
 #include <daemon.h>
 #include <asn1/asn1.h>
+#include <asn1/pem.h>
 
 /* 
  * Oids for hash algorithms are defined in
@@ -736,37 +737,17 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 
 /*
  * see header
- * TODO: PEM files
  */
 rsa_private_key_t *rsa_private_key_create_from_file(char *filename, char *passphrase)
 {
-	chunk_t chunk;
-	struct stat stb;
-	FILE *file;
-	char *buffer;
-	
-	if (stat(filename, &stb) == -1)
-	{
+	bool pgp = FALSE;
+	chunk_t chunk = CHUNK_INITIALIZER;
+	rsa_private_key_t *key = NULL;
+
+	if (!pem_asn1_load_file(filename, passphrase, "private key", &chunk, &pgp))
 		return NULL;
-	}
-	
-	buffer = alloca(stb.st_size);
-	
-	file = fopen(filename, "r");
-	if (file == NULL)
-	{
-		return NULL;
-	}
-	
-	if (fread(buffer, stb.st_size, 1, file) != 1)
-	{
-		fclose(file);
-		return NULL;
-	}
-	fclose(file);
-	
-	chunk.ptr = buffer;
-	chunk.len = stb.st_size;
-	
-	return rsa_private_key_create_from_chunk(chunk);
+
+	key = rsa_private_key_create_from_chunk(chunk);
+	free(chunk.ptr);
+	return key;
 }

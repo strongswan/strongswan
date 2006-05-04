@@ -239,19 +239,21 @@ static void exit_usage(char *error)
 int main(int argc, char *argv[])
 {
 	int res;
+	char *op;
 	
 	if (argc < 2)
 	{
 		exit_usage(NULL);
 	}
 	
-	if (strcmp(argv[1], "status") == 0 || 
-		strcmp(argv[1], "statusall") == 0)
+	op = argv[1];
+
+	if (strcmp(op, "status") == 0 ||
+		strcmp(op, "statusall") == 0)
 	{
-		res = show_status(argv[1], argc > 2 ? argv[2] : NULL);
+		res = show_status(op, argc > 2 ? argv[2] : NULL);
 	}
-	
-	else if (strcmp(argv[1], "up") == 0)
+	else if (strcmp(op, "up") == 0)
 	{
 		if (argc < 3)
 		{
@@ -259,7 +261,7 @@ int main(int argc, char *argv[])
 		}
 		res = initiate_connection(argv[2]);
 	}
-	else if (strcmp(argv[1], "down") == 0)
+	else if (strcmp(op, "down") == 0)
 	{
 		if (argc < 3)
 		{
@@ -267,7 +269,7 @@ int main(int argc, char *argv[])
 		}
 		res = terminate_connection(argv[2]);
 	}
-	else if (strcmp(argv[1], "add") == 0)
+	else if (strcmp(op, "add") == 0)
 	{
 		if (argc < 11)
 		{
@@ -279,7 +281,7 @@ int main(int argc, char *argv[])
 							 argv[7], argv[8], 
 							 atoi(argv[9]), atoi(argv[10]));
 	}
-	else if (strcmp(argv[1], "logtype") == 0)
+	else if (strcmp(op, "logtype") == 0)
 	{
 		if (argc < 5)
 		{
@@ -287,7 +289,7 @@ int main(int argc, char *argv[])
 		}
 		res = set_logtype(argv[2], argv[3], atoi(argv[4])); 
 	}
-	else if (strcmp(argv[1], "loglevel") == 0)
+	else if (strcmp(op, "loglevel") == 0)
 	{
 		if (argc < 4)
 		{

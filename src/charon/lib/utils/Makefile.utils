@@ -18,10 +18,14 @@ LIB_OBJS+= $(BUILD_DIR)leak_detective.o
 $(BUILD_DIR)leak_detective.o :	$(UTILS_DIR)leak_detective.c $(UTILS_DIR)leak_detective.h
 								$(CC) $(CFLAGS) -c -o $@ $<
 
+LIB_OBJS+= $(BUILD_DIR)lexparser.o
+$(BUILD_DIR)lexparser.o :		$(UTILS_DIR)lexparser.c $(UTILS_DIR)lexparser.h
+								$(CC) $(CFLAGS) -c -o $@ $<
+
 LIB_OBJS+= $(BUILD_DIR)linked_list.o
 $(BUILD_DIR)linked_list.o :		$(UTILS_DIR)linked_list.c $(UTILS_DIR)linked_list.h
 								$(CC) $(CFLAGS) -c -o $@ $<
-								
+
 LIB_OBJS+= $(BUILD_DIR)logger.o
 $(BUILD_DIR)logger.o :			$(UTILS_DIR)logger.c $(UTILS_DIR)logger.h
 								$(CC) $(CFLAGS) -c -o $@ $<

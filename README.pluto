@@ -2650,7 +2650,7 @@ and can be used when the following prerequisites are fulfilled:
   - Linux 2.4.x kernel, KLIPS IPsec stack, and arbitrary iptables version.
     Filtering of tunneled traffic is based on ipsecN interfaces.
 
-  - Linux 2.4.16 kernel or newer, native NETKEY IPsec stack, and
+  - Linux 2.6.16 kernel or newer, native NETKEY IPsec stack, and
     iptables-1.3.5 or newer. Filtering of tunneled traffic is based on
     IPsec policy matching rules.
 

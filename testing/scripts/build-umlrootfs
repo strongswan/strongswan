@@ -128,6 +128,7 @@ echo "export USERCOMPILE=\'-DRANDOM_DEVICE=\\\"/dev/urandom\\\"\'" >> $INSTALLSH
 echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
 echo "make programs" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
+echo "ldconfig" >> $INSTALLSHELL
 
 cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot.."
 chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1

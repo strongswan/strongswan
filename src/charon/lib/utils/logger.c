@@ -132,11 +132,15 @@ static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const c
  */
 static int get_priority(log_level_t loglevel)
 {
+	if (loglevel & ERROR)
+	{
+		return LOG_AUTHPRIV|LOG_ERR;
+	}
 	if (loglevel & AUDIT)
 	{
 		return LOG_AUTHPRIV|LOG_INFO;
 	}
-	return LOG_DAEMON|LOG_DEBUG;
+	return LOG_AUTHPRIV|LOG_DEBUG;
 }
 
 /**

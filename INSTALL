@@ -1,5 +1,5 @@
                  ---------------------------
-	          strongSwan - Installation
+                  strongSwan - Installation
                  ---------------------------
 
 
@@ -11,9 +11,7 @@ Contents
    2.1 libcurl
    2.2 OpenLDAP
    2.3 PKCS#11 smartcard library modules
-   3. Building strongSwan with a Linux 2.4 kernel
-   4. Updating strongSwan with a Linux 2.4 kernel
-   5. Building strongSwan with a Linux 2.6 kernel
+   3. Building and running strongSwan with a Linux 2.6 kernel
 
 
 1. Required packages
@@ -125,9 +123,9 @@ Contents
    in "Makefile.inc" 
 
       # Uncomment this line if using OpenSC <= 0.9.6
-      PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
+      # PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"
       # Uncomment tis line if using OpenSC >= 0.10.0
-      #PKCS11_DEFAULT_LIB=\"usr/lib/opensc-pkcs11.so\"
+        PKCS11_DEFAULT_LIB=\"usr/lib/opensc-pkcs11.so\"
 
    This default path to the easily-obtainable OpenSC library module can be
    simply overridden during run-time by specifying an alternative path in
@@ -141,80 +139,9 @@ Contents
        USE="smartcard usb -pam -X" emerge strongswan
 
 
-3. Building strongSwan with a Linux 2.4 kernel
-   -------------------------------------------
 
-   * Building strongSwan with a Linux 2.4 kernel requires the presence of the
-     matching kernel sources referenced via the symbolic link /usr/src/linux.
-     The use of the vanilla kernel sources from ftp.kernel.org is strongly
-     recommended.
-
-     Before building strongSwan you must have compiled the kernel sources at
-     least once:
-
-         make menuconfig; make dep; make bzImage; make modules
-
-   * Now change into the  strongswan-2.x.x  source directory.
-
-     First uncomment any desired compile options in "programs/pluto/Makefile"
-     (see section 2. Optional packages).
-
-     Then in the top source directory type
-
-         make menumod
-
-     This command applies an ESP_IN_UDP encapsulation patch which is required
-     for NAT-Traversal to the kernel sources.
-
-     In the "Networking options" menu set
-
-         <M> IP Security Protocol (strongSwan IPsec)
-
-     in order to build KLIPS as a loadable kernel module "ipsec.o".  Do not
-     forget to save the modified configuration file when leaving "menumod".
-
-     The strongSwan userland programs are now automatically built and
-     installed, whereas the  ipsec.o  kernel module and the crypto modules
-     are only built and must be installed with the command
-
-         make minstall
-
-   * If you intend to use the NAT-Traversal feature then you must compile the
-     patched kernel sources again by executing
-
-         make bzImage
-
-     and then install and boot the modified kernel.
-
-   * Next add your connections to "/etc/ipsec.conf" and start strongSwan with
-
-         ipsec setup start
-
-
-4. Updating strongSwan with a Linux 2.4 kernel
-   -------------------------------------------
-
-   * If you have already successfully installed  strongSwan and want to update
-     to a newer version then the following shortcut can be taken:
-
-     First uncomment any desired compile options in "programs/pluto/Makefile"
-     (see section 2. Optional packages).
-
-     Then in the  strongwan-2.x.x  top directory type
-
-         make programs; make install
-
-     followed by
-
-         make module; make minstall
-
-   * You can then start the updated strongSwan version with
-
-         ipsec setup restart
-
-
-5. Building strongSwan with a Linux 2.6 kernel
-   -------------------------------------------
+3. Building and running strongSwan with a Linux 2.6 kernel
+   -------------------------------------------------------
 
    * Because the Linux 2.6 kernel comes with a built-in native IPsec stack,
      you won't need to build the strongSwan kernel modules. Please make sure 
@@ -225,25 +152,30 @@ Contents
          o esp4
          o ipcomp
          o xfrm_user
+         o xfrm_tunnel
 
      Also the built-in kernel Cryptoapi modules with selected encryption and 
      hash algorithms should be available.
 
-   * First uncomment any desired compile options in "programs/pluto/Makefile"
-     (see section 2. Optional packages).
+   * First select any desired compile options in "Makefile.inc" (see section 2.
+     Optional packages). Then in the  strongwan-4.x.x  top directory type
 
-     Then in the  strongwan-2.x.x  top directory type
-
-         make programs
+         make
 
      followed by
 
          make install
 
-   * Next add your connections to "etc/ipsec.conf" and start strongSwan with
+   * Next add your connections to "/etc/ipsec.conf" and your secrets to 
+     "/etc/ipsec.secrets". Connections that are to be negotiated by the new
+     IKEv2 charon keying daemon should be designated by "keyexchange=ikev2" and 
+     those by the IKEv1 pluto keying daemon either by "keyexchange=ikev1" or
+     the default "keyexchange=ike".
 
-         ipsec setup start
+   * At last start strongSwan with
+
+         ipsec start
 
 -----------------------------------------------------------------------------
 
-This file is RCSID $Id: INSTALL,v 1.8 2006/01/22 16:22:23 as Exp $
+This file is RCSID $Id: INSTALL,v 1.9 2006/05/01 16:02:37 as Exp $

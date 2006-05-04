@@ -1,1 +1,2 @@
-distributed by Andreas Steffen <andreas.steffen@strongswan.org>
+distributed by the Institute of Internet Technologies and Applications
+University of Applied Sciences Rapperswil, Switzerland (ITA-HSR)

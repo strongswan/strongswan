@@ -241,8 +241,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			my_id = my_id->clone(my_id);
 			cert->destroy(cert);
 			this->logger->log(this->logger, CONTROL, 
-							  "defined a valid certificate, using its ID \"%s\"",
-							  my_id->get_string(my_id));
+							  "valid certificate with ID \"%s\"",
+							   my_id->get_string(my_id));
 		}
 	}
 	if (msg->add_conn.other.cert)
@@ -257,8 +257,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			other_id = other_id->clone(other_id);
 			cert->destroy(cert);
 			this->logger->log(this->logger, CONTROL, 
-							  "defined a valid certificate, using its ID \"%s\"",
-							  other_id->get_string(other_id));
+							  "valid certificate with ID \"%s\"",
+							   other_id->get_string(other_id));
 		}
 	}
 	
@@ -308,7 +308,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	connection = charon->connections->get_connection_by_name(charon->connections, msg->initiate.name);
 	if (connection == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "could not find a connection named \"%s\"", msg->initiate.name);
+		this->stroke_logger->log(this->stroke_logger, ERROR, "no connection named \"%s\"", msg->initiate.name);
 	}
 	else
 	{

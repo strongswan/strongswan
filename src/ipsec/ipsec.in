@@ -1,6 +1,7 @@
 #! /bin/sh
 # prefix command to run stuff from our programs directory
 # Copyright (C) 1998-2002  Henry Spencer.
+# Copyright (C) 2006 Andreas Steffen
 # 
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -26,6 +27,7 @@ IPSEC_DIR="$IPSEC_LIBDIR"
 export IPSEC_DIR IPSEC_CONFS IPSEC_LIBDIR IPSEC_EXECDIR
 
 IPSEC_STARTER_PID="/var/run/starter.pid"
+IPSEC_PLUTO_PID="/var/run/pluto.pid"
 IPSEC_CHARON_PID="/var/run/charon.pid"
 
 # standardize PATH, and export it for everything else's benefit
@@ -123,10 +125,13 @@ case "$1" in
 	;;
 down)
 	shift
-	$IPSEC_EXECDIR/whack --name "$1" --terminate
+	if test -e $IPSEC_PLUTO_PID
+	then
+		$IPSEC_EXECDIR/whack --name "$1" --terminate
+	fi
 	if test -e $IPSEC_CHARON_PID
 	then
-	    $IPSEC_EXECDIR/stroke down "$1"
+		$IPSEC_EXECDIR/stroke down "$1"
 	fi
 	exit 0
 	;;
@@ -138,16 +143,22 @@ rereadcacerts|rereadaacerts|rereadocspcerts|\
 rereadacerts|rereadcrls|rereadall)
 	op="$1"
 	shift
-        $IPSEC_EXECDIR/whack "$@" "--$op"
-	if test -e $IPSEC_CHARON_PID
+	if test -e $IPSEC_PLUTO_PID
 	then
-            $IPSEC_EXECDIR/stroke "$op"
-        fi
+		$IPSEC_EXECDIR/whack "$@" "--$op"
+	fi
+	#if test -e $IPSEC_CHARON_PID
+	#then
+	#	$IPSEC_EXECDIR/stroke "$op"
+	#fi
 	exit 0
 	;;
 ready)
 	shift
-	$IPSEC_EXECDIR/whack --listen
+	if test -e $IPSEC_PLUTO_PID
+	then
+		$IPSEC_EXECDIR/whack --listen
+	fi
 	exit 0
 	;;
 reload)
@@ -170,19 +181,28 @@ restart)
 route|unroute)
 	op="$1"
 	shift
-	$IPSEC_EXECDIR/whack --name "$1" "--$op"
+	if test -e $IPSEC_PLUTO_PID
+	then
+		$IPSEC_EXECDIR/whack --name "$1" "--$op"
+	fi
 	exit 0
 	;;
 scencrypt|scdecrypt)
 	op="$1"
 	shift
-        $IPSEC_EXECDIR/whack "--$op" "$@"
+	if test -e $IPSEC_PLUTO_PID
+	then
+		$IPSEC_EXECDIR/whack "--$op" "$@"
+	fi
 	exit 0
 	;;
 secrets)
-        $IPSEC_EXECDIR/whack --rereadsecrets
-        exit 0
-        ;;
+	if test -e $IPSEC_PLUTO_PID
+	then
+		$IPSEC_EXECDIR/whack --rereadsecrets
+	fi
+	exit 0
+	;;
 start)
 	shift
 	exec $IPSEC_EXECDIR/starter "$@"
@@ -192,17 +212,23 @@ status|statusall)
 	shift
 	if test $# -eq 0
 	then
-	    $IPSEC_EXECDIR/whack "--$op"
-	    if test -e $IPSEC_CHARON_PID
-	    then
-	    	$IPSEC_EXECDIR/stroke "$op"
-	    fi
+		if test -e $IPSEC_PLUTO_PID
+		then
+			$IPSEC_EXECDIR/whack "--$op"
+		fi
+		if test -e $IPSEC_CHARON_PID
+		then
+			$IPSEC_EXECDIR/stroke "$op"
+		fi
 	else
-	    $IPSEC_EXECDIR/whack --name "$1" "--$op"
-	    if test -e $IPSEC_CHARON_PID
-	    then
-	    	$IPSEC_EXECDIR/stroke "$op" "$1"
-	    fi
+		if test -e $IPSEC_PLUTO_PID
+		then
+			$IPSEC_EXECDIR/whack --name "$1" "--$op"
+		fi
+		if test -e $IPSEC_CHARON_PID
+		then
+			$IPSEC_EXECDIR/stroke "$op" "$1"
+		fi
 	fi
 	exit 0
 	;;
@@ -218,7 +244,10 @@ stop)
 	;;
 up)
 	shift
-	$IPSEC_EXECDIR/whack --name "$1" --initiate
+	if test -e $IPSEC_PLUTO_PID
+	then
+		$IPSEC_EXECDIR/whack --name "$1" --initiate
+	fi
 	if test -e $IPSEC_CHARON_PID
 	then
 	    $IPSEC_EXECDIR/stroke up "$1"
@@ -228,10 +257,10 @@ up)
 update)
 	if test -e $IPSEC_STARTER_PID 
 	then
-	    echo "Updating strongSwan IPsec configuration..." >&2
-	    kill -s HUP `cat $IPSEC_STARTER_PID`
+		echo "Updating strongSwan IPsec configuration..." >&2
+		kill -s HUP `cat $IPSEC_STARTER_PID`
 	else
-	    echo "ipsec starter is not running" >&2
+		echo "ipsec starter is not running" >&2
 	fi
 	exit 0
 	;;
@@ -241,7 +270,7 @@ version|--version)
 	echo "See \`ipsec --copyright' for copyright information."
 	if [ -f $IPSEC_LIBDIR/distro.txt ]
 	then
-	    cat $IPSEC_LIBDIR/distro.txt
+		cat $IPSEC_LIBDIR/distro.txt
 	fi
 	exit 0
 	;;

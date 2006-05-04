@@ -21,8 +21,6 @@
 
 #include <utils/logger_manager.h>
 
-static logger_t *logger;
-
 /* Names of the months */
 static const char* months[] = {
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -87,7 +85,18 @@ static const asn1Object_t algorithmIdentifierObjects[] = {
 #define ALGORITHM_ID_PARAMETERS	2
 #define ALGORITHM_ID_ROOF		3
 
-/*
+static logger_t *logger = NULL;
+
+/**
+ * initializes the ASN.1 logger
+ */
+static void asn1_init_logger()
+{
+	if (logger == NULL)
+		logger = logger_manager->get_logger(logger_manager, ASN1);
+}
+
+/**
  * return the ASN.1 encoded algorithm identifier
  */
 chunk_t asn1_algorithmIdentifier(int oid)
@@ -109,7 +118,7 @@ chunk_t asn1_algorithmIdentifier(int oid)
 	}
 }
 
-/*
+/**
  * If the oid is listed in the oid_names table then the corresponding
  * position in the oid_names table is returned otherwise -1 is returned
  */
@@ -141,7 +150,7 @@ int known_oid(chunk_t object)
 	return -1;
 }
 
-/*
+/**
  * Decodes the length in bytes of an ASN.1 object
  */
 u_int asn1_length(chunk_t *blob)
@@ -188,7 +197,7 @@ u_int asn1_length(chunk_t *blob)
 	return len;
 }
 
-/*
+/**
  * determines if a character string is of type ASN.1 printableString
  */
 bool is_printablestring(chunk_t str)
@@ -205,9 +214,9 @@ bool is_printablestring(chunk_t str)
 	return TRUE;
 }
 
-/*
+/**
  * Display a date either in local or UTC time
- * TODO: Does not seem to be thread save
+ * TODO: Does not seem to be thread safe
  */
 char* timetoa(const time_t *time, bool utc)
 {
@@ -225,7 +234,7 @@ char* timetoa(const time_t *time, bool utc)
 	return buf;
 }
 
-/*
+/**
  * Converts ASN.1 UTCTIME or GENERALIZEDTIME into calender time
  */
 time_t asn1totime(const chunk_t *utctime, asn1_t type)
@@ -300,19 +309,20 @@ time_t asn1totime(const chunk_t *utctime, asn1_t type)
 	return mktime(&t) - timezone - tz_offset;
 }
 
-/*
+/**
  * Initializes the internal context of the ASN.1 parser
  */
 void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit)
 {
-	logger = logger_manager->get_logger(logger_manager, ASN1);
+	asn1_init_logger();
+
 	ctx->blobs[0] = blob;
 	ctx->level0   = level0;
 	ctx->implicit = implicit;
 	memset(ctx->loopAddr, '\0', sizeof(ctx->loopAddr));
 }
 
-/*
+/**
  * print the value of an ASN.1 simple object
  */
 static void debug_asn1_simple_object(chunk_t object, asn1_t type)
@@ -348,7 +358,7 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 	logger->log_chunk(logger, RAW|LEVEL1, "", object);
 }
 
-/*
+/**
  * Parses and extracts the next ASN.1 object
  */
 bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *object, u_int *level, asn1_ctx_t *ctx)
@@ -479,7 +489,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	return TRUE;
 }
 
-/*
+/**
  * parse an ASN.1 simple type
  */
 bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name)
@@ -515,7 +525,7 @@ bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 	return TRUE;
 }
 
-/*
+/**
  * extracts an algorithmIdentifier
  */
 int parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters)
@@ -558,6 +568,8 @@ bool is_asn1(chunk_t blob)
 	u_int len;
 	u_char tag = *blob.ptr;
 	
+	asn1_init_logger();
+
 	if (tag != ASN1_SEQUENCE && tag != ASN1_SET)
 	{
 		logger->log(logger, ERROR|LEVEL2, "  file content is not binary ASN.1");
@@ -572,7 +584,7 @@ bool is_asn1(chunk_t blob)
 	return TRUE;
 }
 
-/*
+/**
  * codes ASN.1 lengths up to a size of 16'777'215 bytes
  */
 void code_asn1_length(size_t length, chunk_t *code)
@@ -605,7 +617,7 @@ void code_asn1_length(size_t length, chunk_t *code)
 	}
 }
 
-/*
+/**
  * build an empty asn.1 object with tag and length fields already filled in
  */
 u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen)
@@ -634,7 +646,7 @@ u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen)
 	return pos;
 }
 
-/*
+/**
  * build a simple ASN.1 object
  */
 chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
@@ -648,7 +660,8 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 	return object;
 }
 
-/* Build an ASN.1 object from a variable number of individual chunks.
+/**
+ * Build an ASN.1 object from a variable number of individual chunks.
  * Depending on the mode, chunks either are moved ('m') or copied ('c').
  */
 chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
@@ -696,7 +709,7 @@ chunk_t asn1_wrap(asn1_t type, const char *mode, ...)
 	return construct;
 }
 
-/*
+/**
  * convert a MP integer into a DER coded ASN.1 object
  */
 chunk_t asn1_integer_from_mpz(const mpz_t value)
@@ -709,7 +722,7 @@ chunk_t asn1_integer_from_mpz(const mpz_t value)
 	return asn1_wrap(ASN1_INTEGER, "m", n);
 }
 
-/*
+/**
  *  convert a date into ASN.1 UTCTIME or GENERALIZEDTIME format
  */
 chunk_t timetoasn1(const time_t *time, asn1_t type)

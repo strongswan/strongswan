@@ -40,6 +40,12 @@ typedef enum {
 	STATE_INVALID
 } starter_state_t;
 
+typedef enum {
+	KEY_EXCHANGE_IKE,
+	KEY_EXCHANGE_IKEV1,
+	KEY_EXCHANGE_IKEV2
+} keyexchange_t;
+
 typedef struct starter_end starter_end_t;
 
 struct starter_end {
@@ -89,7 +95,7 @@ struct starter_conn {
 	startup_t	startup;
 	starter_state_t	state;
 
-	int		keyexchange;
+	keyexchange_t	keyexchange;
 	lset_t 		policy;
 	time_t 		sa_ike_life_seconds;
 	time_t		sa_ipsec_life_seconds;

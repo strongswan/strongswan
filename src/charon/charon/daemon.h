@@ -203,11 +203,18 @@
 #define PID_FILE "/var/run/charon.pid"
 
 /**
+ * Configuration directory
+ * 
+ * @ingroup charon
+ */
+#define CONFIG_DIR "/etc"
+
+/**
  * Directory of IPsec relevant files
  * 
  * @ingroup charon
  */
-#define IPSEC_DIR "/etc/ipsec.d"
+#define IPSEC_DIR CONFIG_DIR "/ipsec.d"
 
 /**
  * Directory for private keys
@@ -223,6 +230,12 @@
  */
 #define CERTIFICATE_DIR IPSEC_DIR "/certs"
 
+/**
+ * Secrets files
+ * 
+ * @ingroup charon
+ */
+#define SECRETS_FILE CONFIG_DIR "/ipsec.secrets"
 
 typedef struct daemon_t daemon_t;
 

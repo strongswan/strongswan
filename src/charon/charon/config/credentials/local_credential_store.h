@@ -57,7 +57,7 @@ struct local_credential_store_t {
 	 * @param this		calling object
 	 * @param path		directory to load certificates from
 	 */
-	void (*load_certificates) (local_credential_store_t *this, char *path);
+	void (*load_certificates) (local_credential_store_t *this, const char *path);
 	
 	/**
 	 * @brief Loads RSA private keys from a folder.
@@ -66,10 +66,11 @@ struct local_credential_store_t {
 	 * other gets ignored. Further, a certificate for the specific private
 	 * key must already be loaded to get the ID from.
 	 * 
-	 * @param this		calling object
-	 * @param path		directory to load keys from
+	 * @param this			calling object
+	 * @param secretsfile	file where secrets are stored
+	 * @param defaultpath	default directory for private keys
 	 */
-	void (*load_private_keys) (local_credential_store_t *this, char *path);
+	void (*load_private_keys) (local_credential_store_t *this, const char *secretsfile, const char *defaultpath);
 };
 
 /**

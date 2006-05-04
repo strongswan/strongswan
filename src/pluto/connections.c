@@ -11,7 +11,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: connections.c,v 1.42 2006/04/22 21:59:20 as Exp $
+ * RCSID $Id: connections.c,v 1.43 2006/04/29 18:16:02 as Exp $
  */
 
 #include <string.h>
@@ -4022,7 +4022,7 @@ show_connections_status(bool all, const char *name)
     /* sort it! */
     qsort(array, count, sizeof(struct connection *), connection_compare_qsort);
 
-    for (i=0; i<count; i++)
+    for (i = 0; i < count; i++)
     {
 	const char *ifn;
 	char instance[1 + 10 + 1];
@@ -4076,7 +4076,7 @@ show_connections_status(bool all, const char *name)
 	    if (c->spd.that.groups != NULL)
 	    {
 		char buf[BUF_LEN];
-	    
+	
 		format_groups(c->spd.that.groups, buf, BUF_LEN);
 		whack_log(RC_COMMENT
 		    , "\"%s\"%s:   groups: %s"
@@ -4097,7 +4097,7 @@ show_connections_status(bool all, const char *name)
 		, (unsigned long) c->sa_keying_tries);
 
 	    /* show DPD parameters if defined */
-	    
+	
 	    if (c->dpd_action != DPD_ACTION_NONE)
 		whack_log(RC_COMMENT
 		    , "\"%s\"%s:   dpd_action: %s;"
@@ -4141,6 +4141,9 @@ show_connections_status(bool all, const char *name)
 	    kernel_alg_show_connection(c, instance);
 	}
     }
+    if (count > 0)
+	whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
+
     pfree(array);
 }
 

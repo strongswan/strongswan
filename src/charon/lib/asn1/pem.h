@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2006 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2001-2004 Andreas Steffen, Zuercher Hochschule Winterthur
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -20,6 +19,9 @@
 
 #include <types.h>
 
-status_t pemtobin(chunk_t *blob, char *pass);
+err_t pem_to_bin(chunk_t *blob, const char *passphrase, bool *pgp);
+
+bool pem_asn1_load_file(const char *filename, const char *passphrase,
+						const char *type, chunk_t *blob, bool *pgp);
 
 #endif /*PEM_H_*/

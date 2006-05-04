@@ -22,8 +22,6 @@
 #define TTODATAV_IGNORESPACE  (1<<1)  /* ignore spaces in base64 encodings*/
 #define TTODATAV_SPACECOUNTS  0       /* do not ignore spaces in base64   */
 
-typedef const char *err_t;	/* error message, or NULL for success */
-
 err_t ttodata(const char *src, size_t srclen, int base, char *buf, size_t buflen, size_t *needed);
 
 

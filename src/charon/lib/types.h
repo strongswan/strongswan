@@ -37,6 +37,11 @@ typedef int bool;
 #define FALSE	0
 #define TRUE	1
 
+/**
+ *  error message, or NULL for success
+ */
+typedef const char *err_t;
+
 typedef enum status_t status_t;
 
 /**

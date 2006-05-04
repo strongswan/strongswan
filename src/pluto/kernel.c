@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: kernel.c,v 1.25 2006/04/17 14:58:09 as Exp $
+ * RCSID $Id: kernel.c,v 1.26 2006/04/29 18:16:02 as Exp $
  */
 
 #include <stddef.h>
@@ -934,6 +934,8 @@ show_shunt_status(void)
 	    , ourst, ourport, hist, hisport, sat, bs->transport_proto
 	    , prio, bs->why);
     }
+    if (bare_shunts != NULL)
+	whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
 }
 
 /* Setup an IPsec route entry.

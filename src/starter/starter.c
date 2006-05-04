@@ -36,6 +36,7 @@
 #include "confread.h"
 #include "files.h"
 #include "starterwhack.h"
+#include "starterstroke.h"
 #include "invokepluto.h"
 #include "invokecharon.h"
 #include "netkey.h"
@@ -47,564 +48,583 @@
 #define FLAG_ACTION_RELOAD        0x04
 #define FLAG_ACTION_QUIT          0x08
 #define FLAG_ACTION_LISTEN        0x10
-#ifdef IKEV2
 #define FLAG_ACTION_START_CHARON  0x20
-#endif /* IKEV2 */
 
 static unsigned int _action_ = 0;
 
 static void
 fsig(int signal)
 {
-    switch (signal)
-    {
-    case SIGCHLD:
+	switch (signal)
 	{
-	    int status;
-	    pid_t pid;
-	    char *name = NULL;
+	case SIGCHLD:
+		{
+			int status;
+			pid_t pid;
+			char *name = NULL;
 
-	    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
-	    {
-		if (pid == starter_pluto_pid())
-		    name = " (Pluto)";
+			while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
+	    	{
+				if (pid == starter_pluto_pid())
+		    		name = " (Pluto)";
 #ifdef IKEV2
-		if (pid == starter_charon_pid())
-		    name = " (Charon)";
+				if (pid == starter_charon_pid())
+					name = " (Charon)";
 #endif /* IKEV2 */
-		if (WIFSIGNALED(status))
-		    DBG(DBG_CONTROL,
-			DBG_log("child %d%s has been killed by sig %d\n",
-				pid, name?name:"", WTERMSIG(status))
-		    )
-		else if (WIFSTOPPED(status))
-		    DBG(DBG_CONTROL,
-			DBG_log("child %d%s has been stopped by sig %d\n",
-				pid, name?name:"", WSTOPSIG(status))
-		    )
-		else if (WIFEXITED(status))
-		    DBG(DBG_CONTROL,
-			DBG_log("child %d%s has quit (exit code %d)\n",
-				pid, name?name:"", WEXITSTATUS(status))
-		    )
-		else
-		    DBG(DBG_CONTROL,
-			DBG_log("child %d%s has quit", pid, name?name:"")
-		    )
+				if (WIFSIGNALED(status))
+					DBG(DBG_CONTROL,
+						DBG_log("child %d%s has been killed by sig %d\n",
+							pid, name?name:"", WTERMSIG(status))
+		    		)
+				else if (WIFSTOPPED(status))
+					DBG(DBG_CONTROL,
+						DBG_log("child %d%s has been stopped by sig %d\n",
+							pid, name?name:"", WSTOPSIG(status))
+		    		)
+				else if (WIFEXITED(status))
+		    		DBG(DBG_CONTROL,
+						DBG_log("child %d%s has quit (exit code %d)\n",
+							pid, name?name:"", WEXITSTATUS(status))
+					)
+				else
+					DBG(DBG_CONTROL,
+						DBG_log("child %d%s has quit", pid, name?name:"")
+		    		)
 
-		if (pid == starter_pluto_pid())
-		    starter_pluto_sigchild(pid);
+				if (pid == starter_pluto_pid())
+					starter_pluto_sigchild(pid);
 #ifdef IKEV2
-		if (pid == starter_charon_pid())
-		    starter_charon_sigchild(pid);
+				if (pid == starter_charon_pid())
+					starter_charon_sigchild(pid);
 #endif /* IKEV2 */
-	    }
-	}
-	break;
+			}
+		}
+		break;
 
     case SIGPIPE:
-	/** ignore **/
-	break;
+		/** ignore **/
+		break;
 
     case SIGALRM:
-	_action_ |= FLAG_ACTION_START_PLUTO;
+		_action_ |= FLAG_ACTION_START_PLUTO;
 #ifdef IKEV2
-	_action_ |= FLAG_ACTION_START_CHARON;
+		_action_ |= FLAG_ACTION_START_CHARON;
 #endif /* IKEV2 */
-	break;
+		break;
 
     case SIGHUP:
-	_action_ |= FLAG_ACTION_UPDATE;
-	break;
+		_action_ |= FLAG_ACTION_UPDATE;
+		break;
 
     case SIGTERM:
     case SIGQUIT:
     case SIGINT:
 	_action_ |= FLAG_ACTION_QUIT;
-	break;
+		break;
 
     case SIGUSR1:
-	_action_ |= FLAG_ACTION_RELOAD;
-	_action_ |= FLAG_ACTION_UPDATE;
-	break;
+		_action_ |= FLAG_ACTION_RELOAD;
+		_action_ |= FLAG_ACTION_UPDATE;
+		break;
 
     default:
-	plog("fsig(): unknown signal %d -- investigate", signal);
-	break;
+		plog("fsig(): unknown signal %d -- investigate", signal);
+		break;
     }
 }
 
 static void
 usage(char *name)
 {
-    fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>] "
-		    "[--debug|--debug-more|--debug-all]\n");
-    exit(1);
+	fprintf(stderr, "Usage: starter [--nofork] [--auto-update <sec>] "
+					"[--debug|--debug-more|--debug-all]\n");
+	exit(1);
 }
 
 int main (int argc, char **argv)
 {
-    starter_config_t *cfg = NULL;
-    starter_config_t *new_cfg;
-    starter_conn_t *conn, *conn2;
-    starter_ca_t *ca, *ca2;
+	starter_config_t *cfg = NULL;
+	starter_config_t *new_cfg;
+	starter_conn_t *conn, *conn2;
+	starter_ca_t *ca, *ca2;
 
-    struct stat stb;
+	struct stat stb;
 
-    char *err = NULL;
-    int i;
-    int id = 1;
-    struct timeval tv;
-    unsigned long auto_update = 0;
-    time_t last_reload;
-    bool no_fork = FALSE;
+	char *err = NULL;
+	int i;
+	int id = 1;
+	struct timeval tv;
+	unsigned long auto_update = 0;
+	time_t last_reload;
+	bool no_fork = FALSE;
 
-    /* global variables defined in log.h */
-    log_to_stderr = TRUE;
-    base_debugging = DBG_NONE;
+	/* global variables defined in log.h */
+	log_to_stderr = TRUE;
+	base_debugging = DBG_NONE;
 
     /* parse command line */
-    for (i = 1; i < argc; i++)
-    {
-	if (streq(argv[i], "--debug"))
+	for (i = 1; i < argc; i++)
 	{
-	    base_debugging |= DBG_CONTROL;
+		if (streq(argv[i], "--debug"))
+		{
+			base_debugging |= DBG_CONTROL;
+		}
+		else if (streq(argv[i], "--debug-more"))
+		{
+			base_debugging |= DBG_CONTROLMORE;
+		}
+		else if (streq(argv[i], "--debug-all"))
+		{
+			base_debugging |= DBG_ALL;
+		}
+		else if (streq(argv[i], "--nofork"))
+		{
+			no_fork = TRUE;
+		}
+		else if (streq(argv[i], "--auto-update") && i+1 < argc)
+		{
+			auto_update = atoi(argv[++i]);
+			if (!auto_update)
+				usage(argv[0]);
+		}
+		else
+		{
+			usage(argv[0]);
+		}
 	}
-	else if (streq(argv[i], "--debug-more"))
+
+	/* Init */
+	init_log("ipsec_starter");
+	cur_debugging = base_debugging;
+
+	signal(SIGHUP,  fsig);
+	signal(SIGCHLD, fsig);
+	signal(SIGPIPE, fsig);
+	signal(SIGINT,  fsig);
+	signal(SIGTERM, fsig);
+	signal(SIGQUIT, fsig);
+	signal(SIGALRM, fsig);
+	signal(SIGUSR1, fsig);
+
+	plog("Starting strongSwan IPsec %s [starter]...", ipsec_version_code());
+
+	/* verify that we can start */
+	if (getuid() != 0)
 	{
-	    base_debugging |= DBG_CONTROLMORE;
+		plog("permission denied (must be superuser)");
+		exit(1);
 	}
-	else if (streq(argv[i], "--debug-all"))
+
+	if (stat(PLUTO_PID_FILE, &stb) == 0)
 	{
-	    base_debugging |= DBG_ALL;
-	}
-	else if (streq(argv[i], "--nofork"))
-	{
-	    no_fork = TRUE;
-	}
-	else if (streq(argv[i], "--auto-update") && i+1 < argc)
-	{
-	    auto_update = atoi(argv[++i]);
-	    if (!auto_update)
-		usage(argv[0]);
+		plog("pluto is already running (%s exists) -- skipping pluto start", PLUTO_PID_FILE);
 	}
 	else
 	{
-	   usage(argv[0]);
+		_action_ |= FLAG_ACTION_START_PLUTO;
 	}
-    }
-
-    /* Init */
-    init_log("ipsec_starter");
-    cur_debugging = base_debugging;
-
-    signal(SIGHUP,  fsig);
-    signal(SIGCHLD, fsig);
-    signal(SIGPIPE, fsig);
-    signal(SIGINT,  fsig);
-    signal(SIGTERM, fsig);
-    signal(SIGQUIT, fsig);
-    signal(SIGALRM, fsig);
-    signal(SIGUSR1, fsig);
-	
-	
-	plog("Starting strongSwan IPsec %s [starter]...", ipsec_version_code());
-
-    /* verify that we can start */
-    if (getuid() != 0)
-    {
-	plog("permission denied (must be superuser)");
-	exit(1);
-    }
-
-    if (stat(PLUTO_PID_FILE, &stb) == 0)
-    {
-	plog("pluto is already running (%s exists) -- skipping pluto start", PLUTO_PID_FILE);
-    }
-    else
-    {
-	_action_ |= FLAG_ACTION_START_PLUTO;
-    }
 #ifdef IKEV2
-    if (stat(CHARON_PID_FILE, &stb) == 0)
-    {
-	plog("charon is already running (%s exists) -- skipping charon start", CHARON_PID_FILE);
-    }
-    else
-    {
-	_action_ |= FLAG_ACTION_START_CHARON;
-    }
-#endif /* IKEV2 */
-    if (stat(DEV_RANDOM, &stb) != 0)
-    {
-	plog("unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
-	exit(1);
-    }
-
-    if (stat(DEV_URANDOM, &stb)!= 0)
-    {
-	plog("unable to start strongSwan IPsec -- no %s!", DEV_URANDOM);
-	exit(1);
-    }
-
-    cfg = confread_load(CONFIG_FILE);
-    if (!cfg)
-    {
-	plog("unable to start strongSwan -- errors in config");
-	exit(1);
-    }
-
-    /* determine if we have a native netkey IPsec stack */
-    if (!starter_netkey_init())
-    {
-	plog("nor netkey IPSec stack detected");
-	exit(1);
-    }
-
-    last_reload = time(NULL);
-
-    if (stat(MY_PID_FILE, &stb) == 0)
-    {
-	plog("starter is already running (%s exists) -- no fork done", MY_PID_FILE);
-	exit(0);
-    }
-
-    /* fork if we're not debugging stuff */
-    if (!no_fork)
-    {
-	log_to_stderr = FALSE;
-
-	switch (fork())
+	if (stat(CHARON_PID_FILE, &stb) == 0)
 	{
-	case 0:
-	    {
-		int fnull = open("/dev/null", O_RDWR);
-
-		if (fnull >= 0)
-		{
-		    dup2(fnull, STDIN_FILENO);
-		    dup2(fnull, STDOUT_FILENO);
-		    dup2(fnull, STDERR_FILENO);
-		    close(fnull);
-		}
-	    }
-	    break;
-	case -1:
-	    plog("can't fork: %s", strerror(errno));
-	    break;
-	default:
-	    exit(0);
+		plog("charon is already running (%s exists) -- skipping charon start", CHARON_PID_FILE);
 	}
+	else
+	{
+		_action_ |= FLAG_ACTION_START_CHARON;
+	}
+#endif /* IKEV2 */
+	if (stat(DEV_RANDOM, &stb) != 0)
+	{
+		plog("unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
+		exit(1);
+	}
+
+	if (stat(DEV_URANDOM, &stb)!= 0)
+	{
+		plog("unable to start strongSwan IPsec -- no %s!", DEV_URANDOM);
+		exit(1);
+	}
+
+	cfg = confread_load(CONFIG_FILE);
+	if (!cfg)
+	{
+		plog("unable to start strongSwan -- errors in config");
+		exit(1);
+	}
+
+	/* determine if we have a native netkey IPsec stack */
+	if (!starter_netkey_init())
+	{
+		plog("nor netkey IPSec stack detected");
+		exit(1);
+	}
+
+	last_reload = time(NULL);
+
+	if (stat(MY_PID_FILE, &stb) == 0)
+	{
+		plog("starter is already running (%s exists) -- no fork done", MY_PID_FILE);
+		exit(0);
+	}
+
+	/* fork if we're not debugging stuff */
+	if (!no_fork)
+	{
+		log_to_stderr = FALSE;
+
+		switch (fork())
+		{
+		case 0:
+			{
+				int fnull = open("/dev/null", O_RDWR);
+
+				if (fnull >= 0)
+				{
+					dup2(fnull, STDIN_FILENO);
+					dup2(fnull, STDOUT_FILENO);
+					dup2(fnull, STDERR_FILENO);
+					close(fnull);
+				}
+			}
+			break;
+		case -1:
+			plog("can't fork: %s", strerror(errno));
+			break;
+		default:
+			exit(0);
+		}
     }
 
     /* save pid file in /var/run/starter.pid */
     {
-	FILE *fd = fopen(MY_PID_FILE, "w");
+		FILE *fd = fopen(MY_PID_FILE, "w");
 
-	if (fd)
-	{
-	    fprintf(fd, "%u\n", getpid());
-	    fclose(fd);
-	}
+		if (fd)
+		{
+			fprintf(fd, "%u\n", getpid());
+			fclose(fd);
+		}
     }
 
     for (;;)
     {
-	/*
-	 * Stop pluto/charon (if started) and exit
-	 */
-	if (_action_ & FLAG_ACTION_QUIT)
-	{
-	    if (starter_pluto_pid())
-		starter_stop_pluto();
+		/*
+		 * Stop pluto/charon (if started) and exit
+		 */
+		if (_action_ & FLAG_ACTION_QUIT)
+		{
+			if (starter_pluto_pid())
+				starter_stop_pluto();
 #ifdef IKEV2
-		if (starter_charon_pid())
-		starter_stop_charon();
-#endif IKEV2
-	    starter_netkey_cleanup();
-	    confread_free(cfg);
-	    unlink(MY_PID_FILE);
-	    unlink(INFO_FILE);
+			if (starter_charon_pid())
+				starter_stop_charon();
+#endif /* IKEV2 */
+			starter_netkey_cleanup();
+			confread_free(cfg);
+			unlink(MY_PID_FILE);
+			unlink(INFO_FILE);
 #ifdef LEAK_DETECTIVE
-	    report_leaks();
+			report_leaks();
 #endif /* LEAK_DETECTIVE */
-	    close_log();
-	    plog("ipsec starter stopped");
-	    exit(0);
-	}
-
-	/*
-	 * Delete all connections. Will be added below
-	 */
-	if (_action_ & FLAG_ACTION_RELOAD)
-	{
-	    if (starter_pluto_pid())
-	    {
-		for (conn = cfg->conn_first; conn; conn = conn->next)
-		{
-		    if (conn->state == STATE_ADDED)
-		    {
-			starter_whack_del_conn(conn);
-#ifdef IKEV2
-			starter_stroke_del_conn(conn);
-#endif /* IKEV2 */
-			conn->state = STATE_TO_ADD;
-		    }
-		}
-		for (ca = cfg->ca_first; ca; ca = ca->next)
-		{
-		    if (ca->state == STATE_ADDED)
-		    {
-			starter_whack_del_ca(ca);
-			ca->state = STATE_TO_ADD;
-		    }
-		}
-	    }
-	    _action_ &= ~FLAG_ACTION_RELOAD;
-	}
-
-	/*
-	 * Update configuration
-	 */
-	if (_action_ & FLAG_ACTION_UPDATE)
-	{
-	    err = NULL;
-	    DBG(DBG_CONTROL,
-		DBG_log("Reloading config...")
-	    )
-	    new_cfg = confread_load(CONFIG_FILE);
-
-	    if (new_cfg)
-	    {
-		/* Switch to new config. New conn will be loaded below */
-		if (!starter_cmp_defaultroute(&new_cfg->defaultroute
-		    , &cfg->defaultroute))
-		{
-		    _action_ |= FLAG_ACTION_LISTEN;
+			close_log();
+			plog("ipsec starter stopped");
+			exit(0);
 		}
 
-		if (!starter_cmp_pluto(cfg, new_cfg)) 
+		/*
+		 * Delete all connections. Will be added below
+		 */
+		if (_action_ & FLAG_ACTION_RELOAD)
 		{
-		    plog("Pluto has changed");
-		    if (starter_pluto_pid())
-			starter_stop_pluto();
-		    _action_ &= ~FLAG_ACTION_LISTEN;
-		    _action_ |= FLAG_ACTION_START_PLUTO;
-		}
-		else
-		{
-		    /* Only reload conn and ca sections if pluto is not killed */
-
-		    /* Look for new connections that are already loaded */
-		    for (conn = cfg->conn_first; conn; conn = conn->next)
-		    {
-			if (conn->state == STATE_ADDED)
+			if (starter_pluto_pid())
 			{
-			    for (conn2 = new_cfg->conn_first; conn2; conn2 = conn2->next)
-			    {
-				if (conn2->state == STATE_TO_ADD
-				&& starter_cmp_conn(conn, conn2))
+				for (conn = cfg->conn_first; conn; conn = conn->next)
 				{
-				    conn->state = STATE_REPLACED;
-				    conn2->state = STATE_ADDED;
-				    conn2->id = conn->id;
-				    break;
-				}
-			    }
-			}
-		    }
-
-		    /* Remove conn sections that have become unused */
-		    for (conn = cfg->conn_first; conn; conn = conn->next)
-		    {
-			if (conn->state == STATE_ADDED)
-			    starter_whack_del_conn(conn);
+					if (conn->state == STATE_ADDED)
+					{
 #ifdef IKEV2
-			    starter_stroke_del_conn(conn);
+						if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
+						{
+							starter_stroke_del_conn(conn);
+						}
 #endif /* IKEV2 */
-		    }
-
-		    /* Look for new ca sections that are already loaded */
-		    for (ca = cfg->ca_first; ca; ca = ca->next)
-		    {
-			if (ca->state == STATE_ADDED)
-			{
-			    for (ca2 = new_cfg->ca_first; ca2; ca2 = ca2->next)
-			    {
-				if (ca2->state == STATE_TO_ADD
-				&& starter_cmp_ca(ca, ca2))
-				{
-				    ca->state = STATE_REPLACED;
-				    ca2->state = STATE_ADDED;
-				    break;
+						else
+						{
+							starter_whack_del_conn(conn);
+						}
+						conn->state = STATE_TO_ADD;
+		    		}
 				}
-			    }
+				for (ca = cfg->ca_first; ca; ca = ca->next)
+				{
+					if (ca->state == STATE_ADDED)
+					{
+						starter_whack_del_ca(ca);
+						ca->state = STATE_TO_ADD;
+					}
+				}
 			}
-		    }
-
-		    /* Remove ca sections that have become unused */
-		    for (ca = cfg->ca_first; ca; ca = ca->next)
-		    {
-			if (ca->state == STATE_ADDED)
-			    starter_whack_del_ca(ca);
-		    }
+			_action_ &= ~FLAG_ACTION_RELOAD;
 		}
-		confread_free(cfg);
-		cfg = new_cfg;
-	    }
-	    else
-	    {
-		plog("can't reload config file: %s -- keeping old one");
-	    }
-	    _action_ &= ~FLAG_ACTION_UPDATE;
-	    last_reload = time(NULL);
-	}
 
-	/*
-	 * Start pluto
-	 */
-	if (_action_ & FLAG_ACTION_START_PLUTO)
-	{
-	    if (starter_pluto_pid() == 0)
-	    {
-		DBG(DBG_CONTROL,
-		    DBG_log("Attempting to start pluto...")
-		)
-
-		if (starter_start_pluto(cfg, no_fork) == 0)
+		/*
+		 * Update configuration
+		 */
+		if (_action_ & FLAG_ACTION_UPDATE)
 		{
-		    starter_whack_listen();
+			err = NULL;
+			DBG(DBG_CONTROL,
+				DBG_log("Reloading config...")
+			)
+			new_cfg = confread_load(CONFIG_FILE);
+
+			if (new_cfg)
+			{
+				/* Switch to new config. New conn will be loaded below */
+				if (!starter_cmp_defaultroute(&new_cfg->defaultroute
+				, &cfg->defaultroute))
+				{
+					_action_ |= FLAG_ACTION_LISTEN;
+				}
+
+				if (!starter_cmp_pluto(cfg, new_cfg)) 
+				{
+					plog("Pluto has changed");
+					if (starter_pluto_pid())
+						starter_stop_pluto();
+					_action_ &= ~FLAG_ACTION_LISTEN;
+					_action_ |= FLAG_ACTION_START_PLUTO;
+				}
+				else
+				{
+					/* Only reload conn and ca sections if pluto is not killed */
+
+					/* Look for new connections that are already loaded */
+					for (conn = cfg->conn_first; conn; conn = conn->next)
+					{
+						if (conn->state == STATE_ADDED)
+						{
+							for (conn2 = new_cfg->conn_first; conn2; conn2 = conn2->next)
+							{
+								if (conn2->state == STATE_TO_ADD
+								&& starter_cmp_conn(conn, conn2))
+								{
+									conn->state = STATE_REPLACED;
+									conn2->state = STATE_ADDED;
+									conn2->id = conn->id;
+									break;
+								}
+							}
+						}
+					}
+
+					/* Remove conn sections that have become unused */
+					for (conn = cfg->conn_first; conn; conn = conn->next)
+					{
+						if (conn->state == STATE_ADDED)
+						{
+#ifdef IKEV2
+							if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
+							{
+								starter_stroke_del_conn(conn);
+							}
+							else
+#endif /* IKEV2 */
+							{
+								starter_whack_del_conn(conn);
+							}
+						}
+					}
+
+					/* Look for new ca sections that are already loaded */
+					for (ca = cfg->ca_first; ca; ca = ca->next)
+					{
+						if (ca->state == STATE_ADDED)
+						{
+							for (ca2 = new_cfg->ca_first; ca2; ca2 = ca2->next)
+							{
+								if (ca2->state == STATE_TO_ADD
+								&& starter_cmp_ca(ca, ca2))
+								{
+									ca->state = STATE_REPLACED;
+									ca2->state = STATE_ADDED;
+									break;
+								}
+			    			}
+						}
+					}
+
+					/* Remove ca sections that have become unused */
+					for (ca = cfg->ca_first; ca; ca = ca->next)
+					{
+						if (ca->state == STATE_ADDED)
+			    			starter_whack_del_ca(ca);
+					}
+				}
+				confread_free(cfg);
+				cfg = new_cfg;
+			}
+			else
+			{
+				plog("can't reload config file: %s -- keeping old one");
+			}
+			_action_ &= ~FLAG_ACTION_UPDATE;
+			last_reload = time(NULL);
 		}
-		else
+
+		/*
+		 * Start pluto
+		 */
+		if (_action_ & FLAG_ACTION_START_PLUTO)
 		{
-		    /* schedule next try */
-		    alarm(PLUTO_RESTART_DELAY);
+			if (starter_pluto_pid() == 0)
+			{
+				DBG(DBG_CONTROL,
+					DBG_log("Attempting to start pluto...")
+				)
+
+				if (starter_start_pluto(cfg, no_fork) == 0)
+				{
+					starter_whack_listen();
+				}
+				else
+				{
+					/* schedule next try */
+					alarm(PLUTO_RESTART_DELAY);
+				}
+			}
+			_action_ &= ~FLAG_ACTION_START_PLUTO;
+
+			for (ca = cfg->ca_first; ca; ca = ca->next)
+			{
+				if (ca->state == STATE_ADDED)
+				ca->state = STATE_TO_ADD;
+			}
+
+			for (conn = cfg->conn_first; conn; conn = conn->next)
+			{
+				if (conn->state == STATE_ADDED)
+					conn->state = STATE_TO_ADD;
+			}
 		}
-	    }
-	    _action_ &= ~FLAG_ACTION_START_PLUTO;
-
-	    for (ca = cfg->ca_first; ca; ca = ca->next)
-	    {
-		if (ca->state == STATE_ADDED)
-		    ca->state = STATE_TO_ADD;
-	    }
-
-	    for (conn = cfg->conn_first; conn; conn = conn->next)
-	    {
-		if (conn->state == STATE_ADDED)
-		    conn->state = STATE_TO_ADD;
-	    }
-	}
 	
 #ifdef IKEV2
-	/*
-	 * Start charon
-	 */
-	if (_action_ & FLAG_ACTION_START_CHARON)
-	{
-		if (starter_charon_pid() == 0)
+		/*
+		 * Start charon
+		 */
+		if (_action_ & FLAG_ACTION_START_CHARON)
 		{
-			DBG(DBG_CONTROL,
-				DBG_log("Attempting to start charon...")
-			   )
-			if (starter_start_charon(cfg, no_fork) != 0)
+			if (starter_charon_pid() == 0)
 			{
-				/* schedule next try */
-				alarm(PLUTO_RESTART_DELAY);
+				DBG(DBG_CONTROL,
+					DBG_log("Attempting to start charon...")
+				)
+				if (starter_start_charon(cfg, no_fork) != 0)
+				{
+					/* schedule next try */
+					alarm(PLUTO_RESTART_DELAY);
+				}
+			}
+			_action_ &= ~FLAG_ACTION_START_CHARON;
+		}
+#endif /* IKEV2 */
+
+		/*
+		 * Tell pluto to reread its interfaces
+		 */
+		if (_action_ & FLAG_ACTION_LISTEN)
+		{
+			starter_whack_listen();
+			_action_ &= ~FLAG_ACTION_LISTEN;
+		}
+
+		/*
+		 * Add stale conn and ca sections
+		 */
+		if (starter_pluto_pid() != 0)
+		{
+			for (ca = cfg->ca_first; ca; ca = ca->next)
+			{
+				if (ca->state == STATE_TO_ADD)
+				{
+					starter_whack_add_ca(ca);
+					ca->state = STATE_ADDED;
+				}
+			}
+
+			for (conn = cfg->conn_first; conn; conn = conn->next)
+			{
+				if (conn->state == STATE_TO_ADD)
+				{
+					if (conn->id == 0)
+					{
+						/* affect new unique id */
+						conn->id = id++;
+		    		}
+#ifdef IKEV2
+					if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
+					{
+						starter_stroke_add_conn(conn);
+					}
+					else
+#endif /* IKEV2 */
+					{
+						starter_whack_add_conn(conn);
+					}
+					conn->state = STATE_ADDED;
+
+					if (conn->startup == STARTUP_START)
+					{
+#ifdef IKEV2
+						if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
+						{
+							starter_stroke_initiate_conn(conn);
+						}
+						else
+#endif /* IKEV2 */
+						{
+							starter_whack_initiate_conn(conn);
+						}
+					}
+					else if (conn->startup == STARTUP_ROUTE)
+					{
+#ifdef IKEV2
+						if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
+						{
+							starter_stroke_route_conn(conn);
+						}
+						else
+#endif /* IKEV2 */
+						{
+							starter_whack_route_conn(conn);
+						}
+					}
+				}
 			}
 		}
-		_action_ &= ~FLAG_ACTION_START_CHARON;
-	}
-#endif /* IKEV2 */
 
-	/*
-	 * Tell pluto to reread its interfaces
-	 */
-	if (_action_ & FLAG_ACTION_LISTEN)
-	{
-	    starter_whack_listen();
-	    _action_ &= ~FLAG_ACTION_LISTEN;
-	}
-
-	/*
-	 * Add stale conn and ca sections
-	 */
-	if (starter_pluto_pid() != 0)
-	{
-	    for (ca = cfg->ca_first; ca; ca = ca->next)
-	    {
-		if (ca->state == STATE_TO_ADD)
+		/*
+		 * If auto_update activated, when to stop select
+		 */
+		if (auto_update)
 		{
-		    starter_whack_add_ca(ca);
-		    ca->state = STATE_ADDED;
-		}
-	    }
+			time_t now = time(NULL);
 
-	    for (conn = cfg->conn_first; conn; conn = conn->next)
-	    {
-		if (conn->state == STATE_TO_ADD)
+			tv.tv_sec = (now < last_reload + auto_update)
+				? (last_reload + auto_update-now) : 0;
+			tv.tv_usec = 0;
+		}
+
+		/*
+		 * Wait for something to happen
+		 */
+		if (select(0, NULL, NULL, NULL, auto_update ? &tv : NULL) == 0)
 		{
-		    if (conn->id == 0)
-		    {
-			/* affect new unique id */
-			conn->id = id++;
-		    }
-		    starter_whack_add_conn(conn);
-#ifdef IKEV2
-		    starter_stroke_add_conn(conn);
-#endif /* IKEV2 */
-		    conn->state = STATE_ADDED;
-		    if (conn->startup == STARTUP_START)
-		    {
-#ifdef IKEV2
-			if (conn->keyexchange == 2)
-			{
-			    starter_stroke_initiate_conn(conn);
-			}
-			else
-#endif /* IKEV2 */
-			{
-			    starter_whack_initiate_conn(conn);
-			}
-		    }
-		    else if (conn->startup == STARTUP_ROUTE)
-		    {
-#ifdef IKEV2
-			if (conn->keyexchange == 2)
-			{
-				starter_stroke_route_conn(conn);
-			}
-			else
-#endif /* IKEV2 */
-			{
-				starter_whack_route_conn(conn);	
-			}
-		    }
+			/* timeout -> auto_update */
+			_action_ |= FLAG_ACTION_UPDATE;
 		}
-	    }
 	}
 
-	/*
-	 * If auto_update activated, when to stop select
-	 */
-	if (auto_update)
-	{
-	    time_t now = time(NULL);
-	    tv.tv_sec = (now < last_reload + auto_update)
-			? (last_reload + auto_update-now) : 0;
-	    tv.tv_usec = 0;
-	}
-
-	/*
-	 * Wait for something to happen
-	 */
-	if (select(0, NULL, NULL, NULL, auto_update ? &tv : NULL) == 0)
-	{
-	    /* timeout -> auto_update */
-	    _action_ |= FLAG_ACTION_UPDATE;
-	}
-    }
-
-    return 0;
+	return 0;
 }
 

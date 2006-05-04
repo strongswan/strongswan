@@ -179,7 +179,7 @@ static void initialize(private_daemon_t *this)
 	
 	/* load keys & certs */
 	cred_store->load_certificates(cred_store, CERTIFICATE_DIR);
-	cred_store->load_private_keys(cred_store, PRIVATE_KEY_DIR);
+	cred_store->load_private_keys(cred_store, SECRETS_FILE, PRIVATE_KEY_DIR);
 	
 	
 	/* start building threads, we are multi-threaded NOW */

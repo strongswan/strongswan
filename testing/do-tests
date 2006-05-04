@@ -374,6 +374,9 @@ do
 	eval HOSTLOGIN=root@\$ip_${host}
 	ssh $HOSTLOGIN grep pluto /var/log/auth.log \
 	    > $TESTRESULTDIR/${host}.auth.log
+	echo >> $TESTRESULTDIR/${host}.auth.log
+	ssh $HOSTLOGIN grep charon /var/log/auth.log \
+	    >> $TESTRESULTDIR/${host}.auth.log
     done
 
 

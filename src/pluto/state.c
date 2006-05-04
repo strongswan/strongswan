@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: state.c,v 1.12 2006/04/03 15:49:36 as Exp $
+ * RCSID $Id: state.c,v 1.13 2006/04/29 18:16:02 as Exp $
  */
 
 #include <stdio.h>
@@ -902,6 +902,8 @@ show_states_status(const char *name)
 	if (IS_PHASE1(st->st_state))
 	    show_pending_phase2(st->st_connection->host_pair, st);
     }
+    if (count > 0)
+	whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
 
     /* free the array */
     pfree(array);

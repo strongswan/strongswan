@@ -28,12 +28,10 @@
 #include "x509.h"
 
 #include <daemon.h>
-#include <asn1/asn1.h>
 #include <asn1/oid.h>
+#include <asn1/asn1.h>
+#include <asn1/pem.h>
 #include <utils/logger_manager.h>
-
-typedef const char *err_t;	/* error message, or NULL for success */
-
 
 #define BUF_LEN 512
 #define RSA_MIN_OCTETS	(512 / 8)
@@ -905,33 +903,14 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
  */
 x509_t *x509_create_from_file(char *filename)
 {
-	struct stat stb;
-	FILE *file;
-	char *buffer;
-	chunk_t chunk;
-	
-	if (stat(filename, &stb) == -1)
-	{
+	bool pgp = FALSE;
+	chunk_t chunk = CHUNK_INITIALIZER;
+	x509_t *cert = NULL;
+
+	if (!pem_asn1_load_file(filename, "", "certificate", &chunk, &pgp))
 		return NULL;
-	}
-	
-	buffer = alloca(stb.st_size);
-	
-	file = fopen(filename, "r");
-	if (file == NULL)
-	{
-		return NULL;
-	}
-	
-	if (fread(buffer, stb.st_size, 1, file) == -1) 
-	{
-		fclose(file);
-		return NULL;
-	}
-	fclose(file);
-	
-	chunk.ptr = buffer;
-	chunk.len = stb.st_size;
-	
-	return x509_create_from_chunk(chunk);
+
+	cert = x509_create_from_chunk(chunk);
+	free(chunk.ptr);
+	return cert;
 }

@@ -1,3 +1,18 @@
+strongswan-4.0.0
+----------------
+
+- initial support of the IKEv2 protocol. Connections in
+  ipsec.conf designated by keyexchange=ikev2 are negotiated 
+  by the new IKEv2 charon keying daemon whereas those marked
+  by keyexchange=ikev1 or the default keyexchange=ike are
+  handled thy the IKEv1 pluto keying daemon. Currently only
+  a limited subset of functions are available with IKEv2
+  (Default AES encryption, authentication based on locally
+  imported X.509 certificates, unencrypted private RSA keys
+  in PKCS#1 file format, limited functionality of the ipsec
+  status command).
+
+
 strongswan-2.7.0
 ----------------
 

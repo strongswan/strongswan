@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: log.c,v 1.7 2005/07/11 18:33:45 as Exp $
+ * RCSID $Id: log.c,v 1.8 2006/04/29 18:16:02 as Exp $
  */
 
 #include <stdio.h>
@@ -770,13 +770,11 @@ show_status(bool all, const char *name)
 	show_ifaces_status();
 	show_myid_status();
 	show_debug_status();
+	whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
     }
-    whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
     show_connections_status(all, name);
-    whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
     show_states_status(name);
 #ifdef KLIPS
-    whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
     show_shunt_status();
 #endif
 }

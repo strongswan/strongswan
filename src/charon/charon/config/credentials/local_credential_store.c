@@ -22,13 +22,16 @@
 
 #include <sys/stat.h>
 #include <dirent.h>
+#include <string.h>
 
 #include "local_credential_store.h"
 
+#include <utils/lexparser.h>
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
 #include <crypto/x509.h>
 
+#define PATH_BUF	256
 
 typedef struct key_entry_t key_entry_t;
 
@@ -138,9 +141,9 @@ static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *
 }
 
 /**
- * Implements local_credential_store_t.load_private_keys
+ * Implements local_credential_store_t.load_certificates
  */
-static void load_certificates(private_local_credential_store_t *this, char *path)
+static void load_certificates(private_local_credential_store_t *this, const char *path)
 {
 	struct dirent* entry;
 	struct stat stb;
@@ -154,7 +157,8 @@ static void load_certificates(private_local_credential_store_t *this, char *path
 	}
 	while ((entry = readdir(dir)) != NULL)
 	{
-		char file[256];
+		char file[PATH_BUF];
+
 		snprintf(file, sizeof(file), "%s/%s", path, entry->d_name);
 		
 		if (stat(file, &stb) == -1)
@@ -168,7 +172,6 @@ static void load_certificates(private_local_credential_store_t *this, char *path
 			if (cert)
 			{
 				this->certificates->insert_last(this->certificates, (void*)cert);
-				this->logger->log(this->logger, CONTROL|LEVEL1, "loaded certificate \"%s\"", file);
 			}
 			else
 			{
@@ -218,55 +221,118 @@ static identification_t *get_id_for_private_key(private_local_credential_store_t
 /**
  * Implements local_credential_store_t.load_private_keys
  */
-static void load_private_keys(private_local_credential_store_t *this, char *path)
+static void load_private_keys(private_local_credential_store_t *this, const char *secretsfile, const char *defaultpath)
 {
-	struct dirent* entry;
-	struct stat stb;
-	DIR* dir;
-	rsa_private_key_t *key;
-	
-	dir = opendir(path);
-	if (dir == NULL) {
-		this->logger->log(this->logger, ERROR, "error opening private key directory \"%s\"", path);
-		return;
-	}
-	while ((entry = readdir(dir)) != NULL)
+	FILE *fd = fopen(secretsfile, "r");
+
+	if (fd)
 	{
-		char file[256];
-		snprintf(file, sizeof(file), "%s/%s", path, entry->d_name);
-		
-		if (stat(file, &stb) == -1)
+		int bytes;
+		int line_nr = 0;
+    	chunk_t chunk, src, line;
+
+		this->logger->log(this->logger, CONTROL, "loading secrets from \"%s\"", secretsfile);
+
+		fseek(fd, 0, SEEK_END);
+		chunk.len = ftell(fd);
+		rewind(fd);
+		chunk.ptr = malloc(chunk.len);
+		bytes = fread(chunk.ptr, 1, chunk.len, fd);
+		fclose(fd);
+
+		src = chunk;
+
+		while (fetchline(&src, &line))
 		{
-			continue;
-		}
-		/* try to parse all regular files */
-		if (stb.st_mode & S_IFREG)
-		{
-			key = rsa_private_key_create_from_file(file, NULL);
-			if (key)
+			chunk_t ids, token;
+
+			line_nr++;
+
+			if (!eat_whitespace(&line))
 			{
-				key_entry_t *entry;
-				identification_t *id = get_id_for_private_key(this, key);
-				if (!id)
+				continue;
+			}
+			if (!extract_token(&ids, ':', &line))
+			{
+				this->logger->log(this->logger, ERROR, "line %d: missing ':' separator", line_nr);
+				goto error;
+			}
+			if (!eat_whitespace(&line) || !extract_token(&token, ' ', &line))
+			{
+				this->logger->log(this->logger, ERROR, "line %d: missing token", line_nr);
+				goto error;
+			}
+			if (match("RSA", &token))
+			{
+				char path[PATH_BUF];
+				chunk_t filename;
+
+				err_t ugh = extract_value(&filename, &line);
+
+				if (ugh != NULL)
 				{
-					this->logger->log(this->logger, ERROR, 
-									  "no certificate found for private key \"%s\", skipped", file);
-					key->destroy(key);
-					continue;
+					this->logger->log(this->logger, ERROR, "line %d: %s", line_nr, ugh);
+					goto error;
 				}
-				entry = malloc_thing(key_entry_t);
-				entry->key = key;
-				entry->id = id;
-				this->private_keys->insert_last(this->private_keys, (void*)entry);
-				this->logger->log(this->logger, CONTROL|LEVEL1, "loaded private key \"%s\"", file);
+				if (filename.len == 0)
+				{
+					this->logger->log(this->logger, ERROR,
+						"line %d: empty filename", line_nr);
+					goto error;
+				}
+				if (*filename.ptr == '/')
+				{
+					/* absolute path name */
+					snprintf(path, sizeof(path), "%.*s", filename.len, filename.ptr);
+				}
+				else
+				{
+					/* relative path name */
+					snprintf(path, sizeof(path), "%s/%.*s", defaultpath, filename.len, filename.ptr);
+				}
+
+				rsa_private_key_t *key = rsa_private_key_create_from_file(path, NULL);
+				if (key)
+				{
+					key_entry_t *entry;
+					identification_t *id = get_id_for_private_key(this, key);
+
+					if (!id)
+					{
+						this->logger->log(this->logger, ERROR, 
+							"no certificate found for private key \"%s\", skipped", path);
+						key->destroy(key);
+						continue;
+					}
+					entry = malloc_thing(key_entry_t);
+					entry->key = key;
+					entry->id = id;
+					this->private_keys->insert_last(this->private_keys, (void*)entry);
+				}
+			}
+			else if (match("PSK", &token))
+			{
+
+			}
+			else if (match("PIN", &token))
+			{
+
 			}
 			else
 			{
-				this->logger->log(this->logger, ERROR, "private key \"%s\" invalid, skipped", file);
+				this->logger->log(this->logger, ERROR,
+					 "line %d: token must be either RSA, PSK, or PIN",
+					  line_nr, token.len);
+				goto error;
 			}
 		}
+error:
+		free(chunk.ptr);
 	}
-	closedir(dir);
+	else
+	{
+		this->logger->log(this->logger, ERROR, "could not open file '%s'", secretsfile);
+	}
 }
 
 /**
@@ -302,8 +368,8 @@ local_credential_store_t * local_credential_store_create()
 	this->public.credential_store.get_shared_secret = (status_t(*)(credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,identification_t*))get_rsa_private_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
-	this->public.load_certificates = (void(*)(local_credential_store_t*,char*))load_certificates;
-	this->public.load_private_keys = (void(*)(local_credential_store_t*,char*))load_private_keys;
+	this->public.load_certificates = (void(*)(local_credential_store_t*,const char*))load_certificates;
+	this->public.load_private_keys = (void(*)(local_credential_store_t*,const char*, const char*))load_private_keys;
 	this->public.credential_store.destroy = (void(*)(credential_store_t*))destroy;
 	
 	/* private variables */
