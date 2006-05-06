@@ -1196,7 +1196,6 @@ read_packet(struct msg_digest *md)
 	}
 #endif
 
-#ifdef IKEV2
 #define IKEV2_VERSION_OFFSET	17
 #define IKEV2_VERSION		0x20
 
@@ -1209,7 +1208,6 @@ read_packet(struct msg_digest *md)
 	)
 	return FALSE;
     }
-#endif /* IKEV2 */
 
     return TRUE;
 }
