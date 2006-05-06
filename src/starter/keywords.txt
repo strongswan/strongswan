@@ -27,9 +27,11 @@ struct kw_entry {
 };
 %%
 interfaces,        KW_INTERFACES
+dumpdir,           KW_DUMPDIR
+charonstart,       KW_CHARONSTART
+plutostart,        KW_PLUTOSTART
 klipsdebug,        KW_KLIPSDEBUG
 plutodebug,        KW_PLUTODEBUG
-dumpdir,           KW_DUMPDIR
 prepluto,          KW_PREPLUTO
 postpluto,         KW_POSTPLUTO
 fragicmp,          KW_FRAGICMP

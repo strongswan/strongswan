@@ -152,7 +152,7 @@ Contents
          o esp4
          o ipcomp
          o xfrm_user
-         o xfrm_tunnel
+         o xfrm4_tunnel
 
      Also the built-in kernel Cryptoapi modules with selected encryption and 
      hash algorithms should be available.

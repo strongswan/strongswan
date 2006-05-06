@@ -44,7 +44,7 @@ error "gperf generated tables don't work with this execution character set. Plea
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: keywords.c,v 1.7 2006/04/17 10:32:48 as Exp $
+ * RCSID $Id: keywords.txt,v 1.6 2006/04/17 10:30:27 as Exp $
  */
 
 #include <string.h>
@@ -56,12 +56,12 @@ struct kw_entry {
     kw_token_t token;
 };
 
-#define TOTAL_KEYWORDS 77
+#define TOTAL_KEYWORDS 79
 #define MIN_WORD_LENGTH 3
 #define MAX_WORD_LENGTH 17
 #define MIN_HASH_VALUE 9
-#define MAX_HASH_VALUE 146
-/* maximum key range = 138, duplicates = 0 */
+#define MAX_HASH_VALUE 156
+/* maximum key range = 148, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -77,32 +77,32 @@ hash (str, len)
 {
   static const unsigned char asso_values[] =
     {
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-       15, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147,  85, 147,  40,
-       25,  25,   0,  10,   5,  80, 147,  35,  60,  35,
-       60,  55,  10, 147,  15,  20,   5,  65, 147, 147,
-      147,  35,   0, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147, 147, 147, 147, 147,
-      147, 147, 147, 147, 147, 147
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+       20, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157,  75, 157,  40,
+       25,  25,   0,  10,   5,  55, 157,  65,  60,  35,
+       80,  65,  10, 157,  15,  20,   5,  80, 157, 157,
+      157,  35,   5, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157, 157, 157, 157, 157,
+      157, 157, 157, 157, 157, 157
     };
   return len + asso_values[(unsigned char)str[2]] + asso_values[(unsigned char)str[len - 1]];
 }
@@ -142,7 +142,7 @@ static const struct kw_entry wordlist[] =
     {"rightgroups",       KW_RIGHTGROUPS},
     {"rightid",           KW_RIGHTID},
     {"pfs",               KW_PFS},
-    {"rekeyfuzz",         KW_REKEYFUZZ},
+    {""},
     {"righthostaccess",   KW_RIGHTHOSTACCESS},
     {"authby",            KW_AUTHBY},
     {""},
@@ -161,54 +161,62 @@ static const struct kw_entry wordlist[] =
     {"ikelifetime",       KW_IKELIFETIME},
     {""},
     {"compress",          KW_COMPRESS},
-    {"auto",              KW_AUTO},
+    {""},
     {"strictcrlpolicy",   KW_STRICTCRLPOLICY},
     {"keyingtries",       KW_KEYINGTRIES},
     {"keylife",           KW_KEYLIFE},
     {"dpddelay",          KW_DPDDELAY},
     {"cachecrls",         KW_CACHECRLS},
-    {"leftupdown",        KW_LEFTUPDOWN},
+    {""},
     {"keyexchange",       KW_KEYEXCHANGE},
     {"leftfirewall",      KW_LEFTFIREWALL},
     {"nocrsend",          KW_NOCRSEND},
+    {"auto",              KW_AUTO},
+    {"klipsdebug",        KW_KLIPSDEBUG},
     {""},
-    {"rekey",             KW_REKEY},
-    {"leftsubnetwithin",  KW_LEFTSUBNETWITHIN},
     {"pkcs11module",      KW_PKCS11MODULE},
     {"nat_traversal",     KW_NAT_TRAVERSAL},
-    {"also",              KW_ALSO},
+    {"rekeyfuzz",         KW_REKEYFUZZ},
     {"pkcs11keepstate",   KW_PKCS11KEEPSTATE},
-    {"rightupdown",       KW_RIGHTUPDOWN},
-    {"crluri2",           KW_CRLURI2},
-    {"rightfirewall",     KW_RIGHTFIREWALL},
-    {"postpluto",         KW_POSTPLUTO},
-    {"plutodebug",        KW_PLUTODEBUG},
-    {"pkcs11proxy",       KW_PKCS11PROXY},
-    {"rightsubnetwithin", KW_RIGHTSUBNETWITHIN},
-    {"prepluto",          KW_PREPLUTO},
-    {""}, {""},
     {"leftca",            KW_LEFTCA},
-    {""}, {""},
-    {"dpdaction",         KW_DPDACTION},
-    {""}, {""}, {""},
-    {"ldaphost",          KW_LDAPHOST},
+    {"ocspuri",           KW_OCSPURI},
+    {"rightfirewall",     KW_RIGHTFIREWALL},
+    {"uniqueids",         KW_UNIQUEIDS},
     {""},
-    {"klipsdebug",        KW_KLIPSDEBUG},
-    {"overridemtu",       KW_OVERRIDEMTU},
+    {"pkcs11proxy",       KW_PKCS11PROXY},
+    {"crluri2",           KW_CRLURI2},
+    {"ldaphost",          KW_LDAPHOST},
+    {"also",              KW_ALSO},
+    {"leftupdown",        KW_LEFTUPDOWN},
+    {"charonstart",       KW_CHARONSTART},
     {"rightca",           KW_RIGHTCA},
     {"fragicmp",          KW_FRAGICMP},
-    {""}, {""},
-    {"rekeymargin",       KW_REKEYMARGIN},
-    {"ocspuri",           KW_OCSPURI},
+    {"postpluto",         KW_POSTPLUTO},
+    {"plutostart",        KW_PLUTOSTART},
+    {"leftsubnetwithin",  KW_LEFTSUBNETWITHIN},
     {""},
-    {"uniqueids",         KW_UNIQUEIDS},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {"prepluto",          KW_PREPLUTO},
+    {""},
+    {"plutodebug",        KW_PLUTODEBUG},
+    {"rightupdown",       KW_RIGHTUPDOWN},
+    {""}, {""}, {""},
+    {"rekey",             KW_REKEY},
+    {""},
+    {"rightsubnetwithin", KW_RIGHTSUBNETWITHIN},
     {"ldapbase",          KW_LDAPBASE},
+    {""}, {""}, {""}, {""}, {""},
+    {"dpdaction",         KW_DPDACTION},
+    {""},
+    {"overridemtu",       KW_OVERRIDEMTU},
+    {""}, {""}, {""}, {""},
+    {"crluri",            KW_CRLURI},
     {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
-    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {""}, {""}, {""}, {""}, {""},
     {"crlcheckinterval",  KW_CRLCHECKINTERVAL},
     {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
-    {"crluri",            KW_CRLURI}
+    {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
+    {""},
+    {"rekeymargin",       KW_REKEYMARGIN}
   };
 
 #ifdef __GNUC__

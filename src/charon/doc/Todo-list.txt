@@ -38,6 +38,10 @@
   - certificate validation/chaining
   - certificate exchange
 
+- stroke status should show configured connections
+- stroke loglevel update
+- stroke argument parsing via getopts/gperf?
+
 - implement 3DES to load encrypted pem files
 - ipsec.secrets parsing
 

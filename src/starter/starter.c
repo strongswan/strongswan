@@ -67,10 +67,8 @@ fsig(int signal)
 	    	{
 				if (pid == starter_pluto_pid())
 		    		name = " (Pluto)";
-#ifdef IKEV2
 				if (pid == starter_charon_pid())
 					name = " (Charon)";
-#endif /* IKEV2 */
 				if (WIFSIGNALED(status))
 					DBG(DBG_CONTROL,
 						DBG_log("child %d%s has been killed by sig %d\n",
@@ -93,10 +91,8 @@ fsig(int signal)
 
 				if (pid == starter_pluto_pid())
 					starter_pluto_sigchild(pid);
-#ifdef IKEV2
 				if (pid == starter_charon_pid())
 					starter_charon_sigchild(pid);
-#endif /* IKEV2 */
 			}
 		}
 		break;
@@ -106,10 +102,8 @@ fsig(int signal)
 		break;
 
     case SIGALRM:
-		_action_ |= FLAG_ACTION_START_PLUTO;
-#ifdef IKEV2
-		_action_ |= FLAG_ACTION_START_CHARON;
-#endif /* IKEV2 */
+			_action_ |= FLAG_ACTION_START_PLUTO;
+			_action_ |= FLAG_ACTION_START_CHARON;
 		break;
 
     case SIGHUP:
@@ -223,7 +217,6 @@ int main (int argc, char **argv)
 	{
 		_action_ |= FLAG_ACTION_START_PLUTO;
 	}
-#ifdef IKEV2
 	if (stat(CHARON_PID_FILE, &stb) == 0)
 	{
 		plog("charon is already running (%s exists) -- skipping charon start", CHARON_PID_FILE);
@@ -232,7 +225,6 @@ int main (int argc, char **argv)
 	{
 		_action_ |= FLAG_ACTION_START_CHARON;
 	}
-#endif /* IKEV2 */
 	if (stat(DEV_RANDOM, &stb) != 0)
 	{
 		plog("unable to start strongSwan IPsec -- no %s!", DEV_RANDOM);
@@ -315,10 +307,8 @@ int main (int argc, char **argv)
 		{
 			if (starter_pluto_pid())
 				starter_stop_pluto();
-#ifdef IKEV2
 			if (starter_charon_pid())
 				starter_stop_charon();
-#endif /* IKEV2 */
 			starter_netkey_cleanup();
 			confread_free(cfg);
 			unlink(MY_PID_FILE);
@@ -336,22 +326,16 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_RELOAD)
 		{
-			if (starter_pluto_pid())
+			if (starter_pluto_pid() || starter_charon_pid())
 			{
 				for (conn = cfg->conn_first; conn; conn = conn->next)
 				{
 					if (conn->state == STATE_ADDED)
 					{
-#ifdef IKEV2
 						if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
-						{
 							starter_stroke_del_conn(conn);
-						}
-#endif /* IKEV2 */
 						else
-						{
 							starter_whack_del_conn(conn);
-						}
 						conn->state = STATE_TO_ADD;
 		    		}
 				}
@@ -423,16 +407,10 @@ int main (int argc, char **argv)
 					{
 						if (conn->state == STATE_ADDED)
 						{
-#ifdef IKEV2
 							if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
-							{
 								starter_stroke_del_conn(conn);
-							}
 							else
-#endif /* IKEV2 */
-							{
 								starter_whack_del_conn(conn);
-							}
 						}
 					}
 
@@ -477,7 +455,7 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_START_PLUTO)
 		{
-			if (starter_pluto_pid() == 0)
+			if (cfg->setup.plutostart && !starter_pluto_pid())
 			{
 				DBG(DBG_CONTROL,
 					DBG_log("Attempting to start pluto...")
@@ -508,18 +486,17 @@ int main (int argc, char **argv)
 			}
 		}
 	
-#ifdef IKEV2
 		/*
 		 * Start charon
 		 */
 		if (_action_ & FLAG_ACTION_START_CHARON)
 		{
-			if (starter_charon_pid() == 0)
+			if (cfg->setup.charonstart && !starter_charon_pid())
 			{
 				DBG(DBG_CONTROL,
 					DBG_log("Attempting to start charon...")
 				)
-				if (starter_start_charon(cfg, no_fork) != 0)
+				if (starter_start_charon(cfg, no_fork))
 				{
 					/* schedule next try */
 					alarm(PLUTO_RESTART_DELAY);
@@ -527,7 +504,6 @@ int main (int argc, char **argv)
 			}
 			_action_ &= ~FLAG_ACTION_START_CHARON;
 		}
-#endif /* IKEV2 */
 
 		/*
 		 * Tell pluto to reread its interfaces
@@ -541,7 +517,7 @@ int main (int argc, char **argv)
 		/*
 		 * Add stale conn and ca sections
 		 */
-		if (starter_pluto_pid() != 0)
+		if (starter_pluto_pid() || starter_charon_pid())
 		{
 			for (ca = cfg->ca_first; ca; ca = ca->next)
 			{
@@ -561,43 +537,25 @@ int main (int argc, char **argv)
 						/* affect new unique id */
 						conn->id = id++;
 		    		}
-#ifdef IKEV2
 					if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
-					{
 						starter_stroke_add_conn(conn);
-					}
 					else
-#endif /* IKEV2 */
-					{
 						starter_whack_add_conn(conn);
-					}
 					conn->state = STATE_ADDED;
 
 					if (conn->startup == STARTUP_START)
 					{
-#ifdef IKEV2
 						if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
-						{
 							starter_stroke_initiate_conn(conn);
-						}
 						else
-#endif /* IKEV2 */
-						{
 							starter_whack_initiate_conn(conn);
-						}
 					}
 					else if (conn->startup == STARTUP_ROUTE)
 					{
-#ifdef IKEV2
 						if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
-						{
 							starter_stroke_route_conn(conn);
-						}
 						else
-#endif /* IKEV2 */
-						{
 							starter_whack_route_conn(conn);
-						}
 					}
 				}
 			}

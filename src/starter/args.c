@@ -86,10 +86,8 @@ static const char *LST_packetdefault[] = {
 
 static const char *LST_keyexchange[] = {
     "ike",
-#ifdef IKEV2
     "ikev1",
     "ikev2",
-#endif /* IKEV2 */
      NULL
 };
 
@@ -150,6 +148,8 @@ static const token_info_t token_info[] =
     /* config setup keywords */
     { ARG_LST,  offsetof(starter_config_t, setup.interfaces), NULL                 },
     { ARG_STR,  offsetof(starter_config_t, setup.dumpdir), NULL                    },
+    { ARG_ENUM, offsetof(starter_config_t, setup.charonstart), LST_bool            },
+    { ARG_ENUM, offsetof(starter_config_t, setup.plutostart), LST_bool             },
 
     /* pluto keywords */
     { ARG_LST,  offsetof(starter_config_t, setup.plutodebug), LST_plutodebug       },

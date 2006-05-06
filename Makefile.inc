@@ -211,9 +211,6 @@ LDAP_VERSION=3
 # include PKCS11-based smartcard support
 USE_SMARTCARD?=false
 
-# support IKEv2 via charon
-USE_IKEV2?=true
-
 # Default PKCS11 library
 # Uncomment this line if using OpenSC <= 0.9.6
 #PKCS11_DEFAULT_LIB=\"/usr/lib/pkcs11/opensc-pkcs11.so\"

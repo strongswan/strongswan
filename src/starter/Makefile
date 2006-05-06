@@ -34,11 +34,6 @@ ifeq ($(USE_LEAK_DETECTIVE),true)
   DEFINES+= -DLEAK_DETECTIVE
 endif
 
-# Enable charon support
-ifeq ($(USE_IKEV2),true)
-  DEFINES+= -DIKEV2
-endif
-
 INCLUDES=-I${FREESWANDIR}/linux/include
 CFLAGS=$(DEFINES) $(INCLUDES) -Wall
 CFLAGS+=-DIPSEC_EXECDIR=\"${FINALLIBEXECDIR}\" -DIPSEC_CONFDDIR=\"${FINALCONFDDIR}\"
@@ -52,9 +47,7 @@ OBJS=starter.o parser.tab.o lex.yy.o keywords.o args.o invokepluto.o \
      loglite.o ${PLUTO_OBJS}
 
 # Build charon-only objs
-ifeq ($(USE_IKEV2),true)
-  OBJS+= invokecharon.o starterstroke.o
-endif
+OBJS+= invokecharon.o starterstroke.o
 
 DISTSRC=$(OBJS:.o=.c)
 DISTSRC+=cmp.h confread.h confwrite.h exec.h files.h interfaces.h netkey.h

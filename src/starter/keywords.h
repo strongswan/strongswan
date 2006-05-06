@@ -22,6 +22,8 @@ typedef enum {
     /* config setup keywords */
     KW_INTERFACES,
     KW_DUMPDIR,
+    KW_CHARONSTART,
+    KW_PLUTOSTART,
 
     /* pluto keywords */
     KW_PLUTODEBUG,

@@ -151,6 +151,8 @@ struct starter_config {
 		lset_t	seen;
 		char	**interfaces;
 		char	*dumpdir;
+		bool	charonstart;
+		bool	plutostart;
 
 		/* pluto keywords */
 		char	**plutodebug;
