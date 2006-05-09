@@ -190,7 +190,7 @@ struct encryption_payload_t {
  * 
  * @ingroup payloads
  */
-encryption_payload_t *encryption_payload_create();
+encryption_payload_t *encryption_payload_create(void);
 
 
 #endif /*ENCRYPTION_PAYLOAD_H_*/

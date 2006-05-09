@@ -377,7 +377,7 @@ static void destroy(private_md5_hasher_t *this)
 /*
  * Described in header.
  */
-md5_hasher_t *md5_hasher_create()
+md5_hasher_t *md5_hasher_create(void)
 {
 	private_md5_hasher_t *this = malloc_thing(private_md5_hasher_t);
 

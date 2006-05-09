@@ -119,7 +119,7 @@ struct certreq_payload_t {
  * 
  * @ingroup payloads
  */
-certreq_payload_t *certreq_payload_create();
+certreq_payload_t *certreq_payload_create(void);
 
 
 #endif /* CERTREQ_PAYLOAD_H_ */

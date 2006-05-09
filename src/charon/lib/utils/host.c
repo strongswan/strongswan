@@ -261,7 +261,7 @@ static void destroy(private_host_t *this)
 /**
  * Creates an empty host_t object 
  */
-static private_host_t *host_create_empty()
+static private_host_t *host_create_empty(void)
 {
 	private_host_t *this = malloc_thing(private_host_t);
 	

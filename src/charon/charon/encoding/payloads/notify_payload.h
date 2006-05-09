@@ -183,7 +183,7 @@ struct notify_payload_t {
  * 
  * @ingroup payloads
  */
-notify_payload_t *notify_payload_create();
+notify_payload_t *notify_payload_create(void);
 
 /**
  * @brief Creates an notify_payload_t object of specific type for specific protocol id.

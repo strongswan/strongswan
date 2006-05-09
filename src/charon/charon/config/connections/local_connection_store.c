@@ -210,7 +210,7 @@ static void destroy (private_local_connection_store_t *this)
 /**
  * Described in header.
  */
-local_connection_store_t * local_connection_store_create()
+local_connection_store_t * local_connection_store_create(void)
 {
 	private_local_connection_store_t *this = malloc_thing(private_local_connection_store_t);
 

@@ -4,15 +4,9 @@ include ${FREESWANSRCDIR}/Makefile.ver
 CFLAGS+=$(USERCOMPILE) -I${KLIPSINC}
 
 CFLAGS+= -Wall
-#CFLAGS+= -Wconversion
-#CFLAGS+= -Wmissing-prototypes
 CFLAGS+= -Wpointer-arith
 CFLAGS+= -Wcast-qual
-#CFLAGS+= -Wmissing-declarations
 CFLAGS+= -Wstrict-prototypes
-#CFLAGS+= -pedantic
-#CFLAGS+= -W
-#CFLAGS+= -Wwrite-strings
 CFLAGS+= -Wbad-function-cast 
 
 # die if there are any warnings

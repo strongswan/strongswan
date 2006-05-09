@@ -81,6 +81,6 @@ struct stroke_t {
  * 
  * @ingroup threads
  */
-stroke_t *stroke_create();
+stroke_t *stroke_create(void);
 
 #endif /* STROKE_INTERFACE_H_ */

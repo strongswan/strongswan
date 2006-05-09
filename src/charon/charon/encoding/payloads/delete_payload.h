@@ -150,7 +150,7 @@ struct delete_payload_t {
  * 
  * @ingroup payloads
  */
-delete_payload_t *delete_payload_create();
+delete_payload_t *delete_payload_create(void);
 
 
 #endif /* DELETE_PAYLOAD_H_ */

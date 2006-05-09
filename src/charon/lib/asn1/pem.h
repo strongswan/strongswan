@@ -19,9 +19,9 @@
 
 #include <types.h>
 
-err_t pem_to_bin(chunk_t *blob, const char *passphrase, bool *pgp);
+err_t pem_to_bin(chunk_t *blob, char *passphrase, bool *pgp);
 
-bool pem_asn1_load_file(const char *filename, const char *passphrase,
+bool pem_asn1_load_file(const char *filename, char *passphrase,
 						const char *type, chunk_t *blob, bool *pgp);
 
 #endif /*PEM_H_*/

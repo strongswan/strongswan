@@ -58,6 +58,6 @@ struct sender_t {
  * 
  * @ingroup threads
  */
-sender_t * sender_create();
+sender_t * sender_create(void);
 
 #endif /*SENDER_H_*/

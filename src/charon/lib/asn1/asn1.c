@@ -90,7 +90,7 @@ static logger_t *logger = NULL;
 /**
  * initializes the ASN.1 logger
  */
-static void asn1_init_logger()
+static void asn1_init_logger(void)
 {
 	if (logger == NULL)
 		logger = logger_manager->get_logger(logger_manager, ASN1);

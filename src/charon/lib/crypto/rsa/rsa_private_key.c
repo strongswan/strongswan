@@ -170,7 +170,7 @@ static const asn1Object_t privkey_objects[] = {
 #define PRIV_KEY_COEFF			 9
 #define PRIV_KEY_ROOF			16
 
-static private_rsa_private_key_t *rsa_private_key_create_empty();
+static private_rsa_private_key_t *rsa_private_key_create_empty(void);
 
 /**
  * Implementation of private_rsa_private_key_t.compute_prime.
@@ -546,7 +546,7 @@ static void destroy(private_rsa_private_key_t *this)
 /**
  * Internal generic constructor
  */
-static private_rsa_private_key_t *rsa_private_key_create_empty()
+static private_rsa_private_key_t *rsa_private_key_create_empty(void)
 {
 	private_rsa_private_key_t *this = malloc_thing(private_rsa_private_key_t);
 	

@@ -287,7 +287,7 @@ void signal_handler(int signal)
  * 
  * @return 	created daemon_t
  */
-private_daemon_t *daemon_create()
+private_daemon_t *daemon_create(void)
 {	
 	private_daemon_t *this = malloc_thing(private_daemon_t);
 	struct sigaction action;

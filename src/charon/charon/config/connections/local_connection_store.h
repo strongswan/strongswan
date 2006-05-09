@@ -58,6 +58,6 @@ struct local_connection_store_t {
  * 
  * @ingroup config
  */
-local_connection_store_t * local_connection_store_create();
+local_connection_store_t * local_connection_store_create(void);
 
 #endif /* LOCAL_CONNECTION_H_ */

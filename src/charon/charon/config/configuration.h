@@ -84,6 +84,6 @@ struct configuration_t {
  * 
  * @ingroup config
  */
-configuration_t *configuration_create();
+configuration_t *configuration_create(void);
 
 #endif /*CONFIGURATION_H_*/

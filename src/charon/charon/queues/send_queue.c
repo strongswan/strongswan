@@ -136,7 +136,7 @@ static void destroy (private_send_queue_t *this)
  *
  * Documented in header
  */
-send_queue_t *send_queue_create()
+send_queue_t *send_queue_create(void)
 {
 	private_send_queue_t *this = malloc_thing(private_send_queue_t);
 	

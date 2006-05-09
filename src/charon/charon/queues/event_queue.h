@@ -112,6 +112,6 @@ struct event_queue_t {
  * 
  * @ingroup queues
  */
-event_queue_t *event_queue_create();
+event_queue_t *event_queue_create(void);
 		  
 #endif /*EVENT_QUEUE_H_*/

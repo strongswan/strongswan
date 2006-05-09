@@ -105,6 +105,6 @@ struct randomizer_t {
  * 
  * @ingroup utils
  */
-randomizer_t *randomizer_create();
+randomizer_t *randomizer_create(void);
 
 #endif /*RANDOMIZER_H_*/

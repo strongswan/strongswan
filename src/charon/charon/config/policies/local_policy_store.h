@@ -55,6 +55,6 @@ struct local_policy_store_t {
  * 
  * @ingroup config
  */
-local_policy_store_t *local_policy_store_create();
+local_policy_store_t *local_policy_store_create(void);
 
 #endif /* LOCAL_POLICY_STORE_H_ */

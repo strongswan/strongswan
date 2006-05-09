@@ -177,7 +177,7 @@ struct transform_substructure_t {
  * 
  * @ingroup payloads
  */
-transform_substructure_t *transform_substructure_create();
+transform_substructure_t *transform_substructure_create(void);
 
 /**
  * @brief Creates an empty transform_substructure_t object.

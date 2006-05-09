@@ -80,6 +80,6 @@ struct local_credential_store_t {
  * 
  * @ingroup config
  */
-local_credential_store_t *local_credential_store_create();
+local_credential_store_t *local_credential_store_create(void);
 
 #endif /* LOCAL_CREDENTIAL_H_ */

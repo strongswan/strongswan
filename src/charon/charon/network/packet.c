@@ -168,7 +168,7 @@ static packet_t *clone(private_packet_t *this)
 /*
  * Documented in header
  */
-packet_t *packet_create()
+packet_t *packet_create(void)
 {
 	private_packet_t *this = malloc_thing(private_packet_t);
 

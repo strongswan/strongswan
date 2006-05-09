@@ -150,7 +150,7 @@ struct rsa_public_key_info_t {
 	chunk_t public_key;
 };
 
-private_rsa_public_key_t *rsa_public_key_create_empty();
+private_rsa_public_key_t *rsa_public_key_create_empty(void);
 
 /**
  * Implementation of private_rsa_public_key_t.rsaep and private_rsa_public_key_t.rsavp1
@@ -364,7 +364,7 @@ static void destroy(private_rsa_public_key_t *this)
 /**
  * Generic private constructor
  */
-private_rsa_public_key_t *rsa_public_key_create_empty()
+private_rsa_public_key_t *rsa_public_key_create_empty(void)
 {
 	private_rsa_public_key_t *this = malloc_thing(private_rsa_public_key_t);
 	

@@ -144,6 +144,6 @@ struct configuration_attribute_t {
  * 
  * @ingroup payloads
  */
-configuration_attribute_t *configuration_attribute_create();
+configuration_attribute_t *configuration_attribute_create(void);
 
 #endif /* CONFIGURATION_ATTRIBUTE_H_*/

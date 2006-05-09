@@ -252,7 +252,7 @@ static void destroy(private_sha1_hasher_t *this)
 /*
  * Described in header.
  */
-sha1_hasher_t *sha1_hasher_create()
+sha1_hasher_t *sha1_hasher_create(void)
 {
 	private_sha1_hasher_t *this = malloc_thing(private_sha1_hasher_t);
 	

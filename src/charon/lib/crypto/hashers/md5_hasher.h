@@ -55,6 +55,6 @@ struct md5_hasher_t {
  * 
  * @ingroup hashers
  */
-md5_hasher_t *md5_hasher_create();
+md5_hasher_t *md5_hasher_create(void);
 
 #endif /*MD5_HASHER_H_*/

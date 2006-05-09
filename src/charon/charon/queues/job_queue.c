@@ -136,7 +136,7 @@ static void job_queue_destroy (private_job_queue_t *this)
  *
  * Documented in header
  */
-job_queue_t *job_queue_create()
+job_queue_t *job_queue_create(void)
 {
 	private_job_queue_t *this = malloc_thing(private_job_queue_t);
 

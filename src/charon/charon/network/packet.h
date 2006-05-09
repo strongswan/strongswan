@@ -129,7 +129,7 @@ struct packet_t {
  * 
  * @ingroup network
  */
-packet_t *packet_create();
+packet_t *packet_create(void);
 
 
 #endif /*PACKET_H_*/

@@ -94,6 +94,6 @@ struct job_queue_t {
  * 
  * @ingroup queues
  */
-job_queue_t *job_queue_create();
+job_queue_t *job_queue_create(void);
 
 #endif /*JOB_QUEUE_H_*/

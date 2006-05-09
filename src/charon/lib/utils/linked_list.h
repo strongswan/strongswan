@@ -197,7 +197,7 @@ struct linked_list_t {
  * 
  * @ingroup utils
  */
-linked_list_t *linked_list_create();
+linked_list_t *linked_list_create(void);
 
 
 #endif /*LINKED_LIST_H_*/

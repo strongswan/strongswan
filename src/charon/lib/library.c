@@ -26,7 +26,7 @@
 /**
  * Called whenever the library is linked from a process
  */
-void __attribute__ ((constructor)) library_init()
+void __attribute__ ((constructor)) library_init(void)
 {
 	logger_manager_init();
 	leak_detective_init();	
@@ -35,7 +35,7 @@ void __attribute__ ((constructor)) library_init()
 /**
  * Called whenever the library is unlinked from a process
  */
-void __attribute__ ((destructor)) library_cleanup()
+void __attribute__ ((destructor)) library_cleanup(void)
 {
 	leak_detective_cleanup();
 	logger_manager_cleanup();

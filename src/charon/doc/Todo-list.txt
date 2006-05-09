@@ -38,6 +38,10 @@
   - certificate validation/chaining
   - certificate exchange
 
++ Apply -W's from Makefile.program to charon
+- do ipsec status via starter
+- add more output to to up/down, somehow...
+
 - stroke status should show configured connections
 - stroke loglevel update
 - stroke argument parsing via getopts/gperf?

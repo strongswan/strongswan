@@ -133,6 +133,6 @@ struct cp_payload_t {
  * 
  * @ingroup payloads
  */
-cp_payload_t *cp_payload_create();
+cp_payload_t *cp_payload_create(void);
 
 #endif /*CP_PAYLOAD_H_*/

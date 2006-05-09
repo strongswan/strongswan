@@ -353,7 +353,7 @@ message_t * message_create_from_packet(packet_t *packet);
  *
  * @ingroup encoding
  */
-message_t * message_create();
+message_t * message_create(void);
 
 /**
  * @brief Creates an message_t object of type reply containing a notify payload.

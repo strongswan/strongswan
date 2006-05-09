@@ -34,7 +34,7 @@ static logger_t *logger = NULL;
 /**
  * initializes the PEM logger
  */
-static void pem_init_logger()
+static void pem_init_logger(void)
 {
 	if (logger == NULL)
 		logger = logger_manager->get_logger(logger_manager, ASN1);
@@ -89,7 +89,7 @@ static bool find_boundary(const char* tag, chunk_t *line)
 /*
  * decrypts a DES-EDE-CBC encrypted data block
  */
-static err_t pem_decrypt(chunk_t *blob, chunk_t *iv, const char *passphrase)
+static err_t pem_decrypt(chunk_t *blob, chunk_t *iv, char *passphrase)
 {
 	hasher_t *hasher;
 	crypter_t *crypter;
@@ -144,7 +144,7 @@ static err_t pem_decrypt(chunk_t *blob, chunk_t *iv, const char *passphrase)
  *  RFC 1421 Privacy Enhancement for Electronic Mail, February 1993
  *  RFC 934 Message Encapsulation, January 1985
  */
-err_t pem_to_bin(chunk_t *blob, const char *passphrase, bool *pgp)
+err_t pem_to_bin(chunk_t *blob, char *passphrase, bool *pgp)
 {
 	typedef enum {
 		PEM_PRE    = 0,
@@ -285,7 +285,7 @@ err_t pem_to_bin(chunk_t *blob, const char *passphrase, bool *pgp)
 /* load a coded key or certificate file with autodetection
  * of binary DER or base64 PEM ASN.1 formats and armored PGP format
  */
-bool pem_asn1_load_file(const char *filename, const char *passphrase,
+bool pem_asn1_load_file(const char *filename, char *passphrase,
 						const char *type, chunk_t *blob, bool *pgp)
 {
 	err_t ugh = NULL;

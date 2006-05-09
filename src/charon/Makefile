@@ -35,7 +35,7 @@ BINNAMELIB=  $(BUILD_DIR)libstrongswan.so
 
 MAIN_DIR= ./
 
-CFLAGS= -Icharon -Ilib -Istroke -fPIC -Wall -g
+CFLAGS= -Icharon -Ilib -Istroke -fPIC -Wall -Wcast-qual -Wstrict-prototypes -Wbad-function-cast -g
 ifeq ($(USE_LEAK_DETECTIVE),true)
   CFLAGS+= -DLEAK_DETECTIVE
 endif

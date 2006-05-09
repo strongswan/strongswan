@@ -138,7 +138,7 @@ struct transform_attribute_t {
  * 
  * @ingroup payloads
  */
-transform_attribute_t *transform_attribute_create();
+transform_attribute_t *transform_attribute_create(void);
 
 /**
  * @brief Creates an transform_attribute_t of type KEY_LENGTH.

@@ -116,7 +116,7 @@ struct auth_payload_t {
  * 
  * @ingroup payloads
  */
-auth_payload_t *auth_payload_create();
+auth_payload_t *auth_payload_create(void);
 
 
 #endif /* AUTH_PAYLOAD_H_ */

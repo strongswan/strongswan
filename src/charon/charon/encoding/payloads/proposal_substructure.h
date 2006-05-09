@@ -208,7 +208,7 @@ struct proposal_substructure_t {
  * 
  * @ingroup payloads
  */
-proposal_substructure_t *proposal_substructure_create();
+proposal_substructure_t *proposal_substructure_create(void);
 
 /**
  * @brief Creates a proposal substructure from a proposal.

@@ -256,6 +256,6 @@ struct ike_header_t {
  * 
  * @ingroup payloads
  */
-ike_header_t *ike_header_create();
+ike_header_t *ike_header_create(void);
 
 #endif /*IKE_HEADER_H_*/

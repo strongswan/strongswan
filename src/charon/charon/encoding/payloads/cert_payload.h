@@ -149,7 +149,7 @@ struct cert_payload_t {
  * 
  * @ingroup payloads
  */
-cert_payload_t *cert_payload_create();
+cert_payload_t *cert_payload_create(void);
 
 
 #endif /* CERT_PAYLOAD_H_ */

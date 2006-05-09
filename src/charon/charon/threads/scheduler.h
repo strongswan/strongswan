@@ -62,6 +62,6 @@ struct scheduler_t {
  * 
  * @ingroup threads
  */
-scheduler_t * scheduler_create();
+scheduler_t * scheduler_create(void);
 
 #endif /*SCHEDULER_H_*/

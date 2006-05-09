@@ -189,6 +189,6 @@ struct ike_sa_manager_t {
  * 
  * @ingroup sa
  */
-ike_sa_manager_t *ike_sa_manager_create();
+ike_sa_manager_t *ike_sa_manager_create(void);
 
 #endif /*IKE_SA_MANAGER_H_*/

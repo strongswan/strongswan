@@ -62,6 +62,6 @@ struct receiver_t {
  * 
  * @ingroup threads
  */
-receiver_t * receiver_create();
+receiver_t * receiver_create(void);
 
 #endif /*RECEIVER_H_*/

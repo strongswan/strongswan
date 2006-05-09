@@ -99,7 +99,7 @@ struct eap_payload_t {
  * 
  * @ingroup payloads
  */
-eap_payload_t *eap_payload_create();
+eap_payload_t *eap_payload_create(void);
 
 
 #endif /* EAP_PAYLOAD_H_ */

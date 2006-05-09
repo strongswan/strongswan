@@ -55,6 +55,6 @@ struct sha1_hasher_t {
  * 
  * @ingroup hashers
  */
-sha1_hasher_t *sha1_hasher_create();
+sha1_hasher_t *sha1_hasher_create(void);
 
 #endif /*SHA1_HASHER_H_*/

@@ -96,6 +96,6 @@ struct generator_t {
  * 
  * @ingroup encoding
  */
-generator_t *generator_create();
+generator_t *generator_create(void);
 
 #endif /*GENERATOR_H_*/

@@ -112,7 +112,7 @@ struct sa_payload_t {
  * 
  * @ingroup payloads
  */
-sa_payload_t *sa_payload_create();
+sa_payload_t *sa_payload_create(void);
 
 /**
  * @brief Creates a sa_payload_t object from a list of proposals.

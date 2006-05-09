@@ -874,9 +874,9 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public_key = NULL;
 	this->subject = NULL;
 	this->issuer = NULL;
-	this->subjectAltNames = linked_list_create(this->subjectAltNames);
-	this->issuerAltNames = linked_list_create(this->issuerAltNames);
-	this->crlDistributionPoints = linked_list_create(this->crlDistributionPoints);
+	this->subjectAltNames = linked_list_create();
+	this->issuerAltNames = linked_list_create();
+	this->crlDistributionPoints = linked_list_create();
 	
 	/* we do not use a per-instance logger right now, since its not always accessible */
 	logger = logger_manager->get_logger(logger_manager, ASN1);

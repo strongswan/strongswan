@@ -104,7 +104,7 @@ struct ke_payload_t {
  * 
  * @ingroup payloads
  */
-ke_payload_t *ke_payload_create();
+ke_payload_t *ke_payload_create(void);
 
 
 #endif /*KE_PAYLOAD_H_*/

@@ -95,6 +95,6 @@ struct send_queue_t {
  * 
  * @ingroup queues
  */
-send_queue_t *send_queue_create();
+send_queue_t *send_queue_create(void);
 
 #endif /*SEND_QUEUE_H_*/

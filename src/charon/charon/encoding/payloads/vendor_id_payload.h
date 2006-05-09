@@ -97,7 +97,7 @@ struct vendor_id_payload_t {
  * 
  * @ingroup payloads
  */
-vendor_id_payload_t *vendor_id_payload_create();
+vendor_id_payload_t *vendor_id_payload_create(void);
 
 
 #endif /* VENDOR_ID_PAYLOAD_H_ */

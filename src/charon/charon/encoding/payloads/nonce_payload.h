@@ -83,7 +83,7 @@ struct nonce_payload_t {
  * @ingroup payloads
  */
  
-nonce_payload_t *nonce_payload_create();
+nonce_payload_t *nonce_payload_create(void);
 
 
 #endif /*NONCE_PAYLOAD_H_*/

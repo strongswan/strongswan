@@ -120,7 +120,7 @@ static void destroy(private_local_policy_store_t *this)
 /**
  * Described in header.
  */
-local_policy_store_t *local_policy_store_create()
+local_policy_store_t *local_policy_store_create(void)
 {
 	private_local_policy_store_t *this = malloc_thing(private_local_policy_store_t);
 	

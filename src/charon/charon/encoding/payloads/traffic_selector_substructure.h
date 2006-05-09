@@ -154,7 +154,7 @@ struct traffic_selector_substructure_t {
  * 
  * @ingroup payloads
  */
-traffic_selector_substructure_t *traffic_selector_substructure_create();
+traffic_selector_substructure_t *traffic_selector_substructure_create(void);
 
 /**
  * @brief Creates an initialized traffif selector substructure using

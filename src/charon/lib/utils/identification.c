@@ -248,7 +248,7 @@ struct private_identification_t {
 	id_type_t type;
 };
 
-static private_identification_t *identification_create();
+static private_identification_t *identification_create(void);
 
 
 /**
@@ -952,7 +952,7 @@ static void destroy(private_identification_t *this)
 /**
  * Generic constructor used for the other constructors.
  */
-static private_identification_t *identification_create()
+static private_identification_t *identification_create(void)
 {
 	private_identification_t *this = malloc_thing(private_identification_t);
 	
