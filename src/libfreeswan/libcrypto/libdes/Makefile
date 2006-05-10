@@ -1,13 +1,13 @@
-ifndef FREESWANSRCDIR
-FREESWANSRCDIR=../..
-endif
-
-include ${FREESWANSRCDIR}/Makefile.inc
-
-KLIPSD=${FREESWANSRCDIR}/linux
-SRCDIR=${KLIPSD}/crypto/ciphers/des
-
-VPATH =${SRCDIR}
+#ifndef FREESWANSRCDIR
+#FREESWANSRCDIR=../..
+#endif
+#
+#include ${FREESWANSRCDIR}/Makefile.inc
+#
+#KLIPSD=${FREESWANSRCDIR}/linux
+#SRCDIR=${KLIPSD}/crypto/ciphers/des
+#
+#VPATH =${SRCDIR}
 
 # You must select the correct terminal control system to be used to
 # turn character echo off when reading passwords.  There a 5 systems
