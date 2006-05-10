@@ -1,9 +1,0 @@
-#!/bin/bash
-
-FILES=`find . -name '*.[ch]'`
-for FILE in $FILES
-do
-	TMP=${FILE}_tmp
-	sed "s/$1/$2/g" < $FILE > $TMP
-	mv $TMP $FILE
-done
