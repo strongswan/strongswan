@@ -23,11 +23,11 @@
 #include <gmp.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "rsa_public_key.h"
 
-#include <daemon.h>
 #include <crypto/hashers/hasher.h>
 #include <asn1/asn1.h>
 

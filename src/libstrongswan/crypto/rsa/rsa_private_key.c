@@ -27,9 +27,9 @@
 
 #include "rsa_private_key.h"
 
-#include <daemon.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
+#include <utils/randomizer.h>
 
 /* 
  * Oids for hash algorithms are defined in

@@ -28,8 +28,6 @@
 
 #include "tester.h"
 
-#include <utils/linked_list.h>
-#include <queues/job_queue.h>
 
 
 typedef struct private_tester_t private_tester_t;

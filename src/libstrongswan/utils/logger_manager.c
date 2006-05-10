@@ -23,7 +23,6 @@
  
 #include "logger_manager.h"
 
-#include <daemon.h>
 #include <definitions.h>
 #include <utils/linked_list.h>
 

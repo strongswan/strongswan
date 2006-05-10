@@ -27,7 +27,6 @@
 
 #include "diffie_hellman.h"
 
-#include <daemon.h>
 #include <utils/randomizer.h>
 
 

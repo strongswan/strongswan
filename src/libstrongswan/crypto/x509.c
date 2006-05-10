@@ -27,11 +27,11 @@
 
 #include "x509.h"
 
-#include <daemon.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
 #include <utils/logger_manager.h>
+#include <utils/linked_list.h>
 
 #define BUF_LEN 512
 #define RSA_MIN_OCTETS	(512 / 8)
@@ -110,16 +110,11 @@ struct private_x509_t {
 	 */
 	linked_list_t *crlDistributionPoints;
 	
-	/**
-	 * Type of the subjects Key (currently RSA only)
-	 */
-	auth_method_t subjectPublicKeyAlgorithm;
-	
 
-		/**
-		 * Subjects RSA public key, if subjectPublicKeyAlgorithm == RSA
-		 */
-		rsa_public_key_t *public_key;
+	/**
+	 * Subjects RSA public key, if subjectPublicKeyAlgorithm == RSA
+	 */
+	rsa_public_key_t *public_key;
 	
 	
 	
@@ -682,11 +677,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				cert->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
-				if (parse_algorithmIdentifier(object, level, NULL) == OID_RSA_ENCRYPTION)
-				{
-					cert->subjectPublicKeyAlgorithm = RSA_DIGITAL_SIGNATURE;
-				}
-				else
+				if (parse_algorithmIdentifier(object, level, NULL) != OID_RSA_ENCRYPTION)
 				{
 					logger->log(logger, ERROR|LEVEL1, "  unsupported public key algorithm");
 					return FALSE;
