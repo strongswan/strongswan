@@ -56,16 +56,6 @@ typedef struct stroke_t stroke_t;
 struct stroke_t {
 	
 	/**
-	 * Implements policy_store_t interface
-	 */
-	policy_store_t policies;
-	
-	/**
-	 * Implements credential_store_t interfacce
-	 */
-	credential_store_t credentials;
-	
-	/**
 	 * @brief Destroy a stroke_t instance.
 	 * 
 	 * @param this		stroke_t objec to destroy
