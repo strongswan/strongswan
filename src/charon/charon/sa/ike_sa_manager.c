@@ -201,9 +201,9 @@ struct private_ike_sa_manager_t {
 	 linked_list_t *ike_sa_list;
 	 
 	 /**
-	  * Next SPI, needed for incremental creation of SPIs.
+	  * A randomizer, to get random SPIs for our side
 	  */
-	 u_int64_t next_spi;
+	 randomizer_t *randomizer;
 };
 
 /**
@@ -330,13 +330,11 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
  */
 static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 {
-	this->next_spi++;
-	if (this->next_spi == 0) {
-		/* TODO handle overflow,
-		 * delete all SAs or so
-		 */
-	}
-	return this->next_spi;
+	u_int64_t spi;
+	
+	this->randomizer->get_pseudo_random_bytes(this->randomizer, 8, (u_int8_t*)&spi);
+	
+	return spi;
 }
 
 /**
@@ -801,7 +799,9 @@ static void destroy(private_ike_sa_manager_t *this)
 	list->destroy(list);
 	this->logger->log(this->logger,CONTROL | LEVEL2,"IKE_SA's deleted");
 	pthread_mutex_unlock(&(this->mutex));
-
+	
+	this->randomizer->destroy(this->randomizer);
+	
 	free(this);
 }
 
@@ -837,7 +837,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	pthread_mutex_init(&(this->mutex), NULL);
 
-	this->next_spi = 0;
+	this->randomizer = randomizer_create();
 
 	return (ike_sa_manager_t*)this;
 }
