@@ -73,7 +73,7 @@
 #endif
 #endif
 
-#include "crypto/des.h"
+#include "des.h"
 
 #ifndef DES_DEFAULT_OPTIONS
 /* the following is tweaked from a config script, that is why it is a
