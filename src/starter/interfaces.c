@@ -23,11 +23,11 @@
 #include <errno.h>
 
 #include <freeswan.h>
-#include <freeswan/ipsec_tunnel.h>
+#include <ipsec_tunnel.h>
 
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-#include "../pluto/log.h"
+#include <constants.h>
+#include <defs.h>
+#include <log.h>
 
 #include "interfaces.h"
 #include "exec.h"

@@ -87,7 +87,7 @@ void (*pfkey_debug_func)(const char *message, ...) PRINTF_LIKE(1);
          KLIPS_PRINT(debug_pfkey, "klips_debug:" args)
 #endif /* __KERNEL__ */
 
-#include "freeswan/ipsec_sa.h"  /* IPSEC_SAREF_NULL, IPSEC_SA_REF_TABLE_IDX_WIDTH */
+#include "ipsec_sa.h"  /* IPSEC_SAREF_NULL, IPSEC_SA_REF_TABLE_IDX_WIDTH */
 
 #define SENDERR(_x) do { error = -(_x); goto errlab; } while (0)
 

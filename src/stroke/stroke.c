@@ -238,7 +238,7 @@ static void exit_usage(char *error)
 
 int main(int argc, char *argv[])
 {
-	int res;
+	int res = 0;
 	char *op;
 	
 	if (argc < 2)

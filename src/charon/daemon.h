@@ -200,35 +200,35 @@
  * 
  * @ingroup charon
  */
-#define PID_FILE "/var/run/charon.pid"
+#define PID_FILE IPSEC_PIDDIR "/charon.pid"
 
 /**
  * Configuration directory
  * 
  * @ingroup charon
  */
-#define CONFIG_DIR "/etc"
+#define CONFIG_DIR IPSEC_CONFDIR
 
 /**
  * Directory of IPsec relevant files
  * 
  * @ingroup charon
  */
-#define IPSEC_DIR CONFIG_DIR "/ipsec.d"
+#define IPSEC_D_DIR CONFIG_DIR "/ipsec.d"
 
 /**
  * Directory for private keys
  * 
  * @ingroup charon
  */
-#define PRIVATE_KEY_DIR IPSEC_DIR "/private"
+#define PRIVATE_KEY_DIR IPSEC_D_DIR "/private"
 
 /**
  * Directory for trusted certificates
  * 
  * @ingroup charon
  */
-#define CERTIFICATE_DIR IPSEC_DIR "/certs"
+#define CERTIFICATE_DIR IPSEC_D_DIR "/certs"
 
 /**
  * Secrets files

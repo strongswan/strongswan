@@ -30,10 +30,10 @@
 
 #include <freeswan.h>
 
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-#include "../pluto/log.h"
-#include "../pluto/whack.h"
+#include <constants.h>
+#include <defs.h>
+#include <log.h>
+#include <whack.h>
 
 bool
     log_to_stderr = FALSE,	/* should log go to stderr? */

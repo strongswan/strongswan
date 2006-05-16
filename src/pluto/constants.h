@@ -63,9 +63,11 @@ typedef unsigned long long lset_t;
 #define LDISJOINT(a, b)  (((a) & (b)) == LEMPTY)
 
 /* Control and lock pathnames */
-
+#ifndef IPSEC_PIDDIR
+# define IPSEC_PIDDIR "/var/run"
+#endif
 #ifndef DEFAULT_CTLBASE
-# define DEFAULT_CTLBASE "/var/run/pluto"
+# define DEFAULT_CTLBASE IPSEC_PIDDIR "/pluto"
 #endif
 
 #define CTL_SUFFIX ".ctl"	/* for UNIX domain socket pathname */

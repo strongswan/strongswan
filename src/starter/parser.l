@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <glob.h>
 
-#include "parser.tab.h"
+#include "y.tab.h"
 
 #define MAX_INCLUDE_DEPTH  20
 
@@ -166,7 +166,7 @@ setup			return SETUP;
 conn			return CONN;
 ca			return CA;
 include			return INCLUDE;
-version			return VERSION;
+version			return FILE_VERSION;
 
 [^\"= \t\n]+	{
 					yylval.s = strdup(yytext);

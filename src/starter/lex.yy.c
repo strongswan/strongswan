@@ -504,7 +504,7 @@ char *yytext;
 #include <stdlib.h>
 #include <glob.h>
 
-#include "parser.tab.h"
+#include "y.tab.h"
 
 #define MAX_INCLUDE_DEPTH  20
 
@@ -928,7 +928,7 @@ return INCLUDE;
 case 10:
 YY_RULE_SETUP
 #line 169 "parser.l"
-return VERSION;
+return FILE_VERSION;
 	YY_BREAK
 case 11:
 YY_RULE_SETUP

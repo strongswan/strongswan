@@ -313,10 +313,16 @@ The
 command sets them if they are not already set.
 .nf
 .na
-IPSEC_EXECDIR	directory containing published commands
-IPSEC_LIBDIR	directory containing internal executables
-IPSEC_SBINDIR	directory containing \fBipsec\fP command
-IPSEC_CONFS	directory containing configuration files
+
+IPSEC_DIR 		directory containing ipsec programs and utilities
+IPSEC_SBINDIR		directory containing \fBipsec\fP command
+IPSEC_CONFDIR 		directory containing configuration files
+IPSEC_PIDDIR		directory containing PID files
+IPSEC_NAME 		name of ipsec distribution
+IPSEC_VERSION 		version numer of ipsec userland and kernel
+IPSEC_STARTER_PID 	PID file for ipsec starter
+IPSEC_PLUTO_PID 	PID file for IKEv1 keying daemon
+IPSEC_CHARON_PID	PID file for IKEv2 keying daemon
 .ad
 .fi
 .SH SEE ALSO

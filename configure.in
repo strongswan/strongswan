@@ -1,0 +1,139 @@
+dnl  configure.in for linux strongSwan
+dnl  Copyright (C) 2006 Martin Willi
+dnl  Hochschule fuer Technik Rapperswil
+dnl 
+dnl  This program is free software; you can redistribute it and/or modify it
+dnl  under the terms of the GNU General Public License as published by the
+dnl  Free Software Foundation; either version 2 of the License, or (at your
+dnl  option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+dnl 
+dnl  This program is distributed in the hope that it will be useful, but
+dnl  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+dnl  or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+dnl  for more details.
+
+dnl ===========================
+dnl  initialize & set some vars
+dnl ===========================
+
+AC_INIT(strongSwan,4.0.0)
+AM_INIT_AUTOMAKE
+AC_C_BIGENDIAN
+AC_SUBST(ipsecdir, '${libexecdir}/ipsec')
+AC_SUBST(confdir, '${sysconfdir}')
+AC_SUBST(piddir, '/var/run')
+
+dnl ===========================
+dnl  check --enable-xxx params
+dnl ===========================
+
+AC_ARG_ENABLE(
+    [http],
+    AS_HELP_STRING([--enable-http],[enable OCSP and fetching of Certificates and CRLs over HTTP (default is NO). Requires libcurl.]),
+    http=true
+    AC_DEFINE(LIBCURL)
+)
+AM_CONDITIONAL(USE_LIBCURL, test x$http = xtrue)
+
+AC_ARG_ENABLE(
+    [ldap],
+    AS_HELP_STRING([--enable-ldap],[enable fetching of CRLs from LDAP (default is NO). Requires openldap. \
+                                    Protocol version 2 or 3 are supported, use --with-ldap=version to specify \
+                                    explicitly.]),
+    ldap=true
+    [case "${enableval}" in
+        2) AC_DEFINE(LDAP_VER, 2) ;;
+        3) AC_DEFINE(LDAP_VER, 3) ;;
+        *) AC_MSG_ERROR([Invalid LDAP protocol version specified!]) ;;
+        esac
+    ]
+)
+AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
+
+AC_ARG_ENABLE(
+    [pkcs11],
+    AS_HELP_STRING([--enable-pkcs11],[enable PKCS11 smartcard support (default is NO). \
+                                      Set the default PKCS11 library using \
+                                      --enable-pkcs11=/path/to/default-pkcs11.so]),
+    smartcard=true
+    AC_DEFINE(SMARTCARD)
+    AC_DEFINE(PKCS11_DEFAULT_LIB, ${enableval})
+)
+AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
+
+AC_ARG_ENABLE(
+    [leak-detective],
+    AS_HELP_STRING([--enable-leak-detective],[enable malloc hooks to find memory leaks (default is NO).]),
+    leak_detective=true
+    AC_DEFINE(USE_LEAK_DETECTIVE)
+)
+AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
+
+dnl =========================
+dnl  check required programs
+dnl =========================
+
+AC_PROG_INSTALL
+AC_PROG_LIBTOOL
+AC_PROG_LEX
+AC_PROG_YACC
+AC_PROG_CC(intel)
+
+dnl ==========================
+dnl  check required libraries
+dnl ==========================
+
+AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])	
+if test "$ldap" = "true"; then
+    AC_HAVE_LIBRARY([ldap],,[AC_MSG_ERROR([LDAP enabled, but library ldap not found])])
+    AC_HAVE_LIBRARY([lber],,[AC_MSG_ERROR([LDAP enabled, but library lber not found])])
+fi
+if test "$http" = "true"; then
+    AC_HAVE_LIBRARY([curl],,[AC_MSG_ERROR([HTTP enabled, but library curl not found])])
+fi
+
+
+dnl =============================
+dnl  check required header files
+dnl =============================
+
+
+AC_MSG_CHECKING([gmp.h version >= 4.1.4])
+AC_TRY_COMPILE(
+    [#include "gmp.h"],
+    [
+        #if (__GNU_MP_VERSION*100 +  __GNU_MP_VERSION_MINOR*10 + __GNU_MP_VERSION_PATCHLEVEL) < 414
+            #error bad gmp
+        #endif
+    ], 
+    [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([No usable gmp.h found!])]
+)
+if test "$ldap" = "true"; then
+    AC_CHECK_HEADER([ldap.h],,[AC_MSG_ERROR([LDAP enabled, but ldap.h not found!])])
+fi
+if test "$http" = "true"; then
+    AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([HTTP enabled, but curl.h not found!])])
+fi
+
+dnl ==============================
+dnl  build Makefiles
+dnl ==============================
+
+AC_OUTPUT(
+	Makefile
+	src/Makefile
+	src/libstrongswan/Makefile
+	src/libcrypto/Makefile
+	src/libfreeswan/Makefile
+	src/pluto/Makefile
+	src/whack/Makefile
+	src/charon/Makefile
+	src/stroke/Makefile
+	src/ipsec/Makefile
+	src/starter/Makefile
+	src/_updown/Makefile
+	src/_updown_espmark/Makefile
+	src/_copyright/Makefile
+	src/openac/Makefile
+	src/scepclient/Makefile
+)

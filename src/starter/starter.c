@@ -200,7 +200,7 @@ int main (int argc, char **argv)
 	signal(SIGALRM, fsig);
 	signal(SIGUSR1, fsig);
 
-	plog("Starting strongSwan IPsec %s [starter]...", ipsec_version_code());
+	plog("Starting strongSwan %s IPsec [starter]...", ipsec_version_code());
 
 	/* verify that we can start */
 	if (getuid() != 0)
@@ -253,9 +253,9 @@ int main (int argc, char **argv)
 
 	last_reload = time(NULL);
 
-	if (stat(MY_PID_FILE, &stb) == 0)
+	if (stat(STARTER_PID_FILE, &stb) == 0)
 	{
-		plog("starter is already running (%s exists) -- no fork done", MY_PID_FILE);
+		plog("starter is already running (%s exists) -- no fork done", STARTER_PID_FILE);
 		exit(0);
 	}
 
@@ -289,7 +289,7 @@ int main (int argc, char **argv)
 
     /* save pid file in /var/run/starter.pid */
     {
-		FILE *fd = fopen(MY_PID_FILE, "w");
+		FILE *fd = fopen(STARTER_PID_FILE, "w");
 
 		if (fd)
 		{
@@ -311,7 +311,7 @@ int main (int argc, char **argv)
 				starter_stop_charon();
 			starter_netkey_cleanup();
 			confread_free(cfg);
-			unlink(MY_PID_FILE);
+			unlink(STARTER_PID_FILE);
 			unlink(INFO_FILE);
 #ifdef LEAK_DETECTIVE
 			report_leaks();

@@ -26,11 +26,11 @@
 
 #include <freeswan.h>
 
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-#include "../pluto/log.h"
+#include <constants.h>
+#include <defs.h>
+#include <log.h>
 
-#include "../charon/stroke/stroke.h"
+#include <stroke.h>
 
 #include "starterstroke.h"
 #include "confread.h"
@@ -92,7 +92,7 @@ send_stroke_msg (stroke_msg_t *msg)
     }
     if (byte_count < 0)
     {
-	plog(stderr, "read() failed: %s", strerror(errno));
+	plog("read() failed: %s", strerror(errno));
     }
 
     close(sock);

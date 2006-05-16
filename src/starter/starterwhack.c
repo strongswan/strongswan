@@ -23,10 +23,10 @@
 
 #include <freeswan.h>
 
-#include "../pluto/constants.h"
-#include "../pluto/defs.h"
-#include "../pluto/log.h"
-#include "../pluto/whack.h"
+#include <constants.h>
+#include <defs.h>
+#include <log.h>
+#include <whack.h>
 
 #include "starterwhack.h"
 #include "confread.h"
@@ -69,17 +69,13 @@ send_whack_msg (whack_message_t *msg)
     ||  !pack_str(&msg->left.ca,      &str_next, &str_roof)
     ||  !pack_str(&msg->left.groups,  &str_next, &str_roof)
     ||  !pack_str(&msg->left.updown,  &str_next, &str_roof)
-#ifdef VIRTUAL_IP
     ||  !pack_str(&msg->left.virt,    &str_next, &str_roof)
-#endif
     ||  !pack_str(&msg->right.id,     &str_next, &str_roof)
     ||  !pack_str(&msg->right.cert,   &str_next, &str_roof)
     ||  !pack_str(&msg->right.ca,     &str_next, &str_roof)
     ||  !pack_str(&msg->right.groups, &str_next, &str_roof)
     ||  !pack_str(&msg->right.updown, &str_next, &str_roof)
-#ifdef VIRTUAL_IP
     || !pack_str(&msg->right.virt,    &str_next, &str_roof)
-#endif
     || !pack_str(&msg->keyid,         &str_next, &str_roof)
     || !pack_str(&msg->myid,          &str_next, &str_roof)
     || !pack_str(&msg->cacert,        &str_next, &str_roof)

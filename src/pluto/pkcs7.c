@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <crypto/des.h>
+#include <libdes/des.h>
 
 #include <freeswan.h>
 

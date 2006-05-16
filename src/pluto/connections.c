@@ -29,7 +29,7 @@
 #include <sys/queue.h>
 
 #include <freeswan.h>
-#include <freeswan/ipsec_policy.h>
+#include <ipsec_policy.h>
 #include "kameipsec.h"
 
 #include "constants.h"
@@ -58,7 +58,6 @@
 #include "whack.h"
 #include "alg_info.h"
 #include "ike_alg.h"
-#include "kernel_alg.h"
 #ifdef NAT_TRAVERSAL
 #include "nat_traversal.h"
 #endif

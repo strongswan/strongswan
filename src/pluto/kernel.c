@@ -31,7 +31,7 @@
 #include <arpa/inet.h>
 
 #include <freeswan.h>
-#include <freeswan/ipsec_policy.h>
+#include <ipsec_policy.h>
 
 #ifdef KLIPS
 #include <signal.h>

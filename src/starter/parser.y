@@ -54,7 +54,7 @@ extern kw_entry_t *in_word_set (char *str, unsigned int len);
 %}
 
 %union { char *s; };
-%token EQUAL FIRST_SPACES EOL CONFIG SETUP CONN CA INCLUDE VERSION
+%token EQUAL FIRST_SPACES EOL CONFIG SETUP CONN CA INCLUDE FILE_VERSION
 %token <s> STRING
 
 %%
@@ -69,7 +69,7 @@ config_file:
     ;
 
 section_or_include:
-    VERSION STRING EOL
+    FILE_VERSION STRING EOL
     {
 	free($2);
     }

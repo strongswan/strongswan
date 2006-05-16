@@ -1334,7 +1334,6 @@ main(int argc, char **argv)
 	    if (end_seen & LELEM(END_CLIENTWITHIN - END_FIRST))
 		diag("--client conflicts with --clientwithin");
 	    tunnel_af_used_by = long_opts[long_index].name;
-#ifdef VIRTUAL_IP
 	    if ((strlen(optarg) >= 6 && strncmp(optarg,"vhost:",6) == 0)
 	    ||  (strlen(optarg) >= 5 && strncmp(optarg,"vnet:",5) == 0))
 	    {
@@ -1345,10 +1344,6 @@ main(int argc, char **argv)
 		diagq(ttosubnet(optarg, 0, msg.tunnel_addr_family, &msg.right.client), optarg);
 		msg.right.has_client = TRUE;
 	    }
-#else
-	    diagq(ttosubnet(optarg, 0, msg.tunnel_addr_family, &msg.right.client), optarg);
-	    msg.right.has_client = TRUE;
-#endif
 	    msg.policy |= POLICY_TUNNEL;	/* client => tunnel */
 	    continue;
 
@@ -1744,17 +1739,13 @@ main(int argc, char **argv)
     || !pack_str(&msg.left.ca)		/* string  4 */
     || !pack_str(&msg.left.groups)	/* string  5 */
     || !pack_str(&msg.left.updown)	/* string  6 */
-#ifdef VIRTUAL_IP
     || !pack_str(&msg.left.virt)
-#endif
     || !pack_str(&msg.right.id)		/* string  7 */
     || !pack_str(&msg.right.cert)	/* string  8 */
     || !pack_str(&msg.right.ca)		/* string  9 */
     || !pack_str(&msg.right.groups)	/* string 10 */
     || !pack_str(&msg.right.updown)	/* string 11 */
-#ifdef VIRTUAL_IP
     || !pack_str(&msg.right.virt)
-#endif
     || !pack_str(&msg.keyid)		/* string 12 */
     || !pack_str(&msg.myid)		/* string 13 */
     || !pack_str(&msg.cacert)		/* string 14 */

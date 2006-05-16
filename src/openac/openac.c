@@ -40,8 +40,8 @@
 
 #include "build.h"
 
-#define OPENAC_PATH	"/etc/openac"
-#define OPENAC_SERIAL	"/etc/openac/serial"
+#define OPENAC_PATH   IPSEC_CONFDIR "/openac"
+#define OPENAC_SERIAL IPSEC_CONFDIR "/openac/serial"
 
 const char openac_version[] = "openac 0.3";
 

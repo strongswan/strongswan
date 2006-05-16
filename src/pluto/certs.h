@@ -24,14 +24,14 @@
 /* path definitions for private keys, end certs,
  * cacerts, attribute certs and crls
  */
-#define PRIVATE_KEY_PATH  "/etc/ipsec.d/private"
-#define HOST_CERT_PATH    "/etc/ipsec.d/certs"
-#define CA_CERT_PATH	  "/etc/ipsec.d/cacerts"
-#define A_CERT_PATH	  "/etc/ipsec.d/acerts"
-#define AA_CERT_PATH	  "/etc/ipsec.d/aacerts"
-#define OCSP_CERT_PATH	  "/etc/ipsec.d/ocspcerts"
-#define CRL_PATH	  "/etc/ipsec.d/crls"
-#define REQ_PATH	  "/etc/ipsec.d/reqs"
+#define PRIVATE_KEY_PATH  IPSEC_CONFDIR "/ipsec.d/private"
+#define HOST_CERT_PATH    IPSEC_CONFDIR "/ipsec.d/certs"
+#define CA_CERT_PATH	  IPSEC_CONFDIR "/ipsec.d/cacerts"
+#define A_CERT_PATH	  IPSEC_CONFDIR "/ipsec.d/acerts"
+#define AA_CERT_PATH	  IPSEC_CONFDIR "/ipsec.d/aacerts"
+#define OCSP_CERT_PATH	  IPSEC_CONFDIR "/ipsec.d/ocspcerts"
+#define CRL_PATH	  IPSEC_CONFDIR "/ipsec.d/crls"
+#define REQ_PATH	  IPSEC_CONFDIR "/ipsec.d/reqs"
 
 /* advance warning of imminent expiry of
  * cacerts, public keys, and crls

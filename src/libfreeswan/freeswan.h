@@ -43,7 +43,7 @@
 
 #endif /* __KERNEL__ */
 
-#include <freeswan/ipsec_param.h>
+#include <ipsec_param.h>
 
 
 /*

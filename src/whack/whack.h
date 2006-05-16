@@ -19,6 +19,8 @@
 
 #include <freeswan.h>
 
+#include <smartcard.h>
+
 /* Since the message remains on one host, native representation is used.
  * Think of this as horizontal microcode: all selected operations are
  * to be done (in the order declared here).
@@ -67,9 +69,7 @@ struct whack_end {
     u_int16_t host_port;	/* host order */
     u_int16_t port;		/* host order */
     u_int8_t protocol;
-#ifdef VIRTUAL_IP
     char *virt;
-#endif
  };
 
 typedef struct whack_message whack_message_t;

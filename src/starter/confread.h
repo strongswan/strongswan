@@ -71,9 +71,7 @@ struct starter_end {
 	char 		*updown;
 	u_int16_t	port;
 	u_int8_t	protocol;
-#ifdef VIRTUAL_IP
 	char		*virt;
-#endif
 };
 
 typedef struct also also_t;

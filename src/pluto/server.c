@@ -54,7 +54,6 @@
 #include "packet.h"
 #include "demux.h"  /* needs packet.h */
 #include "rcv_whack.h"
-#include "rcv_info.h"
 #include "keys.h"
 #include "adns.h"	/* needs <resolv.h> */
 #include "dnskey.h"	/* needs keys.h and adns.h */

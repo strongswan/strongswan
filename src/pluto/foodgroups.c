@@ -35,7 +35,7 @@
 /* Food group config files are found in directory fg_path */
 
 #ifndef POLICYGROUPSDIR
-#define POLICYGROUPSDIR "/etc/ipsec.d/policies"
+#define POLICYGROUPSDIR IPSEC_CONFDIR "/ipsec.d/policies"
 #endif
 
 const char *policygroups_dir = POLICYGROUPSDIR;

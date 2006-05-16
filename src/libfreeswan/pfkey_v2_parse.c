@@ -49,9 +49,9 @@ char pfkey_v2_parse_c_version[] = "$Id: pfkey_v2_parse.c,v 1.4 2004/06/13 20:35:
 # endif /* if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE) */
 extern int debug_pfkey;
 
-# include <freeswan.h>
+# include freeswan.h"
 
-#include "freeswan/ipsec_encap.h"
+#include "ipsec_encap.h"
 
 #else /* __KERNEL__ */
 
@@ -60,9 +60,9 @@ extern int debug_pfkey;
 # include <linux/errno.h>
 
 # include <freeswan.h>
-# include "src/pluto/constants.h" 
-# include "src/pluto/defs.h"  /* for PRINTF_LIKE */
-# include "src/pluto/log.h"  /* for debugging and DBG_log */
+# include <constants.h>
+# include <defs.h>  /* for PRINTF_LIKE */
+# include <log.h>  /* for debugging and DBG_log */
 
 /* #define PLUTO */
 
@@ -86,7 +86,7 @@ extern int sysctl_ipsec_debug_verbose;
 		 || (sysctl_ipsec_debug_verbose && (debug_pfkey & level & PF_KEY_DEBUG_PARSE_FLOW))) \
  		, "klips_debug:" args)
 #endif /* __KERNEL__ */
-#include "freeswan/ipsec_sa.h"  /* IPSEC_SAREF_NULL, IPSEC_SA_REF_TABLE_IDX_WIDTH */
+#include "ipsec_sa.h"  /* IPSEC_SAREF_NULL, IPSEC_SA_REF_TABLE_IDX_WIDTH */
 
 
 #define SENDERR(_x) do { error = -(_x); goto errlab; } while (0)

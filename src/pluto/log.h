@@ -18,8 +18,8 @@
 
 #define LOG_WIDTH   1024    /* roof of number of chars in log line */
 
-#ifndef PERPERRLOGDIR
-#define PERPERRLOGDIR "/var/log/pluto/peer"
+#ifndef PERPEERLOGDIR
+#define PERPEERLOGDIR "/var/log/pluto/peer"
 #endif
 
 /* our versions of assert: log result */

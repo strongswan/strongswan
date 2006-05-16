@@ -5,22 +5,22 @@ see the file COPYING.
 See the file CREDITS for details on origins of more of the code. 
 
 The DES library is under a BSD style license, see
-	linux/crypto/ciphers/des/COPYRIGHT.
+	src/libcrypto/libdes/COPYRIGHT.
 Note that this software has a advertising clause in it. 
 
 The MD2 implementation is from RSA Data Security Inc., so this package must
 include the following phrase: "RSA Data Security, Inc. MD2 Message Digest
-Algorithm"  It is not under the GPL; see details in programs/pluto/md2.c.
+Algorithm"  It is not under the GPL; see details in src/pluto/md2.c.
 
 The MD5 implementation is from RSA Data Security Inc., so this package must
 include the following phrase: "derived from the RSA Data Security, Inc.
 MD5 Message-Digest Algorithm".  It is not under the GPL; see details in
-linux/net/ipsec/ipsec_md5c.c. 
+src/libfreeswan/ipsec_md5c.c. 
 
 The PKCS#11 header files in programs/pluto/rsaref/ are from RSA Security Inc.,
 so they must include the following phrase: "RSA Security Inc. PKCS#11
 Cryptographic Token Interface (Cryptoki)". The headers are not under the GPL;
-see details in programs/pluto/rsaref/pkcs11.h.
+see details in src/pluto/rsaref/pkcs11.h.
 
 The linux/net/ipsec/radij.c code is derived from BSD 4.4lite code
 from sys/net/radix.c. 

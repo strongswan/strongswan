@@ -30,7 +30,7 @@
 #include <sys/queue.h>
 
 #include <freeswan.h>
-#include <freeswan/ipsec_policy.h>
+#include <ipsec_policy.h>
 
 #include "constants.h"
 #include "adns.h"	/* needs <resolv.h> */

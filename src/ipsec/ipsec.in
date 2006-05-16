@@ -2,6 +2,7 @@
 # prefix command to run stuff from our programs directory
 # Copyright (C) 1998-2002  Henry Spencer.
 # Copyright (C) 2006 Andreas Steffen
+# Copyright (C) 2006 Martin Willi 
 # 
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -15,58 +16,28 @@
 #
 # RCSID $Id: ipsec.in,v 1.13 2006/03/09 20:09:33 as Exp $
 
-IPSEC_NAME=strongSwan
+# name and version of the ipsec implementation
+IPSEC_NAME="@IPSEC_NAME@"
+IPSEC_VERSION="U@IPSEC_VERSION@/K`uname -r`"
 
 # where the private directory and the config files are
-IPSEC_EXECDIR="${IPSEC_EXECDIR-@IPSEC_EXECDIR@}"
-IPSEC_LIBDIR="${IPSEC_LIBDIR-@IPSEC_LIBDIR@}"
-IPSEC_SBINDIR="${IPSEC_SBINDIR-@IPSEC_SBINDIR@}"
-IPSEC_CONFS="${IPSEC_CONFS-@IPSEC_CONFS@}"
+IPSEC_DIR="@IPSEC_DIR@"
+IPSEC_SBINDIR="@IPSEC_SBINDIR@"
+IPSEC_CONFDIR="@IPSEC_CONFDIR@"
+IPSEC_PIDDIR="@IPSEC_PIDDIR@"
 
-IPSEC_DIR="$IPSEC_LIBDIR"
-export IPSEC_DIR IPSEC_CONFS IPSEC_LIBDIR IPSEC_EXECDIR
+IPSEC_STARTER_PID="${IPSEC_PIDDIR}/starter.pid"
+IPSEC_PLUTO_PID="${IPSEC_PIDDIR}/pluto.pid"
+IPSEC_CHARON_PID="${IPSEC_PIDDIR}/charon.pid"
 
-IPSEC_STARTER_PID="/var/run/starter.pid"
-IPSEC_PLUTO_PID="/var/run/pluto.pid"
-IPSEC_CHARON_PID="/var/run/charon.pid"
+IPSEC_WHACK="${IPSEC_DIR}/whack"
+IPSEC_STROKE="${IPSEC_DIR}/stroke"
+IPSEC_STARTER="${IPSEC_DIR}/starter"
 
-# standardize PATH, and export it for everything else's benefit
-PATH="${IPSEC_SBINDIR}":/sbin:/usr/sbin:/usr/local/bin:/bin:/usr/bin
-export PATH
+export IPSEC_DIR IPSEC_SBINDIR IPSEC_CONFDIR IPSEC_PIDDIR IPSEC_VERSION IPSEC_NAME IPSEC_STARTER_PID IPSEC_PLUTO_PID IPSEC_CHARON_PID
 
-# things not to be listed in --help command list
-DONTMENTION='^(ipsec|_.*|.*\.old|.*~)$'
-
-# version numbering (details filled in by build)
-# Possibly should call a C program to invoke the version_code() function
-# instead, but for performance's sake, we inline it here (and only here).
-version="xxx"
-
-# export the version information
-IPSEC_VERSION="$version"
-export IPSEC_VERSION
-
-# function for the funky user/kernel version stuff
-fixversion() {
-	if test -f /proc/net/ipsec_version
-	then
-	stack=" (KLIPS)"
-	kv="`awk '{print $NF}' /proc/net/ipsec_version`"
-	else
-                if test -f /proc/net/pfkey
-                then
-			stack=" (native)"
-                        kv="`uname -r`"
-                else
-                        kv="(no kernel code presently loaded)"
-                fi
-	fi
-	if test " $kv" != " $version"
-	then
-	version="U$version/K$kv"
-	fi
-	version="$version$stack"
-}
+IPSEC_DISTRO="Distributed by the Institute of Internet Technologies and Applications
+              University of Applied Sciences Rapperswil, Switzerland (ITA-HSR)"
 
 case "$1" in
 '')
@@ -102,13 +73,13 @@ case "$1" in
 	echo "	starter"
 	echo "	version"
 	echo "	whack"
+	echo "	stoke"
 	echo
 	echo "Some of these functions have their own manual pages, e.g. ipsec_scepclient(8)."
 	exit 0
 	;;
 --versioncode)
-	fixversion
-	echo "$version"
+	echo "$IPSEC_VERSION"
 	exit 0
 	;;
 --copyright)
@@ -120,18 +91,18 @@ case "$1" in
 	exit 0
 	;;
 --confdir)
-	echo "$IPSEC_CONFS"
+	echo "$IPSEC_CONFDIR"
 	exit 0
 	;;
 down)
 	shift
 	if test -e $IPSEC_PLUTO_PID
 	then
-		$IPSEC_EXECDIR/whack --name "$1" --terminate
+		$IPSEC_WHACK --name "$1" --terminate
 	fi
 	if test -e $IPSEC_CHARON_PID
 	then
-		$IPSEC_EXECDIR/stroke down "$1"
+		$IPSEC_STROKE down "$1"
 	fi
 	exit 0
 	;;
@@ -145,11 +116,11 @@ rereadacerts|rereadcrls|rereadall)
 	shift
 	if test -e $IPSEC_PLUTO_PID
 	then
-		$IPSEC_EXECDIR/whack "$@" "--$op"
+		$IPSEC_WHACK "$@" "--$op"
 	fi
 	#if test -e $IPSEC_CHARON_PID
 	#then
-	#	$IPSEC_EXECDIR/stroke "$op"
+	#	$IPSEC_STROKE "$op"
 	#fi
 	exit 0
 	;;
@@ -157,7 +128,7 @@ ready)
 	shift
 	if test -e $IPSEC_PLUTO_PID
 	then
-		$IPSEC_EXECDIR/whack --listen
+		$IPSEC_WHACK --listen
 	fi
 	exit 0
 	;;
@@ -183,7 +154,7 @@ route|unroute)
 	shift
 	if test -e $IPSEC_PLUTO_PID
 	then
-		$IPSEC_EXECDIR/whack --name "$1" "--$op"
+		$IPSEC_WHACK --name "$1" "--$op"
 	fi
 	exit 0
 	;;
@@ -192,20 +163,20 @@ scencrypt|scdecrypt)
 	shift
 	if test -e $IPSEC_PLUTO_PID
 	then
-		$IPSEC_EXECDIR/whack "--$op" "$@"
+		$IPSEC_WHACK "--$op" "$@"
 	fi
 	exit 0
 	;;
 secrets)
 	if test -e $IPSEC_PLUTO_PID
 	then
-		$IPSEC_EXECDIR/whack --rereadsecrets
+		$IPSEC_WHACK --rereadsecrets
 	fi
 	exit 0
 	;;
 start)
 	shift
-	exec $IPSEC_EXECDIR/starter "$@"
+	exec $IPSEC_STARTER "$@"
 	;;
 status|statusall)
 	op="$1"
@@ -214,20 +185,20 @@ status|statusall)
 	then
 		if test -e $IPSEC_PLUTO_PID
 		then
-			$IPSEC_EXECDIR/whack "--$op"
+			$IPSEC_WHACK "--$op"
 		fi
 		if test -e $IPSEC_CHARON_PID
 		then
-			$IPSEC_EXECDIR/stroke "$op"
+			$IPSEC_STROKE "$op"
 		fi
 	else
 		if test -e $IPSEC_PLUTO_PID
 		then
-			$IPSEC_EXECDIR/whack --name "$1" "--$op"
+			$IPSEC_WHACK --name "$1" "--$op"
 		fi
 		if test -e $IPSEC_CHARON_PID
 		then
-			$IPSEC_EXECDIR/stroke "$op" "$1"
+			$IPSEC_STROKE "$op" "$1"
 		fi
 	fi
 	exit 0
@@ -246,11 +217,11 @@ up)
 	shift
 	if test -e $IPSEC_PLUTO_PID
 	then
-		$IPSEC_EXECDIR/whack --name "$1" --initiate
+		$IPSEC_WHACK --name "$1" --initiate
 	fi
 	if test -e $IPSEC_CHARON_PID
 	then
-	    $IPSEC_EXECDIR/stroke up "$1"
+	    $IPSEC_STROKE up "$1"
 	fi
 	exit 0
 	;;
@@ -265,13 +236,9 @@ update)
 	exit 0
 	;;
 version|--version)
-	fixversion
-	echo "Linux $IPSEC_NAME $version"
+	echo "Linux $IPSEC_NAME $IPSEC_VERSION"
 	echo "See \`ipsec --copyright' for copyright information."
-	if [ -f $IPSEC_LIBDIR/distro.txt ]
-	then
-		cat $IPSEC_LIBDIR/distro.txt
-	fi
+	echo $IPSEC_DISTRO
 	exit 0
 	;;
 --*)
@@ -283,11 +250,11 @@ esac
 cmd="$1"
 shift
 
-path="$IPSEC_EXECDIR/$cmd"
+path="$IPSEC_DIR/$cmd"
 
 if test ! -x "$path" 
 then
-    path="$IPSEC_LIBDIR/$cmd"
+    path="$IPSEC_DIR/$cmd"
     if test ! -x "$path"
     then
 	echo "$0: unknown IPsec command \`$cmd' (\`ipsec --help' for list)" >&2

@@ -23,7 +23,7 @@
 #include "certs.h"
 
 #ifndef SHARED_SECRETS_FILE
-# define SHARED_SECRETS_FILE  "/etc/ipsec.secrets"
+# define SHARED_SECRETS_FILE  IPSEC_CONFDIR "/ipsec.secrets"
 #endif
 
 const char *shared_secrets_file;
