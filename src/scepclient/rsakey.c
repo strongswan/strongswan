@@ -47,8 +47,8 @@
 /* Public exponent used for signature key generation */
 #define PUBLIC_EXPONENT		0x10001
 
-#ifndef RANDOM_DEVICE
-#define	RANDOM_DEVICE	"/dev/random"
+#ifndef DEV_RANDOM
+#define	DEV_RANDOM	"/dev/random"
 #endif
 
 
@@ -66,9 +66,9 @@ get_true_random_bytes(size_t nbytes, char *buf)
 {
     size_t ndone;
     size_t got;
-    char *device = RANDOM_DEVICE;
+    char *device = DEV_RANDOM;
 
-    int dev = open(RANDOM_DEVICE, 0);
+    int dev = open(DEV_RANDOM, 0);
 
     if (dev < 0)
     {

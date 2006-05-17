@@ -69,7 +69,7 @@
 
 #ifdef linux
 # define USE_DEV_RANDOM	1
-# define RANDOM_PATH    "/dev/urandom"
+# define RANDOM_PATH    DEV_URANDOM
 #else
 # ifdef __OpenBSD__
 #  define USE_ARC4RANDOM

@@ -65,7 +65,7 @@ static status_t get_bytes_from_device(private_randomizer_t *this,bool pseudo_ran
 	size_t got;
 	char * device_name;
 
-	device_name = pseudo_random ? PSEUDO_RANDOM_DEVICE : RANDOM_DEVICE;
+	device_name = pseudo_random ? DEV_URANDOM : DEV_RANDOM;
 
 	device = open(device_name, 0);
 	if (device < 0) {

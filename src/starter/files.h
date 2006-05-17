@@ -19,8 +19,6 @@
 
 #define STARTER_PID_FILE IPSEC_PIDDIR "/starter.pid"
 
-#define DEV_RANDOM      "/dev/random"
-#define DEV_URANDOM     "/dev/urandom"
 #define PROC_NETKEY	"/proc/net/pfkey"
 #define PROC_MODULES	"/proc/modules"
 

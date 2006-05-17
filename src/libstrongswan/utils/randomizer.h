@@ -26,15 +26,19 @@
 #include <types.h>
 
 
+#ifndef DEV_RANDOM
 /**
  * Device to read real random bytes
  */
-#define RANDOM_DEVICE "/dev/random"
+# define DEV_RANDOM "/dev/random"
+#endif
 
+#ifndef DEV_URANDOM
 /**
  * Device to read pseudo random bytes
  */
-#define PSEUDO_RANDOM_DEVICE "/dev/urandom"
+# define DEV_URANDOM "/dev/urandom"
+#endif
 
 typedef struct randomizer_t randomizer_t;
 
