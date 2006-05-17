@@ -114,28 +114,26 @@ INSTALLSHELL=${LOOPDIR}/install.sh
 cecho " * Preparing strongSwan installation script"
 echo "ln -sf /usr/share/zoneinfo/${TZUML} /etc/localtime" >> $INSTALLSHELL
 
+echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
+echo -n "./configure --sysconfdir=/etc" >> $INSTALLSHELL
+echo -n " --with-random-device=/dev/urandom" >> $INSTALLSHELL
 if [ "$USE_LIBCURL" = "yes" ]
 then
-    echo "export USE_LIBCURL=true" >> $INSTALLSHELL
+    echo -n " --enable-http" >> $INSTALLSHELL
 fi
 
 if [ "$USE_LDAP" = "yes" ]
 then
-    echo "export USE_LDAP=true" >> $INSTALLSHELL
+    echo -n " --enable-ldap=3" >> $INSTALLSHELL
 fi
-
-echo "export USERCOMPILE=\'-DRANDOM_DEVICE=\\\"/dev/urandom\\\"\'" >> $INSTALLSHELL
-echo "cd /root/${STRONGSWANVERSION}" >> $INSTALLSHELL
-echo "make programs" >> $INSTALLSHELL
+echo "" >> $INSTALLSHELL
+echo "make" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
 echo "ldconfig" >> $INSTALLSHELL
 
 cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot.."
 chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
 cecho "done"
-
-rm -f $INSTALLSHELL
-
 
 ######################################################
 # copying the host's ssh public key
