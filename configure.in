@@ -57,7 +57,7 @@ AC_ARG_ENABLE(
                                       --enable-pkcs11=/path/to/default-pkcs11.so]),
     smartcard=true
     AC_DEFINE(SMARTCARD)
-    AC_DEFINE(PKCS11_DEFAULT_LIB, ${enableval})
+    AC_DEFINE_UNQUOTED(PKCS11_DEFAULT_LIB, "$enableval")
 )
 AM_CONDITIONAL(USE_SMARTCARD, test x$smartcard = xtrue)
 
