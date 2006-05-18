@@ -1,12 +1,6 @@
- strongSwan-4.0.0 / Revision: 978 
+ strongSwan-4.0.0 / Revision: 967
 ==================================
 
-- fixed build
-- started to rebuild source layout
-- fixed stroke error output to starter
-- using random SPIs now, but without collision checks
-- applied some -W's from strongswan
-- fixed that warnings
 - removed IKEV2 ifdefs
 - applied patch from andreas
   - added charonstart option to config
