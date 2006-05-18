@@ -9,6 +9,11 @@ scepclient_LDADD = asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
                    $(top_srcdir)/src/libfreeswan/libfreeswan.a $(top_srcdir)/src/libcrypto/libcrypto.a \
                    -lgmp
 
+# This compile option activates smartcard support
+if USE_SMARTCARD
+  scepclient_LDADD += -ldl
+endif
+
 dist_man_MANS = scepclient.8
 
 PLUTODIR=$(top_srcdir)/src/pluto

@@ -8,6 +8,11 @@ openac_LDADD = ac.o asn1.o ca.o certs.o constants.o crl.o defs.o mp_defs.o fetch
                $(top_srcdir)/src/libfreeswan/libfreeswan.a $(top_srcdir)/src/libcrypto/libcrypto.a \
                -lgmp
 
+# This compile option activates smartcard support
+if USE_SMARTCARD
+  openac_LDADD += -ldl
+endif
+
 dist_man_MANS = openac.8
 
 PLUTODIR=$(top_srcdir)/src/pluto
