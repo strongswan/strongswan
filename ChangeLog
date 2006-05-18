@@ -1,1 +1,149 @@
-todo
+ strongSwan-4.0.0 / Revision: 978 
+==================================
+
+- fixed build
+- started to rebuild source layout
+- fixed stroke error output to starter
+- using random SPIs now, but without collision checks
+- applied some -W's from strongswan
+- fixed that warnings
+- removed IKEV2 ifdefs
+- applied patch from andreas
+  - added charonstart option to config
+  - new ikev2 tests for UML
+- applied patch from andreas
+	- pem loading
+	- secrets file parsing
+	- ikev2 testcase
+	- some other additions here and there
+- connection termination is handled cleanly by name now
+- fixed bad bug, certs load now cleanly again
+- fixed make install (subdir order)
+- fixed include path
+- added missing script
+- finished initial import of strongswan file tree
+- removed a lot of old and unused stuff
+- moved RFCs from ikev2 into doc dir
+- added missing files for starter
+- applied patch for charon (this time really)
+- import of strongswan-2.7.0
+- applied patch for charon
+- renamed get_block_size of hasher
+- reworked usage of IDs in various states
+- using ID_ANY for any, not NULL as before
+- initiator sends IDr payload in IKE_AUTH when ID unique
+- fixed charon checks
+- using status & statusall
+- patch for 2.7.0 
+- add connection names to connections
+- stroke status / ipsec status shows them
+- added statusall for stroke
+- added status by connection name
+- some tests repaired, more to come
+- fixed spi conversion
+- improved "stroke status" output
+- setup PID file after daemon initilization, to correctly inform
+  starter about daemon startup
+- added separate implementation for connection_store, credential_store, policy_store
+- added folder structure to config
+- credentials are fetched solely on IDs now
+- identification_t supports now almost all id types
+- x509 certificates work with identification_t now
+- fixes here, fixes there
+- fixed doxygen build
+- seperates now in lib and charon
+- library initialization done at a central point (library.c)
+- some leak_detective fixes
+- updated Todos
+- fixed log-to-syslog behavior
+- added patch against strongswan-2.6.4
+- x509 certificate loading with pluto asn1 code
+- x509 needs a lot more attention!
+- renamed some files
+- using asn1 pluto stuff now
+- removed, since we use pluto asn1 stuff
+- leak detective is usable, but does not show static function names
+  - a script which gets address via ldd and resolves address via addr2line would be nice
+- fixed a leak in child_sa with new detective ;-)
+- some improvements to new asn1 stuff
+- to be continued
+- fixed bad bugs in kernel interface
+- added some logging info
+- works now much more stable
+- startet importing pluto ASN1 stuff
+- der PKCS#1 key loading works (as it did with der_decoder)
+- split up in libstrong, charon, stroke, testing done
+- new leak detective with malloc hook in library
+  - useable, but needs improvements
+- logger_manager has now a single instance per library
+  - allows use of loggers from any linking prog
+- a LOT of other things
+../svn-commit.tmp
+- added misssing stroke.h
+- improved strokeing
+	- down connection
+	- status
+- some other tweaks
+- rewrote a lot of RSA stuff
+- done major work for ASN1/decoder
+- allow loading of ASN1 der encoded private keys, public keys and certificates
+- extracting public key from certificates
+- passing certificates from stroke to charon
+=> basic authentication with RSA certificates works!
+- starter work on asn1 with der de/encoder
+- RSA private and public key can load read key from ASN1 DER
+- some other fixes here and there
+- rewrite of logger_manager, uses now one instance per context
+- cleanups for logger here and there
+- removed critical flag check in payload verification (conformance to IKEv2)
+- so thats and theres everywere... ;-)
+- patch for strongswan-2.6.3
+- added charon support for strongswan build process
+- ipsec starter supports charon startup and control
+- removed old diploma thesis scripts
+- some cleanups
+- compatibility to strongswan, Makefile can be called by "make programs"
+  and "make install" (ikev2 patch must be applied to strongswan)
+- first version of stroke control utility
+- moved output to doc/api, since doc is used for other docs now
+- some first documentation in english
+- removed old eclipse project files
+- works quite well now with ipsec.conf & ipsec starter
+- belongs to previous commit ;-)
+- reworked configuration framework completly
+- configuration is now split up in: connections, policies, credentials and daemon config
+- further alloc/free fixes needed!
+- first attempt for connection loading and starting via "stroke"
+- some improvements here and there
+- configuration_manager replaced by configuration_t interface
+- current configuration_manager is now static_configuration (testing)
+- first draft of starter_configuration, which should once interact with ipsec starter (via whack?)
+- some cleanups
+- socket_t uses RAW socket, which allows parallel service of pluto/charon
+- comments and cleanups
+- working policy installation and removal
+- fixed policy setup bug
+- proposal setup implementation begun
+- fixed socket code, so we know on which address we receive traffic
+- AH/ESP setup in kernel is working now!!! :-)))
+- installing of child sa works
+- need correct IP adresses to actually use IPsec
+- new RFCs of IKEv2, IKEv2 algs and IPSec arch added
+- update of IKEv2 clarification document
+- refactored ike proposal
+- uses now proposal_t, wich is also used by child proposals
+- ike key derivation refactored
+- crypter_t api has get_key_size now
+- some other improvements here and there
+- config uses uml hosts alice and bob
+- key derivation for child_sa works
+- some fixes here and there
+- fixed memleaks
+- works with new proposal code
+- still some(!) memleaks
+- fixed alot of bugs in child_proposal
+- near to working state ;-)
+- dead end implementation
+
+- ... there is a lot more of it, but 
+  nothing of interest

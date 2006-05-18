@@ -1,0 +1,16 @@
+#!/bin/bash
+
+echo -n " strongswan-x.x.x / " > ChangeLog.tmp
+svn info | grep Revision >> ChangeLog.tmp
+echo "==================================" >> ChangeLog.tmp
+echo "" >> ChangeLog.tmp
+
+svn log -r HEAD:$1 | grep -v "| mwilli |" | grep -v "| andreas | " | grep -v ^$ | grep -v ^------ >> ChangeLog.tmp
+
+echo "" >> ChangeLog.tmp
+echo "" >> ChangeLog.tmp
+
+cat ChangeLog >> ChangeLog.tmp
+cat ChangeLog.tmp > ChangeLog
+
+rm ChangeLog.tmp
