@@ -122,9 +122,9 @@ static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const c
 	
 	if (this->log_thread_id)
 	{
-		snprintf(thread_id, sizeof(thread_id), " @%d", (int)pthread_self());
+		snprintf(thread_id, sizeof(thread_id), "%06d", (int)pthread_self());
 	}
-	snprintf(buffer, MAX_LOG, "[%c%c:%s]%s %s", log_type, log_details, this->name, thread_id, string);
+	snprintf(buffer, MAX_LOG, "%s[%c%c:%s] %s", thread_id, log_type, log_details, this->name, string);
 }
 
 /**
@@ -200,7 +200,7 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 		if (this->log_thread_id)
 		{
-			snprintf(thread_id, sizeof(thread_id), " @%d", (int)pthread_self());
+			snprintf(thread_id, sizeof(thread_id), "%06d", (int)pthread_self());
 		}
 
 		/* since me can't do multi-line output to syslog, 
@@ -244,11 +244,11 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 				if (this->output == NULL)
 				{
-					syslog(get_priority(loglevel), "[  :%5d]%s   %s  %s", line_start, thread_id, buffer, ascii_buffer);	
+					syslog(get_priority(loglevel), "%s[  :%5d]   %s  %s", thread_id, line_start, buffer, ascii_buffer);	
 				}
 				else
 				{
-					fprintf(this->output, "[  :%5d]%s   %s  %s\n", line_start, thread_id, buffer, ascii_buffer);
+					fprintf(this->output, "%s[  :%5d]   %s  %s\n", thread_id, line_start, buffer, ascii_buffer);
 				}
 				buffer_pos = buffer;
 				line_start += MAX_BYTES;

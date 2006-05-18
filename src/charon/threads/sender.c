@@ -73,7 +73,7 @@ static void send_packets(private_sender_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
-	this->logger->log(this->logger, CONTROL, "Sender thread running, thread_id %u", (int)pthread_self());
+	this->logger->log(this->logger, CONTROL, "sender thread running,    thread_ID: %06d", (int)pthread_self());
 
 	while (1)
 	{

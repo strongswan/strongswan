@@ -77,21 +77,17 @@ static socklen_t *get_sockaddr_len(private_host_t *this)
 }
 
 /**
- * Implementation of host_t.is_default_route.
+ * Implementation of host_t.is_anyaddr.
  */
-static bool is_default_route (private_host_t *this)
+static bool is_anyaddr(private_host_t *this)
 {
 	switch (this->family) 
 	{
 		case AF_INET: 
 		{
-			static u_int8_t default_route[4] = {0x00,0x00,0x00,0x00};
+			static u_int8_t default_route[4] = {0x00, 0x00, 0x00, 0x00};
 			
-			if (memcmp(default_route,&(this->address4.sin_addr.s_addr),4) == 0)
-			{
-				return TRUE;
-			}
-			return FALSE;
+			return !memcmp(default_route, &(this->address4.sin_addr.s_addr), 4);
 		}
 		default:
 		{
@@ -114,10 +110,12 @@ static char *get_address(private_host_t *this)
 			/* we need to clone it, since inet_ntoa overwrites 
 			 * internal buffer on subsequent calls
 			 */
-			free(this->string);
-			string = inet_ntoa(this->address4.sin_addr);
-			this->string = malloc(strlen(string)+1);
-			strcpy(this->string, string);
+			if (this->string == NULL)
+			{
+				string = is_anyaddr(this)? "%any" : inet_ntoa(this->address4.sin_addr);
+				this->string = malloc(strlen(string)+1);
+				strcpy(this->string, string);
+			}
 			return this->string;
 		}
 		default:
@@ -275,7 +273,7 @@ static private_host_t *host_create_empty(void)
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
 	this->public.ip_equals = (bool (*) (host_t *,host_t *)) ip_equals;
 	this->public.equals = (bool (*) (host_t *,host_t *)) equals;
-	this->public.is_default_route = (bool (*) (host_t *)) is_default_route;
+	this->public.is_anyaddr = (bool (*) (host_t *)) is_anyaddr;
 	this->public.destroy = (void (*) (host_t*))destroy;
 	
 	this->string = NULL;

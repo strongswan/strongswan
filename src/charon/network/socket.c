@@ -390,11 +390,9 @@ static bool is_listening_on(private_socket_t *this, host_t *host)
 {
 	iterator_t *iterator;
 	
-	/* listening on 0.0.0.0 is always TRUE */
-	if (host->is_default_route(host))
-	{
-		return TRUE;
-	}
+	/* listening on wildcard 0.0.0.0 is always FALSE */
+	if (host->is_anyaddr(host))
+		return FALSE;
 	
 	/* compare host with all interfaces */
 	iterator = this->interfaces->create_iterator(this->interfaces, TRUE);

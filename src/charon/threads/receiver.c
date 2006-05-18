@@ -74,7 +74,7 @@ static void receive_packets(private_receiver_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->logger->log(this->logger, CONTROL, "Receiver thread running, thread_id %u", (int)pthread_self());
+	this->logger->log(this->logger, CONTROL, "receiver thread running,  thread_ID: %06d", (int)pthread_self());
 	
 	while (1)
 	{

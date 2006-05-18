@@ -72,7 +72,7 @@ static void get_events(private_scheduler_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->logger->log(this->logger, CONTROL, "Scheduler thread running, thread_id %u", (int)pthread_self());
+	this->logger->log(this->logger, CONTROL, "scheduler thread running, thread_ID: %06d", (int)pthread_self());
 
 	for (;;)
 	{

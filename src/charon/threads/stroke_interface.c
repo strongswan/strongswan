@@ -240,9 +240,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			my_id = cert->get_subject(cert);
 			my_id = my_id->clone(my_id);
 			cert->destroy(cert);
-			this->logger->log(this->logger, CONTROL, 
-							  "valid certificate with ID \"%s\"",
-							   my_id->get_string(my_id));
 		}
 	}
 	if (msg->add_conn.other.cert)
@@ -256,9 +253,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			other_id = cert->get_subject(cert);
 			other_id = other_id->clone(other_id);
 			cert->destroy(cert);
-			this->logger->log(this->logger, CONTROL, 
-							  "valid certificate with ID \"%s\"",
-							   other_id->get_string(other_id));
 		}
 	}
 	
@@ -278,8 +272,15 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
 	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
 	connection->add_proposal(connection, proposal);
+
 	/* add to global connection list */
 	charon->connections->add_connection(charon->connections, connection);
+	this->logger->log(this->logger, CONTROL, "added connection \"%s\": %s[%s]...%s[%s]",
+					  msg->add_conn.name,
+					  my_host->get_address(my_host),
+					  my_id->get_string(my_id),
+					  other_host->get_address(other_host),
+					  other_id->get_string(other_id));
 	
 	policy = policy_create(my_id, other_id);
 	proposal = proposal_create(1);
@@ -289,10 +290,10 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	policy->add_proposal(policy, proposal);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
+
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);
 	
-	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "connection \"%s\" added", msg->add_conn.name);
 }
 
 /**

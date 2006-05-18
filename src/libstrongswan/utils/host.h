@@ -126,7 +126,7 @@ struct host_t {
 	 * 						- TRUE if host has IP 0.0.0.0 for default route 
 	 * 						- FALSE otherwise
 	 */
-	bool (*is_default_route) (host_t *this);
+	bool (*is_anyaddr) (host_t *this);
 	
 	/** 
 	 * @brief get the address of this host as chunk_t

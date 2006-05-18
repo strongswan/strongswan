@@ -65,7 +65,7 @@ library.c \
 types.c \
 library.h 
 
-LDADD = -lgmp -lpthread
+libstrongswan_la_LIBADD = -lgmp -lpthread
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl

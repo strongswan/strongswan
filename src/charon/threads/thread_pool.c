@@ -144,7 +144,7 @@ static void process_jobs(private_thread_pool_t *this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->worker_logger->log(this->worker_logger, CONTROL, "Worker thread running, thread_id: %u", (int)pthread_self());
+	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running,    thread_ID: %06d", (int)pthread_self());
 
 	for (;;) {
 		
@@ -600,7 +600,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	{
 		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))this->process_jobs, this) == 0) 
 		{
-			this->pool_logger->log(this->pool_logger, CONTROL, "Created worker thread #%d", current+1);
+			this->pool_logger->log(this->pool_logger, CONTROL, "created worker thread #%d", current+1);
 		}
 		else
 		{

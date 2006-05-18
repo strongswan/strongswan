@@ -57,69 +57,84 @@ struct private_local_connection_store_t {
  */
 static connection_t *get_connection_by_hosts(private_local_connection_store_t *this, host_t *my_host, host_t *other_host)
 {
+	typedef enum {
+		PRIO_UNDEFINED=		0x00,
+		PRIO_ADDR_ANY= 		0x01,
+		PRIO_ADDR_MATCH=	0x02
+	} prio_t;
+
+	prio_t best_prio = PRIO_UNDEFINED;
+
 	iterator_t *iterator;
-	connection_t *current, *found = NULL;
+	connection_t *candidate;
+	connection_t *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "getting config for hosts %s - %s", 
+	this->logger->log(this->logger, CONTROL|LEVEL1, "searching connection for host pair %s...%s",
 					  my_host->get_address(my_host), other_host->get_address(other_host));
-	
+
 	iterator = this->connections->create_iterator(this->connections, TRUE);
+
+	/* determine closest matching connection */
 	while (iterator->has_next(iterator))
 	{
-		host_t *config_my_host, *config_other_host;
+		host_t *candidate_my_host;
+		host_t *candidate_other_host;
 		
-		iterator->current(iterator, (void**)&current);
+		iterator->current(iterator, (void**)&candidate);
 
-		config_my_host = current->get_my_host(current);
-		config_other_host = current->get_other_host(current);
+		candidate_my_host    = candidate->get_my_host(candidate);
+		candidate_other_host = candidate->get_other_host(candidate);
 
-		/* first check if ip is equal */
-		if(config_other_host->ip_equals(config_other_host, other_host))
+		/* my_host addresses must match*/
+		if (my_host->ip_equals(my_host, candidate_my_host))
 		{
-			this->logger->log(this->logger, CONTROL|LEVEL2, "config entry with remote host %s", 
-							  config_other_host->get_address(config_other_host));
-			/* could be right one, check my_host for default route*/
-			if (config_my_host->is_default_route(config_my_host))
+			prio_t prio = PRIO_UNDEFINED;
+
+			/* exact match of peer host address or wildcard address? */
+			if (other_host->ip_equals(other_host, candidate_other_host))
 			{
-				found = current->clone(current);
-				break;
+				prio |= PRIO_ADDR_MATCH;
 			}
-			/* check now if host informations are the same */
-			else if (config_my_host->ip_equals(config_my_host,my_host))
+			else if (candidate_other_host->is_anyaddr(candidate_other_host))
 			{
-				found = current->clone(current);
-				break;
+				prio |= PRIO_ADDR_ANY;
 			}
-			
-		}
-		/* Then check for wildcard hosts!
-		* TODO
-		* actually its only checked if other host with default route can be found! */
-		else if (config_other_host->is_default_route(config_other_host))
-		{
-			/* could be right one, check my_host for default route*/
-			if (config_my_host->is_default_route(config_my_host))
+
+			this->logger->log(this->logger, CONTROL|LEVEL2,
+							 "candidate connection \"%s\": %s...%s (prio=%d)",
+							  candidate->get_name(candidate),
+							  candidate_my_host->get_address(candidate_my_host),
+							  candidate_other_host->get_address(candidate_other_host),
+							  prio);
+
+			if (prio > best_prio)
 			{
-				found = current->clone(current);
-				break;
-			}
-			/* check now if host informations are the same */
-			else if (config_my_host->ip_equals(config_my_host,my_host))
-			{
-				found = current->clone(current);
-				break;
-			}
+				found = candidate;
+				best_prio = prio;
+			}			
 		}
 	}
 	iterator->destroy(iterator);
 	
-	/* apply hosts as they are supplied since my_host may be %defaultroute, and other_host may be %any. */
 	if (found)
 	{
-		found->update_my_host(found, my_host->clone(my_host));
-		found->update_other_host(found, other_host->clone(other_host));
+		host_t *found_my_host    = found->get_my_host(found);
+		host_t *found_other_host = found->get_other_host(found);
+		
+		this->logger->log(this->logger, CONTROL|LEVEL1,
+						 "found matching connection \"%s\": %s...%s (prio=%d)",
+						  found->get_name(found),
+						  found_my_host->get_address(found_my_host),
+						  found_other_host->get_address(found_other_host),
+						  best_prio);
+
+		found = found->clone(found);
+		if (best_prio & PRIO_ADDR_ANY)
+		{
+			/* replace %any by the peer's address */
+			found->update_other_host(found, other_host->clone(other_host));
+		}
 	}
-	
 	return found;
 }
 

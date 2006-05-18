@@ -507,9 +507,9 @@ static status_t checkout_by_hosts(private_ike_sa_manager_t *this, host_t *me, ho
 		sa_other = current->ike_sa->get_other_host(current->ike_sa);
 		
 		/* one end may be default/any, but not both */
-		if (me->is_default_route(me))
+		if (me->is_anyaddr(me))
 		{
-			if (other->is_default_route(other))
+			if (other->is_anyaddr(other))
 			{
 				break;
 			}
@@ -519,7 +519,7 @@ static status_t checkout_by_hosts(private_ike_sa_manager_t *this, host_t *me, ho
 				ike_sa_id = current->ike_sa_id;
 			}
 		}
-		else if (other->is_default_route(other))
+		else if (other->is_anyaddr(other))
 		{
 			if (me->equals(me, sa_me))
 			{

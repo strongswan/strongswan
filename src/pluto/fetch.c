@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: fetch.c,v 1.11 2005/11/25 10:08:00 as Exp $
+ * RCSID $Id: fetch.c,v 1.12 2006/05/16 14:19:27 as Exp $
  */
 
 #include <stdlib.h>
@@ -339,7 +339,7 @@ fetch_curl(char *url, chunk_t *blob)
 	}
 	curl_easy_cleanup(curl);
 	/* not using freeanychunk because of realloc (no leak detective) */
-	free(response.ptr);
+	curl_free(response.ptr);
     }
     return strlen(errorbuffer) > 0 ? "libcurl error" : NULL;
 #else   /* !LIBCURL */
@@ -728,7 +728,7 @@ fetch_ocsp_status(ocsp_location_t* location)
 	curl_easy_cleanup(curl);
 	pfree(uri);
 	/* not using freeanychunk because of realloc (no leak detective) */
-	free(response.ptr);
+	curl_free(response.ptr);
     }
     freeanychunk(location->nonce);
     freeanychunk(request);
