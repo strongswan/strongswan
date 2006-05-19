@@ -1,0 +1,1295 @@
+.TH IPSEC.CONF 5 "20 Jan 2006"
+.\" RCSID $Id: ipsec.conf.5,v 1.2 2006/01/22 15:33:46 as Exp $
+.SH NAME
+ipsec.conf \- IPsec configuration and connections
+.SH DESCRIPTION
+The optional
+.I ipsec.conf
+file
+specifies most configuration and control information for the
+strongSwan IPsec subsystem.
+(The major exception is secrets for authentication;
+see
+.IR ipsec.secrets (5).)
+Its contents are not security-sensitive
+.I unless
+manual keying is being done for more than just testing,
+in which case the encryption/authentication keys in the
+descriptions for the manually-keyed connections are very sensitive
+(and those connection descriptions
+are probably best kept in a separate file,
+via the include facility described below).
+.PP
+The file is a text file, consisting of one or more
+.IR sections .
+White space followed by
+.B #
+followed by anything to the end of the line
+is a comment and is ignored,
+as are empty lines which are not within a section.
+.PP
+A line which contains
+.B include
+and a file name, separated by white space,
+is replaced by the contents of that file,
+preceded and followed by empty lines.
+If the file name is not a full pathname,
+it is considered to be relative to the directory containing the
+including file.
+Such inclusions can be nested.
+Only a single filename may be supplied, and it may not contain white space,
+but it may include shell wildcards (see
+.IR sh (1));
+for example:
+.PP
+.B include
+.B "ipsec.*.conf"
+.PP
+The intention of the include facility is mostly to permit keeping
+information on connections, or sets of connections,
+separate from the main configuration file.
+This permits such connection descriptions to be changed,
+copied to the other security gateways involved, etc.,
+without having to constantly extract them from the configuration
+file and then insert them back into it.
+Note also the
+.B also
+parameter (described below) which permits splitting a single logical
+section (e.g. a connection description) into several actual sections.
+.PP
+The first significant line of the file must specify the version
+of this specification that it conforms to:
+.PP
+\fBversion 2\fP
+.PP
+A section
+begins with a line of the form:
+.PP
+.I type
+.I name
+.PP
+where
+.I type
+indicates what type of section follows, and
+.I name
+is an arbitrary name which distinguishes the section from others
+of the same type.
+(Names must start with a letter and may contain only
+letters, digits, periods, underscores, and hyphens.)
+All subsequent non-empty lines
+which begin with white space are part of the section;
+comments within a section must begin with white space too.
+There may be only one section of a given type with a given name.
+.PP
+Lines within the section are generally of the form
+.PP
+\ \ \ \ \ \fIparameter\fB=\fIvalue\fR
+.PP
+(note the mandatory preceding white space).
+There can be white space on either side of the
+.BR = .
+Parameter names follow the same syntax as section names,
+and are specific to a section type.
+Unless otherwise explicitly specified,
+no parameter name may appear more than once in a section.
+.PP
+An empty
+.I value
+stands for the system default value (if any) of the parameter,
+i.e. it is roughly equivalent to omitting the parameter line entirely.
+A
+.I value
+may contain white space only if the entire
+.I value
+is enclosed in double quotes (\fB"\fR);
+a
+.I value
+cannot itself contain a double quote,
+nor may it be continued across more than one line.
+.PP
+Numeric values are specified to be either an ``integer''
+(a sequence of digits) or a ``decimal number''
+(sequence of digits optionally followed by `.' and another sequence of digits).
+.PP
+There is currently one parameter which is available in any type of
+section:
+.TP
+.B also
+the value is a section name;
+the parameters of that section are appended to this section,
+as if they had been written as part of it.
+The specified section must exist, must follow the current one,
+and must have the same section type.
+(Nesting is permitted,
+and there may be more than one
+.B also
+in a single section,
+although it is forbidden to append the same section more than once.)
+This allows, for example, keeping the encryption keys
+for a connection in a separate file
+from the rest of the description, by using both an
+.B also
+parameter and an
+.B include
+line.
+.PP
+Parameter names beginning with
+.B x-
+(or
+.BR X- ,
+or
+.BR x_ ,
+or
+.BR X_ )
+are reserved for user extensions and will never be assigned meanings
+by IPsec.
+Parameters with such names must still observe the syntax rules
+(limits on characters used in the name;
+no white space in a non-quoted value;
+no newlines or double quotes within the value).
+All other as-yet-unused parameter names are reserved for future IPsec
+improvements.
+.PP
+A section with name
+.B %default
+specifies defaults for sections of the same type.
+For each parameter in it,
+any section of that type which does not have a parameter of the same name
+gets a copy of the one from the
+.B %default
+section.
+There may be multiple
+.B %default
+sections of a given type,
+but only one default may be supplied for any specific parameter name,
+and all
+.B %default
+sections of a given type must precede all non-\c
+.B %default
+sections of that type.
+.B %default
+sections may not contain the
+.B also
+parameter.
+.PP
+Currently there are three types of sections:
+a
+.B config
+section specifies general configuration information for IPsec, a
+.B conn
+section specifies an IPsec connection, while a
+.B ca
+section specifies special properties a certification authority.
+.SH "CONN SECTIONS"
+A
+.B conn
+section contains a
+.IR "connection specification" ,
+defining a network connection to be made using IPsec.
+The name given is arbitrary, and is used to identify the connection to
+.IR ipsec_auto (8)
+and
+.IR ipsec_manual (8).
+Here's a simple example:
+.PP
+.ne 10
+.nf
+.ft B
+.ta 1c
+conn snt
+	left=10.11.11.1
+	leftsubnet=10.0.1.0/24
+	leftnexthop=172.16.55.66
+	right=192.168.22.1
+	rightsubnet=10.0.2.0/24
+	rightnexthop=172.16.88.99
+	keyingtries=%forever
+.ft
+.fi
+.PP
+A note on terminology...
+In automatic keying, there are two kinds of communications going on:
+transmission of user IP packets, and gateway-to-gateway negotiations for
+keying, rekeying, and general control.
+The data path (a set of ``IPsec SAs'') used for user packets is herein
+referred to as the ``connection'';
+the path used for negotiations (built with ``ISAKMP SAs'') is referred to as
+the ``keying channel''.
+.PP
+To avoid trivial editing of the configuration file to suit it to each system
+involved in a connection,
+connection specifications are written in terms of
+.I left
+and
+.I right
+participants,
+rather than in terms of local and remote.
+Which participant is considered
+.I left
+or
+.I right
+is arbitrary;
+IPsec figures out which one it is being run on based on internal information.
+This permits using identical connection specifications on both ends.
+There are cases where there is no symmetry; a good convention is to
+use
+.I left
+for the local side and
+.I right
+for the remote side (the first letters are a good mnemonic).
+.PP
+Many of the parameters relate to one participant or the other;
+only the ones for
+.I left
+are listed here, but every parameter whose name begins with
+.B left
+has a
+.B right
+counterpart,
+whose description is the same but with
+.B left
+and
+.B right
+reversed.
+.PP
+Parameters are optional unless marked ``(required)'';
+a parameter required for manual keying need not be included for
+a connection which will use only automatic keying, and vice versa.
+.SS "CONN PARAMETERS:  GENERAL"
+The following parameters are relevant to both automatic and manual keying.
+Unless otherwise noted,
+for a connection to work,
+in general it is necessary for the two ends to agree exactly
+on the values of these parameters.
+.TP 14
+.B type
+the type of the connection; currently the accepted values
+are
+.B tunnel
+(the default)
+signifying a host-to-host, host-to-subnet, or subnet-to-subnet tunnel;
+.BR transport ,
+signifying host-to-host transport mode;
+.BR passthrough ,
+signifying that no IPsec processing should be done at all;
+.BR drop ,
+signifying that packets should be discarded; and
+.BR reject ,
+signifying that packets should be discarded and a diagnostic ICMP returned.
+.TP
+.B left
+(required)
+the IP address of the left participant's public-network interface,
+in any form accepted by
+.IR ipsec_ttoaddr (3)
+or one of several magic values.
+If it is
+.BR %defaultroute ,
+and
+the
+.B config
+.B setup
+section's,
+.B interfaces
+specification contains
+.BR %defaultroute,
+.B left
+will be filled in automatically with the local address
+of the default-route interface (as determined at IPsec startup time);
+this also overrides any value supplied for
+.BR leftnexthop .
+(Either
+.B left
+or
+.B right
+may be
+.BR %defaultroute ,
+but not both.)
+The value
+.B %any
+signifies an address to be filled in (by automatic keying) during
+negotiation.
+The value
+.B %opportunistic
+signifies that both
+.B left
+and
+.B leftnexthop
+are to be filled in (by automatic keying) from DNS data for
+.BR left 's
+client.
+The values
+.B %group
+and
+.B %opportunisticgroup
+makes this a policy group conn: one that will be instantiated
+into a regular or opportunistic conn for each CIDR block listed in the
+policy group file with the same name as the conn.
+.TP
+.B leftsubnet
+private subnet behind the left participant, expressed as
+\fInetwork\fB/\fInetmask\fR
+(actually, any form acceptable to
+.IR ipsec_ttosubnet (3));
+if omitted, essentially assumed to be \fIleft\fB/32\fR,
+signifying that the left end of the connection goes to the left participant only
+.TP
+.B leftnexthop
+next-hop gateway IP address for the left participant's connection
+to the public network;
+defaults to
+.B %direct
+(meaning
+.IR right ).
+If the value is to be overridden by the
+.B left=%defaultroute
+method (see above),
+an explicit value must
+.I not
+be given.
+If that method is not being used,
+but
+.B leftnexthop
+is
+.BR %defaultroute ,
+and
+.B interfaces=%defaultroute
+is used in the
+.B config
+.B setup
+section,
+the next-hop gateway address of the default-route interface
+will be used.
+The magic value
+.B %direct
+signifies a value to be filled in (by automatic keying)
+with the peer's address.
+Relevant only locally, other end need not agree on it.
+.TP
+.B leftupdown
+what ``updown'' script to run to adjust routing and/or firewalling
+when the status of the connection
+changes (default
+.BR "ipsec _updown" ).
+May include positional parameters separated by white space
+(although this requires enclosing the whole string in quotes);
+including shell metacharacters is unwise.
+See
+.IR ipsec_pluto (8)
+for details.
+Relevant only locally, other end need not agree on it.
+.TP
+.B leftfirewall
+whether the left participant is doing forwarding-firewalling
+(including masquerading) for traffic from \fIleftsubnet\fR,
+which should be turned off (for traffic to the other subnet)
+once the connection is established;
+acceptable values are
+.B yes
+and (the default)
+.BR no .
+May not be used in the same connection description with
+.BR leftupdown .
+Implemented as a parameter to the default
+.I updown
+script.
+See notes below.
+Relevant only locally, other end need not agree on it.
+.PP
+If one or both security gateways are doing forwarding firewalling
+(possibly including masquerading),
+and this is specified using the firewall parameters,
+tunnels established with IPsec are exempted from it
+so that packets can flow unchanged through the tunnels.
+(This means that all subnets connected in this manner must have
+distinct, non-overlapping subnet address blocks.)
+This is done by the default
+.I updown
+script (see
+.IR ipsec_pluto (8)).
+.PP
+The implementation of this makes certain assumptions about firewall setup,
+notably the use of the old
+.I ipfwadm
+interface to the firewall.
+In situations calling for more control,
+it may be preferable for the user to supply his own
+.I updown
+script,
+which makes the appropriate adjustments for his system.
+.SS "CONN PARAMETERS:  AUTOMATIC KEYING"
+The following parameters are relevant only to automatic keying,
+and are ignored in manual keying.
+Unless otherwise noted,
+for a connection to work,
+in general it is necessary for the two ends to agree exactly
+on the values of these parameters.
+.TP 14
+.B auto
+what operation, if any, should be done automatically at IPsec startup;
+currently-accepted values are
+.B add
+(signifying an
+.B ipsec auto
+.BR \-\-add ),
+.B route
+(signifying that plus an
+.B ipsec auto
+.BR \-\-route ),
+.B start
+(signifying that plus an
+.B ipsec auto
+.BR \-\-up ),
+.B manual
+(signifying an
+.B ipsec
+.B manual
+.BR \-\-up ),
+and
+.B ignore
+(also the default) (signifying no automatic startup operation).
+See the
+.B config
+.B setup
+discussion below.
+Relevant only locally, other end need not agree on it
+(but in general, for an intended-to-be-permanent connection,
+both ends should use
+.B auto=start
+to ensure that any reboot causes immediate renegotiation).
+.TP
+.B auth
+whether authentication should be done as part of
+ESP encryption, or separately using the AH protocol;
+acceptable values are
+.B esp
+(the default) and
+.BR ah .
+.TP
+.B authby
+how the two security gateways should authenticate each other;
+acceptable values are
+.B secret
+for shared secrets,
+.B rsasig
+for RSA digital signatures (the default),
+.B secret|rsasig
+for either, and
+.B never
+if negotiation is never to be attempted or accepted (useful for shunt-only conns).
+Digital signatures are superior in every way to shared secrets.
+.TP
+.B compress
+whether IPComp compression of content is proposed on the connection
+(link-level compression does not work on encrypted data,
+so to be effective, compression must be done \fIbefore\fR encryption);
+acceptable values are
+.B yes
+and
+.B no
+(the default).
+The two ends need not agree.
+A value of
+.B yes
+causes IPsec to propose both compressed and uncompressed,
+and prefer compressed.
+A value of
+.B no
+prevents IPsec from proposing compression;
+a proposal to compress will still be accepted.
+.TP
+.B disablearrivalcheck
+whether KLIPS's normal tunnel-exit check
+(that a packet emerging from a tunnel has plausible addresses in its header)
+should be disabled;
+acceptable values are
+.B yes
+and
+.B no
+(the default).
+Tunnel-exit checks improve security and do not break any normal configuration.
+Relevant only locally, other end need not agree on it.
+.TP
+.B dpdaction
+controls the use of the Dead Peer Detection protocol (DPD, RFC 3706) where
+R_U_THERE IKE notification messages are periodically sent in order to check the
+liveliness of the IPsec peer. The default is..
+.B none
+which disables the active sending of R_U_THERE notifications.
+Nevertheless pluto will always send the DPD Vendor ID during connection set up
+in order to signal the readiness to act passively as a responder if the peer
+wants to use DPD. The values
+.B clear
+and
+.B hold
+both activate DPD. If no activity is detected, all connections with a dead peer
+are stopped and unrouted (
+.B clear
+) or put in the hold state (
+.B hold
+).
+.TP
+.B dpddelay
+defines the period time interval with which R_U_THERE messages are sent to the peer.
+.TP
+.B dpdtimeout
+defines the timeout interval, after which all connections to a peer are deleted
+in case of inactivity.
+.TP
+.B failureshunt
+what to do with packets when negotiation fails.
+The default is
+.BR none :
+no shunt;
+.BR passthrough ,
+.BR drop ,
+and
+.B reject
+have the obvious meanings.
+.TP
+.B ikelifetime
+how long the keying channel of a connection (buzzphrase:  ``ISAKMP SA'')
+should last before being renegotiated.
+.TP
+.B keyexchange
+method of key exchange;
+which protocol should be used for this connection. Connections marked with
+.B ikev1
+are loaded in pluto, those marked with
+.B ikev2
+are loaded in charon. Currently, an incoming request using another protocol
+as specified with 
+.B keyexchange
+is discarded. The default value
+.B ike
+currently behaves exactly as
+.B ikev1.
+.TP
+.B keylife
+(default set by
+.IR ipsec_pluto (8),
+currently
+.BR 3h ,
+maximum
+.BR 24h ).
+The two-ends-disagree case is similar to that of
+.BR keylife .
+.TP
+.B keyingtries
+how many attempts (a whole number or \fB%forever\fP) should be made to
+negotiate a connection, or a replacement for one, before giving up
+(default
+.BR %forever ).
+The value \fB%forever\fP
+means ``never give up'' (obsolete: this can be written \fB0\fP).
+Relevant only locally, other end need not agree on it.
+.TP
+.B keylife
+how long a particular instance of a connection
+(a set of encryption/authentication keys for user packets) should last,
+from successful negotiation to expiry;
+acceptable values are an integer optionally followed by
+.BR s
+(a time in seconds)
+or a decimal number followed by
+.BR m ,
+.BR h ,
+or
+.B d
+(a time
+in minutes, hours, or days respectively)
+(default
+.BR 1h ,
+maximum
+.BR 24h ).
+Normally, the connection is renegotiated (via the keying channel)
+before it expires.
+The two ends need not exactly agree on
+.BR keylife ,
+although if they do not,
+there will be some clutter of superseded connections on the end
+which thinks the lifetime is longer.
+.TP
+.B leftca
+the distinguished name of a certificate authority which is required to
+lie in the trust path going from the left participant's certificate up
+to the root certification authority. 
+.TP
+.B leftcert
+the path to the left participant's X.509 certificate. The file can be coded either in
+PEM or DER format. OpenPGP certificates are supported as well.
+Both absolute paths or paths relative to
+.B /etc/ipsec.d/certs
+are accepted. By default
+.B leftcert
+sets 
+.B leftid
+to the distinguished name of the certificate's subject and
+.B leftca
+to the distinguished name of the certificate's issuer.
+The left participant's ID can be overriden by specifying a
+.B leftid
+value which must be certified by the certificate, though.
+.TP
+.B leftgroups
+a comma separated list of group names. If the
+.B leftgroups
+parameter is present then the peer must be a member of at least one
+of the groups defined by the parameter. Group membership must be certified
+by a valid attribute certificate stored in \fI/etc/ipsec.d/acerts\fP thas has been
+issued to the peer by a trusted Authorization Authority stored in
+\fI/etc/ipsec.d/aacerts\fP.
+.TP
+.B leftid
+how
+the left participant
+should be identified for authentication;
+defaults to
+.BR left .
+Can be an IP address (in any
+.IR ipsec_ttoaddr (3)
+syntax)
+or a fully-qualified domain name preceded by
+.B @
+(which is used as a literal string and not resolved).
+The magic value
+.B %myid
+stands for the current setting of \fImyid\fP.
+This is set in \fBconfig setup\fP or by \fIipsec_whack\fP(8)), or, if not set,
+it is the IP address in \fB%defaultroute\fP (if that is supported by a TXT record in its reverse domain), or otherwise
+it is the system's hostname (if that is supported by a TXT record in its forward domain), or otherwise it is undefined.
+.TP
+.B leftrsasigkey
+the left participant's
+public key for RSA signature authentication,
+in RFC 2537 format using
+.IR ipsec_ttodata (3)
+encoding.
+The magic value
+.B %none
+means the same as not specifying a value (useful to override a default).
+The value
+.B %cert
+(the default)
+means that the key is extracted from a certificate.
+The value
+.B %dnsondemand
+means the key is to be fetched from DNS at the time it is needed.
+The value
+.B %dnsonload
+means the key is to be fetched from DNS at the time
+the connection description is read from
+.IR ipsec.conf ;
+currently this will be treated as
+.B %none
+if
+.B right=%any
+or
+.BR right=%opportunistic .
+The value
+.B %dns
+is currently treated as
+.B %dnsonload
+but will change to
+.B %dnsondemand
+in the future.
+The identity used for the left participant
+must be a specific host, not
+.B %any
+or another magic value.
+.B Caution:
+if two connection descriptions
+specify different public keys for the same
+.BR leftid ,
+confusion and madness will ensue.
+.TP
+.B leftrsasigkey2
+if present, a second public key.
+Either key can authenticate the signature, allowing for key rollover.
+.TP
+.B leftsourceip
+.TP
+.B leftsubnetwithin
+.TP
+.B pfs
+whether Perfect Forward Secrecy of keys is desired on the connection's
+keying channel
+(with PFS, penetration of the key-exchange protocol
+does not compromise keys negotiated earlier);
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+.TP
+.B rekey
+whether a connection should be renegotiated when it is about to expire;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+The two ends need not agree,
+but while a value of
+.B no
+prevents Pluto from requesting renegotiation,
+it does not prevent responding to renegotiation requested from the other end,
+so
+.B no
+will be largely ineffective unless both ends agree on it.
+.TP
+.B rekeyfuzz
+maximum percentage by which
+.B rekeymargin
+should be randomly increased to randomize rekeying intervals
+(important for hosts with many connections);
+acceptable values are an integer,
+which may exceed 100,
+followed by a `%'
+(default set by
+.IR ipsec_pluto (8),
+currently
+.BR 100% ).
+The value of
+.BR rekeymargin ,
+after this random increase,
+must not exceed
+.BR keylife .
+The value
+.B 0%
+will suppress time randomization.
+Relevant only locally, other end need not agree on it.
+.TP
+.B rekeymargin
+how long before connection expiry or keying-channel expiry
+should attempts to
+negotiate a replacement
+begin; acceptable values as for
+.B keylife
+(default
+.BR 9m ).
+Relevant only locally, other end need not agree on it.
+.SS "CONN PARAMETERS:  MANUAL KEYING"
+The following parameters are relevant only to manual keying,
+and are ignored in automatic keying.
+Unless otherwise noted,
+for a connection to work,
+in general it is necessary for the two ends to agree exactly
+on the values of these parameters.
+A manually-keyed
+connection must specify at least one of AH or ESP.
+.TP 14
+.B spi
+(this or
+.B spibase
+required for manual keying)
+the SPI number to be used for the connection (see
+.IR ipsec_manual (8));
+must be of the form \fB0x\fIhex\fB\fR,
+where
+.I hex
+is one or more hexadecimal digits
+(note, it will generally be necessary to make
+.I spi
+at least
+.B 0x100
+to be acceptable to KLIPS,
+and use of SPIs in the range
+.BR 0x100 - 0xfff
+is recommended)
+.TP 14
+.B spibase
+(this or
+.B spi
+required for manual keying)
+the base number for the SPIs to be used for the connection (see
+.IR ipsec_manual (8));
+must be of the form \fB0x\fIhex\fB0\fR,
+where
+.I hex
+is one or more hexadecimal digits
+(note, it will generally be necessary to make
+.I spibase
+at least
+.B 0x100
+for the resulting SPIs
+to be acceptable to KLIPS,
+and use of numbers in the range
+.BR 0x100 - 0xff0
+is recommended)
+.TP
+.B esp
+ESP encryption/authentication algorithm to be used
+for the connection, e.g.
+.B 3des-md5-96
+(must be suitable as a value of
+.IR ipsec_spi (8)'s
+.B \-\-esp
+option);
+default is not to use ESP
+.TP
+.B espenckey
+ESP encryption key
+(must be suitable as a value of
+.IR ipsec_spi (8)'s
+.B \-\-enckey
+option)
+(may be specified separately for each direction using
+.B leftespenckey
+(leftward SA)
+and
+.B rightespenckey
+parameters)
+.TP
+.B espauthkey
+ESP authentication key
+(must be suitable as a value of
+.IR ipsec_spi (8)'s
+.B \-\-authkey
+option)
+(may be specified separately for each direction using
+.B leftespauthkey
+(leftward SA)
+and
+.B rightespauthkey
+parameters)
+.TP
+.B espreplay_window
+ESP replay-window setting,
+an integer from
+.B 0
+(the
+.IR ipsec_manual
+default, which turns off replay protection) to
+.BR 64 ;
+relevant only if ESP authentication is being used
+.TP
+.B leftespspi
+SPI to be used for the leftward ESP SA, overriding
+automatic assignment using
+.B spi
+or
+.BR spibase ;
+typically a hexadecimal number beginning with
+.B 0x
+.TP
+.B ah
+AH authentication algorithm to be used
+for the connection, e.g.
+.B hmac-md5-96
+(must be suitable as a value of
+.IR ipsec_spi (8)'s
+.B \-\-ah
+option);
+default is not to use AH
+.TP
+.B ahkey
+(required if
+.B ah
+is present) AH authentication key
+(must be suitable as a value of
+.IR ipsec_spi (8)'s
+.B \-\-authkey
+option)
+(may be specified separately for each direction using
+.B leftahkey
+(leftward SA)
+and
+.B rightahkey
+parameters)
+.TP
+.B ahreplay_window
+AH replay-window setting,
+an integer from
+.B 0
+(the
+.I ipsec_manual
+default, which turns off replay protection) to
+.B 64
+.TP
+.B leftahspi
+SPI to be used for the leftward AH SA, overriding
+automatic assignment using
+.B spi
+or
+.BR spibase ;
+typically a hexadecimal number beginning with
+.B 0x
+.SH "CA SECTIONS"
+This are optional sections that can be used to assign special
+parameters to a Certification Authority (CA).
+.TP 10
+.B auto
+currently can have either the value
+.B ignore
+or
+.B add
+. 
+.TP
+.B cacert
+defines a path to the CA certificate either relative to 
+\fI/etc/ipsec.d/cacerts\fP or as an absolute path.
+.TP
+.B crluri
+defines a CRL distribution point (ldap, http, or file URI)
+.TP
+.B crluri2
+defines an alternative CRL distribution point (ldap, http, or file URI)
+.TP
+.B ldaphost
+defines an ldap host.
+.TP
+.B ocspuri
+defines an OCSP URI.
+.SH "CONFIG SECTIONS"
+At present, the only
+.B config
+section known to the IPsec software is the one named
+.BR setup ,
+which contains information used when the software is being started
+(see
+.IR ipsec_setup (8)).
+Here's an example:
+.PP
+.ne 8
+.nf
+.ft B
+.ta 1c
+config setup
+	interfaces="ipsec0=eth1 ipsec1=ppp0"
+	klipsdebug=none
+	plutodebug=all
+	manualstart=
+.ft
+.fi
+.PP
+Parameters are optional unless marked ``(required)''.
+The currently-accepted
+.I parameter
+names in a
+.B config
+.B setup
+section are:
+.TP 14
+.B myid
+the identity to be used for
+.BR %myid .
+.B %myid
+is used in the implicit policy group conns and can be used as
+an identity in explicit conns.
+If unspecified,
+.B %myid
+is set to the IP address in \fB%defaultroute\fP (if that is supported by a TXT record in its reverse domain), or otherwise
+the system's hostname (if that is supported by a TXT record in its forward domain), or otherwise it is undefined.
+An explicit value generally starts with ``\fB@\fP''.
+.TP
+.B interfaces
+virtual and physical interfaces for IPsec to use:
+a single
+\fIvirtual\fB=\fIphysical\fR pair, a (quoted!) list of pairs separated
+by white space, or
+.BR %none .
+One of the pairs may be written as
+.BR %defaultroute ,
+which means: find the interface \fId\fR that the default route points to,
+and then act as if the value was ``\fBipsec0=\fId\fR''.
+.B %defaultroute
+is the default;
+.B %none
+must be used to denote no interfaces.
+If
+.B %defaultroute
+is used (implicitly or explicitly)
+information about the default route and its interface is noted for
+use by
+.IR ipsec_manual (8)
+and
+.IR ipsec_auto (8).)
+.TP
+.B forwardcontrol
+whether
+.I setup
+should turn IP forwarding on
+(if it's not already on) as IPsec is started,
+and turn it off again (if it was off) as IPsec is stopped;
+acceptable values are
+.B yes
+and (the default)
+.BR no .
+For this to have full effect, forwarding must be
+disabled before the hardware interfaces are brought
+up (e.g.,
+.B "net.ipv4.ip_forward\ =\ 0"
+in Red Hat 6.x
+.IR /etc/sysctl.conf ),
+because IPsec doesn't get control early enough to do that.
+.TP
+.B rp_filter
+whether and how
+.I setup
+should adjust the reverse path filtering mechanism for the
+physical devices to be used.
+Values are \fB%unchanged\fP (to leave it alone)
+or \fB0\fP, \fB1\fP, \fB2\fP (values to set it to).
+\fI/proc/sys/net/ipv4/conf/PHYS/rp_filter\fP
+is badly documented; it must be \fB0\fP in many cases
+for ipsec to function.
+The default value for the parameter is \fB0\fP.
+.TP
+.B syslog
+the
+.IR syslog (2)
+``facility'' name and priority to use for
+startup/shutdown log messages,
+default
+.BR daemon.error .
+.TP
+.B klipsdebug
+how much KLIPS debugging output should be logged.
+An empty value,
+or the magic value
+.BR none ,
+means no debugging output (the default).
+The magic value
+.B all
+means full output.
+Otherwise only the specified types of output
+(a quoted list, names separated by white space) are enabled;
+for details on available debugging types, see
+.IR ipsec_klipsdebug (8).
+.TP
+.B plutodebug
+how much Pluto debugging output should be logged.
+An empty value,
+or the magic value
+.BR none ,
+means no debugging output (the default).
+The magic value
+.B all
+means full output.
+Otherwise only the specified types of output
+(a quoted list, names without the
+.B \-\-debug\-
+prefix,
+separated by white space) are enabled;
+for details on available debugging types, see
+.IR ipsec_pluto (8).
+.TP
+.B plutoopts
+additional options to pass to pluto upon startup. See
+.IR ipsec_pluto (8).
+.TP
+.B plutostderrlog
+do not use syslog, but rather log to stderr, and direct stderr to the
+argument file.
+.TP
+.B dumpdir
+in what directory should things started by
+.I setup
+(notably the Pluto daemon) be allowed to
+dump core?
+The empty value (the default) means they are not
+allowed to.
+.TP
+.B manualstart
+which manually-keyed connections to set up at startup
+(empty, a name, or a quoted list of names separated by white space);
+see
+.IR ipsec_manual (8).
+Default is none.
+.TP
+.B pluto
+whether to start Pluto or not;
+Values are
+.B yes
+(the default)
+or
+.B no
+(useful only in special circumstances).
+.TP
+.B plutowait
+should Pluto wait for each
+negotiation attempt that is part of startup to
+finish before proceeding with the next?
+Values are
+.B yes
+or
+.BR no
+(the default).
+.TP
+.B prepluto
+shell command to run before starting Pluto
+(e.g., to decrypt an encrypted copy of the
+.I ipsec.secrets
+file).
+It's run in a very simple way;
+complexities like I/O redirection are best hidden within a script.
+Any output is redirected for logging,
+so running interactive commands is difficult unless they use
+.I /dev/tty
+or equivalent for their interaction.
+Default is none.
+.TP
+.B postpluto
+shell command to run after starting Pluto
+(e.g., to remove a decrypted copy of the
+.I ipsec.secrets
+file).
+It's run in a very simple way;
+complexities like I/O redirection are best hidden within a script.
+Any output is redirected for logging,
+so running interactive commands is difficult unless they use
+.I /dev/tty
+or equivalent for their interaction.
+Default is none.
+.TP
+.B fragicmp
+whether a tunnel's need to fragment a packet should be reported
+back with an ICMP message,
+in an attempt to make the sender lower his PMTU estimate;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+.TP
+.B hidetos
+whether a tunnel packet's TOS field should be set to
+.B 0
+rather than copied from the user packet inside;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+.TP
+.B uniqueids
+whether a particular participant ID should be kept unique,
+with any new (automatically keyed)
+connection using an ID from a different IP address
+deemed to replace all old ones using that ID;
+acceptable values are
+.B yes
+(the default)
+and
+.BR no .
+Participant IDs normally \fIare\fR unique,
+so a new (automatically-keyed) connection using the same ID is
+almost invariably intended to replace an old one.
+.TP
+.B overridemtu
+value that the MTU of the ipsec\fIn\fR interface(s) should be set to,
+overriding IPsec's (large) default.
+This parameter is needed only in special situations.
+.TP
+.B nat_traversal
+.TP
+.B crlcheckinterval
+.TP
+.B strictcrlpolicy
+.TP
+.B pkcs11module
+.TP
+.B pkcs11keepstate
+
+.SH CHOOSING A CONNECTION
+.PP
+When choosing a connection to apply to an outbound packet caught with a 
+.BR %trap,
+the system prefers the one with the most specific eroute that
+includes the packet's source and destination IP addresses.
+Source subnets are examined before destination subnets.
+For initiating, only routed connections are considered. For responding,
+unrouted but added connections are considered.
+.PP
+When choosing a connection to use to respond to a negotiation which
+doesn't match an ordinary conn, an opportunistic connection
+may be instantiated. Eventually, its instance will be /32 -> /32, but
+for earlier stages of the negotiation, there will not be enough
+information about the client subnets to complete the instantiation.
+.SH FILES
+.nf
+/etc/ipsec.conf
+/etc/ipsec.d/cacerts
+/etc/ipsec.d/certs
+/etc/ipsec.d/crls
+/etc/ipsec.d/aacerts
+/etc/ipsec.d/acerts
+
+.SH SEE ALSO
+ipsec(8), ipsec_ttoaddr(8), ipsec_auto(8), ipsec_manual(8), ipsec_rsasigkey(8)
+.SH HISTORY
+Written  for  the  FreeS/WAN project
+<http://www.freeswan.org>
+by Henry Spencer.  Extended for the strongSwan project
+<http://www.strongswan.org>
+by Andreas Steffen.
+.SH BUGS
+.PP
+When
+.B type
+or 
+.B failureshunt
+is set to
+.B drop
+or
+.BR reject,
+strongSwan blocks outbound packets using eroutes, but assumes inbound
+blocking is handled by the firewall. strongSwan offers firewall hooks 
+via an ``updown'' script.  However, the default 
+.B ipsec _updown
+provides no help in controlling a modern firewall.
+.PP
+Including attributes of the keying channel
+(authentication methods,
+.BR ikelifetime ,
+etc.)
+as an attribute of a connection,
+rather than of a participant pair, is dubious and incurs limitations.
+.PP
+.IR Ipsec_manual
+is not nearly as generous about the syntax of subnets,
+addresses, etc. as the usual strongSwan user interfaces.
+Four-component dotted-decimal must be used for all addresses.
+It
+.I is
+smart enough to translate bit-count netmasks to dotted-decimal form.
+.PP
+It would be good to have a line-continuation syntax,
+especially for the very long lines involved in
+RSA signature keys.
+.PP
+The ability to specify different identities,
+.BR authby ,
+and public keys for different automatic-keyed connections
+between the same participants is misleading;
+this doesn't work dependably because the identity of the participants
+is not known early enough.
+This is especially awkward for the ``Road Warrior'' case,
+where the remote IP address is specified as
+.BR 0.0.0.0 ,
+and that is considered to be the ``participant'' for such connections.
+.PP
+In principle it might be necessary to control MTU on an
+interface-by-interface basis,
+rather than with the single global override that
+.B overridemtu
+provides.
+.PP
+A number of features which \fIcould\fR be implemented in
+both manual and automatic keying
+actually are not yet implemented for manual keying.
+This is unlikely to be fixed any time soon.
+.PP
+If conns are to be added before DNS is available,
+\fBleft=\fP\fIFQDN\fP,
+\fBleftnextop=\fP\fIFQDN\fP,
+and
+.B leftrsasigkey=%dnsonload
+will fail.
+.IR ipsec_pluto (8)
+does not actually use the public key for our side of a conn but it
+isn't generally known at a add-time which side is ours (Road Warrior
+and Opportunistic conns are currently exceptions).
+.PP
+The \fBmyid\fP option does not affect explicit \fB ipsec auto \-\-add\fP or \fBipsec auto \-\-replace\fP commands for implicit conns.
