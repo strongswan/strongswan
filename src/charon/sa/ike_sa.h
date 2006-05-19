@@ -267,7 +267,7 @@ struct protected_ike_sa_t {
 	 * 
 	 * Keys are derived using the diffie hellman secret, nonces and internal
 	 * stored SPIs. 
-	 * Allready existing objects get destroyed.
+	 * Already existing objects get destroyed.
 	 * 
 	 * @param this 				calling object
 	 * @param proposal			proposal which contains algorithms to use

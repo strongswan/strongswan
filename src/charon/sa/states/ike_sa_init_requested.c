@@ -273,7 +273,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	
 	/* Iterate over all payloads.
 	 * 
-	 * The message is allready checked for the right payload types.
+	 * The message is already checked for the right payload types.
 	 */
 	payloads = ike_sa_init_reply->get_payload_iterator(ike_sa_init_reply);
 	while (payloads->has_next(payloads))

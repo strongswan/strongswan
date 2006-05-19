@@ -102,7 +102,7 @@ struct child_sa_t {
 	/**
 	 * @brief Install the policies using some traffic selectors.
 	 * 
-	 * Spplied lists of traffic_selector_t's specify the policies
+	 * Supplied lists of traffic_selector_t's specify the policies
 	 * to use for this child sa.
 	 *
 	 * @param this 		calling object

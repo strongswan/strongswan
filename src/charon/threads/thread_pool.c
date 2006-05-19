@@ -373,7 +373,7 @@ static void process_delete_half_open_ike_sa_job(private_thread_pool_t *this, del
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
 	if ((status != SUCCESS) && (status != CREATED))
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL3, "IKE SA seems to be allready deleted and so doesn't have to be deleted");
+		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL3, "IKE SA seems to be already deleted and so doesn't have to be deleted");
 		return;
 	}
 	
@@ -418,7 +418,7 @@ static void process_delete_established_ike_sa_job(private_thread_pool_t *this, d
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,ike_sa_id, &ike_sa);
 	if ((status != SUCCESS) && (status != CREATED))
 	{
-		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL3, "IKE SA seems to be allready deleted and so doesn't have to be deleted");
+		this->worker_logger->log(this->worker_logger, CONTROL | LEVEL3, "IKE SA seems to be already deleted and so doesn't have to be deleted");
 		return;
 	}
 
@@ -470,7 +470,7 @@ static void process_retransmit_request_job(private_thread_pool_t *this, retransm
 	if ((status != SUCCESS) && (status != CREATED))
 	{
 		job->destroy(job);
-		this->worker_logger->log(this->worker_logger, ERROR, "IKE SA could not be checked out. Allready deleted?");
+		this->worker_logger->log(this->worker_logger, ERROR, "IKE SA could not be checked out. Already deleted?");
 		return;
 	}
 				

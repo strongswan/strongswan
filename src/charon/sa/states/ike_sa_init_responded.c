@@ -207,14 +207,14 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	{
 		if (status == NOT_SUPPORTED)
 		{
-			this->logger->log(this->logger, ERROR | LEVEL1, "IKE_AUTH request contains unsupported payload with critical flag set."
+			this->logger->log(this->logger, ERROR | LEVEL1, "IKE_AUTH request contains unsupported payload with critical flag set. "
 															"Deleting IKE_SA");
 			this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, UNSUPPORTED_CRITICAL_PAYLOAD, CHUNK_INITIALIZER);
 			return DELETE_ME;
 		}
 		else
 		{
-			this->logger->log(this->logger, AUDIT, "IKE_AUTH request decryption faild. Ignoring message");
+			this->logger->log(this->logger, AUDIT, "IKE_AUTH request decryption failed. Ignoring message");
 		}
 		return status;
 	}
@@ -298,7 +298,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, FALSE, &response);
 	
 	/* add payloads to it */
-	status = this->build_idr_payload(this, idi_request, idr_request, response,&idr_response);
+	status = this->build_idr_payload(this, idi_request, idr_request, response, &idr_response);
 	if (status != SUCCESS)
 	{
 		response->destroy(response);

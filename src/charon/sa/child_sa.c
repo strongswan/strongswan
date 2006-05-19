@@ -513,7 +513,7 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
  */
 static void destroy(private_child_sa_t *this)
 {
-	/* delete all policys in the kernel */
+	/* delete all policies in the kernel */
 	sa_policy_t *policy;
 	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
 	{

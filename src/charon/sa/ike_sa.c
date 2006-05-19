@@ -936,7 +936,7 @@ static message_t * get_last_requested_message (private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_state.
+ * Implementation of ike_sa_t.get_state.
  */
 static ike_sa_state_t get_state (private_ike_sa_t *this)
 {
@@ -944,7 +944,7 @@ static ike_sa_state_t get_state (private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_state.
+ * Implementation of protected_ike_sa_t.add_child_sa.
  */
 static void add_child_sa (private_ike_sa_t *this, child_sa_t *child_sa)
 {
@@ -1149,12 +1149,12 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.build_transforms = (status_t (*) (protected_ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t)) build_transforms;
 	this->protected.set_new_state = (void (*) (protected_ike_sa_t *,state_t *)) set_new_state;
 	this->protected.get_crypter_initiator = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_initiator;
-	this->protected.get_signer_initiator = (signer_t *(*) (protected_ike_sa_t *)) get_signer_initiator;	
+	this->protected.get_signer_initiator = (signer_t *(*) (protected_ike_sa_t *)) get_signer_initiator;
 	this->protected.get_crypter_responder = (crypter_t *(*) (protected_ike_sa_t *)) get_crypter_responder;
-	this->protected.get_signer_responder = (signer_t *(*) (protected_ike_sa_t *)) get_signer_responder;	
+	this->protected.get_signer_responder = (signer_t *(*) (protected_ike_sa_t *)) get_signer_responder;
 	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t *)) reset_message_buffers;
-	this->protected.get_last_responded_message = (message_t * (*) (protected_ike_sa_t *this)) get_last_responded_message;
-	this->protected.get_last_requested_message = (message_t * (*) (protected_ike_sa_t *this)) get_last_requested_message;
+	this->protected.get_last_responded_message = (message_t * (*) (protected_ike_sa_t *)) get_last_responded_message;
+	this->protected.get_last_requested_message = (message_t * (*) (protected_ike_sa_t *)) get_last_requested_message;
 	
 	this->protected.set_last_replied_message_id = (void (*) (protected_ike_sa_t *,u_int32_t)) set_last_replied_message_id;
 	
