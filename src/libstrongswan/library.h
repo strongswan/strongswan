@@ -24,7 +24,7 @@
 #define LIBRARY_H_
 
 /**
- * @defgroup lib lib
+ * @defgroup libstrongswan libstrongswan
  *
  * libstrongswan: library with various crypto related things.
  */
@@ -34,7 +34,7 @@
  *
  * ASN1 definitions, parser and generator functions.
  *
- * @ingroup lib
+ * @ingroup libstrongswan
  */
 
 /**
@@ -42,7 +42,7 @@
  *
  * Crypto algorithms of different kind.
  *
- * @ingroup lib
+ * @ingroup libstrongswan
  */
 
 /**
@@ -93,7 +93,7 @@
  * 
  * Generic helper classes.
  * 
- * @ingroup lib
+ * @ingroup libstrongswan
  */
 
 
