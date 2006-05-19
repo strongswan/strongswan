@@ -105,6 +105,14 @@ struct rsa_public_key_t {
 	mpz_t *(*get_modulus) (rsa_public_key_t *this);
 	
 	/**
+	 * @brief Get the size of the modulus in bytes.
+	 * 
+	 * @param this				calling object
+	 * @return					size of the modulus (n) in bytes
+	 */
+	size_t (*get_keysize) (rsa_public_key_t *this);
+
+	/**
 	 * @brief Clone the public key.
 	 * 
 	 * @param this				public key to clone

@@ -152,7 +152,15 @@ struct private_iterator_t {
 };
 
 /**
- * Implementation of iterator_t.has_next.
+ * Implementation of iterator_t.get_count.
+ */
+static int get_list_count(private_iterator_t *this)
+{
+	return this->list->count;
+}
+
+/**
+ * Implementation of iterator_t.iterate.
  */
 static bool iterate(private_iterator_t *this, void** value)
 {
@@ -665,6 +673,7 @@ static iterator_t *create_iterator (private_linked_list_t *linked_list,bool forw
 {
 	private_iterator_t *this = malloc_thing(private_iterator_t);
 
+	this->public.get_count = (bool (*) (iterator_t *this)) get_list_count;
 	this->public.iterate = (bool (*) (iterator_t *this, void **value)) iterate;
 	this->public.has_next = (bool (*) (iterator_t *this)) iterator_has_next;
 	this->public.current = (status_t (*) (iterator_t *this, void **value)) iterator_current;

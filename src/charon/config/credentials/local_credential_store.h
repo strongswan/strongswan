@@ -52,7 +52,7 @@ struct local_credential_store_t {
 	/**
 	 * @brief Loads trusted certificates from a folder.
 	 *
-	 * Currently, all keys must be in binary DER format.
+	 * Certificates in both DER and PEM format are accepted
 	 *
 	 * @param this		calling object
 	 * @param path		directory to load certificates from
@@ -60,10 +60,10 @@ struct local_credential_store_t {
 	void (*load_certificates) (local_credential_store_t *this, const char *path);
 	
 	/**
-	 * @brief Loads RSA private keys from a folder.
+	 * @brief Loads RSA private keys defined in ipsec.secrets
 	 * 
-	 * Currently, all keys must be unencrypted in binary DER format. Anything
-	 * other gets ignored. Further, a certificate for the specific private
+	 * Currently, all keys must be unencrypted in either DER or PEM format.
+	 * Other formats are ignored. Further, a certificate for the specific private
 	 * key must already be loaded to get the ID from.
 	 * 
 	 * @param this			calling object

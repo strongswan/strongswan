@@ -121,6 +121,7 @@ extern int known_oid(chunk_t object);
 extern u_int asn1_length(chunk_t *blob);
 extern bool is_printablestring(chunk_t str);
 extern time_t asn1totime(const chunk_t *utctime, asn1_t type);
+extern void timetoa(char *buf, size_t buflen, const time_t *time, bool utc);
 extern void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit);
 extern bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *object, u_int *level, asn1_ctx_t *ctx);
 extern bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name);

@@ -104,6 +104,34 @@ bool chunk_equals(chunk_t a, chunk_t b)
 /**
  * Described in header.
  */
+void chunk_to_hex(char *buf, size_t buflen, chunk_t chunk)
+{
+	bool first = TRUE;
+
+	buflen--;  /* reserve space for null termination */
+
+	while (chunk.len >0 && buflen > 2)
+	{
+		static char hexdig[] = "0123456789abcdef";
+
+		if (first)
+		{
+			first = FALSE;
+		}
+		else
+		{
+			*buf++ = ':'; buflen--;
+		}
+		*buf++ = hexdig[(*chunk.ptr >> 4) & 0x0f];
+		*buf++ = hexdig[ *chunk.ptr++     & 0x0f];
+		buflen -= 2; chunk.len--;
+	}
+	*buf = '\0';
+}
+
+/**
+ * Described in header.
+ */
 void *clalloc(void * pointer, size_t size)
 {
 	void *data;

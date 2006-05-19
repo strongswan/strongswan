@@ -44,6 +44,13 @@ typedef struct iterator_t iterator_t;
 struct iterator_t {
 
 	/**
+	 * @brief Return number of list items.
+	 * 
+	 * @param this 			calling object
+	 * @return				number of list items
+	 */
+	int (*get_count) (iterator_t *this);
+	/**
 	 * @brief Iterate over all items.
 	 * 
 	 * The easy way to iterate over items.

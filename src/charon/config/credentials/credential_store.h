@@ -27,6 +27,7 @@
 #include <crypto/rsa/rsa_private_key.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <utils/identification.h>
+#include <utils/logger.h>
 
 
 typedef struct credential_store_t credential_store_t;
@@ -79,6 +80,15 @@ struct credential_store_t {
 	 * @return						private key, or NULL if not found
 	 */	
 	rsa_private_key_t *(*get_rsa_private_key) (credential_store_t *this, identification_t *identification);
+
+	/**
+	 * @brief Lists all certificates kept in the local credential store.
+	 *
+	 * @param this		calling object
+	 * @param logger	logger to be used
+	 * @param utc		log dates either in UTC or local time
+	 */
+	void (*log_certificates) (credential_store_t *this, logger_t *logger, bool utc);
 
 	/**
 	 * @brief Destroys a credential_store_t object.

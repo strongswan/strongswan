@@ -37,6 +37,7 @@ typedef struct stroke_msg_t stroke_msg_t;
 struct stroke_msg_t {
 	/* length of this message with all strings */
 	u_int16_t length;
+
 	/* type of the message */
 	enum {
 		/* initiate a connection */
@@ -57,8 +58,11 @@ struct stroke_msg_t {
 		STR_LOGTYPE,
 		/* set the verbosity of a logging context */
 		STR_LOGLEVEL,
+		/* show list of locally loaded certificates */
+		STR_LIST_CERTS
 		/* more to come */
 	} type;
+
 	union {
 		/* data for STR_INITIATE, STR_INSTALL, STR_UP, STR_DOWN */
 		struct {
@@ -85,6 +89,7 @@ struct stroke_msg_t {
 			u_int level;
 		} loglevel;
 	};
+
 	u_int8_t buffer[];
 };
 

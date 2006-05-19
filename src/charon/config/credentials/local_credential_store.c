@@ -141,6 +141,30 @@ static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *
 }
 
 /**
+ * Implements credential_store_t.log_certificates
+ */
+static void log_certificates(private_local_credential_store_t *this, logger_t *logger, bool utc)
+{
+	iterator_t *iterator = this->certificates->create_iterator(this->certificates, TRUE);
+
+	if (iterator->get_count(iterator))
+	{
+		logger->log(logger, CONTROL, "");
+		logger->log(logger, CONTROL, "List of X.509 End Entity Certificates:");
+		logger->log(logger, CONTROL, "");
+	}
+
+	while (iterator->has_next(iterator))
+	{
+		x509_t *cert;
+
+		iterator->current(iterator, (void**)&cert);
+		cert->log_certificate(cert, logger, utc);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implements local_credential_store_t.load_certificates
  */
 static void load_certificates(private_local_credential_store_t *this, const char *path)
@@ -187,8 +211,8 @@ static void load_certificates(private_local_credential_store_t *this, const char
  */
 static identification_t *get_id_for_private_key(private_local_credential_store_t *this, rsa_private_key_t *private_key)
 {
-	iterator_t *iterator;
 	x509_t *cert;
+	iterator_t *iterator;
 	identification_t *found = NULL;
 	rsa_public_key_t *public_key;
 	
@@ -368,6 +392,7 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.get_shared_secret = (status_t(*)(credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,identification_t*))get_rsa_private_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
+	this->public.credential_store.log_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_certificates;
 	this->public.load_certificates = (void(*)(local_credential_store_t*,const char*))load_certificates;
 	this->public.load_private_keys = (void(*)(local_credential_store_t*,const char*, const char*))load_private_keys;
 	this->public.credential_store.destroy = (void(*)(credential_store_t*))destroy;

@@ -106,10 +106,10 @@ down)
 	fi
 	exit 0
 	;;
-listalgs|listpubkeys|listcerts|listcacerts|\
-listaacerts|listocspcerts|listacerts|listgroups|\
+listalgs|listpubkeys|listcacerts|listaacerts|\
+listocspcerts|listacerts|listgroups|\
 listcainfos|listcrls|listocsp|listcards|\
-listall|purgeocsp|rereadsecrets|rereadgroups|\
+purgeocsp|rereadsecrets|rereadgroups|\
 rereadcacerts|rereadaacerts|rereadocspcerts|\
 rereadacerts|rereadcrls|rereadall)
 	op="$1"
@@ -118,10 +118,18 @@ rereadacerts|rereadcrls|rereadall)
 	then
 		$IPSEC_WHACK "$@" "--$op"
 	fi
-	#if test -e $IPSEC_CHARON_PID
-	#then
-	#	$IPSEC_STROKE "$op"
-	#fi
+	;;
+listcerts|listall)
+	op="$1"
+	shift
+	if test -e $IPSEC_PLUTO_PID
+	then
+		$IPSEC_WHACK "$@" "--$op"
+	fi
+	if test -e $IPSEC_CHARON_PID
+	then
+		$IPSEC_STROKE "$op"
+	fi
 	exit 0
 	;;
 ready)

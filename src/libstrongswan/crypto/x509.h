@@ -28,6 +28,7 @@
 #include <crypto/rsa/rsa_public_key.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
+#include <utils/logger.h>
 
 
 typedef struct x509_t x509_t;
@@ -103,7 +104,7 @@ struct x509_t {
 	 * @param other			second cert for compare
 	 * @return				TRUE if signature is equal
 	 */
-	bool (*equals) (x509_t *this, x509_t *other);
+	bool (*equals) (x509_t *this, x509_t *that);
 	
 	/**
 	 * @brief Destroys the certificate.
@@ -111,6 +112,15 @@ struct x509_t {
 	 * @param this			certificate to destroy
 	 */
 	void (*destroy) (x509_t *this);
+
+	/**
+	 * @brief Log x509 certificate info.
+	 *
+	 * @param this			certificate to log
+	 * @param logger		logger to be used
+	 * @param utc			log dates either in UTC or local time
+	 */
+	 void (*log_certificate) (x509_t *this, logger_t *logger, bool utc);
 };
 
 /**
@@ -131,6 +141,6 @@ x509_t *x509_create_from_chunk(chunk_t chunk);
  * 
  * @ingroup transforms
  */
-x509_t *x509_create_from_file(char *filename);
+x509_t *x509_create_from_file(const char *filename);
 
 #endif /* X509_H_ */

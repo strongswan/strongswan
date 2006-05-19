@@ -34,9 +34,10 @@
 #include <utils/linked_list.h>
 
 #define BUF_LEN 512
-#define RSA_MIN_OCTETS	(512 / 8)
-#define RSA_MIN_OCTETS_UGH	"RSA modulus too small for security: less than 512 bits"
-#define RSA_MAX_OCTETS	(8192 / 8)
+#define BITS_PER_BYTE	8
+#define RSA_MIN_OCTETS	(1024 / BITS_PER_BYTE)
+#define RSA_MIN_OCTETS_UGH	"RSA modulus too small for security: less than 1024 bits"
+#define RSA_MAX_OCTETS	(8192 / BITS_PER_BYTE)
 #define RSA_MAX_OCTETS_UGH	"RSA modulus too large: more than 8192 bits"
 
 logger_t *logger;
@@ -81,19 +82,44 @@ struct private_x509_t {
 	x509_t public;
 	
 	/**
-	 * Version of the X509 certificate
+	 * Time when certificate was installed
+	 */
+	time_t installed;
+
+	/**
+	 * X.509 Certificate in DER format
+	 */
+	chunk_t certificate;
+
+	/**
+	 * Version of the X.509 certificate
 	 */
 	u_int version;
 	
 	/**
-	 * ID representing the certificates subject
+	 * Serial number of the X.509 certificate
 	 */
-	identification_t *subject;
-	
+	chunk_t serialNumber;
+
 	/**
 	 * ID representing the certificate issuer
 	 */
 	identification_t *issuer;
+	
+	/**
+	 * Start time of certificate validity
+	 */
+	time_t notBefore;
+
+	/**
+	 * End time of certificate validity
+	 */
+	time_t notAfter;
+
+	/**
+	 * ID representing the certificate subject
+	 */
+	identification_t *subject;
 	
 	/**
 	 * List of identification_t's representing subjectAltNames
@@ -109,41 +135,34 @@ struct private_x509_t {
 	 * List of identification_t's representing crlDistributionPoints
 	 */
 	linked_list_t *crlDistributionPoints;
-	
 
 	/**
-	 * Subjects RSA public key, if subjectPublicKeyAlgorithm == RSA
+	 * Subject RSA public key, if subjectPublicKeyAlgorithm == RSA
 	 */
 	rsa_public_key_t *public_key;
 	
+	/**
+	 * Subject Key Identifier
+	 */
+	chunk_t subjectKeyID;
+
+	/**
+	 * Authority Key Identifier
+	 */
+	chunk_t authKeyID;
+
+	/**
+	 * Authority Key Serial Number
+	 */
+	chunk_t authKeySerialNumber;
 	
-	
-	
-	time_t installed;
 	u_char authority_flags;
-	chunk_t x509;
 	chunk_t tbsCertificate;
-	chunk_t serialNumber;
 	/*   signature */
 	int sigAlg;
-	/*   validity */
-	time_t notBefore;
-	time_t notAfter;
-	/* subjectPublicKeyInfo */
 	chunk_t subjectPublicKey;
-	/*   issuerUniqueID */
-	/*   subjectUniqueID */
-	/*   v3 extensions */
-	/*   extension */
-	/*     extension */
-	/*       extnID */
-	/*       critical */
-	/*       extnValue */
 	bool isCA;
 	bool isOcspSigner; /* ocsp */
-	chunk_t subjectKeyID;
-	chunk_t authKeyID;
-	chunk_t authKeySerialNumber;
 	chunk_t accessLocation; /* ocsp */
 	/* signatureAlgorithm */
 	int algorithm;
@@ -649,7 +668,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 		level++;
 		switch (objectID) {
 			case X509_OBJ_CERTIFICATE:
-				cert->x509 = object;
+				cert->certificate = object;
 				break;
 			case X509_OBJ_TBS_CERTIFICATE:
 				cert->tbsCertificate = object;
@@ -843,7 +862,48 @@ static void destroy(private_x509_t *this)
 	{
 		this->public_key->destroy(this->public_key);
 	}
+	free(this->certificate.ptr);
 	free(this);
+}
+
+/**
+ * log certificate
+ */
+static void log_certificate(private_x509_t *this, logger_t *logger, bool utc)
+{
+	identification_t *subject = this->subject;
+	identification_t *issuer = this->issuer;
+
+	rsa_public_key_t *rsa_key = this->public_key;
+
+	char buf[BUF_LEN];
+
+	timetoa(buf, BUF_LEN, &this->installed, utc);
+	logger->log(logger, CONTROL, "%s", buf);
+	logger->log(logger, CONTROL, "       subject: '%s'", subject->get_string(subject));
+	logger->log(logger, CONTROL, "       issuer:  '%s'", issuer->get_string(issuer));
+	chunk_to_hex(buf, BUF_LEN, this->serialNumber);
+	logger->log(logger, CONTROL, "       serial:   %s", buf);
+	timetoa(buf, BUF_LEN, &this->notBefore, utc);
+	logger->log(logger, CONTROL, "       validity: not before %s", buf);
+	timetoa(buf, BUF_LEN, &this->notAfter, utc);
+	logger->log(logger, CONTROL, "                 not after  %s", buf);
+	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits", BITS_PER_BYTE * rsa_key->get_keysize(rsa_key));
+	if (this->subjectKeyID.ptr != NULL)
+	{
+		chunk_to_hex(buf, BUF_LEN, this->subjectKeyID);
+		logger->log(logger, CONTROL, "       subjkey:  %s", buf);
+	}
+	if (this->authKeyID.ptr != NULL)
+	{
+		chunk_to_hex(buf, BUF_LEN, this->authKeyID);
+		logger->log(logger, CONTROL, "       authkey:  %s", buf);
+	}
+	if (this->authKeySerialNumber.ptr != NULL)
+	{
+		chunk_to_hex(buf, BUF_LEN, this->authKeySerialNumber);
+		logger->log(logger, CONTROL, "       aserial:  %s", buf);
+	}
 }
 
 /*
@@ -859,6 +919,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public.get_public_key = (rsa_public_key_t* (*) (x509_t*))get_public_key;
 	this->public.get_subject = (identification_t* (*) (x509_t*))get_subject;
 	this->public.get_issuer = (identification_t* (*) (x509_t*))get_issuer;
+	this->public.log_certificate = (void (*) (x509_t*,logger_t*,bool))log_certificate;
 	
 	/* initialize */
 	this->subjectPublicKey = CHUNK_INITIALIZER;
@@ -892,7 +953,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 /*
  * Described in header.
  */
-x509_t *x509_create_from_file(char *filename)
+x509_t *x509_create_from_file(const char *filename)
 {
 	bool pgp = FALSE;
 	chunk_t chunk = CHUNK_INITIALIZER;
@@ -902,6 +963,9 @@ x509_t *x509_create_from_file(char *filename)
 		return NULL;
 
 	cert = x509_create_from_chunk(chunk);
-	free(chunk.ptr);
+	if (cert == NULL)
+	{
+		free(chunk.ptr);
+	}
 	return cert;
 }

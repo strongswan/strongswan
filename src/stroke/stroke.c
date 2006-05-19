@@ -26,6 +26,8 @@
 
 #include "stroke.h"
 
+#define streq(a, b) (strcmp((a), (b)) == 0) /* clearer shorthand */
+
 static char* push_string(stroke_msg_t **strm, char *string)
 {
 	stroke_msg_t *stroke_msg;
@@ -166,6 +168,18 @@ static int show_status(char *mode, char *connection)
 	return res;
 }
 
+static int list_certs(void)
+{
+	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
+	int res;
+	
+	msg->length = sizeof(stroke_msg_t);
+	msg->type = STR_LIST_CERTS;
+	res = send_stroke_msg(msg);
+	free(msg);
+	return res;
+}
+
 static int set_logtype(char *context, char *type, int enable)
 {
 	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
@@ -233,6 +247,8 @@ static void exit_usage(char *error)
 	printf("           LEVEL is 0|1|2|3\n");
 	printf("  Show connection status:\n");
 	printf("    stroke status\n");
+	printf("  Show list of locally loaded certificates:\n");
+	printf("    stroke listcerts\n");
 	exit_error(error);
 }
 
@@ -248,12 +264,15 @@ int main(int argc, char *argv[])
 	
 	op = argv[1];
 
-	if (strcmp(op, "status") == 0 ||
-		strcmp(op, "statusall") == 0)
+	if (streq(op, "status") || streq(op, "statusall"))
 	{
 		res = show_status(op, argc > 2 ? argv[2] : NULL);
 	}
-	else if (strcmp(op, "up") == 0)
+	else if (streq(op, "listcerts") || streq(op, "listall"))
+	{
+		res = list_certs();
+	}
+	else if (streq(op, "up"))
 	{
 		if (argc < 3)
 		{
@@ -261,7 +280,7 @@ int main(int argc, char *argv[])
 		}
 		res = initiate_connection(argv[2]);
 	}
-	else if (strcmp(op, "down") == 0)
+	else if (streq(op, "down"))
 	{
 		if (argc < 3)
 		{
@@ -269,7 +288,7 @@ int main(int argc, char *argv[])
 		}
 		res = terminate_connection(argv[2]);
 	}
-	else if (strcmp(op, "add") == 0)
+	else if (streq(op, "add"))
 	{
 		if (argc < 11)
 		{
@@ -281,7 +300,7 @@ int main(int argc, char *argv[])
 							 argv[7], argv[8], 
 							 atoi(argv[9]), atoi(argv[10]));
 	}
-	else if (strcmp(op, "logtype") == 0)
+	else if (streq(op, "logtype"))
 	{
 		if (argc < 5)
 		{
@@ -289,7 +308,7 @@ int main(int argc, char *argv[])
 		}
 		res = set_logtype(argv[2], argv[3], atoi(argv[4])); 
 	}
-	else if (strcmp(op, "loglevel") == 0)
+	else if (streq(op, "loglevel"))
 	{
 		if (argc < 4)
 		{

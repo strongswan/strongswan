@@ -358,6 +358,16 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 	charon->ike_sa_manager->log_status(charon->ike_sa_manager, this->stroke_logger, msg->status.name);
 }
 
+/**
+ * list various information
+ */
+static void stroke_list(private_stroke_t *this, stroke_msg_t *msg, bool utc)
+{
+	if (msg->type = STR_LIST_CERTS)
+	{
+		charon->credentials->log_certificates(charon->credentials, this->stroke_logger, utc);
+	}
+}
 logger_context_t get_context(char *context)
 {
 	if      (strcasecmp(context, "ALL") == 0) return ALL_LOGGERS;
@@ -399,11 +409,16 @@ static void stroke_logtype(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	
-	if      (strcasecmp(msg->logtype.type, "CONTROL") == 0) level = CONTROL;
-	else if (strcasecmp(msg->logtype.type, "ERROR") == 0) level = ERROR;
-	else if (strcasecmp(msg->logtype.type, "AUDIT") == 0) level = AUDIT;
-	else if (strcasecmp(msg->logtype.type, "RAW") == 0) level = RAW;
-	else if (strcasecmp(msg->logtype.type, "PRIVATE") == 0) level = PRIVATE;
+	if      (strcasecmp(msg->logtype.type, "CONTROL") == 0)
+		level = CONTROL;
+	else if (strcasecmp(msg->logtype.type, "ERROR") == 0)
+		level = ERROR;
+	else if (strcasecmp(msg->logtype.type, "AUDIT") == 0)
+		level = AUDIT;
+	else if (strcasecmp(msg->logtype.type, "RAW") == 0)
+		level = RAW;
+	else if (strcasecmp(msg->logtype.type, "PRIVATE") == 0)
+		level = PRIVATE;
 	else
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid type (%s)!", msg->logtype.type);
@@ -425,13 +440,13 @@ static void stroke_logtype(private_stroke_t *this, stroke_msg_t *msg)
  */
 static void stroke_loglevel(private_stroke_t *this, stroke_msg_t *msg)
 {
+	log_level_t level;
+	logger_context_t context;
+
 	pop_string(msg, &(msg->loglevel.context));
-	
 	this->logger->log(this->logger, CONTROL, "received stroke: loglevel for %s", msg->loglevel.context);
 	
-	log_level_t level;
-	logger_context_t context = get_context(msg->loglevel.context);
-	
+	context = get_context(msg->loglevel.context);
 	if (context == -2)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid context (%s)!", msg->loglevel.context);
@@ -439,21 +454,13 @@ static void stroke_loglevel(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	
 	if (msg->loglevel.level == 0)
-	{
 		level = LEVEL0;
-	}
 	else if (msg->loglevel.level == 1)
-	{
 		level = LEVEL1;
-	}
 	else if (msg->loglevel.level == 2)
-	{
 		level = LEVEL2;
-	}
 	else if (msg->loglevel.level == 3)
-	{
 		level = LEVEL3;
-	}
 	else 
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid level (%d)!", msg->loglevel.level);
@@ -529,41 +536,30 @@ static void stroke_receive(private_stroke_t *this)
 		switch (msg->type)
 		{
 			case STR_INITIATE:
-			{
 				stroke_initiate(this, msg);
 				break;
-			}
 			case STR_TERMINATE:
-			{
 				stroke_terminate(this, msg);
 				break;
-			}
 			case STR_STATUS:
-			{
 				stroke_status(this, msg);
 				break;
-			}
 			case STR_STATUS_ALL:
-			{
 				this->stroke_logger->enable_level(this->stroke_logger, LEVEL1);
 				stroke_status(this, msg);
 				break;
-			}
 			case STR_ADD_CONN:
-			{
 				stroke_add_conn(this, msg);
 				break;
-			}
 			case STR_LOGTYPE:
-			{
 				stroke_logtype(this, msg);
 				break;
-			}
 			case STR_LOGLEVEL:
-			{
 				stroke_loglevel(this, msg);
 				break;
-			}
+			case STR_LIST_CERTS:
+				stroke_list(this, msg, FALSE);
+				break;
 			default:
 				this->logger->log(this->logger, ERROR, "received invalid stroke");
 		}

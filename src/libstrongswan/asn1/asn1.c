@@ -216,22 +216,19 @@ bool is_printablestring(chunk_t str)
 
 /**
  * Display a date either in local or UTC time
- * TODO: Does not seem to be thread safe
  */
-char* timetoa(const time_t *time, bool utc)
+void timetoa(char *buf, size_t buflen, const time_t *time, bool utc)
 {
-	static char buf[30];
-
 	if (*time == 0)
-		sprintf(buf, "--- -- --:--:--%s----", (utc)?" UTC ":" ");
+		snprintf(buf, buflen, "--- -- --:--:--%s----", (utc)?" UTC ":" ");
 	else
 	{
 		struct tm *t = (utc)? gmtime(time) : localtime(time);
-		sprintf(buf, "%s %02d %02d:%02d:%02d%s%04d",
+
+		snprintf(buf, buflen, "%s %02d %02d:%02d:%02d%s%04d",
 				months[t->tm_mon], t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,
 				(utc)?" UTC ":" ", t->tm_year + 1900);
 	}
-	return buf;
 }
 
 /**
@@ -349,8 +346,13 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 			return;
 		case ASN1_UTCTIME:
 		case ASN1_GENERALIZEDTIME:
-			time = asn1totime(&object, type);
-			logger->log(logger, CONTROL|LEVEL1, "  '%s'", timetoa(&time, TRUE));
+			{
+				char buf[TIMETOA_BUF];
+				time_t time = asn1totime(&object, type);
+
+				timetoa(buf, TIMETOA_BUF, &time, TRUE);
+				logger->log(logger, CONTROL|LEVEL1, "  '%s'", buf);
+			}
 			return;
 		default:
 			break;
