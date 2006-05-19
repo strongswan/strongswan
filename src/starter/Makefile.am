@@ -10,6 +10,7 @@ AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_P
 starter_LDADD = loglite.o defs.o $(top_srcdir)/src/libfreeswan/libfreeswan.a
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
 dist_man_MANS = ipsec.conf.5
+DISTCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
 OPENACDIR=$(top_srcdir)/src/openac
@@ -21,6 +22,9 @@ lex.yy.c:	y.tab.c parser.l parser.y parser.h
 		$(LEX) parser.l
 
 y.tab.c:	parser.l parser.y parser.h
+		$(YACC) -v -d parser.y
+
+y.tab.h:	parser.l parser.y parser.h
 		$(YACC) -v -d parser.y
 
 keywords.c:	keywords.txt keywords.h
