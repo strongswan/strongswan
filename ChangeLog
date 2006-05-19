@@ -1,5 +1,5 @@
- strongSwan-4.0.0 / Revision: 967
-==================================
+ strongSwan-4.0.0 / R:967
+==========================
 
 - removed IKEV2 ifdefs
 - applied patch from andreas

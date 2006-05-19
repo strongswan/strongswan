@@ -1,11 +1,12 @@
 #!/bin/bash
+current=`svn info | grep Revision | sed -e "s:Revision\: ::"`
+last=`svn propget release-revision .`
 
-echo -n " strongswan-x.x.x / " > ChangeLog.tmp
-svn info | grep Revision >> ChangeLog.tmp
-echo "==================================" >> ChangeLog.tmp
+echo " strongswan-4.x.x / R:$current " > ChangeLog.tmp
+echo "===========================" >> ChangeLog.tmp
 echo "" >> ChangeLog.tmp
 
-svn log -r HEAD:$1 | grep -v "| mwilli |" | grep -v "| andreas | " | grep -v ^$ | grep -v ^------ >> ChangeLog.tmp
+svn log -r $current:$last | grep -v "| mwilli |" | grep -v "| andreas | " | grep -v ^$ | grep -v ^------ >> ChangeLog.tmp
 
 echo "" >> ChangeLog.tmp
 echo "" >> ChangeLog.tmp
@@ -14,3 +15,8 @@ cat ChangeLog >> ChangeLog.tmp
 cat ChangeLog.tmp > ChangeLog
 
 rm ChangeLog.tmp
+
+echo "updated ChangeLog from R:$last to R:$current"
+
+svn propset release-revision "$current" . > /dev/null
+
