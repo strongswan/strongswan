@@ -36,10 +36,10 @@ DISTCLEANFILES = oid.c oid.h
 PERL=perl
 
 oid.c: oid.txt oid.pl
-	$PERL oid.pl
+	$(PERL) oid.pl
 
 oid.h: oid.txt oid.pl
-	$PERL oid.pl
+	$(PERL) oid.pl
 
 # This compile option activates dynamic URL fetching using libcurl
 if USE_LIBCURL
