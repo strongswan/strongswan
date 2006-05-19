@@ -18,3 +18,14 @@ libstrongswan_la_LIBADD = -lgmp -lpthread
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl
+DISTCLEANFILES = asn1/oid.c asn1/oid.h
+
+# TODO: get perl from ./configure
+PERL=perl
+
+asn1/oid.c :	asn1/oid.txt asn1/oid.pl
+	        cd asn1 && $(PERL) oid.pl
+
+asn1/oid.h :	asn1/oid.txt asn1/oid.pl
+		cd asn1 && $(PERL) oid.pl
+
