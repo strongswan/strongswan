@@ -110,7 +110,7 @@ void chunk_to_hex(char *buf, size_t buflen, chunk_t chunk)
 
 	buflen--;  /* reserve space for null termination */
 
-	while (chunk.len >0 && buflen > 2)
+	while (chunk.len > 0 && buflen > 2)
 	{
 		static char hexdig[] = "0123456789abcdef";
 
