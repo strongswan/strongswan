@@ -208,6 +208,42 @@ static status_t add_connection(private_local_connection_store_t *this, connectio
 }
 
 /**
+ * Implementation of connection_store_t.log_connections.
+ */
+void log_connections(private_local_connection_store_t *this, logger_t *logger, char *name)
+{
+	iterator_t *iterator;
+	connection_t *current, *found = NULL;
+	
+	if (logger == NULL)
+	{
+		logger = this->logger;
+	}
+	
+	logger->log(logger, CONTROL, "templates:");
+	
+	iterator = this->connections->create_iterator(this->connections, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&current);
+		if (!name || strcmp(name, current->get_name(current)) == 0)
+		{
+			identification_t *my_id, *other_id;
+			host_t *my_host, *other_host;
+			my_id = current->get_my_id(current);
+			other_id = current->get_other_id(current);
+			my_host = current->get_my_host(current);
+			other_host = current->get_other_host(current);
+			logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
+						current->get_name(current),
+						my_host->get_address(my_host), my_id->get_string(my_id),
+						other_host->get_address(other_host), other_id->get_string(other_id));
+		}
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implementation of connection_store_t.destroy.
  */
 static void destroy (private_local_connection_store_t *this)
@@ -233,6 +269,7 @@ local_connection_store_t * local_connection_store_create(void)
 	this->public.connection_store.get_connection_by_ids = (connection_t*(*)(connection_store_t*,identification_t*,identification_t*))get_connection_by_ids;
 	this->public.connection_store.get_connection_by_name = (connection_t*(*)(connection_store_t*,char*))get_connection_by_name;
 	this->public.connection_store.add_connection = (status_t(*)(connection_store_t*,connection_t*))add_connection;
+	this->public.connection_store.log_connections = (void(*)(connection_store_t*,logger_t*,char*))log_connections;
 	this->public.connection_store.destroy = (void(*)(connection_store_t*))destroy;
 	
 	/* private variables */

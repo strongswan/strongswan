@@ -944,12 +944,12 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 	{
 		logger = this->logger;
 	}
-	logger->log(logger, CONTROL|LEVEL1, "\"%s\": IKE_SA in state %s, SPIs: 0x%.16llx 0x%.16llx",
+	logger->log(logger, CONTROL|LEVEL1, "  \"%s\": IKE_SA in state %s, SPIs: 0x%.16llx 0x%.16llx",
 				name,
 				mapping_find(ike_sa_state_m, this->current_state->get_state(this->current_state)),
 				this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 				this->ike_sa_id->get_responder_spi(this->ike_sa_id));
-	logger->log(logger, CONTROL, "\"%s\": %s[%s]...%s[%s]",
+	logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
 				name,
 				my_host->get_address(my_host),
 				my_id->get_string(my_id),

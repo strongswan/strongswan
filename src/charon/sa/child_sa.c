@@ -479,7 +479,7 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 	{
 		logger = this->logger;
 	}
-	logger->log(logger, CONTROL|LEVEL1, "\"%s\":   protected with ESP (0x%x/0x%x), AH (0x%x,0x%x):",
+	logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   protected with ESP (0x%x/0x%x), AH (0x%x,0x%x):",
 				name,
 				htonl(this->my_esp_spi), htonl(this->other_esp_spi), 
 				htonl(this->my_ah_spi), htonl(this->other_ah_spi));
@@ -499,7 +499,7 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 				snprintf(proto_buf, sizeof(proto_buf), "<%d>", policy->upper_proto);
 			}
 		}
-		logger->log(logger, CONTROL, "\"%s\":     %s/%d==%s==%s/%d",
+		logger->log(logger, CONTROL, "  \"%s\":     %s/%d==%s==%s/%d",
 					name,
 					policy->my_net->get_address(policy->my_net), policy->my_net_mask,
 					proto_name,

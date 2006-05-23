@@ -610,6 +610,8 @@ static void log_status(private_ike_sa_manager_t* this, logger_t* logger, char* n
 {
 	iterator_t *iterator;
 	
+	logger->log(logger, CONTROL, "instances:");
+	
 	pthread_mutex_lock(&(this->mutex));
 	
 	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);

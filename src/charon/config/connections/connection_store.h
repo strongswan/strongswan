@@ -25,6 +25,7 @@
 
 #include <types.h>
 #include <config/connections/connection.h>
+#include <utils/logger.h>
 
 
 typedef struct connection_store_t connection_store_t;
@@ -100,6 +101,23 @@ struct connection_store_t {
 	 * 							- FAILED
 	 */
 	status_t (*add_connection) (connection_store_t *this, connection_t *connection);
+	
+	/**
+	 * @brief Log the connections stored in the store.
+	 * 
+	 * Depending on the implementation of the store, the store
+	 * logs various information to the specified logger.
+	 * If logger is NULL, the internal logger is used, if name is
+	 * NULL, all connections are logged
+	 * 
+	 * @param this				calling object
+	 * @param logger			logger to use for the log, or NULL
+	 * @param name				name of the connection, or NULL
+	 * @return
+	 * 							- SUCCESS, or
+	 * 							- FAILED
+	 */
+	void (*log_connections) (connection_store_t *this, logger_t *logger, char *name);
 	
 	/**
 	 * @brief Destroys a connection_store_t object.
