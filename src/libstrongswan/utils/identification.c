@@ -36,14 +36,14 @@
  * String mappings for id_type_t.
  */
 mapping_t id_type_m[] = {
-	{ID_IPV4_ADDR, "ID_IPV4_ADDR"},
-	{ID_FQDN, "ID_FQDN"},
+	{ID_IPV4_ADDR,	 "ID_IPV4_ADDR"},
+	{ID_FQDN,		 "ID_FQDN"},
 	{ID_RFC822_ADDR, "ID_RFC822_ADDR"},
-	{ID_IPV6_ADDR, "ID_IPV6_ADDR"},
+	{ID_IPV6_ADDR,	 "ID_IPV6_ADDR"},
 	{ID_DER_ASN1_DN, "ID_DER_ASN1_DN"},
 	{ID_DER_ASN1_GN, "ID_DER_ASN1_GN"},
-	{ID_KEY_ID, "ID_KEY_ID"},
-	{ID_ANY, "ID_ANY"},
+	{ID_KEY_ID,		 "ID_KEY_ID"},
+	{ID_ANY,		 "ID_ANY"},
 	{MAPPING_END, NULL}
 };
 
@@ -160,21 +160,6 @@ static const x501rdn_t x501rdns[] = {
 	{"TCGID", 			{oid_TCGID, 12}, ASN1_PRINTABLESTRING}
 };
 #define X501_RDN_ROOF   26
-
-/**
- * Different kinds of generalNames
- */
-enum generalNames_t {
-	GN_OTHER_NAME =		0,
-	GN_RFC822_NAME =	1,
-	GN_DNS_NAME =		2,
-	GN_X400_ADDRESS =	3,
-	GN_DIRECTORY_NAME =	4,
-	GN_EDI_PARTY_NAME = 5,
-	GN_URI =			6,
-	GN_IP_ADDRESS =		7,
-	GN_REGISTERED_ID =	8,
-};
 
 /**
  * ASN.1 definition of generalName 

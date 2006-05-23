@@ -90,6 +90,23 @@ enum id_type_t {
  */
 extern mapping_t id_type_m[];
 
+/**
+ * Different kinds of generalNames
+ */
+typedef enum generalNames_t generalNames_t;
+
+enum generalNames_t {
+	GN_OTHER_NAME =		0,
+	GN_RFC822_NAME =	1,
+	GN_DNS_NAME =		2,
+	GN_X400_ADDRESS =	3,
+	GN_DIRECTORY_NAME =	4,
+	GN_EDI_PARTY_NAME = 5,
+	GN_URI =			6,
+	GN_IP_ADDRESS =		7,
+	GN_REGISTERED_ID =	8,
+};
+
 typedef struct identification_t identification_t;
 
 /**
