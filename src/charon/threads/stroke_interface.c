@@ -39,6 +39,8 @@
 #include <crypto/x509.h>
 #include <queues/jobs/initiate_ike_sa_job.h>
 
+#define IKE_PORT	500
+#define PATH_BUF	256
 
 struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
 
@@ -109,6 +111,42 @@ static void pop_string(stroke_msg_t *msg, char **string)
 }
 
 /**
+ * Load end entitity certificate
+ */
+static void load_end_certificate(const char *filename, identification_t **idp)
+{
+	char path[PATH_BUF];
+	x509_t *cert;
+
+	if (*filename == '/')
+	{
+		/* absolute path name */
+		snprintf(path, sizeof(path), "%s", filename);
+	}
+	else
+	{
+		/* relative path name */
+		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
+	}
+
+	cert = x509_create_from_file(path);
+
+	if (cert)
+	{
+		identification_t *id = *idp;
+		identification_t  *subject = cert->get_subject(cert);
+
+		if (!id->equals(id, subject))
+		{
+			id->destroy(id);
+			id = subject;
+			*idp = id->clone(id);
+		}
+		cert->destroy(cert);
+	}
+}
+
+/**
  * Add a connection to the configuration list
  */
 static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
@@ -119,7 +157,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
-	x509_t *cert;
 				
 	pop_string(msg, &msg->add_conn.name);
 	pop_string(msg, &msg->add_conn.me.address);
@@ -133,13 +170,13 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 				
 	this->logger->log(this->logger, CONTROL, "received stroke: add connection \"%s\"", msg->add_conn.name);
 				
-	my_host = host_create(AF_INET, msg->add_conn.me.address, 500);
+	my_host = host_create(AF_INET, msg->add_conn.me.address, IKE_PORT);
 	if (my_host == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.me.address);
 		return;
 	}
-	other_host = host_create(AF_INET, msg->add_conn.other.address, 500);
+	other_host = host_create(AF_INET, msg->add_conn.other.address, IKE_PORT);
 	if (other_host == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.other.address);
@@ -147,7 +184,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	my_id = identification_create_from_string(*msg->add_conn.me.id ? 
-												msg->add_conn.me.id : msg->add_conn.me.address);
+											   msg->add_conn.me.id : msg->add_conn.me.address);
 	if (my_id == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.me.id);
@@ -156,7 +193,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	other_id = identification_create_from_string(*msg->add_conn.other.id ? 
-			msg->add_conn.other.id : msg->add_conn.other.address);
+												  msg->add_conn.other.id : msg->add_conn.other.address);
 	if (other_id == NULL)
 	{
 		my_host->destroy(my_host);
@@ -166,7 +203,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	
-	my_subnet = host_create(AF_INET, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet : msg->add_conn.me.address, 500);
+	my_subnet = host_create(AF_INET, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
 	if (my_subnet == NULL)
 	{
 		my_host->destroy(my_host);
@@ -177,7 +214,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	
-	other_subnet = host_create(AF_INET, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet : msg->add_conn.other.address, 500);
+	other_subnet = host_create(AF_INET, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet : msg->add_conn.other.address, IKE_PORT);
 	if (other_subnet == NULL)
 	{
 		my_host->destroy(my_host);
@@ -231,29 +268,11 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	
 	if (msg->add_conn.me.cert)
 	{
-		char file[128];
-		snprintf(file, sizeof(file), "%s/%s", CERTIFICATE_DIR,  msg->add_conn.me.cert);
-		cert = x509_create_from_file(file);
-		if (cert)
-		{
-			my_id->destroy(my_id);
-			my_id = cert->get_subject(cert);
-			my_id = my_id->clone(my_id);
-			cert->destroy(cert);
-		}
+		load_end_certificate(msg->add_conn.me.cert, &my_id);
 	}
 	if (msg->add_conn.other.cert)
 	{
-		char file[128];
-		snprintf(file, sizeof(file), "%s/%s", CERTIFICATE_DIR,  msg->add_conn.other.cert);
-		cert = x509_create_from_file(file);
-		if (cert)
-		{
-			other_id->destroy(other_id);
-			other_id = cert->get_subject(cert);
-			other_id = other_id->clone(other_id);
-			cert->destroy(cert);
-		}
+		load_end_certificate(msg->add_conn.other.cert, &other_id);
 	}
 	
 	connection = connection_create(msg->add_conn.name, 
