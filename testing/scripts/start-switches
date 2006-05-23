@@ -31,7 +31,7 @@ do
 	cecho " * Great, umlswitch$n is already running!"
     else
 	cecho-n " * Starting umlswitch$n.."
-	uml_switch -tap tap$n -unix /tmp/umlswitch$n >/dev/null </dev/null &
+	uml_switch -hub -tap tap$n -unix /tmp/umlswitch$n >/dev/null </dev/null &
 	sleep 2
 	eval ifconfig "tap$n \$IFCONFIG_$n up"
 	cecho "done"
