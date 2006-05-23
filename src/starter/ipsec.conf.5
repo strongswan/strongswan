@@ -553,14 +553,14 @@ should last before being renegotiated.
 .TP
 .B keyexchange
 method of key exchange;
-which protocol should be used for this connection. Connections marked with
+which protocol should be used to initialize the connection. Connections marked with
 .B ikev1
-are loaded in pluto, those marked with
+are initiated with pluto, those marked with
 .B ikev2
-are loaded in charon. Currently, an incoming request using another protocol
-as specified with 
+with charon. An incoming request from the remote peer is handled by the correct 
+daemon, unaffected from the 
 .B keyexchange
-is discarded. The default value
+setting. The default value
 .B ike
 currently behaves exactly as
 .B ikev1.
