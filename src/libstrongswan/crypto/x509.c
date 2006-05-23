@@ -32,6 +32,7 @@
 #include <asn1/pem.h>
 #include <utils/logger_manager.h>
 #include <utils/linked_list.h>
+#include <utils/identification.h>
 
 #define BUF_LEN 512
 #define BITS_PER_BYTE	8
@@ -41,23 +42,6 @@
 #define RSA_MAX_OCTETS_UGH	"RSA modulus too large: more than 8192 bits"
 
 logger_t *logger;
-
-typedef enum generalNames_t generalNames_t;
-
-/**
- * Different kinds of generalNames
- */
-enum generalNames_t {
-    GN_OTHER_NAME =		0,
-	GN_RFC822_NAME =	1,
-	GN_DNS_NAME =		2,
-	GN_X400_ADDRESS =	3,
-	GN_DIRECTORY_NAME =	4,
-	GN_EDI_PARTY_NAME = 5,
-	GN_URI =			6,
-	GN_IP_ADDRESS =		7,
-	GN_REGISTERED_ID =	8,
-};
 
 typedef struct generalName_t generalName_t;
 
@@ -929,6 +913,9 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->subjectAltNames = linked_list_create();
 	this->issuerAltNames = linked_list_create();
 	this->crlDistributionPoints = linked_list_create();
+	this->subjectKeyID = CHUNK_INITIALIZER;
+	this->authKeyID = CHUNK_INITIALIZER;
+	this->authKeySerialNumber = CHUNK_INITIALIZER;
 	
 	/* we do not use a per-instance logger right now, since its not always accessible */
 	logger = logger_manager->get_logger(logger_manager, ASN1);
