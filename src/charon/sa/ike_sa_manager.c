@@ -137,7 +137,7 @@ struct private_ike_sa_manager_t {
 	/**
 	 * @brief Get next spi.
 	 *
-	 * We give out SPIs incremental starting at 1.
+	 * We give out SPIs from a pseudo random source
 	 * 
 	 * @param this			the ike_sa_manager
 	 * @return 				the next spi
@@ -232,7 +232,8 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) == ike_sa_id->get_initiator_spi(ike_sa_id))
 				&& (ike_sa_id->is_initiator(ike_sa_id) == current->ike_sa_id->is_initiator(current->ike_sa_id)))
 			{
-		 		this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by initiator spi %d",ike_sa_id->get_initiator_spi(ike_sa_id));
+		 		this->logger->log(this->logger, CONTROL|LEVEL2, "Found entry by initiator spi %d",
+								  ike_sa_id->get_initiator_spi(ike_sa_id));
 				*entry = current;
 				status = SUCCESS;
 				break;
@@ -243,7 +244,8 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) == ike_sa_id->get_initiator_spi(ike_sa_id))
 				&& (ike_sa_id->is_initiator(ike_sa_id) == current->ike_sa_id->is_initiator(current->ike_sa_id)))
 			{
-		 		this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by initiator spi %d",ike_sa_id->get_initiator_spi(ike_sa_id));
+		 		this->logger->log(this->logger, CONTROL|LEVEL2, "Found entry by initiator spi %d",
+								  ike_sa_id->get_initiator_spi(ike_sa_id));
 				*entry = current;
 				status = SUCCESS;
 				break;
@@ -251,7 +253,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 		}
 		if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
 		{
-			this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by full ID");
+			this->logger->log(this->logger, CONTROL|LEVEL2, "Found entry by full ID");
 			*entry = current;
 			status = SUCCESS;
 			break;
@@ -283,7 +285,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 		/* only pointers are compared */
 		if (current->ike_sa == ike_sa)
 		{
-	 		this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by pointer");
+	 		this->logger->log(this->logger, CONTROL|LEVEL2, "Found entry by pointer");
 			*entry = current;
 			status = SUCCESS;
 			break;
@@ -305,7 +307,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 	
 	iterator = list->create_iterator(list, TRUE);
 
-	status = NOT_FOUND;	
+	status = NOT_FOUND;
 	
 	while (iterator->has_next(iterator))
 	{
@@ -313,7 +315,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 		iterator->current(iterator, (void**)&current);
 		if (current == entry) 
 		{
-	 		this->logger->log(this->logger,CONTROL | LEVEL2,"Found entry by pointer. Going to delete it.");
+	 		this->logger->log(this->logger, CONTROL|LEVEL2, "Found entry by pointer. Going to delete it.");
 			iterator->remove(iterator);
 			entry->destroy(entry);
 			status = SUCCESS;
@@ -360,7 +362,7 @@ static void create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa
 	this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
 
 	/* check ike_sa out */
-	this->logger->log(this->logger,CONTROL | LEVEL1 ,"New IKE_SA created and added to list of known IKE_SA's");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "New IKE_SA created and added to list of known IKE_SA's");
 	new_ike_sa_entry->checked_out = TRUE;
 	*ike_sa = new_ike_sa_entry->ike_sa;
 
@@ -397,7 +399,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		 	/* can we give this ike_sa out to new requesters?*/
 		 	if (entry->driveout_new_threads)
 		 	{
-		 		this->logger->log(this->logger,CONTROL|LEVEL1,"Drive out new thread for existing IKE_SA");
+		 		this->logger->log(this->logger, CONTROL|LEVEL1, "Drive out new thread for existing IKE_SA");
 		 		/* no we can't */
 		 		retval = NOT_FOUND;
 		 	}
@@ -420,12 +422,12 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 				{
 					/* we must signal here, others are interested that we leave */
 					pthread_cond_signal(&(entry->condvar));
-					this->logger->log(this->logger,CONTROL|LEVEL1,"Drive out waiting thread for existing IKE_SA");
+					this->logger->log(this->logger, CONTROL|LEVEL1, "Drive out waiting thread for existing IKE_SA");
 					retval = NOT_FOUND;
 				}
 				else
 				{
-					this->logger->log(this->logger,CONTROL|LEVEL2,"IKE SA successfully checked out");
+					this->logger->log(this->logger, CONTROL|LEVEL2, "IKE SA successfully checked out");
 					/* ok, this IKE_SA is finally ours */
 					entry->checked_out = TRUE;
 					*ike_sa = entry->ike_sa;
@@ -436,7 +438,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		}
 		else
 		{
-			this->logger->log(this->logger,ERROR | LEVEL1,"IKE SA not stored in known IKE_SA list");
+			this->logger->log(this->logger, ERROR|LEVEL1, "IKE SA not stored in known IKE_SA list");
 			/* looks like there is no such IKE_SA, better luck next time... */
 			/* DON'T use return, we must unlock the mutex! */
 			retval = NOT_FOUND;
@@ -467,7 +469,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
 		
 		/* check ike_sa out */
-		this->logger->log(this->logger,CONTROL | LEVEL1 ,"IKE_SA added to list of known IKE_SA's");
+		this->logger->log(this->logger, CONTROL|LEVEL1 ,"IKE_SA added to list of known IKE_SA's");
 		new_ike_sa_entry->checked_out = TRUE;
 		*ike_sa = new_ike_sa_entry->ike_sa;
 		
@@ -476,7 +478,7 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 	else
 	{
 		/* responder set, initiator not: here is something seriously wrong! */
- 		this->logger->log(this->logger,ERROR | LEVEL1, "Invalid IKE_SA SPI's");
+ 		this->logger->log(this->logger, ERROR|LEVEL1, "Invalid IKE_SA SPI's");
 		/* DON'T use return, we must unlock the mutex! */
 		retval = INVALID_ARG;
 	}
@@ -644,13 +646,13 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
 		/* signal waiting threads */
 		entry->checked_out = FALSE;
-		this->logger->log(this->logger,CONTROL | LEVEL1,"Checkin of IKE_SA successful.");
+		this->logger->log(this->logger, CONTROL|LEVEL1, "Checkin of IKE_SA successful.");
 		pthread_cond_signal(&(entry->condvar));
 	 	retval = SUCCESS;
 	}
 	else
 	{
-		this->logger->log(this->logger,ERROR,"Fatal Error: Tried to checkin nonexisting IKE_SA");
+		this->logger->log(this->logger, ERROR, "Tried to checkin nonexisting IKE_SA");
 		/* this SA is no more, this REALLY should not happen */
 		retval = NOT_FOUND;
 	}
@@ -660,9 +662,9 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 
 
 /**
- * Implementation of ike_sa_manager_t.checkin_and_delete.
+ * Implementation of ike_sa_manager_t.checkin_and_destroy.
  */
-static status_t checkin_and_delete(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
+static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 {
 	/* deletion is a bit complex, we must garant that no thread is waiting for
 	 * this SA.
@@ -682,21 +684,21 @@ static status_t checkin_and_delete(private_ike_sa_manager_t *this, ike_sa_t *ike
 		entry->driveout_waiting_threads = TRUE;
 
 		/* wait until all workers have done their work */
-		while (entry->waiting_threads > 0)
+		while (entry->waiting_threads)
 		{
-			/* let the other threads do some work*/
-			pthread_cond_signal(&(entry->condvar));
+			/* let the other threads leave the manager */
+			pthread_cond_broadcast(&(entry->condvar));
 			/* and the nice thing, they will wake us again when their work is done */
 			pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		}
 		/* ok, we are alone now, no threads waiting in the entry's condvar */
 		this->delete_entry(this, entry);
-		this->logger->log(this->logger,CONTROL | LEVEL1,"Checkin and delete of IKE_SA successful");
+		this->logger->log(this->logger, CONTROL|LEVEL1, "Checkin and destroy of IKE_SA successful");
 		retval = SUCCESS;
 	}
 	else
 	{
-		this->logger->log(this->logger,ERROR,"Fatal Error: Tried to checkin and delete nonexisting IKE_SA");
+		this->logger->log(this->logger,ERROR, "Tried to checkin and delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}
 	
@@ -707,7 +709,7 @@ static status_t checkin_and_delete(private_ike_sa_manager_t *this, ike_sa_t *ike
 /**
  * Implementation of ike_sa_manager_t.delete.
  */
-static status_t delete(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
+static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 {
 	/* deletion is a bit complex, we must garant that no thread is waiting for
 	 * this SA.
@@ -721,25 +723,38 @@ static status_t delete(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 
 	if (this->get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
 	{
-		/* mark it, so now new threads can acquire this SA */
-		entry->driveout_new_threads = TRUE;
-
-		/* wait until all workers have done their work */
-		while (entry->waiting_threads)
+		/* we try a delete. If it succeeds, our job is done here. The
+		 * other peer will reply, and the IKE SA gets the finally deleted...
+		 */
+		if (entry->ike_sa->delete(entry->ike_sa) == SUCCESS)
 		{
-			/* wake up all */
-			pthread_cond_signal(&(entry->condvar));
-			/* and the nice thing, they will wake us again when their work is done */
-			pthread_cond_wait(&(entry->condvar), &(this->mutex));
+			this->logger->log(this->logger, CONTROL|LEVEL1, "Initiated delete for IKE_SA");
 		}
-		/* ok, we are alone now, no threads waiting in the entry's condvar */
-		this->delete_entry(this, entry);
-		this->logger->log(this->logger,CONTROL | LEVEL1,"Delete of IKE_SA successful");
+		/* but if the IKE SA is not in a state where the deletion is negotiated with
+		 * the other peer, we can destroy the IKE SA on our own. For this, we must
+		 * be sure that really NO other threads are waiting for this SA...
+		 */
+		else
+		{
+			/* mark it, so now new threads can acquire this SA */
+			entry->driveout_new_threads = TRUE;
+			/* wait until all workers have done their work */
+			while (entry->waiting_threads)
+			{
+				/* wake up all */
+				pthread_cond_broadcast(&(entry->condvar));
+				/* and the nice thing, they will wake us again when their work is done */
+				pthread_cond_wait(&(entry->condvar), &(this->mutex));
+			}
+			/* ok, we are alone now, no threads waiting in the entry's condvar */
+			this->delete_entry(this, entry);
+			this->logger->log(this->logger, CONTROL|LEVEL1, "Destroyed IKE_SA");
+		}
 		retval = SUCCESS;
 	}
 	else
 	{
-		this->logger->log(this->logger,ERROR,"Fatal Error: Tried to delete nonexisting IKE_SA");
+		this->logger->log(this->logger,ERROR, "Tried to delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}
 
@@ -782,9 +797,9 @@ static void destroy(private_ike_sa_manager_t *this)
 		while (entry->waiting_threads)
 		{
 			/* wake up all */
-			pthread_cond_signal(&(entry->condvar));
+			pthread_cond_broadcast(&(entry->condvar));
 			/* go sleeping until they are gone */
-			pthread_cond_wait(&(entry->condvar), &(this->mutex));		
+			pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		}
 	}
 	this->logger->log(this->logger,CONTROL | LEVEL2,"Delete all IKE_SA's");
@@ -821,8 +836,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.get_ike_sa_list_by_name = (linked_list_t*(*)(ike_sa_manager_t*,const char*))get_ike_sa_list_by_name;
 	this->public.log_status = (void(*)(ike_sa_manager_t*,logger_t*,char*))log_status;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
-	this->public.delete = (status_t(*)(ike_sa_manager_t*,ike_sa_id_t*))delete;
-	this->public.checkin_and_delete = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_delete;
+	this->public.delete = (status_t(*)(ike_sa_manager_t*,ike_sa_id_t*))delete_;
+	this->public.checkin_and_destroy = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
 
 	/* initialize private functions */
 	this->get_next_spi = get_next_spi;

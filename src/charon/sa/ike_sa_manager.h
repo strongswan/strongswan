@@ -149,10 +149,14 @@ struct ike_sa_manager_t {
 	
 	/**
 	 * @brief Delete a SA, which was not checked out.
-	 * 
+	 *
+	 * If the state allows it, the IKE SA is destroyed immediately. If it is
+	 * in the state ike_sa_established or further, a delete message
+	 * is sent to the remote peer, which has to be acknowledged.
+	 *
 	 * @warning do not use this when the SA is already checked out, this will
 	 * deadlock!
-	 *  
+	 *
 	 * @param this			 	the manager object
 	 * @param ike_sa_id[in/out]	the SA identifier
 	 * @returns 				
@@ -162,7 +166,14 @@ struct ike_sa_manager_t {
 	status_t (*delete) (ike_sa_manager_t* this, ike_sa_id_t *ike_sa_id);
 	
 	/**
-	 * @brief Delete a checked out SA.
+	 * @brief Destroy a checked out SA.
+	 *
+	 * The IKE SA is destroyed without notification of the remote peer.
+	 * Use this only if the other peer doesn't respond or behaves not
+	 * as predicted.
+	 * Checking in and destruction is an atomic operation (for the IKE_SA),
+	 * so this can be called if the SA is in a "unclean" state, without the
+	 * risk that another thread can get the SA.
 	 *
 	 * @param this			 	the manager object
 	 * @param ike_sa			SA to delete
@@ -170,7 +181,7 @@ struct ike_sa_manager_t {
 	 * 							- SUCCESS if found
 	 * 							- NOT_FOUND when no such SA is available
 	 */
-	status_t (*checkin_and_delete) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
+	status_t (*checkin_and_destroy) (ike_sa_manager_t* this, ike_sa_t *ike_sa);
 	
 	/**
 	 * @brief Destroys the manager with all associated SAs.

@@ -61,10 +61,10 @@ enum status_t {
 	/**
 	 * Out of ressources.
 	 */
-	
 	OUT_OF_RES,
+	
 	/**
-	 * Already done.
+	 * The suggested operation is already done
 	 */
 	ALREADY_DONE,
 	
@@ -99,9 +99,9 @@ enum status_t {
 	INVALID_STATE,
 	
 	/**
-	 * Delete object which function belongs to.
+	 * Destroy object which called method belongs to.
 	 */
-	DELETE_ME,
+	DESTROY_ME,
 	
 	/**
 	 * An object got created.

@@ -97,7 +97,7 @@ struct private_responder_init_t {
 	 * @param sa_request	The received SA payload
 	 * @param response		the SA payload is added to this response message_t object.
 	 * @return
-	 * 						- DELETE_ME
+	 * 						- DESTROY_ME
 	 * 						- SUCCESS
 	 */
 	status_t (*build_sa_payload) (private_responder_init_t *this,sa_payload_t *sa_request, message_t *response);
@@ -108,7 +108,7 @@ struct private_responder_init_t {
 	 * @param this		calling object
 	 * @param ke_request	The received KE payload
 	 * @param response		the KE payload is added to this response message_t object.
-	 * 						- DELETE_ME
+	 * 						- DESTROY_ME
 	 * 						- SUCCESS
 	 */
 	status_t (*build_ke_payload) (private_responder_init_t *this,ke_payload_t *ke_request, message_t *response);
@@ -119,7 +119,7 @@ struct private_responder_init_t {
 	 * @param this			calling object
 	 * @param nonce_request	The received NONCE payload
 	 * @param response		the NONCE payload is added to this response message_t object.
-	 * 						- DELETE_ME
+	 * 						- DESTROY_ME
 	 * 						- SUCCESS
 	 */
 	status_t (*build_nonce_payload) (private_responder_init_t *this,nonce_payload_t *nonce_request, message_t *response);	
@@ -164,12 +164,12 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	if (message->get_exchange_type(message) != IKE_SA_INIT)
 	{
 		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state responder_init",mapping_find(exchange_type_m,message->get_exchange_type(message)));
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	if (!message->get_request(message))
 	{
 		this->logger->log(this->logger, ERROR | LEVEL1, "IKE_SA_INIT responses not allowed state ike_sa_init_responded");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* this is the first message to process, so get host infos */
@@ -182,7 +182,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		/* no configuration matches given hosts */
 		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request does not match any available connection. Deleting IKE_SA");
 		/* TODO: inform requestor */
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	this->ike_sa->set_connection(this->ike_sa,connection);
 	
@@ -200,7 +200,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		{
 			this->logger->log(this->logger, AUDIT, "Unable to parse IKE_SA_INIT request. Deleting IKE_SA");
 		}
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 
 	payloads = message->get_payload_iterator(message);	
@@ -251,7 +251,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	if (!(sa_request && ke_request && nonce_request))
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain all required payloads. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
@@ -282,7 +282,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* message can now be sent (must not be destroyed) */
@@ -291,7 +291,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	{
 		this->logger->log(this->logger, AUDIT, "Unable to send IKE_SA_INIT response. Deleting IKE_SA");
 		response->destroy(response);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 
 	/* state can now be changed */
@@ -340,7 +340,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain any acceptable proposals. Deleting IKE_SA");
 		this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	/* get selected DH group to force policy, this is very restrictive!? */
 	this->proposal->get_algorithm(this->proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, &algo);
@@ -372,7 +372,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	if (group == MODP_UNDEFINED)
 	{
 		this->logger->log(this->logger, AUDIT, "No diffie hellman group to select. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	if (this->dh_group_number != group)
@@ -387,7 +387,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 		accepted_group_chunk.ptr = (u_int8_t*) &(accepted_group);
 		accepted_group_chunk.len = 2;
 		this->ike_sa->send_notify(this->ike_sa,IKE_SA_INIT,INVALID_KE_PAYLOAD,accepted_group_chunk);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 			
 	/* create diffie hellman object to handle DH exchange */
@@ -396,7 +396,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	{
 		this->logger->log(this->logger, AUDIT, "Could not generate DH object with group %d. Deleting IKE_SA",
 							mapping_find(diffie_hellman_group_m,group) );
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Set other DH public value");
 	

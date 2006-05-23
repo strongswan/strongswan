@@ -52,7 +52,7 @@ struct initiator_init_t {
 	 * @param connection	connection to initiate
 	 * @return				
 	 * 						- SUCCESS
-	 * 						- DELETE_ME if something failed
+	 * 						- DESTROY_ME if something failed
 	 */
 	status_t (*initiate_connection) (initiator_init_t *this, connection_t *connection);
 	
@@ -65,7 +65,7 @@ struct initiator_init_t {
 	 * @param dh_group_priority	dh group priority to try with
 	 * @return				
 	 * 							- SUCCESS
-	 * 							- DELETE_ME if something failed (see log for error)
+	 * 							- DESTROY_ME if something failed (see log for error)
 	 */
 	status_t (*retry_initiate_connection) (initiator_init_t *this, int dh_group_priority);
 };

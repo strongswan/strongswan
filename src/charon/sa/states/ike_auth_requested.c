@@ -107,7 +107,7 @@ struct private_ike_auth_requested_t {
 	 * @param idr_payload	ID payload of responder
 	 * @return				
 	 * 						- SUCCESS
-	 * 						- DELETE_ME
+	 * 						- DESTROY_ME
 	 */
 	status_t (*process_idr_payload) (private_ike_auth_requested_t *this, id_payload_t *idr_payload);
 	
@@ -118,7 +118,7 @@ struct private_ike_auth_requested_t {
 	 * @param sa_payload	SA payload of responder
 	 *
 	 * 						- SUCCESS
-	 * 						- DELETE_ME
+	 * 						- DESTROY_ME
 	 */
 	status_t (*process_sa_payload) (private_ike_auth_requested_t *this, sa_payload_t *sa_payload);
 	
@@ -130,7 +130,7 @@ struct private_ike_auth_requested_t {
 	 * @param other_id_payload	ID payload of responder
 	 *
 	 * 						- SUCCESS
-	 * 						- DELETE_ME
+	 * 						- DESTROY_ME
 	 */
 	status_t (*process_auth_payload) (private_ike_auth_requested_t *this, auth_payload_t *auth_payload, id_payload_t *other_id_payload);
 	
@@ -142,7 +142,7 @@ struct private_ike_auth_requested_t {
 	 * @param ts_payload	TS payload of responder
 	 *
 	 * 						- SUCCESS
-	 * 						- DELETE_ME
+	 * 						- DESTROY_ME
 	 */
 	status_t (*process_ts_payload) (private_ike_auth_requested_t *this, bool ts_initiator, ts_payload_t *ts_payload);
 	
@@ -154,7 +154,7 @@ struct private_ike_auth_requested_t {
 	 *
 	 * 						- SUCCESS
 	 * 						- FAILED
-	 * 						- DELETE_ME
+	 * 						- DESTROY_ME
 	 */
 	status_t (*process_notify_payload) (private_ike_auth_requested_t *this, notify_payload_t *notify_payload);
 	
@@ -281,7 +281,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	if (!(idr_payload && sa_payload && auth_payload && tsi_payload && tsr_payload))
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply did not contain all required payloads. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 
 	/* process all payloads */
@@ -341,13 +341,13 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
-			return DELETE_ME;
+			return DESTROY_ME;
 		}
 		status = this->child_sa->add_policies(this->child_sa, this->my_ts, this->other_ts);
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy! Deleting IKE_SA");
-			return DELETE_ME;
+			return DESTROY_ME;
 		}
 		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	}
@@ -386,7 +386,7 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 	{
 		other_id->destroy(other_id);
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not acceptable ID. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	connection = this->ike_sa->get_connection(this->ike_sa);
@@ -424,7 +424,7 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 			proposal->destroy(proposal);
 		}
 		proposal_list->destroy(proposal_list);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* we have to re-check here if other's selection is valid */
@@ -439,7 +439,7 @@ static status_t process_sa_payload(private_ike_auth_requested_t *this, sa_payloa
 	if (proposal == NULL)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not offered proposal. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* apply proposal */
@@ -462,7 +462,7 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Verification of IKE_AUTH reply failed. Deleting IKE_SA");
-		return DELETE_ME;	
+		return DESTROY_ME;	
 	}
 
 	this->logger->log(this->logger, CONTROL|LEVEL1, "AUTH data verified successfully");
@@ -521,19 +521,19 @@ static status_t process_notify_payload(private_ike_auth_requested_t *this, notif
 		case INVALID_SYNTAX:
 		{
 			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an INVALID_SYNTAX notify. Deleting IKE_SA");
-			return DELETE_ME;	
+			return DESTROY_ME;	
 			
 		}
 		case AUTHENTICATION_FAILED:
 		{
 			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an AUTHENTICATION_FAILED notify. Deleting IKE_SA");
-			return DELETE_ME;	
+			return DESTROY_ME;	
 			
 		}
 		case SINGLE_PAIR_REQUIRED:
 		{
 			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a SINGLE_PAIR_REQUIRED notify. Deleting IKE_SA");
-			return DELETE_ME;		
+			return DESTROY_ME;		
 		}
 		default:
 		{
@@ -546,7 +546,7 @@ static status_t process_notify_payload(private_ike_auth_requested_t *this, notif
 			{
 				this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an unknown notify error (%d). Deleting IKE_SA",
 								  notify_message_type);
-				return DELETE_ME;	
+				return DESTROY_ME;	
 
 			}
 			else

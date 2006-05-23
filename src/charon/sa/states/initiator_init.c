@@ -131,7 +131,7 @@ static status_t initiate_connection (private_initiator_init_t *this, connection_
 	{
 		this->logger->log(this->logger, ERROR | LEVEL1, "Could not get a policy for '%s - %s', aborting",
 						  my_id->get_string(my_id), other_id->get_string(other_id));
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	this->ike_sa->set_policy(this->ike_sa,policy);
 	
@@ -157,7 +157,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	if (dh_group == MODP_UNDEFINED)
 	{
 		this->logger->log(this->logger, AUDIT, "No DH group acceptable for initialization, Aborting");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	connection = this->ike_sa->get_connection(this->ike_sa);
@@ -181,7 +181,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	{
 		this->logger->log(this->logger, ERROR, "Building nonce payload failed. Aborting");
 		message->destroy(message);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* message can now be sent (must not be destroyed) */
@@ -190,7 +190,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	{
 		this->logger->log(this->logger, AUDIT, "Unable to initiate connection, could not send message. Aborting");
 		message->destroy(message);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	message = this->ike_sa->get_last_requested_message(this->ike_sa);

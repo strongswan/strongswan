@@ -556,13 +556,6 @@ static status_t parse(private_encryption_payload_t *this)
 	status_t status;
 	payload_type_t current_payload_type;
 	
-	/* check if there is decrypted data */
-	if (this->decrypted.ptr == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "unable to parse, no input!");
-		return INVALID_STATE;
-	}
-	
 	/* build a parser on the decrypted data */
 	parser = parser_create(this->decrypted);
 	

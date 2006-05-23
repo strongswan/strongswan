@@ -46,20 +46,57 @@ struct private_ike_sa_established_t {
 	 * Assigned logger. Use logger of IKE_SA.
 	 */
 	logger_t *logger;
-	
-	/**
-	 * Process a notify payload
-	 * 
-	 * @param this				calling object
-	 * @param notify_payload	notify payload
-	 * @param response			response message of type INFORMATIONAL
-	 *
-	 * 						- SUCCESS
-	 * 						- FAILED
-	 * 						- DELETE_ME
-	 */
-	status_t (*process_notify_payload) (private_ike_sa_established_t *this, notify_payload_t *notify_payload,message_t *response);
 };
+
+/**
+ * Process an informational request
+ */
+static status_t process_informational(private_ike_sa_established_t *this, message_t *request, message_t *response)
+{
+	delete_payload_t *delete_request = NULL;
+	iterator_t *payloads = request->get_payload_iterator(request);
+	
+	while (payloads->has_next(payloads))
+	{
+		payload_t *payload;
+		payloads->current(payloads, (void**)&payload);
+		
+		switch (payload->get_type(payload))
+		{
+			case DELETE:
+			{
+				delete_request = (delete_payload_t *) payload;
+				break;
+			}
+			default:
+			{
+				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
+								  mapping_find(payload_type_m, payload->get_type(payload)), 
+								  payload->get_type(payload));
+				break;
+			}
+		}
+	}
+	/* iterator can be destroyed */
+	payloads->destroy(payloads);
+	
+	if (delete_request)
+	{
+		if (delete_request->get_protocol_id(delete_request) == PROTO_IKE)
+		{
+			this->logger->log(this->logger, CONTROL, "DELETE request for IKE_SA received");
+			/* we reply with an empty informational message */
+			return DESTROY_ME;
+		}
+		else
+		{
+			this->logger->log(this->logger, CONTROL, "DELETE request for CHILD_SA received. Ignored");
+			response->destroy(response);
+			return SUCCESS;
+		}
+	}
+	return SUCCESS;
+}
 
 /**
  * Implements state_t.get_state
@@ -74,22 +111,16 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 	signer_t *signer;
 	status_t status;
 	
-	if (message->get_exchange_type(message) != INFORMATIONAL)
-	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state ike_sa_established",
-							mapping_find(exchange_type_m,message->get_exchange_type(message)));
-		return FAILED;
-	}
-	
+	/* only requests are allowed, responses are handled in sub-states */
 	if (!message->get_request(message))
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "INFORMATIONAL responses not handled in state ike_sa_established");
+		this->logger->log(this->logger, ERROR | LEVEL1, 
+						  "INFORMATIONAL responses not handled in state ike_sa_established");
 		return FAILED;
 	}
 	
-	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
-	
 	/* get signer for verification and crypter for decryption */
+	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
 	if (!ike_sa_id->is_initiator(ike_sa_id))
 	{
 		crypter = this->ike_sa->get_crypter_initiator(this->ike_sa);
@@ -105,99 +136,50 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 	status = message->parse_body(message, crypter, signer);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "INFORMATIONAL request decryption failed. Ignoring message");
+		this->logger->log(this->logger, AUDIT, "%s request decryption failed. Ignoring message",
+						  mapping_find(exchange_type_m, message->get_exchange_type(message)));
 		return status;
 	}
 	
-	/* build empty INFORMATIONAL message */
-	this->ike_sa->build_message(this->ike_sa, INFORMATIONAL, FALSE, &response);
+	/* prepare a reply of the same type */
+	this->ike_sa->build_message(this->ike_sa, message->get_exchange_type(message), FALSE, &response);
 	
-	payloads = message->get_payload_iterator(message);
-	
-	while (payloads->has_next(payloads))
+	/* handle the different message types in their functions */
+	switch (message->get_exchange_type(message))
 	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
-		
-		switch (payload->get_type(payload))
-		{
-			case NOTIFY:
-			{
-				notify_payload_t *notify_payload = (notify_payload_t *) payload;
-				/* handle the notify directly, abort if no further processing required */
-				status = this->process_notify_payload(this, notify_payload,response);
-				if (status != SUCCESS)
-				{
-					payloads->destroy(payloads);
-					response->destroy(response);
-					return status;
-				}
-			}
-			case DELETE:
-			{
-				delete_request = (delete_payload_t *) payload;
-				break;
-			}
-			default:
-			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
-									mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
-				break;
-			}
-		}
-	}
-	/* iterator can be destroyed */
-	payloads->destroy(payloads);
-	
-	if (delete_request)
-	{	
-		if (delete_request->get_protocol_id(delete_request) == PROTO_IKE)
-		{
-			this->logger->log(this->logger, AUDIT, "DELETE request for IKE_SA received");
-			response->destroy(response);
-			return DELETE_ME;
-		}
-		else
-		{
-			this->logger->log(this->logger, AUDIT, "DELETE request for CHILD_SA received. Ignored");
-			response->destroy(response);
-			return SUCCESS;
-		}
-	}
-	
-	status = this->ike_sa->send_response(this->ike_sa, response);
-	/* message can now be sent (must not be destroyed) */
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, AUDIT, "Unable to send INFORMATIONAL reply");
-		response->destroy(response);
-		return FAILED;
-	}
-	
-	return SUCCESS;
-}
-
-/**
- * Implementation of private_ike_sa_established_t.process_notify_payload;
- */
-static status_t process_notify_payload (private_ike_sa_established_t *this, notify_payload_t *notify_payload, message_t *response)
-{
-	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
-	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s for protocol %s",
-					  mapping_find(notify_message_type_m, notify_message_type),
-					  mapping_find(protocol_id_m, notify_payload->get_protocol_id(notify_payload)));
-					  
-	switch (notify_message_type)
-	{
+		case INFORMATIONAL:
+			status = process_informational(this, message, response);
+			break;
 		default:
+			this->logger->log(this->logger, ERROR | LEVEL1, 
+							  "Message of type %s currently not supported in state ike_sa_established",
+							  mapping_find(exchange_type_m, message->get_exchange_type(message)));
+			status = NOT_SUPPORTED;
+	}
+	
+	/* if we get a DESTROY_ME, we respond to follow strict request/reply scheme */
+	if (status == SUCCESS || status == DESTROY_ME)
+	{
+		if (this->ike_sa->send_response(this->ike_sa, response) != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT, "INFORMATIONAL request contained an unknown notify (%d), ignored.", notify_message_type);
+			/* something is seriously wrong, kill connection */
+			this->logger->log(this->logger, AUDIT, "Unable to send reply. Deleting IKE_SA");
+			response->destroy(response);
+			status = DESTROY_ME;
+		}
+		else if (status == DESTROY_ME)
+		{
+			/* switch to delete_requested. This is not absolutly correct, but we
+			* allow the clean destruction of an SA only in this state. */
+			this->ike_sa->set_new_state(this->ike_sa, (state_t*)delete_requested_create(this));
+			this->public.state_interface.destroy(&(this->public.state_interface));
 		}
 	}
-
-
-	return SUCCESS;	
+	else
+	{
+		response->destroy(response);
+	}
+	return status;
 }
 
 /**
@@ -227,9 +209,6 @@ ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa)
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;
 	this->public.state_interface.get_state = (ike_sa_state_t (*) (state_t *)) get_state;
 	this->public.state_interface.destroy  = (void (*) (state_t *)) destroy;
-	
-	/* private functions */
-	this->process_notify_payload = process_notify_payload;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

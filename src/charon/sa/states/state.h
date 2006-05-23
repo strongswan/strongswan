@@ -90,9 +90,20 @@ enum ike_sa_state_t {
 	 * 
 	 * In this state, all the informations for an IKE_SA and one CHILD_SA are known.
 	 * 
- 	 * Implemented in class ike_sa_established_t.
+	 * Implemented in class ike_sa_established_t.
 	 */
-	IKE_SA_ESTABLISHED = 6
+	IKE_SA_ESTABLISHED = 6,
+
+	/**
+	 * @brief An IKE SA has sent a DELETE IKE_SA to the other peer.
+	 * 
+	 * After a call to ike_sa.close(), the IKE_SA sends a delete message 
+	 * to the remote peer and switches to this state. It waits until the
+	 * message is aknowledged, or a certain timout occurs.
+	 * 
+	 * Implemented in class delete_requested.
+	 */
+	DELETE_REQUESTED = 7
 };
 
 
@@ -122,6 +133,7 @@ typedef struct state_t state_t;
  * - IKE_SA_INIT_RESPONDED: implemented in ike_sa_init_responded_t
  * - IKE_AUTH_REQUESTED: implemented in ike_auth_requested_t
  * - IKE_SA_ESTABLISHED: implemented in ike_sa_established_t
+ * - DELETE_REQUESTED: implemented in delete_requested_t
  * 
  * @b Constructors:
  *  - initiator_init_create()
@@ -130,6 +142,7 @@ typedef struct state_t state_t;
  *  - ike_sa_init_responded_create()
  *  - ike_auth_requested_create()
  *  - ike_sa_established_create()
+ *  - delete_requested_create()
  * 
  * @ingroup states
  */
@@ -143,7 +156,7 @@ struct state_t {
 	 * @return 				
 	 * 						- SUCCESSFUL
 	 * 						- FAILED
-	 * 						- DELETE_ME if belonging IKE_SA should be deleted
+	 * 						- DESTROY_ME if belonging IKE_SA should be deleted
 	 */
 	status_t (*process_message) (state_t *this,message_t *message);
 

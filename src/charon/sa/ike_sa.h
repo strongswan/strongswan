@@ -73,7 +73,7 @@ struct ike_sa_t {
 	 * @return 				
 	 * 						- SUCCESS
 	 * 						- FAILED
-	 * 						- DELETE_ME if this IKE_SA MUST be deleted
+	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
 	status_t (*process_message) (ike_sa_t *this,message_t *message);
 
@@ -88,7 +88,7 @@ struct ike_sa_t {
 	 * @return				
 	 * 						- SUCCESS if initialization started
 	 * 						- FAILED if in wrong state
-	 * 						- DELETE_ME if initialization failed and IKE_SA MUST be deleted
+	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
 	 */
 	status_t (*initiate_connection) (ike_sa_t *this, connection_t *connection);
 	
@@ -102,15 +102,6 @@ struct ike_sa_t {
 	 * 						- NOT_FOUND if request doesn't have to be retransmited
 	 */
 	status_t (*retransmit_request) (ike_sa_t *this, u_int32_t message_id);
-	
-	/**
-	 * @brief Sends a request to delete IKE_SA.
-	 * 
-	 * Only supported in state IKE_SA_ESTABLISHED
-	 * 
-	 * @param this 			calling object
-	 */
-	void (*send_delete_ike_sa_request) (ike_sa_t *this);
 
 	/**
 	 * @brief Get the id of the SA.
@@ -188,6 +179,22 @@ struct ike_sa_t {
 	 * @param name		name of the connection
 	 */	
 	void (*log_status) (ike_sa_t *this, logger_t *logger, char *name);
+	
+	/**
+	 * @brief Initiates the deletion of an IKE_SA.
+	 * 
+	 * Sends a delete message to the remote peer and waits for
+	 * its response. If the response comes in, or a timeout occur,
+	 * the IKE SA gets deleted.
+	 * 
+	 * @param this 			calling object
+	 * @return
+	 * 						- SUCCESS if deletion is initialized
+	 * 						- INVALID_STATE, if the IKE_SA is not in 
+	 * 						  an established state and can not be
+	 * 						  delete (but destroyed).
+	 */
+	status_t (*delete) (ike_sa_t *this);
 
 	/**
 	 * @brief Destroys a ike_sa_t object.

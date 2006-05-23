@@ -325,7 +325,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	if (!(nonce_payload && sa_payload && ke_payload))
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT reply did not contain all required payloads. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	status = this->process_nonce_payload (this,nonce_payload);
@@ -351,7 +351,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* apply the address on wich we really received the packet */
@@ -407,7 +407,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	{
 		this->logger->log(this->logger, AUDIT, "Unable to send IKE_AUTH request. Deleting IKE_SA");
 		request->destroy(request);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_sa_init_reply->get_message_id(ike_sa_init_reply));
@@ -456,7 +456,7 @@ status_t process_sa_payload (private_ike_sa_init_requested_t *this, sa_payload_t
 			proposal->destroy(proposal);
 		}
 		proposal_list->destroy(proposal_list);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* we have to re-check if the others selection is valid */
@@ -470,7 +470,7 @@ status_t process_sa_payload (private_ike_sa_init_requested_t *this, sa_payload_t
 	if (this->proposal == NULL)
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT response contained selected proposal we did not offer. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	return SUCCESS;
@@ -544,7 +544,7 @@ static status_t build_auth_payload (private_ike_sa_init_requested_t *this, id_pa
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Could not generate AUTH data for IKE_AUTH request. Deleting IKE_SA");
-		return DELETE_ME;		
+		return DESTROY_ME;		
 	}
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Add AUTH payload to message");
@@ -573,7 +573,7 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 	if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	sa_payload = sa_payload_create_from_proposal_list(proposal_list);
@@ -637,12 +637,12 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 		case NO_PROPOSAL_CHOSEN:
 		{
 			this->logger->log(this->logger, AUDIT, "IKE_SA_INIT response contained a NO_PROPOSAL_CHOSEN notify. Deleting IKE_SA");
-			return DELETE_ME;
+			return DESTROY_ME;
 		}
 		case INVALID_MAJOR_VERSION:
 		{
 			this->logger->log(this->logger, AUDIT, "IKE_SA_INIT response contained a INVALID_MAJOR_VERSION notify. Deleting IKE_SA");
-			return DELETE_ME;						
+			return DESTROY_ME;						
 		}
 		case INVALID_KE_PAYLOAD:
 		{
@@ -671,7 +671,7 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 				this->logger->log(this->logger, AUDIT, 
 								  "Peer does only accept DH group %s, which we do not accept! Aborting",
 								  mapping_find(diffie_hellman_group_m, dh_group));
-				return DELETE_ME;
+				return DESTROY_ME;
 			}
 			
 			/* Going to change state back to initiator_init_t */
@@ -691,7 +691,7 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 			this->public.state_interface.destroy(&(this->public.state_interface));
 			if (initiator_init_state->retry_initiate_connection (initiator_init_state, dh_group) != SUCCESS)
 			{
-				return DELETE_ME;
+				return DESTROY_ME;
 			}
 			return FAILED;
 		}
@@ -705,7 +705,7 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 			{
 				this->logger->log(this->logger, AUDIT, "IKE_SA_INIT reply contained an unknown notify error (%d). Deleting IKE_SA",
 								  notify_message_type);
-				return DELETE_ME;	
+				return DESTROY_ME;	
 			}
 			else
 			{

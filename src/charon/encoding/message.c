@@ -941,7 +941,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				iterator->destroy(iterator);
 				return FAILED;
 			}
-			/* decrypt */			
+			/* decrypt */
 			encryption_payload->set_transforms(encryption_payload, crypter, signer);
 			this->logger->log(this->logger, CONTROL | LEVEL1, "Verify signature of encryption payload");
 			status = encryption_payload->verify_signature(encryption_payload, this->packet->get_data(this->packet));
@@ -955,8 +955,9 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			status = encryption_payload->decrypt(encryption_payload);
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR | LEVEL1, "Encrypted payload could not be decrypted and parsed: %s", 
-								mapping_find(status_m, status));
+				this->logger->log(this->logger, ERROR | LEVEL1, 
+								  "Encrypted payload could not be decrypted and parsed: %s", 
+								  mapping_find(status_m, status));
 				iterator->destroy(iterator);
 				return status;
 			}
@@ -997,8 +998,9 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			while (encryption_payload->get_payload_count(encryption_payload) > 0)
 			{
 				encryption_payload->remove_first_payload(encryption_payload, &current_encrypted_payload);
-				this->logger->log(this->logger, CONTROL | LEVEL1, "Insert unencrypted payload of type %s at end of list.",
-									mapping_find(payload_type_m,current_encrypted_payload->get_type(current_encrypted_payload)));
+				this->logger->log(this->logger, CONTROL | LEVEL1, 
+								  "Insert unencrypted payload of type %s at end of list.",
+								   mapping_find(payload_type_m, current_encrypted_payload->get_type(current_encrypted_payload)));
 				this->payloads->insert_last(this->payloads,current_encrypted_payload);
 			}
 			
@@ -1007,14 +1009,15 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 		}
 
 		/* we allow unknown payloads of any type and don't bother if it was encrypted. Not our problem. */
-		if (current_payload_type != UNKNOWN_PAYLOAD)
+		if (current_payload_type != UNKNOWN_PAYLOAD && current_payload_type != NO_PAYLOAD)
 		{
 			/* get the ruleset for found payload */
 			status = this->get_payload_rule(this, current_payload_type, &payload_rule);
 			if (status != SUCCESS)
 			{
 				/* payload is not allowed */
-				this->logger->log(this->logger, ERROR | LEVEL1, "Payload type %s not allowed",mapping_find(payload_type_m,current_payload_type));
+				this->logger->log(this->logger, ERROR | LEVEL1, "Payload type %s not allowed",
+								  mapping_find(payload_type_m,current_payload_type));
 				iterator->destroy(iterator);
 				return status;
 			}

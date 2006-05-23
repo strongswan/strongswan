@@ -152,7 +152,7 @@ struct private_ike_sa_init_responded_t {
 	 * @param this		calling object
 	 * @param notify_payload payload to process
 	 * @return
-	 * 					- DELETE_ME if IKE_SA should be deleted
+	 * 					- DESTROY_ME if IKE_SA should be deleted
 	 * 					- SUCCSS if processed successfull
 	 */
 	status_t (*process_notify_payload) (private_ike_sa_init_responded_t *this, notify_payload_t* notify_payload);
@@ -210,7 +210,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 			this->logger->log(this->logger, ERROR | LEVEL1, "IKE_AUTH request contains unsupported payload with critical flag set. "
 															"Deleting IKE_SA");
 			this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, UNSUPPORTED_CRITICAL_PAYLOAD, CHUNK_INITIALIZER);
-			return DELETE_ME;
+			return DESTROY_ME;
 		}
 		else
 		{
@@ -291,7 +291,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	if (!(idi_request && sa_request && auth_request && tsi_request && tsr_request))
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply did not contain all required payloads. Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 		
 	/* build response */
@@ -335,7 +335,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	{
 		this->logger->log(this->logger, AUDIT, "Unable to send IKE_AUTH reply. Deleting IKE_SA");
 		response->destroy(response);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* install child SA policies */
@@ -355,12 +355,12 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy! Deleting IKE_SA");
-			return DELETE_ME;
+			return DESTROY_ME;
 		}
 		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	}
 	
-	/* create new state */						
+	/* create new state */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
 	this->destroy_after_state_change(this);
 	
@@ -403,7 +403,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	{
 		this->logger->log(this->logger, AUDIT, "We don't have a policy for IDs %s - %s. Deleting IKE_SA", 
 						  my_id->get_string(my_id), other_id->get_string(other_id));
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* get my id from policy, which must contain a fully qualified valid id */
@@ -462,7 +462,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH request did not contain any proposals we accept. Deleting IKE_SA");
 		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
-		return DELETE_ME;	
+		return DESTROY_ME;	
 	}
 	
 	/* set up child sa */
@@ -481,7 +481,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 	
 	/* create payload with selected propsal */
@@ -508,7 +508,7 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH request verification failed. Deleting IKE_SA");
 		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, AUTHENTICATION_FAILED, CHUNK_INITIALIZER);
 		authenticator->destroy(authenticator);
-		return DELETE_ME;
+		return DESTROY_ME;
 	}
 		
 	status = authenticator->compute_auth_data(authenticator,&auth_reply, this->ike_sa_init_response_data,this->received_nonce,my_id_payload,FALSE);
@@ -516,8 +516,7 @@ static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_p
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Unable to build authentication data for IKE_AUTH reply. Deleting IKE_SA");
-		return DELETE_ME;
-		
+		return DESTROY_ME;
 	}
 	
 	response->add_payload(response, (payload_t *)auth_reply);
