@@ -223,6 +223,18 @@ struct connection_t {
 	char* (*get_name) (connection_t *this);
 	
 	/**
+	 * @brief Check if the connection is marked as an IKEv2 connection.
+	 * 
+	 * Since all connections (IKEv1+2) are loaded, but charon handles 
+	 * only those marked with IKEv2, this flag can tell us if we must
+	 * ignore a connection on initiaton. Then pluto will do it for us.
+	 * 
+	 * @param this					calling object
+	 * @return						- TRUE, if this is an IKEv2 connection
+	 */
+	bool (*is_ikev2) (connection_t *this);
+	
+	/**
 	 * @brief Get the DH group to use for connection initialization.
 	 * 
 	 * @param this					calling object
@@ -265,6 +277,7 @@ struct connection_t {
  * connection_create(). Name gets cloned internally.
  *
  * @param name			connection identifier
+ * @param ikev2			TRUE if this is an IKEv2 connection
  * @param my_host		host_t representing local address
  * @param other_host	host_t representing remote address
  * @param my_id			identification_t for me
@@ -274,7 +287,8 @@ struct connection_t {
  * 
  * @ingroup config
  */
-connection_t * connection_create(char *name, 
+connection_t * connection_create(char *name,
+								 bool ikev2,
 								 host_t *my_host, host_t *other_host,
 								 identification_t *my_id, 
 								 identification_t *other_id,

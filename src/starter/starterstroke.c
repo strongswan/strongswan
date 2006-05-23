@@ -125,6 +125,7 @@ starter_stroke_add_conn(starter_conn_t *conn)
     msg->type = STR_ADD_CONN;
 
     msg->add_conn.name = push_string(&msg, connection_name(conn));
+	msg->add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2 ? 1 : 0;
 
     msg->add_conn.me.id = push_string(&msg, conn->left.id);
     msg->add_conn.me.cert = push_string(&msg, conn->left.cert);

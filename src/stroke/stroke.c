@@ -104,6 +104,7 @@ static int add_connection(char *name,
 	msg->type = STR_ADD_CONN;
 	
 	msg->add_conn.name = push_string(&msg, name);
+	msg->add_conn.ikev2 = 1;
 	
 	msg->add_conn.me.id = push_string(&msg, my_id);
 	msg->add_conn.me.address = push_string(&msg, my_addr);

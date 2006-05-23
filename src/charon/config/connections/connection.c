@@ -55,6 +55,11 @@ struct private_connection_t {
 	 */
 	char *name;
 	
+	/** 
+	 * Does charon handle this connection? Or can he ignore it?
+	 */
+	bool ikev2;
+	
 	/**
 	 * ID of us
 	 */
@@ -92,6 +97,14 @@ struct private_connection_t {
 static char *get_name (private_connection_t *this)
 {
 	return this->name;
+}
+
+/**
+ * Implementation of connection_t.is_ikev2.
+ */
+static bool is_ikev2 (private_connection_t *this)
+{
+	return this->ikev2;
 }
 
 /**
@@ -287,6 +300,7 @@ static connection_t *clone(private_connection_t *this)
 	proposal_t *proposal;
 	private_connection_t *clone = (private_connection_t*)connection_create(
 			this->name,
+			this->ikev2,
 			this->my_host->clone(this->my_host),
 			this->other_host->clone(this->other_host),
 			this->my_id->clone(this->my_id),
@@ -309,7 +323,7 @@ static connection_t *clone(private_connection_t *this)
 /**
  * Implementation of connection_t.destroy.
  */
-static void destroy (private_connection_t *this)
+static void destroy(private_connection_t *this)
 {
 	proposal_t *proposal;
 	
@@ -330,12 +344,13 @@ static void destroy (private_connection_t *this)
 /**
  * Described in header.
  */
-connection_t * connection_create(char *name, host_t *my_host, host_t *other_host, identification_t *my_id, identification_t *other_id, auth_method_t auth_method)
+connection_t * connection_create(char *name, bool ikev2, host_t *my_host, host_t *other_host, identification_t *my_id, identification_t *other_id, auth_method_t auth_method)
 {
 	private_connection_t *this = malloc_thing(private_connection_t);
 
 	/* public functions */
 	this->public.get_name = (char*(*)(connection_t*))get_name;
+	this->public.is_ikev2 = (bool(*)(connection_t*))is_ikev2;
 	this->public.get_my_id = (identification_t*(*)(connection_t*))get_my_id;
 	this->public.get_other_id = (identification_t*(*)(connection_t*))get_other_id;
 	this->public.get_my_host = (host_t*(*)(connection_t*))get_my_host;
@@ -355,6 +370,7 @@ connection_t * connection_create(char *name, host_t *my_host, host_t *other_host
 	
 	/* private variables */
 	this->name = strdup(name);
+	this->ikev2 = ikev2;
 	this->my_host = my_host;
 	this->other_host = other_host;
 	this->my_id = my_id;

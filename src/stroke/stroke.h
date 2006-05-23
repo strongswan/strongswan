@@ -71,12 +71,14 @@ struct stroke_msg_t {
 		/* data for STR_ADD_CONN */
 		struct {
 			char *name;
+			/* is this connection handled by charon? */
+			int ikev2;
 			struct {
 				char *id;
 				char *cert;
 				char *address;
 				char *subnet;
-				u_int8_t subnet_mask;
+				int subnet_mask;
 			} me, other;
 		} add_conn;
 		struct {
@@ -86,10 +88,9 @@ struct stroke_msg_t {
 		} logtype;
 		struct {
 			char *context;
-			u_int level;
+			int level;
 		} loglevel;
 	};
-
 	u_int8_t buffer[];
 };
 

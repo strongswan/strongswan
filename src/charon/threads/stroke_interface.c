@@ -134,7 +134,7 @@ static void load_end_certificate(const char *filename, identification_t **idp)
 	if (cert)
 	{
 		identification_t *id = *idp;
-		identification_t  *subject = cert->get_subject(cert);
+		identification_t *subject = cert->get_subject(cert);
 
 		if (!id->equals(id, subject))
 		{
@@ -275,9 +275,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		load_end_certificate(msg->add_conn.other.cert, &other_id);
 	}
 	
-	connection = connection_create(msg->add_conn.name, 
-								   my_host, other_host, 
-								   my_id->clone(my_id), other_id->clone(other_id), 
+	connection = connection_create(msg->add_conn.name, msg->add_conn.ikev2,
+								   my_host, other_host,
+								   my_id->clone(my_id), other_id->clone(other_id),
 								   RSA_DIGITAL_SIGNATURE);
 	proposal = proposal_create(1);
 	proposal->add_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
@@ -312,7 +312,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);
-	
 }
 
 /**
@@ -322,7 +321,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 {
 	initiate_ike_sa_job_t *job;
 	connection_t *connection;
-				
+	
 	pop_string(msg, &(msg->initiate.name));
 	this->logger->log(this->logger, CONTROL, "received stroke: initiate \"%s\"", msg->initiate.name);
 	connection = charon->connections->get_connection_by_name(charon->connections, msg->initiate.name);
@@ -330,7 +329,8 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "no connection named \"%s\"", msg->initiate.name);
 	}
-	else
+	/* only initiate if it is an ikev2 connection */
+	else if (connection->is_ikev2(connection))
 	{
 		job = initiate_ike_sa_job_create(connection);
 		charon->job_queue->add(charon->job_queue, (job_t*)job);
@@ -387,6 +387,7 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg, bool utc)
 		charon->credentials->log_certificates(charon->credentials, this->stroke_logger, utc);
 	}
 }
+
 logger_context_t get_context(char *context)
 {
 	if      (strcasecmp(context, "ALL") == 0) return ALL_LOGGERS;
