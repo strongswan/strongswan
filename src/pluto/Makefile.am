@@ -5,14 +5,14 @@
 ipsec_PROGRAMS = pluto _pluto_adns
 
 pluto_SOURCES = \
-linux26/rtnetlink.h linux26/xfrm.h linux26/netlink.h rsaref/pkcs11t.h rsaref/pkcs11.h \
+oid.c oid.h linux26/rtnetlink.h linux26/xfrm.h linux26/netlink.h rsaref/pkcs11t.h rsaref/pkcs11.h \
 rsaref/unix.h rsaref/pkcs11f.h alg/ike_alg_twofish.c alg/ike_alg_aes.c alg/ike_alg_blowfish.c \
 alg/ike_alg_sha2.c alg/ike_alg_serpent.c alg/ike_alginit.c kernel_alg.c kernel_alg.h kernel_pfkey.h \
 kernel_pfkey.c gcryptfix.c gcryptfix.h primegen.c smallprime.c ocsp.c ocsp.h pgp.c ac.c certs.c \
 connections.c certs.h virtual.c connections.h fetch.c virtual.h fetch.h ipsec_doi.c ipsec_doi.h \
 x509.c kameipsec.h cookie.c x509.h cookie.h pgp.h ac.h sha1.c sha1.h constants.c smartcard.c \
 kernel.c constants.h smartcard.h kernel.h dnskey.c asn1.c dnskey.h elgamal.c db_ops.c asn1.h \
-elgamal.h oid.c db_ops.h mp_defs.c state.c oid.h mp_defs.h ca.c state.h pkcs7.c lex.c ca.h \
+elgamal.h db_ops.h mp_defs.c state.c mp_defs.h ca.c state.h pkcs7.c lex.c ca.h \
 pkcs7.h id.c lex.h id.h keys.c ike_alg.c keys.h md5.c md5.h kernel_noklips.c ike_alg.h rcv_whack.c \
 rcv_whack.h alg_info.c alg_info.h pem.c kernel_noklips.h foodgroups.c pem.h kernel_netlink.c \
 foodgroups.h vendor.c vendor.h packet.c packet.h crl.c md2.c rnd.c crl.h md2.h spdb.c rnd.h \
@@ -35,10 +35,10 @@ DISTCLEANFILES = oid.c oid.h
 # TODO: get perl from ./configure
 PERL=perl
 
-oid.c: oid.txt oid.pl
+oid.c:	oid.txt oid.pl
 	$(PERL) oid.pl
 
-oid.h: oid.txt oid.pl
+oid.h:	oid.txt oid.pl
 	$(PERL) oid.pl
 
 # This compile option activates dynamic URL fetching using libcurl
