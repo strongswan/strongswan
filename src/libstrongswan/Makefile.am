@@ -20,6 +20,12 @@ INCLUDES = -I$(top_srcdir)/src/libstrongswan
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl
 DISTCLEANFILES = asn1/oid.c asn1/oid.h
 
+if USE_LEAK_DETECTIVE
+  libstrongswan_la_LIBADD += -ldl
+  AM_CFLAGS = -DLEAK_DETECTIVE
+endif
+
+
 # TODO: get perl from ./configure
 PERL=perl
 
