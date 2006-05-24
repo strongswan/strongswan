@@ -776,12 +776,12 @@ static void destroy(private_ike_sa_manager_t *this)
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	this->logger->log(this->logger,CONTROL | LEVEL1,"Going to destroy IKE_SA manager and all managed IKE_SA's");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Going to destroy IKE_SA manager and all managed IKE_SA's");
 	
 	/* Step 1: drive out all waiting threads  */
 	iterator = list->create_iterator(list, TRUE);
 
-	this->logger->log(this->logger,CONTROL | LEVEL2,"Set driveout flags for all stored IKE_SA's");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Set driveout flags for all stored IKE_SA's");
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&entry);
@@ -790,7 +790,7 @@ static void destroy(private_ike_sa_manager_t *this)
 		entry->driveout_waiting_threads = TRUE;	
 	}
 
-	this->logger->log(this->logger,CONTROL | LEVEL2,"Wait for all threads to leave IKE_SA's");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Wait for all threads to leave IKE_SA's");
 	/* Step 2: wait until all are gone */
 	iterator->reset(iterator);
 	while (iterator->has_next(iterator))
@@ -804,17 +804,24 @@ static void destroy(private_ike_sa_manager_t *this)
 			pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		}
 	}
-	this->logger->log(this->logger,CONTROL | LEVEL2,"Delete all IKE_SA's");
-	/* Step 3: delete all entries */
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Delete all IKE_SA's");
+	/* Step 3: initiate deletion of all IKE_SAs */
+	iterator->reset(iterator);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&entry);
+		entry->ike_sa->delete(entry->ike_sa);
+	}
 	iterator->destroy(iterator);
-
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy all entries");
+	/* Step 4: destroy all entries */
 	while (list->get_count(list) > 0)
 	{
 		list->get_first(list, (void**)&entry);
 		this->delete_entry(this, entry);
 	}
 	list->destroy(list);
-	this->logger->log(this->logger,CONTROL | LEVEL2,"IKE_SA's deleted");
 	pthread_mutex_unlock(&(this->mutex));
 	
 	this->randomizer->destroy(this->randomizer);
