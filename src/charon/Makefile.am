@@ -44,4 +44,4 @@ threads/thread_pool.h threads/receiver.h threads/stroke_interface.h
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
 AM_CFLAGS = -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\"
-LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread
