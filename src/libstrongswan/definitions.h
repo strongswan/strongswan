@@ -59,16 +59,25 @@
  #error "BYTE_ORDER must be defined"
 #endif
 
+/**
+  * Default length for various auxiliary text buffers
+  */
+#define BUF_LEN		512
+
+/**
+ * Macro compares to strings for equality
+ */
+#define streq(x,y) (strcmp(x, y) == 0)
 
 /**
  * Macro gives back larger of two values.
  */
-#define max(x,y) (x > y ? x : y)
+#define max(x,y) ((x) > (y) ? (x):(y))
 
 /**
  * Macro gives back smaller of two values.
  */
-#define min(x,y) (x < y ? x : y)
+#define min(x,y) ((x) < (y) ? (x):(y))
 
 /**
  * Debug macro to follow control flow
