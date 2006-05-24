@@ -92,13 +92,10 @@ chunk_t chunk_alloc(size_t bytes)
  */
 bool chunk_equals(chunk_t a, chunk_t b)
 {
-	if (a.ptr == NULL || b.ptr == NULL ||
-		a.len != b.len ||
-		memcmp(a.ptr, b.ptr, a.len) != 0)
-	{
-		return FALSE;
-	}
-	return TRUE;
+	return a.len == b.len &&
+		   a.ptr != NULL  &&
+		   b.ptr != NULL  &&
+		   memcmp(a.ptr, b.ptr, a.len) == 0;
 }
 
 /**
