@@ -89,6 +89,8 @@ AC_PROG_LIBTOOL
 AC_PROG_LEX
 AC_PROG_YACC
 AC_PROG_CC(intel)
+AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 
 dnl ==========================
 dnl  check required libraries

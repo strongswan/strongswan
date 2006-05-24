@@ -30,10 +30,7 @@ pluto_LDADD = $(top_srcdir)/src/libfreeswan/libfreeswan.a $(top_srcdir)/src/libc
 _pluto_adns_LDADD = -lresolv $(top_srcdir)/src/libfreeswan/libfreeswan.a
 dist_man_MANS = pluto.8 ipsec.secrets.5
 EXTRA_DIST = oid.pl oid.txt
-DISTCLEANFILES = oid.c oid.h
-
-# TODO: get perl from ./configure
-PERL=perl
+MAINTAINERCLEANFILES = oid.c oid.h
 
 oid.c:	oid.txt oid.pl
 	$(PERL) oid.pl

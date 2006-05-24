@@ -10,13 +10,10 @@ AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_P
 starter_LDADD = loglite.o defs.o $(top_srcdir)/src/libfreeswan/libfreeswan.a
 EXTRA_DIST = parser.l parser.y keywords.txt ipsec.conf
 dist_man_MANS = ipsec.conf.5
-DISTCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
+MAINTAINERCLEANFILES = lex.yy.c y.tab.c y.tab.h keywords.c
 
 PLUTODIR=$(top_srcdir)/src/pluto
 OPENACDIR=$(top_srcdir)/src/openac
-
-# TODO: get gperf from ./configure
-GPERF=gperf
 
 lex.yy.c:	y.tab.c parser.l parser.y parser.h
 		$(LEX) parser.l
@@ -38,5 +35,3 @@ defs.o:		$(PLUTODIR)/defs.c $(PLUTODIR)/defs.h
 
 install-exec-local :
 		test -e "$(sysconfdir)/ipsec.conf" || $(INSTALL) ipsec.conf $(sysconfdir)/ipsec.conf
-
-
