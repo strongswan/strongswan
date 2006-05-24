@@ -332,6 +332,8 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	/* only initiate if it is an IKEv2 connection, ignore IKEv1 */
 	else if (connection->is_ikev2(connection))
 	{
+		this->stroke_logger->log(this->stroke_logger, CONTROL, "initiating connection \"%s\" (see log)...", msg->initiate.name);
+	
 		job = initiate_ike_sa_job_create(connection);
 		charon->job_queue->add(charon->job_queue, (job_t*)job);
 	}

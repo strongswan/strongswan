@@ -39,19 +39,19 @@
   - certificate exchange
 
 + Apply -W's from Makefile.program to charon
-- do ipsec status via starter
++ do ipsec status via starter
 - add more output to to up/down, somehow...
 
-- stroke status should show configured connections
-- stroke loglevel update
++ stroke status should show configured connections
++ stroke loglevel update
 - stroke argument parsing via getopts/gperf?
 
 - implement 3DES to load encrypted pem files
-- ipsec.secrets parsing
++ ipsec.secrets parsing
 
 - trapping
-- delete notify, when to send?
++ proper delete messages
 - notifys on connection setup failure
 - create child sa message/rekeying
 
-- new build environment (autotools?)
++ new build environment (autotools?)

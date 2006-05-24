@@ -521,19 +521,33 @@ static status_t process_notify_payload(private_ike_auth_requested_t *this, notif
 		case INVALID_SYNTAX:
 		{
 			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an INVALID_SYNTAX notify. Deleting IKE_SA");
-			return DESTROY_ME;	
+			return DESTROY_ME;
 			
 		}
 		case AUTHENTICATION_FAILED:
 		{
 			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained an AUTHENTICATION_FAILED notify. Deleting IKE_SA");
-			return DESTROY_ME;	
+			return DESTROY_ME;
 			
 		}
 		case SINGLE_PAIR_REQUIRED:
 		{
 			this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a SINGLE_PAIR_REQUIRED notify. Deleting IKE_SA");
-			return DESTROY_ME;		
+			return DESTROY_ME;
+		}
+		case TS_UNACCEPTABLE:
+		{
+			/* TODO: We currently check only the replied TS payloads, which should be empty. Should
+			* we interpret the notify additionaly? */
+			this->logger->log(this->logger, CONTROL, "IKE_AUTH reply contained a TS_UNACCEPTABLE notify. Ignored");
+			return SUCCESS;
+		}
+		case NO_PROPOSAL_CHOSEN:
+		{
+			/* TODO: We currently check only the replied SA payload, which should be empty. Should
+			 * we interpret the notify additionaly? */
+			this->logger->log(this->logger, CONTROL, "IKE_AUTH reply contained a NO_PROPOSAL_CHOSEN notify. Ignored");
+			return SUCCESS;
 		}
 		default:
 		{

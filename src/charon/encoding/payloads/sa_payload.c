@@ -341,6 +341,7 @@ sa_payload_t *sa_payload_create()
 	/* public functions */
 	this->public.create_proposal_substructure_iterator = (iterator_t* (*) (sa_payload_t *,bool)) create_proposal_substructure_iterator;
 	this->public.add_proposal_substructure = (void (*) (sa_payload_t *,proposal_substructure_t *)) add_proposal_substructure;
+	this->public.add_proposal = (void (*) (sa_payload_t*,proposal_t*))add_proposal;
 	this->public.get_proposals = (linked_list_t* (*) (sa_payload_t *)) get_proposals;
 	this->public.destroy = (void (*) (sa_payload_t *)) destroy;
 	

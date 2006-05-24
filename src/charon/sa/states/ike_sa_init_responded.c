@@ -436,19 +436,11 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	status_t status;
 	connection_t *connection;
 	
-	/* get proposals from request */
+	/* prepare reply */
+	sa_response = sa_payload_create();
+	
+	/* get proposals from request, and select one with ours */
 	proposal_list = request->get_proposals(request);
-	if (proposal_list->get_count(proposal_list) == 0)
-	{
-		/* if the other side did not offer any proposals, we do not create child sa's */
-		this->logger->log(this->logger, AUDIT, "IKE_AUH request did not contain any proposals. No CHILD_SA created");
-		sa_response = sa_payload_create();
-		response->add_payload(response, (payload_t*)sa_response);
-		proposal_list->destroy(proposal_list);
-		return SUCCESS;
-	}
-
-	/* now select a proposal */
 	this->logger->log(this->logger, CONTROL|LEVEL1, "Selecting proposals:");
 	proposal = this->policy->select_proposal(this->policy, proposal_list);
 	/* list is not needed anymore */
@@ -457,37 +449,45 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		proposal_tmp->destroy(proposal_tmp);
 	}
 	proposal_list->destroy(proposal_list);
-	/* do we have a proposal */
+	/* do we have a proposal? */
 	if (proposal == NULL)
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUTH request did not contain any proposals we accept. Deleting IKE_SA");
-		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
-		return DESTROY_ME;	
+		notify_payload_t *notify;
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH request did not contain any proposals we accept. "
+											   "Adding NO_PROPOSAL_CHOSEN notify");
+		/* add NO_PROPOSAL_CHOSEN and an empty SA payload */
+		notify = notify_payload_create_from_protocol_and_type(PROTO_IKE, NO_PROPOSAL_CHOSEN);
+		response->add_payload(response, (payload_t*)notify);
 	}
-	
-	/* set up child sa */
-	seed = chunk_alloc(this->received_nonce.len + this->sent_nonce.len);
-	memcpy(seed.ptr, this->received_nonce.ptr, this->received_nonce.len);
-	memcpy(seed.ptr + this->received_nonce.len, this->sent_nonce.ptr, this->sent_nonce.len);
-	prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
-	chunk_free(&seed);
-	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	this->child_sa = child_sa_create(connection->get_my_host(connection),
-									 connection->get_other_host(connection));
-		
-	status = this->child_sa->add(this->child_sa, proposal, prf_plus);
-	prf_plus->destroy(prf_plus);
-	if (status != SUCCESS)
+	else
 	{
-		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
-		return DESTROY_ME;
+		/* set up child sa */
+		seed = chunk_alloc(this->received_nonce.len + this->sent_nonce.len);
+		memcpy(seed.ptr, this->received_nonce.ptr, this->received_nonce.len);
+		memcpy(seed.ptr + this->received_nonce.len, this->sent_nonce.ptr, this->sent_nonce.len);
+		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
+		chunk_free(&seed);
+		
+		connection = this->ike_sa->get_connection(this->ike_sa);
+		this->child_sa = child_sa_create(connection->get_my_host(connection),
+										connection->get_other_host(connection));
+		
+		status = this->child_sa->add(this->child_sa, proposal, prf_plus);
+		prf_plus->destroy(prf_plus);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+			/* TODO: how do we handle this cleanly? */
+			sa_response->destroy(sa_response);
+			proposal->destroy(proposal);
+			return DESTROY_ME;
+		}
+		
+		/* add proposal to sa payload */
+		sa_response->add_proposal(sa_response, proposal);
+		proposal->destroy(proposal);
 	}
-	
-	/* create payload with selected propsal */
-	sa_response = sa_payload_create_from_proposal(proposal);
 	response->add_payload(response, (payload_t*)sa_response);
-	proposal->destroy(proposal);
 	return SUCCESS;
 }
 
@@ -549,6 +549,19 @@ static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_
 	
 	ts_response = ts_payload_create_from_traffic_selectors(ts_initiator, ts_selected);
 	response->add_payload(response, (payload_t*)ts_response);
+	
+	/* add notify if traffic selectors do not match */
+	if (!ts_initiator &&
+		(ts_selected->get_count(ts_selected) == 0 || this->other_ts->get_count(this->other_ts) == 0))
+	{
+		notify_payload_t *notify;
+		
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH request did not contain any traffic selectors we accept. "
+											   "Adding TS_UNACCEPTABLE notify");
+		
+		notify = notify_payload_create_from_protocol_and_type(0, TS_UNACCEPTABLE);
+		response->add_payload(response, (payload_t*)notify);
+	}
 	
 	/* cleanup */
 	while (ts_received->remove_last(ts_received, (void**)&ts) == SUCCESS)
