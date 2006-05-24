@@ -59,7 +59,7 @@ enum status_t {
 	FAILED,
 	
 	/**
-	 * Out of ressources.
+	 * Out of resources.
 	 */
 	OUT_OF_RES,
 	
