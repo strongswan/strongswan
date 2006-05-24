@@ -559,8 +559,9 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	status_t status;
 	chunk_t packet_data;
 	
-	this->logger->log(this->logger, CONTROL, "Generating message of type %s, contains %d payloads",
+	this->logger->log(this->logger, CONTROL, "Generating %s %s, contains %d payloads",
 					  mapping_find(exchange_type_m,this->exchange_type),
+					  this->is_request ? "request" : "response",
 					  this->payloads->get_count(this->payloads));
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
@@ -717,7 +718,7 @@ static status_t parse_header(private_message_t *this)
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(&(ike_header->payload_interface));
 	
-	this->logger->log(this->logger, CONTROL, "Parsed a %s %s", 
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Parsed a %s %s", 
 						mapping_find(exchange_type_m, this->exchange_type),
 						this->is_request ? "request" : "response");
 	
@@ -810,7 +811,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		this->logger->log(this->logger, ERROR, "Verification of message failed");
 	}
 	
-	this->logger->log(this->logger, CONTROL, "Message %s %s contains %d payloads", 
+	this->logger->log(this->logger, CONTROL, "Parsed %s %s, contains %d payloads", 
 					mapping_find(exchange_type_m, this->exchange_type),
 					this->is_request ? "request" : "response",
 					this->payloads->get_count(this->payloads));

@@ -184,6 +184,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	signer_t *signer = NULL;
 	status_t status;
 	host_t *my_host, *other_host;
+	identification_t *my_id, *other_id;
 	chunk_t seed;
 	prf_plus_t *prf_plus;
 	connection_t *connection;
@@ -361,8 +362,11 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	my_host = connection->get_my_host(connection);
 	other_host = connection->get_other_host(connection);
-	this->logger->log(this->logger, AUDIT, "IKE_SA established between %s - %s", 
-					  my_host->get_address(my_host), other_host->get_address(other_host));
+	my_id = connection->get_my_id(connection);
+	other_id = connection->get_other_id(connection);
+	this->logger->log(this->logger, AUDIT, "IKE_SA established %s[%s]...%s[%s]", 
+					  my_host->get_address(my_host), my_id->get_string(my_id),
+					  other_host->get_address(other_host), other_id->get_string(other_id));
 	
 	return SUCCESS;
 }

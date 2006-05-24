@@ -71,12 +71,45 @@ struct private_logger_t {
 };
 
 /**
+ * thread local storage for get_thread_number
+ */
+static pthread_key_t thread_ids;
+static void make_key(void)
+{
+	pthread_key_create(&thread_ids, NULL);
+}
+
+/**
+ * Get a unique thread number for a calling thread. Since
+ * pthread_self returns large and ugly numbers, use this function
+ * for logging; these numbers are incremental starting at 1
+ */
+static int get_thread_number(void)
+{
+	static int current_num = 0;
+	static pthread_once_t key_once = PTHREAD_ONCE_INIT;
+	int stored_num;
+	
+	pthread_once(&key_once, make_key);
+	stored_num = (int)pthread_getspecific(thread_ids);
+	if (stored_num == 0)
+	{
+		pthread_setspecific(thread_ids, (void*)++current_num);
+		return current_num;
+	}
+	else
+	{
+		return stored_num;
+	}
+}
+
+/**
  * prepend the logging prefix to string and store it in buffer
  */
 static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const char *string, char *buffer)
 {
 	char log_type, log_details;
-	char thread_id[10] = "";
+	u_int8_t thread_id = 0;
 
 	if (loglevel & CONTROL)
 	{
@@ -122,9 +155,9 @@ static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const c
 	
 	if (this->log_thread_id)
 	{
-		snprintf(thread_id, sizeof(thread_id), "%06d", (int)pthread_self());
+		thread_id = get_thread_number();
 	}
-	snprintf(buffer, MAX_LOG, "%s[%c%c:%s] %s", thread_id, log_type, log_details, this->name, string);
+	snprintf(buffer, MAX_LOG, "[%02d:%c%c:%s] %s", thread_id, log_type, log_details, this->name, string);
 }
 
 /**
@@ -186,7 +219,7 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 	if ((this->level & loglevel) == loglevel)
 	{
-		char thread_id[10] = "";
+		u_int8_t thread_id = 0;
 		char buffer[MAX_LOG];
 		char ascii_buffer[MAX_BYTES+1];
 
@@ -198,11 +231,6 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 		int line_start = 0;
 		int i = 0;
 
-		if (this->log_thread_id)
-		{
-			snprintf(thread_id, sizeof(thread_id), "%06d", (int)pthread_self());
-		}
-
 		/* since me can't do multi-line output to syslog, 
 		* we must do multiple syslogs. To avoid
 		* problems in output order, lock this by a mutex.
@@ -210,6 +238,11 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 		pthread_mutex_lock(&mutex);
 
 		prepend_prefix(this, loglevel, format, buffer);
+		
+		if (this->log_thread_id)
+		{
+			thread_id = get_thread_number();
+		}
 
 		if (this->output == NULL)
 		{
@@ -244,11 +277,11 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 				if (this->output == NULL)
 				{
-					syslog(get_priority(loglevel), "%s[  :%5d]   %s  %s", thread_id, line_start, buffer, ascii_buffer);	
+					syslog(get_priority(loglevel), "[%02d:  :%5d]  %s  %s", thread_id, line_start, buffer, ascii_buffer);	
 				}
 				else
 				{
-					fprintf(this->output, "%s[  :%5d]   %s  %s\n", thread_id, line_start, buffer, ascii_buffer);
+					fprintf(this->output, "[%02d:  :%5d]  %s  %s\n", thread_id, line_start, buffer, ascii_buffer);
 				}
 				buffer_pos = buffer;
 				line_start += MAX_BYTES;

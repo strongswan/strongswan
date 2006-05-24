@@ -974,6 +974,7 @@ static status_t delete_(private_ike_sa_t *this)
 	delete_payload_t *delete_payload;
 	u_int32_t timeout;
 	delete_half_open_ike_sa_job_t *job;
+	state_t *old_state;
 	
 	if (get_state(this) != IKE_SA_ESTABLISHED)
 	{
@@ -995,8 +996,9 @@ static status_t delete_(private_ike_sa_t *this)
 	}
 	
 	/* transit to state delete_requested */
-	this->current_state->destroy(this->current_state);
+	old_state = this->current_state;
 	set_new_state(this, (state_t*)delete_requested_create(this));
+	old_state->destroy(old_state);
 	
 	/* there is no guarantee that the other peer will acknowledge the delete,
 	 * so we have to set a timeout where we destroy the SA... This is done with
