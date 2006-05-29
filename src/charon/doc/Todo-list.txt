@@ -30,6 +30,7 @@
   + port x509 stuff
 
 + doxygen cleanup (charon/lib)
++ new build environment (autotools?)
 
 / useable certificate support
   + more id types (use atodn from pluto)
@@ -54,4 +55,6 @@
 - notifys on connection setup failure
 - create child sa message/rekeying
 
-+ new build environment (autotools?)
+- implement a mechanism against thread exhaustion
+  when a blocked IKE_SA receives a lot of messages
+- add a crl fetch mechanism which synchronizes equal fetches
