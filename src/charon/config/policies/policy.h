@@ -46,6 +46,16 @@ typedef struct policy_t policy_t;
 struct policy_t {
 	
 	/**
+	 * @brief Get the name of the policy.
+	 * 
+	 * Returned object is not getting cloned.
+	 * 
+	 * @param this			calling object
+	 * @return				policy's name
+	 */
+	char *(*get_name) (policy_t *this);
+	
+	/**
 	 * @brief Get own id to use for identification.
 	 * 
 	 * Returned object is not getting cloned.
@@ -238,12 +248,15 @@ struct policy_t {
 /**
  * @brief Create a configuration object for IKE_AUTH and later.
  * 
+ * name-string gets cloned, ID's not.
+ * 
+ * @param name				name of the policy
  * @param my_id 			identification_t for ourselves
  * @param other_id 			identification_t for the remote guy
  * @return 					policy_t object
  * 
  * @ingroup config
  */
-policy_t *policy_create(identification_t *my_id, identification_t *other_id);
+policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id);
 
 #endif /* POLICY_H_ */

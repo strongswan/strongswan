@@ -37,37 +37,66 @@ typedef struct policy_store_t policy_store_t;
  * 
  * @ingroup config
  */
-struct policy_store_t { 
+struct policy_store_t {
 
 	/**
 	 * @brief Returns a policy identified by two IDs.
-	 * 
+	 *
 	 * The returned policy gets created/cloned and therefore must be
 	 * destroyed by the caller.
-	 * 
+	 * other_id must be fully qualified. my_id may be %any, as the
+	 * other peer may not include an IDr Request.
+	 *
 	 * @param this		calling object
 	 * @param my_id		own ID of the policy
 	 * @param other_id	others ID of the policy
 	 * @return
 	 *					- matching policy_t, if found
-	 * 					- NULL otherwise
+	 *					- NULL otherwise
 	 */
-	policy_t *(*get_policy) (policy_store_t *this, identification_t *my_id, identification_t *other_id);
+	policy_t *(*get_policy_by_ids) (policy_store_t *this, identification_t *my_id, identification_t *other_id);
+
+	/**
+	 * @brief Returns a policy identified by a connection name.
+	 *
+	 * The returned policy gets created/cloned and therefore must be
+	 * destroyed by the caller.
+	 *
+	 * @param this		calling object
+	 * @param name		name of the policy
+	 * @return
+	 *					- matching policy_t, if found
+	 *					- NULL otherwise
+	 */
+	policy_t *(*get_policy_by_name) (policy_store_t *this, char *name);
 
 	/**
 	 * @brief Add a policy to the list.
-	 * 
+	 *
 	 * The policy is owned by the store after the call. Do
 	 * not modify nor free.
-	 * 
+	 *
 	 * @param this		calling object
 	 * @param policy	policy to add
 	 */
 	void (*add_policy) (policy_store_t *this, policy_t *policy);
+
+	/**
+	 * @brief Delete a policy from the store.
+	 *
+	 * Remove a policy from the store identified by its name.
+	 *
+	 * @param this		calling object
+	 * @param policy	policy to add
+	 * @return
+	 *					- SUCCESS, or
+	 *					- NOT_FOUND
+	 */
+	status_t (*delete_policy) (policy_store_t *this, char *name);
 	
 	/**
 	 * @brief Destroys a policy_store_t object.
-	 * 
+	 *
 	 * @param this 					calling object
 	 */
 	void (*destroy) (policy_store_t *this);

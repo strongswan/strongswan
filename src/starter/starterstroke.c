@@ -132,7 +132,12 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 
 int starter_stroke_del_conn(starter_conn_t *conn)
 {
-    return 0;
+	stroke_msg_t msg;
+
+	msg.type = STR_DEL_CONN;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.install.name = push_string(&msg, connection_name(conn));
+	return send_stroke_msg(&msg);
 }
 
 int starter_stroke_route_conn(starter_conn_t *conn)

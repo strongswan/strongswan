@@ -65,10 +65,10 @@ struct stroke_msg_t {
 	} type;
 
 	union {
-		/* data for STR_INITIATE, STR_INSTALL, STR_UP, STR_DOWN */
+		/* data for STR_INITIATE, STR_INSTALL, STR_UP, STR_DOWN, ... */
 		struct {
 			char *name;
-		} initiate, install, terminate, status;
+		} initiate, install, terminate, status, del_conn;
 
 		/* data for STR_ADD_CONN */
 		struct {

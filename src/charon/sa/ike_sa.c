@@ -332,7 +332,7 @@ static host_t* get_other_host(private_ike_sa_t *this)
  */
 static identification_t* get_my_id(private_ike_sa_t *this)
 {
-	return this->connection->get_my_id(this->connection);;
+	return this->policy->get_my_id(this->policy);;
 }
 
 /**
@@ -340,7 +340,7 @@ static identification_t* get_my_id(private_ike_sa_t *this)
  */
 static identification_t* get_other_id(private_ike_sa_t *this)
 {
-	return this->connection->get_other_id(this->connection);;
+	return this->policy->get_other_id(this->policy);;
 }
 
 /**
@@ -919,7 +919,7 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 	iterator_t *iterator;
 	child_sa_t *child_sa;
 	host_t *my_host, *other_host;
-	identification_t *my_id, *other_id;
+	identification_t *my_id = NULL, *other_id = NULL;
 	
 	/* only log if name == NULL or name == connection_name */
 	if (name)
@@ -937,8 +937,11 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 	my_host = this->connection->get_my_host(this->connection);
 	other_host = this->connection->get_other_host(this->connection);
 
-	my_id = this->connection->get_my_id(this->connection);
-	other_id = this->connection->get_other_id(this->connection);
+	if (this->policy)
+	{
+		my_id = this->policy->get_my_id(this->policy);
+		other_id = this->policy->get_other_id(this->policy);
+	}
 	
 	if (logger == NULL)
 	{
@@ -952,9 +955,9 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 	logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
 				name,
 				my_host->get_address(my_host),
-				my_id->get_string(my_id),
+				my_id ? my_id->get_string(my_id) : "(unknown)",
 				other_host->get_address(other_host),
-				other_id->get_string(other_id));
+				other_id ? other_id->get_string(other_id) : "(unknown)");
 	
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->has_next(iterator))
@@ -1067,12 +1070,21 @@ static void destroy(private_ike_sa_t *this)
 	}
 	if (this->connection)
 	{
-		host_t *me, *other;
-		me = this->connection->get_my_host(this->connection);
-		other = this->connection->get_other_host(this->connection);
+		host_t *my_host, *other_host;
+		identification_t *my_id = NULL, *other_id = NULL;
+		my_host = this->connection->get_my_host(this->connection);
+		other_host = this->connection->get_other_host(this->connection);
+		if (this->policy)
+		{
+			my_id = this->policy->get_my_id(this->policy);
+			other_id = this->policy->get_other_id(this->policy);
+		}
 		
-		this->logger->log(this->logger, AUDIT, "IKE_SA deleted between %s - %s", 
-						  me->get_address(me), other->get_address(other));
+		this->logger->log(this->logger, AUDIT, "IKE_SA deleted between %s[%s]...%s[%s]", 
+						  my_host->get_address(my_host),
+						  my_id ? my_id->get_string(my_id) : "(unknown)",
+						  other_host->get_address(other_host),
+						  other_id ? other_id->get_string(other_id) : "(unknown)");
 		this->connection->destroy(this->connection);
 	}
 	if (this->policy)

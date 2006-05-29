@@ -188,6 +188,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	chunk_t seed;
 	prf_plus_t *prf_plus;
 	connection_t *connection;
+	policy_t *policy;
 	
 	if (ike_auth_reply->get_exchange_type(ike_auth_reply) != IKE_AUTH)
 	{
@@ -362,8 +363,9 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	my_host = connection->get_my_host(connection);
 	other_host = connection->get_other_host(connection);
-	my_id = connection->get_my_id(connection);
-	other_id = connection->get_other_id(connection);
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	my_id = policy->get_my_id(policy);
+	other_id = policy->get_other_id(policy);
 	this->logger->log(this->logger, AUDIT, "IKE_SA established %s[%s]...%s[%s]", 
 					  my_host->get_address(my_host), my_id->get_string(my_id),
 					  other_host->get_address(other_host), other_id->get_string(other_id));
@@ -392,9 +394,6 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply contained a not acceptable ID. Deleting IKE_SA");
 		return DESTROY_ME;
 	}
-	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	connection->update_other_id(connection, other_id->clone(other_id));
 	
 	this->policy->update_other_id(this->policy, other_id);
 	return SUCCESS;

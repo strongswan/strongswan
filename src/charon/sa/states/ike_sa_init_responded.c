@@ -185,6 +185,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	host_t *my_host, *other_host;
 	identification_t *my_id, *other_id;
 	connection_t *connection;
+	policy_t *policy;
 	
 	if (request->get_exchange_type(request) != IKE_AUTH)
 	{
@@ -368,8 +369,9 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	my_host = connection->get_my_host(connection);
 	other_host = connection->get_other_host(connection);
-	my_id = connection->get_my_id(connection);
-	other_id = connection->get_other_id(connection);
+	policy = this->ike_sa->get_policy(this->ike_sa);
+	my_id = policy->get_my_id(policy);
+	other_id = policy->get_other_id(policy);
 	this->logger->log(this->logger, AUDIT, "IKE_SA established %s[%s]...%s[%s]", 
 					  my_host->get_address(my_host), my_id->get_string(my_id),
 					  other_host->get_address(other_host), other_id->get_string(other_id));
@@ -382,27 +384,22 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
  */
 static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payload_t *request_idi, id_payload_t *request_idr, message_t *response,id_payload_t **response_idr)
 {
-	identification_t *other_id, *my_id = NULL;
-	connection_t *connection;
+	identification_t *other_id, *my_id;
 	id_payload_t *idr_response;
 	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	
-	/* update adresses, as connection may contain wildcards, or wrong IDs */
+	/* use others ID, an ours if peer requested one */
 	other_id = request_idi->get_identification(request_idi);
 	if (request_idr)
 	{
 		my_id = request_idr->get_identification(request_idr);
-		connection->update_my_id(connection, my_id);
 	}
 	else
 	{
-		my_id = connection->get_my_id(connection);
+		my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);;
 	}
-	connection->update_other_id(connection, other_id);
 
 	/* build new sa config */
-	this->policy = charon->policies->get_policy(charon->policies, my_id, other_id);
+	this->policy = charon->policies->get_policy_by_ids(charon->policies, my_id, other_id);
 	if (this->policy == NULL)
 	{
 		this->logger->log(this->logger, AUDIT, "We don't have a policy for IDs %s - %s. Deleting IKE_SA", 

@@ -293,7 +293,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	
 	connection = connection_create(msg->add_conn.name, msg->add_conn.ikev2,
 								   my_host, other_host,
-								   my_id->clone(my_id), other_id->clone(other_id),
 								   RSA_DIGITAL_SIGNATURE);
 	proposal = proposal_create(1);
 	proposal->add_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
@@ -317,7 +316,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					  other_host->get_address(other_host),
 					  other_id->get_string(other_id));
 	
-	policy = policy_create(my_id, other_id);
+	policy = policy_create(msg->add_conn.name, my_id, other_id);
 	proposal = proposal_create(1);
 	proposal->add_algorithm(proposal, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
@@ -331,12 +330,38 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 }
 
 /**
+ * Delete a connection from the list
+ */
+static void stroke_del_conn(private_stroke_t *this, stroke_msg_t *msg)
+{
+	status_t status;
+	
+	pop_string(msg, &(msg->del_conn.name));
+	this->logger->log(this->logger, CONTROL, "received stroke: delete \"%s\"", msg->del_conn.name);
+	
+	status = charon->connections->delete_connection(charon->connections, 
+													msg->del_conn.name);
+	charon->policies->delete_policy(charon->policies, msg->del_conn.name);
+	if (status == SUCCESS)
+	{
+		this->stroke_logger->log(this->stroke_logger, CONTROL,
+								 "Deleted connection '%s'", msg->del_conn.name);
+	}
+	else
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR,
+								 "No connection named '%s'", msg->del_conn.name);
+	}
+}
+
+/**
  * initiate a connection by name
  */
 static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 {
 	initiate_ike_sa_job_t *job;
 	connection_t *connection;
+	linked_list_t *ike_sas;
 	
 	pop_string(msg, &(msg->initiate.name));
 	this->logger->log(this->logger, CONTROL, "received stroke: initiate \"%s\"", msg->initiate.name);
@@ -348,10 +373,20 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	/* only initiate if it is an IKEv2 connection, ignore IKEv1 */
 	else if (connection->is_ikev2(connection))
 	{
-		this->stroke_logger->log(this->stroke_logger, CONTROL, "initiating connection \"%s\" (see log)...", msg->initiate.name);
-	
-		job = initiate_ike_sa_job_create(connection);
-		charon->job_queue->add(charon->job_queue, (job_t*)job);
+		/* check for already set up IKE_SAs befor initiating */
+		ike_sas = charon->ike_sa_manager->get_ike_sa_list_by_name(charon->ike_sa_manager, msg->initiate.name);
+		if (ike_sas->get_count(ike_sas) == 0)
+		{
+			this->stroke_logger->log(this->stroke_logger, CONTROL, "initiating connection \"%s\" (see log)...", msg->initiate.name);
+			job = initiate_ike_sa_job_create(connection);
+			charon->job_queue->add(charon->job_queue, (job_t*)job);
+		}
+		else
+		{
+			
+			this->stroke_logger->log(this->stroke_logger, CONTROL, "connection \"%s\" already up", msg->initiate.name);
+		}
+		ike_sas->destroy(ike_sas);
 	}
 }
 
@@ -620,6 +655,9 @@ static void stroke_receive(private_stroke_t *this)
 				break;
 			case STR_ADD_CONN:
 				stroke_add_conn(this, msg);
+				break;
+			case STR_DEL_CONN:
+				stroke_del_conn(this, msg);
 				break;
 			case STR_LOGTYPE:
 				stroke_logtype(this, msg);

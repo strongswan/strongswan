@@ -81,26 +81,6 @@ typedef struct connection_t connection_t;
 struct connection_t {
 
 	/**
-	 * @brief Get my ID for this connection.
-	 * 
-	 * Object is NOT getting cloned.
-	 * 
-	 * @param this	calling object
-	 * @return		host information as identification_t object
-	 */
-	identification_t *(*get_my_id) (connection_t *this);
-
-	/**
-	 * @brief Get others ID for this connection.
-	 * 
-	 * Object is NOT getting cloned.
-	 * 
-	 * @param this	calling object
-	 * @return		host information as identification_t object
-	 */
-	identification_t *(*get_other_id) (connection_t *this);
-
-	/**
 	 * @brief Get my address as host_t object.
 	 * 
 	 * Object is NOT getting cloned.
@@ -143,32 +123,6 @@ struct connection_t {
 	 * @param my_host	new host to set as other_host
 	 */
 	void (*update_other_host) (connection_t *this, host_t *other_host);
-
-	/**
-	 * @brief Update own ID.
-	 * 
-	 * It may be necessary to uptdate own ID, as it 
-	 * is set to %any or to e.g. *@strongswan.org in 
-	 * some cases.
-	 * Old ID is destroyed, new one NOT cloned.
-	 * 
-	 * @param this		calling object
-	 * @param my_id		new ID to set as my_id
-	 */
-	void (*update_my_id) (connection_t *this, identification_t *my_id);
-
-	/**
-	 * @brief Update others ID.
-	 * 
-	 * It may be necessary to uptdate others ID, as it 
-	 * is set to %any or to e.g. *@strongswan.org in 
-	 * some cases.
-	 * Old ID is destroyed, new one NOT cloned.
-	 * 
-	 * @param this		calling object
-	 * @param other_id	new ID to set as other_id
-	 */
-	void (*update_other_id) (connection_t *this, identification_t *other_id);
 	
 	/**
 	 * @brief Returns a list of all supported proposals.
@@ -176,8 +130,8 @@ struct connection_t {
 	 * Returned list is still owned by connection and MUST NOT
 	 * modified or destroyed.
 	 * 
-	 * @param this				calling object
-	 * @return 					list containing all the proposals
+	 * @param this		calling object
+	 * @return 			list containing all the proposals
 	 */
 	linked_list_t *(*get_proposals) (connection_t *this);
 	
@@ -187,8 +141,8 @@ struct connection_t {
 	 * The first added proposal has the highest priority, the last
 	 * added the lowest.
 	 * 
-	 * @param this				calling object
-	 * @param proposal			proposal to add
+	 * @param this		calling object
+	 * @param proposal	proposal to add
 	 */
 	void (*add_proposal) (connection_t *this, proposal_t *proposal);
 	
@@ -197,17 +151,17 @@ struct connection_t {
 	 * 
 	 * Returned proposal must be destroyed after usage.
 	 * 
-	 * @param this					calling object
-	 * @param proposals				list of proposals to select from
-	 * @return						selected proposal, or NULL if none matches.
+	 * @param this		calling object
+	 * @param proposals	list of proposals to select from
+	 * @return			selected proposal, or NULL if none matches.
 	 */
 	proposal_t *(*select_proposal) (connection_t *this, linked_list_t *proposals);
 	
 	/**
 	 * @brief Get the authentication method to use
 	 * 
-	 * @param this			calling object
-	 * @return				authentication method
+	 * @param this		calling object
+	 * @return			authentication method
 	 */
 	auth_method_t (*get_auth_method) (connection_t *this);
 	
@@ -217,8 +171,8 @@ struct connection_t {
 	 * Name must not be freed, since it points to 
 	 * internal data.
 	 * 
-	 * @param this			calling object
-	 * @return				name of the connection
+	 * @param this		calling object
+	 * @return			name of the connection
 	 */
 	char* (*get_name) (connection_t *this);
 	
@@ -229,16 +183,16 @@ struct connection_t {
 	 * only those marked with IKEv2, this flag can tell us if we must
 	 * ignore a connection on initiaton. Then pluto will do it for us.
 	 * 
-	 * @param this					calling object
-	 * @return						- TRUE, if this is an IKEv2 connection
+	 * @param this		calling object
+	 * @return			- TRUE, if this is an IKEv2 connection
 	 */
 	bool (*is_ikev2) (connection_t *this);
 	
 	/**
 	 * @brief Get the DH group to use for connection initialization.
 	 * 
-	 * @param this					calling object
-	 * @return						dh group to use for initialization
+	 * @param this		calling object
+	 * @return			dh group to use for initialization
 	 */
 	diffie_hellman_group_t (*get_dh_group) (connection_t *this);
 	
@@ -248,23 +202,23 @@ struct connection_t {
 	 * If we guess a wrong DH group for IKE_SA_INIT, the other
 	 * peer will send us a offer. But is this acceptable for us?
 	 * 
-	 * @param this					calling object
-	 * @return						TRUE if group acceptable
+	 * @param this		calling object
+	 * @return			TRUE if group acceptable
 	 */
 	bool (*check_dh_group) (connection_t *this, diffie_hellman_group_t dh_group);
 	
 	/**
 	 * @brief Clone a connection_t object.
 	 * 
-	 * @param this	connection to clone
-	 * @return		clone of it
+	 * @param this		connection to clone
+	 * @return			clone of it
 	 */
 	connection_t *(*clone) (connection_t *this);
 	
 	/**
 	 * @brief Destroys a connection_t object.
 	 * 
-	 * @param this	calling object
+	 * @param this		calling object
 	 */
 	void (*destroy) (connection_t *this);
 };
@@ -272,7 +226,7 @@ struct connection_t {
 /**
  * @brief Creates a connection_t object.
  * 
- * Supplied hosts/IDs become owned by connection, so 
+ * Supplied hosts become owned by connection, so 
  * do not modify or destroy them after a call to 
  * connection_create(). Name gets cloned internally.
  *
@@ -280,8 +234,6 @@ struct connection_t {
  * @param ikev2			TRUE if this is an IKEv2 connection
  * @param my_host		host_t representing local address
  * @param other_host	host_t representing remote address
- * @param my_id			identification_t for me
- * @param other_id		identification_t for other
  * @param auth_method	Authentication method to use for our(!) auth data
  * @return 				connection_t object.
  * 
@@ -290,8 +242,6 @@ struct connection_t {
 connection_t * connection_create(char *name,
 								 bool ikev2,
 								 host_t *my_host, host_t *other_host,
-								 identification_t *my_id, 
-								 identification_t *other_id,
 								 auth_method_t auth_method);
 
 #endif /* CONNECTION_H_ */

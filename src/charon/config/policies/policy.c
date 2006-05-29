@@ -39,6 +39,11 @@ struct private_policy_t {
 	policy_t public;
 	
 	/**
+	 * Name of the policy, used to query it
+	 */
+	char *name;
+	
+	/**
 	 * id to use to identify us
 	 */
 	identification_t *my_id;
@@ -68,6 +73,14 @@ struct private_policy_t {
 	 */
 	linked_list_t *(*select_traffic_selectors) (private_policy_t *,linked_list_t*,linked_list_t*);
 };
+
+/**
+ * Implementation of policy_t.get_name
+ */
+static char *get_name(private_policy_t *this)
+{
+	return this->name;
+}
 
 /**
  * Implementation of policy_t.get_my_id
@@ -276,49 +289,12 @@ static void add_proposal(private_policy_t *this, proposal_t *proposal)
 }
 
 /**
- * Implements policy_t.destroy.
- */
-static status_t destroy(private_policy_t *this)
-{	
-	proposal_t *proposal;
-	traffic_selector_t *traffic_selector;
-	
-	
-	/* delete proposals */
-	while(this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
-	{
-		proposal->destroy(proposal);
-	}
-	this->proposals->destroy(this->proposals);
-	
-	/* delete traffic selectors */
-	while(this->my_ts->remove_last(this->my_ts, (void**)&traffic_selector) == SUCCESS)
-	{
-		traffic_selector->destroy(traffic_selector);
-	}
-	this->my_ts->destroy(this->my_ts);
-	
-	/* delete traffic selectors */
-	while(this->other_ts->remove_last(this->other_ts, (void**)&traffic_selector) == SUCCESS)
-	{
-		traffic_selector->destroy(traffic_selector);
-	}
-	this->other_ts->destroy(this->other_ts);
-	
-	/* delete ids */
-	this->my_id->destroy(this->my_id);
-	this->other_id->destroy(this->other_id);
-	
-	free(this);
-	return SUCCESS;
-}
-
-/**
  * Implements policy_t.clone.
  */
 static policy_t *clone(private_policy_t *this)
 {
-	private_policy_t *clone = (private_policy_t*)policy_create(this->my_id->clone(this->my_id), 
+	private_policy_t *clone = (private_policy_t*)policy_create(this->name,
+															   this->my_id->clone(this->my_id),
 															   this->other_id->clone(this->other_id));
 	iterator_t *iterator;
 	proposal_t *proposal;
@@ -354,17 +330,58 @@ static policy_t *clone(private_policy_t *this)
 	}
 	iterator->destroy(iterator);
 	
+	clone->name = strdup(this->name);
 	return &clone->public;
+}
+
+/**
+ * Implements policy_t.destroy.
+ */
+static status_t destroy(private_policy_t *this)
+{	
+	proposal_t *proposal;
+	traffic_selector_t *traffic_selector;
+	
+	
+	/* delete proposals */
+	while(this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
+	{
+		proposal->destroy(proposal);
+	}
+	this->proposals->destroy(this->proposals);
+	
+	/* delete traffic selectors */
+	while(this->my_ts->remove_last(this->my_ts, (void**)&traffic_selector) == SUCCESS)
+	{
+		traffic_selector->destroy(traffic_selector);
+	}
+	this->my_ts->destroy(this->my_ts);
+	
+	/* delete traffic selectors */
+	while(this->other_ts->remove_last(this->other_ts, (void**)&traffic_selector) == SUCCESS)
+	{
+		traffic_selector->destroy(traffic_selector);
+	}
+	this->other_ts->destroy(this->other_ts);
+	
+	/* delete ids */
+	this->my_id->destroy(this->my_id);
+	this->other_id->destroy(this->other_id);
+	
+	free(this->name);
+	free(this);
+	return SUCCESS;
 }
 
 /*
  * Described in header-file
  */
-policy_t *policy_create(identification_t *my_id, identification_t *other_id)
+policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id)
 {
 	private_policy_t *this = malloc_thing(private_policy_t);
 
 	/* public functions */
+	this->public.get_name = (char *(*)(policy_t*))get_name;
 	this->public.get_my_id = (identification_t*(*)(policy_t*))get_my_id;
 	this->public.get_other_id = (identification_t*(*)(policy_t*))get_other_id;
 	this->public.update_my_id = (void(*)(policy_t*,identification_t*))update_my_id;
@@ -386,6 +403,7 @@ policy_t *policy_create(identification_t *my_id, identification_t *other_id)
 	/* apply init values */
 	this->my_id = my_id;
 	this->other_id = other_id;
+	this->name = strdup(name);
 	
 	/* init private members*/
 	this->select_traffic_selectors = select_traffic_selectors;

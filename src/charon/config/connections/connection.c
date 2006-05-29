@@ -59,16 +59,6 @@ struct private_connection_t {
 	 * Does charon handle this connection? Or can he ignore it?
 	 */
 	bool ikev2;
-	
-	/**
-	 * ID of us
-	 */
-	identification_t *my_id;
-
-	/**
-	 * ID of remote peer
-	 */	
-	identification_t *other_id;
 
 	/**
 	 * Host information of my host.
@@ -108,45 +98,19 @@ static bool is_ikev2 (private_connection_t *this)
 }
 
 /**
- * Implementation of connection_t.get_my_id.
- */
-static identification_t *get_my_id (private_connection_t *this)
-{
-	return this->my_id;
-}
-
-/**
- * Implementation of connection_t.get_other_id.
- */
-static identification_t *get_other_id(private_connection_t *this)
-{
-	return this->other_id;
-}
-
-/**
- * Implementation of connection_t.update_my_id
- */
-static void update_my_id(private_connection_t *this, identification_t *my_id)
-{
-	this->my_id->destroy(this->my_id);
-	this->my_id = my_id;
-}
-
-/**
- * Implementation of connection_t.update_other_id
- */
-static void update_other_id(private_connection_t *this, identification_t *other_id)
-{
-	this->other_id->destroy(this->other_id);
-	this->other_id = other_id;
-}
-
-/**
  * Implementation of connection_t.get_my_host.
  */
-static host_t * get_my_host (private_connection_t *this)
+static host_t *get_my_host (private_connection_t *this)
 {
 	return this->my_host;
+}
+
+/**
+ * Implementation of connection_t.get_other_host.
+ */
+static host_t *get_other_host (private_connection_t *this)
+{
+	return this->other_host;
 }
 
 /**
@@ -168,17 +132,9 @@ static void update_other_host(private_connection_t *this, host_t *other_host)
 }
 
 /**
- * Implementation of connection_t.get_other_host.
- */
-static host_t * get_other_host (private_connection_t *this)
-{
-	return this->other_host;
-}
-
-/**
  * Implementation of connection_t.get_proposals.
  */
-static linked_list_t* get_proposals (private_connection_t *this)
+static linked_list_t* get_proposals(private_connection_t *this)
 {
 	return this->proposals;
 }
@@ -224,7 +180,7 @@ static proposal_t *select_proposal(private_connection_t *this, linked_list_t *pr
 /**
  * Implementation of connection_t.add_proposal.
  */
-static void add_proposal (private_connection_t *this, proposal_t *proposal)
+static void add_proposal(private_connection_t *this, proposal_t *proposal)
 {
 	this->proposals->insert_last(this->proposals, proposal);
 }
@@ -303,8 +259,6 @@ static connection_t *clone(private_connection_t *this)
 			this->ikev2,
 			this->my_host->clone(this->my_host),
 			this->other_host->clone(this->other_host),
-			this->my_id->clone(this->my_id),
-			this->other_id->clone(this->other_id),
 			this->auth_method);
 	
 	/* clone all proposals */
@@ -335,8 +289,6 @@ static void destroy(private_connection_t *this)
 	
 	this->my_host->destroy(this->my_host);
 	this->other_host->destroy(this->other_host);
-	this->my_id->destroy(this->my_id);
-	this->other_id->destroy(this->other_id);
 	free(this->name);
 	free(this);
 }
@@ -344,20 +296,16 @@ static void destroy(private_connection_t *this)
 /**
  * Described in header.
  */
-connection_t * connection_create(char *name, bool ikev2, host_t *my_host, host_t *other_host, identification_t *my_id, identification_t *other_id, auth_method_t auth_method)
+connection_t * connection_create(char *name, bool ikev2, host_t *my_host, host_t *other_host, auth_method_t auth_method)
 {
 	private_connection_t *this = malloc_thing(private_connection_t);
 
 	/* public functions */
 	this->public.get_name = (char*(*)(connection_t*))get_name;
 	this->public.is_ikev2 = (bool(*)(connection_t*))is_ikev2;
-	this->public.get_my_id = (identification_t*(*)(connection_t*))get_my_id;
-	this->public.get_other_id = (identification_t*(*)(connection_t*))get_other_id;
 	this->public.get_my_host = (host_t*(*)(connection_t*))get_my_host;
 	this->public.update_my_host = (void(*)(connection_t*,host_t*))update_my_host;
 	this->public.update_other_host = (void(*)(connection_t*,host_t*))update_other_host;
-	this->public.update_my_id = (void(*)(connection_t*,identification_t*))update_my_id;
-	this->public.update_other_id = (void(*)(connection_t*,identification_t*))update_other_id;
 	this->public.get_other_host = (host_t*(*)(connection_t*))get_other_host;
 	this->public.get_proposals = (linked_list_t*(*)(connection_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(connection_t*,linked_list_t*))select_proposal;
@@ -373,8 +321,6 @@ connection_t * connection_create(char *name, bool ikev2, host_t *my_host, host_t
 	this->ikev2 = ikev2;
 	this->my_host = my_host;
 	this->other_host = other_host;
-	this->my_id = my_id;
-	this->other_id = other_id;
 	this->auth_method = auth_method;
 		
 	this->proposals = linked_list_create();

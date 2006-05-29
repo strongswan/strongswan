@@ -116,6 +116,16 @@ static int add_connection(char *name,
 	return send_stroke_msg(&msg);
 }
 
+static int del_connection(char *name)
+{
+	stroke_msg_t msg;
+	
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.type = STR_DEL_CONN;
+	msg.initiate.name = push_string(&msg, name);
+	return send_stroke_msg(&msg);
+}
+
 static int initiate_connection(char *name)
 {
 	stroke_msg_t msg;
@@ -201,6 +211,9 @@ static void exit_usage(char *error)
 	printf("           ADDR is a IPv4 address\n");
 	printf("           NET is a IPv4 address of the subnet to tunnel\n");
 	printf("           NETBITS is the size of the subnet, as the \"24\" in 192.168.0.0/24\n");
+	printf("  Delete a connection:\n");
+	printf("    stroke delete NAME\n");
+	printf("    where: NAME is a connection name added with \"stroke add\"\n");
 	printf("  Initiate a connection:\n");
 	printf("    stroke up NAME\n");
 	printf("    where: NAME is a connection name added with \"stroke add\"\n");
@@ -272,6 +285,14 @@ int main(int argc, char *argv[])
 							 argv[5], argv[6], 
 							 argv[7], argv[8], 
 							 atoi(argv[9]), atoi(argv[10]));
+	}
+	else if (streq(op, "delete"))
+	{
+		if (argc < 3)
+		{
+			exit_usage("\"delete\" needs a connection name");
+		}
+		res = del_connection(argv[2]);
 	}
 	else if (streq(op, "logtype"))
 	{

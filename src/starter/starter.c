@@ -338,8 +338,8 @@ int main (int argc, char **argv)
 			if (starter_pluto_pid())
 			{
 			    starter_whack_del_conn(conn);
-			    conn->state = STATE_TO_ADD;
 			}
+			conn->state = STATE_TO_ADD;
 		    }
 		}
 		for (ca = cfg->ca_first; ca; ca = ca->next)
