@@ -17,15 +17,10 @@
 #include <string.h>
 #include <time.h>
 
+#include "types.h"
 #include "asn1.h"
 
 #include <utils/logger_manager.h>
-
-/* Names of the months */
-static const char* months[] = {
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
 
 /* some common prefabricated ASN.1 constants */
 static u_char ASN1_INTEGER_0_str[] = { 0x02, 0x00 };
@@ -212,23 +207,6 @@ bool is_printablestring(chunk_t str)
 			return FALSE;
 	}
 	return TRUE;
-}
-
-/**
- * Display a date either in local or UTC time
- */
-void timetoa(char *buf, size_t buflen, const time_t *time, bool utc)
-{
-	if (*time == 0)
-		snprintf(buf, buflen, "--- -- --:--:--%s----", (utc)?" UTC ":" ");
-	else
-	{
-		struct tm *t = (utc)? gmtime(time) : localtime(time);
-
-		snprintf(buf, buflen, "%s %02d %02d:%02d:%02d%s%04d",
-				months[t->tm_mon], t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,
-				(utc)?" UTC ":" ", t->tm_year + 1900);
-	}
 }
 
 /**

@@ -133,6 +133,5 @@ extern u_char* build_asn1_object(chunk_t *object, asn1_t type, size_t datalen);
 extern chunk_t asn1_integer_from_mpz(const mpz_t value);
 extern chunk_t asn1_simple_object(asn1_t tag, chunk_t content);
 extern chunk_t asn1_wrap(asn1_t type, const char *mode, ...);
-extern chunk_t timetoasn1(const time_t *time, asn1_t type);
 
 #endif /* _ASN1_H */

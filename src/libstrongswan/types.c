@@ -21,6 +21,7 @@
  */
 
 #include <string.h>
+#include <time.h>
 
 #include "types.h"
 
@@ -43,6 +44,19 @@ mapping_t status_m[] = {
 	{CREATED, "CREATED"},
 	{MAPPING_END, NULL}
 };
+
+#define UNDEFINED_TIME	0
+
+/**
+ * @brief Display a date either in local or UTC time
+ * 
+ * @param buf		buffer where displayed time will be written
+ * @param buflen	buffer length
+ * @param time		time to be displayed
+ * @param utc		UTC (TRUE) or local time (FALSE)
+ * 
+ */
+void timetoa(char *buf, size_t buflen, const time_t *time, bool utc);
 
 /**
  * Empty chunk.
@@ -138,3 +152,29 @@ void *clalloc(void * pointer, size_t size)
 	
 	return (data);
 }
+
+/*
+ * Names of the months used by timetoa()
+ */
+static const char* months[] = {
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
+
+/*
+ * Described in header file
+ */
+void timetoa(char *buf, size_t buflen, const time_t *time, bool utc)
+{
+	if (*time == UNDEFINED_TIME)
+		snprintf(buf, buflen, "--- -- --:--:--%s----", (utc)?" UTC ":" ");
+	else
+	{
+		struct tm *t = (utc)? gmtime(time) : localtime(time);
+
+		snprintf(buf, buflen, "%s %02d %02d:%02d:%02d%s%04d",
+				months[t->tm_mon], t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,
+				(utc)?" UTC ":" ", t->tm_year + 1900);
+	}
+}
+
