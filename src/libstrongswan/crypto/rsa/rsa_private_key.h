@@ -142,7 +142,7 @@ struct rsa_private_key_t {
 };
 
 /**
- * @brief Generate a new RSA key with specified key lenght.
+ * @brief Generate a new RSA key with specified key length.
  * 
  * @param key_size			size of the key in bits
  * @return 					generated rsa_private_key_t.
