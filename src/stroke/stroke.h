@@ -28,6 +28,7 @@
  */
 #define STROKE_SOCKET "/var/run/charon.ctl"
 
+#define STROKE_BUF_LEN		2048
 
 typedef struct stroke_msg_t stroke_msg_t;
 
@@ -36,7 +37,7 @@ typedef struct stroke_msg_t stroke_msg_t;
  */
 struct stroke_msg_t {
 	/* length of this message with all strings */
-	u_int16_t length;
+	u_int length;
 
 	/* type of the message */
 	enum {
@@ -68,6 +69,7 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 		} initiate, install, terminate, status;
+
 		/* data for STR_ADD_CONN */
 		struct {
 			char *name;
@@ -81,17 +83,19 @@ struct stroke_msg_t {
 				int subnet_mask;
 			} me, other;
 		} add_conn;
+
 		struct {
 			char *context;
 			char *type;
 			int enable;
 		} logtype;
+
 		struct {
 			char *context;
 			int level;
 		} loglevel;
 	};
-	u_int8_t buffer[];
+	char buffer[STROKE_BUF_LEN];
 };
 
 #endif /* STROKE_H_ */

@@ -28,24 +28,20 @@
 
 #define streq(a, b) (strcmp((a), (b)) == 0) /* clearer shorthand */
 
-static char* push_string(stroke_msg_t **strm, char *string)
+static char* push_string(stroke_msg_t *msg, char *string)
 {
-	stroke_msg_t *stroke_msg;
-	size_t string_length;
-	
-	if (string == NULL)
+	u_int string_start = msg->length;
+
+	if (string == NULL ||  msg->length + strlen(string) >= sizeof(stroke_msg_t))
 	{
 		return NULL;
 	}
-	stroke_msg = *strm;
-	string_length = strlen(string) + 1;
-	stroke_msg->length += string_length;
-	
-	stroke_msg = realloc(stroke_msg, stroke_msg->length);
-	strcpy((char*)stroke_msg + stroke_msg->length - string_length, string);
-	
-	*strm = stroke_msg;
-	return (char*)(u_int)stroke_msg->length - string_length;
+	else
+	{
+		msg->length += strlen(string) + 1;
+		strcpy((char*)msg + string_start, string);
+		return (char*)string_start;
+	}
 }
 
 static int send_stroke_msg (stroke_msg_t *msg)
@@ -97,117 +93,93 @@ static int add_connection(char *name,
 						  char *my_net, char *other_net,
 						  u_int my_netmask, u_int other_netmask)
 {
-	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
-	int res;
+	stroke_msg_t msg;
 	
-	msg->length = sizeof(stroke_msg_t);
-	msg->type = STR_ADD_CONN;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.type = STR_ADD_CONN;
 	
-	msg->add_conn.name = push_string(&msg, name);
-	msg->add_conn.ikev2 = 1;
+	msg.add_conn.name = push_string(&msg, name);
+	msg.add_conn.ikev2 = 1;
 	
-	msg->add_conn.me.id = push_string(&msg, my_id);
-	msg->add_conn.me.address = push_string(&msg, my_addr);
-	msg->add_conn.me.subnet = push_string(&msg, my_net);
-	msg->add_conn.me.subnet_mask = my_netmask;
-	msg->add_conn.me.cert = NULL;
+	msg.add_conn.me.id = push_string(&msg, my_id);
+	msg.add_conn.me.address = push_string(&msg, my_addr);
+	msg.add_conn.me.subnet = push_string(&msg, my_net);
+	msg.add_conn.me.subnet_mask = my_netmask;
+	msg.add_conn.me.cert = NULL;
 	
-	msg->add_conn.other.id = push_string(&msg, other_id);
-	msg->add_conn.other.address = push_string(&msg, other_addr);
-	msg->add_conn.other.subnet = push_string(&msg, other_net);
-	msg->add_conn.other.subnet_mask = other_netmask;
-	msg->add_conn.other.cert = NULL;
+	msg.add_conn.other.id = push_string(&msg, other_id);
+	msg.add_conn.other.address = push_string(&msg, other_addr);
+	msg.add_conn.other.subnet = push_string(&msg, other_net);
+	msg.add_conn.other.subnet_mask = other_netmask;
+	msg.add_conn.other.cert = NULL;
 	
-	res = send_stroke_msg(msg);
-	free(msg);
-	return res;
+	return send_stroke_msg(&msg);
 }
 
 static int initiate_connection(char *name)
 {
-	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
-	int res;
+	stroke_msg_t msg;
 	
-	msg->length = sizeof(stroke_msg_t);
-	msg->type = STR_INITIATE;
-	msg->initiate.name = push_string(&msg, name);
-	res = send_stroke_msg(msg);
-	free(msg);
-	return res;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.type = STR_INITIATE;
+	msg.initiate.name = push_string(&msg, name);
+	return send_stroke_msg(&msg);
 }
 
 static int terminate_connection(char *name)
 {
-	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
-	int res;
+	stroke_msg_t msg;
 	
-	msg->length = sizeof(stroke_msg_t);
-	msg->type = STR_TERMINATE;
-	msg->initiate.name = push_string(&msg, name);
-	res = send_stroke_msg(msg);
-	free(msg);
-	return res;
+	msg.type = STR_TERMINATE;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.initiate.name = push_string(&msg, name);
+	return send_stroke_msg(&msg);
 }
 
 static int show_status(char *mode, char *connection)
 {
-	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
-	int res;
+	stroke_msg_t msg;
 	
-	msg->length = sizeof(stroke_msg_t);
 	if (strcmp(mode, "statusall") == 0)
-	{
-		msg->type = STR_STATUS_ALL;
-	}
+		msg.type = STR_STATUS_ALL;
 	else
-	{
-		msg->type = STR_STATUS;
-	}
-	msg->status.name = push_string(&msg, connection);
-	res = send_stroke_msg(msg);
-	free(msg);
-	return res;
+		msg.type = STR_STATUS;
+
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.status.name = push_string(&msg, connection);
+	return send_stroke_msg(&msg);
 }
 
 static int list_certs(void)
 {
-	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
-	int res;
+	stroke_msg_t msg;
 	
-	msg->length = sizeof(stroke_msg_t);
-	msg->type = STR_LIST_CERTS;
-	res = send_stroke_msg(msg);
-	free(msg);
-	return res;
+	msg.type = STR_LIST_CERTS;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	return send_stroke_msg(&msg);
 }
 
 static int set_logtype(char *context, char *type, int enable)
 {
-	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
-	int res;
+	stroke_msg_t msg;
 	
-	msg->length = sizeof(stroke_msg_t);
-	msg->type = STR_LOGTYPE;
-	msg->logtype.context = push_string(&msg, context);
-	msg->logtype.type = push_string(&msg, type);
-	msg->logtype.enable = enable;
-	res = send_stroke_msg(msg);
-	free(msg);
-	return res;
+	msg.type = STR_LOGTYPE;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.logtype.context = push_string(&msg, context);
+	msg.logtype.type = push_string(&msg, type);
+	msg.logtype.enable = enable;
+	return send_stroke_msg(&msg);
 }
 
 static int set_loglevel(char *context, u_int level)
 {
-	stroke_msg_t *msg = malloc(sizeof(stroke_msg_t));
-	int res;
+	stroke_msg_t msg;
 	
-	msg->length = sizeof(stroke_msg_t);
-	msg->type = STR_LOGLEVEL;
-	msg->loglevel.context = push_string(&msg, context);
-	msg->loglevel.level = level;
-	res = send_stroke_msg(msg);
-	free(msg);
-	return res;
+	msg.type = STR_LOGLEVEL;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.loglevel.context = push_string(&msg, context);
+	msg.loglevel.level = level;
+	return send_stroke_msg(&msg);
 }
 
 static void exit_error(char *error)

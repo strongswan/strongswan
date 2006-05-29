@@ -92,17 +92,16 @@ struct private_stroke_t {
  */
 static void pop_string(stroke_msg_t *msg, char **string)
 {
-	/* check for sanity of string pointer and string */
 	if (*string == NULL)
+		return;
+
+	/* check for sanity of string pointer and string */
+	if (string < (char**)msg
+	||	string > (char**)msg + sizeof(stroke_msg_t)
+	|| (u_int)*string < (u_int)((char*)msg->buffer - (char*)msg)
+	|| (u_int)*string > msg->length)
 	{
-		*string = "";
-	}
-	else if (string < (char**)msg ||
-		string > (char**)msg + sizeof(stroke_msg_t) ||
-		*string < (char*)msg->buffer - (u_int)msg ||
-		*string > (char*)(u_int)msg->length)
-	{
-		*string = "(invalid char* in stroke msg)";
+		*string = "(invalid pointer in stroke msg)";
 	}
 	else
 	{
@@ -136,7 +135,7 @@ static void load_end_certificate(const char *filename, identification_t **idp)
 		identification_t *id = *idp;
 		identification_t *subject = cert->get_subject(cert);
 
-		if (!id->equals(id, subject))
+		if (!id->equals(id, subject) && !cert->equals_subjectAltName(cert, id))
 		{
 			id->destroy(id);
 			id = subject;
@@ -170,21 +169,25 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 				
 	this->logger->log(this->logger, CONTROL, "received stroke: add connection \"%s\"", msg->add_conn.name);
 				
-	my_host = host_create(AF_INET, msg->add_conn.me.address, IKE_PORT);
+	my_host = msg->add_conn.me.address?
+			  host_create(AF_INET, msg->add_conn.me.address, IKE_PORT) : NULL;
 	if (my_host == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.me.address);
 		return;
 	}
-	other_host = host_create(AF_INET, msg->add_conn.other.address, IKE_PORT);
+
+	other_host = msg->add_conn.other.address ?
+				 host_create(AF_INET, msg->add_conn.other.address, IKE_PORT) : NULL;
 	if (other_host == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.other.address);
 		my_host->destroy(my_host);
 		return;
 	}
-	my_id = identification_create_from_string(*msg->add_conn.me.id ? 
-											   msg->add_conn.me.id : msg->add_conn.me.address);
+
+	my_id = identification_create_from_string(msg->add_conn.me.id ?
+											  msg->add_conn.me.id : msg->add_conn.me.address);
 	if (my_id == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.me.id);
@@ -192,8 +195,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		other_host->destroy(other_host);
 		return;
 	}
-	other_id = identification_create_from_string(*msg->add_conn.other.id ? 
-												  msg->add_conn.other.id : msg->add_conn.other.address);
+
+	other_id = identification_create_from_string(msg->add_conn.other.id ?
+												 msg->add_conn.other.id : msg->add_conn.other.address);
 	if (other_id == NULL)
 	{
 		my_host->destroy(my_host);
@@ -203,7 +207,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	
-	my_subnet = host_create(AF_INET, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
+	my_subnet = host_create(AF_INET, msg->add_conn.me.subnet ?
+									 msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
 	if (my_subnet == NULL)
 	{
 		my_host->destroy(my_host);
@@ -214,7 +219,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 	
-	other_subnet = host_create(AF_INET, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet : msg->add_conn.other.address, IKE_PORT);
+	other_subnet = host_create(AF_INET, msg->add_conn.other.subnet ?
+										msg->add_conn.other.subnet : msg->add_conn.other.address, IKE_PORT);
 	if (other_subnet == NULL)
 	{
 		my_host->destroy(my_host);
@@ -226,27 +232,37 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 				
-	my_ts = traffic_selector_create_from_subnet(my_subnet, *msg->add_conn.me.subnet ? msg->add_conn.me.subnet_mask : 32);
+	my_ts = traffic_selector_create_from_subnet(my_subnet, msg->add_conn.me.subnet ?
+														   msg->add_conn.me.subnet_mask : 32);
 	my_subnet->destroy(my_subnet);
-	other_ts = traffic_selector_create_from_subnet(other_subnet, *msg->add_conn.other.subnet ? msg->add_conn.other.subnet_mask : 32);
+
+	other_ts = traffic_selector_create_from_subnet(other_subnet, msg->add_conn.other.subnet ?
+																 msg->add_conn.other.subnet_mask : 32);
 	other_subnet->destroy(other_subnet);
 				
 	if (charon->socket->is_listening_on(charon->socket, other_host))
 	{
 		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is other host, switching");
 		
-		host_t *tmp_host = my_host;
-		identification_t *tmp_id = my_id;
-		traffic_selector_t *tmp_ts = my_ts;
-		char *tmp_cert = msg->add_conn.me.cert;
+		host_t *tmp_host;
+		identification_t *tmp_id;
+		traffic_selector_t *tmp_ts;
+		char *tmp_cert;
 		
-		my_host = other_host;
+		tmp_host   = my_host;
+		my_host    = other_host;
 		other_host = tmp_host;
-		my_id = other_id;
+
+		tmp_id   = my_id;
+		my_id    = other_id;
 		other_id = tmp_id;
-		my_ts = other_ts;
+
+		tmp_ts   = my_ts;
+		my_ts    = other_ts;
 		other_ts = tmp_ts;
-		msg->add_conn.me.cert = msg->add_conn.other.cert;
+
+        tmp_cert                 = msg->add_conn.me.cert;
+		msg->add_conn.me.cert    = msg->add_conn.other.cert;
 		msg->add_conn.other.cert = tmp_cert;
 	}
 	else if (charon->socket->is_listening_on(charon->socket, my_host))
