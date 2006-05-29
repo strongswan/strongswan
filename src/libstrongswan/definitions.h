@@ -24,8 +24,6 @@
 #ifndef DEFINITIONS_H_
 #define DEFINITIONS_H_
 
-
-
 /* stolen from strongswan */
 #if linux
 # if defined(i386) && !defined(__i386__)
@@ -65,9 +63,14 @@
 #define BUF_LEN		512
 
 /**
- * Macro compares to strings for equality
+ * Macro compares two strings for equality
  */
 #define streq(x,y) (strcmp(x, y) == 0)
+
+/**
+ * Macro compares two binary blobs for equality
+ */
+#define memeq(x,y,len) (memcmp(x, y, len) == 0)
 
 /**
  * Macro gives back larger of two values.
