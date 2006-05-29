@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: rcv_whack.c,v 1.17 2005/12/25 12:41:23 as Exp $
+ * RCSID $Id: rcv_whack.c,v 1.18 2006/05/25 11:33:57 as Exp $
  */
 
 #include <stdio.h>
@@ -557,7 +557,14 @@ whack_handle(int whackctlfd)
     if (msg.whack_route)
     {
 	if (!listening)
+	{
 	    whack_log(RC_DEAF, "need --listen before --route");
+	}
+	if (msg.name == NULL)
+	{
+	    whack_log(RC_UNKNOWN_NAME
+		, "whack --route requires a connection name");
+	}
 	else
 	{
 	    struct connection *c = con_by_name(msg.name, TRUE);
@@ -579,37 +586,54 @@ whack_handle(int whackctlfd)
 
     if (msg.whack_unroute)
     {
-	struct connection *c = con_by_name(msg.name, TRUE);
-
-	if (c != NULL)
+	if (msg.name == NULL)
 	{
-	    struct spd_route *sr;
-	    int fail = 0;
+	    whack_log(RC_UNKNOWN_NAME
+		, "whack --unroute requires a connection name");
+	}
+	else
+	{
+	    struct connection *c = con_by_name(msg.name, TRUE);
 
-	    set_cur_connection(c);
-
-	    for (sr = &c->spd; sr != NULL; sr = sr->next)
+	    if (c != NULL)
 	    {
-		if (sr->routing >= RT_ROUTED_TUNNEL)
-		    fail++;
+		struct spd_route *sr;
+		int fail = 0;
+
+		set_cur_connection(c);
+
+		for (sr = &c->spd; sr != NULL; sr = sr->next)
+		{
+		    if (sr->routing >= RT_ROUTED_TUNNEL)
+			fail++;
+		}
+		if (fail > 0)
+		    whack_log(RC_RTBUSY, "cannot unroute: route busy");
+		else if (c->policy & POLICY_GROUP)
+		    unroute_group(c);
+		else
+		    unroute_connection(c);
+		reset_cur_connection();
 	    }
-	    if (fail > 0)
-		whack_log(RC_RTBUSY, "cannot unroute: route busy");
-	    else if (c->policy & POLICY_GROUP)
-		unroute_group(c);
-	    else
-		unroute_connection(c);
-	    reset_cur_connection();
 	}
     }
 
     if (msg.whack_initiate)
     {
 	if (!listening)
+	{
 	    whack_log(RC_DEAF, "need --listen before --initiate");
+	}
+	else if (msg.name == NULL)
+	{
+	    whack_log(RC_UNKNOWN_NAME
+		, "whack --initiate requires a connection name");
+	}
 	else
+	{
 	    initiate_connection(msg.name
 		, msg.whack_async? NULL_FD : dup_any(whackfd));
+	}
     }
 
     if (msg.whack_oppo_initiate)
@@ -623,7 +647,17 @@ whack_handle(int whackctlfd)
     }
 
     if (msg.whack_terminate)
-	terminate_connection(msg.name);
+    {
+	if (msg.name == NULL)
+	{
+	    whack_log(RC_UNKNOWN_NAME
+		, "whack --terminate requires a connection name");
+	}
+	else
+	{
+	    terminate_connection(msg.name);
+	}
+    }
 
     if (msg.whack_status)
 	show_status(msg.whack_statusall, msg.name);

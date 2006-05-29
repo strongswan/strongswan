@@ -96,6 +96,11 @@ case "$1" in
 	;;
 down)
 	shift
+	if [ "$#" -ne 1 ]
+	then
+	    echo "Usage: ipsec down <connection name>"
+	    exit 1
+	fi
 	if test -e $IPSEC_PLUTO_PID
 	then
 		$IPSEC_WHACK --name "$1" --terminate
@@ -160,6 +165,11 @@ restart)
 route|unroute)
 	op="$1"
 	shift
+	if [ "$#" -ne 1 ]
+	then
+	    echo "Usage: ipsec $op <connection name>"
+	    exit 1
+	fi
 	if test -e $IPSEC_PLUTO_PID
 	then
 		$IPSEC_WHACK --name "$1" "--$op"
@@ -223,6 +233,11 @@ stop)
 	;;
 up)
 	shift
+	if [ "$#" -ne 1 ]
+	then
+	    echo "Usage: ipsec up <connection name>"
+	    exit 1
+	fi
 	if test -e $IPSEC_PLUTO_PID
 	then
 		$IPSEC_WHACK --name "$1" --initiate
