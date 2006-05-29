@@ -37,6 +37,11 @@ typedef enum id_type_t id_type_t;
 enum id_type_t {
 	
 	/**
+	 * private type which matches any other id.
+	 */
+	ID_ANY = 0,
+
+	/**
 	 * ID data is a single four (4) octet IPv4 address.
 	 */
 	ID_IPV4_ADDR = 1,
@@ -78,34 +83,18 @@ enum id_type_t {
      * types of identification.
      */
 	ID_KEY_ID = 11,
-	
+
 	/**
-	 * Special type of PRIVATE USE which matches to any other id.
+	 * private type which represents a GeneralName of type URI
 	 */
-	ID_ANY = 201,
+	ID_DER_ASN1_GN_URI = 201,
+
 };
 
 /**
  * String mappings for id_type_t.
  */
 extern mapping_t id_type_m[];
-
-/**
- * Different kinds of generalNames
- */
-typedef enum generalNames_t generalNames_t;
-
-enum generalNames_t {
-	GN_OTHER_NAME =		0,
-	GN_RFC822_NAME =	1,
-	GN_DNS_NAME =		2,
-	GN_X400_ADDRESS =	3,
-	GN_DIRECTORY_NAME =	4,
-	GN_EDI_PARTY_NAME = 5,
-	GN_URI =			6,
-	GN_IP_ADDRESS =		7,
-	GN_REGISTERED_ID =	8,
-};
 
 typedef struct identification_t identification_t;
 
@@ -120,6 +109,7 @@ typedef struct identification_t identification_t;
  * - ID_DER_ASN1_DN
  * - ID_DER_ASN1_GN
  * - ID_KEY_ID
+ * - ID_DER_ASN1_GN_URI
  * 
  * @b Constructors:
  * - identification_create_from_string()

@@ -107,6 +107,15 @@ struct x509_t {
 	bool (*equals) (x509_t *this, x509_t *that);
 	
 	/**
+	 * @brief Checks if the certificate contains a subjectAltName equal to id.
+	 * 
+	 * @param this			certificate being examined
+	 * @param id			id which is being compared to the subjectAltNames
+	 * @return				TRUE if a match is found
+	 */
+	bool (*equals_subjectAltName) (x509_t *this, identification_t *id);
+	
+	/**
 	 * @brief Destroys the certificate.
 	 * 
 	 * @param this			certificate to destroy

@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include "definitions.h"
 #include "identification.h"
 
 #include <asn1/asn1.h>
@@ -47,21 +48,17 @@ mapping_t id_type_m[] = {
 	{MAPPING_END, NULL}
 };
 
-
 /**
  * X.501 acronyms for well known object identifiers (OIDs)
  */
 static u_char oid_ND[]  = {
-	0x02, 0x82, 0x06, 0x01, 
-	0x0A, 0x07, 0x14
+	0x02, 0x82, 0x06, 0x01, 0x0A, 0x07, 0x14
 };
 static u_char oid_UID[] = {
-	0x09, 0x92, 0x26, 0x89, 0x93,
-	0xF2, 0x2C, 0x64, 0x01, 0x01
+	0x09, 0x92, 0x26, 0x89, 0x93, 0xF2, 0x2C, 0x64, 0x01, 0x01
 };
 static u_char oid_DC[]  = {
-	0x09, 0x92, 0x26, 0x89, 0x93,
-	0xF2, 0x2C, 0x64, 0x01, 0x19
+	0x09, 0x92, 0x26, 0x89, 0x93, 0xF2, 0x2C, 0x64, 0x01, 0x19
 };
 static u_char oid_CN[] = {
 	0x55, 0x04, 0x03
@@ -106,20 +103,16 @@ static u_char oid_ID[] = {
 	0x55, 0x04, 0x2D
 };
 static u_char oid_EN[]  = {
-	0x60, 0x86, 0x48, 0x01, 0x86,
-	0xF8, 0x42, 0x03, 0x01, 0x03
+	0x60, 0x86, 0x48, 0x01, 0x86, 0xF8, 0x42, 0x03, 0x01, 0x03
 };
 static u_char oid_E[] = {
-	0x2A, 0x86, 0x48, 0x86, 0xF7,
-	0x0D, 0x01, 0x09, 0x01
+	0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x01
 };
 static u_char oid_UN[]  = {
-	0x2A, 0x86, 0x48, 0x86, 0xF7,
-	0x0D, 0x01, 0x09, 0x02
+	0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x02
 };
 static u_char oid_TCGID[] = {
-	0x2B, 0x06, 0x01, 0x04, 0x01, 0x89,
-	0x31, 0x01, 0x01, 0x02, 0x02, 0x4B
+	0x2B, 0x06, 0x01, 0x04, 0x01, 0x89, 0x31, 0x01, 0x01, 0x02, 0x02, 0x4B
 };
 
 /**
@@ -162,49 +155,10 @@ static const x501rdn_t x501rdns[] = {
 #define X501_RDN_ROOF   26
 
 /**
- * ASN.1 definition of generalName 
+ * maximum number of RDNs in atodn()
  */
-static const asn1Object_t generalNameObjects[] = {
-	{ 0,   "otherName",		ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_BODY	}, /*  0 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  1 */
-	{ 0,   "rfc822Name",	ASN1_CONTEXT_S_1,  ASN1_OPT|ASN1_BODY	}, /*  2 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END 			}, /*  3 */
-	{ 0,   "dnsName",		ASN1_CONTEXT_S_2,  ASN1_OPT|ASN1_BODY	}, /*  4 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  5 */
-	{ 0,   "x400Address",	ASN1_CONTEXT_S_3,  ASN1_OPT|ASN1_BODY	}, /*  6 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  7 */
-	{ 0,   "directoryName",	ASN1_CONTEXT_C_4,  ASN1_OPT|ASN1_BODY	}, /*  8 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  9 */
-	{ 0,   "ediPartyName",	ASN1_CONTEXT_C_5,  ASN1_OPT|ASN1_BODY	}, /* 10 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 11 */
-	{ 0,   "URI",			ASN1_CONTEXT_S_6,  ASN1_OPT|ASN1_BODY	}, /* 12 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 13 */
-	{ 0,   "ipAddress",		ASN1_CONTEXT_S_7,  ASN1_OPT|ASN1_BODY	}, /* 14 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 15 */
-	{ 0,   "registeredID",	ASN1_CONTEXT_S_8,  ASN1_OPT|ASN1_BODY	}, /* 16 */
-	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}  /* 17 */
-};
-#define GN_OBJ_OTHER_NAME	 	 0
-#define GN_OBJ_RFC822_NAME	 	 2
-#define GN_OBJ_DNS_NAME		 	 4
-#define GN_OBJ_X400_ADDRESS	 	 6
-#define GN_OBJ_DIRECTORY_NAME	 8
-#define GN_OBJ_EDI_PARTY_NAME	10
-#define GN_OBJ_URI				12
-#define GN_OBJ_IP_ADDRESS		14
-#define GN_OBJ_REGISTERED_ID	16
-#define GN_OBJ_ROOF				18
+#define RDN_MAX			20
 
-/**
- * ASN.1 definition of otherName 
- */
-static const asn1Object_t otherNameObjects[] = {
-	{0, "type-id",	ASN1_OID,			ASN1_BODY	}, /*  0 */
-	{0, "value",	ASN1_CONTEXT_C_0,	ASN1_BODY	}  /*  1 */
-};
-#define ON_OBJ_ID_TYPE		0
-#define ON_OBJ_VALUE		1
-#define ON_OBJ_ROOF			2
 
 typedef struct private_identification_t private_identification_t;
 
@@ -235,7 +189,6 @@ struct private_identification_t {
 
 static private_identification_t *identification_create(void);
 
-
 /**
  * updates a chunk (!????)
  * TODO: We should reconsider this stuff, its not really clear
@@ -253,7 +206,7 @@ void hex_str(chunk_t bin, chunk_t *str)
 {
 	u_int i;
 	update_chunk(str, snprintf(str->ptr,str->len,"0x"));
-	for (i=0; i < bin.len; i++)
+	for (i = 0; i < bin.len; i++)
 	{
 		update_chunk(str, snprintf(str->ptr,str->len,"%02X",*bin.ptr++));
 	}
@@ -396,18 +349,14 @@ static status_t dntoa(chunk_t dn, chunk_t *str)
 	status_t status = init_rdn(dn, &rdn, &attribute, &next);
 
 	if (status != SUCCESS)
-	{/* a parsing error has occured */
 		return status;
-	}
 
 	while (next)
 	{
 		status = get_next_rdn(&rdn, &attribute, &oid, &value, &type, &next);
 
 		if (status != SUCCESS)
-		{/* a parsing error has occured */
 			return status;
-		}
 
 		if (first) 
 		{ /* first OID/value pair */
@@ -447,18 +396,15 @@ static bool same_dn(chunk_t a, chunk_t b)
 
 	/* same lengths for the DNs */
 	if (a.len != b.len)
-	{
 		return FALSE;
-	}
+
 	/* try a binary comparison first */
-	if (memcmp(a.ptr, b.ptr, b.len) == 0)
-	{
+	if (memeq(a.ptr, b.ptr, b.len))
 		return TRUE;
-	}
  
 	/* initialize DN parsing */
-	if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != SUCCESS ||
-		init_rdn(b, &rdn_b, &attribute_b, &next_b) != SUCCESS)
+	if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != SUCCESS
+	||	init_rdn(b, &rdn_b, &attribute_b, &next_b) != SUCCESS)
 	{
 		return FALSE;
 	}
@@ -467,36 +413,31 @@ static bool same_dn(chunk_t a, chunk_t b)
 	while (next_a && next_b)
 	{
 		/* parse next RDNs and check for errors */
-		if (get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) != SUCCESS ||  
-			get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b) != SUCCESS)
+		if (get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) != SUCCESS 
+		||  get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b) != SUCCESS)
 		{
 			return FALSE;
 		}
+
 		/* OIDs must agree */
 		if (oid_a.len != oid_b.len || memcmp(oid_a.ptr, oid_b.ptr, oid_b.len) != 0)
-		{
 			return FALSE;
-		}
+
 		/* same lengths for values */
 		if (value_a.len != value_b.len)
-		{
 			return FALSE;
-		}
+
 		/* printableStrings and email RDNs require uppercase comparison */
-		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-				  (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
+		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING
+		|| (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
-			{
 				return FALSE;
-			}
 		}
 		else
 		{
 			if (strncmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
-			{
 				return FALSE;
-			}
 		}
 	}
 	/* both DNs must have same number of RDNs */
@@ -524,25 +465,25 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 	*wildcards = 0;
 
 	/* initialize DN parsing */
-	if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != SUCCESS ||
-		init_rdn(b, &rdn_b, &attribute_b, &next_b) != SUCCESS)
+	if (init_rdn(a, &rdn_a, &attribute_a, &next_a) != SUCCESS
+	||	init_rdn(b, &rdn_b, &attribute_b, &next_b) != SUCCESS)
 	{
 		return FALSE;
 	}
+
 	/* fetch next RDN pair */
 	while (next_a && next_b)
 	{
 		/* parse next RDNs and check for errors */
-		if (get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) != SUCCESS ||
-			get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b) != SUCCESS)
+		if (get_next_rdn(&rdn_a, &attribute_a, &oid_a, &value_a, &type_a, &next_a) != SUCCESS
+		||	get_next_rdn(&rdn_b, &attribute_b, &oid_b, &value_b, &type_b, &next_b) != SUCCESS)
 		{
 			return FALSE;
 		}
 		/* OIDs must agree */
 		if (oid_a.len != oid_b.len || memcmp(oid_a.ptr, oid_b.ptr, oid_b.len) != 0)
-		{
 			return FALSE;
-		}
+
 		/* does rdn_b contain a wildcard? */
 		if (value_b.len == 1 && *value_b.ptr == '*')
 		{
@@ -551,24 +492,19 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 		}
 		/* same lengths for values */
 		if (value_a.len != value_b.len)
-		{
 			return FALSE;
-		}
+
 		/* printableStrings and email RDNs require uppercase comparison */
-		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING ||
-			(type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
+		if (type_a == type_b && (type_a == ASN1_PRINTABLESTRING
+		|| (type_a == ASN1_IA5STRING && known_oid(oid_a) == OID_PKCS9_EMAIL)))
 		{
 			if (strncasecmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
-			{
 				return FALSE;
-			}
 		}
 		else
 		{
 			if (strncmp(value_a.ptr, value_b.ptr, value_b.len) != 0)
-			{
 				return FALSE;
-			}
 		}
 	}
 	/* both DNs must have same number of RDNs */
@@ -578,59 +514,6 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 	}
 	/* the two DNs match! */
 	return TRUE;
-}
-
-/**
- * get string representation of a general name
- * TODO: Add support for gn types
- */
-static char *gntoa(chunk_t blob)
-{
-	asn1_ctx_t ctx;
-	chunk_t object;
-	int objectID = 0;
-	u_int level;
-	char buf[128];
-
-	asn1_init(&ctx, blob, 0, FALSE);
-
-	while (objectID < GN_OBJ_ROOF)
-	{
-		if (!extract_object(generalNameObjects, &objectID, &object, &level, &ctx))
-		{
-			return NULL;
-		}
-		switch (objectID)
-		{
-			case GN_OBJ_RFC822_NAME:
-			case GN_OBJ_DNS_NAME:
-			case GN_OBJ_URI:
-				snprintf(buf, sizeof(buf), "%.*s", object.len, object.ptr);
-				return strdup(buf);
-			case GN_OBJ_IP_ADDRESS:
-				if (object.len == 4 &&
-					inet_ntop(AF_INET, object.ptr, buf, sizeof(buf)))
-				{
-					return strdup(buf);
-				}
-				return NULL;
-				break;
-			case GN_OBJ_OTHER_NAME:
-				return strdup("(other name)");
-			case GN_OBJ_X400_ADDRESS:
-				return strdup("(X400 Address)");
-			case GN_OBJ_EDI_PARTY_NAME:
-				return strdup("(EDI party name)");
-			case GN_OBJ_REGISTERED_ID:
-				return strdup("(registered ID)");
-			case GN_OBJ_DIRECTORY_NAME:
-				return strdup("(directory name)");
-			default:
-				break;
-		}
-		objectID++;
-	}
-	return NULL;
 }
 
 /**
@@ -648,13 +531,13 @@ static status_t atodn(char *src, chunk_t *dn)
 		UNKNOWN_OID =	4
 	} state_t;
 	
-	char *wrap_mode;
 	chunk_t oid  = CHUNK_INITIALIZER;
 	chunk_t name = CHUNK_INITIALIZER;
-	chunk_t names[25]; /* max to 25 rdns */
-	int name_count = 0;
+	chunk_t rdns[RDN_MAX];
+	int rdn_count = 0;
+	int dn_len = 0;
 	int whitespace = 0;
-	int pos = 0;
+	int i;
 	asn1_t rdn_type;
 	state_t state = SEARCH_OID;
 	status_t status = SUCCESS;
@@ -678,15 +561,15 @@ static status_t atodn(char *src, chunk_t *dn)
 				}
 				else
 				{
-					for (pos = 0; pos < X501_RDN_ROOF; pos++)
+					for (i = 0; i < X501_RDN_ROOF; i++)
 					{
-						if (strlen(x501rdns[pos].name) == oid.len &&
-											  strncasecmp(x501rdns[pos].name, oid.ptr, oid.len) == 0)
+						if (strlen(x501rdns[i].name) == oid.len
+						&&  strncasecmp(x501rdns[i].name, oid.ptr, oid.len) == 0)
 						{
 							break; /* found a valid OID */
 						}
 					}
-					if (pos == X501_RDN_ROOF)
+					if (i == X501_RDN_ROOF)
 					{
 						status = NOT_SUPPORTED;
 						state = UNKNOWN_OID;
@@ -711,29 +594,26 @@ static status_t atodn(char *src, chunk_t *dn)
 				{
 					name.len++;
 					if (*src == ' ')
-					{
 						whitespace++;
-					}
 					else
-					{
 						whitespace = 0;
-					}
 				}
 				else
 				{
 					name.len -= whitespace;
-					rdn_type = (x501rdns[pos].type == ASN1_PRINTABLESTRING
-							&& !is_printablestring(name))? ASN1_T61STRING : x501rdns[pos].type;
+					rdn_type = (x501rdns[i].type == ASN1_PRINTABLESTRING
+							&& !is_printablestring(name))? ASN1_T61STRING : x501rdns[i].type;
 					
-					if (name_count < 25)
+					if (rdn_count < RDN_MAX)
 					{
-						names[name_count++] = 
+						rdns[rdn_count] = 
 								asn1_wrap(ASN1_SET, "m",
-										  asn1_wrap(ASN1_SEQUENCE, "mm",
-												  asn1_wrap(ASN1_OID, "c", x501rdns[pos].oid),
-												  asn1_wrap(rdn_type, "c", name)
-												   )
-										 );
+									asn1_wrap(ASN1_SEQUENCE, "mm",
+										asn1_wrap(ASN1_OID, "c", x501rdns[i].oid),
+										asn1_wrap(rdn_type, "c", name)
+									)
+								);
+						dn_len += rdns[rdn_count++].len;
 					}
 					else
 					{
@@ -749,17 +629,19 @@ static status_t atodn(char *src, chunk_t *dn)
 		}
 	} while (*src++ != '\0');
 
-	
 	/* build the distinguished name sequence */
-	wrap_mode = alloca(26);
-	memset(wrap_mode, 0, 26);
-	memset(wrap_mode, 'm', name_count);
-	*dn = asn1_wrap(ASN1_SEQUENCE, wrap_mode, 
-					names[0], names[1], names[2], names[3], names[4], 
-					names[5], names[6], names[7], names[8], names[9],
-					names[10], names[11], names[12], names[13], names[14], 
-					names[15], names[16], names[17], names[18], names[19], 
-					names[20], names[21], names[22], names[23], names[24]);
+   {
+		int i;
+		u_char *pos = build_asn1_object(dn, ASN1_SEQUENCE, dn_len);
+
+		for (i = 0; i < rdn_count; i++)
+		{
+			memcpy(pos, rdns[i].ptr, rdns[i].len); 
+			pos += rdns[i].len;
+			free(rdns[i].ptr);
+		}
+	}
+
 	if (status != SUCCESS)
 	{
 		free(dn->ptr);
@@ -797,29 +679,16 @@ static char *get_string(private_identification_t *this)
  */
 static bool contains_wildcards(private_identification_t *this)
 {
-	if (this->type == ID_ANY ||
-		memchr(this->encoded.ptr, '*', this->encoded.len) != NULL)
-	{
-		return TRUE;
-	}
-	return FALSE;
+	return this->type == ID_ANY || memchr(this->encoded.ptr, '*', this->encoded.len) != NULL;
 }
 
 /**
  * Default implementation of identification_t.equals and identification_t.belongs_to.
  * compares encoded chunk for equality.
  */
-static bool equals_binary(private_identification_t *this,private_identification_t *other)
+static bool equals_binary(private_identification_t *this, private_identification_t *other)
 {
-	if (this->type == other->type)
-	{
-		if (this->encoded.len == other->encoded.len &&
-			memcmp(this->encoded.ptr, other->encoded.ptr, this->encoded.len) == 0)
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
+	return this->type == other->type && chunk_equals(this->encoded, other->encoded);
 }
 
 /**
@@ -882,11 +751,7 @@ static bool belongs_to_wc_string(private_identification_t *this, private_identif
  */
 static bool belongs_to_any(private_identification_t *this, private_identification_t *other)
 {	
-	if (other->type == ID_ANY)
-	{
-		return TRUE;
-	}
-	return FALSE;
+	return other->type == ID_ANY;
 }
 
 /**
@@ -968,9 +833,8 @@ identification_t *identification_create_from_string(char *string)
 	{
 		/* we interpret this as an ASCII X.501 ID_DER_ASN1_DN.
 		 * convert from LDAP style or openssl x509 -subject style to ASN.1 DN
-		 * discard optional @ character in front of DN
 		 */
-		if (atodn((*string == '@') ? string + 1 : string, &this->encoded) != SUCCESS)
+		if (atodn(string, &this->encoded) != SUCCESS)
 		{
 			free(this);
 			return NULL;
@@ -983,11 +847,11 @@ identification_t *identification_create_from_string(char *string)
 	}
 	else if (strchr(string, '@') == NULL)
 	{
-		if (strcmp(string, "%any") == 0 ||
-			strcmp(string, "0.0.0.0") == 0 ||
-			strcmp(string, "*") == 0 ||
-			strcmp(string, "::") == 0||
-			strcmp(string, "0::0") == 0)
+		if (streq(string, "%any")
+		||	streq(string, "0.0.0.0")
+		||	streq(string, "*")
+		||	streq(string, "::")
+		||	streq(string, "0::0"))
 		{
 			/* any ID will be accepted */
 			this->type = ID_ANY;
@@ -997,8 +861,6 @@ identification_t *identification_create_from_string(char *string)
 		}
 		else
 		{
-			/* TODO: Pluto resolve domainnames without '@' to IPv4/6 address. Is this really needed? */
-			
 			if (strchr(string, ':') == NULL)
 			{
 				/* try IPv4 */
@@ -1039,14 +901,15 @@ identification_t *identification_create_from_string(char *string)
 		{
 			if (*(string + 1) == '#')
 			{
-				/* TODO: Pluto handles '#' as hex encoded ASN1/KEY ID. Do we need this, too? */
+				/* TODO: Pluto handles '#' as hex encoded ASN1/KEY ID. Do we need this, too?
+                   Yes, key IDs are needed */
 				free(this);
 				return NULL;
 			}
 			else
 			{
 				this->type = ID_FQDN;
-				this->string = strdup(string + 1); /* discard @ */
+				this->string = strdup(string);
 				this->encoded.ptr = strdup(string + 1);
 				this->encoded.len = strlen(string + 1);
 				this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_wc_string;
@@ -1070,10 +933,10 @@ identification_t *identification_create_from_string(char *string)
  */
 identification_t *identification_create_from_encoding(id_type_t type, chunk_t encoded)
 {
-	private_identification_t *this = identification_create();
-	char buf[256];
-	chunk_t buf_chunk = chunk_from_buf(buf);
 	char *pos;
+	char buf[BUF_LEN];
+	chunk_t buf_chunk = chunk_from_buf(buf);
+	private_identification_t *this = identification_create();
 	
 	this->type = type;
 	switch (type)
@@ -1123,10 +986,14 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 			this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_dn;
 			break;
 		case ID_DER_ASN1_GN:
-			this->string = gntoa(encoded);
+			this->string = strdup("ASN.1 coded generalName");
 			break;
 		case ID_KEY_ID:
-			this->string = strdup("(unparsed KEY_ID)");
+			this->string = strdup("(KEY_ID)");
+			break;
+		case ID_DER_ASN1_GN_URI:
+			snprintf(buf, sizeof(buf), "%.*s", encoded.len, encoded.ptr);
+			this->string = strdup(buf);
 			break;
 		default:
 			snprintf(buf, sizeof(buf), "(invalid ID type: %d)", type);

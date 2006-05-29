@@ -27,6 +27,8 @@
 
 #include "x509.h"
 
+#include <types.h>
+#include <definitions.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
@@ -34,24 +36,31 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
-#define BUF_LEN 512
 #define BITS_PER_BYTE	8
 #define RSA_MIN_OCTETS	(1024 / BITS_PER_BYTE)
 #define RSA_MIN_OCTETS_UGH	"RSA modulus too small for security: less than 1024 bits"
 #define RSA_MAX_OCTETS	(8192 / BITS_PER_BYTE)
 #define RSA_MAX_OCTETS_UGH	"RSA modulus too large: more than 8192 bits"
 
+#define CERT_WARNING_INTERVAL	30	/* days */
+
 logger_t *logger;
 
-typedef struct generalName_t generalName_t;
-
 /**
- * A generalName, chainable in a list
+ * Different kinds of generalNames
  */
-struct generalName_t {
-	generalName_t *next;
-	generalNames_t kind;
-	chunk_t name;
+typedef enum generalNames_t generalNames_t;
+
+enum generalNames_t {
+	GN_OTHER_NAME =		0,
+	GN_RFC822_NAME =	1,
+	GN_DNS_NAME =		2,
+	GN_X400_ADDRESS =	3,
+	GN_DIRECTORY_NAME =	4,
+	GN_EDI_PARTY_NAME = 5,
+	GN_URI =			6,
+	GN_IP_ADDRESS =		7,
+	GN_REGISTERED_ID =	8,
 };
 
 typedef struct private_x509_t private_x509_t;
@@ -111,11 +120,6 @@ struct private_x509_t {
 	linked_list_t *subjectAltNames;
 	
 	/**
-	 * List of identification_t's representing issuerAltNames
-	 */
-	linked_list_t *issuerAltNames;
-	
-	/**
 	 * List of identification_t's representing crlDistributionPoints
 	 */
 	linked_list_t *crlDistributionPoints;
@@ -153,6 +157,50 @@ struct private_x509_t {
 	chunk_t signature;
 };
 
+/**
+ * ASN.1 definition of generalName 
+ */
+static const asn1Object_t generalNameObjects[] = {
+	{ 0,   "otherName",		ASN1_CONTEXT_C_0,  ASN1_OPT|ASN1_BODY	}, /*  0 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  1 */
+	{ 0,   "rfc822Name",	ASN1_CONTEXT_S_1,  ASN1_OPT|ASN1_BODY	}, /*  2 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END 			}, /*  3 */
+	{ 0,   "dnsName",		ASN1_CONTEXT_S_2,  ASN1_OPT|ASN1_BODY	}, /*  4 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  5 */
+	{ 0,   "x400Address",	ASN1_CONTEXT_S_3,  ASN1_OPT|ASN1_BODY	}, /*  6 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  7 */
+	{ 0,   "directoryName",	ASN1_CONTEXT_C_4,  ASN1_OPT|ASN1_BODY	}, /*  8 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /*  9 */
+	{ 0,   "ediPartyName",	ASN1_CONTEXT_C_5,  ASN1_OPT|ASN1_BODY	}, /* 10 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 11 */
+	{ 0,   "URI",			ASN1_CONTEXT_S_6,  ASN1_OPT|ASN1_BODY	}, /* 12 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 13 */
+	{ 0,   "ipAddress",		ASN1_CONTEXT_S_7,  ASN1_OPT|ASN1_BODY	}, /* 14 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}, /* 15 */
+	{ 0,   "registeredID",	ASN1_CONTEXT_S_8,  ASN1_OPT|ASN1_BODY	}, /* 16 */
+	{ 0,   "end choice",	ASN1_EOC,          ASN1_END				}  /* 17 */
+};
+#define GN_OBJ_OTHER_NAME	 	 0
+#define GN_OBJ_RFC822_NAME	 	 2
+#define GN_OBJ_DNS_NAME		 	 4
+#define GN_OBJ_X400_ADDRESS	 	 6
+#define GN_OBJ_DIRECTORY_NAME	 8
+#define GN_OBJ_EDI_PARTY_NAME	10
+#define GN_OBJ_URI				12
+#define GN_OBJ_IP_ADDRESS		14
+#define GN_OBJ_REGISTERED_ID	16
+#define GN_OBJ_ROOF				18
+
+/**
+ * ASN.1 definition of otherName 
+ */
+static const asn1Object_t otherNameObjects[] = {
+	{0, "type-id",	ASN1_OID,			ASN1_BODY	}, /*  0 */
+	{0, "value",	ASN1_CONTEXT_C_0,	ASN1_BODY	}  /*  1 */
+};
+#define ON_OBJ_ID_TYPE		0
+#define ON_OBJ_VALUE		1
+#define ON_OBJ_ROOF			2
 /**
  * ASN.1 definition of a basicConstraints extension 
  */
@@ -331,56 +379,6 @@ static bool equals(private_x509_t *this, private_x509_t *other)
 }
 
 /**
- * encode a linked list of subjectAltNames
- */
-chunk_t build_subjectAltNames(generalName_t *subjectAltNames)
-{
-	u_char *pos;
-	chunk_t names;
-	size_t len = 0;
-	generalName_t *gn = subjectAltNames;
-	
-	/* compute the total size of the ASN.1 attributes object */
-	while (gn != NULL)
-	{
-		len += gn->name.len;
-		gn = gn->next;
-	}
-
-	pos = build_asn1_object(&names, ASN1_SEQUENCE, len);
-
-	gn = subjectAltNames;
-	while (gn != NULL)
-	{
-		memcpy(pos, gn->name.ptr, gn->name.len); 
-		pos += gn->name.len;
-		gn = gn->next;
-	}
-
-	return asn1_wrap(ASN1_SEQUENCE, "cm",
-					 ASN1_subjectAltName_oid,
-					 asn1_wrap(ASN1_OCTET_STRING, "m", names)
-					);
-}
-
-/**
- * free the dynamic memory used to store generalNames
- */
-void free_generalNames(generalName_t* gn, bool free_name)
-{
-	while (gn != NULL)
-	{
-		generalName_t *gn_top = gn;
-		if (free_name)
-		{
-			free(gn->name.ptr);
-		}
-		gn = gn->next;
-		free(gn_top);
-	}
-}
-
-/**
  * extracts the basicConstraints extension
  */
 static bool parse_basicConstraints(chunk_t blob, int level0)
@@ -402,12 +400,112 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
 		if (objectID == BASIC_CONSTRAINTS_CA)
 		{
 			isCA = object.len && *object.ptr;
-			logger->log(logger, RAW|LEVEL1, "  %s", isCA ? "TRUE" : "FALSE");
+			logger->log(logger, CONTROL|LEVEL1, "  %s", isCA ? "TRUE" : "FALSE");
 		}
 		objectID++;
 	}
 	return isCA;
 }
+
+/*
+ * extracts an otherName
+ */
+static bool
+parse_otherName(chunk_t blob, int level0)
+{
+	asn1_ctx_t ctx;
+	chunk_t object;
+	int objectID = 0;
+	u_int level;
+	int oid = OID_UNKNOWN;
+
+	asn1_init(&ctx, blob, level0, FALSE);
+
+	while (objectID < ON_OBJ_ROOF)
+	{
+		if (!extract_object(otherNameObjects, &objectID, &object, &level, &ctx))
+			return FALSE;
+
+		switch (objectID)
+		{
+			case ON_OBJ_ID_TYPE:
+				oid = known_oid(object);
+				break;
+			case ON_OBJ_VALUE:
+				if (oid == OID_XMPP_ADDR)
+				{
+					if (!parse_asn1_simple_object(&object, ASN1_UTF8STRING, level + 1, "xmppAddr"))
+						return FALSE;
+				}
+				break;
+			default:
+				break;
+		}
+		objectID++;
+	}
+	return TRUE;
+}
+
+/*
+ * extracts a generalName
+ */
+static identification_t *parse_generalName(chunk_t blob, int level0)
+{
+	u_char buf[BUF_LEN];
+	asn1_ctx_t ctx;
+	chunk_t object;
+	int objectID = 0;
+	u_int level;
+
+	asn1_init(&ctx, blob, level0, FALSE);
+
+	while (objectID < GN_OBJ_ROOF)
+	{
+		id_type_t id_type = ID_ANY;
+	
+		if (!extract_object(generalNameObjects, &objectID, &object, &level, &ctx))
+			return NULL;
+
+		switch (objectID)
+		{
+			case GN_OBJ_RFC822_NAME:
+				id_type = ID_RFC822_ADDR;
+				break;
+			case GN_OBJ_DNS_NAME:
+				id_type = ID_FQDN;
+				break;
+			case GN_OBJ_URI:
+				id_type = ID_DER_ASN1_GN_URI;
+				break;
+			case GN_OBJ_DIRECTORY_NAME:
+				id_type = ID_DER_ASN1_DN;
+	    		break;
+			case GN_OBJ_IP_ADDRESS:
+				id_type = ID_IPV4_ADDR;
+				break;
+			case GN_OBJ_OTHER_NAME:
+				if (!parse_otherName(object, level + 1))
+					return NULL;
+				break;
+			case GN_OBJ_X400_ADDRESS:
+			case GN_OBJ_EDI_PARTY_NAME:
+			case GN_OBJ_REGISTERED_ID:
+				break;
+			default:
+				break;
+		}
+
+		if (id_type != ID_ANY)
+		{
+			identification_t *gn = identification_create_from_encoding(id_type, object);
+			logger->log(logger, CONTROL|LEVEL1, "  '%s'", gn->get_string(gn));
+			return gn;
+        }
+		objectID++;
+    }
+    return NULL;
+}
+
 
 /**
  * extracts one or several GNs and puts them into a chained list
@@ -428,7 +526,10 @@ static void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_l
 		
 		if (objectID == GENERAL_NAMES_GN)
 		{
-			list->insert_last(list, identification_create_from_encoding(ID_DER_ASN1_GN, object));
+			identification_t *gn = parse_generalName(object, level+1);
+
+			if (gn != NULL)
+				list->insert_last(list, gn);
 		}
 		objectID++;
 	}
@@ -547,10 +648,8 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessL
 						if (*object.ptr == ASN1_CONTEXT_S_6)
 						{
 							if (asn1_length(&object) == ASN1_INVALID_LENGTH)
-							{
 								return;
-							}
-							logger->log(logger, RAW|LEVEL1, "  '%.*s'",(int)object.len, object.ptr);
+							logger->log(logger, CONTROL|LEVEL1, "  '%.*s'",(int)object.len, object.ptr);
 							/* only HTTP(S) URIs accepted */
 							if (strncasecmp(object.ptr, "http", 4) == 0)
 							{
@@ -659,7 +758,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_VERSION:
 				cert->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				logger->log(logger, RAW|LEVEL1, "  v%d", cert->version);
+				logger->log(logger, CONTROL|LEVEL1, "  v%d", cert->version);
 				break;
 			case X509_OBJ_SERIAL_NUMBER:
 				cert->serialNumber = object;
@@ -669,6 +768,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_ISSUER:
 				cert->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
+				logger->log(logger, CONTROL|LEVEL1, "  '%s'", cert->issuer->get_string(cert->issuer));
 				break;
 			case X509_OBJ_NOT_BEFORE:
 				cert->notBefore = parse_time(object, level);
@@ -678,6 +778,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_SUBJECT:
 				cert->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
+				logger->log(logger, CONTROL|LEVEL1, "  '%s'", cert->subject->get_string(cert->subject));
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
 				if (parse_algorithmIdentifier(object, level, NULL) != OID_RSA_ENCRYPTION)
@@ -737,9 +838,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 					case OID_NS_CA_POLICY_URL:
 					case OID_NS_COMMENT:
 						if (!parse_asn1_simple_object(&object, ASN1_IA5STRING , level, oid_names[extn_oid].name))
-						{
 							return FALSE;
-						}
 						break;
 					default:
 						break;
@@ -790,11 +889,34 @@ err_t check_validity(const private_x509_t *cert, time_t *until)
 }
 
 /**
+ * Implements x509_t.equals_subjectAltName
+ */
+static bool equals_subjectAltName(private_x509_t *this, identification_t *id)
+{
+	bool found = FALSE;
+	iterator_t *iterator = this->subjectAltNames->create_iterator(this->subjectAltNames, TRUE);
+
+	while (iterator->has_next(iterator))
+	{
+		identification_t *subjectAltName;
+
+		iterator->current(iterator, (void**)&subjectAltName);
+		if (id->equals(id, subjectAltName))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return found;
+}
+
+/**
  * Implements x509_t.get_public_key
  */
 static rsa_public_key_t *get_public_key(private_x509_t *this)
 {
-	return this->public_key->clone(this->public_key);;
+	return this->public_key->clone(this->public_key);
 }
 
 /**
@@ -824,30 +946,67 @@ static void destroy(private_x509_t *this)
 		id->destroy(id);
 	}
 	this->subjectAltNames->destroy(this->subjectAltNames);
-	while (this->issuerAltNames->remove_last(this->issuerAltNames, (void**)&id) == SUCCESS)
-	{
-		id->destroy(id);
-	}
-	this->issuerAltNames->destroy(this->issuerAltNames);
+
 	while (this->crlDistributionPoints->remove_last(this->crlDistributionPoints, (void**)&id) == SUCCESS)
 	{
 		id->destroy(id);
 	}
 	this->crlDistributionPoints->destroy(this->crlDistributionPoints);
+
 	if (this->issuer)
-	{
 		this->issuer->destroy(this->issuer);
-	}
+
 	if (this->subject)
-	{
 		this->subject->destroy(this->subject);
-	}
+
 	if (this->public_key)
-	{
 		this->public_key->destroy(this->public_key);
-	}
+
 	free(this->certificate.ptr);
 	free(this);
+}
+
+/** checks if the expiration date has been reached and
+ *  warns during the warning_interval of the imminent
+ *  expiry. strict=TRUE declares a fatal error,
+ *  strict=FALSE issues a warning upon expiry.
+ */
+char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
+{
+	time_t now;
+	int time_left;
+
+	if (expiration_date == UNDEFINED_TIME)
+		return "ok (expires never)";
+
+	time_left = (expiration_date - time(NULL));
+	if (time_left < 0)
+		return strict? "fatal (expired)" : "warning (expired)";
+
+	{
+		static char buf[35]; /* temporary storage */
+		const char* unit = "second";
+
+		if (time_left > 86400*warning_interval)
+			return "ok";
+
+		if (time_left > 172800)
+		{
+			time_left /= 86400;
+			unit = "day";
+		}
+		else if (time_left > 7200)
+		{
+			time_left /= 3600;
+			unit = "hour";
+		}
+		else if (time_left > 120)
+		{
+			time_left /= 60;
+			unit = "minute";
+		}
+		snprintf(buf, sizeof(buf), "warning (expires in %d %s%s)", time_left, unit, (time_left == 1)?"":"s");
+	}
 }
 
 /**
@@ -861,6 +1020,10 @@ static void log_certificate(private_x509_t *this, logger_t *logger, bool utc)
 	rsa_public_key_t *rsa_key = this->public_key;
 
 	char buf[BUF_LEN];
+    time_t now;
+
+    /* determine the current time */
+    time(&now);
 
 	timetoa(buf, BUF_LEN, &this->installed, utc);
 	logger->log(logger, CONTROL, "%s", buf);
@@ -869,9 +1032,11 @@ static void log_certificate(private_x509_t *this, logger_t *logger, bool utc)
 	chunk_to_hex(buf, BUF_LEN, this->serialNumber);
 	logger->log(logger, CONTROL, "       serial:   %s", buf);
 	timetoa(buf, BUF_LEN, &this->notBefore, utc);
-	logger->log(logger, CONTROL, "       validity: not before %s", buf);
+	logger->log(logger, CONTROL, "       validity: not before %s %s", buf,
+				(this->notBefore < now)? "ok":"fatal (not valid yet)");
 	timetoa(buf, BUF_LEN, &this->notAfter, utc);
-	logger->log(logger, CONTROL, "                 not after  %s", buf);
+	logger->log(logger, CONTROL, "                 not after  %s %s", buf,
+			check_expiry(this->notAfter, CERT_WARNING_INTERVAL, TRUE));
 	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits", BITS_PER_BYTE * rsa_key->get_keysize(rsa_key));
 	if (this->subjectKeyID.ptr != NULL)
 	{
@@ -899,6 +1064,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	
 	/* public functions */
 	this->public.equals = (bool (*) (x509_t*,x509_t*))equals;
+	this->public.equals_subjectAltName = (bool (*) (x509_t*,identification_t*))equals_subjectAltName;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	this->public.get_public_key = (rsa_public_key_t* (*) (x509_t*))get_public_key;
 	this->public.get_subject = (identification_t* (*) (x509_t*))get_subject;
@@ -911,7 +1077,6 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->subject = NULL;
 	this->issuer = NULL;
 	this->subjectAltNames = linked_list_create();
-	this->issuerAltNames = linked_list_create();
 	this->crlDistributionPoints = linked_list_create();
 	this->subjectKeyID = CHUNK_INITIALIZER;
 	this->authKeyID = CHUNK_INITIALIZER;
@@ -920,8 +1085,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	/* we do not use a per-instance logger right now, since its not always accessible */
 	logger = logger_manager->get_logger(logger_manager, ASN1);
 	
-	if (!is_asn1(chunk) ||
-		!parse_x509cert(chunk, 0, this))
+	if (!is_asn1(chunk) || !parse_x509cert(chunk, 0, this))
 	{
 		destroy(this);
 		return NULL;
@@ -950,9 +1114,8 @@ x509_t *x509_create_from_file(const char *filename)
 		return NULL;
 
 	cert = x509_create_from_chunk(chunk);
+
 	if (cert == NULL)
-	{
 		free(chunk.ptr);
-	}
 	return cert;
 }
