@@ -119,9 +119,12 @@ static status_t initiate_connection (private_initiator_init_t *this, connection_
 	my_id = connection->get_my_id(connection);
 	other_id = connection->get_other_id(connection);
 	
-	this->logger->log(this->logger, CONTROL, "Initiating connection between %s (%s) - %s (%s)",
-					  my_id->get_string(my_id), my_host->get_address(my_host),
-					  other_id->get_string(other_id), other_host->get_address(other_host));
+	this->logger->log(this->logger, CONTROL, "initiating connection \"%s\": %s[%s]...%s[%s]",
+					  connection->get_name(connection),
+					  my_host->get_address(my_host),
+					  my_id->get_string(my_id),
+				      other_host->get_address(other_host),
+					  other_id->get_string(other_id));
 	
 	this->ike_sa->set_connection(this->ike_sa, connection);
 	
@@ -129,7 +132,7 @@ static status_t initiate_connection (private_initiator_init_t *this, connection_
 	policy = charon->policies->get_policy(charon->policies, my_id, other_id);
 	if (policy == NULL)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Could not get a policy for '%s - %s', aborting",
+		this->logger->log(this->logger, ERROR | LEVEL1, "could not get a policy for '%s...%s', aborting",
 						  my_id->get_string(my_id), other_id->get_string(other_id));
 		return DESTROY_ME;
 	}
