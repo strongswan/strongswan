@@ -268,10 +268,6 @@ static status_t remove(private_iterator_t *this)
 	{
 		new_current = this->current->previous;
 	}
-	else if (this->current->next != NULL)
-	{
-		new_current = this->current->next;
-	}
 	else
 	{
 		new_current = NULL;

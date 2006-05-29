@@ -50,6 +50,7 @@ struct iterator_t {
 	 * @return				number of list items
 	 */
 	int (*get_count) (iterator_t *this);
+	
 	/**
 	 * @brief Iterate over all items.
 	 * 
@@ -125,10 +126,9 @@ struct iterator_t {
 	/**
 	 * @brief Removes an element from list at the given iterator position.
 	 * 
-	 * The position of the iterator is set in the following order:
+	 * The iterator is set the the following position:
 	 * - to the item before, if available
-	 * - otherwise to the item after, if available
-	 * - otherwise it gets reseted
+	 * - it gets reseted, otherwise
 	 * 
 	 * @param linked_list 	calling object
 	 * @return 
@@ -136,7 +136,7 @@ struct iterator_t {
 	 * 						- FAILED if iterator is on an invalid position
 	 */
 	status_t (*remove) (iterator_t *iterator);
-			  
+	
 	/**
 	 * @brief Resets the iterator position.
 	 * 
