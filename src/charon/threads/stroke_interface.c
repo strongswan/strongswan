@@ -362,6 +362,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	initiate_ike_sa_job_t *job;
 	connection_t *connection;
 	linked_list_t *ike_sas;
+	ike_sa_id_t *ike_sa_id;
 	
 	pop_string(msg, &(msg->initiate.name));
 	this->logger->log(this->logger, CONTROL, "received stroke: initiate \"%s\"", msg->initiate.name);
@@ -383,8 +384,11 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		}
 		else
 		{
-			
 			this->stroke_logger->log(this->stroke_logger, CONTROL, "connection \"%s\" already up", msg->initiate.name);
+		}
+		while (ike_sas->remove_last(ike_sas, (void**)&ike_sa_id) == SUCCESS)
+		{
+			ike_sa_id->destroy(ike_sa_id);
 		}
 		ike_sas->destroy(ike_sas);
 	}
