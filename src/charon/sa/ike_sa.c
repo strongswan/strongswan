@@ -924,7 +924,7 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 	/* only log if name == NULL or name == connection_name */
 	if (name)
 	{
-		if (strcmp(this->connection->get_name(this->connection), name) != 0)
+		if (streq(this->connection->get_name(this->connection), name))
 		{
 			return;
 		}
