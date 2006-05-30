@@ -128,7 +128,7 @@ static void load_end_certificate(const char *filename, identification_t **idp)
 		snprintf(path, sizeof(path), "%s/%s", CERTIFICATE_DIR, filename);
 	}
 
-	cert = x509_create_from_file(path);
+	cert = x509_create_from_file(path, "end entity certificate");
 
 	if (cert)
 	{
@@ -141,7 +141,7 @@ static void load_end_certificate(const char *filename, identification_t **idp)
 			id = subject;
 			*idp = id->clone(id);
 		}
-		cert->destroy(cert);
+		charon->credentials->add_certificate(charon->credentials, cert);
 	}
 }
 
@@ -474,6 +474,7 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg, bool utc)
 	if (msg->type = STR_LIST_CERTS)
 	{
 		charon->credentials->log_certificates(charon->credentials, this->stroke_logger, utc);
+		charon->credentials->log_ca_certificates(charon->credentials, this->stroke_logger, utc);
 	}
 }
 
