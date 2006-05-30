@@ -1012,12 +1012,11 @@ char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
 /**
  * log certificate
  */
-static void log_certificate(private_x509_t *this, logger_t *logger, bool utc)
+static void log_certificate(private_x509_t *this, logger_t *logger, bool utc, bool has_key)
 {
 	identification_t *subject = this->subject;
 	identification_t *issuer = this->issuer;
-
-	rsa_public_key_t *rsa_key = this->public_key;
+	rsa_public_key_t *pubkey = this->public_key;
 
 	char buf[BUF_LEN];
     time_t now;
@@ -1037,7 +1036,12 @@ static void log_certificate(private_x509_t *this, logger_t *logger, bool utc)
 	timetoa(buf, BUF_LEN, &this->notAfter, utc);
 	logger->log(logger, CONTROL, "                 not after  %s %s", buf,
 			check_expiry(this->notAfter, CERT_WARNING_INTERVAL, TRUE));
-	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits", BITS_PER_BYTE * rsa_key->get_keysize(rsa_key));
+
+	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits%s",
+			BITS_PER_BYTE * pubkey->get_keysize(pubkey), has_key? ", has private key":"");
+	chunk_to_hex(buf, BUF_LEN, pubkey->get_keyid(pubkey));
+	logger->log(logger, CONTROL, "       keyid:    %s", buf);
+
 	if (this->subjectKeyID.ptr != NULL)
 	{
 		chunk_to_hex(buf, BUF_LEN, this->subjectKeyID);
@@ -1069,7 +1073,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public.get_public_key = (rsa_public_key_t* (*) (x509_t*))get_public_key;
 	this->public.get_subject = (identification_t* (*) (x509_t*))get_subject;
 	this->public.get_issuer = (identification_t* (*) (x509_t*))get_issuer;
-	this->public.log_certificate = (void (*) (x509_t*,logger_t*,bool))log_certificate;
+	this->public.log_certificate = (void (*) (x509_t*,logger_t*,bool,bool))log_certificate;
 	
 	/* initialize */
 	this->subjectPublicKey = CHUNK_INITIALIZER;
@@ -1104,13 +1108,13 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 /*
  * Described in header.
  */
-x509_t *x509_create_from_file(const char *filename)
+x509_t *x509_create_from_file(const char *filename, const char *label)
 {
 	bool pgp = FALSE;
 	chunk_t chunk = CHUNK_INITIALIZER;
 	x509_t *cert = NULL;
 
-	if (!pem_asn1_load_file(filename, "", "certificate", &chunk, &pgp))
+	if (!pem_asn1_load_file(filename, "", label, &chunk, &pgp))
 		return NULL;
 
 	cert = x509_create_from_chunk(chunk);
