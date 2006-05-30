@@ -194,6 +194,7 @@ void chunk_to_hex(char *buf, size_t buflen, chunk_t chunk);
 void *clalloc(void *pointer, size_t size);
 
 #define UNDEFINED_TIME	0
+#define TIMETOA_BUF 	30
 
 /**
  * @brief Display a date either in local or UTC time
