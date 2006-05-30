@@ -74,7 +74,7 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 	connection_t *candidate;
 	connection_t *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "searching connection for host pair %s...%s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "looking for connection for host pair %s...%s",
 					  my_host->get_address(my_host), other_host->get_address(other_host));
 	
 	pthread_mutex_lock(&(this->mutex));
@@ -126,7 +126,7 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 		host_t *found_my_host    = found->get_my_host(found);
 		host_t *found_other_host = found->get_other_host(found);
 		
-		this->logger->log(this->logger, CONTROL|LEVEL1,
+		this->logger->log(this->logger, CONTROL,
 						 "found matching connection \"%s\": %s...%s (prio=%d)",
 						  found->get_name(found),
 						  found_my_host->get_address(found_my_host),
