@@ -196,30 +196,36 @@ static void initialize(private_daemon_t *this)
  */
 static void destroy(private_daemon_t *this)
 {
+	/* destruction is a non trivial task, we need to follow 
+	 * a strict order to prevent threading issues! 
+	 * Kill active threads first, except the sender, as
+	 * the killed IKE_SA want to send delete messages. 
+	 */
+	if (this->public.receiver != NULL)
+	{	/* we don't want to receive anything... */
+		this->public.receiver->destroy(this->public.receiver);
+	}
+	if (this->public.stroke != NULL)
+	{	/* ignore all incoming user requests */
+		this->public.stroke->destroy(this->public.stroke);
+	}
+	if (this->public.scheduler != NULL)
+	{	/* stop scheduing jobs */
+		this->public.scheduler->destroy(this->public.scheduler);	
+	}
+	if (this->public.thread_pool != NULL)
+	{	/* stop processing jobs */
+		this->public.thread_pool->destroy(this->public.thread_pool);	
+	}
 	if (this->public.ike_sa_manager != NULL)
-	{
+	{	/* shut down manager with all IKE SAs */
 		this->public.ike_sa_manager->destroy(this->public.ike_sa_manager);
 	}
 	if (this->public.kernel_interface != NULL)
-	{
+	{	/* all child SAs should be down now, so kill kernel interface */
 		this->public.kernel_interface->destroy(this->public.kernel_interface);
 	}
-	if (this->public.receiver != NULL)
-	{
-		this->public.receiver->destroy(this->public.receiver);
-	}
-	if (this->public.scheduler != NULL)
-	{
-		this->public.scheduler->destroy(this->public.scheduler);	
-	}
-	if (this->public.sender != NULL)
-	{
-		this->public.sender->destroy(this->public.sender);
-	}
-	if (this->public.thread_pool != NULL)
-	{
-		this->public.thread_pool->destroy(this->public.thread_pool);	
-	}
+	/* destroy other infrastructure */
 	if (this->public.job_queue != NULL)
 	{
 		this->public.job_queue->destroy(this->public.job_queue);
@@ -227,14 +233,6 @@ static void destroy(private_daemon_t *this)
 	if (this->public.event_queue != NULL)
 	{
 		this->public.event_queue->destroy(this->public.event_queue);	
-	}
-	if (this->public.send_queue != NULL)
-	{
-		this->public.send_queue->destroy(this->public.send_queue);	
-	}
-	if (this->public.socket != NULL)
-	{
-		this->public.socket->destroy(this->public.socket);
 	}
 	if (this->public.configuration != NULL)
 	{
@@ -252,9 +250,19 @@ static void destroy(private_daemon_t *this)
 	{
 		this->public.policies->destroy(this->public.policies);
 	}
-	if (this->public.stroke != NULL)
+	/* we hope the sender could send the outstanding deletes, but 
+	 * we shut down here at any cost */
+	if (this->public.sender != NULL)
 	{
-		this->public.stroke->destroy(this->public.stroke);
+		this->public.sender->destroy(this->public.sender);
+	}
+	if (this->public.send_queue != NULL)
+	{
+		this->public.send_queue->destroy(this->public.send_queue);	
+	}
+	if (this->public.socket != NULL)
+	{
+		this->public.socket->destroy(this->public.socket);
 	}
 	free(this);
 }
