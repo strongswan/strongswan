@@ -32,12 +32,9 @@
 #include <asn1/asn1.h>
 
 /* 
- * For simplicity,
- * we use these predefined values for
- * hash algorithm OIDs. These also contain
- * the length of the following hash.
- * These values are also used in rsa_private_key.c.
- * TODO: We may move them in asn1 sometime...
+ * For simplicity, we use these predefined values for hash algorithm OIDs 
+ * These also contain the length of the appended hash  
+ * These values are also  used in rsa_private_key.c.
  */
 
 const u_int8_t md2_oid[] = {
@@ -133,6 +130,11 @@ struct private_rsa_public_key_t {
 	size_t k;
 	
 	/**
+	 * Keyid formed as a SHA-1 hash of a publicKeyInfo object
+	 */
+	chunk_t keyid;
+
+	/**
 	 * @brief Implements the RSAEP algorithm specified in PKCS#1.
 	 * 
 	 * @param this		calling object
@@ -149,24 +151,6 @@ struct private_rsa_public_key_t {
 	 * @return			processed data
 	 */
 	chunk_t (*rsavp1) (private_rsa_public_key_t *this, chunk_t data);
-};
-
-
-typedef struct rsa_public_key_info_t rsa_public_key_info_t;
-
-/**
- * KeyInfo, as it appears in a public key file
- */
-struct rsa_public_key_info_t {
-	/**
-	 * Algorithm for this key
-	 */
-	chunk_t algorithm_oid;
-	
-	/**
-	 * Public key, parseable with rsa_public_key_rules
-	 */
-	chunk_t public_key;
 };
 
 private_rsa_public_key_t *rsa_public_key_create_empty(void);
@@ -204,11 +188,10 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	chunk_t hash;
 	chunk_t em;
 	u_int8_t *pos;
+	status_t res = FAILED;
 	
 	if (signature.len > this->k)
-	{
 		return INVALID_ARG;	
-	}
 	
 	/* unpack signature */
 	em = this->rsavp1(this, signature);
@@ -220,12 +203,8 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	 */	
 	
 	/* check magic bytes */
-	if ((*(em.ptr) != 0x00) ||
-		(*(em.ptr+1) != 0x01))
-	{
-		free(em.ptr);
-		return FAILED;
-	}
+	if ((*(em.ptr) != 0x00) || (*(em.ptr+1) != 0x01))
+		goto end;
 	
 	/* find magic 0x00 */
 	pos = em.ptr + 2;
@@ -240,8 +219,7 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 		else if (*pos != 0xFF)
 		{
 			/* bad padding, decryption failed ?!*/
-			free(em.ptr);
-			return FAILED;	
+			goto end;
 		}
 		pos++;
 	}
@@ -249,36 +227,35 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	if (pos + 20 > em.ptr + em.len)
 	{
 		/* not enought room for oid compare */
-		free(em.ptr);
-		return FAILED;	
+		goto end;
 	}
 	
-	if (memcmp(md2_oid, pos, sizeof(md2_oid)) == 0)
+	if (memeq(md2_oid, pos, sizeof(md2_oid)))
 	{
 		hasher = hasher_create(HASH_MD2);
 		pos += sizeof(md2_oid);
 	}
-	else if (memcmp(md5_oid, pos, sizeof(md5_oid)) == 0)
+	else if (memeq(md5_oid, pos, sizeof(md5_oid)))
 	{
 		hasher = hasher_create(HASH_MD5);
 		pos += sizeof(md5_oid);
 	}
-	else if (memcmp(sha1_oid, pos, sizeof(sha1_oid)) == 0)
+	else if (memeq(sha1_oid, pos, sizeof(sha1_oid)))
 	{
 		hasher = hasher_create(HASH_SHA1);
 		pos += sizeof(sha1_oid);
 	}
-	else if (memcmp(sha256_oid, pos, sizeof(sha256_oid)) == 0)
+	else if (memeq(sha256_oid, pos, sizeof(sha256_oid)))
 	{
 		hasher = hasher_create(HASH_SHA256);
 		pos += sizeof(sha256_oid);
 	}
-	else if (memcmp(sha384_oid, pos, sizeof(sha384_oid)) == 0)
+	else if (memeq(sha384_oid, pos, sizeof(sha384_oid)))
 	{
 		hasher = hasher_create(HASH_SHA384);
 		pos += sizeof(sha384_oid);
 	}
-	else if (memcmp(sha512_oid, pos, sizeof(sha512_oid)) == 0)
+	else if (memeq(sha512_oid, pos, sizeof(sha512_oid)))
 	{
 		hasher = hasher_create(HASH_SHA512);
 		pos += sizeof(sha512_oid);
@@ -286,36 +263,29 @@ static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chun
 	
 	if (hasher == NULL)
 	{
-		/* not supported hash algorithm */
-		free(em.ptr);
-		return NOT_SUPPORTED;	
+		/* unsupported hash algorithm */
+		res = NOT_SUPPORTED;;
+		goto end;
 	}
 	
 	if (pos + hasher->get_hash_size(hasher) != em.ptr + em.len)
 	{
 		/* bad length */
-		free(em.ptr);
 		hasher->destroy(hasher);
-		return FAILED;	
+		goto end;
 	}
 	
-	/* build own hash for a compare */
+	/* build our own hash */
 	hasher->allocate_hash(hasher, data, &hash);
 	hasher->destroy(hasher);
 	
-	if (memcmp(hash.ptr, pos, hash.len) != 0)
-	{
-		/* hash does not equal */
-		free(hash.ptr);
-		free(em.ptr);
-		return FAILED;	
-			
-	}
-	
-	/* seems good */
+	/* compare the hashes */
+	res = memeq(hash.ptr, pos, hash.len)? SUCCESS : FAILED;
 	free(hash.ptr);
+
+end:
 	free(em.ptr);
-	return SUCCESS;	
+	return res;
 }
 	
 /**
@@ -365,6 +335,14 @@ static size_t get_keysize(private_rsa_public_key_t *this)
 }
 
 /**
+ * Implementation of rsa_public_key.get_keyid.
+ */
+static chunk_t get_keyid(private_rsa_public_key_t *this)
+{
+	return this->keyid;
+}
+
+/**
  * Implementation of rsa_public_key.clone.
  */
 static rsa_public_key_t* _clone(private_rsa_public_key_t *this)
@@ -373,6 +351,7 @@ static rsa_public_key_t* _clone(private_rsa_public_key_t *this)
 	
 	mpz_init_set(clone->n, this->n);
 	mpz_init_set(clone->e, this->e);
+	clone->keyid = chunk_clone(this->keyid);
 	clone->k = this->k;
 	
 	return &clone->public;
@@ -385,6 +364,7 @@ static void destroy(private_rsa_public_key_t *this)
 {
 	mpz_clear(this->n);
 	mpz_clear(this->e);
+	free(this->keyid.ptr);
 	free(this);
 }
 
@@ -401,6 +381,7 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 	this->public.save_key = (status_t (*) (rsa_public_key_t*,char*))save_key;
 	this->public.get_modulus = (mpz_t *(*) (rsa_public_key_t*))get_modulus;
 	this->public.get_keysize = (size_t (*) (rsa_public_key_t*))get_keysize;
+	this->public.get_keyid = (chunk_t (*) (rsa_public_key_t*))get_keyid;
 	this->public.clone = (rsa_public_key_t* (*) (rsa_public_key_t*))_clone;
 	this->public.destroy = (void (*) (rsa_public_key_t*))destroy;
 	
@@ -410,7 +391,27 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 	
 	return this;
 }
-	
+
+/**
+ * Build a DER-encoded publicKeyInfo object from an RSA public key
+ */
+chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e)
+{
+	chunk_t rawKey = asn1_wrap(ASN1_SEQUENCE, "mm",
+								 asn1_integer_from_mpz(n),
+								 asn1_integer_from_mpz(e));
+	chunk_t publicKey;
+
+	u_char *pos = build_asn1_object(&publicKey, ASN1_BIT_STRING, 1 + rawKey.len);
+
+	*pos++ = 0x00;
+	memcpy(pos, rawKey.ptr, rawKey.len);
+	free(rawKey.ptr);
+
+	return asn1_wrap(ASN1_SEQUENCE, "cm", ASN1_rsaEncryption_id,
+										  publicKey);
+}
+
 /*
  * See header
  */
@@ -420,9 +421,9 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
 	chunk_t object;
 	u_int level;
 	int objectID = 0;
-	private_rsa_public_key_t *this;
-	
-	this = rsa_public_key_create_empty();
+
+	private_rsa_public_key_t *this = rsa_public_key_create_empty();
+
 	mpz_init(this->n);
 	mpz_init(this->e);
 	
@@ -448,6 +449,17 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
 	}
 	
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
+	
+	/* form the keyid as a SHA-1 hash of a publicKeyInfo object */
+	{
+		chunk_t publicKeyInfo = rsa_public_key_info_to_asn1(this->n, this->e);
+		hasher_t *hasher = hasher_create(HASH_SHA1);
+
+		hasher->allocate_hash(hasher, publicKeyInfo, &this->keyid);
+		hasher->destroy(hasher);
+		free(publicKeyInfo.ptr);
+	}
+
 	return &this->public;
 }
 
@@ -456,31 +468,14 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
  */
 rsa_public_key_t *rsa_public_key_create_from_file(char *filename)
 {
-	struct stat stb;
-	FILE *file;
-	char *buffer;
-	chunk_t chunk;
-	
-	if (stat(filename, &stb) == -1)
-	{
+	bool pgp = FALSE;
+	chunk_t chunk = CHUNK_INITIALIZER;
+	rsa_public_key_t *pubkey = NULL;
+
+	if (!pem_asn1_load_file(filename, "", "public key", &chunk, &pgp))
 		return NULL;
-	}
-	
-	buffer = alloca(stb.st_size);
-	
-	file = fopen(filename, "r");
-	if (file == NULL)
-	{
-		return NULL;
-	}
-	
-	if (fread(buffer, stb.st_size, 1, file) != 1)
-	{
-		return NULL;
-	}
-	
-	chunk.ptr = buffer;
-	chunk.len = stb.st_size;
-	
-	return rsa_public_key_create_from_chunk(chunk);
+
+	pubkey = rsa_public_key_create_from_chunk(chunk);
+	free(chunk.ptr);
+	return pubkey;
 }

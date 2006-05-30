@@ -113,6 +113,14 @@ struct rsa_public_key_t {
 	size_t (*get_keysize) (rsa_public_key_t *this);
 
 	/**
+	 * @brief Get the keyid formed as the SHA-1 hash of a publicKeyInfo object.
+	 * 
+	 * @param this				calling object
+	 * @return					keyid in the form of a SHA-1 hash
+	 */
+	chunk_t (*get_keyid) (rsa_public_key_t *this);
+
+	/**
 	 * @brief Clone the public key.
 	 * 
 	 * @param this				public key to clone
@@ -132,13 +140,11 @@ struct rsa_public_key_t {
  * @brief Load an RSA public key from a chunk.
  * 
  * Load a key from a chunk, encoded in the more frequently
- * used PublicKeyInfo struct (ASN1 DER encoded).
+ * used publicKeyInfo object (ASN1 DER encoded).
  * 
  * @param chunk				chunk containing the DER encoded key
  * @return 					loaded rsa_public_key_t, or NULL
- * 
- * @todo Check OID in PublicKeyInfo
- * 
+  * 
  * @ingroup rsa
  */
 rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t chunk);
@@ -152,10 +158,19 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t chunk);
  * @param filename			filename which holds the key
  * @return 					loaded rsa_public_key_t, or NULL
  * 
- * @todo Implement PEM file loading
- * 
  * @ingroup rsa
  */
 rsa_public_key_t *rsa_public_key_create_from_file(char *filename);
+
+/**
+ * @brief Build a DER-encoded publicKeyInfo object from an RSA public key
+ * 
+ * @param n					modulus n
+ * @param e					public exponent
+ * @return 					DER-encoded publicKeyInfo object
+ * 
+ * @ingroup rsa
+ */
+chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e);
 
 #endif /*RSA_PUBLIC_KEY_H_*/

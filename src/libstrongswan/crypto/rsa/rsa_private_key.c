@@ -25,15 +25,15 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "rsa_public_key.h"
 #include "rsa_private_key.h"
 
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
 #include <utils/randomizer.h>
 
-/* 
- * Oids for hash algorithms are defined in
- * rsa_public_key.c.
+/**
+ * OIDs for hash algorithms are defined in rsa_public_key.c.
  */
 extern u_int8_t md2_oid[18];
 extern u_int8_t md5_oid[18];
@@ -109,6 +109,12 @@ struct private_rsa_private_key_t {
 	 * Keysize in bytes.
 	 */
 	size_t k;
+
+	/**
+	 * Keyid formed as a SHA-1 hash of a publicKeyInfo object
+	 */
+	chunk_t keyid;
+
 	
 	/**
 	 * @brief Implements the RSADP algorithm specified in PKCS#1.
@@ -251,8 +257,8 @@ static status_t build_emsa_pkcs1_signature(private_rsa_private_key_t *this, hash
 {
 	hasher_t *hasher;
 	chunk_t hash;
-	chunk_t oid;
 	chunk_t em;
+	chunk_t oid;
 	
 	/* get oid string prepended to hash */
 	switch (hash_algorithm)
@@ -406,11 +412,7 @@ rsa_public_key_t *get_public_key(private_rsa_private_key_t *this)
  */
 static bool belongs_to(private_rsa_private_key_t *this, rsa_public_key_t *public)
 {
-	if (mpz_cmp(this->n, *public->get_modulus(public)) == 0)
-	{
-		return TRUE;
-	}
-	return FALSE;
+	return chunk_equals(this->keyid, public->get_keyid(public));
 }
 
 /**
@@ -522,6 +524,7 @@ static rsa_private_key_t* _clone(private_rsa_private_key_t *this)
 	mpz_init_set(clone->exp1, this->exp1);
 	mpz_init_set(clone->exp2, this->exp2);
 	mpz_init_set(clone->coeff, this->coeff);
+	clone->keyid = chunk_clone(this->keyid);
 	clone->k = this->k;
 	
 	return &clone->public;
@@ -540,6 +543,7 @@ static void destroy(private_rsa_private_key_t *this)
 	mpz_clear(this->exp1);
 	mpz_clear(this->exp2);
 	mpz_clear(this->coeff);
+	free(this->keyid.ptr);
 	free(this);
 }
 
@@ -723,6 +727,16 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 	}
 	
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / 8;
+
+	/* form the keyid as a SHA-1 hash of a publicKeyInfo object */
+	{
+		chunk_t publicKeyInfo = rsa_public_key_info_to_asn1(this->n, this->e);
+		hasher_t *hasher = hasher_create(HASH_SHA1);
+
+		hasher->allocate_hash(hasher, publicKeyInfo, &this->keyid);
+		hasher->destroy(hasher);
+		free(publicKeyInfo.ptr);
+	}
 	
 	if (check(this) != SUCCESS)
 	{
