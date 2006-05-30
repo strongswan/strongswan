@@ -121,11 +121,12 @@ struct private_event_queue_t {
  */
 static long time_difference(struct timeval *end_time, struct timeval *start_time)
 {
-	long seconds, microseconds;
+	time_t s;
+	suseconds_t us;
 	
-	seconds = (end_time->tv_sec - start_time->tv_sec);
-	microseconds = (end_time->tv_usec - start_time->tv_usec);
-	return ((seconds * 1000) + microseconds/1000);
+	s = (end_time->tv_sec - start_time->tv_sec);
+	us = (end_time->tv_usec - start_time->tv_usec);
+	return ((s * 1000) + us/1000);
 }
 
 /**
@@ -278,13 +279,15 @@ static void add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
 {
 	timeval_t current_time;
 	timeval_t time;
-	int micros = ms * 1000;
-
+	
+	time_t s = ms / 1000;
+	suseconds_t us = (ms - s * 1000) * 1000;
+	
 	gettimeofday(&current_time, NULL);
-
-	time.tv_usec = ((current_time.tv_usec + micros) % 1000000);
-	time.tv_sec = current_time.tv_sec + ((current_time.tv_usec + micros)/ 1000000);
-
+	
+	time.tv_usec = (current_time.tv_usec + us) % 1000000;
+	time.tv_sec = current_time.tv_sec + (current_time.tv_usec + us)/1000000 + s;
+	
 	this->add_absolute(this, job, time);
 }
 
