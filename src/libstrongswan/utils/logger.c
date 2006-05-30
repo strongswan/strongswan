@@ -157,7 +157,7 @@ static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const c
 	{
 		thread_id = get_thread_number();
 	}
-	snprintf(buffer, MAX_LOG, "[%02d:%c%c:%s] %s", thread_id, log_type, log_details, this->name, string);
+	snprintf(buffer, MAX_LOG, "%02d[%c%c:%s] %s", thread_id, log_type, log_details, this->name, string);
 }
 
 /**
@@ -277,11 +277,11 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 				if (this->output == NULL)
 				{
-					syslog(get_priority(loglevel), "[%02d:  :%5d]  %s  %s", thread_id, line_start, buffer, ascii_buffer);	
+					syslog(get_priority(loglevel), "%02d[  :%5d]   %s  %s", thread_id, line_start, buffer, ascii_buffer);	
 				}
 				else
 				{
-					fprintf(this->output, "[%02d:  :%5d]  %s  %s\n", thread_id, line_start, buffer, ascii_buffer);
+					fprintf(this->output, "%02d[  :%5d]   %s  %s\n", thread_id, line_start, buffer, ascii_buffer);
 				}
 				buffer_pos = buffer;
 				line_start += MAX_BYTES;
