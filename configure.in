@@ -141,6 +141,7 @@ AC_OUTPUT(
 	src/pluto/Makefile
 	src/whack/Makefile
 	src/charon/Makefile
+	src/charon/testing/Makefile
 	src/stroke/Makefile
 	src/ipsec/Makefile
 	src/starter/Makefile

@@ -205,7 +205,7 @@ void test_rsa(protected_tester_t *tester)
 	/* key loading */
 	private_key = rsa_private_key_create_from_file("alice.der", NULL);
 	tester->assert_true(tester, private_key != NULL, "loading private key from file");
-	certificate = x509_create_from_file("alice-cert.der");
+	certificate = x509_create_from_file("alice-cert.der", "testcert");
 	tester->assert_true(tester, public_key != NULL, "loading certificate from file");
 	public_key = certificate->get_public_key(certificate);
 	tester->assert_true(tester, public_key != NULL, "loading public key from certificate");

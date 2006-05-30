@@ -48,7 +48,7 @@ void test_policy(protected_tester_t *tester)
 	
 	alice = identification_create_from_string("152.96.193.131");
 	bob = identification_create_from_string("152.96.193.130");
-	policy = policy_create(alice, bob);
+	policy = policy_create("test", alice, bob);
 	
 	tester->assert_true(tester, (policy != NULL), "policy construction");
 

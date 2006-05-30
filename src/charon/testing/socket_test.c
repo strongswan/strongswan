@@ -36,7 +36,7 @@ void test_socket(protected_tester_t *tester)
 	int packet_count = 10;
 	int current;
 	socket_t *skt = socket_create(500);
-	packet_t *pkt = packet_create(AF_INET);
+	packet_t *pkt = packet_create();
 	char test_data[] = {
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x03, /* spi */
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x05, /* spi */

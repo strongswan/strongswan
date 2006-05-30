@@ -64,7 +64,7 @@ void test_sender(protected_tester_t *tester)
 
 	for (i = 0; i < NUMBER_OF_PACKETS_TO_SEND; i++)
 	{
-		packet = packet_create(AF_INET);
+		packet = packet_create();
 		packet->set_destination(packet, host_create(AF_INET, "127.0.0.1", 500));
 		packet->set_source(packet, host_create(AF_INET, "127.0.0.1", 500));
 		packet->set_data(packet, chunk_clone(data));

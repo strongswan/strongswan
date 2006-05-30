@@ -976,7 +976,7 @@ void test_generator_with_auth_payload(protected_tester_t *tester)
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
-	auth_payload = auth_payload_create(FALSE);
+	auth_payload = auth_payload_create();
 	
 	
 	auth.ptr = "123456789012";

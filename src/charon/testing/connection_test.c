@@ -33,9 +33,7 @@ void test_connection(protected_tester_t *tester)
 {
 	host_t *alice = host_create(AF_INET, "192.168.0.1", 500);
 	host_t *bob = host_create(AF_INET, "192.168.0.2", 500);
-	identification_t *alice_id = identification_create_from_string("192.168.0.1");
-	identification_t *bob_id = identification_create_from_string("192.168.0.2");
-	connection_t *connection = connection_create(alice, bob, alice_id, bob_id, RSA_DIGITAL_SIGNATURE);
+	connection_t *connection = connection_create("alice-bob", TRUE, alice, bob, RSA_DIGITAL_SIGNATURE);
 	proposal_t *prop1, *prop2, *prop3, *prop4;
 	linked_list_t *list;
 
