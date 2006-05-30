@@ -57,7 +57,7 @@ struct local_credential_store_t {
 	 * @param this		calling object
 	 * @param path		directory to load certificates from
 	 */
-	void (*load_certificates) (local_credential_store_t *this, const char *path);
+	void (*load_ca_certificates) (local_credential_store_t *this, const char *path);
 	
 	/**
 	 * @brief Loads RSA private keys defined in ipsec.secrets

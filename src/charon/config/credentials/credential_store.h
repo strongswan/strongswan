@@ -24,6 +24,7 @@
 #define CREDENTIAL_STORE_H_
 
 #include <types.h>
+#include <crypto/x509.h>
 #include <crypto/rsa/rsa_private_key.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <utils/identification.h>
@@ -48,7 +49,7 @@ struct credential_store_t {
 	 * The returned chunk must be destroyed by the caller after usage.
 	 * 
 	 * @param this					calling object
-	 * @param identification		identification_t object identifiying the secret.
+	 * @param id					identification_t object identifiying the secret.
 	 * @param[out] preshared_secret	the preshared secret will be written there.
 	 * @return
 	 * 								- NOT_FOUND	if no preshared secrets for specific ID could be found
@@ -57,7 +58,7 @@ struct credential_store_t {
 	 * @todo We should use two IDs to query shared secrets, since we want to use different
 	 * keys for different peers...
 	 */	
-	status_t (*get_shared_secret) (credential_store_t *this, identification_t *identification, chunk_t *preshared_secret);
+	status_t (*get_shared_secret) (credential_store_t *this, identification_t *id, chunk_t *secret);
 	
 	/**
 	 * @brief Returns the RSA public key of a specific ID.
@@ -65,21 +66,40 @@ struct credential_store_t {
 	 * The returned rsa_public_key_t must be destroyed by the caller after usage.
 	 * 
 	 * @param this					calling object
-	 * @param identification		identification_t object identifiying the key.
+	 * @param id					identification_t object identifiying the key.
 	 * @return						public key, or NULL if not found
 	 */
-	rsa_public_key_t * (*get_rsa_public_key) (credential_store_t *this, identification_t *identification);
+	rsa_public_key_t* (*get_rsa_public_key) (credential_store_t *this, identification_t *id);
 	
 	/**
-	 * @brief Returns the RSA private key of a specific ID.
+	 * @brief Returns the RSA private key belonging to an RSA public key
 	 * 
 	 * The returned rsa_private_key_t must be destroyed by the caller after usage.
 	 * 
 	 * @param this					calling object
-	 * @param identification		identification_t object identifiying the key
+	 * @param pubkey				public key 
 	 * @return						private key, or NULL if not found
 	 */	
-	rsa_private_key_t *(*get_rsa_private_key) (credential_store_t *this, identification_t *identification);
+	rsa_private_key_t* (*get_rsa_private_key) (credential_store_t *this, rsa_public_key_t *pubkey);
+
+	/**
+	 * @brief Is there a matching RSA private key belonging to an RSA public key?
+	 * 
+	 * The returned rsa_private_key_t must be destroyed by the caller after usage.
+	 * 
+	 * @param this					calling object
+	 * @param pubkey				public key 
+	 * @return						TRUE if matching private key was found 
+	 */	
+	bool (*has_rsa_private_key) (credential_store_t *this, rsa_public_key_t *pubkey);
+
+	/**
+	 * @brief If a certificate does not already exists in the credential store then add it.
+	 *
+	 * @param this		calling object
+	 * @param cert		certificate to be added
+	 */
+	void (*add_certificate) (credential_store_t *this, x509_t *cert);
 
 	/**
 	 * @brief Lists all certificates kept in the local credential store.
@@ -89,6 +109,15 @@ struct credential_store_t {
 	 * @param utc		log dates either in UTC or local time
 	 */
 	void (*log_certificates) (credential_store_t *this, logger_t *logger, bool utc);
+
+	/**
+	 * @brief Lists all CA certificates kept in the local credential store.
+	 *
+	 * @param this		calling object
+	 * @param logger	logger to be used
+	 * @param utc		log dates either in UTC or local time
+	 */
+	void (*log_ca_certificates) (credential_store_t *this, logger_t *logger, bool utc);
 
 	/**
 	 * @brief Destroys a credential_store_t object.

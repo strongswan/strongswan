@@ -33,25 +33,6 @@
 
 #define PATH_BUF	256
 
-typedef struct key_entry_t key_entry_t;
-
-/**
- * Private key with an associated ID to find it
- */
-struct key_entry_t {
-	
-	/**
-	 * ID, as added
-	 */
-	identification_t *id;
-	
-	/**
-	 * Associated rsa private key
-	 */
-	rsa_private_key_t *key;
-};
-
-
 typedef struct private_local_credential_store_t private_local_credential_store_t;
 
 /**
@@ -70,10 +51,14 @@ struct private_local_credential_store_t {
 	linked_list_t *private_keys;
 	
 	/**
-	 * list of x509 certificates with public keys
+	 * list of X.509 certificates with public keys
 	 */
-	linked_list_t *certificates;
+	linked_list_t *certs;
 	
+	/**
+	 * list of X.509 CA certificates with public keys
+	 */
+	linked_list_t *ca_certs;
 	/**
 	 * Assigned logger
 	 */
@@ -84,7 +69,7 @@ struct private_local_credential_store_t {
 /**
  * Implementation of credential_store_t.get_shared_secret.
  */	
-static status_t get_shared_secret(private_local_credential_store_t *this, identification_t *identification, chunk_t *preshared_secret)
+static status_t get_shared_secret(private_local_credential_store_t *this, identification_t *id, chunk_t *secret)
 {
 	return FAILED;
 }
@@ -92,24 +77,21 @@ static status_t get_shared_secret(private_local_credential_store_t *this, identi
 /**
  * Implementation of credential_store_t.get_rsa_public_key.
  */
-static rsa_public_key_t * get_rsa_public_key(private_local_credential_store_t *this, identification_t *identification)
+static rsa_public_key_t * get_rsa_public_key(private_local_credential_store_t *this, identification_t *id)
 {
-	x509_t *current;
 	rsa_public_key_t *found = NULL;
-	iterator_t *iterator;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Looking for public key for %s",
-					  identification->get_string(identification));
-	iterator = this->certificates->create_iterator(this->certificates, TRUE);
+
+	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
+
 	while (iterator->has_next(iterator))
 	{
-		iterator->current(iterator, (void**)&current);
-		identification_t *stored = current->get_subject(current);
-		this->logger->log(this->logger, CONTROL|LEVEL2, "there is one for %s",
-						  stored->get_string(stored));
-		if (identification->equals(identification, stored))
+		x509_t *cert;
+
+		iterator->current(iterator, (void**)&cert);
+
+		if (id->equals(id, cert->get_subject(cert)) || cert->equals_subjectAltName(cert, id))
 		{
-			found = current->get_public_key(current);
+			found = cert->get_public_key(cert);
 			break;
 		}
 	}
@@ -120,19 +102,20 @@ static rsa_public_key_t * get_rsa_public_key(private_local_credential_store_t *t
 /**
  * Implementation of credential_store_t.get_rsa_private_key.
  */
-static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *this, identification_t *identification)
+static rsa_private_key_t* get_rsa_private_key(private_local_credential_store_t *this, rsa_public_key_t *pubkey)
 {
 	rsa_private_key_t *found = NULL;
-	key_entry_t *current;
-	iterator_t *iterator;
-	
-	iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
+	rsa_private_key_t *current;
+
+	iterator_t *iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
+
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current);
-		if (identification->equals(identification, current->id))
+
+		if (current->belongs_to(current, pubkey))
 		{
-			found = current->key->clone(current->key);
+			found = current->clone(current);
 			break;
 		}
 	}
@@ -141,11 +124,67 @@ static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *
 }
 
 /**
+ * Implementation of credential_store_t.has_rsa_private_key.
+ */
+static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_public_key_t *pubkey)
+{
+	bool found = FALSE;
+	rsa_private_key_t *current;
+
+	iterator_t *iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
+
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&current);
+
+		if (current->belongs_to(current, pubkey))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return found;
+}
+
+/**
+ * Implements credential_store_t.add_certificate
+ */
+static void add_certificate(private_local_credential_store_t *this, x509_t *cert)
+{
+	bool found = FALSE;
+
+	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
+
+	while (iterator->has_next(iterator))
+	{
+		x509_t *current_cert;
+
+		iterator->current(iterator, (void**)&current_cert);
+		if (cert->equals(cert, current_cert))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	if (found)
+	{
+		cert->destroy(cert);
+	}
+	else
+	{
+		this->certs->insert_last(this->certs, (void*)cert);
+	}
+}
+
+/**
  * Implements credential_store_t.log_certificates
  */
 static void log_certificates(private_local_credential_store_t *this, logger_t *logger, bool utc)
 {
-	iterator_t *iterator = this->certificates->create_iterator(this->certificates, TRUE);
+	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
 
 	if (iterator->get_count(iterator))
 	{
@@ -157,28 +196,58 @@ static void log_certificates(private_local_credential_store_t *this, logger_t *l
 	while (iterator->has_next(iterator))
 	{
 		x509_t *cert;
+		rsa_private_key_t *key;
+		bool has_key;
 
 		iterator->current(iterator, (void**)&cert);
-		cert->log_certificate(cert, logger, utc);
+		has_key = has_rsa_private_key(this, cert->get_public_key(cert));
+		cert->log_certificate(cert, logger, utc, has_key);
 	}
 	iterator->destroy(iterator);
 }
 
 /**
- * Implements local_credential_store_t.load_certificates
+ * Implements credential_store_t.log_ca_certificates
  */
-static void load_certificates(private_local_credential_store_t *this, const char *path)
+static void log_ca_certificates(private_local_credential_store_t *this, logger_t *logger, bool utc)
+{
+	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+
+	if (iterator->get_count(iterator))
+	{
+		logger->log(logger, CONTROL, "");
+		logger->log(logger, CONTROL, "List of X.509 CA Certificates:");
+		logger->log(logger, CONTROL, "");
+	}
+
+	while (iterator->has_next(iterator))
+	{
+		x509_t *cert;
+
+		iterator->current(iterator, (void**)&cert);
+		cert->log_certificate(cert, logger, utc, FALSE);
+	}
+	iterator->destroy(iterator);
+}
+/**
+ * Implements local_credential_store_t.load_ca_certificates
+ */
+static void load_ca_certificates(private_local_credential_store_t *this, const char *path)
 {
 	struct dirent* entry;
 	struct stat stb;
 	DIR* dir;
 	x509_t *cert;
 	
+	this->logger->log(this->logger, CONTROL, "loading ca certificates from '%s/'", path);
+
 	dir = opendir(path);
-	if (dir == NULL) {
-		this->logger->log(this->logger, ERROR, "error opening certificate directory \"%s\"", path);
+	if (dir == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "error opening ca certs directory %s'", path);
 		return;
 	}
+
 	while ((entry = readdir(dir)) != NULL)
 	{
 		char file[PATH_BUF];
@@ -192,10 +261,10 @@ static void load_certificates(private_local_credential_store_t *this, const char
 		/* try to parse all regular files */
 		if (stb.st_mode & S_IFREG)
 		{
-			cert = x509_create_from_file(file);
+			cert = x509_create_from_file(file, "ca certificate");
 			if (cert)
 			{
-				this->certificates->insert_last(this->certificates, (void*)cert);
+				this->ca_certs->insert_last(this->ca_certs, (void*)cert);
 			}
 			else
 			{
@@ -204,42 +273,6 @@ static void load_certificates(private_local_credential_store_t *this, const char
 		}
 	}
 	closedir(dir);
-}
-
-/**
- * Query the ID for a private key, by doing a lookup in the certificates
- */
-static identification_t *get_id_for_private_key(private_local_credential_store_t *this, rsa_private_key_t *private_key)
-{
-	x509_t *cert;
-	iterator_t *iterator;
-	identification_t *found = NULL;
-	rsa_public_key_t *public_key;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Getting ID for a private key...");
-	
-	iterator = this->certificates->create_iterator(this->certificates, TRUE);
-	while (!found && iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&cert);
-		public_key = cert->get_public_key(cert);
-		if (public_key)
-		{
-			if (private_key->belongs_to(private_key, public_key))
-			{
-				this->logger->log(this->logger, CONTROL|LEVEL2, "found a match");
-				found = cert->get_subject(cert);
-				found = found->clone(found);
-			}
-			else
-			{
-				this->logger->log(this->logger, CONTROL|LEVEL3, "this one did not match");
-			}
-			public_key->destroy(public_key);
-		}
-	}
-	iterator->destroy(iterator);
-	return found;
 }
 
 /**
@@ -318,20 +351,7 @@ static void load_private_keys(private_local_credential_store_t *this, const char
 				rsa_private_key_t *key = rsa_private_key_create_from_file(path, NULL);
 				if (key)
 				{
-					key_entry_t *entry;
-					identification_t *id = get_id_for_private_key(this, key);
-
-					if (!id)
-					{
-						this->logger->log(this->logger, ERROR, 
-							"no certificate found for private key \"%s\", skipped", path);
-						key->destroy(key);
-						continue;
-					}
-					entry = malloc_thing(key_entry_t);
-					entry->key = key;
-					entry->id = id;
-					this->private_keys->insert_last(this->private_keys, (void*)entry);
+					this->private_keys->insert_last(this->private_keys, (void*)key);
 				}
 			}
 			else if (match("PSK", &token))
@@ -364,21 +384,30 @@ error:
  */
 static void destroy(private_local_credential_store_t *this)
 {
-	x509_t *certificate;
-	key_entry_t *key_entry;
+	x509_t *cert;
+	rsa_private_key_t *key;
 	
-	while (this->certificates->remove_last(this->certificates, (void**)&certificate) == SUCCESS)
+	/* destroy cert list */
+	while (this->certs->remove_last(this->certs, (void**)&cert) == SUCCESS)
 	{
-		certificate->destroy(certificate);
+		cert->destroy(cert);
 	}
-	this->certificates->destroy(this->certificates);
-	while (this->private_keys->remove_last(this->private_keys, (void**)&key_entry) == SUCCESS)
+	this->certs->destroy(this->certs);
+
+	/* destroy ca cert list */
+	while (this->ca_certs->remove_last(this->ca_certs, (void**)&cert) == SUCCESS)
 	{
-		key_entry->id->destroy(key_entry->id);
-		key_entry->key->destroy(key_entry->key);
-		free(key_entry);
+		cert->destroy(cert);
+	}
+	this->ca_certs->destroy(this->ca_certs);
+
+    /* destroy private key list */
+	while (this->private_keys->remove_last(this->private_keys, (void**)&key) == SUCCESS)
+	{
+		key->destroy(key);
 	}
 	this->private_keys->destroy(this->private_keys);
+
 	free(this);
 }
 
@@ -390,16 +419,20 @@ local_credential_store_t * local_credential_store_create(void)
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
 
 	this->public.credential_store.get_shared_secret = (status_t(*)(credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
-	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,identification_t*))get_rsa_private_key;
+	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
+	this->public.credential_store.has_rsa_private_key = (bool(*)(credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
+	this->public.credential_store.add_certificate = (void(*)(credential_store_t*,x509_t*))add_certificate;
 	this->public.credential_store.log_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_certificates;
-	this->public.load_certificates = (void(*)(local_credential_store_t*,const char*))load_certificates;
+	this->public.credential_store.log_ca_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_ca_certificates;
+	this->public.load_ca_certificates = (void(*)(local_credential_store_t*,const char*))load_ca_certificates;
 	this->public.load_private_keys = (void(*)(local_credential_store_t*,const char*, const char*))load_private_keys;
 	this->public.credential_store.destroy = (void(*)(credential_store_t*))destroy;
 	
 	/* private variables */
 	this->private_keys = linked_list_create();
-	this->certificates = linked_list_create();
+	this->certs = linked_list_create();
+	this->ca_certs = linked_list_create();
 	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 
 	return (&this->public);
