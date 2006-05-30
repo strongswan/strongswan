@@ -103,6 +103,7 @@ struct whack_message {
 
     bool whack_connection;
     bool whack_async;
+    bool ikev1;
 
     lset_t policy;
     time_t sa_ike_life_seconds;

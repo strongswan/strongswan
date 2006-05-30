@@ -568,13 +568,15 @@ int main (int argc, char **argv)
 
 		    if (conn->startup == STARTUP_START)
 		    {
-			if (starter_charon_pid())
+			if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
 			{
-			    starter_stroke_initiate_conn(conn);
+			    if (starter_charon_pid())
+			    {
+				starter_stroke_initiate_conn(conn);
+			    }
 			}
-			if (conn->keyexchange != KEY_EXCHANGE_IKEV2)
+			else
 			{
-			    /* currently not initiated, until pluto handles the keyexchange flag */
 			    if (starter_pluto_pid())
 			    {
 				starter_whack_initiate_conn(conn);
@@ -583,13 +585,15 @@ int main (int argc, char **argv)
 		    }
 		    else if (conn->startup == STARTUP_ROUTE)
 		    {
-			if (starter_charon_pid())
+			if (conn->keyexchange == KEY_EXCHANGE_IKEV2)
 			{
-			    starter_stroke_route_conn(conn);
+			    if (starter_charon_pid())
+			    {
+				starter_stroke_route_conn(conn);
+			    }
 			}
-			if (conn->keyexchange != KEY_EXCHANGE_IKEV2)
+			else
 			{
-			    /* currently not routed, until pluto handles the keyexchange flag */
 			    if (starter_pluto_pid())
 			    {
 				starter_whack_route_conn(conn);

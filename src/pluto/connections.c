@@ -350,7 +350,7 @@ delete_connection(struct connection *c, bool relations)
     free_ietfAttrList(c->spd.that.groups);
     free_generalNames(c->requested_ca, TRUE);
     gw_delref(&c->gw_info);
-    
+
     lock_certs_and_keys("delete_connection");
     release_cert(c->spd.this.cert);
     scx_release(c->spd.this.sc);
@@ -360,7 +360,7 @@ delete_connection(struct connection *c, bool relations)
 
     alg_info_delref((struct alg_info **)&c->alg_info_esp);
     alg_info_delref((struct alg_info **)&c->alg_info_ike);
-    
+
     pfree(c);
 }
 
@@ -978,8 +978,8 @@ add_connection(const whack_message_t *wm)
 	bool same_rightca, same_leftca;
 	struct connection *c = alloc_thing(struct connection, "struct connection");
 
-	c->name = wm->name;
-
+	c->name   = wm->name;
+	c->ikev1  = wm->ikev1;
 	c->policy = wm->policy;
 
 	if ((c->policy & POLICY_COMPRESS) && !can_do_IPcomp)
@@ -1138,7 +1138,9 @@ add_connection(const whack_message_t *wm)
 
 	unshare_connection_strings(c);
 	(void)orient(c);
-	connect_to_host_pair(c);
+
+	if (c->ikev1)
+	    connect_to_host_pair(c);
 
 	/* log all about this connection */
 	plog("added connection description \"%s\"", c->name);
@@ -1824,7 +1826,7 @@ initiate_connection(const char *name, int whackfd)
 {
     struct connection *c = con_by_name(name, TRUE);
 
-    if (c != NULL)
+    if (c != NULL && c->ikev1)
     {
 	set_cur_connection(c);
 	if (!oriented(*c))
@@ -2983,11 +2985,15 @@ terminate_connection(const char *nm)
     /* Loop because more than one may match (master and instances)
      * But at least one is required (enforced by con_by_name).
      */
-    struct connection *c, *n;
+    struct connection *c = con_by_name(nm, TRUE);
 
-    for (c = con_by_name(nm, TRUE); c != NULL; c = n)
+    if (c == NULL || !c->ikev1)
+	return;
+
+    do
     {
-	n = c->ac_next;	/* grab this before c might disappear */
+	struct connection *n = c->ac_next;  /* grab this before c might disappear */
+
 	if (streq(c->name, nm)
 	&& c->kind >= CK_PERMANENT
 	&& !NEVER_NEGOTIATE(c->policy))
@@ -2999,7 +3005,8 @@ terminate_connection(const char *nm)
 	    delete_states_by_connection(c, FALSE);
 	    reset_cur_connection();
 	}
-    }
+	c = n;
+    } while (c != NULL);
 }
 
 /* check nexthop safety
@@ -4006,7 +4013,7 @@ show_connections_status(bool all, const char *name)
     count = 0;
     for (c = connections; c != NULL; c = c->ac_next)
     {
-	if (name == NULL || streq(c->name, name))
+	if (c->ikev1 && (name == NULL || streq(c->name, name)))
 	    count++;
     }
     array = alloc_bytes(sizeof(struct connection *)*count, "connection array");
@@ -4014,7 +4021,7 @@ show_connections_status(bool all, const char *name)
     count=0;
     for (c = connections; c != NULL; c = c->ac_next)
     {
-	if (name == NULL || streq(c->name, name))
+	if (c->ikev1 && (name == NULL || streq(c->name, name)))
 	    array[count++]=c;
     }
 

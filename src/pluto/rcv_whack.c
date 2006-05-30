@@ -569,7 +569,7 @@ whack_handle(int whackctlfd)
 	{
 	    struct connection *c = con_by_name(msg.name, TRUE);
 
-	    if (c != NULL)
+	    if (c != NULL && c->ikev1)
 	    {
 		set_cur_connection(c);
 		if (!oriented(*c))
@@ -595,7 +595,7 @@ whack_handle(int whackctlfd)
 	{
 	    struct connection *c = con_by_name(msg.name, TRUE);
 
-	    if (c != NULL)
+	    if (c != NULL && c->ikev1)
 	    {
 		struct spd_route *sr;
 		int fail = 0;

@@ -225,21 +225,22 @@ void log_connections(private_local_connection_store_t *this, logger_t *logger, c
 		logger = this->logger;
 	}
 	
-	logger->log(logger, CONTROL, "templates:");
+	logger->log(logger, CONTROL, "Templates:");
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->connections->create_iterator(this->connections, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current);
-		if (!name || strcmp(name, current->get_name(current)) == 0)
+		if (current->is_ikev2(current) && ( name == NULL || streq(name, current->get_name(current))))
 		{
-			host_t *my_host, *other_host;
-			my_host = current->get_my_host(current);
-			other_host = current->get_other_host(current);
+			host_t *my_host = current->get_my_host(current);
+			host_t *other_host = current->get_other_host(current);
+
 			logger->log(logger, CONTROL, "  \"%s\": %s...%s",
 						current->get_name(current),
-						my_host->get_address(my_host), other_host->get_address(other_host));
+						my_host->get_address(my_host),
+						other_host->get_address(other_host));
 		}
 	}
 	iterator->destroy(iterator);

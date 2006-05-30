@@ -234,6 +234,7 @@ starter_whack_add_conn(starter_conn_t *conn)
     msg.whack_connection = TRUE;
     msg.name = connection_name(conn);
 
+    msg.ikev1                 = conn->keyexchange != KEY_EXCHANGE_IKEV2;
     msg.addr_family           = conn->addr_family;
     msg.tunnel_addr_family    = conn->tunnel_addr_family;
     msg.sa_ike_life_seconds   = conn->sa_ike_life_seconds;
