@@ -217,18 +217,25 @@
 #define IPSEC_D_DIR CONFIG_DIR "/ipsec.d"
 
 /**
- * Directory for private keys
+ * Default directory for private keys
  * 
  * @ingroup charon
  */
 #define PRIVATE_KEY_DIR IPSEC_D_DIR "/private"
 
 /**
- * Directory for trusted certificates
+ * Default directory for end entity certificates
  * 
  * @ingroup charon
  */
 #define CERTIFICATE_DIR IPSEC_D_DIR "/certs"
+
+/**
+ * Default directory for trusted CA certificates
+ * 
+ * @ingroup charon
+ */
+#define CA_CERTIFICATE_DIR IPSEC_D_DIR "/cacerts"
 
 /**
  * Secrets files
