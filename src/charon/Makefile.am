@@ -1,3 +1,4 @@
+SUBDIRS = . testing
 ipsec_PROGRAMS = charon
 
 charon_SOURCES = \
