@@ -150,7 +150,7 @@ static chunk_t allocate_octets(private_authenticator_t *this,
 	current_pos += other_nonce.len;
 	prf->get_bytes(prf, id_with_header_chunk, current_pos);
 	
-	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Octets (Mesage + Nonce + prf(Sk_px,Idx)",octets);
+	this->logger->log_chunk(this->logger,RAW | LEVEL2, "octets (message + nonce + prf(Sk_px,Idx)",octets);
 	return octets;
 }
 
@@ -177,7 +177,7 @@ static chunk_t build_preshared_secret_signature(private_authenticator_t *this,
 	this->prf->set_key(this->prf, key);
 	this->prf->allocate_bytes(this->prf, octets, &auth_data);
 	chunk_free(&octets);
-	this->logger->log_chunk(this->logger,RAW | LEVEL2, "Authenticated data",auth_data);
+	this->logger->log_chunk(this->logger,RAW | LEVEL2, "authenticated data",auth_data);
 
 	return auth_data;
 }
@@ -206,7 +206,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 															&preshared_secret);
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "No shared secret found for %s",
+				this->logger->log(this->logger, ERROR|LEVEL1, "no shared secret found for '%s'",
 								  other_id->get_string(other_id));
 				other_id->destroy(other_id);
 				return status;	
@@ -227,13 +227,13 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			}
 			else if (memcmp(auth_data.ptr,my_auth_data.ptr, my_auth_data.len) == 0)
 			{
-				this->logger->log(this->logger, CONTROL, "Authentication of %s with preshared secret successful",
+				this->logger->log(this->logger, CONTROL, "authentication of '%s' with preshared secret successful",
 										other_id->get_string(other_id));
 				status = SUCCESS;
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL, "Authentication of %s with preshared secret failed",
+				this->logger->log(this->logger, ERROR, "authentication of '%s' with preshared secret failed",
 										other_id->get_string(other_id));
 				status = FAILED;
 			}
@@ -254,7 +254,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 															 other_id);
 			if (public_key == NULL)
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "No RSA public key found for %s",
+				this->logger->log(this->logger, ERROR|LEVEL1, "no public key found for '%s'",
 								  other_id->get_string(other_id));
 				other_id->destroy(other_id);
 				return NOT_FOUND;	
@@ -265,12 +265,12 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
 			if (status == SUCCESS)
 			{
-				this->logger->log(this->logger, CONTROL, "Authentication of %s with RSA successful",
+				this->logger->log(this->logger, CONTROL, "authentication of '%s' with RSA successful",
 										other_id->get_string(other_id));
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL, "Authentication of %s with RSA failed",
+				this->logger->log(this->logger, ERROR, "authentication of '%s' with RSA failed",
 										other_id->get_string(other_id));
 			}
 			
@@ -313,7 +313,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "No shared secret found for %s",
+				this->logger->log(this->logger, ERROR, "no shared secret found for %s",
 								  my_id->get_string(my_id));
 				my_id->destroy(my_id);
 				return status;	
@@ -332,38 +332,61 @@ static status_t compute_auth_data (private_authenticator_t *this,
 		}
 		case RSA_DIGITAL_SIGNATURE:
 		{
-			identification_t *my_id = my_id_payload->get_identification(my_id_payload);
-			rsa_private_key_t *private_key;
-			status_t status;
+			char buf[BUF_LEN];
 			chunk_t octets, auth_data;
+			status_t status = NOT_FOUND;
+			rsa_public_key_t  *my_pubkey;
+			rsa_private_key_t *my_key;
+
+			identification_t  *my_id = my_id_payload->get_identification(my_id_payload);
 			
-			private_key = charon->credentials->get_rsa_private_key(charon->credentials, my_id);
-			if (private_key == NULL)
+			this->logger->log(this->logger, CONTROL, "looking for public key belonging to '%s'",
+							  my_id->get_string(my_id));
+
+			my_pubkey = charon->credentials->get_rsa_public_key(charon->credentials, my_id);
+			if (my_pubkey == NULL)
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "No RSA private key found for %s",
+				this->logger->log(this->logger, ERROR, "no public key found for '%s'",
 								  my_id->get_string(my_id));
-				my_id->destroy(my_id);
-				return NOT_FOUND;	
+				goto end_rsa;
 			}
-			my_id->destroy(my_id);
+			this->logger->log(this->logger, CONTROL, "matching public key found");
 			
+			chunk_to_hex(buf, BUF_LEN, my_pubkey->get_keyid(my_pubkey));
+			this->logger->log(this->logger, CONTROL, "looking for private key with keyid %s", buf);
+
+			my_key = charon->credentials->get_rsa_private_key(charon->credentials, my_pubkey);
+			if (my_key == NULL)
+			{
+				char buf[BUF_LEN];
+
+				chunk_to_hex(buf, BUF_LEN, my_pubkey->get_keyid(my_pubkey));
+				this->logger->log(this->logger, ERROR, "no private key found with keyid %s",
+								  buf);
+				goto end_rsa;
+			}
+			this->logger->log(this->logger, CONTROL, "matching private key found");
+
 			octets = this->allocate_octets(this,last_sent_packet,other_nonce,my_id_payload,initiator);
-			
-			status = private_key->build_emsa_pkcs1_signature(private_key, HASH_SHA1, octets, &auth_data);
+			status = my_key->build_emsa_pkcs1_signature(my_key, HASH_SHA1, octets, &auth_data);
 			chunk_free(&octets);
+
 			if (status != SUCCESS)
 			{
-				private_key->destroy(private_key);
-				return status;
+				my_key->destroy(my_key);
+				goto end_rsa;
 			}
 			
 			*auth_payload = auth_payload_create();
 			(*auth_payload)->set_auth_method(*auth_payload, RSA_DIGITAL_SIGNATURE);
 			(*auth_payload)->set_data(*auth_payload, auth_data);
 
-			private_key->destroy(private_key);
+			my_key->destroy(my_key);
 			chunk_free(&auth_data);
-			return SUCCESS;
+
+		end_rsa:
+			my_id->destroy(my_id);
+			return status;
 		}
 		default:
 		{
