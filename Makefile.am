@@ -1,5 +1,5 @@
 SUBDIRS = src
-EXTRA_DIST = Doxyfile.in
+EXTRA_DIST = Doxyfile.in testing
 CLEANFILES = apidoc Doxyfile
 
 Doxyfile :	Doxyfile.in
@@ -10,3 +10,6 @@ Doxyfile :	Doxyfile.in
 
 apidoc :	Doxyfile
 		doxygen
+
+dist-hook :
+		rm -rf `find $(distdir)/testing -name .svn`

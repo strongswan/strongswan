@@ -17,7 +17,7 @@ dnl  initialize & set some vars
 dnl ===========================
 
 AC_INIT(strongSwan,4.0.1)
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE(tar-ustar)
 AC_C_BIGENDIAN
 AC_SUBST(ipsecdir, '${libexecdir}/ipsec')
 AC_SUBST(confdir, '${sysconfdir}')
