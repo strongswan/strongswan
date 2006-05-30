@@ -85,7 +85,6 @@ static event_t *event_create(timeval_t time, job_t *job)
 	return this;
 }
 
-
 typedef struct private_event_queue_t private_event_queue_t;
 
 /**
@@ -118,31 +117,21 @@ struct private_event_queue_t {
 };
 
 /**
- * Returns the difference of to timeval structs in microseconds
- *
- * @param end_time 		end time
- * @param start_time 	start time
- *
- * @warning this function is also defined in the tester class
- * 			In later improvements, this function can be added to a general
- *          class type!
- *
- * @return 	difference in microseconds (end time - start time)
+ * Returns the difference of to timeval structs in milliseconds
  */
 static long time_difference(struct timeval *end_time, struct timeval *start_time)
 {
 	long seconds, microseconds;
-
+	
 	seconds = (end_time->tv_sec - start_time->tv_sec);
 	microseconds = (end_time->tv_usec - start_time->tv_usec);
-	return ((seconds * 1000000) + microseconds);
+	return ((seconds * 1000) + microseconds/1000);
 }
-
 
 /**
  * Implements event_queue_t.get_count
  */
-static int get_count (private_event_queue_t *this)
+static int get_count(private_event_queue_t *this)
 {
 	int count;
 	pthread_mutex_lock(&(this->mutex));
@@ -161,9 +150,9 @@ static job_t *get(private_event_queue_t *this)
 	event_t * next_event;
 	job_t *job;
 	int oldstate;
-
+	
 	pthread_mutex_lock(&(this->mutex));
-
+	
 	while (1)
 	{
 		while(this->list->get_count(this->list) == 0)
@@ -171,28 +160,28 @@ static job_t *get(private_event_queue_t *this)
 			/* add mutex unlock handler for cancellation, enable cancellation */
 			pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-
+			
 			pthread_cond_wait( &(this->condvar), &(this->mutex));
-
+			
 			/* reset cancellation, remove mutex-unlock handler (without executing) */
 			pthread_setcancelstate(oldstate, NULL);
 			pthread_cleanup_pop(0);
 		}
-
+		
 		this->list->get_first(this->list,(void **) &next_event);
-
-		gettimeofday(&current_time,NULL);
+		
+		gettimeofday(&current_time, NULL);
 		long difference = time_difference(&current_time,&(next_event->time));
 		if (difference <= 0)
 		{
 			timeout.tv_sec = next_event->time.tv_sec;
-            timeout.tv_nsec = next_event->time.tv_usec * 1000;
-
+			timeout.tv_nsec = next_event->time.tv_usec * 1000;
+			
 			/* add mutex unlock handler for cancellation, enable cancellation */
 			pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
 			pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 			
-			pthread_cond_timedwait( &(this->condvar), &(this->mutex),&timeout);
+			pthread_cond_timedwait(&(this->condvar), &(this->mutex), &timeout);
 			
 			/* reset cancellation, remove mutex-unlock handler (without executing) */
 			pthread_setcancelstate(oldstate, NULL);
@@ -202,18 +191,16 @@ static job_t *get(private_event_queue_t *this)
 		{
 			/* event available */
 			this->list->remove_first(this->list,(void **) &next_event);
-
+			
 			job = next_event->job;
-
+			
 			next_event->destroy(next_event);
 			break;
 		}
-
 	}
 	pthread_cond_signal( &(this->condvar));
-
 	pthread_mutex_unlock(&(this->mutex));
-
+	
 	return job;
 }
 
