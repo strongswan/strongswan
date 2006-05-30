@@ -128,8 +128,9 @@ struct x509_t {
 	 * @param this			certificate to log
 	 * @param logger		logger to be used
 	 * @param utc			log dates either in UTC or local time
+	 * @param has_key		a matching private key is available
 	 */
-	 void (*log_certificate) (x509_t *this, logger_t *logger, bool utc);
+	 void (*log_certificate) (x509_t *this, logger_t *logger, bool utc, bool has_key);
 };
 
 /**
@@ -146,10 +147,11 @@ x509_t *x509_create_from_chunk(chunk_t chunk);
  * @brief Read a x509 certificate from a DER encoded file.
  * 
  * @param filename 	file containing DER encoded data
+ * @param label		label describing kind of certificate
  * @return 			created x509_t certificate, or NULL if invalid.
  * 
  * @ingroup transforms
  */
-x509_t *x509_create_from_file(const char *filename);
+x509_t *x509_create_from_file(const char *filename, const char *label);
 
 #endif /* X509_H_ */
