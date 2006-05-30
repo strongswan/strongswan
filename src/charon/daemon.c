@@ -178,7 +178,7 @@ static void initialize(private_daemon_t *this)
 	this->public.credentials = (credential_store_t*)(cred_store = local_credential_store_create());
 	
 	/* load keys & certs */
-	cred_store->load_certificates(cred_store, CERTIFICATE_DIR);
+	cred_store->load_ca_certificates(cred_store, CA_CERTIFICATE_DIR);
 	cred_store->load_private_keys(cred_store, SECRETS_FILE, PRIVATE_KEY_DIR);
 	
 	
