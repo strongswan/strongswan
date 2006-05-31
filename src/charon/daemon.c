@@ -366,6 +366,9 @@ int main(int argc, char *argv[])
 	charon = (daemon_t*)private_charon;
 	
 	private_charon->logger = logger_manager->get_logger(logger_manager, DAEMON);
+
+	private_charon->logger->log(private_charon->logger, CONTROL, 
+								"Starting Charon (strongSwan Version %s)", VERSION);
 		
 	/* initialize daemon */
 	private_charon->initialize(private_charon);
