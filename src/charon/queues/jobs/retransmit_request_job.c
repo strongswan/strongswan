@@ -22,8 +22,7 @@
  
 #include "retransmit_request_job.h"
 
-
-
+#include <daemon.h>
 
 typedef struct private_retransmit_request_job_t private_retransmit_request_job_t;
 
@@ -50,8 +49,12 @@ struct private_retransmit_request_job_t {
 	 * Number of times a request was retransmitted
 	 */
 	u_int32_t retransmit_count;
+	
+	/**
+	 * Logger reference
+	 */
+	logger_t *logger;
 };
-
 
 /**
  * Implements job_t.get_type.
@@ -62,37 +65,63 @@ static job_type_t get_type(private_retransmit_request_job_t *this)
 }
 
 /**
- * Implements retransmit_request_job_t.get_ike_sa_id.
+ * Implementation of job_t.execute.
  */
-static ike_sa_id_t *get_ike_sa_id(private_retransmit_request_job_t *this)
+static status_t execute(private_retransmit_request_job_t *this)
 {
-	return this->ike_sa_id;
-}
+	bool stop_retransmitting = FALSE;
+	u_int32_t timeout;
+	ike_sa_t *ike_sa;
+	status_t status;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Checking out IKE SA %lld:%lld, role %s", 
+					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
+					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
+					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
+				
+	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id, &ike_sa);
+	if ((status != SUCCESS) && (status != CREATED))
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1, 
+						  "IKE SA could not be checked out. Already deleted?");
+		return DESTROY_ME;
+	}
+	
+	status = ike_sa->retransmit_request(ike_sa, this->message_id);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL3, 
+								 "Message doesn't have to be retransmitted");
+		stop_retransmitting = TRUE;
+	}
+				
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Checkin IKE SA %lld:%lld, role %s", 
+					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
+					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
+					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 
-/**
- * Implements retransmit_request_job_t.get_retransmit_count.
- */
-static u_int32_t get_retransmit_count(private_retransmit_request_job_t *this)
-{
-	return this->retransmit_count;
-}
+	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "Checkin of IKE SA failed!");
+	}
 
-/**
- * Implements retransmit_request_job_t.increase_retransmit_count.
- */
-static void increase_retransmit_count(private_retransmit_request_job_t *this)
-{
+	if (stop_retransmitting)
+	{
+		return DESTROY_ME;
+	}
+	
 	this->retransmit_count++;
+	status = charon->configuration->get_retransmit_timeout(charon->configuration,
+			this->retransmit_count, &timeout);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Message will not be retransmitted anymore");
+		return DESTROY_ME;
+	}
+	charon->event_queue->add_relative(charon->event_queue, (job_t *)this, timeout);
+	return SUCCESS;
 }
-
-/**
- * Implements retransmit_request_job_t.get_message_id.
- */
-static u_int32_t get_message_id(private_retransmit_request_job_t *this)
-{
-	return this->message_id;
-}
-
 
 /**
  * Implements job_t.destroy.
@@ -112,21 +141,14 @@ retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
-	/* same as destroy */
-	this->public.job_interface.destroy_all = (void (*) (job_t *)) destroy;
+	this->public.job_interface.execute = (status_t (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*) (job_t *)) destroy;
-	
-	/* public functions */
-	this->public.get_ike_sa_id = (ike_sa_id_t * (*)(retransmit_request_job_t *)) get_ike_sa_id;
-	this->public.get_message_id = (u_int32_t (*)(retransmit_request_job_t *)) get_message_id;
-	this->public.destroy = (void (*)(retransmit_request_job_t *)) destroy;
-	this->public.get_retransmit_count = (u_int32_t (*)(retransmit_request_job_t *)) get_retransmit_count;
-	this->public.increase_retransmit_count = (void (*)(retransmit_request_job_t *)) increase_retransmit_count;
-	
+
 	/* private variables */
 	this->message_id = message_id;
 	this->retransmit_count = 0;
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);
 }

@@ -114,6 +114,19 @@ struct ike_sa_t {
 	ike_sa_id_t* (*get_id) (ike_sa_t *this);
 
 	/**
+	 * @brief Get the CHILD_SA with the specified reqid.
+	 *
+	 * The reqid is a unique ID for a child SA, which is 
+	 * generated on child SA creation.
+	 * Returned child_sa_t object is not cloned!
+	 *
+	 * @param this 			calling object
+	 * @param reqid			reqid of the child SA, as used in the kernel
+	 * @return 				child_sa, or NULL if not found
+	 */
+	child_sa_t* (*get_child_sa) (ike_sa_t *this, u_int32_t reqid);
+
+	/**
 	 * @brief Get local peer address of the IKE_SA.
 	 *
 	 * @param this 			calling object
@@ -184,7 +197,7 @@ struct ike_sa_t {
 	 * @brief Initiates the deletion of an IKE_SA.
 	 * 
 	 * Sends a delete message to the remote peer and waits for
-	 * its response. If the response comes in, or a timeout occur,
+	 * its response. If the response comes in, or a timeout occurs,
 	 * the IKE SA gets deleted.
 	 * 
 	 * @param this 			calling object

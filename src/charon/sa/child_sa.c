@@ -120,6 +120,14 @@ struct private_child_sa_t {
 };
 
 /**
+ * Implements child_sa_t.get_reqid
+ */
+static u_int32_t get_reqid(private_child_sa_t *this)
+{
+	return this->reqid;
+}
+
+/**
  * Implements child_sa_t.alloc
  */
 static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
@@ -300,6 +308,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 													  src, dst,
 													  spi, protocols[i],
 													  this->reqid,
+													  5, 30,
 													  enc_algo, enc_key,
 													  int_algo, int_key, mine);
 			/* clean up for next round */
@@ -316,8 +325,6 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 			{
 				return FAILED;
 			}
-			
-			
 		}
 	}
 	return SUCCESS;
@@ -564,10 +571,11 @@ static void destroy(private_child_sa_t *this)
  */
 child_sa_t * child_sa_create(host_t *me, host_t* other)
 {
-	static u_int32_t reqid = 0xc0000000;
+	static u_int32_t reqid = 2000000000;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
 
 	/* public functions */
+	this->public.get_reqid = (u_int32_t(*)(child_sa_t*))get_reqid;
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
@@ -583,7 +591,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other)
 	this->my_esp_spi = 0;
 	this->other_ah_spi = 0;
 	this->other_esp_spi = 0;
-	this->reqid = reqid++;
+	this->reqid = ++reqid;
 	this->policies = linked_list_create();
 	
 	return (&this->public);

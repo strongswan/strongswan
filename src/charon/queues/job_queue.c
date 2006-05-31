@@ -121,7 +121,7 @@ static void job_queue_destroy (private_job_queue_t *this)
 			this->list->destroy(this->list);
 			break;
 		}
-		job->destroy_all(job);
+		job->destroy(job);
 	}
 	this->list->destroy(this->list);
 

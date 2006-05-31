@@ -29,6 +29,7 @@ $(top_srcdir)/src/charon/ke_payload.o $(top_srcdir)/src/charon/unknown_payload.o
 $(top_srcdir)/src/charon/delete_payload.o $(top_srcdir)/src/charon/sa_payload.o $(top_srcdir)/src/charon/certreq_payload.o $(top_srcdir)/src/charon/vendor_id_payload.o \
 $(top_srcdir)/src/charon/proposal_substructure.o $(top_srcdir)/src/charon/payload.o $(top_srcdir)/src/charon/message.o $(top_srcdir)/src/charon/generator.o \
 $(top_srcdir)/src/charon/parser.o $(top_srcdir)/src/charon/packet.o $(top_srcdir)/src/charon/socket.o $(top_srcdir)/src/charon/job.o \
+$(top_srcdir)/src/charon/delete_child_sa_job.o $(top_srcdir)/src/charon/rekey_child_sa_job.o \
 $(top_srcdir)/src/charon/delete_established_ike_sa_job.o $(top_srcdir)/src/charon/incoming_packet_job.o $(top_srcdir)/src/charon/delete_half_open_ike_sa_job.o \
 $(top_srcdir)/src/charon/retransmit_request_job.o $(top_srcdir)/src/charon/initiate_ike_sa_job.o $(top_srcdir)/src/charon/job_queue.o $(top_srcdir)/src/charon/event_queue.o \
 $(top_srcdir)/src/charon/send_queue.o $(top_srcdir)/src/charon/kernel_interface.o $(top_srcdir)/src/charon/thread_pool.o $(top_srcdir)/src/charon/scheduler.o \

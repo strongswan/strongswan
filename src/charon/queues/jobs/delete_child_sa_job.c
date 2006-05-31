@@ -1,12 +1,12 @@
 /**
- * @file delete_established_ike_sa_job.c
+ * @file delete_child_sa_job.c
  * 
- * @brief Implementation of delete_established_ike_sa_job_t.
+ * @brief Implementation of delete_child_sa_job_t.
  * 
  */
 
 /*
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,26 +20,26 @@
  * for more details.
  */
 
-#include "delete_established_ike_sa_job.h"
+#include "delete_child_sa_job.h"
 
 #include <daemon.h>
 
 
-typedef struct private_delete_established_ike_sa_job_t private_delete_established_ike_sa_job_t;
+typedef struct private_delete_child_sa_job_t private_delete_child_sa_job_t;
 
 /**
- * Private data of an delete_established_ike_sa_job_t object.
+ * Private data of an delete_child_sa_job_t object.
  */
-struct private_delete_established_ike_sa_job_t {
+struct private_delete_child_sa_job_t {
 	/**
-	 * Public delete_established_ike_sa_job_t interface.
+	 * Public delete_child_sa_job_t interface.
 	 */
-	delete_established_ike_sa_job_t public;
+	delete_child_sa_job_t public;
 	
 	/**
-	 * ID of the ike_sa to delete.
+	 * reqid of the sa to delete.
 	 */
-	ike_sa_id_t *ike_sa_id;
+	u_int32_t reqid;
 	
 	/**
 	 * Logger ref
@@ -50,43 +50,46 @@ struct private_delete_established_ike_sa_job_t {
 /**
  * Implementation of job_t.get_type.
  */
-static job_type_t get_type(private_delete_established_ike_sa_job_t *this)
+static job_type_t get_type(private_delete_child_sa_job_t *this)
 {
-	return DELETE_ESTABLISHED_IKE_SA;
+	return DELETE_CHILD_SA;
 }
-
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_delete_established_ike_sa_job_t *this)
+static status_t execute(private_delete_child_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	status_t status;
 	
-	status = charon->ike_sa_manager->delete(charon->ike_sa_manager, this->ike_sa_id);
+	status = charon->ike_sa_manager->checkout_by_reqid(charon->ike_sa_manager, this->reqid, &ike_sa);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, CONTROL, "IKE SA didn't exist anymore");
+		this->logger->log(this->logger, CONTROL, "CHILD SA didn't exist anymore");
+		return DESTROY_ME;
 	}
+	
+	/* TODO */
+	
+	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return DESTROY_ME;
 }
 
 /**
  * Implementation of job_t.destroy.
  */
-static void destroy(private_delete_established_ike_sa_job_t *this)
+static void destroy(private_delete_child_sa_job_t *this)
 {
-	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
 }
 
 /*
  * Described in header
  */
-delete_established_ike_sa_job_t *delete_established_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
+delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid)
 {
-	private_delete_established_ike_sa_job_t *this = malloc_thing(private_delete_established_ike_sa_job_t);
+	private_delete_child_sa_job_t *this = malloc_thing(private_delete_child_sa_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
@@ -94,7 +97,7 @@ delete_established_ike_sa_job_t *delete_established_ike_sa_job_create(ike_sa_id_
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
 		
 	/* private variables */
-	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+	this->reqid = reqid;
 	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);

@@ -59,6 +59,17 @@ typedef struct child_sa_t child_sa_t;
 struct child_sa_t {
 	
 	/**
+	 * @brief Get the unique reqid of the CHILD SA.
+	 * 
+	 * Every CHILD_SA has a unique reqid, which is also 
+	 * stored down in the kernel.
+	 *
+	 * @param this 		calling object
+	 * @return 			reqid of the CHILD SA
+	 */
+	u_int32_t (*get_reqid)(child_sa_t *this);
+	
+	/**
 	 * @brief Allocate SPIs for a given proposals.
 	 * 
 	 * Since the kernel manages SPIs for us, we need

@@ -81,21 +81,21 @@ struct ike_sa_manager_t {
 	void (*create_and_checkout) (ike_sa_manager_t* this,ike_sa_t **ike_sa);
 	
 	/**
-	 * @brief Check out an IKE_SA, defined be the two peers.
-	 * 
-	 * Checking out an IKE_SA by their peer addresses may be necessary
-	 * for kernel traps, status querying and so on... one of the hosts
-	 * may be 0.0.0.0 (defaultroute/any), but not both.
-	 * 
-	 * @param this			 	the manager object
-	 * @param me				host on local side
-	 * @param other				host on remote side
+	 * @brief Check out an IKE_SA by the reqid of one of its CHILD_SAs.
+	 *
+	 * The kernel sends us expire messages for IPsec SAs. To fullfill
+	 * this request, we must check out the IKE SA which contains the
+	 * CHILD_SA the kernel wants to modify. We do this by the reqid, which
+	 * is unique to every CHILD_SA.
+	 *
+	 * @param this				the manager object
+	 * @param reqid				reqid of the IPsec SA
 	 * @param ike_sa[out] 		checked out SA
 	 * @return
-	 * 							- NOT_FOUND, if no such SA found
-	 * 							- SUCCESS, if SA found and ike_sa set appropriatly
+	 * 							- NOT_FOUND, if no IKE SA with such a child found
+	 * 							- SUCCESS, if ike_sa set
 	 */
-	status_t (*checkout_by_hosts) (ike_sa_manager_t* this, host_t *me, host_t *other, ike_sa_t **ike_sa);
+	status_t (*checkout_by_reqid) (ike_sa_manager_t* this, u_int32_t reqid, ike_sa_t **ike_sa);
 	
 	/**
 	 * @brief Get a list of all IKE_SA SAs currently set up.

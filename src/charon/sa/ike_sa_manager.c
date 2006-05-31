@@ -392,19 +392,19 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		/* we SHOULD have an IKE_SA for these SPIs in the list,
 		 * if not, we can't handle the request...
 		 */
-		 ike_sa_entry_t *entry;
-		 /* look for the entry */
-		 if (this->get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
-		 {
-		 	/* can we give this ike_sa out to new requesters?*/
-		 	if (entry->driveout_new_threads)
-		 	{
-		 		this->logger->log(this->logger, CONTROL|LEVEL1, "Drive out new thread for existing IKE_SA");
-		 		/* no we can't */
-		 		retval = NOT_FOUND;
-		 	}
-		 	else
-		 	{
+		ike_sa_entry_t *entry;
+		/* look for the entry */
+		if (this->get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
+		{
+			/* can we give this ike_sa out to new requesters?*/
+			if (entry->driveout_new_threads)
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL1, "Drive out new thread for existing IKE_SA");
+				/* no we can't */
+				retval = NOT_FOUND;
+			}
+			else
+			{
 				/* is this IKE_SA already checked out ?? 
 				 * are we welcome to get this SA ? */
 				while (entry->checked_out && !entry->driveout_waiting_threads)	
@@ -489,64 +489,55 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 }
 
 /**
- * Implementation of of ike_sa_manager.checkout_by_hosts.
+ * Implementation of of ike_sa_manager.checkout_by_reqid.
  */
-static status_t checkout_by_hosts(private_ike_sa_manager_t *this, host_t *me, host_t *other, ike_sa_t **ike_sa)
+static status_t checkout_by_reqid(private_ike_sa_manager_t *this, u_int32_t reqid, ike_sa_t **ike_sa)
 {
 	iterator_t *iterator;
-	ike_sa_id_t *ike_sa_id = NULL;
+	status_t status = NOT_FOUND;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
 	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
 	while (iterator->has_next(iterator))
 	{
-		ike_sa_entry_t *current;
-		host_t *sa_me, *sa_other;
+		ike_sa_entry_t *entry;
 		
-		iterator->current(iterator, (void**)&current);
-		sa_me = current->ike_sa->get_my_host(current->ike_sa);
-		sa_other = current->ike_sa->get_other_host(current->ike_sa);
-		
-		/* one end may be default/any, but not both */
-		if (me->is_anyaddr(me))
+		iterator->current(iterator, (void**)&entry);
+		if (entry->driveout_new_threads)
 		{
-			if (other->is_anyaddr(other))
-			{
-				break;
-			}
-			if (other->equals(other, sa_other))
-			{
-				/* other matches */
-				ike_sa_id = current->ike_sa_id;
-			}
+			/* we are not allowed to get this, get next one */
+			continue;
 		}
-		else if (other->is_anyaddr(other))
+		while (entry->checked_out && !entry->driveout_waiting_threads)	
 		{
-			if (me->equals(me, sa_me))
-			{
-				/* ME matches */
-				ike_sa_id = current->ike_sa_id;
-			}
+			/* so wait until we can get it for us.
+			 * we register us as waiting. */
+			entry->waiting_threads++;
+			pthread_cond_wait(&(entry->condvar), &(this->mutex));
+			entry->waiting_threads--;
 		}
-		else
+		/* hm, a deletion request forbids us to get this SA, get next one */
+		if (entry->driveout_waiting_threads)
 		{
-			if (me->equals(me, sa_me) && other->equals(other, sa_other))
-			{
-				/* both matches */
-				ike_sa_id = current->ike_sa_id;
-			}
+			/* we must signal here, others may be waiting on it, too */
+			pthread_cond_signal(&(entry->condvar));
+			continue;
+		}
+		/* ok, access is exclusive for us, check reqid */
+		if (entry->ike_sa->get_child_sa(entry->ike_sa, reqid) != NULL)
+		{
+			/* match */
+			entry->checked_out = TRUE;
+			*ike_sa = entry->ike_sa;
+			status = SUCCESS;
+			break;
 		}
 	}
 	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->mutex));
 	
-	if (ike_sa_id)
-	{
-		/* checkout is done in the checkout function, since its rather complex */
-		return checkout(this, ike_sa_id, ike_sa);
-	}
-	return NOT_FOUND;
+	return status;
 }
 
 /**
@@ -840,7 +831,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
 	this->public.create_and_checkout = (void(*)(ike_sa_manager_t*,ike_sa_t**))create_and_checkout;
 	this->public.checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t*,ike_sa_t**))checkout;
-	this->public.checkout_by_hosts = (status_t(*)(ike_sa_manager_t*,host_t*,host_t*,ike_sa_t**))checkout_by_hosts;
+	this->public.checkout_by_reqid = (status_t(*)(ike_sa_manager_t*,u_int32_t,ike_sa_t**))checkout_by_reqid;
 	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;
 	this->public.get_ike_sa_list_by_name = (linked_list_t*(*)(ike_sa_manager_t*,const char*))get_ike_sa_list_by_name;
 	this->public.log_status = (void(*)(ike_sa_manager_t*,logger_t*,char*))log_status;

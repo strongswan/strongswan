@@ -45,21 +45,6 @@ struct initiate_ike_sa_job_t {
 	 * implements job_t interface
 	 */
 	job_t job_interface;
-	
-	/**
-	 * @brief Returns the connection_t to initialize
-	 * 
-	 * @param this 	calling initiate_ike_sa_job_t object
-	 * @return 		connection_t
-	 */
-	connection_t *(*get_connection) (initiate_ike_sa_job_t *this);
-
-	/**
-	 * @brief Destroys an initiate_ike_sa_job_t object.
-	 *
-	 * @param this 	initiate_ike_sa_job_t object to destroy
-	 */
-	void (*destroy) (initiate_ike_sa_job_t *this);
 };
 
 /**

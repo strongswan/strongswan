@@ -48,21 +48,12 @@ struct incoming_packet_job_t {
 	job_t job_interface;
 	
 	/**
-	 * @brief Returns the assigned packet_t object
-	 * 	
-	 * @warning Returned packet is not cloned and has to get destroyed by the caller.
+	 * @brief Get associated packet.
 	 * 
-	 * @param this 			calling incoming_packet_job_t object
-	 * @return			 	assigned packet
+	 * @param this	calling object
+	 * @return		associated packet
 	 */
-	packet_t *(*get_packet) (incoming_packet_job_t *this);
-
-	/**
-	 * @brief Destroys an incoming_packet_job_t object.
-	 *
-	 * @param this 	incoming_packet_job_t object to destroy
-	 */
-	void (*destroy) (incoming_packet_job_t *this);
+	packet_t *(*get_packet)(incoming_packet_job_t *this);
 };
 
 /**

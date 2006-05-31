@@ -36,6 +36,8 @@
 
 #include <daemon.h>
 #include <utils/linked_list.h>
+#include <queues/jobs/delete_child_sa_job.h>
+#include <queues/jobs/rekey_child_sa_job.h>
 
 
 #define KERNEL_ESP 50
@@ -101,6 +103,8 @@ struct netlink_message_t {
 		struct xfrm_userpolicy_id policy_id;
 		/** message for policy installation */
 		struct xfrm_userpolicy_info policy;
+		/** expire message sent from kernel */
+		struct xfrm_user_expire expire;
 	};
 	u_int8_t data[XFRM_DATA_LENGTH];
 };
@@ -205,7 +209,6 @@ mapping_t kernel_integrity_algs_m[] = {
 	{MAPPING_END, NULL}
 };
 
-
 /**
  * Implementation of kernel_interface_t.get_spi.
  */
@@ -272,6 +275,8 @@ static status_t add_sa(	private_kernel_interface_t *this,
 						u_int32_t spi,
 						int protocol,
 						u_int32_t reqid,
+						u_int64_t expire_soft,
+						u_int64_t expire_hard,
 						encryption_algorithm_t enc_alg,
 						chunk_t encryption_key,
 						integrity_algorithm_t int_alg,
@@ -296,10 +301,16 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	request.sa.mode = TRUE; /* tunnel mode */
 	request.sa.replay_window = 32;
 	request.sa.reqid = reqid;
+	/* we currently do not expire SAs by volume/packet count */
 	request.sa.lft.soft_byte_limit = XFRM_INF;
-	request.sa.lft.soft_packet_limit = XFRM_INF;
 	request.sa.lft.hard_byte_limit = XFRM_INF;
+	request.sa.lft.soft_packet_limit = XFRM_INF;
 	request.sa.lft.hard_packet_limit = XFRM_INF;
+	/* we use lifetimes since added, not since used */
+	request.sa.lft.soft_add_expires_seconds = expire_soft;
+	request.sa.lft.hard_add_expires_seconds = expire_hard;
+	request.sa.lft.soft_use_expires_seconds = 0;
+	request.sa.lft.hard_use_expires_seconds = 0;
 	
 	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.sa)));
 	
@@ -435,10 +446,15 @@ static status_t add_policy(private_kernel_interface_t *this,
 	request.policy.action = XFRM_POLICY_ALLOW;
 	request.policy.share = XFRM_SHARE_ANY;
 	
+	/* policies currently don't expire */
 	request.policy.lft.soft_byte_limit = XFRM_INF;
 	request.policy.lft.soft_packet_limit = XFRM_INF;
 	request.policy.lft.hard_byte_limit = XFRM_INF;
 	request.policy.lft.hard_packet_limit = XFRM_INF;
+	request.sa.lft.soft_add_expires_seconds = 0;
+	request.sa.lft.hard_add_expires_seconds = 0;
+	request.sa.lft.soft_use_expires_seconds = 0;
+	request.sa.lft.hard_use_expires_seconds = 0;
 	
 	if (esp || ah)
 	{
@@ -645,30 +661,58 @@ static void receive_messages(private_kernel_interface_t *this)
 				/* not from kernel. not interested, try another one */
 				continue;
 			}
+			/* good message, handle it */
 			break;
 		}
 		
-		/* got a valid message.
-		 * requests are handled on our own, 
-		 * responses are listed for the requesters
+		/* we handle ACQUIRE and EXPIRE messages directly
 		 */
-		if (response.hdr.nlmsg_flags & NLM_F_REQUEST)
+		if (response.hdr.nlmsg_type == XFRM_MSG_ACQUIRE)
 		{
-			/* handle request */	
+			this->logger->log(this->logger, CONTROL,
+							  "Received a XFRM_MSG_ACQUIRE. Ignored");
 		}
-		else
+		else if (response.hdr.nlmsg_type == XFRM_MSG_EXPIRE)
 		{
-			/* add response to queue */			
+			job_t *job;
+			this->logger->log(this->logger, CONTROL|LEVEL1,
+							  "Received a XFRM_MSG_EXPIRE");
+			this->logger->log(this->logger, CONTROL|LEVEL0,
+							  "creating %s job for CHILD_SA with reqid %d",
+							  response.expire.hard ? "delete" : "rekey",
+							  response.expire.state.reqid);
+			if (response.expire.hard)
+			{
+				job = (job_t*)delete_child_sa_job_create(
+						response.expire.state.reqid);
+			}
+			else
+			{
+				job = (job_t*)rekey_child_sa_job_create(
+						response.expire.state.reqid);
+			}
+			charon->job_queue->add(charon->job_queue, job);
+		}
+		/* NLMSG_ERROR is send back for acknowledge (or on error), an
+		 * XFRM_MSG_NEWSA is returned when we alloc spis.
+		 * list these responses for the sender
+		 */
+		else if (response.hdr.nlmsg_type == NLMSG_ERROR ||
+				 response.hdr.nlmsg_type == XFRM_MSG_NEWSA)
+		{
+			/* add response to queue */
 			listed_response = malloc(sizeof(response));
 			memcpy(listed_response, &response, sizeof(response));
-
+			
 			pthread_mutex_lock(&(this->mutex));
 			this->responses->insert_last(this->responses, (void*)listed_response);
 			pthread_mutex_unlock(&(this->mutex));
 			/* signal ALL waiting threads */
 			pthread_cond_broadcast(&(this->condvar));
 		}
-		/* get the next one */
+		/* we are not interested in anything other.
+		 * anyway, move on to the next message */
+		continue;
 	}
 }
 
@@ -689,11 +733,12 @@ static void destroy(private_kernel_interface_t *this)
  */
 kernel_interface_t *kernel_interface_create()
 {
+	struct sockaddr_nl addr;
 	private_kernel_interface_t *this = malloc_thing(private_kernel_interface_t);
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,encryption_algorithm_t,chunk_t,integrity_algorithm_t,chunk_t,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,encryption_algorithm_t,chunk_t,integrity_algorithm_t,chunk_t,bool))add_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,bool,bool,u_int32_t))add_policy;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int))del_policy;
@@ -709,12 +754,25 @@ kernel_interface_t *kernel_interface_create()
 	pthread_mutex_init(&(this->mutex),NULL);
 	pthread_cond_init(&(this->condvar),NULL);
 	this->seq = 0;
+	
+	/* open netlink socket */
 	this->socket = socket(PF_NETLINK, SOCK_RAW, NETLINK_XFRM);
 	if (this->socket <= 0)
 	{
 		this->responses->destroy(this->responses);
 		free(this);
 		charon->kill(charon, "Unable to create netlink socket");	
+	}
+	/* bind the socket and reqister for ACQUIRE & EXPIRE */
+	addr.nl_family = AF_NETLINK;
+	addr.nl_pid = getpid();
+	addr.nl_groups = XFRMGRP_ACQUIRE | XFRMGRP_EXPIRE;
+	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)) != 0)
+	{
+		this->responses->destroy(this->responses);
+		close(this->socket);
+		free(this);
+		charon->kill(charon, "Unable to bind netlink socket");	
 	}
 	
 	if (pthread_create(&(this->thread), NULL, (void*(*)(void*))this->receive_messages, this) != 0)

@@ -32,43 +32,57 @@ typedef enum job_type_t job_type_t;
 /**
  * @brief Definition of the various job types.
  * 
- * @todo add more jobs, such as rekeying.
- * 
  * @ingroup jobs
  */
 enum job_type_t {
 	/** 
 	 * Process an incoming IKEv2-Message.
 	 * 
- 	 * Job is implemented in class type incoming_packet_job_t
+ 	 * Job is implemented in class incoming_packet_job_t
 	 */
 	INCOMING_PACKET,
 	
 	/** 
 	 * Retransmit an IKEv2-Message.
+	 * 
+	 * Job is implemented in class retransmit_request_job_t
 	 */
 	RETRANSMIT_REQUEST,
 	
 	/** 
 	 * Establish an ike sa as initiator.
 	 * 
-	 * Job is implemented in class type initiate_ike_sa_job_t
+	 * Job is implemented in class initiate_ike_sa_job_t
 	 */
 	INITIATE_IKE_SA,
 	
 	/** 
 	 * Delete an ike sa which is still not established.
 	 * 
-	 * Job is implemented in class type delete_half_open_ike_sa_job_t
+	 * Job is implemented in class delete_half_open_ike_sa_job_t
 	 */
 	DELETE_HALF_OPEN_IKE_SA,
 	
 	/** 
 	 * Delete an ike sa which is established.
 	 * 
-	 * Job is implemented in class type delete_established_ike_sa_job_t
+	 * Job is implemented in class delete_established_ike_sa_job_t
 	 */	
-	DELETE_ESTABLISHED_IKE_SA
+	DELETE_ESTABLISHED_IKE_SA,
+	
+	/**
+	 * Delete a child sa.
+	 * 
+	 * Job is implemented in class delete_child_sa_job_t
+	 */
+	DELETE_CHILD_SA,
+	
+	/**
+	 * Rekey a child sa.
+	 * 
+	 * Job is implemented in class rekey_child_sa_job_t
+	 */
+	REKEY_CHILD_SA,
 };
 
 /**
@@ -102,11 +116,16 @@ struct job_t {
 	job_type_t (*get_type) (job_t *this);
 
 	/**
-	 * @brief Destroys a job_t object and all assigned data!
+	 * @brief Execute a job.
 	 * 
-	 * @param job_t calling object
+	 * Call the internall job routine to process the
+	 * job. If this method returns DESTROY_ME, the job
+	 * must be destroyed by the caller.
+	 *
+	 * @param this 				calling object
+	 * @return 					status of job execution
 	 */
-	void (*destroy_all) (job_t *job);
+	status_t (*execute) (job_t *this);
 
 	/**
 	 * @brief Destroys a job_t object
@@ -117,4 +136,4 @@ struct job_t {
 };
 
 
-#endif /*JOB_H_*/
+#endif /* JOB_H_ */

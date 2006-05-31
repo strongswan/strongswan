@@ -47,23 +47,6 @@ struct delete_half_open_ike_sa_job_t {
 	 * The job_t interface.
 	 */
 	job_t job_interface;
-	
-	/**
-	 * @brief Returns the currently set ike_sa_id.
-	 * 	
-	 * @warning Returned object is not copied.
-	 * 
-	 * @param this 	calling delete_half_open_ike_sa_job_t object
-	 * @return 		ike_sa_id_t object
-	 */
-	ike_sa_id_t * (*get_ike_sa_id) (delete_half_open_ike_sa_job_t *this);
-
-	/**
-	 * @brief Destroys an delete_half_open_ike_sa_job_t object (including assigned data).
-	 *
-	 * @param this 	delete_half_open_ike_sa_job_t object to destroy
-	 */
-	void (*destroy) (delete_half_open_ike_sa_job_t *this);
 };
 
 /**

@@ -184,6 +184,32 @@ static payload_rule_t informational_r_payload_rules[] = {
 	{DELETE,0,1,TRUE,FALSE},
 };
 
+/**
+ * Message rule for CREATE_CHILD_SA from initiator.
+ */
+static payload_rule_t create_child_sa_r_payload_rules[] = {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
+	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
+	{NONCE,1,1,TRUE,FALSE},
+	{KEY_EXCHANGE,0,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
+	{CONFIGURATION,0,1,TRUE,FALSE},
+};
+
+/**
+ * Message rule for CREATE_CHILD_SA from responder.
+ */
+static payload_rule_t create_child_sa_i_payload_rules[] = {
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
+	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
+	{NONCE,1,1,TRUE,FALSE},
+	{KEY_EXCHANGE,0,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_INITIATOR,0,1,TRUE,FALSE},
+	{TRAFFIC_SELECTOR_RESPONDER,0,1,TRUE,FALSE},
+	{CONFIGURATION,0,1,TRUE,FALSE},
+};
+
 
 /**
  * Message rules, defines allowed payloads.

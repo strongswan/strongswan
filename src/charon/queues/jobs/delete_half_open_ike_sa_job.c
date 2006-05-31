@@ -22,7 +22,7 @@
 
 #include "delete_half_open_ike_sa_job.h"
 
-
+#include <daemon.h>
 
 typedef struct private_delete_half_open_ike_sa_job_t private_delete_half_open_ike_sa_job_t;
 
@@ -39,6 +39,11 @@ struct private_delete_half_open_ike_sa_job_t {
 	 * ID of the ike_sa to delete
 	 */
 	ike_sa_id_t *ike_sa_id;
+	
+	/**
+	 * logger ref
+	 */
+	logger_t *logger;
 };
 
 /**
@@ -50,11 +55,48 @@ static job_type_t get_type(private_delete_half_open_ike_sa_job_t *this)
 }
 
 /**
- * Implements elete_ike_sa_job_t.get_ike_sa_id
+ * Implementation of job_t.execute.
  */
-static ike_sa_id_t *get_ike_sa_id(private_delete_half_open_ike_sa_job_t *this)
+static status_t execute(private_delete_half_open_ike_sa_job_t *this)
 {
-	return this->ike_sa_id;
+	ike_sa_t *ike_sa;
+	status_t status;
+	
+	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id, &ike_sa);
+	if ((status != SUCCESS) && (status != CREATED))
+	{
+		this->logger->log(this->logger, CONTROL | LEVEL3, "IKE SA seems to be already deleted");
+		return DESTROY_ME;
+	}
+	
+	switch (ike_sa->get_state(ike_sa))
+	{
+		case INITIATOR_INIT:
+		case RESPONDER_INIT:
+		case IKE_SA_INIT_REQUESTED:
+		case IKE_SA_INIT_RESPONDED:
+		case IKE_AUTH_REQUESTED:
+		case DELETE_REQUESTED:
+		{
+			/* IKE_SA is half open and gets deleted! */
+			status = charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+			if (status != SUCCESS)
+			{
+				this->logger->log(this->logger, ERROR, "Could not checkin and delete checked out IKE_SA!");
+			}
+			return DESTROY_ME;
+		}
+		default:
+		{
+			/* IKE_SA is established and so is not getting deleted! */
+			status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			if (status != SUCCESS)
+			{
+				this->logger->log(this->logger, ERROR, "Could not checkin a checked out IKE_SA!");
+			}
+			return DESTROY_ME;
+		}
+	}
 }
 
 /**
@@ -75,16 +117,12 @@ delete_half_open_ike_sa_job_t *delete_half_open_ike_sa_job_create(ike_sa_id_t *i
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
-	/* same as destroy */
-	this->public.job_interface.destroy_all = (void (*) (job_t *)) destroy;
+	this->public.job_interface.execute = (status_t (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t *)) destroy;;
-	
-	/* public functions */
-	this->public.get_ike_sa_id = (ike_sa_id_t * (*)(delete_half_open_ike_sa_job_t *)) get_ike_sa_id;
-	this->public.destroy = (void (*)(delete_half_open_ike_sa_job_t *)) destroy;
 	
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);
 }

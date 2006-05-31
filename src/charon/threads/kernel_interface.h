@@ -68,30 +68,34 @@ struct kernel_interface_t {
 	 * 
 	 * add_sa() may update an already allocated
 	 * SPI (via get_spi). In this case, the replace
-	 * flag must be set. 
+	 * flag must be set.
 	 * This function does install a single SA for a
 	 * single protocol in one direction.
 	 * 
-	 * @param this		calling object
-	 * @param src		source address for this SA
-	 * @param dst		destination address for this SA
-	 * @param spi		SPI allocated by us or remote peer
-	 * @param protocol	protocol for this SA (ESP/AH)
-	 * @param reqid		unique ID for this SA
-	 * @param enc_alg	Algorithm to use for encryption (ESP only)
-	 * @param enc_key	Key to use for encryption
-	 * @param int_alg	Algorithm to use for integrity protection
-	 * @param int_key	Key for integrity protection
-	 * @param replace	Should an already installed SA be updated?
+	 * @param this			calling object
+	 * @param src			source address for this SA
+	 * @param dst			destination address for this SA
+	 * @param spi			SPI allocated by us or remote peer
+	 * @param protocol		protocol for this SA (ESP/AH)
+	 * @param reqid			unique ID for this SA
+	 * @param expire_soft	lifetime in seconds before rekeying
+	 * @param expire_hard	lieftime in seconds before delete
+	 * @param enc_alg		Algorithm to use for encryption (ESP only)
+	 * @param enc_key		Key to use for encryption
+	 * @param int_alg		Algorithm to use for integrity protection
+	 * @param int_key		Key for integrity protection
+	 * @param replace		Should an already installed SA be updated?
 	 * @return
-	 * 					- SUCCESS
-	 * 					- FAILED if kernel comm failed
+	 * 						- SUCCESS
+	 * 						- FAILED if kernel comm failed
 	 */
 	status_t (*add_sa)(kernel_interface_t *this,
 				host_t *src, host_t *dst,
 				u_int32_t spi,
 				protocol_id_t protocol,
 				u_int32_t reqid,
+				u_int64_t expire_soft,
+				u_int64_t expire_hard,
 				encryption_algorithm_t enc_alg,
 				chunk_t enc_key,
 				integrity_algorithm_t int_alg,

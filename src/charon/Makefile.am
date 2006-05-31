@@ -38,6 +38,8 @@ queues/jobs/delete_established_ike_sa_job.c queues/jobs/retransmit_request_job.h
 queues/jobs/incoming_packet_job.c queues/jobs/delete_half_open_ike_sa_job.c \
 queues/jobs/delete_established_ike_sa_job.h queues/jobs/delete_half_open_ike_sa_job.h \
 queues/jobs/incoming_packet_job.h queues/jobs/retransmit_request_job.c queues/jobs/initiate_ike_sa_job.c \
+queues/jobs/rekey_child_sa_job.c queues/jobs/rekey_child_sa_job.h \
+queues/jobs/delete_child_sa_job.c queues/jobs/delete_child_sa_job.h \
 queues/job_queue.c queues/event_queue.c queues/send_queue.h queues/job_queue.h queues/event_queue.h \
 queues/send_queue.c threads/kernel_interface.c threads/thread_pool.c threads/scheduler.c threads/sender.c \
 threads/sender.h threads/kernel_interface.h threads/scheduler.h threads/receiver.c threads/stroke_interface.c \

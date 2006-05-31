@@ -47,48 +47,6 @@ struct retransmit_request_job_t {
 	 * The job_t interface.
 	 */
 	job_t job_interface;
-	
-	/**
-	 * @brief Returns the retransmit count for a specific request.
-	 *
-	 * @param this 	calling retransmit_request_job_t object
-	 * @return 		retransmit count of request
-	 */
-	u_int32_t (*get_retransmit_count) (retransmit_request_job_t *this);
-
-	/**
-	 * @brief Increases number of retransmitt attemps.
-	 *
-	 * @param this 	calling retransmit_request_job_t object
-	 */	
-	void (*increase_retransmit_count) (retransmit_request_job_t *this);
-	
-	/**
-	 * @brief Returns the message_id of the request to be resent
-	 *
-	 * @param this 	calling retransmit_request_job_t object
-	 * @return 		message id of the request to resend
-	 */
-	u_int32_t (*get_message_id) (retransmit_request_job_t *this);
-	
-	/**
-	 * @brief Returns the ike_sa_id_t object of the IKE_SA 
-	 * 		  which the request belongs to
-	 * 
-	 * @warning returned ike_sa_id_t object is getting destroyed in 
-	 * retransmit_request_job_t.destroy.
-	 *
-	 * @param this 	calling retransmit_request_job_t object
-	 * @return 		ike_sa_id_t object to identify IKE_SA (gets NOT cloned)
-	 */
-	ike_sa_id_t *(*get_ike_sa_id) (retransmit_request_job_t *this);
-
-	/**
-	 * @brief Destroys an retransmit_request_job_t object.
-	 *
-	 * @param this 	retransmit_request_job_t object to destroy
-	 */
-	void (*destroy) (retransmit_request_job_t *this);
 };
 
 /**
@@ -100,6 +58,7 @@ struct retransmit_request_job_t {
  * 
  * @ingroup jobs
  */
-retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike_sa_id_t *ike_sa_id);
+retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,
+														ike_sa_id_t *ike_sa_id);
 
 #endif /* RESEND_MESSAGE_JOB_H_ */

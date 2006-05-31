@@ -887,6 +887,28 @@ static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 }
 
 /**
+ * Implementation of ike_sa_t.get_child_sa.
+ */
+static child_sa_t *get_child_sa(private_ike_sa_t *this, u_int32_t reqid)
+{
+	iterator_t *iterator;
+	child_sa_t *current, *found = NULL;
+	
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&current);
+		if (current->get_reqid(current) == reqid)
+		{
+			found = current;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return found;
+}
+
+/**
  * Implementation of protected_ike_sa_t.reset_message_buffers.
  */
 static void reset_message_buffers(private_ike_sa_t *this)
@@ -929,18 +951,19 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 			return;
 		}
 	}
-	else
-	{
-		name = this->connection->get_name(this->connection);
-	}
-	
 	my_host = this->connection->get_my_host(this->connection);
 	other_host = this->connection->get_other_host(this->connection);
 
+	/* use policy information, if available */
 	if (this->policy)
 	{
 		my_id = this->policy->get_my_id(this->policy);
 		other_id = this->policy->get_other_id(this->policy);
+		name = this->policy->get_name(this->policy);
+	}
+	else
+	{
+		name = this->connection->get_name(this->connection);
 	}
 	
 	if (logger == NULL)
@@ -1116,6 +1139,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* Public functions */
 	this->protected.public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->protected.public.initiate_connection = (status_t(*)(ike_sa_t*,connection_t*)) initiate_connection;
+	this->protected.public.get_child_sa = (child_sa_t*(*)(ike_sa_t*,u_int32_t))get_child_sa;
 	this->protected.public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->protected.public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
 	this->protected.public.get_other_host = (host_t*(*)(ike_sa_t*)) get_other_host;
