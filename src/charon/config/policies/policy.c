@@ -330,7 +330,6 @@ static policy_t *clone(private_policy_t *this)
 	}
 	iterator->destroy(iterator);
 	
-	clone->name = strdup(this->name);
 	return &clone->public;
 }
 

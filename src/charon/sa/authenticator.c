@@ -356,6 +356,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			this->logger->log(this->logger, CONTROL, "looking for private key with keyid %s", buf);
 
 			my_key = charon->credentials->get_rsa_private_key(charon->credentials, my_pubkey);
+			my_pubkey->destroy(my_pubkey);
 			if (my_key == NULL)
 			{
 				char buf[BUF_LEN];

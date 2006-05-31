@@ -137,7 +137,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 {
 	char buffer[MAX_PACKET];
 	chunk_t data;
-	packet_t *pkt = packet_create();
+	packet_t *pkt;
 	host_t *source, *dest;
 	int bytes_read = 0;
 	
@@ -164,16 +164,12 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		}
 		iterator->destroy(iterator);
 		
-		/* add packet destroy handler for cancellation, enable cancellation */
-		pthread_cleanup_push((void(*)(void*))pkt->destroy, (void*)pkt);
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		
 		this->logger->log(this->logger, CONTROL|LEVEL1, "waiting on sockets");
-		bytes_read = select(max_fd, &readfds, NULL, NULL, NULL);
 		
-		/* reset cancellation, remove packet destroy handler (without executing) */
+		/* allow cancellation while select()-ing */
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		bytes_read = select(max_fd, &readfds, NULL, NULL, NULL);
 		pthread_setcancelstate(oldstate, NULL);
-		pthread_cleanup_pop(0);
 		
 		/* read on the first nonblocking socket */
 		bytes_read = 0;
@@ -204,6 +200,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			u_int16_t dest_port = ntohs(*(u_int16_t*)(buffer + 22));
 			source = host_create_from_chunk(AF_INET, source_chunk, source_port);
 			dest = host_create_from_chunk(AF_INET, dest_chunk, dest_port);
+			pkt = packet_create();
 			pkt->set_source(pkt, source);
 			pkt->set_destination(pkt, dest);
 			break;
