@@ -225,7 +225,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	u_int64_t responder_spi;
 	ike_sa_id_t *ike_sa_id;
 	iterator_t *payloads;
-	host_t *me;
+	host_t *me, *other;
 	connection_t *connection;
 	policy_t *policy;
 
@@ -357,9 +357,12 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	/* apply the address on wich we really received the packet */
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	me = ike_sa_init_reply->get_destination(ike_sa_init_reply);
+	other = ike_sa_init_reply->get_source(ike_sa_init_reply);
 	connection->update_my_host(connection, me->clone(me));
+	connection->update_other_host(connection, other->clone(other));
 	policy = this->ike_sa->get_policy(this->ike_sa);
 	policy->update_my_ts(policy, me);
+	policy->update_other_ts(policy, other);
 	
 	/*  build empty message */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, TRUE, &request);

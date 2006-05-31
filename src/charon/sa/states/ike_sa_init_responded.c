@@ -411,6 +411,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	my_id = this->policy->get_my_id(this->policy);
 	
 	/* update others traffic selectors with actually used address */
+	this->policy->update_my_ts(this->policy, response->get_source(response));
 	this->policy->update_other_ts(this->policy, response->get_destination(response));
 	
 	/* set policy in ike_sa for other states */

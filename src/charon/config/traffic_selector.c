@@ -24,6 +24,7 @@
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
+#include <utils/logger_manager.h>
 #include <arpa/inet.h>
 #include <string.h>
 
@@ -72,6 +73,11 @@ struct private_traffic_selector_t {
 	 * end of port range 
 	 */
 	u_int16_t to_port;
+	
+	/**
+	 * Logger reference
+	 */
+	logger_t *logger;
 };
 
 /**
@@ -92,12 +98,18 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		u_int16_t from_port, to_port;
 		private_traffic_selector_t *new_ts;
 		
+		/* TODO: make output more human readable */
+		this->logger->log(this->logger, CONTROL|LEVEL2,
+						  "matching traffic selector ranges %x:%d-%x:%d <=> %x:%d-%x:%d",
+						  this->from_addr_ipv4, this->from_port, this->to_addr_ipv4, this->to_port,
+						  other->from_addr_ipv4, other->from_port, other->to_addr_ipv4, other->to_port);
 		/* calculate the maximum address range allowed for both */
 		from_addr = max(this->from_addr_ipv4, other->from_addr_ipv4);
 		to_addr = min(this->to_addr_ipv4, other->to_addr_ipv4);
 		if (from_addr > to_addr)
 		{
-			/* no match */
+			this->logger->log(this->logger, CONTROL|LEVEL2,
+							  "no match in address range");
 			return NULL;	
 		}
 		
@@ -106,7 +118,8 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		to_port = min(this->to_port, other->to_port);
 		if (from_port > to_port)
 		{
-			/* no match */
+			this->logger->log(this->logger, CONTROL|LEVEL2,
+							  "no match in port range");
 			return NULL;	
 		}
 		
@@ -115,6 +128,10 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		new_ts->from_addr_ipv4 = from_addr;
 		new_ts->to_addr_ipv4 = to_addr;
 		new_ts->type = TS_IPV4_ADDR_RANGE;
+		
+		this->logger->log(this->logger, CONTROL|LEVEL2,
+						  "got a match: %x:%d-%x:%d",
+						  new_ts->from_addr_ipv4, new_ts->from_port, new_ts->to_addr_ipv4, new_ts->to_port);
 		return &(new_ts->public);
 	}
 	return NULL;
@@ -256,7 +273,7 @@ static void update_address_range(private_traffic_selector_t *this, host_t *host)
 /**
  * Implements traffic_selector_t.clone.
  */
-static traffic_selector_t *clone(private_traffic_selector_t *this)
+static traffic_selector_t *clone_(private_traffic_selector_t *this)
 {
 	private_traffic_selector_t *clone = traffic_selector_create(this->protocol, this->type, this->from_port, this->to_port);
 	clone->type = this->type;
@@ -335,8 +352,8 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t ne
 			this->from_addr_ipv4 = ntohl(*((u_int32_t*)from.ptr));
 			if (this->from_addr_ipv4 == 0)
 			{
-				/* use /32 for 0.0.0.0 */
-				this->to_addr_ipv4 = 0xFFFFFF;
+				/* use /0 for 0.0.0.0 */
+				this->to_addr_ipv4 = ~0;
 			}
 			else
 			{
@@ -413,13 +430,14 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
 	this->public.get_netmask = (u_int8_t(*)(traffic_selector_t*))get_netmask;
 	this->public.update_address_range = (void(*)(traffic_selector_t*,host_t*))update_address_range;
-	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone;
+	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone_;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
 	
 	this->from_port = from_port;
 	this->to_port = to_port;
 	this->protocol = protocol;
 	this->type = type;
+	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 	
 	return this;
 }

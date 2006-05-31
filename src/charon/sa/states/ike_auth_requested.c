@@ -318,7 +318,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	{
 		this->logger->log(this->logger, CONTROL, "No CHILD_SA requested, no CHILD_SA built");
 	}
-	if (!this->proposal)
+	else if (!this->proposal)
 	{
 		this->logger->log(this->logger, CONTROL, "Proposal negotiation failed, no CHILD_SA built");
 		this->child_sa->destroy(this->child_sa);
