@@ -108,8 +108,9 @@ static int get_thread_number(void)
  */
 static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const char *string, char *buffer)
 {
+	char thread_id[3] = "";
 	char log_type, log_details;
-	u_int8_t thread_id = 0;
+	char *separator = (strlen(this->name) == 0)? "" : ":";
 
 	if (loglevel & CONTROL)
 	{
@@ -155,9 +156,10 @@ static void prepend_prefix(private_logger_t *this, log_level_t loglevel, const c
 	
 	if (this->log_thread_id)
 	{
-		thread_id = get_thread_number();
+		snprintf(thread_id, sizeof(thread_id), "%02d", get_thread_number());
 	}
-	snprintf(buffer, MAX_LOG, "%02d[%c%c:%s] %s", thread_id, log_type, log_details, this->name, string);
+	snprintf(buffer, MAX_LOG, "%s[%c%c%s%s] %s",
+			 thread_id, log_type, log_details, separator, this->name, string);
 }
 
 /**
@@ -219,7 +221,7 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 	if ((this->level & loglevel) == loglevel)
 	{
-		u_int8_t thread_id = 0;
+		char thread_id[3] = "";
 		char buffer[MAX_LOG];
 		char ascii_buffer[MAX_BYTES+1];
 
@@ -241,7 +243,7 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 		
 		if (this->log_thread_id)
 		{
-			thread_id = get_thread_number();
+			snprintf(thread_id, sizeof(thread_id), "%02d", get_thread_number());
 		}
 
 		if (this->output == NULL)
@@ -277,11 +279,11 @@ static void log_bytes(private_logger_t *this, log_level_t loglevel, const char *
 
 				if (this->output == NULL)
 				{
-					syslog(get_priority(loglevel), "%02d[  :%5d]   %s  %s", thread_id, line_start, buffer, ascii_buffer);	
+					syslog(get_priority(loglevel), "%s[  :%5d]   %s  %s", thread_id, line_start, buffer, ascii_buffer);	
 				}
 				else
 				{
-					fprintf(this->output, "%02d[  :%5d]   %s  %s\n", thread_id, line_start, buffer, ascii_buffer);
+					fprintf(this->output, "%s[  :%5d]   %s  %s\n", thread_id, line_start, buffer, ascii_buffer);
 				}
 				buffer_pos = buffer;
 				line_start += MAX_BYTES;

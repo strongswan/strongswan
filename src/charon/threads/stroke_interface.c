@@ -639,7 +639,7 @@ static void stroke_receive(private_stroke_t *this)
 		}
 		
 		/* setup a logger which writes status to the unix socket */
-		this->stroke_logger = logger_create("-", CONTROL|ERROR, FALSE, strokefile);
+		this->stroke_logger = logger_create("", CONTROL|ERROR, FALSE, strokefile);
 		
 		this->logger->log_bytes(this->logger, RAW, "stroke message", (void*)msg, msg_length);
 		
