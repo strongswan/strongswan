@@ -310,7 +310,8 @@ delete_connection(struct connection *c, bool relations)
     /* find and delete c from the host pair list */
     if (c->host_pair == NULL)
     {
-	list_rm(struct connection, hp_next, c, unoriented_connections);
+	if (c->ikev1)
+	    list_rm(struct connection, hp_next, c, unoriented_connections);
     }
     else
     {
