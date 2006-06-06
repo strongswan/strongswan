@@ -14,15 +14,15 @@
 
 PH_IP_ALICE	alice.strongswan.org	alice
 PH_IP_VENUS	venus.strongswan.org	venus
-PH_IP1_MOON	moon1.strongswan.org	moon1
+PH_IP_MOON1	moon1.strongswan.org	moon1
 PH_IP_MOON	moon.strongswan.org	moon
 PH_IP_CAROL	carol.strongswan.org	carol
-PH_IP1_CAROL	carol1.strongswan.org	carol1
+PH_IP_CAROL1	carol1.strongswan.org	carol1
 PH_IP_WINNETOU	winnetou.strongswan.org	winnetou crl.strongswan.org ocsp.strongswan.org ldap.strongswan.org
 PH_IP_DAVE	dave.strongswan.org	dave
-PH_IP1_DAVE	dave1.strongswan.org	dave1
+PH_IP_DAVE1	dave1.strongswan.org	dave1
 PH_IP_SUN	sun.strongswan.org	sun
-PH_IP1_SUN	sun1.strongswan.org	sun1
+PH_IP_SUN1	sun1.strongswan.org	sun1
 PH_IP_BOB	bob.strongswan.org	bob
 
 # IPV6 versions of localhost and co
@@ -32,3 +32,17 @@ ff00::0 ip6-mcastprefix
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 ff02::3 ip6-allhosts
+
+PH_IP6_ALICE	ip6-alice.strongswan.org    ip6-alice
+PH_IP6_VENUS	ip6-venus.strongswan.org    ip6-venus
+PH_IP6_MOON1 	ip6-moon1.strongswan.org    ip6-moon1
+PH_IP6_MOON 	ip6-moon.strongswan.org     ip6-moon
+PH_IP6_CAROL	ip6-carol.strongswan.org    ip6-carol
+PH_IP6_CAROL1 	ip6-carol1.strongswan.org   ip6-carol1
+PH_IP6_WINNETOU	ip6-winnetou.strongswan.org ip6-winnetou 
+PH_IP6_DAVE	ip6-dave.strongswan.org     ip6-dave
+PH_IP6_DAVE1 	ip6-dave1.strongswan.org    ip6-dave1
+PH_IP6_SUN 	ip6-sun.strongswan.org      ip6-sun
+PH_IP6_SUN1 	ip6-sun1.strongswan.org     ip6-sun1
+PH_IP6_BOB	ip6-bob.strongswan.org      ip6-bob
+

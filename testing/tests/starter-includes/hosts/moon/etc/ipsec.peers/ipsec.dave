@@ -3,6 +3,6 @@
 conn rw-dave
 	right=%any
 	rightid=dave@strongswan.org
-	rightsourceip=PH_IP1_DAVE
+	rightsourceip=PH_IP_DAVE1
 	auto=add
 

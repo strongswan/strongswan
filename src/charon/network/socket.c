@@ -308,9 +308,9 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 		int skt;
 		interface_t *interface;
 
-		if (current->sin_family != AF_INET)
+		if (current->sin_family != AF_INET && current->sin_family != AF_INET6)
 		{
-			/* ignore all but AF_INET interfaces */
+			/* ignore all but IPv4 and IPv6 interfaces */
 			continue;
 		}
 
@@ -334,7 +334,7 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 		}
 		
 		/* set up interface socket */
-		skt = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+		skt = socket(current->sin_family, SOCK_RAW, IPPROTO_UDP);
 		if (socket < 0)
 		{
 			this->logger->log(this->logger, ERROR, "unable to open interface socket!");
@@ -347,7 +347,7 @@ static status_t build_interface_list(private_socket_t *this, u_int16_t port)
 			continue;
 		}
 		current->sin_port = htons(port);
-		current->sin_family = AF_INET;
+
 		if (bind(skt, (struct sockaddr*)current, sizeof(struct sockaddr_in)) < 0)
 		{
 			this->logger->log(this->logger, ERROR, "unable to bind interface socket!");

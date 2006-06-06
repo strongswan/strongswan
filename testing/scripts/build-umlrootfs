@@ -152,7 +152,7 @@ cp $LOOPDIR/etc/ssh/ssh_host_rsa_key $LOOPDIR/root/.ssh/id_rsa
 
 for host in $STRONGSWANHOSTS
 do
-    eval ip="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+    eval ip="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F- '{ print $1 }' | awk '{ print $1 }'`"
     echo "$host,$ip `cat $HOSTCONFIGDIR/ssh_host_rsa_key.pub`" >> $LOOPDIR/root/.ssh/known_hosts
     echo "`cat $HOSTCONFIGDIR/ssh_host_rsa_key.pub` root@$host" >> $LOOPDIR/root/.ssh/authorized_keys
 done

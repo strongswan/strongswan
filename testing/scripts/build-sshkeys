@@ -58,10 +58,10 @@ else
     cecho "done"
 fi
 
-for host in $HOSTNAMEIPS
+for host in $HOSTNAMEIPV4
 do
-    HOSTNAME=`echo $host | awk -F : '{ print $1 }'`
-    IP=`echo $host | awk -F : '{ print $2 }'`
+    HOSTNAME=`echo $host | awk -F, '{ print $1 }'`
+    IP=`echo $host | awk -F, '{ print $2 }'`
     if [ `grep "$IP " ~/.ssh/known_hosts | wc -l` != "0" ]
     then
         cecho "!! Warning: An entry exists for the following IP address: $IP"

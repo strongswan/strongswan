@@ -3,6 +3,6 @@
 conn rw-carol
 	right=%any
 	rightid=carol@strongswan.org
-	rightsourceip=PH_IP1_CAROL
+	rightsourceip=PH_IP_CAROL1
 	auto=add
 

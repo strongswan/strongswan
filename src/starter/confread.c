@@ -31,13 +31,15 @@
 #include "args.h"
 #include "interfaces.h"
 
+/* strings containing a colon are interpreted as an IPv6 address */
+#define ip_version(string)	(strchr(string, ':') != NULL)? AF_INET6 : AF_INET;
+
 static const char ike_defaults[] = "3des-sha, 3des-md5";
 static const char esp_defaults[] = "3des-sha1, 3des-md5";
 
 static const char firewall_defaults[] = "ipsec _updown iptables";
 
-static void
-default_values(starter_config_t *cfg)
+static void default_values(starter_config_t *cfg)
 {
 	if (cfg == NULL)
 		return;
@@ -167,22 +169,18 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 				goto err;
 			}
 		}
-		else if (streq(value,"%any"))
+		else if (streq(value, "%any"))
 		{
 			anyaddr(conn->addr_family, &end->addr);
 		}
-		else if (value[0] == '%')
+		else if (streq(value, "%any6"))
 		{
-			if (end->iface)
-				pfree(end->iface);
-			end->iface = clone_str(value+1, "iface");
-			if (starter_iface_find(end->iface, conn->addr_family, &end->addr, &end->nexthop) == -1)
-			{
-				conn->state = STATE_INVALID;
-			}
+			conn->addr_family = AF_INET6;
+			anyaddr(conn->addr_family, &end->addr);
 		}
 		else
 		{
+			conn->addr_family = ip_version(value);
 			ugh = ttoaddr(value, 0, conn->addr_family, &end->addr);
 			if (ugh != NULL)
 			{
@@ -203,10 +201,14 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 			}
 		}
 		else if (streq(value, "%direct"))
+		{
 			ugh = anyaddr(conn->addr_family, &end->nexthop);
+		}
 		else
+		{
+			conn->addr_family = ip_version(value);
 			ugh = ttoaddr(value, 0, conn->addr_family, &end->nexthop);
-
+		}
 		if (ugh != NULL)
 		{
 			plog("# bad addr: %s=%s [%s]", name, value, ugh);
@@ -222,6 +224,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		else
 		{
 			end->has_client = TRUE;
+			conn->tunnel_addr_family = ip_version(value);
 			ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &end->subnet);
 			if (ugh != NULL)
 			{
@@ -233,6 +236,7 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 	case KW_SUBNETWITHIN:
 		end->has_client = TRUE;
 		end->has_client_wildcard = TRUE;
+		conn->tunnel_addr_family = ip_version(value);
 		ugh = ttosubnet(value, 0, conn->tunnel_addr_family, &end->subnet);
 		break;
 	case KW_PROTOPORT:
@@ -246,7 +250,8 @@ kw_end(starter_conn_t *conn, starter_end_t *end, kw_token_t token
 		}
 		else
 		{
-			ugh = ttoaddr(value, 0, conn->addr_family, &end->srcip);
+			conn->tunnel_addr_family = ip_version(value);
+			ugh = ttoaddr(value, 0, conn->tunnel_addr_family, &end->srcip);
 			if (ugh != NULL)
 			{
 				plog("# bad addr: %s=%s [%s]", name, value, ugh);

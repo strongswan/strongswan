@@ -46,7 +46,7 @@ if [ -d $TESTSDIR/$testname/hosts ]
 then
     for host in `ls $TESTSDIR/$testname/hosts`
     do
-	eval HOSTLOGIN="root@`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+	eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
 	scp -rp $TESTSDIR/$testname/hosts/$host/etc $HOSTLOGIN:/ > /dev/null 2>&1
     done
 fi
@@ -58,7 +58,7 @@ fi
 
 for host in $IPSECHOSTS
 do
-    eval HOSTLOGIN="root@`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+    eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
     ssh $HOSTLOGIN 'rm -f /var/log/auth.log; \
 		    kill -SIGHUP `cat /var/run/syslogd.pid`' > /dev/null 2>&1
 done

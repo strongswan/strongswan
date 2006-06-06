@@ -68,39 +68,56 @@ cp -rfp $DEFAULTTESTSDIR/* $TESTSDIR
 
 for host in $STRONGSWANHOSTS
 do
-    eval ip_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $1 }' | awk '{ print $1 }'`"
+    eval ipv4_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
+    eval ipv6_${host}="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
     case $host in
     moon)
-        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP_MOON $ip_moon $TESTSDIR
-        searchandreplace PH_IP1_MOON $ip1_moon $TESTSDIR
+        eval ipv4_moon1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_MOON1 $ipv4_moon1 $TESTSDIR
+        searchandreplace PH_IP_MOON  $ipv4_moon  $TESTSDIR
+        eval ipv6_moon1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP6_MOON1 $ipv6_moon1 $TESTSDIR
+        searchandreplace PH_IP6_MOON  $ipv6_moon  $TESTSDIR
         ;;
     sun)
-        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP_SUN $ip_sun $TESTSDIR
-        searchandreplace PH_IP1_SUN $ip1_sun $TESTSDIR
+        eval ipv4_sun1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_SUN1 $ipv4_sun1 $TESTSDIR
+        searchandreplace PH_IP_SUN  $ipv4_sun  $TESTSDIR
+        eval ipv6_sun1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP6_SUN1 $ipv6_sun1 $TESTSDIR
+        searchandreplace PH_IP6_SUN  $ipv6_sun  $TESTSDIR
         ;;
     alice)
-        searchandreplace PH_IP_ALICE $ip_alice $TESTSDIR
+        searchandreplace PH_IP_ALICE  $ipv4_alice $TESTSDIR
+        searchandreplace PH_IP6_ALICE $ipv6_alice $TESTSDIR
         ;;
     venus)
-        searchandreplace PH_IP_VENUS $ip_venus $TESTSDIR
+        searchandreplace PH_IP_VENUS  $ipv4_venus $TESTSDIR
+        searchandreplace PH_IP6_VENUS $ipv6_venus $TESTSDIR
         ;;
     bob)
-        searchandreplace PH_IP_BOB $ip_bob $TESTSDIR
+        searchandreplace PH_IP_BOB   $ipv4_bob $TESTSDIR
+        searchandreplace PH_IPV6_BOB $ipv6_bob $TESTSDIR
         ;;
     carol)
-        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP_CAROL $ip_carol $TESTSDIR
-        searchandreplace PH_IP1_CAROL $ip1_carol $TESTSDIR
+        eval ipv4_carol1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_CAROL1 $ipv4_carol1 $TESTSDIR
+        searchandreplace PH_IP_CAROL  $ipv4_carol  $TESTSDIR
+        eval ipv6_carol1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP6_CAROL1 $ipv6_carol1 $TESTSDIR
+        searchandreplace PH_IP6_CAROL  $ipv6_carol  $TESTSDIR
         ;;
     dave)
-        eval ip1_${host}="`echo $HOSTNAMEIPS | sed -n -e "s/^.*${host}://gp" | awk -F : '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP_DAVE $ip_dave $TESTSDIR
-        searchandreplace PH_IP1_DAVE $ip1_dave $TESTSDIR
+        eval ipv4_dave1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP_DAVE1 $ipv4_dave1 $TESTSDIR
+        searchandreplace PH_IP_DAVE  $ipv4_dave  $TESTSDIR
+        eval ipv6_dave1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
+        searchandreplace PH_IP6_DAVE1 $ipv6_dave1 $TESTSDIR
+        searchandreplace PH_IP6_DAVE  $ipv6_dave  $TESTSDIR
         ;;
     winnetou)
-        searchandreplace PH_IP_WINNETOU $ip_winnetou $TESTSDIR
+        searchandreplace PH_IP_WINNETOU  $ipv4_winnetou $TESTSDIR
+        searchandreplace PH_IP6_WINNETOU $ipv6_winnetou $TESTSDIR
         ;;
     esac
 done
@@ -198,7 +215,7 @@ do
 	    iface=`echo $host_iface | awk -F ":" '{if ($2 != "") { print $2 } else { printf("eth0") }}'`
 	    tcpdump_cmd="tcpdump -i $iface not port ssh and not port domain and not arp > /tmp/tcpdump.log 2>&1 &"
             echo "${host}# $tcpdump_cmd" >> $CONSOLE_LOG
-            ssh root@`eval echo \\\$ip_$host '$tcpdump_cmd'`
+            ssh root@`eval echo \\\$ipv4_$host '$tcpdump_cmd'`
 	    eval TDUP_${host}="true"
         done
     fi
@@ -214,7 +231,7 @@ do
 	if ($2 != "")
 	{
 	    printf("echo \"%s# %s\"; ", $1, $2)
-	    printf("ssh root@\044ip_%s \"%s\"; ", $1, $2)
+	    printf("ssh root@\044ipv4_%s \"%s\"; ", $1, $2)
 	    printf("echo;\n")
 	}
     }' $TESTSDIR/${testname}/pretest.dat` >> $CONSOLE_LOG 2>&1
@@ -226,7 +243,7 @@ do
 
     function stop_tcpdump {
         echo "${1}# killall tcpdump" >> $CONSOLE_LOG
-        eval ssh root@\$ip_${1} killall tcpdump
+        eval ssh root@\$ipv4_${1} killall tcpdump
         eval TDUP_${1}="false"
 	echo ""
     }
@@ -252,12 +269,12 @@ do
 	    {
 		printf("if [ \044TDUP_%s == \"true\" ]; then stop_tcpdump %s; fi; \n", host, host)
 		printf("echo \"%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
-		printf("ssh root@\044ip_%s cat /tmp/tcpdump.log | grep \"%s\"; ", host, pattern)
+		printf("ssh root@\044ipv4_%s cat /tmp/tcpdump.log | grep \"%s\"; ", host, pattern)
 	    }
 	    else
 	    {
 		printf("echo \"%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
-		printf("ssh root@\044ip_%s %s | grep \"%s\"; ",  host, command, pattern)
+		printf("ssh root@\044ipv4_%s %s | grep \"%s\"; ",  host, command, pattern)
 	    }
 	    printf("cmd_exit=\044?; ")
 	    printf("echo; ")
@@ -310,7 +327,7 @@ do
 
     for host in $IPSECHOSTS
     do
-	eval HOSTLOGIN=root@\$ip_${host}
+	eval HOSTLOGIN=root@\$ipv4_${host}
 
 	for command in statusall listall
 	do
@@ -359,7 +376,7 @@ do
 	if ($2 != "")
 	{
 	    printf("echo \"%s# %s\"; ", $1, $2)
-	    printf("ssh root@\044ip_%s \"%s\"; ", $1, $2)
+	    printf("ssh root@\044ipv4_%s \"%s\"; ", $1, $2)
 	    printf("echo;\n")
 	}
     }' $TESTSDIR/${testname}/posttest.dat` >> $CONSOLE_LOG 2>&1
@@ -371,7 +388,7 @@ do
 
     for host in $IPSECHOSTS
     do
-	eval HOSTLOGIN=root@\$ip_${host}
+	eval HOSTLOGIN=root@\$ipv4_${host}
 	ssh $HOSTLOGIN grep pluto /var/log/auth.log \
 	    > $TESTRESULTDIR/${host}.auth.log
 	echo >> $TESTRESULTDIR/${host}.auth.log
@@ -389,7 +406,7 @@ do
 	if [ "`eval echo \\\$TDUP_${host}`" = "true" ]
 	then
 	    echo "${host}# killall tcpdump" >> $CONSOLE_LOG
-	    eval ssh root@\$ip_$host killall tcpdump
+	    eval ssh root@\$ipv4_$host killall tcpdump
 	    eval TDUP_${host}="false"
 	fi
     done
@@ -452,10 +469,10 @@ cecho ""
 HTDOCS="/var/www/localhost/htdocs"
 
 cecho-n "Copying test results to winnetou.."
-ssh root@${ip_winnetou} mkdir -p $HTDOCS/testresults > /dev/null 2>&1
-scp -r $TODAYDIR root@${ip_winnetou}:$HTDOCS/testresults > /dev/null 2>&1
-ssh root@${ip_winnetou} ln -s $HTDOCS/images $HTDOCS/testresults/$TESTDATE/images > /dev/null 2>&1
+ssh root@${ipv4_winnetou} mkdir -p $HTDOCS/testresults > /dev/null 2>&1
+scp -r $TODAYDIR root@${ipv4_winnetou}:$HTDOCS/testresults > /dev/null 2>&1
+ssh root@${ipv4_winnetou} ln -s $HTDOCS/images $HTDOCS/testresults/$TESTDATE/images > /dev/null 2>&1
 cecho "done"
 cecho ""
 cecho "The results are available in $TODAYDIR"
-cecho "or via the link http://$ip_winnetou/testresults/$TESTDATE"
+cecho "or via the link http://$ipv4_winnetou/testresults/$TESTDATE"
