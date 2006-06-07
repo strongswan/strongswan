@@ -127,6 +127,34 @@ struct ike_sa_t {
 	child_sa_t* (*get_child_sa) (ike_sa_t *this, u_int32_t reqid);
 
 	/**
+	 * @brief Close the CHILD SA with the specified reqid.
+	 *
+	 * Looks for a CHILD SA owned by this IKE_SA, deletes it and
+	 * notify's the remote peer about the delete. The associated
+	 * states and policies in the kernel get deleted, if they exist.
+	 *
+	 * @param this 			calling object
+	 * @param reqid			reqid of the child SA, as used in the kernel
+	 * @return
+	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
+	 * 						- SUCCESS, if deleted and delete message sent
+	 */
+	status_t (*delete_child_sa) (ike_sa_t *this, u_int32_t reqid);
+
+	/**
+	 * @brief Rekey the CHILD SA with the specified reqid.
+	 *
+	 * Looks for a CHILD SA owned by this IKE_SA, and start the rekeing.
+	 *
+	 * @param this 			calling object
+	 * @param spi			security parameter index identifying the SA to rekey
+	 * @return
+	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
+	 * 						- SUCCESS, if rekeying initiated
+	 */
+	status_t (*rekey_child_sa) (ike_sa_t *this, u_int32_t reqid);
+
+	/**
 	 * @brief Get local peer address of the IKE_SA.
 	 *
 	 * @param this 			calling object

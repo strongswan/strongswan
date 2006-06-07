@@ -289,6 +289,22 @@ static void add_proposal(private_policy_t *this, proposal_t *proposal)
 }
 
 /**
+ * Implementation of policy_t.get_soft_lifetime
+ */
+static u_int32_t get_soft_lifetime(policy_t *this)
+{
+	return 0; /*5 + random() % 5; */
+}
+
+/**
+ * Implementation of policy_t.get_hard_lifetime
+ */
+static u_int32_t get_hard_lifetime(policy_t *this)
+{
+	return 0; /*20; */
+}
+
+/**
  * Implements policy_t.clone.
  */
 static policy_t *clone(private_policy_t *this)
@@ -396,6 +412,8 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.add_my_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_my_traffic_selector;
 	this->public.add_other_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_other_traffic_selector;
 	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
+	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
+	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
 	this->public.clone = (policy_t*(*)(policy_t*))clone;
 	this->public.destroy = (void(*)(policy_t*))destroy;
 	

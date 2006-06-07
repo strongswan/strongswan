@@ -173,12 +173,25 @@ encoding_rule_t notify_payload_encodings[] = {
  */
 static status_t verify(private_notify_payload_t *this)
 {
-	if (this->protocol_id > 3)
+	switch (this->protocol_id)
 	{
-		/* reserved for future use */
-		return FAILED;
+		case PROTO_IKE:
+			if (this->spi.len != 8)
+			{
+				return FAILED;
+			}
+			break;
+		case PROTO_AH:
+		case PROTO_ESP:
+			if (this->spi.len != 4)
+			{
+				return FAILED;
+			}
+			break;
+		default:
+			return FAILED;
 	}
-	
+		
 	/* TODO: Check all kinds of notify */
 	
 	if (this->notify_message_type == INVALID_KE_PAYLOAD)
@@ -265,9 +278,7 @@ static void compute_length (private_notify_payload_t *this)
 	{
 		length += this->spi.len;
 	}
-	
 	this->payload_length = length;
-
 }
 
 /**
@@ -289,7 +300,7 @@ static void set_protocol_id(private_notify_payload_t *this, u_int8_t protocol_id
 /**
  * Implementation of notify_payload_t.get_notify_message_type.
  */
-static u_int16_t get_notify_message_type(private_notify_payload_t *this)
+static notify_message_type_t get_notify_message_type(private_notify_payload_t *this)
 {
 	return this->notify_message_type;
 }
@@ -305,32 +316,42 @@ static void set_notify_message_type(private_notify_payload_t *this, u_int16_t no
 /**
  * Implementation of notify_payload_t.get_spi.
  */
-static chunk_t get_spi(private_notify_payload_t *this)
+static u_int64_t get_spi(private_notify_payload_t *this)
 {
-	return (this->spi);
+	switch (this->protocol_id)
+	{
+		case PROTO_IKE:
+			return *((u_int64_t*)this->spi.ptr);
+		case PROTO_AH:
+		case PROTO_ESP:
+			return *((u_int32_t*)this->spi.ptr);
+		default:
+			return 0;
+	}
 }
 
 /**
  * Implementation of notify_payload_t.set_spi.
  */
-static void set_spi(private_notify_payload_t *this, chunk_t spi)
+static void set_spi(private_notify_payload_t *this, u_int64_t spi)
 {
-	/* destroy existing data first */
-	if (this->spi.ptr != NULL)
+	chunk_free(&this->spi);
+	switch (this->protocol_id)
 	{
-		/* free existing value */
-		free(this->spi.ptr);
-		this->spi.ptr = NULL;
-		this->spi.len = 0;
-		
+		case PROTO_IKE:
+			this->spi = chunk_alloc(8);
+			*((u_int64_t*)this->spi.ptr) = spi;
+			break;
+		case PROTO_AH:
+		case PROTO_ESP:
+			this->spi = chunk_alloc(4);
+			*((u_int32_t*)this->spi.ptr) = spi;
+			break;
+		default:
+			break;
 	}
-	
-	this->spi.ptr = clalloc(spi.ptr,spi.len);
-
-	this->spi.len = spi.len;
-	this->spi_size = spi.len;
+	this->spi_size = this->spi.len;
 	this->compute_length(this);
-
 }
 
 /**
@@ -376,7 +397,6 @@ static status_t destroy(private_notify_payload_t *this)
 	{
 		free(this->spi.ptr);
 	}
-
 	free(this);
 	return SUCCESS;
 }
@@ -400,10 +420,10 @@ notify_payload_t *notify_payload_create()
 	/* public functions */
 	this->public.get_protocol_id = (u_int8_t (*) (notify_payload_t *)) get_protocol_id;
 	this->public.set_protocol_id  = (void (*) (notify_payload_t *,u_int8_t)) set_protocol_id;
-	this->public.get_notify_message_type = (u_int16_t (*) (notify_payload_t *)) get_notify_message_type;
-	this->public.set_notify_message_type = (void (*) (notify_payload_t *,u_int16_t)) set_notify_message_type;
-	this->public.get_spi = (chunk_t (*) (notify_payload_t *)) get_spi;
-	this->public.set_spi = (void (*) (notify_payload_t *,chunk_t)) set_spi;
+	this->public.get_notify_message_type = (notify_message_type_t (*) (notify_payload_t *)) get_notify_message_type;
+	this->public.set_notify_message_type = (void (*) (notify_payload_t *,notify_message_type_t)) set_notify_message_type;
+	this->public.get_spi = (u_int64_t (*) (notify_payload_t *)) get_spi;
+	this->public.set_spi = (void (*) (notify_payload_t *,u_int64_t)) set_spi;
 	this->public.get_notification_data = (chunk_t (*) (notify_payload_t *)) get_notification_data;
 	this->public.set_notification_data = (void (*) (notify_payload_t *,chunk_t)) set_notification_data;
 	this->public.destroy = (void (*) (notify_payload_t *)) destroy;

@@ -49,14 +49,14 @@ void test_child_sa(protected_tester_t *tester)
 	remote_me = host_create(AF_INET, "192.168.0.3", 0);
 	remote_other = host_create(AF_INET, "192.168.0.4", 0);
 	
-	local_sa = child_sa_create(local_me, local_other);
-	remote_sa = child_sa_create(remote_me, remote_other);
+	local_sa = child_sa_create(local_me, local_other, 5, 10);
+	remote_sa = child_sa_create(remote_me, remote_other, 5, 10);
 	
-	proposal1 = proposal_create(1);
-	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal1 = proposal_create(PROTO_ESP);
+	proposal1->add_algorithm(proposal1, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
 	
-	proposal2 = proposal_create(2);
-	proposal2->add_algorithm(proposal2, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+	proposal2 = proposal_create(PROTO_AH);
+	proposal2->add_algorithm(proposal2, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
 	
 	list = linked_list_create();
 	list->insert_last(list, proposal1);

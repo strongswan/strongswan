@@ -27,6 +27,7 @@
 #include <types.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
+#include <config/proposal.h>
 #include <utils/logger.h>
 
 typedef struct child_sa_t child_sa_t;
@@ -68,6 +69,27 @@ struct child_sa_t {
 	 * @return 			reqid of the CHILD SA
 	 */
 	u_int32_t (*get_reqid)(child_sa_t *this);
+	
+	/**
+	 * @brief Get the SPI of this CHILD_SA.
+	 * 
+	 * Set the boolean parameter inbound to TRUE to
+	 * get the SPI for which we receive packets, use
+	 * FALSE to get those we use for sending packets.
+	 *
+	 * @param this 		calling object
+	 * @param inbound	TRUE to get inbound SPI, FALSE for outbound.
+	 * @return 			spi of the CHILD SA
+	 */
+	u_int32_t (*get_spi) (child_sa_t *this, bool inbound);
+	
+	/**
+	 * @brief Get the protocol which this CHILD_SA uses to protect traffic.
+	 *
+	 * @param this 		calling object
+	 * @return 			AH | ESP
+	 */
+	protocol_id_t (*get_protocol) (child_sa_t *this);
 	
 	/**
 	 * @brief Allocate SPIs for a given proposals.
@@ -112,7 +134,7 @@ struct child_sa_t {
 	
 	/**
 	 * @brief Install the policies using some traffic selectors.
-	 * 
+	 *
 	 * Supplied lists of traffic_selector_t's specify the policies
 	 * to use for this child sa.
 	 *
@@ -151,10 +173,12 @@ struct child_sa_t {
  * 
  * @param me			own address
  * @param other			remote address
+ * @param soft_lifetime	time before rekeying
+ * @param hard_lifteime	time before delete
  * @return				child_sa_t object
  * 
  * @ingroup sa
  */
-child_sa_t * child_sa_create(host_t *me, host_t *other);
+child_sa_t * child_sa_create(host_t *me, host_t *other, u_int32_t soft_lifetime, u_int32_t hard_lifetime);
 
 #endif /*CHILD_SA_H_*/

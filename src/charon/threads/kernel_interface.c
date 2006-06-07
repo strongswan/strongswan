@@ -677,17 +677,19 @@ static void receive_messages(private_kernel_interface_t *this)
 			job_t *job;
 			this->logger->log(this->logger, CONTROL|LEVEL1,
 							  "Received a XFRM_MSG_EXPIRE");
-			this->logger->log(this->logger, CONTROL|LEVEL0,
-							  "creating %s job for CHILD_SA with reqid %d",
-							  response.expire.hard ? "delete" : "rekey",
-							  response.expire.state.reqid);
 			if (response.expire.hard)
 			{
+				this->logger->log(this->logger, CONTROL|LEVEL0,
+								  "creating delete job for CHILD_SA with reqid %d",
+								  response.expire.state.reqid);
 				job = (job_t*)delete_child_sa_job_create(
 						response.expire.state.reqid);
 			}
 			else
 			{
+				this->logger->log(this->logger, CONTROL|LEVEL0,
+								  "creating rekey job for CHILD_SA with reqid %d",
+								  response.expire.state.reqid);
 				job = (job_t*)rekey_child_sa_job_create(
 						response.expire.state.reqid);
 			}

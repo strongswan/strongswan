@@ -294,19 +294,19 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	connection = connection_create(msg->add_conn.name, msg->add_conn.ikev2,
 								   my_host, other_host,
 								   RSA_DIGITAL_SIGNATURE);
-	proposal = proposal_create(1);
-	proposal->add_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
-	proposal->add_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
-	proposal->add_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
-	proposal->add_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
-	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_1536_BIT, 0);
-	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
-	proposal->add_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
+	proposal = proposal_create(PROTO_IKE);
+	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+	proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
+	proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
+	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_1536_BIT, 0);
+	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
+	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
 	connection->add_proposal(connection, proposal);
-
+	
 	/* add to global connection list */
 	charon->connections->add_connection(charon->connections, connection);
 	this->logger->log(this->logger, CONTROL, "added connection \"%s\": %s[%s]...%s[%s]",
@@ -317,10 +317,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					  other_id->get_string(other_id));
 	
 	policy = policy_create(msg->add_conn.name, my_id, other_id);
-	proposal = proposal_create(1);
-	proposal->add_algorithm(proposal, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
-	proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
-	proposal->add_algorithm(proposal, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+	proposal = proposal_create(PROTO_ESP);
+	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
 	policy->add_proposal(policy, proposal);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);

@@ -123,13 +123,9 @@ typedef struct proposal_t proposal_t;
  * @brief Stores a set of algorithms used for an SA.
  * 
  * A proposal stores algorithms for a specific 
- * protocol. It can store algorithms for more than
- * one protocol (e.g. AH and ESP). Then the proposal
- * means both protocols must be used.
- * A proposal may contain more than one algorithm
- * of the same kind. ONE of them can be selected.
- *
- * @warning This class is NOT thread-save!
+ * protocol. It can store algorithms for one protocol.
+ * Proposals with multiple protocols are not supported,
+ * as it's not specified in RFC4301 anymore.
  * 
  * @b Constructors:
  *   - proposal_create()
@@ -150,25 +146,21 @@ struct proposal_t {
 	 * integrity_algorithm_t, dh_group_number_t and
 	 * extended_sequence_numbers_t.
 	 * 
-	 * @warning Do not add while other threads are reading.
-	 * 
 	 * @param this					calling object
-	 * @param proto					desired protocol
 	 * @param type					kind of algorithm
 	 * @param alg					identifier for algorithm
 	 * @param key_size				key size to use
 	 */
-	void (*add_algorithm) (proposal_t *this, protocol_id_t proto, transform_type_t type, u_int16_t alg, size_t key_size);
+	void (*add_algorithm) (proposal_t *this, transform_type_t type, u_int16_t alg, size_t key_size);
 	
 	/**
-	 * @brief Get an iterator over algorithms for a specifc protocol/algo type.
+	 * @brief Get an iterator over algorithms for a specifc algo type.
 	 * 
 	 * @param this					calling object
-	 * @param proto					desired protocol
 	 * @param type					kind of algorithm
-	 * @return						iterator over algorithms
+	 * @return						iterator over algorithm_t's
 	 */
-	iterator_t *(*create_algorithm_iterator) (proposal_t *this, protocol_id_t proto, transform_type_t type);
+	iterator_t *(*create_algorithm_iterator) (proposal_t *this, transform_type_t type);
 	
 	/**
 	 * @brief Get the algorithm for a type to use.
@@ -177,12 +169,11 @@ struct proposal_t {
 	 * Result is still owned by proposal, do not modify!
 	 * 
 	 * @param this					calling object
-	 * @param proto					desired protocol
 	 * @param type					kind of algorithm
 	 * @param[out] algo				pointer which receives algorithm and key size
 	 * @return						TRUE if algorithm of this kind available
 	 */
-	bool (*get_algorithm) (proposal_t *this, protocol_id_t proto, transform_type_t type, algorithm_t** algo);
+	bool (*get_algorithm) (proposal_t *this, transform_type_t type, algorithm_t** algo);
 
 	/**
 	 * @brief Compare two proposal, and select a matching subset.
@@ -200,41 +191,28 @@ struct proposal_t {
 	proposal_t *(*select) (proposal_t *this, proposal_t *other);
 	
 	/**
-	 * @brief Get the number set on construction.
-	 * 
+	 * @brief Get the protocol ID of the proposal.
+	 *
 	 * @param this				calling object
-	 * @return 					number
+	 * @return					protocol of the proposal
 	 */
-	u_int8_t (*get_number) (proposal_t *this);
+	protocol_id_t (*get_protocol) (proposal_t *this);
 	
 	/**
-	 * @brief Get the protocol ids in the proposals.
-	 * 
-	 * With AH and ESP, there could be two protocols in one
-	 * proposal.
+	 * @brief Get the SPI of the proposal.
 	 * 
 	 * @param this				calling object
-	 * @param ids 				array of protocol ids, 
-	 */
-	void (*get_protocols) (proposal_t *this, protocol_id_t ids[2]);
-	
-	/**
-	 * @brief Get the spi for a specific protocol.
-	 * 
-	 * @param this				calling object
-	 * @param proto				AH/ESP
 	 * @return					spi for proto
 	 */
-	u_int64_t (*get_spi) (proposal_t *this, protocol_id_t proto);
+	u_int64_t (*get_spi) (proposal_t *this);
 	
 	/**
-	 * @brief Set the spi for a specific protocol.
+	 * @brief Set the SPI of the proposal.
 	 * 
 	 * @param this				calling object
-	 * @param proto 			AH/ESP
 	 * @param spi				spi to set for proto
 	 */
-	void (*set_spi) (proposal_t *this, protocol_id_t proto, u_int64_t spi);
+	void (*set_spi) (proposal_t *this, u_int64_t spi);
 	
 	/**
 	 * @brief Clone a proposal.
@@ -253,17 +231,13 @@ struct proposal_t {
 };
 
 /**
- * @brief Create a child proposal for AH and/or ESP.
+ * @brief Create a child proposal for AH, ESP or IKE.
  * 
- * Since the order of multiple proposals is important for
- * key derivation, we must assign them numbers as they
- * appear in the raw payload. Numbering starts at 1.
- * 
- * @param number			number of the proposal, as in the payload
+ * @param protocol			protocol, such as PROTO_ESP
  * @return 					proposal_t object
  * 
  * @ingroup config
  */
-proposal_t *proposal_create(u_int8_t number);
+proposal_t *proposal_create(protocol_id_t protocol);
 
 #endif /* PROPOSAL_H_ */

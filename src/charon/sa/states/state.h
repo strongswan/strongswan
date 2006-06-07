@@ -34,6 +34,8 @@ typedef enum ike_sa_state_t ike_sa_state_t;
  * 
  * @todo Support of more states (CHILD_SA_REQUESTED, etc...)
  * 
+ * @see state_t for state diagram
+ * 
  * @ingroup states
  */
 enum ike_sa_state_t {
@@ -54,7 +56,7 @@ enum ike_sa_state_t {
 	 * 
 	 * Implemented in class responder_init_t.
 	 */
-	RESPONDER_INIT = 2,
+	RESPONDER_INIT,
 
 	/**
 	 * @brief A IKE_SA_INIT request was sent. In this state a reply of type IKE_SA_INIT is expected.
@@ -65,7 +67,7 @@ enum ike_sa_state_t {
 	 * 
 	 * Implemented in class ike_sa_init_requested_t.
 	 */
-	IKE_SA_INIT_REQUESTED = 3,
+	IKE_SA_INIT_REQUESTED,
 
 	/**
 	 * @brief A IKE_SA_INIT response was sent. In this state a request of type IKE_AUTH is expected.
@@ -74,7 +76,7 @@ enum ike_sa_state_t {
  	 * 
  	 * Implemented in class ike_sa_init_responded_t.
 	 */
-	IKE_SA_INIT_RESPONDED = 4,
+	IKE_SA_INIT_RESPONDED,
 
 	/**
 	 * @brief An IKE_AUTH request was sent after a successful IKE_SA_INIT-exchange.
@@ -83,7 +85,7 @@ enum ike_sa_state_t {
  	 * 
  	 * Implemented in class ike_auth_requested_t.
 	 */
-	IKE_AUTH_REQUESTED = 5,
+	IKE_AUTH_REQUESTED,
 
 	/**
 	 * @brief An IKE_AUTH exchange was successfuly handled either as initiator or responder.
@@ -92,7 +94,7 @@ enum ike_sa_state_t {
 	 * 
 	 * Implemented in class ike_sa_established_t.
 	 */
-	IKE_SA_ESTABLISHED = 6,
+	IKE_SA_ESTABLISHED,
 
 	/**
 	 * @brief An IKE SA has sent a DELETE IKE_SA to the other peer.
@@ -103,7 +105,9 @@ enum ike_sa_state_t {
 	 * 
 	 * Implemented in class delete_requested.
 	 */
-	DELETE_REQUESTED = 7
+	DELETE_REQUESTED,
+
+	CREATE_CHILD_SA_REQUESTED,
 };
 
 
@@ -117,24 +121,57 @@ typedef struct state_t state_t;
 
 /**
  * @brief This interface represents an IKE_SA state.
+ *
+ * A state_t object is responsible to handle incoming messages. States
+ * are exclusive, an IKE_SA is exactly in one state. They are used on IKE_SA
+ * setup, as there is a strict scheme message exchange follow. This can be
+ * mapped in a state machine. Every state is represented in a single class, 
+ * and the IKE_SA may switch these states by replacing the owned state.
+ @verbatim
+           initiator                                  responder
+           ---------                                  ---------
+
+                ¦                                        ¦
+                V                                        ¦
+    +-----------------------+                            ¦
+    ¦     initiator_init    ¦      msg1                  V
+    +-----------------------+     ----->      +-----------------------+
+                ¦                  msg2       ¦     responder_init    ¦
+                V                 <-----      +-----------------------+
+    +-----------------------+                            ¦
+    ¦ ike_sa_init_requested ¦      msg3                  V
+    +-----------------------+     ----->      +-----------------------+
+                ¦                  msg4       ¦ ike_sa_init_requested ¦
+                V                 <-----      +-----------------------+
+    +-----------------------+                   ¦
+    ¦  ike_auth_requested   ¦                   ¦
+    +-----------------------+                   ¦
+                          ¦                     ¦
+                          V                     V
+                       +---------------------------+
+                       ¦    ike_sa_established     ¦
+                       +---------------------------+
+                                     ¦
+                                     V
+                       +---------------------------+
+                       ¦     delete_requested      ¦
+                       +---------------------------+
+
+  msg1 = IKE_SA_INIT request
+  msg2 = IKE_SA_INIT response
+  msg3 = IKE_AUTH request
+  msg4 = IKE_AUTH response
+ @endverbatim
+ * Every state can be left by deleting the IKE_SA, except the state
+ * ike_sa_established: it must switch to the delete_requested state first,
+ * as the peer must be informed about the delete.
  * 
- * A state_t object is responsible to handle incoming messages.
- * 
- * It's the responsibility of the state_t object to parse the body of the message and to process each 
- * payload.
- * 
- * Needed Configurations and transform objects can be retrieved over an internal stored protected_ike_sa_t object 
- * which is passed to a state_t object when creating it (see different constructors).
- * 
- * The following states are supported and implemented:
- * - INITIATOR_INIT: implemented in initiator_init_t
- * - RESPONDER_INIT: implemented in responder_init_t
- * - IKE_SA_INIT_REQUESTED: implemented in ike_sa_init_requested_t
- * - IKE_SA_INIT_RESPONDED: implemented in ike_sa_init_responded_t
- * - IKE_AUTH_REQUESTED: implemented in ike_auth_requested_t
- * - IKE_SA_ESTABLISHED: implemented in ike_sa_established_t
- * - DELETE_REQUESTED: implemented in delete_requested_t
- * 
+ * For the handling of message in a established IKE_SA, another concept is used.
+ * The state-concept is good if a single state is possible. But in a established
+ * IKE_SA, there is no strict message order, and if a window size > 1 is used, 
+ * multiple "states" would be possible. We call this transactions, better 
+ * descripted in the transaction_t interface.
+ *
  * @b Constructors:
  *  - initiator_init_create()
  *  - responder_init_create()
@@ -176,4 +213,4 @@ struct state_t {
 	void (*destroy) (state_t *this);
 };
 
-#endif /*STATE_H_*/
+#endif /* STATE_H_ */

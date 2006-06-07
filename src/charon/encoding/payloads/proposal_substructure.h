@@ -174,16 +174,12 @@ struct proposal_substructure_t {
 	void (*set_spi) (proposal_substructure_t *this, chunk_t spi);
 	
 	/**
-	 * @brief Add this proposal_substructure to a proposal.
-	 * 
-	 * Since a proposal_t may contain the data of multiple
-	 * proposal_sbustructure_t's, it may be necessary to call
-	 * the function multiple times with the same proposal.
+	 * @brief Get a proposal_t from the propsal_substructure_t.
 	 * 
 	 * @param this 		calling proposal_substructure_t object
-	 * @param proposal	proposal where the data should be added
+	 * @return			proposal_t
 	 */
-	void (*add_to_proposal) (proposal_substructure_t *this, proposal_t *proposal);
+	proposal_t * (*get_proposal) (proposal_substructure_t *this);
 
 	/**
 	 * @brief Clones an proposal_substructure_t object.
@@ -211,21 +207,14 @@ struct proposal_substructure_t {
 proposal_substructure_t *proposal_substructure_create(void);
 
 /**
- * @brief Creates a proposal substructure from a proposal.
- * 
- * Since a child proposal may contain data for both AH and ESP, 
- * the protocol must be specified. If the proposal does not contain
- * data for proto, NULL is returned. Call twice, once with AH, once 
- * with ESP, with the same proposal to build the two substructures 
- * for it.
- * 
+ * @brief Creates a proposal_substructure_t from a proposal_t.
+ *
  * @param proposal		proposal to build a substruct out of it
- * @param proto			for which protocol the substructure should be built
- * @return 				proposal_substructure_t object, or NULL
+ * @return 				proposal_substructure_t object
  * 
  * @ingroup payloads
  */
-proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal, protocol_id_t proto);
+proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal);
 
 
 #endif /*PROPOSAL_SUBSTRUCTURE_H_*/

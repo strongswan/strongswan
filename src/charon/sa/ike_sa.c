@@ -38,8 +38,10 @@
 #include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/transform_substructure.h>
 #include <encoding/payloads/transform_attribute.h>
+#include <encoding/payloads/ts_payload.h>
 #include <sa/states/initiator_init.h>
 #include <sa/states/responder_init.h>
+#include <sa/states/create_child_sa_requested.h>
 #include <queues/jobs/retransmit_request_job.h>
 #include <queues/jobs/delete_established_ike_sa_job.h>
 #include <queues/jobs/delete_half_open_ike_sa_job.h>
@@ -63,7 +65,7 @@ struct private_ike_sa_t {
 	 * Identifier for the current IKE_SA.
 	 */
 	ike_sa_id_t *ike_sa_id;
-
+	
 	/**
 	 * Linked List containing the child sa's of the current IKE_SA.
 	 */
@@ -84,30 +86,12 @@ struct private_ike_sa_t {
 	state_t *current_state;
 	
 	/**
-	 * INIT configuration, needed for the IKE_SA_INIT exchange.
-	 * 
-	 * Gets set in states:
-	 *  - INITATOR_INIT
-	 *  - RESPONDER_INIT
-	 * 
-	 * Available in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
+	 * Connection definition used for this IKE_SA
 	 */
 	connection_t *connection;
 	
 	/**
-	 * SA configuration, needed for all other exchanges after IKE_SA_INIT exchange.
-	 * 
-	 * Gets set in states:
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - IKE_SA_INIT_RESPONDED
-	 * 
-	 * Available in states:
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
+	 * Policy definition used for this IKE_SA
 	 */
 	policy_t *policy;
 	
@@ -190,77 +174,6 @@ struct private_ike_sa_t {
 };
 
 /**
- * Implementation of ike_sa_t.process_message.
- */
-static status_t process_message(private_ike_sa_t *this, message_t *message)
-{
-	u_int32_t message_id;
-	exchange_type_t exchange_type;
-	bool is_request;
-	/* We must process each request or response from remote host */
-	
-	/* Find out type of message (request or response) */
-	is_request = message->get_request(message);
-	exchange_type = message->get_exchange_type(message);
-	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process %s of exchange type %s",
-					  (is_request) ? "request" : "response",mapping_find(exchange_type_m,exchange_type));
-	
-	message_id = message->get_message_id(message);
-	
-	/* 
-	 * It has to be checked, if the message has to be resent cause of lost packets!
-	 */
-	if (is_request && (message_id == (this->message_id_in - 1)))
-	{
-		/* resend last message, if any */
-		if (this->last_responded_message)
-		{
-			packet_t *packet = this->last_responded_message->get_packet(this->last_responded_message);
-			this->logger->log(this->logger, CONTROL|LEVEL1, "Resent request detected. Send stored reply.");
-			charon->send_queue->add(charon->send_queue, packet);
-			return SUCCESS;
-		}
-		else
-		{
-			/* somebody does something nasty here... */
-			return FAILED;
-		}
-	}
-	
-	/* Now, the message id is checked for request AND reply */
-	if (is_request)
-	{
-		/* In a request, the message has to be this->message_id_in (other case is already handled) */
-		if (message_id != this->message_id_in)
-		{
-			this->logger->log(this->logger, ERROR | LEVEL1,
-								"Message request with message id %d received, but %d expected",
-								message_id,this->message_id_in);
-			return FAILED;
-		}
-	}
-	else
-	{
-		/* In a reply, the message has to be this->message_id_out -1 cause it is the reply to the last sent message*/
-		if (message_id != (this->message_id_out - 1))
-		{
-			this->logger->log(this->logger, ERROR | LEVEL1,
-								"Message reply with message id %d received, but %d expected",
-								message_id,this->message_id_in);
-			return FAILED;
-		}
-	}
-	
-	/* now the message is processed by the current state object.
-	 * The specific state object is responsible to check if a message can be received in 
-	 * the state it represents.
-	 * The current state is also responsible to change the state object to the next state 
-	* by calling protected_ike_sa_t.set_new_state*/
-	return this->current_state->process_message(this->current_state,message);
-}
-
-/**
  * Implementation of protected_ike_sa_t.build_message.
  */
 static void build_message(private_ike_sa_t *this, exchange_type_t type, bool request, message_t **message)
@@ -281,95 +194,6 @@ static void build_message(private_ike_sa_t *this, exchange_type_t type, bool req
 	new_message->set_ike_sa_id(new_message, this->ike_sa_id);
 
 	*message = new_message;
-}
-
-/**
- * Implementation of protected_ike_sa_t.initiate_connection.
- */
-static status_t initiate_connection(private_ike_sa_t *this, connection_t *connection)
-{
-	initiator_init_t *current_state;
-
-	/* Work is done in state object of type INITIATOR_INIT. All other states are not 
-	 * initial states and so don't have a initiate_connection function */
-	
-	if (this->current_state->get_state(this->current_state) != INITIATOR_INIT)
-	{
-		return FAILED;
-	}
-	
-	current_state = (initiator_init_t *) this->current_state;
-	
-	return current_state->initiate_connection(current_state, connection);
-}
-
-/**
- * Implementation of ike_sa_t.get_id.
- */
-static ike_sa_id_t* get_id(private_ike_sa_t *this)
-{
-	return this->ike_sa_id;
-}
-
-/**
- * Implementation of ike_sa_t.get_my_host.
- */
-static host_t* get_my_host(private_ike_sa_t *this)
-{
-	return this->connection->get_my_host(this->connection);;
-}
-
-/**
- * Implementation of ike_sa_t.get_other_host.
- */
-static host_t* get_other_host(private_ike_sa_t *this)
-{
-	return this->connection->get_other_host(this->connection);;
-}
-
-/**
- * Implementation of ike_sa_t.get_my_id.
- */
-static identification_t* get_my_id(private_ike_sa_t *this)
-{
-	return this->policy->get_my_id(this->policy);;
-}
-
-/**
- * Implementation of ike_sa_t.get_other_id.
- */
-static identification_t* get_other_id(private_ike_sa_t *this)
-{
-	return this->policy->get_other_id(this->policy);;
-}
-
-/**
- * Implementation of ike_sa_t.retransmit_request.
- */
-status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
-{
-	packet_t *packet;
-		
-	if (this->last_requested_message == NULL)
-	{
-		return NOT_FOUND;
-	}
-
-	if (message_id == this->last_replied_message_id)
-	{
-		return NOT_FOUND;
-	}
-
-	if ((this->last_requested_message->get_message_id(this->last_requested_message)) != message_id)
-	{
-		return NOT_FOUND;
-	}
-	
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to retransmit message with id %d",message_id);
-	packet = this->last_requested_message->get_packet(this->last_requested_message);
-	charon->send_queue->add(charon->send_queue, packet);
-	
-	return SUCCESS;
 }
 
 /**
@@ -454,6 +278,74 @@ static prf_t *get_prf_auth_r(private_ike_sa_t *this)
 {
 	return this->prf_auth_r;
 }
+/**
+ * Implementation of ike_sa_t.get_id.
+ */
+static ike_sa_id_t* get_id(private_ike_sa_t *this)
+{
+	return this->ike_sa_id;
+}
+
+/**
+ * Implementation of ike_sa_t.get_my_host.
+ */
+static host_t* get_my_host(private_ike_sa_t *this)
+{
+	return this->connection->get_my_host(this->connection);;
+}
+
+/**
+ * Implementation of ike_sa_t.get_other_host.
+ */
+static host_t* get_other_host(private_ike_sa_t *this)
+{
+	return this->connection->get_other_host(this->connection);;
+}
+
+/**
+ * Implementation of ike_sa_t.get_my_id.
+ */
+static identification_t* get_my_id(private_ike_sa_t *this)
+{
+	return this->policy->get_my_id(this->policy);;
+}
+
+/**
+ * Implementation of ike_sa_t.get_other_id.
+ */
+static identification_t* get_other_id(private_ike_sa_t *this)
+{
+	return this->policy->get_other_id(this->policy);;
+}
+
+/**
+ * Implementation of ike_sa_t.retransmit_request.
+ */
+status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
+{
+	packet_t *packet;
+		
+	if (this->last_requested_message == NULL)
+	{
+		return NOT_FOUND;
+	}
+
+	if (message_id == this->last_replied_message_id)
+	{
+		return NOT_FOUND;
+	}
+
+	if ((this->last_requested_message->get_message_id(this->last_requested_message)) != message_id)
+	{
+		return NOT_FOUND;
+	}
+	
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to retransmit message with id %d",message_id);
+	packet = this->last_requested_message->get_packet(this->last_requested_message);
+	charon->send_queue->add(charon->send_queue, packet);
+	
+	return SUCCESS;
+}
 
 
 /**
@@ -468,13 +360,13 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	size_t key_size;
 	
 	/*
-	 * Build the PRF+ instance for deriving keys
-	 */
+	* Build the PRF+ instance for deriving keys
+	*/
 	if (this->prf != NULL)
 	{
 		this->prf->destroy(this->prf);
 	}
-	proposal->get_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, &algo);
+	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
 	if (algo == NULL)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No PRF algoithm selected!?");
@@ -511,10 +403,10 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	chunk_free(&secret);
 
 	/* prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr )
-	 * = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr
-	 *
-	 * we use the prf directly for prf+ 
-	 */
+	* = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr
+	*
+	* we use the prf directly for prf+ 
+	*/
 	this->prf->set_key(this->prf, skeyseed);
 	prf_plus = prf_plus_create(this->prf, nonces_spis);
 	
@@ -525,9 +417,9 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	
 	/*
-	 * We now can derive all of our key. We build the transforms 
-	 * directly.
-	 */
+	* We now can derive all of our key. We build the transforms 
+	* directly.
+	*/
 	
 	
 	/* SK_d used for prf+ to derive keys for child SAs */
@@ -540,7 +432,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	
 	/* SK_ai/SK_ar used for integrity protection */
-	proposal->get_algorithm(proposal, PROTO_IKE, INTEGRITY_ALGORITHM, &algo);
+	proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo);
 	if (algo == NULL)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No integrity algoithm selected?!");
@@ -578,7 +470,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	
 	/* SK_ei/SK_er used for encryption */
-	proposal->get_algorithm(proposal, PROTO_IKE, ENCRYPTION_ALGORITHM, &algo);
+	proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo);
 	if (algo == NULL)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No encryption algoithm selected!?");
@@ -616,7 +508,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	chunk_free(&key);
 	
 	/* SK_pi/SK_pr used for authentication */
-	proposal->get_algorithm(proposal, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, &algo);
+	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
 	if (this->prf_auth_i != NULL)
 	{
 		this->prf_auth_i->destroy(this->prf_auth_i);
@@ -701,7 +593,7 @@ static status_t send_request(private_ike_sa_t *this, message_t *message)
 	if (message->get_message_id(message) != this->message_id_out)
 	{
 		this->logger->log(this->logger, ERROR, "Message could not be sent cause id (%d) was not as expected (%d)",
-							message->get_message_id(message),this->message_id_out);
+						  message->get_message_id(message),this->message_id_out);
 		return FAILED;
 	}
 
@@ -727,8 +619,8 @@ static status_t send_request(private_ike_sa_t *this, message_t *message)
 	}
 	
 	this->logger->log(this->logger, CONTROL|LEVEL3,
-						"Add request packet with message id %d to global send queue",
-						this->message_id_out);
+					  "Add request packet with message id %d to global send queue",
+					  this->message_id_out);
 	charon->send_queue->add(charon->send_queue, packet);
 	
 	/* replace last message for retransmit with current */
@@ -754,8 +646,8 @@ static status_t send_request(private_ike_sa_t *this, message_t *message)
 	
 	/* message counter can now be increased */
 	this->logger->log(this->logger, CONTROL|LEVEL3,
-						"Increase message counter for outgoing messages from %d",
-						this->message_id_out);
+					  "Increase message counter for outgoing messages from %d",
+					  this->message_id_out);
 	this->message_id_out++;
 	return SUCCESS;	
 }
@@ -795,8 +687,8 @@ static status_t send_response(private_ike_sa_t *this, message_t *message)
 	}
 	
 	this->logger->log(this->logger, CONTROL|LEVEL3,
-						"Add response packet with message id %d to global send queue",
-						this->message_id_in);
+					  "Add response packet with message id %d to global send queue",
+					  this->message_id_in);
 	charon->send_queue->add(charon->send_queue, packet);
 	
 	if (this->last_responded_message != NULL)
@@ -827,7 +719,7 @@ static void send_notify(private_ike_sa_t *this, exchange_type_t exchange_type, n
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message with notify payload");
 	/* set up the reply */
-	this->protected.build_message(&(this->protected), exchange_type, FALSE, &response);
+	build_message(this, exchange_type, FALSE, &response);
 	payload = notify_payload_create_from_protocol_and_type(PROTO_IKE, type);
 	if ((data.ptr != NULL) && (data.len > 0))
 	{
@@ -887,6 +779,220 @@ static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 }
 
 /**
+ * Process an informational request
+ */
+static status_t process_informational(private_ike_sa_t *this, message_t *request)
+{
+	delete_payload_t *delete_request = NULL;
+	message_t *response;
+	iterator_t *payloads;
+	state_t *old_state;
+	
+	build_message(this, INFORMATIONAL, FALSE, &response);
+	
+	payloads = request->get_payload_iterator(request);
+	while (payloads->has_next(payloads))
+	{
+		payload_t *payload;
+		payloads->current(payloads, (void**)&payload);
+		
+		switch (payload->get_type(payload))
+		{
+			case DELETE:
+			{
+				delete_request = (delete_payload_t *) payload;
+				break;
+			}
+			default:
+			{
+				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
+								  mapping_find(payload_type_m, payload->get_type(payload)), 
+								  payload->get_type(payload));
+				break;
+			}
+		}
+	}
+	/* iterator can be destroyed */
+	payloads->destroy(payloads);
+	
+	if (delete_request)
+	{
+		if (delete_request->get_protocol_id(delete_request) == PROTO_IKE)
+		{
+			this->logger->log(this->logger, CONTROL, "DELETE request for IKE_SA received");
+			if (send_response(this, response) != SUCCESS)
+			{
+				/* something is seriously wrong, kill connection */
+				this->logger->log(this->logger, AUDIT, "Unable to send reply. Deleting IKE_SA");
+				response->destroy(response);
+			}
+			/* switch to delete_requested. This is not absolutly correct, but we
+			 * allow the clean destruction of an SA only in this state. */
+			old_state = this->current_state;
+			set_new_state(this, (state_t*)delete_requested_create(this));
+			old_state->destroy(old_state);
+			return DESTROY_ME;
+		}
+		else
+		{
+			this->logger->log(this->logger, CONTROL, "DELETE request for CHILD_SA received. Ignored");
+			response->destroy(response);
+			return FAILED;
+		}
+	}
+	return SUCCESS;
+}
+
+
+/**
+ * Process an informational request
+ */
+static status_t process_create_child_sa(private_ike_sa_t *this, message_t *request)
+{
+
+}
+
+/**
+ * Implementation of ike_sa_t.process_message.
+ */
+static status_t process_message(private_ike_sa_t *this, message_t *message)
+{
+	u_int32_t message_id;
+	exchange_type_t exchange_type;
+	bool is_request;
+	status_t status;
+	crypter_t *crypter;
+	signer_t *signer;
+	
+	/* Find out type of message (request or response) */
+	is_request = message->get_request(message);
+	exchange_type = message->get_exchange_type(message);
+	
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Process %s of exchange type %s",
+					  (is_request) ? "request" : "response",
+					  mapping_find(exchange_type_m, exchange_type));
+	
+	message_id = message->get_message_id(message);
+	
+	/* check if message already received, and retransmit its reply */
+	if (is_request && (message_id == (this->message_id_in - 1)))
+	{
+		/* resend last message, if any */
+		if (this->last_responded_message)
+		{
+			packet_t *packet = this->last_responded_message->get_packet(this->last_responded_message);
+			this->logger->log(this->logger, CONTROL|LEVEL1, "Resent request detected. Send stored reply.");
+			charon->send_queue->add(charon->send_queue, packet);
+			return SUCCESS;
+		}
+		else
+		{
+			/* somebody does something nasty here... */
+			return FAILED;
+		}
+	}
+	
+	/* Now, the message id is checked for request AND reply */
+	if (is_request)
+	{
+		/* In a request, the message has to be this->message_id_in (other case is already handled) */
+		if (message_id != this->message_id_in)
+		{
+			this->logger->log(this->logger, ERROR | LEVEL1,
+								"Message request with message id %d received, but %d expected",
+								message_id,this->message_id_in);
+			return FAILED;
+		}
+	}
+	else
+	{
+		/* In a reply, the message has to be this->message_id_out -1 cause it is the reply to the last sent message*/
+		if (message_id != (this->message_id_out - 1))
+		{
+			this->logger->log(this->logger, ERROR | LEVEL1,
+								"Message reply with message id %d received, but %d expected",
+								message_id,this->message_id_in);
+			return FAILED;
+		}
+	}
+	
+	if (this->current_state->get_state(this->current_state) == IKE_SA_ESTABLISHED)
+	{
+		if (is_request)
+		{
+			/* get signer for verification and crypter for decryption */
+			if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
+			{
+				crypter = this->crypter_initiator;
+				signer = this->signer_initiator;
+			}
+			else
+			{
+				crypter = this->crypter_responder;
+				signer = this->signer_responder;
+			}
+	
+			/* parse incoming message */
+			status = message->parse_body(message, crypter, signer);
+			if (status != SUCCESS)
+			{
+				this->logger->log(this->logger, AUDIT, "%s request decryption failed. Ignoring message",
+								  mapping_find(exchange_type_m, message->get_exchange_type(message)));
+				return status;
+			}
+			switch (message->get_exchange_type(message))
+			{
+				case CREATE_CHILD_SA:
+					return process_create_child_sa(this, message);
+				case INFORMATIONAL:
+					return process_informational(this, message);
+				default:
+					this->logger->log(this->logger, CONTROL,
+									  "Received a %s request, ignored",
+									  mapping_find(exchange_type_m, exchange_type));
+			}
+		}
+		else
+		{
+			this->logger->log(this->logger, ERROR|LEVEL1,
+							  "Received an unexpected %s response, ignored",
+							  mapping_find(exchange_type_m, exchange_type));
+		}
+		return FAILED;
+	}
+	else
+	{
+		/* now the message is processed by the current state object.
+		 * The specific state object is responsible to check if a message can be received in 
+		 * the state it represents.
+		 * The current state is also responsible to change the state object to the next state 
+		 * by calling protected_ike_sa_t.set_new_state
+		 */
+		return this->current_state->process_message(this->current_state, message);
+	}
+}
+
+/**
+ * Implementation of protected_ike_sa_t.initiate_connection.
+ */
+static status_t initiate_connection(private_ike_sa_t *this, connection_t *connection)
+{
+	initiator_init_t *current_state;
+
+	/* Work is done in state object of type INITIATOR_INIT. All other states are not 
+	 * initial states and so don't have a initiate_connection function */
+	
+	if (this->current_state->get_state(this->current_state) != INITIATOR_INIT)
+	{
+		return FAILED;
+	}
+	
+	current_state = (initiator_init_t *) this->current_state;
+	
+	return current_state->initiate_connection(current_state, connection);
+}
+
+/**
  * Implementation of ike_sa_t.get_child_sa.
  */
 static child_sa_t *get_child_sa(private_ike_sa_t *this, u_int32_t reqid)
@@ -906,6 +1012,83 @@ static child_sa_t *get_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	}
 	iterator->destroy(iterator);
 	return found;
+}
+
+/**
+ * Implementation of ike_sa_t.delete_child_sa.
+ */
+static status_t delete_child_sa(private_ike_sa_t *this, u_int32_t reqid)
+{
+	return NOT_FOUND;
+}
+
+/**
+ * Implementation of ike_sa_t.rekey_child_sa.
+ */
+static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
+{
+	message_t *request;
+	child_sa_t *child_sa;
+	notify_payload_t *notify;
+	sa_payload_t *sa_payload;
+	ts_payload_t *tsi_payload, *tsr_payload;
+	nonce_payload_t *nonce_payload;
+	policy_t *policy;
+	randomizer_t *randomizer;
+	linked_list_t *proposals;
+	chunk_t nonce;
+	linked_list_t *my_ts, *other_ts;
+	state_t *old_state;
+	
+	if (this->current_state->get_state(this->current_state) != IKE_SA_ESTABLISHED)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1,
+						  "Rekeying of an IKE_SA not in state IKE_SA_ESTABLISHED, aborting", reqid);
+		return FAILED;
+	}
+	
+	child_sa = get_child_sa(this, reqid);
+	if (child_sa == NULL)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1, 
+						  "IKE_SA does not contain a CHILD_SA with reqid %d", reqid);
+		return FAILED;
+	}
+	
+	build_message(this, CREATE_CHILD_SA, TRUE, &request);
+	notify = notify_payload_create_from_protocol_and_type(
+			child_sa->get_protocol(child_sa), REKEY_SA);
+	notify->set_spi(notify, child_sa->get_spi(child_sa, TRUE));
+	request->add_payload(request, (payload_t*)notify);
+	
+	proposals = this->policy->get_proposals(this->policy);
+	sa_payload = sa_payload_create_from_proposal_list(proposals);
+	request->add_payload(request, (payload_t*)sa_payload);
+	
+	nonce_payload = nonce_payload_create();
+	if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
+		NONCE_SIZE, &nonce))
+	{
+		request->destroy(request);
+		return FAILED;
+	}
+	nonce_payload->set_nonce(nonce_payload, nonce);
+	request->add_payload(request, (payload_t*)nonce_payload);
+	
+	my_ts = this->policy->get_my_traffic_selectors(this->policy);
+	other_ts = this->policy->get_my_traffic_selectors(this->policy);
+	tsi_payload = ts_payload_create_from_traffic_selectors(TRUE, my_ts);
+	tsr_payload = ts_payload_create_from_traffic_selectors(FALSE, other_ts);
+	request->add_payload(request, (payload_t*)tsi_payload);
+	request->add_payload(request, (payload_t*)tsr_payload);
+	
+	send_request(this, request);
+	
+	old_state = this->current_state;
+	set_new_state(this, (state_t*)create_child_sa_requested_create(&this->protected, nonce));
+	old_state->destroy(old_state);
+	
+	return SUCCESS;
 }
 
 /**
@@ -1125,7 +1308,6 @@ static void destroy(private_ike_sa_t *this)
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	this->randomizer->destroy(this->randomizer);
 	this->current_state->destroy(this->current_state);
-
 	free(this);
 }
 
@@ -1135,10 +1317,12 @@ static void destroy(private_ike_sa_t *this)
 ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 {
 	private_ike_sa_t *this = malloc_thing(private_ike_sa_t);
-
+	
 	/* Public functions */
 	this->protected.public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->protected.public.initiate_connection = (status_t(*)(ike_sa_t*,connection_t*)) initiate_connection;
+	this->protected.public.delete_child_sa = (status_t(*)(ike_sa_t*,u_int32_t)) delete_child_sa;
+	this->protected.public.rekey_child_sa = (status_t(*)(ike_sa_t*,u_int32_t)) rekey_child_sa;
 	this->protected.public.get_child_sa = (child_sa_t*(*)(ike_sa_t*,u_int32_t))get_child_sa;
 	this->protected.public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->protected.public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
@@ -1153,7 +1337,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.destroy = (void(*)(ike_sa_t*))destroy;
 	
 	/* protected functions */
-	this->protected.build_message = (void (*) (protected_ike_sa_t *, exchange_type_t , bool , message_t **)) build_message;
+	this->protected.build_message = (void (*) (protected_ike_sa_t *, exchange_type_t,bool,message_t**)) build_message;
 	this->protected.get_prf = (prf_t *(*) (protected_ike_sa_t *)) get_prf;	
 	this->protected.get_child_prf = (prf_t *(*) (protected_ike_sa_t *)) get_child_prf;
 	this->protected.get_prf_auth_i = (prf_t *(*) (protected_ike_sa_t *)) get_prf_auth_i;

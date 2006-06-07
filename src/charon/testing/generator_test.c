@@ -568,17 +568,17 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
 
-	proposal1 = proposal_create(1);
-	proposal1->add_algorithm(proposal1, PROTO_IKE, ENCRYPTION_ALGORITHM, 1, 20);
-	proposal1->add_algorithm(proposal1, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, 2, 22);
-	proposal1->add_algorithm(proposal1, PROTO_IKE, INTEGRITY_ALGORITHM, 3, 24);
-	proposal1->add_algorithm(proposal1, PROTO_IKE, DIFFIE_HELLMAN_GROUP, 4, 0);
+	proposal1 = proposal_create(PROTO_IKE);
+	proposal1->add_algorithm(proposal1, ENCRYPTION_ALGORITHM, 1, 20);
+	proposal1->add_algorithm(proposal1, PSEUDO_RANDOM_FUNCTION, 2, 22);
+	proposal1->add_algorithm(proposal1, INTEGRITY_ALGORITHM, 3, 24);
+	proposal1->add_algorithm(proposal1, DIFFIE_HELLMAN_GROUP, 4, 0);
 	
-	proposal2 = proposal_create(2);
-	proposal2->add_algorithm(proposal2, PROTO_IKE, ENCRYPTION_ALGORITHM, 5, 26);
-	proposal2->add_algorithm(proposal2, PROTO_IKE, PSEUDO_RANDOM_FUNCTION, 6, 28);
-	proposal2->add_algorithm(proposal2, PROTO_IKE, INTEGRITY_ALGORITHM, 7, 30);
-	proposal2->add_algorithm(proposal2, PROTO_IKE, DIFFIE_HELLMAN_GROUP, 8, 0);
+	proposal2 = proposal_create(PROTO_IKE);
+	proposal2->add_algorithm(proposal2, ENCRYPTION_ALGORITHM, 5, 26);
+	proposal2->add_algorithm(proposal2, PSEUDO_RANDOM_FUNCTION, 6, 28);
+	proposal2->add_algorithm(proposal2, INTEGRITY_ALGORITHM, 7, 30);
+	proposal2->add_algorithm(proposal2, DIFFIE_HELLMAN_GROUP, 8, 0);
 
 	list = linked_list_create();
 	list->insert_last(list, (void*)proposal1);
@@ -630,121 +630,7 @@ void test_generator_with_sa_payload(protected_tester_t *tester)
 	proposal1->destroy(proposal1);
 	proposal2->destroy(proposal2);
 	chunk_free(&generated_data);
-	generator->destroy(generator);
-	
-	
-	/* --------------------------- */
-	/* test with automatic created child proposals */
-
-	generator = generator_create();
-	tester->assert_true(tester,(generator != NULL), "generator create check");
-	
-
-	proposal1 = proposal_create(1);
-	
-	proposal1->add_algorithm(proposal1, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	proposal1->add_algorithm(proposal1, PROTO_AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	proposal1->add_algorithm(proposal1, PROTO_AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
-	proposal1->set_spi(proposal1, PROTO_AH, 0x01010101l);
-	
-	proposal1->add_algorithm(proposal1, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 20);
-	proposal1->add_algorithm(proposal1, PROTO_ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	proposal1->set_spi(proposal1, PROTO_ESP, 0x02020202);
-	
-	
-	proposal2->add_algorithm(proposal2, PROTO_AH, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	proposal2->add_algorithm(proposal2, PROTO_AH, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	proposal2->add_algorithm(proposal2, PROTO_AH, EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS, 0);
-	proposal2->set_spi(proposal2, PROTO_AH, 0x01010101);
-	
-	proposal2->add_algorithm(proposal2, PROTO_ESP, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 32);
-	proposal2->add_algorithm(proposal2, PROTO_ESP, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 20);
-	proposal2->add_algorithm(proposal2, PROTO_ESP, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	proposal2->set_spi(proposal2, PROTO_ESP, 0x02020202);
-	
-	list->insert_last(list, (void*)proposal1);
-	list->insert_last(list, (void*)proposal2);
-	
-	sa_payload = sa_payload_create_from_proposal_list(list);
-	tester->assert_true(tester,(sa_payload != NULL), "sa_payload create check");
-
-	generator->generate_payload(generator,(payload_t *)sa_payload);
-	generator->write_to_chunk(generator,&generated_data);
-	logger->log_chunk(logger,RAW,"generated",generated_data);	
-
-	u_int8_t expected_generation3[] = {	
-		0x00,0x00,0x00,0xA0, /* payload header*/
-
-			/* suite 1 */
-			0x02,0x00,0x00,0x28,  /* a proposal */
-			0x01,0x02,0x04,0x03,
-			0x01,0x01,0x01,0x01,
-				0x03,0x00,0x00,0x0C, /* transform 1 */
-				0x03,0x00,0x00,0x01,  
-					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
-
-				0x03,0x00,0x00,0x08, /* transform 2 */
-				0x04,0x00,0x00,0x0E,  
-
-				0x00,0x00,0x00,0x08, /* transform 3 */
-				0x05,0x00,0x00,0x01,  
-
-
-			0x02,0x00,0x00,0x20,  /* a proposal */
-			0x01,0x03,0x04,0x02,
-			0x02,0x02,0x02,0x02,
-			
-				0x03,0x00,0x00,0x0C, /* transform 1 */
-				0x01,0x00,0x00,0x0C,  
-					0x80,0x0E,0x00,0x20, /* keylength attribute with 32 bytes length */
-					
-				0x00,0x00,0x00,0x08, /* transform 2 */
-				0x04,0x00,0x00,0x02,  
-
-			/* suite 2 */
-			0x02,0x00,0x00,0x28,  /* a proposal */
-			0x02,0x02,0x04,0x03,
-			0x01,0x01,0x01,0x01,
-				0x03,0x00,0x00,0x0C, /* transform 1 */
-				0x03,0x00,0x00,0x01,  
-					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
-
-				0x03,0x00,0x00,0x08, /* transform 2 */
-				0x04,0x00,0x00,0x0E,  
-
-				0x00,0x00,0x00,0x08, /* transform 3 */
-				0x05,0x00,0x00,0x01,  
-
-
-			0x00,0x00,0x00,0x2C,  /* a proposal */
-			0x02,0x03,0x04,0x03,
-			0x02,0x02,0x02,0x02,
-			
-				0x03,0x00,0x00,0x0C, /* transform 1 */
-				0x01,0x00,0x00,0x0C,  
-					0x80,0x0E,0x00,0x20, /* keylength attribute with 32 bytes length */
-					
-				0x03,0x00,0x00,0x0C, /* transform 2 */
-				0x03,0x00,0x00,0x01,  
-					0x80,0x0E,0x00,0x14, /* keylength attribute with 20 bytes length */
-					
-				0x00,0x00,0x00,0x08, /* transform 3 */
-				0x04,0x00,0x00,0x02,  
-
-	};
-
-
-	logger->log_bytes(logger,RAW,"expected",expected_generation3,sizeof(expected_generation3));	
-	
-	tester->assert_true(tester,(memcmp(expected_generation3,generated_data.ptr,sizeof(expected_generation3)) == 0), "compare generated data");
-
-	sa_payload->destroy(sa_payload);
-	proposal1->destroy(proposal1);
-	proposal2->destroy(proposal2);
-	list->destroy(list);
-	chunk_free(&generated_data);
-	generator->destroy(generator);
-	
+	generator->destroy(generator);	
 }
 
 /*
@@ -819,16 +705,12 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	
 	notify_payload = notify_payload_create();
 	
-	
-	spi.ptr = "12345";
-	spi.len = strlen(spi.ptr);
-	
 	notification_data.ptr = "67890";
 	notification_data.len = strlen(notification_data.ptr);
 	
 	notify_payload->set_protocol_id(notify_payload,255);
 	notify_payload->set_notify_message_type(notify_payload,63333); /* Hex F765 */
-	notify_payload->set_spi(notify_payload,spi);
+	notify_payload->set_spi(notify_payload, 0x3132333435);
 	notify_payload->set_notification_data(notify_payload,notification_data);
 	
 	generator->generate_payload(generator,(payload_t *)notify_payload);

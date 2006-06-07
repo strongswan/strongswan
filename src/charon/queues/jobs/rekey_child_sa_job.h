@@ -51,9 +51,12 @@ struct rekey_child_sa_job_t {
  * @brief Creates a job of type REKEY_CHILD_SA.
  *
  * To find the targeted CHILD_SA, the uniqe reqid used in 
- * the kernel is used.
+ * the kernel is used. As a CHILD_SA may contain multiple SAs
+ * (AH and/or ESP), we must provide an additional spi to
+ * know which IPsec SA to rekey.
  *
  * @param reqid		reqid CHILD_SA to rekey
+ * @param spi		security parameter index of the SA to rekey
  * @return			rekey_child_sa_job_t object
  * 
  * @ingroup jobs

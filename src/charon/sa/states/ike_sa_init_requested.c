@@ -572,7 +572,9 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 	/* build child sa */
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	this->child_sa = child_sa_create(connection->get_my_host(connection),
-									 connection->get_other_host(connection));
+									 connection->get_other_host(connection),
+									 policy->get_soft_lifetime(policy),
+									 policy->get_hard_lifetime(policy));
 	if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");

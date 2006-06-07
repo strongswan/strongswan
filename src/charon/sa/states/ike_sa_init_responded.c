@@ -441,6 +441,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	prf_plus_t *prf_plus;
 	status_t status;
 	connection_t *connection;
+	policy_t *policy;
 	
 	/* prepare reply */
 	sa_response = sa_payload_create();
@@ -474,9 +475,12 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 		chunk_free(&seed);
 		
+		policy = this->ike_sa->get_policy(this->ike_sa);
 		connection = this->ike_sa->get_connection(this->ike_sa);
 		this->child_sa = child_sa_create(connection->get_my_host(connection),
-										connection->get_other_host(connection));
+										 connection->get_other_host(connection),
+										 policy->get_soft_lifetime(policy),
+										 policy->get_hard_lifetime(policy));
 		
 		status = this->child_sa->add(this->child_sa, proposal, prf_plus);
 		prf_plus->destroy(prf_plus);

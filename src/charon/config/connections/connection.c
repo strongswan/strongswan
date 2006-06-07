@@ -155,7 +155,7 @@ static proposal_t *select_proposal(private_connection_t *this, linked_list_t *pr
 	{
 		supplied_iter->reset(supplied_iter);
 		stored_iter->current(stored_iter, (void**)&stored);
-
+		
 		while (supplied_iter->has_next(supplied_iter))
 		{
 			supplied_iter->current(supplied_iter, (void**)&supplied);
@@ -169,7 +169,6 @@ static proposal_t *select_proposal(private_connection_t *this, linked_list_t *pr
 			}
 		}
 	}
-	
 	/* no proposal match :-(, will result in a NO_PROPOSAL_CHOSEN... */
 	stored_iter->destroy(stored_iter);
 	supplied_iter->destroy(supplied_iter);
@@ -206,7 +205,7 @@ static diffie_hellman_group_t get_dh_group(private_connection_t *this)
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&proposal);
-		proposal->get_algorithm(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP, &algo);
+		proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo);
 		if (algo)
 		{
 			iterator->destroy(iterator);
@@ -230,7 +229,7 @@ static bool check_dh_group(private_connection_t *this, diffie_hellman_group_t dh
 	while (prop_iter->has_next(prop_iter))
 	{
 		prop_iter->current(prop_iter, (void**)&proposal);
-		alg_iter = proposal->create_algorithm_iterator(proposal, PROTO_IKE, DIFFIE_HELLMAN_GROUP);
+		alg_iter = proposal->create_algorithm_iterator(proposal, DIFFIE_HELLMAN_GROUP);
 		while (alg_iter->has_next(alg_iter))
 		{
 			alg_iter->current(alg_iter, (void**)&algo);
@@ -322,7 +321,7 @@ connection_t * connection_create(char *name, bool ikev2, host_t *my_host, host_t
 	this->my_host = my_host;
 	this->other_host = other_host;
 	this->auth_method = auth_method;
-		
+	
 	this->proposals = linked_list_create();
 
 	return (&this->public);

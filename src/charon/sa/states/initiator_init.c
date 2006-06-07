@@ -159,14 +159,15 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	message_t *message;
 	status_t status;
 	
-	if (dh_group == MODP_UNDEFINED)
+	this->diffie_hellman = diffie_hellman_create(dh_group);
+	if (this->diffie_hellman == NULL)
 	{
-		this->logger->log(this->logger, AUDIT, "No DH group acceptable for initialization, Aborting");
+		this->logger->log(this->logger, AUDIT, "DH group %s (%d) not supported, aborting",
+						  mapping_find(diffie_hellman_group_m, dh_group), dh_group);
 		return DESTROY_ME;
 	}
 	
 	connection = this->ike_sa->get_connection(this->ike_sa);
-	this->diffie_hellman = diffie_hellman_create(dh_group);
 	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
 	ike_sa_id->set_responder_spi(ike_sa_id,0);
 
@@ -174,12 +175,10 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message");
 	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, TRUE, &message);
 	
-	/* build SA payload */		
+	/* build SA payload */
 	this->build_sa_payload(this, message);
-	
 	/* build KE payload */
 	this->build_ke_payload(this, message);
-	
 	/* build Nonce payload */
 	status = this->build_nonce_payload(this, message);
 	if (status != SUCCESS)
@@ -188,7 +187,6 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 		message->destroy(message);
 		return DESTROY_ME;
 	}
-	
 	/* message can now be sent (must not be destroyed) */
 	status = this->ike_sa->send_request(this->ike_sa, message);
 	if (status != SUCCESS)
@@ -244,7 +242,7 @@ static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1, "Building KE payload");
 	
-	this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
+	this->diffie_hellman->get_my_public_value(this->diffie_hellman, &key_data);
 	dh_group = this->diffie_hellman->get_dh_group(this->diffie_hellman);
 
 	ke_payload = ke_payload_create();

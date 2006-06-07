@@ -61,7 +61,7 @@ struct private_proposal_substructure_t {
 	/**
 	 * Proposal number.
 	 */
-	u_int8_t	 proposal_number;
+	u_int8_t proposal_number;
 	
 	/**
 	 * Protocol ID.
@@ -404,14 +404,17 @@ static size_t get_spi_size (private_proposal_substructure_t *this)
 }
 
 /**
- * Implementation of proposal_substructure_t.add_to_proposal.
+ * Implementation of proposal_substructure_t.get_proposal.
  */
-void add_to_proposal(private_proposal_substructure_t *this, proposal_t *proposal)
+proposal_t* get_proposal(private_proposal_substructure_t *this)
 {
-	iterator_t *iterator = this->transforms->create_iterator(this->transforms, TRUE);
-	u_int32_t spi;
+	iterator_t *iterator;
+	proposal_t *proposal;
+	u_int64_t spi;
 	
+	proposal = proposal_create(this->protocol_id);
 	
+	iterator = this->transforms->create_iterator(this->transforms, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		transform_substructure_t *transform;
@@ -425,13 +428,24 @@ void add_to_proposal(private_proposal_substructure_t *this, proposal_t *proposal
 		transform_id = transform->get_transform_id(transform);
 		transform->get_key_length(transform, &key_length);
 		
-		proposal->add_algorithm(proposal, this->protocol_id, transform_type, transform_id, key_length);
+		proposal->add_algorithm(proposal, transform_type, transform_id, key_length);
 	}
 	iterator->destroy(iterator);
 	
-	spi = *((u_int32_t*)this->spi.ptr);
+	switch (this->spi.len)
+	{
+		case 4:
+			spi = *((u_int32_t*)this->spi.ptr);
+			break;
+		case 8:
+			spi = *((u_int64_t*)this->spi.ptr);
+			break;
+		default:
+			spi = 0;
+	}
+	proposal->set_spi(proposal, spi);
 	
-	proposal->set_spi(proposal, this->protocol_id, spi);
+	return proposal;
 }
 
 /**
@@ -527,7 +541,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
 	this->public.get_info_for_transform_type = 	(status_t (*) (proposal_substructure_t *,transform_type_t,u_int16_t *, u_int16_t *))get_info_for_transform_type;
 	this->public.set_is_last_proposal = (void (*) (proposal_substructure_t *,bool)) set_is_last_proposal;
-	this->public.add_to_proposal = (void (*) (proposal_substructure_t*,proposal_t*))add_to_proposal;
+	this->public.get_proposal = (proposal_t* (*) (proposal_substructure_t*))get_proposal;
 	this->public.set_spi = (void (*) (proposal_substructure_t *,chunk_t))set_spi;
 	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
 	this->public.get_transform_count = (size_t (*) (proposal_substructure_t *)) get_transform_count;
@@ -556,7 +570,7 @@ proposal_substructure_t *proposal_substructure_create()
 /*
  * Described in header.
  */
-proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal, protocol_id_t proto)
+proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal)
 {
 	private_proposal_substructure_t *this = (private_proposal_substructure_t*)proposal_substructure_create();
 	iterator_t *iterator;
@@ -564,7 +578,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	transform_substructure_t *transform;
 	
 	/* encryption algorithm is only availble in ESP */
-	iterator = proposal->create_algorithm_iterator(proposal, proto, ENCRYPTION_ALGORITHM);
+	iterator = proposal->create_algorithm_iterator(proposal, ENCRYPTION_ALGORITHM);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&algo);
@@ -574,7 +588,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	iterator->destroy(iterator);
 	
 	/* integrity algorithms */
-	iterator = proposal->create_algorithm_iterator(proposal, proto, INTEGRITY_ALGORITHM);
+	iterator = proposal->create_algorithm_iterator(proposal, INTEGRITY_ALGORITHM);
 	while (iterator->has_next(iterator))
 	{
 		algorithm_t *algo;
@@ -585,7 +599,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	iterator->destroy(iterator);
 	
 	/* prf algorithms */
-	iterator = proposal->create_algorithm_iterator(proposal, proto, PSEUDO_RANDOM_FUNCTION);
+	iterator = proposal->create_algorithm_iterator(proposal, PSEUDO_RANDOM_FUNCTION);
 	while (iterator->has_next(iterator))
 	{
 		algorithm_t *algo;
@@ -596,7 +610,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	iterator->destroy(iterator);
 	
 	/* dh groups */
-	iterator = proposal->create_algorithm_iterator(proposal, proto, DIFFIE_HELLMAN_GROUP);
+	iterator = proposal->create_algorithm_iterator(proposal, DIFFIE_HELLMAN_GROUP);
 	while (iterator->has_next(iterator))
 	{
 		algorithm_t *algo;
@@ -607,7 +621,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	iterator->destroy(iterator);
 	
 	/* extended sequence numbers */
-	iterator = proposal->create_algorithm_iterator(proposal, proto, EXTENDED_SEQUENCE_NUMBERS);
+	iterator = proposal->create_algorithm_iterator(proposal, EXTENDED_SEQUENCE_NUMBERS);
 	while (iterator->has_next(iterator))
 	{
 		algorithm_t *algo;
@@ -618,12 +632,19 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	iterator->destroy(iterator);
 	
 	/* take over general infos */
-	this->spi_size = proto == PROTO_IKE ? 8 : 4;
+	this->spi_size = proposal->get_protocol(proposal) == PROTO_IKE ? 8 : 4;
 	this->spi.len = this->spi_size;
 	this->spi.ptr = malloc(this->spi_size);
-	*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal, proto);
-	this->proposal_number = proposal->get_number(proposal);
-	this->protocol_id = proto;
+	if (this->spi_size == 8)
+	{
+		*((u_int64_t*)this->spi.ptr) = proposal->get_spi(proposal);
+	}
+	else
+	{
+		*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal);
+	}
+	this->proposal_number = 0;
+	this->protocol_id = proposal->get_protocol(proposal);
 	
 	return &(this->public);
 }

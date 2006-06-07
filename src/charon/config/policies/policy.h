@@ -230,6 +230,25 @@ struct policy_t {
 	void (*add_proposal) (policy_t *this, proposal_t *proposal);
 	
 	/**
+	 * @brief Get the lifetime of a policy, before rekeying starts.
+	 * 
+	 * A call to this function automatically adds a jitter to
+	 * avoid simultanous rekeying.
+	 * 
+	 * @param this				policy 
+	 * @return					lifetime in seconds
+	 */
+	u_int32_t (*get_soft_lifetime) (policy_t *this);
+	
+	/**
+	 * @brief Get the lifetime of a policy, before SA gets deleted.
+	 * 
+	 * @param this				policy
+	 * @return					lifetime in seconds
+	 */
+	u_int32_t (*get_hard_lifetime) (policy_t *this);
+	
+	/**
 	 * @brief Clone a policy.
 	 * 
 	 * @param this				policy to clone

@@ -187,7 +187,7 @@ static payload_rule_t informational_r_payload_rules[] = {
 /**
  * Message rule for CREATE_CHILD_SA from initiator.
  */
-static payload_rule_t create_child_sa_r_payload_rules[] = {
+static payload_rule_t create_child_sa_i_payload_rules[] = {
 	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
 	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
 	{NONCE,1,1,TRUE,FALSE},
@@ -200,7 +200,7 @@ static payload_rule_t create_child_sa_r_payload_rules[] = {
 /**
  * Message rule for CREATE_CHILD_SA from responder.
  */
-static payload_rule_t create_child_sa_i_payload_rules[] = {
+static payload_rule_t create_child_sa_r_payload_rules[] = {
 	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
 	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
 	{NONCE,1,1,TRUE,FALSE},
@@ -220,7 +220,9 @@ static message_rule_t message_rules[] = {
 	{IKE_AUTH,TRUE,TRUE,(sizeof(ike_auth_i_payload_rules)/sizeof(payload_rule_t)),ike_auth_i_payload_rules},
 	{IKE_AUTH,FALSE,TRUE,(sizeof(ike_auth_r_payload_rules)/sizeof(payload_rule_t)),ike_auth_r_payload_rules},
 	{INFORMATIONAL,TRUE,TRUE,(sizeof(informational_i_payload_rules)/sizeof(payload_rule_t)),informational_i_payload_rules},
-	{INFORMATIONAL,FALSE,TRUE,(sizeof(informational_r_payload_rules)/sizeof(payload_rule_t)),informational_r_payload_rules}
+	{INFORMATIONAL,FALSE,TRUE,(sizeof(informational_r_payload_rules)/sizeof(payload_rule_t)),informational_r_payload_rules},
+	{CREATE_CHILD_SA,TRUE,TRUE,(sizeof(create_child_sa_i_payload_rules)/sizeof(payload_rule_t)),create_child_sa_i_payload_rules},
+	{CREATE_CHILD_SA,FALSE,TRUE,(sizeof(create_child_sa_r_payload_rules)/sizeof(payload_rule_t)),create_child_sa_r_payload_rules},
 };
 
 

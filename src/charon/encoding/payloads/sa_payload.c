@@ -232,18 +232,20 @@ static iterator_t *create_proposal_substructure_iterator (private_sa_payload_t *
 /**
  * Implementation of sa_payload_t.add_proposal_substructure.
  */
-static void add_proposal_substructure (private_sa_payload_t *this,proposal_substructure_t *proposal)
+static void add_proposal_substructure(private_sa_payload_t *this,proposal_substructure_t *proposal)
 {
 	status_t status;
-	if (this->proposals->get_count(this->proposals) > 0)
+	u_int proposal_count = this->proposals->get_count(this->proposals);
+	
+	if (proposal_count > 0)
 	{
 		proposal_substructure_t *last_proposal;
 		status = this->proposals->get_last(this->proposals,(void **) &last_proposal);
 		/* last transform is now not anymore last one */
-		last_proposal->set_is_last_proposal(last_proposal,FALSE);
+		last_proposal->set_is_last_proposal(last_proposal, FALSE);
 	}
-	proposal->set_is_last_proposal(proposal,TRUE);
-	
+	proposal->set_is_last_proposal(proposal, TRUE);
+	proposal->set_proposal_number(proposal, proposal_count + 1);
 	this->proposals->insert_last(this->proposals,(void *) proposal);
 	this->compute_length(this);
 }
@@ -254,19 +256,9 @@ static void add_proposal_substructure (private_sa_payload_t *this,proposal_subst
 static void add_proposal(private_sa_payload_t *this, proposal_t *proposal)
 {
 	proposal_substructure_t *substructure;
-	protocol_id_t proto[2];
-	u_int i;
 	
-	/* build the substructures for every protocol */
-	proposal->get_protocols(proposal, proto);
-	for (i = 0; i<2; i++)
-	{
-		if (proto[i] != PROTO_NONE)
-		{
-			substructure = proposal_substructure_create_from_proposal(proposal, proto[i]);
-			add_proposal_substructure(this, substructure);
-		}
-	}
+	substructure = proposal_substructure_create_from_proposal(proposal);
+	add_proposal_substructure(this, substructure);
 }
 
 /**
@@ -274,30 +266,44 @@ static void add_proposal(private_sa_payload_t *this, proposal_t *proposal)
  */
 static linked_list_t *get_proposals(private_sa_payload_t *this)
 {
-	int proposal_struct_number = 0;
+	int struct_number = 0;
+	int ignore_struct_number = 0;
 	iterator_t *iterator;
-	proposal_t *proposal;
 	linked_list_t *proposal_list;
 	
 	/* this list will hold our proposals */
 	proposal_list = linked_list_create();
 	
-	/* iterate over structures, one OR MORE structures will result in a proposal */
-	iterator = this->proposals->create_iterator(this->proposals,TRUE);
+	/* we do not support proposals split up to two proposal substructures, as
+	 * AH+ESP bundles are not supported in RFC4301 anymore.
+	 * To handle such structures safely, we just skip proposals with multiple
+	 * protocols.
+	 */
+	iterator = this->proposals->create_iterator(this->proposals, TRUE);
 	while (iterator->has_next(iterator))
 	{
+		proposal_t *proposal;
 		proposal_substructure_t *proposal_struct;
-		iterator->current(iterator,(void **)&(proposal_struct));
 		
-		if (proposal_struct->get_proposal_number(proposal_struct) > proposal_struct_number)
+		iterator->current(iterator, (void **)&proposal_struct);
+		/* check if a proposal has a single protocol */
+		if (proposal_struct->get_proposal_number(proposal_struct) == struct_number)
 		{
-			/* here starts a new proposal, create a new one and add it to the list */
-			proposal_struct_number = proposal_struct->get_proposal_number(proposal_struct);
-			proposal = proposal_create(proposal_struct_number);
+			if (ignore_struct_number < struct_number)
+			{
+				/* remova an already added, if first of series */
+				proposal_list->remove_last(proposal_list, (void**)proposal);
+				proposal->destroy(proposal);
+				ignore_struct_number = struct_number;
+			}
+			continue;
+		}
+		struct_number++;
+		proposal = proposal_struct->get_proposal(proposal_struct);
+		if (proposal)
+		{
 			proposal_list->insert_last(proposal_list, proposal);
 		}
-		/* proposal_substructure_t does the dirty work and builds up the proposal */
-		proposal_struct->add_to_proposal(proposal_struct, proposal);
 	}
 	iterator->destroy(iterator);
 	return proposal_list;
@@ -354,7 +360,7 @@ sa_payload_t *sa_payload_create()
 	this->payload_length = SA_PAYLOAD_HEADER_LENGTH;
 
 	this->proposals = linked_list_create();
-	return (&(this->public));
+	return &this->public;
 }
 
 /*

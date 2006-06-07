@@ -64,7 +64,8 @@ enum notify_message_type_t {
 	INVALID_SELECTORS = 39,
 	
 	INITIAL_CONTACT = 16384,
-	SET_WINDOW_SIZE = 16385
+	SET_WINDOW_SIZE = 16385,
+	REKEY_SA = 16393,
 };
 
 /** 
@@ -107,46 +108,42 @@ struct notify_payload_t {
 	/**
 	 * @brief Sets the protocol id of this payload.
 	 * 	
-	 * @param this 				calling notify_payload_t object
-	 * @param protocol_id		protocol id to set
+	 * @param this 			calling notify_payload_t object
+	 * @param protocol_id	protocol id to set
 	 */
 	void (*set_protocol_id) (notify_payload_t *this, u_int8_t protocol_id);
 
 	/**
 	 * @brief Gets the notify message type of this payload.
 	 * 	
-	 * @param this 				calling notify_payload_t object
-	 * @return 					 notify message type of this payload
+	 * @param this 		calling notify_payload_t object
+	 * @return 			notify message type of this payload
 	 */
-	u_int16_t (*get_notify_message_type) (notify_payload_t *this);
+	notify_message_type_t (*get_notify_message_type) (notify_payload_t *this);
 
 	/**
 	 * @brief Sets notify message type of this payload.
 	 * 	
-	 * @param this 					calling notify_payload_t object
-	 * @param notify_message_type	notify message type to set
+	 * @param this 		calling notify_payload_t object
+	 * @param type		notify message type to set
 	 */
-	void (*set_notify_message_type) (notify_payload_t *this, u_int16_t notify_message_type);
+	void (*set_notify_message_type) (notify_payload_t *this, notify_message_type_t type);
 
 	/**
 	 * @brief Returns the currently set spi of this payload.
-	 * 	
-	 * @warning Returned data are not copied.
-	 * 
+	 *
 	 * @param this 	calling notify_payload_t object
-	 * @return 		chunk_t pointing to the value
+	 * @return 		SPI value
 	 */
-	chunk_t (*get_spi) (notify_payload_t *this);
+	u_int64_t (*get_spi) (notify_payload_t *this);
 	
 	/**
 	 * @brief Sets the spi of this payload.
-	 * 	
-	 * @warning Value is getting copied.
 	 * 
-	 * @param this 				calling notify_payload_t object
-	 * @param spi				chunk_t pointing to the value to set
+	 * @param this 	calling notify_payload_t object
+	 * @param spi	SPI value
 	 */
-	void (*set_spi) (notify_payload_t *this, chunk_t spi);
+	void (*set_spi) (notify_payload_t *this, u_int64_t spi);
 
 	/**
 	 * @brief Returns the currently set notification data of payload.
@@ -163,7 +160,7 @@ struct notify_payload_t {
 	 * 	
 	 * @warning Value is getting copied.
 	 * 
-	 * @param this 				calling notify_payload_t object
+	 * @param this 					calling notify_payload_t object
 	 * @param notification_data 	chunk_t pointing to the value to set
 	 */
 	void (*set_notification_data) (notify_payload_t *this, chunk_t notification_data);
