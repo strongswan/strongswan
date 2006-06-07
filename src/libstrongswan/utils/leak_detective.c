@@ -280,8 +280,7 @@ void free_hook(void *ptr, const void *caller)
  */
 void *realloc_hook(void *old, size_t bytes, const void *caller)
 {
-	void *new;
-	memory_header_t *hdr = old - sizeof(memory_header_t);
+	memory_header_t *hdr;
 	void *stack_frames[STACK_FRAMES_COUNT];
 	int stack_frame_count;
 	
@@ -290,6 +289,10 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	{
 		return malloc_hook(bytes, caller);
 	}
+	
+	hdr = old - sizeof(memory_header_t);
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
 		logger->log(logger, ERROR, "reallocation of invalid memory (%p)", old);
@@ -299,14 +302,22 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 		return NULL;
 	}
 	
-	/* malloc and free is done with hooks */
-	new = malloc_hook(bytes, caller);
-	memcpy(new, old, min(bytes, hdr->bytes));
-	free_hook(old, caller);
+	hdr = realloc(hdr, bytes + sizeof(memory_header_t));
 	
-	return new;
+	/* update statistics */
+	hdr->bytes = bytes;
+	hdr->stack_frame_count = backtrace(hdr->stack_frames, STACK_FRAMES_COUNT);
+	
+	/* update header of linked list neighbours */
+	if (hdr->next)
+	{
+		hdr->next->previous = hdr;
+	}
+	hdr->previous->next = hdr;
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return hdr + 1;
 }
-
 
 /**
  * Setup leak detective
@@ -349,6 +360,7 @@ struct excluded_function {
 	{"libc.so.6", 		"mktime", 				NULL, NULL},
 	{"libc.so.6", 		"vsyslog", 				NULL, NULL},
 	{"libc.so.6", 		"strerror", 			NULL, NULL},
+	{"libpthread.so.0", "pthread_setspecific",	NULL, NULL},
 };
 #define INET_NTOA				0
 #define PTHREAD_CREATE			1
@@ -359,7 +371,7 @@ struct excluded_function {
 #define MKTIME					6
 #define VSYSLOG					7
 #define STRERROR				8
-
+#define PTHREAD_SETSPECIFIC		9
 
 /**
  * Load libraries and function pointers for excluded functions
@@ -433,6 +445,21 @@ int pthread_cancel(pthread_t __th)
 	uninstall_hooks();
 	
 	result = _pthread_cancel(__th);
+	
+	install_hooks();
+	pthread_mutex_unlock(&mutex);
+	return result;
+}
+
+int pthread_setspecific(pthread_key_t __key, __const void *__pointer)
+{
+	int (*_pthread_setspecific) (pthread_key_t,__const void*) = excluded_functions[PTHREAD_SETSPECIFIC].lib_function;
+	int result;
+	
+	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
+	
+	result = _pthread_setspecific(__key, __pointer);
 	
 	install_hooks();
 	pthread_mutex_unlock(&mutex);
