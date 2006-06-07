@@ -395,7 +395,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	}
 	else
 	{
-		my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);;
+		my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
 	}
 
 	/* build new sa config */
@@ -404,8 +404,12 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	{
 		this->logger->log(this->logger, AUDIT, "We don't have a policy for IDs %s - %s. Deleting IKE_SA", 
 						  my_id->get_string(my_id), other_id->get_string(other_id));
+		my_id->destroy(my_id);
+		other_id->destroy(other_id);
 		return DESTROY_ME;
 	}
+	my_id->destroy(my_id);
+	other_id->destroy(other_id);
 	
 	/* get my id from policy, which must contain a fully qualified valid id */
 	my_id = this->policy->get_my_id(this->policy);
