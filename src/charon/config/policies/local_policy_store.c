@@ -20,6 +20,8 @@
  * for more details.
  */
 
+#include <string.h>
+
 #include "local_policy_store.h"
 
 #include <utils/linked_list.h>

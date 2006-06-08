@@ -12,7 +12,7 @@ sa/states/state.c sa/states/state.h sa/states/ike_sa_init_requested.c sa/states/
 sa/states/ike_sa_init_responded.c sa/states/ike_sa_established.c sa/states/ike_sa_established.h \
 sa/states/responder_init.c sa/states/responder_init.h sa/states/initiator_init.c sa/states/initiator_init.h \
 sa/states/ike_sa_init_responded.h sa/states/ike_auth_requested.c sa/states/ike_auth_requested.h \
-sa/states/delete_requested.h sa/states/delete_requested.c \
+sa/states/delete_ike_sa_requested.h sa/states/delete_ike_sa_requested.c \
 sa/states/create_child_sa_requested.c sa/states/create_child_sa_requested.h \
 sa/child_sa.c sa/child_sa.h sa/ike_sa.c sa/ike_sa.h sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/ike_sa_id.c sa/ike_sa_id.h sa/authenticator.c sa/authenticator.h encoding/payloads/encryption_payload.c \

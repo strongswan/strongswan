@@ -379,7 +379,6 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 static status_t process_idr_payload(private_ike_auth_requested_t *this, id_payload_t *idr_payload)
 {
 	identification_t *other_id, *configured_other_id;
-	connection_t *connection;
 	
 	other_id = idr_payload->get_identification(idr_payload);
 	configured_other_id = this->policy->get_other_id(this->policy);

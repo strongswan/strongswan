@@ -61,7 +61,6 @@ static job_type_t get_type(private_delete_established_ike_sa_job_t *this)
  */
 static status_t execute(private_delete_established_ike_sa_job_t *this)
 {
-	ike_sa_t *ike_sa;
 	status_t status;
 	
 	status = charon->ike_sa_manager->delete(charon->ike_sa_manager, this->ike_sa_id);

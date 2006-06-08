@@ -97,6 +97,20 @@ enum ike_sa_state_t {
 	IKE_SA_ESTABLISHED,
 
 	/**
+	 * @brief A rekeying/create CHILD_SA request was sent.
+	 * 
+	 * Implemented in class create_child_sa_requested.
+	 */
+	CREATE_CHILD_SA_REQUESTED,
+
+	/**
+	 * @brief A delete CHILD_SA request was sent.
+	 * 
+	 * Implemented in class delete_child_sa_requested.
+	 */
+	DELETE_CHILD_SA_REQUESTED,
+
+	/**
 	 * @brief An IKE SA has sent a DELETE IKE_SA to the other peer.
 	 * 
 	 * After a call to ike_sa.close(), the IKE_SA sends a delete message 
@@ -105,9 +119,7 @@ enum ike_sa_state_t {
 	 * 
 	 * Implemented in class delete_requested.
 	 */
-	DELETE_REQUESTED,
-
-	CREATE_CHILD_SA_REQUESTED,
+	DELETE_IKE_SA_REQUESTED,
 };
 
 

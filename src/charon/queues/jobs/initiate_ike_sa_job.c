@@ -26,6 +26,7 @@
 #include "initiate_ike_sa_job.h"
 
 #include <daemon.h>
+#include <queues/jobs/delete_half_open_ike_sa_job.h>
 
 typedef struct private_initiate_ike_sa_job_t private_initiate_ike_sa_job_t;
 

@@ -1,7 +1,7 @@
 /**
- * @file delete_requested.h
+ * @file delete_ike_sa_requested.h
  * 
- * @brief Interface of delete_requested_t.
+ * @brief Interface of delete_ike_sa_requested_t.
  * 
  */
 
@@ -20,23 +20,23 @@
  * for more details.
  */
 
-#ifndef DELETE_REQUESTED_H_
-#define DELETE_REQUESTED_H_
+#ifndef DELETE_IKE_SA_REQUESTED_H_
+#define DELETE_IKE_SA_REQUESTED_H_
 
 #include <sa/states/state.h>
 #include <sa/ike_sa.h>
 
-typedef struct delete_requested_t delete_requested_t;
+typedef struct delete_ike_sa_requested_t delete_ike_sa_requested_t;
 
 /**
  * @brief This class represents an the state of a half closed IKE_SA.
  * 
  * @b Constructors:
- * - delete_requested_create()
+ * - delete_ike_sa_requested_create()
  * 
  * @ingroup states
  */
-struct delete_requested_t {
+struct delete_ike_sa_requested_t {
 	/**
 	 * methods of the state_t interface
 	 */
@@ -45,13 +45,13 @@ struct delete_requested_t {
 };
 
 /**
- * @brief Constructor of class delete_requested_t
+ * @brief Constructor of class delete_ike_sa_requested_t
  * 
  * @param ike_sa 	assigned ike_sa
- * @return			created delete_requested_t object
+ * @return			created delete_ike_sa_requested_t object
  * 
  * @ingroup states
  */
-delete_requested_t *delete_requested_create(protected_ike_sa_t *ike_sa);
+delete_ike_sa_requested_t *delete_ike_sa_requested_create(protected_ike_sa_t *ike_sa);
 
-#endif /*DELETE_REQUESTED_H_*/
+#endif /*DELETE_IKE_SA_REQUESTED_H_*/

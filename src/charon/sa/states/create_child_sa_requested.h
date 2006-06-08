@@ -25,6 +25,7 @@
 
 #include <sa/states/state.h>
 #include <sa/ike_sa.h>
+#include <sa/child_sa.h>
 
 typedef struct create_child_sa_requested_t create_child_sa_requested_t;
 
@@ -47,11 +48,12 @@ struct create_child_sa_requested_t {
  * @brief Constructor of class create_child_sa_requested_t
  * 
  * @param ike_sa 	assigned ike_sa
+ * @param child_sa	newly created child sa to complete
  * @param nonce		nonce sent at initialization
  * @return			created create_child_sa_requested_t object
  * 
  * @ingroup states
  */
-create_child_sa_requested_t *create_child_sa_requested_create(protected_ike_sa_t *ike_sa, chunk_t nonce_i);
+create_child_sa_requested_t *create_child_sa_requested_create(protected_ike_sa_t *ike_sa, child_sa_t *child_sa, chunk_t nonce_i);
 
 #endif /*CREATE_CHILD_SA_REQEUSTED_H_*/

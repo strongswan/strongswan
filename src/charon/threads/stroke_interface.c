@@ -470,7 +470,7 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
  */
 static void stroke_list(private_stroke_t *this, stroke_msg_t *msg, bool utc)
 {
-	if (msg->type = STR_LIST_CERTS)
+	if (msg->type == STR_LIST_CERTS)
 	{
 		charon->credentials->log_certificates(charon->credentials, this->stroke_logger, utc);
 		charon->credentials->log_ca_certificates(charon->credentials, this->stroke_logger, utc);

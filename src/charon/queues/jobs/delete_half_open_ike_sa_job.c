@@ -76,7 +76,7 @@ static status_t execute(private_delete_half_open_ike_sa_job_t *this)
 		case IKE_SA_INIT_REQUESTED:
 		case IKE_SA_INIT_RESPONDED:
 		case IKE_AUTH_REQUESTED:
-		case DELETE_REQUESTED:
+		case DELETE_IKE_SA_REQUESTED:
 		{
 			/* IKE_SA is half open and gets deleted! */
 			status = charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);

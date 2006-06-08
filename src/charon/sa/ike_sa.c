@@ -42,6 +42,7 @@
 #include <sa/states/initiator_init.h>
 #include <sa/states/responder_init.h>
 #include <sa/states/create_child_sa_requested.h>
+#include <sa/states/delete_ike_sa_requested.h>
 #include <queues/jobs/retransmit_request_job.h>
 #include <queues/jobs/delete_established_ike_sa_job.h>
 #include <queues/jobs/delete_half_open_ike_sa_job.h>
@@ -664,7 +665,9 @@ static status_t send_response(private_ike_sa_t *this, message_t *message)
 	
 	if (message->get_message_id(message) != this->message_id_in)
 	{
-		this->logger->log(this->logger, ERROR, "Message could not be sent cause id was not as expected");
+	
+		this->logger->log(this->logger, ERROR, "Message could not be sent cause id (%d) was not as expected (%d)",
+						  message->get_message_id(message),this->message_id_in);
 		return FAILED;	
 	}
 	
@@ -779,80 +782,6 @@ static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 }
 
 /**
- * Process an informational request
- */
-static status_t process_informational(private_ike_sa_t *this, message_t *request)
-{
-	delete_payload_t *delete_request = NULL;
-	message_t *response;
-	iterator_t *payloads;
-	state_t *old_state;
-	
-	build_message(this, INFORMATIONAL, FALSE, &response);
-	
-	payloads = request->get_payload_iterator(request);
-	while (payloads->has_next(payloads))
-	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
-		
-		switch (payload->get_type(payload))
-		{
-			case DELETE:
-			{
-				delete_request = (delete_payload_t *) payload;
-				break;
-			}
-			default:
-			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
-								  mapping_find(payload_type_m, payload->get_type(payload)), 
-								  payload->get_type(payload));
-				break;
-			}
-		}
-	}
-	/* iterator can be destroyed */
-	payloads->destroy(payloads);
-	
-	if (delete_request)
-	{
-		if (delete_request->get_protocol_id(delete_request) == PROTO_IKE)
-		{
-			this->logger->log(this->logger, CONTROL, "DELETE request for IKE_SA received");
-			if (send_response(this, response) != SUCCESS)
-			{
-				/* something is seriously wrong, kill connection */
-				this->logger->log(this->logger, AUDIT, "Unable to send reply. Deleting IKE_SA");
-				response->destroy(response);
-			}
-			/* switch to delete_requested. This is not absolutly correct, but we
-			 * allow the clean destruction of an SA only in this state. */
-			old_state = this->current_state;
-			set_new_state(this, (state_t*)delete_requested_create(this));
-			old_state->destroy(old_state);
-			return DESTROY_ME;
-		}
-		else
-		{
-			this->logger->log(this->logger, CONTROL, "DELETE request for CHILD_SA received. Ignored");
-			response->destroy(response);
-			return FAILED;
-		}
-	}
-	return SUCCESS;
-}
-
-
-/**
- * Process an informational request
- */
-static status_t process_create_child_sa(private_ike_sa_t *this, message_t *request)
-{
-
-}
-
-/**
  * Implementation of ike_sa_t.process_message.
  */
 static status_t process_message(private_ike_sa_t *this, message_t *message)
@@ -860,9 +789,6 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	u_int32_t message_id;
 	exchange_type_t exchange_type;
 	bool is_request;
-	status_t status;
-	crypter_t *crypter;
-	signer_t *signer;
 	
 	/* Find out type of message (request or response) */
 	is_request = message->get_request(message);
@@ -916,60 +842,13 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		}
 	}
 	
-	if (this->current_state->get_state(this->current_state) == IKE_SA_ESTABLISHED)
-	{
-		if (is_request)
-		{
-			/* get signer for verification and crypter for decryption */
-			if (!this->ike_sa_id->is_initiator(this->ike_sa_id))
-			{
-				crypter = this->crypter_initiator;
-				signer = this->signer_initiator;
-			}
-			else
-			{
-				crypter = this->crypter_responder;
-				signer = this->signer_responder;
-			}
-	
-			/* parse incoming message */
-			status = message->parse_body(message, crypter, signer);
-			if (status != SUCCESS)
-			{
-				this->logger->log(this->logger, AUDIT, "%s request decryption failed. Ignoring message",
-								  mapping_find(exchange_type_m, message->get_exchange_type(message)));
-				return status;
-			}
-			switch (message->get_exchange_type(message))
-			{
-				case CREATE_CHILD_SA:
-					return process_create_child_sa(this, message);
-				case INFORMATIONAL:
-					return process_informational(this, message);
-				default:
-					this->logger->log(this->logger, CONTROL,
-									  "Received a %s request, ignored",
-									  mapping_find(exchange_type_m, exchange_type));
-			}
-		}
-		else
-		{
-			this->logger->log(this->logger, ERROR|LEVEL1,
-							  "Received an unexpected %s response, ignored",
-							  mapping_find(exchange_type_m, exchange_type));
-		}
-		return FAILED;
-	}
-	else
-	{
-		/* now the message is processed by the current state object.
-		 * The specific state object is responsible to check if a message can be received in 
-		 * the state it represents.
-		 * The current state is also responsible to change the state object to the next state 
-		 * by calling protected_ike_sa_t.set_new_state
-		 */
-		return this->current_state->process_message(this->current_state, message);
-	}
+	/* now the message is processed by the current state object.
+	 * The specific state object is responsible to check if a message can be received in 
+	 * the state it represents.
+	 * The current state is also responsible to change the state object to the next state 
+	 * by calling protected_ike_sa_t.set_new_state
+	 */
+	return this->current_state->process_message(this->current_state, message);
 }
 
 /**
@@ -1033,8 +912,6 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	sa_payload_t *sa_payload;
 	ts_payload_t *tsi_payload, *tsr_payload;
 	nonce_payload_t *nonce_payload;
-	policy_t *policy;
-	randomizer_t *randomizer;
 	linked_list_t *proposals;
 	chunk_t nonce;
 	linked_list_t *my_ts, *other_ts;
@@ -1062,6 +939,11 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	request->add_payload(request, (payload_t*)notify);
 	
 	proposals = this->policy->get_proposals(this->policy);
+	child_sa = child_sa_create(this->connection->get_my_host(this->connection),
+							   this->connection->get_other_host(this->connection),
+							   this->policy->get_soft_lifetime(this->policy),
+							   this->policy->get_hard_lifetime(this->policy));
+	child_sa->alloc(child_sa, proposals);
 	sa_payload = sa_payload_create_from_proposal_list(proposals);
 	request->add_payload(request, (payload_t*)sa_payload);
 	
@@ -1076,7 +958,7 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	request->add_payload(request, (payload_t*)nonce_payload);
 	
 	my_ts = this->policy->get_my_traffic_selectors(this->policy);
-	other_ts = this->policy->get_my_traffic_selectors(this->policy);
+	other_ts = this->policy->get_other_traffic_selectors(this->policy);
 	tsi_payload = ts_payload_create_from_traffic_selectors(TRUE, my_ts);
 	tsr_payload = ts_payload_create_from_traffic_selectors(FALSE, other_ts);
 	request->add_payload(request, (payload_t*)tsi_payload);
@@ -1085,7 +967,7 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	send_request(this, request);
 	
 	old_state = this->current_state;
-	set_new_state(this, (state_t*)create_child_sa_requested_create(&this->protected, nonce));
+	set_new_state(this, (state_t*)create_child_sa_requested_create(&this->protected, child_sa, nonce));
 	old_state->destroy(old_state);
 	
 	return SUCCESS;
@@ -1187,7 +1069,6 @@ static status_t delete_(private_ike_sa_t *this)
 	
 	if (get_state(this) != IKE_SA_ESTABLISHED)
 	{
-		this->logger->log(this->logger, ERROR, "Closing a not established IKE SA not allowed, aborting!");
 		return INVALID_STATE;
 	}
 	
@@ -1204,9 +1085,9 @@ static status_t delete_(private_ike_sa_t *this)
 		informational_request->destroy(informational_request);
 	}
 	
-	/* transit to state delete_requested */
+	/* transit to state delete_ike_sa_requested */
 	old_state = this->current_state;
-	set_new_state(this, (state_t*)delete_requested_create(this));
+	set_new_state(this, (state_t*)delete_ike_sa_requested_create(&this->protected));
 	old_state->destroy(old_state);
 	
 	/* there is no guarantee that the other peer will acknowledge the delete,

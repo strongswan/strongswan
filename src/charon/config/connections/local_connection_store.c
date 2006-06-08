@@ -218,7 +218,7 @@ static status_t add_connection(private_local_connection_store_t *this, connectio
 void log_connections(private_local_connection_store_t *this, logger_t *logger, char *name)
 {
 	iterator_t *iterator;
-	connection_t *current, *found = NULL;
+	connection_t *current;
 	
 	if (logger == NULL)
 	{

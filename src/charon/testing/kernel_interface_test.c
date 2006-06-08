@@ -20,7 +20,8 @@
  * for more details.
  */
 
- 
+#include <unistd.h>
+
 #include "kernel_interface_test.h"
 
 #include <daemon.h>

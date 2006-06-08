@@ -24,6 +24,7 @@
 #include "incoming_packet_job.h"
 
 #include <daemon.h>
+#include <queues/jobs/delete_half_open_ike_sa_job.h>
 
 typedef struct private_incoming_packet_job_t private_incoming_packet_job_t;
 

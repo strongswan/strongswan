@@ -135,7 +135,6 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 	iterator_t *iterator;
 	proposal_t *proposal;
 	status_t status;
-	u_int i;
 	
 	/* iterator through proposals */
 	iterator = proposals->create_iterator(proposals, TRUE);
@@ -146,9 +145,9 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 		
 		status = charon->kernel_interface->get_spi(
 					charon->kernel_interface,
-					this->me.addr, this->other.addr,
+					this->other.addr, this->me.addr,
 					protocol, FALSE,
-					&(this->me.spi));
+					&this->me.spi);
 		
 		if (status != SUCCESS)
 		{
@@ -178,14 +177,14 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	
 	/* we must assign the roles to correctly set up the SAs */
  	if (mine)
- 	{
- 		src = this->me.addr;
-		dst = this->other.addr;
- 	}
- 	else
- 	{
+	{
 		dst = this->me.addr;
 		src = this->other.addr;
+ 	}
+ 	else
+	{
+		src = this->me.addr;
+		dst = this->other.addr;
  	}
 	
 	this->protocol = proposal->get_protocol(proposal);

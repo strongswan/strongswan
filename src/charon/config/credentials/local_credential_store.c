@@ -185,20 +185,19 @@ static void add_certificate(private_local_credential_store_t *this, x509_t *cert
 static void log_certificates(private_local_credential_store_t *this, logger_t *logger, bool utc)
 {
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
-
+	
 	if (iterator->get_count(iterator))
 	{
 		logger->log(logger, CONTROL, "");
 		logger->log(logger, CONTROL, "List of X.509 End Entity Certificates:");
 		logger->log(logger, CONTROL, "");
 	}
-
+	
 	while (iterator->has_next(iterator))
 	{
 		x509_t *cert;
-		rsa_private_key_t *key;
 		bool has_key;
-
+		
 		iterator->current(iterator, (void**)&cert);
 		has_key = has_rsa_private_key(this, cert->get_public_key(cert));
 		cert->log_certificate(cert, logger, utc, has_key);

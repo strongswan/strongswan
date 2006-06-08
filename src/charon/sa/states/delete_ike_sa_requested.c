@@ -1,7 +1,7 @@
 /**
- * @file delete_requested.c
+ * @file delete_ike_sa_requested.c
  *
- * @brief Implementation of delete_requested_t.
+ * @brief Implementation of delete_ike_sa_requested_t.
  *
  */
 
@@ -20,22 +20,22 @@
  * for more details.
  */
 
-#include "delete_requested.h"
+#include "delete_ike_sa_requested.h"
 
 #include <daemon.h>
 
 
-typedef struct private_delete_requested_t private_delete_requested_t;
+typedef struct private_delete_ike_sa_requested_t private_delete_ike_sa_requested_t;
 
 /**
- * Private data of a delete_requested_t object.
+ * Private data of a delete_ike_sa_requested_t object.
  */
-struct private_delete_requested_t {
+struct private_delete_ike_sa_requested_t {
 	
 	/**
 	 * methods of the state_t interface
 	 */
-	delete_requested_t public;
+	delete_ike_sa_requested_t public;
 	
 	/** 
 	 * Assigned IKE_SA.
@@ -51,7 +51,7 @@ struct private_delete_requested_t {
 /**
  * Implements state_t.get_state
  */
-static status_t process_message(private_delete_requested_t *this, message_t *message)
+static status_t process_message(private_delete_ike_sa_requested_t *this, message_t *message)
 {
 	ike_sa_id_t *ike_sa_id;
 	crypter_t *crypter;
@@ -86,7 +86,7 @@ static status_t process_message(private_delete_requested_t *this, message_t *mes
 		/* anything other than information is ignored. We can an will not handle
 		 * messages such as CREATE_CHILD_SA */
 		this->logger->log(this->logger, ERROR | LEVEL1, 
-						  "%s messages not supported in state delete_requested. Ignored",
+						  "%s messages not supported in state delete_ike_sa_requested. Ignored",
 						  mapping_find(exchange_type_m, message->get_exchange_type(message)));
 		return FAILED;
 	}
@@ -130,15 +130,15 @@ static status_t process_message(private_delete_requested_t *this, message_t *mes
 /**
  * Implementation of state_t.get_state.
  */
-static ike_sa_state_t get_state(private_delete_requested_t *this)
+static ike_sa_state_t get_state(private_delete_ike_sa_requested_t *this)
 {
-	return DELETE_REQUESTED;
+	return DELETE_IKE_SA_REQUESTED;
 }
 
 /**
  * Implementation of state_t.get_state
  */
-static void destroy(private_delete_requested_t *this)
+static void destroy(private_delete_ike_sa_requested_t *this)
 {
 	free(this);
 }
@@ -146,9 +146,9 @@ static void destroy(private_delete_requested_t *this)
 /* 
  * Described in header.
  */
-delete_requested_t *delete_requested_create(protected_ike_sa_t *ike_sa)
+delete_ike_sa_requested_t *delete_ike_sa_requested_create(protected_ike_sa_t *ike_sa)
 {
-	private_delete_requested_t *this = malloc_thing(private_delete_requested_t);
+	private_delete_ike_sa_requested_t *this = malloc_thing(private_delete_ike_sa_requested_t);
 
 	/* interface functions */
 	this->public.state_interface.process_message = (status_t (*) (state_t *,message_t *)) process_message;

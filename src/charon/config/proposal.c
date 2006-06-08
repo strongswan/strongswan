@@ -258,7 +258,6 @@ static proposal_t *select_proposal(private_proposal_t *this, private_proposal_t 
 	u_int16_t algo;
 	size_t key_size;
 	bool add;
-	u_int64_t spi;
 	
 	/* check protocol */
 	if (this->protocol != other->protocol)

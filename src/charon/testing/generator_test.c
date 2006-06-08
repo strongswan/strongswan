@@ -695,7 +695,7 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	notify_payload_t *notify_payload;
 	logger_t *logger;
 	chunk_t generated_data;
-	chunk_t spi,notification_data;
+	chunk_t notification_data;
 	
 	logger = logger_manager->get_logger(logger_manager,TESTER);
 	
@@ -710,7 +710,7 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	
 	notify_payload->set_protocol_id(notify_payload,255);
 	notify_payload->set_notify_message_type(notify_payload,63333); /* Hex F765 */
-	notify_payload->set_spi(notify_payload, 0x3132333435);
+	notify_payload->set_spi(notify_payload, 0x3132333435ll);
 	notify_payload->set_notification_data(notify_payload,notification_data);
 	
 	generator->generate_payload(generator,(payload_t *)notify_payload);

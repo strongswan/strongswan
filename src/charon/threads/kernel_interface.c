@@ -360,7 +360,7 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	}
 	else if (response->e.error)
 	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWSA got error %s",
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWSA received error: %s",
 						  strerror(-response->e.error));
 		status = FAILED;
 	}
@@ -438,9 +438,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 	request.policy.sel.proto = upper_proto;
 	request.policy.sel.family = src->get_family(src);
 
-	request.hdr.nlmsg_type = XFRM_MSG_NEWPOLICY;
+	request.hdr.nlmsg_type = XFRM_MSG_UPDPOLICY;
 	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.policy)));
-
 	request.policy.dir = direction;
 	request.policy.priority = SPD_PRIORITY;
 	request.policy.action = XFRM_POLICY_ALLOW;
@@ -502,7 +501,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	}
 	else if (response->e.error)
 	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY got error %s",
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY received error: %s",
 						  strerror(-response->e.error));
 		status = FAILED;
 	}

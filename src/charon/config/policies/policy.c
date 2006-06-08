@@ -20,6 +20,9 @@
  * for more details.
  */
 
+#include <time.h>
+#include <string.h>
+
 #include "policy.h"
 
 #include <utils/linked_list.h>
@@ -293,7 +296,8 @@ static void add_proposal(private_policy_t *this, proposal_t *proposal)
  */
 static u_int32_t get_soft_lifetime(policy_t *this)
 {
-	return 0; /*5 + random() % 5; */
+	srandom(time(NULL));
+	return 0; //5 + random() % 3;
 }
 
 /**
@@ -301,7 +305,7 @@ static u_int32_t get_soft_lifetime(policy_t *this)
  */
 static u_int32_t get_hard_lifetime(policy_t *this)
 {
-	return 0; /*20; */
+	return 0; //9;
 }
 
 /**
