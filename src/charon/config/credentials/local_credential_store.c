@@ -263,11 +263,22 @@ static void load_ca_certificates(private_local_credential_store_t *this, const c
 			cert = x509_create_from_file(file, "ca certificate");
 			if (cert)
 			{
-				this->ca_certs->insert_last(this->ca_certs, (void*)cert);
-			}
-			else
-			{
-				this->logger->log(this->logger, ERROR, "certificate \"%s\" invalid, skipped", file);
+				err_t ugh = cert->is_valid(cert, NULL);
+
+				if (ugh != NULL)	
+				{
+					this->logger->log(this->logger, ERROR, "warning: ca certificate %s", ugh);
+				}
+				if (cert->is_ca(cert))
+				{
+					this->ca_certs->insert_last(this->ca_certs, (void*)cert);
+				}
+				else
+				{
+					this->logger->log(this->logger, ERROR,
+							"  CA basic constraints flag not set, cert discarded");
+					cert->destroy(cert);
+				}
 			}
 		}
 	}
