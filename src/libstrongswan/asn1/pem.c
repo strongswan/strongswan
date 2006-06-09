@@ -338,7 +338,7 @@ bool pem_asn1_load_file(const char *filename, char *passphrase,
 	}
 	else
 	{
-		logger->log(logger, ERROR, "could not open %s file '%s'", type, filename);
+		logger->log(logger, ERROR, "  could not open %s file '%s'", type, filename);
 	}
 	return FALSE;
 }
