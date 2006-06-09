@@ -71,6 +71,11 @@ struct private_delete_payload_t {
 	 * The contained SPI's.
 	 */
 	chunk_t spis;
+	
+	/**
+	 * List containing u_int32_t spis 
+	 */
+	linked_list_t *spi_list;
 };
 
 /**
@@ -121,23 +126,30 @@ encoding_rule_t delete_payload_encodings[] = {
  */
 static status_t verify(private_delete_payload_t *this)
 {
-	if ((this->protocol_id == 0) ||
-		(this->protocol_id > 3))
+	switch (this->protocol_id)
 	{
-		/* reserved IDs */
-		return FAILED;
+		case PROTO_AH:
+		case PROTO_ESP:
+			if (this->spi_size != 4)
+			{
+				return FAILED;
+			}
+			break;
+		case PROTO_IKE:
+		case 0:
+			/* IKE deletion has no spi assigned! */
+			if (this->spi_size != 0)
+			{
+				return FAILED;
+			}
+			break;
+		default:
+			return FAILED;
 	}
 	if (this->spis.len != (this->spi_count * this->spi_size))
 	{
 		return FAILED;
 	}
-	if ((this->protocol_id == PROTO_IKE) && (this->spis.len != 0))
-	{
-		/* IKE deletion has no spi assigned! */
-		return FAILED;
-	}
-	
-	
 	return SUCCESS;
 }
 
@@ -225,16 +237,15 @@ static void set_spi_count (private_delete_payload_t *this, u_int16_t spi_count)
 /**
  * Implementation of delete_payload_t.get_spi_count.
  */
-static u_int16_t get_spi_count (private_delete_payload_t *this)
+static u_int16_t get_spi_count(private_delete_payload_t *this)
 {
 	return (this->spi_count);
 }
 
-
 /**
  * Implementation of delete_payload_t.set_spis.
  */
-static void set_spis (private_delete_payload_t *this, chunk_t spis)
+static void set_spis(private_delete_payload_t *this, chunk_t spis)
 {
 	if (this->spis.ptr != NULL)
 	{
@@ -254,18 +265,41 @@ static chunk_t get_spis (private_delete_payload_t *this)
 }
 
 /**
- * Implementation of delete_payload_t.get_spis_clone.
+ * Implementation of delete_payload_t.add_spi.
  */
-static chunk_t get_spis_clone (private_delete_payload_t *this)
+static void add_spi(private_delete_payload_t *this, u_int32_t spi)
 {
-	chunk_t cloned_spis;
-	if (this->spis.ptr == NULL)
+	/* only add SPIs if AH|ESP, ignore others */
+	if (this->protocol_id == PROTO_AH || this->protocol_id == PROTO_ESP)
 	{
-		return (this->spis);
+		this->spi_count += 1;
+		this->spis.len += this->spi_size;
+		this->spis.ptr = realloc(this->spis.ptr, this->spis.len);
+		*(u_int32_t*)(this->spis.ptr + (this->spis.len / this->spi_size - 1)) = spi;
 	}
-	cloned_spis.ptr = clalloc(this->spis.ptr,this->spis.len);
-	cloned_spis.len = this->spis.len;
-	return cloned_spis;
+}
+
+/**
+ * Implementation of delete_payload_t.create_spi_iterator.
+ */
+static iterator_t* create_spi_iterator(private_delete_payload_t *this)
+{
+	int i;
+	
+	if (this->spi_list == NULL)
+	{
+		this->spi_list = linked_list_create();
+		/* only parse SPIs if AH|ESP */
+		if (this->protocol_id == PROTO_AH || this->protocol_id == PROTO_ESP)
+		{
+			for (i = 0; i < this->spi_count; i++)
+			{
+				u_int32_t spi = *(u_int32_t*)(this->spis.ptr + i * this->spi_size);
+				this->spi_list->insert_last(this->spi_list, (void*)spi);
+			}
+		}
+	}
+	return this->spi_list->create_iterator(this->spi_list, TRUE);
 }
 
 /**
@@ -275,16 +309,19 @@ static void destroy(private_delete_payload_t *this)
 {
 	if (this->spis.ptr != NULL)
 	{
-		chunk_free(&(this->spis));
+		chunk_free(&this->spis);
 	}
-	
+	if (this->spi_list)
+	{
+		this->spi_list->destroy(this->spi_list);
+	}
 	free(this);	
 }
 
 /*
  * Described in header
  */
-delete_payload_t *delete_payload_create()
+delete_payload_t *delete_payload_create(protocol_id_t protocol_id)
 {
 	private_delete_payload_t *this = malloc_thing(private_delete_payload_t);
 
@@ -306,17 +343,19 @@ delete_payload_t *delete_payload_create()
 	this->public.set_spi_count = (void (*) (delete_payload_t *,u_int16_t)) set_spi_count;
 	this->public.get_spi_count = (u_int16_t (*) (delete_payload_t *)) get_spi_count;
 	this->public.set_spis = (void (*) (delete_payload_t *,chunk_t)) set_spis;
-	this->public.get_spis_clone = (chunk_t (*) (delete_payload_t *)) get_spis_clone;
 	this->public.get_spis = (chunk_t (*) (delete_payload_t *)) get_spis;
+	this->public.add_spi = (void (*) (delete_payload_t *,u_int32_t))add_spi;
+	this->public.create_spi_iterator = (iterator_t* (*) (delete_payload_t *)) create_spi_iterator;
 	
 	/* private variables */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
-	this->payload_length =DELETE_PAYLOAD_HEADER_LENGTH;
-	this->protocol_id = PROTO_NONE;
-	this->spi_size = 0;
+	this->payload_length = DELETE_PAYLOAD_HEADER_LENGTH;
+	this->protocol_id = protocol_id;
+	this->spi_size = protocol_id == PROTO_AH || protocol_id == PROTO_ESP ? 4 : 0;
 	this->spi_count = 0;
 	this->spis = CHUNK_INITIALIZER;
+	this->spi_list = NULL;
 
-	return (&(this->public));
+	return (&this->public);
 }

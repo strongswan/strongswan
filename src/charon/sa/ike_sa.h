@@ -464,6 +464,24 @@ struct protected_ike_sa_t {
 	void (*add_child_sa) (protected_ike_sa_t *this, child_sa_t *child_sa);
 	
 	/**
+	 * @brief Destroys a CHILD_SA upon request from the other peer.
+	 * 
+	 * @param this 				calling object
+	 * @param spi				inbound spi of the CHILD_SA to destroy
+	 * @return					outbound spi of the destroyed CHILD_SA
+	 */
+	u_int32_t (*destroy_child_sa) (protected_ike_sa_t *this, u_int32_t spi);
+	
+	/**
+	 * @brief Get a CHILD_SA upon request from the other peer.
+	 * 
+	 * @param this 				calling object
+	 * @param spi				spi of the CHILD_SA
+	 * @return					child_sa, or NULL if none found
+	 */
+	child_sa_t* (*get_child_sa) (protected_ike_sa_t *this, u_int32_t spi);
+	
+	/**
 	 * @brief Get the last responded message.
 	 *  
 	 * @param this 				calling object

@@ -61,6 +61,8 @@ struct delete_payload_t {
 	 *
 	 * @param this 			calling delete_payload_t object
 	 * @param protocol_id	protocol ID
+	 * 
+	 * @deprecated is set by constructor
 	 */
 	void (*set_protocol_id) (delete_payload_t *this, protocol_id_t protocol_id);
 	
@@ -74,10 +76,11 @@ struct delete_payload_t {
 	
 	/**
 	 * @brief Set the SPI size.
-	 * 
 	 *
 	 * @param this 			calling delete_payload_t object
 	 * @param spi_size		SPI size
+	 * 
+	 * @deprecated is set by constructor
 	 */
 	void (*set_spi_size) (delete_payload_t *this, u_int8_t spi_size);
 	
@@ -94,6 +97,8 @@ struct delete_payload_t {
 	 *
 	 * @param this 			calling delete_payload_t object
 	 * @param spi_count		SPI count
+	 * 
+	 * @deprecated is incremented via add_spi
 	 */
 	void (*set_spi_count) (delete_payload_t *this, u_int16_t spi_count);
 	
@@ -112,18 +117,10 @@ struct delete_payload_t {
 	 *
 	 * @param this 			calling delete_payload_t object
 	 * @param data			SPI's as chunk_t
+	 *
+	 * @deprecated use add_spi
 	 */
 	void (*set_spis) (delete_payload_t *this, chunk_t spis);
-	
-	/**
-	 * @brief Get the SPI's.
-	 * 
-	 * Returned data are a copy of the internal one.
-	 *
-	 * @param this 			calling delete_payload_t object
-	 * @return				SPI's chunk_t
-	 */
-	chunk_t (*get_spis_clone) (delete_payload_t *this);
 	
 	/**
 	 * @brief Get the SPI's.
@@ -132,8 +129,29 @@ struct delete_payload_t {
 	 *
 	 * @param this 			calling delete_payload_t object
 	 * @return				SPI's as chunk_t
+	 * 
+	 * @deprecated use create_spi_iterator
 	 */
 	chunk_t (*get_spis) (delete_payload_t *this);
+	
+	/**
+	 * @brief Add an SPI to the list of deleted SAs.
+	 *
+	 * @param this 			calling delete_payload_t object
+	 * @param spi			spi to add
+	 */
+	void (*add_spi) (delete_payload_t *this, u_int32_t spi);
+	
+	/**
+	 * @brief Get an iterator over the SPIs.
+	 * 
+	 * The resulting interators current() function returns
+	 * u_int32_t SPIs directly.
+	 *
+	 * @param this 			calling delete_payload_t object
+	 * @return				iterator over SPIs
+	 */
+	iterator_t *(*create_spi_iterator) (delete_payload_t *this);
 	
 	/**
 	 * @brief Destroys an delete_payload_t object.
@@ -146,11 +164,11 @@ struct delete_payload_t {
 /**
  * @brief Creates an empty delete_payload_t object.
  * 
- * @return delete_payload_t object
+ * @param protocol_id	protocol, such as AH|ESP
+ * @return 				delete_payload_t object
  * 
  * @ingroup payloads
  */
-delete_payload_t *delete_payload_create(void);
-
+delete_payload_t *delete_payload_create(protocol_id_t protocol_id);
 
 #endif /* DELETE_PAYLOAD_H_ */

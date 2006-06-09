@@ -125,7 +125,7 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 		memcpy(seed.ptr, this->nonce_i.ptr, this->nonce_i.len);
 		memcpy(seed.ptr + this->nonce_i.len, this->nonce_r.ptr, this->nonce_r.len);
 		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
-		this->logger->log_chunk(this->logger, CONTROL, "Seed", seed);
+		this->logger->log_chunk(this->logger, RAW|LEVEL2, "Rekey seed", seed);
 		chunk_free(&seed);
 		
 		policy = this->ike_sa->get_policy(this->ike_sa);
@@ -240,8 +240,10 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 	ts_payload_t *tsi_request = NULL, *tsr_request = NULL;
 	sa_payload_t *sa_request = NULL;
 	nonce_payload_t *nonce_request = NULL;
+	notify_payload_t *notify = NULL;
 	iterator_t *payloads;
 	status_t status;
+	child_sa_t *old_child_sa;
 	
 	/* iterate over incoming payloads. Message is verified, we can be sure there are the required payloads */
 	payloads = request->get_payload_iterator(request);
@@ -260,7 +262,7 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 			case TRAFFIC_SELECTOR_INITIATOR:
 			{
 				tsi_request = (ts_payload_t*)payload;
-				break;	
+				break;
 			}
 			case TRAFFIC_SELECTOR_RESPONDER:
 			{
@@ -274,7 +276,7 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 			}
 			case NOTIFY:
 			{
-				/* TODO: handle notifys */
+				notify = (notify_payload_t*)payload;
 				break;
 			}
 			default:
@@ -351,6 +353,16 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 		{
 			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy!");
 		}
+		
+		if (notify && notify->get_notify_message_type(notify) == REKEY_SA)
+		{
+			/* mark old child sa as rekeyed */
+			old_child_sa = this->ike_sa->get_child_sa(this->ike_sa, notify->get_spi(notify));
+			if (old_child_sa)
+			{
+				old_child_sa->set_rekeyed(old_child_sa, this->child_sa->get_reqid(this->child_sa));
+			}
+		}
 		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	}
 	
@@ -403,8 +415,22 @@ static status_t process_informational(private_ike_sa_established_t *this, messag
 		}
 		else
 		{
-			this->logger->log(this->logger, CONTROL, "DELETE request for CHILD_SA received. Ignored");
-			return SUCCESS;
+			iterator_t *iterator;
+			delete_payload_t *delete_response = delete_payload_create(delete_request->get_protocol_id(delete_request));
+			iterator = delete_request->create_spi_iterator(delete_request);
+			while (iterator->has_next(iterator))
+			{	
+				u_int32_t spi;
+				iterator->current(iterator, (void**)&spi);
+				this->logger->log(this->logger, CONTROL, "DELETE request for CHILD_SA with SPI 0x%x received", spi);
+				spi = this->ike_sa->destroy_child_sa(this->ike_sa, spi);
+				if (spi)
+				{
+					delete_response->add_spi(delete_response, spi);
+				}
+			}
+			iterator->destroy(iterator);
+			response->add_payload(response, (payload_t*)delete_response);
 		}
 	}
 	

@@ -315,8 +315,8 @@ static void add_proposal(private_policy_t *this, proposal_t *proposal)
  */
 static u_int32_t get_soft_lifetime(policy_t *this)
 {
-	srandom(time(NULL));
-	return 0; //5 + random() % 3;
+	srandom(time(NULL)+getpid());
+	return 5 + (random() % 10);
 }
 
 /**
@@ -324,7 +324,7 @@ static u_int32_t get_soft_lifetime(policy_t *this)
  */
 static u_int32_t get_hard_lifetime(policy_t *this)
 {
-	return 0; //9;
+	return 20;
 }
 
 /**

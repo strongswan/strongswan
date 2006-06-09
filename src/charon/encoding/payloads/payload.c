@@ -113,7 +113,7 @@ payload_t *payload_create(payload_type_t type)
 		case NOTIFY:
 			return (payload_t*)notify_payload_create();
 		case DELETE:
-			return (payload_t*)delete_payload_create();
+			return (payload_t*)delete_payload_create(0);
 		case VENDOR_ID:
 			return (payload_t*)vendor_id_payload_create();
 		case CONFIGURATION:

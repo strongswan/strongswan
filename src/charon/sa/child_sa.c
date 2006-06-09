@@ -93,6 +93,11 @@ struct private_child_sa_t {
 	u_int32_t hard_lifetime;
 	
 	/**
+	 * reqid of a CHILD_SA which rekeyed this one
+	 */
+	u_int32_t rekeyed;
+	
+	/**
 	 * CHILD_SAs own logger
 	 */
 	logger_t *logger;
@@ -379,6 +384,14 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 }
 
 /**
+ * Implementation of child_sa_t.set_rekeyed.
+ */
+static void set_rekeyed(private_child_sa_t *this, u_int32_t reqid)
+{
+	this->rekeyed = reqid;
+}
+
+/**
  * Implementation of child_sa_t.log_status.
  */
 static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
@@ -428,42 +441,47 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
  */
 static void destroy(private_child_sa_t *this)
 {
-	/* delete all policies in the kernel */
 	sa_policy_t *policy;
-	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
-	{
-		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 this->me.addr, this->other.addr,
-											 policy->me.net, policy->other.net,
-											 policy->me.net_mask, policy->other.net_mask,
-											 XFRM_POLICY_OUT, policy->upper_proto);
-		
-		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 this->other.addr, this->me.addr,
-											 policy->other.net, policy->me.net,
-											 policy->other.net_mask, policy->me.net_mask,
-											 XFRM_POLICY_IN, policy->upper_proto);
-		
-		charon->kernel_interface->del_policy(charon->kernel_interface,
-											 this->other.addr, this->me.addr,
-											 policy->other.net, policy->me.net,
-											 policy->other.net_mask, policy->me.net_mask,
-											 XFRM_POLICY_FWD, policy->upper_proto);
-		
-		policy->me.net->destroy(policy->me.net);
-		policy->other.net->destroy(policy->other.net);
-		free(policy);
-	}
-	this->policies->destroy(this->policies);
 	
 	/* delete SAs in the kernel, if they are set up */
 	if (this->protocol != PROTO_NONE)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->other.addr, this->me.spi, this->protocol);
+										 this->me.addr, this->me.spi, this->protocol);
 		charon->kernel_interface->del_sa(charon->kernel_interface,
-										 this->me.addr, this->other.spi, this->protocol);
+										 this->other.addr, this->other.spi, this->protocol);
 	}
+	
+	/* delete all policies in the kernel */
+	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
+	{
+		if (!this->rekeyed)
+		{	
+			/* let rekeyed policies, as they are used by another child_sa */
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+												this->me.addr, this->other.addr,
+												policy->me.net, policy->other.net,
+												policy->me.net_mask, policy->other.net_mask,
+												XFRM_POLICY_OUT, policy->upper_proto);
+			
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+												this->other.addr, this->me.addr,
+												policy->other.net, policy->me.net,
+												policy->other.net_mask, policy->me.net_mask,
+												XFRM_POLICY_IN, policy->upper_proto);
+			
+			charon->kernel_interface->del_policy(charon->kernel_interface,
+												this->other.addr, this->me.addr,
+												policy->other.net, policy->me.net,
+												policy->other.net_mask, policy->me.net_mask,
+												XFRM_POLICY_FWD, policy->upper_proto);
+		}
+		policy->me.net->destroy(policy->me.net);
+		policy->other.net->destroy(policy->other.net);
+		free(policy);
+	}
+	this->policies->destroy(this->policies);
+
 	free(this);
 }
 
@@ -483,6 +501,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other, u_int32_t soft_lifetime,
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
+	this->public.set_rekeyed = (void (*)(child_sa_t*,u_int32_t))set_rekeyed;
 	this->public.log_status = (void (*)(child_sa_t*, logger_t*, char*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
@@ -497,6 +516,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other, u_int32_t soft_lifetime,
 	this->reqid = ++reqid;
 	this->policies = linked_list_create();
 	this->protocol = PROTO_NONE;
+	this->rekeyed = 0;
 	
 	return (&this->public);
 }

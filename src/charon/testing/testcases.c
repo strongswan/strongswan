@@ -159,12 +159,12 @@ daemon_t *daemon_create()
 	/* assign methods */
 	charon->kill = daemon_kill;
 	
-	charon->socket = socket_create(500);
+	//charon->socket = socket_create(500);
 	charon->ike_sa_manager = ike_sa_manager_create();
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();
 	charon->send_queue = send_queue_create();
-	charon->kernel_interface = kernel_interface_create();
+	//charon->kernel_interface = kernel_interface_create();
 	//charon->configuration = configuration_create(RETRANSMIT_TIMEOUT,MAX_RETRANSMIT_COUNT,HALF_OPEN_IKE_SA_TIMEOUT);
 	charon->sender = NULL;
 	charon->receiver = NULL;

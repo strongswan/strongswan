@@ -86,6 +86,11 @@ struct private_create_child_sa_requested_t {
 	child_sa_t *child_sa;
 	
 	/**
+	 * Reqid of the old CHILD_SA, when rekeying
+	 */
+	u_int32_t reqid;
+	
+	/**
 	 * Assigned logger.
 	 * 
 	 * Is logger of ike_sa!
@@ -205,6 +210,7 @@ static status_t process_message(private_create_child_sa_requested_t *this, messa
 	status_t status;
 	chunk_t seed;
 	prf_plus_t *prf_plus;
+	child_sa_t *old_child_sa;
 	
 	this->policy = this->ike_sa->get_policy(this->ike_sa);
 	if (response->get_exchange_type(response) != CREATE_CHILD_SA)
@@ -339,7 +345,7 @@ static status_t process_message(private_create_child_sa_requested_t *this, messa
 		memcpy(seed.ptr + this->nonce_i.len, this->nonce_r.ptr, this->nonce_r.len);
 		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 		
-		this->logger->log_chunk(this->logger, CONTROL, "Seed", seed);
+		this->logger->log_chunk(this->logger, RAW|LEVEL2, "Rekey seed", seed);
 		chunk_free(&seed);
 		
 		status = this->child_sa->update(this->child_sa, this->proposal, prf_plus);
@@ -364,6 +370,17 @@ static status_t process_message(private_create_child_sa_requested_t *this, messa
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
 	this->public.state_interface.destroy(&this->public.state_interface);
 	
+	/* if we are rekeying, inform the old child SA that it has been superseeded and
+	 * start its delete */
+	if (this->reqid)
+	{
+		old_child_sa = this->ike_sa->public.get_child_sa(&this->ike_sa->public, this->reqid);
+		if (old_child_sa)
+		{
+			old_child_sa->set_rekeyed(old_child_sa, this->child_sa->get_reqid(this->child_sa));
+		}
+		this->ike_sa->public.delete_child_sa(&this->ike_sa->public, this->reqid);
+	}
 	return SUCCESS;
 }
 
@@ -388,7 +405,7 @@ static void destroy(private_create_child_sa_requested_t *this)
 /*
  * Described in header.
  */
-create_child_sa_requested_t *create_child_sa_requested_create(protected_ike_sa_t *ike_sa, child_sa_t *child_sa, chunk_t nonce_i)
+create_child_sa_requested_t *create_child_sa_requested_create(protected_ike_sa_t *ike_sa, child_sa_t *child_sa, chunk_t nonce_i, u_int32_t reqid)
 {
 	private_create_child_sa_requested_t *this = malloc_thing(private_create_child_sa_requested_t);
 	
@@ -402,6 +419,7 @@ create_child_sa_requested_t *create_child_sa_requested_create(protected_ike_sa_t
 	this->child_sa = child_sa;
 	this->nonce_i = nonce_i;
 	this->nonce_r = CHUNK_INITIALIZER;
+	this->reqid = reqid;
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &(this->public);

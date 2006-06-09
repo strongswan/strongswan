@@ -1,7 +1,7 @@
 /**
- * @file create_child_sa_requested.h
+ * @file delete_child_sa_requested.h
  * 
- * @brief Interface of create_child_sa_requested_t.
+ * @brief Interface of delete_child_sa_requested_t.
  * 
  */
 
@@ -20,24 +20,24 @@
  * for more details.
  */
 
-#ifndef CREATE_CHILD_SA_REQEUSTED_H_
-#define CREATE_CHILD_SA_REQEUSTED_H_
+#ifndef DELETE_CHILD_SA_REQEUSTED_H_
+#define DELETE_CHILD_SA_REQEUSTED_H_
 
 #include <sa/states/state.h>
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
 
-typedef struct create_child_sa_requested_t create_child_sa_requested_t;
+typedef struct delete_child_sa_requested_t delete_child_sa_requested_t;
 
 /**
  * @brief State after a CREATE_CHILD_SA request was sent.
  * 
  * @b Constructors:
- * - create_child_sa_requested_create()
+ * - delete_child_sa_requested_create()
  * 
  * @ingroup states
  */
-struct create_child_sa_requested_t {
+struct delete_child_sa_requested_t {
 	/**
 	 * methods of the state_t interface
 	 */
@@ -45,20 +45,13 @@ struct create_child_sa_requested_t {
 };
 
 /**
- * @brief Constructor of class create_child_sa_requested_t
- * 
- * If this CREATE_CHILD_SA message is to rekey a CHILD_SA, 
- * the child_sa with the specified reqid gets deleted after a new
- * one is set up.
+ * @brief Constructor of class delete_child_sa_requested_t
  * 
  * @param ike_sa 	assigned ike_sa
- * @param child_sa	newly created child sa to complete
- * @param nonce		nonce sent at initialization
- * @param reqid		reqid, when rekeying a child SA.
- * @return			created create_child_sa_requested_t object
+ * @return			created delete_child_sa_requested_t object
  * 
  * @ingroup states
  */
-create_child_sa_requested_t *create_child_sa_requested_create(protected_ike_sa_t *ike_sa, child_sa_t *child_sa, chunk_t nonce_i, u_int32_t reqid);
+delete_child_sa_requested_t *delete_child_sa_requested_create(protected_ike_sa_t *ike_sa);
 
-#endif /*CREATE_CHILD_SA_REQEUSTED_H_*/
+#endif /*DELETE_CHILD_SA_REQEUSTED_H_*/

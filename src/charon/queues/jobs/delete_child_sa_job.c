@@ -70,7 +70,7 @@ static status_t execute(private_delete_child_sa_job_t *this)
 		return DESTROY_ME;
 	}
 	
-	/* TODO */
+	ike_sa->delete_child_sa(ike_sa, this->reqid);
 	
 	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return DESTROY_ME;

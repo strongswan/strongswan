@@ -1091,13 +1091,12 @@ void test_generator_with_delete_payload(protected_tester_t *tester)
 	generator = generator_create();
 	tester->assert_true(tester,(generator != NULL), "generator create check");
 	
-	delete_payload = delete_payload_create();
+	delete_payload = delete_payload_create(PROTO_AH);
 	
 	
 	spis.ptr = "123456789012";
 	spis.len = strlen(spis.ptr);
 
-	delete_payload->set_protocol_id(delete_payload, PROTO_AH);
 	delete_payload->set_spi_count(delete_payload,3);
 	delete_payload->set_spi_size(delete_payload,4);
 	delete_payload->set_spis(delete_payload,spis);

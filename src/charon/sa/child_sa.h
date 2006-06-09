@@ -146,6 +146,18 @@ struct child_sa_t {
 	status_t (*add_policies) (child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list);
 	
 	/**
+	 * @brief Mark this child_sa as rekeyed.
+	 *
+	 * Since an SA which rekeys a old SA shares the same policy,
+	 * we must mark a child_sa as rekeyed. A so marked SA does
+	 * not remove its policy, as the new SA uses it.
+	 *
+	 * @param this 		calling object
+	 * @param reqid		reqid of the SA which replaces this one.
+	 */	
+	void (*set_rekeyed) (child_sa_t *this, u_int32_t reqid);
+	
+	/**
 	 * @brief Log the status of a child_sa to a logger.
 	 *
 	 * The status of ESP/AH SAs is logged with the supplied logger in
