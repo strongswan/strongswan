@@ -473,12 +473,15 @@ transform_substructure_t *transform_substructure_create_type(transform_type_t tr
 	transform->set_transform_type(transform,transform_type);
 	transform->set_transform_id(transform,transform_id);
 	
-	/* a keylength attribute is only created for AES encryption */
+	/* a keylength attribute is only created for variable length algos */
 	if (transform_type == ENCRYPTION_ALGORITHM &&
-		transform_id == ENCR_AES_CBC)
+		(transform_id == ENCR_AES_CBC ||
+		 transform_id == ENCR_IDEA ||
+		 transform_id == ENCR_CAST ||
+		 transform_id == ENCR_BLOWFISH))
 	{
 		transform_attribute_t *attribute = transform_attribute_create_key_length(key_length);
-		transform->add_transform_attribute(transform,attribute);		
+		transform->add_transform_attribute(transform,attribute);
 	}
 
 	return transform;

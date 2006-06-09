@@ -45,7 +45,7 @@
 
 #define SPD_PRIORITY 1024
 
-#define XFRM_DATA_LENGTH 512
+#define XFRM_DATA_LENGTH 1024
 
 
 typedef struct xfrm_data_t xfrm_data_t;
@@ -109,6 +109,85 @@ struct netlink_message_t {
 	u_int8_t data[XFRM_DATA_LENGTH];
 };
 
+typedef struct kernel_algorithm_t kernel_algorithm_t;
+
+/**
+ * Mapping from the algorithms defined in IKEv2 to
+ * kernel level algorithm names and their key length
+ */
+struct kernel_algorithm_t {
+	/**
+	 * Identifier specified in IKEv2
+	 */
+	int ikev2_id;
+	
+	/**
+	 * Name of the algorithm, as used as kernel identifier
+	 */
+	char *name;
+	
+	/**
+	 * Key length in bits, if fixed size
+	 */
+	u_int key_size;
+};
+#define END_OF_LIST -1
+
+/**
+ * Algorithms for encryption
+ */
+kernel_algorithm_t encryption_algs[] = {
+/*	{ENCR_DES_IV64, 	"***", 			0}, */
+	{ENCR_DES, 			"des", 			64},
+	{ENCR_3DES, 		"des3_ede",		192},
+/*	{ENCR_RC5, 			"***", 			0}, */
+/*	{ENCR_IDEA, 		"***",			0}, */
+	{ENCR_CAST, 		"cast128",		0},
+	{ENCR_BLOWFISH, 	"blowfish",		0},
+/*	{ENCR_3IDEA, 		"***",			0}, */
+/*	{ENCR_DES_IV32, 	"***",			0}, */
+	{ENCR_NULL, 		"cipher_null",	0},
+	{ENCR_AES_CBC, 		"aes",			0},
+/*	{ENCR_AES_CTR, 		"***",			0}, */
+	{END_OF_LIST, 		NULL,			0},
+};
+
+/**
+ * Algorithms for integrity protection
+ */
+kernel_algorithm_t integrity_algs[] = {
+	{AUTH_HMAC_MD5_96, 	"md5",			128},
+	{AUTH_HMAC_SHA1_96,	"sha1",			160},
+/*	{AUTH_DES_MAC,		"***",			0}, */
+/*	{AUTH_KPDK_MD5,		"***",			0}, */
+/*	{AUTH_AES_XCBC_96,	"***",			0}, */
+	{END_OF_LIST, 		NULL,			0},
+};
+
+/**
+ * Look up a kernel algorithm name and its key size
+ */
+char* lookup_algorithm(kernel_algorithm_t *kernel_algo, algorithm_t *ikev2_algo, u_int *key_size)
+{
+	while (kernel_algo->ikev2_id != END_OF_LIST)
+	{
+		if (ikev2_algo->algorithm == kernel_algo->ikev2_id)
+		{
+			/* match, evaluate key length */
+			if (ikev2_algo->key_size)
+			{	/* variable length */
+				*key_size = ikev2_algo->key_size;
+			}
+			else
+			{	/* fixed length */
+				*key_size = kernel_algo->key_size;
+			}
+			return kernel_algo->name;
+		}
+		kernel_algo++;
+	}
+	return NULL;	
+}
 
 typedef struct private_kernel_interface_t private_kernel_interface_t;
 
@@ -171,42 +250,6 @@ struct private_kernel_interface_t {
 	 * Sends a netlink_message_t down to the kernel and wait for reply.
 	 */
 	status_t (*send_message) (private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response);
-};
-
-/**
- * In the kernel, algorithms are identified as strings, we use our
- * mapping functions...
- * Algorithms for encryption.
- * TODO: Add missing algorithm strings
- */
-mapping_t kernel_encryption_algs_m[] = {
-	{ENCR_DES_IV64, ""},
-	{ENCR_DES, "des"},
-	{ENCR_3DES, "des3_ede"},
-	{ENCR_RC5, ""},
-	{ENCR_IDEA, "idea"},
-	{ENCR_CAST, "cast128"},
-	{ENCR_BLOWFISH, "blowfish"},
-	{ENCR_3IDEA, ""},
-	{ENCR_DES_IV32, ""},
-	{ENCR_NULL, ""},
-	{ENCR_AES_CBC, "aes"},
-	{ENCR_AES_CTR, ""},
-	{MAPPING_END, NULL}
-};
-/**
- * In the kernel, algorithms are identified as strings, we use our
- * mapping functions...
- * Algorithms for integrity protection.
- * TODO: Add missing algorithm strings
- */
-mapping_t kernel_integrity_algs_m[] = {
-	{AUTH_HMAC_MD5_96, "md5"},
-	{AUTH_HMAC_SHA1_96, "sha1"},
-	{AUTH_DES_MAC, ""},
-	{AUTH_KPDK_MD5, ""},
-	{AUTH_AES_XCBC_96, ""},
-	{MAPPING_END, NULL}
 };
 
 /**
@@ -277,15 +320,17 @@ static status_t add_sa(	private_kernel_interface_t *this,
 						u_int32_t reqid,
 						u_int64_t expire_soft,
 						u_int64_t expire_hard,
-						encryption_algorithm_t enc_alg,
-						chunk_t encryption_key,
-						integrity_algorithm_t int_alg,
-						chunk_t integrity_key,
+						algorithm_t *enc_alg,
+						algorithm_t *int_alg,
+						prf_plus_t *prf_plus,
 						bool replace)
 {
 	netlink_message_t request, *response;
-	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
+	int key_size;
+	char *alg_name;
+	
+	memset(&request, 0, sizeof(request));
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "adding SA");
 	
@@ -314,36 +359,52 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	
 	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.sa)));
 	
-	if (enc_alg != ENCR_UNDEFINED)
+	if (enc_alg->algorithm != ENCR_UNDEFINED)
 	{
 		xfrm_data_t *data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
 		
 		data->type = XFRMA_ALG_CRYPT;
-		data->length = 4 + sizeof(data->algo) + encryption_key.len;
-		data->algo.alg_key_len = encryption_key.len * 8;
+		alg_name = lookup_algorithm(encryption_algs, enc_alg, &key_size);
+		if (alg_name == NULL)
+		{
+			this->logger->log(this->logger, ERROR, "Algorithm %s not supported by kernel!", 
+							  mapping_find(encryption_algorithm_m, enc_alg->algorithm));
+			return FAILED;
+		}
+		this->logger->log(this->logger, CONTROL|LEVEL2, "using key size %d", key_size);
+		data->length = 4 + sizeof(data->algo) + key_size;
+		data->algo.alg_key_len = key_size;
 		request.hdr.nlmsg_len += data->length;
 		if (request.hdr.nlmsg_len > sizeof(request))
 		{
 			return FAILED;
 		}
-		strcpy(data->algo.alg_name, mapping_find(kernel_encryption_algs_m, enc_alg));
-		memcpy(data->algo.alg_key, encryption_key.ptr, encryption_key.len);
+		strcpy(data->algo.alg_name, alg_name);
+		prf_plus->get_bytes(prf_plus, key_size / 8, data->algo.alg_key);
 	}
 	
-	if (int_alg != AUTH_UNDEFINED)
+	if (int_alg->algorithm  != AUTH_UNDEFINED)
 	{
 		xfrm_data_t *data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
 		
 		data->type = XFRMA_ALG_AUTH;
-		data->length = 4 + sizeof(data->algo) + integrity_key.len;
-		data->algo.alg_key_len = integrity_key.len * 8;
+		alg_name = lookup_algorithm(integrity_algs, int_alg, &key_size);
+		if (alg_name == NULL)
+		{
+			this->logger->log(this->logger, ERROR, "Algorithm %s not supported by kernel!", 
+							  mapping_find(integrity_algorithm_m, int_alg->algorithm));
+			return FAILED;
+		}
+		this->logger->log(this->logger, CONTROL|LEVEL2, "using key size %d", key_size);
+		data->length = 4 + sizeof(data->algo) + key_size;
+		data->algo.alg_key_len = key_size;
 		request.hdr.nlmsg_len += data->length;
 		if (request.hdr.nlmsg_len > sizeof(request))
 		{
 			return FAILED;
 		}
-		strcpy(data->algo.alg_name, mapping_find(kernel_integrity_algs_m, int_alg));
-		memcpy(data->algo.alg_key, integrity_key.ptr, integrity_key.len);
+		strcpy(data->algo.alg_name, alg_name);
+		prf_plus->get_bytes(prf_plus, key_size / 8, data->algo.alg_key);
 	}
 	
 	/* TODO: add IPComp here*/
@@ -739,7 +800,7 @@ kernel_interface_t *kernel_interface_create()
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,encryption_algorithm_t,chunk_t,integrity_algorithm_t,chunk_t,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,bool))add_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,bool,bool,u_int32_t))add_policy;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int))del_policy;

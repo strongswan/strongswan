@@ -26,6 +26,7 @@
 #include <linux/xfrm.h>
 
 #include <utils/host.h>
+#include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 
 typedef struct kernel_interface_t kernel_interface_t;
@@ -70,7 +71,9 @@ struct kernel_interface_t {
 	 * SPI (via get_spi). In this case, the replace
 	 * flag must be set.
 	 * This function does install a single SA for a
-	 * single protocol in one direction.
+	 * single protocol in one direction. The kernel-interface
+	 * gets the keys itself from the PRF, as we don't know
+	 * his algorithms and key sizes.
 	 * 
 	 * @param this			calling object
 	 * @param src			source address for this SA
@@ -81,9 +84,8 @@ struct kernel_interface_t {
 	 * @param expire_soft	lifetime in seconds before rekeying
 	 * @param expire_hard	lieftime in seconds before delete
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
-	 * @param enc_key		Key to use for encryption
 	 * @param int_alg		Algorithm to use for integrity protection
-	 * @param int_key		Key for integrity protection
+	 * @param prf_plus		PRF to derive keys
 	 * @param replace		Should an already installed SA be updated?
 	 * @return
 	 * 						- SUCCESS
@@ -96,10 +98,9 @@ struct kernel_interface_t {
 				u_int32_t reqid,
 				u_int64_t expire_soft,
 				u_int64_t expire_hard,
-				encryption_algorithm_t enc_alg,
-				chunk_t enc_key,
-				integrity_algorithm_t int_alg,
-				chunk_t int_key,
+				algorithm_t *enc_alg,
+				algorithm_t *int_alg,
+				prf_plus_t *prf_plus,
 				bool replace);
 	/**
 	 * @brief Delete a previusly installed SA from the SAD.

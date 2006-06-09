@@ -486,8 +486,8 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 		this->crypter_responder->destroy(this->crypter_responder);
 	}
 	
-	this->crypter_initiator = crypter_create(algo->algorithm, algo->key_size);
-	this->crypter_responder = crypter_create(algo->algorithm, algo->key_size);
+	this->crypter_initiator = crypter_create(algo->algorithm, algo->key_size / 8);
+	this->crypter_responder = crypter_create(algo->algorithm, algo->key_size / 8);
 	if (this->crypter_initiator == NULL || this->crypter_responder == NULL)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL1, 

@@ -112,7 +112,7 @@ struct algorithm_t {
 	u_int16_t algorithm;
 	
 	/**
-	 * the associated key size, or zero if not needed
+	 * the associated key size in bits, or zero if not needed
 	 */
 	u_int16_t key_size;
 };

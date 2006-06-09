@@ -39,24 +39,18 @@ void test_kernel_interface(protected_tester_t *tester)
 	u_int32_t spi;
 	host_t *me, *other, *left, *right;
 	status_t status;
-	
-	u_int8_t enc_key_bytes[] = {
-		0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,
+	prf_plus_t *prf_plus;
+	prf_t *prf;	
+	u_int8_t key_bytes[] = {
 		0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08
 	};
+	chunk_t key = chunk_from_buf(key_bytes);
+	algorithm_t int_alg = {AUTH_HMAC_MD5_96, 0};
+	algorithm_t enc_alg = {ENCR_AES_CBC, 128};
 	
-	u_int8_t inc_key_bytes[] = {
-		0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,
-		0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08
-	};
-	
-	chunk_t enc_key,inc_key;
-	enc_key.ptr = enc_key_bytes;
-	enc_key.len = sizeof(enc_key_bytes);
-	inc_key.ptr = inc_key_bytes;
-	inc_key.len = sizeof(inc_key_bytes);
-	
-	
+	prf = prf_create(PRF_HMAC_MD5);
+	prf->set_key(prf, key);
+	prf_plus = prf_plus_create(prf, key);	
 	
 	kernel_interface = kernel_interface_create();
 	
@@ -66,7 +60,7 @@ void test_kernel_interface(protected_tester_t *tester)
 	status = kernel_interface->get_spi(kernel_interface, me, other, 50, 1234, &spi);
 	tester->assert_true(tester, status == SUCCESS, "spi get");
 	
-	status = kernel_interface->add_sa(kernel_interface, me, other, spi, 50, 1234, 5, 10, ENCR_AES_CBC, enc_key,AUTH_UNDEFINED,inc_key,TRUE);	
+	status = kernel_interface->add_sa(kernel_interface, me, other, spi, 50, 1234, 5, 10, &enc_alg, &int_alg, prf_plus,  TRUE);	
 	tester->assert_true(tester, status == SUCCESS, "add sa");
 	
 	left = host_create(AF_INET, "10.1.0.0", 0);

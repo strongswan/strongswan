@@ -164,13 +164,9 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus, bool mine)
 {
 	u_int32_t spi;
-	encryption_algorithm_t enc_algo;
-	integrity_algorithm_t int_algo;
-	chunk_t enc_key, int_key;
-	algorithm_t *algo;
-	crypter_t *crypter;
-	signer_t *signer;
-	size_t key_size;
+	algorithm_t *enc_algo, *int_algo;
+	algorithm_t enc_algo_none = {ENCR_UNDEFINED, 0};
+	algorithm_t int_algo_none = {AUTH_UNDEFINED, 0};
 	host_t *src;
 	host_t *dst;
 	status_t status;
@@ -201,75 +197,44 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 		this->other.spi = spi;
 	}
 	
-	/* derive encryption key first */
-	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Adding %s %s SA",
+					  mine ? "inbound" : "outbound",
+					  mapping_find(protocol_id_m, this->protocol));
+	
+	/* select encryption algo */
+	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_algo))
 	{
-		enc_algo = algo->algorithm;
-		this->logger->log(this->logger, CONTROL|LEVEL1, "%s for %s: using %s %s, ",
-							mapping_find(protocol_id_m, this->protocol),
-							mine ? "me" : "other",
-							mapping_find(transform_type_m, ENCRYPTION_ALGORITHM),
-							mapping_find(encryption_algorithm_m, enc_algo));
-		
-		/* we must create a (unused) crypter, since its the only way to get the size
-		 * of the key. This is not so nice, since charon must support all algorithms
-		 * the kernel supports...
-		 * TODO: build something of a encryption algorithm lookup function 
-		 */
-		crypter = crypter_create(enc_algo, algo->key_size);
-		key_size = crypter->get_key_size(crypter);
-		crypter->destroy(crypter);
-		prf_plus->allocate_bytes(prf_plus, key_size, &enc_key);
-		this->logger->log_chunk(this->logger, PRIVATE, "key:", enc_key);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "  using %s for encryption",
+							mapping_find(encryption_algorithm_m, enc_algo->algorithm));
 	}
 	else
 	{
-		enc_algo = ENCR_UNDEFINED;
+		enc_algo = &enc_algo_none;
 	}
 	
-	/* derive integrity key */
-	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
+	/* select integrity algo */
+	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_algo))
 	{
-		int_algo = algo->algorithm;
-		this->logger->log(this->logger, CONTROL|LEVEL1, "%s for %s: using %s %s,",
-							mapping_find(protocol_id_m, this->protocol),
-							mine ? "me" : "other",
-							mapping_find(transform_type_m, INTEGRITY_ALGORITHM),
-							mapping_find(integrity_algorithm_m, algo->algorithm));
-		
-		signer = signer_create(int_algo);
-		key_size = signer->get_key_size(signer);
-		signer->destroy(signer);
-		prf_plus->allocate_bytes(prf_plus, key_size, &int_key);
-		this->logger->log_chunk(this->logger, PRIVATE, "key:", int_key);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "  using %s for integrity",
+						  mapping_find(integrity_algorithm_m, int_algo->algorithm));
 	}
 	else
 	{
-		int_algo = AUTH_UNDEFINED;
+		int_algo = &int_algo_none;
 	}
 	
-	/* send keys down to kernel */
-	this->logger->log(this->logger, CONTROL|LEVEL1, 
-						"installing 0x%.8x for %s, src %s dst %s",
-						ntohl(spi), mapping_find(protocol_id_m, this->protocol), 
-						src->get_address(src), dst->get_address(dst));
+	/* send SA down to the kernel */
+	this->logger->log(this->logger, CONTROL|LEVEL2,
+						"  SPI 0x%.8x, src %s dst %s",
+						ntohl(spi), src->get_address(src), dst->get_address(dst));
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 												src, dst,
 												spi, this->protocol,
 												this->reqid,
 												mine ? 0 : this->soft_lifetime,
 												this->hard_lifetime,
-												enc_algo, enc_key,
-												int_algo, int_key, mine);
-	/* clean up */
-	if (enc_algo != ENCR_UNDEFINED)
-	{
-		chunk_free(&enc_key);
-	}
-	if (int_algo != AUTH_UNDEFINED)
-	{
-		chunk_free(&int_key);
-	}
+												enc_algo, int_algo, prf_plus, mine);
+
 	return status;
 }
 

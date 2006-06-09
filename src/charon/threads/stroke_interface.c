@@ -311,7 +311,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 								   my_host, other_host,
 								   RSA_DIGITAL_SIGNATURE);
 	proposal = proposal_create(PROTO_IKE);
-	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 128);
 	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
 	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
 	proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
@@ -334,8 +334,12 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	
 	policy = policy_create(msg->add_conn.name, my_id, other_id);
 	proposal = proposal_create(PROTO_ESP);
-	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);
+	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 128);
+	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 256);
+	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
+	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 256);
 	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
 	policy->add_proposal(policy, proposal);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
@@ -514,6 +518,7 @@ logger_context_t get_context(char *context)
 	else if (strcasecmp(context, "CONFG") == 0) return CONFIG;
 	else if (strcasecmp(context, "ENCPL") == 0) return ENCRYPTION_PAYLOAD;
 	else if (strcasecmp(context, "PAYLD") == 0) return PAYLOAD;
+	else if (strcasecmp(context, "XFRM") == 0) return XFRM;
 	else return -2;
 }
 
