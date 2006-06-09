@@ -106,6 +106,17 @@ static char* connection_name(starter_conn_t *conn)
 	return conn->name;
 }
 
+static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, starter_end_t *conn_end)
+{
+	msg_end->id = push_string(msg, conn_end->id);
+	msg_end->cert = push_string(msg, conn_end->cert);
+	msg_end->cert = push_string(msg, conn_end->cert);
+	msg_end->address = push_string(msg, inet_ntoa(conn_end->addr.u.v4.sin_addr));
+	msg_end->subnet = push_string(msg, inet_ntoa(conn_end->subnet.addr.u.v4.sin_addr));
+	msg_end->subnet_mask = conn_end->subnet.maskbits;
+	msg_end->sendcert = conn_end->sendcert;
+}
+
 int starter_stroke_add_conn(starter_conn_t *conn)
 {
 	stroke_msg_t msg;
@@ -115,17 +126,8 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
 
-	msg.add_conn.me.id = push_string(&msg, conn->left.id);
-	msg.add_conn.me.cert = push_string(&msg, conn->left.cert);
-	msg.add_conn.me.address = push_string(&msg, inet_ntoa(conn->left.addr.u.v4.sin_addr));
-	msg.add_conn.me.subnet = push_string(&msg, inet_ntoa(conn->left.subnet.addr.u.v4.sin_addr));
-	msg.add_conn.me.subnet_mask = conn->left.subnet.maskbits;
-
-	msg.add_conn.other.id = push_string(&msg, conn->right.id);
-	msg.add_conn.other.cert = push_string(&msg, conn->right.cert);
-	msg.add_conn.other.address = push_string(&msg, inet_ntoa(conn->right.addr.u.v4.sin_addr));
-	msg.add_conn.other.subnet = push_string(&msg, inet_ntoa(conn->right.subnet.addr.u.v4.sin_addr));
-	msg.add_conn.other.subnet_mask = conn->right.subnet.maskbits;
+	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->right);
+	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->left);
 
 	return send_stroke_msg(&msg);
 }

@@ -230,6 +230,15 @@ struct policy_t {
 	void (*add_proposal) (policy_t *this, proposal_t *proposal);
 	
 	/**
+	 * @brief Add certification authorities
+	 * 
+	 * @param this					calling object
+	 * @param my_ca					issuer of my certificate
+	 * @param other_ca				required issuer of the peer's certificate
+	 */
+	void (*add_authorities) (policy_t *this, identification_t *my_ca, identification_t *other_ca);
+
+	/**
 	 * @brief Get the lifetime of a policy, before rekeying starts.
 	 * 
 	 * A call to this function automatically adds a jitter to

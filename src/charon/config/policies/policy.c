@@ -57,6 +57,16 @@ struct private_policy_t {
 	identification_t *other_id;
 	
 	/**
+	 * we have a cert issued by this CA
+	 */
+	identification_t *my_ca;
+	
+	/**
+	 * we require the other end to have a cert issued by this CA
+	 */
+	identification_t *other_ca;
+	
+	/**
 	 * list for all proposals
 	 */
 	linked_list_t *proposals;
@@ -268,6 +278,15 @@ static proposal_t *select_proposal(private_policy_t *this, linked_list_t *propos
 }
 
 /**
+ * Implementation of policy_t.add_authorities
+ */
+static void add_authorities(private_policy_t *this, identification_t *my_ca, identification_t *other_ca)
+{
+	this->my_ca = my_ca;
+	this->other_ca = other_ca;
+}
+
+/**
  * Implementation of policy_t.add_my_traffic_selector
  */
 static void add_my_traffic_selector(private_policy_t *this, traffic_selector_t *traffic_selector)
@@ -320,6 +339,10 @@ static policy_t *clone(private_policy_t *this)
 	proposal_t *proposal;
 	traffic_selector_t *ts;
 	
+	/* clone the certification authorities */
+	clone->my_ca = this->my_ca->clone(this->my_ca);
+	clone->other_ca = this->other_ca->clone(this->other_ca);
+
 	/* clone all proposals */
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
 	while (iterator->has_next(iterator))
@@ -383,6 +406,10 @@ static status_t destroy(private_policy_t *this)
 	}
 	this->other_ts->destroy(this->other_ts);
 	
+	/* delete certification authorities */
+	this->my_ca->destroy(this->my_ca);
+	this->other_ca->destroy(this->other_ca);
+
 	/* delete ids */
 	this->my_id->destroy(this->my_id);
 	this->other_id->destroy(this->other_id);
@@ -416,17 +443,20 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.add_my_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_my_traffic_selector;
 	this->public.add_other_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_other_traffic_selector;
 	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
+	this->public.add_authorities = (void(*)(policy_t*,identification_t*, identification_t*))add_authorities;
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
 	this->public.clone = (policy_t*(*)(policy_t*))clone;
 	this->public.destroy = (void(*)(policy_t*))destroy;
 	
 	/* apply init values */
+	this->name = strdup(name);
 	this->my_id = my_id;
 	this->other_id = other_id;
-	this->name = strdup(name);
 	
-	/* init private members*/
+	/* initialize private members*/
+	this->my_ca = NULL;
+	this->other_ca = NULL;
 	this->select_traffic_selectors = select_traffic_selectors;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();

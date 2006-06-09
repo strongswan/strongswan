@@ -73,7 +73,7 @@ struct private_stroke_t {
 	int socket;
 	
 	/**
-	 * Thread which reads from the socket
+	 * Thread which reads from the ocket
 	 */
 	pthread_t assigned_thread;
 
@@ -112,7 +112,7 @@ static void pop_string(stroke_msg_t *msg, char **string)
 /**
  * Load end entitity certificate
  */
-static void load_end_certificate(const char *filename, identification_t **idp)
+static void load_end_certificate(const char *filename, identification_t **idp, logger_t *logger)
 {
 	char path[PATH_BUF];
 	x509_t *cert;
@@ -135,6 +135,12 @@ static void load_end_certificate(const char *filename, identification_t **idp)
 		identification_t *id = *idp;
 		identification_t *subject = cert->get_subject(cert);
 
+		err_t ugh = cert->is_valid(cert, NULL);
+
+		if (ugh != NULL)	
+		{
+			logger->log(logger, ERROR, "warning: certificate %s", ugh);
+		}
 		if (!id->equals(id, subject) && !cert->equals_subjectAltName(cert, id))
 		{
 			id->destroy(id);
@@ -152,7 +158,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 {
 	connection_t *connection;
 	policy_t *policy;
-	identification_t *my_id, *other_id;
+	identification_t *my_id, *other_id, *my_ca, *other_ca;
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
@@ -160,12 +166,14 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	pop_string(msg, &msg->add_conn.name);
 	pop_string(msg, &msg->add_conn.me.address);
 	pop_string(msg, &msg->add_conn.other.address);
+	pop_string(msg, &msg->add_conn.me.subnet);
+	pop_string(msg, &msg->add_conn.other.subnet);
 	pop_string(msg, &msg->add_conn.me.id);
 	pop_string(msg, &msg->add_conn.other.id);
 	pop_string(msg, &msg->add_conn.me.cert);
 	pop_string(msg, &msg->add_conn.other.cert);
-	pop_string(msg, &msg->add_conn.me.subnet);
-	pop_string(msg, &msg->add_conn.other.subnet);
+	pop_string(msg, &msg->add_conn.me.ca);
+	pop_string(msg, &msg->add_conn.other.ca);
 				
 	this->logger->log(this->logger, CONTROL, "received stroke: add connection \"%s\"", msg->add_conn.name);
 				
@@ -232,6 +240,10 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 				
+	/* TODO check for %same */
+	my_ca = identification_create_from_string(msg->add_conn.me.ca);
+	other_ca = identification_create_from_string(msg->add_conn.other.ca);
+
 	my_ts = traffic_selector_create_from_subnet(my_subnet, msg->add_conn.me.subnet ?
 														   msg->add_conn.me.subnet_mask : 32);
 	my_subnet->destroy(my_subnet);
@@ -245,7 +257,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is other host, switching");
 		
 		host_t *tmp_host;
-		identification_t *tmp_id;
+		identification_t *tmp_id, *tmp_ca;
 		traffic_selector_t *tmp_ts;
 		char *tmp_cert;
 		
@@ -256,6 +268,10 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		tmp_id   = my_id;
 		my_id    = other_id;
 		other_id = tmp_id;
+
+		tmp_ca   = my_ca;
+		my_ca    = other_ca;
+		other_ca = tmp_ca;
 
 		tmp_ts   = my_ts;
 		my_ts    = other_ts;
@@ -284,11 +300,11 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	
 	if (msg->add_conn.me.cert)
 	{
-		load_end_certificate(msg->add_conn.me.cert, &my_id);
+		load_end_certificate(msg->add_conn.me.cert, &my_id, this->stroke_logger);
 	}
 	if (msg->add_conn.other.cert)
 	{
-		load_end_certificate(msg->add_conn.other.cert, &other_id);
+		load_end_certificate(msg->add_conn.other.cert, &other_id, this->stroke_logger);
 	}
 	
 	connection = connection_create(msg->add_conn.name, msg->add_conn.ikev2,
@@ -323,6 +339,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	policy->add_proposal(policy, proposal);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
+	policy->add_authorities(policy, my_ca, other_ca);
 
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);

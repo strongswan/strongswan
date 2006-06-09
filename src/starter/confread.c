@@ -82,6 +82,9 @@ static void default_values(starter_config_t *cfg)
 	cfg->conn_default.left.seen  = LEMPTY;
 	cfg->conn_default.right.seen = LEMPTY;
 
+	cfg->conn_default.left.sendcert  = CERT_SEND_IF_ASKED;
+	cfg->conn_default.right.sendcert = CERT_SEND_IF_ASKED;
+
 	anyaddr(AF_INET, &cfg->conn_default.left.addr);
 	anyaddr(AF_INET, &cfg->conn_default.left.nexthop);
 	anyaddr(AF_INET, &cfg->conn_default.left.srcip);

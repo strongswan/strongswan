@@ -30,6 +30,18 @@
 
 #define STROKE_BUF_LEN		2048
 
+typedef struct stroke_end_t stroke_end_t;
+
+struct stroke_end_t {
+	char *id;
+	char *cert;
+	char *ca;
+	char *address;
+	char *subnet;
+	int subnet_mask;
+	certpolicy_t sendcert;
+};
+
 typedef struct stroke_msg_t stroke_msg_t;
 
 /**
@@ -73,15 +85,8 @@ struct stroke_msg_t {
 		/* data for STR_ADD_CONN */
 		struct {
 			char *name;
-			/* is this connection handled by charon? */
-			int ikev2;
-			struct {
-				char *id;
-				char *cert;
-				char *address;
-				char *subnet;
-				int subnet_mask;
-			} me, other;
+			bool ikev2;
+			stroke_end_t me, other;
 		} add_conn;
 
 		struct {

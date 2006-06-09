@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <linux/stddef.h>
 
+#include <types.h>
+
 #include "stroke.h"
 
 #define streq(a, b) (strcmp((a), (b)) == 0) /* clearer shorthand */
@@ -106,12 +108,16 @@ static int add_connection(char *name,
 	msg.add_conn.me.subnet = push_string(&msg, my_net);
 	msg.add_conn.me.subnet_mask = my_netmask;
 	msg.add_conn.me.cert = NULL;
+	msg.add_conn.me.ca = NULL;
+	msg.add_conn.me.sendcert = CERT_SEND_IF_ASKED;
 	
 	msg.add_conn.other.id = push_string(&msg, other_id);
 	msg.add_conn.other.address = push_string(&msg, other_addr);
 	msg.add_conn.other.subnet = push_string(&msg, other_net);
 	msg.add_conn.other.subnet_mask = other_netmask;
 	msg.add_conn.other.cert = NULL;
+	msg.add_conn.other.ca = NULL;
+	msg.add_conn.other.sendcert = CERT_SEND_IF_ASKED;
 	
 	return send_stroke_msg(&msg);
 }
