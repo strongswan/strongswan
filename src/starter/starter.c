@@ -246,7 +246,7 @@ int main (int argc, char **argv)
     /* determine if we have a native netkey IPsec stack */
     if (!starter_netkey_init())
     {
-	plog("nor netkey IPSec stack detected");
+	plog("no netkey IPSec stack detected");
 	exit(1);
     }
 
