@@ -54,7 +54,7 @@ struct x509_t {
 	 * @param this				calling object
 	 * @return					public_key
 	 */
-	rsa_public_key_t *(*get_public_key) (x509_t *this);
+	rsa_public_key_t *(*get_public_key) (const x509_t *this);
 		
 	/**
 	 * @brief Get the certificate issuers ID.
@@ -65,7 +65,7 @@ struct x509_t {
 	 * @param this				calling object
 	 * @return					issuers ID
 	 */
-	identification_t *(*get_issuer) (x509_t *this);
+	identification_t *(*get_issuer) (const x509_t *this);
 		
 	/**
 	 * @brief Get the subjects ID.
@@ -76,7 +76,7 @@ struct x509_t {
 	 * @param this				calling object
 	 * @return					subjects ID
 	 */
-	identification_t *(*get_subject) (x509_t *this);
+	identification_t *(*get_subject) (const x509_t *this);
 	
 	/**
 	 * @brief Check if a certificate is valid.
@@ -86,14 +86,14 @@ struct x509_t {
 	 * 
 	 * @todo implement!
 	 */
-	bool (*verify) (x509_t *this, rsa_public_key_t *signer);
+	bool (*verify) (const x509_t *this, rsa_public_key_t *signer);
 	
 	/**
 	 * @brief Get the key identifier of the public key.
 	 * 
 	 * @todo implement!
 	 */
-	chunk_t (*get_subject_key_identifier) (x509_t *this);
+	chunk_t (*get_subject_key_identifier) (const x509_t *this);
 	
 	/**
 	 * @brief Compare two certificates.
@@ -102,18 +102,35 @@ struct x509_t {
 	 * 
 	 * @param this			first cert for compare
 	 * @param other			second cert for compare
-	 * @return				TRUE if signature is equal
+	 * @return			TRUE if signature is equal
 	 */
-	bool (*equals) (x509_t *this, x509_t *that);
+	bool (*equals) (const x509_t *this, const x509_t *that);
 	
 	/**
 	 * @brief Checks if the certificate contains a subjectAltName equal to id.
 	 * 
 	 * @param this			certificate being examined
 	 * @param id			id which is being compared to the subjectAltNames
-	 * @return				TRUE if a match is found
+	 * @return			TRUE if a match is found
 	 */
-	bool (*equals_subjectAltName) (x509_t *this, identification_t *id);
+	bool (*equals_subjectAltName) (const x509_t *this, identification_t *id);
+
+	/**
+	 * @brief Checks the validity interval of the certificate
+	 * 
+	 * @param this			certificate being examined
+	 * @param until			until = min(until, notAfter)
+	 * @return			NULL if the certificate is valid
+	 */
+	err_t (*is_valid) (const x509_t *this, time_t *until);
+	
+	/**
+	 * @brief Returns the CA basic constraints flag
+	 * 
+	 * @param this			certificate being examined
+	 * @return			TRUE if the CA flag is set
+	 */
+	bool (*is_ca) (const x509_t *this);
 	
 	/**
 	 * @brief Destroys the certificate.
@@ -130,7 +147,7 @@ struct x509_t {
 	 * @param utc			log dates either in UTC or local time
 	 * @param has_key		a matching private key is available
 	 */
-	 void (*log_certificate) (x509_t *this, logger_t *logger, bool utc, bool has_key);
+	 void (*log_certificate) (const x509_t *this, logger_t *logger, bool utc, bool has_key);
 };
 
 /**

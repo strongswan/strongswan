@@ -44,7 +44,7 @@
 
 #define CERT_WARNING_INTERVAL	30	/* days */
 
-logger_t *logger;
+static logger_t *logger;
 
 /**
  * Different kinds of generalNames
@@ -144,12 +144,16 @@ struct private_x509_t {
 	 */
 	chunk_t authKeySerialNumber;
 	
+	/**
+	 * CA basic constraints flag
+	 */
+	bool isCA;
+
 	u_char authority_flags;
 	chunk_t tbsCertificate;
 	/*   signature */
 	int sigAlg;
 	chunk_t subjectPublicKey;
-	bool isCA;
 	bool isOcspSigner; /* ocsp */
 	chunk_t accessLocation; /* ocsp */
 	/* signatureAlgorithm */
@@ -373,7 +377,7 @@ static const chunk_t ASN1_subjectAltName_oid = chunk_from_buf(ASN1_subjectAltNam
 /**
  * compare two X.509 x509s by comparing their signatures
  */
-static bool equals(private_x509_t *this, private_x509_t *other)
+static bool equals(const private_x509_t *this, const private_x509_t *other)
 {
 	return chunk_equals(this->signature, other->signature);
 }
@@ -400,7 +404,7 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
 		if (objectID == BASIC_CONSTRAINTS_CA)
 		{
 			isCA = object.len && *object.ptr;
-			logger->log(logger, CONTROL|LEVEL1, "  %s", isCA ? "TRUE" : "FALSE");
+			logger->log(logger, CONTROL|LEVEL2, "  %s", isCA ? "TRUE" : "FALSE");
 		}
 		objectID++;
 	}
@@ -498,7 +502,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 		if (id_type != ID_ANY)
 		{
 			identification_t *gn = identification_create_from_encoding(id_type, object);
-			logger->log(logger, CONTROL|LEVEL1, "  '%s'", gn->get_string(gn));
+			logger->log(logger, CONTROL|LEVEL2, "  '%s'", gn->get_string(gn));
 			return gn;
         }
 		objectID++;
@@ -649,7 +653,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessL
 						{
 							if (asn1_length(&object) == ASN1_INVALID_LENGTH)
 								return;
-							logger->log(logger, CONTROL|LEVEL1, "  '%.*s'",(int)object.len, object.ptr);
+							logger->log(logger, CONTROL|LEVEL2, "  '%.*s'",(int)object.len, object.ptr);
 							/* only HTTP(S) URIs accepted */
 							if (strncasecmp(object.ptr, "http", 4) == 0)
 							{
@@ -729,7 +733,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0, linked_list_t 
 
 
 /**
- * Parses an X.509v3 x509
+ * Parses an X.509v3 certificate
  */
 bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 {
@@ -758,7 +762,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_VERSION:
 				cert->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				logger->log(logger, CONTROL|LEVEL1, "  v%d", cert->version);
+				logger->log(logger, CONTROL|LEVEL2, "  v%d", cert->version);
 				break;
 			case X509_OBJ_SERIAL_NUMBER:
 				cert->serialNumber = object;
@@ -807,7 +811,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_CRITICAL:
 				critical = object.len && *object.ptr;
-				logger->log(logger, ERROR|LEVEL1, "  %s", critical ? "TRUE" : "FALSE");
+				logger->log(logger, ERROR|LEVEL2, "  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case X509_OBJ_EXTN_VALUE:
 			{
@@ -861,37 +865,46 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 }
 
 /**
- * verify the validity of a x509 by
- * checking the notBefore and notAfter dates
+ * Implements x509_t.is_valid
  */
-err_t check_validity(const private_x509_t *cert, time_t *until)
+static err_t is_valid(const private_x509_t *this, time_t *until)
 {
-	time_t current_time;
+	char buf[TIMETOA_BUF];
+
+	time_t current_time = time(NULL);
 	
-	time(&current_time);
-	
-	if (cert->notAfter < *until) 
+	timetoa(buf, BUF_LEN, &this->notBefore, TRUE);
+	logger->log(logger, CONTROL|LEVEL1, "  not before  : %s", buf);
+	timetoa(buf, BUF_LEN, &current_time, TRUE);
+	logger->log(logger, CONTROL|LEVEL1, "  current time: %s", buf);
+	timetoa(buf, BUF_LEN, &this->notAfter, TRUE);
+	logger->log(logger, CONTROL|LEVEL1, "  not after   : %s", buf);
+
+	if (until != NULL
+	&& (*until == UNDEFINED_TIME || this->notAfter < *until)) 
 	{
-		*until = cert->notAfter;
+		*until = this->notAfter;
 	}
-	if (current_time < cert->notBefore)
-	{
-		return "x509 is not valid yet";
-	}
-	if (current_time > cert->notAfter)
-	{
-		return "x509 has expired";
-	}
-	else
-	{
-		return NULL;
-	}
+	if (current_time < this->notBefore)
+		return "is not valid yet";
+	if (current_time > this->notAfter)
+		return "has expired";
+	logger->log(logger, CONTROL|LEVEL1, "  certificate is valid", buf);
+	return NULL;
+}
+
+/**
+ * Implements x509_t.is_ca
+ */
+static bool is_ca(const private_x509_t *this)
+{
+	return this->isCA;
 }
 
 /**
  * Implements x509_t.equals_subjectAltName
  */
-static bool equals_subjectAltName(private_x509_t *this, identification_t *id)
+static bool equals_subjectAltName(const private_x509_t *this, identification_t *id)
 {
 	bool found = FALSE;
 	iterator_t *iterator = this->subjectAltNames->create_iterator(this->subjectAltNames, TRUE);
@@ -914,7 +927,7 @@ static bool equals_subjectAltName(private_x509_t *this, identification_t *id)
 /**
  * Implements x509_t.get_public_key
  */
-static rsa_public_key_t *get_public_key(private_x509_t *this)
+static rsa_public_key_t *get_public_key(const private_x509_t *this)
 {
 	return this->public_key->clone(this->public_key);
 }
@@ -922,7 +935,7 @@ static rsa_public_key_t *get_public_key(private_x509_t *this)
 /**
  * Implements x509_t.get_subject
  */
-static identification_t *get_subject(private_x509_t *this)
+static identification_t *get_subject(const private_x509_t *this)
 {
 	return this->subject;
 }
@@ -930,7 +943,7 @@ static identification_t *get_subject(private_x509_t *this)
 /**
  * Implements x509_t.get_issuer
  */
-static identification_t *get_issuer(private_x509_t *this)
+static identification_t *get_issuer(const private_x509_t *this)
 {
 	return this->issuer;
 }
@@ -966,10 +979,10 @@ static void destroy(private_x509_t *this)
 	free(this);
 }
 
-/** checks if the expiration date has been reached and
- *  warns during the warning_interval of the imminent
- *  expiry. strict=TRUE declares a fatal error,
- *  strict=FALSE issues a warning upon expiry.
+/**
+ * checks if the expiration date has been reached and warns during the
+  * warning_interval of the imminent expiration.
+  * strict=TRUE declares a fatal error, strict=FALSE issues a warning upon expiry.
  */
 char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
 {
@@ -1012,27 +1025,29 @@ char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
 /**
  * log certificate
  */
-static void log_certificate(private_x509_t *this, logger_t *logger, bool utc, bool has_key)
+static void log_certificate(const private_x509_t *this, logger_t *logger, bool utc, bool has_key)
 {
 	identification_t *subject = this->subject;
 	identification_t *issuer = this->issuer;
 	rsa_public_key_t *pubkey = this->public_key;
 
 	char buf[BUF_LEN];
-    time_t now;
 
     /* determine the current time */
-    time(&now);
+    time_t now = time(NULL);
 
 	timetoa(buf, BUF_LEN, &this->installed, utc);
 	logger->log(logger, CONTROL, "%s", buf);
 	logger->log(logger, CONTROL, "       subject: '%s'", subject->get_string(subject));
 	logger->log(logger, CONTROL, "       issuer:  '%s'", issuer->get_string(issuer));
+	
 	chunk_to_hex(buf, BUF_LEN, this->serialNumber);
 	logger->log(logger, CONTROL, "       serial:   %s", buf);
+	
 	timetoa(buf, BUF_LEN, &this->notBefore, utc);
 	logger->log(logger, CONTROL, "       validity: not before %s %s", buf,
 				(this->notBefore < now)? "ok":"fatal (not valid yet)");
+	
 	timetoa(buf, BUF_LEN, &this->notAfter, utc);
 	logger->log(logger, CONTROL, "                 not after  %s %s", buf,
 			check_expiry(this->notAfter, CERT_WARNING_INTERVAL, TRUE));
@@ -1066,15 +1081,6 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 {
 	private_x509_t *this = malloc_thing(private_x509_t);
 	
-	/* public functions */
-	this->public.equals = (bool (*) (x509_t*,x509_t*))equals;
-	this->public.equals_subjectAltName = (bool (*) (x509_t*,identification_t*))equals_subjectAltName;
-	this->public.destroy = (void (*) (x509_t*))destroy;
-	this->public.get_public_key = (rsa_public_key_t* (*) (x509_t*))get_public_key;
-	this->public.get_subject = (identification_t* (*) (x509_t*))get_subject;
-	this->public.get_issuer = (identification_t* (*) (x509_t*))get_issuer;
-	this->public.log_certificate = (void (*) (x509_t*,logger_t*,bool,bool))log_certificate;
-	
 	/* initialize */
 	this->subjectPublicKey = CHUNK_INITIALIZER;
 	this->public_key = NULL;
@@ -1086,22 +1092,34 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->authKeyID = CHUNK_INITIALIZER;
 	this->authKeySerialNumber = CHUNK_INITIALIZER;
 	
+	/* public functions */
+	this->public.equals = (bool (*) (const x509_t*,const x509_t*))equals;
+	this->public.equals_subjectAltName = (bool (*) (const x509_t*,identification_t*))equals_subjectAltName;
+	this->public.is_valid = (err_t (*) (const x509_t*,time_t*))is_valid;
+	this->public.is_ca = (bool (*) (const x509_t*))is_ca;
+	this->public.destroy = (void (*) (x509_t*))destroy;
+	this->public.get_public_key = (rsa_public_key_t* (*) (const x509_t*))get_public_key;
+	this->public.get_subject = (identification_t* (*) (const x509_t*))get_subject;
+	this->public.get_issuer = (identification_t* (*) (const x509_t*))get_issuer;
+	this->public.log_certificate = (void (*) (const x509_t*,logger_t*,bool,bool))log_certificate;
+
 	/* we do not use a per-instance logger right now, since its not always accessible */
 	logger = logger_manager->get_logger(logger_manager, ASN1);
 	
-	if (!is_asn1(chunk) || !parse_x509cert(chunk, 0, this))
+	if (!parse_x509cert(chunk, 0, this))
 	{
 		destroy(this);
 		return NULL;
 	}
-	
+
+	/* extract public key from certificate */
 	this->public_key = rsa_public_key_create_from_chunk(this->subjectPublicKey);
 	if (this->public_key == NULL)
 	{
 		destroy(this);
 		return NULL;
 	}
-	
+
 	return &this->public;
 }
 
