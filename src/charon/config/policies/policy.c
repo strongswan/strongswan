@@ -340,9 +340,15 @@ static policy_t *clone(private_policy_t *this)
 	traffic_selector_t *ts;
 	
 	/* clone the certification authorities */
-	clone->my_ca = this->my_ca->clone(this->my_ca);
-	clone->other_ca = this->other_ca->clone(this->other_ca);
-
+	if (this->my_ca)
+	{
+		clone->my_ca = this->my_ca->clone(this->my_ca);
+	}
+	if (this->other_ca)
+	{
+		clone->other_ca = this->other_ca->clone(this->other_ca);
+	}
+	
 	/* clone all proposals */
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
 	while (iterator->has_next(iterator))
@@ -407,8 +413,14 @@ static status_t destroy(private_policy_t *this)
 	this->other_ts->destroy(this->other_ts);
 	
 	/* delete certification authorities */
-	this->my_ca->destroy(this->my_ca);
-	this->other_ca->destroy(this->other_ca);
+	if (this->my_ca)
+	{
+		this->my_ca->destroy(this->my_ca);
+	}
+	if (this->other_ca)
+	{
+		this->other_ca->destroy(this->other_ca);
+	}
 
 	/* delete ids */
 	this->my_id->destroy(this->my_id);
