@@ -311,7 +311,7 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 			oid = known_oid(object);
 			if (oid != OID_UNKNOWN)
 			{
-				logger->log(logger, CONTROL|LEVEL1, "  '%s'", oid_names[oid].name);
+				logger->log(logger, CONTROL|LEVEL2, "  '%s'", oid_names[oid].name);
 				return;
 			}
 			break;
@@ -320,7 +320,7 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 		case ASN1_PRINTABLESTRING:
 		case ASN1_T61STRING:
 		case ASN1_VISIBLESTRING:
-			logger->log(logger, CONTROL|LEVEL1, "  '%.*s'", (int)object.len, object.ptr);
+			logger->log(logger, CONTROL|LEVEL2, "  '%.*s'", (int)object.len, object.ptr);
 			return;
 		case ASN1_UTCTIME:
 		case ASN1_GENERALIZEDTIME:
@@ -329,7 +329,7 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 				time_t time = asn1totime(&object, type);
 
 				timetoa(buf, TIMETOA_BUF, &time, TRUE);
-				logger->log(logger, CONTROL|LEVEL1, "  '%s'", buf);
+				logger->log(logger, CONTROL|LEVEL2, "  '%s'", buf);
 			}
 			return;
 		default:
@@ -373,7 +373,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	if ((obj.flags & ASN1_DEF) && (blob->len == 0 || *start_ptr != obj.type) )
 	{
 		/* field is missing */
-		logger->log(logger, CONTROL|LEVEL1, "L%d - %s:", *level, obj.name);
+		logger->log(logger, CONTROL|LEVEL2, "L%d - %s:", *level, obj.name);
 		if (obj.type & ASN1_CONSTRUCTED)
 		{
 			(*objectID)++ ;  /* skip context-specific tag */
@@ -420,7 +420,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	
 	if (obj.flags & ASN1_RAW)
 	{
-		logger->log(logger, CONTROL|LEVEL1, "L%d - %s:", *level, obj.name);
+		logger->log(logger, CONTROL|LEVEL2, "L%d - %s:", *level, obj.name);
 		object->ptr = start_ptr;
 		object->len = (size_t)(blob->ptr - start_ptr);
 		return TRUE;
@@ -434,7 +434,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 		return FALSE;
 	}
 	
-	logger->log(logger, CONTROL|LEVEL1, "L%d - %s:", ctx->level0+obj.level, obj.name);
+	logger->log(logger, CONTROL|LEVEL2, "L%d - %s:", ctx->level0+obj.level, obj.name);
 	
 	/* In case of "SEQUENCE OF" or "SET OF" start a loop */	
 	if (obj.flags & ASN1_LOOP)
@@ -459,7 +459,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	{
 		object->ptr = start_ptr;
 		object->len = (size_t)(blob->ptr - start_ptr);
-		logger->log_chunk(logger, RAW|LEVEL1, "", *object);
+		logger->log_chunk(logger, RAW|LEVEL2, "", *object);
 	}
 	else if (obj.flags & ASN1_BODY)
 	{
@@ -500,7 +500,7 @@ bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 		return FALSE;
 	}
 	
-	logger->log(logger, CONTROL|LEVEL1, "L%d - %s:", level, name);
+	logger->log(logger, CONTROL|LEVEL2, "L%d - %s:", level, name);
 	debug_asn1_simple_object(*object, type);
 	return TRUE;
 }
