@@ -135,8 +135,7 @@ struct kernel_interface_t {
 	 * @param dst_hostbits	subnetmask to use for dst address
 	 * @param direction		direction of traffic, XFRM_POLICY_OUT, XFRM_POLICY_IN, XFRM_POLICY_FWD
 	 * @param upper_proto	upper layer protocol of traffic for this policy (TCP, UDP, ICMP, ...)
-	 * @param ah			protect traffic with AH?
-	 * @param esp			protect traffic with ESP?
+	 * @param protocol		protocol to use to protect traffic (AH/ESP)
 	 * @param reqid			uniqe ID of an SA to use to enforce policy
 	 * @return
 	 * 						- SUCCESS
@@ -147,7 +146,7 @@ struct kernel_interface_t {
 				host_t *src, host_t *dst,
 				u_int8_t src_hostbits, u_int8_t dst_hostbits,
 				int direction, int upper_proto, 
-				bool ah, bool esp,
+				protocol_id_t protocol,
 				u_int32_t reqid);
 	
 	/**

@@ -73,7 +73,7 @@ struct xfrm_data_t {
 		/** algorithm */
 		struct xfrm_algo algo;
 		/** policy tmpl */
-		struct xfrm_user_tmpl tmpl[2];
+		struct xfrm_user_tmpl tmpl;
 	};
 };
 
@@ -263,8 +263,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 	netlink_message_t request, *response;
 	status_t status = SUCCESS;
 	
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "getting spi");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Getting SPI for reqid %d", reqid);
 	
 	memset(&request, 0, sizeof(request));
 	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.spi)));
@@ -316,7 +315,7 @@ static status_t add_sa(	private_kernel_interface_t *this,
 						host_t *me,
 						host_t *other,
 						u_int32_t spi,
-						int protocol,
+						protocol_id_t protocol,
 						u_int32_t reqid,
 						u_int64_t expire_soft,
 						u_int64_t expire_hard,
@@ -332,7 +331,8 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	
 	memset(&request, 0, sizeof(request));
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "adding SA");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Adding %s SA with SPI 0x%x, reqid %d to kernel",
+					  mapping_find(protocol_id_m, protocol), htonl(spi), reqid);
 	
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	request.hdr.nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
@@ -371,7 +371,8 @@ static status_t add_sa(	private_kernel_interface_t *this,
 							  mapping_find(encryption_algorithm_m, enc_alg->algorithm));
 			return FAILED;
 		}
-		this->logger->log(this->logger, CONTROL|LEVEL2, "using key size %d", key_size);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "  using encryption algorithm %s with key size %d",
+						  mapping_find(encryption_algorithm_m, enc_alg->algorithm), key_size);
 		data->length = 4 + sizeof(data->algo) + key_size;
 		data->algo.alg_key_len = key_size;
 		request.hdr.nlmsg_len += data->length;
@@ -395,7 +396,8 @@ static status_t add_sa(	private_kernel_interface_t *this,
 							  mapping_find(integrity_algorithm_m, int_alg->algorithm));
 			return FAILED;
 		}
-		this->logger->log(this->logger, CONTROL|LEVEL2, "using key size %d", key_size);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "  using integrity algorithm %s with key size %d",
+						  mapping_find(integrity_algorithm_m, int_alg->algorithm), key_size);
 		data->length = 4 + sizeof(data->algo) + key_size;
 		data->algo.alg_key_len = key_size;
 		request.hdr.nlmsg_len += data->length;
@@ -439,7 +441,8 @@ static status_t del_sa(	private_kernel_interface_t *this,
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting SA");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Deleting %s SA with SPI 0x%x from kernel",
+					  mapping_find(protocol_id_m, protocol), htonl(spi));
 	
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	request.hdr.nlmsg_type = XFRM_MSG_DELSA;
@@ -454,14 +457,18 @@ static status_t del_sa(	private_kernel_interface_t *this,
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_DELSA not acknowledged");
 		status = FAILED;
 	}
 	else if (response->e.error)
 	{
+		this->logger->log(this->logger, ERROR|LEVEL1, "netlink request XFRM_MSG_DELSA received error: %s",
+						  strerror(-response->e.error));
 		status = FAILED;
 	}
 	
@@ -476,14 +483,16 @@ static status_t add_policy(private_kernel_interface_t *this,
 						  host_t *me, host_t *other, 
 						  host_t *src, host_t *dst,
 						  u_int8_t src_hostbits, u_int8_t dst_hostbits,
-						  int direction, int upper_proto, 
-						  bool ah, bool esp,
+						  int direction, int upper_proto,
+						  protocol_id_t protocol,
 						  u_int32_t reqid)
 {
 	netlink_message_t request, *response;
 	status_t status = SUCCESS;
+	xfrm_data_t *data;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "adding policy");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Adding %s policy with reqid %d to kernel",
+					  mapping_find(protocol_id_m, protocol), reqid);
 	
 	memset(&request, 0, sizeof(request));
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -516,39 +525,18 @@ static status_t add_policy(private_kernel_interface_t *this,
 	request.sa.lft.soft_use_expires_seconds = 0;
 	request.sa.lft.hard_use_expires_seconds = 0;
 	
-	if (esp || ah)
-	{
-		xfrm_data_t *data;
-		int tmpl_pos = 0;
-		data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
-		data->type = XFRMA_TMPL;
-		if (esp)
-		{
-			data->tmpl[tmpl_pos].reqid = reqid;
-			data->tmpl[tmpl_pos].id.proto = KERNEL_ESP;
-			data->tmpl[tmpl_pos].aalgos = data->tmpl[tmpl_pos].ealgos = data->tmpl[tmpl_pos].calgos = ~0;
-			data->tmpl[tmpl_pos].mode = TRUE;
-			
-			data->tmpl[tmpl_pos].saddr = me->get_xfrm_addr(me);
-			data->tmpl[tmpl_pos].id.daddr = me->get_xfrm_addr(other);
-			
-			tmpl_pos++;
-		}	
-		if (ah)
-		{
-			data->tmpl[tmpl_pos].reqid = reqid;
-			data->tmpl[tmpl_pos].id.proto = KERNEL_AH;
-			data->tmpl[tmpl_pos].aalgos = data->tmpl[tmpl_pos].ealgos = data->tmpl[tmpl_pos].calgos = ~0;
-			data->tmpl[tmpl_pos].mode = TRUE;
-			
-			data->tmpl[tmpl_pos].saddr = me->get_xfrm_addr(me);
-			data->tmpl[tmpl_pos].id.daddr = other->get_xfrm_addr(other);
-			
-			tmpl_pos++;
-		}
-		data->length = 4 + sizeof(struct xfrm_user_tmpl) * tmpl_pos;
-		request.hdr.nlmsg_len += data->length;
-	}
+	data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
+	data->type = XFRMA_TMPL;
+	
+	data->tmpl.reqid = reqid;
+	data->tmpl.id.proto = protocol == PROTO_AH ? KERNEL_AH : KERNEL_ESP;
+	data->tmpl.aalgos = data->tmpl.ealgos = data->tmpl.calgos = ~0;
+	data->tmpl.mode = TRUE;
+	data->tmpl.saddr = me->get_xfrm_addr(me);
+	data->tmpl.id.daddr = me->get_xfrm_addr(other);
+	
+	data->length = 4 + sizeof(struct xfrm_user_tmpl);
+	request.hdr.nlmsg_len += data->length;
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
@@ -583,8 +571,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 	netlink_message_t request, *response;
 	status_t status = SUCCESS;
 	
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting policy");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Removing policy from kernel");
 	
 	memset(&request, 0, sizeof(request));
 	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -607,14 +594,18 @@ static status_t del_policy(private_kernel_interface_t *this,
 	
 	if (this->send_message(this, &request, &response) != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_DELPOLICY not acknowledged");
 		status = FAILED;
 	}
 	else if (response->e.error)
 	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_DELPOLICY received error: %s",
+						  strerror(-response->e.error));
 		status = FAILED;
 	}
 	
@@ -801,7 +792,7 @@ kernel_interface_t *kernel_interface_create()
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,bool))add_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,bool,bool,u_int32_t))add_policy;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,protocol_id_t,u_int32_t))add_policy;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int))del_policy;
 	

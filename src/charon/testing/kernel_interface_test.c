@@ -66,11 +66,11 @@ void test_kernel_interface(protected_tester_t *tester)
 	left = host_create(AF_INET, "10.1.0.0", 0);
 	right = host_create(AF_INET, "10.2.0.0", 0);
 	
-	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0, TRUE, FALSE, 1234);
+	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0, PROTO_ESP, 1234);
 	tester->assert_true(tester, status == SUCCESS, "add policy OUT");
-	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_IN, 0, TRUE, FALSE, 1234);
+	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_IN, 0, PROTO_ESP, 1234);
 	tester->assert_true(tester, status == SUCCESS, "add policy IN");
-	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_FWD, 0, TRUE, FALSE, 1234);
+	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_FWD, 0, PROTO_ESP, 1234);
 	tester->assert_true(tester, status == SUCCESS, "add policy FWD");
 	
 	me->destroy(me);

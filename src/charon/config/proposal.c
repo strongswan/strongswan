@@ -34,9 +34,9 @@
  */
 mapping_t protocol_id_m[] = {
 	{PROTO_NONE, "PROTO_NONE"},
-	{PROTO_IKE, "PROTO_IKE"},
-	{PROTO_AH, "PROTO_AH"},
-	{PROTO_ESP, "PROTO_ESP"},
+	{PROTO_IKE, "IKE"},
+	{PROTO_AH, "AH"},
+	{PROTO_ESP, "ESP"},
 	{MAPPING_END, NULL}
 };
 

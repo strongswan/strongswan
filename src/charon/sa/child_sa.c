@@ -146,7 +146,7 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 		status = charon->kernel_interface->get_spi(
 					charon->kernel_interface,
 					this->other.addr, this->me.addr,
-					protocol, FALSE,
+					protocol, this->reqid,
 					&this->me.spi);
 		
 		if (status != SUCCESS)
@@ -340,8 +340,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 					policy->me.net, policy->other.net,
 					policy->me.net_mask, policy->other.net_mask,
 					XFRM_POLICY_OUT, policy->upper_proto,
-					this->protocol == PROTO_AH,
-					this->protocol == PROTO_ESP,
+					this->protocol,
 					this->reqid);
 	
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
@@ -349,8 +348,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 					policy->other.net, policy->me.net,
 					policy->other.net_mask, policy->me.net_mask,
 					XFRM_POLICY_IN, policy->upper_proto,
-					this->protocol == PROTO_AH,
-					this->protocol == PROTO_ESP,
+					this->protocol,
 					this->reqid);
 	
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
@@ -358,8 +356,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 					policy->other.net, policy->me.net,
 					policy->other.net_mask, policy->me.net_mask,
 					XFRM_POLICY_FWD, policy->upper_proto,
-					this->protocol == PROTO_AH,
-					this->protocol == PROTO_ESP,
+					this->protocol,
 					this->reqid);
 			
 			if (status != SUCCESS)
