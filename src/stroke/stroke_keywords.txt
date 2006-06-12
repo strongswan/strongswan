@@ -1,0 +1,42 @@
+%{
+/* stroke keywords
+ * Copyright (C) 2006 Andreas Steffen
+ * Hochschule fuer Technik Rapperswil, Switzerland
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ *
+ * RCSID $Id: keywords.txt,v 1.6 2006/04/17 10:30:27 as Exp $
+ */
+
+#include <string.h>
+
+#include "stroke_keywords.h"
+
+%}
+struct stroke_token {
+    char *name;
+    stroke_keyword_t kw;
+};
+%%
+add,          STROKE_ADD
+del,          STROKE_DEL
+delete,       STROKE_DELETE
+route,        STROKE_ROUTE
+up,           STROKE_UP
+dowm,         STROKE_DOWN
+logtype,      STROKE_LOGTYPE
+logleve,      STROKE_LOGLEVEL
+status,       STROKE_STATUS
+statusall,    STROKE_STATUSALL
+listcerts,    STROKE_LIST_CERTS
+listcacerts,  STROKE_LIST_CACERTS
+listcrls,     STROKE_LIST_CRLS
+listall,      STROKE_LIST_ALL
