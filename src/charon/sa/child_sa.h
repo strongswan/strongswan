@@ -183,6 +183,7 @@ struct child_sa_t {
 /**
  * @brief Constructor to create a new child_sa_t.
  * 
+ * @param rekey_reqid	reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param me			own address
  * @param other			remote address
  * @param soft_lifetime	time before rekeying
@@ -191,6 +192,7 @@ struct child_sa_t {
  * 
  * @ingroup sa
  */
-child_sa_t * child_sa_create(host_t *me, host_t *other, u_int32_t soft_lifetime, u_int32_t hard_lifetime);
+child_sa_t * child_sa_create(u_int32_t rekey_reqid, host_t *me, host_t *other, 
+							 u_int32_t soft_lifetime, u_int32_t hard_lifetime);
 
 #endif /*CHILD_SA_H_*/

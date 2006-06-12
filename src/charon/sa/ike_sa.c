@@ -1025,7 +1025,8 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	request->add_payload(request, (payload_t*)notify);
 	
 	proposals = this->policy->get_proposals(this->policy);
-	child_sa = child_sa_create(this->connection->get_my_host(this->connection),
+	child_sa = child_sa_create(reqid,
+							   this->connection->get_my_host(this->connection),
 							   this->connection->get_other_host(this->connection),
 							   this->policy->get_soft_lifetime(this->policy),
 							   this->policy->get_hard_lifetime(this->policy));

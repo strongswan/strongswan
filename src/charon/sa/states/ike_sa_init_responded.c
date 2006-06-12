@@ -477,7 +477,8 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		
 		policy = this->ike_sa->get_policy(this->ike_sa);
 		connection = this->ike_sa->get_connection(this->ike_sa);
-		this->child_sa = child_sa_create(connection->get_my_host(connection),
+		this->child_sa = child_sa_create(0,
+										 connection->get_my_host(connection),
 										 connection->get_other_host(connection),
 										 policy->get_soft_lifetime(policy),
 										 policy->get_hard_lifetime(policy));

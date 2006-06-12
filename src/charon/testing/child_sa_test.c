@@ -49,8 +49,8 @@ void test_child_sa(protected_tester_t *tester)
 	remote_me = host_create(AF_INET, "192.168.0.3", 0);
 	remote_other = host_create(AF_INET, "192.168.0.4", 0);
 	
-	local_sa = child_sa_create(local_me, local_other, 5, 10);
-	remote_sa = child_sa_create(remote_me, remote_other, 5, 10);
+	local_sa = child_sa_create(0, local_me, local_other, 5, 10);
+	remote_sa = child_sa_create(0, remote_me, remote_other, 5, 10);
 	
 	proposal1 = proposal_create(PROTO_ESP);
 	proposal1->add_algorithm(proposal1, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 16);

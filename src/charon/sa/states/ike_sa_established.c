@@ -74,6 +74,11 @@ struct private_ike_sa_established_t {
 	 */
 	child_sa_t *child_sa;
 	
+	/**
+	 * Old child sa, if we are rekeying
+	 */
+	child_sa_t *old_child_sa;
+	
 	/** 
 	 * Assigned logger. Use logger of IKE_SA.
 	 */
@@ -93,6 +98,7 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 	status_t status;
 	connection_t *connection;
 	policy_t *policy;
+	u_int32_t reqid = 0;
 	
 	/* prepare reply */
 	sa_response = sa_payload_create();
@@ -130,7 +136,12 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 		
 		policy = this->ike_sa->get_policy(this->ike_sa);
 		connection = this->ike_sa->get_connection(this->ike_sa);
-		this->child_sa = child_sa_create(connection->get_my_host(connection),
+		if (this->old_child_sa)
+		{	/* reuse old reqid if we are rekeying */
+			reqid = this->old_child_sa->get_reqid(this->old_child_sa);
+		}
+		this->child_sa = child_sa_create(reqid,
+										 connection->get_my_host(connection),
 										 connection->get_other_host(connection),
 										 policy->get_soft_lifetime(policy),
 										 policy->get_hard_lifetime(policy));
@@ -243,7 +254,6 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 	notify_payload_t *notify = NULL;
 	iterator_t *payloads;
 	status_t status;
-	child_sa_t *old_child_sa;
 	
 	/* iterate over incoming payloads. Message is verified, we can be sure there are the required payloads */
 	payloads = request->get_payload_iterator(request);
@@ -280,7 +290,7 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 				 * for CHILD_SAs. */
 				u_int16_t no_group[1];
 				no_group[0] = htons(MODP_NONE);
-				chunk_t no_group_chunk = chunk_from_buf(no_group);
+				chunk_t no_group_chunk = chunk_from_buf((u_int8_t*)no_group);
 				this->ike_sa->send_notify(this->ike_sa, CREATE_CHILD_SA, INVALID_KE_PAYLOAD, no_group_chunk);
 				payloads->destroy(payloads);
 				return FAILED;
@@ -306,6 +316,11 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 	{
 		this->logger->log(this->logger, AUDIT, "CREATE_CHILD_SA request did not contain all required payloads. Ignored");
 		return FAILED;
+	}
+	
+	if (notify && notify->get_notify_message_type(notify) == REKEY_SA)
+	{
+		this->old_child_sa = this->ike_sa->get_child_sa(this->ike_sa, notify->get_spi(notify));
 	}
 		
 	/* build response */
@@ -364,15 +379,9 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 		{
 			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy!");
 		}
-		
-		if (notify && notify->get_notify_message_type(notify) == REKEY_SA)
-		{
-			/* mark old child sa as rekeyed */
-			old_child_sa = this->ike_sa->get_child_sa(this->ike_sa, notify->get_spi(notify));
-			if (old_child_sa)
-			{
-				old_child_sa->set_rekeyed(old_child_sa, this->child_sa->get_reqid(this->child_sa));
-			}
+		if (this->old_child_sa)
+		{	/* mark old child sa as rekeyed */
+			this->old_child_sa->set_rekeyed(this->old_child_sa, this->child_sa->get_reqid(this->child_sa));
 		}
 		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	}
@@ -553,6 +562,7 @@ ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa)
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	this->nonce_i = CHUNK_INITIALIZER;
 	this->nonce_r = CHUNK_INITIALIZER;
+	this->old_child_sa = NULL;
 	
 	return &(this->public);
 }

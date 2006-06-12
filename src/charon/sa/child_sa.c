@@ -496,7 +496,8 @@ static void destroy(private_child_sa_t *this)
 /*
  * Described in header.
  */
-child_sa_t * child_sa_create(host_t *me, host_t* other, u_int32_t soft_lifetime, u_int32_t hard_lifetime)
+child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other, 
+							 u_int32_t soft_lifetime, u_int32_t hard_lifetime)
 {
 	static u_int32_t reqid = 2000000000;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
@@ -521,7 +522,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other, u_int32_t soft_lifetime,
 	this->other.spi = 0;
 	this->soft_lifetime = soft_lifetime;
 	this->hard_lifetime = hard_lifetime;
-	this->reqid = ++reqid;
+	/* reuse old reqid if we are rekeying an existing CHILD_SA */
+	this->reqid = rekey ? rekey : ++reqid;
 	this->policies = linked_list_create();
 	this->protocol = PROTO_NONE;
 	this->rekeyed = 0;
