@@ -30,6 +30,15 @@
 
 #define STROKE_BUF_LEN		2048
 
+/**
+  * Definition of the LIST flags
+  */
+#define LIST_NONE		0x0000	/* don't list anything */
+#define LIST_CERTS		0x0001	/* list all host/user certs */
+#define LIST_CACERTS	0x0002	/* list all ca certs */
+#define LIST_CRLS		0x0004	/* list all crls */
+#define LIST_ALL		0x0007	/* all list options */
+
 typedef struct stroke_end_t stroke_end_t;
 
 struct stroke_end_t {
@@ -72,7 +81,7 @@ struct stroke_msg_t {
 		/* set the verbosity of a logging context */
 		STR_LOGLEVEL,
 		/* show list of locally loaded certificates */
-		STR_LIST_CERTS
+		STR_LIST
 		/* more to come */
 	} type;
 
@@ -96,16 +105,24 @@ struct stroke_msg_t {
 			stroke_end_t me, other;
 		} add_conn;
 
+		/* data for STR_LOGTYPE */
 		struct {
 			char *context;
 			char *type;
 			int enable;
 		} logtype;
 
+		/* data for STR_LOGLEVEL */
 		struct {
 			char *context;
 			int level;
 		} loglevel;
+
+		/* data for STR_LIST */
+		struct {
+			u_int flags;
+			bool  utc;
+		} list;
 	};
 	char buffer[STROKE_BUF_LEN];
 };

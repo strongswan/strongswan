@@ -112,7 +112,7 @@ static void pop_string(stroke_msg_t *msg, char **string)
 /**
  * Load end entitity certificate
  */
-static void load_end_certificate(const char *filename, identification_t **idp, logger_t *logger)
+static x509_t* load_end_certificate(const char *filename, identification_t **idp, logger_t *logger)
 {
 	char path[PATH_BUF];
 	x509_t *cert;
@@ -147,8 +147,9 @@ static void load_end_certificate(const char *filename, identification_t **idp, l
 			id = subject;
 			*idp = id->clone(id);
 		}
-		charon->credentials->add_certificate(charon->credentials, cert);
+		return charon->credentials->add_certificate(charon->credentials, cert);
 	}
+	return NULL;
 }
 
 /**
@@ -158,7 +159,11 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 {
 	connection_t *connection;
 	policy_t *policy;
-	identification_t *my_id, *other_id, *my_ca, *other_ca;
+	identification_t *my_id, *other_id;
+	identification_t *my_ca = NULL;
+	identification_t *other_ca = NULL;
+	bool my_ca_same = FALSE;
+    bool other_ca_same =FALSE;
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
@@ -191,6 +196,30 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.other.address);
 		my_host->destroy(my_host);
+		return;
+	}
+
+	if (charon->socket->is_listening_on(charon->socket, other_host))
+	{
+		stroke_end_t tmp_end;
+		host_t *tmp_host;
+
+		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is other host, swapping ends");
+
+		tmp_host = my_host;
+		my_host = other_host;
+		other_host = tmp_host;
+
+		tmp_end = msg->add_conn.me;
+		msg->add_conn.me = msg->add_conn.other;
+		msg->add_conn.other = tmp_end;
+	}
+	else if (!charon->socket->is_listening_on(charon->socket, my_host))
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, "left nor right host is our side, aborting");
+		
+		my_host->destroy(my_host);
+		other_host->destroy(other_host);
 		return;
 	}
 
@@ -240,10 +269,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 				
-	/* TODO check for %same */
-	my_ca = identification_create_from_string(msg->add_conn.me.ca);
-	other_ca = identification_create_from_string(msg->add_conn.other.ca);
-
 	my_ts = traffic_selector_create_from_subnet(my_subnet, msg->add_conn.me.subnet ?
 														   msg->add_conn.me.subnet_mask : 32);
 	my_subnet->destroy(my_subnet);
@@ -251,62 +276,70 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	other_ts = traffic_selector_create_from_subnet(other_subnet, msg->add_conn.other.subnet ?
 																 msg->add_conn.other.subnet_mask : 32);
 	other_subnet->destroy(other_subnet);
-				
-	if (charon->socket->is_listening_on(charon->socket, other_host))
+
+	if (msg->add_conn.me.ca)
 	{
-		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is other host, switching");
-		
-		host_t *tmp_host;
-		identification_t *tmp_id, *tmp_ca;
-		traffic_selector_t *tmp_ts;
-		char *tmp_cert;
-		
-		tmp_host   = my_host;
-		my_host    = other_host;
-		other_host = tmp_host;
-
-		tmp_id   = my_id;
-		my_id    = other_id;
-		other_id = tmp_id;
-
-		tmp_ca   = my_ca;
-		my_ca    = other_ca;
-		other_ca = tmp_ca;
-
-		tmp_ts   = my_ts;
-		my_ts    = other_ts;
-		other_ts = tmp_ts;
-
-        tmp_cert                 = msg->add_conn.me.cert;
-		msg->add_conn.me.cert    = msg->add_conn.other.cert;
-		msg->add_conn.other.cert = tmp_cert;
+		if (streq(msg->add_conn.me.ca, "%same"))
+		{
+			my_ca_same = TRUE;
+		}
+		else
+		{
+			my_ca = identification_create_from_string(msg->add_conn.me.ca);
+		}
 	}
-	else if (charon->socket->is_listening_on(charon->socket, my_host))
+	if (msg->add_conn.other.ca)
 	{
-		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is own host, not switching");
+		if (streq(msg->add_conn.other.ca, "%same"))
+		{
+			other_ca_same = TRUE;
+		}
+		else
+		{
+			other_ca = identification_create_from_string(msg->add_conn.other.ca);
+		}
 	}
-	else
-	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "left nor right host is our, aborting");
-		
-		my_host->destroy(my_host);
-		other_host->destroy(other_host);
-		my_id->destroy(my_id);
-		other_id->destroy(other_id);
-		my_ts->destroy(my_ts);
-		other_ts->destroy(other_ts);
-		return;
-	}
-	
 	if (msg->add_conn.me.cert)
 	{
-		load_end_certificate(msg->add_conn.me.cert, &my_id, this->stroke_logger);
+		x509_t *cert = load_end_certificate(msg->add_conn.me.cert, &my_id, this->stroke_logger);
+
+		if (my_ca == NULL && !my_ca_same && cert)
+		{
+			identification_t *issuer = cert->get_issuer(cert);
+
+			my_ca = issuer->clone(issuer);
+		}
 	}
 	if (msg->add_conn.other.cert)
 	{
-		load_end_certificate(msg->add_conn.other.cert, &other_id, this->stroke_logger);
+		x509_t *cert = load_end_certificate(msg->add_conn.other.cert, &other_id, this->stroke_logger);
+
+		if (other_ca == NULL && !other_ca_same && cert)
+		{
+			identification_t *issuer = cert->get_issuer(cert);
+
+			other_ca = issuer->clone(issuer);
+		}
 	}
-	
+	if (other_ca_same && my_ca)
+	{
+		other_ca = my_ca->clone(my_ca);
+	}
+	else if (my_ca_same && other_ca)
+	{
+		my_ca = other_ca->clone(other_ca);
+	}
+	if (my_ca == NULL)
+	{
+		my_ca = identification_create_from_string("%any");
+	}
+	if (other_ca == NULL)
+	{
+		other_ca = identification_create_from_string("%any");
+	}
+	this->logger->log(this->logger, CONTROL|LEVEL1, "  my ca:   '%s'", my_ca->get_string(my_ca));
+	this->logger->log(this->logger, CONTROL|LEVEL1, "  other ca:'%s'", other_ca->get_string(other_ca));
+
 	connection = connection_create(msg->add_conn.name, msg->add_conn.ikev2,
 								   my_host, other_host,
 								   RSA_DIGITAL_SIGNATURE);
@@ -492,12 +525,15 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 /**
  * list various information
  */
-static void stroke_list(private_stroke_t *this, stroke_msg_t *msg, bool utc)
+static void stroke_list(private_stroke_t *this, stroke_msg_t *msg)
 {
-	if (msg->type == STR_LIST_CERTS)
+	if (msg->list.flags & LIST_CERTS)
 	{
-		charon->credentials->log_certificates(charon->credentials, this->stroke_logger, utc);
-		charon->credentials->log_ca_certificates(charon->credentials, this->stroke_logger, utc);
+		charon->credentials->log_certificates(charon->credentials, this->stroke_logger, msg->list.utc);
+	}
+	if (msg->list.flags & LIST_CACERTS)
+	{
+		charon->credentials->log_ca_certificates(charon->credentials, this->stroke_logger, msg->list.utc);
 	}
 }
 
@@ -694,8 +730,8 @@ static void stroke_receive(private_stroke_t *this)
 			case STR_LOGLEVEL:
 				stroke_loglevel(this, msg);
 				break;
-			case STR_LIST_CERTS:
-				stroke_list(this, msg, FALSE);
+			case STR_LIST:
+				stroke_list(this, msg);
 				break;
 			default:
 				this->logger->log(this->logger, ERROR, "received invalid stroke");

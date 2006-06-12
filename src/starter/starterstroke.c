@@ -110,7 +110,7 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 {
 	msg_end->id = push_string(msg, conn_end->id);
 	msg_end->cert = push_string(msg, conn_end->cert);
-	msg_end->cert = push_string(msg, conn_end->cert);
+	msg_end->ca = push_string(msg, conn_end->ca);
 	msg_end->address = push_string(msg, inet_ntoa(conn_end->addr.u.v4.sin_addr));
 	msg_end->subnet = push_string(msg, inet_ntoa(conn_end->subnet.addr.u.v4.sin_addr));
 	msg_end->subnet_mask = conn_end->subnet.maskbits;

@@ -27,6 +27,12 @@
 #include <types.h>
 
 #include "stroke.h"
+#include "stroke_keywords.h"
+
+struct stroke_token {
+    char *name;
+    stroke_keyword_t kw;
+};
 
 static char* push_string(stroke_msg_t *msg, char *string)
 {
@@ -156,26 +162,31 @@ static int terminate_connection(char *name)
 	return send_stroke_msg(&msg);
 }
 
-static int show_status(char *mode, char *connection)
+static int show_status(stroke_keyword_t kw, char *connection)
 {
 	stroke_msg_t msg;
 	
-	if (strcmp(mode, "statusall") == 0)
-		msg.type = STR_STATUS_ALL;
-	else
-		msg.type = STR_STATUS;
-
+	msg.type = (kw == STROKE_STATUS)? STR_STATUS:STR_STATUS_ALL;
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.status.name = push_string(&msg, connection);
 	return send_stroke_msg(&msg);
 }
 
-static int list_certs(void)
+static int list_flags[] = {
+	LIST_CERTS,
+	LIST_CACERTS,
+	LIST_CRLS,
+	LIST_ALL
+};
+
+static int list(stroke_keyword_t kw, bool utc)
 {
 	stroke_msg_t msg;
 	
-	msg.type = STR_LIST_CERTS;
+	msg.type = STR_LIST;
 	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.list.utc = utc;
+	msg.list.flags = list_flags[kw - STROKE_LIST_FIRST];
 	return send_stroke_msg(&msg);
 }
 
@@ -250,80 +261,82 @@ static void exit_usage(char *error)
 
 int main(int argc, char *argv[])
 {
+	const stroke_token_t *token;
 	int res = 0;
-	char *op;
-	
+
 	if (argc < 2)
 	{
 		exit_usage(NULL);
 	}
 	
-	op = argv[1];
+	token = in_word_set(argv[1], strlen(argv[1]));
 
-	if (streq(op, "status") || streq(op, "statusall"))
+	if (token == NULL)
 	{
-		res = show_status(op, argc > 2 ? argv[2] : NULL);
+		exit_usage("unknown keyword");
 	}
-	else if (streq(op, "listcerts") || streq(op, "listall"))
+
+	switch (token->kw)
 	{
-		res = list_certs();
+		case STROKE_ADD:
+			if (argc < 11)
+			{
+				exit_usage("\"add\" needs more parameters...");
+			}
+			res = add_connection(argv[2],
+								 argv[3], argv[4], 
+								 argv[5], argv[6], 
+								 argv[7], argv[8], 
+								 atoi(argv[9]), atoi(argv[10]));
+			break;
+		case STROKE_DELETE:
+		case STROKE_DEL:
+			if (argc < 3)
+			{
+				exit_usage("\"delete\" needs a connection name");
+			}
+			res = del_connection(argv[2]);
+			break;
+		case STROKE_UP:
+			if (argc < 3)
+			{
+				exit_usage("\"up\" needs a connection name");
+			}
+			res = initiate_connection(argv[2]);
+			break;
+		case STROKE_DOWN:
+			if (argc < 3)
+			{
+				exit_usage("\"down\" needs a connection name");
+			}
+			res = terminate_connection(argv[2]);
+			break;
+		case STROKE_LOGTYPE:
+			if (argc < 5)
+			{
+				exit_usage("\"logtype\" needs more parameters...");
+			}
+			res = set_logtype(argv[2], argv[3], atoi(argv[4])); 
+			break;
+		case STROKE_LOGLEVEL:
+			if (argc < 4)
+			{
+				exit_usage("\"logtype\" needs more parameters...");
+			}
+			res = set_loglevel(argv[2], atoi(argv[3])); 
+			break;
+		case STROKE_STATUS:
+		case STROKE_STATUSALL:
+			res = show_status(token->kw, argc > 2 ? argv[2] : NULL);
+			break;
+		case STROKE_LIST_CERTS:
+		case STROKE_LIST_CACERTS:
+		case STROKE_LIST_CRLS:
+		case STROKE_LIST_ALL:
+			res = list(token->kw, argc > 2 && streq(argv[2], "--utc"));
+			break;
+		default:
+			exit_usage(NULL);
 	}
-	else if (streq(op, "up"))
-	{
-		if (argc < 3)
-		{
-			exit_usage("\"up\" needs a connection name");
-		}
-		res = initiate_connection(argv[2]);
-	}
-	else if (streq(op, "down"))
-	{
-		if (argc < 3)
-		{
-			exit_usage("\"down\" needs a connection name");
-		}
-		res = terminate_connection(argv[2]);
-	}
-	else if (streq(op, "add"))
-	{
-		if (argc < 11)
-		{
-			exit_usage("\"add\" needs more parameters...");
-		}
-		res = add_connection(argv[2],
-							 argv[3], argv[4], 
-							 argv[5], argv[6], 
-							 argv[7], argv[8], 
-							 atoi(argv[9]), atoi(argv[10]));
-	}
-	else if (streq(op, "delete"))
-	{
-		if (argc < 3)
-		{
-			exit_usage("\"delete\" needs a connection name");
-		}
-		res = del_connection(argv[2]);
-	}
-	else if (streq(op, "logtype"))
-	{
-		if (argc < 5)
-		{
-			exit_usage("\"logtype\" needs more parameters...");
-		}
-		res = set_logtype(argv[2], argv[3], atoi(argv[4])); 
-	}
-	else if (streq(op, "loglevel"))
-	{
-		if (argc < 4)
-		{
-			exit_usage("\"logtype\" needs more parameters...");
-		}
-		res = set_loglevel(argv[2], atoi(argv[3])); 
-	}
-	else
-	{
-		exit_usage(NULL);
-	}
-	
 	return res;
 }
