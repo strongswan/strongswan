@@ -828,6 +828,9 @@ static private_identification_t *identification_create(void)
 identification_t *identification_create_from_string(char *string)
 {
 	private_identification_t *this = identification_create();
+
+	if (string == NULL)
+		string = "%any";
 	
 	if (strchr(string, '=') != NULL)
 	{
