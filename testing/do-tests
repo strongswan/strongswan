@@ -58,9 +58,6 @@ passed_cnt="0"
 
 TESTSDIR=$BUILDDIR/tests
 [ -d $TESTSDIR ] || mkdir $TESTSDIR
-rm -rf $TESTSDIR/*
-cp -rfp $DEFAULTTESTSDIR/* $TESTSDIR
-
 
 ##############################################################################
 # assign IP for each host to hostname
@@ -70,54 +67,31 @@ for host in $STRONGSWANHOSTS
 do
     eval ipv4_${host}="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
     eval ipv6_${host}="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
+
     case $host in
     moon)
         eval ipv4_moon1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP_MOON1 $ipv4_moon1 $TESTSDIR
-        searchandreplace PH_IP_MOON  $ipv4_moon  $TESTSDIR
         eval ipv6_moon1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP6_MOON1 $ipv6_moon1 $TESTSDIR
-        searchandreplace PH_IP6_MOON  $ipv6_moon  $TESTSDIR
         ;;
     sun)
         eval ipv4_sun1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP_SUN1 $ipv4_sun1 $TESTSDIR
-        searchandreplace PH_IP_SUN  $ipv4_sun  $TESTSDIR
         eval ipv6_sun1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP6_SUN1 $ipv6_sun1 $TESTSDIR
-        searchandreplace PH_IP6_SUN  $ipv6_sun  $TESTSDIR
         ;;
     alice)
-        searchandreplace PH_IP_ALICE  $ipv4_alice $TESTSDIR
-        searchandreplace PH_IP6_ALICE $ipv6_alice $TESTSDIR
         ;;
     venus)
-        searchandreplace PH_IP_VENUS  $ipv4_venus $TESTSDIR
-        searchandreplace PH_IP6_VENUS $ipv6_venus $TESTSDIR
         ;;
     bob)
-        searchandreplace PH_IP_BOB   $ipv4_bob $TESTSDIR
-        searchandreplace PH_IPV6_BOB $ipv6_bob $TESTSDIR
         ;;
     carol)
         eval ipv4_carol1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP_CAROL1 $ipv4_carol1 $TESTSDIR
-        searchandreplace PH_IP_CAROL  $ipv4_carol  $TESTSDIR
         eval ipv6_carol1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP6_CAROL1 $ipv6_carol1 $TESTSDIR
-        searchandreplace PH_IP6_CAROL  $ipv6_carol  $TESTSDIR
-        ;;
+         ;;
     dave)
         eval ipv4_dave1="`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP_DAVE1 $ipv4_dave1 $TESTSDIR
-        searchandreplace PH_IP_DAVE  $ipv4_dave  $TESTSDIR
         eval ipv6_dave1="`echo $HOSTNAMEIPV6 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $2 }' | awk '{ print $1 }'`"
-        searchandreplace PH_IP6_DAVE1 $ipv6_dave1 $TESTSDIR
-        searchandreplace PH_IP6_DAVE  $ipv6_dave  $TESTSDIR
         ;;
     winnetou)
-        searchandreplace PH_IP_WINNETOU  $ipv4_winnetou $TESTSDIR
-        searchandreplace PH_IP6_WINNETOU $ipv6_winnetou $TESTSDIR
         ;;
     esac
 done
@@ -167,30 +141,84 @@ then
     TESTS=$SELECTEDTESTS
 else
     # set internal field seperator
-    TESTS="`ls $TESTSDIR`"
+    TESTS="`ls $DEFAULTTESTSDIR`"
 fi
 
 for testname in $TESTS
 do
     let "testnumber += 1"
     cecho-n " $testnumber $testname.."
-    
-    if [ ! -d $TESTSDIR/${testname} ]
+
+    if [ ! -d $DEFAULTTESTSDIR/${testname} ]
     then
 	cecho "is missing..skipped"
 	continue
     fi
 
-    [ -f $TESTSDIR/${testname}/description.txt ] || die "!! File 'description.txt' is missing"
-    [ -f $TESTSDIR/${testname}/test.conf ]       || die "!! File 'test.conf' is missing"
-    [ -f $TESTSDIR/${testname}/pretest.dat ]     || die "!! File 'pretest.dat' is missing"
-    [ -f $TESTSDIR/${testname}/posttest.dat ]    || die "!! File 'posttest.dat' is missing"
-    [ -f $TESTSDIR/${testname}/evaltest.dat ]    || die "!! File 'evaltest.dat' is missing"
+    [ -f $DEFAULTTESTSDIR/${testname}/description.txt ] || die "!! File 'description.txt' is missing"
+    [ -f $DEFAULTTESTSDIR/${testname}/test.conf ]       || die "!! File 'test.conf' is missing"
+    [ -f $DEFAULTTESTSDIR/${testname}/pretest.dat ]     || die "!! File 'pretest.dat' is missing"
+    [ -f $DEFAULTTESTSDIR/${testname}/posttest.dat ]    || die "!! File 'posttest.dat' is missing"
+    [ -f $DEFAULTTESTSDIR/${testname}/evaltest.dat ]    || die "!! File 'evaltest.dat' is missing"
 
     TESTRESULTDIR=$TODAYDIR/$testname
     mkdir $TESTRESULTDIR
     CONSOLE_LOG=$TESTRESULTDIR/console.log
     touch $CONSOLE_LOG
+
+    TESTDIR=$TESTSDIR/${testname}
+    rm -rf $TESTDIR/*
+    cp -rfp $DEFAULTTESTSDIR/${testname} $TESTSDIR
+
+    ##############################################################################
+    # replace IP wildcards with actual IPv4 and IPv6 addresses
+    #
+
+    for host in $STRONGSWANHOSTS
+    do
+	case $host in
+	moon)
+	    searchandreplace PH_IP_MOON1     $ipv4_moon1 $TESTDIR
+	    searchandreplace PH_IP_MOON      $ipv4_moon  $TESTDIR
+	    searchandreplace PH_IP6_MOON1    $ipv6_moon1 $TESTDIR
+	    searchandreplace PH_IP6_MOON     $ipv6_moon  $TESTDIR
+	    ;;
+	sun)
+	    searchandreplace PH_IP_SUN1      $ipv4_sun1 $TESTDIR
+	    searchandreplace PH_IP_SUN       $ipv4_sun  $TESTDIR
+	    searchandreplace PH_IP6_SUN1     $ipv6_sun1 $TESTDIR
+	    searchandreplace PH_IP6_SUN      $ipv6_sun  $TESTDIR
+	    ;;
+	alice)
+	    searchandreplace PH_IP_ALICE     $ipv4_alice $TESTDIR
+	    searchandreplace PH_IP6_ALICE    $ipv6_alice $TESTDIR
+	    ;;
+	venus)
+	    searchandreplace PH_IP_VENUS     $ipv4_venus $TESTDIR
+	    searchandreplace PH_IP6_VENUS    $ipv6_venus $TESTDIR
+	    ;;
+	bob)
+	    searchandreplace PH_IP_BOB       $ipv4_bob $TESTDIR
+	    searchandreplace PH_IPV6_BOB     $ipv6_bob $TESTDIR
+	    ;;
+	carol)
+	    searchandreplace PH_IP_CAROL1    $ipv4_carol1 $TESTDIR
+	    searchandreplace PH_IP_CAROL     $ipv4_carol  $TESTDIR
+	    searchandreplace PH_IP6_CAROL1   $ipv6_carol1 $TESTDIR
+	    searchandreplace PH_IP6_CAROL    $ipv6_carol  $TESTDIR
+	    ;;
+	dave)
+	    searchandreplace PH_IP_DAVE1     $ipv4_dave1 $TESTSDIR
+	    searchandreplace PH_IP_DAVE      $ipv4_dave  $TESTSDIR
+	    searchandreplace PH_IP6_DAVE1    $ipv6_dave1 $TESTSDIR
+	    searchandreplace PH_IP6_DAVE     $ipv6_dave  $TESTSDIR
+	    ;;
+	winnetou)
+	    searchandreplace PH_IP_WINNETOU  $ipv4_winnetou $TESTSDIR
+	    searchandreplace PH_IP6_WINNETOU $ipv6_winnetou $TESTSDIR
+	    ;;
+	esac
+    done
 
 
     ##########################################################################
@@ -198,9 +226,9 @@ do
     #
 
     $DIR/scripts/load-testconfig $testname
-    source $TESTSDIR/$testname/test.conf
+    source $TESTDIR/test.conf
 
-    
+
     ##########################################################################
     # run tcpdump in the background
     #
@@ -234,7 +262,7 @@ do
 	    printf("ssh root@\044ipv4_%s \"%s\"; ", $1, $2)
 	    printf("echo;\n")
 	}
-    }' $TESTSDIR/${testname}/pretest.dat` >> $CONSOLE_LOG 2>&1
+    }' $TESTDIR/pretest.dat` >> $CONSOLE_LOG 2>&1
 
 
     ##########################################################################
@@ -283,7 +311,7 @@ do
 	    printf("; then STATUS=\"failed\"; fi; \n")
 
 	}
-    }' $TESTSDIR/${testname}/evaltest.dat` >> $CONSOLE_LOG 2>&1
+    }' $TESTDIR/evaltest.dat` >> $CONSOLE_LOG 2>&1
 
 
     ##########################################################################
@@ -315,7 +343,7 @@ do
     <h3>Description</h3>
 @EOF
 
-    cat $TESTSDIR/${testname}/description.txt >> $TESTRESULTDIR/index.html
+    cat $TESTDIR/description.txt >> $TESTRESULTDIR/index.html
 
     cat >> $TESTRESULTDIR/index.html <<@EOF
     <ul>
@@ -379,7 +407,7 @@ do
 	    printf("ssh root@\044ipv4_%s \"%s\"; ", $1, $2)
 	    printf("echo;\n")
 	}
-    }' $TESTSDIR/${testname}/posttest.dat` >> $CONSOLE_LOG 2>&1
+    }' $TESTDIR/posttest.dat` >> $CONSOLE_LOG 2>&1
 
 
     ##########################################################################
