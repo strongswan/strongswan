@@ -332,7 +332,10 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					  other_host->get_address(other_host),
 					  other_id->get_string(other_id));
 	
-	policy = policy_create(msg->add_conn.name, my_id, other_id);
+	policy = policy_create(msg->add_conn.name, my_id, other_id,
+						   msg->add_conn.rekey.ipsec_lifetime,
+						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
+						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100);
 	proposal = proposal_create(PROTO_ESP);
 	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 128);
 	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 256);

@@ -86,6 +86,13 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 			bool ikev2;
+			struct {
+				time_t ipsec_lifetime;
+				time_t ike_lifetime;
+				time_t margin;
+				unsigned long tries;
+				unsigned long fuzz;
+			} rekey;
 			stroke_end_t me, other;
 		} add_conn;
 

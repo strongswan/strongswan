@@ -22,6 +22,7 @@
 
 #include <time.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "policy.h"
 
@@ -80,7 +81,23 @@ struct private_policy_t {
 	 * list for traffic selectors for others site
 	 */
 	linked_list_t *other_ts;
-
+	
+	/**
+	 * Time before an SA gets invalid
+	 */
+	u_int32_t soft_lifetime;
+	
+	/**
+	 * Time before an SA gets rekeyed
+	 */
+	u_int32_t hard_lifetime;
+	
+	/**
+	 * Time, which specifies the range of a random value
+	 * substracted from soft_lifetime.
+	 */
+	u_int32_t jitter;
+	
 	/**
 	 * select_traffic_selectors for both
 	 */
@@ -313,18 +330,18 @@ static void add_proposal(private_policy_t *this, proposal_t *proposal)
 /**
  * Implementation of policy_t.get_soft_lifetime
  */
-static u_int32_t get_soft_lifetime(policy_t *this)
+static u_int32_t get_soft_lifetime(private_policy_t *this)
 {
 	srandom(time(NULL)+getpid());
-	return 5 + (random() % 10);
+	return this->soft_lifetime - (random() % this->jitter);
 }
 
 /**
  * Implementation of policy_t.get_hard_lifetime
  */
-static u_int32_t get_hard_lifetime(policy_t *this)
+static u_int32_t get_hard_lifetime(private_policy_t *this)
 {
-	return 20;
+	return this->hard_lifetime;
 }
 
 /**
@@ -334,7 +351,9 @@ static policy_t *clone(private_policy_t *this)
 {
 	private_policy_t *clone = (private_policy_t*)policy_create(this->name,
 															   this->my_id->clone(this->my_id),
-															   this->other_id->clone(this->other_id));
+															   this->other_id->clone(this->other_id),
+															   this->hard_lifetime, this->soft_lifetime,
+															   this->jitter);
 	iterator_t *iterator;
 	proposal_t *proposal;
 	traffic_selector_t *ts;
@@ -434,7 +453,9 @@ static status_t destroy(private_policy_t *this)
 /*
  * Described in header-file
  */
-policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id)
+policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
+						u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
+						u_int32_t jitter)
 {
 	private_policy_t *this = malloc_thing(private_policy_t);
 
@@ -465,6 +486,9 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->name = strdup(name);
 	this->my_id = my_id;
 	this->other_id = other_id;
+	this->hard_lifetime = hard_lifetime;
+	this->soft_lifetime = soft_lifetime;
+	this->jitter = jitter;
 	
 	/* initialize private members*/
 	this->my_ca = NULL;

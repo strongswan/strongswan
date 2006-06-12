@@ -213,7 +213,7 @@ static diffie_hellman_group_t get_dh_group(private_connection_t *this)
 		}
 	}
 	iterator->destroy(iterator);
-	return MODP_UNDEFINED;
+	return MODP_NONE;
 }
 
 /**

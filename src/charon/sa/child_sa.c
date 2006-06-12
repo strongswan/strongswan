@@ -83,6 +83,11 @@ struct private_child_sa_t {
 	u_int32_t reqid;
 	
 	/**
+	 * time, on which SA was installed
+	 */
+	time_t install_time;
+	
+	/**
 	 * Lifetime before rekeying
 	 */
 	u_int32_t soft_lifetime;
@@ -239,6 +244,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 												mine ? 0 : this->soft_lifetime,
 												this->hard_lifetime,
 												enc_algo, int_algo, prf_plus, mine);
+	
+	this->install_time = time(NULL);
 
 	return status;
 }
@@ -406,11 +413,12 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 	{
 		logger = this->logger;
 	}
-	logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   protected with %s (0x%x/0x%x), reqid %d:",
+	logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   protected with %s (0x%x/0x%x), reqid %d, rekeying in %ds:",
 				name,
 				this->protocol == PROTO_ESP ? "ESP" : "AH",
 				htonl(this->me.spi), htonl(this->other.spi),
-				this->reqid);
+				this->reqid, 
+				this->soft_lifetime - (time(NULL) - this->install_time));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->has_next(iterator))
 	{

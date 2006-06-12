@@ -223,7 +223,15 @@ static status_t process_message(private_create_child_sa_requested_t *this, messa
 	if (response->get_request(response))
 	{
 		this->logger->log(this->logger, ERROR | LEVEL1, "CREATE_CHILD_SA requests not allowed state create_child_sa_requested");
-		return FAILED;
+		/* TODO: our state implementation currently can not handle incoming requests cleanly here.
+		 * If a request comes in before an outstanding reply, we can not handle it the correct way.
+		 * Currently, we create a ESTABLISHED state and let it process the message... But we
+		 * need changes in the whole state mechanism.
+		 */
+		state_t *state = (state_t*)ike_sa_established_create(this->ike_sa);
+		state->process_message(state, response);
+		state->destroy(state);
+		return SUCCESS;
 	}
 	
 	/* get signer for verification and crypter for decryption */

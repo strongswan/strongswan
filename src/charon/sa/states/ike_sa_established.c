@@ -274,6 +274,17 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 				nonce_request = (nonce_payload_t*)payload;
 				break;	
 			}
+			case KEY_EXCHANGE:
+			{
+				/* we currently do not support a diffie hellman exchange
+				 * for CHILD_SAs. */
+				u_int16_t no_group[1];
+				no_group[0] = htons(MODP_NONE);
+				chunk_t no_group_chunk = chunk_from_buf(no_group);
+				this->ike_sa->send_notify(this->ike_sa, CREATE_CHILD_SA, INVALID_KE_PAYLOAD, no_group_chunk);
+				payloads->destroy(payloads);
+				return FAILED;
+			}
 			case NOTIFY:
 			{
 				notify = (notify_payload_t*)payload;

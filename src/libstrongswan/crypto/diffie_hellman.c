@@ -34,7 +34,7 @@
  * String mappings for diffie_hellman_group_t.
  */
 mapping_t diffie_hellman_group_m[] = {
-	{MODP_UNDEFINED, "MODP_UNDEFINED"},
+	{MODP_NONE, "MODP_NONE"},
 	{MODP_768_BIT, "MODP_768_BIT"},
 	{MODP_1024_BIT, "MODP_1024_BIT"},
 	{MODP_1536_BIT, "MODP_1536_BIT"},

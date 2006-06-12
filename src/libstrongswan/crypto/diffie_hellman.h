@@ -38,7 +38,7 @@ typedef enum diffie_hellman_group_t diffie_hellman_group_t;
  * @ingroup transforms
  */
 enum diffie_hellman_group_t {
-	MODP_UNDEFINED = 1024,
+	MODP_NONE = 0,
 	MODP_768_BIT = 1,
 	MODP_1024_BIT = 2,
 	MODP_1536_BIT = 5,

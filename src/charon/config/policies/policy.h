@@ -277,14 +277,23 @@ struct policy_t {
  * @brief Create a configuration object for IKE_AUTH and later.
  * 
  * name-string gets cloned, ID's not.
+ * Lifetimes are in seconds. To prevent to peers to start rekeying at the
+ * same time, a jitter may be specified. Rekeying of an SA starts at
+ * (soft_lifetime - random(0, jitter)). After a successful rekeying, 
+ * the hard_lifetime limit counter is reset. You should specify
+ * hard_lifetime > soft_lifetime > jitter.
  * 
  * @param name				name of the policy
  * @param my_id 			identification_t for ourselves
  * @param other_id 			identification_t for the remote guy
+ * @param hard_lifetime		lifetime before deleting an SA
+ * @param soft_lifetime		lifetime before rekeying an SA
+ * @param jitter			range of randomization time
  * @return 					policy_t object
  * 
  * @ingroup config
  */
-policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id);
+policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
+						u_int32_t hard_lifetime, u_int32_t soft_lifetime, u_int32_t jitter);
 
 #endif /* POLICY_H_ */

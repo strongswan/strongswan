@@ -369,7 +369,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	this->logger->log(this->logger, CONTROL | LEVEL2, "Process received KE payload");
 	group = ke_request->get_dh_group_number(ke_request);
 				
-	if (group == MODP_UNDEFINED)
+	if (group == MODP_NONE)
 	{
 		this->logger->log(this->logger, AUDIT, "No diffie hellman group to select. Deleting IKE_SA");
 		return DESTROY_ME;
@@ -560,7 +560,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	this->sent_nonce = CHUNK_INITIALIZER;
 	this->received_nonce = CHUNK_INITIALIZER;
-	this->dh_group_number = MODP_UNDEFINED;
+	this->dh_group_number = MODP_NONE;
 	this->diffie_hellman = NULL;
 	this->proposal = NULL;
 

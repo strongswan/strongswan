@@ -125,6 +125,11 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
+	msg.add_conn.rekey.ipsec_lifetime = conn->sa_ipsec_life_seconds;
+	msg.add_conn.rekey.ike_lifetime = conn->sa_ike_life_seconds;
+	msg.add_conn.rekey.margin = conn->sa_rekey_margin;
+	msg.add_conn.rekey.tries = conn->sa_keying_tries;
+	msg.add_conn.rekey.fuzz = conn->sa_rekey_fuzz;
 
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->right);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->left);

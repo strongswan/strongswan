@@ -28,8 +28,6 @@
 
 #include "stroke.h"
 
-#define streq(a, b) (strcmp((a), (b)) == 0) /* clearer shorthand */
-
 static char* push_string(stroke_msg_t *msg, char *string)
 {
 	u_int string_start = msg->length;
@@ -102,6 +100,12 @@ static int add_connection(char *name,
 	
 	msg.add_conn.name = push_string(&msg, name);
 	msg.add_conn.ikev2 = 1;
+	
+	msg.add_conn.rekey.ipsec_lifetime = 0;
+	msg.add_conn.rekey.ike_lifetime = 0;
+	msg.add_conn.rekey.margin = 0;
+	msg.add_conn.rekey.tries = 0;
+	msg.add_conn.rekey.fuzz = 0;
 	
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
