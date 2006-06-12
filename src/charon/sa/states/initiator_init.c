@@ -172,7 +172,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	ike_sa_id->set_responder_spi(ike_sa_id,0);
 
 	/* going to build message */
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "going to build message");
 	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, TRUE, &message);
 	
 	/* build SA payload */
@@ -183,7 +183,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	status = this->build_nonce_payload(this, message);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Building nonce payload failed. Aborting");
+		this->logger->log(this->logger, ERROR, "building nonce payload failed, aborting");
 		message->destroy(message);
 		return DESTROY_ME;
 	}
@@ -191,7 +191,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	status = this->ike_sa->send_request(this->ike_sa, message);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Unable to initiate connection, could not send message. Aborting");
+		this->logger->log(this->logger, AUDIT, "unable to initiate connection, could not send message, aborting");
 		message->destroy(message);
 		return DESTROY_ME;
 	}
@@ -201,11 +201,11 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 	ike_sa_init_request_data = message->get_packet_data(message);
 
 	/* state can now be changed */
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Create next state object");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "create next state object");
 	next_state = ike_sa_init_requested_create(this->ike_sa, this->diffie_hellman, this->sent_nonce,ike_sa_init_request_data);
 	this->ike_sa->set_new_state(this->ike_sa,(state_t *) next_state);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "destroy old state object");
 	this->destroy_after_state_change(this);
 	return SUCCESS;
 }
@@ -219,7 +219,7 @@ static void build_sa_payload(private_initiator_init_t *this, message_t *request)
 	linked_list_t *proposal_list;
 	connection_t *connection;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Building SA payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "building SA payload");
 	
 	connection = this->ike_sa->get_connection(this->ike_sa);
 
@@ -227,7 +227,7 @@ static void build_sa_payload(private_initiator_init_t *this, message_t *request)
 	
 	sa_payload = sa_payload_create_from_proposal_list(proposal_list);	
 
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add SA payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add SA payload to message");
 	request->add_payload(request, (payload_t *) sa_payload);
 }
 
@@ -240,7 +240,7 @@ static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 	chunk_t key_data;
 	diffie_hellman_group_t dh_group;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Building KE payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "building KE payload");
 	
 	this->diffie_hellman->get_my_public_value(this->diffie_hellman, &key_data);
 	dh_group = this->diffie_hellman->get_dh_group(this->diffie_hellman);
@@ -251,7 +251,7 @@ static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 	
 	chunk_free(&key_data);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add KE payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add KE payload to message");
 	request->add_payload(request, (payload_t *) ke_payload);
 }
 
@@ -264,9 +264,9 @@ static status_t build_nonce_payload(private_initiator_init_t *this, message_t *r
 	randomizer_t *randomizer;
 	status_t status;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Building NONCE payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "building NONCE payload");
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Get pseudo random bytes for NONCE");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "get pseudo random bytes for NONCE");
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
 	
 	status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
@@ -275,13 +275,13 @@ static status_t build_nonce_payload(private_initiator_init_t *this, message_t *r
 		return status;
 	}
 
-	this->logger->log(this->logger, RAW|LEVEL2, "Initiator NONCE",&(this->sent_nonce));
+	this->logger->log(this->logger, RAW|LEVEL2, "initiator NONCE",&(this->sent_nonce));
 	
 	nonce_payload = nonce_payload_create();
 	
 	nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add NONCE payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add NONCE payload to message");
 	request->add_payload(request, (payload_t *) nonce_payload);
 	return SUCCESS;
 }
@@ -291,7 +291,7 @@ static status_t build_nonce_payload(private_initiator_init_t *this, message_t *r
  */
 static status_t process_message(private_initiator_init_t *this, message_t *message)
 {
-	this->logger->log(this->logger, ERROR, "In state INITIATOR_INIT, no message is processed");
+	this->logger->log(this->logger, ERROR, "in state INITIATOR_INIT, no message is processed");
 	return FAILED;
 }
 
@@ -308,7 +308,7 @@ static ike_sa_state_t get_state(private_initiator_init_t *this)
  */
 static void destroy(private_initiator_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Going to destroy initiator_init_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL3, "going to destroy initiator_init_t state object");
 
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
@@ -327,7 +327,7 @@ static void destroy(private_initiator_init_t *this)
  */
 static void destroy_after_state_change (private_initiator_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL3, "Going to destroy initiator_init_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL3, "going to destroy initiator_init_t state object");
 	free(this);
 }
 

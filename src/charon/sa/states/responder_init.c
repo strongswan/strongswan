@@ -163,12 +163,13 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 
 	if (message->get_exchange_type(message) != IKE_SA_INIT)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state responder_init",mapping_find(exchange_type_m,message->get_exchange_type(message)));
+		this->logger->log(this->logger, ERROR | LEVEL1, "message of type %s not supported in state responder_init",
+						  mapping_find(exchange_type_m,message->get_exchange_type(message)));
 		return DESTROY_ME;
 	}
 	if (!message->get_request(message))
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "IKE_SA_INIT responses not allowed state ike_sa_init_responded");
+		this->logger->log(this->logger, ERROR | LEVEL1, "IKE_SA_INIT responses not allowed in state ike_sa_init_responded");
 		return DESTROY_ME;
 	}
 	
@@ -180,7 +181,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	if (connection == NULL)
 	{
 		/* no configuration matches given hosts */
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request does not match any available connection. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request does not match any available connection, deleting IKE_SA");
 		/* TODO: inform requestor */
 		return DESTROY_ME;
 	}
@@ -192,13 +193,13 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	{
 		if (status == NOT_SUPPORTED)
 		{
-			this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request contains unsupported payload with critical flag set. "
-													"Deleting IKE_SA");
+			this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request contains unsupported payload with critical flag set, "
+													"deleting IKE_SA");
 			this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, UNSUPPORTED_CRITICAL_PAYLOAD, CHUNK_INITIALIZER);
 		}
 		else
 		{
-			this->logger->log(this->logger, AUDIT, "Unable to parse IKE_SA_INIT request. Deleting IKE_SA");
+			this->logger->log(this->logger, AUDIT, "unable to parse IKE_SA_INIT request, deleting IKE_SA");
 		}
 		return DESTROY_ME;
 	}
@@ -239,7 +240,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring payload %s (%d)", 
+				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring payload %s (%d)", 
 									mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
 				break;
 			}
@@ -250,7 +251,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	/* check if we have all payloads */
 	if (!(sa_request && ke_request && nonce_request))
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain all required payloads. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain all required payloads. deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -281,7 +282,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	status = this->ike_sa->build_transforms(this->ike_sa, this->proposal, this->diffie_hellman, this->received_nonce, this->sent_nonce);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "transform objects could not be created from selected proposal, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -289,13 +290,13 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	status = this->ike_sa->send_response(this->ike_sa, response);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Unable to send IKE_SA_INIT response. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "unable to send IKE_SA_INIT response, deleting IKE_SA");
 		response->destroy(response);
 		return DESTROY_ME;
 	}
 
 	/* state can now be changed */
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Create next state object of type IKE_SA_INIT_RESPONDED");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "create next state object of type IKE_SA_INIT_RESPONDED");
 
 	response = this->ike_sa->get_last_responded_message(this->ike_sa);
 	ike_sa_init_response_data = response->get_packet_data(response);
@@ -324,7 +325,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 
 	connection = this->ike_sa->get_connection(this->ike_sa);
 
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Process received SA payload");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "process received SA payload");
 	
 	/* get the list of suggested proposals */ 
 	proposal_list = sa_request->get_proposals (sa_request);
@@ -338,7 +339,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 	proposal_list->destroy(proposal_list);
 	if (this->proposal == NULL)
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain any acceptable proposals. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain any acceptable proposals, deleting IKE_SA");
 		this->ike_sa->send_notify(this->ike_sa, IKE_SA_INIT, NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER);
 		return DESTROY_ME;
 	}
@@ -348,7 +349,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 	
 	this->logger->log(this->logger, CONTROL | LEVEL2, "SA Payload processed");
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Building SA payload");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "building SA payload");
 	sa_payload = sa_payload_create_from_proposal(this->proposal);	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "add SA payload to message");
 	response->add_payload(response,(payload_t *) sa_payload);
@@ -366,12 +367,12 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	diffie_hellman_t *dh;
 	chunk_t key_data;
 				
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Process received KE payload");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "process received KE payload");
 	group = ke_request->get_dh_group_number(ke_request);
 				
 	if (group == MODP_NONE)
 	{
-		this->logger->log(this->logger, AUDIT, "No diffie hellman group to select. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "no Diffie-Hellman group to select, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -381,7 +382,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 		chunk_t accepted_group_chunk;
 		/* group not same as selected one 
 		 * Maybe key exchange payload is before SA payload */
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain a acceptable diffie hellman group. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain an acceptable Diffie-Hellman group, deleting IKE_SA");
 		
 		accepted_group = htons(this->dh_group_number);
 		accepted_group_chunk.ptr = (u_int8_t*) &(accepted_group);
@@ -394,19 +395,19 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	dh = diffie_hellman_create(group);
 	if (dh == NULL)
 	{
-		this->logger->log(this->logger, AUDIT, "Could not generate DH object with group %d. Deleting IKE_SA",
+		this->logger->log(this->logger, AUDIT, "could not generate DH object with group %d, deleting IKE_SA",
 							mapping_find(diffie_hellman_group_m,group) );
 		return DESTROY_ME;
 	}
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Set other DH public value");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "set other DH public value");
 	
 	dh->set_other_public_value(dh, ke_request->get_key_exchange_data(ke_request));
 
 	this->diffie_hellman = dh;
 	
-	this->logger->log(this->logger, CONTROL | LEVEL2, "KE Payload processed.");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "KE payload processed.");
 
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Building KE payload");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "building KE payload");
 	this->diffie_hellman->get_my_public_value(this->diffie_hellman,&key_data);
 
 	ke_payload = ke_payload_create();
@@ -414,7 +415,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	ke_payload->set_dh_group_number(ke_payload, this->dh_group_number);
 	chunk_free(&key_data);
 
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add KE payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add KE payload to message");
 	response->add_payload(response,(payload_t *) ke_payload);
 	
 	return SUCCESS;
@@ -429,14 +430,14 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 	randomizer_t *randomizer;
 	status_t status;
 
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Process received NONCE payload");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "process received NONCE payload");
 	free(this->received_nonce.ptr);
 	this->received_nonce = CHUNK_INITIALIZER;
 
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Get NONCE value and store it");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "get NONCE value and store it");
 	this->received_nonce = nonce_request->get_nonce(nonce_request);
 	
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Create new NONCE value.");	
+	this->logger->log(this->logger, CONTROL | LEVEL2, "create new NONCE value.");	
 	
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
 	status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &(this->sent_nonce));
@@ -445,11 +446,11 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 		return status;
 	}
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Building NONCE payload");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "building NONCE payload");
 	nonce_payload = nonce_payload_create();
 	nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add NONCE payload to message");
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add NONCE payload to message");
 	response->add_payload(response,(payload_t *) nonce_payload);
 	
 	return SUCCESS;
@@ -462,12 +463,12 @@ static status_t process_notify_payload(private_responder_init_t *this, notify_pa
 {
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
 						  mapping_find(notify_message_type_m, notify_message_type));
 								  
 	if (notify_payload->get_protocol_id(notify_payload) != PROTO_IKE)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Notify reply not for IKE protocol.");
+		this->logger->log(this->logger, ERROR | LEVEL1, "notify reply not for IKE protocol.");
 		return FAILED;	
 	}
 	switch (notify_message_type)
@@ -494,23 +495,22 @@ static ike_sa_state_t get_state(private_responder_init_t *this)
  */
 static void destroy(private_responder_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy responder init state object");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "going to destroy responder init state object");
 	
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy sent nonce");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "destroy nonces");
 	chunk_free(&(this->sent_nonce));
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy received nonce");
 	chunk_free(&(this->received_nonce));
 
 	if (this->diffie_hellman != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy diffie_hellman_t hellman object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "destroy diffie_hellman_t hellman object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
 	if (this->proposal)
 	{
 		this->proposal->destroy(this->proposal);
 	}
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy object");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "destroy object");
 	free(this);
 }
 
@@ -519,12 +519,12 @@ static void destroy(private_responder_init_t *this)
  */
 static void destroy_after_state_change (private_responder_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy responder_init_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "going to destroy responder_init_t state object");
 	
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy diffie_hellman_t object");
+		this->logger->log(this->logger, CONTROL | LEVEL2, "destroy diffie_hellman_t object");
 		this->diffie_hellman->destroy(this->diffie_hellman);
 	}
 	if (this->proposal)
@@ -532,7 +532,7 @@ static void destroy_after_state_change (private_responder_init_t *this)
 		this->proposal->destroy(this->proposal);
 	}
 	
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Destroy object");	
+	this->logger->log(this->logger, CONTROL | LEVEL2, "destroy object");	
 	free(this);
 }
 

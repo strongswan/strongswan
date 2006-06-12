@@ -529,7 +529,7 @@ static void add_payload(private_message_t *this, payload_t *payload)
 	payload->set_next_type(payload, NO_PAYLOAD);
 	this->payloads->insert_last(this->payloads, (void*)payload);
 
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Added payload of type %s to message", 
+	this->logger->log(this->logger, CONTROL|LEVEL1, "added payload of type %s to message", 
 					  mapping_find(payload_type_m, payload->get_type(payload)));
 }
 
@@ -587,14 +587,14 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	status_t status;
 	chunk_t packet_data;
 	
-	this->logger->log(this->logger, CONTROL, "Generating %s %s, contains %d payloads",
+	this->logger->log(this->logger, CONTROL, "generating %s %s, contains %d payloads",
 					  mapping_find(exchange_type_m,this->exchange_type),
 					  this->is_request ? "request" : "response",
 					  this->payloads->get_count(this->payloads));
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Exchange type %s is not defined",
+		this->logger->log(this->logger, ERROR | LEVEL1, "exchange type %s is not defined",
 							mapping_find(exchange_type_m,this->exchange_type));
 		return INVALID_STATE;
 	}
@@ -611,7 +611,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	status = this->set_message_rule(this);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "No message rules specified for a %s %s",
+		this->logger->log(this->logger, ERROR, "no message rules specified for a %s %s",
 						  mapping_find(exchange_type_m,this->exchange_type),
 						  this->is_request ? "request" : "response");
 		return NOT_SUPPORTED;
@@ -622,7 +622,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	status = this->encrypt_payloads(this, crypter, signer);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Could not encrypt payloads");
+		this->logger->log(this->logger, ERROR | LEVEL1, "could not encrypt payloads");
 		return status;
 	}
 
@@ -666,7 +666,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	/* if last payload is of type encrypted, integrity checksum if necessary */
 	if (payload->get_type(payload) == ENCRYPTED)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL1, "Build signature on whole message");
+		this->logger->log(this->logger, CONTROL | LEVEL1, "build signature on whole message");
 		encryption_payload_t *encryption_payload = (encryption_payload_t*)payload;
 		status = encryption_payload->build_signature(encryption_payload, packet_data);
 		if (status != SUCCESS)
@@ -680,7 +680,7 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	/* clone packet for caller */
 	*packet = this->packet->clone(this->packet);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Message of type %s generated successfully",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "message of type %s generated successfully",
 						mapping_find(exchange_type_m,this->exchange_type));
 	return SUCCESS;
 }
@@ -716,7 +716,7 @@ static status_t parse_header(private_message_t *this)
 	status = this->parser->parse_payload(this->parser,HEADER,(payload_t **) &ike_header);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Header could not be parsed");
+		this->logger->log(this->logger, ERROR | LEVEL1, "header could not be parsed");
 		return status;
 		
 	}
@@ -725,7 +725,7 @@ static status_t parse_header(private_message_t *this)
 	status = ike_header->payload_interface.verify(&(ike_header->payload_interface));
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Header verification failed");
+		this->logger->log(this->logger, ERROR | LEVEL1, "header verification failed");
 		ike_header->destroy(ike_header);
 		return status;
 	}	
@@ -746,7 +746,7 @@ static status_t parse_header(private_message_t *this)
 	this->minor_version = ike_header->get_min_version(ike_header);
 	this->first_payload = ike_header->payload_interface.get_next_type(&(ike_header->payload_interface));
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Parsed a %s %s", 
+	this->logger->log(this->logger, CONTROL|LEVEL1, "parsed a %s %s", 
 						mapping_find(exchange_type_m, this->exchange_type),
 						this->is_request ? "request" : "response");
 	
@@ -756,7 +756,7 @@ static status_t parse_header(private_message_t *this)
 	status = this->set_message_rule(this);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "No message rules specified for a %s %s",
+		this->logger->log(this->logger, ERROR, "no message rules specified for a %s %s",
 						  mapping_find(exchange_type_m,this->exchange_type),
 						  this->is_request ? "request" : "response");
 	}
@@ -774,7 +774,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		
 	current_payload_type = this->first_payload;	
 		
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Parsing body of message, first payload is %s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "parsing body of message, first payload is %s",
 					  mapping_find(payload_type_m, current_payload_type));
 
 	/* parse payload for payload, while there are more available */
@@ -782,7 +782,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	{
 		payload_t *current_payload;
 		
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Start parsing a %s payload", 
+		this->logger->log(this->logger, CONTROL|LEVEL2, "start parsing a %s payload", 
 							mapping_find(payload_type_m, current_payload_type));
 		
 		/* parse current payload */
@@ -790,12 +790,12 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Payload type %s could not be parsed",
+			this->logger->log(this->logger, ERROR, "payload type %s could not be parsed",
 								mapping_find(payload_type_m,current_payload_type));
 			return status;
 		}
 
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Verify payload of type %s", 
+		this->logger->log(this->logger, CONTROL|LEVEL2, "verify payload of type %s", 
 							mapping_find(payload_type_m, current_payload_type));
 		
 		/* verify it, stop parsig if its invalid */
@@ -829,17 +829,17 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	status = this->decrypt_payloads(this,crypter,signer);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Could not decrypt payloads");
+		this->logger->log(this->logger, ERROR, "could not decrypt payloads");
 		return status;
 	}
 	
 	status = this->verify(this);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Verification of message failed");
+		this->logger->log(this->logger, ERROR, "verification of message failed");
 	}
 	
-	this->logger->log(this->logger, CONTROL, "Parsed %s %s, contains %d payloads", 
+	this->logger->log(this->logger, CONTROL, "parsed %s %s, contains %d payloads", 
 					mapping_find(exchange_type_m, this->exchange_type),
 					this->is_request ? "request" : "response",
 					this->payloads->get_count(this->payloads));
@@ -856,7 +856,7 @@ static status_t verify(private_message_t *this)
 	iterator_t *iterator;
 	size_t total_found_payloads = 0;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Verifying message structure");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "verifying message structure");
 
 	iterator = this->payloads->create_iterator(this->payloads,TRUE);
 	/* check for payloads with wrong count*/
@@ -891,13 +891,13 @@ static status_t verify(private_message_t *this)
 			{
 				found_payloads++;
 				total_found_payloads++;
-				this->logger->log(this->logger, CONTROL|LEVEL2, "Found payload of type %s",
+				this->logger->log(this->logger, CONTROL|LEVEL2, "found payload of type %s",
 							  mapping_find(payload_type_m, this->message_rule->payload_rules[i].payload_type));
 	
 				/* as soon as ohe payload occures more then specified, the verification fails */
 				if (found_payloads > this->message_rule->payload_rules[i].max_occurence)
 				{
-					this->logger->log(this->logger, ERROR|LEVEL1, "Payload of type %s more than %d times (%d) occured in current message",
+					this->logger->log(this->logger, ERROR|LEVEL1, "payload of type %s more than %d times (%d) occured in current message",
 									  mapping_find(payload_type_m, current_payload_type),
 									  this->message_rule->payload_rules[i].max_occurence, found_payloads);
 					iterator->destroy(iterator);
@@ -908,7 +908,7 @@ static status_t verify(private_message_t *this)
 
 		if (found_payloads < this->message_rule->payload_rules[i].min_occurence)
 		{
-			this->logger->log(this->logger, ERROR|LEVEL1, "Payload of type %s not occured %d times (%d)",
+			this->logger->log(this->logger, ERROR|LEVEL1, "payload of type %s not occured %d times (%d)",
 							  mapping_find(payload_type_m, this->message_rule->payload_rules[i].payload_type),
 							  this->message_rule->payload_rules[i].min_occurence, found_payloads);
 			iterator->destroy(iterator);
@@ -951,7 +951,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 		/* needed to check */
 		current_payload_type = current_payload->get_type(current_payload);
 		
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Process payload of type %s",
+		this->logger->log(this->logger, CONTROL|LEVEL2, "process payload of type %s",
 							mapping_find(payload_type_m,current_payload_type));
 		
 		if (current_payload_type == ENCRYPTED)
@@ -961,18 +961,18 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			
 			encryption_payload = (encryption_payload_t*)current_payload;
 			
-			this->logger->log(this->logger, CONTROL | LEVEL2, "Found an encryption payload");
+			this->logger->log(this->logger, CONTROL | LEVEL2, "found an encryption payload");
 
 			if (payload_number != this->payloads->get_count(this->payloads))
 			{
 				/* encrypted payload is not last one */
-				this->logger->log(this->logger, ERROR | LEVEL1, "Encrypted payload is not last payload");
+				this->logger->log(this->logger, ERROR | LEVEL1, "encrypted payload is not last payload");
 				iterator->destroy(iterator);
 				return FAILED;
 			}
 			/* decrypt */
 			encryption_payload->set_transforms(encryption_payload, crypter, signer);
-			this->logger->log(this->logger, CONTROL | LEVEL1, "Verify signature of encryption payload");
+			this->logger->log(this->logger, CONTROL | LEVEL1, "verify signature of encryption payload");
 			status = encryption_payload->verify_signature(encryption_payload, this->packet->get_data(this->packet));
 			if (status != SUCCESS)
 			{
@@ -980,12 +980,12 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				iterator->destroy(iterator);
 				return status;
 			}
-			this->logger->log(this->logger, CONTROL | LEVEL2, "Decrypt content of encryption payload");
+			this->logger->log(this->logger, CONTROL | LEVEL2, "decrypt content of encryption payload");
 			status = encryption_payload->decrypt(encryption_payload);
 			if (status != SUCCESS)
 			{
 				this->logger->log(this->logger, ERROR | LEVEL1, 
-								  "Encrypted payload could not be decrypted and parsed: %s", 
+								  "encrypted payload could not be decrypted and parsed: %s", 
 								  mapping_find(status_m, status));
 				iterator->destroy(iterator);
 				return status;
@@ -997,7 +997,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			/* check if there are payloads contained in the encryption payload */
 			if (encryption_payload->get_payload_count(encryption_payload) == 0)
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL2, "Encrypted payload is empty");
+				this->logger->log(this->logger, CONTROL|LEVEL2, "encrypted payload is empty");
 				/* remove the encryption payload, is not needed anymore */
 				iterator->remove(iterator);
 				/* encrypted payload contains no other payload */
@@ -1028,7 +1028,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			{
 				encryption_payload->remove_first_payload(encryption_payload, &current_encrypted_payload);
 				this->logger->log(this->logger, CONTROL | LEVEL1, 
-								  "Insert unencrypted payload of type %s at end of list.",
+								  "insert unencrypted payload of type %s at end of list.",
 								   mapping_find(payload_type_m, current_encrypted_payload->get_type(current_encrypted_payload)));
 				this->payloads->insert_last(this->payloads,current_encrypted_payload);
 			}
@@ -1045,7 +1045,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			if (status != SUCCESS)
 			{
 				/* payload is not allowed */
-				this->logger->log(this->logger, ERROR | LEVEL1, "Payload type %s not allowed",
+				this->logger->log(this->logger, ERROR | LEVEL1, "payload type %s not allowed",
 								  mapping_find(payload_type_m,current_payload_type));
 				iterator->destroy(iterator);
 				return status;
@@ -1055,7 +1055,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			if (payload_rule->encrypted != current_payload_was_encrypted)
 			{
 				/* payload was not encrypted, but should have been. or vice-versa */
-				this->logger->log(this->logger, ERROR | LEVEL1, "Payload type %s should be %s!", 
+				this->logger->log(this->logger, ERROR | LEVEL1, "payload type %s should be %s!", 
 									mapping_find(payload_type_m,current_payload_type),
 									(payload_rule->encrypted) ? "encrypted" : "not encrypted");
 				iterator->destroy(iterator);
@@ -1082,12 +1082,12 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 	
 	if (!this->message_rule->encrypted_content)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL1, "Message doesn't have to be encrypted");
+		this->logger->log(this->logger, CONTROL | LEVEL1, "message doesn't have to be encrypted");
 		/* message contains no content to encrypt */
 		return SUCCESS;
 	}
 	
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Copy all payloads to a temporary list");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "copy all payloads to a temporary list");
 	all_payloads = linked_list_create();
 	
 	/* first copy all payloads in a temporary list */
@@ -1100,7 +1100,7 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 	
 	encryption_payload = encryption_payload_create();
 
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Check each payloads if they have to get encrypted");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "check each payloads if they have to get encrypted");
 	while (all_payloads->get_count(all_payloads) > 0)
 	{
 		payload_rule_t *payload_rule;
@@ -1108,7 +1108,7 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		bool to_encrypt = FALSE;
 		
 		all_payloads->remove_first(all_payloads,(void **)&current_payload);
-		this->logger->log(this->logger, CONTROL | LEVEL3, "Get rule for payload %s", 
+		this->logger->log(this->logger, CONTROL | LEVEL3, "get rule for payload %s", 
 							mapping_find(payload_type_m,current_payload->get_type(current_payload)));
 		
 		status = this->get_payload_rule(this,current_payload->get_type(current_payload),&payload_rule);
@@ -1116,38 +1116,38 @@ static status_t encrypt_payloads (private_message_t *this,crypter_t *crypter, si
 		 * that they don't have to be encrypted */
 		if ((status == SUCCESS) && (payload_rule->encrypted))
 		{
-			this->logger->log(this->logger, CONTROL | LEVEL2, "Payload %s has to get encrypted", 
+			this->logger->log(this->logger, CONTROL | LEVEL2, "payload %s has to get encrypted", 
 							  mapping_find(payload_type_m,current_payload->get_type(current_payload)));
 			to_encrypt = TRUE;
 		}
 		else if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, CONTROL | LEVEL2, "Payload %s not defined for exchange type %s. Handle it anyway", 
+			this->logger->log(this->logger, CONTROL | LEVEL2, "payload %s not defined for exchange type %s. Handle it anyway", 
 							  mapping_find(payload_type_m,current_payload->get_type(current_payload)),
 							  mapping_find(exchange_type_m,this->exchange_type));
 		}
 		
 		if (to_encrypt)
 		{
-			this->logger->log(this->logger, CONTROL | LEVEL2, "Insert payload %s to encryption payload", 
+			this->logger->log(this->logger, CONTROL | LEVEL2, "insert payload %s to encryption payload", 
 							  mapping_find(payload_type_m,current_payload->get_type(current_payload)));
 
 			encryption_payload->add_payload(encryption_payload,current_payload);
 		}
 		else
 		{
-			this->logger->log(this->logger, CONTROL | LEVEL2, "Insert payload %s as payload wich does not have to be encrypted", 
+			this->logger->log(this->logger, CONTROL | LEVEL2, "insert payload %s as payload wich does not have to be encrypted", 
 							  mapping_find(payload_type_m,current_payload->get_type(current_payload)));
 			this->public.add_payload(&(this->public), (payload_t*)encryption_payload);
 		}
 	}
 
 	status = SUCCESS;
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Set transforms for encryption payload ");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "set transforms for encryption payload ");
 	encryption_payload->set_transforms(encryption_payload,crypter,signer);
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Encrypt all payloads of encrypted payload");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "encrypt all payloads of encrypted payload");
 	status = encryption_payload->encrypt(encryption_payload);
-	this->logger->log(this->logger, CONTROL | LEVEL2, "Add encrypted payload to payload list");
+	this->logger->log(this->logger, CONTROL | LEVEL2, "add encrypted payload to payload list");
 	this->public.add_payload(&(this->public), (payload_t*)encryption_payload);
 	
 	all_payloads->destroy(all_payloads);
@@ -1163,7 +1163,7 @@ static void destroy (private_message_t *this)
 {
 	iterator_t *iterator;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL3, "Going to destroy message_t object");
+	this->logger->log(this->logger, CONTROL|LEVEL3, "going to destroy message_t object");
 	
 	this->packet->destroy(this->packet);
 
@@ -1177,7 +1177,7 @@ static void destroy (private_message_t *this)
 	{
 		payload_t *payload;
 		iterator->current(iterator, (void**)&payload);	
-		this->logger->log(this->logger, CONTROL|LEVEL3, "Destroying payload of type %s", 
+		this->logger->log(this->logger, CONTROL|LEVEL3, "destroying payload of type %s", 
 							mapping_find(payload_type_m, payload->get_type(payload)));
 		payload->destroy(payload);
 	}
