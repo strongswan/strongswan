@@ -150,7 +150,7 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 /**
  * Implements credential_store_t.add_certificate
  */
-static void add_certificate(private_local_credential_store_t *this, x509_t *cert)
+static x509_t* add_certificate(private_local_credential_store_t *this, x509_t *cert)
 {
 	bool found = FALSE;
 
@@ -164,19 +164,18 @@ static void add_certificate(private_local_credential_store_t *this, x509_t *cert
 		if (cert->equals(cert, current_cert))
 		{
 			found = TRUE;
+			cert->destroy(cert);
+			cert = current_cert;
 			break;
 		}
 	}
 	iterator->destroy(iterator);
 
-	if (found)
-	{
-		cert->destroy(cert);
-	}
-	else
+	if (!found)
 	{
 		this->certs->insert_last(this->certs, (void*)cert);
 	}
+	return cert;
 }
 
 /**
@@ -432,7 +431,7 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool(*)(credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
-	this->public.credential_store.add_certificate = (void(*)(credential_store_t*,x509_t*))add_certificate;
+	this->public.credential_store.add_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_certificate;
 	this->public.credential_store.log_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_certificates;
 	this->public.credential_store.log_ca_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_ca_certificates;
 	this->public.load_ca_certificates = (void(*)(local_credential_store_t*,const char*))load_ca_certificates;

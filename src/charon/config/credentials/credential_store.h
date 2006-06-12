@@ -98,8 +98,9 @@ struct credential_store_t {
 	 *
 	 * @param this		calling object
 	 * @param cert		certificate to be added
+	 * @return			pointer to the added or already existing certificate
 	 */
-	void (*add_certificate) (credential_store_t *this, x509_t *cert);
+	x509_t* (*add_certificate) (credential_store_t *this, x509_t *cert);
 
 	/**
 	 * @brief Lists all certificates kept in the local credential store.
