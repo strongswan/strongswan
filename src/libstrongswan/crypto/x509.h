@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (C) 2006 Martin Willi
+ * Copyright (C) 2006 Martin Willi, Andreas Steffen
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -34,7 +34,7 @@
 typedef struct x509_t x509_t;
 
 /**
- * @brief X509 certificate.
+ * @brief X.509 certificate.
  * 
  * @b Constructors:
  *  - x509_create_from_chunk()
@@ -79,10 +79,10 @@ struct x509_t {
 	identification_t *(*get_subject) (const x509_t *this);
 	
 	/**
-	 * @brief Check if a certificate is valid.
+	 * @brief Check if a certificate is trustworthy
 	 * 
-	 * This function uses the issuers public key to verify 
-	 * the validity of a certificate.
+	 * Use the issuer's public key to verify 
+	 * the trustworthiness of a certificate.
 	 * 
 	 * @todo implement!
 	 */
