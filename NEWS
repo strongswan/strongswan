@@ -1,8 +1,19 @@
 
+- initial support for rekeying CHILD_SAs using IKEv2. Currently
+  perfect forward secrecy is not supported. The rekeying parameters
+  rekeymargin, rekeyfuzz and keylife from ipsec.conf are now supported
+  when using IKEv2.
+
 - new build environment featuring autotools. Features such
   as HTTP, LDAP and smartcard support may be enabled using
   the ./configure script. Changing install directories 
   is possible, too. See ./configure --help for more details.
+
+- better integration of charon with ipsec starter, which allows
+  (almost) transparent operation with both daemons. charon
+  handles ipsec commands up, down, status, statusall, listall,
+  listcerts and allows proper load, reload and delete of connections
+  via ipsec starter.
 
 strongswan-4.0.0
 ----------------
