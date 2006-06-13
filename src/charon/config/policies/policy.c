@@ -332,6 +332,10 @@ static void add_proposal(private_policy_t *this, proposal_t *proposal)
  */
 static u_int32_t get_soft_lifetime(private_policy_t *this)
 {
+	if (this->jitter == 0)
+	{
+		return this->soft_lifetime ;
+	}
 	srandom(time(NULL)+getpid());
 	return this->soft_lifetime - (random() % this->jitter);
 }

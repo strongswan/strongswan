@@ -40,10 +40,10 @@ struct configuration_t {
 
 	/**
 	 * @brief Returns the retransmit timeout.
-	 * 
+	 *
 	 * The timeout values are managed by the configuration, so 
 	 * another backoff algorithm may be implemented here.
-	 * 
+	 *
 	 * @param this				calling object
 	 * @param retransmit_count	number of times a message was retransmitted so far
 	 * @param[out] timeout		the new retransmit timeout in milliseconds

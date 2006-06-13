@@ -1,7 +1,8 @@
  Known bugs in charon
 ======================
 
-- intiating the same connection twice makes trouble
 - leak_detective gets confused from libpthread (invalid frees)
-- installing to many SAs in the kernel at the same time causes troubles. Threading issue?
+- inititate rekeying at the same time causes troubles, as the current state
+  machine can't handle it properly
+- traffic selector changes while rekeying may cause troubles
 

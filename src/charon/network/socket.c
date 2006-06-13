@@ -191,6 +191,18 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			this->logger->log(this->logger, ERROR, "error reading from socket: %s", strerror(errno));
 			continue;
 		}
+		/* insert a delay to simulate small bandwith/RTT */
+#ifdef PACKET_RECV_DELAY
+		usleep(PACKET_RECV_DELAY * 1000);
+#endif
+		/* simulate packet loss of every PACKET_RECV_LOSS'th packet */
+#ifdef PACKET_RECV_LOSS
+		srandom(time(NULL) + getpid());
+		if (random() % PACKET_RECV_LOSS == 0)
+		{
+			return SUCCESS;
+		}
+#endif
 		if (bytes_read > IP_HEADER_LENGTH + UDP_HEADER_LENGTH)
 		{
 			/* read source/dest from raw IP/UDP header */
@@ -240,9 +252,19 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	this->logger->log(this->logger, CONTROL, "sending packet: from %s:%d to %s:%d",
 					  src->get_address(src), src->get_port(src),
 					  dst->get_address(dst), dst->get_port(dst));
-	
+	/* insert a delay to simulate small bandwith/RTT */
+#ifdef PACKET_SEND_DELAY
+	usleep(PACKET_SEND_DELAY * 1000);
+#endif
+	/* simulate packet loss of every PACKET_LOSS'th packet */
+#ifdef PACKET_SEND_LOSS
+	srandom(time(NULL) + getpid());
+	if (random() % PACKET_SEND_LOSS == 0)
+	{
+		return SUCCESS;
+	}
+#endif
 	/* send data */
-	/* TODO: should we send via the interface we received the packet? */
 	bytes_sent = sendto(this->master_fd, data.ptr, data.len, 0, 
 						dst->get_sockaddr(dst), *(dst->get_sockaddr_len(dst)));
 

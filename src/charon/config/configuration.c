@@ -30,7 +30,7 @@
  * First retransmit timeout in milliseconds.
  * Timeout value is increasing in each retransmit round.
  */
-#define RETRANSMIT_TIMEOUT 3000
+#define RETRANSMIT_TIMEOUT 2500
 
 /**
  * Timeout in milliseconds after that a half open IKE_SA gets deleted.
@@ -42,7 +42,7 @@
  * 0 for infinite. The max time a half open IKE_SA is alive is set by 
  * RETRANSMIT_TIMEOUT.
  */
-#define MAX_RETRANSMIT_COUNT 0
+#define MAX_RETRANSMIT_COUNT 3
 
 
 typedef struct private_configuration_t private_configuration_t;
@@ -65,7 +65,7 @@ struct private_configuration_t {
 static status_t get_retransmit_timeout (private_configuration_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
 {
 	int new_timeout = RETRANSMIT_TIMEOUT, i;
-	if (retransmit_count > MAX_RETRANSMIT_COUNT && MAX_RETRANSMIT_COUNT != 0)
+	if (retransmit_count >= MAX_RETRANSMIT_COUNT && MAX_RETRANSMIT_COUNT != 0)
 	{
 		return FAILED;
 	}

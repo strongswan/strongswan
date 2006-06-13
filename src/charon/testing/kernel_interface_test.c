@@ -68,8 +68,6 @@ void test_kernel_interface(protected_tester_t *tester)
 	
 	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 24, 24, XFRM_POLICY_OUT, 0, PROTO_ESP, 1234);
 	tester->assert_true(tester, status == SUCCESS, "add policy OUT");
-	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 24, 24, XFRM_POLICY_OUT, 0, PROTO_ESP, 2345);
-	tester->assert_true(tester, status == SUCCESS, "add policy OUT");
 	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 24, 24, XFRM_POLICY_IN, 0, PROTO_ESP, 1234);
 	tester->assert_true(tester, status == SUCCESS, "add policy IN");
 	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 24, 24, XFRM_POLICY_FWD, 0, PROTO_ESP, 1234);

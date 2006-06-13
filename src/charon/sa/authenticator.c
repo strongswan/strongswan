@@ -350,10 +350,10 @@ static status_t compute_auth_data (private_authenticator_t *this,
 								  my_id->get_string(my_id));
 				goto end_rsa;
 			}
-			this->logger->log(this->logger, CONTROL, "matching public key found");
+			this->logger->log(this->logger, CONTROL|LEVEL2, "matching public key found");
 			
 			chunk_to_hex(buf, BUF_LEN, my_pubkey->get_keyid(my_pubkey));
-			this->logger->log(this->logger, CONTROL, "looking for private key with keyid %s", buf);
+			this->logger->log(this->logger, CONTROL|LEVEL1, "looking for private key with keyid %s", buf);
 
 			my_key = charon->credentials->get_rsa_private_key(charon->credentials, my_pubkey);
 			my_pubkey->destroy(my_pubkey);
@@ -366,7 +366,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 								  buf);
 				goto end_rsa;
 			}
-			this->logger->log(this->logger, CONTROL, "matching private key found");
+			this->logger->log(this->logger, CONTROL|LEVEL2, "matching private key found");
 
 			octets = this->allocate_octets(this,last_sent_packet,other_nonce,my_id_payload,initiator);
 			status = my_key->build_emsa_pkcs1_signature(my_key, HASH_SHA1, octets, &auth_data);
