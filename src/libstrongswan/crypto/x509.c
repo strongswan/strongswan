@@ -36,12 +36,6 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
-#define BITS_PER_BYTE	8
-#define RSA_MIN_OCTETS	(1024 / BITS_PER_BYTE)
-#define RSA_MIN_OCTETS_UGH	"RSA modulus too small for security: less than 1024 bits"
-#define RSA_MAX_OCTETS	(8192 / BITS_PER_BYTE)
-#define RSA_MAX_OCTETS_UGH	"RSA modulus too large: more than 8192 bits"
-
 #define CERT_WARNING_INTERVAL	30	/* days */
 
 static logger_t *logger;

@@ -24,7 +24,7 @@
 #ifndef DEFINITIONS_H_
 #define DEFINITIONS_H_
 
-/* stolen from strongswan */
+/* stolen from FreeS/WAN */
 #if linux
 # if defined(i386) && !defined(__i386__)
 #  define __i386__ 1
@@ -56,6 +56,12 @@
 #ifndef BYTE_ORDER
  #error "BYTE_ORDER must be defined"
 #endif
+
+#define BITS_PER_BYTE	8
+#define RSA_MIN_OCTETS	(1024 / BITS_PER_BYTE)
+#define RSA_MIN_OCTETS_UGH	"RSA modulus too small for security: less than 1024 bits"
+#define RSA_MAX_OCTETS	(8192 / BITS_PER_BYTE)
+#define RSA_MAX_OCTETS_UGH	"RSA modulus too large: more than 8192 bits"
 
 /**
   * Default length for various auxiliary text buffers
