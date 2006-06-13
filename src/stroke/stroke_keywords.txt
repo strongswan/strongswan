@@ -31,7 +31,7 @@ del,          STROKE_DEL
 delete,       STROKE_DELETE
 route,        STROKE_ROUTE
 up,           STROKE_UP
-dowm,         STROKE_DOWN
+down,         STROKE_DOWN
 logtype,      STROKE_LOGTYPE
 logleve,      STROKE_LOGLEVEL
 status,       STROKE_STATUS
