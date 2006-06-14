@@ -238,6 +238,13 @@
 #define CA_CERTIFICATE_DIR IPSEC_D_DIR "/cacerts"
 
 /**
+ * Default directory for CRLs
+ * 
+ * @ingroup charon
+ */
+#define CRL_DIR IPSEC_D_DIR "/crls"
+
+/**
  * Secrets files
  * 
  * @ingroup charon
