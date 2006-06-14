@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <execinfo.h>
 #include <string.h>
+#include <getopt.h>
 
 #include "daemon.h" 
 
@@ -73,9 +74,10 @@ struct private_daemon_t {
 	/**
 	 * Initialize the daemon.
 	 * 
-	 * @param this 	calling object
+	 * @param this		calling object
+	 * @param strict	enforce a strict crl policy
 	 */
-	void (*initialize) (private_daemon_t *this);
+	void (*initialize) (private_daemon_t *this, bool strict);
 	
 	/**
 	 * Destroy the daemon.
@@ -163,7 +165,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 /**
  * Implementation of private_daemon_t.initialize.
  */
-static void initialize(private_daemon_t *this)
+static void initialize(private_daemon_t *this, bool strict)
 {
 	local_credential_store_t* cred_store;
 	
@@ -175,10 +177,11 @@ static void initialize(private_daemon_t *this)
 	this->public.send_queue = send_queue_create();
 	this->public.connections = (connection_store_t*)local_connection_store_create();
 	this->public.policies = (policy_store_t*)local_policy_store_create();
-	this->public.credentials = (credential_store_t*)(cred_store = local_credential_store_create());
+	this->public.credentials = (credential_store_t*)(cred_store = local_credential_store_create(strict));
 	
 	/* load keys & certs */
 	cred_store->load_ca_certificates(cred_store, CA_CERTIFICATE_DIR);
+	cred_store->load_crls(cred_store, CRL_DIR);
 	cred_store->load_private_keys(cred_store, SECRETS_FILE, PRIVATE_KEY_DIR);
 	
 	
@@ -344,24 +347,69 @@ private_daemon_t *daemon_create(void)
 	return this;
 }
 
+static void usage(const char *msg)
+{
+	if (msg != NULL && *msg != '\0')
+		fprintf(stderr, "%s\n", msg);
+    fprintf(stderr, "Usage: charon"
+		" [--help]"
+		" [--version]"
+		" [--use-syslog]"
+		" [--strictcrlpolicy]"
+		"\n"
+	);
+    exit(msg == NULL? 0 : 1);
+}
+
+
 /**
  * Main function, manages the daemon.
  */
 int main(int argc, char *argv[])
 {	
+	bool strict_crl_policy = FALSE;
+
 	private_daemon_t *private_charon;
 	FILE *pid_file;
 	struct stat stb;
-	int i;
 	
-	/* trivial argument parsing */
-	for (i = 1; i < argc; i++)
-	{
-		if (strcmp(argv[i], "--use-syslog") == 0)
+    /* handle arguments */
+    for (;;)
+    {
+		static const struct option long_opts[] = {
+			{ "help", no_argument, NULL, 'h' },
+			{ "version", no_argument, NULL, 'v' },
+			{ "use-syslog", no_argument, NULL, 'l' },
+			{ "strictcrlpolicy", no_argument, NULL, 'r' },
+			{ 0,0,0,0 }
+		};
+
+		int c = getopt_long(argc, argv, "", long_opts, NULL);
+
+		/* Note: "breaking" from case terminates loop */
+		switch (c)
 		{
-			logger_manager->set_output(logger_manager, ALL_LOGGERS, NULL);
+			case EOF:	/* end of flags */
+	    		break;
+			case 'h':
+				usage(NULL);
+				break;	/* not actually reached */
+			case 'v':
+				printf("Linux strongSwan %s\n", VERSION);
+				exit(0);
+			case 'l':
+				logger_manager->set_output(logger_manager, ALL_LOGGERS, NULL);
+				continue;
+			case 'r':
+				strict_crl_policy = TRUE;
+				continue;
+			default:
+				usage("");
+				break;	/* not actually reached */
 		}
+		break;
 	}
+
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
 	
@@ -371,7 +419,7 @@ int main(int argc, char *argv[])
 								"Starting Charon (strongSwan Version %s)", VERSION);
 		
 	/* initialize daemon */
-	private_charon->initialize(private_charon);
+	private_charon->initialize(private_charon, strict_crl_policy);
 	
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
