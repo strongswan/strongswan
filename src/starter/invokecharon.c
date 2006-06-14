@@ -109,7 +109,11 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     {
 	arg[argc++] = "--use-syslog";
     }
-	
+    if (cfg->setup.strictcrlpolicy)
+    {
+	arg[argc++] = "--strictcrlpolicy";
+    }
+
     if (_charon_pid)
     {
 	plog("starter_start_charon(): charon already started...");
