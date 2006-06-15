@@ -34,8 +34,8 @@
 /* strings containing a colon are interpreted as an IPv6 address */
 #define ip_version(string)	(strchr(string, ':') != NULL)? AF_INET6 : AF_INET;
 
-static const char ike_defaults[] = "3des-sha, 3des-md5";
-static const char esp_defaults[] = "3des-sha1, 3des-md5";
+static const char ike_defaults[] = "aes128-sha-modp2048";
+static const char esp_defaults[] = "aes128-sha1, 3des-md5";
 
 static const char firewall_defaults[] = "ipsec _updown iptables";
 
