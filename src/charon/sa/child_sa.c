@@ -68,6 +68,16 @@ struct private_child_sa_t {
 	} me, other;
 	
 	/**
+	 * Allocated SPI for a ESP proposal candidates
+	 */
+	u_int32_t alloc_esp_spi;
+	
+	/**
+	 * Allocated SPI for a AH proposal candidates
+	 */
+	u_int32_t alloc_ah_spi;
+	
+	/**
 	 * Protocol used to protect this SA, ESP|AH
 	 */
 	protocol_id_t protocol;
@@ -144,28 +154,47 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 	protocol_id_t protocol;
 	iterator_t *iterator;
 	proposal_t *proposal;
-	status_t status;
 	
-	/* iterator through proposals */
+	/* iterator through proposals to update spis */
 	iterator = proposals->create_iterator(proposals, TRUE);
 	while(iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&proposal);
 		protocol = proposal->get_protocol(proposal);
 		
-		status = charon->kernel_interface->get_spi(
-					charon->kernel_interface,
-					this->other.addr, this->me.addr,
-					protocol, this->reqid,
-					&this->me.spi);
-		
-		if (status != SUCCESS)
+		if (protocol == PROTO_AH)
 		{
-			iterator->destroy(iterator);
-			return FAILED;
+			/* get a new spi for AH, if not already done */
+			if (this->alloc_ah_spi == 0)
+			{
+				if (charon->kernel_interface->get_spi(
+								charon->kernel_interface,
+								this->other.addr, this->me.addr,
+								PROTO_AH, this->reqid,
+								&this->alloc_ah_spi) != SUCCESS)
+				{
+					return FAILED;
+				}
+			}
+			proposal->set_spi(proposal, this->alloc_ah_spi);
 		}
-		/* update proposal */
-		proposal->set_spi(proposal, (u_int64_t)this->me.spi);
+		if (protocol == PROTO_ESP)
+		{
+			/* get a new spi for ESP, if not already done */
+			if (this->alloc_esp_spi == 0)
+			{
+				if (charon->kernel_interface->get_spi(
+								charon->kernel_interface,
+								this->other.addr, this->me.addr,
+								PROTO_ESP, this->reqid,
+								&this->alloc_esp_spi) != SUCCESS)
+				{
+					return FAILED;
+				}
+			}
+			proposal->set_spi(proposal, this->alloc_esp_spi);
+		}
+		
 	}
 	iterator->destroy(iterator);
 	return SUCCESS;
@@ -181,30 +210,43 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	host_t *dst;
 	status_t status;
 	
-	/* we must assign the roles to correctly set up the SAs */
- 	if (mine)
-	{
-		dst = this->me.addr;
-		src = this->other.addr;
- 	}
- 	else
-	{
-		src = this->me.addr;
-		dst = this->other.addr;
- 	}
-	
 	this->protocol = proposal->get_protocol(proposal);
 	
 	/* now we have to decide which spi to use. Use self allocated, if "mine",
-	 * or the one in the proposal, if not "mine" (others). */
+	 * or the one in the proposal, if not "mine" (others). Additionally,
+	 * source and dest host switch depending on the role */
 	if (mine)
 	{
+		/* if we have allocated SPIs for AH and ESP, we must delete the unused
+		 * one. */
+		if (this->protocol == PROTO_ESP)
+		{
+			this->me.spi = this->alloc_esp_spi;
+			if (this->alloc_ah_spi)
+			{
+				charon->kernel_interface->del_sa(charon->kernel_interface, this->me.addr, 
+						this->alloc_ah_spi, PROTO_AH);
+			}
+		}
+		else
+		{
+			this->me.spi = this->alloc_ah_spi;
+			if (this->alloc_esp_spi)
+			{
+				charon->kernel_interface->del_sa(charon->kernel_interface, this->me.addr, 
+						this->alloc_esp_spi, PROTO_ESP);
+			}
+		}
 		spi = this->me.spi;
+		dst = this->me.addr;
+		src = this->other.addr;
 	}
 	else
 	{
-		spi = proposal->get_spi(proposal);
-		this->other.spi = spi;
+		this->other.spi = proposal->get_spi(proposal);
+		spi = this->other.spi;
+		src = this->me.addr;
+		dst = this->other.addr;
 	}
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1, "Adding %s %s SA",
@@ -413,12 +455,24 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 	{
 		logger = this->logger;
 	}
-	logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   protected with %s (0x%x/0x%x), reqid %d, rekeying in %ds:",
-				name,
-				this->protocol == PROTO_ESP ? "ESP" : "AH",
-				htonl(this->me.spi), htonl(this->other.spi),
-				this->reqid, 
-				this->soft_lifetime - (time(NULL) - this->install_time));
+	if (this->soft_lifetime)
+	{
+		logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   protected with %s (0x%x/0x%x), reqid %d, rekeying in %ds:",
+					name,
+					this->protocol == PROTO_ESP ? "ESP" : "AH",
+					htonl(this->me.spi), htonl(this->other.spi),
+					this->reqid, 
+					this->soft_lifetime - (time(NULL) - this->install_time));
+	}
+	else
+	{
+		
+		logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   protected with %s (0x%x/0x%x), reqid %d, no rekeying:",
+					name,
+					this->protocol == PROTO_ESP ? "ESP" : "AH",
+					htonl(this->me.spi), htonl(this->other.spi),
+					this->reqid);
+	}
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->has_next(iterator))
 	{
@@ -452,10 +506,23 @@ static void destroy(private_child_sa_t *this)
 	sa_policy_t *policy;
 	
 	/* delete SAs in the kernel, if they are set up */
-	if (this->protocol != PROTO_NONE)
+	if (this->me.spi)
 	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 										 this->me.addr, this->me.spi, this->protocol);
+	}
+	if (this->alloc_esp_spi && this->alloc_esp_spi != this->me.spi)
+	{
+		charon->kernel_interface->del_sa(charon->kernel_interface,
+										 this->me.addr, this->alloc_esp_spi, PROTO_ESP);
+	}
+	if (this->alloc_ah_spi && this->alloc_ah_spi != this->me.spi)
+	{
+		charon->kernel_interface->del_sa(charon->kernel_interface,
+										 this->me.addr, this->alloc_ah_spi, PROTO_AH);
+	}
+	if (this->other.spi)
+	{
 		charon->kernel_interface->del_sa(charon->kernel_interface,
 										 this->other.addr, this->other.spi, this->protocol);
 	}
@@ -520,6 +587,8 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->other.addr = other;
 	this->me.spi = 0;
 	this->other.spi = 0;
+	this->alloc_ah_spi = 0;
+	this->alloc_esp_spi = 0;
 	this->soft_lifetime = soft_lifetime;
 	this->hard_lifetime = hard_lifetime;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
