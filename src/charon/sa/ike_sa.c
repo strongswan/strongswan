@@ -435,7 +435,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	/* SK_ai/SK_ar used for integrity protection */
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
 	{
-		this->logger->log(this->logger, ERROR|LEVEL2, "No integrity algoithm selected?!");
+		this->logger->log(this->logger, ERROR, "No integrity algoithm selected?!");
 		return FAILED;
 	}
 	if (this->signer_initiator != NULL)
@@ -451,7 +451,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	this->signer_responder = signer_create(algo->algorithm);
 	if (this->signer_initiator == NULL || this->signer_responder == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, 
+		this->logger->log(this->logger, ERROR, 
 						  "INTEGRITY_ALGORITHM %s not supported!",
 						  mapping_find(integrity_algorithm_m,algo->algorithm));
 		return FAILED;
@@ -459,12 +459,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	key_size = this->signer_initiator->get_key_size(this->signer_initiator);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", key);
+	this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "Sk_ai secret", key);
 	this->signer_initiator->set_key(this->signer_initiator, key);
 	chunk_free(&key);
 
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", key);
+	this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "Sk_ar secret", key);
 	this->signer_responder->set_key(this->signer_responder, key);
 	chunk_free(&key);
 	
@@ -472,7 +472,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	/* SK_ei/SK_er used for encryption */
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
 	{
-		this->logger->log(this->logger, ERROR|LEVEL2, "No encryption algoithm selected!?");
+		this->logger->log(this->logger, ERROR, "No encryption algoithm selected!?");
 		return FAILED;
 	}
 	if (this->crypter_initiator != NULL)
@@ -488,7 +488,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	this->crypter_responder = crypter_create(algo->algorithm, algo->key_size / 8);
 	if (this->crypter_initiator == NULL || this->crypter_responder == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, 
+		this->logger->log(this->logger, ERROR, 
 						  "ENCRYPTION_ALGORITHM %s (key size %d) not supported!",
 						  mapping_find(encryption_algorithm_m, algo->algorithm),
 						  algo->key_size);

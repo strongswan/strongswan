@@ -85,8 +85,6 @@ struct credential_store_t {
 	/**
 	 * @brief Is there a matching RSA private key belonging to an RSA public key?
 	 * 
-	 * The returned rsa_private_key_t must be destroyed by the caller after usage.
-	 * 
 	 * @param this					calling object
 	 * @param pubkey				public key 
 	 * @return						TRUE if matching private key was found 

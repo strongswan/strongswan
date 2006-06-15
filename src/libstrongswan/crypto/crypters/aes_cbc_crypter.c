@@ -77,11 +77,6 @@ struct private_aes_cbc_crypter_t {
 	u_int32_t    aes_d_key[AES_KS_LENGTH];
 	
 	/**
-	* The number of columns in the cipher state.
-	*/
-	u_int32_t    aes_Ncol;
-	
-	/**
 	* Key size of this AES cypher object.
 	*/
 	u_int32_t    key_size;
@@ -967,7 +962,7 @@ static void gen_tabs(void)
     f2 ^= f4 ^ f8 ^ upr(f2 ^ f9,3) ^ upr(f4 ^ f9,2) ^ upr(f9,1))
 #endif
 
-#define nc   (this->aes_Ncol)
+#define nc   (AES_BLOCK_SIZE/4)
 
 // Initialise the key schedule from the user supplied key. The key
 // length is now specified in bytes - 16, 24 or 32 as appropriate.
@@ -1490,7 +1485,7 @@ static status_t set_key (private_aes_cbc_crypter_t *this, chunk_t key)
 		return INVALID_ARG;
 	}
 	
-	this->aes_Nrnd = (this->aes_Nkey > (this->aes_Ncol) ? this->aes_Nkey : (this->aes_Ncol)) + 6; 
+	this->aes_Nrnd = (this->aes_Nkey > (nc) ? this->aes_Nkey : (nc)) + 6; 
 	
 	this->aes_e_key[0] = const_word_in(in_key     );
 	this->aes_e_key[1] = const_word_in(in_key +  4);
@@ -1595,15 +1590,12 @@ aes_cbc_crypter_t *aes_cbc_crypter_create(size_t key_size)
 	this->key_size = key_size;
 	switch(key_size) {
 	case 32:        /* bytes */
-		this->aes_Ncol = 8;
 		this->aes_Nkey = 8;
 		break;
 	case 24:        /* bytes */
-		this->aes_Ncol = 6;
 		this->aes_Nkey = 6;
 		break;
 	case 16:        /* bytes */
-		this->aes_Ncol = 4;
 		this->aes_Nkey = 4;
 		break;
 	default:
