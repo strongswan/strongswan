@@ -96,6 +96,10 @@ struct stroke_msg_t {
 			char *name;
 			bool ikev2;
 			struct {
+				char *ike;
+				char *esp;
+			} algorithms;
+			struct {
 				time_t ipsec_lifetime;
 				time_t ike_lifetime;
 				time_t margin;

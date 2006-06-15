@@ -133,6 +133,8 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
 		this->logger->log_chunk(this->logger, RAW|LEVEL2, "Rekey seed", seed);
 		chunk_free(&seed);
+		chunk_free(&this->nonce_i);
+		chunk_free(&this->nonce_r);
 		
 		policy = this->ike_sa->get_policy(this->ike_sa);
 		connection = this->ike_sa->get_connection(this->ike_sa);
@@ -226,19 +228,18 @@ static status_t build_nonce_payload(private_ike_sa_established_t *this, nonce_pa
 	randomizer_t *randomizer;
 	status_t status;
 	
-	this->nonce_i = nonce_request->get_nonce(nonce_request);
-	
 	randomizer = this->ike_sa->get_randomizer(this->ike_sa);
 	status = randomizer->allocate_pseudo_random_bytes(randomizer, NONCE_SIZE, &this->nonce_r);
 	if (status != SUCCESS)
 	{
 		return status;
 	}
-	
 	nonce_payload = nonce_payload_create();
 	nonce_payload->set_nonce(nonce_payload, this->nonce_r);
 	
 	response->add_payload(response,(payload_t *) nonce_payload);
+	
+	this->nonce_i = nonce_request->get_nonce(nonce_request);
 	
 	return SUCCESS;
 }
@@ -431,6 +432,7 @@ static status_t process_informational(private_ike_sa_established_t *this, messag
 			 * allow the clean destruction of an SA only in this state. */
 			this->ike_sa->set_new_state(this->ike_sa, (state_t*)delete_ike_sa_requested_create(this->ike_sa));
 			this->public.state_interface.destroy(&(this->public.state_interface));
+			this->ike_sa->send_response(this->ike_sa, response);
 			return DESTROY_ME;
 		}
 		else
@@ -523,9 +525,6 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 							  mapping_find(exchange_type_m, message->get_exchange_type(message)));
 			status = NOT_SUPPORTED;
 	}
-	/* clean up private members */
-	chunk_free(&this->nonce_i);
-	chunk_free(&this->nonce_r);
 	return status;
 }
 
@@ -542,6 +541,8 @@ static ike_sa_state_t get_state(private_ike_sa_established_t *this)
  */
 static void destroy(private_ike_sa_established_t *this)
 {
+	chunk_free(&this->nonce_i);
+	chunk_free(&this->nonce_r);
 	free(this);
 }
 

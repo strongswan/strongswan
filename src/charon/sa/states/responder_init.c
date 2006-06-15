@@ -344,8 +344,10 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 		return DESTROY_ME;
 	}
 	/* get selected DH group to force policy, this is very restrictive!? */
-	this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP, &algo);
-	this->dh_group_number = algo->algorithm;
+	if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP, &algo))
+	{
+		this->dh_group_number = algo->algorithm;
+	}
 	
 	this->logger->log(this->logger, CONTROL | LEVEL2, "SA Payload processed");
 	

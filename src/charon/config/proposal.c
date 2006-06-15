@@ -27,6 +27,10 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 #include <utils/logger.h>
+#include <utils/lexparser.h>
+#include <crypto/prfs/prf.h>
+#include <crypto/crypters/crypter.h>
+#include <crypto/signers/signer.h>
 
 
 /** 
@@ -115,8 +119,9 @@ struct private_proposal_t {
  */
 static void add_algo(linked_list_t *list, u_int8_t algo, size_t key_size)
 {
-	algorithm_t *algo_key = malloc_thing(algorithm_t);
+	algorithm_t *algo_key;
 	
+	algo_key = malloc_thing(algorithm_t);
 	algo_key->algorithm = algo;
 	algo_key->key_size = key_size;
 	list->insert_last(list, (void*)algo_key);
@@ -414,6 +419,83 @@ static void free_algo_list(linked_list_t *list)
 	list->destroy(list);
 }
 
+static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
+{
+	if (strncmp(alg.ptr, "aes128", alg.len) == 0)
+	{
+		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 128);
+	}
+	else if (strncmp(alg.ptr, "aes192", alg.len) == 0)
+	{
+		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 192);
+	}
+	else if (strncmp(alg.ptr, "aes256", alg.len) == 0)
+	{
+		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 256);
+	}
+	else if (strncmp(alg.ptr, "3des", alg.len) == 0)
+	{
+		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
+	}
+	/* blowfish only uses some predefined key sizes yet */
+	else if (strncmp(alg.ptr, "blowfish128", alg.len) == 0)
+	{
+		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 128);
+	}
+	else if (strncmp(alg.ptr, "blowfish192", alg.len) == 0)
+	{
+		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 192);
+	}
+	else if (strncmp(alg.ptr, "blowfish256", alg.len) == 0)
+	{
+		add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 256);
+	}
+	else if (strncmp(alg.ptr, "sha", alg.len) == 0 ||
+			 strncmp(alg.ptr, "sha1", alg.len) == 0)
+	{
+		/* sha means we use SHA for both, PRF and AUTH */
+		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
+		if (this->protocol == PROTO_IKE)
+		{
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
+		}
+	}
+	else if (strncmp(alg.ptr, "md5", alg.len) == 0)
+	{
+		/* same for MD5 */
+		add_algorithm(this, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
+		if (this->protocol == PROTO_IKE)
+		{
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
+		}
+	}
+	else if (strncmp(alg.ptr, "modp1024", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "modp1536", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_1536_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "modp2048", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "modp4096", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
+	}
+	else if (strncmp(alg.ptr, "modp8192", alg.len) == 0)
+	{
+		add_algorithm(this, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
+	}
+	else
+	{
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
 /**
  * Implements proposal_t.destroy.
  */
@@ -452,6 +534,80 @@ proposal_t *proposal_create(protocol_id_t protocol)
 	this->prf_algos = linked_list_create();
 	this->dh_groups = linked_list_create();
 	this->esns = linked_list_create();
+	
+	return &this->public;
+}
+
+/*
+ * Describtion in header-file
+ */
+proposal_t *proposal_create_default(protocol_id_t protocol)
+{
+	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol);
+	
+	switch (protocol)
+	{
+		case PROTO_IKE:
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,    128);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1,     0);
+			add_algorithm(this, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,      0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_2048_BIT,     0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1536_BIT,     0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_1024_BIT,     0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_4096_BIT,     0);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,   MODP_8192_BIT,     0);
+			break;
+		case PROTO_ESP:
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,    128);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,    192);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_AES_CBC,    256);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_3DES,         0);
+			add_algorithm(this, ENCRYPTION_ALGORITHM,   ENCR_BLOWFISH,   256);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
+			break;
+		case PROTO_AH:
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
+			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
+			break;
+	}
+	
+	return &this->public;
+}
+
+/*
+ * Describtion in header-file
+ */
+proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs)
+{
+	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol);
+	chunk_t string = {(void*)algs, strlen(algs)};
+	chunk_t alg;
+	status_t status = SUCCESS;
+	
+	eat_whitespace(&string);
+	if (string.len < 1)
+	{
+		destroy(this);
+		return NULL;
+	}
+	
+	/* get all tokens, separated by '-' */
+	while (extract_token(&alg, '-', &string))
+	{
+		status |= add_string_algo(this, alg);
+	}
+	if (string.len)
+	{
+		status |= add_string_algo(this, string);
+	}
+	if (status != SUCCESS)
+	{
+		destroy(this);
+		return NULL;
+	}
 	
 	return &this->public;
 }

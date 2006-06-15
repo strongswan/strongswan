@@ -131,19 +131,23 @@ struct notify_payload_t {
 
 	/**
 	 * @brief Returns the currently set spi of this payload.
+	 * 
+	 * This is only valid for notifys with protocol AH|ESP
 	 *
 	 * @param this 	calling notify_payload_t object
 	 * @return 		SPI value
 	 */
-	u_int64_t (*get_spi) (notify_payload_t *this);
+	u_int32_t (*get_spi) (notify_payload_t *this);
 	
 	/**
 	 * @brief Sets the spi of this payload.
 	 * 
+	 * This is only valid for notifys with protocol AH|ESP
+	 * 
 	 * @param this 	calling notify_payload_t object
 	 * @param spi	SPI value
 	 */
-	void (*set_spi) (notify_payload_t *this, u_int64_t spi);
+	void (*set_spi) (notify_payload_t *this, u_int32_t spi);
 
 	/**
 	 * @brief Returns the currently set notification data of payload.

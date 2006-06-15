@@ -252,7 +252,7 @@ int main()
 	tester_t *tester = tester_create(test_output, FALSE);
 	
 	//tester->perform_tests(tester,all_tests);
-	tester->perform_test(tester,&kernel_interface_test);
+	tester->perform_test(tester,&proposal_test);
 	
 	
 	tester->destroy(tester);

@@ -966,7 +966,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			if (payload_number != this->payloads->get_count(this->payloads))
 			{
 				/* encrypted payload is not last one */
-				this->logger->log(this->logger, ERROR | LEVEL1, "encrypted payload is not last payload");
+				this->logger->log(this->logger, ERROR, "encrypted payload is not last payload");
 				iterator->destroy(iterator);
 				return FAILED;
 			}
@@ -976,7 +976,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			status = encryption_payload->verify_signature(encryption_payload, this->packet->get_data(this->packet));
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR | LEVEL1, "encryption payload signature invalid");
+				this->logger->log(this->logger, ERROR, "encryption payload signature invalid");
 				iterator->destroy(iterator);
 				return status;
 			}
@@ -984,7 +984,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			status = encryption_payload->decrypt(encryption_payload);
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR | LEVEL1, 
+				this->logger->log(this->logger, ERROR, 
 								  "encrypted payload could not be decrypted and parsed: %s", 
 								  mapping_find(status_m, status));
 				iterator->destroy(iterator);
@@ -1045,7 +1045,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			if (status != SUCCESS)
 			{
 				/* payload is not allowed */
-				this->logger->log(this->logger, ERROR | LEVEL1, "payload type %s not allowed",
+				this->logger->log(this->logger, ERROR, "payload type %s not allowed",
 								  mapping_find(payload_type_m,current_payload_type));
 				iterator->destroy(iterator);
 				return status;
@@ -1055,7 +1055,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			if (payload_rule->encrypted != current_payload_was_encrypted)
 			{
 				/* payload was not encrypted, but should have been. or vice-versa */
-				this->logger->log(this->logger, ERROR | LEVEL1, "payload type %s should be %s!", 
+				this->logger->log(this->logger, ERROR, "payload type %s should be %s!", 
 									mapping_find(payload_type_m,current_payload_type),
 									(payload_rule->encrypted) ? "encrypted" : "not encrypted");
 				iterator->destroy(iterator);
@@ -1276,7 +1276,7 @@ message_t *message_create_notify_reply(host_t *source, host_t *destination, exch
 	message->set_message_id(message,0);
 	message->set_ike_sa_id(message, ike_sa_id);
 	
-	payload = notify_payload_create_from_protocol_and_type(PROTO_IKE, notify_type);
+	payload = notify_payload_create_from_protocol_and_type(PROTO_NONE, notify_type);
 	message->add_payload(message,(payload_t *) payload);
 	
 	return message;

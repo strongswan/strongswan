@@ -302,6 +302,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 	else
 	{
 		*spi = response->sa.id.spi;
+		this->logger->log(this->logger, CONTROL|LEVEL1, "SPI is 0x%x", *spi);
 	}
 	free(response);
 	

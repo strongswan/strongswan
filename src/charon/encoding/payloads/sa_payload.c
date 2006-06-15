@@ -26,6 +26,7 @@
 
 #include <encoding/payloads/encodings.h>
 #include <utils/linked_list.h>
+#include <utils/logger_manager.h>
 
 
 typedef struct private_sa_payload_t private_sa_payload_t;
@@ -59,6 +60,11 @@ struct private_sa_payload_t {
 	 * Proposals in this payload are stored in a linked_list_t.
 	 */
 	linked_list_t * proposals;
+	
+	/**
+	 * Logger for error handling
+	 */
+	logger_t *logger;
 	
 	/**
 	 * @brief Computes the length of this payload.
@@ -112,7 +118,7 @@ encoding_rule_t sa_payload_encodings[] = {
  */
 static status_t verify(private_sa_payload_t *this)
 {
-	int proposal_number = 1;
+	int expected_number = 1, current_number;
 	status_t status = SUCCESS;
 	iterator_t *iterator;
 	bool first = TRUE;
@@ -124,25 +130,28 @@ static status_t verify(private_sa_payload_t *this)
 	{
 		proposal_substructure_t *current_proposal;
 		iterator->current(iterator,(void **)&current_proposal);
-		if (current_proposal->get_proposal_number(current_proposal) > proposal_number)
+		current_number = current_proposal->get_proposal_number(current_proposal);
+		if (current_number > expected_number)
 		{
 			if (first) 
 			{
-				/* first number must be 1 */
+				this->logger->log(this->logger, ERROR, "first proposal is not proposal #1");
 				status = FAILED;
 				break;
 			}
 			
-			if (current_proposal->get_proposal_number(current_proposal) != (proposal_number + 1))
+			if (current_number != (expected_number + 1))
 			{
-				/* must be only one more then previous proposal */
+				this->logger->log(this->logger, ERROR, "proposal number is %d, excepted %d or %d",
+								  current_number, expected_number, expected_number + 1);
 				status = FAILED;
 				break;
 			}
 		}
-		else if (current_proposal->get_proposal_number(current_proposal) < proposal_number)
+		else if (current_number < expected_number)
 		{
 			/* must not be smaller then proceeding one */
+			this->logger->log(this->logger, ERROR, "proposal number smaller than that of previous proposal");
 			status = FAILED;
 			break;
 		}
@@ -150,9 +159,11 @@ static status_t verify(private_sa_payload_t *this)
 		status = current_proposal->payload_interface.verify(&(current_proposal->payload_interface));
 		if (status != SUCCESS)
 		{
+			this->logger->log(this->logger, ERROR, "proposal substructure verification failed");
 			break;
 		}
 		first = FALSE;
+		expected_number = current_number;
 	}
 	
 	iterator->destroy(iterator);
@@ -358,6 +369,7 @@ sa_payload_t *sa_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = SA_PAYLOAD_HEADER_LENGTH;
+	this->logger = logger_manager->get_logger(logger_manager, PARSER);
 
 	this->proposals = linked_list_create();
 	return &this->public;

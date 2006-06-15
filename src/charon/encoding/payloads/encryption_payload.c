@@ -385,7 +385,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	 */
 	if (concatenated.len < iv.len)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "could not decrypt, invalid input");
+		this->logger->log(this->logger, ERROR, "could not decrypt, invalid input");
 		return FAILED;
 	}
 	
@@ -397,7 +397,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	status = this->crypter->decrypt(this->crypter, concatenated, iv, &(this->decrypted));
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "could not decrypt, decryption failed");
+		this->logger->log(this->logger, ERROR, "could not decrypt, decryption failed");
 		return FAILED;
 	}
 	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after decryption with padding", this->decrypted);
@@ -412,7 +412,7 @@ static status_t decrypt(private_encryption_payload_t *this)
 	/* check size again */
 	if (padding_length > concatenated.len || this->decrypted.len < 0)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "decryption failed, invalid padding length found. Invalid key?");
+		this->logger->log(this->logger, ERROR, "decryption failed, invalid padding length found. Invalid key?");
 		/* decryption failed :-/ */
 		return FAILED;
 	}
@@ -575,7 +575,7 @@ static status_t parse(private_encryption_payload_t *this)
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR|LEVEL1, "%s verification failed: %s", 
+			this->logger->log(this->logger, ERROR, "%s verification failed: %s", 
 								mapping_find(payload_type_m,current_payload->get_type(current_payload)),
 								mapping_find(status_m, status));
 			current_payload->destroy(current_payload);

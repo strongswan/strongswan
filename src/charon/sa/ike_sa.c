@@ -368,8 +368,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	{
 		this->prf->destroy(this->prf);
 	}
-	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
-	if (algo == NULL)
+	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo))
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No PRF algoithm selected!?");
 		return FAILED;
@@ -434,8 +433,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	
 	/* SK_ai/SK_ar used for integrity protection */
-	proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo);
-	if (algo == NULL)
+	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No integrity algoithm selected?!");
 		return FAILED;
@@ -472,8 +470,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	
 	/* SK_ei/SK_er used for encryption */
-	proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo);
-	if (algo == NULL)
+	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
 	{
 		this->logger->log(this->logger, ERROR|LEVEL2, "No encryption algoithm selected!?");
 		return FAILED;
@@ -510,7 +507,6 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	chunk_free(&key);
 	
 	/* SK_pi/SK_pr used for authentication */
-	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
 	if (this->prf_auth_i != NULL)
 	{
 		this->prf_auth_i->destroy(this->prf_auth_i);
@@ -520,6 +516,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 		this->prf_auth_r->destroy(this->prf_auth_r);
 	}
 	
+	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
 	this->prf_auth_i = prf_create(algo->algorithm);
 	this->prf_auth_r = prf_create(algo->algorithm);
 	
@@ -724,7 +721,7 @@ static void send_notify(private_ike_sa_t *this, exchange_type_t exchange_type, n
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Going to build message with notify payload");
 	/* set up the reply */
 	build_message(this, exchange_type, FALSE, &response);
-	payload = notify_payload_create_from_protocol_and_type(PROTO_IKE, type);
+	payload = notify_payload_create_from_protocol_and_type(PROTO_NONE, type);
 	if ((data.ptr != NULL) && (data.len > 0))
 	{
 		this->logger->log(this->logger, CONTROL|LEVEL2, "Add Data to notify payload");

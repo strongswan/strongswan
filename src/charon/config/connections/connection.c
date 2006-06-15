@@ -200,20 +200,20 @@ static diffie_hellman_group_t get_dh_group(private_connection_t *this)
 	iterator_t *iterator;
 	proposal_t *proposal;
 	algorithm_t *algo;
+	diffie_hellman_group_t dh_group = MODP_NONE;
 	
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&proposal);
-		proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo);
-		if (algo)
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo))
 		{
-			iterator->destroy(iterator);
-			return algo->algorithm;
+			dh_group = algo->algorithm;
+			break;
 		}
 	}
 	iterator->destroy(iterator);
-	return MODP_NONE;
+	return dh_group;
 }
 
 /**

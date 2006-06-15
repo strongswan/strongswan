@@ -1,6 +1,6 @@
 /**
  * @file proposal.h
- * 
+ *
  * @brief Interface of proposal_t.
  *
  */
@@ -232,12 +232,39 @@ struct proposal_t {
 
 /**
  * @brief Create a child proposal for AH, ESP or IKE.
- * 
+ *
  * @param protocol			protocol, such as PROTO_ESP
+ * @return 					proposal_t object
+ *
+ * @ingroup config
+ */
+proposal_t *proposal_create(protocol_id_t protocol);
+
+/**
+ * @brief Create a default proposal if nothing further specified.
+ *
+ * @param protocol			protocol, such as PROTO_ESP
+ * @return 					proposal_t object
+ *
+ * @ingroup config
+ */
+proposal_t *proposal_create_default(protocol_id_t protocol);
+
+/**
+ * @brief Create a proposal from a string identifying the algorithms.
+ *
+ * The string is in the same form as a in the ipsec.conf file.
+ * E.g.:	aes128-sha2_256-modp2048
+ *          3des-md5
+ * An additional '!' at the end of the string forces this proposal,
+ * without it the peer may choose another algorithm we support.
+ *
+ * @param protocol			protocol, such as PROTO_ESP
+ * @param algs				algorithms as string
  * @return 					proposal_t object
  * 
  * @ingroup config
  */
-proposal_t *proposal_create(protocol_id_t protocol);
+proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs);
 
 #endif /* PROPOSAL_H_ */

@@ -179,7 +179,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	pop_string(msg, &msg->add_conn.other.cert);
 	pop_string(msg, &msg->add_conn.me.ca);
 	pop_string(msg, &msg->add_conn.other.ca);
-				
+	pop_string(msg, &msg->add_conn.algorithms.ike);
+	pop_string(msg, &msg->add_conn.algorithms.esp);
+	
 	this->logger->log(this->logger, CONTROL, "received stroke: add connection \"%s\"", msg->add_conn.name);
 				
 	my_host = msg->add_conn.me.address?
@@ -343,18 +345,91 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	connection = connection_create(msg->add_conn.name, msg->add_conn.ikev2,
 								   my_host, other_host,
 								   RSA_DIGITAL_SIGNATURE);
-	proposal = proposal_create(PROTO_IKE);
-	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 128);
-	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
-	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
-	proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_SHA1, 0);
-	proposal->add_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5, 0);
-	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_2048_BIT, 0);
-	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_1536_BIT, 0);
-	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_1024_BIT, 0);
-	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_4096_BIT, 0);
-	proposal->add_algorithm(proposal, DIFFIE_HELLMAN_GROUP, MODP_8192_BIT, 0);
-	connection->add_proposal(connection, proposal);
+	if (msg->add_conn.algorithms.ike)
+	{
+		char *proposal_string;
+		char *strict = msg->add_conn.algorithms.ike + strlen(msg->add_conn.algorithms.ike) - 1;
+		if (*strict == '!')
+		{
+			*strict = '\0';
+		}
+		else
+		{
+			strict = NULL;
+		}
+		while ((proposal_string = strsep(&msg->add_conn.algorithms.ike, ",")))
+		{
+			proposal = proposal_create_from_string(PROTO_IKE, proposal_string);
+			if (proposal == NULL)
+			{
+				this->logger->log(this->logger, ERROR, "invalid IKE proposal string: %s", msg->add_conn.algorithms.esp);
+				my_id->destroy(my_id);
+				other_id->destroy(other_id);
+				my_ts->destroy(my_ts);
+				other_ts->destroy(other_ts);
+				my_ca->destroy(my_ca);
+				other_ca->destroy(other_ca);
+				connection->destroy(connection);
+				return;
+			}
+			connection->add_proposal(connection, proposal);
+		}
+		if (!strict)
+		{
+			proposal = proposal_create_default(PROTO_IKE);
+			connection->add_proposal(connection, proposal);
+		}
+	}
+	else
+	{
+		proposal = proposal_create_default(PROTO_IKE);
+		connection->add_proposal(connection, proposal);
+	}
+	
+	policy = policy_create(msg->add_conn.name, my_id, other_id,
+						   msg->add_conn.rekey.ipsec_lifetime,
+						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
+						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100);
+	policy->add_my_traffic_selector(policy, my_ts);
+	policy->add_other_traffic_selector(policy, other_ts);
+	policy->add_authorities(policy, my_ca, other_ca);
+	
+	if (msg->add_conn.algorithms.esp)
+	{
+		char *proposal_string;
+		char *strict = msg->add_conn.algorithms.esp + strlen(msg->add_conn.algorithms.esp) - 1;
+		if (*strict == '!')
+		{
+			*strict = '\0';
+		}
+		else
+		{
+			strict = NULL;
+		}
+		
+		while ((proposal_string = strsep(&msg->add_conn.algorithms.esp, ",")))
+		{
+			proposal = proposal_create_from_string(PROTO_ESP, proposal_string);
+			if (proposal == NULL)
+			{
+				this->logger->log(this->logger, ERROR, "invalid ESP proposal string: %s", msg->add_conn.algorithms.esp);
+				policy->destroy(policy);
+				connection->destroy(connection);
+				return;
+			}
+			policy->add_proposal(policy, proposal);
+		}
+		if (!strict)
+		{
+			proposal = proposal_create_default(PROTO_ESP);
+			policy->add_proposal(policy, proposal);
+		}
+	}
+	else
+	{
+		proposal = proposal_create_default(PROTO_ESP);
+		policy->add_proposal(policy, proposal);
+	}
 	
 	/* add to global connection list */
 	charon->connections->add_connection(charon->connections, connection);
@@ -364,23 +439,6 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					  my_id->get_string(my_id),
 					  other_host->get_address(other_host),
 					  other_id->get_string(other_id));
-	
-	policy = policy_create(msg->add_conn.name, my_id, other_id,
-						   msg->add_conn.rekey.ipsec_lifetime,
-						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
-						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100);
-	proposal = proposal_create(PROTO_ESP);
-	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 128);
-	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_AES_CBC, 256);
-	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_3DES, 0);
-	proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, ENCR_BLOWFISH, 256);
-	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_SHA1_96, 0);
-	proposal->add_algorithm(proposal, INTEGRITY_ALGORITHM, AUTH_HMAC_MD5_96, 0);
-	policy->add_proposal(policy, proposal);
-	policy->add_my_traffic_selector(policy, my_ts);
-	policy->add_other_traffic_selector(policy, other_ts);
-	policy->add_authorities(policy, my_ca, other_ca);
-
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);
 }
