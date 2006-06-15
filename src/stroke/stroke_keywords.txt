@@ -33,7 +33,7 @@ route,        STROKE_ROUTE
 up,           STROKE_UP
 down,         STROKE_DOWN
 logtype,      STROKE_LOGTYPE
-logleve,      STROKE_LOGLEVEL
+loglevel,     STROKE_LOGLEVEL
 status,       STROKE_STATUS
 statusall,    STROKE_STATUSALL
 listcerts,    STROKE_LIST_CERTS
