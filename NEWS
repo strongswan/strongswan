@@ -1,8 +1,26 @@
+- Added algorithm selection to charon: New default algorithms for 
+  ike=aes128-sha-modp2048, as both daemons support it. The default
+  for IPsec SAs is now esp=aes128-sha,3des-md5. charon handles
+  the ike/esp parameter the same way as pluto. As this syntax does
+  not allow specification of a pseudo random function, the same 
+  algorithm as for integrity is used (currently sha/md5). Supported
+  algorithms for IKE:
+    Encryption: aes128, aes192, aes256
+    Integrity/PRF: md5, sha (using hmac)
+    DH-Groups: modp768, 1024, 1536, 2048, 4096, 8192
+  and for ESP:
+    Encryption: aes128, aes192, aes256, 3des, blowfish128, 
+                blowfish192, blowfish256
+    Integrity: md5, sha1
+  More IKE encryption algorithms will come after porting libcrypto into
+  libstrongswan. 
 
-- initial support for rekeying CHILD_SAs using IKEv2. Currently
-  perfect forward secrecy is not supported. The rekeying parameters
+- initial support for rekeying CHILD_SAs using IKEv2. Currently no
+  perfect forward secrecy is used. The rekeying parameters rekey,
   rekeymargin, rekeyfuzz and keylife from ipsec.conf are now supported
-  when using IKEv2.
+  when using IKEv2. WARNING: charon currently is unable to handle
+  simultaneous rekeying. To avoid such a situation, use a large
+  rekeyfuzz, or even better, set rekey=no on one peer.
 
 - new build environment featuring autotools. Features such
   as HTTP, LDAP and smartcard support may be enabled using
