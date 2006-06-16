@@ -206,7 +206,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 															&preshared_secret);
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "no shared secret found for '%s'",
+				this->logger->log(this->logger, ERROR, "no shared secret found for '%s'",
 								  other_id->get_string(other_id));
 				other_id->destroy(other_id);
 				return status;	
@@ -254,7 +254,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 															 other_id);
 			if (public_key == NULL)
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "no public key found for '%s'",
+				this->logger->log(this->logger, ERROR, "no public key found for '%s'",
 								  other_id->get_string(other_id));
 				other_id->destroy(other_id);
 				return NOT_FOUND;	
@@ -340,7 +340,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 
 			identification_t  *my_id = my_id_payload->get_identification(my_id_payload);
 			
-			this->logger->log(this->logger, CONTROL, "looking for public key belonging to '%s'",
+			this->logger->log(this->logger, CONTROL|LEVEL1, "looking for public key belonging to '%s'",
 							  my_id->get_string(my_id));
 
 			my_pubkey = charon->credentials->get_rsa_public_key(charon->credentials, my_id);
@@ -362,8 +362,8 @@ static status_t compute_auth_data (private_authenticator_t *this,
 				char buf[BUF_LEN];
 
 				chunk_to_hex(buf, BUF_LEN, my_pubkey->get_keyid(my_pubkey));
-				this->logger->log(this->logger, ERROR, "no private key found with keyid %s",
-								  buf);
+				this->logger->log(this->logger, ERROR, "no private key found with for %s with keyid %s",
+								  my_id->get_string(my_id), buf);
 				goto end_rsa;
 			}
 			this->logger->log(this->logger, CONTROL|LEVEL2, "matching private key found");
