@@ -158,7 +158,7 @@ struct identification_t {
 	 * @param other		other identification_t object
 	 * @return 			TRUE if the IDs are equal
 	 */
-	bool (*equals) (identification_t *this,identification_t *other);
+	bool (*equals) (identification_t *this, identification_t *other);
 	
 	/**
 	 * @brief Check if an ID belongs to a wildcard ID.
