@@ -45,23 +45,10 @@ mapping_t status_m[] = {
 	{MAPPING_END, NULL}
 };
 
-#define UNDEFINED_TIME	0
-
-/**
- * @brief Display a date either in local or UTC time
- * 
- * @param buf		buffer where displayed time will be written
- * @param buflen	buffer length
- * @param time		time to be displayed
- * @param utc		UTC (TRUE) or local time (FALSE)
- * 
- */
-void timetoa(char *buf, size_t buflen, const time_t *time, bool utc);
-
 /**
  * Empty chunk.
  */
-chunk_t CHUNK_INITIALIZER = {NULL,0};
+chunk_t CHUNK_INITIALIZER = { NULL, 0 };
 
 /**
  * Described in header.
@@ -106,10 +93,18 @@ chunk_t chunk_alloc(size_t bytes)
  */
 bool chunk_equals(chunk_t a, chunk_t b)
 {
-	return a.len == b.len &&
-		   a.ptr != NULL  &&
-		   b.ptr != NULL  &&
-		   memcmp(a.ptr, b.ptr, a.len) == 0;
+	return a.ptr != NULL  && b.ptr != NULL &&
+		   a.len == b.len && memeq(a.ptr, b.ptr, a.len);
+}
+
+/**
+ * Described in header.
+ */
+bool chunk_equals_or_null(chunk_t a, chunk_t b)
+{
+	if (a.ptr == NULL || b.ptr == NULL)
+		return TRUE;
+	return a.len == b.len && memeq(a.ptr, b.ptr, a.len);
 }
 
 /**

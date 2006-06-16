@@ -123,6 +123,23 @@ typedef enum certpolicy {
 } certpolicy_t;
 
 /**
+ * RFC 2459 CRL reason codes
+ */
+
+/* TODO extern enum_names crl_reason_names; */
+
+typedef enum {
+    REASON_UNSPECIFIED =			0,
+    REASON_KEY_COMPROMISE = 		1,
+    REASON_CA_COMPROMISE = 			2,
+    REASON_AFFILIATION_CHANGED =	3,
+    REASON_SUPERSEDED =				4,
+    REASON_CESSATION_OF_OPERATON =	5,
+    REASON_CERTIFICATE_HOLD =		6,
+    REASON_REMOVE_FROM_CRL =		8
+} crl_reason_t;
+
+/**
  * String mappings for type status_t.
  */
 extern mapping_t status_m[];
@@ -154,17 +171,16 @@ struct chunk_t {
 	/**
 	 * Pointer to start of data
 	 */
-    u_char *ptr;
-    
-    /**
-     * Length of data in bytes
-     */
-    size_t len;
+	u_char *ptr;
+
+	/**
+	 * Length of data in bytes
+	 */
+	size_t len;
 };
 
 /**
- * {NULL, 0}-chunk, handy for initialization 
- * of chunks.
+ * used to initialize a chunk to { NULL, 0 }.
  */
 extern chunk_t CHUNK_INITIALIZER;
 
@@ -193,6 +209,12 @@ chunk_t chunk_alloc(size_t bytes);
  * NULL chunks are never equal.
  */
 bool chunk_equals(chunk_t a, chunk_t b);
+
+/**
+ * Compare two chunks for equality,
+ * NULL chunks are always equal.
+ */
+bool chunk_equals_or_null(chunk_t a, chunk_t b);
 
 /**
  * Print a chunk in hexadecimal form
