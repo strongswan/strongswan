@@ -70,7 +70,7 @@ while ($line = <SRC>)
     }
     if (length($4) > 0)
     {
-	printf OID_H "#define %s%s%d\n", $4, "\t" x ((39-length($4))/8), $counter;
+	printf OID_H "#define %s%s%d\n", $4, "\t" x ((39-length($4))/4), $counter;
     }
     $counter++;
 }
