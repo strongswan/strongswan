@@ -79,6 +79,11 @@ struct private_x509_t {
 	chunk_t certificate;
 
 	/**
+	 * X.509 certificate body over which signature is computed
+	 */
+	chunk_t tbsCertificate;
+
+	/**
 	 * Version of the X.509 certificate
 	 */
 	u_int version;
@@ -88,6 +93,11 @@ struct private_x509_t {
 	 */
 	chunk_t serialNumber;
 
+	/**
+	 * Signature algorithm
+	 */
+	int sigAlg;
+	
 	/**
 	 * ID representing the certificate issuer
 	 */
@@ -143,16 +153,20 @@ struct private_x509_t {
 	 */
 	bool isCA;
 
+	/**
+	 * Signature algorithm (must be identical to sigAlg)
+	 */
+	int algorithm;
+
+	/**
+	 * Signature
+	 */
+	chunk_t signature;
+
 	u_char authority_flags;
-	chunk_t tbsCertificate;
-	/*   signature */
-	int sigAlg;
 	chunk_t subjectPublicKey;
 	bool isOcspSigner; /* ocsp */
 	chunk_t accessLocation; /* ocsp */
-	/* signatureAlgorithm */
-	int algorithm;
-	chunk_t signature;
 };
 
 /**
@@ -527,7 +541,7 @@ static void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_l
 			identification_t *gn = parse_generalName(object, level+1);
 
 			if (gn != NULL)
-				list->insert_last(list, gn);
+				list->insert_last(list, (void *)gn);
 		}
 		objectID++;
 	}
