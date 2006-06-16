@@ -42,6 +42,8 @@
 #define IKE_PORT	500
 #define PATH_BUF	256
 
+static bool strict = FALSE;
+
 struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
 
 
@@ -147,7 +149,7 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 			id = subject;
 			*idp = id->clone(id);
 		}
-		return charon->credentials->add_certificate(charon->credentials, cert);
+		return charon->credentials->add_end_certificate(charon->credentials, cert);
 	}
 	return NULL;
 }
@@ -592,6 +594,10 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg)
 	if (msg->list.flags & LIST_CACERTS)
 	{
 		charon->credentials->log_ca_certificates(charon->credentials, this->stroke_logger, msg->list.utc);
+	}
+	if (msg->list.flags & LIST_CRLS)
+	{
+		charon->credentials->log_crls(charon->credentials, this->stroke_logger, msg->list.utc);
 	}
 }
 
