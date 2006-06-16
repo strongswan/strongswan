@@ -92,14 +92,22 @@ struct credential_store_t {
 	bool (*has_rsa_private_key) (credential_store_t *this, rsa_public_key_t *pubkey);
 
 	/**
-	 * @brief If a certificate does not already exists in the credential store then add it.
+	 * @brief If an end certificate does not already exists in the credential store then add it.
 	 *
 	 * @param this		calling object
 	 * @param cert		certificate to be added
 	 * @return			pointer to the added or already existing certificate
 	 */
-	x509_t* (*add_certificate) (credential_store_t *this, x509_t *cert);
+	x509_t* (*add_end_certificate) (credential_store_t *this, x509_t *cert);
 
+	/**
+	 * @brief If a ca certificate does not already exists in the credential store then add it.
+	 *
+	 * @param this		calling object
+	 * @param cert		ca certificate to be added
+	 * @return			pointer to the added or already existing certificate
+	 */
+	x509_t* (*add_ca_certificate) (credential_store_t *this, x509_t *cert);
 	/**
 	 * @brief Lists all certificates kept in the local credential store.
 	 *
@@ -117,6 +125,15 @@ struct credential_store_t {
 	 * @param utc		log dates either in UTC or local time
 	 */
 	void (*log_ca_certificates) (credential_store_t *this, logger_t *logger, bool utc);
+
+	/**
+	 * @brief Lists all CRLs kept in the local credential store.
+	 *
+	 * @param this		calling object
+	 * @param logger	logger to be used
+	 * @param utc		log dates either in UTC or local time
+	 */
+	void (*log_crls) (credential_store_t *this, logger_t *logger, bool utc);
 
 	/**
 	 * @brief Destroys a credential_store_t object.

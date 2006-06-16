@@ -30,6 +30,7 @@
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
 #include <crypto/x509.h>
+#include <crypto/crl.h>
 
 #define PATH_BUF	256
 
@@ -59,6 +60,17 @@ struct private_local_credential_store_t {
 	 * list of X.509 CA certificates with public keys
 	 */
 	linked_list_t *ca_certs;
+
+	/**
+	 * list of X.509 CRLs
+	 */
+	linked_list_t *crls;
+
+	/**
+	 * enforce strict crl policy
+	 */
+	bool strict;
+
 	/**
 	 * Assigned logger
 	 */
@@ -148,13 +160,13 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 }
 
 /**
- * Implements credential_store_t.add_certificate
+ * Add a unique certificate to a linked list
  */
-static x509_t* add_certificate(private_local_credential_store_t *this, x509_t *cert)
+static x509_t* add_certificate(linked_list_t *certs, x509_t *cert)
 {
 	bool found = FALSE;
 
-	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
+	iterator_t *iterator = certs->create_iterator(certs, TRUE);
 
 	while (iterator->has_next(iterator))
 	{
@@ -173,9 +185,25 @@ static x509_t* add_certificate(private_local_credential_store_t *this, x509_t *c
 
 	if (!found)
 	{
-		this->certs->insert_last(this->certs, (void*)cert);
+		certs->insert_last(certs, (void*)cert);
 	}
 	return cert;
+}
+
+/**
+ * Implements credential_store_t.add_end_certificate
+ */
+static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_t *cert)
+{
+	return add_certificate(this->certs, cert);
+}
+
+/**
+ * Implements credential_store_t.add_ca_certificate
+ */
+static x509_t* add_ca_certificate(private_local_credential_store_t *this, x509_t *cert)
+{
+	return add_certificate(this->ca_certs, cert);
 }
 
 /**
@@ -227,6 +255,31 @@ static void log_ca_certificates(private_local_credential_store_t *this, logger_t
 	}
 	iterator->destroy(iterator);
 }
+
+/**
+ * Implements credential_store_t.log_crls
+ */
+static void log_crls(private_local_credential_store_t *this, logger_t *logger, bool utc)
+{
+	iterator_t *iterator = this->crls->create_iterator(this->crls, TRUE);
+
+	if (iterator->get_count(iterator))
+	{
+		logger->log(logger, CONTROL, "");
+		logger->log(logger, CONTROL, "List of X.509 CRLs:");
+		logger->log(logger, CONTROL, "");
+	}
+
+	while (iterator->has_next(iterator))
+	{
+		crl_t *crl;
+
+		iterator->current(iterator, (void**)&crl);
+		crl->log_crl(crl, logger, utc, this->strict);
+	}
+	iterator->destroy(iterator);
+}
+
 /**
  * Implements local_credential_store_t.load_ca_certificates
  */
@@ -270,7 +323,7 @@ static void load_ca_certificates(private_local_credential_store_t *this, const c
 				}
 				if (cert->is_ca(cert))
 				{
-					this->ca_certs->insert_last(this->ca_certs, (void*)cert);
+					cert = add_certificate(this->ca_certs, cert);
 				}
 				else
 				{
@@ -278,6 +331,85 @@ static void load_ca_certificates(private_local_credential_store_t *this, const c
 							"  CA basic constraints flag not set, cert discarded");
 					cert->destroy(cert);
 				}
+			}
+		}
+	}
+	closedir(dir);
+}
+
+/**
+ * Add the latest crl to a linked list
+ */
+static crl_t* add_crl(linked_list_t *crls, crl_t *crl)
+{
+	bool found = FALSE;
+
+	iterator_t *iterator = crls->create_iterator(crls, TRUE);
+
+	while (iterator->has_next(iterator))
+	{
+		crl_t *current_crl;
+
+		iterator->current(iterator, (void**)&current_crl);
+		if (crl->equals_issuer(crl, current_crl))
+		{
+			found = TRUE;
+			crl->destroy(crl);
+			crl = current_crl;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	if (!found)
+	{
+		crls->insert_last(crls, (void*)crl);
+	}
+	return crl;
+}
+
+/**
+ * Implements local_credential_store_t.load_crls
+ */
+static void load_crls(private_local_credential_store_t *this, const char *path)
+{
+	struct dirent* entry;
+	struct stat stb;
+	DIR* dir;
+	crl_t *crl;
+	
+	this->logger->log(this->logger, CONTROL, "loading crls from '%s/'", path);
+
+	dir = opendir(path);
+	if (dir == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "error opening crl directory %s'", path);
+		return;
+	}
+
+	while ((entry = readdir(dir)) != NULL)
+	{
+		char file[PATH_BUF];
+
+		snprintf(file, sizeof(file), "%s/%s", path, entry->d_name);
+		
+		if (stat(file, &stb) == -1)
+		{
+			continue;
+		}
+		/* try to parse all regular files */
+		if (stb.st_mode & S_IFREG)
+		{
+			crl = crl_create_from_file(file);
+			if (crl)
+			{
+				err_t ugh = crl->is_valid(crl, NULL, this->strict);
+
+				if (ugh != NULL)	
+				{
+					this->logger->log(this->logger, ERROR, "warning: crl %s", ugh);
+				}
+				crl = add_crl(this->crls, crl);
 			}
 		}
 	}
@@ -394,6 +526,7 @@ error:
 static void destroy(private_local_credential_store_t *this)
 {
 	x509_t *cert;
+	crl_t *crl;
 	rsa_private_key_t *key;
 	
 	/* destroy cert list */
@@ -410,6 +543,13 @@ static void destroy(private_local_credential_store_t *this)
 	}
 	this->ca_certs->destroy(this->ca_certs);
 
+	/* destroy crl list */
+	while (this->crls->remove_last(this->crls, (void**)&crl) == SUCCESS)
+	{
+		crl->destroy(crl);
+	}
+	this->crls->destroy(this->crls);
+
     /* destroy private key list */
 	while (this->private_keys->remove_last(this->private_keys, (void**)&key) == SUCCESS)
 	{
@@ -423,7 +563,7 @@ static void destroy(private_local_credential_store_t *this)
 /**
  * Described in header.
  */
-local_credential_store_t * local_credential_store_create(void)
+local_credential_store_t * local_credential_store_create(bool strict)
 {
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
 
@@ -431,10 +571,13 @@ local_credential_store_t * local_credential_store_create(void)
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool(*)(credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
-	this->public.credential_store.add_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_certificate;
+	this->public.credential_store.add_end_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_end_certificate;
+	this->public.credential_store.add_ca_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_ca_certificate;
 	this->public.credential_store.log_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_certificates;
 	this->public.credential_store.log_ca_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_ca_certificates;
+	this->public.credential_store.log_crls = (void(*)(credential_store_t*,logger_t*,bool))log_crls;
 	this->public.load_ca_certificates = (void(*)(local_credential_store_t*,const char*))load_ca_certificates;
+	this->public.load_crls = (void(*)(local_credential_store_t*,const char*))load_crls;
 	this->public.load_private_keys = (void(*)(local_credential_store_t*,const char*, const char*))load_private_keys;
 	this->public.credential_store.destroy = (void(*)(credential_store_t*))destroy;
 	
@@ -442,6 +585,8 @@ local_credential_store_t * local_credential_store_create(void)
 	this->private_keys = linked_list_create();
 	this->certs = linked_list_create();
 	this->ca_certs = linked_list_create();
+	this->crls = linked_list_create();
+	this->strict = strict;
 	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 
 	return (&this->public);

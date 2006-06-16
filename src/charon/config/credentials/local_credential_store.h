@@ -38,7 +38,7 @@ typedef struct local_credential_store_t local_credential_store_t;
  * Shared secret are not handled yet, so get_shared_secret always returns NOT_FOUND.
  *
  * @b Constructors:
- *  - local_credential_store_create()
+ *  - local_credential_store_create(bool strict)
  * 
  * @ingroup config
  */
@@ -50,7 +50,7 @@ struct local_credential_store_t {
 	credential_store_t credential_store;
 	
 	/**
-	 * @brief Loads trusted certificates from a folder.
+	 * @brief Loads trusted CA certificates from a default directory.
 	 *
 	 * Certificates in both DER and PEM format are accepted
 	 *
@@ -58,6 +58,16 @@ struct local_credential_store_t {
 	 * @param path		directory to load certificates from
 	 */
 	void (*load_ca_certificates) (local_credential_store_t *this, const char *path);
+	
+	/**
+	 * @brief Loads CRLs from a default directory.
+	 *
+	 * Certificates in both DER and PEM format are accepted
+	 *
+	 * @param this		calling object
+	 * @param path		directory to load crls from 
+	 */
+	void (*load_crls) (local_credential_store_t *this, const char *path);
 	
 	/**
 	 * @brief Loads RSA private keys defined in ipsec.secrets
@@ -68,18 +78,19 @@ struct local_credential_store_t {
 	 * 
 	 * @param this			calling object
 	 * @param secretsfile	file where secrets are stored
-	 * @param defaultpath	default directory for private keys
+	 * @param path			default directory for private keys
 	 */
-	void (*load_private_keys) (local_credential_store_t *this, const char *secretsfile, const char *defaultpath);
+	void (*load_private_keys) (local_credential_store_t *this, const char *secretsfile, const char *path);
 };
 
 /**
  * @brief Creates a local_credential_store_t instance.
  *
- * @return credential store instance.
+ * @param  strict		enforce a strict crl policy
+ * @return 				credential store instance.
  * 
  * @ingroup config
  */
-local_credential_store_t *local_credential_store_create(void);
+local_credential_store_t *local_credential_store_create(bool strict);
 
 #endif /* LOCAL_CREDENTIAL_H_ */
