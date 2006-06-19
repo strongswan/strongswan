@@ -108,9 +108,9 @@ struct private_child_sa_t {
 	u_int32_t hard_lifetime;
 	
 	/**
-	 * reqid of a CHILD_SA which rekeyed this one
+	 * has this CHILD_SA been rekeyed?
 	 */
-	u_int32_t rekeyed;
+	bool rekeyed;
 	
 	/**
 	 * CHILD_SAs own logger
@@ -450,9 +450,9 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 /**
  * Implementation of child_sa_t.set_rekeyed.
  */
-static void set_rekeyed(private_child_sa_t *this, u_int32_t reqid)
+static void set_rekeyed(private_child_sa_t *this)
 {
-	this->rekeyed = reqid;
+	this->rekeyed = TRUE;
 }
 
 /**
@@ -592,7 +592,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
-	this->public.set_rekeyed = (void (*)(child_sa_t*,u_int32_t))set_rekeyed;
+	this->public.set_rekeyed = (void (*)(child_sa_t*))set_rekeyed;
 	this->public.log_status = (void (*)(child_sa_t*, logger_t*, char*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
@@ -610,7 +610,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->reqid = rekey ? rekey : ++reqid;
 	this->policies = linked_list_create();
 	this->protocol = PROTO_NONE;
-	this->rekeyed = 0;
+	this->rekeyed = FALSE;
 	
 	return (&this->public);
 }

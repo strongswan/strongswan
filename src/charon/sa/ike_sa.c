@@ -940,7 +940,7 @@ static u_int32_t destroy_child_sa(private_ike_sa_t *this, u_int32_t spi)
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&child_sa);
-		if (child_sa->get_spi(child_sa, TRUE) == spi)
+		if (child_sa->get_spi(child_sa, FALSE) == spi)
 		{
 			iterator->remove(iterator);
 			break;
@@ -958,7 +958,7 @@ static u_int32_t destroy_child_sa(private_ike_sa_t *this, u_int32_t spi)
 		return 0;
 	}
 	
-	spi = child_sa->get_spi(child_sa, FALSE);
+	spi = child_sa->get_spi(child_sa, TRUE);
 	child_sa->destroy(child_sa);
 	return spi;
 }
@@ -975,7 +975,7 @@ static child_sa_t* get_child_sa_by_spi(private_ike_sa_t *this, u_int32_t spi)
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current);
-		if (current->get_spi(current, TRUE) == spi)
+		if (current->get_spi(current, FALSE) == spi)
 		{
 			found = current;
 		}

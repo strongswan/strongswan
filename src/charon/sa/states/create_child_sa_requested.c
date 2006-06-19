@@ -385,7 +385,7 @@ static status_t process_message(private_create_child_sa_requested_t *this, messa
 		old_child_sa = this->ike_sa->public.get_child_sa(&this->ike_sa->public, this->reqid);
 		if (old_child_sa)
 		{
-			old_child_sa->set_rekeyed(old_child_sa, this->child_sa->get_reqid(this->child_sa));
+			old_child_sa->set_rekeyed(old_child_sa);
 		}
 		this->ike_sa->public.delete_child_sa(&this->ike_sa->public, this->reqid);
 	}

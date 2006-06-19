@@ -321,7 +321,13 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 	
 	if (notify && notify->get_notify_message_type(notify) == REKEY_SA)
 	{
-		this->old_child_sa = this->ike_sa->get_child_sa(this->ike_sa, notify->get_spi(notify));
+		u_int32_t spi = notify->get_spi(notify);
+		this->old_child_sa = this->ike_sa->get_child_sa(this->ike_sa, spi);
+		this->logger->log(this->logger, CONTROL, "Rekeying CHILD_SA with SPI 0x%x", spi);
+	}
+	else
+	{
+		this->logger->log(this->logger, CONTROL, "Create new CHILD_SA");
 	}
 		
 	/* build response */
@@ -382,7 +388,7 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 		}
 		if (this->old_child_sa)
 		{	/* mark old child sa as rekeyed */
-			this->old_child_sa->set_rekeyed(this->old_child_sa, this->child_sa->get_reqid(this->child_sa));
+			this->old_child_sa->set_rekeyed(this->old_child_sa);
 		}
 		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	}

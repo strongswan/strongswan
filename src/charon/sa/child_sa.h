@@ -153,9 +153,8 @@ struct child_sa_t {
 	 * not remove its policy, as the new SA uses it.
 	 *
 	 * @param this 		calling object
-	 * @param reqid		reqid of the SA which replaces this one.
 	 */	
-	void (*set_rekeyed) (child_sa_t *this, u_int32_t reqid);
+	void (*set_rekeyed) (child_sa_t *this);
 	
 	/**
 	 * @brief Log the status of a child_sa to a logger.
