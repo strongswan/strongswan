@@ -295,14 +295,12 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus)
 {
 	linked_list_t *list;
+	u_int32_t outbound_spi, inbound_spi;
 	
-	/* install others (initiators) SAs*/
-	if (install(this, proposal, prf_plus, FALSE) != SUCCESS)
-	{
-		return FAILED;
-	}
+	/* backup outbound spi, as alloc overwrites it */
+	outbound_spi = proposal->get_spi(proposal);
 	
-	/* get SPIs for our SAs */
+	/* get SPIs inbound SAs */
 	list = linked_list_create();
 	list->insert_last(list, proposal);
 	if (alloc(this, list) != SUCCESS)
@@ -311,25 +309,42 @@ static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *
 		return FAILED;
 	}
 	list->destroy(list);
+	inbound_spi = proposal->get_spi(proposal);
 	
-	/* install our (responders) SAs */
+	/* install inbound SAs */
 	if (install(this, proposal, prf_plus, TRUE) != SUCCESS)
 	{
 		return FAILED;
 	}
+	
+	/* install outbound SAs, restore spi*/
+	proposal->set_spi(proposal, outbound_spi);
+	if (install(this, proposal, prf_plus, FALSE) != SUCCESS)
+	{
+		return FAILED;
+	}
+	proposal->set_spi(proposal, inbound_spi);
 	
 	return SUCCESS;
 }
 
 static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus)
 {
-	/* install our (initator) SAs */
-	if (install(this, proposal, prf_plus, TRUE) != SUCCESS)
+	u_int32_t inbound_spi;
+	
+	/* backup received spi, as install() overwrites it */
+	inbound_spi = proposal->get_spi(proposal);
+	
+	/* install outbound SAs */
+	if (install(this, proposal, prf_plus, FALSE) != SUCCESS)
 	{
 		return FAILED;
 	}
-	/* install his (responder) SAs */
-	if (install(this, proposal, prf_plus, FALSE) != SUCCESS)
+	
+	/* restore spi */
+	proposal->set_spi(proposal, inbound_spi);
+	/* install inbound SAs */
+	if (install(this, proposal, prf_plus, TRUE) != SUCCESS)
 	{
 		return FAILED;
 	}
