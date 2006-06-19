@@ -917,7 +917,7 @@ static status_t delete_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	}
 	build_message(this, INFORMATIONAL, TRUE, &request);
 	delete_payload = delete_payload_create(child_sa->get_protocol(child_sa));
-	delete_payload->add_spi(delete_payload, child_sa->get_spi(child_sa, FALSE));
+	delete_payload->add_spi(delete_payload, child_sa->get_spi(child_sa, TRUE));
 	request->add_payload(request, (payload_t*)delete_payload);
 	
 	send_request(this, request);
@@ -1018,7 +1018,7 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	build_message(this, CREATE_CHILD_SA, TRUE, &request);
 	notify = notify_payload_create_from_protocol_and_type(
 			child_sa->get_protocol(child_sa), REKEY_SA);
-	notify->set_spi(notify, child_sa->get_spi(child_sa, FALSE));
+	notify->set_spi(notify, child_sa->get_spi(child_sa, TRUE));
 	request->add_payload(request, (payload_t*)notify);
 	
 	proposals = this->policy->get_proposals(this->policy);
