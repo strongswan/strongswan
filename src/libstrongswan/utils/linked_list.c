@@ -665,7 +665,7 @@ static status_t get_last(private_linked_list_t *this, void **item)
 /**
  * Implementation of linked_list_t.create_iterator.
  */
-static iterator_t *create_iterator (private_linked_list_t *linked_list,bool forward)
+static iterator_t *create_iterator (private_linked_list_t *linked_list, bool forward)
 {
 	private_iterator_t *this = malloc_thing(private_iterator_t);
 

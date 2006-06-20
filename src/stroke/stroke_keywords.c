@@ -56,12 +56,12 @@ struct stroke_token {
     stroke_keyword_t kw;
 };
 
-#define TOTAL_KEYWORDS 14
+#define TOTAL_KEYWORDS 17
 #define MIN_WORD_LENGTH 2
-#define MAX_WORD_LENGTH 11
+#define MAX_WORD_LENGTH 13
 #define MIN_HASH_VALUE 2
-#define MAX_HASH_VALUE 21
-/* maximum key range = 20, duplicates = 0 */
+#define MAX_HASH_VALUE 23
+/* maximum key range = 22, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -77,32 +77,32 @@ hash (str, len)
 {
   static const unsigned char asso_values[] =
     {
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-       0, 15, 22, 22, 22,  5, 22, 22, 22, 22,
-      22,  0,  0, 22, 22, 22,  0, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
-      22, 22, 22, 22, 22, 22
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      20,  0, 24, 24, 24, 10, 24, 24, 24, 24,
+      24,  0,  0, 24, 24, 24,  5, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+      24, 24, 24, 24, 24, 24
     };
   return len + asso_values[(unsigned char)str[1]];
 }
@@ -110,24 +110,27 @@ hash (str, len)
 static const struct stroke_token wordlist[] =
   {
     {""}, {""},
-    {"up",           STROKE_UP},
-    {"add",          STROKE_ADD},
-    {"down",         STROKE_DOWN},
-    {"route",        STROKE_ROUTE},
-    {"status",       STROKE_STATUS},
-    {"logtype",      STROKE_LOGTYPE},
-    {"loglevel",     STROKE_LOGLEVEL},
-    {"statusall",    STROKE_STATUSALL},
-    {""}, {""},
-    {"listall",      STROKE_LIST_ALL},
-    {"listcrls",     STROKE_LIST_CRLS},
-    {"listcerts",    STROKE_LIST_CERTS},
+    {"up",            STROKE_UP},
+    {"del",           STROKE_DEL},
+    {"down",          STROKE_DOWN},
+    {"route",         STROKE_ROUTE},
+    {"delete",        STROKE_DELETE},
+    {"logtype",       STROKE_LOGTYPE},
+    {"loglevel",      STROKE_LOGLEVEL},
+    {"rereadall",     STROKE_REREAD_ALL},
+    {"rereadcrls",    STROKE_REREAD_CRLS,},
+    {"status",        STROKE_STATUS},
     {""},
-    {"listcacerts",  STROKE_LIST_CACERTS},
-    {""},
-    {"del",          STROKE_DEL},
+    {"rereadcacerts", STROKE_REREAD_CACERTS,},
+    {"statusall",     STROKE_STATUSALL},
     {""}, {""},
-    {"delete",       STROKE_DELETE}
+    {"listall",       STROKE_LIST_ALL,},
+    {"listcrls",      STROKE_LIST_CRLS},
+    {"listcerts",     STROKE_LIST_CERTS},
+    {""},
+    {"listcacerts",   STROKE_LIST_CACERTS},
+    {""},
+    {"add",           STROKE_ADD}
   };
 
 #ifdef __GNUC__

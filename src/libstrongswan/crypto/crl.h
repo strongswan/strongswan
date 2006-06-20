@@ -77,12 +77,21 @@ struct crl_t {
 	/**
 	 * @brief Checks the validity interval of the crl
 	 * 
-	 * @param this			certificate being examined
+	 * @param this			calling object
 	 * @param until			until = min(until, nextUpdate) if strict == TRUE
-	 * @param strict		nextUpdate restricts the validiat
+	 * @param strict		nextUpdate restricts the validity
 	 * @return				NULL if the crl is valid
 	 */
 	err_t (*is_valid) (const crl_t *this, time_t *until, bool strict);
+	
+	/**
+	 * @brief Checks if this crl is newer (thisUpdate) than the other crl
+	 * 
+	 * @param this			calling object
+	 * @param other			other crl object
+	 * @return				TRUE if this was issued more recently than other
+	 */
+	bool (*is_newer) (const crl_t *this, const crl_t *other);
 	
 	/**
 	 * @brief Check if a certificate has been revoked.

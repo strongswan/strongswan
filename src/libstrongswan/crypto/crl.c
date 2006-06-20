@@ -332,6 +332,14 @@ static err_t is_valid(const private_crl_t *this, time_t *until, bool strict)
 }
 
 /**
+ * Implements crl_t.is_newer
+ */
+static bool is_newer(const private_crl_t *this, const private_crl_t *other)
+{
+	return (this->nextUpdate > other->nextUpdate);
+}
+
+/**
  * Implements crl_t.get_issuer
  */
 static identification_t *get_issuer(const private_crl_t *this)
@@ -435,7 +443,8 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->public.is_valid = (err_t (*) (const crl_t*,time_t*))is_valid;
 	this->public.destroy = (void (*) (crl_t*))destroy;
 	this->public.get_issuer = (identification_t* (*) (const crl_t*))get_issuer;
-	this->public.equals_issuer = (bool (*) (const crl_t*, const crl_t*))equals_issuer;
+	this->public.equals_issuer = (bool (*) (const crl_t*,const crl_t*))equals_issuer;
+	this->public.is_newer = (bool (*) (const crl_t*,const crl_t*))is_newer;
 	this->public.log_crl = (void (*) (const crl_t*,logger_t*,bool,bool))log_crl;
 
 	/* we do not use a per-instance logger right now, since its not always accessible */

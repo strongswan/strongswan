@@ -193,6 +193,22 @@ static int list(stroke_keyword_t kw, bool utc)
 	return send_stroke_msg(&msg);
 }
 
+static int reread_flags[] = {
+	REREAD_CACERTS,
+	REREAD_CRLS,
+	REREAD_ALL
+};
+
+static int reread(stroke_keyword_t kw)
+{
+	stroke_msg_t msg;
+	
+	msg.type = STR_REREAD;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.reread.flags = reread_flags[kw - STROKE_REREAD_FIRST];
+	return send_stroke_msg(&msg);
+}
+
 static int set_logtype(char *context, char *type, int enable)
 {
 	stroke_msg_t msg;
@@ -257,8 +273,10 @@ static void exit_usage(char *error)
 	printf("           LEVEL is 0|1|2|3\n");
 	printf("  Show connection status:\n");
 	printf("    stroke status\n");
-	printf("  Show list of locally loaded certificates:\n");
-	printf("    stroke listcerts\n");
+	printf("  Show list of locally loaded certificates and crls:\n");
+	printf("    stroke listcerts|listcacerts|listcrls|listall\n");
+	printf("  Reload ca certificates and crls:\n");
+	printf("    stroke rereadcacerts|rereadcrls|rereadall\n");
 	exit_error(error);
 }
 
@@ -337,6 +355,11 @@ int main(int argc, char *argv[])
 		case STROKE_LIST_CRLS:
 		case STROKE_LIST_ALL:
 			res = list(token->kw, argc > 2 && streq(argv[2], "--utc"));
+			break;
+		case STROKE_REREAD_CACERTS:
+		case STROKE_REREAD_CRLS:
+		case STROKE_REREAD_ALL:
+			res = reread(token->kw);
 			break;
 		default:
 			exit_usage(NULL);

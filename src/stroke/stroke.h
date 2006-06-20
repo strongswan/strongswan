@@ -39,6 +39,14 @@
 #define LIST_CRLS		0x0004	/* list all crls */
 #define LIST_ALL		0x0007	/* all list options */
 
+/**
+  * Definition of the REREAD flags
+  */
+#define REREAD_NONE		0x0000	/* don't reread anything */
+#define REREAD_CACERTS	0x0001	/* reread all ca certs */
+#define REREAD_CRLS		0x0002	/* reread all crls */
+#define REREAD_ALL		0x0003	/* all reread options */
+
 typedef struct stroke_end_t stroke_end_t;
 
 struct stroke_end_t {
@@ -80,8 +88,10 @@ struct stroke_msg_t {
 		STR_LOGTYPE,
 		/* set the verbosity of a logging context */
 		STR_LOGLEVEL,
-		/* show list of locally loaded certificates */
-		STR_LIST
+		/* list various objects */
+		STR_LIST,
+		/* reread various objects */
+		STR_REREAD
 		/* more to come */
 	} type;
 
@@ -127,6 +137,12 @@ struct stroke_msg_t {
 			u_int flags;
 			bool  utc;
 		} list;
+
+		/* data for STR_REREAD */
+		struct {
+			u_int flags;
+		} reread;
+
 	};
 	char buffer[STROKE_BUF_LEN];
 };
