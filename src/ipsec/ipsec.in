@@ -115,8 +115,7 @@ listalgs|listpubkeys|listaacerts|\
 listocspcerts|listacerts|listgroups|\
 listcainfos|listocsp|listcards|\
 purgeocsp|rereadsecrets|rereadgroups|\
-rereadcacerts|rereadaacerts|rereadocspcerts|\
-rereadacerts|rereadcrls|rereadall)
+rereadaacerts|rereadocspcerts|rereadacerts)
 	op="$1"
 	shift
 	if test -e $IPSEC_PLUTO_PID
@@ -124,7 +123,8 @@ rereadacerts|rereadcrls|rereadall)
 		$IPSEC_WHACK "$@" "--$op"
 	fi
 	;;
-listcerts|listcacerts|listcrls|listall)
+listcerts|listcacerts|listcrls|listall|\
+rereadcacerts|rereadcrls|rereadall)
 	op="$1"
 	shift
 	if test -e $IPSEC_PLUTO_PID
