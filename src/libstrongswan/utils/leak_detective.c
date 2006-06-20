@@ -148,11 +148,15 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
  * This is necessary, as some function use allocation hacks (static buffers)
  * and so on, which we want to suppress on leak reports.
  */
-struct {
+typedef struct whitelist_t whitelist_t;
+
+struct whitelist_t {
 	void* range_start;
 	size_t range_size;
-} whitelist[] = {
-	{pthread_create, 0xFF},
+};
+
+whitelist_t whitelist[] = {
+	{pthread_create, 0x200},
 	{pthread_setspecific, 0xFF},
 	{mktime, 0xFF},
 	{inet_ntoa, 0xFF},
@@ -167,7 +171,7 @@ static bool is_whitelisted(void **stack_frames, int stack_frame_count)
 	
 	for (i=0; i< stack_frame_count; i++)
 	{
-		for (j=0; j<sizeof(whitelist)/sizeof(void*); j++)
+		for (j=0; j<sizeof(whitelist)/sizeof(whitelist_t); j++)
 		{
 			if (stack_frames[i] >= whitelist[j].range_start &&
 				stack_frames[i] <= (whitelist[j].range_start + whitelist[j].range_size))
