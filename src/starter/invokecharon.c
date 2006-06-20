@@ -102,7 +102,7 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     struct stat stb;
     int argc = 1;
     char *arg[] = {
-	CHARON_CMD, NULL, NULL,
+	CHARON_CMD, NULL, NULL, NULL
     };
 
     if (!debug)
