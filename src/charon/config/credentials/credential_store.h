@@ -136,11 +136,55 @@ struct credential_store_t {
 	void (*log_crls) (credential_store_t *this, logger_t *logger, bool utc);
 
 	/**
+	 * @brief Loads trusted CA certificates from a default directory.
+	 *
+	 * Certificates in both DER and PEM format are accepted
+	 *
+	 * @param this		calling object
+	 * @param path		directory to load certificates from
+	 */
+	void (*load_ca_certificates) (credential_store_t *this, const char *path);
+	
+	/**
+	 * @brief Loads CRLs from a default directory.
+	 *
+	 * Certificates in both DER and PEM format are accepted
+	 *
+	 * @param this		calling object
+	 * @param path		directory to load crls from 
+	 */
+	void (*load_crls) (credential_store_t *this, const char *path);
+	
+	/**
+	 * @brief Loads RSA private keys defined in ipsec.secrets
+	 * 
+	 * Currently, all keys must be unencrypted in either DER or PEM format.
+	 * Other formats are ignored. Further, a certificate for the specific private
+	 * key must already be loaded to get the ID from.
+	 * 
+	 * @param this			calling object
+	 * @param secretsfile	file where secrets are stored
+	 * @param path			default directory for private keys
+	 */
+	void (*load_private_keys) (credential_store_t *this, const char *secretsfile, const char *path);
+
+	/**
 	 * @brief Destroys a credential_store_t object.
 	 * 
 	 * @param this 					calling object
 	 */
 	void (*destroy) (credential_store_t *this);
 };
+
+/**
+ * @brief Creates a credential_store_t instance.
+ *
+ * @param  strict		enforce a strict crl policy
+ * @return 				credential store instance.
+ * 
+ * @ingroup config
+ */
+credential_store_t *credential_store_create(bool strict);
+
 
 #endif /*CREDENTIAL_STORE_H_*/

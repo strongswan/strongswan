@@ -414,7 +414,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			proposal = proposal_create_from_string(PROTO_ESP, proposal_string);
 			if (proposal == NULL)
 			{
-				this->logger->log(this->logger, ERROR, "invalid ESP proposal string: %s", msg->add_conn.algorithms.esp);
+				this->logger->log(this->logger, ERROR,
+					"invalid ESP proposal string: %s", msg->add_conn.algorithms.esp);
 				policy->destroy(policy);
 				connection->destroy(connection);
 				return;
@@ -494,13 +495,15 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		ike_sas = charon->ike_sa_manager->get_ike_sa_list_by_name(charon->ike_sa_manager, msg->initiate.name);
 		if (ike_sas->get_count(ike_sas) == 0)
 		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL, "initiating connection \"%s\" (see log)...", msg->initiate.name);
+			this->stroke_logger->log(this->stroke_logger, CONTROL,
+					"initiating connection \"%s\" (see log)...", msg->initiate.name);
 			job = initiate_ike_sa_job_create(connection);
 			charon->job_queue->add(charon->job_queue, (job_t*)job);
 		}
 		else
 		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL, "connection \"%s\" already up", msg->initiate.name);
+			this->stroke_logger->log(this->stroke_logger, CONTROL,
+					"connection \"%s\" already up", msg->initiate.name);
 		}
 		while (ike_sas->remove_last(ike_sas, (void**)&ike_sa_id) == SUCCESS)
 		{
@@ -598,6 +601,21 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg)
 	if (msg->list.flags & LIST_CRLS)
 	{
 		charon->credentials->log_crls(charon->credentials, this->stroke_logger, msg->list.utc);
+	}
+}
+
+/**
+ * reread various information
+ */
+static void stroke_reread(private_stroke_t *this, stroke_msg_t *msg)
+{
+	if (msg->reread.flags & REREAD_CACERTS)
+	{
+		charon->credentials->load_ca_certificates(charon->credentials, CA_CERTIFICATE_DIR);
+	}
+	if (msg->reread.flags & REREAD_CRLS)
+	{
+		charon->credentials->load_crls(charon->credentials, CRL_DIR);
 	}
 }
 
@@ -796,6 +814,9 @@ static void stroke_receive(private_stroke_t *this)
 				break;
 			case STR_LIST:
 				stroke_list(this, msg);
+				break;
+			case STR_REREAD:
+				stroke_reread(this, msg);
 				break;
 			default:
 				this->logger->log(this->logger, ERROR, "received invalid stroke");
