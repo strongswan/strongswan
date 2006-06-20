@@ -156,7 +156,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	else
 	{
 		this->logger->log(this->logger, CONTROL, "sending SIGTERM to ourself", reason);
-		kill(0, SIGTERM);
+		raise(SIGTERM);
 		/* thread must die, since he produced a ciritcal failure and can't continue */
 		pthread_exit(NULL);
 	}
@@ -290,7 +290,7 @@ void signal_handler(int signal)
 	}
 	free (strings);
 	logger->log(logger, ERROR, "Killing ourself hard after SIGSEGV");
-	kill(getpid(), SIGKILL);
+	raise(SIGKILL);
 }
 
 /**

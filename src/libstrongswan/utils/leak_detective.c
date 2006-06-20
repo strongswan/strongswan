@@ -143,6 +143,43 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
 }
 
 /**
+ * Whitelist, which contains address ranges in stack frames ignored when leaking.
+ * 
+ * This is necessary, as some function use allocation hacks (static buffers)
+ * and so on, which we want to suppress on leak reports.
+ */
+struct {
+	void* range_start;
+	size_t range_size;
+} whitelist[] = {
+	{pthread_create, 0xFF},
+	{pthread_setspecific, 0xFF},
+	{mktime, 0xFF},
+	{inet_ntoa, 0xFF},
+};
+
+/**
+ * Check if this stack frame is whitelisted.
+ */
+static bool is_whitelisted(void **stack_frames, int stack_frame_count)
+{
+	int i, j;
+	
+	for (i=0; i< stack_frame_count; i++)
+	{
+		for (j=0; j<sizeof(whitelist)/sizeof(void*); j++)
+		{
+			if (stack_frames[i] >= whitelist[j].range_start &&
+				stack_frames[i] <= (whitelist[j].range_start + whitelist[j].range_size))
+			{
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Report leaks at library destruction
  */
 void report_leaks()
@@ -155,9 +192,12 @@ void report_leaks()
 	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
-		logger->log(logger, ERROR, "Leak (%d bytes at %p)", hdr->bytes, hdr + 1);
-		log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
-		leaks++;
+		if (!is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
+		{
+			logger->log(logger, ERROR, "Leak (%d bytes at %p)", hdr->bytes, hdr + 1);
+			log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
+			leaks++;
+		}
 	}
 		
 	switch (leaks)
@@ -215,6 +255,8 @@ void *malloc_hook(size_t bytes, const void *caller)
 	pthread_mutex_lock(&mutex);
 	uninstall_hooks();
 	hdr = malloc(bytes + sizeof(memory_header_t));
+	/* set to something which causes crashes */
+	memset(hdr, 0xEE, bytes + sizeof(memory_header_t));
 	
 	hdr->magic = MEMORY_HEADER_MAGIC;
 	hdr->bytes = bytes;
@@ -252,8 +294,6 @@ void free_hook(void *ptr, const void *caller)
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
 		pthread_mutex_unlock(&mutex);
-		/* TODO: since pthread_join cannot be excluded cleanly, we are not whining about bad frees */
-		return;
 		logger->log(logger, ERROR, "freeing of invalid memory (%p)", ptr);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
@@ -298,7 +338,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 		logger->log(logger, ERROR, "reallocation of invalid memory (%p)", old);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
-		kill(getpid(), SIGKILL);
+		raise(SIGKILL);
 		return NULL;
 	}
 	
@@ -325,7 +365,6 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 void leak_detective_init()
 {
 	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
-	load_excluded_functions();
 	install_hooks();
 }
 
@@ -336,232 +375,6 @@ void leak_detective_cleanup()
 {
 	uninstall_hooks();
 	report_leaks();
-}
-
-
-/**
- * The following glibc functions are excluded from leak detection, since
- * they use static allocated buffers or other ugly allocation hacks.
- * For this to work, the linker must link libstrongswan preferred to
- * the other (overriden) libs.
- */
-struct excluded_function {
-	char *lib_name;
-	char *function_name;
-	void *handle;
-	void *lib_function;
-} excluded_functions[] = {
-	{"libc.so.6", 		"inet_ntoa", 			NULL, NULL},
-	{"libpthread.so.0", "pthread_create", 		NULL, NULL},
-	{"libpthread.so.0", "pthread_cancel", 		NULL, NULL},
-	{"libpthread.so.0", "pthread_join", 		NULL, NULL},
-	{"libpthread.so.0", "_pthread_cleanup_push",NULL, NULL},
-	{"libpthread.so.0", "_pthread_cleanup_pop",	NULL, NULL},
-	{"libc.so.6", 		"mktime", 				NULL, NULL},
-	{"libc.so.6", 		"vsyslog", 				NULL, NULL},
-	{"libc.so.6", 		"strerror", 			NULL, NULL},
-	{"libpthread.so.0", "pthread_setspecific",	NULL, NULL},
-};
-#define INET_NTOA				0
-#define PTHREAD_CREATE			1
-#define PTHREAD_CANCEL			2
-#define PTHREAD_JOIN			3
-#define PTHREAD_CLEANUP_PUSH	4
-#define PTHREAD_CLEANUP_POP		5
-#define MKTIME					6
-#define VSYSLOG					7
-#define STRERROR				8
-#define PTHREAD_SETSPECIFIC		9
-
-/**
- * Load libraries and function pointers for excluded functions
- */
-static void load_excluded_functions()
-{
-	int i;
-	
-	for (i = 0; i < sizeof(excluded_functions)/sizeof(struct excluded_function); i++)
-	{
-		void *handle, *function;
-		handle = dlopen(excluded_functions[i].lib_name, RTLD_LAZY);
-		if (handle == NULL)
-		{
-			kill(getpid(), SIGSEGV);
-		}
-		
-		function = dlsym(handle, excluded_functions[i].function_name);
-		
-		if (function  == NULL)
-		{
-			dlclose(handle);
-			kill(getpid(), SIGSEGV);
-		}
-		excluded_functions[i].handle = handle;
-		excluded_functions[i].lib_function = function;
-	}
-}
-
-char *inet_ntoa(struct in_addr in)
-{
-	char *(*_inet_ntoa)(struct in_addr) = excluded_functions[INET_NTOA].lib_function;
-	char *result;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	result = _inet_ntoa(in);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
-}
-
-int pthread_create(pthread_t *__restrict __threadp, __const pthread_attr_t *__restrict __attr, 
-					void *(*__start_routine) (void *), void *__restrict __arg)
-{
-	int (*_pthread_create) (pthread_t *__restrict __threadp,
-						__const pthread_attr_t *__restrict __attr,
-						void *(*__start_routine) (void *),
-						void *__restrict __arg) = excluded_functions[PTHREAD_CREATE].lib_function;
-	int result;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	result = _pthread_create(__threadp, __attr, __start_routine, __arg);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
-}
-
-
-int pthread_cancel(pthread_t __th)
-{
-	int (*_pthread_cancel) (pthread_t) = excluded_functions[PTHREAD_CANCEL].lib_function;
-	int result;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	result = _pthread_cancel(__th);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
-}
-
-int pthread_setspecific(pthread_key_t __key, __const void *__pointer)
-{
-	int (*_pthread_setspecific) (pthread_key_t,__const void*) = excluded_functions[PTHREAD_SETSPECIFIC].lib_function;
-	int result;
-	
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	result = _pthread_setspecific(__key, __pointer);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
-}
-
-// /* TODO: join has probs, since it dellocates memory 
-//  * allocated (somewhere) with leak_detective :-(.
-//  * We should exclude all pthread_ functions to fix it !? */
-// int pthread_join(pthread_t __th, void **__thread_return)
-// {
-// 	int (*_pthread_join) (pthread_t, void **) = excluded_functions[PTHREAD_JOIN].lib_function;
-// 	int result;
-// 	
-// 	pthread_mutex_lock(&mutex);
-// 	uninstall_hooks();
-// 	
-// 	result = _pthread_join(__th, __thread_return);
-// 	
-// 	install_hooks();
-// 	pthread_mutex_unlock(&mutex);
-// 	return result;
-// }
-// 
-// void _pthread_cleanup_push (struct _pthread_cleanup_buffer *__buffer,
-// 								   void (*__routine) (void *),
-// 								   void *__arg)
-// {
-// 	int (*__pthread_cleanup_push) (struct _pthread_cleanup_buffer *__buffer,
-// 									void (*__routine) (void *),
-// 									void *__arg) = 
-// 			excluded_functions[PTHREAD_CLEANUP_PUSH].lib_function;
-// 	
-// 	pthread_mutex_lock(&mutex);
-// 	uninstall_hooks();
-// 	
-// 	__pthread_cleanup_push(__buffer, __routine, __arg);
-// 	
-// 	install_hooks();
-// 	pthread_mutex_unlock(&mutex);
-// 	return;
-// }
-// 	
-// void _pthread_cleanup_pop (struct _pthread_cleanup_buffer *__buffer, int __execute)
-// {
-// 	int (*__pthread_cleanup_pop) (struct _pthread_cleanup_buffer *__buffer, int __execute) = 
-// 			excluded_functions[PTHREAD_CLEANUP_POP].lib_function;
-// 	
-// 	pthread_mutex_lock(&mutex);
-// 	uninstall_hooks();
-// 	
-// 	__pthread_cleanup_pop(__buffer, __execute);
-// 	
-// 	install_hooks();
-// 	pthread_mutex_unlock(&mutex);
-// 	return;
-// }
-
-time_t mktime(struct tm *tm)
-{
-	time_t (*_mktime)(struct tm *tm) = excluded_functions[MKTIME].lib_function;
-	time_t result;
-
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-		
-	result = _mktime(tm);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
-}
-
-void vsyslog (int __pri, __const char *__fmt, __gnuc_va_list __ap)
-{
-	void (*_vsyslog) (int __pri, __const char *__fmt, __gnuc_va_list __ap) = excluded_functions[VSYSLOG].lib_function;
-
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	_vsyslog(__pri, __fmt, __ap);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return;
-}
-
-
-
-char *strerror(int errnum)
-{
-	char* (*_strerror) (int) = excluded_functions[STRERROR].lib_function;
-	char *result;
-
-	pthread_mutex_lock(&mutex);
-	uninstall_hooks();
-	
-	result = _strerror(errnum);
-	
-	install_hooks();
-	pthread_mutex_unlock(&mutex);
-	return result;
 }
 
 #endif /* LEAK_DETECTION */
