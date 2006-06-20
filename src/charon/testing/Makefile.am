@@ -16,7 +16,7 @@ rsa_test.h generator_test.h aes_cbc_crypter_test.h send_queue_test.c
 
 testing_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread \
 $(top_srcdir)/src/charon/connection.o $(top_srcdir)/src/charon/local_connection_store.o $(top_srcdir)/src/charon/policy.o \
-$(top_srcdir)/src/charon/local_policy_store.o $(top_srcdir)/src/charon/local_credential_store.o $(top_srcdir)/src/charon/traffic_selector.o \
+$(top_srcdir)/src/charon/local_policy_store.o $(top_srcdir)/src/charon/credential_store.o $(top_srcdir)/src/charon/traffic_selector.o \
 $(top_srcdir)/src/charon/proposal.o $(top_srcdir)/src/charon/configuration.o $(top_srcdir)/src/charon/state.o $(top_srcdir)/src/charon/ike_sa_init_requested.o \
 $(top_srcdir)/src/charon/ike_sa_init_responded.o $(top_srcdir)/src/charon/ike_sa_established.o $(top_srcdir)/src/charon/responder_init.o \
 $(top_srcdir)/src/charon/initiator_init.o $(top_srcdir)/src/charon/ike_auth_requested.o $(top_srcdir)/src/charon/delete_ike_sa_requested.o \
