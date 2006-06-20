@@ -376,7 +376,6 @@ static status_t process_message(private_create_child_sa_requested_t *this, messa
 	
 	/* create new state */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
-	this->public.state_interface.destroy(&this->public.state_interface);
 	
 	/* if we are rekeying, inform the old child SA that it has been superseeded and
 	 * start its delete */
@@ -387,8 +386,10 @@ static status_t process_message(private_create_child_sa_requested_t *this, messa
 		{
 			old_child_sa->set_rekeyed(old_child_sa);
 		}
+		
 		this->ike_sa->public.delete_child_sa(&this->ike_sa->public, this->reqid);
 	}
+	this->public.state_interface.destroy(&this->public.state_interface);
 	return SUCCESS;
 }
 
