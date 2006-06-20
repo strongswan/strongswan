@@ -108,6 +108,7 @@ struct credential_store_t {
 	 * @return			pointer to the added or already existing certificate
 	 */
 	x509_t* (*add_ca_certificate) (credential_store_t *this, x509_t *cert);
+	
 	/**
 	 * @brief Lists all certificates kept in the local credential store.
 	 *
@@ -143,7 +144,7 @@ struct credential_store_t {
 	 * @param this		calling object
 	 * @param path		directory to load certificates from
 	 */
-	void (*load_ca_certificates) (credential_store_t *this, const char *path);
+	void (*load_ca_certificates) (credential_store_t *this);
 	
 	/**
 	 * @brief Loads CRLs from a default directory.
@@ -153,7 +154,7 @@ struct credential_store_t {
 	 * @param this		calling object
 	 * @param path		directory to load crls from 
 	 */
-	void (*load_crls) (credential_store_t *this, const char *path);
+	void (*load_crls) (credential_store_t *this);
 	
 	/**
 	 * @brief Loads RSA private keys defined in ipsec.secrets
@@ -163,10 +164,8 @@ struct credential_store_t {
 	 * key must already be loaded to get the ID from.
 	 * 
 	 * @param this			calling object
-	 * @param secretsfile	file where secrets are stored
-	 * @param path			default directory for private keys
 	 */
-	void (*load_private_keys) (credential_store_t *this, const char *secretsfile, const char *path);
+	void (*load_private_keys) (credential_store_t *this);
 
 	/**
 	 * @brief Destroys a credential_store_t object.

@@ -37,6 +37,15 @@ mapping_t auth_method_m[] = {
 	{MAPPING_END, NULL}
 };
 
+/** 
+ * String mappings for cert_policy_t.
+ */
+mapping_t cert_policy_m[] = {
+	{CERT_ALWAYS_SEND, "CERT_ALWAYS_SEND"},
+	{CERT_SEND_IF_ASKED, "CERT_SEND_IF_ASKED"},
+	{CERT_NEVER_SEND, "CERT_NEVER_SEND"},
+	{MAPPING_END, NULL}
+};
 
 typedef struct private_connection_t private_connection_t;
 
@@ -59,6 +68,21 @@ struct private_connection_t {
 	 * Does charon handle this connection? Or can he ignore it?
 	 */
 	bool ikev2;
+	
+	/**
+	 * should we send a certificate request?
+	 */
+	cert_policy_t cert_req_policy;
+	
+	/**
+	 * should we send a certificates?
+	 */
+	cert_policy_t cert_policy;
+	
+	/**
+	 * ID of us
+	 */
+	identification_t *my_id;
 
 	/**
 	 * Host information of my host.
@@ -95,6 +119,22 @@ static char *get_name (private_connection_t *this)
 static bool is_ikev2 (private_connection_t *this)
 {
 	return this->ikev2;
+}
+
+/**
+ * Implementation of connection_t.get_cert_req_policy.
+ */
+static cert_policy_t get_cert_req_policy (private_connection_t *this)
+{
+	return this->cert_req_policy;
+}
+
+/**
+ * Implementation of connection_t.get_cert_policy.
+ */
+static cert_policy_t get_cert_policy (private_connection_t *this)
+{
+	return this->cert_policy;
 }
 
 /**
@@ -254,8 +294,8 @@ static connection_t *clone(private_connection_t *this)
 	iterator_t *iterator;
 	proposal_t *proposal;
 	private_connection_t *clone = (private_connection_t*)connection_create(
-			this->name,
-			this->ikev2,
+			this->name, this->ikev2,
+			this->cert_policy, this->cert_req_policy,
 			this->my_host->clone(this->my_host),
 			this->other_host->clone(this->other_host),
 			this->auth_method);
@@ -295,13 +335,18 @@ static void destroy(private_connection_t *this)
 /**
  * Described in header.
  */
-connection_t * connection_create(char *name, bool ikev2, host_t *my_host, host_t *other_host, auth_method_t auth_method)
+connection_t * connection_create(char *name, bool ikev2,
+								 cert_policy_t cert_policy, cert_policy_t cert_req_policy,
+								 host_t *my_host, host_t *other_host, 
+								 auth_method_t auth_method)
 {
 	private_connection_t *this = malloc_thing(private_connection_t);
 
 	/* public functions */
 	this->public.get_name = (char*(*)(connection_t*))get_name;
 	this->public.is_ikev2 = (bool(*)(connection_t*))is_ikev2;
+	this->public.get_cert_policy = (cert_policy_t(*)(connection_t*))get_cert_policy;
+	this->public.get_cert_req_policy = (cert_policy_t(*)(connection_t*))get_cert_req_policy;
 	this->public.get_my_host = (host_t*(*)(connection_t*))get_my_host;
 	this->public.update_my_host = (void(*)(connection_t*,host_t*))update_my_host;
 	this->public.update_other_host = (void(*)(connection_t*,host_t*))update_other_host;
@@ -318,6 +363,8 @@ connection_t * connection_create(char *name, bool ikev2, host_t *my_host, host_t
 	/* private variables */
 	this->name = strdup(name);
 	this->ikev2 = ikev2;
+	this->cert_policy = cert_policy;
+	this->cert_req_policy = cert_req_policy;
 	this->my_host = my_host;
 	this->other_host = other_host;
 	this->auth_method = auth_method;

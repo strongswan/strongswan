@@ -1,7 +1,7 @@
 /**
- * @file credential_store.c
+ * @file local_credential_store.c
  * 
- * @brief Implementation of credential_store_t.
+ * @brief Implementation of local_credential_store_t.
  *  
  */
 
@@ -25,7 +25,7 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "credential_store.h"
+#include "local_credential_store.h"
 
 #include <utils/lexparser.h>
 #include <utils/linked_list.h>
@@ -33,19 +33,19 @@
 #include <crypto/x509.h>
 #include <crypto/crl.h>
 
-#define PATH_BUF	256
+#define PATH_BUF 256
 
-typedef struct private_credential_store_t private_credential_store_t;
+typedef struct private_local_credential_store_t private_local_credential_store_t;
 
 /**
- * Private data of an credential_store_t object
+ * Private data of an local_credential_store_t object
  */
-struct private_credential_store_t {
+struct private_local_credential_store_t {
 
 	/**
 	 * Public part
 	 */
-	credential_store_t public;
+	local_credential_store_t public;
 	
 	/**
 	 * list of key_entry_t's with private keys
@@ -85,17 +85,17 @@ struct private_credential_store_t {
 
 
 /**
- * Implementation of credential_store_t.get_shared_secret.
+ * Implementation of local_credential_store_t.get_shared_secret.
  */	
-static status_t get_shared_secret(private_credential_store_t *this, identification_t *id, chunk_t *secret)
+static status_t get_shared_secret(private_local_credential_store_t *this, identification_t *id, chunk_t *secret)
 {
 	return FAILED;
 }
 
 /**
- * Implementation of credential_store_t.get_rsa_public_key.
+ * Implementation of local_credential_store_t.get_rsa_public_key.
  */
-static rsa_public_key_t * get_rsa_public_key(private_credential_store_t *this, identification_t *id)
+static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *this, identification_t *id)
 {
 	rsa_public_key_t *found = NULL;
 
@@ -118,9 +118,9 @@ static rsa_public_key_t * get_rsa_public_key(private_credential_store_t *this, i
 }
 
 /**
- * Implementation of credential_store_t.get_rsa_private_key.
+ * Implementation of local_credential_store_t.get_rsa_private_key.
  */
-static rsa_private_key_t* get_rsa_private_key(private_credential_store_t *this, rsa_public_key_t *pubkey)
+static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *this, rsa_public_key_t *pubkey)
 {
 	rsa_private_key_t *found = NULL;
 	rsa_private_key_t *current;
@@ -142,9 +142,9 @@ static rsa_private_key_t* get_rsa_private_key(private_credential_store_t *this, 
 }
 
 /**
- * Implementation of credential_store_t.has_rsa_private_key.
+ * Implementation of local_credential_store_t.has_rsa_private_key.
  */
-static bool has_rsa_private_key(private_credential_store_t *this, rsa_public_key_t *pubkey)
+static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_public_key_t *pubkey)
 {
 	bool found = FALSE;
 	rsa_private_key_t *current;
@@ -197,25 +197,25 @@ static x509_t* add_certificate(linked_list_t *certs, x509_t *cert)
 }
 
 /**
- * Implements credential_store_t.add_end_certificate
+ * Implements local_credential_store_t.add_end_certificate
  */
-static x509_t* add_end_certificate(private_credential_store_t *this, x509_t *cert)
+static x509_t* add_end_certificate(private_local_credential_store_t *this, x509_t *cert)
 {
 	return add_certificate(this->certs, cert);
 }
 
 /**
- * Implements credential_store_t.add_ca_certificate
+ * Implements local_credential_store_t.add_ca_certificate
  */
-static x509_t* add_ca_certificate(private_credential_store_t *this, x509_t *cert)
+static x509_t* add_ca_certificate(private_local_credential_store_t *this, x509_t *cert)
 {
 	return add_certificate(this->ca_certs, cert);
 }
 
 /**
- * Implements credential_store_t.log_certificates
+ * Implements local_credential_store_t.log_certificates
  */
-static void log_certificates(private_credential_store_t *this, logger_t *logger, bool utc)
+static void log_certificates(private_local_credential_store_t *this, logger_t *logger, bool utc)
 {
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
 	
@@ -239,9 +239,9 @@ static void log_certificates(private_credential_store_t *this, logger_t *logger,
 }
 
 /**
- * Implements credential_store_t.log_ca_certificates
+ * Implements local_credential_store_t.log_ca_certificates
  */
-static void log_ca_certificates(private_credential_store_t *this, logger_t *logger, bool utc)
+static void log_ca_certificates(private_local_credential_store_t *this, logger_t *logger, bool utc)
 {
 	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
 
@@ -263,9 +263,9 @@ static void log_ca_certificates(private_credential_store_t *this, logger_t *logg
 }
 
 /**
- * Implements credential_store_t.log_crls
+ * Implements local_credential_store_t.log_crls
  */
-static void log_crls(private_credential_store_t *this, logger_t *logger, bool utc)
+static void log_crls(private_local_credential_store_t *this, logger_t *logger, bool utc)
 {
 	iterator_t *iterator = this->crls->create_iterator(this->crls, TRUE);
 
@@ -290,21 +290,21 @@ static void log_crls(private_credential_store_t *this, logger_t *logger, bool ut
 }
 
 /**
- * Implements credential_store_t.load_ca_certificates
+ * Implements local_credential_store_t.load_ca_certificates
  */
-static void load_ca_certificates(private_credential_store_t *this, const char *path)
+static void load_ca_certificates(private_local_credential_store_t *this)
 {
 	struct dirent* entry;
 	struct stat stb;
 	DIR* dir;
 	x509_t *cert;
 	
-	this->logger->log(this->logger, CONTROL, "loading ca certificates from '%s/'", path);
+	this->logger->log(this->logger, CONTROL, "loading ca certificates from '%s/'", CA_CERTIFICATE_DIR);
 
-	dir = opendir(path);
+	dir = opendir(CA_CERTIFICATE_DIR);
 	if (dir == NULL)
 	{
-		this->logger->log(this->logger, ERROR, "error opening ca certs directory %s'", path);
+		this->logger->log(this->logger, ERROR, "error opening ca certs directory %s'", CA_CERTIFICATE_DIR);
 		return;
 	}
 
@@ -312,7 +312,7 @@ static void load_ca_certificates(private_credential_store_t *this, const char *p
 	{
 		char file[PATH_BUF];
 
-		snprintf(file, sizeof(file), "%s/%s", path, entry->d_name);
+		snprintf(file, sizeof(file), "%s/%s", CA_CERTIFICATE_DIR, entry->d_name);
 		
 		if (stat(file, &stb) == -1)
 		{
@@ -394,21 +394,21 @@ static crl_t* add_crl(linked_list_t *crls, crl_t *crl, logger_t *logger)
 }
 
 /**
- * Implements credential_store_t.load_crls
+ * Implements local_credential_store_t.load_crls
  */
-static void load_crls(private_credential_store_t *this, const char *path)
+static void load_crls(private_local_credential_store_t *this)
 {
 	struct dirent* entry;
 	struct stat stb;
 	DIR* dir;
 	crl_t *crl;
 	
-	this->logger->log(this->logger, CONTROL, "loading crls from '%s/'", path);
+	this->logger->log(this->logger, CONTROL, "loading crls from '%s/'", CRL_DIR);
 
-	dir = opendir(path);
+	dir = opendir(CRL_DIR);
 	if (dir == NULL)
 	{
-		this->logger->log(this->logger, ERROR, "error opening crl directory %s'", path);
+		this->logger->log(this->logger, ERROR, "error opening crl directory %s'", CRL_DIR);
 		return;
 	}
 
@@ -416,7 +416,7 @@ static void load_crls(private_credential_store_t *this, const char *path)
 	{
 		char file[PATH_BUF];
 
-		snprintf(file, sizeof(file), "%s/%s", path, entry->d_name);
+		snprintf(file, sizeof(file), "%s/%s", CRL_DIR, entry->d_name);
 		
 		if (stat(file, &stb) == -1)
 		{
@@ -444,11 +444,11 @@ static void load_crls(private_credential_store_t *this, const char *path)
 }
 
 /**
- * Implements credential_store_t.load_private_keys
+ * Implements local_credential_store_t.load_private_keys
  */
-static void load_private_keys(private_credential_store_t *this, const char *secretsfile, const char *defaultpath)
+static void load_private_keys(private_local_credential_store_t *this)
 {
-	FILE *fd = fopen(secretsfile, "r");
+	FILE *fd = fopen(SECRETS_FILE, "r");
 
 	if (fd)
 	{
@@ -456,7 +456,7 @@ static void load_private_keys(private_credential_store_t *this, const char *secr
 		int line_nr = 0;
     	chunk_t chunk, src, line;
 
-		this->logger->log(this->logger, CONTROL, "loading secrets from \"%s\"", secretsfile);
+		this->logger->log(this->logger, CONTROL, "loading secrets from \"%s\"", SECRETS_FILE);
 
 		fseek(fd, 0, SEEK_END);
 		chunk.len = ftell(fd);
@@ -513,7 +513,7 @@ static void load_private_keys(private_credential_store_t *this, const char *secr
 				else
 				{
 					/* relative path name */
-					snprintf(path, sizeof(path), "%s/%.*s", defaultpath, filename.len, filename.ptr);
+					snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR, filename.len, filename.ptr);
 				}
 
 				rsa_private_key_t *key = rsa_private_key_create_from_file(path, NULL);
@@ -543,14 +543,14 @@ error:
 	}
 	else
 	{
-		this->logger->log(this->logger, ERROR, "could not open file '%s'", secretsfile);
+		this->logger->log(this->logger, ERROR, "could not open file '%s'", SECRETS_FILE);
 	}
 }
 
 /**
- * Implementation of credential_store_t.destroy.
+ * Implementation of local_credential_store_t.destroy.
  */
-static void destroy(private_credential_store_t *this)
+static void destroy(private_local_credential_store_t *this)
 {
 	x509_t *cert;
 	crl_t *crl;
@@ -592,23 +592,23 @@ static void destroy(private_credential_store_t *this)
 /**
  * Described in header.
  */
-credential_store_t * credential_store_create(bool strict)
+local_credential_store_t * local_credential_store_create(bool strict)
 {
-	private_credential_store_t *this = malloc_thing(private_credential_store_t);
+	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
 
-	this->public.get_shared_secret = (status_t(*)(credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
-	this->public.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
-	this->public.has_rsa_private_key = (bool(*)(credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
-	this->public.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
-	this->public.add_end_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_end_certificate;
-	this->public.add_ca_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_ca_certificate;
-	this->public.log_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_certificates;
-	this->public.log_ca_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_ca_certificates;
-	this->public.log_crls = (void(*)(credential_store_t*,logger_t*,bool))log_crls;
-	this->public.load_ca_certificates = (void(*)(credential_store_t*,const char*))load_ca_certificates;
-	this->public.load_crls = (void(*)(credential_store_t*,const char*))load_crls;
-	this->public.load_private_keys = (void(*)(credential_store_t*,const char*, const char*))load_private_keys;
-	this->public.destroy = (void(*)(credential_store_t*))destroy;
+	this->public.credential_store.get_shared_secret = (status_t(*)(credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
+	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
+	this->public.credential_store.has_rsa_private_key = (bool(*)(credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
+	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
+	this->public.credential_store.add_end_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_end_certificate;
+	this->public.credential_store.add_ca_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_ca_certificate;
+	this->public.credential_store.log_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_certificates;
+	this->public.credential_store.log_ca_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_ca_certificates;
+	this->public.credential_store.log_crls = (void(*)(credential_store_t*,logger_t*,bool))log_crls;
+	this->public.credential_store.load_ca_certificates = (void(*)(credential_store_t*))load_ca_certificates;
+	this->public.credential_store.load_crls = (void(*)(credential_store_t*))load_crls;
+	this->public.credential_store.load_private_keys = (void(*)(credential_store_t*))load_private_keys;
+	this->public.credential_store.destroy = (void(*)(credential_store_t*))destroy;
 	
 	/* initialize mutexes */
 	pthread_mutex_init(&(this->crls_mutex), NULL);

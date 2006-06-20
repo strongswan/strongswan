@@ -345,6 +345,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	this->logger->log(this->logger, CONTROL|LEVEL1, "  other ca:'%s'", other_ca->get_string(other_ca));
 
 	connection = connection_create(msg->add_conn.name, msg->add_conn.ikev2,
+								   msg->add_conn.me.sendcert, msg->add_conn.other.sendcert,
 								   my_host, other_host,
 								   RSA_DIGITAL_SIGNATURE);
 	if (msg->add_conn.algorithms.ike)
@@ -611,11 +612,11 @@ static void stroke_reread(private_stroke_t *this, stroke_msg_t *msg)
 {
 	if (msg->reread.flags & REREAD_CACERTS)
 	{
-		charon->credentials->load_ca_certificates(charon->credentials, CA_CERTIFICATE_DIR);
+		charon->credentials->load_ca_certificates(charon->credentials);
 	}
 	if (msg->reread.flags & REREAD_CRLS)
 	{
-		charon->credentials->load_crls(charon->credentials, CRL_DIR);
+		charon->credentials->load_crls(charon->credentials);
 	}
 }
 

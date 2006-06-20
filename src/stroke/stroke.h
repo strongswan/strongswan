@@ -23,6 +23,8 @@
 #ifndef STROKE_H_
 #define STROKE_H_
 
+#include <sys/types.h>
+
 /**
  * Socket which is used to communicate between charon and stroke
  */
@@ -30,25 +32,47 @@
 
 #define STROKE_BUF_LEN		2048
 
-/**
-  * Definition of the LIST flags
-  */
-#define LIST_NONE		0x0000	/* don't list anything */
-#define LIST_CERTS		0x0001	/* list all host/user certs */
-#define LIST_CACERTS	0x0002	/* list all ca certs */
-#define LIST_CRLS		0x0004	/* list all crls */
-#define LIST_ALL		0x0007	/* all list options */
+typedef enum list_flag_t list_flag_t;
 
 /**
-  * Definition of the REREAD flags
-  */
-#define REREAD_NONE		0x0000	/* don't reread anything */
-#define REREAD_CACERTS	0x0001	/* reread all ca certs */
-#define REREAD_CRLS		0x0002	/* reread all crls */
-#define REREAD_ALL		0x0003	/* all reread options */
+ * Definition of the LIST flags, used for
+ * the various stroke list* commands.
+ */
+enum list_flag_t {
+	/** don't list anything */
+	LIST_NONE = 	0x0000,
+	/** list all host/user certs */
+	LIST_CERTS =	0x0001,
+	/** list all ca certs */
+	LIST_CACERTS =	0x0002,
+	/** list all crls */
+	LIST_CRLS =		0x0004,
+	/** all list options */
+	LIST_ALL =		0x0007,
+};
+
+typedef enum reread_flag_t reread_flag_t;
+
+/**
+ * Definition of the REREAD flags, used for
+ * the various stroke reread* commands.
+ */
+enum reread_flag_t {
+	/** don't reread anything */
+	REREAD_NONE = 		0x0000,
+	/** reread all ca certs */
+	REREAD_CACERTS = 	0x0001,
+	/** reread all crls */
+	REREAD_CRLS = 		0x0002,
+	/** all reread options */
+	REREAD_ALL = 		0x0003,
+};
 
 typedef struct stroke_end_t stroke_end_t;
 
+/**
+ * definition of a peer in a stroke message
+ */
 struct stroke_end_t {
 	char *id;
 	char *cert;
@@ -56,7 +80,7 @@ struct stroke_end_t {
 	char *address;
 	char *subnet;
 	int subnet_mask;
-	certpolicy_t sendcert;
+	int sendcert;
 };
 
 typedef struct stroke_msg_t stroke_msg_t;
@@ -66,7 +90,7 @@ typedef struct stroke_msg_t stroke_msg_t;
  */
 struct stroke_msg_t {
 	/* length of this message with all strings */
-	u_int length;
+	u_int16_t length;
 
 	/* type of the message */
 	enum {
@@ -134,13 +158,13 @@ struct stroke_msg_t {
 
 		/* data for STR_LIST */
 		struct {
-			u_int flags;
+			list_flag_t flags;
 			bool  utc;
 		} list;
 
 		/* data for STR_REREAD */
 		struct {
-			u_int flags;
+			reread_flag_t flags;
 		} reread;
 
 	};

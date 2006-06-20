@@ -67,6 +67,36 @@ enum auth_method_t {
 extern mapping_t auth_method_m[];
 
 
+typedef enum cert_policy_t cert_policy_t;
+
+/**
+ * Certificate sending policy. This is also used for certificate
+ * requests when using this definition for the other peer. If
+ * it is CERT_NEVER_SEND, a certreq is ommited, otherwise its
+ * included.
+ *
+ * @ingroup config
+ * 
+ * @warning These definitions must be the same as in pluto/starter,
+ * as they are sent over the stroke socket.
+ */
+enum cert_policy_t {
+	/** always send certificates, even when not requested */
+	CERT_ALWAYS_SEND   = 0,
+	/** send certificate upon cert request */
+	CERT_SEND_IF_ASKED = 1,
+	/** never send a certificate, even when requested */
+	CERT_NEVER_SEND    = 2,
+};
+
+/**
+ * string mappings for certpolicy_t.
+ * 
+ * @ingroup config
+ */
+extern mapping_t cert_policy_m[];
+
+
 typedef struct connection_t connection_t;
 
 /**
@@ -189,6 +219,28 @@ struct connection_t {
 	bool (*is_ikev2) (connection_t *this);
 	
 	/**
+	 * @brief Should be sent a certificate request for this connection?
+	 *
+	 * A certificate request contains serials of our trusted CA certificates.
+	 * This flag says if such a request is sent on connection setup to
+	 * the peer. It should be ommited when CERT_SEND_NEVER, sended otherwise.
+	 *
+	 * @param this		calling object
+	 * @return			- TRUE, if certificate request should be sent
+	 */
+	cert_policy_t (*get_cert_req_policy) (connection_t *this);
+	
+	/**
+	 * @brief Should be sent a certificate for this connection?
+	 *
+	 * Return the policy used to send the certificate.
+	 *
+	 * @param this		calling object
+	 * @return			certificate sending policy
+	 */
+	cert_policy_t (*get_cert_policy) (connection_t *this);
+	
+	/**
 	 * @brief Get the DH group to use for connection initialization.
 	 * 
 	 * @param this		calling object
@@ -230,17 +282,19 @@ struct connection_t {
  * do not modify or destroy them after a call to 
  * connection_create(). Name gets cloned internally.
  *
- * @param name			connection identifier
- * @param ikev2			TRUE if this is an IKEv2 connection
- * @param my_host		host_t representing local address
- * @param other_host	host_t representing remote address
- * @param auth_method	Authentication method to use for our(!) auth data
- * @return 				connection_t object.
+ * @param name				connection identifier
+ * @param ikev2				TRUE if this is an IKEv2 connection
+ * @param cert_policy		certificate send policy
+ * @param cert_req_policy	certificate request send policy
+ * @param my_host			host_t representing local address
+ * @param other_host		host_t representing remote address
+ * @param auth_method		Authentication method to use for our(!) auth data
+ * @return 					connection_t object.
  * 
  * @ingroup config
  */
-connection_t * connection_create(char *name,
-								 bool ikev2,
+connection_t * connection_create(char *name, bool ikev2,
+								 cert_policy_t cert_pol, cert_policy_t req_pol,
 								 host_t *my_host, host_t *other_host,
 								 auth_method_t auth_method);
 

@@ -122,7 +122,7 @@ static int add_connection(char *name,
 	msg.add_conn.me.subnet_mask = my_netmask;
 	msg.add_conn.me.cert = NULL;
 	msg.add_conn.me.ca = NULL;
-	msg.add_conn.me.sendcert = CERT_SEND_IF_ASKED;
+	msg.add_conn.me.sendcert = 1;
 	
 	msg.add_conn.other.id = push_string(&msg, other_id);
 	msg.add_conn.other.address = push_string(&msg, other_addr);
@@ -130,7 +130,7 @@ static int add_connection(char *name,
 	msg.add_conn.other.subnet_mask = other_netmask;
 	msg.add_conn.other.cert = NULL;
 	msg.add_conn.other.ca = NULL;
-	msg.add_conn.other.sendcert = CERT_SEND_IF_ASKED;
+	msg.add_conn.other.sendcert = 1;
 	
 	return send_stroke_msg(&msg);
 }

@@ -6,8 +6,8 @@ config/connections/connection.c config/connections/connection.h \
 config/connections/local_connection_store.c config/connections/local_connection_store.h config/connections/connection_store.h \
 config/policies/policy.c config/policies/policy.h \
 config/policies/local_policy_store.c config/policies/policy_store.h config/policies/local_policy_store.h \
-config/credentials/credential_store.c config/credentials/credential_store.h \
-config/traffic_selector.c config/traffic_selector.h \
+config/credentials/local_credential_store.c config/credentials/local_credential_store.h \
+config/credentials/credential_store.h config/traffic_selector.c config/traffic_selector.h \
 config/proposal.c config/proposal.h config/configuration.c config/configuration.h \
 sa/states/state.c sa/states/state.h sa/states/ike_sa_init_requested.c sa/states/ike_sa_init_requested.h \
 sa/states/ike_sa_init_responded.c sa/states/ike_sa_established.c sa/states/ike_sa_established.h \

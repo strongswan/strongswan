@@ -177,14 +177,13 @@ static void initialize(private_daemon_t *this, bool strict)
 	this->public.send_queue = send_queue_create();
 	this->public.connections = (connection_store_t*)local_connection_store_create();
 	this->public.policies = (policy_store_t*)local_policy_store_create();
-	this->public.credentials = credential_store_create(strict);
+	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
 
 	/* load keys, ca certificates and crls */
 	credentials = this->public.credentials;
-	credentials->load_ca_certificates(credentials, CA_CERTIFICATE_DIR);
-	credentials->load_crls(credentials, CRL_DIR);
-	credentials->load_private_keys(credentials, SECRETS_FILE, PRIVATE_KEY_DIR);
-	
+	credentials->load_ca_certificates(credentials);
+	credentials->load_crls(credentials);
+	credentials->load_private_keys(credentials);
 	
 	/* start building threads, we are multi-threaded NOW */
 	this->public.stroke = stroke_create();

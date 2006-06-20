@@ -251,6 +251,7 @@
  */
 #define SECRETS_FILE CONFIG_DIR "/ipsec.secrets"
 
+
 typedef struct daemon_t daemon_t;
 
 /**

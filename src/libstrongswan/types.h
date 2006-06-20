@@ -109,19 +109,6 @@ enum status_t {
 	CREATED,
 };
 
-
-/**
-  * Certificate sending policy
-  */
-typedef enum certpolicy {
-  CERT_ALWAYS_SEND   = 0,
-  CERT_SEND_IF_ASKED = 1,
-  CERT_NEVER_SEND    = 2,
-
-  CERT_YES_SEND      = 3,	/* synonym for CERT_ALWAYS_SEND */
-  CERT_NO_SEND       = 4	/* synonym for CERT_NEVER_SEND  */
-} certpolicy_t;
-
 /**
  * RFC 2459 CRL reason codes
  */
