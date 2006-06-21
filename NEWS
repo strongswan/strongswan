@@ -1,3 +1,6 @@
+strongswan-4.0.1
+----------------
+
 - Added algorithm selection to charon: New default algorithms for 
   ike=aes128-sha-modp2048, as both daemons support it. The default
   for IPsec SAs is now esp=aes128-sha,3des-md5. charon handles
@@ -21,6 +24,10 @@
   when using IKEv2. WARNING: charon currently is unable to handle
   simultaneous rekeying. To avoid such a situation, use a large
   rekeyfuzz, or even better, set rekey=no on one peer.
+
+- support for host2host, net2net, host2net (roadwarrior) tunnels
+  using predefined RSA certificates (see uml scenarios for
+  configuration examples).
 
 - new build environment featuring autotools. Features such
   as HTTP, LDAP and smartcard support may be enabled using
