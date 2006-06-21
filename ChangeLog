@@ -1,3 +1,233 @@
+ strongswan-4.0.1 / R:1144 
+===========================
+
+fixed whitelist detection
+reworked function ignore mechanism to not-report whitelist
+  rather than overriding functions
+fixed execv call args to work when using strictcrl and syslog
+fixed bug: usage of already freed mem
+readded local_credential_store
+added sendcert policy to connection
+some other cleanups
+implemented rereadcrls rereadcacerts
+implemented rereadcrls rereadcacerts
+implemented rereadcrls rereadcacerts
+removed local_credential_store
+fixed SPI when acting as initiator of rekeying
+fixed SPI when rekeying and deleting CHILD_SAs
+change key derivation order to fullfill RFC
+added crl support
+added listcrls
+added chunk_equals_or_null()
+added crl support
+changed tabs from 8 to 4 spaces
+added crl support
+cosmetics
+cosmetics (space)
+fixed compilation error
+updated for release
+fixed aes code, we support now aes128, aes192, aes256 in IKE
+added support for "ike" and "esp" keywords
+fixed bugs in proposal code
+algorithm selection for charon works now with ipsec.conf
+a lot of other fixes
+implemented clean spi allocation behavior when using multiple proposals
+fixed logleve(l) keyword typo
+handling of "rekey=no" parameter added
+changed default algorithms to:
+  ike: aes128-sha-modp2048
+  esp: aes128-sha1, 3des-md5
+added default CRL directory path
+added strictcrlpolicy command line argument
+added option parsing
+added local CRLs
+added rekeying parameters
+corrected some descriptions
+moved RSA key size constraints to definitions.h
+fixed down keyword
+debug and logging improvements
+support for stroke listcerts|listcacerts|listcrls|listall
+support for stroke listcerts|listcacerts|listall and left|rightca=
+gperf creates optimum hash table for stroke keywords
+using same reqid if a child sa rekeys an existing one
+NULL string argument is treated as %any
+add_certificate() now returns pointer to added cert
+cosmetics
+single tests now start up faster
+workaround for peers rekeying at the same time
+loading lifetime policies from ipsec.conf
+old child_sa gets deleted after rekeying
+rekeying almost complete, but:
+	IKE_SA get in an invalid state when both initiate rekeying at the same time,
+corrected type
+improved kernel interface logging
+fixed clone/destroy behavior when not using CAs
+specifying keysize in bits, as it is required in IKEv2
+added generic kernel SA algorithm handling, which brings us:
+        aes-128, aes-256, blowfish, des, 3des and null encryption for CHILD_SAs
+added support for leftsendcert= and left|rightca= parameters
+discard cert if CA basic constraints flag is not set and warn if cert is not valide
+added public methods is_ca() and is_valid()
+changed ASN.1 CONTROL log output to LEVEL2
+cosmetics
+removed unused Makefile
+stroke.h requires libstrongswan/types.h
+fixed compile warnings when using -Wall
+further CHILD_SA rekeying work done:
+	creation of a new CHILD_SA on a expire from a kernel works
+	delete of old CHILD_SA still missing
+	some issues when both initiate rekeing 
+updated INSTALL to conform with autotools
+added a short HACKING introduction
+further work for rekeying:
+  get liftimes from policy
+  added new state
+  initiation of rekeying done
+proposal redone:
+  removed support for AH+ESP proposals
+proper leak detective hook for realloc
+excluded pthread_setspecific from leak detective
+fixed a memleak
+cosmetics
+ipv6-host2host scenario added
+created IPv6 environment
+job management:
+  moved job code from thread_pool to job, jobs have an "execute" method now
+  added two new jobs: delete_child_sa & rekey_child_sa
+kernel interface:
+  listens now for ACQUIRE & EXPIRE
+  supports hard and soft lifetimes
+  fires jobs for delete and rekey child sa
+ike sa manager:
+  can checkout IKE SAs by requid of owned CHILD SAs
+we have now the infrastructure to do the rekeying... :-)
+fixed some memleaks/freebugs
+leak detective works almost usable now (?!)
+added host2host test for ikev2
+fixed host-host tunnel traffic selection, host-host works now
+bug fixed circumventing an assertion in delete_connection when ikev1 is not set
+minimized prefixed on stroke logger output
+charon outputs strongSwan version
+tests with subjectAltNames now
+fixed event queue for events >36min
+included charons module tests to build & dist
+full support of ikev1 and ikev2 connection flags
+cosmetics in log_status output
+use of streq
+added testing files to dist
+  required the use of the "ustar" format to support 
+  filenames longer than 99 chars
+lookup of private key based on keyid of public key
+new functions to add certificates and retrieve private and public keys
+changed log level
+list ca certificates
+computation of SHA-1 hash over publicKeyInfo object
+moved abbreviated thread_id in front of brackets
+added has_key parameter to log_certificates()
+log_certificates() now shows keyid and availability of matching private key
+indented loaded file log entry
+moved TIMETOA_BUF definition to types.h
+moved TIMETOA_BUF definition from asn1.h
+define default CA_CERTIFICATE_DIR
+load all ca certificates
+fixed daemon destruction order to prevent
+  crashes on termination
+fixed memleak when deleting a connection
+updated todo list
+policies contain a connections name now
+  used for initiate and delete
+connections won't get initiated twice anymore
+deleting of connections is now possible, which allows us to use
+  ipsec update and ipsec reload
+changed iterator->remove behavior
+ipsec up|down|route|delete require a connection name
+stroke now uses constant size string buffer
+changed to standard connection log output
+reworked parsing and matching of subjectAltNames
+added memeq() macro
+moved timetoa() from asn1.c to types.c
+corrected type
+some logging improvements and cosmetics
+handle IKE_SA setup without a piggy-packed CHILD_SA
+  more IKEv2 conform
+initiate IKE_SA deletion befor manager destruction
+improved code of chunk_equals
+added streq() macro and defined default BUF_LEN
+typo
+build gets perl and gperf from configure now
+moved built sources to maintainer-clean
+show connection templates in status & statusall
+don't complain on termination of IKEv1 connections
+updated ipsec.conf manual to reflect actual state of
+  keyexchange-parameter
+using hubs instead of switches, which allows us
+  to sniff the traffic from the host system.
+changed config load strategy:
+  starter loads both connections in charon & pluto,
+  charon ignores anything with keyexchange!=ikev2.
+  pluto needs the same behavior.
+ changed build order to fix build error after distclean
+load_end_certificate() now loads certificates
+cosmetics
+moved definition of generalNames_t to identification.h; initialized subjectKeyID, authKeyID and authKeySerialNumber
+moved definition of generalNames_t to identification.h
+corrrected description
+reimplemented proper IKE SA deletion using a seperate state,
+  should conform now to IKEv2
+fixed build when using --enable-leak-detective
+added removed files to svn:ignore
+fixed bug in pluto/Makefile.am
+removed perl-generated oid.c/h from svn,
+  added them to "dist" and "distclean"
+removed lex, yacc and gperf output from svn,
+  added them to "dist" and "distclean"
+storing release revision in svn property "release-revision", because I forget it all the times
+fixed ignorelist, should work now
+added ingorelist for builded files
+re-added doxygen apidoc, buildable with "make apidoc"
+added missing ipsec.conf.5 to distribution :-/
+fixed another typo
+added missing ipsec.conf ipsec.conf.5
+existing ipsec.conf won't get overwritten anymore
+fixed typo in Makefile which corrupted the build
+applied patch from the NAT-T team fixing several typos
+applied patch from andreas, which allows certificate listing via stroke
+added ipsec.conf template and man page back
+removed old Makefiles
+added new strongswan KDevelop project & startup hack
+fixed Revision in changelog fo 4.0.0
+started ChangeLog
+simple script for ChangeLog update via "svn log"
+fixed compliation error using --enable-smartcard
+added test for ikev1-ikev2 mixed mode
+added test ikev2 roadwarrior scenario
+applied andreas's patch
+  logger output improvements
+  testin gupdates
+  and a lot more
+updated testsuite to autotools
+added random source ./configure options
+fixed default-pkcs11 option
+testcommit
+fixed errors when --enable-pkcs11
+added autogen script
+introduced autotools
+  first working version
+  make dist should work
+  things to do:
+    UML testing!
+    more cleanups
+fixed build
+started to rebuild source layout
+fixed stroke error output to starter
+using random SPIs now, but without collision checks
+applied some -W's from strongswan
+fixed that warnings
+removed IKEV2 ifdefs
+applied patch from andreas
+  added charonstart option to config
+  new ikev2 tests for UML
+
  strongSwan-4.0.0 / R:967
 ==========================
 
