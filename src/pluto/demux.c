@@ -12,7 +12,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  *
- * RCSID $Id: demux.c,v 1.13 2005/02/18 21:08:59 as Exp $
+ * RCSID $Id: demux.c,v 1.14 2006/06/22 11:58:25 as Exp $
  */
 
 /* Ordering Constraints on Payloads
@@ -1196,19 +1196,6 @@ read_packet(struct msg_digest *md)
 	}
 #endif
 
-#define IKEV2_VERSION_OFFSET	17
-#define IKEV2_VERSION		0x20
-
-    /* ignore IKEv2 packets - they will be handled by charon */
-    if (pbs_room(&md->packet_pbs) > IKEV2_VERSION_OFFSET
-    &&  md->packet_pbs.start[IKEV2_VERSION_OFFSET] == IKEV2_VERSION)
-    {
-	DBG(DBG_CONTROLMORE,
-	    DBG_log("  ignoring IKEv2 packet")
-	)
-	return FALSE;
-    }
-
     return TRUE;
 }
 
@@ -1242,7 +1229,6 @@ process_packet(struct msg_digest **mdp)
 	if (md->packet_pbs.roof - md->packet_pbs.cur >= (ptrdiff_t)isakmp_hdr_desc.size)
 	{
 	    struct isakmp_hdr *hdr = (struct isakmp_hdr *)md->packet_pbs.cur;
-
 	    if ((hdr->isa_version >> ISA_MAJ_SHIFT) != ISAKMP_MAJOR_VERSION)
 	    {
 		SEND_NOTIFICATION(INVALID_MAJOR_VERSION);
@@ -2411,7 +2397,8 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 	     * whatever retrying was in place, remains in place.
 	     */
 	    whack_log(RC_NOTIFICATION + md->note
-		, "%s: %s", enum_name(&state_names, st->st_state)
+		, "%s: %s"
+		, enum_name(&state_names, (st == NULL)? STATE_MAIN_R0:st->st_state)
 		, enum_name(&notification_names, md->note));
 
 	    SEND_NOTIFICATION(md->note);
