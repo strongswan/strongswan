@@ -60,6 +60,15 @@
 #define IP_IPSEC_POLICY 16
 #endif /*IP_IPSEC_POLICY*/
 
+/* from linux/udp.h */
+#ifndef UDP_ENCAP
+#define UDP_ENCAP 100
+#endif /*UDP_ENCAP*/
+
+#ifndef UDP_ENCAP_ESPINUDP
+#define UDP_ENCAP_ESPINUDP 2
+#endif /*UDP_ENCAP_ESPINUDP*/
+
 typedef struct private_socket_t private_socket_t;
 
 /**
@@ -380,6 +389,17 @@ static status_t initialize(private_socket_t *this)
 	{
 		this->logger->log(this->logger, ERROR, "unable to setup send socket on port %d!", this->natt_port);
 		return FAILED;
+	} else {
+		int type = UDP_ENCAP_ESPINUDP;
+		if (setsockopt(this->natt_fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0 
+		    && errno == ENOPROTOOPT)
+		{
+			this->logger->log(this->logger, ERROR, "unable to set UDP_ENCAP on natt send socket!");
+			close(this->natt_fd);
+			close(this->send_fd);
+			close(this->raw_fd);
+			return FAILED;
+		}
 	}
 
 	return SUCCESS;
