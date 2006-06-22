@@ -389,16 +389,15 @@ static status_t initialize(private_socket_t *this)
 	{
 		this->logger->log(this->logger, ERROR, "unable to setup send socket on port %d!", this->natt_port);
 		return FAILED;
-	} else {
+	}
+	else
+	{
 		int type = UDP_ENCAP_ESPINUDP;
-		if (setsockopt(this->natt_fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0 
-		    && errno == ENOPROTOOPT)
+		if (setsockopt(this->natt_fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 		{
-			this->logger->log(this->logger, ERROR, "unable to set UDP_ENCAP on natt send socket!");
-			close(this->natt_fd);
-			close(this->send_fd);
-			close(this->raw_fd);
-			return FAILED;
+			this->logger->log(this->logger, ERROR, 
+							  "unable to set UDP_ENCAP on natt send socket! NAT-T may fail! error: %s",
+							  strerror(errno)); 
 		}
 	}
 
