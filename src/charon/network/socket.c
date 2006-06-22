@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 1998-2002  D. Hugh Redelmeier.
@@ -32,9 +33,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <net/if.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <linux/ipsec.h>
 #include <linux/filter.h>
 
 #include "socket.h"
@@ -42,66 +45,20 @@
 #include <daemon.h>
 #include <utils/logger_manager.h>
 
+/* constants for packet handling */
+#define IP_LEN sizeof(struct iphdr)
+#define UDP_LEN sizeof(struct udphdr)
+#define MARKER_LEN sizeof(u_int32_t)
+ 
+/* offsets for packet handling */
+#define IP 0
+#define UDP IP + IP_LEN
+#define IKE UDP + UDP_LEN
 
-#define IP_HEADER_LENGTH 20
-#define UDP_HEADER_LENGTH 8
-
-
-/**
- * This filter code filters out all non-IKEv2 traffic on 
- * a SOCK_RAW IP_PROTP_UDP socket. Handling of other
- * IKE versions is done in pluto.
- */
-struct sock_filter ikev2_filter_code[] = 
-{
-	/* Protocol must be UDP */
-	BPF_STMT(BPF_LD+BPF_B+BPF_ABS, 9),
-	BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IPPROTO_UDP, 0, 7),
-	/* Destination Port must be 500 */
-	BPF_STMT(BPF_LD+BPF_H+BPF_ABS, 22),
-	BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 500, 0, 5),
-	/* IKE version must be 2.0 */
-	BPF_STMT(BPF_LD+BPF_B+BPF_ABS, 45),
-	BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x20, 0, 3),
-	/* packet length is length in IKEv2 header + ip header + udp header */
-	BPF_STMT(BPF_LD+BPF_W+BPF_ABS, 52),
-	BPF_STMT(BPF_ALU+BPF_ADD+BPF_K, IP_HEADER_LENGTH + UDP_HEADER_LENGTH),
-	BPF_STMT(BPF_RET+BPF_A, 0),
-	/* packet doesn't match IKEv2, ignore */
-	BPF_STMT(BPF_RET+BPF_K, 0),
-};
-
-/**
- * Filter struct to use with setsockopt
- */
-struct sock_fprog ikev2_filter = {
-	sizeof(ikev2_filter_code) / sizeof(struct sock_filter),
-	ikev2_filter_code
-};
-
-
-typedef struct interface_t interface_t;
-
-/**
- * An interface on which we listen.
- */
-struct interface_t {
-	
-	/**
-	 * Name of the interface
-	 */
-	char name[IFNAMSIZ];
-	
-	/**
-	 * Associated socket
-	 */
-	int socket_fd;
-	
-	/**
-	 * Host with listening address
-	 */
-	host_t *address;
-};
+/* from linux/in.h */
+#ifndef IP_IPSEC_POLICY
+#define IP_IPSEC_POLICY 16
+#endif /*IP_IPSEC_POLICY*/
 
 typedef struct private_socket_t private_socket_t;
 
@@ -113,21 +70,52 @@ struct private_socket_t{
 	 * public functions
 	 */
 	 socket_t public;
+
+	 /**
+	  * regular port
+	  */
+	 int port;
+
+	 /**
+	  * port used for nat-t
+	  */
+	 int natt_port;
 	 
 	 /**
-	  * Master socket
+	  * raw socket (receiver)
 	  */
-	 int master_fd;
-	 
+	 int raw_fd;
+
 	 /**
-	  * List of all socket to listen
+	  * send socket on regular port
 	  */
-	 linked_list_t* interfaces;
+	 int send_fd;
+
+	 /**
+	  * send socket on nat-t port
+	  */
+	 int natt_fd;
 	 
 	 /** 
 	  * logger for this socket
 	  */
 	 logger_t *logger;
+
+	 /**
+	  * Setup a send socket
+	  *
+	  * @param this		calling object
+	  * @param port		the port
+	  * @param send_fd	returns the file descriptor of this new socket
+	  */
+	 status_t (*setup_send_socket) (private_socket_t *this, u_int16_t port, int *send_fd);
+
+	 /**
+	  * Initialize
+	  *
+	  * @param this 	calling object
+	  */
+	 status_t (*initialize) (private_socket_t *this);
 };
 
 /**
@@ -138,96 +126,51 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	char buffer[MAX_PACKET];
 	chunk_t data;
 	packet_t *pkt;
+	struct iphdr *ip;
+	struct udphdr *udp;
 	host_t *source, *dest;
 	int bytes_read = 0;
+	int data_offset, oldstate;
 	
-	
-	while (bytes_read >= 0)
+	this->logger->log(this->logger, CONTROL|LEVEL1, "receive from raw socket");
+	/* allow cancellation while blocking on recv() */
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+	bytes_read = recv(this->raw_fd, buffer, MAX_PACKET, 0);
+	pthread_setcancelstate(oldstate, NULL);
+
+	if (bytes_read < 0)
 	{
-		int max_fd = 1;
-		fd_set readfds;
-		iterator_t *iterator;
-		int oldstate;
-		interface_t *interface;
-		
-		/* build fd_set */
-		FD_ZERO(&readfds);
-		iterator = this->interfaces->create_iterator(this->interfaces, TRUE);
-		while (iterator->has_next(iterator))
-		{
-			iterator->current(iterator, (void**)&interface);
-			FD_SET(interface->socket_fd, &readfds);
-			if (interface->socket_fd > max_fd)
-			{
-				max_fd = interface->socket_fd + 1;
-			}
-		}
-		iterator->destroy(iterator);
-		
-		this->logger->log(this->logger, CONTROL|LEVEL1, "waiting on sockets");
-		
-		/* allow cancellation while select()-ing */
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		bytes_read = select(max_fd, &readfds, NULL, NULL, NULL);
-		pthread_setcancelstate(oldstate, NULL);
-		
-		/* read on the first nonblocking socket */
-		bytes_read = 0;
-		iterator = this->interfaces->create_iterator(this->interfaces, TRUE);
-		while (iterator->has_next(iterator))
-		{
-			iterator->current(iterator, (void**)&interface);
-			if (FD_ISSET(interface->socket_fd, &readfds))
-			{
-				/* do the read */
-				bytes_read = recv(interface->socket_fd, buffer, MAX_PACKET, 0);
-				break;
-			}
-		}
-		iterator->destroy(iterator);
-		
-		if (bytes_read  < 0)
-		{
-			this->logger->log(this->logger, ERROR, "error reading from socket: %s", strerror(errno));
-			continue;
-		}
-		/* insert a delay to simulate small bandwith/RTT */
-#ifdef PACKET_RECV_DELAY
-		usleep(PACKET_RECV_DELAY * 1000);
-#endif
-		/* simulate packet loss of every PACKET_RECV_LOSS'th packet */
-#ifdef PACKET_RECV_LOSS
-		srandom(time(NULL) + getpid());
-		if (random() % PACKET_RECV_LOSS == 0)
-		{
-			return SUCCESS;
-		}
-#endif
-		if (bytes_read > IP_HEADER_LENGTH + UDP_HEADER_LENGTH)
-		{
-			/* read source/dest from raw IP/UDP header */
-			chunk_t source_chunk = {buffer + 12, 4};
-			chunk_t dest_chunk = {buffer + 16, 4};
-			u_int16_t source_port = ntohs(*(u_int16_t*)(buffer + 20));
-			u_int16_t dest_port = ntohs(*(u_int16_t*)(buffer + 22));
-			source = host_create_from_chunk(AF_INET, source_chunk, source_port);
-			dest = host_create_from_chunk(AF_INET, dest_chunk, dest_port);
-			pkt = packet_create();
-			pkt->set_source(pkt, source);
-			pkt->set_destination(pkt, dest);
-			break;
-		}
-		this->logger->log(this->logger, ERROR|LEVEL1, "too short packet received");
+		this->logger->log(this->logger, ERROR, "error reading from socket: %s", strerror(errno));
+		return FAILED;
 	}
+
+	/* read source/dest from raw IP/UDP header */
+	ip = (struct iphdr*) buffer;
+	udp = (struct udphdr*) (buffer + IP_LEN);
 	
+	source = host_create_from_hdr(ip->saddr, udp->source);
+	dest = host_create_from_hdr(ip->daddr, udp->dest);
+
+	pkt = packet_create();
+	pkt->set_source(pkt, source);
+	pkt->set_destination(pkt, dest);
+
 	this->logger->log(this->logger, CONTROL, "received packet: from %s:%d to %s:%d",
 					  source->get_address(source), source->get_port(source),
 					  dest->get_address(dest), dest->get_port(dest));
 
+	data_offset = IP_LEN + UDP_LEN;
+
+	/* remove non esp marker */	
+	if (dest->get_port(dest) == this->natt_port)
+	{
+		data_offset += MARKER_LEN;
+	}
+	
 	/* fill in packet */
-	data.len = bytes_read - IP_HEADER_LENGTH - UDP_HEADER_LENGTH;
+	data.len = bytes_read - data_offset;
 	data.ptr = malloc(data.len);
-	memcpy(data.ptr, buffer + IP_HEADER_LENGTH + UDP_HEADER_LENGTH, data.len);
+	memcpy(data.ptr, buffer + data_offset, data.len);
 	pkt->set_data(pkt, data);
 
 	/* return packet */
@@ -241,8 +184,9 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
  */
 status_t sender(private_socket_t *this, packet_t *packet)
 {
+	int sport, fd;
 	ssize_t bytes_sent;
-	chunk_t data;
+	chunk_t data, marked;
 	host_t *src, *dst;
 	
 	src = packet->get_source(packet);
@@ -252,20 +196,39 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	this->logger->log(this->logger, CONTROL, "sending packet: from %s:%d to %s:%d",
 					  src->get_address(src), src->get_port(src),
 					  dst->get_address(dst), dst->get_port(dst));
-	/* insert a delay to simulate small bandwith/RTT */
-#ifdef PACKET_SEND_DELAY
-	usleep(PACKET_SEND_DELAY * 1000);
-#endif
-	/* simulate packet loss of every PACKET_LOSS'th packet */
-#ifdef PACKET_SEND_LOSS
-	srandom(time(NULL) + getpid());
-	if (random() % PACKET_SEND_LOSS == 0)
-	{
-		return SUCCESS;
-	}
-#endif
+	
 	/* send data */
-	bytes_sent = sendto(this->master_fd, data.ptr, data.len, 0, 
+	sport = src->get_port(src);
+	if (sport == this->port)
+	{
+		fd = this->send_fd;
+	}
+	else if (sport == this->natt_port)
+	{
+		fd = this->natt_fd;
+		/* NAT keepalives without marker */
+		if (data.len != 1 || data.ptr[0] != 0xFF)
+		{
+			/* add non esp marker to packet */
+			if (data.len > MAX_PACKET - MARKER_LEN)
+			{
+				this->logger->log(this->logger, ERROR, "unable to send packet: it's too big");
+				return FAILED;
+			}
+			marked = chunk_alloc(data.len + MARKER_LEN);
+			memset(marked.ptr, 0, MARKER_LEN);
+			memcpy(marked.ptr + MARKER_LEN, data.ptr, data.len);
+			packet->set_data(packet, marked); /* let the packet do the clean up for us */
+			data = marked;
+		}
+	}
+	else
+	{
+		this->logger->log(this->logger, ERROR, "unable to locate a send socket for port: %d", sport);
+		return FAILED;
+	}
+	
+	bytes_sent = sendto(fd, data.ptr, data.len, 0,
 						dst->get_sockaddr(dst), *(dst->get_sockaddr_len(dst)));
 
 	if (bytes_sent != data.len)
@@ -273,160 +236,153 @@ status_t sender(private_socket_t *this, packet_t *packet)
 		this->logger->log(this->logger, ERROR, "error writing to socket: %s", strerror(errno));
 		return FAILED;
 	}
+	
 	return SUCCESS;
 }
 
 /**
- * Find all suitable interfaces, bind them and add them to the list
+ * setup a send socket on a specified port
  */
-static status_t build_interface_list(private_socket_t *this, u_int16_t port)
-{
+static status_t setup_send_socket(private_socket_t *this, u_int16_t port, int *send_fd) {
 	int on = TRUE;
-	int i;
 	struct sockaddr_in addr;
-	struct ifconf ifconf;
-	struct ifreq buf[300];
-	
-	/* master socket for querying socket for a specific interfaces */
-	this->master_fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (this->master_fd == -1)
+	int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (fd < 0)
 	{
-		this->logger->log(this->logger, ERROR, "could not open IPv4 master socket!");
+		this->logger->log(this->logger, ERROR, "could not open IPv4 send socket!");
 		return FAILED;
 	}
 	
-	/* allow binding of multiplo sockets */
-	if (setsockopt(this->master_fd, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
 	{
-		this->logger->log(this->logger, ERROR, "unable to set SO_REUSEADDR on master socket!");
+		this->logger->log(this->logger, ERROR, "unable to set SO_REUSEADDR on send socket!");
+		close(fd);
 		return FAILED;
 	}
+
+	struct sadb_x_policy policy;
+	int level, opt;
 	
-	/* bind the master socket */
+	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
+	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
+	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
+	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
+	policy.sadb_x_policy_reserved = 0;
+	policy.sadb_x_policy_id = 0;
+
+	/* ipv6
+	 * level = IPPROTO_IPV6;
+	 * opt = IPV6_IPSEC_POLICY;
+	 */
+	level = IPPROTO_IP;
+	opt = IP_IPSEC_POLICY;
+
+	if (setsockopt(fd, level, opt, &policy, sizeof(policy)) < 0)
+	{
+		this->logger->log(this->logger, ERROR, "unable to set IPSEC_POLICY on send socket!");
+		close(fd);
+		return FAILED;
+	}
+
+	policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
+
+	if (setsockopt(fd, level, opt, &policy, sizeof(policy)) < 0)
+	{
+		this->logger->log(this->logger, ERROR, "unable to set IPSEC_POLICY on send socket!");
+		close(fd);
+		return FAILED;
+	}
+
+	/* bind the send socket */
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(port);
-	if (bind(this->master_fd,(struct sockaddr*)&addr, sizeof(addr)) < 0)
+	if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
 	{
-		this->logger->log(this->logger, ERROR, "unable to bind master socket: %s!", strerror(errno));
+		this->logger->log(this->logger, ERROR, "unable to bind send socket: %s!", strerror(errno));
 		return FAILED;
 	}
 
-	/* get all interfaces */
-	ifconf.ifc_len = sizeof(buf);
-	ifconf.ifc_buf = (void*) buf;
-	memset(buf, 0, sizeof(buf));
-	if (ioctl(this->master_fd, SIOCGIFCONF, &ifconf) == -1)
-	{
-		this->logger->log(this->logger, ERROR, "unable to get interfaces!");
-		return FAILED;
-	}
-
-	/* add every interesting interfaces to our interface list */
-	for (i = 0; (i+1) * sizeof(*buf) <= (size_t)ifconf.ifc_len; i++)
-	{
-		struct sockaddr_in *current = (struct sockaddr_in*) &buf[i].ifr_addr;
-		struct ifreq auxinfo;
-		int skt;
-		interface_t *interface;
-
-		if (current->sin_family != AF_INET && current->sin_family != AF_INET6)
-		{
-			/* ignore all but IPv4 and IPv6 interfaces */
-			continue;
-		}
-
-		/* get auxilary info about socket */
-		memset(&auxinfo, 0, sizeof(auxinfo));
-		memcpy(auxinfo.ifr_name, buf[i].ifr_name, IFNAMSIZ);
-		if (ioctl(this->master_fd, SIOCGIFFLAGS, &auxinfo) == -1)
-		{
-			this->logger->log(this->logger, ERROR, "unable to SIOCGIFFLAGS master socket!");
-			continue;
-		}
-		if (!(auxinfo.ifr_flags & IFF_UP))
-		{
-			/* ignore an interface that isn't up */
-			continue;
-		}
-		if (current->sin_addr.s_addr == 0)
-		{
-			/* ignore unconfigured interfaces */
-			continue;
-		}
-		
-		/* set up interface socket */
-		skt = socket(current->sin_family, SOCK_RAW, IPPROTO_UDP);
-		if (socket < 0)
-		{
-			this->logger->log(this->logger, ERROR, "unable to open interface socket!");
-			continue;
-		}
-		if (setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
-		{
-			this->logger->log(this->logger, ERROR, "unable to set SO_REUSEADDR on interface socket!");
-			close(skt);
-			continue;
-		}
-		current->sin_port = htons(port);
-
-		if (bind(skt, (struct sockaddr*)current, sizeof(struct sockaddr_in)) < 0)
-		{
-			this->logger->log(this->logger, ERROR, "unable to bind interface socket!");
-			close(skt);
-			continue;
-		}
-			
-		if (setsockopt(skt, SOL_SOCKET, SO_ATTACH_FILTER, &ikev2_filter, sizeof(ikev2_filter)) < 0)
-		{
-			this->logger->log(this->logger, ERROR, "unable to attack IKEv2 filter to interface socket!");
-			close(skt);
-			continue;
-		}
-		
-		/* add socket with interface name to list */
-		interface = malloc_thing(interface_t);
- 		strncpy(interface->name, buf[i].ifr_name, IFNAMSIZ);
-		interface->socket_fd = skt;
-		interface->address = host_create_from_sockaddr((struct sockaddr*)current);
-		this->logger->log(this->logger, CONTROL, "listening on %s (%s)",
-						  interface->name, interface->address->get_address(interface->address));
-		this->interfaces->insert_last(this->interfaces, (void*)interface);
-	}
-	
-	if (this->interfaces->get_count(this->interfaces) == 0)
-	{
-		this->logger->log(this->logger, ERROR, "unable to find any usable interface!");
-		return FAILED;
-	}
+	*send_fd = fd;
 	return SUCCESS;
 }
 
 /**
- * implementation of socket_t.is_listening_on
+ * Initialize all sub sockets
  */
-static bool is_listening_on(private_socket_t *this, host_t *host)
+static status_t initialize(private_socket_t *this)
 {
-	iterator_t *iterator;
-	
-	/* listening on wildcard 0.0.0.0 is always FALSE */
-	if (host->is_anyaddr(host))
-		return FALSE;
-	
-	/* compare host with all interfaces */
-	iterator = this->interfaces->create_iterator(this->interfaces, TRUE);
-	while (iterator->has_next(iterator))
+	/* This filter code filters out all non-IKEv2 traffic on
+	 * a SOCK_RAW IP_PROTP_UDP socket. Handling of other
+	 * IKE versions is done in pluto.
+	 */
+	struct sock_filter ikev2_filter_code[] =
 	{
-		interface_t *interface;
-		iterator->current(iterator, (void**)&interface);
-		if (host->equals(host, interface->address))
-		{
-			iterator->destroy(iterator);
-			return TRUE;
-		}
+		/* Protocol must be UDP */
+		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, IP + 9),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IPPROTO_UDP, 0, 15),
+		/* Destination Port must be either port or natt_port */
+		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, UDP + 2),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, this->port, 1, 0),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, this->natt_port, 5, 12),
+		/* port */
+			/* IKE version must be 2.0 */
+			BPF_STMT(BPF_LD+BPF_B+BPF_ABS, IKE + 17),
+			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x20, 0, 10),
+			/* packet length is length in IKEv2 header + ip header + udp header */
+			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, IKE + 24),
+			BPF_STMT(BPF_ALU+BPF_ADD+BPF_K, IP_LEN + UDP_LEN),
+			BPF_STMT(BPF_RET+BPF_A, 0),
+		/* natt_port */
+			/* nat-t: check for marker */
+			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, IKE),
+			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0, 0, 5),
+			/* nat-t: IKE version must be 2.0 */
+			BPF_STMT(BPF_LD+BPF_B+BPF_ABS, IKE + MARKER_LEN + 17),
+			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x20, 0, 3),
+			/* nat-t: packet length is length in IKEv2 header + ip header + udp header + non esp marker */
+			BPF_STMT(BPF_LD+BPF_W+BPF_ABS, IKE + MARKER_LEN + 24),
+			BPF_STMT(BPF_ALU+BPF_ADD+BPF_K, IP_LEN + UDP_LEN + MARKER_LEN),
+			BPF_STMT(BPF_RET+BPF_A, 0),
+		/* packet doesn't match, ignore */
+		BPF_STMT(BPF_RET+BPF_K, 0),
+	};
+
+	/* Filter struct to use with setsockopt */
+	struct sock_fprog ikev2_filter = {
+		sizeof(ikev2_filter_code) / sizeof(struct sock_filter),
+		ikev2_filter_code
+	};
+
+	/* set up raw socket */
+	this->raw_fd = socket(PF_INET, SOCK_RAW, IPPROTO_UDP);
+	if (this->raw_fd < 0)
+	{
+		this->logger->log(this->logger, ERROR, "unable to create raw socket!");
+		return FAILED;
 	}
-	iterator->destroy(iterator);
-	return FALSE;
+	
+	if (setsockopt(this->raw_fd, SOL_SOCKET, SO_ATTACH_FILTER, &ikev2_filter, sizeof(ikev2_filter)) < 0)
+	{
+		this->logger->log(this->logger, ERROR, "unable to attach IKEv2 filter to raw socket!");
+		close(this->raw_fd);
+		return FAILED;
+	}
+
+	/* setup the send sockets */
+	if (this->setup_send_socket(this, this->port, &this->send_fd) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "unable to setup send socket on port %d!", this->port);
+		return FAILED;
+	}
+
+	if (this->setup_send_socket(this, this->natt_port, &this->natt_fd) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "unable to setup send socket on port %d!", this->natt_port);
+		return FAILED;
+	}
+
+	return SUCCESS;
 }
 
 /**
@@ -434,39 +390,37 @@ static bool is_listening_on(private_socket_t *this, host_t *host)
  */
 static void destroy(private_socket_t *this)
 {
-	interface_t *interface;
-	while (this->interfaces->remove_last(this->interfaces, (void**)&interface) == SUCCESS)
-	{
-		interface->address->destroy(interface->address);
-		close(interface->socket_fd);
-		free(interface);
-	}
-	this->interfaces->destroy(this->interfaces);
-	close(this->master_fd);
+	close(this->natt_fd);
+	close(this->send_fd);
+	close(this->raw_fd);
 	free(this);
 }
 
 /*
  * See header for description
  */
-socket_t *socket_create(u_int16_t port)
+socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 {
 	private_socket_t *this = malloc_thing(private_socket_t);
+
+	/* private functions */
+	this->initialize = (status_t(*)(private_socket_t*))initialize;
+	this->setup_send_socket = (status_t(*)(private_socket_t*,u_int16_t, int*))setup_send_socket;
 
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
-	this->public.is_listening_on = (bool (*)(socket_t*,host_t*))is_listening_on;
 	this->public.destroy = (void(*)(socket_t*)) destroy;
-	
+
 	this->logger = logger_manager->get_logger(logger_manager, SOCKET);
-	this->interfaces = linked_list_create();
 	
-	if (build_interface_list(this, port) != SUCCESS)
+	this->port = port;
+	this->natt_port = natt_port;
+	
+	if (this->initialize(this) != SUCCESS)
 	{
-		this->interfaces->destroy(this->interfaces);
 		free(this);
-		charon->kill(charon, "could not bind any interface!");
+		charon->kill(charon, "could not init socket!");
 	}
 
 	return (socket_t*)this;

@@ -21,16 +21,11 @@
  */
 
 #include <stdlib.h>
+#include <math.h>
 
 #include "configuration.h"
 
 #include <types.h>
-
-/**
- * First retransmit timeout in milliseconds.
- * Timeout value is increasing in each retransmit round.
- */
-#define RETRANSMIT_TIMEOUT 2500
 
 /**
  * Timeout in milliseconds after that a half open IKE_SA gets deleted.
@@ -38,11 +33,38 @@
 #define HALF_OPEN_IKE_SA_TIMEOUT 30000
 
 /**
+ * First retransmit timeout in milliseconds.
+ * Timeout value is increasing in each retransmit round.
+ */
+#define RETRANSMIT_TIMEOUT 6000
+
+/**
+ * Base which is raised to the power of the retransmission count.
+ */
+#define RETRANSMIT_BASE 1.5
+
+/**
  * Max retransmit count.
  * 0 for infinite. The max time a half open IKE_SA is alive is set by 
  * RETRANSMIT_TIMEOUT.
  */
-#define MAX_RETRANSMIT_COUNT 3
+#define MAX_RETRANSMIT_COUNT 6
+
+/**
+ * Keepalive interval in milliseconds.
+ */
+#define KEEPALIVE_INTERVAL 2000000
+
+/**
+ * Keepalive timeout in milliseconds.
+ * Not implemented yet.
+ */
+#define KEEPALIVE_TIMEOUT 30000000
+
+/**
+ * DPD interval in milliseconds.
+ */
+#define DPD_INTERVAL 6000000
 
 
 typedef struct private_configuration_t private_configuration_t;
@@ -64,19 +86,13 @@ struct private_configuration_t {
  */
 static status_t get_retransmit_timeout (private_configuration_t *this, u_int32_t retransmit_count, u_int32_t *timeout)
 {
-	int new_timeout = RETRANSMIT_TIMEOUT, i;
-	if (retransmit_count >= MAX_RETRANSMIT_COUNT && MAX_RETRANSMIT_COUNT != 0)
+	if (retransmit_count > MAX_RETRANSMIT_COUNT && MAX_RETRANSMIT_COUNT != 0)
 	{
 		return FAILED;
 	}
 	
-	for (i = 0; i < retransmit_count; i++)
-	{
-		new_timeout *= 2;
-	}
-	
-	*timeout = new_timeout;
-	
+	*timeout = (u_int32_t)(RETRANSMIT_TIMEOUT * pow(RETRANSMIT_BASE, retransmit_count));
+
 	return SUCCESS;
 }
 
@@ -86,6 +102,30 @@ static status_t get_retransmit_timeout (private_configuration_t *this, u_int32_t
 static u_int32_t get_half_open_ike_sa_timeout (private_configuration_t *this)
 {
 	return HALF_OPEN_IKE_SA_TIMEOUT;
+}
+
+/**
+ * Implementation of configuration_t.get_keepalive_interval.
+ */
+static u_int32_t get_keepalive_interval (private_configuration_t *this)
+{
+	return KEEPALIVE_INTERVAL;
+}
+
+/**
+ * Implementation of configuration_t.get_keepalive_timeout.
+ */
+static u_int32_t get_keepalive_timeout (private_configuration_t *this)
+{
+	return KEEPALIVE_TIMEOUT;
+}
+
+/**
+ * Implementation of configuration_t.get_dpd_interval.
+ */
+static u_int32_t get_dpd_interval (private_configuration_t *this)
+{
+	return DPD_INTERVAL;
 }
 
 /**
@@ -107,6 +147,9 @@ configuration_t *configuration_create()
 	this->public.destroy = (void(*)(configuration_t*))destroy;
 	this->public.get_retransmit_timeout = (status_t (*) (configuration_t *, u_int32_t retransmit_count, u_int32_t *timeout))get_retransmit_timeout;
 	this->public.get_half_open_ike_sa_timeout = (u_int32_t (*) (configuration_t *)) get_half_open_ike_sa_timeout;
+	this->public.get_keepalive_interval = (u_int32_t (*) (configuration_t *)) get_keepalive_interval;
+	this->public.get_keepalive_timeout = (u_int32_t (*) (configuration_t *)) get_keepalive_timeout;
+	this->public.get_dpd_interval = (u_int32_t (*) (configuration_t *)) get_dpd_interval;
 	
 	return (&this->public);
 }

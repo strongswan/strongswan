@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -29,6 +30,15 @@
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 
+typedef struct natt_conf_t natt_conf_t;
+
+/**
+ * @brief Configuration for NAT-T
+ */
+struct natt_conf_t {
+	u_int16_t sport, dport;
+};
+
 typedef struct kernel_interface_t kernel_interface_t;
 
 /**
@@ -47,6 +57,10 @@ struct kernel_interface_t {
 
 	/**
 	 * @brief Get a SPI from the kernel.
+	 *
+	 * @warning get_spi() implicitely creates an SA with
+	 * the allocated SPI, therefore the replace flag
+	 * in add_sa() must be set when installing this SA.
 	 * 
 	 * @param this		calling object
 	 * @param src		source address of SA
@@ -86,6 +100,7 @@ struct kernel_interface_t {
 	 * @param enc_alg		Algorithm to use for encryption (ESP only)
 	 * @param int_alg		Algorithm to use for integrity protection
 	 * @param prf_plus		PRF to derive keys
+	 * @param natt			NAT-T Configuration
 	 * @param replace		Should an already installed SA be updated?
 	 * @return
 	 * 						- SUCCESS
@@ -101,7 +116,34 @@ struct kernel_interface_t {
 				algorithm_t *enc_alg,
 				algorithm_t *int_alg,
 				prf_plus_t *prf_plus,
+				natt_conf_t *natt,
 				bool replace);
+	/**
+	 * @brief Update the hosts on an installed SA. Encapsulation ports are also updated.
+	 *
+	 * @note We cannot directly update the destination address as the kernel requires the spi,
+	 * the protocol AND the destination address (and family) to identify SAs. Therefore if the 
+	 * destination address changed we create a new SA and delete the old one.
+	 *
+	 * @param this		calling object
+	 * @param src		source address for this SA
+	 * @param dst		destination address for this SA
+	 * @param new_src	new source address for this SA
+	 * @param new_dst	new destination address for this SA
+	 * @param src_changes	changes in src
+	 * @param dst_changes	changes in dst
+	 * @param spi		SPI allocated by us or remote peer
+	 * @param protocol	protocol for this SA (ESP/AH)
+	 * @return
+	 * 					- SUCCESS
+	 * 					- FAILED if kernel comm failed
+	 */
+	status_t (*update_sa_hosts)(kernel_interface_t *this,
+				host_t *src, host_t *dst,
+				host_t *new_src, host_t *new_dst,
+				int src_changes, int dst_changes,
+				u_int32_t spi, protocol_id_t protocol);
+	
 	/**
 	 * @brief Delete a previusly installed SA from the SAD.
 	 * 

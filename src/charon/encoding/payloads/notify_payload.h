@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -65,6 +66,8 @@ enum notify_message_type_t {
 	
 	INITIAL_CONTACT = 16384,
 	SET_WINDOW_SIZE = 16385,
+	NAT_DETECTION_SOURCE_IP = 16388,
+	NAT_DETECTION_DESTINATION_IP = 16389,
 	REKEY_SA = 16393,
 };
 

@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -28,6 +29,7 @@
 #include <sa/states/ike_sa_init_requested.h>
 #include <queues/jobs/retransmit_request_job.h>
 #include <crypto/diffie_hellman.h>
+#include <crypto/hashers/hasher.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
@@ -92,7 +94,24 @@ struct private_initiator_init_t {
 	 * @param request	message_t object to add the NONCE payload
 	 */
 	status_t (*build_nonce_payload) (private_initiator_init_t *this,message_t *request);	
-	
+	/**
+	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
+	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
+	 * 
+	 * @param this		calling object
+	 * @param request	message_t object to add the Notify payloads
+	 */
+	void (*build_natd_payload) (private_initiator_init_t *this, message_t *request, notify_message_type_t type, host_t *host);
+
+	/**
+	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
+	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
+	 * 
+	 * @param this		calling object
+	 * @param request	message_t object to add the Notify payloads
+	 */
+	void (*build_natd_payloads) (private_initiator_init_t *this, message_t *request);
+
 	/**
 	 * Destroy function called internally of this class after state change to state 
 	 * IKE_SA_INIT_REQUESTED succeeded.
@@ -187,6 +206,10 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 		message->destroy(message);
 		return DESTROY_ME;
 	}
+	
+	/* build Notify(NAT-D) payloads */
+	this->build_natd_payloads(this, message);
+	
 	/* message can now be sent (must not be destroyed) */
 	status = this->ike_sa->send_request(this->ike_sa, message);
 	if (status != SUCCESS)
@@ -287,6 +310,57 @@ static status_t build_nonce_payload(private_initiator_init_t *this, message_t *r
 }
 
 /**
+ * Implementation of private_initiator_init_t.build_natd_payload.
+ */
+static void build_natd_payload(private_initiator_init_t *this, message_t *request, notify_message_type_t type, host_t *host)
+{
+	chunk_t hash;
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Building Notify(NAT-D) payload");
+	notify_payload_t *notify_payload;
+	notify_payload = notify_payload_create();
+	/*notify_payload->set_protocol_id(notify_payload, NULL);*/
+	/*notify_payload->set_spi(notify_payload, NULL);*/
+	notify_payload->set_notify_message_type(notify_payload, type);
+	hash = this->ike_sa->generate_natd_hash(this->ike_sa,
+			request->get_initiator_spi(request),
+			request->get_responder_spi(request),
+			host);
+	notify_payload->set_notification_data(notify_payload, hash);
+	chunk_free(&hash);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add Notify(NAT-D) payload to message");
+	request->add_payload(request, (payload_t *) notify_payload);
+}
+
+/**
+ * Implementation of private_initiator_init_t.build_natd_payloads.
+ */
+static void build_natd_payloads(private_initiator_init_t *this, message_t *request)
+{
+	connection_t	*connection;
+	linked_list_t	*hostlist;
+	iterator_t		*hostiter;
+	host_t			*host;
+
+	/*
+	 * N(NAT_DETECTION_SOURCE_IP)+
+	 */
+	hostlist = charon->interfaces->get_addresses(charon->interfaces);
+	hostiter = hostlist->create_iterator(hostlist, TRUE);
+	while(hostiter->iterate(hostiter, (void**)&host)) {
+		this->build_natd_payload(this, request, NAT_DETECTION_SOURCE_IP,
+			host);
+	}
+	hostiter->destroy(hostiter);
+
+	/*
+	 * N(NAT_DETECTION_DESTINATION_IP)
+	 */
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	this->build_natd_payload(this, request, NAT_DETECTION_DESTINATION_IP,
+			connection->get_other_host(connection));
+}
+
+/**
  * Implementation of state_t.process_message.
  */
 static status_t process_message(private_initiator_init_t *this, message_t *message)
@@ -352,6 +426,8 @@ initiator_init_t *initiator_init_create(protected_ike_sa_t *ike_sa)
 	this->build_nonce_payload = build_nonce_payload;
 	this->build_sa_payload = build_sa_payload;
 	this->build_ke_payload = build_ke_payload;
+	this->build_natd_payload = build_natd_payload;
+	this->build_natd_payloads = build_natd_payloads;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

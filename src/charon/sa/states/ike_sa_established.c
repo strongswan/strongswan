@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -31,7 +32,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <sa/child_sa.h>
 #include <sa/states/delete_ike_sa_requested.h>
-
+#include <queues/jobs/send_dpd_job.h>
 
 typedef struct private_ike_sa_established_t private_ike_sa_established_t;
 
@@ -86,6 +87,21 @@ struct private_ike_sa_established_t {
 };
 
 /**
+ * Schedule send dpd job
+ */
+static void schedule_dpd_job(private_ike_sa_established_t *this)
+{
+	u_int32_t interval = charon->configuration->get_dpd_interval(charon->configuration);
+
+	if (interval)
+	{
+		charon->event_queue->add_relative(charon->event_queue,
+			(job_t*)send_dpd_job_create(this->ike_sa->public.get_id(&this->ike_sa->public)),
+			interval);
+	}
+}
+
+/**
  * Implementation of private_ike_sa_established_t.build_sa_payload.
  */
 static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_t *request, message_t *response)
@@ -99,6 +115,7 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 	connection_t *connection;
 	policy_t *policy;
 	u_int32_t reqid = 0;
+	bool use_natt;
 	
 	/* prepare reply */
 	sa_response = sa_payload_create();
@@ -142,11 +159,13 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 		{	/* reuse old reqid if we are rekeying */
 			reqid = this->old_child_sa->get_reqid(this->old_child_sa);
 		}
+		use_natt = this->ike_sa->public.is_any_host_behind_nat(&this->ike_sa->public);
 		this->child_sa = child_sa_create(reqid,
 										 connection->get_my_host(connection),
 										 connection->get_other_host(connection),
 										 policy->get_soft_lifetime(policy),
-										 policy->get_hard_lifetime(policy));
+										 policy->get_hard_lifetime(policy),
+										 use_natt);
 		
 		status = this->child_sa->add(this->child_sa, proposal, prf_plus);
 		prf_plus->destroy(prf_plus);
@@ -404,6 +423,11 @@ static status_t process_informational(private_ike_sa_established_t *this, messag
 {
 	delete_payload_t *delete_request = NULL;
 	iterator_t *payloads = request->get_payload_iterator(request);
+
+	if (!payloads->get_count(payloads))
+	{
+		this->logger->log(this->logger, CONTROL, "DPD request received.");
+	} 
 	
 	while (payloads->has_next(payloads))
 	{
@@ -434,7 +458,7 @@ static status_t process_informational(private_ike_sa_established_t *this, messag
 		if (delete_request->get_protocol_id(delete_request) == PROTO_IKE)
 		{
 			this->logger->log(this->logger, CONTROL, "DELETE request for IKE_SA received");
-			/* switch to delete_ike_sa_requested. This is not absolutly correct, but we
+			/* switch to delete_ike_sa_requested. This is not absolutely correct, but we
 			 * allow the clean destruction of an SA only in this state. */
 			this->ike_sa->set_new_state(this->ike_sa, (state_t*)delete_ike_sa_requested_create(this->ike_sa));
 			this->public.state_interface.destroy(&(this->public.state_interface));
@@ -473,6 +497,53 @@ static status_t process_informational(private_ike_sa_established_t *this, messag
 }
 
 /**
+ * Process an informational response
+ */
+static status_t process_informational_response(private_ike_sa_established_t *this, message_t *message)
+{
+	iterator_t *payloads = message->get_payload_iterator(message);
+
+	if (!payloads->get_count(payloads))
+	{
+		if (message->get_message_id(message) 
+ 			!= this->ike_sa->get_last_dpd_message_id(this->ike_sa))
+		{
+			this->logger->log(this->logger, ERROR|LEVEL1, "DPD response received that does not match our last sent dpd message.");
+			payloads->destroy(payloads);
+			return FAILED;
+		}
+			
+		this->logger->log(this->logger, CONTROL, "DPD response received. Schedule job.");
+		schedule_dpd_job(this);
+			
+		payloads->destroy(payloads);
+		return SUCCESS;
+	}
+	
+	while (payloads->has_next(payloads))
+	{
+		payload_t *payload;
+		payloads->current(payloads, (void**)&payload);
+		
+		switch (payload->get_type(payload))
+		{
+			default:
+			{
+				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
+								  mapping_find(payload_type_m, payload->get_type(payload)), 
+								  payload->get_type(payload));
+				break;
+			}
+		}
+	}
+	/* iterator can be destroyed */
+	payloads->destroy(payloads);
+	
+	return SUCCESS;		
+}
+
+/**
+ * Implements state_t.get_state
  * Implements state_t.process_message
  */
 static status_t process_message(private_ike_sa_established_t *this, message_t *message)
@@ -510,6 +581,13 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 	{
 		this->logger->log(this->logger, AUDIT, "%s request decryption failed. Ignoring message",
 						  mapping_find(exchange_type_m, message->get_exchange_type(message)));
+		return status;
+	}
+	
+	status = this->ike_sa->update_connection_hosts(this->ike_sa,
+				message->get_destination(message), message->get_source(message));
+	if (status != SUCCESS)
+	{
 		return status;
 	}
 	
@@ -570,6 +648,9 @@ ike_sa_established_t *ike_sa_established_create(protected_ike_sa_t *ike_sa)
 	this->nonce_i = CHUNK_INITIALIZER;
 	this->nonce_r = CHUNK_INITIALIZER;
 	this->old_child_sa = NULL;
+
+	/* schedule initial dpd job */
+	schedule_dpd_job(this);
 	
 	return &(this->public);
 }

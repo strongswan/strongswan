@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -284,6 +285,14 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	{
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply did not contain all required payloads. Deleting IKE_SA");
 		return DESTROY_ME;
+	}
+
+	status = this->ike_sa->update_connection_hosts(this->ike_sa,
+				ike_auth_reply->get_destination(ike_auth_reply),
+				ike_auth_reply->get_source(ike_auth_reply));
+	if (status != SUCCESS)
+	{
+		return status;
 	}
 
 	/* process all payloads */

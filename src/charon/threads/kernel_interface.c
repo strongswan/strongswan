@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Herbert Xu.
@@ -26,6 +27,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
+#include <linux/rtnetlink.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -45,69 +47,12 @@
 
 #define SPD_PRIORITY 1024
 
-#define XFRM_DATA_LENGTH 1024
+#define BUFFER_SIZE 1024
 
-
-typedef struct xfrm_data_t xfrm_data_t;
-
-/**
- * Lenght/Type/data struct for userdata in xfrm
- * We dont use the "I-don't-know-where-they-come-from"-structs
- * used in the kernel.
- */
-struct xfrm_data_t {
-	/**
-	 * length of the data
-	 */
-	u_int16_t length;
-	
-	/**
-	 * type of data 
-	 */
-	u_int16_t type;
-	
-	/**
-	 * and the data itself, for different purposes
-	 */
-	union {
-		/** algorithm */
-		struct xfrm_algo algo;
-		/** policy tmpl */
-		struct xfrm_user_tmpl tmpl;
-	};
-};
-
-
-typedef struct netlink_message_t netlink_message_t;
-
-/**
- * Representation of ANY netlink message used
- */
-struct netlink_message_t {
-	
-	/**
-	 * header of the netlink message 
-	 */
-	struct nlmsghdr hdr;
-
-	union {
-		/** error message */
-		struct nlmsgerr e;
-		/** message for spi allocation */
-		struct xfrm_userspi_info spi;
-		/** message for SA manipulation */
-		struct xfrm_usersa_id sa_id;
-		/** message for SA installation */
-		struct xfrm_usersa_info sa;
-		/** message for policy manipulation */
-		struct xfrm_userpolicy_id policy_id;
-		/** message for policy installation */
-		struct xfrm_userpolicy_info policy;
-		/** expire message sent from kernel */
-		struct xfrm_user_expire expire;
-	};
-	u_int8_t data[XFRM_DATA_LENGTH];
-};
+/* returns a pointer to the first rtattr following the nlmsghdr *nlh and the 'usual' netlink data x like 'struct xfrm_usersa_info' */
+#define XFRM_RTA(nlh, x) ((struct rtattr*)(NLMSG_DATA(nlh) + NLMSG_ALIGN(sizeof(x))))
+/* returns the total size of attached rta data (after 'usual' netlink data x like 'struct xfrm_usersa_info') */
+#define XFRM_PAYLOAD(nlh, x) NLMSG_PAYLOAD(nlh, sizeof(x))
 
 typedef struct kernel_algorithm_t kernel_algorithm_t;
 
@@ -249,7 +194,7 @@ struct private_kernel_interface_t {
 	/**
 	 * Sends a netlink_message_t down to the kernel and wait for reply.
 	 */
-	status_t (*send_message) (private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response);
+	status_t (*send_message) (private_kernel_interface_t *this, struct nlmsghdr *request, struct nlmsghdr **response);
 };
 
 /**
@@ -260,48 +205,53 @@ static status_t get_spi(private_kernel_interface_t *this,
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int32_t *spi)
 {
-	netlink_message_t request, *response;
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *response;
+
+	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Getting SPI for reqid %d", reqid);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "getting spi");
 	
-	memset(&request, 0, sizeof(request));
-	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.spi)));
-	request.hdr.nlmsg_flags = NLM_F_REQUEST;
-	request.hdr.nlmsg_type = XFRM_MSG_ALLOCSPI;
-	request.spi.info.saddr = src->get_xfrm_addr(src);
-	request.spi.info.id.daddr = dest->get_xfrm_addr(dest);
-	request.spi.info.mode = TRUE; /* tunnel mode */
-	request.spi.info.reqid = reqid;
-	request.spi.info.id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
-	request.spi.info.family = PF_INET;
-	request.spi.min = 0xc0000000;
-	request.spi.max = 0xcFFFFFFF;
+	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = XFRM_MSG_ALLOCSPI;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userspi_info));
+
+	struct xfrm_userspi_info *userspi = (struct xfrm_userspi_info*)NLMSG_DATA(hdr);
+	userspi->info.saddr = src->get_xfrm_addr(src);
+	userspi->info.id.daddr = dest->get_xfrm_addr(dest);
+	userspi->info.id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	userspi->info.mode = TRUE; /* tunnel mode */
+	userspi->info.reqid = reqid;
+	userspi->info.family = src->get_family(src);
+	userspi->min = 0xc0000000;
+	userspi->max = 0xcFFFFFFF;
 	
-	if (this->send_message(this, &request, &response) != SUCCESS)
+	if (this->send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
 	}
-	else if (response->hdr.nlmsg_type == NLMSG_ERROR)
+	else if (response->nlmsg_type == NLMSG_ERROR)
 	{
 		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_ALLOCSPI got an error: %s",
-						  strerror(-response->e.error));
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
-	else if (response->hdr.nlmsg_type != XFRM_MSG_NEWSA)
+	else if (response->nlmsg_type != XFRM_MSG_NEWSA)
 	{
 		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_ALLOCSPI got a unknown reply");
 		status = FAILED;
 	}
-	else if (response->hdr.nlmsg_len < NLMSG_LENGTH(sizeof(response->sa)))
+	else if (response->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_usersa_info)))
 	{
 		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_ALLOCSPI got an invalid reply");
 		status = FAILED;
 	}
 	else
 	{
-		*spi = response->sa.id.spi;
+		*spi = ((struct xfrm_usersa_info*)NLMSG_DATA(response))->id.spi;
 		this->logger->log(this->logger, CONTROL|LEVEL1, "SPI is 0x%x", *spi);
 	}
 	free(response);
@@ -312,59 +262,56 @@ static status_t get_spi(private_kernel_interface_t *this,
 /**
  * Implementation of kernel_interface_t.add_sa.
  */
-static status_t add_sa(	private_kernel_interface_t *this,
-						host_t *me,
-						host_t *other,
-						u_int32_t spi,
-						protocol_id_t protocol,
-						u_int32_t reqid,
-						u_int64_t expire_soft,
-						u_int64_t expire_hard,
-						algorithm_t *enc_alg,
-						algorithm_t *int_alg,
-						prf_plus_t *prf_plus,
-						bool replace)
+static status_t add_sa(private_kernel_interface_t *this,
+					   host_t *me, host_t *other,
+					   u_int32_t spi, protocol_id_t protocol,
+					   u_int32_t reqid,
+					   u_int64_t expire_soft, u_int64_t expire_hard,
+					   algorithm_t *enc_alg, algorithm_t *int_alg,
+					   prf_plus_t *prf_plus, natt_conf_t *natt,
+					   bool replace)
 {
-	netlink_message_t request, *response;
-	status_t status = SUCCESS;
-	int key_size;
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *response;
 	char *alg_name;
+	size_t key_size;
 	
 	memset(&request, 0, sizeof(request));
+	status_t status = SUCCESS;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Adding %s SA with SPI 0x%x, reqid %d to kernel",
-					  mapping_find(protocol_id_m, protocol), htonl(spi), reqid);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "adding SA");
+
+	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	
-	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	request.hdr.nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+	struct xfrm_usersa_info *sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
+	sa->saddr = me->get_xfrm_addr(me);
+	sa->id.daddr = other->get_xfrm_addr(other);
 	
-	request.sa.saddr = me->get_xfrm_addr(me);
-	request.sa.id.daddr = other->get_xfrm_addr(other);
-	
-	request.sa.id.spi = spi;
-	request.sa.id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
-	request.sa.family = me->get_family(me);
-	request.sa.mode = TRUE; /* tunnel mode */
-	request.sa.replay_window = 32;
-	request.sa.reqid = reqid;
+	sa->id.spi = spi;
+	sa->id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	sa->family = me->get_family(me);
+	sa->mode = TRUE; /* tunnel mode */
+	sa->replay_window = 32;
+	sa->reqid = reqid;
 	/* we currently do not expire SAs by volume/packet count */
-	request.sa.lft.soft_byte_limit = XFRM_INF;
-	request.sa.lft.hard_byte_limit = XFRM_INF;
-	request.sa.lft.soft_packet_limit = XFRM_INF;
-	request.sa.lft.hard_packet_limit = XFRM_INF;
+	sa->lft.soft_byte_limit = XFRM_INF;
+	sa->lft.hard_byte_limit = XFRM_INF;
+	sa->lft.soft_packet_limit = XFRM_INF;
+	sa->lft.hard_packet_limit = XFRM_INF;
 	/* we use lifetimes since added, not since used */
-	request.sa.lft.soft_add_expires_seconds = expire_soft;
-	request.sa.lft.hard_add_expires_seconds = expire_hard;
-	request.sa.lft.soft_use_expires_seconds = 0;
-	request.sa.lft.hard_use_expires_seconds = 0;
-	
-	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.sa)));
+	sa->lft.soft_add_expires_seconds = expire_soft;
+	sa->lft.hard_add_expires_seconds = expire_hard;
+	sa->lft.soft_use_expires_seconds = 0;
+	sa->lft.hard_use_expires_seconds = 0;
 	
 	if (enc_alg->algorithm != ENCR_UNDEFINED)
 	{
-		xfrm_data_t *data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
+		struct rtattr *rthdr = (struct rtattr*)(request + hdr->nlmsg_len);
 		
-		data->type = XFRMA_ALG_CRYPT;
+		rthdr->rta_type = XFRMA_ALG_CRYPT;
 		alg_name = lookup_algorithm(encryption_algs, enc_alg, &key_size);
 		if (alg_name == NULL)
 		{
@@ -374,22 +321,25 @@ static status_t add_sa(	private_kernel_interface_t *this,
 		}
 		this->logger->log(this->logger, CONTROL|LEVEL2, "  using encryption algorithm %s with key size %d",
 						  mapping_find(encryption_algorithm_m, enc_alg->algorithm), key_size);
-		data->length = 4 + sizeof(data->algo) + key_size;
-		data->algo.alg_key_len = key_size;
-		request.hdr.nlmsg_len += data->length;
-		if (request.hdr.nlmsg_len > sizeof(request))
+		
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + key_size);
+		hdr->nlmsg_len += rthdr->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
 		}
-		strcpy(data->algo.alg_name, alg_name);
-		prf_plus->get_bytes(prf_plus, key_size / 8, data->algo.alg_key);
+		
+		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
+		algo->alg_key_len = key_size;
+		strcpy(algo->alg_name, alg_name);
+		prf_plus->get_bytes(prf_plus, key_size / 8, algo->alg_key);
 	}
 	
 	if (int_alg->algorithm  != AUTH_UNDEFINED)
 	{
-		xfrm_data_t *data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
+		struct rtattr *rthdr = (struct rtattr*)(request + hdr->nlmsg_len);
 		
-		data->type = XFRMA_ALG_AUTH;
+		rthdr->rta_type = XFRMA_ALG_AUTH;
 		alg_name = lookup_algorithm(integrity_algs, int_alg, &key_size);
 		if (alg_name == NULL)
 		{
@@ -399,33 +349,68 @@ static status_t add_sa(	private_kernel_interface_t *this,
 		}
 		this->logger->log(this->logger, CONTROL|LEVEL2, "  using integrity algorithm %s with key size %d",
 						  mapping_find(integrity_algorithm_m, int_alg->algorithm), key_size);
-		data->length = 4 + sizeof(data->algo) + key_size;
-		data->algo.alg_key_len = key_size;
-		request.hdr.nlmsg_len += data->length;
-		if (request.hdr.nlmsg_len > sizeof(request))
+		
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + key_size);
+		hdr->nlmsg_len += rthdr->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
 		{
 			return FAILED;
 		}
-		strcpy(data->algo.alg_name, alg_name);
-		prf_plus->get_bytes(prf_plus, key_size / 8, data->algo.alg_key);
+		
+		struct xfrm_algo* algo = (struct xfrm_algo*)RTA_DATA(rthdr);
+		algo->alg_key_len = key_size;
+		strcpy(algo->alg_name, alg_name);
+		prf_plus->get_bytes(prf_plus, key_size / 8, algo->alg_key);
 	}
 	
-	/* TODO: add IPComp here*/
+	/* TODO: add IPComp here */
 	
-	if (this->send_message(this, &request, &response) != SUCCESS)
+	if (natt)
+	{
+		struct rtattr *rthdr = (struct rtattr*)(request + hdr->nlmsg_len);
+		
+		rthdr->rta_type = XFRMA_ENCAP;
+		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
+
+		hdr->nlmsg_len += rthdr->rta_len;
+		if (hdr->nlmsg_len > sizeof(request))
+		{
+			return FAILED;
+		}
+
+		struct xfrm_encap_tmpl* encap = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
+		/* UDP_ENCAP_ESPINUDP, see /usr/src/linux/include/linux/udp.h
+		 * we could probably use 3 here (as pluto does) although the 
+		 * result is eventually the same. */
+		encap->encap_type = 2;
+		encap->encap_sport = ntohs(natt->sport);
+		encap->encap_dport = ntohs(natt->dport);
+		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
+		/* encap_oa could probably be derived from the 
+		 * traffic selectors [rfc4306, p39]. In the netlink kernel implementation 
+		 * pluto does the same as we do here but it uses encap_oa in the 
+		 * pfkey implementation. BUT as /usr/src/linux/net/key/af_key.c indicates 
+		 * the kernel ignores it anyway
+		 *   -> does that mean that NAT-T encap doesn't work in transport mode?
+		 * No. The reason the kernel ignores NAT-OA is that it recomputes 
+		 * (or, rather, just ignores) the checksum. If packets pass
+		 * the IPSec checks it marks them "checksum ok" so OA isn't needed. */
+	}
+
+	if (this->send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
 	}
-	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
+	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
 		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWSA not acknowledged");
 		status = FAILED;
 	}
-	else if (response->e.error)
+	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWSA received error: %s",
-						  strerror(-response->e.error));
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWSA got an error: %s",
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
 	
@@ -433,43 +418,158 @@ static status_t add_sa(	private_kernel_interface_t *this,
 	return status;
 }
 
+static status_t update_sa_hosts(
+		private_kernel_interface_t *this,
+		host_t *src, host_t *dst,
+		host_t *new_src, host_t *new_dst, 
+		int src_changes, int dst_changes,
+		u_int32_t spi, protocol_id_t protocol)
+{
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *update, *response;
+	
+	memset(&request, 0, sizeof(request));
+	status_t status = SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "getting SA");
+
+	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST ;
+	hdr->nlmsg_type = XFRM_MSG_GETSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
+
+	struct xfrm_usersa_id *sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	sa_id->daddr = dst->get_xfrm_addr(dst);
+	sa_id->spi = spi;
+	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	sa_id->family = dst->get_family(dst);
+
+	if (this->send_message(this, hdr, &update) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
+		return FAILED;
+	}
+	else if (update->nlmsg_type == NLMSG_ERROR)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETSA got an error: %s",
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(update))->error));
+		free(update);
+		return FAILED;
+	}
+	else if (update->nlmsg_type != XFRM_MSG_NEWSA)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETSA got a unknown reply");
+		free(update);
+		return FAILED;
+	}
+	else if (update->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_usersa_info)))
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETSA got an invalid reply");
+		free(update);
+		return FAILED;
+	}
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "updating SA");
+	update->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;	
+	update->nlmsg_type = XFRM_MSG_UPDSA;
+	
+	struct xfrm_usersa_info *sa = (struct xfrm_usersa_info*)NLMSG_DATA(update);
+	if (src_changes & HOST_DIFF_ADDR)
+	{
+		sa->saddr = new_src->get_xfrm_addr(new_src);
+	}
+
+	if (dst_changes & HOST_DIFF_ADDR)
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL2, "destination address changed! replacing SA");	
+		
+		update->nlmsg_type = XFRM_MSG_NEWSA;
+		sa->id.daddr = new_dst->get_xfrm_addr(new_dst);		
+	}
+	
+	if (src_changes & HOST_DIFF_PORT || dst_changes & HOST_DIFF_PORT)
+	{
+		struct rtattr *rthdr = XFRM_RTA(update, struct xfrm_usersa_info);
+		size_t rtsize = XFRM_PAYLOAD(update, struct xfrm_usersa_info);
+		while (RTA_OK(rthdr, rtsize))
+		{
+			if (rthdr->rta_type == XFRMA_ENCAP)
+			{
+				struct xfrm_encap_tmpl* encap = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
+				encap->encap_sport = ntohs(new_src->get_port(new_src));
+				encap->encap_dport = ntohs(new_dst->get_port(new_dst));
+				break;
+			}
+			rthdr = RTA_NEXT(rthdr, rtsize);
+		}
+	}
+	
+	if (this->send_message(this, update, &response) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
+		free(update);
+		return FAILED;
+	}
+	else if (response->nlmsg_type != NLMSG_ERROR)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_XXXSA not acknowledged");
+		status = FAILED;
+	}
+	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_XXXSA got an error: %s",
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
+		status = FAILED;
+	}
+	else if (dst_changes & HOST_DIFF_ADDR)
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL2, "deleting old SA");
+		status = this->public.del_sa(&this->public, dst, spi, protocol);
+	}
+
+	free(update);
+	free(response);
+	return status;
+}
+	
 static status_t del_sa(	private_kernel_interface_t *this,
 						host_t *dst,
 						u_int32_t spi,
 						protocol_id_t protocol)
 {
-	netlink_message_t request, *response;
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *response;
+	
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Deleting %s SA with SPI 0x%x from kernel",
-					  mapping_find(protocol_id_m, protocol), htonl(spi));
+	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting SA");
+
+	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = XFRM_MSG_DELSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
+
+	struct xfrm_usersa_id *sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	sa_id->daddr = dst->get_xfrm_addr(dst);
+	sa_id->spi = spi;
+	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	sa_id->family = dst->get_family(dst);
 	
-	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	request.hdr.nlmsg_type = XFRM_MSG_DELSA;
-	
-	request.sa_id.daddr = dst->get_xfrm_addr(dst);
-	
-	request.sa_id.spi = spi;
-	request.sa_id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
-	request.sa_id.family = dst->get_family(dst);
-	
-	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.sa_id)));
-	
-	if (this->send_message(this, &request, &response) != SUCCESS)
+	if (this->send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
 	}
-	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
+	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
 		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_DELSA not acknowledged");
 		status = FAILED;
 	}
-	else if (response->e.error)
+	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "netlink request XFRM_MSG_DELSA received error: %s",
-						  strerror(-response->e.error));
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_DELSA got an error: %s",
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
 	
@@ -488,71 +588,84 @@ static status_t add_policy(private_kernel_interface_t *this,
 						  protocol_id_t protocol,
 						  u_int32_t reqid)
 {
-	netlink_message_t request, *response;
-	status_t status = SUCCESS;
-	xfrm_data_t *data;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Adding %s policy with reqid %d to kernel",
-					  mapping_find(protocol_id_m, protocol), reqid);
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *response;
 	
 	memset(&request, 0, sizeof(request));
-	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	status_t status = SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "adding policy");
 
-	request.policy.sel.sport = htons(src->get_port(src));
-	request.policy.sel.dport = htons(dst->get_port(dst));
-	request.policy.sel.sport_mask = (request.policy.sel.sport) ? ~0 : 0;
-	request.policy.sel.dport_mask = (request.policy.sel.dport) ? ~0 : 0;
-	request.policy.sel.saddr = src->get_xfrm_addr(src);
-	request.policy.sel.daddr = dst->get_xfrm_addr(dst);
-	request.policy.sel.prefixlen_s = src_hostbits;
-	request.policy.sel.prefixlen_d = dst_hostbits;
-	request.policy.sel.proto = upper_proto;
-	request.policy.sel.family = src->get_family(src);
+	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = XFRM_MSG_UPDPOLICY;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info));
 
-	request.hdr.nlmsg_type = XFRM_MSG_UPDPOLICY;
-	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.policy)));
-	request.policy.dir = direction;
-	request.policy.priority = SPD_PRIORITY;
-	request.policy.action = XFRM_POLICY_ALLOW;
-	request.policy.share = XFRM_SHARE_ANY;
+	struct xfrm_userpolicy_info *policy = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
+	
+	policy->sel.sport = htons(src->get_port(src));
+	policy->sel.sport_mask = (policy->sel.sport) ? ~0 : 0;
+	policy->sel.saddr = src->get_xfrm_addr(src);
+	policy->sel.prefixlen_s = src_hostbits;
+	
+	policy->sel.dport = htons(dst->get_port(dst));
+	policy->sel.dport_mask = (policy->sel.dport) ? ~0 : 0;
+	policy->sel.daddr = dst->get_xfrm_addr(dst);
+	policy->sel.prefixlen_d = dst_hostbits;
+	
+	policy->sel.proto = upper_proto;
+	policy->sel.family = src->get_family(src);
+	
+	policy->dir = direction;
+	policy->priority = SPD_PRIORITY;
+	policy->action = XFRM_POLICY_ALLOW;
+	policy->share = XFRM_SHARE_ANY;
 	
 	/* policies currently don't expire */
-	request.policy.lft.soft_byte_limit = XFRM_INF;
-	request.policy.lft.soft_packet_limit = XFRM_INF;
-	request.policy.lft.hard_byte_limit = XFRM_INF;
-	request.policy.lft.hard_packet_limit = XFRM_INF;
-	request.sa.lft.soft_add_expires_seconds = 0;
-	request.sa.lft.hard_add_expires_seconds = 0;
-	request.sa.lft.soft_use_expires_seconds = 0;
-	request.sa.lft.hard_use_expires_seconds = 0;
+	policy->lft.soft_byte_limit = XFRM_INF;
+	policy->lft.soft_packet_limit = XFRM_INF;
+	policy->lft.hard_byte_limit = XFRM_INF;
+	policy->lft.hard_packet_limit = XFRM_INF;
+	policy->lft.soft_add_expires_seconds = 0;
+	policy->lft.hard_add_expires_seconds = 0;
+	policy->lft.soft_use_expires_seconds = 0;
+	policy->lft.hard_use_expires_seconds = 0;
 	
-	data = (xfrm_data_t*)(((u_int8_t*)&request) + request.hdr.nlmsg_len);
-	data->type = XFRMA_TMPL;
+	struct rtattr *rthdr = (struct rtattr*)(request + hdr->nlmsg_len);
+	rthdr->rta_type = XFRMA_TMPL;
+
+	rthdr->rta_len = sizeof(struct xfrm_user_tmpl);
+	rthdr->rta_len = RTA_LENGTH(rthdr->rta_len);
+
+	hdr->nlmsg_len += rthdr->rta_len;
+	if (hdr->nlmsg_len > sizeof(request))
+	{
+		return FAILED;
+	}
 	
-	data->tmpl.reqid = reqid;
-	data->tmpl.id.proto = protocol == PROTO_AH ? KERNEL_AH : KERNEL_ESP;
-	data->tmpl.aalgos = data->tmpl.ealgos = data->tmpl.calgos = ~0;
-	data->tmpl.mode = TRUE;
-	data->tmpl.saddr = me->get_xfrm_addr(me);
-	data->tmpl.id.daddr = me->get_xfrm_addr(other);
+	struct xfrm_user_tmpl *tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
+	tmpl->reqid = reqid;
+	tmpl->id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
+	tmpl->mode = TRUE;
 	
-	data->length = 4 + sizeof(struct xfrm_user_tmpl);
-	request.hdr.nlmsg_len += data->length;
+	tmpl->saddr = me->get_xfrm_addr(me);
+	tmpl->id.daddr = other->get_xfrm_addr(other);
 	
-	if (this->send_message(this, &request, &response) != SUCCESS)
+	if (this->send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
 	}
-	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
+	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
 		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY not acknowledged");
 		status = FAILED;
 	}
-	else if (response->e.error)
+	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY received error: %s",
-						  strerror(-response->e.error));
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY got an error: %s",
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
 	
@@ -569,44 +682,49 @@ static status_t del_policy(private_kernel_interface_t *this,
 						   u_int8_t src_hostbits, u_int8_t dst_hostbits,
 						   int direction, int upper_proto)
 {
-	netlink_message_t request, *response;
-	status_t status = SUCCESS;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Removing policy from kernel");
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *response;
 	
 	memset(&request, 0, sizeof(request));
-	request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-
-	request.policy_id.sel.sport = htons(src->get_port(src));
-	request.policy_id.sel.dport = htons(dst->get_port(dst));
-	request.policy_id.sel.sport_mask = (request.policy.sel.sport) ? ~0 : 0;
-	request.policy_id.sel.dport_mask = (request.policy.sel.dport) ? ~0 : 0;
-	request.policy_id.sel.saddr = src->get_xfrm_addr(src);
-	request.policy_id.sel.daddr = dst->get_xfrm_addr(dst);
-	request.policy_id.sel.prefixlen_s = src_hostbits;
-	request.policy_id.sel.prefixlen_d = dst_hostbits;
-	request.policy_id.sel.proto = upper_proto;
-	request.policy_id.sel.family = src->get_family(src);
+	status_t status = SUCCESS;
 	
-	request.policy_id.dir = direction;
+	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting policy");
 
-	request.hdr.nlmsg_type = XFRM_MSG_DELPOLICY;
-	request.hdr.nlmsg_len = NLMSG_ALIGN(NLMSG_LENGTH(sizeof(request.policy_id)));
+	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = XFRM_MSG_DELPOLICY;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
+
+	struct xfrm_userpolicy_id *policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
+	policy_id->sel.sport = htons(src->get_port(src));
+	policy_id->sel.sport_mask = (policy_id->sel.sport) ? ~0 : 0;
+	policy_id->sel.saddr = src->get_xfrm_addr(src);
+	policy_id->sel.prefixlen_s = src_hostbits;
 	
-	if (this->send_message(this, &request, &response) != SUCCESS)
+	policy_id->sel.dport = htons(dst->get_port(dst));
+	policy_id->sel.dport_mask = (policy_id->sel.dport) ? ~0 : 0;
+	policy_id->sel.daddr = dst->get_xfrm_addr(dst);
+	policy_id->sel.prefixlen_d = dst_hostbits;
+	
+	policy_id->sel.proto = upper_proto;
+	policy_id->sel.family = src->get_family(src);
+	
+	policy_id->dir = direction;
+
+	if (this->send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
 	}
-	else if (response->hdr.nlmsg_type != NLMSG_ERROR)
+	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
 		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_DELPOLICY not acknowledged");
 		status = FAILED;
 	}
-	else if (response->e.error)
+	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_DELPOLICY received error: %s",
-						  strerror(-response->e.error));
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_DELPOLICY got an error: %s",
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
 	
@@ -617,26 +735,26 @@ static status_t del_policy(private_kernel_interface_t *this,
 /**
  * Implementation of private_kernel_interface_t.send_message.
  */
-static status_t send_message(private_kernel_interface_t *this, netlink_message_t *request, netlink_message_t **response)
+static status_t send_message(private_kernel_interface_t *this, struct nlmsghdr *request, struct nlmsghdr **response)
 {
 	size_t length;
 	struct sockaddr_nl addr;
 	
-	request->hdr.nlmsg_seq = ++this->seq;
-	request->hdr.nlmsg_pid = this->pid;
+	request->nlmsg_seq = ++this->seq;
+	request->nlmsg_pid = 0;
 	
 	memset(&addr, 0, sizeof(struct sockaddr_nl));
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = 0;
 	addr.nl_groups = 0;
 	
-	length = sendto(this->socket,(void *)request, request->hdr.nlmsg_len, 0, (struct sockaddr *)&addr, sizeof(addr));
+	length = sendto(this->socket,(void *)request, request->nlmsg_len, 0, (struct sockaddr *)&addr, sizeof(addr));
 	
 	if (length < 0)
 	{
 		return FAILED;
 	}
-	else if (length != request->hdr.nlmsg_len)
+	else if (length != request->nlmsg_len)
 	{
 		return FAILED;
 	}
@@ -651,12 +769,13 @@ static status_t send_message(private_kernel_interface_t *this, netlink_message_t
 		iterator = this->responses->create_iterator(this->responses, TRUE);
 		while (iterator->has_next(iterator))
 		{
-			netlink_message_t *listed_response;
+			struct nlmsghdr *listed_response;
 			iterator->current(iterator, (void**)&listed_response);
-			if (listed_response->hdr.nlmsg_seq == request->hdr.nlmsg_seq)
+			if (listed_response->nlmsg_seq == request->nlmsg_seq)
 			{
 				/* matches our request, this is the reply */
 				*response = listed_response;
+				iterator->remove(iterator);
 				found = TRUE;
 				break;
 			}
@@ -683,7 +802,8 @@ static void receive_messages(private_kernel_interface_t *this)
 {
 	while(TRUE) 
 	{
-		netlink_message_t response, *listed_response;
+		unsigned char response[BUFFER_SIZE];
+		struct nlmsghdr *hdr, *listed_response;
 		while (TRUE)
 		{
 			struct sockaddr_nl addr;
@@ -692,7 +812,6 @@ static void receive_messages(private_kernel_interface_t *this)
 			
 			addr_length = sizeof(addr);
 			
-			response.hdr.nlmsg_type = XFRM_MSG_NEWSA;
 			length = recvfrom(this->socket, &response, sizeof(response), 0, (struct sockaddr*)&addr, &addr_length);
 			if (length < 0)
 			{
@@ -703,7 +822,7 @@ static void receive_messages(private_kernel_interface_t *this)
 				}
 				charon->kill(charon, "receiving from netlink socket failed");
 			}
-			if (!NLMSG_OK(&response.hdr, length))
+			if (!NLMSG_OK((struct nlmsghdr *)response, length))
 			{
 				/* bad netlink message */
 				continue;
@@ -719,44 +838,52 @@ static void receive_messages(private_kernel_interface_t *this)
 		
 		/* we handle ACQUIRE and EXPIRE messages directly
 		 */
-		if (response.hdr.nlmsg_type == XFRM_MSG_ACQUIRE)
+		hdr = (struct nlmsghdr*)response;
+		if (hdr->nlmsg_type == XFRM_MSG_ACQUIRE)
 		{
 			this->logger->log(this->logger, CONTROL,
 							  "Received a XFRM_MSG_ACQUIRE. Ignored");
 		}
-		else if (response.hdr.nlmsg_type == XFRM_MSG_EXPIRE)
+		else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
 		{
 			job_t *job;
+			struct xfrm_user_expire *expire;
 			this->logger->log(this->logger, CONTROL|LEVEL1,
 							  "Received a XFRM_MSG_EXPIRE");
-			if (response.expire.hard)
+			expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
+			this->logger->log(this->logger, CONTROL|LEVEL0,
+							  "creating %s job for CHILD_SA with reqid %d",
+							  expire->hard ? "delete" : "rekey",
+							  expire->state.reqid);
+			if (expire->hard)
 			{
 				this->logger->log(this->logger, CONTROL|LEVEL0,
 								  "creating delete job for CHILD_SA with reqid %d",
-								  response.expire.state.reqid);
+								  expire->state.reqid);
 				job = (job_t*)delete_child_sa_job_create(
-						response.expire.state.reqid);
+						expire->state.reqid);
 			}
 			else
 			{
 				this->logger->log(this->logger, CONTROL|LEVEL0,
 								  "creating rekey job for CHILD_SA with reqid %d",
-								  response.expire.state.reqid);
+								  expire->state.reqid);
 				job = (job_t*)rekey_child_sa_job_create(
-						response.expire.state.reqid);
+						expire->state.reqid);
 			}
 			charon->job_queue->add(charon->job_queue, job);
 		}
-		/* NLMSG_ERROR is send back for acknowledge (or on error), an
-		 * XFRM_MSG_NEWSA is returned when we alloc spis.
+		/* NLMSG_ERROR is sent back for acknowledge (or on error), an
+		 * XFRM_MSG_NEWSA is returned when we alloc spis and when
+		 * updating SAs.
 		 * list these responses for the sender
 		 */
-		else if (response.hdr.nlmsg_type == NLMSG_ERROR ||
-				 response.hdr.nlmsg_type == XFRM_MSG_NEWSA)
+		else if (hdr->nlmsg_type == NLMSG_ERROR ||
+				 hdr->nlmsg_type == XFRM_MSG_NEWSA)
 		{
 			/* add response to queue */
-			listed_response = malloc(sizeof(response));
-			memcpy(listed_response, &response, sizeof(response));
+			listed_response = malloc(hdr->nlmsg_len);
+			memcpy(listed_response, &response, hdr->nlmsg_len);
 			
 			pthread_mutex_lock(&(this->mutex));
 			this->responses->insert_last(this->responses, (void*)listed_response);
@@ -792,8 +919,9 @@ kernel_interface_t *kernel_interface_create()
 	
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
-	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,bool))add_sa;
+	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,bool))add_sa;
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,protocol_id_t,u_int32_t))add_policy;
+	this->public.update_sa_hosts = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,int,int,u_int32_t,protocol_id_t))update_sa_hosts;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int))del_policy;
 	
@@ -817,6 +945,7 @@ kernel_interface_t *kernel_interface_create()
 		free(this);
 		charon->kill(charon, "Unable to create netlink socket");	
 	}
+	
 	/* bind the socket and reqister for ACQUIRE & EXPIRE */
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = getpid();

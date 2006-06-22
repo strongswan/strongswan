@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -33,6 +34,10 @@
 
 #include <types.h>
 
+
+#define HOST_DIFF_NONE 0
+#define HOST_DIFF_ADDR 1
+#define HOST_DIFF_PORT 2
 
 typedef struct host_t host_t;
 
@@ -141,12 +146,18 @@ struct host_t {
 	/** 
 	 * @brief get the port of this host
 	 * 
-	 * Mostly used for debugging purposes. 
-	 * 
 	 * @param this			object to clone
 	 * @return				port number
 	 */
 	u_int16_t (*get_port) (host_t *this);
+
+	/** 
+	 * @brief set the port of this host
+	 *
+	 * @param this			object to clone
+	 * @param port			port numer
+	 */
+	void (*set_port) (host_t *this, u_int16_t port);
 		
 	/** 
 	 * @brief Compare the ips of two hosts hosts.
@@ -165,6 +176,16 @@ struct host_t {
 	 * @return				TRUE if addresses and ports are equal.
 	 */
 	bool (*equals) (host_t *this, host_t *other);
+
+	/** 
+	 * @brief Compare two hosts and return the differences.
+	 *
+	 * @param this			object to compare
+	 * @param other			the other to compare
+	 * @return				a combination of HOST_DIFF_NONE,
+	 * 						HOST_DIFF_ADDR and HOST_DIFF_PORT
+	 */
+	int (*get_differences) (host_t *this, host_t *other);
 	
 	/** 
 	 * @brief Destroy this host object
@@ -190,6 +211,20 @@ struct host_t {
  * @ingroup network
  */
 host_t *host_create(int family, char *address, u_int16_t port);
+
+/**
+ * @brief Constructor to create a host_t object from raw header data
+ *
+ * only IPv4 (create host_create_from_hdr6 for IPv6)!
+ *
+ * @param address		address in network byte order
+ * @param port			port number in network byte order
+ * @return
+ * 						- host_t object
+ *
+ * @ingroup network
+ */
+host_t *host_create_from_hdr(u_long address, u_short port);
 
 /**
  * @brief Constructor to create a host_t object from an address chunk

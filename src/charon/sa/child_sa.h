@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2005 Martin Willi
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
+ * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -30,16 +31,19 @@
 #include <config/proposal.h>
 #include <utils/logger.h>
 
+/**
+ * Where we should start with reqid enumeration
+ */
+#define REQID_START 2000000000
+
 typedef struct child_sa_t child_sa_t;
 
 /**
  * @brief Represents multiple IPsec SAs between two hosts.
  * 
- * A child_sa_t contains multiple SAs. SAs for both
- * directions are managed in one child_sa_t object, and
- * if both AH and ESP is set up, both protocols are managed
- * by one child_sa_t. This means we can have two or
- * in the AH+ESP case four IPsec-SAs in one child_sa_t.
+ * A child_sa_t contains two SAs. SAs for both
+ * directions are managed in one child_sa_t object. Both
+ * SAs and the policies have the same reqid.
  * 
  * The procedure for child sa setup is as follows:
  * - A gets SPIs for a proposal via child_sa_t.alloc
@@ -92,45 +96,53 @@ struct child_sa_t {
 	protocol_id_t (*get_protocol) (child_sa_t *this);
 	
 	/**
-	 * @brief Allocate SPIs for a given proposals.
+	 * @brief Allocate SPIs for given proposals.
 	 * 
 	 * Since the kernel manages SPIs for us, we need
-	 * to allocate them. If the proposal contains more
+	 * to allocate them. If a proposal contains more
 	 * than one protocol, for each protocol an SPI is
 	 * allocated. SPIs are stored internally and written
 	 * back to the proposal.
 	 *
 	 * @param this 		calling object
-	 * @param proposal	proposal for which SPIs are allocated
+	 * @param proposals	list of proposals for which SPIs are allocated
 	 */
 	status_t (*alloc)(child_sa_t *this, linked_list_t* proposals);
 	
 	/**
-	 * @brief Install the kernel SAs for a proposal.
-	 * 
-	 * Since the kernel manages SPIs for us, we need
-	 * to allocate them. If the proposal contains more
-	 * than one protocol, for each protocol an SPI is
-	 * allocated. SPIs are stored internally and written
-	 * back to the proposal.
+	 * @brief Install the kernel SAs for a proposal, without previous SPI allocation.
 	 *
 	 * @param this 		calling object
 	 * @param proposal	proposal for which SPIs are allocated
 	 * @param prf_plus	key material to use for key derivation
+	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*add)(child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus);
 	
 	/**
-	 * @brief Install the kernel SAs for a proposal, if SPIs already allocated.
-	 * 
-	 * This one updates the SAs in the kernel, which are
-	 * allocated via alloc, with a selected proposals.
+	 * @brief Install the kernel SAs for a proposal, after SPIs have been allocated.
+	 *
+	 * Updates an SA, for which SPIs are already allocated via alloc().
 	 *
 	 * @param this 		calling object
 	 * @param proposal	proposal for which SPIs are allocated
 	 * @param prf_plus	key material to use for key derivation
+	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*update)(child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus);
+
+	/**
+	 * @brief Update the hosts in the kernel SAs and policies
+	 *
+	 * @warning only call this after update() has been called.
+	 *
+	 * @param this		calling object
+	 * @param new_me	the new local host
+	 * @param new_other	the new remote host
+	 * @return			SUCCESS or FAILED
+	 */
+	status_t (*update_hosts) (child_sa_t *this, host_t *new_me, host_t *new_other, 
+							  int my_changes, int other_changes);
 	
 	/**
 	 * @brief Install the policies using some traffic selectors.
@@ -187,11 +199,13 @@ struct child_sa_t {
  * @param other			remote address
  * @param soft_lifetime	time before rekeying
  * @param hard_lifteime	time before delete
+ * @param use_natt		TRUE if NAT traversal is used
  * @return				child_sa_t object
  * 
  * @ingroup sa
  */
 child_sa_t * child_sa_create(u_int32_t rekey_reqid, host_t *me, host_t *other, 
-							 u_int32_t soft_lifetime, u_int32_t hard_lifetime);
+							 u_int32_t soft_lifetime, u_int32_t hard_lifetime,
+							 bool use_natt);
 
 #endif /*CHILD_SA_H_*/

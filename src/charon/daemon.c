@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -170,7 +171,8 @@ static void initialize(private_daemon_t *this, bool strict)
 	credential_store_t* credentials;
 	
 	this->public.configuration = configuration_create();
-	this->public.socket = socket_create(IKEV2_UDP_PORT);
+	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
+	this->public.interfaces = interfaces_create(IKEV2_UDP_PORT);
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
@@ -236,6 +238,10 @@ static void destroy(private_daemon_t *this)
 	if (this->public.event_queue != NULL)
 	{
 		this->public.event_queue->destroy(this->public.event_queue);	
+	}
+	if (this->public.interfaces != NULL)
+	{
+		this->public.interfaces->destroy(this->public.interfaces);
 	}
 	if (this->public.configuration != NULL)
 	{
@@ -311,6 +317,7 @@ private_daemon_t *daemon_create(void)
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
+	this->public.interfaces = NULL;
 	this->public.ike_sa_manager = NULL;
 	this->public.job_queue = NULL;
 	this->public.event_queue = NULL;

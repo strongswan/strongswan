@@ -59,7 +59,7 @@ struct iterator_t {
 	 * @param this 			calling object
 	 * @param[out] value 	item
 	 * @return
-	 * 						- TRUE, if more elements are avaiable,
+	 * 						- TRUE, if there was an element available,
 	 * 						- FALSE otherwise
 	 */
 	bool (*iterate) (iterator_t *this, void** value);
@@ -72,7 +72,7 @@ struct iterator_t {
 	 * 
 	 * @param this 			calling object
 	 * @return
-	 * 						- TRUE, if more elements are avaiable,
+	 * 						- TRUE, if more elements are available,
 	 * 						- FALSE otherwise
 	 */
 	bool (*has_next) (iterator_t *this);

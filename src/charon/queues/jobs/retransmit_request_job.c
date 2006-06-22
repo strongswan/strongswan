@@ -69,7 +69,7 @@ static job_type_t get_type(private_retransmit_request_job_t *this)
  */
 static status_t execute(private_retransmit_request_job_t *this)
 {
-	bool stop_retransmitting = FALSE;
+	bool stop_retransmitting = FALSE, timed_out = FALSE;
 	u_int32_t timeout;
 	ike_sa_t *ike_sa;
 	status_t status;
@@ -87,14 +87,29 @@ static status_t execute(private_retransmit_request_job_t *this)
 		return DESTROY_ME;
 	}
 	
-	status = ike_sa->retransmit_request(ike_sa, this->message_id);
-	if (status != SUCCESS)
+	this->retransmit_count++;
+	status = charon->configuration->get_retransmit_timeout(charon->configuration,
+			this->retransmit_count, &timeout);
+	timed_out = (status != SUCCESS);
+	
+	if (ike_sa->retransmit_possible(ike_sa, this->message_id))
 	{
-		this->logger->log(this->logger, CONTROL|LEVEL3, 
-								 "Message doesn't have to be retransmitted");
+		if (!timed_out)
+		{
+			status = ike_sa->retransmit_request(ike_sa, this->message_id);
+			if (status != SUCCESS)
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL3, 
+										 "Message doesn't have to be retransmitted");
+				stop_retransmitting = TRUE;
+			}
+		}
+	}
+	else
+	{
 		stop_retransmitting = TRUE;
 	}
-				
+
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Checkin IKE SA %lld:%lld, role %s", 
 					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
@@ -106,19 +121,25 @@ static status_t execute(private_retransmit_request_job_t *this)
 		this->logger->log(this->logger, ERROR, "Checkin of IKE SA failed!");
 	}
 
+	if (timed_out)
+	{
+		/*
+		 * XXX: We should act depending on DPD policy here, or not act at all.
+		 */
+		this->logger->log(this->logger, CONTROL|LEVEL2, "Timeout: Deleting SA!");
+		status = charon->ike_sa_manager->delete(charon->ike_sa_manager, this->ike_sa_id);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR|LEVEL1, "Cannot delete SA!");
+		}
+		return DESTROY_ME;
+	}
+	
 	if (stop_retransmitting)
 	{
 		return DESTROY_ME;
 	}
 	
-	this->retransmit_count++;
-	status = charon->configuration->get_retransmit_timeout(charon->configuration,
-			this->retransmit_count, &timeout);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Message will not be retransmitted anymore");
-		return DESTROY_ME;
-	}
 	charon->event_queue->add_relative(charon->event_queue, (job_t *)this, timeout);
 	return SUCCESS;
 }

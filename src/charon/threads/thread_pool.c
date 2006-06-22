@@ -29,12 +29,6 @@
  
 #include <daemon.h>
 #include <queues/job_queue.h>
-#include <queues/jobs/delete_half_open_ike_sa_job.h>
-#include <queues/jobs/delete_established_ike_sa_job.h>
-#include <queues/jobs/incoming_packet_job.h>
-#include <queues/jobs/initiate_ike_sa_job.h>
-#include <queues/jobs/retransmit_request_job.h>
-#include <encoding/payloads/notify_payload.h>
 #include <utils/logger.h>
 
 
@@ -145,13 +139,13 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	this->public.destroy = (void(*)(thread_pool_t*))destroy;
 	this->public.get_pool_size = (size_t(*)(thread_pool_t*))get_pool_size;
 	
-	/* initialze memeber */
+	/* initialize member */
 	this->pool_size = pool_size;
 	this->threads = malloc(sizeof(pthread_t) * pool_size);
 	this->pool_logger = logger_manager->get_logger(logger_manager, THREAD_POOL);
 	this->worker_logger = logger_manager->get_logger(logger_manager, WORKER);
 	
-	/* try to create as many threads as possible, up tu pool_size */
+	/* try to create as many threads as possible, up to pool_size */
 	for (current = 0; current < pool_size; current++) 
 	{
 		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))process_jobs, this) == 0) 

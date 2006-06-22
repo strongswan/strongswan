@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -92,6 +93,17 @@ struct ike_sa_t {
 	 */
 	status_t (*initiate_connection) (ike_sa_t *this, connection_t *connection);
 	
+	/**
+	 * @brief Checks whether retransmission is possible.
+	 * 
+	 * @param this 			calling object
+	 * @param message_id	ID of the request to retransmit
+	 * @return
+	 * 						- TRUE if retransmit is possible
+	 * 						- FALSE if not
+	 */
+	bool (*retransmit_possible) (ike_sa_t *this, u_int32_t message_id);
+
 	/**
 	 * @brief Retransmits a request.
 	 * 
@@ -200,12 +212,51 @@ struct ike_sa_t {
 	connection_t* (*get_connection) (ike_sa_t *this);
 	
 	/**
+	 * @brief Query NAT detection status for local host.
+	 *
+	 * @param this 			calling object
+	 * @return 				TRUE if this host is behind NAT
+	 */
+	bool (*is_my_host_behind_nat) (ike_sa_t *this);
+
+	/**
+	 * @brief Query NAT detection status for remote host.
+	 *
+	 * @param this 			calling object
+	 * @return 				TRUE if other host is behind NAT
+	 */
+	bool (*is_other_host_behind_nat) (ike_sa_t *this);
+
+	/**
+	 * @brief Query NAT detection status for any host.
+	 *
+	 * @param this 			calling object
+	 * @return 				TRUE if this or other host is behind NAT
+	 */
+	bool (*is_any_host_behind_nat) (ike_sa_t *this);
+
+	/**
+	 * @brief Query timeval of last message sent.
+	 *
+	 * @param this 			calling object
+	 * @return 				time when the last message was sent
+	 */
+	struct timeval (*get_last_msg_tv) (ike_sa_t *this);
+
+	/**
 	 * @brief Get the state of type of associated state object.
 	 *
 	 * @param this 			calling object
 	 * @return 				state of IKE_SA
 	 */
 	ike_sa_state_t (*get_state) (ike_sa_t *this);
+	
+	/**
+	 * @brief Sends a DPD request to the peer.
+	 * 
+	 * @param this				calling object
+	 */
+	status_t (*send_dpd_request) (ike_sa_t *this);
 	
 	/**
 	 * @brief Log the status of a the ike sa to a logger.
@@ -507,6 +558,52 @@ struct protected_ike_sa_t {
 	 * @param this 				calling object
 	 */	
 	void (*reset_message_buffers) (protected_ike_sa_t *this);
+	
+	/**
+	 * @brief Set NAT detection status for local host.
+	 *
+	 * @param this 				calling object
+	 * @param nat 				if TRUE, local host is behing NAT
+	 */
+	void (*set_my_host_behind_nat) (protected_ike_sa_t *this, bool nat);
+
+	/**
+	 * @brief Set NAT detection status for remote host.
+	 *
+	 * @param this 				calling object
+	 * @param nat 				if TRUE, remote host is behing NAT
+	 */
+	void (*set_other_host_behind_nat) (protected_ike_sa_t *this, bool nat);
+
+	/**
+	 * @brief Generate NAT-D payload hash.
+	 *
+	 * @param this 				calling object
+	 * @param spi_i				IKE SPI of initiator
+	 * @param spi_r				IKE SPI of responder
+	 * @param host				address and port of the host/interface
+	 * @return					chunk containing calculated NAT-D hash
+	 */
+	chunk_t (*generate_natd_hash) (protected_ike_sa_t *this, u_int64_t spi_i, u_int64_t spi_r, host_t *host);
+
+	/**
+	 * @brief Dynamically update hosts on the associated connection.
+	 *
+	 * Warning: me and other host are cloned.
+	 *
+	 * @param this 				calling object
+	 * @param me				local address and port
+	 * @param other				remote address and port
+	 */
+	status_t (*update_connection_hosts) (protected_ike_sa_t *this, host_t *me, host_t *other);
+
+	/**
+	 * @brief Return the message id of the last DPD message
+	 *
+	 * @param this				calling object
+	 * @return				the messages id
+	 */
+	u_int32_t (*get_last_dpd_message_id) (protected_ike_sa_t *this);
 };
 
 

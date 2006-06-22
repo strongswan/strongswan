@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -19,6 +20,8 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
+#include <sys/time.h>
 #include <string.h>
 
 #include "ike_sa.h"
@@ -32,6 +35,7 @@
 #include <crypto/diffie_hellman.h>
 #include <crypto/prf_plus.h>
 #include <crypto/crypters/crypter.h>
+#include <crypto/hashers/hasher.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -173,6 +177,31 @@ struct private_ike_sa_t {
 	 * A logger for this IKE_SA.
 	 */
 	logger_t *logger;
+	
+	/**
+	 * NAT hasher.
+	 */
+	hasher_t *nat_hasher;
+	
+	/**
+	 * NAT status of local host.
+	 */
+	bool nat_here;
+	
+	/**
+	 * NAT status of remote host.
+	 */
+	bool nat_there;
+
+	/**
+	 * Timestamp of last IKE message sent or received on this SA
+	 */
+	struct timeval last_msg_tv;
+
+	/*
+	 * Message ID of last DPD message
+	 */
+	u_int32_t last_dpd_message_id;
 };
 
 /**
@@ -321,23 +350,24 @@ static identification_t* get_other_id(private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of ike_sa_t.retransmit_possible.
+ */
+static bool retransmit_possible(private_ike_sa_t *this, u_int32_t message_id)
+{
+	return ((this->last_requested_message)
+	     && (message_id != this->last_replied_message_id)
+	     && (message_id == this->last_requested_message->get_message_id(
+	                                        this->last_requested_message)));
+}
+
+/**
  * Implementation of ike_sa_t.retransmit_request.
  */
-status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
+static status_t retransmit_request(private_ike_sa_t *this, u_int32_t message_id)
 {
 	packet_t *packet;
-		
-	if (this->last_requested_message == NULL)
-	{
-		return NOT_FOUND;
-	}
-
-	if (message_id == this->last_replied_message_id)
-	{
-		return NOT_FOUND;
-	}
-
-	if ((this->last_requested_message->get_message_id(this->last_requested_message)) != message_id)
+	
+	if (!this->protected.public.retransmit_possible(&this->protected.public, message_id))
 	{
 		return NOT_FOUND;
 	}
@@ -348,7 +378,6 @@ status_t retransmit_request (private_ike_sa_t *this, u_int32_t message_id)
 	
 	return SUCCESS;
 }
-
 
 /**
  * Implementation of protected_ike_sa_t.build_transforms.
@@ -648,6 +677,12 @@ static status_t send_request(private_ike_sa_t *this, message_t *message)
 					  "Increase message counter for outgoing messages from %d",
 					  this->message_id_out);
 	this->message_id_out++;
+
+	/* bump last message sent timestamp */
+	if (gettimeofday(&this->last_msg_tv, NULL) < 0)
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1, "failed to get time of day");
+	}
 	return SUCCESS;	
 }
 
@@ -870,6 +905,158 @@ static status_t initiate_connection(private_ike_sa_t *this, connection_t *connec
 }
 
 /**
+ * Implementation of protected_ike_sa_t.update_connection_hosts.
+ *
+ * Quoting RFC 4306:
+ *
+ * 2.11.  Address and Port Agility
+ * 
+ *    IKE runs over UDP ports 500 and 4500, and implicitly sets up ESP and
+ *    AH associations for the same IP addresses it runs over.  The IP
+ *    addresses and ports in the outer header are, however, not themselves
+ *    cryptographically protected, and IKE is designed to work even through
+ *    Network Address Translation (NAT) boxes.  An implementation MUST
+ *    accept incoming requests even if the source port is not 500 or 4500,
+ *    and MUST respond to the address and port from which the request was
+ *    received.  It MUST specify the address and port at which the request
+ *    was received as the source address and port in the response.  IKE
+ *    functions identically over IPv4 or IPv6.
+ * 
+ * [...]
+ * 
+ *    There are cases where a NAT box decides to remove mappings that
+ *    are still alive (for example, the keepalive interval is too long,
+ *    or the NAT box is rebooted).  To recover in these cases, hosts
+ *    that are not behind a NAT SHOULD send all packets (including
+ *    retransmission packets) to the IP address and port from the last
+ *    valid authenticated packet from the other end (i.e., dynamically
+ *    update the address).  A host behind a NAT SHOULD NOT do this
+ *    because it opens a DoS attack possibility.  Any authenticated IKE
+ *    packet or any authenticated UDP-encapsulated ESP packet can be
+ *    used to detect that the IP address or the port has changed.
+ */
+static status_t update_connection_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
+{
+	host_t *old_other = NULL;
+	iterator_t *iterator = NULL;
+	child_sa_t *child_sa = NULL;
+	int my_changes, other_changes;
+	ike_sa_state_t s;
+
+	my_changes = me->get_differences(me, this->connection->get_my_host(this->connection));
+
+	old_other = this->connection->get_other_host(this->connection);
+	other_changes = other->get_differences(other, old_other);
+
+	if (!my_changes && !other_changes) {
+		return SUCCESS;
+	}
+	
+	if (my_changes)
+	{
+		this->connection->update_my_host(this->connection, me->clone(me));
+	}
+
+	s = this->protected.public.get_state(&this->protected.public);
+	
+	if (s == RESPONDER_INIT || s == IKE_SA_INIT_REQUESTED || !this->nat_here)
+	{
+		if (other_changes)
+		{
+			this->connection->update_other_host(this->connection, other->clone(other));
+		}
+	}
+	else
+	{
+		if (other_changes & HOST_DIFF_ADDR)
+		{
+			this->logger->log(this->logger, ERROR|LEVEL1,
+							  "Destination ip changed from %s to %s. As we are NATed this is not allowed!",
+							  old_other->get_address(old_other), other->get_address(other));
+			return DESTROY_ME;
+		}
+		else if (other_changes & HOST_DIFF_PORT)
+		{
+			old_other->set_port(old_other, other->get_port(other));
+		}
+	}
+
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		child_sa->update_hosts(child_sa,
+							   this->connection->get_my_host(this->connection),
+							   this->connection->get_other_host(this->connection),
+							   my_changes, other_changes);
+		/* XXX error handling */
+	}
+	iterator->destroy(iterator);
+	
+	return SUCCESS;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.build_transforms.
+ * TODO: IPv6 support.
+ */
+static chunk_t generate_natd_hash(private_ike_sa_t *this, u_int64_t spi_i, u_int64_t spi_r, host_t *host)
+{
+	chunk_t natd_string;
+	chunk_t natd_hash;
+	void *p;
+	struct sockaddr_in* sai;
+	char buf[512];
+
+	natd_hash = chunk_alloc(this->nat_hasher->get_hash_size(this->nat_hasher));
+	natd_string = chunk_alloc(8 + 8 + 4 + 2);
+
+	sai = (struct sockaddr_in*)host->get_sockaddr(host);
+	p = natd_string.ptr;
+	*(u_int64_t*)p = spi_i;                p += sizeof(spi_i);
+	*(u_int64_t*)p = spi_r;                p += sizeof(spi_r);
+	*(u_int32_t*)p = sai->sin_addr.s_addr; p += sizeof(sai->sin_addr.s_addr);
+	*(u_int16_t*)p = sai->sin_port;        p += sizeof(sai->sin_port);
+
+	this->nat_hasher->get_hash(this->nat_hasher, natd_string, natd_hash.ptr);
+	this->nat_hasher->reset(this->nat_hasher);
+
+	sprintf(buf, "natd_hash(%016llx %016llx %s:%d)\n == SHA1(", spi_i, spi_r,
+			host->get_address(host), host->get_port(host));
+	chunk_to_hex(buf + strlen(buf), sizeof(buf) - strlen(buf), natd_string);
+	strcat(buf, ") == ");
+	chunk_to_hex(buf + strlen(buf), sizeof(buf) - strlen(buf), natd_hash);
+	this->logger->log(this->logger, CONTROL|LEVEL3, buf);
+
+	chunk_free(&natd_string);
+	return natd_hash;
+}
+
+/**
+ * Implementation of ike_sa_t.send_dpd_request.
+ */
+static status_t send_dpd_request(private_ike_sa_t *this)
+{
+	message_t *dpd_msg;
+	status_t status;
+	this->protected.build_message(&this->protected, INFORMATIONAL, TRUE, &dpd_msg);
+	status = this->protected.send_request(&this->protected, dpd_msg);
+	if (status != SUCCESS)
+	{
+		dpd_msg->destroy(dpd_msg);
+	}
+	this->last_dpd_message_id = dpd_msg->get_message_id(dpd_msg);
+	return status;
+}
+
+/**
+ * Implementation of ike_sa_t.get_last_dpd_message_id
+ */
+static u_int32_t get_last_dpd_message_id(private_ike_sa_t *this)
+{
+	return this->last_dpd_message_id;
+}
+
+/**
  * Implementation of ike_sa_t.get_child_sa.
  */
 static child_sa_t *get_child_sa(private_ike_sa_t *this, u_int32_t reqid)
@@ -1026,7 +1213,8 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 							   this->connection->get_my_host(this->connection),
 							   this->connection->get_other_host(this->connection),
 							   this->policy->get_soft_lifetime(this->policy),
-							   this->policy->get_hard_lifetime(this->policy));
+							   this->policy->get_hard_lifetime(this->policy),
+							   this->nat_here || this->nat_there);
 	child_sa->alloc(child_sa, proposals);
 	sa_payload = sa_payload_create_from_proposal_list(proposals);
 	request->add_payload(request, (payload_t*)sa_payload);
@@ -1184,6 +1372,57 @@ static status_t delete_(private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of ike_sa_t.is_my_host_behind_nat.
+ */
+static bool is_my_host_behind_nat (private_ike_sa_t *this)
+{
+	return this->nat_here;
+}
+
+/**
+ * Implementation of ike_sa_t.is_other_host_behind_nat.
+ */
+static bool is_other_host_behind_nat (private_ike_sa_t *this)
+{
+	return this->nat_there;
+}
+
+/**
+ * Implementation of ike_sa_t.is_any_host_behind_nat.
+ */
+static bool is_any_host_behind_nat (private_ike_sa_t *this)
+{
+	return this->nat_here || this->nat_there;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.set_my_host_behind_nat.
+ */
+static void set_my_host_behind_nat (private_ike_sa_t *this, bool nat)
+{
+	this->nat_here = nat;
+}
+
+/**
+ * Implementation of protected_ike_sa_t.set_other_host_behind_nat.
+ */
+static void set_other_host_behind_nat (private_ike_sa_t *this, bool nat)
+{
+	this->nat_there = nat;
+}
+
+/**
+ * Implementation of ike_sa_t.get_last_msg_tv.
+ */
+static struct timeval get_last_msg_tv (private_ike_sa_t *this)
+{
+	/*
+	 * XXX: query kernel for last activity time
+	 */
+	return this->last_msg_tv;
+}
+
+/**
  * Implementation of protected_ike_sa_t.destroy.
  */
 static void destroy(private_ike_sa_t *this)
@@ -1269,6 +1508,7 @@ static void destroy(private_ike_sa_t *this)
 	{
 		this->last_responded_message->destroy(this->last_responded_message);
 	}
+	this->nat_hasher->destroy(this->nat_hasher);
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	this->randomizer->destroy(this->randomizer);
 	this->current_state->destroy(this->current_state);
@@ -1294,11 +1534,17 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.get_my_id = (identification_t*(*)(ike_sa_t*)) get_my_id;
 	this->protected.public.get_other_id = (identification_t*(*)(ike_sa_t*)) get_other_id;
 	this->protected.public.get_connection = (connection_t*(*)(ike_sa_t*)) get_connection;
+	this->protected.public.retransmit_possible = (bool (*) (ike_sa_t *, u_int32_t)) retransmit_possible;
 	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t *this)) get_state;
 	this->protected.public.log_status = (void (*) (ike_sa_t*,logger_t*,char*))log_status;
 	this->protected.public.delete = (status_t(*)(ike_sa_t*))delete_;
 	this->protected.public.destroy = (void(*)(ike_sa_t*))destroy;
+	this->protected.public.is_my_host_behind_nat = (bool(*)(ike_sa_t*)) is_my_host_behind_nat;
+	this->protected.public.is_other_host_behind_nat = (bool(*)(ike_sa_t*)) is_other_host_behind_nat;
+	this->protected.public.is_any_host_behind_nat = (bool(*)(ike_sa_t*)) is_any_host_behind_nat;
+	this->protected.public.get_last_msg_tv = (struct timeval (*)(ike_sa_t*)) get_last_msg_tv;
+	this->protected.public.send_dpd_request = (status_t (*)(ike_sa_t*)) send_dpd_request;
 	
 	/* protected functions */
 	this->protected.build_message = (void (*) (protected_ike_sa_t *, exchange_type_t,bool,message_t**)) build_message;
@@ -1327,6 +1573,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.set_last_replied_message_id = (void (*) (protected_ike_sa_t *,u_int32_t)) set_last_replied_message_id;
 	this->protected.destroy_child_sa = (u_int32_t (*)(protected_ike_sa_t*,u_int32_t))destroy_child_sa;
 	this->protected.get_child_sa = (child_sa_t* (*)(protected_ike_sa_t*,u_int32_t))get_child_sa_by_spi;
+	this->protected.set_my_host_behind_nat = (void(*)(protected_ike_sa_t*, bool)) set_my_host_behind_nat;
+	this->protected.set_other_host_behind_nat = (void(*)(protected_ike_sa_t*, bool)) set_other_host_behind_nat;
+	this->protected.generate_natd_hash = (chunk_t (*) (protected_ike_sa_t *, u_int64_t, u_int64_t, host_t*)) generate_natd_hash;
+	this->protected.get_last_dpd_message_id = (u_int32_t (*) (protected_ike_sa_t*)) get_last_dpd_message_id;
+	this->protected.update_connection_hosts = (status_t (*) (protected_ike_sa_t *, host_t*, host_t*)) update_connection_hosts;
 	
 	/* initialize private fields */
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
@@ -1350,7 +1601,13 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->child_prf = NULL;
 	this->connection = NULL;
 	this->policy = NULL;
-	
+	this->nat_hasher = hasher_create(HASH_SHA1);
+	this->nat_here = FALSE;
+	this->nat_there = FALSE;
+	this->last_msg_tv.tv_sec = 0;
+	this->last_msg_tv.tv_usec = 0;
+	this->last_dpd_message_id = 0;
+
 	/* at creation time, IKE_SA is in a initiator state */
 	if (ike_sa_id->is_initiator(ike_sa_id))
 	{

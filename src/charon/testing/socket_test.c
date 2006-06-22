@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -35,7 +36,7 @@ void test_socket(protected_tester_t *tester)
 {
 	int packet_count = 10;
 	int current;
-	socket_t *skt = socket_create(500);
+	socket_t *skt = socket_create(500, 4500);
 	packet_t *pkt = packet_create();
 	char test_data[] = {
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x03, /* spi */

@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -111,6 +112,11 @@ struct private_child_sa_t {
 	 * has this CHILD_SA been rekeyed?
 	 */
 	bool rekeyed;
+
+	/**
+	 * Specifies if NAT traversal is used
+	 */
+	bool use_natt;
 	
 	/**
 	 * CHILD_SAs own logger
@@ -147,11 +153,53 @@ protocol_id_t get_protocol(private_child_sa_t *this)
 }
 
 /**
+ * Allocate SPI for a single proposal
+ */
+static status_t alloc_proposal(private_child_sa_t *this, proposal_t *proposal)
+{
+	protocol_id_t protocol = proposal->get_protocol(proposal);
+		
+	if (protocol == PROTO_AH)
+	{
+		/* get a new spi for AH, if not already done */
+		if (this->alloc_ah_spi == 0)
+		{
+			if (charon->kernel_interface->get_spi(
+						 charon->kernel_interface, 
+						 this->other.addr, this->me.addr,
+						 PROTO_AH, this->reqid,
+						 &this->alloc_ah_spi) != SUCCESS)
+			{
+				return FAILED;
+			}
+		}
+		proposal->set_spi(proposal, this->alloc_ah_spi);
+	}
+	if (protocol == PROTO_ESP)
+	{
+		/* get a new spi for ESP, if not already done */
+		if (this->alloc_esp_spi == 0)
+		{
+			if (charon->kernel_interface->get_spi(
+						 charon->kernel_interface,
+						 this->other.addr, this->me.addr,
+						 PROTO_ESP, this->reqid,
+						 &this->alloc_esp_spi) != SUCCESS)
+			{
+				return FAILED;
+			}
+		}
+		proposal->set_spi(proposal, this->alloc_esp_spi);
+	}
+	return SUCCESS;
+}
+
+
+/**
  * Implements child_sa_t.alloc
  */
 static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 {
-	protocol_id_t protocol;
 	iterator_t *iterator;
 	proposal_t *proposal;
 	
@@ -160,41 +208,11 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 	while(iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&proposal);
-		protocol = proposal->get_protocol(proposal);
-		
-		if (protocol == PROTO_AH)
+		if (alloc_proposal(this, proposal) != SUCCESS)
 		{
-			/* get a new spi for AH, if not already done */
-			if (this->alloc_ah_spi == 0)
-			{
-				if (charon->kernel_interface->get_spi(
-								charon->kernel_interface,
-								this->other.addr, this->me.addr,
-								PROTO_AH, this->reqid,
-								&this->alloc_ah_spi) != SUCCESS)
-				{
-					return FAILED;
-				}
-			}
-			proposal->set_spi(proposal, this->alloc_ah_spi);
+			iterator->destroy(iterator);
+			return FAILED;
 		}
-		if (protocol == PROTO_ESP)
-		{
-			/* get a new spi for ESP, if not already done */
-			if (this->alloc_esp_spi == 0)
-			{
-				if (charon->kernel_interface->get_spi(
-								charon->kernel_interface,
-								this->other.addr, this->me.addr,
-								PROTO_ESP, this->reqid,
-								&this->alloc_esp_spi) != SUCCESS)
-				{
-					return FAILED;
-				}
-			}
-			proposal->set_spi(proposal, this->alloc_esp_spi);
-		}
-		
 	}
 	iterator->destroy(iterator);
 	return SUCCESS;
@@ -208,6 +226,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	algorithm_t int_algo_none = {AUTH_UNDEFINED, 0};
 	host_t *src;
 	host_t *dst;
+	natt_conf_t *natt;
 	status_t status;
 	
 	this->protocol = proposal->get_protocol(proposal);
@@ -275,17 +294,31 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 		int_algo = &int_algo_none;
 	}
 	
+	/* setup nat-t */
+	if (this->use_natt)
+	{
+		natt = alloca(sizeof(natt_conf_t));
+		natt->sport = src->get_port(src);
+		natt->dport = dst->get_port(dst);
+	}
+	else
+	{
+		natt = NULL;
+	}
+	
+	
 	/* send SA down to the kernel */
 	this->logger->log(this->logger, CONTROL|LEVEL2,
 						"  SPI 0x%.8x, src %s dst %s",
 						ntohl(spi), src->get_address(src), dst->get_address(dst));
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
-												src, dst,
-												spi, this->protocol,
-												this->reqid,
-												mine ? 0 : this->soft_lifetime,
-												this->hard_lifetime,
-												enc_algo, int_algo, prf_plus, mine);
+											  src, dst,
+											  spi, this->protocol,
+											  this->reqid,
+											  mine ? 0 : this->soft_lifetime,
+											  this->hard_lifetime,
+											  enc_algo, int_algo,
+											  prf_plus, natt, mine);
 	
 	this->install_time = time(NULL);
 
@@ -301,14 +334,10 @@ static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *
 	outbound_spi = proposal->get_spi(proposal);
 	
 	/* get SPIs inbound SAs */
-	list = linked_list_create();
-	list->insert_last(list, proposal);
-	if (alloc(this, list) != SUCCESS)
+	if (alloc_proposal(this, proposal) != SUCCESS)
 	{
-		list->destroy(list);
 		return FAILED;
 	}
-	list->destroy(list);
 	inbound_spi = proposal->get_spi(proposal);
 	
 	/* install inbound SAs */
@@ -409,24 +438,21 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 					policy->me.net, policy->other.net,
 					policy->me.net_mask, policy->other.net_mask,
 					XFRM_POLICY_OUT, policy->upper_proto,
-					this->protocol,
-					this->reqid);
+					this->protocol, this->reqid);
 	
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr,
 					policy->other.net, policy->me.net,
 					policy->other.net_mask, policy->me.net_mask,
 					XFRM_POLICY_IN, policy->upper_proto,
-					this->protocol,
-					this->reqid);
+					this->protocol, this->reqid);
 	
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr,
 					policy->other.net, policy->me.net,
 					policy->other.net_mask, policy->me.net_mask,
 					XFRM_POLICY_FWD, policy->upper_proto,
-					this->protocol,
-					this->reqid);
+					this->protocol, this->reqid);
 			
 			if (status != SUCCESS)
 			{
@@ -514,6 +540,159 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 }
 
 /**
+ * Update the host adress/port of a SA
+ */
+static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other, 
+								int my_changes, int other_changes, bool mine)
+{
+	host_t *src, *dst, *new_src, *new_dst;
+	int src_changes, dst_changes;
+	status_t status;
+	u_int32_t spi;
+	
+	if (mine)
+	{
+		src = this->me.addr;
+		dst = this->other.addr;
+		new_src = new_me;
+		new_dst = new_other;
+		src_changes = my_changes;
+		dst_changes = other_changes;
+		spi = this->me.spi;
+	}
+	else
+	{
+		src = this->other.addr;
+		dst = this->me.addr;
+		new_src = new_other;
+		new_dst = new_me;
+		src_changes = other_changes;
+		dst_changes = my_changes;
+		spi = this->other.spi;
+	}
+	
+	this->logger->log(this->logger, CONTROL|LEVEL1,
+					  "updating %s SA 0x%x, from %s:%d..%s:%d to %s:%d..%s:%d",
+					  mapping_find(protocol_id_m, this->protocol), ntohl(spi),
+					  src->get_address(src), src->get_port(src),
+					  dst->get_address(dst), dst->get_port(dst),
+					  new_src->get_address(new_src), new_src->get_port(new_src),
+					  new_dst->get_address(new_dst), new_dst->get_port(new_dst));
+	
+	status = charon->kernel_interface->update_sa_hosts(
+						charon->kernel_interface,
+						src, dst, new_src, new_dst, 
+						src_changes, dst_changes,
+						spi, this->protocol);
+	
+	if (status != SUCCESS)
+	{
+		return FAILED;
+	}
+	return SUCCESS;
+}
+
+/**
+ * Update the host adress/port of a policy
+ */
+static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other)
+{
+	iterator_t *iterator;
+	sa_policy_t *policy;
+	status_t status;
+	
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->iterate(iterator, (void**)&policy))
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL1,
+						  "updating policy:   %s/%d====%s/%d",
+						  policy->me.net->get_address(policy->me.net), policy->me.net_mask,
+						  policy->other.net->get_address(policy->other.net), policy->other.net_mask);
+
+		status = charon->kernel_interface->add_policy(
+				charon->kernel_interface,
+				new_me, new_other,
+				policy->me.net, policy->other.net,
+				policy->me.net_mask, policy->other.net_mask,
+				XFRM_POLICY_OUT, policy->upper_proto,
+				this->protocol, this->reqid);
+		
+		status |= charon->kernel_interface->add_policy(
+				charon->kernel_interface,
+				new_other, new_me,
+				policy->other.net, policy->me.net,
+				policy->other.net_mask, policy->me.net_mask,
+				XFRM_POLICY_IN, policy->upper_proto,
+				this->protocol, this->reqid);
+		
+		status |= charon->kernel_interface->add_policy(
+				charon->kernel_interface,
+				new_other, new_me,
+				policy->other.net, policy->me.net,
+				policy->other.net_mask, policy->me.net_mask,
+				XFRM_POLICY_FWD, policy->upper_proto,
+				this->protocol, this->reqid);
+
+		if (status != SUCCESS)
+		{
+			iterator->destroy(iterator);
+			return FAILED;
+		}
+	}
+	iterator->destroy(iterator);
+
+	return SUCCESS;		
+}
+
+/**
+ * Implementation of child_sa_t.update_hosts.
+ */
+static status_t update_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other, 
+							 int my_changes, int other_changes) 
+{
+	if (!my_changes || !other_changes)
+	{
+		return SUCCESS;
+	}
+
+	/* update our (initator) SAs */
+	if (update_sa_hosts(this, new_me, new_other, my_changes, other_changes, TRUE) != SUCCESS)
+	{
+		return FAILED;
+	}
+
+	/* update his (responder) SAs */
+	if (update_sa_hosts(this, new_me, new_other, my_changes, other_changes, FALSE) != SUCCESS)
+	{
+		return FAILED;
+	}
+	
+	/* update policies */
+	if (my_changes & HOST_DIFF_ADDR || other_changes & HOST_DIFF_ADDR)
+	{
+		if (update_policy_hosts(this, new_me, new_other) != SUCCESS)
+		{
+			return FAILED;
+		}
+	}
+
+	/* update hosts */
+	if (my_changes)
+	{
+		this->me.addr->destroy(this->me.addr);
+		this->me.addr = new_me->clone(new_me);
+	}
+
+	if (other_changes)
+	{
+		this->other.addr->destroy(this->other.addr);
+		this->other.addr = new_other->clone(new_other);
+	}	
+
+	return SUCCESS;
+}
+
+/**
  * Implementation of child_sa_t.destroy.
  */
 static void destroy(private_child_sa_t *this)
@@ -579,9 +758,10 @@ static void destroy(private_child_sa_t *this)
  * Described in header.
  */
 child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other, 
-							 u_int32_t soft_lifetime, u_int32_t hard_lifetime)
+							 u_int32_t soft_lifetime, u_int32_t hard_lifetime,
+							 bool use_natt)
 {
-	static u_int32_t reqid = 2000000000;
+	static u_int32_t reqid = REQID_START;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
 
 	/* public functions */
@@ -604,6 +784,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->other.spi = 0;
 	this->alloc_ah_spi = 0;
 	this->alloc_esp_spi = 0;
+	this->use_natt = use_natt;
 	this->soft_lifetime = soft_lifetime;
 	this->hard_lifetime = hard_lifetime;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
@@ -612,5 +793,5 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->protocol = PROTO_NONE;
 	this->rekeyed = FALSE;
 	
-	return (&this->public);
+	return &this->public;
 }

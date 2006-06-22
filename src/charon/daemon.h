@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -30,6 +31,7 @@
 #include <threads/thread_pool.h>
 #include <threads/stroke_interface.h>
 #include <network/socket.h>
+#include <network/interfaces.h>
 #include <sa/ike_sa_manager.h>
 #include <queues/send_queue.h>
 #include <queues/job_queue.h>
@@ -196,6 +198,13 @@
 #define IKEV2_UDP_PORT 500
 
 /**
+ * UDP Port to which the daemon will float to if NAT is detected.
+ *
+ * @ingroup charon
+ */
+#define IKEV2_NATT_PORT 4500
+
+/**
  * PID file, in which charon stores its process id
  * 
  * @ingroup charon
@@ -264,6 +273,10 @@ struct daemon_t {
 	 * A socket_t instance.
 	 */
 	socket_t *socket;
+	/**
+	 * A interfaces_t instance.
+	 */
+	interfaces_t *interfaces;
 	
 	/**
 	 * A send_queue_t instance.

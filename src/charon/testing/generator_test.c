@@ -710,7 +710,7 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	
 	notify_payload->set_protocol_id(notify_payload,255);
 	notify_payload->set_notify_message_type(notify_payload,63333); /* Hex F765 */
-	notify_payload->set_spi(notify_payload, 0x3132333435ll);
+	notify_payload->set_spi(notify_payload, 0x31323334);
 	notify_payload->set_notification_data(notify_payload,notification_data);
 	
 	generator->generate_payload(generator,(payload_t *)notify_payload);
@@ -719,11 +719,10 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 
 	u_int8_t expected_generation[] = {
 		/* payload header */
-		0x00,0x00,0x00,0x12,
-		0xFF,0x05,0xF7,0x65,
+		0x00,0x00,0x00,0x11,
+		0xFF,0x04,0xF7,0x65,
 		/* spi */
 		0x31,0x32,0x33,0x34,
-		0x35,
 		/* notification data */
 		0x36,0x37,0x38,0x39,
 		0x30,

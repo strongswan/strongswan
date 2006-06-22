@@ -83,6 +83,20 @@ enum job_type_t {
 	 * Job is implemented in class rekey_child_sa_job_t
 	 */
 	REKEY_CHILD_SA,
+	
+	/**
+	 * Send a keepalive packet.
+	 * 
+	 * Job is implemented in class type send_keepalive_job_t
+	 */
+	SEND_KEEPALIVE,
+	
+	/**
+	 * Send a DPD packet.
+	 * 
+	 * Job is implemented in class type send_dpd_job_t
+	 */
+	SEND_DPD
 };
 
 /**

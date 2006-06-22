@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -100,6 +101,14 @@ struct message_t {
 	 */
 	u_int32_t (*get_message_id) (message_t *this);
 	
+	/**
+	 * @brief Gets the initiator SPI of the message.
+	 *
+	 * @param this 			message_t object
+	 * @return				initiator spi of the message
+	 */
+	u_int64_t (*get_initiator_spi) (message_t *this);
+
 	/**
 	 * @brief Gets the responder SPI of the message.
 	 *

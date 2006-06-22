@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -90,6 +91,36 @@ struct private_ike_sa_init_requested_t {
 	 */
 	logger_t *logger;
 	
+	/**
+	 * Precomputed NAT-D hash for initiator.
+	 */
+	chunk_t natd_hash_i;
+	
+	/**
+	 * Flag indicating that an initiator NAT-D hash matched.
+	 */
+	bool natd_hash_i_matched;
+	
+	/**
+	 * NAT-D payload count for NAT_DETECTION_SOURCE_IP.
+	 */
+	int natd_seen_i;
+	
+	/**
+	 * Precomputed NAT-D hash of responder.
+	 */
+	chunk_t natd_hash_r;
+	
+	/**
+	 * Flag indicating that a responder NAT-D hash matched.
+	 */
+	bool natd_hash_r_matched;
+	
+	/**
+	 * NAT-D payload count for NAT_DETECTION_DESTINATION_IP.
+	 */
+	int natd_seen_r;
+
 
 	/**
 	 * Process NONCE payload of IKE_SA_INIT response.
@@ -271,6 +302,26 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	ike_sa_id = this->ike_sa->public.get_id(&(this->ike_sa->public));
 	ike_sa_id->set_responder_spi(ike_sa_id,responder_spi);
 	
+	/*
+	 * Precompute NAT-D hashes.
+	 * Even though there SHOULD only be a single payload of each
+	 * Notify type, we precompute both hashes.
+	 */
+	this->natd_hash_i = this->ike_sa->generate_natd_hash(this->ike_sa,
+			ike_sa_init_reply->get_initiator_spi(ike_sa_init_reply),
+			ike_sa_init_reply->get_responder_spi(ike_sa_init_reply),
+			ike_sa_init_reply->get_source(ike_sa_init_reply));
+	this->natd_hash_i_matched = FALSE;
+	this->natd_seen_i = 0;
+	this->natd_hash_r = this->ike_sa->generate_natd_hash(this->ike_sa,
+			ike_sa_init_reply->get_initiator_spi(ike_sa_init_reply),
+			ike_sa_init_reply->get_responder_spi(ike_sa_init_reply),
+			ike_sa_init_reply->get_destination(ike_sa_init_reply));
+	this->natd_hash_r_matched = FALSE;
+	this->natd_seen_r = 0;
+	this->ike_sa->set_my_host_behind_nat(this->ike_sa, FALSE);
+	this->ike_sa->set_other_host_behind_nat(this->ike_sa, FALSE);
+
 	/* Iterate over all payloads.
 	 * 
 	 * The message is already checked for the right payload types.
@@ -354,12 +405,59 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		return DESTROY_ME;
 	}
 	
-	/* apply the address on wich we really received the packet */
+	/* NAT-D */
+	if ((!this->natd_seen_i && this->natd_seen_r > 0)
+		|| (this->natd_seen_i > 0 && !this->natd_seen_r))
+	{
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request contained wrong number of NAT-D payloads. Deleting IKE_SA");
+		return DESTROY_ME;
+	}
+	if (this->natd_seen_r > 1)
+	{
+		this->logger->log(this->logger, AUDIT, "Warning: IKE_SA_INIT request contained multiple Notify(NAT_DETECTION_DESTINATION_IP) payloads.");
+	}
+	if (this->natd_seen_i > 0 && !this->natd_hash_i_matched)
+	{
+		this->logger->log(this->logger, AUDIT, "Remote host is behind NAT, using NAT-T.");
+		this->ike_sa->set_other_host_behind_nat(this->ike_sa, TRUE);
+	}
+	if (this->natd_seen_r > 0 && !this->natd_hash_r_matched)
+	{
+		this->logger->log(this->logger, AUDIT, "Local host is behind NAT, using NAT-T.");
+		this->ike_sa->set_my_host_behind_nat(this->ike_sa, TRUE);
+	}
+
+	/* apply the address on wich we really received the packet,
+	 * and switch to port 4500 when using NAT-T and NAT was detected.
+	 */
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	me = ike_sa_init_reply->get_destination(ike_sa_init_reply);
 	other = ike_sa_init_reply->get_source(ike_sa_init_reply);
-	connection->update_my_host(connection, me->clone(me));
-	connection->update_other_host(connection, other->clone(other));
+
+	if (this->ike_sa->public.is_any_host_behind_nat((ike_sa_t*)this->ike_sa))
+	{
+		me->set_port(me, IKEV2_NATT_PORT);
+		other->set_port(other, IKEV2_NATT_PORT);
+		this->logger->log(this->logger, AUDIT, "Switching to port %d.", IKEV2_NATT_PORT);
+	}
+	else
+	{
+		this->logger->log(this->logger, AUDIT, "No NAT detected, not using NAT-T.");
+	}
+
+	if (this->ike_sa->public.is_my_host_behind_nat(&this->ike_sa->public))
+	{
+		charon->event_queue->add_relative(charon->event_queue,
+			(job_t*)send_keepalive_job_create(this->ike_sa->public.get_id((ike_sa_t*)this->ike_sa)),
+			charon->configuration->get_keepalive_interval(charon->configuration));
+	}
+
+	status = this->ike_sa->update_connection_hosts(this->ike_sa, me, other);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+
 	policy = this->ike_sa->get_policy(this->ike_sa);
 	policy->update_my_ts(policy, me);
 	policy->update_other_ts(policy, other);
@@ -575,7 +673,8 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 									 connection->get_my_host(connection),
 									 connection->get_other_host(connection),
 									 policy->get_soft_lifetime(policy),
-									 policy->get_hard_lifetime(policy));
+									 policy->get_hard_lifetime(policy),
+									 this->ike_sa->public.is_any_host_behind_nat(&this->ike_sa->public));
 	if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
@@ -633,6 +732,7 @@ static status_t build_tsr_payload (private_ike_sa_init_requested_t *this, messag
  */
 static status_t process_notify_payload(private_ike_sa_init_requested_t *this, notify_payload_t *notify_payload)
 {
+	chunk_t notification_data;
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
@@ -700,6 +800,44 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 				return DESTROY_ME;
 			}
 			return FAILED;
+		}
+		case NAT_DETECTION_DESTINATION_IP:
+		{
+			this->natd_seen_r++;
+			if (this->natd_hash_r_matched)
+				return SUCCESS;
+
+			notification_data = notify_payload->get_notification_data(notify_payload);
+			if (chunk_equals(notification_data, this->natd_hash_r))
+			{
+				this->natd_hash_r_matched = TRUE;
+				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D hash match");
+			}
+			else
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D hash mismatch");
+			}
+
+			return SUCCESS;
+		}
+		case NAT_DETECTION_SOURCE_IP:
+		{
+			this->natd_seen_i++;
+			if (this->natd_hash_i_matched)
+				return SUCCESS;
+
+			notification_data = notify_payload->get_notification_data(notify_payload);
+			if (chunk_equals(notification_data, this->natd_hash_i))
+			{
+				this->natd_hash_i_matched = TRUE;
+				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D hash match");
+			}
+			else
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D hash mismatch");
+			}
+
+			return SUCCESS;
 		}
 		default:
 		{

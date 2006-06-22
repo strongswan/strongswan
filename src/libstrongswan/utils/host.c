@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -136,7 +137,7 @@ static chunk_t get_address_as_chunk(private_host_t *this)
 	{
 		case AF_INET: 
 		{
-			/* allocate 4 bytes for IPV4 address*/
+			/* allocate 4 bytes for IPv4 address*/
 			address.ptr = malloc(4);
 			address.len = 4;
 			memcpy(address.ptr,&(this->address4.sin_addr.s_addr),4);
@@ -188,6 +189,24 @@ static u_int16_t get_port(private_host_t *this)
 	}
 }
 
+/**
+ * implements host_t.set_port
+ */
+static void set_port(private_host_t *this, u_int16_t port)
+{
+	switch (this->family)
+	{
+		case AF_INET:
+		{
+			this->address4.sin_port = htons(port);
+		}
+		default:
+		{
+			/**/
+		}
+	}
+}
+
 
 /**
  * Implements host_t.clone.
@@ -224,6 +243,26 @@ static bool ip_equals(private_host_t *this, private_host_t *other)
 		}
 	}
 	return FALSE;
+}
+
+/**
+ * Implements host_t.get_differences
+ */
+static int get_differences(private_host_t *this, private_host_t *other)
+{
+	int ret = HOST_DIFF_NONE;
+	
+	if (!this->public.ip_equals(&this->public, &other->public))
+	{
+		ret |= HOST_DIFF_ADDR;
+	}
+
+	if (this->public.get_port(&this->public) != other->public.get_port(&other->public))
+	{
+		ret |= HOST_DIFF_PORT;
+	}
+
+	return ret;
 }
 
 /**
@@ -271,6 +310,8 @@ static private_host_t *host_create_empty(void)
 	this->public.get_address = (char* (*) (host_t *))get_address;
 	this->public.get_address_as_chunk = (chunk_t (*) (host_t *)) get_address_as_chunk;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
+	this->public.set_port = (void (*) (host_t *,u_int16_t))set_port;
+	this->public.get_differences = (int (*) (host_t *,host_t *)) get_differences;
 	this->public.ip_equals = (bool (*) (host_t *,host_t *)) ip_equals;
 	this->public.equals = (bool (*) (host_t *,host_t *)) equals;
 	this->public.is_anyaddr = (bool (*) (host_t *)) is_anyaddr;
@@ -309,6 +350,22 @@ host_t *host_create(int family, char *address, u_int16_t port)
 		}
 	}
 	
+}
+
+/*
+ * Described in header.
+ */
+host_t *host_create_from_hdr(u_long address, u_short port)
+{
+	private_host_t *this = host_create_empty();
+	
+	this->family = AF_INET;
+
+	this->address4.sin_family = AF_INET;
+	this->address4.sin_addr.s_addr = address;
+	this->address4.sin_port = port;
+	this->socklen = sizeof(struct sockaddr_in);
+	return &(this->public);
 }
 
 /*

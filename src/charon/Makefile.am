@@ -36,13 +36,15 @@ encoding/payloads/sa_payload.h encoding/payloads/vendor_id_payload.c encoding/pa
 encoding/payloads/vendor_id_payload.h encoding/payloads/proposal_substructure.c encoding/payloads/payload.c \
 encoding/parser.h encoding/message.c encoding/generator.c encoding/message.h encoding/generator.h \
 encoding/parser.c daemon.c daemon.h network/packet.c \
-network/socket.c network/packet.h network/socket.h queues/jobs/job.h queues/jobs/job.c \
+network/interfaces.c network/interfaces.h network/socket.c network/packet.h network/socket.h queues/jobs/job.h queues/jobs/job.c \
 queues/jobs/delete_established_ike_sa_job.c queues/jobs/retransmit_request_job.h queues/jobs/initiate_ike_sa_job.h \
 queues/jobs/incoming_packet_job.c queues/jobs/delete_half_open_ike_sa_job.c \
 queues/jobs/delete_established_ike_sa_job.h queues/jobs/delete_half_open_ike_sa_job.h \
 queues/jobs/incoming_packet_job.h queues/jobs/retransmit_request_job.c queues/jobs/initiate_ike_sa_job.c \
+queues/jobs/send_keepalive_job.c queues/jobs/send_keepalive_job.h \
 queues/jobs/rekey_child_sa_job.c queues/jobs/rekey_child_sa_job.h \
 queues/jobs/delete_child_sa_job.c queues/jobs/delete_child_sa_job.h \
+queues/jobs/send_dpd_job.c queues/jobs/send_dpd_job.h \
 queues/job_queue.c queues/event_queue.c queues/send_queue.h queues/job_queue.h queues/event_queue.h \
 queues/send_queue.c threads/kernel_interface.c threads/thread_pool.c threads/scheduler.c threads/sender.c \
 threads/sender.h threads/kernel_interface.h threads/scheduler.h threads/receiver.c threads/stroke_interface.c \
@@ -50,4 +52,4 @@ threads/thread_pool.h threads/receiver.h threads/stroke_interface.h
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan -I$(top_srcdir)/src/charon -I$(top_srcdir)/src/stroke
 AM_CFLAGS = -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\"
-charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread
+charon_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la -lgmp -lpthread -lm

@@ -88,8 +88,8 @@ struct event_queue_t {
 	 * removes the job.
 	 *
 	 * @param event_queue 	calling object
- 	 * @param[in] 			job job to add to the queue (job is not copied)
-  	 * @param[in] 			absolute time time, when the event has to get fired
+ 	 * @param[in] job		job to add to the queue (job is not copied)
+  	 * @param[in] time		absolute time, when the event has to get fired
 	 */
 	void (*add_absolute) (event_queue_t *event_queue, job_t *job, timeval_t time);
 

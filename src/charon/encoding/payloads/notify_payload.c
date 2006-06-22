@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -48,6 +49,8 @@ mapping_t notify_message_type_m[] = {
 	{INVALID_SELECTORS, "INVALID_SELECTORS"},
 	{INITIAL_CONTACT, "INITIAL_CONTACT"},
 	{SET_WINDOW_SIZE, "SET_WINDOW_SIZE"},
+	{NAT_DETECTION_SOURCE_IP, "NAT_DETECTION_SOURCE_IP"},
+	{NAT_DETECTION_DESTINATION_IP, "NAT_DETECTION_DESTINATION_IP"},
 	{MAPPING_END, NULL}
 };
 

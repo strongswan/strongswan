@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -33,6 +34,24 @@
  * @ingroup testcases
  */
 void test_kernel_interface(protected_tester_t *tester);
+
+/**
+ * @brief Test function used to test the kernel_interface functionality. Incldes NAT-T configuration.
+ *
+ * @param tester associated tester object
+ *
+ * @ingroup testcases
+ */
+void test_kernel_interface_with_nat(protected_tester_t *tester);
+
+/**
+ * @brief Test function used to test the hosts update functionality in kernel_interface_t.
+ *
+ * @param tester associated tester object
+ *
+ * @ingroup testcases
+ */
+void test_kernel_interface_update_hosts(protected_tester_t *tester);
 
 
 #endif /*KERNEL_INTERFACE_TEST_H_*/

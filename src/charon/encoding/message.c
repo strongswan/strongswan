@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -439,6 +440,14 @@ static u_int32_t get_message_id (private_message_t *this)
 }
 
 /**
+ * Implementation of message_t.get_initiator_spi.
+ */
+static u_int64_t get_initiator_spi (private_message_t *this)
+{
+	return (this->ike_sa_id->get_initiator_spi(this->ike_sa_id));
+}
+
+/**
  * Implementation of message_t.get_responder_spi.
  */
 static u_int64_t get_responder_spi (private_message_t *this)
@@ -826,11 +835,13 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	}
 
 	if (current_payload_type == ENCRYPTED)
-	status = this->decrypt_payloads(this,crypter,signer);
-	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "could not decrypt payloads");
-		return status;
+		status = this->decrypt_payloads(this,crypter,signer);
+		if (status != SUCCESS)
+		{
+			this->logger->log(this->logger, ERROR, "Could not decrypt payloads");
+			return status;
+		}
 	}
 	
 	status = this->verify(this);
@@ -1202,7 +1213,8 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_minor_version = (u_int8_t(*)(message_t*))get_minor_version;
 	this->public.set_message_id = (void(*)(message_t*, u_int32_t))set_message_id;
 	this->public.get_message_id = (u_int32_t(*)(message_t*))get_message_id;
-	this->public.get_responder_spi = (u_int64_t(*)(message_t*))get_responder_spi;	
+	this->public.get_initiator_spi = (u_int64_t(*)(message_t*))get_initiator_spi;
+	this->public.get_responder_spi = (u_int64_t(*)(message_t*))get_responder_spi;
 	this->public.set_ike_sa_id = (void(*)(message_t*, ike_sa_id_t *))set_ike_sa_id;
 	this->public.get_ike_sa_id = (status_t(*)(message_t*, ike_sa_id_t **))get_ike_sa_id;
 	this->public.set_exchange_type = (void(*)(message_t*, exchange_type_t))set_exchange_type;

@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -295,7 +296,14 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		this->logger->log(this->logger, AUDIT, "IKE_AUTH reply did not contain all required payloads. Deleting IKE_SA");
 		return DESTROY_ME;
 	}
-		
+	
+	status = this->ike_sa->update_connection_hosts(this->ike_sa,
+				request->get_destination(request), request->get_source(request));
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+
 	/* build response */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, FALSE, &response);
 	
@@ -442,6 +450,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	status_t status;
 	connection_t *connection;
 	policy_t *policy;
+	bool use_natt;
 	
 	/* prepare reply */
 	sa_response = sa_payload_create();
@@ -477,11 +486,13 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		
 		policy = this->ike_sa->get_policy(this->ike_sa);
 		connection = this->ike_sa->get_connection(this->ike_sa);
+		use_natt = this->ike_sa->public.is_any_host_behind_nat(&this->ike_sa->public);
 		this->child_sa = child_sa_create(0,
 										 connection->get_my_host(connection),
 										 connection->get_other_host(connection),
 										 policy->get_soft_lifetime(policy),
-										 policy->get_hard_lifetime(policy));
+										 policy->get_hard_lifetime(policy),
+										 use_natt);
 		
 		status = this->child_sa->add(this->child_sa, proposal, prf_plus);
 		prf_plus->destroy(prf_plus);

@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -30,6 +31,7 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <crypto/diffie_hellman.h>
+#include <queues/jobs/send_keepalive_job.h>
 
 
 typedef struct private_responder_init_t private_responder_init_t;
@@ -91,6 +93,37 @@ struct private_responder_init_t {
 	logger_t *logger;
 	
 	/**
+	 * Precomputed NAT-D hash for initiator.
+	 */
+	chunk_t natd_hash_i;
+	
+	/**
+	 * Flag indicating that an initiator NAT-D hash matched.
+	 */
+	bool natd_hash_i_matched;
+	
+	/**
+	 * NAT-D payload count for NAT_DETECTION_SOURCE_IP.
+	 */
+	int natd_seen_i;
+	
+	/**
+	 * Precomputed NAT-D hash of responder.
+	 */
+	chunk_t natd_hash_r;
+	
+	/**
+	 * Flag indicating that a responder NAT-D hash matched.
+	 */
+	bool natd_hash_r_matched;
+	
+	/**
+	 * NAT-D payload count for NAT_DETECTION_DESTINATION_IP.
+	 */
+	int natd_seen_r;
+
+
+	/**
 	 * Handles received SA payload and builds the SA payload for the response.
 	 * 
 	 * @param this			calling object
@@ -124,6 +157,24 @@ struct private_responder_init_t {
 	 */
 	status_t (*build_nonce_payload) (private_responder_init_t *this,nonce_payload_t *nonce_request, message_t *response);	
 	
+	/**
+	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
+	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
+	 * 
+	 * @param this		calling object
+	 * @param request	message_t object to add the Notify payloads
+	 */
+	void (*build_natd_payload) (private_responder_init_t *this, message_t *request, notify_message_type_t type, host_t *host);
+
+	/**
+	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
+	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
+	 * 
+	 * @param this		calling object
+	 * @param request	message_t object to add the Notify payloads
+	 */
+	void (*build_natd_payloads) (private_responder_init_t *this, message_t *request);
+
 	/**
 	 * Sends a IKE_SA_INIT reply containing a notify payload.
 	 * 
@@ -185,7 +236,13 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		/* TODO: inform requestor */
 		return DESTROY_ME;
 	}
-	this->ike_sa->set_connection(this->ike_sa,connection);
+	this->ike_sa->set_connection(this->ike_sa, connection);
+	status = this->ike_sa->update_connection_hosts(this->ike_sa,
+				destination, source);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
 	
 	/* parse incoming message */
 	status = message->parse_body(message, NULL, NULL);
@@ -204,7 +261,31 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		return DESTROY_ME;
 	}
 
-	payloads = message->get_payload_iterator(message);	
+	/*
+	 * Precompute NAT-D hashes.
+	 * Even though there SHOULD only be a single payload of Notify type
+	 * NAT_DETECTION_DESTINATION_IP we precompute both hashes.
+	 */
+	this->natd_hash_i = this->ike_sa->generate_natd_hash(this->ike_sa,
+			message->get_initiator_spi(message),
+			message->get_responder_spi(message),
+			message->get_source(message));
+	this->natd_hash_i_matched = FALSE;
+	this->natd_seen_i = 0;
+	this->natd_hash_r = this->ike_sa->generate_natd_hash(this->ike_sa,
+			message->get_initiator_spi(message),
+			message->get_responder_spi(message),
+			message->get_destination(message));
+	this->natd_hash_r_matched = FALSE;
+	this->natd_seen_r = 0;
+	this->ike_sa->set_my_host_behind_nat(this->ike_sa, FALSE);
+	this->ike_sa->set_other_host_behind_nat(this->ike_sa, FALSE);
+
+	/* Iterate over all payloads.
+	 * 
+	 * The message is already checked for the right payload types.
+	 */
+	payloads = message->get_payload_iterator(message);
 	while (payloads->has_next(payloads))
 	{
 		payload_t *payload;
@@ -237,6 +318,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 					payloads->destroy(payloads);
 					return status;	
 				}
+				break;
 			}
 			default:
 			{
@@ -251,10 +333,39 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	/* check if we have all payloads */
 	if (!(sa_request && ke_request && nonce_request))
 	{
-		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain all required payloads. deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request did not contain all required payloads. Deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
+	/* NAT-D */
+	if ((!this->natd_seen_i && this->natd_seen_r > 0)
+		|| (this->natd_seen_i > 0 && !this->natd_seen_r))
+	{
+		this->logger->log(this->logger, AUDIT, "IKE_SA_INIT request contained wrong number of NAT-D payloads. Deleting IKE_SA");
+		return DESTROY_ME;
+	}
+	if (this->natd_seen_r > 1)
+	{
+		this->logger->log(this->logger, AUDIT, "Warning: IKE_SA_INIT request contained multiple Notify(NAT_DETECTION_DESTINATION_IP) payloads.");
+	}
+	if (this->natd_seen_i > 0 && !this->natd_hash_i_matched)
+	{
+		this->logger->log(this->logger, AUDIT, "Remote host is behind NAT, using NAT-T.");
+		this->ike_sa->set_other_host_behind_nat(this->ike_sa, TRUE);
+	}
+	if (this->natd_seen_r > 0 && !this->natd_hash_r_matched)
+	{
+		this->logger->log(this->logger, AUDIT, "Local host is behind NAT, using NAT-T.");
+		this->ike_sa->set_my_host_behind_nat(this->ike_sa, TRUE);
+		charon->event_queue->add_relative(charon->event_queue,
+			(job_t*)send_keepalive_job_create(this->ike_sa->public.get_id((ike_sa_t*)this->ike_sa)),
+			charon->configuration->get_keepalive_interval(charon->configuration));
+	}
+	if (!this->ike_sa->public.is_any_host_behind_nat((ike_sa_t*)this->ike_sa))
+	{
+		this->logger->log(this->logger, AUDIT, "No NAT detected, not using NAT-T.");
+	}
+
 	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
 	
 	status = this->build_sa_payload(this, sa_request, response);
@@ -277,7 +388,9 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		response->destroy(response);
 		return status;
 	}	
-	
+	/* build Notify(NAT-D) payloads */
+	this->build_natd_payloads(this, response);
+
 	/* derive all the keys used in the IKE_SA */
 	status = this->ike_sa->build_transforms(this->ike_sa, this->proposal, this->diffie_hellman, this->received_nonce, this->sent_nonce);
 	if (status != SUCCESS)
@@ -459,26 +572,94 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 }
 
 /**
+ * Implementation of private_initiator_init_t.build_natd_payload.
+ */
+static void build_natd_payload(private_responder_init_t *this, message_t *request, notify_message_type_t type, host_t *host)
+{
+	chunk_t hash;
+	this->logger->log(this->logger, CONTROL|LEVEL1, "Building Notify(NAT-D) payload");
+	notify_payload_t *notify_payload;
+	notify_payload = notify_payload_create();
+	/*notify_payload->set_protocol_id(notify_payload, NULL);*/
+	/*notify_payload->set_spi(notify_payload, NULL);*/
+	notify_payload->set_notify_message_type(notify_payload, type);
+	hash = this->ike_sa->generate_natd_hash(this->ike_sa,
+			request->get_initiator_spi(request),
+			request->get_responder_spi(request),
+			host);
+	notify_payload->set_notification_data(notify_payload, hash);
+	chunk_free(&hash);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "Add Notify(NAT-D) payload to message");
+	request->add_payload(request, (payload_t *) notify_payload);
+}
+
+/**
+ * Implementation of private_initiator_init_t.build_natd_payloads.
+ */
+static void build_natd_payloads(private_responder_init_t *this, message_t *request)
+{
+	connection_t	*connection;
+	connection = this->ike_sa->get_connection(this->ike_sa);
+	this->build_natd_payload(this, request, NAT_DETECTION_SOURCE_IP,
+			connection->get_my_host(connection));
+	this->build_natd_payload(this, request, NAT_DETECTION_DESTINATION_IP,
+			connection->get_other_host(connection));
+}
+
+/**
  * Implementation of private_responder_init_t.process_notify_payload.
  */
 static status_t process_notify_payload(private_responder_init_t *this, notify_payload_t *notify_payload)
 {
+	chunk_t notification_data;
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
 						  mapping_find(notify_message_type_m, notify_message_type));
-								  
-	if (notify_payload->get_protocol_id(notify_payload) != PROTO_IKE)
-	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "notify reply not for IKE protocol.");
-		return FAILED;	
-	}
 	switch (notify_message_type)
 	{
+		case NAT_DETECTION_DESTINATION_IP:
+		{
+			this->natd_seen_r++;
+			if (this->natd_hash_r_matched)
+				return SUCCESS;
+
+			notification_data = notify_payload->get_notification_data(notify_payload);
+			if (chunk_equals(notification_data, this->natd_hash_r))
+			{
+				this->natd_hash_r_matched = TRUE;
+				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D hash match");
+			}
+			else
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D hash mismatch");
+			}
+
+			return SUCCESS;
+		}
+		case NAT_DETECTION_SOURCE_IP:
+		{
+			this->natd_seen_i++;
+			if (this->natd_hash_i_matched)
+				return SUCCESS;
+
+			notification_data = notify_payload->get_notification_data(notify_payload);
+			if (chunk_equals(notification_data, this->natd_hash_i))
+			{
+				this->natd_hash_i_matched = TRUE;
+				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D hash match");
+			}
+			else
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D hash mismatch");
+			}
+
+			return SUCCESS;
+		}
 		default:
 		{
-				this->logger->log(this->logger, CONTROL, "IKE_SA_INIT request contained a notify (%d), ignored.", 
-									notify_message_type);
+			this->logger->log(this->logger, CONTROL, "IKE_SA_INIT request contained a notify (%d), ignored.",
+								notify_message_type);
 			return SUCCESS;
 		}
 	}	
@@ -501,7 +682,11 @@ static void destroy(private_responder_init_t *this)
 	
 	this->logger->log(this->logger, CONTROL | LEVEL2, "destroy nonces");
 	chunk_free(&(this->sent_nonce));
+	this->logger->log(this->logger, CONTROL | LEVEL2, "destroy received nonce");
 	chunk_free(&(this->received_nonce));
+
+	chunk_free(&(this->natd_hash_i));
+	chunk_free(&(this->natd_hash_r));
 
 	if (this->diffie_hellman != NULL)
 	{
@@ -521,7 +706,10 @@ static void destroy(private_responder_init_t *this)
  */
 static void destroy_after_state_change (private_responder_init_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL1, "going to destroy responder_init_t state object");
+	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to destroy responder_init_t state object");
+
+	chunk_free(&(this->natd_hash_i));
+	chunk_free(&(this->natd_hash_r));
 	
 	/* destroy diffie hellman object */
 	if (this->diffie_hellman != NULL)
@@ -556,6 +744,8 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->build_nonce_payload = build_nonce_payload;
 	this->destroy_after_state_change = destroy_after_state_change;
 	this->process_notify_payload = process_notify_payload;
+	this->build_natd_payload = build_natd_payload;
+	this->build_natd_payloads = build_natd_payloads;
 	
 	/* private data */
 	this->ike_sa = ike_sa;
@@ -565,6 +755,12 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->dh_group_number = MODP_NONE;
 	this->diffie_hellman = NULL;
 	this->proposal = NULL;
+	this->natd_hash_i = CHUNK_INITIALIZER;
+	this->natd_hash_i_matched = FALSE;
+	this->natd_seen_i = 0;
+	this->natd_hash_r = CHUNK_INITIALIZER;
+	this->natd_hash_r_matched = FALSE;
+	this->natd_seen_r = 0;
 
 	return &(this->public);
 }

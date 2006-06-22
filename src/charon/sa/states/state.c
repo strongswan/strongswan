@@ -38,3 +38,4 @@ mapping_t ike_sa_state_m[] = {
 	{DELETE_CHILD_SA_REQUESTED, "DELETE_CHILD_SA_REQUESTED"},
 	{MAPPING_END, NULL}
 };
+

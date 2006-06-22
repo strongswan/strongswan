@@ -203,7 +203,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 
-	if (charon->socket->is_listening_on(charon->socket, other_host))
+	if (charon->interfaces->is_local_address(charon->interfaces, other_host))
 	{
 		stroke_end_t tmp_end;
 		host_t *tmp_host;
@@ -218,7 +218,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		msg->add_conn.me = msg->add_conn.other;
 		msg->add_conn.other = tmp_end;
 	}
-	else if (!charon->socket->is_listening_on(charon->socket, my_host))
+	else if (!charon->interfaces->is_local_address(charon->interfaces, my_host))
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "left nor right host is our side, aborting");
 		

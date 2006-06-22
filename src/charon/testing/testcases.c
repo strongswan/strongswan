@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -126,7 +127,9 @@ test_t connection_test = {test_connection, "connection_t test"};
 test_t policy_test = {test_policy, "policy_t test"};
 test_t proposal_test = {test_proposal, "proposal_t test"};
 test_t rsa_test = {test_rsa, "RSA private/public key test"};
-test_t kernel_interface_test = {test_kernel_interface, "Kernel Interface"};
+test_t kernel_interface_test1 = {test_kernel_interface, "Kernel Interface"};
+test_t kernel_interface_test2 = {test_kernel_interface_with_nat, "Kernel Interface: NAT"};
+test_t kernel_interface_test3 = {test_kernel_interface_update_hosts, "Kernel Interface: Hosts update"};
 test_t child_sa_test = {test_child_sa, "Child SA"};
 test_t certificate_test = {test_certificate, "X509 Certificate"};
 test_t leak_detective_test = {test_leak_detective, "LEAK detective"};
@@ -159,7 +162,7 @@ daemon_t *daemon_create()
 	/* assign methods */
 	charon->kill = daemon_kill;
 	
-	//charon->socket = socket_create(500);
+	charon->socket = socket_create(500, 4500);
 	charon->ike_sa_manager = ike_sa_manager_create();
 	charon->job_queue = job_queue_create();
 	charon->event_queue = event_queue_create();

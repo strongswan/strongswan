@@ -6,6 +6,7 @@
  */
 
 /*
+ * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -93,15 +94,6 @@ struct socket_t {
 	status_t (*send) (socket_t *sock, packet_t *packet);
 	
 	/**
-	 * @brief Check if socket listens on an address.
-	 * 
-	 * @param sock			socket_t object to work on
-	 * @param host			address to check
-	 * @return 				TRUE if listening on host, FALSE otherwise
-	 */
-	bool (*is_listening_on) (socket_t *sock, host_t *host);
-	
-	/**
 	 * @brief Destroy sockets.
 	 * 
 	 * close sockets and destroy socket_t object
@@ -114,15 +106,15 @@ struct socket_t {
 /**
  * @brief Create a socket_t, wich binds multiple sockets.
  * 
- * currently creates one socket, listening on all addresses
- * on "port".
+ * currently creates a raw socket and two send sockets
  *  
  * @param port				port to bind socket to
+ * @param natt_port			port to float to in NAT-T
  * @return  				socket_t object
  * 
  * @ingroup network
  */
-socket_t *socket_create(u_int16_t port);
+socket_t *socket_create(u_int16_t port, u_int16_t natt_port);
 
 
 #endif /*SOCKET_H_*/
