@@ -786,6 +786,9 @@ static identification_t *clone(private_identification_t *this)
 	clone->string = malloc(strlen(this->string) + 1);
 	strcpy(clone->string, this->string);
 	
+	clone->public.equals = this->public.equals;
+	clone->public.belongs_to = this->public.belongs_to;
+	
 	return &clone->public;
 }
 
