@@ -711,6 +711,20 @@ static chunk_t get_packet_data (private_message_t *this)
 }
 
 /**
+ * Implementation of message_t.is_encoded.
+ */
+static bool is_encoded(private_message_t *this)
+{
+	chunk_t data = this->packet->get_data(this->packet);
+	
+	if (data.ptr == NULL)
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Implementation of message_t.parse_header.
  */
 static status_t parse_header(private_message_t *this)
@@ -1232,6 +1246,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
 	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;
 	this->public.get_packet_data = (chunk_t (*) (message_t *this)) get_packet_data;
+	this->public.is_encoded = (bool (*) (message_t *this)) is_encoded;
 	this->public.destroy = (void(*)(message_t*))destroy;
 		
 	/* private values */
@@ -1271,25 +1286,4 @@ message_t *message_create_from_packet(packet_t *packet)
 message_t *message_create()
 {
 	return message_create_from_packet(NULL);
-}
-
-/*
- * Described in Header.
- */
-message_t *message_create_notify_reply(host_t *source, host_t *destination, exchange_type_t exchange_type, bool original_initiator,ike_sa_id_t *ike_sa_id,notify_message_type_t notify_type)
-{
-	message_t *message = message_create_from_packet(NULL);
-	notify_payload_t *payload;
-	
-	message->set_source(message, source->clone(source));
-	message->set_destination(message, destination->clone(destination));
-	message->set_exchange_type(message, exchange_type);
-	message->set_request(message, FALSE);
-	message->set_message_id(message,0);
-	message->set_ike_sa_id(message, ike_sa_id);
-	
-	payload = notify_payload_create_from_protocol_and_type(PROTO_NONE, notify_type);
-	message->add_payload(message,(payload_t *) payload);
-	
-	return message;
 }

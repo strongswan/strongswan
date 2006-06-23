@@ -306,7 +306,7 @@ struct message_t {
 	iterator_t * (*get_payload_iterator) (message_t *this);
 	
 	/**
-	 * Returns a clone of the internal stored packet_t object.
+	 * @brief Returns a clone of the internal stored packet_t object.
 	 *
 	 * @param this 		message_t object
 	 * @return			packet_t object as clone of internal one
@@ -314,12 +314,24 @@ struct message_t {
 	packet_t * (*get_packet) (message_t *this);
 	
 	/**
-	 * Returns a clone of the internal stored packet_t data.
+	 * @brief Returns a clone of the internal stored packet_t data.
 	 *
 	 * @param this 		message_t object
 	 * @return			clone of the internal stored packet_t data.
 	 */	
 	chunk_t (*get_packet_data) (message_t *this);
+	
+	/**
+	 * @brief Check if a message is encoded.
+	 *
+	 * Check if the packet is in a generated (and encrypted) form available
+	 * and can be passed down to the socket. If not, it has to be generated
+	 * first.
+	 *
+	 * @param this 		message_t object
+	 * @return			TRUE if encoded, FALSE if not
+	 */	
+	bool (*is_encoded) (message_t *this);
 	
 	
 	/**
@@ -363,14 +375,5 @@ message_t * message_create_from_packet(packet_t *packet);
  * @ingroup encoding
  */
 message_t * message_create(void);
-
-/**
- * @brief Creates an message_t object of type reply containing a notify payload.
- *
- * @return message_t object
- *
- * @ingroup encoding
- */
-message_t *message_create_notify_reply(host_t *source, host_t *destination, exchange_type_t exchange_type, bool original_initiator,ike_sa_id_t *ike_sa_id,notify_message_type_t notify_type);
 
 #endif /*MESSAGE_H_*/

@@ -89,15 +89,26 @@ static status_t execute(private_incoming_packet_job_t *this)
 						  message->get_minor_version(message));
 		if ((message->get_exchange_type(message) == IKE_SA_INIT) && (message->get_request(message)))
 		{
+			notify_payload_t *notify;
 			message_t *response;
+			host_t *src, *dst;
+			
 			message->get_ike_sa_id(message, &ike_sa_id);
 			ike_sa_id->switch_initiator(ike_sa_id);
-			response = message_create_notify_reply(message->get_destination(message),
-					message->get_source(message),
-					IKE_SA_INIT, FALSE, ike_sa_id,
-					INVALID_MAJOR_VERSION);
-			message->destroy(message);
-			ike_sa_id->destroy(ike_sa_id);
+			
+			response = message_create();
+			src = message->get_source(message);
+			dst = message->get_destination(message);
+			response->set_source(response, src->clone(src));
+			response->set_destination(response, dst->clone(dst));
+			response->set_exchange_type(response, IKE_SA_INIT);
+			response->set_request(response, FALSE);
+			response->set_message_id(response, 0);
+			response->set_ike_sa_id(response, ike_sa_id);
+			
+			notify = notify_payload_create_from_protocol_and_type(PROTO_NONE, INVALID_MAJOR_VERSION);
+			response->add_payload(response, (payload_t *)notify);
+			
 			status = response->generate(response, NULL, NULL, &packet);
 			if (status != SUCCESS)
 			{
