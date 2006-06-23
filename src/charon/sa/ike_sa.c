@@ -68,6 +68,16 @@ struct private_ike_sa_t {
 	protected_ike_sa_t protected;
 	
 	/**
+	 * Update a timestamp on ike traffic
+	 */
+	void (*update_timestamp)(private_ike_sa_t *this, bool in);
+	
+	/**
+	 * Returns the time since last traffic on kernel policies
+	 */
+	struct timeval (*get_last_esp_traffic_tv)(private_ike_sa_t * this, bool inbound);
+
+	/**
 	 * Identifier for the current IKE_SA.
 	 */
 	ike_sa_id_t *ike_sa_id;
@@ -194,9 +204,14 @@ struct private_ike_sa_t {
 	bool nat_there;
 
 	/**
-	 * Timestamp of last IKE message sent or received on this SA
+	 * Timestamp of last IKE message received on this SA
 	 */
-	struct timeval last_msg_tv;
+	struct timeval last_msg_in_tv;
+
+	/**
+	 * Timestamp of last IKE message sent on this SA
+	 */
+	struct timeval last_msg_out_tv;
 
 	/*
 	 * Message ID of last DPD message
@@ -330,7 +345,7 @@ static host_t* get_my_host(private_ike_sa_t *this)
  */
 static host_t* get_other_host(private_ike_sa_t *this)
 {
-	return this->connection->get_other_host(this->connection);;
+	return this->connection->get_other_host(this->connection);
 }
 
 /**
@@ -338,7 +353,7 @@ static host_t* get_other_host(private_ike_sa_t *this)
  */
 static identification_t* get_my_id(private_ike_sa_t *this)
 {
-	return this->policy->get_my_id(this->policy);;
+	return this->policy->get_my_id(this->policy);
 }
 
 /**
@@ -346,7 +361,7 @@ static identification_t* get_my_id(private_ike_sa_t *this)
  */
 static identification_t* get_other_id(private_ike_sa_t *this)
 {
-	return this->policy->get_other_id(this->policy);;
+	return this->policy->get_other_id(this->policy);
 }
 
 /**
@@ -375,7 +390,7 @@ static status_t retransmit_request(private_ike_sa_t *this, u_int32_t message_id)
 	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to retransmit message with id %d",message_id);
 	packet = this->last_requested_message->get_packet(this->last_requested_message);
 	charon->send_queue->add(charon->send_queue, packet);
-	
+	this->update_timestamp(this, FALSE);
 	return SUCCESS;
 }
 
@@ -607,6 +622,20 @@ static signer_t *get_signer_responder(private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.update_timestamp
+ */
+static void update_timestamp(private_ike_sa_t *this, bool in)
+{
+	/* bump last message sent timestamp */
+	struct timeval *tv = in ? &this->last_msg_in_tv : &this->last_msg_out_tv;
+	if (0 > gettimeofday(tv, NULL))
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1,
+						  "Warning: Failed to get time of day.");
+	}
+}
+
+/**
  * Implementation of protected_ike_sa_t.send_request.
  */
 static status_t send_request(private_ike_sa_t *this, message_t *message)
@@ -678,11 +707,7 @@ static status_t send_request(private_ike_sa_t *this, message_t *message)
 					  this->message_id_out);
 	this->message_id_out++;
 
-	/* bump last message sent timestamp */
-	if (gettimeofday(&this->last_msg_tv, NULL) < 0)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "failed to get time of day");
-	}
+	this->update_timestamp(this, FALSE);
 	return SUCCESS;	
 }
 
@@ -740,6 +765,8 @@ static status_t send_response(private_ike_sa_t *this, message_t *message)
 	this->logger->log(this->logger, CONTROL|LEVEL3, "Increase message counter for incoming messages");
 	this->message_id_in++;
 
+	this->update_timestamp(this, FALSE);
+
 	return SUCCESS;
 }
 
@@ -780,6 +807,8 @@ static void send_notify(private_ike_sa_t *this, exchange_type_t exchange_type, n
 	charon->send_queue->add(charon->send_queue, packet);
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy message");
 	response->destroy(response);
+
+	this->update_timestamp(this, FALSE);
 }
 
 /**
@@ -842,6 +871,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			packet_t *packet = this->last_responded_message->get_packet(this->last_responded_message);
 			this->logger->log(this->logger, CONTROL|LEVEL1, "Resent request detected. Send stored reply.");
 			charon->send_queue->add(charon->send_queue, packet);
+			this->update_timestamp(this, FALSE);
 			return SUCCESS;
 		}
 		else
@@ -874,6 +904,8 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			return FAILED;
 		}
 	}
+	
+	this->update_timestamp(this, TRUE);
 	
 	/* now the message is processed by the current state object.
 	 * The specific state object is responsible to check if a message can be received in 
@@ -1412,14 +1444,50 @@ static void set_other_host_behind_nat (private_ike_sa_t *this, bool nat)
 }
 
 /**
- * Implementation of ike_sa_t.get_last_msg_tv.
+ * Implementation of private_ike_sa_t.get_last_esp_traffic_tv
  */
-static struct timeval get_last_msg_tv (private_ike_sa_t *this)
+static struct timeval get_last_esp_traffic_tv(private_ike_sa_t * this, bool inbound)
 {
-	/*
-	 * XXX: query kernel for last activity time
-	 */
-	return this->last_msg_tv;
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	bool ret = TRUE; 
+	time_t use_time = 0;
+	struct timeval tv = {0, 0};
+
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		if (child_sa->get_use_time(child_sa, inbound, &use_time) == SUCCESS
+				&& use_time != 0)
+		{
+			tv.tv_sec = max(tv.tv_sec, use_time);
+		}
+	}
+	iterator->destroy(iterator);
+	
+	return tv;
+}
+
+/**
+ * Implementation of ike_sa_t.get_last_traffic_in_tv.
+ */
+static struct timeval get_last_traffic_in_tv (private_ike_sa_t *this)
+{
+	struct timeval esp_tv  = this->get_last_esp_traffic_tv(this, TRUE);
+	return this->last_msg_in_tv.tv_sec > esp_tv.tv_sec ? this->last_msg_in_tv
+	     : this->last_msg_in_tv.tv_sec < esp_tv.tv_sec ? esp_tv
+	     : this->last_msg_in_tv.tv_usec > esp_tv.tv_usec ? this->last_msg_in_tv : esp_tv;
+}
+
+/**
+ * Implementation of ike_sa_t.get_last_traffic_out_tv.
+ */
+static struct timeval get_last_traffic_out_tv (private_ike_sa_t *this)
+{
+	struct timeval esp_tv  = this->get_last_esp_traffic_tv(this, FALSE);
+	return this->last_msg_out_tv.tv_sec > esp_tv.tv_sec ? this->last_msg_out_tv
+	     : this->last_msg_out_tv.tv_sec < esp_tv.tv_sec ? esp_tv
+	     : this->last_msg_out_tv.tv_usec > esp_tv.tv_usec ? this->last_msg_out_tv : esp_tv;	
 }
 
 /**
@@ -1543,7 +1611,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.public.is_my_host_behind_nat = (bool(*)(ike_sa_t*)) is_my_host_behind_nat;
 	this->protected.public.is_other_host_behind_nat = (bool(*)(ike_sa_t*)) is_other_host_behind_nat;
 	this->protected.public.is_any_host_behind_nat = (bool(*)(ike_sa_t*)) is_any_host_behind_nat;
-	this->protected.public.get_last_msg_tv = (struct timeval (*)(ike_sa_t*)) get_last_msg_tv;
+	this->protected.public.get_last_traffic_in_tv = (struct timeval (*)(ike_sa_t*)) get_last_traffic_in_tv;
+	this->protected.public.get_last_traffic_out_tv = (struct timeval (*)(ike_sa_t*)) get_last_traffic_out_tv;
 	this->protected.public.send_dpd_request = (status_t (*)(ike_sa_t*)) send_dpd_request;
 	
 	/* protected functions */
@@ -1579,6 +1648,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->protected.get_last_dpd_message_id = (u_int32_t (*) (protected_ike_sa_t*)) get_last_dpd_message_id;
 	this->protected.update_connection_hosts = (status_t (*) (protected_ike_sa_t *, host_t*, host_t*)) update_connection_hosts;
 	
+	/* private functions */
+	this->update_timestamp = (void (*) (private_ike_sa_t*,bool))update_timestamp;
+	this->get_last_esp_traffic_tv = (struct timeval (*) (private_ike_sa_t *,bool))get_last_esp_traffic_tv;
+
 	/* initialize private fields */
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
@@ -1604,8 +1677,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->nat_hasher = hasher_create(HASH_SHA1);
 	this->nat_here = FALSE;
 	this->nat_there = FALSE;
-	this->last_msg_tv.tv_sec = 0;
-	this->last_msg_tv.tv_usec = 0;
+	this->last_msg_in_tv.tv_sec = 0;
+	this->last_msg_in_tv.tv_usec = 0;
+	this->last_msg_out_tv.tv_sec = 0;
+	this->last_msg_out_tv.tv_usec = 0;
 	this->last_dpd_message_id = 0;
 
 	/* at creation time, IKE_SA is in a initiator state */

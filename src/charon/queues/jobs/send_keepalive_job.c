@@ -68,7 +68,6 @@ static status_t execute(private_send_keepalive_job_t *this)
 	status_t status;
 	u_int32_t dt;
 	u_int32_t interval = charon->configuration->get_keepalive_interval(charon->configuration);
-	u_int32_t timeout = charon->configuration->get_keepalive_timeout(charon->configuration);
 	struct timeval last_msg_tv, current_tv;
 	packet_t *packet;
 	host_t *host;
@@ -89,7 +88,7 @@ static status_t execute(private_send_keepalive_job_t *this)
 		return DESTROY_ME;
 	}
 
-	last_msg_tv = ike_sa->get_last_msg_tv(ike_sa);
+	last_msg_tv = ike_sa->get_last_traffic_out_tv(ike_sa);
 	if (0 > gettimeofday(&current_tv, NULL) )
 	{
 		this->logger->log(this->logger, ERROR|LEVEL1,
@@ -114,8 +113,7 @@ static status_t execute(private_send_keepalive_job_t *this)
 		this->logger->log(this->logger, CONTROL|LEVEL1,
 				"NAT keepalive packet scheduled");
 	}
-	charon->event_queue->add_relative(charon->event_queue,
-	                                  (job_t*) this, interval - dt);
+	charon->event_queue->add_relative(charon->event_queue, (job_t*) this, interval - dt);
 
 	this->logger->log(this->logger, CONTROL|LEVEL2,
 			"Checkin IKE SA %lld:%lld, role %s",

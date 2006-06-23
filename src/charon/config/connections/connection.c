@@ -22,7 +22,7 @@
 
 #include <string.h>
 
-#include "connection.h"
+#include <config/connections/connection.h>
 
 #include <utils/linked_list.h>
 #include <utils/logger.h>

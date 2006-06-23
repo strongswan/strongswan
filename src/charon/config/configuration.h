@@ -81,17 +81,6 @@ struct configuration_t {
 	u_int32_t (*get_keepalive_interval) (configuration_t *this);
 
 	/**
-	 * @brief Returns the keepalive timeout in ms.
-	 * 
-	 * The keepalive timeout defines how long we should keep sending
-	 * NAT keepalives after closing an IKE_SA.
-	 * 
-	 * @param this				calling object
-	 * @return					timeout in milliseconds (ms)
-	 */	
-	u_int32_t (*get_keepalive_timeout) (configuration_t *this);
-
-	/**
 	 * @brief Returns the DPD interval in ms.
 	 * 
 	 * The DPD interval defines the time after which a

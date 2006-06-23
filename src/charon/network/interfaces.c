@@ -147,6 +147,7 @@ interfaces_t *interfaces_create(u_int16_t port)
 	if (initialize(this) != SUCCESS)
 	{
 		destroy(this);
+		return NULL;
 	}
 
 	return &this->public;

@@ -236,12 +236,20 @@ struct ike_sa_t {
 	bool (*is_any_host_behind_nat) (ike_sa_t *this);
 
 	/**
-	 * @brief Query timeval of last message sent.
+	 * @brief Query timeval of last inbound IKE or ESP traffic.
 	 *
-	 * @param this 			calling object
-	 * @return 				time when the last message was sent
+	 * @param this			calling object
+	 * @return				time when the last traffic was seen
 	 */
-	struct timeval (*get_last_msg_tv) (ike_sa_t *this);
+	struct timeval (*get_last_traffic_in_tv) (ike_sa_t *this);
+
+	/**
+	 * @brief Query timeval of last outbound IKE or ESP traffic.
+	 *
+	 * @param this			calling object
+	 * @return				time when the last traffic was seen
+	 */
+	struct timeval (*get_last_traffic_out_tv) (ike_sa_t *this);
 
 	/**
 	 * @brief Get the state of type of associated state object.

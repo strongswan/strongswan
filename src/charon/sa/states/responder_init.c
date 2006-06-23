@@ -388,6 +388,7 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 		response->destroy(response);
 		return status;
 	}	
+
 	/* build Notify(NAT-D) payloads */
 	this->build_natd_payloads(this, response);
 
@@ -616,6 +617,7 @@ static status_t process_notify_payload(private_responder_init_t *this, notify_pa
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
 						  mapping_find(notify_message_type_m, notify_message_type));
+
 	switch (notify_message_type)
 	{
 		case NAT_DETECTION_DESTINATION_IP:

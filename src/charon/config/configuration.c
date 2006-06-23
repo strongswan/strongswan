@@ -56,12 +56,6 @@
 #define KEEPALIVE_INTERVAL 2000000
 
 /**
- * Keepalive timeout in milliseconds.
- * Not implemented yet.
- */
-#define KEEPALIVE_TIMEOUT 30000000
-
-/**
  * DPD interval in milliseconds.
  */
 #define DPD_INTERVAL 6000000
@@ -113,14 +107,6 @@ static u_int32_t get_keepalive_interval (private_configuration_t *this)
 }
 
 /**
- * Implementation of configuration_t.get_keepalive_timeout.
- */
-static u_int32_t get_keepalive_timeout (private_configuration_t *this)
-{
-	return KEEPALIVE_TIMEOUT;
-}
-
-/**
  * Implementation of configuration_t.get_dpd_interval.
  */
 static u_int32_t get_dpd_interval (private_configuration_t *this)
@@ -148,7 +134,6 @@ configuration_t *configuration_create()
 	this->public.get_retransmit_timeout = (status_t (*) (configuration_t *, u_int32_t retransmit_count, u_int32_t *timeout))get_retransmit_timeout;
 	this->public.get_half_open_ike_sa_timeout = (u_int32_t (*) (configuration_t *)) get_half_open_ike_sa_timeout;
 	this->public.get_keepalive_interval = (u_int32_t (*) (configuration_t *)) get_keepalive_interval;
-	this->public.get_keepalive_timeout = (u_int32_t (*) (configuration_t *)) get_keepalive_timeout;
 	this->public.get_dpd_interval = (u_int32_t (*) (configuration_t *)) get_dpd_interval;
 	
 	return (&this->public);

@@ -327,7 +327,6 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 
 static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *prf_plus)
 {
-	linked_list_t *list;
 	u_int32_t outbound_spi, inbound_spi;
 	
 	/* backup outbound spi, as alloc overwrites it */
@@ -537,6 +536,94 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 					policy->other.net->get_address(policy->other.net), policy->other.net_mask);
 	}
 	iterator->destroy(iterator);
+}
+
+/**
+ * Implementation of child_sa_t.get_use_time
+ */
+static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use_time)
+{
+	iterator_t *iterator;
+	sa_policy_t *policy;
+	struct protoent *proto;
+	char proto_buf[8] = "";
+	char *proto_name = proto_buf;
+	status_t status;
+	
+	*use_time = UNDEFINED_TIME;
+
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->iterate(iterator, (void**)&policy))
+	{
+		time_t ut;
+
+		if (policy->upper_proto)
+		{
+			proto = getprotobynumber(policy->upper_proto);
+			if (proto)
+			{
+				proto_name = proto->p_name;
+			}
+			else
+			{
+				snprintf(proto_buf, sizeof(proto_buf), "<%d>", policy->upper_proto);
+			}
+		}
+		
+		this->logger->log(this->logger, CONTROL|LEVEL1,
+					"quering policy:     %s/%d==%s==%s/%d",
+					policy->me.net->get_address(policy->me.net), policy->me.net_mask,
+					proto_name,
+					policy->other.net->get_address(policy->other.net), policy->other.net_mask);
+
+		if (inbound) 
+		{
+			status = charon->kernel_interface->query_policy(charon->kernel_interface,
+						this->other.addr, this->me.addr,
+						policy->other.net, policy->me.net,
+						policy->other.net_mask, policy->me.net_mask,
+						XFRM_POLICY_IN, policy->upper_proto,
+						&ut);
+	
+			/* also check forward policy in tunnel mode */
+			if (status == SUCCESS /*&& mode == TUNNEL XXX */)
+			{
+				time_t fwd;
+
+				status = charon->kernel_interface->query_policy(charon->kernel_interface,
+							this->other.addr, this->me.addr,
+							policy->other.net, policy->me.net,
+							policy->other.net_mask, policy->me.net_mask,
+							XFRM_POLICY_FWD, policy->upper_proto,
+							&fwd);
+			
+				if (status == SUCCESS)
+				{
+					ut = max(ut, fwd);
+				}
+			}
+		}
+		else 
+		{
+			status = charon->kernel_interface->query_policy(charon->kernel_interface,
+						this->me.addr, this->other.addr,
+						policy->me.net, policy->other.net,
+						policy->me.net_mask, policy->other.net_mask,
+						XFRM_POLICY_OUT, policy->upper_proto,
+						&ut);
+		}
+		
+		if (status != SUCCESS)
+		{
+			iterator->destroy(iterator);
+			return FAILED;
+		}
+
+		*use_time = max(*use_time, ut);
+	}
+	iterator->destroy(iterator);
+	
+	return SUCCESS;
 }
 
 /**
@@ -772,6 +859,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
+	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_rekeyed = (void (*)(child_sa_t*))set_rekeyed;
 	this->public.log_status = (void (*)(child_sa_t*, logger_t*, char*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;

@@ -273,6 +273,7 @@ struct daemon_t {
 	 * A socket_t instance.
 	 */
 	socket_t *socket;
+	
 	/**
 	 * A interfaces_t instance.
 	 */

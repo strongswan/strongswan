@@ -158,6 +158,16 @@ struct child_sa_t {
 	status_t (*add_policies) (child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list);
 	
 	/**
+	 * @brief Get the time of this child_sa_t's last use (i.e. last use of any of its policies)
+	 * 
+	 * @param this 		calling object
+	 * @param inbound	query for in- or outbound usage
+	 * @param use_time	the time
+	 * @return			SUCCESS or FAILED
+	 */	
+	status_t (*get_use_time) (child_sa_t *this, bool inbound, time_t *use_time);
+	
+	/**
 	 * @brief Mark this child_sa as rekeyed.
 	 *
 	 * Since an SA which rekeys a old SA shares the same policy,

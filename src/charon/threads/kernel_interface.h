@@ -118,6 +118,7 @@ struct kernel_interface_t {
 				prf_plus_t *prf_plus,
 				natt_conf_t *natt,
 				bool replace);
+	
 	/**
 	 * @brief Update the hosts on an installed SA. Encapsulation ports are also updated.
 	 *
@@ -190,6 +191,29 @@ struct kernel_interface_t {
 				int direction, int upper_proto, 
 				protocol_id_t protocol,
 				u_int32_t reqid);
+	/**
+	 * @brief Query the use time of a policy
+	 * 
+	 * @param this			calling object
+	 * @param me			address of local peer
+	 * @param other			address of remote peer
+	 * @param src			src address of traffic this policy applies
+	 * @param dst			dest address of traffic this policy applies
+	 * @param src_hostbits	subnetmask to use for src address
+	 * @param dst_hostbits	subnetmask to use for dst address
+	 * @param direction		direction of traffic, XFRM_POLICY_OUT, XFRM_POLICY_IN, XFRM_POLICY_FWD
+	 * @param upper_proto	upper layer protocol of traffic for this policy (TCP, UDP, ICMP, ...)
+	 * @param use_time		the time of this policy's last use
+	 * @return
+	 * 						- SUCCESS
+	 * 						- FAILED if kernel comm failed
+	 */
+	status_t (*query_policy) (kernel_interface_t *this, 
+				host_t *me, host_t *other,
+				host_t *src, host_t *dst,
+				u_int8_t src_hostbits, u_int8_t dst_hostbits,
+				int direction, int upper_proto,
+				time_t *use_time);
 	
 	/**
 	 * @brief Remove a policy from the SPD.

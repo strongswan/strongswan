@@ -395,9 +395,9 @@ static status_t initialize(private_socket_t *this)
 		int type = UDP_ENCAP_ESPINUDP;
 		if (setsockopt(this->natt_fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 		{
-			this->logger->log(this->logger, ERROR, 
+			this->logger->log(this->logger, ERROR,
 							  "unable to set UDP_ENCAP on natt send socket! NAT-T may fail! error: %s",
-							  strerror(errno)); 
+							  strerror(errno));
 		}
 	}
 

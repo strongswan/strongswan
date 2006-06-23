@@ -673,6 +673,75 @@ static status_t add_policy(private_kernel_interface_t *this,
 	return status;
 }
 
+static status_t query_policy(private_kernel_interface_t *this,
+					host_t *me, host_t *other, 
+					host_t *src, host_t *dst,
+					u_int8_t src_hostbits, u_int8_t dst_hostbits,
+					int direction, int upper_proto,
+					time_t *use_time)
+{
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *response;
+	
+	memset(&request, 0, sizeof(request));
+	status_t status = SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "querying policy");
+
+	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = XFRM_MSG_GETPOLICY;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
+
+	struct xfrm_userpolicy_id *policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
+	policy_id->sel.sport = htons(src->get_port(src));
+	policy_id->sel.sport_mask = (policy_id->sel.sport) ? ~0 : 0;
+	policy_id->sel.saddr = src->get_xfrm_addr(src);
+	policy_id->sel.prefixlen_s = src_hostbits;
+	
+	policy_id->sel.dport = htons(dst->get_port(dst));
+	policy_id->sel.dport_mask = (policy_id->sel.dport) ? ~0 : 0;
+	policy_id->sel.daddr = dst->get_xfrm_addr(dst);
+	policy_id->sel.prefixlen_d = dst_hostbits;
+	
+	policy_id->sel.proto = upper_proto;
+	policy_id->sel.family = src->get_family(src);
+	
+	policy_id->dir = direction;
+
+	if (this->send_message(this, hdr, &response) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
+		return FAILED;
+	}
+	else if (response->nlmsg_type == NLMSG_ERROR)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an error: %s",
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
+		free(response);
+		return FAILED;
+	}
+	else if (response->nlmsg_type != XFRM_MSG_NEWPOLICY)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an unknown reply");
+		free(response);
+		return FAILED;
+	}
+	else if (response->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info)))
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an invalid reply");
+		free(response);
+		return FAILED;
+	}
+
+	struct xfrm_userpolicy_info *policy = (struct xfrm_userpolicy_info*)NLMSG_DATA(response);
+
+	*use_time = (time_t)policy->curlft.use_time;
+	
+	free(response);
+	return status;
+}
+
 /**
  * Implementation of kernel_interface_t.del_policy.
  */
@@ -923,6 +992,7 @@ kernel_interface_t *kernel_interface_create()
 	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,protocol_id_t,u_int32_t))add_policy;
 	this->public.update_sa_hosts = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,int,int,u_int32_t,protocol_id_t))update_sa_hosts;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
+	this->public.query_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,time_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int))del_policy;
 	
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;

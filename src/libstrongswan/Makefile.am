@@ -38,6 +38,7 @@ libstrongswan_la_LIBADD = -lgmp -lpthread
 
 INCLUDES = -I$(top_srcdir)/src/libstrongswan
 EXTRA_DIST = asn1/oid.txt asn1/oid.pl
+BUILT_SOURCES = asn1/oid.c asn1/oid.h
 MAINTAINERCLEANFILES = asn1/oid.c asn1/oid.h
 
 if USE_LEAK_DETECTIVE

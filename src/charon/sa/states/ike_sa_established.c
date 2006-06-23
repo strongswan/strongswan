@@ -554,14 +554,6 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 	signer_t *signer;
 	status_t status;
 	
-	/* only requests are allowed, responses are handled in other state */
-	if (!message->get_request(message))
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1,
-						  "Response not handled in state ike_sa_established");
-		return FAILED;
-	}
-	
 	/* get signer for verification and crypter for decryption */
 	ike_sa_id = this->ike_sa->public.get_id(&this->ike_sa->public);
 	if (!ike_sa_id->is_initiator(ike_sa_id))
@@ -590,6 +582,28 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 	{
 		return status;
 	}
+
+	/* process responses */
+	if (!message->get_request(message))
+	{
+		switch (message->get_exchange_type(message))
+		{
+			case INFORMATIONAL:
+				status = process_informational_response(this, message);
+				break;
+			default:
+				this->logger->log(this->logger, ERROR | LEVEL1, 
+						  "Only INFORMATIONAL responses are handled in state ike_sa_established");
+				status = FAILED;
+				break;
+		}
+
+		/* we don't really reply to this message but the retransmit mechanism relies on this */
+		this->ike_sa->set_last_replied_message_id(this->ike_sa, message->get_message_id(message));
+
+		/* return here */
+		return status;
+	}
 	
 	/* prepare a reply of the same type */
 	this->ike_sa->build_message(this->ike_sa, message->get_exchange_type(message), FALSE, &response);
@@ -609,6 +623,7 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 							  mapping_find(exchange_type_m, message->get_exchange_type(message)));
 			status = NOT_SUPPORTED;
 	}
+	
 	return status;
 }
 

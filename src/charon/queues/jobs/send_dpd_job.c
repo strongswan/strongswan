@@ -66,6 +66,9 @@ static status_t execute(private_send_dpd_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	status_t status;
+	u_int32_t dt;
+	u_int32_t interval = charon->configuration->get_dpd_interval(charon->configuration);
+	struct timeval last_msg_tv, current_tv;
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Checking out IKE SA %lld:%lld, role %s",
 			this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
@@ -81,9 +84,26 @@ static status_t execute(private_send_dpd_job_t *this)
 		return DESTROY_ME;
 	}
 
-	ike_sa->send_dpd_request(ike_sa);
-	this->logger->log(this->logger, CONTROL|LEVEL1,
-			"DPD request packet scheduled");
+	last_msg_tv = ike_sa->get_last_traffic_in_tv(ike_sa);
+	if (0 > gettimeofday(&current_tv, NULL) )
+	{
+		this->logger->log(this->logger, ERROR|LEVEL1,
+				"Warning: Failed to get time of day.");
+	}
+	dt = (current_tv.tv_sec - last_msg_tv.tv_sec) * 1000
+	   + (current_tv.tv_usec - last_msg_tv.tv_usec) / 1000;
+
+	if (dt >= interval)
+	{
+		ike_sa->send_dpd_request(ike_sa);
+		this->logger->log(this->logger, CONTROL|LEVEL1,
+				"DPD request packet scheduled");
+
+	}
+	else
+	{
+		charon->event_queue->add_relative(charon->event_queue, (job_t*) this, interval - dt);
+	}
 
 	this->logger->log(this->logger, CONTROL|LEVEL2,
 			"Checkin IKE SA %lld:%lld, role %s",

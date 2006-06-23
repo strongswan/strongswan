@@ -94,6 +94,7 @@ struct private_initiator_init_t {
 	 * @param request	message_t object to add the NONCE payload
 	 */
 	status_t (*build_nonce_payload) (private_initiator_init_t *this,message_t *request);	
+
 	/**
 	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
 	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
