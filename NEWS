@@ -1,3 +1,14 @@
+strongswan-4.0.2
+----------------
+
+- The mixed PSK/RSA roadwarrior detection capability introduced by the
+  strongswan-2.7.0 release necessitated the pre-parsing of the IKE proposal
+  payloads by the responder right before any defined IKE Main Mode state had
+  been established. Although any form of bad proposal syntax was being correctly
+  detected by the payload parser, the subsequent error handler didn't check
+  the state pointer before logging current state information, causing an
+  immediate crash of the pluto keying daemon due to a NULL pointer.
+
 strongswan-4.0.1
 ----------------
 
