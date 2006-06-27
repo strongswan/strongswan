@@ -74,6 +74,11 @@ struct private_x509_t {
 	time_t installed;
 
 	/**
+	 * Time until certificate can be trusted
+	 */
+	time_t until;
+
+	/**
 	 * X.509 Certificate in DER format
 	 */
 	chunk_t certificate;
@@ -910,6 +915,14 @@ static bool is_ca(const private_x509_t *this)
 }
 
 /**
+ * Implements x509_t.is_self_signed
+ */
+static bool is_self_signed(const private_x509_t *this)
+{
+	return this->subject->equals(this->subject, this->issuer);
+}
+
+/**
  * Implements x509_t.equals_subjectAltName
  */
 static bool equals_subjectAltName(const private_x509_t *this, identification_t *id)
@@ -933,11 +946,46 @@ static bool equals_subjectAltName(const private_x509_t *this, identification_t *
 }
 
 /**
+ * Implements x509_t.is_issuer
+ */
+static bool is_issuer(const private_x509_t *this, const private_x509_t *issuer)
+{
+	return (this->authKeyID.ptr)
+			? chunk_equals(this->authKeyID, issuer->subjectKeyID)
+			: (this->issuer->equals(this->issuer, issuer->subject)
+			   && chunk_equals_or_null(this->authKeySerialNumber, issuer->serialNumber));
+}
+
+/**
  * Implements x509_t.get_public_key
  */
 static rsa_public_key_t *get_public_key(const private_x509_t *this)
 {
 	return this->public_key->clone(this->public_key);
+}
+
+/**
+ * Implements x509_t.get_serialNumber
+ */
+static chunk_t get_serialNumber(const private_x509_t *this)
+{
+	return this->serialNumber;
+}
+
+/**
+ * Implements x509_t.get_subjectKeyID
+ */
+static chunk_t get_subjectKeyID(const private_x509_t *this)
+{
+	return this->subjectKeyID;
+}
+
+/**
+ * Implements x509_t.get_issuer
+ */
+static identification_t *get_issuer(const private_x509_t *this)
+{
+	return this->issuer;
 }
 
 /**
@@ -949,11 +997,19 @@ static identification_t *get_subject(const private_x509_t *this)
 }
 
 /**
- * Implements x509_t.get_issuer
+ * Implements x509_t.set_until
  */
-static identification_t *get_issuer(const private_x509_t *this)
+static void set_until(private_x509_t *this, time_t until)
 {
-	return this->issuer;
+	this->until = until;
+}
+
+/**
+ * Implements x509_t.verify
+ */
+static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
+{
+	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertificate, this->signature);
 }
 
 /**
@@ -1060,8 +1116,11 @@ static void log_certificate(const private_x509_t *this, logger_t *logger, bool u
 	logger->log(logger, CONTROL, "                 not after  %s %s", buf,
 			check_expiry(this->notAfter, CERT_WARNING_INTERVAL, TRUE));
 
-	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits%s",
-			BITS_PER_BYTE * pubkey->get_keysize(pubkey), has_key? ", has private key":"");
+	timetoa(buf, BUF_LEN, &this->until, utc);
+	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits%s, until %s",
+			BITS_PER_BYTE * pubkey->get_keysize(pubkey),
+			has_key? ", has private key":"", buf);
+
 	chunk_to_hex(buf, BUF_LEN, pubkey->get_keyid(pubkey));
 	logger->log(logger, CONTROL, "       keyid:    %s", buf);
 
@@ -1103,12 +1162,18 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	/* public functions */
 	this->public.equals = (bool (*) (const x509_t*,const x509_t*))equals;
 	this->public.equals_subjectAltName = (bool (*) (const x509_t*,identification_t*))equals_subjectAltName;
+	this->public.is_issuer = (bool (*) (const x509_t*,const x509_t*))is_issuer;
 	this->public.is_valid = (err_t (*) (const x509_t*,time_t*))is_valid;
 	this->public.is_ca = (bool (*) (const x509_t*))is_ca;
-	this->public.destroy = (void (*) (x509_t*))destroy;
+	this->public.is_self_signed = (bool (*) (const x509_t*))is_self_signed;
 	this->public.get_public_key = (rsa_public_key_t* (*) (const x509_t*))get_public_key;
-	this->public.get_subject = (identification_t* (*) (const x509_t*))get_subject;
+	this->public.get_serialNumber = (chunk_t (*) (const x509_t*))get_serialNumber;
+	this->public.get_subjectKeyID = (chunk_t (*) (const x509_t*))get_subjectKeyID;
 	this->public.get_issuer = (identification_t* (*) (const x509_t*))get_issuer;
+	this->public.get_subject = (identification_t* (*) (const x509_t*))get_subject;
+	this->public.set_until = (void (*) (x509_t*,time_t))set_until;
+	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
+	this->public.destroy = (void (*) (x509_t*))destroy;
 	this->public.log_certificate = (void (*) (const x509_t*,logger_t*,bool,bool))log_certificate;
 
 	/* we do not use a per-instance logger right now, since its not always accessible */
@@ -1127,7 +1192,8 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 		destroy(this);
 		return NULL;
 	}
-
+	/* set trusted lifetime of public key to notAfter */
+	this->until = this->notAfter;
 	return &this->public;
 }
 

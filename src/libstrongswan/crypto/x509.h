@@ -49,15 +49,39 @@ typedef struct x509_t x509_t;
 struct x509_t {
 
 	/**
+	 * @brief Set trusted public key life.
+	 * 
+	 * @param this				calling object
+	 * @param until				time until public key is trusted
+	 */
+	void (*set_until) (x509_t *this, time_t until);
+		
+	/**
 	 * @brief Get the RSA public key from the certificate.
 	 * 
 	 * @param this				calling object
 	 * @return					public_key
 	 */
 	rsa_public_key_t *(*get_public_key) (const x509_t *this);
+
+	/**
+	 * @brief Get serial number from the certificate.
+	 * 
+	 * @param this				calling object
+	 * @return					serialNumber
+	 */
+	chunk_t (*get_serialNumber) (const x509_t *this);
 		
 	/**
-	 * @brief Get the certificate issuers ID.
+	 * @brief Get serial number from the certificate.
+	 * 
+	 * @param this				calling object
+	 * @return					subjectKeyID
+	 */
+	chunk_t (*get_subjectKeyID) (const x509_t *this);
+		
+	/**
+	 * @brief Get the certificate issuer's ID.
 	 * 
 	 * The resulting ID is always a identification_t
 	 * of type ID_DER_ASN1_DN.
@@ -81,19 +105,10 @@ struct x509_t {
 	/**
 	 * @brief Check if a certificate is trustworthy
 	 * 
-	 * Use the issuer's public key to verify 
-	 * the trustworthiness of a certificate.
-	 * 
-	 * @todo implement!
+	 * @param this			calling object
+	 * @param signer		signer's RSA public key
 	 */
-	bool (*verify) (const x509_t *this, rsa_public_key_t *signer);
-	
-	/**
-	 * @brief Get the key identifier of the public key.
-	 * 
-	 * @todo implement!
-	 */
-	chunk_t (*get_subject_key_identifier) (const x509_t *this);
+	bool (*verify) (const x509_t *this, const rsa_public_key_t *signer);
 	
 	/**
 	 * @brief Compare two certificates.
@@ -102,7 +117,7 @@ struct x509_t {
 	 * 
 	 * @param this			first cert for compare
 	 * @param other			second cert for compare
-	 * @return			TRUE if signature is equal
+	 * @return				TRUE if signature is equal
 	 */
 	bool (*equals) (const x509_t *this, const x509_t *that);
 	
@@ -111,16 +126,25 @@ struct x509_t {
 	 * 
 	 * @param this			certificate being examined
 	 * @param id			id which is being compared to the subjectAltNames
-	 * @return			TRUE if a match is found
+	 * @return				TRUE if a match is found
 	 */
 	bool (*equals_subjectAltName) (const x509_t *this, identification_t *id);
+
+	/**
+	 * @brief Checks if the subject of the other cert is the issuer of this cert.
+	 * 
+	 * @param this			certificate
+	 * @param issuer		potential issuer certificate
+	 * @return				TRUE if issuer is found
+	 */
+	bool (*is_issuer) (const x509_t *this, const x509_t *issuer);
 
 	/**
 	 * @brief Checks the validity interval of the certificate
 	 * 
 	 * @param this			certificate being examined
 	 * @param until			until = min(until, notAfter)
-	 * @return			NULL if the certificate is valid
+	 * @return				NULL if the certificate is valid
 	 */
 	err_t (*is_valid) (const x509_t *this, time_t *until);
 	
@@ -128,10 +152,18 @@ struct x509_t {
 	 * @brief Returns the CA basic constraints flag
 	 * 
 	 * @param this			certificate being examined
-	 * @return			TRUE if the CA flag is set
+	 * @return				TRUE if the CA flag is set
 	 */
 	bool (*is_ca) (const x509_t *this);
 	
+	/**
+	 * @brief Checks if the certificate is self-signed (subject equals issuer)
+	 * 
+	 * @param this			certificate being examined
+	 * @return				TRUE if self-signed
+	 */
+	bool (*is_self_signed) (const x509_t *this);
+
 	/**
 	 * @brief Destroys the certificate.
 	 * 
@@ -154,7 +186,7 @@ struct x509_t {
  * @brief Read a x509 certificate from a DER encoded blob.
  * 
  * @param chunk 	chunk containing DER encoded data
- * @return 			created x509_t certificate, or NULL if invalid.
+ * @return 			created x509_t certificate, or NULL if invlid.
  * 
  * @ingroup transforms
  */

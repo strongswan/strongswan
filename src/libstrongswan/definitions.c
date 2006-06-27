@@ -20,6 +20,8 @@
  * for more details.
  */
 
+#include <stdlib.h>
+
 #include "definitions.h"
 
 /*
@@ -38,3 +40,19 @@ char *mapping_find(mapping_t * maps, int value)
 	}
 	return "INVALID MAPPING";
 }
+
+/*
+ * Described in header
+ */
+const char *enum_name(enum_names *ed, unsigned long val)
+{
+	enum_names	*p;
+
+	for (p = ed; p != NULL; p = p->en_next_range)
+	{
+		if (p->en_first <= val && val <= p->en_last)
+	    	return p->en_names[val - p->en_first];
+	}
+	return NULL;
+}
+

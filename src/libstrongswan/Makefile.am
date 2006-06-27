@@ -21,6 +21,7 @@ crypto/hashers/sha1_hasher.c crypto/hashers/sha1_hasher.h \
 crypto/hashers/md5_hasher.c  crypto/hashers/md5_hasher.h \
 crypto/prf_plus.h crypto/prf_plus.c \
 crypto/hmac.c crypto/hmac.h \
+crypto/certinfo.c crypto/certinfo.h \
 crypto/x509.c crypto/x509.h \
 crypto/crl.c crypto/crl.h \
 crypto/diffie_hellman.c crypto/diffie_hellman.h \

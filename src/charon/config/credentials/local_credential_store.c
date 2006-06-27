@@ -25,15 +25,18 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "local_credential_store.h"
-
 #include <utils/lexparser.h>
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
+#include <crypto/certinfo.h>
+#include <crypto/rsa/rsa_public_key.h>
 #include <crypto/x509.h>
 #include <crypto/crl.h>
 
-#define PATH_BUF 256
+#include "local_credential_store.h"
+
+#define PATH_BUF			256
+#define MAX_CA_PATH_LEN		7
 
 typedef struct private_local_credential_store_t private_local_credential_store_t;
 
@@ -163,6 +166,236 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 	}
 	iterator->destroy(iterator);
 	return found;
+}
+
+/**
+ * Implementation of credential_store_t.get_issuer_certificate.
+ */
+static x509_t* get_issuer_certificate(private_local_credential_store_t *this, const x509_t *cert)
+{
+	x509_t *issuer_cert = NULL;
+
+	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+
+	while (iterator->has_next(iterator))
+	{
+		x509_t *current_cert;
+
+		iterator->current(iterator, (void**)&current_cert);
+		if (cert->is_issuer(cert, current_cert))
+		{
+			issuer_cert = current_cert;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	return issuer_cert;
+}
+
+/**
+ * Implementation of credential_store_t.get_crl.
+ */
+static crl_t* get_crl(private_local_credential_store_t *this, const x509_t *issuer)
+{
+	crl_t *crl = NULL;
+
+	iterator_t *iterator = this->crls->create_iterator(this->crls, TRUE);
+
+	while (iterator->has_next(iterator))
+	{
+		crl_t *current_crl;
+
+		iterator->current(iterator, (void**)&current_crl);
+		if (current_crl->is_issuer(current_crl, issuer))
+		{
+			crl = current_crl;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	return crl;
+}
+
+/**
+ *  Verify the certificate status using CRLs
+ */
+static cert_status_t verify_by_crl(private_local_credential_store_t* this, const x509_t *cert,
+	const x509_t *issuer_cert, certinfo_t *certinfo)
+{
+	crl_t *crl;
+	bool valid_signature;
+	rsa_public_key_t *issuer_public_key;
+
+
+	pthread_mutex_lock(&(this->crls_mutex));
+
+	crl = get_crl(this, issuer_cert);
+	if (crl == NULL)
+	{
+		this->logger->log(this->logger, ERROR, "crl not found");
+		goto err;
+	}
+	this->logger->log(this->logger, CONTROL|LEVEL1, "crl found");
+	
+ 	issuer_public_key = issuer_cert->get_public_key(issuer_cert);
+	valid_signature = crl->verify(crl, issuer_public_key);
+	issuer_public_key->destroy(issuer_public_key);
+
+	if (!valid_signature)
+	{
+	    this->logger->log(this->logger, ERROR, "crl signature is invalid");
+		goto err;
+	}
+	this->logger->log(this->logger, CONTROL|LEVEL1, "crl signature is valid");
+
+	crl->get_status(crl, certinfo);
+
+err:
+	pthread_mutex_unlock(&(this->crls_mutex));
+	return certinfo->get_status(certinfo);
+}
+
+/**
+  * Verify the certificate status using OCSP
+  */
+static cert_status_t verify_by_ocsp(private_local_credential_store_t* this,
+	 		const x509_t *cert, certinfo_t *certinfo)
+{
+	/* TODO implement function */
+	return CERT_UNDEFINED;
+}
+
+/**
+  * Remove a public key for the linked list
+  */
+static void remove_public_key(private_local_credential_store_t *this, const x509_t *cert)
+{
+	/* TODO implement function */
+}
+
+/**
+ * Implementation of credential_store_t.verify.
+ */
+static bool verify(private_local_credential_store_t *this, const x509_t *cert, time_t *until)
+{
+	int pathlen;
+	
+	*until = UNDEFINED_TIME;
+
+	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
+	{
+		err_t ugh = NULL;
+		x509_t *issuer_cert;
+		rsa_public_key_t *issuer_public_key;
+		bool valid_signature;
+
+		identification_t *subject = cert->get_subject(cert);
+		identification_t *issuer  = cert->get_issuer(cert);
+
+		this->logger->log(this->logger, CONTROL|LEVEL1, "subject: '%s'", subject->get_string(subject));
+		this->logger->log(this->logger, CONTROL|LEVEL1, "issuer:  '%s'", issuer->get_string(issuer));
+
+		ugh = cert->is_valid(cert, until);
+		if (ugh != NULL)
+		{
+			this->logger->log(this->logger, ERROR, "certificate %s", ugh);
+			return FALSE;
+		}
+		this->logger->log(this->logger, CONTROL|LEVEL1, "certificate is valid");
+
+		issuer_cert = get_issuer_certificate(this, cert);
+		if (issuer_cert == NULL)
+		{
+			this->logger->log(this->logger, ERROR, "issuer certificate not found");
+			return FALSE;
+		}
+		this->logger->log(this->logger, CONTROL|LEVEL1, "issuer certificate found");
+
+		issuer_public_key = issuer_cert->get_public_key(issuer_cert);
+		valid_signature = cert->verify(cert, issuer_public_key);
+		issuer_public_key->destroy(issuer_public_key);
+
+		if (!valid_signature)
+		{
+	    	this->logger->log(this->logger, ERROR, "certificate signature is invalid");
+			return FALSE;
+		}
+		this->logger->log(this->logger, CONTROL|LEVEL1, "certificate signature is valid");
+
+		/* check if cert is a self-signed root ca */
+		if (pathlen > 0 && cert->is_self_signed(cert))
+		{
+			this->logger->log(this->logger, CONTROL|LEVEL1, "reached self-signed root ca");
+			return TRUE;
+		}
+		else
+		{
+			time_t nextUpdate;
+			cert_status_t status;
+			certinfo_t *certinfo = certinfo_create(cert->get_serialNumber(cert));
+
+			certinfo->set_nextUpdate(certinfo, *until);
+
+			/* first check certificate revocation using ocsp */
+			status = verify_by_ocsp(this, cert, certinfo);
+
+			/* if ocsp service is not available then fall back to crl */
+			if ((status == CERT_UNDEFINED) || (status == CERT_UNKNOWN && this->strict))
+			{
+				status = verify_by_crl(this, cert, issuer_cert, certinfo);
+			}
+			
+			nextUpdate = certinfo->get_nextUpdate(certinfo);
+
+			switch (status)
+			{
+				case CERT_GOOD:
+					/* if status information is stale */
+					if (this->strict && nextUpdate < time(NULL))
+					{
+						this->logger->log(this->logger, CONTROL|LEVEL1, "certificate is good but status is stale");
+						remove_public_key(this, cert);
+						return FALSE;
+					}
+					this->logger->log(this->logger, CONTROL|LEVEL1, "certificate is good");
+		
+					/* with strict crl policy the public key must have the same
+					 * lifetime as the validity of the ocsp status or crl lifetime
+					 */
+					if (this->strict && nextUpdate < *until)
+		    			*until = nextUpdate;
+					break;
+				case CERT_REVOKED:
+					{
+						u_char buf[TIMETOA_BUF];
+						time_t revocationTime = certinfo->get_revocationTime(certinfo);
+
+						timetoa(buf, TIMETOA_BUF, &revocationTime, TRUE);
+						this->logger->log(this->logger, ERROR, "certificate was revoked on %s, reason: %s",
+										  buf, certinfo->get_revocationReason(certinfo));
+						remove_public_key(this, cert);
+						return FALSE;
+					}
+				case CERT_UNKNOWN:
+				case CERT_UNDEFINED:
+				default:
+					this->logger->log(this->logger, CONTROL|LEVEL1, "certificate status unknown");
+					if (this->strict)
+					{
+						remove_public_key(this, cert);
+						return FALSE;
+					}
+					break;
+			}
+			certinfo->destroy(certinfo);
+		}
+		/* go up one step in the trust chain */
+		cert = issuer_cert;
+	}
+    this->logger->log(this->logger, ERROR, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	return FALSE;
 }
 
 /**
@@ -600,6 +833,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool(*)(credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
+	this->public.credential_store.verify = (bool(*)(credential_store_t*,const x509_t*,time_t*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_ca_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_ca_certificate;
 	this->public.credential_store.log_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_certificates;

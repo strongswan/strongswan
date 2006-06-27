@@ -92,6 +92,16 @@ struct credential_store_t {
 	bool (*has_rsa_private_key) (credential_store_t *this, rsa_public_key_t *pubkey);
 
 	/**
+	 * @brief Verify an X.509 certificate up to trust anchor including revocation checks
+	 *
+	 * @param this		calling object
+	 * @param cert		certificate to be verified
+	 * @param until		time until which the cert can be trusted
+	 * @return			TRUE if trusted
+	 */
+	bool (*verify) (credential_store_t *this, const x509_t *cert, time_t *until);
+
+	/**
 	 * @brief If an end certificate does not already exists in the credential store then add it.
 	 *
 	 * @param this		calling object
@@ -108,7 +118,7 @@ struct credential_store_t {
 	 * @return			pointer to the added or already existing certificate
 	 */
 	x509_t* (*add_ca_certificate) (credential_store_t *this, x509_t *cert);
-	
+
 	/**
 	 * @brief Lists all certificates kept in the local credential store.
 	 *

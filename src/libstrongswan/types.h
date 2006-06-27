@@ -110,23 +110,6 @@ enum status_t {
 };
 
 /**
- * RFC 2459 CRL reason codes
- */
-
-/* TODO extern enum_names crl_reason_names; */
-
-typedef enum {
-    REASON_UNSPECIFIED =			0,
-    REASON_KEY_COMPROMISE = 		1,
-    REASON_CA_COMPROMISE = 			2,
-    REASON_AFFILIATION_CHANGED =	3,
-    REASON_SUPERSEDED =				4,
-    REASON_CESSATION_OF_OPERATON =	5,
-    REASON_CERTIFICATE_HOLD =		6,
-    REASON_REMOVE_FROM_CRL =		8
-} crl_reason_t;
-
-/**
  * String mappings for type status_t.
  */
 extern mapping_t status_m[];

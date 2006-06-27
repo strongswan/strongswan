@@ -136,6 +136,7 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 	{
 		identification_t *id = *idp;
 		identification_t *subject = cert->get_subject(cert);
+		time_t until;
 
 		err_t ugh = cert->is_valid(cert, NULL);
 
@@ -149,6 +150,20 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 			id = subject;
 			*idp = id->clone(id);
 		}
+		/* test output */
+		if (charon->credentials->verify(charon->credentials, cert, &until))
+		{
+			char buf[TIMETOA_BUF];
+
+			timetoa(buf, TIMETOA_BUF, &until, TRUE);
+			logger->log(logger, CONTROL, "  end entity certificate is trusted until %s", buf);
+			cert->set_until(cert, until);
+		}
+		else
+		{
+			logger->log(logger, ERROR, "  end entity certificate is not trusted");
+		}
+		/* end of test output */
 		return charon->credentials->add_end_certificate(charon->credentials, cert);
 	}
 	return NULL;
@@ -305,7 +320,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	if (msg->add_conn.me.cert)
 	{
-		x509_t *cert = load_end_certificate(msg->add_conn.me.cert, &my_id, this->stroke_logger);
+		x509_t *cert = load_end_certificate(msg->add_conn.me.cert, &my_id, this->logger);
 
 		if (my_ca == NULL && !my_ca_same && cert)
 		{
@@ -316,7 +331,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	if (msg->add_conn.other.cert)
 	{
-		x509_t *cert = load_end_certificate(msg->add_conn.other.cert, &other_id, this->stroke_logger);
+		x509_t *cert = load_end_certificate(msg->add_conn.other.cert, &other_id, this->logger);
 
 		if (other_ca == NULL && !other_ca_same && cert)
 		{

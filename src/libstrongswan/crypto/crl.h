@@ -26,10 +26,10 @@
 #include <types.h>
 #include <definitions.h>
 #include <crypto/rsa/rsa_public_key.h>
+#include <crypto/certinfo.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
 #include <utils/logger.h>
-
 
 typedef struct crl_t crl_t;
 
@@ -54,7 +54,7 @@ struct crl_t {
 	 * @return					issuers ID
 	 */
 	identification_t *(*get_issuer) (const crl_t *this);
-		
+
 	/**
 	 * @brief Check if both crls have the same issuer.
 	 * 
@@ -65,15 +65,14 @@ struct crl_t {
 	bool (*equals_issuer) (const crl_t *this, const crl_t *other);
 
 	/**
-	 * @brief Check if a crl is trustworthy
+	 * @brief Check if ia candidate cert is the issuer of the crl
 	 * 
-	 * Use the issuer's public key to verify 
-	 * the trustworthiness of a crl.
-	 * 
-	 * @todo implement!
+	 * @param this				calling object
+	 * @param issuer			candidate issuer of the crl
+	 * @return					TRUE if issuer
 	 */
-	bool (*verify) (const crl_t *this, rsa_public_key_t *signer);
-	
+	bool (*is_issuer) (const crl_t *this, const x509_t *issuer);
+
 	/**
 	 * @brief Checks the validity interval of the crl
 	 * 
@@ -94,13 +93,21 @@ struct crl_t {
 	bool (*is_newer) (const crl_t *this, const crl_t *other);
 	
 	/**
-	 * @brief Check if a certificate has been revoked.
+	 * @brief Check if a crl is trustworthy.
 	 * 
-	 * This function uses the certificate's serialNumber
-	 * to get the revocation status.
-	 * 
+	 * @param this			calling object
+	 * @param signer		signer's RSA public key
+	 * @return				TRUE if crl is trustworthy
 	 */
-	bool (*get_status) (const crl_t *this, chunk_t serial);
+	bool (*verify) (const crl_t *this, const rsa_public_key_t *signer);
+
+	/**
+	 * @brief Get the certificate status
+	 * 
+	 * @param this			calling object
+	 * @param certinfo		certinfo is updated
+	 */
+	void (*get_status) (const crl_t *this, certinfo_t *certinfo);
 
 	/**
 	 * @brief Destroys the crl.

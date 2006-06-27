@@ -135,4 +135,22 @@ struct mapping_t
  */
 char *mapping_find(mapping_t *mappings, int value);
 
+/**
+ * @brief Describes an enumeration
+ * enum_name() returns the name of an enum value, or NULL if invalid.
+ */
+typedef const struct enum_names enum_names;
+
+struct enum_names {
+	unsigned long en_first;  	/* first value in range */
+	unsigned long en_last;   	/* last value in range (inclusive) */
+	const char *const *en_names;
+	enum_names *en_next_range;	/* descriptor of next range */
+};
+
+/**
+ * @brief Returns the name of an enum value, or NULL if invalid
+ */
+const char *enum_name(enum_names *ed, unsigned long val);
+
 #endif /*DEFINITIONS_H_*/

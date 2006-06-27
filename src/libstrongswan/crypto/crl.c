@@ -33,8 +33,9 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
-#include "crl.h"
+#include "certinfo.h"
 #include "x509.h"
+#include "crl.h"
 
 #define CRL_WARNING_INTERVAL	7	/* days */
 
@@ -132,8 +133,9 @@ struct private_crl_t {
 	chunk_t signature;
 };
 
-/* ASN.1 definition of an X.509 certificate revocation list */
-
+/**
+  * ASN.1 definition of an X.509 certificate revocation list
+ */
 static const asn1Object_t crlObjects[] = {
 	{ 0, "certificateList",				ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
 	{ 1,   "tbsCertList",				ASN1_SEQUENCE,     ASN1_OBJ  }, /*  1 */
@@ -201,7 +203,8 @@ static crl_reason_t parse_crl_reasonCode(chunk_t object)
 	{
 		reason = *object.ptr;
 	}
-	/* TODO logger->log(logger, CONTROL|LEVEL2, "  '%s'", enum_name(&crl_reason_names, reason)) */
+	logger->log(logger, CONTROL|LEVEL2, "  '%s'", enum_name(&crl_reason_names, reason));
+
     return reason;
 }
 
@@ -332,14 +335,6 @@ static err_t is_valid(const private_crl_t *this, time_t *until, bool strict)
 }
 
 /**
- * Implements crl_t.is_newer
- */
-static bool is_newer(const private_crl_t *this, const private_crl_t *other)
-{
-	return (this->nextUpdate > other->nextUpdate);
-}
-
-/**
  * Implements crl_t.get_issuer
  */
 static identification_t *get_issuer(const private_crl_t *this)
@@ -359,7 +354,61 @@ static bool equals_issuer(const private_crl_t *this, const private_crl_t *other)
 }
 
 /**
- * destroy
+ * Implements crl_t.is_issuer
+ */
+static bool is_issuer(const private_crl_t *this, const x509_t *issuer)
+{
+	return (this->authKeyID.ptr)
+			? chunk_equals(this->authKeyID, issuer->get_subjectKeyID(issuer))
+			: (this->issuer->equals(this->issuer, issuer->get_subject(issuer))
+			   && chunk_equals_or_null(this->authKeySerialNumber, issuer->get_serialNumber(issuer)));
+}
+
+/**
+ * Implements crl_t.is_newer
+ */
+static bool is_newer(const private_crl_t *this, const private_crl_t *other)
+{
+	return (this->nextUpdate > other->nextUpdate);
+}
+
+/**
+ * Implements crl_t.verify
+ */
+static bool verify(const private_crl_t *this, const rsa_public_key_t *signer)
+{
+	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertList, this->signature);
+}
+
+/**
+ * Implements crl_t.get_status
+ */
+static void get_status(const private_crl_t *this, certinfo_t *certinfo)
+{
+	chunk_t serialNumber = certinfo->get_serialNumber(certinfo);
+	iterator_t *iterator = this->revokedCertificates->create_iterator(this->revokedCertificates, TRUE);
+
+	certinfo->set_nextUpdate(certinfo, this->nextUpdate);
+	certinfo->set_status(certinfo, CERT_GOOD);
+
+	while (iterator->has_next(iterator))
+	{
+		revokedCert_t *revokedCert;
+
+		iterator->current(iterator, (void**)&revokedCert);
+		if (chunk_equals(serialNumber, revokedCert->userCertificate))
+		{
+			certinfo->set_status(certinfo, CERT_REVOKED);
+			certinfo->set_revocationTime(certinfo, revokedCert->revocationDate);
+			certinfo->set_revocationReason(certinfo, revokedCert->revocationReason);
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * Implements crl_t.destroy
  */
 static void destroy(private_crl_t *this)
 {
@@ -440,12 +489,15 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->authKeySerialNumber = CHUNK_INITIALIZER;
 	
 	/* public functions */
-	this->public.is_valid = (err_t (*) (const crl_t*,time_t*))is_valid;
-	this->public.destroy = (void (*) (crl_t*))destroy;
 	this->public.get_issuer = (identification_t* (*) (const crl_t*))get_issuer;
 	this->public.equals_issuer = (bool (*) (const crl_t*,const crl_t*))equals_issuer;
+	this->public.is_issuer = (bool (*) (const crl_t*,const x509_t*))is_issuer;
+	this->public.is_valid = (err_t (*) (const crl_t*,time_t*,bool))is_valid;
 	this->public.is_newer = (bool (*) (const crl_t*,const crl_t*))is_newer;
+	this->public.verify = (bool (*) (const crl_t*,const rsa_public_key_t*))verify;
+	this->public.get_status = (void (*) (const crl_t*,certinfo_t*))get_status;
 	this->public.log_crl = (void (*) (const crl_t*,logger_t*,bool,bool))log_crl;
+	this->public.destroy = (void (*) (crl_t*))destroy;
 
 	/* we do not use a per-instance logger right now, since its not always accessible */
 	logger = logger_manager->get_logger(logger_manager, ASN1);

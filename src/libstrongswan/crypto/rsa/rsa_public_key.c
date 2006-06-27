@@ -141,7 +141,7 @@ struct private_rsa_public_key_t {
 	 * @param data		data to process
 	 * @return			processed data
 	 */
-	chunk_t (*rsaep) (private_rsa_public_key_t *this, chunk_t data);
+	chunk_t (*rsaep) (const private_rsa_public_key_t *this, chunk_t data);
 		
 	/**
 	 * @brief Implements the RSASVP1 algorithm specified in PKCS#1.
@@ -150,7 +150,7 @@ struct private_rsa_public_key_t {
 	 * @param data		data to process
 	 * @return			processed data
 	 */
-	chunk_t (*rsavp1) (private_rsa_public_key_t *this, chunk_t data);
+	chunk_t (*rsavp1) (const private_rsa_public_key_t *this, chunk_t data);
 };
 
 private_rsa_public_key_t *rsa_public_key_create_empty(void);
@@ -158,7 +158,7 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void);
 /**
  * Implementation of private_rsa_public_key_t.rsaep and private_rsa_public_key_t.rsavp1
  */
-static chunk_t rsaep(private_rsa_public_key_t *this, chunk_t data)
+static chunk_t rsaep(const private_rsa_public_key_t *this, chunk_t data)
 {
 	mpz_t m, c;
 	chunk_t encrypted;
@@ -182,7 +182,7 @@ static chunk_t rsaep(private_rsa_public_key_t *this, chunk_t data)
 /**
  * Implementation of rsa_public_key.verify_emsa_pkcs1_signature.
  */
-static status_t verify_emsa_pkcs1_signature(private_rsa_public_key_t *this, chunk_t data, chunk_t signature)
+static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this, chunk_t data, chunk_t signature)
 {
 	hasher_t *hasher = NULL;
 	chunk_t hash;
@@ -291,7 +291,7 @@ end:
 /**
  * Implementation of rsa_public_key.get_key.
  */
-static status_t get_key(private_rsa_public_key_t *this, chunk_t *key)
+static status_t get_key(const private_rsa_public_key_t *this, chunk_t *key)
 {	
 	chunk_t n, e;
 
@@ -313,7 +313,7 @@ static status_t get_key(private_rsa_public_key_t *this, chunk_t *key)
 /**
  * Implementation of rsa_public_key.save_key.
  */
-static status_t save_key(private_rsa_public_key_t *this, char *file)
+static status_t save_key(const private_rsa_public_key_t *this, char *file)
 {
 	return NOT_SUPPORTED;
 }
@@ -321,7 +321,7 @@ static status_t save_key(private_rsa_public_key_t *this, char *file)
 /**
  * Implementation of rsa_public_key.get_modulus.
  */
-static mpz_t *get_modulus(private_rsa_public_key_t *this)
+static mpz_t *get_modulus(const private_rsa_public_key_t *this)
 {
 	return &this->n;
 }
@@ -329,7 +329,7 @@ static mpz_t *get_modulus(private_rsa_public_key_t *this)
 /**
  * Implementation of rsa_public_key.get_keysize.
  */
-static size_t get_keysize(private_rsa_public_key_t *this)
+static size_t get_keysize(const private_rsa_public_key_t *this)
 {
 	return this->k;
 }
@@ -337,7 +337,7 @@ static size_t get_keysize(private_rsa_public_key_t *this)
 /**
  * Implementation of rsa_public_key.get_keyid.
  */
-static chunk_t get_keyid(private_rsa_public_key_t *this)
+static chunk_t get_keyid(const private_rsa_public_key_t *this)
 {
 	return this->keyid;
 }
@@ -345,7 +345,7 @@ static chunk_t get_keyid(private_rsa_public_key_t *this)
 /**
  * Implementation of rsa_public_key.clone.
  */
-static rsa_public_key_t* _clone(private_rsa_public_key_t *this)
+static rsa_public_key_t* _clone(const private_rsa_public_key_t *this)
 {
 	private_rsa_public_key_t *clone = rsa_public_key_create_empty();
 	
@@ -376,13 +376,13 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 	private_rsa_public_key_t *this = malloc_thing(private_rsa_public_key_t);
 	
 	/* public functions */
-	this->public.verify_emsa_pkcs1_signature = (status_t (*) (rsa_public_key_t*,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
-	this->public.get_key = (status_t (*) (rsa_public_key_t*,chunk_t*))get_key;
-	this->public.save_key = (status_t (*) (rsa_public_key_t*,char*))save_key;
-	this->public.get_modulus = (mpz_t *(*) (rsa_public_key_t*))get_modulus;
-	this->public.get_keysize = (size_t (*) (rsa_public_key_t*))get_keysize;
-	this->public.get_keyid = (chunk_t (*) (rsa_public_key_t*))get_keyid;
-	this->public.clone = (rsa_public_key_t* (*) (rsa_public_key_t*))_clone;
+	this->public.verify_emsa_pkcs1_signature = (status_t (*) (const rsa_public_key_t*,chunk_t,chunk_t))verify_emsa_pkcs1_signature;
+	this->public.get_key = (status_t (*) (const rsa_public_key_t*,chunk_t*))get_key;
+	this->public.save_key = (status_t (*) (const rsa_public_key_t*,char*))save_key;
+	this->public.get_modulus = (mpz_t *(*) (const rsa_public_key_t*))get_modulus;
+	this->public.get_keysize = (size_t (*) (const rsa_public_key_t*))get_keysize;
+	this->public.get_keyid = (chunk_t (*) (const rsa_public_key_t*))get_keyid;
+	this->public.clone = (rsa_public_key_t* (*) (const rsa_public_key_t*))_clone;
 	this->public.destroy = (void (*) (rsa_public_key_t*))destroy;
 	
 	/* private functions */
