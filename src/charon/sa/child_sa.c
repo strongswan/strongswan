@@ -268,7 +268,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 		dst = this->other.addr;
 	}
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Adding %s %s SA",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "adding %s %s SA",
 					  mine ? "inbound" : "outbound",
 					  mapping_find(protocol_id_m, this->protocol));
 	
