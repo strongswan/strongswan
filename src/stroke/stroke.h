@@ -77,6 +77,7 @@ struct stroke_end_t {
 	char *id;
 	char *cert;
 	char *ca;
+	char *updown;
 	char *address;
 	char *subnet;
 	int subnet_mask;
