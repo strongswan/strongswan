@@ -1196,6 +1196,19 @@ read_packet(struct msg_digest *md)
 	}
 #endif
 
+#define IKEV2_VERSION_OFFSET	17
+#define IKEV2_VERSION		0x20
+
+    /* ignore IKEv2 packets - they will be handled by charon */
+    if (pbs_room(&md->packet_pbs) > IKEV2_VERSION_OFFSET
+    &&  md->packet_pbs.start[IKEV2_VERSION_OFFSET] == IKEV2_VERSION)
+    {
+	DBG(DBG_CONTROLMORE,
+	    DBG_log("  ignoring IKEv2 packet")
+	)
+	return FALSE;
+    }
+
     return TRUE;
 }
 
