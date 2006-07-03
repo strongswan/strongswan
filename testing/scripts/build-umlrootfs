@@ -126,6 +126,11 @@ if [ "$USE_LDAP" = "yes" ]
 then
     echo -n " --enable-ldap=3" >> $INSTALLSHELL
 fi
+
+if [ "$USE_LEAK_DETECTIVE" = "yes" ]
+then
+    echo -n " --enable-leak-detective" >> $INSTALLSHELL
+fi
 echo "" >> $INSTALLSHELL
 echo "make" >> $INSTALLSHELL
 echo "make install" >> $INSTALLSHELL
