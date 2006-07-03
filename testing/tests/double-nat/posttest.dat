@@ -1,8 +1,0 @@
-alice::iptables -v -n -L
-bob::iptables -v -n -L
-bob::ipsec stop
-alice::ipsec stop
-alice::/etc/init.d/iptables stop 2> /dev/null
-bob::/etc/init.d/iptables stop 2> /dev/null
-moon::iptables -t nat -F
-sun::iptables -t nat -F

@@ -1,5 +1,0 @@
-In IKE phase 2 the roadwarrior <b>carol</b> proposes to gateway <b>moon</b>
-the ESP NULL encryption algorithm with SHA-1 authentication. <b>moon</b> must
-explicitly accept the choice of this insecure algorithm by setting the strict
-flag '!' in <b>esp=null-sha1!</b>. The tunnel is tested by <b>carol</b> 
-sending a ping to client <b>alice</b> behind gateway <b>moon</b>.

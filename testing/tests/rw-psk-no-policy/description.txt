@@ -1,3 +1,0 @@
-The roadwarrior <b>carol</b> wants to set up a connection to gateway <b>moon</b> using
-<b>PSK</b>-based authentication. Since <b>moon</b> supports <b>RSASIG</b>-based
-authentication only, the connection setup fails.

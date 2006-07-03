@@ -1,6 +1,0 @@
-moon::ipsec stop
-carol::ipsec stop
-dave::ipsec stop
-moon::rm /etc/ipsec.d/certs/*
-carol::rm /etc/ipsec.d/certs/*
-dave::rm /etc/ipsec.d/certs/*

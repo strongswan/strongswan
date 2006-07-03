@@ -1,8 +1,0 @@
-Roadwarrior <b>carol</b> and gateway <b>moon</b> each generate a
-PKCS#1 RSA private key and a self-signed X.509 certificate
-using the <b>ipsec scepclient</b> function. Because the UML testing
-environment does not offer enough entropy, the non-blocking /dev/urandom
-device is used in place of /dev/random for generating the random primes.
-<p>
-The self-signed certificates are then distributed to the peers via scp
-and are used to set up a road warrior connection initiated by <b>carol</b> 

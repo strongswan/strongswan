@@ -1,7 +1,0 @@
-An IPsec tunnel connecting the subnets behind the gateways <b>moon</b> and 
-<b>sun</b> is set up. The authentication is based on <b>Preshared Keys</b>
-(PSK). Unfortunately the secret keys of <b>moon</b> and <b>sun</b> do not
-match, so that the responder cannot decrypt ISAKMP message MI3. The resulting
-encrypted notification message cannot in turn be read by the initiator
-<b>moon</b>. In order to avoid a <b>notify-war</b>, any further generation of
-PAYLOAD_MALFORMED messages is suppressed.

@@ -1,8 +1,0 @@
-moon::cat /var/log/auth.log::X.509 certificate rejected::YES
-carol::cat /var/log/auth.log::X.509 certificate rejected::YES
-moon::cat /var/log/auth.log::ignoring informational payload, type INVALID_KEY_INFORMATION::YES
-carol::cat /var/log/auth.log::ignoring informational payload, type INVALID_KEY_INFORMATION::YES
-moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
-moon::ipsec listcrls:: ok::YES
-carol::ipsec listcrls:: ok::YES

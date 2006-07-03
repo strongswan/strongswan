@@ -1,8 +1,0 @@
-# /etc/ipsec.peers/ipsec.dave - connection from dave
-
-conn rw-dave
-	right=%any
-	rightid=dave@strongswan.org
-	rightsourceip=PH_IP_DAVE1
-	auto=add
-

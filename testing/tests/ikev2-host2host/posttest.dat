@@ -1,4 +1,0 @@
-moon::ipsec stop
-sun::ipsec stop
-moon::rm /etc/ipsec.d/certs/*
-sun::rm /etc/ipsec.d/certs/*

@@ -1,8 +1,0 @@
-# /etc/ipsec.peers/ipsec.carol - connection from carol 
-
-conn rw-carol
-	right=%any
-	rightid=carol@strongswan.org
-	rightsourceip=PH_IP_CAROL1
-	auto=add
-

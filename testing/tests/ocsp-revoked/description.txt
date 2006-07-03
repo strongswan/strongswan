@@ -1,7 +1,0 @@
-By setting <b>strictcrlpolicy=yes</b> a <b>strict CRL policy</b> is enforced on
-both roadwarrior <b>carol</b> and gateway <b>moon</b>. Thus when <b>carol</b> initiates
-the connection and no current revocation information is available, the Main Mode
-negotiation fails but an OCSP request issued to the OCSP server <b>winnetou</b>.
-When the second Main Mode trial comes around the OCSP response will be available
-but because the certificate presented by carol has been revoked,
-the IKE negotatiation will fail..

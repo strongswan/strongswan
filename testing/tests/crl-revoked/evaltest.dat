@@ -1,6 +1,0 @@
-moon::cat /var/log/auth.log::X.509 certificate rejected::YES
-moon::cat /var/log/auth.log::certificate was revoked::YES
-carol::cat /var/log/auth.log::ignoring informational payload, type INVALID_KEY_INFORMATION::YES
-moon::ipsec listcrls:: ok::YES
-moon::ipsec status::rw.*STATE_MAIN_R3.*ISAKMP SA established::NO
-carol::ipsec status::home.*STATE_MAIN_I4.*ISAKMP SA established::NO

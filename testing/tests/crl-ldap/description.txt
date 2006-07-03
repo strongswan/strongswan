@@ -1,9 +1,0 @@
-By setting <b>strictcrlpolicy=yes</b> a <b>strict CRL policy</b> is enforced on
-both roadwarrior <b>carol</b> and gateway <b>moon</b>. Thus when <b>carol</b> initiates
-the connection and only an expired CRL cache file in <b>/etc/ipsec.d/crls</b> is
-available, the Main Mode negotiation fails. A http fetch for an updated CRL fails
-because the web server is currently not reachable. Thus the second Main Mode negotiation
-fails, too. Finally an ldap fetch to get the CRL from the LDAP server <b>winnetou</b>
-is triggered. When the third Main Mode trial comes around, the fetched CRL has become
-available and the IKE negotiation completes. The new CRL is again cached locally as a
-file in <b>/etc/ipsec.d/crls</b> due to the <b>cachecrls=yes</b> option.

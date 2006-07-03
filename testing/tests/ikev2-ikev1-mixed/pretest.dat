@@ -1,9 +1,0 @@
-moon::echo 1 > /proc/sys/net/ipv4/ip_forward
-sun::echo 1 > /proc/sys/net/ipv4/ip_forward
-moon::ipsec start
-sun::ipsec start
-carol::ipsec start
-moon::sleep 1 
-moon::ipsec up net-net
-carol::ipsec up home
-moon::sleep 1

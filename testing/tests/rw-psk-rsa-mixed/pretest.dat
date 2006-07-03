@@ -1,7 +1,0 @@
-carol::rm /etc/ipsec.d/cacerts/*
-carol::ipsec start
-dave::ipsec start
-moon::ipsec start
-carol::sleep 2
-carol::ipsec up home
-dave::ipsec up home

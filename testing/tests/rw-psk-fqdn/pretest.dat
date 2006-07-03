@@ -1,8 +1,0 @@
-moon::/etc/init.d/iptables start 2> /dev/null
-carol::/etc/init.d/iptables start 2> /dev/null
-moon::rm /etc/ipsec.d/cacerts/*
-carol::rm /etc/ipsec.d/cacerts/*
-carol::ipsec start
-moon::ipsec start
-carol::sleep 2
-carol::ipsec up home

@@ -1,4 +1,0 @@
-A host to host tunnel between the gateways <b>moon</b> and <b>sun</b>
-is set up using the IKEv2 key exchange protocol. The authentication is based on
-locally imported <b>X.509 certificates</b>.
-In order to test the established tunnel, <b>moon</b> pings <b>sun</b>.

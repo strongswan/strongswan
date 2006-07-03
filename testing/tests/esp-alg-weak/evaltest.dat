@@ -1,5 +1,0 @@
-carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::NO
-carol::cat /var/log/auth.log::NO_PROPOSAL_CHOSEN::YES
-moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::NO
-moon::cat /var/log/auth.log::IPSec Transform.*refused due to insecure key_len::YES
-moon::cat /var/log/auth.log::no acceptable Proposal in IPsec SA::YES
