@@ -220,7 +220,7 @@ starter_start_pluto (starter_config_t *cfg, bool debug)
 
 	    /* ipsec.secrets is root readable only */
 	    oldmask = umask(0066);
-	    
+
 	    f = fopen(SECRETS_FILE, "w");
 	    if (f)
 	    {
