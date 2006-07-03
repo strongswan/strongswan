@@ -123,7 +123,7 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 	/* get proposals from request, and select one with ours */
 	policy = this->ike_sa->get_policy(this->ike_sa);
 	proposal_list = request->get_proposals(request);
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Selecting proposals:");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "selecting proposals:");
 	proposal = policy->select_proposal(policy, proposal_list);
 	/* list is not needed anymore */
 	while (proposal_list->remove_last(proposal_list, (void**)&proposal_tmp) == SUCCESS)
@@ -148,7 +148,7 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 		memcpy(seed.ptr, this->nonce_i.ptr, this->nonce_i.len);
 		memcpy(seed.ptr + this->nonce_i.len, this->nonce_r.ptr, this->nonce_r.len);
 		prf_plus = prf_plus_create(this->ike_sa->get_child_prf(this->ike_sa), seed);
-		this->logger->log_chunk(this->logger, RAW|LEVEL2, "Rekey seed", seed);
+		this->logger->log_chunk(this->logger, RAW|LEVEL2, "sekey seed", seed);
 		chunk_free(&seed);
 		chunk_free(&this->nonce_i);
 		chunk_free(&this->nonce_r);
@@ -171,7 +171,7 @@ static status_t build_sa_payload(private_ike_sa_established_t *this, sa_payload_
 		prf_plus->destroy(prf_plus);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA!");
+			this->logger->log(this->logger, AUDIT, "sould not install CHILD_SA!");
 			sa_response->destroy(sa_response);
 			proposal->destroy(proposal);
 			return DESTROY_ME;
@@ -322,7 +322,7 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring payload %s (%d)", 
+				this->logger->log(this->logger, ERROR|LEVEL1, "sgnoring payload %s (%d)", 
 								  mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
 				break;
 			}
@@ -342,11 +342,11 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 	{
 		u_int32_t spi = notify->get_spi(notify);
 		this->old_child_sa = this->ike_sa->get_child_sa(this->ike_sa, spi);
-		this->logger->log(this->logger, CONTROL, "Rekeying CHILD_SA with SPI 0x%x", spi);
+		this->logger->log(this->logger, CONTROL, "sekeying CHILD_SA with SPI 0x%x", spi);
 	}
 	else
 	{
-		this->logger->log(this->logger, CONTROL, "Create new CHILD_SA");
+		this->logger->log(this->logger, CONTROL, "create new CHILD_SA");
 	}
 		
 	/* build response */
@@ -382,7 +382,7 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 	/* message can now be sent (must not be destroyed) */
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Unable to send CREATE_CHILD_SA reply. Ignored");
+		this->logger->log(this->logger, AUDIT, "unable to send CREATE_CHILD_SA reply. Ignored");
 		response->destroy(response);
 		return FAILED;
 	}
@@ -390,11 +390,11 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 	/* install child SA policies */
 	if (!this->child_sa)
 	{
-		this->logger->log(this->logger, ERROR, "Proposal negotiation failed, no CHILD_SA built");
+		this->logger->log(this->logger, ERROR, "proposal negotiation failed, no CHILD_SA built");
 	}
 	else if (this->my_ts->get_count(this->my_ts) == 0 || this->other_ts->get_count(this->other_ts) == 0)
 	{
-		this->logger->log(this->logger, ERROR, "Traffic selector negotiation failed, no CHILD_SA built");
+		this->logger->log(this->logger, ERROR, "traffic selector negotiation failed, no CHILD_SA built");
 		this->child_sa->destroy(this->child_sa);
 		this->child_sa = NULL;
 	}
@@ -403,7 +403,7 @@ static status_t process_create_child_sa(private_ike_sa_established_t *this, mess
 		status = this->child_sa->add_policies(this->child_sa, this->my_ts, this->other_ts);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy!");
+			this->logger->log(this->logger, AUDIT, "could not install CHILD_SA policy!");
 		}
 		if (this->old_child_sa)
 		{	/* mark old child sa as rekeyed */
@@ -443,7 +443,7 @@ static status_t process_informational(private_ike_sa_established_t *this, messag
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)",
+				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring Payload %s (%d)",
 								  mapping_find(payload_type_m, payload->get_type(payload)),
 								  payload->get_type(payload));
 				break;
@@ -489,7 +489,7 @@ static status_t process_informational(private_ike_sa_established_t *this, messag
 	if (this->ike_sa->send_response(this->ike_sa, response) != SUCCESS)
 	{
 		/* something is seriously wrong, kill connection */
-		this->logger->log(this->logger, AUDIT, "Unable to send reply. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "unable to send reply. Deleting IKE_SA");
 		response->destroy(response);
 		return DESTROY_ME;
 	}
@@ -529,7 +529,7 @@ static status_t process_informational_response(private_ike_sa_established_t *thi
 		{
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
+				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring Payload %s (%d)", 
 								  mapping_find(payload_type_m, payload->get_type(payload)), 
 								  payload->get_type(payload));
 				break;
@@ -619,7 +619,7 @@ static status_t process_message(private_ike_sa_established_t *this, message_t *m
 			break;
 		default:
 			this->logger->log(this->logger, ERROR | LEVEL1,
-							  "Message of type %s not supported in state ike_sa_established",
+							  "message of type %s not supported in state ike_sa_established",
 							  mapping_find(exchange_type_m, message->get_exchange_type(message)));
 			status = NOT_SUPPORTED;
 	}

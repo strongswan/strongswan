@@ -239,6 +239,14 @@ struct policy_t {
 	void (*add_authorities) (policy_t *this, identification_t *my_ca, identification_t *other_ca);
 
 	/**
+	 * @brief Add updown script
+	 * 
+	 * @param this					calling object
+	 * @param updown				updown script
+	 */
+	void (*add_updown) (policy_t *this, char *updown);
+
+	/**
 	 * @brief Get the lifetime of a policy, before rekeying starts.
 	 * 
 	 * A call to this function automatically adds a jitter to

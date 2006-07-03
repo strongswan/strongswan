@@ -68,6 +68,11 @@ struct private_policy_t {
 	identification_t *other_ca;
 	
 	/**
+	 * updown script
+	 */
+	char *updown;
+	
+	/**
 	 * list for all proposals
 	 */
 	linked_list_t *proposals;
@@ -304,6 +309,14 @@ static void add_authorities(private_policy_t *this, identification_t *my_ca, ide
 }
 
 /**
+ * Implementation of policy_t.add_updown
+ */
+static void add_updown(private_policy_t *this, char *updown)
+{
+	this->updown = (updown == NULL)? NULL:strdup(updown);
+}
+
+/**
  * Implementation of policy_t.add_my_traffic_selector
  */
 static void add_my_traffic_selector(private_policy_t *this, traffic_selector_t *traffic_selector)
@@ -371,6 +384,9 @@ static policy_t *clone(private_policy_t *this)
 	{
 		clone->other_ca = this->other_ca->clone(this->other_ca);
 	}
+
+	/* clone updown script */
+	clone->updown = (this->updown == NULL)? NULL:strdup(this->updown);
 	
 	/* clone all proposals */
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
@@ -445,6 +461,12 @@ static status_t destroy(private_policy_t *this)
 		this->other_ca->destroy(this->other_ca);
 	}
 
+	/* delete updown script */
+	if (this->updown)
+	{
+		free(this->updown);
+	}
+	
 	/* delete ids */
 	this->my_id->destroy(this->my_id);
 	this->other_id->destroy(this->other_id);
@@ -481,6 +503,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.add_other_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_other_traffic_selector;
 	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
 	this->public.add_authorities = (void(*)(policy_t*,identification_t*, identification_t*))add_authorities;
+	this->public.add_updown = (void(*)(policy_t*,identification_t*,char*))add_updown;
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
 	this->public.clone = (policy_t*(*)(policy_t*))clone;

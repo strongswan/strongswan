@@ -996,7 +996,7 @@ void test_generator_with_cert_payload(protected_tester_t *tester)
 	cert.ptr = "123456789012";
 	cert.len = strlen(cert.ptr);
 
-	cert_payload->set_cert_encoding(cert_payload,PGP_CERTIFICATE);
+	cert_payload->set_cert_encoding(cert_payload, CERT_PGP);
 	cert_payload->set_data(cert_payload,cert);
 	
 	generator->generate_payload(generator,(payload_t *)cert_payload);
@@ -1046,7 +1046,7 @@ void test_generator_with_certreq_payload(protected_tester_t *tester)
 	certreq.ptr = "123456789012";
 	certreq.len = strlen(certreq.ptr);
 
-	certreq_payload->set_cert_encoding(certreq_payload,PGP_CERTIFICATE);
+	certreq_payload->set_cert_encoding(certreq_payload, CERT_PGP);
 	certreq_payload->set_data(certreq_payload,certreq);
 	
 	generator->generate_payload(generator,(payload_t *)certreq_payload);

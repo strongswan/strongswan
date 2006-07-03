@@ -24,6 +24,7 @@
 #define CERT_PAYLOAD_H_
 
 #include <types.h>
+#include <crypto/x509.h>
 #include <encoding/payloads/payload.h>
 
 /**
@@ -42,18 +43,19 @@ typedef enum cert_encoding_t cert_encoding_t;
  * @ingroup payloads
  */
 enum cert_encoding_t {
-	PKCS7_WRAPPED_X509_CERTIFICATE = 1,
-	PGP_CERTIFICATE = 2,
-	DNS_SIGNED_KEY = 3,
-	X509_CERTIFICATE_SIGNATURE = 4,
-	KERBEROS_TOKEN	= 6,
-	CERTIFICATE_REVOCATION_LIST = 7,
-	AUTHORITY_REVOCATION_LIST = 8,
-	SPKI_CERTIFICATE = 9,
-	X509_CERTIFICATE_ATTRIBUTE = 10,
-	RAW_SA_KEY = 11,
-	HASH_AND_URL_X509_CERTIFICATE  = 12,
-	HASH_AND_URL_X509_BUNDLE = 13
+	CERT_NONE =						 0,
+	CERT_PKCS7_WRAPPED_X509 =		 1,
+	CERT_PGP =						 2,
+	CERT_DNS_SIGNED_KEY =			 3,
+	CERT_X509_SIGNATURE =			 4,
+	CERT_KERBEROS_TOKEN	=			 6,
+	CERT_CRL =						 7,
+	CERT_ARL =						 8,
+	CERT_SPKI =						 9,
+	CERT_X509_ATTRIBUTE =			10,
+	CERT_RAW_RSA_KEY =				11,
+	CERT_X509_HASH_AND_URL =		12,
+	CERT_X509_HASH_AND_URL_BUNDLE =	13
 };
 
 /**
@@ -61,8 +63,7 @@ enum cert_encoding_t {
  * 
  * @ingroup payloads
  */
-extern mapping_t cert_encoding_m[];
-
+extern enum_names cert_encoding_names;
 
 typedef struct cert_payload_t cert_payload_t;
 
@@ -145,11 +146,20 @@ struct cert_payload_t {
 /**
  * @brief Creates an empty cert_payload_t object.
  * 
- * @return cert_payload_t object
+ * @return					cert_payload_t object
  * 
  * @ingroup payloads
  */
 cert_payload_t *cert_payload_create(void);
 
+/**
+ * @brief Creates a cert_payload_t object with an X.509 certificate.
+ * 
+ * @param cert				X.509 certificate
+ * @return					cert_payload_t object
+ * 
+ * @ingroup payloads
+ */
+cert_payload_t *cert_payload_create_from_x509(x509_t *cert);
 
 #endif /* CERT_PAYLOAD_H_ */

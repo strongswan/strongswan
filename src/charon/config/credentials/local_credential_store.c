@@ -25,6 +25,7 @@
 #include <string.h>
 #include <pthread.h>
 
+#include <types.h>
 #include <utils/lexparser.h>
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
@@ -96,11 +97,11 @@ static status_t get_shared_secret(private_local_credential_store_t *this, identi
 }
 
 /**
- * Implementation of local_credential_store_t.get_rsa_public_key.
+ * Implementation of credential_store_t.get_certificate.
  */
-static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *this, identification_t *id)
+static x509_t* get_certificate(private_local_credential_store_t *this, identification_t * id)
 {
-	rsa_public_key_t *found = NULL;
+	x509_t *found = NULL;
 
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
 
@@ -112,12 +113,58 @@ static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *th
 
 		if (id->equals(id, cert->get_subject(cert)) || cert->equals_subjectAltName(cert, id))
 		{
-			found = cert->get_public_key(cert);
+			found = cert;
 			break;
 		}
 	}
 	iterator->destroy(iterator);
 	return found;
+}
+
+/**
+ * Implementation of local_credential_store_t.get_rsa_public_key.
+ */
+static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *this, identification_t *id)
+{
+	x509_t *cert = get_certificate(this, id);
+
+	return (cert == NULL)? NULL:cert->get_public_key(cert);
+}
+
+/**
+ * Implementation of local_credential_store_t.get_trusted_public_key.
+ */
+static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t *this, identification_t *id)
+{
+	cert_status_t status;
+	err_t ugh;
+
+	x509_t *cert = get_certificate(this, id);
+
+	if (cert == NULL)
+		return NULL;
+
+	ugh = cert->is_valid(cert, NULL);
+	if (ugh != NULL)
+	{
+		this->logger->log(this->logger, ERROR, "certificate %s");
+		return NULL;
+	}
+
+	status = cert->get_status(cert);
+	if (status == CERT_REVOKED || status == CERT_UNTRUSTED || (this->strict && status != CERT_GOOD))
+	{
+		this->logger->log(this->logger, ERROR, "certificate status: %s",
+						  enum_name(&cert_status_names, status));
+		return NULL;
+	}
+	if (status == CERT_GOOD && cert->get_until(cert) < time(NULL))
+	{
+		this->logger->log(this->logger, ERROR, "certificate is good but crl is stale");
+		return NULL;
+	}
+
+	return cert->get_public_key(cert);
 }
 
 /**
@@ -241,7 +288,6 @@ static cert_status_t verify_by_crl(private_local_credential_store_t* this, const
 	
  	issuer_public_key = issuer_cert->get_public_key(issuer_cert);
 	valid_signature = crl->verify(crl, issuer_public_key);
-	issuer_public_key->destroy(issuer_public_key);
 
 	if (!valid_signature)
 	{
@@ -268,21 +314,47 @@ static cert_status_t verify_by_ocsp(private_local_credential_store_t* this,
 }
 
 /**
-  * Remove a public key for the linked list
-  */
-static void remove_public_key(private_local_credential_store_t *this, const x509_t *cert)
+ * Find an exact copy of a certificate in a linked list
+ */
+static x509_t* find_certificate_copy(linked_list_t *certs, x509_t *cert)
 {
-	/* TODO implement function */
+	x509_t *found_cert = NULL;
+
+	iterator_t *iterator = certs->create_iterator(certs, TRUE);
+
+	while (iterator->has_next(iterator))
+	{
+		x509_t *current_cert;
+
+		iterator->current(iterator, (void**)&current_cert);
+		if (cert->equals(cert, current_cert))
+		{
+			found_cert = current_cert;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	return found_cert;
 }
 
 /**
  * Implementation of credential_store_t.verify.
  */
-static bool verify(private_local_credential_store_t *this, const x509_t *cert, time_t *until)
+static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *found)
 {
 	int pathlen;
+	time_t until = UNDEFINED_TIME;
+
+	x509_t *end_cert = cert;
+	x509_t *cert_copy = find_certificate_copy(this->certs, end_cert);
 	
-	*until = UNDEFINED_TIME;
+	*found = (cert_copy != NULL);
+	if (*found)
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL1,
+				"end entitity certificate is already in credential store");
+	}
 
 	for (pathlen = 0; pathlen < MAX_CA_PATH_LEN; pathlen++)
 	{
@@ -297,7 +369,7 @@ static bool verify(private_local_credential_store_t *this, const x509_t *cert, t
 		this->logger->log(this->logger, CONTROL|LEVEL1, "subject: '%s'", subject->get_string(subject));
 		this->logger->log(this->logger, CONTROL|LEVEL1, "issuer:  '%s'", issuer->get_string(issuer));
 
-		ugh = cert->is_valid(cert, until);
+		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)
 		{
 			this->logger->log(this->logger, ERROR, "certificate %s", ugh);
@@ -315,7 +387,6 @@ static bool verify(private_local_credential_store_t *this, const x509_t *cert, t
 
 		issuer_public_key = issuer_cert->get_public_key(issuer_cert);
 		valid_signature = cert->verify(cert, issuer_public_key);
-		issuer_public_key->destroy(issuer_public_key);
 
 		if (!valid_signature)
 		{
@@ -328,6 +399,14 @@ static bool verify(private_local_credential_store_t *this, const x509_t *cert, t
 		if (pathlen > 0 && cert->is_self_signed(cert))
 		{
 			this->logger->log(this->logger, CONTROL|LEVEL1, "reached self-signed root ca");
+
+			/* set the definite status and trust interval of the end entity certificate */
+			end_cert->set_until(end_cert, until);
+			if (cert_copy)
+			{
+				cert_copy->set_status(cert_copy, end_cert->get_status(end_cert));
+				cert_copy->set_until(cert_copy, until);
+			}
 			return TRUE;
 		}
 		else
@@ -336,7 +415,7 @@ static bool verify(private_local_credential_store_t *this, const x509_t *cert, t
 			cert_status_t status;
 			certinfo_t *certinfo = certinfo_create(cert->get_serialNumber(cert));
 
-			certinfo->set_nextUpdate(certinfo, *until);
+			certinfo->set_nextUpdate(certinfo, until);
 
 			/* first check certificate revocation using ocsp */
 			status = verify_by_ocsp(this, cert, certinfo);
@@ -348,24 +427,27 @@ static bool verify(private_local_credential_store_t *this, const x509_t *cert, t
 			}
 			
 			nextUpdate = certinfo->get_nextUpdate(certinfo);
+			cert->set_status(cert, status);
 
 			switch (status)
 			{
 				case CERT_GOOD:
+					/* set nextUpdate */
+					cert->set_until(cert, nextUpdate);
+
 					/* if status information is stale */
 					if (this->strict && nextUpdate < time(NULL))
 					{
 						this->logger->log(this->logger, CONTROL|LEVEL1, "certificate is good but status is stale");
-						remove_public_key(this, cert);
 						return FALSE;
 					}
 					this->logger->log(this->logger, CONTROL|LEVEL1, "certificate is good");
-		
+
 					/* with strict crl policy the public key must have the same
 					 * lifetime as the validity of the ocsp status or crl lifetime
 					 */
-					if (this->strict && nextUpdate < *until)
-		    			*until = nextUpdate;
+					if (this->strict && nextUpdate < until)
+		    			until = nextUpdate;
 					break;
 				case CERT_REVOKED:
 					{
@@ -375,7 +457,23 @@ static bool verify(private_local_credential_store_t *this, const x509_t *cert, t
 						timetoa(buf, TIMETOA_BUF, &revocationTime, TRUE);
 						this->logger->log(this->logger, ERROR, "certificate was revoked on %s, reason: %s",
 										  buf, certinfo->get_revocationReason(certinfo));
-						remove_public_key(this, cert);
+
+						/* set revocationTime */
+						cert->set_until(cert, revocationTime);
+
+						/* update status of end certificate in the credential store */
+						if (cert_copy)
+						{
+							if (pathlen > 0)
+							{
+								cert_copy->set_status(cert_copy, CERT_UNTRUSTED);
+							}
+							else
+							{
+								cert_copy->set_status(cert_copy, CERT_REVOKED);
+								cert_copy->set_until(cert_copy, certinfo->get_revocationTime(certinfo));
+							}
+						}
 						return FALSE;
 					}
 				case CERT_UNKNOWN:
@@ -384,7 +482,11 @@ static bool verify(private_local_credential_store_t *this, const x509_t *cert, t
 					this->logger->log(this->logger, CONTROL|LEVEL1, "certificate status unknown");
 					if (this->strict)
 					{
-						remove_public_key(this, cert);
+						/* update status of end certificate in the credential store */
+						if (cert_copy)
+						{
+							cert_copy->set_status(cert_copy, CERT_UNTRUSTED);
+						}
 						return FALSE;
 					}
 					break;
@@ -403,30 +505,18 @@ static bool verify(private_local_credential_store_t *this, const x509_t *cert, t
  */
 static x509_t* add_certificate(linked_list_t *certs, x509_t *cert)
 {
-	bool found = FALSE;
+	x509_t *found_cert = find_certificate_copy(certs, cert);
 
-	iterator_t *iterator = certs->create_iterator(certs, TRUE);
-
-	while (iterator->has_next(iterator))
+	if (found_cert)
 	{
-		x509_t *current_cert;
-
-		iterator->current(iterator, (void**)&current_cert);
-		if (cert->equals(cert, current_cert))
-		{
-			found = TRUE;
-			cert->destroy(cert);
-			cert = current_cert;
-			break;
-		}
+		cert->destroy(cert);
+		return found_cert;
 	}
-	iterator->destroy(iterator);
-
-	if (!found)
+	else
 	{
 		certs->insert_last(certs, (void*)cert);
+		return cert;
 	}
-	return cert;
 }
 
 /**
@@ -829,20 +919,22 @@ local_credential_store_t * local_credential_store_create(bool strict)
 {
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
 
-	this->public.credential_store.get_shared_secret = (status_t(*)(credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
-	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t*(*)(credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
-	this->public.credential_store.has_rsa_private_key = (bool(*)(credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
+	this->public.credential_store.get_shared_secret = (status_t (*) (credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
-	this->public.credential_store.verify = (bool(*)(credential_store_t*,const x509_t*,time_t*))verify;
-	this->public.credential_store.add_end_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_end_certificate;
-	this->public.credential_store.add_ca_certificate = (x509_t*(*)(credential_store_t*,x509_t*))add_ca_certificate;
-	this->public.credential_store.log_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_certificates;
-	this->public.credential_store.log_ca_certificates = (void(*)(credential_store_t*,logger_t*,bool))log_ca_certificates;
-	this->public.credential_store.log_crls = (void(*)(credential_store_t*,logger_t*,bool))log_crls;
-	this->public.credential_store.load_ca_certificates = (void(*)(credential_store_t*))load_ca_certificates;
-	this->public.credential_store.load_crls = (void(*)(credential_store_t*))load_crls;
-	this->public.credential_store.load_private_keys = (void(*)(credential_store_t*))load_private_keys;
-	this->public.credential_store.destroy = (void(*)(credential_store_t*))destroy;
+	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t* (*) (credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
+	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
+	this->public.credential_store.get_trusted_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_trusted_public_key;
+	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
+	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
+	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
+	this->public.credential_store.add_ca_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_ca_certificate;
+	this->public.credential_store.log_certificates = (void (*) (credential_store_t*,logger_t*,bool))log_certificates;
+	this->public.credential_store.log_ca_certificates = (void (*) (credential_store_t*,logger_t*,bool))log_ca_certificates;
+	this->public.credential_store.log_crls = (void (*) (credential_store_t*,logger_t*,bool))log_crls;
+	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
+	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
+	this->public.credential_store.load_private_keys = (void (*) (credential_store_t*))load_private_keys;
+	this->public.credential_store.destroy = (void (*) (credential_store_t*))destroy;
 	
 	/* initialize mutexes */
 	pthread_mutex_init(&(this->crls_mutex), NULL);

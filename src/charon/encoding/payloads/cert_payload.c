@@ -28,22 +28,25 @@
 /** 
  * String mappings for cert_encoding_t.
  */
-mapping_t cert_encoding_m[] = {
-	{PKCS7_WRAPPED_X509_CERTIFICATE, "PKCS7_WRAPPED_X509_CERTIFICATE"},
-	{PGP_CERTIFICATE, "PGP_CERTIFICATE"},
-	{DNS_SIGNED_KEY, "DNS_SIGNED_KEY"},
-	{X509_CERTIFICATE_SIGNATURE, "X509_CERTIFICATE_SIGNATURE"},
-	{KERBEROS_TOKEN, "KERBEROS_TOKEN"},
-	{CERTIFICATE_REVOCATION_LIST, "CERTIFICATE_REVOCATION_LIST"},
-	{AUTHORITY_REVOCATION_LIST, "AUTHORITY_REVOCATION_LIST"},
-	{SPKI_CERTIFICATE, "SPKI_CERTIFICATE"},
-	{X509_CERTIFICATE_ATTRIBUTE, "X509_CERTIFICATE_ATTRIBUTE"},
-	{RAW_SA_KEY, "RAW_SA_KEY"},
-	{HASH_AND_URL_X509_CERTIFICATE, "HASH_AND_URL_X509_CERTIFICATE"},
-	{HASH_AND_URL_X509_BUNDLE, "HASH_AND_URL_X509_BUNDLE"},
-	{MAPPING_END, NULL}
+static const char *const cert_encoding_name[] = {
+	"CERT_NONE",
+	"CERT_PKCS7_WRAPPED_X509",
+	"CERT_PGP",
+	"CERT_DNS_SIGNED_KEY",
+	"CERT_X509_SIGNATURE",
+	"CERT_X509_KEY_EXCHANGE",
+	"CERT_KERBEROS_TOKENS",
+	"CERT_CRL",
+	"CERT_ARL",
+	"CERT_SPKI",
+	"CERT_X509_ATTRIBUTE",
+	"CERT_RAW_RSA_KEY",
+	"CERT_X509_HASH_AND_URL",
+	"CERT_X509_HASH_AND_URL_BUNDLE"
 };
 
+enum_names cert_encoding_names =
+    { CERT_NONE, CERT_X509_HASH_AND_URL_BUNDLE, cert_encoding_name, NULL };
 
 typedef struct private_cert_payload_t private_cert_payload_t;
 
@@ -276,4 +279,16 @@ cert_payload_t *cert_payload_create()
 	this->cert_data = CHUNK_INITIALIZER;
 
 	return (&(this->public));
+}
+
+/*
+ * Described in header
+ */
+cert_payload_t *cert_payload_create_from_x509(x509_t *cert)
+{
+	cert_payload_t *this = cert_payload_create();
+
+	this->set_cert_encoding(this, CERT_X509_SIGNATURE);
+	this->set_data(this, cert->get_certificate(cert));
+	return this;
 }

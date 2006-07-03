@@ -727,7 +727,7 @@ void test_parser_with_cert_payload(protected_tester_t *tester)
 		return;	
 	}
 	result = cert_payload->get_data_clone(cert_payload);
-	tester->assert_true(tester,(cert_payload->get_cert_encoding(cert_payload) == DNS_SIGNED_KEY), "is DNS_SIGNED_KEY encoding");
+	tester->assert_true(tester,(cert_payload->get_cert_encoding(cert_payload) == CERT_DNS_SIGNED_KEY), "is DNS_SIGNED_KEY encoding");
 	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
 	tester->assert_false(tester,(memcmp(cert_bytes + 5, result.ptr, result.len)), "parsed data");
 	cert_payload->destroy(cert_payload);
@@ -766,8 +766,8 @@ void test_parser_with_certreq_payload(protected_tester_t *tester)
 		return;	
 	}
 	result = certreq_payload->get_data_clone(certreq_payload);
-	tester->assert_true(tester,(certreq_payload->get_cert_encoding(certreq_payload) == DNS_SIGNED_KEY), "is DNS_SIGNED_KEY encoding");
-	tester->assert_true(tester,(result.len == 12), "parsed data lenght");
+	tester->assert_true(tester,(certreq_payload->get_cert_encoding(certreq_payload) == CERT_DNS_SIGNED_KEY), "is DNS_SIGNED_KEY encoding");
+	tester->assert_true(tester,(result.len == 12), "parsed data length");
 	tester->assert_false(tester,(memcmp(certreq_bytes + 5, result.ptr, result.len)), "parsed data");
 	certreq_payload->destroy(certreq_payload);
 	chunk_free(&result);

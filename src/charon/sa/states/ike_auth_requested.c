@@ -29,6 +29,7 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/id_payload.h>
+#include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <crypto/signers/signer.h>
@@ -113,6 +114,17 @@ struct private_ike_auth_requested_t {
 	status_t (*process_idr_payload) (private_ike_auth_requested_t *this, id_payload_t *idr_payload);
 	
 	/**
+	 * Process received CERT payload
+	 * 
+	 * @param this			calling object
+	 * @param cert_payload	payload to process
+	 * @return
+	 * 						- DESTROY_ME if IKE_SA should be deleted
+	 * 						- SUCCSS if processed successful
+	 */
+	status_t (*process_cert_payload) (private_ike_auth_requested_t *this, cert_payload_t *cert_payload);
+	
+	/**
 	 * Process the SA payload (check if selected proposals are valid, setup child sa)
 	 * 
 	 * @param this			calling object
@@ -176,8 +188,10 @@ struct private_ike_auth_requested_t {
  */
 static status_t process_message(private_ike_auth_requested_t *this, message_t *ike_auth_reply)
 {
-	ts_payload_t *tsi_payload = NULL, *tsr_payload = NULL;
+	ts_payload_t *tsi_payload = NULL;
+	ts_payload_t *tsr_payload = NULL;
 	id_payload_t *idr_payload = NULL;
+	cert_payload_t *cert_payload = NULL;
 	auth_payload_t *auth_payload = NULL;
 	sa_payload_t *sa_payload = NULL;
 	iterator_t *payloads = NULL;
@@ -193,7 +207,7 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	
 	if (ike_auth_reply->get_exchange_type(ike_auth_reply) != IKE_AUTH)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state ike_auth_requested",
+		this->logger->log(this->logger, ERROR | LEVEL1, "message of type %s not supported in state ike_auth_requested",
 							mapping_find(exchange_type_m,ike_auth_reply->get_exchange_type(ike_auth_reply)));
 		return FAILED;
 	}
@@ -230,33 +244,34 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 		switch (payload->get_type(payload))
 		{
 			case AUTHENTICATION:
-			{
 				auth_payload = (auth_payload_t*)payload;
 				break;	
-			}
+			case CERTIFICATE:
+				cert_payload = (cert_payload_t*)payload;
+				status = this->process_cert_payload(this, cert_payload);
+				if (status != SUCCESS)
+				{
+					payloads->destroy(payloads);
+					return status;
+	
+				}
+				break;
 			case ID_RESPONDER:
-			{
 				idr_payload = (id_payload_t*)payload;
 				break;	
-			}
 			case SECURITY_ASSOCIATION:
-			{
 				sa_payload = (sa_payload_t*)payload;
 				break;
-			}
 			case TRAFFIC_SELECTOR_INITIATOR:
-			{
 				tsi_payload = (ts_payload_t*)payload;				
 				break;	
-			}
 			case TRAFFIC_SELECTOR_RESPONDER:
-			{
 				tsr_payload = (ts_payload_t*)payload;
 				break;	
-			}
 			case NOTIFY:
 			{
 				notify_payload_t *notify_payload = (notify_payload_t *) payload;
+
 				/* handle the notify directly, abort if no further processing required */
 				status = this->process_notify_payload(this, notify_payload);
 				if (status != SUCCESS)
@@ -265,16 +280,10 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 					return status;
 				}
 			}
-			case CERTIFICATE:
-			{
-				/* TODO handle cert payloads */
-			}
 			default:
-			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring Payload %s (%d)", 
+				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring Payload %s (%d)", 
 									mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
 				break;
-			}
 		}
 	}
 	/* iterator can be destroyed */
@@ -291,51 +300,43 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 				ike_auth_reply->get_destination(ike_auth_reply),
 				ike_auth_reply->get_source(ike_auth_reply));
 	if (status != SUCCESS)
-	{
 		return status;
-	}
 
 	/* process all payloads */
 	status = this->process_idr_payload(this, idr_payload);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
+
 	status = this->process_auth_payload(this, auth_payload,idr_payload);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
+
 	status = this->process_sa_payload(this, sa_payload);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
+
 	status = this->process_ts_payload(this, TRUE, tsi_payload);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
+
 	status = this->process_ts_payload(this, FALSE, tsr_payload);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
 	
 	/* install child SAs for AH and esp */
 	if (!this->child_sa)
 	{
-		this->logger->log(this->logger, CONTROL, "No CHILD_SA requested, no CHILD_SA built");
+		this->logger->log(this->logger, CONTROL, "no CHILD_SA requested, no CHILD_SA built");
 	}
 	else if (!this->proposal)
 	{
-		this->logger->log(this->logger, CONTROL, "Proposal negotiation failed, no CHILD_SA built");
+		this->logger->log(this->logger, CONTROL, "proposal negotiation failed, no CHILD_SA built");
 		this->child_sa->destroy(this->child_sa);
 		this->child_sa = NULL;
 	}
 	else if (this->my_ts->get_count(this->my_ts) == 0 || this->other_ts->get_count(this->other_ts) == 0)
 	{
-		this->logger->log(this->logger, CONTROL, "Traffic selector negotiation failed, no CHILD_SA built");
+		this->logger->log(this->logger, CONTROL, "traffic selector negotiation failed, no CHILD_SA built");
 		this->child_sa->destroy(this->child_sa);
 		this->child_sa = NULL;
 	}
@@ -351,13 +352,13 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 		prf_plus->destroy(prf_plus);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+			this->logger->log(this->logger, AUDIT, "could not install CHILD_SA! Deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		status = this->child_sa->add_policies(this->child_sa, this->my_ts, this->other_ts);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy! Deleting IKE_SA");
+			this->logger->log(this->logger, AUDIT, "could not install CHILD_SA policy! Deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
@@ -366,19 +367,8 @@ static status_t process_message(private_ike_auth_requested_t *this, message_t *i
 	this->ike_sa->set_last_replied_message_id(this->ike_sa,ike_auth_reply->get_message_id(ike_auth_reply));
 	
 	/* create new state */
-	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+	this->ike_sa->establish(this->ike_sa);
 	this->destroy_after_state_change(this);
-	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	my_host = connection->get_my_host(connection);
-	other_host = connection->get_other_host(connection);
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	my_id = policy->get_my_id(policy);
-	other_id = policy->get_other_id(policy);
-	this->logger->log(this->logger, AUDIT, "IKE_SA established %s[%s]...%s[%s]", 
-					  my_host->get_address(my_host), my_id->get_string(my_id),
-					  other_host->get_address(other_host), other_id->get_string(other_id));
-	
 	return SUCCESS;
 }
 
@@ -406,6 +396,38 @@ static status_t process_idr_payload(private_ike_auth_requested_t *this, id_paylo
 	this->policy->update_other_id(this->policy, other_id);
 	return SUCCESS;
 }
+
+/**
+ * Implements private_ike_auth_requested_t.process_cert_payload
+ */
+static status_t process_cert_payload(private_ike_auth_requested_t *this, cert_payload_t * cert_payload)
+{
+	bool found;
+	x509_t *cert;
+
+	if (cert_payload->get_cert_encoding(cert_payload) != CERT_X509_SIGNATURE)
+	{
+		this->logger->log(this->logger, CONTROL, "certificate encoding is %s, ignored",
+				enum_name(&cert_encoding_names, cert_payload->get_cert_encoding(cert_payload)));
+		return SUCCESS;
+	}
+	cert = x509_create_from_chunk(cert_payload->get_data_clone(cert_payload));
+
+	if (charon->credentials->verify(charon->credentials, cert, &found))
+	{
+		this->logger->log(this->logger, CONTROL, "end entity certificate is trusted");
+		if (!found)
+		{
+			cert = charon->credentials->add_end_certificate(charon->credentials, cert);
+		}
+	}
+	else
+	{
+		this->logger->log(this->logger, ERROR, "end entity certificate is not trusted");
+	}
+	return SUCCESS;
+}
+
 
 /**
  * Implements private_ike_auth_requested_t.process_sa_payload
@@ -472,7 +494,7 @@ static status_t process_auth_payload(private_ike_auth_requested_t *this, auth_pa
 	authenticator->destroy(authenticator);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Verification of IKE_AUTH reply failed. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "verification of IKE_AUTH reply failed. Deleting IKE_SA");
 		return DESTROY_ME;	
 	}
 
@@ -524,7 +546,7 @@ static status_t process_notify_payload(private_ike_auth_requested_t *this, notif
 {
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
 							  mapping_find(notify_message_type_m, notify_message_type));
 	
 	switch (notify_message_type)
@@ -675,6 +697,7 @@ ike_auth_requested_t *ike_auth_requested_create(protected_ike_sa_t *ike_sa,chunk
 	
 	/* private functions */
 	this->process_idr_payload = process_idr_payload;
+	this->process_cert_payload = process_cert_payload;
 	this->process_sa_payload = process_sa_payload;
 	this->process_auth_payload = process_auth_payload;
 	this->process_ts_payload = process_ts_payload;

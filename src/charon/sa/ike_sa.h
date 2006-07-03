@@ -539,7 +539,14 @@ struct protected_ike_sa_t {
 	 * @return					child_sa, or NULL if none found
 	 */
 	child_sa_t* (*get_child_sa) (protected_ike_sa_t *this, u_int32_t spi);
-	
+
+	/**
+	 * @brief establish the IKE SA
+	 *
+	 * @param this 			calling object
+	 */
+	void (*establish) (protected_ike_sa_t *this);
+
 	/**
 	 * @brief Get the last responded message.
 	 *  

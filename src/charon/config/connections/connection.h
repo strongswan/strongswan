@@ -228,7 +228,7 @@ struct connection_t {
 	 * @param this		calling object
 	 * @return			- TRUE, if certificate request should be sent
 	 */
-	cert_policy_t (*get_cert_req_policy) (connection_t *this);
+	cert_policy_t (*get_certreq_policy) (connection_t *this);
 	
 	/**
 	 * @brief Should be sent a certificate for this connection?

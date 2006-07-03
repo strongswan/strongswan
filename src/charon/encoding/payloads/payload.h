@@ -199,7 +199,7 @@ typedef struct payload_t payload_t;
  * handling of all payloads.
  * 
  * @b Constructors:
- * - payload_create() with the payload to instanciate.
+ * - payload_create() with the payload to instantiate.
  * 
  * @ingroup payloads
  */

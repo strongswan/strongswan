@@ -79,6 +79,11 @@ struct private_x509_t {
 	time_t until;
 
 	/**
+	 * Certificate status
+	 */
+	cert_status_t status;
+
+	/**
 	 * X.509 Certificate in DER format
 	 */
 	chunk_t certificate;
@@ -957,11 +962,19 @@ static bool is_issuer(const private_x509_t *this, const private_x509_t *issuer)
 }
 
 /**
+ * Implements x509_t.get_certificate
+ */
+static chunk_t get_certificate(const private_x509_t *this)
+{
+	return this->certificate;
+}
+
+/**
  * Implements x509_t.get_public_key
  */
 static rsa_public_key_t *get_public_key(const private_x509_t *this)
 {
-	return this->public_key->clone(this->public_key);
+	return this->public_key;
 }
 
 /**
@@ -1002,6 +1015,30 @@ static identification_t *get_subject(const private_x509_t *this)
 static void set_until(private_x509_t *this, time_t until)
 {
 	this->until = until;
+}
+
+/**
+ * Implements x509_t.get_until
+ */
+static time_t get_until(const private_x509_t *this)
+{
+	return this->until;
+}
+
+/**
+ * Implements x509_t.set_status
+ */
+static void set_status(private_x509_t *this, cert_status_t status)
+{
+	this->status = status;
+}
+
+/**
+ * Implements x509_t.get_status
+ */
+static cert_status_t get_status(const private_x509_t *this)
+{
+	return this->status;
 }
 
 /**
@@ -1096,30 +1133,46 @@ static void log_certificate(const private_x509_t *this, logger_t *logger, bool u
 	rsa_public_key_t *pubkey = this->public_key;
 
 	char buf[BUF_LEN];
+	char time_buf[TIMETOA_BUF];
 
     /* determine the current time */
     time_t now = time(NULL);
 
-	timetoa(buf, BUF_LEN, &this->installed, utc);
-	logger->log(logger, CONTROL, "%s", buf);
+	timetoa(time_buf, TIMETOA_BUF, &this->installed, utc);
+	logger->log(logger, CONTROL, "%s", time_buf);
 	logger->log(logger, CONTROL, "       subject: '%s'", subject->get_string(subject));
 	logger->log(logger, CONTROL, "       issuer:  '%s'", issuer->get_string(issuer));
 	
 	chunk_to_hex(buf, BUF_LEN, this->serialNumber);
 	logger->log(logger, CONTROL, "       serial:   %s", buf);
 	
-	timetoa(buf, BUF_LEN, &this->notBefore, utc);
-	logger->log(logger, CONTROL, "       validity: not before %s %s", buf,
+	timetoa(time_buf, TIMETOA_BUF, &this->notBefore, utc);
+	logger->log(logger, CONTROL, "       validity: not before %s %s", time_buf,
 				(this->notBefore < now)? "ok":"fatal (not valid yet)");
 	
-	timetoa(buf, BUF_LEN, &this->notAfter, utc);
-	logger->log(logger, CONTROL, "                 not after  %s %s", buf,
+	timetoa(time_buf, TIMETOA_BUF, &this->notAfter, utc);
+	logger->log(logger, CONTROL, "                 not after  %s %s", time_buf,
 			check_expiry(this->notAfter, CERT_WARNING_INTERVAL, TRUE));
 
-	timetoa(buf, BUF_LEN, &this->until, utc);
-	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits%s, until %s",
+	timetoa(time_buf, TIMETOA_BUF, &this->until, utc);
+	switch (this->status)
+	{
+		case CERT_GOOD:
+			snprintf(buf, BUF_LEN, " until %s", time_buf);
+			break;
+		case CERT_REVOKED:
+			snprintf(buf, BUF_LEN, " on %s", time_buf);
+			break;
+		case CERT_UNKNOWN:
+		case CERT_UNDEFINED:
+		case CERT_UNTRUSTED:
+		default:
+			*buf = '\0';
+	}
+	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits%s, status %s%s",
 			BITS_PER_BYTE * pubkey->get_keysize(pubkey),
-			has_key? ", has private key":"", buf);
+			has_key? ", has private key":"",
+			enum_name(&cert_status_names, this->status), buf);
 
 	chunk_to_hex(buf, BUF_LEN, pubkey->get_keyid(pubkey));
 	logger->log(logger, CONTROL, "       keyid:    %s", buf);
@@ -1166,12 +1219,16 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public.is_valid = (err_t (*) (const x509_t*,time_t*))is_valid;
 	this->public.is_ca = (bool (*) (const x509_t*))is_ca;
 	this->public.is_self_signed = (bool (*) (const x509_t*))is_self_signed;
+	this->public.get_certificate = (chunk_t (*) (const x509_t*))get_certificate;
 	this->public.get_public_key = (rsa_public_key_t* (*) (const x509_t*))get_public_key;
 	this->public.get_serialNumber = (chunk_t (*) (const x509_t*))get_serialNumber;
 	this->public.get_subjectKeyID = (chunk_t (*) (const x509_t*))get_subjectKeyID;
 	this->public.get_issuer = (identification_t* (*) (const x509_t*))get_issuer;
 	this->public.get_subject = (identification_t* (*) (const x509_t*))get_subject;
 	this->public.set_until = (void (*) (x509_t*,time_t))set_until;
+	this->public.get_until = (time_t (*) (const x509_t*))get_until;
+	this->public.set_status = (void (*) (x509_t*,cert_status_t))set_status;
+	this->public.get_status = (cert_status_t (*) (const x509_t*))get_status;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
 	this->public.destroy = (void (*) (x509_t*))destroy;
 	this->public.log_certificate = (void (*) (const x509_t*,logger_t*,bool,bool))log_certificate;
@@ -1193,6 +1250,7 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 		return NULL;
 	}
 	/* set trusted lifetime of public key to notAfter */
+	this->status = is_self_signed(this)? CERT_GOOD:CERT_UNDEFINED;
 	this->until = this->notAfter;
 	return &this->public;
 }

@@ -70,6 +70,20 @@ struct private_certinfo_t {
 };
 
 /**
+ * RFC 2560 OCSP - certificate status
+ */
+static const char *const cert_status_name[] = {
+	"good",
+	"revoked",
+	"unknown",
+	"unknown",
+	"untrusted"
+    };
+
+enum_names cert_status_names =
+    { CERT_GOOD, CERT_UNTRUSTED, cert_status_name, NULL};
+
+/**
  * RFC 2459 CRL reason codes
  */
 static const char *const crl_reason_name[] = {

@@ -29,6 +29,8 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/id_payload.h>
+#include <encoding/payloads/cert_payload.h>
+#include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ts_payload.h>
 #include <crypto/diffie_hellman.h>
@@ -158,12 +160,34 @@ struct private_ike_sa_init_requested_t {
 	 * 
 	 * @param this				calling object
 	 * @param[out] id_payload	buildet ID payload
-	 * @param response			created payload will be added to this message_t object
+	 * @param msg				created payload will be added to this message_t object
 	 * @return
 	 * 							- SUCCESS
 	 * 							- FAILED
 	 */
-	status_t (*build_id_payload) (private_ike_sa_init_requested_t *this,id_payload_t **id_payload, message_t *response);
+	status_t (*build_id_payload) (private_ike_sa_init_requested_t *this,id_payload_t **id_payload, message_t *msg);
+	
+	/**
+	 * Build CERT payload for IKE_AUTH request.
+	 * 
+	 * @param this				calling object
+	 * @param msg				created payload will be added to this message_t object
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED
+	 */
+	status_t (*build_cert_payload) (private_ike_sa_init_requested_t *this, message_t *msg);
+	
+	/**
+	 * Build CERTREQ payload for IKE_AUTH request.
+	 * 
+	 * @param this				calling object
+	 * @param msg				created payload will be added to this message_t object
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED
+	 */
+	status_t (*build_certreq_payload) (private_ike_sa_init_requested_t *this, message_t *msg);
 	
 	/**
 	 * Build IDr payload for IKE_AUTH request.
@@ -171,57 +195,57 @@ struct private_ike_sa_init_requested_t {
 	 * Only built when the ID of the responder contains no wildcards.
 	 * 
 	 * @param this				calling object
-	 * @param response			created payload will be added to this message_t object
+	 * @param msg				created payload will be added to this message_t object
 	 * @return
 	 * 							- SUCCESS
 	 * 							- FAILED
 	 */
-	status_t (*build_idr_payload) (private_ike_sa_init_requested_t *this, message_t *response);
+	status_t (*build_idr_payload) (private_ike_sa_init_requested_t *this, message_t *msg);
 	
 	/**
 	 * Build AUTH payload for IKE_AUTH request.
 	 * 
 	 * @param this				calling object
 	 * @param my_id_payload		buildet ID payload
-	 * @param response			created payload will be added to this message_t object
+	 * @param msg				created payload will be added to this message_t object
 	 * @return
 	 * 							- SUCCESS
 	 * 							- FAILED
 	 */
-	status_t (*build_auth_payload) (private_ike_sa_init_requested_t *this,id_payload_t *my_id_payload, message_t *response);
+	status_t (*build_auth_payload) (private_ike_sa_init_requested_t *this,id_payload_t *my_id_payload, message_t *msg);
 
 	/**
 	 * Build SA payload for IKE_AUTH request.
 	 * 
 	 * @param this				calling object
-	 * @param response			created payload will be added to this message_t object
+	 * @param msg				created payload will be added to this message_t object
 	 * @return
 	 * 							- SUCCESS
 	 * 							- FAILED
 	 */
-	status_t (*build_sa_payload) (private_ike_sa_init_requested_t *this, message_t *response);
+	status_t (*build_sa_payload) (private_ike_sa_init_requested_t *this, message_t *msg);
 	
 	/**
 	 * Build TSi payload for IKE_AUTH request.
 	 * 
 	 * @param this				calling object
-	 * @param response			created payload will be added to this message_t object
+	 * @param msg				created payload will be added to this message_t object
 	 * @return
 	 * 							- SUCCESS
 	 * 							- FAILED
 	 */
-	status_t (*build_tsi_payload) (private_ike_sa_init_requested_t *this, message_t *response);
+	status_t (*build_tsi_payload) (private_ike_sa_init_requested_t *this, message_t *msg);
 	
 	/**
 	 * Build TSr payload for IKE_AUTH request.
 	 * 
 	 * @param this				calling object
-	 * @param response			created payload will be added to this message_t object
+	 * @param msg				created payload will be added to this message_t object
 	 * @return
 	 * 							- SUCCESS
 	 * 							- FAILED
 	 */
-	status_t (*build_tsr_payload) (private_ike_sa_init_requested_t *this, message_t *response);
+	status_t (*build_tsr_payload) (private_ike_sa_init_requested_t *this, message_t *msg);
 	
 	/**
 	 * Process a notify payload and react.
@@ -273,7 +297,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 	if (ike_sa_init_reply->get_exchange_type(ike_sa_init_reply) != IKE_SA_INIT)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state ike_sa_init_requested",
+		this->logger->log(this->logger, ERROR | LEVEL1, "message of type %s not supported in state ike_sa_init_requested",
 							mapping_find(exchange_type_m,ike_sa_init_reply->get_exchange_type(ike_sa_init_reply)));
 		return FAILED;
 	}
@@ -335,20 +359,14 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 		switch (payload->get_type(payload))
 		{
 			case SECURITY_ASSOCIATION:
-			{
 				sa_payload = (sa_payload_t*)payload;
 				break;
-			}
 			case KEY_EXCHANGE:
-			{
 				ke_payload = (ke_payload_t*)payload;
 				break;
-			}
 			case NONCE:
-			{
 				nonce_payload = (nonce_payload_t*)payload;
 				break;
-			}
 			case NOTIFY:
 			{
 				notify_payload_t *notify_payload = (notify_payload_t *) payload;
@@ -362,12 +380,9 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 				break;
 			}
 			default:
-			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring payload %s (%d)", 
+				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring payload %s (%d)", 
 									mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
 				break;
-			}
-				
 		}
 			
 	}
@@ -381,27 +396,21 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	
 	status = this->process_nonce_payload (this,nonce_payload);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
 	
 	status = this->process_sa_payload (this,sa_payload);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
 	
 	status = this->process_ke_payload (this,ke_payload);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
 	
 	/* derive all the keys used in the IKE_SA */
 	status = this->ike_sa->build_transforms(this->ike_sa, this->proposal, this->diffie_hellman, this->sent_nonce, this->received_nonce);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Transform objects could not be created from selected proposal. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "transform objects could not be created from selected proposal. Deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -414,16 +423,16 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	}
 	if (this->natd_seen_r > 1)
 	{
-		this->logger->log(this->logger, AUDIT, "Warning: IKE_SA_INIT request contained multiple Notify(NAT_DETECTION_DESTINATION_IP) payloads.");
+		this->logger->log(this->logger, AUDIT, "warning: IKE_SA_INIT request contained multiple Notify(NAT_DETECTION_DESTINATION_IP) payloads.");
 	}
 	if (this->natd_seen_i > 0 && !this->natd_hash_i_matched)
 	{
-		this->logger->log(this->logger, AUDIT, "Remote host is behind NAT, using NAT-T.");
+		this->logger->log(this->logger, AUDIT, "remote host is behind NAT, using NAT-Traversal");
 		this->ike_sa->set_other_host_behind_nat(this->ike_sa, TRUE);
 	}
 	if (this->natd_seen_r > 0 && !this->natd_hash_r_matched)
 	{
-		this->logger->log(this->logger, AUDIT, "Local host is behind NAT, using NAT-T.");
+		this->logger->log(this->logger, AUDIT, "local host is behind NAT, using NAT-Traversal");
 		this->ike_sa->set_my_host_behind_nat(this->ike_sa, TRUE);
 	}
 
@@ -438,11 +447,11 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	{
 		me->set_port(me, IKEV2_NATT_PORT);
 		other->set_port(other, IKEV2_NATT_PORT);
-		this->logger->log(this->logger, AUDIT, "Switching to port %d.", IKEV2_NATT_PORT);
+		this->logger->log(this->logger, AUDIT, "switching to port %d.", IKEV2_NATT_PORT);
 	}
 	else
 	{
-		this->logger->log(this->logger, AUDIT, "No NAT detected, not using NAT-T.");
+		this->logger->log(this->logger, AUDIT, "no NAT detected, not using NAT-Traversal");
 	}
 
 	if (this->ike_sa->public.is_my_host_behind_nat(&this->ike_sa->public))
@@ -454,9 +463,7 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 	status = this->ike_sa->update_connection_hosts(this->ike_sa, me, other);
 	if (status != SUCCESS)
-	{
 		return status;
-	}
 
 	policy = this->ike_sa->get_policy(this->ike_sa);
 	policy->update_my_ts(policy, me);
@@ -467,46 +474,41 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 	
 	status = this->build_id_payload(this, &id_payload, request);
 	if (status != SUCCESS)
-	{
-		request->destroy(request);
-		return status;
-	}	
+		goto destroy_request;
+
+	status = this->build_cert_payload(this, request);
+	if (status != SUCCESS)
+		goto destroy_request;
+
+	status = this->build_certreq_payload(this, request);
+	if (status != SUCCESS)
+		goto destroy_request;
+
 	status = this->build_idr_payload(this, request);
 	if (status != SUCCESS)
-	{
-		request->destroy(request);
-		return status;
-	}
+		goto destroy_request;
+
 	status = this->build_auth_payload(this, (id_payload_t*)id_payload, request);
 	if (status != SUCCESS)
-	{
-		request->destroy(request);
-		return status;
-	}
+		goto destroy_request;
+
 	status = this->build_sa_payload(this, request);
 	if (status != SUCCESS)
-	{
-		request->destroy(request);
-		return status;
-	}
+		goto destroy_request;
+
 	status = this->build_tsi_payload(this, request);
 	if (status != SUCCESS)
-	{
-		request->destroy(request);
-		return status;
-	}
+		goto destroy_request;
+
 	status = this->build_tsr_payload(this, request);
 	if (status != SUCCESS)
-	{
-		request->destroy(request);
-		return status;
-	}	
+		goto destroy_request;
 	
 	/* message can now be sent (must not be destroyed) */
 	status = this->ike_sa->send_request(this->ike_sa, request);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Unable to send IKE_AUTH request. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "unable to send IKE_AUTH request. Deleting IKE_SA");
 		request->destroy(request);
 		return DESTROY_ME;
 	}
@@ -522,6 +524,11 @@ static status_t process_message(private_ike_sa_init_requested_t *this, message_t
 
 	this->destroy_after_state_change(this);
 	return SUCCESS;
+
+destroy_request:
+	request->destroy(request);
+	return status;
+
 }
 
 
@@ -590,18 +597,18 @@ status_t process_ke_payload (private_ike_sa_init_requested_t *this, ke_payload_t
 /**
  * Implementation of private_ike_sa_init_requested_t.build_id_payload.
  */
-static status_t build_id_payload (private_ike_sa_init_requested_t *this,id_payload_t **id_payload, message_t *request)
+static status_t build_id_payload (private_ike_sa_init_requested_t *this,id_payload_t **id_payload, message_t *msg)
 {
 	policy_t *policy;
+	identification_t *my_id;
 	id_payload_t *new_id_payload;
-	identification_t *identification;
 	
 	policy = this->ike_sa->get_policy(this->ike_sa);
-	identification = policy->get_my_id(policy);
-	new_id_payload = id_payload_create_from_identification(TRUE, identification);
+	my_id = policy->get_my_id(policy);
+	new_id_payload = id_payload_create_from_identification(TRUE, my_id);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add ID payload to message");
-	request->add_payload(request,(payload_t *) new_id_payload);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add ID payload to message");
+	msg->add_payload(msg, (payload_t *) new_id_payload);
 	
 	*id_payload = new_id_payload;
 	
@@ -609,22 +616,64 @@ static status_t build_id_payload (private_ike_sa_init_requested_t *this,id_paylo
 }
 
 /**
+ * Implementation of private_ike_sa_init_requested_t.build_cert_payload.
+ */
+static status_t build_cert_payload (private_ike_sa_init_requested_t *this, message_t *msg)
+{
+	connection_t *connection = this->ike_sa->get_connection(this->ike_sa);
+
+	if (connection->get_cert_policy(connection) != CERT_NEVER_SEND)
+	{
+		policy_t *policy;
+		identification_t *my_id;
+		x509_t *cert;
+		cert_payload_t *cert_payload;
+
+		policy = this->ike_sa->get_policy(this->ike_sa);
+		my_id = policy->get_my_id(policy);
+		
+		cert = charon->credentials->get_certificate(charon->credentials, my_id);
+		if (cert == NULL)
+		{
+			this->logger->log(this->logger, ERROR, "could not find my certificate");
+			return NOT_FOUND;
+		}
+		cert_payload = cert_payload_create_from_x509(cert);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "add CERT payload to message");
+		msg->add_payload(msg, (payload_t *) cert_payload);
+	}
+	return SUCCESS;
+}
+
+/**
+ * Implementation of private_ike_sa_init_requested_t.build_certreq_payload.
+ */
+static status_t build_certreq_payload (private_ike_sa_init_requested_t *this, message_t *msg)
+{
+	if (FALSE)
+	{
+		certreq_payload_t *certreq_payload;
+
+		this->logger->log(this->logger, CONTROL|LEVEL2, "add CERTREQ payload to message");
+		msg->add_payload(msg, (payload_t *) certreq_payload);
+	}
+	return SUCCESS;
+}
+
+/**
  * Implementation of private_ike_sa_init_requested_t.build_idr_payload.
  */
-static status_t build_idr_payload (private_ike_sa_init_requested_t *this, message_t *request)
+static status_t build_idr_payload (private_ike_sa_init_requested_t *this, message_t *msg)
 {
-	policy_t *policy;
-	id_payload_t *idr_payload;
-	identification_t *identification;
-	
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	identification = policy->get_other_id(policy);
+	policy_t         *policy = this->ike_sa->get_policy(this->ike_sa);
+	identification_t *identification = policy->get_other_id(policy);
+
 	if (!identification->contains_wildcards(identification))
 	{
-		idr_payload = id_payload_create_from_identification(FALSE, identification);
+		id_payload_t *idr_payload = id_payload_create_from_identification(FALSE, identification);
 	
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Add IDr payload to message");
-		request->add_payload(request,(payload_t *) idr_payload);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "add IDr payload to message");
+		msg->add_payload(msg, (payload_t *) idr_payload);
 	}
 	return SUCCESS;
 }
@@ -632,7 +681,7 @@ static status_t build_idr_payload (private_ike_sa_init_requested_t *this, messag
 /**
  * Implementation of private_ike_sa_init_requested_t.build_auth_payload.
  */
-static status_t build_auth_payload (private_ike_sa_init_requested_t *this, id_payload_t *my_id_payload, message_t *request)
+static status_t build_auth_payload (private_ike_sa_init_requested_t *this, id_payload_t *my_id_payload, message_t *msg)
 {
 	authenticator_t *authenticator;
 	auth_payload_t *auth_payload;
@@ -644,12 +693,12 @@ static status_t build_auth_payload (private_ike_sa_init_requested_t *this, id_pa
 	
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Could not generate AUTH data for IKE_AUTH request. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "could not generate AUTH data for IKE_AUTH request. Deleting IKE_SA");
 		return DESTROY_ME;		
 	}
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add AUTH payload to message");
-	request->add_payload(request,(payload_t *) auth_payload);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add AUTH payload to message");
+	msg->add_payload(msg, (payload_t *) auth_payload);
 	
 	return SUCCESS;
 }
@@ -657,7 +706,7 @@ static status_t build_auth_payload (private_ike_sa_init_requested_t *this, id_pa
 /**
  * Implementation of private_ike_sa_init_requested_t.build_sa_payload.
  */
-static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message_t *request)
+static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message_t *msg)
 {
 	linked_list_t *proposal_list;
 	sa_payload_t *sa_payload;
@@ -677,14 +726,14 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 									 this->ike_sa->public.is_any_host_behind_nat(&this->ike_sa->public));
 	if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "could not install CHILD_SA! Deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
 	sa_payload = sa_payload_create_from_proposal_list(proposal_list);
 
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add SA payload to message");
-	request->add_payload(request,(payload_t *) sa_payload);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add SA payload to message");
+	msg->add_payload(msg, (payload_t *) sa_payload);
 	
 	return SUCCESS;
 }
@@ -692,18 +741,14 @@ static status_t build_sa_payload (private_ike_sa_init_requested_t *this, message
 /**
  * Implementation of private_ike_sa_init_requested_t.build_tsi_payload.
  */
-static status_t build_tsi_payload (private_ike_sa_init_requested_t *this, message_t *request)
+static status_t build_tsi_payload (private_ike_sa_init_requested_t *this, message_t *msg)
 {
-	linked_list_t *ts_list;
-	ts_payload_t *ts_payload;
-	policy_t *policy;
+	policy_t      *policy = this->ike_sa->get_policy(this->ike_sa);
+	linked_list_t *ts_list = policy->get_my_traffic_selectors(policy);
+	ts_payload_t  *ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_list);
 	
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	ts_list = policy->get_my_traffic_selectors(policy);
-	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_list);
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add TSi payload to message");
-	request->add_payload(request,(payload_t *) ts_payload);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add TSi payload to message");
+	msg->add_payload(msg, (payload_t *) ts_payload);
 	
 	return SUCCESS;
 }
@@ -711,18 +756,14 @@ static status_t build_tsi_payload (private_ike_sa_init_requested_t *this, messag
 /**
  * Implementation of private_ike_sa_init_requested_t.build_tsr_payload.
  */
-static status_t build_tsr_payload (private_ike_sa_init_requested_t *this, message_t *request)
+static status_t build_tsr_payload (private_ike_sa_init_requested_t *this, message_t *msg)
 {
-	linked_list_t *ts_list;
-	ts_payload_t *ts_payload;
-	policy_t *policy;
-	
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	ts_list = policy->get_other_traffic_selectors(policy);
-	ts_payload = ts_payload_create_from_traffic_selectors(FALSE, ts_list);
+	policy_t      *policy = this->ike_sa->get_policy(this->ike_sa);
+	linked_list_t *ts_list = policy->get_other_traffic_selectors(policy);
+	ts_payload_t  *ts_payload = ts_payload_create_from_traffic_selectors(FALSE, ts_list);
 
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add TSr payload to message");
-	request->add_payload(request,(payload_t *) ts_payload);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add TSr payload to message");
+	msg->add_payload(msg, (payload_t *) ts_payload);
 	
 	return SUCCESS;
 }
@@ -735,7 +776,7 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 	chunk_t notification_data;
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
 					  mapping_find(notify_message_type_m, notify_message_type));
 	
 	switch (notify_message_type)
@@ -768,20 +809,20 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 			 * is cancelled...
 			 */
 			
-			this->logger->log(this->logger, AUDIT, "Peer didn't accept %s, it requested %s!",
+			this->logger->log(this->logger, AUDIT, "peer didn't accept %s, it requested %s!",
 							  mapping_find(diffie_hellman_group_m, old_dh_group),
 							  mapping_find(diffie_hellman_group_m, dh_group));
 			/* check if we can accept this dh group */
 			if (!connection->check_dh_group(connection, dh_group))
 			{
 				this->logger->log(this->logger, AUDIT, 
-								  "Peer does only accept DH group %s, which we do not accept! Aborting",
+								  "peer does only accept DH group %s, which we do not accept! Aborting",
 								  mapping_find(diffie_hellman_group_m, dh_group));
 				return DESTROY_ME;
 			}
 			
 			/* Going to change state back to initiator_init_t */
-			this->logger->log(this->logger, CONTROL|LEVEL2, "Create next state object");
+			this->logger->log(this->logger, CONTROL|LEVEL2, "create next state object");
 			initiator_init_state = initiator_init_create(this->ike_sa);
 
 			/* buffer of sent and received messages has to get reseted */
@@ -791,8 +832,8 @@ static status_t process_notify_payload(private_ike_sa_init_requested_t *this, no
 			this->ike_sa->set_new_state(this->ike_sa,(state_t *) initiator_init_state);
 
 			/* state has NOW changed :-) */
-			this->logger->log(this->logger, CONTROL|LEVEL2, "Destroy old sate object");
-			this->logger->log(this->logger, CONTROL|LEVEL2, "Going to retry initialization of connection");
+			this->logger->log(this->logger, CONTROL|LEVEL2, "destroy old sate object");
+			this->logger->log(this->logger, CONTROL|LEVEL2, "going to retry initialization of connection");
 			
 			this->public.state_interface.destroy(&(this->public.state_interface));
 			if (initiator_init_state->retry_initiate_connection (initiator_init_state, dh_group) != SUCCESS)
@@ -925,6 +966,8 @@ ike_sa_init_requested_t *ike_sa_init_requested_create(protected_ike_sa_t *ike_sa
 	this->build_tsr_payload = build_tsr_payload;
 	this->build_id_payload = build_id_payload;
 	this->build_idr_payload = build_idr_payload;
+	this->build_cert_payload = build_cert_payload;
+	this->build_certreq_payload = build_certreq_payload;
 	this->build_sa_payload = build_sa_payload;
 	this->process_notify_payload = process_notify_payload;
 	

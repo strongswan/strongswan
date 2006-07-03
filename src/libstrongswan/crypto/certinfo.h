@@ -29,11 +29,14 @@
 /**
  * RFC 2560 OCSP - certificate status
  */
+extern enum_names cert_status_names;
+
 typedef enum {
 	CERT_GOOD = 		0,
 	CERT_REVOKED = 		1,
 	CERT_UNKNOWN = 		2,
-	CERT_UNDEFINED =	3
+	CERT_UNDEFINED =	3,
+	CERT_UNTRUSTED =	4  /* private use */
 } cert_status_t;
 
 /**

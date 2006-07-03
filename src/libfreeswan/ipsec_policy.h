@@ -149,10 +149,10 @@ enum ipsec_id_type {
  * RFC 2408 ISAKMP, chapter 3.9
  */
 enum ipsec_cert_type {
-  CERT_NONE=			0,  
-  CERT_PKCS7_WRAPPED_X509=	1,  /* self-signed certificate from disk */
+  CERT_NONE=			0,
+  CERT_PKCS7_WRAPPED_X509=	1,
   CERT_PGP=			2,
-  CERT_DNS_SIGNED_KEY=		3,  /* KEY RR from DNS */
+  CERT_DNS_SIGNED_KEY=		3,
   CERT_X509_SIGNATURE=		4,
   CERT_X509_KEY_EXCHANGE=	5,
   CERT_KERBEROS_TOKENS=		6,
@@ -160,7 +160,7 @@ enum ipsec_cert_type {
   CERT_ARL=			8,
   CERT_SPKI=			9,
   CERT_X509_ATTRIBUTE=		10,
-  CERT_RAW_RSA=                 11, /* raw RSA from config file */ 
+  CERT_RAW_RSA_KEY=             11
 };
 
 /* a SIG record in ASCII */

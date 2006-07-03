@@ -75,43 +75,43 @@ struct private_initiator_init_t {
 	 * Builds the SA payload for this state.
 	 * 
 	 * @param this		calling object
-	 * @param request	message_t object to add the SA payload
+	 * @param msg		message_t object to add the SA payload
 	 */
-	void (*build_sa_payload) (private_initiator_init_t *this, message_t *request);
+	void (*build_sa_payload) (private_initiator_init_t *this, message_t *msg);
 
 	/**
 	 * Builds the KE payload for this state.
 	 * 
 	 * @param this		calling object
-	 * @param request	message_t object to add the KE payload
+	 * @param msg		message_t object to add the KE payload
 	 */
-	void (*build_ke_payload) (private_initiator_init_t *this, message_t *request);
+	void (*build_ke_payload) (private_initiator_init_t *this, message_t *msg);
 	
 	/**
 	 * Builds the NONCE payload for this state.
 	 * 
 	 * @param this		calling object
-	 * @param request	message_t object to add the NONCE payload
+	 * @param msg		message_t object to add the NONCE payload
 	 */
-	status_t (*build_nonce_payload) (private_initiator_init_t *this,message_t *request);	
+	status_t (*build_nonce_payload) (private_initiator_init_t *this,message_t *msg);	
 
 	/**
 	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
 	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
 	 * 
 	 * @param this		calling object
-	 * @param request	message_t object to add the Notify payloads
+	 * @param msg		message_t object to add the Notify payloads
 	 */
-	void (*build_natd_payload) (private_initiator_init_t *this, message_t *request, notify_message_type_t type, host_t *host);
+	void (*build_natd_payload) (private_initiator_init_t *this, message_t *msg, notify_message_type_t type, host_t *host);
 
 	/**
 	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
 	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
 	 * 
 	 * @param this		calling object
-	 * @param request	message_t object to add the Notify payloads
+	 * @param msg		message_t object to add the Notify payloads
 	 */
-	void (*build_natd_payloads) (private_initiator_init_t *this, message_t *request);
+	void (*build_natd_payloads) (private_initiator_init_t *this, message_t *msg);
 
 	/**
 	 * Destroy function called internally of this class after state change to state 
@@ -237,7 +237,7 @@ status_t retry_initiate_connection (private_initiator_init_t *this, diffie_hellm
 /**
  * Implementation of private_initiator_init_t.build_sa_payload.
  */
-static void build_sa_payload(private_initiator_init_t *this, message_t *request)
+static void build_sa_payload(private_initiator_init_t *this, message_t *msg)
 {
 	sa_payload_t* sa_payload;
 	linked_list_t *proposal_list;
@@ -252,13 +252,13 @@ static void build_sa_payload(private_initiator_init_t *this, message_t *request)
 	sa_payload = sa_payload_create_from_proposal_list(proposal_list);	
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "add SA payload to message");
-	request->add_payload(request, (payload_t *) sa_payload);
+	msg->add_payload(msg, (payload_t *) sa_payload);
 }
 
 /**
  * Implementation of private_initiator_init_t.build_ke_payload.
  */
-static void build_ke_payload(private_initiator_init_t *this, message_t *request)
+static void build_ke_payload(private_initiator_init_t *this, message_t *msg)
 {
 	ke_payload_t *ke_payload;
 	chunk_t key_data;
@@ -276,13 +276,13 @@ static void build_ke_payload(private_initiator_init_t *this, message_t *request)
 	chunk_free(&key_data);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "add KE payload to message");
-	request->add_payload(request, (payload_t *) ke_payload);
+	msg->add_payload(msg, (payload_t *) ke_payload);
 }
 
 /**
  * Implementation of private_initiator_init_t.build_nonce_payload.
  */
-static status_t build_nonce_payload(private_initiator_init_t *this, message_t *request)
+static status_t build_nonce_payload(private_initiator_init_t *this, message_t *msg)
 {
 	nonce_payload_t *nonce_payload;
 	randomizer_t *randomizer;
@@ -306,36 +306,36 @@ static status_t build_nonce_payload(private_initiator_init_t *this, message_t *r
 	nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "add NONCE payload to message");
-	request->add_payload(request, (payload_t *) nonce_payload);
+	msg->add_payload(msg, (payload_t *) nonce_payload);
 	return SUCCESS;
 }
 
 /**
  * Implementation of private_initiator_init_t.build_natd_payload.
  */
-static void build_natd_payload(private_initiator_init_t *this, message_t *request, notify_message_type_t type, host_t *host)
+static void build_natd_payload(private_initiator_init_t *this, message_t *msg, notify_message_type_t type, host_t *host)
 {
 	chunk_t hash;
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Building Notify(NAT-D) payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "building Notify(NAT-D) payload");
 	notify_payload_t *notify_payload;
 	notify_payload = notify_payload_create();
 	/*notify_payload->set_protocol_id(notify_payload, NULL);*/
 	/*notify_payload->set_spi(notify_payload, NULL);*/
 	notify_payload->set_notify_message_type(notify_payload, type);
 	hash = this->ike_sa->generate_natd_hash(this->ike_sa,
-			request->get_initiator_spi(request),
-			request->get_responder_spi(request),
-			host);
+				msg->get_initiator_spi(msg),
+				msg->get_responder_spi(msg),
+				host);
 	notify_payload->set_notification_data(notify_payload, hash);
 	chunk_free(&hash);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add Notify(NAT-D) payload to message");
-	request->add_payload(request, (payload_t *) notify_payload);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add Notify(NAT-D) payload to message");
+	msg->add_payload(msg, (payload_t *) notify_payload);
 }
 
 /**
  * Implementation of private_initiator_init_t.build_natd_payloads.
  */
-static void build_natd_payloads(private_initiator_init_t *this, message_t *request)
+static void build_natd_payloads(private_initiator_init_t *this, message_t *msg)
 {
 	connection_t	*connection;
 	linked_list_t	*hostlist;
@@ -348,7 +348,7 @@ static void build_natd_payloads(private_initiator_init_t *this, message_t *reque
 	hostlist = charon->interfaces->get_addresses(charon->interfaces);
 	hostiter = hostlist->create_iterator(hostlist, TRUE);
 	while(hostiter->iterate(hostiter, (void**)&host)) {
-		this->build_natd_payload(this, request, NAT_DETECTION_SOURCE_IP,
+		this->build_natd_payload(this, msg, NAT_DETECTION_SOURCE_IP,
 			host);
 	}
 	hostiter->destroy(hostiter);
@@ -357,7 +357,7 @@ static void build_natd_payloads(private_initiator_init_t *this, message_t *reque
 	 * N(NAT_DETECTION_DESTINATION_IP)
 	 */
 	connection = this->ike_sa->get_connection(this->ike_sa);
-	this->build_natd_payload(this, request, NAT_DETECTION_DESTINATION_IP,
+	this->build_natd_payload(this, msg, NAT_DETECTION_DESTINATION_IP,
 			connection->get_other_host(connection));
 }
 

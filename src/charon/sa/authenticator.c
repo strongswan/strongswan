@@ -243,15 +243,14 @@ static status_t verify_auth_data (private_authenticator_t *this,
 		}
 		case RSA_DIGITAL_SIGNATURE:
 		{
-			identification_t *other_id = other_id_payload->get_identification(other_id_payload);
-			rsa_public_key_t *public_key;
 			status_t status;
-			chunk_t octets, auth_data;
-			
-			auth_data = auth_payload->get_data(auth_payload);
-			
-			public_key = charon->credentials->get_rsa_public_key(charon->credentials,
-															 other_id);
+			chunk_t octets;
+			chunk_t auth_data = auth_payload->get_data(auth_payload);
+			identification_t *other_id = other_id_payload->get_identification(other_id_payload);
+
+			rsa_public_key_t *public_key =
+				charon->credentials->get_trusted_public_key(charon->credentials, other_id);
+
 			if (public_key == NULL)
 			{
 				this->logger->log(this->logger, ERROR, "no public key found for '%s'",
@@ -274,7 +273,6 @@ static status_t verify_auth_data (private_authenticator_t *this,
 										other_id->get_string(other_id));
 			}
 			
-			public_key->destroy(public_key);
 			other_id->destroy(other_id);
 			chunk_free(&octets);
 			return status;
@@ -356,7 +354,6 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			this->logger->log(this->logger, CONTROL|LEVEL1, "looking for private key with keyid %s", buf);
 
 			my_key = charon->credentials->get_rsa_private_key(charon->credentials, my_pubkey);
-			my_pubkey->destroy(my_pubkey);
 			if (my_key == NULL)
 			{
 				char buf[BUF_LEN];

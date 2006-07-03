@@ -29,6 +29,7 @@
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
+#include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <crypto/diffie_hellman.h>
 #include <queues/jobs/send_keepalive_job.h>
@@ -128,52 +129,66 @@ struct private_responder_init_t {
 	 * 
 	 * @param this			calling object
 	 * @param sa_request	The received SA payload
-	 * @param response		the SA payload is added to this response message_t object.
+	 * @param msg			the SA payload is added to this message_t object.
 	 * @return
 	 * 						- DESTROY_ME
 	 * 						- SUCCESS
 	 */
-	status_t (*build_sa_payload) (private_responder_init_t *this,sa_payload_t *sa_request, message_t *response);
+	status_t (*build_sa_payload) (private_responder_init_t *this,sa_payload_t *sa_request, message_t *msg);
 
 	/**
 	 * Handles received KE payload and builds the KE payload for the response.
 	 * 
-	 * @param this		calling object
+	 * @param this			calling object
 	 * @param ke_request	The received KE payload
-	 * @param response		the KE payload is added to this response message_t object.
+	 * @param msg			the KE payload is added to this message_t object.
+	 * @return
 	 * 						- DESTROY_ME
 	 * 						- SUCCESS
 	 */
-	status_t (*build_ke_payload) (private_responder_init_t *this,ke_payload_t *ke_request, message_t *response);
+	status_t (*build_ke_payload) (private_responder_init_t *this,ke_payload_t *ke_request, message_t *msg);
 	
 	/**
 	 * Handles received NONCE payload and builds the NONCE payload for the response.
 	 * 
 	 * @param this			calling object
 	 * @param nonce_request	The received NONCE payload
-	 * @param response		the NONCE payload is added to this response message_t object.
+	 * @param msg			the NONCE payload is added to this message_t object.
+	 * @return
 	 * 						- DESTROY_ME
 	 * 						- SUCCESS
 	 */
-	status_t (*build_nonce_payload) (private_responder_init_t *this,nonce_payload_t *nonce_request, message_t *response);	
+	status_t (*build_nonce_payload) (private_responder_init_t *this,nonce_payload_t *nonce_request, message_t *msg);
+
+	/**
+	 * Build CERTREQ payload for the response.
+	 * 
+	 * @param this			calling object
+	 * @param msg			the CERTREQ payload is added to this message_t object
+	 * @return
+	 * 							- SUCCESS
+	 * 							- FAILED
+	 */
+	status_t (*build_certreq_payload) (private_responder_init_t *this, message_t *msg);
+	
 	
 	/**
 	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
 	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
 	 * 
 	 * @param this		calling object
-	 * @param request	message_t object to add the Notify payloads
+	 * @param msg		message_t object to add the Notify payloads
 	 */
-	void (*build_natd_payload) (private_responder_init_t *this, message_t *request, notify_message_type_t type, host_t *host);
+	void (*build_natd_payload) (private_responder_init_t *this, message_t *msg, notify_message_type_t type, host_t *host);
 
 	/**
 	 * Builds the NAT-T Notify(NAT_DETECTION_SOURCE_IP) and
 	 * Notify(NAT_DETECTION_DESTINATION_IP) payloads for this state.
 	 * 
 	 * @param this		calling object
-	 * @param request	message_t object to add the Notify payloads
+	 * @param msg		message_t object to add the Notify payloads
 	 */
-	void (*build_natd_payloads) (private_responder_init_t *this, message_t *request);
+	void (*build_natd_payloads) (private_responder_init_t *this, message_t *msg);
 
 	/**
 	 * Sends a IKE_SA_INIT reply containing a notify payload.
@@ -346,16 +361,16 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	if (this->natd_seen_r > 1)
 	{
-		this->logger->log(this->logger, AUDIT, "Warning: IKE_SA_INIT request contained multiple Notify(NAT_DETECTION_DESTINATION_IP) payloads.");
+		this->logger->log(this->logger, AUDIT, "warning: IKE_SA_INIT request contained multiple Notify(NAT_DETECTION_DESTINATION_IP) payloads.");
 	}
 	if (this->natd_seen_i > 0 && !this->natd_hash_i_matched)
 	{
-		this->logger->log(this->logger, AUDIT, "Remote host is behind NAT, using NAT-T.");
+		this->logger->log(this->logger, AUDIT, "remote host is behind NAT, using NAT-Traversal");
 		this->ike_sa->set_other_host_behind_nat(this->ike_sa, TRUE);
 	}
 	if (this->natd_seen_r > 0 && !this->natd_hash_r_matched)
 	{
-		this->logger->log(this->logger, AUDIT, "Local host is behind NAT, using NAT-T.");
+		this->logger->log(this->logger, AUDIT, "local host is behind NAT, using NAT-Traversal");
 		this->ike_sa->set_my_host_behind_nat(this->ike_sa, TRUE);
 		charon->event_queue->add_relative(charon->event_queue,
 			(job_t*)send_keepalive_job_create(this->ike_sa->public.get_id((ike_sa_t*)this->ike_sa)),
@@ -363,32 +378,27 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	}
 	if (!this->ike_sa->public.is_any_host_behind_nat((ike_sa_t*)this->ike_sa))
 	{
-		this->logger->log(this->logger, AUDIT, "No NAT detected, not using NAT-T.");
+		this->logger->log(this->logger, AUDIT, "no NAT detected, not using NAT-Traversal");
 	}
 
 	this->ike_sa->build_message(this->ike_sa, IKE_SA_INIT, FALSE, &response);
 	
 	status = this->build_sa_payload(this, sa_request, response);
 	if (status != SUCCESS)
-	{
-		response->destroy(response);
-		return status;
-	}
+		goto destroy_response;
 	
 	status = this->build_ke_payload(this, ke_request, response);
 	if (status != SUCCESS)
-	{
-		response->destroy(response);
-		return status;
-	}
+		goto destroy_response;
 	
 	status = this->build_nonce_payload(this, nonce_request, response);
 	if (status != SUCCESS)
-	{
-		response->destroy(response);
-		return status;
-	}	
-
+		goto destroy_response;
+	
+	status = this->build_certreq_payload(this, response);
+	if (status != SUCCESS)
+		goto destroy_response;
+	
 	/* build Notify(NAT-D) payloads */
 	this->build_natd_payloads(this, response);
 
@@ -422,14 +432,18 @@ static status_t process_message(private_responder_init_t *this, message_t *messa
 	/* state can now be changed */
 	this->ike_sa->set_new_state(this->ike_sa, (state_t *) next_state);
 	this->destroy_after_state_change(this);	
-	
 	return SUCCESS;
+
+destroy_response:
+	response->destroy(response);
+	return status;
+
 }
 
 /**
  * Implementation of private_initiator_init_t.build_sa_payload.
  */
-static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa_request, message_t *response)
+static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa_request, message_t *msg)
 {
 	proposal_t *proposal;
 	linked_list_t *proposal_list;
@@ -468,7 +482,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 	this->logger->log(this->logger, CONTROL|LEVEL2, "building SA payload");
 	sa_payload = sa_payload_create_from_proposal(this->proposal);	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "add SA payload to message");
-	response->add_payload(response,(payload_t *) sa_payload);
+	msg->add_payload(msg, (payload_t *) sa_payload);
 	
 	return SUCCESS;
 }
@@ -476,7 +490,7 @@ static status_t build_sa_payload(private_responder_init_t *this,sa_payload_t *sa
 /**
  * Implementation of private_initiator_init_t.build_ke_payload.
  */
-static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke_request, message_t *response)
+static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke_request, message_t *msg)
 {
 	diffie_hellman_group_t group;
 	ke_payload_t *ke_payload;
@@ -532,7 +546,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 	chunk_free(&key_data);
 
 	this->logger->log(this->logger, CONTROL|LEVEL2, "add KE payload to message");
-	response->add_payload(response,(payload_t *) ke_payload);
+	msg->add_payload(msg, (payload_t *) ke_payload);
 	
 	return SUCCESS;
 }
@@ -540,7 +554,7 @@ static status_t build_ke_payload(private_responder_init_t *this,ke_payload_t *ke
 /**
  * Implementation of private_responder_init_t.build_nonce_payload.
  */
-static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload_t *nonce_request, message_t *response)
+static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload_t *nonce_request, message_t *msg)
 {
 	nonce_payload_t *nonce_payload;
 	randomizer_t *randomizer;
@@ -567,43 +581,58 @@ static status_t build_nonce_payload(private_responder_init_t *this,nonce_payload
 	nonce_payload->set_nonce(nonce_payload, this->sent_nonce);
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "add NONCE payload to message");
-	response->add_payload(response,(payload_t *) nonce_payload);
+	msg->add_payload(msg, (payload_t *) nonce_payload);
 	
+	return SUCCESS;
+}
+
+/**
+ * Implementation of private_responder_init_t.build_certreq_payload.
+ */
+static status_t build_certreq_payload (private_responder_init_t *this, message_t *msg)
+{
+	if (FALSE)
+	{
+		certreq_payload_t *certreq_payload;
+
+		this->logger->log(this->logger, CONTROL|LEVEL2, "add CERTREQ payload to message");
+		msg->add_payload(msg, (payload_t *) certreq_payload);
+	}
 	return SUCCESS;
 }
 
 /**
  * Implementation of private_initiator_init_t.build_natd_payload.
  */
-static void build_natd_payload(private_responder_init_t *this, message_t *request, notify_message_type_t type, host_t *host)
+static void build_natd_payload(private_responder_init_t *this, message_t *msg, notify_message_type_t type, host_t *host)
 {
 	chunk_t hash;
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Building Notify(NAT-D) payload");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "building Notify(NAT-D) payload");
 	notify_payload_t *notify_payload;
 	notify_payload = notify_payload_create();
 	/*notify_payload->set_protocol_id(notify_payload, NULL);*/
 	/*notify_payload->set_spi(notify_payload, NULL);*/
 	notify_payload->set_notify_message_type(notify_payload, type);
 	hash = this->ike_sa->generate_natd_hash(this->ike_sa,
-			request->get_initiator_spi(request),
-			request->get_responder_spi(request),
-			host);
+				msg->get_initiator_spi(msg),
+				msg->get_responder_spi(msg),
+				host);
 	notify_payload->set_notification_data(notify_payload, hash);
 	chunk_free(&hash);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Add Notify(NAT-D) payload to message");
-	request->add_payload(request, (payload_t *) notify_payload);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "add Notify(NAT-D) payload to message");
+	msg->add_payload(msg, (payload_t *) notify_payload);
 }
 
 /**
  * Implementation of private_initiator_init_t.build_natd_payloads.
  */
-static void build_natd_payloads(private_responder_init_t *this, message_t *request)
+static void build_natd_payloads(private_responder_init_t *this, message_t *msg)
 {
 	connection_t	*connection;
 	connection = this->ike_sa->get_connection(this->ike_sa);
-	this->build_natd_payload(this, request, NAT_DETECTION_SOURCE_IP,
+	this->build_natd_payload(this, msg, NAT_DETECTION_SOURCE_IP,
 			connection->get_my_host(connection));
-	this->build_natd_payload(this, request, NAT_DETECTION_DESTINATION_IP,
+	this->build_natd_payload(this, msg, NAT_DETECTION_DESTINATION_IP,
 			connection->get_other_host(connection));
 }
 
@@ -744,6 +773,7 @@ responder_init_t *responder_init_create(protected_ike_sa_t *ike_sa)
 	this->build_sa_payload = build_sa_payload;
 	this->build_ke_payload = build_ke_payload;
 	this->build_nonce_payload = build_nonce_payload;
+	this->build_certreq_payload = build_certreq_payload;
 	this->destroy_after_state_change = destroy_after_state_change;
 	this->process_notify_payload = process_notify_payload;
 	this->build_natd_payload = build_natd_payload;

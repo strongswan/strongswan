@@ -63,13 +63,20 @@ struct credential_store_t {
 	/**
 	 * @brief Returns the RSA public key of a specific ID.
 	 * 
-	 * The returned rsa_public_key_t must be destroyed by the caller after usage.
-	 * 
 	 * @param this					calling object
 	 * @param id					identification_t object identifiying the key.
 	 * @return						public key, or NULL if not found
 	 */
 	rsa_public_key_t* (*get_rsa_public_key) (credential_store_t *this, identification_t *id);
+	
+	/**
+	 * @brief Returns the RSA public key of a specific ID if is trusted
+	 * 
+	 * @param this					calling object
+	 * @param id					identification_t object identifiying the key.
+	 * @return						public key, or NULL if not found or not trusted
+	 */
+	rsa_public_key_t* (*get_trusted_public_key) (credential_store_t *this, identification_t *id);
 	
 	/**
 	 * @brief Returns the RSA private key belonging to an RSA public key
@@ -92,14 +99,23 @@ struct credential_store_t {
 	bool (*has_rsa_private_key) (credential_store_t *this, rsa_public_key_t *pubkey);
 
 	/**
+	 * @brief Returns the certificate of a specific ID.
+	 * 
+	 * @param this					calling object
+	 * @param id					identification_t object identifiying the key.
+	 * @return						certificate, or NULL if not found
+	 */
+	x509_t* (*get_certificate) (credential_store_t *this, identification_t *id);
+	
+	/**
 	 * @brief Verify an X.509 certificate up to trust anchor including revocation checks
 	 *
 	 * @param this		calling object
 	 * @param cert		certificate to be verified
-	 * @param until		time until which the cert can be trusted
+	 * @param found		found a certificate copy in the credential store
 	 * @return			TRUE if trusted
 	 */
-	bool (*verify) (credential_store_t *this, const x509_t *cert, time_t *until);
+	bool (*verify) (credential_store_t *this, x509_t *cert, bool *found);
 
 	/**
 	 * @brief If an end certificate does not already exists in the credential store then add it.

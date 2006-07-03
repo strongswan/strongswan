@@ -31,6 +31,7 @@
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/id_payload.h>
+#include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <crypto/signers/signer.h>
@@ -108,23 +109,22 @@ struct private_ike_sa_init_responded_t {
 	 * @param this			calling object
 	 * @param request_idi	ID payload representing initiator
 	 * @param request_idr	ID payload representing responder (May be zero)
-	 * @param response		The created IDr payload is added to this message_t object
+	 * @param msg			The created IDr payload is added to this message_t object
 	 * @param response_idr	The created IDr payload is also written to this location
 	 */
 	status_t (*build_idr_payload) (private_ike_sa_init_responded_t *this,
 									id_payload_t *request_idi, 
 									id_payload_t *request_idr, 
-									message_t *response,
+									message_t *msg,
 									id_payload_t **response_idr);
 
 	/**
-	 * Process received SA payload and build SA payload for IKE_AUTH response.
+	 * Build CERT payload for IKE_AUTH response.
 	 * 
 	 * @param this			calling object
-	 * @param request		SA payload received in IKE_AUTH request
-	 * @param response		The created SA payload is added to this message_t object
+	 * @param msg			The created CERT payload is added to this message_t object
 	 */
-	status_t (*build_sa_payload) (private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *response);
+	status_t (*build_cert_payload) (private_ike_sa_init_responded_t *this, message_t *msg);
 
 	/**
 	 * Process received AUTH payload and build AUTH payload for IKE_AUTH response.
@@ -133,19 +133,39 @@ struct private_ike_sa_init_responded_t {
 	 * @param request			AUTH payload received in IKE_AUTH request
 	 * @param other_id_payload	other ID payload needed to verify AUTH data
 	 * @param my_id_payload		my ID payload needed to compute AUTH data
-	 * @param response			The created AUTH payload is added to this message_t object
+	 * @param msg				The created AUTH payload is added to this message_t object
 	 */
-	status_t (*build_auth_payload) (private_ike_sa_init_responded_t *this, auth_payload_t *request,id_payload_t *other_id_payload,id_payload_t *my_id_payload, message_t* response);
+	status_t (*build_auth_payload) (private_ike_sa_init_responded_t *this, auth_payload_t *request,id_payload_t *other_id_payload,id_payload_t *my_id_payload, message_t* msg);
 	
+	/**
+	 * Process received SA payload and build SA payload for IKE_AUTH response.
+	 * 
+	 * @param this			calling object
+	 * @param request		SA payload received in IKE_AUTH request
+	 * @param msg			The created SA payload is added to this message_t object
+	 */
+	status_t (*build_sa_payload) (private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *msg);
+
 	/**
 	 * Process received TS payload and build TS payload for IKE_AUTH response.
 	 * 
 	 * @param this			calling object
 	 * @param is_initiator	type of TS payload. TRUE for TSi, FALSE for TSr
 	 * @param request		TS payload received in IKE_AUTH request
-	 * @param response		the created TS payload is added to this message_t object
+	 * @param msg			the created TS payload is added to this message_t object
 	 */
-	status_t (*build_ts_payload) (private_ike_sa_init_responded_t *this, bool ts_initiator, ts_payload_t *request, message_t *response);
+	status_t (*build_ts_payload) (private_ike_sa_init_responded_t *this, bool ts_initiator, ts_payload_t *request, message_t *msg);
+	
+	/**
+	 * Process received CERT payload
+	 * 
+	 * @param this			calling object
+	 * @param cert_payload	payload to process
+	 * @return
+	 * 						- DESTROY_ME if IKE_SA should be deleted
+	 * 						- SUCCSS if processed successful
+	 */
+	status_t (*process_cert_payload) (private_ike_sa_init_responded_t *this, cert_payload_t *cert_payload);
 	
 	/**
 	 * Sends a IKE_AUTH reply containing a notify payload.
@@ -154,7 +174,7 @@ struct private_ike_sa_init_responded_t {
 	 * @param notify_payload payload to process
 	 * @return
 	 * 					- DESTROY_ME if IKE_SA should be deleted
-	 * 					- SUCCSS if processed successfull
+	 * 					- SUCCSS if processed successful
 	 */
 	status_t (*process_notify_payload) (private_ike_sa_init_responded_t *this, notify_payload_t* notify_payload);
 	
@@ -170,14 +190,18 @@ struct private_ike_sa_init_responded_t {
 };
 
 /**
- * Implements state_t.get_state
+ * Implements state_t.process_message
  */
 static status_t process_message(private_ike_sa_init_responded_t *this, message_t *request)
 {
-	id_payload_t *idi_request = NULL, *idr_request = NULL,*idr_response;
-	ts_payload_t *tsi_request = NULL, *tsr_request = NULL;
+	id_payload_t *idi_request = NULL;
+	id_payload_t *idr_request = NULL;
+	id_payload_t *idr_response;
+	ts_payload_t *tsi_request = NULL;
+	ts_payload_t *tsr_request = NULL;
 	auth_payload_t *auth_request = NULL;
 	sa_payload_t *sa_request = NULL;
+	cert_payload_t *cert_request = NULL;
 	iterator_t *payloads;
 	message_t *response;
 	crypter_t *crypter;
@@ -190,7 +214,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	
 	if (request->get_exchange_type(request) != IKE_AUTH)
 	{
-		this->logger->log(this->logger, ERROR | LEVEL1, "Message of type %s not supported in state ike_sa_init_responded",
+		this->logger->log(this->logger, ERROR | LEVEL1, "message of type %s not supported in state ike_sa_init_respondd",
 							mapping_find(exchange_type_m,request->get_exchange_type(request)));
 		return FAILED;
 	}
@@ -232,35 +256,32 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		switch (payload->get_type(payload))
 		{
 			case ID_INITIATOR:
-			{
 				idi_request = (id_payload_t*)payload;
 				break;	
-			}
+			case CERTIFICATE:
+				cert_request = (cert_payload_t*)payload;
+				status = this->process_cert_payload(this, cert_request);
+				if (status != SUCCESS)
+				{
+					payloads->destroy(payloads);
+					return status;	
+				}
+				break;
 			case AUTHENTICATION:
-			{
 				auth_request = (auth_payload_t*)payload;
 				break;	
-			}
 			case ID_RESPONDER:
-			{
 				idr_request = (id_payload_t*)payload;
 				break;	
-			}
 			case SECURITY_ASSOCIATION:
-			{
 				sa_request = (sa_payload_t*)payload;
 				break;
-			}
 			case TRAFFIC_SELECTOR_INITIATOR:
-			{
 				tsi_request = (ts_payload_t*)payload;
 				break;	
-			}
 			case TRAFFIC_SELECTOR_RESPONDER:
-			{
 				tsr_request = (ts_payload_t*)payload;
 				break;	
-			}
 			case NOTIFY:
 			{
 				notify_payload_t *notify_payload = (notify_payload_t *) payload;
@@ -271,20 +292,14 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 					return status;	
 				}
 			}			
-			case CERTIFICATE:
-			{
-				/* TODO handle cert payloads */
-			}
 			case CERTIFICATE_REQUEST:
 			{
 				/* TODO handle certrequest payloads */
 			}
 			default:
-			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "Ignoring payload %s (%d)", 
+				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring payload %s (%d)", 
 									mapping_find(payload_type_m, payload->get_type(payload)), payload->get_type(payload));
 				break;
-			}
 		}
 	}
 	/* iterator can be destroyed */
@@ -300,9 +315,7 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	status = this->ike_sa->update_connection_hosts(this->ike_sa,
 				request->get_destination(request), request->get_source(request));
 	if (status != SUCCESS)
-	{
 		return status;
-	}
 
 	/* build response */
 	this->ike_sa->build_message(this->ike_sa, IKE_AUTH, FALSE, &response);
@@ -310,40 +323,34 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	/* add payloads to it */
 	status = this->build_idr_payload(this, idi_request, idr_request, response, &idr_response);
 	if (status != SUCCESS)
-	{
-		response->destroy(response);
-		return status;
-	}
+		goto destroy_response;
+
+	status = this->build_cert_payload(this, response);
+	if (status != SUCCESS)
+		goto destroy_response;
+
 	status = this->build_auth_payload(this, auth_request,idi_request, idr_response,response);
 	if (status != SUCCESS)
-	{
-		response->destroy(response);
-		return status;
-	}
+		goto destroy_response;
+
 	status = this->build_sa_payload(this, sa_request, response);
 	if (status != SUCCESS)
-	{
-		response->destroy(response);
-		return status;
-	}
+		goto destroy_response;
+
 	status = this->build_ts_payload(this, TRUE, tsi_request, response);
 	if (status != SUCCESS)
-	{
-		response->destroy(response);
-		return status;
-	}
+		goto destroy_response;
+
 	status = this->build_ts_payload(this, FALSE, tsr_request, response);
 	if (status != SUCCESS)
-	{
-		response->destroy(response);
-		return status;
-	}		
+		goto destroy_response;
 
 	status = this->ike_sa->send_response(this->ike_sa, response);
 	/* message can now be sent (must not be destroyed) */
+
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, "Unable to send IKE_AUTH reply. Deleting IKE_SA");
+		this->logger->log(this->logger, AUDIT, "unable to send IKE_AUTH reply. Deleting IKE_SA");
 		response->destroy(response);
 		return DESTROY_ME;
 	}
@@ -351,11 +358,11 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 	/* install child SA policies */
 	if (!this->child_sa)
 	{
-		this->logger->log(this->logger, CONTROL, "Proposal negotiation failed, no CHILD_SA built");
+		this->logger->log(this->logger, CONTROL, "proposal negotiation failed, no CHILD_SA built");
 	}
 	else if (this->my_ts->get_count(this->my_ts) == 0 || this->other_ts->get_count(this->other_ts) == 0)
 	{
-		this->logger->log(this->logger, CONTROL, "Traffic selector negotiation failed, no CHILD_SA built");
+		this->logger->log(this->logger, CONTROL, "traffic selector negotiation failed, no CHILD_SA built");
 		this->child_sa->destroy(this->child_sa);
 		this->child_sa = NULL;
 	}
@@ -364,33 +371,27 @@ static status_t process_message(private_ike_sa_init_responded_t *this, message_t
 		status = this->child_sa->add_policies(this->child_sa, this->my_ts, this->other_ts);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA policy! Deleting IKE_SA");
+			this->logger->log(this->logger, AUDIT, "could not install CHILD_SA policy! Deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	}
 	
 	/* create new state */
-	this->ike_sa->set_new_state(this->ike_sa, (state_t*)ike_sa_established_create(this->ike_sa));
+	this->ike_sa->establish(this->ike_sa);
 	this->destroy_after_state_change(this);
-	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	my_host = connection->get_my_host(connection);
-	other_host = connection->get_other_host(connection);
-	policy = this->ike_sa->get_policy(this->ike_sa);
-	my_id = policy->get_my_id(policy);
-	other_id = policy->get_other_id(policy);
-	this->logger->log(this->logger, AUDIT, "IKE_SA established %s[%s]...%s[%s]", 
-					  my_host->get_address(my_host), my_id->get_string(my_id),
-					  other_host->get_address(other_host), other_id->get_string(other_id));
-
 	return SUCCESS;
+
+destroy_response:
+	response->destroy(response);
+	return status;
+
 }
 
 /**
  * Implementation of private_ike_sa_init_responded_t.build_idr_payload.
  */
-static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payload_t *request_idi, id_payload_t *request_idr, message_t *response,id_payload_t **response_idr)
+static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payload_t *request_idi, id_payload_t *request_idr, message_t *msg,id_payload_t **response_idr)
 {
 	identification_t *other_id, *my_id;
 	id_payload_t *idr_response;
@@ -410,7 +411,7 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	this->policy = charon->policies->get_policy_by_ids(charon->policies, my_id, other_id);
 	if (this->policy == NULL)
 	{
-		this->logger->log(this->logger, AUDIT, "We don't have a policy for IDs %s - %s. Deleting IKE_SA", 
+		this->logger->log(this->logger, AUDIT, "we don't have a policy for IDs %s - %s. Deleting IKE_SA", 
 						  my_id->get_string(my_id), other_id->get_string(other_id));
 		my_id->destroy(my_id);
 		other_id->destroy(other_id);
@@ -423,24 +424,86 @@ static status_t build_idr_payload(private_ike_sa_init_responded_t *this, id_payl
 	my_id = this->policy->get_my_id(this->policy);
 	
 	/* update others traffic selectors with actually used address */
-	this->policy->update_my_ts(this->policy, response->get_source(response));
-	this->policy->update_other_ts(this->policy, response->get_destination(response));
+	this->policy->update_my_ts(this->policy, msg->get_source(msg));
+	this->policy->update_other_ts(this->policy, msg->get_destination(msg));
 	
 	/* set policy in ike_sa for other states */
 	this->ike_sa->set_policy(this->ike_sa, this->policy);
 	
 	/*  build response */
 	idr_response = id_payload_create_from_identification(FALSE, my_id);
-	response->add_payload(response, (payload_t*)idr_response);
+	msg->add_payload(msg, (payload_t*)idr_response);
 	*response_idr = idr_response;
 	
 	return SUCCESS;
 }
 
 /**
+ * Implementation of private_ike_sa_init_responded_t.build_cert_payload.
+ */
+static status_t build_cert_payload (private_ike_sa_init_responded_t *this, message_t *msg)
+{
+	connection_t *connection = this->ike_sa->get_connection(this->ike_sa);
+
+	if (connection->get_cert_policy(connection) != CERT_NEVER_SEND)
+	{
+		policy_t *policy;
+		identification_t *my_id;
+		x509_t *cert;
+		cert_payload_t *cert_payload;
+
+		policy = this->ike_sa->get_policy(this->ike_sa);
+		my_id = policy->get_my_id(policy);
+		
+		cert = charon->credentials->get_certificate(charon->credentials, my_id);
+		if (cert == NULL)
+		{
+			this->logger->log(this->logger, ERROR, "could not find my certificate");
+			return NOT_FOUND;
+		}
+		cert_payload = cert_payload_create_from_x509(cert);
+		this->logger->log(this->logger, CONTROL|LEVEL2, "add CERT payload to message");
+		msg->add_payload(msg, (payload_t *) cert_payload);
+	}
+	return SUCCESS;
+}
+
+/**
+ * Implementation of private_ike_sa_init_responded_t.build_auth_payload.
+ */
+static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_payload_t *auth_request,id_payload_t *other_id_payload,id_payload_t *my_id_payload, message_t* msg)
+{
+	authenticator_t *authenticator;
+	auth_payload_t *auth_reply;
+	status_t status;
+	
+	authenticator = authenticator_create(this->ike_sa);
+	status =  authenticator->verify_auth_data(authenticator,auth_request, this->ike_sa_init_request_data,this->sent_nonce,other_id_payload,TRUE);
+	
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, AUDIT, "IKE_AUTH request verification failed. Deleting IKE_SA");
+		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, AUTHENTICATION_FAILED, CHUNK_INITIALIZER);
+		authenticator->destroy(authenticator);
+		return DESTROY_ME;
+	}
+		
+	status = authenticator->compute_auth_data(authenticator,&auth_reply, this->ike_sa_init_response_data,this->received_nonce,my_id_payload,FALSE);
+	authenticator->destroy(authenticator);
+	if (status != SUCCESS)
+	{
+		this->logger->log(this->logger, AUDIT, "unable to build authentication data for IKE_AUTH reply. Deleting IKE_S");
+		return DESTROY_ME;
+	}
+	
+	msg->add_payload(msg, (payload_t *)auth_reply);
+	return SUCCESS;	
+}
+
+/**
  * Implementation of private_ike_sa_init_responded_t.build_sa_payload.
  */
-static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *response)
+static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_payload_t *request, message_t *msg)
 {
 	proposal_t *proposal, *proposal_tmp;
 	linked_list_t *proposal_list;
@@ -457,7 +520,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 	
 	/* get proposals from request, and select one with ours */
 	proposal_list = request->get_proposals(request);
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Selecting proposals:");
+	this->logger->log(this->logger, CONTROL|LEVEL1, "selecting proposals:");
 	proposal = this->policy->select_proposal(this->policy, proposal_list);
 	/* list is not needed anymore */
 	while (proposal_list->remove_last(proposal_list, (void**)&proposal_tmp) == SUCCESS)
@@ -473,7 +536,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 											   "Adding NO_PROPOSAL_CHOSEN notify");
 		/* add NO_PROPOSAL_CHOSEN and an empty SA payload */
 		notify = notify_payload_create_from_protocol_and_type(PROTO_IKE, NO_PROPOSAL_CHOSEN);
-		response->add_payload(response, (payload_t*)notify);
+		msg->add_payload(msg, (payload_t*) notify);
 	}
 	else
 	{
@@ -498,7 +561,7 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		prf_plus->destroy(prf_plus);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT, "Could not install CHILD_SA! Deleting IKE_SA");
+			this->logger->log(this->logger, AUDIT, "could not install CHILD_SA! Deleting IKE_SA");
 			/* TODO: how do we handle this cleanly? */
 			sa_response->destroy(sa_response);
 			proposal->destroy(proposal);
@@ -509,46 +572,14 @@ static status_t build_sa_payload(private_ike_sa_init_responded_t *this, sa_paylo
 		sa_response->add_proposal(sa_response, proposal);
 		proposal->destroy(proposal);
 	}
-	response->add_payload(response, (payload_t*)sa_response);
+	msg->add_payload(msg, (payload_t*)sa_response);
 	return SUCCESS;
-}
-
-/**
- * Implementation of private_ike_sa_init_responded_t.build_auth_payload.
- */
-static status_t build_auth_payload(private_ike_sa_init_responded_t *this, auth_payload_t *auth_request,id_payload_t *other_id_payload,id_payload_t *my_id_payload, message_t* response)
-{
-	authenticator_t *authenticator;
-	auth_payload_t *auth_reply;
-	status_t status;
-	
-	authenticator = authenticator_create(this->ike_sa);
-	status =  authenticator->verify_auth_data(authenticator,auth_request, this->ike_sa_init_request_data,this->sent_nonce,other_id_payload,TRUE);
-	
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, AUDIT, "IKE_AUTH request verification failed. Deleting IKE_SA");
-		this->ike_sa->send_notify(this->ike_sa, IKE_AUTH, AUTHENTICATION_FAILED, CHUNK_INITIALIZER);
-		authenticator->destroy(authenticator);
-		return DESTROY_ME;
-	}
-		
-	status = authenticator->compute_auth_data(authenticator,&auth_reply, this->ike_sa_init_response_data,this->received_nonce,my_id_payload,FALSE);
-	authenticator->destroy(authenticator);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, AUDIT, "Unable to build authentication data for IKE_AUTH reply. Deleting IKE_SA");
-		return DESTROY_ME;
-	}
-	
-	response->add_payload(response, (payload_t *)auth_reply);
-	return SUCCESS;	
 }
 
 /**
  * Implementation of private_ike_sa_init_responded_t.build_ts_payload.
  */
-static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_initiator, ts_payload_t *request, message_t* response)
+static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_initiator, ts_payload_t *request, message_t* msg)
 {
 	linked_list_t *ts_received, *ts_selected;
 	traffic_selector_t *ts;
@@ -570,7 +601,7 @@ static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_
 	}
 	
 	ts_response = ts_payload_create_from_traffic_selectors(ts_initiator, ts_selected);
-	response->add_payload(response, (payload_t*)ts_response);
+	msg->add_payload(msg, (payload_t*) ts_response);
 	
 	/* add notify if traffic selectors do not match */
 	if (!ts_initiator &&
@@ -582,7 +613,7 @@ static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_
 											   "Adding TS_UNACCEPTABLE notify");
 		
 		notify = notify_payload_create_from_protocol_and_type(0, TS_UNACCEPTABLE);
-		response->add_payload(response, (payload_t*)notify);
+		msg->add_payload(msg, (payload_t*)notify);
 	}
 	
 	/* cleanup */
@@ -595,11 +626,45 @@ static status_t build_ts_payload(private_ike_sa_init_responded_t *this, bool ts_
 	return status;
 }
 
+/**
+ * Implements private_ike_sa_init_responded_t.process_cert_payload
+ */
+static status_t process_cert_payload(private_ike_sa_init_responded_t *this, cert_payload_t * cert_payload)
+{
+	bool found;
+	x509_t *cert;
+
+	if (cert_payload->get_cert_encoding(cert_payload) != CERT_X509_SIGNATURE)
+	{
+		this->logger->log(this->logger, CONTROL, "certificate encoding is %s, ignored",
+				enum_name(&cert_encoding_names, cert_payload->get_cert_encoding(cert_payload)));
+		return SUCCESS;
+	}
+	cert = x509_create_from_chunk(cert_payload->get_data_clone(cert_payload));
+
+	if (charon->credentials->verify(charon->credentials, cert, &found))
+	{
+		this->logger->log(this->logger, CONTROL, "end entity certificate is trusted");
+		if (!found)
+		{
+			cert = charon->credentials->add_end_certificate(charon->credentials, cert);
+		}
+	}
+	else
+	{
+		this->logger->log(this->logger, ERROR, "end entity certificate is not trusted");
+	}
+	return SUCCESS;
+}
+
+/**
+ * Implements private_ike_sa_init_responded_t.process_notify_payload
+ */
 static status_t process_notify_payload(private_ike_sa_init_responded_t *this, notify_payload_t *notify_payload)
 {
 	notify_message_type_t notify_message_type = notify_payload->get_notify_message_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Process notify type %s",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
 					  mapping_find(notify_message_type_m, notify_message_type));
 					  
 	switch (notify_message_type)
@@ -708,9 +773,11 @@ ike_sa_init_responded_t *ike_sa_init_responded_create(protected_ike_sa_t *ike_sa
 	
 	/* private functions */
 	this->build_idr_payload = build_idr_payload;
-	this->build_sa_payload = build_sa_payload;
+	this->build_cert_payload = build_cert_payload;
 	this->build_auth_payload = build_auth_payload;
+	this->build_sa_payload = build_sa_payload;
 	this->build_ts_payload = build_ts_payload;
+	this->process_cert_payload = process_cert_payload;
 	this->process_notify_payload = process_notify_payload;
 	this->destroy_after_state_change = destroy_after_state_change;
 	

@@ -134,9 +134,9 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 
 	if (cert)
 	{
+		bool found;
 		identification_t *id = *idp;
 		identification_t *subject = cert->get_subject(cert);
-		time_t until;
 
 		err_t ugh = cert->is_valid(cert, NULL);
 
@@ -150,20 +150,6 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 			id = subject;
 			*idp = id->clone(id);
 		}
-		/* test output */
-		if (charon->credentials->verify(charon->credentials, cert, &until))
-		{
-			char buf[TIMETOA_BUF];
-
-			timetoa(buf, TIMETOA_BUF, &until, TRUE);
-			logger->log(logger, CONTROL, "  end entity certificate is trusted until %s", buf);
-			cert->set_until(cert, until);
-		}
-		else
-		{
-			logger->log(logger, ERROR, "  end entity certificate is not trusted");
-		}
-		/* end of test output */
 		return charon->credentials->add_end_certificate(charon->credentials, cert);
 	}
 	return NULL;
@@ -196,6 +182,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	pop_string(msg, &msg->add_conn.other.cert);
 	pop_string(msg, &msg->add_conn.me.ca);
 	pop_string(msg, &msg->add_conn.other.ca);
+	pop_string(msg, &msg->add_conn.me.updown);
+	pop_string(msg, &msg->add_conn.other.updown);
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	
@@ -236,10 +224,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	else if (!charon->interfaces->is_local_address(charon->interfaces, my_host))
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "left nor right host is our side, aborting");
-		
-		my_host->destroy(my_host);
-		other_host->destroy(other_host);
-		return;
+		goto destroy_hosts;
 	}
 
 	my_id = identification_create_from_string(msg->add_conn.me.id ?
@@ -247,45 +232,33 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	if (my_id == NULL)
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.me.id);
-		my_host->destroy(my_host);
-		other_host->destroy(other_host);
-		return;
+		goto destroy_hosts;
 	}
 
 	other_id = identification_create_from_string(msg->add_conn.other.id ?
 												 msg->add_conn.other.id : msg->add_conn.other.address);
 	if (other_id == NULL)
 	{
-		my_host->destroy(my_host);
-		other_host->destroy(other_host);
-		my_id->destroy(my_id);
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.other.id);
-		return;
+		my_id->destroy(my_id);
+		goto destroy_hosts;
 	}
 	
 	my_subnet = host_create(AF_INET, msg->add_conn.me.subnet ?
 									 msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
 	if (my_subnet == NULL)
 	{
-		my_host->destroy(my_host);
-		other_host->destroy(other_host);
-		my_id->destroy(my_id);
-		other_id->destroy(other_id);
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid subnet: %s", msg->add_conn.me.subnet);
-		return;
+		goto destroy_ids;
 	}
 	
 	other_subnet = host_create(AF_INET, msg->add_conn.other.subnet ?
 										msg->add_conn.other.subnet : msg->add_conn.other.address, IKE_PORT);
 	if (other_subnet == NULL)
 	{
-		my_host->destroy(my_host);
-		other_host->destroy(other_host);
-		my_id->destroy(my_id);
-		other_id->destroy(other_id);
-		my_subnet->destroy(my_subnet);
 		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid subnet: %s", msg->add_conn.me.subnet);
-		return;
+		my_subnet->destroy(my_subnet);
+		goto destroy_ids;
 	}
 				
 	my_ts = traffic_selector_create_from_subnet(my_subnet, msg->add_conn.me.subnet ?
@@ -358,23 +331,26 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	this->logger->log(this->logger, CONTROL|LEVEL1, "  my ca:   '%s'", my_ca->get_string(my_ca));
 	this->logger->log(this->logger, CONTROL|LEVEL1, "  other ca:'%s'", other_ca->get_string(other_ca));
+	this->logger->log(this->logger, CONTROL|LEVEL1, "  updown:'%s'", msg->add_conn.me.updown);
 
-	connection = connection_create(msg->add_conn.name, msg->add_conn.ikev2,
-								   msg->add_conn.me.sendcert, msg->add_conn.other.sendcert,
+	connection = connection_create(msg->add_conn.name,
+								   msg->add_conn.ikev2,
+								   msg->add_conn.me.sendcert,
+								   msg->add_conn.other.sendcert,
 								   my_host, other_host,
-								   RSA_DIGITAL_SIGNATURE);
+								   RSA_DIGITAL_SIGNATURE
+								  );
+
 	if (msg->add_conn.algorithms.ike)
 	{
 		char *proposal_string;
 		char *strict = msg->add_conn.algorithms.ike + strlen(msg->add_conn.algorithms.ike) - 1;
+
 		if (*strict == '!')
-		{
 			*strict = '\0';
-		}
 		else
-		{
 			strict = NULL;
-		}
+
 		while ((proposal_string = strsep(&msg->add_conn.algorithms.ike, ",")))
 		{
 			proposal = proposal_create_from_string(PROTO_IKE, proposal_string);
@@ -411,19 +387,17 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
 	policy->add_authorities(policy, my_ca, other_ca);
+	policy->add_updown(policy, msg->add_conn.me.updown);
 	
 	if (msg->add_conn.algorithms.esp)
 	{
 		char *proposal_string;
 		char *strict = msg->add_conn.algorithms.esp + strlen(msg->add_conn.algorithms.esp) - 1;
+
 		if (*strict == '!')
-		{
 			*strict = '\0';
-		}
 		else
-		{
 			strict = NULL;
-		}
 		
 		while ((proposal_string = strsep(&msg->add_conn.algorithms.esp, ",")))
 		{
@@ -460,6 +434,17 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					  other_id->get_string(other_id));
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);
+	return;
+
+	/* mopping up after parsing errors */
+
+destroy_ids:
+	my_id->destroy(my_id);
+	other_id->destroy(other_id);
+
+destroy_hosts:
+	my_host->destroy(my_host);
+	other_host->destroy(other_host);
 }
 
 /**

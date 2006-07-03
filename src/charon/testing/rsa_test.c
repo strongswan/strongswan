@@ -177,7 +177,6 @@ void test_rsa(protected_tester_t *tester)
 // 	free(signature.ptr);
 // 	
 // 	private_key->destroy(private_key);
-// 	public_key->destroy(public_key);
 	
 	/* key setting */
 	private_key = rsa_private_key_create_from_chunk(der_private_key);
@@ -220,7 +219,6 @@ void test_rsa(protected_tester_t *tester)
 	free(signature.ptr);
 	
 	certificate->destroy(certificate);
-	public_key->destroy(public_key);
 	private_key->destroy(private_key);
 	
 }

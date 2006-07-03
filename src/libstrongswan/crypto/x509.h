@@ -26,6 +26,7 @@
 #include <types.h>
 #include <definitions.h>
 #include <crypto/rsa/rsa_public_key.h>
+#include <crypto/certinfo.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
 #include <utils/logger.h>
@@ -56,6 +57,38 @@ struct x509_t {
 	 */
 	void (*set_until) (x509_t *this, time_t until);
 		
+	/**
+	 * @brief Get trusted public key life.
+	 * 
+	 * @param this				calling object
+	 * @return					time until public key is trusted
+	 */
+	time_t (*get_until) (const x509_t *this);
+		
+	/**
+	 * @brief Set the certificate status
+	 * 
+	 * @param this				calling object
+	 * @param status			certificate status
+	 */
+	void (*set_status) (x509_t *this, cert_status_t status);
+	
+	/**
+	 * @brief Get the certificate status
+	 * 
+	 * @param this				calling object
+	 * @return					certificate status
+	 */
+	cert_status_t (*get_status) (const x509_t *this);
+	
+	/**
+	 * @brief Get the DER-encoded X.509 certificate body
+	 * 
+	 * @param this				calling object
+	 * @return					DER-encoded X.509 certificate
+	 */
+	chunk_t (*get_certificate) (const x509_t *this);
+
 	/**
 	 * @brief Get the RSA public key from the certificate.
 	 * 
