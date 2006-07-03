@@ -1,0 +1,4 @@
+Roadwarrior <b>carol</b> proposes  to gateway <b>moon</b> the strong cipher suite
+<b>TWOFISH_CBC_256-SHA2_512-MODP4096</b> for the IKE protocol and 
+<b>TWOFISH_256-HMAC_SHA2_256</b> for ESP packets. A ping from <b>carol</b> to
+<b>alice</b> successfully checks the established tunnel.

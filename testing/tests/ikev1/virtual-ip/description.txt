@@ -1,0 +1,8 @@
+The roadwarrior <b>carol</b> sets up a connection to gateway <b>moon</b>. Both <b>carol</b>
+and <b>moon</b> define a static virtual IP using the <b>leftsourceip</b> parameter.
+<b>leftfirewall=yes</b> automatically inserts iptables-based firewall rules that let pass
+the tunneled traffic. In order to test the tunnel, <b>carol</b> pings the client <b>alice</b>
+behind the gateway <b>moon</b> as well as the inner interface of the gateway. The source IP
+of the two pings will be the virtual IP <b>carol1</b>. Also thanks to its virtual IP <b>moon1</b>
+the gateway <b>moon</b> is able to ping <b>carol1</b> by using the existing subnet-subnet IPsec
+tunnel.

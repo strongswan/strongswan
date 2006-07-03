@@ -1,0 +1,9 @@
+moon::echo 1 > /proc/sys/net/ipv4/ip_forward
+sun::echo 1 > /proc/sys/net/ipv4/ip_forward
+moon::wget -q http://crl.strongswan.org/strongswan.crl -O /etc/ipsec.d/crls/strongswan.crl
+sun::wget -q http://crl.strongswan.org/strongswan.crl -O /etc/ipsec.d/crls/strongswan.crl
+moon::ipsec start
+sun::ipsec start
+moon::sleep 1 
+moon::ipsec up net-net
+moon::sleep 1

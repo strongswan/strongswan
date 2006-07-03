@@ -1,0 +1,5 @@
+moon::ipsec stop
+sun::ipsec stop
+sun::rm /etc/ipsec.d/crls/*
+moon::rm /etc/ipsec.d/crls/*
+

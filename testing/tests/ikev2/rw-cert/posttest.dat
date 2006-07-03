@@ -1,0 +1,6 @@
+moon::ipsec stop
+carol::ipsec stop
+dave::ipsec stop
+moon::rm /etc/ipsec.d/crls/*
+carol::rm /etc/ipsec.d/crls/*
+dave::rm /etc/ipsec.d/crls/*

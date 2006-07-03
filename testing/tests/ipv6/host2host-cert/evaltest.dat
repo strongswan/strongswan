@@ -1,0 +1,5 @@
+moon::ipsec status::host-host.*STATE_QUICK_I2.*IPsec SA established::YES
+sun::ipsec status::host-host.*STATE_QUICK_R2.*IPsec SA established::YES
+moon::ping6 -c 1 -p deadbeef ip6-sun.strongswan.org::64 bytes from ip6-sun.strongswan.org: icmp_seq=1::YES
+sun::tcpdump::00:01 >.*00:02, ethertype IPv6.*length 202::YES
+sun::tcpdump::00:02 >.*00:01, ethertype IPv6.*length 202::YES

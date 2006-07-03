@@ -1,0 +1,6 @@
+moon::cat /var/log/auth.log::malformed payload in packet::YES
+sun::cat /var/log/auth.log::probable authentication failure.*mismatch of preshared secrets.*malformed payload in packet::YES
+sun::cat /var/log/auth.log::sending encrypted notification PAYLOAD_MALFORMED::YES
+moon::ipsec status::net-net.*STATE_MAIN_I4.*ISAKMP SA established::NO
+sun::ipsec status::net-net.*STATE_MAIN_R3.*ISAKMP SA established::NO
+

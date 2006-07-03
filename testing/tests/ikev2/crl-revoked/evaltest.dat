@@ -1,0 +1,6 @@
+moon::cat /var/log/auth.log::certificate was revoked::YES
+moon::cat /var/log/auth.log::end entity certificate is not trusted::YES
+carol::cat /var/log/auth.log::AUTHENTICATION_FAILED::YES
+moon::ipsec listcrls:: ok::YES
+moon::ipsec status::rw.*STATE_MAIN_R3.*ISAKMP SA established::NO
+carol::ipsec status::home.*STATE_MAIN_I4.*ISAKMP SA established::NO
