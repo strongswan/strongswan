@@ -916,7 +916,9 @@ static ike_sa_state_t get_state(private_ike_sa_init_requested_t *this)
 static void destroy_after_state_change (private_ike_sa_init_requested_t *this)
 {
 	this->diffie_hellman->destroy(this->diffie_hellman);
-	chunk_free(&(this->ike_sa_init_request_data));
+	free(this->natd_hash_i.ptr);
+	free(this->natd_hash_r.ptr);
+	free(this->ike_sa_init_request_data.ptr);
 	if (this->proposal)
 	{
 		this->proposal->destroy(this->proposal);
@@ -932,7 +934,10 @@ static void destroy(private_ike_sa_init_requested_t *this)
 	this->diffie_hellman->destroy(this->diffie_hellman);
 	free(this->sent_nonce.ptr);
 	free(this->received_nonce.ptr);
-	chunk_free(&(this->ike_sa_init_request_data));
+	free(this->natd_hash_i.ptr);
+	free(this->natd_hash_r.ptr);
+	free(this->ike_sa_init_request_data.ptr);
+
 	if (this->child_sa)
 	{
 		this->child_sa->destroy(this->child_sa);
