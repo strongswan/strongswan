@@ -124,6 +124,29 @@ starter_start_charon (starter_config_t *cfg, bool debug)
 	unlink(CHARON_CTL_FILE);
 	_stop_requested = 0;
 
+	/* if ipsec.secrets file is missing then generate RSA default key pair */
+	if (stat(SECRETS_FILE, &stb) != 0)
+	{
+	    mode_t oldmask;
+	    FILE *f;
+
+	    plog("no %s file, generating RSA key", SECRETS_FILE);
+	    system("ipsec scepclient --out pkcs1 --out cert-self --quiet");
+
+	    /* ipsec.secrets is root readable only */
+	    oldmask = umask(0066);
+
+	    f = fopen(SECRETS_FILE, "w");
+	    if (f)
+	    {
+		fprintf(f, "# /etc/ipsec.secrets - strongSwan IPsec secrets file\n");
+		fprintf(f, "\n");
+		fprintf(f, ": RSA myKey.der\n");
+		fclose(f);
+	    }
+	    umask(oldmask);
+	}
+
 	pid = fork();
 	switch (pid)
 	{
