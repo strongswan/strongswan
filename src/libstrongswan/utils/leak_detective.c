@@ -133,7 +133,7 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
 
 	strings = backtrace_symbols (stack_frames, stack_frame_count);
 
-	logger->log(logger, ERROR, "  dumping %d stack frame addresses.", stack_frame_count);
+	logger->log(logger, ERROR, "  dumping %d stack frame addresses", stack_frame_count);
 
 	for (i = 0; i < stack_frame_count; i++)
 	{
@@ -156,10 +156,11 @@ struct whitelist_t {
 };
 
 whitelist_t whitelist[] = {
-	{pthread_create, 0x200},
+	{pthread_create, 0x500},
 	{pthread_setspecific, 0xFF},
 	{mktime, 0xFF},
 	{inet_ntoa, 0xFF},
+	{strerror, 0xFF},
 };
 
 /**
@@ -198,7 +199,7 @@ void report_leaks()
 	{
 		if (!is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
 		{
-			logger->log(logger, ERROR, "Leak (%d bytes at %p)", hdr->bytes, hdr + 1);
+			logger->log(logger, ERROR, "Leak (%d bytes at %p):", hdr->bytes, hdr + 1);
 			log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
 			leaks++;
 		}
@@ -298,7 +299,7 @@ void free_hook(void *ptr, const void *caller)
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
 		pthread_mutex_unlock(&mutex);
-		logger->log(logger, ERROR, "freeing of invalid memory (%p)", ptr);
+		logger->log(logger, ERROR, "freeing of invalid memory (%p):", ptr);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		return;
@@ -339,7 +340,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		logger->log(logger, ERROR, "reallocation of invalid memory (%p)", old);
+		logger->log(logger, ERROR, "reallocation of invalid memory (%p):", old);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		raise(SIGKILL);
