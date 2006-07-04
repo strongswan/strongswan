@@ -505,6 +505,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		{
 			this->stroke_logger->log(this->stroke_logger, CONTROL,
 					"connection \"%s\" already up", msg->initiate.name);
+			connection->destroy(connection);
 		}
 		while (ike_sas->remove_last(ike_sas, (void**)&ike_sa_id) == SUCCESS)
 		{
