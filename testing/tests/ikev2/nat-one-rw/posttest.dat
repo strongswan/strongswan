@@ -1,0 +1,4 @@
+alice::ipsec stop
+sun::ipsec stop
+moon::iptables -t nat -F
+
