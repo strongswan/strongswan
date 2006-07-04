@@ -225,10 +225,14 @@ void log_connections(private_local_connection_store_t *this, logger_t *logger, c
 		logger = this->logger;
 	}
 	
-	logger->log(logger, CONTROL, "Templates:");
-	
 	pthread_mutex_lock(&(this->mutex));
+
 	iterator = this->connections->create_iterator(this->connections, TRUE);
+
+	if (iterator->get_count(iterator))
+	{
+		logger->log(logger, CONTROL, "Templates:");
+	}
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current);
