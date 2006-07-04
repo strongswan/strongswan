@@ -51,6 +51,9 @@
 
 /* returns a pointer to the first rtattr following the nlmsghdr *nlh and the 'usual' netlink data x like 'struct xfrm_usersa_info' */
 #define XFRM_RTA(nlh, x) ((struct rtattr*)(NLMSG_DATA(nlh) + NLMSG_ALIGN(sizeof(x))))
+/* returns a pointer to the next rtattr following rta.
+ * !!! do not use this to parse messages. use RTA_NEXT and RTA_OK instead !!! */
+#define XFRM_RTA_NEXT(rta) ((struct rtattr*)(((char*)(rta)) + RTA_ALIGN((rta)->rta_len)))
 /* returns the total size of attached rta data (after 'usual' netlink data x like 'struct xfrm_usersa_info') */
 #define XFRM_PAYLOAD(nlh, x) NLMSG_PAYLOAD(nlh, sizeof(x))
 
@@ -307,10 +310,10 @@ static status_t add_sa(private_kernel_interface_t *this,
 	sa->lft.soft_use_expires_seconds = 0;
 	sa->lft.hard_use_expires_seconds = 0;
 	
+	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_usersa_info);
+	
 	if (enc_alg->algorithm != ENCR_UNDEFINED)
 	{
-		struct rtattr *rthdr = (struct rtattr*)(request + hdr->nlmsg_len);
-		
 		rthdr->rta_type = XFRMA_ALG_CRYPT;
 		alg_name = lookup_algorithm(encryption_algs, enc_alg, &key_size);
 		if (alg_name == NULL)
@@ -333,12 +336,12 @@ static status_t add_sa(private_kernel_interface_t *this,
 		algo->alg_key_len = key_size;
 		strcpy(algo->alg_name, alg_name);
 		prf_plus->get_bytes(prf_plus, key_size / 8, algo->alg_key);
+		
+		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 	
 	if (int_alg->algorithm  != AUTH_UNDEFINED)
 	{
-		struct rtattr *rthdr = (struct rtattr*)(request + hdr->nlmsg_len);
-		
 		rthdr->rta_type = XFRMA_ALG_AUTH;
 		alg_name = lookup_algorithm(integrity_algs, int_alg, &key_size);
 		if (alg_name == NULL)
@@ -361,14 +364,14 @@ static status_t add_sa(private_kernel_interface_t *this,
 		algo->alg_key_len = key_size;
 		strcpy(algo->alg_name, alg_name);
 		prf_plus->get_bytes(prf_plus, key_size / 8, algo->alg_key);
+		
+		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 	
 	/* TODO: add IPComp here */
 	
 	if (natt)
 	{
-		struct rtattr *rthdr = (struct rtattr*)(request + hdr->nlmsg_len);
-		
 		rthdr->rta_type = XFRMA_ENCAP;
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_encap_tmpl));
 
@@ -395,6 +398,8 @@ static status_t add_sa(private_kernel_interface_t *this,
 		 * No. The reason the kernel ignores NAT-OA is that it recomputes 
 		 * (or, rather, just ignores) the checksum. If packets pass
 		 * the IPSec checks it marks them "checksum ok" so OA isn't needed. */
+		
+		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
 	if (this->send_message(this, hdr, &response) != SUCCESS)
@@ -631,7 +636,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	policy->lft.soft_use_expires_seconds = 0;
 	policy->lft.hard_use_expires_seconds = 0;
 	
-	struct rtattr *rthdr = (struct rtattr*)(request + hdr->nlmsg_len);
+	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_info);
 	rthdr->rta_type = XFRMA_TMPL;
 
 	rthdr->rta_len = sizeof(struct xfrm_user_tmpl);
@@ -945,10 +950,12 @@ static void receive_messages(private_kernel_interface_t *this)
 		/* NLMSG_ERROR is sent back for acknowledge (or on error), an
 		 * XFRM_MSG_NEWSA is returned when we alloc spis and when
 		 * updating SAs.
+		 * XFRM_MSG_NEWPOLICY is returned when we query a policy.
 		 * list these responses for the sender
 		 */
 		else if (hdr->nlmsg_type == NLMSG_ERROR ||
-				 hdr->nlmsg_type == XFRM_MSG_NEWSA)
+			 hdr->nlmsg_type == XFRM_MSG_NEWSA ||
+			 hdr->nlmsg_type == XFRM_MSG_NEWPOLICY)
 		{
 			/* add response to queue */
 			listed_response = malloc(hdr->nlmsg_len);

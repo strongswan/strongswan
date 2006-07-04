@@ -571,7 +571,7 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 		}
 		
 		this->logger->log(this->logger, CONTROL|LEVEL1,
-					"quering policy:     %s/%d==%s==%s/%d",
+					"querying policy:     %s/%d==%s==%s/%d",
 					policy->me.net->get_address(policy->me.net), policy->me.net_mask,
 					proto_name,
 					policy->other.net->get_address(policy->other.net), policy->other.net_mask);
