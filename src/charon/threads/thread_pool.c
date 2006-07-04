@@ -75,7 +75,7 @@ static void process_jobs(private_thread_pool_t *this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running,    thread_ID: %06d", (int)pthread_self());
+	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running,    thread_ID: %06u", (int)pthread_self());
 	
 	while (TRUE)
 	{
