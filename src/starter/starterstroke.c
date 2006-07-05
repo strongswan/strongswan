@@ -116,6 +116,8 @@ static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, sta
 	msg_end->subnet = push_string(msg, inet_ntoa(conn_end->subnet.addr.u.v4.sin_addr));
 	msg_end->subnet_mask = conn_end->subnet.maskbits;
 	msg_end->sendcert = conn_end->sendcert;
+	msg_end->protocol = conn_end->protocol;
+	msg_end->port = conn_end->port;
 }
 
 int starter_stroke_add_conn(starter_conn_t *conn)

@@ -82,6 +82,8 @@ struct stroke_end_t {
 	char *subnet;
 	int subnet_mask;
 	int sendcert;
+	u_int8_t protocol;
+	u_int16_t port;
 };
 
 typedef struct stroke_msg_t stroke_msg_t;

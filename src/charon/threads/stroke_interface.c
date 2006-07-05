@@ -259,12 +259,14 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		goto destroy_ids;
 	}
 				
-	my_ts = traffic_selector_create_from_subnet(my_subnet, msg->add_conn.me.subnet ?
-														   msg->add_conn.me.subnet_mask : 32);
+	my_ts = traffic_selector_create_from_subnet(my_subnet,
+				msg->add_conn.me.subnet ?  msg->add_conn.me.subnet_mask : 32,
+				msg->add_conn.me.protocol, msg->add_conn.me.port);
 	my_subnet->destroy(my_subnet);
 
-	other_ts = traffic_selector_create_from_subnet(other_subnet, msg->add_conn.other.subnet ?
-																 msg->add_conn.other.subnet_mask : 32);
+	other_ts = traffic_selector_create_from_subnet(other_subnet, 
+			msg->add_conn.other.subnet ?  msg->add_conn.other.subnet_mask : 32,
+			msg->add_conn.other.protocol, msg->add_conn.other.port);
 	other_subnet->destroy(other_subnet);
 
 	if (msg->add_conn.me.ca)

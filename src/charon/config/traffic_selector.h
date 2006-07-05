@@ -244,6 +244,8 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
  * is sufficient. This constructor creates a traffic selector for
  * all protocols, all ports and the address range specified by the
  * subnet.
+ * Additionally, a protocol and a port may be specified. Port ranges
+ * are not supported via this constructor.
  * 
  * @param net			subnet to use
  * @param netbits		size of the subnet, as used in e.g. 192.168.0.0/24 notation
@@ -253,6 +255,6 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
  *
  * @ingroup config
  */
-traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits);
+traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits, u_int8_t protocol, u_int16_t port);
 
 #endif /* TRAFFIC_SELECTOR_H_ */

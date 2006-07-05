@@ -90,12 +90,12 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
  */
 static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_traffic_selector_t *other)
 {
-	if ((this->type == TS_IPV4_ADDR_RANGE) &&
-		(other->type == TS_IPV4_ADDR_RANGE) &&
-		(this->protocol == other->protocol))
+	if ((this->type == TS_IPV4_ADDR_RANGE) && (other->type == TS_IPV4_ADDR_RANGE) &&
+		(this->protocol == other->protocol || this->protocol == 0 || other->protocol == 0))
 	{
 		u_int32_t from_addr, to_addr;
 		u_int16_t from_port, to_port;
+		u_int8_t protocol;
 		private_traffic_selector_t *new_ts;
 		
 		/* TODO: make output more human readable */
@@ -123,8 +123,11 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 			return NULL;	
 		}
 		
+		/* select protocol, which is not zero */
+		protocol = max(this->protocol, other->protocol);
+		
 		/* got a match, return it */
-		new_ts = traffic_selector_create(this->protocol, this->type, from_port, to_port); 
+		new_ts = traffic_selector_create(protocol, this->type, from_port, to_port); 
 		new_ts->from_addr_ipv4 = from_addr;
 		new_ts->to_addr_ipv4 = to_addr;
 		new_ts->type = TS_IPV4_ADDR_RANGE;
@@ -337,9 +340,9 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits)
+traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits, u_int8_t protocol, u_int16_t port)
 {
-	private_traffic_selector_t *this = traffic_selector_create(0, 0, 0, 65535);
+	private_traffic_selector_t *this = traffic_selector_create(protocol, 0, 0, 65535);
 
 	switch (net->get_family(net))
 	{
@@ -369,6 +372,12 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t ne
 			return NULL;	
 		}
 	}
+	if (port)
+	{
+		this->from_port = port;
+		this->to_port = port;
+	}
+	
 	return (&this->public);
 }
 
