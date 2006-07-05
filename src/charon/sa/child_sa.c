@@ -403,13 +403,16 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			
 			other_iter->current(other_iter, (void**)&other_ts);
 			
-			/* only set up policies if protocol matches */
-			if (my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts))
+			/* only set up policies if protocol matches, or if one is zero (any) */
+			if (my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts) &&
+				my_ts->get_protocol(my_ts) && other_ts->get_protocol(other_ts))
 			{
+				this->logger->log(this->logger, ERROR, 
+								  "CHILD_SA policy uses two different protocols, ignored");
 				continue;
 			}
 			policy = malloc_thing(sa_policy_t);
-			policy->upper_proto = my_ts->get_protocol(my_ts);
+			policy->upper_proto = max(my_ts->get_protocol(my_ts), other_ts->get_protocol(other_ts));
 		
 			/* calculate net and ports for local side */
 			family = my_ts->get_type(my_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
@@ -478,64 +481,6 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 static void set_rekeyed(private_child_sa_t *this)
 {
 	this->rekeyed = TRUE;
-}
-
-/**
- * Implementation of child_sa_t.log_status.
- */
-static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
-{
-	iterator_t *iterator;
-	sa_policy_t *policy;
-	struct protoent *proto;
-	char proto_buf[8] = "";
-	char *proto_name = proto_buf;
-	
-	if (logger == NULL)
-	{
-		logger = this->logger;
-	}
-	if (this->soft_lifetime)
-	{
-		logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   protected with %s (0x%x/0x%x), reqid %d, rekeying in %ds:",
-					name,
-					this->protocol == PROTO_ESP ? "ESP" : "AH",
-					htonl(this->me.spi), htonl(this->other.spi),
-					this->reqid, 
-					this->soft_lifetime - (time(NULL) - this->install_time));
-	}
-	else
-	{
-		
-		logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   protected with %s (0x%x/0x%x), reqid %d, no rekeying:",
-					name,
-					this->protocol == PROTO_ESP ? "ESP" : "AH",
-					htonl(this->me.spi), htonl(this->other.spi),
-					this->reqid);
-	}
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&policy);
-		if (policy->upper_proto)
-		{
-			proto = getprotobynumber(policy->upper_proto);
-			if (proto)
-			{
-				proto_name = proto->p_name;
-			}
-			else
-			{
-				snprintf(proto_buf, sizeof(proto_buf), "<%d>", policy->upper_proto);
-			}
-		}
-		logger->log(logger, CONTROL, "  \"%s\":     %s/%d==%s==%s/%d",
-					name,
-					policy->me.net->get_address(policy->me.net), policy->me.net_mask,
-					proto_name,
-					policy->other.net->get_address(policy->other.net), policy->other.net_mask);
-	}
-	iterator->destroy(iterator);
 }
 
 /**
@@ -624,6 +569,106 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 	iterator->destroy(iterator);
 	
 	return SUCCESS;
+}
+
+/**
+ * Implementation of child_sa_t.log_status.
+ */
+static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
+{
+	iterator_t *iterator;
+	char use_in_str[12] = "unused";
+	char use_out_str[12] = "unused";
+	char rekey_str[12] = "disabled";
+	time_t use_in, use_out, now, rekeying;
+	
+	if (logger == NULL)
+	{
+		logger = this->logger;
+	}
+	now = time(NULL);
+	get_use_time(this, TRUE, &use_in);
+	if (use_in)
+	{
+		snprintf(use_in_str, sizeof(use_in_str), "%ds", (int)(now - use_in));
+	}
+	get_use_time(this, FALSE, &use_out);
+	if (use_out)
+	{
+		snprintf(use_out_str, sizeof(use_out_str), "%ds", (int)(now - use_out));
+	}
+	if (this->soft_lifetime)
+	{
+		rekeying = this->soft_lifetime - (now - this->install_time);
+		snprintf(rekey_str, sizeof(rekey_str), "%ds", (int)rekeying);
+	}
+	
+	logger->log(logger, CONTROL|LEVEL1, 
+				"  \"%s\":   using %s, SPIs (in/out): 0x%x/0x%x, reqid: %d",
+				name,
+				this->protocol == PROTO_ESP ? "ESP" : "AH",
+				htonl(this->me.spi), htonl(this->other.spi),
+				this->reqid);
+	
+	logger->log(logger, CONTROL|LEVEL1, 
+				"  \"%s\":   rekeying: %s, last traffic (in/out): %s/%s",
+				name, rekey_str, use_in_str, use_out_str);
+	
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		sa_policy_t *policy;
+		struct protoent *proto;
+		char proto_str[8] = "";
+		char *proto_name = proto_str;
+		char my_net_str[8] = "";
+		char other_net_str[8] = "";
+		char my_port_str[8] = "";
+		char other_port_str[8] = "";
+		u_int16_t my_port, other_port;
+		
+		iterator->current(iterator, (void**)&policy);
+		
+		if (policy->upper_proto)
+		{
+			proto = getprotobynumber(policy->upper_proto);
+			if (proto)
+			{
+				proto_name = proto->p_name;
+			}
+			else
+			{
+				snprintf(proto_str, sizeof(proto_str), "%d", policy->upper_proto);
+			}
+		}
+		if (policy->me.net_mask != 32)
+		{
+			snprintf(my_net_str, sizeof(my_net_str), "/%d", policy->me.net_mask);
+		}
+		if (policy->other.net_mask != 32)
+		{
+			snprintf(other_net_str, sizeof(other_net_str), "/%d", policy->other.net_mask);
+		}
+		my_port = policy->me.net->get_port(policy->me.net);
+		other_port = policy->other.net->get_port(policy->other.net);
+		if (my_port)
+		{
+			snprintf(my_port_str, sizeof(my_port_str), ":%d", my_port);
+		}
+		if (other_port)
+		{
+			snprintf(other_port_str, sizeof(other_port_str), ":%d", other_port);
+		}
+		
+		logger->log(logger, CONTROL, "  \"%s\":     %s%s%s==%s==%s%s%s",
+					name,
+					policy->me.net->get_address(policy->me.net), 
+					my_port_str, my_net_str,
+					proto_name,
+					policy->other.net->get_address(policy->other.net), 
+					other_port_str, other_net_str);
+	}
+	iterator->destroy(iterator);
 }
 
 /**
