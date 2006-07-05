@@ -248,7 +248,6 @@ static void destroy(private_sha1_hasher_t *this)
 	free(this);
 }
 
-
 /*
  * Described in header.
  */
@@ -263,7 +262,7 @@ sha1_hasher_t *sha1_hasher_create(void)
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 	
 	/* initialize */
-	this->public.hasher_interface.reset(&(this->public.hasher_interface));
+	reset(this);
 	
 	return &(this->public);
 }

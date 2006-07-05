@@ -334,7 +334,7 @@ static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *ha
 	
 	MD5Update(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
-	{	
+	{
 		allocated_hash.ptr = malloc(BLOCK_SIZE_MD5);
 		allocated_hash.len = BLOCK_SIZE_MD5;
 
@@ -358,12 +358,12 @@ static size_t get_hash_size(private_md5_hasher_t *this)
  */
 static void reset(private_md5_hasher_t *this)
 {
-  	this->state[0] = 0x67452301;
-  	this->state[1] = 0xefcdab89;
-  	this->state[2] = 0x98badcfe;
-  	this->state[3] = 0x10325476;
-  	this->count[0] = 0;
-  	this->count[1] = 0;
+	this->state[0] = 0x67452301;
+	this->state[1] = 0xefcdab89;
+	this->state[2] = 0x98badcfe;
+	this->state[3] = 0x10325476;
+	this->count[0] = 0;
+	this->count[1] = 0;
 }
 
 /**
@@ -388,7 +388,7 @@ md5_hasher_t *md5_hasher_create(void)
 	this->public.hasher_interface.destroy = (void (*) (hasher_t*))destroy;
 	
 	/* initialize */
-	this->public.hasher_interface.reset(&(this->public.hasher_interface));
+	reset(this);
 	
 	return &(this->public);
 }

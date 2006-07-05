@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
 
 #include "types.h"
 
@@ -41,7 +42,6 @@ mapping_t status_m[] = {
 	{VERIFY_ERROR, "VERIFY_ERROR"},
 	{INVALID_STATE, "INVALID_STATE"},
 	{DESTROY_ME, "DESTROY_ME"},
-	{CREATED, "CREATED"},
 	{MAPPING_END, NULL}
 };
 

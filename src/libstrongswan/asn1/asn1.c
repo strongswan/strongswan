@@ -303,7 +303,6 @@ void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit)
 static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 {
 	int oid;
-	time_t time;
 	
 	switch (type)
 	{

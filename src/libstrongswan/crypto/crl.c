@@ -40,6 +40,9 @@
 #define CRL_WARNING_INTERVAL	7	/* days */
 
 static logger_t *logger;
+extern char* check_expiry(time_t expiration_date, int warning_interval, bool strict);
+extern time_t parse_time(chunk_t blob, int level0);
+extern void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID, chunk_t *authKeySerialNumber);
 
 /* access structure for a revoked certificate */
 
@@ -213,7 +216,6 @@ static crl_reason_t parse_crl_reasonCode(chunk_t object)
  */
 bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 {
-	u_char buf[BUF_LEN];
 	asn1_ctx_t ctx;
 	bool critical;
 	chunk_t extnID;
@@ -440,13 +442,9 @@ static void destroy(private_crl_t *this)
 static void log_crl(const private_crl_t *this, logger_t *logger, bool utc, bool strict)
 {
 	identification_t *issuer = this->issuer;
-	linked_list_t *crlDistributionPoints = this->crlDistributionPoints;
 	linked_list_t *revokedCertificates   = this->revokedCertificates;
 
 	char buf[BUF_LEN];
-
-    /* determine the current time */
-    time_t now = time(NULL);
 
 	timetoa(buf, BUF_LEN, &this->installed, utc);
 	logger->log(logger, CONTROL, "%s, revoked certs: %d",

@@ -30,6 +30,7 @@
 
 #include <crypto/hashers/hasher.h>
 #include <asn1/asn1.h>
+#include <asn1/pem.h>
 
 /* 
  * For simplicity, we use these predefined values for hash algorithm OIDs 
@@ -323,7 +324,7 @@ static status_t save_key(const private_rsa_public_key_t *this, char *file)
  */
 static mpz_t *get_modulus(const private_rsa_public_key_t *this)
 {
-	return &this->n;
+	return (mpz_t*)&this->n;
 }
 
 /**

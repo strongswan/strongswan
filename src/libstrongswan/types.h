@@ -102,11 +102,6 @@ enum status_t {
 	 * Destroy object which called method belongs to.
 	 */
 	DESTROY_ME,
-	
-	/**
-	 * An object got created.
-	 */
-	CREATED,
 };
 
 /**

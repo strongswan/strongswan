@@ -473,7 +473,6 @@ parse_otherName(chunk_t blob, int level0)
  */
 static identification_t *parse_generalName(chunk_t blob, int level0)
 {
-	u_char buf[BUF_LEN];
 	asn1_ctx_t ctx;
 	chunk_t object;
 	int objectID = 0;
@@ -1087,18 +1086,19 @@ static void destroy(private_x509_t *this)
  */
 char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
 {
-	time_t now;
 	int time_left;
 
 	if (expiration_date == UNDEFINED_TIME)
+	{
 		return "ok (expires never)";
-
+	}
 	time_left = (expiration_date - time(NULL));
 	if (time_left < 0)
-		return strict? "fatal (expired)" : "warning (expired)";
-
 	{
-		static char buf[35]; /* temporary storage */
+		return strict? "fatal (expired)" : "warning (expired)";
+	}
+/*	{
+		static char buf[35];
 		const char* unit = "second";
 
 		if (time_left > 86400*warning_interval)
@@ -1120,7 +1120,11 @@ char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
 			unit = "minute";
 		}
 		snprintf(buf, sizeof(buf), "warning (expires in %d %s%s)", time_left, unit, (time_left == 1)?"":"s");
-	}
+} */
+	/* TODO: check_expiry from pluto is a hack: it returns a buffer to its stack.
+	 * this is dangerous and may cause crashes! Reimplement this another way!!!
+	*/
+	return "warning (expires in under 30days)";
 }
 
 /**
