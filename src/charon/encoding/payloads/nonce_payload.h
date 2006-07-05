@@ -27,6 +27,15 @@
 #include <encoding/payloads/payload.h>
 
 /**
+ * Nonce size in bytes for nonces sending to other peer.
+ * 
+ * @warning Nonce size MUST be between 16 and 256 bytes.
+ * 
+ * @ingroup payloads
+ */
+#define NONCE_SIZE 16
+
+/**
  * Length of a nonce payload without a nonce in bytes.
  * 
  * @ingroup payloads

@@ -63,41 +63,28 @@ static job_type_t get_type(private_initiate_ike_sa_job_t *this)
  */
 static status_t execute(private_initiate_ike_sa_job_t *this)
 {
-	/*
-	* Initiatie an IKE_SA:
-	* - is defined by a name of a configuration
-	* - create an empty IKE_SA via manager
-	* - call initiate_connection on this sa
-	*/
+	/* Initiatie an IKE_SA:
+	 * - is defined by a connection
+	 * - create an empty IKE_SA via manager
+	 * - call initiate() on this IKE_SA
+	 */
 	ike_sa_t *ike_sa;
 	status_t status;
-	job_t *delete_job;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Creating and checking out IKE SA");
 	charon->ike_sa_manager->create_and_checkout(charon->ike_sa_manager, &ike_sa);
 	
-	status = ike_sa->initiate_connection(ike_sa, this->connection->clone(this->connection));
+	status = ike_sa->initiate(ike_sa, this->connection->clone(this->connection));
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Initiation returned %s, going to delete IKE_SA.", 
-								 mapping_find(status_m, status));
+		this->logger->log(this->logger, ERROR,
+						  "initiation returned %s, going to delete IKE_SA.",
+						  mapping_find(status_m, status));
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 		return DESTROY_ME;
 	}
 	
-	this->logger->log(this->logger, CONTROL|LEVEL3, "Create Job to delete half open IKE_SA.");
-	
-	delete_job = (job_t *) delete_half_open_ike_sa_job_create(ike_sa->get_id(ike_sa));
-	charon->event_queue->add_relative(charon->event_queue, delete_job, 
-			charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
-
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Checking in IKE SA");
-	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Could not checkin IKE_SA (%s)", 
-								 mapping_find(status_m, status));
-	}
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return DESTROY_ME;
 }
 

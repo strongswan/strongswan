@@ -709,7 +709,7 @@ void test_generator_with_notify_payload(protected_tester_t *tester)
 	notification_data.len = strlen(notification_data.ptr);
 	
 	notify_payload->set_protocol_id(notify_payload,255);
-	notify_payload->set_notify_message_type(notify_payload,63333); /* Hex F765 */
+	notify_payload->set_notify_type(notify_payload,63333); /* Hex F765 */
 	notify_payload->set_spi(notify_payload, 0x31323334);
 	notify_payload->set_notification_data(notify_payload,notification_data);
 	

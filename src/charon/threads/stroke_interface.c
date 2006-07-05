@@ -42,7 +42,6 @@
 #define IKE_PORT	500
 #define PATH_BUF	256
 
-static bool strict = FALSE;
 
 struct sockaddr_un socket_addr = { AF_UNIX, STROKE_SOCKET};
 
@@ -134,7 +133,6 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 
 	if (cert)
 	{
-		bool found;
 		identification_t *id = *idp;
 		identification_t *subject = cert->get_subject(cert);
 

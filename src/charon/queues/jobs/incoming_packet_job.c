@@ -57,6 +57,47 @@ static job_type_t get_type(private_incoming_packet_job_t *this)
 }
 
 /**
+ * send a notify back to the sender
+ */
+static void send_notify_response(private_incoming_packet_job_t *this,
+								 message_t *request,
+								 notify_type_t type)
+{
+	notify_payload_t *notify;
+	message_t *response;
+	host_t *src, *dst;
+	packet_t *packet;
+	ike_sa_id_t *ike_sa_id;
+	
+	ike_sa_id = request->get_ike_sa_id(request);
+	ike_sa_id = ike_sa_id->clone(ike_sa_id);
+	ike_sa_id->switch_initiator(ike_sa_id);
+	
+	response = message_create();
+	dst = request->get_source(request);
+	src = request->get_destination(request);
+	response->set_source(response, src->clone(src));
+	response->set_destination(response, dst->clone(dst));
+	response->set_exchange_type(response, IKE_SA_INIT);
+	response->set_request(response, FALSE);
+	response->set_message_id(response, 0);
+	response->set_ike_sa_id(response, ike_sa_id);
+	notify = notify_payload_create_from_protocol_and_type(PROTO_NONE, type);
+	response->add_payload(response, (payload_t *)notify);
+	if (response->generate(response, NULL, NULL, &packet) != SUCCESS)
+	{
+		response->destroy(response);
+		return;
+	}
+	this->logger->log(this->logger, CONTROL, "sending %s notify",
+					  mapping_find(notify_type_m, type)); 
+	charon->send_queue->add(charon->send_queue, packet);
+	response->destroy(response);
+	ike_sa_id->destroy(ike_sa_id);
+	return;
+}
+
+/**
  * Implementation of job_t.execute.
  */
 static status_t execute(private_incoming_packet_job_t *this)
@@ -65,104 +106,55 @@ static status_t execute(private_incoming_packet_job_t *this)
 	ike_sa_t *ike_sa;
 	ike_sa_id_t *ike_sa_id;
 	status_t status;
-	packet_t *packet;
+	host_t *src, *dst;
 	
 	message = message_create_from_packet(this->packet->clone(this->packet));
+	src = message->get_source(message);
+	dst = message->get_destination(message);
+	this->logger->log(this->logger, CONTROL, "received packet: from %s:%d to %s:%d",
+					  src->get_address(src), src->get_port(src),
+					  dst->get_address(dst), dst->get_port(dst));
+	
 	status = message->parse_header(message);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "Message header could not be verified!");
+		this->logger->log(this->logger, ERROR, "received message with invalid IKE header, ignored");
 		message->destroy(message);
 		return DESTROY_ME;
 	}
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Message is a %s %s", 
-					  mapping_find(exchange_type_m, message->get_exchange_type(message)),
-					  message->get_request(message) ? "request" : "reply");
-	
 	if ((message->get_major_version(message) != IKE_MAJOR_VERSION) ||
 		(message->get_minor_version(message) != IKE_MINOR_VERSION))
 	{
-		this->logger->log(this->logger, ERROR | LEVEL2,
-						  "IKE version %d.%d not supported",
+		this->logger->log(this->logger, ERROR,
+						  "received a packet with IKE version %d.%d, not supported",
 						  message->get_major_version(message),
 						  message->get_minor_version(message));
 		if ((message->get_exchange_type(message) == IKE_SA_INIT) && (message->get_request(message)))
 		{
-			notify_payload_t *notify;
-			message_t *response;
-			host_t *src, *dst;
-			
-			message->get_ike_sa_id(message, &ike_sa_id);
-			ike_sa_id->switch_initiator(ike_sa_id);
-			
-			response = message_create();
-			src = message->get_source(message);
-			dst = message->get_destination(message);
-			response->set_source(response, src->clone(src));
-			response->set_destination(response, dst->clone(dst));
-			response->set_exchange_type(response, IKE_SA_INIT);
-			response->set_request(response, FALSE);
-			response->set_message_id(response, 0);
-			response->set_ike_sa_id(response, ike_sa_id);
-			
-			notify = notify_payload_create_from_protocol_and_type(PROTO_NONE, INVALID_MAJOR_VERSION);
-			response->add_payload(response, (payload_t *)notify);
-			
-			status = response->generate(response, NULL, NULL, &packet);
-			if (status != SUCCESS)
-			{
-				this->logger->log(this->logger, ERROR, "Could not generate packet from message");
-				response->destroy(response);
-				return DESTROY_ME;
-			}
-			this->logger->log(this->logger, ERROR, "Send notify reply of type INVALID_MAJOR_VERSION"); 
-			charon->send_queue->add(charon->send_queue, packet);
-			response->destroy(response);
-			return DESTROY_ME;
+			send_notify_response(this, message, INVALID_MAJOR_VERSION);
 		}
 		message->destroy(message);
 		return DESTROY_ME;
 	}
 	
-	message->get_ike_sa_id(message, &ike_sa_id);
+	ike_sa_id = message->get_ike_sa_id(message);
+	ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	ike_sa_id->switch_initiator(ike_sa_id);
-	this->logger->log(this->logger, CONTROL|LEVEL3, "Checking out IKE SA %lld:%lld, role %s", 
-					  ike_sa_id->get_initiator_spi(ike_sa_id),
-					  ike_sa_id->get_responder_spi(ike_sa_id),
-					  ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
-	
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id, &ike_sa);
-	if ((status != SUCCESS) && (status != CREATED))
+	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "IKE SA could not be checked out");
+		this->logger->log(this->logger, ERROR,
+						  "received packet with SPIs %llx:%llx, but no such IKE_SA",
+						  ike_sa_id->get_initiator_spi(ike_sa_id),
+						  ike_sa_id->get_responder_spi(ike_sa_id));
+		send_notify_response(this, message, INVALID_IKE_SPI);
 		ike_sa_id->destroy(ike_sa_id);	
 		message->destroy(message);
-		
-		/* TODO: send notify reply of type INVALID_IKE_SPI if SPI could not be found ? */
 		return DESTROY_ME;
-	}
-
-	if (status == CREATED)
-	{
-		job_t *delete_job;
-		this->logger->log(this->logger, CONTROL|LEVEL3, 
-						  "Create Job to delete half open IKE_SA.");
-		
-		delete_job = (job_t *) delete_half_open_ike_sa_job_create(ike_sa_id);
-		charon->event_queue->add_relative(charon->event_queue, delete_job, 
-										  charon->configuration->get_half_open_ike_sa_timeout(charon->configuration));
 	}
 	
 	status = ike_sa->process_message(ike_sa, message);
-	
-	this->logger->log(this->logger, CONTROL|LEVEL3, "%s IKE SA %lld:%lld, role %s", 
-					  status == DESTROY_ME ? "Checkin and delete" : "Checkin",
-					  ike_sa_id->get_initiator_spi(ike_sa_id),
-					  ike_sa_id->get_responder_spi(ike_sa_id),
-					  ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
-	ike_sa_id->destroy(ike_sa_id);
-	
 	if (status == DESTROY_ME)
 	{
 		status = charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
@@ -171,11 +163,7 @@ static status_t execute(private_incoming_packet_job_t *this)
 	{
 		status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
-	
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Checkin of IKE SA failed!");
-	}
+	ike_sa_id->destroy(ike_sa_id);
 	message->destroy(message);
 	return DESTROY_ME;
 }

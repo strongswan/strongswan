@@ -27,6 +27,8 @@
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_substructure.h>
 #include <utils/linked_list.h>
+#include <crypto/diffie_hellman.h>
+
 /**
  * KE payload length in bytes without any key exchange data.
  * 
@@ -106,5 +108,14 @@ struct ke_payload_t {
  */
 ke_payload_t *ke_payload_create(void);
 
+/**
+ * @brief Creates a ke_payload_t from a diffie_hellman_t
+ * 
+ * @param diffie_hellman	diffie hellman object containing group and key
+ * @return 					ke_payload_t object
+ * 
+ * @ingroup payloads
+ */
+ke_payload_t *ke_payload_create_from_diffie_hellman(diffie_hellman_t *diffie_hellman);
 
-#endif /*KE_PAYLOAD_H_*/
+#endif /* KE_PAYLOAD_H_ */

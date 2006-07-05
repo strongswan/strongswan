@@ -66,58 +66,23 @@ static status_t execute(private_send_dpd_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	status_t status;
-	u_int32_t dt;
-	u_int32_t interval = charon->configuration->get_dpd_interval(charon->configuration);
-	struct timeval last_msg_tv, current_tv;
-
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Checking out IKE SA %lld:%lld, role %s",
-			this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-			this->ike_sa_id->get_responder_spi(this->ike_sa_id),
-			this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 	
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
-			this->ike_sa_id, &ike_sa);
+											  this->ike_sa_id, &ike_sa);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1,
-				"IKE SA could not be checked out. Already deleted?");
 		return DESTROY_ME;
 	}
-
-	last_msg_tv = ike_sa->get_last_traffic_in_tv(ike_sa);
-	if (0 > gettimeofday(&current_tv, NULL) )
+	status = ike_sa->send_dpd(ike_sa);
+	if (status == DESTROY_ME)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1,
-				"Warning: Failed to get time of day.");
-	}
-	dt = (current_tv.tv_sec - last_msg_tv.tv_sec) * 1000
-	   + (current_tv.tv_usec - last_msg_tv.tv_usec) / 1000;
-
-	if (dt >= interval)
-	{
-		ike_sa->send_dpd_request(ike_sa);
-		this->logger->log(this->logger, CONTROL|LEVEL1,
-				"DPD request packet scheduled");
-
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 	}
 	else
 	{
-		charon->event_queue->add_relative(charon->event_queue, (job_t*) this, interval - dt);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
-
-	this->logger->log(this->logger, CONTROL|LEVEL2,
-			"Checkin IKE SA %lld:%lld, role %s",
-			this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-			this->ike_sa_id->get_responder_spi(this->ike_sa_id),
-			this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
-
-	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Checkin of IKE SA failed!");
-	}
-
-	return SUCCESS;
+	return DESTROY_ME;
 }
 
 /**

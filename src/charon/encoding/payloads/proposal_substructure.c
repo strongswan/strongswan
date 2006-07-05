@@ -632,15 +632,11 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	iterator->destroy(iterator);
 	
 	/* take over general infos */
-	this->spi_size = proposal->get_protocol(proposal) == PROTO_IKE ? 8 : 4;
+	this->spi_size = proposal->get_protocol(proposal) == PROTO_IKE ? 0 : 4;
 	this->spi.len = this->spi_size;
-	this->spi.ptr = malloc(this->spi_size);
-	if (this->spi_size == 8)
+	if (this->spi_size == 4)
 	{
-		*((u_int64_t*)this->spi.ptr) = proposal->get_spi(proposal);
-	}
-	else
-	{
+		this->spi.ptr = malloc(this->spi_size);
 		*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal);
 	}
 	this->proposal_number = 0;

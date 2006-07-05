@@ -37,7 +37,7 @@
  */
 #define NOTIFY_PAYLOAD_HEADER_LENGTH 8
 
-typedef enum notify_message_type_t notify_message_type_t;
+typedef enum notify_type_t notify_type_t;
 
 
 /** 
@@ -47,7 +47,7 @@ typedef enum notify_message_type_t notify_message_type_t;
  * 
  * @ingroup payloads
  */
-enum notify_message_type_t {
+enum notify_type_t {
 	UNSUPPORTED_CRITICAL_PAYLOAD = 1,
 	INVALID_IKE_SPI = 4,
 	INVALID_MAJOR_VERSION = 5,
@@ -72,11 +72,11 @@ enum notify_message_type_t {
 };
 
 /** 
- * String mappings for notify_message_type_t.
+ * String mappings for notify_type_t.
  * 
  * @ingroup payloads
  */
-extern mapping_t notify_message_type_m[];
+extern mapping_t notify_type_m[];
 
 
 typedef struct notify_payload_t notify_payload_t;
@@ -122,7 +122,7 @@ struct notify_payload_t {
 	 * @param this 		calling notify_payload_t object
 	 * @return 			notify message type of this payload
 	 */
-	notify_message_type_t (*get_notify_message_type) (notify_payload_t *this);
+	notify_type_t (*get_notify_type) (notify_payload_t *this);
 
 	/**
 	 * @brief Sets notify message type of this payload.
@@ -130,7 +130,7 @@ struct notify_payload_t {
 	 * @param this 		calling notify_payload_t object
 	 * @param type		notify message type to set
 	 */
-	void (*set_notify_message_type) (notify_payload_t *this, notify_message_type_t type);
+	void (*set_notify_type) (notify_payload_t *this, notify_type_t type);
 
 	/**
 	 * @brief Returns the currently set spi of this payload.
@@ -193,12 +193,12 @@ notify_payload_t *notify_payload_create(void);
  * @brief Creates an notify_payload_t object of specific type for specific protocol id.
  * 
  * @param protocol_id			protocol id (IKE, AH or ESP)
- * @param notify_message_type	notify type (see notify_message_type_t)
+ * @param type					notify type (see notify_type_t)
  * @return						notify_payload_t object
  * 
  * @ingroup payloads
  */
-notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_message_type_t notify_message_type);
+notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_type_t type);
 
 
 #endif /*NOTIFY_PAYLOAD_H_*/

@@ -164,7 +164,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	pkt->set_source(pkt, source);
 	pkt->set_destination(pkt, dest);
 
-	this->logger->log(this->logger, CONTROL, "received packet: from %s:%d to %s:%d",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "received packet: from %s:%d to %s:%d",
 					  source->get_address(source), source->get_port(source),
 					  dest->get_address(dest), dest->get_port(dest));
 
@@ -202,7 +202,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	dst = packet->get_destination(packet);
 	data = packet->get_data(packet);
 
-	this->logger->log(this->logger, CONTROL, "sending packet: from %s:%d to %s:%d",
+	this->logger->log(this->logger, CONTROL|LEVEL1, "sending packet: from %s:%d to %s:%d",
 					  src->get_address(src), src->get_port(src),
 					  dst->get_address(dst), dst->get_port(dst));
 	

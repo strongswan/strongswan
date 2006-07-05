@@ -120,19 +120,12 @@ struct authenticator_t {
 /**
  * @brief Creates an authenticator object.
  * 
- * @warning: The following functions of the assigned protected_ike_sa_t object 
- * must return a valid value:
- *  - protected_ike_sa_t.get_policy
- *  - protected_ike_sa_t.get_prf
- *  - protected_ike_sa_t.get_logger
- * This preconditions are not given in IKE_SA states INITIATOR_INIT or RESPONDER_INIT!
- * 
- * @param ike_sa		object of type protected_ike_sa_t
+ * @param ike_sa		associated ike_sa
  * 
  * @return				authenticator_t object
  * 
  * @ingroup sa
  */
-authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa);
+authenticator_t *authenticator_create(ike_sa_t *ike_sa);
 
 #endif /* AUTHENTICATOR_H_ */

@@ -558,7 +558,7 @@ void test_parser_with_notify_payload(protected_tester_t *tester)
 		return;	
 	}
 	tester->assert_true(tester,(notify_payload->get_protocol_id(notify_payload) == 3), "Protocol id");
-	tester->assert_true(tester,(notify_payload->get_notify_message_type(notify_payload) == 1), "notify message type");
+	tester->assert_true(tester,(notify_payload->get_notify_type(notify_payload) == 1), "notify message type");
 	
 	spi = notify_payload->get_spi(notify_payload);
 	tester->assert_false(tester, spi == 0x01020303, "parsed spi");

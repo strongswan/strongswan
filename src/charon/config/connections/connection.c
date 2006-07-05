@@ -280,9 +280,9 @@ static bool check_dh_group(private_connection_t *this, diffie_hellman_group_t dh
 				return TRUE;
 			}
 		}
+		alg_iter->destroy(alg_iter);
 	}
 	prop_iter->destroy(prop_iter);
-	alg_iter->destroy(alg_iter);
 	return FALSE;
 }
 

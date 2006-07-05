@@ -35,9 +35,9 @@
 / useable certificate support
   + more id types (use atodn from pluto)
   + rewrite certificate storage the clean way
-  - further subjectAltName support
-  - certificate validation/chaining
-  - certificate exchange
+  + further subjectAltName support
+  + certificate validation/chaining
+  + certificate exchange
 
 + Apply -W's from Makefile.program to charon
 + do ipsec status via starter
@@ -45,7 +45,7 @@
 
 + stroke status should show configured connections
 + stroke loglevel update
-- stroke argument parsing via getopts/gperf?
++ stroke argument parsing via getopts/gperf?
 
 - implement 3DES to load encrypted pem files
 + ipsec.secrets parsing
@@ -60,3 +60,4 @@
 - add a crl fetch mechanism which synchronizes equal fetches
 
 - replace state machine with something more transaction oriented
+- find existing IKE_SA on CHILD_SA initiation

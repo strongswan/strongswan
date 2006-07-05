@@ -572,6 +572,8 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_SHA1_96, 0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,    AUTH_HMAC_MD5_96,  0);
 			break;
+		default:
+			break;
 	}
 	
 	return &this->public;

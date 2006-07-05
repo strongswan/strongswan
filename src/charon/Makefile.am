@@ -1,4 +1,3 @@
-SUBDIRS = . testing
 ipsec_PROGRAMS = charon
 
 charon_SOURCES = \
@@ -9,13 +8,11 @@ config/policies/local_policy_store.c config/policies/policy_store.h config/polic
 config/credentials/local_credential_store.c config/credentials/local_credential_store.h \
 config/credentials/credential_store.h config/traffic_selector.c config/traffic_selector.h \
 config/proposal.c config/proposal.h config/configuration.c config/configuration.h \
-sa/states/state.c sa/states/state.h sa/states/ike_sa_init_requested.c sa/states/ike_sa_init_requested.h \
-sa/states/ike_sa_init_responded.c sa/states/ike_sa_established.c sa/states/ike_sa_established.h \
-sa/states/responder_init.c sa/states/responder_init.h sa/states/initiator_init.c sa/states/initiator_init.h \
-sa/states/ike_sa_init_responded.h sa/states/ike_auth_requested.c sa/states/ike_auth_requested.h \
-sa/states/delete_ike_sa_requested.h sa/states/delete_ike_sa_requested.c \
-sa/states/delete_child_sa_requested.h sa/states/delete_child_sa_requested.c \
-sa/states/create_child_sa_requested.c sa/states/create_child_sa_requested.h \
+sa/transactions/transaction.h sa/transactions/transaction.c \
+sa/transactions/ike_sa_init.h sa/transactions/ike_sa_init.c \
+sa/transactions/ike_auth.h sa/transactions/ike_auth.c \
+sa/transactions/dead_peer_detection.h sa/transactions/dead_peer_detection.c \
+sa/transactions/delete_ike_sa.h sa/transactions/delete_ike_sa.c \
 sa/child_sa.c sa/child_sa.h sa/ike_sa.c sa/ike_sa.h sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/ike_sa_id.c sa/ike_sa_id.h sa/authenticator.c sa/authenticator.h encoding/payloads/encryption_payload.c \
 encoding/payloads/cert_payload.c encoding/payloads/payload.h encoding/payloads/traffic_selector_substructure.c \

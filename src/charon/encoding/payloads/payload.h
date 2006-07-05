@@ -188,6 +188,11 @@ enum payload_type_t{
  */
 extern mapping_t payload_type_m[];
 
+/**
+ * Special string mappings for payload_type_t in a short form.
+ */
+extern mapping_t payload_type_short_m[];
+
 
 typedef struct payload_t payload_t;
 

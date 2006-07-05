@@ -41,18 +41,15 @@ struct configuration_t {
 	/**
 	 * @brief Returns the retransmit timeout.
 	 *
+	 * A return value of zero means the request should not retransmitted again.
 	 * The timeout values are managed by the configuration, so 
 	 * another backoff algorithm may be implemented here.
 	 *
 	 * @param this				calling object
 	 * @param retransmit_count	number of times a message was retransmitted so far
-	 * @param[out] timeout		the new retransmit timeout in milliseconds
-	 * 
-	 * @return		
-	 * 							- FAILED, if the message should not be retransmitted
-	 * 							- SUCCESS
+	 * @return					time in milliseconds, when to schedule next retransmit
 	 */
-	status_t (*get_retransmit_timeout) (configuration_t *this, u_int32_t retransmit_count, u_int32_t *timeout);
+	u_int32_t (*get_retransmit_timeout) (configuration_t *this, u_int32_t retransmit_count);
 	
 	/**
 	 * @brief Returns the timeout for an half open IKE_SA in ms.
@@ -76,7 +73,7 @@ struct configuration_t {
 	 * NAT keepalive packet should be sent.
 	 * 
 	 * @param this				calling object
-	 * @return					interval in milliseconds (ms)
+	 * @return					interval in seconds
 	 */	
 	u_int32_t (*get_keepalive_interval) (configuration_t *this);
 
@@ -87,7 +84,7 @@ struct configuration_t {
 	 * DPD request packet should be sent.
 	 * 
 	 * @param this				calling object
-	 * @return					interval in milliseconds (ms)
+	 * @return					interval in seconds
 	 */	
 	u_int32_t (*get_dpd_interval) (configuration_t *this);
 

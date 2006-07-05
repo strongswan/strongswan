@@ -60,40 +60,27 @@ static job_type_t get_type(private_delete_half_open_ike_sa_job_t *this)
 static status_t execute(private_delete_half_open_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	status_t status;
 	
-	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id, &ike_sa);
-	if ((status != SUCCESS) && (status != CREATED))
+	if (charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id, 
+										 &ike_sa) != SUCCESS)
 	{
-		this->logger->log(this->logger, CONTROL | LEVEL3, "IKE SA seems to be already deleted");
 		return DESTROY_ME;
 	}
 	
 	switch (ike_sa->get_state(ike_sa))
 	{
-		case INITIATOR_INIT:
-		case RESPONDER_INIT:
-		case IKE_SA_INIT_REQUESTED:
-		case IKE_SA_INIT_RESPONDED:
-		case IKE_AUTH_REQUESTED:
-		case DELETE_IKE_SA_REQUESTED:
+		case SA_ESTABLISHED:
 		{
-			/* IKE_SA is half open and gets deleted! */
-			status = charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
-			if (status != SUCCESS)
-			{
-				this->logger->log(this->logger, ERROR, "Could not checkin and delete checked out IKE_SA!");
-			}
+			/* IKE_SA is established and so is not getting destroyed */
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 			return DESTROY_ME;
 		}
 		default:
 		{
-			/* IKE_SA is established and so is not getting deleted! */
-			status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-			if (status != SUCCESS)
-			{
-				this->logger->log(this->logger, ERROR, "Could not checkin a checked out IKE_SA!");
-			}
+			/* IKE_SA is half open and gets destroyed */
+			this->logger->log(this->logger, AUDIT,
+							  "deleting half open IKE_SA after timeout");
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 			return DESTROY_ME;
 		}
 	}

@@ -28,10 +28,12 @@
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
 
+#define SHA1_HASH_SIZE 20
+
 /** 
- * String mappings for notify_message_type_t.
+ * String mappings for notify_type_t.
  */
-mapping_t notify_message_type_m[] = {
+mapping_t notify_type_m[] = {
 	{UNSUPPORTED_CRITICAL_PAYLOAD, "UNSUPPORTED_CRITICAL_PAYLOAD"},
 	{INVALID_IKE_SPI, "INVALID_IKE_SPI"},
 	{INVALID_MAJOR_VERSION, "INVALID_MAJOR_VERSION"},
@@ -94,7 +96,7 @@ struct private_notify_payload_t {
 	/**
 	 * Notify message type.
 	 */
-	u_int16_t notify_message_type;
+	u_int16_t notify_type;
 	
 	/**
 	 * Security parameter index (spi).
@@ -146,7 +148,7 @@ encoding_rule_t notify_payload_encodings[] = {
 	/* SPI Size as 8 bit field*/
 	{ SPI_SIZE,			offsetof(private_notify_payload_t, spi_size) 			},
 	/* Notify message type as 16 bit field*/
-	{ U_INT_16,			offsetof(private_notify_payload_t, notify_message_type)	},
+	{ U_INT_16,			offsetof(private_notify_payload_t, notify_type)	},
 	/* SPI as variable length field*/
 	{ SPI,				offsetof(private_notify_payload_t, spi)		 			},
 	/* Key Exchange Data is from variable size */
@@ -195,31 +197,60 @@ static status_t verify(private_notify_payload_t *this)
 			return FAILED;
 	}
 	
-	/* TODO: Check all kinds of notify */
-	if (this->notify_message_type == INVALID_KE_PAYLOAD)
+	switch (this->notify_type)
 	{
-		/* check notification data */
-		diffie_hellman_group_t dh_group;
-		if (this->notification_data.len != 2)
+		case INVALID_KE_PAYLOAD:
 		{
-			return FAILED;
-		}
-		dh_group = ntohs(*((u_int16_t*)this->notification_data.ptr));
-		switch (dh_group)
-		{
-			case MODP_768_BIT:
-			case MODP_1024_BIT:
-			case MODP_1536_BIT:
-			case MODP_2048_BIT:
-			case MODP_3072_BIT:
-			case MODP_4096_BIT:
-			case MODP_6144_BIT:
-			case MODP_8192_BIT:
-				break;
-			default:
-				this->logger->log(this->logger, ERROR, "Bad DH group (%d)", dh_group);
+			/* check notification data */
+			diffie_hellman_group_t dh_group;
+			if (this->notification_data.len != 2)
+			{
 				return FAILED;
+			}
+			dh_group = ntohs(*((u_int16_t*)this->notification_data.ptr));
+			switch (dh_group)
+			{
+				case MODP_768_BIT:
+				case MODP_1024_BIT:
+				case MODP_1536_BIT:
+				case MODP_2048_BIT:
+				case MODP_3072_BIT:
+				case MODP_4096_BIT:
+				case MODP_6144_BIT:
+				case MODP_8192_BIT:
+					break;
+				default:
+					this->logger->log(this->logger, ERROR, "Bad DH group (%d)", dh_group);
+					return FAILED;
+			}
+			break;
 		}
+		case NAT_DETECTION_SOURCE_IP:
+		case NAT_DETECTION_DESTINATION_IP:
+		{
+			if (this->notification_data.len != SHA1_HASH_SIZE)
+			{
+				this->logger->log(this->logger, ERROR, "invalid %s notify length",
+								  mapping_find(notify_type_m, this->notify_type));
+				return FAILED;
+			}
+			break;
+		}
+		case INVALID_SYNTAX:
+		case INVALID_MAJOR_VERSION:
+		case NO_PROPOSAL_CHOSEN:
+		{
+			if (this->notification_data.len != 0)
+			{
+				this->logger->log(this->logger, ERROR, "invalid %s notify",
+								  mapping_find(notify_type_m, this->notify_type));
+				return FAILED;
+			}
+			break;
+		}
+		default:
+			/* TODO: verify */
+			break;
 	}
 	return SUCCESS;
 }
@@ -300,19 +331,19 @@ static void set_protocol_id(private_notify_payload_t *this, u_int8_t protocol_id
 }
 
 /**
- * Implementation of notify_payload_t.get_notify_message_type.
+ * Implementation of notify_payload_t.get_notify_type.
  */
-static notify_message_type_t get_notify_message_type(private_notify_payload_t *this)
+static notify_type_t get_notify_type(private_notify_payload_t *this)
 {
-	return this->notify_message_type;
+	return this->notify_type;
 }
 
 /**
- * Implementation of notify_payload_t.set_notify_message_type.
+ * Implementation of notify_payload_t.set_notify_type.
  */
-static void set_notify_message_type(private_notify_payload_t *this, u_int16_t notify_message_type)
+static void set_notify_type(private_notify_payload_t *this, u_int16_t notify_type)
 {
-	this->notify_message_type = notify_message_type;
+	this->notify_type = notify_type;
 }
 
 /**
@@ -363,20 +394,9 @@ static chunk_t get_notification_data(private_notify_payload_t *this)
  */
 static status_t set_notification_data(private_notify_payload_t *this, chunk_t notification_data)
 {
-	/* destroy existing data first */
-	if (this->notification_data.ptr != NULL)
-	{
-		/* free existing value */
-		free(this->notification_data.ptr);
-		this->notification_data.ptr = NULL;
-		this->notification_data.len = 0;
-		
-	}
-	
-	this->notification_data.ptr = clalloc(notification_data.ptr,notification_data.len);
-	this->notification_data.len = notification_data.len;
+	chunk_free(&this->notification_data);
+	this->notification_data = chunk_clone(notification_data);
 	this->compute_length(this);
-	
 	return SUCCESS;
 }
 
@@ -385,14 +405,8 @@ static status_t set_notification_data(private_notify_payload_t *this, chunk_t no
  */
 static status_t destroy(private_notify_payload_t *this)
 {
-	if (this->notification_data.ptr != NULL)
-	{
-		free(this->notification_data.ptr);
-	}
-	if (this->spi.ptr != NULL)
-	{
-		free(this->spi.ptr);
-	}
+	chunk_free(&this->notification_data);
+	chunk_free(&this->spi);
 	free(this);
 	return SUCCESS;
 }
@@ -416,8 +430,8 @@ notify_payload_t *notify_payload_create()
 	/* public functions */
 	this->public.get_protocol_id = (u_int8_t (*) (notify_payload_t *)) get_protocol_id;
 	this->public.set_protocol_id  = (void (*) (notify_payload_t *,u_int8_t)) set_protocol_id;
-	this->public.get_notify_message_type = (notify_message_type_t (*) (notify_payload_t *)) get_notify_message_type;
-	this->public.set_notify_message_type = (void (*) (notify_payload_t *,notify_message_type_t)) set_notify_message_type;
+	this->public.get_notify_type = (notify_type_t (*) (notify_payload_t *)) get_notify_type;
+	this->public.set_notify_type = (void (*) (notify_payload_t *,notify_type_t)) set_notify_type;
 	this->public.get_spi = (u_int32_t (*) (notify_payload_t *)) get_spi;
 	this->public.set_spi = (void (*) (notify_payload_t *,u_int32_t)) set_spi;
 	this->public.get_notification_data = (chunk_t (*) (notify_payload_t *)) get_notification_data;
@@ -432,7 +446,7 @@ notify_payload_t *notify_payload_create()
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = NOTIFY_PAYLOAD_HEADER_LENGTH;
 	this->protocol_id = 0;
-	this->notify_message_type = 0;
+	this->notify_type = 0;
 	this->spi.ptr = NULL;
 	this->spi.len = 0;
 	this->spi_size = 0;
@@ -440,17 +454,17 @@ notify_payload_t *notify_payload_create()
 	this->notification_data.len = 0;
 	this->logger = logger_manager->get_logger(logger_manager, PAYLOAD);
 
-	return (&(this->public));
+	return &this->public;
 }
 
 /*
  * Described in header.
  */
-notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_message_type_t notify_message_type)
+notify_payload_t *notify_payload_create_from_protocol_and_type(protocol_id_t protocol_id, notify_type_t notify_type)
 {
 	notify_payload_t *notify = notify_payload_create();
 
-	notify->set_notify_message_type(notify,notify_message_type);
+	notify->set_notify_type(notify,notify_type);
 	notify->set_protocol_id(notify,protocol_id);
 	
 	return notify;

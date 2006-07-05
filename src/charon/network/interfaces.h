@@ -41,12 +41,12 @@ typedef struct interfaces_t interfaces_t;
 struct interfaces_t {
 
 	/**
-	 * @brief Get addresses of local interfaces
+	 * @brief Get an iterator over addresses of local interfaces
 	 *
 	 * @param this		calling object
-	 * @return			linked_list_t of host_t objects
+	 * @return			iterator over host_t objects
 	 */
-	linked_list_t* (*get_addresses) (interfaces_t *ifaces);
+	iterator_t* (*create_address_iterator) (interfaces_t *this);
 	
 	/**
 	 * @brief Check if address is associated with a local interface
@@ -55,7 +55,7 @@ struct interfaces_t {
 	 * @param host		address to set as destination
 	 * @return			TRUE if address is associated with a local interface, FALSE otherwise
 	 */
-	bool (*is_local_address) (interfaces_t *ifaces, host_t *host);
+	bool (*is_local_address) (interfaces_t *this, host_t *host);
 	
 	/**
 	 * @brief Destroy the object, freeing contained data.
@@ -77,4 +77,4 @@ struct interfaces_t {
 interfaces_t *interfaces_create(u_int16_t port);
 
 
-#endif /*INTERFACES_H_*/
+#endif /* INTERFACES_H_ */

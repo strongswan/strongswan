@@ -47,7 +47,7 @@ struct private_authenticator_t {
 	/**
 	 * Assigned IKE_SA. Needed to get objects of type prf_t and logger_t.
 	 */
-	protected_ike_sa_t *ike_sa;
+	ike_sa_t *ike_sa;
 	
 	/**
 	 * PRF taken from the IKE_SA.
@@ -404,7 +404,7 @@ static void destroy (private_authenticator_t *this)
 /*
  * Described in header.
  */
-authenticator_t *authenticator_create(protected_ike_sa_t *ike_sa)
+authenticator_t *authenticator_create(ike_sa_t *ike_sa)
 {
 	private_authenticator_t *this = malloc_thing(private_authenticator_t);
 

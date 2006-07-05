@@ -503,7 +503,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.add_other_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_other_traffic_selector;
 	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
 	this->public.add_authorities = (void(*)(policy_t*,identification_t*, identification_t*))add_authorities;
-	this->public.add_updown = (void(*)(policy_t*,identification_t*,char*))add_updown;
+	this->public.add_updown = (void(*)(policy_t*,char*))add_updown;
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
 	this->public.clone = (policy_t*(*)(policy_t*))clone;

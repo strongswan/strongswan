@@ -74,6 +74,37 @@ mapping_t payload_type_m[] = {
 };
 
 /*
+ * build the short mappings for payload_type_t
+ */
+mapping_t payload_type_short_m[] = {
+	{NO_PAYLOAD, "--"},
+	{SECURITY_ASSOCIATION, "SA"},
+	{KEY_EXCHANGE, "KE"},
+	{ID_INITIATOR, "IDi"},
+	{ID_RESPONDER, "IDr"},
+	{CERTIFICATE, "CERT"},
+	{CERTIFICATE_REQUEST, "CERTREQ"},
+	{AUTHENTICATION, "AUTH"},
+	{NONCE, "No"},
+	{NOTIFY, "N"},
+	{DELETE, "D"},
+	{VENDOR_ID, "V"},
+	{TRAFFIC_SELECTOR_INITIATOR, "TSi"},
+	{TRAFFIC_SELECTOR_RESPONDER, "TSr"},
+	{ENCRYPTED, "E"},
+	{CONFIGURATION, "CP"},
+	{EXTENSIBLE_AUTHENTICATION, "EAP"},
+	{HEADER, "HDR"},
+	{PROPOSAL_SUBSTRUCTURE, "PROP"},
+	{TRANSFORM_SUBSTRUCTURE, "TRANS"},
+	{TRANSFORM_ATTRIBUTE, "TRANSATTR"},
+	{TRAFFIC_SELECTOR_SUBSTRUCTURE, "TSSUB"},
+	{CONFIGURATION_ATTRIBUTE, "CPATTR"},
+	{UNKNOWN_PAYLOAD, "??"},
+	{MAPPING_END, NULL}
+};
+
+/*
  * see header
  */
 payload_t *payload_create(payload_type_t type)

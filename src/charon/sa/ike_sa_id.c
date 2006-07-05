@@ -181,5 +181,5 @@ ike_sa_id_t * ike_sa_id_create(u_int64_t initiator_spi, u_int64_t responder_spi,
 	this->responder_spi = responder_spi;
 	this->is_initiator_flag = is_initiator_flag;
 
-	return (&this->public);
+	return &this->public;
 }

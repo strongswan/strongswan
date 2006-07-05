@@ -22,6 +22,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "message.h"
 
@@ -413,14 +414,9 @@ static void set_ike_sa_id (private_message_t *this,ike_sa_id_t *ike_sa_id)
 /**
  * Implementation of message_t.get_ike_sa_id.
  */
-static status_t get_ike_sa_id (private_message_t *this,ike_sa_id_t **ike_sa_id)
+static ike_sa_id_t* get_ike_sa_id (private_message_t *this)
 {
-	if (this->ike_sa_id == NULL)
-	{
-		return FAILED;
-	}
-	*ike_sa_id = this->ike_sa_id->clone(this->ike_sa_id);
-	return SUCCESS;
+	return this->ike_sa_id;
 }
 
 /**
@@ -521,6 +517,20 @@ static exchange_type_t get_request (private_message_t *this)
 }
 
 /**
+ * Is this message in an encoded form?
+ */
+static bool is_encoded(private_message_t *this)
+{
+	chunk_t data = this->packet->get_data(this->packet);
+	
+	if (data.ptr == NULL)
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Implementation of message_t.add_payload.
  */
 static void add_payload(private_message_t *this, payload_t *payload)
@@ -583,6 +593,48 @@ static iterator_t *get_payload_iterator(private_message_t *this)
 	return this->payloads->create_iterator(this->payloads, TRUE);
 }
 
+/**
+ * Build a string containing short names for all payload in this message
+ */
+static void build_payload_string(private_message_t *this, char* buffer, size_t size)
+{
+	iterator_t *iterator;
+	payload_t *payload;
+	bool first = TRUE;
+	
+	*buffer = '\0';
+	size--;
+	
+	iterator = this->payloads->create_iterator(this->payloads, TRUE);
+	while (iterator->iterate(iterator, (void**)&payload))
+	{
+		payload_type_t type = payload->get_type(payload);
+		char *name = mapping_find(payload_type_short_m, type);
+		size_t name_len = strlen(name);
+		if (!first)
+		{
+			strncat(buffer, " ", size);
+			if (size)
+			{
+				size--;
+			}
+		}
+		else
+		{
+			first = FALSE;
+		}
+		strncat(buffer, name, size);
+		if (name_len > size)
+		{
+			size = 0;
+		}
+		else
+		{
+			size -= name_len;
+		}
+	}
+	iterator->destroy(iterator);
+}
 
 /**
  * Implementation of message_t.generate.
@@ -595,11 +647,20 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	iterator_t *iterator;
 	status_t status;
 	chunk_t packet_data;
+	char payload_names[128];
 	
-	this->logger->log(this->logger, CONTROL, "generating %s %s, contains %d payloads",
+	if (is_encoded(this))
+	{
+		/* already generated, return a new packet clone */
+		*packet = this->packet->clone(this->packet);
+		return SUCCESS;
+	}
+	
+	build_payload_string(this, payload_names, sizeof(payload_names));
+	this->logger->log(this->logger, CONTROL, "generating %s %s [%s]",
 					  mapping_find(exchange_type_m,this->exchange_type),
 					  this->is_request ? "request" : "response",
-					  this->payloads->get_count(this->payloads));
+					  payload_names);
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -711,20 +772,6 @@ static chunk_t get_packet_data (private_message_t *this)
 }
 
 /**
- * Implementation of message_t.is_encoded.
- */
-static bool is_encoded(private_message_t *this)
-{
-	chunk_t data = this->packet->get_data(this->packet);
-	
-	if (data.ptr == NULL)
-	{
-		return FALSE;
-	}
-	return TRUE;
-}
-
-/**
  * Implementation of message_t.parse_header.
  */
 static status_t parse_header(private_message_t *this)
@@ -794,6 +841,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 {
 	status_t status = SUCCESS;
 	payload_type_t current_payload_type;
+	char payload_names[128];
 		
 	current_payload_type = this->first_payload;	
 		
@@ -815,7 +863,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 		{
 			this->logger->log(this->logger, ERROR, "payload type %s could not be parsed",
 								mapping_find(payload_type_m,current_payload_type));
-			return status;
+			return PARSE_ERROR;
 		}
 
 		this->logger->log(this->logger, CONTROL|LEVEL2, "verify payload of type %s", 
@@ -828,8 +876,7 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 			this->logger->log(this->logger, ERROR, "%s payload verification failed",
 								mapping_find(payload_type_m,current_payload_type));
 			current_payload->destroy(current_payload);
-			status = VERIFY_ERROR;
-			return status;
+			return VERIFY_ERROR;
 		}
 		
 		this->logger->log(this->logger, CONTROL|LEVEL2, "%s payload verified. Adding to payload list", 
@@ -862,14 +909,16 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "verification of message failed");
+		return status;
 	}
 	
-	this->logger->log(this->logger, CONTROL, "parsed %s %s, contains %d payloads", 
+	build_payload_string(this, payload_names, sizeof(payload_names));
+	this->logger->log(this->logger, CONTROL, "parsed %s %s [%s]", 
 					mapping_find(exchange_type_m, this->exchange_type),
 					this->is_request ? "request" : "response",
-					this->payloads->get_count(this->payloads));
+					payload_names);
 	
-	return status;
+	return SUCCESS;
 }
 
 /**
@@ -926,7 +975,7 @@ static status_t verify(private_message_t *this)
 									  mapping_find(payload_type_m, current_payload_type),
 									  this->message_rule->payload_rules[i].max_occurence, found_payloads);
 					iterator->destroy(iterator);
-					return FAILED;					
+					return VERIFY_ERROR;
 				}
 			}
 		}
@@ -937,7 +986,7 @@ static status_t verify(private_message_t *this)
 							  mapping_find(payload_type_m, this->message_rule->payload_rules[i].payload_type),
 							  this->message_rule->payload_rules[i].min_occurence, found_payloads);
 			iterator->destroy(iterator);
-			return FAILED;
+			return VERIFY_ERROR;
 		}
 		if ((this->message_rule->payload_rules[i].sufficient) && (this->payloads->get_count(this->payloads) == total_found_payloads))
 		{
@@ -993,7 +1042,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				/* encrypted payload is not last one */
 				this->logger->log(this->logger, ERROR, "encrypted payload is not last payload");
 				iterator->destroy(iterator);
-				return FAILED;
+				return VERIFY_ERROR;
 			}
 			/* decrypt */
 			encryption_payload->set_transforms(encryption_payload, crypter, signer);
@@ -1003,7 +1052,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			{
 				this->logger->log(this->logger, ERROR, "encryption payload signature invalid");
 				iterator->destroy(iterator);
-				return status;
+				return FAILED;
 			}
 			this->logger->log(this->logger, CONTROL | LEVEL2, "decrypt content of encryption payload");
 			status = encryption_payload->decrypt(encryption_payload);
@@ -1013,7 +1062,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 								  "encrypted payload could not be decrypted and parsed: %s", 
 								  mapping_find(status_m, status));
 				iterator->destroy(iterator);
-				return status;
+				return PARSE_ERROR;
 			}
 			
 			/* needed later to find out if a payload was encrypted */
@@ -1073,7 +1122,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 				this->logger->log(this->logger, ERROR, "payload type %s not allowed",
 								  mapping_find(payload_type_m,current_payload_type));
 				iterator->destroy(iterator);
-				return status;
+				return VERIFY_ERROR;
 			}
 			
 			/* check if the payload was encrypted, and if it should been have encrypted */
@@ -1084,7 +1133,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 									mapping_find(payload_type_m,current_payload_type),
 									(payload_rule->encrypted) ? "encrypted" : "not encrypted");
 				iterator->destroy(iterator);
-				return FAILED;
+				return VERIFY_ERROR;
 			}
 		}
 		/* advance to the next payload */
@@ -1188,8 +1237,6 @@ static void destroy (private_message_t *this)
 {
 	iterator_t *iterator;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL3, "going to destroy message_t object");
-	
 	this->packet->destroy(this->packet);
 
 	if (this->ike_sa_id != NULL)
@@ -1202,8 +1249,6 @@ static void destroy (private_message_t *this)
 	{
 		payload_t *payload;
 		iterator->current(iterator, (void**)&payload);	
-		this->logger->log(this->logger, CONTROL|LEVEL3, "destroying payload of type %s", 
-							mapping_find(payload_type_m, payload->get_type(payload)));
 		payload->destroy(payload);
 	}
 	iterator->destroy(iterator);
@@ -1230,7 +1275,7 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.get_initiator_spi = (u_int64_t(*)(message_t*))get_initiator_spi;
 	this->public.get_responder_spi = (u_int64_t(*)(message_t*))get_responder_spi;
 	this->public.set_ike_sa_id = (void(*)(message_t*, ike_sa_id_t *))set_ike_sa_id;
-	this->public.get_ike_sa_id = (status_t(*)(message_t*, ike_sa_id_t **))get_ike_sa_id;
+	this->public.get_ike_sa_id = (ike_sa_id_t*(*)(message_t*))get_ike_sa_id;
 	this->public.set_exchange_type = (void(*)(message_t*, exchange_type_t))set_exchange_type;
 	this->public.get_exchange_type = (exchange_type_t(*)(message_t*))get_exchange_type;
 	this->public.set_request = (void(*)(message_t*, bool))set_request;
@@ -1246,7 +1291,6 @@ message_t *message_create_from_packet(packet_t *packet)
 	this->public.parse_body = (status_t (*) (message_t *,crypter_t*,signer_t*)) parse_body;
 	this->public.get_packet = (packet_t * (*) (message_t*)) get_packet;
 	this->public.get_packet_data = (chunk_t (*) (message_t *this)) get_packet_data;
-	this->public.is_encoded = (bool (*) (message_t *this)) is_encoded;
 	this->public.destroy = (void(*)(message_t*))destroy;
 		
 	/* private values */

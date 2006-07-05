@@ -303,7 +303,7 @@ static linked_list_t *get_proposals(private_sa_payload_t *this)
 			if (ignore_struct_number < struct_number)
 			{
 				/* remova an already added, if first of series */
-				proposal_list->remove_last(proposal_list, (void**)proposal);
+				proposal_list->remove_last(proposal_list, (void**)&proposal);
 				proposal->destroy(proposal);
 				ignore_struct_number = struct_number;
 			}

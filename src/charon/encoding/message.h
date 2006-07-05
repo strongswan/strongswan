@@ -120,27 +120,22 @@ struct message_t {
 	/**
 	 * @brief Sets the IKE_SA ID of the message.
 	 * 
-	 * @warning ike_sa_id gets cloned  internaly and 
-	 * so can be destroyed afterwards.
+	 * ike_sa_id gets cloned.
 	 *
 	 * @param this 			message_t object
 	 * @param ike_sa_id		ike_sa_id to set
 	 */
-	void (*set_ike_sa_id) (message_t *this,ike_sa_id_t * ike_sa_id);
+	void (*set_ike_sa_id) (message_t *this, ike_sa_id_t * ike_sa_id);
 
 	/**
 	 * @brief Gets the IKE_SA ID of the message.
-	 * 
-	 * @warning The returned ike_sa_id is a clone of the internal one.
-	 * So it has to be destroyed by the caller.
+	 *
+	 * The ike_sa_id points to the message internal id, do not modify.
 	 *
 	 * @param this 			message_t object
-	 * @param ike_sa_id		pointer to ike_sa_id pointer which will be set
-	 * @return				
-	 * 						- SUCCESS
-	 * 						- FAILED if no ike_sa_id is set
+	 * @return				ike_sa_id of message
 	 */
-	status_t (*get_ike_sa_id) (message_t *this,ike_sa_id_t **ike_sa_id);
+	ike_sa_id_t *(*get_ike_sa_id) (message_t *this);
 
 	/**
 	 * @brief Sets the exchange type of the message.
@@ -219,11 +214,12 @@ struct message_t {
 	 * @param crypter	crypter to decrypt encryption payloads
 	 * @param signer	signer to verifiy a message with an encryption payload
 	 * @return
-	 * 					- SUCCESS if header could be parsed
+	 * 					- SUCCESS if parsing successful
 	 * 					- NOT_SUPPORTED if ciritcal unknown payloads found
-	 * 					- FAILED if message type is not suppported!
-	 *					- PARSE_ERROR if corrupted/invalid data found
-	 * 					- VERIFY_ERROR if verification of some payload failed
+	 * 					- NOT_SUPPORTED if message type is not supported!
+	 *					- PARSE_ERROR if message parsing failed
+	 * 					- VERIFY_ERROR if message verification failed (bad syntax)
+	 * 					- FAILED if integrity check failed
 	 * 					- INVALID_STATE if crypter/signer not supplied, but needed
 	 */
 	status_t (*parse_body) (message_t *this, crypter_t *crypter, signer_t *signer);
@@ -238,10 +234,12 @@ struct message_t {
 	 * message.
 	 * Crypter/signer can be omitted (by passing NULL) when no encryption 
 	 * payload is expected.
+	 * Generation is only done once, multiple calls will just return a packet copy.
 	 *
 	 * @param this 		message_t object
 	 * @param crypter	crypter to use when a payload must be encrypted
 	 * @param signer	signer to build a mac
+	 * @param packet	copy of generated packet
 	 * @return
 	 * 					- SUCCESS if packet could be generated
 	 * 					- INVALID_STATE if exchange type is currently not set
@@ -320,19 +318,6 @@ struct message_t {
 	 * @return			clone of the internal stored packet_t data.
 	 */	
 	chunk_t (*get_packet_data) (message_t *this);
-	
-	/**
-	 * @brief Check if a message is encoded.
-	 *
-	 * Check if the packet is in a generated (and encrypted) form available
-	 * and can be passed down to the socket. If not, it has to be generated
-	 * first.
-	 *
-	 * @param this 		message_t object
-	 * @return			TRUE if encoded, FALSE if not
-	 */	
-	bool (*is_encoded) (message_t *this);
-	
 	
 	/**
 	 * @brief Destroys a message and all including objects.

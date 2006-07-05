@@ -216,9 +216,7 @@ static void set_key_exchange_data(private_ke_payload_t *this, chunk_t key_exchan
 		
 	}
 	
-	this->key_exchange_data.ptr = clalloc(key_exchange_data.ptr,key_exchange_data.len);
-
-	this->key_exchange_data.len = key_exchange_data.len;
+	this->key_exchange_data = chunk_clone(key_exchange_data);
 	this->compute_length(this);
 }
 
@@ -268,9 +266,22 @@ ke_payload_t *ke_payload_create()
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = KE_PAYLOAD_HEADER_LENGTH;
-	this->key_exchange_data.ptr = NULL;
-	this->key_exchange_data.len = 0;
-	this->dh_group_number = 0;
+	this->key_exchange_data = CHUNK_INITIALIZER;
+	this->dh_group_number = MODP_NONE;
 
-	return (&(this->public));
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+ke_payload_t *ke_payload_create_from_diffie_hellman(diffie_hellman_t *dh)
+{
+	private_ke_payload_t *this = (private_ke_payload_t*)ke_payload_create();
+	
+	dh->get_my_public_value(dh, &this->key_exchange_data);
+	this->dh_group_number = dh->get_dh_group(dh);
+	this->compute_length(this);
+	
+	return &this->public;
 }

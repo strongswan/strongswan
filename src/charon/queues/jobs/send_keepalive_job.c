@@ -60,74 +60,22 @@ static job_type_t get_type(private_send_keepalive_job_t *this)
 }
 
 /**
- * Implementation of job_t.execute. 
+ * Implementation of job_t.execute.
  */ 
 static status_t execute(private_send_keepalive_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	status_t status;
-	u_int32_t dt;
-	u_int32_t interval = charon->configuration->get_keepalive_interval(charon->configuration);
-	struct timeval last_msg_tv, current_tv;
-	packet_t *packet;
-	host_t *host;
-	connection_t *connection;
-	chunk_t data;
-
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Checking out IKE SA %lld:%lld, role %s",
-			this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-			this->ike_sa_id->get_responder_spi(this->ike_sa_id),
-			this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 	
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
-			this->ike_sa_id, &ike_sa);
+											  this->ike_sa_id, &ike_sa);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1,
-				"IKE SA could not be checked out. Already deleted?");
 		return DESTROY_ME;
 	}
-
-	last_msg_tv = ike_sa->get_last_traffic_out_tv(ike_sa);
-	if (0 > gettimeofday(&current_tv, NULL) )
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1,
-				"Warning: Failed to get time of day.");
-	}
-	dt = (current_tv.tv_sec - last_msg_tv.tv_sec) * 1000
-	   + (current_tv.tv_usec - last_msg_tv.tv_usec) / 1000;
-
-	if (dt >= interval)
-	{
-		packet = packet_create();
-		connection = ike_sa->get_connection(ike_sa);
-		host = connection->get_my_host(connection);
-		packet->set_source(packet, host->clone(host));
-		host = connection->get_other_host(connection);
-		packet->set_destination(packet, host->clone(host));
-		data = chunk_alloc(1);
-		data.ptr[0] = 0xFF;
-		packet->set_data(packet, data);
-		charon->send_queue->add(charon->send_queue, packet);
-		dt = 0;
-		this->logger->log(this->logger, CONTROL|LEVEL1,
-				"NAT keepalive packet scheduled");
-	}
-	charon->event_queue->add_relative(charon->event_queue, (job_t*) this, interval - dt);
-
-	this->logger->log(this->logger, CONTROL|LEVEL2,
-			"Checkin IKE SA %lld:%lld, role %s",
-			this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-			this->ike_sa_id->get_responder_spi(this->ike_sa_id),
-			this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
-
-	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Checkin of IKE SA failed!");
-	}
-
-	return SUCCESS;
+	ike_sa->send_keepalive(ike_sa);
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	return DESTROY_ME;
 }
 
 /**

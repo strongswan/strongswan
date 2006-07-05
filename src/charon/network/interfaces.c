@@ -50,11 +50,11 @@ struct private_interfaces_t {
 };
 
 /**
- * Implements interfaces_t.get_addresses
+ * Implements interfaces_t.create_address_iterator
  */
-static linked_list_t* get_addresses(private_interfaces_t *this)
+static iterator_t* create_address_iterator(private_interfaces_t *this)
 {
-	return this->addresses;
+	return this->addresses->create_iterator(this->addresses, TRUE);
 }
 	
 /**
@@ -138,7 +138,7 @@ interfaces_t *interfaces_create(u_int16_t port)
 
 	this->port = port;
 	
-	this->public.get_addresses = (linked_list_t* (*) (interfaces_t*)) get_addresses;
+	this->public.create_address_iterator = (iterator_t* (*) (interfaces_t*)) create_address_iterator;
 	this->public.is_local_address = (bool (*) (interfaces_t*, host_t*)) is_local_address;
 	this->public.destroy = (void (*) (interfaces_t*)) destroy;
 

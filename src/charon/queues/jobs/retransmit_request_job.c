@@ -46,11 +46,6 @@ struct private_retransmit_request_job_t {
 	ike_sa_id_t *ike_sa_id;
 	
 	/**
-	 * Number of times a request was retransmitted
-	 */
-	u_int32_t retransmit_count;
-	
-	/**
 	 * Logger reference
 	 */
 	logger_t *logger;
@@ -69,79 +64,27 @@ static job_type_t get_type(private_retransmit_request_job_t *this)
  */
 static status_t execute(private_retransmit_request_job_t *this)
 {
-	bool stop_retransmitting = FALSE, timed_out = FALSE;
-	u_int32_t timeout;
 	ike_sa_t *ike_sa;
 	status_t status;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Checking out IKE SA %lld:%lld, role %s", 
-					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
-					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 				
 	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id, &ike_sa);
-	if ((status != SUCCESS) && (status != CREATED))
+	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL1, 
 						  "IKE SA could not be checked out. Already deleted?");
 		return DESTROY_ME;
 	}
 	
-	this->retransmit_count++;
-	status = charon->configuration->get_retransmit_timeout(charon->configuration,
-			this->retransmit_count, &timeout);
-	timed_out = (status != SUCCESS);
-	
-	if (ike_sa->retransmit_possible(ike_sa, this->message_id))
+	if (ike_sa->retransmit_request(ike_sa, this->message_id) == DESTROY_ME)
 	{
-		if (!timed_out)
-		{
-			status = ike_sa->retransmit_request(ike_sa, this->message_id);
-			if (status != SUCCESS)
-			{
-				this->logger->log(this->logger, CONTROL|LEVEL3, 
-										 "Message doesn't have to be retransmitted");
-				stop_retransmitting = TRUE;
-			}
-		}
+		/* retransmission hopeless, kill SA */
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 	}
 	else
 	{
-		stop_retransmitting = TRUE;
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
-
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Checkin IKE SA %lld:%lld, role %s", 
-					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
-					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
-
-	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "Checkin of IKE SA failed!");
-	}
-
-	if (timed_out)
-	{
-		/*
-		 * XXX: We should act depending on DPD policy here, or not act at all.
-		 */
-		this->logger->log(this->logger, CONTROL|LEVEL2, "Timeout: Deleting SA!");
-		status = charon->ike_sa_manager->delete(charon->ike_sa_manager, this->ike_sa_id);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR|LEVEL1, "Cannot delete SA!");
-		}
-		return DESTROY_ME;
-	}
-	
-	if (stop_retransmitting)
-	{
-		return DESTROY_ME;
-	}
-	
-	charon->event_queue->add_relative(charon->event_queue, (job_t *)this, timeout);
-	return SUCCESS;
+	return DESTROY_ME;
 }
 
 /**
@@ -167,7 +110,6 @@ retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike
 
 	/* private variables */
 	this->message_id = message_id;
-	this->retransmit_count = 0;
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	

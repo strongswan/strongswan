@@ -31,7 +31,6 @@
 #include <definitions.h>
 #include <utils/linked_list.h>
 #include <utils/logger_manager.h>
-#include <utils/randomizer.h>
 #include <crypto/diffie_hellman.h>
 #include <crypto/prf_plus.h>
 #include <crypto/crypters/crypter.h>
@@ -43,16 +42,27 @@
 #include <encoding/payloads/transform_substructure.h>
 #include <encoding/payloads/transform_attribute.h>
 #include <encoding/payloads/ts_payload.h>
-#include <sa/states/initiator_init.h>
-#include <sa/states/responder_init.h>
-#include <sa/states/create_child_sa_requested.h>
-#include <sa/states/delete_child_sa_requested.h>
-#include <sa/states/delete_ike_sa_requested.h>
+#include <sa/transactions/transaction.h>
+#include <sa/transactions/ike_sa_init.h>
+#include <sa/transactions/delete_ike_sa.h>
+#include <sa/transactions/dead_peer_detection.h>
 #include <queues/jobs/retransmit_request_job.h>
 #include <queues/jobs/delete_established_ike_sa_job.h>
 #include <queues/jobs/delete_half_open_ike_sa_job.h>
+#include <queues/jobs/send_dpd_job.h>
+#include <queues/jobs/send_keepalive_job.h>
 
 
+/**
+ * String mappings for ike_sa_state_t.
+ */
+mapping_t ike_sa_state_m[] = {
+	{SA_CREATED, "CREATED"},
+	{SA_CONNECTING, "CONNECTING"},
+	{SA_ESTABLISHED, "ESTABLISHED"},
+	{SA_DELETING, "DELETING"},
+	{MAPPING_END, NULL}
+};
 
 
 typedef struct private_ike_sa_t private_ike_sa_t;
@@ -63,19 +73,9 @@ typedef struct private_ike_sa_t private_ike_sa_t;
 struct private_ike_sa_t {
 
 	/**
-	 * Protected part of a ike_sa_t object.
+	 * Public members
 	 */
-	protected_ike_sa_t protected;
-	
-	/**
-	 * Update a timestamp on ike traffic
-	 */
-	void (*update_timestamp)(private_ike_sa_t *this, bool in);
-	
-	/**
-	 * Returns the time since last traffic on kernel policies
-	 */
-	struct timeval (*get_last_esp_traffic_tv)(private_ike_sa_t * this, bool inbound);
+	ike_sa_t public;
 
 	/**
 	 * Identifier for the current IKE_SA.
@@ -88,18 +88,9 @@ struct private_ike_sa_t {
 	linked_list_t *child_sas;
 	
 	/**
-	 * Current state of the IKE_SA represented as state_t object.
-	 * 
-	 * A state object representates one of the following states and is processing 
-	 * messages in the specific state:
-	 *  - INITIATOR_INIT
-	 *  - RESPONDER_INIT
-	 *  - IKE_SA_INIT_REQUESTED
-	 *  - IKE_SA_INIT_RESPONDED
-	 *  - IKE_AUTH_REQUESTED
-	 *   -IKE_SA_ESTABLISHED
+	 * Current state of the IKE_SA
 	 */
-	state_t *current_state;
+	ike_sa_state_t state;
 	
 	/**
 	 * Connection definition used for this IKE_SA
@@ -112,41 +103,24 @@ struct private_ike_sa_t {
 	policy_t *policy;
 	
 	/**
-	 * This SA's source for random data.
-	 * 
-	 * Is available in every state.
+	 * crypter for inbound traffic
 	 */
-	randomizer_t *randomizer;
+	crypter_t *crypter_in;
 	
 	/**
-	 * The last responded message.
+	 * crypter for outbound traffic
 	 */
-	message_t *last_responded_message;
-
-	/**
-	 * The ast requested message.
-	 */
-	message_t *last_requested_message;
+	crypter_t *crypter_out;
 	
 	/**
-	 * Crypter object for initiator.
+	 * Signer for inbound traffic
 	 */
-	crypter_t *crypter_initiator;
+	signer_t *signer_in;
 	
 	/**
-	 * Crypter object for responder.
+	 * Signer for outbound traffic
 	 */
-	crypter_t *crypter_responder;
-	
-	/**
-	 * Signer object for initiator.
-	 */
-	signer_t *signer_initiator;
-	
-	/**
-	 * Signer object for responder.
-	 */
-	signer_t *signer_responder;
+	signer_t *signer_out;
 	
 	/**
 	 * Multi purpose prf, set key, use it, forget it
@@ -167,21 +141,6 @@ struct private_ike_sa_t {
 	 * PRF, with key set to pr_key, used for authentication
 	 */
 	prf_t *prf_auth_r;
-
-	/**
-	 * Next message id to receive.
-	 */
-	u_int32_t message_id_in;
-	
-	/**
-	 * Next message id to send.
-	 */
-	u_int32_t message_id_out;
-	
-	/**
-	 * Last reply id which was successfully received.
-	 */
-	int32_t last_replied_message_id;
 	
 	/**
 	 * A logger for this IKE_SA.
@@ -202,44 +161,676 @@ struct private_ike_sa_t {
 	 * NAT status of remote host.
 	 */
 	bool nat_there;
+	
+	/**
+	 * message ID for next outgoung request
+	 */
+	u_int32_t message_id_out;
 
 	/**
 	 * Timestamp of last IKE message received on this SA
 	 */
-	struct timeval last_msg_in_tv;
+	time_t time_inbound;
 
 	/**
 	 * Timestamp of last IKE message sent on this SA
 	 */
-	struct timeval last_msg_out_tv;
-
-	/*
-	 * Message ID of last DPD message
+	time_t time_outbound;
+	
+	/**
+	 * List of queued transactions to process
 	 */
-	u_int32_t last_dpd_message_id;
+	linked_list_t *transaction_queue;
+	
+	/**
+	 * Transaction currently initiated
+	 * (only one supported yet, window size = 1)
+	 */
+	transaction_t *transaction_out;
+	
+	/**
+	 * last transaction initiated by peer processed.
+	 * (only one supported yet, window size = 1)
+	 * Stored for retransmission.
+	 */
+	transaction_t *transaction_in;
+	
+	/**
+	 * Next incoming transaction expected. Used to
+	 * do multi transaction operations.
+	 */
+	transaction_t *transaction_in_next;
 };
 
 /**
- * Implementation of protected_ike_sa_t.build_message.
+ * get the time of the latest traffic processed by the kernel
  */
-static void build_message(private_ike_sa_t *this, exchange_type_t type, bool request, message_t **message)
+static time_t get_esp_time(private_ike_sa_t* this, bool inbound)
 {
-	message_t *new_message;
-	host_t *me, *other;
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	time_t latest = 0, use_time;
 	
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		if (child_sa->get_use_time(child_sa, inbound, &use_time) == SUCCESS)
+		{
+			latest = max(latest, use_time);
+		}
+	}
+	iterator->destroy(iterator);
+	
+	return latest;
+}
 
-	this->logger->log(this->logger, CONTROL|LEVEL2, "build empty message");
-	new_message = message_create();
-	new_message->set_source(new_message, me->clone(me));
-	new_message->set_destination(new_message, other->clone(other));
-	new_message->set_exchange_type(new_message, type);
-	new_message->set_request(new_message, request);
-	new_message->set_message_id(new_message, (request) ? this->message_id_out : this->message_id_in);
-	new_message->set_ike_sa_id(new_message, this->ike_sa_id);
+/**
+ * get the time of the latest received traffice
+ */
+static time_t get_time_inbound(private_ike_sa_t *this)
+{
+	return max(this->time_inbound, get_esp_time(this, TRUE));
+}
 
-	*message = new_message;
+/**
+ * get the time of the latest sent traffic
+ */
+static time_t get_time_outbound(private_ike_sa_t *this)
+{
+	return max(this->time_outbound, get_esp_time(this, FALSE));
+}
+
+
+/**
+ * Update connection host, as addresses may change (NAT)
+ */
+static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
+{
+	/*
+	 * Quoting RFC 4306:
+	 *
+	 * 2.11.  Address and Port Agility
+	 * 
+	 *    IKE runs over UDP ports 500 and 4500, and implicitly sets up ESP and
+	 *    AH associations for the same IP addresses it runs over.  The IP
+	 *    addresses and ports in the outer header are, however, not themselves
+	 *    cryptographically protected, and IKE is designed to work even through
+	 *    Network Address Translation (NAT) boxes.  An implementation MUST
+	 *    accept incoming requests even if the source port is not 500 or 4500,
+	 *    and MUST respond to the address and port from which the request was
+	 *    received.  It MUST specify the address and port at which the request
+	 *    was received as the source address and port in the response.  IKE
+	 *    functions identically over IPv4 or IPv6.
+	 *
+	 *    [...]
+	 *
+	 *    There are cases where a NAT box decides to remove mappings that
+	 *    are still alive (for example, the keepalive interval is too long,
+	 *    or the NAT box is rebooted).  To recover in these cases, hosts
+	 *    that are not behind a NAT SHOULD send all packets (including
+	 *    retransmission packets) to the IP address and port from the last
+	 *    valid authenticated packet from the other end (i.e., dynamically
+	 *    update the address).  A host behind a NAT SHOULD NOT do this
+	 *    because it opens a DoS attack possibility.  Any authenticated IKE
+	 *    packet or any authenticated UDP-encapsulated ESP packet can be
+	 *    used to detect that the IP address or the port has changed.
+	 */
+	host_t *old_other = NULL;
+	iterator_t *iterator = NULL;
+	child_sa_t *child_sa = NULL;
+	int my_changes, other_changes;
+
+	my_changes = me->get_differences(me, this->connection->get_my_host(this->connection));
+
+	old_other = this->connection->get_other_host(this->connection);
+	other_changes = other->get_differences(other, old_other);
+
+	if (!my_changes && !other_changes) 
+	{
+		return;
+	}
+	
+	if (my_changes)
+	{
+		this->connection->update_my_host(this->connection, me->clone(me));
+	}
+	
+	if (!this->nat_here)
+	{
+		/* update without restrictions if we are not NATted */
+		if (other_changes)
+		{
+			this->connection->update_other_host(this->connection, other->clone(other));
+		}
+	}
+	else
+	{
+		/* if we are natted, only port may change */
+		if (other_changes & HOST_DIFF_ADDR)
+		{
+			return;
+		}
+		else if (other_changes & HOST_DIFF_PORT)
+		{
+			old_other->set_port(old_other, other->get_port(other));
+		}
+	}
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		child_sa->update_hosts(child_sa,
+							   this->connection->get_my_host(this->connection),
+							   this->connection->get_other_host(this->connection),
+							   my_changes, other_changes);
+		/* TODO: what to do if update fails? Delete CHILD_SA? */
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * send a request and schedule retransmission
+ */
+static status_t transmit_request(private_ike_sa_t *this)
+{
+	message_t *request;
+	packet_t *packet;
+	status_t status;
+	retransmit_request_job_t *job;
+	u_int32_t transmitted;
+	u_int32_t timeout;
+	transaction_t *transaction = this->transaction_out;
+	u_int32_t message_id = transaction->get_message_id(transaction);
+	
+	transmitted = transaction->requested(transaction);
+	timeout = charon->configuration->get_retransmit_timeout(charon->configuration,
+															transmitted);
+	if (timeout == 0)
+	{
+		this->logger->log(this->logger, ERROR,
+						  "giving up after %d retransmits, deleting IKE_SA",
+						  transmitted - 1);
+		return DESTROY_ME;
+	}
+	
+	status = transaction->get_request(transaction, &request);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	/* if we retransmit, the request is already generated */
+	if (transmitted == 0)
+	{
+		status = request->generate(request, this->crypter_out, this->signer_out, &packet);
+		if (status != SUCCESS)
+		{
+			return FAILED;
+		}
+	}
+	else
+	{
+		this->logger->log(this->logger, CONTROL, 
+						  "sending retransmit %d for %s request with message ID %d",
+						  transmitted,
+						  mapping_find(exchange_type_m, request->get_exchange_type(request)),
+						  message_id);
+		packet = request->get_packet(request);
+	}
+	/* finally send */
+	charon->send_queue->add(charon->send_queue, packet);
+	this->time_outbound = time(NULL);
+	
+	/* schedule retransmission job */
+	job = retransmit_request_job_create(message_id, this->ike_sa_id);
+	charon->event_queue->add_relative(charon->event_queue, (job_t*)job, timeout);
+	return SUCCESS;
+}
+
+/**
+ * Implementation of ike_sa.retransmit_request.
+ */
+static status_t retransmit_request(private_ike_sa_t *this, u_int32_t message_id)
+{
+	if (this->transaction_out == NULL ||
+		this->transaction_out->get_message_id(this->transaction_out) != message_id)
+	{
+		/* no retransmit necessary, transaction did already complete */
+		return SUCCESS;
+	}
+	return transmit_request(this);
+}
+
+/**
+ * Check for transactions in the queue and initiate the first transaction found.
+ */
+static status_t process_transaction_queue(private_ike_sa_t *this)
+{
+	if (this->transaction_out)
+	{
+		/* already a transaction in progress */
+		return SUCCESS;
+	}
+	
+	while (TRUE)
+	{
+		if (this->transaction_queue->remove_first(this->transaction_queue,
+			(void**)&this->transaction_out) != SUCCESS)
+		{
+			/* transaction queue empty */
+			return SUCCESS;
+		}
+		switch (transmit_request(this))
+		{
+			case SUCCESS:
+				return SUCCESS;
+			case DESTROY_ME:
+				/* critical, IKE_SA unusable, destroy immediately */
+				this->logger->log(this->logger, ERROR, 
+								  "transaction initiaton failed, deleting IKE_SA");
+				return DESTROY_ME;
+			default:
+				/* discard transaction, process next one */
+				this->logger->log(this->logger, ERROR, 
+								  "transaction initiation failed, discarded");
+				this->transaction_out->destroy(this->transaction_out);
+				this->transaction_out = NULL;
+				/* handle next transaction */
+				continue;
+		}
+	}
+}
+
+/**
+ * Queue a new transaction and execute the next outstanding transaction
+ */
+static status_t queue_transaction(private_ike_sa_t *this, transaction_t *transaction, bool prefer)
+{
+	/* inject next transaction */
+	if (transaction)
+	{
+		if (prefer)
+		{
+			this->transaction_queue->insert_first(this->transaction_queue, transaction);
+		}
+		else
+		{
+			this->transaction_queue->insert_last(this->transaction_queue, transaction);
+		}
+	}
+	/* process a transaction */
+	return process_transaction_queue(this);
+}
+
+/**
+ * process an incoming request.
+ */
+static status_t process_request(private_ike_sa_t *this, message_t *request)
+{
+	transaction_t *last, *current = NULL;
+	message_t *response;
+	packet_t *packet;
+	u_int32_t request_mid;
+	status_t status;
+	
+	request_mid = request->get_message_id(request);
+	last = this->transaction_in;
+	
+	/* check if message ID is correct */
+	if (last)
+	{
+		u_int32_t last_mid = last->get_message_id(last);
+		
+		if (last_mid == request_mid)
+		{
+			/* retransmit detected */
+			this->logger->log(this->logger, ERROR,
+							  "received retransmitted request for message ID %d, retransmitting response",
+							  request_mid);
+			last->get_response(last, request, &response, &this->transaction_in_next);
+			packet = response->get_packet(response);
+			charon->send_queue->add(charon->send_queue, packet);
+			this->time_outbound = time(NULL);
+			return SUCCESS;
+		}
+		
+		if (last_mid > request_mid)
+		{
+			/* something seriously wrong here, message id may not decrease */
+			this->logger->log(this->logger, ERROR,
+							  "received request with message ID %d, excepted %d, ingored",
+							  request_mid, last_mid + 1);
+			return FAILED;
+		}
+		/* we allow jumps in message IDs, as long as they are incremental */
+		if (last_mid + 1 < request_mid)
+		{
+			this->logger->log(this->logger, ERROR,
+							  "received request with message ID %d, excepted %d",
+							  request_mid, last_mid + 1);
+		}
+	}
+	else
+	{
+		if (request_mid != 0)
+		{
+			/* warn, but allow it */
+			this->logger->log(this->logger, CONTROL,
+							  "first received request has message ID %d, excepted 0", 
+							  request_mid);
+		}
+	}
+	
+	/* check if we already have a pre-created transaction for this request */
+	if (this->transaction_in_next)
+	{
+		u_int32_t trans_mid = this->transaction_in_next->get_message_id(this->transaction_in_next);
+		
+		/* check message id consistency */
+		if (trans_mid == request_mid)
+		{
+			/* use it */
+			current = this->transaction_in_next;
+		}
+		else
+		{
+			/* discard queued transaction */
+			this->transaction_in_next->destroy(this->transaction_in_next);
+		}
+		this->transaction_in_next = NULL;
+	}
+	/* create new transaction if "next" unusable */
+	if (current == NULL)
+	{
+		current = transaction_create(&this->public, request);
+		if (current == NULL)
+		{
+			this->logger->log(this->logger, ERROR, 
+							  "no idea how to handle received message (%d), ignored",
+							  request->get_exchange_type(request));
+			return FAILED;
+		}
+	}
+	
+	/* send message. get_request() always gives a valid response */
+	status = current->get_response(current, request, &response, &this->transaction_in_next);
+	if (response->generate(response, this->crypter_out, this->signer_out, &packet) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, 
+						  "response generation failed, discarding transaction");
+		current->destroy(current);
+		return FAILED;
+	}
+	
+	charon->send_queue->add(charon->send_queue, packet);
+	this->time_outbound = time(NULL);
+	/* act depending on transaction result */
+	switch (status)
+	{
+		case DESTROY_ME:
+			/* transactions says we should destroy the IKE_SA, so do it */
+			current->destroy(current);
+			return DESTROY_ME;
+		default:
+			/* store for retransmission, destroy old transaction */
+			this->transaction_in = current;
+			if (last)
+			{
+				last->destroy(last);
+			}
+			return SUCCESS;
+	}
+}
+
+/**
+ * process an incoming response
+ */
+static status_t process_response(private_ike_sa_t *this, message_t *response)
+{
+	transaction_t *current, *new = NULL;
+	
+	current = this->transaction_out;
+	/* check if message ID is that of our currently active transaction */
+	if (current == NULL ||
+		current->get_message_id(current) !=
+		   response->get_message_id(response))
+	{
+		this->logger->log(this->logger, ERROR, 
+						  "received response with message ID %d not requested, ignored");
+		return FAILED;
+	}
+	
+	switch (current->conclude(current, response, &new))
+	{
+		case DESTROY_ME:
+			/* state requested to destroy IKE_SA */
+			return DESTROY_ME;
+		default:
+			/* discard transaction, process next one */
+			break;
+	}
+	/* transaction comleted, remove */
+	current->destroy(current);
+	this->transaction_out = NULL;
+	
+	/* queue new transaction */
+	return queue_transaction(this, new, TRUE);
+}
+
+/**
+ * send a notify back to the sender
+ */
+static void send_notify_response(private_ike_sa_t *this,
+								 message_t *request,
+								 notify_type_t type)
+{
+	notify_payload_t *notify;
+	message_t *response;
+	host_t *src, *dst;
+	packet_t *packet;
+	
+	response = message_create();
+	dst = request->get_source(request);
+	src = request->get_destination(request);
+	response->set_source(response, src->clone(src));
+	response->set_destination(response, dst->clone(dst));
+	response->set_exchange_type(response, request->get_exchange_type(request));
+	response->set_request(response, FALSE);
+	response->set_message_id(response, request->get_message_id(request));
+	response->set_ike_sa_id(response, this->ike_sa_id);
+	notify = notify_payload_create_from_protocol_and_type(PROTO_NONE, type);
+	response->add_payload(response, (payload_t *)notify);
+	if (response->generate(response, this->crypter_out, this->signer_out, &packet) != SUCCESS)
+	{
+		response->destroy(response);
+		return;
+	}
+	charon->send_queue->add(charon->send_queue, packet);
+	this->time_outbound = time(NULL);
+	response->destroy(response);
+	return;
+}
+
+
+/**
+ * Implementation of ike_sa_t.process_message.
+ */
+static status_t process_message(private_ike_sa_t *this, message_t *message)
+{
+	status_t status;
+	bool is_request;
+	
+	is_request = message->get_request(message);
+	
+	status = message->parse_body(message, this->crypter_in, this->signer_in);
+	if (status != SUCCESS)
+	{
+		switch (status)
+		{
+			case NOT_SUPPORTED:
+				this->logger->log(this->logger, ERROR,
+								  "ciritcal unknown payloads found");
+				if (is_request)
+				{
+					send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
+				}
+				break;
+			case PARSE_ERROR:
+				this->logger->log(this->logger, ERROR,
+								  "message parsing failed");
+				if (is_request)
+				{
+					send_notify_response(this, message, INVALID_SYNTAX);
+				}
+				break;
+			case VERIFY_ERROR:
+				this->logger->log(this->logger, ERROR,
+								  "message verification failed");
+				if (is_request)
+				{
+					send_notify_response(this, message, INVALID_SYNTAX);
+				}
+				break;
+			case FAILED:
+				this->logger->log(this->logger, ERROR,
+								  "integrity check failed");
+				/* ignored */
+				break;
+			case INVALID_STATE:
+				this->logger->log(this->logger, ERROR,
+								  "found encrypted message, but no keys available");
+				if (is_request)
+				{
+					send_notify_response(this, message, INVALID_SYNTAX);
+				}
+			default:
+				break;
+		}
+		this->logger->log(this->logger, ERROR,
+						  "%s %s with message ID %d processing failed",
+						  mapping_find(exchange_type_m, message->get_exchange_type(message)),
+						  message->get_request(message) ? "request" : "response",
+						  message->get_message_id(message));
+	}
+	else
+	{
+		/* check if message is trustworthy, and update connection information */
+		if ((this->state == SA_CREATED && this->connection) ||
+			message->get_exchange_type(message) != IKE_SA_INIT)
+		{
+			update_hosts(this, message->get_destination(message),
+							   message->get_source(message));
+			this->time_inbound = time(NULL);
+		}
+		if (is_request)
+		{
+			status = process_request(this, message);
+		}
+		else
+		{
+			status = process_response(this, message);
+		}
+	}
+	return status;
+}
+
+/**
+ * Implementation of ike_sa_t.initiate.
+ */
+static status_t initiate(private_ike_sa_t *this, connection_t *connection)
+{
+	ike_sa_init_t *ike_sa_init;
+	
+	/* set connection and policy */
+	this->connection = connection;
+	this->policy = charon->policies->get_policy_by_name(charon->policies,
+			this->connection->get_name(this->connection));
+	if (this->policy == NULL)
+	{
+		this->logger->log(this->logger, ERROR,
+						  "no policy found for connection %s, aborting",
+						  connection->get_name(connection));
+		return DESTROY_ME;
+	}
+	ike_sa_init = ike_sa_init_create(&this->public, 0);
+	this->message_id_out = 2;
+	return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
+}
+
+/**
+ * Implementation of ike_sa_t.send_dpd
+ */
+static status_t send_dpd(private_ike_sa_t *this)
+{
+	send_dpd_job_t *job;
+	time_t diff, interval;
+	status_t status = SUCCESS;
+	
+	interval = charon->configuration->get_dpd_interval(charon->configuration);
+	
+	if (this->transaction_out)
+	{
+		/* there is a transaction in progress. Come back later */
+		diff = 0;
+	}
+	else
+	{
+		/* check if there was any inbound traffic */
+		time_t last_in, now;
+		last_in = get_time_inbound(this);
+		now = time(NULL);
+		diff = now - last_in;
+		if (diff >= interval)
+		{
+			/* to long ago, initiate dead peer detection */
+			dead_peer_detection_t *dpd;
+			this->logger->log(this->logger, CONTROL, "sending DPD request");
+			dpd = dead_peer_detection_create(&this->public, this->message_id_out++);
+			status = queue_transaction(this, (transaction_t*)dpd, FALSE);
+			diff = 0;
+		}
+	}
+	/* recheck in "interval" seconds */
+	job = send_dpd_job_create(this->ike_sa_id);
+	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
+									  (interval - diff) * 1000);
+	return SUCCESS;
+}
+
+/**
+ * Implementation of ike_sa_t.send_keepalive
+ */
+static void send_keepalive(private_ike_sa_t *this)
+{
+	send_keepalive_job_t *job;
+	time_t last_out, now, diff, interval;
+	
+	last_out = get_time_outbound(this);
+	now = time(NULL);
+	
+	diff = now - last_out;
+	interval = charon->configuration->get_keepalive_interval(charon->configuration);
+	
+	if (diff >= interval)
+	{
+		host_t *me, *other;
+		packet_t *packet;
+		chunk_t data;
+		
+		packet = packet_create();
+		me = this->connection->get_my_host(this->connection);
+		other = this->connection->get_other_host(this->connection);
+		packet->set_source(packet, me->clone(me));
+		packet->set_destination(packet, other->clone(other));
+		data.ptr = malloc(1);
+		data.ptr[0] = 0xFF;
+		data.len = 1;
+		packet->set_data(packet, data);
+		charon->send_queue->add(charon->send_queue, packet);
+		this->logger->log(this->logger, CONTROL, "sending keep alive");
+		diff = 0;
+	}
+	job = send_keepalive_job_create(this->ike_sa_id);
+	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
+									  (interval - diff) * 1000);
 }
 
 /**
@@ -247,18 +838,34 @@ static void build_message(private_ike_sa_t *this, exchange_type_t type, bool req
  */
 static ike_sa_state_t get_state(private_ike_sa_t *this)
 {
-	return this->current_state->get_state(this->current_state);
+	return this->state;
 }
-	
+
 /**
- * Implementation of protected_ike_sa_t.set_new_state.
+ * Implementation of ike_sa_t.set_state.
  */
-static void set_new_state(private_ike_sa_t *this, state_t *state)
+static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 {
 	this->logger->log(this->logger, CONTROL, "state change: %s => %s",
-					  mapping_find(ike_sa_state_m, get_state(this)),
-					  mapping_find(ike_sa_state_m, state->get_state(state)));
-	this->current_state = state;
+					  mapping_find(ike_sa_state_m, this->state),
+					  mapping_find(ike_sa_state_m, state));
+	if (state == SA_ESTABLISHED)
+	{
+		host_t *my_host, *other_host;
+		identification_t *my_id, *other_id;
+		my_host = this->connection->get_my_host(this->connection);
+		other_host = this->connection->get_other_host(this->connection);
+		my_id = this->policy->get_my_id(this->policy);
+		other_id = this->policy->get_other_id(this->policy);
+		this->logger->log(this->logger, AUDIT, "IKE_SA established: %s[%s]...%s[%s]",
+						  my_host->get_address(my_host),
+						  my_id->get_string(my_id),
+						  other_host->get_address(other_host),
+						  other_id->get_string(other_id));
+		
+		send_dpd(this);
+	}
+	this->state = state;
 }
 
 /**
@@ -333,105 +940,40 @@ static ike_sa_id_t* get_id(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of ike_sa_t.get_my_host.
- */
-static host_t* get_my_host(private_ike_sa_t *this)
-{
-	return this->connection->get_my_host(this->connection);;
-}
-
-/**
- * Implementation of ike_sa_t.get_other_host.
- */
-static host_t* get_other_host(private_ike_sa_t *this)
-{
-	return this->connection->get_other_host(this->connection);
-}
-
-/**
- * Implementation of ike_sa_t.get_my_id.
- */
-static identification_t* get_my_id(private_ike_sa_t *this)
-{
-	return this->policy->get_my_id(this->policy);
-}
-
-/**
- * Implementation of ike_sa_t.get_other_id.
- */
-static identification_t* get_other_id(private_ike_sa_t *this)
-{
-	return this->policy->get_other_id(this->policy);
-}
-
-/**
- * Implementation of ike_sa_t.retransmit_possible.
- */
-static bool retransmit_possible(private_ike_sa_t *this, u_int32_t message_id)
-{
-	return ((this->last_requested_message)
-	     && (message_id != this->last_replied_message_id)
-	     && (message_id == this->last_requested_message->get_message_id(
-	                                        this->last_requested_message)));
-}
-
-/**
- * Implementation of ike_sa_t.retransmit_request.
- */
-static status_t retransmit_request(private_ike_sa_t *this, u_int32_t message_id)
-{
-	packet_t *packet;
-	
-	if (!this->protected.public.retransmit_possible(&this->protected.public, message_id))
-	{
-		return NOT_FOUND;
-	}
-	
-	this->logger->log(this->logger, CONTROL | LEVEL1, "going to retransmit message with id %d",message_id);
-	packet = this->last_requested_message->get_packet(this->last_requested_message);
-	charon->send_queue->add(charon->send_queue, packet);
-	this->update_timestamp(this, FALSE);
-	return SUCCESS;
-}
-
-/**
  * Implementation of protected_ike_sa_t.build_transforms.
  */
-static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
+static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, 
+								 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
+								 bool initiator)
 {
 	chunk_t nonces, nonces_spis, skeyseed, key, secret;
 	u_int64_t spi_i, spi_r;
 	prf_plus_t *prf_plus;
 	algorithm_t *algo;
 	size_t key_size;
+	crypter_t *crypter_i, *crypter_r;
+	signer_t *signer_i, *signer_r;
 	
-	/*
-	* Build the PRF+ instance for deriving keys
-	*/
-	if (this->prf != NULL)
-	{
-		this->prf->destroy(this->prf);
-	}
+	/* Build the PRF+ instance for deriving keys */
 	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo))
 	{
-		this->logger->log(this->logger, ERROR|LEVEL2, "no PRF algoithm selected!?");
+		this->logger->log(this->logger, ERROR, "no PSEUDO_RANDOM_FUNCTION selected!");
 		return FAILED;
 	}
 	this->prf = prf_create(algo->algorithm);
 	if (this->prf == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, 
-						  "PSEUDO_RANDOM_FUNCTION %s not supported!",
+		this->logger->log(this->logger, ERROR, "PSEUDO_RANDOM_FUNCTION %s not supported!",
 						  mapping_find(pseudo_random_function_m, algo->algorithm));
 		return FAILED;
 	}
 	
-	/* concatenate nonces =  nonce_i | nonce_r */
+	/* nonces =  nonce_i | nonce_r */
 	nonces = chunk_alloc(nonce_i.len + nonce_r.len);
 	memcpy(nonces.ptr, nonce_i.ptr, nonce_i.len);
 	memcpy(nonces.ptr + nonce_i.len, nonce_r.ptr, nonce_r.len);
 
-	/* concatenate prf_seed = nonce_i | nonce_r | spi_i | spi_r */
+	/* prf_seed = nonce_i | nonce_r | spi_i | spi_r */
 	nonces_spis = chunk_alloc(nonces.len + 16);
 	memcpy(nonces_spis.ptr, nonces.ptr, nonces.len);
 	spi_i = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
@@ -441,17 +983,15 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	
 	/* SKEYSEED = prf(Ni | Nr, g^ir) */
 	dh->get_shared_secret(dh, &secret);
-	this->logger->log_chunk(this->logger, PRIVATE, "shared Diffie-Hellman secret", secret);
+	this->logger->log_chunk(this->logger, PRIVATE, "shared Diffie Hellman secret", secret);
 	this->prf->set_key(this->prf, nonces);
 	this->prf->allocate_bytes(this->prf, secret, &skeyseed);
-	this->logger->log_chunk(this->logger, PRIVATE | LEVEL1, "SKEYSEED", skeyseed);
+	this->logger->log_chunk(this->logger, PRIVATE|LEVEL1, "SKEYSEED", skeyseed);
 	chunk_free(&secret);
 
 	/* prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr )
-	* = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr
-	*
-	* we use the prf directly for prf+ 
-	*/
+	 *     = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr
+	 */
 	this->prf->set_key(this->prf, skeyseed);
 	prf_plus = prf_plus_create(this->prf, nonces_spis);
 	
@@ -459,13 +999,6 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	chunk_free(&nonces);
 	chunk_free(&nonces_spis);
 	chunk_free(&skeyseed);
-	
-	
-	/*
-	* We now can derive all of our key. We build the transforms 
-	* directly.
-	*/
-	
 	
 	/* SK_d used for prf+ to derive keys for child SAs */
 	this->child_prf = prf_create(algo->algorithm);
@@ -475,62 +1008,53 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 	this->child_prf->set_key(this->child_prf, key);
 	chunk_free(&key);
 	
-	
 	/* SK_ai/SK_ar used for integrity protection */
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
 	{
-		this->logger->log(this->logger, ERROR, "no integrity algoithm selected?!");
+		this->logger->log(this->logger, ERROR, "no INTEGRITY_ALGORITHM selected?!");
 		return FAILED;
 	}
-	if (this->signer_initiator != NULL)
-	{
-		this->signer_initiator->destroy(this->signer_initiator);
-	}
-	if (this->signer_responder != NULL)
-	{
-		this->signer_responder->destroy(this->signer_responder);
-	}
 	
-	this->signer_initiator = signer_create(algo->algorithm);
-	this->signer_responder = signer_create(algo->algorithm);
-	if (this->signer_initiator == NULL || this->signer_responder == NULL)
+	signer_i = signer_create(algo->algorithm);
+	signer_r = signer_create(algo->algorithm);
+	if (signer_i == NULL || signer_r == NULL)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "INTEGRITY_ALGORITHM %s not supported!",
+		this->logger->log(this->logger, ERROR, "INTEGRITY_ALGORITHM %s not supported!",
 						  mapping_find(integrity_algorithm_m,algo->algorithm));
 		return FAILED;
 	}
-	key_size = this->signer_initiator->get_key_size(this->signer_initiator);
+	key_size = signer_i->get_key_size(signer_i);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "Sk_ai secret", key);
-	this->signer_initiator->set_key(this->signer_initiator, key);
+	signer_i->set_key(signer_i, key);
 	chunk_free(&key);
 
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "Sk_ar secret", key);
-	this->signer_responder->set_key(this->signer_responder, key);
+	signer_r->set_key(signer_r, key);
 	chunk_free(&key);
 	
+	if (initiator)
+	{
+		this->signer_in = signer_i;
+		this->signer_out = signer_r;
+	}
+	else
+	{
+		this->signer_in = signer_r;
+		this->signer_out = signer_i;
+	}
 	
 	/* SK_ei/SK_er used for encryption */
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
 	{
-		this->logger->log(this->logger, ERROR, "no encryption algoithm selected!?");
+		this->logger->log(this->logger, ERROR, "no ENCRYPTION_ALGORITHM selected!");
 		return FAILED;
-	}
-	if (this->crypter_initiator != NULL)
-	{
-		this->crypter_initiator->destroy(this->crypter_initiator);
-	}
-	if (this->crypter_responder != NULL)
-	{
-		this->crypter_responder->destroy(this->crypter_responder);
-	}
-	
-	this->crypter_initiator = crypter_create(algo->algorithm, algo->key_size / 8);
-	this->crypter_responder = crypter_create(algo->algorithm, algo->key_size / 8);
-	if (this->crypter_initiator == NULL || this->crypter_responder == NULL)
+	}	
+	crypter_i = crypter_create(algo->algorithm, algo->key_size / 8);
+	crypter_r = crypter_create(algo->algorithm, algo->key_size / 8);
+	if (crypter_i == NULL || crypter_r == NULL)
 	{
 		this->logger->log(this->logger, ERROR, 
 						  "ENCRYPTION_ALGORITHM %s (key size %d) not supported!",
@@ -538,28 +1062,30 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 						  algo->key_size);
 		return FAILED;
 	}
-	key_size = this->crypter_initiator->get_key_size(this->crypter_initiator);
+	key_size = crypter_i->get_key_size(crypter_i);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", key);
-	this->crypter_initiator->set_key(this->crypter_initiator, key);
+	crypter_i->set_key(crypter_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", key);
-	this->crypter_responder->set_key(this->crypter_responder, key);
+	crypter_r->set_key(crypter_r, key);
 	chunk_free(&key);
 	
-	/* SK_pi/SK_pr used for authentication */
-	if (this->prf_auth_i != NULL)
+	if (initiator)
 	{
-		this->prf_auth_i->destroy(this->prf_auth_i);
+		this->crypter_in = crypter_i;
+		this->crypter_out = crypter_r;
 	}
-	if (this->prf_auth_r != NULL)
+	else
 	{
-		this->prf_auth_r->destroy(this->prf_auth_r);
+		this->crypter_in = crypter_r;
+		this->crypter_out = crypter_i;
 	}
 	
+	/* SK_pi/SK_pr used for authentication */	
 	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
 	this->prf_auth_i = prf_create(algo->algorithm);
 	this->prf_auth_r = prf_create(algo->algorithm);
@@ -582,260 +1108,6 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, d
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_randomizer.
- */
-static randomizer_t *get_randomizer(private_ike_sa_t *this)
-{
-	return this->randomizer;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_crypter_initiator.
- */
-static crypter_t *get_crypter_initiator(private_ike_sa_t *this)
-{
-	return this->crypter_initiator;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_signer_initiator.
- */
-static signer_t *get_signer_initiator(private_ike_sa_t *this)
-{
-	return this->signer_initiator;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_crypter_responder.
- */
-static crypter_t *get_crypter_responder(private_ike_sa_t *this)
-{
-	return this->crypter_responder;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_signer_responder.
- */
-static signer_t *get_signer_responder(private_ike_sa_t *this)
-{
-	return this->signer_responder;
-}
-
-/**
- * Implementation of protected_ike_sa_t.update_timestamp
- */
-static void update_timestamp(private_ike_sa_t *this, bool in)
-{
-	/* bump last message sent timestamp */
-	struct timeval *tv = in ? &this->last_msg_in_tv : &this->last_msg_out_tv;
-	if (0 > gettimeofday(tv, NULL))
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1,
-						  "warning: failed to get time of day.");
-	}
-}
-
-/**
- * Implementation of protected_ike_sa_t.send_request.
- */
-static status_t send_request(private_ike_sa_t *this, message_t *message)
-{
-	retransmit_request_job_t *retransmit_job;
-	u_int32_t timeout;
-	crypter_t *crypter;
-	signer_t *signer;
-	packet_t *packet;
-	status_t status;
-	
-	if (message->get_message_id(message) != this->message_id_out)
-	{
-		this->logger->log(this->logger, ERROR, "message could not be sent cause id (%d) was not as expected (%d)",
-						  message->get_message_id(message),this->message_id_out);
-		return FAILED;
-	}
-
-	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "generate packet from message");
-
-	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
-	{
-		crypter = this->crypter_initiator;
-		signer = this->signer_initiator;
-	}
-	else
-	{
-		crypter = this->crypter_responder;
-		signer =this->signer_responder;
-	}
-	
-	status = message->generate(message, crypter,signer, &packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "could not generate packet from message");
-		return FAILED;
-	}
-	
-	this->logger->log(this->logger, CONTROL|LEVEL3,
-					  "add request packet with message id %d to global send queue",
-					  this->message_id_out);
-	charon->send_queue->add(charon->send_queue, packet);
-	
-	/* replace last message for retransmit with current */
-	if (this->last_requested_message != NULL)
-	{
-		this->last_requested_message->destroy(this->last_requested_message);
-	}
-	this->logger->log(this->logger, CONTROL|LEVEL3, "replace last requested message with new one");
-	this->last_requested_message = message;
-	
-	/* schedule a job for retransmission */
-	status = charon->configuration->get_retransmit_timeout(charon->configuration, 0, &timeout);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, CONTROL|LEVEL2, "no retransmit job for message created!");
-	}
-	else
-	{
-		this->logger->log(this->logger, CONTROL|LEVEL2, "request will be retransmitted in %d ms.", timeout);
-		retransmit_job = retransmit_request_job_create(this->message_id_out, this->ike_sa_id);
-		charon->event_queue->add_relative(charon->event_queue, (job_t *)retransmit_job, timeout);
-	}
-	
-	/* message counter can now be increased */
-	this->logger->log(this->logger, CONTROL|LEVEL3,
-					  "increase message counter for outgoing messages from %d",
-					  this->message_id_out);
-	this->message_id_out++;
-
-	this->update_timestamp(this, FALSE);
-	return SUCCESS;	
-}
-
-/**
- * Implementation of protected_ike_sa_t.send_response.
- */
-static status_t send_response(private_ike_sa_t *this, message_t *message)
-{
-	crypter_t *crypter;
-	signer_t *signer;
-	packet_t *packet;
-	status_t status;
-	
-	if (message->get_message_id(message) != this->message_id_in)
-	{
-	
-		this->logger->log(this->logger, ERROR, "message could not be sent cause id (%d) was not as expected (%d)",
-						  message->get_message_id(message),this->message_id_in);
-		return FAILED;	
-	}
-	
-	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
-	{
-		crypter = this->crypter_initiator;
-		signer = this->signer_initiator;
-	}
-	else
-	{
-		crypter = this->crypter_responder;
-		signer =this->signer_responder;
-	}
-	
-	status = message->generate(message, crypter,signer, &packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "could not generate packet from message");
-		return FAILED;
-	}
-	
-	this->logger->log(this->logger, CONTROL|LEVEL3,
-					  "add response packet with message id %d to global send queue",
-					  this->message_id_in);
-	charon->send_queue->add(charon->send_queue, packet);
-	
-	if (this->last_responded_message != NULL)
-	{
-		/* destroy message */
-		this->last_responded_message->destroy(this->last_responded_message);
-	}
-	
-	this->logger->log(this->logger, CONTROL|LEVEL3, "replace last responded message with new one");
-	this->last_responded_message = message;
-
-	/* message counter can now be increased */
-	this->logger->log(this->logger, CONTROL|LEVEL3, "increase message counter for incoming messages");
-	this->message_id_in++;
-
-	this->update_timestamp(this, FALSE);
-
-	return SUCCESS;
-}
-
-/**
- * Implementation of of private_responder_init_t.send_notify_reply.
- */
-static void send_notify(private_ike_sa_t *this, exchange_type_t exchange_type, notify_message_type_t type, chunk_t data)
-{
-	notify_payload_t *payload;
-	message_t *response;
-	packet_t *packet;
-	status_t status;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "going to build message with notify payload");
-	/* set up the reply */
-	build_message(this, exchange_type, FALSE, &response);
-	payload = notify_payload_create_from_protocol_and_type(PROTO_NONE, type);
-	if ((data.ptr != NULL) && (data.len > 0))
-	{
-		this->logger->log(this->logger, CONTROL|LEVEL2, "add Data to notify payload");
-		payload->set_notification_data(payload,data);
-	}
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "add Notify payload to message");
-	response->add_payload(response,(payload_t *) payload);
-	
-	/* generate packet */	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "generate packet from message");
-	status = response->generate(response, this->crypter_responder, this->signer_responder, &packet);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "could not generate notify message");
-		response->destroy(response);
-		return;
-	}
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "add packet to global send queue");
-	charon->send_queue->add(charon->send_queue, packet);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "destroy message");
-	response->destroy(response);
-
-	this->update_timestamp(this, FALSE);
-}
-
-/**
- * Implementation of protected_ike_sa_t.set_last_replied_message_id.
- */
-static void set_last_replied_message_id (private_ike_sa_t *this,u_int32_t message_id)
-{
-	this->last_replied_message_id = message_id;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_last_responded_message.
- */
-static message_t *get_last_responded_message (private_ike_sa_t *this)
-{
-	return this->last_responded_message;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_last_requested_message.
- */
-static message_t *get_last_requested_message(private_ike_sa_t *this)
-{
-	return this->last_requested_message;
-}
-
-/**
  * Implementation of protected_ike_sa_t.add_child_sa.
  */
 static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
@@ -844,306 +1116,39 @@ static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 }
 
 /**
- * Implementation of ike_sa_t.process_message.
- */
-static status_t process_message(private_ike_sa_t *this, message_t *message)
-{
-	u_int32_t message_id;
-	exchange_type_t exchange_type;
-	bool is_request;
-	
-	/* Find out type of message (request or response) */
-	is_request = message->get_request(message);
-	exchange_type = message->get_exchange_type(message);
-	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "process %s of exchange type %s",
-					  (is_request) ? "request" : "response",
-					  mapping_find(exchange_type_m, exchange_type));
-	
-	message_id = message->get_message_id(message);
-	
-	/* check if message already received, and retransmit its reply */
-	if (is_request && (message_id == (this->message_id_in - 1)))
-	{
-		/* resend last message, if any */
-		if (this->last_responded_message)
-		{
-			packet_t *packet = this->last_responded_message->get_packet(this->last_responded_message);
-			this->logger->log(this->logger, CONTROL|LEVEL1, "resent request detected. Send stored reply.");
-			charon->send_queue->add(charon->send_queue, packet);
-			this->update_timestamp(this, FALSE);
-			return SUCCESS;
-		}
-		else
-		{
-			/* somebody does something nasty here... */
-			return FAILED;
-		}
-	}
-	
-	/* Now, the message id is checked for request AND reply */
-	if (is_request)
-	{
-		/* In a request, the message has to be this->message_id_in (other case is already handled) */
-		if (message_id != this->message_id_in)
-		{
-			this->logger->log(this->logger, ERROR | LEVEL1,
-								"message request with message id %d received, but %d expected",
-								message_id,this->message_id_in);
-			return FAILED;
-		}
-	}
-	else
-	{
-		/* In a reply, the message has to be this->message_id_out -1 cause it is the reply to the last sent message*/
-		if (message_id != (this->message_id_out - 1))
-		{
-			this->logger->log(this->logger, ERROR | LEVEL1,
-								"message reply with message id %d received, but %d expected",
-								message_id,this->message_id_in);
-			return FAILED;
-		}
-	}
-	
-	this->update_timestamp(this, TRUE);
-	
-	/* now the message is processed by the current state object.
-	 * The specific state object is responsible to check if a message can be received in 
-	 * the state it represents.
-	 * The current state is also responsible to change the state object to the next state 
-	 * by calling protected_ike_sa_t.set_new_state
-	 */
-	return this->current_state->process_message(this->current_state, message);
-}
-
-/**
- * Implementation of protected_ike_sa_t.initiate_connection.
- */
-static status_t initiate_connection(private_ike_sa_t *this, connection_t *connection)
-{
-	initiator_init_t *current_state;
-
-	/* Work is done in state object of type INITIATOR_INIT. All other states are not 
-	 * initial states and so don't have a initiate_connection function */
-	
-	if (this->current_state->get_state(this->current_state) != INITIATOR_INIT)
-	{
-		return FAILED;
-	}
-	
-	current_state = (initiator_init_t *) this->current_state;
-	
-	return current_state->initiate_connection(current_state, connection);
-}
-
-/**
- * Implementation of protected_ike_sa_t.update_connection_hosts.
- *
- * Quoting RFC 4306:
- *
- * 2.11.  Address and Port Agility
- * 
- *    IKE runs over UDP ports 500 and 4500, and implicitly sets up ESP and
- *    AH associations for the same IP addresses it runs over.  The IP
- *    addresses and ports in the outer header are, however, not themselves
- *    cryptographically protected, and IKE is designed to work even through
- *    Network Address Translation (NAT) boxes.  An implementation MUST
- *    accept incoming requests even if the source port is not 500 or 4500,
- *    and MUST respond to the address and port from which the request was
- *    received.  It MUST specify the address and port at which the request
- *    was received as the source address and port in the response.  IKE
- *    functions identically over IPv4 or IPv6.
- * 
- * [...]
- * 
- *    There are cases where a NAT box decides to remove mappings that
- *    are still alive (for example, the keepalive interval is too long,
- *    or the NAT box is rebooted).  To recover in these cases, hosts
- *    that are not behind a NAT SHOULD send all packets (including
- *    retransmission packets) to the IP address and port from the last
- *    valid authenticated packet from the other end (i.e., dynamically
- *    update the address).  A host behind a NAT SHOULD NOT do this
- *    because it opens a DoS attack possibility.  Any authenticated IKE
- *    packet or any authenticated UDP-encapsulated ESP packet can be
- *    used to detect that the IP address or the port has changed.
- */
-static status_t update_connection_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
-{
-	host_t *old_other = NULL;
-	iterator_t *iterator = NULL;
-	child_sa_t *child_sa = NULL;
-	int my_changes, other_changes;
-	ike_sa_state_t s;
-
-	my_changes = me->get_differences(me, this->connection->get_my_host(this->connection));
-
-	old_other = this->connection->get_other_host(this->connection);
-	other_changes = other->get_differences(other, old_other);
-
-	if (!my_changes && !other_changes) {
-		return SUCCESS;
-	}
-	
-	if (my_changes)
-	{
-		this->connection->update_my_host(this->connection, me->clone(me));
-	}
-
-	s = this->protected.public.get_state(&this->protected.public);
-	
-	if (s == RESPONDER_INIT || s == IKE_SA_INIT_REQUESTED || !this->nat_here)
-	{
-		if (other_changes)
-		{
-			this->connection->update_other_host(this->connection, other->clone(other));
-		}
-	}
-	else
-	{
-		if (other_changes & HOST_DIFF_ADDR)
-		{
-			this->logger->log(this->logger, ERROR|LEVEL1,
-							  "destination ip changed from %s to %s. As we are NATed this is not allowed!",
-							  old_other->get_address(old_other), other->get_address(other));
-			return DESTROY_ME;
-		}
-		else if (other_changes & HOST_DIFF_PORT)
-		{
-			old_other->set_port(old_other, other->get_port(other));
-		}
-	}
-
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
-	{
-		child_sa->update_hosts(child_sa,
-							   this->connection->get_my_host(this->connection),
-							   this->connection->get_other_host(this->connection),
-							   my_changes, other_changes);
-		/* XXX error handling */
-	}
-	iterator->destroy(iterator);
-	
-	return SUCCESS;
-}
-
-/**
- * Implementation of protected_ike_sa_t.build_transforms.
- * TODO: IPv6 support.
- */
-static chunk_t generate_natd_hash(private_ike_sa_t *this, u_int64_t spi_i, u_int64_t spi_r, host_t *host)
-{
-	chunk_t natd_string;
-	chunk_t natd_hash;
-	void *p;
-	struct sockaddr_in* sai;
-	char buf[512];
-
-	natd_hash = chunk_alloc(this->nat_hasher->get_hash_size(this->nat_hasher));
-	natd_string = chunk_alloc(8 + 8 + 4 + 2);
-
-	sai = (struct sockaddr_in*)host->get_sockaddr(host);
-	p = natd_string.ptr;
-	*(u_int64_t*)p = spi_i;                p += sizeof(spi_i);
-	*(u_int64_t*)p = spi_r;                p += sizeof(spi_r);
-	*(u_int32_t*)p = sai->sin_addr.s_addr; p += sizeof(sai->sin_addr.s_addr);
-	*(u_int16_t*)p = sai->sin_port;        p += sizeof(sai->sin_port);
-
-	this->nat_hasher->get_hash(this->nat_hasher, natd_string, natd_hash.ptr);
-	this->nat_hasher->reset(this->nat_hasher);
-
-	sprintf(buf, "natd_hash(%016llx %016llx %s:%d)\n == SHA1(", spi_i, spi_r,
-			host->get_address(host), host->get_port(host));
-	chunk_to_hex(buf + strlen(buf), sizeof(buf) - strlen(buf), natd_string);
-	strcat(buf, ") == ");
-	chunk_to_hex(buf + strlen(buf), sizeof(buf) - strlen(buf), natd_hash);
-	this->logger->log(this->logger, CONTROL|LEVEL3, buf);
-
-	chunk_free(&natd_string);
-	return natd_hash;
-}
-
-/**
- * Implementation of ike_sa_t.send_dpd_request.
- */
-static status_t send_dpd_request(private_ike_sa_t *this)
-{
-	message_t *dpd_msg;
-	status_t status;
-	this->protected.build_message(&this->protected, INFORMATIONAL, TRUE, &dpd_msg);
-	status = this->protected.send_request(&this->protected, dpd_msg);
-	if (status != SUCCESS)
-	{
-		dpd_msg->destroy(dpd_msg);
-	}
-	this->last_dpd_message_id = dpd_msg->get_message_id(dpd_msg);
-	return status;
-}
-
-/**
- * Implementation of ike_sa_t.get_last_dpd_message_id
- */
-static u_int32_t get_last_dpd_message_id(private_ike_sa_t *this)
-{
-	return this->last_dpd_message_id;
-}
-
-/**
- * Implementation of ike_sa_t.get_child_sa.
- */
-static child_sa_t *get_child_sa(private_ike_sa_t *this, u_int32_t reqid)
-{
-	iterator_t *iterator;
-	child_sa_t *current, *found = NULL;
-	
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&current);
-		if (current->get_reqid(current) == reqid)
-		{
-			found = current;
-			break;
-		}
-	}
-	iterator->destroy(iterator);
-	return found;
-}
-
-/**
  * Implementation of ike_sa_t.delete_child_sa.
  */
-static status_t delete_child_sa(private_ike_sa_t *this, u_int32_t reqid)
+static status_t delete_child_sa(private_ike_sa_t *this, u_int32_t spi)
 {
-	message_t *request;
-	child_sa_t *child_sa;
-	delete_payload_t *delete_payload;
-	state_t *old_state;
-	
-	if (this->current_state->get_state(this->current_state) != IKE_SA_ESTABLISHED)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1,
-						  "delete of a CHILD_SA whose IKE_SA not in state IKE_SA_ESTABLISHED, aborting");
-		return FAILED;
-	}
-	
-	child_sa = get_child_sa(this, reqid);
-	if (child_sa == NULL)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, 
-						  "IKE_SA does not contain a CHILD_SA with reqid %d", reqid);
-		return FAILED;
-	}
-	build_message(this, INFORMATIONAL, TRUE, &request);
-	delete_payload = delete_payload_create(child_sa->get_protocol(child_sa));
-	delete_payload->add_spi(delete_payload, child_sa->get_spi(child_sa, TRUE));
-	request->add_payload(request, (payload_t*)delete_payload);
-	
-	send_request(this, request);
-	
-	old_state = this->current_state;
-	set_new_state(this, (state_t*)delete_child_sa_requested_create(&this->protected));
-	old_state->destroy(old_state);
+	/* TODO: Reimplement */
+// 	message_t *request;
+// 	child_sa_t *child_sa;
+// 	delete_payload_t *delete_payload;
+// 
+// 	if (this->current_state->get_state(this->current_state) != IKE_SA_ESTABLISHED)
+// 	{
+// 		this->logger->log(this->logger, ERROR|LEVEL1,
+// 						  "Delete of a CHILD_SA whose IKE_SA not in state IKE_SA_ESTABLISHED, aborting");
+// 		return FAILED;
+// 	}
+// 	
+// 	child_sa = get_child_sa(this, reqid);
+// 	if (child_sa == NULL)
+// 	{
+// 		this->logger->log(this->logger, ERROR|LEVEL1, 
+// 						  "IKE_SA does not contain a CHILD_SA with reqid %d", reqid);
+// 		return FAILED;
+// 	}
+// 	build_message(this, INFORMATIONAL, TRUE, &request);
+// 	delete_payload = delete_payload_create(child_sa->get_protocol(child_sa));
+// 	delete_payload->add_spi(delete_payload, child_sa->get_spi(child_sa, TRUE));
+// 	request->add_payload(request, (payload_t*)delete_payload);
+// 	
+// 	send_request(this, request);
+// 	
+// 	old_state = this->current_state;
+// 	set_new_state(this, (state_t*)delete_child_sa_requested_create(&this->protected));
+// 	old_state->destroy(old_state);
 	return SUCCESS;
 }
 
@@ -1185,7 +1190,7 @@ static u_int32_t destroy_child_sa(private_ike_sa_t *this, u_int32_t spi)
 /**
  * Implementation of protected_ike_sa_t.get_child_sa.
  */
-static child_sa_t* get_child_sa_by_spi(private_ike_sa_t *this, u_int32_t spi)
+static child_sa_t* get_child_sa(private_ike_sa_t *this, u_int32_t spi)
 {
 	iterator_t *iterator;
 	child_sa_t *current, *found = NULL;
@@ -1206,8 +1211,9 @@ static child_sa_t* get_child_sa_by_spi(private_ike_sa_t *this, u_int32_t spi)
 /**
  * Implementation of ike_sa_t.rekey_child_sa.
  */
-static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
+static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t spi)
 {
+/*	TODO reimplement 
 	message_t *request;
 	child_sa_t *child_sa;
 	notify_payload_t *notify;
@@ -1217,7 +1223,6 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	linked_list_t *proposals;
 	chunk_t nonce;
 	linked_list_t *my_ts, *other_ts;
-	state_t *old_state;
 	
 	if (this->current_state->get_state(this->current_state) != IKE_SA_ESTABLISHED)
 	{
@@ -1272,58 +1277,11 @@ static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 	
 	old_state = this->current_state;
 	set_new_state(this, (state_t*)create_child_sa_requested_create(&this->protected, child_sa, nonce, reqid));
-	old_state->destroy(old_state);
+	old_state->destroy(old_state);*/
 	
 	return SUCCESS;
 }
 
-/**
- * Implementation of protected_ike_sa_t.establish.
- */
-static void establish(private_ike_sa_t *this)
-{
-	protected_ike_sa_t *ike_sa = (protected_ike_sa_t *)this;
-
-	connection_t *connection = ike_sa->get_connection(ike_sa);
-	host_t *my_host = connection->get_my_host(connection);
-	host_t *other_host = connection->get_other_host(connection);
-	policy_t *policy = ike_sa->get_policy(ike_sa);
-	identification_t *my_id = policy->get_my_id(policy);
-	identification_t *other_id = policy->get_other_id(policy);
-
-	ike_sa->set_new_state(ike_sa, (state_t*)ike_sa_established_create(ike_sa));
-
-	this->logger->log(this->logger, AUDIT, "IKE_SA established %s[%s]...%s[%s]",
-					  my_host->get_address(my_host),
-					  my_id->get_string(my_id),
-					  other_host->get_address(other_host),
-					  other_id->get_string(other_id));
-}
-
-/**
- * Implementation of protected_ike_sa_t.reset_message_buffers.
- */
-static void reset_message_buffers(private_ike_sa_t *this)
-{
-	this->logger->log(this->logger, CONTROL|LEVEL2, "reset message counters and destroy stored messages");
-	/* destroy stored requested message */
-	if (this->last_requested_message != NULL)
-	{
-		this->last_requested_message->destroy(this->last_requested_message);
-		this->last_requested_message = NULL;
-	}
-	
-	/* destroy stored responded messages */
-	if (this->last_responded_message != NULL)
-	{
-		this->last_responded_message->destroy(this->last_responded_message);
-		this->last_responded_message = NULL;
-	}
-	
-	this->message_id_out = 0;
-	this->message_id_in = 0;
-	this->last_replied_message_id = -1;
-}
 
 /**
  * Implementation of protected_ike_sa_t.log_status.
@@ -1364,7 +1322,7 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 	}
 	logger->log(logger, CONTROL|LEVEL1, "  \"%s\": IKE_SA in state %s, SPIs: 0x%.16llx 0x%.16llx",
 				name,
-				mapping_find(ike_sa_state_m, this->current_state->get_state(this->current_state)),
+				mapping_find(ike_sa_state_m, this->state),
 				this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 				this->ike_sa_id->get_responder_spi(this->ike_sa_id));
 	logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
@@ -1388,129 +1346,38 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
  */
 static status_t delete_(private_ike_sa_t *this)
 {
-	message_t *informational_request;
-	delete_payload_t *delete_payload;
-	u_int32_t timeout;
-	delete_half_open_ike_sa_job_t *job;
-	state_t *old_state;
+	delete_ike_sa_t *delete_ike_sa;
+	delete_ike_sa = delete_ike_sa_create(&this->public, this->message_id_out++);
 	
-	if (get_state(this) != IKE_SA_ESTABLISHED)
-	{
-		return INVALID_STATE;
-	}
-	
-	build_message(this, INFORMATIONAL, TRUE, &informational_request);
-	/* delete for the full IKE_SA, this deletes all child_sa's implicit */	
-	delete_payload = delete_payload_create(PROTO_IKE);
-	
-	informational_request->add_payload(informational_request, (payload_t*)delete_payload);
-	
-	if (send_request(this, informational_request) != SUCCESS)
-	{
-		/* send failed, but we ignore this, SA will get deleted anyway later */
-		informational_request->destroy(informational_request);
-	}
-	
-	/* transit to state delete_ike_sa_requested */
-	old_state = this->current_state;
-	set_new_state(this, (state_t*)delete_ike_sa_requested_create(&this->protected));
-	old_state->destroy(old_state);
-	
-	/* there is no guarantee that the other peer will acknowledge the delete,
-	 * so we have to set a timeout where we destroy the SA... This is done with
-	 * the delete_half_open_ike_sa_job as used in IKE SA setup.
-	 */
-	timeout = charon->configuration->get_half_open_ike_sa_timeout(charon->configuration);
-	job = delete_half_open_ike_sa_job_create(this->ike_sa_id);
-	charon->event_queue->add_relative(charon->event_queue, (job_t*)job, timeout);
-	return SUCCESS;
+	return queue_transaction(this, (transaction_t*)delete_ike_sa, FALSE);
 }
 
 /**
- * Implementation of ike_sa_t.is_my_host_behind_nat.
+ * Implementation of ike_sa_t.is_natt_enabled.
  */
-static bool is_my_host_behind_nat (private_ike_sa_t *this)
-{
-	return this->nat_here;
-}
-
-/**
- * Implementation of ike_sa_t.is_other_host_behind_nat.
- */
-static bool is_other_host_behind_nat (private_ike_sa_t *this)
-{
-	return this->nat_there;
-}
-
-/**
- * Implementation of ike_sa_t.is_any_host_behind_nat.
- */
-static bool is_any_host_behind_nat (private_ike_sa_t *this)
+static bool is_natt_enabled (private_ike_sa_t *this)
 {
 	return this->nat_here || this->nat_there;
 }
 
 /**
- * Implementation of protected_ike_sa_t.set_my_host_behind_nat.
+ * Implementation of protected_ike_sa_t.enable_natt.
  */
-static void set_my_host_behind_nat (private_ike_sa_t *this, bool nat)
+static void enable_natt (private_ike_sa_t *this, bool local)
 {
-	this->nat_here = nat;
-}
-
-/**
- * Implementation of protected_ike_sa_t.set_other_host_behind_nat.
- */
-static void set_other_host_behind_nat (private_ike_sa_t *this, bool nat)
-{
-	this->nat_there = nat;
-}
-
-/**
- * Implementation of private_ike_sa_t.get_last_esp_traffic_tv
- */
-static struct timeval get_last_esp_traffic_tv(private_ike_sa_t * this, bool inbound)
-{
-	iterator_t *iterator;
-	child_sa_t *child_sa;
-	bool ret = TRUE; 
-	time_t use_time = 0;
-	struct timeval tv = {0, 0};
-
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->iterate(iterator, (void**)&child_sa))
+	if (local)
 	{
-		if (child_sa->get_use_time(child_sa, inbound, &use_time) == SUCCESS
-				&& use_time != 0)
-		{
-			tv.tv_sec = max(tv.tv_sec, use_time);
-		}
+		this->logger->log(this->logger, CONTROL,
+						  "local host is behind NAT, using NAT-T, scheduled keep alives");
+		this->nat_here = TRUE;
+		send_keepalive(this);
 	}
-	iterator->destroy(iterator);
-	
-	return tv;
-}
-
-/**
- * Implementation of ike_sa_t.get_last_traffic_in_tv.
- */
-static struct timeval get_last_traffic_in_tv (private_ike_sa_t *this)
-{
-	struct timeval esp_tv  = this->get_last_esp_traffic_tv(this, TRUE);
-	return this->last_msg_in_tv.tv_sec > esp_tv.tv_sec ? this->last_msg_in_tv
-	     : this->last_msg_in_tv.tv_sec < esp_tv.tv_sec ? esp_tv
-	     : this->last_msg_in_tv.tv_usec > esp_tv.tv_usec ? this->last_msg_in_tv : esp_tv;
-}
-
-/**
- * Implementation of ike_sa_t.get_last_traffic_out_tv.
- */
-static struct timeval get_last_traffic_out_tv (private_ike_sa_t *this)
-{
-	struct timeval esp_tv  = this->get_last_esp_traffic_tv(this, FALSE);
-	return this->last_msg_out_tv.tv_sec > esp_tv.tv_sec ? this->last_msg_out_tv
-	     : this->last_msg_out_tv.tv_sec < esp_tv.tv_sec ? esp_tv
-	     : this->last_msg_out_tv.tv_usec > esp_tv.tv_usec ? this->last_msg_out_tv : esp_tv;	
+	else
+	{
+		this->logger->log(this->logger, CONTROL, 
+						  "remote host is behind NAT, using NAT-T");
+		this->nat_there = TRUE;
+	}
 }
 
 /**
@@ -1519,15 +1386,17 @@ static struct timeval get_last_traffic_out_tv (private_ike_sa_t *this)
 static void destroy(private_ike_sa_t *this)
 {
 	child_sa_t *child_sa;
+	transaction_t *transaction;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "going to destroy IKE SA %llu:%llu, role %s", 
 					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
 					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 	
-	if (get_state(this) == IKE_SA_ESTABLISHED)
+	if (this->state == SA_ESTABLISHED)
 	{
-		this->logger->log(this->logger, ERROR, "destroying an established IKE SA without knowledge from remote peer!");
+		this->logger->log(this->logger, ERROR, 
+						  "destroying an established IKE SA without knowledge from remote peer!");
 	}
 
 	while (this->child_sas->remove_last(this->child_sas, (void**)&child_sa) == SUCCESS)
@@ -1536,21 +1405,38 @@ static void destroy(private_ike_sa_t *this)
 	}
 	this->child_sas->destroy(this->child_sas);
 	
-	if (this->crypter_initiator)
+	while (this->transaction_queue->remove_last(this->transaction_queue, (void**)&transaction) == SUCCESS)
 	{
-		this->crypter_initiator->destroy(this->crypter_initiator);
+		transaction->destroy(transaction);
 	}
-	if (this->crypter_responder)
+	this->transaction_queue->destroy(this->transaction_queue);
+	if (this->transaction_in)
 	{
-		this->crypter_responder->destroy(this->crypter_responder);
+		this->transaction_in->destroy(this->transaction_in);
 	}
-	if (this->signer_initiator)
+	if (this->transaction_in_next)
 	{
-		this->signer_initiator->destroy(this->signer_initiator);
+		this->transaction_in_next->destroy(this->transaction_in_next);
 	}
-	if (this->signer_responder)
+	if (this->transaction_out)
 	{
-		this->signer_responder->destroy(this->signer_responder);
+		this->transaction_out->destroy(this->transaction_out);
+	}
+	if (this->crypter_in)
+	{
+		this->crypter_in->destroy(this->crypter_in);
+	}
+	if (this->crypter_out)
+	{
+		this->crypter_out->destroy(this->crypter_out);
+	}
+	if (this->signer_in)
+	{
+		this->signer_in->destroy(this->signer_in);
+	}
+	if (this->signer_out)
+	{
+		this->signer_out->destroy(this->signer_out);
 	}
 	if (this->prf)
 	{
@@ -1591,18 +1477,7 @@ static void destroy(private_ike_sa_t *this)
 	{
 		this->policy->destroy(this->policy);
 	}
-	if (this->last_requested_message)
-	{
-		this->last_requested_message->destroy(this->last_requested_message);
-	}
-	if (this->last_responded_message)
-	{
-		this->last_responded_message->destroy(this->last_responded_message);
-	}
-	this->nat_hasher->destroy(this->nat_hasher);
 	this->ike_sa_id->destroy(this->ike_sa_id);
-	this->randomizer->destroy(this->randomizer);
-	this->current_state->destroy(this->current_state);
 	free(this);
 }
 
@@ -1614,109 +1489,59 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	private_ike_sa_t *this = malloc_thing(private_ike_sa_t);
 	
 	/* Public functions */
-	this->protected.public.process_message = (status_t (*) (ike_sa_t*,message_t*)) process_message;
-	this->protected.public.initiate_connection = (status_t (*) (ike_sa_t*,connection_t*)) initiate_connection;
-	this->protected.public.delete_child_sa = (status_t (*) (ike_sa_t*,u_int32_t)) delete_child_sa;
-	this->protected.public.rekey_child_sa = (status_t (*) (ike_sa_t*,u_int32_t)) rekey_child_sa;
-	this->protected.public.get_child_sa = (child_sa_t* (*) (ike_sa_t*,u_int32_t))get_child_sa;
-	this->protected.public.get_id = (ike_sa_id_t* (*) (ike_sa_t*)) get_id;
-	this->protected.public.get_my_host = (host_t* (*) (ike_sa_t*)) get_my_host;
-	this->protected.public.get_other_host = (host_t* (*) (ike_sa_t*)) get_other_host;
-	this->protected.public.get_my_id = (identification_t* (*) (ike_sa_t*)) get_my_id;
-	this->protected.public.get_other_id = (identification_t* (*) (ike_sa_t*)) get_other_id;
-	this->protected.public.get_connection = (connection_t* (*) (ike_sa_t*)) get_connection;
-	this->protected.public.retransmit_possible = (bool (*) (ike_sa_t*,u_int32_t)) retransmit_possible;
-	this->protected.public.retransmit_request = (status_t (*) (ike_sa_t*,u_int32_t)) retransmit_request;
-	this->protected.public.get_state = (ike_sa_state_t (*) (ike_sa_t*)) get_state;
-	this->protected.public.log_status = (void (*) (ike_sa_t*,logger_t*,char*))log_status;
-	this->protected.public.delete = (status_t (*) (ike_sa_t*))delete_;
-	this->protected.public.destroy = (void (*) (ike_sa_t*))destroy;
-	this->protected.public.is_my_host_behind_nat = (bool (*) (ike_sa_t*)) is_my_host_behind_nat;
-	this->protected.public.is_other_host_behind_nat = (bool (*) (ike_sa_t*)) is_other_host_behind_nat;
-	this->protected.public.is_any_host_behind_nat = (bool (*) (ike_sa_t*)) is_any_host_behind_nat;
-	this->protected.public.get_last_traffic_in_tv = (struct timeval (*) (ike_sa_t*)) get_last_traffic_in_tv;
-	this->protected.public.get_last_traffic_out_tv = (struct timeval (*) (ike_sa_t*)) get_last_traffic_out_tv;
-	this->protected.public.send_dpd_request = (status_t (*) (ike_sa_t*)) send_dpd_request;
+	this->public.get_state = (ike_sa_state_t(*)(ike_sa_t*)) get_state;
+	this->public.set_state = (void(*)(ike_sa_t*,ike_sa_state_t)) set_state;
+	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
+	this->public.initiate = (status_t(*)(ike_sa_t*,connection_t*)) initiate;
+	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
+	this->public.get_connection = (connection_t*(*)(ike_sa_t*)) get_connection;
+	this->public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
+	this->public.log_status = (void (*) (ike_sa_t*,logger_t*,char*))log_status;
+	this->public.delete = (status_t(*)(ike_sa_t*))delete_;
+	this->public.destroy = (void(*)(ike_sa_t*))destroy;
+	this->public.send_dpd = (status_t (*)(ike_sa_t*)) send_dpd;
+	this->public.send_keepalive = (void (*)(ike_sa_t*)) send_keepalive;
+	this->public.get_prf = (prf_t *(*) (ike_sa_t *)) get_prf;
+	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
+	this->public.get_prf_auth_i = (prf_t *(*) (ike_sa_t *)) get_prf_auth_i;
+	this->public.get_prf_auth_r = (prf_t *(*) (ike_sa_t *)) get_prf_auth_r;
+	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
+	this->public.set_connection = (void (*) (ike_sa_t *,connection_t *)) set_connection;
+	this->public.get_connection = (connection_t *(*) (ike_sa_t *)) get_connection;
+	this->public.set_policy = (void (*) (ike_sa_t *,policy_t *)) set_policy;
+	this->public.get_policy = (policy_t *(*) (ike_sa_t *)) get_policy;
+	this->public.build_transforms = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool)) build_transforms;
+	this->public.destroy_child_sa = (u_int32_t (*)(ike_sa_t*,u_int32_t))destroy_child_sa;
+	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,u_int32_t)) get_child_sa;
+	this->public.delete_child_sa = (status_t(*)(ike_sa_t*,u_int32_t)) delete_child_sa;
+	this->public.rekey_child_sa = (status_t(*)(ike_sa_t*,u_int32_t)) rekey_child_sa;
+	this->public.enable_natt = (void(*)(ike_sa_t*, bool)) enable_natt;
+	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
 	
-	/* protected functions */
-	this->protected.build_message = (void (*) (protected_ike_sa_t*,exchange_type_t,bool,message_t**)) build_message;
-	this->protected.get_prf = (prf_t *(*) (protected_ike_sa_t*)) get_prf;	
-	this->protected.get_child_prf = (prf_t* (*) (protected_ike_sa_t*)) get_child_prf;
-	this->protected.get_prf_auth_i = (prf_t* (*) (protected_ike_sa_t*)) get_prf_auth_i;
-	this->protected.get_prf_auth_r = (prf_t* (*) (protected_ike_sa_t*)) get_prf_auth_r;
-	this->protected.add_child_sa = (void (*) (protected_ike_sa_t*,child_sa_t*)) add_child_sa;
-	this->protected.establish = (void (*) (protected_ike_sa_t*)) establish;
-	this->protected.set_connection = (void (*) (protected_ike_sa_t*,connection_t*)) set_connection;
-	this->protected.get_connection = (connection_t* (*) (protected_ike_sa_t*)) get_connection;
-	this->protected.set_policy = (void (*) (protected_ike_sa_t *,policy_t*)) set_policy;
-	this->protected.get_policy = (policy_t* (*) (protected_ike_sa_t*)) get_policy;
-	this->protected.get_randomizer = (randomizer_t* (*) (protected_ike_sa_t*)) get_randomizer;
-	this->protected.send_request = (status_t (*) (protected_ike_sa_t*,message_t*)) send_request;
-	this->protected.send_response = (status_t (*) (protected_ike_sa_t*,message_t*)) send_response;
-	this->protected.send_notify = (void (*) (protected_ike_sa_t*,exchange_type_t,notify_message_type_t,chunk_t)) send_notify;
-	this->protected.build_transforms = (status_t (*) (protected_ike_sa_t*,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t)) build_transforms;
-	this->protected.set_new_state = (void (*) (protected_ike_sa_t*,state_t*)) set_new_state;
-	this->protected.get_crypter_initiator = (crypter_t* (*) (protected_ike_sa_t*)) get_crypter_initiator;
-	this->protected.get_signer_initiator = (signer_t* (*) (protected_ike_sa_t*)) get_signer_initiator;
-	this->protected.get_crypter_responder = (crypter_t* (*) (protected_ike_sa_t*)) get_crypter_responder;
-	this->protected.get_signer_responder = (signer_t* (*) (protected_ike_sa_t*)) get_signer_responder;
-	this->protected.reset_message_buffers = (void (*) (protected_ike_sa_t*)) reset_message_buffers;
-	this->protected.get_last_responded_message = (message_t* (*) (protected_ike_sa_t*)) get_last_responded_message;
-	this->protected.get_last_requested_message = (message_t* (*) (protected_ike_sa_t*)) get_last_requested_message;
-	this->protected.set_last_replied_message_id = (void (*) (protected_ike_sa_t*,u_int32_t)) set_last_replied_message_id;
-	this->protected.destroy_child_sa = (u_int32_t (*) (protected_ike_sa_t*,u_int32_t))destroy_child_sa;
-	this->protected.get_child_sa = (child_sa_t* (*) (protected_ike_sa_t*,u_int32_t))get_child_sa_by_spi;
-	this->protected.set_my_host_behind_nat = (void (*) (protected_ike_sa_t*,bool)) set_my_host_behind_nat;
-	this->protected.set_other_host_behind_nat = (void (*) (protected_ike_sa_t*,bool)) set_other_host_behind_nat;
-	this->protected.generate_natd_hash = (chunk_t (*) (protected_ike_sa_t*,u_int64_t, u_int64_t, host_t*)) generate_natd_hash;
-	this->protected.get_last_dpd_message_id = (u_int32_t (*) (protected_ike_sa_t*)) get_last_dpd_message_id;
-	this->protected.update_connection_hosts = (status_t (*) (protected_ike_sa_t*,host_t*,host_t*)) update_connection_hosts;
-	
-	/* private functions */
-	this->update_timestamp = (void (*) (private_ike_sa_t*,bool))update_timestamp;
-	this->get_last_esp_traffic_tv = (struct timeval (*) (private_ike_sa_t*,bool))get_last_esp_traffic_tv;
-
 	/* initialize private fields */
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
-	
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->child_sas = linked_list_create();
-	this->randomizer = randomizer_create();
-	
-	this->last_requested_message = NULL;
-	this->last_responded_message = NULL;
-	this->message_id_out = 0;
-	this->message_id_in = 0;
-	this->last_replied_message_id = -1;
-	this->crypter_initiator = NULL;
-	this->crypter_responder = NULL;
-	this->signer_initiator = NULL;
-	this->signer_responder = NULL;
+	this->crypter_in = NULL;
+	this->crypter_out = NULL;
+	this->signer_in = NULL;
+	this->signer_out = NULL;
 	this->prf = NULL;
 	this->prf_auth_i = NULL;
 	this->prf_auth_r = NULL;
  	this->child_prf = NULL;
 	this->connection = NULL;
 	this->policy = NULL;
-	this->nat_hasher = hasher_create(HASH_SHA1);
 	this->nat_here = FALSE;
 	this->nat_there = FALSE;
-	this->last_msg_in_tv.tv_sec = 0;
-	this->last_msg_in_tv.tv_usec = 0;
-	this->last_msg_out_tv.tv_sec = 0;
-	this->last_msg_out_tv.tv_usec = 0;
-	this->last_dpd_message_id = 0;
-
-	/* at creation time, IKE_SA is in a initiator state */
-	if (ike_sa_id->is_initiator(ike_sa_id))
-	{
-		this->logger->log(this->logger, CONTROL | LEVEL2, "create first state_t object of type INITIATOR_INIT");
-		this->current_state = (state_t *) initiator_init_create(&(this->protected));
-	}
-	else
-	{
-		this->logger->log(this->logger, CONTROL | LEVEL2, "create first state_t object of type RESPONDER_INIT");
-		this->current_state = (state_t *) responder_init_create(&(this->protected));
-	}
-	return &(this->protected.public);
+	this->transaction_queue = linked_list_create();
+	this->transaction_in = NULL;
+	this->transaction_in_next = NULL;
+	this->transaction_out = NULL;
+	this->state = SA_CREATED;
+	this->message_id_out = 0;
+	this->time_inbound = 0;
+	this->time_outbound = 0;
+	
+	return &this->public;
 }
