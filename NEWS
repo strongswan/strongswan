@@ -1,3 +1,20 @@
+- added dead peer detection which checks aliveness of remote peer if no 
+  IKE or ESP traffic is received. Support for dpdaction, dpddelay???
+
+- Added support for leftprotoport/rightprotoport parameters in IKEv2. IKEv2 
+  would offer more possibilities for traffic selection, but the Linux kernel
+  currently does not support it. That's why we stick with these simple 
+  ipsec.conf rules for now.
+
+- Initial NAT traversal support in IKEv2. Charon includes NAT detection
+  notify payloads to detect NAT routers between the peers. It switches
+  to port 4500, uses UDP encapsulated ESP packets, handles peer address
+  changes gracefully and sends keep alive message periodically.
+
+- Reimplemented IKE_SA state machine for charon, which allows simultaneous 
+  rekeying, more shared code, cleaner design, proper retransmission 
+  and a more extensible code base.
+
 strongswan-4.0.2
 ----------------
 
