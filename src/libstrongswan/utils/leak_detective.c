@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <pthread.h>
+#include <netdb.h>
 
 #include "leak_detective.h"
 
@@ -161,6 +162,7 @@ whitelist_t whitelist[] = {
 	{mktime, 0xFF},
 	{inet_ntoa, 0xFF},
 	{strerror, 0xFF},
+	{getprotobynumber, 0xFF},
 };
 
 /**
