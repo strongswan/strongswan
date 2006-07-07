@@ -315,7 +315,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 											  src, dst,
 											  spi, this->protocol,
 											  this->reqid,
-											  mine ? 0 : this->soft_lifetime,
+											  mine ? this->soft_lifetime : 0,
 											  this->hard_lifetime,
 											  enc_algo, int_algo,
 											  prf_plus, natt, mine);
@@ -773,7 +773,7 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 	}
 	iterator->destroy(iterator);
 
-	return SUCCESS;		
+	return SUCCESS;
 }
 
 /**

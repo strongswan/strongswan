@@ -26,6 +26,7 @@
 #include <types.h>
 #include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
+#include <config/proposal.h>
 
 
 typedef struct delete_child_sa_job_t delete_child_sa_job_t;
@@ -33,8 +34,7 @@ typedef struct delete_child_sa_job_t delete_child_sa_job_t;
 /**
  * @brief Class representing an DELETE_CHILD_SA Job.
  * 
- * This job initiates the deletion of an CHILD_SA. The SA
- * to delete is specified via the unique reqid used in kernel.
+ * This job initiates the delete of a CHILD SA.
  * 
  * @b Constructors:
  *  - delete_child_sa_job_create()
@@ -51,13 +51,15 @@ struct delete_child_sa_job_t {
 /**
  * @brief Creates a job of type DELETE_CHILD_SA.
  *
- * To find the targeted CHILD_SA, the uniqe reqid used in 
- * the kernel is used.
+ * The CHILD_SA is identified by its protocol (AH/ESP) and its
+ * inbound SPI.
  *
- * @param reqid		reqid CHILD_SA to rekey
+ * @param protocol	protocol of the CHILD_SA
+ * @param spi		security parameter index of the CHILD_SA
+ * @return			delete_child_sa_job_t object
  * 
  * @ingroup jobs
  */
-delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid);
+delete_child_sa_job_t *delete_child_sa_job_create(protocol_id_t protocol, u_int32_t spi);
 
 #endif /* DELETE_CHILD_SA_JOB_H_ */

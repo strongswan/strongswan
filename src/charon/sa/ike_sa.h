@@ -37,6 +37,7 @@
 #include <crypto/signers/signer.h>
 #include <config/connections/connection.h>
 #include <config/policies/policy.h>
+#include <config/proposal.h>
 #include <utils/logger.h>
 
 
@@ -129,7 +130,6 @@ struct ike_sa_t {
 	 * @param connection	connection to initiate
 	 * @return				
 	 * 						- SUCCESS if initialization started
-	 * 						- FAILED if in wrong state
 	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
 	 */
 	status_t (*initiate) (ike_sa_t *this, connection_t *connection);
@@ -175,7 +175,7 @@ struct ike_sa_t {
 	 * 						- FAILED
 	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
-	status_t (*process_message) (ike_sa_t *this,message_t *message);
+	status_t (*process_message) (ike_sa_t *this, message_t *message);
 	
 	/**
 	 * @brief Check if NAT traversal is enabled for this IKE_SA.
@@ -222,7 +222,7 @@ struct ike_sa_t {
 	 * UDP packets are sent if no other traffic
 	 * was sent.
 	 *
-	 * @param this				calling object
+	 * @param this			calling object
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
 	
@@ -234,41 +234,41 @@ struct ike_sa_t {
 	 * to do the logging. The log is only done if the supplied
 	 * connection name is NULL or matches the connections name.
 	 *
-	 * @param this 		calling object
-	 * @param logger	logger to use for logging
-	 * @param name		name of the connection
+	 * @param this 			calling object
+	 * @param logger		logger to use for logging
+	 * @param name			name of the connection
 	 */	
 	void (*log_status) (ike_sa_t *this, logger_t *logger, char *name);
 		
 	/**
 	 * @brief Get the internal stored connection_t object.
 	 * 
-	 * @param this 				calling object
-	 * @return					pointer to the internal stored connection_t object
+	 * @param this 			calling object
+	 * @return				pointer to the internal stored connection_t object
 	 */
 	connection_t *(*get_connection) (ike_sa_t *this);
 	
 	/**
 	 * @brief Set the internal connection object.
 	 * 
-	 * @param this 				calling object
-	 * @param connection		object of type connection_t
+	 * @param this 			calling object
+	 * @param connection	object of type connection_t
 	 */
 	void (*set_connection) (ike_sa_t *this, connection_t *connection);
 	
 	/**
 	 * @brief Get the internal stored policy object.
 	 * 
-	 * @param this 				calling object
-	 * @return					pointer to the internal stored policy_t object
+	 * @param this 			calling object
+	 * @return				pointer to the internal stored policy_t object
 	 */
 	policy_t *(*get_policy) (ike_sa_t *this);
 	
 	/**
 	 * @brief Set the internal policy_t object.
 	 * 
-	 * @param this 				calling object
-	 * @param policy			object of type policy_t
+	 * @param this 			calling object
+	 * @param policy		object of type policy_t
 	 */
 	void (*set_policy) (ike_sa_t *this, policy_t *policy);
 
@@ -324,47 +324,6 @@ struct ike_sa_t {
 	prf_t *(*get_prf_auth_r) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get a CHILD_SA upon request from the other peer.
-	 * 
-	 * @param this 			calling object
-	 * @param spi			spi of the CHILD_SA
-	 * @return				child_sa, or NULL if none found
-	 */
-	child_sa_t* (*get_child_sa) (ike_sa_t *this, u_int32_t spi);
-
-	/**
-	 * @brief Close the CHILD SA with the specified reqid.
-	 *
-	 * Looks for a CHILD SA owned by this IKE_SA, deletes it and
-	 * notify's the remote peer about the delete. The associated
-	 * states and policies in the kernel get deleted, if they exist.
-	 *
-	 * @param this 			calling object
-	 * @param reqid			reqid of the child SA, as used in the kernel
-	 * @return
-	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
-	 * 						- SUCCESS, if deleted and delete message sent
-	 * 
-	 * @TODO use spi, not reqid
-	 */
-	status_t (*delete_child_sa) (ike_sa_t *this, u_int32_t reqid);
-	
-	/**
-	 * @brief Rekey the CHILD SA with the specified reqid.
-	 *
-	 * Looks for a CHILD SA owned by this IKE_SA, and start the rekeing.
-	 *
-	 * @param this 			calling object
-	 * @param spi			security parameter index identifying the SA to rekey
-	 * @return
-	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
-	 * 						- SUCCESS, if rekeying initiated
-	 * 
-	 * @TODO use spi, not reqid
-	 */
-	status_t (*rekey_child_sa) (ike_sa_t *this, u_int32_t reqid);
-	
-	/**
 	 * @brief Associates a child SA to this IKE SA
 	 * 
 	 * @param this 			calling object
@@ -373,13 +332,60 @@ struct ike_sa_t {
 	void (*add_child_sa) (ike_sa_t *this, child_sa_t *child_sa);
 	
 	/**
-	 * @brief Destroys a CHILD_SA upon request from the other peer.
+	 * @brief Get a CHILD_SA identified by protocol and SPI.
 	 * 
 	 * @param this 			calling object
-	 * @param spi			inbound spi of the CHILD_SA to destroy
-	 * @return				outbound spi of the destroyed CHILD_SA
+	 * @param protocol		protocol of the SA
+	 * @param spi			SPI of the CHILD_SA
+	 * @param inbound		TRUE if SPI is inbound, FALSE if outbound
+	 * @return				child_sa, or NULL if none found
 	 */
-	u_int32_t (*destroy_child_sa) (ike_sa_t *this, u_int32_t spi);
+	child_sa_t* (*get_child_sa) (ike_sa_t *this, protocol_id_t protocol, 
+								 u_int32_t spi, bool inbound);
+	
+	/**
+	 * @brief Rekey the CHILD SA with the specified reqid.
+	 *
+	 * Looks for a CHILD SA owned by this IKE_SA, and start the rekeing.
+	 *
+	 * @param this 			calling object
+	 * @param protocol		protocol of the SA
+	 * @param spi			inbound SPI of the CHILD_SA
+	 * @return
+	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
+	 * 						- SUCCESS, if rekeying initiated
+	 */
+	status_t (*rekey_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
+
+	/**
+	 * @brief Close the CHILD SA with the specified protocol/SPI.
+	 *
+	 * Looks for a CHILD SA owned by this IKE_SA, deletes it and
+	 * notify's the remote peer about the delete. The associated
+	 * states and policies in the kernel get deleted, if they exist.
+	 *
+	 * @param this 			calling object
+	 * @param protocol		protocol of the SA
+	 * @param spi			inbound SPI of the CHILD_SA
+	 * @return
+	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
+	 * 						- SUCCESS, if delete message sent
+	 */
+	status_t (*delete_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
+
+	/**
+	 * @brief Destroy a CHILD SA with the specified protocol/SPI.
+	 *
+	 * Looks for a CHILD SA owned by this IKE_SA and destroys it.
+	 *
+	 * @param this 			calling object
+	 * @param protocol		protocol of the SA
+	 * @param spi			inbound SPI of the CHILD_SA
+	 * @return
+	 * 						- NOT_FOUND, if IKE_SA has no such CHILD_SA
+	 * 						- SUCCESS
+	 */
+	status_t (*destroy_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
 	
 	/**
 	 * @brief Destroys a ike_sa_t object.
@@ -394,11 +400,11 @@ struct ike_sa_t {
  *
  * The ID gets cloned internally.
  *
- * @param[in] ike_sa_id 	ike_sa_id_t object to associate with new IKE_SA
- * @return 					ike_sa_t object
+ * @param ike_sa_id 	ike_sa_id_t object to associate with new IKE_SA
+ * @return 				ike_sa_t object
  * 
  * @ingroup sa
  */
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id);
 
-#endif /*IKE_SA_H_*/
+#endif /* IKE_SA_H_ */

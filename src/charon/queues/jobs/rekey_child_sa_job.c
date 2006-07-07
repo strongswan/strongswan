@@ -37,9 +37,14 @@ struct private_rekey_child_sa_job_t {
 	rekey_child_sa_job_t public;
 	
 	/**
-	 * reqid of the child sa, as used in the kernel
+	 * protocol of the CHILD_SA (ESP/AH)
 	 */
-	u_int32_t reqid;
+	protocol_id_t protocol;
+	
+	/**
+	 * inbound SPI of the CHILD_SA
+	 */
+	u_int32_t spi;
 	
 	/**
 	 * Logger ref
@@ -55,7 +60,6 @@ static job_type_t get_type(private_rekey_child_sa_job_t *this)
 	return REKEY_CHILD_SA;
 }
 
-
 /**
  * Implementation of job_t.execute.
  */
@@ -64,14 +68,16 @@ static status_t execute(private_rekey_child_sa_job_t *this)
 	ike_sa_t *ike_sa;
 	status_t status;
 	
-	status = charon->ike_sa_manager->checkout_by_reqid(charon->ike_sa_manager, this->reqid, &ike_sa);
+	status = charon->ike_sa_manager->checkout_by_child(charon->ike_sa_manager, 
+													   this->protocol, this->spi,
+													   &ike_sa);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, CONTROL, "CHILD SA didn't exist anymore");
+		this->logger->log(this->logger, ERROR|LEVEL1, 
+						  "CHILD_SA not found for rekeying");
 		return DESTROY_ME;
 	}
-	
-	ike_sa->rekey_child_sa(ike_sa, this->reqid);
+	ike_sa->rekey_child_sa(ike_sa, this->protocol, this->spi);
 	
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return DESTROY_ME;
@@ -88,7 +94,7 @@ static void destroy(private_rekey_child_sa_job_t *this)
 /*
  * Described in header
  */
-rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid)
+rekey_child_sa_job_t *rekey_child_sa_job_create(protocol_id_t protocol, u_int32_t spi)
 {
 	private_rekey_child_sa_job_t *this = malloc_thing(private_rekey_child_sa_job_t);
 	
@@ -98,7 +104,8 @@ rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid)
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
 		
 	/* private variables */
-	this->reqid = reqid;
+	this->protocol = protocol;
+	this->spi = spi;
 	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);

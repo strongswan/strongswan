@@ -45,6 +45,8 @@
 #include <sa/transactions/transaction.h>
 #include <sa/transactions/ike_sa_init.h>
 #include <sa/transactions/delete_ike_sa.h>
+#include <sa/transactions/create_child_sa.h>
+#include <sa/transactions/delete_child_sa.h>
 #include <sa/transactions/dead_peer_detection.h>
 #include <queues/jobs/retransmit_request_job.h>
 #include <queues/jobs/delete_established_ike_sa_job.h>
@@ -611,6 +613,13 @@ static status_t process_response(private_ike_sa_t *this, message_t *response)
 	current->destroy(current);
 	this->transaction_out = NULL;
 	
+	/* if conclude() created a new transaction, we increment the message_id
+	 * counter, as the new transaction used the next one */
+	if (new)
+	{
+		this->message_id_out++;
+	}
+	
 	/* queue new transaction */
 	return queue_transaction(this, new, TRUE);
 }
@@ -750,8 +759,8 @@ static status_t initiate(private_ike_sa_t *this, connection_t *connection)
 						  connection->get_name(connection));
 		return DESTROY_ME;
 	}
-	ike_sa_init = ike_sa_init_create(&this->public, 0);
-	this->message_id_out = 2;
+	this->message_id_out = 0;
+	ike_sa_init = ike_sa_init_create(&this->public, this->message_id_out++);
 	return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
 }
 
@@ -1116,81 +1125,10 @@ static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 }
 
 /**
- * Implementation of ike_sa_t.delete_child_sa.
- */
-static status_t delete_child_sa(private_ike_sa_t *this, u_int32_t spi)
-{
-	/* TODO: Reimplement */
-// 	message_t *request;
-// 	child_sa_t *child_sa;
-// 	delete_payload_t *delete_payload;
-// 
-// 	if (this->current_state->get_state(this->current_state) != IKE_SA_ESTABLISHED)
-// 	{
-// 		this->logger->log(this->logger, ERROR|LEVEL1,
-// 						  "Delete of a CHILD_SA whose IKE_SA not in state IKE_SA_ESTABLISHED, aborting");
-// 		return FAILED;
-// 	}
-// 	
-// 	child_sa = get_child_sa(this, reqid);
-// 	if (child_sa == NULL)
-// 	{
-// 		this->logger->log(this->logger, ERROR|LEVEL1, 
-// 						  "IKE_SA does not contain a CHILD_SA with reqid %d", reqid);
-// 		return FAILED;
-// 	}
-// 	build_message(this, INFORMATIONAL, TRUE, &request);
-// 	delete_payload = delete_payload_create(child_sa->get_protocol(child_sa));
-// 	delete_payload->add_spi(delete_payload, child_sa->get_spi(child_sa, TRUE));
-// 	request->add_payload(request, (payload_t*)delete_payload);
-// 	
-// 	send_request(this, request);
-// 	
-// 	old_state = this->current_state;
-// 	set_new_state(this, (state_t*)delete_child_sa_requested_create(&this->protected));
-// 	old_state->destroy(old_state);
-	return SUCCESS;
-}
-
-/**
- * Implementation of protected_ike_sa_t.destroy_child_sa.
- */
-static u_int32_t destroy_child_sa(private_ike_sa_t *this, u_int32_t spi)
-{
-	iterator_t *iterator;
-	child_sa_t *child_sa;
-	
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&child_sa);
-		if (child_sa->get_spi(child_sa, FALSE) == spi)
-		{
-			iterator->remove(iterator);
-			break;
-		}
-		else
-		{
-			child_sa = NULL;
-		}
-	}
-	iterator->destroy(iterator);
-	if (child_sa == NULL)
-	{
-		this->logger->log(this->logger, ERROR, 
-						  "IKE_SA does not contain a CHILD_SA with spi 0x%x", spi);
-		return 0;
-	}
-	
-	spi = child_sa->get_spi(child_sa, TRUE);
-	child_sa->destroy(child_sa);
-	return spi;
-}
-
-/**
  * Implementation of protected_ike_sa_t.get_child_sa.
  */
-static child_sa_t* get_child_sa(private_ike_sa_t *this, u_int32_t spi)
+static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
+								u_int32_t spi, bool inbound)
 {
 	iterator_t *iterator;
 	child_sa_t *current, *found = NULL;
@@ -1199,7 +1137,8 @@ static child_sa_t* get_child_sa(private_ike_sa_t *this, u_int32_t spi)
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current);
-		if (current->get_spi(current, FALSE) == spi)
+		if (current->get_spi(current, inbound) == spi &&
+				  current->get_protocol(current) == protocol)
 		{
 			found = current;
 		}
@@ -1211,75 +1150,64 @@ static child_sa_t* get_child_sa(private_ike_sa_t *this, u_int32_t spi)
 /**
  * Implementation of ike_sa_t.rekey_child_sa.
  */
-static status_t rekey_child_sa(private_ike_sa_t *this, u_int32_t spi)
+static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
-/*	TODO reimplement 
-	message_t *request;
+	create_child_sa_t *rekey;
 	child_sa_t *child_sa;
-	notify_payload_t *notify;
-	sa_payload_t *sa_payload;
-	ts_payload_t *tsi_payload, *tsr_payload;
-	nonce_payload_t *nonce_payload;
-	linked_list_t *proposals;
-	chunk_t nonce;
-	linked_list_t *my_ts, *other_ts;
 	
-	if (this->current_state->get_state(this->current_state) != IKE_SA_ESTABLISHED)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1,
-						  "rekeying of an CHILD_SA whose IKE_SA not in state IKE_SA_ESTABLISHED, aborting");
-		return FAILED;
-	}
-	
-	child_sa = get_child_sa(this, reqid);
+	child_sa = get_child_sa(this, protocol, spi, TRUE);
 	if (child_sa == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, 
-						  "IKE_SA does not contain a CHILD_SA with reqid %d", reqid);
-		return FAILED;
+		return NOT_FOUND;
 	}
 	
-	build_message(this, CREATE_CHILD_SA, TRUE, &request);
-	notify = notify_payload_create_from_protocol_and_type(
-			child_sa->get_protocol(child_sa), REKEY_SA);
-	notify->set_spi(notify, child_sa->get_spi(child_sa, TRUE));
-	request->add_payload(request, (payload_t*)notify);
+	rekey = create_child_sa_create(&this->public, this->message_id_out++);
+	rekey->rekeys_child(rekey, child_sa);
+	return queue_transaction(this, (transaction_t*)rekey, FALSE);
+}
+
+/**
+ * Implementation of ike_sa_t.delete_child_sa.
+ */
+static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+{
+	delete_child_sa_t *del;
+	child_sa_t *child_sa;
 	
-	proposals = this->policy->get_proposals(this->policy);
-	child_sa = child_sa_create(reqid,
-							   this->connection->get_my_host(this->connection),
-							   this->connection->get_other_host(this->connection),
-							   this->policy->get_soft_lifetime(this->policy),
-							   this->policy->get_hard_lifetime(this->policy),
-							   this->nat_here || this->nat_there);
-	child_sa->alloc(child_sa, proposals);
-	sa_payload = sa_payload_create_from_proposal_list(proposals);
-	request->add_payload(request, (payload_t*)sa_payload);
-	
-	nonce_payload = nonce_payload_create();
-	if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
-		NONCE_SIZE, &nonce))
+	child_sa = get_child_sa(this, protocol, spi, TRUE);
+	if (child_sa == NULL)
 	{
-		request->destroy(request);
-		return FAILED;
+		return NOT_FOUND;
 	}
-	nonce_payload->set_nonce(nonce_payload, nonce);
-	request->add_payload(request, (payload_t*)nonce_payload);
 	
-	my_ts = this->policy->get_my_traffic_selectors(this->policy);
-	other_ts = this->policy->get_other_traffic_selectors(this->policy);
-	tsi_payload = ts_payload_create_from_traffic_selectors(TRUE, my_ts);
-	tsr_payload = ts_payload_create_from_traffic_selectors(FALSE, other_ts);
-	request->add_payload(request, (payload_t*)tsi_payload);
-	request->add_payload(request, (payload_t*)tsr_payload);
+	del = delete_child_sa_create(&this->public, this->message_id_out++);
+	del->set_child_sa(del, child_sa);
+	return queue_transaction(this, (transaction_t*)del, FALSE);
+}
+
+/**
+ * Implementation of protected_ike_sa_t.destroy_child_sa.
+ */
+static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
+{
+	iterator_t *iterator;
+	child_sa_t *child_sa;
+	status_t status = NOT_FOUND;
 	
-	send_request(this, request);
-	
-	old_state = this->current_state;
-	set_new_state(this, (state_t*)create_child_sa_requested_create(&this->protected, child_sa, nonce, reqid));
-	old_state->destroy(old_state);*/
-	
-	return SUCCESS;
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		if (child_sa->get_protocol(child_sa) == protocol &&
+			child_sa->get_spi(child_sa, TRUE) == spi)
+		{
+			child_sa->destroy(child_sa);
+			iterator->remove(iterator);
+			status = SUCCESS;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return status;
 }
 
 
@@ -1505,16 +1433,16 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
 	this->public.get_prf_auth_i = (prf_t *(*) (ike_sa_t *)) get_prf_auth_i;
 	this->public.get_prf_auth_r = (prf_t *(*) (ike_sa_t *)) get_prf_auth_r;
-	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.set_connection = (void (*) (ike_sa_t *,connection_t *)) set_connection;
 	this->public.get_connection = (connection_t *(*) (ike_sa_t *)) get_connection;
 	this->public.set_policy = (void (*) (ike_sa_t *,policy_t *)) set_policy;
 	this->public.get_policy = (policy_t *(*) (ike_sa_t *)) get_policy;
 	this->public.build_transforms = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool)) build_transforms;
-	this->public.destroy_child_sa = (u_int32_t (*)(ike_sa_t*,u_int32_t))destroy_child_sa;
-	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,u_int32_t)) get_child_sa;
-	this->public.delete_child_sa = (status_t(*)(ike_sa_t*,u_int32_t)) delete_child_sa;
-	this->public.rekey_child_sa = (status_t(*)(ike_sa_t*,u_int32_t)) rekey_child_sa;
+	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
+	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
+	this->public.rekey_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
+	this->public.delete_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
+	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
 	this->public.enable_natt = (void(*)(ike_sa_t*, bool)) enable_natt;
 	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
 	

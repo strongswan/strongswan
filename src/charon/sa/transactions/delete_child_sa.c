@@ -1,7 +1,7 @@
 /**
- * @file delete_ike_sa.c
+ * @file delete_child_sa.c
  *
- * @brief Implementation of the delete_ike_sa transaction.
+ * @brief Implementation of the delete_child_sa transaction.
  *
  */
 
@@ -20,23 +20,23 @@
  * for more details.
  */
 
-#include "delete_ike_sa.h"
+#include "delete_child_sa.h"
 
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
 
 
-typedef struct private_delete_ike_sa_t private_delete_ike_sa_t;
+typedef struct private_delete_child_sa_t private_delete_child_sa_t;
 
 /**
- * Private members of a delete_ike_sa_t object..
+ * Private members of a delete_child_sa_t object..
  */
-struct private_delete_ike_sa_t {
+struct private_delete_child_sa_t {
 	
 	/**
 	 * Public methods and transaction_t interface.
 	 */
-	delete_ike_sa_t public;
+	delete_child_sa_t public;
 	
 	/**
 	 * Assigned IKE_SA.
@@ -59,6 +59,11 @@ struct private_delete_ike_sa_t {
 	u_int32_t requested;
 	
 	/**
+	 * CHILD SA to delete
+	 */
+	child_sa_t *child_sa;
+	
+	/**
 	 * Assigned logger.
 	 */
 	logger_t *logger;
@@ -67,7 +72,7 @@ struct private_delete_ike_sa_t {
 /**
  * Implementation of transaction_t.get_message_id.
  */
-static u_int32_t get_message_id(private_delete_ike_sa_t *this)
+static u_int32_t get_message_id(private_delete_child_sa_t *this)
 {
 	return this->message_id;
 }
@@ -75,20 +80,27 @@ static u_int32_t get_message_id(private_delete_ike_sa_t *this)
 /**
  * Implementation of transaction_t.requested.
  */
-static u_int32_t requested(private_delete_ike_sa_t *this)
+static u_int32_t requested(private_delete_child_sa_t *this)
 {
 	return this->requested++;
 }
 
 /**
+ * Implementation of delete_child_sa_t.set_child_sa.
+ */
+static void set_child_sa(private_delete_child_sa_t *this, child_sa_t *child_sa)
+{
+	this->child_sa = child_sa;
+}
+
+/**
  * Implementation of transaction_t.get_request.
  */
-static status_t get_request(private_delete_ike_sa_t *this, message_t **result)
+static status_t get_request(private_delete_child_sa_t *this, message_t **result)
 {
 	message_t *request;
 	connection_t *connection;
 	host_t *me, *other;
-	delete_payload_t *delete_payload;
 	
 	/* check if we already have built a message (retransmission) */
 	if (this->message)
@@ -109,35 +121,98 @@ static status_t get_request(private_delete_ike_sa_t *this, message_t **result)
 	request->set_request(request, TRUE);
 	request->set_message_id(request, this->message_id);
 	request->set_ike_sa_id(request, this->ike_sa->get_id(this->ike_sa));
-	/* apply for caller */
 	*result = request;
-	/* store for retransmission */
 	this->message = request;
 	
-	delete_payload = delete_payload_create(PROTO_IKE);
-	request->add_payload(request, (payload_t*)delete_payload);
+	{	/* add delete payload */
+		delete_payload_t *delete_payload;
+		protocol_id_t protocol;
+		u_int32_t spi;
+		
+		protocol = this->child_sa->get_protocol(this->child_sa);
+		spi = this->child_sa->get_spi(this->child_sa, TRUE);
+		delete_payload = delete_payload_create(protocol);
+		
+		this->logger->log(this->logger, CONTROL,
+						  "created DELETE payload for %s CHILD_SA with SPI 0x%x",
+						  mapping_find(protocol_id_m, protocol), htonl(spi));
+		delete_payload->add_spi(delete_payload, spi);
+		request->add_payload(request, (payload_t*)delete_payload);
+	}
 	
-	/* transit to state SA_DELETING */
-	this->ike_sa->set_state(this->ike_sa, SA_DELETING);
+	return SUCCESS;
+}
+
+/**
+ * process a delete payload
+ */
+static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t *delete_request, message_t *response)
+{
+	protocol_id_t protocol;
+	u_int32_t spi;
+	iterator_t *iterator;
+	delete_payload_t *delete_response;
 	
+	/* get requested CHILD */
+	protocol = delete_request->get_protocol_id(delete_request);
+	if (protocol != PROTO_ESP && protocol != PROTO_AH)
+	{
+		this->logger->log(this->logger, CONTROL,
+						  "CHILD_SA delete response contained unexpected protocol");
+		return FAILED;
+	}
+	
+	/* prepare response payload */
+	if (response)
+	{
+		delete_response = delete_payload_create(protocol);
+		response->add_payload(response, (payload_t*)delete_response);
+	}
+
+	iterator = delete_request->create_spi_iterator(delete_request);
+	while (iterator->iterate(iterator, (void**)&spi))
+	{
+		child_sa_t *child_sa;
+		
+		child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol, spi, FALSE);
+		
+		if (child_sa != NULL)
+		{
+			this->logger->log(this->logger, CONTROL,
+							  "received DELETE for %s CHILD_SA with SPI 0x%x, deleting", 
+							  mapping_find(protocol_id_m, protocol), ntohl(spi));
+			/* delete it, with inbound spi */
+			spi = child_sa->get_spi(child_sa, TRUE);
+			this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
+			/* add delete response to message, if we are responding */
+			if (response)
+			{
+				delete_response->add_spi(delete_response, spi);
+			}
+		}
+		else
+		{
+			this->logger->log(this->logger, ERROR,
+							  "received DELETE for %s CHILD_SA with SPI 0x%x, but no such SA", 
+							  mapping_find(protocol_id_m, protocol), ntohl(spi));
+		}
+	}
+	iterator->destroy(iterator);
 	return SUCCESS;
 }
 
 /**
  * Implementation of transaction_t.get_response.
  */
-static status_t get_response(private_delete_ike_sa_t *this, message_t *request, 
+static status_t get_response(private_delete_child_sa_t *this, message_t *request, 
 							 message_t **result, transaction_t **next)
 {
 	host_t *me, *other;
 	message_t *response;
 	iterator_t *payloads;
-	delete_payload_t *delete_request = NULL;
 	connection_t *connection;
 	
-	/* check if we already have built a response (retransmission) 
-	 * this only happens in special simultanous transaction cases,
-	 * as we delete the IKE_SA after the response is sent. */
+	/* check if we already have built a response (retransmission) */
 	if (this->message)
 	{
 		*result = this->message;
@@ -159,12 +234,11 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	this->message = response;
 	*result = response;
 	
-	/* check message type */
 	if (request->get_exchange_type(request) != INFORMATIONAL)
 	{
 		this->logger->log(this->logger, ERROR,
-						  "INFORMATIONAL response of invalid type, deleting IKE_SA");
-		return DESTROY_ME;
+						  "INFORMATIONAL response of invalid type, aborting");
+		return FAILED;
 	}
 	
 	/* iterate over all payloads */
@@ -178,7 +252,7 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 		{
 			case DELETE:
 			{
-				delete_request = (delete_payload_t *)payload;
+				process_delete(this, (delete_payload_t*)payload, response);
 				break;
 			}
 			default:
@@ -191,52 +265,56 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 		}
 	}
 	payloads->destroy(payloads);
-	
-	if (delete_request && 
-		delete_request->get_protocol_id(delete_request) == PROTO_IKE)
-	{
-		this->logger->log(this->logger, CONTROL, 
-						  "DELETE request for IKE_SA received, deleting IKE_SA");
-	}
-	else
-	{
-		/* should not happen, as we preparsed this at transaction construction */
-		this->logger->log(this->logger, CONTROL, 
-						  "received a weird DELETE request for IKE_SA, deleting anyway");
-	}
-	if (this->ike_sa->get_state(this->ike_sa) == SA_DELETING)
-	{
-		/* if we are already deleting an IKE_SA, we do not destroy. We wait
-		 * until we get the response for our initiated delete. */
-		return SUCCESS;
-	}
-	this->ike_sa->set_state(this->ike_sa, SA_DELETING);
-	return DESTROY_ME;
+	return SUCCESS;
 }
-
 
 /**
  * Implementation of transaction_t.conclude
  */
-static status_t conclude(private_delete_ike_sa_t *this, message_t *response, 
+static status_t conclude(private_delete_child_sa_t *this, message_t *response, 
 						 transaction_t **transaction)
 {
+	iterator_t *payloads;
+	
 	/* check message type */
 	if (response->get_exchange_type(response) != INFORMATIONAL)
 	{
 		this->logger->log(this->logger, ERROR,
-						  "INFORMATIONAL response of invalid type, deleting IKE_SA");
-		return DESTROY_ME;
+						  "INFORMATIONAL response of invalid type, aborting");
+		return FAILED;
 	}
-	/* this is only an acknowledge. We can't do anything here, but delete
-	 * the IKE_SA. */
-	return DESTROY_ME;
+	
+	/* iterate over all payloads */
+	payloads = response->get_payload_iterator(response);
+	while (payloads->has_next(payloads))
+	{
+		payload_t *payload;
+		payloads->current(payloads, (void**)&payload);
+		
+		switch (payload->get_type(payload))
+		{
+			case DELETE:
+			{
+				process_delete(this, (delete_payload_t*)payload, NULL);
+				break;
+			}
+			default:
+			{
+				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring payload %s (%d)",
+								  mapping_find(payload_type_m, payload->get_type(payload)),
+								  payload->get_type(payload));
+				break;
+			}
+		}
+	}
+	payloads->destroy(payloads);
+	return SUCCESS;
 }
 
 /**
  * implements transaction_t.destroy
  */
-static void destroy(private_delete_ike_sa_t *this)
+static void destroy(private_delete_child_sa_t *this)
 {
 	if (this->message)
 	{
@@ -248,9 +326,9 @@ static void destroy(private_delete_ike_sa_t *this)
 /*
  * Described in header.
  */
-delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa, u_int32_t message_id)
+delete_child_sa_t *delete_child_sa_create(ike_sa_t *ike_sa, u_int32_t message_id)
 {
-	private_delete_ike_sa_t *this = malloc_thing(private_delete_ike_sa_t);
+	private_delete_child_sa_t *this = malloc_thing(private_delete_child_sa_t);
 	
 	/* transaction interface functions */
 	this->public.transaction.get_request = (status_t(*)(transaction_t*,message_t**))get_request;
@@ -259,6 +337,9 @@ delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa, u_int32_t message_id)
 	this->public.transaction.get_message_id = (u_int32_t(*)(transaction_t*))get_message_id;
 	this->public.transaction.requested = (u_int32_t(*)(transaction_t*))requested;
 	this->public.transaction.destroy = (void(*)(transaction_t*))destroy;
+	
+	/* publics */
+	this->public.set_child_sa = (void(*)(delete_child_sa_t*,child_sa_t*))set_child_sa;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

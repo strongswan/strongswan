@@ -515,10 +515,11 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 }
 
 /**
- * Implementation of of ike_sa_manager.checkout_by_reqid.
+ * Implementation of of ike_sa_manager.checkout_by_child.
  */
-static status_t checkout_by_reqid(private_ike_sa_manager_t *this, 
-								  u_int32_t reqid, ike_sa_t **ike_sa)
+static status_t checkout_by_child(private_ike_sa_manager_t *this,
+								  protocol_id_t protocol, u_int32_t spi,
+								  ike_sa_t **ike_sa)
 {
 	iterator_t *iterator;
 	status_t status = NOT_FOUND;
@@ -551,8 +552,8 @@ static status_t checkout_by_reqid(private_ike_sa_manager_t *this,
 			pthread_cond_signal(&(entry->condvar));
 			continue;
 		}
-		/* ok, access is exclusive for us, check reqid */
-		if (entry->ike_sa->get_child_sa(entry->ike_sa, reqid) != NULL)
+		/* ok, access is exclusive for us, check for child */
+		if (entry->ike_sa->get_child_sa(entry->ike_sa, protocol, spi, TRUE) != NULL)
 		{
 			/* match */
 			entry->checked_out = TRUE;
@@ -895,7 +896,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
 	this->public.create_and_checkout = (void(*)(ike_sa_manager_t*,ike_sa_t**))create_and_checkout;
 	this->public.checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t*,ike_sa_t**))checkout;
-	this->public.checkout_by_reqid = (status_t(*)(ike_sa_manager_t*,u_int32_t,ike_sa_t**))checkout_by_reqid;
+	this->public.checkout_by_child = (status_t(*)(ike_sa_manager_t*,protocol_id_t,u_int32_t,ike_sa_t**))checkout_by_child;
 	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;
 	this->public.get_ike_sa_list_by_name = (linked_list_t*(*)(ike_sa_manager_t*,const char*))get_ike_sa_list_by_name;
 	this->public.log_status = (void(*)(ike_sa_manager_t*,logger_t*,char*))log_status;

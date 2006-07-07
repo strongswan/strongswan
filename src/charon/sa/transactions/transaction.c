@@ -26,6 +26,8 @@
 #include <sa/transactions/ike_sa_init.h>
 #include <sa/transactions/ike_auth.h>
 #include <sa/transactions/delete_ike_sa.h>
+#include <sa/transactions/create_child_sa.h>
+#include <sa/transactions/delete_child_sa.h>
 #include <sa/transactions/dead_peer_detection.h>
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/sa_payload.h>
@@ -56,7 +58,10 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 	{
 		case IKE_SA_INIT:
 		{
-			transaction = (transaction_t*)ike_sa_init_create(ike_sa, message_id);
+			if (ike_sa->get_state(ike_sa) == SA_CREATED)
+			{
+				transaction = (transaction_t*)ike_sa_init_create(ike_sa, message_id);
+			}
 			break;
 		}
 		case IKE_AUTH:
@@ -67,6 +72,10 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 		}
 		case CREATE_CHILD_SA:
 		{
+			if (ike_sa->get_state(ike_sa) != SA_ESTABLISHED)
+			{
+				break;
+			}
 			/* look for a REKEY_SA notify */
 			iterator = request->get_payload_iterator(request);
 			while (iterator->has_next(iterator))
@@ -88,10 +97,9 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 						break;
 					case PROTO_AH:
 					case PROTO_ESP:
-					{
-						/* TODO: transaction = rekey_child_sa_create(ike_sa, message_id); */
-						break;
-					}
+						/* we do not handle rekeying of CHILD_SAs in a special 
+						 * transaction, as the procedure is nearly equal 
+						 * to create a new CHILD_SA. */
 					default:
 						break;
 				}
@@ -101,10 +109,21 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 				}
 			}
 			iterator->destroy(iterator);
+			if (!transaction)
+			{
+				/* we have not found a REKEY_SA notify for IKE. This means
+				 * we create a new CHILD_SA, or rekey an existing one.
+				 * Both cases are handled with the create_child_sa transaction. */
+				transaction = (transaction_t*)create_child_sa_create(ike_sa, message_id);
+			}
 			break;
 		}
 		case INFORMATIONAL:
 		{
+			if (ike_sa->get_state(ike_sa) == SA_CREATED)
+			{
+				break;
+			}
 			u_int payload_count = 0;
 			iterator = request->get_payload_iterator(request);
 			while (iterator->has_next(iterator))
@@ -117,12 +136,21 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 					{
 						delete_payload_t *delete_payload;
 						delete_payload = (delete_payload_t*)current;
-						if (delete_payload->get_protocol_id(delete_payload) == PROTO_IKE)
+						switch (delete_payload->get_protocol_id(delete_payload))
 						{
-							transaction = (transaction_t*)
-									delete_ike_sa_create(ike_sa, message_id);
-							break;
+							case PROTO_IKE:
+								transaction = (transaction_t*)
+										delete_ike_sa_create(ike_sa, message_id);
+								break;
+							case PROTO_AH:
+							case PROTO_ESP:
+								transaction = (transaction_t*)
+										delete_child_sa_create(ike_sa, message_id);
+								break;
+							default:
+								break;
 						}
+						break;
 					}
 					default:
 						break;
@@ -133,6 +161,8 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 				}
 			}
 			iterator->destroy(iterator);
+			/* empty informationals are used for dead peer detection in
+			 * IKEv2. We use a special transaction for it. */
 			if (payload_count == 0)
 			{
 				transaction = (transaction_t*)

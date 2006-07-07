@@ -60,8 +60,8 @@ struct ike_sa_manager_t {
 	 * result in a deadlock!
 	 * 
 	 * @param this 				the manager object
-	 * @param ike_sa_id[in/out]	the SA identifier, will be updated
-	 * @param ike_sa[out] 		checked out SA
+	 * @param[in/out] ike_sa_id	the SA identifier, will be updated
+	 * @param[out] ike_sa 		checked out SA
 	 * @returns 					
 	 * 							- SUCCESS if checkout successful
 	 * 							- NOT_FOUND when no such SA is available
@@ -76,26 +76,27 @@ struct ike_sa_manager_t {
 	 * Management of SPIs is the managers job, he will set it.
 	 * 
 	 * @param this			 	the manager object
-	 * @param ike_sa[out] 		checked out SA
+	 * @param[out] ike_sa 		checked out SA
 	 */
 	void (*create_and_checkout) (ike_sa_manager_t* this,ike_sa_t **ike_sa);
 	
 	/**
-	 * @brief Check out an IKE_SA by the reqid of one of its CHILD_SAs.
+	 * @brief Check out an IKE_SA by protocol and SPI of one of its CHILD_SA.
 	 *
 	 * The kernel sends us expire messages for IPsec SAs. To fullfill
 	 * this request, we must check out the IKE SA which contains the
-	 * CHILD_SA the kernel wants to modify. We do this by the reqid, which
-	 * is unique to every CHILD_SA.
+	 * CHILD_SA the kernel wants to modify.
 	 *
 	 * @param this				the manager object
-	 * @param reqid				reqid of the IPsec SA
-	 * @param ike_sa[out] 		checked out SA
+	 * @param protocol			protocol of the CHILD_SA
+	 * @param spi				SPI of the CHILD_SA
+	 * @param[out] ike_sa 		checked out SA
 	 * @return
 	 * 							- NOT_FOUND, if no IKE SA with such a child found
 	 * 							- SUCCESS, if ike_sa set
 	 */
-	status_t (*checkout_by_reqid) (ike_sa_manager_t* this, u_int32_t reqid, ike_sa_t **ike_sa);
+	status_t (*checkout_by_child) (ike_sa_manager_t* this, protocol_id_t protocol,
+									u_int32_t spi, ike_sa_t **ike_sa);
 	
 	/**
 	 * @brief Get a list of all IKE_SA SAs currently set up.
@@ -139,8 +140,8 @@ struct ike_sa_manager_t {
 	 * The SA must be checked out again!
 	 *  
 	 * @param this			 	the manager object
-	 * @param ike_sa_id[in/out]	the SA identifier, will be updated
-	 * @param ike_sa[out]		checked out SA
+	 * @param[in/out] ike_sa_id	the SA identifier, will be updated
+	 * @param[out] ike_sa		checked out SA
 	 * @returns 				
 	 * 							- SUCCESS if checked in
 	 * 							- NOT_FOUND when not found (shouldn't happen!)
@@ -158,7 +159,7 @@ struct ike_sa_manager_t {
 	 * deadlock!
 	 *
 	 * @param this			 	the manager object
-	 * @param ike_sa_id[in/out]	the SA identifier
+	 * @param[in/out] ike_sa_id	the SA identifier
 	 * @returns 				
 	 * 							- SUCCESS if found
 	 * 							- NOT_FOUND when no such SA is available

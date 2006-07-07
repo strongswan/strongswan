@@ -37,9 +37,14 @@ struct private_delete_child_sa_job_t {
 	delete_child_sa_job_t public;
 	
 	/**
-	 * reqid of the sa to delete.
+	 * protocol of the CHILD_SA (ESP/AH)
 	 */
-	u_int32_t reqid;
+	protocol_id_t protocol;
+	
+	/**
+	 * inbound SPI of the CHILD_SA
+	 */
+	u_int32_t spi;
 	
 	/**
 	 * Logger ref
@@ -63,16 +68,18 @@ static status_t execute(private_delete_child_sa_job_t *this)
 	ike_sa_t *ike_sa;
 	status_t status;
 	
-	status = charon->ike_sa_manager->checkout_by_reqid(charon->ike_sa_manager, this->reqid, &ike_sa);
+	status = charon->ike_sa_manager->checkout_by_child(charon->ike_sa_manager, 
+													   this->protocol, this->spi,
+													   &ike_sa);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, CONTROL, "CHILD SA didn't exist anymore");
+		this->logger->log(this->logger, ERROR|LEVEL1, 
+						  "CHILD_SA not found for delete");
 		return DESTROY_ME;
 	}
+	ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi);
 	
-	ike_sa->delete_child_sa(ike_sa, this->reqid);
-	
-	status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return DESTROY_ME;
 }
 
@@ -87,7 +94,7 @@ static void destroy(private_delete_child_sa_job_t *this)
 /*
  * Described in header
  */
-delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid)
+delete_child_sa_job_t *delete_child_sa_job_create(protocol_id_t protocol, u_int32_t spi)
 {
 	private_delete_child_sa_job_t *this = malloc_thing(private_delete_child_sa_job_t);
 	
@@ -95,9 +102,10 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid)
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
 	this->public.job_interface.execute = (status_t (*) (job_t *)) execute;
 	this->public.job_interface.destroy = (void (*)(job_t*)) destroy;
-		
+	
 	/* private variables */
-	this->reqid = reqid;
+	this->protocol = protocol;
+	this->spi = spi;
 	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);

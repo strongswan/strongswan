@@ -316,17 +316,12 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 	
 	{	/* build the NONCE payload for us (initiator) */
 		nonce_payload_t *nonce_payload;
-		randomizer_t *randomizer;
 		
-		randomizer = randomizer_create();
-		if (randomizer->allocate_pseudo_random_bytes(randomizer, 
+		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
 			NONCE_SIZE, &this->nonce_i) != SUCCESS)
 		{
-			randomizer->destroy(randomizer);
-			request->destroy(request);
 			return DESTROY_ME;
 		}
-		randomizer->destroy(randomizer);
 		nonce_payload = nonce_payload_create();
 		nonce_payload->set_nonce(nonce_payload, this->nonce_i);
 		
@@ -484,14 +479,6 @@ static status_t get_response(private_ike_sa_init_t *this,
 	ike_sa_id_t *ike_sa_id;
 	u_int32_t timeout;
 	
-	/* check message type */
-	if (request->get_exchange_type(request) != IKE_SA_INIT)
-	{
-		this->logger->log(this->logger, ERROR, 
-						  "IKE_SA_INIT request of invalid type, deleting IKE_SA");
-		return DESTROY_ME;
-	}
-	
 	/* check if we already have built a response (retransmission) */
 	if (this->message)
 	{
@@ -512,6 +499,14 @@ static status_t get_response(private_ike_sa_init_t *this,
 	response->set_ike_sa_id(response, this->ike_sa->get_id(this->ike_sa));
 	this->message = response;
 	*result = response;
+	
+	/* check message type */
+	if (request->get_exchange_type(request) != IKE_SA_INIT)
+	{
+		this->logger->log(this->logger, ERROR, 
+						  "IKE_SA_INIT request of invalid type, deleting IKE_SA");
+		return DESTROY_ME;
+	}
 	
 	/* this is the first message to process, find a connection for IKE_SA */
 	this->connection = charon->connections->get_connection_by_hosts(
@@ -1003,7 +998,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		response_chunk = response->get_packet_data(response);
 		
 		/* create next transaction, for which we except a message */
-		ike_auth = ike_auth_create(this->ike_sa, 1);
+		ike_auth = ike_auth_create(this->ike_sa, this->message_id + 1);
 		ike_auth->set_nonces(ike_auth,
 							 chunk_clone(this->nonce_i),
 							 chunk_clone(this->nonce_r));

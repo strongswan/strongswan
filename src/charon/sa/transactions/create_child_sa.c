@@ -1,13 +1,12 @@
 /**
- * @file ike_auth.c
+ * @file create_child_sa.c
  *
- * @brief Implementation of ike_auth_t transaction.
+ * @brief Implementation of create_child_sa_t transaction.
  *
  */
 
 /*
- * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,32 +20,30 @@
  * for more details.
  */
 
-#include "ike_auth.h"
+#include "create_child_sa.h"
 
 #include <string.h>
 
 #include <daemon.h>
 #include <encoding/payloads/sa_payload.h>
-#include <encoding/payloads/id_payload.h>
-#include <encoding/payloads/cert_payload.h>
-#include <encoding/payloads/certreq_payload.h>
-#include <encoding/payloads/auth_payload.h>
+#include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/ts_payload.h>
-#include <sa/authenticator.h>
 #include <sa/child_sa.h>
+#include <sa/transactions/delete_child_sa.h>
+#include <utils/randomizer.h>
 
 
-typedef struct private_ike_auth_t private_ike_auth_t;
+typedef struct private_create_child_sa_t private_create_child_sa_t;
 
 /**
- * Private members of a ike_auth_t object..
+ * Private members of a create_child_sa_t object..
  */
-struct private_ike_auth_t {
+struct private_create_child_sa_t {
 	
 	/**
 	 * Public methods and transaction_t interface.
 	 */
-	ike_auth_t public;
+	create_child_sa_t public;
 	
 	/**
 	 * Assigned IKE_SA.
@@ -69,27 +66,12 @@ struct private_ike_auth_t {
 	u_int32_t requested;
 	
 	/**
-	 * initiator chosen nonce
+	 * initiators inbound SPI of the CHILD_SA which gets rekeyed
 	 */
-	chunk_t nonce_i;
+	u_int32_t rekey_spi;
 	
 	/**
-	 * responder chosen nonce
-	 */
-	chunk_t nonce_r;
-	
-	/**
-	 * encoded request message of ike_sa_init transaction
-	 */
-	chunk_t init_request;
-	
-	/**
-	 * encoded response message of ike_sa_init transaction
-	 */
-	chunk_t init_response;
-	
-	/**
-	 * connection definition used
+	 * connection of IKE_SA
 	 */
 	connection_t *connection;
 	
@@ -104,6 +86,16 @@ struct private_ike_auth_t {
 	proposal_t *proposal;
 	
 	/**
+	 * initiator chosen nonce
+	 */
+	chunk_t nonce_i;
+	
+	/**
+	 * responder chosen nonce
+	 */
+	chunk_t nonce_r;
+	
+	/**
 	 * Negotiated traffic selectors for initiator
 	 */
 	linked_list_t *tsi;
@@ -114,14 +106,19 @@ struct private_ike_auth_t {
 	linked_list_t *tsr;
 	
 	/**
-	 * CHILD_SA created along with IKE_AUTH
+	 * CHILD_SA created by this transaction
 	 */
 	child_sa_t *child_sa;
 	
 	/**
-	 * did other peer create a CHILD_SA?
+	 * CHILD_SA rekeyed if we are rekeying
 	 */
-	bool build_child;
+	child_sa_t *rekeyed_sa;
+	
+	/**
+	 * source of randomness
+	 */
+	randomizer_t *randomizer;
 	
 	/**
 	 * Assigned logger.
@@ -132,7 +129,7 @@ struct private_ike_auth_t {
 /**
  * Implementation of transaction_t.get_message_id.
  */
-static u_int32_t get_message_id(private_ike_auth_t *this)
+static u_int32_t get_message_id(private_create_child_sa_t *this)
 {
 	return this->message_id;
 }
@@ -140,38 +137,26 @@ static u_int32_t get_message_id(private_ike_auth_t *this)
 /**
  * Implementation of transaction_t.requested.
  */
-static u_int32_t requested(private_ike_auth_t *this)
+static u_int32_t requested(private_create_child_sa_t *this)
 {
 	return this->requested++;
 }
 
 /**
- * Implementation of transaction_t.set_nonces.
+ * Implementation of transaction_t.rekeys_child.
  */
-static void set_nonces(private_ike_auth_t *this, chunk_t nonce_i, chunk_t nonce_r)
+static void rekeys_child(private_create_child_sa_t *this, child_sa_t *child_sa)
 {
-	this->nonce_i = nonce_i;
-	this->nonce_r = nonce_r;
-}
-
-/**
- * Implementation of transaction_t.set_init_messages.
- */
-static void set_init_messages(private_ike_auth_t *this, chunk_t init_request, chunk_t init_response)
-{
-	this->init_request = init_request;
-	this->init_response = init_response;
+	this->rekeyed_sa = child_sa;
 }
 
 /**
  * Implementation of transaction_t.get_request.
  */
-static status_t get_request(private_ike_auth_t *this, message_t **result)
+static status_t get_request(private_create_child_sa_t *this, message_t **result)
 {
 	message_t *request;
 	host_t *me, *other;
-	identification_t *my_id, *other_id;
-	id_payload_t *my_id_payload;
 	
 	/* check if we already have built a message (retransmission) */
 	if (this->message)
@@ -184,114 +169,88 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	me = this->connection->get_my_host(this->connection);
 	other = this->connection->get_other_host(this->connection);
 	this->policy = this->ike_sa->get_policy(this->ike_sa);
-	my_id = this->policy->get_my_id(this->policy);
-	other_id = this->policy->get_other_id(this->policy);
 	
 	/* build the request */
 	request = message_create();
 	request->set_source(request, me->clone(me));
 	request->set_destination(request, other->clone(other));
-	request->set_exchange_type(request, IKE_AUTH);
+	request->set_exchange_type(request, CREATE_CHILD_SA);
 	request->set_request(request, TRUE);
 	request->set_message_id(request, this->message_id);
 	request->set_ike_sa_id(request, this->ike_sa->get_id(this->ike_sa));
-	/* apply for caller */
 	*result = request;
-	/* store for retransmission */
 	this->message = request;
 	
-	{	/* build ID payload */
-		my_id_payload = id_payload_create_from_identification(TRUE, my_id);
-		request->add_payload(request, (payload_t*)my_id_payload);
-	}
-	
-	{	/* TODO: build certreq payload */
-		
-	}
-	
-	if (this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
-	{	/* build certificate payload. TODO: Handle certreq from init_ike_sa. */
-		x509_t *cert;
-		cert_payload_t *cert_payload;
-		
-		cert = charon->credentials->get_certificate(charon->credentials, my_id);
-		if (cert)
-		{
-			cert_payload = cert_payload_create_from_x509(cert);
-			request->add_payload(request, (payload_t*)cert_payload);
-		}
-		else
-		{
-			this->logger->log(this->logger, ERROR, 
-							  "could not find my certificate, certificate payload ommited");
-		}
-	}
-	
-	{	/* build IDr payload, if other_id defined */
-		id_payload_t *id_payload;
-		if (!other_id->contains_wildcards(other_id))
-		{
-			id_payload = id_payload_create_from_identification(FALSE, other_id);
-			request->add_payload(request, (payload_t*)id_payload);
-		}
-	}
-	
-	{	/* build auth payload */
-		authenticator_t *authenticator;
-		auth_payload_t *auth_payload;
-		status_t status;
-	
-		authenticator = authenticator_create(this->ike_sa);
-		status = authenticator->compute_auth_data(authenticator, &auth_payload,
-				this->init_request, this->nonce_r, my_id_payload, TRUE);
-		authenticator->destroy(authenticator);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, AUDIT, 
-							  "could not generate AUTH data, deleting IKE_SA");
-			return DESTROY_ME;
-		}
-		request->add_payload(request, (payload_t*)auth_payload);
-	}
-	
-	{	/* build SA payload for CHILD_SA */
-		linked_list_t *proposal_list;
+	{	/* build SA payload */
 		sa_payload_t *sa_payload;
-		u_int32_t soft_lifetime, hard_lifetime;
+		linked_list_t *proposals;
+		bool use_natt;
+		u_int32_t reqid = 0;
 		
-		proposal_list = this->policy->get_proposals(this->policy);
-		soft_lifetime = this->policy->get_soft_lifetime(this->policy);
-		hard_lifetime = this->policy->get_hard_lifetime(this->policy);
-		this->child_sa = child_sa_create(0, me, other, soft_lifetime, hard_lifetime,
-										 this->ike_sa->is_natt_enabled(this->ike_sa));
-		if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
+		if (this->rekeyed_sa)
+		{
+			reqid = this->rekeyed_sa->get_reqid(this->rekeyed_sa);
+		}
+		
+		proposals = this->policy->get_proposals(this->policy);
+		use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
+		this->child_sa = child_sa_create(reqid, me, other,
+							this->policy->get_soft_lifetime(this->policy),
+							this->policy->get_hard_lifetime(this->policy),
+							use_natt);
+		if (this->child_sa->alloc(this->child_sa, proposals) != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR,
-					"could not install CHILD_SA, deleting IKE_SA");
-			return DESTROY_ME;
+							  "could not install CHILD_SA, CHILD_SA creation aborted");
+			return FAILED;
 		}
-		sa_payload = sa_payload_create_from_proposal_list(proposal_list);
+		sa_payload = sa_payload_create_from_proposal_list(proposals);
 		request->add_payload(request, (payload_t*)sa_payload);
+	}
+	
+	{	/* build the NONCE payload for us (initiator) */
+		nonce_payload_t *nonce_payload;
+		
+		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
+			NONCE_SIZE, &this->nonce_i) != SUCCESS)
+		{
+			return FAILED;
+		}
+		nonce_payload = nonce_payload_create();
+		nonce_payload->set_nonce(nonce_payload, this->nonce_i);
+		request->add_payload(request, (payload_t*)nonce_payload);
 	}
 	
 	{	/* build TSi payload */
 		linked_list_t *ts_list;
 		ts_payload_t *ts_payload;
-	
+		
 		ts_list = this->policy->get_my_traffic_selectors(this->policy);
 		ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_list);
-		
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
 	
 	{	/* build TSr payload */
 		linked_list_t *ts_list;
 		ts_payload_t *ts_payload;
-	
+		
 		ts_list = this->policy->get_other_traffic_selectors(this->policy);
 		ts_payload = ts_payload_create_from_traffic_selectors(FALSE, ts_list);
-		
 		request->add_payload(request, (payload_t*)ts_payload);
+	}
+	
+	if (this->rekeyed_sa)
+	{	/* add REKEY_SA notify if we are rekeying */
+		notify_payload_t *notify;
+		protocol_id_t protocol;
+		
+		protocol = this->rekeyed_sa->get_protocol(this->rekeyed_sa);
+		notify = notify_payload_create_from_protocol_and_type(protocol, REKEY_SA);
+		notify->set_spi(notify, this->rekeyed_sa->get_spi(this->rekeyed_sa, TRUE));
+		request->add_payload(request, (payload_t*)notify);
+		
+		/* and mark sa with rekeying-in-progress */
+		this->rekeyed_sa->set_rekeyed(this->rekeyed_sa);
 	}
 	
 	return SUCCESS;
@@ -300,7 +259,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 /**
  * Handle all kind of notifys
  */
-static status_t process_notifys(private_ike_auth_t *this, notify_payload_t *notify_payload)
+static status_t process_notifys(private_create_child_sa_t *this, notify_payload_t *notify_payload)
 {
 	notify_type_t notify_type = notify_payload->get_notify_type(notify_payload);
 	
@@ -309,26 +268,42 @@ static status_t process_notifys(private_ike_auth_t *this, notify_payload_t *noti
 
 	switch (notify_type)
 	{
-		/* these notifys are not critical. no child_sa is built, but IKE stays alive */
 		case SINGLE_PAIR_REQUIRED:
 		{
 			this->logger->log(this->logger, AUDIT, 
 							  "received a SINGLE_PAIR_REQUIRED notify");
-			this->build_child = FALSE;
-			return SUCCESS;
+			return FAILED;
 		}
 		case TS_UNACCEPTABLE:
 		{
 			this->logger->log(this->logger, CONTROL, 
 							  "received TS_UNACCEPTABLE notify");
-			this->build_child = FALSE;
-			return SUCCESS;
+			return FAILED;
 		}
 		case NO_PROPOSAL_CHOSEN:
 		{
-			this->logger->log(this->logger, CONTROL, 
+			this->logger->log(this->logger, CONTROL,
 							  "received NO_PROPOSAL_CHOSEN notify");
-			this->build_child = FALSE;
+			return FAILED;
+		}
+		case REKEY_SA:
+		{
+			u_int32_t spi;
+			protocol_id_t protocol;
+			
+			protocol = notify_payload->get_protocol_id(notify_payload);
+			switch (protocol)
+			{
+				case PROTO_AH:
+				case PROTO_ESP:
+					spi = notify_payload->get_spi(notify_payload);
+					this->rekeyed_sa = this->ike_sa->get_child_sa(this->ike_sa, 
+																  protocol, spi,
+																  FALSE);
+					break;
+				default:
+					break;
+			}
 			return SUCCESS;
 		}
 		default:
@@ -339,7 +314,7 @@ static status_t process_notifys(private_ike_auth_t *this, notify_payload_t *noti
 								  "received %s notify error (%d), deleting IKE_SA",
 								  mapping_find(notify_type_m, notify_type),
 								  notify_type);
-				return DESTROY_ME;	
+				return FAILED;	
 			}
 			else
 			{
@@ -378,48 +353,9 @@ static void build_notify(notify_type_t type, message_t *message, bool flush_mess
 }
 
 /**
- * Import a certificate from a cert payload
- */
-static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_payload)
-{
-	bool found;
-	x509_t *cert;
-	cert_encoding_t encoding;
-	
-	encoding = cert_payload->get_cert_encoding(cert_payload);
-	if (encoding != CERT_X509_SIGNATURE)
-	{
-		this->logger->log(this->logger, CONTROL, 
-						  "certificate payload %s not supported, ignored",
-						  enum_name(&cert_encoding_names, encoding));
-		return;
-	}
-	cert = x509_create_from_chunk(cert_payload->get_data_clone(cert_payload));
-	
-	if (charon->credentials->verify(charon->credentials, cert, &found))
-	{
-		this->logger->log(this->logger, CONTROL|LEVEL1, 
-						  "end entity certificate is trusted");
-		if (found)
-		{
-			cert->destroy(cert);
-		}
-		else
-		{
-			cert = charon->credentials->add_end_certificate(charon->credentials, cert);
-		}
-	}
-	else
-	{
-		this->logger->log(this->logger, ERROR, 
-						  "end entity certificate is not trusted");
-	}
-}
-
-/**
  * Install a CHILD_SA for usage
  */
-static status_t install_child_sa(private_ike_auth_t *this, bool initiator)
+static status_t install_child_sa(private_create_child_sa_t *this, bool initiator)
 {
 	prf_plus_t *prf_plus;
 	chunk_t seed;
@@ -481,22 +417,17 @@ static void destroy_ts_list(linked_list_t *list)
 /**
  * Implementation of transaction_t.get_response.
  */
-static status_t get_response(private_ike_auth_t *this, message_t *request, 
+static status_t get_response(private_create_child_sa_t *this, message_t *request, 
 							 message_t **result, transaction_t **next)
 {
 	host_t *me, *other;
-	identification_t *my_id, *other_id;
 	message_t *response;
 	status_t status;
 	iterator_t *payloads;
-	id_payload_t *idi_request = NULL;
-	id_payload_t *idr_request = NULL;
-	auth_payload_t *auth_request = NULL;
-	cert_payload_t *cert_request = NULL;
 	sa_payload_t *sa_request = NULL;
+	nonce_payload_t *nonce_request = NULL;
 	ts_payload_t *tsi_request = NULL;
 	ts_payload_t *tsr_request = NULL;
-	id_payload_t *idr_response;
 	
 	/* check if we already have built a response (retransmission) */
 	if (this->message)
@@ -508,12 +439,13 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	this->connection = this->ike_sa->get_connection(this->ike_sa);
 	me = this->connection->get_my_host(this->connection);
 	other = this->connection->get_other_host(this->connection);
+	this->policy = this->ike_sa->get_policy(this->ike_sa);
 	
 	/* set up response */
 	response = message_create();
 	response->set_source(response, me->clone(me));
 	response->set_destination(response, other->clone(other));
-	response->set_exchange_type(response, IKE_AUTH);
+	response->set_exchange_type(response, CREATE_CHILD_SA);
 	response->set_request(response, FALSE);
 	response->set_message_id(response, this->message_id);
 	response->set_ike_sa_id(response, this->ike_sa->get_id(this->ike_sa));
@@ -521,11 +453,11 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	*result = response;
 	
 	/* check message type */
-	if (request->get_exchange_type(request) != IKE_AUTH)
+	if (request->get_exchange_type(request) != CREATE_CHILD_SA)
 	{
 		this->logger->log(this->logger, ERROR,
-						  "IKE_AUTH response of invalid type, deleting IKE_SA");
-		return DESTROY_ME;
+						  "CREATE_CHILD_SA response of invalid type, aborted");
+		return FAILED;
 	}
 	
 	/* Iterate over all payloads. */
@@ -536,20 +468,11 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		payloads->current(payloads, (void**)&payload);
 		switch (payload->get_type(payload))
 		{
-			case ID_INITIATOR:
-				idi_request = (id_payload_t*)payload;
-				break;
-			case ID_RESPONDER:
-				idr_request = (id_payload_t*)payload;
-				break;
-			case AUTHENTICATION:
-				auth_request = (auth_payload_t*)payload;
-				break;
-			case CERTIFICATE:
-				cert_request = (cert_payload_t*)payload;
-				break;
 			case SECURITY_ASSOCIATION:
 				sa_request = (sa_payload_t*)payload;
+				break;
+			case NONCE:
+				nonce_request = (nonce_payload_t*)payload;
 				break;
 			case TRAFFIC_SELECTOR_INITIATOR:
 				tsi_request = (ts_payload_t*)payload;
@@ -560,16 +483,10 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			case NOTIFY:
 			{
 				status = process_notifys(this, (notify_payload_t*)payload);
-				if (status == FAILED)
+				if (status != SUCCESS)
 				{
 					payloads->destroy(payloads);
-					/* we return SUCCESS, returned FAILED means do next transaction */
-					return SUCCESS;
-				}
-				if (status == DESTROY_ME)
-				{
-					payloads->destroy(payloads);
-					return DESTROY_ME;
+					return status;
 				}
 				break;
 			}
@@ -585,103 +502,27 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	payloads->destroy(payloads);
 	
 	/* check if we have all payloads */
-	if (!(idi_request && auth_request && sa_request && tsi_request && tsr_request))
+	if (!(sa_request && nonce_request && tsi_request && tsr_request))
 	{
 		build_notify(INVALID_SYNTAX, response, TRUE);
 		this->logger->log(this->logger, AUDIT, 
-						  "request message incomplete, deleting IKE_SA");
-		return DESTROY_ME;
+						  "request message incomplete, no CHILD_SA created");
+		return FAILED;
 	}
 	
-	{	/* process ID payload */
-		other_id = idi_request->get_identification(idi_request);
-		if (idr_request)
-		{
-			my_id = idr_request->get_identification(idr_request);
-		}
-		else
-		{
-			my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
-		}
+	{	/* process nonce payload */
+		nonce_payload_t *nonce_response;
 		
-		/* get policy from store */
-		this->policy = charon->policies->get_policy_by_ids(charon->policies, my_id, other_id);
-		if (this->policy == NULL)
+		this->nonce_i = nonce_request->get_nonce(nonce_request);
+		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
+			NONCE_SIZE, &this->nonce_r) != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT,
-							  "we don't have a policy for IDs %s - %s, deleting IKE_SA", 
-							  my_id->get_string(my_id), other_id->get_string(other_id));
-			my_id->destroy(my_id);
-			other_id->destroy(other_id);
-			build_notify(AUTHENTICATION_FAILED, response, TRUE);
-			return DESTROY_ME;
+			build_notify(NO_PROPOSAL_CHOSEN, response, TRUE);
+			return FAILED;
 		}
-		my_id->destroy(my_id);
-		other_id->destroy(other_id);
-		
-		/* get my id from policy, which must contain a fully qualified valid id */
-		my_id = this->policy->get_my_id(this->policy);
-		
-		/* update others traffic selectors with actually used address */
-		this->policy->update_my_ts(this->policy, me);
-		this->policy->update_other_ts(this->policy, other);
-		
-		this->ike_sa->set_policy(this->ike_sa, this->policy);
-		idr_response = id_payload_create_from_identification(FALSE, my_id);
-		response->add_payload(response, (payload_t*)idr_response);
-	}
-	
-	if (this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
-	{	/* build certificate payload */
-		x509_t *cert;
-		cert_payload_t *cert_payload;
-		
-		cert = charon->credentials->get_certificate(charon->credentials, my_id);
-		if (cert == NULL)
-		{
-			this->logger->log(this->logger, ERROR,
-							  "could not find my certificate, cert payload ommited");
-		}
-		cert_payload = cert_payload_create_from_x509(cert);
-		response->add_payload(response, (payload_t *)cert_payload);
-	}
-	
-	if (cert_request)
-	{	/* process certificate payload */
-		import_certificate(this, cert_request);
-	}
-	
-	{	/* process auth payload */
-		authenticator_t *authenticator;
-		auth_payload_t *auth_response;
-		status_t status;
-	
-		authenticator = authenticator_create(this->ike_sa);
-		status = authenticator->verify_auth_data(authenticator, auth_request,
-												this->init_request,
-												this->nonce_r, idi_request,
-												TRUE);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, AUDIT, 
-							  "authentication failed, deleting IKE_SA");
-			build_notify(AUTHENTICATION_FAILED, response, TRUE);
-			authenticator->destroy(authenticator);
-			return DESTROY_ME;
-		}
-		status = authenticator->compute_auth_data(authenticator, &auth_response,
-												  this->init_response,
-												  this->nonce_i, idr_response,
-												  FALSE);
-		authenticator->destroy(authenticator);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, AUDIT, 
-							  "authentication data generation failed, deleting IKE_SA");
-			build_notify(AUTHENTICATION_FAILED, response, TRUE);
-			return DESTROY_ME;
-		}
-		response->add_payload(response, (payload_t*)auth_response);
+		nonce_response = nonce_payload_create();
+		nonce_response->set_nonce(nonce_response, this->nonce_r);
+		response->add_payload(response, (payload_t *)nonce_response);
 	}
 	
 	{	/* process traffic selectors for other */
@@ -704,9 +545,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		bool use_natt;
 		u_int32_t soft_lifetime, hard_lifetime;
 		
-		/* prepare reply */
 		sa_response = sa_payload_create();
-		
 		/* get proposals from request, and select one with ours */
 		proposal_list = sa_request->get_proposals(sa_request);
 		this->logger->log(this->logger, CONTROL|LEVEL1, "selecting proposals:");
@@ -723,29 +562,37 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		{
 			this->logger->log(this->logger, AUDIT, 
 							  "CHILD_SA proposals unacceptable, adding NO_PROPOSAL_CHOSEN notify");
-			build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
+			build_notify(NO_PROPOSAL_CHOSEN, response, TRUE);
+			return FAILED;
 		}
 		/* do we have traffic selectors? */
 		else if (this->tsi->get_count(this->tsi) == 0 || this->tsr->get_count(this->tsr) == 0)
 		{
 			this->logger->log(this->logger, AUDIT,
 							  "CHILD_SA traffic selectors unacceptable, adding TS_UNACCEPTABLE notify");
-			build_notify(TS_UNACCEPTABLE, response, FALSE);
+			build_notify(TS_UNACCEPTABLE, response, TRUE);
+			return FAILED;
 		}
 		else
-		{
-			/* create child sa */
+		{	/* create child sa */
+			u_int32_t reqid = 0;
+		
+			if (this->rekeyed_sa)
+			{
+				reqid = this->rekeyed_sa->get_reqid(this->rekeyed_sa);
+			}
 			soft_lifetime = this->policy->get_soft_lifetime(this->policy);
 			hard_lifetime = this->policy->get_hard_lifetime(this->policy);
 			use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-			this->child_sa = child_sa_create(0, me, other, 
-											 soft_lifetime, hard_lifetime, 
+			this->child_sa = child_sa_create(reqid, me, other,
+											 soft_lifetime, hard_lifetime,
 											 use_natt);
 			if (install_child_sa(this, FALSE) != SUCCESS)
 			{
 				this->logger->log(this->logger, ERROR,
 								  "installing CHILD_SA failed, adding NO_PROPOSAL_CHOSEN notify");
-				build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
+				build_notify(NO_PROPOSAL_CHOSEN, response, TRUE);
+				return FAILED;
 			}
 			/* add proposal to sa payload */
 			sa_response->add_proposal(sa_response, this->proposal);
@@ -758,35 +605,36 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		ts_response = ts_payload_create_from_traffic_selectors(FALSE, this->tsr);
 		response->add_payload(response, (payload_t*)ts_response);
 	}
-	/* set established state */
-	this->ike_sa->set_state(this->ike_sa, SA_ESTABLISHED);
+	/* CHILD_SA successfully created. Now we must check if it rekeys an old one, 
+	 * and if so, mark the old as rekeyed. It will get deleted from the other
+	 * peer. */
+	if (this->rekeyed_sa)
+	{
+		this->rekeyed_sa->set_rekeyed(this->rekeyed_sa);
+	}
 	return SUCCESS;
 }
-
 
 /**
  * Implementation of transaction_t.conclude
  */
-static status_t conclude(private_ike_auth_t *this, message_t *response, 
-						 transaction_t **transaction)
+static status_t conclude(private_create_child_sa_t *this, message_t *response, 
+						 transaction_t **next)
 {
 	iterator_t *payloads;
 	host_t *me, *other;
-	identification_t *other_id;
+	sa_payload_t *sa_payload = NULL;
+	nonce_payload_t *nonce_payload = NULL;
 	ts_payload_t *tsi_payload = NULL;
 	ts_payload_t *tsr_payload = NULL;
-	id_payload_t *idr_payload = NULL;
-	cert_payload_t *cert_payload = NULL;
-	auth_payload_t *auth_payload = NULL;
-	sa_payload_t *sa_payload = NULL;
 	status_t status;
 	
 	/* check message type */
-	if (response->get_exchange_type(response) != IKE_AUTH)
+	if (response->get_exchange_type(response) != CREATE_CHILD_SA)
 	{
 		this->logger->log(this->logger, ERROR,
-						  "IKE_AUTH response of invalid type, deleting IKE_SA");
-		return DESTROY_ME;
+						  "CREATE_CHILD_SA response of invalid type, aborting");
+		return FAILED;
 	}
 	
 	me = this->connection->get_my_host(this->connection);
@@ -795,23 +643,16 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	/* Iterate over all payloads to collect them */
 	payloads = response->get_payload_iterator(response);
 	while (payloads->has_next(payloads))
-	{ 
+	{
 		payload_t *payload;
 		payloads->current(payloads, (void**)&payload);
-		
 		switch (payload->get_type(payload))
 		{
-			case ID_RESPONDER:
-				idr_payload = (id_payload_t*)payload;
-				break;
-			case AUTHENTICATION:
-				auth_payload = (auth_payload_t*)payload;
-				break;
-			case CERTIFICATE:
-				cert_payload = (cert_payload_t*)payload;
-				break;
 			case SECURITY_ASSOCIATION:
 				sa_payload = (sa_payload_t*)payload;
+				break;
+			case NONCE:
+				nonce_payload = (nonce_payload_t*)payload;
 				break;
 			case TRAFFIC_SELECTOR_INITIATOR:
 				tsi_payload = (ts_payload_t*)payload;
@@ -822,13 +663,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 			case NOTIFY:
 			{
 				status = process_notifys(this, (notify_payload_t*)payload);
-				if (status == FAILED)
-				{
-					payloads->destroy(payloads);
-					/* we return SUCCESS, returned FAILED means do next transaction */
-					return SUCCESS;
-				}
-				if (status == DESTROY_ME)
+				if (status != SUCCESS)
 				{
 					payloads->destroy(payloads);
 					return status;
@@ -837,7 +672,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 			}
 			default:
 			{
-				this->logger->log(this->logger, CONTROL, "ignoring payload %s (%d)",
+				this->logger->log(this->logger, ERROR, "ignoring %s payload (%d)", 
 								  mapping_find(payload_type_m, payload->get_type(payload)),
 								  payload->get_type(payload));
 				break;
@@ -846,51 +681,14 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	}
 	payloads->destroy(payloads);
 	
-	if (!(idr_payload && auth_payload && sa_payload && tsi_payload && tsr_payload))
+	if (!(sa_payload && nonce_payload && tsi_payload && tsr_payload))
 	{
-		this->logger->log(this->logger, AUDIT, "response message incomplete, deleting IKE_SA");
-		return DESTROY_ME;
+		this->logger->log(this->logger, AUDIT, "response message incomplete, no CHILD_SA built");
+		return FAILED;
 	}
 	
-	{	/* process idr payload */
-		identification_t *configured_other_id;
-		
-		other_id = idr_payload->get_identification(idr_payload);
-		configured_other_id = this->policy->get_other_id(this->policy);
-		
-		if (!other_id->belongs_to(other_id, configured_other_id))
-		{
-			other_id->destroy(other_id);
-			this->logger->log(this->logger, AUDIT,
-							  "other peer uses unacceptable ID (%s, excepted %s), deleting IKE_SA",
-							  other_id->get_string(other_id),
-							  configured_other_id->get_string(configured_other_id));
-			return DESTROY_ME;
-		}
-		
-		this->policy->update_other_id(this->policy, other_id);
-	}
-	
-	if (cert_payload)
-	{	/* process cert payload */
-		import_certificate(this, cert_payload);
-	}
-	
-	{	/* authenticate peer */
-		authenticator_t *authenticator;
-		status_t status;
-		
-		authenticator = authenticator_create(this->ike_sa);
-		status = authenticator->verify_auth_data(authenticator, auth_payload,
-				this->init_response,
-				this->nonce_i, idr_payload,
-				FALSE);
-		authenticator->destroy(authenticator);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, AUDIT, "authentication failed, deleting IKE_SA");
-			return DESTROY_ME;	
-		}
+	{	/* process NONCE payload  */
+		this->nonce_r = nonce_payload->get_nonce(nonce_payload);
 	}
 	
 	{	/* process traffic selectors for us */
@@ -922,30 +720,36 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		/* everything fine to create CHILD? */
 		if (this->proposal == NULL ||
 			this->tsi->get_count(this->tsi) == 0 ||
-			this->tsr->get_count(this->tsr) == 0 ||
-			!this->build_child)
+			this->tsr->get_count(this->tsr) == 0)
 		{
 			this->logger->log(this->logger, AUDIT,
 							  "CHILD_SA creation failed");
+			return FAILED;
 		}
-		else
+		if (install_child_sa(this, TRUE) != SUCCESS)
 		{
-			if (install_child_sa(this, TRUE) != SUCCESS)
-			{
-				this->logger->log(this->logger, ERROR,
-								  "installing CHILD_SA failed, no CHILD_SA built");
-			}
+			this->logger->log(this->logger, ERROR,
+							"installing CHILD_SA failed, no CHILD_SA built");
+			return FAILED;
 		}
 	}
-	/* set new state */
-	this->ike_sa->set_state(this->ike_sa, SA_ESTABLISHED);
+	/* CHILD_SA successfully created. If we have rekeyed an old one, delete it */
+	if (this->rekeyed_sa)
+	{
+		delete_child_sa_t *delete_child_sa;
+		
+		delete_child_sa = delete_child_sa_create(this->ike_sa, 
+												 this->message_id + 1);
+		delete_child_sa->set_child_sa(delete_child_sa, this->rekeyed_sa);
+		*next = (transaction_t*)delete_child_sa;
+	}
 	return SUCCESS;
 }
 
 /**
  * implements transaction_t.destroy
  */
-static void destroy(private_ike_auth_t *this)
+static void destroy(private_create_child_sa_t *this)
 {
 	if (this->message)
 	{
@@ -963,18 +767,17 @@ static void destroy(private_ike_auth_t *this)
 	destroy_ts_list(this->tsr);
 	chunk_free(&this->nonce_i);
 	chunk_free(&this->nonce_r);
-	chunk_free(&this->init_request);
-	chunk_free(&this->init_response);
+	this->randomizer->destroy(this->randomizer);
 	free(this);
 }
 
 /*
  * Described in header.
  */
-ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, u_int32_t message_id)
+create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa, u_int32_t message_id)
 {
-	private_ike_auth_t *this = malloc_thing(private_ike_auth_t);
-
+	private_create_child_sa_t *this = malloc_thing(private_create_child_sa_t);
+	
 	/* transaction interface functions */
 	this->public.transaction.get_request = (status_t(*)(transaction_t*,message_t**))get_request;
 	this->public.transaction.get_response = (status_t(*)(transaction_t*,message_t*,message_t**,transaction_t**))get_response;
@@ -984,24 +787,23 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, u_int32_t message_id)
 	this->public.transaction.destroy = (void(*)(transaction_t*))destroy;
 	
 	/* public functions */
-	this->public.set_nonces = (void(*)(ike_auth_t*,chunk_t,chunk_t))set_nonces;
-	this->public.set_init_messages = (void(*)(ike_auth_t*,chunk_t,chunk_t))set_init_messages;
+	this->public.rekeys_child = (void(*)(create_child_sa_t*,child_sa_t*))rekeys_child;
 	
 	/* private data */
 	this->ike_sa = ike_sa;
 	this->message_id = message_id;
 	this->message = NULL;
 	this->requested = 0;
+	this->rekey_spi = 0;
 	this->nonce_i = CHUNK_INITIALIZER;
 	this->nonce_r = CHUNK_INITIALIZER;
-	this->init_request = CHUNK_INITIALIZER;
-	this->init_response = CHUNK_INITIALIZER;
 	this->child_sa = NULL;
+	this->rekeyed_sa = NULL;
 	this->proposal = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
-	this->build_child = TRUE;
+	this->randomizer = randomizer_create();
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
-
+	
 	return &this->public;
 }

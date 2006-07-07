@@ -26,6 +26,7 @@
 #include <types.h>
 #include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
+#include <config/proposal.h>
 
 
 typedef struct rekey_child_sa_job_t rekey_child_sa_job_t;
@@ -50,17 +51,15 @@ struct rekey_child_sa_job_t {
 /**
  * @brief Creates a job of type REKEY_CHILD_SA.
  *
- * To find the targeted CHILD_SA, the uniqe reqid used in 
- * the kernel is used. As a CHILD_SA may contain multiple SAs
- * (AH and/or ESP), we must provide an additional spi to
- * know which IPsec SA to rekey.
+ * The CHILD_SA is identified by its protocol (AH/ESP) and its
+ * inbound SPI.
  *
- * @param reqid		reqid CHILD_SA to rekey
- * @param spi		security parameter index of the SA to rekey
+ * @param protocol	protocol of the CHILD_SA
+ * @param spi		security parameter index of the CHILD_SA
  * @return			rekey_child_sa_job_t object
  * 
  * @ingroup jobs
  */
-rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid);
+rekey_child_sa_job_t *rekey_child_sa_job_create(protocol_id_t protocol, u_int32_t spi);
 
 #endif /* REKEY_CHILD_SA_JOB_H_ */

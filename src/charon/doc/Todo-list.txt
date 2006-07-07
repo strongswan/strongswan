@@ -61,3 +61,5 @@
 
 - replace state machine with something more transaction oriented
 - find existing IKE_SA on CHILD_SA initiation
+
+- configure flag which allows to ommit vendor id in pluto

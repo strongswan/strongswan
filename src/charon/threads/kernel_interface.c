@@ -921,29 +921,28 @@ static void receive_messages(private_kernel_interface_t *this)
 		else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
 		{
 			job_t *job;
+			protocol_id_t protocol;
+			u_int32_t spi;
 			struct xfrm_user_expire *expire;
+			
+			expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
+			protocol = expire->state.id.proto == KERNEL_ESP ?
+						PROTO_ESP : PROTO_AH;
+			spi = expire->state.id.spi;
+			
 			this->logger->log(this->logger, CONTROL|LEVEL1,
 							  "Received a XFRM_MSG_EXPIRE");
-			expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
-			this->logger->log(this->logger, CONTROL|LEVEL0,
-							  "creating %s job for CHILD_SA with reqid %d",
+			this->logger->log(this->logger, CONTROL,
+							  "creating %s job for %s CHILD_SA 0x%x",
 							  expire->hard ? "delete" : "rekey",
-							  expire->state.reqid);
+							  mapping_find(protocol_id_m, protocol), ntohl(spi));
 			if (expire->hard)
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL0,
-								  "creating delete job for CHILD_SA with reqid %d",
-								  expire->state.reqid);
-				job = (job_t*)delete_child_sa_job_create(
-						expire->state.reqid);
+				job = (job_t*)delete_child_sa_job_create(protocol, spi);
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL0,
-								  "creating rekey job for CHILD_SA with reqid %d",
-								  expire->state.reqid);
-				job = (job_t*)rekey_child_sa_job_create(
-						expire->state.reqid);
+				job = (job_t*)rekey_child_sa_job_create(protocol, spi);
 			}
 			charon->job_queue->add(charon->job_queue, job);
 		}

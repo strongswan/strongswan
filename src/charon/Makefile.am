@@ -11,6 +11,8 @@ config/proposal.c config/proposal.h config/configuration.c config/configuration.
 sa/transactions/transaction.h sa/transactions/transaction.c \
 sa/transactions/ike_sa_init.h sa/transactions/ike_sa_init.c \
 sa/transactions/ike_auth.h sa/transactions/ike_auth.c \
+sa/transactions/create_child_sa.h sa/transactions/create_child_sa.c \
+sa/transactions/delete_child_sa.h sa/transactions/delete_child_sa.c \
 sa/transactions/dead_peer_detection.h sa/transactions/dead_peer_detection.c \
 sa/transactions/delete_ike_sa.h sa/transactions/delete_ike_sa.c \
 sa/child_sa.c sa/child_sa.h sa/ike_sa.c sa/ike_sa.h sa/ike_sa_manager.c sa/ike_sa_manager.h \
