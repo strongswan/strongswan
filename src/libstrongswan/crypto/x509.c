@@ -1097,7 +1097,8 @@ char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
 	{
 		return strict? "fatal (expired)" : "warning (expired)";
 	}
-/*	{
+	
+	{
 		static char buf[35];
 		const char* unit = "second";
 
@@ -1120,11 +1121,10 @@ char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
 			unit = "minute";
 		}
 		snprintf(buf, sizeof(buf), "warning (expires in %d %s%s)", time_left, unit, (time_left == 1)?"":"s");
-} */
-	/* TODO: check_expiry from pluto is a hack: it returns a buffer to its stack.
-	 * this is dangerous and may cause crashes! Reimplement this another way!!!
-	*/
-	return "warning (expires in under 30days)";
+		
+		/* TODO: This is not thread save and may result in corrupted strings. Rewrite this! */
+		return buf;
+	}
 }
 
 /**
