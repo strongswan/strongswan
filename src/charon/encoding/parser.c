@@ -583,9 +583,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 {
 	payload_t *pld;
 	void *output;
-	size_t rule_count, payload_length, spi_size, attribute_length;
-	u_int16_t ts_type;
-	bool attribute_format;
+	size_t rule_count, payload_length = 0, spi_size = 0, attribute_length = 0;
+	u_int16_t ts_type = 0;
+	bool attribute_format = FALSE;
 	int rule_number;
 	encoding_rule_t *rule;
 	
