@@ -1742,24 +1742,24 @@ main(int argc, char **argv)
     || !pack_str(&msg.left.ca)		/* string  4 */
     || !pack_str(&msg.left.groups)	/* string  5 */
     || !pack_str(&msg.left.updown)	/* string  6 */
-    || !pack_str(&msg.left.virt)
-    || !pack_str(&msg.right.id)		/* string  7 */
-    || !pack_str(&msg.right.cert)	/* string  8 */
-    || !pack_str(&msg.right.ca)		/* string  9 */
-    || !pack_str(&msg.right.groups)	/* string 10 */
-    || !pack_str(&msg.right.updown)	/* string 11 */
-    || !pack_str(&msg.right.virt)
-    || !pack_str(&msg.keyid)		/* string 12 */
-    || !pack_str(&msg.myid)		/* string 13 */
-    || !pack_str(&msg.cacert)		/* string 14 */
-    || !pack_str(&msg.ldaphost)		/* string 15 */
-    || !pack_str(&msg.ldapbase)		/* string 16 */
-    || !pack_str(&msg.crluri)		/* string 17 */
-    || !pack_str(&msg.crluri2)		/* string 18 */
-    || !pack_str(&msg.ocspuri)		/* string 19 */
-    || !pack_str(&msg.ike)		/* string 20 */
-    || !pack_str(&msg.esp)		/* string 21 */
-    || !pack_str(&msg.sc_data)		/* string 22 */
+    || !pack_str(&msg.left.virt)	/* string  7 */
+    || !pack_str(&msg.right.id)		/* string  8 */
+    || !pack_str(&msg.right.cert)	/* string  9 */
+    || !pack_str(&msg.right.ca)		/* string 10 */
+    || !pack_str(&msg.right.groups)	/* string 11 */
+    || !pack_str(&msg.right.updown)	/* string 12 */
+    || !pack_str(&msg.right.virt)	/* string 13 */
+    || !pack_str(&msg.keyid)		/* string 14 */
+    || !pack_str(&msg.myid)		/* string 15 */
+    || !pack_str(&msg.cacert)		/* string 16 */
+    || !pack_str(&msg.ldaphost)		/* string 17 */
+    || !pack_str(&msg.ldapbase)		/* string 18 */
+    || !pack_str(&msg.crluri)		/* string 19 */
+    || !pack_str(&msg.crluri2)		/* string 20 */
+    || !pack_str(&msg.ocspuri)		/* string 21 */
+    || !pack_str(&msg.ike)		/* string 22 */
+    || !pack_str(&msg.esp)		/* string 23 */
+    || !pack_str(&msg.sc_data)		/* string 24 */
     || str_roof - next_str < (ptrdiff_t)msg.keyval.len)    /* chunk (sort of string 5) */
 	diag("too many bytes of strings to fit in message to pluto");
 
