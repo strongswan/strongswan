@@ -7,12 +7,9 @@
 
 /*
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
- * Copyright (C) 1998-2002  D. Hugh Redelmeier.
- * Copyright (C) 1997 Angelos D. Keromytis.
- *
- * Some parts of interface lookup code from pluto.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

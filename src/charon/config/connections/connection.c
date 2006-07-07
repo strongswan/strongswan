@@ -1,12 +1,13 @@
 /**
  * @file connection.c
- * 
+ *
  * @brief Implementation of connection_t.
- *  
+ *
  */
 
 /*
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it

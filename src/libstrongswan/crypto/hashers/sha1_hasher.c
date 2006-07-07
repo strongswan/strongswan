@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  * 
  * Ported from Steve Reid's <steve@edmweb.com> implementation

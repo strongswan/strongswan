@@ -7,7 +7,8 @@
  
  /*
  * Copyright (C) 2001 Dr B. R. Gladman <brg@gladman.uk.net>
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it

@@ -1,8 +1,8 @@
 /**
  * @file local_connection_store.c
- * 
+ *
  * @brief Implementation of local_connection_store_t.
- *  
+ *
  */
 
 /*

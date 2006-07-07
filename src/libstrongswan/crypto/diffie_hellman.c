@@ -8,7 +8,8 @@
 /*
  * Copyright (C) 1998-2002  D. Hugh Redelmeier.
  * Copyright (C) 1999, 2000, 2001  Henry Spencer.
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it

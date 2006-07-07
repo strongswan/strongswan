@@ -6,7 +6,8 @@
  */
 
 /*
- * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2005-2006 Martin Willi
+ * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
  * Copyright (C) 1998, 1999  D. Hugh Redelmeier. (Endian stuff)
  * 
