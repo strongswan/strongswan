@@ -89,10 +89,8 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 | 1<<SADB_EXT_IDENTITY_SRC
 | 1<<SADB_EXT_IDENTITY_DST
 | 1<<SADB_EXT_SENSITIVITY
-#ifdef NAT_TRAVERSAL
 | 1<<SADB_X_EXT_NAT_T_SPORT
 | 1<<SADB_X_EXT_NAT_T_DPORT
-#endif
 ,
 /* SADB_ADD */
 1<<SADB_EXT_RESERVED
@@ -107,12 +105,10 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 | 1<<SADB_EXT_IDENTITY_SRC
 | 1<<SADB_EXT_IDENTITY_DST
 | 1<<SADB_EXT_SENSITIVITY
-#ifdef NAT_TRAVERSAL
 | 1<<SADB_X_EXT_NAT_T_TYPE
 | 1<<SADB_X_EXT_NAT_T_SPORT
 | 1<<SADB_X_EXT_NAT_T_DPORT
 | 1<<SADB_X_EXT_NAT_T_OA
-#endif
 ,
 /* SADB_DELETE */
 1<<SADB_EXT_RESERVED
@@ -229,7 +225,6 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 /* SADB_X_DEBUG */
 1<<SADB_EXT_RESERVED
 | 1<<SADB_X_EXT_DEBUG
-#ifdef NAT_TRAVERSAL
 ,
 /* SADB_X_NAT_T_NEW_MAPPING */
 1<<SADB_EXT_RESERVED
@@ -238,7 +233,6 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 | 1<<SADB_EXT_ADDRESS_DST
 | 1<<SADB_X_EXT_NAT_T_SPORT
 | 1<<SADB_X_EXT_NAT_T_DPORT
-#endif
 },
 
 /* REQUIRED IN */
@@ -374,7 +368,6 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 /* SADB_X_DEBUG */
 1<<SADB_EXT_RESERVED
 | 1<<SADB_X_EXT_DEBUG
-#ifdef NAT_TRAVERSAL
 ,
 /* SADB_X_NAT_T_NEW_MAPPING */
 1<<SADB_EXT_RESERVED
@@ -383,7 +376,6 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 | 1<<SADB_EXT_ADDRESS_DST
 | 1<<SADB_X_EXT_NAT_T_SPORT
 | 1<<SADB_X_EXT_NAT_T_DPORT
-#endif
 }
 
 },
@@ -425,12 +417,10 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 | 1<<SADB_EXT_IDENTITY_SRC
 | 1<<SADB_EXT_IDENTITY_DST
 | 1<<SADB_EXT_SENSITIVITY
-#ifdef NAT_TRAVERSAL
 | 1<<SADB_X_EXT_NAT_T_TYPE
 | 1<<SADB_X_EXT_NAT_T_SPORT
 | 1<<SADB_X_EXT_NAT_T_DPORT
 | 1<<SADB_X_EXT_NAT_T_OA
-#endif
 ,
 /* SADB_DELETE */
 1<<SADB_EXT_RESERVED
@@ -572,7 +562,6 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 /* SADB_X_DEBUG */
 1<<SADB_EXT_RESERVED
 | 1<<SADB_X_EXT_DEBUG
-#ifdef NAT_TRAVERSAL
 ,
 /* SADB_X_NAT_T_NEW_MAPPING */
 1<<SADB_EXT_RESERVED
@@ -581,7 +570,6 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 | 1<<SADB_EXT_ADDRESS_DST
 | 1<<SADB_X_EXT_NAT_T_SPORT
 | 1<<SADB_X_EXT_NAT_T_DPORT
-#endif
 },
 
 /* REQUIRED OUT */
@@ -723,7 +711,6 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 /* SADB_X_DEBUG */
 1<<SADB_EXT_RESERVED
 | 1<<SADB_X_EXT_DEBUG
-#ifdef NAT_TRAVERSAL
 ,
 /* SADB_X_NAT_T_NEW_MAPPING */
 1<<SADB_EXT_RESERVED
@@ -732,7 +719,6 @@ unsigned int extensions_bitmaps[2/*in/out*/][2/*perm/req*/][SADB_MAX + 1/*ext*/]
 | 1<<SADB_EXT_ADDRESS_DST
 | 1<<SADB_X_EXT_NAT_T_SPORT
 | 1<<SADB_X_EXT_NAT_T_DPORT
-#endif
 }
 }
 };

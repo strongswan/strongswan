@@ -75,15 +75,8 @@
 #  define DEBUG_NO_STATIC static
 #endif /* CONFIG_IPSEC_DEBUG */
 
-#ifdef CONFIG_IPSEC_NAT_TRAVERSAL /* KERNEL ifdef */
-#ifndef NAT_TRAVERSAL
-#define NAT_TRAVERSAL
-#endif
-#endif
-#ifdef NAT_TRAVERSAL
 #define ESPINUDP_WITH_NON_IKE   1  /* draft-ietf-ipsec-nat-t-ike-00/01 */
 #define ESPINUDP_WITH_NON_ESP   2  /* draft-ietf-ipsec-nat-t-ike-02    */
-#endif
 
 /*
  * Basic data types for the address-handling functions.

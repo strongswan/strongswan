@@ -454,9 +454,7 @@ pfkey_address_build(struct sadb_ext**	pfkey_ext,
 	case SADB_X_EXT_ADDRESS_DST_FLOW:
 	case SADB_X_EXT_ADDRESS_SRC_MASK:
 	case SADB_X_EXT_ADDRESS_DST_MASK:
-#ifdef NAT_TRAVERSAL
 	case SADB_X_EXT_NAT_T_OA:
-#endif	
 		break;
 	default:
 		DEBUGGING( 
@@ -1164,7 +1162,6 @@ errlab:
 	return error;
 }
 
-#ifdef NAT_TRAVERSAL
 int
 pfkey_x_nat_t_type_build(struct sadb_ext**	pfkey_ext,
 		    uint8_t         type)
@@ -1208,6 +1205,7 @@ pfkey_x_nat_t_type_build(struct sadb_ext**	pfkey_ext,
 errlab:
 	return error;
 }
+
 int
 pfkey_x_nat_t_port_build(struct sadb_ext**	pfkey_ext,
 		    uint16_t         exttype,
@@ -1261,7 +1259,6 @@ pfkey_x_nat_t_port_build(struct sadb_ext**	pfkey_ext,
 errlab:
 	return error;
 }
-#endif
 
 int pfkey_x_protocol_build(struct sadb_ext **pfkey_ext,
 			   uint8_t protocol)

@@ -19,29 +19,25 @@ you leave this credit intact on any copies of this file.
 #define PF_KEY_V2 2
 #define PFKEYV2_REVISION        199806L
 
-#define SADB_RESERVED    0
-#define SADB_GETSPI      1
-#define SADB_UPDATE      2
-#define SADB_ADD         3
-#define SADB_DELETE      4
-#define SADB_GET         5
-#define SADB_ACQUIRE     6
-#define SADB_REGISTER    7
-#define SADB_EXPIRE      8
-#define SADB_FLUSH       9
-#define SADB_DUMP       10
-#define SADB_X_PROMISC  11
-#define SADB_X_PCHANGE  12
-#define SADB_X_GRPSA    13
-#define SADB_X_ADDFLOW	14
-#define SADB_X_DELFLOW	15
-#define SADB_X_DEBUG	16
-#ifdef NAT_TRAVERSAL
-#define SADB_X_NAT_T_NEW_MAPPING  17
-#define SADB_MAX                  17
-#else
-#define SADB_MAX        16
-#endif
+#define SADB_RESERVED             0
+#define SADB_GETSPI               1
+#define SADB_UPDATE               2
+#define SADB_ADD                  3
+#define SADB_DELETE               4
+#define SADB_GET                  5
+#define SADB_ACQUIRE              6
+#define SADB_REGISTER             7
+#define SADB_EXPIRE               8
+#define SADB_FLUSH                9
+#define SADB_DUMP                10
+#define SADB_X_PROMISC           11
+#define SADB_X_PCHANGE           12
+#define SADB_X_GRPSA             13
+#define SADB_X_ADDFLOW           14
+#define SADB_X_DELFLOW           15
+#define SADB_X_DEBUG             16
+#define SADB_X_NAT_T_NEW_MAPPING 17
+#define SADB_MAX                 17
 
 struct sadb_msg {
   uint8_t sadb_msg_version;
@@ -219,7 +215,6 @@ struct sadb_x_debug {
   uint8_t sadb_x_debug_reserved[4];
 };
 
-#ifdef NAT_TRAVERSAL
 struct sadb_x_nat_t_type {
   uint16_t sadb_x_nat_t_type_len;
   uint16_t sadb_x_nat_t_type_exttype;
@@ -232,8 +227,7 @@ struct sadb_x_nat_t_port {
   uint16_t sadb_x_nat_t_port_port;
   uint16_t sadb_x_nat_t_port_reserved;
 };
-#endif
-  
+
 /*
  * A protocol structure for passing through the transport level
  * protocol.  It contains more fields than are actually used/needed
@@ -279,15 +273,11 @@ struct sadb_protocol {
 #define SADB_X_EXT_ADDRESS_DST_MASK   24
 #define SADB_X_EXT_DEBUG              25
 #define SADB_X_EXT_PROTOCOL           26
-#ifdef NAT_TRAVERSAL
 #define SADB_X_EXT_NAT_T_TYPE         27
 #define SADB_X_EXT_NAT_T_SPORT        28
 #define SADB_X_EXT_NAT_T_DPORT        29
 #define SADB_X_EXT_NAT_T_OA           30
 #define SADB_EXT_MAX                  30
-#else
-#define SADB_EXT_MAX                  26
-#endif
 
 /* SADB_X_DELFLOW required over and above SADB_X_SAFLAGS_CLEARFLOW */
 #define SADB_X_EXT_ADDRESS_DELFLOW \

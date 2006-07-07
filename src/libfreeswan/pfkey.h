@@ -242,12 +242,12 @@ pfkey_ident_build(struct sadb_ext**	pfkey_ext,
 		  uint8_t               ident_len,
 		  char*			ident_string);
 
-#ifdef NAT_TRAVERSAL
 #ifdef __KERNEL__
 extern int pfkey_nat_t_new_mapping(struct ipsec_sa *, struct sockaddr *, __u16);
 extern int pfkey_x_nat_t_type_process(struct sadb_ext *pfkey_ext, struct pfkey_extracted_data* extr);
 extern int pfkey_x_nat_t_port_process(struct sadb_ext *pfkey_ext, struct pfkey_extracted_data* extr);
 #endif /* __KERNEL__ */
+
 int
 pfkey_x_nat_t_type_build(struct sadb_ext**  pfkey_ext,
             uint8_t         type);
@@ -255,7 +255,6 @@ int
 pfkey_x_nat_t_port_build(struct sadb_ext**  pfkey_ext,
             uint16_t         exttype,
             uint16_t         port);
-#endif
 
 int
 pfkey_sens_build(struct sadb_ext**	pfkey_ext,
@@ -267,7 +266,8 @@ pfkey_sens_build(struct sadb_ext**	pfkey_ext,
 		 uint8_t		integ_len,
 		 uint64_t*		integ_bitmap);
 
-int pfkey_x_protocol_build(struct sadb_ext **, uint8_t);
+int
+pfkey_x_protocol_build(struct sadb_ext **, uint8_t);
 
 
 int
