@@ -24,7 +24,7 @@ _pluto_adns_SOURCES = adns.c adns.h
 
 INCLUDES = -I$(top_srcdir)/src/libfreeswan -I$(top_srcdir)/src/libcrypto -I$(top_srcdir)/src/whack
 AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
--DDEBUG -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES -DNAT_TRAVERSAL -DVIRTUAL_IP -DPLUTO \
+-DDEBUG -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES -DPLUTO \
 -DVENDORID -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" -DTHREADS -DKLIPS
 pluto_LDADD = $(top_srcdir)/src/libfreeswan/libfreeswan.a $(top_srcdir)/src/libcrypto/libcrypto.a -lgmp -lresolv -lpthread
 _pluto_adns_LDADD = -lresolv $(top_srcdir)/src/libfreeswan/libfreeswan.a

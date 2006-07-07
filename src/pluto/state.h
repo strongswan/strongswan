@@ -201,7 +201,7 @@ struct state
     unsigned int       st_iv_len;
     unsigned int       st_new_iv_len;
     unsigned int       st_ph1_iv_len;
-    
+
     chunk_t            st_enc_key;             /* Oakley Encryption key */
 
     struct event      *st_event;               /* backpointer for certain events */
@@ -212,11 +212,9 @@ struct state
 	bool vars_set;
 	bool started;
     } st_modecfg;
-    
-#ifdef NAT_TRAVERSAL
+
     u_int32_t         nat_traversal;
     ip_address        nat_oa;
-#endif
 
     /* RFC 3706 Dead Peer Detection */
     bool                st_dpd;			/* Peer supports DPD */

@@ -142,9 +142,7 @@
 #include "timer.h"
 #include "whack.h"	/* requires connections.h */
 #include "server.h"
-#ifdef NAT_TRAVERSAL
 #include "nat_traversal.h"
-#endif
 #include "vendor.h"
 #include "modecfg.h"
 
@@ -273,11 +271,7 @@ static const struct state_microcode state_microcode_table[] = {
      */
     { STATE_MAIN_R1, STATE_MAIN_R2
     , SMF_PSK_AUTH | SMF_DS_AUTH | SMF_REPLY
-#ifdef NAT_TRAVERSAL
     , P(KE) | P(NONCE), P(VID) | P(CR) | P(NATD_RFC), PT(KE)
-#else
-    , P(KE) | P(NONCE), P(VID) | P(CR), PT(KE)
-#endif    
     , EVENT_RETRANSMIT, main_inI2_outR2 },
 
     { STATE_MAIN_R1, STATE_UNDEFINED
@@ -302,11 +296,7 @@ static const struct state_microcode state_microcode_table[] = {
      */
     { STATE_MAIN_I2, STATE_MAIN_I3
     , SMF_PSK_AUTH | SMF_DS_AUTH | SMF_INITIATOR | SMF_OUTPUT_ENCRYPTED | SMF_REPLY
-#ifdef NAT_TRAVERSAL
     , P(KE) | P(NONCE), P(VID) | P(CR) | P(NATD_RFC), PT(ID)
-#else
-    , P(KE) | P(NONCE), P(VID) | P(CR), PT(ID)
-#endif    
     , EVENT_RETRANSMIT, main_inR2_outI3 },
 
     { STATE_MAIN_I2, STATE_UNDEFINED
@@ -397,11 +387,7 @@ static const struct state_microcode state_microcode_table[] = {
      */
     { STATE_QUICK_R0, STATE_QUICK_R1
     , SMF_ALL_AUTH | SMF_ENCRYPTED | SMF_REPLY
-#ifdef NAT_TRAVERSAL
     , P(HASH) | P(SA) | P(NONCE), /* P(SA) | */ P(KE) | P(ID) | P(NATOA_RFC), PT(NONE)
-#else
-    , P(HASH) | P(SA) | P(NONCE), /* P(SA) | */ P(KE) | P(ID), PT(NONE)
-#endif
     , EVENT_RETRANSMIT, quick_inI1_outR1 },
 
     /* STATE_QUICK_I1:
@@ -412,11 +398,7 @@ static const struct state_microcode state_microcode_table[] = {
      */
     { STATE_QUICK_I1, STATE_QUICK_I2
     , SMF_ALL_AUTH | SMF_INITIATOR | SMF_ENCRYPTED | SMF_REPLY
-#ifdef NAT_TRAVERSAL
     , P(HASH) | P(SA) | P(NONCE), /* P(SA) | */ P(KE) | P(ID) | P(NATOA_RFC), PT(HASH)
-#else
-    , P(HASH) | P(SA) | P(NONCE), /* P(SA) | */ P(KE) | P(ID), PT(HASH)
-#endif
     , EVENT_SA_REPLACE, quick_inR1_outI2 },
 
     /* STATE_QUICK_R1: HDR*, HASH(3) --> done
@@ -744,7 +726,6 @@ check_msg_errqueue(const struct iface *ifp, short interest)
 		    /* note dirty trick to suppress ~ at start of format
 		     * if we know what state to blame.
 		     */
-#ifdef NAT_TRAVERSAL
 		    if ((packet_len == 1) && (buffer[0] = 0xff)
 #ifdef DEBUG
 			&& ((cur_debugging & DBG_NATT) == 0)
@@ -755,7 +736,6 @@ check_msg_errqueue(const struct iface *ifp, short interest)
 			     */
 		    }
 		    else
-#endif		     
 		    plog((sender != NULL) + "~"
 			"ERROR: asynchronous network error report on %s"
 			"%s"
@@ -793,24 +773,19 @@ check_msg_errqueue(const struct iface *ifp, short interest)
 #endif /* defined(IP_RECVERR) && defined(MSG_ERRQUEUE) */
 
 bool
-#ifdef NAT_TRAVERSAL
-_send_packet(struct state *st, const char *where, bool verbose)
-#else
 send_packet(struct state *st, const char *where)
-#endif
 {
     struct connection *c = st->st_connection;
     int port_buf;
     bool err;
-
-#ifdef NAT_TRAVERSAL
     u_int8_t ike_pkt[MAX_OUTPUT_UDP_SIZE];
     u_int8_t *ptr;
     unsigned long len;
 
-    if ((c->interface->ike_float == TRUE) && (st->st_tpacket.len != 1)) {
-	if ((unsigned long) st->st_tpacket.len >
-	    (MAX_OUTPUT_UDP_SIZE-sizeof(u_int32_t))) {
+    if (c->interface->ike_float && st->st_tpacket.len != 1)
+    {
+	if ((unsigned long) st->st_tpacket.len > (MAX_OUTPUT_UDP_SIZE-sizeof(u_int32_t)))
+	{
 	    DBG_log("send_packet(): really too big");
 	    return FALSE;
 	}
@@ -821,11 +796,11 @@ send_packet(struct state *st, const char *where)
 	    (unsigned long)st->st_tpacket.len);
 	len = (unsigned long) st->st_tpacket.len + sizeof(u_int32_t);
     }
-    else {
+    else
+    {
 	ptr = st->st_tpacket.ptr;
 	len = (unsigned long) st->st_tpacket.len;
     }
-#endif
 
     DBG(DBG_RAW,
 	{
@@ -850,28 +825,19 @@ send_packet(struct state *st, const char *where)
     (void) check_msg_errqueue(c->interface, POLLOUT);
 #endif /* defined(IP_RECVERR) && defined(MSG_ERRQUEUE) */
 
-#ifdef NAT_TRAVERSAL
     err = sendto(c->interface->fd
     	, ptr, len, 0
     	, sockaddrof(&c->spd.that.host_addr)
     	, sockaddrlenof(&c->spd.that.host_addr)) != (ssize_t)len;
-#else
-    err = sendto(c->interface->fd
-    	, st->st_tpacket.ptr, st->st_tpacket.len, 0
-    	, sockaddrof(&c->spd.that.host_addr)
-    	, sockaddrlenof(&c->spd.that.host_addr)) != (ssize_t)st->st_tpacket.len;
-#endif
 
     /* restore port */
     setportof(port_buf, &c->spd.that.host_addr);
 
     if (err)
     {
-#ifdef NAT_TRAVERSAL
-        /* do not log NAT-T Keep Alive packets */
-        if (!verbose)
-	    return FALSE;
-#endif
+       /* do not log NAT-T Keep Alive packets */
+        if (streq(where, "NAT-T Keep Alive"))
+ 	    return FALSE;
 	log_errno((e, "sendto on %s to %s:%u failed in %s"
 	    , c->interface->rname
 	    , ip_str(&c->spd.that.host_addr)
@@ -1141,16 +1107,19 @@ read_packet(struct msg_digest *md)
     cur_from = &md->sender;
     cur_from_port = md->sender_port;
 
-#ifdef NAT_TRAVERSAL
-    if (ifp->ike_float == TRUE) {
+    if (ifp->ike_float == TRUE)
+    {
 	u_int32_t non_esp;
-	if (packet_len < (int)sizeof(u_int32_t)) {
+
+	if (packet_len < (int)sizeof(u_int32_t))
+	{
 	    plog("recvfrom %s:%u too small packet (%d)"
 		, ip_str(cur_from), (unsigned) cur_from_port, packet_len);
 	    return FALSE;
 	}
 	memcpy(&non_esp, buffer, sizeof(u_int32_t));
-	if (non_esp != 0) {
+	if (non_esp != 0)
+	{
 	    plog("recvfrom %s:%u has no Non-ESP marker"
 		, ip_str(cur_from), (unsigned) cur_from_port);
 	    return FALSE;
@@ -1161,7 +1130,6 @@ read_packet(struct msg_digest *md)
 	pfree(buffer);
 	buffer = buffer_nat;
     }
-#endif
 
     /* Clone actual message contents
      * and set up md->packet_pbs to describe it.
@@ -1180,21 +1148,20 @@ read_packet(struct msg_digest *md)
     DBG(DBG_RAW,
 	DBG_dump("", md->packet_pbs.start, pbs_room(&md->packet_pbs)));
 
-#ifdef NAT_TRAVERSAL
-	if ((pbs_room(&md->packet_pbs)==1) && (md->packet_pbs.start[0]==0xff)) {
-		/**
-		 * NAT-T Keep-alive packets should be discared by kernel ESPinUDP
-		 * layer. But boggus keep-alive packets (sent with a non-esp marker)
-		 * can reach this point. Complain and discard them.
-		 */
-		DBG(DBG_NATT,
-			DBG_log("NAT-T keep-alive (boggus ?) should not reach this point. "
-				"Ignored. Sender: %s:%u", ip_str(cur_from),
-				(unsigned) cur_from_port);
-			);
-		return FALSE;
+	if ((pbs_room(&md->packet_pbs)==1) && (md->packet_pbs.start[0]==0xff))
+	{
+	    /**
+	     * NAT-T Keep-alive packets should be discared by kernel ESPinUDP
+	     * layer. But boggus keep-alive packets (sent with a non-esp marker)
+	     * can reach this point. Complain and discard them.
+	     */
+	    DBG(DBG_NATT,
+		DBG_log("NAT-T keep-alive (boggus ?) should not reach this point. "
+			"Ignored. Sender: %s:%u", ip_str(cur_from),
+			(unsigned) cur_from_port);
+	    )
+	    return FALSE;
 	}
-#endif
 
 #define IKEV2_VERSION_OFFSET	17
 #define IKEV2_VERSION		0x20
@@ -1809,12 +1776,12 @@ process_packet(struct msg_digest **mdp)
 		return;
 	    }
 
-#ifdef NAT_TRAVERSAL
 	    switch (np)
 	    {
 		case ISAKMP_NEXT_NATD_RFC:
 		case ISAKMP_NEXT_NATOA_RFC:
-		    if ((!st) || (!(st->nat_traversal & NAT_T_WITH_RFC_VALUES))) {
+		    if (!st || !(st->nat_traversal & NAT_T_WITH_RFC_VALUES))
+		    {
 			/*
 			 * don't accept NAT-D/NAT-OA reloc directly in message, unless
 			 * we're using NAT-T RFC
@@ -1823,7 +1790,6 @@ process_packet(struct msg_digest **mdp)
 		    }
 		    break;
 	    }
-#endif
 
 	    if (sd == NULL)
 	    {
@@ -1834,7 +1800,6 @@ process_packet(struct msg_digest **mdp)
 		    sd = IS_PHASE1(from_state)
 			? &isakmp_identification_desc : &isakmp_ipsec_identification_desc;
 		    break;
-#ifdef NAT_TRAVERSAL
 		case ISAKMP_NEXT_NATD_DRAFTS:
 		    np = ISAKMP_NEXT_NATD_RFC;  /* NAT-D relocated */
 		    sd = payload_descs[np];
@@ -1843,7 +1808,6 @@ process_packet(struct msg_digest **mdp)
 		    np = ISAKMP_NEXT_NATOA_RFC;  /* NAT-OA relocated */
 		    sd = payload_descs[np];
 		    break;
-#endif		    
 		default:
 		    loglog(RC_LOG_SERIOUS, "%smessage ignored because it contains an unknown or"
 			" unexpected payload type (%s) at the outermost level"
@@ -2107,10 +2071,8 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		clonetochunk(st->st_tpacket, md->reply.start
 		    , pbs_offset(&md->reply), "reply packet");
 
-#ifdef NAT_TRAVERSAL
 		if (nat_traversal_enabled)
 		    nat_traversal_change_port_lookup(md, md->st);
-#endif
 
 		/* actually send the packet
 		 * Note: this is a great place to implement "impairments"
@@ -2293,7 +2255,6 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 		    /* advance b to end of string */
 		    b = b + strlen(b);
 
-#ifdef NAT_TRAVERSAL
 		    if (st->nat_traversal)
 		    {
 			char oa[ADDRTOT_BUF];
@@ -2304,7 +2265,6 @@ complete_state_transition(struct msg_digest **mdp, stf_status result)
 			ini = " ";
 			fin = "}";
 		    }
-#endif
 
 		    /* advance b to end of string */
 		    b = b + strlen(b);

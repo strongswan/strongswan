@@ -38,10 +38,7 @@
 #include "rnd.h"
 #include "timer.h"
 #include "whack.h"
-
-#ifdef NAT_TRAVERSAL
 #include "nat_traversal.h"
-#endif
 
 /* monotonic version of time(3) */
 time_t
@@ -427,11 +424,9 @@ handle_timer_event(void)
 	case EVENT_DPD_TIMEOUT:
 	    dpd_timeout(st);
 	    break;
-#ifdef NAT_TRAVERSAL
 	case EVENT_NAT_T_KEEPALIVE:
 	    nat_traversal_ka_event();
 	    break;
-#endif
 	default:
 	    loglog(RC_LOG_SERIOUS, "INTERNAL ERROR: ignoring unknown expiring event %s"
 		, enum_show(&timer_event_names, type));

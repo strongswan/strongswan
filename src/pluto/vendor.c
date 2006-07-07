@@ -30,10 +30,7 @@
 #include "whack.h"
 #include "vendor.h"
 #include "kernel.h"
-
-#ifdef NAT_TRAVERSAL
 #include "nat_traversal.h"
-#endif
 
 /**
  * Unknown/Special VID:
@@ -348,7 +345,7 @@ handle_known_vendorid (struct msg_digest *md
 	md->openpgp = TRUE;
 	vid_useful = TRUE;
 	break;
-#ifdef NAT_TRAVERSAL
+
     /*
      * Use most recent supported NAT-Traversal method and ignore the
      * other ones (implementations will send all supported methods but
@@ -376,7 +373,7 @@ handle_known_vendorid (struct msg_digest *md
 	    vid_useful = TRUE;
 	}
 	break;
-#endif
+
     /* Remote side would like to do DPD with us on this connection */
     case VID_MISC_DPD:
 	md->dpd = TRUE;

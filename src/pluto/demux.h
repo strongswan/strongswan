@@ -18,12 +18,7 @@
 
 struct state;	/* forward declaration of tag */
 extern void init_demux(void);
-#ifdef NAT_TRAVERSAL
-#define send_packet(st,wh) _send_packet(st,wh,TRUE)
-extern bool _send_packet(struct state *st, const char *where, bool verbose);
-#else
 extern bool send_packet(struct state *st, const char *where);
-#endif
 extern void comm_handle(const struct iface *ifp);
 
 extern u_int8_t reply_buffer[MAX_OUTPUT_UDP_SIZE];
@@ -74,9 +69,7 @@ struct msg_digest {
 	digest[PAYLIMIT],
 	*digest_roof,
 	*chain[ISAKMP_NEXT_ROOF];
-#ifdef NAT_TRAVERSAL
 	unsigned short nat_traversal_vid;
-#endif	
 };
 
 extern void release_md(struct msg_digest *md);

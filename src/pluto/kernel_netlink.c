@@ -677,7 +677,6 @@ netlink_add_sa(const struct kernel_sa *sa, bool replace)
 	attr = (struct rtattr *)((char *)attr + attr->rta_len);
     }
 
-#ifdef NAT_TRAVERSAL
     if (sa->natt_type)
     {
 	struct xfrm_encap_tmpl natt;
@@ -695,7 +694,6 @@ netlink_add_sa(const struct kernel_sa *sa, bool replace)
 	req.n.nlmsg_len += attr->rta_len;
 	attr = (struct rtattr *)((char *)attr + attr->rta_len);
     }
-#endif
 
     return send_netlink_msg(&req.n, NULL, 0, "Add SA", sa->text_said);
 }

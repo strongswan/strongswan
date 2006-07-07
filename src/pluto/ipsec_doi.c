@@ -67,12 +67,8 @@
 #include "alg_info.h"
 #include "ike_alg.h"
 #include "kernel_alg.h"
-#ifdef NAT_TRAVERSAL
 #include "nat_traversal.h"
-#endif
-#ifdef VIRTUAL_IP
 #include "virtual.h"
-#endif
 
 /*
  * are we sending Pluto's Vendor ID?
@@ -769,10 +765,10 @@ accept_delete(struct state *st, struct msg_digest *md, struct payload_digest *p)
 		
 		oldc = cur_connection;
 		set_cur_connection(dst->st_connection);
-#ifdef NAT_TRAVERSAL
+
 		if (nat_traversal_enabled)
 		    nat_traversal_change_port_lookup(md, dst);
-#endif
+
 		loglog(RC_LOG_SERIOUS, "received Delete SA payload: "
 		    "deleting ISAKMP State #%lu", dst->st_serialno);
 		delete_state(dst);
@@ -806,10 +802,9 @@ accept_delete(struct state *st, struct msg_digest *md, struct payload_digest *p)
 		oldc = cur_connection;
 		set_cur_connection(rc);
 
-#ifdef NAT_TRAVERSAL
 		if (nat_traversal_enabled)
 		    nat_traversal_change_port_lookup(md, dst);
-#endif
+
 		if (rc->newest_ipsec_sa == dst->st_serialno
 		&& (rc->policy & POLICY_UP))
 		    {
@@ -902,10 +897,8 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	vids_to_send++;
     /* always send DPD Vendor ID */
 	vids_to_send++;
-#ifdef NAT_TRAVERSAL
     if (nat_traversal_enabled)
 	vids_to_send++;
-#endif
 
    get_cookie(TRUE, st->st_icookie, COOKIE_SIZE, &c->spd.that.host_addr);
 
@@ -1004,7 +997,6 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	}
     }
 
-#ifdef NAT_TRAVERSAL
     if (nat_traversal_enabled)
     {
 	/* Add supported NAT-Traversal VID */
@@ -1015,7 +1007,6 @@ main_outI1(int whack_sock, struct connection *c, struct state *predecessor
 	    return STF_INTERNAL_ERROR;
 	}
     }
-#endif
 
     close_message(&rbody);
     close_output_pbs(&reply);
@@ -2043,7 +2034,6 @@ quick_outI1(int whack_sock
 	     , replacing
 	     , isakmp_sa->st_serialno);
 
-#ifdef NAT_TRAVERSAL
     if (isakmp_sa->nat_traversal & NAT_T_DETECTED)
     {
 	/* Duplicate nat_traversal status in new state */
@@ -2066,7 +2056,6 @@ quick_outI1(int whack_sock
 	np = (st->nat_traversal & NAT_T_WITH_RFC_VALUES) ?
 		  ISAKMP_NEXT_NATOA_RFC : ISAKMP_NEXT_NATOA_DRAFTS;
     }
-#endif
 
     /* set up reply */
     init_pbs(&reply, reply_buffer, sizeof(reply_buffer), "reply packet");
@@ -2162,7 +2151,6 @@ quick_outI1(int whack_sock
 	}
     }
 
-#ifdef NAT_TRAVERSAL
     /* Send NAT-OA if our address is NATed */
     if (send_natoa)
     {
@@ -2172,7 +2160,6 @@ quick_outI1(int whack_sock
 	    return STF_INTERNAL_ERROR;
 	}
     }
-#endif
 
     /* finish computing  HASH(1), inserting it in output */
     (void) quick_mode_hash12(r_hashval, r_hash_start, rbody.cur
@@ -2341,7 +2328,6 @@ decode_peer_id(struct msg_digest *md, struct id *peer)
      * Besides, there is no good reason for allowing these to be
      * other than 0 in Phase 1.
      */
-#ifdef NAT_TRAVERSAL
     if ((st->nat_traversal & NAT_T_WITH_PORT_FLOATING)
     &&	 id->isaid_doi_specific_a == IPPROTO_UDP
     &&  (id->isaid_doi_specific_b == 0 || id->isaid_doi_specific_b == NAT_T_IKE_FLOAT_PORT))
@@ -2350,10 +2336,8 @@ decode_peer_id(struct msg_digest *md, struct id *peer)
 		"accepted with port_floating NAT-T",
 		id->isaid_doi_specific_a, id->isaid_doi_specific_b);
     }
-    else
-#endif
-    if (!(id->isaid_doi_specific_a == 0 && id->isaid_doi_specific_b == 0)
-    &&  !(id->isaid_doi_specific_a == IPPROTO_UDP && id->isaid_doi_specific_b == IKE_UDP_PORT))
+    else if (!(id->isaid_doi_specific_a == 0 && id->isaid_doi_specific_b == 0)
+	 &&  !(id->isaid_doi_specific_a == IPPROTO_UDP && id->isaid_doi_specific_b == IKE_UDP_PORT))
     {
 	loglog(RC_LOG_SERIOUS, "protocol/port in Phase 1 ID Payload must be 0/0 or %d/%d"
 	    " but are %d/%d"
@@ -2527,14 +2511,8 @@ switch_connection(struct msg_digest *md, struct id *peer, bool initiator)
 	    if (r->kind == CK_TEMPLATE)
 	    {
 		/* instantiate it, filling in peer's ID */
-		r = rw_instantiate(r, &c->spd.that.host_addr,
-#ifdef NAT_TRAVERSAL
-			c->spd.that.host_port,
-#endif
-#ifdef VIRTUAL_IP
-			NULL,
-#endif
-			peer);
+		r = rw_instantiate(r, &c->spd.that.host_addr
+			, c->spd.that.host_port, NULL, peer);
 	    }
 
 	    /* copy certificate request info */
@@ -2984,13 +2962,11 @@ main_inI1_outR1(struct msg_digest *md)
     RETURN_STF_FAILURE(preparse_isakmp_sa_body(&sa_pd->payload.sa
 	, &sa_pd->pbs, &ipsecdoisit, &proposal_pbs, &proposal));
 
-#ifdef NAT_TRAVERSAL
     if (c == NULL && md->iface->ike_float)
     {
 	c = find_host_connection(&md->iface->addr, NAT_T_IKE_FLOAT_PORT
 		, &md->sender, md->sender_port, LEMPTY);
     }
-#endif
 
     if (c == NULL)
     {
@@ -3061,14 +3037,7 @@ main_inI1_outR1(struct msg_digest *md)
 	    /* Create a temporary connection that is a copy of this one.
 	     * His ID isn't declared yet.
 	     */
-	    c = rw_instantiate(c, &md->sender,
-#ifdef NAT_TRAVERSAL
-			md->sender_port,
-#endif
-#ifdef VIRTUAL_IP
-			NULL,
-#endif
-			NULL);
+	    c = rw_instantiate(c, &md->sender, md->sender_port, NULL, NULL);
 	}
     }
 
@@ -3115,10 +3084,8 @@ main_inI1_outR1(struct msg_digest *md)
 	vids_to_send++;
     /* always send DPD Vendor ID */
 	vids_to_send++;
-#ifdef NAT_TRAVERSAL
     if (md->nat_traversal_vid && nat_traversal_enabled)
 	vids_to_send++;
-#endif
 
     /* HDR out.
      * We can't leave this to comm_handle() because we must
@@ -3189,11 +3156,6 @@ main_inI1_outR1(struct msg_digest *md)
 	}
     }
 
-#ifdef NAT_TRAVERSAL
-    DBG(DBG_CONTROLMORE,
-	DBG_log("sender checking NAT-t: %d and %d"
-		, nat_traversal_enabled, md->nat_traversal_vid)
-    )
     if (md->nat_traversal_vid && nat_traversal_enabled)
     {
 	/* reply if NAT-Traversal draft is supported */
@@ -3206,7 +3168,6 @@ main_inI1_outR1(struct msg_digest *md)
 	    return STF_INTERNAL_ERROR;
 	}
     }
-#endif
 
     close_message(&md->rbody);
 
@@ -3252,11 +3213,6 @@ main_inR1_outI2(struct msg_digest *md)
 	    , &proposal_pbs, &proposal, NULL, st));
     }
 
-#ifdef NAT_TRAVERSAL
-    DBG(DBG_CONTROLMORE,
-	DBG_log("sender checking NAT-t: %d and %d"
-		, nat_traversal_enabled, md->nat_traversal_vid)
-    )
     if (nat_traversal_enabled && md->nat_traversal_vid)
     {
 	st->nat_traversal = nat_traversal_vid_to_method(md->nat_traversal_vid);
@@ -3268,7 +3224,6 @@ main_inR1_outI2(struct msg_digest *md)
 	np = (st->nat_traversal & NAT_T_WITH_RFC_VALUES) ?
 		ISAKMP_NEXT_NATD_RFC : ISAKMP_NEXT_NATD_DRAFTS;
     }
- #endif
 
     /**************** build output packet HDR;KE;Ni ****************/
 
@@ -3306,13 +3261,11 @@ main_inR1_outI2(struct msg_digest *md)
 	return STF_INTERNAL_ERROR;
 #endif
 
-#ifdef NAT_TRAVERSAL
     if (st->nat_traversal & NAT_T_WITH_NATD)
     {
 	if (!nat_traversal_add_natd(ISAKMP_NEXT_NONE, &md->rbody, md))
 	    return STF_INTERNAL_ERROR;
     }
-#endif
 
     /* finish message */
     close_message(&md->rbody);
@@ -3353,11 +3306,6 @@ main_inI2_outR2(struct msg_digest *md)
     /* Ni in */
     RETURN_STF_FAILURE(accept_nonce(md, &st->st_ni, "Ni"));
 
-#ifdef NAT_TRAVERSAL
-    DBG(DBG_CONTROLMORE,
-	DBG_log("inI2: checking NAT-t: %d and %d"
-		, nat_traversal_enabled, st->nat_traversal)
-    )
     if (st->nat_traversal & NAT_T_WITH_NATD)
     {
        nat_traversal_natd_lookup(md);
@@ -3373,7 +3321,6 @@ main_inI2_outR2(struct msg_digest *md)
     {
        nat_traversal_new_ka_event();
     }
-#endif
 
     /* decode certificate requests */
     st->st_connection->got_certrequest = FALSE;
@@ -3449,14 +3396,12 @@ main_inI2_outR2(struct msg_digest *md)
 	    }
 	}
     }
-    
-#ifdef NAT_TRAVERSAL
+
     if (st->nat_traversal & NAT_T_WITH_NATD)
     {
        if (!nat_traversal_add_natd(ISAKMP_NEXT_NONE, &md->rbody, md))
 	   return STF_INTERNAL_ERROR;
     }
-#endif
 
     /* finish message */
     close_message(&md->rbody);
@@ -3529,17 +3474,18 @@ main_inR2_outI3(struct msg_digest *md)
     if (!generate_skeyids_iv(st))
 	return STF_FAIL + AUTHENTICATION_FAILED;
 
-#ifdef NAT_TRAVERSAL
-	if (st->nat_traversal & NAT_T_WITH_NATD) {
+	if (st->nat_traversal & NAT_T_WITH_NATD)
+	{
 	    nat_traversal_natd_lookup(md);
 	}
-	if (st->nat_traversal) {
+	if (st->nat_traversal)
+	{
 	    nat_traversal_show_result(st->nat_traversal, md->sender_port);
 	}
-	if (st->nat_traversal & NAT_T_WITH_KA) {
+	if (st->nat_traversal & NAT_T_WITH_KA)
+	{
 	    nat_traversal_new_ka_event();
 	}
-#endif
 
     /*************** build output packet HDR*;IDii;HASH/SIG_I ***************/
     /* ??? NOTE: this is almost the same as main_inI3_outR3's code */
@@ -4772,14 +4718,8 @@ quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 		    /* Plain Road Warrior:
 		     * instantiate, carrying over authenticated peer ID
 		     */
-		    p = rw_instantiate(p, &c->spd.that.host_addr,
-#ifdef NAT_TRAVERSAL
-			        md->sender_port,
-#endif
-#ifdef VIRTUAL_IP
-				his_net, 
-#endif
-				&c->spd.that.id);
+		    p = rw_instantiate(p, &c->spd.that.host_addr, md->sender_port
+				, his_net, &c->spd.that.id);
 		}
 	    }
 #ifdef DEBUG
@@ -4802,8 +4742,6 @@ quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 	    p->spd.that.client = *his_net;
 	    p->spd.that.has_client_wildcard = FALSE;
 	}
-
-#ifdef VIRTUAL_IP
 	else if (is_virtual_connection(c))
 	{
 	    c->spd.that.client = *his_net;
@@ -4811,7 +4749,6 @@ quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 	    if (subnetishost(his_net) && addrinsubnet(&c->spd.that.host_addr, his_net))
 		c->spd.that.has_client = FALSE;
 	}
-#endif
 
 	/* fill in the client's true port */
 	if (p->spd.that.has_port_wildcard)
@@ -4870,7 +4807,6 @@ quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 	st->st_policy = (p1st->st_policy & POLICY_ISAKMP_MASK)
 	    | (c->policy & ~POLICY_ISAKMP_MASK);
 
-#ifdef NAT_TRAVERSAL
 	if (p1st->nat_traversal & NAT_T_DETECTED)
 	{
 	    st->nat_traversal = p1st->nat_traversal;
@@ -4880,12 +4816,11 @@ quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 	{
 	    st->nat_traversal = 0;
 	}
-	if ((st->nat_traversal & NAT_T_DETECTED) &&
-	    (st->nat_traversal & NAT_T_WITH_NATOA))
+	if ((st->nat_traversal & NAT_T_DETECTED)
+	&&  (st->nat_traversal & NAT_T_WITH_NATOA))
 	{
 	    nat_traversal_natoa_lookup(md);
 	}
-#endif
 
 	/* Start the output packet.
 	 *
@@ -4973,7 +4908,6 @@ quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 	    p->isaiid_np = ISAKMP_NEXT_NONE;
 	}
 
-#ifdef NAT_TRAVERSAL
 	if ((st->nat_traversal & NAT_T_WITH_NATOA)
 	&& (st->nat_traversal & LELEM(NAT_TRAVERSAL_NAT_BHND_ME))
 	&& (st->st_esp.attrs.encapsulation == ENCAPSULATION_MODE_TRANSPORT))
@@ -4992,7 +4926,6 @@ quick_inI1_outR1_tail(struct verify_oppo_bundle *b
 	    addrtosubnet(&c->spd.that.host_addr, &c->spd.that.client);
 	    c->spd.that.has_client = FALSE;
 	}
-#endif
 
 	/* Compute reply HASH(2) and insert in output */
 	(void)quick_mode_hash12(r_hashval, r_hash_start, md->rbody.cur
@@ -5132,13 +5065,11 @@ quick_inR1_outI2(struct msg_digest *md)
 	}
     }
 
-#ifdef NAT_TRAVERSAL
 	if ((st->nat_traversal & NAT_T_DETECTED)
 	&&  (st->nat_traversal & NAT_T_WITH_NATOA))
 	{
 	    nat_traversal_natoa_lookup(md);
 	}
-#endif
 
     /* ??? We used to copy the accepted proposal into the state, but it was
      * never used.  From sa_pd->pbs.start, length pbs_room(&sa_pd->pbs).

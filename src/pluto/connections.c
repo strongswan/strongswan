@@ -58,13 +58,8 @@
 #include "whack.h"
 #include "alg_info.h"
 #include "ike_alg.h"
-#ifdef NAT_TRAVERSAL
 #include "nat_traversal.h"
-#endif
-
-#ifdef VIRTUAL_IP
 #include "virtual.h"
-#endif
 
 static void flush_pending_by_connection(struct connection *c);	/* forward */
 
@@ -114,8 +109,8 @@ find_host_pair(const ip_address *myaddr, u_int16_t myport
     if (hisaddr == NULL)
 	hisaddr = aftoinfo(addrtypeof(myaddr))->any;
 	
-#ifdef NAT_TRAVERSAL
-    if (nat_traversal_enabled) {
+    if (nat_traversal_enabled)
+    {
 	/**
 	 * port is not relevant in host_pair. with nat_traversal we
 	 * always use pluto_port (500)
@@ -123,7 +118,6 @@ find_host_pair(const ip_address *myaddr, u_int16_t myport
 	myport = pluto_port;
 	hisport = pluto_port;
     }
-#endif
 
     for (prev = NULL, p = host_pairs; p != NULL; prev = p, p = p->next)
     {
@@ -149,17 +143,17 @@ find_host_pair_connections(const ip_address *myaddr, u_int16_t myport
 {
     struct host_pair *hp = find_host_pair(myaddr, myport, hisaddr, hisport);
 
-#ifdef NAT_TRAVERSAL
-    if (nat_traversal_enabled && hp && hisaddr) {
+    if (nat_traversal_enabled && hp && hisaddr)
+    {
 	struct connection *c;
-	for (c = hp->connections; c != NULL; c = c->hp_next) {
-	    if ((c->spd.this.host_port==myport) && (c->spd.that.host_port==hisport))
+
+	for (c = hp->connections; c != NULL; c = c->hp_next)
+	{
+	    if (c->spd.this.host_port == myport && c->spd.that.host_port == hisport)
 		return c;
 	}
 	return NULL;
     }
-#endif
-
     return hp == NULL? NULL : hp->connections;
 }
 
@@ -177,13 +171,8 @@ connect_to_host_pair(struct connection *c)
 	    hp = alloc_thing(struct host_pair, "host_pair");
 	    hp->me.addr = c->spd.this.host_addr;
 	    hp->him.addr = c->spd.that.host_addr;
-#ifdef NAT_TRAVERSAL
 	    hp->me.port = nat_traversal_enabled ? pluto_port : c->spd.this.host_port;
 	    hp->him.port = nat_traversal_enabled ? pluto_port : c->spd.that.host_port;
-#else
-	    hp->me.port = c->spd.this.host_port;
- 	    hp->him.port = c->spd.that.host_port;
-#endif    
 	    hp->initial_connection_sent = FALSE;
 	    hp->connections = NULL;
 	    hp->pending = NULL;
@@ -333,9 +322,8 @@ delete_connection(struct connection *c, bool relations)
 	}
     }
 
-#ifdef VIRTUAL_IP
-    if (c->kind != CK_GOING_AWAY) pfreeany(c->spd.that.virt);
-#endif
+    if (c->kind != CK_GOING_AWAY)
+	pfreeany(c->spd.that.virt);
 
 #ifdef DEBUG
     cur_debugging = old_cur_debugging;
@@ -573,12 +561,10 @@ format_end(char *buf
 
     client[0] = '\0';
 
-#ifdef VIRTUAL_IP
     if (is_virtual_end(this) && isanyaddr(&this->host_addr))
     {
 	host = "%virtual";
     }
-#endif
 
     /* [client===] */
     if (this->has_client)
@@ -915,14 +901,14 @@ check_connection_end(const whack_end_t *this, const whack_end_t *that
 	    return FALSE;
 	}
     }
-#ifdef VIRTUAL_IP
+
     if (this->virt && (!isanyaddr(&this->host_addr) || this->has_client))
     {
 	loglog(RC_CLASH,
 	    "virtual IP must only be used with %%any and without client");
 	return FALSE;
     }
-#endif
+
     return TRUE;	/* happy */
 }
 
@@ -1125,7 +1111,6 @@ add_connection(const whack_message_t *wm)
 
 	c->gw_info = NULL;
 
-#ifdef VIRTUAL_IP
 	passert(!(wm->left.virt && wm->right.virt));
 	if (wm->left.virt || wm->right.virt)
 	{
@@ -1135,7 +1120,6 @@ add_connection(const whack_message_t *wm)
 	    if (c->spd.that.virt)
 		c->spd.that.has_client = TRUE;
 	}
-#endif
 
 	unshare_connection_strings(c);
 	(void)orient(c);
@@ -1220,13 +1204,11 @@ add_group_instance(struct connection *group, const ip_subnet *target)
 
 	t->spd.reqid = gen_reqid();
 
-#ifdef VIRTUAL_IP
 	if (t->spd.that.virt)
 	{
 	    DBG_log("virtual_ip not supported in group instance");
 	    t->spd.that.virt = NULL;	
 	}
-#endif
 
 	/* add to connections list */
 	t->ac_next = connections;
@@ -1268,9 +1250,7 @@ remove_group_instance(const struct connection *group USED_BY_DEBUG
  */
 static struct connection *
 instantiate(struct connection *c, const ip_address *him
-#ifdef NAT_TRAVERSAL
 , u_int16_t his_port
-#endif
 , const struct id *his_id)
 {
     struct connection *d;
@@ -1295,9 +1275,9 @@ instantiate(struct connection *c, const ip_address *him
     passert(oriented(*d));
     d->spd.that.host_addr = *him;
     setportof(htons(c->spd.that.port), &d->spd.that.host_addr);
-#ifdef NAT_TRAVERSAL
+
     if (his_port) d->spd.that.host_port = his_port;
-#endif    
+
     default_end(&d->spd.that, &d->spd.this.host_addr);
 
     /* We cannot guess what our next_hop should be, but if it was
@@ -1327,23 +1307,11 @@ instantiate(struct connection *c, const ip_address *him
 }
 
 struct connection *
-rw_instantiate(struct connection *c
-, const ip_address *him
-#ifdef NAT_TRAVERSAL
-, u_int16_t his_port
-#endif
-#ifdef VIRTUAL_IP
-, const ip_subnet *his_net
-#endif
-, const struct id *his_id)
+rw_instantiate(struct connection *c, const ip_address *him, u_int16_t his_port
+, const ip_subnet *his_net, const struct id *his_id)
 {
-#ifdef NAT_TRAVERSAL
     struct connection *d = instantiate(c, him, his_port, his_id);
-#else
-    struct connection *d = instantiate(c, him, his_id);
-#endif
 
-#ifdef VIRTUAL_IP
     if (d && his_net && is_virtual_connection(c))
     {
 	d->spd.that.client = *his_net;
@@ -1351,7 +1319,6 @@ rw_instantiate(struct connection *c
 	if (subnetishost(his_net) && addrinsubnet(him, his_net))
 	    d->spd.that.has_client = FALSE;
     }
-#endif
 
     if (d->policy & POLICY_OPPO)
     {
@@ -1374,11 +1341,7 @@ oppo_instantiate(struct connection *c
 , const ip_address *our_client USED_BY_DEBUG
 , const ip_address *peer_client)
 {
-#ifdef NAT_TRAVERSAL
     struct connection *d = instantiate(c, him, 0, his_id);
-#else
-    struct connection *d = instantiate(c, him, his_id);
-#endif	
 
     passert(d->spd.next == NULL);
 
@@ -1510,13 +1473,12 @@ fmt_conn_instance(const struct connection *c, char buf[CONN_INST_BUF])
 	{
 	    *p++ = ' ';
 	    addrtot(&c->spd.that.host_addr, 0, p, ADDRTOT_BUF);
-#ifdef NAT_TRAVERSAL
+#
 	    if (c->spd.that.host_port != pluto_port)
 	    {
 		p += strlen(p);
 		sprintf(p, ":%d", c->spd.that.host_port);
 	    }
-#endif	    
 	}
     }
 }
@@ -1775,9 +1737,9 @@ orient(struct connection *c)
 	     */
 	    for (p = interfaces; p != NULL; p = p->next)
 	    {
-#ifdef NAT_TRAVERSAL
-		if (p->ike_float) continue;
-#endif	    	
+		if (p->ike_float)
+		    continue;
+
 		for (;;)
 		{
 		    /* check if this interface matches this end */
@@ -3083,18 +3045,11 @@ ISAKMP_SA_established(struct connection *c, so_serial_t serial)
 	{
 	    struct connection *next = d->ac_next;	/* might move underneath us */
 
-#ifdef NAT_TRAVERSAL
 	    if (d->kind >= CK_PERMANENT 
 	    && same_id(&c->spd.this.id, &d->spd.this.id)
 	    && same_id(&c->spd.that.id, &d->spd.that.id)
 	    && (!sameaddr(&c->spd.that.host_addr, &d->spd.that.host_addr) ||
-	    (c->spd.that.host_port != d->spd.that.host_port)))
-#else
-	    if (d->kind >= CK_PERMANENT
-	    && same_id(&c->spd.this.id, &d->spd.this.id)
-	    && same_id(&c->spd.that.id, &d->spd.that.id)
-	    && !sameaddr(&c->spd.that.host_addr, &d->spd.that.host_addr))
-#endif
+	       (c->spd.that.host_port != d->spd.that.host_port)))
 	    {
 		release_connection(d, FALSE);
 	    }
@@ -3418,16 +3373,16 @@ refine_host_connection(const struct state *st, const struct id *peer_id
 	    if (d->policy & POLICY_GROUP)
 		continue;
 
-#ifdef NAT_TRAVERSAL
 	    if (c->spd.that.host_port != d->spd.that.host_port
 	    && d->kind == CK_INSTANCE)
+	    {
 		continue;
-#endif
+	    }
 
 	    /* authentication used must fit policy of this connection */
 	    if ((d->policy & auth_policy) == LEMPTY)
 		continue;	/* our auth isn't OK for this connection */
-	    
+
 	    switch (auth)
 	    {
 	    case OAKLEY_PRESHARED_KEY:
@@ -3490,7 +3445,6 @@ refine_host_connection(const struct state *st, const struct id *peer_id
     }
 }
 
-#ifdef VIRTUAL_IP
 /**
  * With virtual addressing, we must not allow someone to use an already
  * used (by another id) addr/net.
@@ -3528,7 +3482,6 @@ is_virtual_net_used(const ip_subnet *peer_net, const struct id *peer_id)
     }
     return FALSE; /* you can safely use it */
 }
-#endif
 
 /* find_client_connection: given a connection suitable for ISAKMP
  * (i.e. the hosts match), find a one suitable for IPSEC
@@ -3646,18 +3599,12 @@ fc_try(const struct connection *c
 		}
 		else
 		{
-#ifdef VIRTUAL_IP
-		    if ((!samesubnet(&sr->that.client, peer_net)) && (!is_virtual_connection(d)))
-#else
-		    if (!samesubnet(&sr->that.client, peer_net))
-#endif
+		    if (!samesubnet(&sr->that.client, peer_net) && !is_virtual_connection(d))
 			continue;
-#ifdef VIRTUAL_IP
 		    if (is_virtual_connection(d)
-		    && ( (!is_virtual_net_allowed(d, peer_net, &c->spd.that.host_addr))
+		    && (!is_virtual_net_allowed(d, peer_net, &c->spd.that.host_addr)
 		        || is_virtual_net_used(peer_net, peer_id?peer_id:&c->spd.that.id)))
 			    continue;
-#endif
 		}
 	    }
 	    else
@@ -4296,14 +4243,12 @@ update_pending(struct state *os, struct state *ns)
     {
 	if (p->isakmp_sa == os)
 	    p->isakmp_sa = ns;
-#ifdef NAT_TRAVERSAL
 	if (p->connection->spd.this.host_port != ns->st_connection->spd.this.host_port)
 	{
 	    p->connection->spd.this.host_port = ns->st_connection->spd.this.host_port;
 	    p->connection->spd.that.host_port = ns->st_connection->spd.that.host_port;
 	}
-#endif
-    }	    
+    }
 }
 
 /* a Main Mode negotiation has failed; discard any pending */

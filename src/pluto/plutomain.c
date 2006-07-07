@@ -57,18 +57,11 @@
 #include "ocsp.h"
 #include "crl.h"
 #include "fetch.h"
-
 #include "sha1.h"
 #include "md5.h"
 #include "crypto.h"	/* requires sha1.h and md5.h */
-
-#ifdef VIRTUAL_IP
-#include "virtual.h"
-#endif
-
-#ifdef NAT_TRAVERSAL
 #include "nat_traversal.h"
-#endif
+#include "virtual.h"
 
 static void
 usage(const char *mess)
@@ -123,17 +116,13 @@ usage(const char *mess)
 	    " [--debug-controlmore]"
 	    " [--debug-private]"
 #endif
-#ifdef NAT_TRAVERSAL
 	    " [ --debug-natt]"
 	    " \\\n\t"
 	    "[--nat_traversal] [--keep_alive <delay_sec>]"
 	    " \\\n\t"
 	    "[--force_keepalive] [--disable_port_floating]"
-#endif
-#ifdef VIRTUAL_IP
 	   " \\\n\t"
 	   "[--virtual_private <network_list>]"
-#endif
 	    "\n"
 	"strongSwan %s\n"
 	, ipsec_version_code());
@@ -225,15 +214,11 @@ main(int argc, char **argv)
 {
     bool fork_desired = TRUE;
     bool log_to_stderr_desired = FALSE;
-#ifdef NAT_TRAVERSAL
     bool nat_traversal = FALSE;
     bool nat_t_spf = TRUE;  /* support port floating */
     unsigned int keep_alive = 0;
     bool force_keepalive = FALSE;
-#endif
-#ifdef VIRTUAL_IP
     char *virtual_private = NULL;
-#endif
     int lockfd;
 
     /* handle arguments */
@@ -269,20 +254,15 @@ main(int argc, char **argv)
 	    { "pkcs11module", required_argument, NULL, 'm' },
 	    { "pkcs11keepstate", no_argument, NULL, 'k' },
 	    { "pkcs11proxy", no_argument, NULL, 'y' },
-#ifdef NAT_TRAVERSAL
 	    { "nat_traversal", no_argument, NULL, '1' },
 	    { "keep_alive", required_argument, NULL, '2' },
 	    { "force_keepalive", no_argument, NULL, '3' },
 	    { "disable_port_floating", no_argument, NULL, '4' },
 	    { "debug-natt", no_argument, NULL, '5' },
-#endif
-#ifdef VIRTUAL_IP
 	    { "virtual_private", required_argument, NULL, '6' },
-#endif
 #ifdef DEBUG
 	    { "debug-none", no_argument, NULL, 'N' },
 	    { "debug-all", no_argument, NULL, 'A' },
-
 	    { "debug-raw", no_argument, NULL, DBG_RAW + DBG_OFFSET },
 	    { "debug-crypt", no_argument, NULL, DBG_CRYPT + DBG_OFFSET },
 	    { "debug-parsing", no_argument, NULL, DBG_PARSING + DBG_OFFSET },
@@ -460,7 +440,6 @@ main(int argc, char **argv)
 	    log_to_perpeer = TRUE;
 	    continue;
 
-#ifdef NAT_TRAVERSAL
 	case '1':	/* --nat_traversal */
 	    nat_traversal = TRUE;
 	    continue;
@@ -476,12 +455,9 @@ main(int argc, char **argv)
 	case '5':	/* --debug-nat_t */
 	    base_debugging |= DBG_NATT;
 	    continue;
-#endif
-#ifdef VIRTUAL_IP
 	case '6':	/* --virtual_private */
 	    virtual_private = optarg;
 	    continue;
-#endif
 
 	default:
 #ifdef DEBUG
@@ -620,13 +596,8 @@ main(int argc, char **argv)
 	, ipsec_version_code()
 	, compile_time_interop_options);
 
-#ifdef NAT_TRAVERSAL
     init_nat_traversal(nat_traversal, keep_alive, force_keepalive, nat_t_spf);
-#endif
-
-#ifdef VIRTUAL_IP
     init_virtual_ip(virtual_private);
-#endif
     scx_init(pkcs11_module_path);   /* load and initialize PKCS #11 module */
     init_rnd_pool();
     init_secret();

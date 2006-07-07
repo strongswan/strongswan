@@ -55,11 +55,6 @@
 #include "timer.h"
 #include "fetch.h"
 
-#ifdef NAT_TRAVERSAL
-#define PB_STREAM_UNDEFINED
-#include "nat_traversal.h"
-#endif
-
 const char *shared_secrets_file = SHARED_SECRETS_FILE;
 
 typedef struct id_list id_list_t;
@@ -185,19 +180,16 @@ get_secret(const struct connection *c, enum PrivateKeyKind kind, bool asym)
 	happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
 	his_id = &rw_id;
     }
-#ifdef NAT_TRAVERSAL
-    else if (nat_traversal_enabled
+    else if (kind == PPK_PSK
     && (c->policy & POLICY_PSK)
-    && kind == PPK_PSK
     && ((c->kind == CK_TEMPLATE && c->spd.that.id.kind == ID_NONE) ||
         (c->kind == CK_INSTANCE && id_is_ipaddr(&c->spd.that.id))))
     {
-	    /* roadwarrior: replace him with 0.0.0.0 */
-	    rw_id.kind = ID_IPV4_ADDR;
-	    happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
-	    his_id = &rw_id;
+	/* roadwarrior: replace him with 0.0.0.0 */
+	rw_id.kind = ID_IPV4_ADDR;
+	happy(anyaddr(addrtypeof(&c->spd.that.host_addr), &rw_id.ip_addr));
+	his_id = &rw_id;
     }
-#endif
 
     for (s = secrets; s != NULL; s = s->next)
     {

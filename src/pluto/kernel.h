@@ -69,11 +69,11 @@ struct kernel_sa {
 	unsigned compalg;
 
 	int encapsulation;
-#ifdef NAT_TRAVERSAL
+
 	u_int16_t natt_sport, natt_dport;
 	u_int8_t transid, natt_type;
 	ip_address *natt_oa;
-#endif
+
 	const char *text_said;
 };
 
@@ -195,6 +195,4 @@ extern bool was_eroute_idle(struct state *st, time_t idle_max
 extern bool get_sa_info(struct state *st, bool inbound, u_int *bytes
     , time_t *use_time);
 
-#ifdef NAT_TRAVERSAL
 extern bool update_ipsec_sa(struct state *st);
-#endif

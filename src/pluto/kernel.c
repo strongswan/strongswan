@@ -58,12 +58,7 @@
 #include "server.h"
 #include "whack.h"	/* for RC_LOG_SERIOUS */
 #include "keys.h"
-
-#ifdef NAT_TRAVERSAL
-#include "packet.h"  /* for pb_stream in nat_traversal.h */
 #include "nat_traversal.h"
-#endif
-
 #include "alg_info.h"
 #include "kernel_alg.h"
 
@@ -686,9 +681,7 @@ could_route(struct connection *c)
 
     /* if routing would affect IKE messages, reject */
     if (!no_klips
-#ifdef NAT_TRAVERSAL
     && c->spd.this.host_port != NAT_T_IKE_FLOAT_PORT
-#endif
     && c->spd.this.host_port != IKE_UDP_PORT
     && addrinsubnet(&c->spd.that.host_addr, &c->spd.that.client))
     {
@@ -1860,19 +1853,19 @@ setup_half_ipsec_sa(struct state *st, bool inbound)
 		SADB_EALG_3DES_CBC, SADB_AALG_SHA1_HMAC },
 	};
 
-#ifdef NAT_TRAVERSAL
 	u_int8_t natt_type = 0;
-	u_int16_t natt_sport = 0, natt_dport = 0;
+	u_int16_t natt_sport = 0;
+	u_int16_t natt_dport = 0;
 	ip_address natt_oa;
 
-	if (st->nat_traversal & NAT_T_DETECTED) {
+	if (st->nat_traversal & NAT_T_DETECTED)
+	{
 	    natt_type = (st->nat_traversal & NAT_T_WITH_PORT_FLOATING) ?
 		ESPINUDP_WITH_NON_ESP : ESPINUDP_WITH_NON_IKE;
 	    natt_sport = inbound? c->spd.that.host_port : c->spd.this.host_port;
 	    natt_dport = inbound? c->spd.this.host_port : c->spd.that.host_port;
 	    natt_oa = st->nat_oa;
 	}
-#endif
 
 	for (ei = esp_info; ; ei++)
 	{
@@ -1903,34 +1896,38 @@ setup_half_ipsec_sa(struct state *st, bool inbound)
 	}
 
 	key_len = st->st_esp.attrs.key_len/8;
-	if (key_len) {
-		/* XXX: must change to check valid _range_ key_len */
-		if (key_len > ei->enckeylen) {
-			loglog(RC_LOG_SERIOUS, "ESP transform %s passed key_len=%d > %d",
-			enum_name(&esp_transformid_names, st->st_esp.attrs.transid),
-			(int)key_len, (int)ei->enckeylen);
-			goto fail;
-		}
-	} else {
-		key_len = ei->enckeylen;
+	if (key_len)
+	{
+	    /* XXX: must change to check valid _range_ key_len */
+	    if (key_len > ei->enckeylen)
+	    {
+		loglog(RC_LOG_SERIOUS, "ESP transform %s passed key_len=%d > %d",
+		    enum_name(&esp_transformid_names, st->st_esp.attrs.transid),
+		    (int)key_len, (int)ei->enckeylen);
+		goto fail;
+	    }
+	}
+	else
+	{
+	    key_len = ei->enckeylen;
 	}
 	/* Grrrrr.... f*cking 7 bits jurassic algos  */
 
 	/* 168 bits in kernel, need 192 bits for keymat_len */
 	if (ei->transid == ESP_3DES && key_len == 21) 
-		key_len = 24;
+	    key_len = 24;
 
 	/* 56 bits in kernel, need 64 bits for keymat_len */
 	if (ei->transid == ESP_DES && key_len == 7) 
-		key_len = 8;
+	    key_len = 8;
 
 	/* divide up keying material */
 	/* passert(st->st_esp.keymat_len == ei->enckeylen + ei->authkeylen); */
 	DBG(DBG_KLIPS|DBG_CONTROL|DBG_PARSING, 
-		if(st->st_esp.keymat_len != key_len + ei->authkeylen)
-			DBG_log("keymat_len=%d key_len=%d authkeylen=%d",
-				st->st_esp.keymat_len, (int)key_len, (int)ei->authkeylen);
-	);
+	    if(st->st_esp.keymat_len != key_len + ei->authkeylen)
+		DBG_log("keymat_len=%d key_len=%d authkeylen=%d",
+			st->st_esp.keymat_len, (int)key_len, (int)ei->authkeylen);
+	)
 	passert(st->st_esp.keymat_len == key_len + ei->authkeylen);
 
 	set_text_said(text_said, &dst.addr, esp_spi, SA_ESP);
@@ -1952,13 +1949,11 @@ setup_half_ipsec_sa(struct state *st, bool inbound)
 	said_next->enckey = esp_dst_keymat;
 	said_next->encapsulation = encapsulation;
 	said_next->reqid = c->spd.reqid + 1;
-#ifdef NAT_TRAVERSAL
 	said_next->natt_sport = natt_sport;
 	said_next->natt_dport = natt_dport;
 	said_next->transid = st->st_esp.attrs.transid;
 	said_next->natt_type = natt_type;
 	said_next->natt_oa = &natt_oa;
-#endif	
 	said_next->text_said = text_said;
 
 	if (!kernel_ops->add_sa(said_next, replace))
@@ -2826,68 +2821,69 @@ delete_ipsec_sa(struct state *st USED_BY_KLIPS, bool inbound_only USED_BY_KLIPS)
     DBG(DBG_CONTROL, DBG_log("if I knew how, I'd eroute() and teardown_ipsec_sa()"));
 #endif /* !KLIPS */
 }
-#ifdef NAT_TRAVERSAL
+
 #ifdef KLIPS
 static bool update_nat_t_ipsec_esp_sa (struct state *st, bool inbound)
 {
-	struct connection *c = st->st_connection;
-	char text_said[SATOT_BUF];
-	struct kernel_sa sa;	
-	ip_address
-		src = inbound? c->spd.that.host_addr : c->spd.this.host_addr,
-		dst = inbound? c->spd.this.host_addr : c->spd.that.host_addr;
-		
+    struct connection *c = st->st_connection;
+    char text_said[SATOT_BUF];
+    struct kernel_sa sa;	
+    ip_address
+	src = inbound? c->spd.that.host_addr : c->spd.this.host_addr,
+	dst = inbound? c->spd.this.host_addr : c->spd.that.host_addr;
 
-	ipsec_spi_t esp_spi = inbound? st->st_esp.our_spi : st->st_esp.attrs.spi;
+    ipsec_spi_t esp_spi = inbound? st->st_esp.our_spi : st->st_esp.attrs.spi;
 
-	u_int16_t
-		natt_sport = inbound? c->spd.that.host_port : c->spd.this.host_port,
-		natt_dport = inbound? c->spd.this.host_port : c->spd.that.host_port;
+    u_int16_t
+	natt_sport = inbound? c->spd.that.host_port : c->spd.this.host_port,
+	natt_dport = inbound? c->spd.this.host_port : c->spd.that.host_port;
 
-	set_text_said(text_said, &dst, esp_spi, SA_ESP);
-		
-	memset(&sa, 0, sizeof(sa));
-	sa.spi = esp_spi;
-	sa.src = &src;
-	sa.dst = &dst;
-	sa.text_said = text_said;
-	sa.authalg = alg_info_esp_aa2sadb(st->st_esp.attrs.auth);
-	sa.natt_sport = natt_sport;
-	sa.natt_dport = natt_dport;
-	sa.transid = st->st_esp.attrs.transid;
-	
-        return kernel_ops->add_sa(&sa, TRUE);
+    set_text_said(text_said, &dst, esp_spi, SA_ESP);
 
+    memset(&sa, 0, sizeof(sa));
+    sa.spi = esp_spi;
+    sa.src = &src;
+    sa.dst = &dst;
+    sa.text_said = text_said;
+    sa.authalg = alg_info_esp_aa2sadb(st->st_esp.attrs.auth);
+    sa.natt_sport = natt_sport;
+    sa.natt_dport = natt_dport;
+    sa.transid = st->st_esp.attrs.transid;
+
+    return kernel_ops->add_sa(&sa, TRUE);
 }
 #endif
 
 bool update_ipsec_sa (struct state *st USED_BY_KLIPS)
 {
 #ifdef KLIPS
-	if (IS_IPSEC_SA_ESTABLISHED(st->st_state)) {
-		if ((st->st_esp.present) && (
-			(!update_nat_t_ipsec_esp_sa (st, TRUE)) ||
-			(!update_nat_t_ipsec_esp_sa (st, FALSE)))) {
-			return FALSE;
-		}
+    if (IS_IPSEC_SA_ESTABLISHED(st->st_state))
+    {
+	if (st->st_esp.present && (
+	   (!update_nat_t_ipsec_esp_sa (st, TRUE)) ||
+	   (!update_nat_t_ipsec_esp_sa (st, FALSE))))
+	{
+	    return FALSE;
 	}
-	else if (IS_ONLY_INBOUND_IPSEC_SA_ESTABLISHED(st->st_state)) {
-		if ((st->st_esp.present) && (!update_nat_t_ipsec_esp_sa (st, FALSE))) {
-			return FALSE;
-		}
+    }
+    else if (IS_ONLY_INBOUND_IPSEC_SA_ESTABLISHED(st->st_state))
+    {
+	if (st->st_esp.present && !update_nat_t_ipsec_esp_sa (st, FALSE))
+	{
+	    return FALSE;
 	}
-	else {
-		DBG_log("assert failed at %s:%d st_state=%d", __FILE__, __LINE__,
-			st->st_state);
-		return FALSE;
-	}
-	return TRUE;
+    }
+    else
+    {
+	DBG_log("assert failed at %s:%d st_state=%d", __FILE__, __LINE__, st->st_state);
+	return FALSE;
+    }
+    return TRUE;
 #else /* !KLIPS */
     DBG(DBG_CONTROL, DBG_log("if I knew how, I'd update_ipsec_sa()"));
     return TRUE;
 #endif /* !KLIPS */
 }
-#endif
 
 /* Check if there was traffic on given SA during the last idle_max
  * seconds. If TRUE, the SA was idle and DPD exchange should be performed.

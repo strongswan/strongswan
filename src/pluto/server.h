@@ -40,9 +40,7 @@ struct iface {
     ip_address addr;	/* interface IP address */
     int fd;	/* file descriptor of socket for IKE UDP messages */
     struct iface *next;
-#ifdef NAT_TRAVERSAL
     bool ike_float;
-#endif
     enum { IFN_ADD, IFN_KEEP, IFN_DELETE } change;
 };
 

@@ -62,10 +62,7 @@
 #include <pfkeyv2.h>
 #include <pfkey.h>
 #include "kameipsec.h"
-
-#ifdef NAT_TRAVERSAL
 #include "nat_traversal.h"
-#endif
 
 /*
  *  Server main loop and socket initialization routines.
@@ -702,13 +699,11 @@ add_entry:
 		    if (fd < 0)
 			break;
 
-#ifdef NAT_TRAVERSAL
 		    if (nat_traversal_support_non_ike
 		    && addrtypeof(&ifp->addr) == AF_INET)
 		    {
 			nat_traversal_espinudp_socket(fd, ESPINUDP_WITH_NON_IKE);
 		    }
-#endif
 
 		    q = alloc_thing(struct iface, "struct iface");
 		    q->rname = clone_str(ifp->name, "real device name");
@@ -720,7 +715,7 @@ add_entry:
 		    interfaces = q;
 		    plog("adding interface %s/%s %s:%d"
 			, q->vname, q->rname, ip_str(&q->addr), pluto_port);
-#ifdef NAT_TRAVERSAL
+
 		    if (nat_traversal_support_port_floating
 		    && addrtypeof(&ifp->addr) == AF_INET)
 		    {
@@ -742,7 +737,6 @@ add_entry:
 			plog("adding interface %s/%s %s:%d",
 			q->vname, q->rname, ip_str(&q->addr), NAT_T_IKE_FLOAT_PORT);
 		    }
-#endif
 		    break;
 		}
 
@@ -753,16 +747,17 @@ add_entry:
 		{
 		    /* matches -- rejuvinate old entry */
 		    q->change = IFN_KEEP;
-#ifdef NAT_TRAVERSAL
+
 		    /* look for other interfaces to keep (due to NAT-T) */
-		    for (q = q->next ; q ; q = q->next) {
+		    for (q = q->next ; q ; q = q->next)
+		    {
 			if (streq(q->rname, ifp->name)
-			    && streq(q->vname, v->name)
-			    && sameaddr(&q->addr, &ifp->addr)) {
-				q->change = IFN_KEEP;
+			&& streq(q->vname, v->name)
+			&& sameaddr(&q->addr, &ifp->addr))
+			{
+			    q->change = IFN_KEEP;
 			}
 		    }
-#endif
 		    break;
 		}
 

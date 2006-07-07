@@ -14,8 +14,6 @@
  * RCSID $Id: virtual.c,v 1.4 2004/04/02 10:38:52 as Exp $
  */
 
-#ifdef VIRTUAL_IP
-
 #include <freeswan.h>
 
 #include <stdlib.h>
@@ -333,6 +331,4 @@ is_virtual_net_allowed(const struct connection *c, const ip_subnet *peer_net,
 
     return FALSE;
 }
-
-#endif
 

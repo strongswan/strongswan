@@ -14,8 +14,6 @@
  * RCSID $Id: nat_traversal.c,v 1.8 2005/01/06 22:36:58 as Exp $
  */
 
-#ifdef NAT_TRAVERSAL
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -31,6 +29,7 @@
 #include <ipsec_policy.h>
 #include <pfkeyv2.h>
 #include <pfkey.h>
+
 #include "constants.h"
 #include "defs.h"
 #include "log.h"
@@ -42,8 +41,6 @@
 #include "kernel.h"
 #include "whack.h"
 #include "timer.h"
-
-
 #include "cookie.h"
 #include "sha1.h"
 #include "md5.h"
@@ -580,7 +577,7 @@ static void nat_traversal_send_ka (struct state *st)
 
     /* send keep alive */
     setchunk(st->st_tpacket, &ka_payload, 1);
-    _send_packet(st, "NAT-T Keep Alive", FALSE);
+    send_packet(st, "NAT-T Keep Alive");
 
     /* restore state chunk */
     setchunk(st->st_tpacket, sav.ptr, sav.len);
@@ -864,6 +861,4 @@ void process_pfkey_nat_t_new_mapping(
     if (ugh != NULL)
 	plog("SADB_X_NAT_T_NEW_MAPPING message from KLIPS malformed: %s", ugh);
 }
-
-#endif
 

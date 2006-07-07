@@ -35,22 +35,18 @@
 #include "kernel.h"
 #include "log.h"
 #include "spdb.h"
-#include "whack.h"	/* for RC_LOG_SERIOUS */
-
+#include "whack.h"
 #include "sha1.h"
 #include "md5.h"
 #include "crypto.h" /* requires sha1.h and md5.h */
-
 #include "alg_info.h"
 #include "kernel_alg.h"
 #include "ike_alg.h"
 #include "db_ops.h"
+#include "nat_traversal.h"
+
 #define AD(x) x, elemsof(x)	/* Array Description */
 #define AD_NULL NULL, 0
-
-#ifdef NAT_TRAVERSAL
-#include "nat_traversal.h"
-#endif
 
 /**************** Oakely (main mode) SA database ****************/
 
@@ -659,7 +655,6 @@ out_sa(pb_stream *outs
 		    if (p->protoid != PROTO_IPCOMP
 		    || st->st_policy & POLICY_TUNNEL)
 		    {
-#ifdef NAT_TRAVERSAL
 #ifndef I_KNOW_TRANSPORT_MODE_HAS_SECURITY_CONCERN_BUT_I_WANT_IT
 			if ((st->nat_traversal & NAT_T_DETECTED)
 			&& !(st->st_policy & POLICY_TUNNEL))
@@ -672,22 +667,16 @@ out_sa(pb_stream *outs
 				"using Tunnel mode");
 			}
 #endif
-#endif
 			out_attr(ENCAPSULATION_MODE
-#ifdef NAT_TRAVERSAL
 #ifdef I_KNOW_TRANSPORT_MODE_HAS_SECURITY_CONCERN_BUT_I_WANT_IT
-			    , NAT_T_ENCAPSULATION_MODE(st,st->st_policy)
+			    , NAT_T_ENCAPSULATION_MODE(st, st->st_policy)
 #else
 				/* If NAT-T is detected, use UDP_TUNNEL as long as Transport
 				 * Mode has security concerns.
 				 *
 				 * User has been informed of that
 				 */
-			    , NAT_T_ENCAPSULATION_MODE(st,POLICY_TUNNEL)
-#endif
-#else /* ! NAT_TRAVERSAL */
-			    , st->st_policy & POLICY_TUNNEL
-			      ? ENCAPSULATION_MODE_TUNNEL : ENCAPSULATION_MODE_TRANSPORT
+			    , NAT_T_ENCAPSULATION_MODE(st, POLICY_TUNNEL)
 #endif
 			    , attr_desc, attr_val_descs
 			    , &trans_pbs);
@@ -1557,7 +1546,6 @@ parse_ipsec_transform(struct isakmp_transform *trans
 		break;
 	    case ENCAPSULATION_MODE | ISAKMP_ATTR_AF_TV:
 		ipcomp_inappropriate = FALSE;
-#ifdef NAT_TRAVERSAL
 		switch (val)
 		{
 		case ENCAPSULATION_MODE_TUNNEL:
@@ -1642,9 +1630,6 @@ parse_ipsec_transform(struct isakmp_transform *trans
 			    , "unknown ENCAPSULATION_MODE %d in IPSec SA", val);
 			return FALSE;
 		}
-#else
-		attrs->encapsulation = val;
-#endif
 		break;
 	    case AUTH_ALGORITHM | ISAKMP_ATTR_AF_TV:
 		attrs->auth = val;

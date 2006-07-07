@@ -126,9 +126,7 @@ typedef unsigned long policy_prio_t;
 #define POLICY_PRIO_BUF	(3+1+3+1)
 extern void fmt_policy_prio(policy_prio_t pp, char buf[POLICY_PRIO_BUF]);
 
-#ifdef VIRTUAL_IP
 struct virtual_t;
-#endif
 
 struct end {
     struct id id;
@@ -151,9 +149,7 @@ struct end {
     chunk_t ca;			/* CA distinguished name */
     struct ietfAttrList *groups;/* access control groups */
     smartcard_t *sc;		/* smartcard reader and key info */
-#ifdef VIRTUAL_IP
     struct virtual_t *virt;
-#endif 
     bool modecfg;		/* this end: request local address from server */
 				/* that end: give local addresses to clients */
     bool hostaccess;		/* allow access to host via iptables INPUT/OUTPUT */
@@ -305,12 +301,8 @@ struct gw_info;	/* forward declaration of tag (defined in dnskey.h) */
 struct alg_info;	/* forward declaration of tag (defined in alg_info.h) */
 extern struct connection *rw_instantiate(struct connection *c
 					 , const ip_address *him
-#ifdef NAT_TRAVERSAL
 					 , u_int16_t his_port
-#endif
-#ifdef VIRTUAL_IP
 					 , const ip_subnet *his_net
-#endif					 
 					 , const struct id *his_id);
 
 extern struct connection *oppo_instantiate(struct connection *c
@@ -366,12 +358,9 @@ extern struct connection *eclipsed(struct connection *c, struct spd_route **);
 
 extern void show_connections_status(bool all, const char *name);
 extern int  connection_compare(const struct connection *ca
-			       , const struct connection *cb);
-#ifdef NAT_TRAVERSAL
-void
-update_host_pair(const char *why, struct connection *c,
-       const ip_address *myaddr, u_int16_t myport ,
-       const ip_address *hisaddr, u_int16_t hisport);
-#endif /* NAT_TRAVERSAL */
+    , const struct connection *cb);
+extern void update_host_pair(const char *why, struct connection *c
+    , const ip_address *myaddr, u_int16_t myport
+    , const ip_address *hisaddr, u_int16_t hisport);
 
 #endif /* _CONNECTIONS_H */
