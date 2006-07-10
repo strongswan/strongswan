@@ -86,14 +86,14 @@ static job_t *get(private_job_queue_t *this)
 		/* add mutex unlock handler for cancellation, enable cancellation */
 		pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-
+		
 		pthread_cond_wait( &(this->condvar), &(this->mutex));
-
+		
 		/* reset cancellation, remove mutex-unlock handler (without executing) */
 		pthread_setcancelstate(oldstate, NULL);
 		pthread_cleanup_pop(0);
 	}
-	this->list->remove_first(this->list,(void **) &job);
+	this->list->remove_first(this->list, (void **)&job);
 	pthread_mutex_unlock(&(this->mutex));
 	return job;
 }
@@ -114,22 +114,14 @@ static void add(private_job_queue_t *this, job_t *job)
  */
 static void job_queue_destroy (private_job_queue_t *this)
 {
-	while (this->list->get_count(this->list) > 0)
+	job_t *job;
+	while (this->list->remove_last(this->list, (void**)&job) == SUCCESS)
 	{
-		job_t *job;
-		if (this->list->remove_first(this->list,(void *) &job) != SUCCESS)
-		{
-			this->list->destroy(this->list);
-			break;
-		}
 		job->destroy(job);
 	}
 	this->list->destroy(this->list);
-
 	pthread_mutex_destroy(&(this->mutex));
-
 	pthread_cond_destroy(&(this->condvar));
-
 	free(this);
 }
 

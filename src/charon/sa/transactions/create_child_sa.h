@@ -20,9 +20,8 @@
  * for more details.
  */
 
-
-#ifndef CREATE_CHILD_SA_
-#define CREATE_CHILD_SA_
+#ifndef CREATE_CHILD_SA_H_
+#define CREATE_CHILD_SA_H_
 
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
@@ -37,6 +36,23 @@ typedef struct create_child_sa_t create_child_sa_t;
  * Rekeying of an CHILD_SA works the same way as creating a new one,
  * but includes an additional REKEY_SA notify and deletes the old
  * one (in a separate transaction).
+ * 
+ *                     ¦__________  _________¦
+ *                     ¦  Cyq     \/    Czq  ¦
+ *                     ¦__________/\_________¦
+ *              detect ¦__________  _________¦ detect
+ *                     ¦  Czp     \/    Czp  ¦
+ * compare nonces, won ¦__________/\_________¦ compare nonces, lost
+ *                     ¦                     ¦
+ *        delete old   ¦__________           ¦
+ *                     ¦  Dxq     \__________¦
+ *                     ¦           __________¦
+ *                     ¦__________/    Dxp   ¦
+ *                     ¦           __________¦ delete created
+ *                     ¦__________/    Dzq   ¦
+ *                     ¦__________           ¦
+ *                     ¦  Dzp     \__________¦
+ * 
  *
  * @b Constructors:
  *  - create_child_sa_create()
@@ -61,6 +77,18 @@ struct create_child_sa_t {
 	 * @param child_sa	CHILD_SA to rekey
 	 */
 	void (*rekeys_child) (create_child_sa_t* this, child_sa_t *child_sa);
+	
+	/**
+	 * @brief Cancel a rekeying request.
+	 *
+	 * Cancelling a rekeying request will set a flag in the transaction. When
+	 * the response for the transaction is received, the created CHILD_SA
+	 * gets deleted afterwards.
+	 *
+	 * @param this		calling object
+	 * @param child_sa	CHILD_SA to rekey
+	 */
+	void (*cancel) (create_child_sa_t* this);
 };
 
 /**
@@ -74,4 +102,4 @@ struct create_child_sa_t {
  */
 create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa, u_int32_t message_id);
 
-#endif /* CREATE_CHILD_SA_ */
+#endif /* CREATE_CHILD_SA_H_ */

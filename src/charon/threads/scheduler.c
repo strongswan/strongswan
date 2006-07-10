@@ -42,15 +42,6 @@ struct private_scheduler_t {
 	 * Public part of a scheduler_t object.
 	 */
 	 scheduler_t public;
-	 
-	/**
-	 * @brief Get events from the event queue and add them to to job queue.
-	 *
-	 * Thread function started at creation of the scheduler object.
-	 *
-	 * @param this 		calling object
-	 */
-	void (*get_events) (private_scheduler_t *this);
 
 	/**
 	 * Assigned thread.
@@ -75,7 +66,7 @@ static void get_events(private_scheduler_t * this)
 	
 	this->logger->log(this->logger, CONTROL, "scheduler thread running, thread_ID: %06u", (int)pthread_self());
 
-	for (;;)
+	while (TRUE)
 	{
 		this->logger->log(this->logger, CONTROL|LEVEL2, "Waiting for next event...");
 		/* get a job, this block until one is available */
@@ -109,11 +100,10 @@ scheduler_t * scheduler_create()
 	private_scheduler_t *this = malloc_thing(private_scheduler_t);
 
 	this->public.destroy = (void(*)(scheduler_t*)) destroy;
-	this->get_events = get_events;
 	
 	this->logger = logger_manager->get_logger(logger_manager, SCHEDULER);
 	
-	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->get_events, this) != 0)
+	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))get_events, this) != 0)
 	{
 		/* thread could not be created  */
 		this->logger->log(this->logger, ERROR, "Scheduler thread could not be created!");

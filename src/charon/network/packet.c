@@ -133,38 +133,22 @@ static void destroy(private_packet_t *this)
 static packet_t *clone(private_packet_t *this)
 {
 	private_packet_t *other = (private_packet_t*)packet_create();
-
+	
 	if (this->destination != NULL)
 	{
 		other->destination = this->destination->clone(this->destination);
 	}
-	else 
-	{
-		other->destination = NULL;
-	}
-	
 	if (this->source != NULL)
 	{
 		other->source = this->source->clone(this->source);
 	}
-	else 
-	{
-		other->source = NULL;
-	}
-	
-	/* only clone existing chunks :-) */
 	if (this->data.ptr != NULL)
 	{
 		other->data.ptr = clalloc(this->data.ptr,this->data.len);
 		other->data.len = this->data.len;
 	}
-	else
-	{
-		other->data = CHUNK_INITIALIZER;
-	}
 	return &(other->public);
 }
-
 
 /*
  * Documented in header

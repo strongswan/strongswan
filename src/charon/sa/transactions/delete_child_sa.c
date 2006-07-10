@@ -24,6 +24,7 @@
 
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
+#include <sa/transactions/create_child_sa.h>
 
 
 typedef struct private_delete_child_sa_t private_delete_child_sa_t;
@@ -151,7 +152,7 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 	protocol_id_t protocol;
 	u_int32_t spi;
 	iterator_t *iterator;
-	delete_payload_t *delete_response;
+	delete_payload_t *delete_response = NULL;
 	
 	/* get requested CHILD */
 	protocol = delete_request->get_protocol_id(delete_request);
@@ -178,9 +179,23 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 		
 		if (child_sa != NULL)
 		{
+			create_child_sa_t *rekey;
+			
 			this->logger->log(this->logger, CONTROL,
-							  "received DELETE for %s CHILD_SA with SPI 0x%x, deleting", 
+							  "received DELETE for %s CHILD_SA with SPI 0x%x, deleting",
 							  mapping_find(protocol_id_m, protocol), ntohl(spi));
+			
+			rekey = child_sa->get_rekeying_transaction(child_sa);
+			if (rekey)
+			{
+				/* we have received a delete for an SA which we are still rekeying.
+				 * this means we have lost the nonce comparison, and the rekeying
+				 * will fail. We set a flag in the transaction for this special case.
+				 */
+				this->logger->log(this->logger, CONTROL,
+								  "DELETE received while rekeying, rekeying cancelled");
+				rekey->cancel(rekey);
+			}
 			/* delete it, with inbound spi */
 			spi = child_sa->get_spi(child_sa, TRUE);
 			this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);

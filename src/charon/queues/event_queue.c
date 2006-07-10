@@ -34,12 +34,9 @@
 typedef struct event_t event_t;
 
 /**
- * @brief Represents an event as it is stored in the event queue.
- *
- * A event consists of a event time and an assigned job object.
- *
+ * Event containing a job and a schedule time
  */
-struct event_t{
+struct event_t {
 	/**
 	 * Time to fire the event.
 	 */
@@ -49,48 +46,12 @@ struct event_t{
 	 * Every event has its assigned job.
 	 */
 	job_t * job;
-
-	/**
-	 * @brief Destroys a event_t object.
-	 *
-	 * @param event_t 	calling object
-	 */
-	void (*destroy) (event_t *event);
 };
-
-
-/**
- * implements event_t.destroy
- */
-static void event_destroy(event_t *event)
-{
-	free(event);
-}
-
-/**
- * @brief Creates a event for a specific time
- *
- * @param time	absolute time to fire the event
- * @param job 	job to add to job-queue at specific time
- *
- * @returns		created event_t object 
- */
-static event_t *event_create(timeval_t time, job_t *job)
-{
-	event_t *this = malloc_thing(event_t);
-
-	this->destroy = event_destroy;
-	this->time = time;
-	this->job = job;
-
-	return this;
-}
 
 typedef struct private_event_queue_t private_event_queue_t;
 
 /**
  * Private Variables and Functions of event_queue_t class.
- *
  */
 struct private_event_queue_t {
 	/**
@@ -155,7 +116,7 @@ static job_t *get(private_event_queue_t *this)
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	while (1)
+	while (TRUE)
 	{
 		while(this->list->get_count(this->list) == 0)
 		{
@@ -170,7 +131,7 @@ static job_t *get(private_event_queue_t *this)
 			pthread_cleanup_pop(0);
 		}
 		
-		this->list->get_first(this->list,(void **) &next_event);
+		this->list->get_first(this->list, (void **)&next_event);
 		
 		gettimeofday(&current_time, NULL);
 		long difference = time_difference(&current_time,&(next_event->time));
@@ -192,11 +153,9 @@ static job_t *get(private_event_queue_t *this)
 		else
 		{
 			/* event available */
-			this->list->remove_first(this->list,(void **) &next_event);
-			
+			this->list->remove_first(this->list, (void **)&next_event);
 			job = next_event->job;
-			
-			next_event->destroy(next_event);
+			free(next_event);
 			break;
 		}
 	}
@@ -212,9 +171,14 @@ static job_t *get(private_event_queue_t *this)
  */
 static void add_absolute(private_event_queue_t *this, job_t *job, timeval_t time)
 {
-	event_t *event = event_create(time,job);
+	event_t *event;
 	event_t *current_event;
 	status_t status;
+	
+	/* create event */
+	event = malloc_thing(event_t);
+	event->time = time;
+	event->job = job;
 
 	pthread_mutex_lock(&(this->mutex));
 
@@ -298,24 +262,15 @@ static void add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
  */
 static void event_queue_destroy(private_event_queue_t *this)
 {
-	while (this->list->get_count(this->list) > 0)
+	event_t *event;
+	while (this->list->remove_last(this->list, (void**)&event) == SUCCESS)
 	{
-		event_t *event;
-
-		if (this->list->remove_first(this->list,(void *) &event) != SUCCESS)
-		{
-			this->list->destroy(this->list);
-			break;
-		}
 		event->job->destroy(event->job);
-		event->destroy(event);
+		free(event);
 	}
 	this->list->destroy(this->list);
-
 	pthread_mutex_destroy(&(this->mutex));
-
 	pthread_cond_destroy(&(this->condvar));
-
 	free(this);
 }
 

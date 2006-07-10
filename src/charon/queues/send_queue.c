@@ -69,9 +69,9 @@ struct private_send_queue_t {
 static int get_count(private_send_queue_t *this)
 {
 	int count;
-	pthread_mutex_lock(&(this->mutex));
+	pthread_mutex_lock(&this->mutex);
 	count = this->list->get_count(this->list);
-	pthread_mutex_unlock(&(this->mutex));
+	pthread_mutex_unlock(&this->mutex);
 	return count;
 }
 
@@ -82,22 +82,23 @@ static packet_t *get(private_send_queue_t *this)
 {
 	int oldstate;
 	packet_t *packet;
-	pthread_mutex_lock(&(this->mutex));
-	/* go to wait while no packets available */
 	
+	pthread_mutex_lock(&this->mutex);
+	
+	/* go to wait while no packets available */
 	while(this->list->get_count(this->list) == 0)
 	{
 		/* add mutex unlock handler for cancellation, enable cancellation */
-		pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&(this->mutex));
+		pthread_cleanup_push((void(*)(void*))pthread_mutex_unlock, (void*)&this->mutex);
 		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		pthread_cond_wait( &(this->condvar), &(this->mutex));
-
+		pthread_cond_wait(&this->condvar, &this->mutex);
+		
 		/* reset cancellation, remove mutex-unlock handler (without executing) */
 		pthread_setcancelstate(oldstate, NULL);
 		pthread_cleanup_pop(0);
 	}
-	this->list->remove_first(this->list,(void **)&packet);
-	pthread_mutex_unlock(&(this->mutex));
+	this->list->remove_first(this->list, (void**)&packet);
+	pthread_mutex_unlock(&this->mutex);
 	return packet;
 }
 
@@ -114,10 +115,10 @@ static void add(private_send_queue_t *this, packet_t *packet)
 					  src->get_address(src), src->get_port(src),
 					  dst->get_address(dst), dst->get_port(dst));
 	
-	pthread_mutex_lock(&(this->mutex));
-	this->list->insert_last(this->list,packet);
-	pthread_cond_signal( &(this->condvar));
-	pthread_mutex_unlock(&(this->mutex));
+	pthread_mutex_lock(&this->mutex);
+	this->list->insert_last(this->list, packet);
+	pthread_cond_signal(&this->condvar);
+	pthread_mutex_unlock(&this->mutex);
 }
 
 /**
@@ -125,24 +126,14 @@ static void add(private_send_queue_t *this, packet_t *packet)
  */
 static void destroy (private_send_queue_t *this)
 {
-
-	/* destroy all packets in list before destroying list */
-	while (this->list->get_count(this->list) > 0)
+	packet_t *packet;
+	while (this->list->remove_last(this->list, (void**)&packet) == SUCCESS)
 	{
-		packet_t *packet;
-		if (this->list->remove_first(this->list,(void *) &packet) != SUCCESS)
-		{
-			this->list->destroy(this->list);
-			break;
-		}
 		packet->destroy(packet);
 	}
 	this->list->destroy(this->list);
-
 	pthread_mutex_destroy(&(this->mutex));
-
 	pthread_cond_destroy(&(this->condvar));
-
 	free(this);
 }
 
@@ -160,9 +151,9 @@ send_queue_t *send_queue_create(void)
 	this->public.destroy = (void(*)(send_queue_t*)) destroy;
 
 	this->list = linked_list_create();
-	pthread_mutex_init(&(this->mutex), NULL);
-	pthread_cond_init(&(this->condvar), NULL);
+	pthread_mutex_init(&this->mutex, NULL);
+	pthread_cond_init(&this->condvar, NULL);
 	this->logger = logger_manager->get_logger(logger_manager, SOCKET);
-
+	
 	return (&this->public);
 }

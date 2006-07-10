@@ -110,9 +110,14 @@ struct private_child_sa_t {
 	u_int32_t hard_lifetime;
 	
 	/**
-	 * has this CHILD_SA been rekeyed?
+	 * transaction which is rekeying this CHILD_SA
 	 */
-	bool rekeyed;
+	void *rekeying_transaction;
+	
+	/**
+	 * has this child SA been rekeyed/is rekeying?
+	 */
+	bool is_rekeying;
 
 	/**
 	 * Specifies if NAT traversal is used
@@ -322,7 +327,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 											  prf_plus, natt, mine);
 	
 	this->install_time = time(NULL);
-
+	
 	return status;
 }
 
@@ -477,11 +482,28 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 }
 
 /**
- * Implementation of child_sa_t.set_rekeyed.
+ * Implementation of child_sa_t.set_rekeying_transaction.
  */
-static void set_rekeyed(private_child_sa_t *this)
+static void set_rekeying_transaction(private_child_sa_t *this, void *transaction)
 {
-	this->rekeyed = TRUE;
+	this->rekeying_transaction = transaction;
+	this->is_rekeying = TRUE;
+}
+
+/**
+ * Implementation of child_sa_t.get_rekeying_transaction.
+ */
+static void* get_rekeying_transaction(private_child_sa_t *this)
+{
+	return this->rekeying_transaction;
+}
+
+/**
+ * Implementation of child_sa_t.is_rekeying.
+ */
+static bool is_rekeying(private_child_sa_t *this)
+{
+	return this->is_rekeying;
 }
 
 /**
@@ -685,16 +707,6 @@ static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t
 	
 	if (mine)
 	{
-		src = this->me.addr;
-		dst = this->other.addr;
-		new_src = new_me;
-		new_dst = new_other;
-		src_changes = my_changes;
-		dst_changes = other_changes;
-		spi = this->me.spi;
-	}
-	else
-	{
 		src = this->other.addr;
 		dst = this->me.addr;
 		new_src = new_other;
@@ -702,6 +714,16 @@ static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t
 		src_changes = other_changes;
 		dst_changes = my_changes;
 		spi = this->other.spi;
+	}
+	else
+	{
+		src = this->me.addr;
+		dst = this->other.addr;
+		new_src = new_me;
+		new_dst = new_other;
+		src_changes = my_changes;
+		dst_changes = other_changes;
+		spi = this->me.spi;
 	}
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1,
@@ -783,7 +805,7 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 static status_t update_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other, 
 							 int my_changes, int other_changes) 
 {
-	if (!my_changes || !other_changes)
+	if (!my_changes && !other_changes)
 	{
 		return SUCCESS;
 	}
@@ -857,7 +879,7 @@ static void destroy(private_child_sa_t *this)
 	/* delete all policies in the kernel */
 	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
 	{
-		if (!this->rekeyed)
+		if (!this->is_rekeying)
 		{	
 			/* let rekeyed policies, as they are used by another child_sa */
 			charon->kernel_interface->del_policy(charon->kernel_interface,
@@ -883,7 +905,9 @@ static void destroy(private_child_sa_t *this)
 		free(policy);
 	}
 	this->policies->destroy(this->policies);
-
+	
+	this->me.addr->destroy(this->me.addr);
+	this->other.addr->destroy(this->other.addr);
 	free(this);
 }
 
@@ -907,14 +931,16 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,int,int))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
-	this->public.set_rekeyed = (void (*)(child_sa_t*))set_rekeyed;
+	this->public.set_rekeying_transaction = (void (*)(child_sa_t*,void*))set_rekeying_transaction;
+	this->public.get_rekeying_transaction = (void* (*)(child_sa_t*))get_rekeying_transaction;
+	this->public.is_rekeying = (bool (*)(child_sa_t*))is_rekeying;
 	this->public.log_status = (void (*)(child_sa_t*, logger_t*, char*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
 	this->logger = logger_manager->get_logger(logger_manager, CHILD_SA);
-	this->me.addr = me;
-	this->other.addr = other;
+	this->me.addr = me->clone(me);
+	this->other.addr = other->clone(other);
 	this->me.spi = 0;
 	this->other.spi = 0;
 	this->alloc_ah_spi = 0;
@@ -926,7 +952,8 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->reqid = rekey ? rekey : ++reqid;
 	this->policies = linked_list_create();
 	this->protocol = PROTO_NONE;
-	this->rekeyed = FALSE;
+	this->rekeying_transaction = NULL;
+	this->is_rekeying = FALSE;
 	
 	return &this->public;
 }

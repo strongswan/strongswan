@@ -1,8 +1,8 @@
 /**
  * @file thread_pool.c
- * 
+ *
  * @brief Implementation of thread_pool_t.
- * 
+ *
  */
 
 /*
@@ -57,12 +57,7 @@ struct private_thread_pool_t {
 	/**
 	 * Logger of the thread pool.
 	 */
-	logger_t *pool_logger;
-	
-	/**
-	 * Logger of the worker threads.
-	 */
-	logger_t *worker_logger;
+	logger_t *logger;
 } ;
 
 /**
@@ -76,7 +71,9 @@ static void process_jobs(private_thread_pool_t *this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->worker_logger->log(this->worker_logger, CONTROL, "worker thread running,    thread_ID: %06u", (int)pthread_self());
+	this->logger->log(this->logger, CONTROL,
+					  "worker thread running,    thread_ID: %06u",
+					  (int)pthread_self());
 	
 	while (TRUE)
 	{
@@ -107,7 +104,8 @@ static void destroy(private_thread_pool_t *this)
 	int current;
 	/* flag thread for termination */
 	for (current = 0; current < this->pool_size; current++) {
-		this->pool_logger->log(this->pool_logger, CONTROL, "cancelling worker thread #%d", current+1);
+		this->logger->log(this->logger, CONTROL, 
+						  "cancelling worker thread #%d", current+1);
 		pthread_cancel(this->threads[current]);
 	}
 	
@@ -115,11 +113,13 @@ static void destroy(private_thread_pool_t *this)
 	for (current = 0; current < this->pool_size; current++) {
 		if (pthread_join(this->threads[current], NULL) == 0)
 		{
-			this->pool_logger->log(this->pool_logger, CONTROL, "worker thread #%d terminated", current+1);
+			this->logger->log(this->logger, CONTROL, 
+							  "worker thread #%d terminated", current+1);
 		}
 		else
 		{
-			this->pool_logger->log(this->pool_logger, ERROR, "could not terminate worker thread #%d", current+1);
+			this->logger->log(this->logger, ERROR, 
+							  "could not terminate worker thread #%d", current+1);
 		}
 	}
 	
@@ -143,32 +143,35 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	/* initialize member */
 	this->pool_size = pool_size;
 	this->threads = malloc(sizeof(pthread_t) * pool_size);
-	this->pool_logger = logger_manager->get_logger(logger_manager, THREAD_POOL);
-	this->worker_logger = logger_manager->get_logger(logger_manager, WORKER);
+	this->logger = logger_manager->get_logger(logger_manager, THREAD_POOL);
 	
 	/* try to create as many threads as possible, up to pool_size */
 	for (current = 0; current < pool_size; current++) 
 	{
-		if (pthread_create(&(this->threads[current]), NULL, (void*(*)(void*))process_jobs, this) == 0) 
+		if (pthread_create(&(this->threads[current]), NULL, 
+						   (void*(*)(void*))process_jobs, this) == 0)
 		{
-			this->pool_logger->log(this->pool_logger, CONTROL, "created worker thread #%d", current+1);
+			this->logger->log(this->logger, CONTROL, 
+							  "created worker thread #%d", current+1);
 		}
 		else
 		{
 			/* creation failed, is it the first one? */	
 			if (current == 0) 
 			{
-				this->pool_logger->log(this->pool_logger, ERROR, "Could not create any thread");
+				this->logger->log(this->logger, ERROR, "Could not create any thread");
 				free(this->threads);
 				free(this);
 				return NULL;
 			}
 			/* not all threads could be created, but at least one :-/ */
-			this->pool_logger->log(this->pool_logger, ERROR, "Could only create %d from requested %d threads!", current, pool_size);
+			this->logger->log(this->logger, ERROR,
+							  "Could only create %d from requested %d threads!",
+							  current, pool_size);
 				
 			this->pool_size = current;
 			return (thread_pool_t*)this;
 		}
-	}	
+	}
 	return (thread_pool_t*)this;
 }

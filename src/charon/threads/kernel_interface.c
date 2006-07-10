@@ -29,6 +29,7 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <linux/udp.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -383,10 +384,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 		}
 
 		struct xfrm_encap_tmpl* encap = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
-		/* UDP_ENCAP_ESPINUDP, see /usr/src/linux/include/linux/udp.h
-		 * we could probably use 3 here (as pluto does) although the 
-		 * result is eventually the same. */
-		encap->encap_type = 2;
+		encap->encap_type = UDP_ENCAP_ESPINUDP;
 		encap->encap_sport = ntohs(natt->sport);
 		encap->encap_dport = ntohs(natt->dport);
 		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
@@ -440,9 +438,9 @@ static status_t update_sa_hosts(
 	this->logger->log(this->logger, CONTROL|LEVEL2, "getting SA");
 
 	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
-	hdr->nlmsg_flags = NLM_F_REQUEST ;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
-	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
 	struct xfrm_usersa_id *sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	sa_id->daddr = dst->get_xfrm_addr(dst);
@@ -996,12 +994,11 @@ kernel_interface_t *kernel_interface_create()
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,bool))add_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,protocol_id_t,u_int32_t))add_policy;
 	this->public.update_sa_hosts = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,int,int,u_int32_t,protocol_id_t))update_sa_hosts;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,protocol_id_t,u_int32_t))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,time_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int))del_policy;
-	
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
 
 	/* private members */

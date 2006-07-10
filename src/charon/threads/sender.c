@@ -50,13 +50,6 @@ struct private_sender_t {
 	 pthread_t assigned_thread;
 	 
 	 /**
-	  * @brief The thread function, sends out packets.
-	  * 
-	  * @param this 	calling object
-	  */
-	 void (*send_packets) (private_sender_t * this);
-	 
-	 /**
 	  * A logger for this sender_t object.
 	  */
 	 logger_t *logger;
@@ -68,7 +61,7 @@ struct private_sender_t {
  */
 static void send_packets(private_sender_t * this)
 {
-	packet_t * current_packet;
+	packet_t *current_packet;
 	status_t status;
 	
 	/* cancellation disabled by default */
@@ -76,11 +69,11 @@ static void send_packets(private_sender_t * this)
 
 	this->logger->log(this->logger, CONTROL, "sender thread running,    thread_ID: %06u", (int)pthread_self());
 
-	while (1)
+	while (TRUE)
 	{
 		current_packet = charon->send_queue->get(charon->send_queue);
 		this->logger->log(this->logger, CONTROL|LEVEL1, "Got a packet, sending it");
-		status = charon->socket->send(charon->socket,current_packet);
+		status = charon->socket->send(charon->socket, current_packet);
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR, "Sending failed, socket returned %s", 
@@ -97,10 +90,10 @@ static void destroy(private_sender_t *this)
 {
 	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to terminate sender thread");
 	pthread_cancel(this->assigned_thread);
-
+	
 	pthread_join(this->assigned_thread, NULL);
 	this->logger->log(this->logger, CONTROL | LEVEL1, "Sender thread terminated");
-
+	
 	free(this);
 }
 
@@ -111,12 +104,11 @@ sender_t * sender_create()
 {
 	private_sender_t *this = malloc_thing(private_sender_t);
 
-	this->send_packets = send_packets;
 	this->public.destroy = (void(*)(sender_t*)) destroy;
 	
 	this->logger = logger_manager->get_logger(logger_manager, SENDER);
 
-	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->send_packets, this) != 0)
+	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))send_packets, this) != 0)
 	{
 		this->logger->log(this->logger, ERROR, "Sender thread could not be created");
 		free(this);

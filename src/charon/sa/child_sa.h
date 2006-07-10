@@ -39,7 +39,7 @@
 typedef struct child_sa_t child_sa_t;
 
 /**
- * @brief Represents multiple IPsec SAs between two hosts.
+ * @brief Represents an IPsec SAs between two hosts.
  * 
  * A child_sa_t contains two SAs. SAs for both
  * directions are managed in one child_sa_t object. Both
@@ -168,15 +168,35 @@ struct child_sa_t {
 	status_t (*get_use_time) (child_sa_t *this, bool inbound, time_t *use_time);
 	
 	/**
-	 * @brief Mark this child_sa as rekeyed.
+	 * @brief Set the transaction which rekeys this CHILD_SA.
 	 *
-	 * Since an SA which rekeys a old SA shares the same policy,
-	 * we must mark a child_sa as rekeyed. A so marked SA does
-	 * not remove its policy, as the new SA uses it.
+	 * Since either end may initiate CHILD_SA rekeying, we must detect
+	 * such situations to handle them cleanly. A rekeying transaction
+	 * registers itself to the CHILD_SA, and checks later if another
+	 * transaction is in progress of a rekey.
 	 *
 	 * @param this 		calling object
 	 */	
-	void (*set_rekeyed) (child_sa_t *this);
+	void (*set_rekeying_transaction) (child_sa_t *this, void *transaction);
+	
+	/**
+	 * @brief Get the transaction which rekeys this CHILD_SA.
+	 *
+	 * See set_rekeying_transactoin
+	 *
+	 * @param this 		calling object
+	 */	
+	void* (*get_rekeying_transaction) (child_sa_t *this);
+	
+	/**
+	 * @brief Is the CHILD SA rekeying/in progress of rekeying?
+	 *
+	 * This is a readonly parameter. It is set whenever the 
+	 * set_rekeying_transaction() method is called.
+	 *
+	 * @param this 		calling object
+	 */	
+	bool (*is_rekeying) (child_sa_t *this);
 	
 	/**
 	 * @brief Log the status of a child_sa to a logger.

@@ -45,13 +45,6 @@ struct private_receiver_t {
 	 * Public part of a receiver_t object.
 	 */
 	 receiver_t public;
-	 
-	 /**
-	  * @brief Thread function started at creation of the receiver object.
-	  *
-	  * @param this 	calling object
-	  */
-	 void (*receive_packets) (private_receiver_t *this);
 
 	 /**
 	  * Assigned thread.
@@ -114,11 +107,10 @@ receiver_t * receiver_create()
 	private_receiver_t *this = malloc_thing(private_receiver_t);
 
 	this->public.destroy = (void(*)(receiver_t*)) destroy;
-	this->receive_packets = receive_packets;
 	
 	this->logger = logger_manager->get_logger(logger_manager, RECEIVER);
 	
-	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->receive_packets, this) != 0)
+	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))receive_packets, this) != 0)
 	{
 		this->logger->log(this->logger, ERROR, "Receiver thread could not be started");
 		free(this);
