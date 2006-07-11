@@ -72,10 +72,9 @@ static void add_policy(private_local_policy_store_t *this, policy_t *policy)
 static policy_t *get_policy_by_ids(private_local_policy_store_t *this, identification_t *my_id, identification_t *other_id)
 {
 	typedef enum {
-		PRIO_UNDEFINED =	0x00,
+		PRIO_UNDEFINED = 	0x00,
 		PRIO_ID_ANY = 		0x01,
-		PRIO_ID_WILDCARD =  0x02,
-		PRIO_ID_MATCH =		0x04,
+		PRIO_ID_MATCH =		PRIO_ID_ANY + MAX_WILDCARDS,
 	} prio_t;
 
 	prio_t best_prio = PRIO_UNDEFINED;
@@ -89,36 +88,28 @@ static policy_t *get_policy_by_ids(private_local_policy_store_t *this, identific
 
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
+
 	/* determine closest matching policy */
 	while (iterator->has_next(iterator))
 	{
 		identification_t *candidate_my_id;
 		identification_t *candidate_other_id;
+		int wildcards;
 		
 		iterator->current(iterator, (void**)&candidate);
 
 		candidate_my_id = candidate->get_my_id(candidate);
 		candidate_other_id = candidate->get_other_id(candidate);
 
-		/* my_id must match, or may be %any */
-		if (candidate_my_id->belongs_to(candidate_my_id, my_id))
+		/* my_id is either %any or if set must match exactly */
+		if (candidate_my_id->matches(candidate_my_id, my_id, &wildcards))
 		{
 			prio_t prio = PRIO_UNDEFINED;
 
-			/* exact match of id? */
-			if (other_id->equals(other_id, candidate_other_id))
+			/* wildcard match for other_id */
+			if (other_id->matches(other_id, candidate_other_id, &wildcards))
 			{
-				prio = PRIO_ID_MATCH;
-			}
-			/* match against any? */
-			else if (candidate_other_id->get_type(candidate_other_id) == ID_ANY)
-			{
-				prio = PRIO_ID_ANY;
-			}
-			/* wildcard match? */
-			else if (other_id->belongs_to(other_id, candidate_other_id))
-			{
-				prio = PRIO_ID_WILDCARD;
+				prio = PRIO_ID_MATCH - wildcards;
 			}
 
 			this->logger->log(this->logger, CONTROL|LEVEL2,
@@ -132,11 +123,6 @@ static policy_t *get_policy_by_ids(private_local_policy_store_t *this, identific
 			{
 				found = candidate;
 				best_prio = prio;
-			}
-			if (prio == PRIO_ID_MATCH)
-			{
-				/* won't get better, stop searching */
-				break;
 			}
 		}
 	}

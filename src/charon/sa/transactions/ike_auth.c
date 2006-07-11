@@ -224,7 +224,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		else
 		{
 			this->logger->log(this->logger, ERROR, 
-							  "could not find my certificate, certificate payload ommited");
+							  "could not find my certificate, certificate payload omitted");
 		}
 	}
 	
@@ -299,9 +299,9 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 }
 
 /**
- * Handle all kind of notifys
+ * Handle all kind of notifies
  */
-static status_t process_notifys(private_ike_auth_t *this, notify_payload_t *notify_payload)
+static status_t process_notifies(private_ike_auth_t *this, notify_payload_t *notify_payload)
 {
 	notify_type_t notify_type = notify_payload->get_notify_type(notify_payload);
 	
@@ -310,7 +310,7 @@ static status_t process_notifys(private_ike_auth_t *this, notify_payload_t *noti
 
 	switch (notify_type)
 	{
-		/* these notifys are not critical. no child_sa is built, but IKE stays alive */
+		/* these notifies are not critical. no child_sa is built, but IKE stays alive */
 		case SINGLE_PAIR_REQUIRED:
 		{
 			this->logger->log(this->logger, AUDIT, 
@@ -471,6 +471,7 @@ static void destroy_ts_list(linked_list_t *list)
 	if (list)
 	{
 		traffic_selector_t *ts;
+
 		while (list->remove_last(list, (void**)&ts) == SUCCESS)
 		{
 			ts->destroy(ts);
@@ -560,7 +561,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 				break;
 			case NOTIFY:
 			{
-				status = process_notifys(this, (notify_payload_t*)payload);
+				status = process_notifies(this, (notify_payload_t*)payload);
 				if (status == FAILED)
 				{
 					payloads->destroy(payloads);
@@ -641,7 +642,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		if (cert == NULL)
 		{
 			this->logger->log(this->logger, ERROR,
-							  "could not find my certificate, cert payload ommited");
+							  "could not find my certificate, cert payload omitted");
 		}
 		cert_payload = cert_payload_create_from_x509(cert);
 		response->add_payload(response, (payload_t *)cert_payload);
@@ -822,7 +823,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 				break;
 			case NOTIFY:
 			{
-				status = process_notifys(this, (notify_payload_t*)payload);
+				status = process_notifies(this, (notify_payload_t*)payload);
 				if (status == FAILED)
 				{
 					payloads->destroy(payloads);
@@ -855,11 +856,12 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	
 	{	/* process idr payload */
 		identification_t *configured_other_id;
+		int wildcards;
 		
 		other_id = idr_payload->get_identification(idr_payload);
 		configured_other_id = this->policy->get_other_id(this->policy);
 		
-		if (!other_id->belongs_to(other_id, configured_other_id))
+		if (!other_id->matches(other_id, configured_other_id, &wildcards))
 		{
 			other_id->destroy(other_id);
 			this->logger->log(this->logger, AUDIT,
