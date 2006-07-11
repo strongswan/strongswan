@@ -37,17 +37,24 @@
 /** 
  * String mappings for id_type_t.
  */
-mapping_t id_type_m[] = {
-	{ID_IPV4_ADDR,	 "ID_IPV4_ADDR"},
-	{ID_FQDN,		 "ID_FQDN"},
-	{ID_RFC822_ADDR, "ID_RFC822_ADDR"},
-	{ID_IPV6_ADDR,	 "ID_IPV6_ADDR"},
-	{ID_DER_ASN1_DN, "ID_DER_ASN1_DN"},
-	{ID_DER_ASN1_GN, "ID_DER_ASN1_GN"},
-	{ID_KEY_ID,		 "ID_KEY_ID"},
-	{ID_ANY,		 "ID_ANY"},
-	{MAPPING_END, NULL}
+
+static const char *const id_type_name[] = {
+	"ID_ANY",
+	"ID_IPV4_ADDR",
+	"ID_FQDN",
+	"ID_RFC822_ADDR",
+	"ID_IPV4_ADDR_SUBNET",
+	"ID_IPV6_ADDR",
+	"ID_IPV6_ADDR_SUBNET",
+	"ID_IPV4_ADDR_RANGE",
+	"ID_IPV6_ADDR_RANGE",
+	"ID_DER_ASN1_DN",
+	"ID_DER_ASN1_GN",
+	"ID_KEY_ID",
 };
+
+enum_names id_type_names =
+    { ID_ANY, ID_KEY_ID, id_type_name, NULL };
 
 /**
  * X.501 acronyms for well known object identifiers (OIDs)
@@ -513,7 +520,9 @@ bool match_dn(chunk_t a, chunk_t b, int *wildcards)
 	{
 		return FALSE;
 	}
+
 	/* the two DNs match! */
+	*wildcards = min(*wildcards, MAX_WILDCARDS);
 	return TRUE;
 }
 
@@ -680,11 +689,11 @@ static char *get_string(private_identification_t *this)
  */
 static bool contains_wildcards(private_identification_t *this)
 {
-	return this->type == ID_ANY || memchr(this->encoded.ptr, '*', this->encoded.len) != NULL;
+	return this->type == ID_ANY || strchr(this->string, '*') != NULL;
 }
 
 /**
- * Default implementation of identification_t.equals and identification_t.belongs_to.
+ * Default implementation of identification_t.equals.
  * compares encoded chunk for equality.
  */
 static bool equals_binary(private_identification_t *this, private_identification_t *other)
@@ -693,7 +702,7 @@ static bool equals_binary(private_identification_t *this, private_identification
 }
 
 /**
- * Special implementation of identification_t.equals for ID_DER_ASN1_DN
+ * Special implementation of identification_t.equals for ID_DER_ASN1_DN.
  */
 static bool equals_dn(private_identification_t *this, private_identification_t *other)
 {
@@ -701,76 +710,86 @@ static bool equals_dn(private_identification_t *this, private_identification_t *
 }
 
 /**
- * Special implementation of identification_t.belongs_to for ID_RFC822_ADDR/ID_FQDN.
- * checks for a wildcard in other-string, and compares it against this-string.
+ * Default implementation of identification_t.matches.
  */
-static bool belongs_to_wc_string(private_identification_t *this, private_identification_t *other)
+static bool matches_binary(private_identification_t *this, private_identification_t *other,
+	int *wildcards)
+{	
+	*wildcards = 0;
+	return this->type == other->type && chunk_equals(this->encoded, other->encoded);
+}
+
+/**
+ * Special implementation of identification_t.matches for ID_RFC822_ADDR/ID_FQDN.
+ * Checks for a wildcard in other-string, and compares it against this-string.
+ */
+static bool matches_string(private_identification_t *this, private_identification_t *other,
+	int *wildcards)
 {
-	char *this_str, *other_str, *pos;
+	u_int len = other->encoded.len;
 	
 	if (other->type == ID_ANY)
 	{
+		*wildcards = MAX_WILDCARDS;
 		return TRUE;
 	}
 	
-	if (this->type == other->type)
+	if (this->type != other->type)
+		return FALSE;
+
+	/* try a binary comparison first */
+	if (equals_binary(this, other))
 	{
-		/* try a binary comparison first */
-		if (equals_binary(this, other))
-		{
-			return TRUE;
-		}
+		*wildcards = 0;
+		return TRUE;
 	}
-	if (other->encoded.len > 0 &&
-		   *(other->encoded.ptr) == '*')
+	
+	if (len == 0 || this->encoded.len < len)
+		return FALSE;
+
+	/* check for single wildcard at the head of the string */
+	if (*other->encoded.ptr == '*')
 	{
-		if (other->encoded.len == 1)
-		{
-			/* other contains just a wildcard, and therefore matches anything */
+		*wildcards = 1;
+
+		/* single asterisk matches any string */
+		if (len-- == 1)
 			return TRUE;
-		}
-		/* We strdup chunks, since they are NOT null-terminated */
-		this_str = strndupa(this->encoded.ptr, this->encoded.len);
-		other_str = strndupa(other->encoded.ptr + 1, other->encoded.len - 1);
-		pos = strstr(this_str, other_str);
-		if (pos != NULL)
-		{
-			/* ok, other is contained in this, but there may be more characters, so check it */
-			if (strlen(pos) == strlen(other_str))
-			{
-				return TRUE;
-			}
-		}
+
+		if (memeq(this->encoded.ptr + this->encoded.len - len, other->encoded.ptr + 1, len))
+			return TRUE;
 	}
 	
 	return FALSE;
 }
 
 /**
- * Special implementation of identification_t.belongs_to for ID_ANY.
+ * Special implementation of identification_t.matches for ID_ANY.
  * ANY matches only another ANY, but nothing other
  */
-static bool belongs_to_any(private_identification_t *this, private_identification_t *other)
+static bool matches_any(private_identification_t *this, private_identification_t *other,
+	int *wildcards)
 {	
+	*wildcards = 0;
 	return other->type == ID_ANY;
 }
 
 /**
- * Special implementation of identification_t.belongs_to for ID_DER_ASN1_DN.
+ * Special implementation of identification_t.matches for ID_DER_ASN1_DN.
  * ANY matches any, even ANY, thats why its there...
  */
-static bool belongs_to_dn(private_identification_t *this, private_identification_t *other)
+static bool matches_dn(private_identification_t *this, private_identification_t *other,
+	int *wildcards)
 {
-	int wildcards;
-	
 	if (other->type == ID_ANY)
 	{
+		*wildcards = MAX_WILDCARDS;
 		return TRUE;
 	}
 	
 	if (this->type == other->type)
 	{
-		return match_dn(this->encoded, other->encoded, &wildcards);
+		return match_dn(this->encoded, other->encoded, wildcards);
 	}
 	return FALSE;
 }
@@ -788,7 +807,7 @@ static identification_t *clone(private_identification_t *this)
 	strcpy(clone->string, this->string);
 	
 	clone->public.equals = this->public.equals;
-	clone->public.belongs_to = this->public.belongs_to;
+	clone->public.matches = this->public.matches;
 	
 	return &clone->public;
 }
@@ -818,7 +837,7 @@ static private_identification_t *identification_create(void)
 	this->public.destroy = (void (*) (identification_t*))destroy;
 	/* we use these as defaults, the may be overloaded for special ID types */
 	this->public.equals = (bool (*) (identification_t*,identification_t*))equals_binary;
-	this->public.belongs_to = (bool (*) (identification_t*,identification_t*))equals_binary;
+	this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_binary;
 	
 	this->string = NULL;
 	this->encoded = CHUNK_INITIALIZER;
@@ -849,7 +868,7 @@ identification_t *identification_create_from_string(char *string)
 		this->string = strdup(string);
 		this->type = ID_DER_ASN1_DN;
 		this->public.equals = (bool (*) (identification_t*,identification_t*))equals_dn;
-		this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_dn;
+		this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_dn;
 		return &this->public;
 	}
 	else if (strchr(string, '@') == NULL)
@@ -863,7 +882,7 @@ identification_t *identification_create_from_string(char *string)
 			/* any ID will be accepted */
 			this->type = ID_ANY;
 			this->string = strdup("%any");
-			this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_any;
+			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_any;
 			return &this->public;
 		}
 		else
@@ -908,8 +927,7 @@ identification_t *identification_create_from_string(char *string)
 		{
 			if (*(string + 1) == '#')
 			{
-				/* TODO: Pluto handles '#' as hex encoded ASN1/KEY ID. Do we need this, too?
-                   Yes, key IDs are needed */
+				/* TODO: Pluto handles '#' as hex encoded ID_KEY_ID. */
 				free(this);
 				return NULL;
 			}
@@ -919,7 +937,7 @@ identification_t *identification_create_from_string(char *string)
 				this->string = strdup(string);
 				this->encoded.ptr = strdup(string + 1);
 				this->encoded.len = strlen(string + 1);
-				this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_wc_string;
+				this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_string;
 				return &(this->public);
 			}
 		}
@@ -929,7 +947,7 @@ identification_t *identification_create_from_string(char *string)
 			this->string = strdup(string);
 			this->encoded.ptr = strdup(string);
 			this->encoded.len = strlen(string);
-			this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_wc_string;
+			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_string;
 			return &(this->public);
 		}
 	}
@@ -946,11 +964,12 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 	private_identification_t *this = identification_create();
 	
 	this->type = type;
+
 	switch (type)
 	{
 		case ID_ANY:
 			this->string = strdup("%any");
-			this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_any;
+			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_any;
 			break;
 		case ID_IPV4_ADDR:
 			if (encoded.len < sizeof(struct in_addr) ||
@@ -977,12 +996,12 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 		case ID_FQDN:
 			snprintf(buf, sizeof(buf), "@%.*s", encoded.len, encoded.ptr);
 			this->string = strdup(buf);
-			this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_wc_string;
+			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_string;
 			break;
 		case ID_RFC822_ADDR:
 			snprintf(buf, sizeof(buf), "%.*s", encoded.len, encoded.ptr);
 			this->string = strdup(buf);
-			this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_wc_string;
+			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_string;
 			break;
 		case ID_DER_ASN1_DN:
 			snprintf(buf, sizeof(buf), "%.*s", encoded.len, encoded.ptr);
@@ -990,7 +1009,7 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 			dntoa(encoded, &buf_chunk);
 			this->string = strdup(buf);
 			this->public.equals = (bool (*) (identification_t*,identification_t*))equals_dn;
-			this->public.belongs_to = (bool (*) (identification_t*,identification_t*))belongs_to_dn;
+			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_dn;
 			break;
 		case ID_DER_ASN1_GN:
 			this->string = strdup("ASN.1 coded generalName");
