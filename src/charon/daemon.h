@@ -159,9 +159,11 @@
  */
 
 /**
- * @defgroup states states
+ * @defgroup transactions transactions
  *
- * Varius states in which an IKE SA can be.
+ * Transactions represent a request/response
+ * message exchange to implement the IKEv2
+ * protocol exchange scenarios.
  *
  * @ingroup sa
  */

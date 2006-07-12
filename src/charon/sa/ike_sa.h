@@ -46,7 +46,39 @@ typedef enum ike_sa_state_t ike_sa_state_t;
 
 /**
  * @brief State of an IKE_SA.
- * 
+ *
+ * An IKE_SA passes various states in its lifetime. A newly created
+ * SA is in the state CREATED.
+ * @verbatim
+                 +----------------+
+                 ¦   SA_CREATED   ¦
+                 +----------------+
+                         ¦
+    on initiate()--->    ¦   <----- on IKE_SA_INIT received 
+                         ¦
+                 +----------------+
+                 ¦ SA_CONNECTING  ¦
+                 +----------------+
+                         ¦
+                         ¦   <----- on IKE_AUTH successfully completed
+                         ¦
+                 +----------------+
+                 ¦ SA_ESTABLISHED ¦
+                 +----------------+
+                         ¦
+    on delete()--->      ¦   <----- on IKE_SA delete request received
+                         ¦
+                 +----------------+
+                 ¦  SA_DELETING   ¦
+                 +----------------+
+                         ¦
+                         ¦   <----- after delete() acknowledged
+                         ¦
+                        \¦/
+                         X
+                        / \
+   @endverbatim
+ *
  * @ingroup sa
  */
 enum ike_sa_state_t {

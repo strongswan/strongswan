@@ -100,6 +100,8 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 						/* we do not handle rekeying of CHILD_SAs in a special 
 						 * transaction, as the procedure is nearly equal 
 						 * to create a new CHILD_SA. */
+						transaction = (transaction_t*)create_child_sa_create(ike_sa, message_id);
+						break;
 					default:
 						break;
 				}

@@ -47,7 +47,7 @@ typedef struct transaction_t transaction_t;
  *
  * The responder must not destroy the transaction, until the 
  * initiator initiates another transaction (or a number of transactions
- * > window size). This allows us to redo a transaction in case of a 
+ * > window size). This allows us to redo a transaction in case of a
  * message loss. The initiator can destroy the the transaction once
  * the conclude() function is called.
  * 
