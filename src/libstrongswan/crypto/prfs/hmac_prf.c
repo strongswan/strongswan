@@ -89,8 +89,8 @@ static void set_key(private_hmac_prf_t *this, chunk_t key)
  */
 static void destroy(private_hmac_prf_t *this)
 {
-	free(this);
 	this->hmac->destroy(this->hmac);
+	free(this);
 }
 
 /*

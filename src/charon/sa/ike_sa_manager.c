@@ -361,12 +361,12 @@ static void create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa
 
 	/* create entry */
 	new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
-	new_ike_sa_id->destroy(new_ike_sa_id);
 	this->logger->log(this->logger, CONTROL|LEVEL2,
 					  "created IKE_SA %llx:%llx, role %s",
 					  new_ike_sa_id->get_initiator_spi(new_ike_sa_id),
 					  new_ike_sa_id->get_responder_spi(new_ike_sa_id),
 					  new_ike_sa_id->is_initiator(new_ike_sa_id) ? "initiator" : "responder");
+	new_ike_sa_id->destroy(new_ike_sa_id);
 
 	/* each access is locked */
 	pthread_mutex_lock(&(this->mutex));

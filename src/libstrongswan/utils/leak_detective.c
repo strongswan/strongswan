@@ -42,9 +42,20 @@
 #ifdef LEAK_DETECTIVE
 
 /**
- * Magic value which helps to detect memory corruption
+ * Magic value which helps to detect memory corruption. Yummy!
  */
-#define MEMORY_HEADER_MAGIC 0xF1367ADF
+#define MEMORY_HEADER_MAGIC 0x7ac0be11
+
+/**
+ * Pattern which is filled in memory before freeing it
+ */
+#define MEMORY_FREE_PATTERN 0xFF
+
+/**
+ * Pattern which is filled in newly allocated memory
+ */
+#define MEMORY_ALLOC_PATTERN 0xEE
+
 
 static void install_hooks(void);
 static void uninstall_hooks(void);
@@ -194,9 +205,6 @@ void report_leaks()
 	memory_header_t *hdr;
 	int leaks = 0;
 	
-	/* reaquire a logger is necessary, this will force ((destructor))
-	* order to work correctly */
-	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
 		if (!is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
@@ -263,11 +271,12 @@ void *malloc_hook(size_t bytes, const void *caller)
 	uninstall_hooks();
 	hdr = malloc(bytes + sizeof(memory_header_t));
 	/* set to something which causes crashes */
-	memset(hdr, 0xEE, bytes + sizeof(memory_header_t));
+	memset(hdr, MEMORY_ALLOC_PATTERN, bytes + sizeof(memory_header_t));
 	
 	hdr->magic = MEMORY_HEADER_MAGIC;
 	hdr->bytes = bytes;
 	hdr->stack_frame_count = backtrace(hdr->stack_frames, STACK_FRAMES_COUNT);
+	install_hooks();
 	
 	/* insert at the beginning of the list */
 	hdr->next = first_header.next;
@@ -277,7 +286,6 @@ void *malloc_hook(size_t bytes, const void *caller)
 	}
 	hdr->previous = &first_header;
 	first_header.next = hdr;
-	install_hooks();
 	pthread_mutex_unlock(&mutex);
 	return hdr + 1;
 }
@@ -298,16 +306,17 @@ void free_hook(void *ptr, const void *caller)
 	}
 	
 	pthread_mutex_lock(&mutex);
+	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		pthread_mutex_unlock(&mutex);
-		logger->log(logger, ERROR, "freeing of invalid memory (%p):", ptr);
+		logger->log(logger, ERROR, "freeing of invalid memory (%p, MAGIC 0x%x != 0x%x):", 
+					ptr, hdr->magic, MEMORY_HEADER_MAGIC);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
 		return;
 	}
-	/* remove magic from hdr */
-	hdr->magic = 0;
 	
 	/* remove item from list */
 	if (hdr->next)
@@ -316,7 +325,9 @@ void free_hook(void *ptr, const void *caller)
 	}
 	hdr->previous->next = hdr->next;
 	
-	uninstall_hooks();
+	/* clear MAGIC, set mem to something remarkable */
+	memset(hdr, MEMORY_FREE_PATTERN, hdr->bytes + sizeof(memory_header_t));
+	
 	free(hdr);
 	install_hooks();
 	pthread_mutex_unlock(&mutex);
@@ -338,6 +349,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	}
 	
 	hdr = old - sizeof(memory_header_t);
+	
 	pthread_mutex_lock(&mutex);
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
@@ -345,6 +357,8 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 		logger->log(logger, ERROR, "reallocation of invalid memory (%p):", old);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
+		install_hooks();
+		pthread_mutex_unlock(&mutex);
 		raise(SIGKILL);
 		return NULL;
 	}
