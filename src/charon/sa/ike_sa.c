@@ -618,7 +618,7 @@ static status_t process_response(private_ike_sa_t *this, message_t *response)
 	 * counter, as the new transaction used the next one */
 	if (new)
 	{
-		this->message_id_out++;
+		this->message_id_out = new->get_message_id(new) + 1;;
 	}
 	
 	/* queue new transaction */
@@ -1047,13 +1047,13 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal,
 	
 	if (initiator)
 	{
-		this->signer_in = signer_i;
-		this->signer_out = signer_r;
+		this->signer_in = signer_r;
+		this->signer_out = signer_i;
 	}
 	else
 	{
-		this->signer_in = signer_r;
-		this->signer_out = signer_i;
+		this->signer_in = signer_i;
+		this->signer_out = signer_r;
 	}
 	
 	/* SK_ei/SK_er used for encryption */
@@ -1086,13 +1086,13 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal,
 	
 	if (initiator)
 	{
-		this->crypter_in = crypter_i;
-		this->crypter_out = crypter_r;
+		this->crypter_in = crypter_r;
+		this->crypter_out = crypter_i;
 	}
 	else
 	{
-		this->crypter_in = crypter_r;
-		this->crypter_out = crypter_i;
+		this->crypter_in = crypter_i;
+		this->crypter_out = crypter_r;
 	}
 	
 	/* SK_pi/SK_pr used for authentication */	
