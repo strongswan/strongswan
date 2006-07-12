@@ -48,6 +48,10 @@ typedef struct kernel_interface_t kernel_interface_t;
  * The kernel interface handles the communication with the kernel
  * for SA and policy management. It allows setup of these, and provides 
  * further the handling of kernel events.
+ * Policy information are cached in the interface. This is necessary to do
+ * reference counting. The Linux kernel does not allow the same policy
+ * installed twice, but we need this as CHILD_SA exist multiple times
+ * when rekeying. Thats why we do reference counting of policies.
  * 
  * @b Constructors:
  *  - kernel_interface_create()
@@ -73,11 +77,8 @@ struct kernel_interface_t {
 	 * 					- SUCCESS
 	 * 					- FAILED if kernel comm failed
 	 */
-	status_t (*get_spi) (kernel_interface_t *this, 
-				host_t *src, host_t *dst, 
-				protocol_id_t protocol, 
-				u_int32_t reqid,
-				u_int32_t *spi);
+	status_t (*get_spi)(kernel_interface_t *this, host_t *src, host_t *dst, 
+						protocol_id_t protocol, u_int32_t reqid, u_int32_t *spi);
 	
 	/**
 	 * @brief Add an SA to the SAD.
@@ -107,18 +108,12 @@ struct kernel_interface_t {
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
-	status_t (*add_sa)(kernel_interface_t *this,
-				host_t *src, host_t *dst,
-				u_int32_t spi,
-				protocol_id_t protocol,
-				u_int32_t reqid,
-				u_int64_t expire_soft,
-				u_int64_t expire_hard,
-				algorithm_t *enc_alg,
-				algorithm_t *int_alg,
-				prf_plus_t *prf_plus,
-				natt_conf_t *natt,
-				bool replace);
+	status_t (*add_sa) (kernel_interface_t *this,
+						host_t *src, host_t *dst, u_int32_t spi,
+						protocol_id_t protocol, u_int32_t reqid,
+						u_int64_t expire_soft, u_int64_t expire_hard,
+						algorithm_t *enc_alg, algorithm_t *int_alg,
+						prf_plus_t *prf_plus, natt_conf_t *natt, bool replace);
 	
 	/**
 	 * @brief Update the hosts on an installed SA. Encapsulation ports are also updated.
@@ -127,40 +122,52 @@ struct kernel_interface_t {
 	 * the protocol AND the destination address (and family) to identify SAs. Therefore if the 
 	 * destination address changed we create a new SA and delete the old one.
 	 *
-	 * @param this		calling object
-	 * @param src		source address for this SA
-	 * @param dst		destination address for this SA
-	 * @param new_src	new source address for this SA
-	 * @param new_dst	new destination address for this SA
+	 * @param this			calling object
+	 * @param src			source address for this SA
+	 * @param dst			destination address for this SA
+	 * @param new_src		new source address for this SA
+	 * @param new_dst		new destination address for this SA
 	 * @param src_changes	changes in src
 	 * @param dst_changes	changes in dst
-	 * @param spi		SPI allocated by us or remote peer
-	 * @param protocol	protocol for this SA (ESP/AH)
+	 * @param spi			SPI allocated by us or remote peer
+	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @return
-	 * 					- SUCCESS
-	 * 					- FAILED if kernel comm failed
+	 * 						- SUCCESS
+	 * 						- FAILED if kernel comm failed
 	 */
 	status_t (*update_sa_hosts)(kernel_interface_t *this,
 				host_t *src, host_t *dst,
 				host_t *new_src, host_t *new_dst,
 				int src_changes, int dst_changes,
 				u_int32_t spi, protocol_id_t protocol);
+	/**
+	 * @brief Query the use time of an SA.
+	 * 
+	 * @param this			calling object
+	 * @param dst			destination address for this SA
+	 * @param spi			SPI allocated by us or remote peer
+	 * @param protocol		protocol for this SA (ESP/AH)
+	 * @param[out] use_time	the time of this SA's last use
+	 * @return
+	 * 						- SUCCESS
+	 * 						- FAILED if kernel comm failed
+	 */
+	status_t (*query_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi, 
+						  protocol_id_t protocol, time_t *use_time);
 	
 	/**
 	 * @brief Delete a previusly installed SA from the SAD.
 	 * 
-	 * @param this		calling object
-	 * @param dst		destination address for this SA
-	 * @param spi		SPI allocated by us or remote peer
-	 * @param protocol	protocol for this SA (ESP/AH)
+	 * @param this			calling object
+	 * @param dst			destination address for this SA
+	 * @param spi			SPI allocated by us or remote peer
+	 * @param protocol		protocol for this SA (ESP/AH)
 	 * @return
-	 * 					- SUCCESS
-	 * 					- FAILED if kernel comm failed
+	 * 						- SUCCESS
+	 * 						- FAILED if kernel comm failed
 	 */
-	status_t (*del_sa) (kernel_interface_t *this,
-				host_t *dst,
-				u_int32_t spi,
-				protocol_id_t protocol);
+	status_t (*del_sa) (kernel_interface_t *this, host_t *dst, u_int32_t spi,
+						protocol_id_t protocol);
 	
 	/**
 	 * @brief Add a policy to the SPD.
@@ -181,47 +188,23 @@ struct kernel_interface_t {
 	 * @param upper_proto	upper layer protocol of traffic for this policy (TCP, UDP, ICMP, ...)
 	 * @param protocol		protocol to use to protect traffic (AH/ESP)
 	 * @param reqid			uniqe ID of an SA to use to enforce policy
+	 * @param update		update an existing policy, if TRUE
 	 * @return
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
 	status_t (*add_policy) (kernel_interface_t *this, 
-				host_t *me, host_t *other, 
-				host_t *src, host_t *dst,
-				u_int8_t src_hostbits, u_int8_t dst_hostbits,
-				int direction, int upper_proto, 
-				protocol_id_t protocol,
-				u_int32_t reqid);
-	/**
-	 * @brief Query the use time of a policy
-	 * 
-	 * @param this			calling object
-	 * @param me			address of local peer
-	 * @param other			address of remote peer
-	 * @param src			src address of traffic this policy applies
-	 * @param dst			dest address of traffic this policy applies
-	 * @param src_hostbits	subnetmask to use for src address
-	 * @param dst_hostbits	subnetmask to use for dst address
-	 * @param direction		direction of traffic, XFRM_POLICY_OUT, XFRM_POLICY_IN, XFRM_POLICY_FWD
-	 * @param upper_proto	upper layer protocol of traffic for this policy (TCP, UDP, ICMP, ...)
-	 * @param use_time		the time of this policy's last use
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if kernel comm failed
-	 */
-	status_t (*query_policy) (kernel_interface_t *this, 
-				host_t *me, host_t *other,
-				host_t *src, host_t *dst,
-				u_int8_t src_hostbits, u_int8_t dst_hostbits,
-				int direction, int upper_proto,
-				time_t *use_time);
+							host_t *me, host_t *other, 
+							host_t *src, host_t *dst,
+							u_int8_t src_hostbits, u_int8_t dst_hostbits,
+							u_int8_t direction, u_int8_t upper_proto, 
+							protocol_id_t protocol,
+							u_int32_t reqid, bool update);
 	
 	/**
 	 * @brief Remove a policy from the SPD.
-	 * 
+	 *
 	 * @param this			calling object
-	 * @param me			address of local peer
-	 * @param other			address of remote peer
 	 * @param src			src address of traffic this policy applies
 	 * @param dst			dest address of traffic this policy applies
 	 * @param src_hostbits	subnetmask to use for src address
@@ -232,11 +215,10 @@ struct kernel_interface_t {
 	 * 						- SUCCESS
 	 * 						- FAILED if kernel comm failed
 	 */
-	status_t (*del_policy) (kernel_interface_t *this, 
-				host_t *me, host_t *other,
-				host_t *src, host_t *dst,
-				u_int8_t src_hostbits, u_int8_t dst_hostbits,
-				int direction, int upper_proto);
+	status_t (*del_policy) (kernel_interface_t *this,
+							host_t *src, host_t *dst,
+							u_int8_t src_hostbits, u_int8_t dst_hostbits,
+							u_int8_t direction, u_int8_t upper_proto);
 	
 	/**
 	 * @brief Destroys a kernel_interface object.

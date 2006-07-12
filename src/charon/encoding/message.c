@@ -204,7 +204,7 @@ static payload_rule_t create_child_sa_i_payload_rules[] = {
  * Message rule for CREATE_CHILD_SA from responder.
  */
 static payload_rule_t create_child_sa_r_payload_rules[] = {
-	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,FALSE},
+	{NOTIFY,0,MAX_NOTIFY_PAYLOADS,TRUE,TRUE},
 	{SECURITY_ASSOCIATION,1,1,TRUE,FALSE},
 	{NONCE,1,1,TRUE,FALSE},
 	{KEY_EXCHANGE,0,1,TRUE,FALSE},

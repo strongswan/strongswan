@@ -172,8 +172,8 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 	host_t *me, *other;
 	
 	/* check if we are not already rekeying */
-	if (this->rekeyed_sa &&
-		this->rekeyed_sa->is_rekeying(this->rekeyed_sa))
+	if (this->rekeyed_sa && 
+		this->rekeyed_sa->get_rekeying_transaction(this->rekeyed_sa))
 	{
 		this->logger->log(this->logger, ERROR,
 						  "rekeying a CHILD_SA which is already rekeying, aborted");
@@ -628,20 +628,11 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		response->add_payload(response, (payload_t*)ts_response);
 	}
 	/* CHILD_SA successfully created. We set us as the rekeying transaction of
-	 * this SA. If we already initiated rekeying of the same SA, we will detect
+	 * the rekeyed SA. If we already initiated rekeying of the same SA, we will detect
 	 * this later in the conclude() call. */
 	if (this->rekeyed_sa)
 	{
-		if (this->rekeyed_sa->is_rekeying(this->rekeyed_sa))
-		{
-			/* rekeying already in progress, register us, too */
-			this->rekeyed_sa->set_rekeying_transaction(this->rekeyed_sa, &this->public);
-		}
-		else
-		{
-			/* no rekeying in progress. mark SA as rekeyed, but not conflicted */
-			this->rekeyed_sa->set_rekeying_transaction(this->rekeyed_sa, NULL);
-		}
+		this->rekeyed_sa->set_rekeying_transaction(this->rekeyed_sa, &this->public);
 	}
 	return SUCCESS;
 }
@@ -779,14 +770,14 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 		other = (private_create_child_sa_t*)
 					this->rekeyed_sa->get_rekeying_transaction(this->rekeyed_sa);
 		
-		/* we are not rekeying anymore, unregister us */
+		/* rekeying finished, update SA status */
 		this->rekeyed_sa->set_rekeying_transaction(this->rekeyed_sa, NULL);
 		
 		if (other != this)
 		{	/* simlutaneous rekeying is going on, not so good */
 			chunk_t this_lowest, other_lowest;
 			
-			/* check if this has a lower nonce the other */
+			/* check if this has a lower nonce than other */
 			if (memcmp(this->nonce_i.ptr, this->nonce_r.ptr, 
 				min(this->nonce_i.len, this->nonce_r.len)) < 0)
 			{
@@ -822,7 +813,6 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 		/* delete the old SA if we have won the rekeying nonce compare*/
 		if (!this->lost)
 		{
-			other->rekeyed_sa->set_rekeying_transaction(other->rekeyed_sa, NULL);
 			delete_child_sa = delete_child_sa_create(this->ike_sa, this->message_id + 1);
 			delete_child_sa->set_child_sa(delete_child_sa, this->rekeyed_sa);
 			*next = (transaction_t*)delete_child_sa;
@@ -832,7 +822,6 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 	{
 		/* we have lost simlutaneous rekeying, delete the CHILD_SA we just have created */
 		delete_child_sa = delete_child_sa_create(this->ike_sa, this->message_id + 1);
-		new_child->set_rekeying_transaction(new_child, NULL);
 		delete_child_sa->set_child_sa(delete_child_sa, new_child);
 		*next = (transaction_t*)delete_child_sa;
 	}

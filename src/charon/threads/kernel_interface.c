@@ -43,20 +43,29 @@
 #include <queues/jobs/delete_child_sa_job.h>
 #include <queues/jobs/rekey_child_sa_job.h>
 
-
+/** kernel level protocol identifiers */
 #define KERNEL_ESP 50
 #define KERNEL_AH 51
 
+/** default priority of installed policies */
 #define SPD_PRIORITY 1024
 
 #define BUFFER_SIZE 1024
 
-/* returns a pointer to the first rtattr following the nlmsghdr *nlh and the 'usual' netlink data x like 'struct xfrm_usersa_info' */
+/**
+ * returns a pointer to the first rtattr following the nlmsghdr *nlh and the 
+ * 'usual' netlink data x like 'struct xfrm_usersa_info' 
+ */
 #define XFRM_RTA(nlh, x) ((struct rtattr*)(NLMSG_DATA(nlh) + NLMSG_ALIGN(sizeof(x))))
-/* returns a pointer to the next rtattr following rta.
- * !!! do not use this to parse messages. use RTA_NEXT and RTA_OK instead !!! */
+/**
+ * returns a pointer to the next rtattr following rta.
+ * !!! do not use this to parse messages. use RTA_NEXT and RTA_OK instead !!!
+ */
 #define XFRM_RTA_NEXT(rta) ((struct rtattr*)(((char*)(rta)) + RTA_ALIGN((rta)->rta_len)))
-/* returns the total size of attached rta data (after 'usual' netlink data x like 'struct xfrm_usersa_info') */
+/**
+ * returns the total size of attached rta data 
+ * (after 'usual' netlink data x like 'struct xfrm_usersa_info') 
+ */
 #define XFRM_PAYLOAD(nlh, x) NLMSG_PAYLOAD(nlh, sizeof(x))
 
 typedef struct kernel_algorithm_t kernel_algorithm_t;
@@ -117,7 +126,8 @@ kernel_algorithm_t integrity_algs[] = {
 /**
  * Look up a kernel algorithm name and its key size
  */
-char* lookup_algorithm(kernel_algorithm_t *kernel_algo, algorithm_t *ikev2_algo, u_int *key_size)
+char* lookup_algorithm(kernel_algorithm_t *kernel_algo, 
+					   algorithm_t *ikev2_algo, u_int *key_size)
 {
 	while (kernel_algo->ikev2_id != END_OF_LIST)
 	{
@@ -139,17 +149,49 @@ char* lookup_algorithm(kernel_algorithm_t *kernel_algo, algorithm_t *ikev2_algo,
 	return NULL;	
 }
 
+
+
+typedef struct kernel_policy_t kernel_policy_t;
+
+/**
+ * Installed kernel policy. 
+ */
+struct kernel_policy_t {
+	
+	/** direction of this policy: in, out, forward */
+	u_int8_t direction;
+	
+	/** reqid of the policy */
+	u_int32_t reqid;
+	
+	/** parameters of installed policy */
+	struct xfrm_selector sel;
+	
+	/** by how many CHILD_SA's this policy is used */
+	u_int refcount;
+};
+
+
 typedef struct private_kernel_interface_t private_kernel_interface_t;
 
- /**
- * @brief Private Variables and Functions of kernel_interface class.
- *
+/**
+ * Private Variables and Functions of kernel_interface class.
  */
 struct private_kernel_interface_t {
 	/**
 	 * Public part of the kernel_interface_t object.
 	 */
 	kernel_interface_t public;
+	
+	/**
+	 * List of installed policies (kernel_policy_t)
+	 */
+	linked_list_t *policies;
+	
+	/**
+	 * Mutex locks access to policies list.
+	 */
+	pthread_mutex_t pol_mutex;
 	
 	/**
 	 * Netlink communication socket.
@@ -179,7 +221,7 @@ struct private_kernel_interface_t {
 	/**
 	 * Mutex locks access to replies list.
 	 */
-	pthread_mutex_t mutex;
+	pthread_mutex_t rep_mutex;
 	
 	/**
 	 * Condvar allows signaling of threads waiting for a reply.
@@ -190,17 +232,181 @@ struct private_kernel_interface_t {
 	 * Logger for XFRM stuff
 	 */
 	logger_t *logger;
-	
-	/**
-	 * Function for the thread, receives messages.
-	 */
-	void (*receive_messages) (private_kernel_interface_t *this);
-	
-	/**
-	 * Sends a netlink_message_t down to the kernel and wait for reply.
-	 */
-	status_t (*send_message) (private_kernel_interface_t *this, struct nlmsghdr *request, struct nlmsghdr **response);
 };
+
+
+/**
+ * Send a message down to the kernel and wait for its response
+ */
+static status_t send_message(private_kernel_interface_t *this,
+							 struct nlmsghdr *request, struct nlmsghdr **response)
+{
+	size_t length;
+	struct sockaddr_nl addr;
+	
+	request->nlmsg_seq = ++this->seq;
+	request->nlmsg_pid = 0;
+	
+	memset(&addr, 0, sizeof(struct sockaddr_nl));
+	addr.nl_family = AF_NETLINK;
+	addr.nl_pid = 0;
+	addr.nl_groups = 0;
+	
+	length = sendto(this->socket,(void *)request, request->nlmsg_len, 0, 
+					(struct sockaddr *)&addr, sizeof(addr));
+	
+	if (length < 0)
+	{
+		return FAILED;
+	}
+	else if (length != request->nlmsg_len)
+	{
+		return FAILED;
+	}
+	
+	pthread_mutex_lock(&(this->rep_mutex));
+	
+	while (TRUE)
+	{
+		iterator_t *iterator; 
+		bool found = FALSE;
+		/* search list, break if found */
+		iterator = this->responses->create_iterator(this->responses, TRUE);
+		while (iterator->has_next(iterator))
+		{
+			struct nlmsghdr *listed_response;
+			iterator->current(iterator, (void**)&listed_response);
+			if (listed_response->nlmsg_seq == request->nlmsg_seq)
+			{
+				/* matches our request, this is the reply */
+				*response = listed_response;
+				iterator->remove(iterator);
+				found = TRUE;
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+		
+		if (found)
+		{
+			break;
+		}
+		/* TODO: we should time out, if something goes wrong!??? */
+		pthread_cond_wait(&(this->condvar), &(this->rep_mutex));
+	}
+	
+	pthread_mutex_unlock(&(this->rep_mutex));
+	
+	return SUCCESS;
+}
+
+/**
+ * Implementation of private_kernel_interface_t.receive_messages.
+ */
+static void receive_messages(private_kernel_interface_t *this)
+{
+	while(TRUE) 
+	{
+		unsigned char response[BUFFER_SIZE];
+		struct nlmsghdr *hdr, *listed_response;
+		while (TRUE)
+		{
+			struct sockaddr_nl addr;
+			socklen_t addr_length;
+			size_t length;
+			
+			addr_length = sizeof(addr);
+			
+			length = recvfrom(this->socket, &response, sizeof(response), 0, (struct sockaddr*)&addr, &addr_length);
+			if (length < 0)
+			{
+				if (errno == EINTR)
+				{
+					/* interrupted, try again */
+					continue;
+				}
+				charon->kill(charon, "receiving from netlink socket failed");
+			}
+			if (!NLMSG_OK((struct nlmsghdr *)response, length))
+			{
+				/* bad netlink message */
+				continue;
+			}
+			if (addr.nl_pid != 0)
+			{
+				/* not from kernel. not interested, try another one */
+				continue;
+			}
+			/* good message, handle it */
+			break;
+		}
+		
+		/* we handle ACQUIRE and EXPIRE messages directly
+		*/
+		hdr = (struct nlmsghdr*)response;
+		if (hdr->nlmsg_type == XFRM_MSG_ACQUIRE)
+		{
+			struct xfrm_user_acquire *acquire;
+			
+			acquire = (struct xfrm_user_acquire*)NLMSG_DATA(hdr);
+			this->logger->log(this->logger, CONTROL,
+							  "Received a XFRM_MSG_ACQUIRE with index %d. Ignored",
+							  acquire->policy.index);
+			
+		}
+		else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
+		{
+			job_t *job;
+			protocol_id_t protocol;
+			u_int32_t spi;
+			struct xfrm_user_expire *expire;
+			
+			expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
+			protocol = expire->state.id.proto == KERNEL_ESP ?
+					PROTO_ESP : PROTO_AH;
+			spi = expire->state.id.spi;
+			
+			this->logger->log(this->logger, CONTROL|LEVEL1,
+							  "Received a XFRM_MSG_EXPIRE");
+			this->logger->log(this->logger, CONTROL,
+							  "creating %s job for %s CHILD_SA 0x%x",
+							  expire->hard ? "delete" : "rekey",
+							  mapping_find(protocol_id_m, protocol), ntohl(spi));
+			if (expire->hard)
+			{
+				job = (job_t*)delete_child_sa_job_create(protocol, spi);
+			}
+			else
+			{
+				job = (job_t*)rekey_child_sa_job_create(protocol, spi);
+			}
+			charon->job_queue->add(charon->job_queue, job);
+		}
+		/* NLMSG_ERROR is sent back for acknowledge (or on error), an
+		* XFRM_MSG_NEWSA is returned when we alloc spis and when
+		* updating SAs.
+		* XFRM_MSG_NEWPOLICY is returned when we query a policy.
+		* list these responses for the sender
+		*/
+		else if (hdr->nlmsg_type == NLMSG_ERROR ||
+					   hdr->nlmsg_type == XFRM_MSG_NEWSA ||
+					   hdr->nlmsg_type == XFRM_MSG_NEWPOLICY)
+		{
+			/* add response to queue */
+			listed_response = malloc(hdr->nlmsg_len);
+			memcpy(listed_response, &response, hdr->nlmsg_len);
+			
+			pthread_mutex_lock(&(this->rep_mutex));
+			this->responses->insert_last(this->responses, (void*)listed_response);
+			pthread_mutex_unlock(&(this->rep_mutex));
+			/* signal ALL waiting threads */
+			pthread_cond_broadcast(&(this->condvar));
+		}
+		/* we are not interested in anything other.
+		* anyway, move on to the next message */
+		continue;
+	}
+}
 
 /**
  * Implementation of kernel_interface_t.get_spi.
@@ -212,18 +418,20 @@ static status_t get_spi(private_kernel_interface_t *this,
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *response;
-
+	struct nlmsghdr *hdr;
+	struct xfrm_userspi_info *userspi;
+	
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "getting spi");
 	
-	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_ALLOCSPI;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userspi_info));
 
-	struct xfrm_userspi_info *userspi = (struct xfrm_userspi_info*)NLMSG_DATA(hdr);
+	userspi = (struct xfrm_userspi_info*)NLMSG_DATA(hdr);
 	userspi->info.saddr = src->get_xfrm_addr(src);
 	userspi->info.id.daddr = dest->get_xfrm_addr(dest);
 	userspi->info.id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
@@ -233,7 +441,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 	userspi->min = 0xc0000000;
 	userspi->max = 0xcFFFFFFF;
 	
-	if (this->send_message(this, hdr, &response) != SUCCESS)
+	if (send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
@@ -280,18 +488,20 @@ static status_t add_sa(private_kernel_interface_t *this,
 	struct nlmsghdr *response;
 	char *alg_name;
 	size_t key_size;
+	struct nlmsghdr *hdr;
+	struct xfrm_usersa_info *sa;
 	
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "adding SA");
 
-	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = replace ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	
-	struct xfrm_usersa_info *sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
+	sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
 	sa->saddr = me->get_xfrm_addr(me);
 	sa->id.daddr = other->get_xfrm_addr(other);
 	
@@ -401,7 +611,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 		rthdr = XFRM_RTA_NEXT(rthdr);
 	}
 
-	if (this->send_message(this, hdr, &response) != SUCCESS)
+	if (send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
@@ -422,6 +632,9 @@ static status_t add_sa(private_kernel_interface_t *this,
 	return status;
 }
 
+/**
+ * Implementation of kernel_interface_t.update_sa_hosts.
+ */
 static status_t update_sa_hosts(
 		private_kernel_interface_t *this,
 		host_t *src, host_t *dst,
@@ -431,24 +644,26 @@ static status_t update_sa_hosts(
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *update, *response;
+	struct nlmsghdr *hdr;
+	struct xfrm_usersa_id *sa_id;
 	
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "getting SA");
 
-	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = XFRM_MSG_GETSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
-	struct xfrm_usersa_id *sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	sa_id->daddr = dst->get_xfrm_addr(dst);
 	sa_id->spi = spi;
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
 
-	if (this->send_message(this, hdr, &update) != SUCCESS)
+	if (send_message(this, hdr, &update) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
@@ -508,7 +723,7 @@ static status_t update_sa_hosts(
 		}
 	}
 	
-	if (this->send_message(this, update, &response) != SUCCESS)
+	if (send_message(this, update, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		free(update);
@@ -535,32 +750,86 @@ static status_t update_sa_hosts(
 	free(response);
 	return status;
 }
-	
-static status_t del_sa(	private_kernel_interface_t *this,
-						host_t *dst,
-						u_int32_t spi,
-						protocol_id_t protocol)
+
+/**
+ * Implementation of kernel_interface_t.query_sa.
+ */
+static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
+						 u_int32_t spi, protocol_id_t protocol, time_t *use_time)
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *response;
+	struct nlmsghdr *hdr;
+	struct xfrm_usersa_id *sa_id;
+	struct xfrm_usersa_info *sa_info;
 	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "querying SA");
 	memset(&request, 0, sizeof(request));
-	status_t status = SUCCESS;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting SA");
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = XFRM_MSG_GETSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 
-	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
-	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	hdr->nlmsg_type = XFRM_MSG_DELSA;
-	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
-
-	struct xfrm_usersa_id *sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
 	sa_id->daddr = dst->get_xfrm_addr(dst);
 	sa_id->spi = spi;
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
 	
-	if (this->send_message(this, hdr, &response) != SUCCESS)
+	if (send_message(this, hdr, &response) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
+		return FAILED;
+	}
+	else if (response->nlmsg_type != XFRM_MSG_NEWSA)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETSA not acknowledged");
+		free(response);
+		return FAILED;
+	}
+	else if (response->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_usersa_info)))
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETSA got an invalid reply");
+		free(response);
+		return FAILED;
+	}
+	
+	sa_info = (struct xfrm_usersa_info*)NLMSG_DATA(response);
+	*use_time = (time_t)sa_info->curlft.use_time;
+	
+	free(response);
+	return SUCCESS;
+}
+
+/**
+ * Implementation of kernel_interface_t.del_sa.
+ */
+static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
+					   u_int32_t spi, protocol_id_t protocol)
+{
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *response;
+	struct nlmsghdr *hdr;
+	struct xfrm_usersa_id *sa_id;
+	
+	memset(&request, 0, sizeof(request));
+	status_t status = SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting SA");
+	
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = XFRM_MSG_DELSA;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
+	
+	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
+	sa_id->daddr = dst->get_xfrm_addr(dst);
+	sa_id->spi = spi;
+	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	sa_id->family = dst->get_family(dst);
+	
+	if (send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
@@ -588,52 +857,85 @@ static status_t add_policy(private_kernel_interface_t *this,
 						  host_t *me, host_t *other, 
 						  host_t *src, host_t *dst,
 						  u_int8_t src_hostbits, u_int8_t dst_hostbits,
-						  int direction, int upper_proto,
+						  u_int8_t direction, u_int8_t upper_proto,
 						  protocol_id_t protocol,
-						  u_int32_t reqid)
+						  u_int32_t reqid, bool update)
 {
+	iterator_t *iterator;
+	kernel_policy_t *current, *policy;
+	bool found = FALSE;
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *response;
-	
-	memset(&request, 0, sizeof(request));
+	struct xfrm_userpolicy_info *policy_info;
+	struct nlmsghdr *hdr;
 	status_t status = SUCCESS;
 	
+	/* create a policy */
+	policy = malloc_thing(kernel_policy_t);
+	memset(policy, 0, sizeof(kernel_policy_t));
+	policy->sel.saddr = src->get_xfrm_addr(src);
+	policy->sel.prefixlen_s = src_hostbits;
+	policy->sel.sport = htons(src->get_port(src));
+	policy->sel.sport_mask = (policy->sel.sport) ? ~0 : 0;
+	policy->sel.daddr = dst->get_xfrm_addr(dst);
+	policy->sel.prefixlen_d = dst_hostbits;
+	policy->sel.dport = htons(dst->get_port(dst));
+	policy->sel.dport_mask = (policy->sel.dport) ? ~0 : 0;
+	policy->sel.proto = upper_proto;
+	policy->sel.family = src->get_family(src);
+	policy->direction = direction;
+	
+	/* find the policy, which matches EXACTLY */
+	pthread_mutex_lock(&this->pol_mutex);
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		if (memcmp(current, policy, sizeof(struct xfrm_selector)) == 0 &&
+			policy->direction == current->direction)
+		{
+			/* use existing policy */
+			if (!update)
+			{
+				current->refcount++;
+			}
+			free(policy);
+			policy = current;
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	if (!found)
+	{	/* apply the new one, if we have no such policy */
+		this->policies->insert_last(this->policies, policy);
+		policy->refcount = 1;
+	}
+	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "adding policy");
-
-	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	
+	memset(&request, 0, sizeof(request));
+	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_UPDPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info));
 
-	struct xfrm_userpolicy_info *policy = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
+	policy_info = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
+	policy_info->sel = policy->sel;
+	policy_info->dir = direction;
+	policy_info->priority = SPD_PRIORITY;
+	policy_info->action = XFRM_POLICY_ALLOW;
+	policy_info->share = XFRM_SHARE_ANY;
+	pthread_mutex_unlock(&this->pol_mutex);
 	
-	policy->sel.sport = htons(src->get_port(src));
-	policy->sel.sport_mask = (policy->sel.sport) ? ~0 : 0;
-	policy->sel.saddr = src->get_xfrm_addr(src);
-	policy->sel.prefixlen_s = src_hostbits;
-	
-	policy->sel.dport = htons(dst->get_port(dst));
-	policy->sel.dport_mask = (policy->sel.dport) ? ~0 : 0;
-	policy->sel.daddr = dst->get_xfrm_addr(dst);
-	policy->sel.prefixlen_d = dst_hostbits;
-	
-	policy->sel.proto = upper_proto;
-	policy->sel.family = src->get_family(src);
-	
-	policy->dir = direction;
-	policy->priority = SPD_PRIORITY;
-	policy->action = XFRM_POLICY_ALLOW;
-	policy->share = XFRM_SHARE_ANY;
-	
-	/* policies currently don't expire */
-	policy->lft.soft_byte_limit = XFRM_INF;
-	policy->lft.soft_packet_limit = XFRM_INF;
-	policy->lft.hard_byte_limit = XFRM_INF;
-	policy->lft.hard_packet_limit = XFRM_INF;
-	policy->lft.soft_add_expires_seconds = 0;
-	policy->lft.hard_add_expires_seconds = 0;
-	policy->lft.soft_use_expires_seconds = 0;
-	policy->lft.hard_use_expires_seconds = 0;
+	/* policies don't expire */
+	policy_info->lft.soft_byte_limit = XFRM_INF;
+	policy_info->lft.soft_packet_limit = XFRM_INF;
+	policy_info->lft.hard_byte_limit = XFRM_INF;
+	policy_info->lft.hard_packet_limit = XFRM_INF;
+	policy_info->lft.soft_add_expires_seconds = 0;
+	policy_info->lft.hard_add_expires_seconds = 0;
+	policy_info->lft.soft_use_expires_seconds = 0;
+	policy_info->lft.hard_use_expires_seconds = 0;
 	
 	struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_userpolicy_info);
 	rthdr->rta_type = XFRMA_TMPL;
@@ -656,91 +958,24 @@ static status_t add_policy(private_kernel_interface_t *this,
 	tmpl->saddr = me->get_xfrm_addr(me);
 	tmpl->id.daddr = other->get_xfrm_addr(other);
 	
-	if (this->send_message(this, hdr, &response) != SUCCESS)
+	if (send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY not acknowledged");
+		this->logger->log(this->logger, ERROR, 
+						  "netlink request XFRM_MSG_UPDPOLICY not acknowledged");
 		status = FAILED;
 	}
 	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_NEWPOLICY got an error: %s",
+		this->logger->log(this->logger, ERROR, 
+						  "netlink request XFRM_MSG_UPDPOLICY got an error: %s",
 						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
-	
-	free(response);
-	return status;
-}
-
-static status_t query_policy(private_kernel_interface_t *this,
-					host_t *me, host_t *other, 
-					host_t *src, host_t *dst,
-					u_int8_t src_hostbits, u_int8_t dst_hostbits,
-					int direction, int upper_proto,
-					time_t *use_time)
-{
-	unsigned char request[BUFFER_SIZE];
-	struct nlmsghdr *response;
-	
-	memset(&request, 0, sizeof(request));
-	status_t status = SUCCESS;
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "querying policy");
-
-	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
-	hdr->nlmsg_flags = NLM_F_REQUEST;
-	hdr->nlmsg_type = XFRM_MSG_GETPOLICY;
-	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
-
-	struct xfrm_userpolicy_id *policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
-	policy_id->sel.sport = htons(src->get_port(src));
-	policy_id->sel.sport_mask = (policy_id->sel.sport) ? ~0 : 0;
-	policy_id->sel.saddr = src->get_xfrm_addr(src);
-	policy_id->sel.prefixlen_s = src_hostbits;
-	
-	policy_id->sel.dport = htons(dst->get_port(dst));
-	policy_id->sel.dport_mask = (policy_id->sel.dport) ? ~0 : 0;
-	policy_id->sel.daddr = dst->get_xfrm_addr(dst);
-	policy_id->sel.prefixlen_d = dst_hostbits;
-	
-	policy_id->sel.proto = upper_proto;
-	policy_id->sel.family = src->get_family(src);
-	
-	policy_id->dir = direction;
-
-	if (this->send_message(this, hdr, &response) != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "netlink communication failed");
-		return FAILED;
-	}
-	else if (response->nlmsg_type == NLMSG_ERROR)
-	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an error: %s",
-						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
-		free(response);
-		return FAILED;
-	}
-	else if (response->nlmsg_type != XFRM_MSG_NEWPOLICY)
-	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an unknown reply");
-		free(response);
-		return FAILED;
-	}
-	else if (response->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info)))
-	{
-		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an invalid reply");
-		free(response);
-		return FAILED;
-	}
-
-	struct xfrm_userpolicy_info *policy = (struct xfrm_userpolicy_info*)NLMSG_DATA(response);
-
-	*use_time = (time_t)policy->curlft.use_time;
 	
 	free(response);
 	return status;
@@ -749,42 +984,81 @@ static status_t query_policy(private_kernel_interface_t *this,
 /**
  * Implementation of kernel_interface_t.del_policy.
  */
-static status_t del_policy(private_kernel_interface_t *this, 
-						   host_t *me, host_t *other, 
-						   host_t *src, host_t *dst,
+static status_t del_policy(private_kernel_interface_t *this,
+						   host_t *src, host_t *dst, 
 						   u_int8_t src_hostbits, u_int8_t dst_hostbits,
-						   int direction, int upper_proto)
+						   u_int8_t direction, u_int8_t upper_proto)
 {
+	kernel_policy_t *current, policy, *to_delete = NULL;
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *response;
-	
-	memset(&request, 0, sizeof(request));
+	struct nlmsghdr *hdr;
+	struct xfrm_userpolicy_id *policy_id;
+	iterator_t *iterator;
 	status_t status = SUCCESS;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "deleting policy");
-
-	struct nlmsghdr *hdr = (struct nlmsghdr*)request;
+	
+	/* create a policy */
+	memset(&policy, 0, sizeof(kernel_policy_t));
+	policy.sel.saddr = src->get_xfrm_addr(src);
+	policy.sel.prefixlen_s = src_hostbits;
+	policy.sel.sport = htons(src->get_port(src));
+	policy.sel.sport_mask = (policy.sel.sport) ? ~0 : 0;
+	policy.sel.daddr = dst->get_xfrm_addr(dst);
+	policy.sel.prefixlen_d = dst_hostbits;
+	policy.sel.dport = htons(dst->get_port(dst));
+	policy.sel.dport_mask = (policy.sel.dport) ? ~0 : 0;
+	policy.sel.proto = upper_proto;
+	policy.sel.family = src->get_family(src);
+	policy.direction = direction;
+	
+	/* find the policy */
+	pthread_mutex_lock(&this->pol_mutex);
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		if (memcmp(&current->sel, &policy.sel, sizeof(struct xfrm_selector)) == 0 &&
+			policy.direction == current->direction)
+		{
+			to_delete = current;
+			if (--to_delete->refcount > 0)
+			{
+				/* is used by more SAs, keep in kernel */
+				this->logger->log(this->logger, CONTROL|LEVEL2, 
+								  "is used by other SAs, not removed");
+				iterator->destroy(iterator);
+				pthread_mutex_unlock(&this->pol_mutex);
+				return SUCCESS;
+			}
+			/* remove if last reference */
+			iterator->remove(iterator);
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	pthread_mutex_unlock(&this->pol_mutex);
+	if (!to_delete)
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL2, 
+						  "no such policy found");
+		return NOT_FOUND;
+	}
+	
+	memset(&request, 0, sizeof(request));
+	
+	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	hdr->nlmsg_type = XFRM_MSG_DELPOLICY;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
 
-	struct xfrm_userpolicy_id *policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
-	policy_id->sel.sport = htons(src->get_port(src));
-	policy_id->sel.sport_mask = (policy_id->sel.sport) ? ~0 : 0;
-	policy_id->sel.saddr = src->get_xfrm_addr(src);
-	policy_id->sel.prefixlen_s = src_hostbits;
-	
-	policy_id->sel.dport = htons(dst->get_port(dst));
-	policy_id->sel.dport_mask = (policy_id->sel.dport) ? ~0 : 0;
-	policy_id->sel.daddr = dst->get_xfrm_addr(dst);
-	policy_id->sel.prefixlen_d = dst_hostbits;
-	
-	policy_id->sel.proto = upper_proto;
-	policy_id->sel.family = src->get_family(src);
-	
+	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
+	policy_id->sel = to_delete->sel;
 	policy_id->dir = direction;
-
-	if (this->send_message(this, hdr, &response) != SUCCESS)
+	
+	free(to_delete);
+	
+	if (send_message(this, hdr, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
 		return FAILED;
@@ -806,172 +1080,6 @@ static status_t del_policy(private_kernel_interface_t *this,
 }
 
 /**
- * Implementation of private_kernel_interface_t.send_message.
- */
-static status_t send_message(private_kernel_interface_t *this, struct nlmsghdr *request, struct nlmsghdr **response)
-{
-	size_t length;
-	struct sockaddr_nl addr;
-	
-	request->nlmsg_seq = ++this->seq;
-	request->nlmsg_pid = 0;
-	
-	memset(&addr, 0, sizeof(struct sockaddr_nl));
-	addr.nl_family = AF_NETLINK;
-	addr.nl_pid = 0;
-	addr.nl_groups = 0;
-	
-	length = sendto(this->socket,(void *)request, request->nlmsg_len, 0, (struct sockaddr *)&addr, sizeof(addr));
-	
-	if (length < 0)
-	{
-		return FAILED;
-	}
-	else if (length != request->nlmsg_len)
-	{
-		return FAILED;
-	}
-	
-	pthread_mutex_lock(&(this->mutex));
-	
-	while (TRUE)
-	{
-		iterator_t *iterator; 
-		bool found = FALSE;
-		/* search list, break if found */
-		iterator = this->responses->create_iterator(this->responses, TRUE);
-		while (iterator->has_next(iterator))
-		{
-			struct nlmsghdr *listed_response;
-			iterator->current(iterator, (void**)&listed_response);
-			if (listed_response->nlmsg_seq == request->nlmsg_seq)
-			{
-				/* matches our request, this is the reply */
-				*response = listed_response;
-				iterator->remove(iterator);
-				found = TRUE;
-				break;
-			}
-		}
-		iterator->destroy(iterator);
-		
-		if (found)
-		{
-			break;
-		}
-		/* TODO: we should time out, if something goes wrong!??? */
-		pthread_cond_wait(&(this->condvar), &(this->mutex));
-	}
-	
-	pthread_mutex_unlock(&(this->mutex));
-	
-	return SUCCESS;
-}
-
-/**
- * Implementation of private_kernel_interface_t.receive_messages.
- */
-static void receive_messages(private_kernel_interface_t *this)
-{
-	while(TRUE) 
-	{
-		unsigned char response[BUFFER_SIZE];
-		struct nlmsghdr *hdr, *listed_response;
-		while (TRUE)
-		{
-			struct sockaddr_nl addr;
-			socklen_t addr_length;
-			size_t length;
-			
-			addr_length = sizeof(addr);
-			
-			length = recvfrom(this->socket, &response, sizeof(response), 0, (struct sockaddr*)&addr, &addr_length);
-			if (length < 0)
-			{
-				if (errno == EINTR)
-				{
-					/* interrupted, try again */
-					continue;
-				}
-				charon->kill(charon, "receiving from netlink socket failed");
-			}
-			if (!NLMSG_OK((struct nlmsghdr *)response, length))
-			{
-				/* bad netlink message */
-				continue;
-			}
-			if (addr.nl_pid != 0)
-			{
-				/* not from kernel. not interested, try another one */
-				continue;
-			}
-			/* good message, handle it */
-			break;
-		}
-		
-		/* we handle ACQUIRE and EXPIRE messages directly
-		 */
-		hdr = (struct nlmsghdr*)response;
-		if (hdr->nlmsg_type == XFRM_MSG_ACQUIRE)
-		{
-			this->logger->log(this->logger, CONTROL,
-							  "Received a XFRM_MSG_ACQUIRE. Ignored");
-		}
-		else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
-		{
-			job_t *job;
-			protocol_id_t protocol;
-			u_int32_t spi;
-			struct xfrm_user_expire *expire;
-			
-			expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
-			protocol = expire->state.id.proto == KERNEL_ESP ?
-						PROTO_ESP : PROTO_AH;
-			spi = expire->state.id.spi;
-			
-			this->logger->log(this->logger, CONTROL|LEVEL1,
-							  "Received a XFRM_MSG_EXPIRE");
-			this->logger->log(this->logger, CONTROL,
-							  "creating %s job for %s CHILD_SA 0x%x",
-							  expire->hard ? "delete" : "rekey",
-							  mapping_find(protocol_id_m, protocol), ntohl(spi));
-			if (expire->hard)
-			{
-				job = (job_t*)delete_child_sa_job_create(protocol, spi);
-			}
-			else
-			{
-				job = (job_t*)rekey_child_sa_job_create(protocol, spi);
-			}
-			charon->job_queue->add(charon->job_queue, job);
-		}
-		/* NLMSG_ERROR is sent back for acknowledge (or on error), an
-		 * XFRM_MSG_NEWSA is returned when we alloc spis and when
-		 * updating SAs.
-		 * XFRM_MSG_NEWPOLICY is returned when we query a policy.
-		 * list these responses for the sender
-		 */
-		else if (hdr->nlmsg_type == NLMSG_ERROR ||
-			 hdr->nlmsg_type == XFRM_MSG_NEWSA ||
-			 hdr->nlmsg_type == XFRM_MSG_NEWPOLICY)
-		{
-			/* add response to queue */
-			listed_response = malloc(hdr->nlmsg_len);
-			memcpy(listed_response, &response, hdr->nlmsg_len);
-			
-			pthread_mutex_lock(&(this->mutex));
-			this->responses->insert_last(this->responses, (void*)listed_response);
-			pthread_mutex_unlock(&(this->mutex));
-			/* signal ALL waiting threads */
-			pthread_cond_broadcast(&(this->condvar));
-		}
-		/* we are not interested in anything other.
-		 * anyway, move on to the next message */
-		continue;
-	}
-}
-
-/**
  * Implementation of kernel_interface_t.destroy.
  */
 static void destroy(private_kernel_interface_t *this)
@@ -980,6 +1088,7 @@ static void destroy(private_kernel_interface_t *this)
 	pthread_join(this->thread, NULL);
 	close(this->socket);
 	this->responses->destroy(this->responses);
+	this->policies->destroy(this->policies);
 	free(this);
 }
 
@@ -995,19 +1104,19 @@ kernel_interface_t *kernel_interface_create()
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,bool))add_sa;
 	this->public.update_sa_hosts = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,int,int,u_int32_t,protocol_id_t))update_sa_hosts;
+	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,time_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*, host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,protocol_id_t,u_int32_t))add_policy;
-	this->public.query_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int,time_t*))query_policy;
-	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,int,int))del_policy;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,u_int8_t,u_int8_t,protocol_id_t,u_int32_t,bool))add_policy;
+	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int8_t,u_int8_t,u_int8_t,u_int8_t))del_policy;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
 
 	/* private members */
-	this->receive_messages = receive_messages;
-	this->send_message = send_message;
 	this->pid = getpid();
 	this->responses = linked_list_create();
+	this->policies = linked_list_create();
 	this->logger = logger_manager->get_logger(logger_manager, XFRM);
-	pthread_mutex_init(&(this->mutex),NULL);
+	pthread_mutex_init(&(this->rep_mutex),NULL);
+	pthread_mutex_init(&(this->pol_mutex),NULL);
 	pthread_cond_init(&(this->condvar),NULL);
 	this->seq = 0;
 	
@@ -1032,7 +1141,7 @@ kernel_interface_t *kernel_interface_create()
 		charon->kill(charon, "Unable to bind netlink socket");	
 	}
 	
-	if (pthread_create(&(this->thread), NULL, (void*(*)(void*))this->receive_messages, this) != 0)
+	if (pthread_create(&this->thread, NULL, (void*(*)(void*))receive_messages, this) != 0)
 	{
 		this->responses->destroy(this->responses);
 		close(this->socket);
@@ -1040,5 +1149,5 @@ kernel_interface_t *kernel_interface_create()
 		charon->kill(charon, "Unable to create netlink thread");
 	}
 	
-	return (&this->public);
+	return &this->public;
 }

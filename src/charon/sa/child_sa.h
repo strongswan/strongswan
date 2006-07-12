@@ -174,6 +174,9 @@ struct child_sa_t {
 	 * such situations to handle them cleanly. A rekeying transaction
 	 * registers itself to the CHILD_SA, and checks later if another
 	 * transaction is in progress of a rekey.
+	 * 
+	 * @todo Fix include problematics to allow inclusion of 
+	 * the create_child_sa_t transaction.
 	 *
 	 * @param this 		calling object
 	 */	
@@ -182,21 +185,11 @@ struct child_sa_t {
 	/**
 	 * @brief Get the transaction which rekeys this CHILD_SA.
 	 *
-	 * See set_rekeying_transactoin
+	 * @see set_rekeying_transactoin().
 	 *
 	 * @param this 		calling object
 	 */	
 	void* (*get_rekeying_transaction) (child_sa_t *this);
-	
-	/**
-	 * @brief Is the CHILD SA rekeying/in progress of rekeying?
-	 *
-	 * This is a readonly parameter. It is set whenever the 
-	 * set_rekeying_transaction() method is called.
-	 *
-	 * @param this 		calling object
-	 */	
-	bool (*is_rekeying) (child_sa_t *this);
 	
 	/**
 	 * @brief Log the status of a child_sa to a logger.
@@ -223,7 +216,7 @@ struct child_sa_t {
 
 /**
  * @brief Constructor to create a new child_sa_t.
- * 
+ *
  * @param rekey_reqid	reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param me			own address
  * @param other			remote address

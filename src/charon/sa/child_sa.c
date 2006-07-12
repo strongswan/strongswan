@@ -113,11 +113,6 @@ struct private_child_sa_t {
 	 * transaction which is rekeying this CHILD_SA
 	 */
 	void *rekeying_transaction;
-	
-	/**
-	 * has this child SA been rekeyed/is rekeying?
-	 */
-	bool is_rekeying;
 
 	/**
 	 * Specifies if NAT traversal is used
@@ -446,21 +441,21 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 					policy->me.net, policy->other.net,
 					policy->me.net_mask, policy->other.net_mask,
 					XFRM_POLICY_OUT, policy->upper_proto,
-					this->protocol, this->reqid);
+					this->protocol, this->reqid, FALSE);
 	
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr,
 					policy->other.net, policy->me.net,
 					policy->other.net_mask, policy->me.net_mask,
 					XFRM_POLICY_IN, policy->upper_proto,
-					this->protocol, this->reqid);
+					this->protocol, this->reqid, FALSE);
 	
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr,
 					policy->other.net, policy->me.net,
 					policy->other.net_mask, policy->me.net_mask,
 					XFRM_POLICY_FWD, policy->upper_proto,
-					this->protocol, this->reqid);
+					this->protocol, this->reqid, FALSE);
 			
 			if (status != SUCCESS)
 			{
@@ -487,7 +482,6 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 static void set_rekeying_transaction(private_child_sa_t *this, void *transaction)
 {
 	this->rekeying_transaction = transaction;
-	this->is_rekeying = TRUE;
 }
 
 /**
@@ -499,99 +493,27 @@ static void* get_rekeying_transaction(private_child_sa_t *this)
 }
 
 /**
- * Implementation of child_sa_t.is_rekeying.
- */
-static bool is_rekeying(private_child_sa_t *this)
-{
-	return this->is_rekeying;
-}
-
-/**
  * Implementation of child_sa_t.get_use_time
  */
 static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use_time)
 {
-	iterator_t *iterator;
-	sa_policy_t *policy;
-	struct protoent *proto;
-	char proto_buf[8] = "";
-	char *proto_name = proto_buf;
 	status_t status;
 	
 	*use_time = UNDEFINED_TIME;
-
-	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->iterate(iterator, (void**)&policy))
+	
+	if (inbound)
 	{
-		time_t ut;
-
-		if (policy->upper_proto)
-		{
-			proto = getprotobynumber(policy->upper_proto);
-			if (proto)
-			{
-				proto_name = proto->p_name;
-			}
-			else
-			{
-				snprintf(proto_buf, sizeof(proto_buf), "<%d>", policy->upper_proto);
-			}
-		}
-		
-		this->logger->log(this->logger, CONTROL|LEVEL1,
-					"querying policy:     %s/%d==%s==%s/%d",
-					policy->me.net->get_address(policy->me.net), policy->me.net_mask,
-					proto_name,
-					policy->other.net->get_address(policy->other.net), policy->other.net_mask);
-
-		if (inbound) 
-		{
-			status = charon->kernel_interface->query_policy(charon->kernel_interface,
-						this->other.addr, this->me.addr,
-						policy->other.net, policy->me.net,
-						policy->other.net_mask, policy->me.net_mask,
-						XFRM_POLICY_IN, policy->upper_proto,
-						&ut);
-	
-			/* also check forward policy in tunnel mode */
-			if (status == SUCCESS /*&& mode == TUNNEL XXX */)
-			{
-				time_t fwd;
-
-				status = charon->kernel_interface->query_policy(charon->kernel_interface,
-							this->other.addr, this->me.addr,
-							policy->other.net, policy->me.net,
-							policy->other.net_mask, policy->me.net_mask,
-							XFRM_POLICY_FWD, policy->upper_proto,
-							&fwd);
-			
-				if (status == SUCCESS)
-				{
-					ut = max(ut, fwd);
-				}
-			}
-		}
-		else 
-		{
-			status = charon->kernel_interface->query_policy(charon->kernel_interface,
-						this->me.addr, this->other.addr,
-						policy->me.net, policy->other.net,
-						policy->me.net_mask, policy->other.net_mask,
-						XFRM_POLICY_OUT, policy->upper_proto,
-						&ut);
-		}
-		
-		if (status != SUCCESS)
-		{
-			iterator->destroy(iterator);
-			return FAILED;
-		}
-
-		*use_time = max(*use_time, ut);
+		status = charon->kernel_interface->query_sa(charon->kernel_interface,
+				this->me.addr, this->me.spi,
+				this->protocol, use_time);
 	}
-	iterator->destroy(iterator);
-	
-	return SUCCESS;
+	else
+	{
+		status = charon->kernel_interface->query_sa(charon->kernel_interface,
+				this->other.addr, this->other.spi,
+				this->protocol, use_time);
+	}
+	return status;
 }
 
 /**
@@ -759,18 +681,13 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		this->logger->log(this->logger, CONTROL|LEVEL1,
-						  "updating policy:   %s/%d====%s/%d",
-						  policy->me.net->get_address(policy->me.net), policy->me.net_mask,
-						  policy->other.net->get_address(policy->other.net), policy->other.net_mask);
-
 		status = charon->kernel_interface->add_policy(
 				charon->kernel_interface,
 				new_me, new_other,
 				policy->me.net, policy->other.net,
 				policy->me.net_mask, policy->other.net_mask,
 				XFRM_POLICY_OUT, policy->upper_proto,
-				this->protocol, this->reqid);
+				this->protocol, this->reqid, TRUE);
 		
 		status |= charon->kernel_interface->add_policy(
 				charon->kernel_interface,
@@ -778,7 +695,7 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 				policy->other.net, policy->me.net,
 				policy->other.net_mask, policy->me.net_mask,
 				XFRM_POLICY_IN, policy->upper_proto,
-				this->protocol, this->reqid);
+				this->protocol, this->reqid, TRUE);
 		
 		status |= charon->kernel_interface->add_policy(
 				charon->kernel_interface,
@@ -786,8 +703,8 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 				policy->other.net, policy->me.net,
 				policy->other.net_mask, policy->me.net_mask,
 				XFRM_POLICY_FWD, policy->upper_proto,
-				this->protocol, this->reqid);
-
+				this->protocol, this->reqid, TRUE);
+		
 		if (status != SUCCESS)
 		{
 			iterator->destroy(iterator);
@@ -879,27 +796,21 @@ static void destroy(private_child_sa_t *this)
 	/* delete all policies in the kernel */
 	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
 	{
-		if (!this->is_rekeying)
-		{	
-			/* let rekeyed policies, as they are used by another child_sa */
-			charon->kernel_interface->del_policy(charon->kernel_interface,
-												this->me.addr, this->other.addr,
-												policy->me.net, policy->other.net,
-												policy->me.net_mask, policy->other.net_mask,
-												XFRM_POLICY_OUT, policy->upper_proto);
-			
-			charon->kernel_interface->del_policy(charon->kernel_interface,
-												this->other.addr, this->me.addr,
-												policy->other.net, policy->me.net,
-												policy->other.net_mask, policy->me.net_mask,
-												XFRM_POLICY_IN, policy->upper_proto);
-			
-			charon->kernel_interface->del_policy(charon->kernel_interface,
-												this->other.addr, this->me.addr,
-												policy->other.net, policy->me.net,
-												policy->other.net_mask, policy->me.net_mask,
-												XFRM_POLICY_FWD, policy->upper_proto);
-		}
+		/* let rekeyed policies, as they are used by another child_sa */
+		charon->kernel_interface->del_policy(charon->kernel_interface,
+											policy->me.net, policy->other.net,
+											policy->me.net_mask, policy->other.net_mask,
+											XFRM_POLICY_OUT, policy->upper_proto);
+		
+		charon->kernel_interface->del_policy(charon->kernel_interface,
+											policy->other.net, policy->me.net,
+											policy->other.net_mask, policy->me.net_mask,
+											XFRM_POLICY_IN, policy->upper_proto);
+		
+		charon->kernel_interface->del_policy(charon->kernel_interface,
+											policy->other.net, policy->me.net,
+											policy->other.net_mask, policy->me.net_mask,
+											XFRM_POLICY_FWD, policy->upper_proto);
 		policy->me.net->destroy(policy->me.net);
 		policy->other.net->destroy(policy->other.net);
 		free(policy);
@@ -933,7 +844,6 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_rekeying_transaction = (void (*)(child_sa_t*,void*))set_rekeying_transaction;
 	this->public.get_rekeying_transaction = (void* (*)(child_sa_t*))get_rekeying_transaction;
-	this->public.is_rekeying = (bool (*)(child_sa_t*))is_rekeying;
 	this->public.log_status = (void (*)(child_sa_t*, logger_t*, char*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
@@ -953,7 +863,6 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->policies = linked_list_create();
 	this->protocol = PROTO_NONE;
 	this->rekeying_transaction = NULL;
-	this->is_rekeying = FALSE;
 	
 	return &this->public;
 }

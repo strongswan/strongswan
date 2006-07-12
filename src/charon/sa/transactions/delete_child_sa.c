@@ -192,8 +192,11 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 				 * this means we have lost the nonce comparison, and the rekeying
 				 * will fail. We set a flag in the transaction for this special case.
 				 */
-				this->logger->log(this->logger, CONTROL,
-								  "DELETE received while rekeying, rekeying cancelled");
+				if (!response)
+				{	/* only whine as initiator */
+					this->logger->log(this->logger, CONTROL,
+									  "DELETE received while rekeying, rekeying cancelled");
+				}
 				rekey->cancel(rekey);
 			}
 			/* delete it, with inbound spi */
