@@ -658,9 +658,10 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	}
 	
 	build_payload_string(this, payload_names, sizeof(payload_names));
-	this->logger->log(this->logger, CONTROL, "generating %s %s [%s]",
+	this->logger->log(this->logger, CONTROL, "generating %s %s (%d) [%s]",
 					  mapping_find(exchange_type_m,this->exchange_type),
 					  this->is_request ? "request" : "response",
+					  this->message_id,
 					  payload_names);
 	
 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
@@ -914,9 +915,10 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
 	}
 	
 	build_payload_string(this, payload_names, sizeof(payload_names));
-	this->logger->log(this->logger, CONTROL, "parsed %s %s [%s]", 
+	this->logger->log(this->logger, CONTROL, "parsed %s %s (%d) [%s]", 
 					mapping_find(exchange_type_m, this->exchange_type),
 					this->is_request ? "request" : "response",
+					this->message_id,
 					payload_names);
 	
 	return SUCCESS;
