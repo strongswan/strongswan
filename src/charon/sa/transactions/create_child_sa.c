@@ -172,7 +172,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 	host_t *me, *other;
 	
 	/* check if we are not already rekeying */
-	if (this->rekeyed_sa && 
+	if (this->rekeyed_sa &&
 		this->rekeyed_sa->get_rekeying_transaction(this->rekeyed_sa))
 	{
 		this->logger->log(this->logger, ERROR,
@@ -450,6 +450,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	nonce_payload_t *nonce_request = NULL;
 	ts_payload_t *tsi_request = NULL;
 	ts_payload_t *tsr_request = NULL;
+	nonce_payload_t *nonce_response;
 	
 	/* check if we already have built a response (retransmission) */
 	if (this->message)
@@ -533,8 +534,6 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	}
 	
 	{	/* process nonce payload */
-		nonce_payload_t *nonce_response;
-		
 		this->nonce_i = nonce_request->get_nonce(nonce_request);
 		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
 			NONCE_SIZE, &this->nonce_r) != SUCCESS)
@@ -544,7 +543,6 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		}
 		nonce_response = nonce_payload_create();
 		nonce_response->set_nonce(nonce_response, this->nonce_r);
-		response->add_payload(response, (payload_t *)nonce_response);
 	}
 	
 	{	/* process traffic selectors for other */
@@ -621,7 +619,8 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		}
 		response->add_payload(response, (payload_t*)sa_response);
 		
-		/* add ts payload after sa payload */
+		/* add nonce/ts payload after sa payload */
+		response->add_payload(response, (payload_t *)nonce_response);
 		ts_response = ts_payload_create_from_traffic_selectors(TRUE, this->tsi);
 		response->add_payload(response, (payload_t*)ts_response);
 		ts_response = ts_payload_create_from_traffic_selectors(FALSE, this->tsr);
