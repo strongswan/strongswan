@@ -131,12 +131,12 @@ struct iterator_t {
 	 * - to the item before, if available
 	 * - it gets reseted, otherwise
 	 * 
-	 * @param linked_list 	calling object
+	 * @param this		 	calling object
 	 * @return 
 	 * 						- SUCCESS
 	 * 						- FAILED if iterator is on an invalid position
 	 */
-	status_t (*remove) (iterator_t *iterator);
+	status_t (*remove) (iterator_t *this);
 	
 	/**
 	 * @brief Resets the iterator position.
