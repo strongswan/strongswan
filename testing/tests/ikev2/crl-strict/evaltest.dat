@@ -1,4 +1,4 @@
-moon::ipsec statusall::rw.*IKE_SA_ESTABLISHED::YES
-carol::ipsec statusall::home.*IKE_SA_ESTABLISHED::YES
+moon::ipsec statusall::rw.*ESTABLISHED::YES
+carol::ipsec statusall::home.*ESTABLISHED::YES
 moon::ipsec listcrls:: ok::YES
 carol::ipsec listcrls:: ok::YES

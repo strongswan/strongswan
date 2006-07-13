@@ -1,0 +1,8 @@
+alice::ipsec stop
+bob::ipsec stop
+alice::rm /etc/ipsec.d/certs/*
+bob::rm /etc/ipsec.d/certs/*
+moon::route del -net 10.2.0.0/16
+sun::route del -net 10.1.0.0/16
+moon::iptables -t nat -F
+sun::iptables -t nat -F

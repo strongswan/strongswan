@@ -1,0 +1,11 @@
+sun::echo 1 > /proc/sys/net/ipv4/ip_forward
+sun::route add -net 10.1.0.0/16 gw PH_IP_MOON
+sun::iptables -t nat -A POSTROUTING -o eth1 -s 192.168.0.0/24 -p udp -j SNAT --to-source PH_IP_SUN1:4024-4100
+moon::echo 1 > /proc/sys/net/ipv4/ip_forward
+moon::route add -net 10.2.0.0/16 gw PH_IP_SUN
+moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p udp -j SNAT --to-source PH_IP_MOON:1024-1100
+bob::ipsec start
+alice::ipsec start
+alice::sleep 1
+alice::ipsec up home
+alice::sleep 1 

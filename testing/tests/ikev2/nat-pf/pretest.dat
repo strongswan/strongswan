@@ -1,0 +1,7 @@
+moon::echo 1 > /proc/sys/net/ipv4/ip_forward
+moon::iptables -m multiport -t nat -A PREROUTING -i eth0 -p udp --dports 500,4500 -j DNAT --to 10.1.0.10
+alice::ipsec start
+carol::ipsec start
+carol::sleep 1
+carol::ipsec up home
+carol::sleep 1 

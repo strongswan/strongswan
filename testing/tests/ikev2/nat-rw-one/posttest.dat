@@ -1,0 +1,5 @@
+sun::ipsec stop
+alice::ipsec stop
+sun::rm /etc/ipsec.d/certs/*
+alice::rm /etc/ipsec.d/certs/*
+moon::iptables -t nat -F
