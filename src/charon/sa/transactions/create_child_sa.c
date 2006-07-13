@@ -370,7 +370,7 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 /**
  * Build a notify message.
  */
-static void build_notify(notify_type_t type, message_t *message, bool flush_message)
+static void build_notify(notify_type_t type, chunk_t data, message_t *message, bool flush_message)
 {
 	notify_payload_t *notify;
 	
@@ -388,6 +388,7 @@ static void build_notify(notify_type_t type, message_t *message, bool flush_mess
 	
 	notify = notify_payload_create();
 	notify->set_notify_type(notify, type);
+	notify->set_notification_data(notify, data);
 	message->add_payload(message, (payload_t*)notify);
 }
 
@@ -520,7 +521,15 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 				break;	
 			case TRAFFIC_SELECTOR_RESPONDER:
 				tsr_request = (ts_payload_t*)payload;
-				break;
+			case KEY_EXCHANGE:
+			{
+				u_int8_t dh_buffer[] = {0x00, 0x00}; /* MODP_NONE */
+				chunk_t group = chunk_from_buf(dh_buffer);
+				build_notify(INVALID_KE_PAYLOAD, group, response, TRUE);
+				this->logger->log(this->logger, CONTROL,
+								  "CREATE_CHILD_SA used PFS, sending INVALID_KE_PAYLOAD");
+				return FAILED;
+			}
 			case NOTIFY:
 			{
 				status = process_notifys(this, (notify_payload_t*)payload);
@@ -545,7 +554,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	/* check if we have all payloads */
 	if (!(sa_request && nonce_request && tsi_request && tsr_request))
 	{
-		build_notify(INVALID_SYNTAX, response, TRUE);
+		build_notify(INVALID_SYNTAX, CHUNK_INITIALIZER, response, TRUE);
 		this->logger->log(this->logger, AUDIT, 
 						  "request message incomplete, no CHILD_SA created");
 		return FAILED;
@@ -556,7 +565,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
 			NONCE_SIZE, &this->nonce_r) != SUCCESS)
 		{
-			build_notify(NO_PROPOSAL_CHOSEN, response, TRUE);
+			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
 		nonce_response = nonce_payload_create();
@@ -600,7 +609,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		{
 			this->logger->log(this->logger, AUDIT, 
 							  "CHILD_SA proposals unacceptable, adding NO_PROPOSAL_CHOSEN notify");
-			build_notify(NO_PROPOSAL_CHOSEN, response, TRUE);
+			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
 		/* do we have traffic selectors? */
@@ -608,7 +617,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		{
 			this->logger->log(this->logger, AUDIT,
 							  "CHILD_SA traffic selectors unacceptable, adding TS_UNACCEPTABLE notify");
-			build_notify(TS_UNACCEPTABLE, response, TRUE);
+			build_notify(TS_UNACCEPTABLE, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
 		else
@@ -629,7 +638,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			{
 				this->logger->log(this->logger, ERROR,
 								  "installing CHILD_SA failed, adding NO_PROPOSAL_CHOSEN notify");
-				build_notify(NO_PROPOSAL_CHOSEN, response, TRUE);
+				build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 				return FAILED;
 			}
 			/* add proposal to sa payload */

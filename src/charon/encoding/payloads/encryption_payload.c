@@ -576,9 +576,8 @@ static status_t parse(private_encryption_payload_t *this)
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "%s verification failed: %s", 
-								mapping_find(payload_type_m,current_payload->get_type(current_payload)),
-								mapping_find(status_m, status));
+			this->logger->log(this->logger, ERROR, "%s verification failed", 
+								mapping_find(payload_type_m,current_payload->get_type(current_payload)));
 			current_payload->destroy(current_payload);
 			parser->destroy(parser);
 			return VERIFY_ERROR;

@@ -160,7 +160,7 @@ static status_t verify(private_sa_payload_t *this)
 		status = current_proposal->payload_interface.verify(&(current_proposal->payload_interface));
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "proposal substructure verification failed");
+			this->logger->log(this->logger, ERROR, "PROPOSAL_SUBSTRUCTURE verification failed");
 			break;
 		}
 		first = FALSE;

@@ -29,6 +29,7 @@
 #include <encoding/payloads/transform_substructure.h>
 #include <types.h>
 #include <utils/linked_list.h>
+#include <utils/logger_manager.h>
 
 
 /**
@@ -88,6 +89,11 @@ struct private_proposal_substructure_t {
  	 * Transforms are stored in a linked_list_t.
  	 */
 	linked_list_t * transforms;
+	
+	/**
+	 * assigned logger
+	 */
+	logger_t *logger;
 	
 	/**
 	 * @brief Computes the length of this substructure.
@@ -153,17 +159,20 @@ static status_t verify(private_proposal_substructure_t *this)
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 2))
 	{
 		/* must be 0 or 2 */
+		this->logger->log(this->logger, ERROR, "inconsistent next payload");
 		return FAILED;
 	}
 	if (this->transforms_count != this->transforms->get_count(this->transforms))
 	{
 		/* must be the same! */
+		this->logger->log(this->logger, ERROR, "transform count invalid");
 		return FAILED;
 	}
 
 	if ((this->protocol_id == 0) || (this->protocol_id >= 4))
 	{
 		/* reserved are not supported */
+		this->logger->log(this->logger, ERROR, "invalid protocol");
 		return FAILED;
 	}
 	
@@ -177,6 +186,7 @@ static status_t verify(private_proposal_substructure_t *this)
 		status = current_transform->verify(current_transform);
 		if (status != SUCCESS)
 		{
+			this->logger->log(this->logger, ERROR, "TRANSFORM_SUBSTRUCTURE verification failed");
 			break;
 		}
 	}
@@ -452,7 +462,7 @@ proposal_t* get_proposal(private_proposal_substructure_t *this)
 /**
  * Implementation of proposal_substructure_t.clone.
  */
-static private_proposal_substructure_t* clone(private_proposal_substructure_t *this)
+static private_proposal_substructure_t* clone_(private_proposal_substructure_t *this)
 {
 	private_proposal_substructure_t * new_clone;
 	iterator_t *transforms;
@@ -547,7 +557,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.get_spi = (chunk_t (*) (proposal_substructure_t *)) get_spi;
 	this->public.get_transform_count = (size_t (*) (proposal_substructure_t *)) get_transform_count;
 	this->public.get_spi_size = (size_t (*) (proposal_substructure_t *)) get_spi_size;	
-	this->public.clone = (proposal_substructure_t * (*) (proposal_substructure_t *)) clone;
+	this->public.clone = (proposal_substructure_t * (*) (proposal_substructure_t *)) clone_;
 	this->public.destroy = (void (*) (proposal_substructure_t *)) destroy;
 	
 	/* private functions */
@@ -562,6 +572,7 @@ proposal_substructure_t *proposal_substructure_create()
 	this->spi_size = 0;
 	this->spi.ptr = NULL;
 	this->spi.len = 0;
+	this->logger = logger_manager->get_logger(logger_manager, PAYLOAD);
 	
 	this->transforms = linked_list_create();
 	

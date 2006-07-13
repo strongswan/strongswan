@@ -1258,6 +1258,13 @@ static status_t delete_(private_ike_sa_t *this)
 	delete_ike_sa_t *delete_ike_sa;
 	delete_ike_sa = delete_ike_sa_create(&this->public);
 	
+	if (this->transaction_out)
+	{
+		/* already a transaction in progress. As this may hang
+		 * around a while, we don't inform the other peer. */
+		return DESTROY_ME;
+	}
+	
 	return queue_transaction(this, (transaction_t*)delete_ike_sa, FALSE);
 }
 

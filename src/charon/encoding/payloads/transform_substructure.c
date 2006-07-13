@@ -29,6 +29,7 @@
 #include <encoding/payloads/encodings.h>
 #include <types.h>
 #include <utils/linked_list.h>
+#include <utils/logger_manager.h>
 
 
 typedef struct private_transform_substructure_t private_transform_substructure_t;
@@ -58,7 +59,7 @@ struct private_transform_substructure_t {
 	/**
 	 * Type of the transform.
 	 */
-	u_int8_t	 transform_type;
+	u_int8_t transform_type;
 	
 	/**
 	 * Transform ID.
@@ -66,9 +67,14 @@ struct private_transform_substructure_t {
 	u_int16_t transform_id;
 	
  	/**
- 	 * Transforms Attributes are stored in a linked_list_t.
- 	 */
+	 * Transforms Attributes are stored in a linked_list_t.
+	 */
 	linked_list_t *attributes;
+	
+ 	/**
+	 * assigned logger
+	 */
+	logger_t *logger;
 	
 	/**
 	 * @brief Computes the length of this substructure.
@@ -130,70 +136,24 @@ static status_t verify(private_transform_substructure_t *this)
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 3))
 	{
 		/* must be 0 or 3 */
+		this->logger->log(this->logger, ERROR, "inconsistent next payload");
 		return FAILED;
 	}
 
 	switch (this->transform_type)
 	{
 		case ENCRYPTION_ALGORITHM:
-		{
-			if ((this->transform_id < ENCR_DES_IV64) || (this->transform_id > ENCR_AES_CTR))
-			{
-				return FAILED;
-			}
-			break;
-		}
 		case PSEUDO_RANDOM_FUNCTION:
-		{
-			if ((this->transform_id < PRF_HMAC_MD5) || (this->transform_id > PRF_AES128_CBC))
-			{
-				return FAILED;
-			}
-			break;
-		}
 		case INTEGRITY_ALGORITHM:
-		{
-			if ((this->transform_id < AUTH_HMAC_MD5_96) || (this->transform_id > AUTH_AES_XCBC_96))
-			{
-				return FAILED;
-			}
-			break;
-		}
 		case DIFFIE_HELLMAN_GROUP:
-		{
-			switch (this->transform_id)
-			{
-				case MODP_768_BIT:
-				case MODP_1024_BIT:
-				case MODP_1536_BIT:
-				case MODP_2048_BIT:
-				case MODP_3072_BIT:
-				case MODP_4096_BIT:
-				case MODP_6144_BIT:
-				case MODP_8192_BIT:
-				{
-					break;
-				}
-				default:
-				{
-					return FAILED;
-				}
-			}
-			
-			
-			break;
-		}
 		case EXTENDED_SEQUENCE_NUMBERS:
-		{
-			if ((this->transform_id != NO_EXT_SEQ_NUMBERS) && (this->transform_id != EXT_SEQ_NUMBERS))
-			{
-				return FAILED;
-			}
+			/* we don't check transform ID, we want to reply
+			 * cleanly with NO_PROPOSAL_CHOSEN or so if we don't support it */
 			break;
-		}
 		default:
 		{
-			/* not a supported transform type! */
+			this->logger->log(this->logger, ERROR, "invalid transform type: %d",
+							  this->transform_type);
 			return FAILED;
 		}
 	}
@@ -207,13 +167,12 @@ static status_t verify(private_transform_substructure_t *this)
 		status = current_attributes->verify(current_attributes);
 		if (status != SUCCESS)
 		{
-			break;
+			this->logger->log(this->logger, ERROR, 
+							  "TRANSFORM_ATTRIBUTE verification failed");
 		}
 	}
-	
 	iterator->destroy(iterator);
-
-
+	
 	/* proposal number is checked in SA payload */	
 	return status;
 }
@@ -347,7 +306,7 @@ static void compute_length (private_transform_substructure_t *this)
 /**
  * Implementation of transform_substructure_t.clone.
  */
-static transform_substructure_t *clone(private_transform_substructure_t *this)
+static transform_substructure_t *clone_(private_transform_substructure_t *this)
 {
 	private_transform_substructure_t *new_clone;
 	iterator_t *attributes;
@@ -448,7 +407,7 @@ transform_substructure_t *transform_substructure_create()
 	this->public.set_transform_id = (void (*) (transform_substructure_t *,u_int16_t)) set_transform_id;
 	this->public.get_transform_id = (u_int16_t (*) (transform_substructure_t *)) get_transform_id;
 	this->public.get_key_length = (status_t (*) (transform_substructure_t *,u_int16_t *)) get_key_length;
-	this->public.clone = (transform_substructure_t* (*) (transform_substructure_t *)) clone;
+	this->public.clone = (transform_substructure_t* (*) (transform_substructure_t *)) clone_;
 	this->public.destroy = (void (*) (transform_substructure_t *)) destroy;
 	
 	/* private functions */
@@ -460,6 +419,7 @@ transform_substructure_t *transform_substructure_create()
 	this->transform_id = 0;
 	this->transform_type = 0;
 	this->attributes = linked_list_create();
+	this->logger = logger_manager->get_logger(logger_manager, PAYLOAD);
 	
 	return (&(this->public));
 }
