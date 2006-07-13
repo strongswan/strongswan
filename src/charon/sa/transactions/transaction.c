@@ -44,7 +44,6 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 {
 	iterator_t *iterator;
 	payload_t *current;
-	notify_payload_t *notify;
 	transaction_t *transaction = NULL;
 	
 	if (!request->get_request(request))
@@ -74,34 +73,35 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 			{
 				break;
 			}
-			/* look for a REKEY_SA notify */
+			/* check protocol of SA payload */
 			iterator = request->get_payload_iterator(request);
-			while (iterator->has_next(iterator))
+			while (iterator->iterate(iterator, (void**)&current))
 			{
-				iterator->current(iterator, (void**)&current);
-				if (current->get_type(current) != NOTIFY)
+				if (current->get_type(current) == SECURITY_ASSOCIATION)
 				{
-					continue;
-				}
-				notify = (notify_payload_t*)current;
-				if (notify->get_notify_type(notify) != REKEY_SA)
-				{
-					continue;
-				}
-				switch (notify->get_protocol_id(notify))
-				{
-					case PROTO_IKE:
-						/* TODO: transaction = rekey_ike_sa_create(ike_sa); */
-						break;
-					case PROTO_AH:
-					case PROTO_ESP:
-						/* we do not handle rekeying of CHILD_SAs in a special 
-						 * transaction, as the procedure is nearly equal 
-						 * to create a new CHILD_SA. */
-						transaction = (transaction_t*)create_child_sa_create(ike_sa);
-						break;
-					default:
-						break;
+					iterator_t *prop_iter;
+					proposal_substructure_t *prop_struct;
+					sa_payload_t *sa_payload = (sa_payload_t*)current;
+					
+					prop_iter = sa_payload->create_proposal_substructure_iterator(sa_payload, TRUE);
+					if (prop_iter->iterate(prop_iter, (void**)&prop_struct))
+					{
+						switch (prop_struct->get_protocol_id(prop_struct))
+						{
+							case PROTO_IKE:
+								/* TODO: transaction = (transaction_t*)
+												rekey_ike_sa_create(ike_sa); */
+								break;
+							case PROTO_AH:
+							case PROTO_ESP:
+								transaction = (transaction_t*)
+										create_child_sa_create(ike_sa);
+								break;
+							default:
+								break;
+						}
+					}
+					prop_iter->destroy(prop_iter);
 				}
 				if (transaction)
 				{
@@ -109,13 +109,6 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 				}
 			}
 			iterator->destroy(iterator);
-			if (!transaction)
-			{
-				/* we have not found a REKEY_SA notify for IKE. This means
-				 * we create a new CHILD_SA, or rekey an existing one.
-				 * Both cases are handled with the create_child_sa transaction. */
-				transaction = (transaction_t*)create_child_sa_create(ike_sa);
-			}
 			break;
 		}
 		case INFORMATIONAL:
@@ -126,16 +119,14 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 			}
 			u_int payload_count = 0;
 			iterator = request->get_payload_iterator(request);
-			while (iterator->has_next(iterator))
+			while (iterator->iterate(iterator, (void**)&current))
 			{
 				payload_count++;
-				iterator->current(iterator, (void**)&current);
 				switch (current->get_type(current))
 				{
 					case DELETE:
 					{
-						delete_payload_t *delete_payload;
-						delete_payload = (delete_payload_t*)current;
+						delete_payload_t *delete_payload = (delete_payload_t*)current;
 						switch (delete_payload->get_protocol_id(delete_payload))
 						{
 							case PROTO_IKE:
