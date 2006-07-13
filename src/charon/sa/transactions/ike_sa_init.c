@@ -348,8 +348,7 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		request->add_payload(request, (payload_t*)notify);
 	}
 	
-	/* set new state */
-	this->ike_sa->set_state(this->ike_sa, SA_CONNECTING);
+	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	return SUCCESS;
 }
 
@@ -398,7 +397,7 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 								  "requested DH group not acceptable, aborting");
 				return DESTROY_ME;
 			}
-			retry = ike_sa_init_create(this->ike_sa, 0);
+			retry = ike_sa_init_create(this->ike_sa);
 			retry->use_dh_group(retry, dh_group);
 			*this->next = (transaction_t*)retry;
 			return FAILED;
@@ -489,6 +488,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 	
 	me = request->get_destination(request);
 	other = request->get_source(request);
+	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
 	response = message_create();
@@ -768,7 +768,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		response_chunk = response->get_packet_data(response);
 		
 		/* create next transaction, for which we except a message */
-		ike_auth = ike_auth_create(this->ike_sa, 1);
+		ike_auth = ike_auth_create(this->ike_sa);
 		ike_auth->set_nonces(ike_auth,
 							 chunk_clone(this->nonce_i),
 							 chunk_clone(this->nonce_r));
@@ -784,7 +784,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		charon->event_queue->add_relative(charon->event_queue, job, timeout);
 	}
 	/* set new state */
-	this->ike_sa->set_state(this->ike_sa, SA_CONNECTING);
+	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 	return SUCCESS;
 }
 
@@ -999,7 +999,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		response_chunk = response->get_packet_data(response);
 		
 		/* create next transaction, for which we except a message */
-		ike_auth = ike_auth_create(this->ike_sa, this->message_id + 1);
+		ike_auth = ike_auth_create(this->ike_sa);
 		ike_auth->set_nonces(ike_auth,
 							 chunk_clone(this->nonce_i),
 							 chunk_clone(this->nonce_r));
@@ -1036,7 +1036,7 @@ static void destroy(private_ike_sa_init_t *this)
 /*
  * Described in header.
  */
-ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa, u_int32_t message_id)
+ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 {
 	private_ike_sa_init_t *this = malloc_thing(private_ike_sa_init_t);
 
@@ -1053,7 +1053,7 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa, u_int32_t message_id)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->message_id = message_id;
+	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
 	this->diffie_hellman = NULL;

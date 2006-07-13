@@ -29,6 +29,17 @@
 #include <daemon.h>
 
 
+/**
+ * String mappings for child_sa_state_t.
+ */
+mapping_t child_sa_state_m[] = {
+	{CHILD_CREATED, "CREATED"},
+	{CHILD_INSTALLED, "INSTALLED"},
+	{CHILD_REKEYING, "REKEYING"},
+	{CHILD_DELETING, "DELETING"},
+	{MAPPING_END, NULL}
+};
+
 typedef struct sa_policy_t sa_policy_t;
 
 /**
@@ -110,6 +121,11 @@ struct private_child_sa_t {
 	u_int32_t hard_lifetime;
 	
 	/**
+	 * state of the CHILD_SA
+	 */
+	child_sa_state_t state;
+	
+	/**
 	 * transaction which is rekeying this CHILD_SA
 	 */
 	void *rekeying_transaction;
@@ -151,6 +167,22 @@ u_int32_t get_spi(private_child_sa_t *this, bool inbound)
 protocol_id_t get_protocol(private_child_sa_t *this)
 {
 	return this->protocol;
+}
+
+/**
+ * Implements child_sa_t.get_state
+ */
+static child_sa_state_t get_state(private_child_sa_t *this)
+{
+	return this->state;
+}
+
+/**
+ * Implements child_sa_t.set_state
+ */
+static void set_state(private_child_sa_t *this, child_sa_state_t state)
+{
+	this->state = state;
 }
 
 /**
@@ -354,6 +386,8 @@ static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *
 	}
 	proposal->set_spi(proposal, inbound_spi);
 	
+	this->state = CHILD_INSTALLED;
+	
 	return SUCCESS;
 }
 
@@ -377,6 +411,8 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_
 	{
 		return FAILED;
 	}
+	
+	this->state = CHILD_INSTALLED;
 	
 	return SUCCESS;
 }
@@ -556,8 +592,9 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 				this->reqid);
 	
 	logger->log(logger, CONTROL|LEVEL1, 
-				"  \"%s\":   rekeying: %s, last traffic (in/out): %s/%s",
-				name, rekey_str, use_in_str, use_out_str);
+				"  \"%s\":   state: %s, rekeying: %s, last traffic (in/out): %s/%s",
+				name, mapping_find(child_sa_state_m, this->state),
+				rekey_str, use_in_str, use_out_str);
 	
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->has_next(iterator))
@@ -844,6 +881,8 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_rekeying_transaction = (void (*)(child_sa_t*,void*))set_rekeying_transaction;
 	this->public.get_rekeying_transaction = (void* (*)(child_sa_t*))get_rekeying_transaction;
+	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
+	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
 	this->public.log_status = (void (*)(child_sa_t*, logger_t*, char*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
@@ -858,6 +897,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->use_natt = use_natt;
 	this->soft_lifetime = soft_lifetime;
 	this->hard_lifetime = hard_lifetime;
+	this->state = CHILD_CREATED;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
 	this->policies = linked_list_create();

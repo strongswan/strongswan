@@ -36,6 +36,39 @@
  */
 #define REQID_START 2000000000
 
+typedef enum child_sa_state_t child_sa_state_t;
+
+/**
+ * @brief States of a CHILD_SA
+ */
+enum child_sa_state_t {
+	
+	/**
+	 * Just created, uninstalled CHILD_SA
+	 */
+	CHILD_CREATED,
+	
+	/**
+	 * Installed an in-use CHILD_SA
+	 */
+	CHILD_INSTALLED,
+	
+	/**
+	 * CHILD_SA which is rekeying
+	 */
+	CHILD_REKEYING,
+	
+	/**
+	 * CHILD_SA in progress of delete
+	 */
+	CHILD_DELETING,
+};
+
+/**
+ * String mappings for child_sa_state_t.
+ */
+extern mapping_t child_sa_state_m[];
+
 typedef struct child_sa_t child_sa_t;
 
 /**
@@ -166,6 +199,20 @@ struct child_sa_t {
 	 * @return			SUCCESS or FAILED
 	 */	
 	status_t (*get_use_time) (child_sa_t *this, bool inbound, time_t *use_time);
+	
+	/**
+	 * @brief Get the state of the CHILD_SA.
+	 *
+	 * @param this 		calling object
+	 */	
+	child_sa_state_t (*get_state) (child_sa_t *this);
+	
+	/**
+	 * @brief Set the state of the CHILD_SA.
+	 *
+	 * @param this 		calling object
+	 */	
+	void (*set_state) (child_sa_t *this, child_sa_state_t state);
 	
 	/**
 	 * @brief Set the transaction which rekeys this CHILD_SA.

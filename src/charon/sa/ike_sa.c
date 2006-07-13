@@ -60,10 +60,10 @@
  * String mappings for ike_sa_state_t.
  */
 mapping_t ike_sa_state_m[] = {
-	{SA_CREATED, "CREATED"},
-	{SA_CONNECTING, "CONNECTING"},
-	{SA_ESTABLISHED, "ESTABLISHED"},
-	{SA_DELETING, "DELETING"},
+	{IKE_CREATED, "CREATED"},
+	{IKE_CONNECTING, "CONNECTING"},
+	{IKE_ESTABLISHED, "ESTABLISHED"},
+	{IKE_DELETING, "DELETING"},
 	{MAPPING_END, NULL}
 };
 
@@ -525,23 +525,10 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 	/* check if we already have a pre-created transaction for this request */
 	if (this->transaction_in_next)
 	{
-		u_int32_t trans_mid = this->transaction_in_next->get_message_id(this->transaction_in_next);
-		
-		/* check message id consistency */
-		if (trans_mid == request_mid)
-		{
-			/* use it */
-			current = this->transaction_in_next;
-		}
-		else
-		{
-			/* discard queued transaction */
-			this->transaction_in_next->destroy(this->transaction_in_next);
-		}
+		current = this->transaction_in_next;
 		this->transaction_in_next = NULL;
 	}
-	/* create new transaction if "next" unusable */
-	if (current == NULL)
+	else
 	{
 		current = transaction_create(&this->public, request);
 		if (current == NULL)
@@ -613,13 +600,6 @@ static status_t process_response(private_ike_sa_t *this, message_t *response)
 	/* transaction comleted, remove */
 	current->destroy(current);
 	this->transaction_out = NULL;
-	
-	/* if conclude() created a new transaction, we increment the message_id
-	 * counter, as the new transaction used the next one */
-	if (new)
-	{
-		this->message_id_out = new->get_message_id(new) + 1;;
-	}
 	
 	/* queue new transaction */
 	return queue_transaction(this, new, TRUE);
@@ -723,7 +703,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	else
 	{
 		/* check if message is trustworthy, and update connection information */
-		if ((this->state == SA_CREATED && this->connection) ||
+		if ((this->state == IKE_CREATED && this->connection) ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
 		{
 			update_hosts(this, message->get_destination(message),
@@ -760,8 +740,8 @@ static status_t initiate(private_ike_sa_t *this, connection_t *connection)
 						  connection->get_name(connection));
 		return DESTROY_ME;
 	}
-	this->message_id_out = 0;
-	ike_sa_init = ike_sa_init_create(&this->public, this->message_id_out++);
+	this->message_id_out = 1;
+	ike_sa_init = ike_sa_init_create(&this->public);
 	return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
 }
 
@@ -793,7 +773,7 @@ static status_t send_dpd(private_ike_sa_t *this)
 			/* to long ago, initiate dead peer detection */
 			dead_peer_detection_t *dpd;
 			this->logger->log(this->logger, CONTROL, "sending DPD request");
-			dpd = dead_peer_detection_create(&this->public, this->message_id_out++);
+			dpd = dead_peer_detection_create(&this->public);
 			status = queue_transaction(this, (transaction_t*)dpd, FALSE);
 			diff = 0;
 		}
@@ -859,7 +839,7 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 	this->logger->log(this->logger, CONTROL, "state change: %s => %s",
 					  mapping_find(ike_sa_state_m, this->state),
 					  mapping_find(ike_sa_state_m, state));
-	if (state == SA_ESTABLISHED)
+	if (state == IKE_ESTABLISHED)
 	{
 		host_t *my_host, *other_host;
 		identification_t *my_id, *other_id;
@@ -1162,7 +1142,7 @@ static status_t rekey_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u
 		return NOT_FOUND;
 	}
 	
-	rekey = create_child_sa_create(&this->public, this->message_id_out++);
+	rekey = create_child_sa_create(&this->public);
 	rekey->rekeys_child(rekey, child_sa);
 	return queue_transaction(this, (transaction_t*)rekey, FALSE);
 }
@@ -1181,7 +1161,7 @@ static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol, 
 		return NOT_FOUND;
 	}
 	
-	del = delete_child_sa_create(&this->public, this->message_id_out++);
+	del = delete_child_sa_create(&this->public);
 	del->set_child_sa(del, child_sa);
 	return queue_transaction(this, (transaction_t*)del, FALSE);
 }
@@ -1276,9 +1256,17 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 static status_t delete_(private_ike_sa_t *this)
 {
 	delete_ike_sa_t *delete_ike_sa;
-	delete_ike_sa = delete_ike_sa_create(&this->public, this->message_id_out++);
+	delete_ike_sa = delete_ike_sa_create(&this->public);
 	
 	return queue_transaction(this, (transaction_t*)delete_ike_sa, FALSE);
+}
+
+/**
+ * Implementation of ike_sa_t.get_next_message_id.
+ */
+static u_int32_t get_next_message_id (private_ike_sa_t *this)
+{
+	return this->message_id_out++;
 }
 
 /**
@@ -1322,7 +1310,7 @@ static void destroy(private_ike_sa_t *this)
 					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
 					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
 	
-	if (this->state == SA_ESTABLISHED)
+	if (this->state == IKE_ESTABLISHED)
 	{
 		this->logger->log(this->logger, ERROR, 
 						  "destroying an established IKE SA without knowledge from remote peer!");
@@ -1423,6 +1411,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->public.initiate = (status_t(*)(ike_sa_t*,connection_t*)) initiate;
 	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
+	this->public.get_next_message_id = (u_int32_t(*)(ike_sa_t*)) get_next_message_id;
 	this->public.get_connection = (connection_t*(*)(ike_sa_t*)) get_connection;
 	this->public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->public.log_status = (void (*) (ike_sa_t*,logger_t*,char*))log_status;
@@ -1467,7 +1456,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->transaction_in = NULL;
 	this->transaction_in_next = NULL;
 	this->transaction_out = NULL;
-	this->state = SA_CREATED;
+	this->state = IKE_CREATED;
+	/* we start with message ID out, as ike_sa_init does not use this counter */
 	this->message_id_out = 0;
 	this->time_inbound = 0;
 	this->time_outbound = 0;

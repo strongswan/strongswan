@@ -95,11 +95,10 @@ struct create_child_sa_t {
  * @brief Create a new transaction which creates/rekeys CHILD_SAs.
  *
  * @param ike_sa		assigned IKE_SA
- * @param message_id	message ids used in this transaction
  * @return				created create_child_sa transaction
  *
  * @ingroup transactions
  */
-create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa, u_int32_t message_id);
+create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa);
 
 #endif /* CREATE_CHILD_SA_H_ */

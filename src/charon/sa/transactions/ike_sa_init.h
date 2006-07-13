@@ -63,11 +63,10 @@ struct ike_sa_init_t {
  * @brief Create a new transaction which processes IKE_SA_INIT exchanges.
  *
  * @param ike_sa		assigned IKE_SA
- * @param message_id	message ids used in this transaction
  * @return				created ike_sa_init transaction
  *
  * @ingroup transactions
  */
-ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa, u_int32_t message_id);
+ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa);
 
 #endif /* IKE_SA_INIT_H_ */

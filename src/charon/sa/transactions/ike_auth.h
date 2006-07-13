@@ -76,11 +76,10 @@ struct ike_auth_t {
  * @brief Create a new transaction which processes IKE_AUTH exchanges.
  *
  * @param ike_sa		assigned IKE_SA
- * @param message_id	message ids used in this transaction
  * @return				created ike_auth transaction
  *
  * @ingroup transactions
  */
-ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, u_int32_t message_id);
+ike_auth_t *ike_auth_create(ike_sa_t *ike_sa);
 
 #endif /* IKE_AUTH_H_ */

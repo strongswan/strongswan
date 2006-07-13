@@ -86,22 +86,22 @@ enum ike_sa_state_t {
 	/**
 	 * IKE_SA just got created, but is not initiating nor responding yet.
 	 */
-	SA_CREATED,
+	IKE_CREATED,
 	
 	/**
 	 * IKE_SA gets initiated actively or passively
 	 */
-	SA_CONNECTING,
+	IKE_CONNECTING,
 	
 	/**
 	 * IKE_SA is fully established
 	 */
-	SA_ESTABLISHED,
+	IKE_ESTABLISHED,
 	
 	/**
 	 * IKE_SA is in progress of deletion
 	 */
-	SA_DELETING,
+	IKE_DELETING,
 };
 
 /**
@@ -209,6 +209,14 @@ struct ike_sa_t {
 	 * 						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
 	status_t (*process_message) (ike_sa_t *this, message_t *message);
+	
+	/**
+	 * @brief Get the next message ID for a request.
+	 *
+	 * @param this 			calling object
+	 * @return 				the next message id
+	 */
+	u_int32_t (*get_next_message_id) (ike_sa_t *this);
 	
 	/**
 	 * @brief Check if NAT traversal is enabled for this IKE_SA.

@@ -107,6 +107,7 @@ static status_t get_request(private_delete_ike_sa_t *this, message_t **result)
 	request->set_destination(request, other->clone(other));
 	request->set_exchange_type(request, INFORMATIONAL);
 	request->set_request(request, TRUE);
+	this->message_id = this->ike_sa->get_next_message_id(this->ike_sa);
 	request->set_message_id(request, this->message_id);
 	request->set_ike_sa_id(request, this->ike_sa->get_id(this->ike_sa));
 	/* apply for caller */
@@ -118,7 +119,7 @@ static status_t get_request(private_delete_ike_sa_t *this, message_t **result)
 	request->add_payload(request, (payload_t*)delete_payload);
 	
 	/* transit to state SA_DELETING */
-	this->ike_sa->set_state(this->ike_sa, SA_DELETING);
+	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 	
 	return SUCCESS;
 }
@@ -147,6 +148,7 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	me = connection->get_my_host(connection);
 	other = connection->get_other_host(connection);
+	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
 	response = message_create();
@@ -204,13 +206,13 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 		this->logger->log(this->logger, CONTROL, 
 						  "received a weird DELETE request for IKE_SA, deleting anyway");
 	}
-	if (this->ike_sa->get_state(this->ike_sa) == SA_DELETING)
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
 		/* if we are already deleting an IKE_SA, we do not destroy. We wait
 		 * until we get the response for our initiated delete. */
 		return SUCCESS;
 	}
-	this->ike_sa->set_state(this->ike_sa, SA_DELETING);
+	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
 	return DESTROY_ME;
 }
 
@@ -248,7 +250,7 @@ static void destroy(private_delete_ike_sa_t *this)
 /*
  * Described in header.
  */
-delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa, u_int32_t message_id)
+delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa)
 {
 	private_delete_ike_sa_t *this = malloc_thing(private_delete_ike_sa_t);
 	
@@ -262,7 +264,7 @@ delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa, u_int32_t message_id)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->message_id = message_id;
+	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);

@@ -46,21 +46,19 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 	payload_t *current;
 	notify_payload_t *notify;
 	transaction_t *transaction = NULL;
-	u_int32_t message_id;
 	
 	if (!request->get_request(request))
 	{
 		return NULL;
 	}
-	message_id = request->get_message_id(request);
 	
 	switch (request->get_exchange_type(request))
 	{
 		case IKE_SA_INIT:
 		{
-			if (ike_sa->get_state(ike_sa) == SA_CREATED)
+			if (ike_sa->get_state(ike_sa) == IKE_CREATED)
 			{
-				transaction = (transaction_t*)ike_sa_init_create(ike_sa, message_id);
+				transaction = (transaction_t*)ike_sa_init_create(ike_sa);
 			}
 			break;
 		}
@@ -72,7 +70,7 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 		}
 		case CREATE_CHILD_SA:
 		{
-			if (ike_sa->get_state(ike_sa) != SA_ESTABLISHED)
+			if (ike_sa->get_state(ike_sa) != IKE_ESTABLISHED)
 			{
 				break;
 			}
@@ -93,14 +91,14 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 				switch (notify->get_protocol_id(notify))
 				{
 					case PROTO_IKE:
-						/* TODO: transaction = rekey_ike_sa_create(ike_sa, message_id); */
+						/* TODO: transaction = rekey_ike_sa_create(ike_sa); */
 						break;
 					case PROTO_AH:
 					case PROTO_ESP:
 						/* we do not handle rekeying of CHILD_SAs in a special 
 						 * transaction, as the procedure is nearly equal 
 						 * to create a new CHILD_SA. */
-						transaction = (transaction_t*)create_child_sa_create(ike_sa, message_id);
+						transaction = (transaction_t*)create_child_sa_create(ike_sa);
 						break;
 					default:
 						break;
@@ -116,13 +114,13 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 				/* we have not found a REKEY_SA notify for IKE. This means
 				 * we create a new CHILD_SA, or rekey an existing one.
 				 * Both cases are handled with the create_child_sa transaction. */
-				transaction = (transaction_t*)create_child_sa_create(ike_sa, message_id);
+				transaction = (transaction_t*)create_child_sa_create(ike_sa);
 			}
 			break;
 		}
 		case INFORMATIONAL:
 		{
-			if (ike_sa->get_state(ike_sa) == SA_CREATED)
+			if (ike_sa->get_state(ike_sa) == IKE_CREATED)
 			{
 				break;
 			}
@@ -142,12 +140,12 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 						{
 							case PROTO_IKE:
 								transaction = (transaction_t*)
-										delete_ike_sa_create(ike_sa, message_id);
+										delete_ike_sa_create(ike_sa);
 								break;
 							case PROTO_AH:
 							case PROTO_ESP:
 								transaction = (transaction_t*)
-										delete_child_sa_create(ike_sa, message_id);
+										delete_child_sa_create(ike_sa);
 								break;
 							default:
 								break;
@@ -168,7 +166,7 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 			if (payload_count == 0)
 			{
 				transaction = (transaction_t*)
-						dead_peer_detection_create(ike_sa, message_id);
+						dead_peer_detection_create(ike_sa);
 			}
 			break;
 		}

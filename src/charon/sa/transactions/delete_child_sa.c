@@ -120,6 +120,7 @@ static status_t get_request(private_delete_child_sa_t *this, message_t **result)
 	request->set_destination(request, other->clone(other));
 	request->set_exchange_type(request, INFORMATIONAL);
 	request->set_request(request, TRUE);
+	this->message_id = this->ike_sa->get_next_message_id(this->ike_sa);
 	request->set_message_id(request, this->message_id);
 	request->set_ike_sa_id(request, this->ike_sa->get_id(this->ike_sa));
 	*result = request;
@@ -140,6 +141,8 @@ static status_t get_request(private_delete_child_sa_t *this, message_t **result)
 		delete_payload->add_spi(delete_payload, spi);
 		request->add_payload(request, (payload_t*)delete_payload);
 	}
+	
+	this->child_sa->set_state(this->child_sa, CHILD_DELETING);
 	
 	return SUCCESS;
 }
@@ -181,6 +184,8 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 		{
 			create_child_sa_t *rekey;
 			
+			child_sa->set_state(child_sa, CHILD_DELETING);
+			
 			this->logger->log(this->logger, CONTROL,
 							  "received DELETE for %s CHILD_SA with SPI 0x%x, deleting",
 							  mapping_find(protocol_id_m, protocol), ntohl(spi));
@@ -192,11 +197,6 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 				 * this means we have lost the nonce comparison, and the rekeying
 				 * will fail. We set a flag in the transaction for this special case.
 				 */
-				if (!response)
-				{	/* only whine as initiator */
-					this->logger->log(this->logger, CONTROL,
-									  "DELETE received while rekeying, rekeying cancelled");
-				}
 				rekey->cancel(rekey);
 			}
 			/* delete it, with inbound spi */
@@ -240,6 +240,7 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	me = connection->get_my_host(connection);
 	other = connection->get_other_host(connection);
+	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
 	response = message_create();
@@ -344,7 +345,7 @@ static void destroy(private_delete_child_sa_t *this)
 /*
  * Described in header.
  */
-delete_child_sa_t *delete_child_sa_create(ike_sa_t *ike_sa, u_int32_t message_id)
+delete_child_sa_t *delete_child_sa_create(ike_sa_t *ike_sa)
 {
 	private_delete_child_sa_t *this = malloc_thing(private_delete_child_sa_t);
 	
@@ -361,7 +362,7 @@ delete_child_sa_t *delete_child_sa_create(ike_sa_t *ike_sa, u_int32_t message_id
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->message_id = message_id;
+	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);

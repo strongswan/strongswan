@@ -194,7 +194,6 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	request->set_destination(request, other->clone(other));
 	request->set_exchange_type(request, IKE_AUTH);
 	request->set_request(request, TRUE);
-	request->set_message_id(request, this->message_id);
 	request->set_ike_sa_id(request, this->ike_sa->get_id(this->ike_sa));
 	/* apply for caller */
 	*result = request;
@@ -295,6 +294,8 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
 	
+	this->message_id = this->ike_sa->get_next_message_id(this->ike_sa);
+	request->set_message_id(request, this->message_id);
 	return SUCCESS;
 }
 
@@ -510,6 +511,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	this->connection = this->ike_sa->get_connection(this->ike_sa);
 	me = this->connection->get_my_host(this->connection);
 	other = this->connection->get_other_host(this->connection);
+	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
 	response = message_create();
@@ -761,7 +763,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		response->add_payload(response, (payload_t*)ts_response);
 	}
 	/* set established state */
-	this->ike_sa->set_state(this->ike_sa, SA_ESTABLISHED);
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 	return SUCCESS;
 }
 
@@ -941,7 +943,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		}
 	}
 	/* set new state */
-	this->ike_sa->set_state(this->ike_sa, SA_ESTABLISHED);
+	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
 	return SUCCESS;
 }
 
@@ -974,7 +976,7 @@ static void destroy(private_ike_auth_t *this)
 /*
  * Described in header.
  */
-ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, u_int32_t message_id)
+ike_auth_t *ike_auth_create(ike_sa_t *ike_sa)
 {
 	private_ike_auth_t *this = malloc_thing(private_ike_auth_t);
 
@@ -992,7 +994,7 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, u_int32_t message_id)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->message_id = message_id;
+	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
 	this->nonce_i = CHUNK_INITIALIZER;

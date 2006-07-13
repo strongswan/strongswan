@@ -50,11 +50,10 @@ struct dead_peer_detection_t {
  * @brief Create a new transaction which detects dead peers.
  *
  * @param ike_sa		assigned IKE_SA
- * @param message_id	message ids used in this transaction
  * @return				created dead_peer_detection transaction
  *
  * @ingroup transactions
  */
-dead_peer_detection_t *dead_peer_detection_create(ike_sa_t *ike_sa, u_int32_t message_id);
+dead_peer_detection_t *dead_peer_detection_create(ike_sa_t *ike_sa);
 
 #endif /* DEAD_PEER_DETECTION_H_ */

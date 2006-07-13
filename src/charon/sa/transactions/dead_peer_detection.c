@@ -105,6 +105,7 @@ static status_t get_request(private_dead_peer_detection_t *this, message_t **res
 	request->set_destination(request, other->clone(other));
 	request->set_exchange_type(request, INFORMATIONAL);
 	request->set_request(request, TRUE);
+	this->message_id = this->ike_sa->get_next_message_id(this->ike_sa);
 	request->set_message_id(request, this->message_id);
 	request->set_ike_sa_id(request, this->ike_sa->get_id(this->ike_sa));
 	/* apply for caller */
@@ -135,6 +136,7 @@ static status_t get_response(private_dead_peer_detection_t *this, message_t *req
 	connection = this->ike_sa->get_connection(this->ike_sa);
 	me = connection->get_my_host(connection);
 	other = connection->get_other_host(connection);
+	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
 	response = message_create();
@@ -175,7 +177,7 @@ static void destroy(private_dead_peer_detection_t *this)
 /*
  * Described in header.
  */
-dead_peer_detection_t *dead_peer_detection_create(ike_sa_t *ike_sa, u_int32_t message_id)
+dead_peer_detection_t *dead_peer_detection_create(ike_sa_t *ike_sa)
 {
 	private_dead_peer_detection_t *this = malloc_thing(private_dead_peer_detection_t);
 	
@@ -189,7 +191,7 @@ dead_peer_detection_t *dead_peer_detection_create(ike_sa_t *ike_sa, u_int32_t me
 	
 	/* private data */
 	this->ike_sa = ike_sa;
-	this->message_id = message_id;
+	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);

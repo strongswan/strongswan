@@ -70,7 +70,7 @@ static status_t execute(private_delete_half_open_ike_sa_job_t *this)
 	
 	switch (ike_sa->get_state(ike_sa))
 	{
-		case SA_ESTABLISHED:
+		case IKE_ESTABLISHED:
 		{
 			/* IKE_SA is established and so is not getting destroyed */
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);

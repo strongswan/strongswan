@@ -73,11 +73,10 @@ struct delete_ike_sa_t {
  * @brief Create a new transaction which deletes the IKE_SA.
  *
  * @param ike_sa		assigned IKE_SA
- * @param message_id	message ids used in this transaction
  * @return				created delete_ike_sa transaction
  *
  * @ingroup transactions
  */
-delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa, u_int32_t message_id);
+delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa);
 
 #endif /* DELETE_IKE_SA_H_ */
