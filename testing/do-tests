@@ -314,6 +314,19 @@ do
 		    printf("echo \"%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
 		    printf("ssh root@\044ipv4_%s cat /tmp/tcpdump.log | grep \"%s\"; ", host, pattern)
 		}
+		else if (command == "tcpdumpcount")
+		{
+		    printf("if [ \044TDUP_%s == \"true\" ]; then stop_tcpdump %s; fi; \n", host, host)
+		    printf("echo -e \"%s# [ \\\\140cat /tmp/tcpdump.log | grep \047%s\047 | tee -a /dev/stderr | wc -l\\\\140 -eq %s ]  [YES]\"; ", host, pattern, hit)
+		    printf("tcpdumpcount=\`ssh root@\044ipv4_%s cat /tmp/tcpdump.log | grep \"%s\" | tee -a /dev/stderr | wc -l\`; ", host, pattern)
+		    printf("[ \044tcpdumpcount -eq %s ]; ", hit)
+		    hit="YES"
+		}
+		else if (command == "cmd")
+		{
+		    printf("echo \"%s# %s  [%s]\"; ", host, pattern, hit)
+		    printf("ssh root@\044ipv4_%s %s; ",  host, pattern)
+		}
 		else
 		{
 		    printf("echo \"%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)

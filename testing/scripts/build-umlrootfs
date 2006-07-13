@@ -89,21 +89,27 @@ mount -o loop gentoo-fs $LOOPDIR >> $LOGFILE 2>&1
 tar xjpf $ROOTFS -C $LOOPDIR     >> $LOGFILE 2>&1
 cecho "done"
 
-
 ######################################################
 # copying default /etc/hosts to the root filesystem
 #
 cecho " * Copying '$HOSTCONFIGDIR/default/etc/hosts' to the root filesystem"
 cp -fp $HOSTCONFIGDIR/default/etc/hosts $LOOPDIR/etc/hosts
 
-#
 #####################################################
 # extracting strongSwan into the root filesystem
 #
-
 cecho " * Extracting strongSwan into the root filesystem"
 tar xjf $STRONGSWAN -C $LOOPDIR/root >> $LOGFILE 2>&1
 
+######################################################
+# setting up mountpoint for shared source tree
+#
+if [ "${SHAREDTREE+set}" = "set" ]; then
+    cecho " * setting up shared strongswan tree at '$SHAREDTREE'"
+    mkdir $LOOPDIR/root/strongswan-shared
+    echo "" >> $LOOPDIR/etc/fstab
+    echo "none /root/strongswan-shared hostfs $SHAREDTREE" >> $LOOPDIR/etc/fstab
+fi
 
 ######################################################
 # installing strongSwan and setting the local timezone
@@ -139,6 +145,9 @@ echo "ldconfig" >> $INSTALLSHELL
 cecho-n " * Compiling $STRONGSWANVERSION within the root file system as chroot.."
 chroot $LOOPDIR /bin/bash /install.sh >> $LOGFILE 2>&1
 cecho "done"
+
+rm -f $INSTALLSHELL
+
 
 ######################################################
 # copying the host's ssh public key
