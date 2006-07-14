@@ -249,10 +249,14 @@ status_t sender(private_socket_t *this, packet_t *packet)
 /**
  * setup a send socket on a specified port
  */
-static status_t setup_send_socket(private_socket_t *this, u_int16_t port, int *send_fd) {
+static status_t setup_send_socket(private_socket_t *this, u_int16_t port, int *send_fd) 
+{
 	int on = TRUE;
 	struct sockaddr_in addr;
-	int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	struct sadb_x_policy policy;
+	int fd;
+	
+	fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (fd < 0)
 	{
 		this->logger->log(this->logger, ERROR, "could not open IPv4 send socket!");
@@ -265,40 +269,22 @@ static status_t setup_send_socket(private_socket_t *this, u_int16_t port, int *s
 		close(fd);
 		return FAILED;
 	}
-
-	struct sadb_x_policy policy;
-	int level, opt;
 	
+	/* bypass outgoung IKE traffic on send socket */
 	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
 	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
-	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
+	policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
 	policy.sadb_x_policy_reserved = 0;
 	policy.sadb_x_policy_id = 0;
-
-	/* ipv6
-	 * level = IPPROTO_IPV6;
-	 * opt = IPV6_IPSEC_POLICY;
-	 */
-	level = IPPROTO_IP;
-	opt = IP_IPSEC_POLICY;
-
-	if (setsockopt(fd, level, opt, &policy, sizeof(policy)) < 0)
+	/* TODO: use IPPROTO_IPV6/IPV6_IPSEC_POLICY for IPv6 sockets */
+	if (setsockopt(fd, IPPROTO_IP, IP_IPSEC_POLICY, &policy, sizeof(policy)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, "unable to set IPSEC_POLICY on send socket!");
 		close(fd);
 		return FAILED;
 	}
-
-	policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
-
-	if (setsockopt(fd, level, opt, &policy, sizeof(policy)) < 0)
-	{
-		this->logger->log(this->logger, ERROR, "unable to set IPSEC_POLICY on send socket!");
-		close(fd);
-		return FAILED;
-	}
-
+	
 	/* bind the send socket */
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
@@ -318,6 +304,8 @@ static status_t setup_send_socket(private_socket_t *this, u_int16_t port, int *s
  */
 static status_t initialize(private_socket_t *this)
 {
+	struct sadb_x_policy policy;
+	
 	/* This filter code filters out all non-IKEv2 traffic on
 	 * a SOCK_RAW IP_PROTP_UDP socket. Handling of other
 	 * IKE versions is done in pluto.
@@ -374,7 +362,22 @@ static status_t initialize(private_socket_t *this)
 		close(this->raw_fd);
 		return FAILED;
 	}
-
+	
+	/* bypass incomining IKE traffic on this socket */
+	policy.sadb_x_policy_len = sizeof(policy) / sizeof(u_int64_t);
+	policy.sadb_x_policy_exttype = SADB_X_EXT_POLICY;
+	policy.sadb_x_policy_type = IPSEC_POLICY_BYPASS;
+	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
+	policy.sadb_x_policy_reserved = 0;
+	policy.sadb_x_policy_id = 0;
+	/* TODO: use IPPROTO_IPV6/IPV6_IPSEC_POLICY for IPv6 sockets */
+	if (setsockopt(this->raw_fd, IPPROTO_IP, IP_IPSEC_POLICY, &policy, sizeof(policy)) < 0)
+	{
+		this->logger->log(this->logger, ERROR, "unable to set IPSEC_POLICY on raw socket!");
+		close(this->raw_fd);
+		return FAILED;
+	}
+	
 	/* setup the send sockets */
 	if (this->setup_send_socket(this, this->port, &this->send_fd) != SUCCESS)
 	{
