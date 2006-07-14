@@ -1,5 +1,9 @@
-- added dead peer detection which checks aliveness of remote peer if no 
-  IKE or ESP traffic is received. Support for dpdaction, dpddelay???
+strongswan-4.0.2
+----------------
+
+- Added Dead Peer Detection (DPD) which checks liveliness of remote peer if no
+  IKE or ESP traffic is received. DPD is currently hardcoded (dpdaction=clear,
+  dpddelay=60s).
 
 - Added support for leftprotoport/rightprotoport parameters in IKEv2. IKEv2 
   would offer more possibilities for traffic selection, but the Linux kernel
@@ -15,9 +19,6 @@
   rekeying, more shared code, cleaner design, proper retransmission 
   and a more extensible code base.
 
-strongswan-4.0.2
-----------------
-
 - The mixed PSK/RSA roadwarrior detection capability introduced by the
   strongswan-2.7.0 release necessitated the pre-parsing of the IKE proposal
   payloads by the responder right before any defined IKE Main Mode state had
@@ -25,6 +26,7 @@ strongswan-4.0.2
   detected by the payload parser, the subsequent error handler didn't check
   the state pointer before logging current state information, causing an
   immediate crash of the pluto keying daemon due to a NULL pointer.
+
 
 strongswan-4.0.1
 ----------------
