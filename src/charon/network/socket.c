@@ -284,6 +284,15 @@ static status_t setup_send_socket(private_socket_t *this, u_int16_t port, int *s
 		close(fd);
 		return FAILED;
 	}
+	/* We don't receive packets on the send socket, but we need a INBOUND policy.
+	 * Otherwise, UDP decapsulation does not work!!! */
+	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
+	if (setsockopt(fd, IPPROTO_IP, IP_IPSEC_POLICY, &policy, sizeof(policy)) < 0)
+	{
+		this->logger->log(this->logger, ERROR, "unable to set IPSEC_POLICY on send socket!");
+		close(fd);
+		return FAILED;
+	}
 	
 	/* bind the send socket */
 	addr.sin_family = AF_INET;
@@ -305,6 +314,7 @@ static status_t setup_send_socket(private_socket_t *this, u_int16_t port, int *s
 static status_t initialize(private_socket_t *this)
 {
 	struct sadb_x_policy policy;
+	int type = UDP_ENCAP_ESPINUDP;
 	
 	/* This filter code filters out all non-IKEv2 traffic on
 	 * a SOCK_RAW IP_PROTP_UDP socket. Handling of other
@@ -384,23 +394,20 @@ static status_t initialize(private_socket_t *this)
 		this->logger->log(this->logger, ERROR, "unable to setup send socket on port %d!", this->port);
 		return FAILED;
 	}
-
 	if (this->setup_send_socket(this, this->natt_port, &this->natt_fd) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "unable to setup send socket on port %d!", this->natt_port);
 		return FAILED;
 	}
-	else
+	
+	/* enable UDP decapsulation globally */
+	if (setsockopt(this->natt_fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 	{
-		int type = UDP_ENCAP_ESPINUDP;
-		if (setsockopt(this->natt_fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
-		{
-			this->logger->log(this->logger, ERROR,
-							  "unable to set UDP_ENCAP on natt send socket! NAT-T may fail! error: %s",
-							  strerror(errno));
-		}
+		this->logger->log(this->logger, ERROR,
+						  "unable to set UDP_ENCAP on raw socket! NAT-T may fail! error: %s",
+						  strerror(errno));
 	}
-
+	
 	return SUCCESS;
 }
 
