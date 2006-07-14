@@ -1,14 +1,19 @@
 strongswan-4.0.2
 ----------------
 
-- Added Dead Peer Detection (DPD) which checks liveliness of remote peer if no
-  IKE or ESP traffic is received. DPD is currently hardcoded (dpdaction=clear,
-  dpddelay=60s).
+- Full X.509 certificate trust chain verification has been implemented.
+  End entity certificates can be exchanged via CERT payloads. The current
+  default is leftsendcert=always, since CERTREQ payloads are not supported
+  yet. Optional CRLs must be imported locally into /etc/ipsec.d/crls.
 
 - Added support for leftprotoport/rightprotoport parameters in IKEv2. IKEv2 
   would offer more possibilities for traffic selection, but the Linux kernel
   currently does not support it. That's why we stick with these simple 
   ipsec.conf rules for now.
+
+- Added Dead Peer Detection (DPD) which checks liveliness of remote peer if no
+  IKE or ESP traffic is received. DPD is currently hardcoded (dpdaction=clear,
+  dpddelay=60s).
 
 - Initial NAT traversal support in IKEv2. Charon includes NAT detection
   notify payloads to detect NAT routers between the peers. It switches
