@@ -69,10 +69,10 @@
 	left = host_create(AF_INET, "10.1.0.0", 0);
 	right = host_create(AF_INET, "10.2.0.0", 0);
 
-	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0, PROTO_ESP, 1234);
+	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0, PROTO_ESP, 1234, FALSE);
 	tester->assert_true(tester, status == SUCCESS, "add policy");
 	
-	status = kernel_interface->del_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0);
+	status = kernel_interface->del_policy(kernel_interface, left, right, 16, 16, XFRM_POLICY_OUT, 0);
 	tester->assert_true(tester, status == SUCCESS, "del policy");
 
 	status = kernel_interface->del_sa(kernel_interface, other, spi, PROTO_ESP);
@@ -144,11 +144,11 @@ void test_kernel_interface_update_hosts(protected_tester_t *tester)
 	left = host_create(AF_INET, "10.1.0.0", 0);
 	right = host_create(AF_INET, "10.2.0.0", 0);
 
-	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0, PROTO_ESP, 1234);
+	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0, PROTO_ESP, 1234, FALSE);
 	tester->assert_true(tester, status == SUCCESS, "add policy OUT");
-	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_IN, 0, PROTO_ESP, 1234);
+	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_IN, 0, PROTO_ESP, 1234, FALSE);
 	tester->assert_true(tester, status == SUCCESS, "add policy IN");
-	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_FWD, 0, PROTO_ESP, 1234);
+	status = kernel_interface->add_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_FWD, 0, PROTO_ESP, 1234, FALSE);
 	tester->assert_true(tester, status == SUCCESS, "add policy FWD");
 
 	new_me = host_create(AF_INET, "192.168.1.12", 4500);
@@ -157,7 +157,7 @@ void test_kernel_interface_update_hosts(protected_tester_t *tester)
 	status = kernel_interface->update_sa_hosts(kernel_interface, me, other, new_me, new_other, me->get_differences(me, new_me), other->get_differences(other, new_other), spi, PROTO_ESP);
 	tester->assert_true(tester, status == SUCCESS, "update hosts on sa");
 	
-	status = kernel_interface->del_policy(kernel_interface, me, other, left, right, 16, 16, XFRM_POLICY_OUT, 0);
+	status = kernel_interface->del_policy(kernel_interface, left, right, 16, 16, XFRM_POLICY_OUT, 0);
 	tester->assert_true(tester, status == SUCCESS, "del policy");
 
 	status = kernel_interface->del_sa(kernel_interface, other, spi, PROTO_ESP);

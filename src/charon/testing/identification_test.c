@@ -34,6 +34,7 @@ void test_identification(protected_tester_t *tester)
 {
 	identification_t *a, *b, *c, *d;
 	bool result;
+	int wildcards;
 	
 	{ /* test RFC822_ADDR */
 		char *bob_string = "bob@wonderland.net";
@@ -44,17 +45,17 @@ void test_identification(protected_tester_t *tester)
 		c = identification_create_from_string("*@wonderland.net");
 		d = identification_create_from_string("*@badlands.com");
 		
-		result = a->belongs_to(a, c);
+		result = a->matches(a, c, &wildcards);
 		tester->assert_true(tester, result, "alice belongs to wonderland");
-		result = b->belongs_to(b, c);
+		result = b->matches(b, c, &wildcards);
 		tester->assert_true(tester, result, "bob belongs to wonderland");
-		result = a->belongs_to(a, d);
+		result = a->matches(a, d, &wildcards);
 		tester->assert_false(tester, result, "alice does not belong to badlands");
-		result = b->belongs_to(b, d);
+		result = b->matches(b, d, &wildcards);
 		tester->assert_false(tester, result, "bob does not belong to badlands");
-		result = c->belongs_to(c, d);
+		result = c->matches(c, d, &wildcards);
 		tester->assert_false(tester, result, "wonderland is not in badlands");
-		result = a->belongs_to(a, a);
+		result = a->matches(a, a, &wildcards);
 		tester->assert_true(tester, result, "alice belongs to alice alice");
 		result = a->equals(a, a);
 		tester->assert_true(tester, result, "alice is alice");
@@ -76,17 +77,17 @@ void test_identification(protected_tester_t *tester)
 		c = identification_create_from_string("@*.nirvana.org");
 		d = identification_create_from_string("@*.samsara.com");
 		
-		result = a->belongs_to(a, c);
+		result = a->matches(a, c, &wildcards);
 		tester->assert_true(tester, result, "carol belongs to nirvana");
-		result = b->belongs_to(b, c);
+		result = b->matches(b, c, &wildcards);
 		tester->assert_true(tester, result, "dave belongs to nirvana");
-		result = a->belongs_to(a, d);
+		result = a->matches(a, d, &wildcards);
 		tester->assert_false(tester, result, "carol does not belong to samsara");
-		result = b->belongs_to(b, d);
+		result = b->matches(b, d, &wildcards);
 		tester->assert_false(tester, result, "dave does not belong to samsara");
-		result = c->belongs_to(c, d);
+		result = c->matches(c, d, &wildcards);
 		tester->assert_false(tester, result, "nirvana is not in samsara");
-		result = a->belongs_to(a, a);
+		result = a->matches(a, a, &wildcards);
 		tester->assert_true(tester, result, "carol belongs to carol carol");
 		result = a->equals(a, a);
 		tester->assert_true(tester, result, "carol is carol");
@@ -150,12 +151,12 @@ void test_identification(protected_tester_t *tester)
 		tester->assert_true(tester, result, "DN of alice equals DN of alice");
 		result = a->equals(a, b);
 		tester->assert_false(tester, result, "DN of alice doesn't equal DN of bob");
-		result = a->belongs_to(a, c);
+		result = a->matches(a, c, &wildcards);
 		tester->assert_true(tester, result, "DN of alice belongs to DN of carol");
 		/* TODO: This does NOT work, wildcard check should work with unordered RDNs */
-		result = b->belongs_to(b, c);
+		result = b->matches(b, c, &wildcards);
 		tester->assert_true(tester, result, "DN of bob belongs to DN of carol");
-		result = b->belongs_to(b, d);
+		result = b->matches(b, d, &wildcards);
 		tester->assert_false(tester, result, "DN of bob doesn't belong to DN of dave");
 		
 		a->destroy(a);
