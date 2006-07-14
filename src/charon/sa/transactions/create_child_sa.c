@@ -521,6 +521,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 				break;	
 			case TRAFFIC_SELECTOR_RESPONDER:
 				tsr_request = (ts_payload_t*)payload;
+				break;
 			case KEY_EXCHANGE:
 			{
 				u_int8_t dh_buffer[] = {0x00, 0x00}; /* MODP_NONE */
