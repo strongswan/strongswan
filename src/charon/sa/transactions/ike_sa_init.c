@@ -219,7 +219,7 @@ static chunk_t generate_natd_hash(private_ike_sa_init_t *this,
 	this->nat_hasher->allocate_hash(this->nat_hasher, natd_string, &natd_hash);
 	
 	sprintf(buf, "natd_hash(%016llx %016llx %s:%d) == SHA1(", spi_i, spi_r,
-			host->get_address(host), host->get_port(host));
+			host->get_string(host), host->get_port(host));
 	chunk_to_hex(buf + strlen(buf), sizeof(buf) - strlen(buf), natd_string);
 	strcat(buf, ") == ");
 	chunk_to_hex(buf + strlen(buf), sizeof(buf) - strlen(buf), natd_hash);
@@ -520,7 +520,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		
 		this->logger->log(this->logger, AUDIT,
 						  "no connection for hosts %s...%s found, deleting IKE_SA",
-						  me->get_address(me), other->get_address(other));
+						  me->get_string(me), other->get_string(other));
 		return DESTROY_ME;
 	}
 	this->ike_sa->set_connection(this->ike_sa, this->connection);

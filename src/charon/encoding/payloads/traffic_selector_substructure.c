@@ -56,7 +56,7 @@ struct private_traffic_selector_substructure_t {
 	/**
 	 * IP Protocol ID.
 	 */
-	u_int8_t  ip_protocol_id;
+	u_int8_t ip_protocol_id;
 
 	/**
 	 * Length of this payload.
@@ -82,11 +82,6 @@ struct private_traffic_selector_substructure_t {
 	 * Ending address.
 	 */
 	chunk_t ending_address;
-	
-	/**
-	 * update length
-	 */
-	void (*compute_length) (private_traffic_selector_substructure_t *this);
 };
 
 /**
@@ -137,7 +132,6 @@ encoding_rule_t traffic_selector_substructure_encodings[] = {
  */
 static status_t verify(private_traffic_selector_substructure_t *this)
 {
-	
 	if (this->start_port > this->end_port)
 	{
 		return FAILED;
@@ -161,7 +155,6 @@ static status_t verify(private_traffic_selector_substructure_t *this)
 			return FAILED;
 		}
 	}
-
 	
 	return SUCCESS;
 }
@@ -196,6 +189,7 @@ static payload_type_t get_next_type(private_traffic_selector_substructure_t *thi
  */
 static void set_next_type(private_traffic_selector_substructure_t *this,payload_type_t type)
 {
+	
 }
 
 /**
@@ -204,82 +198,6 @@ static void set_next_type(private_traffic_selector_substructure_t *this,payload_
 static size_t get_length(private_traffic_selector_substructure_t *this)
 {
 	return this->payload_length;
-}
-
-/**
- * Implementation of traffic_selector_substructure_t.get_ts_type.
- */
-static ts_type_t get_ts_type (private_traffic_selector_substructure_t *this)
-{
-	return this->ts_type;
-}
-
-/**
- * Implementation of traffic_selector_substructure_t.set_ts_type.
- */
-static void set_ts_type (private_traffic_selector_substructure_t *this,ts_type_t ts_type)
-{
-	this->ts_type = ts_type;
-}
-
-/**
- * Implementation of traffic_selector_substructure_t.get_protocol_id.
- */
-static u_int8_t get_protocol_id (private_traffic_selector_substructure_t *this)
-{
-	return this->ip_protocol_id;
-}
-
-/**
- * Implementation of traffic_selector_substructure_t.set_protocol_id.
- */	
-static void set_protocol_id (private_traffic_selector_substructure_t *this,u_int8_t protocol_id)
-{
-	this->ip_protocol_id = protocol_id;
-}
-
-/**
- * Implementation of traffic_selector_substructure_t.get_start_host.
- */
-static host_t * get_start_host (private_traffic_selector_substructure_t *this)
-{
-	return (host_create_from_chunk(AF_INET,this->starting_address, this->start_port));
-}
-
-/**
- * Implementation of traffic_selector_substructure_t.set_start_host.
- */
-static void set_start_host (private_traffic_selector_substructure_t *this,host_t *start_host)
-{
-	this->start_port = start_host->get_port(start_host);
-	if (this->starting_address.ptr != NULL)
-	{
-		chunk_free(&(this->starting_address));
-	}
-	this->starting_address = start_host->get_address_as_chunk(start_host);
-	this->compute_length(this);
-}
-
-/**
- * Implementation of traffic_selector_substructure_t.get_end_host.
- */
-static host_t *get_end_host (private_traffic_selector_substructure_t *this)
-{
-	return (host_create_from_chunk(AF_INET,this->ending_address, this->end_port));
-}
-
-/**
- * Implementation of traffic_selector_substructure_t.set_end_host.
- */
-static void set_end_host (private_traffic_selector_substructure_t *this,host_t *end_host)
-{
-	this->end_port = end_host->get_port(end_host);
-	if (this->ending_address.ptr != NULL)
-	{
-		chunk_free(&(this->ending_address));
-	}
-	this->ending_address = end_host->get_address_as_chunk(end_host);
-	this->compute_length(this);
 }
 
 /**
@@ -295,11 +213,12 @@ static traffic_selector_t *get_traffic_selector(private_traffic_selector_substru
 }
 
 /**
- * Implementation of private_ts_payload_t.compute_length 
+ * recompute length field of the payload
  */
 void compute_length(private_traffic_selector_substructure_t *this)
 {
-	this->payload_length = TRAFFIC_SELECTOR_HEADER_LENGTH + this->ending_address.len + this->starting_address.len;
+	this->payload_length = TRAFFIC_SELECTOR_HEADER_LENGTH +
+			this->ending_address.len + this->starting_address.len;
 }
 
 /**
@@ -329,19 +248,8 @@ traffic_selector_substructure_t *traffic_selector_substructure_create()
 	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
 	
 	/* public functions */
-	this->public.destroy = (void (*) (traffic_selector_substructure_t *)) destroy;
-	this->public.get_ts_type = (ts_type_t (*) (traffic_selector_substructure_t *)) get_ts_type;
-	this->public.set_ts_type = (void (*) (traffic_selector_substructure_t *,ts_type_t)) set_ts_type;
-	this->public.get_protocol_id = (u_int8_t (*) (traffic_selector_substructure_t *)) get_protocol_id;
-	this->public.set_protocol_id = (void (*) (traffic_selector_substructure_t *,u_int8_t)) set_protocol_id;
-	this->public.get_start_host = (host_t * (*) (traffic_selector_substructure_t *))get_start_host;
-	this->public.set_start_host = (void (*) (traffic_selector_substructure_t *, host_t *))set_start_host;
-	this->public.get_end_host = (host_t * (*) (traffic_selector_substructure_t *))get_end_host;
-	this->public.set_end_host = (void (*) (traffic_selector_substructure_t *, host_t *))set_end_host;
 	this->public.get_traffic_selector = (traffic_selector_t* (*)(traffic_selector_substructure_t*))get_traffic_selector;
-	
-	/* private functions */
-	this->compute_length = compute_length;
+	this->public.destroy = (void (*) (traffic_selector_substructure_t *)) destroy;
 	
 	/* private variables */
 	this->payload_length = TRAFFIC_SELECTOR_HEADER_LENGTH;
@@ -368,8 +276,8 @@ traffic_selector_substructure_t *traffic_selector_substructure_create_from_traff
 	this->end_port = traffic_selector->get_to_port(traffic_selector);
 	this->starting_address = traffic_selector->get_from_address(traffic_selector);
 	this->ending_address = traffic_selector->get_to_address(traffic_selector);
-		
-	this->compute_length(this);
+	
+	compute_length(this);
 	
 	return &(this->public);
 }

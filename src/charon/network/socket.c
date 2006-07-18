@@ -162,8 +162,8 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	pkt->set_destination(pkt, dest);
 
 	this->logger->log(this->logger, CONTROL|LEVEL1, "received packet: from %s:%d to %s:%d",
-					  source->get_address(source), source->get_port(source),
-					  dest->get_address(dest), dest->get_port(dest));
+					  source->get_string(source), source->get_port(source),
+					  dest->get_string(dest), dest->get_port(dest));
 
 	data_offset = IP_LEN + UDP_LEN;
 
@@ -200,8 +200,8 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	data = packet->get_data(packet);
 
 	this->logger->log(this->logger, CONTROL|LEVEL1, "sending packet: from %s:%d to %s:%d",
-					  src->get_address(src), src->get_port(src),
-					  dst->get_address(dst), dst->get_port(dst));
+					  src->get_string(src), src->get_port(src),
+					  dst->get_string(dst), dst->get_port(dst));
 	
 	/* send data */
 	sport = src->get_port(src);
@@ -404,7 +404,7 @@ static status_t initialize(private_socket_t *this)
 	if (setsockopt(this->natt_fd, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 	{
 		this->logger->log(this->logger, ERROR,
-						  "unable to set UDP_ENCAP on raw socket! NAT-T may fail! error: %s",
+						  "unable to set UDP_ENCAP on NAT-T socket: %s; NAT-T may fail",
 						  strerror(errno));
 	}
 	

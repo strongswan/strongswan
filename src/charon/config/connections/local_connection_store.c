@@ -75,7 +75,7 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 	connection_t *found = NULL;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1, "looking for connection for host pair %s...%s",
-					  my_host->get_address(my_host), other_host->get_address(other_host));
+					  my_host->get_string(my_host), other_host->get_string(other_host));
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->connections->create_iterator(this->connections, TRUE);
@@ -108,8 +108,8 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 			this->logger->log(this->logger, CONTROL|LEVEL2,
 							 "candidate connection \"%s\": %s...%s (prio=%d)",
 							  candidate->get_name(candidate),
-							  candidate_my_host->get_address(candidate_my_host),
-							  candidate_other_host->get_address(candidate_other_host),
+							  candidate_my_host->get_string(candidate_my_host),
+							  candidate_other_host->get_string(candidate_other_host),
 							  prio);
 
 			if (prio > best_prio)
@@ -129,8 +129,8 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 		this->logger->log(this->logger, CONTROL,
 						 "found matching connection \"%s\": %s...%s (prio=%d)",
 						  found->get_name(found),
-						  found_my_host->get_address(found_my_host),
-						  found_other_host->get_address(found_other_host),
+						  found_my_host->get_string(found_my_host),
+						  found_other_host->get_string(found_other_host),
 						  best_prio);
 
 		found = found->clone(found);
@@ -243,8 +243,8 @@ void log_connections(private_local_connection_store_t *this, logger_t *logger, c
 
 			logger->log(logger, CONTROL, "  \"%s\": %s...%s",
 						current->get_name(current),
-						my_host->get_address(my_host),
-						other_host->get_address(other_host));
+						my_host->get_string(my_host),
+						other_host->get_string(other_host));
 		}
 	}
 	iterator->destroy(iterator);

@@ -82,20 +82,21 @@ struct traffic_selector_t {
 	/**
 	 * @brief Compare two traffic selectors, and create a new one
 	 * which is the largest subset of both (subnet & port).
-	 * 
+	 *
 	 * Resulting traffic_selector is newly created and must be destroyed.
-	 * 
+	 *
 	 * @param this		first to compare
 	 * @param other		second to compare
 	 * @return
 	 * 					- created subset of them
 	 * 					- or NULL if no match between this and other
 	 */
-	traffic_selector_t *(*get_subset) (traffic_selector_t *this, traffic_selector_t *other);
+	traffic_selector_t *(*get_subset)  (traffic_selector_t *this, 
+										traffic_selector_t *other);
 	
 	/**
 	 * @brief Clone a traffic selector.
-	 *  
+	 *
 	 * @param this		traffic selector to clone
 	 * @return			clone of it
 	 */
@@ -103,12 +104,9 @@ struct traffic_selector_t {
 	
 	/**
 	 * @brief Get starting address of this ts as a chunk.
-	 * 
-	 * Data is in network order and represents the address.
-	 * Size depends on protocol.
-	 * 
-	 * Resulting chunk data is allocated and must be freed!
-	 *  
+	 *
+	 * Chunk is in network order gets allocated.
+	 *
 	 * @param this		calling object
 	 * @return			chunk containing the address
 	 */
@@ -116,12 +114,9 @@ struct traffic_selector_t {
 	
 	/**
 	 * @brief Get ending address of this ts as a chunk.
-	 * 
-	 * Data is in network order and represents the address.
-	 * Size depends on protocol.
-	 * 
-	 * Resulting chunk data is allocated and must be freed!
-	 *  
+	 *
+	 * Chunk is in network order gets allocated.
+	 *
 	 * @param this		calling object
 	 * @return			chunk containing the address
 	 */
@@ -140,10 +135,10 @@ struct traffic_selector_t {
 	
 	/**
 	 * @brief Get ending port of this ts.
-	 * 
+	 *
 	 * Port is in host order, since the parser converts it.
 	 * Size depends on protocol.
-	 *  
+	 *
 	 * @param this		calling object
 	 * @return			port
 	 */
@@ -151,50 +146,46 @@ struct traffic_selector_t {
 	
 	/**
 	 * @brief Get the type of the traffic selector.
-	 * 
+	 *
 	 * @param this		calling obect
 	 * @return			ts_type_t specifying the type
 	 */
 	ts_type_t (*get_type) (traffic_selector_t *this);
-		
+	
 	/**
 	 * @brief Get the protocol id of this ts.
-	 * 
+	 *
 	 * @param this		calling obect
 	 * @return			protocol id
 	 */
 	u_int8_t (*get_protocol) (traffic_selector_t *this);
-		
-	/**
-	 * @brief Get the netmask of the address range.
-	 * 
-	 * Returns the number of bits associated to the subnet.
-	 * (As the "24" in "192.168.0.0/24"). This is approximated
-	 * if the address range is not a complete subnet! Since Linux
-	 * does not support full IP address ranges (yet), we can't do this
-	 * (much) better.
-	 * 
-	 * @param this		calling obect
-	 * @return			netmask as "bits for subnet"
-	 */
-	u_int8_t (*get_netmask) (traffic_selector_t *this);
-		
+	
 	/**
 	 * @brief Update the address of a traffic selector.
-	 * 
+	 *
 	 * Update the address range of a traffic selector, 
 	 * if the current address is 0.0.0.0. The new address range
 	 * starts from the supplied address and also ends there 
 	 * (which means it is a one-host-address-range ;-).
-	 * 
+	 *
 	 * @param this		calling obect
 	 * @param host		host_t specifying the address range
 	 */
 	void (*update_address_range) (traffic_selector_t *this, host_t* host);
 	
 	/**
-	 * @brief Destroys the ts object
+	 * @brief Get a string representation of the traffic selector.
+	 *
+	 * String points to internal data, do not free/modify.
 	 * 
+	 * @param this		calling object
+	 * @return 			pointer to a string.
+	 */
+	char* (*get_string) (traffic_selector_t *this);
+	
+	/**
+	 * @brief Destroys the ts object
+	 *
 	 * @param this		calling object
 	 */
 	void (*destroy) (traffic_selector_t *this);
@@ -215,7 +206,10 @@ struct traffic_selector_t {
  * 
  * @ingroup config
  */
-traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_type_t type, char *from_addr, u_int16_t from_port, char *to_addr, u_int16_t to_port);
+traffic_selector_t *traffic_selector_create_from_string(
+									u_int8_t protocol, ts_type_t type,
+									char *from_addr, u_int16_t from_port,
+									char *to_addr, u_int16_t to_port);
 
 /**
  * @brief Create a new traffic selector using data read from the net.
@@ -236,7 +230,10 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
  *
  * @ingroup config
  */
-traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from_address, int16_t from_port, chunk_t to_address, u_int16_t to_port);
+traffic_selector_t *traffic_selector_create_from_bytes(
+								u_int8_t protocol, ts_type_t type,
+								chunk_t from_address, u_int16_t from_port,
+								chunk_t to_address, u_int16_t to_port);
 
 /**
  * @brief Create a new traffic selector defining a whole subnet.
@@ -256,6 +253,8 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
  *
  * @ingroup config
  */
-traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t netbits, u_int8_t protocol, u_int16_t port);
+traffic_selector_t *traffic_selector_create_from_subnet(
+									host_t *net, u_int8_t netbits, 
+									u_int8_t protocol, u_int16_t port);
 
 #endif /* TRAFFIC_SELECTOR_H_ */

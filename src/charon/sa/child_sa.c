@@ -22,8 +22,6 @@
  * for more details.
  */
 
-#include <netdb.h>
-
 #include "child_sa.h"
 
 #include <daemon.h>
@@ -48,18 +46,15 @@ typedef struct sa_policy_t sa_policy_t;
  * for deleting a policy...
  */
 struct sa_policy_t {
-	
-	struct {
-		/** subnet address behind peer peer */
-		host_t *net;
-		/** netmask used for net */
-		u_int8_t net_mask;
-	} me, other;
+	/**
+	 * Traffic selector for us
+	 */
+	traffic_selector_t *my_ts;
 	
 	/**
-	 * Protocol for this policy, such as TCP/UDP/ICMP...
+	 * Traffic selector for other
 	 */
-	int upper_proto;
+	traffic_selector_t *other_ts;
 };
 
 typedef struct private_child_sa_t private_child_sa_t;
@@ -343,7 +338,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	/* send SA down to the kernel */
 	this->logger->log(this->logger, CONTROL|LEVEL2,
 						"  SPI 0x%.8x, src %s dst %s",
-						ntohl(spi), src->get_address(src), dst->get_address(dst));
+						ntohl(spi), src->get_string(src), dst->get_string(dst));
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 											  src, dst,
 											  spi, this->protocol,
@@ -432,79 +427,52 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 		while (other_iter->has_next(other_iter))
 		{
 			/* set up policies for every entry in my_ts_list to every entry in other_ts_list */
-			int family;
-			chunk_t from_addr;
-			u_int16_t from_port, to_port;
-			sa_policy_t *policy;
 			status_t status;
+			sa_policy_t *policy;
 			
 			other_iter->current(other_iter, (void**)&other_ts);
+			
+			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL1, 
+								  "CHILD_SA policy uses two different IP families, ignored");
+				continue;
+			}
 			
 			/* only set up policies if protocol matches, or if one is zero (any) */
 			if (my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts) &&
 				my_ts->get_protocol(my_ts) && other_ts->get_protocol(other_ts))
 			{
-				this->logger->log(this->logger, ERROR, 
+				this->logger->log(this->logger, CONTROL|LEVEL1, 
 								  "CHILD_SA policy uses two different protocols, ignored");
 				continue;
 			}
-			policy = malloc_thing(sa_policy_t);
-			policy->upper_proto = max(my_ts->get_protocol(my_ts), other_ts->get_protocol(other_ts));
-		
-			/* calculate net and ports for local side */
-			family = my_ts->get_type(my_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
-			from_addr = my_ts->get_from_address(my_ts);
-			from_port = my_ts->get_from_port(my_ts);
-			to_port = my_ts->get_to_port(my_ts);
-			from_port = (from_port != to_port) ? 0 : from_port;
-			policy->me.net = host_create_from_chunk(family, from_addr, from_port);
-			policy->me.net_mask = my_ts->get_netmask(my_ts);
-			chunk_free(&from_addr);
 			
-			/* calculate net and ports for remote side */
-			family = other_ts->get_type(other_ts) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
-			from_addr = other_ts->get_from_address(other_ts);
-			from_port = other_ts->get_from_port(other_ts);
-			to_port = other_ts->get_to_port(other_ts);
-			from_port = (from_port != to_port) ? 0 : from_port;
-			policy->other.net = host_create_from_chunk(family, from_addr, from_port);
-			policy->other.net_mask = other_ts->get_netmask(other_ts);
-			chunk_free(&from_addr);
-	
 			/* install 3 policies: out, in and forward */
 			status = charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->me.addr, this->other.addr,
-					policy->me.net, policy->other.net,
-					policy->me.net_mask, policy->other.net_mask,
-					XFRM_POLICY_OUT, policy->upper_proto,
-					this->protocol, this->reqid, FALSE);
-	
+					this->me.addr, this->other.addr, my_ts, other_ts, 
+					POLICY_OUT, this->protocol, this->reqid, FALSE);
+			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->other.addr, this->me.addr,
-					policy->other.net, policy->me.net,
-					policy->other.net_mask, policy->me.net_mask,
-					XFRM_POLICY_IN, policy->upper_proto,
-					this->protocol, this->reqid, FALSE);
-	
+					this->other.addr, this->me.addr, other_ts, my_ts,
+					POLICY_IN, this->protocol, this->reqid, FALSE);
+			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
-					this->other.addr, this->me.addr,
-					policy->other.net, policy->me.net,
-					policy->other.net_mask, policy->me.net_mask,
-					XFRM_POLICY_FWD, policy->upper_proto,
-					this->protocol, this->reqid, FALSE);
+					this->other.addr, this->me.addr, other_ts, my_ts,
+					POLICY_FWD, this->protocol, this->reqid, FALSE);
 			
 			if (status != SUCCESS)
 			{
 				my_iter->destroy(my_iter);
 				other_iter->destroy(other_iter);
-				policy->me.net->destroy(policy->me.net);
-				policy->other.net->destroy(policy->other.net);
-				free(policy);
 				return status;
 			}
 			
-			/* add it to the policy list, since we want to know which policies we own */
-			this->policies->insert_last(this->policies, policy);
+			/* store policy to delete/update them later */
+			policy = malloc_thing(sa_policy_t);
+			policy->my_ts = my_ts->clone(my_ts);
+			policy->other_ts = other_ts->clone(other_ts);
+			this->policies->insert_last(this->policies, (void*)policy);
 		}
 	}
 	my_iter->destroy(my_iter);
@@ -533,22 +501,38 @@ static void* get_rekeying_transaction(private_child_sa_t *this)
  */
 static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use_time)
 {
+	iterator_t *iterator;
+	sa_policy_t *policy;
 	status_t status;
 	
 	*use_time = UNDEFINED_TIME;
-	
-	if (inbound)
+
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		status = charon->kernel_interface->query_sa(charon->kernel_interface,
-				this->me.addr, this->me.spi,
-				this->protocol, use_time);
+		if (inbound) 
+		{
+			time_t in = UNDEFINED_TIME, fwd = UNDEFINED_TIME;
+			
+			status = charon->kernel_interface->query_policy(
+									charon->kernel_interface,
+									policy->other_ts, policy->my_ts,
+									POLICY_IN, (u_int32_t*)&in);
+			status |= charon->kernel_interface->query_policy(
+									charon->kernel_interface,
+									policy->other_ts, policy->my_ts,
+									POLICY_FWD, (u_int32_t*)&fwd);
+			*use_time = max(in, fwd);
+		}
+		else
+		{
+			status = charon->kernel_interface->query_policy(
+									charon->kernel_interface,
+									policy->my_ts, policy->other_ts, 
+									POLICY_OUT, (u_int32_t*)use_time);
+		}
 	}
-	else
-	{
-		status = charon->kernel_interface->query_sa(charon->kernel_interface,
-				this->other.addr, this->other.spi,
-				this->protocol, use_time);
-	}
+	iterator->destroy(iterator);
 	return status;
 }
 
@@ -561,38 +545,44 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 	char use_in_str[12] = "unused";
 	char use_out_str[12] = "unused";
 	char rekey_str[12] = "disabled";
-	time_t use_in, use_out, now, rekeying;
+	u_int32_t use_in, use_out, use_fwd, now, rekeying;
+	status_t status;
 	
 	if (logger == NULL)
 	{
 		logger = this->logger;
 	}
-	now = time(NULL);
-	get_use_time(this, TRUE, &use_in);
-	if (use_in)
+	now = (u_int32_t)time(NULL);
+	
+	/* query SA times */
+	status = charon->kernel_interface->query_sa(charon->kernel_interface,
+					this->me.addr, this->me.spi, this->protocol, &use_in);
+	if (status == SUCCESS && use_in)
 	{
-		snprintf(use_in_str, sizeof(use_in_str), "%ds", (int)(now - use_in));
+		snprintf(use_in_str, sizeof(use_in_str), "%ds", now - use_in);
 	}
-	get_use_time(this, FALSE, &use_out);
-	if (use_out)
+	status = charon->kernel_interface->query_sa(charon->kernel_interface,
+					this->other.addr, this->other.spi, this->protocol, &use_out);
+	if (status == SUCCESS && use_out)
 	{
-		snprintf(use_out_str, sizeof(use_out_str), "%ds", (int)(now - use_out));
+		snprintf(use_out_str, sizeof(use_out_str), "%ds", now - use_out);
 	}
+	
+	/* calculate rekey times */
 	if (this->soft_lifetime)
 	{
 		rekeying = this->soft_lifetime - (now - this->install_time);
 		snprintf(rekey_str, sizeof(rekey_str), "%ds", (int)rekeying);
 	}
 	
-	logger->log(logger, CONTROL|LEVEL1, 
+	logger->log(logger, CONTROL|LEVEL1,
 				"  \"%s\":   using %s, SPIs (in/out): 0x%x/0x%x, reqid: %d",
 				name,
 				this->protocol == PROTO_ESP ? "ESP" : "AH",
 				htonl(this->me.spi), htonl(this->other.spi),
 				this->reqid);
-	
-	logger->log(logger, CONTROL|LEVEL1, 
-				"  \"%s\":   state: %s, rekeying: %s, last traffic (in/out): %s/%s",
+	logger->log(logger, CONTROL|LEVEL1,
+				"  \"%s\":   state: %s, rekeying: %s, key age (in/out): %s/%s",
 				name, mapping_find(child_sa_state_m, this->state),
 				rekey_str, use_in_str, use_out_str);
 	
@@ -600,55 +590,40 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 	while (iterator->has_next(iterator))
 	{
 		sa_policy_t *policy;
-		struct protoent *proto;
-		char proto_str[8] = "";
-		char *proto_name = proto_str;
-		char my_net_str[8] = "";
-		char other_net_str[8] = "";
-		char my_port_str[8] = "";
-		char other_port_str[8] = "";
-		u_int16_t my_port, other_port;
+		char *my_str;
+		char *other_str;
+		char pol_in_str[12] = "unused";
+		char pol_out_str[12] = "unused";
+		char pol_fwd_str[12] = "unused";
 		
+		/* get ts strings */
 		iterator->current(iterator, (void**)&policy);
+		my_str = policy->my_ts->get_string(policy->my_ts);
+		other_str = policy->other_ts->get_string(policy->other_ts);
 		
-		if (policy->upper_proto)
+		/* query policy times */
+		status = charon->kernel_interface->query_policy(charon->kernel_interface,
+						policy->other_ts, policy->my_ts, POLICY_IN, &use_in);
+		if (status == SUCCESS && use_in)
 		{
-			proto = getprotobynumber(policy->upper_proto);
-			if (proto)
-			{
-				proto_name = proto->p_name;
-			}
-			else
-			{
-				snprintf(proto_str, sizeof(proto_str), "%d", policy->upper_proto);
-			}
+			snprintf(pol_in_str, sizeof(pol_in_str), "%ds", now - use_in);
 		}
-		if (policy->me.net_mask != 32)
+		status = charon->kernel_interface->query_policy(charon->kernel_interface,
+						policy->my_ts, policy->other_ts, POLICY_OUT, &use_out);
+		if (status == SUCCESS && use_out)
 		{
-			snprintf(my_net_str, sizeof(my_net_str), "/%d", policy->me.net_mask);
+			snprintf(pol_out_str, sizeof(pol_out_str), "%ds", now - use_out);
 		}
-		if (policy->other.net_mask != 32)
+		status = charon->kernel_interface->query_policy(charon->kernel_interface,
+						policy->other_ts, policy->my_ts, POLICY_FWD, &use_fwd);
+		if (status == SUCCESS && use_fwd)
 		{
-			snprintf(other_net_str, sizeof(other_net_str), "/%d", policy->other.net_mask);
-		}
-		my_port = policy->me.net->get_port(policy->me.net);
-		other_port = policy->other.net->get_port(policy->other.net);
-		if (my_port)
-		{
-			snprintf(my_port_str, sizeof(my_port_str), ":%d", my_port);
-		}
-		if (other_port)
-		{
-			snprintf(other_port_str, sizeof(other_port_str), ":%d", other_port);
+			snprintf(pol_fwd_str, sizeof(pol_fwd_str), "%ds", now - use_fwd);
 		}
 		
-		logger->log(logger, CONTROL, "  \"%s\":     %s%s%s==%s==%s%s%s",
-					name,
-					policy->me.net->get_address(policy->me.net), 
-					my_port_str, my_net_str,
-					proto_name,
-					policy->other.net->get_address(policy->other.net), 
-					other_port_str, other_net_str);
+		logger->log(logger, CONTROL, 
+					"  \"%s\":     %s====%s, last use (in/out/fwd): %s/%s/%s",
+					name, my_str, other_str, pol_in_str, pol_out_str, pol_fwd_str);
 	}
 	iterator->destroy(iterator);
 }
@@ -688,16 +663,15 @@ static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t
 	this->logger->log(this->logger, CONTROL|LEVEL1,
 					  "updating %s SA 0x%x, from %s:%d..%s:%d to %s:%d..%s:%d",
 					  mapping_find(protocol_id_m, this->protocol), ntohl(spi),
-					  src->get_address(src), src->get_port(src),
-					  dst->get_address(dst), dst->get_port(dst),
-					  new_src->get_address(new_src), new_src->get_port(new_src),
-					  new_dst->get_address(new_dst), new_dst->get_port(new_dst));
+					  src->get_string(src), src->get_port(src),
+					  dst->get_string(dst), dst->get_port(dst),
+					  new_src->get_string(new_src), new_src->get_port(new_src),
+					  new_dst->get_string(new_dst), new_dst->get_port(new_dst));
 	
-	status = charon->kernel_interface->update_sa_hosts(
-						charon->kernel_interface,
-						src, dst, new_src, new_dst, 
-						src_changes, dst_changes,
-						spi, this->protocol);
+	status = charon->kernel_interface->update_sa(charon->kernel_interface,
+												 dst, spi, this->protocol, 
+												 new_src, new_dst, 
+												 src_changes, dst_changes);
 	
 	if (status != SUCCESS)
 	{
@@ -721,26 +695,20 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 		status = charon->kernel_interface->add_policy(
 				charon->kernel_interface,
 				new_me, new_other,
-				policy->me.net, policy->other.net,
-				policy->me.net_mask, policy->other.net_mask,
-				XFRM_POLICY_OUT, policy->upper_proto,
-				this->protocol, this->reqid, TRUE);
+				policy->my_ts, policy->other_ts,
+				POLICY_OUT, this->protocol, this->reqid, TRUE);
 		
 		status |= charon->kernel_interface->add_policy(
 				charon->kernel_interface,
 				new_other, new_me,
-				policy->other.net, policy->me.net,
-				policy->other.net_mask, policy->me.net_mask,
-				XFRM_POLICY_IN, policy->upper_proto,
-				this->protocol, this->reqid, TRUE);
+				policy->other_ts, policy->my_ts,
+				POLICY_IN, this->protocol, this->reqid, TRUE);
 		
 		status |= charon->kernel_interface->add_policy(
 				charon->kernel_interface,
 				new_other, new_me,
-				policy->other.net, policy->me.net,
-				policy->other.net_mask, policy->me.net_mask,
-				XFRM_POLICY_FWD, policy->upper_proto,
-				this->protocol, this->reqid, TRUE);
+				policy->other_ts, policy->my_ts,
+				POLICY_FWD, this->protocol, this->reqid, TRUE);
 		
 		if (status != SUCCESS)
 		{
@@ -749,7 +717,7 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 		}
 	}
 	iterator->destroy(iterator);
-
+	
 	return SUCCESS;
 }
 
@@ -757,7 +725,7 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
  * Implementation of child_sa_t.update_hosts.
  */
 static status_t update_hosts(private_child_sa_t *this, host_t *new_me, host_t *new_other, 
-							 int my_changes, int other_changes) 
+							 host_diff_t my_changes, host_diff_t other_changes) 
 {
 	if (!my_changes && !other_changes)
 	{
@@ -835,21 +803,18 @@ static void destroy(private_child_sa_t *this)
 	{
 		/* let rekeyed policies, as they are used by another child_sa */
 		charon->kernel_interface->del_policy(charon->kernel_interface,
-											policy->me.net, policy->other.net,
-											policy->me.net_mask, policy->other.net_mask,
-											XFRM_POLICY_OUT, policy->upper_proto);
+											 policy->my_ts, policy->other_ts,
+											 POLICY_OUT);
 		
 		charon->kernel_interface->del_policy(charon->kernel_interface,
-											policy->other.net, policy->me.net,
-											policy->other.net_mask, policy->me.net_mask,
-											XFRM_POLICY_IN, policy->upper_proto);
+											 policy->other_ts, policy->my_ts,
+											 POLICY_IN);
 		
 		charon->kernel_interface->del_policy(charon->kernel_interface,
-											policy->other.net, policy->me.net,
-											policy->other.net_mask, policy->me.net_mask,
-											XFRM_POLICY_FWD, policy->upper_proto);
-		policy->me.net->destroy(policy->me.net);
-		policy->other.net->destroy(policy->other.net);
+											 policy->other_ts, policy->my_ts,
+											 POLICY_FWD);
+		policy->my_ts->destroy(policy->my_ts);
+		policy->other_ts->destroy(policy->other_ts);
 		free(policy);
 	}
 	this->policies->destroy(this->policies);
@@ -876,7 +841,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.alloc = (status_t(*)(child_sa_t*,linked_list_t*))alloc;
 	this->public.add = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))add;
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
-	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,int,int))update_hosts;
+	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_diff_t,host_diff_t))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_rekeying_transaction = (void (*)(child_sa_t*,void*))set_rekeying_transaction;

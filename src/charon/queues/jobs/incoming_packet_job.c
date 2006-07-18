@@ -113,8 +113,8 @@ static status_t execute(private_incoming_packet_job_t *this)
 	src = message->get_source(message);
 	dst = message->get_destination(message);
 	this->logger->log(this->logger, CONTROL, "received packet: from %s:%d to %s:%d",
-					  src->get_address(src), src->get_port(src),
-					  dst->get_address(dst), dst->get_port(dst));
+					  src->get_string(src), src->get_port(src),
+					  dst->get_string(dst), dst->get_port(dst));
 	
 	status = message->parse_header(message);
 	if (status != SUCCESS)

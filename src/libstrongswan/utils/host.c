@@ -100,9 +100,9 @@ static bool is_anyaddr(private_host_t *this)
 }
 
 /**
- * implements host_t.get_address
+ * implements host_t.get_string
  */
-static char *get_address(private_host_t *this)
+static char *get_string(private_host_t *this)
 {
 	switch (this->family) 
 	{
@@ -128,9 +128,9 @@ static char *get_address(private_host_t *this)
 }
 
 /**
- * Implementation of host_t.get_address_as_chunk.
+ * Implementation of host_t.get_address.
  */
-static chunk_t get_address_as_chunk(private_host_t *this)
+static chunk_t get_address(private_host_t *this)
 {
 	chunk_t address = CHUNK_INITIALIZER;
 	
@@ -139,9 +139,8 @@ static chunk_t get_address_as_chunk(private_host_t *this)
 		case AF_INET: 
 		{
 			/* allocate 4 bytes for IPv4 address*/
-			address.ptr = malloc(4);
+			address.ptr = (char*)&(this->address4.sin_addr.s_addr);
 			address.len = 4;
-			memcpy(address.ptr,&(this->address4.sin_addr.s_addr),4);
 		}
 		default:
 		{
@@ -151,22 +150,9 @@ static chunk_t get_address_as_chunk(private_host_t *this)
 	}
 }
 
-static xfrm_address_t get_xfrm_addr(private_host_t *this)
-{
-	switch (this->family) 
-	{
-		case AF_INET: 
-		{
-			return (xfrm_address_t)(this->address4.sin_addr.s_addr);
-		}
-		default:
-		{
-			/* todo */
-			return (xfrm_address_t)(this->address4.sin_addr.s_addr);
-		}
-	}
-}
-
+/**
+ * implements host_t.get_family
+ */
 static int get_family(private_host_t *this)
 {
 	return this->family;	
@@ -203,11 +189,10 @@ static void set_port(private_host_t *this, u_int16_t port)
 		}
 		default:
 		{
-			/**/
+			/*TODO*/
 		}
 	}
 }
-
 
 /**
  * Implements host_t.clone.
@@ -249,9 +234,9 @@ static bool ip_equals(private_host_t *this, private_host_t *other)
 /**
  * Implements host_t.get_differences
  */
-static int get_differences(private_host_t *this, private_host_t *other)
+static host_diff_t get_differences(private_host_t *this, private_host_t *other)
 {
-	int ret = HOST_DIFF_NONE;
+	host_diff_t ret = HOST_DIFF_NONE;
 	
 	if (!this->public.ip_equals(&this->public, &other->public))
 	{
@@ -307,12 +292,11 @@ static private_host_t *host_create_empty(void)
 	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
 	this->public.clone = (host_t* (*) (host_t*))clone;
 	this->public.get_family = (int (*) (host_t*))get_family;
-	this->public.get_xfrm_addr = (xfrm_address_t (*) (host_t *))get_xfrm_addr;
-	this->public.get_address = (char* (*) (host_t *))get_address;
-	this->public.get_address_as_chunk = (chunk_t (*) (host_t *)) get_address_as_chunk;
+	this->public.get_string = (char* (*) (host_t *))get_string;
+	this->public.get_address = (chunk_t (*) (host_t *)) get_address;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
 	this->public.set_port = (void (*) (host_t *,u_int16_t))set_port;
-	this->public.get_differences = (int (*) (host_t *,host_t *)) get_differences;
+	this->public.get_differences = (host_diff_t (*) (host_t *,host_t *)) get_differences;
 	this->public.ip_equals = (bool (*) (host_t *,host_t *)) ip_equals;
 	this->public.equals = (bool (*) (host_t *,host_t *)) equals;
 	this->public.is_anyaddr = (bool (*) (host_t *)) is_anyaddr;

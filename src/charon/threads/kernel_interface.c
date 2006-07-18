@@ -29,6 +29,7 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <linux/xfrm.h>
 #include <linux/udp.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -389,8 +390,8 @@ static void receive_messages(private_kernel_interface_t *this)
 		* list these responses for the sender
 		*/
 		else if (hdr->nlmsg_type == NLMSG_ERROR ||
-					   hdr->nlmsg_type == XFRM_MSG_NEWSA ||
-					   hdr->nlmsg_type == XFRM_MSG_NEWPOLICY)
+				 hdr->nlmsg_type == XFRM_MSG_NEWSA ||
+				 hdr->nlmsg_type == XFRM_MSG_NEWPOLICY)
 		{
 			/* add response to queue */
 			listed_response = malloc(hdr->nlmsg_len);
@@ -409,10 +410,19 @@ static void receive_messages(private_kernel_interface_t *this)
 }
 
 /**
+ * convert a host_t to a struct xfrm_address
+ */
+static void host2xfrm(host_t *host, xfrm_address_t *xfrm)
+{
+	chunk_t chunk = host->get_address(host);
+	memcpy(xfrm, chunk.ptr, max(chunk.len, sizeof(xfrm_address_t)));	
+}
+
+/**
  * Implementation of kernel_interface_t.get_spi.
  */
 static status_t get_spi(private_kernel_interface_t *this, 
-						host_t *src, host_t *dest, 
+						host_t *src, host_t *dst, 
 						protocol_id_t protocol, u_int32_t reqid,
 						u_int32_t *spi)
 {
@@ -432,8 +442,8 @@ static status_t get_spi(private_kernel_interface_t *this,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userspi_info));
 
 	userspi = (struct xfrm_userspi_info*)NLMSG_DATA(hdr);
-	userspi->info.saddr = src->get_xfrm_addr(src);
-	userspi->info.id.daddr = dest->get_xfrm_addr(dest);
+	host2xfrm(src, &userspi->info.saddr);
+	host2xfrm(dst, &userspi->info.id.daddr);
 	userspi->info.id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	userspi->info.mode = TRUE; /* tunnel mode */
 	userspi->info.reqid = reqid;
@@ -476,9 +486,8 @@ static status_t get_spi(private_kernel_interface_t *this,
  * Implementation of kernel_interface_t.add_sa.
  */
 static status_t add_sa(private_kernel_interface_t *this,
-					   host_t *me, host_t *other,
-					   u_int32_t spi, protocol_id_t protocol,
-					   u_int32_t reqid,
+					   host_t *src, host_t *dst, u_int32_t spi,
+					   protocol_id_t protocol, u_int32_t reqid,
 					   u_int64_t expire_soft, u_int64_t expire_hard,
 					   algorithm_t *enc_alg, algorithm_t *int_alg,
 					   prf_plus_t *prf_plus, natt_conf_t *natt,
@@ -502,12 +511,11 @@ static status_t add_sa(private_kernel_interface_t *this,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	
 	sa = (struct xfrm_usersa_info*)NLMSG_DATA(hdr);
-	sa->saddr = me->get_xfrm_addr(me);
-	sa->id.daddr = other->get_xfrm_addr(other);
-	
+	host2xfrm(src, &sa->saddr);
+	host2xfrm(dst, &sa->id.daddr);
 	sa->id.spi = spi;
 	sa->id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
-	sa->family = me->get_family(me);
+	sa->family = src->get_family(src);
 	sa->mode = TRUE; /* tunnel mode */
 	sa->replay_window = 32;
 	sa->reqid = reqid;
@@ -595,8 +603,8 @@ static status_t add_sa(private_kernel_interface_t *this,
 
 		struct xfrm_encap_tmpl* encap = (struct xfrm_encap_tmpl*)RTA_DATA(rthdr);
 		encap->encap_type = UDP_ENCAP_ESPINUDP;
-		encap->encap_sport = ntohs(natt->sport);
-		encap->encap_dport = ntohs(natt->dport);
+		encap->encap_sport = htons(natt->sport);
+		encap->encap_dport = htons(natt->dport);
 		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
 		/* encap_oa could probably be derived from the 
 		 * traffic selectors [rfc4306, p39]. In the netlink kernel implementation 
@@ -633,13 +641,13 @@ static status_t add_sa(private_kernel_interface_t *this,
 }
 
 /**
- * Implementation of kernel_interface_t.update_sa_hosts.
+ * Implementation of kernel_interface_t.update_sa.
  */
-static status_t update_sa_hosts(
+static status_t update_sa(
 		private_kernel_interface_t *this,
 		host_t *src, host_t *dst,
 		host_t *new_src, host_t *new_dst, 
-		int src_changes, int dst_changes,
+		host_diff_t src_changes, host_diff_t dst_changes,
 		u_int32_t spi, protocol_id_t protocol)
 {
 	unsigned char request[BUFFER_SIZE];
@@ -658,11 +666,11 @@ static status_t update_sa_hosts(
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
-	sa_id->daddr = dst->get_xfrm_addr(dst);
+	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
-
+	POS;
 	if (send_message(this, hdr, &update) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
@@ -687,6 +695,7 @@ static status_t update_sa_hosts(
 		free(update);
 		return FAILED;
 	}
+	POS;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "updating SA");
 	update->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;	
@@ -695,7 +704,7 @@ static status_t update_sa_hosts(
 	struct xfrm_usersa_info *sa = (struct xfrm_usersa_info*)NLMSG_DATA(update);
 	if (src_changes & HOST_DIFF_ADDR)
 	{
-		sa->saddr = new_src->get_xfrm_addr(new_src);
+		host2xfrm(new_src, &sa->saddr);
 	}
 
 	if (dst_changes & HOST_DIFF_ADDR)
@@ -703,7 +712,7 @@ static status_t update_sa_hosts(
 		this->logger->log(this->logger, CONTROL|LEVEL2, "destination address changed! replacing SA");	
 		
 		update->nlmsg_type = XFRM_MSG_NEWSA;
-		sa->id.daddr = new_dst->get_xfrm_addr(new_dst);		
+		host2xfrm(new_dst, &sa->id.daddr);
 	}
 	
 	if (src_changes & HOST_DIFF_PORT || dst_changes & HOST_DIFF_PORT)
@@ -722,7 +731,7 @@ static status_t update_sa_hosts(
 			rthdr = RTA_NEXT(rthdr, rtsize);
 		}
 	}
-	
+	POS;
 	if (send_message(this, update, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
@@ -745,6 +754,7 @@ static status_t update_sa_hosts(
 		this->logger->log(this->logger, CONTROL|LEVEL2, "deleting old SA");
 		status = this->public.del_sa(&this->public, dst, spi, protocol);
 	}
+	POS;
 
 	free(update);
 	free(response);
@@ -755,7 +765,7 @@ static status_t update_sa_hosts(
  * Implementation of kernel_interface_t.query_sa.
  */
 static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
-						 u_int32_t spi, protocol_id_t protocol, time_t *use_time)
+						 u_int32_t spi, protocol_id_t protocol, u_int32_t *use_time)
 {
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *response;
@@ -772,7 +782,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
-	sa_id->daddr = dst->get_xfrm_addr(dst);
+	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
@@ -796,7 +806,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	}
 	
 	sa_info = (struct xfrm_usersa_info*)NLMSG_DATA(response);
-	*use_time = (time_t)sa_info->curlft.use_time;
+	*use_time = sa_info->curlft.use_time;
 	
 	free(response);
 	return SUCCESS;
@@ -824,7 +834,7 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_id));
 	
 	sa_id = (struct xfrm_usersa_id*)NLMSG_DATA(hdr);
-	sa_id->daddr = dst->get_xfrm_addr(dst);
+	host2xfrm(dst, &sa_id->daddr);
 	sa_id->spi = spi;
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
@@ -851,15 +861,110 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 }
 
 /**
+ * convert a traffic selector address range to subnet and its mask.
+ */
+static void ts2subnet(traffic_selector_t* ts, 
+					  xfrm_address_t *net, u_int8_t *mask)
+{
+	/* there is no way to do this cleanly, as the address range may
+	 * be anything else but a subnet. We use from_addr as subnet 
+	 * and try to calculate a usable subnet mask.
+	 */
+	chunk_t chunk;
+	
+	chunk = ts->get_from_address(ts);
+	memcpy(net, chunk.ptr, chunk.len);
+	
+	switch (ts->get_type(ts))
+	{
+		case TS_IPV4_ADDR_RANGE:
+		{
+			u_int32_t from, to, bit;
+			
+			from = *(u_int32_t*)chunk.ptr;
+			chunk_free(&chunk);
+			chunk = ts->get_to_address(ts);
+			to = *(u_int32_t*)chunk.ptr;
+			chunk_free(&chunk);
+			for (bit = 0; bit < 32; bit++)
+			{
+				if ((1<<bit & from) != (1<<bit & to))
+				{
+					*mask = bit;
+					return;
+				}
+			}
+			*mask = 32;
+			return;
+		}
+		case TS_IPV6_ADDR_RANGE:
+		default:
+		{
+			/* TODO: IPV6 support */
+			*mask = 0;
+			return;
+		}
+	}
+}
+
+/**
+ * convert a traffic selector port range to port/portmask
+ */
+static void ts2ports(traffic_selector_t* ts, 
+					 u_int16_t *port, u_int16_t *mask)
+{
+	/* linux does not seem to accept complex portmasks. Only
+	 * any or a specific port is allowed. We set to any, if we have
+	 * a port range, or to a specific, if we have one port only.
+	 */
+	u_int16_t from, to;
+	
+	from = ts->get_from_port(ts);
+	to = ts->get_to_port(ts);
+	
+	if (from == to)
+	{
+		*port = htons(from);
+		*mask = ~0;
+	}
+	else
+	{
+		*port = 0;
+		*mask = 0;
+	}
+}
+
+/**
+ * convert a pair of traffic_selectors to a xfrm_selector
+ */
+static struct xfrm_selector ts2selector(traffic_selector_t *src, 
+										traffic_selector_t *dst)
+{
+	struct xfrm_selector sel;
+
+	memset(&sel, 0, sizeof(sel));
+	sel.family = src->get_type(src) == TS_IPV4_ADDR_RANGE ? AF_INET : AF_INET6;
+	/* src or dest proto may be "any" (0), use more restrictive one */
+	sel.proto = max(src->get_protocol(src), dst->get_protocol(dst));
+	ts2subnet(dst, &sel.daddr, &sel.prefixlen_d);
+	ts2subnet(src, &sel.saddr, &sel.prefixlen_s);
+	ts2ports(dst, &sel.dport, &sel.dport_mask);
+	ts2ports(src, &sel.sport, &sel.sport_mask);
+	sel.ifindex = 0;
+	sel.user = 0;
+	
+	return sel;
+}
+
+/**
  * Implementation of kernel_interface_t.add_policy.
  */
 static status_t add_policy(private_kernel_interface_t *this, 
-						  host_t *me, host_t *other, 
-						  host_t *src, host_t *dst,
-						  u_int8_t src_hostbits, u_int8_t dst_hostbits,
-						  u_int8_t direction, u_int8_t upper_proto,
-						  protocol_id_t protocol,
-						  u_int32_t reqid, bool update)
+						   host_t *src, host_t *dst,
+						   traffic_selector_t *src_ts,
+						   traffic_selector_t *dst_ts,
+						   policy_dir_t direction, protocol_id_t protocol,
+						   u_int32_t reqid, bool update)
 {
 	iterator_t *iterator;
 	kernel_policy_t *current, *policy;
@@ -873,16 +978,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	/* create a policy */
 	policy = malloc_thing(kernel_policy_t);
 	memset(policy, 0, sizeof(kernel_policy_t));
-	policy->sel.saddr = src->get_xfrm_addr(src);
-	policy->sel.prefixlen_s = src_hostbits;
-	policy->sel.sport = htons(src->get_port(src));
-	policy->sel.sport_mask = (policy->sel.sport) ? ~0 : 0;
-	policy->sel.daddr = dst->get_xfrm_addr(dst);
-	policy->sel.prefixlen_d = dst_hostbits;
-	policy->sel.dport = htons(dst->get_port(dst));
-	policy->sel.dport_mask = (policy->sel.dport) ? ~0 : 0;
-	policy->sel.proto = upper_proto;
-	policy->sel.family = src->get_family(src);
+	policy->sel = ts2selector(src_ts, dst_ts);
 	policy->direction = direction;
 	
 	/* find the policy, which matches EXACTLY */
@@ -893,12 +989,17 @@ static status_t add_policy(private_kernel_interface_t *this,
 		if (memcmp(current, policy, sizeof(struct xfrm_selector)) == 0 &&
 			policy->direction == current->direction)
 		{
+			free(policy);
 			/* use existing policy */
 			if (!update)
 			{
 				current->refcount++;
+				iterator->destroy(iterator);
+				pthread_mutex_unlock(&this->pol_mutex);
+				this->logger->log(this->logger, CONTROL|LEVEL1, 
+								  "policy already exists, increasing refcount");
+				return SUCCESS;
 			}
-			free(policy);
 			policy = current;
 			found = TRUE;
 			break;
@@ -921,7 +1022,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 
 	policy_info = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
 	policy_info->sel = policy->sel;
-	policy_info->dir = direction;
+	policy_info->dir = policy->direction;
 	policy_info->priority = SPD_PRIORITY;
 	policy_info->action = XFRM_POLICY_ALLOW;
 	policy_info->share = XFRM_SHARE_ANY;
@@ -955,8 +1056,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 	tmpl->mode = TRUE;
 	
-	tmpl->saddr = me->get_xfrm_addr(me);
-	tmpl->id.daddr = other->get_xfrm_addr(other);
+	host2xfrm(src, &tmpl->saddr);
+	host2xfrm(dst, &tmpl->id.daddr);
 	
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
@@ -982,12 +1083,73 @@ static status_t add_policy(private_kernel_interface_t *this,
 }
 
 /**
+ * Implementation of kernel_interface_t.query_policy.
+ */
+static status_t query_policy(private_kernel_interface_t *this,
+							 traffic_selector_t *src_ts, 
+							 traffic_selector_t *dst_ts,
+							 policy_dir_t direction, u_int32_t *use_time)
+{
+	unsigned char request[BUFFER_SIZE];
+	struct nlmsghdr *response;
+	struct nlmsghdr *hdr;
+	struct xfrm_userpolicy_id *policy_id;
+	struct xfrm_userpolicy_info *policy;
+	
+	memset(&request, 0, sizeof(request));
+	status_t status = SUCCESS;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "querying policy");
+
+	hdr = (struct nlmsghdr*)request;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = XFRM_MSG_GETPOLICY;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_id));
+
+	policy_id = (struct xfrm_userpolicy_id*)NLMSG_DATA(hdr);
+	policy_id->sel = ts2selector(src_ts, dst_ts);
+	policy_id->dir = direction;
+
+	if (send_message(this, hdr, &response) != SUCCESS)
+	{
+		this->logger->log(this->logger, ERROR, "netlink communication failed");
+		return FAILED;
+	}
+	else if (response->nlmsg_type == NLMSG_ERROR)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an error: %s",
+						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
+		free(response);
+		return FAILED;
+	}
+	else if (response->nlmsg_type != XFRM_MSG_NEWPOLICY)
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an unknown reply");
+		free(response);
+		return FAILED;
+	}
+	else if (response->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info)))
+	{
+		this->logger->log(this->logger, ERROR, "netlink request XFRM_MSG_GETPOLICY got an invalid reply");
+		free(response);
+		return FAILED;
+	}
+
+	policy = (struct xfrm_userpolicy_info*)NLMSG_DATA(response);
+
+	*use_time = (time_t)policy->curlft.use_time;
+	
+	free(response);
+	return status;
+}
+
+/**
  * Implementation of kernel_interface_t.del_policy.
  */
 static status_t del_policy(private_kernel_interface_t *this,
-						   host_t *src, host_t *dst, 
-						   u_int8_t src_hostbits, u_int8_t dst_hostbits,
-						   u_int8_t direction, u_int8_t upper_proto)
+						   traffic_selector_t *src_ts, 
+						   traffic_selector_t *dst_ts,
+						   policy_dir_t direction)
 {
 	kernel_policy_t *current, policy, *to_delete = NULL;
 	unsigned char request[BUFFER_SIZE];
@@ -1001,16 +1163,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 	
 	/* create a policy */
 	memset(&policy, 0, sizeof(kernel_policy_t));
-	policy.sel.saddr = src->get_xfrm_addr(src);
-	policy.sel.prefixlen_s = src_hostbits;
-	policy.sel.sport = htons(src->get_port(src));
-	policy.sel.sport_mask = (policy.sel.sport) ? ~0 : 0;
-	policy.sel.daddr = dst->get_xfrm_addr(dst);
-	policy.sel.prefixlen_d = dst_hostbits;
-	policy.sel.dport = htons(dst->get_port(dst));
-	policy.sel.dport_mask = (policy.sel.dport) ? ~0 : 0;
-	policy.sel.proto = upper_proto;
-	policy.sel.family = src->get_family(src);
+	policy.sel = ts2selector(src_ts, dst_ts);
 	policy.direction = direction;
 	
 	/* find the policy */
@@ -1025,7 +1178,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 			if (--to_delete->refcount > 0)
 			{
 				/* is used by more SAs, keep in kernel */
-				this->logger->log(this->logger, CONTROL|LEVEL2, 
+				this->logger->log(this->logger, CONTROL|LEVEL1, 
 								  "is used by other SAs, not removed");
 				iterator->destroy(iterator);
 				pthread_mutex_unlock(&this->pol_mutex);
@@ -1103,11 +1256,12 @@ kernel_interface_t *kernel_interface_create()
 	/* public functions */
 	this->public.get_spi = (status_t(*)(kernel_interface_t*,host_t*,host_t*,protocol_id_t,u_int32_t,u_int32_t*))get_spi;
 	this->public.add_sa  = (status_t(*)(kernel_interface_t *,host_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t,u_int64_t,u_int64_t,algorithm_t*,algorithm_t*,prf_plus_t*,natt_conf_t*,bool))add_sa;
-	this->public.update_sa_hosts = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,int,int,u_int32_t,protocol_id_t))update_sa_hosts;
-	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,time_t*))query_sa;
+	this->public.update_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_diff_t,host_diff_t))update_sa;
+	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,host_t*,host_t*,u_int8_t,u_int8_t,u_int8_t,u_int8_t,protocol_id_t,u_int32_t,bool))add_policy;
-	this->public.del_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,u_int8_t,u_int8_t,u_int8_t,u_int8_t))del_policy;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool))add_policy;
+	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
+	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;
 
 	/* private members */

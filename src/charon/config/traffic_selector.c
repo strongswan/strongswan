@@ -21,13 +21,14 @@
  * for more details.
  */
 
+#include <arpa/inet.h>
+#include <string.h>
+#include <netdb.h>
+
 #include "traffic_selector.h"
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
-#include <utils/logger_manager.h>
-#include <arpa/inet.h>
-#include <string.h>
 
 typedef struct private_traffic_selector_t private_traffic_selector_t;
 
@@ -76,15 +77,131 @@ struct private_traffic_selector_t {
 	u_int16_t to_port;
 	
 	/**
-	 * Logger reference
+	 * string representation of this traffic selector
 	 */
-	logger_t *logger;
+	char *string;
 };
 
 /**
  * internal generic constructor
  */
 static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts_type_t type, u_int16_t from_port, u_int16_t to_port);
+
+/**
+ * update the string representation of this traffic selector
+ */
+static void update_string(private_traffic_selector_t *this)
+{
+	char buf[256];
+	struct protoent *proto;
+	struct servent *serv;
+	char *serv_proto = NULL;
+	char proto_str[8] = "";
+	char addr_str[INET6_ADDRSTRLEN];
+	char port_str[16] = "";
+	char mask_str[8] = "";
+	char proto_port_str[32] = "";
+	bool has_proto = FALSE, has_port = FALSE;
+	
+	if (this->type == TS_IPV4_ADDR_RANGE)
+	{
+		u_int32_t from_no, to_no, bit;
+		u_int8_t mask = 32;
+		
+		/* build address string */
+		from_no = htonl(this->from_addr_ipv4);
+		to_no = htonl(this->to_addr_ipv4);
+		inet_ntop(AF_INET, &from_no, addr_str, sizeof(addr_str));
+		
+		/* build network mask string */
+		for (bit = 0; bit < 32; bit++)
+		{
+			if ((1<<bit & from_no) != (1<<bit & to_no))
+			{
+				mask = bit;
+				break;
+			}
+		}
+		if (mask != 32)
+		{
+			snprintf(mask_str, sizeof(mask_str), "/%d", mask);
+		}
+	}
+	else
+	{
+		/* TODO: be a little bit more verbose ;-) */
+		snprintf(addr_str, sizeof(addr_str), "(IPv6 address range)");
+	}
+	
+	/* build protocol string */
+	if (this->protocol)
+	{
+		proto = getprotobynumber(this->protocol);
+		if (proto)
+		{
+			snprintf(proto_str, sizeof(proto_str), "%s", proto->p_name);
+			serv_proto = proto->p_name;
+		}
+		else
+		{
+			snprintf(proto_str, sizeof(proto_str), "%d", this->protocol);
+		}
+		has_proto = TRUE;
+	}
+	
+	/* build port string */
+	if (this->from_port == this->to_port)
+	{
+		serv = getservbyport(htons(this->from_port), serv_proto);
+		if (serv)
+		{
+			snprintf(port_str, sizeof(port_str), "%s", serv->s_name);
+		}
+		else
+		{
+			snprintf(port_str, sizeof(port_str), "%d", this->from_port);
+		}
+		has_port = TRUE;
+	}
+	else if (!(this->from_port == 0 && this->to_port == 0xFFFF))
+	{
+		snprintf(port_str, sizeof(port_str), "%d-%d",
+				 this->from_port, this->to_port);
+		has_port = TRUE;
+	}
+	
+	/* concatenate port & proto string */
+	if (has_proto && has_port)
+	{
+		snprintf(proto_port_str, sizeof(proto_port_str), "[%s/%s]", 
+				 proto_str, port_str);
+	}
+	else if (has_proto)
+	{
+		snprintf(proto_port_str, sizeof(proto_port_str), "[%s]", proto_str);
+	}
+	else if (has_port)
+	{
+		snprintf(proto_port_str, sizeof(proto_port_str), "[%s]", port_str);
+	}
+	
+	/* concatenate it all */
+	snprintf(buf, sizeof(buf), "%s%s%s", addr_str, mask_str, proto_port_str);
+
+	if (this->string)
+	{
+		free(this->string);
+	}
+	this->string = strdup(buf);
+}
+
+/**
+ * implements traffic_selector_t.get_string
+ */
+static char *get_string(private_traffic_selector_t *this)
+{
+	return this->string;
+}
 
 /**
  * implements traffic_selector_t.get_subset
@@ -99,19 +216,12 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		u_int8_t protocol;
 		private_traffic_selector_t *new_ts;
 		
-		/* TODO: make output more human readable */
-		this->logger->log(this->logger, CONTROL|LEVEL2,
-						  "matching traffic selector ranges %x:%d-%x:%d <=> %x:%d-%x:%d",
-						  this->from_addr_ipv4, this->from_port, this->to_addr_ipv4, this->to_port,
-						  other->from_addr_ipv4, other->from_port, other->to_addr_ipv4, other->to_port);
 		/* calculate the maximum address range allowed for both */
 		from_addr = max(this->from_addr_ipv4, other->from_addr_ipv4);
 		to_addr = min(this->to_addr_ipv4, other->to_addr_ipv4);
 		if (from_addr > to_addr)
 		{
-			this->logger->log(this->logger, CONTROL|LEVEL2,
-							  "no match in address range");
-			return NULL;	
+			return NULL;
 		}
 		
 		/* calculate the maximum port range allowed for both */
@@ -119,9 +229,7 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		to_port = min(this->to_port, other->to_port);
 		if (from_port > to_port)
 		{
-			this->logger->log(this->logger, CONTROL|LEVEL2,
-							  "no match in port range");
-			return NULL;	
+			return NULL;
 		}
 		
 		/* select protocol, which is not zero */
@@ -132,10 +240,8 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 		new_ts->from_addr_ipv4 = from_addr;
 		new_ts->to_addr_ipv4 = to_addr;
 		new_ts->type = TS_IPV4_ADDR_RANGE;
+		update_string(new_ts);
 		
-		this->logger->log(this->logger, CONTROL|LEVEL2,
-						  "got a match: %x:%d-%x:%d",
-						  new_ts->from_addr_ipv4, new_ts->from_port, new_ts->to_addr_ipv4, new_ts->to_port);
 		return &(new_ts->public);
 	}
 	return NULL;
@@ -228,35 +334,6 @@ static u_int8_t get_protocol(private_traffic_selector_t *this)
 }
 
 /**
- * Implements traffic_selector_t.get_netmask.
- */
-static u_int8_t get_netmask(private_traffic_selector_t *this)
-{
-	switch (this->type)
-	{
-		case TS_IPV4_ADDR_RANGE:
-		{
-			u_int32_t from, to, bit;
-			from = htonl(this->from_addr_ipv4);
-			to = htonl(this->to_addr_ipv4);
-			for (bit = 0; bit < 32; bit++)
-			{				
-				if ((1<<bit & from) != (1<<bit & to))
-				{
-					return bit;
-				}
-			}
-			return 32;
-		}
-		case TS_IPV6_ADDR_RANGE:
-		default:
-		{
-			return 0;
-		}
-	}
-}
-
-/**
  * Implements traffic_selector_t.update_address_range.
  */
 static void update_address_range(private_traffic_selector_t *this, host_t *host)
@@ -266,12 +343,12 @@ static void update_address_range(private_traffic_selector_t *this, host_t *host)
 	{
 		if (this->from_addr_ipv4 == 0)
 		{
-			chunk_t from = host->get_address_as_chunk(host);
+			chunk_t from = host->get_address(host);
 			this->from_addr_ipv4 = ntohl(*((u_int32_t*)from.ptr));
 			this->to_addr_ipv4 = this->from_addr_ipv4;
-			chunk_free(&from);
 		}
 	}
+	update_string(this);
 }
 
 /**
@@ -281,6 +358,7 @@ static traffic_selector_t *clone_(private_traffic_selector_t *this)
 {
 	private_traffic_selector_t *clone = traffic_selector_create(this->protocol, this->type, this->from_port, this->to_port);
 	clone->type = this->type;
+	clone->string = strdup(this->string);
 	switch (clone->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
@@ -302,14 +380,15 @@ static traffic_selector_t *clone_(private_traffic_selector_t *this)
  * Implements traffic_selector_t.destroy.
  */
 static void destroy(private_traffic_selector_t *this)
-{	
+{
+	free(this->string);
 	free(this);
 }
 
 /*
  * see header
  */
-traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from_addr, int16_t from_port, chunk_t to_addr, u_int16_t to_port)
+traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from_addr, u_int16_t from_port, chunk_t to_addr, u_int16_t to_port)
 {
 	private_traffic_selector_t *this = traffic_selector_create(protocol, type, from_port, to_port);
 
@@ -335,6 +414,9 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
 			return NULL;	
 		}
 	}
+	
+	update_string(this);
+	
 	return (&this->public);
 }
 
@@ -352,7 +434,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t ne
 			chunk_t from;
 			
 			this->type = TS_IPV4_ADDR_RANGE;
-			from = net->get_address_as_chunk(net);
+			from = net->get_address(net);
 			this->from_addr_ipv4 = ntohl(*((u_int32_t*)from.ptr));
 			if (this->from_addr_ipv4 == 0)
 			{
@@ -363,7 +445,6 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t ne
 			{
 				this->to_addr_ipv4 = this->from_addr_ipv4 | ((1 << (32 - netbits)) - 1);
 			}
-			chunk_free(&from);
 			break;	
 		}
 		case AF_INET6:
@@ -378,6 +459,8 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net, u_int8_t ne
 		this->from_port = port;
 		this->to_port = port;
 	}
+	
+	update_string(this);
 	
 	return (&this->public);
 }
@@ -419,7 +502,9 @@ traffic_selector_t *traffic_selector_create_from_string(u_int8_t protocol, ts_ty
 			return NULL;	
 		}
 	}
-
+	
+	update_string(this);
+	
 	return (&this->public);
 }
 
@@ -432,13 +517,13 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 
 	/* public functions */
 	this->public.get_subset = (traffic_selector_t*(*)(traffic_selector_t*,traffic_selector_t*))get_subset;
+	this->public.get_string = (char*(*)(traffic_selector_t*))get_string;
 	this->public.get_from_address = (chunk_t(*)(traffic_selector_t*))get_from_address;
 	this->public.get_to_address = (chunk_t(*)(traffic_selector_t*))get_to_address;
 	this->public.get_from_port = (u_int16_t(*)(traffic_selector_t*))get_from_port;
 	this->public.get_to_port = (u_int16_t(*)(traffic_selector_t*))get_to_port;	
 	this->public.get_type = (ts_type_t(*)(traffic_selector_t*))get_type;	
 	this->public.get_protocol = (u_int8_t(*)(traffic_selector_t*))get_protocol;
-	this->public.get_netmask = (u_int8_t(*)(traffic_selector_t*))get_netmask;
 	this->public.update_address_range = (void(*)(traffic_selector_t*,host_t*))update_address_range;
 	this->public.clone = (traffic_selector_t*(*)(traffic_selector_t*))clone_;
 	this->public.destroy = (void(*)(traffic_selector_t*))destroy;
@@ -447,7 +532,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 	this->to_port = to_port;
 	this->protocol = protocol;
 	this->type = type;
-	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
+	this->string = NULL;
 	
 	return this;
 }

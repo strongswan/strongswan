@@ -391,7 +391,7 @@ static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_pa
 	encoding = cert_payload->get_cert_encoding(cert_payload);
 	if (encoding != CERT_X509_SIGNATURE)
 	{
-		this->logger->log(this->logger, CONTROL, 
+		this->logger->log(this->logger, ERROR,
 						  "certificate payload %s not supported, ignored",
 						  enum_name(&cert_encoding_names, encoding));
 		return;
@@ -401,7 +401,7 @@ static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_pa
 	if (charon->credentials->verify(charon->credentials, cert, &found))
 	{
 		this->logger->log(this->logger, CONTROL|LEVEL1, 
-						  "end entity certificate is trusted");
+						  "received end entity certificate is trusted, added to store");
 		if (found)
 		{
 			cert->destroy(cert);
@@ -413,8 +413,8 @@ static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_pa
 	}
 	else
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "end entity certificate is not trusted");
+		this->logger->log(this->logger, CONTROL, 
+						  "received end entity certificate is not trusted, discarded");
 	}
 }
 

@@ -1,4 +1,4 @@
-SUBDIRS = . testing
+# SUBDIRS = . testing
 
 ipsec_PROGRAMS = charon
 

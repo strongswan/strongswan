@@ -74,7 +74,7 @@ static bool is_local_address(private_interfaces_t *this, host_t *host)
 	while (iterator->iterate(iterator, (void**)&lhost))
 	{
 		if (host->get_family(host) == lhost->get_family(lhost) && 
-			streq(host->get_address(host), lhost->get_address(lhost)))
+			streq(host->get_string(host), lhost->get_string(lhost)))
 		{
 			iterator->destroy(iterator);
 			return TRUE;

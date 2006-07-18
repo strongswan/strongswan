@@ -366,6 +366,8 @@ static status_t transmit_request(private_ike_sa_t *this)
 		status = request->generate(request, this->crypter_out, this->signer_out, &packet);
 		if (status != SUCCESS)
 		{
+			this->logger->log(this->logger, ERROR,
+							  "request generation failed. transaction discarded");
 			return FAILED;
 		}
 	}
@@ -848,9 +850,9 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 		my_id = this->policy->get_my_id(this->policy);
 		other_id = this->policy->get_other_id(this->policy);
 		this->logger->log(this->logger, AUDIT, "IKE_SA established: %s[%s]...%s[%s]",
-						  my_host->get_address(my_host),
+						  my_host->get_string(my_host),
 						  my_id->get_string(my_id),
-						  other_host->get_address(other_host),
+						  other_host->get_string(other_host),
 						  other_id->get_string(other_id));
 		
 		send_dpd(this);
@@ -1236,9 +1238,9 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 				this->ike_sa_id->get_responder_spi(this->ike_sa_id));
 	logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
 				name,
-				my_host->get_address(my_host),
+				my_host->get_string(my_host),
 				my_id ? my_id->get_string(my_id) : "(unknown)",
-				other_host->get_address(other_host),
+				other_host->get_string(other_host),
 				other_id ? other_id->get_string(other_id) : "(unknown)");
 	
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
@@ -1391,9 +1393,9 @@ static void destroy(private_ike_sa_t *this)
 		}
 		
 		this->logger->log(this->logger, AUDIT, "IKE_SA deleted between %s[%s]...%s[%s]", 
-						  my_host->get_address(my_host),
+						  my_host->get_string(my_host),
 						  my_id ? my_id->get_string(my_id) : "(unknown)",
-						  other_host->get_address(other_host),
+						  other_host->get_string(other_host),
 						  other_id ? other_id->get_string(other_id) : "(unknown)");
 		this->connection->destroy(this->connection);
 	}

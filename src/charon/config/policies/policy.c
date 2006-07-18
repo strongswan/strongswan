@@ -29,7 +29,7 @@
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
-#include <utils/logger.h>
+#include <utils/logger_manager.h>
 
 typedef struct private_policy_t private_policy_t;
 
@@ -105,9 +105,9 @@ struct private_policy_t {
 	u_int32_t jitter;
 	
 	/**
-	 * select_traffic_selectors for both
+	 * logger
 	 */
-	linked_list_t *(*select_traffic_selectors) (private_policy_t *,linked_list_t*,linked_list_t*);
+	logger_t *logger;
 };
 
 /**
@@ -202,21 +202,6 @@ static linked_list_t *get_other_traffic_selectors(private_policy_t *this, traffi
 }
 
 /**
- * Implementation of private_policy_t.select_my_traffic_selectors
- */
-static linked_list_t *select_my_traffic_selectors(private_policy_t *this, linked_list_t *supplied)
-{
-	return this->select_traffic_selectors(this, this->my_ts, supplied);
-}
-
-/**
- * Implementation of private_policy_t.select_other_traffic_selectors
- */
-static linked_list_t *select_other_traffic_selectors(private_policy_t *this, linked_list_t *supplied)
-{
-	return this->select_traffic_selectors(this, this->other_ts, supplied);
-}
-/**
  * Implementation of private_policy_t.select_traffic_selectors
  */
 static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_list_t *stored, linked_list_t *supplied)
@@ -225,6 +210,9 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_li
 	traffic_selector_t *supplied_ts, *stored_ts, *selected_ts;
 	linked_list_t *selected = linked_list_create();
 	
+	this->logger->log(this->logger, CONTROL|LEVEL1,
+					  "selecting traffic selectors for %s host",
+					  stored == this->my_ts ? "local" : "remote");
 	
 	stored_iter = stored->create_iterator(stored, TRUE);
 	supplied_iter = supplied->create_iterator(supplied, TRUE);
@@ -240,11 +228,19 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_li
 		{
 			supplied_iter->current(supplied_iter, (void**)&supplied_ts);
 			
+			this->logger->log(this->logger, CONTROL|LEVEL2,
+							  "  stored %s <=> %s received",
+							  stored_ts->get_string(stored_ts), 
+							  supplied_ts->get_string(supplied_ts));
+			
 			selected_ts = stored_ts->get_subset(stored_ts, supplied_ts);
 			if (selected_ts)
 			{
 				/* got a match, add to list */
 				selected->insert_last(selected, (void*)selected_ts);
+				
+				this->logger->log(this->logger, CONTROL|LEVEL1, "    got a match: %s",
+								  selected_ts->get_string(selected_ts));
 			}
 		}
 	}
@@ -252,6 +248,22 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_li
 	supplied_iter->destroy(supplied_iter);
 	
 	return selected;
+}
+
+/**
+ * Implementation of private_policy_t.select_my_traffic_selectors
+ */
+static linked_list_t *select_my_traffic_selectors(private_policy_t *this, linked_list_t *supplied)
+{
+	return select_traffic_selectors(this, this->my_ts, supplied);
+}
+
+/**
+ * Implementation of private_policy_t.select_other_traffic_selectors
+ */
+static linked_list_t *select_other_traffic_selectors(private_policy_t *this, linked_list_t *supplied)
+{
+	return select_traffic_selectors(this, this->other_ts, supplied);
 }
 
 /**
@@ -365,7 +377,7 @@ static u_int32_t get_hard_lifetime(private_policy_t *this)
 /**
  * Implements policy_t.clone.
  */
-static policy_t *clone(private_policy_t *this)
+static policy_t *clone_(private_policy_t *this)
 {
 	private_policy_t *clone = (private_policy_t*)policy_create(this->name,
 															   this->my_id->clone(this->my_id),
@@ -507,7 +519,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.add_updown = (void(*)(policy_t*,char*))add_updown;
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
-	this->public.clone = (policy_t*(*)(policy_t*))clone;
+	this->public.clone = (policy_t*(*)(policy_t*))clone_;
 	this->public.destroy = (void(*)(policy_t*))destroy;
 	
 	/* apply init values */
@@ -521,10 +533,10 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	/* initialize private members*/
 	this->my_ca = NULL;
 	this->other_ca = NULL;
-	this->select_traffic_selectors = select_traffic_selectors;
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
+	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 
 	return (&this->public);
 }

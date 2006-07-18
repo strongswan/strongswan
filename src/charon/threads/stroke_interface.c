@@ -428,9 +428,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	charon->connections->add_connection(charon->connections, connection);
 	this->logger->log(this->logger, CONTROL, "added connection \"%s\": %s[%s]...%s[%s]",
 					  msg->add_conn.name,
-					  my_host->get_address(my_host),
+					  my_host->get_string(my_host),
 					  my_id->get_string(my_id),
-					  other_host->get_address(other_host),
+					  other_host->get_string(other_host),
 					  other_id->get_string(other_id));
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);

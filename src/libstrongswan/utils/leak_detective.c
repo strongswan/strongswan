@@ -174,6 +174,7 @@ whitelist_t whitelist[] = {
 	{inet_ntoa, 0xFF},
 	{strerror, 0xFF},
 	{getprotobynumber, 0xFF},
+	{getservbyport, 0xFF},
 };
 
 /**

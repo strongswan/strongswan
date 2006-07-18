@@ -169,13 +169,15 @@ struct child_sa_t {
 	 *
 	 * @warning only call this after update() has been called.
 	 *
-	 * @param this		calling object
-	 * @param new_me	the new local host
-	 * @param new_other	the new remote host
-	 * @return			SUCCESS or FAILED
+	 * @param this			calling object
+	 * @param new_me		the new local host
+	 * @param new_other		the new remote host
+	 * @param my_diff		differences to apply for me
+	 * @param other_diff	differences to apply for other
+	 * @return				SUCCESS or FAILED
 	 */
 	status_t (*update_hosts) (child_sa_t *this, host_t *new_me, host_t *new_other, 
-							  int my_changes, int other_changes);
+							  host_diff_t my_diff, host_diff_t other_diff);
 	
 	/**
 	 * @brief Install the policies using some traffic selectors.

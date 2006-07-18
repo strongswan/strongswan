@@ -35,10 +35,17 @@
 
 #include <types.h>
 
+typedef enum host_diff_t host_diff_t;
 
-#define HOST_DIFF_NONE 0
-#define HOST_DIFF_ADDR 1
-#define HOST_DIFF_PORT 2
+/**
+ * Differences between two hosts. They differ in
+ * address, port, or both.
+ */
+enum host_diff_t {
+	HOST_DIFF_NONE = 0,
+	HOST_DIFF_ADDR = 1,
+	HOST_DIFF_PORT = 2,
+};
 
 typedef struct host_t host_t;
 
@@ -80,7 +87,7 @@ struct host_t {
 	/** 
 	 * @brief Get the length of the sockaddr struct.
 	 * 
-	 * Sepending on the family, the length of the sockaddr struct
+	 * Depending on the family, the length of the sockaddr struct
 	 * is different. Use this function to get the length of the sockaddr
 	 * struct returned by get_sock_addr.
 	 * 
@@ -92,20 +99,6 @@ struct host_t {
 	socklen_t *(*get_sockaddr_len) (host_t *this);
 	
 	/**
-	 * @brief Gets the address as xfrm_address_t.
-	 * 
-	 * This function allows the conversion to an
-	 * xfrm_address_t, used for netlink communication
-	 * with the kernel.
-	 * 
-	 * @see kernel_interface_t.
-	 * 
-	 * @param this			calling object
-	 * @return				address in xfrm_address_t format
-	 */
-	xfrm_address_t (*get_xfrm_addr) (host_t *this);
-	
-	/**
 	 * @brief Gets the family of the address
 	 * 
 	 * @param this			calling object
@@ -114,15 +107,15 @@ struct host_t {
 	int (*get_family) (host_t *this);
 	
 	/** 
-	 * @brief get the address of this host
+	 * @brief Get the address of this host as a string
 	 * 
-	 * Mostly used for debugging purposes. 
-	 * @warning string must NOT be freed
+	 * Mostly used for debugging purposes. String
+	 * points to internal data.
 	 * 
 	 * @param this			object
 	 * @return				address string, 
 	 */
-	char* (*get_address) (host_t *this);
+	char* (*get_string) (host_t *this);
 	
 	/** 
 	 * @brief Checks if the ip address of host is set to default route.
@@ -137,12 +130,12 @@ struct host_t {
 	/** 
 	 * @brief get the address of this host as chunk_t
 	 * 
-	 * @warning returned chunk has to get destroyed by caller.
+	 * Returned chunk points to internal data.
 	 * 
 	 * @param this			object
 	 * @return				address string, 
 	 */
-	chunk_t (*get_address_as_chunk) (host_t *this);
+	chunk_t (*get_address) (host_t *this);
 		
 	/** 
 	 * @brief get the port of this host
@@ -183,10 +176,9 @@ struct host_t {
 	 *
 	 * @param this			object to compare
 	 * @param other			the other to compare
-	 * @return				a combination of HOST_DIFF_NONE,
-	 * 						HOST_DIFF_ADDR and HOST_DIFF_PORT
+	 * @return				differences in a combination of host_diff_t's
 	 */
-	int (*get_differences) (host_t *this, host_t *other);
+	host_diff_t (*get_differences) (host_t *this, host_t *other);
 	
 	/** 
 	 * @brief Destroy this host object
