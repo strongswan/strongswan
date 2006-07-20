@@ -177,7 +177,7 @@ struct child_sa_t {
 	 * @return				SUCCESS or FAILED
 	 */
 	status_t (*update_hosts) (child_sa_t *this, host_t *new_me, host_t *new_other, 
-							  host_diff_t my_diff, host_diff_t other_diff);
+	host_diff_t my_diff, host_diff_t other_diff);
 	
 	/**
 	 * @brief Install the policies using some traffic selectors.
@@ -191,6 +191,22 @@ struct child_sa_t {
 	 * @return			SUCCESS or FAILED
 	 */	
 	status_t (*add_policies) (child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list);
+	
+	/**
+	 * @brief Get the traffic selectors of added policies of local host.
+	 *
+	 * @param this 		calling object
+	 * @return			list of traffic selectors
+	 */	
+	linked_list_t* (*get_my_traffic_selectors) (child_sa_t *this);
+	
+	/**
+	 * @brief Get the traffic selectors of added policies of remote host.
+	 *
+	 * @param this 		calling object
+	 * @return			list of traffic selectors
+	 */	
+	linked_list_t* (*get_other_traffic_selectors) (child_sa_t *this);
 	
 	/**
 	 * @brief Get the time of this child_sa_t's last use (i.e. last use of any of its policies)

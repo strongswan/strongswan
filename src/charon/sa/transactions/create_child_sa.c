@@ -70,11 +70,6 @@ struct private_create_child_sa_t {
 	u_int32_t rekey_spi;
 	
 	/**
-	 * connection of IKE_SA
-	 */
-	connection_t *connection;
-	
-	/**
 	 * policy definition used
 	 */
 	policy_t *policy;
@@ -152,6 +147,14 @@ static u_int32_t requested(private_create_child_sa_t *this)
 }
 
 /**
+ * Implementation of create_child_sa_t.set_policy.
+ */
+static void set_policy(private_create_child_sa_t *this, policy_t *policy)
+{
+	this->policy = policy;
+}
+
+/**
  * Implementation of create_child_sa_t.rekeys_child.
  */
 static void rekeys_child(private_create_child_sa_t *this, child_sa_t *child_sa)
@@ -169,12 +172,35 @@ static void cancel(private_create_child_sa_t *this)
 }
 
 /**
+ * destroy a list of traffic selectors
+ */
+static void destroy_ts_list(linked_list_t *list)
+{
+	if (list)
+	{
+		traffic_selector_t *ts;
+		while (list->remove_last(list, (void**)&ts) == SUCCESS)
+		{
+			ts->destroy(ts);
+		}
+		list->destroy(list);
+	}
+}
+
+/**
  * Implementation of transaction_t.get_request.
  */
 static status_t get_request(private_create_child_sa_t *this, message_t **result)
 {
 	message_t *request;
 	host_t *me, *other;
+	
+	/* check if we already have built a message (retransmission) */
+	if (this->message)
+	{
+		*result = this->message;
+		return SUCCESS;
+	}
 	
 	/* check if we are not already rekeying */
 	if (this->rekeyed_sa)
@@ -195,17 +221,8 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		this->rekeyed_sa->set_state(this->rekeyed_sa, CHILD_REKEYING);
 	}
 	
-	/* check if we already have built a message (retransmission) */
-	if (this->message)
-	{
-		*result = this->message;
-		return SUCCESS;
-	}
-	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
-	this->policy = this->ike_sa->get_policy(this->ike_sa);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	
 	/* build the request */
 	request = message_create();
@@ -223,9 +240,31 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		bool use_natt;
 		u_int32_t reqid = 0;
 		
+		/* get a policy, if we are rekeying */
 		if (this->rekeyed_sa)
 		{
+			linked_list_t *my_ts, *other_ts;
+			identification_t *my_id, *other_id;
+			
+			my_ts = this->rekeyed_sa->get_my_traffic_selectors(this->rekeyed_sa);
+			other_ts = this->rekeyed_sa->get_other_traffic_selectors(this->rekeyed_sa);
+			my_id = this->ike_sa->get_my_id(this->ike_sa);
+			other_id = this->ike_sa->get_other_id(this->ike_sa);
+			
+			this->policy = charon->policies->get_policy(charon->policies,
+														my_id, other_id,
+														my_ts, other_ts,
+													    me, other);
+			
 			reqid = this->rekeyed_sa->get_reqid(this->rekeyed_sa);
+			
+			if (this->policy == NULL)
+			{
+				this->logger->log(this->logger, ERROR,
+								  "no policy found to rekey CHILD_SA with reqid %d",
+								  reqid);
+				return FAILED;
+			}
 		}
 		
 		proposals = this->policy->get_proposals(this->policy);
@@ -261,8 +300,9 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		linked_list_t *ts_list;
 		ts_payload_t *ts_payload;
 		
-		ts_list = this->policy->get_my_traffic_selectors(this->policy);
+		ts_list = this->policy->get_my_traffic_selectors(this->policy, me);
 		ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_list);
+		destroy_ts_list(ts_list);
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
 	
@@ -270,8 +310,9 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		linked_list_t *ts_list;
 		ts_payload_t *ts_payload;
 		
-		ts_list = this->policy->get_other_traffic_selectors(this->policy);
+		ts_list = this->policy->get_other_traffic_selectors(this->policy, other);
 		ts_payload = ts_payload_create_from_traffic_selectors(FALSE, ts_list);
+		destroy_ts_list(ts_list);
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
 	
@@ -439,22 +480,6 @@ static status_t install_child_sa(private_create_child_sa_t *this, bool initiator
 }
 
 /**
- * destroy a list of traffic selectors
- */
-static void destroy_ts_list(linked_list_t *list)
-{
-	if (list)
-	{
-		traffic_selector_t *ts;
-		while (list->remove_last(list, (void**)&ts) == SUCCESS)
-		{
-			ts->destroy(ts);
-		}
-		list->destroy(list);
-	}
-}
-
-/**
  * Implementation of transaction_t.get_response.
  */
 static status_t get_response(private_create_child_sa_t *this, message_t *request, 
@@ -477,10 +502,8 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		return SUCCESS;
 	}
 	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
-	this->policy = this->ike_sa->get_policy(this->ike_sa);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
@@ -573,16 +596,35 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		nonce_response->set_nonce(nonce_response, this->nonce_r);
 	}
 	
-	{	/* process traffic selectors for other */
-		linked_list_t *ts_received = tsi_request->get_traffic_selectors(tsi_request);
-		this->tsi = this->policy->select_other_traffic_selectors(this->policy, ts_received);
-		destroy_ts_list(ts_received);
-	}
-	
-	{	/* process traffic selectors for us */
-		linked_list_t *ts_received = ts_received = tsr_request->get_traffic_selectors(tsr_request);
-		this->tsr = this->policy->select_my_traffic_selectors(this->policy, ts_received);
-		destroy_ts_list(ts_received);
+	{	/* get a policy and process traffic selectors */
+		identification_t *my_id, *other_id;
+		linked_list_t *my_ts, *other_ts;
+		
+		my_id = this->ike_sa->get_my_id(this->ike_sa);
+		other_id = this->ike_sa->get_other_id(this->ike_sa);
+		
+		my_ts = tsr_request->get_traffic_selectors(tsr_request);
+		other_ts = tsi_request->get_traffic_selectors(tsi_request);
+		
+		this->policy = charon->policies->get_policy(charon->policies,
+													my_id, other_id,
+													my_ts, other_ts,
+												    me, other);
+		if (this->policy)
+		{
+			this->tsr = this->policy->select_my_traffic_selectors(this->policy, my_ts, me);
+			this->tsi = this->policy->select_other_traffic_selectors(this->policy, other_ts, other);
+		}
+		destroy_ts_list(my_ts);
+		destroy_ts_list(other_ts);
+		
+		if (this->policy == NULL)
+		{
+			this->logger->log(this->logger, AUDIT,
+							  "no acceptable policy found, adding TS_UNACCEPTABLE notify");
+			build_notify(TS_UNACCEPTABLE, CHUNK_INITIALIZER, response, TRUE);
+			return FAILED;
+		}
 	}
 	
 	{	/* process SA payload */
@@ -705,8 +747,8 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 		return FAILED;
 	}
 	
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	
 	/* Iterate over all payloads to collect them */
 	payloads = response->get_payload_iterator(response);
@@ -761,13 +803,13 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 	
 	{	/* process traffic selectors for us */
 		linked_list_t *ts_received = tsi_payload->get_traffic_selectors(tsi_payload);
-		this->tsi = this->policy->select_my_traffic_selectors(this->policy, ts_received);
+		this->tsi = this->policy->select_my_traffic_selectors(this->policy, ts_received, me);
 		destroy_ts_list(ts_received);
 	}
 	
 	{	/* process traffic selectors for other */
 		linked_list_t *ts_received = tsr_payload->get_traffic_selectors(tsr_payload);
-		this->tsr = this->policy->select_other_traffic_selectors(this->policy, ts_received);
+		this->tsr = this->policy->select_other_traffic_selectors(this->policy, ts_received, other);
 		destroy_ts_list(ts_received);
 	}
 	
@@ -790,8 +832,7 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			this->tsi->get_count(this->tsi) == 0 ||
 			this->tsr->get_count(this->tsr) == 0)
 		{
-			this->logger->log(this->logger, AUDIT,
-							  "CHILD_SA creation failed");
+			this->logger->log(this->logger, AUDIT, "CHILD_SA creation failed");
 			return FAILED;
 		}
 		new_child = this->child_sa;
@@ -863,18 +904,10 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
  */
 static void destroy(private_create_child_sa_t *this)
 {
-	if (this->message)
-	{
-		this->message->destroy(this->message);
-	}
-	if (this->proposal)
-	{
-		this->proposal->destroy(this->proposal);
-	}
-	if (this->child_sa)
-	{
-		this->child_sa->destroy(this->child_sa);
-	}
+	DESTROY_IF(this->message);
+	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->child_sa);
+	DESTROY_IF(this->policy);
 	destroy_ts_list(this->tsi);
 	destroy_ts_list(this->tsr);
 	chunk_free(&this->nonce_i);
@@ -900,6 +933,7 @@ create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa)
 	this->public.transaction.destroy = (void(*)(transaction_t*))destroy;
 	
 	/* public functions */
+	this->public.set_policy = (void(*)(create_child_sa_t*,policy_t*))set_policy;
 	this->public.rekeys_child = (void(*)(create_child_sa_t*,child_sa_t*))rekeys_child;
 	this->public.cancel = (void(*)(create_child_sa_t*))cancel;
 	
@@ -916,6 +950,7 @@ create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa)
 	this->rekeyed_sa = NULL;
 	this->lost = FALSE;
 	this->proposal = NULL;
+	this->policy = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
 	this->randomizer = randomizer_create();

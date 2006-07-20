@@ -600,19 +600,15 @@ linked_list_t *get_ike_sa_list_by_name(private_ike_sa_manager_t* this, const cha
 {
 	linked_list_t *list;
 	iterator_t *iterator;
+	ike_sa_entry_t *entry;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
 	list = linked_list_create();
 	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
-		ike_sa_entry_t *entry;
-		connection_t *connection;
-		
-		iterator->current(iterator, (void**)&entry);
-		connection = entry->ike_sa->get_connection(entry->ike_sa);
-		if (strcmp(name, connection->get_name(connection)) == 0)
+		if (strcmp(name, entry->ike_sa->get_name(entry->ike_sa)) == 0)
 		{
 			list->insert_last(list, (void*)entry->ike_sa_id->clone(entry->ike_sa_id));
 		}

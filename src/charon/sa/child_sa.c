@@ -96,6 +96,16 @@ struct private_child_sa_t {
 	linked_list_t *policies;
 	
 	/**
+	 * Seperate list for local traffic selectors
+	 */
+	linked_list_t *my_ts;
+	
+	/**
+	 * Seperate list for remote traffic selectors
+	 */
+	linked_list_t *other_ts;
+	
+	/**
 	 * reqid used for this child_sa
 	 */
 	u_int32_t reqid;
@@ -473,11 +483,30 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			policy->my_ts = my_ts->clone(my_ts);
 			policy->other_ts = other_ts->clone(other_ts);
 			this->policies->insert_last(this->policies, (void*)policy);
+			/* add to separate list to query them via get_*_traffic_selectors() */
+			this->my_ts->insert_last(this->my_ts, (void*)policy->my_ts);
+			this->other_ts->insert_last(this->other_ts, (void*)policy->other_ts);
 		}
 	}
 	my_iter->destroy(my_iter);
 	other_iter->destroy(other_iter);
 	return SUCCESS;
+}
+
+/**
+ * Implementation of child_sa_t.get_my_traffic_selectors.
+ */
+static linked_list_t *get_my_traffic_selectors(private_child_sa_t *this)
+{
+	return this->my_ts;
+}
+
+/**
+ * Implementation of child_sa_t.get_my_traffic_selectors.
+ */
+static linked_list_t *get_other_traffic_selectors(private_child_sa_t *this)
+{
+	return this->other_ts;
 }
 
 /**
@@ -819,6 +848,8 @@ static void destroy(private_child_sa_t *this)
 	}
 	this->policies->destroy(this->policies);
 	
+	this->my_ts->destroy(this->my_ts);
+	this->other_ts->destroy(this->other_ts);
 	this->me.addr->destroy(this->me.addr);
 	this->other.addr->destroy(this->other.addr);
 	free(this);
@@ -843,6 +874,8 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.update = (status_t(*)(child_sa_t*,proposal_t*,prf_plus_t*))update;
 	this->public.update_hosts = (status_t (*)(child_sa_t*,host_t*,host_t*,host_diff_t,host_diff_t))update_hosts;
 	this->public.add_policies = (status_t (*)(child_sa_t*, linked_list_t*,linked_list_t*))add_policies;
+	this->public.get_my_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_my_traffic_selectors;
+	this->public.get_other_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_other_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
 	this->public.set_rekeying_transaction = (void (*)(child_sa_t*,void*))set_rekeying_transaction;
 	this->public.get_rekeying_transaction = (void* (*)(child_sa_t*))get_rekeying_transaction;
@@ -866,6 +899,8 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
 	this->policies = linked_list_create();
+	this->my_ts = linked_list_create();
+	this->other_ts = linked_list_create();
 	this->protocol = PROTO_NONE;
 	this->rekeying_transaction = NULL;
 	

@@ -59,6 +59,11 @@ struct private_connection_t {
 	 * Public part
 	 */
 	connection_t public;
+	
+	/**
+	 * Number of references hold by others to this connection
+	 */
+	u_int refcount;
 
 	/**
 	 * Name of the connection
@@ -152,24 +157,6 @@ static host_t *get_my_host (private_connection_t *this)
 static host_t *get_other_host (private_connection_t *this)
 {
 	return this->other_host;
-}
-
-/**
- * Implementation of connection_t.update_my_host.
- */
-static void update_my_host(private_connection_t *this, host_t *my_host)
-{
-	this->my_host->destroy(this->my_host);
-	this->my_host = my_host;
-}
-
-/**
- * Implementation of connection_t.update_other_host.
- */
-static void update_other_host(private_connection_t *this, host_t *other_host)
-{
-	this->other_host->destroy(this->other_host);
-	this->other_host = other_host;
 }
 
 /**
@@ -288,31 +275,11 @@ static bool check_dh_group(private_connection_t *this, diffie_hellman_group_t dh
 }
 
 /**
- * Implementation of connection_t.clone.
+ * Implementation of connection_t.get_ref.
  */
-static connection_t *clone(private_connection_t *this)
+static void get_ref(private_connection_t *this)
 {
-	iterator_t *iterator;
-	proposal_t *proposal;
-	private_connection_t *clone = (private_connection_t*)connection_create(
-			this->name, this->ikev2,
-			this->cert_policy,
-			this->certreq_policy,
-			this->my_host->clone(this->my_host),
-			this->other_host->clone(this->other_host),
-			this->auth_method);
-	
-	/* clone all proposals */
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&proposal);
-		proposal = proposal->clone(proposal);
-		clone->proposals->insert_last(clone->proposals, (void*)proposal);
-	}
-	iterator->destroy(iterator);
-	
-	return &clone->public;
+	this->refcount++;
 }
 
 /**
@@ -320,18 +287,21 @@ static connection_t *clone(private_connection_t *this)
  */
 static void destroy(private_connection_t *this)
 {
-	proposal_t *proposal;
-	
-	while (this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
+	if (--this->refcount == 0)
 	{
-		proposal->destroy(proposal);
+		proposal_t *proposal;
+		
+		while (this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
+		{
+			proposal->destroy(proposal);
+		}
+		this->proposals->destroy(this->proposals);
+		
+		this->my_host->destroy(this->my_host);
+		this->other_host->destroy(this->other_host);
+		free(this->name);
+		free(this);
 	}
-	this->proposals->destroy(this->proposals);
-	
-	this->my_host->destroy(this->my_host);
-	this->other_host->destroy(this->other_host);
-	free(this->name);
-	free(this);
 }
 
 /**
@@ -344,15 +314,13 @@ connection_t * connection_create(char *name, bool ikev2,
 								 auth_method_t auth_method)
 {
 	private_connection_t *this = malloc_thing(private_connection_t);
-
+	
 	/* public functions */
 	this->public.get_name = (char*(*)(connection_t*))get_name;
 	this->public.is_ikev2 = (bool(*)(connection_t*))is_ikev2;
 	this->public.get_cert_policy = (cert_policy_t(*)(connection_t*))get_cert_policy;
 	this->public.get_certreq_policy = (cert_policy_t(*)(connection_t*))get_certreq_policy;
 	this->public.get_my_host = (host_t*(*)(connection_t*))get_my_host;
-	this->public.update_my_host = (void(*)(connection_t*,host_t*))update_my_host;
-	this->public.update_other_host = (void(*)(connection_t*,host_t*))update_other_host;
 	this->public.get_other_host = (host_t*(*)(connection_t*))get_other_host;
 	this->public.get_proposals = (linked_list_t*(*)(connection_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(connection_t*,linked_list_t*))select_proposal;
@@ -360,10 +328,11 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->public.get_auth_method = (auth_method_t(*)(connection_t*)) get_auth_method;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(connection_t*)) get_dh_group;
 	this->public.check_dh_group = (bool(*)(connection_t*,diffie_hellman_group_t)) check_dh_group;
-	this->public.clone = (connection_t*(*)(connection_t*))clone;
+	this->public.get_ref = (void(*)(connection_t*))get_ref;
 	this->public.destroy = (void(*)(connection_t*))destroy;
 	
 	/* private variables */
+	this->refcount = 1;
 	this->name = strdup(name);
 	this->ikev2 = ikev2;
 	this->cert_policy = cert_policy;
@@ -373,6 +342,6 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->auth_method = auth_method;
 	
 	this->proposals = linked_list_create();
-
-	return (&this->public);
+	
+	return &this->public;
 }

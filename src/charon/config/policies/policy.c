@@ -44,6 +44,11 @@ struct private_policy_t {
 	policy_t public;
 	
 	/**
+	 * Number of references hold by others to this policy
+	 */
+	u_int refcount;
+	
+	/**
 	 * Name of the policy, used to query it
 	 */
 	char *name;
@@ -135,76 +140,52 @@ static identification_t *get_other_id(private_policy_t *this)
 }
 
 /**
- * Implementation of policy_t.update_my_id
+ * Get traffic selectors, with wildcard-address update
  */
-static void update_my_id(private_policy_t *this, identification_t *my_id)
+static linked_list_t *get_traffic_selectors(private_policy_t *this, linked_list_t *list, host_t *host)
 {
-	this->my_id->destroy(this->my_id);
-	this->my_id = my_id;
-}
-
-/**
- * Implementation of policy_t.update_other_id
- */
-static void update_other_id(private_policy_t *this, identification_t *other_id)
-{
-	this->other_id->destroy(this->other_id);
-	this->other_id = other_id;
-}
-
-/** 
- * Helper function which does the work for policy_t.update_my_ts and update_other_ts
- */
-static void update_ts(linked_list_t* list, host_t *new_host)
-{
-	traffic_selector_t *ts;
 	iterator_t *iterator;
-	 
+	traffic_selector_t *current;
+	linked_list_t *result = linked_list_create();
+	
 	iterator = list->create_iterator(list, TRUE);
-	while (iterator->has_next(iterator))
+	
+	while (iterator->iterate(iterator, (void**)&current))
 	{
-		iterator->current(iterator, (void**)&ts);
-		ts->update_address_range(ts, new_host);
+		/* we make a copy of the TS, this allows us to update wildcard
+		 * addresses in it. We won't pollute the shared policy. */
+		current = current->clone(current);
+		current->update_address_range(current, host);
+		
+		result->insert_last(result, (void*)current);
 	}
 	iterator->destroy(iterator);
-}
-
-/**
- * Implementation of policy_t.update_my_id
- */
-static void update_my_ts(private_policy_t *this, host_t *my_host)
-{
-	update_ts(this->my_ts, my_host);
-}
-
-/**
- * Implementation of policy_t.update_other_ts
- */
-static void update_other_ts(private_policy_t *this, host_t *my_host)
-{
-	update_ts(this->other_ts, my_host);
+	return result;
 }
 
 /**
  * Implementation of policy_t.get_my_traffic_selectors
  */
-static linked_list_t *get_my_traffic_selectors(private_policy_t *this)
+static linked_list_t *get_my_traffic_selectors(private_policy_t *this, host_t *me)
 {
-	return this->my_ts;
+	return get_traffic_selectors(this, this->my_ts, me);
 }
 
 /**
  * Implementation of policy_t.get_other_traffic_selectors
  */
-static linked_list_t *get_other_traffic_selectors(private_policy_t *this, traffic_selector_t **traffic_selectors[])
+static linked_list_t *get_other_traffic_selectors(private_policy_t *this, host_t *other)
 {
-	return this->other_ts;
+	return get_traffic_selectors(this, this->other_ts, other);
 }
 
 /**
- * Implementation of private_policy_t.select_traffic_selectors
+ * Narrow traffic selectors, with wildcard-address update in "stored".
  */
-static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_list_t *stored, linked_list_t *supplied)
+static linked_list_t *select_traffic_selectors(private_policy_t *this,
+											   linked_list_t *stored,
+											   linked_list_t *supplied,
+											   host_t *host)
 {
 	iterator_t *supplied_iter, *stored_iter;
 	traffic_selector_t *supplied_ts, *stored_ts, *selected_ts;
@@ -218,16 +199,17 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_li
 	supplied_iter = supplied->create_iterator(supplied, TRUE);
 	
 	/* iterate over all stored selectors */
-	while (stored_iter->has_next(stored_iter))
+	while (stored_iter->iterate(stored_iter, (void**)&stored_ts))
 	{
-		stored_iter->current(stored_iter, (void**)&stored_ts);
+		/* we make a copy of the TS, this allows us to update wildcard
+		 * addresses in it. We won't pollute the shared policy. */
+		stored_ts = stored_ts->clone(stored_ts);
+		stored_ts->update_address_range(stored_ts, host);
 		
 		supplied_iter->reset(supplied_iter);
 		/* iterate over all supplied traffic selectors */
-		while (supplied_iter->has_next(supplied_iter))
+		while (supplied_iter->iterate(supplied_iter, (void**)&supplied_ts))
 		{
-			supplied_iter->current(supplied_iter, (void**)&supplied_ts);
-			
 			this->logger->log(this->logger, CONTROL|LEVEL2,
 							  "  stored %s <=> %s received",
 							  stored_ts->get_string(stored_ts), 
@@ -243,6 +225,7 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_li
 								  selected_ts->get_string(selected_ts));
 			}
 		}
+		stored_ts->destroy(stored_ts);
 	}
 	stored_iter->destroy(stored_iter);
 	supplied_iter->destroy(supplied_iter);
@@ -253,17 +236,21 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this, linked_li
 /**
  * Implementation of private_policy_t.select_my_traffic_selectors
  */
-static linked_list_t *select_my_traffic_selectors(private_policy_t *this, linked_list_t *supplied)
+static linked_list_t *select_my_traffic_selectors(private_policy_t *this,
+												  linked_list_t *supplied,
+												  host_t *me)
 {
-	return select_traffic_selectors(this, this->my_ts, supplied);
+	return select_traffic_selectors(this, this->my_ts, supplied, me);
 }
 
 /**
  * Implementation of private_policy_t.select_other_traffic_selectors
  */
-static linked_list_t *select_other_traffic_selectors(private_policy_t *this, linked_list_t *supplied)
+static linked_list_t *select_other_traffic_selectors(private_policy_t *this,
+		 											 linked_list_t *supplied,
+													 host_t* other)
 {
-	return select_traffic_selectors(this, this->other_ts, supplied);
+	return select_traffic_selectors(this, this->other_ts, supplied, other);
 }
 
 /**
@@ -322,11 +309,11 @@ static void add_authorities(private_policy_t *this, identification_t *my_ca, ide
 }
 
 /**
- * Implementation of policy_t.add_updown
+ * Implementation of policy_t.get_updown
  */
-static void add_updown(private_policy_t *this, char *updown)
+static char* get_updown(private_policy_t *this)
 {
-	this->updown = (updown == NULL)? NULL:strdup(updown);
+	return this->updown;
 }
 
 /**
@@ -375,118 +362,67 @@ static u_int32_t get_hard_lifetime(private_policy_t *this)
 }
 
 /**
- * Implements policy_t.clone.
+ * Implements policy_t.get_ref.
  */
-static policy_t *clone_(private_policy_t *this)
+static void get_ref(private_policy_t *this)
 {
-	private_policy_t *clone = (private_policy_t*)policy_create(this->name,
-															   this->my_id->clone(this->my_id),
-															   this->other_id->clone(this->other_id),
-															   this->hard_lifetime, this->soft_lifetime,
-															   this->jitter);
-	iterator_t *iterator;
-	proposal_t *proposal;
-	traffic_selector_t *ts;
-	
-	/* clone the certification authorities */
-	if (this->my_ca)
-	{
-		clone->my_ca = this->my_ca->clone(this->my_ca);
-	}
-	if (this->other_ca)
-	{
-		clone->other_ca = this->other_ca->clone(this->other_ca);
-	}
-
-	/* clone updown script */
-	clone->updown = (this->updown == NULL)? NULL:strdup(this->updown);
-	
-	/* clone all proposals */
-	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&proposal);
-		proposal = proposal->clone(proposal);
-		clone->proposals->insert_last(clone->proposals, (void*)proposal);
-	}
-	iterator->destroy(iterator);
-	
-	/* clone all local traffic selectors */
-	iterator = this->my_ts->create_iterator(this->my_ts, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&ts);
-		ts = ts->clone(ts);
-		clone->my_ts->insert_last(clone->my_ts, (void*)ts);
-	}
-	iterator->destroy(iterator);
-	
-	/* clone all remote traffic selectors */
-	iterator = this->other_ts->create_iterator(this->other_ts, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&ts);
-		ts = ts->clone(ts);
-		clone->other_ts->insert_last(clone->other_ts, (void*)ts);
-	}
-	iterator->destroy(iterator);
-	
-	return &clone->public;
+	this->refcount++;
 }
 
 /**
  * Implements policy_t.destroy.
  */
-static status_t destroy(private_policy_t *this)
-{	
-	proposal_t *proposal;
-	traffic_selector_t *traffic_selector;
-	
-	
-	/* delete proposals */
-	while(this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
+static void destroy(private_policy_t *this)
+{
+	if (--this->refcount == 0)
 	{
-		proposal->destroy(proposal);
+		proposal_t *proposal;
+		traffic_selector_t *traffic_selector;
+		
+		/* delete proposals */
+		while(this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
+		{
+			proposal->destroy(proposal);
+		}
+		this->proposals->destroy(this->proposals);
+		
+		/* delete traffic selectors */
+		while(this->my_ts->remove_last(this->my_ts, (void**)&traffic_selector) == SUCCESS)
+		{
+			traffic_selector->destroy(traffic_selector);
+		}
+		this->my_ts->destroy(this->my_ts);
+		
+		/* delete traffic selectors */
+		while(this->other_ts->remove_last(this->other_ts, (void**)&traffic_selector) == SUCCESS)
+		{
+			traffic_selector->destroy(traffic_selector);
+		}
+		this->other_ts->destroy(this->other_ts);
+		
+		/* delete certification authorities */
+		if (this->my_ca)
+		{
+			this->my_ca->destroy(this->my_ca);
+		}
+		if (this->other_ca)
+		{
+			this->other_ca->destroy(this->other_ca);
+		}
+		
+		/* delete updown script */
+		if (this->updown)
+		{
+			free(this->updown);
+		}
+		
+		/* delete ids */
+		this->my_id->destroy(this->my_id);
+		this->other_id->destroy(this->other_id);
+		
+		free(this->name);
+		free(this);
 	}
-	this->proposals->destroy(this->proposals);
-	
-	/* delete traffic selectors */
-	while(this->my_ts->remove_last(this->my_ts, (void**)&traffic_selector) == SUCCESS)
-	{
-		traffic_selector->destroy(traffic_selector);
-	}
-	this->my_ts->destroy(this->my_ts);
-	
-	/* delete traffic selectors */
-	while(this->other_ts->remove_last(this->other_ts, (void**)&traffic_selector) == SUCCESS)
-	{
-		traffic_selector->destroy(traffic_selector);
-	}
-	this->other_ts->destroy(this->other_ts);
-	
-	/* delete certification authorities */
-	if (this->my_ca)
-	{
-		this->my_ca->destroy(this->my_ca);
-	}
-	if (this->other_ca)
-	{
-		this->other_ca->destroy(this->other_ca);
-	}
-
-	/* delete updown script */
-	if (this->updown)
-	{
-		free(this->updown);
-	}
-	
-	/* delete ids */
-	this->my_id->destroy(this->my_id);
-	this->other_id->destroy(this->other_id);
-	
-	free(this->name);
-	free(this);
-	return SUCCESS;
 }
 
 /*
@@ -494,7 +430,7 @@ static status_t destroy(private_policy_t *this)
  */
 policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
-						u_int32_t jitter)
+						u_int32_t jitter, char *updown)
 {
 	private_policy_t *this = malloc_thing(private_policy_t);
 
@@ -502,24 +438,20 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.get_name = (char *(*)(policy_t*))get_name;
 	this->public.get_my_id = (identification_t*(*)(policy_t*))get_my_id;
 	this->public.get_other_id = (identification_t*(*)(policy_t*))get_other_id;
-	this->public.update_my_id = (void(*)(policy_t*,identification_t*))update_my_id;
-	this->public.update_other_id = (void(*)(policy_t*,identification_t*))update_other_id;
-	this->public.update_my_ts = (void(*)(policy_t*,host_t*))update_my_ts;
-	this->public.update_other_ts = (void(*)(policy_t*,host_t*))update_other_ts;
-	this->public.get_my_traffic_selectors = (linked_list_t*(*)(policy_t*))get_my_traffic_selectors;
-	this->public.select_my_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*))select_my_traffic_selectors;
-	this->public.get_other_traffic_selectors = (linked_list_t*(*)(policy_t*))get_other_traffic_selectors;
-	this->public.select_other_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*))select_other_traffic_selectors;
+	this->public.get_my_traffic_selectors = (linked_list_t*(*)(policy_t*,host_t*))get_my_traffic_selectors;
+	this->public.get_other_traffic_selectors = (linked_list_t*(*)(policy_t*,host_t*))get_other_traffic_selectors;
+	this->public.select_my_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*,host_t*))select_my_traffic_selectors;
+	this->public.select_other_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*,host_t*))select_other_traffic_selectors;
 	this->public.get_proposals = (linked_list_t*(*)(policy_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(policy_t*,linked_list_t*))select_proposal;
 	this->public.add_my_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_my_traffic_selector;
 	this->public.add_other_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_other_traffic_selector;
 	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
 	this->public.add_authorities = (void(*)(policy_t*,identification_t*, identification_t*))add_authorities;
-	this->public.add_updown = (void(*)(policy_t*,char*))add_updown;
+	this->public.get_updown = (char*(*)(policy_t*))get_updown;
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
-	this->public.clone = (policy_t*(*)(policy_t*))clone_;
+	this->public.get_ref = (void(*)(policy_t*))get_ref;
 	this->public.destroy = (void(*)(policy_t*))destroy;
 	
 	/* apply init values */
@@ -529,8 +461,10 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->hard_lifetime = hard_lifetime;
 	this->soft_lifetime = soft_lifetime;
 	this->jitter = jitter;
+	this->updown = (updown == NULL) ? NULL : strdup(updown);
 	
 	/* initialize private members*/
+	this->refcount = 1;
 	this->my_ca = NULL;
 	this->other_ca = NULL;
 	this->proposals = linked_list_create();
@@ -538,5 +472,5 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->other_ts = linked_list_create();
 	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 
-	return (&this->public);
+	return &this->public;
 }

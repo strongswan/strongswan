@@ -152,20 +152,115 @@ struct ike_sa_t {
 	 * @param state			state to set for the IKE_SA
 	 */
 	void (*set_state) (ike_sa_t *this, ike_sa_state_t ike_sa);
+	
+	/**
+	 * @brief Get the name of the connection this IKE_SA uses.
+	 *
+	 * @param this			calling object
+	 * @return				name
+	 */
+	char* (*get_name) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the name of the connection this IKE_SA uses.
+	 *
+	 * @param this			calling object
+	 * @param name			name, gets cloned
+	 */
+	void (*set_name) (ike_sa_t *this, char* name);
+	
+	/**
+	 * @brief Get the own host address.
+	 * 
+	 * @param this 			calling object
+	 * @return				host address
+	 */
+	host_t* (*get_my_host) (ike_sa_t *this);
+	
+	/**
+	 * @brief Get the other peers host address.
+	 * 
+	 * @param this 			calling object
+	 * @return				host address
+	 */
+	host_t* (*get_other_host) (ike_sa_t *this);
+	
+	/**
+	 * @brief Get the own identification.
+	 * 
+	 * @param this 			calling object
+	 * @return				identification
+	 */
+	identification_t* (*get_my_id) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the own identification.
+	 * 
+	 * @param this 			calling object
+	 * @param me			identification
+	 */
+	void (*set_my_id) (ike_sa_t *this, identification_t *me);
+	
+	/**
+	 * @brief Get the other peers identification.
+	 * 
+	 * @param this 			calling object
+	 * @return				identification
+	 */
+	identification_t* (*get_other_id) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the other peers identification.
+	 * 
+	 * @param this 			calling object
+	 * @param other			identification
+	 */
+	void (*set_other_id) (ike_sa_t *this, identification_t *other);
 
 	/**
 	 * @brief Initiate a new connection.
 	 *
-	 * The connection_t object is owned by the IKE_SA after the call, so
+	 * The policy/connection is owned by the IKE_SA after the call, so
 	 * do not modify or destroy it.
 	 * 
 	 * @param this 			calling object
 	 * @param connection	connection to initiate
+	 * @param policy		policy to set up
 	 * @return				
 	 * 						- SUCCESS if initialization started
 	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
 	 */
-	status_t (*initiate) (ike_sa_t *this, connection_t *connection);
+	status_t (*initiate) (ike_sa_t *this, connection_t *connection, policy_t *policy);
+
+	/**
+	 * @brief Route a policy in the kernel.
+	 *
+	 * Installs the policies in the kernel. If traffic matches,
+	 * the kernel requests connection setup from the IKE_SA via acquire().
+	 * The policy is owned by the IKE_SA after the call, so
+	 * do not modify or destroy it.
+	 * 
+	 * @param this 			calling object
+	 * @param policy		policy to route
+	 * @return				
+	 * 						- SUCCESS if initialization started
+	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
+	 */
+	status_t (*route) (ike_sa_t *this, policy_t *policy);
+	
+	/**
+	 * @brief Acquire connection setup for a policy.
+	 *
+	 * If an installed policy raises an acquire, the kernel calls
+	 * this function to establsh the CHILD_SA (and maybe the IKE_SA).
+	 *
+	 * @param this 			calling object
+	 * @param reqid			reqid of the CHILD_SA the policy belongs to.
+	 * @return				
+	 * 						- SUCCESS if initialization started
+	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
+	 */
+	status_t (*acquire) (ike_sa_t *this, u_int32_t reqid);
 	
 	/**
 	 * @brief Initiates the deletion of an IKE_SA.
@@ -280,38 +375,6 @@ struct ike_sa_t {
 	 * @param name			name of the connection
 	 */	
 	void (*log_status) (ike_sa_t *this, logger_t *logger, char *name);
-		
-	/**
-	 * @brief Get the internal stored connection_t object.
-	 * 
-	 * @param this 			calling object
-	 * @return				pointer to the internal stored connection_t object
-	 */
-	connection_t *(*get_connection) (ike_sa_t *this);
-	
-	/**
-	 * @brief Set the internal connection object.
-	 * 
-	 * @param this 			calling object
-	 * @param connection	object of type connection_t
-	 */
-	void (*set_connection) (ike_sa_t *this, connection_t *connection);
-	
-	/**
-	 * @brief Get the internal stored policy object.
-	 * 
-	 * @param this 			calling object
-	 * @return				pointer to the internal stored policy_t object
-	 */
-	policy_t *(*get_policy) (ike_sa_t *this);
-	
-	/**
-	 * @brief Set the internal policy_t object.
-	 * 
-	 * @param this 			calling object
-	 * @param policy		object of type policy_t
-	 */
-	void (*set_policy) (ike_sa_t *this, policy_t *policy);
 
 	/**
 	 * @brief Derive all keys and create the transforms for IKE communication.

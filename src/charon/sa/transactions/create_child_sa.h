@@ -33,6 +33,10 @@ typedef struct create_child_sa_t create_child_sa_t;
 /**
  * @brief A transaction to create a new or rekey an existing CHILD_SA.
  *
+ * If the CHILD_SA is intended to create a new CHILD_SA, set the policy
+ * with set_policy(). If it is intended to rekey an existing CHILD_SA,
+ * set the appropriate CHILD_SA with rekeys_child().
+ *
  * Rekeying of an CHILD_SA works the same way as creating a new one,
  * but includes an additional REKEY_SA notify and deletes the old
  * one (in a separate transaction).
@@ -68,10 +72,15 @@ struct create_child_sa_t {
 	transaction_t transaction;
 	
 	/**
-	 * @brief Set the CHILD_SA which gets rekeyed by the new one.
+	 * @brief Set the policy to use for creating a new CHILD_SA.
 	 *
-	 * If this transaction is used for rekeying, set the inbound
-	 * SPI of the CHILD_SA which the new CHILD_SA rekeys.
+	 * @param this		calling object
+	 * @param policy	policy for CHILD_SA
+	 */
+	void (*set_policy) (create_child_sa_t* this, policy_t *policy);
+	
+	/**
+	 * @brief Set the CHILD_SA which gets rekeyed by the new one.
 	 *
 	 * @param this		calling object
 	 * @param child_sa	CHILD_SA to rekey
@@ -79,9 +88,9 @@ struct create_child_sa_t {
 	void (*rekeys_child) (create_child_sa_t* this, child_sa_t *child_sa);
 	
 	/**
-	 * @brief Cancel a rekeying request.
+	 * @brief Cancel the request.
 	 *
-	 * Cancelling a rekeying request will set a flag in the transaction. When
+	 * Cancelling the request will set a flag in the transaction. When
 	 * the response for the transaction is received, the created CHILD_SA
 	 * gets deleted afterwards.
 	 *

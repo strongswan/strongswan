@@ -25,13 +25,17 @@
 
 #include <types.h>
 #include <config/policies/policy.h>
+#include <utils/linked_list.h>
 
 
 typedef struct policy_store_t policy_store_t;
 
 /**
  * @brief The interface for a store of policy_t's.
- * 
+ *
+ * The store uses reference counting to manage their lifetime. Call
+ * destroy() for a policy which is returned from the store after usage.
+ *
  * @b Constructors:
  * - stroke_create()
  * 
@@ -40,27 +44,29 @@ typedef struct policy_store_t policy_store_t;
 struct policy_store_t {
 
 	/**
-	 * @brief Returns a policy identified by two IDs.
+	 * @brief Returns a policy identified by two IDs and a set of traffic selectors.
 	 *
-	 * The returned policy gets created/cloned and therefore must be
-	 * destroyed by the caller.
 	 * other_id must be fully qualified. my_id may be %any, as the
 	 * other peer may not include an IDr Request.
 	 *
-	 * @param this		calling object
-	 * @param my_id		own ID of the policy
-	 * @param other_id	others ID of the policy
+	 * @param this			calling object
+	 * @param my_id			own ID of the policy
+	 * @param other_id		others ID of the policy
+	 * @param my_ts			traffic selectors requested for local host
+	 * @param other_ts		traffic selectors requested for remote host
+	 * @param my_host		host to use for wilcards in TS compare
+	 * @param other_host	host to use for wildcards in TS compare
 	 * @return
-	 *					- matching policy_t, if found
-	 *					- NULL otherwise
+	 *						- matching policy_t, if found
+	 *						- NULL otherwise
 	 */
-	policy_t *(*get_policy_by_ids) (policy_store_t *this, identification_t *my_id, identification_t *other_id);
+	policy_t *(*get_policy) (policy_store_t *this, 
+							 identification_t *my_id, identification_t *other_id,
+							 linked_list_t *my_ts, linked_list_t *other_ts,
+							 host_t *my_host, host_t* other_host);
 
 	/**
 	 * @brief Returns a policy identified by a connection name.
-	 *
-	 * The returned policy gets created/cloned and therefore must be
-	 * destroyed by the caller.
 	 *
 	 * @param this		calling object
 	 * @param name		name of the policy

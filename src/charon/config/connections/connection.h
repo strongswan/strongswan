@@ -130,30 +130,6 @@ struct connection_t {
 	 * @return		host information as host_t object
 	 */
 	host_t *(*get_other_host) (connection_t *this);
-
-	/**
-	 * @brief Update address of my host.
-	 * 
-	 * It may be necessary to uptdate own address, as it 
-	 * is set to the default route (0.0.0.0) in some cases.
-	 * Old host is destroyed, new one NOT cloned.
-	 * 
-	 * @param this		calling object
-	 * @param my_host	new host to set as my_host
-	 */
-	void (*update_my_host) (connection_t *this, host_t *my_host);
-
-	/**
-	 * @brief Update address of remote host.
-	 * 
-	 * It may be necessary to uptdate remote address, as a
-	 * connection may define %any (0.0.0.0) or a subnet.
-	 * Old host is destroyed, new one NOT cloned.
-	 * 
-	 * @param this		calling object
-	 * @param my_host	new host to set as other_host
-	 */
-	void (*update_other_host) (connection_t *this, host_t *other_host);
 	
 	/**
 	 * @brief Returns a list of all supported proposals.
@@ -227,7 +203,7 @@ struct connection_t {
 	 * the peer. It should be ommited when CERT_SEND_NEVER, sended otherwise.
 	 *
 	 * @param this		calling object
-	 * @return			- TRUE, if certificate request should be sent
+	 * @return			certificate request sending policy
 	 */
 	cert_policy_t (*get_certreq_policy) (connection_t *this);
 	
@@ -261,15 +237,20 @@ struct connection_t {
 	bool (*check_dh_group) (connection_t *this, diffie_hellman_group_t dh_group);
 	
 	/**
-	 * @brief Clone a connection_t object.
-	 * 
-	 * @param this		connection to clone
-	 * @return			clone of it
+	 * @brief Get a new reference to this connection.
+	 *
+	 * Get a new reference to this connection by increasing
+	 * it's internal reference counter.
+	 *
+	 * @param this		calling object
 	 */
-	connection_t *(*clone) (connection_t *this);
+	void (*get_ref) (connection_t *this);
 	
 	/**
 	 * @brief Destroys a connection_t object.
+	 * 
+	 * Decrements the internal reference counter and
+	 * destroys the connection when it reaches zero.
 	 * 
 	 * @param this		calling object
 	 */
@@ -278,7 +259,7 @@ struct connection_t {
 
 /**
  * @brief Creates a connection_t object.
- * 
+ *
  * Supplied hosts become owned by connection, so 
  * do not modify or destroy them after a call to 
  * connection_create(). Name gets cloned internally.

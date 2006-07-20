@@ -86,24 +86,39 @@ struct private_ike_sa_t {
 	ike_sa_id_t *ike_sa_id;
 	
 	/**
-	 * Linked List containing the child sa's of the current IKE_SA.
-	 */
-	linked_list_t *child_sas;
-	
-	/**
 	 * Current state of the IKE_SA
 	 */
 	ike_sa_state_t state;
 	
 	/**
-	 * Connection definition used for this IKE_SA
+	 * Name of the connection used by this IKE_SA
 	 */
-	connection_t *connection;
+	char *name;
 	
 	/**
-	 * Policy definition used for this IKE_SA
+	 * Address of local host
 	 */
-	policy_t *policy;
+	host_t *my_host;
+	
+	/**
+	 * Address of remote host
+	 */
+	host_t *other_host;
+	
+	/**
+	 * Identification used for us
+	 */
+	identification_t *my_id;
+	
+	/**
+	 * Identification used for other
+	 */
+	identification_t *other_id;
+	
+	/**
+	 * Linked List containing the child sa's of the current IKE_SA.
+	 */
+	linked_list_t *child_sas;
 	
 	/**
 	 * crypter for inbound traffic
@@ -208,7 +223,7 @@ struct private_ike_sa_t {
 /**
  * get the time of the latest traffic processed by the kernel
  */
-static time_t get_esp_time(private_ike_sa_t* this, bool inbound)
+static time_t get_kernel_time(private_ike_sa_t* this, bool inbound)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
@@ -232,7 +247,7 @@ static time_t get_esp_time(private_ike_sa_t* this, bool inbound)
  */
 static time_t get_time_inbound(private_ike_sa_t *this)
 {
-	return max(this->time_inbound, get_esp_time(this, TRUE));
+	return max(this->time_inbound, get_kernel_time(this, TRUE));
 }
 
 /**
@@ -240,9 +255,41 @@ static time_t get_time_inbound(private_ike_sa_t *this)
  */
 static time_t get_time_outbound(private_ike_sa_t *this)
 {
-	return max(this->time_outbound, get_esp_time(this, FALSE));
+	return max(this->time_outbound, get_kernel_time(this, FALSE));
 }
 
+/**
+ * Implementation of ike_sa_t.get_name.
+ */
+static char *get_name(private_ike_sa_t *this)
+{
+	return this->name;
+}
+
+/**
+ * Implementation of ike_sa_t.set_name.
+ */
+static void set_name(private_ike_sa_t *this, char* name)
+{
+	free(this->name);
+	this->name = strdup(name);
+}
+
+/**
+ * Implementation of ike_sa_t.get_my_host.
+ */
+static host_t *get_my_host(private_ike_sa_t *this)
+{
+	return this->my_host;
+}
+
+/**
+ * Implementation of ike_sa_t.get_other_host.
+ */
+static host_t *get_other_host(private_ike_sa_t *this)
+{
+	return this->other_host;
+}
 
 /**
  * Update connection host, as addresses may change (NAT)
@@ -278,53 +325,58 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 	 *    packet or any authenticated UDP-encapsulated ESP packet can be
 	 *    used to detect that the IP address or the port has changed.
 	 */
-	host_t *old_other = NULL;
 	iterator_t *iterator = NULL;
 	child_sa_t *child_sa = NULL;
-	int my_changes, other_changes;
-
-	my_changes = me->get_differences(me, this->connection->get_my_host(this->connection));
-
-	old_other = this->connection->get_other_host(this->connection);
-	other_changes = other->get_differences(other, old_other);
-
-	if (!my_changes && !other_changes) 
+	host_diff_t my_diff, other_diff;
+	
+	if (this->my_host == NULL || this->other_host == NULL)
+	{
+		/* on first received message */
+		this->my_host = me->clone(me);
+		this->other_host = other->clone(other);
+		return;
+	}
+	
+	my_diff = me->get_differences(me, this->my_host);
+	other_diff = other->get_differences(other, this->other_host);
+	
+	if (!my_diff && !other_diff)
 	{
 		return;
 	}
 	
-	if (my_changes)
+	if (my_diff)
 	{
-		this->connection->update_my_host(this->connection, me->clone(me));
+		this->my_host->destroy(this->my_host);
+		this->my_host = me->clone(me);
 	}
 	
 	if (!this->nat_here)
 	{
 		/* update without restrictions if we are not NATted */
-		if (other_changes)
+		if (other_diff)
 		{
-			this->connection->update_other_host(this->connection, other->clone(other));
+			this->other_host->destroy(this->other_host);
+			this->other_host = other->clone(other);
 		}
 	}
 	else
 	{
 		/* if we are natted, only port may change */
-		if (other_changes & HOST_DIFF_ADDR)
+		if (other_diff & HOST_DIFF_ADDR)
 		{
 			return;
 		}
-		else if (other_changes & HOST_DIFF_PORT)
+		else if (other_diff & HOST_DIFF_PORT)
 		{
-			old_other->set_port(old_other, other->get_port(other));
+			this->other_host->set_port(this->other_host, other->get_port(other));
 		}
 	}
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		child_sa->update_hosts(child_sa,
-							   this->connection->get_my_host(this->connection),
-							   this->connection->get_other_host(this->connection),
-							   my_changes, other_changes);
+		child_sa->update_hosts(child_sa, this->my_host, this->other_host, 
+							   my_diff, other_diff);
 		/* TODO: what to do if update fails? Delete CHILD_SA? */
 	}
 	iterator->destroy(iterator);
@@ -705,7 +757,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	else
 	{
 		/* check if message is trustworthy, and update connection information */
-		if ((this->state == IKE_CREATED && this->connection) ||
+		if (this->state == IKE_CREATED ||
 			message->get_exchange_type(message) != IKE_SA_INIT)
 		{
 			update_hosts(this, message->get_destination(message),
@@ -727,24 +779,58 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 /**
  * Implementation of ike_sa_t.initiate.
  */
-static status_t initiate(private_ike_sa_t *this, connection_t *connection)
+static status_t initiate(private_ike_sa_t *this,
+						 connection_t *connection, policy_t *policy)
 {
 	ike_sa_init_t *ike_sa_init;
 	
-	/* set connection and policy */
-	this->connection = connection;
-	this->policy = charon->policies->get_policy_by_name(charon->policies,
-			this->connection->get_name(this->connection));
-	if (this->policy == NULL)
-	{
-		this->logger->log(this->logger, ERROR,
-						  "no policy found for connection %s, aborting",
-						  connection->get_name(connection));
-		return DESTROY_ME;
-	}
+	set_name(this, connection->get_name(connection));
+	
+	/* apply hosts from connection */
+	this->my_host = connection->get_my_host(connection);
+	this->my_host = this->my_host->clone(this->my_host);
+	this->other_host = connection->get_other_host(connection);
+	this->other_host = this->other_host->clone(this->other_host);
+	
 	this->message_id_out = 1;
 	ike_sa_init = ike_sa_init_create(&this->public);
+	ike_sa_init->set_config(ike_sa_init, connection, policy);
 	return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
+}
+
+
+/**
+ * Implementation of ike_sa_t.acquire.
+ */
+static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
+{
+	/* - get TS from child with reqid
+	 * - get a policy from TS
+	 * - get connection from policy
+	 */
+	switch (this->state)
+	{
+		case IKE_CREATED:
+			/* ike_sa_init */
+			break;
+		case IKE_CONNECTING:
+		case IKE_ESTABLISHED:
+			/* queue create_child_sa */
+			break;
+		case IKE_DELETING:
+			/* deny */
+			break;
+	}
+	return FAILED;
+}
+
+/**
+ * Implementation of ike_sa_t.route.
+ */
+static status_t route(private_ike_sa_t *this, policy_t *policy)
+{
+	/* TODO: create CHILD_SA, add policy */
+	return FAILED;
 }
 
 /**
@@ -803,15 +889,12 @@ static void send_keepalive(private_ike_sa_t *this)
 	
 	if (diff >= interval)
 	{
-		host_t *me, *other;
 		packet_t *packet;
 		chunk_t data;
 		
 		packet = packet_create();
-		me = this->connection->get_my_host(this->connection);
-		other = this->connection->get_other_host(this->connection);
-		packet->set_source(packet, me->clone(me));
-		packet->set_destination(packet, other->clone(other));
+		packet->set_source(packet, this->my_host->clone(this->my_host));
+		packet->set_destination(packet, this->other_host->clone(this->other_host));
 		data.ptr = malloc(1);
 		data.ptr[0] = 0xFF;
 		data.len = 1;
@@ -843,53 +926,15 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 					  mapping_find(ike_sa_state_m, state));
 	if (state == IKE_ESTABLISHED)
 	{
-		host_t *my_host, *other_host;
-		identification_t *my_id, *other_id;
-		my_host = this->connection->get_my_host(this->connection);
-		other_host = this->connection->get_other_host(this->connection);
-		my_id = this->policy->get_my_id(this->policy);
-		other_id = this->policy->get_other_id(this->policy);
 		this->logger->log(this->logger, AUDIT, "IKE_SA established: %s[%s]...%s[%s]",
-						  my_host->get_string(my_host),
-						  my_id->get_string(my_id),
-						  other_host->get_string(other_host),
-						  other_id->get_string(other_id));
+						  this->my_host->get_string(this->my_host),
+						  this->my_id->get_string(this->my_id),
+						  this->other_host->get_string(this->other_host),
+						  this->other_id->get_string(this->other_id));
 		
 		send_dpd(this);
 	}
 	this->state = state;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_connection.
- */
-static connection_t *get_connection(private_ike_sa_t *this)
-{
-	return this->connection;
-}
-
-/**
- * Implementation of protected_ike_sa_t.set_connection.
- */
-static void set_connection(private_ike_sa_t *this,connection_t * connection)
-{
-	this->connection = connection;
-}
-
-/**
- * Implementation of protected_ike_sa_t.get_policy.
- */
-static policy_t *get_policy(private_ike_sa_t *this)
-{
-	return this->policy;
-}
-
-/**
- * Implementation of protected_ike_sa_t.set_policy.
- */
-static void set_policy(private_ike_sa_t *this,policy_t * policy)
-{
-	this->policy = policy;
 }
 
 /**
@@ -923,12 +968,45 @@ static prf_t *get_prf_auth_r(private_ike_sa_t *this)
 {
 	return this->prf_auth_r;
 }
+
 /**
  * Implementation of ike_sa_t.get_id.
  */
 static ike_sa_id_t* get_id(private_ike_sa_t *this)
 {
 	return this->ike_sa_id;
+}
+
+/**
+ * Implementation of ike_sa_t.get_my_id.
+ */
+static identification_t* get_my_id(private_ike_sa_t *this)
+{
+	return this->my_id;
+}
+
+/**
+ * Implementation of ike_sa_t.set_my_id.
+ */
+static void set_my_id(private_ike_sa_t *this, identification_t *me)
+{
+	this->my_id = me;
+}
+
+/**
+ * Implementation of ike_sa_t.get_other_id.
+ */
+static identification_t* get_other_id(private_ike_sa_t *this)
+{
+	return this->other_id;
+}
+
+/**
+ * Implementation of ike_sa_t.set_other_id.
+ */
+static void set_other_id(private_ike_sa_t *this, identification_t *other)
+{
+	this->other_id = other;
 }
 
 /**
@@ -1201,55 +1279,41 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
-	host_t *my_host, *other_host;
-	identification_t *my_id = NULL, *other_id = NULL;
+	char *my_host, *other_host, *my_id, *other_id;
 	
-	/* only log if name == NULL or name == connection_name */
-	if (name)
+	if (name == NULL || streq(name, this->name))
 	{
-		if (streq(this->connection->get_name(this->connection), name))
+		if (logger == NULL)
 		{
-			return;
+			logger = this->logger;
 		}
+		
+		my_host = this->my_host ?
+				this->my_host->get_string(this->my_host) : "(unknown)";
+		other_host = this->other_host ?
+				this->other_host->get_string(this->other_host) : "(unknown)";
+		my_id = this->my_id ?
+				this->my_id->get_string(this->my_id) : "(unknown)";
+		other_id = this->other_id ?
+				this->other_id->get_string(this->other_id) : "(unknown)";
+		
+		logger->log(logger, CONTROL|LEVEL1, 
+					"  \"%s\": IKE_SA in state %s, SPIs: 0x%.16llx 0x%.16llx",
+					this->name,
+					mapping_find(ike_sa_state_m, this->state),
+					this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
+					this->ike_sa_id->get_responder_spi(this->ike_sa_id));
+		logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
+					this->name, my_host, my_id, other_host, other_id);
+		
+		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+		while (iterator->has_next(iterator))
+		{
+			iterator->current(iterator, (void**)&child_sa);
+			child_sa->log_status(child_sa, logger, this->name);
+		}
+		iterator->destroy(iterator);
 	}
-	my_host = this->connection->get_my_host(this->connection);
-	other_host = this->connection->get_other_host(this->connection);
-
-	/* use policy information, if available */
-	if (this->policy)
-	{
-		my_id = this->policy->get_my_id(this->policy);
-		other_id = this->policy->get_other_id(this->policy);
-		name = this->policy->get_name(this->policy);
-	}
-	else
-	{
-		name = this->connection->get_name(this->connection);
-	}
-	
-	if (logger == NULL)
-	{
-		logger = this->logger;
-	}
-	logger->log(logger, CONTROL|LEVEL1, "  \"%s\": IKE_SA in state %s, SPIs: 0x%.16llx 0x%.16llx",
-				name,
-				mapping_find(ike_sa_state_m, this->state),
-				this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-				this->ike_sa_id->get_responder_spi(this->ike_sa_id));
-	logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
-				name,
-				my_host->get_string(my_host),
-				my_id ? my_id->get_string(my_id) : "(unknown)",
-				other_host->get_string(other_host),
-				other_id ? other_id->get_string(other_id) : "(unknown)");
-	
-	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&child_sa);
-		child_sa->log_status(child_sa, logger, name);
-	}
-	iterator->destroy(iterator);
 }
 
 /**
@@ -1313,6 +1377,7 @@ static void destroy(private_ike_sa_t *this)
 {
 	child_sa_t *child_sa;
 	transaction_t *transaction;
+	char *my_host, *other_host, *my_id, *other_id;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "going to destroy IKE SA %llu:%llu, role %s", 
 					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
@@ -1336,73 +1401,38 @@ static void destroy(private_ike_sa_t *this)
 		transaction->destroy(transaction);
 	}
 	this->transaction_queue->destroy(this->transaction_queue);
-	if (this->transaction_in)
-	{
-		this->transaction_in->destroy(this->transaction_in);
-	}
-	if (this->transaction_in_next)
-	{
-		this->transaction_in_next->destroy(this->transaction_in_next);
-	}
-	if (this->transaction_out)
-	{
-		this->transaction_out->destroy(this->transaction_out);
-	}
-	if (this->crypter_in)
-	{
-		this->crypter_in->destroy(this->crypter_in);
-	}
-	if (this->crypter_out)
-	{
-		this->crypter_out->destroy(this->crypter_out);
-	}
-	if (this->signer_in)
-	{
-		this->signer_in->destroy(this->signer_in);
-	}
-	if (this->signer_out)
-	{
-		this->signer_out->destroy(this->signer_out);
-	}
-	if (this->prf)
-	{
-		this->prf->destroy(this->prf);
-	}
-	if (this->child_prf)
-	{
-		this->child_prf->destroy(this->child_prf);
-	}
-	if (this->prf_auth_i)
-	{
-		this->prf_auth_i->destroy(this->prf_auth_i);
-	}
-	if (this->prf_auth_r)
-	{
-		this->prf_auth_r->destroy(this->prf_auth_r);
-	}
-	if (this->connection)
-	{
-		host_t *my_host, *other_host;
-		identification_t *my_id = NULL, *other_id = NULL;
-		my_host = this->connection->get_my_host(this->connection);
-		other_host = this->connection->get_other_host(this->connection);
-		if (this->policy)
-		{
-			my_id = this->policy->get_my_id(this->policy);
-			other_id = this->policy->get_other_id(this->policy);
-		}
-		
-		this->logger->log(this->logger, AUDIT, "IKE_SA deleted between %s[%s]...%s[%s]", 
-						  my_host->get_string(my_host),
-						  my_id ? my_id->get_string(my_id) : "(unknown)",
-						  other_host->get_string(other_host),
-						  other_id ? other_id->get_string(other_id) : "(unknown)");
-		this->connection->destroy(this->connection);
-	}
-	if (this->policy)
-	{
-		this->policy->destroy(this->policy);
-	}
+	
+	DESTROY_IF(this->transaction_in);
+	DESTROY_IF(this->transaction_in_next);
+	DESTROY_IF(this->transaction_out);
+	DESTROY_IF(this->crypter_in);
+	DESTROY_IF(this->crypter_out);
+	DESTROY_IF(this->signer_in);
+	DESTROY_IF(this->signer_out);
+	DESTROY_IF(this->prf);
+	DESTROY_IF(this->child_prf);
+	DESTROY_IF(this->prf_auth_i);
+	DESTROY_IF(this->prf_auth_r);
+	
+	my_host = this->my_host ?
+			this->my_host->get_string(this->my_host) : "(unknown)";
+	other_host = this->other_host ?
+			this->other_host->get_string(this->other_host) : "(unknown)";
+	my_id = this->my_id ?
+			this->my_id->get_string(this->my_id) : "(unknown)";
+	other_id = this->other_id ?
+			this->other_id->get_string(this->other_id) : "(unknown)";
+
+	this->logger->log(this->logger, AUDIT, 
+					  "IKE_SA deleted between %s[%s]...%s[%s]", 
+					  my_host, my_id, other_host, other_id);
+	
+	DESTROY_IF(this->my_host);
+	DESTROY_IF(this->other_host);
+	DESTROY_IF(this->my_id);
+	DESTROY_IF(this->other_id);
+	
+	free(this->name);
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
 }
@@ -1417,11 +1447,20 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* Public functions */
 	this->public.get_state = (ike_sa_state_t(*)(ike_sa_t*)) get_state;
 	this->public.set_state = (void(*)(ike_sa_t*,ike_sa_state_t)) set_state;
+	this->public.get_name = (char*(*)(ike_sa_t*))get_name;
+	this->public.set_name = (void(*)(ike_sa_t*,char*))set_name;
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
-	this->public.initiate = (status_t(*)(ike_sa_t*,connection_t*)) initiate;
+	this->public.initiate = (status_t(*)(ike_sa_t*,connection_t*,policy_t*)) initiate;
+	this->public.route = (status_t(*)(ike_sa_t*,policy_t*)) route;
+	this->public.acquire = (status_t(*)(ike_sa_t*,u_int32_t)) acquire;
 	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
+	this->public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
+	this->public.get_other_host = (host_t*(*)(ike_sa_t*)) get_other_host;
+	this->public.get_my_id = (identification_t*(*)(ike_sa_t*)) get_my_id;
+	this->public.set_my_id = (void(*)(ike_sa_t*,identification_t*)) set_my_id;
+	this->public.get_other_id = (identification_t*(*)(ike_sa_t*)) get_other_id;
+	this->public.set_other_id = (void(*)(ike_sa_t*,identification_t*)) set_other_id;
 	this->public.get_next_message_id = (u_int32_t(*)(ike_sa_t*)) get_next_message_id;
-	this->public.get_connection = (connection_t*(*)(ike_sa_t*)) get_connection;
 	this->public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
 	this->public.log_status = (void (*) (ike_sa_t*,logger_t*,char*))log_status;
 	this->public.delete = (status_t(*)(ike_sa_t*))delete_;
@@ -1432,10 +1471,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
 	this->public.get_prf_auth_i = (prf_t *(*) (ike_sa_t *)) get_prf_auth_i;
 	this->public.get_prf_auth_r = (prf_t *(*) (ike_sa_t *)) get_prf_auth_r;
-	this->public.set_connection = (void (*) (ike_sa_t *,connection_t *)) set_connection;
-	this->public.get_connection = (connection_t *(*) (ike_sa_t *)) get_connection;
-	this->public.set_policy = (void (*) (ike_sa_t *,policy_t *)) set_policy;
-	this->public.get_policy = (policy_t *(*) (ike_sa_t *)) get_policy;
 	this->public.build_transforms = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool)) build_transforms;
 	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
@@ -1448,7 +1483,12 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	/* initialize private fields */
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+	this->name = strdup("(uninitialized)");
 	this->child_sas = linked_list_create();
+	this->my_host = NULL;
+	this->other_host = NULL;
+	this->my_id = NULL;
+	this->other_id = NULL;
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;
@@ -1457,8 +1497,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->prf_auth_i = NULL;
 	this->prf_auth_r = NULL;
  	this->child_prf = NULL;
-	this->connection = NULL;
-	this->policy = NULL;
 	this->nat_here = FALSE;
 	this->nat_there = FALSE;
 	this->transaction_queue = linked_list_create();

@@ -260,12 +260,12 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 				
 	my_ts = traffic_selector_create_from_subnet(my_subnet,
-				msg->add_conn.me.subnet ?  msg->add_conn.me.subnet_mask : 32,
+				msg->add_conn.me.subnet ?  msg->add_conn.me.subnet_mask : 0,
 				msg->add_conn.me.protocol, msg->add_conn.me.port);
 	my_subnet->destroy(my_subnet);
 
 	other_ts = traffic_selector_create_from_subnet(other_subnet, 
-			msg->add_conn.other.subnet ?  msg->add_conn.other.subnet_mask : 32,
+			msg->add_conn.other.subnet ?  msg->add_conn.other.subnet_mask : 0,
 			msg->add_conn.other.protocol, msg->add_conn.other.port);
 	other_subnet->destroy(other_subnet);
 
@@ -383,11 +383,11 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	policy = policy_create(msg->add_conn.name, my_id, other_id,
 						   msg->add_conn.rekey.ipsec_lifetime,
 						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
-						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100);
+						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
+						   msg->add_conn.me.updown);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
 	policy->add_authorities(policy, my_ca, other_ca);
-	policy->add_updown(policy, msg->add_conn.me.updown);
 	
 	if (msg->add_conn.algorithms.esp)
 	{
@@ -479,39 +479,64 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 {
 	initiate_ike_sa_job_t *job;
 	connection_t *connection;
+	policy_t *policy;
 	linked_list_t *ike_sas;
 	ike_sa_id_t *ike_sa_id;
 	
 	pop_string(msg, &(msg->initiate.name));
-	this->logger->log(this->logger, CONTROL, "received stroke: initiate \"%s\"", msg->initiate.name);
-	connection = charon->connections->get_connection_by_name(charon->connections, msg->initiate.name);
+	this->logger->log(this->logger, CONTROL,
+					  "received stroke: initiate \"%s\"",
+					  msg->initiate.name);
+	
+	connection = charon->connections->get_connection_by_name(charon->connections,
+															 msg->initiate.name);
 	if (connection == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "no connection named \"%s\"", msg->initiate.name);
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "no connection named \"%s\"", 
+								 msg->initiate.name);
 	}
 	/* only initiate if it is an IKEv2 connection, ignore IKEv1 */
 	else if (connection->is_ikev2(connection))
 	{
-		/* check for already set up IKE_SAs befor initiating */
-		ike_sas = charon->ike_sa_manager->get_ike_sa_list_by_name(charon->ike_sa_manager, msg->initiate.name);
-		if (ike_sas->get_count(ike_sas) == 0)
+		
+		policy = charon->policies->get_policy_by_name(charon->policies, 
+													  msg->initiate.name);
+		if (policy == NULL)
 		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL,
-					"initiating connection \"%s\" (see log)...", msg->initiate.name);
-			job = initiate_ike_sa_job_create(connection);
-			charon->job_queue->add(charon->job_queue, (job_t*)job);
-		}
-		else
-		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL,
-					"connection \"%s\" already up", msg->initiate.name);
+			this->stroke_logger->log(this->stroke_logger, ERROR,
+									 "no policy named \"%s\"",
+									 msg->initiate.name);
 			connection->destroy(connection);
+			return;
 		}
+		/* check for already set up IKE_SAs befor initiating */
+		ike_sas = charon->ike_sa_manager->get_ike_sa_list_by_name(charon->ike_sa_manager,
+																  msg->initiate.name);
+		if (ike_sas->get_count(ike_sas) > 0)
+		{
+			this->stroke_logger->log(this->stroke_logger, CONTROL,
+									 "connection \"%s\" already up", 
+									 msg->initiate.name);
+			/* TODO: setup CHILD_SA with policy */
+			connection->destroy(connection);
+			ike_sas->destroy(ike_sas);
+			return;
+		}
+		this->stroke_logger->log(this->stroke_logger, CONTROL,
+								 "initiating connection \"%s\" (see log)...", 
+								 msg->initiate.name);
+		job = initiate_ike_sa_job_create(connection, policy);
+		charon->job_queue->add(charon->job_queue, (job_t*)job);
 		while (ike_sas->remove_last(ike_sas, (void**)&ike_sa_id) == SUCCESS)
 		{
 			ike_sa_id->destroy(ike_sa_id);
 		}
 		ike_sas->destroy(ike_sas);
+	}
+	else
+	{
+		connection->destroy(connection);
 	}
 }
 

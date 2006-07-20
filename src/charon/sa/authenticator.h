@@ -122,11 +122,12 @@ struct authenticator_t {
  * @brief Creates an authenticator object.
  * 
  * @param ike_sa		associated ike_sa
+ * @param auth_method	authentication method to use for own signature/mac
  * 
  * @return				authenticator_t object
  * 
  * @ingroup sa
  */
-authenticator_t *authenticator_create(ike_sa_t *ike_sa);
+authenticator_t *authenticator_create(ike_sa_t *ike_sa, auth_method_t auth_method);
 
 #endif /* AUTHENTICATOR_H_ */

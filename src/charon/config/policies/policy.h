@@ -75,145 +75,103 @@ struct policy_t {
 	 * @return				other id
 	 */
 	identification_t *(*get_other_id) (policy_t *this);
-
-	/**
-	 * @brief Update own ID.
-	 * 
-	 * It may be necessary to uptdate own ID, as it 
-	 * is set to %any or to e.g. *@strongswan.org in 
-	 * some cases.
-	 * Old ID is destroyed, new one NOT cloned.
-	 * 
-	 * @param this		calling object
-	 * @param my_id		new ID to set as my_id
-	 */
-	void (*update_my_id) (policy_t *this, identification_t *my_id);
-
-	/**
-	 * @brief Update others ID.
-	 * 
-	 * It may be necessary to uptdate others ID, as it 
-	 * is set to %any or to e.g. *@strongswan.org in 
-	 * some cases.
-	 * Old ID is destroyed, new one NOT cloned.
-	 * 
-	 * @param this		calling object
-	 * @param other_id	new ID to set as other_id
-	 */
-	void (*update_other_id) (policy_t *this, identification_t *other_id);
-
-	/**
-	 * @brief Update own address in traffic selectors.
-	 * 
-	 * Update own 0.0.0.0 address in traffic selectors
-	 * with supplied one. The size of the subnet will be
-	 * set to /32.
-	 * 
-	 * @param this		calling object
-	 * @param my_host	new address to set in traffic selectors
-	 */
-	void (*update_my_ts) (policy_t *this, host_t *my_host);
-
-	/**
-	 * @brief Update others address in traffic selectors.
-	 * 
-	 * Update remote 0.0.0.0 address in traffic selectors
-	 * with supplied one. The size of the subnet will be
-	 * set to /32.
-	 * 
-	 * @param this		calling object
-	 * @param other_host	new address to set in traffic selectors
-	 */
-	void (*update_other_ts) (policy_t *this, host_t *other_host);
 	
 	/**
 	 * @brief Get configured traffic selectors for our site.
 	 * 
 	 * Returns a list with all traffic selectors for the local
-	 * site. List and items MUST NOT be freed nor modified.
+	 * site. List and items must be destroyed after usage.
 	 * 
-	 * @param this						calling object
-	 * @return							list with traffic selectors
+	 * @param this			calling object
+	 * @return				list with traffic selectors
 	 */
-	linked_list_t *(*get_my_traffic_selectors) (policy_t *this);
+	linked_list_t *(*get_my_traffic_selectors) (policy_t *this, host_t *me);
 	
 	/**
 	 * @brief Get configured traffic selectors for others site.
 	 * 
 	 * Returns a list with all traffic selectors for the remote
-	 * site. List and items MUST NOT be freed nor modified.
+	 * site. List and items must be destroyed after usage.
 	 * 
-	 * @param this						calling object
-	 * @return							list with traffic selectors
+	 * @param this			calling object
+	 * @return				list with traffic selectors
 	 */
-	linked_list_t *(*get_other_traffic_selectors) (policy_t *this);
+	linked_list_t *(*get_other_traffic_selectors) (policy_t *this, host_t* other);
 	
 	/**
 	 * @brief Select traffic selectors from a supplied list for local site.
 	 * 
 	 * Resulted list and traffic selectors must be destroyed after usage.
+	 * As the traffic selectors may contain a wildcard address (0.0.0.0) for
+	 * addresses we don't know in previous, an address may be supplied to
+	 * replace these 0.0.0.0 addresses on-the-fly.
 	 * 
-	 * @param this						calling object
-	 * @param supplied					linked list with traffic selectors
-	 * @return							list containing the selected traffic selectors
+	 * @param this			calling object
+	 * @param supplied		linked list with traffic selectors
+	 * @param me			host address used by us
+	 * @return				list containing the selected traffic selectors
 	 */
-	linked_list_t *(*select_my_traffic_selectors) (policy_t *this, linked_list_t *supplied);
+	linked_list_t *(*select_my_traffic_selectors) (policy_t *this, 
+												   linked_list_t *supplied,
+												   host_t *me);
 		
 	/**
 	 * @brief Select traffic selectors from a supplied list for remote site.
 	 * 
 	 * Resulted list and traffic selectors must be destroyed after usage.
-	 * 
-	 * @param this						calling object
-	 * @param supplied					linked list with traffic selectors
-	 * @return							list containing the selected traffic selectors
+	 * As the traffic selectors may contain a wildcard address (0.0.0.0) for
+	 * addresses we don't know in previous, an address may be supplied to
+	 * replace these 0.0.0.0 addresses on-the-fly.
+	 *
+	 * @param this			calling object
+	 * @param supplied		linked list with traffic selectors
+	 * @return				list containing the selected traffic selectors
 	 */
-	linked_list_t *(*select_other_traffic_selectors) (policy_t *this, linked_list_t *supplied);
+	linked_list_t *(*select_other_traffic_selectors) (policy_t *this, 
+													  linked_list_t *supplied,
+													  host_t *other);
 	
 	/**
 	 * @brief Get the list of internally stored proposals.
 	 * 
-	 * Rembember: policy_t does store proposals for AH/ESP, 
-	 * IKE proposals are in the connection_t
-	 * 
-	 * @warning List and Items are still owned by policy and MUST NOT
-	 *			be manipulated or freed!
-	 * 
-	 * @param this					calling object
-	 * @return						lists with proposals
+	 * policy_t does store proposals for AH/ESP, IKE proposals are in 
+	 * the connection_t.
+	 * List and Items are still owned by policy and MUST NOT
+	 * be manipulated or freed!
+	 *
+	 * @param this			calling object
+	 * @return				lists with proposals
 	 */
 	linked_list_t *(*get_proposals) (policy_t *this);
 	
 	/**
 	 * @brief Select a proposal from a supplied list.
+	 *
+	 * Returned propsal is newly created and must be destroyed after usage.
 	 * 
-	 * @param this					calling object
-	 * @param proposals				list from from wich proposals are selected
-	 * @return						selected proposal, or NULL if nothing matches
+	 * @param this			calling object
+	 * @param proposals		list from from wich proposals are selected
+	 * @return				selected proposal, or NULL if nothing matches
 	 */
 	proposal_t *(*select_proposal) (policy_t *this, linked_list_t *proposals);
 	
 	/**
 	 * @brief Add a traffic selector to the list for local site.
 	 * 
-	 * After add, proposal is owned by policy.
+	 * After add, traffic selector is owned by policy.
 	 * 
-	 * @warning Do not add while other threads are reading.
-	 * 
-	 * @param this					calling object
-	 * @param traffic_selector		traffic_selector to add
+	 * @param this				calling object
+	 * @param traffic_selector	traffic_selector to add
 	 */
 	void (*add_my_traffic_selector) (policy_t *this, traffic_selector_t *traffic_selector);
 	
 	/**
 	 * @brief Add a traffic selector to the list for remote site.
 	 * 
-	 * After add, proposal is owned by policy.
+	 * After add, traffic selector is owned by policy.
 	 * 
-	 * @warning Do not add while other threads are reading.
-	 * 
-	 * @param this					calling object
-	 * @param traffic_selector		traffic_selector to add
+	 * @param this				calling object
+	 * @param traffic_selector	traffic_selector to add
 	 */
 	void (*add_other_traffic_selector) (policy_t *this, traffic_selector_t *traffic_selector);
 	
@@ -222,30 +180,29 @@ struct policy_t {
 	 * 
 	 * The proposals are stored by priority, first added
 	 * is the most prefered.
+	 * After add, proposal is owned by policy.
 	 * 
-	 * @warning Do not add while other threads are reading.
-	 * 
-	 * @param this					calling object
-	 * @param proposal				proposal to add
+	 * @param this			calling object
+	 * @param proposal		proposal to add
 	 */
 	void (*add_proposal) (policy_t *this, proposal_t *proposal);
 	
 	/**
-	 * @brief Add certification authorities
+	 * @brief Add certification authorities.
 	 * 
-	 * @param this					calling object
-	 * @param my_ca					issuer of my certificate
-	 * @param other_ca				required issuer of the peer's certificate
+	 * @param this			calling object
+	 * @param my_ca			issuer of my certificate
+	 * @param other_ca		required issuer of the peer's certificate
 	 */
 	void (*add_authorities) (policy_t *this, identification_t *my_ca, identification_t *other_ca);
 
 	/**
-	 * @brief Add updown script
+	 * @brief Get updown script
 	 * 
-	 * @param this					calling object
-	 * @param updown				updown script
+	 * @param this			calling object
+	 * @return				path to updown script
 	 */
-	void (*add_updown) (policy_t *this, char *updown);
+	char* (*get_updown) (policy_t *this);
 
 	/**
 	 * @brief Get the lifetime of a policy, before rekeying starts.
@@ -253,29 +210,34 @@ struct policy_t {
 	 * A call to this function automatically adds a jitter to
 	 * avoid simultanous rekeying.
 	 * 
-	 * @param this				policy 
-	 * @return					lifetime in seconds
+	 * @param this			policy 
+	 * @return				lifetime in seconds
 	 */
 	u_int32_t (*get_soft_lifetime) (policy_t *this);
 	
 	/**
 	 * @brief Get the lifetime of a policy, before SA gets deleted.
 	 * 
-	 * @param this				policy
-	 * @return					lifetime in seconds
+	 * @param this			policy
+	 * @return				lifetime in seconds
 	 */
 	u_int32_t (*get_hard_lifetime) (policy_t *this);
 	
 	/**
-	 * @brief Clone a policy.
+	 * @brief Get a new reference.
+	 *
+	 * Get a new reference to this policy by increasing
+	 * it's internal reference counter.
 	 * 
-	 * @param this				policy to clone
-	 * @return					clone of it
+	 * @param this				calling object
 	 */
-	policy_t *(*clone) (policy_t *this);
+	void (*get_ref) (policy_t *this);
 	
 	/**
-	 * @brief Destroys the policy object
+	 * @brief Destroys the policy object.
+	 *
+	 * Decrements the internal reference counter and
+	 * destroys the policy when it reaches zero.
 	 * 
 	 * @param this				calling object
 	 */
@@ -291,6 +253,7 @@ struct policy_t {
  * (soft_lifetime - random(0, jitter)). After a successful rekeying, 
  * the hard_lifetime limit counter is reset. You should specify
  * hard_lifetime > soft_lifetime > jitter.
+ * After a call to create, a reference is obtained (refcount = 1).
  * 
  * @param name				name of the policy
  * @param my_id 			identification_t for ourselves
@@ -298,11 +261,14 @@ struct policy_t {
  * @param hard_lifetime		lifetime before deleting an SA
  * @param soft_lifetime		lifetime before rekeying an SA
  * @param jitter			range of randomization time
+ * @param updown			updown script to execute on up/down event
  * @return 					policy_t object
  * 
  * @ingroup config
  */
-policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
-						u_int32_t hard_lifetime, u_int32_t soft_lifetime, u_int32_t jitter);
+policy_t *policy_create(char *name, 
+						identification_t *my_id, identification_t *other_id,
+						u_int32_t hard_lifetime, u_int32_t soft_lifetime,
+						u_int32_t jitter, char *updown);
 
 #endif /* POLICY_H_ */

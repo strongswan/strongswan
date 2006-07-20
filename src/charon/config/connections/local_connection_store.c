@@ -116,7 +116,7 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 			{
 				found = candidate;
 				best_prio = prio;
-			}			
+			}
 		}
 	}
 	iterator->destroy(iterator);
@@ -132,13 +132,9 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 						  found_my_host->get_string(found_my_host),
 						  found_other_host->get_string(found_other_host),
 						  best_prio);
-
-		found = found->clone(found);
-		if (best_prio & PRIO_ADDR_ANY)
-		{
-			/* replace %any by the peer's address */
-			found->update_other_host(found, other_host->clone(other_host));
-		}
+		
+		/* give out a new reference to it */
+		found->get_ref(found);
 	}
 	pthread_mutex_unlock(&(this->mutex));
 	return found;
@@ -159,13 +155,15 @@ static connection_t *get_connection_by_name(private_local_connection_store_t *th
 		iterator->current(iterator, (void**)&current);
 		if (strcmp(name, current->get_name(current)) == 0)
 		{
-			found = current->clone(current);
+			found = current;
 			break;
 		}
 	}
 	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->mutex));
 	
+	/* get a new reference for it */
+	found->get_ref(found);
 	return found;
 }
 

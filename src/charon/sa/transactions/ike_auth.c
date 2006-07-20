@@ -90,12 +90,12 @@ struct private_ike_auth_t {
 	chunk_t init_response;
 	
 	/**
-	 * connection definition used
+	 * connection definition used for IKE_SA setup
 	 */
 	connection_t *connection;
 	
 	/**
-	 * policy definition used
+	 * policy definition used CHILD_SA creation
 	 */
 	policy_t *policy;
 	
@@ -147,6 +147,16 @@ static u_int32_t requested(private_ike_auth_t *this)
 }
 
 /**
+ * Implementation of transaction_t.set_config.
+ */
+static void set_config(private_ike_auth_t *this,
+					   connection_t *connection, policy_t *policy)
+{
+	this->connection = connection;
+	this->policy = policy;
+}
+
+/**
  * Implementation of transaction_t.set_nonces.
  */
 static void set_nonces(private_ike_auth_t *this, chunk_t nonce_i, chunk_t nonce_r)
@@ -162,6 +172,23 @@ static void set_init_messages(private_ike_auth_t *this, chunk_t init_request, ch
 {
 	this->init_request = init_request;
 	this->init_response = init_response;
+}
+
+/**
+ * destroy a list of traffic selectors
+ */
+static void destroy_ts_list(linked_list_t *list)
+{
+	if (list)
+	{
+		traffic_selector_t *ts;
+
+		while (list->remove_last(list, (void**)&ts) == SUCCESS)
+		{
+			ts->destroy(ts);
+		}
+		list->destroy(list);
+	}
 }
 
 /**
@@ -181,10 +208,8 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		return SUCCESS;
 	}
 	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
-	this->policy = this->ike_sa->get_policy(this->ike_sa);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	my_id = this->policy->get_my_id(this->policy);
 	other_id = this->policy->get_other_id(this->policy);
 	
@@ -203,6 +228,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	{	/* build ID payload */
 		my_id_payload = id_payload_create_from_identification(TRUE, my_id);
 		request->add_payload(request, (payload_t*)my_id_payload);
+		this->ike_sa->set_my_id(this->ike_sa, my_id->clone(my_id));
 	}
 	
 	{	/* TODO: build certreq payload */
@@ -239,9 +265,11 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	{	/* build auth payload */
 		authenticator_t *authenticator;
 		auth_payload_t *auth_payload;
+		auth_method_t auth_method;
 		status_t status;
-	
-		authenticator = authenticator_create(this->ike_sa);
+		
+		auth_method = this->connection->get_auth_method(this->connection);
+		authenticator = authenticator_create(this->ike_sa, auth_method);
 		status = authenticator->compute_auth_data(authenticator, &auth_payload,
 				this->init_request, this->nonce_r, my_id_payload, TRUE);
 		authenticator->destroy(authenticator);
@@ -278,8 +306,9 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		linked_list_t *ts_list;
 		ts_payload_t *ts_payload;
 	
-		ts_list = this->policy->get_my_traffic_selectors(this->policy);
+		ts_list = this->policy->get_my_traffic_selectors(this->policy, me);
 		ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_list);
+		destroy_ts_list(ts_list);
 		
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
@@ -288,8 +317,9 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		linked_list_t *ts_list;
 		ts_payload_t *ts_payload;
 	
-		ts_list = this->policy->get_other_traffic_selectors(this->policy);
+		ts_list = this->policy->get_other_traffic_selectors(this->policy, other);
 		ts_payload = ts_payload_create_from_traffic_selectors(FALSE, ts_list);
+		destroy_ts_list(ts_list);
 		
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
@@ -465,23 +495,6 @@ static status_t install_child_sa(private_ike_auth_t *this, bool initiator)
 }
 
 /**
- * destroy a list of traffic selectors
- */
-static void destroy_ts_list(linked_list_t *list)
-{
-	if (list)
-	{
-		traffic_selector_t *ts;
-
-		while (list->remove_last(list, (void**)&ts) == SUCCESS)
-		{
-			ts->destroy(ts);
-		}
-		list->destroy(list);
-	}
-}
-
-/**
  * Implementation of transaction_t.get_response.
  */
 static status_t get_response(private_ike_auth_t *this, message_t *request, 
@@ -508,9 +521,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		return SUCCESS;
 	}
 	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
@@ -607,13 +619,32 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		{
 			my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
 		}
+	}
+	
+	{	/* get a policy and process traffic selectors */
+		linked_list_t *my_ts, *other_ts;
 		
-		/* get policy from store */
-		this->policy = charon->policies->get_policy_by_ids(charon->policies, my_id, other_id);
+		my_ts = tsr_request->get_traffic_selectors(tsr_request);
+		other_ts = tsi_request->get_traffic_selectors(tsi_request);
+		
+		this->policy = charon->policies->get_policy(charon->policies,
+													my_id, other_id,
+													my_ts, other_ts,
+												    me, other);
+		if (this->policy)
+		{
+			this->tsr = this->policy->select_my_traffic_selectors(this->policy, my_ts, me);
+			this->tsi = this->policy->select_other_traffic_selectors(this->policy, other_ts, other);
+		}
+		destroy_ts_list(my_ts);
+		destroy_ts_list(other_ts);
+		
+		/* TODO: We should check somehow if we have a policy, but with other
+		 * traffic selectors. Then we would create a IKE_SA without a CHILD_SA. */
 		if (this->policy == NULL)
 		{
 			this->logger->log(this->logger, AUDIT,
-							  "we don't have a policy for IDs %s - %s, deleting IKE_SA", 
+							  "no acceptable policy for IDs %s - %s found, deleting IKE_SA", 
 							  my_id->get_string(my_id), other_id->get_string(other_id));
 			my_id->destroy(my_id);
 			other_id->destroy(other_id);
@@ -621,16 +652,12 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			return DESTROY_ME;
 		}
 		my_id->destroy(my_id);
-		other_id->destroy(other_id);
 		
 		/* get my id from policy, which must contain a fully qualified valid id */
 		my_id = this->policy->get_my_id(this->policy);
+		this->ike_sa->set_my_id(this->ike_sa, my_id->clone(my_id));
+		this->ike_sa->set_other_id(this->ike_sa, other_id);
 		
-		/* update others traffic selectors with actually used address */
-		this->policy->update_my_ts(this->policy, me);
-		this->policy->update_other_ts(this->policy, other);
-		
-		this->ike_sa->set_policy(this->ike_sa, this->policy);
 		idr_response = id_payload_create_from_identification(FALSE, my_id);
 		response->add_payload(response, (payload_t*)idr_response);
 	}
@@ -658,9 +685,11 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	{	/* process auth payload */
 		authenticator_t *authenticator;
 		auth_payload_t *auth_response;
+		auth_method_t auth_method;
 		status_t status;
-	
-		authenticator = authenticator_create(this->ike_sa);
+		
+		auth_method = this->connection->get_auth_method(this->connection);
+		authenticator = authenticator_create(this->ike_sa, auth_method);
 		status = authenticator->verify_auth_data(authenticator, auth_request,
 												this->init_request,
 												this->nonce_r, idi_request,
@@ -686,18 +715,6 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			return DESTROY_ME;
 		}
 		response->add_payload(response, (payload_t*)auth_response);
-	}
-	
-	{	/* process traffic selectors for other */
-		linked_list_t *ts_received = tsi_request->get_traffic_selectors(tsi_request);
-		this->tsi = this->policy->select_other_traffic_selectors(this->policy, ts_received);
-		destroy_ts_list(ts_received);
-	}
-	
-	{	/* process traffic selectors for us */
-		linked_list_t *ts_received = ts_received = tsr_request->get_traffic_selectors(tsr_request);
-		this->tsr = this->policy->select_my_traffic_selectors(this->policy, ts_received);
-		destroy_ts_list(ts_received);
 	}
 	
 	{	/* process SA payload */
@@ -793,8 +810,8 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		return DESTROY_ME;
 	}
 	
-	me = this->connection->get_my_host(this->connection);
-	other = this->connection->get_other_host(this->connection);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	
 	/* Iterate over all payloads to collect them */
 	payloads = response->get_payload_iterator(response);
@@ -872,8 +889,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 							  configured_other_id->get_string(configured_other_id));
 			return DESTROY_ME;
 		}
-		
-		this->policy->update_other_id(this->policy, other_id);
+		this->ike_sa->set_other_id(this->ike_sa, other_id);
 	}
 	
 	if (cert_payload)
@@ -883,9 +899,11 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	
 	{	/* authenticate peer */
 		authenticator_t *authenticator;
+		auth_method_t auth_method;
 		status_t status;
 		
-		authenticator = authenticator_create(this->ike_sa);
+		auth_method = this->connection->get_auth_method(this->connection);
+		authenticator = authenticator_create(this->ike_sa, auth_method);
 		status = authenticator->verify_auth_data(authenticator, auth_payload,
 				this->init_response,
 				this->nonce_i, idr_payload,
@@ -900,13 +918,13 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	
 	{	/* process traffic selectors for us */
 		linked_list_t *ts_received = tsi_payload->get_traffic_selectors(tsi_payload);
-		this->tsi = this->policy->select_my_traffic_selectors(this->policy, ts_received);
+		this->tsi = this->policy->select_my_traffic_selectors(this->policy, ts_received, me);
 		destroy_ts_list(ts_received);
 	}
 	
 	{	/* process traffic selectors for other */
 		linked_list_t *ts_received = tsr_payload->get_traffic_selectors(tsr_payload);
-		this->tsr = this->policy->select_other_traffic_selectors(this->policy, ts_received);
+		this->tsr = this->policy->select_other_traffic_selectors(this->policy, ts_received, other);
 		destroy_ts_list(ts_received);
 	}
 	
@@ -952,18 +970,11 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
  */
 static void destroy(private_ike_auth_t *this)
 {
-	if (this->message)
-	{
-		this->message->destroy(this->message);
-	}
-	if (this->proposal)
-	{
-		this->proposal->destroy(this->proposal);
-	}
-	if (this->child_sa)
-	{
-		this->child_sa->destroy(this->child_sa);
-	}
+	DESTROY_IF(this->message);
+	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->child_sa);
+	DESTROY_IF(this->policy);
+	DESTROY_IF(this->connection);
 	destroy_ts_list(this->tsi);
 	destroy_ts_list(this->tsr);
 	chunk_free(&this->nonce_i);
@@ -989,6 +1000,7 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa)
 	this->public.transaction.destroy = (void(*)(transaction_t*))destroy;
 	
 	/* public functions */
+	this->public.set_config = (void(*)(ike_auth_t*,connection_t*,policy_t*))set_config;
 	this->public.set_nonces = (void(*)(ike_auth_t*,chunk_t,chunk_t))set_nonces;
 	this->public.set_init_messages = (void(*)(ike_auth_t*,chunk_t,chunk_t))set_init_messages;
 	

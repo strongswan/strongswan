@@ -356,16 +356,18 @@ static void update_address_range(private_traffic_selector_t *this, host_t *host)
  */
 static traffic_selector_t *clone_(private_traffic_selector_t *this)
 {
-	private_traffic_selector_t *clone = traffic_selector_create(this->protocol, this->type, this->from_port, this->to_port);
-	clone->type = this->type;
-	clone->string = strdup(this->string);
+	private_traffic_selector_t *clone;
+	
+	clone = traffic_selector_create(this->protocol, this->type, 
+									this->from_port, this->to_port);
 	switch (clone->type)
 	{
 		case TS_IPV4_ADDR_RANGE:
 		{
 			clone->from_addr_ipv4 = this->from_addr_ipv4;
 			clone->to_addr_ipv4 = this->to_addr_ipv4;
-			return &(clone->public);	
+			update_string(clone);
+			return &clone->public;
 		}
 		case TS_IPV6_ADDR_RANGE:
 		default:
@@ -391,8 +393,7 @@ static void destroy(private_traffic_selector_t *this)
 traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_type_t type, chunk_t from_addr, u_int16_t from_port, chunk_t to_addr, u_int16_t to_port)
 {
 	private_traffic_selector_t *this = traffic_selector_create(protocol, type, from_port, to_port);
-
-	this->type = type;
+	
 	switch (type)
 	{
 		case TS_IPV4_ADDR_RANGE:
@@ -400,12 +401,12 @@ traffic_selector_t *traffic_selector_create_from_bytes(u_int8_t protocol, ts_typ
 			if (from_addr.len != 4 || to_addr.len != 4)
 			{
 				free(this);
-				return NULL;	
+				return NULL;
 			}
 			/* chunk contains network order, convert! */
 			this->from_addr_ipv4 = ntohl(*((u_int32_t*)from_addr.ptr));
 			this->to_addr_ipv4 = ntohl(*((u_int32_t*)to_addr.ptr));
-			break;	
+			break;
 		}
 		case TS_IPV6_ADDR_RANGE:
 		default:

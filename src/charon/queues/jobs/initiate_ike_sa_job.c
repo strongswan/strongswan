@@ -41,9 +41,14 @@ struct private_initiate_ike_sa_job_t {
 	initiate_ike_sa_job_t public;
 	
 	/**
-	 * associated connection object to initiate
+	 * associated connection to initiate
 	 */
 	connection_t *connection;
+	
+	/**
+	 * associated policy to initiate
+	 */
+	policy_t *policy;
 	
 	/**
 	 * logger
@@ -75,7 +80,9 @@ static status_t execute(private_initiate_ike_sa_job_t *this)
 	this->logger->log(this->logger, CONTROL|LEVEL2, "Creating and checking out IKE SA");
 	charon->ike_sa_manager->create_and_checkout(charon->ike_sa_manager, &ike_sa);
 	
-	status = ike_sa->initiate(ike_sa, this->connection->clone(this->connection));
+	this->connection->get_ref(this->connection);
+	this->policy->get_ref(this->policy);
+	status = ike_sa->initiate(ike_sa, this->connection, this->policy);
 	if (status != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR,
@@ -95,13 +102,14 @@ static status_t execute(private_initiate_ike_sa_job_t *this)
 static void destroy(private_initiate_ike_sa_job_t *this)
 {
 	this->connection->destroy(this->connection);
+	this->policy->destroy(this->policy);
 	free(this);
 }
 
 /*
  * Described in header
  */
-initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection)
+initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection, policy_t *policy)
 {
 	private_initiate_ike_sa_job_t *this = malloc_thing(private_initiate_ike_sa_job_t);
 	
@@ -112,7 +120,8 @@ initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection)
 	
 	/* private variables */
 	this->connection = connection;
+	this->policy = policy;
 	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
-	return &(this->public);
+	return &this->public;
 }

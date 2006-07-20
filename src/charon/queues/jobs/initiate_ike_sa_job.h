@@ -26,6 +26,7 @@
 #include <types.h>
 #include <queues/jobs/job.h>
 #include <config/connections/connection.h>
+#include <config/policies/policy.h>
 
 
 typedef struct initiate_ike_sa_job_t initiate_ike_sa_job_t;
@@ -33,8 +34,7 @@ typedef struct initiate_ike_sa_job_t initiate_ike_sa_job_t;
 /**
  * @brief Class representing an INITIATE_IKE_SA Job.
  * 
- * This job is created if an IKE_SA should be iniated. This 
- * happens via a user request, or via the kernel interface.
+ * This job is created if an IKE_SA should be iniated.
  * 
  * @b Constructors:
  * - initiate_ike_sa_job_create()
@@ -52,10 +52,12 @@ struct initiate_ike_sa_job_t {
  * @brief Creates a job of type INITIATE_IKE_SA.
  * 
  * @param connection	connection_t to initializes
+ * @param policy		policy to set up
  * @return				initiate_ike_sa_job_t object
  * 
  * @ingroup jobs
  */
-initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection);
+initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection,
+												  policy_t *policy);
 
 #endif /*INITIATE_IKE_SA_JOB_H_*/

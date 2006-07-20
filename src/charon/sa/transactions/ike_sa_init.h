@@ -47,6 +47,19 @@ struct ike_sa_init_t {
 	transaction_t transaction;
 	
 	/**
+	 * @brief Set connection & policy to use for initiation.
+	 *
+	 * The policy is not used directly, but forwarded to the 
+	 * ike_auth transaction.
+	 * 
+	 * @param this			calling object
+	 * @param connection	connection to use for initiation
+	 * @param policy		policy used in ike_auth transaction
+	 */
+	void (*set_config) (ike_sa_init_t* this, 
+						connection_t *connection, policy_t *policy);
+	
+	/**
 	 * @brief Set the Diffie Hellman group to use for initiating.
 	 * 
 	 * If a first exchange fails with a INVALID_KE_PAYLOAD, the second

@@ -51,6 +51,11 @@ struct private_authenticator_t {
 	ike_sa_t *ike_sa;
 	
 	/**
+	 * auth_method to create own signature/mac/whatever..
+	 */
+	auth_method_t auth_method;
+	
+	/**
 	 * PRF taken from the IKE_SA.
 	 */
 	prf_t *prf;
@@ -294,10 +299,8 @@ static status_t compute_auth_data (private_authenticator_t *this,
 									chunk_t other_nonce,
 									id_payload_t *my_id_payload,
 									bool initiator)
-{
-	connection_t *connection = this->ike_sa->get_connection(this->ike_sa);
-	
-	switch(connection->get_auth_method(connection))
+{	
+	switch(this->auth_method)
 	{
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
 		{
@@ -405,7 +408,7 @@ static void destroy (private_authenticator_t *this)
 /*
  * Described in header.
  */
-authenticator_t *authenticator_create(ike_sa_t *ike_sa)
+authenticator_t *authenticator_create(ike_sa_t *ike_sa, auth_method_t auth_method)
 {
 	private_authenticator_t *this = malloc_thing(private_authenticator_t);
 
@@ -420,6 +423,7 @@ authenticator_t *authenticator_create(ike_sa_t *ike_sa)
 	
 	/* private data */
 	this->ike_sa = ike_sa;
+	this->auth_method = auth_method;
 	this->prf = this->ike_sa->get_prf(this->ike_sa);
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	

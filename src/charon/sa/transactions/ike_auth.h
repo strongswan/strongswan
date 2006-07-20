@@ -50,6 +50,20 @@ struct ike_auth_t {
 	transaction_t transaction;
 	
 	/**
+	 * @brief Set the config used for the ike_auth exchange.
+	 *
+	 * The connection definition is used to complete IKE_SA setup, the
+	 * policy defines the CHILD_SA which is created along with the ike_auth
+	 * exchange.
+	 *
+	 * @param this			calling object
+	 * @param connection	connection definition
+	 * @param policy		policy definition
+	 */
+	void (*set_config) (ike_auth_t* this, 
+						connection_t *connection, policy_t *policy);
+	
+	/**
 	 * @brief Set the nonces used in the previous ike_sa_init transaction.
 	 * 
 	 * The nonces are used to create the authentication data.

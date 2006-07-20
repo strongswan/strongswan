@@ -90,9 +90,14 @@ struct private_ike_sa_init_t {
 	chunk_t nonce_r;
 	
 	/**
-	 * connection definition used
+	 * connection definition used for initiation
 	 */
 	connection_t *connection;
+	
+	/**
+	 * policy definition forwarded to ike_auth transaction
+	 */
+	policy_t *policy;
 	
 	/**
 	 * Negotiated proposal used for IKE_SA
@@ -150,8 +155,6 @@ struct private_ike_sa_init_t {
  */
 static bool use_dh_group(private_ike_sa_init_t *this, diffie_hellman_group_t dh_group)
 {
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
-	
 	if (this->connection->check_dh_group(this->connection, dh_group))
 	{
 		this->diffie_hellman = diffie_hellman_create(dh_group);
@@ -161,6 +164,16 @@ static bool use_dh_group(private_ike_sa_init_t *this, diffie_hellman_group_t dh_
 		}
 	}
 	return FALSE;
+}
+
+/**
+ * Implementation of ike_sa_init_t.set_config.
+ */
+static void set_config(private_ike_sa_init_t *this,
+					   connection_t *connection, policy_t *policy)
+{
+	this->connection = connection;
+	this->policy = policy;
 }
 
 /**
@@ -264,7 +277,6 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		return SUCCESS;
 	}
 	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
 	me = this->connection->get_my_host(this->connection);
 	other = this->connection->get_other_host(this->connection);
 	
@@ -398,6 +410,9 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 				return DESTROY_ME;
 			}
 			retry = ike_sa_init_create(this->ike_sa);
+			retry->set_config(retry, this->connection, this->policy);
+			this->connection = NULL;
+			this->policy = NULL;
 			retry->use_dh_group(retry, dh_group);
 			*this->next = (transaction_t*)retry;
 			return FAILED;
@@ -523,7 +538,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 						  me->get_string(me), other->get_string(other));
 		return DESTROY_ME;
 	}
-	this->ike_sa->set_connection(this->ike_sa, this->connection);
+	this->ike_sa->set_name(this->ike_sa, 
+						   this->connection->get_name(this->connection));
 	
 	/* Precompute NAT-D hashes for incoming NAT notify comparison */
 	ike_sa_id = request->get_ike_sa_id(request);
@@ -769,6 +785,9 @@ static status_t get_response(private_ike_sa_init_t *this,
 		
 		/* create next transaction, for which we except a message */
 		ike_auth = ike_auth_create(this->ike_sa);
+		ike_auth->set_config(ike_auth, this->connection, this->policy);
+		this->connection = NULL;
+		this->policy = NULL;
 		ike_auth->set_nonces(ike_auth,
 							 chunk_clone(this->nonce_i),
 							 chunk_clone(this->nonce_r));
@@ -802,7 +821,6 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	sa_payload_t *sa_payload = NULL;
 	ke_payload_t *ke_payload = NULL;
 	nonce_payload_t *nonce_payload = NULL;
-	policy_t *policy;
 	status_t status;
 	
 	/* check message type */
@@ -816,7 +834,6 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	/* allow setting of next transaction in other functions */
 	this->next = next;
 	
-	this->connection = this->ike_sa->get_connection(this->ike_sa);
 	me = this->connection->get_my_host(this->connection);
 	other = this->connection->get_other_host(this->connection);
 	
@@ -971,9 +988,6 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 			other->set_port(other, IKEV2_NATT_PORT);
 			this->logger->log(this->logger, CONTROL|LEVEL1, "switching to port %d", IKEV2_NATT_PORT);
 		}
-		policy = this->ike_sa->get_policy(this->ike_sa);
-		policy->update_my_ts(policy, me);
-		policy->update_other_ts(policy, other);
 	}
 	
 	/* because we are original initiator we have to update the responder SPI to the new one */
@@ -1000,6 +1014,9 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		
 		/* create next transaction, for which we except a message */
 		ike_auth = ike_auth_create(this->ike_sa);
+		ike_auth->set_config(ike_auth, this->connection, this->policy);
+		this->connection = NULL;
+		this->policy = NULL;
 		ike_auth->set_nonces(ike_auth,
 							 chunk_clone(this->nonce_i),
 							 chunk_clone(this->nonce_r));
@@ -1012,18 +1029,11 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 
 static void destroy(private_ike_sa_init_t *this)
 {
-	if (this->message)
-	{
-		this->message->destroy(this->message);
-	}
-	if (this->diffie_hellman)
-	{
-		this->diffie_hellman->destroy(this->diffie_hellman);
-	}
-	if (this->proposal)
-	{
-		this->proposal->destroy(this->proposal);
-	}
+	DESTROY_IF(this->message);
+	DESTROY_IF(this->diffie_hellman);
+	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->connection);
+	DESTROY_IF(this->policy);
 	chunk_free(&this->nonce_i);
 	chunk_free(&this->nonce_r);
 	this->randomizer->destroy(this->randomizer);
@@ -1049,6 +1059,7 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	this->public.transaction.destroy = (void(*)(transaction_t*))destroy;
 	
 	/* public functions */
+	this->public.set_config = (void(*)(ike_sa_init_t*,connection_t*,policy_t*))set_config;
 	this->public.use_dh_group = (bool(*)(ike_sa_init_t*,diffie_hellman_group_t))use_dh_group;
 	
 	/* private data */
@@ -1060,6 +1071,7 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	this->nonce_i = CHUNK_INITIALIZER;
 	this->nonce_r = CHUNK_INITIALIZER;
 	this->connection = NULL;
+	this->policy = NULL;
 	this->proposal = NULL;
 	this->randomizer = randomizer_create();
 	this->nat_hasher = hasher_create(HASH_SHA1);
@@ -1070,6 +1082,6 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	this->natd_src_matched = FALSE;
 	this->natd_dst_matched = FALSE;
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
-
+	
 	return &this->public;
 }

@@ -86,7 +86,6 @@ static u_int32_t requested(private_delete_ike_sa_t *this)
 static status_t get_request(private_delete_ike_sa_t *this, message_t **result)
 {
 	message_t *request;
-	connection_t *connection;
 	host_t *me, *other;
 	delete_payload_t *delete_payload;
 	
@@ -97,9 +96,8 @@ static status_t get_request(private_delete_ike_sa_t *this, message_t **result)
 		return SUCCESS;
 	}
 	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	me = connection->get_my_host(connection);
-	other = connection->get_other_host(connection);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	
 	/* build the request */
 	request = message_create();
@@ -134,7 +132,6 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	message_t *response;
 	iterator_t *payloads;
 	delete_payload_t *delete_request = NULL;
-	connection_t *connection;
 	
 	/* check if we already have built a response (retransmission) 
 	 * this only happens in special simultanous transaction cases,
@@ -145,9 +142,8 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 		return SUCCESS;
 	}
 	
-	connection = this->ike_sa->get_connection(this->ike_sa);
-	me = connection->get_my_host(connection);
-	other = connection->get_other_host(connection);
+	me = this->ike_sa->get_my_host(this->ike_sa);
+	other = this->ike_sa->get_other_host(this->ike_sa);
 	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
@@ -240,10 +236,7 @@ static status_t conclude(private_delete_ike_sa_t *this, message_t *response,
  */
 static void destroy(private_delete_ike_sa_t *this)
 {
-	if (this->message)
-	{
-		this->message->destroy(this->message);
-	}
+	DESTROY_IF(this->message);
 	free(this);
 }
 

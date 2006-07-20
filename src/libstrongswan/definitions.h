@@ -90,6 +90,11 @@
 #define min(x,y) ((x) < (y) ? (x):(y))
 
 /**
+ * Call destructor of a object if object != NULL
+ */
+#define DESTROY_IF(obj) if (obj) obj->destroy(obj)
+
+/**
  * Debug macro to follow control flow
  */
 #define POS printf("%s, line %d\n", __FILE__, __LINE__)
