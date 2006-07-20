@@ -142,8 +142,8 @@ static status_t execute(private_incoming_packet_job_t *this)
 	ike_sa_id = message->get_ike_sa_id(message);
 	ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	ike_sa_id->switch_initiator(ike_sa_id);
-	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id, &ike_sa);
-	if (status != SUCCESS)
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id);
+	if (ike_sa == NULL)
 	{
 		this->logger->log(this->logger, ERROR,
 						  "received packet with SPIs %llx:%llx, but no such IKE_SA",
@@ -158,11 +158,11 @@ static status_t execute(private_incoming_packet_job_t *this)
 	status = ike_sa->process_message(ike_sa, message);
 	if (status == DESTROY_ME)
 	{
-		status = charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 	}
 	else
 	{
-		status = charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	ike_sa_id->destroy(ike_sa_id);
 	message->destroy(message);

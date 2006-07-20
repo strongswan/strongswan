@@ -51,11 +51,11 @@ enum job_type_t {
 	RETRANSMIT_REQUEST,
 	
 	/** 
-	 * Establish an ike sa as initiator.
+	 * Set up a CHILD_SA, optional with an IKE_SA.
 	 * 
-	 * Job is implemented in class initiate_ike_sa_job_t
+	 * Job is implemented in class initiate_job_t
 	 */
-	INITIATE_IKE_SA,
+	INITIATE,
 	
 	/** 
 	 * Delete an ike sa which is still not established.

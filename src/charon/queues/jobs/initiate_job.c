@@ -1,7 +1,7 @@
 /**
- * @file initiate_ike_sa_job.c
+ * @file initiate_job.c
  * 
- * @brief Implementation of initiate_ike_sa_job_t.
+ * @brief Implementation of initiate_job_t.
  * 
  */
 
@@ -24,21 +24,21 @@
 
 #include <stdlib.h>
 
-#include "initiate_ike_sa_job.h"
+#include "initiate_job.h"
 
 #include <daemon.h>
 #include <queues/jobs/delete_half_open_ike_sa_job.h>
 
-typedef struct private_initiate_ike_sa_job_t private_initiate_ike_sa_job_t;
+typedef struct private_initiate_job_t private_initiate_job_t;
 
 /**
- * Private data of an initiate_ike_sa_job_t Object
+ * Private data of an initiate_job_t Object
  */
-struct private_initiate_ike_sa_job_t {
+struct private_initiate_job_t {
 	/**
-	 * public initiate_ike_sa_job_t interface
+	 * public initiate_job_t interface
 	 */
-	initiate_ike_sa_job_t public;
+	initiate_job_t public;
 	
 	/**
 	 * associated connection to initiate
@@ -57,37 +57,31 @@ struct private_initiate_ike_sa_job_t {
 };
 
 /**
- * Implements initiate_ike_sa_job_t.get_type.
+ * Implements initiate_job_t.get_type.
  */
-static job_type_t get_type(private_initiate_ike_sa_job_t *this)
+static job_type_t get_type(private_initiate_job_t *this)
 {
-	return INITIATE_IKE_SA;
+	return INITIATE;
 }
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_initiate_ike_sa_job_t *this)
+static status_t execute(private_initiate_job_t *this)
 {
-	/* Initiatie an IKE_SA:
-	 * - is defined by a connection
-	 * - create an empty IKE_SA via manager
-	 * - call initiate() on this IKE_SA
-	 */
 	ike_sa_t *ike_sa;
-	status_t status;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "Creating and checking out IKE SA");
-	charon->ike_sa_manager->create_and_checkout(charon->ike_sa_manager, &ike_sa);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "getting an IKE SA");
+	ike_sa = charon->ike_sa_manager->checkout_by_ids(charon->ike_sa_manager,
+										this->policy->get_my_id(this->policy),
+										this->policy->get_other_id(this->policy));
 	
 	this->connection->get_ref(this->connection);
 	this->policy->get_ref(this->policy);
-	status = ike_sa->initiate(ike_sa, this->connection, this->policy);
-	if (status != SUCCESS)
+	if (ike_sa->initiate(ike_sa, this->connection, this->policy) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR,
-						  "initiation returned %s, going to delete IKE_SA.",
-						  mapping_find(status_m, status));
+						  "initiation failed, going to delete IKE_SA");
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 		return DESTROY_ME;
 	}
@@ -99,7 +93,7 @@ static status_t execute(private_initiate_ike_sa_job_t *this)
 /**
  * Implements job_t.destroy.
  */
-static void destroy(private_initiate_ike_sa_job_t *this)
+static void destroy(private_initiate_job_t *this)
 {
 	this->connection->destroy(this->connection);
 	this->policy->destroy(this->policy);
@@ -109,9 +103,9 @@ static void destroy(private_initiate_ike_sa_job_t *this)
 /*
  * Described in header
  */
-initiate_ike_sa_job_t *initiate_ike_sa_job_create(connection_t *connection, policy_t *policy)
+initiate_job_t *initiate_job_create(connection_t *connection, policy_t *policy)
 {
-	private_initiate_ike_sa_job_t *this = malloc_thing(private_initiate_ike_sa_job_t);
+	private_initiate_job_t *this = malloc_thing(private_initiate_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;

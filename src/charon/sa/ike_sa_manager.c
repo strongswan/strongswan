@@ -333,6 +333,34 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 	return status;	
 }
 
+/**
+ * Wait until no other thread is using an IKE_SA, return FALSE if entry not
+ * acquireable
+ */
+static bool wait_for_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *entry)
+{
+	if (entry->driveout_new_threads)
+	{
+		/* we are not allowed to get this */
+		return FALSE;
+	}
+	while (entry->checked_out && !entry->driveout_waiting_threads)	
+	{
+		/* so wait until we can get it for us.
+		* we register us as waiting. */
+		entry->waiting_threads++;
+		pthread_cond_wait(&(entry->condvar), &(this->mutex));
+		entry->waiting_threads--;
+	}
+	/* hm, a deletion request forbids us to get this SA, get next one */
+	if (entry->driveout_waiting_threads)
+	{
+		/* we must signal here, others may be waiting on it, too */
+		pthread_cond_signal(&(entry->condvar));
+		return FALSE;
+	}
+	return TRUE;
+}
 
 /**
  * Implementation of private_ike_sa_manager_t.get_next_spi.
@@ -349,48 +377,92 @@ static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 /**
  * Implementation of of ike_sa_manager.create_and_checkout.
  */
-static void create_and_checkout(private_ike_sa_manager_t *this,ike_sa_t **ike_sa)
+static ike_sa_t* checkout_by_ids(private_ike_sa_manager_t *this,
+								 identification_t *my_id,
+								 identification_t *other_id)
 {
-	u_int64_t initiator_spi;
-	ike_sa_entry_t *new_ike_sa_entry;
-	ike_sa_id_t *new_ike_sa_id;
-
-	initiator_spi = this->get_next_spi(this);
-	new_ike_sa_id = ike_sa_id_create(0, 0, TRUE);
-	new_ike_sa_id->set_initiator_spi(new_ike_sa_id, initiator_spi);
-
-	/* create entry */
-	new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
-	this->logger->log(this->logger, CONTROL|LEVEL2,
-					  "created IKE_SA %llx:%llx, role %s",
-					  new_ike_sa_id->get_initiator_spi(new_ike_sa_id),
-					  new_ike_sa_id->get_responder_spi(new_ike_sa_id),
-					  new_ike_sa_id->is_initiator(new_ike_sa_id) ? "initiator" : "responder");
-	new_ike_sa_id->destroy(new_ike_sa_id);
-
-	/* each access is locked */
+	iterator_t *iterator;
+	ike_sa_t *ike_sa = NULL;
+	
 	pthread_mutex_lock(&(this->mutex));
 	
-	this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
-
-	/* check ike_sa out */
-	this->logger->log(this->logger, CONTROL|LEVEL1, 
-					  "new IKE_SA created and added to list of known IKE_SA's");
-	new_ike_sa_entry->checked_out = TRUE;
-	*ike_sa = new_ike_sa_entry->ike_sa;
-
+	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		ike_sa_entry_t *entry;
+		identification_t *found_my_id, *found_other_id;
+		int wc;
+		
+		iterator->current(iterator, (void**)&entry);
+		if (!wait_for_entry(this, entry))
+		{
+			continue;
+		}
+		
+		found_my_id = entry->ike_sa->get_my_id(entry->ike_sa);
+		found_other_id = entry->ike_sa->get_other_id(entry->ike_sa);
+		
+		if (!found_my_id || !found_other_id)
+		{
+			/* IKE_SA has no IDs yet, so we can't use it */
+			continue;
+		}
+		
+		if (found_my_id->matches(found_my_id, my_id, &wc) &&
+			found_other_id->matches(found_other_id, other_id, &wc))
+		{
+			/* looks good, we take this one */
+			this->logger->log(this->logger, CONTROL|LEVEL1, 
+							  "found an existing IKE_SA for IDs %s - %s",
+							  my_id->get_string(my_id), other_id->get_string(other_id));
+			entry->checked_out = TRUE;
+			ike_sa = entry->ike_sa;
+		}
+	}
+	iterator->destroy(iterator);
+	
+	if (!ike_sa)
+	{
+		u_int64_t initiator_spi;
+		ike_sa_entry_t *new_ike_sa_entry;
+		ike_sa_id_t *new_ike_sa_id;
+		
+		initiator_spi = this->get_next_spi(this);
+		new_ike_sa_id = ike_sa_id_create(0, 0, TRUE);
+		new_ike_sa_id->set_initiator_spi(new_ike_sa_id, initiator_spi);
+		
+		/* create entry */
+		new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
+		this->logger->log(this->logger, CONTROL|LEVEL2,
+						  "created IKE_SA %llx:%llx, role %s",
+						  new_ike_sa_id->get_initiator_spi(new_ike_sa_id),
+						  new_ike_sa_id->get_responder_spi(new_ike_sa_id),
+						  new_ike_sa_id->is_initiator(new_ike_sa_id) ? "initiator" : "responder");
+		new_ike_sa_id->destroy(new_ike_sa_id);
+		
+		this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
+		
+		/* check ike_sa out */
+		this->logger->log(this->logger, CONTROL|LEVEL1, 
+						  "new IKE_SA created for IDs %s - %s",
+						  my_id->get_string(my_id), other_id->get_string(other_id));
+		new_ike_sa_entry->checked_out = TRUE;
+		ike_sa = new_ike_sa_entry->ike_sa;		
+	}
 	pthread_mutex_unlock(&(this->mutex));
+	
+	return ike_sa;
 }
 
 /**
  * Implementation of of ike_sa_manager.checkout.
  */
-static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_t **ike_sa)
+static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 {
 	bool responder_spi_set;
 	bool initiator_spi_set;
 	bool original_initiator;
-	status_t retval;
+	ike_sa_t *ike_sa = NULL;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2,
 					  "checkout IKE_SA %llx:%llx, role %s",
@@ -418,56 +490,25 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		/* look for the entry */
 		if (this->get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
 		{
-			/* can we give this ike_sa out to new requesters?*/
-			if (entry->driveout_new_threads)
+			if (wait_for_entry(this, entry))
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL1, 
-								  "drive out new thread for existing IKE_SA");
-				/* no we can't */
-				retval = NOT_FOUND;
+				this->logger->log(this->logger, CONTROL|LEVEL2, 
+								  "IKE_SA successfully checked out");
+				/* ok, this IKE_SA is finally ours */
+				entry->checked_out = TRUE;
+				ike_sa = entry->ike_sa;
 			}
 			else
 			{
-				/* is this IKE_SA already checked out ?? 
-				 * are we welcome to get this SA ? */
-				while (entry->checked_out && !entry->driveout_waiting_threads)	
-				{ 
-					/* so wait until we can get it for us.
-					 * we register us as waiting.
-					 */
-					entry->waiting_threads++;
-					pthread_cond_wait(&(entry->condvar), &(this->mutex));
-					entry->waiting_threads--;
-				}
-				
-				/* hm, a deletion request forbids us to get this SA, go home */
-				if (entry->driveout_waiting_threads)
-				{
-					/* we must signal here, others are interested that we leave */
-					pthread_cond_signal(&(entry->condvar));
-					this->logger->log(this->logger, CONTROL|LEVEL1, 
-									  "drive out waiting thread for existing IKE_SA");
-					retval = NOT_FOUND;
-				}
-				else
-				{
-					this->logger->log(this->logger, CONTROL|LEVEL2, 
-									  "IKE SA successfully checked out");
-					/* ok, this IKE_SA is finally ours */
-					entry->checked_out = TRUE;
-					*ike_sa = entry->ike_sa;
-					/* DON'T use return, we must unlock the mutex! */
-					retval = SUCCESS; 
-				}
+				this->logger->log(this->logger, CONTROL|LEVEL2, 
+								  "IKE_SA found, but not allowed to check it out");
 			}
 		}
 		else
 		{
 			this->logger->log(this->logger, ERROR|LEVEL1, 
-							  "IKE SA not stored in known IKE_SA list");
+							  "IKE_SA not stored in list");
 			/* looks like there is no such IKE_SA, better luck next time... */
-			/* DON'T use return, we must unlock the mutex! */
-			retval = NOT_FOUND;
 		}
 	}
 	else if ((initiator_spi_set && !responder_spi_set) && (!original_initiator))
@@ -496,23 +537,18 @@ static status_t checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id,
 		
 		/* check ike_sa out */
 		this->logger->log(this->logger, CONTROL|LEVEL1,
-						  "IKE_SA added to list of known IKE_SA's");
+						  "IKE_SA added to list of known IKE_SAs");
 		new_ike_sa_entry->checked_out = TRUE;
-		*ike_sa = new_ike_sa_entry->ike_sa;
-		
-		retval = SUCCESS;
+		ike_sa = new_ike_sa_entry->ike_sa;
 	}
 	else
 	{
 		/* responder set, initiator not: here is something seriously wrong! */
- 		this->logger->log(this->logger, ERROR|LEVEL1, "invalid IKE_SA SPI's");
-		/* DON'T use return, we must unlock the mutex! */
-		retval = INVALID_ARG;
+ 		this->logger->log(this->logger, ERROR|LEVEL1, "invalid IKE_SA SPIs");
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
-	/* OK, unlocked... */
-	return retval;
+	return ike_sa;
 }
 
 /**
@@ -533,34 +569,17 @@ static status_t checkout_by_child(private_ike_sa_manager_t *this,
 		ike_sa_entry_t *entry;
 		
 		iterator->current(iterator, (void**)&entry);
-		if (entry->driveout_new_threads)
+		if (wait_for_entry(this, entry))
 		{
-			/* we are not allowed to get this, get next one */
-			continue;
-		}
-		while (entry->checked_out && !entry->driveout_waiting_threads)	
-		{
-			/* so wait until we can get it for us.
-			 * we register us as waiting. */
-			entry->waiting_threads++;
-			pthread_cond_wait(&(entry->condvar), &(this->mutex));
-			entry->waiting_threads--;
-		}
-		/* hm, a deletion request forbids us to get this SA, get next one */
-		if (entry->driveout_waiting_threads)
-		{
-			/* we must signal here, others may be waiting on it, too */
-			pthread_cond_signal(&(entry->condvar));
-			continue;
-		}
-		/* ok, access is exclusive for us, check for child */
-		if (entry->ike_sa->get_child_sa(entry->ike_sa, protocol, spi, TRUE) != NULL)
-		{
-			/* match */
-			entry->checked_out = TRUE;
-			*ike_sa = entry->ike_sa;
-			status = SUCCESS;
-			break;
+			/* ok, access is exclusive for us, check for child */
+			if (entry->ike_sa->get_child_sa(entry->ike_sa, protocol, spi, TRUE) != NULL)
+			{
+				/* match */
+				entry->checked_out = TRUE;
+				*ike_sa = entry->ike_sa;
+				status = SUCCESS;
+				break;
+			}
 		}
 	}
 	iterator->destroy(iterator);
@@ -638,9 +657,12 @@ static void log_status(private_ike_sa_manager_t* this, logger_t* logger, char* n
 	while (iterator->has_next(iterator))
 	{
 		ike_sa_entry_t *entry;
-
+		
 		iterator->current(iterator, (void**)&entry);
-		entry->ike_sa->log_status(entry->ike_sa, logger, name);
+		if (wait_for_entry(this, entry))
+		{
+			entry->ike_sa->log_status(entry->ike_sa, logger, name);
+		}
 	}
 	iterator->destroy(iterator);
 	
@@ -891,8 +913,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	/* assign public functions */
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
-	this->public.create_and_checkout = (void(*)(ike_sa_manager_t*,ike_sa_t**))create_and_checkout;
-	this->public.checkout = (status_t(*)(ike_sa_manager_t*, ike_sa_id_t*,ike_sa_t**))checkout;
+	this->public.checkout_by_ids = (ike_sa_t*(*)(ike_sa_manager_t*,identification_t*,identification_t*))checkout_by_ids;
+	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
 	this->public.checkout_by_child = (status_t(*)(ike_sa_manager_t*,protocol_id_t,u_int32_t,ike_sa_t**))checkout_by_child;
 	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;
 	this->public.get_ike_sa_list_by_name = (linked_list_t*(*)(ike_sa_manager_t*,const char*))get_ike_sa_list_by_name;

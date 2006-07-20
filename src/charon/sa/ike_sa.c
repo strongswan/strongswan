@@ -782,22 +782,52 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 static status_t initiate(private_ike_sa_t *this,
 						 connection_t *connection, policy_t *policy)
 {
-	ike_sa_init_t *ike_sa_init;
-	
-	set_name(this, connection->get_name(connection));
-	
-	/* apply hosts from connection */
-	this->my_host = connection->get_my_host(connection);
-	this->my_host = this->my_host->clone(this->my_host);
-	this->other_host = connection->get_other_host(connection);
-	this->other_host = this->other_host->clone(this->other_host);
-	
-	this->message_id_out = 1;
-	ike_sa_init = ike_sa_init_create(&this->public);
-	ike_sa_init->set_config(ike_sa_init, connection, policy);
-	return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
+	switch (this->state)
+	{
+		case IKE_CREATED:
+		{
+			/* in state CREATED, we must do the ike_sa_init
+			 * and ike_auth transactions. Along with these,
+			 * a CHILD_SA with the supplied policy is set up.
+			 */
+			ike_sa_init_t *ike_sa_init;
+			
+			set_name(this, connection->get_name(connection));
+			this->my_host = connection->get_my_host(connection);
+			this->my_host = this->my_host->clone(this->my_host);
+			this->other_host = connection->get_other_host(connection);
+			this->other_host = this->other_host->clone(this->other_host);
+			
+			this->message_id_out = 1;
+			ike_sa_init = ike_sa_init_create(&this->public);
+			ike_sa_init->set_config(ike_sa_init, connection, policy);
+			return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
+		}
+		case IKE_DELETING:
+		{
+			/* if we are in DELETING, we deny set up of a policy. */
+			policy->destroy(policy);
+			connection->destroy(connection);
+			return FAILED;
+		}
+		case IKE_CONNECTING:
+		case IKE_ESTABLISHED:
+		{
+			/* if we are ESTABLISHED or CONNECTING,we queue the 
+			 * transaction to create the CHILD_SA. It gets processed
+			 * when the IKE_SA is ready to do so. We don't need the
+			 * connection, as the IKE_SA is already established/establishing.
+			 */
+			create_child_sa_t *create_child;
+			
+			connection->destroy(connection);
+			create_child = create_child_sa_create(&this->public);
+			create_child->set_policy(create_child, policy);
+			return queue_transaction(this, (transaction_t*)create_child, FALSE);
+		}
+	}
+	return FAILED;
 }
-
 
 /**
  * Implementation of ike_sa_t.acquire.
@@ -990,6 +1020,7 @@ static identification_t* get_my_id(private_ike_sa_t *this)
  */
 static void set_my_id(private_ike_sa_t *this, identification_t *me)
 {
+	DESTROY_IF(this->my_id);
 	this->my_id = me;
 }
 
@@ -1006,6 +1037,7 @@ static identification_t* get_other_id(private_ike_sa_t *this)
  */
 static void set_other_id(private_ike_sa_t *this, identification_t *other)
 {
+	DESTROY_IF(this->other_id);
 	this->other_id = other;
 }
 

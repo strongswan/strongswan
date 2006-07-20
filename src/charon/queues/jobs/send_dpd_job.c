@@ -65,16 +65,15 @@ static job_type_t get_type(private_send_dpd_job_t *this)
 static status_t execute(private_send_dpd_job_t *this)
 {
 	ike_sa_t *ike_sa;
-	status_t status;
 	
-	status = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
-											  this->ike_sa_id, &ike_sa);
-	if (status != SUCCESS)
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+											  this->ike_sa_id);
+	if (ike_sa == NULL)
 	{
 		return DESTROY_ME;
 	}
-	status = ike_sa->send_dpd(ike_sa);
-	if (status == DESTROY_ME)
+	
+	if (ike_sa->send_dpd(ike_sa) == DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 	}

@@ -111,6 +111,16 @@ struct private_child_sa_t {
 	u_int32_t reqid;
 	
 	/**
+	 * encryption algorithm used for this SA
+	 */
+	algorithm_t encryption;
+	
+	/**
+	 * integrity protection algorithm used for this SA
+	 */
+	algorithm_t integrity;
+	
+	/**
 	 * time, on which SA was installed
 	 */
 	time_t install_time;
@@ -358,6 +368,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 											  enc_algo, int_algo,
 											  prf_plus, natt, mine);
 	
+	this->encryption = *enc_algo;
+	this->integrity = *int_algo;
 	this->install_time = time(NULL);
 	
 	return status;
@@ -574,6 +586,8 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 	char use_in_str[12] = "unused";
 	char use_out_str[12] = "unused";
 	char rekey_str[12] = "disabled";
+	char enc_str[32] = "";
+	char int_str[32] = "";
 	u_int32_t use_in, use_out, use_fwd, now, rekeying;
 	status_t status;
 	
@@ -604,10 +618,38 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 		snprintf(rekey_str, sizeof(rekey_str), "%ds", (int)rekeying);
 	}
 	
+	/* algorithms used */
+	if (this->protocol == PROTO_ESP)
+	{
+		if (this->encryption.key_size)
+		{
+			snprintf(enc_str, sizeof(enc_str), "%s-%d,", 
+					mapping_find(encryption_algorithm_m, this->encryption.algorithm),
+					this->encryption.key_size);
+		}
+		else
+		{
+			snprintf(enc_str, sizeof(enc_str), "%s,", 
+					mapping_find(encryption_algorithm_m, this->encryption.algorithm));
+		}
+	}
+	if (this->integrity.key_size)
+	{
+		snprintf(int_str, sizeof(int_str), "%s-%d", 
+				 mapping_find(integrity_algorithm_m, this->integrity.algorithm),
+				 this->integrity.key_size);
+	}
+	else
+	{
+		snprintf(int_str, sizeof(int_str), "%s", 
+				 mapping_find(integrity_algorithm_m, this->integrity.algorithm));
+	}
+	
 	logger->log(logger, CONTROL|LEVEL1,
-				"  \"%s\":   using %s, SPIs (in/out): 0x%x/0x%x, reqid: %d",
+				"  \"%s\":   %s (%s%s), SPIs (in/out): 0x%x/0x%x, reqid: %d",
 				name,
 				this->protocol == PROTO_ESP ? "ESP" : "AH",
+				enc_str, int_str,
 				htonl(this->me.spi), htonl(this->other.spi),
 				this->reqid);
 	logger->log(logger, CONTROL|LEVEL1,
@@ -898,6 +940,10 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->state = CHILD_CREATED;
 	/* reuse old reqid if we are rekeying an existing CHILD_SA */
 	this->reqid = rekey ? rekey : ++reqid;
+	this->encryption.algorithm = ENCR_UNDEFINED;
+	this->encryption.key_size = 0;
+	this->integrity.algorithm = AUTH_UNDEFINED;
+	this->encryption.key_size = 0;
 	this->policies = linked_list_create();
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();

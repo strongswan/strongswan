@@ -37,7 +37,7 @@
 #include <types.h>
 #include <daemon.h>
 #include <crypto/x509.h>
-#include <queues/jobs/initiate_ike_sa_job.h>
+#include <queues/jobs/initiate_job.h>
 
 #define IKE_PORT	500
 #define PATH_BUF	256
@@ -477,11 +477,9 @@ static void stroke_del_conn(private_stroke_t *this, stroke_msg_t *msg)
  */
 static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 {
-	initiate_ike_sa_job_t *job;
+	initiate_job_t *job;
 	connection_t *connection;
 	policy_t *policy;
-	linked_list_t *ike_sas;
-	ike_sa_id_t *ike_sa_id;
 	
 	pop_string(msg, &(msg->initiate.name));
 	this->logger->log(this->logger, CONTROL,
@@ -495,49 +493,29 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		this->stroke_logger->log(this->stroke_logger, ERROR, 
 								 "no connection named \"%s\"", 
 								 msg->initiate.name);
+		return;
 	}
-	/* only initiate if it is an IKEv2 connection, ignore IKEv1 */
-	else if (connection->is_ikev2(connection))
-	{
-		
-		policy = charon->policies->get_policy_by_name(charon->policies, 
-													  msg->initiate.name);
-		if (policy == NULL)
-		{
-			this->stroke_logger->log(this->stroke_logger, ERROR,
-									 "no policy named \"%s\"",
-									 msg->initiate.name);
-			connection->destroy(connection);
-			return;
-		}
-		/* check for already set up IKE_SAs befor initiating */
-		ike_sas = charon->ike_sa_manager->get_ike_sa_list_by_name(charon->ike_sa_manager,
-																  msg->initiate.name);
-		if (ike_sas->get_count(ike_sas) > 0)
-		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL,
-									 "connection \"%s\" already up", 
-									 msg->initiate.name);
-			/* TODO: setup CHILD_SA with policy */
-			connection->destroy(connection);
-			ike_sas->destroy(ike_sas);
-			return;
-		}
-		this->stroke_logger->log(this->stroke_logger, CONTROL,
-								 "initiating connection \"%s\" (see log)...", 
-								 msg->initiate.name);
-		job = initiate_ike_sa_job_create(connection, policy);
-		charon->job_queue->add(charon->job_queue, (job_t*)job);
-		while (ike_sas->remove_last(ike_sas, (void**)&ike_sa_id) == SUCCESS)
-		{
-			ike_sa_id->destroy(ike_sa_id);
-		}
-		ike_sas->destroy(ike_sas);
-	}
-	else
+	if (!connection->is_ikev2(connection))
 	{
 		connection->destroy(connection);
+		return;
 	}
+		
+	policy = charon->policies->get_policy_by_name(charon->policies, 
+												  msg->initiate.name);
+	if (policy == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR,
+								 "no policy named \"%s\"",
+								 msg->initiate.name);
+		connection->destroy(connection);
+		return;
+	}
+	this->stroke_logger->log(this->stroke_logger, CONTROL,
+							 "initiating connection \"%s\" (see log)...", 
+							 msg->initiate.name);
+	job = initiate_job_create(connection, policy);
+	charon->job_queue->add(charon->job_queue, (job_t*)job);
 }
 
 /**

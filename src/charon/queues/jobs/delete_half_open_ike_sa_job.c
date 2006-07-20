@@ -62,9 +62,10 @@ static status_t execute(private_delete_half_open_ike_sa_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
-	if (charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id, 
-										 &ike_sa) != SUCCESS)
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id);
+	if (ike_sa == NULL)
 	{
+		/* hm, somebody was faster ;-) */
 		return DESTROY_ME;
 	}
 	

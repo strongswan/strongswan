@@ -228,7 +228,6 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	{	/* build ID payload */
 		my_id_payload = id_payload_create_from_identification(TRUE, my_id);
 		request->add_payload(request, (payload_t*)my_id_payload);
-		this->ike_sa->set_my_id(this->ike_sa, my_id->clone(my_id));
 	}
 	
 	{	/* TODO: build certreq payload */
@@ -889,6 +888,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 							  configured_other_id->get_string(configured_other_id));
 			return DESTROY_ME;
 		}
+		/* update other ID. It was already set, but may contain wildcards */
 		this->ike_sa->set_other_id(this->ike_sa, other_id);
 	}
 	

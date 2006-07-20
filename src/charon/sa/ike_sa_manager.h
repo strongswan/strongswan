@@ -52,8 +52,8 @@ struct ike_sa_manager_t {
 	/**
 	 * @brief Checkout an IKE_SA, create it when necesarry.
 	 * 
-	 * Checks out a SA by its ID. An SA will be created, when:
-	 * - Responder SPI is not set (when received an IKE_SA_INIT from initiator)
+	 * Checks out a SA by its ID. An SA will be created, when the responder
+	 * SPI is not set (when received an IKE_SA_INIT from initiator).
 	 * Management of SPIs is the managers job, he will set it.
 	 * This function blocks until SA is available for checkout.
 	 * 
@@ -62,24 +62,27 @@ struct ike_sa_manager_t {
 	 * 
 	 * @param this 				the manager object
 	 * @param[in/out] ike_sa_id	the SA identifier, will be updated
-	 * @param[out] ike_sa 		checked out SA
 	 * @returns 					
-	 * 							- SUCCESS if checkout successful
-	 * 							- NOT_FOUND when no such SA is available
-	 * 							- CREATED if a new IKE_SA got created
+	 * 							- checked out IKE_SA if found
+	 * 							- NULL, if no such IKE_SA available
 	 */
-	status_t (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id, ike_sa_t **ike_sa);
+	ike_sa_t* (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id);
 	
 	/**
-	 * @brief Create and checkout an IKE_SA as original initator.
-	 * 
-	 * Creates and checks out a SA as initiator.
-	 * Management of SPIs is the managers job, he will set it.
-	 * 
+	 * @brief Checkout an IKE_SA by two identifications.
+	 *
+	 * Allows the lookup of an IKE_SA by two user IDs. It returns the
+	 * first found occurence, if there are multiple canddates. Supplied IDs
+	 * may contain wildcards. If no IKE_SA is found, a new one is created.
+	 *
 	 * @param this			 	the manager object
-	 * @param[out] ike_sa 		checked out SA
+	 * @param my_id				ID used by us
+	 * @param other_id			ID used by other
+	 * @return					checked out/created IKE_SA
 	 */
-	void (*create_and_checkout) (ike_sa_manager_t* this,ike_sa_t **ike_sa);
+	ike_sa_t* (*checkout_by_ids) (ike_sa_manager_t* this,
+								  identification_t *my_id, 
+								  identification_t *other_id);
 	
 	/**
 	 * @brief Check out an IKE_SA by protocol and SPI of one of its CHILD_SA.
@@ -102,7 +105,7 @@ struct ike_sa_manager_t {
 	/**
 	 * @brief Get a list of all IKE_SA SAs currently set up.
 	 * 
-	 * The resulting list with all IDs must be destroyd by 
+	 * The resulting list with all IDs must be destroyed by 
 	 * the caller. There is no guarantee an ike_sa with the 
 	 * corrensponding ID really exists, since it may be deleted
 	 * in the meantime by another thread.
@@ -153,7 +156,7 @@ struct ike_sa_manager_t {
 	 * @brief Delete a SA, which was not checked out.
 	 *
 	 * If the state allows it, the IKE SA is destroyed immediately. If it is
-	 * in the state ike_sa_established or further, a delete message
+	 * in the state ESTABLSIHED, a delete message
 	 * is sent to the remote peer, which has to be acknowledged.
 	 *
 	 * @warning do not use this when the SA is already checked out, this will

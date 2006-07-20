@@ -269,6 +269,7 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 {
 	message_t *request;
 	host_t *me, *other;
+	identification_t *my_id, *other_id;
 	
 	/* check if we already have built a message (retransmission) */
 	if (this->message)
@@ -279,6 +280,13 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 	
 	me = this->connection->get_my_host(this->connection);
 	other = this->connection->get_other_host(this->connection);
+	
+	/* we already set up the IDs. Mine is already fully qualified, other
+	* will be updated in the ike_auth transaction */
+	my_id = this->policy->get_my_id(this->policy);
+	other_id = this->policy->get_other_id(this->policy);
+	this->ike_sa->set_my_id(this->ike_sa, my_id->clone(my_id));
+	this->ike_sa->set_other_id(this->ike_sa, other_id->clone(other_id));
 	
 	/* build the request */
 	request = message_create();
