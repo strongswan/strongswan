@@ -237,16 +237,27 @@ struct ike_sa_t {
 	 *
 	 * Installs the policies in the kernel. If traffic matches,
 	 * the kernel requests connection setup from the IKE_SA via acquire().
-	 * The policy is owned by the IKE_SA after the call, so
-	 * do not modify or destroy it.
 	 * 
+	 * @param this 			calling object
+	 * @param connection	connection definition used for routing
+	 * @param policy		policy to route
+	 * @return				
+	 * 						- SUCCESS if routed successfully
+	 * 						- FAILED if routing failed
+	 */
+	status_t (*route) (ike_sa_t *this, connection_t *connection, policy_t *policy);
+
+	/**
+	 * @brief Unroute a policy in the kernel previously routed.
+	 *
 	 * @param this 			calling object
 	 * @param policy		policy to route
 	 * @return				
-	 * 						- SUCCESS if initialization started
-	 * 						- DESTROY_ME if initialization failed and IKE_SA MUST be deleted
+	 * 						- SUCCESS if route removed
+	 * 						- DESTROY_ME if last route was removed from
+	 * 						  an IKE_SA which was not established
 	 */
-	status_t (*route) (ike_sa_t *this, policy_t *policy);
+	status_t (*unroute) (ike_sa_t *this, policy_t *policy);
 	
 	/**
 	 * @brief Acquire connection setup for a policy.
@@ -434,6 +445,15 @@ struct ike_sa_t {
 	 * @param child_sa		child_sa to add
 	 */
 	void (*add_child_sa) (ike_sa_t *this, child_sa_t *child_sa);
+	
+	/**
+	 * @brief Check if an IKE_SA has one or more CHILD_SAs with a given reqid.
+	 * 
+	 * @param this 			calling object
+	 * @param reqid			reqid of the CHILD
+	 * @return				TRUE if it has such a CHILD, FALSE if not
+	 */
+	bool (*has_child_sa) (ike_sa_t *this, u_int32_t reqid);
 	
 	/**
 	 * @brief Get a CHILD_SA identified by protocol and SPI.

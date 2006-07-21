@@ -329,10 +329,13 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 	child_sa_t *child_sa = NULL;
 	host_diff_t my_diff, other_diff;
 	
-	if (this->my_host == NULL || this->other_host == NULL)
+	if (this->my_host->is_anyaddr(this->my_host) ||
+		this->other_host->is_anyaddr(this->other_host))
 	{
 		/* on first received message */
+		this->my_host->destroy(this->my_host);
 		this->my_host = me->clone(me);
+		this->other_host->destroy(this->other_host);
 		this->other_host = other->clone(other);
 		return;
 	}
@@ -792,9 +795,14 @@ static status_t initiate(private_ike_sa_t *this,
 			 */
 			ike_sa_init_t *ike_sa_init;
 			
+			this->logger->log(this->logger, CONTROL, 
+							  "initiating IKE_SA");
+			
 			set_name(this, connection->get_name(connection));
+			DESTROY_IF(this->my_host);
 			this->my_host = connection->get_my_host(connection);
 			this->my_host = this->my_host->clone(this->my_host);
+			DESTROY_IF(this->other_host);
 			this->other_host = connection->get_other_host(connection);
 			this->other_host = this->other_host->clone(this->other_host);
 			
@@ -806,6 +814,8 @@ static status_t initiate(private_ike_sa_t *this,
 		case IKE_DELETING:
 		{
 			/* if we are in DELETING, we deny set up of a policy. */
+			this->logger->log(this->logger, CONTROL, 
+							  "creating CHILD_SA discarded, as IKE_SA is deleting");
 			policy->destroy(policy);
 			connection->destroy(connection);
 			return FAILED;
@@ -819,6 +829,9 @@ static status_t initiate(private_ike_sa_t *this,
 			 * connection, as the IKE_SA is already established/establishing.
 			 */
 			create_child_sa_t *create_child;
+			
+			this->logger->log(this->logger, CONTROL, 
+							  "initiating CHILD_SA");
 			
 			connection->destroy(connection);
 			create_child = create_child_sa_create(&this->public);
@@ -834,33 +847,275 @@ static status_t initiate(private_ike_sa_t *this,
  */
 static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 {
-	/* - get TS from child with reqid
-	 * - get a policy from TS
-	 * - get connection from policy
-	 */
+	connection_t *connection;
+	policy_t *policy;
+	iterator_t *iterator;
+	child_sa_t *current, *child_sa = NULL;
+	linked_list_t *my_ts, *other_ts;
+	
+	if (this->state == IKE_DELETING)
+	{
+		this->logger->log(this->logger, CONTROL, 
+						  "acquiring CHILD_SA with reqid %d discarded, as IKE_SA is deleting",
+						  reqid);
+		return FAILED;
+	}
+	
+	
+	/* find CHILD_SA */
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		if (current->get_reqid(current) == reqid)
+		{
+			iterator->remove(iterator);
+			child_sa = current;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	if (!child_sa)
+	{
+		this->logger->log(this->logger, ERROR, 
+						  "CHILD_SA with reqid %d not found, unable to acquire",
+						  reqid);
+		return FAILED;
+	}
+	my_ts = child_sa->get_my_traffic_selectors(child_sa);
+	other_ts = child_sa->get_other_traffic_selectors(child_sa);
+	
+	policy = charon->policies->get_policy(charon->policies, 
+										  this->my_id, this->other_id, 
+										  my_ts, other_ts, 
+										  this->my_host, this->other_host);
+	child_sa->destroy(child_sa);
+	if (policy == NULL)
+	{
+		this->logger->log(this->logger, ERROR, 
+						  "no policy found to acquire CHILD_SA with reqid %d", 
+						  reqid);
+		return FAILED;
+	}
+	
 	switch (this->state)
 	{
 		case IKE_CREATED:
-			/* ike_sa_init */
-			break;
+		{
+			ike_sa_init_t *ike_sa_init;
+			
+			this->logger->log(this->logger, CONTROL,
+							  "acquiring CHILD_SA with reqid %d, IKE_SA setup needed", 
+							  reqid);
+			
+			connection = charon->connections->get_connection_by_hosts(
+					charon->connections, this->my_host, this->other_host);
+			
+			if (connection == NULL)
+			{
+				this->logger->log(this->logger, ERROR, 
+								  "no connection found to acquire IKE_SA for CHILD_SA with reqid %d", 
+								  reqid);
+				policy->destroy(policy);
+				return FAILED;
+			}
+			
+			this->message_id_out = 1;
+			ike_sa_init = ike_sa_init_create(&this->public);
+			ike_sa_init->set_config(ike_sa_init, connection, policy);
+			return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
+		}
 		case IKE_CONNECTING:
 		case IKE_ESTABLISHED:
-			/* queue create_child_sa */
-			break;
-		case IKE_DELETING:
-			/* deny */
+		{
+			create_child_sa_t *create_child;
+			
+			this->logger->log(this->logger, CONTROL, 
+							  "acquiring CHILD_SA with reqid %d",
+							  reqid);
+			
+			create_child = create_child_sa_create(&this->public);
+			create_child->set_policy(create_child, policy);
+			return queue_transaction(this, (transaction_t*)create_child, FALSE);
+		}
+		default:
 			break;
 	}
 	return FAILED;
 }
 
 /**
+ * destroy a list of traffic selectors
+ */
+static void ts_list_destroy(linked_list_t *list)
+{
+	traffic_selector_t *ts;
+	while (list->remove_last(list, (void**)&ts) == SUCCESS)
+	{
+		ts->destroy(ts);
+	}
+	list->destroy(list);
+}
+
+/**
+ * compare two lists of traffic selectors for equality
+ */
+static bool ts_list_equals(linked_list_t *l1, linked_list_t *l2)
+{
+	bool equals = TRUE;
+	iterator_t *i1, *i2;
+	traffic_selector_t *t1, *t2;
+	
+	i1 = l1->create_iterator(l1, TRUE);
+	i2 = l2->create_iterator(l2, TRUE);
+	while (i1->iterate(i1, (void**)&t1) && i2->iterate(i2, (void**)&t2))
+	{
+		if (!t1->equals(t1, t2))
+		{
+			equals = FALSE;
+			break;
+		}
+	}
+	/* check if one iterator is not at the end */
+	if (i1->has_next(i1) || i2->has_next(i2))
+	{
+		equals = FALSE;
+	}
+	i1->destroy(i1);
+	i2->destroy(i2);
+	return equals;
+}
+
+/**
  * Implementation of ike_sa_t.route.
  */
-static status_t route(private_ike_sa_t *this, policy_t *policy)
+static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t *policy)
 {
-	/* TODO: create CHILD_SA, add policy */
-	return FAILED;
+	child_sa_t *child_sa = NULL;
+	iterator_t *iterator;
+	linked_list_t *my_ts, *other_ts;
+	status_t status;
+	
+	/* check if not already routed*/
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		linked_list_t *my_ts_conf, *other_ts_conf;
+		
+		my_ts = child_sa->get_my_traffic_selectors(child_sa);
+		other_ts = child_sa->get_other_traffic_selectors(child_sa);
+		
+		my_ts_conf = policy->get_my_traffic_selectors(policy, this->my_host);
+		other_ts_conf = policy->get_other_traffic_selectors(policy, this->other_host);
+		
+		if (ts_list_equals(my_ts, my_ts_conf) &&
+				  ts_list_equals(other_ts, other_ts_conf))
+		{
+			ts_list_destroy(my_ts_conf);
+			ts_list_destroy(other_ts_conf);
+			iterator->destroy(iterator);
+			this->logger->log(this->logger, CONTROL, 
+							  "a CHILD_SA with such a policy already routed");
+			
+			return FAILED;
+		}
+		ts_list_destroy(my_ts_conf);
+		ts_list_destroy(other_ts_conf);
+	}
+	iterator->destroy(iterator);
+	
+	switch (this->state)
+	{
+		case IKE_CREATED:
+		case IKE_CONNECTING:
+			/* we update IKE_SA information as good as possible, 
+			 * this allows us to set up the SA later when an acquire comes in. */
+			if (this->my_id->get_type(this->my_id) == ID_ANY)
+			{
+				this->my_id->destroy(this->my_id);
+				this->my_id = policy->get_my_id(policy);
+				this->my_id = this->my_id->clone(this->my_id);
+			}
+			if (this->other_id->get_type(this->other_id) == ID_ANY)
+			{
+				this->other_id->destroy(this->other_id);
+				this->other_id = policy->get_other_id(policy);
+				this->other_id = this->other_id->clone(this->other_id);
+			}
+			if (this->my_host->is_anyaddr(this->my_host))
+			{
+				this->my_host->destroy(this->my_host);
+				this->my_host = connection->get_my_host(connection);
+				this->my_host = this->my_host->clone(this->my_host);
+			}
+			if (this->other_host->is_anyaddr(this->other_host))
+			{
+				this->other_host->destroy(this->other_host);
+				this->other_host = connection->get_other_host(connection);
+				this->other_host = this->other_host->clone(this->other_host);
+			}
+			set_name(this, connection->get_name(connection));
+			break;
+		case IKE_ESTABLISHED:
+			/* nothing to do */
+			break;
+		case IKE_DELETING:
+			/* deny */
+			return FAILED;
+	}
+	
+	child_sa = child_sa_create(0, this->my_host, this->other_host, 0, 0, FALSE);
+	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
+	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);
+	status = child_sa->add_policies(child_sa, my_ts, other_ts);
+	ts_list_destroy(my_ts);
+	ts_list_destroy(other_ts);
+	this->child_sas->insert_last(this->child_sas, child_sa);
+	
+	return status;
+}
+
+/**
+ * Implementation of ike_sa_t.unroute.
+ */
+static status_t unroute(private_ike_sa_t *this, policy_t *policy)
+{
+	iterator_t *iterator;
+	child_sa_t *child_sa = NULL;
+	linked_list_t *my_ts, *other_ts, *my_ts_conf, *other_ts_conf;
+	
+	/* find CHILD_SA in ROUTED state */
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		if (child_sa->get_state(child_sa) == CHILD_ROUTED)
+		{
+			my_ts = child_sa->get_my_traffic_selectors(child_sa);
+			other_ts = child_sa->get_other_traffic_selectors(child_sa);
+			
+			my_ts_conf = policy->get_my_traffic_selectors(policy, this->my_host);
+			other_ts_conf = policy->get_other_traffic_selectors(policy, this->other_host);
+			
+			if (ts_list_equals(my_ts, my_ts_conf) &&
+				ts_list_equals(other_ts, other_ts_conf))
+			{
+				iterator->remove(iterator);
+				child_sa->destroy(child_sa);
+				ts_list_destroy(my_ts_conf);
+				ts_list_destroy(other_ts_conf);
+				break;
+			}
+			ts_list_destroy(my_ts_conf);
+			ts_list_destroy(other_ts_conf);
+		}
+	}
+	iterator->destroy(iterator);
+	/* if we are not established, and we have no more routed childs, remove whole SA */
+	if (this->state == IKE_CREATED &&
+		this->child_sas->get_count(this->child_sas) == 0)
+	{
+		return DESTROY_ME;
+	}
+	return SUCCESS;
 }
 
 /**
@@ -1218,6 +1473,28 @@ static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 }
 
 /**
+ * Implementation of protected_ike_sa_t.has_child_sa.
+ */
+static bool has_child_sa(private_ike_sa_t *this, u_int32_t reqid)
+{
+	iterator_t *iterator;
+	child_sa_t *current;
+	bool found = FALSE;
+	
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		if (current->get_reqid(current) == reqid)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+	return found;
+}
+
+/**
  * Implementation of protected_ike_sa_t.get_child_sa.
  */
 static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
@@ -1226,12 +1503,12 @@ static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	iterator_t *iterator;
 	child_sa_t *current, *found = NULL;
 	
-	iterator = this->child_sas->create_iterator(this->child_sas, FALSE);
+	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->has_next(iterator))
 	{
 		iterator->current(iterator, (void**)&current);
 		if (current->get_spi(current, inbound) == spi &&
-				  current->get_protocol(current) == protocol)
+			current->get_protocol(current) == protocol)
 		{
 			found = current;
 		}
@@ -1353,17 +1630,28 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
  */
 static status_t delete_(private_ike_sa_t *this)
 {
-	delete_ike_sa_t *delete_ike_sa;
-	delete_ike_sa = delete_ike_sa_create(&this->public);
-	
-	if (this->transaction_out)
+	switch (this->state)
 	{
-		/* already a transaction in progress. As this may hang
-		 * around a while, we don't inform the other peer. */
-		return DESTROY_ME;
+		case IKE_CONNECTING:
+		case IKE_ESTABLISHED:
+		{
+			delete_ike_sa_t *delete_ike_sa;
+			delete_ike_sa = delete_ike_sa_create(&this->public);
+			if (this->transaction_out)
+			{
+				/* already a transaction in progress. As this may hang
+				* around a while, we don't inform the other peer. */
+				return DESTROY_ME;
+			}
+			return queue_transaction(this, (transaction_t*)delete_ike_sa, FALSE);
+		}
+		case IKE_CREATED:
+		case IKE_DELETING:
+		default:
+		{
+			return DESTROY_ME;
+		}
 	}
-	
-	return queue_transaction(this, (transaction_t*)delete_ike_sa, FALSE);
 }
 
 /**
@@ -1483,7 +1771,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_name = (void(*)(ike_sa_t*,char*))set_name;
 	this->public.process_message = (status_t(*)(ike_sa_t*, message_t*)) process_message;
 	this->public.initiate = (status_t(*)(ike_sa_t*,connection_t*,policy_t*)) initiate;
-	this->public.route = (status_t(*)(ike_sa_t*,policy_t*)) route;
+	this->public.route = (status_t(*)(ike_sa_t*,connection_t*,policy_t*)) route;
+	this->public.unroute = (status_t(*)(ike_sa_t*,policy_t*)) unroute;
 	this->public.acquire = (status_t(*)(ike_sa_t*,u_int32_t)) acquire;
 	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
@@ -1505,6 +1794,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_prf_auth_r = (prf_t *(*) (ike_sa_t *)) get_prf_auth_r;
 	this->public.build_transforms = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool)) build_transforms;
 	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
+	this->public.has_child_sa = (bool(*)(ike_sa_t*,u_int32_t)) has_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
 	this->public.rekey_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
 	this->public.delete_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
@@ -1517,10 +1807,10 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->name = strdup("(uninitialized)");
 	this->child_sas = linked_list_create();
-	this->my_host = NULL;
-	this->other_host = NULL;
-	this->my_id = NULL;
-	this->other_id = NULL;
+	this->my_host = host_create(AF_INET, "0.0.0.0", 0);
+	this->other_host = host_create(AF_INET, "0.0.0.0", 0);
+	this->my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
+	this->other_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
 	this->crypter_in = NULL;
 	this->crypter_out = NULL;
 	this->signer_in = NULL;

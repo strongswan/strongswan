@@ -248,6 +248,29 @@ static traffic_selector_t *get_subset(private_traffic_selector_t *this, private_
 }
 
 /**
+ * implements traffic_selector_t.equals
+ */
+static bool equals(private_traffic_selector_t *this, private_traffic_selector_t *other)
+{
+	if (this->type != other->type)
+	{
+		return FALSE;
+	}
+	if (this->type == TS_IPV4_ADDR_RANGE)
+	{
+		if (this->from_addr_ipv4 == other->from_addr_ipv4 &&
+			this->to_addr_ipv4 == other->to_addr_ipv4 &&
+			this->from_port == other->from_port &&
+			this->to_port == other->to_port &&
+			this->protocol == other->protocol)
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Implements traffic_selector_t.get_from_address.
  */
 static chunk_t get_from_address(private_traffic_selector_t *this)
@@ -518,6 +541,7 @@ static private_traffic_selector_t *traffic_selector_create(u_int8_t protocol, ts
 
 	/* public functions */
 	this->public.get_subset = (traffic_selector_t*(*)(traffic_selector_t*,traffic_selector_t*))get_subset;
+	this->public.equals = (bool(*)(traffic_selector_t*,traffic_selector_t*))equals;
 	this->public.get_string = (char*(*)(traffic_selector_t*))get_string;
 	this->public.get_from_address = (chunk_t(*)(traffic_selector_t*))get_from_address;
 	this->public.get_to_address = (chunk_t(*)(traffic_selector_t*))get_to_address;

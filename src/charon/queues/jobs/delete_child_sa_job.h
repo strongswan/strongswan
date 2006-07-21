@@ -51,15 +51,18 @@ struct delete_child_sa_job_t {
 /**
  * @brief Creates a job of type DELETE_CHILD_SA.
  *
- * The CHILD_SA is identified by its protocol (AH/ESP) and its
+ * The CHILD_SA is identified by its reqid, protocol (AH/ESP) and its
  * inbound SPI.
  *
+ * @param reqid		reqid of the CHILD_SA, as used in kernel
  * @param protocol	protocol of the CHILD_SA
  * @param spi		security parameter index of the CHILD_SA
  * @return			delete_child_sa_job_t object
  * 
  * @ingroup jobs
  */
-delete_child_sa_job_t *delete_child_sa_job_create(protocol_id_t protocol, u_int32_t spi);
+delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid, 
+												  protocol_id_t protocol, 
+												  u_int32_t spi);
 
 #endif /* DELETE_CHILD_SA_JOB_H_ */

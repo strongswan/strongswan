@@ -554,12 +554,11 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 /**
  * Implementation of of ike_sa_manager.checkout_by_child.
  */
-static status_t checkout_by_child(private_ike_sa_manager_t *this,
-								  protocol_id_t protocol, u_int32_t spi,
-								  ike_sa_t **ike_sa)
+static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
+								   u_int32_t reqid)
 {
 	iterator_t *iterator;
-	status_t status = NOT_FOUND;
+	ike_sa_t *ike_sa = NULL;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
@@ -572,12 +571,11 @@ static status_t checkout_by_child(private_ike_sa_manager_t *this,
 		if (wait_for_entry(this, entry))
 		{
 			/* ok, access is exclusive for us, check for child */
-			if (entry->ike_sa->get_child_sa(entry->ike_sa, protocol, spi, TRUE) != NULL)
+			if (entry->ike_sa->has_child_sa(entry->ike_sa, reqid))
 			{
 				/* match */
 				entry->checked_out = TRUE;
-				*ike_sa = entry->ike_sa;
-				status = SUCCESS;
+				ike_sa = entry->ike_sa;
 				break;
 			}
 		}
@@ -585,7 +583,7 @@ static status_t checkout_by_child(private_ike_sa_manager_t *this,
 	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->mutex));
 	
-	return status;
+	return ike_sa;
 }
 
 /**
@@ -915,7 +913,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
 	this->public.checkout_by_ids = (ike_sa_t*(*)(ike_sa_manager_t*,identification_t*,identification_t*))checkout_by_ids;
 	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
-	this->public.checkout_by_child = (status_t(*)(ike_sa_manager_t*,protocol_id_t,u_int32_t,ike_sa_t**))checkout_by_child;
+	this->public.checkout_by_child = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t))checkout_by_child;
 	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;
 	this->public.get_ike_sa_list_by_name = (linked_list_t*(*)(ike_sa_manager_t*,const char*))get_ike_sa_list_by_name;
 	this->public.log_status = (void(*)(ike_sa_manager_t*,logger_t*,char*))log_status;

@@ -169,6 +169,26 @@ static int terminate_connection(char *name)
 	return send_stroke_msg(&msg);
 }
 
+static int route_connection(char *name)
+{
+	stroke_msg_t msg;
+	
+	msg.type = STR_ROUTE;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.route.name = push_string(&msg, name);
+	return send_stroke_msg(&msg);
+}
+
+static int unroute_connection(char *name)
+{
+	stroke_msg_t msg;
+	
+	msg.type = STR_UNROUTE;
+	msg.length = offsetof(stroke_msg_t, buffer);
+	msg.unroute.name = push_string(&msg, name);
+	return send_stroke_msg(&msg);
+}
+
 static int show_status(stroke_keyword_t kw, char *connection)
 {
 	stroke_msg_t msg;
@@ -335,6 +355,20 @@ int main(int argc, char *argv[])
 				exit_usage("\"down\" needs a connection name");
 			}
 			res = terminate_connection(argv[2]);
+			break;
+		case STROKE_ROUTE:
+			if (argc < 3)
+			{
+				exit_usage("\"route\" needs a connection name");
+			}
+			res = route_connection(argv[2]);
+			break;
+		case STROKE_UNROUTE:
+			if (argc < 3)
+			{
+				exit_usage("\"unroute\" needs a connection name");
+			}
+			res = unroute_connection(argv[2]);
 			break;
 		case STROKE_LOGTYPE:
 			if (argc < 5)

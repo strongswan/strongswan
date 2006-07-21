@@ -49,6 +49,11 @@ enum child_sa_state_t {
 	CHILD_CREATED,
 	
 	/**
+	 * Installed SPD, but no SAD entries
+	 */
+	CHILD_ROUTED,
+	
+	/**
 	 * Installed an in-use CHILD_SA
 	 */
 	CHILD_INSTALLED,

@@ -33,6 +33,7 @@
 mapping_t child_sa_state_m[] = {
 	{CHILD_CREATED, "CREATED"},
 	{CHILD_INSTALLED, "INSTALLED"},
+	{CHILD_ROUTED, "ROUTED"},
 	{CHILD_REKEYING, "REKEYING"},
 	{CHILD_DELETING, "DELETING"},
 	{MAPPING_END, NULL}
@@ -502,6 +503,13 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 	}
 	my_iter->destroy(my_iter);
 	other_iter->destroy(other_iter);
+	
+	/* switch to routed state if no SAD entry set up */
+	if (this->state == CHILD_CREATED)
+	{
+		this->state = CHILD_ROUTED;
+	}
+	
 	return SUCCESS;
 }
 
@@ -597,65 +605,74 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 	}
 	now = (u_int32_t)time(NULL);
 	
-	/* query SA times */
-	status = charon->kernel_interface->query_sa(charon->kernel_interface,
-					this->me.addr, this->me.spi, this->protocol, &use_in);
-	if (status == SUCCESS && use_in)
+	if (this->state == CHILD_INSTALLED)
 	{
-		snprintf(use_in_str, sizeof(use_in_str), "%ds", now - use_in);
-	}
-	status = charon->kernel_interface->query_sa(charon->kernel_interface,
-					this->other.addr, this->other.spi, this->protocol, &use_out);
-	if (status == SUCCESS && use_out)
-	{
-		snprintf(use_out_str, sizeof(use_out_str), "%ds", now - use_out);
-	}
-	
-	/* calculate rekey times */
-	if (this->soft_lifetime)
-	{
-		rekeying = this->soft_lifetime - (now - this->install_time);
-		snprintf(rekey_str, sizeof(rekey_str), "%ds", (int)rekeying);
-	}
-	
-	/* algorithms used */
-	if (this->protocol == PROTO_ESP)
-	{
-		if (this->encryption.key_size)
+		/* query SA times */
+		status = charon->kernel_interface->query_sa(charon->kernel_interface,
+						this->me.addr, this->me.spi, this->protocol, &use_in);
+		if (status == SUCCESS && use_in)
 		{
-			snprintf(enc_str, sizeof(enc_str), "%s-%d,", 
-					mapping_find(encryption_algorithm_m, this->encryption.algorithm),
-					this->encryption.key_size);
+			snprintf(use_in_str, sizeof(use_in_str), "%ds", now - use_in);
+		}
+		status = charon->kernel_interface->query_sa(charon->kernel_interface,
+						this->other.addr, this->other.spi, this->protocol, &use_out);
+		if (status == SUCCESS && use_out)
+		{
+			snprintf(use_out_str, sizeof(use_out_str), "%ds", now - use_out);
+		}
+		
+		/* calculate rekey times */
+		if (this->soft_lifetime)
+		{
+			rekeying = this->soft_lifetime - (now - this->install_time);
+			snprintf(rekey_str, sizeof(rekey_str), "%ds", (int)rekeying);
+		}
+		
+		/* algorithms used */
+		if (this->protocol == PROTO_ESP)
+		{
+			if (this->encryption.key_size)
+			{
+				snprintf(enc_str, sizeof(enc_str), "%s-%d,", 
+						mapping_find(encryption_algorithm_m, this->encryption.algorithm),
+						this->encryption.key_size);
+			}
+			else
+			{
+				snprintf(enc_str, sizeof(enc_str), "%s,", 
+						mapping_find(encryption_algorithm_m, this->encryption.algorithm));
+			}
+		}
+		if (this->integrity.key_size)
+		{
+			snprintf(int_str, sizeof(int_str), "%s-%d", 
+					mapping_find(integrity_algorithm_m, this->integrity.algorithm),
+					this->integrity.key_size);
 		}
 		else
 		{
-			snprintf(enc_str, sizeof(enc_str), "%s,", 
-					mapping_find(encryption_algorithm_m, this->encryption.algorithm));
+			snprintf(int_str, sizeof(int_str), "%s", 
+					mapping_find(integrity_algorithm_m, this->integrity.algorithm));
 		}
-	}
-	if (this->integrity.key_size)
-	{
-		snprintf(int_str, sizeof(int_str), "%s-%d", 
-				 mapping_find(integrity_algorithm_m, this->integrity.algorithm),
-				 this->integrity.key_size);
+		
+		logger->log(logger, CONTROL|LEVEL1,
+					"  \"%s\":   state: %s, reqid: %d, ",
+					name, mapping_find(child_sa_state_m, this->state), this->reqid);
+		logger->log(logger, CONTROL|LEVEL1,
+					"  \"%s\":    %s (%s%s), SPIs (in/out): 0x%x/0x%x",
+					name, this->protocol == PROTO_ESP ? "ESP" : "AH",
+					enc_str, int_str,
+					htonl(this->me.spi), htonl(this->other.spi));
+		logger->log(logger, CONTROL|LEVEL1,
+					"  \"%s\":    rekeying: %s, key age (in/out): %s/%s",
+					name, rekey_str, use_in_str, use_out_str);
 	}
 	else
 	{
-		snprintf(int_str, sizeof(int_str), "%s", 
-				 mapping_find(integrity_algorithm_m, this->integrity.algorithm));
+		logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   state: %s, reqid: %d",
+					name, mapping_find(child_sa_state_m, this->state), 
+					this->reqid);
 	}
-	
-	logger->log(logger, CONTROL|LEVEL1,
-				"  \"%s\":   %s (%s%s), SPIs (in/out): 0x%x/0x%x, reqid: %d",
-				name,
-				this->protocol == PROTO_ESP ? "ESP" : "AH",
-				enc_str, int_str,
-				htonl(this->me.spi), htonl(this->other.spi),
-				this->reqid);
-	logger->log(logger, CONTROL|LEVEL1,
-				"  \"%s\":   state: %s, rekeying: %s, key age (in/out): %s/%s",
-				name, mapping_find(child_sa_state_m, this->state),
-				rekey_str, use_in_str, use_out_str);
 	
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->has_next(iterator))

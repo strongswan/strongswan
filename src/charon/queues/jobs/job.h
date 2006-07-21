@@ -58,6 +58,20 @@ enum job_type_t {
 	INITIATE,
 	
 	/** 
+	 * Install SPD entries.
+	 * 
+	 * Job is implemented in class route_job_t
+	 */
+	ROUTE,
+	
+	/** 
+	 * React on a acquire message from the kernel (e.g. setup CHILD_SA)
+	 * 
+	 * Job is implemented in class acquire_job_t
+	 */
+	ACQUIRE,
+	
+	/** 
 	 * Delete an ike sa which is still not established.
 	 * 
 	 * Job is implemented in class delete_half_open_ike_sa_job_t

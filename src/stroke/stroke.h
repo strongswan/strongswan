@@ -99,8 +99,10 @@ struct stroke_msg_t {
 	enum {
 		/* initiate a connection */
 		STR_INITIATE,
-		/* install SPD entries for a connection */
-		STR_INSTALL,
+		/* install SPD entries for a policy */
+		STR_ROUTE,
+		/* uninstall SPD entries for a policy */
+		STR_UNROUTE,
 		/* add a connection */
 		STR_ADD_CONN,
 		/* delete a connection */
@@ -123,10 +125,10 @@ struct stroke_msg_t {
 	} type;
 
 	union {
-		/* data for STR_INITIATE, STR_INSTALL, STR_UP, STR_DOWN, ... */
+		/* data for STR_INITIATE, STR_ROUTE, STR_UP, STR_DOWN, ... */
 		struct {
 			char *name;
-		} initiate, install, terminate, status, del_conn;
+		} initiate, route, unroute, terminate, status, del_conn;
 
 		/* data for STR_ADD_CONN */
 		struct {

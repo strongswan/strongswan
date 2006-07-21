@@ -38,6 +38,7 @@
 #include <daemon.h>
 #include <crypto/x509.h>
 #include <queues/jobs/initiate_job.h>
+#include <queues/jobs/route_job.h>
 
 #define IKE_PORT	500
 #define PATH_BUF	256
@@ -519,6 +520,56 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 }
 
 /**
+ * route/unroute a policy (install SPD entries)
+ */
+static void stroke_route(private_stroke_t *this, stroke_msg_t *msg, bool route)
+{
+	route_job_t *job;
+	connection_t *connection;
+	policy_t *policy;
+	
+	pop_string(msg, &(msg->route.name));
+	this->logger->log(this->logger, CONTROL,
+					  "received stroke: %s \"%s\"",
+					  route ? "route" : "unroute",
+					  msg->route.name);
+	
+	/* we wouldn't need a connection, but we only want to route policies
+	 * whose connections are keyexchange=ikev2. */
+	connection = charon->connections->get_connection_by_name(charon->connections,
+															 msg->route.name);
+	if (connection == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "no connection named \"%s\"", 
+								 msg->route.name);
+		return;
+	}
+	if (!connection->is_ikev2(connection))
+	{
+		connection->destroy(connection);
+		return;
+	}
+		
+	policy = charon->policies->get_policy_by_name(charon->policies, 
+												  msg->route.name);
+	if (policy == NULL)
+	{
+		this->stroke_logger->log(this->stroke_logger, ERROR,
+								 "no policy named \"%s\"",
+								 msg->route.name);
+		connection->destroy(connection);
+		return;
+	}
+	this->stroke_logger->log(this->stroke_logger, CONTROL,
+							 "%s policy \"%s\"", 
+							 route ? "routing" : "unrouting",
+							 msg->route.name);
+	job = route_job_create(connection, policy, route);
+	charon->job_queue->add(charon->job_queue, (job_t*)job);
+}
+
+/**
  * terminate a connection by name
  */
 static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
@@ -794,6 +845,12 @@ static void stroke_receive(private_stroke_t *this)
 		{
 			case STR_INITIATE:
 				stroke_initiate(this, msg);
+				break;
+			case STR_ROUTE:
+				stroke_route(this, msg, TRUE);
+				break;
+			case STR_UNROUTE:
+				stroke_route(this, msg, FALSE);
 				break;
 			case STR_TERMINATE:
 				stroke_terminate(this, msg);

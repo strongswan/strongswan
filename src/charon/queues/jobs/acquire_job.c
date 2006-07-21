@@ -1,7 +1,7 @@
 /**
- * @file delete_child_sa_job.c
+ * @file acquire_job.c
  * 
- * @brief Implementation of delete_child_sa_job_t.
+ * @brief Implementation of acquire_job_t.
  * 
  */
 
@@ -20,36 +20,26 @@
  * for more details.
  */
 
-#include "delete_child_sa_job.h"
+#include "acquire_job.h"
 
 #include <daemon.h>
 
 
-typedef struct private_delete_child_sa_job_t private_delete_child_sa_job_t;
+typedef struct private_acquire_job_t private_acquire_job_t;
 
 /**
- * Private data of an delete_child_sa_job_t object.
+ * Private data of an acquire_job_t object.
  */
-struct private_delete_child_sa_job_t {
+struct private_acquire_job_t {
 	/**
-	 * Public delete_child_sa_job_t interface.
+	 * Public acquire_job_t interface.
 	 */
-	delete_child_sa_job_t public;
+	acquire_job_t public;
 	
 	/**
-	 * reqid of the CHILD_SA
+	 * reqid of the child to rekey
 	 */
 	u_int32_t reqid;
-	
-	/**
-	 * protocol of the CHILD_SA (ESP/AH)
-	 */
-	protocol_id_t protocol;
-	
-	/**
-	 * inbound SPI of the CHILD_SA
-	 */
-	u_int32_t spi;
 	
 	/**
 	 * Logger ref
@@ -60,15 +50,15 @@ struct private_delete_child_sa_job_t {
 /**
  * Implementation of job_t.get_type.
  */
-static job_type_t get_type(private_delete_child_sa_job_t *this)
+static job_type_t get_type(private_acquire_job_t *this)
 {
-	return DELETE_CHILD_SA;
+	return ACQUIRE;
 }
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_delete_child_sa_job_t *this)
+static status_t execute(private_acquire_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
@@ -77,10 +67,10 @@ static status_t execute(private_delete_child_sa_job_t *this)
 	if (ike_sa == NULL)
 	{
 		this->logger->log(this->logger, ERROR|LEVEL1, 
-						  "CHILD_SA not found for delete");
+						  "CHILD_SA not found for acquiring");
 		return DESTROY_ME;
 	}
-	ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi);
+	ike_sa->acquire(ike_sa, this->reqid);
 	
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return DESTROY_ME;
@@ -89,7 +79,7 @@ static status_t execute(private_delete_child_sa_job_t *this)
 /**
  * Implementation of job_t.destroy.
  */
-static void destroy(private_delete_child_sa_job_t *this)
+static void destroy(private_acquire_job_t *this)
 {
 	free(this);
 }
@@ -97,11 +87,9 @@ static void destroy(private_delete_child_sa_job_t *this)
 /*
  * Described in header
  */
-delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid, 
-												  protocol_id_t protocol, 
-												  u_int32_t spi)
+acquire_job_t *acquire_job_create(u_int32_t reqid)
 {
-	private_delete_child_sa_job_t *this = malloc_thing(private_delete_child_sa_job_t);
+	private_acquire_job_t *this = malloc_thing(private_acquire_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;
@@ -110,8 +98,6 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
 	
 	/* private variables */
 	this->reqid = reqid;
-	this->protocol = protocol;
-	this->spi = spi;
 	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);

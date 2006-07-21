@@ -46,6 +46,8 @@ queues/jobs/send_keepalive_job.c queues/jobs/send_keepalive_job.h \
 queues/jobs/rekey_child_sa_job.c queues/jobs/rekey_child_sa_job.h \
 queues/jobs/delete_child_sa_job.c queues/jobs/delete_child_sa_job.h \
 queues/jobs/send_dpd_job.c queues/jobs/send_dpd_job.h \
+queues/jobs/route_job.c queues/jobs/route_job.h \
+queues/jobs/acquire_job.c queues/jobs/acquire_job.h \
 queues/job_queue.c queues/event_queue.c queues/send_queue.h queues/job_queue.h queues/event_queue.h \
 queues/send_queue.c threads/kernel_interface.c threads/thread_pool.c threads/scheduler.c threads/sender.c \
 threads/sender.h threads/kernel_interface.h threads/scheduler.h threads/receiver.c threads/stroke_interface.c \

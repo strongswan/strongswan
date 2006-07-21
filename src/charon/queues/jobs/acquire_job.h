@@ -1,7 +1,7 @@
 /**
- * @file rekey_child_sa_job.h
+ * @file acquire_job.h
  * 
- * @brief Interface of rekey_child_sa_job_t.
+ * @brief Interface of acquire_job_t.
  * 
  */
 
@@ -20,28 +20,26 @@
  * for more details.
  */
 
-#ifndef REKEY_CHILD_SA_JOB_H_
-#define REKEY_CHILD_SA_JOB_H_
+#ifndef ACQUIRE_JOB_H_
+#define ACQUIRE_JOB_H_
 
 #include <types.h>
-#include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
-#include <config/proposal.h>
 
 
-typedef struct rekey_child_sa_job_t rekey_child_sa_job_t;
+typedef struct acquire_job_t acquire_job_t;
 
 /**
- * @brief Class representing an REKEY_CHILD_SA Job.
+ * @brief Class representing an ACQUIRE Job.
  * 
- * This job initiates the rekeying of a CHILD SA.
+ * This job initiates a CHILD SA on kernel request.
  * 
  * @b Constructors:
- *  - rekey_child_sa_job_create()
+ *  - acquire_job_create()
  * 
  * @ingroup jobs
  */
-struct rekey_child_sa_job_t {
+struct acquire_job_t {
 	/**
 	 * The job_t interface.
 	 */
@@ -49,18 +47,15 @@ struct rekey_child_sa_job_t {
 };
 
 /**
- * @brief Creates a job of type REKEY_CHILD_SA.
+ * @brief Creates a job of type ACQUIRE.
  *
- * The CHILD_SA is identified by its protocol (AH/ESP) and its
- * inbound SPI.
+ * We use the reqid to find the routed CHILD_SA.
  *
- * @param reqid		reqid of the CHILD_SA to rekey
- * @param protocol	protocol of the CHILD_SA
- * @param spi		security parameter index of the CHILD_SA
- * @return			rekey_child_sa_job_t object
+ * @param reqid		reqid of the CHILD_SA to acquire
+ * @return			acquire_job_t object
  * 
  * @ingroup jobs
  */
-rekey_child_sa_job_t *rekey_child_sa_job_create(u_int32_t reqid, protocol_id_t protocol, u_int32_t spi);
+acquire_job_t *acquire_job_create(u_int32_t reqid);
 
 #endif /* REKEY_CHILD_SA_JOB_H_ */

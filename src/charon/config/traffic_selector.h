@@ -184,6 +184,15 @@ struct traffic_selector_t {
 	char* (*get_string) (traffic_selector_t *this);
 	
 	/**
+	 * @brief Compare two traffic selectors for equality.
+	 * 
+	 * @param this		first to compare
+	 * @param other		second to compare with first
+	 * @return 			pointer to a string.
+	 */
+	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
+	
+	/**
 	 * @brief Destroys the ts object
 	 *
 	 * @param this		calling object

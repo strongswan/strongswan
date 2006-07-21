@@ -30,6 +30,7 @@ add,           STROKE_ADD
 del,           STROKE_DEL
 delete,        STROKE_DELETE
 route,         STROKE_ROUTE
+unroute,       STROKE_UNROUTE
 up,            STROKE_UP
 down,          STROKE_DOWN
 logtype,       STROKE_LOGTYPE

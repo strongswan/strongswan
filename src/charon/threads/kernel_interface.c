@@ -43,6 +43,7 @@
 #include <utils/linked_list.h>
 #include <queues/jobs/delete_child_sa_job.h>
 #include <queues/jobs/rekey_child_sa_job.h>
+#include <queues/jobs/acquire_job.h>
 
 /** kernel level protocol identifiers */
 #define KERNEL_ESP 50
@@ -342,44 +343,65 @@ static void receive_messages(private_kernel_interface_t *this)
 			break;
 		}
 		
-		/* we handle ACQUIRE and EXPIRE messages directly
-		*/
+		/* we handle ACQUIRE and EXPIRE messages directly */
 		hdr = (struct nlmsghdr*)response;
 		if (hdr->nlmsg_type == XFRM_MSG_ACQUIRE)
 		{
-			struct xfrm_user_acquire *acquire;
-			
-			acquire = (struct xfrm_user_acquire*)NLMSG_DATA(hdr);
-			this->logger->log(this->logger, CONTROL,
-							  "Received a XFRM_MSG_ACQUIRE with index %d. Ignored",
-							  acquire->policy.index);
-			
+			u_int32_t reqid = 0;
+			job_t *job;
+			struct rtattr *rthdr = XFRM_RTA(hdr, struct xfrm_user_acquire);
+			size_t rtsize = XFRM_PAYLOAD(hdr, struct xfrm_user_tmpl);
+			if (RTA_OK(rthdr, rtsize))
+			{
+				if (rthdr->rta_type == XFRMA_TMPL)
+				{
+					struct xfrm_user_tmpl* tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
+					reqid = tmpl->reqid;
+				}
+			}
+			if (reqid == 0)
+			{
+				this->logger->log(this->logger, ERROR,
+								  "Received a XFRM_MSG_ACQUIRE, but no reqid found");
+			}
+			else
+			{
+				this->logger->log(this->logger, CONTROL|LEVEL1, 
+								"Received a XFRM_MSG_ACQUIRE");
+				this->logger->log(this->logger, CONTROL,
+								  "creating acquire job for CHILD_SA with reqid %d",
+								  reqid);
+				job = (job_t*)acquire_job_create(reqid);
+				charon->job_queue->add(charon->job_queue, job);
+			}
 		}
 		else if (hdr->nlmsg_type == XFRM_MSG_EXPIRE)
 		{
 			job_t *job;
 			protocol_id_t protocol;
-			u_int32_t spi;
+			u_int32_t spi, reqid;
 			struct xfrm_user_expire *expire;
 			
 			expire = (struct xfrm_user_expire*)NLMSG_DATA(hdr);
 			protocol = expire->state.id.proto == KERNEL_ESP ?
 					PROTO_ESP : PROTO_AH;
 			spi = expire->state.id.spi;
+			reqid = expire->state.reqid;
 			
 			this->logger->log(this->logger, CONTROL|LEVEL1,
 							  "Received a XFRM_MSG_EXPIRE");
 			this->logger->log(this->logger, CONTROL,
-							  "creating %s job for %s CHILD_SA 0x%x",
+							  "creating %s job for %s CHILD_SA 0x%x (reqid %d)",
 							  expire->hard ? "delete" : "rekey",
-							  mapping_find(protocol_id_m, protocol), ntohl(spi));
+							  mapping_find(protocol_id_m, protocol), ntohl(spi),
+							  reqid);
 			if (expire->hard)
 			{
-				job = (job_t*)delete_child_sa_job_create(protocol, spi);
+				job = (job_t*)delete_child_sa_job_create(reqid, protocol, spi);
 			}
 			else
 			{
-				job = (job_t*)rekey_child_sa_job_create(protocol, spi);
+				job = (job_t*)rekey_child_sa_job_create(reqid, protocol, spi);
 			}
 			charon->job_queue->add(charon->job_queue, job);
 		}
@@ -670,7 +692,7 @@ static status_t update_sa(
 	sa_id->spi = spi;
 	sa_id->proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
 	sa_id->family = dst->get_family(dst);
-	POS;
+	
 	if (send_message(this, hdr, &update) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
@@ -695,7 +717,6 @@ static status_t update_sa(
 		free(update);
 		return FAILED;
 	}
-	POS;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "updating SA");
 	update->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;	
@@ -731,7 +752,7 @@ static status_t update_sa(
 			rthdr = RTA_NEXT(rthdr, rtsize);
 		}
 	}
-	POS;
+	
 	if (send_message(this, update, &response) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "netlink communication failed");
@@ -754,8 +775,7 @@ static status_t update_sa(
 		this->logger->log(this->logger, CONTROL|LEVEL2, "deleting old SA");
 		status = this->public.del_sa(&this->public, dst, spi, protocol);
 	}
-	POS;
-
+	
 	free(update);
 	free(response);
 	return status;
@@ -1052,7 +1072,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	
 	struct xfrm_user_tmpl *tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rthdr);
 	tmpl->reqid = reqid;
-	tmpl->id.proto = (protocol == PROTO_ESP) ? KERNEL_ESP : KERNEL_AH;
+	tmpl->id.proto = (protocol == PROTO_AH) ? KERNEL_AH : KERNEL_ESP;
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 	tmpl->mode = TRUE;
 	

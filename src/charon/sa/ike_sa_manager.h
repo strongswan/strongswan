@@ -92,15 +92,12 @@ struct ike_sa_manager_t {
 	 * CHILD_SA the kernel wants to modify.
 	 *
 	 * @param this				the manager object
-	 * @param protocol			protocol of the CHILD_SA
-	 * @param spi				SPI of the CHILD_SA
-	 * @param[out] ike_sa 		checked out SA
+	 * @param reqid				reqid of the CHILD_SA
 	 * @return
-	 * 							- NOT_FOUND, if no IKE SA with such a child found
-	 * 							- SUCCESS, if ike_sa set
+	 * 							- checked out IKE_SA, if found
+	 * 							- NULL, if not found
 	 */
-	status_t (*checkout_by_child) (ike_sa_manager_t* this, protocol_id_t protocol,
-									u_int32_t spi, ike_sa_t **ike_sa);
+	ike_sa_t* (*checkout_by_child) (ike_sa_manager_t* this, u_int32_t reqid);
 	
 	/**
 	 * @brief Get a list of all IKE_SA SAs currently set up.
