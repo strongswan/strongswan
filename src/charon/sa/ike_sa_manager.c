@@ -402,7 +402,8 @@ static ike_sa_t* checkout_by_ids(private_ike_sa_manager_t *this,
 		found_my_id = entry->ike_sa->get_my_id(entry->ike_sa);
 		found_other_id = entry->ike_sa->get_other_id(entry->ike_sa);
 		
-		if (!found_my_id || !found_other_id)
+		if (found_my_id->get_type(found_my_id) == ID_ANY &&
+			found_other_id->get_type(found_other_id) == ID_ANY)
 		{
 			/* IKE_SA has no IDs yet, so we can't use it */
 			continue;
@@ -447,7 +448,7 @@ static ike_sa_t* checkout_by_ids(private_ike_sa_manager_t *this,
 						  "new IKE_SA created for IDs %s - %s",
 						  my_id->get_string(my_id), other_id->get_string(other_id));
 		new_ike_sa_entry->checked_out = TRUE;
-		ike_sa = new_ike_sa_entry->ike_sa;		
+		ike_sa = new_ike_sa_entry->ike_sa;
 	}
 	pthread_mutex_unlock(&(this->mutex));
 	
@@ -476,8 +477,8 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	/* each access is locked */
 	pthread_mutex_lock(&(this->mutex));
 	
-	responder_spi_set = (FALSE != ike_sa_id->get_responder_spi(ike_sa_id));
-	initiator_spi_set = (FALSE != ike_sa_id->get_initiator_spi(ike_sa_id));
+	responder_spi_set = ike_sa_id->get_responder_spi(ike_sa_id);
+	initiator_spi_set = ike_sa_id->get_initiator_spi(ike_sa_id);
 	original_initiator = ike_sa_id->is_initiator(ike_sa_id);
 	
 	if ((initiator_spi_set && responder_spi_set) ||
@@ -523,7 +524,6 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		u_int64_t responder_spi;
 		ike_sa_entry_t *new_ike_sa_entry;
 		
-		
 		/* set SPIs, we are the responder */
 		responder_spi = this->get_next_spi(this);
 		
@@ -538,6 +538,26 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		/* check ike_sa out */
 		this->logger->log(this->logger, CONTROL|LEVEL1,
 						  "IKE_SA added to list of known IKE_SAs");
+		new_ike_sa_entry->checked_out = TRUE;
+		ike_sa = new_ike_sa_entry->ike_sa;
+	}
+	else if (!initiator_spi_set && !responder_spi_set && original_initiator)
+	{
+		/* checkout of a new and unused IKE_SA, used for rekeying */
+		ike_sa_entry_t *new_ike_sa_entry;
+		
+		ike_sa_id->set_initiator_spi(ike_sa_id, this->get_next_spi(this));
+		/* create entry */
+		new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
+		this->logger->log(this->logger, CONTROL|LEVEL2,
+							"created IKE_SA %llx:%llx, role %s",
+							ike_sa_id->get_initiator_spi(ike_sa_id),
+							ike_sa_id->get_responder_spi(ike_sa_id),
+							ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
+			
+		this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
+		
+		/* check ike_sa out */
 		new_ike_sa_entry->checked_out = TRUE;
 		ike_sa = new_ike_sa_entry->ike_sa;
 	}
@@ -829,7 +849,7 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 	}
 	else
 	{
-		this->logger->log(this->logger,ERROR, 
+		this->logger->log(this->logger,ERROR|LEVEL1,
 						  "tried to delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}

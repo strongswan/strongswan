@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <time.h>
 #include <execinfo.h>
 #include <string.h>
 #include <getopt.h>
@@ -170,6 +171,9 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 static void initialize(private_daemon_t *this, bool strict)
 {
 	credential_store_t* credentials;
+	
+	/* for uncritical pseudo random numbers */
+	srandom(time(NULL) + getpid());
 	
 	this->public.configuration = configuration_create();
 	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);

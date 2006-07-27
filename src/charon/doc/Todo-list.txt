@@ -50,7 +50,7 @@
 - implement 3DES to load encrypted pem files
 + ipsec.secrets parsing
 
-/ trapping
++ trapping
 + proper delete messages
 - notifys on connection setup failure
 + create child sa message/rekeying
@@ -59,7 +59,7 @@
   when a blocked IKE_SA receives a lot of messages
 - add a crl fetch mechanism which synchronizes equal fetches
 
-- replace state machine with something more transaction oriented
-- find existing IKE_SA on CHILD_SA initiation
++ replace state machine with something more transaction oriented
++ find existing IKE_SA on CHILD_SA initiation
 
 - configure flag which allows to ommit vendor id in pluto

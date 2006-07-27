@@ -49,12 +49,13 @@
 #include <sa/transactions/create_child_sa.h>
 #include <sa/transactions/delete_child_sa.h>
 #include <sa/transactions/dead_peer_detection.h>
+#include <sa/transactions/rekey_ike_sa.h>
 #include <queues/jobs/retransmit_request_job.h>
 #include <queues/jobs/delete_established_ike_sa_job.h>
 #include <queues/jobs/delete_half_open_ike_sa_job.h>
 #include <queues/jobs/send_dpd_job.h>
 #include <queues/jobs/send_keepalive_job.h>
-
+#include <queues/jobs/rekey_ike_sa_job.h>
 
 /**
  * String mappings for ike_sa_state_t.
@@ -186,14 +187,20 @@ struct private_ike_sa_t {
 	u_int32_t message_id_out;
 
 	/**
-	 * Timestamp of last IKE message received on this SA
+	 * Timestamps for this IKE_SA
 	 */
-	time_t time_inbound;
-
-	/**
-	 * Timestamp of last IKE message sent on this SA
-	 */
-	time_t time_outbound;
+	struct {
+		/** last IKE message received */
+		u_int32_t inbound;
+		/** last IKE message sent */
+		u_int32_t outbound;
+		/** when IKE_SA became established */
+		u_int32_t established;
+		/** when IKE_SA gets rekeyed */
+		u_int32_t rekey;
+		/** when IKE_SA gets deleted */
+		u_int32_t delete;
+	} time;
 	
 	/**
 	 * List of queued transactions to process
@@ -247,7 +254,7 @@ static time_t get_kernel_time(private_ike_sa_t* this, bool inbound)
  */
 static time_t get_time_inbound(private_ike_sa_t *this)
 {
-	return max(this->time_inbound, get_kernel_time(this, TRUE));
+	return max(this->time.inbound, get_kernel_time(this, TRUE));
 }
 
 /**
@@ -255,7 +262,7 @@ static time_t get_time_inbound(private_ike_sa_t *this)
  */
 static time_t get_time_outbound(private_ike_sa_t *this)
 {
-	return max(this->time_outbound, get_kernel_time(this, FALSE));
+	return max(this->time.outbound, get_kernel_time(this, FALSE));
 }
 
 /**
@@ -284,11 +291,29 @@ static host_t *get_my_host(private_ike_sa_t *this)
 }
 
 /**
+ * Implementation of ike_sa_t.set_my_host.
+ */
+static void set_my_host(private_ike_sa_t *this, host_t *me)
+{
+	DESTROY_IF(this->my_host);
+	this->my_host = me;
+}
+
+/**
  * Implementation of ike_sa_t.get_other_host.
  */
 static host_t *get_other_host(private_ike_sa_t *this)
 {
 	return this->other_host;
+}
+
+/**
+ * Implementation of ike_sa_t.set_other_host.
+ */
+static void set_other_host(private_ike_sa_t *this, host_t *other)
+{
+	DESTROY_IF(this->other_host);
+	this->other_host = other;
 }
 
 /**
@@ -437,7 +462,7 @@ static status_t transmit_request(private_ike_sa_t *this)
 	}
 	/* finally send */
 	charon->send_queue->add(charon->send_queue, packet);
-	this->time_outbound = time(NULL);
+	this->time.outbound = time(NULL);
 	
 	/* schedule retransmission job */
 	job = retransmit_request_job_create(message_id, this->ike_sa_id);
@@ -548,7 +573,7 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 			last->get_response(last, request, &response, &this->transaction_in_next);
 			packet = response->get_packet(response);
 			charon->send_queue->add(charon->send_queue, packet);
-			this->time_outbound = time(NULL);
+			this->time.outbound = time(NULL);
 			return SUCCESS;
 		}
 		
@@ -608,7 +633,7 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 	}
 	
 	charon->send_queue->add(charon->send_queue, packet);
-	this->time_outbound = time(NULL);
+	this->time.outbound = time(NULL);
 	/* act depending on transaction result */
 	switch (status)
 	{
@@ -691,7 +716,7 @@ static void send_notify_response(private_ike_sa_t *this,
 		return;
 	}
 	charon->send_queue->add(charon->send_queue, packet);
-	this->time_outbound = time(NULL);
+	this->time.outbound = time(NULL);
 	response->destroy(response);
 	return;
 }
@@ -710,46 +735,49 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	status = message->parse_body(message, this->crypter_in, this->signer_in);
 	if (status != SUCCESS)
 	{
-		switch (status)
+		if (is_request)
 		{
-			case NOT_SUPPORTED:
-				this->logger->log(this->logger, ERROR,
-								  "ciritcal unknown payloads found");
-				if (is_request)
-				{
-					send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
-				}
-				break;
-			case PARSE_ERROR:
-				this->logger->log(this->logger, ERROR,
-								  "message parsing failed");
-				if (is_request)
-				{
-					send_notify_response(this, message, INVALID_SYNTAX);
-				}
-				break;
-			case VERIFY_ERROR:
-				this->logger->log(this->logger, ERROR,
-								  "message verification failed");
-				if (is_request)
-				{
-					send_notify_response(this, message, INVALID_SYNTAX);
-				}
-				break;
-			case FAILED:
-				this->logger->log(this->logger, ERROR,
-								  "integrity check failed");
-				/* ignored */
-				break;
-			case INVALID_STATE:
-				this->logger->log(this->logger, ERROR,
-								  "found encrypted message, but no keys available");
-				if (is_request)
-				{
-					send_notify_response(this, message, INVALID_SYNTAX);
-				}
-			default:
-				break;
+			switch (status)
+			{
+				case NOT_SUPPORTED:
+					this->logger->log(this->logger, ERROR,
+									"ciritcal unknown payloads found");
+					if (is_request)
+					{
+						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
+					}
+					break;
+				case PARSE_ERROR:
+					this->logger->log(this->logger, ERROR,
+									"message parsing failed");
+					if (is_request)
+					{
+						send_notify_response(this, message, INVALID_SYNTAX);
+					}
+					break;
+				case VERIFY_ERROR:
+					this->logger->log(this->logger, ERROR,
+									"message verification failed");
+					if (is_request)
+					{
+						send_notify_response(this, message, INVALID_SYNTAX);
+					}
+					break;
+				case FAILED:
+					this->logger->log(this->logger, ERROR,
+									"integrity check failed");
+					/* ignored */
+					break;
+				case INVALID_STATE:
+					this->logger->log(this->logger, ERROR,
+									"found encrypted message, but no keys available");
+					if (is_request)
+					{
+						send_notify_response(this, message, INVALID_SYNTAX);
+					}
+				default:
+					break;
+			}
 		}
 		this->logger->log(this->logger, ERROR,
 						  "%s %s with message ID %d processing failed",
@@ -765,7 +793,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 		{
 			update_hosts(this, message->get_destination(message),
 							   message->get_source(message));
-			this->time_inbound = time(NULL);
+			this->time.inbound = time(NULL);
 		}
 		if (is_request)
 		{
@@ -1211,19 +1239,20 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 					  mapping_find(ike_sa_state_m, state));
 	if (state == IKE_ESTABLISHED)
 	{
+		this->time.established = time(NULL);
 		this->logger->log(this->logger, AUDIT, "IKE_SA established: %s[%s]...%s[%s]",
-						  this->my_host->get_string(this->my_host),
-						  this->my_id->get_string(this->my_id),
-						  this->other_host->get_string(this->other_host),
-						  this->other_id->get_string(this->other_id));
-		
+						this->my_host->get_string(this->my_host),
+						this->my_id->get_string(this->my_id),
+						this->other_host->get_string(this->other_host),
+						this->other_id->get_string(this->other_id));
+		/* start DPD checks */
 		send_dpd(this);
 	}
 	this->state = state;
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_prf.
+ * Implementation of ike_sa_t.get_prf.
  */
 static prf_t *get_prf(private_ike_sa_t *this)
 {
@@ -1231,7 +1260,7 @@ static prf_t *get_prf(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_prf.
+ * Implementation of ike_sa_t.get_prf.
  */
 static prf_t *get_child_prf(private_ike_sa_t *this)
 {
@@ -1239,7 +1268,7 @@ static prf_t *get_child_prf(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_prf_auth_i.
+ * Implementation of ike_sa_t.get_prf_auth_i.
  */
 static prf_t *get_prf_auth_i(private_ike_sa_t *this)
 {
@@ -1247,7 +1276,7 @@ static prf_t *get_prf_auth_i(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_prf_auth_r.
+ * Implementation of ike_sa_t.get_prf_auth_r.
  */
 static prf_t *get_prf_auth_r(private_ike_sa_t *this)
 {
@@ -1297,21 +1326,24 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
 }
 
 /**
- * Implementation of protected_ike_sa_t.build_transforms.
+ * Implementation of ike_sa_t.derive_keys.
  */
-static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal, 
-								 diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r,
-								 bool initiator)
+static status_t derive_keys(private_ike_sa_t *this,
+							proposal_t *proposal, diffie_hellman_t *dh,
+							chunk_t nonce_i, chunk_t nonce_r,
+							bool initiator, prf_t *rekey_prf)
 {
-	chunk_t nonces, nonces_spis, skeyseed, key, secret;
-	u_int64_t spi_i, spi_r;
 	prf_plus_t *prf_plus;
+	chunk_t skeyseed, secret, key, nonces, prf_plus_seed;
 	algorithm_t *algo;
 	size_t key_size;
 	crypter_t *crypter_i, *crypter_r;
 	signer_t *signer_i, *signer_r;
+	u_int8_t spi_i_buf[sizeof(u_int64_t)], spi_r_buf[sizeof(u_int64_t)];
+	chunk_t spi_i = chunk_from_buf(spi_i_buf);
+	chunk_t spi_r = chunk_from_buf(spi_r_buf);
 	
-	/* Build the PRF+ instance for deriving keys */
+	/* Create SAs general purpose PRF first, we may use it here */
 	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo))
 	{
 		this->logger->log(this->logger, ERROR, "no PSEUDO_RANDOM_FUNCTION selected!");
@@ -1325,39 +1357,46 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal,
 		return FAILED;
 	}
 	
-	/* nonces =  nonce_i | nonce_r */
-	nonces = chunk_alloc(nonce_i.len + nonce_r.len);
-	memcpy(nonces.ptr, nonce_i.ptr, nonce_i.len);
-	memcpy(nonces.ptr + nonce_i.len, nonce_r.ptr, nonce_r.len);
-
-	/* prf_seed = nonce_i | nonce_r | spi_i | spi_r */
-	nonces_spis = chunk_alloc(nonces.len + 16);
-	memcpy(nonces_spis.ptr, nonces.ptr, nonces.len);
-	spi_i = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
-	spi_r = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
-	memcpy(nonces_spis.ptr + nonces.len, &spi_i, 8);
-	memcpy(nonces_spis.ptr + nonces.len + 8, &spi_r, 8);
-	
-	/* SKEYSEED = prf(Ni | Nr, g^ir) */
 	dh->get_shared_secret(dh, &secret);
 	this->logger->log_chunk(this->logger, PRIVATE, "shared Diffie Hellman secret", secret);
-	this->prf->set_key(this->prf, nonces);
-	this->prf->allocate_bytes(this->prf, secret, &skeyseed);
-	this->logger->log_chunk(this->logger, PRIVATE|LEVEL1, "SKEYSEED", skeyseed);
-	chunk_free(&secret);
-
-	/* prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr )
-	 *     = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr
+	nonces = chunk_cat("cc", nonce_i, nonce_r);
+	*((u_int64_t*)spi_i.ptr) = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
+	*((u_int64_t*)spi_r.ptr) = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
+	prf_plus_seed = chunk_cat("ccc", nonces, spi_i, spi_r);
+	
+	/* KEYMAT = prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr) 
+	 *
+	 * if we are rekeying, SKEYSEED built on another way 
 	 */
-	this->prf->set_key(this->prf, skeyseed);
-	prf_plus = prf_plus_create(this->prf, nonces_spis);
-	
-	/* clean up unused stuff */
+	if (rekey_prf == NULL) /* not rekeying */
+	{	
+		/* SKEYSEED = prf(Ni | Nr, g^ir) */
+		this->prf->set_key(this->prf, nonces);
+		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
+		this->logger->log_chunk(this->logger, PRIVATE|LEVEL1, "SKEYSEED", skeyseed);
+		this->prf->set_key(this->prf, skeyseed);
+		chunk_free(&skeyseed);
+		chunk_free(&secret);
+		prf_plus = prf_plus_create(this->prf, prf_plus_seed);
+	}
+	else
+	{
+		/* SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr) */
+		secret = chunk_cat("mc", secret, nonces);
+		rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed);
+		this->logger->log_chunk(this->logger, PRIVATE|LEVEL1, "SKEYSEED", skeyseed);
+		rekey_prf->set_key(rekey_prf, skeyseed); /* abuse of rekeyed SAs child_prf */
+		chunk_free(&skeyseed);
+		chunk_free(&secret);
+		prf_plus = prf_plus_create(rekey_prf, prf_plus_seed);
+	}
 	chunk_free(&nonces);
-	chunk_free(&nonces_spis);
-	chunk_free(&skeyseed);
+	chunk_free(&prf_plus_seed);
 	
-	/* SK_d used for prf+ to derive keys for child SAs */
+	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
+	
+	/* SK_d is used for generating CHILD_SA key mat => child_prf */
+	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
 	this->child_prf = prf_create(algo->algorithm);
 	key_size = this->child_prf->get_key_size(this->child_prf);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
@@ -1365,13 +1404,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal,
 	this->child_prf->set_key(this->child_prf, key);
 	chunk_free(&key);
 	
-	/* SK_ai/SK_ar used for integrity protection */
+	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
 	{
 		this->logger->log(this->logger, ERROR, "no INTEGRITY_ALGORITHM selected?!");
 		return FAILED;
 	}
-	
 	signer_i = signer_create(algo->algorithm);
 	signer_r = signer_create(algo->algorithm);
 	if (signer_i == NULL || signer_r == NULL)
@@ -1386,7 +1424,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal,
 	this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "Sk_ai secret", key);
 	signer_i->set_key(signer_i, key);
 	chunk_free(&key);
-
+	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "Sk_ar secret", key);
 	signer_r->set_key(signer_r, key);
@@ -1403,12 +1441,12 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal,
 		this->signer_out = signer_r;
 	}
 	
-	/* SK_ei/SK_er used for encryption */
+	/* SK_ei/SK_er used for encryption => crypter_in/crypter_out */
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
 	{
 		this->logger->log(this->logger, ERROR, "no ENCRYPTION_ALGORITHM selected!");
 		return FAILED;
-	}	
+	}
 	crypter_i = crypter_create(algo->algorithm, algo->key_size / 8);
 	crypter_r = crypter_create(algo->algorithm, algo->key_size / 8);
 	if (crypter_i == NULL || crypter_r == NULL)
@@ -1442,7 +1480,7 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal,
 		this->crypter_out = crypter_r;
 	}
 	
-	/* SK_pi/SK_pr used for authentication */	
+	/* SK_pi/SK_pr used for authentication => prf_auth_i, prf_auth_r */	
 	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
 	this->prf_auth_i = prf_create(algo->algorithm);
 	this->prf_auth_r = prf_create(algo->algorithm);
@@ -1462,10 +1500,11 @@ static status_t build_transforms(private_ike_sa_t *this, proposal_t *proposal,
 	prf_plus->destroy(prf_plus);
 	
 	return SUCCESS;
+	
 }
 
 /**
- * Implementation of protected_ike_sa_t.add_child_sa.
+ * Implementation of ike_sa_t.add_child_sa.
  */
 static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 {
@@ -1473,7 +1512,7 @@ static void add_child_sa(private_ike_sa_t *this, child_sa_t *child_sa)
 }
 
 /**
- * Implementation of protected_ike_sa_t.has_child_sa.
+ * Implementation of ike_sa_t.has_child_sa.
  */
 static bool has_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 {
@@ -1495,7 +1534,7 @@ static bool has_child_sa(private_ike_sa_t *this, u_int32_t reqid)
 }
 
 /**
- * Implementation of protected_ike_sa_t.get_child_sa.
+ * Implementation of ike_sa_t.get_child_sa.
  */
 static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 								u_int32_t spi, bool inbound)
@@ -1556,7 +1595,7 @@ static status_t delete_child_sa(private_ike_sa_t *this, protocol_id_t protocol, 
 }
 
 /**
- * Implementation of protected_ike_sa_t.destroy_child_sa.
+ * Implementation of ike_sa_t.destroy_child_sa.
  */
 static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol, u_int32_t spi)
 {
@@ -1580,32 +1619,85 @@ static status_t destroy_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	return status;
 }
 
+/**
+ * Implementation of ike_sa_t.set_lifetimes.
+ */
+static void set_lifetimes(private_ike_sa_t *this,
+						  u_int32_t soft_lifetime, u_int32_t hard_lifetime)
+{
+	job_t *job;
+	
+	if (soft_lifetime)
+	{
+		this->time.rekey = this->time.established + soft_lifetime;
+		job = (job_t*)rekey_ike_sa_job_create(this->ike_sa_id);
+		charon->event_queue->add_relative(charon->event_queue, job,
+										  soft_lifetime * 1000);
+	}
+	
+	if (hard_lifetime)
+	{
+		this->time.delete = this->time.established + hard_lifetime;
+		job = (job_t*)delete_established_ike_sa_job_create(this->ike_sa_id);
+		charon->event_queue->add_relative(charon->event_queue, job,
+										  hard_lifetime * 1000);
+	}
+}
 
 /**
- * Implementation of protected_ike_sa_t.log_status.
+ * Implementation of ike_sa_t.rekey.
+ */
+static status_t rekey(private_ike_sa_t *this)
+{
+	rekey_ike_sa_t *rekey_ike_sa;
+	
+	this->logger->log(this->logger, CONTROL, 
+					  "rekeying IKE_SA between %s[%s]..%s[%s]",
+					  this->my_host->get_string(this->my_host),
+					  this->my_id->get_string(this->my_id),
+					  this->other_host->get_string(this->other_host),
+					  this->other_id->get_string(this->other_id));
+	
+	if (this->state != IKE_ESTABLISHED)
+	{
+		this->logger->log(this->logger, ERROR, 
+						  "unable to rekey IKE_SA in state %s",
+						  mapping_find(ike_sa_state_m, this->state));
+		return FAILED;
+	}
+	
+	rekey_ike_sa = rekey_ike_sa_create(&this->public);
+	return queue_transaction(this, (transaction_t*)rekey_ike_sa, FALSE);
+}
+
+/**
+ * Implementation of ike_sa_t.adopt_children.
+ */
+static void adopt_children(private_ike_sa_t *this, private_ike_sa_t *other)
+{
+	child_sa_t *child_sa;
+	
+	while (other->child_sas->remove_last(other->child_sas,
+		   								 (void**)&child_sa) == SUCCESS)
+	{
+		this->child_sas->insert_first(this->child_sas, (void*)child_sa);
+	}
+}
+
+/**
+ * Implementation of ike_sa_t.log_status.
  */
 static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
-	char *my_host, *other_host, *my_id, *other_id;
 	
 	if (name == NULL || streq(name, this->name))
 	{
 		if (logger == NULL)
 		{
 			logger = this->logger;
-		}
-		
-		my_host = this->my_host ?
-				this->my_host->get_string(this->my_host) : "(unknown)";
-		other_host = this->other_host ?
-				this->other_host->get_string(this->other_host) : "(unknown)";
-		my_id = this->my_id ?
-				this->my_id->get_string(this->my_id) : "(unknown)";
-		other_id = this->other_id ?
-				this->other_id->get_string(this->other_id) : "(unknown)";
-		
+		}		
 		logger->log(logger, CONTROL|LEVEL1, 
 					"  \"%s\": IKE_SA in state %s, SPIs: 0x%.16llx 0x%.16llx",
 					this->name,
@@ -1613,7 +1705,11 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 					this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 					this->ike_sa_id->get_responder_spi(this->ike_sa_id));
 		logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
-					this->name, my_host, my_id, other_host, other_id);
+					this->name,
+					this->my_host->get_string(this->my_host),
+					this->my_id->get_string(this->my_id),
+					this->other_host->get_string(this->other_host),
+					this->other_id->get_string(this->other_id));
 		
 		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 		while (iterator->has_next(iterator))
@@ -1671,7 +1767,7 @@ static bool is_natt_enabled (private_ike_sa_t *this)
 }
 
 /**
- * Implementation of protected_ike_sa_t.enable_natt.
+ * Implementation of ike_sa_t.enable_natt.
  */
 static void enable_natt (private_ike_sa_t *this, bool local)
 {
@@ -1691,13 +1787,12 @@ static void enable_natt (private_ike_sa_t *this, bool local)
 }
 
 /**
- * Implementation of protected_ike_sa_t.destroy.
+ * Implementation of ike_sa_t.destroy.
  */
 static void destroy(private_ike_sa_t *this)
 {
 	child_sa_t *child_sa;
 	transaction_t *transaction;
-	char *my_host, *other_host, *my_id, *other_id;
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "going to destroy IKE SA %llu:%llu, role %s", 
 					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
@@ -1733,19 +1828,13 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->child_prf);
 	DESTROY_IF(this->prf_auth_i);
 	DESTROY_IF(this->prf_auth_r);
-	
-	my_host = this->my_host ?
-			this->my_host->get_string(this->my_host) : "(unknown)";
-	other_host = this->other_host ?
-			this->other_host->get_string(this->other_host) : "(unknown)";
-	my_id = this->my_id ?
-			this->my_id->get_string(this->my_id) : "(unknown)";
-	other_id = this->other_id ?
-			this->other_id->get_string(this->other_id) : "(unknown)";
 
 	this->logger->log(this->logger, AUDIT, 
-					  "IKE_SA deleted between %s[%s]...%s[%s]", 
-					  my_host, my_id, other_host, other_id);
+					  "IKE_SA deleted between %s[%s]...%s[%s]",
+					  this->my_host->get_string(this->my_host),
+					  this->my_id->get_string(this->my_id),
+					  this->other_host->get_string(this->other_host),
+					  this->other_id->get_string(this->other_id));
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -1776,7 +1865,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.acquire = (status_t(*)(ike_sa_t*,u_int32_t)) acquire;
 	this->public.get_id = (ike_sa_id_t*(*)(ike_sa_t*)) get_id;
 	this->public.get_my_host = (host_t*(*)(ike_sa_t*)) get_my_host;
+	this->public.set_my_host = (void(*)(ike_sa_t*,host_t*)) set_my_host;
 	this->public.get_other_host = (host_t*(*)(ike_sa_t*)) get_other_host;
+	this->public.set_other_host = (void(*)(ike_sa_t*,host_t*)) set_other_host;
 	this->public.get_my_id = (identification_t*(*)(ike_sa_t*)) get_my_id;
 	this->public.set_my_id = (void(*)(ike_sa_t*,identification_t*)) set_my_id;
 	this->public.get_other_id = (identification_t*(*)(ike_sa_t*)) get_other_id;
@@ -1792,7 +1883,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
 	this->public.get_prf_auth_i = (prf_t *(*) (ike_sa_t *)) get_prf_auth_i;
 	this->public.get_prf_auth_r = (prf_t *(*) (ike_sa_t *)) get_prf_auth_r;
-	this->public.build_transforms = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool)) build_transforms;
+	this->public.derive_keys = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool,prf_t*)) derive_keys;
 	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.has_child_sa = (bool(*)(ike_sa_t*,u_int32_t)) has_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
@@ -1801,6 +1892,9 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
 	this->public.enable_natt = (void(*)(ike_sa_t*, bool)) enable_natt;
 	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
+	this->public.set_lifetimes = (void(*)(ike_sa_t*,u_int32_t,u_int32_t))set_lifetimes;
+	this->public.rekey = (status_t(*)(ike_sa_t*))rekey;
+	this->public.adopt_children = (void(*)(ike_sa_t*,ike_sa_t*))adopt_children;
 	
 	/* initialize private fields */
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
@@ -1826,10 +1920,12 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->transaction_in_next = NULL;
 	this->transaction_out = NULL;
 	this->state = IKE_CREATED;
-	/* we start with message ID out, as ike_sa_init does not use this counter */
 	this->message_id_out = 0;
-	this->time_inbound = 0;
-	this->time_outbound = 0;
+	/* set to NOW, as when we rekey an existing IKE_SA no message is exchanged */
+	this->time.inbound = this->time.outbound = time(NULL);
+	this->time.established = 0;
+	this->time.rekey = 0;
+	this->time.delete = 0;
 	
 	return &this->public;
 }

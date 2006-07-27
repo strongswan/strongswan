@@ -552,7 +552,7 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 {
 	iterator_t *iterator;
 	sa_policy_t *policy;
-	status_t status;
+	status_t status = FAILED;
 	
 	*use_time = UNDEFINED_TIME;
 

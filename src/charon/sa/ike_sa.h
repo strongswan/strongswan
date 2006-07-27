@@ -178,12 +178,28 @@ struct ike_sa_t {
 	host_t* (*get_my_host) (ike_sa_t *this);
 	
 	/**
+	 * @brief Set the own host address.
+	 * 
+	 * @param this 			calling object
+	 * @param me			host address
+	 */
+	void (*set_my_host) (ike_sa_t *this, host_t *me);
+	
+	/**
 	 * @brief Get the other peers host address.
 	 * 
 	 * @param this 			calling object
 	 * @return				host address
 	 */
 	host_t* (*get_other_host) (ike_sa_t *this);
+	
+	/**
+	 * @brief Set the others host address.
+	 * 
+	 * @param this 			calling object
+	 * @param other			host address
+	 */
+	void (*set_other_host) (ike_sa_t *this, host_t *other);
 	
 	/**
 	 * @brief Get the own identification.
@@ -389,22 +405,25 @@ struct ike_sa_t {
 
 	/**
 	 * @brief Derive all keys and create the transforms for IKE communication.
-	 * 
+	 *
 	 * Keys are derived using the diffie hellman secret, nonces and internal
 	 * stored SPIs.
-	 * Already existing objects get destroyed.
-	 * 
+	 * Key derivation differs when an IKE_SA is set up to replace an
+	 * existing IKE_SA (rekeying). The SK_d key from the old IKE_SA
+	 * is included in the derivation process.
+	 *
 	 * @param this 			calling object
 	 * @param proposal		proposal which contains algorithms to use
 	 * @param dh			diffie hellman object with shared secret
 	 * @param nonce_i		initiators nonce
 	 * @param nonce_r		responders nonce
-	 * @param initiator		role of this IKE SA (TRUE = originial initiator)
+	 * @param initiator		TRUE if initiator, FALSE otherwise
+	 * @param rekey_prf		PRF with SK_d key when rekeying, NULL otherwise
 	 */
-	status_t (*build_transforms) (ike_sa_t *this, proposal_t* proposal,
-								  diffie_hellman_t *dh,
-								  chunk_t nonce_i, chunk_t nonce_r,
-								  bool initiator);
+	status_t (*derive_keys)(ike_sa_t *this, proposal_t* proposal,
+							diffie_hellman_t *dh,
+							chunk_t nonce_i, chunk_t nonce_r,
+							bool initiator, prf_t *rekey_prf);
 	
 	/**
 	 * @brief Get the multi purpose prf.
@@ -510,6 +529,42 @@ struct ike_sa_t {
 	 * 						- SUCCESS
 	 */
 	status_t (*destroy_child_sa) (ike_sa_t *this, protocol_id_t protocol, u_int32_t spi);
+
+	/**
+	 * @brief Set lifetimes of an IKE_SA.
+	 *
+	 * Two lifetimes are specified. The soft_lifetime says, when rekeying should
+	 * be initiated. The hard_lifetime says, when the IKE_SA has been expired
+	 * and must be deleted. Normally, hard_lifetime > soft_lifetime, and 
+	 * hard_lifetime is only reached when rekeying at soft_lifetime fails.
+	 *
+	 * @param this 			calling object
+	 * @param soft_lifetime	soft_lifetime
+	 * @param hard_lifetime	hard_lifetime
+	 */
+	void (*set_lifetimes) (ike_sa_t *this,
+						   u_int32_t soft_lifetime, u_int32_t hard_lifetime);
+
+	/**
+	 * @brief Rekey the IKE_SA.
+	 *
+	 * Sets up a new IKE_SA, moves all CHILDs to it and deletes this IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @return				- SUCCESS, if IKE_SA rekeying initiated
+	 */
+	status_t (*rekey) (ike_sa_t *this);
+
+	/**
+	 * @brief Move all children from other IKE_SA to this IKE_SA.
+	 *
+	 * After rekeying completes, all children are switched over to the
+	 * newly created IKE_SA.
+	 *
+	 * @param this 			stepfather
+	 * @param other			deceased (rekeyed) IKE_SA
+	 */
+	void (*adopt_children) (ike_sa_t *this, ike_sa_t *other);
 	
 	/**
 	 * @brief Destroys a ike_sa_t object.

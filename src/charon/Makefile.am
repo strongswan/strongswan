@@ -17,6 +17,7 @@ sa/transactions/create_child_sa.h sa/transactions/create_child_sa.c \
 sa/transactions/delete_child_sa.h sa/transactions/delete_child_sa.c \
 sa/transactions/dead_peer_detection.h sa/transactions/dead_peer_detection.c \
 sa/transactions/delete_ike_sa.h sa/transactions/delete_ike_sa.c \
+sa/transactions/rekey_ike_sa.h sa/transactions/rekey_ike_sa.c \
 sa/child_sa.c sa/child_sa.h sa/ike_sa.c sa/ike_sa.h sa/ike_sa_manager.c sa/ike_sa_manager.h \
 sa/ike_sa_id.c sa/ike_sa_id.h sa/authenticator.c sa/authenticator.h encoding/payloads/encryption_payload.c \
 encoding/payloads/cert_payload.c encoding/payloads/payload.h encoding/payloads/traffic_selector_substructure.c \
@@ -43,11 +44,9 @@ queues/jobs/incoming_packet_job.c queues/jobs/delete_half_open_ike_sa_job.c \
 queues/jobs/delete_established_ike_sa_job.h queues/jobs/delete_half_open_ike_sa_job.h \
 queues/jobs/incoming_packet_job.h queues/jobs/retransmit_request_job.c queues/jobs/initiate_job.c \
 queues/jobs/send_keepalive_job.c queues/jobs/send_keepalive_job.h \
-queues/jobs/rekey_child_sa_job.c queues/jobs/rekey_child_sa_job.h \
-queues/jobs/delete_child_sa_job.c queues/jobs/delete_child_sa_job.h \
-queues/jobs/send_dpd_job.c queues/jobs/send_dpd_job.h \
-queues/jobs/route_job.c queues/jobs/route_job.h \
-queues/jobs/acquire_job.c queues/jobs/acquire_job.h \
+queues/jobs/rekey_child_sa_job.c queues/jobs/rekey_child_sa_job.h queues/jobs/delete_child_sa_job.c queues/jobs/delete_child_sa_job.h \
+queues/jobs/send_dpd_job.c queues/jobs/send_dpd_job.h queues/jobs/route_job.c queues/jobs/route_job.h \
+queues/jobs/acquire_job.c queues/jobs/acquire_job.h queues/jobs/rekey_ike_sa_job.c queues/jobs/rekey_ike_sa_job.h \
 queues/job_queue.c queues/event_queue.c queues/send_queue.h queues/job_queue.h queues/event_queue.h \
 queues/send_queue.c threads/kernel_interface.c threads/thread_pool.c threads/scheduler.c threads/sender.c \
 threads/sender.h threads/kernel_interface.h threads/scheduler.h threads/receiver.c threads/stroke_interface.c \

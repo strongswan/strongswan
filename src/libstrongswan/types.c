@@ -24,6 +24,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "types.h"
 
@@ -66,6 +67,54 @@ chunk_t chunk_clone(chunk_t chunk)
 	}
 	
 	return clone;
+}
+
+/**
+ * Decribed in header.
+ */
+chunk_t chunk_cat(const char* mode, ...)
+{
+	chunk_t construct;
+	va_list chunks;
+	u_char *pos;
+	int i;
+	int count = strlen(mode);
+
+	/* sum up lengths of individual chunks */
+	va_start(chunks, mode);
+	construct.len = 0;
+	for (i = 0; i < count; i++)
+	{
+		chunk_t ch = va_arg(chunks, chunk_t);
+		construct.len += ch.len;
+	}
+	va_end(chunks);
+
+	/* allocate needed memory for construct */
+	construct.ptr = malloc(construct.len);
+	pos = construct.ptr;
+
+	/* copy or move the chunks */
+	va_start(chunks, mode);
+	for (i = 0; i < count; i++)
+	{
+		chunk_t ch = va_arg(chunks, chunk_t);
+		switch (*mode++)
+		{
+			case 'm':
+				memcpy(pos, ch.ptr, ch.len); 
+				pos += ch.len;
+				free(ch.ptr);
+				break;
+			case 'c':
+			default:
+				memcpy(pos, ch.ptr, ch.len); 
+				pos += ch.len;
+		}
+	}
+	va_end(chunks);
+	
+	return construct;
 }
 
 /**

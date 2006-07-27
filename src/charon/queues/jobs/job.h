@@ -100,6 +100,13 @@ enum job_type_t {
 	REKEY_CHILD_SA,
 	
 	/**
+	 * Rekey an IKE_SA
+	 * 
+	 * Job is implemented in class rekey_ike_sa_job_t
+	 */
+	REKEY_IKE_SA,
+	
+	/**
 	 * Send a keepalive packet.
 	 * 
 	 * Job is implemented in class type send_keepalive_job_t

@@ -134,8 +134,7 @@ struct connection_t {
 	/**
 	 * @brief Returns a list of all supported proposals.
 	 * 
-	 * Returned list is still owned by connection and MUST NOT
-	 * modified or destroyed.
+	 * Returned list and its proposals  must be destroyed after usage.
 	 * 
 	 * @param this		calling object
 	 * @return 			list containing all the proposals
@@ -235,6 +234,25 @@ struct connection_t {
 	 * @return			TRUE if group acceptable
 	 */
 	bool (*check_dh_group) (connection_t *this, diffie_hellman_group_t dh_group);
+
+	/**
+	 * @brief Get the lifetime of a connection, before IKE_SA rekeying starts.
+	 * 
+	 * A call to this function automatically adds a jitter to
+	 * avoid simultanous rekeying.
+	 * 
+	 * @param this		calling object
+	 * @return			lifetime in seconds
+	 */
+	u_int32_t (*get_soft_lifetime) (connection_t *this);
+	
+	/**
+	 * @brief Get the lifetime of a connection, before IKE_SA gets deleted.
+	 * 
+	 * @param this		calling object
+	 * @return			lifetime in seconds
+	 */
+	u_int32_t (*get_hard_lifetime) (connection_t *this);
 	
 	/**
 	 * @brief Get a new reference to this connection.
@@ -271,6 +289,9 @@ struct connection_t {
  * @param my_host			host_t representing local address
  * @param other_host		host_t representing remote address
  * @param auth_method		Authentication method to use for our(!) auth data
+ * @param hard_lifetime		lifetime before deleting an IKE_SA
+ * @param soft_lifetime		lifetime before rekeying an IKE_SA
+ * @param jitter			range of randomization time
  * @return 					connection_t object.
  * 
  * @ingroup config
@@ -278,6 +299,7 @@ struct connection_t {
 connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t cert_pol, cert_policy_t req_pol,
 								 host_t *my_host, host_t *other_host,
-								 auth_method_t auth_method);
+								 auth_method_t auth_method, u_int32_t hard_lifetime, 
+								 u_int32_t soft_lifetime, u_int32_t jitter);
 
 #endif /* CONNECTION_H_ */

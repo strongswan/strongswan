@@ -34,6 +34,8 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <sa/transactions/ike_auth.h>
 #include <queues/jobs/delete_half_open_ike_sa_job.h>
+#include <queues/jobs/delete_established_ike_sa_job.h>
+#include <queues/jobs/rekey_ike_sa_job.h>
 
 
 typedef struct private_ike_sa_init_t private_ike_sa_init_t;
@@ -263,6 +265,20 @@ static notify_payload_t *build_natd_payload(private_ike_sa_init_t *this,
 }
 
 /**
+ * destroy a list of proposals
+ */
+static void destroy_proposal_list(linked_list_t *list)
+{
+	proposal_t *proposal;
+	
+	while (list->remove_last(list, (void**)&proposal) == SUCCESS)
+	{
+		proposal->destroy(proposal);
+	}
+	list->destroy(list);
+}
+
+/**
  * Implementation of transaction_t.get_request.
  */
 static status_t get_request(private_ike_sa_init_t *this, message_t **result)
@@ -323,6 +339,7 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		
 		proposal_list = this->connection->get_proposals(this->connection);
 		sa_payload = sa_payload_create_from_proposal_list(proposal_list);
+		destroy_proposal_list(proposal_list);
 		
 		request->add_payload(request, (payload_t*)sa_payload);
 	}
@@ -619,15 +636,10 @@ static status_t get_response(private_ike_sa_init_t *this,
 		 */
 		sa_payload_t* sa_response;
 		linked_list_t *proposal_list;
-		proposal_t *proposal;
 	
 		proposal_list = sa_request->get_proposals(sa_request);
 		this->proposal = this->connection->select_proposal(this->connection, proposal_list);
-		while(proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
-		{
-			proposal->destroy(proposal);
-		}
-		proposal_list->destroy(proposal_list);
+		destroy_proposal_list(proposal_list);
 		if (this->proposal == NULL)
 		{
 			notify_payload_t *notify = notify_payload_create();
@@ -760,10 +772,10 @@ static status_t get_response(private_ike_sa_init_t *this,
 	}
 
 	/* derive all the keys used in the IKE_SA */
-	if (this->ike_sa->build_transforms(this->ike_sa, this->proposal, 
-									   this->diffie_hellman, 
-									   this->nonce_i, this->nonce_r,
-									   FALSE) != SUCCESS)
+	if (this->ike_sa->derive_keys(this->ike_sa, this->proposal, 
+								  this->diffie_hellman, 
+								  this->nonce_i, this->nonce_r,
+								  FALSE, NULL) != SUCCESS)
 	{
 		notify_payload_t *notify = notify_payload_create();
 		notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
@@ -772,6 +784,10 @@ static status_t get_response(private_ike_sa_init_t *this,
 						  "transform objects could not be created from selected proposal, deleting IKE_SA");
 		return DESTROY_ME;
 	}
+	
+	this->ike_sa->set_lifetimes(this->ike_sa, 
+					this->connection->get_soft_lifetime(this->connection),
+					this->connection->get_hard_lifetime(this->connection));
 	
 	{	/* create ike_auth transaction, which will store informations for us */
 		packet_t *response_packet;
@@ -812,6 +828,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 	}
 	/* set new state */
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
+	
 	return SUCCESS;
 }
 
@@ -941,11 +958,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		
 		/* we have to re-check if the others selection is valid */
 		this->proposal = this->connection->select_proposal(this->connection, proposal_list);
-		while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
-		{
-			proposal->destroy(proposal);
-		}
-		proposal_list->destroy(proposal_list);
+		destroy_proposal_list(proposal_list);
 		
 		if (this->proposal == NULL)
 		{
@@ -1003,15 +1016,19 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
 	
 	/* derive all the keys used in the IKE_SA */
-	if (this->ike_sa->build_transforms(this->ike_sa, this->proposal, 
-									   this->diffie_hellman, 
-									   this->nonce_i, this->nonce_r,
-									   TRUE) != SUCCESS)
+	if (this->ike_sa->derive_keys(this->ike_sa, this->proposal, 
+								  this->diffie_hellman, 
+								  this->nonce_i, this->nonce_r,
+								  TRUE, NULL) != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, 
 						  "transform objects could not be created from selected proposal, deleting IKE_SA");
 		return DESTROY_ME;
 	}
+	
+	this->ike_sa->set_lifetimes(this->ike_sa, 
+					this->connection->get_soft_lifetime(this->connection),
+					this->connection->get_hard_lifetime(this->connection));
 	
 	{	/* create ike_auth transaction, which will continue IKE_SA setup */
 		chunk_t request_chunk, response_chunk;

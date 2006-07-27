@@ -1,13 +1,12 @@
 /**
- * @file delete_established_ike_sa_job.c
+ * @file rekey_ike_sa_job.c
  * 
- * @brief Implementation of delete_established_ike_sa_job_t.
+ * @brief Implementation of rekey_ike_sa_job_t.
  * 
  */
 
 /*
- * Copyright (C) 2005-2006 Martin Willi
- * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -21,24 +20,24 @@
  * for more details.
  */
 
-#include "delete_established_ike_sa_job.h"
+#include "rekey_ike_sa_job.h"
 
 #include <daemon.h>
 
 
-typedef struct private_delete_established_ike_sa_job_t private_delete_established_ike_sa_job_t;
+typedef struct private_rekey_ike_sa_job_t private_rekey_ike_sa_job_t;
 
 /**
- * Private data of an delete_established_ike_sa_job_t object.
+ * Private data of an rekey_ike_sa_job_t object.
  */
-struct private_delete_established_ike_sa_job_t {
+struct private_rekey_ike_sa_job_t {
 	/**
-	 * Public delete_established_ike_sa_job_t interface.
+	 * Public rekey_ike_sa_job_t interface.
 	 */
-	delete_established_ike_sa_job_t public;
+	rekey_ike_sa_job_t public;
 	
 	/**
-	 * ID of the ike_sa to delete.
+	 * ID of the IKE_SA to rekey
 	 */
 	ike_sa_id_t *ike_sa_id;
 	
@@ -51,29 +50,36 @@ struct private_delete_established_ike_sa_job_t {
 /**
  * Implementation of job_t.get_type.
  */
-static job_type_t get_type(private_delete_established_ike_sa_job_t *this)
+static job_type_t get_type(private_rekey_ike_sa_job_t *this)
 {
-	return DELETE_ESTABLISHED_IKE_SA;
+	return REKEY_IKE_SA;
 }
-
 
 /**
  * Implementation of job_t.execute.
  */
-static status_t execute(private_delete_established_ike_sa_job_t *this)
+static status_t execute(private_rekey_ike_sa_job_t *this)
 {
-	if (charon->ike_sa_manager->delete(charon->ike_sa_manager, 
-									   this->ike_sa_id) != SUCCESS)
+	ike_sa_t *ike_sa;
+	
+	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+											  this->ike_sa_id);
+	if (ike_sa == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "IKE SA didn't exist anymore");
+		this->logger->log(this->logger, ERROR,
+						  "IKE_SA to rekey not found");
+		return DESTROY_ME;
 	}
+	ike_sa->rekey(ike_sa);
+	
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	return DESTROY_ME;
 }
 
 /**
  * Implementation of job_t.destroy.
  */
-static void destroy(private_delete_established_ike_sa_job_t *this)
+static void destroy(private_rekey_ike_sa_job_t *this)
 {
 	this->ike_sa_id->destroy(this->ike_sa_id);
 	free(this);
@@ -82,9 +88,9 @@ static void destroy(private_delete_established_ike_sa_job_t *this)
 /*
  * Described in header
  */
-delete_established_ike_sa_job_t *delete_established_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
+rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
 {
-	private_delete_established_ike_sa_job_t *this = malloc_thing(private_delete_established_ike_sa_job_t);
+	private_rekey_ike_sa_job_t *this = malloc_thing(private_rekey_ike_sa_job_t);
 	
 	/* interface functions */
 	this->public.job_interface.get_type = (job_type_t (*) (job_t *)) get_type;

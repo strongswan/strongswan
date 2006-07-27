@@ -149,7 +149,10 @@ static status_t execute(private_incoming_packet_job_t *this)
 						  "received packet with SPIs %llx:%llx, but no such IKE_SA",
 						  ike_sa_id->get_initiator_spi(ike_sa_id),
 						  ike_sa_id->get_responder_spi(ike_sa_id));
-		send_notify_response(this, message, INVALID_IKE_SPI);
+		if (message->get_request(message))
+		{
+			send_notify_response(this, message, INVALID_IKE_SPI);
+		}
 		ike_sa_id->destroy(ike_sa_id);	
 		message->destroy(message);
 		return DESTROY_ME;

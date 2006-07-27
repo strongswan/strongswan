@@ -109,6 +109,22 @@ struct private_connection_t {
 	 * Supported proposals
 	 */
 	linked_list_t *proposals;
+	
+	/**
+	 * Time before an SA gets invalid
+	 */
+	u_int32_t soft_lifetime;
+	
+	/**
+	 * Time before an SA gets rekeyed
+	 */
+	u_int32_t hard_lifetime;
+	
+	/**
+	 * Time, which specifies the range of a random value
+	 * substracted from soft_lifetime.
+	 */
+	u_int32_t jitter;
 };
 
 /**
@@ -164,7 +180,19 @@ static host_t *get_other_host (private_connection_t *this)
  */
 static linked_list_t* get_proposals(private_connection_t *this)
 {
-	return this->proposals;
+	iterator_t *iterator;
+	proposal_t *current;
+	linked_list_t *proposals = linked_list_create();
+	
+	iterator = this->proposals->create_iterator(this->proposals, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		current = current->clone(current);
+		proposals->insert_last(proposals, (void*)current);
+	}
+	iterator->destroy(iterator);
+	
+	return proposals;
 }
 	
 /**
@@ -273,6 +301,25 @@ static bool check_dh_group(private_connection_t *this, diffie_hellman_group_t dh
 	prop_iter->destroy(prop_iter);
 	return FALSE;
 }
+/**
+ * Implementation of connection_t.get_soft_lifetime
+ */
+static u_int32_t get_soft_lifetime(private_connection_t *this)
+{
+	if (this->jitter == 0)
+	{
+		return this->soft_lifetime ;
+	}
+	return this->soft_lifetime - (random() % this->jitter);
+}
+
+/**
+ * Implementation of connection_t.get_hard_lifetime
+ */
+static u_int32_t get_hard_lifetime(private_connection_t *this)
+{
+	return this->hard_lifetime;
+}
 
 /**
  * Implementation of connection_t.get_ref.
@@ -310,8 +357,10 @@ static void destroy(private_connection_t *this)
 connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t cert_policy,
 								 cert_policy_t certreq_policy,
-								 host_t *my_host, host_t *other_host, 
-								 auth_method_t auth_method)
+								 host_t *my_host, host_t *other_host,
+								 auth_method_t auth_method,
+								 u_int32_t hard_lifetime,
+								 u_int32_t soft_lifetime, u_int32_t jitter)
 {
 	private_connection_t *this = malloc_thing(private_connection_t);
 	
@@ -328,6 +377,8 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->public.get_auth_method = (auth_method_t(*)(connection_t*)) get_auth_method;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(connection_t*)) get_dh_group;
 	this->public.check_dh_group = (bool(*)(connection_t*,diffie_hellman_group_t)) check_dh_group;
+	this->public.get_soft_lifetime = (u_int32_t (*) (connection_t *))get_soft_lifetime;
+	this->public.get_hard_lifetime = (u_int32_t (*) (connection_t *))get_hard_lifetime;
 	this->public.get_ref = (void(*)(connection_t*))get_ref;
 	this->public.destroy = (void(*)(connection_t*))destroy;
 	
@@ -340,6 +391,9 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->my_host = my_host;
 	this->other_host = other_host;
 	this->auth_method = auth_method;
+	this->hard_lifetime = hard_lifetime;
+	this->soft_lifetime = soft_lifetime;
+	this->jitter = jitter;
 	
 	this->proposals = linked_list_create();
 	

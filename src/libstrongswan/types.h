@@ -161,6 +161,13 @@ extern chunk_t CHUNK_INITIALIZER;
 chunk_t chunk_clone(chunk_t chunk);
 
 /**
+ * Allocate a chunk from concatenation of other chunks.
+ * mode is a string 'm' and 'c, 'm' means move chunk,
+ * 'c' means copy chunk.
+ */
+chunk_t chunk_cat(const char* mode, ...);
+
+/**
  * Free contents of a chunk
  */
 void chunk_free(chunk_t *chunk);

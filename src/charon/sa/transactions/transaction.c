@@ -29,6 +29,7 @@
 #include <sa/transactions/create_child_sa.h>
 #include <sa/transactions/delete_child_sa.h>
 #include <sa/transactions/dead_peer_detection.h>
+#include <sa/transactions/rekey_ike_sa.h>
 #include <encoding/payloads/ts_payload.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/nonce_payload.h>
@@ -89,8 +90,8 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 						switch (prop_struct->get_protocol_id(prop_struct))
 						{
 							case PROTO_IKE:
-								/* TODO: transaction = (transaction_t*)
-												rekey_ike_sa_create(ike_sa); */
+								transaction = (transaction_t*)
+										rekey_ike_sa_create(ike_sa);
 								break;
 							case PROTO_AH:
 							case PROTO_ESP:

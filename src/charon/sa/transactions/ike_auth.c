@@ -192,6 +192,20 @@ static void destroy_ts_list(linked_list_t *list)
 }
 
 /**
+ * destroy a list of proposals
+ */
+static void destroy_proposal_list(linked_list_t *list)
+{
+	proposal_t *proposal;
+	
+	while (list->remove_last(list, (void**)&proposal) == SUCCESS)
+	{
+		proposal->destroy(proposal);
+	}
+	list->destroy(list);
+}
+
+/**
  * Implementation of transaction_t.get_request.
  */
 static status_t get_request(private_ike_auth_t *this, message_t **result)
@@ -298,6 +312,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 			return DESTROY_ME;
 		}
 		sa_payload = sa_payload_create_from_proposal_list(proposal_list);
+		destroy_proposal_list(proposal_list);
 		request->add_payload(request, (payload_t*)sa_payload);
 	}
 	
@@ -717,7 +732,6 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	}
 	
 	{	/* process SA payload */
-		proposal_t *proposal;
 		linked_list_t *proposal_list;
 		sa_payload_t *sa_response;
 		ts_payload_t *ts_response;
@@ -731,12 +745,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		proposal_list = sa_request->get_proposals(sa_request);
 		this->logger->log(this->logger, CONTROL|LEVEL1, "selecting proposals:");
 		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
-		/* list is not needed anymore */
-		while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
-		{
-			proposal->destroy(proposal);
-		}
-		proposal_list->destroy(proposal_list);
+		destroy_proposal_list(proposal_list);
 
 		/* do we have a proposal? */
 		if (this->proposal == NULL)
@@ -929,18 +938,12 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	}
 	
 	{	/* process sa payload */
-		proposal_t *proposal;
 		linked_list_t *proposal_list;
 		
 		proposal_list = sa_payload->get_proposals(sa_payload);
 		/* we have to re-check here if other's selection is valid */
 		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
-		/* list not needed anymore */
-		while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
-		{
-			proposal->destroy(proposal);
-		}
-		proposal_list->destroy(proposal_list);
+		destroy_proposal_list(proposal_list);
 		
 		/* everything fine to create CHILD? */
 		if (this->proposal == NULL ||

@@ -105,31 +105,30 @@ struct private_proposal_substructure_t {
 
 /**
  * Encoding rules to parse or generate a Proposal substructure.
- * 
+ *
  * The defined offsets are the positions in a object of type 
  * private_proposal_substructure_t.
- * 
  */
 encoding_rule_t proposal_substructure_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
-	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload) 			},
+	{ U_INT_8,			offsetof(private_proposal_substructure_t, next_payload) 		},
 	/* Reserved Byte is skipped */
-	{ RESERVED_BYTE,		0																},	
+	{ RESERVED_BYTE,		0															},
 	/* Length of the whole proposal substructure payload*/
-	{ PAYLOAD_LENGTH,		offsetof(private_proposal_substructure_t, proposal_length) 	},	
+	{ PAYLOAD_LENGTH,		offsetof(private_proposal_substructure_t, proposal_length) 	},
 	/* proposal number is a number of 8 bit */
-	{ U_INT_8,				offsetof(private_proposal_substructure_t, proposal_number) 	},	
+	{ U_INT_8,				offsetof(private_proposal_substructure_t, proposal_number) 	},
 	/* protocol ID is a number of 8 bit */
-	{ U_INT_8,				offsetof(private_proposal_substructure_t, protocol_id)		},	
+	{ U_INT_8,				offsetof(private_proposal_substructure_t, protocol_id)		},
 	/* SPI Size has its own type */
-	{ SPI_SIZE,				offsetof(private_proposal_substructure_t, spi_size)			},	
+	{ SPI_SIZE,				offsetof(private_proposal_substructure_t, spi_size)			},
 	/* Number of transforms is a number of 8 bit */
-	{ U_INT_8,				offsetof(private_proposal_substructure_t, transforms_count)	},	
+	{ U_INT_8,				offsetof(private_proposal_substructure_t, transforms_count)	},
 	/* SPI is a chunk of variable size*/
-	{ SPI,					offsetof(private_proposal_substructure_t, spi)				},	
+	{ SPI,					offsetof(private_proposal_substructure_t, spi)				},
 	/* Transforms are stored in a transform substructure, 
 	   offset points to a linked_list_t pointer */
-	{ TRANSFORMS,				offsetof(private_proposal_substructure_t, transforms) 	}
+	{ TRANSFORMS,			offsetof(private_proposal_substructure_t, transforms) 		}
 };
 
 /*
@@ -169,6 +168,31 @@ static status_t verify(private_proposal_substructure_t *this)
 		return FAILED;
 	}
 
+	switch (this->protocol_id)
+	{
+		case PROTO_AH:
+		case PROTO_ESP:
+			if (this->spi.len != 4)
+			{
+				this->logger->log(this->logger, ERROR, 
+								  "invalid SPI length in %s proposal",
+								  mapping_find(protocol_id_m, this->protocol_id));
+				return FAILED;
+			}
+			break;
+		case PROTO_IKE:
+			if (this->spi.len != 0 && this->spi.len  != 8)
+			{
+				this->logger->log(this->logger, ERROR, 
+								  "invalid SPI length in IKE proposal");
+				return FAILED;
+			}
+			break;
+		default:
+			this->logger->log(this->logger, ERROR, 
+							  "invalid proposal protocol (%d)", this->protocol_id);
+			return FAILED;
+	}
 	if ((this->protocol_id == 0) || (this->protocol_id >= 4))
 	{
 		/* reserved are not supported */
@@ -177,12 +201,11 @@ static status_t verify(private_proposal_substructure_t *this)
 	}
 	
 	iterator = this->transforms->create_iterator(this->transforms,TRUE);
-	
 	while(iterator->has_next(iterator))
 	{
 		payload_t *current_transform;
 		iterator->current(iterator,(void **)&current_transform);
-
+		
 		status = current_transform->verify(current_transform);
 		if (status != SUCCESS)
 		{
@@ -190,10 +213,8 @@ static status_t verify(private_proposal_substructure_t *this)
 			break;
 		}
 	}
-	
 	iterator->destroy(iterator);
-
-
+	
 	/* proposal number is checked in SA payload */	
 	return status;
 }
@@ -275,7 +296,6 @@ static void set_is_last_proposal (private_proposal_substructure_t *this, bool is
 	this->next_payload = (is_last) ? 0: PROPOSAL_TYPE_VALUE;
 }
 
-
 /**
  * Implementation of proposal_substructure_t.set_proposal_number.
  */
@@ -303,7 +323,7 @@ static void set_protocol_id(private_proposal_substructure_t *this,u_int8_t proto
 /**
  * Implementation of proposal_substructure_t.get_protocol_id.
  */
-static u_int8_t get_protocol_id (private_proposal_substructure_t *this)
+static u_int8_t get_protocol_id(private_proposal_substructure_t *this)
 {
 	return (this->protocol_id);
 }
@@ -311,7 +331,7 @@ static u_int8_t get_protocol_id (private_proposal_substructure_t *this)
 /**
  * Implementation of proposal_substructure_t.set_spi.
  */
-static void set_spi (private_proposal_substructure_t *this, chunk_t spi)
+static void set_spi(private_proposal_substructure_t *this, chunk_t spi)
 {
 	/* first delete already set spi value */
 	if (this->spi.ptr != NULL)
@@ -331,54 +351,19 @@ static void set_spi (private_proposal_substructure_t *this, chunk_t spi)
 /**
  * Implementation of proposal_substructure_t.get_spi.
  */
-static chunk_t get_spi (private_proposal_substructure_t *this)
+static chunk_t get_spi(private_proposal_substructure_t *this)
 {
 	chunk_t spi;
 	spi.ptr = this->spi.ptr;
-	spi.len = this->spi.len;		
+	spi.len = this->spi.len;
 	
 	return spi;
 }
 
 /**
- * Implementation of proposal_substructure_t.get_info_for_transform_type.
- */
-static status_t get_info_for_transform_type (private_proposal_substructure_t *this,transform_type_t type, u_int16_t *transform_id, u_int16_t *key_length)
-{
-	iterator_t *iterator;
-	status_t status;
-	u_int16_t found_transform_id;
-	u_int16_t found_key_length;
-
-	iterator = this->transforms->create_iterator(this->transforms,TRUE);
-
-	while (iterator->has_next(iterator))
-	{
-		transform_substructure_t *current_transform;
-		status = iterator->current(iterator,(void **) &current_transform);
-		if (status != SUCCESS)
-		{
-			break;
-		}
-		if (current_transform->get_transform_type(current_transform) == type)
-		{
-			/* now get data for specific type */
-			found_transform_id = current_transform->get_transform_id(current_transform);
-			status = current_transform->get_key_length(current_transform,&found_key_length);
-			*transform_id = found_transform_id;
-			*key_length = found_key_length;
-			iterator->destroy(iterator);
-			return status;
-		}		
-	}
-	iterator->destroy(iterator);
-	return NOT_FOUND;
-}
-
-/**
  * Implementation of private_proposal_substructure_t.compute_length.
  */
-static void compute_length (private_proposal_substructure_t *this)
+static void compute_length(private_proposal_substructure_t *this)
 {
 	iterator_t *iterator;
 	size_t transforms_count = 0;
@@ -550,7 +535,6 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.get_proposal_number = (u_int8_t (*) (proposal_substructure_t *)) get_proposal_number;
 	this->public.set_protocol_id = (void (*) (proposal_substructure_t *,u_int8_t))set_protocol_id;
 	this->public.get_protocol_id = (u_int8_t (*) (proposal_substructure_t *)) get_protocol_id;
-	this->public.get_info_for_transform_type = 	(status_t (*) (proposal_substructure_t *,transform_type_t,u_int16_t *, u_int16_t *))get_info_for_transform_type;
 	this->public.set_is_last_proposal = (void (*) (proposal_substructure_t *,bool)) set_is_last_proposal;
 	this->public.get_proposal = (proposal_t* (*) (proposal_substructure_t*))get_proposal;
 	this->public.set_spi = (void (*) (proposal_substructure_t *,chunk_t))set_spi;
@@ -643,16 +627,26 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	}
 	iterator->destroy(iterator);
 	
-	/* take over general infos */
-	this->spi_size = proposal->get_protocol(proposal) == PROTO_IKE ? 0 : 4;
-	this->spi.len = this->spi_size;
-	if (this->spi_size == 4)
+	/* add SPI, if necessary */
+	switch (proposal->get_protocol(proposal))
 	{
-		this->spi.ptr = malloc(this->spi_size);
-		*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal);
+		case PROTO_AH:
+		case PROTO_ESP:
+			this->spi_size = this->spi.len = 4;
+			this->spi.ptr = malloc(this->spi_size);
+			*((u_int32_t*)this->spi.ptr) = proposal->get_spi(proposal);
+			break;
+		case PROTO_IKE:
+			if (proposal->get_spi(proposal))
+			{	/* IKE only uses SPIS when rekeying, but on initial setup */
+				this->spi_size = this->spi.len = 8;
+				this->spi.ptr = malloc(this->spi_size);
+				*((u_int64_t*)this->spi.ptr) = proposal->get_spi(proposal);
+			}
+			break;
 	}
 	this->proposal_number = 0;
 	this->protocol_id = proposal->get_protocol(proposal);
 	
-	return &(this->public);
+	return &this->public;
 }

@@ -74,11 +74,9 @@ static status_t execute(private_route_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "getting an IKE SA");
 	ike_sa = charon->ike_sa_manager->checkout_by_ids(charon->ike_sa_manager,
 										this->policy->get_my_id(this->policy),
 										this->policy->get_other_id(this->policy));
-	
 	if (this->route)
 	{
 		if (ike_sa->route(ike_sa, this->connection, this->policy) != SUCCESS)

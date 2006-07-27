@@ -68,12 +68,12 @@ struct proposal_substructure_t {
 	 * @param forward		iterator direction (TRUE: front to end)
 	 * @return				created iterator_t object
 	 */
-	iterator_t * (*create_transform_substructure_iterator) (proposal_substructure_t *this, bool forward);
+	iterator_t *(*create_transform_substructure_iterator) (proposal_substructure_t *this, bool forward);
 	
 	/**
 	 * @brief Adds a transform_substructure_t object to this object.
 	 * 
-	 * @warning The added transform_substructure_t object  is 
+	 * @warning The added transform_substructure_t object is
 	 * 			getting destroyed in destroy function of proposal_substructure_t.
 	 *
 	 * @param this 		calling proposal_substructure_t object
@@ -130,20 +130,6 @@ struct proposal_substructure_t {
 	u_int8_t (*get_protocol_id) (proposal_substructure_t *this);
 	
 	/**
-	 * @brief Get informations for a specific transform type. 
-	 * 
-	 * @param this 			calling proposal_substructure_t object
-	 * @param type			type to get informations for
-	 * @param transform_id 	transform id of the specific type
-	 * @param key_length 	key length of the specific key length transform attribute
-	 * @return 			
-	 * 						- SUCCESS if transform type is part of this proposal and 
-	 * 					 	 all data (incl. key length) could be fetched
-	 * 						- NOT_FOUND if transform type is not part of this proposal
-	 */
-	status_t (*get_info_for_transform_type) (proposal_substructure_t *this,transform_type_t type, u_int16_t *transform_id, u_int16_t *key_length);
-
-	/**
 	 * @brief Sets the next_payload field of this substructure
 	 * 
 	 * If this is the last proposal, next payload field is set to 0,
@@ -153,7 +139,7 @@ struct proposal_substructure_t {
 	 * @param is_last	When TRUE, next payload field is set to 0, otherwise to 2
 	 */
 	void (*set_is_last_proposal) (proposal_substructure_t *this, bool is_last);
-
+	
 	/**
 	 * @brief Returns the currently set SPI of this proposal.
 	 * 	

@@ -339,8 +339,10 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 								   msg->add_conn.me.sendcert,
 								   msg->add_conn.other.sendcert,
 								   my_host, other_host,
-								   RSA_DIGITAL_SIGNATURE
-								  );
+								   RSA_DIGITAL_SIGNATURE,
+								   msg->add_conn.rekey.ike_lifetime,
+								   msg->add_conn.rekey.ike_lifetime - msg->add_conn.rekey.margin,
+								   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100);
 
 	if (msg->add_conn.algorithms.ike)
 	{

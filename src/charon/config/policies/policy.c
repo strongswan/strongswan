@@ -258,7 +258,19 @@ static linked_list_t *select_other_traffic_selectors(private_policy_t *this,
  */
 static linked_list_t *get_proposals(private_policy_t *this)
 {
-	return this->proposals;
+	iterator_t *iterator;
+	proposal_t *current;
+	linked_list_t *proposals = linked_list_create();
+	
+	iterator = this->proposals->create_iterator(this->proposals, TRUE);
+	while (iterator->iterate(iterator, (void**)&current))
+	{
+		current = current->clone(current);
+		proposals->insert_last(proposals, (void*)current);
+	}
+	iterator->destroy(iterator);
+	
+	return proposals;
 }
 
 /**
@@ -349,7 +361,6 @@ static u_int32_t get_soft_lifetime(private_policy_t *this)
 	{
 		return this->soft_lifetime ;
 	}
-	srandom(time(NULL)+getpid());
 	return this->soft_lifetime - (random() % this->jitter);
 }
 

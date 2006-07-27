@@ -136,8 +136,7 @@ struct policy_t {
 	 * 
 	 * policy_t does store proposals for AH/ESP, IKE proposals are in 
 	 * the connection_t.
-	 * List and Items are still owned by policy and MUST NOT
-	 * be manipulated or freed!
+	 * Resulting list and all of its proposals must be freed after usage.
 	 *
 	 * @param this			calling object
 	 * @return				lists with proposals
