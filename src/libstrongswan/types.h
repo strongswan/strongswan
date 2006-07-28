@@ -200,6 +200,32 @@ void chunk_to_hex(char *buf, size_t buflen, chunk_t chunk);
  */
 void *clalloc(void *pointer, size_t size);
 
+/**
+ * Special type to count references
+ */
+typedef volatile u_int refcount_t;
+
+/**
+ * @brief Get a new reference.
+ *
+ * Increments the reference counter atomic.
+ *
+ * @param ref	pointer to ref counter
+ */
+void ref_get(refcount_t *ref);
+
+/**
+ * @brief Put back a unused reference.
+ *
+ * Decrements the reference counter atomic and 
+ * says if more references available.
+ *
+ * @param ref	pointer to ref counter
+ * @return		TRUE if no more references counted
+ */
+bool ref_put(refcount_t *ref);
+
+
 #define UNDEFINED_TIME	0
 #define TIMETOA_BUF 	30
 

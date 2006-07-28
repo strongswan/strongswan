@@ -63,7 +63,7 @@ struct private_connection_t {
 	/**
 	 * Number of references hold by others to this connection
 	 */
-	u_int refcount;
+	refcount_t refcount;
 
 	/**
 	 * Name of the connection
@@ -326,7 +326,7 @@ static u_int32_t get_hard_lifetime(private_connection_t *this)
  */
 static void get_ref(private_connection_t *this)
 {
-	this->refcount++;
+	ref_get(&this->refcount);
 }
 
 /**
@@ -334,7 +334,7 @@ static void get_ref(private_connection_t *this)
  */
 static void destroy(private_connection_t *this)
 {
-	if (--this->refcount == 0)
+	if (ref_put(&this->refcount))
 	{
 		proposal_t *proposal;
 		

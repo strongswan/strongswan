@@ -46,7 +46,7 @@ struct private_policy_t {
 	/**
 	 * Number of references hold by others to this policy
 	 */
-	u_int refcount;
+	refcount_t refcount;
 	
 	/**
 	 * Name of the policy, used to query it
@@ -377,7 +377,7 @@ static u_int32_t get_hard_lifetime(private_policy_t *this)
  */
 static void get_ref(private_policy_t *this)
 {
-	this->refcount++;
+	ref_get(&this->refcount);
 }
 
 /**
@@ -385,7 +385,7 @@ static void get_ref(private_policy_t *this)
  */
 static void destroy(private_policy_t *this)
 {
-	if (--this->refcount == 0)
+	if (ref_put(&this->refcount))
 	{
 		proposal_t *proposal;
 		traffic_selector_t *traffic_selector;

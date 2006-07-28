@@ -54,6 +54,8 @@
 + proper delete messages
 - notifys on connection setup failure
 + create child sa message/rekeying
+/ IKE_SA rekeying
+  - handle all simultaneous rekeying/delete/create cases
 
 - implement a mechanism against thread exhaustion
   when a blocked IKE_SA receives a lot of messages

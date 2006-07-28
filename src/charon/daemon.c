@@ -32,6 +32,7 @@
 #include <execinfo.h>
 #include <string.h>
 #include <getopt.h>
+#include <errno.h>
 
 #include "daemon.h" 
 

@@ -25,6 +25,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <pthread.h>
 
 #include "types.h"
 
@@ -196,6 +197,43 @@ void *clalloc(void * pointer, size_t size)
 	memcpy(data, pointer,size);
 	
 	return (data);
+}
+
+/**
+ * We use a single mutex for all refcount variables. This
+ * is not optimal for performance, but the critical section
+ * is not that long...
+ * TODO: Consider to include a mutex in each refcount_t variable.
+ */
+static pthread_mutex_t ref_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * Described in header.
+ * 
+ * TODO: May be implemented with atomic CPU instructions
+ * instead of a mutex.
+ */
+void ref_get(refcount_t *ref)
+{
+	pthread_mutex_lock(&ref_mutex);
+	(*ref)++;
+	pthread_mutex_unlock(&ref_mutex);
+}
+
+/**
+ * Described in header.
+ * 
+ * TODO: May be implemented with atomic CPU instructions
+ * instead of a mutex.
+ */
+bool ref_put(refcount_t *ref)
+{
+	bool more_refs;
+	
+	pthread_mutex_lock(&ref_mutex);
+	more_refs = --(*ref);
+	pthread_mutex_unlock(&ref_mutex);
+	return !more_refs;
 }
 
 /*

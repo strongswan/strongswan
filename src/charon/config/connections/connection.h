@@ -259,6 +259,9 @@ struct connection_t {
 	 *
 	 * Get a new reference to this connection by increasing
 	 * it's internal reference counter.
+	 * Do not call get_ref or any other function until you
+	 * already have a reference. Otherwise the object may get
+	 * destroyed while calling get_ref(),
 	 *
 	 * @param this		calling object
 	 */
