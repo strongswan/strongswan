@@ -11,6 +11,10 @@ strongswan-4.0.3
   new keys are generated using perfect forward secrecy. An optional flag
   which enforces reauthentication will be implemented later.
 
+- "sha" and "sha1" are now treated as synonyms in the ike= and esp=
+  algorithm configuration statements.
+
+
 strongswan-4.0.2
 ----------------
 
@@ -87,6 +91,7 @@ strongswan-4.0.1
   handles ipsec commands up, down, status, statusall, listall,
   listcerts and allows proper load, reload and delete of connections
   via ipsec starter.
+
 
 strongswan-4.0.0
 ----------------
