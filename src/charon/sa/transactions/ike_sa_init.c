@@ -775,7 +775,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 	if (this->ike_sa->derive_keys(this->ike_sa, this->proposal, 
 								  this->diffie_hellman, 
 								  this->nonce_i, this->nonce_r,
-								  FALSE, NULL) != SUCCESS)
+								  FALSE, NULL, NULL) != SUCCESS)
 	{
 		notify_payload_t *notify = notify_payload_create();
 		notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
@@ -1019,7 +1019,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	if (this->ike_sa->derive_keys(this->ike_sa, this->proposal, 
 								  this->diffie_hellman, 
 								  this->nonce_i, this->nonce_r,
-								  TRUE, NULL) != SUCCESS)
+								  TRUE, NULL, NULL) != SUCCESS)
 	{
 		this->logger->log(this->logger, AUDIT, 
 						  "transform objects could not be created from selected proposal, deleting IKE_SA");

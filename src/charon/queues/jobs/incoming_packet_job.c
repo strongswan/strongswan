@@ -79,12 +79,14 @@ static void send_notify_response(private_incoming_packet_job_t *this,
 	src = request->get_destination(request);
 	response->set_source(response, src->clone(src));
 	response->set_destination(response, dst->clone(dst));
-	response->set_exchange_type(response, IKE_SA_INIT);
+	response->set_exchange_type(response, request->get_exchange_type(request));
 	response->set_request(response, FALSE);
 	response->set_message_id(response, 0);
 	response->set_ike_sa_id(response, ike_sa_id);
 	notify = notify_payload_create_from_protocol_and_type(PROTO_NONE, type);
 	response->add_payload(response, (payload_t *)notify);
+	/* generation may fail, as most messages need a crypter/signer.
+	 * TODO: Use transforms implementing the "NULL" algorithm */
 	if (response->generate(response, NULL, NULL, &packet) != SUCCESS)
 	{
 		response->destroy(response);

@@ -70,7 +70,7 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 		}
 		case CREATE_CHILD_SA:
 		{
-			if (ike_sa->get_state(ike_sa) != IKE_ESTABLISHED)
+			if (ike_sa->get_state(ike_sa) < IKE_ESTABLISHED)
 			{
 				break;
 			}
@@ -114,7 +114,7 @@ transaction_t *transaction_create(ike_sa_t *ike_sa, message_t *request)
 		}
 		case INFORMATIONAL:
 		{
-			if (ike_sa->get_state(ike_sa) == IKE_CREATED)
+			if (ike_sa->get_state(ike_sa) < IKE_ESTABLISHED)
 			{
 				break;
 			}

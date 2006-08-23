@@ -51,30 +51,32 @@ typedef enum ike_sa_state_t ike_sa_state_t;
  * SA is in the state CREATED.
  * @verbatim
                  +----------------+
-                 ¦   SA_CREATED   ¦
+                 Â¦   SA_CREATED   Â¦
                  +----------------+
-                         ¦
-    on initiate()--->    ¦   <----- on IKE_SA_INIT received 
-                         ¦
+                         Â¦
+    on initiate()--->    Â¦   <----- on IKE_SA_INIT received 
+                         V
                  +----------------+
-                 ¦ SA_CONNECTING  ¦
+                 Â¦ SA_CONNECTING  Â¦
                  +----------------+
-                         ¦
-                         ¦   <----- on IKE_AUTH successfully completed
-                         ¦
+                         Â¦
+                         Â¦   <----- on IKE_AUTH successfully completed
+                         V
                  +----------------+
-                 ¦ SA_ESTABLISHED ¦
+                 Â¦ SA_ESTABLISHED Â¦-------------------------+ <-- on rekeying
+                 +----------------+                         Â¦
+                         Â¦                                  V
+    on delete()--->      Â¦   <----- on IKE_SA        +-------------+
+                         Â¦          delete request   Â¦ SA_REKEYING Â¦
+                         Â¦          received         +-------------+
+                         V                                  Â¦
+                 +----------------+                         Â¦
+                 Â¦  SA_DELETING   Â¦<------------------------+ <-- after rekeying
                  +----------------+
-                         ¦
-    on delete()--->      ¦   <----- on IKE_SA delete request received
-                         ¦
-                 +----------------+
-                 ¦  SA_DELETING   ¦
-                 +----------------+
-                         ¦
-                         ¦   <----- after delete() acknowledged
-                         ¦
-                        \¦/
+                         Â¦
+                         Â¦   <----- after delete() acknowledged
+                         Â¦
+                        \V/
                          X
                         / \
    @endverbatim
@@ -97,6 +99,11 @@ enum ike_sa_state_t {
 	 * IKE_SA is fully established
 	 */
 	IKE_ESTABLISHED,
+	
+	/**
+	 * IKE_SA rekeying in progress
+	 */
+	IKE_REKEYING,
 	
 	/**
 	 * IKE_SA is in progress of deletion
@@ -279,7 +286,7 @@ struct ike_sa_t {
 	 * @brief Acquire connection setup for a policy.
 	 *
 	 * If an installed policy raises an acquire, the kernel calls
-	 * this function to establsh the CHILD_SA (and maybe the IKE_SA).
+	 * this function to establish the CHILD_SA (and maybe the IKE_SA).
 	 *
 	 * @param this 			calling object
 	 * @param reqid			reqid of the CHILD_SA the policy belongs to.
@@ -418,12 +425,13 @@ struct ike_sa_t {
 	 * @param nonce_i		initiators nonce
 	 * @param nonce_r		responders nonce
 	 * @param initiator		TRUE if initiator, FALSE otherwise
-	 * @param rekey_prf		PRF with SK_d key when rekeying, NULL otherwise
+	 * @param child_prf		PRF with SK_d key when rekeying, NULL otherwise
+	 * @param old_prf		general purpose PRF of old SA when rekeying
 	 */
 	status_t (*derive_keys)(ike_sa_t *this, proposal_t* proposal,
 							diffie_hellman_t *dh,
 							chunk_t nonce_i, chunk_t nonce_r,
-							bool initiator, prf_t *rekey_prf);
+							bool initiator, prf_t *child_prf, prf_t *old_prf);
 	
 	/**
 	 * @brief Get the multi purpose prf.
@@ -485,6 +493,14 @@ struct ike_sa_t {
 	 */
 	child_sa_t* (*get_child_sa) (ike_sa_t *this, protocol_id_t protocol, 
 								 u_int32_t spi, bool inbound);
+	
+	/**
+	 * @brief Create an iterator over all CHILD_SAs.
+	 * 
+	 * @param this 			calling object
+	 * @return				iterator
+	 */
+	iterator_t* (*create_child_sa_iterator) (ike_sa_t *this);
 	
 	/**
 	 * @brief Rekey the CHILD SA with the specified reqid.
@@ -554,6 +570,24 @@ struct ike_sa_t {
 	 * @return				- SUCCESS, if IKE_SA rekeying initiated
 	 */
 	status_t (*rekey) (ike_sa_t *this);
+
+	/**
+	 * @brief Get the transaction which rekeys this IKE_SA.
+	 * 
+	 * @todo Fix include for rekey_ike_sa.h
+	 *
+	 * @param this 			calling object
+	 * @return				rekey_ike_sa_t transaction or NULL
+	 */
+	void* (*get_rekeying_transaction) (ike_sa_t *this);
+
+	/**
+	 * @brief Set the transaction which rekeys this IKE_SA.
+	 *
+	 * @param this 			calling object
+	 * @param rekey			rekey_ike_sa_t transaction or NULL
+	 */
+	void (*set_rekeying_transaction) (ike_sa_t *this, void *rekey);
 
 	/**
 	 * @brief Move all children from other IKE_SA to this IKE_SA.

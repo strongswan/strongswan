@@ -64,6 +64,7 @@ mapping_t ike_sa_state_m[] = {
 	{IKE_CREATED, "CREATED"},
 	{IKE_CONNECTING, "CONNECTING"},
 	{IKE_ESTABLISHED, "ESTABLISHED"},
+	{IKE_REKEYING, "REKEYING"},
 	{IKE_DELETING, "DELETING"},
 	{MAPPING_END, NULL}
 };
@@ -225,6 +226,11 @@ struct private_ike_sa_t {
 	 * do multi transaction operations.
 	 */
 	transaction_t *transaction_in_next;
+	
+	/**
+	 * Transaction which rekeys this IKE_SA, used do detect simultaneus rekeying
+	 */
+	rekey_ike_sa_t *rekeying_transaction;
 };
 
 /**
@@ -840,10 +846,12 @@ static status_t initiate(private_ike_sa_t *this,
 			return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
 		}
 		case IKE_DELETING:
+		case IKE_REKEYING:
 		{
-			/* if we are in DELETING, we deny set up of a policy. */
+			/* if we are in DELETING/REKEYING, we deny set up of a policy. */
 			this->logger->log(this->logger, CONTROL, 
-							  "creating CHILD_SA discarded, as IKE_SA is deleting");
+							  "creating CHILD_SA discarded, as IKE_SA is in state %s",
+							  mapping_find(ike_sa_state_m, this->state));
 			policy->destroy(policy);
 			connection->destroy(connection);
 			return FAILED;
@@ -1084,7 +1092,9 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 			set_name(this, connection->get_name(connection));
 			break;
 		case IKE_ESTABLISHED:
-			/* nothing to do */
+		case IKE_REKEYING:
+			/* nothing to do. We allow it for rekeying, as it will be
+			 * adopted by the new IKE_SA */
 			break;
 		case IKE_DELETING:
 			/* deny */
@@ -1331,7 +1341,7 @@ static void set_other_id(private_ike_sa_t *this, identification_t *other)
 static status_t derive_keys(private_ike_sa_t *this,
 							proposal_t *proposal, diffie_hellman_t *dh,
 							chunk_t nonce_i, chunk_t nonce_r,
-							bool initiator, prf_t *rekey_prf)
+							bool initiator, prf_t *child_prf, prf_t *old_prf)
 {
 	prf_plus_t *prf_plus;
 	chunk_t skeyseed, secret, key, nonces, prf_plus_seed;
@@ -1368,7 +1378,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 	 *
 	 * if we are rekeying, SKEYSEED built on another way 
 	 */
-	if (rekey_prf == NULL) /* not rekeying */
+	if (child_prf == NULL) /* not rekeying */
 	{	
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
 		this->prf->set_key(this->prf, nonces);
@@ -1381,14 +1391,15 @@ static status_t derive_keys(private_ike_sa_t *this,
 	}
 	else
 	{
-		/* SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr) */
+		/* SKEYSEED = prf(SK_d (old), [g^ir (new)] | Ni | Nr) 
+		 * use OLD SAs PRF functions for both prf_plus and prf */
 		secret = chunk_cat("mc", secret, nonces);
-		rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed);
+		child_prf->allocate_bytes(child_prf, secret, &skeyseed);
 		this->logger->log_chunk(this->logger, PRIVATE|LEVEL1, "SKEYSEED", skeyseed);
-		rekey_prf->set_key(rekey_prf, skeyseed); /* abuse of rekeyed SAs child_prf */
+		old_prf->set_key(old_prf, skeyseed);
 		chunk_free(&skeyseed);
 		chunk_free(&secret);
-		prf_plus = prf_plus_create(rekey_prf, prf_plus_seed);
+		prf_plus = prf_plus_create(old_prf, prf_plus_seed);
 	}
 	chunk_free(&nonces);
 	chunk_free(&prf_plus_seed);
@@ -1421,12 +1432,12 @@ static status_t derive_keys(private_ike_sa_t *this,
 	key_size = signer_i->get_key_size(signer_i);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "Sk_ai secret", key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", key);
 	signer_i->set_key(signer_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, CONTROL|LEVEL1, "Sk_ar secret", key);
+	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", key);
 	signer_r->set_key(signer_r, key);
 	chunk_free(&key);
 	
@@ -1547,13 +1558,21 @@ static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	{
 		iterator->current(iterator, (void**)&current);
 		if (current->get_spi(current, inbound) == spi &&
-			current->get_protocol(current) == protocol)
+				  current->get_protocol(current) == protocol)
 		{
 			found = current;
 		}
 	}
 	iterator->destroy(iterator);
 	return found;
+}
+
+/**
+ * Implementation of ike_sa_t.create_child_sa_iterator.
+ */
+static iterator_t* create_child_sa_iterator(private_ike_sa_t *this)
+{
+	return this->child_sas->create_iterator(this->child_sas, TRUE);
 }
 
 /**
@@ -1668,6 +1687,22 @@ static status_t rekey(private_ike_sa_t *this)
 	
 	rekey_ike_sa = rekey_ike_sa_create(&this->public);
 	return queue_transaction(this, (transaction_t*)rekey_ike_sa, FALSE);
+}
+
+/**
+ * Implementation of ike_sa_t.get_rekeying_transaction.
+ */
+static rekey_ike_sa_t* get_rekeying_transaction(private_ike_sa_t *this)
+{
+	return this->rekeying_transaction;
+}
+
+/**
+ * Implementation of ike_sa_t.set_rekeying_transaction.
+ */
+static void set_rekeying_transaction(private_ike_sa_t *this, rekey_ike_sa_t *rekey)
+{
+	this->rekeying_transaction = rekey;
 }
 
 /**
@@ -1883,10 +1918,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
 	this->public.get_prf_auth_i = (prf_t *(*) (ike_sa_t *)) get_prf_auth_i;
 	this->public.get_prf_auth_r = (prf_t *(*) (ike_sa_t *)) get_prf_auth_r;
-	this->public.derive_keys = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool,prf_t*)) derive_keys;
+	this->public.derive_keys = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
 	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.has_child_sa = (bool(*)(ike_sa_t*,u_int32_t)) has_child_sa;
 	this->public.get_child_sa = (child_sa_t* (*)(ike_sa_t*,protocol_id_t,u_int32_t,bool)) get_child_sa;
+	this->public.create_child_sa_iterator = (iterator_t* (*)(ike_sa_t*)) create_child_sa_iterator;
 	this->public.rekey_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) rekey_child_sa;
 	this->public.delete_child_sa = (status_t(*)(ike_sa_t*,protocol_id_t,u_int32_t)) delete_child_sa;
 	this->public.destroy_child_sa = (status_t (*)(ike_sa_t*,protocol_id_t,u_int32_t))destroy_child_sa;
@@ -1894,6 +1930,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
 	this->public.set_lifetimes = (void(*)(ike_sa_t*,u_int32_t,u_int32_t))set_lifetimes;
 	this->public.rekey = (status_t(*)(ike_sa_t*))rekey;
+	this->public.get_rekeying_transaction = (void*(*)(ike_sa_t*))get_rekeying_transaction;
+	this->public.set_rekeying_transaction = (void(*)(ike_sa_t*,void*))set_rekeying_transaction;
 	this->public.adopt_children = (void(*)(ike_sa_t*,ike_sa_t*))adopt_children;
 	
 	/* initialize private fields */
@@ -1919,6 +1957,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->transaction_in = NULL;
 	this->transaction_in_next = NULL;
 	this->transaction_out = NULL;
+	this->rekeying_transaction = NULL;
 	this->state = IKE_CREATED;
 	this->message_id_out = 0;
 	/* set to NOW, as when we rekey an existing IKE_SA no message is exchanged */

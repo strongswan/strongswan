@@ -256,6 +256,17 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 		return FAILED;
 	}
 	
+	/* we can't handle a delete for a CHILD when we are rekeying. There
+	 * is no proper solution for this. We send a empty informational response,
+	 * as described in ikev2-clarifications draft */
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING ||
+		this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
+	{
+		this->logger->log(this->logger, AUDIT, 
+						  "unable to delete CHILD_SA, as rekeying in progress");
+		return FAILED;
+	}
+	
 	/* iterate over all payloads */
 	payloads = request->get_payload_iterator(request);	
 	while (payloads->has_next(payloads))

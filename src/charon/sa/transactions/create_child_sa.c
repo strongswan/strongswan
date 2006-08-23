@@ -406,7 +406,7 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 			if (notify_type < 16383)
 			{
 				this->logger->log(this->logger, AUDIT, 
-								  "received %s notify error (%d), deleting IKE_SA",
+								  "received %s notify error (%d), CHILD_SA creation failed",
 								  mapping_find(notify_type_m, notify_type),
 								  notify_type);
 				return FAILED;	
@@ -537,6 +537,17 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	{
 		this->logger->log(this->logger, ERROR,
 						  "CREATE_CHILD_SA response of invalid type, aborted");
+		return FAILED;
+	}
+	
+	/* we do not allow the creation of new CHILDren/rekeying when IKE_SA is
+	 * rekeying */
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING ||
+		this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
+	{
+		build_notify(NO_ADDITIONAL_SAS, CHUNK_INITIALIZER, response, TRUE);
+		this->logger->log(this->logger, AUDIT, 
+						  "unable to create new CHILD_SAs, as rekeying in progress");
 		return FAILED;
 	}
 	

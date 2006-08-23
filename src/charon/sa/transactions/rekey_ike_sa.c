@@ -190,6 +190,15 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 		return SUCCESS;
 	}
 	
+	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+	{
+		this->logger->log(this->logger, ERROR,
+						  "tried to rekey in state %s, aborted",
+						  mapping_find(ike_sa_state_m,
+									   this->ike_sa->get_state(this->ike_sa)));
+		return FAILED;
+	}
+	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
 	
@@ -274,7 +283,7 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 			this->logger->log(this->logger, AUDIT,
 							  "DH group %s (%d) not supported, aborting",
 							  mapping_find(diffie_hellman_group_m, dh_group), dh_group);
-			return DESTROY_ME;
+			return FAILED;
 		}
 	}
 	
@@ -287,6 +296,10 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 	
 	this->message_id = this->ike_sa->get_next_message_id(this->ike_sa);
 	request->set_message_id(request, this->message_id);
+	
+	/* register us as rekeying to detect multiple rekeying */
+	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
+	this->ike_sa->set_rekeying_transaction(this->ike_sa, &this->public);
 	
 	return SUCCESS;
 }
@@ -380,7 +393,8 @@ static status_t switchto_new_sa(private_rekey_ike_sa_t* this, bool initiator)
 	if (this->new_sa->derive_keys(this->new_sa, this->proposal,
 								  this->diffie_hellman, 
 								  this->nonce_i, this->nonce_r, initiator,
-								  this->ike_sa->get_child_prf(this->ike_sa)
+								  this->ike_sa->get_child_prf(this->ike_sa),
+								  this->ike_sa->get_prf(this->ike_sa)
 								 ) != SUCCESS)
 	{
 		return FAILED;
@@ -388,14 +402,9 @@ static status_t switchto_new_sa(private_rekey_ike_sa_t* this, bool initiator)
 	
 	this->new_sa->set_state(this->new_sa, IKE_ESTABLISHED);
 	
-	this->new_sa->adopt_children(this->new_sa, this->ike_sa);
-	
 	this->new_sa->set_lifetimes(this->new_sa,
 						this->connection->get_soft_lifetime(this->connection),
 						this->connection->get_hard_lifetime(this->connection));
-	
-	charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
-	this->new_sa = NULL;
 	return SUCCESS;
 }
 
@@ -433,7 +442,8 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	host_t *me, *other;
 	message_t *response;
 	status_t status;
-	iterator_t *payloads;
+	iterator_t *payloads, *iterator;
+	child_sa_t *child_sa;
 	sa_payload_t *sa_request = NULL;
 	nonce_payload_t *nonce_request = NULL;
 	ke_payload_t *ke_request = NULL;
@@ -468,6 +478,33 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 						  "CREATE_CHILD_SA response of invalid type, aborted");
 		return FAILED;
 	}
+	
+	/* if we already initiate a delete, we do not allow rekeying */
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
+	{
+		build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+		this->logger->log(this->logger, CONTROL,
+						  "unable to rekey, as delete in progress. Sending NO_PROPOSAL_CHOSEN");
+		return FAILED;
+	}
+	
+	/* if we have a CHILD which is "half-open", we do not allow rekeying */
+	iterator = this->ike_sa->create_child_sa_iterator(this->ike_sa);
+	while (iterator->iterate(iterator, (void**)&child_sa))
+	{
+		child_sa_state_t state = child_sa->get_state(child_sa);
+		if (state == CHILD_CREATED ||
+			state == CHILD_REKEYING ||
+			state == CHILD_DELETING)
+		{
+			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			this->logger->log(this->logger, CONTROL,
+							  "unable to rekey, one CHILD_SA is half open. Sending NO_PROPOSAL_CHOSEN");
+			iterator->destroy(iterator);
+			return FAILED;
+		}
+	}
+	iterator->destroy(iterator);
 	
 	/* apply for notify processing */
 	this->next = next;
@@ -622,7 +659,49 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 		response->add_payload(response, (payload_t*)ke_response);
 	}
 	
-	return switchto_new_sa(this, FALSE);
+	status = switchto_new_sa(this, FALSE);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	
+	/* IKE_SA successfully created. If another transaction is already rekeying
+	 * this SA, our lower nonce must be registered for a later nonce compare. */
+	{
+		private_rekey_ike_sa_t *other;
+		
+		other = this->ike_sa->get_rekeying_transaction(this->ike_sa);
+		if (other)
+		{
+			/* store our lower nonce in the simultaneus transaction, we 
+			 * will later compare it against his nonces when we calls conclude().
+			 * We do not adopt childrens yet, as we don't know if we'll win
+			 * the race...
+			 */
+			if (memcmp(this->nonce_i.ptr, this->nonce_r.ptr,
+				min(this->nonce_i.len, this->nonce_r.len)) < 0)
+			{
+				other->nonce_s = chunk_clone(this->nonce_i);
+			}
+			else
+			{
+				other->nonce_s = chunk_clone(this->nonce_r);
+			}
+			/* overwrite "other" in IKE_SA, allows "other" to access "this" */
+			this->ike_sa->set_rekeying_transaction(this->ike_sa, &this->public);
+		}
+		else
+		{
+			/* if we have no simultaneus transaction, we can safely adopt 
+			 * all children and complete. */
+			this->new_sa->adopt_children(this->new_sa, this->ike_sa);
+			charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
+			this->new_sa = NULL;
+		}
+		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
+	}
+	
+	return SUCCESS;
 }
 
 /**
@@ -636,6 +715,7 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 	sa_payload_t *sa_payload = NULL;
 	nonce_payload_t *nonce_payload = NULL;
 	ke_payload_t *ke_payload = NULL;
+	private_rekey_ike_sa_t *other_trans;
 	status_t status;
 	
 	/* check message type */
@@ -726,18 +806,72 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 							ke_payload->get_key_exchange_data(ke_payload));
 	}
 	
-	if (switchto_new_sa(this, TRUE) == SUCCESS)
-	{
-		/* new IKE_SA is in use now, delete old */
-		*next = (transaction_t*)delete_ike_sa_create(this->ike_sa);
-		return SUCCESS;
-	}
-	else
+	if (switchto_new_sa(this, TRUE) != SUCCESS)
 	{
 		/* this should not happen. But if, we destroy both SAs */
 		*next = (transaction_t*)delete_ike_sa_create(this->new_sa);
 		return DESTROY_ME;
 	}
+	
+	/* IKE_SA successfully created. If the other peer initiated rekeying
+	 * in the meantime, we detect this by comparing the rekeying_transaction
+	 * of the SA. If it changed, we are not alone. Then we must compare the nonces.
+	 * If no simultaneous rekeying is going on, we just initiate the delete of
+	 * the superseded SA. */
+	other_trans = this->ike_sa->get_rekeying_transaction(this->ike_sa);
+	this->ike_sa->set_rekeying_transaction(this->ike_sa, NULL);
+	
+	if (this->nonce_s.ptr)
+	{	/* simlutaneous rekeying is going on, not so good */
+		chunk_t this_lowest;
+		
+		/* first get our lowest nonce */
+		if (memcmp(this->nonce_i.ptr, this->nonce_r.ptr,
+			min(this->nonce_i.len, this->nonce_r.len)) < 0)
+		{
+			this_lowest = this->nonce_i;
+		}
+		else
+		{
+			this_lowest = this->nonce_r;
+		}
+		/* then compare against other lowest nonce */
+		if (memcmp(this_lowest.ptr, this->nonce_s.ptr,
+			min(this_lowest.len, this->nonce_s.len)) < 0)
+		{
+			this->logger->log(this->logger, ERROR,
+								"detected simultaneous IKE_SA rekeying, deleting ours");
+			this->lost = TRUE;
+		}
+		else
+		{
+			this->logger->log(this->logger, ERROR,
+								"detected simultaneous IKE_SA rekeying, but ours is preferred");
+		}
+		if (this->lost)
+		{
+			/* the other has won, he gets our children */
+			other_trans->new_sa->adopt_children(other_trans->new_sa, this->ike_sa);
+			/* we have lost simlutaneous rekeying, delete the SA we just have created */
+			this->new_sa->delete(this->new_sa);
+		}
+		/* other trans' SA is still not checked in, so do it now. It's SA will get
+		 * deleted by remote peer. */
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, other_trans->new_sa);
+		other_trans->new_sa = NULL;
+	}
+	
+	if (!this->lost)
+	{
+		/* we have won. delete old IKE_SA, and migrate all children */
+		*next = (transaction_t*)delete_ike_sa_create(this->ike_sa);
+		this->new_sa->adopt_children(this->new_sa, this->ike_sa);
+	}
+	
+	charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
+	this->new_sa = NULL;
+	
+	return SUCCESS;
 }
 
 /**
