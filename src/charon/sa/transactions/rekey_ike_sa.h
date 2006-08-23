@@ -54,9 +54,8 @@ struct rekey_ike_sa_t {
 	 * 
 	 * @param this		calling object
 	 * @param dh_group	diffie hellman group to use
-	 * @return			FALSE, if DH group not allowed/supported
 	 */
-	bool (*use_dh_group) (rekey_ike_sa_t* this, diffie_hellman_group_t dh_group);
+	void (*use_dh_group) (rekey_ike_sa_t* this, diffie_hellman_group_t dh_group);
 	
 	/**
 	 * @brief Cancel the request.

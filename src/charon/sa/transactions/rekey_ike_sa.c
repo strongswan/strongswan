@@ -140,17 +140,9 @@ static u_int32_t requested(private_rekey_ike_sa_t *this)
 /**
  * Implementation of rekey_ike_sa_t.use_dh_group.
  */
-static bool use_dh_group(private_rekey_ike_sa_t *this, diffie_hellman_group_t dh_group)
+static void use_dh_group(private_rekey_ike_sa_t *this, diffie_hellman_group_t dh_group)
 {
-	if (this->connection->check_dh_group(this->connection, dh_group))
-	{
-		this->diffie_hellman = diffie_hellman_create(dh_group);
-		if (this->diffie_hellman)
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
+	this->diffie_hellman = diffie_hellman_create(dh_group);
 }
 
 /**
@@ -190,7 +182,9 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 		return SUCCESS;
 	}
 	
-	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+	/* check for correct state, except when retrying with another dh group */
+	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED &&
+	    !this->diffie_hellman)
 	{
 		this->logger->log(this->logger, ERROR,
 						  "tried to rekey in state %s, aborted",
@@ -509,6 +503,24 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	/* apply for notify processing */
 	this->next = next;
 	
+	
+	/* get a connection to replace current IKE_SA */
+	this->connection = charon->connections->get_connection_by_name(
+					charon->connections, this->ike_sa->get_name(this->ike_sa));
+	/* if connection lookup by name fails, try it with the hosts */
+	if (this->connection == NULL)
+	{
+		this->connection = charon->connections->get_connection_by_hosts(
+								charon->connections, me, other);
+		if (this->connection == NULL)
+		{
+			this->logger->log(this->logger, ERROR,
+								"no connection found to rekey IKE_SA, sending NO_RROPOSAL_CHOSEN");
+			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			return FAILED;
+		}
+	}
+	
 	/* Iterate over all payloads. */
 	payloads = request->get_payload_iterator(request);
 	while (payloads->has_next(payloads))
@@ -570,26 +582,6 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 		nonce_response->set_nonce(nonce_response, this->nonce_r);
 	}
 	
-	{	/* get a connection to replace current IKE_SA */
-		this->connection = charon->connections->get_connection_by_name(
-							charon->connections,
-							this->ike_sa->get_name(this->ike_sa));
-		/* if connection lookup by name fails, try it with the hosts */
-		if (this->connection == NULL)
-		{
-			this->connection = charon->connections->get_connection_by_hosts(
-														charon->connections,
-														me, other);
-			if (this->connection == NULL)
-			{
-				this->logger->log(this->logger, ERROR,
-								  "no connection found to rekey IKE_SA, sending NO_RROPOSAL_CHOSEN");
-				build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
-				return FAILED;
-			}
-		}
-	}
-	
 	{	/* process SA payload */
 		linked_list_t *proposal_list;
 		sa_payload_t *sa_response;
@@ -649,7 +641,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 			notify_chunk.ptr = (u_int8_t*)&notify_group;
 			notify_chunk.len = sizeof(notify_group);
 			build_notify(INVALID_KE_PAYLOAD, notify_chunk, response, TRUE);
-			return DESTROY_ME;
+			return FAILED;
 		}
 		this->diffie_hellman->set_other_public_value(this->diffie_hellman,
 								ke_request->get_key_exchange_data(ke_request));
@@ -911,7 +903,7 @@ rekey_ike_sa_t *rekey_ike_sa_create(ike_sa_t *ike_sa)
 	this->public.transaction.destroy = (void(*)(transaction_t*))destroy;
 	
 	/* public functions */
-	this->public.use_dh_group = (bool(*)(rekey_ike_sa_t*,diffie_hellman_group_t))use_dh_group;
+	this->public.use_dh_group = (void(*)(rekey_ike_sa_t*,diffie_hellman_group_t))use_dh_group;
 	this->public.cancel = (void(*)(rekey_ike_sa_t*))cancel;
 	
 	/* private data */
