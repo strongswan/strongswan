@@ -1,3 +1,127 @@
+ strongswan-4.0.3 / R:1235 
+===========================
+
+fixed rekeying behavior when proposing an inacceptable DH group (INVALID_KE_PAYLOAD)
+implement proper handling of most simultaneous IKE_SA rekeying cases
+version bump to 4.0.3
+implemented proper refcounting using atomic operations
+implemented IKE_SA rekeying
+	uses ikelifetime, rekeymargin and rekeyfuzz config settings
+	no handling of simultaneus exchanges yet!
+added possibility to route CHILD_SAs, without to set them up
+	support for auto=route parameter
+	support for ipsec route and ipsec unroute
+	initiating of CHILD and/or IKE_SAs based on kernel acquires
+reuse an existing IKE_SA to set up additional CHILD_SAs
+introduced refcounting on policy and connections
+	aren't stored in the IKE_SA anymore, they are queried on the fly
+	are immutable now, allows it to share them
+policy selection based on traffic selectors, leads to valid lookup results
+	rekeying queries the policy based on its traffic selectors
+cleanups in kernel interface code
+added proper traffic selector to string conversion
+some cleanups here & there
+X.509 certificate trust path verification
+added
+fixed UDP decapsulation by adding inbound bypass policy for send socket
+updated mixed tests to new charon output
+corrected DPD entry
+reenabled module tests for charon
+fixed bug which erroneously detected KE payload when rekeying
+added IPsec bypass policy to receiving socket, allows incoming IKE traffic on host2host tunnels when using NAT
+improved logging on verify errors for some payloads
+enforcing IKE_SA shutdown, even when transactions are outstanding
+proper reject of CREATE_CHILD_SA message with KE payload
+added test cases from NAT team
+updated all IKEv2 tests to work with new status output
+added tcpdumpcount function from NATT guys
+added possibility to mount the strongswan tree into all UMLs
+added script for installing from shared tree in all UMLs
+added script to shut down all UMLs properly
+removed in favour of tests from NAT team
+fixed CREATE_CHILD_SA transaction dispatching
+added CHILD_SA states, which allows us to detect further simultaneous transactions
+reimplemented the buggy message id handling
+updated some inline docs
+fixed crypter/signer in/out to conform with standard
+fixed payload order
+added message id logging
+added all currently known notify payload types
+added policy cache to kernel interface
+	allows refcounting of multiple installed policies
+	finally brings us stable simultaneous rekeying
+leak detective blanks memory on free & alloc, allows further membug detection
+code cleanups
+identification_t.matches() supports multiple wildcard counts
+identification_t.matches() supports multiple wildcard counts
+further work done for simultaneous rekeying/delete
+	still some cases which cause trouble
+fixed compiler warnings in parser when using -O2
+reenabled check_expiry
+updated copyright information
+reimplemented CHILD_SA rekeying & delete
+	no simultanous transaction with CHILD_SAs yet!
+removed NAT_TRAVERSAL and VIRTUAL_IP compile options
+removed NAT_TRAVERSAL compile option
+removed NAT_TRAVERSAL and VIRTUAL_IP compile options
+added
+updated NEWS
+added support for leftprotoport and rightprotoport
+improved CHILD_SA output for "ipsec statusall"
+updated whitelist (getprotobynumber)
+redesigned IKE_SA using a transaction mechanism:
+	removed old state machine
+	reimplemented IKE_SA setup and delete
+	implemented dead peer detection
+	implemented keep-alives
+	a lot of fixes
+	no rekeying yet		
+fixed compiler warnings
+made thread ids unsigned again, to avoid negative thread ids on some systems
+fixed memleak when initiating a connection already up
+updated leak detective whitelist
+applied latest NATT patch with some fixes and cleanups
+test currently without firewall
+added
+added
+added
+removed
+removed version information from ipsec.conf
+log entries start with lowcercase character
+restored lost IKEv2 packet suppression
+added USE_LEAK_DETECTIVE option
+fixed natd_hash memory leak
+tests with subdirectory structure
+removed tests
+introduced subdirectory structure
+support of cert payloads
+lowercase log entries
+distributed by ITA
+added support of updown parameter
+generation of default key
+cosmetics
+added support of updown parameter
+version bump to 4.0.2
+added X.509 trust chain verification
+version bump to 4.0.2
+ESP packet size changed
+fixed bad_proposal_syntax bug
+updated ingorelist for stroke_keywords.c
+applied new changes from NATT team
+	DPD only done when no IPsec and IKE traffic processed
+	minor changes here and there
+some message code cleanups
+fixed identification_t clone to apply function pointers
+cleaner error handling on UDP encapsultion sockopt failure
+added mysterious UDP encapsulation socket option to get encapsulation working
+fixed BAD_PROPOSAL_SYNTAX vulnerability
+first merge of NATT code
+fixed testing build
+updated for 4.0.1 release
+updated news for 4.0.1 release
+fixed whitelist detection
+
+
  strongswan-4.0.1 / R:1144 
 ===========================
 

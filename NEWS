@@ -1,3 +1,16 @@
+strongswan-4.0.3
+----------------
+
+- Added support for the auto=route ipsec.conf parameter and the
+  ipsec route/unroute commands for IKEv2. This allows to set up IKE_SAs and 
+  CHILD_SAs dynamically on demand when traffic is detected by the 
+  kernel.
+
+- Added support for rekeying IKE_SAs in IKEv2 using the ikelifetime parameter.
+  As specified in IKEv2, no reauthentication is done (unlike in IKEv1), only
+  new keys are generated using perfect forward secrecy. An optional flag
+  which enforces reauthentication will be implemented later.
+
 strongswan-4.0.2
 ----------------
 

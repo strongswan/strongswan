@@ -52,16 +52,18 @@
 
 + trapping
 + proper delete messages
-- notifys on connection setup failure
++ notifys on connection setup failure
 + create child sa message/rekeying
-/ IKE_SA rekeying
-  - handle all simultaneous rekeying/delete/create cases
-
-- implement a mechanism against thread exhaustion
-  when a blocked IKE_SA receives a lot of messages
-- add a crl fetch mechanism which synchronizes equal fetches
++ IKE_SA rekeying
+  + handle all simultaneous rekeying/delete/create cases
 
 + replace state machine with something more transaction oriented
 + find existing IKE_SA on CHILD_SA initiation
 
 - configure flag which allows to ommit vendor id in pluto
+- use dpdaction/dpddelay parameters from ipsec.conf
+- ikelifetime should optionally enforce reauthentication
+- implement a mechanism against thread exhaustion
+  when a blocked IKE_SA receives a lot of messages
+- add a crl fetch mechanism which synchronizes equal fetches
+- add support for CERTREQs

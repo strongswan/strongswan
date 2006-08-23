@@ -1,8 +1,5 @@
  Known bugs in charon
 ======================
 
-- leak_detective gets confused from libpthread (invalid frees)
-- inititate rekeying at the same time causes troubles, as the current state
-  machine can't handle it properly
-- traffic selector changes while rekeying may cause troubles
+
 
