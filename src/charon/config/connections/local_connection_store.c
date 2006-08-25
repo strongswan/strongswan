@@ -162,8 +162,11 @@ static connection_t *get_connection_by_name(private_local_connection_store_t *th
 	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->mutex));
 	
-	/* get a new reference for it */
-	found->get_ref(found);
+	if (found)
+	{
+		/* get a new reference for it */
+		found->get_ref(found);
+	}
 	return found;
 }
 
