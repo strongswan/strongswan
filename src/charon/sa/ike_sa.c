@@ -1726,14 +1726,31 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa;
+	bool contains_child = FALSE;
 	
-	if (name == NULL || streq(name, this->name))
+	/* check for a CHILD_SA with specified name. We then print the IKE_SA,
+	 * even it has another name */
+	if (name != NULL)
+	{
+		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
+		while (iterator->iterate(iterator, (void**)&child_sa))
+		{
+			if (streq(name, child_sa->get_name(child_sa)))
+			{
+				contains_child = TRUE;
+				break;
+			}
+		}
+		iterator->destroy(iterator);
+	}
+	
+	if (name == NULL || contains_child || streq(name, this->name))
 	{
 		if (logger == NULL)
 		{
 			logger = this->logger;
 		}		
-		logger->log(logger, CONTROL|LEVEL1, 
+		logger->log(logger, CONTROL|LEVEL1,
 					"  \"%s\": IKE_SA in state %s, SPIs: 0x%.16llx 0x%.16llx",
 					this->name,
 					mapping_find(ike_sa_state_m, this->state),
@@ -1750,7 +1767,7 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 		while (iterator->has_next(iterator))
 		{
 			iterator->current(iterator, (void**)&child_sa);
-			child_sa->log_status(child_sa, logger, this->name);
+			child_sa->log_status(child_sa, logger);
 		}
 		iterator->destroy(iterator);
 	}

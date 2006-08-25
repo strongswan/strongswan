@@ -305,6 +305,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		hard_lifetime = this->policy->get_hard_lifetime(this->policy);
 		this->child_sa = child_sa_create(0, me, other, soft_lifetime, hard_lifetime,
 										 this->ike_sa->is_natt_enabled(this->ike_sa));
+		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
 		{
 			this->logger->log(this->logger, ERROR,
@@ -770,6 +771,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			this->child_sa = child_sa_create(0, me, other, 
 											 soft_lifetime, hard_lifetime, 
 											 use_natt);
+			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 			if (install_child_sa(this, FALSE) != SUCCESS)
 			{
 				this->logger->log(this->logger, ERROR,

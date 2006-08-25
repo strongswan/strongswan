@@ -69,6 +69,11 @@ struct private_child_sa_t {
 	 */
 	child_sa_t public;
 	
+	/**
+	 * Name of the policy used by this CHILD_SA
+	 */
+	char *name;
+	
 	struct {
 		/** address of peer */
 		host_t *addr;
@@ -156,6 +161,23 @@ struct private_child_sa_t {
 	 */
 	logger_t *logger;
 };
+
+/**
+ * Implementation of child_sa_t.get_name.
+ */
+static char *get_name(private_child_sa_t *this)
+{
+	return this->name;
+}
+
+/**
+ * Implementation of child_sa_t.set_name.
+ */
+static void set_name(private_child_sa_t *this, char* name)
+{
+	free(this->name);
+	this->name = strdup(name);
+}
 
 /**
  * Implements child_sa_t.get_reqid
@@ -588,7 +610,7 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 /**
  * Implementation of child_sa_t.log_status.
  */
-static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
+static void log_status(private_child_sa_t *this, logger_t *logger)
 {
 	iterator_t *iterator;
 	char use_in_str[12] = "unused";
@@ -657,20 +679,20 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 		
 		logger->log(logger, CONTROL|LEVEL1,
 					"  \"%s\":   state: %s, reqid: %d, ",
-					name, mapping_find(child_sa_state_m, this->state), this->reqid);
+					this->name, mapping_find(child_sa_state_m, this->state), this->reqid);
 		logger->log(logger, CONTROL|LEVEL1,
 					"  \"%s\":    %s (%s%s), SPIs (in/out): 0x%x/0x%x",
-					name, this->protocol == PROTO_ESP ? "ESP" : "AH",
+					this->name, this->protocol == PROTO_ESP ? "ESP" : "AH",
 					enc_str, int_str,
 					htonl(this->me.spi), htonl(this->other.spi));
 		logger->log(logger, CONTROL|LEVEL1,
 					"  \"%s\":    rekeying: %s, key age (in/out): %s/%s",
-					name, rekey_str, use_in_str, use_out_str);
+					this->name, rekey_str, use_in_str, use_out_str);
 	}
 	else
 	{
 		logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   state: %s, reqid: %d",
-					name, mapping_find(child_sa_state_m, this->state), 
+					this->name, mapping_find(child_sa_state_m, this->state), 
 					this->reqid);
 	}
 	
@@ -711,7 +733,7 @@ static void log_status(private_child_sa_t *this, logger_t *logger, char* name)
 		
 		logger->log(logger, CONTROL, 
 					"  \"%s\":     %s====%s, last use (in/out/fwd): %s/%s/%s",
-					name, my_str, other_str, pol_in_str, pol_out_str, pol_fwd_str);
+					this->name, my_str, other_str, pol_in_str, pol_out_str, pol_fwd_str);
 	}
 	iterator->destroy(iterator);
 }
@@ -911,6 +933,7 @@ static void destroy(private_child_sa_t *this)
 	this->other_ts->destroy(this->other_ts);
 	this->me.addr->destroy(this->me.addr);
 	this->other.addr->destroy(this->other.addr);
+	free(this->name);
 	free(this);
 }
 
@@ -925,6 +948,8 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
 
 	/* public functions */
+	this->public.get_name = (char*(*)(child_sa_t*))get_name;
+	this->public.set_name = (void(*)(child_sa_t*,char*))set_name;
 	this->public.get_reqid = (u_int32_t(*)(child_sa_t*))get_reqid;
 	this->public.get_spi = (u_int32_t(*)(child_sa_t*, bool))get_spi;
 	this->public.get_protocol = (protocol_id_t(*)(child_sa_t*))get_protocol;
@@ -940,11 +965,12 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.get_rekeying_transaction = (void* (*)(child_sa_t*))get_rekeying_transaction;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
-	this->public.log_status = (void (*)(child_sa_t*, logger_t*, char*))log_status;
+	this->public.log_status = (void (*)(child_sa_t*, logger_t*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
 	this->logger = logger_manager->get_logger(logger_manager, CHILD_SA);
+	this->name = strdup("(uninitialized)");
 	this->me.addr = me->clone(me);
 	this->other.addr = other->clone(other);
 	this->me.spi = 0;

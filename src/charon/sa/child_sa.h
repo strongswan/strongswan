@@ -102,6 +102,22 @@ typedef struct child_sa_t child_sa_t;
 struct child_sa_t {
 	
 	/**
+	 * @brief Get the name of the policy this CHILD_SA uses.
+	 *
+	 * @param this			calling object
+	 * @return				name
+	 */
+	char* (*get_name) (child_sa_t *this);
+	
+	/**
+	 * @brief Set the name of the policy this IKE_SA uses.
+	 *
+	 * @param this			calling object
+	 * @param name			name, gets cloned
+	 */
+	void (*set_name) (child_sa_t *this, char* name);
+	
+	/**
 	 * @brief Get the unique reqid of the CHILD SA.
 	 * 
 	 * Every CHILD_SA has a unique reqid, which is also 
@@ -267,14 +283,12 @@ struct child_sa_t {
 	 * The status of ESP/AH SAs is logged with the supplied logger in
 	 * a human readable form.
 	 * Supplying NULL as logger uses the internal child_sa logger
-	 * to do the logging. The name is only a log-prefix without further
-	 * meaning.
+	 * to do the logging.
 	 *
 	 * @param this 		calling object
 	 * @param logger	logger to use for logging
-	 * @param name		connection name
 	 */	
-	void (*log_status) (child_sa_t *this, logger_t *logger, char *name);
+	void (*log_status) (child_sa_t *this, logger_t *logger);
 	
 	/**
 	 * @brief Destroys a child_sa.
