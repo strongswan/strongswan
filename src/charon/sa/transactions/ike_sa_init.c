@@ -1005,8 +1005,16 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		}
 		if (this->ike_sa->is_natt_enabled(this->ike_sa))
 		{
+			/* update host in IKE_SA */
+			me = this->ike_sa->get_my_host(this->ike_sa);
+			me = me->clone(me);
 			me->set_port(me, IKEV2_NATT_PORT);
+			this->ike_sa->set_my_host(this->ike_sa, me);
+			other = this->ike_sa->get_other_host(this->ike_sa);
+			other = other->clone(other);
 			other->set_port(other, IKEV2_NATT_PORT);
+			this->ike_sa->set_other_host(this->ike_sa, other);
+			
 			this->logger->log(this->logger, CONTROL|LEVEL1, "switching to port %d", IKEV2_NATT_PORT);
 		}
 	}
