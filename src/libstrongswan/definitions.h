@@ -25,6 +25,8 @@
 #ifndef DEFINITIONS_H_
 #define DEFINITIONS_H_
 
+#include <stddef.h>
+
 /* stolen from FreeS/WAN */
 #if linux
 # if defined(i386) && !defined(__i386__)
