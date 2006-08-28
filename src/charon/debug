@@ -1,0 +1,6 @@
+#!/bin/bash
+make install || exit
+ipsec start --nofork &
+sleep 1
+gdb /usr/local/libexec/ipsec/charon `cat /var/run/charon.pid`
+ipsec stop

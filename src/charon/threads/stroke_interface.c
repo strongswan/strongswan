@@ -205,7 +205,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		return;
 	}
 
-	if (charon->interfaces->is_local_address(charon->interfaces, other_host))
+	if (charon->socket->is_local_address(charon->socket, other_host))
 	{
 		stroke_end_t tmp_end;
 		host_t *tmp_host;
@@ -220,7 +220,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		msg->add_conn.me = msg->add_conn.other;
 		msg->add_conn.other = tmp_end;
 	}
-	else if (!charon->interfaces->is_local_address(charon->interfaces, my_host))
+	else if (!charon->socket->is_local_address(charon->socket, my_host))
 	{
 		this->stroke_logger->log(this->stroke_logger, ERROR, "left nor right host is our side, aborting");
 		goto destroy_hosts;
@@ -635,6 +635,22 @@ static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
  */
 static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 {
+	linked_list_t *list;
+	host_t *host;
+	
+	list = charon->socket->create_local_address_list(charon->socket);
+	this->logger->log(this->logger, CONTROL|LEVEL1,
+					  "listening on %d addresses:",
+					  list->get_count(list));
+	while (list->remove_first(list, (void**)&host) == SUCCESS)
+	{
+		this->logger->log(this->logger, CONTROL|LEVEL1,
+						  "  %s", host->get_string(host));
+		host->destroy(host);
+		
+	}
+	list->destroy(list);
+	
 	if (msg->status.name)
 	{
 		pop_string(msg, &(msg->status.name));

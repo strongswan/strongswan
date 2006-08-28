@@ -644,6 +644,8 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 				*((u_int64_t*)this->spi.ptr) = proposal->get_spi(proposal);
 			}
 			break;
+		default:
+			break;
 	}
 	this->proposal_number = 0;
 	this->protocol_id = proposal->get_protocol(proposal);

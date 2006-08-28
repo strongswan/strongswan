@@ -178,7 +178,6 @@ static void initialize(private_daemon_t *this, bool strict)
 	
 	this->public.configuration = configuration_create();
 	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
-	this->public.interfaces = interfaces_create(IKEV2_UDP_PORT);
 	this->public.ike_sa_manager = ike_sa_manager_create();
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
@@ -210,75 +209,32 @@ static void destroy(private_daemon_t *this)
 	/* destruction is a non trivial task, we need to follow 
 	 * a strict order to prevent threading issues! 
 	 * Kill active threads first, except the sender, as
-	 * the killed IKE_SA want to send delete messages. 
+	 * the killed IKE_SA want to send delete messages.
 	 */
-	if (this->public.receiver != NULL)
-	{	/* we don't want to receive anything... */
-		this->public.receiver->destroy(this->public.receiver);
-	}
-	if (this->public.stroke != NULL)
-	{	/* ignore all incoming user requests */
-		this->public.stroke->destroy(this->public.stroke);
-	}
-	if (this->public.scheduler != NULL)
-	{	/* stop scheduing jobs */
-		this->public.scheduler->destroy(this->public.scheduler);	
-	}
-	if (this->public.thread_pool != NULL)
-	{	/* stop processing jobs */
-		this->public.thread_pool->destroy(this->public.thread_pool);	
-	}
-	if (this->public.ike_sa_manager != NULL)
-	{	/* shut down manager with all IKE SAs */
-		this->public.ike_sa_manager->destroy(this->public.ike_sa_manager);
-	}
-	if (this->public.kernel_interface != NULL)
-	{	/* all child SAs should be down now, so kill kernel interface */
-		this->public.kernel_interface->destroy(this->public.kernel_interface);
-	}
+	/* we don't want to receive anything anymore... */
+	DESTROY_IF(this->public.receiver);
+	/* ignore all incoming user requests */
+	DESTROY_IF(this->public.stroke);
+	/* stop scheduing jobs */
+	DESTROY_IF(this->public.scheduler);
+	/* stop processing jobs */
+	DESTROY_IF(this->public.thread_pool);
+	/* shut down manager with all IKE SAs */
+	DESTROY_IF(this->public.ike_sa_manager);
+	/* all child SAs should be down now, so kill kernel interface */
+	DESTROY_IF(this->public.kernel_interface);
 	/* destroy other infrastructure */
-	if (this->public.job_queue != NULL)
-	{
-		this->public.job_queue->destroy(this->public.job_queue);
-	}
-	if (this->public.event_queue != NULL)
-	{
-		this->public.event_queue->destroy(this->public.event_queue);	
-	}
-	if (this->public.interfaces != NULL)
-	{
-		this->public.interfaces->destroy(this->public.interfaces);
-	}
-	if (this->public.configuration != NULL)
-	{
-		this->public.configuration->destroy(this->public.configuration);
-	}
-	if (this->public.credentials != NULL)
-	{
-		this->public.credentials->destroy(this->public.credentials);
-	}
-	if (this->public.connections != NULL)
-	{
-		this->public.connections->destroy(this->public.connections);
-	}
-	if (this->public.policies != NULL)
-	{
-		this->public.policies->destroy(this->public.policies);
-	}
+	DESTROY_IF(this->public.job_queue);
+	DESTROY_IF(this->public.event_queue);
+	DESTROY_IF(this->public.configuration);
+	DESTROY_IF(this->public.credentials);
+	DESTROY_IF(this->public.connections);
+	DESTROY_IF(this->public.policies);
 	/* we hope the sender could send the outstanding deletes, but 
 	 * we shut down here at any cost */
-	if (this->public.sender != NULL)
-	{
-		this->public.sender->destroy(this->public.sender);
-	}
-	if (this->public.send_queue != NULL)
-	{
-		this->public.send_queue->destroy(this->public.send_queue);	
-	}
-	if (this->public.socket != NULL)
-	{
-		this->public.socket->destroy(this->public.socket);
-	}
+	DESTROY_IF(this->public.sender);
+	DESTROY_IF(this->public.send_queue);
+	DESTROY_IF(this->public.socket);
 	free(this);
 }
 
@@ -323,7 +279,6 @@ private_daemon_t *daemon_create(void)
 	
 	/* NULL members for clean destruction */
 	this->public.socket = NULL;
-	this->public.interfaces = NULL;
 	this->public.ike_sa_manager = NULL;
 	this->public.job_queue = NULL;
 	this->public.event_queue = NULL;
@@ -385,6 +340,8 @@ int main(int argc, char *argv[])
 	private_daemon_t *private_charon;
 	FILE *pid_file;
 	struct stat stb;
+	linked_list_t *list;
+	host_t *host;
 	
     /* handle arguments */
     for (;;)
@@ -448,6 +405,20 @@ int main(int argc, char *argv[])
 		fprintf(pid_file, "%d\n", getpid());
 		fclose(pid_file);
 	}
+	
+	/* log socket info */
+	list = charon->socket->create_local_address_list(charon->socket);
+	private_charon->logger->log(private_charon->logger, CONTROL,
+								"listening on %d addresses:",
+								list->get_count(list));
+	while (list->remove_first(list, (void**)&host) == SUCCESS)
+	{
+		private_charon->logger->log(private_charon->logger, CONTROL,
+									"  %s", host->get_string(host));
+		host->destroy(host);
+		
+	}
+	list->destroy(list);
 	
 	/* run daemon */
 	private_charon->run(private_charon);

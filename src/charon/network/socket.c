@@ -36,6 +36,8 @@
 #include <netinet/udp.h>
 #include <linux/ipsec.h>
 #include <linux/filter.h>
+#include <net/if.h>
+#include <ifaddrs.h>
 
 #include "socket.h"
 
@@ -106,22 +108,6 @@ struct private_socket_t{
 	  * logger for this socket
 	  */
 	 logger_t *logger;
-
-	 /**
-	  * Setup a send socket
-	  *
-	  * @param this		calling object
-	  * @param port		the port
-	  * @param send_fd	returns the file descriptor of this new socket
-	  */
-	 status_t (*setup_send_socket) (private_socket_t *this, u_int16_t port, int *send_fd);
-
-	 /**
-	  * Initialize
-	  *
-	  * @param this 	calling object
-	  */
-	 status_t (*initialize) (private_socket_t *this);
 };
 
 /**
@@ -244,6 +230,108 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	}
 	
 	return SUCCESS;
+}
+
+/**
+ * implements socket_t.is_local_address
+ */
+static bool is_local_address(private_socket_t *this, host_t *host)
+{
+	struct ifaddrs *list;
+	struct ifaddrs *cur;
+	bool found = FALSE;
+	
+	if (getifaddrs(&list) < 0)
+	{
+		return FALSE;
+	}
+	
+	for (cur = list; cur != NULL; cur = cur->ifa_next)
+	{
+		if (!(cur->ifa_flags & IFF_UP))
+		{
+			/* ignore interface which are down */
+			continue;
+		}
+		
+		if (cur->ifa_addr == NULL ||
+			cur->ifa_addr->sa_family != host->get_family(host))
+		{
+			/* no match in family */
+			continue;
+		}
+		
+		switch (cur->ifa_addr->sa_family)
+		{
+			case AF_INET:
+			{
+				struct sockaddr_in *listed, *requested;
+				listed = (struct sockaddr_in*)cur->ifa_addr;
+				requested = (struct sockaddr_in*)host->get_sockaddr(host);
+				if (listed->sin_addr.s_addr == requested->sin_addr.s_addr)
+				{
+					found = TRUE;
+				}
+				break;
+			}
+			case AF_INET6:
+			{
+				struct sockaddr_in6 *listed, *requested;
+				listed = (struct sockaddr_in6*)cur->ifa_addr;
+				requested = (struct sockaddr_in6*)host->get_sockaddr(host);
+				if (memcmp(&listed->sin6_addr, &requested->sin6_addr,
+						   sizeof(listed->sin6_addr)) == 0)
+				{
+					found = TRUE;
+				}
+				break;
+			}
+			default:
+				break;
+		}
+		
+		if (found)
+		{
+			break;
+		}
+	}
+	freeifaddrs(list);
+	return found;
+}
+
+
+/**
+ * implements socket_t.create_local_address_list
+ */
+static linked_list_t* create_local_address_list(private_socket_t *this)
+{
+	struct ifaddrs *list;
+	struct ifaddrs *cur;
+	host_t *host;
+	linked_list_t *result = linked_list_create();
+	
+	if (getifaddrs(&list) < 0)
+	{
+		return result;
+	}
+	
+	for (cur = list; cur != NULL; cur = cur->ifa_next)
+	{
+		if (!(cur->ifa_flags & IFF_UP))
+		{
+			/* ignore interface which are down */
+			continue;
+		}
+		
+		host = host_create_from_sockaddr(cur->ifa_addr);
+		if (host)
+		{
+			/* address supported, add to list */
+			result->insert_last(result, host);
+		}
+	}
+	freeifaddrs(list);
+	return result;
 }
 
 /**
@@ -389,12 +477,12 @@ static status_t initialize(private_socket_t *this)
 	}
 	
 	/* setup the send sockets */
-	if (this->setup_send_socket(this, this->port, &this->send_fd) != SUCCESS)
+	if (setup_send_socket(this, this->port, &this->send_fd) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "unable to setup send socket on port %d!", this->port);
 		return FAILED;
 	}
-	if (this->setup_send_socket(this, this->natt_port, &this->natt_fd) != SUCCESS)
+	if (setup_send_socket(this, this->natt_port, &this->natt_fd) != SUCCESS)
 	{
 		this->logger->log(this->logger, ERROR, "unable to setup send socket on port %d!", this->natt_port);
 		return FAILED;
@@ -429,13 +517,11 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 {
 	private_socket_t *this = malloc_thing(private_socket_t);
 
-	/* private functions */
-	this->initialize = (status_t(*)(private_socket_t*))initialize;
-	this->setup_send_socket = (status_t(*)(private_socket_t*,u_int16_t, int*))setup_send_socket;
-
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
+	this->public.is_local_address = (bool(*)(socket_t*, host_t*))is_local_address;
+	this->public.create_local_address_list = (linked_list_t*(*)(socket_t*))create_local_address_list;
 	this->public.destroy = (void(*)(socket_t*)) destroy;
 
 	this->logger = logger_manager->get_logger(logger_manager, SOCKET);
@@ -443,7 +529,7 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 	this->port = port;
 	this->natt_port = natt_port;
 	
-	if (this->initialize(this) != SUCCESS)
+	if (initialize(this) != SUCCESS)
 	{
 		free(this);
 		charon->kill(charon, "could not init socket!");

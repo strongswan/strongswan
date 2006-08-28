@@ -24,6 +24,8 @@
 
 #include "child_sa.h"
 
+#include <string.h>
+
 #include <daemon.h>
 
 

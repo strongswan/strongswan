@@ -28,6 +28,8 @@
 
 #include <types.h>
 #include <network/packet.h>
+#include <utils/host.h>
+#include <utils/linked_list.h>
 
 
 /**
@@ -57,27 +59,23 @@ typedef struct socket_t socket_t;
  * 
  * @todo add IPv6 support
  * 
- * @todo We currently use multiple sockets for historic reasons. With the
- * new RAW socket mechanism, we could use just one socket and filter
- * addresses in userspace (or via linux socket filter). This would allow 
- * realtime interface/address management in a easy way...
- * 
  * @ingroup network
  */
 struct socket_t {
+	
 	/**
 	 * @brief Receive a packet.
 	 * 
 	 * Reads a packet from the socket and sets source/dest
 	 * appropriately.
 	 * 
-	 * @param sock			socket_t object to work on
+	 * @param this			socket_t object to work on
 	 * @param packet		pinter gets address from allocated packet_t
 	 * @return 				
 	 * 						- SUCCESS when packet successfully received
 	 * 						- FAILED when unable to receive
 	 */
-	status_t (*receive) (socket_t *sock, packet_t **packet);
+	status_t (*receive) (socket_t *this, packet_t **packet);
 	
 	/**
 	 * @brief Send a packet.
@@ -86,22 +84,39 @@ struct socket_t {
 	 * Packet is sent using default routing mechanisms, thus the 
 	 * source address in packet is ignored.
 	 * 
-	 * @param sock			socket_t object to work on
+	 * @param this			socket_t object to work on
 	 * @param packet[out]	packet_t to send
 	 * @return 				
 	 * 						- SUCCESS when packet successfully sent
 	 * 						- FAILED when unable to send
 	 */
-	status_t (*send) (socket_t *sock, packet_t *packet);
+	status_t (*send) (socket_t *this, packet_t *packet);
+	
+	/**
+	 * @brief Check if an address is an address of this host.
+	 *
+	 * @param this			socket_t object to work on
+	 * @param host			address to check
+	 * @return 				TRUE if local address, FALSE otherwise
+	 */
+	bool (*is_local_address) (socket_t *this, host_t *host);
+	
+	/**
+	 * @brief Create a list of hosts with all local addresses.
+	 *
+	 * @param this			socket_t object to work on
+	 * @return 				list with host_t objects
+	 */
+	linked_list_t *(*create_local_address_list) (socket_t *this);
 	
 	/**
 	 * @brief Destroy sockets.
 	 * 
 	 * close sockets and destroy socket_t object
 	 * 
-	 * @param sock 			socket_t to destroy
+	 * @param this 			socket_t to destroy
 	 */
-	void (*destroy) (socket_t *sock);
+	void (*destroy) (socket_t *this);
 };
 
 /**

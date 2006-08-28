@@ -32,7 +32,6 @@
 #include <threads/thread_pool.h>
 #include <threads/stroke_interface.h>
 #include <network/socket.h>
-#include <network/interfaces.h>
 #include <sa/ike_sa_manager.h>
 #include <queues/send_queue.h>
 #include <queues/job_queue.h>
@@ -276,11 +275,6 @@ struct daemon_t {
 	 * A socket_t instance.
 	 */
 	socket_t *socket;
-	
-	/**
-	 * A interfaces_t instance.
-	 */
-	interfaces_t *interfaces;
 	
 	/**
 	 * A send_queue_t instance.

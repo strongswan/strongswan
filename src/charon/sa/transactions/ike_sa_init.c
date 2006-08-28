@@ -368,17 +368,18 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 	
 	{	/* build NAT_DETECTION notifys */
 		notify_payload_t *notify;
-		iterator_t *iterator;
+		linked_list_t *list;
 		host_t *host;
 		
 		/* N(NAT_DETECTION_SOURCE_IP)+ */
-		iterator = charon->interfaces->create_address_iterator(charon->interfaces);
-		while (iterator->iterate(iterator, (void**)&host))
+		list = charon->socket->create_local_address_list(charon->socket);
+		while (list->remove_first(list, (void**)&host) == SUCCESS)
 		{
 			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
+			host->destroy(host);
 			request->add_payload(request, (payload_t*)notify);
 		}
-		iterator->destroy(iterator);
+		list->destroy(list);
 		
 		/* N(NAT_DETECTION_DESTINATION_IP) */
 		notify = build_natd_payload(this, NAT_DETECTION_DESTINATION_IP, other);
