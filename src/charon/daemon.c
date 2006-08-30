@@ -250,7 +250,10 @@ void signal_handler(int signal)
 	strings = backtrace_symbols(array, size);
 	logger = logger_manager->get_logger(logger_manager, DAEMON);
 
-	logger->log(logger, ERROR, "Thread %u received SIGSEGV. Dumping %d frames from stack:", pthread_self(), size);
+	logger->log(logger, ERROR, 
+				"Thread %u received %s. Dumping %d frames from stack:",
+				signal == SIGSEGV ? "SIGSEGV" : "SIGILL",
+				pthread_self(), size);
 
 	for (i = 0; i < size; i++)
 	{
@@ -311,6 +314,10 @@ private_daemon_t *daemon_create(void)
 	if (sigaction(SIGSEGV, &action, NULL) == -1)
 	{
 		this->logger->log(this->logger, ERROR, "signal handler setup for SIGSEGV failed");
+	}
+	if (sigaction(SIGILL, &action, NULL) == -1)
+	{
+		this->logger->log(this->logger, ERROR, "signal handler setup for SIGILL failed");
 	}
 	return this;
 }
@@ -405,7 +412,6 @@ int main(int argc, char *argv[])
 		fprintf(pid_file, "%d\n", getpid());
 		fclose(pid_file);
 	}
-	
 	/* log socket info */
 	list = charon->socket->create_local_address_list(charon->socket);
 	private_charon->logger->log(private_charon->logger, CONTROL,
@@ -416,7 +422,6 @@ int main(int argc, char *argv[])
 		private_charon->logger->log(private_charon->logger, CONTROL,
 									"  %s", host->get_string(host));
 		host->destroy(host);
-		
 	}
 	list->destroy(list);
 	

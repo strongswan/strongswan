@@ -106,14 +106,48 @@ static char* connection_name(starter_conn_t *conn)
 	return conn->name;
 }
 
+static void ip_address2string(ip_address *addr, char *buffer, size_t len)
+{
+	switch (((struct sockaddr*)addr)->sa_family)
+	{
+		case AF_INET:
+		{
+			struct sockaddr_in* sin = (struct sockaddr_in*)addr;
+			if (inet_ntop(AF_INET, &sin->sin_addr, buffer, len))
+			{
+				return;
+			}
+			break;
+		}
+		case AF_INET6:
+		{
+			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)addr;
+			if (inet_ntop(AF_INET6, &sin6->sin6_addr, buffer, len))
+			{
+				return;
+			}
+			break;
+		}
+		default:
+			break;
+	}
+	/* failed */
+	snprintf(buffer, len, "0.0.0.0");
+}
+
+
 static void starter_stroke_add_end(stroke_msg_t *msg, stroke_end_t *msg_end, starter_end_t *conn_end)
 {
+	char buffer[INET6_ADDRSTRLEN];
+	
 	msg_end->id = push_string(msg, conn_end->id);
 	msg_end->cert = push_string(msg, conn_end->cert);
 	msg_end->ca = push_string(msg, conn_end->ca);
 	msg_end->updown = push_string(msg, conn_end->updown);
-	msg_end->address = push_string(msg, inet_ntoa(conn_end->addr.u.v4.sin_addr));
-	msg_end->subnet = push_string(msg, inet_ntoa(conn_end->subnet.addr.u.v4.sin_addr));
+	ip_address2string(&conn_end->addr, buffer, sizeof(buffer));
+	msg_end->address = push_string(msg, buffer);
+	ip_address2string(&conn_end->subnet.addr, buffer, sizeof(buffer));
+	msg_end->subnet = push_string(msg, buffer);
 	msg_end->subnet_mask = conn_end->subnet.maskbits;
 	msg_end->sendcert = conn_end->sendcert;
 	msg_end->protocol = conn_end->protocol;

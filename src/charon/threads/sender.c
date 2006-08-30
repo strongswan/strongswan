@@ -76,8 +76,7 @@ static void send_packets(private_sender_t * this)
 		status = charon->socket->send(charon->socket, current_packet);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Sending failed, socket returned %s", 
-								mapping_find(status_m, status));
+			this->logger->log(this->logger, ERROR, "Sending packet failed");
 		}
 		current_packet->destroy(current_packet);
 	}

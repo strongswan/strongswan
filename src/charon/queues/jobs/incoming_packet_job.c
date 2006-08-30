@@ -83,6 +83,7 @@ static void send_notify_response(private_incoming_packet_job_t *this,
 	response->set_request(response, FALSE);
 	response->set_message_id(response, 0);
 	response->set_ike_sa_id(response, ike_sa_id);
+	ike_sa_id->destroy(ike_sa_id);
 	notify = notify_payload_create_from_protocol_and_type(PROTO_NONE, type);
 	response->add_payload(response, (payload_t *)notify);
 	/* generation may fail, as most messages need a crypter/signer.
@@ -96,7 +97,6 @@ static void send_notify_response(private_incoming_packet_job_t *this,
 					  mapping_find(notify_type_m, type)); 
 	charon->send_queue->add(charon->send_queue, packet);
 	response->destroy(response);
-	ike_sa_id->destroy(ike_sa_id);
 	return;
 }
 
@@ -114,7 +114,7 @@ static status_t execute(private_incoming_packet_job_t *this)
 	message = message_create_from_packet(this->packet->clone(this->packet));
 	src = message->get_source(message);
 	dst = message->get_destination(message);
-	this->logger->log(this->logger, CONTROL, "received packet: from %s:%d to %s:%d",
+	this->logger->log(this->logger, CONTROL, "received packet: from %s[%d] to %s[%d]",
 					  src->get_string(src), src->get_port(src),
 					  dst->get_string(dst), dst->get_port(dst));
 	

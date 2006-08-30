@@ -57,8 +57,6 @@ typedef struct socket_t socket_t;
  * @b Constructors:
  * - socket_create()
  * 
- * @todo add IPv6 support
- * 
  * @ingroup network
  */
 struct socket_t {

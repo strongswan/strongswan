@@ -191,19 +191,31 @@ struct host_t {
 
 /**
  * @brief Constructor to create a host_t object from an address string
- * 
- * Currently supports only IPv4!
+ *
  *
  * @param family 		Address family to use for this object, such as AF_INET or AF_INET6
  * @param address		string of an address, such as "152.96.193.130"
  * @param port			port number
  * @return 				
  * 						- host_t object 
- * 						- NULL, if family not supported.
+ * 						- NULL, if family not supported/invalid string.
  * 
  * @ingroup network
  */
 host_t *host_create(int family, char *address, u_int16_t port);
+
+/**
+ * @brief Same as host_create(), but guesses the family.
+ *
+ * @param string		string of an address, such as "152.96.193.130"
+ * @param port			port number
+ * @return 				
+ * 						- host_t object 
+ * 						- NULL, if string not an address.
+ * 
+ * @ingroup network
+ */
+host_t *host_create_from_string(char *string, u_int16_t port);
 
 /**
  * @brief Constructor to create a host_t object from raw header data
@@ -221,8 +233,6 @@ host_t *host_create_from_hdr(u_long address, u_short port);
 
 /**
  * @brief Constructor to create a host_t object from an address chunk
- * 
- * Currently supports only IPv4!
  *
  * @param family 		Address family to use for this object, such as AF_INET or AF_INET6
  * @param address		address as 4 byte chunk_t in networ order
@@ -237,8 +247,6 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
 
 /**
  * @brief Constructor to create a host_t object from a sockaddr struct
- * 
- * Currently supports only IPv4!
  *
  * @param sockaddr		sockaddr struct which contains family, address and port
  * @return 				

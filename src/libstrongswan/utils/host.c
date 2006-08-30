@@ -39,11 +39,6 @@ struct private_host_t {
 	host_t public;
 	
 	/**
-	 * Address family to use, such as AF_INET or AF_INET6
-	 */
-	int family;
-	
-	/**
 	 * string representation of host
 	 */
 	char *string;
@@ -52,8 +47,14 @@ struct private_host_t {
 	 * low-lewel structure, wich stores the address
 	 */
 	union {
+		/** generic type */
 		struct sockaddr address;
+		/** maximux sockaddr size */
+		struct sockaddr_storage address_max;
+		/** IPv4 address */
 		struct sockaddr_in address4;
+		/** IPv6 address */
+		struct sockaddr_in6 address6;
 	};
 	/**
 	 * length of address structure
@@ -83,17 +84,24 @@ static socklen_t *get_sockaddr_len(private_host_t *this)
  */
 static bool is_anyaddr(private_host_t *this)
 {
-	switch (this->family) 
+	switch (this->address.sa_family) 
 	{
-		case AF_INET: 
+		case AF_INET:
 		{
-			static u_int8_t default_route[4] = {0x00, 0x00, 0x00, 0x00};
-			
-			return !memcmp(default_route, &(this->address4.sin_addr.s_addr), 4);
+			u_int8_t default_route[4];
+			memset(default_route, 0, sizeof(default_route));
+			return memeq(default_route, &(this->address4.sin_addr.s_addr),
+						 sizeof(default_route));
+		}
+		case AF_INET6:
+		{
+			u_int8_t default_route[16];
+			memset(default_route, 0, sizeof(default_route));
+			return memeq(default_route, &(this->address6.sin6_addr.s6_addr),
+						 sizeof(default_route));
 		}
 		default:
 		{
-			/* empty chunk is returned */
 			return FALSE;
 		}	
 	}
@@ -104,25 +112,51 @@ static bool is_anyaddr(private_host_t *this)
  */
 static char *get_string(private_host_t *this)
 {
-	switch (this->family) 
+	return this->string;
+}
+
+/**
+ * Compute the string value
+ */
+static void set_string(private_host_t *this)
+{
+	if (is_anyaddr(this))
 	{
-		case AF_INET: 
+		this->string = strdup("%any");
+		return;
+	}
+	
+	switch (this->address.sa_family) 
+	{
+		case AF_INET:
+		case AF_INET6:
 		{
-			char *string;
-			/* we need to clone it, since inet_ntoa overwrites 
-			 * internal buffer on subsequent calls
-			 */
-			if (this->string == NULL)
+			char buffer[INET6_ADDRSTRLEN];
+			void *address;
+			
+			if (this->address.sa_family == AF_INET)
 			{
-				string = is_anyaddr(this)? "%any" : inet_ntoa(this->address4.sin_addr);
-				this->string = malloc(strlen(string)+1);
-				strcpy(this->string, string);
+				address = &this->address4.sin_addr;
 			}
-			return this->string;
+			else
+			{
+				address = &this->address6.sin6_addr;
+			}
+			
+			if (inet_ntop(this->address.sa_family, address,
+						  buffer, sizeof(buffer)) != NULL)
+			{
+				this->string = strdup(buffer);
+			}
+			else
+			{
+				this->string = strdup("(address conversion failed)");
+			}
+			return;
 		}
 		default:
 		{
-			return "(family	not supported)";
+			this->string = strdup("(family not supported)");
 		}
 	}
 }
@@ -134,17 +168,23 @@ static chunk_t get_address(private_host_t *this)
 {
 	chunk_t address = CHUNK_INITIALIZER;
 	
-	switch (this->family) 
+	switch (this->address.sa_family) 
 	{
-		case AF_INET: 
+		case AF_INET:
 		{
-			/* allocate 4 bytes for IPv4 address*/
 			address.ptr = (char*)&(this->address4.sin_addr.s_addr);
 			address.len = 4;
+			return address;
+		}
+		case AF_INET6:
+		{
+			address.ptr = (char*)&(this->address6.sin6_addr.s6_addr);
+			address.len = 16;
+			return address;
 		}
 		default:
 		{
-			/* empty chunk is returned */
+			/* return empty chunk */
 			return address;
 		}
 	}
@@ -155,7 +195,7 @@ static chunk_t get_address(private_host_t *this)
  */
 static int get_family(private_host_t *this)
 {
-	return this->family;	
+	return this->address.sa_family;
 }
 
 /**
@@ -163,11 +203,15 @@ static int get_family(private_host_t *this)
  */
 static u_int16_t get_port(private_host_t *this)
 {
-	switch (this->family) 
+	switch (this->address.sa_family) 
 	{
-		case AF_INET: 
+		case AF_INET:
 		{
 			return ntohs(this->address4.sin_port);
+		}
+		case AF_INET6:
+		{
+			return ntohs(this->address6.sin6_port);
 		}
 		default:
 		{
@@ -181,15 +225,21 @@ static u_int16_t get_port(private_host_t *this)
  */
 static void set_port(private_host_t *this, u_int16_t port)
 {
-	switch (this->family)
+	switch (this->address.sa_family)
 	{
 		case AF_INET:
 		{
 			this->address4.sin_port = htons(port);
+			break;
+		}
+		case AF_INET6:
+		{
+			this->address6.sin6_port = htons(port);
+			break;
 		}
 		default:
 		{
-			/*TODO*/
+			break;
 		}
 	}
 }
@@ -201,12 +251,10 @@ static private_host_t *clone(private_host_t *this)
 {
 	private_host_t *new = malloc_thing(private_host_t);
 	
-		
 	memcpy(new, this, sizeof(private_host_t));
 	if (this->string)
 	{
-		new->string = malloc(strlen(this->string)+1);
-		strcpy(new->string, this->string);
+		new->string = strdup(this->string);
 	}
 	return new;
 }
@@ -216,17 +264,38 @@ static private_host_t *clone(private_host_t *this)
  */
 static bool ip_equals(private_host_t *this, private_host_t *other)
 {
-	switch (this->family)
+	if (this->address.sa_family != other->address.sa_family)
 	{
-		/* IPv4 */
+		/* 0.0.0.0 and ::0 are equal */
+		if (is_anyaddr(this) && is_anyaddr(other))
+		{
+			return TRUE;
+		}
+		
+		return FALSE;
+	}
+	
+	switch (this->address.sa_family)
+	{
 		case AF_INET:
 		{
-			if ((this->address4.sin_family == other->address4.sin_family) &&
-				(this->address4.sin_addr.s_addr == other->address4.sin_addr.s_addr))
+			if (memeq(&this->address4.sin_addr, &other->address4.sin_addr,
+					  sizeof(this->address4.sin_addr)))
 			{
-				return TRUE;	
+				return TRUE;
+			}
+			break;
+		}
+		case AF_INET6:
+		{
+			if (memeq(&this->address6.sin6_addr, &other->address6.sin6_addr,
+					  sizeof(this->address6.sin6_addr)))
+			{
+				return TRUE;
 			}
 		}
+		default:
+			break;
 	}
 	return FALSE;
 }
@@ -234,20 +303,20 @@ static bool ip_equals(private_host_t *this, private_host_t *other)
 /**
  * Implements host_t.get_differences
  */
-static host_diff_t get_differences(private_host_t *this, private_host_t *other)
+static host_diff_t get_differences(host_t *this, host_t *other)
 {
 	host_diff_t ret = HOST_DIFF_NONE;
 	
-	if (!this->public.ip_equals(&this->public, &other->public))
+	if (!this->ip_equals(this, other))
 	{
 		ret |= HOST_DIFF_ADDR;
 	}
 
-	if (this->public.get_port(&this->public) != other->public.get_port(&other->public))
+	if (this->get_port(this) != other->get_port(other))
 	{
 		ret |= HOST_DIFF_PORT;
 	}
-
+	
 	return ret;
 }
 
@@ -256,18 +325,31 @@ static host_diff_t get_differences(private_host_t *this, private_host_t *other)
  */
 static bool equals(private_host_t *this, private_host_t *other)
 {
-	switch (this->family)
+	if (!ip_equals(this, other))
 	{
-		/* IPv4 */
+		return FAILED;
+	}
+	
+	switch (this->address.sa_family)
+	{
 		case AF_INET:
 		{
-			if ((this->address4.sin_family == other->address4.sin_family) &&
-				(this->address4.sin_addr.s_addr == other->address4.sin_addr.s_addr) &&
-				(this->address4.sin_port == other->address4.sin_port))
+			if (this->address4.sin_port == other->address4.sin_port)
 			{
-				return TRUE;	
+				return TRUE;
 			}
+			break;
 		}
+		case AF_INET6:
+		{
+			if (this->address6.sin6_port == other->address6.sin6_port)
+			{
+				return TRUE;
+			}
+			break;
+		}
+		default:
+			break;
 	}
 	return FALSE;
 }
@@ -296,7 +378,7 @@ static private_host_t *host_create_empty(void)
 	this->public.get_address = (chunk_t (*) (host_t *)) get_address;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
 	this->public.set_port = (void (*) (host_t *,u_int16_t))set_port;
-	this->public.get_differences = (host_diff_t (*) (host_t *,host_t *)) get_differences;
+	this->public.get_differences = get_differences;
 	this->public.ip_equals = (bool (*) (host_t *,host_t *)) ip_equals;
 	this->public.equals = (bool (*) (host_t *,host_t *)) equals;
 	this->public.is_anyaddr = (bool (*) (host_t *)) is_anyaddr;
@@ -314,27 +396,88 @@ host_t *host_create(int family, char *address, u_int16_t port)
 {
 	private_host_t *this = host_create_empty();
 	
-	this->family = family;
+	this->address.sa_family = family;
 
 	switch (family)
 	{
-		/* IPv4 */
 		case AF_INET:
 		{
-			this->address4.sin_family = AF_INET;
-			this->address4.sin_addr.s_addr = inet_addr(address);
+			if (inet_pton(family, address, &this->address4.sin_addr) <=0)
+			{
+				break;
+			}
 			this->address4.sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
-			return &(this->public);
+			set_string(this);
+			return &this->public;
+		}
+		case AF_INET6:
+		{
+			if (inet_pton(family, address, &this->address6.sin6_addr) <=0)
+			{
+				break;
+			}
+			this->address6.sin6_port = htons(port);
+			this->socklen = sizeof(struct sockaddr_in6);
+			set_string(this);
+			return &this->public;
 		}
 		default:
 		{
-			free(this);
-			return NULL;
-
+			break;
 		}
 	}
+	free(this);
+	return NULL;
+}
+
+/*
+ * Described in header.
+ */
+host_t *host_create_from_string(char *string, u_int16_t port)
+{
+	private_host_t *this = host_create_empty();
 	
+	if (strchr(string, '.'))
+	{
+		this->address.sa_family = AF_INET;
+	}
+	else
+	{
+		this->address.sa_family = AF_INET6;
+	}
+
+	switch (this->address.sa_family)
+	{
+		case AF_INET:
+		{
+			if (inet_pton(AF_INET, string, &this->address4.sin_addr) <=0)
+			{
+				break;
+			}
+			this->address4.sin_port = htons(port);
+			this->socklen = sizeof(struct sockaddr_in);
+			set_string(this);
+			return &this->public;
+		}
+		case AF_INET6:
+		{
+			if (inet_pton(AF_INET6, string, &this->address6.sin6_addr) <=0)
+			{
+				break;
+			}
+			this->address6.sin6_port = htons(port);
+			this->socklen = sizeof(struct sockaddr_in6);
+			set_string(this);
+			return &this->public;
+		}
+		default:
+		{
+			break;
+		}
+	}
+	free(this);
+	return NULL;
 }
 
 /*
@@ -344,13 +487,12 @@ host_t *host_create_from_hdr(u_long address, u_short port)
 {
 	private_host_t *this = host_create_empty();
 	
-	this->family = AF_INET;
-
-	this->address4.sin_family = AF_INET;
+	this->address.sa_family = AF_INET;
 	this->address4.sin_addr.s_addr = address;
 	this->address4.sin_port = port;
 	this->socklen = sizeof(struct sockaddr_in);
-	return &(this->public);
+	set_string(this);
+	return &this->public;
 }
 
 /*
@@ -360,22 +502,35 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 {
 	private_host_t *this = host_create_empty();
 	
-	this->family = family;
+	this->address.sa_family = family;
 	switch (family)
 	{
-		/* IPv4 */
 		case AF_INET:
 		{
 			if (address.len != 4)
 			{
-				break;	
+				break;
 			}
-			this->address4.sin_family = AF_INET;
-			memcpy(&(this->address4.sin_addr.s_addr),address.ptr,4);
+			memcpy(&(this->address4.sin_addr.s_addr), address.ptr,4);
 			this->address4.sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
+			set_string(this);
 			return &(this->public);
 		}
+		case AF_INET6:
+		{
+			if (address.len != 16)
+			{
+				break;
+			}
+			memcpy(&(this->address6.sin6_addr.s6_addr), address.ptr, 16);
+			this->address6.sin6_port = htons(port);
+			this->socklen = sizeof(struct sockaddr_in6);
+			set_string(this);
+			return &this->public;
+		}
+		default:
+			break;
 	}
 	free(this);
 	return NULL;
@@ -386,20 +541,25 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
  */
 host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 {
-	chunk_t address;
+	private_host_t *this = host_create_empty();
 	
 	switch (sockaddr->sa_family)
 	{
-		/* IPv4 */
 		case AF_INET:
+			memcpy(&this->address4, sockaddr, sizeof(struct sockaddr_in));
+			this->socklen = sizeof(struct sockaddr_in);
+			set_string(this);
+			return &this->public;
+		case AF_INET6:
 		{
-			struct sockaddr_in *sin = (struct sockaddr_in *)sockaddr;
-			address.ptr = (void*)&(sin->sin_addr.s_addr);
-			address.len = 4;
-			return host_create_from_chunk(AF_INET, address, ntohs(sin->sin_port));
+			memcpy(&this->address6, sockaddr, sizeof(struct sockaddr_in6));
+			this->socklen = sizeof(struct sockaddr_in6);
+			set_string(this);
+			return &this->public;
 		}
 		default:
-			return NULL;
+			break;
 	}
+	free(this);
+	return NULL;
 }
-

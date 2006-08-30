@@ -889,42 +889,37 @@ static void ts2subnet(traffic_selector_t* ts,
 	/* there is no way to do this cleanly, as the address range may
 	 * be anything else but a subnet. We use from_addr as subnet 
 	 * and try to calculate a usable subnet mask.
-	 */
-	chunk_t chunk;
+	*/
+	int byte, bit;
+	bool found = FALSE;
+	chunk_t from, to;
+	size_t size = (ts->get_type(ts) == TS_IPV4_ADDR_RANGE) ? 4 : 16;
 	
-	chunk = ts->get_from_address(ts);
-	memcpy(net, chunk.ptr, chunk.len);
+	from = ts->get_from_address(ts);
+	to = ts->get_to_address(ts);
 	
-	switch (ts->get_type(ts))
+	*mask = (size * 8);
+	/* go trough all bits of the addresses, beginning in the front.
+	 * As longer as they equal, the subnet gets larger */
+	for (byte = 0; byte < size; byte++)
 	{
-		case TS_IPV4_ADDR_RANGE:
+		for (bit = 7; bit >= 0; bit--)
 		{
-			u_int32_t from, to, bit;
-			
-			from = *(u_int32_t*)chunk.ptr;
-			chunk_free(&chunk);
-			chunk = ts->get_to_address(ts);
-			to = *(u_int32_t*)chunk.ptr;
-			chunk_free(&chunk);
-			for (bit = 0; bit < 32; bit++)
+			if ((1<<bit & from.ptr[byte]) != (1<<bit & to.ptr[byte]))
 			{
-				if ((1<<bit & from) != (1<<bit & to))
-				{
-					*mask = bit;
-					return;
-				}
+				*mask = ((7 - bit) + (byte * 8));
+				found = TRUE;
+				break;
 			}
-			*mask = 32;
-			return;
 		}
-		case TS_IPV6_ADDR_RANGE:
-		default:
+		if (found)
 		{
-			/* TODO: IPV6 support */
-			*mask = 0;
-			return;
+			break;
 		}
 	}
+	memcpy(net, from.ptr, from.len);
+	chunk_free(&from);
+	chunk_free(&to);
 }
 
 /**
@@ -1075,6 +1070,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 	tmpl->id.proto = (protocol == PROTO_AH) ? KERNEL_AH : KERNEL_ESP;
 	tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 	tmpl->mode = TRUE;
+	tmpl->family = src->get_family(src);
 	
 	host2xfrm(src, &tmpl->saddr);
 	host2xfrm(dst, &tmpl->id.daddr);

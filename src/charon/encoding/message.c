@@ -1062,8 +1062,7 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 			if (status != SUCCESS)
 			{
 				this->logger->log(this->logger, ERROR, 
-								  "encrypted payload could not be decrypted and parsed: %s", 
-								  mapping_find(status_m, status));
+								  "encrypted payload could not be decrypted and parsed");
 				iterator->destroy(iterator);
 				return PARSE_ERROR;
 			}

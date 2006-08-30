@@ -186,21 +186,38 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	
-	this->logger->log(this->logger, CONTROL, "received stroke: add connection \"%s\"", msg->add_conn.name);
-				
+	this->logger->log(this->logger, CONTROL, 
+					  "received stroke: add connection \"%s\"", msg->add_conn.name);
+	
+	this->logger->log(this->logger, CONTROL|LEVEL2, "conn %s", msg->add_conn.name);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  right=%s", msg->add_conn.me.address);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  left=%s", msg->add_conn.other.address);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  rightsubnet=%s", msg->add_conn.me.subnet);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  leftsubnet=%s", msg->add_conn.other.subnet);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  rightid=%s", msg->add_conn.me.id);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  leftid=%s", msg->add_conn.other.id);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  rightcert=%s", msg->add_conn.me.cert);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  leftcert=%s", msg->add_conn.other.cert);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  rightca=%s", msg->add_conn.me.ca);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  leftca=%s", msg->add_conn.other.ca);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  ike=%s", msg->add_conn.algorithms.ike);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  esp=%s", msg->add_conn.algorithms.esp);
+	
 	my_host = msg->add_conn.me.address?
-			  host_create(AF_INET, msg->add_conn.me.address, IKE_PORT) : NULL;
+			  host_create_from_string(msg->add_conn.me.address, IKE_PORT) : NULL;
 	if (my_host == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.me.address);
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "invalid host: %s", msg->add_conn.me.address);
 		return;
 	}
 
 	other_host = msg->add_conn.other.address ?
-				 host_create(AF_INET, msg->add_conn.other.address, IKE_PORT) : NULL;
+			host_create_from_string(msg->add_conn.other.address, IKE_PORT) : NULL;
 	if (other_host == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid host: %s", msg->add_conn.other.address);
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "invalid host: %s", msg->add_conn.other.address);
 		my_host->destroy(my_host);
 		return;
 	}
@@ -210,7 +227,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		stroke_end_t tmp_end;
 		host_t *tmp_host;
 
-		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, "left is other host, swapping ends");
+		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, 
+								 "left is other host, swapping ends");
 
 		tmp_host = my_host;
 		my_host = other_host;
@@ -222,40 +240,45 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	else if (!charon->socket->is_local_address(charon->socket, my_host))
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "left nor right host is our side, aborting");
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "left nor right host is our side, aborting");
 		goto destroy_hosts;
 	}
 
 	my_id = identification_create_from_string(msg->add_conn.me.id ?
-											  msg->add_conn.me.id : msg->add_conn.me.address);
+						msg->add_conn.me.id : msg->add_conn.me.address);
 	if (my_id == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.me.id);
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "invalid id: %s", msg->add_conn.me.id);
 		goto destroy_hosts;
 	}
 
 	other_id = identification_create_from_string(msg->add_conn.other.id ?
-												 msg->add_conn.other.id : msg->add_conn.other.address);
+						msg->add_conn.other.id : msg->add_conn.other.address);
 	if (other_id == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid id: %s", msg->add_conn.other.id);
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "invalid id: %s", msg->add_conn.other.id);
 		my_id->destroy(my_id);
 		goto destroy_hosts;
 	}
 	
-	my_subnet = host_create(AF_INET, msg->add_conn.me.subnet ?
-									 msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
+	my_subnet = host_create_from_string(msg->add_conn.me.subnet ?
+					msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
 	if (my_subnet == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid subnet: %s", msg->add_conn.me.subnet);
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "invalid subnet: %s", msg->add_conn.me.subnet);
 		goto destroy_ids;
 	}
 	
-	other_subnet = host_create(AF_INET, msg->add_conn.other.subnet ?
-										msg->add_conn.other.subnet : msg->add_conn.other.address, IKE_PORT);
+	other_subnet = host_create_from_string(msg->add_conn.other.subnet ?
+					msg->add_conn.other.subnet : msg->add_conn.other.address, IKE_PORT);
 	if (other_subnet == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid subnet: %s", msg->add_conn.me.subnet);
+		this->stroke_logger->log(this->stroke_logger, ERROR, 
+								 "invalid subnet: %s", msg->add_conn.me.subnet);
 		my_subnet->destroy(my_subnet);
 		goto destroy_ids;
 	}

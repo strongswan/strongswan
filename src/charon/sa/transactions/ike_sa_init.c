@@ -375,6 +375,8 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		list = charon->socket->create_local_address_list(charon->socket);
 		while (list->remove_first(list, (void**)&host) == SUCCESS)
 		{
+			/* TODO: should we only include NAT payloads for addresses
+			 * of used address family? */
 			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
 			host->destroy(host);
 			request->add_payload(request, (payload_t*)notify);

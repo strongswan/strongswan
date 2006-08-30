@@ -1784,13 +1784,13 @@ static status_t delete_(private_ike_sa_t *this)
 		case IKE_ESTABLISHED:
 		{
 			delete_ike_sa_t *delete_ike_sa;
-			delete_ike_sa = delete_ike_sa_create(&this->public);
 			if (this->transaction_out)
 			{
 				/* already a transaction in progress. As this may hang
 				* around a while, we don't inform the other peer. */
 				return DESTROY_ME;
 			}
+			delete_ike_sa = delete_ike_sa_create(&this->public);
 			return queue_transaction(this, (transaction_t*)delete_ike_sa, FALSE);
 		}
 		case IKE_CREATED:
@@ -1956,8 +1956,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->name = strdup("(uninitialized)");
 	this->child_sas = linked_list_create();
-	this->my_host = host_create(AF_INET, "0.0.0.0", 0);
-	this->other_host = host_create(AF_INET, "0.0.0.0", 0);
+	this->my_host = host_create_from_string("0.0.0.0", 0);
+	this->other_host = host_create_from_string("0.0.0.0", 0);
 	this->my_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
 	this->other_id = identification_create_from_encoding(ID_ANY, CHUNK_INITIALIZER);
 	this->crypter_in = NULL;

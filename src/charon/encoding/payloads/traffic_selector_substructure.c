@@ -149,6 +149,15 @@ static status_t verify(private_traffic_selector_substructure_t *this)
 			break;
 		}
 		case TS_IPV6_ADDR_RANGE:
+		{
+			if ((this->starting_address.len != 16) ||
+				(this->ending_address.len != 16))
+			{
+				/* ipv6 address must be 16 bytes long */
+				return FAILED;
+			}
+			break;
+		}
 		default:
 		{
 			/* not supported ts type */
