@@ -192,7 +192,6 @@ struct host_t {
 /**
  * @brief Constructor to create a host_t object from an address string
  *
- *
  * @param family 		Address family to use for this object, such as AF_INET or AF_INET6
  * @param address		string of an address, such as "152.96.193.130"
  * @param port			port number
@@ -216,20 +215,6 @@ host_t *host_create(int family, char *address, u_int16_t port);
  * @ingroup network
  */
 host_t *host_create_from_string(char *string, u_int16_t port);
-
-/**
- * @brief Constructor to create a host_t object from raw header data
- *
- * only IPv4 (create host_create_from_hdr6 for IPv6)!
- *
- * @param address		address in network byte order
- * @param port			port number in network byte order
- * @return
- * 						- host_t object
- *
- * @ingroup network
- */
-host_t *host_create_from_hdr(u_long address, u_short port);
 
 /**
  * @brief Constructor to create a host_t object from an address chunk

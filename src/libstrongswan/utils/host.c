@@ -483,21 +483,6 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 /*
  * Described in header.
  */
-host_t *host_create_from_hdr(u_long address, u_short port)
-{
-	private_host_t *this = host_create_empty();
-	
-	this->address.sa_family = AF_INET;
-	this->address4.sin_addr.s_addr = address;
-	this->address4.sin_port = port;
-	this->socklen = sizeof(struct sockaddr_in);
-	set_string(this);
-	return &this->public;
-}
-
-/*
- * Described in header.
- */
 host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 {
 	private_host_t *this = host_create_empty();
@@ -546,10 +531,12 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 	switch (sockaddr->sa_family)
 	{
 		case AF_INET:
+		{
 			memcpy(&this->address4, sockaddr, sizeof(struct sockaddr_in));
 			this->socklen = sizeof(struct sockaddr_in);
 			set_string(this);
 			return &this->public;
+		}
 		case AF_INET6:
 		{
 			memcpy(&this->address6, sockaddr, sizeof(struct sockaddr_in6));
