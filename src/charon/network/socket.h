@@ -45,9 +45,9 @@
 typedef struct socket_t socket_t;
 
 /**
- * @brief Abstraction all sockets (currently IPv4 only).
+ * @brief Abstraction of all sockets (IPv6/IPv6 send/receive).
  *
- * All available IPv4 sockets are bound and the receive function
+ * All available sockets are bound and the receive function
  * reads from them. To allow binding of other daemons (pluto) to
  * UDP/500, this implementation uses RAW sockets. An installed
  * "Linux socket filter" filters out all non-IKEv2 traffic and handles
@@ -119,13 +119,11 @@ struct socket_t {
 
 /**
  * @brief Create a socket_t, wich binds multiple sockets.
- * 
- * currently creates a raw socket and two send sockets
- *  
+ *
  * @param port				port to bind socket to
  * @param natt_port			port to float to in NAT-T
  * @return  				socket_t object
- * 
+ *
  * @ingroup network
  */
 socket_t *socket_create(u_int16_t port, u_int16_t natt_port);

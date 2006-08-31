@@ -136,7 +136,6 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	char buffer[MAX_PACKET];
 	chunk_t data;
 	packet_t *pkt;
-	struct iphdr *ip;
 	struct udphdr *udp;
 	host_t *source = NULL, *dest = NULL;
 	int bytes_read = 0;
@@ -162,7 +161,9 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	{
 		/* IPv4 raw sockets return the IP header. We read src/dest
 		 * information directly from the raw header */
+		struct iphdr *ip;
 		struct sockaddr_in src, dst;
+		
 		bytes_read = recv(this->recv4, buffer, MAX_PACKET, 0);
 		if (bytes_read < 0)
 		{
@@ -213,7 +214,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	}
 	else if (FD_ISSET(this->recv6, &rfds))
 	{
-		/* IPv6 raw sockets return the no IP header. We must query
+		/* IPv6 raw sockets return no IP header. We must query
 		 * src/dest via socket options/ancillary data */
 		struct msghdr msg;
 		struct cmsghdr *cmsgptr;
@@ -626,7 +627,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 			break;
 		case AF_INET6:
 			proto_offset = IP6_PROTO_OFFSET;
-			ip_len = IP6_LEN;
+			ip_len = 0; /* IPv6 raw sockets contain no IP header */
 			ip_proto = IPPROTO_IPV6;
 			ip_pktinfo = IPV6_PKTINFO;
 			ipsec_policy = IPV6_IPSEC_POLICY;
@@ -643,9 +644,6 @@ static int open_recv_socket(private_socket_t *this, int family)
 	 */
 	struct sock_filter ikev2_filter_code[] =
 	{
-		/* Protocol must be UDP */
-		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, proto_offset),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IPPROTO_UDP, 0, 15),
 		/* Destination Port must be either port or natt_port */
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, udp_header + 2),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, this->port, 1, 0),
@@ -689,17 +687,14 @@ static int open_recv_socket(private_socket_t *this, int family)
 		return 0;
 	}
 	
-	if (family == AF_INET)
+	if (setsockopt(skt, SOL_SOCKET, SO_ATTACH_FILTER,
+				   &ikev2_filter, sizeof(ikev2_filter)) < 0)
 	{
-		if (setsockopt(skt, SOL_SOCKET, SO_ATTACH_FILTER,
-					&ikev2_filter, sizeof(ikev2_filter)) < 0)
-		{
-			this->logger->log(this->logger, ERROR, 
-							"unable to attach IKEv2 filter to raw socket: %s",
-							strerror(errno));
-			close(skt);
-			return 0;
-		}
+		this->logger->log(this->logger, ERROR, 
+						"unable to attach IKEv2 filter to raw socket: %s",
+						strerror(errno));
+		close(skt);
+		return 0;
 	}
 	
 	else if (setsockopt(skt, ip_proto, ip_pktinfo, &on, sizeof(on)) < 0)
@@ -840,7 +835,7 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 		}
 	}
 	
-	if (!(this->send4 || this->send6))
+	if (!(this->send4 || this->send6) || !(this->recv4 || this->recv6))
 	{
 		this->logger->log(this->logger, ERROR,
 						  "could not create any sockets");
