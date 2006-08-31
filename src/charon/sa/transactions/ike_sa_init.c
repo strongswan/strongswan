@@ -200,47 +200,30 @@ static u_int32_t requested(private_ike_sa_init_t *this)
 static chunk_t generate_natd_hash(private_ike_sa_init_t *this,
 								  ike_sa_id_t * ike_sa_id, host_t *host)
 {
-	chunk_t natd_string;
+	chunk_t natd_chunk, spi_i_chunk, spi_r_chunk, addr_chunk, port_chunk;
 	chunk_t natd_hash;
-	u_int8_t *p;
 	u_int64_t spi_i, spi_r;
-	char buf[512];
+	u_int16_t port;
 	
+	/* prepare all requred chunks */
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
 	spi_r = ike_sa_id->get_responder_spi(ike_sa_id);
+	spi_i_chunk.ptr = (void*)&spi_i;
+	spi_i_chunk.len = sizeof(spi_i);
+	spi_r_chunk.ptr = (void*)&spi_r;
+	spi_r_chunk.len = sizeof(spi_r);
+	port = host->get_port(host);
+	port_chunk.ptr = (void*)&port;
+	port_chunk.len = sizeof(port);
+	addr_chunk = host->get_address(host);
 	
-	switch (host->get_family(host))
-	{
-		case AF_INET:
-		{
-			struct sockaddr_in* sai;
-			natd_string = chunk_alloc(sizeof(spi_i) + sizeof(spi_r) +
-									  sizeof(sai->sin_addr.s_addr) +
-									  sizeof(sai->sin_port));
-			sai = (struct sockaddr_in*)host->get_sockaddr(host);
-			p = natd_string.ptr;
-			*(u_int64_t*)p = spi_i;                p += sizeof(spi_i);
-			*(u_int64_t*)p = spi_r;                p += sizeof(spi_r);
-			*(u_int32_t*)p = sai->sin_addr.s_addr; p += sizeof(sai->sin_addr.s_addr);
-			*(u_int16_t*)p = sai->sin_port;        p += sizeof(sai->sin_port);
-			break;
-		}
-		case AF_INET6:
-		default:
-			/* TODO: Add IPv6 support */
-			natd_string = CHUNK_INITIALIZER;
-	}
+	/*  natd_hash = SHA1( spi_i | spi_r | address | port ) */
+	natd_chunk = chunk_cat("cccc", spi_i_chunk, spi_r_chunk, addr_chunk, port_chunk);
+	this->nat_hasher->allocate_hash(this->nat_hasher, natd_chunk, &natd_hash);
+	this->logger->log_chunk(this->logger, RAW, "natd_chunk", natd_chunk);
+	this->logger->log_chunk(this->logger, RAW, "natd_hash", natd_hash);
 	
-	this->nat_hasher->allocate_hash(this->nat_hasher, natd_string, &natd_hash);
-	
-	sprintf(buf, "natd_hash(%016llx %016llx %s:%d) == SHA1(", spi_i, spi_r,
-			host->get_string(host), host->get_port(host));
-	chunk_to_hex(buf + strlen(buf), sizeof(buf) - strlen(buf), natd_string);
-	strcat(buf, ") == ");
-	chunk_to_hex(buf + strlen(buf), sizeof(buf) - strlen(buf), natd_hash);
-	this->logger->log(this->logger, CONTROL|LEVEL3, buf);
-	
-	chunk_free(&natd_string);
+	chunk_free(&natd_chunk);
 	return natd_hash;
 }
 
