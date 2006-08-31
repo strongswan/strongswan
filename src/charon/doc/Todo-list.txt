@@ -67,3 +67,5 @@
   when a blocked IKE_SA receives a lot of messages
 - add a crl fetch mechanism which synchronizes equal fetches
 - add support for CERTREQs
+- use same reqid for routed connections when they are set up
+- add firewall script support

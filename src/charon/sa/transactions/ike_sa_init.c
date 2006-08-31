@@ -212,7 +212,7 @@ static chunk_t generate_natd_hash(private_ike_sa_init_t *this,
 	spi_i_chunk.len = sizeof(spi_i);
 	spi_r_chunk.ptr = (void*)&spi_r;
 	spi_r_chunk.len = sizeof(spi_r);
-	port = host->get_port(host);
+	port = htons(host->get_port(host));
 	port_chunk.ptr = (void*)&port;
 	port_chunk.len = sizeof(port);
 	addr_chunk = host->get_address(host);
