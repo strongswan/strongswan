@@ -1009,11 +1009,8 @@ static status_t add_policy(private_kernel_interface_t *this,
 			if (!update)
 			{
 				current->refcount++;
-				iterator->destroy(iterator);
-				pthread_mutex_unlock(&this->pol_mutex);
 				this->logger->log(this->logger, CONTROL|LEVEL1, 
 								  "policy already exists, increasing refcount");
-				return SUCCESS;
 			}
 			policy = current;
 			found = TRUE;

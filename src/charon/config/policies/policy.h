@@ -264,6 +264,7 @@ struct policy_t {
  * @param soft_lifetime		lifetime before rekeying an SA
  * @param jitter			range of randomization time
  * @param updown			updown script to execute on up/down event
+ * @param dpd_route			should the connection go to routed state if DPD detected?
  * @return 					policy_t object
  * 
  * @ingroup config
@@ -271,6 +272,6 @@ struct policy_t {
 policy_t *policy_create(char *name, 
 						identification_t *my_id, identification_t *other_id,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime,
-						u_int32_t jitter, char *updown);
+						u_int32_t jitter, char *updown, bool dpd_route);
 
 #endif /* POLICY_H_ */

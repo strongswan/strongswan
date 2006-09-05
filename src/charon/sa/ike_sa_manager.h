@@ -69,18 +69,22 @@ struct ike_sa_manager_t {
 	ike_sa_t* (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id);
 	
 	/**
-	 * @brief Checkout an IKE_SA by two identifications.
+	 * @brief Checkout an existing IKE_SA by hosts and identifications.
 	 *
-	 * Allows the lookup of an IKE_SA by two user IDs. It returns the
-	 * first found occurence, if there are multiple canddates. Supplied IDs
-	 * may contain wildcards. If no IKE_SA is found, a new one is created.
+	 * Allows the lookup of an IKE_SA by user IDs and hosts. It returns the
+	 * first found occurence, if there are multiple candidates. Supplied IDs
+	 * may contain wildcards, hosts may be %any. 
+	 * If no IKE_SA is found, a new one is created.
 	 *
 	 * @param this			 	the manager object
+	 * @param my_host			address of our host
+	 * @param other_id			address of remote host
 	 * @param my_id				ID used by us
-	 * @param other_id			ID used by other
+	 * @param other_id			ID used by remote
 	 * @return					checked out/created IKE_SA
 	 */
-	ike_sa_t* (*checkout_by_ids) (ike_sa_manager_t* this,
+	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this,
+								  host_t *my_host, host_t* other_host,
 								  identification_t *my_id, 
 								  identification_t *other_id);
 	

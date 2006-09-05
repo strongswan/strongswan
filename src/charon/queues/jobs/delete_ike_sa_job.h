@@ -1,7 +1,7 @@
 /**
- * @file delete_half_open_ike_sa_job.h
+ * @file delete_ike_sa_job.h
  * 
- * @brief Interface of delete_half_open_ike_sa_job_t.
+ * @brief Interface of delete_ike_sa_job_t.
  * 
  */
 
@@ -21,29 +21,29 @@
  * for more details.
  */
  
-#ifndef DELETE_HALF_OPEN_IKE_SA_JOB_H_
-#define DELETE_HALF_OPEN_IKE_SA_JOB_H_
+#ifndef DELETE_IKE_SA_JOB_H_
+#define DELETE_IKE_SA_JOB_H_
 
 #include <types.h>
 #include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
 
 
-typedef struct delete_half_open_ike_sa_job_t delete_half_open_ike_sa_job_t;
+typedef struct delete_ike_sa_job_t delete_ike_sa_job_t;
 
 /**
- * @brief Class representing an DELETE_HALF_OPEN_IKE_SA Job.
+ * @brief Class representing an DELETE_IKE_SA Job.
  * 
- * This job is responsible for deleting of half open IKE_SAs. A half 
- * open IKE_SA is every IKE_SA which hasn't reache the SA_ESTABLISHED
+ * This job is responsible for deleting established or half open IKE_SAs. 
+ * A half open IKE_SA is every IKE_SA which hasn't reache the SA_ESTABLISHED
  * state.
  * 
  * @b Constructors:
- *  - delete_half_open_ike_sa_job_create()
+ *  - delete_ike_sa_job_create()
  * 
  * @ingroup jobs
  */
-struct delete_half_open_ike_sa_job_t {
+struct delete_ike_sa_job_t {
 	
 	/**
 	 * The job_t interface.
@@ -52,13 +52,15 @@ struct delete_half_open_ike_sa_job_t {
 };
 
 /**
- * @brief Creates a job of type DELETE_HALF_OPEN_IKE_SA.
+ * @brief Creates a job of type DELETE_IKE_SA.
  * 
- * @param ike_sa_id		id of the IKE_SA to delete
- * @return				created delete_half_open_ike_sa_job_t object
+ * @param ike_sa_id				id of the IKE_SA to delete
+ * @param delete_if_established	should the IKE_SA be deleted if it is established?
+ * @return						created delete_ike_sa_job_t object
  * 
  * @ingroup jobs
  */
-delete_half_open_ike_sa_job_t *delete_half_open_ike_sa_job_create(ike_sa_id_t *ike_sa_id);
+delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id,
+											  bool delete_if_established);
 
-#endif /* DELETE_HALF_OPEN_IKE_SA_JOB_H_ */
+#endif /* DELETE_IKE_SA_JOB_H_ */

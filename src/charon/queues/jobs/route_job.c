@@ -74,9 +74,11 @@ static status_t execute(private_route_job_t *this)
 {
 	ike_sa_t *ike_sa;
 	
-	ike_sa = charon->ike_sa_manager->checkout_by_ids(charon->ike_sa_manager,
-										this->policy->get_my_id(this->policy),
-										this->policy->get_other_id(this->policy));
+	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
+							this->connection->get_my_host(this->connection),
+							this->connection->get_other_host(this->connection),
+							this->policy->get_my_id(this->policy),
+							this->policy->get_other_id(this->policy));
 	if (this->route)
 	{
 		if (ike_sa->route(ike_sa, this->connection, this->policy) != SUCCESS)

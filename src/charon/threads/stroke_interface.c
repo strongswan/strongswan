@@ -363,6 +363,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 								   msg->add_conn.other.sendcert,
 								   my_host, other_host,
 								   RSA_DIGITAL_SIGNATURE,
+								   msg->add_conn.dpd.delay,
+								   msg->add_conn.rekey.tries,
 								   msg->add_conn.rekey.ike_lifetime,
 								   msg->add_conn.rekey.ike_lifetime - msg->add_conn.rekey.margin,
 								   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100);
@@ -410,7 +412,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 						   msg->add_conn.rekey.ipsec_lifetime,
 						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
-						   msg->add_conn.me.updown);
+						   msg->add_conn.me.updown, msg->add_conn.dpd.route);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
 	policy->add_authorities(policy, my_ca, other_ca);

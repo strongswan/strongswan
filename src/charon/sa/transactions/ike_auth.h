@@ -62,6 +62,18 @@ struct ike_auth_t {
 	 */
 	void (*set_config) (ike_auth_t* this, 
 						connection_t *connection, policy_t *policy);
+
+	/**
+	 * @brief Set the reqid used for CHILD_SA setup.
+	 *
+	 * The first two message exchanges may set up an associated
+	 * CHILD_SA. If we acquire, we must use the same reqid as the
+	 * installed policy.
+	 * 
+	 * @param this			calling object
+	 * @param reqid			reqid to use for the CHILD_SA
+	 */
+	void (*set_reqid) (ike_auth_t* this, u_int32_t reqid);
 	
 	/**
 	 * @brief Set the nonces used in the previous ike_sa_init transaction.

@@ -70,6 +70,11 @@ struct private_create_child_sa_t {
 	u_int32_t rekey_spi;
 	
 	/**
+	 * reqid to use for new CHILD_SA
+	 */
+	u_int32_t reqid;
+	
+	/**
 	 * policy definition used
 	 */
 	policy_t *policy;
@@ -152,6 +157,14 @@ static u_int32_t requested(private_create_child_sa_t *this)
 static void set_policy(private_create_child_sa_t *this, policy_t *policy)
 {
 	this->policy = policy;
+}
+
+/**
+ * Implementation of create_child_sa_t.set_reqid.
+ */
+static void set_reqid(private_create_child_sa_t *this, u_int32_t reqid)
+{
+	this->reqid = reqid;
 }
 
 /**
@@ -252,7 +265,6 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		sa_payload_t *sa_payload;
 		linked_list_t *proposals;
 		bool use_natt;
-		u_int32_t reqid = 0;
 		
 		/* get a policy, if we are rekeying */
 		if (this->rekeyed_sa)
@@ -270,20 +282,20 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 														my_ts, other_ts,
 													    me, other);
 			
-			reqid = this->rekeyed_sa->get_reqid(this->rekeyed_sa);
+			this->reqid = this->rekeyed_sa->get_reqid(this->rekeyed_sa);
 			
 			if (this->policy == NULL)
 			{
 				this->logger->log(this->logger, ERROR,
 								  "no policy found to rekey CHILD_SA with reqid %d",
-								  reqid);
+								  this->reqid);
 				return FAILED;
 			}
 		}
 		
 		proposals = this->policy->get_proposals(this->policy);
 		use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-		this->child_sa = child_sa_create(reqid, me, other,
+		this->child_sa = child_sa_create(this->reqid, me, other,
 							this->policy->get_soft_lifetime(this->policy),
 							this->policy->get_hard_lifetime(this->policy),
 							use_natt);
@@ -686,16 +698,14 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		}
 		else
 		{	/* create child sa */
-			u_int32_t reqid = 0;
-		
 			if (this->rekeyed_sa)
 			{
-				reqid = this->rekeyed_sa->get_reqid(this->rekeyed_sa);
+				this->reqid = this->rekeyed_sa->get_reqid(this->rekeyed_sa);
 			}
 			soft_lifetime = this->policy->get_soft_lifetime(this->policy);
 			hard_lifetime = this->policy->get_hard_lifetime(this->policy);
 			use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-			this->child_sa = child_sa_create(reqid, me, other,
+			this->child_sa = child_sa_create(this->reqid, me, other,
 											 soft_lifetime, hard_lifetime,
 											 use_natt);
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
@@ -950,6 +960,7 @@ create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa)
 	
 	/* public functions */
 	this->public.set_policy = (void(*)(create_child_sa_t*,policy_t*))set_policy;
+	this->public.set_reqid = (void(*)(create_child_sa_t*,u_int32_t))set_reqid;
 	this->public.rekeys_child = (void(*)(create_child_sa_t*,child_sa_t*))rekeys_child;
 	this->public.cancel = (void(*)(create_child_sa_t*))cancel;
 	
@@ -959,6 +970,7 @@ create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa)
 	this->message = NULL;
 	this->requested = 0;
 	this->rekey_spi = 0;
+	this->reqid = 0;
 	this->nonce_i = CHUNK_INITIALIZER;
 	this->nonce_r = CHUNK_INITIALIZER;
 	this->nonce_s = CHUNK_INITIALIZER;

@@ -33,8 +33,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/nonce_payload.h>
 #include <sa/transactions/ike_auth.h>
-#include <queues/jobs/delete_half_open_ike_sa_job.h>
-#include <queues/jobs/delete_established_ike_sa_job.h>
+#include <queues/jobs/delete_ike_sa_job.h>
 #include <queues/jobs/rekey_ike_sa_job.h>
 
 
@@ -107,6 +106,11 @@ struct private_ike_sa_init_t {
 	proposal_t *proposal;
 	
 	/**
+	 * Reqid to pass to IKE_AUTH, used for created CHILD_SA
+	 */
+	u_int32_t reqid;
+	
+	/**
 	 * Randomizer to generate nonces
 	 */
 	randomizer_t *randomizer;
@@ -176,6 +180,14 @@ static void set_config(private_ike_sa_init_t *this,
 {
 	this->connection = connection;
 	this->policy = policy;
+}
+
+/**
+ * Implementation of ike_sa_init_t.set_reqid.
+ */
+static void set_reqid(private_ike_sa_init_t *this, u_int32_t reqid)
+{
+	this->reqid = reqid;
 }
 
 /**
@@ -796,6 +808,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		/* create next transaction, for which we except a message */
 		ike_auth = ike_auth_create(this->ike_sa);
 		ike_auth->set_config(ike_auth, this->connection, this->policy);
+		ike_auth->set_reqid(ike_auth, this->reqid);
 		this->connection = NULL;
 		this->policy = NULL;
 		ike_auth->set_nonces(ike_auth,
@@ -809,7 +822,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 	timeout = charon->configuration->get_half_open_ike_sa_timeout(charon->configuration);
 	if (timeout)
 	{
-		job_t *job = (job_t*)delete_half_open_ike_sa_job_create(this->ike_sa->get_id(this->ike_sa));
+		job_t *job = (job_t*)delete_ike_sa_job_create(
+						this->ike_sa->get_id(this->ike_sa), FALSE);
 		charon->event_queue->add_relative(charon->event_queue, job, timeout);
 	}
 	/* set new state */
@@ -1029,6 +1043,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		/* create next transaction, for which we except a message */
 		ike_auth = ike_auth_create(this->ike_sa);
 		ike_auth->set_config(ike_auth, this->connection, this->policy);
+		ike_auth->set_reqid(ike_auth, this->reqid);
 		this->connection = NULL;
 		this->policy = NULL;
 		ike_auth->set_nonces(ike_auth,
@@ -1074,6 +1089,7 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	
 	/* public functions */
 	this->public.set_config = (void(*)(ike_sa_init_t*,connection_t*,policy_t*))set_config;
+	this->public.set_reqid = (void(*)(ike_sa_init_t*,u_int32_t))set_reqid;
 	this->public.use_dh_group = (bool(*)(ike_sa_init_t*,diffie_hellman_group_t))use_dh_group;
 	
 	/* private data */
@@ -1087,6 +1103,7 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	this->connection = NULL;
 	this->policy = NULL;
 	this->proposal = NULL;
+	this->reqid = 0;
 	this->randomizer = randomizer_create();
 	this->nat_hasher = hasher_create(HASH_SHA1);
 	this->natd_src_hash = CHUNK_INITIALIZER;

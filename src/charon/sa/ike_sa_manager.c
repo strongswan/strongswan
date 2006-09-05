@@ -375,11 +375,13 @@ static u_int64_t get_next_spi(private_ike_sa_manager_t *this)
 }
 
 /**
- * Implementation of of ike_sa_manager.create_and_checkout.
+ * Implementation of of ike_sa_manager.checkout_by_id.
  */
-static ike_sa_t* checkout_by_ids(private_ike_sa_manager_t *this,
-								 identification_t *my_id,
-								 identification_t *other_id)
+static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
+								   host_t *my_host,
+								   host_t *other_host,
+								   identification_t *my_id,
+								   identification_t *other_id)
 {
 	iterator_t *iterator;
 	ike_sa_t *ike_sa = NULL;
@@ -391,6 +393,7 @@ static ike_sa_t* checkout_by_ids(private_ike_sa_manager_t *this,
 	{
 		ike_sa_entry_t *entry;
 		identification_t *found_my_id, *found_other_id;
+		host_t *found_my_host, *found_other_host;
 		int wc;
 		
 		iterator->current(iterator, (void**)&entry);
@@ -401,6 +404,8 @@ static ike_sa_t* checkout_by_ids(private_ike_sa_manager_t *this,
 		
 		found_my_id = entry->ike_sa->get_my_id(entry->ike_sa);
 		found_other_id = entry->ike_sa->get_other_id(entry->ike_sa);
+		found_my_host = entry->ike_sa->get_my_host(entry->ike_sa);
+		found_other_host = entry->ike_sa->get_other_host(entry->ike_sa);
 		
 		if (found_my_id->get_type(found_my_id) == ID_ANY &&
 			found_other_id->get_type(found_other_id) == ID_ANY)
@@ -409,12 +414,19 @@ static ike_sa_t* checkout_by_ids(private_ike_sa_manager_t *this,
 			continue;
 		}
 		
-		if (found_my_id->matches(found_my_id, my_id, &wc) &&
+		/* compare ID and hosts. Supplied ID may contain wildcards, and IP
+		 * may be %any. */
+		if ((found_my_host->is_anyaddr(found_my_host) ||
+			 my_host->ip_equals(my_host, found_my_host)) &&
+			(found_other_host->is_anyaddr(found_other_host) ||
+			 other_host->ip_equals(other_host, found_other_host)) &&
+			found_my_id->matches(found_my_id, my_id, &wc) &&
 			found_other_id->matches(found_other_id, other_id, &wc))
 		{
 			/* looks good, we take this one */
 			this->logger->log(this->logger, CONTROL|LEVEL1, 
-							  "found an existing IKE_SA for IDs %s - %s",
+							  "found an existing IKE_SA for %s[%s]...%s[%s]",
+							  my_host->get_string(my_host), other_host->get_string(other_host),
 							  my_id->get_string(my_id), other_id->get_string(other_id));
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
@@ -931,7 +943,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	/* assign public functions */
 	this->public.destroy = (void(*)(ike_sa_manager_t*))destroy;
-	this->public.checkout_by_ids = (ike_sa_t*(*)(ike_sa_manager_t*,identification_t*,identification_t*))checkout_by_ids;
+	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,host_t*,host_t*,identification_t*,identification_t*))checkout_by_id;
 	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
 	this->public.checkout_by_child = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t))checkout_by_child;
 	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;

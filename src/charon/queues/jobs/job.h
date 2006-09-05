@@ -72,35 +72,28 @@ enum job_type_t {
 	ACQUIRE,
 	
 	/** 
-	 * Delete an ike sa which is still not established.
+	 * Delete an IKE_SA.
 	 * 
-	 * Job is implemented in class delete_half_open_ike_sa_job_t
+	 * Job is implemented in class delete_ike_sa_job_t
 	 */
-	DELETE_HALF_OPEN_IKE_SA,
-	
-	/** 
-	 * Delete an ike sa which is established.
-	 * 
-	 * Job is implemented in class delete_established_ike_sa_job_t
-	 */	
-	DELETE_ESTABLISHED_IKE_SA,
+	DELETE_IKE_SA,
 	
 	/**
-	 * Delete a child sa.
+	 * Delete a CHILD_SA.
 	 * 
 	 * Job is implemented in class delete_child_sa_job_t
 	 */
 	DELETE_CHILD_SA,
 	
 	/**
-	 * Rekey a child sa.
+	 * Rekey a CHILD_SA.
 	 * 
 	 * Job is implemented in class rekey_child_sa_job_t
 	 */
 	REKEY_CHILD_SA,
 	
 	/**
-	 * Rekey an IKE_SA
+	 * Rekey an IKE_SA.
 	 * 
 	 * Job is implemented in class rekey_ike_sa_job_t
 	 */

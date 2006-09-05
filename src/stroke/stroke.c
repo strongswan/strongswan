@@ -116,6 +116,9 @@ static int add_connection(char *name,
 	msg.add_conn.algorithms.ike = NULL;
 	msg.add_conn.algorithms.esp = NULL;
 	
+	msg.add_conn.dpd.delay = 0;
+	msg.add_conn.dpd.route = 0;
+	
 	msg.add_conn.me.id = push_string(&msg, my_id);
 	msg.add_conn.me.address = push_string(&msg, my_addr);
 	msg.add_conn.me.subnet = push_string(&msg, my_net);

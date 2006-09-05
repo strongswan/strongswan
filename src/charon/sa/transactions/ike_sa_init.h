@@ -58,6 +58,19 @@ struct ike_sa_init_t {
 	 */
 	void (*set_config) (ike_sa_init_t* this, 
 						connection_t *connection, policy_t *policy);
+
+	/**
+	 * @brief Set the reqid used for CHILD_SA setup.
+	 *
+	 * The first two message exchanges may set up an associated
+	 * CHILD_SA. If we acquire, we must use the same reqid as the
+	 * installed policy. This requid is passed to the ike_auth
+	 * transaction which creates the CHILD_AS.
+	 * 
+	 * @param this			calling object
+	 * @param reqid			reqid to use for the CHILD_SA
+	 */
+	void (*set_reqid) (ike_sa_init_t* this, u_int32_t reqid);
 	
 	/**
 	 * @brief Set the Diffie Hellman group to use for initiating.

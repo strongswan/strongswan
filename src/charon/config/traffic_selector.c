@@ -464,24 +464,16 @@ static u_int8_t get_protocol(private_traffic_selector_t *this)
  */
 static void update_address_range(private_traffic_selector_t *this, host_t *host)
 {
-	if (host->get_family(host) == AF_INET && this->type == TS_IPV4_ADDR_RANGE)
+	if ((this->type == TS_IPV4_ADDR_RANGE && this->from4[0] == 0) ||
+		(this->type == TS_IPV6_ADDR_RANGE && this->from6[0] == 0 &&
+		 this->from6[1] == 0 && this->from6[2] == 0 && this->from6[3] == 0))
 	{
-		if (this->from4[0] == 0)
-		{
-			chunk_t from = host->get_address(host);
-			memcpy(this->from4, from.ptr, from.len);
-			memcpy(this->to4, from.ptr, from.len);
-		}
-	}
-	if (host->get_family(host) == AF_INET6 && this->type == TS_IPV6_ADDR_RANGE)
-	{
-		if (this->from6[0] == 0 && this->from6[1] == 0 &&
-			this->from6[2] == 0 && this->from6[3] == 0)
-		{
-			chunk_t from = host->get_address(host);
-			memcpy(this->from6, from.ptr, from.len);
-			memcpy(this->to6, from.ptr, from.len);
-		}
+		this->type = host->get_family(host) == AF_INET ?
+						TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
+		
+		chunk_t from = host->get_address(host);
+		memcpy(this->from, from.ptr, from.len);
+		memcpy(this->to, from.ptr, from.len);
 	}
 	update_string(this);
 }

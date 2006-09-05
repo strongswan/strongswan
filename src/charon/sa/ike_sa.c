@@ -51,8 +51,7 @@
 #include <sa/transactions/dead_peer_detection.h>
 #include <sa/transactions/rekey_ike_sa.h>
 #include <queues/jobs/retransmit_request_job.h>
-#include <queues/jobs/delete_established_ike_sa_job.h>
-#include <queues/jobs/delete_half_open_ike_sa_job.h>
+#include <queues/jobs/delete_ike_sa_job.h>
 #include <queues/jobs/send_dpd_job.h>
 #include <queues/jobs/send_keepalive_job.h>
 #include <queues/jobs/rekey_ike_sa_job.h>
@@ -202,6 +201,16 @@ struct private_ike_sa_t {
 		/** when IKE_SA gets deleted */
 		u_int32_t delete;
 	} time;
+	
+	/**
+	 * interval to send DPD liveness check
+	 */
+	time_t dpd_delay;
+	
+	/**
+	 * number of retransmit sequences to go through before giving up (keyingtries)
+	 */
+	u_int32_t retrans_sequences;
 	
 	/**
 	 * List of queued transactions to process
@@ -428,13 +437,19 @@ static status_t transmit_request(private_ike_sa_t *this)
 	u_int32_t transmitted;
 	u_int32_t timeout;
 	transaction_t *transaction = this->transaction_out;
-	u_int32_t message_id = transaction->get_message_id(transaction);
+	u_int32_t message_id;
+	
+	
+	this->logger->log(this->logger, CONTROL,
+					  "transmitting request");
 	
 	transmitted = transaction->requested(transaction);
 	timeout = charon->configuration->get_retransmit_timeout(charon->configuration,
-															transmitted);
+															transmitted,
+															this->retrans_sequences);
 	if (timeout == 0)
 	{
+		/* giving up. TODO: check for childrens with dpdaction=hold */
 		this->logger->log(this->logger, ERROR,
 						  "giving up after %d retransmits, deleting IKE_SA",
 						  transmitted - 1);
@@ -444,8 +459,11 @@ static status_t transmit_request(private_ike_sa_t *this)
 	status = transaction->get_request(transaction, &request);
 	if (status != SUCCESS)
 	{
+		this->logger->log(this->logger, ERROR,
+						  "generating request failed");
 		return status;
 	}
+	message_id = transaction->get_message_id(transaction);
 	/* if we retransmit, the request is already generated */
 	if (transmitted == 0)
 	{
@@ -484,6 +502,8 @@ static status_t retransmit_request(private_ike_sa_t *this, u_int32_t message_id)
 	if (this->transaction_out == NULL ||
 		this->transaction_out->get_message_id(this->transaction_out) != message_id)
 	{
+		if (this->transaction_out)
+		printf("trans_out->mid = %d, mid = %d\n", this->transaction_out->get_message_id(this->transaction_out), message_id);
 		/* no retransmit necessary, transaction did already complete */
 		return SUCCESS;
 	}
@@ -668,8 +688,7 @@ static status_t process_response(private_ike_sa_t *this, message_t *response)
 	current = this->transaction_out;
 	/* check if message ID is that of our currently active transaction */
 	if (current == NULL ||
-		current->get_message_id(current) !=
-		   response->get_message_id(response))
+		current->get_message_id(current) != response->get_message_id(response))
 	{
 		this->logger->log(this->logger, ERROR, 
 						  "received response with message ID %d not requested, ignored");
@@ -839,6 +858,8 @@ static status_t initiate(private_ike_sa_t *this,
 			DESTROY_IF(this->other_host);
 			this->other_host = connection->get_other_host(connection);
 			this->other_host = this->other_host->clone(this->other_host);
+			this->retrans_sequences = connection->get_retrans_seq(connection);
+			this->dpd_delay = connection->get_dpd_delay(connection);
 			
 			this->message_id_out = 1;
 			ike_sa_init = ike_sa_init_create(&this->public);
@@ -958,6 +979,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 			this->message_id_out = 1;
 			ike_sa_init = ike_sa_init_create(&this->public);
 			ike_sa_init->set_config(ike_sa_init, connection, policy);
+			/* reuse existing reqid */
+			ike_sa_init->set_reqid(ike_sa_init, reqid);
 			return queue_transaction(this, (transaction_t*)ike_sa_init, TRUE);
 		}
 		case IKE_CONNECTING:
@@ -971,6 +994,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 			
 			create_child = create_child_sa_create(&this->public);
 			create_child->set_policy(create_child, policy);
+			/* reuse existing reqid */
+			create_child->set_reqid(create_child, reqid);
 			return queue_transaction(this, (transaction_t*)create_child, FALSE);
 		}
 		default:
@@ -1090,6 +1115,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 				this->other_host = this->other_host->clone(this->other_host);
 			}
 			set_name(this, connection->get_name(connection));
+			this->retrans_sequences = connection->get_retrans_seq(connection);
+			this->dpd_delay = connection->get_dpd_delay(connection);
 			break;
 		case IKE_ESTABLISHED:
 		case IKE_REKEYING:
@@ -1102,6 +1129,7 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	}
 	
 	child_sa = child_sa_create(0, this->my_host, this->other_host, 0, 0, FALSE);
+	child_sa->set_name(child_sa, policy->get_name(policy));
 	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
 	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);
 	status = child_sa->add_policies(child_sa, my_ts, other_ts);
@@ -1162,10 +1190,13 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 static status_t send_dpd(private_ike_sa_t *this)
 {
 	send_dpd_job_t *job;
-	time_t diff, interval;
-	status_t status = SUCCESS;
+	time_t diff;
 	
-	interval = charon->configuration->get_dpd_interval(charon->configuration);
+	if (this->dpd_delay == 0)
+	{
+		/* DPD disabled */
+		return SUCCESS;
+	}
 	
 	if (this->transaction_out)
 	{
@@ -1179,20 +1210,20 @@ static status_t send_dpd(private_ike_sa_t *this)
 		last_in = get_time_inbound(this);
 		now = time(NULL);
 		diff = now - last_in;
-		if (diff >= interval)
+		if (diff >= this->dpd_delay)
 		{
 			/* to long ago, initiate dead peer detection */
 			dead_peer_detection_t *dpd;
 			this->logger->log(this->logger, CONTROL, "sending DPD request");
 			dpd = dead_peer_detection_create(&this->public);
-			status = queue_transaction(this, (transaction_t*)dpd, FALSE);
+			queue_transaction(this, (transaction_t*)dpd, FALSE);
 			diff = 0;
 		}
 	}
 	/* recheck in "interval" seconds */
 	job = send_dpd_job_create(this->ike_sa_id);
 	charon->event_queue->add_relative(charon->event_queue, (job_t*)job,
-									  (interval - diff) * 1000);
+									  (this->dpd_delay - diff) * 1000);
 	return SUCCESS;
 }
 
@@ -1657,7 +1688,7 @@ static void set_lifetimes(private_ike_sa_t *this,
 	if (hard_lifetime)
 	{
 		this->time.delete = this->time.established + hard_lifetime;
-		job = (job_t*)delete_established_ike_sa_job_create(this->ike_sa_id);
+		job = (job_t*)delete_ike_sa_job_create(this->ike_sa_id, TRUE);
 		charon->event_queue->add_relative(charon->event_queue, job,
 										  hard_lifetime * 1000);
 	}
@@ -1982,6 +2013,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->time.established = 0;
 	this->time.rekey = 0;
 	this->time.delete = 0;
+	this->dpd_delay = 0;
+	this->retrans_sequences = 0;
 	
 	return &this->public;
 }

@@ -498,27 +498,11 @@ A value of
 prevents IPsec from proposing compression;
 a proposal to compress will still be accepted.
 .TP
-.B disablearrivalcheck
-whether KLIPS's normal tunnel-exit check
-(that a packet emerging from a tunnel has plausible addresses in its header)
-should be disabled;
-acceptable values are
-.B yes
-and
-.B no
-(the default).
-Tunnel-exit checks improve security and do not break any normal configuration.
-Relevant only locally, other end need not agree on it.
-.TP
 .B dpdaction
 controls the use of the Dead Peer Detection protocol (DPD, RFC 3706) where
-R_U_THERE IKE notification messages are periodically sent in order to check the
-liveliness of the IPsec peer. The default is..
-.B none
-which disables the active sending of R_U_THERE notifications.
-Nevertheless pluto will always send the DPD Vendor ID during connection set up
-in order to signal the readiness to act passively as a responder if the peer
-wants to use DPD. The values
+R_U_THERE notification messages (IKEv1) or empty INFORMATIONAL messages (IKEv2)
+are periodically sent in order to check the
+liveliness of the IPsec peer. The values
 .B clear
 and
 .B hold
@@ -527,14 +511,31 @@ are stopped and unrouted (
 .B clear
 ) or put in the hold state (
 .B hold
+). For
+.B IKEv1
+, the default is
+.B none
+which disables the active sending of R_U_THERE notifications.
+Nevertheless pluto will always send the DPD Vendor ID during connection set up
+in order to signal the readiness to act passively as a responder if the peer
+wants to use DPD. For
+.B IKEv2, none
+does't make sense, as all messages are used to detect dead peers. If specified,
+it has the same meaning as the default (
+.B clear
 ).
 .TP
 .B dpddelay
-defines the period time interval with which R_U_THERE messages are sent to the peer.
+defines the period time interval with which R_U_THERE messages/INFORMATIONAL
+exchanges are sent to the peer. These are only sent if no other traffic is
+received. In IKEv2, a value of 0 sends no additional INFORMATIONAL
+messages and uses only standard messages (such as those to rekey) to detect
+dead peers.
 .TP
 .B dpdtimeout
 defines the timeout interval, after which all connections to a peer are deleted
-in case of inactivity.
+in case of inactivity. This only applies to IKEv1, in IKEv2 the default
+retransmission timeout applies, as every exchange is used to detect dead peers.
 .TP
 .B failureshunt
 what to do with packets when negotiation fails.

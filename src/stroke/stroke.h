@@ -145,6 +145,10 @@ struct stroke_msg_t {
 				unsigned long tries;
 				unsigned long fuzz;
 			} rekey;
+			struct {
+				time_t delay;
+				bool route;
+			} dpd;
 			stroke_end_t me, other;
 		} add_conn;
 

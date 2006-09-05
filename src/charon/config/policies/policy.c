@@ -110,6 +110,11 @@ struct private_policy_t {
 	u_int32_t jitter;
 	
 	/**
+	 * Should the SA get ROUTED when peer detected as dead?
+	 */
+	bool dpd_route;
+	
+	/**
 	 * logger
 	 */
 	logger_t *logger;
@@ -441,7 +446,7 @@ static void destroy(private_policy_t *this)
  */
 policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
-						u_int32_t jitter, char *updown)
+						u_int32_t jitter, char *updown, bool dpd_route)
 {
 	private_policy_t *this = malloc_thing(private_policy_t);
 
@@ -473,6 +478,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->soft_lifetime = soft_lifetime;
 	this->jitter = jitter;
 	this->updown = (updown == NULL) ? NULL : strdup(updown);
+	this->dpd_route = dpd_route;
 	
 	/* initialize private members*/
 	this->refcount = 1;

@@ -66,7 +66,7 @@ static job_type_t get_type(private_retransmit_request_job_t *this)
 static status_t execute(private_retransmit_request_job_t *this)
 {
 	ike_sa_t *ike_sa;
-				
+	
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id);
 	if (ike_sa == NULL)
 	{

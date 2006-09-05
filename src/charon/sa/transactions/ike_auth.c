@@ -125,6 +125,11 @@ struct private_ike_auth_t {
 	bool build_child;
 	
 	/**
+	 * reqid to use for CHILD_SA setup
+	 */
+	u_int32_t reqid;
+	
+	/**
 	 * Assigned logger.
 	 */
 	logger_t *logger;
@@ -154,6 +159,14 @@ static void set_config(private_ike_auth_t *this,
 {
 	this->connection = connection;
 	this->policy = policy;
+}
+
+/**
+ * Implementation of transaction_t.set_reqid.
+ */
+static void set_reqid(private_ike_auth_t *this, u_int32_t reqid)
+{
+	this->reqid = reqid;
 }
 
 /**
@@ -303,7 +316,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		proposal_list = this->policy->get_proposals(this->policy);
 		soft_lifetime = this->policy->get_soft_lifetime(this->policy);
 		hard_lifetime = this->policy->get_hard_lifetime(this->policy);
-		this->child_sa = child_sa_create(0, me, other, soft_lifetime, hard_lifetime,
+		this->child_sa = child_sa_create(this->reqid, me, other, soft_lifetime, hard_lifetime,
 										 this->ike_sa->is_natt_enabled(this->ike_sa));
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
@@ -768,7 +781,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			soft_lifetime = this->policy->get_soft_lifetime(this->policy);
 			hard_lifetime = this->policy->get_hard_lifetime(this->policy);
 			use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-			this->child_sa = child_sa_create(0, me, other, 
+			this->child_sa = child_sa_create(this->reqid, me, other, 
 											 soft_lifetime, hard_lifetime, 
 											 use_natt);
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
@@ -1006,6 +1019,7 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa)
 	
 	/* public functions */
 	this->public.set_config = (void(*)(ike_auth_t*,connection_t*,policy_t*))set_config;
+	this->public.set_reqid = (void(*)(ike_auth_t*,u_int32_t))set_reqid;
 	this->public.set_nonces = (void(*)(ike_auth_t*,chunk_t,chunk_t))set_nonces;
 	this->public.set_init_messages = (void(*)(ike_auth_t*,chunk_t,chunk_t))set_init_messages;
 	
@@ -1023,6 +1037,7 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa)
 	this->tsi = NULL;
 	this->tsr = NULL;
 	this->build_child = TRUE;
+	this->reqid = 0;
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 
 	return &this->public;

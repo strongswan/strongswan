@@ -41,21 +41,21 @@ typedef struct create_child_sa_t create_child_sa_t;
  * but includes an additional REKEY_SA notify and deletes the old
  * one (in a separate transaction).
  * 
- *                     ¦__________  _________¦
- *                     ¦  Cyq     \/    Czq  ¦
- *                     ¦__________/\_________¦
- *              detect ¦__________  _________¦ detect
- *                     ¦  Czp     \/    Czp  ¦
- * compare nonces, won ¦__________/\_________¦ compare nonces, lost
- *                     ¦                     ¦
- *        delete old   ¦__________           ¦
- *                     ¦  Dxq     \__________¦
- *                     ¦           __________¦
- *                     ¦__________/    Dxp   ¦
- *                     ¦           __________¦ delete created
- *                     ¦__________/    Dzq   ¦
- *                     ¦__________           ¦
- *                     ¦  Dzp     \__________¦
+ *                     __________  _________
+ *                       Cyq     \/    Czq  
+ *                     __________/\_________
+ *              detect __________  _________ detect
+ *                       Czp     \/    Czp  
+ * compare nonces, won __________/\_________ compare nonces, lost
+ *                                          
+ *        delete old   __________           
+ *                       Dxq     \__________
+ *                                __________
+ *                     __________/    Dxp   
+ *                                __________ delete created
+ *                     __________/    Dzq   
+ *                     __________           
+ *                       Dzp     \__________
  * 
  *
  * @b Constructors:
@@ -78,6 +78,17 @@ struct create_child_sa_t {
 	 * @param policy	policy for CHILD_SA
 	 */
 	void (*set_policy) (create_child_sa_t* this, policy_t *policy);
+
+	/**
+	 * @brief Set the reqid used for CHILD_SA setup.
+	 *
+	 * If we acquire, we must use the same reqid as the
+	 * installed policy.
+	 * 
+	 * @param this			calling object
+	 * @param reqid			reqid to use for the CHILD_SA
+	 */
+	void (*set_reqid) (create_child_sa_t* this, u_int32_t reqid);
 	
 	/**
 	 * @brief Set the CHILD_SA which gets rekeyed by the new one.

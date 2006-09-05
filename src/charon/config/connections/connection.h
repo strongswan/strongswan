@@ -164,12 +164,31 @@ struct connection_t {
 	proposal_t *(*select_proposal) (connection_t *this, linked_list_t *proposals);
 	
 	/**
-	 * @brief Get the authentication method to use
+	 * @brief Get the authentication method to use.
 	 * 
 	 * @param this		calling object
 	 * @return			authentication method
 	 */
 	auth_method_t (*get_auth_method) (connection_t *this);
+	
+	/**
+	 * @brief Get the DPD check interval.
+	 * 
+	 * @param this		calling object
+	 * @return			dpd_delay in seconds
+	 */
+	u_int32_t (*get_dpd_delay) (connection_t *this);
+	
+	/**
+	 * @brief Get the max number of retransmission sequences.
+	 *
+	 * After this number of sequences, a not responding peer is considered
+	 * dead.
+	 *
+	 * @param this		calling object
+	 * @return			max number of retransmission sequences
+	 */
+	u_int32_t (*get_retrans_seq) (connection_t *this);
 	
 	/**
 	 * @brief Get the connection name.
@@ -281,9 +300,12 @@ struct connection_t {
 /**
  * @brief Creates a connection_t object.
  *
- * Supplied hosts become owned by connection, so 
- * do not modify or destroy them after a call to 
+ * Supplied hosts become owned by connection, so
+ * do not modify or destroy them after a call to
  * connection_create(). Name gets cloned internally.
+ * The retrasmit sequence number says how fast we give up when the peer
+ * does not respond. A high value may bridge-over temporary connection 
+ * problems, a small value can detect dead peers faster.
  *
  * @param name				connection identifier
  * @param ikev2				TRUE if this is an IKEv2 connection
@@ -292,6 +314,8 @@ struct connection_t {
  * @param my_host			host_t representing local address
  * @param other_host		host_t representing remote address
  * @param auth_method		Authentication method to use for our(!) auth data
+ * @param dpd_delay			interval of DPD liveness checks
+ * @param retrans_sequences	number of retransmit sequences to use
  * @param hard_lifetime		lifetime before deleting an IKE_SA
  * @param soft_lifetime		lifetime before rekeying an IKE_SA
  * @param jitter			range of randomization time
@@ -302,7 +326,9 @@ struct connection_t {
 connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t cert_pol, cert_policy_t req_pol,
 								 host_t *my_host, host_t *other_host,
-								 auth_method_t auth_method, u_int32_t hard_lifetime, 
-								 u_int32_t soft_lifetime, u_int32_t jitter);
+								 auth_method_t auth_method,
+								 u_int32_t dpd_delay, u_int32_t retrans_sequences,
+								 u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
+								 u_int32_t jitter);
 
 #endif /* CONNECTION_H_ */

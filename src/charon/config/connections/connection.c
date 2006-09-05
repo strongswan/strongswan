@@ -106,6 +106,16 @@ struct private_connection_t {
 	auth_method_t auth_method;
 	
 	/**
+	 * Interval to send DPD liveness checks on inactivity
+	 */
+	u_int32_t dpd_delay;
+	
+	/**
+	 * Number of retransmission sequences to send bevore giving up
+	 */
+	u_int32_t retrans_sequences;
+	
+	/**
 	 * Supported proposals
 	 */
 	linked_list_t *proposals;
@@ -249,6 +259,22 @@ static auth_method_t get_auth_method(private_connection_t *this)
 }
 
 /**
+ * Implementation of connection_t.get_dpd_delay.
+ */
+static u_int32_t get_dpd_delay(private_connection_t *this)
+{
+	return this->dpd_delay;
+}
+
+/**
+ * Implementation of connection_t.get_retrans_seq.
+ */
+static u_int32_t get_retrans_seq(private_connection_t *this)
+{
+	return this->retrans_sequences;
+}
+
+/**
  * Implementation of connection_t.get_dh_group.
  */
 static diffie_hellman_group_t get_dh_group(private_connection_t *this)
@@ -359,6 +385,8 @@ connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t certreq_policy,
 								 host_t *my_host, host_t *other_host,
 								 auth_method_t auth_method,
+								 u_int32_t dpd_delay,
+								 u_int32_t retrans_sequences,
 								 u_int32_t hard_lifetime,
 								 u_int32_t soft_lifetime, u_int32_t jitter)
 {
@@ -375,6 +403,8 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->public.select_proposal = (proposal_t*(*)(connection_t*,linked_list_t*))select_proposal;
 	this->public.add_proposal = (void(*)(connection_t*, proposal_t*)) add_proposal;
 	this->public.get_auth_method = (auth_method_t(*)(connection_t*)) get_auth_method;
+	this->public.get_dpd_delay = (u_int32_t(*)(connection_t*)) get_dpd_delay;
+	this->public.get_retrans_seq = (u_int32_t(*)(connection_t*)) get_retrans_seq;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(connection_t*)) get_dh_group;
 	this->public.check_dh_group = (bool(*)(connection_t*,diffie_hellman_group_t)) check_dh_group;
 	this->public.get_soft_lifetime = (u_int32_t (*) (connection_t *))get_soft_lifetime;
@@ -391,6 +421,8 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->my_host = my_host;
 	this->other_host = other_host;
 	this->auth_method = auth_method;
+	this->dpd_delay = dpd_delay;
+	this->retrans_sequences = retrans_sequences;
 	this->hard_lifetime = hard_lifetime;
 	this->soft_lifetime = soft_lifetime;
 	this->jitter = jitter;
