@@ -152,7 +152,9 @@ static status_t execute(private_incoming_packet_job_t *this)
 						  ike_sa_id->get_responder_spi(ike_sa_id));
 		if (message->get_request(message))
 		{
-			send_notify_response(this, message, INVALID_IKE_SPI);
+			/* TODO: send notify if we have NULL crypters, 
+			 * see todo in send_notify_response 
+			send_notify_response(this, message, INVALID_IKE_SPI); */
 		}
 		ike_sa_id->destroy(ike_sa_id);	
 		message->destroy(message);

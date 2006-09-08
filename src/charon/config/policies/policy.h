@@ -52,7 +52,7 @@ enum dpd_action_t {
 /**
  * String mappings for dpd_action_t
  */
-mapping_t dpd_action_m[];
+extern mapping_t dpd_action_m[];
 
 
 typedef struct policy_t policy_t;

@@ -111,6 +111,11 @@ struct private_ike_sa_init_t {
 	u_int32_t reqid;
 	
 	/**
+	 * Unique ID for to enumerate all IKE_SAs in its name
+	 */
+	u_int32_t unique_id;
+	
+	/**
 	 * Randomizer to generate nonces
 	 */
 	randomizer_t *randomizer;
@@ -281,6 +286,7 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 	message_t *request;
 	host_t *me, *other;
 	identification_t *my_id, *other_id;
+	char name[64];
 	
 	/* check if we already have built a message (retransmission) */
 	if (this->message)
@@ -298,6 +304,12 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 	other_id = this->policy->get_other_id(this->policy);
 	this->ike_sa->set_my_id(this->ike_sa, my_id->clone(my_id));
 	this->ike_sa->set_other_id(this->ike_sa, other_id->clone(other_id));
+	if (snprintf(name, sizeof(name), "%s{%d}",
+				 this->connection->get_name(this->connection),
+				 this->unique_id) > 0)
+	{
+		this->ike_sa->set_name(this->ike_sa, name);
+	}
 	
 	/* build the request */
 	request = message_create();
@@ -516,6 +528,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 	nonce_payload_t *nonce_request = NULL;
 	ike_sa_id_t *ike_sa_id;
 	u_int32_t timeout;
+	char name[64];
 	
 	/* check if we already have built a response (retransmission) */
 	if (this->message)
@@ -561,8 +574,13 @@ static status_t get_response(private_ike_sa_init_t *this,
 						  me->get_string(me), other->get_string(other));
 		return DESTROY_ME;
 	}
-	this->ike_sa->set_name(this->ike_sa, 
-						   this->connection->get_name(this->connection));
+	
+	if (snprintf(name, sizeof(name), "%s{%d}",
+				 this->connection->get_name(this->connection),
+				 this->unique_id) > 0)
+	{
+		this->ike_sa->set_name(this->ike_sa, name);
+	}
 	
 	/* Precompute NAT-D hashes for incoming NAT notify comparison */
 	ike_sa_id = request->get_ike_sa_id(request);
@@ -1077,6 +1095,7 @@ static void destroy(private_ike_sa_init_t *this)
  */
 ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 {
+	static u_int unique_id = 0;
 	private_ike_sa_init_t *this = malloc_thing(private_ike_sa_init_t);
 
 	/* transaction interface functions */
@@ -1103,6 +1122,7 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	this->connection = NULL;
 	this->policy = NULL;
 	this->proposal = NULL;
+	this->unique_id = ++unique_id;
 	this->reqid = 0;
 	this->randomizer = randomizer_create();
 	this->nat_hasher = hasher_create(HASH_SHA1);

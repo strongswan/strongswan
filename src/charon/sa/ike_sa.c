@@ -920,8 +920,6 @@ static status_t initiate(private_ike_sa_t *this,
 			
 			this->logger->log(this->logger, CONTROL, 
 							  "initiating IKE_SA");
-			
-			set_name(this, connection->get_name(connection));
 			DESTROY_IF(this->my_host);
 			this->my_host = connection->get_my_host(connection);
 			this->my_host = this->my_host->clone(this->my_host);
@@ -1130,27 +1128,30 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
 	{
-		linked_list_t *my_ts_conf, *other_ts_conf;
-		
-		my_ts = child_sa->get_my_traffic_selectors(child_sa);
-		other_ts = child_sa->get_other_traffic_selectors(child_sa);
-		
-		my_ts_conf = policy->get_my_traffic_selectors(policy, this->my_host);
-		other_ts_conf = policy->get_other_traffic_selectors(policy, this->other_host);
-		
-		if (ts_list_equals(my_ts, my_ts_conf) &&
-				  ts_list_equals(other_ts, other_ts_conf))
+		if (child_sa->get_state(child_sa) == CHILD_ROUTED)
 		{
+			linked_list_t *my_ts_conf, *other_ts_conf;
+			
+			my_ts = child_sa->get_my_traffic_selectors(child_sa);
+			other_ts = child_sa->get_other_traffic_selectors(child_sa);
+			
+			my_ts_conf = policy->get_my_traffic_selectors(policy, this->my_host);
+			other_ts_conf = policy->get_other_traffic_selectors(policy, this->other_host);
+			
+			if (ts_list_equals(my_ts, my_ts_conf) &&
+					ts_list_equals(other_ts, other_ts_conf))
+			{
+				ts_list_destroy(my_ts_conf);
+				ts_list_destroy(other_ts_conf);
+				iterator->destroy(iterator);
+				this->logger->log(this->logger, CONTROL, 
+								"a CHILD_SA with such a policy already routed");
+				
+				return FAILED;
+			}
 			ts_list_destroy(my_ts_conf);
 			ts_list_destroy(other_ts_conf);
-			iterator->destroy(iterator);
-			this->logger->log(this->logger, CONTROL, 
-							  "a CHILD_SA with such a policy already routed");
-			
-			return FAILED;
 		}
-		ts_list_destroy(my_ts_conf);
-		ts_list_destroy(other_ts_conf);
 	}
 	iterator->destroy(iterator);
 	

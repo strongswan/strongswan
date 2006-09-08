@@ -134,58 +134,7 @@ struct private_ike_sa_manager_t {
 	 * Public interface of ike_sa_manager_t.
 	 */
 	 ike_sa_manager_t public;
-
-	/**
-	 * @brief Get next spi.
-	 *
-	 * We give out SPIs from a pseudo random source
-	 * 
-	 * @param this			the ike_sa_manager
-	 * @return 				the next spi
-	 */
-	u_int64_t (*get_next_spi) (private_ike_sa_manager_t *this);
-
-	/**
-	 * @brief Find the ike_sa_entry_t object in the list by SPIs.
-	 *
-	 * This function simply iterates over the linked list. A hash-table
-	 * would be more efficient when storing a lot of IKE_SAs...
-	 *
-	 * @param this			calling object
-	 * @param ike_sa_id		id of the ike_sa, containing SPIs
-	 * @param[out] entry	pointer to set to the found entry
-	 * @return				
-	 * 						- SUCCESS when found,
-	 * 						- NOT_FOUND when no such ike_sa_id in list
-	 */
-	 status_t (*get_entry_by_id) (private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_entry_t **entry);
-
-	 /**
-	 * @brief Find the ike_sa_entry_t in the list by pointer to SA.
-	 *
-	 * This function simply iterates over the linked list. A hash-table
-	 * would be more efficient when storing a lot of IKE_SAs...
-	 *
-	 * @param this			calling object
-	 * @param ike_sa		pointer to the ike_sa
-	 * @param[out] entry	pointer to set to the found entry
-	 * @return				
-	 * 						- SUCCESS when found,
-	 * 						- NOT_FOUND when no such ike_sa_id in list
-	 */
-	 status_t (*get_entry_by_sa) (private_ike_sa_manager_t *this, ike_sa_t *ike_sa, ike_sa_entry_t **entry);
-	 
-	 /**
-	  * @brief Delete an entry from the linked list.
-	  *
-	  * @param this			calling object
-	  * @param entry		entry to delete
-	  * @return				
-	  * 					- SUCCESS when found,
-	  * 					- NOT_FOUND when no such ike_sa_id in list
-	  */
-	 status_t (*delete_entry) (private_ike_sa_manager_t *this, ike_sa_entry_t *entry);
-
+	
 	 /**
 	  * Lock for exclusivly accessing the manager.
 	  */
@@ -321,6 +270,17 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 		iterator->current(iterator, (void**)&current);
 		if (current == entry) 
 		{
+			/* mark it, so now new threads can get this entry */
+			entry->driveout_new_threads = TRUE;
+			/* wait until all workers have done their work */
+			while (entry->waiting_threads)
+			{
+				/* wake up all */
+				pthread_cond_broadcast(&(entry->condvar));
+				/* they will wake us again when their work is done */
+				pthread_cond_wait(&(entry->condvar), &(this->mutex));
+			}
+			
 	 		this->logger->log(this->logger, CONTROL|LEVEL2, 
 							  "found entry by pointer. Going to delete it");
 			iterator->remove(iterator);
@@ -440,7 +400,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 		ike_sa_entry_t *new_ike_sa_entry;
 		ike_sa_id_t *new_ike_sa_id;
 		
-		initiator_spi = this->get_next_spi(this);
+		initiator_spi = get_next_spi(this);
 		new_ike_sa_id = ike_sa_id_create(0, 0, TRUE);
 		new_ike_sa_id->set_initiator_spi(new_ike_sa_id, initiator_spi);
 		
@@ -501,7 +461,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		 */
 		ike_sa_entry_t *entry;
 		/* look for the entry */
-		if (this->get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
+		if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
 		{
 			if (wait_for_entry(this, entry))
 			{
@@ -537,7 +497,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		ike_sa_entry_t *new_ike_sa_entry;
 		
 		/* set SPIs, we are the responder */
-		responder_spi = this->get_next_spi(this);
+		responder_spi = get_next_spi(this);
 		
 		/* we also set arguments spi, so its still valid */
 		ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
@@ -558,7 +518,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		/* checkout of a new and unused IKE_SA, used for rekeying */
 		ike_sa_entry_t *new_ike_sa_entry;
 		
-		ike_sa_id->set_initiator_spi(ike_sa_id, this->get_next_spi(this));
+		ike_sa_id->set_initiator_spi(ike_sa_id, get_next_spi(this));
 		/* create entry */
 		new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
 		this->logger->log(this->logger, CONTROL|LEVEL2,
@@ -621,7 +581,7 @@ static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
 /**
  * Implementation of ike_sa_manager_t.get_ike_sa_list.
  */
-linked_list_t *get_ike_sa_list(private_ike_sa_manager_t* this)
+static linked_list_t *get_ike_sa_list(private_ike_sa_manager_t* this)
 {
 	linked_list_t *list;
 	iterator_t *iterator;
@@ -635,32 +595,6 @@ linked_list_t *get_ike_sa_list(private_ike_sa_manager_t* this)
 		ike_sa_entry_t *entry;
 		iterator->current(iterator, (void**)&entry);
 		list->insert_last(list, (void*)entry->ike_sa_id->clone(entry->ike_sa_id));
-	}
-	iterator->destroy(iterator);
-	
-	pthread_mutex_unlock(&(this->mutex));
-	return list;
-}
-
-/**
- * Implementation of ike_sa_manager_t.get_ike_sa_list_by_name.
- */
-linked_list_t *get_ike_sa_list_by_name(private_ike_sa_manager_t* this, const char *name)
-{
-	linked_list_t *list;
-	iterator_t *iterator;
-	ike_sa_entry_t *entry;
-	
-	pthread_mutex_lock(&(this->mutex));
-	
-	list = linked_list_create();
-	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->iterate(iterator, (void**)&entry))
-	{
-		if (strcmp(name, entry->ike_sa->get_name(entry->ike_sa)) == 0)
-		{
-			list->insert_last(list, (void*)entry->ike_sa_id->clone(entry->ike_sa_id));
-		}
 	}
 	iterator->destroy(iterator);
 	
@@ -724,7 +658,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	pthread_mutex_lock(&(this->mutex));
 
 	/* look for the entry */
-	if (this->get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
+	if (get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
 	{
 		/* ike_sa_id must be updated */
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
@@ -772,23 +706,13 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 
 	pthread_mutex_lock(&(this->mutex));
 
-	if (this->get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
+	if (get_entry_by_sa(this, ike_sa, &entry) == SUCCESS)
 	{
-		/* mark it, so now new threads can acquire this SA */
-		entry->driveout_new_threads = TRUE;
-		/* additionaly, drive out waiting threads */
+		/* drive out waiting threads, as we are in hurry */
 		entry->driveout_waiting_threads = TRUE;
-
-		/* wait until all workers have done their work */
-		while (entry->waiting_threads)
-		{
-			/* let the other threads leave the manager */
-			pthread_cond_broadcast(&(entry->condvar));
-			/* and the nice thing, they will wake us again when their work is done */
-			pthread_cond_wait(&(entry->condvar), &(this->mutex));
-		}
-		/* ok, we are alone now, no threads waiting in the entry's condvar */
-		this->delete_entry(this, entry);
+		
+		delete_entry(this, entry);
+		
 		this->logger->log(this->logger, CONTROL|LEVEL1, 
 						  "check-in and destroy of IKE_SA successful");
 		retval = SUCCESS;
@@ -825,7 +749,7 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 	
 	pthread_mutex_lock(&(this->mutex));
 	
-	if (this->get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
+	if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
 	{
 		/* we try a delete. If it succeeds, our job is done here. The
 		 * other peer will reply, and the IKE SA gets the finally deleted...
@@ -837,25 +761,10 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 		}
 		/* but if the IKE SA is not in a state where the deletion is 
 		 * negotiated with the other peer, we can destroy the IKE SA on our own. 
-		 * For this, we must be sure that really NO other threads are 
-		 * waiting for this SA...
 		 */
 		else
 		{
-			/* mark it, so now new threads can acquire this SA */
-			entry->driveout_new_threads = TRUE;
-			/* wait until all workers have done their work */
-			while (entry->waiting_threads)
-			{
-				/* wake up all */
-				pthread_cond_broadcast(&(entry->condvar));
-				/* and the nice thing, they will wake us again when their work
-				 * is done */
-				pthread_cond_wait(&(entry->condvar), &(this->mutex));
-			}
-			/* ok, we are alone now, no threads waiting in the entry's condvar */
-			this->delete_entry(this, entry);
-			this->logger->log(this->logger, CONTROL|LEVEL1, "destroyed IKE_SA");
+			
 		}
 		retval = SUCCESS;
 	}
@@ -868,6 +777,125 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 
 	pthread_mutex_unlock(&(this->mutex));
 	return retval;
+}
+
+/**
+ * Implementation of ike_sa_manager_t.delete_by_name.
+ */
+static status_t delete_by_name(private_ike_sa_manager_t *this, char *name)
+{
+	iterator_t *iterator;
+	iterator_t *child_iter;
+	ike_sa_entry_t *entry;
+	size_t name_len = strlen(name);
+	
+	pthread_mutex_lock(&(this->mutex));
+	
+	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
+	while (iterator->iterate(iterator, (void**)&entry))
+	{
+		if (wait_for_entry(this, entry))
+		{
+			/* delete ike_sa if:
+			 * name{x} matches completely
+			 * name{} matches by name
+			 * name matches by name
+			 */
+			bool del = FALSE;
+			char *ike_name;
+			char *child_name;
+			child_sa_t *child_sa;
+			
+			ike_name = entry->ike_sa->get_name(entry->ike_sa);
+			/* check if "name{x}" matches completely */
+			if (strcmp(name, ike_name) == 0)
+			{
+				del = TRUE;
+			}
+			/* check if name is in form of "name{}" and matches to ike_name */
+			else if (name_len > 1 &&
+					 name[name_len - 2] == '{' && name[name_len - 1] == '}' &&
+					 strlen(ike_name) > name_len &&
+					 ike_name[name_len - 2] == '{' &&
+					 strncmp(name, ike_name, name_len - 2) == 0)
+			{
+				del = TRUE;
+			}
+			/* finally, check if name is "name" and matches ike_name */
+			else if (name_len == strchr(ike_name, '{') - ike_name &&
+					 strncmp(name, ike_name, name_len) == 0)
+			{
+				del = TRUE;
+			}
+			
+			if (del)
+			{
+				if (entry->ike_sa->delete(entry->ike_sa) == DESTROY_ME)
+				{
+					delete_entry(this, entry);
+					iterator->reset(iterator);
+				}
+				/* no need to check children, as we delete all */
+				continue;
+			}
+			
+			/* and now the same game for all children. delete child_sa if:
+			 * name[x] matches completely
+			 * name[] matches by name
+			 * name matches by name
+			 */
+			child_iter = entry->ike_sa->create_child_sa_iterator(entry->ike_sa);
+			while (child_iter->iterate(child_iter, (void**)&child_sa))
+			{
+				/* skip ROUTED children, they have their "unroute" command */
+				if (child_sa->get_state(child_sa) == CHILD_ROUTED)
+				{
+					continue;
+				}
+				
+				child_name = child_sa->get_name(child_sa);
+				del = FALSE;
+				/* check if "name[x]" matches completely */
+				if (strcmp(name, child_name) == 0)
+				{
+					del = TRUE;
+				}
+				/* check if name is in form of "name[]" and matches to child_name */
+				else if (name_len > 1 &&
+						 name[name_len - 2] == '[' && name[name_len - 1] == ']' &&
+						 strlen(child_name) > name_len &&
+						 child_name[name_len - 2] == '[' &&
+						 strncmp(name, child_name, name_len - 2) == 0)
+				{
+					del = TRUE;
+				}
+				/* finally, check if name is "name" and matches child_name */
+				else if (name_len == strchr(child_name, '[') - child_name &&
+						 strncmp(name, child_name, name_len) == 0)
+				{
+					del = TRUE;
+				}
+				if (del)
+				{
+					if (entry->ike_sa->delete_child_sa(entry->ike_sa,
+						child_sa->get_protocol(child_sa),
+						child_sa->get_spi(child_sa, TRUE)) == DESTROY_ME)
+					{
+						/* when a fatal error occurs, we are responsible to
+						 * remove the IKE_SA */
+						delete_entry(this, entry);
+						iterator->reset(iterator);
+						break;
+					}
+				}
+			}
+			child_iter->destroy(child_iter);
+		}
+	}
+	iterator->destroy(iterator);
+	pthread_mutex_unlock(&(this->mutex));
+	
+	return SUCCESS;
 }
 
 /**
@@ -921,10 +949,9 @@ static void destroy(private_ike_sa_manager_t *this)
 	
 	this->logger->log(this->logger, CONTROL|LEVEL2, "destroy all entries");
 	/* Step 4: destroy all entries */
-	while (list->get_count(list) > 0)
+	while (list->remove_last(list, (void**)&entry) == SUCCESS)
 	{
-		list->get_first(list, (void**)&entry);
-		this->delete_entry(this, entry);
+		entry->destroy(entry);
 	}
 	list->destroy(list);
 	pthread_mutex_unlock(&(this->mutex));
@@ -947,17 +974,11 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
 	this->public.checkout_by_child = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t))checkout_by_child;
 	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;
-	this->public.get_ike_sa_list_by_name = (linked_list_t*(*)(ike_sa_manager_t*,const char*))get_ike_sa_list_by_name;
 	this->public.log_status = (void(*)(ike_sa_manager_t*,logger_t*,char*))log_status;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
 	this->public.delete = (status_t(*)(ike_sa_manager_t*,ike_sa_id_t*))delete_;
+	this->public.delete_by_name = (status_t(*)(ike_sa_manager_t*,char*))delete_by_name;
 	this->public.checkin_and_destroy = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
-
-	/* initialize private functions */
-	this->get_next_spi = get_next_spi;
-	this->get_entry_by_sa = get_entry_by_sa;
-	this->get_entry_by_id = get_entry_by_id;
-	this->delete_entry = delete_entry;
 
 	/* initialize private variables */
 	this->logger = logger_manager->get_logger(logger_manager, IKE_SA_MANAGER);

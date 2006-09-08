@@ -117,15 +117,6 @@ struct ike_sa_manager_t {
 	linked_list_t *(*get_ike_sa_list) (ike_sa_manager_t* this);
 	
 	/**
-	 * @brief Get a list of all IKE_SA SAs currently set up specified
-	 * by the connections name.
-	 * 
-	 * @param this			 	the manager object
-	 * @return					a list with ike_sa_id_t s
-	 */
-	linked_list_t *(*get_ike_sa_list_by_name) (ike_sa_manager_t* this, const char *name);
-	
-	/**
 	 * @brief Log the status of the IKE_SA's in the manager.
 	 *
 	 * A informational log is done to the supplied logger. If logger is 
@@ -170,6 +161,29 @@ struct ike_sa_manager_t {
 	 * 							- NOT_FOUND when no such SA is available
 	 */
 	status_t (*delete) (ike_sa_manager_t* this, ike_sa_id_t *ike_sa_id);
+	
+	/**
+	 * @brief Delete a SA identified by its name, which was not checked out.
+	 *
+	 * Using delete_by_name allows the delete of IKE_SAs and CHILD_SAs.
+	 * The supplied name may have one of the following format:
+	 *
+	 * name{x}		=> delete IKE_SA with "name" and unique id "x"
+	 * name{}		=> delete all IKE_SAs with "name"
+	 * name[x]		=> delete CHILD_SA with "name" and unique id "x"
+	 * name[]		=> delete all CHILD_SAs with "name"
+	 * name			=> delete all CHILD_SAs or IKE_SAs with "name"
+	 *
+	 * @warning do not use this when the SA is already checked out, this will
+	 * deadlock!
+	 *
+	 * @param this			 	the manager object
+	 * @param name				name in one of the format described above
+	 * @returns 				
+	 * 							- SUCCESS if found
+	 * 							- NOT_FOUND when no such SA is available
+	 */
+	status_t (*delete_by_name) (ike_sa_manager_t* this, char *name);
 	
 	/**
 	 * @brief Destroy a checked out SA.

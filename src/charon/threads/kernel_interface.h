@@ -207,6 +207,7 @@ struct kernel_interface_t {
 	 * @param direction		direction of traffic, POLICY_IN, POLICY_OUT, POLICY_FWD
 	 * @param protocol		protocol to use to protect traffic (AH/ESP)
 	 * @param reqid			uniqe ID of an SA to use to enforce policy
+	 * @param high_prio		if TRUE, uses a higher priority than any with FALSE
 	 * @param update		update an existing policy, if TRUE
 	 * @return
 	 * 						- SUCCESS
@@ -217,7 +218,7 @@ struct kernel_interface_t {
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, protocol_id_t protocol,
-							u_int32_t reqid, bool update);
+							u_int32_t reqid, bool high_prio, bool update);
 	
 	/**
 	 * @brief Query the use time of a policy.

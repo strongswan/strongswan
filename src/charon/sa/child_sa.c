@@ -24,6 +24,7 @@
 
 #include "child_sa.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #include <daemon.h>
@@ -182,8 +183,14 @@ static char *get_name(private_child_sa_t *this)
  */
 static void set_name(private_child_sa_t *this, char* name)
 {
-	free(this->name);
-	this->name = strdup(name);
+	char buffer[64];
+	
+	if (snprintf(buffer, sizeof(buffer), "%s[%d]",
+				 name, this->reqid - REQID_START) > 0)
+	{
+		free(this->name);
+		this->name = strdup(buffer);
+	}
 }
 
 /**
@@ -468,6 +475,8 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 {
 	iterator_t *my_iter, *other_iter;
 	traffic_selector_t *my_ts, *other_ts;
+	/* use low prio for ROUTED policies */
+	bool high_prio = (this->state != CHILD_CREATED);
 	
 	/* iterate over both lists */
 	my_iter = my_ts_list->create_iterator(my_ts_list, TRUE);
@@ -503,15 +512,15 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			/* install 3 policies: out, in and forward */
 			status = charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->me.addr, this->other.addr, my_ts, other_ts, 
-					POLICY_OUT, this->protocol, this->reqid, FALSE);
+					POLICY_OUT, this->protocol, this->reqid, high_prio, FALSE);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr, other_ts, my_ts,
-					POLICY_IN, this->protocol, this->reqid, FALSE);
+					POLICY_IN, this->protocol, this->reqid, high_prio, FALSE);
 			
 			status |= charon->kernel_interface->add_policy(charon->kernel_interface,
 					this->other.addr, this->me.addr, other_ts, my_ts,
-					POLICY_FWD, this->protocol, this->reqid, FALSE);
+					POLICY_FWD, this->protocol, this->reqid, high_prio, FALSE);
 			
 			if (status != SUCCESS)
 			{
@@ -805,6 +814,7 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 	iterator_t *iterator;
 	sa_policy_t *policy;
 	status_t status;
+	/* we always use high priorities, as hosts getting updated are INSTALLED */
 	
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->iterate(iterator, (void**)&policy))
@@ -813,19 +823,19 @@ static status_t update_policy_hosts(private_child_sa_t *this, host_t *new_me, ho
 				charon->kernel_interface,
 				new_me, new_other,
 				policy->my_ts, policy->other_ts,
-				POLICY_OUT, this->protocol, this->reqid, TRUE);
+				POLICY_OUT, this->protocol, this->reqid, TRUE, TRUE);
 		
 		status |= charon->kernel_interface->add_policy(
 				charon->kernel_interface,
 				new_other, new_me,
 				policy->other_ts, policy->my_ts,
-				POLICY_IN, this->protocol, this->reqid, TRUE);
+				POLICY_IN, this->protocol, this->reqid, TRUE, TRUE);
 		
 		status |= charon->kernel_interface->add_policy(
 				charon->kernel_interface,
 				new_other, new_me,
 				policy->other_ts, policy->my_ts,
-				POLICY_FWD, this->protocol, this->reqid, TRUE);
+				POLICY_FWD, this->protocol, this->reqid, TRUE, TRUE);
 		
 		if (status != SUCCESS)
 		{

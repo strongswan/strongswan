@@ -50,7 +50,8 @@
 #define KERNEL_AH 51
 
 /** default priority of installed policies */
-#define SPD_PRIORITY 1024
+#define PRIO_LOW 3000
+#define PRIO_HIGH 2000
 
 #define BUFFER_SIZE 1024
 
@@ -979,7 +980,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 						   traffic_selector_t *src_ts,
 						   traffic_selector_t *dst_ts,
 						   policy_dir_t direction, protocol_id_t protocol,
-						   u_int32_t reqid, bool update)
+						   u_int32_t reqid, bool high_prio, bool update)
 {
 	iterator_t *iterator;
 	kernel_policy_t *current, *policy;
@@ -1011,6 +1012,14 @@ static status_t add_policy(private_kernel_interface_t *this,
 				current->refcount++;
 				this->logger->log(this->logger, CONTROL|LEVEL1, 
 								  "policy already exists, increasing refcount");
+				if (!high_prio)
+				{
+					/* if added policy is for a ROUTED child_sa, do not
+					 * overwrite existing INSTALLED policy */
+					iterator->destroy(iterator);
+					pthread_mutex_unlock(&this->pol_mutex);
+					return SUCCESS;
+				}
 			}
 			policy = current;
 			found = TRUE;
@@ -1035,7 +1044,11 @@ static status_t add_policy(private_kernel_interface_t *this,
 	policy_info = (struct xfrm_userpolicy_info*)NLMSG_DATA(hdr);
 	policy_info->sel = policy->sel;
 	policy_info->dir = policy->direction;
-	policy_info->priority = SPD_PRIORITY;
+	/* calculate priority based on source selector size, small size = high prio */
+	policy_info->priority = high_prio ? PRIO_HIGH : PRIO_LOW;
+	policy_info->priority -= policy->sel.prefixlen_s * 10;
+	policy_info->priority -= policy->sel.proto ? 2 : 0;
+	policy_info->priority -= policy->sel.sport_mask ? 1 : 0;
 	policy_info->action = XFRM_POLICY_ALLOW;
 	policy_info->share = XFRM_SHARE_ANY;
 	pthread_mutex_unlock(&this->pol_mutex);
@@ -1272,7 +1285,7 @@ kernel_interface_t *kernel_interface_create()
 	this->public.update_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,host_t*,host_t*,host_diff_t,host_diff_t))update_sa;
 	this->public.query_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t,u_int32_t*))query_sa;
 	this->public.del_sa = (status_t(*)(kernel_interface_t*,host_t*,u_int32_t,protocol_id_t))del_sa;
-	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool))add_policy;
+	this->public.add_policy = (status_t(*)(kernel_interface_t*,host_t*,host_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,protocol_id_t,u_int32_t,bool,bool))add_policy;
 	this->public.query_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t,u_int32_t*))query_policy;
 	this->public.del_policy = (status_t(*)(kernel_interface_t*,traffic_selector_t*,traffic_selector_t*,policy_dir_t))del_policy;
 	this->public.destroy = (void(*)(kernel_interface_t*)) destroy;

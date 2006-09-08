@@ -601,58 +601,10 @@ static void stroke_route(private_stroke_t *this, stroke_msg_t *msg, bool route)
  */
 static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
 {
-	linked_list_t *ike_sas;
-	iterator_t *iterator;
-	int instances = 0;
-	connection_t *conn;
-	
 	pop_string(msg, &(msg->terminate.name));
 	this->logger->log(this->logger, CONTROL, "received stroke: terminate \"%s\"", msg->terminate.name);
 	
-	/* we have to do tricky tricks to give the most comprehensive output to the user.
-	 * There are different cases:
-	 * 1. Connection is available, but IKEv1:
-	 *    => just ignore it, let pluto print it
-	 * 2. Connection is not available, but instances of a deleted connection template:
-	 *    => terminate them, and print their termination
-	 * 3. Connection is not available, and and no instances are there:
-	 *    => show error about bad connection name
-	 * 4. An IKEv2 connection is available, and may contain instances:
-	 *    => terminate and print, simple
-	 */
-	conn = charon->connections->get_connection_by_name(charon->connections, msg->terminate.name);
-	if (conn == NULL || conn->is_ikev2(conn))
-	{
-		ike_sas = charon->ike_sa_manager->get_ike_sa_list_by_name(charon->ike_sa_manager, msg->terminate.name);
-		
-		iterator = ike_sas->create_iterator(ike_sas, TRUE);
-		while (iterator->has_next(iterator))
-		{
-			ike_sa_id_t *ike_sa_id;
-			iterator->current(iterator, (void**)&ike_sa_id);
-			charon->ike_sa_manager->delete(charon->ike_sa_manager, ike_sa_id);
-			ike_sa_id->destroy(ike_sa_id);
-			instances++;
-		}
-		iterator->destroy(iterator);
-		ike_sas->destroy(ike_sas);
-		if (conn == NULL && instances == 0)
-		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL, 
-									 "no connection named \"%s\"", 
-									 msg->terminate.name);
-		}
-		else
-		{
-			this->stroke_logger->log(this->stroke_logger, CONTROL, 
-									 "terminated %d instances of \"%s\"", 
-									 instances, msg->terminate.name);
-		}
-	}
-	if (conn)
-	{
-		conn->destroy(conn);
-	}
+	charon->ike_sa_manager->delete_by_name(charon->ike_sa_manager, msg->terminate.name);
 }
 
 /**

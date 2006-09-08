@@ -376,7 +376,7 @@ static status_t switchto_new_sa(private_rekey_ike_sa_t* this, bool initiator)
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	my_host = this->ike_sa->get_my_host(this->ike_sa);
 	other_host = this->ike_sa->get_other_host(this->ike_sa);
-	name = this->connection->get_name(this->connection);
+	name = this->ike_sa->get_name(this->ike_sa);
 	
 	this->new_sa->set_my_id(this->new_sa, my_id->clone(my_id));
 	this->new_sa->set_other_id(this->new_sa, other_id->clone(other_id));

@@ -24,6 +24,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <netdb.h>
+#include <stdio.h>
 
 #include "traffic_selector.h"
 
