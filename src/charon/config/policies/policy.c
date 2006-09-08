@@ -31,6 +31,13 @@
 #include <utils/identification.h>
 #include <utils/logger_manager.h>
 
+mapping_t dpd_action_m[] = {
+	{DPD_CLEAR, "DPD_CLEAR"},
+	{DPD_ROUTE, "DPD_ROUTE"},
+	{DPD_RESTART, "DPD_RESTART"},
+	{MAPPING_END, NULL},
+};
+
 typedef struct private_policy_t private_policy_t;
 
 /**
@@ -110,9 +117,9 @@ struct private_policy_t {
 	u_int32_t jitter;
 	
 	/**
-	 * Should the SA get ROUTED when peer detected as dead?
+	 * What to do with an SA when other peer seams to be dead?
 	 */
-	bool dpd_route;
+	bool dpd_action;
 	
 	/**
 	 * logger
@@ -334,6 +341,15 @@ static char* get_updown(private_policy_t *this)
 }
 
 /**
+ * Implements policy_t.get_dpd_action
+ */
+static dpd_action_t get_dpd_action(private_policy_t *this)
+{
+	return this->dpd_action;
+}
+
+
+/**
  * Implementation of policy_t.add_my_traffic_selector
  */
 static void add_my_traffic_selector(private_policy_t *this, traffic_selector_t *traffic_selector)
@@ -446,7 +462,7 @@ static void destroy(private_policy_t *this)
  */
 policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
-						u_int32_t jitter, char *updown, bool dpd_route)
+						u_int32_t jitter, char *updown, dpd_action_t dpd_action)
 {
 	private_policy_t *this = malloc_thing(private_policy_t);
 
@@ -465,6 +481,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
 	this->public.add_authorities = (void(*)(policy_t*,identification_t*, identification_t*))add_authorities;
 	this->public.get_updown = (char*(*)(policy_t*))get_updown;
+	this->public.get_dpd_action = (dpd_action_t(*)(policy_t*))get_dpd_action;
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
 	this->public.get_ref = (void(*)(policy_t*))get_ref;
@@ -478,7 +495,7 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->soft_lifetime = soft_lifetime;
 	this->jitter = jitter;
 	this->updown = (updown == NULL) ? NULL : strdup(updown);
-	this->dpd_route = dpd_route;
+	this->dpd_action = dpd_action;
 	
 	/* initialize private members*/
 	this->refcount = 1;

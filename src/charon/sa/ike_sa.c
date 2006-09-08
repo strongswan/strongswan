@@ -55,6 +55,8 @@
 #include <queues/jobs/send_dpd_job.h>
 #include <queues/jobs/send_keepalive_job.h>
 #include <queues/jobs/rekey_ike_sa_job.h>
+#include <queues/jobs/route_job.h>
+#include <queues/jobs/initiate_job.h>
 
 /**
  * String mappings for ike_sa_state_t.
@@ -426,6 +428,80 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
 }
 
 /**
+ * called when the peer is not responding anymore
+ */
+static void dpd_detected(private_ike_sa_t *this)
+{
+	/* check for childrens with dpdaction=hold */
+	connection_t *connection = NULL;
+	policy_t *policy;
+	linked_list_t *my_ts, *other_ts;
+	child_sa_t* child_sa;
+	dpd_action_t action;
+	job_t *job;
+	
+	this->logger->log(this->logger, CONTROL|LEVEL1,
+					  "dead peer detected, handling CHILD_SAs dpd action");
+	
+	while(this->child_sas->remove_first(this->child_sas,
+		  									(void**)&child_sa) == SUCCESS)
+	{
+		/* get the policy which belongs to this CHILD */
+		my_ts = child_sa->get_my_traffic_selectors(child_sa);
+		other_ts = child_sa->get_other_traffic_selectors(child_sa);
+		policy = charon->policies->get_policy(charon->policies,
+											  this->my_id, this->other_id,
+											  my_ts, other_ts,
+											  this->my_host, this->other_host);
+		if (policy == NULL)
+		{
+			this->logger->log(this->logger, ERROR,
+							  "no policy found for this CHILD_SA");
+			continue;
+		}
+		
+		action = policy->get_dpd_action(policy);
+		/* get a connection for further actions */
+		if (connection == NULL && 
+			(action == DPD_ROUTE || action == DPD_RESTART))
+		{
+			connection = charon->connections->get_connection_by_hosts(
+											charon->connections,
+											this->my_host, this->other_host);
+			if (connection == NULL)
+			{
+				this->logger->log(this->logger, ERROR,
+								  "no connection found for this IKE_SA");
+				break;
+			}
+		}
+		
+		this->logger->log(this->logger, CONTROL, "dpd action for %s is %s", 
+						  policy->get_name(policy),
+						  mapping_find(dpd_action_m, action));
+		
+		switch (action)
+		{
+			case DPD_ROUTE:
+				connection->get_ref(connection);
+				job = (job_t*)route_job_create(connection, policy, TRUE);
+				charon->job_queue->add(charon->job_queue, job);
+				break;
+			case DPD_RESTART:
+				connection->get_ref(connection);
+				job = (job_t*)initiate_job_create(connection, policy);
+				charon->job_queue->add(charon->job_queue, job);
+				break;
+			default:
+				policy->destroy(policy);
+				break;
+		}
+		child_sa->destroy(child_sa);
+	}
+	DESTROY_IF(connection);
+}
+
+/**
  * send a request and schedule retransmission
  */
 static status_t transmit_request(private_ike_sa_t *this)
@@ -439,20 +515,16 @@ static status_t transmit_request(private_ike_sa_t *this)
 	transaction_t *transaction = this->transaction_out;
 	u_int32_t message_id;
 	
-	
-	this->logger->log(this->logger, CONTROL,
-					  "transmitting request");
-	
 	transmitted = transaction->requested(transaction);
 	timeout = charon->configuration->get_retransmit_timeout(charon->configuration,
 															transmitted,
 															this->retrans_sequences);
 	if (timeout == 0)
 	{
-		/* giving up. TODO: check for childrens with dpdaction=hold */
 		this->logger->log(this->logger, ERROR,
 						  "giving up after %d retransmits, deleting IKE_SA",
 						  transmitted - 1);
+		dpd_detected(this);
 		return DESTROY_ME;
 	}
 	
@@ -502,8 +574,6 @@ static status_t retransmit_request(private_ike_sa_t *this, u_int32_t message_id)
 	if (this->transaction_out == NULL ||
 		this->transaction_out->get_message_id(this->transaction_out) != message_id)
 	{
-		if (this->transaction_out)
-		printf("trans_out->mid = %d, mid = %d\n", this->transaction_out->get_message_id(this->transaction_out), message_id);
 		/* no retransmit necessary, transaction did already complete */
 		return SUCCESS;
 	}
@@ -925,7 +995,7 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	{
 		if (current->get_reqid(current) == reqid)
 		{
-			iterator->remove(iterator);
+			//iterator->remove(iterator);
 			child_sa = current;
 			break;
 		}
@@ -945,7 +1015,7 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 										  this->my_id, this->other_id, 
 										  my_ts, other_ts, 
 										  this->my_host, this->other_host);
-	child_sa->destroy(child_sa);
+	//child_sa->destroy(child_sa);
 	if (policy == NULL)
 	{
 		this->logger->log(this->logger, ERROR, 
@@ -1128,7 +1198,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 			return FAILED;
 	}
 	
-	child_sa = child_sa_create(0, this->my_host, this->other_host, 0, 0, FALSE);
+	child_sa = child_sa_create(0, this->my_host, this->other_host,
+							   0, 0, FALSE);
 	child_sa->set_name(child_sa, policy->get_name(policy));
 	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
 	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);

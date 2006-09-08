@@ -147,7 +147,7 @@ struct stroke_msg_t {
 			} rekey;
 			struct {
 				time_t delay;
-				bool route;
+				int action;
 			} dpd;
 			stroke_end_t me, other;
 		} add_conn;

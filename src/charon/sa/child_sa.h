@@ -197,8 +197,8 @@ struct child_sa_t {
 	 * @param other_diff	differences to apply for other
 	 * @return				SUCCESS or FAILED
 	 */
-	status_t (*update_hosts) (child_sa_t *this, host_t *new_me, host_t *new_other, 
-	host_diff_t my_diff, host_diff_t other_diff);
+	status_t (*update_hosts)(child_sa_t *this, host_t *new_me, host_t *new_other,
+							 host_diff_t my_diff, host_diff_t other_diff);
 	
 	/**
 	 * @brief Install the policies using some traffic selectors.
@@ -211,7 +211,9 @@ struct child_sa_t {
 	 * @param other_ts	traffic selectors for remote site
 	 * @return			SUCCESS or FAILED
 	 */	
-	status_t (*add_policies) (child_sa_t *this, linked_list_t *my_ts_list, linked_list_t *other_ts_list);
+	status_t (*add_policies)(child_sa_t *this, 
+							 linked_list_t *my_ts_list,
+							 linked_list_t *other_ts_list);
 	
 	/**
 	 * @brief Get the traffic selectors of added policies of local host.

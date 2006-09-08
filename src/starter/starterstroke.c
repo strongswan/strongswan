@@ -181,7 +181,7 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	msg.add_conn.algorithms.ike = push_string(&msg, conn->ike);
 	msg.add_conn.algorithms.esp = push_string(&msg, conn->esp);
 	msg.add_conn.dpd.delay = conn->dpd_delay;
-	msg.add_conn.dpd.route = conn->dpd_action == DPD_ACTION_HOLD ? 1 : 0;
+	msg.add_conn.dpd.action = conn->dpd_action;
 
 	starter_stroke_add_end(&msg, &msg.add_conn.me, &conn->right);
 	starter_stroke_add_end(&msg, &msg.add_conn.other, &conn->left);

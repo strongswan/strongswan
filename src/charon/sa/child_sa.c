@@ -157,6 +157,11 @@ struct private_child_sa_t {
 	 * Specifies if NAT traversal is used
 	 */
 	bool use_natt;
+
+	/**
+	 * Specifies if CHILD_SA goes to ROUTED state if DPD detected
+	 */
+	bool stays_routed;
 	
 	/**
 	 * CHILD_SAs own logger

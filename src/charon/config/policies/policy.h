@@ -31,6 +31,30 @@
 #include <encoding/payloads/auth_payload.h>
 
 
+typedef enum dpd_action_t dpd_action_t;
+
+/**
+ * @brief Actions to take when a peer does not respond (dead peer detected).
+ *
+ * These values are the same as in pluto/starter, so do not modify them!
+ *
+ * @ingroup config
+ */
+enum dpd_action_t {
+	/** remove CHILD_SA without replacement */
+	DPD_CLEAR = 1,
+	/** route the CHILD_SA to resetup when needed */
+	DPD_ROUTE = 2,
+	/** restart CHILD_SA in a new IKE_SA, immediately */
+	DPD_RESTART = 3,
+};
+
+/**
+ * String mappings for dpd_action_t
+ */
+mapping_t dpd_action_m[];
+
+
 typedef struct policy_t policy_t;
 
 /**
@@ -202,6 +226,14 @@ struct policy_t {
 	 * @return				path to updown script
 	 */
 	char* (*get_updown) (policy_t *this);
+	
+	/**
+	 * @brief What should be done with a CHILD_SA, when other peer does not respond.
+	 *
+	 * @param this 		calling object
+	 * @return			dpd action
+	 */	
+	dpd_action_t (*get_dpd_action) (policy_t *this);
 
 	/**
 	 * @brief Get the lifetime of a policy, before rekeying starts.
@@ -264,7 +296,7 @@ struct policy_t {
  * @param soft_lifetime		lifetime before rekeying an SA
  * @param jitter			range of randomization time
  * @param updown			updown script to execute on up/down event
- * @param dpd_route			should the connection go to routed state if DPD detected?
+ * @param dpd_action		what to to with a CHILD_SA when other peer does not respond
  * @return 					policy_t object
  * 
  * @ingroup config
@@ -272,6 +304,6 @@ struct policy_t {
 policy_t *policy_create(char *name, 
 						identification_t *my_id, identification_t *other_id,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime,
-						u_int32_t jitter, char *updown, bool dpd_route);
+						u_int32_t jitter, char *updown, dpd_action_t dpd_action);
 
 #endif /* POLICY_H_ */

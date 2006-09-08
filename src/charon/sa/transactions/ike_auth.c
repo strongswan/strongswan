@@ -312,12 +312,15 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		linked_list_t *proposal_list;
 		sa_payload_t *sa_payload;
 		u_int32_t soft_lifetime, hard_lifetime;
+		bool enable_natt;
 		
 		proposal_list = this->policy->get_proposals(this->policy);
 		soft_lifetime = this->policy->get_soft_lifetime(this->policy);
 		hard_lifetime = this->policy->get_hard_lifetime(this->policy);
-		this->child_sa = child_sa_create(this->reqid, me, other, soft_lifetime, hard_lifetime,
-										 this->ike_sa->is_natt_enabled(this->ike_sa));
+		enable_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
+		this->child_sa = child_sa_create(this->reqid, me, other, 
+										 soft_lifetime, hard_lifetime,
+										 enable_natt);
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
 		{

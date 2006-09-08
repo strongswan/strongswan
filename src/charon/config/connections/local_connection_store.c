@@ -126,7 +126,7 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 		host_t *found_my_host    = found->get_my_host(found);
 		host_t *found_other_host = found->get_other_host(found);
 		
-		this->logger->log(this->logger, CONTROL,
+		this->logger->log(this->logger, CONTROL|LEVEL1,
 						 "found matching connection \"%s\": %s...%s (prio=%d)",
 						  found->get_name(found),
 						  found_my_host->get_string(found_my_host),
