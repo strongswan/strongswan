@@ -221,6 +221,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 {
 	message_t *request;
 	host_t *me, *other;
+	identification_t *my_id, *other_id;
 	
 	/* check if we already have built a message (retransmission) */
 	if (this->message)
@@ -250,6 +251,8 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
+	my_id = this->ike_sa->get_my_id(this->ike_sa);
+	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	
 	/* build the request */
 	request = message_create();
@@ -295,9 +298,10 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		
 		proposals = this->policy->get_proposals(this->policy);
 		use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-		this->child_sa = child_sa_create(this->reqid, me, other,
+		this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
 							this->policy->get_soft_lifetime(this->policy),
 							this->policy->get_hard_lifetime(this->policy),
+							this->policy->get_updown(this->policy),
 							use_natt);
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposals) != SUCCESS)
@@ -501,7 +505,9 @@ static status_t install_child_sa(private_create_child_sa_t *this, bool initiator
 	{
 		return DESTROY_ME;
 	}
+	
 	/* add to IKE_SA, and remove from transaction */
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	this->child_sa = NULL;
 	return SUCCESS;
@@ -514,6 +520,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 							 message_t **result, transaction_t **next)
 {
 	host_t *me, *other;
+	identification_t *my_id, *other_id;
 	message_t *response;
 	status_t status;
 	iterator_t *payloads;
@@ -532,6 +539,8 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
+	my_id = this->ike_sa->get_my_id(this->ike_sa);
+	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	this->message_id = request->get_message_id(request);
 	
 	/* set up response */
@@ -705,8 +714,9 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			soft_lifetime = this->policy->get_soft_lifetime(this->policy);
 			hard_lifetime = this->policy->get_hard_lifetime(this->policy);
 			use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-			this->child_sa = child_sa_create(this->reqid, me, other,
+			this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
 											 soft_lifetime, hard_lifetime,
+											 this->policy->get_updown(this->policy),
 											 use_natt);
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 			if (install_child_sa(this, FALSE) != SUCCESS)

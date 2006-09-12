@@ -177,10 +177,7 @@ static void update_string(private_traffic_selector_t *this)
 		
 		/* build network mask string */
 		mask = calc_netbits(this);
-		if (mask != 32)
-		{
-			snprintf(mask_str, sizeof(mask_str), "/%d", mask);
-		}
+		snprintf(mask_str, sizeof(mask_str), "/%d", mask);
 	}
 	else
 	{
@@ -191,10 +188,7 @@ static void update_string(private_traffic_selector_t *this)
 		
 		/* build network mask string */
 		mask = calc_netbits(this);
-		if (mask != 128)
-		{
-			snprintf(mask_str, sizeof(mask_str), "/%d", mask);
-		}
+		snprintf(mask_str, sizeof(mask_str), "/%d", mask);
 	}
 	
 	/* build protocol string */

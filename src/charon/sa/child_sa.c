@@ -80,6 +80,8 @@ struct private_child_sa_t {
 	struct {
 		/** address of peer */
 		host_t *addr;
+		/** id of peer */
+		identification_t *id;
 		/** actual used SPI, 0 if unused */
 		u_int32_t spi;
 	} me, other;
@@ -155,14 +157,14 @@ struct private_child_sa_t {
 	void *rekeying_transaction;
 
 	/**
+	 * Updown script
+	 */
+	char *script;
+
+	/**
 	 * Specifies if NAT traversal is used
 	 */
 	bool use_natt;
-
-	/**
-	 * Specifies if CHILD_SA goes to ROUTED state if DPD detected
-	 */
-	bool stays_routed;
 	
 	/**
 	 * CHILD_SAs own logger
@@ -230,11 +232,156 @@ static child_sa_state_t get_state(private_child_sa_t *this)
 }
 
 /**
+ * Run the up/down script
+ */
+static void updown(private_child_sa_t *this, bool up)
+{
+	iterator_t *iterator;
+	
+	if (this->script == NULL)
+	{
+		return;
+	}
+	
+	iterator = this->policies->create_iterator(this->policies, TRUE);
+	while (iterator->has_next(iterator))
+	{
+		sa_policy_t *policy;
+		char command[1024];
+		char *ifname = NULL;
+		char *my_str, *other_str;
+		char *my_client, *other_client, *my_client_mask, *other_client_mask;
+		char *pos;
+		FILE *shell;
+		
+		/* get ts strings */
+		iterator->current(iterator, (void**)&policy);
+		my_str = policy->my_ts->get_string(policy->my_ts);
+		other_str = policy->other_ts->get_string(policy->other_ts);
+		
+		/* get subnet/bits from string */
+		my_client = strdup(my_str);
+		pos = strchr(my_client, '/');
+		*pos = '\0';
+		my_client_mask = pos + 1;
+		pos = strchr(my_client_mask, '[');
+		if (pos)
+		{
+			*pos = '\0';
+		}
+		other_client = strdup(other_str);
+		pos = strchr(other_client, '/');
+		*pos = '\0';
+		other_client_mask = pos + 1;
+		pos = strchr(other_client_mask, '[');
+		if (pos)
+		{
+			*pos = '\0';
+		}
+		
+		charon->socket->is_local_address(charon->socket, this->me.addr, &ifname);
+		
+		/* build the command with all env variables.
+		* TODO: PLUTO_MY_SRCIP, PLUTO_PEER_CA and PLUTO_NEXT_HOP 
+		* are currently missing */
+		snprintf(command, sizeof(command),
+				 "2>&1 "
+				"PLUTO_VERSION='1.1' "
+				"PLUTO_VERB='%s%s%s' "
+				"PLUTO_CONNECTION='%s' "
+				"PLUTO_INTERFACE='%s' "
+				"PLUTO_REQID='%u' "
+				"PLUTO_ME='%s' "
+				"PLUTO_MY_ID='%s' "
+				"PLUTO_MY_CLIENT='%s/%s' "
+				"PLUTO_MY_CLIENT_NET='%s' "
+				"PLUTO_MY_CLIENT_MASK='%s' "
+				"PLUTO_MY_PORT='%u' "
+				"PLUTO_MY_PROTOCOL='%u' "
+				"PLUTO_PEER='%s' "
+				"PLUTO_PEER_ID='%s' "
+				"PLUTO_PEER_CLIENT='%s/%s' "
+				"PLUTO_PEER_CLIENT_NET='%s' "
+				"PLUTO_PEER_CLIENT_MASK='%s' "
+				"PLUTO_PEER_PORT='%u' "
+				"PLUTO_PEER_PROTOCOL='%u' "
+				"%s",
+				 up ? "up" : "down",
+				 streq(this->me.addr->get_string(this->me.addr),
+					   my_client) ? "-host" : "-client",
+				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
+				 this->name,
+				 ifname,
+				 this->reqid,
+				 this->me.addr->get_string(this->me.addr),
+				 this->me.id->get_string(this->me.id),
+				 my_client, my_client_mask,
+				 my_client, my_client_mask,
+				 policy->my_ts->get_from_port(policy->my_ts),
+				 policy->my_ts->get_protocol(policy->my_ts),
+				 this->other.addr->get_string(this->other.addr),
+				 this->other.id->get_string(this->other.id),
+				 other_client, other_client_mask,
+				 other_client, other_client_mask,
+				 policy->other_ts->get_from_port(policy->other_ts),
+				 policy->other_ts->get_protocol(policy->other_ts),
+				 this->script);
+		free(ifname);
+		free(my_client);
+		free(other_client);
+		
+		shell = popen(command, "r");
+
+		if (shell == NULL)
+		{
+			this->logger->log(this->logger, ERROR,
+							  "could not execute updown script '%s'",
+							  this->script);
+			return;
+		}
+		
+		while (TRUE)
+		{
+			char resp[128];
+			
+			if (fgets(resp, sizeof(resp), shell) == NULL)
+			{
+				if (ferror(shell))
+				{
+					this->logger->log(this->logger, ERROR,
+									  "error reading output from updown script");
+					return;
+				}
+				else
+				{
+					break;
+				}
+			}
+			else
+			{
+				char *e = resp + strlen(resp);
+				if (e > resp && e[-1] == '\n')
+				{	/* trim trailing '\n' */
+					e[-1] = '\0';
+				}
+				this->logger->log(this->logger, ERROR, "updown: %s", resp);
+			}
+		}
+		pclose(shell);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
  * Implements child_sa_t.set_state
  */
 static void set_state(private_child_sa_t *this, child_sa_state_t state)
 {
 	this->state = state;
+	if (state == CHILD_INSTALLED)
+	{
+		updown(this, TRUE);
+	}
 }
 
 /**
@@ -440,8 +587,6 @@ static status_t add(private_child_sa_t *this, proposal_t *proposal, prf_plus_t *
 	}
 	proposal->set_spi(proposal, inbound_spi);
 	
-	this->state = CHILD_INSTALLED;
-	
 	return SUCCESS;
 }
 
@@ -465,8 +610,6 @@ static status_t update(private_child_sa_t *this, proposal_t *proposal, prf_plus_
 	{
 		return FAILED;
 	}
-	
-	this->state = CHILD_INSTALLED;
 	
 	return SUCCESS;
 }
@@ -903,6 +1046,11 @@ static void destroy(private_child_sa_t *this)
 {
 	sa_policy_t *policy;
 	
+	if (this->state == CHILD_DELETING || this->state == CHILD_INSTALLED)
+	{
+		updown(this, FALSE);
+	}
+	
 	/* delete SAs in the kernel, if they are set up */
 	if (this->me.spi)
 	{
@@ -950,16 +1098,20 @@ static void destroy(private_child_sa_t *this)
 	this->other_ts->destroy(this->other_ts);
 	this->me.addr->destroy(this->me.addr);
 	this->other.addr->destroy(this->other.addr);
+	this->me.id->destroy(this->me.id);
+	this->other.id->destroy(this->other.id);
 	free(this->name);
+	free(this->script);
 	free(this);
 }
 
 /*
  * Described in header.
  */
-child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other, 
+child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
+							 identification_t *my_id, identification_t *other_id,
 							 u_int32_t soft_lifetime, u_int32_t hard_lifetime,
-							 bool use_natt)
+							 char *script, bool use_natt)
 {
 	static u_int32_t reqid = REQID_START;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
@@ -990,10 +1142,13 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->name = strdup("(uninitialized)");
 	this->me.addr = me->clone(me);
 	this->other.addr = other->clone(other);
+	this->me.id = my_id->clone(my_id);
+	this->other.id = other_id->clone(other_id);
 	this->me.spi = 0;
 	this->other.spi = 0;
 	this->alloc_ah_spi = 0;
 	this->alloc_esp_spi = 0;
+	this->script = script ? strdup(script) : NULL;
 	this->use_natt = use_natt;
 	this->soft_lifetime = soft_lifetime;
 	this->hard_lifetime = hard_lifetime;

@@ -93,11 +93,15 @@ struct socket_t {
 	/**
 	 * @brief Check if an address is an address of this host.
 	 *
+	 * If the name parameter is not NULL, a string is allocated which
+	 * holds the interfaces name. 
+	 *
 	 * @param this			socket_t object to work on
 	 * @param host			address to check
+	 * @param name[out]		interface name on which address is used
 	 * @return 				TRUE if local address, FALSE otherwise
 	 */
-	bool (*is_local_address) (socket_t *this, host_t *host);
+	bool (*is_local_address) (socket_t *this, host_t *host, char **name);
 	
 	/**
 	 * @brief Create a list of hosts with all local addresses.

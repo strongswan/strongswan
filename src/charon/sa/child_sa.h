@@ -306,15 +306,19 @@ struct child_sa_t {
  * @param rekey_reqid	reqid of old CHILD_SA when rekeying, 0 otherwise
  * @param me			own address
  * @param other			remote address
+ * @param my_id			id of own peer
+ * @param other_id		id of remote peer
  * @param soft_lifetime	time before rekeying
  * @param hard_lifteime	time before delete
+ * @param script		updown script to use when calling child_sa_t.script()
  * @param use_natt		TRUE if NAT traversal is used
  * @return				child_sa_t object
  * 
  * @ingroup sa
  */
-child_sa_t * child_sa_create(u_int32_t rekey_reqid, host_t *me, host_t *other, 
+child_sa_t * child_sa_create(u_int32_t rekey_reqid, host_t *me, host_t *other,
+							 identification_t *my_id, identification_t* other_id,
 							 u_int32_t soft_lifetime, u_int32_t hard_lifetime,
-							 bool use_natt);
+							 char *script, bool use_natt);
 
 #endif /*CHILD_SA_H_*/

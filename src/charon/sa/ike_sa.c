@@ -993,7 +993,6 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	{
 		if (current->get_reqid(current) == reqid)
 		{
-			//iterator->remove(iterator);
 			child_sa = current;
 			break;
 		}
@@ -1013,7 +1012,6 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 										  this->my_id, this->other_id, 
 										  my_ts, other_ts, 
 										  this->my_host, this->other_host);
-	//child_sa->destroy(child_sa);
 	if (policy == NULL)
 	{
 		this->logger->log(this->logger, ERROR, 
@@ -1200,7 +1198,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	}
 	
 	child_sa = child_sa_create(0, this->my_host, this->other_host,
-							   0, 0, FALSE);
+							   this->my_id, this->other_id,
+							   0, 0, NULL, FALSE);
 	child_sa->set_name(child_sa, policy->get_name(policy));
 	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
 	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);

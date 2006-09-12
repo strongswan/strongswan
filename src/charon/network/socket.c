@@ -398,7 +398,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 /**
  * implements socket_t.is_local_address
  */
-static bool is_local_address(private_socket_t *this, host_t *host)
+static bool is_local_address(private_socket_t *this, host_t *host, char **dev)
 {
 	struct ifaddrs *list;
 	struct ifaddrs *cur;
@@ -455,6 +455,11 @@ static bool is_local_address(private_socket_t *this, host_t *host)
 		
 		if (found)
 		{
+			if (dev && cur->ifa_name)
+			{
+				/* return interface name, if requested */
+				*dev = strdup(cur->ifa_name);
+			}
 			break;
 		}
 	}
@@ -768,7 +773,7 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 	/* public functions */
 	this->public.send = (status_t(*)(socket_t*, packet_t*))sender;
 	this->public.receive = (status_t(*)(socket_t*, packet_t**))receiver;
-	this->public.is_local_address = (bool(*)(socket_t*, host_t*))is_local_address;
+	this->public.is_local_address = (bool(*)(socket_t*, host_t*,char**))is_local_address;
 	this->public.create_local_address_list = (linked_list_t*(*)(socket_t*))create_local_address_list;
 	this->public.destroy = (void(*)(socket_t*)) destroy;
 

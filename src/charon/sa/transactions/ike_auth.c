@@ -318,8 +318,9 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		soft_lifetime = this->policy->get_soft_lifetime(this->policy);
 		hard_lifetime = this->policy->get_hard_lifetime(this->policy);
 		enable_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-		this->child_sa = child_sa_create(this->reqid, me, other, 
+		this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
 										 soft_lifetime, hard_lifetime,
+										 this->policy->get_updown(this->policy),
 										 enable_natt);
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
@@ -519,7 +520,9 @@ static status_t install_child_sa(private_ike_auth_t *this, bool initiator)
 	{
 		return DESTROY_ME;
 	}
+	
 	/* add to IKE_SA, and remove from transaction */
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	this->child_sa = NULL;
 	return SUCCESS;
@@ -784,8 +787,9 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			soft_lifetime = this->policy->get_soft_lifetime(this->policy);
 			hard_lifetime = this->policy->get_hard_lifetime(this->policy);
 			use_natt = this->ike_sa->is_natt_enabled(this->ike_sa);
-			this->child_sa = child_sa_create(this->reqid, me, other, 
+			this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
 											 soft_lifetime, hard_lifetime, 
+											 this->policy->get_updown(this->policy),
 											 use_natt);
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 			if (install_child_sa(this, FALSE) != SUCCESS)
