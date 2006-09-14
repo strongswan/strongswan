@@ -459,25 +459,32 @@ static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_pa
 		return;
 	}
 	cert = x509_create_from_chunk(cert_payload->get_data_clone(cert_payload));
-	
-	if (charon->credentials->verify(charon->credentials, cert, &found))
+	if (cert)
 	{
-		this->logger->log(this->logger, CONTROL|LEVEL1, 
-						  "received end entity certificate is trusted, added to store");
-		if (found)
+		if (charon->credentials->verify(charon->credentials, cert, &found))
 		{
-			cert->destroy(cert);
+			this->logger->log(this->logger, CONTROL|LEVEL1, 
+							"received end entity certificate is trusted, added to store");
+			if (!found)
+			{
+				charon->credentials->add_end_certificate(charon->credentials, cert);
+			}
+			else
+			{
+				cert->destroy(cert);
+			}
 		}
 		else
 		{
-			cert = charon->credentials->add_end_certificate(charon->credentials, cert);
+			this->logger->log(this->logger, CONTROL, 
+							  "received end entity certificate is not trusted, discarded");
+			cert->destroy(cert);
 		}
 	}
 	else
 	{
-		cert->destroy(cert);
 		this->logger->log(this->logger, CONTROL, 
-						  "received end entity certificate is not trusted, discarded");
+						  "parsing of received certificate failed, discarded");
 	}
 }
 
