@@ -475,6 +475,7 @@ static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_pa
 	}
 	else
 	{
+		cert->destroy(cert);
 		this->logger->log(this->logger, CONTROL, 
 						  "received end entity certificate is not trusted, discarded");
 	}
