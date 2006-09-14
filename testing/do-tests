@@ -376,7 +376,7 @@ do
     <ul>
       <li><a href="console.log">console.log</a></li>
     </ul>
-    <img src="../images/$DIAGRAM" alt="$UMLHOSTS">
+    <img src="../../images/$DIAGRAM" alt="$UMLHOSTS">
 @EOF
 
 	for host in $IPSECHOSTS
