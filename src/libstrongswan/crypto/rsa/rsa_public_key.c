@@ -93,6 +93,8 @@ const u_int8_t sha512_oid[] = {
 		 0x04,0x40
 };
 
+#define LARGEST_HASH_OID_SIZE sizeof(sha512_oid)
+
 /* ASN.1 definition public key */
 static const asn1Object_t pubkey_objects[] = {
 	{ 0, "RSAPublicKey",		ASN1_SEQUENCE,     ASN1_OBJ  }, /*  0 */
@@ -192,8 +194,17 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 	u_int8_t *pos;
 	status_t res = FAILED;
 	
+	/* remove any preceding 0-bytes from signature */
+	while (signature.len && *(signature.ptr) == 0x00)
+	{
+		signature.len -= 1;
+		signature.ptr++;
+	}
+	
 	if (signature.len > this->k)
-		return INVALID_ARG;	
+	{
+		return INVALID_ARG;
+	}
 	
 	/* unpack signature */
 	em = this->rsavp1(this, signature);
@@ -202,11 +213,13 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 	 * EM = 0x00 || 0x01 || PS || 0x00 || T. 
 	 * PS = 0xFF padding, with length to fill em
 	 * T = oid || hash
-	 */	
+	 */
 	
 	/* check magic bytes */
 	if ((*(em.ptr) != 0x00) || (*(em.ptr+1) != 0x01))
+	{
 		goto end;
+	}
 	
 	/* find magic 0x00 */
 	pos = em.ptr + 2;
@@ -226,7 +239,7 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 		pos++;
 	}
 
-	if (pos + 20 > em.ptr + em.len)
+	if (pos + LARGEST_HASH_OID_SIZE > em.ptr + em.len)
 	{
 		/* not enought room for oid compare */
 		goto end;
@@ -282,7 +295,7 @@ static status_t verify_emsa_pkcs1_signature(const private_rsa_public_key_t *this
 	hasher->destroy(hasher);
 	
 	/* compare the hashes */
-	res = memeq(hash.ptr, pos, hash.len)? SUCCESS : FAILED;
+	res = memeq(hash.ptr, pos, hash.len) ? SUCCESS : FAILED;
 	free(hash.ptr);
 
 end:
