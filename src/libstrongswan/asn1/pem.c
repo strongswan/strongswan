@@ -303,7 +303,7 @@ bool pem_asn1_load_file(const char *filename, char *passphrase,
 		blob->ptr = malloc(blob->len);
 		bytes = fread(blob->ptr, 1, blob->len, fd);
 		fclose(fd);
-		logger->log(logger, CONTROL, "  loaded %s file '%s' (%d bytes)", type, filename, bytes);
+		logger->log(logger, CONTROL, "  loading %s file '%s' (%d bytes)", type, filename, bytes);
 
 		*pgp = FALSE;
 

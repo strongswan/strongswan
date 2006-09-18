@@ -163,15 +163,4 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t chunk);
  */
 rsa_public_key_t *rsa_public_key_create_from_file(char *filename);
 
-/**
- * @brief Build a DER-encoded publicKeyInfo object from an RSA public key
- * 
- * @param n					modulus n
- * @param e					public exponent
- * @return 					DER-encoded publicKeyInfo object
- * 
- * @ingroup rsa
- */
-chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e);
-
 #endif /*RSA_PUBLIC_KEY_H_*/

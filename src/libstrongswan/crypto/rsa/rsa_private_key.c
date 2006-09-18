@@ -45,6 +45,12 @@ extern u_int8_t sha512_oid[19];
 
 
 /**
+ * defined in rsa_public_key.c
+ */
+extern chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e);
+
+
+/**
  *  Public exponent to use for key generation.
  */
 #define PUBLIC_EXPONENT 0x10001

@@ -408,7 +408,8 @@ private_rsa_public_key_t *rsa_public_key_create_empty(void)
 }
 
 /**
- * Build a DER-encoded publicKeyInfo object from an RSA public key
+ * Build a DER-encoded publicKeyInfo object from an RSA public key.
+ * Also used in rsa_private_key.c.
  */
 chunk_t rsa_public_key_info_to_asn1(const mpz_t n, const mpz_t e)
 {
