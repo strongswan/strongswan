@@ -1,5 +1,5 @@
- Todo-List for charon
-======================
+Todo-List for charon
+--------------------
 
 + = done, / = partial, - = todo, ordered by priority
 
@@ -41,13 +41,11 @@
 
 + Apply -W's from Makefile.program to charon
 + do ipsec status via starter
-- add more output to to up/down, somehow...
 
 + stroke status should show configured connections
 + stroke loglevel update
 + stroke argument parsing via getopts/gperf?
 
-- implement 3DES to load encrypted pem files
 + ipsec.secrets parsing
 
 + trapping
@@ -60,15 +58,18 @@
 + replace state machine with something more transaction oriented
 + find existing IKE_SA on CHILD_SA initiation
 
++ use dpdaction/dpddelay parameters from ipsec.conf
+/ add firewall script support
+- include only a minimum of NATD payloads
+- implement 3DES to load encrypted pem files
+- implement a "event bus" mechanism
+  - add more output to to up/down, somehow...
 - configure flag which allows to ommit vendor id in pluto
-- use dpdaction/dpddelay parameters from ipsec.conf
 - ikelifetime should optionally enforce reauthentication
 - cookies/DDoS prevention
 - implement a mechanism against thread exhaustion
   when a blocked IKE_SA receives a lot of messages
 - add a crl fetch mechanism which synchronizes equal fetches
 - add support for CERTREQs
-- use same reqid for routed connections when they are set up
-- if a CHILD_SA gets created, check if it is already ROUTED somewhere:
-  - remove that route and reuse reqid
-- add firewall script support
+- proper handling of multiple certificate payloads (import order)
+- add a Rekey-Counter for SAs in "statusall"
