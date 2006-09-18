@@ -1,0 +1,5 @@
+Roadwarrior <b>carol</b> proposes to gateway <b>moon</b> the syntactically
+incorrect cipher suites <b>ike=aes128-sha1-modp1536</b> for the
+IKE protocol and <b>esp=aes128-sha</b> for ESP packets. Since <b>sha</b> and
+<b>sha1</b> are treated as synonyms the proposal is neverless correctly parsed.
+A ping from <b>carol</b> to <b>alice</b> successfully checks the established tunnel.

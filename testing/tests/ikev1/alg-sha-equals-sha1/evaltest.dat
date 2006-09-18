@@ -1,0 +1,9 @@
+
+carol::ipsec status::home.*STATE_QUICK_I2.*IPsec SA established::YES
+moon::ipsec status::rw.*STATE_QUICK_R2.*IPsec SA established::YES
+moon::ipsec statusall::IKE algorithm newest: AES_CBC_128-SHA-MODP1536::YES
+carol::ipsec statusall::IKE algorithm newest: AES_CBC_128-SHA-MODP1536::YES
+moon::ipsec statusall::ESP algorithm newest: AES_128-HMAC_SHA1::YES
+carol::ipsec statusall::ESP algorithm newest: AES_128-HMAC_SHA1::YES
+carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+
