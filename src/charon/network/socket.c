@@ -143,8 +143,15 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	fd_set rfds;
 
 	FD_ZERO(&rfds);
-	FD_SET(this->recv4, &rfds);
-	FD_SET(this->recv6, &rfds);
+	
+	if (this->recv4)
+	{
+		FD_SET(this->recv4, &rfds);
+	}
+	if (this->recv6)
+	{
+		FD_SET(this->recv6, &rfds);
+	}
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1,
 					  "waiting for data on raw sockets");
@@ -157,7 +164,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 	}
 	pthread_setcancelstate(oldstate, NULL);
 	
-	if (FD_ISSET(this->recv4, &rfds))
+	if (this->recv4 && FD_ISSET(this->recv4, &rfds))
 	{
 		/* IPv4 raw sockets return the IP header. We read src/dest
 		 * information directly from the raw header */
@@ -212,7 +219,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		memcpy(data.ptr, buffer + data_offset, data.len);
 		pkt->set_data(pkt, data);
 	}
-	else if (FD_ISSET(this->recv6, &rfds))
+	else if (this->recv6 && FD_ISSET(this->recv6, &rfds))
 	{
 		/* IPv6 raw sockets return no IP header. We must query
 		 * src/dest via socket options/ancillary data */
@@ -599,12 +606,15 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 		return 0;
 	}
 	
-	/* enable UDP decapsulation globally */
-	if (setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+	if (family == AF_INET)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "unable to set UDP_ENCAP: %s; NAT-T may fail",
-						  strerror(errno));
+		/* enable UDP decapsulation globally, only for one socket needed */
+		if (setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
+		{
+			this->logger->log(this->logger, ERROR,
+							"unable to set UDP_ENCAP: %s; NAT-T may fail",
+							strerror(errno));
+		}
 	}
 	
 	return skt;
@@ -702,7 +712,8 @@ static int open_recv_socket(private_socket_t *this, int family)
 		return 0;
 	}
 	
-	else if (setsockopt(skt, ip_proto, ip_pktinfo, &on, sizeof(on)) < 0)
+	if (family == AF_INET6 &&
+		setsockopt(skt, ip_proto, ip_pktinfo, &on, sizeof(on)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
 						  "unable to set IPV6_PKTINFO on raw socket: %s",
@@ -823,7 +834,7 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 	else
 	{
 		this->send6 = open_send_socket(this, AF_INET6, this->port);
-		if (this->send4 == 0)
+		if (this->send6 == 0)
 		{
 			this->logger->log(this->logger, ERROR, 
 							  "could not open IPv6 send socket, IPv6 disabled");
@@ -831,7 +842,7 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 		}
 		else
 		{
-			this->send6_natt = open_send_socket(this, AF_INET, this->natt_port);
+			this->send6_natt = open_send_socket(this, AF_INET6, this->natt_port);
 			if (this->send6_natt == 0)
 			{
 				this->logger->log(this->logger, ERROR, 
