@@ -261,12 +261,14 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		
 	}
 	
-	if (this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
-	{	/* build certificate payload. TODO: Handle certreq from init_ike_sa. */
-		x509_t *cert;
+	/* build certificate payload. TODO: Handle certreq from init_ike_sa. */
+	if (this->connection->get_auth_method(this->connection) == RSA_DIGITAL_SIGNATURE
+	&&  this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
+	{
 		cert_payload_t *cert_payload;
 		
-		cert = charon->credentials->get_certificate(charon->credentials, my_id);
+		x509_t *cert = charon->credentials->get_certificate(charon->credentials, my_id);
+
 		if (cert)
 		{
 			cert_payload = cert_payload_create_from_x509(cert);
@@ -296,8 +298,13 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		
 		auth_method = this->connection->get_auth_method(this->connection);
 		authenticator = authenticator_create(this->ike_sa, auth_method);
-		status = authenticator->compute_auth_data(authenticator, &auth_payload,
-				this->init_request, this->nonce_r, my_id_payload, TRUE);
+		status = authenticator->compute_auth_data(authenticator,
+												  &auth_payload,
+												  this->init_request,
+												  this->nonce_r,
+												  my_id,
+												  other_id,
+												  TRUE);
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{
@@ -704,19 +711,23 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		response->add_payload(response, (payload_t*)idr_response);
 	}
 	
-	if (this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
+	if (this->connection->get_auth_method(this->connection) == RSA_DIGITAL_SIGNATURE
+	&&  this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
 	{	/* build certificate payload */
 		x509_t *cert;
 		cert_payload_t *cert_payload;
 		
 		cert = charon->credentials->get_certificate(charon->credentials, my_id);
-		if (cert == NULL)
+		if (cert)
+		{
+			cert_payload = cert_payload_create_from_x509(cert);
+			response->add_payload(response, (payload_t *)cert_payload);
+		}
+		else
 		{
 			this->logger->log(this->logger, ERROR,
 							  "could not find my certificate, cert payload omitted");
 		}
-		cert_payload = cert_payload_create_from_x509(cert);
-		response->add_payload(response, (payload_t *)cert_payload);
 	}
 	
 	if (cert_request)
@@ -733,9 +744,11 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		auth_method = this->connection->get_auth_method(this->connection);
 		authenticator = authenticator_create(this->ike_sa, auth_method);
 		status = authenticator->verify_auth_data(authenticator, auth_request,
-												this->init_request,
-												this->nonce_r, idi_request,
-												TRUE);
+												 this->init_request,
+												 this->nonce_r,
+												 my_id,
+												 other_id,
+												 TRUE);
 		if (status != SUCCESS)
 		{
 			this->logger->log(this->logger, AUDIT, 
@@ -746,7 +759,9 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		}
 		status = authenticator->compute_auth_data(authenticator, &auth_response,
 												  this->init_response,
-												  this->nonce_i, idr_response,
+												  this->nonce_i,
+												  my_id,
+												  other_id,
 												  FALSE);
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
@@ -939,14 +954,20 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	{	/* authenticate peer */
 		authenticator_t *authenticator;
 		auth_method_t auth_method;
+		identification_t *my_id;
 		status_t status;
 		
 		auth_method = this->connection->get_auth_method(this->connection);
 		authenticator = authenticator_create(this->ike_sa, auth_method);
-		status = authenticator->verify_auth_data(authenticator, auth_payload,
-				this->init_response,
-				this->nonce_i, idr_payload,
-				FALSE);
+		my_id = this->policy->get_my_id(this->policy);
+
+		status = authenticator->verify_auth_data(authenticator,
+												 auth_payload,
+												 this->init_response,
+												 this->nonce_i,
+												 my_id,
+												 other_id,
+												 FALSE);
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{

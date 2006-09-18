@@ -68,23 +68,22 @@ struct private_authenticator_t {
 	logger_t *logger;
 	
 	/**
-	 * @brief Creates the octets which are signed (RSA) or MACed (shared secret) as described in section 
-	 * 2.15 of RFC.
+	 * @brief Builds the octets to be signed (RSA or PSK) as described in section 2.15 of RFC 4306.
 	 * 
 	 * @param this				calling object
 	 * @param last_message		the last message to include in created octets 
 	 * 							(either binary form of IKE_SA_INIT request or IKE_SA_INIT response)
 	 * @param other_nonce		Nonce data received from other peer
-	 * @param my_id				id_payload_t object representing an ID payload
+	 * @param id				ID of signer
 	 * @param initiator			Type of peer. TRUE, if it is original initiator, FALSE otherwise
 	 * @return					octets as described in section 2.15. Memory gets allocated and has to get 
 	 * 							destroyed by caller.
 	 */
-	chunk_t (*allocate_octets) (private_authenticator_t *this,
-								chunk_t last_message,
-								chunk_t other_nonce,
-								id_payload_t *my_id,
-								bool initiator);
+	chunk_t (*build_tbs_octets) (private_authenticator_t *this,
+								 chunk_t last_message,
+								 chunk_t other_nonce,
+								 identification_t *id,
+								 bool initiator);
 	
 	/**
 	 * @brief Creates the AUTH data using auth method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
@@ -93,49 +92,45 @@ struct private_authenticator_t {
 	 * @param last_message		the last message
 	 * 							(either binary form of IKE_SA_INIT request or IKE_SA_INIT response)
 	 * @param nonce				Nonce data to include in auth data compution
-	 * @param id_payload		id_payload_t object representing an ID payload
+	 * @param id				ID of signer
 	 * @param initiator			Type of peer. TRUE, if it is original initiator, FALSE otherwise
-	 * @param shared_secret		shared secret as chunk_t. If shared secret is a string,
+	 * @param secret			shared secret as chunk_t. If shared secret is a string,
 	 * 							the NULL termination is not included.
 	 * @return					AUTH data as dscribed in section 2.15 for 
 	 * 							AUTH method SHARED_KEY_MESSAGE_INTEGRITY_CODE.
 	 * 							Memory gets allocated and has to get destroyed by caller.
 	 */
-	chunk_t (*build_preshared_secret_signature) (private_authenticator_t *this,
-												 chunk_t last_message,
-												 chunk_t nonce,
-												 id_payload_t *id_payload,
-												 bool initiator,
-												 chunk_t preshared_secret);
+	chunk_t (*build_shared_key_signature) (private_authenticator_t *this,
+										   chunk_t last_message,
+										   chunk_t nonce,
+										   identification_t *id,
+										   bool initiator,
+										   chunk_t secret);
 };
 
 /**
- * Implementation of private_authenticator_t.allocate_octets.
+ * Implementation of private_authenticator_t.build_tbs_octets.
  */
-static chunk_t allocate_octets(private_authenticator_t *this,
+static chunk_t build_tbs_octets(private_authenticator_t *this,
 								chunk_t last_message, 
 								chunk_t other_nonce,
-								id_payload_t *my_id,
+								identification_t *id,
 								bool initiator)
 {
 	prf_t *prf;
-	chunk_t id_chunk = my_id->get_data(my_id);
-	u_int8_t id_with_header[4 + id_chunk.len];
-	/*
-	 * IKEv2 for linux (http://sf.net/projects/ikev2/) 
-	 * is not compatible with IKEv2 Draft and so not compatible with this
-	 * implementation, cause AUTH data are computed without
-	 * ID type and the three reserved bytes.
-	 */
+
+	chunk_t  id_encoding = id->get_encoding(id);
+	u_int8_t id_with_header[4 + id_encoding.len];
 	chunk_t id_with_header_chunk = {ptr:id_with_header, len: sizeof(id_with_header)};
+
 	u_int8_t *current_pos;
 	chunk_t octets;
 	
-	id_with_header[0] = my_id->get_id_type(my_id);
+	id_with_header[0] = id->get_type(id);
 	id_with_header[1] = 0x00;
 	id_with_header[2] = 0x00;
 	id_with_header[3] = 0x00;
-	memcpy(id_with_header + 4,id_chunk.ptr,id_chunk.len);
+	memcpy(id_with_header + 4, id_encoding.ptr, id_encoding.len);
 	
 	if (initiator)
 	{
@@ -150,9 +145,9 @@ static chunk_t allocate_octets(private_authenticator_t *this,
 	octets.len = last_message.len + other_nonce.len + prf->get_block_size(prf);
 	octets.ptr = malloc(octets.len);
 	current_pos = octets.ptr;
-	memcpy(current_pos,last_message.ptr,last_message.len);
+	memcpy(current_pos, last_message.ptr, last_message.len);
 	current_pos += last_message.len;
-	memcpy(current_pos,other_nonce.ptr,other_nonce.len);
+	memcpy(current_pos, other_nonce.ptr, other_nonce.len);
 	current_pos += other_nonce.len;
 	prf->get_bytes(prf, id_with_header_chunk, current_pos);
 	
@@ -161,29 +156,29 @@ static chunk_t allocate_octets(private_authenticator_t *this,
 }
 
 /**
- * Implementation of private_authenticator_t.build_preshared_secret_signature.
+ * Implementation of private_authenticator_t.build_shared_key_signature.
  */
-static chunk_t build_preshared_secret_signature(private_authenticator_t *this,
-															chunk_t last_message,
-															chunk_t nonce,
-															id_payload_t *id_payload,
-															bool initiator,
-															chunk_t preshared_secret)
+static chunk_t build_shared_key_signature(private_authenticator_t *this,
+										  chunk_t last_message,
+										  chunk_t nonce,
+										  identification_t *id,
+										  bool initiator,
+										  chunk_t secret)
 {
 	chunk_t key_pad = {ptr: IKEV2_KEY_PAD, len:strlen(IKEV2_KEY_PAD)};
 	u_int8_t key_buffer[this->prf->get_block_size(this->prf)];
 	chunk_t key = {ptr: key_buffer, len: sizeof(key_buffer)};
 	chunk_t auth_data;
 
-	chunk_t octets = this->allocate_octets(this,last_message,nonce,id_payload,initiator);
+	chunk_t octets = this->build_tbs_octets(this, last_message, nonce, id, initiator);
 	
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
-	this->prf->set_key(this->prf, preshared_secret);
+	this->prf->set_key(this->prf, secret);
 	this->prf->get_bytes(this->prf, key_pad, key_buffer);
 	this->prf->set_key(this->prf, key);
 	this->prf->allocate_bytes(this->prf, octets, &auth_data);
 	chunk_free(&octets);
-	this->logger->log_chunk(this->logger,RAW | LEVEL2, "authenticated data",auth_data);
+	this->logger->log_chunk(this->logger,RAW | LEVEL2, "authenticated data", auth_data);
 
 	return auth_data;
 }
@@ -195,36 +190,36 @@ static status_t verify_auth_data (private_authenticator_t *this,
 									auth_payload_t *auth_payload,
 									chunk_t last_received_packet,
 									chunk_t my_nonce,
-									id_payload_t *other_id_payload,
+									identification_t *my_id,
+									identification_t *other_id,
 									bool initiator)
 {
 	switch(auth_payload->get_auth_method(auth_payload))
 	{
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
 		{
-			identification_t *other_id = other_id_payload->get_identification(other_id_payload);
 			chunk_t auth_data = auth_payload->get_data(auth_payload);
-			chunk_t preshared_secret;
+			chunk_t shared_key;
 			status_t status;
 						
-			status = charon->credentials->get_shared_secret(charon->credentials,
-															other_id,
-															&preshared_secret);
+			status = charon->credentials->get_shared_key(charon->credentials,
+														 my_id,
+														 other_id,
+														 &shared_key);
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR, "no shared secret found for '%s'",
-								  other_id->get_string(other_id));
-				other_id->destroy(other_id);
+				this->logger->log(this->logger, ERROR, "no shared key found for '%s' and '%s'",
+								  my_id->get_string(my_id), other_id->get_string(other_id));
 				return status;	
 			}
 			
-			chunk_t my_auth_data = this->build_preshared_secret_signature(this,
-																		  last_received_packet,
-																		  my_nonce,
-																		  other_id_payload,
-																		  initiator,
-																		  preshared_secret);
-			chunk_free(&preshared_secret);
+			chunk_t my_auth_data = this->build_shared_key_signature(this,
+																	last_received_packet,
+																	my_nonce,
+																	other_id,
+																	initiator,
+																	shared_key);
+			chunk_free(&shared_key);
 			
 			if (auth_data.len != my_auth_data.len)
 			{
@@ -233,17 +228,16 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			}
 			else if (memcmp(auth_data.ptr,my_auth_data.ptr, my_auth_data.len) == 0)
 			{
-				this->logger->log(this->logger, CONTROL, "authentication of '%s' with preshared secret successful",
+				this->logger->log(this->logger, CONTROL, "authentication of '%s' with pre-shared key successful",
 										other_id->get_string(other_id));
 				status = SUCCESS;
 			}
 			else
 			{
-				this->logger->log(this->logger, ERROR, "authentication of '%s' with preshared secret failed",
+				this->logger->log(this->logger, ERROR, "authentication of '%s' with pre-shared key failed",
 										other_id->get_string(other_id));
 				status = FAILED;
 			}
-			other_id->destroy(other_id);
 			chunk_free(&my_auth_data);
 			return status;
 		}
@@ -252,34 +246,30 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			status_t status;
 			chunk_t octets;
 			chunk_t auth_data = auth_payload->get_data(auth_payload);
-			identification_t *other_id = other_id_payload->get_identification(other_id_payload);
 
 			rsa_public_key_t *public_key =
 				charon->credentials->get_trusted_public_key(charon->credentials, other_id);
 
 			if (public_key == NULL)
 			{
-				this->logger->log(this->logger, ERROR, "no public key found for '%s'",
+				this->logger->log(this->logger, ERROR, "no RSA public key found for '%s'",
 								  other_id->get_string(other_id));
-				other_id->destroy(other_id);
 				return NOT_FOUND;	
 			}
 			
-			octets = this->allocate_octets(this,last_received_packet, my_nonce,other_id_payload, initiator);
+			octets = this->build_tbs_octets(this, last_received_packet, my_nonce, other_id, initiator);
 			
 			status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
 			if (status == SUCCESS)
 			{
-				this->logger->log(this->logger, CONTROL, "authentication of '%s' with RSA successful",
+				this->logger->log(this->logger, CONTROL, "authentication of '%s' with RSA signature successful",
 										other_id->get_string(other_id));
 			}
 			else
 			{
-				this->logger->log(this->logger, ERROR, "authentication of '%s' with RSA failed",
+				this->logger->log(this->logger, ERROR, "authentication of '%s' with RSA signature failed",
 										other_id->get_string(other_id));
 			}
-			
-			other_id->destroy(other_id);
 			chunk_free(&octets);
 			return status;
 		}
@@ -294,37 +284,39 @@ static status_t verify_auth_data (private_authenticator_t *this,
  * Implementation of authenticator_t.compute_auth_data.
  */
 static status_t compute_auth_data (private_authenticator_t *this,
-									auth_payload_t **auth_payload,
-									chunk_t last_sent_packet,
-									chunk_t other_nonce,
-									id_payload_t *my_id_payload,
-									bool initiator)
+								   auth_payload_t **auth_payload,
+								   chunk_t last_sent_packet,
+								   chunk_t other_nonce,
+								   identification_t *my_id,
+								   identification_t *other_id,
+								   bool initiator)
 {	
-	switch(this->auth_method)
+	switch (this->auth_method)
 	{
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
 		{
-			identification_t *my_id = my_id_payload->get_identification(my_id_payload);
-			chunk_t preshared_secret;
-			status_t status;
+			chunk_t shared_key;
 			chunk_t auth_data;
 
-			status = charon->credentials->get_shared_secret(charon->credentials,
-															my_id,
-															&preshared_secret);
+			status_t status = charon->credentials->get_shared_key(charon->credentials,
+																  my_id,
+																  other_id,
+																  &shared_key);
 
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR, "no shared secret found for %s",
-								  my_id->get_string(my_id));
-				my_id->destroy(my_id);
+				this->logger->log(this->logger, ERROR, "no shared key found for '%s' and '%s'",
+								  my_id->get_string(my_id), other_id->get_string(other_id));
 				return status;	
 			}
-			my_id->destroy(my_id);
 			
-			auth_data = this->build_preshared_secret_signature(this, last_sent_packet, other_nonce,
-															   my_id_payload, initiator, preshared_secret);
-			chunk_free(&preshared_secret);
+			auth_data = this->build_shared_key_signature(this,
+														 last_sent_packet,
+														 other_nonce,
+														 my_id,
+														 initiator,
+														 shared_key);
+			chunk_free(&shared_key);
 			*auth_payload = auth_payload_create();
 			(*auth_payload)->set_auth_method(*auth_payload, SHARED_KEY_MESSAGE_INTEGRITY_CODE);
 			(*auth_payload)->set_data(*auth_payload, auth_data);
@@ -335,27 +327,26 @@ static status_t compute_auth_data (private_authenticator_t *this,
 		case RSA_DIGITAL_SIGNATURE:
 		{
 			char buf[BUF_LEN];
-			chunk_t octets, auth_data;
-			status_t status = NOT_FOUND;
+			chunk_t octets;
+			chunk_t auth_data;
+			status_t status;
 			rsa_public_key_t  *my_pubkey;
 			rsa_private_key_t *my_key;
 
-			identification_t  *my_id = my_id_payload->get_identification(my_id_payload);
-			
-			this->logger->log(this->logger, CONTROL|LEVEL1, "looking for public key belonging to '%s'",
+			this->logger->log(this->logger, CONTROL|LEVEL1, "looking for RSA public key belonging to '%s'",
 							  my_id->get_string(my_id));
 
 			my_pubkey = charon->credentials->get_rsa_public_key(charon->credentials, my_id);
 			if (my_pubkey == NULL)
 			{
-				this->logger->log(this->logger, ERROR, "no public key found for '%s'",
+				this->logger->log(this->logger, ERROR, "no RSA public key found for '%s'",
 								  my_id->get_string(my_id));
-				goto end_rsa;
+				return NOT_FOUND;
 			}
-			this->logger->log(this->logger, CONTROL|LEVEL2, "matching public key found");
+			this->logger->log(this->logger, CONTROL|LEVEL2, "matching RSA public key found");
 			
 			chunk_to_hex(buf, BUF_LEN, my_pubkey->get_keyid(my_pubkey));
-			this->logger->log(this->logger, CONTROL|LEVEL1, "looking for private key with keyid %s", buf);
+			this->logger->log(this->logger, CONTROL|LEVEL1, "looking for RSA private key with keyid %s", buf);
 
 			my_key = charon->credentials->get_rsa_private_key(charon->credentials, my_pubkey);
 			if (my_key == NULL)
@@ -363,21 +354,22 @@ static status_t compute_auth_data (private_authenticator_t *this,
 				char buf[BUF_LEN];
 
 				chunk_to_hex(buf, BUF_LEN, my_pubkey->get_keyid(my_pubkey));
-				this->logger->log(this->logger, ERROR, "no private key found with for %s with keyid %s",
+				this->logger->log(this->logger, ERROR, "no RSA private key found with for %s with keyid %s",
 								  my_id->get_string(my_id), buf);
-				goto end_rsa;
+				return NOT_FOUND;
 			}
-			this->logger->log(this->logger, CONTROL|LEVEL2, "matching private key found");
+			this->logger->log(this->logger, CONTROL|LEVEL2, "matching RSA private key found");
 
-			octets = this->allocate_octets(this,last_sent_packet,other_nonce,my_id_payload,initiator);
+			octets = this->build_tbs_octets(this, last_sent_packet, other_nonce, my_id, initiator);
 			status = my_key->build_emsa_pkcs1_signature(my_key, HASH_SHA1, octets, &auth_data);
 			chunk_free(&octets);
 
 			if (status != SUCCESS)
 			{
 				my_key->destroy(my_key);
-				goto end_rsa;
+				return status;
 			}
+			this->logger->log(this->logger, CONTROL|LEVEL2, "successfully signed with RSA private key");
 			
 			*auth_payload = auth_payload_create();
 			(*auth_payload)->set_auth_method(*auth_payload, RSA_DIGITAL_SIGNATURE);
@@ -385,10 +377,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 
 			my_key->destroy(my_key);
 			chunk_free(&auth_data);
-
-		end_rsa:
-			my_id->destroy(my_id);
-			return status;
+			return SUCCESS;
 		}
 		default:
 		{
@@ -414,12 +403,14 @@ authenticator_t *authenticator_create(ike_sa_t *ike_sa, auth_method_t auth_metho
 
 	/* Public functions */
 	this->public.destroy = (void(*)(authenticator_t*))destroy;
-	this->public.verify_auth_data = (status_t (*) (authenticator_t *,auth_payload_t *, chunk_t ,chunk_t ,id_payload_t *,bool)) verify_auth_data;
-	this->public.compute_auth_data = (status_t (*) (authenticator_t *,auth_payload_t **, chunk_t ,chunk_t ,id_payload_t *,bool)) compute_auth_data;
+	this->public.verify_auth_data = (status_t (*) (authenticator_t*,auth_payload_t*,chunk_t,
+												   chunk_t,identification_t*,identification_t*,bool)) verify_auth_data;
+	this->public.compute_auth_data = (status_t (*) (authenticator_t*,auth_payload_t**,chunk_t,
+												    chunk_t,identification_t*,identification_t*,bool)) compute_auth_data;
 	
 	/* private functions */
-	this->allocate_octets = allocate_octets;
-	this->build_preshared_secret_signature = build_preshared_secret_signature;
+	this->build_tbs_octets = build_tbs_octets;
+	this->build_shared_key_signature = build_shared_key_signature;
 	
 	/* private data */
 	this->ike_sa = ike_sa;

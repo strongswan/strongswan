@@ -33,11 +33,79 @@
 #include <crypto/rsa/rsa_public_key.h>
 #include <crypto/x509.h>
 #include <crypto/crl.h>
+#include <asn1/ttodata.h>
 
 #include "local_credential_store.h"
 
 #define PATH_BUF			256
 #define MAX_CA_PATH_LEN		7
+
+typedef struct shared_key_t shared_key_t;
+
+/**
+ * Private date of a shared_key_t object
+ */
+struct shared_key_t {
+
+	/**
+	 * shared secret
+	 */
+	chunk_t secret;
+
+	/**
+	 * list of peer IDs
+	 */
+	linked_list_t *peers;
+
+	/**
+	 * @brief Destroys a shared_key_t object.
+	 *
+	 * @param this 			calling object
+	 */
+	void (*destroy) (shared_key_t *this);
+};
+
+
+/**
+ * Implementation of shared_key_t.destroy.
+ */
+static void shared_key_destroy(shared_key_t *this)
+{
+	identification_t *id;
+
+    /* destroy peer id list */
+	while (this->peers->remove_last(this->peers, (void**)&id) == SUCCESS)
+	{
+		id->destroy(id);
+	}
+	this->peers->destroy(this->peers);
+
+	free(this);
+}
+
+/**
+ * @brief Creates a shared_key_t object.
+ * 
+ * @param shared_key		shared key value
+ * 
+ * @return					shared_key_t object
+ * 
+ * @ingroup config
+ */
+static shared_key_t *shared_key_create(chunk_t secret)
+{
+	shared_key_t *this = malloc_thing(shared_key_t);
+
+	/* private functions */
+	this->destroy = shared_key_destroy;
+
+	/* private data */
+	this->secret = chunk_clone(secret);
+	this->peers = linked_list_create();
+
+	return (this);
+}
+
 
 typedef struct private_local_credential_store_t private_local_credential_store_t;
 
@@ -50,6 +118,11 @@ struct private_local_credential_store_t {
 	 * Public part
 	 */
 	local_credential_store_t public;
+	
+	/**
+	 * list of shared keys
+	 */
+	linked_list_t *shared_keys;
 	
 	/**
 	 * list of key_entry_t's with private keys
@@ -89,11 +162,75 @@ struct private_local_credential_store_t {
 
 
 /**
- * Implementation of local_credential_store_t.get_shared_secret.
+ * Implementation of local_credential_store_t.get_shared_key.
  */	
-static status_t get_shared_secret(private_local_credential_store_t *this, identification_t *id, chunk_t *secret)
+static status_t get_shared_key(private_local_credential_store_t *this, identification_t *my_id, identification_t *other_id, chunk_t *secret)
 {
-	return FAILED;
+	typedef enum {
+		PRIO_UNDEFINED=		0x00,
+		PRIO_ANY_MATCH= 	0x01,
+		PRIO_MY_MATCH= 		0x02,
+		PRIO_OTHER_MATCH=	0x04,
+	} prio_t;
+
+	prio_t best_prio = PRIO_UNDEFINED;
+	chunk_t found = CHUNK_INITIALIZER;
+
+	iterator_t *iterator = this->shared_keys->create_iterator(this->shared_keys, TRUE);
+
+	while (iterator->has_next(iterator))
+	{
+		shared_key_t *shared_key;
+		iterator_t *peer_iterator;
+
+		prio_t prio = PRIO_UNDEFINED;
+
+		iterator->current(iterator, (void**)&shared_key);
+
+		peer_iterator = shared_key->peers->create_iterator(shared_key->peers, TRUE);
+
+		if (peer_iterator->get_count(peer_iterator) == 0)
+		{
+			/* this is a wildcard shared key */
+			prio = PRIO_ANY_MATCH;
+		}
+		else
+		{
+			while (peer_iterator->has_next(peer_iterator))
+			{
+				identification_t *peer_id;
+
+				peer_iterator->current(peer_iterator, (void**)&peer_id);
+
+				if (my_id->equals(my_id, peer_id))
+				{
+					prio |= PRIO_MY_MATCH; 
+				}
+				if (other_id->equals(other_id, peer_id))
+				{
+					prio |= PRIO_OTHER_MATCH; 
+				}
+			}
+		}
+		peer_iterator->destroy(peer_iterator);
+
+		if (prio > best_prio)
+		{
+			best_prio = prio;
+			found = shared_key->secret;
+		}
+	}
+	iterator->destroy(iterator);
+
+	if (best_prio = PRIO_UNDEFINED)
+	{
+		return NOT_FOUND;
+	}
+	else
+	{
+		*secret = chunk_clone(found);
+		return SUCCESS;
+	}
 }
 
 /**
@@ -767,9 +904,67 @@ static void load_crls(private_local_credential_store_t *this)
 }
 
 /**
- * Implements local_credential_store_t.load_private_keys
+ * Convert a string of characters into a binary secret
+ * A string between single or double quotes is treated as ASCII characters
+ * A string prepended by 0x is treated as HEX and prepended by 0s as Base64
  */
-static void load_private_keys(private_local_credential_store_t *this)
+static err_t extract_secret(chunk_t *secret, chunk_t *line)
+{
+	chunk_t raw_secret;
+	size_t len;
+	char delimiter = ' ';
+	bool quotes = FALSE;
+
+	if (!eat_whitespace(line))
+	{
+		return "missing secret";
+	}
+
+	if (*line->ptr == '\'' || *line->ptr == '"')
+	{
+		quotes = TRUE;
+		delimiter = *line->ptr;
+		line->ptr++;  line->len--;
+	}
+
+	if (!extract_token(&raw_secret, delimiter, line))
+	{
+		if (delimiter == ' ')
+		{
+			raw_secret = *line;
+		}
+		else
+		{
+			return "missing second delimiter";
+		}
+	}
+
+	if (quotes)
+	{	/* treat as an ASCII string */
+		
+		if (raw_secret.len > secret->len)
+			return "secret larger than buffer";
+		memcpy(secret->ptr, raw_secret.ptr, raw_secret.len);
+		secret->len = raw_secret.len;
+	}
+	else
+	{	/* convert from HEX or Base64 to binary */
+		size_t len;
+		err_t ugh = ttodata(raw_secret.ptr, raw_secret.len, 0, secret->ptr, secret->len, &len);
+
+	    if (ugh != NULL)
+			return ugh;
+		if (len > secret->len)
+			return "secret larger than buffer";
+		secret->len = len;
+	}
+	return NULL;
+}
+
+/**
+ * Implements local_credential_store_t.load_secrets
+ */
+static void load_secrets(private_local_credential_store_t *this)
 {
 	FILE *fd = fopen(SECRETS_FILE, "r");
 
@@ -814,6 +1009,7 @@ static void load_private_keys(private_local_credential_store_t *this)
 			{
 				char path[PATH_BUF];
 				chunk_t filename;
+				rsa_private_key_t *key;
 
 				err_t ugh = extract_value(&filename, &line);
 
@@ -839,7 +1035,7 @@ static void load_private_keys(private_local_credential_store_t *this)
 					snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR, filename.len, filename.ptr);
 				}
 
-				rsa_private_key_t *key = rsa_private_key_create_from_file(path, NULL);
+				key = rsa_private_key_create_from_file(path, NULL);
 				if (key)
 				{
 					this->private_keys->insert_last(this->private_keys, (void*)key);
@@ -847,7 +1043,55 @@ static void load_private_keys(private_local_credential_store_t *this)
 			}
 			else if (match("PSK", &token))
 			{
+				shared_key_t *shared_key;
 
+				char buf[BUF_LEN];
+				chunk_t secret = { buf, BUF_LEN };
+
+				err_t ugh = extract_secret(&secret, &line);
+				if (ugh != NULL)
+				{
+					this->logger->log(this->logger, ERROR, "line %d: malformed secret: %s", line_nr, ugh);
+					goto error;
+				}
+
+				if (ids.len > 0)
+					this->logger->log(this->logger, CONTROL, "  loaded shared key for %.*s", ids.len, ids.ptr);
+				else
+					this->logger->log(this->logger, CONTROL, "  loaded shared key for %%any");
+
+				this->logger->log_chunk(this->logger, PRIVATE, "  secret:", secret);
+
+				shared_key = shared_key_create(secret);
+				if (shared_key)
+				{
+					this->shared_keys->insert_last(this->shared_keys, (void*)shared_key);
+				}
+				while (ids.len > 0)
+				{
+					chunk_t id;
+					identification_t *peer_id;
+
+					ugh = extract_value(&id, &ids);
+					if (ugh != NULL)
+					{
+						this->logger->log(this->logger, ERROR, "line %d: %s", line_nr, ugh);
+						goto error;
+					}
+					if (id.len == 0)
+						continue;
+
+					/* NULL terminate the ID string */
+					*(id.ptr + id.len) = '\0';
+
+					peer_id = identification_create_from_string(id.ptr);
+					if (peer_id->get_type(peer_id) == ID_ANY)
+					{
+						peer_id->destroy(peer_id);
+						continue;
+					}
+					shared_key->peers->insert_last(shared_key->peers, (void*)peer_id);
+				}
 			}
 			else if (match("PIN", &token))
 			{
@@ -878,6 +1122,7 @@ static void destroy(private_local_credential_store_t *this)
 	x509_t *cert;
 	crl_t *crl;
 	rsa_private_key_t *key;
+	shared_key_t *shared_key;
 	
 	/* destroy cert list */
 	while (this->certs->remove_last(this->certs, (void**)&cert) == SUCCESS)
@@ -909,6 +1154,13 @@ static void destroy(private_local_credential_store_t *this)
 	}
 	this->private_keys->destroy(this->private_keys);
 
+    /* destroy shared keys list */
+	while (this->shared_keys->remove_last(this->shared_keys, (void**)&shared_key) == SUCCESS)
+	{
+		shared_key->destroy(shared_key);
+	}
+	this->shared_keys->destroy(this->shared_keys);
+
 	free(this);
 }
 
@@ -919,7 +1171,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 {
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
 
-	this->public.credential_store.get_shared_secret = (status_t (*) (credential_store_t*,identification_t*,chunk_t*))get_shared_secret;
+	this->public.credential_store.get_shared_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_shared_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t* (*) (credential_store_t*,rsa_public_key_t*))get_rsa_private_key;
 	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
@@ -933,17 +1185,18 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.log_crls = (void (*) (credential_store_t*,logger_t*,bool))log_crls;
 	this->public.credential_store.load_ca_certificates = (void (*) (credential_store_t*))load_ca_certificates;
 	this->public.credential_store.load_crls = (void (*) (credential_store_t*))load_crls;
-	this->public.credential_store.load_private_keys = (void (*) (credential_store_t*))load_private_keys;
+	this->public.credential_store.load_secrets = (void (*) (credential_store_t*))load_secrets;
 	this->public.credential_store.destroy = (void (*) (credential_store_t*))destroy;
 	
 	/* initialize mutexes */
 	pthread_mutex_init(&(this->crls_mutex), NULL);
 
 	/* private variables */
+	this->shared_keys  = linked_list_create();
 	this->private_keys = linked_list_create();
-	this->certs = linked_list_create();
-	this->ca_certs = linked_list_create();
-	this->crls = linked_list_create();
+	this->certs        = linked_list_create();
+	this->ca_certs     = linked_list_create();
+	this->crls         = linked_list_create();
 	this->strict = strict;
 	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 

@@ -45,21 +45,20 @@ typedef struct credential_store_t credential_store_t;
 struct credential_store_t { 
 
 	/**
-	 * @brief Returns the preshared secret of a specific ID.
+	 * @brief Returns the secret shared by two specific IDs.
 	 * 
 	 * The returned chunk must be destroyed by the caller after usage.
 	 * 
 	 * @param this					calling object
-	 * @param id					identification_t object identifiying the secret.
-	 * @param[out] preshared_secret	the preshared secret will be written there.
+	 * @param my_id					my ID identifiying the secret.
+	 * @param other_id				peer ID identifying the secret.
+	 * @param[out] secret			the pre-shared secret will be written there.
 	 * @return
 	 * 								- NOT_FOUND	if no preshared secrets for specific ID could be found
 	 * 								- SUCCESS
 	 *
-	 * @todo We should use two IDs to query shared secrets, since we want to use different
-	 * keys for different peers...
 	 */	
-	status_t (*get_shared_secret) (credential_store_t *this, identification_t *id, chunk_t *secret);
+	status_t (*get_shared_key) (credential_store_t *this, identification_t *my_id, identification_t *other_id, chunk_t *shared_key);
 	
 	/**
 	 * @brief Returns the RSA public key of a specific ID.
@@ -184,15 +183,14 @@ struct credential_store_t {
 	void (*load_crls) (credential_store_t *this);
 	
 	/**
-	 * @brief Loads RSA private keys defined in ipsec.secrets
+	 * @brief Loads secrets in ipsec.secrets
 	 * 
-	 * Currently, all keys must be unencrypted in either DER or PEM format.
-	 * Other formats are ignored. Further, a certificate for the specific private
-	 * key must already be loaded to get the ID from.
+	 * Currently, all RSA private key files must be in unencrypted form
+     * either in DER or PEM format.
 	 * 
 	 * @param this			calling object
 	 */
-	void (*load_private_keys) (credential_store_t *this);
+	void (*load_secrets) (credential_store_t *this);
 
 	/**
 	 * @brief Destroys a credential_store_t object.

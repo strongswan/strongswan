@@ -62,8 +62,9 @@ struct authenticator_t {
 	 * @param this 					calling object
 	 * @param last_received_packet	binary representation of the last received IKEv2-Message
 	 * @param my_nonce				the sent nonce (without payload header)
-	 * @param other_id_payload		the ID payload received from other peer
-	 * @param initiator				type of other peer. TRUE, if it is original initiator, FALSE otherwise
+	 * @param my_id					my ID
+	 * @param other_id				peer ID
+	 * @param initiator				type of peer. TRUE, if it is original initiator, FALSE otherwise
 	 * 
 	 * @todo Document RSA error status types
 	 * 
@@ -75,11 +76,12 @@ struct authenticator_t {
 	 * 									(e.g. shared secret, rsa key)
 	 */
 	status_t (*verify_auth_data) (authenticator_t *this,
-									auth_payload_t *auth_payload, 
-									chunk_t last_received_packet,
-									chunk_t my_nonce,
-									id_payload_t *other_id_payload, 
-									bool initiator);
+								  auth_payload_t *auth_payload, 
+								  chunk_t last_received_packet,
+								  chunk_t my_nonce,
+								  identification_t *my_id,
+								  identification_t *other_id,
+								  bool initiator);
 
 	/**
 	 * @brief Computes authentication data and creates specific AUTH payload.
@@ -93,7 +95,8 @@ struct authenticator_t {
 	 * @param[out] auth_payload		The object of typee auth_payload_t will be created at pointing location
 	 * @param last_sent_packet		binary representation of the last sent IKEv2-Message
 	 * @param other_nonce			the received nonce (without payload header)
-	 * @param my_id_payload			the ID payload going to send to other peer
+	 * @param my_id					my ID
+	 * @param other_id				peer ID
 	 * @param initiator				type of myself. TRUE, if I'm original initiator, FALSE otherwise
 	 *
 	 * @todo Document RSA error status types
@@ -104,11 +107,12 @@ struct authenticator_t {
 	 * 								- NOT_FOUND if the data for AUTH method could not be found
 	 */
 	status_t (*compute_auth_data) (authenticator_t *this,
-									auth_payload_t **auth_payload,
-									chunk_t last_sent_packet,
-									chunk_t other_nonce,
-									id_payload_t *my_id_payload,
-									bool initiator);
+								   auth_payload_t **auth_payload,
+								   chunk_t last_sent_packet,
+								   chunk_t other_nonce,
+								   identification_t *my_id,
+								   identification_t *other_id,
+								   bool initiator);
 
 	/**
 	 * @brief Destroys a authenticator_t object.

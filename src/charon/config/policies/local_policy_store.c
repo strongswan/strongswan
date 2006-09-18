@@ -200,7 +200,7 @@ static policy_t *get_policy_by_name(private_local_policy_store_t *this, char *na
 	iterator_t *iterator;
 	policy_t *current, *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "Looking for policy \"%s\"", name);
+	this->logger->log(this->logger, CONTROL|LEVEL1, "looking for policy \"%s\"", name);
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);

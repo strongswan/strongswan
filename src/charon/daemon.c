@@ -186,11 +186,11 @@ static void initialize(private_daemon_t *this, bool strict)
 	this->public.policies = (policy_store_t*)local_policy_store_create();
 	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
 
-	/* load keys, ca certificates and crls */
+	/* load secrets, ca certificates and crls */
 	credentials = this->public.credentials;
 	credentials->load_ca_certificates(credentials);
 	credentials->load_crls(credentials);
-	credentials->load_private_keys(credentials);
+	credentials->load_secrets(credentials);
 	
 	/* start building threads, we are multi-threaded NOW */
 	this->public.stroke = stroke_create();
