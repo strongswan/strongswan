@@ -1,4 +1,5 @@
-moon::echo 1 > /proc/sys/net/ipv4/ip_forward
+moon::/etc/init.d/iptables start 2> /dev/null
+carol::/etc/init.d/iptables start 2> /dev/null
 carol::rm /etc/ipsec.secrets
 carol::rm /etc/ipsec.d/private/*
 carol::rm /etc/ipsec.d/certs/*
