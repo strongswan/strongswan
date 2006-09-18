@@ -36,6 +36,32 @@
 #include "confread.h"
 #include "files.h"
 
+/**
+ * AUTH Method to use.
+ * 
+ * @ingroup config
+ */
+enum auth_method_t {
+	/**
+	 * Computed as specified in section 2.15 of RFC using 
+	 * an RSA private key over a PKCS#1 padded hash.
+	 */
+	RSA_DIGITAL_SIGNATURE = 1,
+	
+	/** 
+	 * Computed as specified in section 2.15 of RFC using the 
+	 * shared key associated with the identity in the ID payload 
+	 * and the negotiated prf function
+	 */
+	SHARED_KEY_MESSAGE_INTEGRITY_CODE = 2,
+	
+	/**
+	 * Computed as specified in section 2.15 of RFC using a 
+	 * DSS private key over a SHA-1 hash.
+	 */
+	DSS_DIGITAL_SIGNATURE = 3,
+};
+
 static char* push_string(stroke_msg_t *msg, char *string)
 {
 	u_int string_start = msg->length;
@@ -162,6 +188,9 @@ int starter_stroke_add_conn(starter_conn_t *conn)
 	msg.length = offsetof(stroke_msg_t, buffer);
 	msg.add_conn.ikev2 = conn->keyexchange == KEY_EXCHANGE_IKEV2;
 	msg.add_conn.name = push_string(&msg, connection_name(conn));
+	msg.add_conn.auth_method = (conn->policy & POLICY_PSK)?
+		SHARED_KEY_MESSAGE_INTEGRITY_CODE : RSA_DIGITAL_SIGNATURE;
+ 
 	if (conn->policy & POLICY_DONT_REKEY)
 	{
 		msg.add_conn.rekey.ipsec_lifetime = 0;
