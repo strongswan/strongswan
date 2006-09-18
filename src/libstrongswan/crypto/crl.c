@@ -379,7 +379,7 @@ static bool is_newer(const private_crl_t *this, const private_crl_t *other)
  */
 static bool verify(const private_crl_t *this, const rsa_public_key_t *signer)
 {
-	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertList, this->signature);
+	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertList, this->signature) == SUCCESS;
 }
 
 /**
