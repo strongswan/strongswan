@@ -1045,8 +1045,7 @@ static cert_status_t get_status(const private_x509_t *this)
  */
 static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
 {
-	return (signer->verify_emsa_pkcs1_signature(signer, this->tbsCertificate, 
-											   this->signature) == SUCCESS);
+	return signer->verify_emsa_pkcs1_signature(signer, this->tbsCertificate, this->signature) == SUCCESS;
 }
 
 /**
