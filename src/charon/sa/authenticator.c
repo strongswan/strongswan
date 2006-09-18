@@ -151,7 +151,6 @@ static chunk_t build_tbs_octets(private_authenticator_t *this,
 	current_pos += other_nonce.len;
 	prf->get_bytes(prf, id_with_header_chunk, current_pos);
 	
-	this->logger->log_chunk(this->logger,RAW | LEVEL2, "octets (message + nonce + prf(Sk_px,Idx)",octets);
 	return octets;
 }
 
@@ -169,7 +168,7 @@ static chunk_t build_shared_key_signature(private_authenticator_t *this,
 	u_int8_t key_buffer[this->prf->get_block_size(this->prf)];
 	chunk_t key = {ptr: key_buffer, len: sizeof(key_buffer)};
 	chunk_t auth_data;
-
+	
 	chunk_t octets = this->build_tbs_octets(this, last_message, nonce, id, initiator);
 	
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
@@ -177,8 +176,17 @@ static chunk_t build_shared_key_signature(private_authenticator_t *this,
 	this->prf->get_bytes(this->prf, key_pad, key_buffer);
 	this->prf->set_key(this->prf, key);
 	this->prf->allocate_bytes(this->prf, octets, &auth_data);
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, 
+							"octets = message + nonce + prf(Sk_px, IDx')", octets);
+	this->logger->log_chunk(this->logger, PRIVATE|LEVEL2, 
+							"secret", secret);
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, 
+							"keypad", key_pad);
+	this->logger->log_chunk(this->logger, RAW|LEVEL2, 
+							"prf(secret, keypad)", key);
+	this->logger->log_chunk(this->logger,RAW | LEVEL2, 
+							"AUTH = prf(prf(secret, keypad), octets)", auth_data);
 	chunk_free(&octets);
-	this->logger->log_chunk(this->logger,RAW | LEVEL2, "authenticated data", auth_data);
 
 	return auth_data;
 }
