@@ -260,4 +260,3 @@ void timetoa(char *buf, size_t buflen, const time_t *time, bool utc)
 				(utc)?" UTC ":" ", t->tm_year + 1900);
 	}
 }
-
