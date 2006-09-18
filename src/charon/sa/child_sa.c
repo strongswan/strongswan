@@ -305,6 +305,7 @@ static void updown(private_child_sa_t *this, bool up)
 				"PLUTO_PEER_CLIENT_MASK='%s' "
 				"PLUTO_PEER_PORT='%u' "
 				"PLUTO_PEER_PROTOCOL='%u' "
+				"PLUTO_HOST_ACCESS='1' "
 				"%s",
 				 up ? "up" : "down",
 				 streq(this->me.addr->get_string(this->me.addr),
