@@ -134,6 +134,7 @@ struct stroke_msg_t {
 		struct {
 			char *name;
 			bool ikev2;
+			int auth_method;
 			struct {
 				char *ike;
 				char *esp;
