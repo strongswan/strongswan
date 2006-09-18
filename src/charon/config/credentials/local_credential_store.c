@@ -72,13 +72,14 @@ struct shared_key_t {
 static void shared_key_destroy(shared_key_t *this)
 {
 	identification_t *id;
-
-    /* destroy peer id list */
+	
+	/* destroy peer id list */
 	while (this->peers->remove_last(this->peers, (void**)&id) == SUCCESS)
 	{
 		id->destroy(id);
 	}
 	this->peers->destroy(this->peers);
+	chunk_free(&this->secret);
 
 	free(this);
 }
@@ -222,7 +223,7 @@ static status_t get_shared_key(private_local_credential_store_t *this, identific
 	}
 	iterator->destroy(iterator);
 
-	if (best_prio = PRIO_UNDEFINED)
+	if (best_prio == PRIO_UNDEFINED)
 	{
 		return NOT_FOUND;
 	}
@@ -911,7 +912,6 @@ static void load_crls(private_local_credential_store_t *this)
 static err_t extract_secret(chunk_t *secret, chunk_t *line)
 {
 	chunk_t raw_secret;
-	size_t len;
 	char delimiter = ' ';
 	bool quotes = FALSE;
 
@@ -941,7 +941,6 @@ static err_t extract_secret(chunk_t *secret, chunk_t *line)
 
 	if (quotes)
 	{	/* treat as an ASCII string */
-		
 		if (raw_secret.len > secret->len)
 			return "secret larger than buffer";
 		memcpy(secret->ptr, raw_secret.ptr, raw_secret.len);
@@ -1032,7 +1031,8 @@ static void load_secrets(private_local_credential_store_t *this)
 				else
 				{
 					/* relative path name */
-					snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR, filename.len, filename.ptr);
+					snprintf(path, sizeof(path), "%s/%.*s", PRIVATE_KEY_DIR, 
+							 filename.len, filename.ptr);
 				}
 
 				key = rsa_private_key_create_from_file(path, NULL);
@@ -1051,14 +1051,21 @@ static void load_secrets(private_local_credential_store_t *this)
 				err_t ugh = extract_secret(&secret, &line);
 				if (ugh != NULL)
 				{
-					this->logger->log(this->logger, ERROR, "line %d: malformed secret: %s", line_nr, ugh);
+					this->logger->log(this->logger, ERROR, 
+									  "line %d: malformed secret: %s", line_nr, ugh);
 					goto error;
 				}
 
 				if (ids.len > 0)
-					this->logger->log(this->logger, CONTROL, "  loaded shared key for %.*s", ids.len, ids.ptr);
+				{
+					this->logger->log(this->logger, CONTROL, 
+									  "  loading shared key for %.*s", ids.len, ids.ptr);
+				}
 				else
-					this->logger->log(this->logger, CONTROL, "  loaded shared key for %%any");
+				{
+					this->logger->log(this->logger, CONTROL, 
+									  "  loading shared key for %%any");
+				}
 
 				this->logger->log_chunk(this->logger, PRIVATE, "  secret:", secret);
 
@@ -1075,16 +1082,26 @@ static void load_secrets(private_local_credential_store_t *this)
 					ugh = extract_value(&id, &ids);
 					if (ugh != NULL)
 					{
-						this->logger->log(this->logger, ERROR, "line %d: %s", line_nr, ugh);
+						this->logger->log(this->logger, ERROR, 
+										  "line %d: %s", line_nr, ugh);
 						goto error;
 					}
 					if (id.len == 0)
+					{
 						continue;
+					}
 
 					/* NULL terminate the ID string */
 					*(id.ptr + id.len) = '\0';
 
 					peer_id = identification_create_from_string(id.ptr);
+					if (peer_id == NULL)
+					{
+						this->logger->log(this->logger, ERROR, 
+										  "line %d: malformed ID: %s", line_nr, id.ptr);
+						goto error;
+					}
+					
 					if (peer_id->get_type(peer_id) == ID_ANY)
 					{
 						peer_id->destroy(peer_id);
