@@ -999,6 +999,9 @@ static void load_secrets(private_local_credential_store_t *this)
 				this->logger->log(this->logger, ERROR, "line %d: missing ':' separator", line_nr);
 				goto error;
 			}
+			/* NULL terminate the ids string by replacing the : separator */
+			*(ids.ptr + ids.len) = '\0';
+
 			if (!eat_whitespace(&line) || !extract_token(&token, ' ', &line))
 			{
 				this->logger->log(this->logger, ERROR, "line %d: missing token", line_nr);
@@ -1059,7 +1062,7 @@ static void load_secrets(private_local_credential_store_t *this)
 				if (ids.len > 0)
 				{
 					this->logger->log(this->logger, CONTROL, 
-									  "  loading shared key for %.*s", ids.len, ids.ptr);
+									  "  loading shared key for %s", ids.ptr);
 				}
 				else
 				{
