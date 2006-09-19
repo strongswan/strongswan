@@ -8,9 +8,9 @@
 /*
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
- * 
- * Ported from Steve Reid's <steve@edmweb.com> implementation
- * "SHA1 in C" found in strongSwan.
+ * Copyright (C) 2001 Jari Ruusu.
+ *
+ * Ported from strongSwans implementation written by Jari Ruusu.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

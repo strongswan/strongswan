@@ -117,7 +117,7 @@ struct private_proposal_t {
 /**
  * Add algorithm/keysize to a algorithm list
  */
-static void add_algo(linked_list_t *list, u_int8_t algo, size_t key_size)
+static void add_algo(linked_list_t *list, u_int16_t algo, size_t key_size)
 {
 	algorithm_t *algo_key;
 	

@@ -19,6 +19,7 @@ crypto/crypters/aes_cbc_crypter.c  crypto/crypters/aes_cbc_crypter.h\
 crypto/crypters/des_crypter.c  crypto/crypters/des_crypter.h\
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/hashers/sha1_hasher.c crypto/hashers/sha1_hasher.h \
+crypto/hashers/sha2_hasher.c crypto/hashers/sha2_hasher.h \
 crypto/hashers/md5_hasher.c  crypto/hashers/md5_hasher.h \
 crypto/prf_plus.h crypto/prf_plus.c \
 crypto/hmac.c crypto/hmac.h \
