@@ -110,6 +110,7 @@ err_t extract_value(chunk_t *value, chunk_t *line)
 		if (delimiter == ' ')
 		{
 			*value = *line;
+			line->len = 0;
 		}
 		else
 		{
