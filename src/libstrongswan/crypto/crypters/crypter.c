@@ -25,6 +25,7 @@
 #include "crypter.h"
 
 #include <crypto/crypters/aes_cbc_crypter.h>
+#include <crypto/crypters/des_crypter.h>
 
 
 /** 
@@ -57,6 +58,11 @@ crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t ke
 		case ENCR_AES_CBC:
 		{
 			return (crypter_t*)aes_cbc_crypter_create(key_size);
+		}
+		case ENCR_DES:
+		case ENCR_3DES:
+		{
+			return (crypter_t*)des_crypter_create(encryption_algorithm);
 		}
 		default:
 			return NULL;

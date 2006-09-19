@@ -60,6 +60,7 @@ Todo-List for charon
 
 + use dpdaction/dpddelay parameters from ipsec.conf
 / add firewall script support
+- do not link unneeded libraries in bins
 - include only a minimum of NATD payloads
 - implement 3DES to load encrypted pem files
 - implement a "event bus" mechanism

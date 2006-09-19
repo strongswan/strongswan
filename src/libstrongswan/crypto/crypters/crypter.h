@@ -31,17 +31,19 @@ typedef enum encryption_algorithm_t encryption_algorithm_t;
 /**
  * @brief Encryption algorithm, as in IKEv2 RFC 3.3.2.
  * 
- * Currently only the following algorithms are implemented and therefore supported:
+ * Currently only the following algorithms are implemented:
  * - ENCR_AES_CBC
- * 
- * @todo Implement more enryption algorithms, such as 3DES
+ * - ENCR_DES
+ * - ENCR_3DES
  * 
  * @ingroup crypters
  */
 enum encryption_algorithm_t {
 	ENCR_UNDEFINED = 1024,
 	ENCR_DES_IV64 = 1,
+	/** Implemented in class des_crypter_t */
 	ENCR_DES = 2,
+	/** Implemented in class des_crypter_t */
 	ENCR_3DES = 3,
 	ENCR_RC5 = 4,
 	ENCR_IDEA = 5,
@@ -50,9 +52,7 @@ enum encryption_algorithm_t {
 	ENCR_3IDEA = 8,
 	ENCR_DES_IV32 = 9,
 	ENCR_NULL = 11,
-	/**
-	 * Implemented in class aes_cbc_crypter_t.
-	 */
+	/** Implemented in class aes_cbc_crypter_t */
 	ENCR_AES_CBC = 12,
 	ENCR_AES_CTR = 13
 };
@@ -74,9 +74,10 @@ typedef struct crypter_t crypter_t;
  * @ingroup crypters
  */
 struct crypter_t {
+	
 	/**
 	 * @brief Encrypt a chunk of data and allocate space for the encrypted value.
-	 * 
+	 *
 	 * @param this				calling object
 	 * @param data				data to encrypt
 	 * @param iv				initializing vector
@@ -138,8 +139,10 @@ struct crypter_t {
 /**
  * @brief Generic constructor for crypter_t objects.
  * 
- * Currently only the following algorithms are implemented and therefore supported:
+ * Currently only the following algorithms are implemented:
  * - ENCR_AES_CBC
+ * - ENCR_DES
+ * - ENCR_3DES
  * 
  * The key_size is ignored for algorithms with fixed key size.
  * 

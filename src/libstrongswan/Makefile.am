@@ -16,6 +16,7 @@ crypto/signers/hmac_signer.c crypto/signers/hmac_signer.h \
 crypto/signers/signer.c crypto/signers/signer.h \
 crypto/crypters/crypter.c crypto/crypters/crypter.h \
 crypto/crypters/aes_cbc_crypter.c  crypto/crypters/aes_cbc_crypter.h\
+crypto/crypters/des_crypter.c  crypto/crypters/des_crypter.h\
 crypto/hashers/hasher.h crypto/hashers/hasher.c \
 crypto/hashers/sha1_hasher.c crypto/hashers/sha1_hasher.h \
 crypto/hashers/md5_hasher.c  crypto/hashers/md5_hasher.h \
