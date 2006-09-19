@@ -33,25 +33,26 @@ typedef enum hash_algorithm_t hash_algorithm_t;
 /**
  * @brief Algorithms to use for hashing.
  * 
- * Currently only the following algorithms are implemented and therefore supported:
+ * Currently only the following algorithms are implemented:
  * - HASH_MD5
  * - HASH_SHA1
- * 
+ * - HASH_SHA256
+ * - HASH_SHA384
+ * - HASH_SHA512
+ *
  * @ingroup hashers
- * 
  */
 enum hash_algorithm_t {
 	HASH_MD2,
-	/**
-	 * Implemented in class md5_hasher_t.
-	 */
+	/** Implemented in class md5_hasher_t */
 	HASH_MD5,
-	/**
-	 * Implemented in class sha1_hasher_t.
-	 */
+	/** Implemented in class sha1_hasher_t */
 	HASH_SHA1,
+	/** Implemented in class sha2_hasher_t */
 	HASH_SHA256,
+	/** Implemented in class sha2_hasher_t */
 	HASH_SHA384,
+	/** Implemented in class sha2_hasher_t */
 	HASH_SHA512,
 };
 
@@ -68,14 +69,6 @@ typedef struct hasher_t hasher_t;
  * 
  * @b Constructors:
  *  - hasher_create()
- *  - md5_hasher_create()
- *  - sha1_hasher_create()
- * 
- * @see		
- * 			- md5_hasher_t
- * 			- sha1_hasher_t
- * 
- * @todo Implement more hash algorithms
  * 
  * @ingroup hashers
  */
@@ -87,8 +80,8 @@ struct hasher_t {
 	 * an more data can be appended to already hashed data.
 	 * If not, the result is written back and the hasher is reseted.
 	 * 
-	 * @warning: the hash output parameter must hold at least
-	 * hash_t.get_block_size bytes.
+	 * The hash output parameter must hold at least
+	 * hash_t.get_block_size() bytes.
 	 * 
 	 * @param this			calling object
 	 * @param data			data to hash
@@ -118,8 +111,7 @@ struct hasher_t {
 	size_t (*get_hash_size) (hasher_t *this);
 	
 	/**
-	 * @brief Resets the hashers state, which allows
-	 * computation of a completely new hash.
+	 * @brief Resets the hashers state.
 	 * 
 	 * @param this			calling object
 	 */
@@ -145,4 +137,4 @@ struct hasher_t {
  */
 hasher_t *hasher_create(hash_algorithm_t hash_algorithm);
 
-#endif /*HASHER_H_*/
+#endif /* HASHER_H_ */

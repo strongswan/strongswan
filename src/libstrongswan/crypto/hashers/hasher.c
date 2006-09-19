@@ -25,6 +25,7 @@
 #include "hasher.h"
 
 #include <crypto/hashers/sha1_hasher.h>
+#include <crypto/hashers/sha2_hasher.h>
 #include <crypto/hashers/md5_hasher.h>
 
 /**
@@ -50,6 +51,12 @@ hasher_t *hasher_create(hash_algorithm_t hash_algorithm)
 		case HASH_SHA1:
 		{
 			return (hasher_t*)sha1_hasher_create();
+		}
+		case HASH_SHA256:
+		case HASH_SHA384:
+		case HASH_SHA512:
+		{
+			return (hasher_t*)sha2_hasher_create(hash_algorithm);
 		}
 		case HASH_MD5:
 		{

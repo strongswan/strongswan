@@ -40,13 +40,9 @@ typedef enum integrity_algorithm_t integrity_algorithm_t;
  */
 enum integrity_algorithm_t {
 	AUTH_UNDEFINED = 1024,
-	/**
-	 * Implemented in class hmac_signer_t.
-	 */
+	/** Implemented via hmac_signer_t */
 	AUTH_HMAC_MD5_96 = 1,
-	/**
-	 * Implemented in class hmac_signer_t.
-	 */
+	/** Implemented via hmac_signer_t */
 	AUTH_HMAC_SHA1_96 = 2,
 	AUTH_DES_MAC = 3,
 	AUTH_KPDK_MD5 = 4,

@@ -32,12 +32,12 @@
  * String mappings for encryption_algorithm_t.
  */
 mapping_t pseudo_random_function_m[] = {
-{PRF_UNDEFINED, "PRF_UNDEFINED"},
-{PRF_HMAC_MD5, "PRF_HMAC_MD5"},
-{PRF_HMAC_SHA1, "PRF_HMAC_SHA1"},
-{PRF_HMAC_TIGER, "PRF_HMAC_TIGER"},
-{PRF_AES128_CBC, "PRF_AES128_CBC"},
-{MAPPING_END, NULL}
+	{PRF_UNDEFINED, "PRF_UNDEFINED"},
+	{PRF_HMAC_MD5, "PRF_HMAC_MD5"},
+	{PRF_HMAC_SHA1, "PRF_HMAC_SHA1"},
+	{PRF_HMAC_TIGER, "PRF_HMAC_TIGER"},
+	{PRF_AES128_CBC, "PRF_AES128_CBC"},
+	{MAPPING_END, NULL}
 };
 
 /*
@@ -61,8 +61,3 @@ prf_t *prf_create(pseudo_random_function_t pseudo_random_function)
 			return NULL;
 	}
 }
-
-
-
-
-
