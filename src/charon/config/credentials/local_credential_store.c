@@ -1011,6 +1011,11 @@ static void load_secrets(private_local_credential_store_t *this)
 			{
 				char path[PATH_BUF];
 				chunk_t filename;
+
+				char buf[BUF_LEN];
+				chunk_t secret = { buf, BUF_LEN };
+				chunk_t *passphrase = NULL;
+
 				rsa_private_key_t *key;
 
 				err_t ugh = extract_value(&filename, &line);
@@ -1038,7 +1043,20 @@ static void load_secrets(private_local_credential_store_t *this)
 							 filename.len, filename.ptr);
 				}
 
-				key = rsa_private_key_create_from_file(path, NULL);
+				/* check for optional passphrase */
+				if (eat_whitespace(&line))
+				{
+					ugh = extract_secret(&secret, &line);
+					if (ugh != NULL)
+					{
+						this->logger->log(this->logger, ERROR, 
+										  "line %d: malformed passphrase: %s", line_nr, ugh);
+						goto error;
+					}
+					if (secret.len > 0)
+						passphrase = &secret;
+				}
+				key = rsa_private_key_create_from_file(path, passphrase);
 				if (key)
 				{
 					this->private_keys->insert_last(this->private_keys, (void*)key);
