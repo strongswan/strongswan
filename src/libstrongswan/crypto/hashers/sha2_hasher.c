@@ -29,10 +29,6 @@
 
 #include <definitions.h>
 
-#define HASH_SIZE_SHA256 32
-#define HASH_SIZE_SHA384 48
-#define HASH_SIZE_SHA512 64
-
 
 typedef struct private_sha512_hasher_t private_sha512_hasher_t;
 

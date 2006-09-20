@@ -32,8 +32,6 @@
 
 #include <definitions.h>
 
-#define BLOCK_SIZE_MD5 16
-
 
 /* Constants for MD5Transform routine. */
 #define S11 7
@@ -336,8 +334,8 @@ static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *ha
 	MD5Update(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
 	{
-		allocated_hash.ptr = malloc(BLOCK_SIZE_MD5);
-		allocated_hash.len = BLOCK_SIZE_MD5;
+		allocated_hash.ptr = malloc(HASH_SIZE_MD5);
+		allocated_hash.len = HASH_SIZE_MD5;
 
 		MD5Final(this, allocated_hash.ptr);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
@@ -351,7 +349,7 @@ static void allocate_hash(private_md5_hasher_t *this, chunk_t chunk, chunk_t *ha
  */
 static size_t get_hash_size(private_md5_hasher_t *this)
 {
-	return BLOCK_SIZE_MD5;
+	return HASH_SIZE_MD5;
 }
 
 /**

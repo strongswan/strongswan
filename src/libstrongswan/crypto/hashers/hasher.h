@@ -56,6 +56,13 @@ enum hash_algorithm_t {
 	HASH_SHA512,
 };
 
+#define HASH_SIZE_MD2		16
+#define HASH_SIZE_MD5		16
+#define HASH_SIZE_SHA1		20
+#define HASH_SIZE_SHA256	32
+#define HASH_SIZE_SHA384	48
+#define HASH_SIZE_SHA512	64
+
 /**
  * String mappings for hash_algorithm_t.
  */

@@ -30,8 +30,6 @@
 
 #include <definitions.h>
 
-#define BLOCK_SIZE_SHA1 20
-
 /*
  * ugly macro stuff
  */ 
@@ -210,8 +208,8 @@ static void allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *h
 	SHA1Update(this, chunk.ptr, chunk.len);
 	if (hash != NULL)
 	{	
-		allocated_hash.ptr = malloc(BLOCK_SIZE_SHA1);
-		allocated_hash.len = BLOCK_SIZE_SHA1;
+		allocated_hash.ptr = malloc(HASH_SIZE_SHA1);
+		allocated_hash.len = HASH_SIZE_SHA1;
 		
 		SHA1Final(this, allocated_hash.ptr);
 		this->public.hasher_interface.reset(&(this->public.hasher_interface));
@@ -225,7 +223,7 @@ static void allocate_hash(private_sha1_hasher_t *this, chunk_t chunk, chunk_t *h
  */
 static size_t get_hash_size(private_sha1_hasher_t *this)
 {
-	return BLOCK_SIZE_SHA1;
+	return HASH_SIZE_SHA1;
 }
 	
 /**
