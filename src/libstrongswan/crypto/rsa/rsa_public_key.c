@@ -488,7 +488,7 @@ rsa_public_key_t *rsa_public_key_create_from_file(char *filename)
 	chunk_t chunk = CHUNK_INITIALIZER;
 	rsa_public_key_t *pubkey = NULL;
 
-	if (!pem_asn1_load_file(filename, "", "public key", &chunk, &pgp))
+	if (!pem_asn1_load_file(filename, NULL, "public key", &chunk, &pgp))
 		return NULL;
 
 	pubkey = rsa_public_key_create_from_chunk(chunk);

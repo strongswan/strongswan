@@ -759,7 +759,7 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 /*
  * see header
  */
-rsa_private_key_t *rsa_private_key_create_from_file(char *filename, char *passphrase)
+rsa_private_key_t *rsa_private_key_create_from_file(char *filename, chunk_t *passphrase)
 {
 	bool pgp = FALSE;
 	chunk_t chunk = CHUNK_INITIALIZER;

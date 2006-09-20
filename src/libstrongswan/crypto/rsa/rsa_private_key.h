@@ -173,7 +173,7 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t chunk);
  * passphrase is used to decrypt an ecrypted key.
  * 
  * @param filename			filename which holds the key
- * @param passphrase		optional passphase for decryption
+ * @param passphrase		optional passphase for decryption, can be NULL
  * @return 					loaded rsa_private_key_t, or NULL
  * 
  * @todo Implement PEM file loading
@@ -181,6 +181,6 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t chunk);
  * 
  * @ingroup rsa
  */
-rsa_private_key_t *rsa_private_key_create_from_file(char *filename, char *passphrase);
+rsa_private_key_t *rsa_private_key_create_from_file(char *filename, chunk_t *passphrase);
 
 #endif /*RSA_PRIVATE_KEY_H_*/

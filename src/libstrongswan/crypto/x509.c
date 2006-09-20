@@ -1268,7 +1268,7 @@ x509_t *x509_create_from_file(const char *filename, const char *label)
 	chunk_t chunk = CHUNK_INITIALIZER;
 	x509_t *cert = NULL;
 
-	if (!pem_asn1_load_file(filename, "", label, &chunk, &pgp))
+	if (!pem_asn1_load_file(filename, NULL, label, &chunk, &pgp))
 		return NULL;
 
 	cert = x509_create_from_chunk(chunk);

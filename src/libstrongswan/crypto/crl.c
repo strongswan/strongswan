@@ -518,7 +518,7 @@ crl_t *crl_create_from_file(const char *filename)
 	chunk_t chunk = CHUNK_INITIALIZER;
 	crl_t *crl = NULL;
 
-	if (!pem_asn1_load_file(filename, "", "crl", &chunk, &pgp))
+	if (!pem_asn1_load_file(filename, NULL, "crl", &chunk, &pgp))
 		return NULL;
 
 	crl = crl_create_from_chunk(chunk);

@@ -89,38 +89,47 @@ static bool find_boundary(const char* tag, chunk_t *line)
 /*
  * decrypts a DES-EDE-CBC encrypted data block
  */
-static err_t pem_decrypt(chunk_t *blob, chunk_t *iv, char *passphrase)
+static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_size,
+						 chunk_t *iv, chunk_t *passphrase)
 {
 	hasher_t *hasher;
 	crypter_t *crypter;
 	chunk_t hash;
 	chunk_t decrypted;
-	chunk_t pass = {(char*)passphrase, strlen(passphrase)};
-	chunk_t key = {alloca(24), 24};
+	chunk_t key = {alloca(key_size), key_size};
 	u_int8_t padding, *last_padding_pos, *first_padding_pos;
 	
+	if (passphrase == NULL || passphrase->len == 0)
+		return "missing passphrase";
+
 	/* build key from passphrase and IV */
 	hasher = hasher_create(HASH_MD5);
 	hash.len = hasher->get_hash_size(hasher);
 	hash.ptr = alloca(hash.len);
-	hasher->get_hash(hasher, pass, NULL);
+	hasher->get_hash(hasher, *passphrase, NULL);
 	hasher->get_hash(hasher, *iv, hash.ptr);
-	
 	memcpy(key.ptr, hash.ptr, hash.len);
-	
-	hasher->get_hash(hasher, hash, NULL);
-	hasher->get_hash(hasher, pass, NULL);
-	hasher->get_hash(hasher, *iv, hash.ptr);
-	
-	memcpy(key.ptr + hash.len, hash.ptr, key.len - hash.len);
-	
+
+	printf("hash.len: %d, key.len: %d, iv.len: %d\n", hash.len, key.len, iv->len);	
+	if (key.len > hash.len)
+	{
+		hasher->get_hash(hasher, hash, NULL);
+		hasher->get_hash(hasher, *passphrase, NULL);
+		hasher->get_hash(hasher, *iv, hash.ptr);	
+		memcpy(key.ptr + hash.len, hash.ptr, key.len - hash.len);
+	}	
 	hasher->destroy(hasher);
 	
 	/* decrypt blob */
-	crypter = crypter_create(ENCR_3DES, 0);
+	crypter = crypter_create(alg, key_size);
 	crypter->set_key(crypter, key);
-	crypter->decrypt(crypter, *blob, *iv, &decrypted);
+	logger->log_chunk(logger, CONTROL, "  cipher text:", *blob);
+	if (crypter->decrypt(crypter, *blob, *iv, &decrypted) != SUCCESS)
+	{
+		return "data size is not multiple of block size";
+	}
 	memcpy(blob->ptr, decrypted.ptr, blob->len);
+	logger->log_chunk(logger, CONTROL, "  plain text:", *blob);
 	chunk_free(&decrypted);
 	
 	/* determine amount of padding */
@@ -144,7 +153,7 @@ static err_t pem_decrypt(chunk_t *blob, chunk_t *iv, char *passphrase)
  *  RFC 1421 Privacy Enhancement for Electronic Mail, February 1993
  *  RFC 934 Message Encapsulation, January 1985
  */
-err_t pem_to_bin(chunk_t *blob, char *passphrase, bool *pgp)
+err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 {
 	typedef enum {
 		PEM_PRE    = 0,
@@ -154,6 +163,9 @@ err_t pem_to_bin(chunk_t *blob, char *passphrase, bool *pgp)
 		PEM_POST   = 4,
 		PEM_ABORT  = 5
 	} state_t;
+
+	encryption_algorithm_t alg = ENCR_UNDEFINED;
+	size_t key_size;
 
 	bool encrypted = FALSE;
 
@@ -198,6 +210,7 @@ err_t pem_to_bin(chunk_t *blob, char *passphrase, bool *pgp)
 			}
 			if (state == PEM_HEADER)
 			{
+				err_t ugh = NULL;
 				chunk_t name  = CHUNK_INITIALIZER;
 				chunk_t value = CHUNK_INITIALIZER;
 
@@ -210,14 +223,14 @@ err_t pem_to_bin(chunk_t *blob, char *passphrase, bool *pgp)
 
 				/* we are looking for a parameter: value pair */
 				logger->log(logger, CONTROL|LEVEL2, "  %.*s", (int)line.len, line.ptr);
-				if (!extract_parameter_value(&name, &value, &line))
+				ugh = extract_parameter_value(&name, &value, &line);
+				if (ugh != NULL)
 					continue;
 
 				if (match("Proc-Type", &name) && *value.ptr == '4')
 					encrypted = TRUE;
 				else if (match("DEK-Info", &name))
 				{
-					const char *ugh = NULL;
 					size_t len = 0;
 					chunk_t dek;
 
@@ -225,8 +238,25 @@ err_t pem_to_bin(chunk_t *blob, char *passphrase, bool *pgp)
 						dek = value;
 
 					/* we support DES-EDE3-CBC encrypted files, only */
-					if (!match("DES-EDE3-CBC", &dek))
+					if (match("DES-EDE3-CBC", &dek))
+					{
+						alg = ENCR_3DES;
+						key_size = 24;
+					}
+					else if (match("AES-128-CBC", &dek))
+					{
+						alg = ENCR_AES_CBC;
+						key_size = 16;
+					}
+					else if (match("AES-256-CBC", &dek))
+					{
+						alg = ENCR_AES_CBC;
+						key_size = 32;
+					}
+					else
+					{
 						return "encryption algorithm not supported";
+					}
 
 					eat_whitespace(&value);
 					ugh = ttodata(value.ptr, value.len, 16, iv.ptr, 16, &len);
@@ -279,13 +309,13 @@ err_t pem_to_bin(chunk_t *blob, char *passphrase, bool *pgp)
 	if (state != PEM_POST)
 		return "file coded in unknown format, discarded";
 
-	return (encrypted)? pem_decrypt(blob, &iv, passphrase) : NULL;
+	return (encrypted)? pem_decrypt(blob, alg, key_size, &iv, passphrase) : NULL;
 }
 
 /* load a coded key or certificate file with autodetection
  * of binary DER or base64 PEM ASN.1 formats and armored PGP format
  */
-bool pem_asn1_load_file(const char *filename, char *passphrase,
+bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
 						const char *type, chunk_t *blob, bool *pgp)
 {
 	err_t ugh = NULL;
@@ -313,6 +343,9 @@ bool pem_asn1_load_file(const char *filename, char *passphrase,
 			logger->log(logger, CONTROL|LEVEL1, "  file coded in DER format");
 			return TRUE;
 		}
+
+		if (passphrase != NULL)
+			logger->log_bytes(logger, PRIVATE, "  passphrase:", passphrase->ptr, passphrase->len);
 
 		/* try PEM format */
 		ugh = pem_to_bin(blob, passphrase, pgp);
