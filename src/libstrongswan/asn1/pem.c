@@ -165,7 +165,7 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 	} state_t;
 
 	encryption_algorithm_t alg = ENCR_UNDEFINED;
-	size_t key_size;
+	size_t key_size = 0;
 
 	bool encrypted = FALSE;
 

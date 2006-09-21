@@ -220,7 +220,7 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 	bool critical;
 	chunk_t extnID;
 	chunk_t userCertificate;
-	revokedCert_t *revokedCert;
+	revokedCert_t *revokedCert = NULL;
 	chunk_t object;
 	u_int level;
 	int objectID = 0;
@@ -264,11 +264,11 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 				userCertificate = object;
 				break;
 			case CRL_OBJ_REVOCATION_DATE:
-					revokedCert = malloc_thing(revokedCert_t);
-					revokedCert->userCertificate = userCertificate;
-					revokedCert->revocationDate = parse_time(object, level);
-					revokedCert->revocationReason = REASON_UNSPECIFIED;
-					crl->revokedCertificates->insert_last(crl->revokedCertificates, (void *)revokedCert);
+				revokedCert = malloc_thing(revokedCert_t);
+				revokedCert->userCertificate = userCertificate;
+				revokedCert->revocationDate = parse_time(object, level);
+				revokedCert->revocationReason = REASON_UNSPECIFIED;
+				crl->revokedCertificates->insert_last(crl->revokedCertificates, (void *)revokedCert);
 				break;
 			case CRL_OBJ_CRL_ENTRY_EXTN_ID:
 			case CRL_OBJ_EXTN_ID:
@@ -284,9 +284,9 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 				{
 					int extn_oid = known_oid(extnID);
 
-					if (extn_oid == OID_CRL_REASON_CODE)
+					if (revokedCert && extn_oid == OID_CRL_REASON_CODE)
 					{
-						revokedCert->revocationReason =	parse_crl_reasonCode(object);
+						revokedCert->revocationReason = parse_crl_reasonCode(object);
 					}
 					else if (extn_oid == OID_AUTHORITY_KEY_ID)
 					{

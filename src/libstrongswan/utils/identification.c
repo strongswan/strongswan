@@ -547,7 +547,7 @@ static status_t atodn(char *src, chunk_t *dn)
 	int rdn_count = 0;
 	int dn_len = 0;
 	int whitespace = 0;
-	int i;
+	int i = 0;
 	asn1_t rdn_type;
 	state_t state = SEARCH_OID;
 	status_t status = SUCCESS;
