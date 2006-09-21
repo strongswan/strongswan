@@ -49,7 +49,7 @@ char pfkey_v2_parse_c_version[] = "$Id: pfkey_v2_parse.c,v 1.4 2004/06/13 20:35:
 # endif /* if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE) */
 extern int debug_pfkey;
 
-# include freeswan.h"
+#include "freeswan.h"
 
 #include "ipsec_encap.h"
 
