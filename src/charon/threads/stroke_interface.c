@@ -39,6 +39,7 @@
 #include <crypto/x509.h>
 #include <queues/jobs/initiate_job.h>
 #include <queues/jobs/route_job.h>
+#include <utils/leak_detective.h>
 
 #define IKE_PORT	500
 #define PATH_BUF	256
@@ -384,7 +385,8 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			proposal = proposal_create_from_string(PROTO_IKE, proposal_string);
 			if (proposal == NULL)
 			{
-				this->logger->log(this->logger, ERROR, "invalid IKE proposal string: %s", msg->add_conn.algorithms.esp);
+				this->logger->log(this->logger, ERROR, 
+								  "invalid IKE proposal string: %s", proposal_string);
 				my_id->destroy(my_id);
 				other_id->destroy(other_id);
 				my_ts->destroy(my_ts);
@@ -433,7 +435,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			if (proposal == NULL)
 			{
 				this->logger->log(this->logger, ERROR,
-					"invalid ESP proposal string: %s", msg->add_conn.algorithms.esp);
+								  "invalid ESP proposal string: %s", proposal_string);
 				policy->destroy(policy);
 				connection->destroy(connection);
 				return;
@@ -615,14 +617,22 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 	linked_list_t *list;
 	host_t *host;
 	
+	leak_detective_status(this->stroke_logger);
+	
+	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
+							 "job queue load: %d",
+							 charon->job_queue->get_count(charon->job_queue));
+	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
+							 "scheduled events: %d",
+							 charon->event_queue->get_count(charon->event_queue));
 	list = charon->socket->create_local_address_list(charon->socket);
-	this->logger->log(this->logger, CONTROL|LEVEL1,
-					  "listening on %d addresses:",
-					  list->get_count(list));
+	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
+							 "listening on %d addresses:",
+							 list->get_count(list));
 	while (list->remove_first(list, (void**)&host) == SUCCESS)
 	{
-		this->logger->log(this->logger, CONTROL|LEVEL1,
-						  "  %s", host->get_string(host));
+		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
+								 "  %s", host->get_string(host));
 		host->destroy(host);
 		
 	}
@@ -632,8 +642,10 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 	{
 		pop_string(msg, &(msg->status.name));
 	}
-	charon->connections->log_connections(charon->connections, this->stroke_logger, msg->status.name);
-	charon->ike_sa_manager->log_status(charon->ike_sa_manager, this->stroke_logger, msg->status.name);
+	charon->connections->log_connections(charon->connections,
+										 this->stroke_logger, msg->status.name);
+	charon->ike_sa_manager->log_status(charon->ike_sa_manager,
+									   this->stroke_logger, msg->status.name);
 }
 
 /**

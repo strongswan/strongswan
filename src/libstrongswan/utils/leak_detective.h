@@ -23,6 +23,13 @@
 #define LEAK_DETECTIVE_H_
 
 
+#include <utils/logger_manager.h>
+
+/**
+ * Log status information about allocation
+ */
+void leak_detective_status(logger_t *logger);
+
 #ifdef LEAK_DETECTIVE
 
 /**

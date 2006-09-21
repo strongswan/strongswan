@@ -37,7 +37,6 @@
 #include "leak_detective.h"
 
 #include <types.h>
-#include <utils/logger_manager.h>
 
 #ifdef LEAK_DETECTIVE
 
@@ -62,7 +61,10 @@ static void uninstall_hooks(void);
 static void *malloc_hook(size_t, const void *);
 static void *realloc_hook(void *, size_t, const void *);
 static void free_hook(void*, const void *);
-static void load_excluded_functions();
+
+static u_int count_malloc = 0;
+static u_int count_free = 0;
+static u_int count_realloc = 0;
 
 typedef struct memory_header_t memory_header_t;
 
@@ -269,6 +271,7 @@ void *malloc_hook(size_t bytes, const void *caller)
 	memory_header_t *hdr;
 	
 	pthread_mutex_lock(&mutex);
+	count_malloc++;
 	uninstall_hooks();
 	hdr = malloc(bytes + sizeof(memory_header_t));
 	/* set to something which causes crashes */
@@ -307,6 +310,7 @@ void free_hook(void *ptr, const void *caller)
 	}
 	
 	pthread_mutex_lock(&mutex);
+	count_free++;
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
@@ -352,6 +356,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	hdr = old - sizeof(memory_header_t);
 	
 	pthread_mutex_lock(&mutex);
+	count_realloc++;
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
@@ -397,6 +402,40 @@ void leak_detective_cleanup()
 {
 	uninstall_hooks();
 	report_leaks();
+}
+
+/**
+ * Log memory allocation statistics
+ */
+void leak_detective_status(logger_t *logger)
+{
+	u_int blocks = 0;
+	size_t bytes = 0;
+	memory_header_t *hdr = &first_header;
+	
+	pthread_mutex_lock(&mutex);
+	while ((hdr = hdr->next))
+	{
+		blocks++;
+		bytes += hdr->bytes;
+	}
+	pthread_mutex_unlock(&mutex);
+	
+	logger->log(logger, CONTROL|LEVEL1, "allocation statistics:");
+	logger->log(logger, CONTROL|LEVEL1, "  call stats: malloc: %d, free: %d, realloc: %d",
+			count_malloc, count_free, count_realloc);
+	logger->log(logger, CONTROL|LEVEL1, "  allocated %d blocks, total size %d bytes (avg. %d bytes)",
+			blocks, bytes, bytes/blocks);
+}
+
+#else /* !LEAK_DETECTION */
+
+/**
+ * Dummy when !using LEAK_DETECTIVE
+ */
+void leak_detective_status(logger_t *logger)
+{
+
 }
 
 #endif /* LEAK_DETECTION */
