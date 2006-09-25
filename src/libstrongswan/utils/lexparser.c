@@ -98,7 +98,8 @@ err_t extract_value(chunk_t *value, chunk_t *line)
 
 	if (!eat_whitespace(line))
 	{
-		return "missing value";
+		*value = CHUNK_INITIALIZER;
+		return NULL;
 	}
 	if (*line->ptr == '\'' || *line->ptr == '"')
 	{
