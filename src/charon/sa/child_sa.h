@@ -311,6 +311,7 @@ struct child_sa_t {
  * @param soft_lifetime	time before rekeying
  * @param hard_lifteime	time before delete
  * @param script		updown script to use when calling child_sa_t.script()
+ * @param hostaccess	allow host access (needed by updown script)
  * @param use_natt		TRUE if NAT traversal is used
  * @return				child_sa_t object
  * 
@@ -319,6 +320,6 @@ struct child_sa_t {
 child_sa_t * child_sa_create(u_int32_t rekey_reqid, host_t *me, host_t *other,
 							 identification_t *my_id, identification_t* other_id,
 							 u_int32_t soft_lifetime, u_int32_t hard_lifetime,
-							 char *script, bool use_natt);
+							 char *script, bool hostaccess, bool use_natt);
 
 #endif /*CHILD_SA_H_*/
