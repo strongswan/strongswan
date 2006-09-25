@@ -1,3 +1,35 @@
+strongswan-4.0.4
+----------------
+
+- Implemented full support for IPv6-in-IPv6 tunnels.
+
+- Added configuration options for dead peer detection in IKEv2. dpd_action
+  types "clear", "hold" and "restart" are supported. The dpd_timeout
+  value is not used, as the normal retransmission policy applies to
+  detect dead peers. The dpd_delay parameter enables sending of empty
+  informational message to detect dead peers in case of inactivity.
+
+- Added support for preshared keys in IKEv2. PSK keys configured in
+  ipsec.secrets are loaded. The authby parameter specifies the authentication
+  method to authentificate ourself, the other peer may use PSK or RSA.
+
+- Changed retransmission policy to respect the keyingtries parameter.
+
+- Added private key decryption. PEM keys encrypted with AES or DES/3DES are
+  supported.
+
+- Implemented DES/3DES algorithms in libstrongswan. 3DES can be used to
+  encrypt IKE traffic.
+
+- Implemented SHA-256/384/512 in libstrongswan, allows usage of certificates
+  signed with such a hash algorithm.
+
+- Added initial support for updown scripts. The actions up-host/client and
+  down-host/client are executed. The leftfirewall=yes parameter
+  uses the default updown script to insert dynamic firewall rules, a custom
+  updown script may be specified with the leftupdown parameter.
+
+
 strongswan-4.0.3
 ----------------
 

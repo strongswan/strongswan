@@ -1,3 +1,76 @@
+ strongswan-4.0.4 / R:1289 
+===========================
+
+fixed some compiler warnings
+extended statusall output
+  added job/event-queue statistics
+  added allocation statistics when using LEAK_DETECTIVE
+fixed include typo
+public declaration of all HASH_SIZEs in hasher.h
+support of encrypted private key files
+added copyright notice to sha2_hasher
+included SHA2 in build process
+implemented sha2_hasher which supports SHA-256, SHA-384 and SHA-512
+added support for 3DES encryption algorithm in IKE
+fixed the ids parsing bug
+fixed the ids parsing bug
+updated TODOs
+fixed memleak
+fixed proper handling of id parsing errors
+proper return value when no PSK found
+added HOST_ACCESS for firewall script as default
+more debugging output for PSK authentication
+some cleanups here and there
+added auth_method field
+added auth_method field
+cosmetics
+verify_emsa_pkcs1_signature returns status_t
+cosmetics
+added PSK support
+enabled firewall support
+proper error handling for socket creation
+handle certificate parsing error more generous
+fixed certificate verification bug!
+fixed memleak when receiving invalid certificate
+version bump to 4.0.4
+version bump to 4.0.4
+two new test scenarios
+fixed path to images directory
+implemented updown script to handle firewalling
+add priority management for kernel policy
+let ROUTED policies installed, until manuall removed
+introduced new naming scheme to allow proper shutdown of IKE/CHILD_SAs
+ike_sa_manager cleanups
+implemented handling of dpdaction and dpddelay ipsec.conf parameters
+reuse reqid when a ROUTED child_sa gets INSTALLED
+fixed a bug in retransmission code
+added support for the "keyingtries" ipsec.conf parameter
+added support for the "dpddelay" ipsec.conf parameter
+done some work for "dpdaction" behavior
+some other cleanups and fixes
+fixed a at-least-one-year-old bug which caused crashed in the scheduler
+added raw socket filter for IPv6
+implemented NAT detection for IPv6
+removed unneeded constructor
+initial support for IPv6 (more testing needed)
+  socket works (without v6 filter)
+  traffic selector handle IPv4/v4 cleanly
+    improvements in traffic selector code
+  kernel interface accepts v6 traffic selectors and hosts
+  host_t class has full IPv6 support
+added stddef.h include for compilers which do not support the offsetof() directive
+moved interface enumeration code to socket, where it belongs
+query interfaces every time we need it to respect changes in network config
+added address listing on startup and "ipsec statusall"
+version bump of UML kernel to 2.6.17.11
+fixed crash bug when doing "ipsec down" with an unknown connection
+added name property in CHILD_SA, allows proper status output
+fixed bug which prevented port float when nat is detected
+version bumps
+'sha' and 'sha1' are now treated as synonyms
+updated Changelog and other docs
+
+
  strongswan-4.0.3 / R:1235 
 ===========================
 

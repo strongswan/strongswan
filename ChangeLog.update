@@ -6,7 +6,7 @@ echo " strongswan-4.x.x / R:$current " > ChangeLog.tmp
 echo "===========================" >> ChangeLog.tmp
 echo "" >> ChangeLog.tmp
 
-svn log -r $current:$last | grep -v "| mwilli |" | grep -v "| andreas | " | grep -v ^$ | grep -v ^------ >> ChangeLog.tmp
+svn log -r $current:$last | grep -v "| martin |" | grep -v "| andreas | " | grep -v ^$ | grep -v ^------ >> ChangeLog.tmp
 
 echo "" >> ChangeLog.tmp
 echo "" >> ChangeLog.tmp
