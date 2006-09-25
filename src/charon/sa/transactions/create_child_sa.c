@@ -302,6 +302,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 							this->policy->get_soft_lifetime(this->policy),
 							this->policy->get_hard_lifetime(this->policy),
 							this->policy->get_updown(this->policy),
+							this->policy->get_hostaccess(this->policy),
 							use_natt);
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposals) != SUCCESS)
@@ -717,6 +718,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
 											 soft_lifetime, hard_lifetime,
 											 this->policy->get_updown(this->policy),
+											 this->policy->get_hostaccess(this->policy),
 											 use_natt);
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 			if (install_child_sa(this, FALSE) != SUCCESS)
