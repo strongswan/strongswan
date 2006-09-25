@@ -715,6 +715,11 @@ static bool equals_dn(private_identification_t *this, private_identification_t *
 static bool matches_binary(private_identification_t *this, private_identification_t *other,
 	int *wildcards)
 {	
+	if (other->type == ID_ANY)
+	{
+		*wildcards = MAX_WILDCARDS;
+		return TRUE;
+	}
 	*wildcards = 0;
 	return this->type == other->type && chunk_equals(this->encoded, other->encoded);
 }
