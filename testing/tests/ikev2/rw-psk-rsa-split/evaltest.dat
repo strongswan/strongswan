@@ -1,0 +1,12 @@
+moon::cat /var/log/auth.log::authentication of 'carol@strongswan.org' with pre-shared key successful::YES
+moon::cat /var/log/auth.log::authentication of 'dave@strongswan.org' with pre-shared key successful::YES
+moon::cat /var/log/auth.log::authentication of '@moon.strongswan.org' with RSA signature (myself)::YES
+moon::ipsec statusall::rw.*INSTALLED::YES
+carol::ipsec statusall::home.*ESTABLISHED::YES
+dave::ipsec statusall::home.*ESTABLISHED::YES
+carol::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+dave::ping -c 1 PH_IP_ALICE::64 bytes from PH_IP_ALICE: icmp_seq=1::YES
+moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
+moon::tcpdump::IP dave.strongswan.org > moon.strongswan.org: ESP::YES
+moon::tcpdump::IP moon.strongswan.org > dave.strongswan.org: ESP::YES
