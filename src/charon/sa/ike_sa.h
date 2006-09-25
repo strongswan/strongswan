@@ -371,12 +371,12 @@ struct ike_sa_t {
 	void (*enable_natt) (ike_sa_t *this, bool local);
 
 	/**
-	 * @brief Set the delay before starting a DPD check in case of inactivity.
+	 * @brief Apply connection parameters for this IKE_SA.
 	 * 
 	 * @param this			calling object
-	 * @param delay			dpd delay in seconds
+	 * @param connection	connection definition
 	 */
-	void (*set_dpd_delay) (ike_sa_t *this, u_int32_t delay);
+	void (*apply_connection) (ike_sa_t *this, connection_t *connection);
 
 	/**
 	 * @brief Sends a DPD request to the peer.

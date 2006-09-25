@@ -300,11 +300,12 @@ static void set_name(private_ike_sa_t *this, char* name)
 }
 
 /**
- * Implementation of ike_sa_t.set_dpd_delay.
+ * Implementation of ike_sa_t.apply_connection.
  */
-static void set_dpd_delay(private_ike_sa_t *this, u_int32_t delay)
+static void apply_connection(private_ike_sa_t *this, connection_t *connection)
 {
-	this->dpd_delay = delay;
+	this->dpd_delay = connection->get_dpd_delay(connection);
+	this->retrans_sequences = connection->get_retrans_seq(connection);
 }
 
 /**
@@ -2058,7 +2059,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.enable_natt = (void(*)(ike_sa_t*, bool)) enable_natt;
 	this->public.is_natt_enabled = (bool(*)(ike_sa_t*)) is_natt_enabled;
 	this->public.set_lifetimes = (void(*)(ike_sa_t*,u_int32_t,u_int32_t))set_lifetimes;
-	this->public.set_dpd_delay = (void(*)(ike_sa_t*,u_int32_t))set_dpd_delay;
+	this->public.apply_connection = (void(*)(ike_sa_t*,connection_t*))apply_connection;
 	this->public.rekey = (status_t(*)(ike_sa_t*))rekey;
 	this->public.get_rekeying_transaction = (void*(*)(ike_sa_t*))get_rekeying_transaction;
 	this->public.set_rekeying_transaction = (void(*)(ike_sa_t*,void*))set_rekeying_transaction;
