@@ -28,7 +28,41 @@
 #include <utils/identification.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
-#include <encoding/payloads/auth_payload.h>
+
+typedef enum auth_method_t auth_method_t;
+
+/**
+ * AUTH Method to use.
+ * 
+ * @ingroup config
+ */
+enum auth_method_t {
+	/**
+	 * Computed as specified in section 2.15 of RFC using 
+	 * an RSA private key over a PKCS#1 padded hash.
+	 */
+	RSA_DIGITAL_SIGNATURE = 1,
+	
+	/** 
+	 * Computed as specified in section 2.15 of RFC using the 
+	 * shared key associated with the identity in the ID payload 
+	 * and the negotiated prf function
+	 */
+	SHARED_KEY_MESSAGE_INTEGRITY_CODE = 2,
+	
+	/**
+	 * Computed as specified in section 2.15 of RFC using a 
+	 * DSS private key over a SHA-1 hash.
+	 */
+	DSS_DIGITAL_SIGNATURE = 3,
+};
+
+/**
+ * string mappings for auth_method_t.
+ * 
+ * @ingroup config
+ */
+extern enum_names auth_method_names;
 
 
 typedef enum dpd_action_t dpd_action_t;
@@ -41,18 +75,20 @@ typedef enum dpd_action_t dpd_action_t;
  * @ingroup config
  */
 enum dpd_action_t {
+	/** DPD disabled */
+	DPD_NONE,
 	/** remove CHILD_SA without replacement */
-	DPD_CLEAR = 1,
+	DPD_CLEAR,
 	/** route the CHILD_SA to resetup when needed */
-	DPD_ROUTE = 2,
+	DPD_ROUTE,
 	/** restart CHILD_SA in a new IKE_SA, immediately */
-	DPD_RESTART = 3,
+	DPD_RESTART,
 };
 
 /**
- * String mappings for dpd_action_t
+ * String mappings for dpd_action_t.
  */
-extern mapping_t dpd_action_m[];
+extern enum_names dpd_action_names;
 
 
 typedef struct policy_t policy_t;
@@ -99,6 +135,14 @@ struct policy_t {
 	 * @return				other id
 	 */
 	identification_t *(*get_other_id) (policy_t *this);
+	
+	/**
+	 * @brief Get the authentication method to use.
+	 * 
+	 * @param this		calling object
+	 * @return			authentication method
+	 */
+	auth_method_t (*get_auth_method) (policy_t *this);
 	
 	/**
 	 * @brief Get configured traffic selectors for our site.
@@ -228,6 +272,14 @@ struct policy_t {
 	char* (*get_updown) (policy_t *this);
 	
 	/**
+	 * @brief Get hostaccess flag
+	 * 
+	 * @param this			calling object
+	 * @return				value of hostaccess flag
+	 */
+	bool (*get_hostaccess) (policy_t *this);
+	
+	/**
 	 * @brief What should be done with a CHILD_SA, when other peer does not respond.
 	 *
 	 * @param this 		calling object
@@ -292,10 +344,12 @@ struct policy_t {
  * @param name				name of the policy
  * @param my_id 			identification_t for ourselves
  * @param other_id 			identification_t for the remote guy
+ * @param auth_method		Authentication method to use for our(!) auth data
  * @param hard_lifetime		lifetime before deleting an SA
  * @param soft_lifetime		lifetime before rekeying an SA
  * @param jitter			range of randomization time
  * @param updown			updown script to execute on up/down event
+ * @param hostaccess		allow access to the host itself (used by the updown script)
  * @param dpd_action		what to to with a CHILD_SA when other peer does not respond
  * @return 					policy_t object
  * 
@@ -303,7 +357,10 @@ struct policy_t {
  */
 policy_t *policy_create(char *name, 
 						identification_t *my_id, identification_t *other_id,
+						auth_method_t auth_method,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime,
-						u_int32_t jitter, char *updown, dpd_action_t dpd_action);
+						u_int32_t jitter,
+						char *updown, bool hostaccess,
+						dpd_action_t dpd_action);
 
 #endif /* POLICY_H_ */

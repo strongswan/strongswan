@@ -179,7 +179,7 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 		identification_t *found_my_id = found->get_my_id(found);
 		identification_t *found_other_id = found->get_other_id(found);
 		
-		this->logger->log(this->logger, CONTROL|LEVEL1,
+		this->logger->log(this->logger, CONTROL,
 						  "found matching policy '%s': %s...%s (prio=%d)",
 						  found->get_name(found),
 						  found_my_id->get_string(found_my_id),

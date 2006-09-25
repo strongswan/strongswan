@@ -31,12 +31,30 @@
 #include <utils/identification.h>
 #include <utils/logger_manager.h>
 
-mapping_t dpd_action_m[] = {
-	{DPD_CLEAR, "DPD_CLEAR"},
-	{DPD_ROUTE, "DPD_ROUTE"},
-	{DPD_RESTART, "DPD_RESTART"},
-	{MAPPING_END, NULL},
+/** 
+ * String mappings for auth_method_t.
+ */
+static const char *const auth_method_name[] = {
+	"RSA signature",
+	"pre-shared key",
+	"DSS signature"
 };
+
+enum_names auth_method_names =
+    { RSA_DIGITAL_SIGNATURE, DSS_DIGITAL_SIGNATURE, auth_method_name, NULL };
+
+/** 
+ * String mappings for dpd_action_t.
+ */
+static const char *const dpd_action_name[] = {
+	"DPD_NONE",
+	"DPD_CLEAR",
+	"DPD_ROUTE",
+	"DPD_RESTART"
+};
+
+enum_names dpd_action_names =
+    { DPD_NONE, DPD_RESTART, dpd_action_name, NULL };
 
 typedef struct private_policy_t private_policy_t;
 
@@ -71,6 +89,11 @@ struct private_policy_t {
 	identification_t *other_id;
 	
 	/**
+	 * Method to use for own authentication data
+	 */
+	auth_method_t auth_method;
+	
+	/**
 	 * we have a cert issued by this CA
 	 */
 	identification_t *my_ca;
@@ -84,6 +107,11 @@ struct private_policy_t {
 	 * updown script
 	 */
 	char *updown;
+	
+	/**
+	 * allow host access
+	 */
+	bool hostaccess;
 	
 	/**
 	 * list for all proposals
@@ -149,6 +177,14 @@ static identification_t *get_my_id(private_policy_t *this)
 static identification_t *get_other_id(private_policy_t *this)
 {
 	return this->other_id;
+}
+
+/**
+ * Implementation of connection_t.auth_method_t.
+ */
+static auth_method_t get_auth_method(private_policy_t *this)
+{
+	return this->auth_method;
 }
 
 /**
@@ -341,6 +377,14 @@ static char* get_updown(private_policy_t *this)
 }
 
 /**
+ * Implementation of policy_t.get_hostaccess
+ */
+static bool get_hostaccess(private_policy_t *this)
+{
+	return this->hostaccess;
+}
+
+/**
  * Implements policy_t.get_dpd_action
  */
 static dpd_action_t get_dpd_action(private_policy_t *this)
@@ -461,40 +505,46 @@ static void destroy(private_policy_t *this)
  * Described in header-file
  */
 policy_t *policy_create(char *name, identification_t *my_id, identification_t *other_id,
+						auth_method_t auth_method,
 						u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
-						u_int32_t jitter, char *updown, dpd_action_t dpd_action)
+						u_int32_t jitter, char *updown, bool hostaccess,
+						dpd_action_t dpd_action)
 {
 	private_policy_t *this = malloc_thing(private_policy_t);
 
 	/* public functions */
-	this->public.get_name = (char *(*)(policy_t*))get_name;
-	this->public.get_my_id = (identification_t*(*)(policy_t*))get_my_id;
-	this->public.get_other_id = (identification_t*(*)(policy_t*))get_other_id;
-	this->public.get_my_traffic_selectors = (linked_list_t*(*)(policy_t*,host_t*))get_my_traffic_selectors;
-	this->public.get_other_traffic_selectors = (linked_list_t*(*)(policy_t*,host_t*))get_other_traffic_selectors;
-	this->public.select_my_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*,host_t*))select_my_traffic_selectors;
-	this->public.select_other_traffic_selectors = (linked_list_t*(*)(policy_t*,linked_list_t*,host_t*))select_other_traffic_selectors;
-	this->public.get_proposals = (linked_list_t*(*)(policy_t*))get_proposals;
-	this->public.select_proposal = (proposal_t*(*)(policy_t*,linked_list_t*))select_proposal;
-	this->public.add_my_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_my_traffic_selector;
-	this->public.add_other_traffic_selector = (void(*)(policy_t*,traffic_selector_t*))add_other_traffic_selector;
-	this->public.add_proposal = (void(*)(policy_t*,proposal_t*))add_proposal;
-	this->public.add_authorities = (void(*)(policy_t*,identification_t*, identification_t*))add_authorities;
-	this->public.get_updown = (char*(*)(policy_t*))get_updown;
-	this->public.get_dpd_action = (dpd_action_t(*)(policy_t*))get_dpd_action;
+	this->public.get_name = (char* (*) (policy_t*))get_name;
+	this->public.get_my_id = (identification_t* (*) (policy_t*))get_my_id;
+	this->public.get_other_id = (identification_t* (*) (policy_t*))get_other_id;
+	this->public.get_auth_method = (auth_method_t (*) (policy_t*)) get_auth_method;
+	this->public.get_my_traffic_selectors = (linked_list_t* (*) (policy_t*,host_t*))get_my_traffic_selectors;
+	this->public.get_other_traffic_selectors = (linked_list_t* (*) (policy_t*,host_t*))get_other_traffic_selectors;
+	this->public.select_my_traffic_selectors = (linked_list_t* (*) (policy_t*,linked_list_t*,host_t*))select_my_traffic_selectors;
+	this->public.select_other_traffic_selectors = (linked_list_t* (*) (policy_t*,linked_list_t*,host_t*))select_other_traffic_selectors;
+	this->public.get_proposals = (linked_list_t* (*) (policy_t*))get_proposals;
+	this->public.select_proposal = (proposal_t* (*) (policy_t*,linked_list_t*))select_proposal;
+	this->public.add_my_traffic_selector = (void (*) (policy_t*,traffic_selector_t*))add_my_traffic_selector;
+	this->public.add_other_traffic_selector = (void (*) (policy_t*,traffic_selector_t*))add_other_traffic_selector;
+	this->public.add_proposal = (void (*) (policy_t*,proposal_t*))add_proposal;
+	this->public.add_authorities = (void (*) (policy_t*,identification_t*,identification_t*))add_authorities;
+	this->public.get_updown = (char* (*) (policy_t*))get_updown;
+	this->public.get_hostaccess = (bool (*) (policy_t*))get_hostaccess;
+	this->public.get_dpd_action = (dpd_action_t (*) (policy_t*))get_dpd_action;
 	this->public.get_soft_lifetime = (u_int32_t (*) (policy_t *))get_soft_lifetime;
 	this->public.get_hard_lifetime = (u_int32_t (*) (policy_t *))get_hard_lifetime;
-	this->public.get_ref = (void(*)(policy_t*))get_ref;
-	this->public.destroy = (void(*)(policy_t*))destroy;
+	this->public.get_ref = (void (*) (policy_t*))get_ref;
+	this->public.destroy = (void (*) (policy_t*))destroy;
 	
 	/* apply init values */
 	this->name = strdup(name);
 	this->my_id = my_id;
 	this->other_id = other_id;
+	this->auth_method = auth_method;
 	this->hard_lifetime = hard_lifetime;
 	this->soft_lifetime = soft_lifetime;
 	this->jitter = jitter;
 	this->updown = (updown == NULL) ? NULL : strdup(updown);
+	this->hostaccess = hostaccess;
 	this->dpd_action = dpd_action;
 	
 	/* initialize private members*/
