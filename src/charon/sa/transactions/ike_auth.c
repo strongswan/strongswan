@@ -262,7 +262,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	}
 	
 	/* build certificate payload. TODO: Handle certreq from init_ike_sa. */
-	if (this->connection->get_auth_method(this->connection) == RSA_DIGITAL_SIGNATURE
+	if (this->policy->get_auth_method(this->policy) == RSA_DIGITAL_SIGNATURE
 	&&  this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
 	{
 		cert_payload_t *cert_payload;
@@ -296,7 +296,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		auth_method_t auth_method;
 		status_t status;
 		
-		auth_method = this->connection->get_auth_method(this->connection);
+		auth_method = this->policy->get_auth_method(this->policy);
 		authenticator = authenticator_create(this->ike_sa, auth_method);
 		status = authenticator->compute_auth_data(authenticator,
 												  &auth_payload,
@@ -328,6 +328,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
 										 soft_lifetime, hard_lifetime,
 										 this->policy->get_updown(this->policy),
+										 this->policy->get_hostaccess(this->policy),
 										 enable_natt);
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
@@ -711,7 +712,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		response->add_payload(response, (payload_t*)idr_response);
 	}
 	
-	if (this->connection->get_auth_method(this->connection) == RSA_DIGITAL_SIGNATURE
+	if (this->policy->get_auth_method(this->policy) == RSA_DIGITAL_SIGNATURE
 	&&  this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
 	{	/* build certificate payload */
 		x509_t *cert;
@@ -741,7 +742,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		auth_method_t auth_method;
 		status_t status;
 		
-		auth_method = this->connection->get_auth_method(this->connection);
+		auth_method = this->policy->get_auth_method(this->policy);
 		authenticator = authenticator_create(this->ike_sa, auth_method);
 		status = authenticator->verify_auth_data(authenticator, auth_request,
 												 this->init_request,
@@ -813,6 +814,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			this->child_sa = child_sa_create(this->reqid, me, other, my_id, other_id,
 											 soft_lifetime, hard_lifetime, 
 											 this->policy->get_updown(this->policy),
+											 this->policy->get_hostaccess(this->policy),
 											 use_natt);
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 			if (install_child_sa(this, FALSE) != SUCCESS)
@@ -957,7 +959,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		identification_t *my_id;
 		status_t status;
 		
-		auth_method = this->connection->get_auth_method(this->connection);
+		auth_method = this->policy->get_auth_method(this->policy);
 		authenticator = authenticator_create(this->ike_sa, auth_method);
 		my_id = this->policy->get_my_id(this->policy);
 
