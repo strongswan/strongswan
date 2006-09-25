@@ -478,7 +478,7 @@ static void dpd_detected(private_ike_sa_t *this)
 		
 		this->logger->log(this->logger, CONTROL, "dpd action for %s is %s", 
 						  policy->get_name(policy),
-						  mapping_find(dpd_action_m, action));
+						  enum_name(&dpd_action_names, action));
 		
 		switch (action)
 		{
@@ -1196,10 +1196,12 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 			/* deny */
 			return FAILED;
 	}
-	
+
 	child_sa = child_sa_create(0, this->my_host, this->other_host,
 							   this->my_id, this->other_id,
-							   0, 0, NULL, FALSE);
+							   0, 0,
+							   NULL, policy->get_hostaccess(policy),
+							   FALSE);
 	child_sa->set_name(child_sa, policy->get_name(policy));
 	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
 	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);
