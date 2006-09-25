@@ -29,16 +29,6 @@
 #include <utils/logger.h>
 
 /** 
- * String mappings for auth_method_t.
- */
-mapping_t auth_method_m[] = {
-	{RSA_DIGITAL_SIGNATURE, "RSA"},
-	{SHARED_KEY_MESSAGE_INTEGRITY_CODE, "SHARED_KEY"},
-	{DSS_DIGITAL_SIGNATURE, "DSS"},
-	{MAPPING_END, NULL}
-};
-
-/** 
  * String mappings for cert_policy_t.
  */
 mapping_t cert_policy_m[] = {
@@ -99,11 +89,6 @@ struct private_connection_t {
 	 * Host information of other host.
 	 */	
 	host_t *other_host;
-	
-	/**
-	 * Method to use for own authentication data
-	 */
-	auth_method_t auth_method;
 	
 	/**
 	 * Interval to send DPD liveness checks on inactivity
@@ -251,14 +236,6 @@ static void add_proposal(private_connection_t *this, proposal_t *proposal)
 }
 
 /**
- * Implementation of connection_t.auth_method_t.
- */
-static auth_method_t get_auth_method(private_connection_t *this)
-{
-	return this->auth_method;
-}
-
-/**
  * Implementation of connection_t.get_dpd_delay.
  */
 static u_int32_t get_dpd_delay(private_connection_t *this)
@@ -384,7 +361,6 @@ connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t cert_policy,
 								 cert_policy_t certreq_policy,
 								 host_t *my_host, host_t *other_host,
-								 auth_method_t auth_method,
 								 u_int32_t dpd_delay,
 								 u_int32_t retrans_sequences,
 								 u_int32_t hard_lifetime,
@@ -402,7 +378,6 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->public.get_proposals = (linked_list_t*(*)(connection_t*))get_proposals;
 	this->public.select_proposal = (proposal_t*(*)(connection_t*,linked_list_t*))select_proposal;
 	this->public.add_proposal = (void(*)(connection_t*, proposal_t*)) add_proposal;
-	this->public.get_auth_method = (auth_method_t(*)(connection_t*)) get_auth_method;
 	this->public.get_dpd_delay = (u_int32_t(*)(connection_t*)) get_dpd_delay;
 	this->public.get_retrans_seq = (u_int32_t(*)(connection_t*)) get_retrans_seq;
 	this->public.get_dh_group = (diffie_hellman_group_t(*)(connection_t*)) get_dh_group;
@@ -420,7 +395,6 @@ connection_t * connection_create(char *name, bool ikev2,
 	this->certreq_policy = certreq_policy;
 	this->my_host = my_host;
 	this->other_host = other_host;
-	this->auth_method = auth_method;
 	this->dpd_delay = dpd_delay;
 	this->retrans_sequences = retrans_sequences;
 	this->hard_lifetime = hard_lifetime;

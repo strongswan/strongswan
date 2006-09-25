@@ -31,43 +31,6 @@
 #include <config/proposal.h>
 #include <crypto/diffie_hellman.h>
 
-
-typedef enum auth_method_t auth_method_t;
-
-/**
- * AUTH Method to use.
- * 
- * @ingroup config
- */
-enum auth_method_t {
-	/**
-	 * Computed as specified in section 2.15 of RFC using 
-	 * an RSA private key over a PKCS#1 padded hash.
-	 */
-	RSA_DIGITAL_SIGNATURE = 1,
-	
-	/** 
-	 * Computed as specified in section 2.15 of RFC using the 
-	 * shared key associated with the identity in the ID payload 
-	 * and the negotiated prf function
-	 */
-	SHARED_KEY_MESSAGE_INTEGRITY_CODE = 2,
-	
-	/**
-	 * Computed as specified in section 2.15 of RFC using a 
-	 * DSS private key over a SHA-1 hash.
-	 */
-	DSS_DIGITAL_SIGNATURE = 3,
-};
-
-/**
- * string mappings for auth method.
- * 
- * @ingroup config
- */
-extern mapping_t auth_method_m[];
-
-
 typedef enum cert_policy_t cert_policy_t;
 
 /**
@@ -91,7 +54,7 @@ enum cert_policy_t {
 };
 
 /**
- * string mappings for certpolicy_t.
+ * string mappings for certpolic_t.
  * 
  * @ingroup config
  */
@@ -162,14 +125,6 @@ struct connection_t {
 	 * @return			selected proposal, or NULL if none matches.
 	 */
 	proposal_t *(*select_proposal) (connection_t *this, linked_list_t *proposals);
-	
-	/**
-	 * @brief Get the authentication method to use.
-	 * 
-	 * @param this		calling object
-	 * @return			authentication method
-	 */
-	auth_method_t (*get_auth_method) (connection_t *this);
 	
 	/**
 	 * @brief Get the DPD check interval.
@@ -313,7 +268,6 @@ struct connection_t {
  * @param cert_req_policy	certificate request send policy
  * @param my_host			host_t representing local address
  * @param other_host		host_t representing remote address
- * @param auth_method		Authentication method to use for our(!) auth data
  * @param dpd_delay			interval of DPD liveness checks
  * @param retrans_sequences	number of retransmit sequences to use
  * @param hard_lifetime		lifetime before deleting an IKE_SA
@@ -326,7 +280,6 @@ struct connection_t {
 connection_t * connection_create(char *name, bool ikev2,
 								 cert_policy_t cert_pol, cert_policy_t req_pol,
 								 host_t *my_host, host_t *other_host,
-								 auth_method_t auth_method,
 								 u_int32_t dpd_delay, u_int32_t retrans_sequences,
 								 u_int32_t hard_lifetime, u_int32_t soft_lifetime, 
 								 u_int32_t jitter);
