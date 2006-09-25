@@ -38,7 +38,7 @@ mapping_t child_sa_state_m[] = {
 	{CHILD_INSTALLED, "INSTALLED"},
 	{CHILD_ROUTED, "ROUTED"},
 	{CHILD_REKEYING, "REKEYING"},
-	{CHILD_DELETING, "DELETING"},
+	{CHILD_DELETING, "DELETNG"},
 	{MAPPING_END, NULL}
 };
 
@@ -64,7 +64,7 @@ struct sa_policy_t {
 typedef struct private_child_sa_t private_child_sa_t;
 
 /**
- * Private data of a child_sa_t object.
+ * Private data of a child_sa_t bject.
  */
 struct private_child_sa_t {
 	/**
@@ -160,6 +160,11 @@ struct private_child_sa_t {
 	 * Updown script
 	 */
 	char *script;
+
+	/**
+	 * Allow host access
+	 */
+	bool hostaccess;
 
 	/**
 	 * Specifies if NAT traversal is used
@@ -305,7 +310,7 @@ static void updown(private_child_sa_t *this, bool up)
 				"PLUTO_PEER_CLIENT_MASK='%s' "
 				"PLUTO_PEER_PORT='%u' "
 				"PLUTO_PEER_PROTOCOL='%u' "
-				"PLUTO_HOST_ACCESS='1' "
+				"%s"
 				"%s",
 				 up ? "up" : "down",
 				 streq(this->me.addr->get_string(this->me.addr),
@@ -326,6 +331,7 @@ static void updown(private_child_sa_t *this, bool up)
 				 other_client, other_client_mask,
 				 policy->other_ts->get_from_port(policy->other_ts),
 				 policy->other_ts->get_protocol(policy->other_ts),
+				 this->hostaccess? "PLUTO_HOST_ACCESS='1' " : "",
 				 this->script);
 		free(ifname);
 		free(my_client);
@@ -1112,7 +1118,7 @@ static void destroy(private_child_sa_t *this)
 child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 							 identification_t *my_id, identification_t *other_id,
 							 u_int32_t soft_lifetime, u_int32_t hard_lifetime,
-							 char *script, bool use_natt)
+							 char *script, bool hostaccess, bool use_natt)
 {
 	static u_int32_t reqid = REQID_START;
 	private_child_sa_t *this = malloc_thing(private_child_sa_t);
@@ -1150,6 +1156,7 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->alloc_ah_spi = 0;
 	this->alloc_esp_spi = 0;
 	this->script = script ? strdup(script) : NULL;
+	this->hostaccess = hostaccess;
 	this->use_natt = use_natt;
 	this->soft_lifetime = soft_lifetime;
 	this->hard_lifetime = hard_lifetime;
