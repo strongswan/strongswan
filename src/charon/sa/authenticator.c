@@ -25,6 +25,7 @@
 
 #include "authenticator.h"
 
+#include <config/policies/policy.h>
 #include <daemon.h>
 
 /**
@@ -202,13 +203,16 @@ static status_t verify_auth_data (private_authenticator_t *this,
 									identification_t *other_id,
 									bool initiator)
 {
-	switch(auth_payload->get_auth_method(auth_payload))
+	status_t status;
+	chunk_t       auth_data   = auth_payload->get_data(auth_payload);
+	auth_method_t auth_method = auth_payload->get_auth_method(auth_payload);
+
+	switch (auth_method)
 	{
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
 		{
-			chunk_t auth_data = auth_payload->get_data(auth_payload);
 			chunk_t shared_key;
-			status_t status;
+			chunk_t my_auth_data;
 						
 			status = charon->credentials->get_shared_key(charon->credentials,
 														 my_id,
@@ -218,42 +222,26 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			{
 				this->logger->log(this->logger, ERROR, "no shared key found for '%s' and '%s'",
 								  my_id->get_string(my_id), other_id->get_string(other_id));
-				return status;	
+				chunk_free(&shared_key);
+				break;
 			}
 			
-			chunk_t my_auth_data = this->build_shared_key_signature(this,
-																	last_received_packet,
-																	my_nonce,
-																	other_id,
-																	initiator,
-																	shared_key);
+			my_auth_data = this->build_shared_key_signature(this,
+															last_received_packet,
+															my_nonce,
+															other_id,
+															initiator,
+															shared_key);
 			chunk_free(&shared_key);
-			
-			if (auth_data.len != my_auth_data.len)
-			{
-				chunk_free(&my_auth_data);
-				status = FAILED;
-			}
-			else if (memcmp(auth_data.ptr,my_auth_data.ptr, my_auth_data.len) == 0)
-			{
-				this->logger->log(this->logger, CONTROL, "authentication of '%s' with pre-shared key successful",
-										other_id->get_string(other_id));
-				status = SUCCESS;
-			}
-			else
-			{
-				this->logger->log(this->logger, ERROR, "authentication of '%s' with pre-shared key failed",
-										other_id->get_string(other_id));
-				status = FAILED;
-			}
+
+			status = (auth_data.len == my_auth_data.len && memeq(auth_data.ptr, my_auth_data.ptr, my_auth_data.len))
+					 ? SUCCESS : FAILED;
 			chunk_free(&my_auth_data);
-			return status;
+		    break;
 		}
 		case RSA_DIGITAL_SIGNATURE:
 		{
-			status_t status;
 			chunk_t octets;
-			chunk_t auth_data = auth_payload->get_data(auth_payload);
 
 			rsa_public_key_t *public_key =
 				charon->credentials->get_trusted_public_key(charon->credentials, other_id);
@@ -262,30 +250,27 @@ static status_t verify_auth_data (private_authenticator_t *this,
 			{
 				this->logger->log(this->logger, ERROR, "no RSA public key found for '%s'",
 								  other_id->get_string(other_id));
-				return NOT_FOUND;	
+				status = NOT_FOUND;
+				break;
 			}
 			
 			octets = this->build_tbs_octets(this, last_received_packet, my_nonce, other_id, initiator);
-			
+
 			status = public_key->verify_emsa_pkcs1_signature(public_key, octets, auth_data);
-			if (status == SUCCESS)
-			{
-				this->logger->log(this->logger, CONTROL, "authentication of '%s' with RSA signature successful",
-										other_id->get_string(other_id));
-			}
-			else
-			{
-				this->logger->log(this->logger, ERROR, "authentication of '%s' with RSA signature failed",
-										other_id->get_string(other_id));
-			}
 			chunk_free(&octets);
-			return status;
+			break;
 		}
 		default:
 		{
 			return NOT_SUPPORTED;
 		}
 	}
+	
+	this->logger->log(this->logger, CONTROL, "authentication of '%s' with %s %s",
+					  other_id->get_string(other_id),
+					  enum_name(&auth_method_names, auth_method),
+					  (status == SUCCESS)? "successful":"failed");
+	return status;
 }
 
 /**
@@ -299,6 +284,10 @@ static status_t compute_auth_data (private_authenticator_t *this,
 								   identification_t *other_id,
 								   bool initiator)
 {	
+	this->logger->log(this->logger, CONTROL, "authentication of '%s' with %s (myself)",
+					  my_id->get_string(my_id),
+					  enum_name(&auth_method_names, this->auth_method));
+
 	switch (this->auth_method)
 	{
 		case SHARED_KEY_MESSAGE_INTEGRITY_CODE:
