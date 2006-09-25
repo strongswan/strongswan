@@ -354,16 +354,15 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	{
 		other_ca = identification_create_from_string("%any");
 	}
-	this->logger->log(this->logger, CONTROL|LEVEL1, "  my ca:   '%s'", my_ca->get_string(my_ca));
-	this->logger->log(this->logger, CONTROL|LEVEL1, "  other ca:'%s'", other_ca->get_string(other_ca));
-	this->logger->log(this->logger, CONTROL|LEVEL1, "  updown:'%s'", msg->add_conn.me.updown);
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  my ca:   '%s'", my_ca->get_string(my_ca));
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  other ca:'%s'", other_ca->get_string(other_ca));
+	this->logger->log(this->logger, CONTROL|LEVEL2, "  updown:'%s'", msg->add_conn.me.updown);
 
 	connection = connection_create(msg->add_conn.name,
 								   msg->add_conn.ikev2,
 								   msg->add_conn.me.sendcert,
 								   msg->add_conn.other.sendcert,
 								   my_host, other_host,
-								   msg->add_conn.auth_method,
 								   msg->add_conn.dpd.delay,
 								   msg->add_conn.rekey.tries,
 								   msg->add_conn.rekey.ike_lifetime,
@@ -411,10 +410,12 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	
 	policy = policy_create(msg->add_conn.name, my_id, other_id,
+						   msg->add_conn.auth_method,
 						   msg->add_conn.rekey.ipsec_lifetime,
 						   msg->add_conn.rekey.ipsec_lifetime - msg->add_conn.rekey.margin,
 						   msg->add_conn.rekey.margin * msg->add_conn.rekey.fuzz / 100, 
-						   msg->add_conn.me.updown, msg->add_conn.dpd.action);
+						   msg->add_conn.me.updown, msg->add_conn.me.hostaccess,
+						   msg->add_conn.dpd.action);
 	policy->add_my_traffic_selector(policy, my_ts);
 	policy->add_other_traffic_selector(policy, other_ts);
 	policy->add_authorities(policy, my_ca, other_ca);
