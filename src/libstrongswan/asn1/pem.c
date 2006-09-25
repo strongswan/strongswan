@@ -29,6 +29,8 @@
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 
+#define PKCS5_SALT_LEN	8	/* bytes */
+
 static logger_t *logger = NULL;
 
 /**
@@ -94,6 +96,7 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 {
 	hasher_t *hasher;
 	crypter_t *crypter;
+	chunk_t salt = { iv->ptr, PKCS5_SALT_LEN };
 	chunk_t hash;
 	chunk_t decrypted;
 	chunk_t key = {alloca(key_size), key_size};
@@ -107,15 +110,14 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 	hash.len = hasher->get_hash_size(hasher);
 	hash.ptr = alloca(hash.len);
 	hasher->get_hash(hasher, *passphrase, NULL);
-	hasher->get_hash(hasher, *iv, hash.ptr);
+	hasher->get_hash(hasher, salt, hash.ptr);
 	memcpy(key.ptr, hash.ptr, hash.len);
 
-	printf("hash.len: %d, key.len: %d, iv.len: %d\n", hash.len, key.len, iv->len);	
 	if (key.len > hash.len)
 	{
 		hasher->get_hash(hasher, hash, NULL);
 		hasher->get_hash(hasher, *passphrase, NULL);
-		hasher->get_hash(hasher, *iv, hash.ptr);	
+		hasher->get_hash(hasher, salt, hash.ptr);	
 		memcpy(key.ptr + hash.len, hash.ptr, key.len - hash.len);
 	}	
 	hasher->destroy(hasher);
@@ -123,13 +125,11 @@ static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_s
 	/* decrypt blob */
 	crypter = crypter_create(alg, key_size);
 	crypter->set_key(crypter, key);
-	logger->log_chunk(logger, CONTROL, "  cipher text:", *blob);
 	if (crypter->decrypt(crypter, *blob, *iv, &decrypted) != SUCCESS)
 	{
 		return "data size is not multiple of block size";
 	}
 	memcpy(blob->ptr, decrypted.ptr, blob->len);
-	logger->log_chunk(logger, CONTROL, "  plain text:", *blob);
 	chunk_free(&decrypted);
 	
 	/* determine amount of padding */
@@ -247,6 +247,11 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					{
 						alg = ENCR_AES_CBC;
 						key_size = 16;
+					}
+					else if (match("AES-192-CBC", &dek))
+					{
+						alg = ENCR_AES_CBC;
+						key_size = 24;
 					}
 					else if (match("AES-256-CBC", &dek))
 					{
