@@ -581,6 +581,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 	{
 		this->ike_sa->set_name(this->ike_sa, name);
 	}
+	this->ike_sa->set_dpd_delay(this->ike_sa,
+								this->connection->get_dpd_delay(this->connection));
 	
 	/* Precompute NAT-D hashes for incoming NAT notify comparison */
 	ike_sa_id = request->get_ike_sa_id(request);

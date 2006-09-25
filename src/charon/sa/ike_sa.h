@@ -371,6 +371,14 @@ struct ike_sa_t {
 	void (*enable_natt) (ike_sa_t *this, bool local);
 
 	/**
+	 * @brief Set the delay before starting a DPD check in case of inactivity.
+	 * 
+	 * @param this			calling object
+	 * @param delay			dpd delay in seconds
+	 */
+	void (*set_dpd_delay) (ike_sa_t *this, u_int32_t delay);
+
+	/**
 	 * @brief Sends a DPD request to the peer.
 	 *
 	 * To check if a peer is still alive, periodic
