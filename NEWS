@@ -15,8 +15,8 @@ strongswan-4.0.4
 
 - Changed retransmission policy to respect the keyingtries parameter.
 
-- Added private key decryption. PEM keys encrypted with AES or DES/3DES are
-  supported.
+- Added private key decryption. PEM keys encrypted with AES-128/192/256
+  or 3DES are supported.
 
 - Implemented DES/3DES algorithms in libstrongswan. 3DES can be used to
   encrypt IKE traffic.
