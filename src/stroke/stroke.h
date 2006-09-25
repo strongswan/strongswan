@@ -82,6 +82,7 @@ struct stroke_end_t {
 	char *subnet;
 	int subnet_mask;
 	int sendcert;
+	bool hostaccess;
 	u_int8_t protocol;
 	u_int16_t port;
 };

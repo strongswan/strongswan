@@ -126,6 +126,7 @@ static int add_connection(char *name,
 	msg.add_conn.me.cert = NULL;
 	msg.add_conn.me.ca = NULL;
 	msg.add_conn.me.sendcert = 1;
+	msg.add_conn.me.hostaccess = FALSE;
 	msg.add_conn.me.protocol = 0;
 	msg.add_conn.me.port = 0;
 	
@@ -136,6 +137,7 @@ static int add_connection(char *name,
 	msg.add_conn.other.cert = NULL;
 	msg.add_conn.other.ca = NULL;
 	msg.add_conn.other.sendcert = 1;
+	msg.add_conn.other.hostaccess = FALSE;
 	msg.add_conn.other.protocol = 0;
 	msg.add_conn.other.port = 0;
 	
