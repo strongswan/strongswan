@@ -22,14 +22,12 @@
  */
 
 #include <syslog.h>
-#include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
 #include <pthread.h>
 
 #include "logger.h"
-
 
 /**
  * Maximum length of a log entry (only used for logger_s.log).
@@ -180,37 +178,40 @@ static int get_priority(log_level_t loglevel)
 }
 
 /**
- * Implementation of logger_t.log.
- *
- * Yes, logg is written wrong :-).
+ * Implementation of logger_t.logv.
  */
-static void logg(private_logger_t *this, log_level_t loglevel, const char *format, ...)
+static void logv(private_logger_t *this, log_level_t loglevel, const char *format, va_list args)
 {
 	if ((this->level & loglevel) == loglevel)
 	{
 		char buffer[MAX_LOG];
-		va_list args;
 		
-
 		if (this->output == NULL)
 		{
 			/* syslog */
 			prepend_prefix(this, loglevel, format, buffer);
-			va_start(args, format);
 			vsyslog(get_priority(loglevel), buffer, args);
-			va_end(args);
 		}
 		else
 		{
 			/* File output */
 			prepend_prefix(this, loglevel, format, buffer);
-			va_start(args, format);
 			vfprintf(this->output, buffer, args);
-			va_end(args);
 			fprintf(this->output, "\n");
 		}
-
 	}
+}
+
+/**
+ * Implementation of logger_t.log.
+ */
+static void logg(private_logger_t *this, log_level_t loglevel, const char *format, ...)
+{
+	va_list args;
+	
+	va_start(args, format);
+	logv(this, loglevel, format, args);
+	va_end(args);
 }
 
 /**
@@ -357,6 +358,7 @@ logger_t *logger_create(char *logger_name, log_level_t log_level, bool log_threa
 	
 	/* public functions */
 	this->public.log = (void(*)(logger_t*,log_level_t,const char*,...))logg;
+	this->public.logv = (void(*)(logger_t*,log_level_t,const char*,va_list))logv;
 	this->public.log_bytes = (void(*)(logger_t*, log_level_t, const char*, const char*,size_t))log_bytes;
 	this->public.log_chunk = log_chunk;
 	this->public.enable_level = (void(*)(logger_t*,log_level_t))enable_level;

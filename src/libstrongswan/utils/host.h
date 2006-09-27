@@ -35,6 +35,14 @@
 
 #include <types.h>
 
+
+/**
+ * printf() specifier to print a host.
+ * The specifier option '#' does include the port number, e.g.:
+ * printf("my host is %#H\n", my_host);
+ */
+#define HOST_PRINTF_SPEC 'H'
+
 typedef enum host_diff_t host_diff_t;
 
 /**
@@ -105,17 +113,6 @@ struct host_t {
 	 * @return				family
 	 */
 	int (*get_family) (host_t *this);
-	
-	/** 
-	 * @brief Get the address of this host as a string
-	 * 
-	 * Mostly used for debugging purposes. String
-	 * points to internal data.
-	 * 
-	 * @param this			object
-	 * @return				address string, 
-	 */
-	char* (*get_string) (host_t *this);
 	
 	/** 
 	 * @brief Checks if the ip address of host is set to default route.
@@ -190,21 +187,7 @@ struct host_t {
 };
 
 /**
- * @brief Constructor to create a host_t object from an address string
- *
- * @param family 		Address family to use for this object, such as AF_INET or AF_INET6
- * @param address		string of an address, such as "152.96.193.130"
- * @param port			port number
- * @return 				
- * 						- host_t object 
- * 						- NULL, if family not supported/invalid string.
- * 
- * @ingroup network
- */
-host_t *host_create(int family, char *address, u_int16_t port);
-
-/**
- * @brief Same as host_create(), but guesses the family.
+ * @brief Constructor to create a host_t object from an address string.
  *
  * @param string		string of an address, such as "152.96.193.130"
  * @param port			port number
@@ -241,6 +224,5 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port);
  * @ingroup network
  */
 host_t *host_create_from_sockaddr(sockaddr_t *sockaddr);
-
 
 #endif /*HOST_H_*/

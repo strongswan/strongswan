@@ -151,6 +151,21 @@ struct chunk_t {
 extern chunk_t CHUNK_INITIALIZER;
 
 /**
+ * Printf() hook character to dump a chunk using printf.
+ * The argument supplied to printf() is a pointer to a chunk.
+ * E.g. printf("chunk xy is: %B", &xy);
+ */
+#define CHUNK_PRINTF_SPEC 'B'
+
+/**
+ * Printf() hook character to dump a chunk using printf. 
+ * Two arguments are supplied for one format string charactar, 
+ * first a pointer to the buffer, and as second the length of the buffer.
+ * E.g. printf("buffer xy is: %b", buffer, sizeof(buffer));
+ */
+#define BYTES_PRINTF_SPEC 'b'
+
+/**
  * Initialize a chunk to a static buffer
  */
 #define chunk_from_buf(str) { str, sizeof(str) }

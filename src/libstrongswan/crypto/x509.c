@@ -519,7 +519,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 		if (id_type != ID_ANY)
 		{
 			identification_t *gn = identification_create_from_encoding(id_type, object);
-			logger->log(logger, CONTROL|LEVEL2, "  '%s'", gn->get_string(gn));
+			logger->log(logger, CONTROL|LEVEL2, "  '%D'", gn);
 			return gn;
         }
 		objectID++;
@@ -789,7 +789,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_ISSUER:
 				cert->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				logger->log(logger, CONTROL|LEVEL1, "  '%s'", cert->issuer->get_string(cert->issuer));
+				logger->log(logger, CONTROL|LEVEL1, "  '%D'", cert->issuer);
 				break;
 			case X509_OBJ_NOT_BEFORE:
 				cert->notBefore = parse_time(object, level);
@@ -799,7 +799,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_SUBJECT:
 				cert->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				logger->log(logger, CONTROL|LEVEL1, "  '%s'", cert->subject->get_string(cert->subject));
+				logger->log(logger, CONTROL|LEVEL1, "  '%D'", cert->subject);
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
 				if (parse_algorithmIdentifier(object, level, NULL) != OID_RSA_ENCRYPTION)
@@ -1144,8 +1144,8 @@ static void log_certificate(const private_x509_t *this, logger_t *logger, bool u
 
 	timetoa(time_buf, TIMETOA_BUF, &this->installed, utc);
 	logger->log(logger, CONTROL, "%s", time_buf);
-	logger->log(logger, CONTROL, "       subject: '%s'", subject->get_string(subject));
-	logger->log(logger, CONTROL, "       issuer:  '%s'", issuer->get_string(issuer));
+	logger->log(logger, CONTROL, "       subject: '%D'", subject);
+	logger->log(logger, CONTROL, "       issuer:  '%D'", issuer);
 	
 	chunk_to_hex(buf, BUF_LEN, this->serialNumber);
 	logger->log(logger, CONTROL, "       serial:   %s", buf);

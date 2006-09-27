@@ -28,6 +28,10 @@
 #include "types.h"
 
 #define MAX_WILDCARDS     14
+/**
+ * printf() specifier to print a identification.
+ */
+#define IDENTIFICATION_PRINTF_SPEC 'D'
 
 typedef enum id_type_t id_type_t;
 
@@ -162,16 +166,6 @@ struct identification_t {
 	id_type_t (*get_type) (identification_t *this);
 	
 	/**
-	 * @brief Get a string representation of this id.
-	 * 
-	 * @warning Result points to internal data, do NOT free!
-	 * 
-	 * @param this		the identification_t object
-	 * @return 			string
-	 */
-	char *(*get_string) (identification_t *this);
-	
-	/**
 	 * @brief Check if two identification_t objects are equal.
 	 * 
 	 * @param this		the identification_t object
@@ -268,6 +262,5 @@ identification_t * identification_create_from_string(char *string);
  * @ingroup utils
  */
 identification_t * identification_create_from_encoding(id_type_t type, chunk_t encoded);
-
 
 #endif /* IDENTIFICATION_H_ */

@@ -27,39 +27,6 @@
 
 #include <stddef.h>
 
-/* stolen from FreeS/WAN */
-#if linux
-# if defined(i386) && !defined(__i386__)
-#  define __i386__ 1
-#  define MYHACKFORTHIS 1
-# endif
-# include <endian.h>
-# ifdef MYHACKFORTHIS
-#  undef __i386__
-#  undef MYHACKFORTHIS
-# endif
-#elif !(defined(BIG_ENDIAN) && defined(LITTLE_ENDIAN) && defined(BYTE_ORDER))
- /* we don't know how to do this, so we require the macros to be defined
-  * with compiler flags:
-  *    -DBIG_ENDIAN=4321 -DLITTLE_ENDIAN=1234 -DBYTE_ORDER=BIG_ENDIAN
-  * or -DBIG_ENDIAN=4321 -DLITTLE_ENDIAN=1234 -DBYTE_ORDER=LITTLE_ENDIAN
-  * Thse match the GNU definitions
-  */
-# include <sys/endian.h>
-#endif
-
-#ifndef BIG_ENDIAN
- #error "BIG_ENDIAN must be defined"
-#endif
-
-#ifndef LITTLE_ENDIAN
- #error "LITTLE_ENDIAN must be defined"
-#endif
-
-#ifndef BYTE_ORDER
- #error "BYTE_ORDER must be defined"
-#endif
-
 #define BITS_PER_BYTE	8
 #define RSA_MIN_OCTETS	(1024 / BITS_PER_BYTE)
 #define RSA_MIN_OCTETS_UGH	"RSA modulus too small for security: less than 1024 bits"
@@ -103,11 +70,13 @@
 
 /**
  * Macro to allocate a sized type.
- * 
- * @param thing 	object on which a sizeof is performed
- * @return 			poiner to allocated memory
  */
 #define malloc_thing(thing) ((thing*)malloc(sizeof(thing)))
+
+/**
+ * Assign a function as a class method
+ */
+#define ASSIGN(method, function) (method = (typeof(method))function)
 
 
 /**
@@ -132,7 +101,6 @@ struct mapping_t
 	 */
 	char *string;
 };
-
 
 /**
  * @brief Find a mapping_string in the mapping[].

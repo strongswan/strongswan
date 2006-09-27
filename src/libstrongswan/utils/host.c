@@ -23,6 +23,7 @@
  */
 
 #include <string.h>
+#include <printf.h>
 
 #include "host.h"
 
@@ -37,11 +38,6 @@ struct private_host_t {
 	 * Public data
 	 */
 	host_t public;
-	
-	/**
-	 * string representation of host
-	 */
-	char *string;
 	
 	/**
 	 * low-lewel structure, wich stores the address
@@ -108,57 +104,74 @@ static bool is_anyaddr(private_host_t *this)
 }
 
 /**
- * implements host_t.get_string
+ * output handler in printf()
  */
-static char *get_string(private_host_t *this)
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
 {
-	return this->string;
+	private_host_t *this = *((private_host_t**)(args[0]));
+	char buffer[INET6_ADDRSTRLEN];
+	void *address;
+	u_int16_t port;
+	
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	
+	if (is_anyaddr(this))
+	{
+		return fprintf(stream, "%%any");
+	}
+	
+	switch (this->address.sa_family)
+	{
+		case AF_INET:
+			address = &this->address4.sin_addr;
+			port = this->address4.sin_port;
+			break;
+		case AF_INET6:
+			address = &this->address6.sin6_addr;
+			port = this->address6.sin6_port;
+			break;
+		default:
+			return fprintf(stream, "(family not supported)");
+	}
+	
+	if (inet_ntop(this->address.sa_family, address,
+				  buffer, sizeof(buffer)) == NULL)
+	{
+		return fprintf(stream, "(address conversion failed)");
+	}
+	
+	if (info->alt)
+	{
+		return fprintf(stream, "%s[%d]", buffer, ntohs(port));
+	}
+	else
+	{
+		return fprintf(stream, "%s", buffer);
+	}
 }
 
 /**
- * Compute the string value
+ * arginfo handler in printf()
  */
-static void set_string(private_host_t *this)
+static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
 {
-	if (is_anyaddr(this))
+	if (n > 0)
 	{
-		this->string = strdup("%any");
-		return;
+		argtypes[0] = PA_POINTER;
 	}
-	
-	switch (this->address.sa_family) 
-	{
-		case AF_INET:
-		case AF_INET6:
-		{
-			char buffer[INET6_ADDRSTRLEN];
-			void *address;
-			
-			if (this->address.sa_family == AF_INET)
-			{
-				address = &this->address4.sin_addr;
-			}
-			else
-			{
-				address = &this->address6.sin6_addr;
-			}
-			
-			if (inet_ntop(this->address.sa_family, address,
-						  buffer, sizeof(buffer)) != NULL)
-			{
-				this->string = strdup(buffer);
-			}
-			else
-			{
-				this->string = strdup("(address conversion failed)");
-			}
-			return;
-		}
-		default:
-		{
-			this->string = strdup("(family not supported)");
-		}
-	}
+	return 1;
+}
+
+/**
+ * register printf() handlers
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(HOST_PRINTF_SPEC, print, print_arginfo);
 }
 
 /**
@@ -252,10 +265,6 @@ static private_host_t *clone(private_host_t *this)
 	private_host_t *new = malloc_thing(private_host_t);
 	
 	memcpy(new, this, sizeof(private_host_t));
-	if (this->string)
-	{
-		new->string = strdup(this->string);
-	}
 	return new;
 }
 
@@ -359,7 +368,6 @@ static bool equals(private_host_t *this, private_host_t *other)
  */
 static void destroy(private_host_t *this)
 {
-	free(this->string);
 	free(this);
 }
 
@@ -374,7 +382,6 @@ static private_host_t *host_create_empty(void)
 	this->public.get_sockaddr_len = (socklen_t*(*) (host_t*))get_sockaddr_len;
 	this->public.clone = (host_t* (*) (host_t*))clone;
 	this->public.get_family = (int (*) (host_t*))get_family;
-	this->public.get_string = (char* (*) (host_t *))get_string;
 	this->public.get_address = (chunk_t (*) (host_t *)) get_address;
 	this->public.get_port = (u_int16_t (*) (host_t *))get_port;
 	this->public.set_port = (void (*) (host_t *,u_int16_t))set_port;
@@ -384,51 +391,7 @@ static private_host_t *host_create_empty(void)
 	this->public.is_anyaddr = (bool (*) (host_t *)) is_anyaddr;
 	this->public.destroy = (void (*) (host_t*))destroy;
 	
-	this->string = NULL;
-	
 	return this;
-}
-
-/*
- * Described in header.
- */
-host_t *host_create(int family, char *address, u_int16_t port)
-{
-	private_host_t *this = host_create_empty();
-	
-	this->address.sa_family = family;
-
-	switch (family)
-	{
-		case AF_INET:
-		{
-			if (inet_pton(family, address, &this->address4.sin_addr) <=0)
-			{
-				break;
-			}
-			this->address4.sin_port = htons(port);
-			this->socklen = sizeof(struct sockaddr_in);
-			set_string(this);
-			return &this->public;
-		}
-		case AF_INET6:
-		{
-			if (inet_pton(family, address, &this->address6.sin6_addr) <=0)
-			{
-				break;
-			}
-			this->address6.sin6_port = htons(port);
-			this->socklen = sizeof(struct sockaddr_in6);
-			set_string(this);
-			return &this->public;
-		}
-		default:
-		{
-			break;
-		}
-	}
-	free(this);
-	return NULL;
 }
 
 /*
@@ -457,7 +420,6 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 			}
 			this->address4.sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
-			set_string(this);
 			return &this->public;
 		}
 		case AF_INET6:
@@ -468,7 +430,6 @@ host_t *host_create_from_string(char *string, u_int16_t port)
 			}
 			this->address6.sin6_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in6);
-			set_string(this);
 			return &this->public;
 		}
 		default:
@@ -499,7 +460,6 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 			memcpy(&(this->address4.sin_addr.s_addr), address.ptr,4);
 			this->address4.sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
-			set_string(this);
 			return &(this->public);
 		}
 		case AF_INET6:
@@ -511,7 +471,6 @@ host_t *host_create_from_chunk(int family, chunk_t address, u_int16_t port)
 			memcpy(&(this->address6.sin6_addr.s6_addr), address.ptr, 16);
 			this->address6.sin6_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in6);
-			set_string(this);
 			return &this->public;
 		}
 		default:
@@ -534,14 +493,12 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 		{
 			memcpy(&this->address4, sockaddr, sizeof(struct sockaddr_in));
 			this->socklen = sizeof(struct sockaddr_in);
-			set_string(this);
 			return &this->public;
 		}
 		case AF_INET6:
 		{
 			memcpy(&this->address6, sockaddr, sizeof(struct sockaddr_in6));
 			this->socklen = sizeof(struct sockaddr_in6);
-			set_string(this);
 			return &this->public;
 		}
 		default:

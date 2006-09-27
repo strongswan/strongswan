@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <pthread.h>
+#include <printf.h>
 
 #include "types.h"
 
@@ -184,6 +185,123 @@ void chunk_to_hex(char *buf, size_t buflen, chunk_t chunk)
 		buflen -= 2; chunk.len--;
 	}
 	*buf = '\0';
+}
+
+/**
+ * Number of bytes per line to dump raw data
+ */
+#define BYTES_PER_LINE 16
+
+/**
+ * output handler in printf() for byte ranges
+ */
+static int print_bytes(FILE *stream, const struct printf_info *info,
+					   const void *const *args)
+{
+	char *bytes = *((void**)(args[0]));
+	int len = *((size_t*)(args[1]));
+	
+	char buffer[BYTES_PER_LINE * 3];
+	char ascii_buffer[BYTES_PER_LINE + 1];
+	char *buffer_pos = buffer;
+	char *bytes_pos  = bytes;
+	char *bytes_roof = bytes + len;
+	int line_start = 0;
+	int i = 0;
+	int total_written = 0;
+	
+	total_written = fprintf(stream, "=> %d bytes @ %p", len, bytes);
+	if (total_written < 0)
+	{
+		return total_written;
+	}
+	
+	while (bytes_pos < bytes_roof)
+	{
+		static char hexdig[] = "0123456789ABCDEF";
+		
+		*buffer_pos++ = hexdig[(*bytes_pos >> 4) & 0xF];
+		*buffer_pos++ = hexdig[ *bytes_pos       & 0xF];
+
+		ascii_buffer[i++] =
+				(*bytes_pos > 31 && *bytes_pos < 127) ? *bytes_pos : '.';
+
+		if (++bytes_pos == bytes_roof || i == BYTES_PER_LINE) 
+		{
+			int padding = 3 * (BYTES_PER_LINE - i);
+			int written;
+			
+			while (padding--)
+			{
+				*buffer_pos++ = ' ';
+			}
+			*buffer_pos++ = '\0';
+			ascii_buffer[i] = '\0';
+			
+			written = fprintf(stream, "\n%4d: %s  %s",
+							  line_start, buffer, ascii_buffer);
+			if (written < 0)
+			{
+				return written;
+			}
+			total_written += written;
+			
+			buffer_pos = buffer;
+			line_start += BYTES_PER_LINE;
+			i = 0;
+		}
+		else
+		{
+			*buffer_pos++ = ' ';
+		}
+	}
+	return total_written;
+}
+
+/**
+ * output handler in printf() for chunks
+ */
+static int print_chunk(FILE *stream, const struct printf_info *info,
+					   const void *const *args)
+{
+	chunk_t *chunk = *((chunk_t**)(args[0]));
+	
+	const void *new_args[] = {&chunk->ptr, &chunk->len};
+	return print_bytes(stream, info, new_args);
+}
+
+/**
+ * arginfo handler in printf() for chunks
+ */
+static int print_chunk_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * arginfo handler in printf() for byte ranges
+ */
+static int print_bytes_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 1)
+	{
+		argtypes[0] = PA_POINTER;
+		argtypes[1] = PA_INT;
+	}
+	return 2;
+}
+
+/**
+ * register printf() handlers for chunk and byte ranges
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(CHUNK_PRINTF_SPEC, print_chunk, print_chunk_arginfo);
+	register_printf_function(BYTES_PRINTF_SPEC, print_bytes, print_bytes_arginfo);
 }
 
 /**

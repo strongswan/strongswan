@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <printf.h>
 
 #include "definitions.h"
 #include "identification.h"
@@ -178,11 +179,6 @@ struct private_identification_t {
 	 * Public interface.
 	 */
 	identification_t public;
-	
-	/**
-	 * String representation of this ID.
-	 */
-	char *string;
 	
 	/**
 	 * Encoded representation of this ID.
@@ -675,21 +671,25 @@ static id_type_t get_type(private_identification_t *this)
 {
 	return this->type;
 }
-	
-/**
- * Implementation of identification_t.get_string.
- */
-static char *get_string(private_identification_t *this)
-{
-	return this->string;
-}
 
 /**
  * Implementation of identification_t.contains_wildcards.
  */
 static bool contains_wildcards(private_identification_t *this)
 {
-	return this->type == ID_ANY || strchr(this->string, '*') != NULL;
+	switch (this->type)
+	{
+		case ID_ANY:
+			return TRUE;
+		case ID_FQDN:
+		case ID_RFC822_ADDR:
+			return memchr(this->encoded.ptr, '*', this->encoded.len) != NULL;
+		case ID_DER_ASN1_DN:
+			/* TODO */
+		default:
+			return FALSE;
+		
+	}
 }
 
 /**
@@ -698,13 +698,15 @@ static bool contains_wildcards(private_identification_t *this)
  */
 static bool equals_binary(private_identification_t *this, private_identification_t *other)
 {
-	return this->type == other->type && chunk_equals(this->encoded, other->encoded);
+	return this->type == other->type && 
+							chunk_equals(this->encoded, other->encoded);
 }
 
 /**
  * Special implementation of identification_t.equals for ID_DER_ASN1_DN.
  */
-static bool equals_dn(private_identification_t *this, private_identification_t *other)
+static bool equals_dn(private_identification_t *this,
+					  private_identification_t *other)
 {
 	return same_dn(this->encoded, other->encoded);
 }
@@ -712,24 +714,25 @@ static bool equals_dn(private_identification_t *this, private_identification_t *
 /**
  * Default implementation of identification_t.matches.
  */
-static bool matches_binary(private_identification_t *this, private_identification_t *other,
-	int *wildcards)
-{	
+static bool matches_binary(private_identification_t *this, 
+						   private_identification_t *other, int *wildcards)
+{
 	if (other->type == ID_ANY)
 	{
 		*wildcards = MAX_WILDCARDS;
 		return TRUE;
 	}
 	*wildcards = 0;
-	return this->type == other->type && chunk_equals(this->encoded, other->encoded);
+	return this->type == other->type &&
+							chunk_equals(this->encoded, other->encoded);
 }
 
 /**
  * Special implementation of identification_t.matches for ID_RFC822_ADDR/ID_FQDN.
  * Checks for a wildcard in other-string, and compares it against this-string.
  */
-static bool matches_string(private_identification_t *this, private_identification_t *other,
-	int *wildcards)
+static bool matches_string(private_identification_t *this,
+						   private_identification_t *other, int *wildcards)
 {
 	u_int len = other->encoded.len;
 	
@@ -772,9 +775,9 @@ static bool matches_string(private_identification_t *this, private_identificatio
  * Special implementation of identification_t.matches for ID_ANY.
  * ANY matches only another ANY, but nothing other
  */
-static bool matches_any(private_identification_t *this, private_identification_t *other,
-	int *wildcards)
-{	
+static bool matches_any(private_identification_t *this,
+						private_identification_t *other, int *wildcards)
+{
 	*wildcards = 0;
 	return other->type == ID_ANY;
 }
@@ -783,8 +786,8 @@ static bool matches_any(private_identification_t *this, private_identification_t
  * Special implementation of identification_t.matches for ID_DER_ASN1_DN.
  * ANY matches any, even ANY, thats why its there...
  */
-static bool matches_dn(private_identification_t *this, private_identification_t *other,
-	int *wildcards)
+static bool matches_dn(private_identification_t *this,
+					   private_identification_t *other, int *wildcards)
 {
 	if (other->type == ID_ANY)
 	{
@@ -800,6 +803,85 @@ static bool matches_dn(private_identification_t *this, private_identification_t 
 }
 
 /**
+ * output handler in printf()
+ */
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
+{
+	private_identification_t *this = *((private_identification_t**)(args[0]));
+	char buf[BUF_LEN];
+	chunk_t buf_chunk = chunk_from_buf(buf);
+	
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	
+	switch (this->type)
+	{
+		case ID_ANY:
+			return fprintf(stream, "%%any");
+		case ID_IPV4_ADDR:
+			if (this->encoded.len < sizeof(struct in_addr) ||
+				inet_ntop(AF_INET, this->encoded.ptr, buf, sizeof(buf)) == NULL)
+			{
+				return fprintf(stream, "(invalid ID_IPV4_ADDR)");
+			}
+			else
+			{
+				return fprintf(stream, "%s", buf);
+			}
+		case ID_IPV6_ADDR:
+			if (this->encoded.len < sizeof(struct in6_addr) ||
+				inet_ntop(AF_INET6, this->encoded.ptr, buf, INET6_ADDRSTRLEN) == NULL)
+			{
+				return fprintf(stream, "(invalid ID_IPV6_ADDR)");
+			}
+			else
+			{
+				return fprintf(stream, "%s", buf);
+			}
+		case ID_FQDN:
+			return fprintf(stream, "@%.*s", this->encoded.len, this->encoded.ptr);
+		case ID_RFC822_ADDR:
+			return fprintf(stream, "%.*s", this->encoded.len, this->encoded.ptr);
+		case ID_DER_ASN1_DN:
+			snprintf(buf, sizeof(buf), "%.*s", this->encoded.len, this->encoded.ptr);
+			/* TODO: whats returned on failure?*/
+			dntoa(this->encoded, &buf_chunk);
+			return fprintf(stream, "%s", buf);
+		case ID_DER_ASN1_GN:
+			return fprintf(stream, "(ASN.1 general Name");
+		case ID_KEY_ID:
+			return fprintf(stream, "(KEY_ID)");
+		case ID_DER_ASN1_GN_URI:
+			return fprintf(stream, "%.*s", this->encoded.len, this->encoded.ptr);
+		default:
+			return fprintf(stream, "(unknown ID type: %d)", this->type);
+	}
+}
+
+/**
+ * arginfo handler in printf()
+ */
+static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * register printf() handlers
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(IDENTIFICATION_PRINTF_SPEC, print, print_arginfo);
+}
+
+/**
  * Implementation of identification_t.clone.
  */
 static identification_t *clone(private_identification_t *this)
@@ -808,9 +890,6 @@ static identification_t *clone(private_identification_t *this)
 	
 	clone->type = this->type;
 	clone->encoded = chunk_clone(this->encoded);
-	clone->string = malloc(strlen(this->string) + 1);
-	strcpy(clone->string, this->string);
-	
 	clone->public.equals = this->public.equals;
 	clone->public.matches = this->public.matches;
 	
@@ -822,9 +901,8 @@ static identification_t *clone(private_identification_t *this)
  */
 static void destroy(private_identification_t *this)
 {
-	free(this->string);
-	free(this->encoded.ptr);
-	free(this);	
+	chunk_free(&this->encoded);
+	free(this);
 }
 
 /**
@@ -836,7 +914,6 @@ static private_identification_t *identification_create(void)
 	
 	this->public.get_encoding = (chunk_t (*) (identification_t*))get_encoding;
 	this->public.get_type = (id_type_t (*) (identification_t*))get_type;
-	this->public.get_string = (char* (*) (identification_t*))get_string;
 	this->public.contains_wildcards = (bool (*) (identification_t *this))contains_wildcards;
 	this->public.clone = (identification_t* (*) (identification_t*))clone;
 	this->public.destroy = (void (*) (identification_t*))destroy;
@@ -844,7 +921,6 @@ static private_identification_t *identification_create(void)
 	this->public.equals = (bool (*) (identification_t*,identification_t*))equals_binary;
 	this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_binary;
 	
-	this->string = NULL;
 	this->encoded = CHUNK_INITIALIZER;
 	
 	return this;
@@ -858,8 +934,9 @@ identification_t *identification_create_from_string(char *string)
 	private_identification_t *this = identification_create();
 
 	if (string == NULL)
+	{
 		string = "%any";
-	
+	}
 	if (strchr(string, '=') != NULL)
 	{
 		/* we interpret this as an ASCII X.501 ID_DER_ASN1_DN.
@@ -870,7 +947,6 @@ identification_t *identification_create_from_string(char *string)
 			free(this);
 			return NULL;
 		}
-		this->string = strdup(string);
 		this->type = ID_DER_ASN1_DN;
 		this->public.equals = (bool (*) (identification_t*,identification_t*))equals_dn;
 		this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_dn;
@@ -886,8 +962,8 @@ identification_t *identification_create_from_string(char *string)
 		{
 			/* any ID will be accepted */
 			this->type = ID_ANY;
-			this->string = strdup("%any");
-			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_any;
+			this->public.matches = (bool (*)
+					(identification_t*,identification_t*,int*))matches_any;
 			return &this->public;
 		}
 		else
@@ -904,7 +980,6 @@ identification_t *identification_create_from_string(char *string)
 					return NULL;
 				}
 				this->encoded = chunk_clone(chunk);
-				this->string = strdup(string);
 				this->type = ID_IPV4_ADDR;
 				return &(this->public);
 			}
@@ -920,7 +995,6 @@ identification_t *identification_create_from_string(char *string)
 					return NULL;
 				}
 				this->encoded = chunk_clone(chunk);
-				this->string = strdup(string);
 				this->type = ID_IPV6_ADDR;
 				return &(this->public);
 			}
@@ -939,20 +1013,20 @@ identification_t *identification_create_from_string(char *string)
 			else
 			{
 				this->type = ID_FQDN;
-				this->string = strdup(string);
 				this->encoded.ptr = strdup(string + 1);
 				this->encoded.len = strlen(string + 1);
-				this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_string;
+				this->public.matches = (bool (*) 
+						(identification_t*,identification_t*,int*))matches_string;
 				return &(this->public);
 			}
 		}
 		else
 		{
 			this->type = ID_RFC822_ADDR;
-			this->string = strdup(string);
 			this->encoded.ptr = strdup(string);
 			this->encoded.len = strlen(string);
-			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_string;
+			this->public.matches = (bool (*) 
+					(identification_t*,identification_t*,int*))matches_string;
 			return &(this->public);
 		}
 	}
@@ -963,72 +1037,34 @@ identification_t *identification_create_from_string(char *string)
  */
 identification_t *identification_create_from_encoding(id_type_t type, chunk_t encoded)
 {
-	char *pos;
-	char buf[BUF_LEN];
-	chunk_t buf_chunk = chunk_from_buf(buf);
 	private_identification_t *this = identification_create();
-	
 	this->type = type;
-
 	switch (type)
 	{
 		case ID_ANY:
-			this->string = strdup("%any");
-			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_any;
-			break;
-		case ID_IPV4_ADDR:
-			if (encoded.len < sizeof(struct in_addr) ||
-				inet_ntop(AF_INET, encoded.ptr, buf, sizeof(buf)) == NULL)
-			{
-				this->string = strdup("(invalid ID_IPV4_ADDR)");
-			}
-			else
-			{
-				this->string = strdup(buf);
-			}
-			break;
-		case ID_IPV6_ADDR:
-			if (encoded.len < sizeof(struct in6_addr) ||
-				inet_ntop(AF_INET6, encoded.ptr, buf, INET6_ADDRSTRLEN) == NULL)
-			{
-				this->string = strdup("(invalid ID_IPV6_ADDR)");
-			}
-			else
-			{
-				this->string = strdup(buf);
-			}
+			this->public.matches = (bool (*)
+					(identification_t*,identification_t*,int*))matches_any;
 			break;
 		case ID_FQDN:
-			snprintf(buf, sizeof(buf), "@%.*s", encoded.len, encoded.ptr);
-			this->string = strdup(buf);
-			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_string;
+			this->public.matches = (bool (*)
+					(identification_t*,identification_t*,int*))matches_string;
 			break;
 		case ID_RFC822_ADDR:
-			snprintf(buf, sizeof(buf), "%.*s", encoded.len, encoded.ptr);
-			this->string = strdup(buf);
-			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_string;
+			this->public.matches = (bool (*)
+					(identification_t*,identification_t*,int*))matches_string;
 			break;
 		case ID_DER_ASN1_DN:
-			snprintf(buf, sizeof(buf), "%.*s", encoded.len, encoded.ptr);
-			/* TODO: whats returned on failure */
-			dntoa(encoded, &buf_chunk);
-			this->string = strdup(buf);
-			this->public.equals = (bool (*) (identification_t*,identification_t*))equals_dn;
-			this->public.matches = (bool (*) (identification_t*,identification_t*,int*))matches_dn;
+			this->public.equals = (bool (*)
+					(identification_t*,identification_t*))equals_dn;
+			this->public.matches = (bool (*)
+					(identification_t*,identification_t*,int*))matches_dn;
 			break;
+		case ID_IPV4_ADDR:
+		case ID_IPV6_ADDR:
 		case ID_DER_ASN1_GN:
-			this->string = strdup("ASN.1 coded generalName");
-			break;
 		case ID_KEY_ID:
-			this->string = strdup("(KEY_ID)");
-			break;
 		case ID_DER_ASN1_GN_URI:
-			snprintf(buf, sizeof(buf), "%.*s", encoded.len, encoded.ptr);
-			this->string = strdup(buf);
-			break;
 		default:
-			snprintf(buf, sizeof(buf), "(invalid ID type: %d)", type);
-			this->string = strdup(buf);
 			break;
 	}
 	
@@ -1036,15 +1072,6 @@ identification_t *identification_create_from_encoding(id_type_t type, chunk_t en
 	if (type != ID_ANY)
 	{
 		this->encoded = chunk_clone(encoded);
-	}
-	
-	/* remove unprintable chars in string */
-	for (pos = this->string; *pos != '\0'; pos++)
-	{
-		if (!isprint(*pos))
-		{
-			*pos = '?';
-		}
 	}
 	return &(this->public);
 }

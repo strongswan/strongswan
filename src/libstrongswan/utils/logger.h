@@ -25,6 +25,7 @@
 #define LOGGER_H_
 
 #include <stdio.h>
+#include <stdarg.h>
 
 #include <types.h>
 
@@ -112,6 +113,19 @@ struct logger_t {
 	 * @param ... 		printf like parameters
 	 */
 	void (*log) (logger_t *this, log_level_t log_level, const char *format, ...);
+
+	/**
+	 * @brief Log an entry, using vprintf() style va_list parameters.
+	 *
+	 * All specified loglevels must be activated that
+	 * the log is done.
+	 *
+	 * @param this 		logger_t object
+	 * @param loglevel 	or'ed set of log_level_t's
+	 * @param format 	printf like format string
+	 * @param args 		va_list argument list
+	 */
+	void (*logv) (logger_t *this, log_level_t log_level, const char *format, va_list args);
 
 	/**
 	 * @brief Log some bytes, useful for debugging.

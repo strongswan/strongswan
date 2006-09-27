@@ -252,7 +252,7 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 				break;
 			case CRL_OBJ_ISSUER:
 				crl->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				logger->log(logger, CONTROL|LEVEL1, "  '%s'", crl->issuer->get_string(crl->issuer));
+				logger->log(logger, CONTROL|LEVEL1, "  '%D'", crl->issuer);
 				break;
 			case CRL_OBJ_THIS_UPDATE:
 				crl->thisUpdate = parse_time(object, level);
@@ -450,7 +450,7 @@ static void log_crl(const private_crl_t *this, logger_t *logger, bool utc, bool 
 	logger->log(logger, CONTROL, "%s, revoked certs: %d",
 			buf, revokedCertificates->get_count(revokedCertificates));
 
-	logger->log(logger, CONTROL, "       issuer:  '%s'", issuer->get_string(issuer));
+	logger->log(logger, CONTROL, "       issuer:  '%D'", issuer);
 	
 	timetoa(buf, BUF_LEN, &this->thisUpdate, utc);
 	logger->log(logger, CONTROL, "       updates:  this %s", buf);

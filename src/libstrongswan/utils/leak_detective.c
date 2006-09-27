@@ -33,6 +33,7 @@
 #include <syslog.h>
 #include <pthread.h>
 #include <netdb.h>
+#include <printf.h>
 
 #include "leak_detective.h"
 
@@ -138,7 +139,8 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * log stack frames queried by backtrace()
- * TODO: Dump symbols of static functions!!!
+ * TODO: Dump symbols of static functions. This could be done with
+ * the addr2line utility or the GNU BFD Library...
  */
 static void log_stack_frames(void **stack_frames, int stack_frame_count)
 {
@@ -161,6 +163,10 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
  * 
  * This is necessary, as some function use allocation hacks (static buffers)
  * and so on, which we want to suppress on leak reports.
+ *
+ * The range_size is calculated using the readelf utility, e.g.:
+ * readelf -s /lib/glibc.so.6
+ * These values may or may not be acceptable for another system.
  */
 typedef struct whitelist_t whitelist_t;
 
@@ -170,13 +176,15 @@ struct whitelist_t {
 };
 
 whitelist_t whitelist[] = {
-	{pthread_create, 0x500},
-	{pthread_setspecific, 0xFF},
-	{mktime, 0xFF},
-	{inet_ntoa, 0xFF},
-	{strerror, 0xFF},
-	{getprotobynumber, 0xFF},
-	{getservbyport, 0xFF},
+	{pthread_create,			381},
+	{pthread_setspecific,		256},
+	{mktime,					 60},
+	{tzset,						126},
+	{inet_ntoa,					256},
+	{strerror,					173},
+	{getprotobynumber,			294},
+	{getservbyport,				309},
+	{register_printf_function,	150},
 };
 
 /**
