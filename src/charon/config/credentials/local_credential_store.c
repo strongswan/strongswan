@@ -504,8 +504,8 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		identification_t *subject = cert->get_subject(cert);
 		identification_t *issuer  = cert->get_issuer(cert);
 
-		this->logger->log(this->logger, CONTROL|LEVEL1, "subject: '%s'", subject->get_string(subject));
-		this->logger->log(this->logger, CONTROL|LEVEL1, "issuer:  '%s'", issuer->get_string(issuer));
+		this->logger->log(this->logger, CONTROL|LEVEL1, "subject: '%D'", subject);
+		this->logger->log(this->logger, CONTROL|LEVEL1, "issuer:  '%D'", issuer);
 
 		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)

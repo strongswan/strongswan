@@ -85,7 +85,7 @@ static char certificate_buffer[] = {
  */
 void test_certificate(protected_tester_t *tester)
 {
-	chunk_t certificate = {certificate_buffer, sizeof(certificate_buffer)};
+	/*chunk_t certificate = {certificate_buffer, sizeof(certificate_buffer)};
 	identification_t *id;
 	x509_t *cert;
 	
@@ -95,7 +95,7 @@ void test_certificate(protected_tester_t *tester)
 	id = cert->get_issuer(cert);
 	tester->assert_true(tester, strcmp(id->get_string(id), "C=CH, O=Linux strongSwan, CN=maeno") == 0, "issuer");
 	cert->destroy(cert);
-	/*
+	
 	cert = x509_create_from_file("scripts/complex1.der");
 	id = cert->get_subject(cert);
 	printf("Subject: %s\n", id->get_string(id));

@@ -220,8 +220,9 @@ static status_t verify_auth_data (private_authenticator_t *this,
 														 &shared_key);
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR, "no shared key found for '%s' and '%s'",
-								  my_id->get_string(my_id), other_id->get_string(other_id));
+				this->logger->log(this->logger, ERROR, 
+								  "no shared key found for '%D' - '%D'",
+								  my_id, other_id);
 				chunk_free(&shared_key);
 				break;
 			}
@@ -234,7 +235,9 @@ static status_t verify_auth_data (private_authenticator_t *this,
 															shared_key);
 			chunk_free(&shared_key);
 
-			status = (auth_data.len == my_auth_data.len && memeq(auth_data.ptr, my_auth_data.ptr, my_auth_data.len))
+
+			status = (auth_data.len == my_auth_data.len &&
+					  memeq(auth_data.ptr, my_auth_data.ptr, my_auth_data.len))
 					 ? SUCCESS : FAILED;
 			chunk_free(&my_auth_data);
 		    break;
@@ -248,8 +251,8 @@ static status_t verify_auth_data (private_authenticator_t *this,
 
 			if (public_key == NULL)
 			{
-				this->logger->log(this->logger, ERROR, "no RSA public key found for '%s'",
-								  other_id->get_string(other_id));
+				this->logger->log(this->logger, ERROR, 
+								  "no RSA public key found for '%D'", other_id);
 				status = NOT_FOUND;
 				break;
 			}
@@ -266,9 +269,8 @@ static status_t verify_auth_data (private_authenticator_t *this,
 		}
 	}
 	
-	this->logger->log(this->logger, CONTROL, "authentication of '%s' with %s %s",
-					  other_id->get_string(other_id),
-					  enum_name(&auth_method_names, auth_method),
+	this->logger->log(this->logger, CONTROL, "authentication of '%D' with %s %s",
+					  other_id, enum_name(&auth_method_names, auth_method),
 					  (status == SUCCESS)? "successful":"failed");
 	return status;
 }
@@ -284,9 +286,9 @@ static status_t compute_auth_data (private_authenticator_t *this,
 								   identification_t *other_id,
 								   bool initiator)
 {	
-	this->logger->log(this->logger, CONTROL, "authentication of '%s' with %s (myself)",
-					  my_id->get_string(my_id),
-					  enum_name(&auth_method_names, this->auth_method));
+	this->logger->log(this->logger, CONTROL, 
+					  "authentication of '%D' with %s (myself)",
+					  my_id, enum_name(&auth_method_names, this->auth_method));
 
 	switch (this->auth_method)
 	{
@@ -302,8 +304,9 @@ static status_t compute_auth_data (private_authenticator_t *this,
 
 			if (status != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR, "no shared key found for '%s' and '%s'",
-								  my_id->get_string(my_id), other_id->get_string(other_id));
+				this->logger->log(this->logger, ERROR,
+								  "no shared key found for '%D' - '%D'",
+								  my_id, other_id);
 				return status;	
 			}
 			
@@ -330,14 +333,15 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			rsa_public_key_t  *my_pubkey;
 			rsa_private_key_t *my_key;
 
-			this->logger->log(this->logger, CONTROL|LEVEL1, "looking for RSA public key belonging to '%s'",
-							  my_id->get_string(my_id));
+			this->logger->log(this->logger, CONTROL|LEVEL1,
+							  "looking for RSA public key belonging to '%D'",
+							  my_id);
 
 			my_pubkey = charon->credentials->get_rsa_public_key(charon->credentials, my_id);
 			if (my_pubkey == NULL)
 			{
-				this->logger->log(this->logger, ERROR, "no RSA public key found for '%s'",
-								  my_id->get_string(my_id));
+				this->logger->log(this->logger, ERROR, 
+								  "no RSA public key found for '%D'", my_id);
 				return NOT_FOUND;
 			}
 			this->logger->log(this->logger, CONTROL|LEVEL2, "matching RSA public key found");
@@ -351,8 +355,9 @@ static status_t compute_auth_data (private_authenticator_t *this,
 				char buf[BUF_LEN];
 
 				chunk_to_hex(buf, BUF_LEN, my_pubkey->get_keyid(my_pubkey));
-				this->logger->log(this->logger, ERROR, "no RSA private key found with for %s with keyid %s",
-								  my_id->get_string(my_id), buf);
+				this->logger->log(this->logger, ERROR, 
+								  "no RSA private key found with for %D with keyid %s",
+								  my_id, buf);
 				return NOT_FOUND;
 			}
 			this->logger->log(this->logger, CONTROL|LEVEL2, "matching RSA private key found");

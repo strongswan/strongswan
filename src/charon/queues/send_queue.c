@@ -111,9 +111,8 @@ static void add(private_send_queue_t *this, packet_t *packet)
 	
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
-	this->logger->log(this->logger, CONTROL, "sending packet: from %s[%d] to %s[%d]",
-					  src->get_string(src), src->get_port(src),
-					  dst->get_string(dst), dst->get_port(dst));
+	this->logger->log(this->logger, CONTROL, 
+					  "sending packet: from %#H to %#H", src, dst);
 	
 	pthread_mutex_lock(&this->mutex);
 	this->list->insert_last(this->list, packet);

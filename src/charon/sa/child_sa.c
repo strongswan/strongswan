@@ -296,15 +296,15 @@ static void updown(private_child_sa_t *this, bool up)
 				"PLUTO_CONNECTION='%s' "
 				"PLUTO_INTERFACE='%s' "
 				"PLUTO_REQID='%u' "
-				"PLUTO_ME='%s' "
-				"PLUTO_MY_ID='%s' "
+				"PLUTO_ME='%H' "
+				"PLUTO_MY_ID='%D' "
 				"PLUTO_MY_CLIENT='%s/%s' "
 				"PLUTO_MY_CLIENT_NET='%s' "
 				"PLUTO_MY_CLIENT_MASK='%s' "
 				"PLUTO_MY_PORT='%u' "
 				"PLUTO_MY_PROTOCOL='%u' "
-				"PLUTO_PEER='%s' "
-				"PLUTO_PEER_ID='%s' "
+				"PLUTO_PEER='%H' "
+				"PLUTO_PEER_ID='%D' "
 				"PLUTO_PEER_CLIENT='%s/%s' "
 				"PLUTO_PEER_CLIENT_NET='%s' "
 				"PLUTO_PEER_CLIENT_MASK='%s' "
@@ -313,20 +313,20 @@ static void updown(private_child_sa_t *this, bool up)
 				"%s"
 				"%s",
 				 up ? "up" : "down",
-				 streq(this->me.addr->get_string(this->me.addr),
-					   my_client) ? "-host" : "-client",
+				 /* TODO: fix it: streq(this->me.addr->get_string(this->me.addr),
+				 my_client) ? "-host" :*/ "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
 				 this->name,
 				 ifname,
 				 this->reqid,
-				 this->me.addr->get_string(this->me.addr),
-				 this->me.id->get_string(this->me.id),
+				 this->me.addr,
+				 this->me.id,
 				 my_client, my_client_mask,
 				 my_client, my_client_mask,
 				 policy->my_ts->get_from_port(policy->my_ts),
 				 policy->my_ts->get_protocol(policy->my_ts),
-				 this->other.addr->get_string(this->other.addr),
-				 this->other.id->get_string(this->other.id),
+				 this->other.addr,
+				 this->other.id,
 				 other_client, other_client_mask,
 				 other_client, other_client_mask,
 				 policy->other_ts->get_from_port(policy->other_ts),
@@ -548,8 +548,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	
 	/* send SA down to the kernel */
 	this->logger->log(this->logger, CONTROL|LEVEL2,
-						"  SPI 0x%.8x, src %s dst %s",
-						ntohl(spi), src->get_string(src), dst->get_string(dst));
+						"  SPI 0x%.8x, src %H dst %H",
+						ntohl(spi), src, dst);
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 											  src, dst,
 											  spi, this->protocol,
@@ -937,12 +937,9 @@ static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t
 	}
 	
 	this->logger->log(this->logger, CONTROL|LEVEL1,
-					  "updating %s SA 0x%x, from %s:%d..%s:%d to %s:%d..%s:%d",
+					  "updating %s SA 0x%x, from %#H..#H to %#H..%#H",
 					  mapping_find(protocol_id_m, this->protocol), ntohl(spi),
-					  src->get_string(src), src->get_port(src),
-					  dst->get_string(dst), dst->get_port(dst),
-					  new_src->get_string(new_src), new_src->get_port(new_src),
-					  new_dst->get_string(new_dst), new_dst->get_port(new_dst));
+					  src, dst, new_src, new_dst);
 	
 	status = charon->kernel_interface->update_sa(charon->kernel_interface,
 												 dst, spi, this->protocol, 

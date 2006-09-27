@@ -67,37 +67,15 @@ struct private_daemon_t {
 	 * The thread_id of main-thread.
 	 */
 	pthread_t main_thread_id;
-	
-	/**
-	 * Main loop function.
-	 * 
-	 * @param this 	calling object
-	 */
-	void (*run) (private_daemon_t *this);
-	
-	/**
-	 * Initialize the daemon.
-	 * 
-	 * @param this		calling object
-	 * @param strict	enforce a strict crl policy
-	 */
-	void (*initialize) (private_daemon_t *this, bool strict);
-	
-	/**
-	 * Destroy the daemon.
-	 * 
-	 * @param this 	calling object
-	 */
-	void (*destroy) (private_daemon_t *this);
 };
 
-/** 
+/**
  * One and only instance of the daemon.
  */
 daemon_t *charon;
 
 /**
- * Implementation of private_daemon_t.run.
+ * Run the daemon and handle unix signals
  */
 static void run(private_daemon_t *this)
 {
@@ -144,7 +122,47 @@ static void run(private_daemon_t *this)
 }
 
 /**
- * Implementation of daemon_t.kill.
+ * Clean up all daemon resources
+ */
+static void destroy(private_daemon_t *this)
+{
+	/* destruction is a non trivial task, we need to follow 
+	* a strict order to prevent threading issues! 
+	* Kill active threads first, except the sender, as
+	* the killed IKE_SA want to send delete messages.
+	*/
+	/* we don't want to receive anything anymore... */
+	DESTROY_IF(this->public.receiver);
+	/* ignore all incoming user requests */
+	DESTROY_IF(this->public.stroke);
+	/* stop scheduing jobs */
+	DESTROY_IF(this->public.scheduler);
+	/* stop processing jobs */
+	DESTROY_IF(this->public.thread_pool);
+	/* shut down manager with all IKE SAs */
+	DESTROY_IF(this->public.ike_sa_manager);
+	/* all child SAs should be down now, so kill kernel interface */
+	DESTROY_IF(this->public.kernel_interface);
+	/* destroy other infrastructure */
+	DESTROY_IF(this->public.bus);
+	DESTROY_IF(this->public.outlog);
+	DESTROY_IF(this->public.syslog);
+	DESTROY_IF(this->public.job_queue);
+	DESTROY_IF(this->public.event_queue);
+	DESTROY_IF(this->public.configuration);
+	DESTROY_IF(this->public.credentials);
+	DESTROY_IF(this->public.connections);
+	DESTROY_IF(this->public.policies);
+	/* we hope the sender could send the outstanding deletes, but 
+	* we shut down here at any cost */
+	DESTROY_IF(this->public.sender);
+	DESTROY_IF(this->public.send_queue);
+	DESTROY_IF(this->public.socket);
+	free(this);
+}
+
+/**
+ * Enforce daemon shutdown, with a given reason to do so.
  */
 static void kill_daemon(private_daemon_t *this, char *reason)
 {
@@ -153,7 +171,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	if (this->main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
-		this->destroy(this);
+		destroy(this);
 		unlink(PID_FILE);
 		exit(-1);
 	}
@@ -167,7 +185,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 }
 
 /**
- * Implementation of private_daemon_t.initialize.
+ * Initialize the daemon, optional with a strict crl policy
  */
 static void initialize(private_daemon_t *this, bool strict)
 {
@@ -182,6 +200,11 @@ static void initialize(private_daemon_t *this, bool strict)
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.send_queue = send_queue_create();
+	this->public.bus = bus_create();
+	this->public.outlog = file_logger_create(stdout);
+	this->public.bus->add_listener(this->public.bus, &this->public.outlog->listener);
+	this->public.syslog = sys_logger_create(LOG_DAEMON);
+	this->public.bus->add_listener(this->public.bus, &this->public.syslog->listener);
 	this->public.connections = (connection_store_t*)local_connection_store_create();
 	this->public.policies = (policy_store_t*)local_policy_store_create();
 	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
@@ -202,42 +225,8 @@ static void initialize(private_daemon_t *this, bool strict)
 }
 
 /**
- * Destory all initiated objects
+ * Handle SIGSEGV/SIGILL signals raised by threads
  */
-static void destroy(private_daemon_t *this)
-{
-	/* destruction is a non trivial task, we need to follow 
-	 * a strict order to prevent threading issues! 
-	 * Kill active threads first, except the sender, as
-	 * the killed IKE_SA want to send delete messages.
-	 */
-	/* we don't want to receive anything anymore... */
-	DESTROY_IF(this->public.receiver);
-	/* ignore all incoming user requests */
-	DESTROY_IF(this->public.stroke);
-	/* stop scheduing jobs */
-	DESTROY_IF(this->public.scheduler);
-	/* stop processing jobs */
-	DESTROY_IF(this->public.thread_pool);
-	/* shut down manager with all IKE SAs */
-	DESTROY_IF(this->public.ike_sa_manager);
-	/* all child SAs should be down now, so kill kernel interface */
-	DESTROY_IF(this->public.kernel_interface);
-	/* destroy other infrastructure */
-	DESTROY_IF(this->public.job_queue);
-	DESTROY_IF(this->public.event_queue);
-	DESTROY_IF(this->public.configuration);
-	DESTROY_IF(this->public.credentials);
-	DESTROY_IF(this->public.connections);
-	DESTROY_IF(this->public.policies);
-	/* we hope the sender could send the outstanding deletes, but 
-	 * we shut down here at any cost */
-	DESTROY_IF(this->public.sender);
-	DESTROY_IF(this->public.send_queue);
-	DESTROY_IF(this->public.socket);
-	free(this);
-}
-
 void signal_handler(int signal)
 {
 	void *array[20];
@@ -265,9 +254,7 @@ void signal_handler(int signal)
 }
 
 /**
- * @brief Create the daemon.
- * 
- * @return 	created daemon_t
+ * Create the daemon.
  */
 private_daemon_t *daemon_create(void)
 {	
@@ -275,9 +262,6 @@ private_daemon_t *daemon_create(void)
 	struct sigaction action;
 		
 	/* assign methods */
-	this->run = run;
-	this->destroy = destroy;
-	this->initialize = initialize;
 	this->public.kill = (void (*) (daemon_t*,char*))kill_daemon;
 	
 	/* NULL members for clean destruction */
@@ -296,6 +280,9 @@ private_daemon_t *daemon_create(void)
 	this->public.kernel_interface = NULL;
 	this->public.thread_pool = NULL;
 	this->public.stroke = NULL;
+	this->public.bus = NULL;
+	this->public.outlog = NULL;
+	this->public.syslog = NULL;
 	
 	this->main_thread_id = pthread_self();
 	
@@ -322,6 +309,9 @@ private_daemon_t *daemon_create(void)
 	return this;
 }
 
+/**
+ * print command line usage and exit
+ */
 static void usage(const char *msg)
 {
 	if (msg != NULL && *msg != '\0')
@@ -396,14 +386,14 @@ int main(int argc, char *argv[])
 								"Starting Charon (strongSwan Version %s)", VERSION);
 		
 	/* initialize daemon */
-	private_charon->initialize(private_charon, strict_crl_policy);
+	initialize(private_charon, strict_crl_policy);
 	
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
 	{
 		private_charon->logger->log(private_charon->logger, ERROR, 
 									"charon already running (\""PID_FILE"\" exists)");
-		private_charon->destroy(private_charon);
+		destroy(private_charon);
 		exit(-1);
 	}
 	pid_file = fopen(PID_FILE, "w");
@@ -420,19 +410,17 @@ int main(int argc, char *argv[])
 	while (list->remove_first(list, (void**)&host) == SUCCESS)
 	{
 		private_charon->logger->log(private_charon->logger, CONTROL,
-									"  %s", host->get_string(host));
+									"  %H", host);
 		host->destroy(host);
 	}
 	list->destroy(list);
 	
 	/* run daemon */
-	private_charon->run(private_charon);
+	run(private_charon);
 	
 	/* normal termination, cleanup and exit */
-	private_charon->destroy(private_charon);
+	destroy(private_charon);
 	unlink(PID_FILE);
 
 	return 0;
 }
-
-

@@ -385,9 +385,8 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 		{
 			/* looks good, we take this one */
 			this->logger->log(this->logger, CONTROL|LEVEL1, 
-							  "found an existing IKE_SA for %s[%s]...%s[%s]",
-							  my_host->get_string(my_host), other_host->get_string(other_host),
-							  my_id->get_string(my_id), other_id->get_string(other_id));
+							  "found an existing IKE_SA for %H[%D]...%H[%D]",
+							  my_host, other_host, my_id, other_id);
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
 		}
@@ -417,13 +416,12 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 		
 		/* check ike_sa out */
 		this->logger->log(this->logger, CONTROL|LEVEL1, 
-						  "new IKE_SA created for IDs %s - %s",
-						  my_id->get_string(my_id), other_id->get_string(other_id));
+						  "new IKE_SA created for IDs %D - %D", my_id, other_id);
 		new_ike_sa_entry->checked_out = TRUE;
 		ike_sa = new_ike_sa_entry->ike_sa;
 	}
 	pthread_mutex_unlock(&(this->mutex));
-	
+	SIG_SA(ike_sa);
 	return ike_sa;
 }
 
@@ -540,6 +538,8 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
+	
+	SIG_SA(ike_sa);
 	return ike_sa;
 }
 
@@ -575,6 +575,7 @@ static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
 	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->mutex));
 	
+	SIG_SA(ike_sa);
 	return ike_sa;
 }
 
@@ -679,6 +680,8 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	this->logger->log(this->logger, CONTROL|LEVEL2, "%d IKE_SAs in manager now",
 				this->ike_sa_list->get_count(this->ike_sa_list));
 	pthread_mutex_unlock(&(this->mutex));
+	
+	SIG_SA(NULL);
 	return retval;
 }
 
@@ -725,6 +728,7 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
+	SIG_SA(NULL);
 	return retval;
 }
 

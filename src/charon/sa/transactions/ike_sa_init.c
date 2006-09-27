@@ -570,8 +570,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 		response->add_payload(response, (payload_t*)notify);
 		
 		this->logger->log(this->logger, AUDIT,
-						  "no connection for hosts %s...%s found, deleting IKE_SA",
-						  me->get_string(me), other->get_string(other));
+						  "no connection for hosts %H...%H found, deleting IKE_SA",
+						  me, other);
 		return DESTROY_ME;
 	}
 	

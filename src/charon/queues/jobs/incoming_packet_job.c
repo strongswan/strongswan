@@ -113,9 +113,8 @@ static status_t execute(private_incoming_packet_job_t *this)
 	message = message_create_from_packet(this->packet->clone(this->packet));
 	src = message->get_source(message);
 	dst = message->get_destination(message);
-	this->logger->log(this->logger, CONTROL, "received packet: from %s[%d] to %s[%d]",
-					  src->get_string(src), src->get_port(src),
-					  dst->get_string(dst), dst->get_port(dst));
+	this->logger->log(this->logger, CONTROL,
+					  "received packet: from %#H to %#H", src, dst);
 	
 	status = message->parse_header(message);
 	if (status != SUCCESS)

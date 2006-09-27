@@ -694,8 +694,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		if (this->policy == NULL)
 		{
 			this->logger->log(this->logger, AUDIT,
-							  "no acceptable policy for IDs %s - %s found, deleting IKE_SA", 
-							  my_id->get_string(my_id), other_id->get_string(other_id));
+							  "no acceptable policy for IDs %D - %D found, deleting IKE_SA", 
+							  my_id, other_id);
 			my_id->destroy(my_id);
 			other_id->destroy(other_id);
 			build_notify(AUTHENTICATION_FAILED, response, TRUE);
@@ -939,9 +939,8 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		{
 			other_id->destroy(other_id);
 			this->logger->log(this->logger, AUDIT,
-							  "other peer uses unacceptable ID (%s, excepted %s), deleting IKE_SA",
-							  other_id->get_string(other_id),
-							  configured_other_id->get_string(configured_other_id));
+							  "other peer uses unacceptable ID (%D, excepted %D), deleting IKE_SA",
+							  other_id, configured_other_id);
 			return DESTROY_ME;
 		}
 		/* update other ID. It was already set, but may contain wildcards */

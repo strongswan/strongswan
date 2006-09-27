@@ -204,9 +204,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		pkt->set_source(pkt, source);
 		pkt->set_destination(pkt, dest);
 		this->logger->log(this->logger, CONTROL|LEVEL1, 
-						  "received packet: from %s[%d] to %s[%d]",
-						  source->get_string(source), source->get_port(source),
-						  dest->get_string(dest), dest->get_port(dest));
+						  "received packet: from %#H to %#H", source, dest);
 		data_offset = IP_LEN + UDP_LEN;
 		/* remove non esp marker */	
 		if (dest->get_port(dest) == this->natt_port)
@@ -297,9 +295,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		pkt->set_source(pkt, source);
 		pkt->set_destination(pkt, dest);
 		this->logger->log(this->logger, CONTROL|LEVEL1, 
-						  "received packet: from %s[%d] to %s[%d]",
-						  source->get_string(source), source->get_port(source),
-						  dest->get_string(dest), dest->get_port(dest));
+						  "received packet: from %#H to %#H", source, dest);
 		data_offset = UDP_LEN;
 		/* remove non esp marker */	
 		if (dest->get_port(dest) == this->natt_port)
@@ -337,9 +333,8 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	dst = packet->get_destination(packet);
 	data = packet->get_data(packet);
 
-	this->logger->log(this->logger, CONTROL|LEVEL1, "sending packet: from %s[%d] to %s[%d]",
-					  src->get_string(src), src->get_port(src),
-					  dst->get_string(dst), dst->get_port(dst));
+	this->logger->log(this->logger, CONTROL|LEVEL1,
+					  "sending packet: from %#H to %#H", src, dst);
 	
 	/* send data */
 	sport = src->get_port(src);
@@ -575,6 +570,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	policy.sadb_x_policy_dir = IPSEC_DIR_OUTBOUND;
 	policy.sadb_x_policy_reserved = 0;
 	policy.sadb_x_policy_id = 0;
+	policy.sadb_x_policy_priority = 0;
 	
 	if (setsockopt(skt, ip_proto, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
@@ -729,6 +725,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
 	policy.sadb_x_policy_reserved = 0;
 	policy.sadb_x_policy_id = 0;
+	policy.sadb_x_policy_priority = 0;
 	
 	if (setsockopt(skt, ip_proto, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{

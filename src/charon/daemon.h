@@ -32,6 +32,9 @@
 #include <threads/thread_pool.h>
 #include <threads/stroke_interface.h>
 #include <network/socket.h>
+#include <bus/bus.h>
+#include <bus/listeners/file_logger.h>
+#include <bus/listeners/sys_logger.h>
 #include <sa/ike_sa_manager.h>
 #include <queues/send_queue.h>
 #include <queues/job_queue.h>
@@ -176,8 +179,16 @@
  */
 
 /**
+ * @defgroup bus bus
+ *
+ * Signaling bus and its listeners.
+ *
+ * @ingroup charon
+ */
+
+/**
  * Name of the daemon.
- * 
+ *
  * @ingroup charon
  */
 #define DAEMON_NAME "charon"
@@ -335,6 +346,21 @@ struct daemon_t {
 	 * The Thread pool managing the worker threads.
 	 */
 	thread_pool_t *thread_pool;
+	
+	/**
+	 * The signaling bus.
+	 */
+	bus_t *bus;
+	
+	/**
+	 * A bus listener logging to stdout
+	 */
+	file_logger_t *outlog;
+	
+	/**
+	 * A bus listener logging to syslog
+	 */
+	sys_logger_t *syslog;
 	
 	/**
 	 * Kernel Interface to communicate with kernel

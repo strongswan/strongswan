@@ -3,6 +3,10 @@
 ipsec_PROGRAMS = charon
 
 charon_SOURCES = \
+bus/bus.c bus/bus.h \
+bus/listeners/stream_logger.c bus/listeners/stream_logger.h \
+bus/listeners/sys_logger.c bus/listeners/sys_logger.h \
+bus/listeners/file_logger.c bus/listeners/file_logger.h \
 config/connections/connection.c config/connections/connection.h \
 config/connections/local_connection_store.c config/connections/local_connection_store.h config/connections/connection_store.h \
 config/policies/policy.c config/policies/policy.h \

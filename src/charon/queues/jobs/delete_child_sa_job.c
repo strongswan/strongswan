@@ -1,8 +1,8 @@
 /**
  * @file delete_child_sa_job.c
- * 
+ *
  * @brief Implementation of delete_child_sa_job_t.
- * 
+ *
  */
 
 /*
@@ -32,6 +32,7 @@ typedef struct private_delete_child_sa_job_t private_delete_child_sa_job_t;
  */
 struct private_delete_child_sa_job_t {
 	/**
+
 	 * Public delete_child_sa_job_t interface.
 	 */
 	delete_child_sa_job_t public;

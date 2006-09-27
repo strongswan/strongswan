@@ -1363,11 +1363,9 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 	if (state == IKE_ESTABLISHED)
 	{
 		this->time.established = time(NULL);
-		this->logger->log(this->logger, AUDIT, "IKE_SA established: %s[%s]...%s[%s]",
-						this->my_host->get_string(this->my_host),
-						this->my_id->get_string(this->my_id),
-						this->other_host->get_string(this->other_host),
-						this->other_id->get_string(this->other_id));
+		this->logger->log(this->logger, AUDIT, "IKE_SA established: %H[%D]...%H[%D]",
+						  this->my_host, this->my_id, 
+						  this->other_host, this->other_id);
 		/* start DPD checks */
 		send_dpd(this);
 	}
@@ -1784,11 +1782,9 @@ static status_t rekey(private_ike_sa_t *this)
 	rekey_ike_sa_t *rekey_ike_sa;
 	
 	this->logger->log(this->logger, CONTROL, 
-					  "rekeying IKE_SA between %s[%s]..%s[%s]",
-					  this->my_host->get_string(this->my_host),
-					  this->my_id->get_string(this->my_id),
-					  this->other_host->get_string(this->other_host),
-					  this->other_id->get_string(this->other_id));
+					  "rekeying IKE_SA between: %H[%D]...%H[%D]",
+					  this->my_host, this->my_id, 
+					  this->other_host, this->other_id);
 	
 	if (this->state != IKE_ESTABLISHED)
 	{
@@ -1869,12 +1865,9 @@ static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
 					mapping_find(ike_sa_state_m, this->state),
 					this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
 					this->ike_sa_id->get_responder_spi(this->ike_sa_id));
-		logger->log(logger, CONTROL, "  \"%s\": %s[%s]...%s[%s]",
-					this->name,
-					this->my_host->get_string(this->my_host),
-					this->my_id->get_string(this->my_id),
-					this->other_host->get_string(this->other_host),
-					this->other_id->get_string(this->other_id));
+		logger->log(logger, CONTROL, "  \"%s\": %H[%D]...%H[%D]",
+					this->name, this->my_host, this->my_id, 
+					this->other_host, this->other_id);
 		
 		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 		while (iterator->has_next(iterator))
@@ -1995,11 +1988,9 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->prf_auth_r);
 
 	this->logger->log(this->logger, AUDIT, 
-					  "IKE_SA deleted between %s[%s]...%s[%s]",
-					  this->my_host->get_string(this->my_host),
-					  this->my_id->get_string(this->my_id),
-					  this->other_host->get_string(this->other_host),
-					  this->other_id->get_string(this->other_id));
+					  "IKE_SA deleted between: %H[%D]...%H[%D]",
+					  this->my_host, this->my_id, 
+					  this->other_host, this->other_id);
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);

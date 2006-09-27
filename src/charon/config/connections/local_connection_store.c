@@ -74,8 +74,9 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 	connection_t *candidate;
 	connection_t *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "looking for connection for host pair %s...%s",
-					  my_host->get_string(my_host), other_host->get_string(other_host));
+	this->logger->log(this->logger, CONTROL|LEVEL1,
+					  "looking for connection for host pair %H...%H",
+					  my_host, other_host);
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->connections->create_iterator(this->connections, TRUE);
@@ -106,10 +107,9 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 			}
 
 			this->logger->log(this->logger, CONTROL|LEVEL2,
-							 "candidate connection \"%s\": %s...%s (prio=%d)",
+							 "candidate connection \"%s\": %H...%H (prio=%d)",
 							  candidate->get_name(candidate),
-							  candidate_my_host->get_string(candidate_my_host),
-							  candidate_other_host->get_string(candidate_other_host),
+							  candidate_my_host, candidate_other_host,
 							  prio);
 
 			if (prio > best_prio)
@@ -127,10 +127,9 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 		host_t *found_other_host = found->get_other_host(found);
 		
 		this->logger->log(this->logger, CONTROL|LEVEL1,
-						 "found matching connection \"%s\": %s...%s (prio=%d)",
+						 "found matching connection \"%s\": %H...%H (prio=%d)",
 						  found->get_name(found),
-						  found_my_host->get_string(found_my_host),
-						  found_other_host->get_string(found_other_host),
+						  found_my_host, found_other_host,
 						  best_prio);
 		
 		/* give out a new reference to it */
@@ -242,10 +241,8 @@ void log_connections(private_local_connection_store_t *this, logger_t *logger, c
 			host_t *my_host = current->get_my_host(current);
 			host_t *other_host = current->get_other_host(current);
 
-			logger->log(logger, CONTROL, "  \"%s\": %s...%s",
-						current->get_name(current),
-						my_host->get_string(my_host),
-						other_host->get_string(other_host));
+			logger->log(logger, CONTROL, "  \"%s\": %H...%H",
+						current->get_name(current), my_host, other_host);
 		}
 	}
 	iterator->destroy(iterator);

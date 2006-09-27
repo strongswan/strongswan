@@ -116,8 +116,8 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 	policy_t *candidate;
 	policy_t *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "searching policy for ID pair %s...%s",
-					  my_id->get_string(my_id), other_id->get_string(other_id));
+	this->logger->log(this->logger, CONTROL|LEVEL1, 
+					  "searching policy for ID pair %D...%D", my_id, other_id);
 
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -151,19 +151,14 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 			{
 				this->logger->log(this->logger, CONTROL|LEVEL2,
 								  "candidate '%s' inacceptable due traffic selector mismatch",
-								  candidate->get_name(candidate),
-								  candidate_my_id->get_string(candidate_my_id),
-								  candidate_other_id->get_string(candidate_other_id),
-								  prio);
+								  candidate->get_name(candidate));
 				continue;
 			}
 
 			this->logger->log(this->logger, CONTROL|LEVEL2,
-							  "candidate policy '%s': %s...%s (prio=%d)",
+							  "candidate policy '%s': %D...%D (prio=%d)",
 							  candidate->get_name(candidate),
-							  candidate_my_id->get_string(candidate_my_id),
-							  candidate_other_id->get_string(candidate_other_id),
-							  prio);
+							  candidate_my_id, candidate_other_id, prio);
 
 			if (prio > best_prio)
 			{
@@ -180,11 +175,9 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 		identification_t *found_other_id = found->get_other_id(found);
 		
 		this->logger->log(this->logger, CONTROL,
-						  "found matching policy '%s': %s...%s (prio=%d)",
+						  "found matching policy '%s': %D...%D (prio=%d)",
 						  found->get_name(found),
-						  found_my_id->get_string(found_my_id),
-						  found_other_id->get_string(found_other_id),
-						  best_prio);
+						  found_my_id, found_other_id, best_prio);
 		/* give out a new reference to it */
 		found->get_ref(found);
 	}

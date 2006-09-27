@@ -354,9 +354,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	{
 		other_ca = identification_create_from_string("%any");
 	}
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  my ca:   '%s'", my_ca->get_string(my_ca));
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  other ca:'%s'", other_ca->get_string(other_ca));
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  updown:'%s'", msg->add_conn.me.updown);
+	this->logger->log(this->logger, CONTROL|LEVEL1, "  my ca:   '%D'", my_ca);
+	this->logger->log(this->logger, CONTROL|LEVEL1, "  other ca:'%D'", other_ca);
+	this->logger->log(this->logger, CONTROL|LEVEL1, "  updown: '%s'", msg->add_conn.me.updown);
 
 	connection = connection_create(msg->add_conn.name,
 								   msg->add_conn.ikev2,
@@ -457,12 +457,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	
 	/* add to global connection list */
 	charon->connections->add_connection(charon->connections, connection);
-	this->logger->log(this->logger, CONTROL, "added connection \"%s\": %s[%s]...%s[%s]",
-					  msg->add_conn.name,
-					  my_host->get_string(my_host),
-					  my_id->get_string(my_id),
-					  other_host->get_string(other_host),
-					  other_id->get_string(other_id));
+	this->logger->log(this->logger, CONTROL, 
+					  "added connection \"%s\": %H[%D]...%H[%D]", msg->add_conn.name,
+					  my_host, my_id, other_host, other_id);
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);
 	return;
@@ -633,7 +630,7 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 	while (list->remove_first(list, (void**)&host) == SUCCESS)
 	{
 		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
-								 "  %s", host->get_string(host));
+								 "  %H", host);
 		host->destroy(host);
 		
 	}
