@@ -5,29 +5,92 @@
 ipsec_PROGRAMS = pluto _pluto_adns
 
 pluto_SOURCES = \
-oid.c oid.h linux26/rtnetlink.h linux26/xfrm.h linux26/netlink.h rsaref/pkcs11t.h rsaref/pkcs11.h \
-rsaref/unix.h rsaref/pkcs11f.h alg/ike_alg_twofish.c alg/ike_alg_aes.c alg/ike_alg_blowfish.c \
-alg/ike_alg_sha2.c alg/ike_alg_serpent.c alg/ike_alginit.c kernel_alg.c kernel_alg.h kernel_pfkey.h \
-kernel_pfkey.c gcryptfix.c gcryptfix.h primegen.c smallprime.c ocsp.c ocsp.h pgp.c ac.c certs.c \
-connections.c certs.h virtual.c connections.h fetch.c virtual.h fetch.h ipsec_doi.c ipsec_doi.h \
-x509.c kameipsec.h cookie.c x509.h cookie.h pgp.h ac.h sha1.c sha1.h constants.c smartcard.c \
-kernel.c constants.h smartcard.h kernel.h dnskey.c asn1.c dnskey.h elgamal.c db_ops.c asn1.h \
-elgamal.h db_ops.h mp_defs.c state.c mp_defs.h ca.c state.h pkcs7.c lex.c ca.h \
-pkcs7.h id.c lex.h id.h keys.c ike_alg.c keys.h md5.c md5.h kernel_noklips.c ike_alg.h rcv_whack.c \
-rcv_whack.h alg_info.c alg_info.h pem.c kernel_noklips.h foodgroups.c pem.h kernel_netlink.c \
-foodgroups.h vendor.c vendor.h packet.c packet.h crl.c md2.c rnd.c crl.h md2.h spdb.c rnd.h \
-spdb.h modecfg.c timer.h nat_traversal.c server.c dsa.c plutomain.c modecfg.h kernel_netlink.h \
-nat_traversal.h server.h dsa.h timer.c crypto.c pkcs1.c log.c defs.c demux.c crypto.h pkcs1.h \
-log.h defs.h demux.h
+ac.c ac.h \
+alg_info.c alg_info.h \
+asn1.c asn1.h \
+ca.c ca.h \
+certs.c certs.h \
+connections.c connections.h \
+constants.c constants.h \
+cookie.c cookie.h \
+crl.c crl.h \
+crypto.c crypto.h \
+db_ops.c db_ops.h \
+defs.c defs.h \
+demux.c demux.h \
+dnskey.c dnskey.h \
+dsa.c dsa.h \
+elgamal.c elgamal.h \
+fetch.c fetch.h \
+foodgroups.c foodgroups.h \
+gcryptfix.c gcryptfix.h \
+id.c id.h \
+ike_alg.c ike_alg.h \
+ipsec_doi.c ipsec_doi.h \
+kameipsec.h \
+kernel.c kernel.h \
+kernel_alg.c kernel_alg.h \
+kernel_netlink.c kernel_netlink.h \
+kernel_noklips.c kernel_noklips.h \
+kernel_pfkey.c kernel_pfkey.h \
+keys.c keys.h \
+lex.c lex.h \
+log.c log.h \
+md2.c md2.h \
+md5.c md5.h \
+modecfg.c modecfg.h \
+mp_defs.c mp_defs.h \
+nat_traversal.c nat_traversal.h \
+ocsp.c ocsp.h \
+oid.c oid.h \
+packet.c packet.h \
+pem.c pem.h \
+pgp.c pgp.h \
+pkcs1.c pkcs1.h \
+pkcs7.c pkcs7.h \
+plutomain.c \
+primegen.c smallprime.c \
+rcv_whack.c rcv_whack.h \
+rnd.c rnd.h \
+server.c server.h \
+sha1.c sha1.h \
+smartcard.c smartcard.h \
+spdb.c spdb.h \
+state.c state.h \
+timer.c timer.h \
+vendor.c vendor.h \
+virtual.c virtual.h \
+x509.c x509.h \
+alg/ike_alg_aes.c alg/ike_alg_blowfish.c alg/ike_alg_twofish.c \
+alg/ike_alg_serpent.c alg/ike_alg_sha2.c alg/ike_alginit.c \
+linux26/netlink.h linux26/rtnetlink.h linux26/xfrm.h \
+rsaref/pkcs11t.h rsaref/pkcs11.h rsaref/unix.h rsaref/pkcs11f.h
 
 _pluto_adns_SOURCES = adns.c adns.h
 
-INCLUDES = -I$(top_srcdir)/src/libfreeswan -I$(top_srcdir)/src/libcrypto -I$(top_srcdir)/src/whack
-AM_CFLAGS = -DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_CONFDIR=\"${confdir}\" -DIPSEC_PIDDIR=\"${piddir}\" \
--DDEBUG -DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES -DPLUTO \
--DVENDORID -DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" -DTHREADS -DKLIPS
-pluto_LDADD = $(top_srcdir)/src/libfreeswan/libfreeswan.a $(top_srcdir)/src/libcrypto/libcrypto.a -lgmp -lresolv -lpthread
-_pluto_adns_LDADD = -lresolv $(top_srcdir)/src/libfreeswan/libfreeswan.a
+INCLUDES = \
+-I$(top_srcdir)/src/libfreeswan \
+-I$(top_srcdir)/src/libcrypto \
+-I$(top_srcdir)/src/whack
+
+AM_CFLAGS = \
+-DIPSEC_DIR=\"${ipsecdir}\" \
+-DIPSEC_CONFDIR=\"${confdir}\" \
+-DIPSEC_PIDDIR=\"${piddir}\" \
+-DSHARED_SECRETS_FILE=\"${confdir}/ipsec.secrets\" \
+-DKERNEL26_SUPPORT -DKERNEL26_HAS_KAME_DUPLICATES \
+-DPLUTO -DKLIPS -DDEBUG \
+-DVENDORID  -DTHREADS
+
+pluto_LDADD = \
+$(top_srcdir)/src/libfreeswan/libfreeswan.a \
+$(top_srcdir)/src/libcrypto/libcrypto.a \
+-lgmp -lresolv -lpthread
+
+_pluto_adns_LDADD = \
+$(top_srcdir)/src/libfreeswan/libfreeswan.a \
+-lresolv
+
 dist_man_MANS = pluto.8 ipsec.secrets.5
 EXTRA_DIST = oid.pl oid.txt
 BUILT_SOURCES = oid.c oid.h
