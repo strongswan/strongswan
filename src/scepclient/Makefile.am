@@ -1,13 +1,23 @@
 ipsec_PROGRAMS = scepclient
 scepclient_SOURCES = rsakey.c rsakey.h pkcs10.c pkcs10.h scep.c scep.h scepclient.c
 
-INCLUDES = -I$(top_srcdir)/src/libfreeswan -I$(top_srcdir)/src/pluto -I$(top_srcdir)/src/whack -I$(top_srcdir)/src/libcrypto
+INCLUDES = \
+-I$(top_srcdir)/src/libfreeswan \
+-I$(top_srcdir)/src/pluto \
+-I$(top_srcdir)/src/whack \
+-I$(top_srcdir)/src/libcrypto
+
 AM_CFLAGS = -DDEBUG -DNO_PLUTO -DIPSEC_CONFDIR=\"${confdir}\"
 scepclient_LDADD = asn1.o ca.o crl.o certs.o constants.o defs.o fetch.o id.o \
                    keys.o lex.o md2.o md5.o mp_defs.o ocsp.o oid.o pem.o pgp.o \
                    pkcs1.o pkcs7.o rnd.o sha1.o smartcard.o x509.o loglite.o \
                    $(top_srcdir)/src/libfreeswan/libfreeswan.a $(top_srcdir)/src/libcrypto/libcrypto.a \
                    -lgmp
+
+# This compile option activates dynamic URL fetching using libcurl
+if USE_LIBCURL
+  scepclient_LDADD += -lcurl
+endif
 
 # This compile option activates smartcard support
 if USE_SMARTCARD
@@ -91,8 +101,3 @@ smartcard.o :	$(PLUTODIR)/smartcard.c $(PLUTODIR)/smartcard.h
 
 x509.o :	$(PLUTODIR)/x509.c $(PLUTODIR)/x509.h
 		$(COMPILE) $(INCLUDES) -c -o $@ $<
-
-# This compile option activates dynamic URL fetching using libcurl
-if USE_LIBCURL
-  scepclient_LDADD += -lcurl
-endif
