@@ -96,13 +96,13 @@ dnl ==========================
 dnl  check required libraries
 dnl ==========================
 
-AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])	
+AC_HAVE_LIBRARY([gmp],[LIBS="$LIBS"],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])])	
 if test "$ldap" = "true"; then
-    AC_HAVE_LIBRARY([ldap],,[AC_MSG_ERROR([LDAP enabled, but library ldap not found])])
-    AC_HAVE_LIBRARY([lber],,[AC_MSG_ERROR([LDAP enabled, but library lber not found])])
+    AC_HAVE_LIBRARY([ldap],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP enabled, but library ldap not found])])
+    AC_HAVE_LIBRARY([lber],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP enabled, but library lber not found])])
 fi
 if test "$http" = "true"; then
-    AC_HAVE_LIBRARY([curl],,[AC_MSG_ERROR([HTTP enabled, but library curl not found])])
+    AC_HAVE_LIBRARY([curl],[LIBS="$LIBS"],[AC_MSG_ERROR([HTTP enabled, but library curl not found])])
 fi
 
 
