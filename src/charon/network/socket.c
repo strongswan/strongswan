@@ -71,6 +71,11 @@
 #define UDP_ENCAP_ESPINUDP 2
 #endif /*UDP_ENCAP_ESPINUDP*/
 
+/* needed for older kernel headers */
+#ifndef IPV6_2292PKTINFO
+#define IPV6_2292PKTINFO 2
+#endif /*IPV6_2292PKTINFO*/
+
 typedef struct private_socket_t private_socket_t;
 
 /**
@@ -175,8 +180,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		if (bytes_read < 0)
 		{
 			this->logger->log(this->logger, ERROR,
-							  "error reading from IPv4 socket: %s", 
-							  strerror(errno));
+							  "error reading from IPv4 socket: %m");
 			return FAILED;
 		}
 		this->logger->log_bytes(this->logger, RAW,
@@ -241,8 +245,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		if (bytes_read < 0)
 		{
 			this->logger->log(this->logger, ERROR, 
-							  "error reading from IPv6 socket: %s", 
-							  strerror(errno));
+							  "error reading from IPv6 socket: %m");
 			return FAILED;
 		}
 		this->logger->log_bytes(this->logger, RAW,
@@ -262,8 +265,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 			if (cmsgptr->cmsg_len == 0) 
 			{
 				this->logger->log(this->logger, ERROR, 
-								  "error reading IPv6 ancillary data: %s", 
-								  strerror(errno));
+								  "error reading IPv6 ancillary data: %m");
 				return FAILED;
 			}	
 			if (cmsgptr->cmsg_level == IPPROTO_IPV6 &&
@@ -391,7 +393,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	if (bytes_sent != data.len)
 	{
 		this->logger->log(this->logger, ERROR, 
-						  "error writing to socket: %s", strerror(errno));
+						  "error writing to socket: %m");
 		return FAILED;
 	}
 	return SUCCESS;
@@ -549,16 +551,14 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	skt = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	if (skt < 0)
 	{
-		this->logger->log(this->logger, ERROR, "could not open send socket: %s",
-						  strerror(errno));
+		this->logger->log(this->logger, ERROR, "could not open send socket: %m");
 		return 0;
 	}
 	
 	if (setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
-						  "unable to set SO_REUSEADDR on send socket: %s",
-						  strerror(errno));
+						  "unable to set SO_REUSEADDR on send socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -575,8 +575,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	if (setsockopt(skt, ip_proto, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
-						  "unable to set IPSEC_POLICY on send socket: %s",
-						  strerror(errno));
+						  "unable to set IPSEC_POLICY on send socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -587,8 +586,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	if (setsockopt(skt, ip_proto, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
 		this->logger->log(this->logger, ERROR,
-						  "unable to set IPSEC_POLICY on send socket: %s",
-						  strerror(errno));
+						  "unable to set IPSEC_POLICY on send socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -596,8 +594,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	/* bind the send socket */
 	if (bind(skt, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
-		this->logger->log(this->logger, ERROR, "unable to bind send socket: %s",
-						  strerror(errno));
+		this->logger->log(this->logger, ERROR, "unable to bind send socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -608,8 +605,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 		if (setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 		{
 			this->logger->log(this->logger, ERROR,
-							"unable to set UDP_ENCAP: %s; NAT-T may fail",
-							strerror(errno));
+							"unable to set UDP_ENCAP: %m; NAT-T may fail");
 		}
 	}
 	
@@ -693,8 +689,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 	if (skt < 0)
 	{
 		this->logger->log(this->logger, ERROR,
-						  "unable to create raw socket: %s",
-						  strerror(errno));
+						  "unable to create raw socket: %m");
 		return 0;
 	}
 	
@@ -702,18 +697,18 @@ static int open_recv_socket(private_socket_t *this, int family)
 				   &ikev2_filter, sizeof(ikev2_filter)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
-						"unable to attach IKEv2 filter to raw socket: %s",
-						strerror(errno));
+						"unable to attach IKEv2 filter to raw socket: %m");
 		close(skt);
 		return 0;
 	}
 	
 	if (family == AF_INET6 &&
-		setsockopt(skt, ip_proto, ip_pktinfo, &on, sizeof(on)) < 0)
+		/* we use IPV6_2292PKTINFO, as IPV6_PKTINFO is defined as
+		 * 2 or 50 depending on kernel header version */
+		setsockopt(skt, SOL_IPV6, IPV6_2292PKTINFO, &on, sizeof(on)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
-						  "unable to set IPV6_PKTINFO on raw socket: %s",
-						  strerror(errno));
+						  "unable to set IPV6_PKTINFO on raw socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -730,8 +725,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 	if (setsockopt(skt, ip_proto, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
-						  "unable to set IPSEC_POLICY on raw socket: %s",
-						  strerror(errno));
+						  "unable to set IPSEC_POLICY on raw socket: %m");
 		close(skt);
 		return 0;
 	}
