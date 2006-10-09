@@ -13,3 +13,6 @@ R	140321062536Z	050621195214Z	0C	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN
 V	140321062916Z		0D	unknown	/C=CH/O=Linux strongSwan/OU=Sales/CN=Sales CA
 V	100607191714Z		0E	unknown	/C=CH/O=Linux strongSwan/CN=winnetou.strongswan.org
 V	100620195806Z		0F	unknown	/C=CH/O=Linux strongSwan/OU=Research/CN=Research CA
+V	111007105811Z		10	unknown	/C=CH/O=Linux strongSwan/OU=SHA-256/CN=moon.strongswan.org
+V	111007121250Z		11	unknown	/C=CH/O=Linux strongSwan/OU=SHA-384/CN=carol@strongswan.org
+V	111007122112Z		12	unknown	/C=CH/O=Linux strongSwan/OU=SHA-512/CN=dave@strongswan.org
