@@ -268,8 +268,8 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 								  "error reading IPv6 ancillary data: %m");
 				return FAILED;
 			}	
-			if (cmsgptr->cmsg_level == IPPROTO_IPV6 &&
-				cmsgptr->cmsg_type == IPV6_PKTINFO)
+			if (cmsgptr->cmsg_level == SOL_IPV6 &&
+				cmsgptr->cmsg_type == IPV6_2292PKTINFO)
 			{
 				struct in6_pktinfo *pktinfo;
 				pktinfo = (struct in6_pktinfo*)CMSG_DATA(cmsgptr);
@@ -516,7 +516,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	int on = TRUE;
 	int type = UDP_ENCAP_ESPINUDP;
 	struct sockaddr_storage addr;
-	u_int ip_proto, ipsec_policy;
+	u_int sol, ipsec_policy;
 	struct sadb_x_policy policy;
 	int skt;
 	
@@ -530,7 +530,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 			sin->sin_family = AF_INET;
 			sin->sin_addr.s_addr = INADDR_ANY;
 			sin->sin_port = htons(port);
-			ip_proto = IPPROTO_IP;
+			sol = SOL_IP;
 			ipsec_policy = IP_IPSEC_POLICY;
 			break;
 		}
@@ -540,7 +540,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 			sin6->sin6_family = AF_INET6;
 			memcpy(&sin6->sin6_addr, &in6addr_any, sizeof(in6addr_any));
 			sin6->sin6_port = htons(port);
-			ip_proto = IPPROTO_IPV6;
+			sol = SOL_IPV6;
 			ipsec_policy = IPV6_IPSEC_POLICY;
 			break;
 		}
@@ -572,7 +572,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	policy.sadb_x_policy_id = 0;
 	policy.sadb_x_policy_priority = 0;
 	
-	if (setsockopt(skt, ip_proto, ipsec_policy, &policy, sizeof(policy)) < 0)
+	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
 						  "unable to set IPSEC_POLICY on send socket: %m");
@@ -583,7 +583,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	/* We don't receive packets on the send socket, but we need a INBOUND policy.
 	 * Otherwise, UDP decapsulation does not work!!! */
 	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
-	if (setsockopt(skt, ip_proto, ipsec_policy, &policy, sizeof(policy)) < 0)
+	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
 		this->logger->log(this->logger, ERROR,
 						  "unable to set IPSEC_POLICY on send socket: %m");
@@ -619,7 +619,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 {
 	int skt;
 	int on = TRUE;
-	u_int proto_offset, ip_len, ip_proto, ipsec_policy, ip_pktinfo, udp_header, ike_header;
+	u_int proto_offset, ip_len, sol, ipsec_policy, udp_header, ike_header;
 	struct sadb_x_policy policy;
 	
 	/* precalculate constants depending on address family */
@@ -628,15 +628,13 @@ static int open_recv_socket(private_socket_t *this, int family)
 		case AF_INET:
 			proto_offset = IP_PROTO_OFFSET;
 			ip_len = IP_LEN;
-			ip_proto = IPPROTO_IP;
-			ip_pktinfo = IP_PKTINFO;
+			sol = SOL_IP;
 			ipsec_policy = IP_IPSEC_POLICY;
 			break;
 		case AF_INET6:
 			proto_offset = IP6_PROTO_OFFSET;
 			ip_len = 0; /* IPv6 raw sockets contain no IP header */
-			ip_proto = IPPROTO_IPV6;
-			ip_pktinfo = IPV6_PKTINFO;
+			sol = SOL_IPV6;
 			ipsec_policy = IPV6_IPSEC_POLICY;
 			break;
 		default:
@@ -705,7 +703,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 	if (family == AF_INET6 &&
 		/* we use IPV6_2292PKTINFO, as IPV6_PKTINFO is defined as
 		 * 2 or 50 depending on kernel header version */
-		setsockopt(skt, SOL_IPV6, IPV6_2292PKTINFO, &on, sizeof(on)) < 0)
+		setsockopt(skt, sol, IPV6_2292PKTINFO, &on, sizeof(on)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
 						  "unable to set IPV6_PKTINFO on raw socket: %m");
@@ -722,7 +720,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 	policy.sadb_x_policy_id = 0;
 	policy.sadb_x_policy_priority = 0;
 	
-	if (setsockopt(skt, ip_proto, ipsec_policy, &policy, sizeof(policy)) < 0)
+	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
 		this->logger->log(this->logger, ERROR, 
 						  "unable to set IPSEC_POLICY on raw socket: %m");
