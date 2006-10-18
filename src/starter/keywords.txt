@@ -32,6 +32,7 @@ charonstart,       KW_CHARONSTART
 plutostart,        KW_PLUTOSTART
 klipsdebug,        KW_KLIPSDEBUG
 plutodebug,        KW_PLUTODEBUG
+charondebug,       KW_CHARONDEBUG
 prepluto,          KW_PREPLUTO
 postpluto,         KW_POSTPLUTO
 fragicmp,          KW_FRAGICMP

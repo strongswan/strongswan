@@ -151,8 +151,9 @@ static const token_info_t token_info[] =
     { ARG_ENUM, offsetof(starter_config_t, setup.charonstart), LST_bool            },
     { ARG_ENUM, offsetof(starter_config_t, setup.plutostart), LST_bool             },
 
-    /* pluto keywords */
+    /* pluto/charon keywords */
     { ARG_LST,  offsetof(starter_config_t, setup.plutodebug), LST_plutodebug       },
+    { ARG_STR,  offsetof(starter_config_t, setup.charondebug),  NULL               },
     { ARG_STR,  offsetof(starter_config_t, setup.prepluto), NULL                   },
     { ARG_STR,  offsetof(starter_config_t, setup.postpluto), NULL                  },
     { ARG_ENUM, offsetof(starter_config_t, setup.uniqueids), LST_bool              },

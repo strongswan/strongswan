@@ -152,8 +152,9 @@ struct starter_config {
 		bool	charonstart;
 		bool	plutostart;
 
-		/* pluto keywords */
+		/* pluto/charon keywords */
 		char	**plutodebug;
+		char	*charondebug;
 		char	*prepluto;
 		char	*postpluto;
 		bool	uniqueids;

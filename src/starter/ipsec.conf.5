@@ -1076,6 +1076,17 @@ separated by white space) are enabled;
 for details on available debugging types, see
 .IR ipsec_pluto (8).
 .TP
+.B charondebug
+how much Charon debugging output should be logged.
+A comma separated list containing type level/pairs may
+be specified, e.g:
+.B dmn 3, ike 1, net -1.
+Acceptable values for types are
+.B dmn, mgr, ike, chd, job, cfg, knl, net, enc, lib
+and the level is one of
+.B -1, 0, 1, 2, 3, 4
+(for silent, audit, control, controlmore, raw, private)
+.TP
 .B plutoopts
 additional options to pass to pluto upon startup. See
 .IR ipsec_pluto (8).

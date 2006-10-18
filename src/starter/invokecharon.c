@@ -102,7 +102,10 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     struct stat stb;
     int argc = 1;
     char *arg[] = {
-	CHARON_CMD, NULL, NULL, NULL
+	CHARON_CMD, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
     };
 
     if (!debug)
@@ -112,6 +115,36 @@ starter_start_charon (starter_config_t *cfg, bool debug)
     if (cfg->setup.strictcrlpolicy)
     {
 	arg[argc++] = "--strictcrlpolicy";
+    }
+
+    {   /* parse debug string */
+    	char *pos, *level, *buf_pos, type[4], buffer[512];
+	pos = cfg->setup.charondebug;
+	buf_pos = buffer;
+	while (pos && sscanf(pos, "%4s %d,", type, &level) == 2)
+	{
+	    snprintf(buf_pos, buffer + sizeof(buffer) - buf_pos, "--debug-%s", type);
+	    arg[argc++] = buf_pos;
+	    buf_pos += strlen(buf_pos) + 1;
+	    if (buf_pos >= buffer + sizeof(buffer))
+	    {
+		break;
+	    }
+	    snprintf(buf_pos, buffer + sizeof(buffer) - buf_pos, "%d", level);
+	    arg[argc++] = buf_pos;
+	    buf_pos += strlen(buf_pos) + 1;
+	    if (buf_pos >= buffer + sizeof(buffer))
+	    {
+		break;
+	    }
+	
+	    /* get next */
+	    pos = strchr(pos, ',');
+	    if (pos)
+	    {
+		pos++;
+	    }
+	}
     }
 
     if (_charon_pid)
