@@ -115,8 +115,6 @@ struct stroke_msg_t {
 		/* show verbose connection status */
 		STR_STATUS_ALL,
 		/* set a log type to log/not log */
-		STR_LOGTYPE,
-		/* set the verbosity of a logging context */
 		STR_LOGLEVEL,
 		/* list various objects */
 		STR_LIST,
@@ -154,23 +152,16 @@ struct stroke_msg_t {
 			stroke_end_t me, other;
 		} add_conn;
 
-		/* data for STR_LOGTYPE */
-		struct {
-			char *context;
-			char *type;
-			int enable;
-		} logtype;
-
 		/* data for STR_LOGLEVEL */
 		struct {
-			char *context;
+			char *type;
 			int level;
 		} loglevel;
 
 		/* data for STR_LIST */
 		struct {
 			list_flag_t flags;
-			bool  utc;
+			bool utc;
 		} list;
 
 		/* data for STR_REREAD */

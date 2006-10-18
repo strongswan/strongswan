@@ -238,25 +238,13 @@ static int reread(stroke_keyword_t kw)
 	return send_stroke_msg(&msg);
 }
 
-static int set_logtype(char *context, char *type, int enable)
-{
-	stroke_msg_t msg;
-	
-	msg.type = STR_LOGTYPE;
-	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.logtype.context = push_string(&msg, context);
-	msg.logtype.type = push_string(&msg, type);
-	msg.logtype.enable = enable;
-	return send_stroke_msg(&msg);
-}
-
-static int set_loglevel(char *context, u_int level)
+static int set_loglevel(char *type, u_int level)
 {
 	stroke_msg_t msg;
 	
 	msg.type = STR_LOGLEVEL;
 	msg.length = offsetof(stroke_msg_t, buffer);
-	msg.loglevel.context = push_string(&msg, context);
+	msg.loglevel.type = push_string(&msg, type);
 	msg.loglevel.level = level;
 	return send_stroke_msg(&msg);
 }
@@ -289,17 +277,10 @@ static void exit_usage(char *error)
 	printf("  Terminate a connection:\n");
 	printf("    stroke down NAME\n");
 	printf("    where: NAME is a connection name added with \"stroke add\"\n");
-	printf("  Set logtype for a logging context:\n");
-	printf("    stroke logtype CONTEXT TYPE ENABLE\n");
-	printf("    where: CONTEXT is PARSR|GNRAT|IKESA|SAMGR|CHDSA|MESSG|TPOOL|WORKR|SCHED|\n");
-	printf("                      SENDR|RECVR|SOCKT|TESTR|DAEMN|CONFG|ENCPL|PAYLD\n");
-	printf("           TYPE is CONTROL|ERROR|AUDIT|RAW|PRIVATE\n");
-	printf("           ENABLE is 0|1\n");
-	printf("  Set loglevel for a logging context:\n");
-	printf("    stroke loglevel CONTEXT LEVEL\n");
-	printf("    where: CONTEXT is PARSR|GNRAT|IKESA|SAMGR|CHDSA|MESSG|TPOOL|WORKR|SCHED|\n");
-	printf("                      SENDR|RECVR|SOCKT|TESTR|DAEMN|CONFG|ENCPL|PAYLD\n");
-	printf("           LEVEL is 0|1|2|3\n");
+	printf("  Set loglevel for a logging type:\n");
+	printf("    stroke loglevel TYPE LEVEL\n");
+	printf("    where: TYPE is any|dmn|mgr|ike|chd|job|cfg|knl|net|enc|lib\n");
+	printf("           LEVEL is -1|0|1|2|3|4\n");
 	printf("  Show connection status:\n");
 	printf("    stroke status\n");
 	printf("  Show list of locally loaded certificates and crls:\n");
@@ -374,13 +355,6 @@ int main(int argc, char *argv[])
 				exit_usage("\"unroute\" needs a connection name");
 			}
 			res = unroute_connection(argv[2]);
-			break;
-		case STROKE_LOGTYPE:
-			if (argc < 5)
-			{
-				exit_usage("\"logtype\" needs more parameters...");
-			}
-			res = set_logtype(argv[2], argv[3], atoi(argv[4])); 
 			break;
 		case STROKE_LOGLEVEL:
 			if (argc < 4)
