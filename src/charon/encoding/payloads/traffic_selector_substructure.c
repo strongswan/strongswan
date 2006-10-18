@@ -26,15 +26,6 @@
 #include <encoding/payloads/encodings.h>
 #include <utils/linked_list.h>
 
-/** 
- * String mappings for ts_type_t.
- */
-mapping_t ts_type_m[] = {
-	{TS_IPV4_ADDR_RANGE, "TS_IPV4_ADDR_RANGE"},
-	{TS_IPV6_ADDR_RANGE, "TS_IPV6_ADDR_RANGE"},
-	{MAPPING_END, NULL}
-};
-
 
 typedef struct private_traffic_selector_substructure_t private_traffic_selector_substructure_t;
 

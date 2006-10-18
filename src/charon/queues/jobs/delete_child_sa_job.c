@@ -51,11 +51,6 @@ struct private_delete_child_sa_job_t {
 	 * inbound SPI of the CHILD_SA
 	 */
 	u_int32_t spi;
-	
-	/**
-	 * Logger ref
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -77,8 +72,8 @@ static status_t execute(private_delete_child_sa_job_t *this)
 													   this->reqid);
 	if (ike_sa == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, 
-						  "CHILD_SA not found for delete");
+		DBG1(SIG_DBG_JOB, "CHILD_SA with reqid %d not found for delete",
+			 this->reqid);
 		return DESTROY_ME;
 	}
 	ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi);
@@ -113,7 +108,6 @@ delete_child_sa_job_t *delete_child_sa_job_create(u_int32_t reqid,
 	this->reqid = reqid;
 	this->protocol = protocol;
 	this->spi = spi;
-	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);
 }

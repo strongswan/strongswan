@@ -26,45 +26,33 @@
 
 #include <utils/linked_list.h>
 #include <utils/identification.h>
-#include <utils/logger.h>
 #include <utils/lexparser.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
 
 
-/** 
- * String mappings for protocol_id_t.
- */
-mapping_t protocol_id_m[] = {
-	{PROTO_NONE, "PROTO_NONE"},
-	{PROTO_IKE, "IKE"},
-	{PROTO_AH, "AH"},
-	{PROTO_ESP, "ESP"},
-	{MAPPING_END, NULL}
-};
+ENUM(protocol_id_names, PROTO_NONE, PROTO_ESP,
+	"PROTO_NONE",
+	"IKE",
+	"AH",
+	"ESP",
+);
 
-/** 
- * String mappings for transform_type_t.
- */
-mapping_t transform_type_m[] = {
-	{UNDEFINED_TRANSFORM_TYPE, "UNDEFINED_TRANSFORM_TYPE"},
-	{ENCRYPTION_ALGORITHM, "ENCRYPTION_ALGORITHM"},
-	{PSEUDO_RANDOM_FUNCTION, "PSEUDO_RANDOM_FUNCTION"},
-	{INTEGRITY_ALGORITHM, "INTEGRITY_ALGORITHM"},
-	{DIFFIE_HELLMAN_GROUP, "DIFFIE_HELLMAN_GROUP"},
-	{EXTENDED_SEQUENCE_NUMBERS, "EXTENDED_SEQUENCE_NUMBERS"},
-	{MAPPING_END, NULL}
-};
+ENUM_BEGIN(transform_type_names, UNDEFINED_TRANSFORM_TYPE, UNDEFINED_TRANSFORM_TYPE, 
+	"UNDEFINED_TRANSFORM_TYPE");
+ENUM_NEXT(transform_type_names, ENCRYPTION_ALGORITHM, EXTENDED_SEQUENCE_NUMBERS, UNDEFINED_TRANSFORM_TYPE,
+	"ENCRYPTION_ALGORITHM",
+	"PSEUDO_RANDOM_FUNCTION",
+	"INTEGRITY_ALGORITHM",
+	"DIFFIE_HELLMAN_GROUP",
+	"EXTENDED_SEQUENCE_NUMBERS");
+ENUM_END(transform_type_names, EXTENDED_SEQUENCE_NUMBERS);
 
-/** 
- * String mappings for extended_sequence_numbers_t.
- */
-mapping_t extended_sequence_numbers_m[] = {
-	{NO_EXT_SEQ_NUMBERS, "NO_EXT_SEQ_NUMBERS"},
-	{EXT_SEQ_NUMBERS, "EXT_SEQ_NUMBERS"},
-	{MAPPING_END, NULL}
-};
+ENUM(extended_sequence_numbers_names, NO_EXT_SEQ_NUMBERS, EXT_SEQ_NUMBERS,
+	"NO_EXT_SEQ_NUMBERS",
+	"EXT_SEQ_NUMBERS",
+);
 
 typedef struct private_proposal_t private_proposal_t;
 
@@ -389,7 +377,7 @@ static void clone_algo_list(linked_list_t *list, linked_list_t *clone_list)
 /**
  * Implements proposal_t.clone
  */
-static proposal_t *clone(private_proposal_t *this)
+static proposal_t *clone_(private_proposal_t *this)
 {
 	private_proposal_t *clone = (private_proposal_t*)proposal_create(this->protocol);
 	
@@ -523,7 +511,7 @@ proposal_t *proposal_create(protocol_id_t protocol)
 	this->public.get_protocol = (protocol_id_t(*)(proposal_t*))get_protocol;
 	this->public.set_spi = (void(*)(proposal_t*,u_int64_t))set_spi;
 	this->public.get_spi = (u_int64_t(*)(proposal_t*))get_spi;
-	this->public.clone = (proposal_t*(*)(proposal_t*))clone;
+	this->public.clone = (proposal_t*(*)(proposal_t*))clone_;
 	this->public.destroy = (void(*)(proposal_t*))destroy;
 	
 	this->spi = 0;

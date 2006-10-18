@@ -41,11 +41,11 @@ enum transform_attribute_type_t {
 };
 
 /** 
- * String mappings for transform_attribute_type_t.
+ * enum name for transform_attribute_type_t.
  * 
  * @ingroup payloads
  */
-extern mapping_t transform_attribute_type_m[];
+extern enum_name_t *transform_attribute_type_names;
 
 typedef struct transform_attribute_t transform_attribute_t;
 

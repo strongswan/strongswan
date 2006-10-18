@@ -29,60 +29,81 @@
 #include <sa/child_sa.h>
 
 
-/**
- * @brief Raise a signal for an occured event.
- *
- * @param sig		signal_t signal description
- * @param level		level for the signal
- * @param format	printf() style format string
- * @param ...		printf() style agument list
- */
-#define SIG(sig, level, format, ...) charon->bus->signal(charon->bus, sig, level, format, ##__VA_ARGS__)
-
-/**
- * @brief Set the IKE_SA the calling thread is using.
- *
- * @param ike_sa	ike_sa to register, or NULL to unregister
- */
-#define SIG_SA(ike_sa) charon->bus->set_sa(charon->bus, ike_sa)
-
-/**
- * @brief Log a debug message via the signal bus.
- *
- * @param signal	signal_t signal description
- * @param format	printf() style format string
- * @param ...		printf() style agument list
- */
-#define DBG1(sig, format, ...) charon->bus->signal(charon->bus, sig, LEV_DBG1, format, ##__VA_ARGS__)
-#define DBG2(sig, format, ...) charon->bus->signal(charon->bus, sig, LEV_DBG2, format, ##__VA_ARGS__)
-#define DBG3(sig, format, ...) charon->bus->signal(charon->bus, sig, LEV_DBG3, format, ##__VA_ARGS__)
-#define DBG4(sig, format, ...) charon->bus->signal(charon->bus, sig, LEV_DBG4, format, ##__VA_ARGS__)
-
-
 typedef enum signal_t signal_t;
 
+/**
+ * @brief signals ommited by the daemon.
+ *
+ * Signaling is for different purporses. First, it allows debugging via
+ * "debugging signal messages", sencondly, it allows to follow certain
+ * mechanisms currently going on in the daemon. As we are multithreaded, 
+ * and a multiple messages are involved, it's not possible to follow
+ * one connection setup without further infrastructure. These infrastructure
+ * is provided by the bus and the signals the whole daemon ommits to the bus.
+ *
+ * @par Schema 1: Signals involved in IKE_SA/CHILD_SA initiation
+ *
+ * In the initiation of a IKE- or CHILD_SA is triggered by three possible
+ * sources: User request, a request from the other peer, or a request
+ * triggered by the kernel.
+ * Once the user requests initiation, the SIG_INITIATE signal is ommited.
+ * This signal contains the IKE_SA that got created. Any further signals
+ * have the same IKE_SA and are therefore easy to trace.
+ * If the kernel initiates, a SIG_ACQUIRE is sent over the bus.
+ * If a new IKE_SA is needed, it is set up. If it succeeds, a
+ * SIG_IKE_ESTABLISHED is ommitted. If the peer didn't accept our DH
+ * group, the initiation fails. A SIG_DH_INVALID is sent over the bus. It still
+ * contains the the old IKE_SA. Shortly afterwards, a SIG_DH_RETRY is ommited.
+ * It contains the NEW IKE_SA. This mechanism allows us to trace the setup even
+ * beyond a INVALID_KE_PAYLOUD error.
+ * If the setup fails, SIG_IKE_ESTABLISH_FAILED is sent.
+ * After a successful establishment of the IKE_SA, or if an already established
+ * IKE_SA is reused, the child establishment begins. If it is set up with
+ * the ike_auth transaction, the SIG_CHILD_ESTABLISHED signal is ommited
+ * directly after the SIG_IKE_ESTABLISHED signal, as both are set up
+ * simultaneously. The child setup may fail (in a ike_auth, or in a 
+ * create_child_sa exchange), if so, the SIG_CHID_ESTABLISH_FAILED signal
+ * is raised.
+ *
+ * @verbatim
+
+          "ipsec up"  "peer msg"  "kernel acquire"
+                |         |          |
+                V         |          V
+            SIG_INITIATE  | SIG_ACQUIRE
+                       \  | /
+                        \ |/______________________________________________
+                         \/________________________________               \
+                         /\                           \    \              |
+                        |  |                          |    |              |
+                        V  V                          |    V              |
+      SIG_IKE_ESTABLISHED  SIG_IKE_ESTABLISH_FALIED   |  SIG_DH_INVALID   |
+                        \                |            |    |              |
+                         \               X            |    V              |
+                          \___________________________/  SIG_DH_RETRY     |
+                          /\                               \______________/
+                         |  |
+                         V  V
+     SIG_CHILD_ESTABLISHED  SIG_CHILD_ESTABLISH_FAILED
+                                          |
+                                          X
+   @endverbatim
+ * Other scenarios are much simpler. Termination is just indicated with
+ * a simple SIG_CHILD_TERMINATED and/or SIG_IKE_TERMINATED signal. There
+ * are other signals as SIG_CHILD_ROUTED or SIG_CHILD_UNROUTED. Rekeying is
+ * also trivial (SIG_IKE_REKEYED/SIG_CHILD_REKEYED), but may contain
+ * SIG_DH_INVALID...
+ *
+ * @ingroup bus
+ */
 enum signal_t {
-	/** an IKE_SA has been established */
-	SIG_IKE_UP,
-	/** an IKE_SA has been closed */
-	SIG_IKE_DOWN,
-	/** an IKE_SA has been rekeyed */
-	SIG_IKE_REKEY,
-	/** a CHILD_SA has been installed */
-	SIG_CHILD_UP,
-	/** a CHILD_SA has been closed */
-	SIG_CHILD_DOWN,
-	/** a CHILD_SA has been rekeyed */
-	SIG_CHILD_REKEY,
-	/** a CHILD_SA has been routed */
-	SIG_CHILD_ROUTE,
-	/** a CHILD_SA has been unrouted */
-	SIG_CHILD_UNROUTE,
-	/** a remote peer has been authenticated using RSA digital signature */
-	SIG_AUTH_RSA,
-	/** a remote peer has been authenticated using preshared keys */
-	SIG_AUTH_PSK,
+	/** pseudo signal, representing any other signal */
+	SIG_ANY,
 	
+	/** debugging messages printed from daemon main loop */
+	SIG_DBG_DMN,
+	/** debugging message printed from IKE_SA_MANAGER */
+	SIG_DBG_MGR,
 	/** debugging message printed from an IKE_SA */
 	SIG_DBG_IKE,
 	/** debugging message printed from a CHILD_SA */
@@ -97,26 +118,102 @@ enum signal_t {
 	SIG_DBG_NET,
 	/** debugging message printed from message encoding/decoding */
 	SIG_DBG_ENC,
+	/** debugging message printed from libstrongswan via logging hook */
+	SIG_DBG_LIB,
 	
-	SIG_MAX,
+	/** number of debug signals */
+	SIG_DBG_MAX,
+	
+	/** initiation started on user request */
+	SIG_INITIATE,
+	/** acquiring on kernel request */
+	SIG_ACQUIRE,
+	
+	/** an IKE_SA has been established */
+	SIG_IKE_UP,
+	/** an IKE_SA has been closed as requested */
+	SIG_IKE_DOWN,
+	/** an IKE_SA got deleted due an error */
+	SIG_IKE_FAILED,
+	/** an IKE_SA has been rekeyed */
+	SIG_IKE_REKEY,
+	
+	/** a CHILD_SA has been established */
+	SIG_CHILD_UP,
+	/** a CHILD_SA has been closed as requested */
+	SIG_CHILD_DOWN,
+	/** a CHILD_SA got deleted due an error */
+	SIG_CHILD_FAILED,
+	/** a CHILD_SA has been rekeyed */
+	SIG_CHILD_REKEY,
+	/** a CHILD_SA has been routed */
+	SIG_CHILD_ROUTE,
+	/** a CHILD_SA has been unrouted */
+	SIG_CHILD_UNROUTE,
+	
+	SIG_MAX
 };
+
+/**
+ * short names of signals using 3 chars
+ */
+extern enum_name_t *signal_names;
 
 typedef enum level_t level_t;
 
+/**
+ * Signal levels used to control output verbosity.
+ */
 enum level_t {
-	/** Signal indicates something has failed */
-	LEV_FAILED,
-	/** Signal indicates something was successful */
-	LEV_SUCCESS,
-	/** Debug level 1, control flow messages */
-	LEV_DBG1,
-	/** Debug level 2, more detail informational messages */
-	LEV_DBG2,
-	/** Debug level 3, RAW data output */
-	LEV_DBG3,
-	/** Debug level 4, RAW data with sensitive (private) data */
-	LEV_DBG4,
+	/** numerical levels from 0 to 4 */
+	LEVEL_0 = 0,
+	LEVEL_1 = 1,
+	LEVEL_2 = 2,
+	LEVEL_3 = 3,
+	LEVEL_4 = 4,
+	/** absolutely silent, no signal is ommited with this level */
+	LEVEL_SILENT = -1,
+	/** alias for numberical levels */
+	LEVEL_AUDIT = LEVEL_0,
+	LEVEL_CTRL = LEVEL_1,
+	LEVEL_CTRLMORE = LEVEL_2,
+	LEVEL_RAW = LEVEL_3,
+	LEVEL_PRIVATE = LEVEL_4,
 };
+
+/**
+ * @brief Raise a signal for an occured event.
+ *
+ * @param sig		signal_t signal description
+ * @param format	printf() style format string
+ * @param ...		printf() style agument list
+ */
+#define SIG(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_0, format, ##__VA_ARGS__)
+
+/**
+ * @brief Log a debug message via the signal bus.
+ *
+ * @param signal	signal_t signal description
+ * @param format	printf() style format string
+ * @param ...		printf() style agument list
+ */
+#define DBG1(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_1, format, ##__VA_ARGS__)
+#define DBG2(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_2, format, ##__VA_ARGS__)
+#define DBG3(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_3, format, ##__VA_ARGS__)
+#define DBG4(sig, format, ...) charon->bus->signal(charon->bus, sig, LEVEL_4, format, ##__VA_ARGS__)
+
+/**
+ * @brief Get the type of a signal.
+ *
+ * A signal may be a debugging signal with a specific context. They have
+ * a level specific for their context > 0. All audit signals use the
+ * type 0. This allows filtering of singals by their type.
+ *
+ * @param signal	signal to get the type from
+ * @return			type of the signal, between 0..(SIG_DBG_MAX-1)
+ */
+#define SIG_TYPE(sig) (sig > SIG_DBG_MAX ? SIG_ANY : sig)
+
 
 typedef struct bus_listener_t bus_listener_t;
 
@@ -135,21 +232,21 @@ struct bus_listener_t {
 	 *
 	 * A numerical identification for the thread is included, as the
 	 * associated IKE_SA, if any. Signal specifies the type of
-	 * the event occured, with a verbosity level. The format string specifies
+	 * the event occured. The format string specifies
 	 * an additional informational or error message with a printf() like
 	 * variable argument list. This is in the va_list form, as forwarding
 	 * a "..." parameters to functions is not (cleanly) possible.
 	 *
 	 * @param this		listener
+	 * @param singal	kind of the signal (up, down, rekeyed, ...)
+	 * @param level		verbosity level of the signal
 	 * @param thread	ID of the thread raised this signal
 	 * @param ike_sa	IKE_SA associated to the event
-	 * @param singal	kind of the signal (up, down, rekeyed, ...)
-	 * @param level		level for signal
 	 * @param format	printf() style format string
 	 * @param args		vprintf() style va_list argument list
 	 */
-	void (*signal) (bus_listener_t *this, int thread, ike_sa_t *ike_sa,
-					signal_t signal, level_t level, char* format, va_list args);
+	void (*signal) (bus_listener_t *this, signal_t signal, level_t level,
+					int thread, ike_sa_t *ike_sa, char* format, va_list args);
 };
 
 
@@ -161,7 +258,8 @@ typedef struct bus_t bus_t;
  * The signal bus is not much more than a multiplexer. A listener interested
  * in receiving event signals registers at the bus. Any signals sent to
  * are delivered to all registered listeners.
- * 
+ * To deliver signals to threads, the blocking listen() call may be used
+ * to wait for a signal.
  *
  * @ingroup bus
  */
@@ -171,11 +269,50 @@ struct bus_t {
 	 * @brief Register a listener to the bus.
 	 *
 	 * A registered listener receives all signals which are sent to the bus.
+	 * The listener is passive; the thread which ommited the signal
+	 * processes the listener routine.
 	 *
 	 * @param this		bus
 	 * @param listener	listener to register.
 	 */
 	void (*add_listener) (bus_t *this, bus_listener_t *listener);
+	
+	/**
+	 * @brief Listen actively on the bus.
+	 *
+	 * As we are fully multithreaded, we must provide a mechanism
+	 * for active threads to listen to the bus. With the listen() method,
+	 * a thread waits until a signal occurs, and then processes it.
+	 * To prevent the listen() calling thread to miss signals ommited while
+	 * it processes a signal, registration is required. This is done through
+	 * the set_listen_state() method, see below.
+	 *
+	 * @param this		bus
+	 * @param level		verbosity level of the signal
+	 * @param thread	receives thread number ommited the signal
+	 * @param ike_sa	receives the IKE_SA involved in the signal, or NULL
+	 * @param format	receives the format string supplied with the signal
+	 * @param va_list	receives the variable argument list for format
+	 * @return			the ommited signal type
+	 */
+	signal_t (*listen) (bus_t *this, level_t* level, int *thread,
+						ike_sa_t **ike_sa, char** format, va_list* args);
+	
+	/**
+	 * @brief Set the listening state of the calling thread.
+	 *
+	 * To prevent message loss for active listeners using listen(), threads
+	 * must register themself to the bus before starting to listen(). When
+	 * a signal occurs, the ommiter waits until all threads with listen_state
+	 * TRUE are waiting in the listen() method to process the signal.
+	 * It is important that a thread with liste_state TRUE calls listen()
+	 * periodically, or sets it's listening state to FALSE; otherwise
+	 * all signal omitting threads get blocked on the bus.
+	 *
+	 * @param this		bus
+	 * @param active	TRUE to set to listening
+	 */
+	void (*set_listen_state) (bus_t *this, bool active);
 	
 	/**
 	 * @brief Set the IKE_SA the calling thread is using.
@@ -185,8 +322,6 @@ struct bus_t {
 	 * time it checked it out. Before checking it in, the thread unregisters
 	 * the IKE_SA (by passing NULL). This IKE_SA is stored per-thread, so each
 	 * thread has one IKE_SA registered (or not).
-	 * There is a macro to simplify the call.
-	 * @see SIG_SA()
 	 * 
 	 * @param this		bus
 	 * @param ike_sa	ike_sa to register, or NULL to unregister
@@ -196,21 +331,32 @@ struct bus_t {
 	/**
 	 * @brief Send a signal to the bus.
 	 *
-	 * A signal may belong to an IKE_SA and a CHILD_SA. If so, these
-	 * are supplied to the signal function. The signal specifies the type of
-	 * the event occured. The format string specifies an additional
-	 * informational or error message with a printf() like variable argument
-	 * list.
-	 * Some useful macros may be available to shorten this call.
+	 * The signal specifies the type of the event occured. The format string
+	 * specifies an additional informational or error message with a
+	 * printf() like variable argument list.
+	 * Some useful macros are available to shorten this call.
 	 * @see SIG(), DBG1()
 	 *
 	 * @param this		bus
 	 * @param singal	kind of the signal (up, down, rekeyed, ...)
-	 * @param level		status level of the signal to send
+	 * @param level		verbosity level of the signal
 	 * @param format	printf() style format string
 	 * @param ...		printf() style argument list
 	 */
 	void (*signal) (bus_t *this, signal_t signal, level_t level, char* format, ...);
+	
+	/**
+	 * @brief Send a signal to the bus using va_list arguments.
+	 *
+	 * Same as bus_t.signal(), but uses va_list argument list.
+	 *
+	 * @param this		bus
+	 * @param singal	kind of the signal (up, down, rekeyed, ...)
+	 * @param level		verbosity level of the signal
+	 * @param format	printf() style format string
+	 * @param args		va_list arguments
+	 */
+	void (*vsignal) (bus_t *this, signal_t signal, level_t level, char* format, va_list args);
 	
 	/**
 	 * @brief Destroy the signal bus.

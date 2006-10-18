@@ -25,17 +25,17 @@
 
 #include <types.h>
 #include <config/connections/connection.h>
-#include <utils/logger.h>
+#include <utils/iterator.h>
 
 
 typedef struct connection_store_t connection_store_t;
 
 /**
  * @brief The interface for a store of connection_t's.
- * 
+ *
  * @b Constructors:
  *	- stroke_create()
- * 
+ *
  * @ingroup config
  */
 struct connection_store_t {
@@ -47,7 +47,7 @@ struct connection_store_t {
 	 * It may be used after kernel request for traffic protection.
 	 * The returned connection gets created/cloned and therefore must
 	 * be destroyed after usage.
-	 * 
+	 *
 	 * @param this				calling object
 	 * @param my_id				own address of connection
 	 * @param other_id			others address of connection
@@ -55,14 +55,15 @@ struct connection_store_t {
 	 * 							- connection_t, if found
 	 * 							- NULL otherwise
 	 */
-	connection_t *(*get_connection_by_hosts) (connection_store_t *this, host_t *my_host, host_t *other_host);
+	connection_t *(*get_connection_by_hosts)(connection_store_t *this, 
+											 host_t *my_host, host_t *other_host);
 	
 	/**
 	 * @brief Returns a connection identified by its name.
-	 * 
+	 *
 	 * This call is usefull to get a connection identified its
 	 * name, as on an connection setup.
-	 * 
+	 *
 	 * @param this				calling object
 	 * @param name				name of the connection to get
 	 * @return		
@@ -73,10 +74,10 @@ struct connection_store_t {
 	
 	/**
 	 * @brief Add a connection to the store.
-	 * 
-	 * After a successful call, the connection is owned by the store and may 
+	 *
+	 * After a successful call, the connection is owned by the store and may
 	 * not be manipulated nor destroyed.
-	 * 
+	 *
 	 * @param this				calling object
 	 * @param connection		connection to add
 	 * @return
@@ -87,10 +88,10 @@ struct connection_store_t {
 	
 	/**
 	 * @brief Delete a connection from the store.
-	 * 
+	 *
 	 * Remove a connection from the connection store, identified
 	 * by the connections name.
-	 * 
+	 *
 	 * @param this				calling object
 	 * @param name				name of the connection to delete
 	 * @return
@@ -100,25 +101,16 @@ struct connection_store_t {
 	status_t (*delete_connection) (connection_store_t *this, char *name);
 	
 	/**
-	 * @brief Log the connections stored in the store.
-	 * 
-	 * Depending on the implementation of the store, the store
-	 * logs various information to the specified logger.
-	 * If logger is NULL, the internal logger is used, if name is
-	 * NULL, all connections are logged
-	 * 
+	 * @brief Get an iterator for the stored connections.
+	 *
 	 * @param this				calling object
-	 * @param logger			logger to use for the log, or NULL
-	 * @param name				name of the connection, or NULL
-	 * @return
-	 * 							- SUCCESS, or
-	 * 							- FAILED
+	 * @return					iterator over all stored connections
 	 */
-	void (*log_connections) (connection_store_t *this, logger_t *logger, char *name);
+	iterator_t* (*create_iterator) (connection_store_t *this);
 	
 	/**
 	 * @brief Destroys a connection_store_t object.
-	 * 
+	 *
 	 * @param this 					calling object
 	 */
 	void (*destroy) (connection_store_t *this);

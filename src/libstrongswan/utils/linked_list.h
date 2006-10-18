@@ -24,6 +24,8 @@
 #ifndef LINKED_LIST_H_
 #define LINKED_LIST_H_
 
+#include <pthread.h>
+
 #include <types.h>
 #include <utils/iterator.h>
 
@@ -31,18 +33,13 @@
 typedef struct linked_list_t linked_list_t;
 
 /**
- * @brief Class implementing a double linked list (named only as linked list).
+ * @brief Class implementing a double linked list.
  *
- * @warning Access to an object of this type is not thread-save.
+ * General purpose linked list. This list is not synchronized.
  * 
  * @b Costructors:
  * - linked_list_create()
- * 
- * @see		
- * 			- job_queue_t
- * 			- event_queue_t
- * 			- send_queue_t
- * 
+ *
  * @ingroup utils
  */
 struct linked_list_t {
@@ -64,27 +61,24 @@ struct linked_list_t {
 	 * @param forward 		iterator direction (TRUE: front to end)
 	 * @return				new iterator_t object
 	 */
-	iterator_t * (*create_iterator) (linked_list_t *linked_list, bool forward);
+	iterator_t *(*create_iterator) (linked_list_t *linked_list, bool forward);
 	
 	/**
-	 * @brief Call a function with list element as argument.
-	 * 
-	 * This method accepts a function, which will be called for 
-	 * each list element once. The function must accept the list
-	 * element as the first argument. Handy for destruction of
-	 * list elements.
-	 * 
-	 * @todo Additional vararg which are passed to the 
-	 *		 function would be nice...
+	 * @brief Creates a iterator, locking a mutex.
+	 *
+	 * The supplied mutex is acquired immediately, and released
+	 * when the iterator gets destroyed.
 	 * 
 	 * @param linked_list 	calling object
-	 * @param func			function to call
+	 * @param mutex 		mutex to use for exclusive access
+	 * @return				new iterator_t object
 	 */
-	void (*call_on_items) (linked_list_t *linked_list, void(*func)(void*));
+	iterator_t *(*create_iterator_locked) (linked_list_t *linked_list,
+										   pthread_mutex_t *mutex);
 
 	/**
 	 * @brief Inserts a new item at the beginning of the list.
-	 * 
+	 *
 	 * @param linked_list 	calling object
 	 * @param[in] item		item value to insert in list
 	 */

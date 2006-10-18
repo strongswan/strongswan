@@ -24,6 +24,7 @@
 
 #include <sys/time.h>
 #include <string.h>
+#include <printf.h>
 
 #include "ike_sa.h"
 
@@ -31,7 +32,6 @@
 #include <daemon.h>
 #include <definitions.h>
 #include <utils/linked_list.h>
-#include <utils/logger_manager.h>
 #include <crypto/diffie_hellman.h>
 #include <crypto/prf_plus.h>
 #include <crypto/crypters/crypter.h>
@@ -58,18 +58,13 @@
 #include <queues/jobs/route_job.h>
 #include <queues/jobs/initiate_job.h>
 
-/**
- * String mappings for ike_sa_state_t.
- */
-mapping_t ike_sa_state_m[] = {
-	{IKE_CREATED, "CREATED"},
-	{IKE_CONNECTING, "CONNECTING"},
-	{IKE_ESTABLISHED, "ESTABLISHED"},
-	{IKE_REKEYING, "REKEYING"},
-	{IKE_DELETING, "DELETING"},
-	{MAPPING_END, NULL}
-};
-
+ENUM(ike_sa_state_names, IKE_CREATED, IKE_DELETING,
+	"CREATED",
+	"CONNECTING",
+	"ESTABLISHED",
+	"REKEYING",
+	"DELETING",
+);
 
 typedef struct private_ike_sa_t private_ike_sa_t;
 
@@ -162,11 +157,6 @@ struct private_ike_sa_t {
 	 * PRF, with key set to pr_key, used for authentication
 	 */
 	prf_t *prf_auth_r;
-	
-	/**
-	 * A logger for this IKE_SA.
-	 */
-	logger_t *logger;
 	
 	/**
 	 * NAT hasher.
@@ -449,8 +439,7 @@ static void dpd_detected(private_ike_sa_t *this)
 	dpd_action_t action;
 	job_t *job;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1,
-					  "dead peer detected, handling CHILD_SAs dpd action");
+	DBG2(SIG_DBG_IKE, "dead peer detected, handling CHILD_SAs dpd action");
 	
 	while(this->child_sas->remove_first(this->child_sas,
 		  									(void**)&child_sa) == SUCCESS)
@@ -464,8 +453,7 @@ static void dpd_detected(private_ike_sa_t *this)
 											  this->my_host, this->other_host);
 		if (policy == NULL)
 		{
-			this->logger->log(this->logger, ERROR,
-							  "no policy found for this CHILD_SA");
+			SIG(SIG_CHILD_FAILED, "no policy for CHILD to handle DPD");
 			continue;
 		}
 		
@@ -479,15 +467,13 @@ static void dpd_detected(private_ike_sa_t *this)
 											this->my_host, this->other_host);
 			if (connection == NULL)
 			{
-				this->logger->log(this->logger, ERROR,
-								  "no connection found for this IKE_SA");
+				SIG(SIG_IKE_FAILED, "no connection found to handle DPD");
 				break;
 			}
 		}
 		
-		this->logger->log(this->logger, CONTROL, "dpd action for %s is %s", 
-						  policy->get_name(policy),
-						  enum_name(&dpd_action_names, action));
+		DBG1(SIG_DBG_IKE, "dpd action for %s is %N",
+			 policy->get_name(policy), dpd_action_names, action);
 		
 		switch (action)
 		{
@@ -530,9 +516,8 @@ static status_t transmit_request(private_ike_sa_t *this)
 															this->retrans_sequences);
 	if (timeout == 0)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "giving up after %d retransmits, deleting IKE_SA",
-						  transmitted - 1);
+		SIG(SIG_IKE_FAILED, "giving up after %d retransmits, deleting IKE_SA",
+			transmitted - 1);
 		dpd_detected(this);
 		return DESTROY_ME;
 	}
@@ -540,8 +525,7 @@ static status_t transmit_request(private_ike_sa_t *this)
 	status = transaction->get_request(transaction, &request);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "generating request failed");
+		/* generating request failed */
 		return status;
 	}
 	message_id = transaction->get_message_id(transaction);
@@ -551,18 +535,15 @@ static status_t transmit_request(private_ike_sa_t *this)
 		status = request->generate(request, this->crypter_out, this->signer_out, &packet);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR,
-							  "request generation failed. transaction discarded");
+			DBG1(SIG_DBG_IKE, "request generation failed. transaction discarded");
 			return FAILED;
 		}
 	}
 	else
 	{
-		this->logger->log(this->logger, CONTROL, 
-						  "sending retransmit %d for %s request with message ID %d",
-						  transmitted,
-						  mapping_find(exchange_type_m, request->get_exchange_type(request)),
-						  message_id);
+		DBG1(SIG_DBG_IKE, "sending retransmit %d for %N request with messageID %d",
+			transmitted, exchange_type_names, request->get_exchange_type(request),
+			message_id);
 		packet = request->get_packet(request);
 	}
 	/* finally send */
@@ -614,13 +595,9 @@ static status_t process_transaction_queue(private_ike_sa_t *this)
 				return SUCCESS;
 			case DESTROY_ME:
 				/* critical, IKE_SA unusable, destroy immediately */
-				this->logger->log(this->logger, ERROR, 
-								  "transaction initiaton failed, deleting IKE_SA");
 				return DESTROY_ME;
 			default:
 				/* discard transaction, process next one */
-				this->logger->log(this->logger, ERROR, 
-								  "transaction initiation failed, discarded");
 				this->transaction_out->destroy(this->transaction_out);
 				this->transaction_out = NULL;
 				/* handle next transaction */
@@ -672,9 +649,8 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 		if (last_mid == request_mid)
 		{
 			/* retransmit detected */
-			this->logger->log(this->logger, ERROR,
-							  "received retransmitted request for message ID %d, retransmitting response",
-							  request_mid);
+			DBG1(SIG_DBG_IKE, "received retransmitted request for message "
+				 "ID %d, retransmitting response", request_mid);
 			last->get_response(last, request, &response, &this->transaction_in_next);
 			packet = response->get_packet(response);
 			charon->send_queue->add(charon->send_queue, packet);
@@ -685,17 +661,15 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 		if (last_mid > request_mid)
 		{
 			/* something seriously wrong here, message id may not decrease */
-			this->logger->log(this->logger, ERROR,
-							  "received request with message ID %d, excepted %d, ingored",
-							  request_mid, last_mid + 1);
+			DBG1(SIG_DBG_IKE, "received request with message ID %d, "
+				 "excepted %d, ingored", request_mid, last_mid + 1);
 			return FAILED;
 		}
 		/* we allow jumps in message IDs, as long as they are incremental */
 		if (last_mid + 1 < request_mid)
 		{
-			this->logger->log(this->logger, ERROR,
-							  "received request with message ID %d, excepted %d",
-							  request_mid, last_mid + 1);
+			DBG1(SIG_DBG_IKE, "received request with message ID %d, excepted %d",
+				 request_mid, last_mid + 1);
 		}
 	}
 	else
@@ -703,9 +677,8 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 		if (request_mid != 0)
 		{
 			/* warn, but allow it */
-			this->logger->log(this->logger, CONTROL,
-							  "first received request has message ID %d, excepted 0", 
-							  request_mid);
+			DBG1(SIG_DBG_IKE, "first received request has message ID %d, "
+				 "excepted 0", request_mid);
 		}
 	}
 	
@@ -720,9 +693,8 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 		current = transaction_create(&this->public, request);
 		if (current == NULL)
 		{
-			this->logger->log(this->logger, ERROR, 
-							  "no idea how to handle received message (%d), ignored",
-							  request->get_exchange_type(request));
+			DBG1(SIG_DBG_IKE, "no idea how to handle received message (exchange"
+				 " type %d), ignored", request->get_exchange_type(request));
 			return FAILED;
 		}
 	}
@@ -731,8 +703,7 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 	status = current->get_response(current, request, &response, &this->transaction_in_next);
 	if (response->generate(response, this->crypter_out, this->signer_out, &packet) != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "response generation failed, discarding transaction");
+		DBG1(SIG_DBG_IKE, "response generation failed, discarding transaction");
 		current->destroy(current);
 		return FAILED;
 	}
@@ -769,8 +740,8 @@ static status_t process_response(private_ike_sa_t *this, message_t *response)
 	if (current == NULL ||
 		current->get_message_id(current) != response->get_message_id(response))
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "received response with message ID %d not requested, ignored");
+		DBG1(SIG_DBG_IKE, "received response with message ID %d "
+			 "not requested, ignored", response->get_message_id(response));
 		return FAILED;
 	}
 	
@@ -839,42 +810,38 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 	status = message->parse_body(message, this->crypter_in, this->signer_in);
 	if (status != SUCCESS)
 	{
+		
 		if (is_request)
 		{
 			switch (status)
 			{
 				case NOT_SUPPORTED:
-					this->logger->log(this->logger, ERROR,
-									"ciritcal unknown payloads found");
+					DBG1(SIG_DBG_IKE, "ciritcal unknown payloads found");
 					if (is_request)
 					{
 						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
 					}
 					break;
 				case PARSE_ERROR:
-					this->logger->log(this->logger, ERROR,
-									"message parsing failed");
+					DBG1(SIG_DBG_IKE, "message parsing failed");
 					if (is_request)
 					{
 						send_notify_response(this, message, INVALID_SYNTAX);
 					}
 					break;
 				case VERIFY_ERROR:
-					this->logger->log(this->logger, ERROR,
-									"message verification failed");
+					DBG1(SIG_DBG_IKE, "message verification failed");
 					if (is_request)
 					{
 						send_notify_response(this, message, INVALID_SYNTAX);
 					}
 					break;
 				case FAILED:
-					this->logger->log(this->logger, ERROR,
-									"integrity check failed");
+					DBG1(SIG_DBG_IKE, "integrity check failed");
 					/* ignored */
 					break;
 				case INVALID_STATE:
-					this->logger->log(this->logger, ERROR,
-									"found encrypted message, but no keys available");
+					DBG1(SIG_DBG_IKE, "found encrypted message, but no keys available");
 					if (is_request)
 					{
 						send_notify_response(this, message, INVALID_SYNTAX);
@@ -883,11 +850,10 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 					break;
 			}
 		}
-		this->logger->log(this->logger, ERROR,
-						  "%s %s with message ID %d processing failed",
-						  mapping_find(exchange_type_m, message->get_exchange_type(message)),
-						  message->get_request(message) ? "request" : "response",
-						  message->get_message_id(message));
+		DBG1(SIG_DBG_IKE, "%N %s with message ID %d processing failed",
+			 exchange_type_names, message->get_exchange_type(message),
+			 message->get_request(message) ? "request" : "response",
+			 message->get_message_id(message));
 	}
 	else
 	{
@@ -927,8 +893,7 @@ static status_t initiate(private_ike_sa_t *this,
 			 */
 			ike_sa_init_t *ike_sa_init;
 			
-			this->logger->log(this->logger, CONTROL, 
-							  "initiating IKE_SA");
+			SIG(SIG_INITIATE, "initiating new IKE_SA for CHILD_SA");
 			DESTROY_IF(this->my_host);
 			this->my_host = connection->get_my_host(connection);
 			this->my_host = this->my_host->clone(this->my_host);
@@ -938,6 +903,17 @@ static status_t initiate(private_ike_sa_t *this,
 			this->retrans_sequences = connection->get_retrans_seq(connection);
 			this->dpd_delay = connection->get_dpd_delay(connection);
 			
+			if (this->other_host->is_anyaddr(this->other_host))
+			{
+				SIG(SIG_IKE_FAILED,
+					"can not initiate a connection to %%any, aborting");
+				SIG(SIG_CHILD_FAILED,
+					"unable to create an IKE_SA to instantiate policy");
+				policy->destroy(policy);
+				connection->destroy(connection);
+				return DESTROY_ME;
+			}
+			
 			this->message_id_out = 1;
 			ike_sa_init = ike_sa_init_create(&this->public);
 			ike_sa_init->set_config(ike_sa_init, connection, policy);
@@ -946,10 +922,12 @@ static status_t initiate(private_ike_sa_t *this,
 		case IKE_DELETING:
 		case IKE_REKEYING:
 		{
-			/* if we are in DELETING/REKEYING, we deny set up of a policy. */
-			this->logger->log(this->logger, CONTROL, 
-							  "creating CHILD_SA discarded, as IKE_SA is in state %s",
-							  mapping_find(ike_sa_state_m, this->state));
+			/* if we are in DELETING/REKEYING, we deny set up of a policy.
+			 * TODO: would it make sense to queue the transaction and adopt
+			 * it all transactions to the new IKE_SA? */
+			SIG(SIG_CHILD_FAILED,
+				"creating CHILD_SA discarded, as IKE_SA is in state %N",
+				ike_sa_state_names, this->state);
 			policy->destroy(policy);
 			connection->destroy(connection);
 			return FAILED;
@@ -957,16 +935,14 @@ static status_t initiate(private_ike_sa_t *this,
 		case IKE_CONNECTING:
 		case IKE_ESTABLISHED:
 		{
-			/* if we are ESTABLISHED or CONNECTING,we queue the 
+			/* if we are ESTABLISHED or CONNECTING, we queue the
 			 * transaction to create the CHILD_SA. It gets processed
 			 * when the IKE_SA is ready to do so. We don't need the
 			 * connection, as the IKE_SA is already established/establishing.
 			 */
 			create_child_sa_t *create_child;
 			
-			this->logger->log(this->logger, CONTROL, 
-							  "initiating CHILD_SA");
-			
+			SIG(SIG_INITIATE, "creating CHILD_SA in existing IKE_SA");
 			connection->destroy(connection);
 			create_child = create_child_sa_create(&this->public);
 			create_child->set_policy(create_child, policy);
@@ -989,12 +965,10 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	
 	if (this->state == IKE_DELETING)
 	{
-		this->logger->log(this->logger, CONTROL, 
-						  "acquiring CHILD_SA with reqid %d discarded, as IKE_SA is deleting",
-						  reqid);
+		SIG(SIG_CHILD_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+			"IKE_SA is deleting", reqid);
 		return FAILED;
 	}
-	
 	
 	/* find CHILD_SA */
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
@@ -1009,9 +983,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	iterator->destroy(iterator);
 	if (!child_sa)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "CHILD_SA with reqid %d not found, unable to acquire",
-						  reqid);
+		SIG(SIG_CHILD_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+			"CHILD_SA not found", reqid);
 		return FAILED;
 	}
 	my_ts = child_sa->get_my_traffic_selectors(child_sa);
@@ -1023,9 +996,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 										  this->my_host, this->other_host);
 	if (policy == NULL)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "no policy found to acquire CHILD_SA with reqid %d", 
-						  reqid);
+		SIG(SIG_CHILD_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+			"no policy found", reqid);
 		return FAILED;
 	}
 	
@@ -1035,18 +1007,16 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		{
 			ike_sa_init_t *ike_sa_init;
 			
-			this->logger->log(this->logger, CONTROL,
-							  "acquiring CHILD_SA with reqid %d, IKE_SA setup needed", 
-							  reqid);
+			DBG1(SIG_DBG_CHD,
+				 "acquiring CHILD_SA with reqid %d, IKE_SA setup needed", reqid);
 			
 			connection = charon->connections->get_connection_by_hosts(
 					charon->connections, this->my_host, this->other_host);
 			
 			if (connection == NULL)
 			{
-				this->logger->log(this->logger, ERROR, 
-								  "no connection found to acquire IKE_SA for CHILD_SA with reqid %d", 
-								  reqid);
+				SIG(SIG_CHILD_FAILED, "acquiring CHILD_SA "
+					"(reqid %d) failed: no connection found for IKE_SA", reqid);
 				policy->destroy(policy);
 				return FAILED;
 			}
@@ -1063,9 +1033,7 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		{
 			create_child_sa_t *create_child;
 			
-			this->logger->log(this->logger, CONTROL, 
-							  "acquiring CHILD_SA with reqid %d",
-							  reqid);
+			DBG1(SIG_DBG_CHD, "acquiring CHILD_SA with reqid %d", reqid);
 			
 			create_child = create_child_sa_create(&this->public);
 			create_child->set_policy(create_child, policy);
@@ -1151,8 +1119,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 				ts_list_destroy(my_ts_conf);
 				ts_list_destroy(other_ts_conf);
 				iterator->destroy(iterator);
-				this->logger->log(this->logger, CONTROL, 
-								"a CHILD_SA with such a policy already routed");
+				SIG(SIG_CHILD_FAILED, "CHILD_SA with such a policy "
+					"already routed");
 				
 				return FAILED;
 			}
@@ -1202,7 +1170,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 			 * adopted by the new IKE_SA */
 			break;
 		case IKE_DELETING:
-			/* deny */
+			SIG(SIG_CHILD_FAILED, "CHILD_SA with such a policy "
+				"already routed");
 			return FAILED;
 	}
 
@@ -1218,6 +1187,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	ts_list_destroy(my_ts);
 	ts_list_destroy(other_ts);
 	this->child_sas->insert_last(this->child_sas, child_sa);
+	SIG(SIG_CHILD_ROUTE,
+		"CHILD_SA routed: %R...%R", my_ts, other_ts);
 	
 	return status;
 }
@@ -1247,6 +1218,7 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 				ts_list_equals(other_ts, other_ts_conf))
 			{
 				iterator->remove(iterator);
+				SIG(SIG_CHILD_UNROUTE, "CHILD_SA unrouted");
 				child_sa->destroy(child_sa);
 				ts_list_destroy(my_ts_conf);
 				ts_list_destroy(other_ts_conf);
@@ -1296,7 +1268,7 @@ static status_t send_dpd(private_ike_sa_t *this)
 		{
 			/* to long ago, initiate dead peer detection */
 			dead_peer_detection_t *dpd;
-			this->logger->log(this->logger, CONTROL, "sending DPD request");
+			DBG1(SIG_DBG_IKE, "sending DPD request");
 			dpd = dead_peer_detection_create(&this->public);
 			queue_transaction(this, (transaction_t*)dpd, FALSE);
 			diff = 0;
@@ -1336,7 +1308,7 @@ static void send_keepalive(private_ike_sa_t *this)
 		data.len = 1;
 		packet->set_data(packet, data);
 		charon->send_queue->add(charon->send_queue, packet);
-		this->logger->log(this->logger, CONTROL, "sending keep alive");
+		DBG1(SIG_DBG_IKE, "sending keep alive");
 		diff = 0;
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
@@ -1357,18 +1329,20 @@ static ike_sa_state_t get_state(private_ike_sa_t *this)
  */
 static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 {
-	this->logger->log(this->logger, CONTROL, "state change: %s => %s",
-					  mapping_find(ike_sa_state_m, this->state),
-					  mapping_find(ike_sa_state_m, state));
+	DBG1(SIG_DBG_IKE, "state change: %N => %N",
+		 ike_sa_state_names, this->state,
+		 ike_sa_state_names, state);
+	
 	if (state == IKE_ESTABLISHED)
 	{
 		this->time.established = time(NULL);
-		this->logger->log(this->logger, AUDIT, "IKE_SA established: %H[%D]...%H[%D]",
-						  this->my_host, this->my_id, 
-						  this->other_host, this->other_id);
 		/* start DPD checks */
 		send_dpd(this);
+		
+		SIG(SIG_IKE_UP, "IKE_SA established: %H[%D]...%H[%D]",
+		    this->my_host, this->my_id, this->other_host, this->other_id);
 	}
+	
 	this->state = state;
 }
 
@@ -1467,19 +1441,19 @@ static status_t derive_keys(private_ike_sa_t *this,
 	/* Create SAs general purpose PRF first, we may use it here */
 	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo))
 	{
-		this->logger->log(this->logger, ERROR, "no PSEUDO_RANDOM_FUNCTION selected!");
+		DBG1(SIG_DBG_IKE, "key derivation failed: no PSEUDO_RANDOM_FUNCTION");;
 		return FAILED;
 	}
 	this->prf = prf_create(algo->algorithm);
 	if (this->prf == NULL)
 	{
-		this->logger->log(this->logger, ERROR, "PSEUDO_RANDOM_FUNCTION %s not supported!",
-						  mapping_find(pseudo_random_function_m, algo->algorithm));
+		DBG1(SIG_DBG_IKE, "key derivation failed: PSEUDO_RANDOM_FUNCTION "
+			 "%N not supported!", pseudo_random_function_names, algo->algorithm);
 		return FAILED;
 	}
 	
 	dh->get_shared_secret(dh, &secret);
-	this->logger->log_chunk(this->logger, PRIVATE, "shared Diffie Hellman secret", secret);
+	DBG4(SIG_DBG_IKE, "shared Diffie Hellman secret %B", &secret);
 	nonces = chunk_cat("cc", nonce_i, nonce_r);
 	*((u_int64_t*)spi_i.ptr) = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
 	*((u_int64_t*)spi_r.ptr) = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
@@ -1490,11 +1464,11 @@ static status_t derive_keys(private_ike_sa_t *this,
 	 * if we are rekeying, SKEYSEED built on another way 
 	 */
 	if (child_prf == NULL) /* not rekeying */
-	{	
+	{
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
 		this->prf->set_key(this->prf, nonces);
 		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
-		this->logger->log_chunk(this->logger, PRIVATE|LEVEL1, "SKEYSEED", skeyseed);
+		DBG4(SIG_DBG_IKE, "SKEYSEED %B", &skeyseed);
 		this->prf->set_key(this->prf, skeyseed);
 		chunk_free(&skeyseed);
 		chunk_free(&secret);
@@ -1506,7 +1480,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 		 * use OLD SAs PRF functions for both prf_plus and prf */
 		secret = chunk_cat("mc", secret, nonces);
 		child_prf->allocate_bytes(child_prf, secret, &skeyseed);
-		this->logger->log_chunk(this->logger, PRIVATE|LEVEL1, "SKEYSEED", skeyseed);
+		DBG4(SIG_DBG_IKE, "SKEYSEED %B", &skeyseed);
 		old_prf->set_key(old_prf, skeyseed);
 		chunk_free(&skeyseed);
 		chunk_free(&secret);
@@ -1522,33 +1496,33 @@ static status_t derive_keys(private_ike_sa_t *this,
 	this->child_prf = prf_create(algo->algorithm);
 	key_size = this->child_prf->get_key_size(this->child_prf);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_d secret", key);
+	DBG4(SIG_DBG_IKE, "Sk_d secret %B", &key);
 	this->child_prf->set_key(this->child_prf, key);
 	chunk_free(&key);
 	
 	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
 	{
-		this->logger->log(this->logger, ERROR, "no INTEGRITY_ALGORITHM selected?!");
+		DBG1(SIG_DBG_IKE, "key derivation failed: no INTEGRITY_ALGORITHM");
 		return FAILED;
 	}
 	signer_i = signer_create(algo->algorithm);
 	signer_r = signer_create(algo->algorithm);
 	if (signer_i == NULL || signer_r == NULL)
 	{
-		this->logger->log(this->logger, ERROR, "INTEGRITY_ALGORITHM %s not supported!",
-						  mapping_find(integrity_algorithm_m,algo->algorithm));
+		DBG1(SIG_DBG_IKE, "key derivation failed: INTEGRITY_ALGORITHM "
+			"%N not supported!", integrity_algorithm_names ,algo->algorithm);
 		return FAILED;
 	}
 	key_size = signer_i->get_key_size(signer_i);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ai secret", key);
+	DBG4(SIG_DBG_IKE, "Sk_ai secret %B", &key);
 	signer_i->set_key(signer_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ar secret", key);
+	DBG4(SIG_DBG_IKE, "Sk_ar secret %B", &key);
 	signer_r->set_key(signer_r, key);
 	chunk_free(&key);
 	
@@ -1566,28 +1540,27 @@ static status_t derive_keys(private_ike_sa_t *this,
 	/* SK_ei/SK_er used for encryption => crypter_in/crypter_out */
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
 	{
-		this->logger->log(this->logger, ERROR, "no ENCRYPTION_ALGORITHM selected!");
+		DBG1(SIG_DBG_IKE, "key derivation failed: no ENCRYPTION_ALGORITHM");
 		return FAILED;
 	}
 	crypter_i = crypter_create(algo->algorithm, algo->key_size / 8);
 	crypter_r = crypter_create(algo->algorithm, algo->key_size / 8);
 	if (crypter_i == NULL || crypter_r == NULL)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "ENCRYPTION_ALGORITHM %s (key size %d) not supported!",
-						  mapping_find(encryption_algorithm_m, algo->algorithm),
-						  algo->key_size);
+		DBG1(SIG_DBG_IKE, "key derivation failed: ENCRYPTION_ALGORITHM "
+			"%N (key size %d) not supported!",
+			encryption_algorithm_names, algo->algorithm, algo->key_size);
 		return FAILED;
 	}
 	key_size = crypter_i->get_key_size(crypter_i);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_ei secret", key);
+	DBG4(SIG_DBG_IKE, "Sk_ei secret %B", &key);
 	crypter_i->set_key(crypter_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_er secret", key);
+	DBG4(SIG_DBG_IKE, "Sk_er secret %B", &key);
 	crypter_r->set_key(crypter_r, key);
 	chunk_free(&key);
 	
@@ -1609,12 +1582,12 @@ static status_t derive_keys(private_ike_sa_t *this,
 	
 	key_size = this->prf_auth_i->get_key_size(this->prf_auth_i);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pi secret", key);
+	DBG4(SIG_DBG_IKE, "Sk_pi secret %B", &key);
 	this->prf_auth_i->set_key(this->prf_auth_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	this->logger->log_chunk(this->logger, PRIVATE, "Sk_pr secret", key);
+	DBG4(SIG_DBG_IKE, "Sk_pr secret %B", &key);
 	this->prf_auth_r->set_key(this->prf_auth_r, key);
 	chunk_free(&key);
 	
@@ -1781,16 +1754,14 @@ static status_t rekey(private_ike_sa_t *this)
 {
 	rekey_ike_sa_t *rekey_ike_sa;
 	
-	this->logger->log(this->logger, CONTROL, 
-					  "rekeying IKE_SA between: %H[%D]...%H[%D]",
-					  this->my_host, this->my_id, 
+	DBG1(SIG_DBG_IKE, "rekeying IKE_SA between %H[%D]..%H[%D]",
+					  this->my_host, this->my_id,
 					  this->other_host, this->other_id);
 	
 	if (this->state != IKE_ESTABLISHED)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "unable to rekey IKE_SA in state %s",
-						  mapping_find(ike_sa_state_m, this->state));
+		SIG(SIG_IKE_FAILED, "unable to rekey IKE_SA in state %N",
+			ike_sa_state_names, this->state);
 		return FAILED;
 	}
 	
@@ -1825,57 +1796,6 @@ static void adopt_children(private_ike_sa_t *this, private_ike_sa_t *other)
 		   								 (void**)&child_sa) == SUCCESS)
 	{
 		this->child_sas->insert_first(this->child_sas, (void*)child_sa);
-	}
-}
-
-/**
- * Implementation of ike_sa_t.log_status.
- */
-static void log_status(private_ike_sa_t *this, logger_t *logger, char *name)
-{
-	iterator_t *iterator;
-	child_sa_t *child_sa;
-	bool contains_child = FALSE;
-	
-	/* check for a CHILD_SA with specified name. We then print the IKE_SA,
-	 * even it has another name */
-	if (name != NULL)
-	{
-		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-		while (iterator->iterate(iterator, (void**)&child_sa))
-		{
-			if (streq(name, child_sa->get_name(child_sa)))
-			{
-				contains_child = TRUE;
-				break;
-			}
-		}
-		iterator->destroy(iterator);
-	}
-	
-	if (name == NULL || contains_child || streq(name, this->name))
-	{
-		if (logger == NULL)
-		{
-			logger = this->logger;
-		}		
-		logger->log(logger, CONTROL|LEVEL1,
-					"  \"%s\": IKE_SA in state %s, SPIs: 0x%.16llx 0x%.16llx",
-					this->name,
-					mapping_find(ike_sa_state_m, this->state),
-					this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-					this->ike_sa_id->get_responder_spi(this->ike_sa_id));
-		logger->log(logger, CONTROL, "  \"%s\": %H[%D]...%H[%D]",
-					this->name, this->my_host, this->my_id, 
-					this->other_host, this->other_id);
-		
-		iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-		while (iterator->has_next(iterator))
-		{
-			iterator->current(iterator, (void**)&child_sa);
-			child_sa->log_status(child_sa, logger);
-		}
-		iterator->destroy(iterator);
 	}
 }
 
@@ -1931,17 +1851,55 @@ static void enable_natt (private_ike_sa_t *this, bool local)
 {
 	if (local)
 	{
-		this->logger->log(this->logger, CONTROL,
-						  "local host is behind NAT, using NAT-T, scheduled keep alives");
+		DBG1(SIG_DBG_IKE, "local host is behind NAT, using NAT-T, "
+			"scheduled keep alives");
 		this->nat_here = TRUE;
 		send_keepalive(this);
 	}
 	else
 	{
-		this->logger->log(this->logger, CONTROL, 
-						  "remote host is behind NAT, using NAT-T");
+		DBG1(SIG_DBG_IKE, "remote host is behind NAT, using NAT-T");
 		this->nat_there = TRUE;
 	}
+}
+
+/**
+ * output handler in printf()
+ */
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
+{
+	private_ike_sa_t *this = *((private_ike_sa_t**)(args[0]));
+	
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	
+	return fprintf(stream, "%10s: %N, %H[%D]...%H[%D] (%J)",
+				   this->name, ike_sa_state_names, this->state,
+				   this->my_host, this->my_id, this->other_host, this->other_id,
+				   this->ike_sa_id);
+}
+
+/**
+ * arginfo handler in printf()
+ */
+static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * register printf() handlers
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(IKE_SA_PRINTF_SPEC, print, print_arginfo);
 }
 
 /**
@@ -1952,17 +1910,6 @@ static void destroy(private_ike_sa_t *this)
 	child_sa_t *child_sa;
 	transaction_t *transaction;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "going to destroy IKE SA %llu:%llu, role %s", 
-					  this->ike_sa_id->get_initiator_spi(this->ike_sa_id),
-					  this->ike_sa_id->get_responder_spi(this->ike_sa_id),
-					  this->ike_sa_id->is_initiator(this->ike_sa_id) ? "initiator" : "responder");
-	
-	if (this->state == IKE_ESTABLISHED)
-	{
-		this->logger->log(this->logger, ERROR, 
-						  "destroying an established IKE SA without knowledge from remote peer!");
-	}
-
 	while (this->child_sas->remove_last(this->child_sas, (void**)&child_sa) == SUCCESS)
 	{
 		child_sa->destroy(child_sa);
@@ -1987,10 +1934,8 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->prf_auth_i);
 	DESTROY_IF(this->prf_auth_r);
 
-	this->logger->log(this->logger, AUDIT, 
-					  "IKE_SA deleted between: %H[%D]...%H[%D]",
-					  this->my_host, this->my_id, 
-					  this->other_host, this->other_id);
+	DBG1(SIG_DBG_IKE, "IKE_SA deleted between %H[%D]...%H[%D]",
+		 this->my_host, this->my_id, this->other_host, this->other_id);
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -2030,7 +1975,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_other_id = (void(*)(ike_sa_t*,identification_t*)) set_other_id;
 	this->public.get_next_message_id = (u_int32_t(*)(ike_sa_t*)) get_next_message_id;
 	this->public.retransmit_request = (status_t (*) (ike_sa_t *, u_int32_t)) retransmit_request;
-	this->public.log_status = (void (*) (ike_sa_t*,logger_t*,char*))log_status;
 	this->public.delete = (status_t(*)(ike_sa_t*))delete_;
 	this->public.destroy = (void(*)(ike_sa_t*))destroy;
 	this->public.send_dpd = (status_t (*)(ike_sa_t*)) send_dpd;
@@ -2057,7 +2001,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.adopt_children = (void(*)(ike_sa_t*,ike_sa_t*))adopt_children;
 	
 	/* initialize private fields */
-	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->name = strdup("(uninitialized)");
 	this->child_sas = linked_list_create();

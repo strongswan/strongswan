@@ -27,16 +27,12 @@
 
 #include <stddef.h>
 
-#define BITS_PER_BYTE	8
-#define RSA_MIN_OCTETS	(1024 / BITS_PER_BYTE)
-#define RSA_MIN_OCTETS_UGH	"RSA modulus too small for security: less than 1024 bits"
-#define RSA_MAX_OCTETS	(8192 / BITS_PER_BYTE)
-#define RSA_MAX_OCTETS_UGH	"RSA modulus too large: more than 8192 bits"
+#define BITS_PER_BYTE 8
 
 /**
   * Default length for various auxiliary text buffers
   */
-#define BUF_LEN		512
+#define BUF_LEN 512
 
 /**
  * Macro compares two strings for equality
@@ -78,55 +74,35 @@
  */
 #define ASSIGN(method, function) (method = (typeof(method))function)
 
+/**
+ * printf() specifier to resolf enum names, see enum_names
+ */
+#define ENUM_PRINTF_SPEC 'N'
+
+typedef struct enum_name_t enum_name_t;
 
 /**
- * Mapping entry which defines the end of a mapping_t array.
+ * Struct to store names for enums. Use the convenience macros 
+ * to define these.
+ * For a single range, use:
+ * ENUM(name, first, last, string1, string2, ...)
+ *
+ * For multiple ranges, use:
+ * ENUM_BEGIN(name, first, last, string1, string2, ...)
+ *   ENUM_NEXT(name, first, last, last_from_previous, string3, ...)
+ *   ENUM_NEXT(name, first, last, last_from_previous, string4, ...)
+ * ENUM_END(name, last_from_previous)
  */
-#define MAPPING_END (-1)
-
-typedef struct mapping_t mapping_t;
-
-/**
- * @brief Mapping entry, where enum-to-string mappings are stored.
- */
-struct mapping_t
-{
-	/**
-	 * Enumeration value.
-	 */
-	int value;
-	
-	/**
-	 * Mapped string.
-	 */
-	char *string;
+struct enum_name_t {
+	long first;
+	long last;
+	enum_name_t *next;
+	char *names[];
 };
 
-/**
- * @brief Find a mapping_string in the mapping[].
- * 
- * @param mappings		mappings array
- * @param value			enum-value to get the string from
- * 
- */
-char *mapping_find(mapping_t *mappings, int value);
-
-/**
- * @brief Describes an enumeration
- * enum_name() returns the name of an enum value, or NULL if invalid.
- */
-typedef const struct enum_names enum_names;
-
-struct enum_names {
-	unsigned long en_first;  	/* first value in range */
-	unsigned long en_last;   	/* last value in range (inclusive) */
-	const char *const *en_names;
-	enum_names *en_next_range;	/* descriptor of next range */
-};
-
-/**
- * @brief Returns the name of an enum value, or NULL if invalid
- */
-const char *enum_name(enum_names *ed, unsigned long val);
+#define ENUM_BEGIN(name, first, last, ...) static enum_name_t name##last = {first, last, NULL, { __VA_ARGS__ }}
+#define ENUM_NEXT(name, first, last, prev, ...) static enum_name_t name##last = {first, last, &name##prev, { __VA_ARGS__ }}
+#define ENUM_END(name, prev) enum_name_t *name = &name##prev;
+#define ENUM(name, first, last, ...) ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END(name, last)
 
 #endif /*DEFINITIONS_H_*/

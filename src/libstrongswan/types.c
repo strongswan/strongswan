@@ -30,24 +30,20 @@
 
 #include "types.h"
 
+ENUM(status_names, SUCCESS, DESTROY_ME,
+	"SUCCESS",
+	"FAILED",
+	"OUT_OF_RES",
+	"ALREADY_DONE",
+	"NOT_SUPPORTED",
+	"INVALID_ARG",
+	"NOT_FOUND",
+	"PARSE_ERROR",
+	"VERIFY_ERROR",
+	"INVALID_STATE",
+	"DESTROY_ME",
+);
 
-/**
- * String mappings for type status_t.
- */
-mapping_t status_m[] = {
-	{SUCCESS, "SUCCESS"},
-	{FAILED, "FAILED"},
-	{OUT_OF_RES, "OUT_OF_RES"},
-	{ALREADY_DONE, "ALREADY_DONE"},
-	{NOT_SUPPORTED, "NOT_SUPPORTED"},
-	{INVALID_ARG, "INVALID_ARG"},
-	{NOT_FOUND, "NOT_FOUND"},
-	{PARSE_ERROR, "PARSE_ERROR"},
-	{VERIFY_ERROR, "VERIFY_ERROR"},
-	{INVALID_STATE, "INVALID_STATE"},
-	{DESTROY_ME, "DESTROY_ME"},
-	{MAPPING_END, NULL}
-};
 
 /**
  * Empty chunk.
@@ -162,151 +158,6 @@ bool chunk_equals_or_null(chunk_t a, chunk_t b)
 /**
  * Described in header.
  */
-void chunk_to_hex(char *buf, size_t buflen, chunk_t chunk)
-{
-	bool first = TRUE;
-
-	buflen--;  /* reserve space for null termination */
-
-	while (chunk.len > 0 && buflen > 2)
-	{
-		static char hexdig[] = "0123456789abcdef";
-
-		if (first)
-		{
-			first = FALSE;
-		}
-		else
-		{
-			*buf++ = ':'; buflen--;
-		}
-		*buf++ = hexdig[(*chunk.ptr >> 4) & 0x0f];
-		*buf++ = hexdig[ *chunk.ptr++     & 0x0f];
-		buflen -= 2; chunk.len--;
-	}
-	*buf = '\0';
-}
-
-/**
- * Number of bytes per line to dump raw data
- */
-#define BYTES_PER_LINE 16
-
-/**
- * output handler in printf() for byte ranges
- */
-static int print_bytes(FILE *stream, const struct printf_info *info,
-					   const void *const *args)
-{
-	char *bytes = *((void**)(args[0]));
-	int len = *((size_t*)(args[1]));
-	
-	char buffer[BYTES_PER_LINE * 3];
-	char ascii_buffer[BYTES_PER_LINE + 1];
-	char *buffer_pos = buffer;
-	char *bytes_pos  = bytes;
-	char *bytes_roof = bytes + len;
-	int line_start = 0;
-	int i = 0;
-	int total_written = 0;
-	
-	total_written = fprintf(stream, "=> %d bytes @ %p", len, bytes);
-	if (total_written < 0)
-	{
-		return total_written;
-	}
-	
-	while (bytes_pos < bytes_roof)
-	{
-		static char hexdig[] = "0123456789ABCDEF";
-		
-		*buffer_pos++ = hexdig[(*bytes_pos >> 4) & 0xF];
-		*buffer_pos++ = hexdig[ *bytes_pos       & 0xF];
-
-		ascii_buffer[i++] =
-				(*bytes_pos > 31 && *bytes_pos < 127) ? *bytes_pos : '.';
-
-		if (++bytes_pos == bytes_roof || i == BYTES_PER_LINE) 
-		{
-			int padding = 3 * (BYTES_PER_LINE - i);
-			int written;
-			
-			while (padding--)
-			{
-				*buffer_pos++ = ' ';
-			}
-			*buffer_pos++ = '\0';
-			ascii_buffer[i] = '\0';
-			
-			written = fprintf(stream, "\n%4d: %s  %s",
-							  line_start, buffer, ascii_buffer);
-			if (written < 0)
-			{
-				return written;
-			}
-			total_written += written;
-			
-			buffer_pos = buffer;
-			line_start += BYTES_PER_LINE;
-			i = 0;
-		}
-		else
-		{
-			*buffer_pos++ = ' ';
-		}
-	}
-	return total_written;
-}
-
-/**
- * output handler in printf() for chunks
- */
-static int print_chunk(FILE *stream, const struct printf_info *info,
-					   const void *const *args)
-{
-	chunk_t *chunk = *((chunk_t**)(args[0]));
-	
-	const void *new_args[] = {&chunk->ptr, &chunk->len};
-	return print_bytes(stream, info, new_args);
-}
-
-/**
- * arginfo handler in printf() for chunks
- */
-static int print_chunk_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 0)
-	{
-		argtypes[0] = PA_POINTER;
-	}
-	return 1;
-}
-
-/**
- * arginfo handler in printf() for byte ranges
- */
-static int print_bytes_arginfo(const struct printf_info *info, size_t n, int *argtypes)
-{
-	if (n > 1)
-	{
-		argtypes[0] = PA_POINTER;
-		argtypes[1] = PA_INT;
-	}
-	return 2;
-}
-
-/**
- * register printf() handlers for chunk and byte ranges
- */
-static void __attribute__ ((constructor))print_register()
-{
-	register_printf_function(CHUNK_PRINTF_SPEC, print_chunk, print_chunk_arginfo);
-	register_printf_function(BYTES_PRINTF_SPEC, print_bytes, print_bytes_arginfo);
-}
-
-/**
- * Described in header.
- */
 void *clalloc(void * pointer, size_t size)
 {
 	void *data;
@@ -354,27 +205,237 @@ bool ref_put(refcount_t *ref)
 	return !more_refs;
 }
 
-/*
- * Names of the months used by timetoa()
+/**
+ * Number of bytes per line to dump raw data
  */
-static const char* months[] = {
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
+#define BYTES_PER_LINE 16
 
-/*
- * Described in header file
+/**
+ * output handler in printf() for byte ranges
  */
-void timetoa(char *buf, size_t buflen, const time_t *time, bool utc)
+static int print_bytes(FILE *stream, const struct printf_info *info,
+					   const void *const *args)
 {
-	if (*time == UNDEFINED_TIME)
-		snprintf(buf, buflen, "--- -- --:--:--%s----", (utc)?" UTC ":" ");
+	char *bytes = *((void**)(args[0]));
+	int len = *((size_t*)(args[1]));
+	
+	char buffer[BYTES_PER_LINE * 3];
+	char ascii_buffer[BYTES_PER_LINE + 1];
+	char *buffer_pos = buffer;
+	char *bytes_pos  = bytes;
+	char *bytes_roof = bytes + len;
+	int line_start = 0;
+	int i = 0;
+	int written = 0;
+	
+	written += fprintf(stream, "=> %d bytes @ %p", len, bytes);
+	
+	while (bytes_pos < bytes_roof)
+	{
+		static char hexdig[] = "0123456789ABCDEF";
+		
+		*buffer_pos++ = hexdig[(*bytes_pos >> 4) & 0xF];
+		*buffer_pos++ = hexdig[ *bytes_pos       & 0xF];
+
+		ascii_buffer[i++] =
+				(*bytes_pos > 31 && *bytes_pos < 127) ? *bytes_pos : '.';
+
+		if (++bytes_pos == bytes_roof || i == BYTES_PER_LINE) 
+		{
+			int padding = 3 * (BYTES_PER_LINE - i);
+			int written;
+			
+			while (padding--)
+			{
+				*buffer_pos++ = ' ';
+			}
+			*buffer_pos++ = '\0';
+			ascii_buffer[i] = '\0';
+			
+			written += fprintf(stream, "\n%4d: %s  %s",
+							  line_start, buffer, ascii_buffer);
+
+			
+			buffer_pos = buffer;
+			line_start += BYTES_PER_LINE;
+			i = 0;
+		}
+		else
+		{
+			*buffer_pos++ = ' ';
+		}
+	}
+	return written;
+}
+
+/**
+ * output handler in printf() for chunks
+ */
+static int print_chunk(FILE *stream, const struct printf_info *info,
+					   const void *const *args)
+{
+	chunk_t *chunk = *((chunk_t**)(args[0]));
+	bool first = TRUE;
+	chunk_t copy = *chunk;
+	int written = 0;
+	
+	if (!info->alt)
+	{
+		const void *new_args[] = {&chunk->ptr, &chunk->len};
+		return print_bytes(stream, info, new_args);
+	}
+	
+	while (copy.len > 0)
+	{
+		static char hexdig[] = "0123456789abcdef";
+		if (first)
+		{
+			first = FALSE;
+		}
+		else
+		{
+			written += fprintf(stream, ":");
+		}
+		written += fprintf(stream, "%c%c", 
+						   hexdig[(*copy.ptr >> 4) & 0x0f],
+						   hexdig[ *copy.ptr++     & 0x0f]);
+		copy.len--;
+	}
+	return written;
+}
+
+/**
+ * output handler in printf() for time_t
+ */
+static int print_time(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
+{
+	static const char* months[] = {
+		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+	};
+	time_t time = *((time_t*)(args[0]));
+	bool utc = TRUE;
+	struct tm t;
+	
+	if (info->alt)
+	{
+		utc = *((bool*)(args[1]));
+	}
+	if (time == UNDEFINED_TIME)
+	{
+		return fprintf(stream, "--- -- --:--:--%s----",
+					   info->alt ? " UTC " : " ");
+	}
+	if (utc)
+	{
+		gmtime_r(&time, &t);
+	}
 	else
 	{
-		struct tm *t = (utc)? gmtime(time) : localtime(time);
-
-		snprintf(buf, buflen, "%s %02d %02d:%02d:%02d%s%04d",
-				months[t->tm_mon], t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,
-				(utc)?" UTC ":" ", t->tm_year + 1900);
+		localtime_r(&time, &t);
 	}
+	return fprintf(stream, "%s %02d %02d:%02d:%02d%s%04d",
+				   months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
+				   t.tm_sec, info->alt ? " UTC " : " ", t.tm_year + 1900);
+}
+
+/**
+ * output handler in printf() for time deltas
+ */
+static int print_time_delta(FILE *stream, const struct printf_info *info,
+					  const void *const *args)
+{
+	time_t start = *((time_t*)(args[0]));
+	time_t end = *((time_t*)(args[1]));
+	u_int delta = abs(end - start);
+	char* unit = "second";
+	
+	if (delta > 2 * 60 * 60 * 24)
+	{
+		delta /= 60 * 60 * 24;
+		unit = "days";
+	}
+	else if (delta > 2 * 60 * 60)
+	{
+		delta /= 60 * 60;
+		unit = "hours";
+	}
+	else if (delta > 2 * 60)
+	{
+		delta /= 60;
+		unit = "minutes";
+	}
+	return fprintf(stream, "%d %s", delta, unit);
+}
+
+/**
+ * arginfo handler in printf() for byte ranges
+ */
+static int print_bytes_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 1)
+	{
+		argtypes[0] = PA_POINTER;
+		argtypes[1] = PA_INT;
+	}
+	return 2;
+}
+
+/**
+ * arginfo handler in printf() for time deltas
+ */
+static int print_time_delta_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 1)
+	{
+		argtypes[0] = PA_INT;
+		argtypes[1] = PA_INT;
+	}
+	return 2;
+}
+
+/**
+ * arginfo handler in printf() for time_t
+ */
+static int print_time_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (info->alt)
+	{
+		if (n > 1)
+		{
+			argtypes[0] = PA_INT;
+			argtypes[1] = PA_INT;
+		}
+		return 2;
+	}
+	
+	if (n > 0)
+	{
+		argtypes[0] = PA_INT;
+	}
+	return 1;
+}
+
+/**
+ * arginfo handler in printf() for chunks
+ */
+static int print_chunk_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * register printf() handlers for time_t
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(CHUNK_PRINTF_SPEC, print_chunk, print_chunk_arginfo);
+	register_printf_function(BYTES_PRINTF_SPEC, print_bytes, print_bytes_arginfo);
+	register_printf_function(TIME_PRINTF_SPEC, print_time, print_time_arginfo);
+	register_printf_function(TIME_DELTA_PRINTF_SPEC, print_time_delta, print_time_delta_arginfo);
 }

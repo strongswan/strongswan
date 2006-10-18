@@ -29,12 +29,16 @@
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <config/proposal.h>
-#include <utils/logger.h>
 
 /**
  * Where we should start with reqid enumeration
  */
 #define REQID_START 2000000000
+
+/**
+ * Printf() specifier for child_sa_t
+ */
+#define CHILD_SA_PRINTF_SPEC 'P'
 
 typedef enum child_sa_state_t child_sa_state_t;
 
@@ -70,9 +74,9 @@ enum child_sa_state_t {
 };
 
 /**
- * String mappings for child_sa_state_t.
+ * enum strings for child_sa_state_t.
  */
-extern mapping_t child_sa_state_m[];
+extern enum_name_t *child_sa_state_names;
 
 typedef struct child_sa_t child_sa_t;
 
@@ -278,19 +282,6 @@ struct child_sa_t {
 	 * @param this 		calling object
 	 */	
 	void* (*get_rekeying_transaction) (child_sa_t *this);
-	
-	/**
-	 * @brief Log the status of a child_sa to a logger.
-	 *
-	 * The status of ESP/AH SAs is logged with the supplied logger in
-	 * a human readable form.
-	 * Supplying NULL as logger uses the internal child_sa logger
-	 * to do the logging.
-	 *
-	 * @param this 		calling object
-	 * @param logger	logger to use for logging
-	 */	
-	void (*log_status) (child_sa_t *this, logger_t *logger);
 	
 	/**
 	 * @brief Destroys a child_sa.

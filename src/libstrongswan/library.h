@@ -84,17 +84,25 @@
  *
  * Symmetric signing algorithms, 
  * used to ensure message integrity.
- * 
+ *
  * @ingroup crypto
  */
- 
+
 /**
  * @defgroup utils utils
- * 
+ *
  * Generic helper classes.
- * 
+ *
  * @ingroup libstrongswan
  */
 
+/** debug macros, they call the dbg function hook */
+#define DBG1(fmt, ...) dbg(1, fmt, ##__VA_ARGS__)
+#define DBG2(fmt, ...) dbg(2, fmt, ##__VA_ARGS__)
+#define DBG3(fmt, ...) dbg(3, fmt, ##__VA_ARGS__)
+#define DBG4(fmt, ...) dbg(4, fmt, ##__VA_ARGS__)
+
+/** dbg function hook, uses stderr logger by default */
+extern void (*dbg) (int level, char *fmt, ...);
 
 #endif /* LIBRARY_H_ */

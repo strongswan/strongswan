@@ -29,7 +29,7 @@
 #include <encoding/payloads/transform_substructure.h>
 #include <types.h>
 #include <utils/linked_list.h>
-#include <utils/logger_manager.h>
+#include <daemon.h>
 
 
 /**
@@ -89,18 +89,6 @@ struct private_proposal_substructure_t {
  	 * Transforms are stored in a linked_list_t.
  	 */
 	linked_list_t * transforms;
-	
-	/**
-	 * assigned logger
-	 */
-	logger_t *logger;
-	
-	/**
-	 * @brief Computes the length of this substructure.
-	 *
-	 * @param this 	calling private_proposal_substructure_t object
-	 */
-	void (*compute_length) (private_proposal_substructure_t *this);
 };
 
 /**
@@ -158,13 +146,13 @@ static status_t verify(private_proposal_substructure_t *this)
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 2))
 	{
 		/* must be 0 or 2 */
-		this->logger->log(this->logger, ERROR, "inconsistent next payload");
+		DBG1(SIG_DBG_ENC, "inconsistent next payload");
 		return FAILED;
 	}
 	if (this->transforms_count != this->transforms->get_count(this->transforms))
 	{
 		/* must be the same! */
-		this->logger->log(this->logger, ERROR, "transform count invalid");
+		DBG1(SIG_DBG_ENC, "transform count invalid");
 		return FAILED;
 	}
 
@@ -174,29 +162,26 @@ static status_t verify(private_proposal_substructure_t *this)
 		case PROTO_ESP:
 			if (this->spi.len != 4)
 			{
-				this->logger->log(this->logger, ERROR, 
-								  "invalid SPI length in %s proposal",
-								  mapping_find(protocol_id_m, this->protocol_id));
+				DBG1(SIG_DBG_ENC, "invalid SPI length in %N proposal",
+								  protocol_id_names, this->protocol_id);
 				return FAILED;
 			}
 			break;
 		case PROTO_IKE:
 			if (this->spi.len != 0 && this->spi.len  != 8)
 			{
-				this->logger->log(this->logger, ERROR, 
-								  "invalid SPI length in IKE proposal");
+				DBG1(SIG_DBG_ENC, "invalid SPI length in IKE proposal");
 				return FAILED;
 			}
 			break;
 		default:
-			this->logger->log(this->logger, ERROR, 
-							  "invalid proposal protocol (%d)", this->protocol_id);
+			DBG1(SIG_DBG_ENC, "invalid proposal protocol (%d)", this->protocol_id);
 			return FAILED;
 	}
 	if ((this->protocol_id == 0) || (this->protocol_id >= 4))
 	{
 		/* reserved are not supported */
-		this->logger->log(this->logger, ERROR, "invalid protocol");
+		DBG1(SIG_DBG_ENC, "invalid protocol");
 		return FAILED;
 	}
 	
@@ -209,7 +194,7 @@ static status_t verify(private_proposal_substructure_t *this)
 		status = current_transform->verify(current_transform);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "TRANSFORM_SUBSTRUCTURE verification failed");
+			DBG1(SIG_DBG_ENC, "TRANSFORM_SUBSTRUCTURE verification failed");
 			break;
 		}
 	}
@@ -252,11 +237,34 @@ static void set_next_type(private_proposal_substructure_t *this,payload_type_t t
 }
 
 /**
+ * (re-)compute the length of the payload.
+ */
+static void compute_length(private_proposal_substructure_t *this)
+{
+	iterator_t *iterator;
+	size_t transforms_count = 0;
+	size_t length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
+	iterator = this->transforms->create_iterator(this->transforms,TRUE);
+	while (iterator->has_next(iterator))
+	{
+		payload_t * current_transform;
+		iterator->current(iterator,(void **) &current_transform);
+		length += current_transform->get_length(current_transform);
+		transforms_count++;
+	}
+	iterator->destroy(iterator);
+	
+	length += this->spi.len;
+	this->transforms_count = transforms_count;
+	this->proposal_length = length;
+}
+
+/**
  * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_proposal_substructure_t *this)
 {
-	this->compute_length(this);
+	compute_length(this);
 	return this->proposal_length;
 }
 
@@ -285,7 +293,7 @@ static void add_transform_substructure (private_proposal_substructure_t *this,tr
 	transform->set_is_last_transform(transform,TRUE);
 	
 	this->transforms->insert_last(this->transforms,(void *) transform);
-	this->compute_length(this);
+	compute_length(this);
 }
 
 /**
@@ -339,13 +347,13 @@ static void set_spi(private_proposal_substructure_t *this, chunk_t spi)
 		free(this->spi.ptr);
 		this->spi.ptr = NULL;
 		this->spi.len = 0;
-		this->compute_length(this);
+		compute_length(this);
 	}
 	
 	this->spi.ptr = clalloc(spi.ptr,spi.len);
 	this->spi.len = spi.len;
 	this->spi_size = spi.len;
-	this->compute_length(this);
+	compute_length(this);
 }
 
 /**
@@ -358,29 +366,6 @@ static chunk_t get_spi(private_proposal_substructure_t *this)
 	spi.len = this->spi.len;
 	
 	return spi;
-}
-
-/**
- * Implementation of private_proposal_substructure_t.compute_length.
- */
-static void compute_length(private_proposal_substructure_t *this)
-{
-	iterator_t *iterator;
-	size_t transforms_count = 0;
-	size_t length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
-	iterator = this->transforms->create_iterator(this->transforms,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		payload_t * current_transform;
-		iterator->current(iterator,(void **) &current_transform);
-		length += current_transform->get_length(current_transform);
-		transforms_count++;
-	}
-	iterator->destroy(iterator);
-	
-	length += this->spi.len;
-	this->transforms_count = transforms_count;
-	this->proposal_length = length;
 }
 
 /**
@@ -544,9 +529,6 @@ proposal_substructure_t *proposal_substructure_create()
 	this->public.clone = (proposal_substructure_t * (*) (proposal_substructure_t *)) clone_;
 	this->public.destroy = (void (*) (proposal_substructure_t *)) destroy;
 	
-	/* private functions */
-	this->compute_length = compute_length;
-	
 	/* set default values of the fields */
 	this->next_payload = NO_PAYLOAD;
 	this->proposal_length = 0;
@@ -556,7 +538,6 @@ proposal_substructure_t *proposal_substructure_create()
 	this->spi_size = 0;
 	this->spi.ptr = NULL;
 	this->spi.len = 0;
-	this->logger = logger_manager->get_logger(logger_manager, PAYLOAD);
 	
 	this->transforms = linked_list_create();
 	

@@ -27,7 +27,7 @@
 
 #include <encoding/payloads/encodings.h>
 #include <utils/linked_list.h>
-#include <utils/logger_manager.h>
+#include <daemon.h>
 
 
 typedef struct private_sa_payload_t private_sa_payload_t;
@@ -61,18 +61,6 @@ struct private_sa_payload_t {
 	 * Proposals in this payload are stored in a linked_list_t.
 	 */
 	linked_list_t * proposals;
-	
-	/**
-	 * Logger for error handling
-	 */
-	logger_t *logger;
-	
-	/**
-	 * @brief Computes the length of this payload.
-	 *
-	 * @param this 	calling private_sa_payload_t object
-	 */
-	void (*compute_length) (private_sa_payload_t *this);
 };
 
 /**
@@ -136,15 +124,15 @@ static status_t verify(private_sa_payload_t *this)
 		{
 			if (first) 
 			{
-				this->logger->log(this->logger, ERROR, "first proposal is not proposal #1");
+				DBG1(SIG_DBG_ENC, "first proposal is not proposal #1");
 				status = FAILED;
 				break;
 			}
 			
 			if (current_number != (expected_number + 1))
 			{
-				this->logger->log(this->logger, ERROR, "proposal number is %d, excepted %d or %d",
-								  current_number, expected_number, expected_number + 1);
+				DBG1(SIG_DBG_ENC, "proposal number is %d, excepted %d or %d",
+					 current_number, expected_number, expected_number + 1);
 				status = FAILED;
 				break;
 			}
@@ -152,7 +140,7 @@ static status_t verify(private_sa_payload_t *this)
 		else if (current_number < expected_number)
 		{
 			/* must not be smaller then proceeding one */
-			this->logger->log(this->logger, ERROR, "proposal number smaller than that of previous proposal");
+			DBG1(SIG_DBG_ENC, "proposal number smaller than that of previous proposal");
 			status = FAILED;
 			break;
 		}
@@ -160,7 +148,7 @@ static status_t verify(private_sa_payload_t *this)
 		status = current_proposal->payload_interface.verify(&(current_proposal->payload_interface));
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "PROPOSAL_SUBSTRUCTURE verification failed");
+			DBG1(SIG_DBG_ENC, "PROPOSAL_SUBSTRUCTURE verification failed");
 			break;
 		}
 		first = FALSE;
@@ -225,11 +213,30 @@ static void set_next_type(private_sa_payload_t *this,payload_type_t type)
 }
 
 /**
+ * recompute length of the payload.
+ */
+static void compute_length (private_sa_payload_t *this)
+{
+	iterator_t *iterator;
+	size_t length = SA_PAYLOAD_HEADER_LENGTH;
+	iterator = this->proposals->create_iterator(this->proposals,TRUE);
+	while (iterator->has_next(iterator))
+	{
+		payload_t *current_proposal;
+		iterator->current(iterator,(void **) &current_proposal);
+		length += current_proposal->get_length(current_proposal);
+	}
+	iterator->destroy(iterator);
+	
+	this->payload_length = length;
+}
+
+/**
  * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_sa_payload_t *this)
 {
-	this->compute_length(this);
+	compute_length(this);
 	return this->payload_length;
 }
 
@@ -259,7 +266,7 @@ static void add_proposal_substructure(private_sa_payload_t *this,proposal_substr
 	proposal->set_is_last_proposal(proposal, TRUE);
 	proposal->set_proposal_number(proposal, proposal_count + 1);
 	this->proposals->insert_last(this->proposals,(void *) proposal);
-	this->compute_length(this);
+	compute_length(this);
 }
 
 /**
@@ -321,25 +328,6 @@ static linked_list_t *get_proposals(private_sa_payload_t *this)
 	return proposal_list;
 }
 
-/**
- * Implementation of private_sa_payload_t.compute_length.
- */
-static void compute_length (private_sa_payload_t *this)
-{
-	iterator_t *iterator;
-	size_t length = SA_PAYLOAD_HEADER_LENGTH;
-	iterator = this->proposals->create_iterator(this->proposals,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		payload_t *current_proposal;
-		iterator->current(iterator,(void **) &current_proposal);
-		length += current_proposal->get_length(current_proposal);
-	}
-	iterator->destroy(iterator);
-	
-	this->payload_length = length;
-}
-
 /*
  * Described in header.
  */
@@ -363,15 +351,10 @@ sa_payload_t *sa_payload_create()
 	this->public.get_proposals = (linked_list_t* (*) (sa_payload_t *)) get_proposals;
 	this->public.destroy = (void (*) (sa_payload_t *)) destroy;
 	
-	/* private functions */
-	this->compute_length = compute_length;
-	
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
 	this->payload_length = SA_PAYLOAD_HEADER_LENGTH;
-	this->logger = logger_manager->get_logger(logger_manager, PARSER);
-
 	this->proposals = linked_list_create();
 	return &this->public;
 }

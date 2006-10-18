@@ -106,9 +106,9 @@ enum status_t {
 };
 
 /**
- * String mappings for type status_t.
+ * enum_names for type status_t.
  */
-extern mapping_t status_m[];
+extern enum_name_t *status_names;
 
 /**
  * Handle struct timeval like an own type.
@@ -150,6 +150,8 @@ struct chunk_t {
  */
 extern chunk_t CHUNK_INITIALIZER;
 
+
+
 /**
  * Printf() hook character to dump a chunk using printf.
  * The argument supplied to printf() is a pointer to a chunk.
@@ -164,6 +166,22 @@ extern chunk_t CHUNK_INITIALIZER;
  * E.g. printf("buffer xy is: %b", buffer, sizeof(buffer));
  */
 #define BYTES_PRINTF_SPEC 'b'
+
+/**
+ * printf specifier for time_t, use #-modifier to print time as UTC 
+ */
+#define TIME_PRINTF_SPEC 'T'
+
+/**
+ * printf specifier for time_t deltas, uses two arguments
+ * E.g. printf("%V", begin, end);
+ */
+#define TIME_DELTA_PRINTF_SPEC 'V'
+
+/**
+ * time_t for a not defined time
+ */
+#define UNDEFINED_TIME 0
 
 /**
  * Initialize a chunk to a static buffer
@@ -240,19 +258,5 @@ void ref_get(refcount_t *ref);
  */
 bool ref_put(refcount_t *ref);
 
-
-#define UNDEFINED_TIME	0
-#define TIMETOA_BUF 	30
-
-/**
- * @brief Display a date either in local or UTC time
- * 
- * @param buf		buffer where displayed time will be written to
- * @param buflen	buffer length
- * @param time		time to be displayed
- * @param utc		UTC (TRUE) or local time (FALSE)
- * 
- */
-void timetoa(char *buf, size_t buflen, const time_t *time, bool utc);
 
 #endif /*TYPES_H_*/

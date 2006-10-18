@@ -50,10 +50,10 @@ enum diffie_hellman_group_t {
 	MODP_8192_BIT = 18
 };
 
-/** 
- * String mappings for diffie_hellman_group_t.
+/**
+ * enum name for diffie_hellman_group_t.
  */
-extern mapping_t diffie_hellman_group_m[];
+extern enum_name_t *diffie_hellman_group_names;
 
 
 typedef struct diffie_hellman_t diffie_hellman_t;

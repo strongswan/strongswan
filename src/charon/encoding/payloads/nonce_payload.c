@@ -60,13 +60,6 @@ struct private_nonce_payload_t {
 	 * The contained nonce value.
 	 */
 	chunk_t nonce;
-	
-	/**
-	 * @brief Computes the length of this payload.
-	 *
-	 * @param this 	calling private_nonce_payload_t object
-	 */
-	void (*compute_length) (private_nonce_payload_t *this);
 };
 
 /**
@@ -176,20 +169,20 @@ static void set_next_type(private_nonce_payload_t *this,payload_type_t type)
 }
 
 /**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_nonce_payload_t *this)
-{
-	this->compute_length(this);
-	return this->payload_length;
-}
-
-/**
- * Implementation of private_id_payload_t.compute_length.
+ * recompute the length of the payload.
  */
 static void compute_length(private_nonce_payload_t *this)
 {
 	this->payload_length = NONCE_PAYLOAD_HEADER_LENGTH + this->nonce.len;
+}
+
+/**
+ * Implementation of payload_t.get_length.
+ */
+static size_t get_length(private_nonce_payload_t *this)
+{
+	compute_length(this);
+	return this->payload_length;
 }
 
 /**
@@ -225,9 +218,6 @@ nonce_payload_t *nonce_payload_create()
 	this->public.destroy = (void (*) (nonce_payload_t *)) destroy;
 	this->public.set_nonce = (void (*) (nonce_payload_t *,chunk_t)) set_nonce;
 	this->public.get_nonce = (chunk_t (*) (nonce_payload_t *)) get_nonce;
-	
-	/* private functions */
-	this->compute_length = compute_length;
 	
 	/* private variables */
 	this->critical = FALSE;

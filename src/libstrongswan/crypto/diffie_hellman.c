@@ -23,29 +23,26 @@
  * for more details.
  */
 
-#include <gmp.h> 
-#include <stdio.h> 
+#include <gmp.h>
+#include <stdio.h>
 
 #include "diffie_hellman.h"
 
 #include <utils/randomizer.h>
 
-
-/** 
- * String mappings for diffie_hellman_group_t.
- */
-mapping_t diffie_hellman_group_m[] = {
-	{MODP_NONE, "MODP_NONE"},
-	{MODP_768_BIT, "MODP_768_BIT"},
-	{MODP_1024_BIT, "MODP_1024_BIT"},
-	{MODP_1536_BIT, "MODP_1536_BIT"},
-	{MODP_2048_BIT, "MODP_2048_BIT"},
-	{MODP_3072_BIT, "MODP_3072_BIT"},
-	{MODP_4096_BIT, "MODP_4096_BIT"},
-	{MODP_6144_BIT, "MODP_6144_BIT"},
-	{MODP_8192_BIT, "MODP_8192_BIT"},
-	{MAPPING_END, NULL}
-};
+ENUM_BEGIN(diffie_hellman_group_names, MODP_NONE, MODP_1024_BIT,
+	"MODP_NONE",
+	"MODP_768_BIT",
+	"MODP_1024_BIT");
+ENUM_NEXT(diffie_hellman_group_names, MODP_1536_BIT, MODP_1536_BIT, MODP_1024_BIT,
+	"MODP_1536_BIT");
+ENUM_NEXT(diffie_hellman_group_names, MODP_2048_BIT, MODP_8192_BIT, MODP_1536_BIT,
+	"MODP_2048_BIT",
+	"MODP_3072_BIT",
+	"MODP_4096_BIT",
+	"MODP_6144_BIT",
+	"MODP_8192_BIT");
+ENUM_END(diffie_hellman_group_names, MODP_8192_BIT);
 
 
 /**

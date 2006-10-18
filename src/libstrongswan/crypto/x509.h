@@ -29,8 +29,13 @@
 #include <crypto/certinfo.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
-#include <utils/logger.h>
 
+/**
+ * printf specifier for printing certificates. When using the
+ * #-modifier, an additional bool argument defines if times
+ * are printed in UTC.
+ */
+#define X509_PRINTF_SPEC 'Q'
 
 typedef struct x509_t x509_t;
 
@@ -203,16 +208,6 @@ struct x509_t {
 	 * @param this			certificate to destroy
 	 */
 	void (*destroy) (x509_t *this);
-
-	/**
-	 * @brief Log x509 certificate info.
-	 *
-	 * @param this			certificate to log
-	 * @param logger		logger to be used
-	 * @param utc			log dates either in UTC or local time
-	 * @param has_key		a matching private key is available
-	 */
-	 void (*log_certificate) (const x509_t *this, logger_t *logger, bool utc, bool has_key);
 };
 
 /**

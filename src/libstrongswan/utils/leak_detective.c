@@ -38,6 +38,7 @@
 #include "leak_detective.h"
 
 #include <types.h>
+#include <library.h>
 
 #ifdef LEAK_DETECTIVE
 
@@ -117,11 +118,6 @@ static memory_header_t first_header = {
 };
 
 /**
- * logger for the leak detective
- */
-static logger_t *logger;
-
-/**
  * standard hooks, used to temparily remove hooking
  */
 static void *old_malloc_hook, *old_realloc_hook, *old_free_hook;
@@ -149,11 +145,11 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
 
 	strings = backtrace_symbols (stack_frames, stack_frame_count);
 
-	logger->log(logger, ERROR, "  dumping %d stack frame addresses", stack_frame_count);
+	DBG1("  dumping %d stack frame addresses", stack_frame_count);
 
 	for (i = 0; i < stack_frame_count; i++)
 	{
-		logger->log(logger, ERROR, "    %s", strings[i]);
+		DBG1("    %s", strings[i]);
 	}
 	free (strings);
 }
@@ -166,7 +162,7 @@ static void log_stack_frames(void **stack_frames, int stack_frame_count)
  *
  * The range_size is calculated using the readelf utility, e.g.:
  * readelf -s /lib/glibc.so.6
- * These values may or may not be acceptable for another system.
+ * The values are for glibc-2.4 and may or may not be correct on other systems.
  */
 typedef struct whitelist_t whitelist_t;
 
@@ -176,15 +172,16 @@ struct whitelist_t {
 };
 
 whitelist_t whitelist[] = {
-	{pthread_create,			381},
-	{pthread_setspecific,		256},
-	{mktime,					 60},
-	{tzset,						126},
-	{inet_ntoa,					256},
-	{strerror,					173},
-	{getprotobynumber,			294},
-	{getservbyport,				309},
-	{register_printf_function,	150},
+	{pthread_create,			2542},
+	{pthread_setspecific,		 217},
+	{mktime,					  60},
+	{tzset,						 123},
+	{inet_ntoa,					 249},
+	{strerror,					 180},
+	{getprotobynumber,			 291},
+	{getservbyport,				 311},
+	{register_printf_function,	 159},
+	{syslog,					  45},
 };
 
 /**
@@ -220,7 +217,7 @@ void report_leaks()
 	{
 		if (!is_whitelisted(hdr->stack_frames, hdr->stack_frame_count))
 		{
-			logger->log(logger, ERROR, "Leak (%d bytes at %p):", hdr->bytes, hdr + 1);
+			DBG1("Leak (%d bytes at %p):", hdr->bytes, hdr + 1);
 			log_stack_frames(hdr->stack_frames, hdr->stack_frame_count);
 			leaks++;
 		}
@@ -229,13 +226,13 @@ void report_leaks()
 	switch (leaks)
 	{
 		case 0:
-			logger->log(logger, CONTROL, "No leaks detected");
+			DBG1("No leaks detected");
 			break;
 		case 1:
-			logger->log(logger, ERROR, "One leak detected");
+			DBG1("One leak detected");
 			break;
 		default:
-			logger->log(logger, ERROR, "%d leaks detected", leaks);
+			DBG1("%d leaks detected", leaks);
 			break;
 	}
 }
@@ -322,8 +319,8 @@ void free_hook(void *ptr, const void *caller)
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		logger->log(logger, ERROR, "freeing of invalid memory (%p, MAGIC 0x%x != 0x%x):", 
-					ptr, hdr->magic, MEMORY_HEADER_MAGIC);
+		DBG1("freeing of invalid memory (%p, MAGIC 0x%x != 0x%x):",
+			 ptr, hdr->magic, MEMORY_HEADER_MAGIC);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
@@ -368,7 +365,7 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 	uninstall_hooks();
 	if (hdr->magic != MEMORY_HEADER_MAGIC)
 	{
-		logger->log(logger, ERROR, "reallocation of invalid memory (%p):", old);
+		DBG1("reallocation of invalid memory (%p):", old);
 		stack_frame_count = backtrace(stack_frames, STACK_FRAMES_COUNT);
 		log_stack_frames(stack_frames, stack_frame_count);
 		install_hooks();
@@ -397,16 +394,15 @@ void *realloc_hook(void *old, size_t bytes, const void *caller)
 /**
  * Setup leak detective
  */
-void leak_detective_init()
+void __attribute__ ((constructor)) leak_detective_init()
 {
-	logger = logger_manager->get_logger(logger_manager, LEAK_DETECT);
 	install_hooks();
 }
 
 /**
  * Clean up leak detective
  */
-void leak_detective_cleanup()
+void __attribute__ ((destructor)) leak_detective_cleanup()
 {
 	uninstall_hooks();
 	report_leaks();
@@ -415,7 +411,7 @@ void leak_detective_cleanup()
 /**
  * Log memory allocation statistics
  */
-void leak_detective_status(logger_t *logger)
+void leak_detective_status(FILE *stream)
 {
 	u_int blocks = 0;
 	size_t bytes = 0;
@@ -429,10 +425,10 @@ void leak_detective_status(logger_t *logger)
 	}
 	pthread_mutex_unlock(&mutex);
 	
-	logger->log(logger, CONTROL|LEVEL1, "allocation statistics:");
-	logger->log(logger, CONTROL|LEVEL1, "  call stats: malloc: %d, free: %d, realloc: %d",
+	fprintf(stream, "allocation statistics:\n");
+	fprintf(stream, "  call stats: malloc: %d, free: %d, realloc: %d\n",
 			count_malloc, count_free, count_realloc);
-	logger->log(logger, CONTROL|LEVEL1, "  allocated %d blocks, total size %d bytes (avg. %d bytes)",
+	fprintf(stream, "  allocated %d blocks, total size %d bytes (avg. %d bytes)\n",
 			blocks, bytes, bytes/blocks);
 }
 
@@ -441,7 +437,7 @@ void leak_detective_status(logger_t *logger)
 /**
  * Dummy when !using LEAK_DETECTIVE
  */
-void leak_detective_status(logger_t *logger)
+void leak_detective_status(FILE *stream)
 {
 
 }

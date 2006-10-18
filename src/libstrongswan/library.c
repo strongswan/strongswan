@@ -1,8 +1,8 @@
 /**
  * @file library.c
- * 
+ *
  * @brief Library (de-)initialization.
- * 
+ *
  */
 
 /*
@@ -21,23 +21,22 @@
  * for more details.
  */
 
-#include <utils/logger_manager.h>
-#include <utils/leak_detective.h>
+#include <stdarg.h>
+#include <stdio.h>
+
+#include "library.h"
 
 /**
- * Called whenever the library is linked from a process
+ * default dbg function which printf all to stderr
  */
-void __attribute__ ((constructor)) library_init(void)
+static void dbg_stderr(int level, char *fmt, ...)
 {
-	logger_manager_init();
-	leak_detective_init();	
+	va_list args;
+	
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	fprintf(stderr, "\n");
+	va_end(args);
 }
 
-/**
- * Called whenever the library is unlinked from a process
- */
-void __attribute__ ((destructor)) library_cleanup(void)
-{
-	leak_detective_cleanup();
-	logger_manager_cleanup();
-}
+void (*dbg) (int level, char *fmt, ...) = dbg_stderr;

@@ -128,11 +128,6 @@ struct private_create_child_sa_t {
 	 * source of randomness
 	 */
 	randomizer_t *randomizer;
-	
-	/**
-	 * Assigned logger.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -236,12 +231,12 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		switch (this->rekeyed_sa->get_state(this->rekeyed_sa))
 		{
 			case CHILD_REKEYING:
-				this->logger->log(this->logger, ERROR,
-								  "rekeying a CHILD_SA which is already rekeying, aborted");
+				DBG1(SIG_DBG_IKE,
+					 "rekeying a CHILD_SA which is already rekeying, aborted");
 				return FAILED;
 			case CHILD_DELETING:
-				this->logger->log(this->logger, ERROR,
-								  "rekeying a CHILD_SA which is deleting, aborted");
+				DBG1(SIG_DBG_IKE,
+					 "rekeying a CHILD_SA which is deleting, aborted");
 				return FAILED;
 			default:
 				break;
@@ -289,9 +284,8 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 			
 			if (this->policy == NULL)
 			{
-				this->logger->log(this->logger, ERROR,
-								  "no policy found to rekey CHILD_SA with reqid %d",
-								  this->reqid);
+				DBG1(SIG_DBG_IKE, "no policy found to rekey "
+					 "CHILD_SA with reqid %d", this->reqid);
 				return FAILED;
 			}
 		}
@@ -307,8 +301,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposals) != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR,
-							  "could not install CHILD_SA, CHILD_SA creation aborted");
+			DBG1(SIG_DBG_IKE, "could not install CHILD_SA, CHILD_SA creation aborted");
 			return FAILED;
 		}
 		sa_payload = sa_payload_create_from_proposal_list(proposals);
@@ -376,27 +369,23 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 {
 	notify_type_t notify_type = notify_payload->get_notify_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
-					  mapping_find(notify_type_m, notify_type));
+	DBG2(SIG_DBG_IKE, "process notify type %N", notify_type_names, notify_type);
 
 	switch (notify_type)
 	{
 		case SINGLE_PAIR_REQUIRED:
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "received a SINGLE_PAIR_REQUIRED notify");
+			DBG1(SIG_DBG_IKE, "received a SINGLE_PAIR_REQUIRED notify");
 			return FAILED;
 		}
 		case TS_UNACCEPTABLE:
 		{
-			this->logger->log(this->logger, CONTROL, 
-							  "received TS_UNACCEPTABLE notify");
+			DBG1(SIG_DBG_IKE, "received TS_UNACCEPTABLE notify");
 			return FAILED;
 		}
 		case NO_PROPOSAL_CHOSEN:
 		{
-			this->logger->log(this->logger, CONTROL,
-							  "received NO_PROPOSAL_CHOSEN notify");
+			DBG1(SIG_DBG_IKE, "received NO_PROPOSAL_CHOSEN notify");
 			return FAILED;
 		}
 		case REKEY_SA:
@@ -423,18 +412,14 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 		{
 			if (notify_type < 16383)
 			{
-				this->logger->log(this->logger, AUDIT, 
-								  "received %s notify error (%d), CHILD_SA creation failed",
-								  mapping_find(notify_type_m, notify_type),
-								  notify_type);
+				DBG1(SIG_DBG_IKE, "received %N notify error, CHILD_SA "
+					 "creation failed", notify_type_names, notify_type);
 				return FAILED;	
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL, 
-								  "received %s notify (%d), ignored",
-								  mapping_find(notify_type_m, notify_type),
-								  notify_type);
+				DBG1(SIG_DBG_IKE, "received %N notify, ignored",
+					 notify_type_names, notify_type);
 				return SUCCESS;
 			}
 		}
@@ -558,8 +543,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	/* check message type */
 	if (request->get_exchange_type(request) != CREATE_CHILD_SA)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "CREATE_CHILD_SA response of invalid type, aborted");
+		DBG1(SIG_DBG_IKE, "CREATE_CHILD_SA response of invalid type, aborted");
 		return FAILED;
 	}
 	
@@ -569,8 +553,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
 		build_notify(NO_ADDITIONAL_SAS, CHUNK_INITIALIZER, response, TRUE);
-		this->logger->log(this->logger, AUDIT, 
-						  "unable to create new CHILD_SAs, as rekeying in progress");
+		DBG1(SIG_DBG_IKE, "unable to create new CHILD_SAs, as rekeying in progress");
 		return FAILED;
 	}
 	
@@ -599,8 +582,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 				u_int8_t dh_buffer[] = {0x00, 0x00}; /* MODP_NONE */
 				chunk_t group = chunk_from_buf(dh_buffer);
 				build_notify(INVALID_KE_PAYLOAD, group, response, TRUE);
-				this->logger->log(this->logger, CONTROL,
-								  "CREATE_CHILD_SA used PFS, sending INVALID_KE_PAYLOAD");
+				DBG1(SIG_DBG_IKE, "CREATE_CHILD_SA used PFS, sending INVALID_KE_PAYLOAD");
 				return FAILED;
 			}
 			case NOTIFY:
@@ -615,9 +597,8 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "ignoring %s payload (%d)", 
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG1(SIG_DBG_IKE, "ignoring %N payload",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -628,8 +609,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	if (!(sa_request && nonce_request && tsi_request && tsr_request))
 	{
 		build_notify(INVALID_SYNTAX, CHUNK_INITIALIZER, response, TRUE);
-		this->logger->log(this->logger, AUDIT, 
-						  "request message incomplete, no CHILD_SA created");
+		DBG1(SIG_DBG_IKE, "request message incomplete, no CHILD_SA created");
 		return FAILED;
 	}
 	
@@ -669,8 +649,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		
 		if (this->policy == NULL)
 		{
-			this->logger->log(this->logger, AUDIT,
-							  "no acceptable policy found, adding TS_UNACCEPTABLE notify");
+			DBG1(SIG_DBG_IKE, "no acceptable policy found, adding TS_UNACCEPTABLE notify");
 			build_notify(TS_UNACCEPTABLE, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
@@ -686,23 +665,21 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		sa_response = sa_payload_create();
 		/* get proposals from request, and select one with ours */
 		proposal_list = sa_request->get_proposals(sa_request);
-		this->logger->log(this->logger, CONTROL|LEVEL1, "selecting proposals:");
+		DBG2(SIG_DBG_IKE, "selecting proposals:");
 		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
 		destroy_proposal_list(proposal_list);
 		
 		/* do we have a proposal? */
 		if (this->proposal == NULL)
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "CHILD_SA proposals unacceptable, adding NO_PROPOSAL_CHOSEN notify");
+			DBG1(SIG_DBG_IKE, "CHILD_SA proposals unacceptable, adding NO_PROPOSAL_CHOSEN notify");
 			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
 		/* do we have traffic selectors? */
 		else if (this->tsi->get_count(this->tsi) == 0 || this->tsr->get_count(this->tsr) == 0)
 		{
-			this->logger->log(this->logger, AUDIT,
-							  "CHILD_SA traffic selectors unacceptable, adding TS_UNACCEPTABLE notify");
+			DBG1(SIG_DBG_IKE, "CHILD_SA traffic selectors unacceptable, adding TS_UNACCEPTABLE notify");
 			build_notify(TS_UNACCEPTABLE, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
@@ -723,8 +700,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 			if (install_child_sa(this, FALSE) != SUCCESS)
 			{
-				this->logger->log(this->logger, ERROR,
-								  "installing CHILD_SA failed, adding NO_PROPOSAL_CHOSEN notify");
+				DBG1(SIG_DBG_IKE, "installing CHILD_SA failed, adding NO_PROPOSAL_CHOSEN notify");
 				build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 				return FAILED;
 			}
@@ -786,8 +762,7 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != CREATE_CHILD_SA)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "CREATE_CHILD_SA response of invalid type, aborting");
+		DBG1(SIG_DBG_IKE, "CREATE_CHILD_SA response of invalid type, aborting");
 		return FAILED;
 	}
 	
@@ -826,9 +801,8 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "ignoring %s payload (%d)", 
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG1(SIG_DBG_IKE, "ignoring %N payload",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -837,7 +811,7 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 	
 	if (!(sa_payload && nonce_payload && tsi_payload && tsr_payload))
 	{
-		this->logger->log(this->logger, AUDIT, "response message incomplete, no CHILD_SA built");
+		DBG1(SIG_DBG_IKE, "response message incomplete, no CHILD_SA built");
 		return FAILED;
 	}
 	
@@ -870,14 +844,13 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			this->tsi->get_count(this->tsi) == 0 ||
 			this->tsr->get_count(this->tsr) == 0)
 		{
-			this->logger->log(this->logger, AUDIT, "CHILD_SA creation failed");
+			DBG1(SIG_DBG_IKE, "CHILD_SA creation failed");
 			return FAILED;
 		}
 		new_child = this->child_sa;
 		if (install_child_sa(this, TRUE) != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR,
-							"installing CHILD_SA failed, no CHILD_SA built");
+			DBG1(SIG_DBG_IKE, "installing CHILD_SA failed, no CHILD_SA built");
 			return FAILED;
 		}
 	}
@@ -909,14 +882,12 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			if (memcmp(this_lowest.ptr, this->nonce_s.ptr, 
 				min(this_lowest.len, this->nonce_s.len)) < 0)
 			{
-				this->logger->log(this->logger, ERROR,
-								  "detected simultaneous CHILD_SA rekeying, deleting ours");
+				DBG1(SIG_DBG_IKE, "detected simultaneous CHILD_SA rekeying, deleting ours");
 				this->lost = TRUE;
 			}
 			else
 			{
-				this->logger->log(this->logger, ERROR,
-								  "detected simultaneous CHILD_SA rekeying, but ours is preferred");
+				DBG1(SIG_DBG_IKE, "detected simultaneous CHILD_SA rekeying, but ours is preferred");
 			}
 		}	
 		/* delete the old SA if we have won the rekeying nonce compare*/
@@ -994,7 +965,6 @@ create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa)
 	this->tsi = NULL;
 	this->tsr = NULL;
 	this->randomizer = randomizer_create();
-	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &this->public;
 }

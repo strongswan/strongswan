@@ -29,7 +29,13 @@
 #include <crypto/certinfo.h>
 #include <utils/identification.h>
 #include <utils/iterator.h>
-#include <utils/logger.h>
+
+/**
+ * printf specifier for printing crls. When using the
+ * #-modifier, an additional bool argument defines if times
+ * are printed in UTC.
+ */
+#define CRL_PRINTF_SPEC 'U'
 
 typedef struct crl_t crl_t;
 
@@ -115,16 +121,6 @@ struct crl_t {
 	 * @param this			crl to destroy
 	 */
 	void (*destroy) (crl_t *this);
-
-	/**
-	 * @brief Log x509 crl info.
-	 *
-	 * @param this			crl to log
-	 * @param logger		logger to be used
-	 * @param utc			log dates either in UTC or local time
-	 * @param strict		expiry of nextUpdate is fatal with strict == TRUE
-	 */
-	 void (*log_crl) (const crl_t *this, logger_t *logger, bool utc, bool strict);
 };
 
 /**

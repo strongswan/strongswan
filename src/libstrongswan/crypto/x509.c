@@ -24,21 +24,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#include <printf.h>
 
 #include "x509.h"
 
 #include <types.h>
+#include <library.h>
 #include <definitions.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
-#include <utils/logger_manager.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
 #define CERT_WARNING_INTERVAL	30	/* days */
-
-static logger_t *logger;
 
 /**
  * Different kinds of generalNames
@@ -422,7 +421,7 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
 		if (objectID == BASIC_CONSTRAINTS_CA)
 		{
 			isCA = object.len && *object.ptr;
-			logger->log(logger, CONTROL|LEVEL2, "  %s", isCA ? "TRUE" : "FALSE");
+			DBG2("  %s", isCA ? "TRUE" : "FALSE");
 		}
 		objectID++;
 	}
@@ -519,7 +518,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 		if (id_type != ID_ANY)
 		{
 			identification_t *gn = identification_create_from_encoding(id_type, object);
-			logger->log(logger, CONTROL|LEVEL2, "  '%D'", gn);
+			DBG2("  '%D'", gn);
 			return gn;
         }
 		objectID++;
@@ -670,7 +669,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessL
 						{
 							if (asn1_length(&object) == ASN1_INVALID_LENGTH)
 								return;
-							logger->log(logger, CONTROL|LEVEL2, "  '%.*s'",(int)object.len, object.ptr);
+							DBG2("  '%.*s'",(int)object.len, object.ptr);
 							/* only HTTP(S) URIs accepted */
 							if (strncasecmp(object.ptr, "http", 4) == 0)
 							{
@@ -678,7 +677,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessL
 								return;
 							}
 						}
-						logger->log(logger, ERROR|LEVEL2, "ignoring OCSP InfoAccessLocation with unkown protocol");
+						DBG2("ignoring OCSP InfoAccessLocation with unkown protocol");
 						break;
 					default:
 						/* unkown accessMethod, ignoring */
@@ -779,7 +778,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_VERSION:
 				cert->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				logger->log(logger, CONTROL|LEVEL2, "  v%d", cert->version);
+				DBG2("  v%d", cert->version);
 				break;
 			case X509_OBJ_SERIAL_NUMBER:
 				cert->serialNumber = object;
@@ -789,7 +788,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_ISSUER:
 				cert->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				logger->log(logger, CONTROL|LEVEL1, "  '%D'", cert->issuer);
+				DBG2("  '%D'", cert->issuer);
 				break;
 			case X509_OBJ_NOT_BEFORE:
 				cert->notBefore = parse_time(object, level);
@@ -799,12 +798,12 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_SUBJECT:
 				cert->subject = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				logger->log(logger, CONTROL|LEVEL1, "  '%D'", cert->subject);
+				DBG2("  '%D'", cert->subject);
 				break;
 			case X509_OBJ_SUBJECT_PUBLIC_KEY_ALGORITHM:
 				if (parse_algorithmIdentifier(object, level, NULL) != OID_RSA_ENCRYPTION)
 				{
-					logger->log(logger, ERROR|LEVEL1, "  unsupported public key algorithm");
+					DBG2("  unsupported public key algorithm");
 					return FALSE;
 				}
 				break;
@@ -816,7 +815,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				}
 				else
 				{
-					logger->log(logger, ERROR|LEVEL1, "  invalid RSA public key format");
+					DBG2("  invalid RSA public key format");
 					return FALSE;
 				}
 				break;
@@ -828,7 +827,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 				break;
 			case X509_OBJ_CRITICAL:
 				critical = object.len && *object.ptr;
-				logger->log(logger, ERROR|LEVEL2, "  %s", critical ? "TRUE" : "FALSE");
+				DBG2("  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case X509_OBJ_EXTN_VALUE:
 			{
@@ -886,27 +885,26 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
  */
 static err_t is_valid(const private_x509_t *this, time_t *until)
 {
-	char buf[TIMETOA_BUF];
-
 	time_t current_time = time(NULL);
 	
-	timetoa(buf, BUF_LEN, &this->notBefore, TRUE);
-	logger->log(logger, CONTROL|LEVEL1, "  not before  : %s", buf);
-	timetoa(buf, BUF_LEN, &current_time, TRUE);
-	logger->log(logger, CONTROL|LEVEL1, "  current time: %s", buf);
-	timetoa(buf, BUF_LEN, &this->notAfter, TRUE);
-	logger->log(logger, CONTROL|LEVEL1, "  not after   : %s", buf);
+	DBG2("  not before  : %T", this->notBefore);
+	DBG2("  current time: %T", current_time);
+	DBG2("  not after   : %T", this->notAfter);
 
-	if (until != NULL
-	&& (*until == UNDEFINED_TIME || this->notAfter < *until)) 
+	if (until != NULL &&
+		(*until == UNDEFINED_TIME || this->notAfter < *until))
 	{
 		*until = this->notAfter;
 	}
 	if (current_time < this->notBefore)
+	{
 		return "is not valid yet";
+	}
 	if (current_time > this->notAfter)
+	{
 		return "has expired";
-	logger->log(logger, CONTROL|LEVEL1, "  certificate is valid", buf);
+	}
+	DBG2("  certificate is valid");
 	return NULL;
 }
 
@@ -1049,7 +1047,144 @@ static bool verify(const private_x509_t *this, const rsa_public_key_t *signer)
 }
 
 /**
- * destroy
+ * output handler in printf()
+ */
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
+{
+	private_x509_t *this = *((private_x509_t**)(args[0]));
+	iterator_t *iterator;
+	identification_t *san;
+	chunk_t chunk;
+	bool utc = TRUE;
+	int written = 0;
+	
+	if (info->alt)
+	{
+		utc = *((bool*)(args[1]));
+	}
+	
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	
+	/* determine the current time */
+	time_t now = time(NULL);
+
+	written += fprintf(stream, "  subject:   %D\n", this->subject);
+	if (this->subjectAltNames->get_count(this->subjectAltNames) > 0)
+	{
+		written += fprintf(stream, "  altNames:  ");
+		iterator = this->subjectAltNames->create_iterator(this->subjectAltNames, TRUE);
+		while (iterator->iterate(iterator, (void**)&san))
+		{
+			written += fprintf(stream, "%D, ", san);
+		}
+		iterator->destroy(iterator);
+		written += fprintf(stream, "\n");
+	}
+	written += fprintf(stream, "  issuer:    '%D'\n", this->issuer);
+	written += fprintf(stream, "  serial:    '%#B'\n", &this->serialNumber);
+	written += fprintf(stream, "  installed: %#T\n", this->installed, utc);
+	
+	written += fprintf(stream, "  validity:  not before %#T, ",
+					   this->notBefore, utc);
+	if (now < this->notBefore)
+	{
+		written += fprintf(stream, "not valid yet (valid in %V)\n",
+						   now, this->notBefore);
+	}
+	else
+	{
+		written += fprintf(stream, "ok\n");
+	}
+	
+	written += fprintf(stream, "             not after  %#T, ",
+					   this->notAfter, utc);
+	if (now > this->notAfter)
+	{
+		written += fprintf(stream, "expired (since %V)\n", now, this->notAfter);
+	}
+	else
+	{
+		written += fprintf(stream, "ok");
+		if (now > this->notAfter - CERT_WARNING_INTERVAL * 60 * 60 * 24)
+		{
+			written += fprintf(stream, " (expires in %V)", now, this->notAfter);
+		}
+		written += fprintf(stream, " \n");
+	}
+	
+	chunk = this->public_key->get_keyid(this->public_key);
+	written += fprintf(stream, "  keyid:     %#B\n", &chunk);
+	if (this->subjectKeyID.ptr)
+	{
+		written += fprintf(stream, "  subjkey:   %#B\n", &this->subjectKeyID);
+	}
+	if (this->authKeyID.ptr)
+	{
+		written += fprintf(stream, "  authkey:   %#B\n", &this->authKeyID);
+	}
+	if (this->authKeySerialNumber.ptr)
+	{
+		written += fprintf(stream, "  aserial:   %#B\n", &this->authKeySerialNumber);
+	}
+	
+	written += fprintf(stream, "  pubkey:    RSA %d bits", BITS_PER_BYTE *
+					   this->public_key->get_keysize(this->public_key));
+	written += fprintf(stream, ", status %N",
+					   cert_status_names, this->status);
+	
+	switch (this->status)
+	{
+		case CERT_GOOD:
+			written += fprintf(stream, " until %#T", this->until, utc);
+			break;
+		case CERT_REVOKED:
+			written += fprintf(stream, " on %#T", this->until, utc);
+			break;
+		case CERT_UNKNOWN:
+		case CERT_UNDEFINED:
+		case CERT_UNTRUSTED:
+		default:
+			break;
+	}
+	return written;
+}
+
+/**
+ * arginfo handler in printf()
+ */
+static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (info->alt)
+	{
+		if (n > 1)
+		{
+			argtypes[0] = PA_INT;
+			argtypes[1] = PA_INT;
+		}
+		return 2;
+	}
+	
+	if (n > 0)
+	{
+		argtypes[0] = PA_INT;
+	}
+	return 1;
+}
+
+/**
+ * register printf() handlers
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(X509_PRINTF_SPEC, print, print_arginfo);
+}
+
+/**
+ * Implements x509_t.destroy
  */
 static void destroy(private_x509_t *this)
 {
@@ -1066,136 +1201,11 @@ static void destroy(private_x509_t *this)
 	}
 	this->crlDistributionPoints->destroy(this->crlDistributionPoints);
 
-	if (this->issuer)
-		this->issuer->destroy(this->issuer);
-
-	if (this->subject)
-		this->subject->destroy(this->subject);
-
-	if (this->public_key)
-		this->public_key->destroy(this->public_key);
-
+	DESTROY_IF(this->issuer);
+	DESTROY_IF(this->subject);
+	DESTROY_IF(this->public_key);
 	free(this->certificate.ptr);
 	free(this);
-}
-
-/**
- * checks if the expiration date has been reached and warns during the
-  * warning_interval of the imminent expiration.
-  * strict=TRUE declares a fatal error, strict=FALSE issues a warning upon expiry.
- */
-char* check_expiry(time_t expiration_date, int warning_interval, bool strict)
-{
-	int time_left;
-
-	if (expiration_date == UNDEFINED_TIME)
-	{
-		return "ok (expires never)";
-	}
-	time_left = (expiration_date - time(NULL));
-	if (time_left < 0)
-	{
-		return strict? "fatal (expired)" : "warning (expired)";
-	}
-	
-	{
-		static char buf[35];
-		const char* unit = "second";
-
-		if (time_left > 86400*warning_interval)
-			return "ok";
-
-		if (time_left > 172800)
-		{
-			time_left /= 86400;
-			unit = "day";
-		}
-		else if (time_left > 7200)
-		{
-			time_left /= 3600;
-			unit = "hour";
-		}
-		else if (time_left > 120)
-		{
-			time_left /= 60;
-			unit = "minute";
-		}
-		snprintf(buf, sizeof(buf), "warning (expires in %d %s%s)", time_left, unit, (time_left == 1)?"":"s");
-		
-		/* TODO: This is not thread save and may result in corrupted strings. Rewrite this! */
-		return buf;
-	}
-}
-
-/**
- * log certificate
- */
-static void log_certificate(const private_x509_t *this, logger_t *logger, bool utc, bool has_key)
-{
-	identification_t *subject = this->subject;
-	identification_t *issuer = this->issuer;
-	rsa_public_key_t *pubkey = this->public_key;
-
-	char buf[BUF_LEN];
-	char time_buf[TIMETOA_BUF];
-
-    /* determine the current time */
-    time_t now = time(NULL);
-
-	timetoa(time_buf, TIMETOA_BUF, &this->installed, utc);
-	logger->log(logger, CONTROL, "%s", time_buf);
-	logger->log(logger, CONTROL, "       subject: '%D'", subject);
-	logger->log(logger, CONTROL, "       issuer:  '%D'", issuer);
-	
-	chunk_to_hex(buf, BUF_LEN, this->serialNumber);
-	logger->log(logger, CONTROL, "       serial:   %s", buf);
-	
-	timetoa(time_buf, TIMETOA_BUF, &this->notBefore, utc);
-	logger->log(logger, CONTROL, "       validity: not before %s %s", time_buf,
-				(this->notBefore < now)? "ok":"fatal (not valid yet)");
-	
-	timetoa(time_buf, TIMETOA_BUF, &this->notAfter, utc);
-	logger->log(logger, CONTROL, "                 not after  %s %s", time_buf,
-			check_expiry(this->notAfter, CERT_WARNING_INTERVAL, TRUE));
-
-	timetoa(time_buf, TIMETOA_BUF, &this->until, utc);
-	switch (this->status)
-	{
-		case CERT_GOOD:
-			snprintf(buf, BUF_LEN, " until %s", time_buf);
-			break;
-		case CERT_REVOKED:
-			snprintf(buf, BUF_LEN, " on %s", time_buf);
-			break;
-		case CERT_UNKNOWN:
-		case CERT_UNDEFINED:
-		case CERT_UNTRUSTED:
-		default:
-			*buf = '\0';
-	}
-	logger->log(logger, CONTROL, "       pubkey:   RSA %d bits%s, status %s%s",
-			BITS_PER_BYTE * pubkey->get_keysize(pubkey),
-			has_key? ", has private key":"",
-			enum_name(&cert_status_names, this->status), buf);
-
-	chunk_to_hex(buf, BUF_LEN, pubkey->get_keyid(pubkey));
-	logger->log(logger, CONTROL, "       keyid:    %s", buf);
-
-	if (this->subjectKeyID.ptr != NULL)
-	{
-		chunk_to_hex(buf, BUF_LEN, this->subjectKeyID);
-		logger->log(logger, CONTROL, "       subjkey:  %s", buf);
-	}
-	if (this->authKeyID.ptr != NULL)
-	{
-		chunk_to_hex(buf, BUF_LEN, this->authKeyID);
-		logger->log(logger, CONTROL, "       authkey:  %s", buf);
-	}
-	if (this->authKeySerialNumber.ptr != NULL)
-	{
-		chunk_to_hex(buf, BUF_LEN, this->authKeySerialNumber);
-		logger->log(logger, CONTROL, "       aserial:  %s", buf);
-	}
 }
 
 /*
@@ -1235,10 +1245,6 @@ x509_t *x509_create_from_chunk(chunk_t chunk)
 	this->public.get_status = (cert_status_t (*) (const x509_t*))get_status;
 	this->public.verify = (bool (*) (const x509_t*,const rsa_public_key_t*))verify;
 	this->public.destroy = (void (*) (x509_t*))destroy;
-	this->public.log_certificate = (void (*) (const x509_t*,logger_t*,bool,bool))log_certificate;
-
-	/* we do not use a per-instance logger right now, since its not always accessible */
-	logger = logger_manager->get_logger(logger_manager, ASN1);
 	
 	if (!parse_x509cert(chunk, 0, this))
 	{

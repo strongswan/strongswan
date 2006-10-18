@@ -499,11 +499,11 @@ enum encoding_type_t {
 };
 
 /**
- * mappings to map encoding_type_t's to strings
+ * enum name for encoding_type_t
  * 
  * @ingroup payloads
  */
-extern mapping_t encoding_type_m[];
+extern enum_name_t *encoding_type_names;
 
 
 typedef struct encoding_rule_t encoding_rule_t;

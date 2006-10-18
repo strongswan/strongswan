@@ -41,11 +41,6 @@ struct private_incoming_packet_job_t {
 	 * Assigned packet
 	 */
 	packet_t *packet;
-	
-	/**
-	 * logger
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -92,8 +87,7 @@ static void send_notify_response(private_incoming_packet_job_t *this,
 		response->destroy(response);
 		return;
 	}
-	this->logger->log(this->logger, CONTROL, "sending %s notify",
-					  mapping_find(notify_type_m, type)); 
+	DBG1(SIG_DBG_NET, "sending %N notify", notify_type_names, type);
 	charon->send_queue->add(charon->send_queue, packet);
 	response->destroy(response);
 	return;
@@ -113,13 +107,12 @@ static status_t execute(private_incoming_packet_job_t *this)
 	message = message_create_from_packet(this->packet->clone(this->packet));
 	src = message->get_source(message);
 	dst = message->get_destination(message);
-	this->logger->log(this->logger, CONTROL,
-					  "received packet: from %#H to %#H", src, dst);
+	DBG1(SIG_DBG_NET, "received packet: from %#H to %#H", src, dst);
 	
 	status = message->parse_header(message);
 	if (status != SUCCESS)
 	{
-		this->logger->log(this->logger, ERROR, "received message with invalid IKE header, ignored");
+		DBG1(SIG_DBG_NET, "received message with invalid IKE header, ignored");
 		message->destroy(message);
 		return DESTROY_ME;
 	}
@@ -127,10 +120,10 @@ static status_t execute(private_incoming_packet_job_t *this)
 	if ((message->get_major_version(message) != IKE_MAJOR_VERSION) ||
 		(message->get_minor_version(message) != IKE_MINOR_VERSION))
 	{
-		this->logger->log(this->logger, ERROR,
-						  "received a packet with IKE version %d.%d, not supported",
-						  message->get_major_version(message),
-						  message->get_minor_version(message));
+		DBG1(SIG_DBG_NET,
+			 "received a packet with IKE version %d.%d, not supported",
+			  message->get_major_version(message),
+			  message->get_minor_version(message));
 		if ((message->get_exchange_type(message) == IKE_SA_INIT) && (message->get_request(message)))
 		{
 			send_notify_response(this, message, INVALID_MAJOR_VERSION);
@@ -145,14 +138,12 @@ static status_t execute(private_incoming_packet_job_t *this)
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id);
 	if (ike_sa == NULL)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "received packet with SPIs %llx:%llx, but no such IKE_SA",
-						  ike_sa_id->get_initiator_spi(ike_sa_id),
-						  ike_sa_id->get_responder_spi(ike_sa_id));
+		DBG1(SIG_DBG_NET, "received packet for IKE_SA: %J, but no such IKE_SA",
+			 ike_sa_id);
 		if (message->get_request(message))
 		{
-			/* TODO: send notify if we have NULL crypters, 
-			 * see todo in send_notify_response 
+			/* TODO: send notify if we have NULL crypters,
+			 * see todo in send_notify_response
 			send_notify_response(this, message, INVALID_IKE_SPI); */
 		}
 		ike_sa_id->destroy(ike_sa_id);	
@@ -207,7 +198,6 @@ incoming_packet_job_t *incoming_packet_job_create(packet_t *packet)
 	
 	/* private variables */
 	this->packet = packet;
-	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);
 }

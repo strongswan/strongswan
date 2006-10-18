@@ -28,50 +28,54 @@
 
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
+#include <crypto/hashers/hasher.h>
 
-#define SHA1_HASH_SIZE 20
-
-/** 
- * String mappings for notify_type_t.
- */
-mapping_t notify_type_m[] = {
-	{UNSUPPORTED_CRITICAL_PAYLOAD, "UNSUPPORTED_CRITICAL_PAYLOAD"},
-	{INVALID_IKE_SPI, "INVALID_IKE_SPI"},
-	{INVALID_MAJOR_VERSION, "INVALID_MAJOR_VERSION"},
-	{INVALID_SYNTAX, "INVALID_SYNTAX"},
-	{INVALID_MESSAGE_ID, "INVALID_MESSAGE_ID"},
-	{INVALID_SPI, "INVALID_SPI"},
-	{NO_PROPOSAL_CHOSEN, "NO_PROPOSAL_CHOSEN"},
-	{INVALID_KE_PAYLOAD, "INVALID_KE_PAYLOAD"},
-	{AUTHENTICATION_FAILED, "AUTHENTICATION_FAILED"},
-	{SINGLE_PAIR_REQUIRED, "SINGLE_PAIR_REQUIRED"},
-	{NO_ADDITIONAL_SAS, "NO_ADDITIONAL_SAS"},
-	{INTERNAL_ADDRESS_FAILURE, "INTERNAL_ADDRESS_FAILURE"},
-	{FAILED_CP_REQUIRED, "FAILED_CP_REQUIRED"},
-	{TS_UNACCEPTABLE, "TS_UNACCEPTABLE"},
-	{INVALID_SELECTORS, "INVALID_SELECTORS"},
-	{INITIAL_CONTACT, "INITIAL_CONTACT"},
-	{SET_WINDOW_SIZE, "SET_WINDOW_SIZE"},
-	{ADDITIONAL_TS_POSSIBLE, "ADDITIONAL_TS_POSSIBLE"},
-	{IPCOMP_SUPPORTED, "IPCOMP_SUPPORTED"},
-	{NAT_DETECTION_SOURCE_IP, "NAT_DETECTION_SOURCE_IP"},
-	{NAT_DETECTION_DESTINATION_IP, "NAT_DETECTION_DESTINATION_IP"},
-	{COOKIE, "COOKIE"},
-	{USE_TRANSPORT_MODE, "USE_TRANSPORT_MODE"},
-	{HTTP_CERT_LOOKUP_SUPPORTED, "HTTP_CERT_LOOKUP_SUPPORTED"},
-	{REKEY_SA, "REKEY_SA"},
-	{ESP_TFC_PADDING_NOT_SUPPORTED, "ESP_TFC_PADDING_NOT_SUPPORTED"},
-	{NON_FIRST_FRAGMENTS_ALSO, "NON_FIRST_FRAGMENTS_ALSO"},
-	{MOBIKE_SUPPORTED, "MOBIKE_SUPPORTED"},
-	{ADDITIONAL_IP4_ADDRESS, "ADDITIONAL_IP4_ADDRESS"},
-	{ADDITIONAL_IP6_ADDRESS, "ADDITIONAL_IP6_ADDRESS"},
-	{NO_ADDITIONAL_ADDRESSES, "NO_ADDITIONAL_ADDRESSES"},
-	{UPDATE_SA_ADDRESSES, "UPDATE_SA_ADDRESSES"},
-	{COOKIE2, "COOKIE2"},
-	{NO_NATS_ALLOWED, "NO_NATS_ALLOWED"},
-	{AUTH_LIFETIME, "AUTH_LIFETIME"},
-	{MAPPING_END, NULL}
-};
+ENUM_BEGIN(notify_type_names, UNSUPPORTED_CRITICAL_PAYLOAD, UNSUPPORTED_CRITICAL_PAYLOAD,
+	"UNSUPPORTED_CRITICAL_PAYLOAD");
+ENUM_NEXT(notify_type_names, INVALID_IKE_SPI, INVALID_MAJOR_VERSION, UNSUPPORTED_CRITICAL_PAYLOAD,
+	"INVALID_IKE_SPI",
+	"INVALID_MAJOR_VERSION");
+ENUM_NEXT(notify_type_names, INVALID_SYNTAX, INVALID_SYNTAX, INVALID_MAJOR_VERSION,
+	"INVALID_SYNTAX");
+ENUM_NEXT(notify_type_names, INVALID_MESSAGE_ID, INVALID_MESSAGE_ID, INVALID_SYNTAX,
+	"INVALID_MESSAGE_ID");
+ENUM_NEXT(notify_type_names, INVALID_SPI, INVALID_SPI, INVALID_MESSAGE_ID,
+	"INVALID_SPI");
+ENUM_NEXT(notify_type_names, NO_PROPOSAL_CHOSEN, NO_PROPOSAL_CHOSEN, INVALID_SPI,
+	"NO_PROPOSAL_CHOSEN");
+ENUM_NEXT(notify_type_names, INVALID_KE_PAYLOAD, INVALID_KE_PAYLOAD, NO_PROPOSAL_CHOSEN,
+	"INVALID_KE_PAYLOAD");
+ENUM_NEXT(notify_type_names, AUTHENTICATION_FAILED, AUTHENTICATION_FAILED, INVALID_KE_PAYLOAD,
+	"AUTHENTICATION_FAILED");
+ENUM_NEXT(notify_type_names, SINGLE_PAIR_REQUIRED, INVALID_SELECTORS, AUTHENTICATION_FAILED,
+	"SINGLE_PAIR_REQUIRED",
+	"NO_ADDITIONAL_SAS",
+	"INTERNAL_ADDRESS_FAILURE",
+	"FAILED_CP_REQUIRED",
+	"TS_UNACCEPTABLE",
+	"INVALID_SELECTORS");
+ENUM_NEXT(notify_type_names, INITIAL_CONTACT, AUTH_LIFETIME, INVALID_SELECTORS,
+	"INITIAL_CONTACT",
+	"SET_WINDOW_SIZE",
+	"ADDITIONAL_TS_POSSIBLE",
+	"IPCOMP_SUPPORTED",
+	"NAT_DETECTION_SOURCE_IP",
+	"NAT_DETECTION_DESTINATION_IP",
+	"COOKIE",
+	"USE_TRANSPORT_MODE",
+	"HTTP_CERT_LOOKUP_SUPPORTED",
+	"REKEY_SA",
+	"ESP_TFC_PADDING_NOT_SUPPORTED",
+	"NON_FIRST_FRAGMENTS_ALSO",
+	"MOBIKE_SUPPORTED",
+	"ADDITIONAL_IP4_ADDRESS",
+	"ADDITIONAL_IP6_ADDRESS",
+	"NO_ADDITIONAL_ADDRESSES",
+	"UPDATE_SA_ADDRESSES",
+	"COOKIE2",
+	"NO_NATS_ALLOWED",
+	"AUTH_LIFETIME");
+ENUM_END(notify_type_names, AUTH_LIFETIME);
 
 typedef struct private_notify_payload_t private_notify_payload_t;
 
@@ -124,18 +128,6 @@ struct private_notify_payload_t {
 	 * Notification data.
 	 */
 	chunk_t notification_data;
-	
-	/**
-	 * Assigned logger
-	 */
-	logger_t *logger;
-	
-	/**
-	 * @brief Computes the length of this payload.
-	 *
-	 * @param this 	calling private_ke_payload_t object
-	 */
-	void (*compute_length) (private_notify_payload_t *this);
 };
 
 /**
@@ -204,13 +196,13 @@ static status_t verify(private_notify_payload_t *this)
 		case PROTO_ESP:
 			if (this->spi.len != 4)
 			{
-				this->logger->log(this->logger, ERROR, "Invalid SPI size for %s", 
-								  mapping_find(protocol_id_m, this->protocol_id));
+				DBG1(SIG_DBG_ENC, "Invalid SPI size for %N", 
+					 protocol_id_names, this->protocol_id);
 				return FAILED;
 			}
 			break;
 		default:
-			this->logger->log(this->logger, ERROR, "Unknown protocol (%d)", this->protocol_id);
+			DBG1(SIG_DBG_ENC, "Unknown protocol (%d)", this->protocol_id);
 			return FAILED;
 	}
 	
@@ -237,7 +229,7 @@ static status_t verify(private_notify_payload_t *this)
 				case MODP_8192_BIT:
 					break;
 				default:
-					this->logger->log(this->logger, ERROR, "Bad DH group (%d)", dh_group);
+					DBG1(SIG_DBG_ENC, "Bad DH group (%d)", dh_group);
 					return FAILED;
 			}
 			break;
@@ -245,10 +237,10 @@ static status_t verify(private_notify_payload_t *this)
 		case NAT_DETECTION_SOURCE_IP:
 		case NAT_DETECTION_DESTINATION_IP:
 		{
-			if (this->notification_data.len != SHA1_HASH_SIZE)
+			if (this->notification_data.len != HASH_SIZE_SHA1)
 			{
-				this->logger->log(this->logger, ERROR, "invalid %s notify length",
-								  mapping_find(notify_type_m, this->notify_type));
+				DBG1(SIG_DBG_ENC, "invalid %N notify length",
+					 notify_type_names, this->notify_type);
 				return FAILED;
 			}
 			break;
@@ -259,8 +251,8 @@ static status_t verify(private_notify_payload_t *this)
 		{
 			if (this->notification_data.len != 0)
 			{
-				this->logger->log(this->logger, ERROR, "invalid %s notify",
-								  mapping_find(notify_type_m, this->notify_type));
+				DBG1(SIG_DBG_ENC, "invalid %N notify",
+					 notify_type_names, this->notify_type);
 				return FAILED;
 			}
 			break;
@@ -306,16 +298,7 @@ static void set_next_type(private_notify_payload_t *this,payload_type_t type)
 }
 
 /**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_notify_payload_t *this)
-{
-	this->compute_length(this);
-	return this->payload_length;
-}
-
-/**
- * Implementation of private_notify_payload_t.compute_length.
+ * recompute the payloads length.
  */
 static void compute_length (private_notify_payload_t *this)
 {
@@ -329,6 +312,15 @@ static void compute_length (private_notify_payload_t *this)
 		length += this->spi.len;
 	}
 	this->payload_length = length;
+}
+
+/**
+ * Implementation of payload_t.get_length.
+ */
+static size_t get_length(private_notify_payload_t *this)
+{
+	compute_length(this);
+	return this->payload_length;
 }
 
 /**
@@ -395,7 +387,7 @@ static void set_spi(private_notify_payload_t *this, u_int32_t spi)
 			break;
 	}
 	this->spi_size = this->spi.len;
-	this->compute_length(this);
+	compute_length(this);
 }
 
 /**
@@ -413,7 +405,7 @@ static status_t set_notification_data(private_notify_payload_t *this, chunk_t no
 {
 	chunk_free(&this->notification_data);
 	this->notification_data = chunk_clone(notification_data);
-	this->compute_length(this);
+	compute_length(this);
 	return SUCCESS;
 }
 
@@ -455,9 +447,6 @@ notify_payload_t *notify_payload_create()
 	this->public.set_notification_data = (void (*) (notify_payload_t *,chunk_t)) set_notification_data;
 	this->public.destroy = (void (*) (notify_payload_t *)) destroy;
 	
-	/* private functions */
-	this->compute_length = compute_length;
-	
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
@@ -469,8 +458,7 @@ notify_payload_t *notify_payload_create()
 	this->spi_size = 0;
 	this->notification_data.ptr = NULL;
 	this->notification_data.len = 0;
-	this->logger = logger_manager->get_logger(logger_manager, PAYLOAD);
-
+	
 	return &this->public;
 }
 

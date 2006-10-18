@@ -27,18 +27,14 @@
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/hmac_prf.h>
 
-
-/** 
- * String mappings for encryption_algorithm_t.
- */
-mapping_t pseudo_random_function_m[] = {
-	{PRF_UNDEFINED, "PRF_UNDEFINED"},
-	{PRF_HMAC_MD5, "PRF_HMAC_MD5"},
-	{PRF_HMAC_SHA1, "PRF_HMAC_SHA1"},
-	{PRF_HMAC_TIGER, "PRF_HMAC_TIGER"},
-	{PRF_AES128_CBC, "PRF_AES128_CBC"},
-	{MAPPING_END, NULL}
-};
+ENUM_BEGIN(pseudo_random_function_names, PRF_UNDEFINED, PRF_UNDEFINED,
+	"PRF_UNDEFINED");
+ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_AES128_CBC, PRF_UNDEFINED,
+	"PRF_HMAC_MD5",
+	"PRF_HMAC_SHA1",
+	"PRF_HMAC_TIGER",
+	"PRF_AES128_CBC");
+ENUM_END(pseudo_random_function_names, PRF_AES128_CBC);
 
 /*
  * Described in header.

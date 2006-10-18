@@ -127,6 +127,11 @@ struct private_iterator_t {
 	 * Direction of iterator.
 	 */
 	bool forward;
+	
+	/**
+	 * Mutex to use to synchronize access
+	 */
+	pthread_mutex_t *mutex;
 };
 
 /**
@@ -361,6 +366,10 @@ static void insert_after(private_iterator_t * iterator, void *item)
  */
 static void iterator_destroy(private_iterator_t *this)
 {
+	if (this->mutex)
+	{
+		pthread_mutex_unlock(this->mutex);
+	}
 	free(this);
 }
 
@@ -370,24 +379,6 @@ static void iterator_destroy(private_iterator_t *this)
 static int get_count(private_linked_list_t *this)
 {
 	return this->count;
-}
-
-/**
- * Implementation of linked_list_t.call_on_items.
- */
-static void call_on_items(private_linked_list_t *this, void(*func)(void*))
-{
-	iterator_t *iterator;
-	void *item;
-	
-	iterator = this->public.create_iterator(&this->public,TRUE);
-	
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, &item);
-		(*func)(item);
-	}
-	iterator->destroy(iterator);
 }
 
 /**
@@ -629,7 +620,7 @@ static status_t get_last(private_linked_list_t *this, void **item)
 static iterator_t *create_iterator (private_linked_list_t *linked_list, bool forward)
 {
 	private_iterator_t *this = malloc_thing(private_iterator_t);
-
+	
 	this->public.get_count = (bool (*) (iterator_t *this)) get_list_count;
 	this->public.iterate = (bool (*) (iterator_t *this, void **value)) iterate;
 	this->public.has_next = (bool (*) (iterator_t *this)) iterator_has_next;
@@ -640,11 +631,26 @@ static iterator_t *create_iterator (private_linked_list_t *linked_list, bool for
 	this->public.remove = (status_t (*) (iterator_t *this)) remove;
 	this->public.reset = (void (*) (iterator_t *this)) iterator_reset;
 	this->public.destroy = (void (*) (iterator_t *this)) iterator_destroy;
-
+	
 	this->forward = forward;
 	this->current = NULL;
 	this->list = linked_list;
+	this->mutex = NULL;
+	
+	return &this->public;
+}
 
+/**
+ * Implementation of linked_list_t.create_iterator_locked.
+ */
+static iterator_t *create_iterator_locked(private_linked_list_t *linked_list,
+										  pthread_mutex_t *mutex)
+{
+	private_iterator_t *this = (private_iterator_t*)create_iterator(linked_list, TRUE);
+	this->mutex = mutex;
+	
+	pthread_mutex_lock(mutex);
+	
 	return &this->public;
 }
 
@@ -672,7 +678,7 @@ linked_list_t *linked_list_create()
 
 	this->public.get_count = (int (*) (linked_list_t *)) get_count;
 	this->public.create_iterator = (iterator_t * (*) (linked_list_t *,bool))create_iterator;
-	this->public.call_on_items = (void (*) (linked_list_t *, void(*func)(void*)))call_on_items;
+	this->public.create_iterator_locked = (iterator_t * (*) (linked_list_t *,pthread_mutex_t*))create_iterator_locked;
 	this->public.get_first = (status_t (*) (linked_list_t *, void **item))get_first;
 	this->public.get_last = (status_t (*) (linked_list_t *, void **item))get_last;
 	this->public.insert_first = (void (*) (linked_list_t *, void *item))insert_first;

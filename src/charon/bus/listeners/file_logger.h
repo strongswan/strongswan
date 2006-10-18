@@ -48,7 +48,7 @@ struct file_logger_t {
 	 *
 	 * @param this		stream_logger_t object
 	 * @param singal	type of signal
-	 * @param level		max level to log
+	 * @param level		max level to log (0..4)
 	 */
 	void (*set_level) (file_logger_t *this, signal_t signal, level_t level);
 	

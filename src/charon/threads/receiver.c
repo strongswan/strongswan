@@ -32,7 +32,6 @@
 #include <queues/job_queue.h>
 #include <queues/jobs/job.h>
 #include <queues/jobs/incoming_packet_job.h>
-#include <utils/logger_manager.h>
 
 
 typedef struct private_receiver_t private_receiver_t;
@@ -50,11 +49,6 @@ struct private_receiver_t {
 	  * Assigned thread.
 	  */
 	 pthread_t assigned_thread;
-	 
-	 /**
-	  * A logger for the receiver_t object.
-	  */
-	 logger_t *logger;
 };
 
 /**
@@ -68,20 +62,20 @@ static void receive_packets(private_receiver_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->logger->log(this->logger, CONTROL, "receiver thread running,  thread_ID: %06u", (int)pthread_self());
+	DBG1(SIG_DBG_NET, "receiver thread running, thread_ID: %06u", 
+		 (int)pthread_self());
 	
-	while (1)
+	while (TRUE)
 	{
 		while (charon->socket->receive(charon->socket,&current_packet) == SUCCESS)
 		{
-			this->logger->log(this->logger, CONTROL | LEVEL1, "Creating job from packet");
+			DBG2(SIG_DBG_NET, "creating job from packet");
 			current_job = (job_t *) incoming_packet_job_create(current_packet);
-
+			
 			charon->job_queue->add(charon->job_queue,current_job);
-
 		}
-		/* bad bad, rebuild the socket ? */
-		this->logger->log(this->logger, ERROR, "Receiving from socket failed!");
+		/* bad bad, TODO: rebuild the socket ? */
+		DBG1(SIG_DBG_NET, "receiving from socket failed!");
 	}
 }
 
@@ -90,12 +84,8 @@ static void receive_packets(private_receiver_t * this)
  */
 static void destroy(private_receiver_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to terminate receiver thread");
 	pthread_cancel(this->assigned_thread);
-
 	pthread_join(this->assigned_thread, NULL);
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Receiver thread terminated");
-
 	free(this);
 }
 
@@ -108,13 +98,10 @@ receiver_t * receiver_create()
 
 	this->public.destroy = (void(*)(receiver_t*)) destroy;
 	
-	this->logger = logger_manager->get_logger(logger_manager, RECEIVER);
-	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))receive_packets, this) != 0)
 	{
-		this->logger->log(this->logger, ERROR, "Receiver thread could not be started");
 		free(this);
-		charon->kill(charon, "Unable to create receiver thread");
+		charon->kill(charon, "unable to create receiver thread");
 	}
 
 	return &(this->public);

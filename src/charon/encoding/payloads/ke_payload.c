@@ -64,13 +64,6 @@ struct private_ke_payload_t {
 	 * Key Exchange Data of this KE payload.
 	 */
 	chunk_t key_exchange_data;
-	
-	/**
-	 * @brief Computes the length of this payload.
-	 *
-	 * @param this 	calling private_ke_payload_t object
-	 */
-	void (*compute_length) (private_ke_payload_t *this);
 };
 
 /**
@@ -172,18 +165,9 @@ static void set_next_type(private_ke_payload_t *this,payload_type_t type)
 }
 
 /**
- * Implementation of payload_t.get_length.
+ * recompute the length of the payload.
  */
-static size_t get_length(private_ke_payload_t *this)
-{
-	this->compute_length(this);
-	return this->payload_length;
-}
-
-/**
- * Implementation of private_ke_payload_t.compute_length.
- */
-static void compute_length (private_ke_payload_t *this)
+static void compute_length(private_ke_payload_t *this)
 {
 	size_t length = KE_PAYLOAD_HEADER_LENGTH;
 	if (this->key_exchange_data.ptr != NULL)
@@ -193,6 +177,14 @@ static void compute_length (private_ke_payload_t *this)
 	this->payload_length = length;
 }
 
+/**
+ * Implementation of payload_t.get_length.
+ */
+static size_t get_length(private_ke_payload_t *this)
+{
+	compute_length(this);
+	return this->payload_length;
+}
 
 /**
  * Implementation of ke_payload_t.get_key_exchange_data.
@@ -218,7 +210,7 @@ static void set_key_exchange_data(private_ke_payload_t *this, chunk_t key_exchan
 	}
 	
 	this->key_exchange_data = chunk_clone(key_exchange_data);
-	this->compute_length(this);
+	compute_length(this);
 }
 
 /**
@@ -260,9 +252,6 @@ ke_payload_t *ke_payload_create()
 	this->public.set_dh_group_number =(void (*) (ke_payload_t *,diffie_hellman_group_t)) set_dh_group_number;
 	this->public.destroy = (void (*) (ke_payload_t *)) destroy;
 	
-	/* private functions */
-	this->compute_length = compute_length;
-	
 	/* set default values of the fields */
 	this->critical = FALSE;
 	this->next_payload = NO_PAYLOAD;
@@ -282,7 +271,7 @@ ke_payload_t *ke_payload_create_from_diffie_hellman(diffie_hellman_t *dh)
 	
 	dh->get_my_public_value(dh, &this->key_exchange_data);
 	this->dh_group_number = dh->get_dh_group(dh);
-	this->compute_length(this);
+	compute_length(this);
 	
 	return &this->public;
 }

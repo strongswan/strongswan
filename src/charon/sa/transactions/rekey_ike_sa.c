@@ -113,11 +113,6 @@ struct private_rekey_ike_sa_t {
 	 * next transaction processed by the IKE_SA
 	 */
 	transaction_t **next;
-	
-	/**
-	 * Assigned logger.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -186,10 +181,8 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED &&
 	    !this->diffie_hellman)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "tried to rekey in state %s, aborted",
-						  mapping_find(ike_sa_state_m,
-									   this->ike_sa->get_state(this->ike_sa)));
+		DBG1(SIG_DBG_IKE, "tried to rekey in state %N, aborted",
+			 ike_sa_state_names, this->ike_sa->get_state(this->ike_sa));
 		return FAILED;
 	}
 	
@@ -226,8 +219,7 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 										me, other);
 			if (this->connection == NULL)
 			{
-				this->logger->log(this->logger, ERROR,
-								  "no connection found to rekey IKE_SA");
+				DBG1(SIG_DBG_IKE, "no connection found to rekey IKE_SA");
 				return FAILED;
 			}
 		}
@@ -274,9 +266,8 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 		this->diffie_hellman = diffie_hellman_create(dh_group);
 		if (this->diffie_hellman == NULL)
 		{
-			this->logger->log(this->logger, AUDIT,
-							  "DH group %s (%d) not supported, aborting",
-							  mapping_find(diffie_hellman_group_m, dh_group), dh_group);
+			DBG1(SIG_DBG_IKE, "DH group %N not supported, aborting",
+				 diffie_hellman_group_names, dh_group);
 			return FAILED;
 		}
 	}
@@ -305,15 +296,13 @@ static status_t process_notifys(private_rekey_ike_sa_t *this, notify_payload_t *
 {
 	notify_type_t notify_type = notify_payload->get_notify_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
-					  mapping_find(notify_type_m, notify_type));
+	DBG2(SIG_DBG_IKE,"process notify type %N", notify_type_names, notify_type);
 
 	switch (notify_type)
 	{
 		case NO_PROPOSAL_CHOSEN:
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "received a NO_PROPOSAL_CHOSEN notify, IKE_SA rekeying failed");
+			DBG1(SIG_DBG_IKE, "received a NO_PROPOSAL_CHOSEN notify, IKE_SA rekeying failed");
 			return FAILED;
 		}
 		case INVALID_KE_PAYLOAD:
@@ -326,14 +315,12 @@ static status_t process_notifys(private_rekey_ike_sa_t *this, notify_payload_t *
 			notify_data = notify_payload->get_notification_data(notify_payload);
 			dh_group = ntohs(*((u_int16_t*)notify_data.ptr));
 			
-			this->logger->log(this->logger, AUDIT, 
-							  "peer didn't accept DH group %s, it requested %s",
-							  mapping_find(diffie_hellman_group_m, old_dh_group),
-							  mapping_find(diffie_hellman_group_m, dh_group));
+			DBG1(SIG_DBG_IKE, "peer didn't accept DH group %N, it requested %N",
+				 diffie_hellman_group_names, old_dh_group,
+				 diffie_hellman_group_names, dh_group);
 			if (!this->connection->check_dh_group(this->connection, dh_group))
 			{
-				this->logger->log(this->logger, AUDIT, 
-								  "requested DH group not acceptable, IKE_SA rekeying failed");
+				DBG1(SIG_DBG_IKE, "requested DH group not acceptable, IKE_SA rekeying failed");
 				return FAILED;
 			}
 			retry = rekey_ike_sa_create(this->ike_sa);
@@ -345,18 +332,14 @@ static status_t process_notifys(private_rekey_ike_sa_t *this, notify_payload_t *
 		{
 			if (notify_type < 16383)
 			{
-				this->logger->log(this->logger, AUDIT, 
-								  "received %s notify error (%d, IKE_SA rekeying failed",
-								  mapping_find(notify_type_m, notify_type),
-								  notify_type);
+				DBG1(SIG_DBG_IKE, "received %N notify error, IKE_SA rekeying failed",
+					 notify_type_names, notify_type);
 				return FAILED;	
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL, 
-								  "received %s notify (%d), ignored",
-								  mapping_find(notify_type_m, notify_type),
-								  notify_type);
+				DBG1(SIG_DBG_IKE, "received %N notify, ignored",
+					 notify_type_names, notify_type);
 				return SUCCESS;
 			}
 		}
@@ -468,8 +451,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	/* check message type */
 	if (request->get_exchange_type(request) != CREATE_CHILD_SA)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "CREATE_CHILD_SA response of invalid type, aborted");
+		DBG1(SIG_DBG_IKE, "CREATE_CHILD_SA response of invalid type, aborted");
 		return FAILED;
 	}
 	
@@ -477,8 +459,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
 		build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
-		this->logger->log(this->logger, CONTROL,
-						  "unable to rekey, as delete in progress. Sending NO_PROPOSAL_CHOSEN");
+		DBG1(SIG_DBG_IKE, "unable to rekey, as delete in progress. Sending NO_PROPOSAL_CHOSEN");
 		return FAILED;
 	}
 	
@@ -492,8 +473,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 			state == CHILD_DELETING)
 		{
 			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
-			this->logger->log(this->logger, CONTROL,
-							  "unable to rekey, one CHILD_SA is half open. Sending NO_PROPOSAL_CHOSEN");
+			DBG1(SIG_DBG_IKE, "unable to rekey, one CHILD_SA is half open. Sending NO_PROPOSAL_CHOSEN");
 			iterator->destroy(iterator);
 			return FAILED;
 		}
@@ -514,8 +494,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 								charon->connections, me, other);
 		if (this->connection == NULL)
 		{
-			this->logger->log(this->logger, ERROR,
-								"no connection found to rekey IKE_SA, sending NO_RROPOSAL_CHOSEN");
+			DBG1(SIG_DBG_IKE, "no connection found to rekey IKE_SA, sending NO_RROPOSAL_CHOSEN");
 			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
@@ -552,9 +531,8 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "ignoring %s payload (%d)", 
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG1(SIG_DBG_IKE, "ignoring %N payload",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -565,8 +543,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	if (!(sa_request && nonce_request && ke_request))
 	{
 		build_notify(INVALID_SYNTAX, CHUNK_INITIALIZER, response, TRUE);
-		this->logger->log(this->logger, AUDIT, 
-						  "request message incomplete, IKE_SA rekeying failed");
+		DBG1(SIG_DBG_IKE, "request message incomplete, IKE_SA rekeying failed");
 		return FAILED;
 	}
 	
@@ -591,15 +568,14 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 		sa_response = sa_payload_create();
 		/* get proposals from request, and select one with ours */
 		proposal_list = sa_request->get_proposals(sa_request);
-		this->logger->log(this->logger, CONTROL|LEVEL1, "selecting proposals:");
+		DBG2(SIG_DBG_IKE, "selecting proposals:");
 		this->proposal = this->connection->select_proposal(this->connection, proposal_list);
 		destroy_proposal_list(proposal_list);
 		
 		/* do we have a proposal? */
 		if (this->proposal == NULL)
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "no proposals acceptable to rekey IKE_SA, sending NO_PROPOSAL_CHOSEN");
+			DBG1(SIG_DBG_IKE, "no proposals acceptable to rekey IKE_SA, sending NO_PROPOSAL_CHOSEN");
 			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
@@ -632,10 +608,10 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 			chunk_t notify_chunk;
 			
 			notify_group = this->connection->get_dh_group(this->connection);
-			this->logger->log(this->logger, AUDIT, 
-							  "request used inacceptable DH group %s, sending INVALID_KE_PAYLOAD with %s",
-							  mapping_find(diffie_hellman_group_m, used_group),
-							  mapping_find(diffie_hellman_group_m, notify_group));
+			DBG1(SIG_DBG_IKE, "request used inacceptable DH group %N, sending "
+				 "INVALID_KE_PAYLOAD with %N",
+				 diffie_hellman_group_names, used_group,
+				 diffie_hellman_group_names, notify_group);
 			
 			notify_group = htons(notify_group);
 			notify_chunk.ptr = (u_int8_t*)&notify_group;
@@ -713,8 +689,7 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != CREATE_CHILD_SA)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "CREATE_CHILD_SA response of invalid type, aborting");
+		DBG1(SIG_DBG_IKE, "CREATE_CHILD_SA response of invalid type, aborting");
 		return FAILED;
 	}
 	
@@ -753,9 +728,8 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "ignoring %s payload (%d)", 
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG1(SIG_DBG_IKE, "ignoring %N payload",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -764,7 +738,7 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 	
 	if (!(sa_payload && nonce_payload && ke_payload))
 	{
-		this->logger->log(this->logger, AUDIT, "response message incomplete, rekeying IKE_SA failed");
+		DBG1(SIG_DBG_IKE, "response message incomplete, rekeying IKE_SA failed");
 		return FAILED;
 	}
 	
@@ -784,8 +758,7 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 		
 		if (this->proposal == NULL)
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "no proposal selected, rekeying IKE_SA failed");
+			DBG1(SIG_DBG_IKE, "no proposal selected, rekeying IKE_SA failed");
 			return FAILED;
 		}
 		spi = this->proposal->get_spi(this->proposal);
@@ -831,14 +804,12 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 		if (memcmp(this_lowest.ptr, this->nonce_s.ptr,
 			min(this_lowest.len, this->nonce_s.len)) < 0)
 		{
-			this->logger->log(this->logger, ERROR,
-								"detected simultaneous IKE_SA rekeying, deleting ours");
+			DBG1(SIG_DBG_IKE, "detected simultaneous IKE_SA rekeying, deleting ours");
 			this->lost = TRUE;
 		}
 		else
 		{
-			this->logger->log(this->logger, ERROR,
-								"detected simultaneous IKE_SA rekeying, but ours is preferred");
+			DBG1(SIG_DBG_IKE, "detected simultaneous IKE_SA rekeying, but ours is preferred");
 		}
 		if (this->lost)
 		{
@@ -920,7 +891,6 @@ rekey_ike_sa_t *rekey_ike_sa_create(ike_sa_t *ike_sa)
 	this->randomizer = randomizer_create();
 	this->diffie_hellman = NULL;
 	this->proposal = NULL;
-	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &this->public;
 }

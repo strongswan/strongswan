@@ -101,6 +101,14 @@ struct policy_store_t {
 	status_t (*delete_policy) (policy_store_t *this, char *name);
 	
 	/**
+	 * @brief Get an iterator for the stored policies.
+	 *
+	 * @param this				calling object
+	 * @return					iterator over all stored policies
+	 */
+	iterator_t* (*create_iterator) (policy_store_t *this);
+	
+	/**
 	 * @brief Destroys a policy_store_t object.
 	 *
 	 * @param this 					calling object

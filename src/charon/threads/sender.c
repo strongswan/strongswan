@@ -30,7 +30,6 @@
 #include <network/socket.h>
 #include <network/packet.h>
 #include <queues/send_queue.h>
-#include <utils/logger_manager.h>
 
 
 typedef struct private_sender_t private_sender_t;
@@ -48,11 +47,6 @@ struct private_sender_t {
 	  * Assigned thread.
 	  */
 	 pthread_t assigned_thread;
-	 
-	 /**
-	  * A logger for this sender_t object.
-	  */
-	 logger_t *logger;
 
 };
 
@@ -67,16 +61,17 @@ static void send_packets(private_sender_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
-	this->logger->log(this->logger, CONTROL, "sender thread running,    thread_ID: %06u", (int)pthread_self());
+	DBG1(SIG_DBG_NET, "sender thread running, thread_ID: %06u",
+		 (int)pthread_self());
 
 	while (TRUE)
 	{
 		current_packet = charon->send_queue->get(charon->send_queue);
-		this->logger->log(this->logger, CONTROL|LEVEL1, "Got a packet, sending it");
+		DBG2(SIG_DBG_NET, "got a packet, sending it");
 		status = charon->socket->send(charon->socket, current_packet);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "Sending packet failed");
+			DBG1(SIG_DBG_NET, "sending packet failed");
 		}
 		current_packet->destroy(current_packet);
 	}
@@ -87,12 +82,8 @@ static void send_packets(private_sender_t * this)
  */
 static void destroy(private_sender_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Going to terminate sender thread");
 	pthread_cancel(this->assigned_thread);
-	
 	pthread_join(this->assigned_thread, NULL);
-	this->logger->log(this->logger, CONTROL | LEVEL1, "Sender thread terminated");
-	
 	free(this);
 }
 
@@ -104,14 +95,11 @@ sender_t * sender_create()
 	private_sender_t *this = malloc_thing(private_sender_t);
 
 	this->public.destroy = (void(*)(sender_t*)) destroy;
-	
-	this->logger = logger_manager->get_logger(logger_manager, SENDER);
 
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))send_packets, this) != 0)
 	{
-		this->logger->log(this->logger, ERROR, "Sender thread could not be created");
 		free(this);
-		charon->kill(charon, "Unable to create sender thread");
+		charon->kill(charon, "unable to create sender thread");
 	}
 
 	return &(this->public);

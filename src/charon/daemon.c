@@ -21,7 +21,7 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #include <stdio.h>
 #include <signal.h>
 #include <pthread.h>
@@ -34,7 +34,7 @@
 #include <getopt.h>
 #include <errno.h>
 
-#include "daemon.h" 
+#include "daemon.h"
 
 #include <types.h>
 #include <config/credentials/local_credential_store.h>
@@ -54,11 +54,6 @@ struct private_daemon_t {
 	daemon_t public;
 	
 	/**
-	 * A logger_t object assigned for daemon things.
-	 */
-	logger_t *logger;
-
-	/**
 	 * Signal set used for signal handling.
 	 */
 	sigset_t signal_set;
@@ -73,6 +68,37 @@ struct private_daemon_t {
  * One and only instance of the daemon.
  */
 daemon_t *charon;
+
+/**
+ * hook in library for debugging messages
+ */
+extern void (*dbg) (int level, char *fmt, ...);
+
+/**
+ * Logging hook for library logs, spreads debug message over bus
+ */
+static void dbg_bus(int level, char *fmt, ...)
+{
+	va_list args;
+	
+	va_start(args, fmt);
+	charon->bus->vsignal(charon->bus, SIG_DBG_LIB, level, fmt, args);
+	va_end(args);
+}
+
+/**
+ * Logging hook for library logs, using stderr output
+ */
+static void dbg_stderr(int level, char *fmt, ...)
+{
+	va_list args;
+	
+	va_start(args, fmt);
+	fprintf(stderr, "00[LIB] ");
+	vfprintf(stderr, fmt, args);
+	fprintf(stderr, "\n");
+	va_end(args);
+}
 
 /**
  * Run the daemon and handle unix signals
@@ -94,27 +120,27 @@ static void run(private_daemon_t *this)
 		error = sigwait(&(this->signal_set), &signal_number);
 		if(error)
 		{
-			this->logger->log(this->logger, ERROR, "Error %d when waiting for signal", error);
+			DBG1(SIG_DBG_DMN, "error %d while waiting for a signal", error);
 			return;
 		}
 		switch (signal_number)
 		{
 			case SIGHUP:
 			{
-				this->logger->log(this->logger, CONTROL, "Signal of type SIGHUP received. Do nothing");
+				DBG1(SIG_DBG_DMN, "signal of type SIGHUP received. Ignored");
 				break;
 			}
 			case SIGINT:
 			{
-				this->logger->log(this->logger, CONTROL, "Signal of type SIGINT received. Exit main loop");
+				DBG1(SIG_DBG_DMN, "signal of type SIGINT received. Shutting down");
 				return;
 			}
 			case SIGTERM:
-				this->logger->log(this->logger, CONTROL, "Signal of type SIGTERM received. Exit main loop");
+				DBG1(SIG_DBG_DMN, "signal of type SIGTERM received. Shutting down");
 				return;
 			default:
 			{
-				this->logger->log(this->logger, CONTROL, "Unknown signal %d received. Do nothing", signal_number);
+				DBG1(SIG_DBG_DMN, "unknown signal %d received. Ignored", signal_number);
 				break;
 			}
 		}
@@ -144,20 +170,24 @@ static void destroy(private_daemon_t *this)
 	/* all child SAs should be down now, so kill kernel interface */
 	DESTROY_IF(this->public.kernel_interface);
 	/* destroy other infrastructure */
-	DESTROY_IF(this->public.bus);
-	DESTROY_IF(this->public.outlog);
-	DESTROY_IF(this->public.syslog);
 	DESTROY_IF(this->public.job_queue);
 	DESTROY_IF(this->public.event_queue);
 	DESTROY_IF(this->public.configuration);
 	DESTROY_IF(this->public.credentials);
 	DESTROY_IF(this->public.connections);
 	DESTROY_IF(this->public.policies);
+	sched_yield();
 	/* we hope the sender could send the outstanding deletes, but 
-	* we shut down here at any cost */
+	 * we shut down here at any cost */
 	DESTROY_IF(this->public.sender);
 	DESTROY_IF(this->public.send_queue);
 	DESTROY_IF(this->public.socket);
+	/* before destroying bus with its listeners, rehook library logs */
+	dbg = dbg_stderr;
+	DESTROY_IF(this->public.bus);
+	DESTROY_IF(this->public.outlog);
+	DESTROY_IF(this->public.syslog);
+	DESTROY_IF(this->public.authlog);
 	free(this);
 }
 
@@ -167,7 +197,7 @@ static void destroy(private_daemon_t *this)
 static void kill_daemon(private_daemon_t *this, char *reason)
 {
 	/* we send SIGTERM, so the daemon can cleanly shut down */
-	this->logger->log(this->logger, CONTROL, "Killing daemon: %s", reason);
+	DBG1(SIG_DBG_DMN, "killing daemon: %s", reason);
 	if (this->main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
@@ -177,7 +207,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	}
 	else
 	{
-		this->logger->log(this->logger, CONTROL, "sending SIGTERM to ourself", reason);
+		DBG1(SIG_DBG_DMN, "sending SIGTERM to ourself");
 		raise(SIGTERM);
 		/* thread must die, since he produced a ciritcal failure and can't continue */
 		pthread_exit(NULL);
@@ -187,12 +217,43 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 /**
  * Initialize the daemon, optional with a strict crl policy
  */
-static void initialize(private_daemon_t *this, bool strict)
+static void initialize(private_daemon_t *this, bool strict, bool syslog,
+					   level_t levels[])
 {
 	credential_store_t* credentials;
+	signal_t signal;
 	
 	/* for uncritical pseudo random numbers */
 	srandom(time(NULL) + getpid());
+	
+	/* setup bus and it's listeners first to enable log output */
+	this->public.bus = bus_create();
+	this->public.outlog = file_logger_create(stdout);
+	this->public.syslog = sys_logger_create(LOG_DAEMON);
+	this->public.authlog = sys_logger_create(LOG_AUTHPRIV);
+	this->public.bus->add_listener(this->public.bus, &this->public.syslog->listener);
+	this->public.bus->add_listener(this->public.bus, &this->public.outlog->listener);
+	this->public.bus->add_listener(this->public.bus, &this->public.authlog->listener);
+	this->public.authlog->set_level(this->public.authlog, SIG_ANY, LEVEL_AUDIT);
+	/* set up hook to log dbg message in library via charons message bus */
+	dbg = dbg_bus;
+	
+	/* apply loglevels */
+	for (signal = 0; signal < SIG_DBG_MAX; signal++)
+	{
+		if (syslog)
+		{
+			this->public.syslog->set_level(this->public.syslog,
+										   signal, levels[signal]);
+		}
+		else
+		{
+			this->public.outlog->set_level(this->public.outlog,
+										   signal, levels[signal]);
+		}
+	}
+	
+	DBG1(SIG_DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 	
 	this->public.configuration = configuration_create();
 	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
@@ -200,11 +261,6 @@ static void initialize(private_daemon_t *this, bool strict)
 	this->public.job_queue = job_queue_create();
 	this->public.event_queue = event_queue_create();
 	this->public.send_queue = send_queue_create();
-	this->public.bus = bus_create();
-	this->public.outlog = file_logger_create(stdout);
-	this->public.bus->add_listener(this->public.bus, &this->public.outlog->listener);
-	this->public.syslog = sys_logger_create(LOG_DAEMON);
-	this->public.bus->add_listener(this->public.bus, &this->public.syslog->listener);
 	this->public.connections = (connection_store_t*)local_connection_store_create();
 	this->public.policies = (policy_store_t*)local_policy_store_create();
 	this->public.credentials = (credential_store_t*)local_credential_store_create(strict);
@@ -233,23 +289,19 @@ void signal_handler(int signal)
 	size_t size;
 	char **strings;
 	size_t i;
-	logger_t *logger;
 
 	size = backtrace(array, 20);
 	strings = backtrace_symbols(array, size);
-	logger = logger_manager->get_logger(logger_manager, DAEMON);
 
-	logger->log(logger, ERROR, 
-				"Thread %u received %s. Dumping %d frames from stack:",
-				signal == SIGSEGV ? "SIGSEGV" : "SIGILL",
-				pthread_self(), size);
+	DBG1(SIG_DBG_DMN, "thread %u received %s. Dumping %d frames from stack:",
+		 signal == SIGSEGV ? "SIGSEGV" : "SIGILL", pthread_self(), size);
 
 	for (i = 0; i < size; i++)
 	{
-		logger->log(logger, ERROR, "    %s", strings[i]);
+		DBG1(SIG_DBG_DMN, "    %s", strings[i]);
 	}
 	free (strings);
-	logger->log(logger, ERROR, "Killing ourself hard after SIGSEGV");
+	DBG1(SIG_DBG_DMN, "killing ourself hard after SIGSEGV");
 	raise(SIGKILL);
 }
 
@@ -283,6 +335,7 @@ private_daemon_t *daemon_create(void)
 	this->public.bus = NULL;
 	this->public.outlog = NULL;
 	this->public.syslog = NULL;
+	this->public.authlog = NULL;
 	
 	this->main_thread_id = pthread_self();
 	
@@ -298,14 +351,8 @@ private_daemon_t *daemon_create(void)
 	action.sa_handler = signal_handler;
 	action.sa_mask = this->signal_set;
 	action.sa_flags = 0;
-	if (sigaction(SIGSEGV, &action, NULL) == -1)
-	{
-		this->logger->log(this->logger, ERROR, "signal handler setup for SIGSEGV failed");
-	}
-	if (sigaction(SIGILL, &action, NULL) == -1)
-	{
-		this->logger->log(this->logger, ERROR, "signal handler setup for SIGILL failed");
-	}
+	sigaction(SIGSEGV, &action, NULL);
+	sigaction(SIGILL, &action, NULL);
 	return this;
 }
 
@@ -315,64 +362,90 @@ private_daemon_t *daemon_create(void)
 static void usage(const char *msg)
 {
 	if (msg != NULL && *msg != '\0')
+	{
 		fprintf(stderr, "%s\n", msg);
-    fprintf(stderr, "Usage: charon"
-		" [--help]"
-		" [--version]"
-		" [--use-syslog]"
-		" [--strictcrlpolicy]"
-		"\n"
-	);
-    exit(msg == NULL? 0 : 1);
+	}
+	fprintf(stderr, "Usage: charon\n"
+					"         [--help]\n"
+					"         [--version]\n"
+					"         [--strictcrlpolicy]\n"
+					"         [--use-syslog]\n"
+					"         [--debug-<type> <level>]\n"
+					"           <type>:  log context type (dmn|mgr|ike|chd|job|cfg|knl|net|enc|lib)\n"
+					"           <level>: log verbosity (-1 = silent, 0 = audit, 1 = control,\n"
+					"                                    2 = controlmore, 3 = raw, 4 = private)\n"
+					"\n"
+		   );
+	exit(msg == NULL? 0 : 1);
 }
-
 
 /**
  * Main function, manages the daemon.
  */
 int main(int argc, char *argv[])
-{	
+{
 	bool strict_crl_policy = FALSE;
+	bool use_syslog = FALSE;
 
 	private_daemon_t *private_charon;
 	FILE *pid_file;
 	struct stat stb;
 	linked_list_t *list;
 	host_t *host;
+	level_t levels[SIG_DBG_MAX];
+	int signal;
 	
-    /* handle arguments */
-    for (;;)
-    {
-		static const struct option long_opts[] = {
+	/* use CTRL loglevel for default */
+	for (signal = 0; signal < SIG_DBG_MAX; signal++)
+	{
+		levels[signal] = LEVEL_CTRL;
+	}
+	
+	/* handle arguments */
+	for (;;)
+	{
+		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
 			{ "strictcrlpolicy", no_argument, NULL, 'r' },
+			{ "debug-dmn", required_argument, &signal, SIG_DBG_DMN },
+			{ "debug-mgr", required_argument, &signal, SIG_DBG_MGR },
+			{ "debug-ike", required_argument, &signal, SIG_DBG_IKE },
+			{ "debug-chd", required_argument, &signal, SIG_DBG_CHD },
+			{ "debug-job", required_argument, &signal, SIG_DBG_JOB },
+			{ "debug-cfg", required_argument, &signal, SIG_DBG_CFG },
+			{ "debug-knl", required_argument, &signal, SIG_DBG_KNL },
+			{ "debug-net", required_argument, &signal, SIG_DBG_NET },
+			{ "debug-enc", required_argument, &signal, SIG_DBG_ENC },
+			{ "debug-lib", required_argument, &signal, SIG_DBG_LIB },
 			{ 0,0,0,0 }
 		};
-
+		
 		int c = getopt_long(argc, argv, "", long_opts, NULL);
-
-		/* Note: "breaking" from case terminates loop */
 		switch (c)
 		{
-			case EOF:	/* end of flags */
+			case EOF:
 	    		break;
 			case 'h':
 				usage(NULL);
-				break;	/* not actually reached */
+				break;
 			case 'v':
 				printf("Linux strongSwan %s\n", VERSION);
 				exit(0);
 			case 'l':
-				logger_manager->set_output(logger_manager, ALL_LOGGERS, NULL);
+				use_syslog = TRUE;
 				continue;
 			case 'r':
 				strict_crl_policy = TRUE;
 				continue;
+			case 0:
+				/* option is in signal */
+				levels[signal] = atoi(optarg);
+				continue;
 			default:
 				usage("");
-				break;	/* not actually reached */
+				break;
 		}
 		break;
 	}
@@ -380,19 +453,13 @@ int main(int argc, char *argv[])
 	private_charon = daemon_create();
 	charon = (daemon_t*)private_charon;
 	
-	private_charon->logger = logger_manager->get_logger(logger_manager, DAEMON);
-
-	private_charon->logger->log(private_charon->logger, CONTROL, 
-								"Starting Charon (strongSwan Version %s)", VERSION);
-		
 	/* initialize daemon */
-	initialize(private_charon, strict_crl_policy);
+	initialize(private_charon, strict_crl_policy, use_syslog, levels);
 	
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
 	{
-		private_charon->logger->log(private_charon->logger, ERROR, 
-									"charon already running (\""PID_FILE"\" exists)");
+		DBG1(SIG_DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
 		destroy(private_charon);
 		exit(-1);
 	}
@@ -404,13 +471,10 @@ int main(int argc, char *argv[])
 	}
 	/* log socket info */
 	list = charon->socket->create_local_address_list(charon->socket);
-	private_charon->logger->log(private_charon->logger, CONTROL,
-								"listening on %d addresses:",
-								list->get_count(list));
+	DBG1(SIG_DBG_NET, "listening on %d addresses:", list->get_count(list));
 	while (list->remove_first(list, (void**)&host) == SUCCESS)
 	{
-		private_charon->logger->log(private_charon->logger, CONTROL,
-									"  %H", host);
+		DBG1(SIG_DBG_NET, "  %H", host);
 		host->destroy(host);
 	}
 	list->destroy(list);
@@ -421,6 +485,6 @@ int main(int argc, char *argv[])
 	/* normal termination, cleanup and exit */
 	destroy(private_charon);
 	unlink(PID_FILE);
-
+	
 	return 0;
 }

@@ -54,11 +54,11 @@ enum cert_policy_t {
 };
 
 /**
- * string mappings for certpolic_t.
+ * enum strings for cert_policy_t
  * 
  * @ingroup config
  */
-extern mapping_t cert_policy_m[];
+extern enum_name_t *cert_policy_names;
 
 
 typedef struct connection_t connection_t;

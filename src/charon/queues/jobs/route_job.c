@@ -52,11 +52,6 @@ struct private_route_job_t {
 	 * route or unroute?
 	 */
 	bool route;
-	
-	/**
-	 * logger
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -83,16 +78,14 @@ static status_t execute(private_route_job_t *this)
 	{
 		if (ike_sa->route(ike_sa, this->connection, this->policy) != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR,
-							  "routing failed");
+			DBG1(SIG_DBG_JOB, "routing failed");
 		}
 	}
 	else
 	{
 		if (ike_sa->unroute(ike_sa, this->policy) == DESTROY_ME)
 		{
-			this->logger->log(this->logger, ERROR,
-							  "removing IKE_SA, as last routed CHILD_SA unrouted");
+			DBG1(SIG_DBG_JOB, "removing IKE_SA, as last routed CHILD_SA unrouted");
 			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 			return DESTROY_ME;
 		}
@@ -127,7 +120,6 @@ route_job_t *route_job_create(connection_t *connection, policy_t *policy, bool r
 	this->connection = connection;
 	this->policy = policy;
 	this->route = route;
-	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &this->public;
 }

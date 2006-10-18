@@ -24,19 +24,13 @@
 #include <string.h>
 
 #include <config/connections/connection.h>
-
 #include <utils/linked_list.h>
-#include <utils/logger.h>
 
-/** 
- * String mappings for cert_policy_t.
- */
-mapping_t cert_policy_m[] = {
-	{CERT_ALWAYS_SEND, "CERT_ALWAYS_SEND"},
-	{CERT_SEND_IF_ASKED, "CERT_SEND_IF_ASKED"},
-	{CERT_NEVER_SEND, "CERT_NEVER_SEND"},
-	{MAPPING_END, NULL}
-};
+ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
+	"CERT_ALWAYS_SEND",
+	"CERT_SEND_IF_ASKED",
+	"CERT_NEVER_SEND"
+);
 
 typedef struct private_connection_t private_connection_t;
 

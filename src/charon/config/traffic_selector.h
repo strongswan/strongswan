@@ -27,6 +27,11 @@
 #include <types.h>
 #include <utils/host.h>
 
+/**
+ * printf() specifier for tRaffic selectors
+ */
+#define TRAFFIC_SELECTOR_PRINTF_SPEC 'R'
+
 typedef enum ts_type_t ts_type_t;
 
 /**
@@ -56,9 +61,9 @@ enum ts_type_t {
 };
 
 /**
- * string mappings for ts_type_t
+ * enum names for ts_type_t
  */
-extern mapping_t ts_type_m[];
+extern enum_name_t *ts_type_name;
 
 
 typedef struct traffic_selector_t traffic_selector_t;
@@ -161,6 +166,18 @@ struct traffic_selector_t {
 	u_int8_t (*get_protocol) (traffic_selector_t *this);
 	
 	/**
+	 * @brief Check if the traffic selector is for a single host.
+	 *
+	 * Traffic selector may describe the end of *-to-host tunnel. In this
+	 * case, the address range is a single address equal to the hosts
+	 * peer address.
+	 *
+	 * @param this		calling obect
+	 * @param host		host_t specifying the address range
+	 */
+	bool (*is_host) (traffic_selector_t *this, host_t* host);
+	
+	/**
 	 * @brief Update the address of a traffic selector.
 	 *
 	 * Update the address range of a traffic selector, 
@@ -172,16 +189,6 @@ struct traffic_selector_t {
 	 * @param host		host_t specifying the address range
 	 */
 	void (*update_address_range) (traffic_selector_t *this, host_t* host);
-	
-	/**
-	 * @brief Get a string representation of the traffic selector.
-	 *
-	 * String points to internal data, do not free/modify.
-	 * 
-	 * @param this		calling object
-	 * @return 			pointer to a string.
-	 */
-	char* (*get_string) (traffic_selector_t *this);
 	
 	/**
 	 * @brief Compare two traffic selectors for equality.

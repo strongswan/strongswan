@@ -26,10 +26,7 @@
 #include "cert_payload.h"
 
 
-/** 
- * String mappings for cert_encoding_t.
- */
-static const char *const cert_encoding_name[] = {
+ENUM(cert_encoding_names, CERT_NONE, CERT_X509_HASH_AND_URL_BUNDLE, 
 	"CERT_NONE",
 	"CERT_PKCS7_WRAPPED_X509",
 	"CERT_PGP",
@@ -43,11 +40,8 @@ static const char *const cert_encoding_name[] = {
 	"CERT_X509_ATTRIBUTE",
 	"CERT_RAW_RSA_KEY",
 	"CERT_X509_HASH_AND_URL",
-	"CERT_X509_HASH_AND_URL_BUNDLE"
-};
-
-enum_names cert_encoding_names =
-    { CERT_NONE, CERT_X509_HASH_AND_URL_BUNDLE, cert_encoding_name, NULL };
+	"CERT_X509_HASH_AND_URL_BUNDLE",
+);
 
 typedef struct private_cert_payload_t private_cert_payload_t;
 

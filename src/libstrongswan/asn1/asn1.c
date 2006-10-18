@@ -13,14 +13,14 @@
  * for more details.
  */
 
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
-#include "types.h"
 #include "asn1.h"
 
-#include <utils/logger_manager.h>
+#include <types.h>
+#include <library.h>
 
 /* some common prefabricated ASN.1 constants */
 static u_char ASN1_INTEGER_0_str[] = { 0x02, 0x00 };
@@ -79,17 +79,6 @@ static const asn1Object_t algorithmIdentifierObjects[] = {
 #define ALGORITHM_ID_ALG		1
 #define ALGORITHM_ID_PARAMETERS	2
 #define ALGORITHM_ID_ROOF		3
-
-static logger_t *logger = NULL;
-
-/**
- * initializes the ASN.1 logger
- */
-static void asn1_init_logger(void)
-{
-	if (logger == NULL)
-		logger = logger_manager->get_logger(logger_manager, ASN1);
-}
 
 /**
  * return the ASN.1 encoded algorithm identifier
@@ -171,14 +160,14 @@ u_int asn1_length(chunk_t *blob)
 	
 	if (n > blob->len)
 	{
-		logger->log(logger, ERROR|LEVEL1, "number of length octets is larger than ASN.1 object");
+		DBG2("number of length octets is larger than ASN.1 object");
 		return ASN1_INVALID_LENGTH;
 	}
 	
 	if (n > sizeof(len))
 	{
-		logger->log(logger, ERROR|LEVEL1, "number of length octets is larger than limit of %d octets", 
-					(int)sizeof(len));
+		DBG2("number of length octets is larger than limit of %d octets", 
+			 (int)sizeof(len));
 		return ASN1_INVALID_LENGTH;
 	}
 	
@@ -289,8 +278,6 @@ time_t asn1totime(const chunk_t *utctime, asn1_t type)
  */
 void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit)
 {
-	asn1_init_logger();
-
 	ctx->blobs[0] = blob;
 	ctx->level0   = level0;
 	ctx->implicit = implicit;
@@ -310,7 +297,7 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 			oid = known_oid(object);
 			if (oid != OID_UNKNOWN)
 			{
-				logger->log(logger, CONTROL|LEVEL2, "  '%s'", oid_names[oid].name);
+				DBG2("  '%s'", oid_names[oid].name);
 				return;
 			}
 			break;
@@ -319,22 +306,18 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 		case ASN1_PRINTABLESTRING:
 		case ASN1_T61STRING:
 		case ASN1_VISIBLESTRING:
-			logger->log(logger, CONTROL|LEVEL2, "  '%.*s'", (int)object.len, object.ptr);
+			DBG2("  '%.*s'", (int)object.len, object.ptr);
 			return;
 		case ASN1_UTCTIME:
 		case ASN1_GENERALIZEDTIME:
 			{
-				char buf[TIMETOA_BUF];
-				time_t time = asn1totime(&object, type);
-
-				timetoa(buf, TIMETOA_BUF, &time, TRUE);
-				logger->log(logger, CONTROL|LEVEL2, "  '%s'", buf);
+				DBG2("  '%T'", asn1totime(&object, type));
 			}
 			return;
 		default:
 			break;
 	}
-	logger->log_chunk(logger, RAW|LEVEL1, "", object);
+	DBG3("%B", &object);
 }
 
 /**
@@ -372,7 +355,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	if ((obj.flags & ASN1_DEF) && (blob->len == 0 || *start_ptr != obj.type) )
 	{
 		/* field is missing */
-		logger->log(logger, CONTROL|LEVEL2, "L%d - %s:", *level, obj.name);
+		DBG2("L%d - %s:", *level, obj.name);
 		if (obj.type & ASN1_CONSTRUCTED)
 		{
 			(*objectID)++ ;  /* skip context-specific tag */
@@ -397,7 +380,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	
 	if (blob->len < 2)
 	{
-		logger->log(logger, ERROR|LEVEL1, "L%d - %s:  ASN.1 object smaller than 2 octets", 
+		DBG2("L%d - %s:  ASN.1 object smaller than 2 octets", 
 					*level, obj.name);
 		return FALSE;
 	}
@@ -406,7 +389,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	
 	if (blob1->len == ASN1_INVALID_LENGTH || blob->len < blob1->len)
 	{
-		logger->log(logger, ERROR|LEVEL1, "L%d - %s:  length of ASN.1 object invalid or too large", 
+		DBG2("L%d - %s:  length of ASN.1 object invalid or too large", 
 					*level, obj.name);
 		return FALSE;
 	}
@@ -419,7 +402,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	
 	if (obj.flags & ASN1_RAW)
 	{
-		logger->log(logger, CONTROL|LEVEL2, "L%d - %s:", *level, obj.name);
+		DBG2("L%d - %s:", *level, obj.name);
 		object->ptr = start_ptr;
 		object->len = (size_t)(blob->ptr - start_ptr);
 		return TRUE;
@@ -427,13 +410,13 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 
 	if (*start_ptr != obj.type && !(ctx->implicit && *objectID == 0))
 	{
-		logger->log(logger, ERROR|LEVEL1, "L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
+		DBG1("L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
 					*level, obj.name, obj.type, *start_ptr);
-		logger->log_bytes(logger, RAW|LEVEL1, "", start_ptr, (u_int)(blob->ptr - start_ptr));
+		DBG3("%b", start_ptr, (u_int)(blob->ptr - start_ptr));
 		return FALSE;
 	}
 	
-	logger->log(logger, CONTROL|LEVEL2, "L%d - %s:", ctx->level0+obj.level, obj.name);
+	DBG2("L%d - %s:", ctx->level0+obj.level, obj.name);
 	
 	/* In case of "SEQUENCE OF" or "SET OF" start a loop */	
 	if (obj.flags & ASN1_LOOP)
@@ -458,7 +441,7 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	{
 		object->ptr = start_ptr;
 		object->len = (size_t)(blob->ptr - start_ptr);
-		logger->log_chunk(logger, RAW|LEVEL2, "", *object);
+		DBG3("%B", object);
 	}
 	else if (obj.flags & ASN1_BODY)
 	{
@@ -478,15 +461,14 @@ bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 	/* an ASN.1 object must possess at least a tag and length field */
 	if (object->len < 2)
 	{
-		logger->log(logger, ERROR|LEVEL1, "L%d - %s:  ASN.1 object smaller than 2 octets", 
-					level, name);
+		DBG2("L%d - %s:  ASN.1 object smaller than 2 octets", level, name);
 		return FALSE;
 	}
 	
 	if (*object->ptr != type)
 	{
-		logger->log(logger, ERROR|LEVEL1, "L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
-					level, name, type, *object->ptr);
+		DBG2("L%d - %s: ASN1 tag 0x%02x expected, but is 0x%02x",
+			 level, name, type, *object->ptr);
 		return FALSE;
 	}
 	
@@ -494,12 +476,12 @@ bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 	
 	if (len == ASN1_INVALID_LENGTH || object->len < len)
 	{
-		logger->log(logger, ERROR|LEVEL1, "L%d - %s:  length of ASN.1 object invalid or too large",
-					level, name);
+		DBG2("L%d - %s:  length of ASN.1 object invalid or too large",
+			 level, name);
 		return FALSE;
 	}
 	
-	logger->log(logger, CONTROL|LEVEL2, "L%d - %s:", level, name);
+	DBG2("L%d - %s:", level, name);
 	debug_asn1_simple_object(*object, type);
 	return TRUE;
 }
@@ -546,18 +528,16 @@ bool is_asn1(chunk_t blob)
 {
 	u_int len;
 	u_char tag = *blob.ptr;
-	
-	asn1_init_logger();
 
 	if (tag != ASN1_SEQUENCE && tag != ASN1_SET)
 	{
-		logger->log(logger, ERROR|LEVEL2, "  file content is not binary ASN.1");
+		DBG2("  file content is not binary ASN.1");
 		return FALSE;
 	}
 	len = asn1_length(&blob);
 	if (len != blob.len)
 	{
-		logger->log(logger, ERROR|LEVEL2, "  file size does not match ASN.1 coded length");
+		DBG2("  file size does not match ASN.1 coded length");
 		return FALSE;
 	}
 	return TRUE;
@@ -708,7 +688,7 @@ chunk_t timetoasn1(const time_t *time, asn1_t type)
 {
 	int offset;
 	const char *format;
-	char buf[TIMETOA_BUF];
+	char buf[32];
 	chunk_t formatted_time;
 	struct tm *t = gmtime(time);
 	
@@ -722,8 +702,8 @@ chunk_t timetoasn1(const time_t *time, asn1_t type)
 		format = "%02d%02d%02d%02d%02d%02dZ";
 		offset = (t->tm_year < 100)? 0 : -100;
 	}
-	sprintf(buf, format, t->tm_year + offset, t->tm_mon + 1, t->tm_mday
-			, t->tm_hour, t->tm_min, t->tm_sec);
+	snprintf(buf, sizeof(buf), format, t->tm_year + offset, 
+			 t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 	formatted_time.ptr = buf;
 	formatted_time.len = strlen(buf);
 	return asn1_simple_object(type, formatted_time);

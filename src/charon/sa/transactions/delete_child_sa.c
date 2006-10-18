@@ -63,11 +63,6 @@ struct private_delete_child_sa_t {
 	 * CHILD SA to delete
 	 */
 	child_sa_t *child_sa;
-	
-	/**
-	 * Assigned logger.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -133,9 +128,8 @@ static status_t get_request(private_delete_child_sa_t *this, message_t **result)
 		spi = this->child_sa->get_spi(this->child_sa, TRUE);
 		delete_payload = delete_payload_create(protocol);
 		
-		this->logger->log(this->logger, CONTROL,
-						  "created DELETE payload for %s CHILD_SA with SPI 0x%x",
-						  mapping_find(protocol_id_m, protocol), htonl(spi));
+		DBG1(SIG_DBG_IKE, "created DELETE payload for %N CHILD_SA with SPI 0x%x",
+			 protocol_id_names, protocol, htonl(spi));
 		delete_payload->add_spi(delete_payload, spi);
 		request->add_payload(request, (payload_t*)delete_payload);
 	}
@@ -159,8 +153,7 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 	protocol = delete_request->get_protocol_id(delete_request);
 	if (protocol != PROTO_ESP && protocol != PROTO_AH)
 	{
-		this->logger->log(this->logger, CONTROL,
-						  "CHILD_SA delete response contained unexpected protocol");
+		DBG1(SIG_DBG_IKE, "CHILD_SA delete response contained unexpected protocol");
 		return FAILED;
 	}
 	
@@ -184,9 +177,8 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 			
 			child_sa->set_state(child_sa, CHILD_DELETING);
 			
-			this->logger->log(this->logger, CONTROL,
-							  "received DELETE for %s CHILD_SA with SPI 0x%x, deleting",
-							  mapping_find(protocol_id_m, protocol), ntohl(spi));
+			DBG1(SIG_DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, deleting",
+				 protocol_id_names, protocol, ntohl(spi));
 			
 			rekey = child_sa->get_rekeying_transaction(child_sa);
 			if (rekey)
@@ -208,9 +200,8 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 		}
 		else
 		{
-			this->logger->log(this->logger, ERROR,
-							  "received DELETE for %s CHILD_SA with SPI 0x%x, but no such SA", 
-							  mapping_find(protocol_id_m, protocol), ntohl(spi));
+			DBG1(SIG_DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, but no such SA",
+				 protocol_id_names, protocol, ntohl(spi));
 		}
 	}
 	iterator->destroy(iterator);
@@ -251,8 +242,7 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 	
 	if (request->get_exchange_type(request) != INFORMATIONAL)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "INFORMATIONAL response of invalid type, aborting");
+		DBG1(SIG_DBG_IKE, "INFORMATIONAL response of invalid type, aborting");
 		return FAILED;
 	}
 	
@@ -262,8 +252,7 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING ||
 		this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
-		this->logger->log(this->logger, AUDIT, 
-						  "unable to delete CHILD_SA, as rekeying in progress");
+		DBG1(SIG_DBG_IKE, "unable to delete CHILD_SA, as rekeying in progress");
 		return FAILED;
 	}
 	
@@ -283,9 +272,8 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring payload %s (%d)",
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG2(SIG_DBG_IKE, "ignoring payload %N",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -305,8 +293,7 @@ static status_t conclude(private_delete_child_sa_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != INFORMATIONAL)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "INFORMATIONAL response of invalid type, aborting");
+		DBG1(SIG_DBG_IKE, "INFORMATIONAL response of invalid type, aborting");
 		return FAILED;
 	}
 	
@@ -326,9 +313,8 @@ static status_t conclude(private_delete_child_sa_t *this, message_t *response,
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring payload %s (%d)",
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG1(SIG_DBG_IKE, "ignoring payload %N",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -369,7 +355,6 @@ delete_child_sa_t *delete_child_sa_create(ike_sa_t *ike_sa)
 	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
-	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &this->public;
 }

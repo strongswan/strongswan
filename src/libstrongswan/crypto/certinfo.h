@@ -29,8 +29,6 @@
 /**
  * RFC 2560 OCSP - certificate status
  */
-extern enum_names cert_status_names;
-
 typedef enum {
 	CERT_GOOD = 		0,
 	CERT_REVOKED = 		1,
@@ -39,12 +37,11 @@ typedef enum {
 	CERT_UNTRUSTED =	4  /* private use */
 } cert_status_t;
 
+extern enum_name_t *cert_status_names;
+
 /**
  * RFC 2459 CRL reason codes
  */
-
-extern enum_names crl_reason_names;
-
 typedef enum {
     REASON_UNSPECIFIED =			0,
     REASON_KEY_COMPROMISE = 		1,
@@ -55,6 +52,8 @@ typedef enum {
     REASON_CERTIFICATE_HOLD =		6,
     REASON_REMOVE_FROM_CRL =		8
 } crl_reason_t;
+
+extern enum_name_t *crl_reason_names;
 
 typedef struct certinfo_t certinfo_t;
 
@@ -67,85 +66,76 @@ typedef struct certinfo_t certinfo_t;
 struct certinfo_t {
 
 	/**
-	 * @brief Get serial number
-	 * 
-	 * 
+	 * @brief Get serial number.
+	 *
 	 * @param this				calling object
 	 * @return					serialNumber
 	 */
 	chunk_t (*get_serialNumber) (const certinfo_t *this);
 
 	/**
-	 * @brief Set certificate status
-	 * 
-	 * 
+	 * @brief Set certificate status.
+	 *
 	 * @param this				calling object
 	 * @param status			status
 	 */
 	void (*set_status) (certinfo_t *this, cert_status_t status);
 
 	/**
-	 * @brief Get certificate status
-	 * 
-	 * 
+	 * @brief Get certificate status.
+	 *
 	 * @param this				calling object
 	 * @return					status
 	 */
 	cert_status_t (*get_status) (const certinfo_t *this);
 
 	/**
-	 * @brief Set nextUpdate
-	 * 
-	 * 
+	 * @brief Set nextUpdate.
+	 *
 	 * @param this				calling object
 	 * @return					nextUpdate
 	 */
 	void (*set_nextUpdate) (certinfo_t *this, time_t nextUpdate);
 
 	/**
-	 * @brief Get nextUpdate
-	 * 
-	 * 
+	 * @brief Get nextUpdate.
+	 *
 	 * @param this				calling object
 	 * @return					nextUpdate
 	 */
 	time_t (*get_nextUpdate) (const certinfo_t *this);
 
 	/**
-	 * @brief Set revocationTime
-	 * 
-	 * 
+	 * @brief Set revocationTime.
+	 *
 	 * @param this				calling object
 	 * @param revocationTime	revocationTime
 	 */
 	void (*set_revocationTime) (certinfo_t *this, time_t revocationTime);
 
 	/**
-	 * @brief Get revocationTime
-	 * 
-	 * 
+	 * @brief Get revocationTime.
+	 *
 	 * @param this				calling object
 	 * @return					revocationTime
 	 */
 	time_t (*get_revocationTime) (const certinfo_t *this);
 
 	/**
-	 * @brief Set revocationReason
-	 * 
-	 * 
+	 * @brief Set revocationReason.
+	 *
 	 * @param this				calling object
 	 * @param reason			revocationReason
 	 */
 	void (*set_revocationReason) (certinfo_t *this, crl_reason_t reason);
 
 	/**
-	 * @brief Get revocationReason
-	 * 
-	 * 
+	 * @brief Get revocationReason.
+	 *
 	 * @param this				calling object
 	 * @return					revocationReason
 	 */
-	const char *(*get_revocationReason) (const certinfo_t *this);
+	crl_reason_t (*get_revocationReason) (const certinfo_t *this);
 
 	/**
 	 * @brief Destroys the certinfo_t object.

@@ -45,13 +45,22 @@ typedef struct thread_pool_t thread_pool_t;
  * @ingroup threads
  */
 struct thread_pool_t {
+	
 	/**
 	 * @brief Return currently instanciated thread count.
-	 * 
+	 *
 	 * @param thread_pool	calling object		
 	 * @return				size of thread pool
 	 */
-	size_t (*get_pool_size) (thread_pool_t *thread_pool);
+	u_int (*get_pool_size) (thread_pool_t *thread_pool);
+	
+	/**
+	 * @brief Get the number of threads currently waiting for work.
+	 *
+	 * @param thread_pool	calling object		
+	 * @return				number of idle threads
+	 */
+	u_int (*get_idle_threads) (thread_pool_t *thread_pool);
 	
 	/**
 	 * @brief Destroy a thread_pool_t object.

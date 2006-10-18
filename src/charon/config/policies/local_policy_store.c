@@ -1,8 +1,8 @@
 /**
  * @file local_policy_store.c
- * 
+ *
  * @brief Implementation of local_policy_store_t.
- *  
+ *
  */
 
 /*
@@ -24,8 +24,8 @@
 
 #include "local_policy_store.h"
 
+#include <daemon.h>
 #include <utils/linked_list.h>
-#include <utils/logger_manager.h>
 
 
 typedef struct private_local_policy_store_t private_local_policy_store_t;
@@ -49,11 +49,6 @@ struct private_local_policy_store_t {
 	 * Mutex to exclusivly access list
 	 */
 	pthread_mutex_t mutex;
-	
-	/**
-	 * Assigned logger
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -116,8 +111,7 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 	policy_t *candidate;
 	policy_t *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, 
-					  "searching policy for ID pair %D...%D", my_id, other_id);
+	DBG2(SIG_DBG_CFG, "searching policy for ID pair %D...%D", my_id, other_id);
 
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -149,16 +143,14 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 			if (!contains_traffic_selectors(candidate, TRUE, my_ts, my_host) ||
 				!contains_traffic_selectors(candidate, FALSE, other_ts, other_host))
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL2,
-								  "candidate '%s' inacceptable due traffic selector mismatch",
-								  candidate->get_name(candidate));
+				DBG2(SIG_DBG_CFG, "candidate '%s' inacceptable due traffic "
+					 "selector mismatch", candidate->get_name(candidate));
 				continue;
 			}
 
-			this->logger->log(this->logger, CONTROL|LEVEL2,
-							  "candidate policy '%s': %D...%D (prio=%d)",
-							  candidate->get_name(candidate),
-							  candidate_my_id, candidate_other_id, prio);
+			DBG2(SIG_DBG_CFG, "candidate policy '%s': %D...%D (prio=%d)",
+				 candidate->get_name(candidate),
+				 candidate_my_id, candidate_other_id, prio);
 
 			if (prio > best_prio)
 			{
@@ -174,10 +166,8 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 		identification_t *found_my_id = found->get_my_id(found);
 		identification_t *found_other_id = found->get_other_id(found);
 		
-		this->logger->log(this->logger, CONTROL,
-						  "found matching policy '%s': %D...%D (prio=%d)",
-						  found->get_name(found),
-						  found_my_id, found_other_id, best_prio);
+		DBG1(SIG_DBG_CFG, "found matching policy '%s': %D...%D (prio=%d)",
+			 found->get_name(found), found_my_id, found_other_id, best_prio);
 		/* give out a new reference to it */
 		found->get_ref(found);
 	}
@@ -193,7 +183,7 @@ static policy_t *get_policy_by_name(private_local_policy_store_t *this, char *na
 	iterator_t *iterator;
 	policy_t *current, *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "looking for policy \"%s\"", name);
+	DBG2(SIG_DBG_CFG, "looking for policy '%s'", name);
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -246,6 +236,15 @@ static status_t delete_policy(private_local_policy_store_t *this, char *name)
 }
 
 /**
+ * Implementation of policy_store_t.create_iterator.
+ */
+static iterator_t* create_iterator(private_local_policy_store_t *this)
+{
+	return this->policies->create_iterator_locked(this->policies,
+												  &this->mutex);
+}
+
+/**
  * Implementation of policy_store_t.destroy.
  */
 static void destroy(private_local_policy_store_t *this)
@@ -273,11 +272,11 @@ local_policy_store_t *local_policy_store_create(void)
 	this->public.policy_store.get_policy = (policy_t*(*)(policy_store_t*,identification_t*,identification_t*,linked_list_t*,linked_list_t*,host_t*,host_t*))get_policy;
 	this->public.policy_store.get_policy_by_name = (policy_t*(*)(policy_store_t*,char*))get_policy_by_name;
 	this->public.policy_store.delete_policy = (status_t(*)(policy_store_t*,char*))delete_policy;
+	this->public.policy_store.create_iterator = (iterator_t*(*)(policy_store_t*))create_iterator;
 	this->public.policy_store.destroy = (void(*)(policy_store_t*))destroy;
 	
 	/* private variables */
 	this->policies = linked_list_create();
-	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 	pthread_mutex_init(&(this->mutex), NULL);
 	
 	return (&this->public);

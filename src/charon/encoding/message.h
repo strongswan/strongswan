@@ -34,6 +34,11 @@
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
 
+/**
+ * printf() specifier for message
+ */
+#define MESSAGE_PRINTF_SPEC 'M'
+
 
 typedef struct message_t message_t;
 

@@ -28,27 +28,25 @@
 #include <crypto/crypters/des_crypter.h>
 
 
-/** 
- * String mappings for encryption_algorithm_t.
- */
-mapping_t encryption_algorithm_m[] = {
-	{ENCR_UNDEFINED, "UNDEFINED"},
-	{ENCR_DES_IV64, "DES_IV64"},
-	{ENCR_DES, "DES"},
-	{ENCR_3DES, "3DES"},
-	{ENCR_RC5, "RC5"},
-	{ENCR_IDEA, "IDEA"},
-	{ENCR_CAST, "CAST"},
-	{ENCR_BLOWFISH, "BLOWFISH"},
-	{ENCR_3IDEA, "3IDEA"},
-	{ENCR_DES_IV32, "DES_IV32"},
-	{ENCR_NULL, "NULL"},
-	{ENCR_AES_CBC, "AES_CBC"},
-	{ENCR_AES_CTR, "AES_CTR"},
-	{MAPPING_END, NULL}
-};
+ENUM_BEGIN(encryption_algorithm_names, ENCR_UNDEFINED, ENCR_UNDEFINED,
+	"UNDEFINED");
+ENUM_NEXT(encryption_algorithm_names, ENCR_DES_IV64, ENCR_DES_IV32, ENCR_UNDEFINED,
+	"DES_IV64",
+	"DES",
+	"3DES",
+	"RC5",
+	"IDEA",
+	"CAST",
+	"BLOWFISH",
+	"3IDEA",
+	"DES_IV32");
+ENUM_NEXT(encryption_algorithm_names, ENCR_NULL, ENCR_AES_CTR, ENCR_DES_IV32,
+	"NULL",
+	"AES_CBC",
+	"AES_CTR");
+ENUM_END(encryption_algorithm_names, ENCR_AES_CTR);
 
-/* 
+/*
  * Described in header.
  */
 crypter_t *crypter_create(encryption_algorithm_t encryption_algorithm, size_t key_size)

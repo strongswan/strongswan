@@ -69,24 +69,15 @@ struct private_certinfo_t {
     crl_reason_t revocationReason;
 };
 
-/**
- * RFC 2560 OCSP - certificate status
- */
-static const char *const cert_status_name[] = {
+ENUM(cert_status_names, CERT_GOOD, CERT_UNTRUSTED,
 	"good",
 	"revoked",
 	"unknown",
 	"unknown",
-	"untrusted"
-    };
+	"untrusted",
+);
 
-enum_names cert_status_names =
-    { CERT_GOOD, CERT_UNTRUSTED, cert_status_name, NULL};
-
-/**
- * RFC 2459 CRL reason codes
- */
-static const char *const crl_reason_name[] = {
+ENUM(crl_reason_names, REASON_UNSPECIFIED, REASON_REMOVE_FROM_CRL,
 	"unspecified",
 	"key compromise",
 	"ca compromise",
@@ -95,11 +86,8 @@ static const char *const crl_reason_name[] = {
 	"cessation of operation",
 	"certificate hold",
 	"reason #7",
-	"remove from crl"
-    };
-
-enum_names crl_reason_names =
-    { REASON_UNSPECIFIED, REASON_REMOVE_FROM_CRL, crl_reason_name, NULL};
+	"remove from crl",
+);
 
 /**
  * Implements certinfo_t.get_serialNumber
@@ -168,9 +156,9 @@ static void set_revocationReason(private_certinfo_t *this, crl_reason_t reason)
 /**
  * Implements certinfo_t.get_revocationReason
  */
-static const char *get_revocationReason(const private_certinfo_t *this)
+static crl_reason_t get_revocationReason(const private_certinfo_t *this)
 {
-	return enum_name(&crl_reason_names, this->revocationReason);
+	return this->revocationReason;
 }
 
 /**
@@ -205,7 +193,7 @@ certinfo_t *certinfo_create(chunk_t serial)
 	this->public.set_revocationTime = (void (*) (certinfo_t*,time_t))set_revocationTime;
 	this->public.get_revocationTime = (time_t (*) (const certinfo_t*))get_revocationTime;
 	this->public.set_revocationReason = (void (*) (certinfo_t*, crl_reason_t))set_revocationReason;
-	this->public.get_revocationReason = (const char *(*) (const certinfo_t*))get_revocationReason;
+	this->public.get_revocationReason = (crl_reason_t(*) (const certinfo_t*))get_revocationReason;
 	this->public.destroy = (void (*) (certinfo_t*))destroy;
 
 	return &this->public;

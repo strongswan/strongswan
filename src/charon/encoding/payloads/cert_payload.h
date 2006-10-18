@@ -64,7 +64,7 @@ enum cert_encoding_t {
  * 
  * @ingroup payloads
  */
-extern enum_names cert_encoding_names;
+extern enum_name_t *cert_encoding_names;
 
 typedef struct cert_payload_t cert_payload_t;
 

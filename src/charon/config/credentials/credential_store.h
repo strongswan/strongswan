@@ -29,7 +29,6 @@
 #include <crypto/rsa/rsa_private_key.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <utils/identification.h>
-#include <utils/logger.h>
 
 
 typedef struct credential_store_t credential_store_t;
@@ -136,31 +135,28 @@ struct credential_store_t {
 	x509_t* (*add_ca_certificate) (credential_store_t *this, x509_t *cert);
 
 	/**
-	 * @brief Lists all certificates kept in the local credential store.
+	 * @brief Create an iterator over all end certificates.
 	 *
 	 * @param this		calling object
-	 * @param logger	logger to be used
-	 * @param utc		log dates either in UTC or local time
+	 * @return 			iterator
 	 */
-	void (*log_certificates) (credential_store_t *this, logger_t *logger, bool utc);
+	iterator_t* (*create_cert_iterator) (credential_store_t *this);
 
 	/**
-	 * @brief Lists all CA certificates kept in the local credential store.
+	 * @brief Create an iterator over all CA certificates.
 	 *
 	 * @param this		calling object
-	 * @param logger	logger to be used
-	 * @param utc		log dates either in UTC or local time
+	 * @return 			iterator
 	 */
-	void (*log_ca_certificates) (credential_store_t *this, logger_t *logger, bool utc);
+	iterator_t* (*create_cacert_iterator) (credential_store_t *this);
 
 	/**
-	 * @brief Lists all CRLs kept in the local credential store.
+	 * @brief Create an iterator over all CRLs.
 	 *
 	 * @param this		calling object
-	 * @param logger	logger to be used
-	 * @param utc		log dates either in UTC or local time
+	 * @return 			iterator
 	 */
-	void (*log_crls) (credential_store_t *this, logger_t *logger, bool utc);
+	iterator_t* (*create_crl_iterator) (credential_store_t *this);
 
 	/**
 	 * @brief Loads trusted CA certificates from a default directory.

@@ -62,11 +62,11 @@ enum configuration_attribute_type_t {
 };
 
 /** 
- * String mappings for configuration_attribute_type_t.
+ * enum names for configuration_attribute_type_t.
  * 
  * @ingroup payloads
  */
-extern mapping_t configuration_attribute_type_m[];
+extern enum_name_t *configuration_attribute_type_names;
 
 typedef struct configuration_attribute_t configuration_attribute_t;
 

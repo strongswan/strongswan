@@ -20,27 +20,17 @@
 #include <stddef.h>
 #include <sys/types.h>
 
-#include "asn1.h"
 #include "pem.h"
-#include "ttodata.h"
+
+#include <library.h>
+#include <asn1/asn1.h>
+#include <asn1/ttodata.h>
 
 #include <utils/lexparser.h>
-#include <utils/logger_manager.h>
 #include <crypto/hashers/hasher.h>
 #include <crypto/crypters/crypter.h>
 
 #define PKCS5_SALT_LEN	8	/* bytes */
-
-static logger_t *logger = NULL;
-
-/**
- * initializes the PEM logger
- */
-static void pem_init_logger(void)
-{
-	if (logger == NULL)
-		logger = logger_manager->get_logger(logger_manager, ASN1);
-}
 
 /**
  * check the presence of a pattern in a character string
@@ -79,8 +69,7 @@ static bool find_boundary(const char* tag, chunk_t *line)
 	{
 		if (present("-----", line))
 		{
-			logger->log(logger, CONTROL|LEVEL2,
-		 		"  -----%s %.*s-----", tag, (int)name.len, name.ptr);
+			DBG2("  -----%s %.*s-----", tag, (int)name.len, name.ptr);
 			return TRUE;
 		}
 		line->ptr++;  line->len--;  name.len++;
@@ -185,8 +174,6 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 	iv.ptr = iv_buf;
 	iv.len = 0;
 
-	pem_init_logger();
-
 	while (fetchline(&src, &line))
 	{
 		if (state == PEM_PRE)
@@ -222,7 +209,7 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 				}
 
 				/* we are looking for a parameter: value pair */
-				logger->log(logger, CONTROL|LEVEL2, "  %.*s", (int)line.len, line.ptr);
+				DBG2("  %.*s", (int)line.len, line.ptr);
 				ugh = extract_parameter_value(&name, &value, &line);
 				if (ugh != NULL)
 					continue;
@@ -289,8 +276,7 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					*pgp = TRUE;
 					data.ptr++;
 					data.len--;
-					logger->log(logger, CONTROL|LEVEL2, "  Armor checksum: %.*s",
-								(int)data.len, data.ptr);
+					DBG2("  Armor checksum: %.*s", (int)data.len, data.ptr);
 		    		continue;
 				}
 
@@ -327,8 +313,6 @@ bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
 
 	FILE *fd = fopen(filename, "r");
 
-	pem_init_logger();
-
 	if (fd)
 	{
 		int bytes;
@@ -338,19 +322,19 @@ bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
 		blob->ptr = malloc(blob->len);
 		bytes = fread(blob->ptr, 1, blob->len, fd);
 		fclose(fd);
-		logger->log(logger, CONTROL, "  loading %s file '%s' (%d bytes)", type, filename, bytes);
+		DBG1("  loading %s file '%s' (%d bytes)", type, filename, bytes);
 
 		*pgp = FALSE;
 
 		/* try DER format */
 		if (is_asn1(*blob))
 		{
-			logger->log(logger, CONTROL|LEVEL1, "  file coded in DER format");
+			DBG2("  file coded in DER format");
 			return TRUE;
 		}
 
 		if (passphrase != NULL)
-			logger->log_bytes(logger, PRIVATE, "  passphrase:", passphrase->ptr, passphrase->len);
+			DBG4("  passphrase:", passphrase->ptr, passphrase->len);
 
 		/* try PEM format */
 		ugh = pem_to_bin(blob, passphrase, pgp);
@@ -359,24 +343,24 @@ bool pem_asn1_load_file(const char *filename, chunk_t *passphrase,
 		{
 			if (*pgp)
 			{
-				logger->log(logger, CONTROL|LEVEL1, "  file coded in armored PGP format");
+				DBG2("  file coded in armored PGP format");
 				return TRUE;
 			}
 			if (is_asn1(*blob))
 			{
-				logger->log(logger, CONTROL|LEVEL1, "  file coded in PEM format");
+				DBG2("  file coded in PEM format");
 				return TRUE;
 			}
 			ugh = "file coded in unknown format, discarded";
 		}
 
 		/* a conversion error has occured */
-		logger->log(logger, ERROR, "  %s", ugh);
+		DBG1("  %s", ugh);
 		chunk_free(blob);
 	}
 	else
 	{
-		logger->log(logger, ERROR, "  could not open %s file '%s'", type, filename);
+		DBG1("  could not open %s file '%s'", type, filename);
 	}
 	return FALSE;
 }

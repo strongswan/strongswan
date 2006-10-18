@@ -47,10 +47,10 @@ enum pseudo_random_function_t {
 	PRF_AES128_CBC = 4,
 };
 
-/** 
- * String mappings for encryption_algorithm_t.
+/**
+ * enum name for encryption_algorithm_t.
  */
-extern mapping_t pseudo_random_function_m[];
+extern enum_name_t *pseudo_random_function_names;
 
 
 typedef struct prf_t prf_t;

@@ -20,14 +20,10 @@
  * for more details.
  */
 
-/* for fmemopen() */
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 
 #include "file_logger.h"
-
-#include <bus/listeners/stream_logger.h>
 
 
 typedef struct private_file_logger_t private_file_logger_t;
@@ -48,99 +44,58 @@ struct private_file_logger_t {
 	FILE *out;
 	
 	/**
-	 * Internal used stream logger that does the dirty work
+	 * Maximum level to log
 	 */
-	stream_logger_t *logger;
-	
-	/**
-	 * Memory stream used for stream_logger
-	 */
-	FILE *stream;
-	
-	/**
-	 * Underlying buffer for stream
-	 */
-	char buffer[4096];
+	level_t levels[SIG_DBG_MAX];
 };
 
 
 /**
  * Implementation of bus_listener_t.signal.
  */
-static void signal_(private_file_logger_t *this, int thread, ike_sa_t* ike_sa,
-					signal_t signal, level_t level,
-					char *format, va_list args)
+static void signal_(private_file_logger_t *this, signal_t signal, level_t level,
+					int thread, ike_sa_t* ike_sa, char *format, va_list args)
 {
-	char line[512];
-	char *prefix;
-	FILE *reader;
-	
-	switch (signal)
+	if (level <= this->levels[SIG_TYPE(signal)])
 	{
-		case SIG_IKE_UP:
-		case SIG_IKE_DOWN:
-		case SIG_IKE_REKEY:
-		case SIG_DBG_IKE:
-			prefix = "IKE";
-			break;
-		case SIG_DBG_CHD:
-			prefix = "CHD";
-			break;
-		case SIG_DBG_JOB:
-			prefix = "JOG";
-			break;
-		case SIG_DBG_CFG:
-			prefix = "CFG";
-			break;
-		case SIG_DBG_KNL:
-			prefix = "KNL";
-			break;
-		case SIG_DBG_NET:
-			prefix = "NET";
-			break;
-		case SIG_DBG_ENC:
-			prefix = "ENC";
-			break;
-		default:
-			prefix = "???";
-			break;
-	}
-	
-	flockfile(this->stream);
-	/* reset memory stream */
-	rewind(this->stream);
-	memset(this->buffer, '\0', sizeof(this->buffer));
-	/* log to memstream */
-	this->logger->listener.signal(&this->logger->listener, thread, ike_sa,
-								  signal, level, format, args);
-	/* flush is needed to append a '\0' */
-	fflush(this->stream);
-	
-	/* create a reader stream that reads out line by line */
-	reader = fmemopen(this->buffer, sizeof(this->buffer), "r");
-	
-	while (fgets(line, sizeof(line), reader))
-	{
-		if (line[0] == '\0')
+		char buffer[8192];
+		char *current = buffer, *next;
+		
+		/* write in memory buffer first */
+		vsnprintf(buffer, sizeof(buffer), format, args);
+		
+		/* prepend a prefix in front of every line */
+		while (current)
 		{
-			/* abort on EOF */
-			break;
-		}
-		else if (line[0] != '\n')
-		{
-			fprintf(this->out, "%.2d[%s] %s", thread, prefix, line);
+			next = strchr(current, '\n');
+			if (next)
+			{
+				*(next++) = '\0';
+			}
+			fprintf(this->out, "%.2d[%N] %s\n", thread, signal_names, signal, current);
+			current = next;
 		}
 	}
-	fclose(reader);
-	funlockfile(this->stream);
 }
 
 /**
  * Implementation of file_logger_t.set_level.
  */
-static void set_level(private_file_logger_t *this, signal_t signal, level_t max)
+static void set_level(private_file_logger_t *this, signal_t signal, level_t level)
 {
-	this->logger->set_level(this->logger, signal, max);
+	if (signal == SIG_ANY)
+	{
+		int i;
+		for (i = 0; i < SIG_DBG_MAX; i++)
+		{
+			this->levels[i] = level;
+		}
+	}
+	else
+	{
+		
+		this->levels[SIG_TYPE(signal)] = level;
+	}
 }
 
 /**
@@ -148,8 +103,6 @@ static void set_level(private_file_logger_t *this, signal_t signal, level_t max)
  */
 static void destroy(private_file_logger_t *this)
 {
-	fclose(this->stream);
-	this->logger->destroy(this->logger);
 	free(this);
 }
 
@@ -161,19 +114,13 @@ file_logger_t *file_logger_create(FILE *out)
 	private_file_logger_t *this = malloc_thing(private_file_logger_t);
 	
 	/* public functions */
-	this->public.listener.signal = (void(*)(bus_listener_t*,int,ike_sa_t*,signal_t,level_t,char*,va_list))signal_;
+	this->public.listener.signal = (void(*)(bus_listener_t*,signal_t,level_t,int,ike_sa_t*,char*,va_list))signal_;
 	this->public.set_level = (void(*)(file_logger_t*,signal_t,level_t))set_level;
 	this->public.destroy = (void(*)(file_logger_t*))destroy;
 	
 	/* private variables */
 	this->out = out;
-	this->stream = fmemopen(this->buffer, sizeof(this->buffer), "w");
-	if (this->stream == NULL)
-	{
-		/* fallback to stderr */
-		this->stream = stderr;
-	}
-	this->logger = stream_logger_create(this->stream);
+	set_level(this, SIG_ANY, LEVEL_SILENT);
 	
 	return &this->public;
 }

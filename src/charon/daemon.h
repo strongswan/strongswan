@@ -1,8 +1,8 @@
 /**
  * @file daemon.h
- * 
+ *
  * @brief Interface of daemon_t.
- * 
+ *
  */
 
 /*
@@ -39,7 +39,6 @@
 #include <queues/send_queue.h>
 #include <queues/job_queue.h>
 #include <queues/event_queue.h>
-#include <utils/logger_manager.h>
 #include <config/configuration.h>
 #include <config/connections/connection_store.h>
 #include <config/policies/policy_store.h>
@@ -361,6 +360,11 @@ struct daemon_t {
 	 * A bus listener logging to syslog
 	 */
 	sys_logger_t *syslog;
+	
+	/**
+	 * A bus listener logging most important events
+	 */
+	sys_logger_t *authlog;
 	
 	/**
 	 * Kernel Interface to communicate with kernel

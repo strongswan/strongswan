@@ -154,11 +154,6 @@ struct private_ike_sa_init_t {
 	 * Have we found a matching destination address NAT hash?
 	 */
 	bool natd_dst_matched;
-	
-	/**
-	 * Assigned logger.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -237,8 +232,8 @@ static chunk_t generate_natd_hash(private_ike_sa_init_t *this,
 	/*  natd_hash = SHA1( spi_i | spi_r | address | port ) */
 	natd_chunk = chunk_cat("cccc", spi_i_chunk, spi_r_chunk, addr_chunk, port_chunk);
 	this->nat_hasher->allocate_hash(this->nat_hasher, natd_chunk, &natd_hash);
-	this->logger->log_chunk(this->logger, RAW, "natd_chunk", natd_chunk);
-	this->logger->log_chunk(this->logger, RAW, "natd_hash", natd_hash);
+	DBG3(SIG_DBG_IKE, "natd_chunk %B", &natd_chunk);
+	DBG3(SIG_DBG_IKE, "natd_hash %B", &natd_hash);
 	
 	chunk_free(&natd_chunk);
 	return natd_hash;
@@ -333,9 +328,8 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		this->diffie_hellman = diffie_hellman_create(dh_group);
 		if (this->diffie_hellman == NULL)
 		{
-			this->logger->log(this->logger, AUDIT,
-							  "DH group %s (%d) not supported, aborting",
-							  mapping_find(diffie_hellman_group_m, dh_group), dh_group);
+			DBG1(SIG_DBG_IKE, "DH group %N not supported, aborting",
+				 diffie_hellman_group_names, dh_group);
 			return DESTROY_ME;
 		}
 	}
@@ -407,21 +401,18 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 	chunk_t notification_data;
 	notify_type_t notify_type = notify_payload->get_notify_type(notify_payload);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "process notify type %s",
-					  mapping_find(notify_type_m, notify_type));
+	DBG2(SIG_DBG_IKE, "process notify type %N", notify_type_names, notify_type);
 
 	switch (notify_type)
 	{
 		case NO_PROPOSAL_CHOSEN:
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "received a NO_PROPOSAL_CHOSEN notify, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "received a NO_PROPOSAL_CHOSEN notify, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		case INVALID_MAJOR_VERSION:
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "received a INVALID_MAJOR_VERSION notify, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "received a INVALID_MAJOR_VERSION notify, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		case INVALID_KE_PAYLOAD:
@@ -434,14 +425,12 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 			notify_data = notify_payload->get_notification_data(notify_payload);
 			dh_group = ntohs(*((u_int16_t*)notify_data.ptr));
 			
-			this->logger->log(this->logger, AUDIT, 
-							  "peer didn't accept DH group %s, it requested %s",
-							  mapping_find(diffie_hellman_group_m, old_dh_group),
-							  mapping_find(diffie_hellman_group_m, dh_group));
+			DBG1(SIG_DBG_IKE, "peer didn't accept DH group %N, it requested %N",
+				 diffie_hellman_group_names, old_dh_group,
+				 diffie_hellman_group_names, dh_group);
 			if (!this->connection->check_dh_group(this->connection, dh_group))
 			{
-				this->logger->log(this->logger, AUDIT, 
-								  "requested DH group not acceptable, aborting");
+				DBG1(SIG_DBG_IKE, "requested DH group not acceptable, aborting");
 				return DESTROY_ME;
 			}
 			retry = ike_sa_init_create(this->ike_sa);
@@ -463,11 +452,11 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 			if (chunk_equals(notification_data, this->natd_dst_hash))
 			{
 				this->natd_dst_matched = TRUE;
-				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D dst hash match");
+				DBG2(SIG_DBG_IKE, "NAT-D dst hash match");
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D dst hash mismatch");
+				DBG2(SIG_DBG_IKE, "NAT-D dst hash mismatch");
 			}
 			return SUCCESS;
 		}
@@ -482,11 +471,11 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 			if (chunk_equals(notification_data, this->natd_src_hash))
 			{
 				this->natd_src_matched = TRUE;
-				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D src hash match");
+				DBG2(SIG_DBG_IKE, "NAT-D src hash match");
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL3, "NAT-D src hash mismatch");
+				DBG2(SIG_DBG_IKE, "NAT-D src hash mismatch");
 			}
 			return SUCCESS;
 		}
@@ -494,18 +483,14 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 		{
 			if (notify_type < 16383)
 			{
-				this->logger->log(this->logger, AUDIT, 
-								  "received %s notify error (%d), deleting IKE_SA",
-								  mapping_find(notify_type_m, notify_type),
-								  notify_type);
+				DBG1(SIG_DBG_IKE, "received %N notify error, deleting IKE_SA",
+					 notify_type_names, notify_type);
 				return DESTROY_ME;	
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL, 
-								  "received %s notify (%d), ignored",
-								  mapping_find(notify_type_m, notify_type),
-								  notify_type);
+				DBG1(SIG_DBG_IKE, "received %N notify, ignored",
+					 notify_type_names, notify_type);
 				return SUCCESS;
 			}
 		}
@@ -555,8 +540,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 	/* check message type */
 	if (request->get_exchange_type(request) != IKE_SA_INIT)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "IKE_SA_INIT request of invalid type, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "IKE_SA_INIT request of invalid type, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -569,9 +553,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 		notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
 		response->add_payload(response, (payload_t*)notify);
 		
-		this->logger->log(this->logger, AUDIT,
-						  "no connection for hosts %H...%H found, deleting IKE_SA",
-						  me, other);
+		DBG1(SIG_DBG_IKE, "no connection for hosts %H...%H found, deleting IKE_SA",
+			 me, other);
 		return DESTROY_ME;
 	}
 	
@@ -623,10 +606,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, 
-								  "ignoring %s payload (%d)", 
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG2(SIG_DBG_IKE, "ignoring %N payload",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -639,8 +620,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		notify_payload_t *notify = notify_payload_create();
 		notify->set_notify_type(notify, INVALID_SYNTAX);
 		response->add_payload(response, (payload_t*)notify);
-		this->logger->log(this->logger, AUDIT, 
-						  "request message incomplete, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "request message incomplete, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -662,8 +642,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 			notify_payload_t *notify = notify_payload_create();
 			notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
 			response->add_payload(response, (payload_t*)notify);
-			this->logger->log(this->logger, AUDIT,
-							  "request did not contain any acceptable proposals, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "request did not contain any acceptable proposals, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		sa_response = sa_payload_create_from_proposal(this->proposal);	
@@ -692,10 +671,10 @@ static status_t get_response(private_ike_sa_init_t *this,
 			payload_t *payload;
 			
 			notify_group = this->connection->get_dh_group(this->connection);
-			this->logger->log(this->logger, AUDIT, 
-							  "request used inacceptable DH group %s, sending INVALID_KE_PAYLOAD with %s, deleting IKE_SA",
-							  mapping_find(diffie_hellman_group_m, used_group),
-							  mapping_find(diffie_hellman_group_m, notify_group));
+			DBG1(SIG_DBG_IKE, "request used inacceptable DH group %N, sending "
+				 "INVALID_KE_PAYLOAD with %N, deleting IKE_SA",
+				 diffie_hellman_group_names, used_group,
+				 diffie_hellman_group_names, notify_group);
 			
 			/* remove already added payloads */
 			iterator = response->get_payload_iterator(response);
@@ -740,8 +719,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 			notify_payload_t *notify = notify_payload_create();
 			notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
 			response->add_payload(response, (payload_t*)notify);
-			this->logger->log(this->logger, AUDIT,
-							  "could not get random bytes for nonce, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "could not get random bytes for nonce, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		nonce_response = nonce_payload_create();
@@ -763,8 +741,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 			notify = notify_payload_create();
 			notify->set_notify_type(notify, INVALID_SYNTAX);
 			response->add_payload(response, (payload_t*)notify);
-			this->logger->log(this->logger, AUDIT,
-							  "request contained wrong number of NAT-D payloads, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "request contained wrong number of NAT-D payloads, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		if (this->natd_dst_seen && !this->natd_dst_matched)
@@ -797,8 +774,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		notify_payload_t *notify = notify_payload_create();
 		notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
 		response->add_payload(response, (payload_t*)notify);
-		this->logger->log(this->logger, AUDIT, 
-						  "transform objects could not be created from selected proposal, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "transform objects could not be created from selected proposal, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -816,8 +792,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		 * as we don't use a crypter/signer in ike_sa_init... */
 		if (response->generate(response, NULL, NULL, &response_packet) != SUCCESS)
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "error in response generation, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "error in response generation, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		response_packet->destroy(response_packet);
@@ -870,8 +845,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != IKE_SA_INIT)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "IKE_SA_INIT response of invalid type, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "IKE_SA_INIT response of invalid type, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -885,8 +859,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	responder_spi = response->get_responder_spi(response);
 	if (responder_spi == 0)
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "response contained a SPI of zero, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "response contained a SPI of zero, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -937,9 +910,8 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "ignoring payload %s (%d)",
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG1(SIG_DBG_IKE, "ignoring payload %N",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -948,7 +920,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	
 	if (!(nonce_payload && sa_payload && ke_payload))
 	{
-		this->logger->log(this->logger, AUDIT, "response message incomplete, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "response message incomplete, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -965,8 +937,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		proposal_list = sa_payload->get_proposals (sa_payload);
 		if (proposal_list->get_count(proposal_list) != 1)
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "response did not contain a single proposal, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "response did not contain a single proposal, deleting IKE_SA");
 			while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
 			{
 				proposal->destroy(proposal);
@@ -981,8 +952,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		
 		if (this->proposal == NULL)
 		{
-			this->logger->log(this->logger, AUDIT, 
-							  "peer selected a proposal we did not offer, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "peer selected a proposal we did not offer, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 	}
@@ -1010,8 +980,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		if ((!this->natd_dst_seen && this->natd_src_seen) ||
 			(this->natd_dst_seen && !this->natd_src_seen))
 		{
-			this->logger->log(this->logger, AUDIT, 
-							"request contained wrong number of NAT-D payloads, deleting IKE_SA");
+			DBG1(SIG_DBG_IKE, "request contained wrong number of NAT-D payloads, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		if (this->natd_src_seen && !this->natd_src_matched)
@@ -1029,7 +998,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 			other = this->ike_sa->get_other_host(this->ike_sa);
 			other->set_port(other, IKEV2_NATT_PORT);
 			
-			this->logger->log(this->logger, CONTROL|LEVEL1, "switching to port %d", IKEV2_NATT_PORT);
+			DBG2(SIG_DBG_IKE, "switching to port %d", IKEV2_NATT_PORT);
 		}
 	}
 	
@@ -1043,8 +1012,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 								  this->nonce_i, this->nonce_r,
 								  TRUE, NULL, NULL) != SUCCESS)
 	{
-		this->logger->log(this->logger, AUDIT, 
-						  "transform objects could not be created from selected proposal, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "transform objects could not be created from selected proposal, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -1133,7 +1101,6 @@ ike_sa_init_t *ike_sa_init_create(ike_sa_t *ike_sa)
 	this->natd_dst_seen = FALSE;
 	this->natd_src_matched = FALSE;
 	this->natd_dst_matched = FALSE;
-	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &this->public;
 }

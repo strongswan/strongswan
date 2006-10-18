@@ -31,7 +31,6 @@
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
 #include <config/configuration.h>
-#include <utils/logger.h>
 #include <utils/randomizer.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
@@ -39,8 +38,9 @@
 #include <config/connections/connection.h>
 #include <config/policies/policy.h>
 #include <config/proposal.h>
-#include <utils/logger.h>
 
+
+#define IKE_SA_PRINTF_SPEC 'K'
 
 typedef enum ike_sa_state_t ike_sa_state_t;
 
@@ -112,9 +112,9 @@ enum ike_sa_state_t {
 };
 
 /**
- * String mappings for ike_sa_state_t.
+ * enum names for ike_sa_state_t.
  */
-extern mapping_t ike_sa_state_m[];
+extern enum_name_t *ike_sa_state_names;
 
 
 typedef struct ike_sa_t ike_sa_t;
@@ -403,20 +403,6 @@ struct ike_sa_t {
 	 * @param this			calling object
 	 */
 	void (*send_keepalive) (ike_sa_t *this);
-	
-	/**
-	 * @brief Log the status of a the ike sa to a logger.
-	 *
-	 * The status of the IKE SA and all child SAs is logged.
-	 * Supplying NULL as logger uses the internal child_sa logger
-	 * to do the logging. The log is only done if the supplied
-	 * connection name is NULL or matches the connections name.
-	 *
-	 * @param this 			calling object
-	 * @param logger		logger to use for logging
-	 * @param name			name of the connection
-	 */	
-	void (*log_status) (ike_sa_t *this, logger_t *logger, char *name);
 
 	/**
 	 * @brief Derive all keys and create the transforms for IKE communication.

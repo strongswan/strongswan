@@ -26,7 +26,8 @@
 #include "send_queue.h"
 
 #include <utils/linked_list.h>
-#include <utils/logger_manager.h>
+#include <bus/bus.h>
+#include <daemon.h>
 
 
 typedef struct private_send_queue_t private_send_queue_t;
@@ -39,7 +40,7 @@ struct private_send_queue_t {
 	/**
 	 * Public part of the send_queue_t object
 	 */
- 	send_queue_t public;
+	send_queue_t public;
 
 	/**
 	 * The packets are stored in a linked list
@@ -56,11 +57,6 @@ struct private_send_queue_t {
 	 * This condvar is used to wake up such a thread
 	 */
 	pthread_cond_t condvar;
-
-	/**
-	 * Logger reference
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -111,8 +107,7 @@ static void add(private_send_queue_t *this, packet_t *packet)
 	
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
-	this->logger->log(this->logger, CONTROL, 
-					  "sending packet: from %#H to %#H", src, dst);
+	DBG1(SIG_DBG_NET, "sending packet: from %#H to %#H", src, dst);
 	
 	pthread_mutex_lock(&this->mutex);
 	this->list->insert_last(this->list, packet);
@@ -152,7 +147,6 @@ send_queue_t *send_queue_create(void)
 	this->list = linked_list_create();
 	pthread_mutex_init(&this->mutex, NULL);
 	pthread_cond_init(&this->condvar, NULL);
-	this->logger = logger_manager->get_logger(logger_manager, SOCKET);
 	
 	return (&this->public);
 }

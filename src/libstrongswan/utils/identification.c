@@ -35,11 +35,7 @@
 
 #include <asn1/asn1.h>
 
-/** 
- * String mappings for id_type_t.
- */
-
-static const char *const id_type_name[] = {
+ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_ANY",
 	"ID_IPV4_ADDR",
 	"ID_FQDN",
@@ -51,11 +47,11 @@ static const char *const id_type_name[] = {
 	"ID_IPV6_ADDR_RANGE",
 	"ID_DER_ASN1_DN",
 	"ID_DER_ASN1_GN",
-	"ID_KEY_ID",
-};
+	"ID_KEY_ID");
+ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_DER_ASN1_GN_URI, ID_KEY_ID,
+	"ID_DER_ASN1_GN_URI");
+ENUM_END(id_type_names, ID_DER_ASN1_GN_URI);
 
-enum_names id_type_names =
-    { ID_ANY, ID_KEY_ID, id_type_name, NULL };
 
 /**
  * X.501 acronyms for well known object identifiers (OIDs)

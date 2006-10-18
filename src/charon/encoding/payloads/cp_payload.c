@@ -28,18 +28,12 @@
 #include <encoding/payloads/encodings.h>
 #include <utils/linked_list.h>
 
-
-/** 
- * String mappings for config_type_t.
- */
-mapping_t config_type_m[] = {
-	{CFG_REQUEST, "CFG_REQUEST"},
-	{CFG_REPLY, "CFG_REPLY"},
-	{CFG_SET, "CFG_SET"},
-	{CFG_ACK, "CFG_ACK"},
-	{MAPPING_END, NULL}
-};
-
+ENUM(config_type_names, CFG_REQUEST, CFG_ACK,
+	"CFG_REQUEST",
+	"CFG_REPLY",
+	"CFG_SET",
+	"CFG_ACK",
+);
 
 typedef struct private_cp_payload_t private_cp_payload_t;
 
@@ -77,13 +71,6 @@ struct private_cp_payload_t {
 	 * Config Type.
 	 */
 	u_int8_t config_type;
-	
-	/**
-	 * @brief Computes the length of this payload.
-	 *
-	 * @param this 	calling private_cp_payload_t object
-	 */
-	void (*compute_length) (private_cp_payload_t *this);
 };
 
 /**
@@ -190,11 +177,30 @@ static void set_next_type(private_cp_payload_t *this,payload_type_t type)
 }
 
 /**
+ * recompute the length of the payload.
+ */
+static void compute_length(private_cp_payload_t *this)
+{
+	iterator_t *iterator;
+	size_t length = CP_PAYLOAD_HEADER_LENGTH;
+	iterator = this->attributes->create_iterator(this->attributes,TRUE);
+	while (iterator->has_next(iterator))
+	{
+		payload_t *current_attribute;
+		iterator->current(iterator,(void **) &current_attribute);
+		length += current_attribute->get_length(current_attribute);
+	}
+	iterator->destroy(iterator);
+	
+	this->payload_length = length;
+}
+
+/**
  * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_cp_payload_t *this)
 {
-	this->compute_length(this);
+	compute_length(this);
 	return this->payload_length;
 }
 
@@ -212,7 +218,7 @@ static iterator_t *create_configuration_attribute_iterator (private_cp_payload_t
 static void add_configuration_attribute (private_cp_payload_t *this,configuration_attribute_t *attribute)
 {
 	this->attributes->insert_last(this->attributes,(void *) attribute);
-	this->compute_length(this);
+	compute_length(this);
 }
 
 /**
@@ -229,25 +235,6 @@ static void set_config_type (private_cp_payload_t *this,config_type_t config_typ
 static config_type_t get_config_type (private_cp_payload_t *this)
 {
 	return this->config_type;
-}
-
-/**
- * Implementation of private_cp_payload_t.compute_length.
- */
-static void compute_length (private_cp_payload_t *this)
-{
-	iterator_t *iterator;
-	size_t length = CP_PAYLOAD_HEADER_LENGTH;
-	iterator = this->attributes->create_iterator(this->attributes,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		payload_t *current_attribute;
-		iterator->current(iterator,(void **) &current_attribute);
-		length += current_attribute->get_length(current_attribute);
-	}
-	iterator->destroy(iterator);
-	
-	this->payload_length = length;
 }
 
 /**
@@ -291,10 +278,6 @@ cp_payload_t *cp_payload_create()
 	this->public.set_config_type = (void (*) (cp_payload_t *, config_type_t)) set_config_type;
 	this->public.get_config_type = (config_type_t (*) (cp_payload_t *)) get_config_type;
 	this->public.destroy = (void (*) (cp_payload_t *)) destroy;
-	
-	
-	/* private functions */
-	this->compute_length = compute_length;
 	
 	/* set default values of the fields */
 	this->critical = FALSE;

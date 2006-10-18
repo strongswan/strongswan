@@ -27,10 +27,9 @@
 #include <errno.h>
 
 #include "thread_pool.h"
- 
+
 #include <daemon.h>
 #include <queues/job_queue.h>
-#include <utils/logger.h>
 
 
 typedef struct private_thread_pool_t private_thread_pool_t;
@@ -47,17 +46,17 @@ struct private_thread_pool_t {
 	/**
 	 * Number of running threads.
 	 */
-	size_t pool_size;
+	u_int pool_size;
+	
+	/**
+	 * Number of threads waiting for work
+	 */
+	u_int idle_threads;
 	
 	/**
 	 * Array of thread ids.
 	 */
 	pthread_t *threads;
-	
-	/**
-	 * Logger of the thread pool.
-	 */
-	logger_t *logger;
 } ;
 
 /**
@@ -71,13 +70,14 @@ static void process_jobs(private_thread_pool_t *this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->logger->log(this->logger, CONTROL,
-					  "worker thread running,    thread_ID: %06u",
-					  (int)pthread_self());
+	DBG1(SIG_DBG_JOB, "worker thread running, thread_ID: %06u",
+		 (int)pthread_self());
 	
 	while (TRUE)
 	{
+		this->idle_threads++;
 		job = charon->job_queue->get(charon->job_queue);
+		this->idle_threads--;
 		
 		status = job->execute(job);
 		
@@ -91,9 +91,17 @@ static void process_jobs(private_thread_pool_t *this)
 /**
  * Implementation of thread_pool_t.get_pool_size.
  */
-static size_t get_pool_size(private_thread_pool_t *this)
+static u_int get_pool_size(private_thread_pool_t *this)
 {
 	return this->pool_size;
+}
+
+/**
+ * Implementation of thread_pool_t.get_idle_threads.
+ */
+static u_int get_idle_threads(private_thread_pool_t *this)
+{
+	return this->idle_threads;
 }
 
 /**
@@ -103,9 +111,9 @@ static void destroy(private_thread_pool_t *this)
 {	
 	int current;
 	/* flag thread for termination */
-	for (current = 0; current < this->pool_size; current++) {
-		this->logger->log(this->logger, CONTROL, 
-						  "cancelling worker thread #%d", current+1);
+	for (current = 0; current < this->pool_size; current++)
+	{
+		DBG1(SIG_DBG_JOB, "cancelling worker thread #%d", current+1);
 		pthread_cancel(this->threads[current]);
 	}
 	
@@ -113,13 +121,11 @@ static void destroy(private_thread_pool_t *this)
 	for (current = 0; current < this->pool_size; current++) {
 		if (pthread_join(this->threads[current], NULL) == 0)
 		{
-			this->logger->log(this->logger, CONTROL, 
-							  "worker thread #%d terminated", current+1);
+			DBG1(SIG_DBG_JOB, "worker thread #%d terminated", current+1);
 		}
 		else
 		{
-			this->logger->log(this->logger, ERROR, 
-							  "could not terminate worker thread #%d", current+1);
+			DBG1(SIG_DBG_JOB, "could not terminate worker thread #%d", current+1);
 		}
 	}
 	
@@ -138,39 +144,36 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 	
 	/* fill in public fields */
 	this->public.destroy = (void(*)(thread_pool_t*))destroy;
-	this->public.get_pool_size = (size_t(*)(thread_pool_t*))get_pool_size;
+	this->public.get_pool_size = (u_int(*)(thread_pool_t*))get_pool_size;
+	this->public.get_idle_threads = (u_int(*)(thread_pool_t*))get_idle_threads;
 	
 	/* initialize member */
 	this->pool_size = pool_size;
+	this->idle_threads = 0;
 	this->threads = malloc(sizeof(pthread_t) * pool_size);
-	this->logger = logger_manager->get_logger(logger_manager, THREAD_POOL);
 	
 	/* try to create as many threads as possible, up to pool_size */
-	for (current = 0; current < pool_size; current++) 
+	for (current = 0; current < pool_size; current++)
 	{
-		if (pthread_create(&(this->threads[current]), NULL, 
+		if (pthread_create(&(this->threads[current]), NULL,
 						   (void*(*)(void*))process_jobs, this) == 0)
 		{
-			this->logger->log(this->logger, CONTROL, 
-							  "created worker thread #%d", current+1);
+			DBG1(SIG_DBG_JOB, "created worker thread #%d", current+1);
 		}
 		else
 		{
 			/* creation failed, is it the first one? */	
-			if (current == 0) 
+			if (current == 0)
 			{
-				this->logger->log(this->logger, ERROR, "Could not create any thread");
 				free(this->threads);
 				free(this);
-				return NULL;
+				charon->kill(charon, "could not create any worker threads");
 			}
 			/* not all threads could be created, but at least one :-/ */
-			this->logger->log(this->logger, ERROR,
-							  "Could only create %d from requested %d threads!",
-							  current, pool_size);
-				
+			DBG1(SIG_DBG_JOB, "could only create %d from requested %d threads!",
+				 current, pool_size);
 			this->pool_size = current;
-			return (thread_pool_t*)this;
+			break;
 		}
 	}
 	return (thread_pool_t*)this;

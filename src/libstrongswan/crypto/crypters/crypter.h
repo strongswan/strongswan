@@ -57,10 +57,10 @@ enum encryption_algorithm_t {
 	ENCR_AES_CTR = 13
 };
 
-/** 
- * String mappings for encryption_algorithm_t.
+/**
+ * enum name for encryption_algorithm_t.
  */
-extern mapping_t encryption_algorithm_m[];
+extern enum_name_t *encryption_algorithm_names;
 
 
 typedef struct crypter_t crypter_t;

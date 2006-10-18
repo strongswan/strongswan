@@ -45,11 +45,6 @@ struct private_delete_ike_sa_job_t {
 	 * Should the IKE_SA be deleted if it is in ESTABLISHED state?
 	 */
 	bool delete_if_established;
-	
-	/**
-	 * logger ref
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -72,7 +67,7 @@ static status_t execute(private_delete_ike_sa_job_t *this)
 		if (charon->ike_sa_manager->delete(charon->ike_sa_manager, 
 			this->ike_sa_id) != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR|LEVEL1, "IKE SA didn't exist anymore");
+			DBG2(SIG_DBG_JOB, "IKE SA didn't exist anymore");
 		}
 		return DESTROY_ME;
 	}
@@ -96,8 +91,7 @@ static status_t execute(private_delete_ike_sa_job_t *this)
 			default:
 			{
 				/* IKE_SA is half open and gets destroyed */
-				this->logger->log(this->logger, AUDIT,
-								"deleting half open IKE_SA after timeout");
+				DBG1(SIG_DBG_JOB, "deleting half open IKE_SA after timeout");
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 				return DESTROY_ME;
 			}
@@ -130,7 +124,6 @@ delete_ike_sa_job_t *delete_ike_sa_job_create(ike_sa_id_t *ike_sa_id,
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
 	this->delete_if_established = delete_if_established;
-	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);
 }

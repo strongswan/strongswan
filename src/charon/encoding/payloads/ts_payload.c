@@ -69,13 +69,6 @@ struct private_ts_payload_t {
 	 * Contains the traffic selectors of type traffic_selector_substructure_t.
 	 */
 	linked_list_t *traffic_selectors;
-	
-	/**
-	 * @brief Computes the length of this payload.
-	 *
-	 * @param this 	calling private_ts_payload_t object
-	 */
-	void (*compute_length) (private_ts_payload_t *this);
 };
 
 /**
@@ -196,11 +189,34 @@ static void set_next_type(private_ts_payload_t *this,payload_type_t type)
 }
 
 /**
+ * recompute the length of the payload.
+ */
+static void compute_length (private_ts_payload_t *this)
+{
+	iterator_t *iterator;
+	size_t ts_count = 0;
+	size_t length = TS_PAYLOAD_HEADER_LENGTH;
+	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors,TRUE);
+	while (iterator->has_next(iterator))
+	{
+		payload_t * current_traffic_selector;
+		iterator->current(iterator,(void **) &current_traffic_selector);
+		length += current_traffic_selector->get_length(current_traffic_selector);
+		ts_count++;
+	}
+	iterator->destroy(iterator);
+	
+	this->number_of_traffic_selectors= ts_count;
+	this->payload_length = length;	
+
+}
+
+/**
  * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_ts_payload_t *this)
 {
-	this->compute_length(this);
+	compute_length(this);
 	return this->payload_length;
 }
 
@@ -260,30 +276,6 @@ static linked_list_t *get_traffic_selectors(private_ts_payload_t *this)
 }
 
 /**
- * Implementation of private_ts_payload_t.compute_length.
- */
-static void compute_length (private_ts_payload_t *this)
-{
-	iterator_t *iterator;
-	size_t ts_count = 0;
-	size_t length = TS_PAYLOAD_HEADER_LENGTH;
-	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		payload_t * current_traffic_selector;
-		iterator->current(iterator,(void **) &current_traffic_selector);
-		length += current_traffic_selector->get_length(current_traffic_selector);
-		ts_count++;
-	}
-	iterator->destroy(iterator);
-	
-	this->number_of_traffic_selectors= ts_count;
-	this->payload_length = length;	
-
-}
-
-
-/**
  * Implementation of payload_t.destroy and ts_payload_t.destroy.
  */
 static void destroy(private_ts_payload_t *this)
@@ -325,9 +317,6 @@ ts_payload_t *ts_payload_create(bool is_initiator)
 	this->public.add_traffic_selector_substructure = (void (*) (ts_payload_t *,traffic_selector_substructure_t *)) add_traffic_selector_substructure;
 	this->public.create_traffic_selector_substructure_iterator = (iterator_t* (*) (ts_payload_t *,bool)) create_traffic_selector_substructure_iterator;
 	this->public.get_traffic_selectors = (linked_list_t *(*) (ts_payload_t *)) get_traffic_selectors;
-	
-	/* private functions */
-	this->compute_length = compute_length;
 	
 	/* private variables */
 	this->critical = FALSE;

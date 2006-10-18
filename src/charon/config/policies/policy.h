@@ -58,11 +58,11 @@ enum auth_method_t {
 };
 
 /**
- * string mappings for auth_method_t.
- * 
+ * enum names for auth_method_t.
+ *
  * @ingroup config
  */
-extern enum_names auth_method_names;
+extern enum_name_t *auth_method_names;
 
 
 typedef enum dpd_action_t dpd_action_t;
@@ -86,9 +86,9 @@ enum dpd_action_t {
 };
 
 /**
- * String mappings for dpd_action_t.
+ * enum names for dpd_action_t.
  */
-extern enum_names dpd_action_names;
+extern enum_name_t *dpd_action_names;
 
 
 typedef struct policy_t policy_t;

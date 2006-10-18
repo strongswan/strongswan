@@ -40,11 +40,6 @@ struct private_rekey_ike_sa_job_t {
 	 * ID of the IKE_SA to rekey
 	 */
 	ike_sa_id_t *ike_sa_id;
-	
-	/**
-	 * Logger ref
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -66,8 +61,7 @@ static status_t execute(private_rekey_ike_sa_job_t *this)
 											  this->ike_sa_id);
 	if (ike_sa == NULL)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "IKE_SA to rekey not found");
+		DBG2(SIG_DBG_JOB, "IKE_SA %J to rekey not found", this->ike_sa_id);
 		return DESTROY_ME;
 	}
 	ike_sa->rekey(ike_sa);
@@ -99,7 +93,6 @@ rekey_ike_sa_job_t *rekey_ike_sa_job_create(ike_sa_id_t *ike_sa_id)
 		
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);
 }

@@ -29,14 +29,11 @@
 #include <daemon.h>
 #include <encoding/payloads/encodings.h>
 #include <utils/linked_list.h>
-#include <utils/logger.h>
 #include <encoding/generator.h>
 #include <encoding/parser.h>
 #include <utils/iterator.h>
 #include <utils/randomizer.h>
 #include <crypto/signers/signer.h>
-
-
 
 
 typedef struct private_encryption_payload_t private_encryption_payload_t;
@@ -95,32 +92,6 @@ struct private_encryption_payload_t {
 	 * Contained payloads of this encrpytion_payload.
 	 */
 	linked_list_t *payloads;
-	
-	/** 
-	 * logger for this payload, uses MESSAGE context
-	 */
-	logger_t *logger;
-	
-	/**
-	 * @brief Computes the length of this payload.
-	 *
-	 * @param this 	calling private_encryption_payload_t object
-	 */
-	void (*compute_length) (private_encryption_payload_t *this);
-	
-	/**
-	 * @brief Generate payloads (unencrypted) in chunk decrypted.
-	 * 
-	 * @param this 	calling private_encryption_payload_t object
-	 */
-	void (*generate) (private_encryption_payload_t *this);
-		
-	/**
-	 * @brief Parse payloads from a (unencrypted) chunk.
-	 * 
-	 * @param this 	calling private_encryption_payload_t object
-	 */
-	status_t (*parse) (private_encryption_payload_t *this);
 };
 
 /**
@@ -212,389 +183,7 @@ static void set_next_type(private_encryption_payload_t *this, payload_type_t typ
 }
 
 /**
- * Implementation of payload_t.get_length.
- */
-static size_t get_length(private_encryption_payload_t *this)
-{
-	this->compute_length(this);
-	return this->payload_length;
-}
-
-/**
- * Implementation of payload_t.create_payload_iterator.
- */
-static  iterator_t *create_payload_iterator (private_encryption_payload_t *this, bool forward)
-{
-	return (this->payloads->create_iterator(this->payloads, forward));
-}
-
-/**
- * Implementation of payload_t.add_payload.
- */
-static void add_payload(private_encryption_payload_t *this, payload_t *payload)
-{
-	payload_t *last_payload;
-	if (this->payloads->get_count(this->payloads) > 0)
-	{
-		this->payloads->get_last(this->payloads,(void **) &last_payload);
-		last_payload->set_next_type(last_payload, payload->get_type(payload));
-	}
-	else
-	{
-		this->next_payload = payload->get_type(payload);
-	}
-	payload->set_next_type(payload, NO_PAYLOAD);
-	this->payloads->insert_last(this->payloads, (void*)payload);
-	this->compute_length(this);
-}
-
-/**
- * Implementation of encryption_payload_t.remove_first_payload.
- */
-static status_t remove_first_payload(private_encryption_payload_t *this, payload_t **payload)
-{
-	return this->payloads->remove_first(this->payloads, (void**)payload);
-}
-
-/**
- * Implementation of encryption_payload_t.get_payload_count.
- */
-static size_t get_payload_count(private_encryption_payload_t *this)
-{
-	return this->payloads->get_count(this->payloads);
-}
-
-
-/**
- * Implementation of encryption_payload_t.encrypt.
- */
-static status_t encrypt(private_encryption_payload_t *this)
-{
-	chunk_t iv, padding, to_crypt, result;
-	randomizer_t *randomizer;
-	status_t status;
-	size_t block_size;
-	
-	if (this->signer == NULL || this->crypter == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "could not encrypt, signer/crypter not set");
-		return INVALID_STATE;
-	}
-	
-	/* for random data in iv and padding */
-	randomizer = randomizer_create();
-
-
-	/* build payload chunk */
-	this->generate(this);
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "encrypting payloads");
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data to encrypt", this->decrypted);
-	
-	/* build padding */
-	block_size = this->crypter->get_block_size(this->crypter);
-	padding.len = block_size - ((this->decrypted.len + 1) %  block_size);
-	status = randomizer->allocate_pseudo_random_bytes(randomizer, padding.len, &padding);
-	if (status != SUCCESS)
-	{
-		randomizer->destroy(randomizer);
-		return status;
-	}
-	
-	/* concatenate payload data, padding, padding len */
-	to_crypt.len = this->decrypted.len + padding.len + 1;
-	to_crypt.ptr = malloc(to_crypt.len);
-
-	memcpy(to_crypt.ptr, this->decrypted.ptr, this->decrypted.len);
-	memcpy(to_crypt.ptr + this->decrypted.len, padding.ptr, padding.len);
-	*(to_crypt.ptr + to_crypt.len - 1) = padding.len;
-		
-	/* build iv */
-	iv.len = block_size;
-	status = randomizer->allocate_pseudo_random_bytes(randomizer, iv.len, &iv);
-	randomizer->destroy(randomizer);
-	if (status != SUCCESS)
-	{
-		chunk_free(&to_crypt);
-		chunk_free(&padding);
-		return status;
-	}
-	
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before encryption with padding", to_crypt);
-		
-	/* encrypt to_crypt chunk */
-	free(this->encrypted.ptr);
-	status = this->crypter->encrypt(this->crypter, to_crypt, iv, &result);
-	free(padding.ptr);
-	free(to_crypt.ptr);
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "encryption failed");
-		free(iv.ptr);
-		return status;
-	}
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after encryption", result);
-	
-	
-	/* build encrypted result with iv and signature */
-	this->encrypted.len = iv.len + result.len + this->signer->get_block_size(this->signer);
-	free(this->encrypted.ptr);
-	this->encrypted.ptr = malloc(this->encrypted.len);
-	
-	/* fill in result, signature is left out */
-	memcpy(this->encrypted.ptr, iv.ptr, iv.len);
-	memcpy(this->encrypted.ptr + iv.len, result.ptr, result.len);
-	
-	free(result.ptr);
-	free(iv.ptr);
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after encryption with IV and (invalid) signature", this->encrypted);
-	
-	return SUCCESS;
-}
-
-/**
- * Implementation of encryption_payload_t.encrypt.
- */
-static status_t decrypt(private_encryption_payload_t *this)
-{
-	chunk_t iv, concatenated;
-	u_int8_t padding_length;
-	status_t status;
-	
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "decrypting encryption payload");
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before decryption with IV and (invalid) signature", this->encrypted);
-	
-	
-	if (this->signer == NULL || this->crypter == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "could not decrypt, no crypter/signer set");
-		return INVALID_STATE;
-	}
-	
-	/* get IV */
-	iv.len = this->crypter->get_block_size(this->crypter);
-	
-	iv.ptr = this->encrypted.ptr;
-	
-	/* point concatenated to data + padding + padding_length*/
-	concatenated.ptr = this->encrypted.ptr + iv.len;
-	concatenated.len = this->encrypted.len - iv.len - this->signer->get_block_size(this->signer);
-		
-	/* check the size of input:
-	 * concatenated  must be at least on block_size of crypter
-	 */
-	if (concatenated.len < iv.len)
-	{
-		this->logger->log(this->logger, ERROR, "could not decrypt, invalid input");
-		return FAILED;
-	}
-	
-	/* free previus data, if any */
-	free(this->decrypted.ptr);
-	
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data before decryption", concatenated);
-	
-	status = this->crypter->decrypt(this->crypter, concatenated, iv, &(this->decrypted));
-	if (status != SUCCESS)
-	{
-		this->logger->log(this->logger, ERROR, "could not decrypt, decryption failed");
-		return FAILED;
-	}
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after decryption with padding", this->decrypted);
-	
-	
-	/* get padding length, sits just bevore signature */
-	padding_length = *(this->decrypted.ptr + this->decrypted.len - 1);
-	/* add one byte to the padding length, since the padding_length field is not included */
-	padding_length++;
-	this->decrypted.len -= padding_length;
-	
-	/* check size again */
-	if (padding_length > concatenated.len || this->decrypted.len < 0)
-	{
-		this->logger->log(this->logger, ERROR, "decryption failed, invalid padding length found. Invalid key?");
-		/* decryption failed :-/ */
-		return FAILED;
-	}
-	
-	/* free padding */
-	this->decrypted.ptr = realloc(this->decrypted.ptr, this->decrypted.len);
-	this->logger->log_chunk(this->logger, RAW|LEVEL2, "data after decryption without padding", this->decrypted);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "decryption successful, trying to parse content");
-	return (this->parse(this));
-}
-
-/**
- * Implementation of encryption_payload_t.set_transforms.
- */
-static void set_transforms(private_encryption_payload_t *this, crypter_t* crypter, signer_t* signer)
-{
-	this->signer = signer;
-	this->crypter = crypter;
-}
-
-/**
- * Implementation of encryption_payload_t.build_signature.
- */
-static status_t build_signature(private_encryption_payload_t *this, chunk_t data)
-{
-	chunk_t data_without_sig = data;
-	chunk_t sig;
-	
-	if (this->signer == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "unable to build signature, no signer set");
-		return INVALID_STATE;
-	}
-	
-	sig.len = this->signer->get_block_size(this->signer);
-	data_without_sig.len -= sig.len;
-	sig.ptr = data.ptr + data_without_sig.len;
-	this->logger->log(this->logger, CONTROL|LEVEL2, "building signature");
-	this->signer->get_signature(this->signer, data_without_sig, sig.ptr);
-	return SUCCESS;
-}
-
-/**
- * Implementation of encryption_payload_t.verify_signature.
- */
-static status_t verify_signature(private_encryption_payload_t *this, chunk_t data)
-{
-	chunk_t sig, data_without_sig;
-	bool valid;
-	
-	if (this->signer == NULL)
-	{
-		this->logger->log(this->logger, ERROR, "unable to verify signature, no signer set");
-		return INVALID_STATE;
-	}
-	/* find signature in data chunk */
-	sig.len = this->signer->get_block_size(this->signer);
-	if (data.len <= sig.len)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "unable to verify signature, invalid input");
-		return FAILED;
-	}
-	sig.ptr = data.ptr + data.len - sig.len;
-	
-	/* verify it */
-	data_without_sig.len = data.len - sig.len;
-	data_without_sig.ptr = data.ptr;
-	valid = this->signer->verify_signature(this->signer, data_without_sig, sig);
-	
-	if (!valid)
-	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "signature verification failed");
-		return FAILED;
-	}
-	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "signature verification successful");
-	return SUCCESS;
-}
-
-/**
- * Implementation of private_encryption_payload_t.generate.
- */
-static void generate(private_encryption_payload_t *this)
-{
-	payload_t *current_payload, *next_payload;
-	generator_t *generator;
-	iterator_t *iterator;
-	
-	/* recalculate length before generating */
-	this->compute_length(this);
-	
-	/* create iterator */
-	iterator = this->payloads->create_iterator(this->payloads, TRUE);
-	
-	/* get first payload */
-	if (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&current_payload);
-		this->next_payload = current_payload->get_type(current_payload);
-	}
-	else
-	{
-		/* no paylads? */
-		this->logger->log(this->logger, CONTROL|LEVEL1, "generating contained payloads, but no available");
-		free(this->decrypted.ptr);
-		this->decrypted = CHUNK_INITIALIZER;
-		iterator->destroy(iterator);
-		return;
-	}
-	
-	generator = generator_create();
-	
-	/* build all payload, except last */
-	while(iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&next_payload);
-		current_payload->set_next_type(current_payload, next_payload->get_type(next_payload));
-		generator->generate_payload(generator, current_payload);
-		current_payload = next_payload;
-	}
-	iterator->destroy(iterator);
-	
-	/* build last payload */
-	current_payload->set_next_type(current_payload, NO_PAYLOAD);
-	generator->generate_payload(generator, current_payload);
-	
-	/* free already generated data */
-	free(this->decrypted.ptr);
-	
-	generator->write_to_chunk(generator, &(this->decrypted));
-	generator->destroy(generator);
-	this->logger->log(this->logger, CONTROL|LEVEL1, "successfully generated content in encrpytion payload");
-}
-
-/**
- * Implementation of private_encryption_payload_t.parse.
- */
-static status_t parse(private_encryption_payload_t *this)
-{
-	parser_t *parser;
-	status_t status;
-	payload_type_t current_payload_type;
-	
-	/* build a parser on the decrypted data */
-	parser = parser_create(this->decrypted);
-	
-	current_payload_type = this->next_payload;
-	/* parse all payloads */
-	while (current_payload_type != NO_PAYLOAD)
-	{
-		payload_t *current_payload;	
-		
-		status = parser->parse_payload(parser, current_payload_type, (payload_t**)&current_payload);
-		if (status != SUCCESS)
-		{
-			parser->destroy(parser);
-			return PARSE_ERROR;
-		}
-
-		status = current_payload->verify(current_payload);
-		if (status != SUCCESS)
-		{
-			this->logger->log(this->logger, ERROR, "%s verification failed", 
-								mapping_find(payload_type_m,current_payload->get_type(current_payload)));
-			current_payload->destroy(current_payload);
-			parser->destroy(parser);
-			return VERIFY_ERROR;
-		}
-
-		/* get next payload type */
-		current_payload_type = current_payload->get_next_type(current_payload);
-		
-		this->payloads->insert_last(this->payloads,current_payload);
-	}
-	parser->destroy(parser);
-	this->logger->log(this->logger, CONTROL|LEVEL1, "succesfully parsed content of encryption payload");
-	return SUCCESS;
-}
-
-/**
- * Implementation of private_encryption_payload_t.compute_length.
+ * (re-)compute the lenght of the whole payload
  */
 static void compute_length(private_encryption_payload_t *this)
 {
@@ -627,6 +216,384 @@ static void compute_length(private_encryption_payload_t *this)
 	this->payload_length = length;
 }
 
+/**
+ * Implementation of payload_t.get_length.
+ */
+static size_t get_length(private_encryption_payload_t *this)
+{
+	compute_length(this);
+	return this->payload_length;
+}
+
+/**
+ * Implementation of payload_t.create_payload_iterator.
+ */
+static  iterator_t *create_payload_iterator (private_encryption_payload_t *this, bool forward)
+{
+	return (this->payloads->create_iterator(this->payloads, forward));
+}
+
+/**
+ * Implementation of payload_t.add_payload.
+ */
+static void add_payload(private_encryption_payload_t *this, payload_t *payload)
+{
+	payload_t *last_payload;
+	if (this->payloads->get_count(this->payloads) > 0)
+	{
+		this->payloads->get_last(this->payloads,(void **) &last_payload);
+		last_payload->set_next_type(last_payload, payload->get_type(payload));
+	}
+	else
+	{
+		this->next_payload = payload->get_type(payload);
+	}
+	payload->set_next_type(payload, NO_PAYLOAD);
+	this->payloads->insert_last(this->payloads, (void*)payload);
+	compute_length(this);
+}
+
+/**
+ * Implementation of encryption_payload_t.remove_first_payload.
+ */
+static status_t remove_first_payload(private_encryption_payload_t *this, payload_t **payload)
+{
+	return this->payloads->remove_first(this->payloads, (void**)payload);
+}
+
+/**
+ * Implementation of encryption_payload_t.get_payload_count.
+ */
+static size_t get_payload_count(private_encryption_payload_t *this)
+{
+	return this->payloads->get_count(this->payloads);
+}
+
+/**
+ * Generate payload before encryption.
+ */
+static void generate(private_encryption_payload_t *this)
+{
+	payload_t *current_payload, *next_payload;
+	generator_t *generator;
+	iterator_t *iterator;
+	
+	/* recalculate length before generating */
+	compute_length(this);
+	
+	/* create iterator */
+	iterator = this->payloads->create_iterator(this->payloads, TRUE);
+	
+	/* get first payload */
+	if (iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&current_payload);
+		this->next_payload = current_payload->get_type(current_payload);
+	}
+	else
+	{
+		/* no paylads? */
+		DBG2(SIG_DBG_ENC, "generating contained payloads, but none available");
+		free(this->decrypted.ptr);
+		this->decrypted = CHUNK_INITIALIZER;
+		iterator->destroy(iterator);
+		return;
+	}
+	
+	generator = generator_create();
+	
+	/* build all payload, except last */
+	while(iterator->has_next(iterator))
+	{
+		iterator->current(iterator, (void**)&next_payload);
+		current_payload->set_next_type(current_payload, next_payload->get_type(next_payload));
+		generator->generate_payload(generator, current_payload);
+		current_payload = next_payload;
+	}
+	iterator->destroy(iterator);
+	
+	/* build last payload */
+	current_payload->set_next_type(current_payload, NO_PAYLOAD);
+	generator->generate_payload(generator, current_payload);
+	
+	/* free already generated data */
+	free(this->decrypted.ptr);
+	
+	generator->write_to_chunk(generator, &(this->decrypted));
+	generator->destroy(generator);
+	DBG2(SIG_DBG_ENC, "successfully generated content in encryption payload");
+}
+
+/**
+ * Implementation of encryption_payload_t.encrypt.
+ */
+static status_t encrypt(private_encryption_payload_t *this)
+{
+	chunk_t iv, padding, to_crypt, result;
+	randomizer_t *randomizer;
+	status_t status;
+	size_t block_size;
+	
+	if (this->signer == NULL || this->crypter == NULL)
+	{
+		DBG1(SIG_DBG_ENC, "could not encrypt, signer/crypter not set");
+		return INVALID_STATE;
+	}
+	
+	/* for random data in iv and padding */
+	randomizer = randomizer_create();
+	
+	/* build payload chunk */
+	generate(this);
+	
+	DBG2(SIG_DBG_ENC, "encrypting payloads");
+	DBG3(SIG_DBG_ENC, "data to encrypt %B", &this->decrypted);
+	
+	/* build padding */
+	block_size = this->crypter->get_block_size(this->crypter);
+	padding.len = block_size - ((this->decrypted.len + 1) %  block_size);
+	status = randomizer->allocate_pseudo_random_bytes(randomizer, padding.len, &padding);
+	if (status != SUCCESS)
+	{
+		randomizer->destroy(randomizer);
+		return status;
+	}
+	
+	/* concatenate payload data, padding, padding len */
+	to_crypt.len = this->decrypted.len + padding.len + 1;
+	to_crypt.ptr = malloc(to_crypt.len);
+
+	memcpy(to_crypt.ptr, this->decrypted.ptr, this->decrypted.len);
+	memcpy(to_crypt.ptr + this->decrypted.len, padding.ptr, padding.len);
+	*(to_crypt.ptr + to_crypt.len - 1) = padding.len;
+		
+	/* build iv */
+	iv.len = block_size;
+	status = randomizer->allocate_pseudo_random_bytes(randomizer, iv.len, &iv);
+	randomizer->destroy(randomizer);
+	if (status != SUCCESS)
+	{
+		chunk_free(&to_crypt);
+		chunk_free(&padding);
+		return status;
+	}
+	
+	DBG3(SIG_DBG_ENC, "data before encryption with padding %B", &to_crypt);
+	
+	/* encrypt to_crypt chunk */
+	free(this->encrypted.ptr);
+	status = this->crypter->encrypt(this->crypter, to_crypt, iv, &result);
+	free(padding.ptr);
+	free(to_crypt.ptr);
+	if (status != SUCCESS)
+	{
+		DBG2(SIG_DBG_ENC, "encryption failed");
+		free(iv.ptr);
+		return status;
+	}
+	DBG3(SIG_DBG_ENC, "data after encryption %B", &result);
+	
+	/* build encrypted result with iv and signature */
+	this->encrypted.len = iv.len + result.len + this->signer->get_block_size(this->signer);
+	free(this->encrypted.ptr);
+	this->encrypted.ptr = malloc(this->encrypted.len);
+	
+	/* fill in result, signature is left out */
+	memcpy(this->encrypted.ptr, iv.ptr, iv.len);
+	memcpy(this->encrypted.ptr + iv.len, result.ptr, result.len);
+	
+	free(result.ptr);
+	free(iv.ptr);
+	DBG3(SIG_DBG_ENC, "data after encryption with IV and (invalid) signature %B",
+		 &this->encrypted);
+	
+	return SUCCESS;
+}
+
+/**
+ * Parse the payloads after decryption.
+ */
+static status_t parse(private_encryption_payload_t *this)
+{
+	parser_t *parser;
+	status_t status;
+	payload_type_t current_payload_type;
+	
+	/* build a parser on the decrypted data */
+	parser = parser_create(this->decrypted);
+	
+	current_payload_type = this->next_payload;
+	/* parse all payloads */
+	while (current_payload_type != NO_PAYLOAD)
+	{
+		payload_t *current_payload;	
+		
+		status = parser->parse_payload(parser, current_payload_type, (payload_t**)&current_payload);
+		if (status != SUCCESS)
+		{
+			parser->destroy(parser);
+			return PARSE_ERROR;
+		}
+
+		status = current_payload->verify(current_payload);
+		if (status != SUCCESS)
+		{
+			DBG1(SIG_DBG_ENC, "%N verification failed",
+				 payload_type_names, current_payload->get_type(current_payload));
+			current_payload->destroy(current_payload);
+			parser->destroy(parser);
+			return VERIFY_ERROR;
+		}
+
+		/* get next payload type */
+		current_payload_type = current_payload->get_next_type(current_payload);
+		
+		this->payloads->insert_last(this->payloads,current_payload);
+	}
+	parser->destroy(parser);
+	DBG2(SIG_DBG_ENC, "succesfully parsed content of encryption payload");
+	return SUCCESS;
+}
+
+/**
+ * Implementation of encryption_payload_t.encrypt.
+ */
+static status_t decrypt(private_encryption_payload_t *this)
+{
+	chunk_t iv, concatenated;
+	u_int8_t padding_length;
+	status_t status;
+	
+	DBG2(SIG_DBG_ENC, "decrypting encryption payload");
+	DBG3(SIG_DBG_ENC, "data before decryption with IV and (invalid) signature %B",
+		 &this->encrypted);
+	
+	if (this->signer == NULL || this->crypter == NULL)
+	{
+		DBG1(SIG_DBG_ENC, "could not decrypt, no crypter/signer set");
+		return INVALID_STATE;
+	}
+	
+	/* get IV */
+	iv.len = this->crypter->get_block_size(this->crypter);
+	
+	iv.ptr = this->encrypted.ptr;
+	
+	/* point concatenated to data + padding + padding_length*/
+	concatenated.ptr = this->encrypted.ptr + iv.len;
+	concatenated.len = this->encrypted.len - iv.len - this->signer->get_block_size(this->signer);
+		
+	/* check the size of input:
+	 * concatenated  must be at least on block_size of crypter
+	 */
+	if (concatenated.len < iv.len)
+	{
+		DBG1(SIG_DBG_ENC, "could not decrypt, invalid input");
+		return FAILED;
+	}
+	
+	/* free previus data, if any */
+	free(this->decrypted.ptr);
+	
+	DBG3(SIG_DBG_ENC, "data before decryption %B", &concatenated);
+	
+	status = this->crypter->decrypt(this->crypter, concatenated, iv, &(this->decrypted));
+	if (status != SUCCESS)
+	{
+		DBG1(SIG_DBG_ENC, "could not decrypt, decryption failed");
+		return FAILED;
+	}
+	DBG3(SIG_DBG_ENC, "data after decryption with padding %B", &this->decrypted);
+	
+	
+	/* get padding length, sits just bevore signature */
+	padding_length = *(this->decrypted.ptr + this->decrypted.len - 1);
+	/* add one byte to the padding length, since the padding_length field is not included */
+	padding_length++;
+	this->decrypted.len -= padding_length;
+	
+	/* check size again */
+	if (padding_length > concatenated.len || this->decrypted.len < 0)
+	{
+		DBG1(SIG_DBG_ENC, "decryption failed, invalid padding length found. Invalid key?");
+		/* decryption failed :-/ */
+		return FAILED;
+	}
+	
+	/* free padding */
+	this->decrypted.ptr = realloc(this->decrypted.ptr, this->decrypted.len);
+	DBG3(SIG_DBG_ENC, "data after decryption without padding %B", &this->decrypted);
+	DBG2(SIG_DBG_ENC, "decryption successful, trying to parse content");
+	return parse(this);
+}
+
+/**
+ * Implementation of encryption_payload_t.set_transforms.
+ */
+static void set_transforms(private_encryption_payload_t *this, crypter_t* crypter, signer_t* signer)
+{
+	this->signer = signer;
+	this->crypter = crypter;
+}
+
+/**
+ * Implementation of encryption_payload_t.build_signature.
+ */
+static status_t build_signature(private_encryption_payload_t *this, chunk_t data)
+{
+	chunk_t data_without_sig = data;
+	chunk_t sig;
+	
+	if (this->signer == NULL)
+	{
+		DBG1(SIG_DBG_ENC, "unable to build signature, no signer set");
+		return INVALID_STATE;
+	}
+	
+	sig.len = this->signer->get_block_size(this->signer);
+	data_without_sig.len -= sig.len;
+	sig.ptr = data.ptr + data_without_sig.len;
+	DBG2(SIG_DBG_ENC, "building signature");
+	this->signer->get_signature(this->signer, data_without_sig, sig.ptr);
+	return SUCCESS;
+}
+
+/**
+ * Implementation of encryption_payload_t.verify_signature.
+ */
+static status_t verify_signature(private_encryption_payload_t *this, chunk_t data)
+{
+	chunk_t sig, data_without_sig;
+	bool valid;
+	
+	if (this->signer == NULL)
+	{
+		DBG1(SIG_DBG_ENC, "unable to verify signature, no signer set");
+		return INVALID_STATE;
+	}
+	/* find signature in data chunk */
+	sig.len = this->signer->get_block_size(this->signer);
+	if (data.len <= sig.len)
+	{
+		DBG1(SIG_DBG_ENC, "unable to verify signature, invalid input");
+		return FAILED;
+	}
+	sig.ptr = data.ptr + data.len - sig.len;
+	
+	/* verify it */
+	data_without_sig.len = data.len - sig.len;
+	data_without_sig.ptr = data.ptr;
+	valid = this->signer->verify_signature(this->signer, data_without_sig, sig);
+	
+	if (!valid)
+	{
+		DBG1(SIG_DBG_ENC, "signature verification failed");
+		return FAILED;
+	}
+	
+	DBG2(SIG_DBG_ENC, "signature verification successful");
+	return SUCCESS;
+}
 
 /**
  * Implementation of payload_t.destroy.
@@ -674,12 +641,6 @@ encryption_payload_t *encryption_payload_create()
 	this->public.build_signature = (status_t (*) (encryption_payload_t*, chunk_t)) build_signature;
 	this->public.verify_signature = (status_t (*) (encryption_payload_t*, chunk_t)) verify_signature;
 	this->public.destroy = (void (*) (encryption_payload_t *)) destroy;
-	
-	/* private functions */
-	this->compute_length = compute_length;
-	this->generate = generate;
-	this->parse = parse;
-	this->logger = logger_manager->get_logger(logger_manager, ENCRYPTION_PAYLOAD);
 	
 	/* set default values of the fields */
 	this->critical = FALSE;

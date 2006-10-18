@@ -30,12 +30,9 @@ crypto/diffie_hellman.c crypto/diffie_hellman.h \
 utils/identification.c utils/identification.h \
 utils/linked_list.c utils/linked_list.h utils/iterator.h\
 utils/randomizer.c utils/randomizer.h \
-utils/logger.c utils/logger.h \
-utils/logger_manager.c utils/logger_manager.h \
 utils/host.c utils/host.h \
 utils/lexparser.c utils/lexparser.h \
-utils/leak_detective.c utils/leak_detective.h \
-utils/tester.c utils/tester.h
+utils/leak_detective.c utils/leak_detective.h
 
 libstrongswan_la_LIBADD = -lgmp -lpthread
 

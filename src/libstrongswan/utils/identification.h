@@ -116,9 +116,9 @@ enum id_type_t {
 };
 
 /**
- * String mappings for id_type_t.
+ * enum names for id_type_t.
  */
-extern enum_names id_type_names;
+extern enum_name_t *id_type_names;
 
 typedef struct identification_t identification_t;
 

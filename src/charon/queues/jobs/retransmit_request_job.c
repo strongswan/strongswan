@@ -45,11 +45,6 @@ struct private_retransmit_request_job_t {
 	 * ID of the IKE_SA which the message belongs to.
 	 */
 	ike_sa_id_t *ike_sa_id;
-	
-	/**
-	 * Logger reference
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -70,8 +65,7 @@ static status_t execute(private_retransmit_request_job_t *this)
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id);
 	if (ike_sa == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, 
-						  "IKE SA could not be checked out. Already deleted?");
+		DBG2(SIG_DBG_JOB, "IKE SA could not be checked out. Already deleted?");
 		return DESTROY_ME;
 	}
 	
@@ -111,7 +105,6 @@ retransmit_request_job_t *retransmit_request_job_create(u_int32_t message_id,ike
 	/* private variables */
 	this->message_id = message_id;
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);
 }

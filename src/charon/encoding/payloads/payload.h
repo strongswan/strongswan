@@ -185,14 +185,14 @@ enum payload_type_t{
 
 
 /**
- * String mappings for payload_type_t.
+ * enum names for payload_type_t.
  */
-extern mapping_t payload_type_m[];
+extern enum_name_t *payload_type_names;
 
 /**
- * Special string mappings for payload_type_t in a short form.
+ * enum names for payload_type_t in a short form.
  */
-extern mapping_t payload_type_short_m[];
+extern enum_name_t *payload_type_short_names;
 
 
 typedef struct payload_t payload_t;

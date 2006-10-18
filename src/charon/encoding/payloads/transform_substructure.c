@@ -29,7 +29,7 @@
 #include <encoding/payloads/encodings.h>
 #include <types.h>
 #include <utils/linked_list.h>
-#include <utils/logger_manager.h>
+#include <daemon.h>
 
 
 typedef struct private_transform_substructure_t private_transform_substructure_t;
@@ -70,18 +70,6 @@ struct private_transform_substructure_t {
 	 * Transforms Attributes are stored in a linked_list_t.
 	 */
 	linked_list_t *attributes;
-	
- 	/**
-	 * assigned logger
-	 */
-	logger_t *logger;
-	
-	/**
-	 * @brief Computes the length of this substructure.
-	 *
-	 * @param this 	calling private_transform_substructure_t object
-	 */
-	void (*compute_length) (private_transform_substructure_t *this);
 };
 
 
@@ -136,7 +124,7 @@ static status_t verify(private_transform_substructure_t *this)
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 3))
 	{
 		/* must be 0 or 3 */
-		this->logger->log(this->logger, ERROR, "inconsistent next payload");
+		DBG1(SIG_DBG_ENC, "inconsistent next payload");
 		return FAILED;
 	}
 
@@ -152,8 +140,7 @@ static status_t verify(private_transform_substructure_t *this)
 			break;
 		default:
 		{
-			this->logger->log(this->logger, ERROR, "invalid transform type: %d",
-							  this->transform_type);
+			DBG1(SIG_DBG_ENC, "invalid transform type: %d", this->transform_type);
 			return FAILED;
 		}
 	}
@@ -167,8 +154,7 @@ static status_t verify(private_transform_substructure_t *this)
 		status = current_attributes->verify(current_attributes);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, 
-							  "TRANSFORM_ATTRIBUTE verification failed");
+			DBG1(SIG_DBG_ENC, "TRANSFORM_ATTRIBUTE verification failed");
 		}
 	}
 	iterator->destroy(iterator);
@@ -203,12 +189,30 @@ static payload_type_t get_next_type(private_transform_substructure_t *this)
 }
 
 /**
+ * recompute the length of the payload.
+ */
+static void compute_length (private_transform_substructure_t *this)
+{
+	iterator_t *iterator;
+	size_t length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
+	iterator = this->attributes->create_iterator(this->attributes,TRUE);
+	while (iterator->has_next(iterator))
+	{
+		payload_t * current_attribute;
+		iterator->current(iterator,(void **) &current_attribute);
+		length += current_attribute->get_length(current_attribute);
+	}
+	iterator->destroy(iterator);
+	
+	this->transform_length = length;
+}
+
+/**
  * Implementation of payload_t.get_length.
  */
 static size_t get_length(private_transform_substructure_t *this)
 {
-	this->compute_length(this);
-		
+	compute_length(this);
 	return this->transform_length;
 }
 
@@ -226,7 +230,7 @@ static iterator_t *create_transform_attribute_iterator (private_transform_substr
 static void add_transform_attribute (private_transform_substructure_t *this,transform_attribute_t *attribute)
 {
 	this->attributes->insert_last(this->attributes,(void *) attribute);
-	this->compute_length(this);
+	compute_length(this);
 }
 
 /**
@@ -282,25 +286,6 @@ static void set_transform_id (private_transform_substructure_t *this,u_int16_t i
 static u_int16_t get_transform_id (private_transform_substructure_t *this)
 {
 	return this->transform_id;
-}
-
-/**
- * Implementation of private_transform_substructure_t.compute_length.
- */
-static void compute_length (private_transform_substructure_t *this)
-{
-	iterator_t *iterator;
-	size_t length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
-	iterator = this->attributes->create_iterator(this->attributes,TRUE);
-	while (iterator->has_next(iterator))
-	{
-		payload_t * current_attribute;
-		iterator->current(iterator,(void **) &current_attribute);
-		length += current_attribute->get_length(current_attribute);
-	}
-	iterator->destroy(iterator);
-	
-	this->transform_length = length;
 }
 
 /**
@@ -410,16 +395,12 @@ transform_substructure_t *transform_substructure_create()
 	this->public.clone = (transform_substructure_t* (*) (transform_substructure_t *)) clone_;
 	this->public.destroy = (void (*) (transform_substructure_t *)) destroy;
 	
-	/* private functions */
-	this->compute_length = compute_length;
-	
 	/* set default values of the fields */
 	this->next_payload = NO_PAYLOAD;
 	this->transform_length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
 	this->transform_id = 0;
 	this->transform_type = 0;
 	this->attributes = linked_list_create();
-	this->logger = logger_manager->get_logger(logger_manager, PAYLOAD);
 	
 	return (&(this->public));
 }

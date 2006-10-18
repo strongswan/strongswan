@@ -44,11 +44,6 @@ struct private_send_dpd_job_t {
 	 * ID of the IKE_SA which the message belongs to.
 	 */
 	ike_sa_id_t *ike_sa_id;
-
-	/**
-	 * Logger reference.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -110,7 +105,6 @@ send_dpd_job_t *send_dpd_job_create(ike_sa_id_t *ike_sa_id)
 	
 	/* private variables */
 	this->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 
 	return &(this->public);
 }

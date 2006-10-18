@@ -47,12 +47,12 @@ enum protocol_id_t {
 	PROTO_ESP = 3,
 };
 
-/** 
- * String mappings for protocol_id_t.
- * 
+/**
+ * enum names for protocol_id_t
+ *
  * @ingroup config
  */
-extern mapping_t protocol_id_m[];
+extern enum_name_t *protocol_id_names;
 
 
 typedef enum transform_type_t transform_type_t;
@@ -60,7 +60,7 @@ typedef enum transform_type_t transform_type_t;
 /**
  * Type of a transform, as in IKEv2 RFC 3.3.2.
  * 
- * @ingroup payloads
+ * @ingroup config
  */
 enum transform_type_t {
 	UNDEFINED_TRANSFORM_TYPE = 241,
@@ -71,12 +71,12 @@ enum transform_type_t {
 	EXTENDED_SEQUENCE_NUMBERS = 5
 };
 
-/** 
- * String mappings for transform_type_t.
- * 
- * @ingroup payloads
+/**
+ * enum names for transform_type_t.
+ *
+ * @ingroup config
  */
-extern mapping_t transform_type_m[];
+extern enum_name_t *transform_type_names;
 
 
 typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
@@ -84,19 +84,19 @@ typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
 /** 
  * Extended sequence numbers, as in IKEv2 RFC 3.3.2.
  * 
- * @ingroup payloads
+ * @ingroup config
  */
 enum extended_sequence_numbers_t {
 	NO_EXT_SEQ_NUMBERS = 0,
 	EXT_SEQ_NUMBERS = 1
 };
 
-/** 
- * String mappings for extended_sequence_numbers_t.
- * 
- * @ingroup payloads
+/**
+ * enum strings for extended_sequence_numbers_t.
+ *
+ * @ingroup config
  */
-extern mapping_t extended_sequence_numbers_m[];
+extern enum_name_t *extended_sequence_numbers_names;
 
 
 typedef struct algorithm_t algorithm_t;

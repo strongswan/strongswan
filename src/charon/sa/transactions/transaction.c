@@ -35,8 +35,6 @@
 #include <encoding/payloads/nonce_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <encoding/payloads/delete_payload.h>
-#include <utils/logger_manager.h>
-
 
 /*
  * see header file

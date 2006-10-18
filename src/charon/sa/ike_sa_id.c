@@ -24,6 +24,8 @@
 
 #include "ike_sa_id.h"
 
+#include <printf.h>
+#include <stdio.h>
 
 
 typedef struct private_ike_sa_id_t private_ike_sa_id_t;
@@ -137,7 +139,7 @@ static bool switch_initiator(private_ike_sa_id_t *this)
 	}
 	else
 	{
-		this->is_initiator_flag = TRUE;	
+		this->is_initiator_flag = TRUE;
 	}
 	return this->is_initiator_flag;
 }
@@ -149,6 +151,44 @@ static ike_sa_id_t* clone(private_ike_sa_id_t *this)
 {
 	return ike_sa_id_create(this->initiator_spi, this->responder_spi, this->is_initiator_flag);
 }
+
+/**
+ * output handler in printf()
+ */
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
+{
+	private_ike_sa_id_t *this = *((private_ike_sa_id_t**)(args[0]));
+	
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	return fprintf(stream, "%llx:%llx[%c]",
+				   this->initiator_spi, this->responder_spi,
+				   this->is_initiator_flag ? 'i' : 'r');
+}
+
+/**
+ * arginfo handler in printf()
+ */
+static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * register printf() handlers
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(IKE_SA_ID_PRINTF_SPEC, print, print_arginfo);
+}
+
 
 /**
  * Implementation of ike_sa_id_t.destroy.

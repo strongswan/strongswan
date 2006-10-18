@@ -24,8 +24,8 @@
 
 #include "local_connection_store.h"
 
+#include <daemon.h>
 #include <utils/linked_list.h>
-#include <utils/logger_manager.h>
 
 
 typedef struct private_local_connection_store_t private_local_connection_store_t;
@@ -49,11 +49,6 @@ struct private_local_connection_store_t {
 	 * Mutex to exclusivly access connection list
 	 */
 	pthread_mutex_t mutex;
-	
-	/**
-	 * Assigned logger
-	 */
-	logger_t *logger;
 };
 
 
@@ -74,9 +69,8 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 	connection_t *candidate;
 	connection_t *found = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1,
-					  "looking for connection for host pair %H...%H",
-					  my_host, other_host);
+	DBG2(SIG_DBG_CFG, "looking for connection for host pair %H...%H",
+		 my_host, other_host);
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->connections->create_iterator(this->connections, TRUE);
@@ -106,11 +100,9 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 				prio |= PRIO_ADDR_ANY;
 			}
 
-			this->logger->log(this->logger, CONTROL|LEVEL2,
-							 "candidate connection \"%s\": %H...%H (prio=%d)",
-							  candidate->get_name(candidate),
-							  candidate_my_host, candidate_other_host,
-							  prio);
+			DBG2(SIG_DBG_CFG, "candidate connection \"%s\": %H...%H (prio=%d)",
+				 candidate->get_name(candidate),
+				 candidate_my_host, candidate_other_host, prio);
 
 			if (prio > best_prio)
 			{
@@ -126,11 +118,8 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 		host_t *found_my_host    = found->get_my_host(found);
 		host_t *found_other_host = found->get_other_host(found);
 		
-		this->logger->log(this->logger, CONTROL|LEVEL1,
-						 "found matching connection \"%s\": %H...%H (prio=%d)",
-						  found->get_name(found),
-						  found_my_host, found_other_host,
-						  best_prio);
+		DBG2(SIG_DBG_CFG, "found matching connection \"%s\": %H...%H (prio=%d)",
+			 found->get_name(found), found_my_host, found_other_host, best_prio);
 		
 		/* give out a new reference to it */
 		found->get_ref(found);
@@ -213,40 +202,12 @@ static status_t add_connection(private_local_connection_store_t *this, connectio
 }
 
 /**
- * Implementation of connection_store_t.log_connections.
+ * Implementation of connection_store_t.create_iterator.
  */
-void log_connections(private_local_connection_store_t *this, logger_t *logger, char *name)
+static iterator_t* create_iterator(private_local_connection_store_t *this)
 {
-	iterator_t *iterator;
-	connection_t *current;
-	
-	if (logger == NULL)
-	{
-		logger = this->logger;
-	}
-	
-	pthread_mutex_lock(&(this->mutex));
-
-	iterator = this->connections->create_iterator(this->connections, TRUE);
-
-	if (iterator->get_count(iterator))
-	{
-		logger->log(logger, CONTROL, "Templates:");
-	}
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&current);
-		if (current->is_ikev2(current) && ( name == NULL || streq(name, current->get_name(current))))
-		{
-			host_t *my_host = current->get_my_host(current);
-			host_t *other_host = current->get_other_host(current);
-
-			logger->log(logger, CONTROL, "  \"%s\": %H...%H",
-						current->get_name(current), my_host, other_host);
-		}
-	}
-	iterator->destroy(iterator);
-	pthread_mutex_unlock(&(this->mutex));
+	return this->connections->create_iterator_locked(this->connections,
+													 &this->mutex);
 }
 
 /**
@@ -277,12 +238,11 @@ local_connection_store_t * local_connection_store_create(void)
 	this->public.connection_store.get_connection_by_name = (connection_t*(*)(connection_store_t*,char*))get_connection_by_name;
 	this->public.connection_store.delete_connection = (status_t(*)(connection_store_t*,char*))delete_connection;
 	this->public.connection_store.add_connection = (status_t(*)(connection_store_t*,connection_t*))add_connection;
-	this->public.connection_store.log_connections = (void(*)(connection_store_t*,logger_t*,char*))log_connections;
+	this->public.connection_store.create_iterator = (iterator_t*(*)(connection_store_t*))create_iterator;
 	this->public.connection_store.destroy = (void(*)(connection_store_t*))destroy;
 	
 	/* private variables */
 	this->connections = linked_list_create();
-	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 	pthread_mutex_init(&(this->mutex), NULL);
 
 	return (&this->public);

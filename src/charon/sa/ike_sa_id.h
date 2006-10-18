@@ -27,6 +27,10 @@
 
 #include <types.h>
 
+/**
+ * printf() specifier to print a ike_sa_id.
+ */
+#define IKE_SA_ID_PRINTF_SPEC 'J'
 
 typedef struct ike_sa_id_t ike_sa_id_t;
 

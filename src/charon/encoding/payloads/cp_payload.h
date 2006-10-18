@@ -52,11 +52,11 @@ enum config_type_t {
 };
 
 /**
- * string mappings for config_type_t.
- * 
+ * enum name for config_type_t.
+ *
  * @ingroup payloads
  */
-extern mapping_t config_type_m[];
+extern enum_name_t *config_type_names;
 
 
 typedef struct cp_payload_t cp_payload_t;

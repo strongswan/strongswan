@@ -28,20 +28,15 @@
 
 #include <daemon.h>
 #include <sa/ike_sa_id.h>
-#include <utils/logger.h>
-#include <utils/logger_manager.h>
+#include <bus/bus.h>
 #include <utils/linked_list.h>
 
-typedef struct ike_sa_entry_t ike_sa_entry_t;
+typedef struct entry_t entry_t;
 
 /**
  * An entry in the linked list, contains IKE_SA, locking and lookup data.
  */
-struct ike_sa_entry_t {
-	/**
-	 * Destructor, also destroys associated ike_sa_t object.
-	 */
-	status_t (*destroy) (ike_sa_entry_t *this);
+struct entry_t {
 	
 	/**
 	 * Number of threads waiting for this ike_sa_t object.
@@ -80,9 +75,9 @@ struct ike_sa_entry_t {
 };
 
 /**
- * Implementation of ike_sa_entry_t.destroy.
+ * Implementation of entry_t.destroy.
  */
-static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
+static status_t entry_destroy(entry_t *this)
 {
 	/* also destroy IKE SA */
 	this->ike_sa->destroy(this->ike_sa);
@@ -92,19 +87,11 @@ static status_t ike_sa_entry_destroy(ike_sa_entry_t *this)
 }
 
 /**
- * @brief Creates a new entry for the ike_sa_t list.
- *
- * This constructor additionaly creates a new and empty SA.
- *
- * @param ike_sa_id		The associated ike_sa_id_t, will be cloned
- * @return				ike_sa_entry_t object
+ * Creates a new entry for the ike_sa_t list.
  */
-static ike_sa_entry_t *ike_sa_entry_create(ike_sa_id_t *ike_sa_id)
+static entry_t *entry_create(ike_sa_id_t *ike_sa_id)
 {
-	ike_sa_entry_t *this = malloc_thing(ike_sa_entry_t);
-
-	/* destroy function */
-	this->destroy = ike_sa_entry_destroy;
+	entry_t *this = malloc_thing(entry_t);
 	
 	this->waiting_threads = 0;
 	pthread_cond_init(&(this->condvar), NULL);
@@ -141,11 +128,6 @@ struct private_ike_sa_manager_t {
 	 pthread_mutex_t mutex;
 
 	 /**
-	  * Logger used for this IKE SA Manager.
-	  */
-	 logger_t *logger;
-
-	 /**
 	  * Linked list with entries for the ike_sa_t objects.
 	  */
 	 linked_list_t *ike_sa_list;
@@ -159,10 +141,11 @@ struct private_ike_sa_manager_t {
 /**
  * Implementation of private_ike_sa_manager_t.get_entry_by_id.
  */
-static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, ike_sa_entry_t **entry)
+static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id, entry_t **entry)
 {
 	linked_list_t *list = this->ike_sa_list;
 	iterator_t *iterator;
+	entry_t *current;
 	status_t status;
 	
 	/* create iterator over list of ike_sa's */
@@ -171,47 +154,29 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 	/* default status */
 	status = NOT_FOUND;
 	
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current))
 	{
-		ike_sa_entry_t *current;
-		
-		iterator->current(iterator, (void**)&current);
-		if (current->ike_sa_id->get_responder_spi(current->ike_sa_id) == 0)
+		if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
+		{
+			DBG2(SIG_DBG_MGR,  "found entry by both SPIs");
+			*entry = current;
+			status = SUCCESS;
+			break;
+		}
+		if (ike_sa_id->get_responder_spi(ike_sa_id) == 0 ||
+			current->ike_sa_id->get_responder_spi(current->ike_sa_id) == 0)
 		{
 			/* seems to be a half ready ike_sa */
 			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) ==
 						  ike_sa_id->get_initiator_spi(ike_sa_id)) &&
-				(ike_sa_id->is_initiator(ike_sa_id) == 
-						  current->ike_sa_id->is_initiator(current->ike_sa_id)))
+				(current->ike_sa_id->is_initiator(ike_sa_id) ==
+						  ike_sa_id->is_initiator(current->ike_sa_id)))
 			{
-		 		this->logger->log(this->logger, CONTROL|LEVEL2, 
-								  "found entry by initiator spi %d",
-								  ike_sa_id->get_initiator_spi(ike_sa_id));
+				DBG2(SIG_DBG_MGR, "found entry by initiator SPI");
 				*entry = current;
 				status = SUCCESS;
 				break;
 			}
-		}
-		else if (ike_sa_id->get_responder_spi(ike_sa_id) == 0)
-		{
-			if ((current->ike_sa_id->get_initiator_spi(current->ike_sa_id) == 
-						  ike_sa_id->get_initiator_spi(ike_sa_id)) &&
-				(ike_sa_id->is_initiator(ike_sa_id) == 
-						  current->ike_sa_id->is_initiator(current->ike_sa_id)))
-			{
-		 		this->logger->log(this->logger, CONTROL|LEVEL2, "found entry by initiator spi %d",
-								  ike_sa_id->get_initiator_spi(ike_sa_id));
-				*entry = current;
-				status = SUCCESS;
-				break;
-			}			
-		}
-		if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
-		{
-			this->logger->log(this->logger, CONTROL|LEVEL2, "found entry by full ID");
-			*entry = current;
-			status = SUCCESS;
-			break;
 		}
 	}
 	
@@ -222,7 +187,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 /**
  * Implementation of private_ike_sa_manager_t.get_entry_by_sa.
  */
-static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa, ike_sa_entry_t **entry)
+static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa, entry_t **entry)
 {
 	linked_list_t *list = this->ike_sa_list;
 	iterator_t *iterator;
@@ -235,12 +200,12 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 	
 	while (iterator->has_next(iterator))
 	{
-		ike_sa_entry_t *current;
+		entry_t *current;
 		iterator->current(iterator, (void**)&current);
 		/* only pointers are compared */
 		if (current->ike_sa == ike_sa)
 		{
-	 		this->logger->log(this->logger, CONTROL|LEVEL2, "found entry by pointer");
+			DBG2(SIG_DBG_MGR, "found entry by pointer");
 			*entry = current;
 			status = SUCCESS;
 			break;
@@ -254,7 +219,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 /**
  * Implementation of private_ike_sa_manager_s.delete_entry.
  */
-static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *entry)
+static status_t delete_entry(private_ike_sa_manager_t *this, entry_t *entry)
 {
 	linked_list_t *list = this->ike_sa_list;
 	iterator_t *iterator;
@@ -266,7 +231,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 	
 	while (iterator->has_next(iterator))
 	{
-		ike_sa_entry_t *current;
+		entry_t *current;
 		iterator->current(iterator, (void**)&current);
 		if (current == entry) 
 		{
@@ -281,23 +246,22 @@ static status_t delete_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *ent
 				pthread_cond_wait(&(entry->condvar), &(this->mutex));
 			}
 			
-	 		this->logger->log(this->logger, CONTROL|LEVEL2, 
-							  "found entry by pointer. Going to delete it");
+			DBG2(SIG_DBG_MGR,  "found entry by pointer, deleting it");
 			iterator->remove(iterator);
-			entry->destroy(entry);
+			entry_destroy(entry);
 			status = SUCCESS;
 			break;
 		}
 	}
 	iterator->destroy(iterator);
-	return status;	
+	return status;
 }
 
 /**
  * Wait until no other thread is using an IKE_SA, return FALSE if entry not
  * acquireable
  */
-static bool wait_for_entry(private_ike_sa_manager_t *this, ike_sa_entry_t *entry)
+static bool wait_for_entry(private_ike_sa_manager_t *this, entry_t *entry)
 {
 	if (entry->driveout_new_threads)
 	{
@@ -351,7 +315,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
 	while (iterator->has_next(iterator))
 	{
-		ike_sa_entry_t *entry;
+		entry_t *entry;
 		identification_t *found_my_id, *found_other_id;
 		host_t *found_my_host, *found_other_host;
 		int wc;
@@ -384,9 +348,8 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 			found_other_id->matches(found_other_id, other_id, &wc))
 		{
 			/* looks good, we take this one */
-			this->logger->log(this->logger, CONTROL|LEVEL1, 
-							  "found an existing IKE_SA for %H[%D]...%H[%D]",
-							  my_host, other_host, my_id, other_id);
+			DBG2(SIG_DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
+				 my_host, other_host, my_id, other_id);
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
 		}
@@ -396,7 +359,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 	if (!ike_sa)
 	{
 		u_int64_t initiator_spi;
-		ike_sa_entry_t *new_ike_sa_entry;
+		entry_t *new_entry;
 		ike_sa_id_t *new_ike_sa_id;
 		
 		initiator_spi = get_next_spi(this);
@@ -404,24 +367,19 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 		new_ike_sa_id->set_initiator_spi(new_ike_sa_id, initiator_spi);
 		
 		/* create entry */
-		new_ike_sa_entry = ike_sa_entry_create(new_ike_sa_id);
-		this->logger->log(this->logger, CONTROL|LEVEL2,
-						  "created IKE_SA %llx:%llx, role %s",
-						  new_ike_sa_id->get_initiator_spi(new_ike_sa_id),
-						  new_ike_sa_id->get_responder_spi(new_ike_sa_id),
-						  new_ike_sa_id->is_initiator(new_ike_sa_id) ? "initiator" : "responder");
+		new_entry = entry_create(new_ike_sa_id);
+		DBG2(SIG_DBG_MGR, "created IKE_SA: %J", new_ike_sa_id);
 		new_ike_sa_id->destroy(new_ike_sa_id);
 		
-		this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
+		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
 		
 		/* check ike_sa out */
-		this->logger->log(this->logger, CONTROL|LEVEL1, 
-						  "new IKE_SA created for IDs %D - %D", my_id, other_id);
-		new_ike_sa_entry->checked_out = TRUE;
-		ike_sa = new_ike_sa_entry->ike_sa;
+		DBG2(SIG_DBG_MGR, "new IKE_SA created for IDs [%D]...[%D]", my_id, other_id);
+		new_entry->checked_out = TRUE;
+		ike_sa = new_entry->ike_sa;
 	}
 	pthread_mutex_unlock(&(this->mutex));
-	SIG_SA(ike_sa);
+	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
 
@@ -435,14 +393,10 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	bool original_initiator;
 	ike_sa_t *ike_sa = NULL;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2,
-					  "checkout IKE_SA %llx:%llx, role %s",
-					  ike_sa_id->get_initiator_spi(ike_sa_id),
-					  ike_sa_id->get_responder_spi(ike_sa_id),
-					  ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
+	DBG2(SIG_DBG_MGR, "checkout IKE_SA: %J", ike_sa_id);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "%d IKE_SAs in manager",
-					  this->ike_sa_list->get_count(this->ike_sa_list));
+	DBG2(SIG_DBG_MGR,  "%d IKE_SAs in manager",
+		 this->ike_sa_list->get_count(this->ike_sa_list));
 	
 	/* each access is locked */
 	pthread_mutex_lock(&(this->mutex));
@@ -457,28 +411,25 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		/* we SHOULD have an IKE_SA for these SPIs in the list,
 		 * if not, we can't handle the request...
 		 */
-		ike_sa_entry_t *entry;
+		entry_t *entry;
 		/* look for the entry */
 		if (get_entry_by_id(this, ike_sa_id, &entry) == SUCCESS)
 		{
 			if (wait_for_entry(this, entry))
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL2, 
-								  "IKE_SA successfully checked out");
+				DBG2(SIG_DBG_MGR, "IKE_SA successfully checked out");
 				/* ok, this IKE_SA is finally ours */
 				entry->checked_out = TRUE;
 				ike_sa = entry->ike_sa;
 			}
 			else
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL2, 
-								  "IKE_SA found, but not allowed to check it out");
+				DBG2(SIG_DBG_MGR, "IKE_SA found, but not allowed to check it out");
 			}
 		}
 		else
 		{
-			this->logger->log(this->logger, ERROR|LEVEL1, 
-							  "IKE_SA not stored in list");
+			DBG2(SIG_DBG_MGR, "IKE_SA not stored in list");
 			/* looks like there is no such IKE_SA, better luck next time... */
 		}
 	}
@@ -492,7 +443,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		 * IKE_SA. This could be improved...
 		 */
 		u_int64_t responder_spi;
-		ike_sa_entry_t *new_ike_sa_entry;
+		entry_t *new_entry;
 		
 		/* set SPIs, we are the responder */
 		responder_spi = get_next_spi(this);
@@ -501,45 +452,40 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		ike_sa_id->set_responder_spi(ike_sa_id, responder_spi);
 		
 		/* create entry */
-		new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
+		new_entry = entry_create(ike_sa_id);
 		
-		this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
+		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
 		
 		/* check ike_sa out */
-		this->logger->log(this->logger, CONTROL|LEVEL1,
-						  "IKE_SA added to list of known IKE_SAs");
-		new_ike_sa_entry->checked_out = TRUE;
-		ike_sa = new_ike_sa_entry->ike_sa;
+		DBG2(SIG_DBG_MGR,  "IKE_SA added to list of known IKE_SAs");
+		new_entry->checked_out = TRUE;
+		ike_sa = new_entry->ike_sa;
 	}
 	else if (!initiator_spi_set && !responder_spi_set && original_initiator)
 	{
 		/* checkout of a new and unused IKE_SA, used for rekeying */
-		ike_sa_entry_t *new_ike_sa_entry;
+		entry_t *new_entry;
 		
 		ike_sa_id->set_initiator_spi(ike_sa_id, get_next_spi(this));
 		/* create entry */
-		new_ike_sa_entry = ike_sa_entry_create(ike_sa_id);
-		this->logger->log(this->logger, CONTROL|LEVEL2,
-							"created IKE_SA %llx:%llx, role %s",
-							ike_sa_id->get_initiator_spi(ike_sa_id),
-							ike_sa_id->get_responder_spi(ike_sa_id),
-							ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
+		new_entry = entry_create(ike_sa_id);
+		DBG2(SIG_DBG_MGR, "created IKE_SA: %J", ike_sa_id);
 			
-		this->ike_sa_list->insert_last(this->ike_sa_list, new_ike_sa_entry);
+		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
 		
 		/* check ike_sa out */
-		new_ike_sa_entry->checked_out = TRUE;
-		ike_sa = new_ike_sa_entry->ike_sa;
+		new_entry->checked_out = TRUE;
+		ike_sa = new_entry->ike_sa;
 	}
 	else
 	{
 		/* responder set, initiator not: here is something seriously wrong! */
- 		this->logger->log(this->logger, ERROR|LEVEL1, "invalid IKE_SA SPIs");
+		DBG2(SIG_DBG_MGR, "invalid IKE_SA SPIs");
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
 	
-	SIG_SA(ike_sa);
+	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
 
@@ -557,7 +503,7 @@ static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
 	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
 	while (iterator->has_next(iterator))
 	{
-		ike_sa_entry_t *entry;
+		entry_t *entry;
 		
 		iterator->current(iterator, (void**)&entry);
 		if (wait_for_entry(this, entry))
@@ -575,63 +521,35 @@ static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
 	iterator->destroy(iterator);
 	pthread_mutex_unlock(&(this->mutex));
 	
-	SIG_SA(ike_sa);
+	charon->bus->set_sa(charon->bus, ike_sa);
 	return ike_sa;
 }
 
 /**
- * Implementation of ike_sa_manager_t.get_ike_sa_list.
+ * Iterator hook for iterate
  */
-static linked_list_t *get_ike_sa_list(private_ike_sa_manager_t* this)
+static bool iterate(iterator_t *iterator, void **value)
 {
-	linked_list_t *list;
-	iterator_t *iterator;
-	
-	pthread_mutex_lock(&(this->mutex));
-	
-	list = linked_list_create();
-	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->has_next(iterator))
+	if (iterator->has_next(iterator))
 	{
-		ike_sa_entry_t *entry;
+		entry_t *entry;
 		iterator->current(iterator, (void**)&entry);
-		list->insert_last(list, (void*)entry->ike_sa_id->clone(entry->ike_sa_id));
+		*value = entry->ike_sa;
+		return TRUE;
 	}
-	iterator->destroy(iterator);
-	
-	pthread_mutex_unlock(&(this->mutex));
-	return list;
+	return FALSE;
 }
 
 /**
- * Implementation of ike_sa_manager_t.log_status.
+ * Implementation of ike_sa_manager_t.create_iterator.
  */
-static void log_status(private_ike_sa_manager_t* this, logger_t* logger, char* name)
+static iterator_t *create_iterator(private_ike_sa_manager_t* this)
 {
-	iterator_t *iterator;
-	u_int instances;
-	
-	pthread_mutex_lock(&(this->mutex));
-	
-	instances = this->ike_sa_list->get_count(this->ike_sa_list);
-	if (instances)
-	{
-		logger->log(logger, CONTROL, "Instances (%d):", instances);
-	}
-	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		ike_sa_entry_t *entry;
-		
-		iterator->current(iterator, (void**)&entry);
-		if (wait_for_entry(this, entry))
-		{
-			entry->ike_sa->log_status(entry->ike_sa, logger, name);
-		}
-	}
-	iterator->destroy(iterator);
-	
-	pthread_mutex_unlock(&(this->mutex));
+	iterator_t *iterator = this->ike_sa_list->create_iterator_locked(
+								this->ike_sa_list, &this->mutex);
+	/* overload iterator */
+	iterator->iterate = iterate;
+	return iterator;
 }
 
 /**
@@ -645,16 +563,12 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	 * of a IKE_SA_INIT response). Updating of the SPI MAY be necessary...
 	 */
 	status_t retval;
-	ike_sa_entry_t *entry;
+	entry_t *entry;
 	ike_sa_id_t *ike_sa_id;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2,
-					   "checkin IKE_SA %llx:%llx, role %s",
-					  ike_sa_id->get_initiator_spi(ike_sa_id),
-					  ike_sa_id->get_responder_spi(ike_sa_id),
-					  ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
+	DBG2(SIG_DBG_MGR, "checkin IKE_SA: %J", ike_sa_id);
 	
 	pthread_mutex_lock(&(this->mutex));
 
@@ -665,23 +579,22 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
 		/* signal waiting threads */
 		entry->checked_out = FALSE;
-		this->logger->log(this->logger, CONTROL|LEVEL1, "check-in of IKE_SA successful.");
+		DBG2(SIG_DBG_MGR, "check-in of IKE_SA successful.");
 		pthread_cond_signal(&(entry->condvar));
 	 	retval = SUCCESS;
 	}
 	else
 	{
-		this->logger->log(this->logger, ERROR, 
-						  "tried to check in nonexisting IKE_SA");
+		DBG2(SIG_DBG_MGR, "tried to check in nonexisting IKE_SA");
 		/* this SA is no more, this REALLY should not happen */
 		retval = NOT_FOUND;
 	}
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "%d IKE_SAs in manager now",
-				this->ike_sa_list->get_count(this->ike_sa_list));
+	DBG2(SIG_DBG_MGR, "%d IKE_SAs in manager now",
+		 this->ike_sa_list->get_count(this->ike_sa_list));
 	pthread_mutex_unlock(&(this->mutex));
 	
-	SIG_SA(NULL);
+	charon->bus->set_sa(charon->bus, NULL);
 	return retval;
 }
 
@@ -696,16 +609,12 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	 * We take this SA from the list, and start signaling while threads
 	 * are in the condvar.
 	 */
-	ike_sa_entry_t *entry;
+	entry_t *entry;
 	status_t retval;
 	ike_sa_id_t *ike_sa_id;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
-	this->logger->log(this->logger, CONTROL|LEVEL2,
-					  "checkin and destroy IKE_SA %llx:%llx, role %s",
-					  ike_sa_id->get_initiator_spi(ike_sa_id),
-					  ike_sa_id->get_responder_spi(ike_sa_id),
-					  ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
+	DBG2(SIG_DBG_MGR, "checkin and destroy IKE_SA: %J", ike_sa_id);
 
 	pthread_mutex_lock(&(this->mutex));
 
@@ -716,19 +625,17 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 		
 		delete_entry(this, entry);
 		
-		this->logger->log(this->logger, CONTROL|LEVEL1, 
-						  "check-in and destroy of IKE_SA successful");
+		DBG2(SIG_DBG_MGR, "check-in and destroy of IKE_SA successful");
 		retval = SUCCESS;
 	}
 	else
 	{
-		this->logger->log(this->logger,ERROR, 
-						  "tried to check-in and delete nonexisting IKE_SA");
+		DBG2(SIG_DBG_MGR, "tried to check-in and delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
-	SIG_SA(NULL);
+	charon->bus->set_sa(charon->bus, ike_sa);
 	return retval;
 }
 
@@ -742,14 +649,10 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 	 * We take this SA from the list, and start signaling while threads
 	 * are in the condvar.
 	 */
-	ike_sa_entry_t *entry;
+	entry_t *entry;
 	status_t retval;
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2,
-					  "delete IKE_SA %llx:%llx, role %s",
-					  ike_sa_id->get_initiator_spi(ike_sa_id),
-					  ike_sa_id->get_responder_spi(ike_sa_id),
-					  ike_sa_id->is_initiator(ike_sa_id) ? "initiator" : "responder");
+	DBG2(SIG_DBG_MGR, "delete IKE_SA: %J", ike_sa_id);
 	
 	pthread_mutex_lock(&(this->mutex));
 	
@@ -760,8 +663,7 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 		 */
 		if (entry->ike_sa->delete(entry->ike_sa) == SUCCESS)
 		{
-			this->logger->log(this->logger, CONTROL|LEVEL1,
-							  "initiated delete for IKE_SA");
+			DBG2(SIG_DBG_MGR, "initiated delete for IKE_SA");
 		}
 		/* but if the IKE SA is not in a state where the deletion is 
 		 * negotiated with the other peer, we can destroy the IKE SA on our own. 
@@ -774,8 +676,7 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 	}
 	else
 	{
-		this->logger->log(this->logger,ERROR|LEVEL1,
-						  "tried to delete nonexisting IKE_SA");
+		DBG2(SIG_DBG_MGR, "tried to delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}
 
@@ -790,7 +691,7 @@ static status_t delete_by_name(private_ike_sa_manager_t *this, char *name)
 {
 	iterator_t *iterator;
 	iterator_t *child_iter;
-	ike_sa_entry_t *entry;
+	entry_t *entry;
 	size_t name_len = strlen(name);
 	
 	pthread_mutex_lock(&(this->mutex));
@@ -910,14 +811,12 @@ static void destroy(private_ike_sa_manager_t *this)
 	/* destroy all list entries */
 	linked_list_t *list = this->ike_sa_list;
 	iterator_t *iterator;
-	ike_sa_entry_t *entry;
+	entry_t *entry;
 	
 	pthread_mutex_lock(&(this->mutex));
-	this->logger->log(this->logger, CONTROL|LEVEL1, 
-					  "going to destroy IKE_SA manager and all managed IKE_SA's");
+	DBG2(SIG_DBG_MGR, "going to destroy IKE_SA manager and all managed IKE_SA's");
 	/* Step 1: drive out all waiting threads  */
-	this->logger->log(this->logger, CONTROL|LEVEL2, 
-					  "set driveout flags for all stored IKE_SA's");
+	DBG2(SIG_DBG_MGR, "set driveout flags for all stored IKE_SA's");
 	iterator = list->create_iterator(list, TRUE);
 	while (iterator->has_next(iterator))
 	{
@@ -926,8 +825,7 @@ static void destroy(private_ike_sa_manager_t *this)
 		entry->driveout_new_threads = TRUE;
 		entry->driveout_waiting_threads = TRUE;	
 	}
-	this->logger->log(this->logger, CONTROL|LEVEL2, 
-					  "wait for all threads to leave IKE_SA's");
+	DBG2(SIG_DBG_MGR, "wait for all threads to leave IKE_SA's");
 	/* Step 2: wait until all are gone */
 	iterator->reset(iterator);
 	while (iterator->has_next(iterator))
@@ -941,7 +839,7 @@ static void destroy(private_ike_sa_manager_t *this)
 			pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		}
 	}
-	this->logger->log(this->logger, CONTROL|LEVEL2, "delete all IKE_SA's");
+	DBG2(SIG_DBG_MGR, "delete all IKE_SA's");
 	/* Step 3: initiate deletion of all IKE_SAs */
 	iterator->reset(iterator);
 	while (iterator->has_next(iterator))
@@ -951,11 +849,11 @@ static void destroy(private_ike_sa_manager_t *this)
 	}
 	iterator->destroy(iterator);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "destroy all entries");
+	DBG2(SIG_DBG_MGR, "destroy all entries");
 	/* Step 4: destroy all entries */
 	while (list->remove_last(list, (void**)&entry) == SUCCESS)
 	{
-		entry->destroy(entry);
+		entry_destroy(entry);
 	}
 	list->destroy(list);
 	pthread_mutex_unlock(&(this->mutex));
@@ -977,21 +875,16 @@ ike_sa_manager_t *ike_sa_manager_create()
 	this->public.checkout_by_id = (ike_sa_t*(*)(ike_sa_manager_t*,host_t*,host_t*,identification_t*,identification_t*))checkout_by_id;
 	this->public.checkout = (ike_sa_t*(*)(ike_sa_manager_t*, ike_sa_id_t*))checkout;
 	this->public.checkout_by_child = (ike_sa_t*(*)(ike_sa_manager_t*,u_int32_t))checkout_by_child;
-	this->public.get_ike_sa_list = (linked_list_t*(*)(ike_sa_manager_t*))get_ike_sa_list;
-	this->public.log_status = (void(*)(ike_sa_manager_t*,logger_t*,char*))log_status;
+	this->public.create_iterator = (iterator_t*(*)(ike_sa_manager_t*))create_iterator;
 	this->public.checkin = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin;
 	this->public.delete = (status_t(*)(ike_sa_manager_t*,ike_sa_id_t*))delete_;
 	this->public.delete_by_name = (status_t(*)(ike_sa_manager_t*,char*))delete_by_name;
 	this->public.checkin_and_destroy = (status_t(*)(ike_sa_manager_t*,ike_sa_t*))checkin_and_destroy;
-
-	/* initialize private variables */
-	this->logger = logger_manager->get_logger(logger_manager, IKE_SA_MANAGER);
 	
+	/* initialize private variables */
 	this->ike_sa_list = linked_list_create();
-
 	pthread_mutex_init(&(this->mutex), NULL);
-
 	this->randomizer = randomizer_create();
-
+	
 	return (ike_sa_manager_t*)this;
 }

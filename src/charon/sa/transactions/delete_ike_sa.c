@@ -25,7 +25,6 @@
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
 
-
 typedef struct private_delete_ike_sa_t private_delete_ike_sa_t;
 
 /**
@@ -57,11 +56,6 @@ struct private_delete_ike_sa_t {
 	 * Times we did send the request
 	 */
 	u_int32_t requested;
-	
-	/**
-	 * Assigned logger.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -160,8 +154,7 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	/* check message type */
 	if (request->get_exchange_type(request) != INFORMATIONAL)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "INFORMATIONAL response of invalid type, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "INFORMATIONAL response of invalid type, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -181,9 +174,8 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR|LEVEL1, "ignoring payload %s (%d)",
-								  mapping_find(payload_type_m, payload->get_type(payload)),
-								  payload->get_type(payload));
+				DBG1(SIG_DBG_IKE, "ignoring payload %N",
+					 payload_type_names, payload->get_type(payload));
 				break;
 			}
 		}
@@ -193,14 +185,12 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	if (delete_request && 
 		delete_request->get_protocol_id(delete_request) == PROTO_IKE)
 	{
-		this->logger->log(this->logger, CONTROL, 
-						  "DELETE request for IKE_SA received, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "DELETE request for IKE_SA received, deleting IKE_SA");
 	}
 	else
 	{
 		/* should not happen, as we preparsed this at transaction construction */
-		this->logger->log(this->logger, CONTROL, 
-						  "received a weird DELETE request for IKE_SA, deleting anyway");
+		DBG1(SIG_DBG_IKE, "received a weird DELETE request for IKE_SA, deleting anyway");
 	}
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
@@ -222,8 +212,7 @@ static status_t conclude(private_delete_ike_sa_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != INFORMATIONAL)
 	{
-		this->logger->log(this->logger, ERROR,
-						  "INFORMATIONAL response of invalid type, deleting IKE_SA");
+		DBG1(SIG_DBG_IKE, "INFORMATIONAL response of invalid type, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	/* this is only an acknowledge. We can't do anything here, but delete
@@ -260,7 +249,6 @@ delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa)
 	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
-	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &this->public;
 }

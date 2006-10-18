@@ -25,19 +25,15 @@
 
 #include <crypto/signers/hmac_signer.h>
 
-/** 
- * String mappings for integrity_algorithm_t.
- */
-mapping_t integrity_algorithm_m[] = {
-	{AUTH_UNDEFINED, "UNDEFINED"},
-	{AUTH_HMAC_MD5_96, "HMAC_MD5_96"},
-	{AUTH_HMAC_SHA1_96, "HMAC_SHA1_96"},
-	{AUTH_DES_MAC, "DES_MAC"},
-	{AUTH_KPDK_MD5, "KPDK_MD5"},
-	{AUTH_AES_XCBC_96, "AES_XCBC_96"},
-	{MAPPING_END, NULL}
-};
-
+ENUM_BEGIN(integrity_algorithm_names, AUTH_UNDEFINED, AUTH_UNDEFINED,
+	"UNDEFINED");
+ENUM_NEXT(integrity_algorithm_names, AUTH_HMAC_MD5_96, AUTH_AES_XCBC_96, AUTH_UNDEFINED,
+	"HMAC_MD5_96",
+	"HMAC_SHA1_96",
+	"DES_MAC",
+	"KPDK_MD5",
+	"AES_XCBC_96");
+ENUM_END(integrity_algorithm_names, AUTH_AES_XCBC_96);
 
 /*
  * Described in header.

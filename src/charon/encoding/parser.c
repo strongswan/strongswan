@@ -30,7 +30,6 @@
 #include <types.h>
 #include <definitions.h>
 #include <daemon.h>
-#include <utils/logger.h>
 #include <utils/linked_list.h>
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
@@ -233,11 +232,6 @@ struct private_parser_t {
 	 * Set of encoding rules for this parsing session.
 	 */
 	encoding_rule_t *rules;
-	
-	/**
-	 * Assigned logger_t object.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -247,9 +241,8 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 {
 	if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, 
-							this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input to parse rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	switch (this->bit_pos)
@@ -272,15 +265,15 @@ static status_t parse_uint4(private_parser_t *this, int rule_number, u_int8_t *o
 			this->byte_pos++;
 			break;
 		default:
-			this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-								rule_number, mapping_find(encoding_type_m, 
-								this->rules[rule_number].type), this->bit_pos);
+			DBG2(SIG_DBG_ENC, "  found rule %d %N on bitpos %d",
+				 rule_number, encoding_type_names,
+				 this->rules[rule_number].type, this->bit_pos);
 			return PARSE_ERROR;
 	}
 	
 	if (output_pos != NULL)
 	{
-		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
+		DBG3(SIG_DBG_ENC, "   => %d", *output_pos);
 	}
 	
 	return SUCCESS;
@@ -293,16 +286,15 @@ static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *o
 {
 	if (this->byte_pos + sizeof(u_int8_t)  > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, 
-							this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input to parse rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos)
 	{
-		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, 
-							this->rules[rule_number].type), this->bit_pos);
+		DBG1(SIG_DBG_ENC, "  found rule %d %N on bitpos %d",
+			 rule_number, encoding_type_names,
+			 this->rules[rule_number].type, this->bit_pos);
 		return PARSE_ERROR;
 	}
 
@@ -310,7 +302,7 @@ static status_t parse_uint8(private_parser_t *this, int rule_number, u_int8_t *o
 	if (output_pos != NULL)
 	{
 		*output_pos = *(this->byte_pos);
-		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
+		DBG3(SIG_DBG_ENC, "   => %d", *output_pos);
 	}
 	this->byte_pos++;
 	
@@ -324,23 +316,21 @@ static status_t parse_uint15(private_parser_t *this, int rule_number, u_int16_t 
 {
 	if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, 
-							this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input to parse rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos != 1)
 	{
-		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
-							this->bit_pos);
+		DBG2(SIG_DBG_ENC, "  found rule %d %N on bitpos %d", rule_number,
+			 encoding_type_names, this->rules[rule_number].type, this->bit_pos);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
 	if (output_pos != NULL)
 	{
 		*output_pos = ntohs(*((u_int16_t*)this->byte_pos)) & ~0x8000;
-		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
+		DBG3(SIG_DBG_ENC, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
 	this->bit_pos = 0;
@@ -355,15 +345,14 @@ static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t 
 {
 	if (this->byte_pos + sizeof(u_int16_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input to parse rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos)
 	{
-		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
-							this->bit_pos);
+		DBG1(SIG_DBG_ENC, "  found rule %d %N on bitpos %d", rule_number,
+			 encoding_type_names, this->rules[rule_number].type, this->bit_pos);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
@@ -371,7 +360,7 @@ static status_t parse_uint16(private_parser_t *this, int rule_number, u_int16_t 
 	{
 		*output_pos = ntohs(*((u_int16_t*)this->byte_pos));
 		
-		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
+		DBG3(SIG_DBG_ENC, "   => %d", *output_pos);
 	}
 	this->byte_pos += 2;
 	
@@ -384,15 +373,14 @@ static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t 
 {
 	if (this->byte_pos + sizeof(u_int32_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input to parse rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos)
 	{
-		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
-							this->bit_pos);
+		DBG1(SIG_DBG_ENC, "  found rule %d %N on bitpos %d", rule_number,
+			 encoding_type_names, this->rules[rule_number].type, this->bit_pos);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
@@ -400,7 +388,7 @@ static status_t parse_uint32(private_parser_t *this, int rule_number, u_int32_t 
 	{
 		*output_pos = ntohl(*((u_int32_t*)this->byte_pos));
 		
-		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
+		DBG3(SIG_DBG_ENC, "   => %d", *output_pos);
 	}
 	this->byte_pos += 4;
 	
@@ -414,15 +402,14 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 {
 	if (this->byte_pos + sizeof(u_int64_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input to parse rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos)
 	{
-		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
-							this->bit_pos);
+		DBG1(SIG_DBG_ENC, "  found rule %d %N on bitpos %d", rule_number,
+			 encoding_type_names, this->rules[rule_number].type, this->bit_pos);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
@@ -432,7 +419,7 @@ static status_t parse_uint64(private_parser_t *this, int rule_number, u_int64_t 
 		*(output_pos + 1) = ntohl(*((u_int32_t*)this->byte_pos));
 		*output_pos = ntohl(*(((u_int32_t*)this->byte_pos) + 1));
 		
-		this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)output_pos, 8);
+		DBG3(SIG_DBG_ENC, "   => %b", (void*)output_pos, sizeof(u_int64_t));
 	}
 	this->byte_pos += 8;
 
@@ -446,15 +433,14 @@ static status_t parse_bytes (private_parser_t *this, int rule_number, u_int8_t *
 {
 	if (this->byte_pos + bytes > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input to parse rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos)
 	{
-		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), 
-							this->bit_pos);
+		DBG1(SIG_DBG_ENC, "  found rule %d %N on bitpos %d", rule_number,
+			 encoding_type_names, this->rules[rule_number].type, this->bit_pos);
 		return PARSE_ERROR;
 	}
 
@@ -463,7 +449,7 @@ static status_t parse_bytes (private_parser_t *this, int rule_number, u_int8_t *
 	{
 		memcpy(output_pos,this->byte_pos,bytes);
 		
-		this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)output_pos, bytes);
+		DBG3(SIG_DBG_ENC, "   => %b", (void*)output_pos, bytes);
 	}
 	this->byte_pos += bytes;
 	
@@ -477,8 +463,8 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 {
 	if (this->byte_pos + sizeof(u_int8_t) > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  not enough input to parse rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input to parse rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	/* caller interested in result ? */
@@ -494,7 +480,7 @@ static status_t parse_bit(private_parser_t *this, int rule_number, bool *output_
 			*output_pos = TRUE;
 		}
 		
-		this->logger->log(this->logger, RAW|LEVEL2, "   => %d", *output_pos);
+		DBG3(SIG_DBG_ENC, "   => %d", *output_pos);
 	}
 	this->bit_pos = (this->bit_pos + 1) % 8;
 	if (this->bit_pos == 0) 
@@ -514,15 +500,15 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 	
 	if (length < 0)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  invalid length for rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  invalid length for rule %d %N",
+			 rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;	
 	}
 	
 	if (this->bit_pos)
 	{
-		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), this->bit_pos);
+		DBG1(SIG_DBG_ENC, "  found rule %d %N on bitpos %d", rule_number,
+			 encoding_type_names, this->rules[rule_number].type, this->bit_pos);
 		return PARSE_ERROR;
 	}
 	
@@ -531,13 +517,13 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 		u_int8_t *pos_before = this->byte_pos;
 		payload_t *payload;
 		status_t status;
-		this->logger->log(this->logger, CONTROL|LEVEL1, "  %d bytes left, parsing recursivly %s", 
-							length, mapping_find(payload_type_m, payload_type));
+		DBG2(SIG_DBG_ENC, "  %d bytes left, parsing recursivly %N",
+			 length, payload_type_names, payload_type);
 		status = this->public.parse_payload((parser_t*)this, payload_type, &payload);
 		if (status != SUCCESS)
 		{
-			this->logger->log(this->logger, ERROR, "  parsing of a %s substructure failed", 
-								mapping_find(payload_type_m, payload_type));
+			DBG1(SIG_DBG_ENC, "  parsing of a %N substructure failed",
+				 payload_type_names, payload_type);
 			return status;	
 		}
 		list->insert_last(list, payload);
@@ -554,14 +540,14 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 {
 	if (this->byte_pos + length > this->input_roof)
 	{
-		this->logger->log(this->logger, ERROR, "  not enough input (%d bytes) to parse rule %d %s", 
-							length, rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type));
+		DBG1(SIG_DBG_ENC, "  not enough input (%d bytes) to parse rule %d %N",
+			 length, rule_number, encoding_type_names, this->rules[rule_number].type);
 		return PARSE_ERROR;
 	}
 	if (this->bit_pos)
 	{
-		this->logger->log(this->logger, ERROR, "  found rule %d %s on bitpos %d", 
-							rule_number, mapping_find(encoding_type_m, this->rules[rule_number].type), this->bit_pos);
+		DBG1(SIG_DBG_ENC, "  found rule %d %N on bitpos %d", rule_number,
+			 encoding_type_names, this->rules[rule_number].type, this->bit_pos);
 		return PARSE_ERROR;
 	}
 	if (output_pos != NULL)
@@ -571,7 +557,7 @@ static status_t parse_chunk(private_parser_t *this, int rule_number, chunk_t *ou
 		memcpy(output_pos->ptr, this->byte_pos, length);
 	}
 	this->byte_pos += length;
-	this->logger->log_bytes(this->logger, RAW|LEVEL2, "   =>", (void*)output_pos->ptr, length);
+	DBG3(SIG_DBG_ENC, "   => %b", (void*)output_pos->ptr, length);
 	
 	return SUCCESS;
 }
@@ -592,17 +578,16 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	/* create instance of the payload to parse */
 	pld = payload_create(payload_type);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "parsing %s payload, %d bytes left", 
-						mapping_find(payload_type_m, payload_type),
-						this->input_roof-this->byte_pos);
+	DBG2(SIG_DBG_ENC, "parsing %N payload, %d bytes left",
+		 payload_type_names, payload_type, this->input_roof - this->byte_pos);
 	
-	this->logger->log_bytes(this->logger, RAW|LEVEL3, "parsing payload from", this->byte_pos, 
-								this->input_roof-this->byte_pos);
+	DBG3(SIG_DBG_ENC, "parsing payload from %b",
+		 this->byte_pos, this->input_roof-this->byte_pos);
 	
 	if (pld->get_type(pld) == UNKNOWN_PAYLOAD)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, "  payload type %d is unknown, handling as %s",
-							payload_type, mapping_find(payload_type_m, UNKNOWN_PAYLOAD));
+		DBG1(SIG_DBG_ENC, "  payload type %d is unknown, handling as %N",
+			 payload_type, payload_type_names, UNKNOWN_PAYLOAD);
 	}
 	
 	/* base pointer for output, avoids casting in every rule */
@@ -613,8 +598,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
 	{
 		rule = &(this->rules[rule_number]);
-		this->logger->log(this->logger, CONTROL|LEVEL2, "  parsing rule %d %s", 
-							rule_number, mapping_find(encoding_type_m, rule->type));
+		DBG2(SIG_DBG_ENC, "  parsing rule %d %N",
+			 rule_number, encoding_type_names, rule->type);
 		switch (rule->type)
 		{
 			case U_INT_4:
@@ -990,7 +975,8 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 			}
 			default:
 			{
-				this->logger->log(this->logger, ERROR, "  no rule to parse rule %d %s (%d)", rule_number, mapping_find(encoding_type_m, rule->type), rule->type);
+				DBG1(SIG_DBG_ENC, "  no rule to parse rule %d %N",
+					 rule_number, encoding_type_names, rule->type);
 				pld->destroy(pld);
 				return PARSE_ERROR;
 			}
@@ -999,9 +985,9 @@ static status_t parse_payload(private_parser_t *this, payload_type_t payload_typ
 		rule++;
 	}
 	
-	*payload = pld;	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "parsing %s payload finished.", 
-					  mapping_find(payload_type_m, payload_type));
+	*payload = pld;
+	DBG2(SIG_DBG_ENC, "parsing %N payload finished",
+		 payload_type_names, payload_type);
 	return SUCCESS;
 }
 
@@ -1038,8 +1024,6 @@ parser_t *parser_create(chunk_t data)
 {
 	private_parser_t *this = malloc_thing(private_parser_t);
 	
-	this->logger = logger_manager->get_logger(logger_manager, PARSER);
-	
 	this->public.parse_payload = (status_t(*)(parser_t*,payload_type_t,payload_t**)) parse_payload;
 	this->public.reset_context = (void(*)(parser_t*)) reset_context;
 	this->public.get_remaining_byte_count = (int (*) (parser_t *))get_remaining_byte_count;
@@ -1055,7 +1039,7 @@ parser_t *parser_create(chunk_t data)
 	this->parse_bit = parse_bit;
 	this->parse_list = parse_list;
 	this->parse_chunk = parse_chunk;
-		
+	
 	this->input = data.ptr;
 	this->byte_pos = data.ptr;
 	this->bit_pos = 0;
@@ -1063,4 +1047,3 @@ parser_t *parser_create(chunk_t data)
 	
 	return (parser_t*)this;
 }
-

@@ -115,11 +115,11 @@ enum job_type_t {
 };
 
 /**
- * string mappings for job_type_t
+ * enum name  for job_type_t
  * 
  * @ingroup jobs
  */
-extern mapping_t job_type_m[];
+extern enum_name_t *job_type_names;
 
 
 typedef struct job_t job_t;

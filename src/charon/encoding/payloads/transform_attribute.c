@@ -65,14 +65,12 @@ struct private_transform_attribute_t {
 	chunk_t attribute_value;
 };
 
-/** 
- * String mappings for transform_attribute_type_t.
- */
-mapping_t transform_attribute_type_m[] = {
-	{ATTRIBUTE_UNDEFINED, "ATTRIBUTE_UNDEFINED"},
-	{KEY_LENGTH, "KEY_LENGTH"},
-	{MAPPING_END, NULL}
-};
+
+ENUM_BEGIN(transform_attribute_type_name, ATTRIBUTE_UNDEFINED, ATTRIBUTE_UNDEFINED,
+	"ATTRIBUTE_UNDEFINED");
+ENUM_NEXT(transform_attribute_type_name, KEY_LENGTH, KEY_LENGTH, ATTRIBUTE_UNDEFINED,
+	"KEY_LENGTH");
+ENUM_END(transform_attribute_type_name, KEY_LENGTH);
 
 /**
  * Encoding rules to parse or generate a Transform attribute.

@@ -56,11 +56,6 @@ struct private_dead_peer_detection_t {
 	 * Times we did send the request
 	 */
 	u_int32_t requested;
-	
-	/**
-	 * Assigned logger.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -187,7 +182,6 @@ dead_peer_detection_t *dead_peer_detection_create(ike_sa_t *ike_sa)
 	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
-	this->logger = logger_manager->get_logger(logger_manager, IKE_SA);
 	
 	return &this->public;
 }

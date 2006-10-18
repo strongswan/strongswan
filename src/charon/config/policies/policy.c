@@ -27,34 +27,23 @@
 
 #include "policy.h"
 
+#include <daemon.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
-#include <utils/logger_manager.h>
 
-/** 
- * String mappings for auth_method_t.
- */
-static const char *const auth_method_name[] = {
+ENUM(auth_method_names, RSA_DIGITAL_SIGNATURE, DSS_DIGITAL_SIGNATURE,
 	"RSA signature",
 	"pre-shared key",
 	"DSS signature"
-};
+);
 
-enum_names auth_method_names =
-    { RSA_DIGITAL_SIGNATURE, DSS_DIGITAL_SIGNATURE, auth_method_name, NULL };
 
-/** 
- * String mappings for dpd_action_t.
- */
-static const char *const dpd_action_name[] = {
+ENUM(dpd_action_names, DPD_NONE, DPD_RESTART,
 	"DPD_NONE",
 	"DPD_CLEAR",
 	"DPD_ROUTE",
 	"DPD_RESTART"
-};
-
-enum_names dpd_action_names =
-    { DPD_NONE, DPD_RESTART, dpd_action_name, NULL };
+);
 
 typedef struct private_policy_t private_policy_t;
 
@@ -148,11 +137,6 @@ struct private_policy_t {
 	 * What to do with an SA when other peer seams to be dead?
 	 */
 	bool dpd_action;
-	
-	/**
-	 * logger
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -239,9 +223,7 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 	traffic_selector_t *supplied_ts, *stored_ts, *selected_ts;
 	linked_list_t *selected = linked_list_create();
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1,
-					  "selecting traffic selectors for %s host",
-					  stored == this->my_ts ? "local" : "remote");
+	DBG2(SIG_DBG_CFG, "selecting traffic selectors");
 	
 	stored_iter = stored->create_iterator(stored, TRUE);
 	supplied_iter = supplied->create_iterator(supplied, TRUE);
@@ -258,10 +240,8 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 		/* iterate over all supplied traffic selectors */
 		while (supplied_iter->iterate(supplied_iter, (void**)&supplied_ts))
 		{
-			this->logger->log(this->logger, CONTROL|LEVEL2,
-							  "  stored %s <=> %s received",
-							  stored_ts->get_string(stored_ts), 
-							  supplied_ts->get_string(supplied_ts));
+			DBG2(SIG_DBG_CFG, "stored %R <=> %R received",
+				 stored_ts, supplied_ts);
 			
 			selected_ts = stored_ts->get_subset(stored_ts, supplied_ts);
 			if (selected_ts)
@@ -269,8 +249,8 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 				/* got a match, add to list */
 				selected->insert_last(selected, (void*)selected_ts);
 				
-				this->logger->log(this->logger, CONTROL|LEVEL1, "    got a match: %s",
-								  selected_ts->get_string(selected_ts));
+				DBG2(SIG_DBG_CFG, "found traffic selector for %s: %R", 
+					 stored == this->my_ts ? "us" : "other", selected_ts);
 			}
 		}
 		stored_ts->destroy(stored_ts);
@@ -554,7 +534,6 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->proposals = linked_list_create();
 	this->my_ts = linked_list_create();
 	this->other_ts = linked_list_create();
-	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
 
 	return &this->public;
 }

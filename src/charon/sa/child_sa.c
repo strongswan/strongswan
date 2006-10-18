@@ -22,25 +22,22 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
 #include "child_sa.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <printf.h>
 
 #include <daemon.h>
 
-
-/**
- * String mappings for child_sa_state_t.
- */
-mapping_t child_sa_state_m[] = {
-	{CHILD_CREATED, "CREATED"},
-	{CHILD_INSTALLED, "INSTALLED"},
-	{CHILD_ROUTED, "ROUTED"},
-	{CHILD_REKEYING, "REKEYING"},
-	{CHILD_DELETING, "DELETNG"},
-	{MAPPING_END, NULL}
-};
+ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DELETING,
+	"CREATED",
+	"ROUTED",
+	"INSTALLED",
+	"REKEYING",
+	"DELETING",
+);
 
 typedef struct sa_policy_t sa_policy_t;
 
@@ -170,11 +167,6 @@ struct private_child_sa_t {
 	 * Specifies if NAT traversal is used
 	 */
 	bool use_natt;
-	
-	/**
-	 * CHILD_SAs own logger
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -254,18 +246,15 @@ static void updown(private_child_sa_t *this, bool up)
 		sa_policy_t *policy;
 		char command[1024];
 		char *ifname = NULL;
-		char *my_str, *other_str;
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
 		char *pos;
 		FILE *shell;
 		
 		/* get ts strings */
 		iterator->current(iterator, (void**)&policy);
-		my_str = policy->my_ts->get_string(policy->my_ts);
-		other_str = policy->other_ts->get_string(policy->other_ts);
 		
 		/* get subnet/bits from string */
-		my_client = strdup(my_str);
+		asprintf(&my_client, "%R", policy->my_ts);
 		pos = strchr(my_client, '/');
 		*pos = '\0';
 		my_client_mask = pos + 1;
@@ -274,7 +263,7 @@ static void updown(private_child_sa_t *this, bool up)
 		{
 			*pos = '\0';
 		}
-		other_client = strdup(other_str);
+		asprintf(&other_client, "%R", policy->other_ts);
 		pos = strchr(other_client, '/');
 		*pos = '\0';
 		other_client_mask = pos + 1;
@@ -313,8 +302,8 @@ static void updown(private_child_sa_t *this, bool up)
 				"%s"
 				"%s",
 				 up ? "up" : "down",
-				 /* TODO: fix it: streq(this->me.addr->get_string(this->me.addr),
-				 my_client) ? "-host" :*/ "-client",
+				 policy->my_ts->is_host(policy->my_ts,
+							this->me.addr) ? "-host" : "-client",
 				 this->me.addr->get_family(this->me.addr) == AF_INET ? "" : "-ipv6",
 				 this->name,
 				 ifname,
@@ -341,9 +330,7 @@ static void updown(private_child_sa_t *this, bool up)
 
 		if (shell == NULL)
 		{
-			this->logger->log(this->logger, ERROR,
-							  "could not execute updown script '%s'",
-							  this->script);
+			DBG1(SIG_DBG_CHD, "could not execute updown script '%s'", this->script);
 			return;
 		}
 		
@@ -355,8 +342,7 @@ static void updown(private_child_sa_t *this, bool up)
 			{
 				if (ferror(shell))
 				{
-					this->logger->log(this->logger, ERROR,
-									  "error reading output from updown script");
+					DBG1(SIG_DBG_CHD, "error reading output from updown script");
 					return;
 				}
 				else
@@ -371,7 +357,7 @@ static void updown(private_child_sa_t *this, bool up)
 				{	/* trim trailing '\n' */
 					e[-1] = '\0';
 				}
-				this->logger->log(this->logger, ERROR, "updown: %s", resp);
+				DBG1(SIG_DBG_CHD, "updown: %s", resp);
 			}
 		}
 		pclose(shell);
@@ -507,15 +493,14 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 		dst = this->other.addr;
 	}
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1, "adding %s %s SA",
-					  mine ? "inbound" : "outbound",
-					  mapping_find(protocol_id_m, this->protocol));
+	DBG2(SIG_DBG_CHD, "adding %s %N SA", mine ? "inbound" : "outbound",
+		 protocol_id_names, this->protocol);
 	
 	/* select encryption algo */
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_algo))
 	{
-		this->logger->log(this->logger, CONTROL|LEVEL2, "  using %s for encryption",
-							mapping_find(encryption_algorithm_m, enc_algo->algorithm));
+		DBG2(SIG_DBG_CHD, "  using %N for encryption",
+			 encryption_algorithm_names, enc_algo->algorithm);
 	}
 	else
 	{
@@ -525,8 +510,8 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	/* select integrity algo */
 	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_algo))
 	{
-		this->logger->log(this->logger, CONTROL|LEVEL2, "  using %s for integrity",
-						  mapping_find(integrity_algorithm_m, int_algo->algorithm));
+		DBG2(SIG_DBG_CHD, "  using %N for integrity",
+			 integrity_algorithm_names, int_algo->algorithm);
 	}
 	else
 	{
@@ -547,9 +532,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	
 	
 	/* send SA down to the kernel */
-	this->logger->log(this->logger, CONTROL|LEVEL2,
-						"  SPI 0x%.8x, src %H dst %H",
-						ntohl(spi), src, dst);
+	DBG2(SIG_DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 											  src, dst,
 											  spi, this->protocol,
@@ -645,8 +628,8 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			
 			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL1, 
-								  "CHILD_SA policy uses two different IP families, ignored");
+				DBG2(SIG_DBG_CHD,
+					 "CHILD_SA policy uses two different IP families, ignored");
 				continue;
 			}
 			
@@ -654,8 +637,8 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			if (my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts) &&
 				my_ts->get_protocol(my_ts) && other_ts->get_protocol(other_ts))
 			{
-				this->logger->log(this->logger, CONTROL|LEVEL1, 
-								  "CHILD_SA policy uses two different protocols, ignored");
+				DBG2(SIG_DBG_CHD,
+					 "CHILD_SA policy uses two different protocols, ignored");
 				continue;
 			}
 			
@@ -774,134 +757,133 @@ static status_t get_use_time(private_child_sa_t *this, bool inbound, time_t *use
 }
 
 /**
- * Implementation of child_sa_t.log_status.
+ * output handler in printf()
  */
-static void log_status(private_child_sa_t *this, logger_t *logger)
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
 {
+	private_child_sa_t *this = *((private_child_sa_t**)(args[0]));
 	iterator_t *iterator;
-	char use_in_str[12] = "unused";
-	char use_out_str[12] = "unused";
-	char rekey_str[12] = "disabled";
-	char enc_str[32] = "";
-	char int_str[32] = "";
-	u_int32_t use_in, use_out, use_fwd, now, rekeying;
+	sa_policy_t *policy;
+	u_int32_t now, rekeying, use;
 	status_t status;
+	size_t written, total_written = 0;
+#define fprintf_sum(...) { written = fprintf(__VA_ARGS__); if (written < 0) return written; total_written += written; }
 	
-	if (logger == NULL)
+	if (this == NULL)
 	{
-		logger = this->logger;
+		return fprintf(stream, "(null)");
 	}
+	
 	now = (u_int32_t)time(NULL);
+	
+	fprintf_sum(stream, "%10s:  %N, reqid: %d", this->name,
+				child_sa_state_names, this->state, this->reqid);
 	
 	if (this->state == CHILD_INSTALLED)
 	{
-		/* query SA times */
-		status = charon->kernel_interface->query_sa(charon->kernel_interface,
-						this->me.addr, this->me.spi, this->protocol, &use_in);
-		if (status == SUCCESS && use_in)
-		{
-			snprintf(use_in_str, sizeof(use_in_str), "%ds", now - use_in);
-		}
-		status = charon->kernel_interface->query_sa(charon->kernel_interface,
-						this->other.addr, this->other.spi, this->protocol, &use_out);
-		if (status == SUCCESS && use_out)
-		{
-			snprintf(use_out_str, sizeof(use_out_str), "%ds", now - use_out);
-		}
+		fprintf_sum(stream, ", %N, SPIs (in/out): 0x%x/0x%x",
+					protocol_id_names, this->protocol,
+					htonl(this->me.spi), htonl(this->other.spi));
 		
-		/* calculate rekey times */
-		if (this->soft_lifetime)
+		if (info->alt)
 		{
-			rekeying = this->soft_lifetime - (now - this->install_time);
-			snprintf(rekey_str, sizeof(rekey_str), "%ds", (int)rekeying);
-		}
-		
-		/* algorithms used */
-		if (this->protocol == PROTO_ESP)
-		{
-			if (this->encryption.key_size)
+			fprintf_sum(stream, "\n%10s:   ", this->name);
+			
+			if (this->protocol == PROTO_ESP)
 			{
-				snprintf(enc_str, sizeof(enc_str), "%s-%d,", 
-						mapping_find(encryption_algorithm_m, this->encryption.algorithm),
-						this->encryption.key_size);
+				fprintf_sum(stream, "%N",
+							encryption_algorithm_names, this->encryption.algorithm);
+				
+				if (this->encryption.key_size)
+				{
+					fprintf_sum(stream, "-%d", this->encryption.key_size);
+				}
+				fprintf_sum(stream, "/");
+			}
+			
+			fprintf_sum(stream, "%N",
+						integrity_algorithm_names, this->integrity.algorithm);
+			if (this->integrity.key_size)
+			{
+				fprintf_sum(stream, "-%d", this->integrity.key_size);
+			}
+			fprintf_sum(stream, ", rekeying: ");
+			
+			/* calculate rekey times */
+			if (this->soft_lifetime)
+			{
+				rekeying = this->soft_lifetime - (now - this->install_time);
+				fprintf_sum(stream, "%ds", rekeying);
 			}
 			else
 			{
-				snprintf(enc_str, sizeof(enc_str), "%s,", 
-						mapping_find(encryption_algorithm_m, this->encryption.algorithm));
+				fprintf_sum(stream, "disabled");
 			}
 		}
-		if (this->integrity.key_size)
-		{
-			snprintf(int_str, sizeof(int_str), "%s-%d", 
-					mapping_find(integrity_algorithm_m, this->integrity.algorithm),
-					this->integrity.key_size);
-		}
-		else
-		{
-			snprintf(int_str, sizeof(int_str), "%s", 
-					mapping_find(integrity_algorithm_m, this->integrity.algorithm));
-		}
-		
-		logger->log(logger, CONTROL|LEVEL1,
-					"  \"%s\":   state: %s, reqid: %d, ",
-					this->name, mapping_find(child_sa_state_m, this->state), this->reqid);
-		logger->log(logger, CONTROL|LEVEL1,
-					"  \"%s\":    %s (%s%s), SPIs (in/out): 0x%x/0x%x",
-					this->name, this->protocol == PROTO_ESP ? "ESP" : "AH",
-					enc_str, int_str,
-					htonl(this->me.spi), htonl(this->other.spi));
-		logger->log(logger, CONTROL|LEVEL1,
-					"  \"%s\":    rekeying: %s, key age (in/out): %s/%s",
-					this->name, rekey_str, use_in_str, use_out_str);
 	}
-	else
-	{
-		logger->log(logger, CONTROL|LEVEL1, "  \"%s\":   state: %s, reqid: %d",
-					this->name, mapping_find(child_sa_state_m, this->state), 
-					this->reqid);
-	}
-	
+#undef fprintf_sum
+#define fprintf_sum(...) { written = fprintf(__VA_ARGS__); if (written < 0) { iterator->destroy(iterator); return written; } total_written += written; }
 	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		sa_policy_t *policy;
-		char *my_str;
-		char *other_str;
-		char pol_in_str[12] = "unused";
-		char pol_out_str[12] = "unused";
-		char pol_fwd_str[12] = "unused";
-		
-		/* get ts strings */
-		iterator->current(iterator, (void**)&policy);
-		my_str = policy->my_ts->get_string(policy->my_ts);
-		other_str = policy->other_ts->get_string(policy->other_ts);
+		fprintf_sum(stream, "\n%10s:    %R===%R, last use (in/out/fwd): ",
+					this->name, policy->my_ts, policy->other_ts);
 		
 		/* query policy times */
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-						policy->other_ts, policy->my_ts, POLICY_IN, &use_in);
-		if (status == SUCCESS && use_in)
+							policy->other_ts, policy->my_ts, POLICY_IN, &use);
+		if (status == SUCCESS && use)
 		{
-			snprintf(pol_in_str, sizeof(pol_in_str), "%ds", now - use_in);
+			fprintf_sum(stream, "%ds/", now - use);
+		}
+		else
+		{
+			fprintf_sum(stream, "unused/");
 		}
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-						policy->my_ts, policy->other_ts, POLICY_OUT, &use_out);
-		if (status == SUCCESS && use_out)
+				policy->my_ts, policy->other_ts, POLICY_OUT, &use);
+		if (status == SUCCESS && use)
 		{
-			snprintf(pol_out_str, sizeof(pol_out_str), "%ds", now - use_out);
+			fprintf_sum(stream, "%ds/", now - use);
+		}
+		else
+		{
+			fprintf_sum(stream, "unused/");
 		}
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-						policy->other_ts, policy->my_ts, POLICY_FWD, &use_fwd);
-		if (status == SUCCESS && use_fwd)
+				policy->other_ts, policy->my_ts, POLICY_FWD, &use);
+		if (status == SUCCESS && use)
 		{
-			snprintf(pol_fwd_str, sizeof(pol_fwd_str), "%ds", now - use_fwd);
+			fprintf_sum(stream, "%ds", now - use);
 		}
-		
-		logger->log(logger, CONTROL, 
-					"  \"%s\":     %s====%s, last use (in/out/fwd): %s/%s/%s",
-					this->name, my_str, other_str, pol_in_str, pol_out_str, pol_fwd_str);
+		else
+		{
+			fprintf_sum(stream, "unused");
+		}
 	}
 	iterator->destroy(iterator);
+	return total_written;
+}
+
+/**
+ * arginfo handler in printf()
+ */
+static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (n > 0)
+	{
+		argtypes[0] = PA_POINTER;
+	}
+	return 1;
+}
+
+/**
+ * register printf() handlers
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(CHILD_SA_PRINTF_SPEC, print, print_arginfo);
 }
 
 /**
@@ -936,10 +918,8 @@ static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t
 		spi = this->me.spi;
 	}
 	
-	this->logger->log(this->logger, CONTROL|LEVEL1,
-					  "updating %s SA 0x%x, from %#H..#H to %#H..%#H",
-					  mapping_find(protocol_id_m, this->protocol), ntohl(spi),
-					  src, dst, new_src, new_dst);
+	DBG2(SIG_DBG_CHD, "updating %N SA 0x%x, from %#H..#H to %#H..%#H",
+		 protocol_id_names, this->protocol, ntohl(spi), src, dst, new_src, new_dst);
 	
 	status = charon->kernel_interface->update_sa(charon->kernel_interface,
 												 dst, spi, this->protocol, 
@@ -1138,11 +1118,9 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.get_rekeying_transaction = (void* (*)(child_sa_t*))get_rekeying_transaction;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
-	this->public.log_status = (void (*)(child_sa_t*, logger_t*))log_status;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;
 
 	/* private data */
-	this->logger = logger_manager->get_logger(logger_manager, CHILD_SA);
 	this->name = strdup("(uninitialized)");
 	this->me.addr = me->clone(me);
 	this->other.addr = other->clone(other);

@@ -26,8 +26,6 @@
 
 #include <types.h>
 #include <sa/ike_sa.h>
-#include <utils/logger.h>
-
 
 typedef struct ike_sa_manager_t ike_sa_manager_t;
 
@@ -84,9 +82,9 @@ struct ike_sa_manager_t {
 	 * @return					checked out/created IKE_SA
 	 */
 	ike_sa_t* (*checkout_by_id) (ike_sa_manager_t* this,
-								  host_t *my_host, host_t* other_host,
-								  identification_t *my_id, 
-								  identification_t *other_id);
+								 host_t *my_host, host_t* other_host,
+								 identification_t *my_id, 
+								 identification_t *other_id);
 	
 	/**
 	 * @brief Check out an IKE_SA by protocol and SPI of one of its CHILD_SA.
@@ -104,30 +102,17 @@ struct ike_sa_manager_t {
 	ike_sa_t* (*checkout_by_child) (ike_sa_manager_t* this, u_int32_t reqid);
 	
 	/**
-	 * @brief Get a list of all IKE_SA SAs currently set up.
-	 * 
-	 * The resulting list with all IDs must be destroyed by 
-	 * the caller. There is no guarantee an ike_sa with the 
-	 * corrensponding ID really exists, since it may be deleted
-	 * in the meantime by another thread.
-	 * 
-	 * @param this			 	the manager object
-	 * @return					a list with ike_sa_id_t s
-	 */
-	linked_list_t *(*get_ike_sa_list) (ike_sa_manager_t* this);
-	
-	/**
-	 * @brief Log the status of the IKE_SA's in the manager.
+	 * @brief Create an iterator over all stored IKE_SAs.
 	 *
-	 * A informational log is done to the supplied logger. If logger is 
-	 * NULL, an internal logger is used. If a name is supplied,
-	 * only connections with the matching name will be logged.
-	 * 
+	 * The avoid synchronization issues, the iterator locks access
+	 * to the manager exclusively, until it gets destroyed.
+	 * Only use the iterate() functions of this iterator!!! Anything other
+	 * is not implemented and causes crashes.
+	 *
 	 * @param this			 	the manager object
-	 * @param logger			logger to do the log, or NULL
-	 * @param name				name of a connection, or NULL
+	 * @return					iterator over all IKE_SAs.
 	 */
-	void (*log_status) (ike_sa_manager_t* this, logger_t* logger, char* name);
+	iterator_t *(*create_iterator) (ike_sa_manager_t* this);
 	
 	/**
 	 * @brief Checkin the SA after usage.

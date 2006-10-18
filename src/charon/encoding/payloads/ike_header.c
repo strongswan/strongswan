@@ -100,19 +100,16 @@ struct private_ike_header_t {
 	 * Length of the whole IKEv2-Message (header and all payloads).
 	 */
 	u_int32_t length;	
-}; 
-
-/**
- * Mappings used to get strings for exchange_type_t.
- */
-mapping_t exchange_type_m[] = {
-	{EXCHANGE_TYPE_UNDEFINED, "EXCHANGE_TYPE_UNDEFINED"},
-	{IKE_SA_INIT, "IKE_SA_INIT"},
-	{IKE_AUTH, "IKE_AUTH"},
-	{CREATE_CHILD_SA, "CREATE_CHILD_SA"},
-	{INFORMATIONAL, "INFORMATIONAL"}
 };
 
+ENUM_BEGIN(exchange_type_names, EXCHANGE_TYPE_UNDEFINED, EXCHANGE_TYPE_UNDEFINED,
+	"EXCHANGE_TYPE_UNDEFINED");
+ENUM_NEXT(exchange_type_names, IKE_SA_INIT, INFORMATIONAL, EXCHANGE_TYPE_UNDEFINED,
+	"IKE_SA_INIT",
+	"IKE_AUTH",
+	"CREATE_CHILD_SA",
+	"INFORMATIONAL");
+ENUM_END(exchange_type_names, INFORMATIONAL);
 
 /**
  * Encoding rules to parse or generate a IKEv2-Header.

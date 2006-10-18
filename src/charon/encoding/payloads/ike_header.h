@@ -93,11 +93,11 @@ enum exchange_type_t{
 };
 
 /**
- * string mappings for exchange_type_t
+ * enum name for exchange_type_t
  * 
  * @ingroup payloads
  */
-extern mapping_t exchange_type_m[];
+extern enum_name_t *exchange_type_names;
 
 
 typedef struct ike_header_t ike_header_t;

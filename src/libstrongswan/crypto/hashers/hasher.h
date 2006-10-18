@@ -43,17 +43,17 @@ typedef enum hash_algorithm_t hash_algorithm_t;
  * @ingroup hashers
  */
 enum hash_algorithm_t {
-	HASH_MD2,
+	HASH_MD2 = 0,
 	/** Implemented in class md5_hasher_t */
-	HASH_MD5,
+	HASH_MD5 = 1,
 	/** Implemented in class sha1_hasher_t */
-	HASH_SHA1,
+	HASH_SHA1 = 2,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA256,
+	HASH_SHA256 = 3,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA384,
+	HASH_SHA384 = 4,
 	/** Implemented in class sha2_hasher_t */
-	HASH_SHA512,
+	HASH_SHA512 = 5,
 };
 
 #define HASH_SIZE_MD2		16
@@ -65,9 +65,9 @@ enum hash_algorithm_t {
 #define HASH_SIZE_MAX		64
 
 /**
- * String mappings for hash_algorithm_t.
+ * enum names for hash_algorithm_t.
  */
-extern mapping_t hash_algorithm_m[];
+extern enum_name_t *hash_algorithm_names;
 
 
 typedef struct hasher_t hasher_t;

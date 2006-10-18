@@ -22,36 +22,14 @@
 #ifndef LEAK_DETECTIVE_H_
 #define LEAK_DETECTIVE_H_
 
-
-#include <utils/logger_manager.h>
-
 /**
  * Log status information about allocation
  */
-void leak_detective_status(logger_t *logger);
-
-#ifdef LEAK_DETECTIVE
+void leak_detective_status(FILE *stream);
 
 /**
  * Max number of stack frames to include in a backtrace.
  */
 #define STACK_FRAMES_COUNT 30
-
-/**
- * Initialize leak detective, activates it
- */
-void leak_detective_init();
-
-/**
- * Cleanup leak detective, deactivates it
- */
-void leak_detective_cleanup();
-
-#else /* !LEAK_DETECTIVE */
-
-#define leak_detective_init() {}
-#define leak_detective_cleanup() {}
-
-#endif /* LEAK_DETECTIVE */
 
 #endif /* LEAK_DETECTIVE_H_ */

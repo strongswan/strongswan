@@ -40,11 +40,6 @@ struct private_acquire_job_t {
 	 * reqid of the child to rekey
 	 */
 	u_int32_t reqid;
-	
-	/**
-	 * Logger ref
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -66,8 +61,8 @@ static status_t execute(private_acquire_job_t *this)
 													   this->reqid);
 	if (ike_sa == NULL)
 	{
-		this->logger->log(this->logger, ERROR|LEVEL1, 
-						  "CHILD_SA not found for acquiring");
+		DBG2(SIG_DBG_JOB, "CHILD_SA with reqid %d not found for acquiring",
+			 this->reqid);
 		return DESTROY_ME;
 	}
 	ike_sa->acquire(ike_sa, this->reqid);
@@ -98,7 +93,6 @@ acquire_job_t *acquire_job_create(u_int32_t reqid)
 	
 	/* private variables */
 	this->reqid = reqid;
-	this->logger = logger_manager->get_logger(logger_manager, WORKER);
 	
 	return &(this->public);
 }

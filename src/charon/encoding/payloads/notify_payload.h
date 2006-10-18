@@ -90,12 +90,12 @@ enum notify_type_t {
 	AUTH_LIFETIME = 16403,
 };
 
-/** 
- * String mappings for notify_type_t.
- * 
+/**
+ * enum name for notify_type_t.
+ *
  * @ingroup payloads
  */
-extern mapping_t notify_type_m[];
+extern enum_name_t *notify_type_names;
 
 
 typedef struct notify_payload_t notify_payload_t;

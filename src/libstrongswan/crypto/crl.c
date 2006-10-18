@@ -23,13 +23,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+#include <printf.h>
 
 #include <types.h>
+#include <library.h>
 #include <definitions.h>
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/pem.h>
-#include <utils/logger_manager.h>
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
@@ -39,7 +40,6 @@
 
 #define CRL_WARNING_INTERVAL	7	/* days */
 
-static logger_t *logger;
 extern char* check_expiry(time_t expiration_date, int warning_interval, bool strict);
 extern time_t parse_time(chunk_t blob, int level0);
 extern void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID, chunk_t *authKeySerialNumber);
@@ -206,9 +206,9 @@ static crl_reason_t parse_crl_reasonCode(chunk_t object)
 	{
 		reason = *object.ptr;
 	}
-	logger->log(logger, CONTROL|LEVEL2, "  '%s'", enum_name(&crl_reason_names, reason));
+	DBG2("  '%N'", crl_reason_names, reason);
 
-    return reason;
+	return reason;
 }
 
 /**
@@ -219,7 +219,7 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 	asn1_ctx_t ctx;
 	bool critical;
 	chunk_t extnID;
-	chunk_t userCertificate;
+	chunk_t userCertificate = CHUNK_INITIALIZER;
 	revokedCert_t *revokedCert = NULL;
 	chunk_t object;
 	u_int level;
@@ -245,14 +245,14 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 				break;
 			case CRL_OBJ_VERSION:
 				crl->version = (object.len) ? (1+(u_int)*object.ptr) : 1;
-				logger->log(logger, CONTROL|LEVEL2, "  v%d", crl->version);
+				DBG2("  v%d", crl->version);
 				break;
 			case CRL_OBJ_SIG_ALG:
 				crl->sigAlg = parse_algorithmIdentifier(object, level, NULL);
 				break;
 			case CRL_OBJ_ISSUER:
 				crl->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
-				logger->log(logger, CONTROL|LEVEL1, "  '%D'", crl->issuer);
+				DBG2("  '%D'", crl->issuer);
 				break;
 			case CRL_OBJ_THIS_UPDATE:
 				crl->thisUpdate = parse_time(object, level);
@@ -277,7 +277,7 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 			case CRL_OBJ_CRL_ENTRY_CRITICAL:
 			case CRL_OBJ_CRITICAL:
 				critical = object.len && *object.ptr;
-				logger->log(logger, CONTROL|LEVEL2, "  %s",(critical)?"TRUE":"FALSE");
+				DBG2("  %s",(critical)?"TRUE":"FALSE");
 				break;
 			case CRL_OBJ_CRL_ENTRY_EXTN_VALUE:
 			case CRL_OBJ_EXTN_VALUE:
@@ -314,25 +314,22 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
  */
 static err_t is_valid(const private_crl_t *this, time_t *until, bool strict)
 {
-	char buf[TIMETOA_BUF];
-
 	time_t current_time = time(NULL);
 	
-	timetoa(buf, BUF_LEN, &this->thisUpdate, TRUE);
-	logger->log(logger, CONTROL|LEVEL1, "  this update : %s", buf);
-	timetoa(buf, BUF_LEN, &current_time, TRUE);
-	logger->log(logger, CONTROL|LEVEL1, "  current time: %s", buf);
-	timetoa(buf, BUF_LEN, &this->nextUpdate, TRUE);
-	logger->log(logger, CONTROL|LEVEL1, "  next update:  %s", buf);
+	DBG2("  this update : %T", this->thisUpdate);
+	DBG2("  current time: %T", current_time);
+	DBG2("  next update:  %T", this->nextUpdate);
 
-	if (strict && until != NULL
-	&& (*until == UNDEFINED_TIME || this->nextUpdate < *until)) 
+	if (strict && until != NULL && 
+		(*until == UNDEFINED_TIME || this->nextUpdate < *until))
 	{
 		*until = this->nextUpdate;
 	}
 	if (current_time > this->nextUpdate)
+	{
 		return "has expired";
-	logger->log(logger, CONTROL|LEVEL1, "  crl is valid", buf);
+	}
+	DBG2("  crl is valid");
 	return NULL;
 }
 
@@ -437,38 +434,88 @@ static void destroy(private_crl_t *this)
 }
 
 /**
- * log crl
+ * output handler in printf()
  */
-static void log_crl(const private_crl_t *this, logger_t *logger, bool utc, bool strict)
+static int print(FILE *stream, const struct printf_info *info,
+				 const void *const *args)
 {
-	identification_t *issuer = this->issuer;
-	linked_list_t *revokedCertificates   = this->revokedCertificates;
-
-	char buf[BUF_LEN];
-
-	timetoa(buf, BUF_LEN, &this->installed, utc);
-	logger->log(logger, CONTROL, "%s, revoked certs: %d",
-			buf, revokedCertificates->get_count(revokedCertificates));
-
-	logger->log(logger, CONTROL, "       issuer:  '%D'", issuer);
+	private_crl_t *this = *((private_crl_t**)(args[0]));
+	bool utc = TRUE;
+	int written = 0;
+	time_t now;
 	
-	timetoa(buf, BUF_LEN, &this->thisUpdate, utc);
-	logger->log(logger, CONTROL, "       updates:  this %s", buf);
+	if (info->alt)
+	{
+		utc = *((bool*)(args[1]));
+	}
 	
-	timetoa(buf, BUF_LEN, &this->nextUpdate, utc);
-	logger->log(logger, CONTROL, "                 next %s %s", buf,
-			check_expiry(this->nextUpdate, CRL_WARNING_INTERVAL, strict));
+	if (this == NULL)
+	{
+		return fprintf(stream, "(null)");
+	}
+	
+	now = time(NULL);
+	
+	written += fprintf(stream, "  issuer:    %D\n", this->issuer);
+	written += fprintf(stream, "  installed: %#T, revoked certs: %d\n", this->installed, utc,
+					   this->revokedCertificates->get_count(this->revokedCertificates));
+	written += fprintf(stream, "  updates:   this %#T\n", this->thisUpdate, utc);
+	written += fprintf(stream, "             next %#T ");
+	if (this->nextUpdate == UNDEFINED_TIME)
+	{
+		written += fprintf(stream, "ok (expires never)");
+	}
+	else if (now > this->nextUpdate)
+	{
+		written += fprintf(stream, "expired (since %V)", now, this->nextUpdate);
+	}
+	else if (now > this->nextUpdate - CRL_WARNING_INTERVAL * 60 * 60 * 24)
+	{
+		written += fprintf(stream, "ok (expires in %V)", now, this->nextUpdate);
+	}
+	else
+	{
+		written += fprintf(stream, "ok");
+	}
+	if (this->authKeyID.ptr)
+	{
+		written += fprintf(stream, "\n  authkey:   %#B", &this->authKeyID);
+	}
+	if (this->authKeySerialNumber.ptr)
+	{
+		written += fprintf(stream, "\n  aserial:   %#B", &this->authKeySerialNumber);
+	}
+	return written;
+}
 
-	if (this->authKeyID.ptr != NULL)
+/**
+ * arginfo handler in printf()
+ */
+static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+{
+	if (info->alt)
 	{
-		chunk_to_hex(buf, BUF_LEN, this->authKeyID);
-		logger->log(logger, CONTROL, "       authkey:  %s", buf);
+		if (n > 1)
+		{
+			argtypes[0] = PA_INT;
+			argtypes[1] = PA_INT;
+		}
+		return 2;
 	}
-	if (this->authKeySerialNumber.ptr != NULL)
+	
+	if (n > 0)
 	{
-		chunk_to_hex(buf, BUF_LEN, this->authKeySerialNumber);
-		logger->log(logger, CONTROL, "       aserial:  %s", buf);
+		argtypes[0] = PA_INT;
 	}
+	return 1;
+}
+
+/**
+ * register printf() handlers
+ */
+static void __attribute__ ((constructor))print_register()
+{
+	register_printf_function(CRL_PRINTF_SPEC, print, print_arginfo);
 }
 
 /*
@@ -494,11 +541,7 @@ crl_t *crl_create_from_chunk(chunk_t chunk)
 	this->public.is_newer = (bool (*) (const crl_t*,const crl_t*))is_newer;
 	this->public.verify = (bool (*) (const crl_t*,const rsa_public_key_t*))verify;
 	this->public.get_status = (void (*) (const crl_t*,certinfo_t*))get_status;
-	this->public.log_crl = (void (*) (const crl_t*,logger_t*,bool,bool))log_crl;
 	this->public.destroy = (void (*) (crl_t*))destroy;
-
-	/* we do not use a per-instance logger right now, since its not always accessible */
-	logger = logger_manager->get_logger(logger_manager, ASN1);
 	
 	if (!parse_x509crl(chunk, 0, this))
 	{

@@ -28,7 +28,6 @@
 
 #include <daemon.h>
 #include <definitions.h>
-#include <utils/logger_manager.h>
 #include <queues/job_queue.h>
 
 
@@ -47,11 +46,6 @@ struct private_scheduler_t {
 	 * Assigned thread.
 	 */
 	pthread_t assigned_thread;
-	
-	/** 
-	 * A logger.
-	 */
-	logger_t *logger;
 };
 
 /**
@@ -64,16 +58,17 @@ static void get_events(private_scheduler_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	this->logger->log(this->logger, CONTROL, "scheduler thread running, thread_ID: %06u", (int)pthread_self());
+	DBG1(SIG_DBG_JOB, "scheduler thread running, thread_ID: %06u", 
+		 (int)pthread_self());
 
 	while (TRUE)
 	{
-		this->logger->log(this->logger, CONTROL|LEVEL2, "waiting for next event...");
+		DBG2(SIG_DBG_JOB, "waiting for next event...");
 		/* get a job, this block until one is available */
 		current_job = charon->event_queue->get(charon->event_queue);
 		/* queue the job in the job queue, workers will eat them */
-		this->logger->log(this->logger, CONTROL | LEVEL1, "got event, adding job %s to job-queue.", 
-						  mapping_find(job_type_m, current_job->get_type(current_job)));
+		DBG2(SIG_DBG_JOB, "got event, adding job %N to job-queue",
+			 job_type_names, current_job->get_type(current_job));
 		charon->job_queue->add(charon->job_queue, current_job);
 	}
 }
@@ -83,12 +78,8 @@ static void get_events(private_scheduler_t * this)
  */
 static void destroy(private_scheduler_t *this)
 {
-	this->logger->log(this->logger, CONTROL | LEVEL1, "going to terminate scheduler thread");
 	pthread_cancel(this->assigned_thread);
-
 	pthread_join(this->assigned_thread, NULL);
-	this->logger->log(this->logger, CONTROL | LEVEL1, "scheduler thread terminated");
-
 	free(this);
 }
 
@@ -98,18 +89,15 @@ static void destroy(private_scheduler_t *this)
 scheduler_t * scheduler_create()
 {
 	private_scheduler_t *this = malloc_thing(private_scheduler_t);
-
-	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	
-	this->logger = logger_manager->get_logger(logger_manager, SCHEDULER);
+	this->public.destroy = (void(*)(scheduler_t*)) destroy;
 	
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))get_events, this) != 0)
 	{
 		/* thread could not be created  */
-		this->logger->log(this->logger, ERROR, "scheduler thread could not be created!");
 		free(this);
 		charon->kill(charon, "unable to create scheduler thread");
 	}
-
+	
 	return &(this->public);
 }

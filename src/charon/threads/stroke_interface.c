@@ -33,10 +33,11 @@
 
 #include "stroke_interface.h"
 
-#include <stroke.h>
 #include <types.h>
+#include <stroke.h>
 #include <daemon.h>
 #include <crypto/x509.h>
+#include <crypto/crl.h>
 #include <queues/jobs/initiate_job.h>
 #include <queues/jobs/route_job.h>
 #include <utils/leak_detective.h>
@@ -59,16 +60,11 @@ struct private_stroke_t {
 	 * Public part of stroke_t object.
 	 */
 	stroke_t public;
-
-	/**
-	 * Assigned logger_t object in charon.
-	 */
-	logger_t *logger;
 	
 	/**
-	 * Logger which logs to stroke
+	 * Output stream (stroke console)
 	 */
-	logger_t *stroke_logger;
+	FILE *out;
 		
 	/**
 	 * Unix socket to listen for strokes
@@ -76,14 +72,9 @@ struct private_stroke_t {
 	int socket;
 	
 	/**
-	 * Thread which reads from the ocket
+	 * Thread which reads from the Socket
 	 */
 	pthread_t assigned_thread;
-
-	/**
-	 * Read from the socket and handle stroke messages
-	 */
-	void (*stroke_receive) (private_stroke_t *this);
 };
 
 /**
@@ -115,7 +106,7 @@ static void pop_string(stroke_msg_t *msg, char **string)
 /**
  * Load end entitity certificate
  */
-static x509_t* load_end_certificate(const char *filename, identification_t **idp, logger_t *logger)
+static x509_t* load_end_certificate(const char *filename, identification_t **idp)
 {
 	char path[PATH_BUF];
 	x509_t *cert;
@@ -142,7 +133,7 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 
 		if (ugh != NULL)	
 		{
-			logger->log(logger, ERROR, "warning: certificate %s", ugh);
+			DBG1(SIG_DBG_CFG, "warning: certificate %s", ugh);
 		}
 		if (!id->equals(id, subject) && !cert->equals_subjectAltName(cert, id))
 		{
@@ -170,7 +161,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	host_t *my_host, *other_host, *my_subnet, *other_subnet;
 	proposal_t *proposal;
 	traffic_selector_t *my_ts, *other_ts;
-				
+	
 	pop_string(msg, &msg->add_conn.name);
 	pop_string(msg, &msg->add_conn.me.address);
 	pop_string(msg, &msg->add_conn.other.address);
@@ -187,29 +178,27 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	
-	this->logger->log(this->logger, CONTROL, 
-					  "received stroke: add connection \"%s\"", msg->add_conn.name);
+	DBG1(SIG_DBG_CFG, "received stroke: add connection '%s'", msg->add_conn.name);
 	
-	this->logger->log(this->logger, CONTROL|LEVEL2, "conn %s", msg->add_conn.name);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  right=%s", msg->add_conn.me.address);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  left=%s", msg->add_conn.other.address);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  rightsubnet=%s", msg->add_conn.me.subnet);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  leftsubnet=%s", msg->add_conn.other.subnet);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  rightid=%s", msg->add_conn.me.id);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  leftid=%s", msg->add_conn.other.id);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  rightcert=%s", msg->add_conn.me.cert);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  leftcert=%s", msg->add_conn.other.cert);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  rightca=%s", msg->add_conn.me.ca);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  leftca=%s", msg->add_conn.other.ca);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  ike=%s", msg->add_conn.algorithms.ike);
-	this->logger->log(this->logger, CONTROL|LEVEL2, "  esp=%s", msg->add_conn.algorithms.esp);
+	DBG2(SIG_DBG_CFG, "conn %s", msg->add_conn.name);
+	DBG2(SIG_DBG_CFG, "  right=%s", msg->add_conn.me.address);
+	DBG2(SIG_DBG_CFG, "  left=%s", msg->add_conn.other.address);
+	DBG2(SIG_DBG_CFG, "  rightsubnet=%s", msg->add_conn.me.subnet);
+	DBG2(SIG_DBG_CFG, "  leftsubnet=%s", msg->add_conn.other.subnet);
+	DBG2(SIG_DBG_CFG, "  rightid=%s", msg->add_conn.me.id);
+	DBG2(SIG_DBG_CFG, "  leftid=%s", msg->add_conn.other.id);
+	DBG2(SIG_DBG_CFG, "  rightcert=%s", msg->add_conn.me.cert);
+	DBG2(SIG_DBG_CFG, "  leftcert=%s", msg->add_conn.other.cert);
+	DBG2(SIG_DBG_CFG, "  rightca=%s", msg->add_conn.me.ca);
+	DBG2(SIG_DBG_CFG, "  leftca=%s", msg->add_conn.other.ca);
+	DBG2(SIG_DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
+	DBG2(SIG_DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	
 	my_host = msg->add_conn.me.address?
 			  host_create_from_string(msg->add_conn.me.address, IKE_PORT) : NULL;
 	if (my_host == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "invalid host: %s", msg->add_conn.me.address);
+		DBG1(SIG_DBG_CFG, "invalid host: %s\n", msg->add_conn.me.address);
 		return;
 	}
 
@@ -217,8 +206,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			host_create_from_string(msg->add_conn.other.address, IKE_PORT) : NULL;
 	if (other_host == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "invalid host: %s", msg->add_conn.other.address);
+		DBG1(SIG_DBG_CFG, "invalid host: %s\n", msg->add_conn.other.address);
 		my_host->destroy(my_host);
 		return;
 	}
@@ -228,8 +216,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		stroke_end_t tmp_end;
 		host_t *tmp_host;
 
-		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1, 
-								 "left is other host, swapping ends");
+		DBG2(SIG_DBG_CFG, "left is other host, swapping ends\n");
 
 		tmp_host = my_host;
 		my_host = other_host;
@@ -241,8 +228,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	else if (!charon->socket->is_local_address(charon->socket, my_host, NULL))
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "left nor right host is our side, aborting");
+		DBG1(SIG_DBG_CFG, "left nor right host is our side, aborting\n");
 		goto destroy_hosts;
 	}
 
@@ -250,8 +236,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 						msg->add_conn.me.id : msg->add_conn.me.address);
 	if (my_id == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "invalid id: %s", msg->add_conn.me.id);
+		DBG1(SIG_DBG_CFG, "invalid ID: %s\n", msg->add_conn.me.id);
 		goto destroy_hosts;
 	}
 
@@ -259,8 +244,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 						msg->add_conn.other.id : msg->add_conn.other.address);
 	if (other_id == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "invalid id: %s", msg->add_conn.other.id);
+		DBG1(SIG_DBG_CFG, "invalid ID: %s\n", msg->add_conn.other.id);
 		my_id->destroy(my_id);
 		goto destroy_hosts;
 	}
@@ -269,8 +253,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
 	if (my_subnet == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "invalid subnet: %s", msg->add_conn.me.subnet);
+		DBG1(SIG_DBG_CFG, "invalid subnet: %s\n", msg->add_conn.me.subnet);
 		goto destroy_ids;
 	}
 	
@@ -278,8 +261,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					msg->add_conn.other.subnet : msg->add_conn.other.address, IKE_PORT);
 	if (other_subnet == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "invalid subnet: %s", msg->add_conn.me.subnet);
+		DBG1(SIG_DBG_CFG, "invalid subnet: %s\n", msg->add_conn.me.subnet);
 		my_subnet->destroy(my_subnet);
 		goto destroy_ids;
 	}
@@ -318,7 +300,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	if (msg->add_conn.me.cert)
 	{
-		x509_t *cert = load_end_certificate(msg->add_conn.me.cert, &my_id, this->logger);
+		x509_t *cert = load_end_certificate(msg->add_conn.me.cert, &my_id);
 
 		if (my_ca == NULL && !my_ca_same && cert)
 		{
@@ -329,7 +311,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	if (msg->add_conn.other.cert)
 	{
-		x509_t *cert = load_end_certificate(msg->add_conn.other.cert, &other_id, this->logger);
+		x509_t *cert = load_end_certificate(msg->add_conn.other.cert, &other_id);
 
 		if (other_ca == NULL && !other_ca_same && cert)
 		{
@@ -354,9 +336,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	{
 		other_ca = identification_create_from_string("%any");
 	}
-	this->logger->log(this->logger, CONTROL|LEVEL1, "  my ca:   '%D'", my_ca);
-	this->logger->log(this->logger, CONTROL|LEVEL1, "  other ca:'%D'", other_ca);
-	this->logger->log(this->logger, CONTROL|LEVEL1, "  updown: '%s'", msg->add_conn.me.updown);
+	DBG2(SIG_DBG_CFG, "  my ca:   '%D'", my_ca);
+	DBG2(SIG_DBG_CFG, "  other ca:'%D'", other_ca);
+	DBG2(SIG_DBG_CFG, "  updown: '%s'", msg->add_conn.me.updown);
 
 	connection = connection_create(msg->add_conn.name,
 								   msg->add_conn.ikev2,
@@ -384,8 +366,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			proposal = proposal_create_from_string(PROTO_IKE, proposal_string);
 			if (proposal == NULL)
 			{
-				this->logger->log(this->logger, ERROR, 
-								  "invalid IKE proposal string: %s", proposal_string);
+				DBG1(SIG_DBG_CFG, "invalid IKE proposal string: %s", proposal_string);
 				my_id->destroy(my_id);
 				other_id->destroy(other_id);
 				my_ts->destroy(my_ts);
@@ -435,8 +416,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			proposal = proposal_create_from_string(PROTO_ESP, proposal_string);
 			if (proposal == NULL)
 			{
-				this->logger->log(this->logger, ERROR,
-								  "invalid ESP proposal string: %s", proposal_string);
+				DBG1(SIG_DBG_CFG, "invalid ESP proposal string: %s", proposal_string);
 				policy->destroy(policy);
 				connection->destroy(connection);
 				return;
@@ -457,11 +437,11 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	
 	/* add to global connection list */
 	charon->connections->add_connection(charon->connections, connection);
-	this->logger->log(this->logger, CONTROL, 
-					  "added connection \"%s\": %H[%D]...%H[%D]", msg->add_conn.name,
-					  my_host, my_id, other_host, other_id);
+	DBG1(SIG_DBG_CFG, "added connection '%s': %H[%D]...%H[%D]",
+		 msg->add_conn.name, my_host, my_id, other_host, other_id);
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);
+	
 	return;
 
 	/* mopping up after parsing errors */
@@ -483,20 +463,18 @@ static void stroke_del_conn(private_stroke_t *this, stroke_msg_t *msg)
 	status_t status;
 	
 	pop_string(msg, &(msg->del_conn.name));
-	this->logger->log(this->logger, CONTROL, "received stroke: delete \"%s\"", msg->del_conn.name);
+	DBG1(SIG_DBG_CFG, "received stroke: delete '%s'", msg->del_conn.name);
 	
 	status = charon->connections->delete_connection(charon->connections, 
 													msg->del_conn.name);
 	charon->policies->delete_policy(charon->policies, msg->del_conn.name);
 	if (status == SUCCESS)
 	{
-		this->stroke_logger->log(this->stroke_logger, CONTROL,
-								 "Deleted connection '%s'", msg->del_conn.name);
+		fprintf(this->out, "deleted connection '%s'\n", msg->del_conn.name);
 	}
 	else
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR,
-								 "No connection named '%s'", msg->del_conn.name);
+		fprintf(this->out, "no connection named '%s'\n", msg->del_conn.name);
 	}
 }
 
@@ -508,19 +486,17 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	initiate_job_t *job;
 	connection_t *connection;
 	policy_t *policy;
+	ike_sa_t *init_ike_sa = NULL;
+	signal_t signal;
 	
 	pop_string(msg, &(msg->initiate.name));
-	this->logger->log(this->logger, CONTROL,
-					  "received stroke: initiate \"%s\"",
-					  msg->initiate.name);
+	DBG1(SIG_DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
 	
 	connection = charon->connections->get_connection_by_name(charon->connections,
 															 msg->initiate.name);
 	if (connection == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "no connection named \"%s\"", 
-								 msg->initiate.name);
+		fprintf(this->out, "no connection named '%s'\n", msg->initiate.name);
 		return;
 	}
 	if (!connection->is_ikev2(connection))
@@ -533,17 +509,54 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 												  msg->initiate.name);
 	if (policy == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR,
-								 "no policy named \"%s\"",
-								 msg->initiate.name);
+		fprintf(this->out, "no policy named '%s'\n", msg->initiate.name);
 		connection->destroy(connection);
 		return;
 	}
-	this->stroke_logger->log(this->stroke_logger, CONTROL,
-							 "initiating connection \"%s\" (see log)...", 
-							 msg->initiate.name);
+	fprintf(this->out, "initiating connection '%s'\n", msg->initiate.name);
+	
 	job = initiate_job_create(connection, policy);
+	
+	charon->bus->set_listen_state(charon->bus, TRUE);
 	charon->job_queue->add(charon->job_queue, (job_t*)job);
+	while (TRUE)
+	{
+		level_t level;
+		int thread;
+		ike_sa_t *ike_sa;
+		char* format;
+		va_list args;
+		
+		signal = charon->bus->listen(charon->bus, &level, &thread, &ike_sa, &format, &args);
+		
+		if (ike_sa == init_ike_sa && level <= LEVEL_CTRL)
+		{
+			if (vfprintf(this->out, format, args) < 0 ||
+				fprintf(this->out, "\n") < 0 ||
+				fflush(this->out))
+			{
+				break;
+			}
+		}
+		
+		/* TODO: Handle INVALID_KE_PAYLOAD signal (ike_sa switch) */
+		switch (signal)
+		{
+			case SIG_IKE_UP:
+			case SIG_IKE_FAILED:
+			case SIG_IKE_DOWN:
+				if (ike_sa == init_ike_sa)
+				{
+					charon->bus->set_listen_state(charon->bus, FALSE);
+				}
+				return;
+			case SIG_INITIATE:
+				init_ike_sa = ike_sa;
+				/* fall through */
+			default:
+				continue;
+		}
+	}
 }
 
 /**
@@ -556,10 +569,8 @@ static void stroke_route(private_stroke_t *this, stroke_msg_t *msg, bool route)
 	policy_t *policy;
 	
 	pop_string(msg, &(msg->route.name));
-	this->logger->log(this->logger, CONTROL,
-					  "received stroke: %s \"%s\"",
-					  route ? "route" : "unroute",
-					  msg->route.name);
+	DBG1(SIG_DBG_CFG, "received stroke: %s '%s'",
+		 route ? "route" : "unroute", msg->route.name);
 	
 	/* we wouldn't need a connection, but we only want to route policies
 	 * whose connections are keyexchange=ikev2. */
@@ -567,9 +578,7 @@ static void stroke_route(private_stroke_t *this, stroke_msg_t *msg, bool route)
 															 msg->route.name);
 	if (connection == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, 
-								 "no connection named \"%s\"", 
-								 msg->route.name);
+		fprintf(this->out, "no connection named '%s'\n", msg->route.name);
 		return;
 	}
 	if (!connection->is_ikev2(connection))
@@ -582,16 +591,12 @@ static void stroke_route(private_stroke_t *this, stroke_msg_t *msg, bool route)
 												  msg->route.name);
 	if (policy == NULL)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR,
-								 "no policy named \"%s\"",
-								 msg->route.name);
+		fprintf(this->out, "no policy named '%s'\n", msg->route.name);
 		connection->destroy(connection);
 		return;
 	}
-	this->stroke_logger->log(this->stroke_logger, CONTROL,
-							 "%s policy \"%s\"", 
-							 route ? "routing" : "unrouting",
-							 msg->route.name);
+	fprintf(this->out, "%s policy '%s'\n",
+			route ? "routing" : "unrouting", msg->route.name);
 	job = route_job_create(connection, policy, route);
 	charon->job_queue->add(charon->job_queue, (job_t*)job);
 }
@@ -602,37 +607,38 @@ static void stroke_route(private_stroke_t *this, stroke_msg_t *msg, bool route)
 static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
 {
 	pop_string(msg, &(msg->terminate.name));
-	this->logger->log(this->logger, CONTROL, "received stroke: terminate \"%s\"", msg->terminate.name);
+	DBG1(SIG_DBG_CFG, "received stroke: terminate '%s'", msg->terminate.name);
 	
 	charon->ike_sa_manager->delete_by_name(charon->ike_sa_manager, msg->terminate.name);
 }
 
 /**
- * show status of (established) connections
+ * show status of daemon
  */
-static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
+static void stroke_statusall(private_stroke_t *this, stroke_msg_t *msg)
 {
+	iterator_t *iterator;
 	linked_list_t *list;
 	host_t *host;
+	connection_t *connection;
+	policy_t *policy;
+	ike_sa_t *ike_sa;
 	
-	leak_detective_status(this->stroke_logger);
+	leak_detective_status(this->out);
 	
-	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
-							 "job queue load: %d",
-							 charon->job_queue->get_count(charon->job_queue));
-	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
-							 "scheduled events: %d",
-							 charon->event_queue->get_count(charon->event_queue));
+	fprintf(this->out, "worker threads idle: %d of %d\n",
+			charon->thread_pool->get_idle_threads(charon->thread_pool),
+			charon->thread_pool->get_pool_size(charon->thread_pool));
+	fprintf(this->out, "job queue load: %d\n",
+			charon->job_queue->get_count(charon->job_queue));
+	fprintf(this->out, "scheduled events: %d\n",
+			charon->event_queue->get_count(charon->event_queue));
 	list = charon->socket->create_local_address_list(charon->socket);
-	this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
-							 "listening on %d addresses:",
-							 list->get_count(list));
+	fprintf(this->out, "listening on %d addresses:\n", list->get_count(list));
 	while (list->remove_first(list, (void**)&host) == SUCCESS)
 	{
-		this->stroke_logger->log(this->stroke_logger, CONTROL|LEVEL1,
-								 "  %H", host);
+		fprintf(this->out, "  %H\n", host);
 		host->destroy(host);
-		
 	}
 	list->destroy(list);
 	
@@ -640,10 +646,101 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
 	{
 		pop_string(msg, &(msg->status.name));
 	}
-	charon->connections->log_connections(charon->connections,
-										 this->stroke_logger, msg->status.name);
-	charon->ike_sa_manager->log_status(charon->ike_sa_manager,
-									   this->stroke_logger, msg->status.name);
+	
+	fprintf(this->out, "connections:\n");
+	iterator = charon->connections->create_iterator(charon->connections);
+	while (iterator->iterate(iterator, (void**)&connection))
+	{
+		if (connection->is_ikev2(connection) && (msg->status.name == NULL ||
+			streq(msg->status.name, connection->get_name(connection))))
+		{
+			fprintf(this->out, "%10s: %H...%H\n",
+					connection->get_name(connection),
+					connection->get_my_host(connection),
+					connection->get_other_host(connection));
+		}
+	}
+	iterator->destroy(iterator);
+	
+	fprintf(this->out, "policies:\n");
+	iterator = charon->policies->create_iterator(charon->policies);
+	while (iterator->iterate(iterator, (void**)&policy))
+	{
+		if (msg->status.name == NULL ||
+			streq(msg->status.name, policy->get_name(policy)))
+		{
+			fprintf(this->out, "%10s: %D...%D\n",
+					policy->get_name(policy),
+					policy->get_my_id(policy),
+					policy->get_other_id(policy));
+		}
+	}
+	iterator->destroy(iterator);
+	
+	fprintf(this->out,  "IKE_SAs:\n");
+	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
+	while (iterator->iterate(iterator, (void**)&ike_sa))
+	{
+		bool ike_sa_printed = FALSE;
+		child_sa_t *child_sa;
+		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
+		while (children->iterate(children, (void**)&child_sa))
+		{
+			if (!ike_sa_printed &&
+			   (msg->status.name == NULL ||
+				streq(msg->status.name, child_sa->get_name(child_sa)) ||
+				streq(msg->status.name, ike_sa->get_name(ike_sa))))
+			{
+				fprintf(this->out, "%#K\n", ike_sa);
+				ike_sa_printed = TRUE;
+			}
+			if (ike_sa_printed)
+			{
+				fprintf(this->out, "%#P\n", child_sa);
+			}
+		}
+		children->destroy(children);
+	}
+	iterator->destroy(iterator);
+}
+
+/**
+ * show status of daemon
+ */
+static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
+{
+	iterator_t *iterator;
+	ike_sa_t *ike_sa;
+	
+	if (msg->status.name)
+	{
+		pop_string(msg, &(msg->status.name));
+	}
+	
+	iterator = charon->ike_sa_manager->create_iterator(charon->ike_sa_manager);
+	while (iterator->iterate(iterator, (void**)&ike_sa))
+	{
+		bool ike_sa_printed = FALSE;
+		child_sa_t *child_sa;
+		iterator_t *children = ike_sa->create_child_sa_iterator(ike_sa);
+		while (children->iterate(children, (void**)&child_sa))
+		{
+			if (!ike_sa_printed &&
+				(msg->status.name == NULL ||
+				streq(msg->status.name, child_sa->get_name(child_sa)) ||
+				streq(msg->status.name, ike_sa->get_name(ike_sa))))
+			{
+				fprintf(this->out, "%K\n", ike_sa);
+				ike_sa_printed = TRUE;
+			}
+			if (ike_sa_printed)
+			{
+				fprintf(this->out, "%P\n", child_sa);
+			}
+		}
+		children->destroy(children);
+	}
+	iterator->destroy(iterator);
 }
 
 /**
@@ -651,17 +748,62 @@ static void stroke_status(private_stroke_t *this, stroke_msg_t *msg)
  */
 static void stroke_list(private_stroke_t *this, stroke_msg_t *msg)
 {
+	iterator_t *iterator;
+	
 	if (msg->list.flags & LIST_CERTS)
 	{
-		charon->credentials->log_certificates(charon->credentials, this->stroke_logger, msg->list.utc);
+		x509_t *cert;
+		
+		iterator = charon->credentials->create_cert_iterator(charon->credentials);
+		if (iterator->get_count(iterator))
+		{
+			fprintf(this->out, "List of X.509 End Entity Certificates:\n");
+			fprintf(this->out, "--------------------------------------\n");
+		}
+		while (iterator->iterate(iterator, (void**)&cert))
+		{
+			fprintf(this->out, "%#Q", cert, msg->list.utc);
+			if (charon->credentials->has_rsa_private_key(
+					charon->credentials, cert->get_public_key(cert)))
+			{
+				fprintf(this->out, ", has private key");
+			}
+			fprintf(this->out, "\n\n");
+			
+		}
+		iterator->destroy(iterator);
 	}
 	if (msg->list.flags & LIST_CACERTS)
 	{
-		charon->credentials->log_ca_certificates(charon->credentials, this->stroke_logger, msg->list.utc);
+		x509_t *cert;
+		
+		iterator = charon->credentials->create_cacert_iterator(charon->credentials);
+		if (iterator->get_count(iterator))
+		{
+			fprintf(this->out, "List of X.509 CA Certificates:\n");
+			fprintf(this->out, "------------------------------\n");
+		}
+		while (iterator->iterate(iterator, (void**)&cert))
+		{
+			fprintf(this->out, "%#Q\n\n", cert, msg->list.utc);
+		}
+		iterator->destroy(iterator);
 	}
 	if (msg->list.flags & LIST_CRLS)
 	{
-		charon->credentials->log_crls(charon->credentials, this->stroke_logger, msg->list.utc);
+		crl_t *crl;
+		
+		iterator = charon->credentials->create_crl_iterator(charon->credentials);
+		if (iterator->get_count(iterator))
+		{
+			fprintf(this->out, "List of X.509 CRLs:\n");
+			fprintf(this->out, "-------------------\n");
+		}
+		while (iterator->iterate(iterator, (void**)&crl))
+		{
+			fprintf(this->out, "%#U\n\n", crl, msg->list.utc);
+		}
+		iterator->destroy(iterator);
 	}
 }
 
@@ -680,107 +822,41 @@ static void stroke_reread(private_stroke_t *this, stroke_msg_t *msg)
 	}
 }
 
-logger_context_t get_context(char *context)
+signal_t get_signal_from_logtype(char *type)
 {
-	if      (strcasecmp(context, "ALL") == 0) return ALL_LOGGERS;
-	else if (strcasecmp(context, "PARSR") == 0) return PARSER;
-	else if (strcasecmp(context, "GNRAT") == 0) return GENERATOR;
-	else if (strcasecmp(context, "IKESA") == 0) return IKE_SA;
-	else if (strcasecmp(context, "SAMGR") == 0) return IKE_SA_MANAGER;
-	else if (strcasecmp(context, "CHDSA") == 0) return CHILD_SA;
-	else if (strcasecmp(context, "MESSG") == 0) return MESSAGE;
-	else if (strcasecmp(context, "TPOOL") == 0) return THREAD_POOL;
-	else if (strcasecmp(context, "WORKR") == 0) return WORKER;
-	else if (strcasecmp(context, "SCHED") == 0) return SCHEDULER;
-	else if (strcasecmp(context, "SENDR") == 0) return SENDER;
-	else if (strcasecmp(context, "RECVR") == 0) return RECEIVER;
-	else if (strcasecmp(context, "SOCKT") == 0) return SOCKET;
-	else if (strcasecmp(context, "TESTR") == 0) return TESTER;
-	else if (strcasecmp(context, "DAEMN") == 0) return DAEMON;
-	else if (strcasecmp(context, "CONFG") == 0) return CONFIG;
-	else if (strcasecmp(context, "ENCPL") == 0) return ENCRYPTION_PAYLOAD;
-	else if (strcasecmp(context, "PAYLD") == 0) return PAYLOAD;
-	else if (strcasecmp(context, "XFRM") == 0) return XFRM;
-	else return -2;
+	if      (strcasecmp(type, "any") == 0) return SIG_ANY;
+	else if (strcasecmp(type, "mgr") == 0) return SIG_DBG_MGR;
+	else if (strcasecmp(type, "ike") == 0) return SIG_DBG_IKE;
+	else if (strcasecmp(type, "chd") == 0) return SIG_DBG_CHD;
+	else if (strcasecmp(type, "job") == 0) return SIG_DBG_JOB;
+	else if (strcasecmp(type, "cfg") == 0) return SIG_DBG_CFG;
+	else if (strcasecmp(type, "knl") == 0) return SIG_DBG_KNL;
+	else if (strcasecmp(type, "net") == 0) return SIG_DBG_NET;
+	else if (strcasecmp(type, "enc") == 0) return SIG_DBG_ENC;
+	else if (strcasecmp(type, "lib") == 0) return SIG_DBG_LIB;
+	else return -1;
 }
 
 /**
- * set the type of logged messages in a context
- */
-static void stroke_logtype(private_stroke_t *this, stroke_msg_t *msg)
-{
-	pop_string(msg, &(msg->logtype.context));
-	pop_string(msg, &(msg->logtype.type));
-	
-	this->logger->log(this->logger, CONTROL, "received stroke: logtype for %s", msg->logtype.context);
-	
-	log_level_t level;
-	logger_context_t context = get_context(msg->logtype.context);
-	if (context == -2)
-	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid context (%s)!", msg->logtype.context);
-		return;
-	}
-	
-	if      (strcasecmp(msg->logtype.type, "CONTROL") == 0)
-		level = CONTROL;
-	else if (strcasecmp(msg->logtype.type, "ERROR") == 0)
-		level = ERROR;
-	else if (strcasecmp(msg->logtype.type, "AUDIT") == 0)
-		level = AUDIT;
-	else if (strcasecmp(msg->logtype.type, "RAW") == 0)
-		level = RAW;
-	else if (strcasecmp(msg->logtype.type, "PRIVATE") == 0)
-		level = PRIVATE;
-	else
-	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid type (%s)!", msg->logtype.type);
-		return;
-	}
-	
-	if (msg->logtype.enable)
-	{
-		logger_manager->enable_log_level(logger_manager, context, level);
-	}
-	else
-	{
-		logger_manager->disable_log_level(logger_manager, context, level);
-	}
-}
-
-/**
- * set the verbosity of a logger
+ * set the verbosity debug output
  */
 static void stroke_loglevel(private_stroke_t *this, stroke_msg_t *msg)
 {
-	log_level_t level;
-	logger_context_t context;
-
-	pop_string(msg, &(msg->loglevel.context));
-	this->logger->log(this->logger, CONTROL, "received stroke: loglevel for %s", msg->loglevel.context);
+	signal_t signal;
 	
-	context = get_context(msg->loglevel.context);
-	if (context == -2)
+	pop_string(msg, &(msg->loglevel.type));
+	DBG1(SIG_DBG_CFG, "received stroke: loglevel %d for %s",
+		 msg->loglevel.level, msg->loglevel.type);
+	
+	signal = get_signal_from_logtype(msg->loglevel.type);
+	if (signal < 0)
 	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid context (%s)!", msg->loglevel.context);
+		fprintf(this->out, "invalid type (%s)!\n", msg->loglevel.type);
 		return;
 	}
 	
-	if (msg->loglevel.level == 0)
-		level = LEVEL0;
-	else if (msg->loglevel.level == 1)
-		level = LEVEL1;
-	else if (msg->loglevel.level == 2)
-		level = LEVEL2;
-	else if (msg->loglevel.level == 3)
-		level = LEVEL3;
-	else 
-	{
-		this->stroke_logger->log(this->stroke_logger, ERROR, "invalid level (%d)!", msg->loglevel.level);
-		return;
-	}
-	
-	logger_manager->enable_log_level(logger_manager, context, level);
+	charon->outlog->set_level(charon->outlog, signal, msg->loglevel.level);
+	charon->syslog->set_level(charon->syslog, signal, msg->loglevel.level);
 }
 
 /**
@@ -794,7 +870,6 @@ static void stroke_receive(private_stroke_t *this)
 	int strokeaddrlen = sizeof(strokeaddr);
 	ssize_t bytes_read;
 	int strokefd;
-	FILE *strokefile;
 	int oldstate;
 	
 	/* disable cancellation by default */
@@ -809,7 +884,7 @@ static void stroke_receive(private_stroke_t *this)
 		
 		if (strokefd < 0)
 		{
-			this->logger->log(this->logger, ERROR, "accepting stroke connection failed: %s", strerror(errno));
+			DBG1(SIG_DBG_CFG, "accepting stroke connection failed: %m");
 			continue;
 		}
 		
@@ -817,7 +892,7 @@ static void stroke_receive(private_stroke_t *this)
 		bytes_read = recv(strokefd, &msg_length, sizeof(msg_length), MSG_PEEK);
 		if (bytes_read != sizeof(msg_length))
 		{
-			this->logger->log(this->logger, ERROR, "reading lenght of stroke message failed");
+			DBG1(SIG_DBG_CFG, "reading lenght of stroke message failed");
 			close(strokefd);
 			continue;
 		}
@@ -827,24 +902,21 @@ static void stroke_receive(private_stroke_t *this)
 		bytes_read = recv(strokefd, msg, msg_length, 0);
 		if (bytes_read != msg_length)
 		{
-			this->logger->log(this->logger, ERROR, "reading stroke message failed: %s");
+			DBG1(SIG_DBG_CFG, "reading stroke message failed: %m");
 			close(strokefd);
 			continue;
 		}
 		
-		strokefile = fdopen(dup(strokefd), "w");
-		if (strokefile == NULL)
+		this->out = fdopen(dup(strokefd), "w");
+		if (this->out == NULL)
 		{
-			this->logger->log(this->logger, ERROR, "opening stroke output channel failed:", strerror(errno));
+			DBG1(SIG_DBG_CFG, "opening stroke output channel failed: %m");
 			close(strokefd);
 			free(msg);
 			continue;
 		}
 		
-		/* setup a logger which writes status to the unix socket */
-		this->stroke_logger = logger_create("", CONTROL|ERROR, FALSE, strokefile);
-		
-		this->logger->log_bytes(this->logger, RAW, "stroke message", (void*)msg, msg_length);
+		DBG3(SIG_DBG_CFG, "stroke message %b", (void*)msg, msg_length);
 		
 		switch (msg->type)
 		{
@@ -864,17 +936,13 @@ static void stroke_receive(private_stroke_t *this)
 				stroke_status(this, msg);
 				break;
 			case STR_STATUS_ALL:
-				this->stroke_logger->enable_level(this->stroke_logger, LEVEL1);
-				stroke_status(this, msg);
+				stroke_statusall(this, msg);
 				break;
 			case STR_ADD_CONN:
 				stroke_add_conn(this, msg);
 				break;
 			case STR_DEL_CONN:
 				stroke_del_conn(this, msg);
-				break;
-			case STR_LOGTYPE:
-				stroke_logtype(this, msg);
 				break;
 			case STR_LOGLEVEL:
 				stroke_loglevel(this, msg);
@@ -886,10 +954,9 @@ static void stroke_receive(private_stroke_t *this)
 				stroke_reread(this, msg);
 				break;
 			default:
-				this->logger->log(this->logger, ERROR, "received invalid stroke");
+				DBG1(SIG_DBG_CFG, "received unknown stroke");
 		}
-		this->stroke_logger->destroy(this->stroke_logger);
-		fclose(strokefile);
+		fclose(this->out);
 		close(strokefd);
 		free(msg);
 	}
@@ -900,7 +967,6 @@ static void stroke_receive(private_stroke_t *this)
  */
 static void destroy(private_stroke_t *this)
 {
-	
 	pthread_cancel(this->assigned_thread);
 	pthread_join(this->assigned_thread, NULL);
 
@@ -908,7 +974,6 @@ static void destroy(private_stroke_t *this)
 	unlink(socket_addr.sun_path);
 	free(this);
 }
-
 
 /*
  * Described in header-file
@@ -921,16 +986,11 @@ stroke_t *stroke_create()
 	/* public functions */
 	this->public.destroy = (void (*)(stroke_t*))destroy;
 	
-	/* private functions */
-	this->stroke_receive = stroke_receive;
-	
-	this->logger = logger_manager->get_logger(logger_manager, CONFIG);
-	
 	/* set up unix socket */
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (this->socket == -1)
 	{
-		this->logger->log(this->logger, ERROR, "could not create whack socket");
+		DBG1(SIG_DBG_CFG, "could not create whack socket");
 		free(this);
 		return NULL;
 	}
@@ -938,7 +998,7 @@ stroke_t *stroke_create()
 	old = umask(~S_IRWXU);
 	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
 	{
-		this->logger->log(this->logger, ERROR, "could not bind stroke socket: %s", strerror(errno));
+		DBG1(SIG_DBG_CFG, "could not bind stroke socket: %m");
 		close(this->socket);
 		free(this);
 		return NULL;
@@ -947,7 +1007,7 @@ stroke_t *stroke_create()
 	
 	if (listen(this->socket, 0) < 0)
 	{
-		this->logger->log(this->logger, ERROR, "could not listen on stroke socket: %s", strerror(errno));
+		DBG1(SIG_DBG_CFG, "could not listen on stroke socket: %m");
 		close(this->socket);
 		unlink(socket_addr.sun_path);
 		free(this);
@@ -955,9 +1015,9 @@ stroke_t *stroke_create()
 	}
 	
 	/* start a thread reading from the socket */
-	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))this->stroke_receive, this) != 0)
+	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))stroke_receive, this) != 0)
 	{
-		this->logger->log(this->logger, ERROR, "Could not spawn stroke thread");
+		DBG1(SIG_DBG_CFG, "Could not spawn stroke thread");
 		close(this->socket);
 		unlink(socket_addr.sun_path);
 		free(this);

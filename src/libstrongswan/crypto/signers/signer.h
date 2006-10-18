@@ -49,10 +49,10 @@ enum integrity_algorithm_t {
 	AUTH_AES_XCBC_96 = 5
 };
 
-/** 
- * String mappings for integrity_algorithm_t.
+/**
+ * enum names for integrity_algorithm_t.
  */
-extern mapping_t integrity_algorithm_m[];
+extern enum_name_t *integrity_algorithm_names;
 
 
 typedef struct signer_t signer_t;
