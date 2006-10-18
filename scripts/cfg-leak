@@ -1,0 +1,2 @@
+#!/bin/bash
+CFLAGS="-Wall -Wno-format -Wno-pointer-sign -Wno-strict-aliasing -g -O2" ./configure --sysconfdir=/etc --with-random-device=/dev/urandom --enable-ldap --enable-http --enable-leak-detective
