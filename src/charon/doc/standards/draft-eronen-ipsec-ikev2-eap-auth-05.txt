@@ -1,0 +1,729 @@
+
+
+
+Network Working Group                                          P. Eronen
+Internet-Draft                                                     Nokia
+Expires: December 28, 2006                                 H. Tschofenig
+                                                                 Siemens
+                                                           June 26, 2006
+
+
+               Extension for EAP Authentication in IKEv2
+                draft-eronen-ipsec-ikev2-eap-auth-05.txt
+
+Status of this Memo
+
+   By submitting this Internet-Draft, each author represents that any
+   applicable patent or other IPR claims of which he or she is aware
+   have been or will be disclosed, and any of which he or she becomes
+   aware will be disclosed, in accordance with Section 6 of BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF), its areas, and its working groups.  Note that
+   other groups may also distribute working documents as Internet-
+   Drafts.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   The list of current Internet-Drafts can be accessed at
+   http://www.ietf.org/ietf/1id-abstracts.txt.
+
+   The list of Internet-Draft Shadow Directories can be accessed at
+   http://www.ietf.org/shadow.html.
+
+   This Internet-Draft will expire on December 28, 2006.
+
+Copyright Notice
+
+   Copyright (C) The Internet Society (2006).
+
+Abstract
+
+   IKEv2 specifies that EAP authentication must be used together with
+   public key signature based responder authentication.  This is
+   necessary with old EAP methods that provide only unilateral
+   authentication using, e.g., one-time passwords or token cards.
+
+   This document specifies how EAP methods that provide mutual
+   authentication and key agreement can be used to provide extensible
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 1]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+   responder authentication for IKEv2 based on other methods than public
+   key signatures.
+
+
+1.  Introduction
+
+   The Extensible Authentication Protocol (EAP), defined in [4], is an
+   authentication framework which supports multiple authentication
+   mechanisms.  Today, EAP has been implemented at end hosts and routers
+   that connect via switched circuits or dial-up lines using PPP [13],
+   IEEE 802 wired switches [9], and IEEE 802.11 wireless access points
+   [11].
+
+   One of the advantages of the EAP architecture is its flexibility.
+   EAP is used to select a specific authentication mechanism, typically
+   after the authenticator requests more information in order to
+   determine the specific authentication method to be used.  Rather than
+   requiring the authenticator (e.g., wireless LAN access point) to be
+   updated to support each new authentication method, EAP permits the
+   use of a backend authentication server which may implement some or
+   all authentication methods.
+
+   IKEv2 [3] is a component of IPsec used for performing mutual
+   authentication and establishing and maintaining security associations
+   for IPsec ESP and AH.  In addition to supporting authentication using
+   public key signatures and shared secrets, IKEv2 also supports EAP
+   authentication.
+
+   IKEv2 provides EAP authentication since it was recognized that public
+   key signatures and shared secrets are not flexible enough to meet the
+   requirements of many deployment scenarios.  By using EAP, IKEv2 can
+   leverage existing authentication infrastructure and credential
+   databases, since EAP allows users to choose a method suitable for
+   existing credentials, and also makes separation of the IKEv2
+   responder (VPN gateway) from the EAP authentication endpoint (backend
+   AAA server) easier.
+
+   Some older EAP methods are designed for unilateral authentication
+   only (that is, EAP peer to EAP server).  These methods are used in
+   conjunction with IKEv2 public key based authentication of the
+   responder to the initiator.  It is expected that this approach is
+   especially useful for "road warrior" VPN gateways that use, for
+   instance, one-time passwords or token cards to authenticate the
+   clients.
+
+   However, most newer EAP methods, such as those typically used with
+   IEEE 802.11i wireless LANs, provide mutual authentication and key
+   agreement.  Currently, IKEv2 specifies that also these EAP methods
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 2]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+   must be used together with public key signature based responder
+   authentication.
+
+   In some environments, requiring the deployment of PKI for just this
+   purpose can be counterproductive.  Deploying new infrastructure can
+   be expensive, and it may weaken security by creating new
+   vulnerabilities.  Mutually authenticating EAP methods alone can
+   provide a sufficient level of security in many circumstances, and
+   indeed, IEEE 802.11i uses EAP without any PKI for authenticating the
+   WLAN access points.
+
+   This document specifies how EAP methods that offer mutual
+   authentication and key agreement can be used to provide responder
+   authentication in IKEv2 completely based on EAP.
+
+1.1.  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in [2].
+
+
+2.  Scenarios
+
+   In this section we describe two scenarios for extensible
+   authentication within IKEv2.  These scenarios are intended to be
+   illustrative examples rather than specifying how things should be
+   done.
+
+   Figure 1 shows a configuration where the EAP and the IKEv2 endpoints
+   are co-located.  Authenticating the IKEv2 responder using both EAP
+   and public key signatures is redundant.  Offering EAP based
+   authentication has the advantage that multiple different
+   authentication and key exchange protocols are available with EAP with
+   different security properties (such as strong password based
+   protocols, protocols offering user identity confidentiality and many
+   more).  As an example it is possible to use GSS-API support within
+   EAP [6] to support Kerberos based authentication which effectively
+   replaces the need for KINK [14].
+
+          +------+-----+                            +------------+
+     O    |   IKEv2    |                            |   IKEv2    |
+    /|\   | Initiator  |<---////////////////////--->| Responder  |
+    / \   +------------+          IKEv2             +------------+
+    User  |  EAP Peer  |          Exchange          | EAP Server |
+          +------------+                            +------------+
+
+   Figure 1: EAP and IKEv2 endpoints are co-located
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 3]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+   Figure 2 shows a typical corporate network access scenario.  The
+   initiator (client) interacts with the responder (VPN gateway) in the
+   corporate network.  The EAP exchange within IKE runs between the
+   client and the home AAA server.  As a result of a successful EAP
+   authentication protocol run, session keys are established and sent
+   from the AAA server to the VPN gateway, and then used to authenticate
+   the IKEv2 SA with AUTH payloads.
+
+   The protocol used between the VPN gateway and AAA server could be,
+   for instance, Diameter [4] or RADIUS [5].  See Section 5 for related
+   security considerations.
+
+                                +-------------------------------+
+                                |       Corporate network       |
+                                |                               |
+                           +-----------+            +--------+  |
+                           |   IKEv2   |     AAA    |  Home  |  |
+     IKEv2      +////----->+ Responder +<---------->+  AAA   |  |
+     Exchange   /          | (VPN GW)  |  (RADIUS/  | Server |  |
+                /          +-----------+  Diameter) +--------+  |
+                /               |        carrying EAP           |
+                |               |                               |
+                |               +-------------------------------+
+                v
+         +------+-----+
+     o   |   IKEv2    |
+    /|\  | Initiator  |
+    / \  | VPN client |
+   User  +------------+
+
+   Figure 2: Corporate Network Access
+
+
+3.  Solution
+
+   IKEv2 specifies that when the EAP method establishes a shared secret
+   key, that key is used by both the initiator and responder to generate
+   an AUTH payload (thus authenticating the IKEv2 SA set up by messages
+   1 and 2).
+
+   When used together with public key responder authentication, the
+   responder is in effect authenticated using two different methods: the
+   public key signature AUTH payload in message 4, and the EAP-based
+   AUTH payload later.
+
+   If the initiator does not wish to use public key based responder
+   authentication, it includes an EAP_ONLY_AUTHENTICATION notification
+   payload (type TBD-BY-IANA) in message 3.  The SPI size field is set
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 4]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+   to zero, and there is no additional data associated with this
+   notification.
+
+   If the responder supports this notification, it omits the public key
+   based AUTH payload and CERT payloads from message 4.
+
+   If the responder does not support the EAP_ONLY_AUTHENTICATION
+   notification, it ignores the notification payload, and includes the
+   AUTH payload in message 4.  In this case the initiator can, based on
+   its local policy, choose to either ignore the AUTH payload, or verify
+   it and any associated certificates as usual.
+
+   Both the initiator and responder MUST verify that the EAP method
+   actually used provided mutual authentication and established a shared
+   secret key.  The AUTH payloads sent after EAP Success MUST use the
+   EAP-generated key, and MUST NOT use SK_pi or SK_pr.
+
+   An IKEv2 message exchange with this modification is shown below:
+
+
+      Initiator                   Responder
+     -----------                 -----------
+      HDR, SAi1, KEi, Ni,
+           [N(NAT_DETECTION_SOURCE_IP),
+            N(NAT_DETECTION_DESTINATION_IP)]  -->
+
+                            <--   HDR, SAr1, KEr, Nr, [CERTREQ],
+                                       [N(NAT_DETECTION_SOURCE_IP),
+                                        N(NAT_DETECTION_DESTINATION_IP)]
+
+      HDR, SK { IDi, [IDr], SAi2, TSi, TSr,
+                N(EAP_ONLY_AUTHENTICATION),
+                [CP(CFG_REQUEST)] }  -->
+
+                            <--   HDR, SK { IDr, EAP(Request) }
+
+      HDR, SK { EAP(Response) }  -->
+
+                            <--   HDR, SK { EAP(Request) }
+
+      HDR, SK { EAP(Response) }  -->
+
+                            <--   HDR, SK { EAP(Success) }
+
+      HDR, SK { AUTH }  -->
+
+                            <--   HDR, SK { AUTH, SAr2, TSi, TSr,
+                                            [CP(CFG_REPLY] }
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 5]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+   The NAT detection and Configuration payloads are shown for
+   informative purposes only; they do not change how EAP authentication
+   works.
+
+
+4.  IANA considerations
+
+   This document defines a new IKEv2 Notification Payload type,
+   EAP_ONLY_AUTHENTICATION, described in Section 3.  This payload must
+   be assigned a new type number from the "status types" range.
+
+   This document does not define any new namespaces to be managed by
+   IANA.
+
+
+5.  Security Considerations
+
+   Security considerations applicable to all EAP methods are discussed
+   in [1].  The EAP Key Management Framework [7] deals with issues that
+   arise when EAP is used as a part of a larger system.
+
+5.1.  Authentication of IKEv2 SA
+
+   It is important to note that the IKEv2 SA is not authenticated by
+   just running an EAP conversation: the crucial step is the AUTH
+   payload based on the EAP-generated key.  Thus, EAP methods that do
+   not provide mutual authentication or establish a shared secret key
+   MUST NOT be used with the modifications presented in this document.
+
+5.2.  Authentication with separated IKEv2 responder/EAP server
+
+   As described in Section 2, the EAP conversation can terminate either
+   at the IKEv2 responder or at a backend AAA server.
+
+   If the EAP method terminates at the IKEv2 responder then no key
+   transport via the AAA infrastructure is required.  Pre-shared secret
+   and public key based authentication offered by IKEv2 is then replaced
+   by a wider range of authentication and key exchange methods.
+
+   However, typically EAP will be used with a backend AAA server.  See
+   [7] for a more complete discussion of the related security issues;
+   here we provide only a short summary.
+
+   When a backend server is used, there are actually two authentication
+   exchanges: the EAP method between the client and the AAA server, and
+   another authentication between the AAA server and IKEv2 gateway.  The
+   AAA server authenticates the client using the selected EAP method,
+   and they establish a session key.  The AAA server then sends this key
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 6]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+   to the IKEv2 gateway over a connection authenticated using, e.g.,
+   IPsec or TLS.
+
+   Some EAP methods do not have any concept of pass-through
+   authenticator (e.g., NAS or IKEv2 gateway) identity, and these two
+   authentications remain quite independent of each other.  That is,
+   after the client has verified the AUTH payload sent by the IKEv2
+   gateway, it knows that it is talking to SOME gateway trusted by the
+   home AAA server, but not which one.  The situation is somewhat
+   similar if a single cryptographic hardware accelerator, containing a
+   single private key, would be shared between multiple IKEv2 gateways
+   (perhaps in some kind of cluster configuration).  In particular, if
+   one of the gateways is compromised, it can impersonate any of the
+   other gateways towards the user (until the compromise is discovered
+   and access rights revoked).
+
+   In some environments it is not desirable to trust the IKEv2 gateways
+   this much (also known as the "Lying NAS Problem").  EAP methods that
+   provide what is called "connection binding" or "channel binding"
+   transport some identity or identities of the gateway (or WLAN access
+   point/NAS) inside the EAP method.  Then the AAA server can check that
+   it is indeed sending the key to the gateway expected by the client.
+   A potential solution is described in [16].
+
+   In some deployment configurations, AAA proxies may be present between
+   the IKEv2 gateway and the backend AAA server.  These AAA proxies MUST
+   be trusted for secure operation, and therefore SHOULD be avoided when
+   possible; see [4] and [7] for more discussion.
+
+5.3.  Protection of EAP payloads
+
+   Although the EAP payloads are encrypted and integrity protected with
+   SK_e/SK_a, this does not provide any protection against active
+   attackers.  Until the AUTH payload has been received and verified, a
+   man-in-the-middle can change the KEi/KEr payloads and eavesdrop or
+   modify the EAP payloads.
+
+   In IEEE 802.11i WLANs, the EAP payloads are neither encrypted nor
+   integrity protected (by the link layer), so EAP methods are typically
+   designed to take that into account.
+
+   In particular, EAP methods that are vulnerable to dictionary attacks
+   when used in WLANs are still vulnerable (to active attackers) when
+   run inside IKEv2.
+
+5.4.  User identity confidentiality
+
+   IKEv2 provides confidentiality for the initiator identity against
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 7]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+   passive eavesdroppers, but not against active attackers.  The
+   initiator announces its identity first (in message #3), before the
+   responder has been authenticated.  The usage of EAP in IKEv2 does not
+   change this situation, since the ID payload in message #3 is used
+   instead of the EAP Identity Request/Response exchange.  This is
+   somewhat unfortunate since when EAP is used with public key
+   authentication of the responder, it would be possible to provide
+   active user identity confidentiality for the initiator.
+
+   IKEv2 protects the responder identity even against active attacks.
+   This property cannot be provided when using EAP.  If public key
+   responder authentication is used in addition to EAP, the responder
+   reveals its identity before authenticating the initiator.  If only
+   EAP is used (as proposed in this document), the situation depends on
+   the EAP method used (in some EAP methods, the server reveals its
+   identity first).
+
+   Hence, if active user identity confidentiality for the initiator is
+   required then EAP methods that offer this functionality have to be
+   used (see [1], Section 7.3).
+
+
+6.  Acknowledgments
+
+   This document borrows some text from [1], [3], and [4].  We would
+   also like to thank Hugo Krawczyk for interesting discussions about
+   this topic.
+
+
+7.  References
+
+7.1.  Normative References
+
+   [1]  Aboba, B., Blunk, L., Vollbrecht, J., Carlson, J., and H.
+        Levkowetz, "Extensible Authentication Protocol (EAP)", RFC 3748,
+        June 2004.
+
+   [2]  Bradner, S., "Key words for use in RFCs to Indicate Requirement
+        Levels", RFC 2119, March 1997.
+
+   [3]  Kaufman, C., "Internet Key Exchange (IKEv2) Protocol", RFC 4306,
+        December 2005.
+
+   [4]  Eronen, P., Hiller, T., and G. Zorn, "Diameter Extensible
+        Authentication Protocol (EAP) Application", RFC 4072,
+        August 2005.
+
+
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 8]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+7.2.  Informative References
+
+   [5]   Aboba, B. and P. Calhoun, "RADIUS (Remote Authentication Dial
+         In User Service) Support For Extensible Authentication Protocol
+         (EAP)", RFC 3579, September 2003.
+
+   [6]   Aboba, B. and D. Simon, "EAP GSS Authentication Protocol",
+         draft-aboba-pppext-eapgss-12 (work in progress), April 2002.
+
+   [7]   Aboba, B., "Extensible Authentication Protocol (EAP) Key
+         Management Framework", draft-ietf-eap-keying-13 (work in
+         progress), May 2006.
+
+   [8]   Forsberg, D., "Protocol for Carrying Authentication for Network
+         Access (PANA)", draft-ietf-pana-pana-11 (work in progress),
+         March 2006.
+
+   [9]   Institute of Electrical and Electronics Engineers, "Local and
+         Metropolitan Area Networks: Port-Based Network Access Control",
+         IEEE Standard 802.1X-2001, 2001.
+
+   [10]  Institute of Electrical and Electronics Engineers, "Information
+         technology - Telecommunications and information exchange
+         between systems - Local and metropolitan area networks -
+         Specific Requirements Part 11: Wireless LAN Medium Access
+         Control (MAC) and Physical Layer (PHY) Specifications", IEEE
+         Standard 802.11-1999, 1999.
+
+   [11]  Institute of Electrical and Electronics Engineers, "IEEE
+         Standard for Information technology - Telecommunications and
+         information exchange between systems - Local and metropolitan
+         area networks - Specific requirements - Part 11: Wireless
+         Medium Access Control (MAC) and Physical Layer (PHY)
+         specifications: Amendment 6: Medium Access Control (MAC)
+         Security Enhancements", IEEE Standard 802.11i-2004, July 2004.
+
+   [12]  Rigney, C., Willens, S., Rubens, A., and W. Simpson, "Remote
+         Authentication Dial In User Service (RADIUS)", RFC 2865,
+         June 2000.
+
+   [13]  Simpson, W., "The Point-to-Point Protocol (PPP)", STD 51,
+         RFC 1661, July 1994.
+
+   [14]  Sakane, S., Kamada, K., Thomas, M., and J. Vilhuber,
+         "Kerberized Internet Negotiation of Keys (KINK)", RFC 4430,
+         March 2006.
+
+   [15]  Tschofenig, H., "EAP IKEv2 Method",
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006               [Page 9]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+         draft-tschofenig-eap-ikev2-11 (work in progress), June 2006.
+
+   [16]  Arkko, J. and P. Eronen, "Authenticated Service Information for
+         the Extensible Authentication Protocol  (EAP)",
+         draft-arkko-eap-service-identity-auth-04 (work in progress),
+         October 2005.
+
+
+Appendix A.  Alternative Approaches
+
+   In this section we list alternatives which have been considered
+   during the work on this document.  Finally, the solution presented in
+   Section 3 seems to fit better into IKEv2.
+
+A.1.  Ignore AUTH payload at the initiator
+
+   With this approach, the initiator simply ignores the AUTH payload in
+   message #4 (but obviously must check the second AUTH payload later!).
+   The main advantage of this approach is that no protocol modifications
+   are required and no signature verification is required.
+
+   The initiator could signal the responder (using a NOTIFY payload)
+   that it did not verify the first AUTH payload.
+
+A.2.  Unauthenticated PKs in AUTH payload (message 4)
+
+   The first solution approach suggests the use of unauthenticated
+   public keys in the public key signature AUTH payload (for message 4).
+
+   That is, the initiator verifies the signature in the AUTH payload,
+   but does not verify that the public key indeed belongs to the
+   intended party (using certificates)--since it doesn't have a PKI that
+   would allow this.  This could be used with X.509 certificates (the
+   initiator ignores all other fields of the certificate except the
+   public key), or "Raw RSA Key" CERT payloads.
+
+   This approach has the advantage that initiators that wish to perform
+   certificate-based responder authentication (in addition to EAP) may
+   do so, without requiring the responder to handle these cases
+   separately.
+
+   If using RSA, the overhead of signature verification is quite small
+   (compared to g^xy calculation).
+
+A.3.  Use EAP derived session keys for IKEv2
+
+   It has been proposed that when using an EAP methods that provides
+   mutual authentication and key agreement, the IKEv2 Diffie-Hellman
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006              [Page 10]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+   exchange could also be omitted.  This would mean that the sessions
+   keys for IPsec SAs established later would rely only on EAP-provided
+   keys.
+
+   It seems the only benefit of this approach is saving some computation
+   time (g^xy calculation).  This approach requires designing a
+   completely new protocol (which would not resemble IKEv2 anymore) we
+   do not believe that it should be considered.  Nevertheless, we
+   include it for completeness.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006              [Page 11]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+Authors' Addresses
+
+   Pasi Eronen
+   Nokia Research Center
+   P.O. Box 407
+   FIN-00045 Nokia Group
+   Finland
+
+   Email: pasi.eronen@nokia.com
+
+
+   Hannes Tschofenig
+   Siemens
+   Otto-Hahn-Ring 6
+   Munich, Bayern  81739
+   Germany
+
+   Email: Hannes.Tschofenig@siemens.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006              [Page 12]
+
+Internet-Draft         Extension for EAP in IKEv2              June 2006
+
+
+Intellectual Property Statement
+
+   The IETF takes no position regarding the validity or scope of any
+   Intellectual Property Rights or other rights that might be claimed to
+   pertain to the implementation or use of the technology described in
+   this document or the extent to which any license under such rights
+   might or might not be available; nor does it represent that it has
+   made any independent effort to identify any such rights.  Information
+   on the procedures with respect to rights in RFC documents can be
+   found in BCP 78 and BCP 79.
+
+   Copies of IPR disclosures made to the IETF Secretariat and any
+   assurances of licenses to be made available, or the result of an
+   attempt made to obtain a general license or permission for the use of
+   such proprietary rights by implementers or users of this
+   specification can be obtained from the IETF on-line IPR repository at
+   http://www.ietf.org/ipr.
+
+   The IETF invites any interested party to bring to its attention any
+   copyrights, patents or patent applications, or other proprietary
+   rights that may cover technology that may be required to implement
+   this standard.  Please address the information to the IETF at
+   ietf-ipr@ietf.org.
+
+
+Disclaimer of Validity
+
+   This document and the information contained herein are provided on an
+   "AS IS" basis and THE CONTRIBUTOR, THE ORGANIZATION HE/SHE REPRESENTS
+   OR IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY AND THE INTERNET
+   ENGINEERING TASK FORCE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE
+   INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
+   WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+
+Copyright Statement
+
+   Copyright (C) The Internet Society (2006).  This document is subject
+   to the rights, licenses and restrictions contained in BCP 78, and
+   except as set forth therein, the authors retain all their rights.
+
+
+Acknowledgment
+
+   Funding for the RFC Editor function is currently provided by the
+   Internet Society.
+
+
+
+
+Eronen & Tschofenig     Expires December 28, 2006              [Page 13]
+
+
