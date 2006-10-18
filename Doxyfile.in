@@ -71,7 +71,7 @@ WARN_LOGFILE =
 # configuration options related to the input files
 #---------------------------------------------------------------------------
 INPUT = src/libstrongswan src/charon
-FILE_PATTERNS = *.h *.txt
+FILE_PATTERNS = *.h
 RECURSIVE = YES
 EXCLUDE = 
 EXCLUDE_SYMLINKS = NO
