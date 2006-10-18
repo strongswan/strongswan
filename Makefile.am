@@ -1,5 +1,5 @@
 SUBDIRS = src
-EXTRA_DIST = Doxyfile.in testing
+EXTRA_DIST = Doxyfile.in testing CREDITS
 CLEANFILES = apidoc Doxyfile
 
 Doxyfile :	Doxyfile.in
