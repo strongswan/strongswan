@@ -767,8 +767,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	sa_policy_t *policy;
 	u_int32_t now, rekeying, use;
 	status_t status;
-	size_t written, total_written = 0;
-#define fprintf_sum(...) { written = fprintf(__VA_ARGS__); if (written < 0) return written; total_written += written; }
+	size_t written = 0;
 	
 	if (this == NULL)
 	{
@@ -777,93 +776,91 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	now = (u_int32_t)time(NULL);
 	
-	fprintf_sum(stream, "%10s:  %N, reqid: %d", this->name,
-				child_sa_state_names, this->state, this->reqid);
+	written += fprintf(stream, "%10s:  %N, reqid: %d", this->name,
+					   child_sa_state_names, this->state, this->reqid);
 	
 	if (this->state == CHILD_INSTALLED)
 	{
-		fprintf_sum(stream, ", %N, SPIs (in/out): 0x%x/0x%x",
-					protocol_id_names, this->protocol,
-					htonl(this->me.spi), htonl(this->other.spi));
+		written += fprintf(stream, ", %N, SPIs (in/out): 0x%x/0x%x",
+						   protocol_id_names, this->protocol,
+						   htonl(this->me.spi), htonl(this->other.spi));
 		
 		if (info->alt)
 		{
-			fprintf_sum(stream, "\n%10s:   ", this->name);
+			written += fprintf(stream, "\n%10s:   ", this->name);
 			
 			if (this->protocol == PROTO_ESP)
 			{
-				fprintf_sum(stream, "%N",
-							encryption_algorithm_names, this->encryption.algorithm);
+				written += fprintf(stream, "%N", encryption_algorithm_names,
+								   this->encryption.algorithm);
 				
 				if (this->encryption.key_size)
 				{
-					fprintf_sum(stream, "-%d", this->encryption.key_size);
+					written += fprintf(stream, "-%d", this->encryption.key_size);
 				}
-				fprintf_sum(stream, "/");
+				written += fprintf(stream, "/");
 			}
 			
-			fprintf_sum(stream, "%N",
-						integrity_algorithm_names, this->integrity.algorithm);
+			written += fprintf(stream, "%N", integrity_algorithm_names,
+							   this->integrity.algorithm);
 			if (this->integrity.key_size)
 			{
-				fprintf_sum(stream, "-%d", this->integrity.key_size);
+				written += fprintf(stream, "-%d", this->integrity.key_size);
 			}
-			fprintf_sum(stream, ", rekeying: ");
+			written += fprintf(stream, ", rekeying: ");
 			
 			/* calculate rekey times */
 			if (this->soft_lifetime)
 			{
 				rekeying = this->soft_lifetime - (now - this->install_time);
-				fprintf_sum(stream, "%ds", rekeying);
+				written += fprintf(stream, "%ds", rekeying);
 			}
 			else
 			{
-				fprintf_sum(stream, "disabled");
+				written += fprintf(stream, "disabled");
 			}
 		}
 	}
-#undef fprintf_sum
-#define fprintf_sum(...) { written = fprintf(__VA_ARGS__); if (written < 0) { iterator->destroy(iterator); return written; } total_written += written; }
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		fprintf_sum(stream, "\n%10s:    %R===%R, last use (in/out/fwd): ",
-					this->name, policy->my_ts, policy->other_ts);
+		written += fprintf(stream, "\n%10s:    %R===%R, last use (in/out/fwd): ",
+						   this->name, policy->my_ts, policy->other_ts);
 		
 		/* query policy times */
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
 							policy->other_ts, policy->my_ts, POLICY_IN, &use);
 		if (status == SUCCESS && use)
 		{
-			fprintf_sum(stream, "%ds/", now - use);
+			written += fprintf(stream, "%ds/", now - use);
 		}
 		else
 		{
-			fprintf_sum(stream, "unused/");
+			written += fprintf(stream, "unused/");
 		}
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
-				policy->my_ts, policy->other_ts, POLICY_OUT, &use);
+							policy->my_ts, policy->other_ts, POLICY_OUT, &use);
 		if (status == SUCCESS && use)
 		{
-			fprintf_sum(stream, "%ds/", now - use);
+			written += fprintf(stream, "%ds/", now - use);
 		}
 		else
 		{
-			fprintf_sum(stream, "unused/");
+			written += fprintf(stream, "unused/");
 		}
 		status = charon->kernel_interface->query_policy(charon->kernel_interface,
 				policy->other_ts, policy->my_ts, POLICY_FWD, &use);
 		if (status == SUCCESS && use)
 		{
-			fprintf_sum(stream, "%ds", now - use);
+			written += fprintf(stream, "%ds", now - use);
 		}
 		else
 		{
-			fprintf_sum(stream, "unused");
+			written += fprintf(stream, "unused");
 		}
 	}
 	iterator->destroy(iterator);
-	return total_written;
+	return written;
 }
 
 /**

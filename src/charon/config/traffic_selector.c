@@ -165,8 +165,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	struct servent *serv;
 	char *serv_proto = NULL;
 	bool has_proto = FALSE;
-	size_t written, total_written = 0;
-#define fprintf_sum(...) { written = fprintf(__VA_ARGS__); if (written < 0) return written; total_written += written; }
+	size_t written = 0;
 	
 	if (this == NULL)
 	{
@@ -183,7 +182,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	}
 	mask = calc_netbits(this);
 	
-	fprintf_sum(stream, "%s/%d", addr_str, mask);
+	written += fprintf(stream, "%s/%d", addr_str, mask);
 	
 	/* build protocol string */
 	if (this->protocol)
@@ -191,12 +190,12 @@ static int print(FILE *stream, const struct printf_info *info,
 		proto = getprotobynumber(this->protocol);
 		if (proto)
 		{
-			fprintf_sum(stream, "[%s", proto->p_name);
+			written += fprintf(stream, "[%s", proto->p_name);
 			serv_proto = proto->p_name;
 		}
 		else
 		{
-			fprintf_sum(stream, "[%d", this->protocol);
+			written += fprintf(stream, "[%d", this->protocol);
 		}
 		has_proto = TRUE;
 	}
@@ -206,36 +205,36 @@ static int print(FILE *stream, const struct printf_info *info,
 	{
 		if (has_proto)
 		{
-			fprintf_sum(stream, "/");
+			written += fprintf(stream, "/");
 		}
 		else
 		{
-			fprintf_sum(stream, "[");
+			written += fprintf(stream, "[");
 		}
 		serv = getservbyport(htons(this->from_port), serv_proto);
 		if (serv)
 		{
-			fprintf_sum(stream, "%s]", serv->s_name);
+			written += fprintf(stream, "%s]", serv->s_name);
 		}
 		else
 		{
-			fprintf_sum(stream, "%d]", this->from_port);
+			written += fprintf(stream, "%d]", this->from_port);
 		}
 	}
 	else if (!(this->from_port == 0 && this->to_port == 0xFFFF))
 	{
 		if (has_proto)
 		{
-			fprintf_sum(stream, "/");
+			written += fprintf(stream, "/");
 		}
 		else
 		{
-			fprintf_sum(stream, "[");
+			written += fprintf(stream, "[");
 		}
-		fprintf_sum(stream, "%d-%d]", this->from_port, this->to_port);
+		written += fprintf(stream, "%d-%d]", this->from_port, this->to_port);
 	}
 	
-	return total_written;
+	return written;
 }
 
 /**
