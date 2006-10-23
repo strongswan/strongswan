@@ -1,0 +1,3 @@
+An IPv6 ESP connection between the hosts <b>moon</b> and <b>sun</b> is successfully set up.
+The authentication is based on X.509 certificates. In order to test the host-to-host tunnel
+<b>moon</b> sends an IPv6 ICMP request to <b>sun</b> using the ping6 command.
