@@ -10,7 +10,7 @@ moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
 moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
 moon::tcpdump::IP dave.strongswan.org > moon.strongswan.org: ESP::YES
 moon::tcpdump::IP moon.strongswan.org > dave.strongswan.org: ESP::YES
-alice::tcpdump::IP carol1.strongswan.org > alice.strongswan.org: icmp::YES
-alice::tcpdump::IP alice.strongswan.org > carol1.strongswan.org: icmp::YES
-alice::tcpdump::IP dave1.strongswan.org > alice.strongswan.org: icmp::YES
-alice::tcpdump::IP alice.strongswan.org > dave1.strongswan.org: icmp::YES
+alice::tcpdump::IP carol1.strongswan.org > alice.strongswan.org: ICMP echo request::YES
+alice::tcpdump::IP alice.strongswan.org > carol1.strongswan.org: ICMP echo reply::YES
+alice::tcpdump::IP dave1.strongswan.org > alice.strongswan.org: ICMP echo request::YES
+alice::tcpdump::IP alice.strongswan.org > dave1.strongswan.org: ICMP echo reply::YES
