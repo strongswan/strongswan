@@ -1,0 +1,8 @@
+carol::ipsec statusall::home.*INSTALLED::YES
+carol::iptables -A INPUT -i eth0 -s PH_IP_MOON -j DROP::no output expected::NO
+moon::sleep 100::no output expected::NO
+moon::cat /var/log/auth.log::sending DPD request::YES
+moon::cat /var/log/auth.log::sending retransmit::YES
+moon::cat /var/log/auth.log::giving up after 4 retransmits, deleting IKE_SA::YES
+moon::cat /var/log/auth.log::dpd action for rw is DPD_CLEAR::YES
+moon::cat /var/log/auth.log::IKE_SA deleted::YES
