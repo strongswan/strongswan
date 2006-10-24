@@ -83,6 +83,9 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	struct sockaddr_un ctl_addr = { AF_UNIX, CHARON_CTL_FILE };
 	int byte_count;
 	char buffer[64];
+	
+	/* starter is not called from commandline, and therefore absolutely silent */
+	msg->output_verbosity = -1;
 
 	int sock = socket(AF_UNIX, SOCK_STREAM, 0);
 

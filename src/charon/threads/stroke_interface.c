@@ -496,7 +496,10 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 															 msg->initiate.name);
 	if (connection == NULL)
 	{
-		fprintf(this->out, "no connection named '%s'\n", msg->initiate.name);
+		if (msg->output_verbosity >= 0)
+		{
+			fprintf(this->out, "no connection named '%s'\n", msg->initiate.name);
+		}
 		return;
 	}
 	if (!connection->is_ikev2(connection))
@@ -509,11 +512,17 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 												  msg->initiate.name);
 	if (policy == NULL)
 	{
-		fprintf(this->out, "no policy named '%s'\n", msg->initiate.name);
+		if (msg->output_verbosity >= 0)
+		{
+			fprintf(this->out, "no policy named '%s'\n", msg->initiate.name);
+		}
 		connection->destroy(connection);
 		return;
 	}
-	fprintf(this->out, "initiating connection '%s'\n", msg->initiate.name);
+	if (msg->output_verbosity >= 0)
+	{
+		fprintf(this->out, "initiating connection '%s'\n", msg->initiate.name);
+	}
 	
 	job = initiate_job_create(connection, policy);
 	
@@ -529,7 +538,8 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		
 		signal = charon->bus->listen(charon->bus, &level, &thread, &ike_sa, &format, &args);
 		
-		if (ike_sa == init_ike_sa && level <= LEVEL_CTRL)
+		if ((init_ike_sa == NULL || ike_sa == init_ike_sa) &&
+			level <= msg->output_verbosity)
 		{
 			if (vfprintf(this->out, format, args) < 0 ||
 				fprintf(this->out, "\n") < 0 ||
@@ -544,15 +554,20 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		{
 			case SIG_IKE_UP:
 			case SIG_IKE_FAILED:
-			case SIG_IKE_DOWN:
+			case SIG_CHILD_UP:
+			case SIG_CHILD_FAILED:
 				if (ike_sa == init_ike_sa)
 				{
 					charon->bus->set_listen_state(charon->bus, FALSE);
+					return;
 				}
-				return;
+				continue;
 			case SIG_INITIATE:
-				init_ike_sa = ike_sa;
-				/* fall through */
+				if (init_ike_sa == NULL)
+				{
+					init_ike_sa = ike_sa;
+				}
+				continue;
 			default:
 				continue;
 		}

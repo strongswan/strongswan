@@ -122,6 +122,9 @@ struct stroke_msg_t {
 		STR_REREAD
 		/* more to come */
 	} type;
+	
+	/* verbosity of output returned from charon (-from -1=silent to 4=private)*/
+	int output_verbosity;
 
 	union {
 		/* data for STR_INITIATE, STR_ROUTE, STR_UP, STR_DOWN, ... */

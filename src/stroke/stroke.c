@@ -57,6 +57,8 @@ static int send_stroke_msg (stroke_msg_t *msg)
 	char buffer[64];
 	int byte_count;
 	
+	msg->output_verbosity = 1; /* CONTROL */
+	
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock < 0)
 	{
