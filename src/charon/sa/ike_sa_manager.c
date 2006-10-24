@@ -851,11 +851,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	
 	DBG2(SIG_DBG_MGR, "destroy all entries");
 	/* Step 4: destroy all entries */
-	while (list->remove_last(list, (void**)&entry) == SUCCESS)
-	{
-		entry_destroy(entry);
-	}
-	list->destroy(list);
+	list->destroy_function(list, (void*)entry_destroy);
 	pthread_mutex_unlock(&(this->mutex));
 	
 	this->randomizer->destroy(this->randomizer);

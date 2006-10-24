@@ -165,17 +165,9 @@ static status_t verify(private_sa_payload_t *this)
  */
 static status_t destroy(private_sa_payload_t *this)
 {
-	/* all proposals are getting destroyed */ 
-	while (this->proposals->get_count(this->proposals) > 0)
-	{
-		proposal_substructure_t *current_proposal;
-		this->proposals->remove_last(this->proposals,(void **)&current_proposal);
-		current_proposal->destroy(current_proposal);
-	}
-	this->proposals->destroy(this->proposals);
-	
+	this->proposals->destroy_offset(this->proposals,
+									offsetof(proposal_substructure_t, destroy));
 	free(this);
-	
 	return SUCCESS;
 }
 

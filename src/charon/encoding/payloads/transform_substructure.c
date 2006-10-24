@@ -354,15 +354,8 @@ static status_t get_key_length(private_transform_substructure_t *this, u_int16_t
  */
 static void destroy(private_transform_substructure_t *this)
 {
-	/* all proposals are getting destroyed */ 
-	while (this->attributes->get_count(this->attributes) > 0)
-	{
-		transform_attribute_t *current_attribute;
-		this->attributes->remove_last(this->attributes,(void **)&current_attribute);
-		current_attribute->destroy(current_attribute);
-	}
-	this->attributes->destroy(this->attributes);
-	
+	this->attributes->destroy_offset(this->attributes,
+									 offsetof(transform_attribute_t, destroy));
 	free(this);
 }
 

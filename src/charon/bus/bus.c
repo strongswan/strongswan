@@ -365,14 +365,7 @@ static void signal_(private_bus_t *this, signal_t signal, level_t level,
  */
 static void destroy(private_bus_t *this)
 {
-	active_listener_t *listener;
-	while (this->active_listeners->remove_last(this->active_listeners,
-		   									   (void**)&listener) == SUCCESS)
-	{
-		free(listener);
-	}
-	
-	this->active_listeners->destroy(this->active_listeners);
+	this->active_listeners->destroy_function(this->active_listeners, free);
 	this->listeners->destroy(this->listeners);
 	free(this);
 }

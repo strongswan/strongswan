@@ -432,29 +432,10 @@ static void destroy(private_policy_t *this)
 {
 	if (ref_put(&this->refcount))
 	{
-		proposal_t *proposal;
-		traffic_selector_t *traffic_selector;
 		
-		/* delete proposals */
-		while(this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
-		{
-			proposal->destroy(proposal);
-		}
-		this->proposals->destroy(this->proposals);
-		
-		/* delete traffic selectors */
-		while(this->my_ts->remove_last(this->my_ts, (void**)&traffic_selector) == SUCCESS)
-		{
-			traffic_selector->destroy(traffic_selector);
-		}
-		this->my_ts->destroy(this->my_ts);
-		
-		/* delete traffic selectors */
-		while(this->other_ts->remove_last(this->other_ts, (void**)&traffic_selector) == SUCCESS)
-		{
-			traffic_selector->destroy(traffic_selector);
-		}
-		this->other_ts->destroy(this->other_ts);
+		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
+		this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
+		this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
 		
 		/* delete certification authorities */
 		if (this->my_ca)

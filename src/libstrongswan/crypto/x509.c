@@ -1188,19 +1188,10 @@ static void __attribute__ ((constructor))print_register()
  */
 static void destroy(private_x509_t *this)
 {
-	identification_t *id;
-	while (this->subjectAltNames->remove_last(this->subjectAltNames, (void**)&id) == SUCCESS)
-	{
-		id->destroy(id);
-	}
-	this->subjectAltNames->destroy(this->subjectAltNames);
-
-	while (this->crlDistributionPoints->remove_last(this->crlDistributionPoints, (void**)&id) == SUCCESS)
-	{
-		id->destroy(id);
-	}
-	this->crlDistributionPoints->destroy(this->crlDistributionPoints);
-
+	this->subjectAltNames->destroy_offset(this->subjectAltNames,
+								offsetof(identification_t, destroy));
+	this->crlDistributionPoints->destroy_offset(this->crlDistributionPoints,
+								offsetof(identification_t, destroy));
 	DESTROY_IF(this->issuer);
 	DESTROY_IF(this->subject);
 	DESTROY_IF(this->public_key);

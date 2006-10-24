@@ -600,14 +600,7 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
  */
 static void destroy(private_encryption_payload_t *this)
 {
-	/* all proposals are getting destroyed */ 
-	while (this->payloads->get_count(this->payloads) > 0)
-	{
-		payload_t *current_payload;
-		this->payloads->remove_last(this->payloads,(void **)&current_payload);
-		current_payload->destroy(current_payload);
-	}
-	this->payloads->destroy(this->payloads);
+	this->payloads->destroy_offset(this->payloads, offsetof(payload_t, destroy));
 	free(this->encrypted.ptr);
 	free(this->decrypted.ptr);
 	free(this);

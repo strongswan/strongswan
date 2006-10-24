@@ -280,18 +280,9 @@ static linked_list_t *get_traffic_selectors(private_ts_payload_t *this)
  */
 static void destroy(private_ts_payload_t *this)
 {
-	while (this->traffic_selectors->get_count(this->traffic_selectors) > 0)
-	{
-		payload_t *current_traffic_selector;
-		
-		this->traffic_selectors->remove_last(this->traffic_selectors,(void **) &current_traffic_selector);
-		
-		current_traffic_selector->destroy(current_traffic_selector);
-	}
-	
-	this->traffic_selectors->destroy(this->traffic_selectors);
-		
-	free(this);	
+	this->traffic_selectors->destroy_offset(this->traffic_selectors,
+											offsetof(payload_t, destroy));
+	free(this);
 }
 
 /*

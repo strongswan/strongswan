@@ -260,20 +260,6 @@ static notify_payload_t *build_natd_payload(private_ike_sa_init_t *this,
 }
 
 /**
- * destroy a list of proposals
- */
-static void destroy_proposal_list(linked_list_t *list)
-{
-	proposal_t *proposal;
-	
-	while (list->remove_last(list, (void**)&proposal) == SUCCESS)
-	{
-		proposal->destroy(proposal);
-	}
-	list->destroy(list);
-}
-
-/**
  * Implementation of transaction_t.get_request.
  */
 static status_t get_request(private_ike_sa_init_t *this, message_t **result)
@@ -328,8 +314,8 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		this->diffie_hellman = diffie_hellman_create(dh_group);
 		if (this->diffie_hellman == NULL)
 		{
-			DBG1(SIG_DBG_IKE, "DH group %N not supported, aborting",
-				 diffie_hellman_group_names, dh_group);
+			SIG(SIG_IKE_FAILED, "DH group %N not supported, aborting",
+				diffie_hellman_group_names, dh_group);
 			return DESTROY_ME;
 		}
 	}
@@ -340,7 +326,7 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		
 		proposal_list = this->connection->get_proposals(this->connection);
 		sa_payload = sa_payload_create_from_proposal_list(proposal_list);
-		destroy_proposal_list(proposal_list);
+		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 		
 		request->add_payload(request, (payload_t*)sa_payload);
 	}
@@ -359,6 +345,7 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
 			NONCE_SIZE, &this->nonce_i) != SUCCESS)
 		{
+			SIG(SIG_IKE_FAILED, "could not generate nonce, aborting");
 			return DESTROY_ME;
 		}
 		nonce_payload = nonce_payload_create();
@@ -407,12 +394,14 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 	{
 		case NO_PROPOSAL_CHOSEN:
 		{
-			DBG1(SIG_DBG_IKE, "received a NO_PROPOSAL_CHOSEN notify, deleting IKE_SA");
+			SIG(SIG_IKE_FAILED,
+				"received a NO_PROPOSAL_CHOSEN notify, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		case INVALID_MAJOR_VERSION:
 		{
-			DBG1(SIG_DBG_IKE, "received a INVALID_MAJOR_VERSION notify, deleting IKE_SA");
+			SIG(SIG_IKE_FAILED,
+				"received a INVALID_MAJOR_VERSION notify, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		case INVALID_KE_PAYLOAD:
@@ -483,14 +472,14 @@ static status_t process_notifys(private_ike_sa_init_t *this, notify_payload_t *n
 		{
 			if (notify_type < 16383)
 			{
-				DBG1(SIG_DBG_IKE, "received %N notify error, deleting IKE_SA",
-					 notify_type_names, notify_type);
+				SIG(SIG_IKE_FAILED, "received %N notify error, deleting IKE_SA",
+					notify_type_names, notify_type);
 				return DESTROY_ME;	
 			}
 			else
 			{
-				DBG1(SIG_DBG_IKE, "received %N notify, ignored",
-					 notify_type_names, notify_type);
+				SIG(SIG_IKE_FAILED, "received %N notify, ignored",
+					notify_type_names, notify_type);
 				return SUCCESS;
 			}
 		}
@@ -540,7 +529,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 	/* check message type */
 	if (request->get_exchange_type(request) != IKE_SA_INIT)
 	{
-		DBG1(SIG_DBG_IKE, "IKE_SA_INIT request of invalid type, deleting IKE_SA");
+		SIG(SIG_IKE_FAILED, "IKE_SA_INIT request of invalid type, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -553,8 +542,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 		notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
 		response->add_payload(response, (payload_t*)notify);
 		
-		DBG1(SIG_DBG_IKE, "no connection for hosts %H...%H found, deleting IKE_SA",
-			 me, other);
+		SIG(SIG_IKE_FAILED, "no connection for hosts %H...%H found, "
+			"deleting IKE_SA", me, other);
 		return DESTROY_ME;
 	}
 	
@@ -620,7 +609,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		notify_payload_t *notify = notify_payload_create();
 		notify->set_notify_type(notify, INVALID_SYNTAX);
 		response->add_payload(response, (payload_t*)notify);
-		DBG1(SIG_DBG_IKE, "request message incomplete, deleting IKE_SA");
+		SIG(SIG_IKE_FAILED, "request message incomplete, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -636,13 +625,14 @@ static status_t get_response(private_ike_sa_init_t *this,
 	
 		proposal_list = sa_request->get_proposals(sa_request);
 		this->proposal = this->connection->select_proposal(this->connection, proposal_list);
-		destroy_proposal_list(proposal_list);
+		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 		if (this->proposal == NULL)
 		{
 			notify_payload_t *notify = notify_payload_create();
 			notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
 			response->add_payload(response, (payload_t*)notify);
-			DBG1(SIG_DBG_IKE, "request did not contain any acceptable proposals, deleting IKE_SA");
+			SIG(SIG_IKE_FAILED, "request did not contain any acceptable "
+				"proposals, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		sa_response = sa_payload_create_from_proposal(this->proposal);	
@@ -719,7 +709,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 			notify_payload_t *notify = notify_payload_create();
 			notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
 			response->add_payload(response, (payload_t*)notify);
-			DBG1(SIG_DBG_IKE, "could not get random bytes for nonce, deleting IKE_SA");
+			SIG(SIG_IKE_FAILED,  "could not create nonce, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		nonce_response = nonce_payload_create();
@@ -741,7 +731,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 			notify = notify_payload_create();
 			notify->set_notify_type(notify, INVALID_SYNTAX);
 			response->add_payload(response, (payload_t*)notify);
-			DBG1(SIG_DBG_IKE, "request contained wrong number of NAT-D payloads, deleting IKE_SA");
+			SIG(SIG_IKE_FAILED, "request contained invalid number of NAT-D"
+				"payloads, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		if (this->natd_dst_seen && !this->natd_dst_matched)
@@ -774,7 +765,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		notify_payload_t *notify = notify_payload_create();
 		notify->set_notify_type(notify, NO_PROPOSAL_CHOSEN);
 		response->add_payload(response, (payload_t*)notify);
-		DBG1(SIG_DBG_IKE, "transform objects could not be created from selected proposal, deleting IKE_SA");
+		SIG(SIG_IKE_FAILED, "error creating transform from proposal, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -792,7 +783,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 		 * as we don't use a crypter/signer in ike_sa_init... */
 		if (response->generate(response, NULL, NULL, &response_packet) != SUCCESS)
 		{
-			DBG1(SIG_DBG_IKE, "error in response generation, deleting IKE_SA");
+			SIG(SIG_IKE_FAILED, "error in response generation, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		response_packet->destroy(response_packet);
@@ -845,7 +836,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != IKE_SA_INIT)
 	{
-		DBG1(SIG_DBG_IKE, "IKE_SA_INIT response of invalid type, deleting IKE_SA");
+		SIG(SIG_IKE_FAILED, "IKE_SA_INIT response of invalid type, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -859,7 +850,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	responder_spi = response->get_responder_spi(response);
 	if (responder_spi == 0)
 	{
-		DBG1(SIG_DBG_IKE, "response contained a SPI of zero, deleting IKE_SA");
+		SIG(SIG_IKE_FAILED, "response contained a SPI of zero, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -871,7 +862,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	/* Iterate over all payloads to collect them */
 	payloads = response->get_payload_iterator(response);
 	while (payloads->has_next(payloads))
-	{ 
+	{
 		payload_t *payload;
 		payloads->current(payloads, (void**)&payload);
 		
@@ -920,7 +911,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	
 	if (!(nonce_payload && sa_payload && ke_payload))
 	{
-		DBG1(SIG_DBG_IKE, "response message incomplete, deleting IKE_SA");
+		SIG(SIG_IKE_FAILED, "response message incomplete, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -930,29 +921,24 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		 * - check if peer selected a proposal
 		 * - verify it's selection againts our set
 		 */
-		proposal_t *proposal;
 		linked_list_t *proposal_list;
 		
 		/* get the list of selected proposals, the peer has to select only one proposal */
 		proposal_list = sa_payload->get_proposals (sa_payload);
 		if (proposal_list->get_count(proposal_list) != 1)
 		{
-			DBG1(SIG_DBG_IKE, "response did not contain a single proposal, deleting IKE_SA");
-			while (proposal_list->remove_last(proposal_list, (void**)&proposal) == SUCCESS)
-			{
-				proposal->destroy(proposal);
-			}
-			proposal_list->destroy(proposal_list);
+			SIG(SIG_IKE_FAILED, "response did not contain a single proposal, deleting IKE_SA");
+			proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 			return DESTROY_ME;
 		}
 		
 		/* we have to re-check if the others selection is valid */
 		this->proposal = this->connection->select_proposal(this->connection, proposal_list);
-		destroy_proposal_list(proposal_list);
+		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 		
 		if (this->proposal == NULL)
 		{
-			DBG1(SIG_DBG_IKE, "peer selected a proposal we did not offer, deleting IKE_SA");
+			SIG(SIG_IKE_FAILED, "peer selected a proposal we did not offer, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 	}
@@ -980,7 +966,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 		if ((!this->natd_dst_seen && this->natd_src_seen) ||
 			(this->natd_dst_seen && !this->natd_src_seen))
 		{
-			DBG1(SIG_DBG_IKE, "request contained wrong number of NAT-D payloads, deleting IKE_SA");
+			SIG(SIG_IKE_FAILED, "request contained invalid number of NAT-D payloads, deleting IKE_SA");
 			return DESTROY_ME;
 		}
 		if (this->natd_src_seen && !this->natd_src_matched)
@@ -1012,7 +998,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 								  this->nonce_i, this->nonce_r,
 								  TRUE, NULL, NULL) != SUCCESS)
 	{
-		DBG1(SIG_DBG_IKE, "transform objects could not be created from selected proposal, deleting IKE_SA");
+		SIG(SIG_IKE_FAILED, "error creating transforms from proposal, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	

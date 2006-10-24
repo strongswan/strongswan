@@ -180,36 +180,6 @@ static void cancel(private_create_child_sa_t *this)
 }
 
 /**
- * destroy a list of traffic selectors
- */
-static void destroy_ts_list(linked_list_t *list)
-{
-	if (list)
-	{
-		traffic_selector_t *ts;
-		while (list->remove_last(list, (void**)&ts) == SUCCESS)
-		{
-			ts->destroy(ts);
-		}
-		list->destroy(list);
-	}
-}
-
-/**
- * destroy a list of proposals
- */
-static void destroy_proposal_list(linked_list_t *list)
-{
-	proposal_t *proposal;
-	
-	while (list->remove_last(list, (void**)&proposal) == SUCCESS)
-	{
-		proposal->destroy(proposal);
-	}
-	list->destroy(list);
-}
-
-/**
  * Implementation of transaction_t.get_request.
  */
 static status_t get_request(private_create_child_sa_t *this, message_t **result)
@@ -305,7 +275,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 			return FAILED;
 		}
 		sa_payload = sa_payload_create_from_proposal_list(proposals);
-		destroy_proposal_list(proposals);
+		proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
 		request->add_payload(request, (payload_t*)sa_payload);
 	}
 	
@@ -328,7 +298,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		
 		ts_list = this->policy->get_my_traffic_selectors(this->policy, me);
 		ts_payload = ts_payload_create_from_traffic_selectors(TRUE, ts_list);
-		destroy_ts_list(ts_list);
+		ts_list->destroy_offset(ts_list, offsetof(traffic_selector_t, destroy));
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
 	
@@ -338,7 +308,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		
 		ts_list = this->policy->get_other_traffic_selectors(this->policy, other);
 		ts_payload = ts_payload_create_from_traffic_selectors(FALSE, ts_list);
-		destroy_ts_list(ts_list);
+		ts_list->destroy_offset(ts_list, offsetof(traffic_selector_t, destroy));
 		request->add_payload(request, (payload_t*)ts_payload);
 	}
 	
@@ -644,8 +614,8 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			this->tsr = this->policy->select_my_traffic_selectors(this->policy, my_ts, me);
 			this->tsi = this->policy->select_other_traffic_selectors(this->policy, other_ts, other);
 		}
-		destroy_ts_list(my_ts);
-		destroy_ts_list(other_ts);
+		my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
+		other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 		
 		if (this->policy == NULL)
 		{
@@ -667,7 +637,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		proposal_list = sa_request->get_proposals(sa_request);
 		DBG2(SIG_DBG_IKE, "selecting proposals:");
 		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
-		destroy_proposal_list(proposal_list);
+		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 		
 		/* do we have a proposal? */
 		if (this->proposal == NULL)
@@ -822,13 +792,13 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 	{	/* process traffic selectors for us */
 		linked_list_t *ts_received = tsi_payload->get_traffic_selectors(tsi_payload);
 		this->tsi = this->policy->select_my_traffic_selectors(this->policy, ts_received, me);
-		destroy_ts_list(ts_received);
+		ts_received->destroy_offset(ts_received, offsetof(traffic_selector_t, destroy));
 	}
 	
 	{	/* process traffic selectors for other */
 		linked_list_t *ts_received = tsr_payload->get_traffic_selectors(tsr_payload);
 		this->tsr = this->policy->select_other_traffic_selectors(this->policy, ts_received, other);
-		destroy_ts_list(ts_received);
+		ts_received->destroy_offset(ts_received, offsetof(traffic_selector_t, destroy));
 	}
 	
 	{	/* process sa payload */
@@ -837,7 +807,7 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 		proposal_list = sa_payload->get_proposals(sa_payload);
 		/* we have to re-check here if other's selection is valid */
 		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
-		destroy_proposal_list(proposal_list);
+		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 		
 		/* everything fine to create CHILD? */
 		if (this->proposal == NULL ||
@@ -917,8 +887,8 @@ static void destroy(private_create_child_sa_t *this)
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->policy);
-	destroy_ts_list(this->tsi);
-	destroy_ts_list(this->tsr);
+	this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
+	this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
 	chunk_free(&this->nonce_i);
 	chunk_free(&this->nonce_r);
 	chunk_free(&this->nonce_s);

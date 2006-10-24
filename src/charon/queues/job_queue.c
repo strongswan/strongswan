@@ -114,14 +114,7 @@ static void add(private_job_queue_t *this, job_t *job)
  */
 static void job_queue_destroy (private_job_queue_t *this)
 {
-	job_t *job;
-	while (this->list->remove_last(this->list, (void**)&job) == SUCCESS)
-	{
-		job->destroy(job);
-	}
-	this->list->destroy(this->list);
-	pthread_mutex_destroy(&(this->mutex));
-	pthread_cond_destroy(&(this->condvar));
+	this->list->destroy_offset(this->list, offsetof(job_t, destroy));
 	free(this);
 }
 

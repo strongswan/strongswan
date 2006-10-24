@@ -333,14 +333,7 @@ static void destroy(private_connection_t *this)
 {
 	if (ref_put(&this->refcount))
 	{
-		proposal_t *proposal;
-		
-		while (this->proposals->remove_last(this->proposals, (void**)&proposal) == SUCCESS)
-		{
-			proposal->destroy(proposal);
-		}
-		this->proposals->destroy(this->proposals);
-		
+		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 		this->my_host->destroy(this->my_host);
 		this->other_host->destroy(this->other_host);
 		free(this->name);

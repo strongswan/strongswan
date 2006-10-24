@@ -149,20 +149,6 @@ static void cancel(private_rekey_ike_sa_t *this)
 }
 
 /**
- * destroy a list of proposals
- */
-static void destroy_proposal_list(linked_list_t *list)
-{
-	proposal_t *proposal;
-	
-	while (list->remove_last(list, (void**)&proposal) == SUCCESS)
-	{
-		proposal->destroy(proposal);
-	}
-	list->destroy(list);
-}
-
-/**
  * Implementation of transaction_t.get_request.
  */
 static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
@@ -240,7 +226,7 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 		iterator->destroy(iterator);
 		
 		sa_payload = sa_payload_create_from_proposal_list(proposals);
-		destroy_proposal_list(proposals);
+		proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
 		request->add_payload(request, (payload_t*)sa_payload);
 	}
 	
@@ -570,7 +556,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 		proposal_list = sa_request->get_proposals(sa_request);
 		DBG2(SIG_DBG_IKE, "selecting proposals:");
 		this->proposal = this->connection->select_proposal(this->connection, proposal_list);
-		destroy_proposal_list(proposal_list);
+		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 		
 		/* do we have a proposal? */
 		if (this->proposal == NULL)
@@ -754,7 +740,7 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 		proposal_list = sa_payload->get_proposals(sa_payload);
 		/* we have to re-check here if other's selection is valid */
 		this->proposal = this->connection->select_proposal(this->connection, proposal_list);
-		destroy_proposal_list(proposal_list);
+		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 		
 		if (this->proposal == NULL)
 		{

@@ -63,16 +63,8 @@ struct shared_key_t {
  */
 static void shared_key_destroy(shared_key_t *this)
 {
-	identification_t *id;
-	
-	/* destroy peer id list */
-	while (this->peers->remove_last(this->peers, (void**)&id) == SUCCESS)
-	{
-		id->destroy(id);
-	}
-	this->peers->destroy(this->peers);
+	this->peers->destroy_offset(this->peers, offsetof(identification_t, destroy));
 	chunk_free(&this->secret);
-
 	free(this);
 }
 
@@ -1077,48 +1069,11 @@ error:
  */
 static void destroy(private_local_credential_store_t *this)
 {
-	x509_t *cert;
-	crl_t *crl;
-	rsa_private_key_t *key;
-	shared_key_t *shared_key;
-	
-	/* destroy cert list */
-	while (this->certs->remove_last(this->certs, (void**)&cert) == SUCCESS)
-	{
-		cert->destroy(cert);
-	}
-	this->certs->destroy(this->certs);
-
-	/* destroy ca cert list */
-	while (this->ca_certs->remove_last(this->ca_certs, (void**)&cert) == SUCCESS)
-	{
-		cert->destroy(cert);
-	}
-	this->ca_certs->destroy(this->ca_certs);
-
-	/* destroy crl list */
-	pthread_mutex_lock(&(this->crls_mutex));
-	while (this->crls->remove_last(this->crls, (void**)&crl) == SUCCESS)
-	{
-		crl->destroy(crl);
-	}
-	this->crls->destroy(this->crls);
-	pthread_mutex_unlock(&(this->crls_mutex));
-
-    /* destroy private key list */
-	while (this->private_keys->remove_last(this->private_keys, (void**)&key) == SUCCESS)
-	{
-		key->destroy(key);
-	}
-	this->private_keys->destroy(this->private_keys);
-
-    /* destroy shared keys list */
-	while (this->shared_keys->remove_last(this->shared_keys, (void**)&shared_key) == SUCCESS)
-	{
-		shared_key_destroy(shared_key);
-	}
-	this->shared_keys->destroy(this->shared_keys);
-
+	this->certs->destroy_offset(this->certs, offsetof(x509_t, destroy));
+	this->ca_certs->destroy_offset(this->ca_certs, offsetof(x509_t, destroy));
+	this->crls->destroy_offset(this->crls, offsetof(crl_t, destroy));
+	this->private_keys->destroy_offset(this->private_keys, offsetof(rsa_private_key_t, destroy));
+	this->shared_keys->destroy_function(this->shared_keys, (void*)shared_key_destroy);
 	free(this);
 }
 
@@ -1128,7 +1083,7 @@ static void destroy(private_local_credential_store_t *this)
 local_credential_store_t * local_credential_store_create(bool strict)
 {
 	private_local_credential_store_t *this = malloc_thing(private_local_credential_store_t);
-
+	
 	this->public.credential_store.get_shared_key = (status_t (*) (credential_store_t*,identification_t*,identification_t*,chunk_t*))get_shared_key;
 	this->public.credential_store.get_rsa_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_rsa_public_key;
 	this->public.credential_store.get_rsa_private_key = (rsa_private_key_t* (*) (credential_store_t*,rsa_public_key_t*))get_rsa_private_key;

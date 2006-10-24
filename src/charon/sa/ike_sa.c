@@ -1048,19 +1048,6 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 }
 
 /**
- * destroy a list of traffic selectors
- */
-static void ts_list_destroy(linked_list_t *list)
-{
-	traffic_selector_t *ts;
-	while (list->remove_last(list, (void**)&ts) == SUCCESS)
-	{
-		ts->destroy(ts);
-	}
-	list->destroy(list);
-}
-
-/**
  * compare two lists of traffic selectors for equality
  */
 static bool ts_list_equals(linked_list_t *l1, linked_list_t *l2)
@@ -1114,18 +1101,17 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 			other_ts_conf = policy->get_other_traffic_selectors(policy, this->other_host);
 			
 			if (ts_list_equals(my_ts, my_ts_conf) &&
-					ts_list_equals(other_ts, other_ts_conf))
+				ts_list_equals(other_ts, other_ts_conf))
 			{
-				ts_list_destroy(my_ts_conf);
-				ts_list_destroy(other_ts_conf);
 				iterator->destroy(iterator);
+				my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
+				other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
 				SIG(SIG_CHILD_FAILED, "CHILD_SA with such a policy "
 					"already routed");
-				
 				return FAILED;
 			}
-			ts_list_destroy(my_ts_conf);
-			ts_list_destroy(other_ts_conf);
+			my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
+			other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
 		}
 	}
 	iterator->destroy(iterator);
@@ -1184,12 +1170,11 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	my_ts = policy->get_my_traffic_selectors(policy, this->my_host);
 	other_ts = policy->get_other_traffic_selectors(policy, this->other_host);
 	status = child_sa->add_policies(child_sa, my_ts, other_ts);
-	ts_list_destroy(my_ts);
-	ts_list_destroy(other_ts);
+	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
+	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 	this->child_sas->insert_last(this->child_sas, child_sa);
 	SIG(SIG_CHILD_ROUTE,
 		"CHILD_SA routed: %R...%R", my_ts, other_ts);
-	
 	return status;
 }
 
@@ -1220,12 +1205,12 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 				iterator->remove(iterator);
 				SIG(SIG_CHILD_UNROUTE, "CHILD_SA unrouted");
 				child_sa->destroy(child_sa);
-				ts_list_destroy(my_ts_conf);
-				ts_list_destroy(other_ts_conf);
+				my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
+				other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
 				break;
 			}
-			ts_list_destroy(my_ts_conf);
-			ts_list_destroy(other_ts_conf);
+			my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
+			other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
 		}
 	}
 	iterator->destroy(iterator);
@@ -1907,20 +1892,8 @@ static void __attribute__ ((constructor))print_register()
  */
 static void destroy(private_ike_sa_t *this)
 {
-	child_sa_t *child_sa;
-	transaction_t *transaction;
-	
-	while (this->child_sas->remove_last(this->child_sas, (void**)&child_sa) == SUCCESS)
-	{
-		child_sa->destroy(child_sa);
-	}
-	this->child_sas->destroy(this->child_sas);
-	
-	while (this->transaction_queue->remove_last(this->transaction_queue, (void**)&transaction) == SUCCESS)
-	{
-		transaction->destroy(transaction);
-	}
-	this->transaction_queue->destroy(this->transaction_queue);
+	this->child_sas->destroy_offset(this->child_sas, offsetof(child_sa_t, destroy));
+	this->transaction_queue->destroy_offset(this->transaction_queue, offsetof(transaction_t, destroy));
 	
 	DESTROY_IF(this->transaction_in);
 	DESTROY_IF(this->transaction_in_next);

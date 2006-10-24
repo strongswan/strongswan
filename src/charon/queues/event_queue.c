@@ -48,6 +48,15 @@ struct event_t {
 	job_t * job;
 };
 
+/**
+ * destroy an event and its job
+ */
+static void event_destroy(event_t *event)
+{
+	event->job->destroy(event->job);
+	free(event);
+}
+
 typedef struct private_event_queue_t private_event_queue_t;
 
 /**
@@ -262,15 +271,7 @@ static void add_relative(event_queue_t *this, job_t *job, u_int32_t ms)
  */
 static void event_queue_destroy(private_event_queue_t *this)
 {
-	event_t *event;
-	while (this->list->remove_last(this->list, (void**)&event) == SUCCESS)
-	{
-		event->job->destroy(event->job);
-		free(event);
-	}
-	this->list->destroy(this->list);
-	pthread_mutex_destroy(&(this->mutex));
-	pthread_cond_destroy(&(this->condvar));
+	this->list->destroy_function(this->list, (void*)event_destroy);
 	free(this);
 }
 

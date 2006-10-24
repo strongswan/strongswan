@@ -69,7 +69,6 @@ static bool contains_traffic_selectors(policy_t *policy, bool mine,
 {
 	linked_list_t *selected;
 	bool contains = FALSE;
-	traffic_selector_t *to;
 	
 	if (mine)
 	{
@@ -83,11 +82,7 @@ static bool contains_traffic_selectors(policy_t *policy, bool mine,
 	{
 		contains = TRUE;
 	}
-	while (selected->remove_last(selected, (void**)&to) == SUCCESS)
-	{
-		to->destroy(to);
-	}
-	selected->destroy(selected);
+	selected->destroy_offset(selected, offsetof(traffic_selector_t, destroy));
 	return contains;
 }
 
@@ -249,14 +244,8 @@ static iterator_t* create_iterator(private_local_policy_store_t *this)
  */
 static void destroy(private_local_policy_store_t *this)
 {
-	policy_t *policy;
-	
 	pthread_mutex_lock(&(this->mutex));
-	while (this->policies->remove_last(this->policies, (void**)&policy) == SUCCESS)
-	{
-		policy->destroy(policy);
-	}
-	this->policies->destroy(this->policies);
+	this->policies->destroy_offset(this->policies, offsetof(policy_t, destroy));
 	pthread_mutex_unlock(&(this->mutex));
 	free(this);
 }

@@ -240,20 +240,11 @@ static config_type_t get_config_type (private_cp_payload_t *this)
 /**
  * Implementation of payload_t.destroy and cp_payload_t.destroy.
  */
-static status_t destroy(private_cp_payload_t *this)
+static void destroy(private_cp_payload_t *this)
 {
-	/* all attributes are getting destroyed */ 
-	while (this->attributes->get_count(this->attributes) > 0)
-	{
-		configuration_attribute_t *current_attribute;
-		this->attributes->remove_last(this->attributes,(void **)&current_attribute);
-		current_attribute->destroy(current_attribute);
-	}
-	this->attributes->destroy(this->attributes);
-	
+	this->attributes->destroy_offset(this->attributes,
+									 offsetof(configuration_attribute_t, destroy));
 	free(this);
-	
-	return SUCCESS;
 }
 
 /*

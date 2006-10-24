@@ -215,14 +215,8 @@ static iterator_t* create_iterator(private_local_connection_store_t *this)
  */
 static void destroy (private_local_connection_store_t *this)
 {
-	connection_t *connection;
-	
 	pthread_mutex_lock(&(this->mutex));
-	while (this->connections->remove_last(this->connections, (void**)&connection) == SUCCESS)
-	{
-		connection->destroy(connection);
-	}
-	this->connections->destroy(this->connections);
+	this->connections->destroy_offset(this->connections, offsetof(connection_t, destroy));
 	pthread_mutex_unlock(&(this->mutex));
 	free(this);
 }

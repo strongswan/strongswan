@@ -411,24 +411,10 @@ static void get_status(const private_crl_t *this, certinfo_t *certinfo)
  */
 static void destroy(private_crl_t *this)
 {
-	revokedCert_t *revokedCert;
-	identification_t *id;
-
-   while (this->revokedCertificates->remove_last(this->revokedCertificates, (void**)&revokedCert) == SUCCESS)
-	{
-		free(revokedCert);
-	}
-	this->revokedCertificates->destroy(this->revokedCertificates);
-
-	while (this->crlDistributionPoints->remove_last(this->crlDistributionPoints, (void**)&id) == SUCCESS)
-	{
-		id->destroy(id);
-	}
-	this->crlDistributionPoints->destroy(this->crlDistributionPoints);
-
-	if (this->issuer)
-		this->issuer->destroy(this->issuer);
-
+	this->revokedCertificates->destroy_function(this->revokedCertificates, free);
+	this->crlDistributionPoints->destroy_offset(this->crlDistributionPoints,
+												offsetof(identification_t, destroy));
+	DESTROY_IF(this->issuer);
 	free(this->certificateList.ptr);
 	free(this);
 }

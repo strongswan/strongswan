@@ -120,19 +120,11 @@ static void add(private_send_queue_t *this, packet_t *packet)
  */
 static void destroy (private_send_queue_t *this)
 {
-	packet_t *packet;
-	while (this->list->remove_last(this->list, (void**)&packet) == SUCCESS)
-	{
-		packet->destroy(packet);
-	}
-	this->list->destroy(this->list);
-	pthread_mutex_destroy(&(this->mutex));
-	pthread_cond_destroy(&(this->condvar));
+	this->list->destroy_offset(this->list, offsetof(packet_t, destroy));
 	free(this);
 }
 
 /*
- *
  * Documented in header
  */
 send_queue_t *send_queue_create(void)

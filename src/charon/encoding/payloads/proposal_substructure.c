@@ -472,28 +472,12 @@ static private_proposal_substructure_t* clone_(private_proposal_substructure_t *
  * Implements payload_t's and proposal_substructure_t's destroy function.
  * See #payload_s.destroy or proposal_substructure_s.destroy for description.
  */
-static status_t destroy(private_proposal_substructure_t *this)
+static void destroy(private_proposal_substructure_t *this)
 {
-	/* all proposals are getting destroyed */ 
-	while (this->transforms->get_count(this->transforms) > 0)
-	{
-		transform_substructure_t *current_transform;
-		if (this->transforms->remove_last(this->transforms,(void **)&current_transform) != SUCCESS)
-		{
-			break;
-		}
-		current_transform->destroy(current_transform);
-	}
-	this->transforms->destroy(this->transforms);
-	
-	if (this->spi.ptr != NULL)
-	{
-		free(this->spi.ptr);
-	}
-	
+	this->transforms->destroy_offset(this->transforms,
+									 offsetof(transform_substructure_t, destroy));
+	chunk_free(&this->spi);
 	free(this);
-	
-	return SUCCESS;
 }
 
 /*

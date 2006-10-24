@@ -392,21 +392,6 @@ static proposal_t *clone_(private_proposal_t *this)
 	return &clone->public;
 }
 
-/**
- * Frees all list items and destroys the list
- */
-static void free_algo_list(linked_list_t *list)
-{
-	algorithm_t *algo;
-	
-	while(list->get_count(list) > 0)
-	{
-		list->remove_last(list, (void**)&algo);
-		free(algo);
-	}
-	list->destroy(list);
-}
-
 static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
 {
 	if (strncmp(alg.ptr, "aes128", alg.len) == 0)
@@ -489,11 +474,11 @@ static status_t add_string_algo(private_proposal_t *this, chunk_t alg)
  */
 static void destroy(private_proposal_t *this)
 {
-	free_algo_list(this->encryption_algos);
-	free_algo_list(this->integrity_algos);
-	free_algo_list(this->prf_algos);
-	free_algo_list(this->dh_groups);
-	free_algo_list(this->esns);
+	this->encryption_algos->destroy_function(this->encryption_algos, free);
+	this->integrity_algos->destroy_function(this->integrity_algos, free);
+	this->prf_algos->destroy_function(this->prf_algos, free);
+	this->dh_groups->destroy_function(this->dh_groups, free);
+	this->esns->destroy_function(this->esns, free);
 	free(this);
 }
 
