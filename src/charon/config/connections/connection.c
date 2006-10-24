@@ -196,14 +196,12 @@ static proposal_t *select_proposal(private_connection_t *this, linked_list_t *pr
 	supplied_iter = proposals->create_iterator(proposals, TRUE);
 	
 	/* compare all stored proposals with all supplied. Stored ones are preferred. */
-	while (stored_iter->has_next(stored_iter))
+	while (stored_iter->iterate(stored_iter, (void**)&stored))
 	{
 		supplied_iter->reset(supplied_iter);
-		stored_iter->current(stored_iter, (void**)&stored);
 		
-		while (supplied_iter->has_next(supplied_iter))
+		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
 		{
-			supplied_iter->current(supplied_iter, (void**)&supplied);
 			selected = stored->select(stored, supplied);
 			if (selected)
 			{
@@ -256,9 +254,8 @@ static diffie_hellman_group_t get_dh_group(private_connection_t *this)
 	diffie_hellman_group_t dh_group = MODP_NONE;
 	
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&proposal))
 	{
-		iterator->current(iterator, (void**)&proposal);
 		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &algo))
 		{
 			dh_group = algo->algorithm;
@@ -279,13 +276,11 @@ static bool check_dh_group(private_connection_t *this, diffie_hellman_group_t dh
 	algorithm_t *algo;
 	
 	prop_iter = this->proposals->create_iterator(this->proposals, TRUE);
-	while (prop_iter->has_next(prop_iter))
+	while (prop_iter->iterate(prop_iter, (void**)&proposal))
 	{
-		prop_iter->current(prop_iter, (void**)&proposal);
 		alg_iter = proposal->create_algorithm_iterator(proposal, DIFFIE_HELLMAN_GROUP);
-		while (alg_iter->has_next(alg_iter))
+		while (alg_iter->iterate(alg_iter, (void**)&algo))
 		{
-			alg_iter->current(alg_iter, (void**)&algo);
 			if (algo->algorithm == dh_group)
 			{
 				prop_iter->destroy(prop_iter);

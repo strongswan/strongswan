@@ -406,6 +406,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	message_t *response;
 	status_t status;
 	iterator_t *payloads, *iterator;
+	payload_t *payload;
 	child_sa_t *child_sa;
 	sa_payload_t *sa_request = NULL;
 	nonce_payload_t *nonce_request = NULL;
@@ -488,10 +489,8 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	
 	/* Iterate over all payloads. */
 	payloads = request->get_payload_iterator(request);
-	while (payloads->has_next(payloads))
+	while (payloads->iterate(payloads, (void**)&payload))
 	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
 		switch (payload->get_type(payload))
 		{
 			case SECURITY_ASSOCIATION:
@@ -665,6 +664,7 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 						 transaction_t **next)
 {
 	iterator_t *payloads;
+	payload_t *payload;
 	host_t *me, *other;
 	sa_payload_t *sa_payload = NULL;
 	nonce_payload_t *nonce_payload = NULL;
@@ -687,10 +687,8 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 	
 	/* Iterate over all payloads to collect them */
 	payloads = response->get_payload_iterator(response);
-	while (payloads->has_next(payloads))
+	while (payloads->iterate(payloads, (void**)&payload))
 	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
 		switch (payload->get_type(payload))
 		{
 			case SECURITY_ASSOCIATION:

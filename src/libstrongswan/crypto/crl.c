@@ -385,16 +385,15 @@ static bool verify(const private_crl_t *this, const rsa_public_key_t *signer)
 static void get_status(const private_crl_t *this, certinfo_t *certinfo)
 {
 	chunk_t serialNumber = certinfo->get_serialNumber(certinfo);
-	iterator_t *iterator = this->revokedCertificates->create_iterator(this->revokedCertificates, TRUE);
-
+	iterator_t *iterator;
+	revokedCert_t *revokedCert;
+	
 	certinfo->set_nextUpdate(certinfo, this->nextUpdate);
 	certinfo->set_status(certinfo, CERT_GOOD);
-
-	while (iterator->has_next(iterator))
+	
+	iterator = this->revokedCertificates->create_iterator(this->revokedCertificates, TRUE);
+	while (iterator->iterate(iterator, (void**)&revokedCert))
 	{
-		revokedCert_t *revokedCert;
-
-		iterator->current(iterator, (void**)&revokedCert);
 		if (chunk_equals(serialNumber, revokedCert->userCertificate))
 		{
 			certinfo->set_status(certinfo, CERT_REVOKED);

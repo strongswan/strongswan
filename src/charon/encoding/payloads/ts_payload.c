@@ -123,6 +123,7 @@ encoding_rule_t ts_payload_encodings[] = {
 static status_t verify(private_ts_payload_t *this)
 {
 	iterator_t *iterator;
+	payload_t *current_traffic_selector;
 	status_t status = SUCCESS;
 	
 	if (this->number_of_traffic_selectors != (this->traffic_selectors->get_count(this->traffic_selectors)))
@@ -132,11 +133,8 @@ static status_t verify(private_ts_payload_t *this)
 	}
 	
 	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors,TRUE);
-	while(iterator->has_next(iterator))
+	while(iterator->iterate(iterator, (void**)&current_traffic_selector))
 	{
-		payload_t *current_traffic_selector;
-		iterator->current(iterator,(void **)&current_traffic_selector);
-
 		status = current_traffic_selector->verify(current_traffic_selector);
 		if (status != SUCCESS)
 		{
@@ -196,11 +194,11 @@ static void compute_length (private_ts_payload_t *this)
 	iterator_t *iterator;
 	size_t ts_count = 0;
 	size_t length = TS_PAYLOAD_HEADER_LENGTH;
+	payload_t *current_traffic_selector;
+	
 	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors,TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current_traffic_selector))
 	{
-		payload_t * current_traffic_selector;
-		iterator->current(iterator,(void **) &current_traffic_selector);
 		length += current_traffic_selector->get_length(current_traffic_selector);
 		ts_count++;
 	}
@@ -208,7 +206,6 @@ static void compute_length (private_ts_payload_t *this)
 	
 	this->number_of_traffic_selectors= ts_count;
 	this->payload_length = length;	
-
 }
 
 /**
@@ -260,13 +257,12 @@ static linked_list_t *get_traffic_selectors(private_ts_payload_t *this)
 {
 	traffic_selector_t *ts;
 	iterator_t *iterator;
+	traffic_selector_substructure_t *ts_substructure;
 	linked_list_t *ts_list = linked_list_create();
 	
 	iterator = this->traffic_selectors->create_iterator(this->traffic_selectors, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&ts_substructure))
 	{
-		traffic_selector_substructure_t *ts_substructure;
-		iterator->current(iterator, (void**)&ts_substructure);
 		ts = ts_substructure->get_traffic_selector(ts_substructure);
 		ts_list->insert_last(ts_list, (void*)ts);
 	}
@@ -333,9 +329,8 @@ ts_payload_t *ts_payload_create_from_traffic_selectors(bool is_initiator, linked
 	this = (private_ts_payload_t*)ts_payload_create(is_initiator);
 	
 	iterator = traffic_selectors->create_iterator(traffic_selectors, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&ts))
 	{
-		iterator->current(iterator, (void**)&ts);
 		ts_substructure = traffic_selector_substructure_create_from_traffic_selector(ts);
 		this->public.add_traffic_selector_substructure(&(this->public), ts_substructure);
 	}

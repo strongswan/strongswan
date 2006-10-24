@@ -112,13 +112,11 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 	iterator = this->policies->create_iterator(this->policies, TRUE);
 
 	/* determine closest matching policy */
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&candidate))
 	{
 		identification_t *candidate_my_id;
 		identification_t *candidate_other_id;
 		int wildcards;
-		
-		iterator->current(iterator, (void**)&candidate);
 
 		candidate_my_id = candidate->get_my_id(candidate);
 		candidate_other_id = candidate->get_other_id(candidate);
@@ -182,9 +180,8 @@ static policy_t *get_policy_by_name(private_local_policy_store_t *this, char *na
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void **)&current))
 	{
-		iterator->current(iterator, (void **)&current);
 		if (strcmp(current->get_name(current), name) == 0)
 		{
 			found = current;
@@ -209,9 +206,8 @@ static status_t delete_policy(private_local_policy_store_t *this, char *name)
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void **)&current))
 	{
-		iterator->current(iterator, (void **)&current);
 		if (strcmp(current->get_name(current), name) == 0)
 		{
 			/* remove policy from list, and destroy it */

@@ -120,6 +120,7 @@ static status_t verify(private_transform_substructure_t *this)
 {
 	status_t status = SUCCESS;
 	iterator_t *iterator;
+	payload_t *current_attributes;
 	
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 3))
 	{
@@ -146,11 +147,8 @@ static status_t verify(private_transform_substructure_t *this)
 	}
 	iterator = this->attributes->create_iterator(this->attributes,TRUE);
 	
-	while(iterator->has_next(iterator))
+	while(iterator->iterate(iterator, (void**)&current_attributes))
 	{
-		payload_t *current_attributes;
-		iterator->current(iterator,(void **)&current_attributes);
-
 		status = current_attributes->verify(current_attributes);
 		if (status != SUCCESS)
 		{
@@ -194,12 +192,12 @@ static payload_type_t get_next_type(private_transform_substructure_t *this)
 static void compute_length (private_transform_substructure_t *this)
 {
 	iterator_t *iterator;
+	payload_t *current_attribute;
 	size_t length = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
+	
 	iterator = this->attributes->create_iterator(this->attributes,TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current_attribute))
 	{
-		payload_t * current_attribute;
-		iterator->current(iterator,(void **) &current_attribute);
 		length += current_attribute->get_length(current_attribute);
 	}
 	iterator->destroy(iterator);
@@ -293,31 +291,24 @@ static u_int16_t get_transform_id (private_transform_substructure_t *this)
  */
 static transform_substructure_t *clone_(private_transform_substructure_t *this)
 {
-	private_transform_substructure_t *new_clone;
+	private_transform_substructure_t *clone;
 	iterator_t *attributes;
+	transform_attribute_t *current_attribute;
 	
-	new_clone = (private_transform_substructure_t *) transform_substructure_create();
+	clone = (private_transform_substructure_t *) transform_substructure_create();
+	clone->next_payload = this->next_payload;
+	clone->transform_type = this->transform_type;
+	clone->transform_id = this->transform_id;
 	
-	new_clone->next_payload = this->next_payload;
-	new_clone->transform_type = this->transform_type;
-	new_clone->transform_id = this->transform_id;
-
-	attributes = this->attributes->create_iterator(this->attributes,FALSE);
-
-	while (attributes->has_next(attributes))
+	attributes = this->attributes->create_iterator(this->attributes, FALSE);
+	while (attributes->iterate(attributes, (void**)&current_attribute))
 	{
-		transform_attribute_t *current_attribute;
-		transform_attribute_t *current_attribute_clone;
-		attributes->current(attributes,(void **) &current_attribute);
-
-		current_attribute_clone = current_attribute->clone(current_attribute);
-		
-		new_clone->public.add_transform_attribute(&(new_clone->public),current_attribute_clone);
+		current_attribute = current_attribute->clone(current_attribute);
+		clone->public.add_transform_attribute(&clone->public, current_attribute);
 	}
-	
 	attributes->destroy(attributes);	
 	
-	return &(new_clone->public);
+	return &clone->public;
 }
 
 
@@ -327,24 +318,19 @@ static transform_substructure_t *clone_(private_transform_substructure_t *this)
 static status_t get_key_length(private_transform_substructure_t *this, u_int16_t *key_length)
 {
 	iterator_t *attributes;
+	transform_attribute_t *current_attribute;
 	
-	attributes = this->attributes->create_iterator(this->attributes,TRUE);
-
-	while (attributes->has_next(attributes))
+	attributes = this->attributes->create_iterator(this->attributes, TRUE);
+	while (attributes->iterate(attributes, (void**)&current_attribute))
 	{
-		transform_attribute_t *current_attribute;
-		attributes->current(attributes,(void **) &current_attribute);
-
 		if (current_attribute->get_attribute_type(current_attribute) == KEY_LENGTH)
 		{
 			*key_length = current_attribute->get_value(current_attribute);
 			attributes->destroy(attributes);	
 			return SUCCESS;
 		}
-		
 	}
 	attributes->destroy(attributes);
-	
 	return FAILED;
 }
 

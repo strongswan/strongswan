@@ -182,7 +182,7 @@ static void add_absolute(private_event_queue_t *this, job_t *job, timeval_t time
 {
 	event_t *event;
 	event_t *current_event;
-	status_t status;
+	iterator_t *iterator;
 	
 	/* create event */
 	event = malloc_thing(event_t);
@@ -192,7 +192,7 @@ static void add_absolute(private_event_queue_t *this, job_t *job, timeval_t time
 	pthread_mutex_lock(&(this->mutex));
 
 	/* while just used to break out */
-	while(1)
+	while(TRUE)
 	{
 		if (this->list->get_count(this->list) == 0)
 		{
@@ -219,18 +219,12 @@ static void add_absolute(private_event_queue_t *this, job_t *job, timeval_t time
 			this->list->insert_first(this->list,event);
 			break;
 		}
-
-		iterator_t * iterator;
-
+		
 		iterator = this->list->create_iterator(this->list,TRUE);
-
-		iterator->has_next(iterator);
+		iterator->iterate(iterator, (void**)&current_event);
 		/* first element has not to be checked (already done) */
-
-		while(iterator->has_next(iterator))
+		while(iterator->iterate(iterator, (void**)&current_event))
 		{
-			status = iterator->current(iterator,(void **) &current_event);
-
 			if (time_difference(&(event->time), &(current_event->time)) <= 0)
 			{
 				/* my event has to be fired before the current event in list */

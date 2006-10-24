@@ -1056,6 +1056,11 @@ static bool ts_list_equals(linked_list_t *l1, linked_list_t *l2)
 	iterator_t *i1, *i2;
 	traffic_selector_t *t1, *t2;
 	
+	if (l1->get_count(l1) != l2->get_count(l2))
+	{
+		return FALSE;
+	}
+	
 	i1 = l1->create_iterator(l1, TRUE);
 	i2 = l2->create_iterator(l2, TRUE);
 	while (i1->iterate(i1, (void**)&t1) && i2->iterate(i2, (void**)&t2))
@@ -1065,11 +1070,6 @@ static bool ts_list_equals(linked_list_t *l1, linked_list_t *l2)
 			equals = FALSE;
 			break;
 		}
-	}
-	/* check if one iterator is not at the end */
-	if (i1->has_next(i1) || i2->has_next(i2))
-	{
-		equals = FALSE;
 	}
 	i1->destroy(i1);
 	i2->destroy(i2);
@@ -1623,11 +1623,10 @@ static child_sa_t* get_child_sa(private_ike_sa_t *this, protocol_id_t protocol,
 	child_sa_t *current, *found = NULL;
 	
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		iterator->current(iterator, (void**)&current);
+	while (iterator->iterate(iterator, (void**)&current))
+	{;
 		if (current->get_spi(current, inbound) == spi &&
-				  current->get_protocol(current) == protocol)
+			current->get_protocol(current) == protocol)
 		{
 			found = current;
 		}

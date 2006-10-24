@@ -266,14 +266,14 @@ static status_t send_message(private_kernel_interface_t *this,
 	
 	while (TRUE)
 	{
-		iterator_t *iterator; 
+		iterator_t *iterator;
+		struct nlmsghdr *listed_response;
 		bool found = FALSE;
+		
 		/* search list, break if found */
 		iterator = this->responses->create_iterator(this->responses, TRUE);
-		while (iterator->has_next(iterator))
+		while (iterator->iterate(iterator, (void**)&listed_response))
 		{
-			struct nlmsghdr *listed_response;
-			iterator->current(iterator, (void**)&listed_response);
 			if (listed_response->nlmsg_seq == request->nlmsg_seq)
 			{
 				/* matches our request, this is the reply */

@@ -75,14 +75,12 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->connections->create_iterator(this->connections, TRUE);
 	/* determine closest matching connection */
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&candidate))
 	{
 		host_t *candidate_my_host;
 		host_t *candidate_other_host;
-		
-		iterator->current(iterator, (void**)&candidate);
 
-		candidate_my_host    = candidate->get_my_host(candidate);
+		candidate_my_host = candidate->get_my_host(candidate);
 		candidate_other_host = candidate->get_other_host(candidate);
 
 		/* my_host addresses must match*/
@@ -138,9 +136,8 @@ static connection_t *get_connection_by_name(private_local_connection_store_t *th
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->connections->create_iterator(this->connections, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current))
 	{
-		iterator->current(iterator, (void**)&current);
 		if (strcmp(name, current->get_name(current)) == 0)
 		{
 			found = current;
@@ -169,9 +166,8 @@ static status_t delete_connection(private_local_connection_store_t *this, char *
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->connections->create_iterator(this->connections, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void **)&current))
 	{
-		iterator->current(iterator, (void **)&current);
 		if (strcmp(current->get_name(current), name) == 0)
 		{
 			/* remove connection from list, and destroy it */

@@ -313,14 +313,11 @@ static proposal_t *select_proposal(private_policy_t *this, linked_list_t *propos
 	supplied_iter = proposals->create_iterator(proposals, TRUE);
 	
 	/* compare all stored proposals with all supplied. Stored ones are preferred. */
-	while (stored_iter->has_next(stored_iter))
+	while (stored_iter->iterate(stored_iter, (void**)&stored))
 	{
 		supplied_iter->reset(supplied_iter);
-		stored_iter->current(stored_iter, (void**)&stored);
-
-		while (supplied_iter->has_next(supplied_iter))
+		while (supplied_iter->iterate(supplied_iter, (void**)&supplied))
 		{
-			supplied_iter->current(supplied_iter, (void**)&supplied);
 			selected = stored->select(stored, supplied);
 			if (selected)
 			{

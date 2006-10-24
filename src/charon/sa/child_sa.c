@@ -233,6 +233,7 @@ static child_sa_state_t get_state(private_child_sa_t *this)
  */
 static void updown(private_child_sa_t *this, bool up)
 {
+	sa_policy_t *policy;
 	iterator_t *iterator;
 	
 	if (this->script == NULL)
@@ -241,17 +242,13 @@ static void updown(private_child_sa_t *this, bool up)
 	}
 	
 	iterator = this->policies->create_iterator(this->policies, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&policy))
 	{
-		sa_policy_t *policy;
 		char command[1024];
 		char *ifname = NULL;
 		char *my_client, *other_client, *my_client_mask, *other_client_mask;
 		char *pos;
 		FILE *shell;
-		
-		/* get ts strings */
-		iterator->current(iterator, (void**)&policy);
 		
 		/* get subnet/bits from string */
 		asprintf(&my_client, "%R", policy->my_ts);
@@ -430,9 +427,8 @@ static status_t alloc(private_child_sa_t *this, linked_list_t *proposals)
 	
 	/* iterator through proposals to update spis */
 	iterator = proposals->create_iterator(proposals, TRUE);
-	while(iterator->has_next(iterator))
+	while(iterator->iterate(iterator, (void**)&proposal))
 	{
-		iterator->current(iterator, (void**)&proposal);
 		if (alloc_proposal(this, proposal) != SUCCESS)
 		{
 			iterator->destroy(iterator);
@@ -614,17 +610,14 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 	/* iterate over both lists */
 	my_iter = my_ts_list->create_iterator(my_ts_list, TRUE);
 	other_iter = other_ts_list->create_iterator(other_ts_list, TRUE);
-	while (my_iter->has_next(my_iter))
+	while (my_iter->iterate(my_iter, (void**)&my_ts))
 	{
-		my_iter->current(my_iter, (void**)&my_ts);
 		other_iter->reset(other_iter);
-		while (other_iter->has_next(other_iter))
+		while (other_iter->iterate(other_iter, (void**)&other_ts))
 		{
 			/* set up policies for every entry in my_ts_list to every entry in other_ts_list */
 			status_t status;
 			sa_policy_t *policy;
-			
-			other_iter->current(other_iter, (void**)&other_ts);
 			
 			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
 			{

@@ -191,6 +191,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 {
 	linked_list_t *list = this->ike_sa_list;
 	iterator_t *iterator;
+	entry_t *current;
 	status_t status;
 	
 	iterator = list->create_iterator(list, TRUE);
@@ -198,10 +199,8 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 	/* default status */
 	status = NOT_FOUND;
 	
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current))
 	{
-		entry_t *current;
-		iterator->current(iterator, (void**)&current);
 		/* only pointers are compared */
 		if (current->ike_sa == ike_sa)
 		{
@@ -223,17 +222,16 @@ static status_t delete_entry(private_ike_sa_manager_t *this, entry_t *entry)
 {
 	linked_list_t *list = this->ike_sa_list;
 	iterator_t *iterator;
+	entry_t *current;
 	status_t status;
 	
 	iterator = list->create_iterator(list, TRUE);
 
 	status = NOT_FOUND;
 	
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current))
 	{
-		entry_t *current;
-		iterator->current(iterator, (void**)&current);
-		if (current == entry) 
+		if (current == entry)
 		{
 			/* mark it, so now new threads can get this entry */
 			entry->driveout_new_threads = TRUE;
@@ -308,19 +306,18 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 								   identification_t *other_id)
 {
 	iterator_t *iterator;
+	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
 	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
-		entry_t *entry;
 		identification_t *found_my_id, *found_other_id;
 		host_t *found_my_host, *found_other_host;
 		int wc;
 		
-		iterator->current(iterator, (void**)&entry);
 		if (!wait_for_entry(this, entry))
 		{
 			continue;
@@ -496,16 +493,14 @@ static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
 								   u_int32_t reqid)
 {
 	iterator_t *iterator;
+	entry_t *entry;
 	ike_sa_t *ike_sa = NULL;
 	
 	pthread_mutex_lock(&(this->mutex));
 	
 	iterator = this->ike_sa_list->create_iterator(this->ike_sa_list, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
-		entry_t *entry;
-		
-		iterator->current(iterator, (void**)&entry);
 		if (wait_for_entry(this, entry))
 		{
 			/* ok, access is exclusive for us, check for child */
@@ -526,18 +521,11 @@ static ike_sa_t* checkout_by_child(private_ike_sa_manager_t *this,
 }
 
 /**
- * Iterator hook for iterate
+ * Iterator hook for iterate, gets ike_sas instead of entries
  */
-static bool iterate(iterator_t *iterator, void **value)
+static void* iterator_hook(void *value)
 {
-	if (iterator->has_next(iterator))
-	{
-		entry_t *entry;
-		iterator->current(iterator, (void**)&entry);
-		*value = entry->ike_sa;
-		return TRUE;
-	}
-	return FALSE;
+	return ((entry_t*)value)->ike_sa;
 }
 
 /**
@@ -547,8 +535,8 @@ static iterator_t *create_iterator(private_ike_sa_manager_t* this)
 {
 	iterator_t *iterator = this->ike_sa_list->create_iterator_locked(
 								this->ike_sa_list, &this->mutex);
-	/* overload iterator */
-	iterator->iterate = iterate;
+	/* register hook to iterator over ike_sas, not entries */
+	iterator->set_iterator_hook(iterator, iterator_hook);
 	return iterator;
 }
 
@@ -818,9 +806,8 @@ static void destroy(private_ike_sa_manager_t *this)
 	/* Step 1: drive out all waiting threads  */
 	DBG2(SIG_DBG_MGR, "set driveout flags for all stored IKE_SA's");
 	iterator = list->create_iterator(list, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
-		iterator->current(iterator, (void**)&entry);
 		/* do not accept new threads, drive out waiting threads */
 		entry->driveout_new_threads = TRUE;
 		entry->driveout_waiting_threads = TRUE;	
@@ -828,9 +815,8 @@ static void destroy(private_ike_sa_manager_t *this)
 	DBG2(SIG_DBG_MGR, "wait for all threads to leave IKE_SA's");
 	/* Step 2: wait until all are gone */
 	iterator->reset(iterator);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
-		iterator->current(iterator, (void**)&entry);
 		while (entry->waiting_threads)
 		{
 			/* wake up all */
@@ -842,9 +828,8 @@ static void destroy(private_ike_sa_manager_t *this)
 	DBG2(SIG_DBG_MGR, "delete all IKE_SA's");
 	/* Step 3: initiate deletion of all IKE_SAs */
 	iterator->reset(iterator);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&entry))
 	{
-		iterator->current(iterator, (void**)&entry);
 		entry->ike_sa->delete(entry->ike_sa);
 	}
 	iterator->destroy(iterator);

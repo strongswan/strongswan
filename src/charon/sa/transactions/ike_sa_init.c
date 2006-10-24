@@ -497,6 +497,7 @@ static status_t get_response(private_ike_sa_init_t *this,
 	message_t *response;
 	status_t status;
 	iterator_t *payloads;
+	payload_t *payload;
 	sa_payload_t *sa_request = NULL;
 	ke_payload_t *ke_request = NULL;
 	nonce_payload_t *nonce_request = NULL;
@@ -562,10 +563,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 	
 	/* Iterate over all payloads. */
 	payloads = request->get_payload_iterator(request);
-	while (payloads->has_next(payloads))
+	while (payloads->iterate(payloads, (void**)&payload))
 	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
 		switch (payload->get_type(payload))
 		{
 			case SECURITY_ASSOCIATION:
@@ -668,9 +667,8 @@ static status_t get_response(private_ike_sa_init_t *this,
 			
 			/* remove already added payloads */
 			iterator = response->get_payload_iterator(response);
-			while (iterator->has_next(iterator))
+			while (iterator->iterate(iterator, (void**)&payload))
 			{
-				iterator->current(iterator, (void**)&payload);
 				iterator->remove(iterator);
 				payload->destroy(payload);
 			}
@@ -827,6 +825,7 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	u_int64_t responder_spi;
 	ike_sa_id_t *ike_sa_id;
 	iterator_t *payloads;
+	payload_t *payload;
 	host_t *me, *other;
 	sa_payload_t *sa_payload = NULL;
 	ke_payload_t *ke_payload = NULL;
@@ -861,11 +860,8 @@ static status_t conclude(private_ike_sa_init_t *this, message_t *response,
 	
 	/* Iterate over all payloads to collect them */
 	payloads = response->get_payload_iterator(response);
-	while (payloads->has_next(payloads))
+	while (payloads->iterate(payloads, (void**)&payload))
 	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
-		
 		switch (payload->get_type(payload))
 		{
 			case SECURITY_ASSOCIATION:

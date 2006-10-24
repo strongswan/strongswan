@@ -751,9 +751,8 @@ static status_t generate(private_message_t *this, crypter_t *crypter, signer_t* 
 	
 	/* generate every payload expect last one, this is doen later*/
 	iterator = this->payloads->create_iterator(this->payloads, TRUE);
-	while(iterator->has_next(iterator))
+	while(iterator->iterate(iterator, (void**)&next_payload))
 	{
-		iterator->current(iterator, (void**)&next_payload);
 		payload->set_next_type(payload, next_payload->get_type(next_payload));
 		generator->generate_payload(generator, payload);
 		payload = next_payload;
@@ -878,19 +877,16 @@ static status_t decrypt_payloads(private_message_t *this,crypter_t *crypter, sig
 	payload_t *previous_payload = NULL;
 	int payload_number = 1;
 	iterator_t *iterator;
+	payload_t *current_payload;
 	status_t status;
 
 	iterator = this->payloads->create_iterator(this->payloads,TRUE);
 
 	/* process each payload and decrypt a encryption payload */
-	while(iterator->has_next(iterator))
+	while(iterator->iterate(iterator, (void**)&current_payload))
 	{
 		payload_rule_t *payload_rule;
 		payload_type_t current_payload_type;
-		payload_t *current_payload;
-
-		/* get current payload */		
-		iterator->current(iterator,(void **)&current_payload);
 		
 		/* needed to check */
 		current_payload_type = current_payload->get_type(current_payload);
@@ -1020,6 +1016,7 @@ static status_t verify(private_message_t *this)
 {
 	int i;
 	iterator_t *iterator;
+	payload_t *current_payload;
 	size_t total_found_payloads = 0;
 	
 	DBG2(SIG_DBG_ENC, "verifying message structure");
@@ -1033,14 +1030,11 @@ static status_t verify(private_message_t *this)
 		/* check all payloads for specific rule */
 		iterator->reset(iterator);
 		
-		while(iterator->has_next(iterator))
+		while(iterator->iterate(iterator,(void **)&current_payload))
 		{
-			payload_t *current_payload;
 			payload_type_t current_payload_type;
 			
-			iterator->current(iterator,(void **)&current_payload);
 			current_payload_type = current_payload->get_type(current_payload);
-			
 			if (current_payload_type == UNKNOWN_PAYLOAD)
 			{
 				/* unknown payloads are ignored, IF they are not critical */
@@ -1177,26 +1171,10 @@ static status_t parse_body(private_message_t *this, crypter_t *crypter, signer_t
  */
 static void destroy (private_message_t *this)
 {
-	iterator_t *iterator;
-	
+	DESTROY_IF(this->ike_sa_id);
+	this->payloads->destroy_offset(this->payloads, offsetof(payload_t, destroy));
 	this->packet->destroy(this->packet);
-
-	if (this->ike_sa_id != NULL)
-	{
-		this->ike_sa_id->destroy(this->ike_sa_id);
-	}
-	
-	iterator = this->payloads->create_iterator(this->payloads, TRUE);
-	while (iterator->has_next(iterator))
-	{
-		payload_t *payload;
-		iterator->current(iterator, (void**)&payload);	
-		payload->destroy(payload);
-	}
-	iterator->destroy(iterator);
-	this->payloads->destroy(this->payloads);
 	this->parser->destroy(this->parser);
-	
 	free(this);
 }
 

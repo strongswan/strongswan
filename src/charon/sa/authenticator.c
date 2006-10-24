@@ -213,9 +213,12 @@ static status_t verify_auth_data (private_authenticator_t *this,
 		}
 	}
 	
-	DBG1(SIG_DBG_IKE, "authentication of '%D' with %N %s",
-		 other_id, auth_method_names, auth_method,
-		 (status == SUCCESS)? "successful":"failed");
+	if (status == SUCCESS)
+	{
+		DBG1(SIG_DBG_IKE, "authentication of '%D' with %N successful",
+			 other_id, auth_method_names, auth_method);
+	}
+	
 	return status;
 }
 

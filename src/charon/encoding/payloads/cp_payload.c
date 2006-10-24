@@ -125,20 +125,17 @@ static status_t verify(private_cp_payload_t *this)
 {
 	status_t status = SUCCESS;
 	iterator_t *iterator;
-
-	iterator = this->attributes->create_iterator(this->attributes,TRUE);
+	configuration_attribute_t *attribute;
 	
-	while(iterator->has_next(iterator))
+	iterator = this->attributes->create_iterator(this->attributes,TRUE);
+	while(iterator->iterate(iterator, (void**)&attribute))
 	{
-		configuration_attribute_t *attribute;
-		iterator->current(iterator,(void **)&attribute);
-		status = attribute->payload_interface.verify(&(attribute->payload_interface));
+		status = attribute->payload_interface.verify(&attribute->payload_interface);
 		if (status != SUCCESS)
 		{
 			break;
 		}
 	}
-	
 	iterator->destroy(iterator);
 	return status;
 }
@@ -182,12 +179,12 @@ static void set_next_type(private_cp_payload_t *this,payload_type_t type)
 static void compute_length(private_cp_payload_t *this)
 {
 	iterator_t *iterator;
+	payload_t *current_attribute;
 	size_t length = CP_PAYLOAD_HEADER_LENGTH;
+	
 	iterator = this->attributes->create_iterator(this->attributes,TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current_attribute))
 	{
-		payload_t *current_attribute;
-		iterator->current(iterator,(void **) &current_attribute);
 		length += current_attribute->get_length(current_attribute);
 	}
 	iterator->destroy(iterator);

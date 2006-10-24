@@ -216,13 +216,11 @@ static bool select_algo(linked_list_t *first, linked_list_t *second, bool *add, 
 	first_iter = first->create_iterator(first, TRUE);
 	second_iter = second->create_iterator(second, TRUE);
 	/* compare algs, order of algs in "first" is preferred */
-	while (first_iter->has_next(first_iter))
+	while (first_iter->iterate(first_iter, (void**)&first_alg))
 	{
-		first_iter->current(first_iter, (void**)&first_alg);
 		second_iter->reset(second_iter);
-		while (second_iter->has_next(second_iter))
+		while (second_iter->iterate(second_iter, (void**)&second_alg))
 		{
-			second_iter->current(second_iter, (void**)&second_alg);
 			if (first_alg->algorithm == second_alg->algorithm &&
 				first_alg->key_size == second_alg->key_size)
 			{
@@ -364,9 +362,8 @@ static void clone_algo_list(linked_list_t *list, linked_list_t *clone_list)
 {
 	algorithm_t *algo, *clone_algo;
 	iterator_t *iterator = list->create_iterator(list, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&algo))
 	{
-		iterator->current(iterator, (void**)&algo);
 		clone_algo = malloc_thing(algorithm_t);
 		memcpy(clone_algo, algo, sizeof(algorithm_t));
 		clone_list->insert_last(clone_list, (void*)clone_algo);

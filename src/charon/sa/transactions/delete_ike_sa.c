@@ -125,6 +125,7 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	host_t *me, *other;
 	message_t *response;
 	iterator_t *payloads;
+	payload_t *payload;
 	delete_payload_t *delete_request = NULL;
 	
 	/* check if we already have built a response (retransmission) 
@@ -160,11 +161,8 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	
 	/* iterate over all payloads */
 	payloads = request->get_payload_iterator(request);	
-	while (payloads->has_next(payloads))
+	while (payloads->iterate(payloads, (void**)&payload))
 	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
-		
 		switch (payload->get_type(payload))
 		{
 			case DELETE:

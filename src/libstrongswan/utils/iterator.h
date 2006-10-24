@@ -64,30 +64,20 @@ struct iterator_t {
 	 * 						- FALSE otherwise
 	 */
 	bool (*iterate) (iterator_t *this, void** value);
-
+	
 	/**
-	 * @brief Moves to the next element, if available.
-	 * 
-	 * A newly created iterator_t object doesn't point to any item.
-	 * Call iterator_t.has_next first to point it to the first item.
+	 * @brief Hook a function into the iterator.
+	 *
+	 * Sometimes it is useful to hook in an iterator. The hook function is
+	 * called before any successful return of iterate(). It takes the
+	 * iterator value, may manipulate it (or the references object), and returns
+	 * the value that the iterate() function returns.
+	 * A value of NULL deactivates the iterator hook.
 	 * 
 	 * @param this 			calling object
-	 * @return
-	 * 						- TRUE, if more elements are available,
-	 * 						- FALSE otherwise
+	 * @param hook			iterator hook which manipulates the iterated value
 	 */
-	bool (*has_next) (iterator_t *this);
-
-	/**
-	 * @brief Returns the current value at the iterator position.
-	 * 
-	 * @param this 			calling object
-	 * @param[out] value 	value is set to the current value at iterator position
-	 * @return
-	 * 						- SUCCESS
-	 * 						- FAILED if iterator on an invalid position
-	 */
-	status_t (*current) (iterator_t *this, void **value);
+	void (*set_iterator_hook) (iterator_t *this, void*(*hook)(void*));
 	
 	/**
 	 * @brief Inserts a new item before the given iterator position.

@@ -217,6 +217,7 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 	host_t *me, *other;
 	message_t *response;
 	iterator_t *payloads;
+	payload_t *payload;
 	
 	/* check if we already have built a response (retransmission) */
 	if (this->message)
@@ -258,11 +259,8 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 	
 	/* iterate over all payloads */
 	payloads = request->get_payload_iterator(request);	
-	while (payloads->has_next(payloads))
+	while (payloads->iterate(payloads, (void**)&payload))
 	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
-		
 		switch (payload->get_type(payload))
 		{
 			case DELETE:
@@ -289,6 +287,7 @@ static status_t conclude(private_delete_child_sa_t *this, message_t *response,
 						 transaction_t **transaction)
 {
 	iterator_t *payloads;
+	payload_t *payload;
 	
 	/* check message type */
 	if (response->get_exchange_type(response) != INFORMATIONAL)
@@ -299,11 +298,8 @@ static status_t conclude(private_delete_child_sa_t *this, message_t *response,
 	
 	/* iterate over all payloads */
 	payloads = response->get_payload_iterator(response);
-	while (payloads->has_next(payloads))
+	while (payloads->iterate(payloads, (void**)&payload))
 	{
-		payload_t *payload;
-		payloads->current(payloads, (void**)&payload);
-		
 		switch (payload->get_type(payload))
 		{
 			case DELETE:

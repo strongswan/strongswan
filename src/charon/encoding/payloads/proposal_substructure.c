@@ -142,6 +142,7 @@ static status_t verify(private_proposal_substructure_t *this)
 {
 	status_t status = SUCCESS;
 	iterator_t *iterator;
+	payload_t *current_transform;
 	
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 2))
 	{
@@ -186,11 +187,8 @@ static status_t verify(private_proposal_substructure_t *this)
 	}
 	
 	iterator = this->transforms->create_iterator(this->transforms,TRUE);
-	while(iterator->has_next(iterator))
+	while(iterator->iterate(iterator, (void**)&current_transform))
 	{
-		payload_t *current_transform;
-		iterator->current(iterator,(void **)&current_transform);
-		
 		status = current_transform->verify(current_transform);
 		if (status != SUCCESS)
 		{
@@ -242,13 +240,13 @@ static void set_next_type(private_proposal_substructure_t *this,payload_type_t t
 static void compute_length(private_proposal_substructure_t *this)
 {
 	iterator_t *iterator;
+	payload_t *current_transform;
 	size_t transforms_count = 0;
 	size_t length = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH;
+	
 	iterator = this->transforms->create_iterator(this->transforms,TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current_transform))
 	{
-		payload_t * current_transform;
-		iterator->current(iterator,(void **) &current_transform);
 		length += current_transform->get_length(current_transform);
 		transforms_count++;
 	}
@@ -390,20 +388,18 @@ static size_t get_spi_size (private_proposal_substructure_t *this)
 proposal_t* get_proposal(private_proposal_substructure_t *this)
 {
 	iterator_t *iterator;
+	transform_substructure_t *transform;
 	proposal_t *proposal;
 	u_int64_t spi;
 	
 	proposal = proposal_create(this->protocol_id);
 	
 	iterator = this->transforms->create_iterator(this->transforms, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&transform))
 	{
-		transform_substructure_t *transform;
 		transform_type_t transform_type;
 		u_int16_t transform_id;
 		u_int16_t key_length = 0;
-		
-		iterator->current(iterator, (void**)&transform);
 		
 		transform_type = transform->get_transform_type(transform);
 		transform_id = transform->get_transform_id(transform);
@@ -434,38 +430,30 @@ proposal_t* get_proposal(private_proposal_substructure_t *this)
  */
 static private_proposal_substructure_t* clone_(private_proposal_substructure_t *this)
 {
-	private_proposal_substructure_t * new_clone;
+	private_proposal_substructure_t *clone;
 	iterator_t *transforms;
+	transform_substructure_t *current_transform;
 	
-	new_clone = (private_proposal_substructure_t *) proposal_substructure_create();
-	
-	new_clone->next_payload = this->next_payload;
-	new_clone->proposal_number = this->proposal_number;
-	new_clone->protocol_id = this->protocol_id;
-	new_clone->spi_size = this->spi_size;
+	clone = (private_proposal_substructure_t *) proposal_substructure_create();
+	clone->next_payload = this->next_payload;
+	clone->proposal_number = this->proposal_number;
+	clone->protocol_id = this->protocol_id;
+	clone->spi_size = this->spi_size;
 	if (this->spi.ptr != NULL)
 	{
-		new_clone->spi.ptr = clalloc(this->spi.ptr,this->spi.len);
-		new_clone->spi.len = this->spi.len;
+		clone->spi.ptr = clalloc(this->spi.ptr,this->spi.len);
+		clone->spi.len = this->spi.len;
 	}
 
 	transforms = this->transforms->create_iterator(this->transforms,FALSE);
-
-	while (transforms->has_next(transforms))
+	while (transforms->iterate(transforms, (void**)&current_transform))
 	{
-		transform_substructure_t *current_transform;
-		transform_substructure_t *current_transform_clone;
-
-		transforms->current(transforms,(void **) &current_transform);
-
-		current_transform_clone = current_transform->clone(current_transform);
-		
-		new_clone->public.add_transform_substructure(&(new_clone->public),current_transform_clone);
+		current_transform = current_transform->clone(current_transform);
+		clone->public.add_transform_substructure(&clone->public, current_transform);
 	}
-	
 	transforms->destroy(transforms);	
 	
-	return new_clone;	
+	return clone;
 }
 
 /**
@@ -533,49 +521,46 @@ proposal_substructure_t *proposal_substructure_create()
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *proposal)
 {
-	private_proposal_substructure_t *this = (private_proposal_substructure_t*)proposal_substructure_create();
+	private_proposal_substructure_t *this = (private_proposal_substructure_t*)
+												proposal_substructure_create();
 	iterator_t *iterator;
 	algorithm_t *algo;
 	transform_substructure_t *transform;
 	
 	/* encryption algorithm is only availble in ESP */
 	iterator = proposal->create_algorithm_iterator(proposal, ENCRYPTION_ALGORITHM);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&algo))
 	{
-		iterator->current(iterator, (void**)&algo);
-		transform = transform_substructure_create_type(ENCRYPTION_ALGORITHM, algo->algorithm, algo->key_size);
+		transform = transform_substructure_create_type(ENCRYPTION_ALGORITHM,
+												algo->algorithm, algo->key_size);
 		this->public.add_transform_substructure(&(this->public), transform);
 	}
 	iterator->destroy(iterator);
 	
 	/* integrity algorithms */
 	iterator = proposal->create_algorithm_iterator(proposal, INTEGRITY_ALGORITHM);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&algo))
 	{
-		algorithm_t *algo;
-		iterator->current(iterator, (void**)&algo);
-		transform = transform_substructure_create_type(INTEGRITY_ALGORITHM, algo->algorithm, algo->key_size);
+		transform = transform_substructure_create_type(INTEGRITY_ALGORITHM,
+												algo->algorithm, algo->key_size);
 		this->public.add_transform_substructure(&(this->public), transform);
 	}
 	iterator->destroy(iterator);
 	
 	/* prf algorithms */
 	iterator = proposal->create_algorithm_iterator(proposal, PSEUDO_RANDOM_FUNCTION);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&algo))
 	{
-		algorithm_t *algo;
-		iterator->current(iterator, (void**)&algo);
-		transform = transform_substructure_create_type(PSEUDO_RANDOM_FUNCTION, algo->algorithm, algo->key_size);
+		transform = transform_substructure_create_type(PSEUDO_RANDOM_FUNCTION,
+												algo->algorithm, algo->key_size);
 		this->public.add_transform_substructure(&(this->public), transform);
 	}
 	iterator->destroy(iterator);
 	
 	/* dh groups */
 	iterator = proposal->create_algorithm_iterator(proposal, DIFFIE_HELLMAN_GROUP);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&algo))
 	{
-		algorithm_t *algo;
-		iterator->current(iterator, (void**)&algo);
 		transform = transform_substructure_create_type(DIFFIE_HELLMAN_GROUP, algo->algorithm, 0);
 		this->public.add_transform_substructure(&(this->public), transform);
 	}
@@ -583,11 +568,10 @@ proposal_substructure_t *proposal_substructure_create_from_proposal(proposal_t *
 	
 	/* extended sequence numbers */
 	iterator = proposal->create_algorithm_iterator(proposal, EXTENDED_SEQUENCE_NUMBERS);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&algo))
 	{
-		algorithm_t *algo;
-		iterator->current(iterator, (void**)&algo);
-		transform = transform_substructure_create_type(EXTENDED_SEQUENCE_NUMBERS, algo->algorithm, 0);
+		transform = transform_substructure_create_type(EXTENDED_SEQUENCE_NUMBERS,
+															algo->algorithm, 0);
 		this->public.add_transform_substructure(&(this->public), transform);
 	}
 	iterator->destroy(iterator);

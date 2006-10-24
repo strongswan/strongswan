@@ -106,8 +106,7 @@ struct ike_sa_manager_t {
 	 *
 	 * The avoid synchronization issues, the iterator locks access
 	 * to the manager exclusively, until it gets destroyed.
-	 * Only use the iterate() functions of this iterator!!! Anything other
-	 * is not implemented and causes crashes.
+	 * This iterator is for reading only! Writing will corrupt the manager.
 	 *
 	 * @param this			 	the manager object
 	 * @return					iterator over all IKE_SAs.

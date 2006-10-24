@@ -803,19 +803,17 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				u_int16_t int16_val;
 				/* proposals are stored in a linked list and so accessed */
 				linked_list_t *proposals = *((linked_list_t **)(this->data_struct + rules[i].offset));
-
 				iterator_t *iterator;
+				payload_t *current_proposal;
+				
 				/* create forward iterator */
 				iterator = proposals->create_iterator(proposals,TRUE);
 				/* every proposal is processed (iterative call )*/
-				while (iterator->has_next(iterator))
+				while (iterator->iterate(iterator, (void**)&current_proposal))
 				{
-					payload_t *current_proposal;
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
 					
-					iterator->current(iterator,(void **)&current_proposal);
-
 					before_generate_position_offset = this->get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_proposal);
 					after_generate_position_offset = this->get_current_buffer_offset(this);
@@ -828,25 +826,23 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				int16_val = htons(length_of_sa_payload);
 				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				break;
-			}	
+			}
 			case TRANSFORMS:
-			{	
+			{
 				/* before iterative generate the transforms, store the current length position */
 				u_int32_t payload_length_position_offset = this->last_payload_length_position_offset;
 				u_int16_t length_of_proposal = PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH + this->last_spi_size;
 				u_int16_t int16_val;
 				linked_list_t *transforms = *((linked_list_t **)(this->data_struct + rules[i].offset));
 				iterator_t *iterator;
-								
+				payload_t *current_transform;
+				
 				/* create forward iterator */
 				iterator = transforms->create_iterator(transforms,TRUE);
-				while (iterator->has_next(iterator))
+				while (iterator->iterate(iterator, (void**)&current_transform))
 				{
-					payload_t *current_transform;
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
-					
-					iterator->current(iterator,(void **)&current_transform);
 					
 					before_generate_position_offset = this->get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_transform);
@@ -857,7 +853,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				}
 				
 				iterator->destroy(iterator);
-								
+				
 				int16_val = htons(length_of_proposal);
 				this->write_bytes_to_buffer_at_offset(this,&int16_val,sizeof(u_int16_t),payload_length_position_offset);
 				
@@ -867,21 +863,18 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			{
 				/* before iterative generate the transform attributes, store the current length position */
 				u_int32_t transform_length_position_offset = this->last_payload_length_position_offset;
-
 				u_int16_t length_of_transform = TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH;
 				u_int16_t int16_val;
 				linked_list_t *transform_attributes =*((linked_list_t **)(this->data_struct + rules[i].offset));
-
 				iterator_t *iterator;
+				payload_t *current_attribute;
+				
 				/* create forward iterator */
 				iterator = transform_attributes->create_iterator(transform_attributes,TRUE);
-				while (iterator->has_next(iterator))
+				while (iterator->iterate(iterator, (void**)&current_attribute))
 				{
-					payload_t *current_attribute;
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
-					
-					iterator->current(iterator,(void **)&current_attribute);
 					
 					before_generate_position_offset = this->get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_attribute);
@@ -902,21 +895,18 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			{
 				/* before iterative generate the configuration attributes, store the current length position */
 				u_int32_t configurations_length_position_offset = this->last_payload_length_position_offset;
-
 				u_int16_t length_of_configurations = CP_PAYLOAD_HEADER_LENGTH;
 				u_int16_t int16_val;
 				linked_list_t *configuration_attributes =*((linked_list_t **)(this->data_struct + rules[i].offset));
-
 				iterator_t *iterator;
+				payload_t *current_attribute;
+				
 				/* create forward iterator */
 				iterator = configuration_attributes->create_iterator(configuration_attributes,TRUE);
-				while (iterator->has_next(iterator))
+				while (iterator->iterate(iterator, (void**)&current_attribute))
 				{
-					payload_t *current_attribute;
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
-					
-					iterator->current(iterator,(void **)&current_attribute);
 					
 					before_generate_position_offset = this->get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_attribute);
@@ -974,18 +964,16 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				u_int16_t int16_val;
 				/* traffic selectors are stored in a linked list and so accessed */
 				linked_list_t *traffic_selectors = *((linked_list_t **)(this->data_struct + rules[i].offset));
-
 				iterator_t *iterator;
+				payload_t *current_traffic_selector_substructure;
+				
 				/* create forward iterator */
 				iterator = traffic_selectors->create_iterator(traffic_selectors,TRUE);
 				/* every proposal is processed (iterative call )*/
-				while (iterator->has_next(iterator))
+				while (iterator->iterate(iterator, (void **)&current_traffic_selector_substructure))
 				{
-					payload_t *current_traffic_selector_substructure;
 					u_int32_t before_generate_position_offset;
 					u_int32_t after_generate_position_offset;
-					
-					iterator->current(iterator,(void **)&current_traffic_selector_substructure);
 
 					before_generate_position_offset = this->get_current_buffer_offset(this);
 					this->public.generate_payload(&(this->public),current_traffic_selector_substructure);

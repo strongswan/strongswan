@@ -110,19 +110,18 @@ static status_t verify(private_sa_payload_t *this)
 	int expected_number = 1, current_number;
 	status_t status = SUCCESS;
 	iterator_t *iterator;
+	proposal_substructure_t *current_proposal;
 	bool first = TRUE;
 
-	/* check proposal numbering */		
+	/* check proposal numbering */
 	iterator = this->proposals->create_iterator(this->proposals,TRUE);
 	
-	while(iterator->has_next(iterator))
+	while(iterator->iterate(iterator, (void**)&current_proposal))
 	{
-		proposal_substructure_t *current_proposal;
-		iterator->current(iterator,(void **)&current_proposal);
 		current_number = current_proposal->get_proposal_number(current_proposal);
 		if (current_number > expected_number)
 		{
-			if (first) 
+			if (first)
 			{
 				DBG1(SIG_DBG_ENC, "first proposal is not proposal #1");
 				status = FAILED;
@@ -210,12 +209,12 @@ static void set_next_type(private_sa_payload_t *this,payload_type_t type)
 static void compute_length (private_sa_payload_t *this)
 {
 	iterator_t *iterator;
+	payload_t *current_proposal;
 	size_t length = SA_PAYLOAD_HEADER_LENGTH;
+	
 	iterator = this->proposals->create_iterator(this->proposals,TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void **)&current_proposal))
 	{
-		payload_t *current_proposal;
-		iterator->current(iterator,(void **) &current_proposal);
 		length += current_proposal->get_length(current_proposal);
 	}
 	iterator->destroy(iterator);
@@ -280,6 +279,7 @@ static linked_list_t *get_proposals(private_sa_payload_t *this)
 	int struct_number = 0;
 	int ignore_struct_number = 0;
 	iterator_t *iterator;
+	proposal_substructure_t *proposal_struct;
 	linked_list_t *proposal_list;
 	
 	/* this list will hold our proposals */
@@ -291,12 +291,10 @@ static linked_list_t *get_proposals(private_sa_payload_t *this)
 	 * protocols.
 	 */
 	iterator = this->proposals->create_iterator(this->proposals, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void **)&proposal_struct))
 	{
 		proposal_t *proposal;
-		proposal_substructure_t *proposal_struct;
 		
-		iterator->current(iterator, (void **)&proposal_struct);
 		/* check if a proposal has a single protocol */
 		if (proposal_struct->get_proposal_number(proposal_struct) == struct_number)
 		{
@@ -362,9 +360,8 @@ sa_payload_t *sa_payload_create_from_proposal_list(linked_list_t *proposals)
 	
 	/* add every payload from the list */
 	iterator = proposals->create_iterator(proposals, TRUE);
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&proposal))
 	{
-		iterator->current(iterator, (void**)&proposal);
 		add_proposal((private_sa_payload_t*)sa_payload, proposal);
 	}
 	iterator->destroy(iterator);

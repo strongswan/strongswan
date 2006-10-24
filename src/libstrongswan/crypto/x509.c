@@ -930,13 +930,12 @@ static bool is_self_signed(const private_x509_t *this)
 static bool equals_subjectAltName(const private_x509_t *this, identification_t *id)
 {
 	bool found = FALSE;
-	iterator_t *iterator = this->subjectAltNames->create_iterator(this->subjectAltNames, TRUE);
-
-	while (iterator->has_next(iterator))
+	identification_t *subjectAltName;
+	iterator_t *iterator;
+	
+	iterator = this->subjectAltNames->create_iterator(this->subjectAltNames, TRUE);
+	while (iterator->iterate(iterator, (void**)&subjectAltName))
 	{
-		identification_t *subjectAltName;
-
-		iterator->current(iterator, (void**)&subjectAltName);
 		if (id->equals(id, subjectAltName))
 		{
 			found = TRUE;

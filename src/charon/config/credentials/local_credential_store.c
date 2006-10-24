@@ -140,7 +140,9 @@ struct private_local_credential_store_t {
 /**
  * Implementation of local_credential_store_t.get_shared_key.
  */	
-static status_t get_shared_key(private_local_credential_store_t *this, identification_t *my_id, identification_t *other_id, chunk_t *secret)
+static status_t get_shared_key(private_local_credential_store_t *this,
+							   identification_t *my_id,
+							   identification_t *other_id, chunk_t *secret)
 {
 	typedef enum {
 		PRIO_UNDEFINED=		0x00,
@@ -151,17 +153,15 @@ static status_t get_shared_key(private_local_credential_store_t *this, identific
 
 	prio_t best_prio = PRIO_UNDEFINED;
 	chunk_t found = CHUNK_INITIALIZER;
+	shared_key_t *shared_key;
 
 	iterator_t *iterator = this->shared_keys->create_iterator(this->shared_keys, TRUE);
 
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&shared_key))
 	{
-		shared_key_t *shared_key;
 		iterator_t *peer_iterator;
-
+		identification_t *peer_id;
 		prio_t prio = PRIO_UNDEFINED;
-
-		iterator->current(iterator, (void**)&shared_key);
 
 		peer_iterator = shared_key->peers->create_iterator(shared_key->peers, TRUE);
 
@@ -172,12 +172,8 @@ static status_t get_shared_key(private_local_credential_store_t *this, identific
 		}
 		else
 		{
-			while (peer_iterator->has_next(peer_iterator))
+			while (peer_iterator->iterate(peer_iterator, (void**)&peer_id))
 			{
-				identification_t *peer_id;
-
-				peer_iterator->current(peer_iterator, (void**)&peer_id);
-
 				if (my_id->equals(my_id, peer_id))
 				{
 					prio |= PRIO_MY_MATCH; 
@@ -212,19 +208,17 @@ static status_t get_shared_key(private_local_credential_store_t *this, identific
 /**
  * Implementation of credential_store_t.get_certificate.
  */
-static x509_t* get_certificate(private_local_credential_store_t *this, identification_t * id)
+static x509_t* get_certificate(private_local_credential_store_t *this,
+							   identification_t * id)
 {
-	x509_t *found = NULL;
+	x509_t *found = NULL, *cert;
 
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
 
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&cert))
 	{
-		x509_t *cert;
-
-		iterator->current(iterator, (void**)&cert);
-
-		if (id->equals(id, cert->get_subject(cert)) || cert->equals_subjectAltName(cert, id))
+		if (id->equals(id, cert->get_subject(cert)) ||
+			cert->equals_subjectAltName(cert, id))
 		{
 			found = cert;
 			break;
@@ -237,7 +231,8 @@ static x509_t* get_certificate(private_local_credential_store_t *this, identific
 /**
  * Implementation of local_credential_store_t.get_rsa_public_key.
  */
-static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *this, identification_t *id)
+static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *this,
+											identification_t *id)
 {
 	x509_t *cert = get_certificate(this, id);
 
@@ -247,7 +242,8 @@ static rsa_public_key_t *get_rsa_public_key(private_local_credential_store_t *th
 /**
  * Implementation of local_credential_store_t.get_trusted_public_key.
  */
-static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t *this, identification_t *id)
+static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t *this,
+												identification_t *id)
 {
 	cert_status_t status;
 	err_t ugh;
@@ -282,17 +278,15 @@ static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t
 /**
  * Implementation of local_credential_store_t.get_rsa_private_key.
  */
-static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *this, rsa_public_key_t *pubkey)
+static rsa_private_key_t *get_rsa_private_key(private_local_credential_store_t *this,
+											  rsa_public_key_t *pubkey)
 {
-	rsa_private_key_t *found = NULL;
-	rsa_private_key_t *current;
+	rsa_private_key_t *found = NULL, *current;
 
 	iterator_t *iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
 
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current))
 	{
-		iterator->current(iterator, (void**)&current);
-
 		if (current->belongs_to(current, pubkey))
 		{
 			found = current->clone(current);
@@ -313,10 +307,8 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 
 	iterator_t *iterator = this->private_keys->create_iterator(this->private_keys, TRUE);
 
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current))
 	{
-		iterator->current(iterator, (void**)&current);
-
 		if (current->belongs_to(current, pubkey))
 		{
 			found = TRUE;
@@ -330,17 +322,14 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 /**
  * Implementation of credential_store_t.get_issuer_certificate.
  */
-static x509_t* get_issuer_certificate(private_local_credential_store_t *this, const x509_t *cert)
+static x509_t* get_issuer_certificate(private_local_credential_store_t *this,
+									  const x509_t *cert)
 {
-	x509_t *issuer_cert = NULL;
+	x509_t *issuer_cert = NULL, *current_cert;;
 
 	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
-
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
-		x509_t *current_cert;
-
-		iterator->current(iterator, (void**)&current_cert);
 		if (cert->is_issuer(cert, current_cert))
 		{
 			issuer_cert = current_cert;
@@ -357,15 +346,12 @@ static x509_t* get_issuer_certificate(private_local_credential_store_t *this, co
  */
 static crl_t* get_crl(private_local_credential_store_t *this, const x509_t *issuer)
 {
-	crl_t *crl = NULL;
+	crl_t *crl = NULL, *current_crl;
 
 	iterator_t *iterator = this->crls->create_iterator(this->crls, TRUE);
 
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current_crl))
 	{
-		crl_t *current_crl;
-
-		iterator->current(iterator, (void**)&current_crl);
 		if (current_crl->is_issuer(current_crl, issuer))
 		{
 			crl = current_crl;
@@ -430,15 +416,12 @@ static cert_status_t verify_by_ocsp(private_local_credential_store_t* this,
  */
 static x509_t* find_certificate_copy(linked_list_t *certs, x509_t *cert)
 {
-	x509_t *found_cert = NULL;
+	x509_t *found_cert = NULL, *current_cert;
 
 	iterator_t *iterator = certs->create_iterator(certs, TRUE);
 
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
-		x509_t *current_cert;
-
-		iterator->current(iterator, (void**)&current_cert);
 		if (cert->equals(cert, current_cert))
 		{
 			found_cert = current_cert;
@@ -733,21 +716,19 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 static crl_t* add_crl(linked_list_t *crls, crl_t *crl)
 {
 	bool found = FALSE;
+	crl_t *current_crl;
 
 	iterator_t *iterator = crls->create_iterator(crls, TRUE);
 
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void**)&current_crl))
 	{
-		crl_t *current_crl;
-
-		iterator->current(iterator, (void**)&current_crl);
 		if (crl->equals_issuer(crl, current_crl))
 		{
 			found = TRUE;
 			if (crl->is_newer(crl, current_crl))
 			{
 				crl_t *old_crl = NULL;
-
+				
 				iterator->replace(iterator, (void**)&old_crl, (void*)crl);
 				if (old_crl != NULL)
 				{

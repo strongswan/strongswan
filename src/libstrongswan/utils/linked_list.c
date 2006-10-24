@@ -128,6 +128,11 @@ struct private_iterator_t {
 	 * Mutex to use to synchronize access
 	 */
 	pthread_mutex_t *mutex;
+	
+	/**
+	 * iteration hook
+	 */
+	void* (*hook)(void*);
 };
 
 /**
@@ -136,6 +141,29 @@ struct private_iterator_t {
 static int get_list_count(private_iterator_t *this)
 {
 	return this->list->count;
+}
+
+/**
+ * default iterator hook which does nothing
+ */
+static void *iterator_hook(void *value)
+{
+	return value;
+}
+
+/**
+ * Implementation of iterator_t.set_iterator_hook.
+ */
+static void set_iterator_hook(private_iterator_t *this, void*(*hook)(void*))
+{
+	if (hook == NULL)
+	{
+		this->hook = iterator_hook;
+	}
+	else
+	{
+		this->hook = hook;
+	}
 }
 
 /**
@@ -150,7 +178,7 @@ static bool iterate(private_iterator_t *this, void** value)
 	if (this->current == NULL)
 	{
 		this->current = (this->forward) ? this->list->first : this->list->last;
-		*value = this->current->value;
+		*value = this->hook(this->current->value);
 		return TRUE;
 	}
 	if (this->forward)
@@ -160,7 +188,7 @@ static bool iterate(private_iterator_t *this, void** value)
 			return FALSE;
 		}
 		this->current = this->current->next;
-		*value = this->current->value;
+		*value = this->hook(this->current->value);
 		return TRUE;
 	}
 	/* backward */
@@ -169,53 +197,8 @@ static bool iterate(private_iterator_t *this, void** value)
 		return FALSE;
 	}
 	this->current = this->current->previous;
-	*value = this->current->value;
+	*value = this->hook(this->current->value);
 	return TRUE;
-}
-
-/**
- * Implementation of iterator_t.has_next.
- */
-static bool iterator_has_next(private_iterator_t *this)
-{
-	if (this->list->count == 0)
-	{
-		return FALSE;
-	}
-	if (this->current == NULL)
-	{
-		this->current = (this->forward) ? this->list->first : this->list->last;
-		return TRUE;
-	}
-	if (this->forward)
-	{
-		if (this->current->next == NULL)
-		{
-			return FALSE;
-		}
-		this->current = this->current->next;
-		return TRUE;
-	}
-	/* backward */
-	if (this->current->previous == NULL)
-	{
-		return FALSE;
-	}
-	this->current = this->current->previous;
-	return TRUE;
-}
-
-/**
- * Implementation of iterator_t.current.
- */
-static status_t iterator_current(private_iterator_t *this, void **value)
-{
-	if (this->current == NULL)
-	{
-		return NOT_FOUND;
-	}
-	*value = this->current->value;
-	return SUCCESS;
 }
 
 /**
@@ -314,7 +297,7 @@ static void insert_before(private_iterator_t * iterator, void *item)
 /**
  * Implementation of iterator_t.replace.
  */
-static status_t replace (private_iterator_t *this, void **old_item, void *new_item)
+static status_t replace(private_iterator_t *this, void **old_item, void *new_item)
 {
 	if (this->current == NULL)
 	{
@@ -322,7 +305,7 @@ static status_t replace (private_iterator_t *this, void **old_item, void *new_it
 	}
 	if (old_item != NULL)
 	{
-		*old_item = this->current->value;
+		*old_item = this->hook(this->current->value);
 	}
 	this->current->value = new_item;
 	
@@ -332,7 +315,7 @@ static status_t replace (private_iterator_t *this, void **old_item, void *new_it
 /**
  * Implementation of iterator_t.insert_after.
  */
-static void insert_after(private_iterator_t * iterator, void *item)
+static void insert_after(private_iterator_t *iterator, void *item)
 {
 	if (iterator->current == NULL)
 	{
@@ -546,53 +529,57 @@ static status_t insert_at_position (private_linked_list_t *this,size_t position,
 /**
  * Implementation of linked_list_t.remove_at_position.
  */
-static status_t remove_at_position (private_linked_list_t *this,size_t position, void **item)
+static status_t remove_at_position(private_linked_list_t *this,size_t position, void **item)
 {
 	iterator_t *iterator;
 	int i;
-
+	
 	if (this->count <= position)
 	{
 		return INVALID_ARG;
 	}
 	
 	iterator = this->public.create_iterator(&(this->public),TRUE);
-	
-	iterator->has_next(iterator);
-	for (i = 0; i < position;i++)
+	iterator->iterate(iterator, item);
+	for (i = 0; i < position; i++)
 	{
-		iterator->has_next(iterator);
+		if (!iterator->iterate(iterator, item))
+		{
+			iterator->destroy(iterator);
+			return INVALID_ARG;
+		}
 	}
-	iterator->current(iterator,item);
 	iterator->remove(iterator);
 	iterator->destroy(iterator);
-
+	
 	return SUCCESS;
 }
 
 /**
  * Implementation of linked_list_t.get_at_position.
  */
-static status_t get_at_position (private_linked_list_t *this,size_t position, void **item)
+static status_t get_at_position(private_linked_list_t *this,size_t position, void **item)
 {
 	int i;
 	iterator_t *iterator;
-	status_t status;
+	
 	if (this->count <= position)
 	{
 		return INVALID_ARG;
 	}
 
 	iterator = this->public.create_iterator(&(this->public),TRUE);
-	
-	iterator->has_next(iterator);
-	for (i = 0; i < position;i++)
+	iterator->iterate(iterator, item);
+	for (i = 0; i < position; i++)
 	{
-		iterator->has_next(iterator);
+		if (!iterator->iterate(iterator, item))
+		{
+			iterator->destroy(iterator);
+			return INVALID_ARG;
+		}
 	}
-	status = iterator->current(iterator,item);
 	iterator->destroy(iterator);
-	return status;
+	return SUCCESS;
 }
 
 /**
@@ -684,8 +671,7 @@ static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forw
 	
 	this->public.get_count = (bool (*) (iterator_t *this)) get_list_count;
 	this->public.iterate = (bool (*) (iterator_t *this, void **value)) iterate;
-	this->public.has_next = (bool (*) (iterator_t *this)) iterator_has_next;
-	this->public.current = (status_t (*) (iterator_t *this, void **value)) iterator_current;
+	this->public.set_iterator_hook = (void(*)(iterator_t *this, void*(*)(void*)))set_iterator_hook;
 	this->public.insert_before = (void (*) (iterator_t *this, void *item)) insert_before;
 	this->public.insert_after = (void (*) (iterator_t *this, void *item)) insert_after;
 	this->public.replace = (status_t (*) (iterator_t *, void **, void *)) replace;
@@ -697,6 +683,7 @@ static iterator_t *create_iterator(private_linked_list_t *linked_list, bool forw
 	this->current = NULL;
 	this->list = linked_list;
 	this->mutex = NULL;
+	this->hook = iterator_hook;
 	
 	return &this->public;
 }

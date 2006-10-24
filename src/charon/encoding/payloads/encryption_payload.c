@@ -188,14 +188,13 @@ static void set_next_type(private_encryption_payload_t *this, payload_type_t typ
 static void compute_length(private_encryption_payload_t *this)
 {
 	iterator_t *iterator;
+	payload_t *current_payload;
 	size_t block_size, length = 0;
 	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 
 	/* count payload length */
-	while (iterator->has_next(iterator))
+	while (iterator->iterate(iterator, (void **) &current_payload))
 	{
-		payload_t *current_payload;
-		iterator->current(iterator, (void **) &current_payload);
 		length += current_payload->get_length(current_payload);
 	}
 	iterator->destroy(iterator);
@@ -285,9 +284,8 @@ static void generate(private_encryption_payload_t *this)
 	iterator = this->payloads->create_iterator(this->payloads, TRUE);
 	
 	/* get first payload */
-	if (iterator->has_next(iterator))
+	if (iterator->iterate(iterator, (void**)&current_payload))
 	{
-		iterator->current(iterator, (void**)&current_payload);
 		this->next_payload = current_payload->get_type(current_payload);
 	}
 	else
@@ -303,9 +301,8 @@ static void generate(private_encryption_payload_t *this)
 	generator = generator_create();
 	
 	/* build all payload, except last */
-	while(iterator->has_next(iterator))
+	while(iterator->iterate(iterator, (void**)&next_payload))
 	{
-		iterator->current(iterator, (void**)&next_payload);
 		current_payload->set_next_type(current_payload, next_payload->get_type(next_payload));
 		generator->generate_payload(generator, current_payload);
 		current_payload = next_payload;
