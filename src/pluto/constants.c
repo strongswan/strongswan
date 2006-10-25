@@ -188,6 +188,7 @@ static const char *const state_name[] = {
 	"STATE_MODE_CFG_R2",
 	"STATE_MODE_CFG_I1",
 	"STATE_MODE_CFG_I2",
+	"STATE_MODE_CFG_I3",
 
 	"STATE_IKE_ROOF"
     };
@@ -218,9 +219,10 @@ const char *const state_story[] = {
 	
 	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R0 */
 	"sent ModeCfg reply",			 /* STATE_MODE_CFG_R1 */
-	"ModeCfg R2",				 /* STATE_MODE_CFG_R2 */
+	"received ModeCfg ack",			 /* STATE_MODE_CFG_R2 */
 	"sent ModeCfg request, expecting reply", /* STATE_MODE_CFG_I1 */
 	"received ModeCfg reply",		 /* STATE_MODE_CFG_I2 */
+	"received ModeCfg set, sent ack",	 /* STATE_MODE_CFG_I3 */
     };
 
 /* kind of struct connection */
@@ -484,6 +486,7 @@ const char *const sa_policy_bit_names[] = {
 	"GROUP",
 	"GROUTED",
 	"UP",
+	"MODECFGPUSH",
 	NULL
     };
 
