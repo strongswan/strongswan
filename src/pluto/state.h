@@ -257,11 +257,11 @@ extern struct state
     *find_phase1_state(const struct connection *c, lset_t ok_states),
     *find_sender(size_t packet_len, u_char *packet);
 
-extern void show_states_status(const char *name);
+extern void show_states_status(bool all, const char *name);
 extern void for_each_state(void *(f)(struct state *, void *data), void *data);
 extern void find_my_cpi_gap(cpi_t *latest_cpi, cpi_t *first_busy_cpi);
 extern ipsec_spi_t uniquify_his_cpi(ipsec_spi_t cpi, struct state *st);
-extern void fmt_state(struct state *st, time_t n
+extern void fmt_state(bool all, struct state *st, time_t n
 		     , char *state_buf, size_t state_buf_len
 		     , char *state_buf2, size_t state_buf_len2);
 extern void delete_states_by_peer(ip_address *peer);
