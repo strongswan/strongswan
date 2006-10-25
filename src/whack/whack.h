@@ -62,6 +62,7 @@ struct whack_end {
     bool has_client_wildcard;
     bool has_port_wildcard;
     bool has_srcip;
+    bool has_natip;
     bool modecfg;
     bool hostaccess;
     certpolicy_t sendcert;
