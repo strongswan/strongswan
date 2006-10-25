@@ -122,6 +122,7 @@ rereadaacerts|rereadocspcerts|rereadacerts)
 	then
 		$IPSEC_WHACK "$@" "--$op"
 	fi
+	exit 0
 	;;
 listcerts|listcacerts|listcrls|listall|\
 rereadcacerts|rereadcrls|rereadall)
