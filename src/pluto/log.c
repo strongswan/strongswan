@@ -773,7 +773,7 @@ show_status(bool all, const char *name)
 	whack_log(RC_COMMENT, BLANK_FORMAT);	/* spacer */
     }
     show_connections_status(all, name);
-    show_states_status(name);
+    show_states_status(all, name);
 #ifdef KLIPS
     show_shunt_status();
 #endif
