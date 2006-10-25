@@ -78,7 +78,7 @@ static bool find_boundary(const char* tag, chunk_t *line)
 }
 
 /*
- * decrypts a DES-EDE-CBC encrypted data block
+ * decrypts a passphrase protected encrypted data block
  */
 static err_t pem_decrypt(chunk_t *blob, encryption_algorithm_t alg, size_t key_size,
 						 chunk_t *iv, chunk_t *passphrase)
@@ -224,7 +224,6 @@ err_t pem_to_bin(chunk_t *blob, chunk_t *passphrase, bool *pgp)
 					if (!extract_token(&dek, ',', &value))
 						dek = value;
 
-					/* we support DES-EDE3-CBC encrypted files, only */
 					if (match("DES-EDE3-CBC", &dek))
 					{
 						alg = ENCR_3DES;
