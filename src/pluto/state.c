@@ -716,7 +716,7 @@ state_eroute_usage(ip_subnet *ours, ip_subnet *his
 	});
 }
 
-void fmt_state(struct state *st, time_t n
+void fmt_state(bool all, struct state *st, time_t n
 , char *state_buf, size_t state_buf_len
 , char *state_buf2, size_t state_buf2_len)
 {
@@ -735,20 +735,22 @@ void fmt_state(struct state *st, time_t n
     /* XXX spd-enum */
     const char *eo = c->spd.eroute_owner == st->st_serialno
 	? "; eroute owner" : "";
-
+    const char *dpd = (all && st->st_dpd && c->dpd_action != DPD_ACTION_NONE)
+		      ? "; DPD active" : "";
+    
     passert(st->st_event != 0);
 
     fmt_conn_instance(c, inst);
 
     snprintf(state_buf, state_buf_len
-	, "#%lu: \"%s\"%s %s (%s); %s in %lds%s%s%s"
+	, "#%lu: \"%s\"%s %s (%s); %s in %lds%s%s%s%s"
 	, st->st_serialno
 	, c->name, inst
 	, enum_name(&state_names, st->st_state)
 	, state_story[st->st_state - STATE_MAIN_R0]
 	, enum_name(&timer_event_names, st->st_event->ev_type)
 	, delta
-	, np1, np2, eo);
+	, np1, np2, eo, dpd);
 
     /* print out SPIs if SAs are established */
     if (state_buf2_len != 0)
@@ -846,7 +848,7 @@ state_compare(const void *a, const void *b)
 }
 
 void
-show_states_status(const char *name)
+show_states_status(bool all, const char *name)
 {
     time_t n = now();
     int i;
@@ -892,7 +894,8 @@ show_states_status(const char *name)
 
 	st = array[i];
 
-	fmt_state(st, n, state_buf, sizeof(state_buf)
+	fmt_state(all, st, n
+		  , state_buf, sizeof(state_buf)
 		  , state_buf2, sizeof(state_buf2));
 	whack_log(RC_COMMENT, state_buf);
 	if (state_buf2[0] != '\0')
