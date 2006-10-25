@@ -2,6 +2,7 @@
  * Copyright (C) 2001-2002 Colubris Networks
  * Copyright (C) 2003 Sean Mathews - Nu Tech Software Solutions, inc.
  * Copyright (C) 2003-2004 Xelerance Corporation
+ * Copyright (C) 2006 Andreas Steffen - Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -39,23 +40,46 @@
 #include "modecfg.h"
 #include "whack.h"
 
+#define SUPPORTED_ATTR_SET   ( LELEM(INTERNAL_IP4_ADDRESS) \
+                             | LELEM(INTERNAL_IP4_NETMASK) \
+                             | LELEM(INTERNAL_IP4_DNS)     \
+                             | LELEM(INTERNAL_IP4_NBNS)    \
+                             )
+
 /*
- * Addresses assigned (usually via MODE_CONFIG) to the Initiator
+ * Addresses assigned (usually via ModeCfg) to the Initiator
  */
+typedef struct internal_addr internal_addr_t;
+
 struct internal_addr
 {
+    lset_t        attr_set;
     ip_address    ipaddr;
     ip_address    dns[2];
-    ip_address    wins[2];  
+    ip_address    wins[2];
 };
 
 /*
- * Get inside IP address for a connection
+ * Initialize an internal_addr struct
  */
 static void
-get_internal_addresses(struct connection *c, struct internal_addr *ia)
+init_internal_addr(internal_addr_t *ia)
 {
-    zero(ia);
+    ia->attr_set = LEMPTY;
+    anyaddr(AF_INET, &ia->ipaddr);
+    anyaddr(AF_INET, &ia->dns[0]);
+    anyaddr(AF_INET, &ia->dns[1]);
+    anyaddr(AF_INET, &ia->wins[0]);
+    anyaddr(AF_INET, &ia->wins[1]);
+}
+
+/*
+ * get internal IP address for a connection
+ */
+static void
+get_internal_addr(struct connection *c, internal_addr_t *ia)
+{
+    init_internal_addr(ia);
 
     if (isanyaddr(&c->spd.that.host_srcip))
     {
@@ -63,16 +87,78 @@ get_internal_addresses(struct connection *c, struct internal_addr *ia)
     }
     else
     {
+	char srcip[ADDRTOT_BUF];
+
 	ia->ipaddr = c->spd.that.host_srcip;
+
+	addrtot(&ia->ipaddr, 0, srcip, sizeof(srcip));
+	plog("assigning virtual IP source address %s", srcip);
     }
+
+    if (!isanyaddr(&ia->ipaddr))	/* We got an IP address, send it */
+    {
+	c->spd.that.client.addr     = ia->ipaddr;
+	c->spd.that.client.maskbits = 32;
+	c->spd.that.has_client      = TRUE;
+	
+	ia->attr_set |= LELEM(INTERNAL_IP4_ADDRESS) | LELEM(INTERNAL_IP4_NETMASK);
+    }
+
+
+    if (!isanyaddr(&ia->dns[0]))	/* We got DNS addresses, send them */
+	ia->attr_set |= LELEM(INTERNAL_IP4_DNS);
+
+    if (!isanyaddr(&ia->wins[0]))	/* We got WINS addresses, send them */
+	ia->attr_set |= LELEM(INTERNAL_IP4_NBNS);
+}
+
+/*
+ * Set srcip and client subnet to internal IP address
+ */
+static bool
+set_internal_addr(struct connection *c, internal_addr_t *ia)
+{
+    if (ia->attr_set & LELEM(INTERNAL_IP4_ADDRESS)
+    && !isanyaddr(&ia->ipaddr))
+    {
+	if (addrbytesptr(&c->spd.this.host_srcip, NULL) == 0
+	|| isanyaddr(&c->spd.this.host_srcip)
+	|| sameaddr(&c->spd.this.host_srcip, &ia->ipaddr))
+	{
+	    char srcip[ADDRTOT_BUF];
+
+	    addrtot(&ia->ipaddr, 0, srcip, sizeof(srcip));
+	    plog("setting virtual IP source address to %s", srcip);
+	}
+	else
+	{
+	    char old_srcip[ADDRTOT_BUF];
+	    char new_srcip[ADDRTOT_BUF];
+
+	    addrtot(&c->spd.this.host_srcip, 0, old_srcip, sizeof(old_srcip));
+	    addrtot(&ia->ipaddr, 0, new_srcip, sizeof(new_srcip));
+	    plog("replacing virtual IP source address %s by %s"
+		, old_srcip, new_srcip);
+	}
+	
+	/* setting srcip */
+	c->spd.this.host_srcip = ia->ipaddr;
+
+	/* setting client subnet to srcip/32 */
+	addrtosubnet(&ia->ipaddr, &c->spd.this.client);
+	setportof(0, &c->spd.this.client.addr);
+	c->spd.this.has_client = TRUE;
+	return TRUE;
+    }
+    return FALSE;
 }
 
 /*
  * Compute HASH of Mode Config.
  */
 static size_t
-mode_cfg_hash(u_char *dest, const u_char *start, const u_char *roof
-	     , const struct state *st)
+modecfg_hash(u_char *dest, const u_char *start, const u_char *roof
+	    , const struct state *st)
 {
     struct hmac_ctx ctx;
 
@@ -82,92 +168,51 @@ mode_cfg_hash(u_char *dest, const u_char *start, const u_char *roof
     hmac_final(dest, &ctx);
 
     DBG(DBG_CRYPT,
-	DBG_log("MODE CFG: HASH computed:");
+	DBG_log("ModeCfg HASH computed:");
  	DBG_dump("", dest, ctx.hmac_digest_size)
     ) 
     return ctx.hmac_digest_size;
 }
 
 
-/* Mode Config Reply
- * Generates a reply stream containing Mode Config information (eg: IP, DNS, WINS)
+/* 
+ * Generate an IKE message containing ModeCfg information (eg: IP, DNS, WINS)
  */
-stf_status modecfg_resp(struct state *st
-			, u_int resp
-			, pb_stream *rbody
-			, u_int16_t replytype
-			, bool hackthat
-			, u_int16_t ap_id)
+static stf_status
+modecfg_build_msg(struct state *st, pb_stream *rbody
+				  , u_int16_t msg_type
+				  , internal_addr_t *ia
+				  , u_int16_t ap_id)
 {
-    u_char *r_hash_start,*r_hashval;
+    u_char *r_hash_start, *r_hashval;
 
-    /* START_HASH_PAYLOAD(rbody, ISAKMP_NEXT_ATTR); */
-
-    {
-	pb_stream hash_pbs;
-	int np = ISAKMP_NEXT_ATTR;
-
-	if (!out_generic(np, &isakmp_hash_desc, rbody, &hash_pbs))
-	    return STF_INTERNAL_ERROR;
-	r_hashval = hash_pbs.cur;	/* remember where to plant value */
-	if (!out_zero(st->st_oakley.hasher->hash_digest_size, &hash_pbs, "HASH"))
-	    return STF_INTERNAL_ERROR;
-	close_output_pbs(&hash_pbs);
-	r_hash_start = (rbody)->cur;	/* hash from after HASH payload */
-    }
+    START_HASH_PAYLOAD(*rbody, ISAKMP_NEXT_ATTR);
 
     /* ATTR out */
     {
-	struct  isakmp_mode_attr attrh;
+	struct isakmp_mode_attr attrh;
 	struct isakmp_attribute attr;
 	pb_stream strattr,attrval;
 	int attr_type;
-	struct internal_addr ia;
 	int dns_idx, wins_idx;
 	bool dont_advance;
+	lset_t attr_set = ia->attr_set;
 
-	attrh.isama_np = ISAKMP_NEXT_NONE;
-	attrh.isama_type = replytype;
-
+	attrh.isama_np         = ISAKMP_NEXT_NONE;
+	attrh.isama_type       = msg_type;
 	attrh.isama_identifier = ap_id;
+
 	if (!out_struct(&attrh, &isakmp_attr_desc, rbody, &strattr))
 	    return STF_INTERNAL_ERROR;
-
-	get_internal_addresses(st->st_connection, &ia);
-
-	if (!isanyaddr(&ia.dns[0]))	/* We got DNS addresses, answer with those */
-	    resp |= LELEM(INTERNAL_IP4_DNS);
-	else
-	    resp &= ~LELEM(INTERNAL_IP4_DNS);
-
-	if (!isanyaddr(&ia.wins[0]))	/* We got WINS addresses, answer with those */
-	    resp |= LELEM(INTERNAL_IP4_NBNS);
-	else
-	    resp &= ~LELEM(INTERNAL_IP4_NBNS);
-
-	if (hackthat)
-	{
-	    if (memcmp(&st->st_connection->spd.that.client.addr
-		      ,&ia.ipaddr
-		      ,sizeof(ia.ipaddr)) != 0)
-	    {
-		/* Make the Internal IP address and Netmask 
-		 * as that client address
-		 */
-		st->st_connection->spd.that.client.addr = ia.ipaddr;
-		st->st_connection->spd.that.client.maskbits = 32;
-		st->st_connection->spd.that.has_client = TRUE;
-	    }
-	}
 
 	attr_type = 0;
 	dns_idx = 0;
 	wins_idx = 0;
 
-	while (resp != 0)
+	while (attr_set != 0)
 	{
 	    dont_advance = FALSE;
-	    if (resp & 1)
+	    if (attr_set & 1)
 	    {
 		const u_char *byte_ptr;
 		u_int len;
@@ -179,14 +224,11 @@ stf_status modecfg_resp(struct state *st
 		switch (attr_type)
 		{
 		case INTERNAL_IP4_ADDRESS:
+		    if (!isanyaddr(&ia->ipaddr))
 		    {
-			char srcip[ADDRTOT_BUF];
-
-			addrtot(&ia.ipaddr, 0, srcip, sizeof(srcip));
-			plog("assigning virtual IP source address %s", srcip);
-			len = addrbytesptr(&ia.ipaddr, &byte_ptr);
- 			out_raw(byte_ptr,len,&attrval,"IP4_addr");
-		     }
+			len = addrbytesptr(&ia->ipaddr, &byte_ptr);
+ 			out_raw(byte_ptr, len, &attrval, "IP4_addr");
+		    }
  		    break;
 		case INTERNAL_IP4_NETMASK:
 		    {
@@ -207,7 +249,7 @@ stf_status modecfg_resp(struct state *st
  			    mask = 0;
  			else
  			    mask = 0xffffffff * 1;
-			    out_raw(&mask,4,&attrval,"IP4_mask");
+			    out_raw(&mask, 4, &attrval, "IP4_mask");
 		    }
 		    break;
 		case INTERNAL_IP4_SUBNET:
@@ -228,22 +270,28 @@ stf_status modecfg_resp(struct state *st
 			        m = 0;
 			}
 			len = addrbytesptr(&st->st_connection->spd.this.client.addr, &byte_ptr);
-			out_raw(byte_ptr,len,&attrval,"IP4_subnet");
-			out_raw(mask,sizeof(mask),&attrval,"IP4_submsk");
+			out_raw(byte_ptr, len, &attrval, "IP4_subnet");
+			out_raw(mask, sizeof(mask), &attrval, "IP4_submsk");
 		    }
 		    break;
 		case INTERNAL_IP4_DNS:
- 		    len = addrbytesptr(&ia.dns[dns_idx++], &byte_ptr);
- 		    out_raw(byte_ptr,len,&attrval,"IP4_dns");
-		    if (dns_idx < 2 && !isanyaddr(&ia.dns[dns_idx]))
+		    if (!isanyaddr(&ia->dns[dns_idx]))
+		    {
+ 		    	len = addrbytesptr(&ia->dns[dns_idx++], &byte_ptr);
+ 		        out_raw(byte_ptr, len, &attrval, "IP4_dns");
+		    }
+		    if (dns_idx < 2 && !isanyaddr(&ia->dns[dns_idx]))
 		    {
 			dont_advance = TRUE;
 		    }
  		    break;
 		case INTERNAL_IP4_NBNS:
- 		    len = addrbytesptr(&ia.wins[wins_idx++], &byte_ptr);
- 		    out_raw(byte_ptr,len,&attrval,"IP4_wins");
-		    if (wins_idx < 2 && !isanyaddr(&ia.wins[wins_idx]))
+		    if (!isanyaddr(&ia->wins[wins_idx]))
+		    {
+ 			len = addrbytesptr(&ia->wins[wins_idx++], &byte_ptr);
+ 			out_raw(byte_ptr, len, &attrval, "IP4_wins");
+		    }
+		    if (wins_idx < 2 && !isanyaddr(&ia->wins[wins_idx]))
 		    {
 			dont_advance = TRUE;
 		    }
@@ -254,35 +302,39 @@ stf_status modecfg_resp(struct state *st
 		    break;
 		}
 		close_output_pbs(&attrval);
-
 	    }
 	    if (!dont_advance)
 	    {
 		attr_type++;
-		resp >>= 1;
+		attr_set >>= 1;
 	    }
 	}
 	close_message(&strattr);
     }
 
-    mode_cfg_hash(r_hashval,r_hash_start,rbody->cur,st);
+    modecfg_hash(r_hashval, r_hash_start, rbody->cur,st);
     close_message(rbody);
     encrypt_message(rbody, st);
     return STF_OK;
 }
 
-/* Set MODE_CONFIG data to client.
- * Pack IP Addresses, DNS, etc... and ship
+/*
+ * Send ModeCfg message
  */
-stf_status modecfg_send_set(struct state *st)
+static stf_status
+modecfg_send_msg(struct state *st, int isama_type, internal_addr_t *ia)
 {
-    pb_stream reply,rbody;
-    char buf[256];
+    pb_stream msg;
+    pb_stream rbody;
+    char buf[BUF_LEN];
 
-    /* set up reply */
-    init_pbs(&reply, buf, sizeof(buf), "ModecfgR1");
+    /* set up attr */
+    init_pbs(&msg, buf, sizeof(buf), "ModeCfg msg buffer");
 
-    st->st_state = STATE_MODE_CFG_R1;
+    /* this is the beginning of a new exchange */
+    st->st_msgid = generate_msgid(st);
+    init_phase2_iv(st, &st->st_msgid);
+
     /* HDR out */
     {
 	struct isakmp_hdr hdr;
@@ -296,503 +348,280 @@ stf_status modecfg_send_set(struct state *st)
 	memcpy(hdr.isa_rcookie, st->st_rcookie, COOKIE_SIZE);
 	hdr.isa_msgid = st->st_msgid;
 
-	if (!out_struct(&hdr, &isakmp_hdr_desc, &reply, &rbody))
+	if (!out_struct(&hdr, &isakmp_hdr_desc, &msg, &rbody))
 	{
 	    return STF_INTERNAL_ERROR;
 	}
     }
 
-#define MODECFG_SET_ITEM ( LELEM(INTERNAL_IP4_ADDRESS) | LELEM(INTERNAL_IP4_SUBNET) | LELEM(INTERNAL_IP4_NBNS) | LELEM(INTERNAL_IP4_DNS) )
+    /* ATTR out */
+    modecfg_build_msg(st, &rbody
+			, isama_type
+			, ia
+			, 0 /* XXX isama_id */
+		     );
 
-    modecfg_resp(st, MODECFG_SET_ITEM
-		   , &rbody
-		   , ISAKMP_CFG_SET
-		   , TRUE
-		   , 0/* XXX ID */);
-#undef MODECFG_SET_ITEM
-
-    clonetochunk(st->st_tpacket, reply.start
-		, pbs_offset(&reply), "ModeCfg set");
+    clonetochunk(st->st_tpacket, msg.start, pbs_offset(&msg), "ModeCfg msg");
 
     /* Transmit */
-    send_packet(st, "ModeCfg set");
+    send_packet(st, "ModeCfg msg");
 
-    /* RETRANSMIT if Main, SA_REPLACE if Aggressive */
-    if (st->st_event->ev_type != EVENT_RETRANSMIT
-    && st->st_event->ev_type != EVENT_NULL)
+    if (st->st_event->ev_type != EVENT_RETRANSMIT)
     {
 	delete_event(st);
 	event_schedule(EVENT_RETRANSMIT, EVENT_RETRANSMIT_DELAY_0, st);
     }
-
+    st->st_modecfg.started = TRUE;
     return STF_OK;
 }
 
-/* Set MODE_CONFIG data to client.
- * Pack IP Addresses, DNS, etc... and ship
- */
-stf_status
-modecfg_start_set(struct state *st)
-{
-    if (st->st_msgid == 0)
-    {
-	/* pick a new message id */
-	st->st_msgid = generate_msgid(st);
-    }
-    st->st_modecfg.vars_set = TRUE;
-
-    return modecfg_send_set(st);
-}
-
 /*
- * Send modecfg IP address request (IP4 address)
+ * Send ModeCfg request message from client to server in pull mode
  */
 stf_status
 modecfg_send_request(struct state *st)
 {
-    pb_stream reply;
-    pb_stream rbody;
-    char buf[256];
-    u_char *r_hash_start,*r_hashval;
+    internal_addr_t ia;
 
-    /* set up reply */
-    init_pbs(&reply, buf, sizeof(buf), "modecfg_buf");
+    init_internal_addr(&ia);
+    ia.attr_set = LELEM(INTERNAL_IP4_ADDRESS)
+	        | LELEM(INTERNAL_IP4_NETMASK);
 
     plog("sending ModeCfg request");
-
-    /* this is the beginning of a new exchange */
-    st->st_msgid = generate_msgid(st);
     st->st_state = STATE_MODE_CFG_I1;
-
-    /* HDR out */
-    {
-	struct isakmp_hdr hdr;
-
-	zero(&hdr);	/* default to 0 */
-	hdr.isa_version = ISAKMP_MAJOR_VERSION << ISA_MAJ_SHIFT | ISAKMP_MINOR_VERSION;
-	hdr.isa_np = ISAKMP_NEXT_HASH;
-	hdr.isa_xchg = ISAKMP_XCHG_MODE_CFG;
-	hdr.isa_flags = ISAKMP_FLAG_ENCRYPTION;
-	memcpy(hdr.isa_icookie, st->st_icookie, COOKIE_SIZE);
-	memcpy(hdr.isa_rcookie, st->st_rcookie, COOKIE_SIZE);
-	hdr.isa_msgid = st->st_msgid;
-
-	if (!out_struct(&hdr, &isakmp_hdr_desc, &reply, &rbody))
-	{
-	    return STF_INTERNAL_ERROR;
-	}
-    }
-
-    START_HASH_PAYLOAD(rbody, ISAKMP_NEXT_ATTR);
-
-    /* ATTR out */
-    {
-	struct  isakmp_mode_attr attrh;
-	struct isakmp_attribute attr;
-	pb_stream strattr;
-
-	attrh.isama_np = ISAKMP_NEXT_NONE;
-	attrh.isama_type = ISAKMP_CFG_REQUEST;
-	attrh.isama_identifier = 0;
-	if (!out_struct(&attrh, &isakmp_attr_desc, &rbody, &strattr))
-	    return STF_INTERNAL_ERROR;
-	/* ISAKMP attr out (ipv4) */
-	attr.isaat_af_type = INTERNAL_IP4_ADDRESS;
-	attr.isaat_lv = 0;
-	out_struct(&attr, &isakmp_modecfg_attribute_desc, &strattr, NULL);
-	
-	/* ISAKMP attr out (netmask) */
-	attr.isaat_af_type = INTERNAL_IP4_NETMASK;
-	attr.isaat_lv = 0;
-	out_struct(&attr, &isakmp_modecfg_attribute_desc, &strattr, NULL);
-
-	close_message(&strattr);
-    }
-
-    mode_cfg_hash(r_hashval,r_hash_start,rbody.cur,st);
-
-    close_message(&rbody);
-    close_output_pbs(&reply);
-
-    init_phase2_iv(st, &st->st_msgid);
-    encrypt_message(&rbody, st);
-
-    clonetochunk(st->st_tpacket, reply.start, pbs_offset(&reply)
-	, "modecfg: req");
-
-    /* Transmit */
-    send_packet(st, "modecfg: req");
-
-    /* RETRANSMIT if Main, SA_REPLACE if Aggressive */
-    if (st->st_event->ev_type != EVENT_RETRANSMIT)
-    {	
-	delete_event(st);
-	event_schedule(EVENT_RETRANSMIT, EVENT_RETRANSMIT_DELAY_0 * 3, st);
-    }
-    st->st_modecfg.started = TRUE;
-
-    return STF_OK;
+    return modecfg_send_msg(st, ISAKMP_CFG_REQUEST, &ia);
 }
 
 /*
- * parse a modecfg attribute payload
+ * Send ModeCfg set message from server to client in push mode
+ */
+stf_status
+modecfg_send_set(struct state *st)
+{
+    internal_addr_t ia;
+
+    get_internal_addr(st->st_connection, &ia);
+
+    plog("sending ModeCfg set");
+    st->st_state = STATE_MODE_CFG_R1;
+    return modecfg_send_msg(st, ISAKMP_CFG_SET, &ia);
+}
+
+/*
+ * Parse a ModeCfg attribute payload
  */
 static stf_status
-modecfg_parse_attributes(pb_stream *attrs, u_int *set)
+modecfg_parse_attributes(pb_stream *attrs, internal_addr_t *ia)
 {
     struct isakmp_attribute attr;
     pb_stream strattr;
 
-    while (pbs_left(attrs) > sizeof(struct isakmp_attribute))
+    while (pbs_left(attrs) >= sizeof(struct isakmp_attribute))
     {
+	u_int16_t attr_type;
+	u_int16_t attr_len;
+
 	if (!in_struct(&attr, &isakmp_modecfg_attribute_desc, attrs, &strattr))
 	{
-	    int len = (attr.isaat_af_type & 0x8000)? 4 : attr.isaat_lv;
-
-	    if (len < 4)
-	    {
-		plog("Attribute was too short: %d", len);
-		return STF_FAIL;
-	    }
-
-	    attrs->cur += len;
+	    return STF_FAIL;
 	}
+	attr_type = attr.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK;
+	attr_len  = attr.isaat_lv;
 
-	switch (attr.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK )
+	switch (attr_type)
 	{
 	case INTERNAL_IP4_ADDRESS:
+	    if (attr_len == 4)
+	    {
+		initaddr((char *)(strattr.cur), 4, AF_INET, &ia->ipaddr);
+	    }
+	    /* fall through to set attribute flags */
 	case INTERNAL_IP4_NETMASK:
 	case INTERNAL_IP4_DNS:
 	case INTERNAL_IP4_SUBNET:
 	case INTERNAL_IP4_NBNS:
-	    *set |= LELEM(attr.isaat_af_type);
+	    ia->attr_set |= LELEM(attr_type);
 	    break;
 	default:
-	    plog("unsupported mode cfg attribute %s received."
-		, enum_show(&modecfg_attr_names
-		    , attr.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK ));
+	    plog("unsupported ModeCfg attribute %s received."
+		, enum_show(&modecfg_attr_names, attr_type));
 	    break;
 	}
     }
     return STF_OK;
+}
+
+/* 
+ * Parse a ModeCfg message
+ */
+static stf_status
+modecfg_parse_msg(struct msg_digest *md, int isama_type, u_int16_t *isama_id
+		, internal_addr_t *ia)
+{
+    struct state *const st = md->st;
+    struct payload_digest *p;
+    stf_status stat;
+
+    st->st_msgid = md->hdr.isa_msgid;
+
+    CHECK_QUICK_HASH(md, modecfg_hash(hash_val
+				    , hash_pbs->roof
+				    , md->message_pbs.roof, st)
+		       , "MODECFG-HASH", "ISAKMP_CFG_MSG");
+
+    /* process the ModeCfg payloads received */
+    for (p = md->chain[ISAKMP_NEXT_ATTR]; p != NULL; p = p->next)
+    {
+	internal_addr_t ia_candidate;
+
+	init_internal_addr(&ia_candidate);
+
+	if (p->payload.attribute.isama_type == isama_type)
+	{
+	    *isama_id = p->payload.attribute.isama_identifier;
+
+	    stat = modecfg_parse_attributes(&p->pbs, &ia_candidate);
+	    if (stat == STF_OK)
+	    {
+		/* retrun with a valid set of attributes */
+		*ia = ia_candidate;
+		return STF_OK;
+	    }
+	}
+	else
+	{
+	    plog("expected %s, got %s instead (ignored)"
+		, enum_name(&attr_msg_type_names, isama_type)
+		, enum_name(&attr_msg_type_names, p->payload.attribute.isama_type));
+
+	    stat = modecfg_parse_attributes(&p->pbs, &ia_candidate);
+	}
+	if (stat != STF_OK)
+	    return stat;
+    }
+    return STF_IGNORE;
 }
 
 /* STATE_MODE_CFG_R0:
  * HDR*, HASH, ATTR(REQ=IP) --> HDR*, HASH, ATTR(REPLY=IP)
  *
- * This state occurs both in the responder and in the initiator.
- *
- * In the responding server, it occurs when the client *asks* for an IP
- * address or other information.
- *
- * Otherwise, it occurs in the initiator when the server sends a challenge
- * a set, or has a reply to our request.
+ * used in ModeCfg pull mode, on the server (responder)
  */
 stf_status
 modecfg_inR0(struct msg_digest *md)
 {
     struct state *const st = md->st;
-    struct payload_digest *p;
+    u_int16_t isama_id;
+    internal_addr_t ia;
     stf_status stat;
 
-    plog("received ModeCfg request");
+    stat = modecfg_parse_msg(md, ISAKMP_CFG_REQUEST, &isama_id, &ia);
+    if (stat != STF_OK)
+	return stat;
 
-    st->st_msgid = md->hdr.isa_msgid;
-    CHECK_QUICK_HASH(md, mode_cfg_hash(hash_val
-				      ,hash_pbs->roof
-				      , md->message_pbs.roof, st)
-		     , "MODECFG-HASH", "MODE R0");
+    get_internal_addr(st->st_connection, &ia);
 
-    /* process the MODECFG payloads therein */
-    for (p = md->chain[ISAKMP_NEXT_ATTR]; p != NULL; p = p->next)
-    {
-	u_int set_modecfg_attrs = LEMPTY;
-
-	switch (p->payload.attribute.isama_type)
-	{
-	default:
-	    plog("Expecting ISAKMP_CFG_REQUEST, got %s instead (ignored)."
-		, enum_name(&attr_msg_type_names
-			, p->payload.attribute.isama_type));
-
-	    stat = modecfg_parse_attributes(&p->pbs, &set_modecfg_attrs);
-	    if (stat != STF_OK)
-		return stat;
-	    break;
-
-	case ISAKMP_CFG_REQUEST:
-	    stat = modecfg_parse_attributes(&p->pbs, &set_modecfg_attrs);
-	    if (stat != STF_OK)
-		return stat;
-
-	    stat = modecfg_resp(st, set_modecfg_attrs
-				,&md->rbody
-				,ISAKMP_CFG_REPLY
-				,TRUE
-				,p->payload.attribute.isama_identifier);
-
-	    if (stat != STF_OK)
-	    {
-		/* notification payload - not exactly the right choice, but okay */
-		md->note = CERTIFICATE_UNAVAILABLE;
-		return stat;
-	    }
-
-	    /* they asked us, we responded, msgid is done */
-	    st->st_msgid = 0;
-	}
-    }
-    return STF_OK;
-}
-
-/* STATE_MODE_CFG_R2:
- *  HDR*, HASH, ATTR(SET=IP) --> HDR*, HASH, ATTR(ACK,OK)
- *
- * used in server push mode, on the client (initiator).
- */
-static stf_status
-modecfg_inI2(struct msg_digest *md)
-{
-    struct state *const st = md->st;
-    pb_stream *attrs = &md->chain[ISAKMP_NEXT_ATTR]->pbs;
-    int resp = LEMPTY;
-    stf_status stat;
-    struct payload_digest *p;
-    u_int16_t isama_id = 0;
-
-    st->st_msgid = md->hdr.isa_msgid;
-    CHECK_QUICK_HASH(md
-		     , mode_cfg_hash(hash_val
-				    ,hash_pbs->roof
-				    , md->message_pbs.roof
-				    , st)
-		     , "MODECFG-HASH", "MODE R1");
-
-    for (p = md->chain[ISAKMP_NEXT_ATTR]; p != NULL; p = p->next)
-    {
-        struct isakmp_attribute attr;
-        pb_stream strattr;
-
-	isama_id = p->payload.attribute.isama_identifier;
-
-	if (p->payload.attribute.isama_type != ISAKMP_CFG_SET)
-	{
-	    plog("Expecting MODE_CFG_SET, got %x instead."
-			 ,md->chain[ISAKMP_NEXT_ATTR]->payload.attribute.isama_type);
-	    return STF_IGNORE;
-	}
-
-	/* CHECK that SET has been received. */
-
-	while (pbs_left(attrs) > sizeof(struct isakmp_attribute))
-	{
-            if (!in_struct(&attr, &isakmp_modecfg_attribute_desc
-			   , attrs, &strattr))
-	    {
-		int len;
-
-		/* Skip unknown */
-		if (attr.isaat_af_type & 0x8000)
-		    len = 4;
-		else
-		    len = attr.isaat_lv;
-
-		if (len < 4)
-		{
-		    plog("Attribute was too short: %d", len);
-		    return STF_FAIL;
-		}
-
-		attrs->cur += len;
-	    }
-
-	    switch (attr.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK )
-	    {
-	    case INTERNAL_IP4_ADDRESS:
-		{
-		    struct connection *c = st->st_connection;
-		    ip_address a;
-		    u_int32_t *ap = (u_int32_t *)(strattr.cur);
-		    a.u.v4.sin_family = AF_INET;
-
-		    memcpy(&a.u.v4.sin_addr.s_addr, ap
-			       , sizeof(a.u.v4.sin_addr.s_addr));
-
-		    if (addrbytesptr(&c->spd.this.host_srcip, NULL) == 0
-		    || isanyaddr(&c->spd.this.host_srcip))
-		    {
-			char srcip[ADDRTOT_BUF];
-
-			c->spd.this.host_srcip = a;
-			addrtot(&a, 0, srcip, sizeof(srcip));
-			plog("setting virtual IP source address to %s", srcip);
-		    }
-
-		    /* setting client subnet as srcip/32 */
-		    addrtosubnet(&a, &c->spd.this.client);
-		    c->spd.this.has_client = TRUE;
-		}
-		resp |= LELEM(attr.isaat_af_type);
-		break;
-	    case INTERNAL_IP4_NETMASK:
-	    case INTERNAL_IP4_DNS:
-	    case INTERNAL_IP4_SUBNET:
-	    case INTERNAL_IP4_NBNS:
-		resp |= LELEM(attr.isaat_af_type);
-		break;
-	    default:
-		plog("unsupported mode cfg attribute %s received."
-			, enum_show(&modecfg_attr_names, (attr.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK )));
-		break;
-	    }
-	}
-    }
-
-    /* ack things */
-    stat = modecfg_resp(st, resp
-			,&md->rbody
-			,ISAKMP_CFG_ACK
-			,FALSE
-			,isama_id);
-
+    /* build ISAKMP_CFG_REPLY */ 
+    stat = modecfg_build_msg(st, &md->rbody
+			       , ISAKMP_CFG_REPLY
+			       , &ia
+			       , isama_id);
     if (stat != STF_OK)
     {
 	/* notification payload - not exactly the right choice, but okay */
-	md->note = CERTIFICATE_UNAVAILABLE;
+	md->note = ATTRIBUTES_NOT_SUPPORTED;
 	return stat;
     }
 
-    /*
-     * we are done with this exchange, clear things so
-     * that we can start phase 2 properly
-     */
     st->st_msgid = 0;
-
-    if (resp)
-    {
-	st->st_modecfg.vars_set = TRUE;
-    }
     return STF_OK;
 }
 
 /* STATE_MODE_CFG_R1:
- * HDR*, HASH, ATTR(SET=IP) --> HDR*, HASH, ATTR(ACK,OK)
+ * HDR*, HASH, ATTR(ACK,OK)
+ *
+ * used in ModeCfg push mode, on the server (responder)
  */
 stf_status
 modecfg_inR1(struct msg_digest *md)
 {
     struct state *const st = md->st;
-    pb_stream *attrs = &md->chain[ISAKMP_NEXT_ATTR]->pbs;
-    int set_modecfg_attrs = LEMPTY;
+    u_int16_t isama_id;
+    internal_addr_t ia;
     stf_status stat;
-    struct payload_digest *p;
+
+    plog("parsing ModeCfg ack");
+
+    stat = modecfg_parse_msg(md, ISAKMP_CFG_ACK, &isama_id, &ia);
+    if (stat != STF_OK)
+	return stat;
+
+    st->st_msgid = 0;
+    return STF_OK;
+}
+
+/* STATE_MODE_CFG_I1:
+ * HDR*, HASH, ATTR(REPLY=IP)
+ *
+ * used in ModeCfg pull mode, on the client (initiator) 
+ */
+stf_status
+modecfg_inI1(struct msg_digest *md)
+{
+    struct state *const st = md->st;
+    u_int16_t isama_id;
+    internal_addr_t ia;
+    stf_status stat;
 
     plog("parsing ModeCfg reply");
 
-    st->st_msgid = md->hdr.isa_msgid;
-    CHECK_QUICK_HASH(md, mode_cfg_hash(hash_val,hash_pbs->roof, md->message_pbs.roof, st)
-	, "MODECFG-HASH", "MODE R1");
+    stat = modecfg_parse_msg(md, ISAKMP_CFG_REPLY, &isama_id, &ia);
+    if (stat != STF_OK)
+	return stat;
 
-
-    /* process the MODECFG payloads therein */
-    for (p = md->chain[ISAKMP_NEXT_ATTR]; p != NULL; p = p->next)
-    {
-        struct isakmp_attribute attr;
-        pb_stream strattr;
-	
-	attrs = &p->pbs;
-	
-	switch (p->payload.attribute.isama_type)
-	{
-	default:
-	{
-	    plog("Expecting MODE_CFG_ACK, got %x instead."
-		,md->chain[ISAKMP_NEXT_ATTR]->payload.attribute.isama_type);
-	    return STF_IGNORE;
-	}
-	break;
-	
-	case ISAKMP_CFG_ACK:
-	    /* CHECK that ACK has been received. */
-	    stat = modecfg_parse_attributes(attrs, &set_modecfg_attrs);
-	    if (stat != STF_OK)
-		return stat;
-	    break;
-
-	case ISAKMP_CFG_REPLY:
-	    while (pbs_left(attrs) > sizeof(struct isakmp_attribute))
-	    {
-		if (!in_struct(&attr, &isakmp_modecfg_attribute_desc
-			       , attrs, &strattr))
-		{
-		    /* Skip unknown */
-		    int len;
-		    if (attr.isaat_af_type & 0x8000)
-			len = 4;
-		    else
-			len = attr.isaat_lv;
-		    
-		    if (len < 4)
-		    {
-			plog("Attribute was too short: %d", len);
-			return STF_FAIL;
-		    }
-
-		    attrs->cur += len;
-		}
-
-		switch (attr.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK )
-		{
-		case INTERNAL_IP4_ADDRESS:
-		   {
-			struct connection *c = st->st_connection;
-			ip_address a;
-			u_int32_t *ap = (u_int32_t *)(strattr.cur);
-			a.u.v4.sin_family = AF_INET;
-
-			memcpy(&a.u.v4.sin_addr.s_addr, ap
-			   , sizeof(a.u.v4.sin_addr.s_addr));
-
-			if (addrbytesptr(&c->spd.this.host_srcip, NULL) == 0
-			|| isanyaddr(&c->spd.this.host_srcip))
-			{
-			    char srcip[ADDRTOT_BUF];
-
-			    c->spd.this.host_srcip = a;
-			    addrtot(&a, 0, srcip, sizeof(srcip));
-			    plog("setting virtual IP source address to %s", srcip);
-			}
-
-			/* setting client subnet as srcip/32 */
-			addrtosubnet(&a, &c->spd.this.client);
-			setportof(0, &c->spd.this.client.addr);
-			c->spd.this.has_client = TRUE;
-		    }
-		    /* fall through to set attribute flage */
-
-		case INTERNAL_IP4_NETMASK:
-		case INTERNAL_IP4_DNS:
-		case INTERNAL_IP4_SUBNET:
-		case INTERNAL_IP4_NBNS:
-		    set_modecfg_attrs |= LELEM(attr.isaat_af_type);
-		    break;
-		default:
-		    plog("unsupported mode cfg attribute %s received."
-			    , enum_show(&modecfg_attr_names
-				, (attr.isaat_af_type & ISAKMP_ATTR_RTYPE_MASK )));
-		    break;
-		}
-	    }
-	    break;
-	}
-    }
-
-    /* we are done with this exchange, clear things so that we can start phase 2 properly */
+    st->st_modecfg.vars_set = set_internal_addr(st->st_connection, &ia);
     st->st_msgid = 0;
+    return STF_OK;
+}
 
-    if (set_modecfg_attrs)
+/* STATE_MODE_CFG_I2:
+ *  HDR*, HASH, ATTR(SET=IP) --> HDR*, HASH, ATTR(ACK,OK)
+ *
+ * used in ModeCfg push mode, on the client (initiator).
+ */
+stf_status
+modecfg_inI2(struct msg_digest *md)
+{
+    struct state *const st = md->st;
+    u_int16_t isama_id;
+    internal_addr_t ia;
+    lset_t attr_set;
+    stf_status stat;
+
+    plog("parsing ModeCfg set");
+
+    stat = modecfg_parse_msg(md, ISAKMP_CFG_SET, &isama_id, &ia);
+    if (stat != STF_OK)
+	return stat;
+
+    st->st_modecfg.vars_set = set_internal_addr(st->st_connection, &ia);
+
+    /* prepare ModeCfg ack which sends zero length attributes */
+    attr_set = ia.attr_set;
+    init_internal_addr(&ia);
+    ia.attr_set = attr_set & SUPPORTED_ATTR_SET;
+
+    stat = modecfg_build_msg(st, &md->rbody
+			       , ISAKMP_CFG_ACK
+			       , &ia
+			       , isama_id);
+    if (stat != STF_OK)
     {
-	st->st_modecfg.vars_set = TRUE;
+	/* notification payload - not exactly the right choice, but okay */
+	md->note = ATTRIBUTES_NOT_SUPPORTED;
+	return stat;
     }
+
+    st->st_msgid = 0;
     return STF_OK;
 }
