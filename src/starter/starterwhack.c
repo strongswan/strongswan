@@ -167,6 +167,7 @@ set_whack_end(whack_end_t *w, starter_end_t *end)
     w->has_client_wildcard = end->has_client_wildcard;
     w->has_port_wildcard   = end->has_port_wildcard;
     w->has_srcip           = end->has_srcip;
+    w->has_natip           = end->has_natip;
     w->modecfg             = end->modecfg;
     w->hostaccess          = end->hostaccess;
     w->sendcert            = end->sendcert;
