@@ -176,7 +176,7 @@ struct private_parser_t {
 	/**
 	 * @brief Parse substructures in a list
 	 * 
-	 * This function calls the parser recursivly to parse contained substructures
+	 * This function calls the parser recursively to parse contained substructures
 	 * in a linked_list_t. The list must already be created. Payload defines
 	 * the type of the substructures. parsing is continued until the specified length
 	 * is completely parsed.
@@ -517,7 +517,7 @@ static status_t parse_list(private_parser_t *this, int rule_number, linked_list_
 		u_int8_t *pos_before = this->byte_pos;
 		payload_t *payload;
 		status_t status;
-		DBG2(SIG_DBG_ENC, "  %d bytes left, parsing recursivly %N",
+		DBG2(SIG_DBG_ENC, "  %d bytes left, parsing recursively %N",
 			 length, payload_type_names, payload_type);
 		status = this->public.parse_payload((parser_t*)this, payload_type, &payload);
 		if (status != SUCCESS)
