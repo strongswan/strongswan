@@ -512,6 +512,7 @@ enum state_kind {
 
     STATE_MODE_CFG_I1,           /* this is used on the initiator */
     STATE_MODE_CFG_I2,
+    STATE_MODE_CFG_I3,
 
     STATE_IKE_ROOF
 };
@@ -521,17 +522,21 @@ enum state_kind {
 #define PHASE1_INITIATOR_STATES	 (LELEM(STATE_MAIN_I1) | LELEM(STATE_MAIN_I2) \
     | LELEM(STATE_MAIN_I3) | LELEM(STATE_MAIN_I4))
 #define ISAKMP_SA_ESTABLISHED_STATES  (LELEM(STATE_MAIN_R3) | LELEM(STATE_MAIN_I4) \
-    | LELEM(STATE_MODE_CFG_R1) | LELEM(STATE_MODE_CFG_I2))
+    | LELEM(STATE_MODE_CFG_R1) | LELEM(STATE_MODE_CFG_R2) \
+    | LELEM(STATE_MODE_CFG_I2) | LELEM(STATE_MODE_CFG_I3))
 
 #define IS_PHASE1(s) ((STATE_MAIN_R0 <= (s) && (s) <= STATE_MAIN_I4) \
-		   || (STATE_MODE_CFG_R0 <= (s) && (s) <= STATE_MODE_CFG_I2))
+		   || (STATE_MODE_CFG_R0 <= (s) && (s) <= STATE_MODE_CFG_I3))
 #define IS_QUICK(s) (STATE_QUICK_R0 <= (s) && (s) <= STATE_QUICK_R2)
 #define IS_ISAKMP_ENCRYPTED(s) (STATE_MAIN_I2 <= (s))
-#define IS_ISAKMP_SA_ESTABLISHED(s) ((s) == STATE_MAIN_R3 \
-				  || (s) == STATE_MAIN_I4 \
+#define IS_ISAKMP_SA_ESTABLISHED(s) (         \
+					 (s) == STATE_MAIN_R3     \
+				  || (s) == STATE_MAIN_I4     \
 				  || (s) == STATE_MODE_CFG_R0 \
 				  || (s) == STATE_MODE_CFG_R1 \
-				  || (s) == STATE_MODE_CFG_I2)
+				  || (s) == STATE_MODE_CFG_R2 \
+				  || (s) == STATE_MODE_CFG_I2 \
+				  || (s) == STATE_MODE_CFG_I3)
 #define IS_IPSEC_SA_ESTABLISHED(s) ((s) == STATE_QUICK_I2 || (s) == STATE_QUICK_R2)
 #define IS_ONLY_INBOUND_IPSEC_SA_ESTABLISHED(s) ((s) == STATE_QUICK_R1)
 
@@ -785,11 +790,12 @@ extern const char *prettypolicy(lset_t policy);
 /* connection policy
  * Other policies could vary per state object.  These live in connection.
  */
-#define POLICY_DONT_REKEY     LELEM(12)	/* don't rekey state either Phase */
-#define POLICY_OPPO     LELEM(13)	/* is this opportunistic? */
-#define POLICY_GROUP	LELEM(14)	/* is this a group template? */
-#define POLICY_GROUTED	LELEM(15)	/* do we want this group routed? */
-#define POLICY_UP	LELEM(16)	/* do we want this up? */
+#define POLICY_DONT_REKEY	LELEM(12)	/* don't rekey state either Phase */
+#define POLICY_OPPO		LELEM(13)	/* is this opportunistic? */
+#define POLICY_GROUP		LELEM(14)	/* is this a group template? */
+#define POLICY_GROUTED		LELEM(15)	/* do we want this group routed? */
+#define POLICY_UP		LELEM(16)	/* do we want this up? */
+#define POLICY_MODECFG_PUSH	LELEM(17)	/* is modecfg pushed by server? */
 
 
 /* Any IPsec policy?  If not, a connection description
