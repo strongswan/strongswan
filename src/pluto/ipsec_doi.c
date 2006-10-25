@@ -2950,8 +2950,7 @@ main_inI1_outR1(struct msg_digest *md)
 {
     struct payload_digest *const sa_pd = md->chain[ISAKMP_NEXT_SA];
     struct state *st;
-    struct connection *c = find_host_connection(&md->iface->addr, pluto_port
-				, &md->sender, md->sender_port, LEMPTY);
+    struct connection *c;
     struct isakmp_proposal proposal;
     pb_stream proposal_pbs;
     pb_stream r_sa_pbs;
@@ -2959,13 +2958,27 @@ main_inI1_outR1(struct msg_digest *md)
     lset_t policy = LEMPTY;
     int vids_to_send = 0;
 
+    /* We preparse the peer's proposal in order to determine
+     * the requested authentication policy (RSA or PSK)
+     */
     RETURN_STF_FAILURE(preparse_isakmp_sa_body(&sa_pd->payload.sa
 	, &sa_pd->pbs, &ipsecdoisit, &proposal_pbs, &proposal));
+
+    backup_pbs(&proposal_pbs);
+    RETURN_STF_FAILURE(parse_isakmp_policy(&proposal_pbs
+		     , proposal.isap_notrans, &policy));
+    restore_pbs(&proposal_pbs);
+
+    /* We are only considering candidate connections that match
+     * the requested authentication policy (RSA or PSK)
+     */
+    c = find_host_connection(&md->iface->addr, pluto_port
+			   , &md->sender, md->sender_port, policy);
 
     if (c == NULL && md->iface->ike_float)
     {
 	c = find_host_connection(&md->iface->addr, NAT_T_IKE_FLOAT_PORT
-		, &md->sender, md->sender_port, LEMPTY);
+		, &md->sender, md->sender_port, policy);
     }
 
     if (c == NULL)
@@ -2982,11 +2995,6 @@ main_inI1_outR1(struct msg_digest *md)
 	 */
 	{
 	    struct connection *d;
-
-	    backup_pbs(&proposal_pbs);
-	    RETURN_STF_FAILURE(parse_isakmp_policy(&proposal_pbs
-		, proposal.isap_notrans, &policy));
-	    restore_pbs(&proposal_pbs);
 
 	    d = find_host_connection(&md->iface->addr
 		, pluto_port, (ip_address*)NULL, md->sender_port, policy);
