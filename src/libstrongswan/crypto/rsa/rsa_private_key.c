@@ -687,7 +687,7 @@ rsa_private_key_t *rsa_private_key_create_from_chunk(chunk_t blob)
 	mpz_init(this->exp2);
 	mpz_init(this->coeff);
 	
-	asn1_init(&ctx, blob, 0, FALSE);
+	asn1_init(&ctx, blob, 0, FALSE, TRUE);
 	
 	while (objectID < PRIV_KEY_ROOF) 
 	{

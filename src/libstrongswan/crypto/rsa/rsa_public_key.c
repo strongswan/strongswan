@@ -443,7 +443,7 @@ rsa_public_key_t *rsa_public_key_create_from_chunk(chunk_t blob)
 	mpz_init(this->n);
 	mpz_init(this->e);
 	
-	asn1_init(&ctx, blob, 0, FALSE);
+	asn1_init(&ctx, blob, 0, FALSE, FALSE);
 	
 	while (objectID < PUB_KEY_ROOF) 
 	{
