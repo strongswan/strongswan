@@ -141,6 +141,7 @@ struct end {
     bool has_client_wildcard;
     bool has_port_wildcard;
     bool has_id_wildcards;
+    bool has_natip;
     char *updown;
     u_int16_t host_port;	/* host order */
     u_int16_t port;		/* host order */
