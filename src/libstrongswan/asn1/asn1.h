@@ -87,19 +87,20 @@ typedef enum {
 /* definition of an ASN.1 object */
 
 typedef struct {
-    u_int   level;
-    const u_char  *name;
-    asn1_t  type;
-    u_char  flags;
+	u_int   level;
+	const u_char  *name;
+	asn1_t  type;
+	u_char  flags;
 } asn1Object_t;
 
 #define ASN1_MAX_LEVEL	10
 
 typedef struct {
-    bool  implicit;
-    u_int level0;
-    u_int loopAddr[ASN1_MAX_LEVEL+1];
-    chunk_t blobs[ASN1_MAX_LEVEL+2];
+	bool  implicit;
+	bool  private;
+	u_int level0;
+	u_int loopAddr[ASN1_MAX_LEVEL+1];
+	chunk_t  blobs[ASN1_MAX_LEVEL+2];
 } asn1_ctx_t;
 
 /* some common prefabricated ASN.1 constants */
@@ -119,7 +120,7 @@ extern int known_oid(chunk_t object);
 extern u_int asn1_length(chunk_t *blob);
 extern bool is_printablestring(chunk_t str);
 extern time_t asn1totime(const chunk_t *utctime, asn1_t type);
-extern void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit);
+extern void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit, bool private);
 extern bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *object, u_int *level, asn1_ctx_t *ctx);
 extern bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const char* name);
 extern int parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters);

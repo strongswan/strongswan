@@ -276,18 +276,20 @@ time_t asn1totime(const chunk_t *utctime, asn1_t type)
 /**
  * Initializes the internal context of the ASN.1 parser
  */
-void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0, bool implicit)
+void asn1_init(asn1_ctx_t *ctx, chunk_t blob, u_int level0,
+			   bool implicit, bool private)
 {
 	ctx->blobs[0] = blob;
 	ctx->level0   = level0;
 	ctx->implicit = implicit;
+    ctx->private  = private;
 	memset(ctx->loopAddr, '\0', sizeof(ctx->loopAddr));
 }
 
 /**
  * print the value of an ASN.1 simple object
  */
-static void debug_asn1_simple_object(chunk_t object, asn1_t type)
+static void debug_asn1_simple_object(chunk_t object, asn1_t type, bool private)
 {
 	int oid;
 	
@@ -317,7 +319,10 @@ static void debug_asn1_simple_object(chunk_t object, asn1_t type)
 		default:
 			break;
 	}
-	DBG3("%B", &object);
+	if (private)
+		DBG4("%B", &object);
+	else
+		DBG3("%B", &object);
 }
 
 /**
@@ -441,12 +446,15 @@ bool extract_object(asn1Object_t const *objects, u_int *objectID, chunk_t *objec
 	{
 		object->ptr = start_ptr;
 		object->len = (size_t)(blob->ptr - start_ptr);
-		DBG3("%B", object);
+		if (ctx->private)
+			DBG4("%B", object);
+		else
+			DBG3("%B", object);
 	}
 	else if (obj.flags & ASN1_BODY)
 	{
 		*object = *blob1;
-		debug_asn1_simple_object(*object, obj.type);
+		debug_asn1_simple_object(*object, obj.type, ctx->private);
 	}
 	return TRUE;
 }
@@ -482,7 +490,7 @@ bool parse_asn1_simple_object(chunk_t *object, asn1_t type, u_int level, const c
 	}
 	
 	DBG2("L%d - %s:", level, name);
-	debug_asn1_simple_object(*object, type);
+	debug_asn1_simple_object(*object, type, FALSE);
 	return TRUE;
 }
 
@@ -497,7 +505,7 @@ int parse_algorithmIdentifier(chunk_t blob, int level0, chunk_t *parameters)
 	int alg = OID_UNKNOWN;
 	int objectID = 0;
 	
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	
 	while (objectID < ALGORITHM_ID_ROOF)
 	{
