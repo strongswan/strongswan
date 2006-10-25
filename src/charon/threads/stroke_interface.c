@@ -772,8 +772,9 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg)
 		iterator = charon->credentials->create_cert_iterator(charon->credentials);
 		if (iterator->get_count(iterator))
 		{
+			fprintf(this->out, "\n");
 			fprintf(this->out, "List of X.509 End Entity Certificates:\n");
-			fprintf(this->out, "--------------------------------------\n");
+			fprintf(this->out, "\n");
 		}
 		while (iterator->iterate(iterator, (void**)&cert))
 		{
@@ -783,7 +784,7 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg)
 			{
 				fprintf(this->out, ", has private key");
 			}
-			fprintf(this->out, "\n\n");
+			fprintf(this->out, "\n");
 			
 		}
 		iterator->destroy(iterator);
@@ -795,12 +796,13 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg)
 		iterator = charon->credentials->create_cacert_iterator(charon->credentials);
 		if (iterator->get_count(iterator))
 		{
+			fprintf(this->out, "\n");
 			fprintf(this->out, "List of X.509 CA Certificates:\n");
-			fprintf(this->out, "------------------------------\n");
+			fprintf(this->out, "\n");
 		}
 		while (iterator->iterate(iterator, (void**)&cert))
 		{
-			fprintf(this->out, "%#Q\n\n", cert, msg->list.utc);
+			fprintf(this->out, "%#Q\n", cert, msg->list.utc);
 		}
 		iterator->destroy(iterator);
 	}
@@ -811,12 +813,13 @@ static void stroke_list(private_stroke_t *this, stroke_msg_t *msg)
 		iterator = charon->credentials->create_crl_iterator(charon->credentials);
 		if (iterator->get_count(iterator))
 		{
+			fprintf(this->out, "\n");
 			fprintf(this->out, "List of X.509 CRLs:\n");
-			fprintf(this->out, "-------------------\n");
+			fprintf(this->out, "\n");
 		}
 		while (iterator->iterate(iterator, (void**)&crl))
 		{
-			fprintf(this->out, "%#U\n\n", crl, msg->list.utc);
+			fprintf(this->out, "%#U\n", crl, msg->list.utc);
 		}
 		iterator->destroy(iterator);
 	}
