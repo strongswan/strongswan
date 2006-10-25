@@ -410,7 +410,7 @@ static bool parse_basicConstraints(chunk_t blob, int level0)
 	int objectID = 0;
 	bool isCA = FALSE;
 
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 
 	while (objectID < BASIC_CONSTRAINTS_ROOF) {
 
@@ -440,7 +440,7 @@ parse_otherName(chunk_t blob, int level0)
 	u_int level;
 	int oid = OID_UNKNOWN;
 
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 
 	while (objectID < ON_OBJ_ROOF)
 	{
@@ -477,7 +477,7 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 	int objectID = 0;
 	u_int level;
 
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 
 	while (objectID < GN_OBJ_ROOF)
 	{
@@ -537,7 +537,7 @@ static void parse_generalNames(chunk_t blob, int level0, bool implicit, linked_l
 	u_int level;
 	int objectID = 0;
 
-	asn1_init(&ctx, blob, level0, implicit);
+	asn1_init(&ctx, blob, level0, implicit, FALSE);
 
 	while (objectID < GENERAL_NAMES_ROOF)
 	{
@@ -566,7 +566,7 @@ time_t parse_time(chunk_t blob, int level0)
 	u_int level;
 	int objectID = 0;
 	
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	
 	while (objectID < TIME_ROOF)
 	{
@@ -593,7 +593,7 @@ static chunk_t parse_keyIdentifier(chunk_t blob, int level0, bool implicit)
 	u_int level;
 	int objectID = 0;
 	
-	asn1_init(&ctx, blob, level0, implicit);
+	asn1_init(&ctx, blob, level0, implicit, FALSE);
 	
 	extract_object(keyIdentifierObjects, &objectID, &object, &level, &ctx);
 	return object;
@@ -609,7 +609,7 @@ void parse_authorityKeyIdentifier(chunk_t blob, int level0 , chunk_t *authKeyID,
 	u_int level;
 	int objectID = 0;
 	
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < AUTH_KEY_ID_ROOF)
 	{
 		if (!extract_object(authorityKeyIdentifierObjects, &objectID, &object, &level, &ctx))
@@ -648,7 +648,7 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0, chunk_t *accessL
 	
 	u_int accessMethod = OID_UNKNOWN;
 	
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < AUTH_INFO_ACCESS_ROOF)
 	{
 		if (!extract_object(authorityInfoAccessObjects, &objectID, &object, &level, &ctx))
@@ -702,7 +702,7 @@ static bool parse_extendedKeyUsage(chunk_t blob, int level0)
 	u_int level;
 	int objectID = 0;
 	
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < EXT_KEY_USAGE_ROOF)
 	{
 		if (!extract_object(extendedKeyUsageObjects, &objectID, &object, &level, &ctx))
@@ -730,7 +730,7 @@ static void parse_crlDistributionPoints(chunk_t blob, int level0, linked_list_t 
 	u_int level;
 	int objectID = 0;
 	
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < CRL_DIST_POINTS_ROOF)
 	{
 		if (!extract_object(crlDistributionPointsObjects, &objectID, &object, &level, &ctx))
@@ -760,7 +760,7 @@ bool parse_x509cert(chunk_t blob, u_int level0, private_x509_t *cert)
 	u_int extn_oid = OID_UNKNOWN;
 	int objectID = 0;
 	
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 	while (objectID < X509_OBJ_ROOF)
 	{
 		if (!extract_object(certObjects, &objectID, &object, &level, &ctx))
@@ -1053,8 +1053,6 @@ static int print(FILE *stream, const struct printf_info *info,
 {
 	private_x509_t *this = *((private_x509_t**)(args[0]));
 	iterator_t *iterator;
-	identification_t *san;
-	chunk_t chunk;
 	bool utc = TRUE;
 	int written = 0;
 	
@@ -1071,36 +1069,44 @@ static int print(FILE *stream, const struct printf_info *info,
 	/* determine the current time */
 	time_t now = time(NULL);
 
-	written += fprintf(stream, "  subject:   %D\n", this->subject);
-	if (this->subjectAltNames->get_count(this->subjectAltNames) > 0)
+	written += fprintf(stream, "%#T\n", this->installed, utc);
+
+	if (this->subjectAltNames->get_count(this->subjectAltNames))
 	{
-		written += fprintf(stream, "  altNames:  ");
+		identification_t *subjectAltName;
+		bool first = TRUE;
+
+		written += fprintf(stream, "    altNames:  ");
 		iterator = this->subjectAltNames->create_iterator(this->subjectAltNames, TRUE);
-		while (iterator->iterate(iterator, (void**)&san))
+		while (iterator->iterate(iterator, (void**)&subjectAltName))
 		{
-			written += fprintf(stream, "%D, ", san);
+			if (first)
+			{
+				first = FALSE;
+			}
+			else
+			{
+				written += fprintf(stream, ", ");
+			}
+			written += fprintf(stream, "'%D'", subjectAltName);
 		}
 		iterator->destroy(iterator);
 		written += fprintf(stream, "\n");
 	}
-	written += fprintf(stream, "  issuer:    '%D'\n", this->issuer);
-	written += fprintf(stream, "  serial:    '%#B'\n", &this->serialNumber);
-	written += fprintf(stream, "  installed: %#T\n", this->installed, utc);
-	
-	written += fprintf(stream, "  validity:  not before %#T, ",
-					   this->notBefore, utc);
+	written += fprintf(stream, "    subject:   '%D'\n", this->subject);
+	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
+	written += fprintf(stream, "    serial:     %#B\n", &this->serialNumber);
+	written += fprintf(stream, "    validity:   not before %#T, ", this->notBefore, utc);
 	if (now < this->notBefore)
 	{
-		written += fprintf(stream, "not valid yet (valid in %V)\n",
-						   now, this->notBefore);
+		written += fprintf(stream, "not valid yet (valid in %V)\n", now, this->notBefore);
 	}
 	else
 	{
 		written += fprintf(stream, "ok\n");
 	}
 	
-	written += fprintf(stream, "             not after  %#T, ",
-					   this->notAfter, utc);
+	written += fprintf(stream, "                not after  %#T, ", this->notAfter, utc);
 	if (now > this->notAfter)
 	{
 		written += fprintf(stream, "expired (since %V)\n", now, this->notAfter);
@@ -1115,22 +1121,25 @@ static int print(FILE *stream, const struct printf_info *info,
 		written += fprintf(stream, " \n");
 	}
 	
-	chunk = this->public_key->get_keyid(this->public_key);
-	written += fprintf(stream, "  keyid:     %#B\n", &chunk);
+	{
+		chunk_t keyid = this->public_key->get_keyid(this->public_key);
+		written += fprintf(stream, "    keyid:      %#B\n", &keyid);
+	}
+
 	if (this->subjectKeyID.ptr)
 	{
-		written += fprintf(stream, "  subjkey:   %#B\n", &this->subjectKeyID);
+		written += fprintf(stream, "    subjkey:    %#B\n", &this->subjectKeyID);
 	}
 	if (this->authKeyID.ptr)
 	{
-		written += fprintf(stream, "  authkey:   %#B\n", &this->authKeyID);
+		written += fprintf(stream, "    authkey:    %#B\n", &this->authKeyID);
 	}
 	if (this->authKeySerialNumber.ptr)
 	{
-		written += fprintf(stream, "  aserial:   %#B\n", &this->authKeySerialNumber);
+		written += fprintf(stream, "    aserial:    %#B\n", &this->authKeySerialNumber);
 	}
 	
-	written += fprintf(stream, "  pubkey:    RSA %d bits", BITS_PER_BYTE *
+	written += fprintf(stream, "    pubkey:     RSA %d bits", BITS_PER_BYTE *
 					   this->public_key->get_keysize(this->public_key));
 	written += fprintf(stream, ", status %N",
 					   cert_status_names, this->status);
@@ -1161,7 +1170,7 @@ static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes
 	{
 		if (n > 1)
 		{
-			argtypes[0] = PA_INT;
+			argtypes[0] = PA_POINTER;
 			argtypes[1] = PA_INT;
 		}
 		return 2;
@@ -1169,7 +1178,7 @@ static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes
 	
 	if (n > 0)
 	{
-		argtypes[0] = PA_INT;
+		argtypes[0] = PA_POINTER;
 	}
 	return 1;
 }

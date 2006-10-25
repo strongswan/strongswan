@@ -225,7 +225,7 @@ bool parse_x509crl(chunk_t blob, u_int level0, private_crl_t *crl)
 	u_int level;
 	int objectID = 0;
 
-	asn1_init(&ctx, blob, level0, FALSE);
+	asn1_init(&ctx, blob, level0, FALSE, FALSE);
 
 	while (objectID < CRL_OBJ_ROOF)
 	{
@@ -431,7 +431,7 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	if (info->alt)
 	{
-		utc = *((bool*)(args[1]));
+		utc = *((bool*)args[1]);
 	}
 	
 	if (this == NULL)
@@ -441,11 +441,11 @@ static int print(FILE *stream, const struct printf_info *info,
 	
 	now = time(NULL);
 	
-	written += fprintf(stream, "  issuer:    %D\n", this->issuer);
-	written += fprintf(stream, "  installed: %#T, revoked certs: %d\n", this->installed, utc,
+	written += fprintf(stream, "%#T, revoked certs: %d\n", this->installed, utc,
 					   this->revokedCertificates->get_count(this->revokedCertificates));
-	written += fprintf(stream, "  updates:   this %#T\n", this->thisUpdate, utc);
-	written += fprintf(stream, "             next %#T ");
+	written += fprintf(stream, "    issuer:    '%D'\n", this->issuer);
+	written += fprintf(stream, "    updates:    this %#T\n", this->thisUpdate, utc);
+	written += fprintf(stream, "                next %#T ",  this->nextUpdate, utc);
 	if (this->nextUpdate == UNDEFINED_TIME)
 	{
 		written += fprintf(stream, "ok (expires never)");
@@ -464,11 +464,11 @@ static int print(FILE *stream, const struct printf_info *info,
 	}
 	if (this->authKeyID.ptr)
 	{
-		written += fprintf(stream, "\n  authkey:   %#B", &this->authKeyID);
+		written += fprintf(stream, "\n    authkey:    %#B", &this->authKeyID);
 	}
 	if (this->authKeySerialNumber.ptr)
 	{
-		written += fprintf(stream, "\n  aserial:   %#B", &this->authKeySerialNumber);
+		written += fprintf(stream, "\n    aserial:    %#B", &this->authKeySerialNumber);
 	}
 	return written;
 }
@@ -482,7 +482,7 @@ static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes
 	{
 		if (n > 1)
 		{
-			argtypes[0] = PA_INT;
+			argtypes[0] = PA_POINTER;
 			argtypes[1] = PA_INT;
 		}
 		return 2;
@@ -490,7 +490,7 @@ static int print_arginfo(const struct printf_info *info, size_t n, int *argtypes
 	
 	if (n > 0)
 	{
-		argtypes[0] = PA_INT;
+		argtypes[0] = PA_POINTER;
 	}
 	return 1;
 }
