@@ -32,7 +32,7 @@
 
 /**
  * printf specifier for printing certificates. When using the
- * #-modifier, an additional bool argument defines if times
+ * #-modifier, an additional bool argument defines if dates
  * are printed in UTC.
  */
 #define X509_PRINTF_SPEC 'Q'

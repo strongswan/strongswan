@@ -32,7 +32,7 @@
 
 /**
  * printf specifier for printing crls. When using the
- * #-modifier, an additional bool argument defines if times
+ * #-modifier, an additional bool argument defines if dates 
  * are printed in UTC.
  */
 #define CRL_PRINTF_SPEC 'U'
