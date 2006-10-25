@@ -287,7 +287,6 @@ static int print_chunk(FILE *stream, const struct printf_info *info,
 	
 	while (copy.len > 0)
 	{
-		static char hexdig[] = "0123456789abcdef";
 		if (first)
 		{
 			first = FALSE;
@@ -296,9 +295,7 @@ static int print_chunk(FILE *stream, const struct printf_info *info,
 		{
 			written += fprintf(stream, ":");
 		}
-		written += fprintf(stream, "%c%c", 
-						   hexdig[(*copy.ptr >> 4) & 0x0f],
-						   hexdig[ *copy.ptr++     & 0x0f]);
+		written += fprintf(stream, "%02x", *copy.ptr++);
 		copy.len--;
 	}
 	return written;
@@ -337,7 +334,7 @@ static int print_time(FILE *stream, const struct printf_info *info,
 	}
 	return fprintf(stream, "%s %02d %02d:%02d:%02d%s%04d",
 				   months[t.tm_mon], t.tm_mday, t.tm_hour, t.tm_min,
-				   t.tm_sec, info->alt ? " UTC " : " ", t.tm_year + 1900);
+				   t.tm_sec, utc ? " UTC " : " ", t.tm_year + 1900);
 }
 
 /**
