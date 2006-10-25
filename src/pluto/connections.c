@@ -845,6 +845,7 @@ extract_end(struct end *dst, const whack_end_t *src, const char *which)
     dst->host_addr = src->host_addr;
     dst->host_nexthop = src->host_nexthop;
     dst->host_srcip = src->host_srcip;
+    dst->has_natip = src->has_natip;
     dst->client = src->client;
     dst->protocol = src->protocol;
     dst->port = src->port;
@@ -863,6 +864,7 @@ extract_end(struct end *dst, const whack_end_t *src, const char *which)
      */
     if (addrbytesptr(&dst->host_srcip, NULL)
     && !isanyaddr(&dst->host_srcip)
+    && !dst->has_natip
     && !dst->has_client)
     {
 	err_t ugh = addrtosubnet(&dst->host_srcip, &dst->client);
@@ -1985,7 +1987,8 @@ cannot_oppo(struct connection *c
 	    char state_buf2[LOG_WIDTH];
 	    time_t n = now();
 
-	    fmt_state(st, n, state_buf, sizeof(state_buf)
+	    fmt_state(FALSE, st, n
+		      , state_buf, sizeof(state_buf)
 		      , state_buf2, sizeof(state_buf2));
 	    DBG_log("cannot_oppo, failure SA1: %s", state_buf);
 	    DBG_log("cannot_oppo, failure SA2: %s", state_buf2);
@@ -3031,7 +3034,7 @@ ISAKMP_SA_established(struct connection *c, so_serial_t serial)
     /* the connection is now oriented so that we are able to determine
      * whether we are a mode config server with a virtual IP to send.
      */
-    if (!isanyaddr(&c->spd.that.host_srcip))
+    if (!isanyaddr(&c->spd.that.host_srcip) && !c->spd.that.has_natip)
 	c->spd.that.modecfg = TRUE;
 	
     if (uniqueIDs)
