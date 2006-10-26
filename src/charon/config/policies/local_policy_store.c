@@ -106,7 +106,7 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 	policy_t *candidate;
 	policy_t *found = NULL;
 	
-	DBG2(SIG_DBG_CFG, "searching policy for ID pair %D...%D", my_id, other_id);
+	DBG2(DBG_CFG, "searching policy for ID pair %D...%D", my_id, other_id);
 
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);
@@ -136,12 +136,12 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 			if (!contains_traffic_selectors(candidate, TRUE, my_ts, my_host) ||
 				!contains_traffic_selectors(candidate, FALSE, other_ts, other_host))
 			{
-				DBG2(SIG_DBG_CFG, "candidate '%s' inacceptable due traffic "
+				DBG2(DBG_CFG, "candidate '%s' inacceptable due traffic "
 					 "selector mismatch", candidate->get_name(candidate));
 				continue;
 			}
 
-			DBG2(SIG_DBG_CFG, "candidate policy '%s': %D...%D (prio=%d)",
+			DBG2(DBG_CFG, "candidate policy '%s': %D...%D (prio=%d)",
 				 candidate->get_name(candidate),
 				 candidate_my_id, candidate_other_id, prio);
 
@@ -159,7 +159,7 @@ static policy_t *get_policy(private_local_policy_store_t *this,
 		identification_t *found_my_id = found->get_my_id(found);
 		identification_t *found_other_id = found->get_other_id(found);
 		
-		DBG1(SIG_DBG_CFG, "found matching policy '%s': %D...%D (prio=%d)",
+		DBG1(DBG_CFG, "found matching policy '%s': %D...%D (prio=%d)",
 			 found->get_name(found), found_my_id, found_other_id, best_prio);
 		/* give out a new reference to it */
 		found->get_ref(found);
@@ -176,7 +176,7 @@ static policy_t *get_policy_by_name(private_local_policy_store_t *this, char *na
 	iterator_t *iterator;
 	policy_t *current, *found = NULL;
 	
-	DBG2(SIG_DBG_CFG, "looking for policy '%s'", name);
+	DBG2(DBG_CFG, "looking for policy '%s'", name);
 	
 	pthread_mutex_lock(&(this->mutex));
 	iterator = this->policies->create_iterator(this->policies, TRUE);

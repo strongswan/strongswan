@@ -128,6 +128,12 @@ struct private_create_child_sa_t {
 	 * source of randomness
 	 */
 	randomizer_t *randomizer;
+	
+	/**
+	 * signal to emit when transaction fails. As this transaction is used
+	 * for CHILD_SA creation AND rekeying, we must emit different signals.
+	 */
+	signal_t failsig;
 };
 
 /**
@@ -168,6 +174,7 @@ static void set_reqid(private_create_child_sa_t *this, u_int32_t reqid)
 static void rekeys_child(private_create_child_sa_t *this, child_sa_t *child_sa)
 {
 	this->rekeyed_sa = child_sa;
+	this->failsig = CHILD_REKEY_FAILED;
 }
 
 /**
@@ -198,20 +205,26 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 	/* check if we are not already rekeying */
 	if (this->rekeyed_sa)
 	{
+		SIG(CHILD_REKEY_START, "rekeying CHILD_SA");
+		
 		switch (this->rekeyed_sa->get_state(this->rekeyed_sa))
 		{
 			case CHILD_REKEYING:
-				DBG1(SIG_DBG_IKE,
+				SIG(CHILD_REKEY_FAILED,
 					 "rekeying a CHILD_SA which is already rekeying, aborted");
 				return FAILED;
 			case CHILD_DELETING:
-				DBG1(SIG_DBG_IKE,
+				SIG(CHILD_REKEY_FAILED,
 					 "rekeying a CHILD_SA which is deleting, aborted");
 				return FAILED;
 			default:
 				break;
 		}
 		this->rekeyed_sa->set_state(this->rekeyed_sa, CHILD_REKEYING);
+	}
+	else
+	{
+		SIG(CHILD_UP_START, "creating CHILD_SA");
 	}
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
@@ -254,7 +267,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 			
 			if (this->policy == NULL)
 			{
-				DBG1(SIG_DBG_IKE, "no policy found to rekey "
+				SIG(IKE_REKEY_FAILED, "no policy found to rekey "
 					 "CHILD_SA with reqid %d", this->reqid);
 				return FAILED;
 			}
@@ -271,7 +284,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposals) != SUCCESS)
 		{
-			SIG(SIG_CHILD_FAILED, "could not install CHILD_SA, CHILD_SA creation aborted");
+			SIG(this->failsig, "could not install CHILD_SA, CHILD_SA creation failed");
 			return FAILED;
 		}
 		sa_payload = sa_payload_create_from_proposal_list(proposals);
@@ -285,7 +298,7 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		if (this->randomizer->allocate_pseudo_random_bytes(this->randomizer, 
 			NONCE_SIZE, &this->nonce_i) != SUCCESS)
 		{
-			SIG(SIG_CHILD_FAILED, "could not create nonce");
+			SIG(this->failsig, "could not create nonce, CHILD_SA creation failed");
 			return FAILED;
 		}
 		nonce_payload = nonce_payload_create();
@@ -340,23 +353,23 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 {
 	notify_type_t notify_type = notify_payload->get_notify_type(notify_payload);
 	
-	DBG2(SIG_DBG_IKE, "process notify type %N", notify_type_names, notify_type);
+	DBG2(DBG_IKE, "process notify type %N", notify_type_names, notify_type);
 
 	switch (notify_type)
 	{
 		case SINGLE_PAIR_REQUIRED:
 		{
-			SIG(SIG_CHILD_FAILED, "received a SINGLE_PAIR_REQUIRED notify");
+			SIG(this->failsig, "received a SINGLE_PAIR_REQUIRED notify");
 			return FAILED;
 		}
 		case TS_UNACCEPTABLE:
 		{
-			SIG(SIG_CHILD_FAILED, "received TS_UNACCEPTABLE notify");
+			SIG(this->failsig, "received TS_UNACCEPTABLE notify");
 			return FAILED;
 		}
 		case NO_PROPOSAL_CHOSEN:
 		{
-			SIG(SIG_CHILD_FAILED, "received NO_PROPOSAL_CHOSEN notify");
+			SIG(this->failsig, "received NO_PROPOSAL_CHOSEN notify");
 			return FAILED;
 		}
 		case REKEY_SA:
@@ -373,6 +386,7 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 					this->rekeyed_sa = this->ike_sa->get_child_sa(this->ike_sa, 
 																  protocol, spi,
 																  FALSE);
+					this->failsig = CHILD_REKEY_FAILED;
 					break;
 				default:
 					break;
@@ -383,13 +397,13 @@ static status_t process_notifys(private_create_child_sa_t *this, notify_payload_
 		{
 			if (notify_type < 16383)
 			{
-				SIG(SIG_CHILD_FAILED, "received %N notify error, CHILD_SA "
+				SIG(this->failsig, "received %N notify error, CHILD_SA "
 					 "creation failed", notify_type_names, notify_type);
-				return FAILED;	
+				return FAILED;
 			}
 			else
 			{
-				DBG1(SIG_DBG_IKE, "received %N notify, ignored",
+				DBG1(DBG_IKE, "received %N notify, ignored",
 					 notify_type_names, notify_type);
 				return SUCCESS;
 			}
@@ -515,7 +529,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	/* check message type */
 	if (request->get_exchange_type(request) != CREATE_CHILD_SA)
 	{
-		SIG(SIG_CHILD_FAILED, "CREATE_CHILD_SA response of invalid type, aborted");
+		DBG1(DBG_IKE, "CREATE_CHILD_SA response of invalid type, aborted");
 		return FAILED;
 	}
 	
@@ -525,7 +539,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
 		build_notify(NO_ADDITIONAL_SAS, CHUNK_INITIALIZER, response, TRUE);
-		SIG(SIG_CHILD_FAILED, "unable to create new CHILD_SAs, as rekeying in progress");
+		DBG1(DBG_IKE, "unable to create new CHILD_SAs, as rekeying in progress");
 		return FAILED;
 	}
 	
@@ -552,7 +566,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 				u_int8_t dh_buffer[] = {0x00, 0x00}; /* MODP_NONE */
 				chunk_t group = chunk_from_buf(dh_buffer);
 				build_notify(INVALID_KE_PAYLOAD, group, response, TRUE);
-				SIG(SIG_CHILD_FAILED, "CREATE_CHILD_SA used PFS, sending INVALID_KE_PAYLOAD");
+				DBG1(DBG_IKE, "CREATE_CHILD_SA used PFS, sending INVALID_KE_PAYLOAD");
 				return FAILED;
 			}
 			case NOTIFY:
@@ -567,7 +581,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			}
 			default:
 			{
-				DBG1(SIG_DBG_IKE, "ignoring %N payload",
+				DBG1(DBG_IKE, "ignoring %N payload",
 					 payload_type_names, payload->get_type(payload));
 				break;
 			}
@@ -575,11 +589,22 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	}
 	payloads->destroy(payloads);
 	
+	/* after processing the notify payloads, we know if this transaction is
+	 * for rekeying or for a new CHILD_SA. We can emit the signals now. */
+	if (this->rekeyed_sa)
+	{
+		SIG(CHILD_REKEY_START, "rekeying CHILD_SA");
+	}
+	else
+	{
+		SIG(CHILD_UP_START, "creating CHILD_SA");
+	}
+	
 	/* check if we have all payloads */
 	if (!(sa_request && nonce_request && tsi_request && tsr_request))
 	{
 		build_notify(INVALID_SYNTAX, CHUNK_INITIALIZER, response, TRUE);
-		SIG(SIG_CHILD_FAILED, "request message incomplete, no CHILD_SA created");
+		SIG(this->failsig, "request message incomplete, no CHILD_SA created");
 		return FAILED;
 	}
 	
@@ -589,6 +614,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			NONCE_SIZE, &this->nonce_r) != SUCCESS)
 		{
 			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
+			SIG(this->failsig, "nonce generation failed, no CHILD_SA created");
 			return FAILED;
 		}
 		nonce_response = nonce_payload_create();
@@ -619,7 +645,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		
 		if (this->policy == NULL)
 		{
-			SIG(SIG_CHILD_FAILED, "no acceptable policy found, sending TS_UNACCEPTABLE notify");
+			SIG(this->failsig, "no acceptable policy found, sending TS_UNACCEPTABLE notify");
 			build_notify(TS_UNACCEPTABLE, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
@@ -635,21 +661,21 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 		sa_response = sa_payload_create();
 		/* get proposals from request, and select one with ours */
 		proposal_list = sa_request->get_proposals(sa_request);
-		DBG2(SIG_DBG_IKE, "selecting proposals:");
+		DBG2(DBG_IKE, "selecting proposals:");
 		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
 		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 		
 		/* do we have a proposal? */
 		if (this->proposal == NULL)
 		{
-			SIG(SIG_CHILD_FAILED, "CHILD_SA proposals unacceptable, sending NO_PROPOSAL_CHOSEN notify");
+			SIG(this->failsig, "CHILD_SA proposals unacceptable, sending NO_PROPOSAL_CHOSEN notify");
 			build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
 		/* do we have traffic selectors? */
 		else if (this->tsi->get_count(this->tsi) == 0 || this->tsr->get_count(this->tsr) == 0)
 		{
-			SIG(SIG_CHILD_FAILED, "CHILD_SA traffic selectors unacceptable, sending TS_UNACCEPTABLE notify");
+			SIG(this->failsig, "CHILD_SA traffic selectors unacceptable, sending TS_UNACCEPTABLE notify");
 			build_notify(TS_UNACCEPTABLE, CHUNK_INITIALIZER, response, TRUE);
 			return FAILED;
 		}
@@ -670,7 +696,7 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 			if (install_child_sa(this, FALSE) != SUCCESS)
 			{
-				SIG(SIG_CHILD_FAILED, "installing CHILD_SA failed, sending NO_PROPOSAL_CHOSEN notify");
+				SIG(this->failsig, "installing CHILD_SA failed, sending NO_PROPOSAL_CHOSEN notify");
 				build_notify(NO_PROPOSAL_CHOSEN, CHUNK_INITIALIZER, response, TRUE);
 				return FAILED;
 			}
@@ -708,11 +734,16 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 				other->nonce_s = chunk_clone(this->nonce_r);
 			}
 		}
+		else
+		{
+			/* we only signal when no other transaction is rekeying */
+			SIG(CHILD_REKEY_SUCCESS, "CHILD_SA rekeyed");
+		}
 		this->rekeyed_sa->set_state(this->rekeyed_sa, CHILD_REKEYING);
 	}
 	else
 	{
-		SIG(SIG_CHILD_UP, "CHILD_SA created");
+		SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
 	}
 	return SUCCESS;
 }
@@ -737,7 +768,7 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != CREATE_CHILD_SA)
 	{
-		SIG(SIG_CHILD_FAILED, "CREATE_CHILD_SA response of invalid type, aborting");
+		SIG(this->failsig, "CREATE_CHILD_SA response of invalid type, aborting");
 		return FAILED;
 	}
 	
@@ -774,7 +805,7 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			}
 			default:
 			{
-				DBG1(SIG_DBG_IKE, "ignoring %N payload",
+				DBG1(DBG_IKE, "ignoring %N payload",
 					 payload_type_names, payload->get_type(payload));
 				break;
 			}
@@ -784,7 +815,7 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 	
 	if (!(sa_payload && nonce_payload && tsi_payload && tsr_payload))
 	{
-		SIG(SIG_CHILD_FAILED, "response message incomplete, no CHILD_SA built");
+		SIG(this->failsig, "response message incomplete, no CHILD_SA built");
 		return FAILED;
 	}
 	
@@ -817,16 +848,15 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			this->tsi->get_count(this->tsi) == 0 ||
 			this->tsr->get_count(this->tsr) == 0)
 		{
-			SIG(SIG_CHILD_FAILED, "CHILD_SA negotiation failed, no CHILD_SA built");
+			SIG(this->failsig, "CHILD_SA negotiation failed, no CHILD_SA built");
 			return FAILED;
 		}
 		new_child = this->child_sa;
 		if (install_child_sa(this, TRUE) != SUCCESS)
 		{
-			SIG(SIG_CHILD_FAILED, "installing CHILD_SA failed, no CHILD_SA built");
+			SIG(this->failsig, "installing CHILD_SA failed, no CHILD_SA built");
 			return FAILED;
 		}
-		SIG(SIG_CHILD_UP, "CHILD_SA created");
 	}
 	/* CHILD_SA successfully created. If the other peer initiated rekeying
 	 * in the meantime, we detect this by comparing the rekeying_transaction
@@ -856,14 +886,14 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			if (memcmp(this_lowest.ptr, this->nonce_s.ptr, 
 				min(this_lowest.len, this->nonce_s.len)) < 0)
 			{
-				DBG1(SIG_DBG_IKE, "detected simultaneous CHILD_SA rekeying, deleting ours");
+				DBG1(DBG_IKE, "detected simultaneous CHILD_SA rekeying, deleting ours");
 				this->lost = TRUE;
 			}
 			else
 			{
-				DBG1(SIG_DBG_IKE, "detected simultaneous CHILD_SA rekeying, but ours is preferred");
+				DBG1(DBG_IKE, "detected simultaneous CHILD_SA rekeying, but ours is preferred");
 			}
-		}	
+		}
 		/* delete the old SA if we have won the rekeying nonce compare*/
 		if (!this->lost)
 		{
@@ -871,10 +901,13 @@ static status_t conclude(private_create_child_sa_t *this, message_t *response,
 			delete_child_sa->set_child_sa(delete_child_sa, this->rekeyed_sa);
 			*next = (transaction_t*)delete_child_sa;
 		}
+		/* we send a rekey SUCCESS signal in any case. If the other transaction 
+		* detected our transaction, it did not send a signal. We do it for it. */
+		SIG(CHILD_REKEY_SUCCESS, "CHILD_SA rekeyed");
 	}
 	else
 	{
-		SIG(SIG_CHILD_UP, "CHILD_SA created");
+		SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
 	}
 	if (this->lost)
 	{
@@ -943,6 +976,7 @@ create_child_sa_t *create_child_sa_create(ike_sa_t *ike_sa)
 	this->tsi = NULL;
 	this->tsr = NULL;
 	this->randomizer = randomizer_create();
+	this->failsig = CHILD_UP_FAILED;
 	
 	return &this->public;
 }

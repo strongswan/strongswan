@@ -69,7 +69,7 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 	connection_t *candidate;
 	connection_t *found = NULL;
 	
-	DBG2(SIG_DBG_CFG, "looking for connection for host pair %H...%H",
+	DBG2(DBG_CFG, "looking for connection for host pair %H...%H",
 		 my_host, other_host);
 	
 	pthread_mutex_lock(&(this->mutex));
@@ -98,7 +98,7 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 				prio |= PRIO_ADDR_ANY;
 			}
 
-			DBG2(SIG_DBG_CFG, "candidate connection \"%s\": %H...%H (prio=%d)",
+			DBG2(DBG_CFG, "candidate connection \"%s\": %H...%H (prio=%d)",
 				 candidate->get_name(candidate),
 				 candidate_my_host, candidate_other_host, prio);
 
@@ -116,7 +116,7 @@ static connection_t *get_connection_by_hosts(private_local_connection_store_t *t
 		host_t *found_my_host    = found->get_my_host(found);
 		host_t *found_other_host = found->get_other_host(found);
 		
-		DBG2(SIG_DBG_CFG, "found matching connection \"%s\": %H...%H (prio=%d)",
+		DBG2(DBG_CFG, "found matching connection \"%s\": %H...%H (prio=%d)",
 			 found->get_name(found), found_my_host, found_other_host, best_prio);
 		
 		/* give out a new reference to it */

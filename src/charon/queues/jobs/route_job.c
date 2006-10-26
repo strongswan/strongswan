@@ -78,14 +78,14 @@ static status_t execute(private_route_job_t *this)
 	{
 		if (ike_sa->route(ike_sa, this->connection, this->policy) != SUCCESS)
 		{
-			DBG1(SIG_DBG_JOB, "routing failed");
+			DBG1(DBG_JOB, "routing failed");
 		}
 	}
 	else
 	{
 		if (ike_sa->unroute(ike_sa, this->policy) == DESTROY_ME)
 		{
-			DBG1(SIG_DBG_JOB, "removing IKE_SA, as last routed CHILD_SA unrouted");
+			DBG1(DBG_JOB, "removing IKE_SA, as last routed CHILD_SA unrouted");
 			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 			return DESTROY_ME;
 		}

@@ -147,13 +147,13 @@ static status_t verify(private_proposal_substructure_t *this)
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 2))
 	{
 		/* must be 0 or 2 */
-		DBG1(SIG_DBG_ENC, "inconsistent next payload");
+		DBG1(DBG_ENC, "inconsistent next payload");
 		return FAILED;
 	}
 	if (this->transforms_count != this->transforms->get_count(this->transforms))
 	{
 		/* must be the same! */
-		DBG1(SIG_DBG_ENC, "transform count invalid");
+		DBG1(DBG_ENC, "transform count invalid");
 		return FAILED;
 	}
 
@@ -163,7 +163,7 @@ static status_t verify(private_proposal_substructure_t *this)
 		case PROTO_ESP:
 			if (this->spi.len != 4)
 			{
-				DBG1(SIG_DBG_ENC, "invalid SPI length in %N proposal",
+				DBG1(DBG_ENC, "invalid SPI length in %N proposal",
 								  protocol_id_names, this->protocol_id);
 				return FAILED;
 			}
@@ -171,18 +171,18 @@ static status_t verify(private_proposal_substructure_t *this)
 		case PROTO_IKE:
 			if (this->spi.len != 0 && this->spi.len  != 8)
 			{
-				DBG1(SIG_DBG_ENC, "invalid SPI length in IKE proposal");
+				DBG1(DBG_ENC, "invalid SPI length in IKE proposal");
 				return FAILED;
 			}
 			break;
 		default:
-			DBG1(SIG_DBG_ENC, "invalid proposal protocol (%d)", this->protocol_id);
+			DBG1(DBG_ENC, "invalid proposal protocol (%d)", this->protocol_id);
 			return FAILED;
 	}
 	if ((this->protocol_id == 0) || (this->protocol_id >= 4))
 	{
 		/* reserved are not supported */
-		DBG1(SIG_DBG_ENC, "invalid protocol");
+		DBG1(DBG_ENC, "invalid protocol");
 		return FAILED;
 	}
 	
@@ -192,7 +192,7 @@ static status_t verify(private_proposal_substructure_t *this)
 		status = current_transform->verify(current_transform);
 		if (status != SUCCESS)
 		{
-			DBG1(SIG_DBG_ENC, "TRANSFORM_SUBSTRUCTURE verification failed");
+			DBG1(DBG_ENC, "TRANSFORM_SUBSTRUCTURE verification failed");
 			break;
 		}
 	}

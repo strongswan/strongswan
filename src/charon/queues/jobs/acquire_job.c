@@ -61,7 +61,7 @@ static status_t execute(private_acquire_job_t *this)
 													   this->reqid);
 	if (ike_sa == NULL)
 	{
-		DBG2(SIG_DBG_JOB, "CHILD_SA with reqid %d not found for acquiring",
+		DBG2(DBG_JOB, "CHILD_SA with reqid %d not found for acquiring",
 			 this->reqid);
 		return DESTROY_ME;
 	}

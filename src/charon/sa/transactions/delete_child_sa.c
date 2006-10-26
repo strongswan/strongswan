@@ -128,7 +128,7 @@ static status_t get_request(private_delete_child_sa_t *this, message_t **result)
 		spi = this->child_sa->get_spi(this->child_sa, TRUE);
 		delete_payload = delete_payload_create(protocol);
 		
-		DBG1(SIG_DBG_IKE, "created DELETE payload for %N CHILD_SA with SPI 0x%x",
+		DBG1(DBG_IKE, "created DELETE payload for %N CHILD_SA with SPI 0x%x",
 			 protocol_id_names, protocol, htonl(spi));
 		delete_payload->add_spi(delete_payload, spi);
 		request->add_payload(request, (payload_t*)delete_payload);
@@ -153,7 +153,7 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 	protocol = delete_request->get_protocol_id(delete_request);
 	if (protocol != PROTO_ESP && protocol != PROTO_AH)
 	{
-		DBG1(SIG_DBG_IKE, "CHILD_SA delete response contained unexpected protocol");
+		DBG1(DBG_IKE, "CHILD_SA delete response contained unexpected protocol");
 		return FAILED;
 	}
 	
@@ -177,7 +177,7 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 			
 			child_sa->set_state(child_sa, CHILD_DELETING);
 			
-			DBG1(SIG_DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, deleting",
+			DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, deleting",
 				 protocol_id_names, protocol, ntohl(spi));
 			
 			rekey = child_sa->get_rekeying_transaction(child_sa);
@@ -200,7 +200,7 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 		}
 		else
 		{
-			DBG1(SIG_DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, but no such SA",
+			DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, but no such SA",
 				 protocol_id_names, protocol, ntohl(spi));
 		}
 	}
@@ -243,7 +243,7 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 	
 	if (request->get_exchange_type(request) != INFORMATIONAL)
 	{
-		DBG1(SIG_DBG_IKE, "INFORMATIONAL response of invalid type, aborting");
+		DBG1(DBG_IKE, "INFORMATIONAL response of invalid type, aborting");
 		return FAILED;
 	}
 	
@@ -253,7 +253,7 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING ||
 		this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
-		DBG1(SIG_DBG_IKE, "unable to delete CHILD_SA, as rekeying in progress");
+		DBG1(DBG_IKE, "unable to delete CHILD_SA, as rekeying in progress");
 		return FAILED;
 	}
 	
@@ -270,7 +270,7 @@ static status_t get_response(private_delete_child_sa_t *this, message_t *request
 			}
 			default:
 			{
-				DBG2(SIG_DBG_IKE, "ignoring payload %N",
+				DBG2(DBG_IKE, "ignoring payload %N",
 					 payload_type_names, payload->get_type(payload));
 				break;
 			}
@@ -292,7 +292,7 @@ static status_t conclude(private_delete_child_sa_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != INFORMATIONAL)
 	{
-		DBG1(SIG_DBG_IKE, "INFORMATIONAL response of invalid type, aborting");
+		DBG1(DBG_IKE, "INFORMATIONAL response of invalid type, aborting");
 		return FAILED;
 	}
 	
@@ -309,7 +309,7 @@ static status_t conclude(private_delete_child_sa_t *this, message_t *response,
 			}
 			default:
 			{
-				DBG1(SIG_DBG_IKE, "ignoring payload %N",
+				DBG1(DBG_IKE, "ignoring payload %N",
 					 payload_type_names, payload->get_type(payload));
 				break;
 			}

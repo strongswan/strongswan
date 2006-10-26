@@ -431,7 +431,6 @@ static void update_hosts(private_ike_sa_t *this, host_t *me, host_t *other)
  */
 static void dpd_detected(private_ike_sa_t *this)
 {
-	/* check for childrens with dpdaction=hold */
 	connection_t *connection = NULL;
 	policy_t *policy;
 	linked_list_t *my_ts, *other_ts;
@@ -439,10 +438,11 @@ static void dpd_detected(private_ike_sa_t *this)
 	dpd_action_t action;
 	job_t *job;
 	
-	DBG2(SIG_DBG_IKE, "dead peer detected, handling CHILD_SAs dpd action");
+	DBG2(DBG_IKE, "dead peer detected, handling CHILD_SAs dpd action");
 	
+	/* check for childrens with dpdaction = hold */
 	while(this->child_sas->remove_first(this->child_sas,
-		  									(void**)&child_sa) == SUCCESS)
+		  								(void**)&child_sa) == SUCCESS)
 	{
 		/* get the policy which belongs to this CHILD */
 		my_ts = child_sa->get_my_traffic_selectors(child_sa);
@@ -453,13 +453,13 @@ static void dpd_detected(private_ike_sa_t *this)
 											  this->my_host, this->other_host);
 		if (policy == NULL)
 		{
-			SIG(SIG_CHILD_FAILED, "no policy for CHILD to handle DPD");
+			DBG1(DBG_IKE, "no policy for CHILD to handle DPD");
 			continue;
 		}
 		
 		action = policy->get_dpd_action(policy);
 		/* get a connection for further actions */
-		if (connection == NULL && 
+		if (connection == NULL &&
 			(action == DPD_ROUTE || action == DPD_RESTART))
 		{
 			connection = charon->connections->get_connection_by_hosts(
@@ -467,12 +467,12 @@ static void dpd_detected(private_ike_sa_t *this)
 											this->my_host, this->other_host);
 			if (connection == NULL)
 			{
-				SIG(SIG_IKE_FAILED, "no connection found to handle DPD");
+				SIG(IKE_UP_FAILED, "no connection found to handle DPD");
 				break;
 			}
 		}
 		
-		DBG1(SIG_DBG_IKE, "dpd action for %s is %N",
+		DBG1(DBG_IKE, "dpd action for %s is %N",
 			 policy->get_name(policy), dpd_action_names, action);
 		
 		switch (action)
@@ -516,8 +516,8 @@ static status_t transmit_request(private_ike_sa_t *this)
 															this->retrans_sequences);
 	if (timeout == 0)
 	{
-		SIG(SIG_IKE_FAILED, "giving up after %d retransmits, deleting IKE_SA",
-			transmitted - 1);
+		DBG1(DBG_IKE, "giving up after %d retransmits, deleting IKE_SA",
+			 transmitted - 1);
 		dpd_detected(this);
 		return DESTROY_ME;
 	}
@@ -535,13 +535,13 @@ static status_t transmit_request(private_ike_sa_t *this)
 		status = request->generate(request, this->crypter_out, this->signer_out, &packet);
 		if (status != SUCCESS)
 		{
-			DBG1(SIG_DBG_IKE, "request generation failed. transaction discarded");
+			DBG1(DBG_IKE, "request generation failed. transaction discarded");
 			return FAILED;
 		}
 	}
 	else
 	{
-		DBG1(SIG_DBG_IKE, "sending retransmit %d for %N request with messageID %d",
+		DBG1(DBG_IKE, "sending retransmit %d for %N request with messageID %d",
 			transmitted, exchange_type_names, request->get_exchange_type(request),
 			message_id);
 		packet = request->get_packet(request);
@@ -649,7 +649,7 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 		if (last_mid == request_mid)
 		{
 			/* retransmit detected */
-			DBG1(SIG_DBG_IKE, "received retransmitted request for message "
+			DBG1(DBG_IKE, "received retransmitted request for message "
 				 "ID %d, retransmitting response", request_mid);
 			last->get_response(last, request, &response, &this->transaction_in_next);
 			packet = response->get_packet(response);
@@ -661,14 +661,14 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 		if (last_mid > request_mid)
 		{
 			/* something seriously wrong here, message id may not decrease */
-			DBG1(SIG_DBG_IKE, "received request with message ID %d, "
+			DBG1(DBG_IKE, "received request with message ID %d, "
 				 "excepted %d, ingored", request_mid, last_mid + 1);
 			return FAILED;
 		}
 		/* we allow jumps in message IDs, as long as they are incremental */
 		if (last_mid + 1 < request_mid)
 		{
-			DBG1(SIG_DBG_IKE, "received request with message ID %d, excepted %d",
+			DBG1(DBG_IKE, "received request with message ID %d, excepted %d",
 				 request_mid, last_mid + 1);
 		}
 	}
@@ -677,7 +677,7 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 		if (request_mid != 0)
 		{
 			/* warn, but allow it */
-			DBG1(SIG_DBG_IKE, "first received request has message ID %d, "
+			DBG1(DBG_IKE, "first received request has message ID %d, "
 				 "excepted 0", request_mid);
 		}
 	}
@@ -693,7 +693,7 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 		current = transaction_create(&this->public, request);
 		if (current == NULL)
 		{
-			DBG1(SIG_DBG_IKE, "no idea how to handle received message (exchange"
+			DBG1(DBG_IKE, "no idea how to handle received message (exchange"
 				 " type %d), ignored", request->get_exchange_type(request));
 			return FAILED;
 		}
@@ -703,7 +703,7 @@ static status_t process_request(private_ike_sa_t *this, message_t *request)
 	status = current->get_response(current, request, &response, &this->transaction_in_next);
 	if (response->generate(response, this->crypter_out, this->signer_out, &packet) != SUCCESS)
 	{
-		DBG1(SIG_DBG_IKE, "response generation failed, discarding transaction");
+		DBG1(DBG_IKE, "response generation failed, discarding transaction");
 		current->destroy(current);
 		return FAILED;
 	}
@@ -740,7 +740,7 @@ static status_t process_response(private_ike_sa_t *this, message_t *response)
 	if (current == NULL ||
 		current->get_message_id(current) != response->get_message_id(response))
 	{
-		DBG1(SIG_DBG_IKE, "received response with message ID %d "
+		DBG1(DBG_IKE, "received response with message ID %d "
 			 "not requested, ignored", response->get_message_id(response));
 		return FAILED;
 	}
@@ -816,32 +816,32 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 			switch (status)
 			{
 				case NOT_SUPPORTED:
-					DBG1(SIG_DBG_IKE, "ciritcal unknown payloads found");
+					DBG1(DBG_IKE, "ciritcal unknown payloads found");
 					if (is_request)
 					{
 						send_notify_response(this, message, UNSUPPORTED_CRITICAL_PAYLOAD);
 					}
 					break;
 				case PARSE_ERROR:
-					DBG1(SIG_DBG_IKE, "message parsing failed");
+					DBG1(DBG_IKE, "message parsing failed");
 					if (is_request)
 					{
 						send_notify_response(this, message, INVALID_SYNTAX);
 					}
 					break;
 				case VERIFY_ERROR:
-					DBG1(SIG_DBG_IKE, "message verification failed");
+					DBG1(DBG_IKE, "message verification failed");
 					if (is_request)
 					{
 						send_notify_response(this, message, INVALID_SYNTAX);
 					}
 					break;
 				case FAILED:
-					DBG1(SIG_DBG_IKE, "integrity check failed");
+					DBG1(DBG_IKE, "integrity check failed");
 					/* ignored */
 					break;
 				case INVALID_STATE:
-					DBG1(SIG_DBG_IKE, "found encrypted message, but no keys available");
+					DBG1(DBG_IKE, "found encrypted message, but no keys available");
 					if (is_request)
 					{
 						send_notify_response(this, message, INVALID_SYNTAX);
@@ -850,7 +850,7 @@ static status_t process_message(private_ike_sa_t *this, message_t *message)
 					break;
 			}
 		}
-		DBG1(SIG_DBG_IKE, "%N %s with message ID %d processing failed",
+		DBG1(DBG_IKE, "%N %s with message ID %d processing failed",
 			 exchange_type_names, message->get_exchange_type(message),
 			 message->get_request(message) ? "request" : "response",
 			 message->get_message_id(message));
@@ -893,7 +893,7 @@ static status_t initiate(private_ike_sa_t *this,
 			 */
 			ike_sa_init_t *ike_sa_init;
 			
-			SIG(SIG_INITIATE, "initiating new IKE_SA for CHILD_SA");
+			DBG2(DBG_IKE, "initiating new IKE_SA for CHILD_SA");
 			DESTROY_IF(this->my_host);
 			this->my_host = connection->get_my_host(connection);
 			this->my_host = this->my_host->clone(this->my_host);
@@ -905,10 +905,8 @@ static status_t initiate(private_ike_sa_t *this,
 			
 			if (this->other_host->is_anyaddr(this->other_host))
 			{
-				SIG(SIG_IKE_FAILED,
-					"can not initiate a connection to %%any, aborting");
-				SIG(SIG_CHILD_FAILED,
-					"unable to create an IKE_SA to instantiate policy");
+				SIG(IKE_UP_START, "establishing new IKE_SA for CHILD_SA");
+				SIG(IKE_UP_FAILED, "can not initiate a connection to %%any, aborting");
 				policy->destroy(policy);
 				connection->destroy(connection);
 				return DESTROY_ME;
@@ -924,9 +922,9 @@ static status_t initiate(private_ike_sa_t *this,
 		{
 			/* if we are in DELETING/REKEYING, we deny set up of a policy.
 			 * TODO: would it make sense to queue the transaction and adopt
-			 * it all transactions to the new IKE_SA? */
-			SIG(SIG_CHILD_FAILED,
-				"creating CHILD_SA discarded, as IKE_SA is in state %N",
+			 * all transactions to the new IKE_SA? */
+			SIG(IKE_UP_START, "creating CHILD_SA in existing IKE_SA");
+			SIG(IKE_UP_FAILED, "creating CHILD_SA discarded, as IKE_SA is in state %N",
 				ike_sa_state_names, this->state);
 			policy->destroy(policy);
 			connection->destroy(connection);
@@ -942,7 +940,7 @@ static status_t initiate(private_ike_sa_t *this,
 			 */
 			create_child_sa_t *create_child;
 			
-			SIG(SIG_INITIATE, "creating CHILD_SA in existing IKE_SA");
+			DBG1(DBG_IKE, "creating CHILD_SA in existing IKE_SA");
 			connection->destroy(connection);
 			create_child = create_child_sa_create(&this->public);
 			create_child->set_policy(create_child, policy);
@@ -965,7 +963,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	
 	if (this->state == IKE_DELETING)
 	{
-		SIG(SIG_CHILD_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG(CHILD_UP_START, "acquiring CHILD_SA on kernel request");
+		SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
 			"IKE_SA is deleting", reqid);
 		return FAILED;
 	}
@@ -983,7 +982,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 	iterator->destroy(iterator);
 	if (!child_sa)
 	{
-		SIG(SIG_CHILD_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG(CHILD_UP_START, "acquiring CHILD_SA on kernel request");
+		SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
 			"CHILD_SA not found", reqid);
 		return FAILED;
 	}
@@ -996,7 +996,8 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 										  this->my_host, this->other_host);
 	if (policy == NULL)
 	{
-		SIG(SIG_CHILD_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+		SIG(CHILD_UP_START, "acquiring CHILD_SA with reqid %d", reqid);
+		SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
 			"no policy found", reqid);
 		return FAILED;
 	}
@@ -1007,19 +1008,20 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		{
 			ike_sa_init_t *ike_sa_init;
 			
-			DBG1(SIG_DBG_CHD,
-				 "acquiring CHILD_SA with reqid %d, IKE_SA setup needed", reqid);
-			
 			connection = charon->connections->get_connection_by_hosts(
 					charon->connections, this->my_host, this->other_host);
 			
 			if (connection == NULL)
 			{
-				SIG(SIG_CHILD_FAILED, "acquiring CHILD_SA "
-					"(reqid %d) failed: no connection found for IKE_SA", reqid);
+				SIG(CHILD_UP_START, "acquiring CHILD_SA with reqid %d", reqid);
+				SIG(CHILD_UP_FAILED, "acquiring CHILD_SA (reqid %d) failed: "
+					"no connection found to establsih IKE_SA", reqid);
 				policy->destroy(policy);
 				return FAILED;
 			}
+			
+			DBG1(DBG_IKE, "establishing IKE_SA to acquire CHILD_SA "
+				 "with reqid %d", reqid);
 			
 			this->message_id_out = 1;
 			ike_sa_init = ike_sa_init_create(&this->public);
@@ -1033,7 +1035,7 @@ static status_t acquire(private_ike_sa_t *this, u_int32_t reqid)
 		{
 			create_child_sa_t *create_child;
 			
-			DBG1(SIG_DBG_CHD, "acquiring CHILD_SA with reqid %d", reqid);
+			DBG1(DBG_CHD, "acquiring CHILD_SA with reqid %d", reqid);
 			
 			create_child = create_child_sa_create(&this->public);
 			create_child->set_policy(create_child, policy);
@@ -1086,6 +1088,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	linked_list_t *my_ts, *other_ts;
 	status_t status;
 	
+	SIG(CHILD_ROUTE_START, "routing CHILD_SA");
+	
 	/* check if not already routed*/
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
 	while (iterator->iterate(iterator, (void**)&child_sa))
@@ -1106,8 +1110,7 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 				iterator->destroy(iterator);
 				my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
 				other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
-				SIG(SIG_CHILD_FAILED, "CHILD_SA with such a policy "
-					"already routed");
+				SIG(CHILD_ROUTE_FAILED, "CHILD_SA with such a policy already routed");
 				return FAILED;
 			}
 			my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
@@ -1120,7 +1123,7 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	{
 		case IKE_CREATED:
 		case IKE_CONNECTING:
-			/* we update IKE_SA information as good as possible, 
+			/* we update IKE_SA information as good as possible,
 			 * this allows us to set up the SA later when an acquire comes in. */
 			if (this->my_id->get_type(this->my_id) == ID_ANY)
 			{
@@ -1156,8 +1159,8 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 			 * adopted by the new IKE_SA */
 			break;
 		case IKE_DELETING:
-			SIG(SIG_CHILD_FAILED, "CHILD_SA with such a policy "
-				"already routed");
+			/* TODO: hanlde this case, create a new IKE_SA and route CHILD_SA */
+			SIG(CHILD_ROUTE_FAILED, "unable to route CHILD_SA, as its IKE_SA gets deleted");
 			return FAILED;
 	}
 
@@ -1173,8 +1176,7 @@ static status_t route(private_ike_sa_t *this, connection_t *connection, policy_t
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 	this->child_sas->insert_last(this->child_sas, child_sa);
-	SIG(SIG_CHILD_ROUTE,
-		"CHILD_SA routed: %R...%R", my_ts, other_ts);
+	SIG(CHILD_ROUTE_SUCCESS, "CHILD_SA routed");
 	return status;
 }
 
@@ -1185,7 +1187,10 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 {
 	iterator_t *iterator;
 	child_sa_t *child_sa = NULL;
+	bool found = FALSE;
 	linked_list_t *my_ts, *other_ts, *my_ts_conf, *other_ts_conf;
+	
+	SIG(CHILD_UNROUTE_START, "unrouting CHILD_SA");
 	
 	/* find CHILD_SA in ROUTED state */
 	iterator = this->child_sas->create_iterator(this->child_sas, TRUE);
@@ -1203,10 +1208,11 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 				ts_list_equals(other_ts, other_ts_conf))
 			{
 				iterator->remove(iterator);
-				SIG(SIG_CHILD_UNROUTE, "CHILD_SA unrouted");
+				SIG(CHILD_UNROUTE_SUCCESS, "CHILD_SA unrouted");
 				child_sa->destroy(child_sa);
 				my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
 				other_ts_conf->destroy_offset(other_ts_conf, offsetof(traffic_selector_t, destroy));
+				found = TRUE;
 				break;
 			}
 			my_ts_conf->destroy_offset(my_ts_conf, offsetof(traffic_selector_t, destroy));
@@ -1214,6 +1220,12 @@ static status_t unroute(private_ike_sa_t *this, policy_t *policy)
 		}
 	}
 	iterator->destroy(iterator);
+	
+	if (!found)
+	{
+		SIG(CHILD_UNROUTE_FAILED, "CHILD_SA to unroute not found");
+		return FAILED;
+	}
 	/* if we are not established, and we have no more routed childs, remove whole SA */
 	if (this->state == IKE_CREATED &&
 		this->child_sas->get_count(this->child_sas) == 0)
@@ -1253,7 +1265,7 @@ static status_t send_dpd(private_ike_sa_t *this)
 		{
 			/* to long ago, initiate dead peer detection */
 			dead_peer_detection_t *dpd;
-			DBG1(SIG_DBG_IKE, "sending DPD request");
+			DBG1(DBG_IKE, "sending DPD request");
 			dpd = dead_peer_detection_create(&this->public);
 			queue_transaction(this, (transaction_t*)dpd, FALSE);
 			diff = 0;
@@ -1293,7 +1305,7 @@ static void send_keepalive(private_ike_sa_t *this)
 		data.len = 1;
 		packet->set_data(packet, data);
 		charon->send_queue->add(charon->send_queue, packet);
-		DBG1(SIG_DBG_IKE, "sending keep alive");
+		DBG1(DBG_IKE, "sending keep alive");
 		diff = 0;
 	}
 	job = send_keepalive_job_create(this->ike_sa_id);
@@ -1314,7 +1326,7 @@ static ike_sa_state_t get_state(private_ike_sa_t *this)
  */
 static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 {
-	DBG1(SIG_DBG_IKE, "state change: %N => %N",
+	DBG1(DBG_IKE, "IKE_SA state change: %N => %N",
 		 ike_sa_state_names, this->state,
 		 ike_sa_state_names, state);
 	
@@ -1323,9 +1335,6 @@ static void set_state(private_ike_sa_t *this, ike_sa_state_t state)
 		this->time.established = time(NULL);
 		/* start DPD checks */
 		send_dpd(this);
-		
-		SIG(SIG_IKE_UP, "IKE_SA established: %H[%D]...%H[%D]",
-		    this->my_host, this->my_id, this->other_host, this->other_id);
 	}
 	
 	this->state = state;
@@ -1426,19 +1435,19 @@ static status_t derive_keys(private_ike_sa_t *this,
 	/* Create SAs general purpose PRF first, we may use it here */
 	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo))
 	{
-		DBG1(SIG_DBG_IKE, "key derivation failed: no PSEUDO_RANDOM_FUNCTION");;
+		DBG1(DBG_IKE, "key derivation failed: no PSEUDO_RANDOM_FUNCTION");;
 		return FAILED;
 	}
 	this->prf = prf_create(algo->algorithm);
 	if (this->prf == NULL)
 	{
-		DBG1(SIG_DBG_IKE, "key derivation failed: PSEUDO_RANDOM_FUNCTION "
+		DBG1(DBG_IKE, "key derivation failed: PSEUDO_RANDOM_FUNCTION "
 			 "%N not supported!", pseudo_random_function_names, algo->algorithm);
 		return FAILED;
 	}
 	
 	dh->get_shared_secret(dh, &secret);
-	DBG4(SIG_DBG_IKE, "shared Diffie Hellman secret %B", &secret);
+	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
 	nonces = chunk_cat("cc", nonce_i, nonce_r);
 	*((u_int64_t*)spi_i.ptr) = this->ike_sa_id->get_initiator_spi(this->ike_sa_id);
 	*((u_int64_t*)spi_r.ptr) = this->ike_sa_id->get_responder_spi(this->ike_sa_id);
@@ -1446,14 +1455,14 @@ static status_t derive_keys(private_ike_sa_t *this,
 	
 	/* KEYMAT = prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr) 
 	 *
-	 * if we are rekeying, SKEYSEED built on another way 
+	 * if we are rekeying, SKEYSEED is built on another way
 	 */
 	if (child_prf == NULL) /* not rekeying */
 	{
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
 		this->prf->set_key(this->prf, nonces);
 		this->prf->allocate_bytes(this->prf, secret, &skeyseed);
-		DBG4(SIG_DBG_IKE, "SKEYSEED %B", &skeyseed);
+		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		this->prf->set_key(this->prf, skeyseed);
 		chunk_free(&skeyseed);
 		chunk_free(&secret);
@@ -1465,7 +1474,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 		 * use OLD SAs PRF functions for both prf_plus and prf */
 		secret = chunk_cat("mc", secret, nonces);
 		child_prf->allocate_bytes(child_prf, secret, &skeyseed);
-		DBG4(SIG_DBG_IKE, "SKEYSEED %B", &skeyseed);
+		DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 		old_prf->set_key(old_prf, skeyseed);
 		chunk_free(&skeyseed);
 		chunk_free(&secret);
@@ -1481,33 +1490,33 @@ static status_t derive_keys(private_ike_sa_t *this,
 	this->child_prf = prf_create(algo->algorithm);
 	key_size = this->child_prf->get_key_size(this->child_prf);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(SIG_DBG_IKE, "Sk_d secret %B", &key);
+	DBG4(DBG_IKE, "Sk_d secret %B", &key);
 	this->child_prf->set_key(this->child_prf, key);
 	chunk_free(&key);
 	
 	/* SK_ai/SK_ar used for integrity protection => signer_in/signer_out */
 	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &algo))
 	{
-		DBG1(SIG_DBG_IKE, "key derivation failed: no INTEGRITY_ALGORITHM");
+		DBG1(DBG_IKE, "key derivation failed: no INTEGRITY_ALGORITHM");
 		return FAILED;
 	}
 	signer_i = signer_create(algo->algorithm);
 	signer_r = signer_create(algo->algorithm);
 	if (signer_i == NULL || signer_r == NULL)
 	{
-		DBG1(SIG_DBG_IKE, "key derivation failed: INTEGRITY_ALGORITHM "
+		DBG1(DBG_IKE, "key derivation failed: INTEGRITY_ALGORITHM "
 			"%N not supported!", integrity_algorithm_names ,algo->algorithm);
 		return FAILED;
 	}
 	key_size = signer_i->get_key_size(signer_i);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(SIG_DBG_IKE, "Sk_ai secret %B", &key);
+	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
 	signer_i->set_key(signer_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(SIG_DBG_IKE, "Sk_ar secret %B", &key);
+	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
 	signer_r->set_key(signer_r, key);
 	chunk_free(&key);
 	
@@ -1525,14 +1534,14 @@ static status_t derive_keys(private_ike_sa_t *this,
 	/* SK_ei/SK_er used for encryption => crypter_in/crypter_out */
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &algo))
 	{
-		DBG1(SIG_DBG_IKE, "key derivation failed: no ENCRYPTION_ALGORITHM");
+		DBG1(DBG_IKE, "key derivation failed: no ENCRYPTION_ALGORITHM");
 		return FAILED;
 	}
 	crypter_i = crypter_create(algo->algorithm, algo->key_size / 8);
 	crypter_r = crypter_create(algo->algorithm, algo->key_size / 8);
 	if (crypter_i == NULL || crypter_r == NULL)
 	{
-		DBG1(SIG_DBG_IKE, "key derivation failed: ENCRYPTION_ALGORITHM "
+		DBG1(DBG_IKE, "key derivation failed: ENCRYPTION_ALGORITHM "
 			"%N (key size %d) not supported!",
 			encryption_algorithm_names, algo->algorithm, algo->key_size);
 		return FAILED;
@@ -1540,12 +1549,12 @@ static status_t derive_keys(private_ike_sa_t *this,
 	key_size = crypter_i->get_key_size(crypter_i);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(SIG_DBG_IKE, "Sk_ei secret %B", &key);
+	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
 	crypter_i->set_key(crypter_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(SIG_DBG_IKE, "Sk_er secret %B", &key);
+	DBG4(DBG_IKE, "Sk_er secret %B", &key);
 	crypter_r->set_key(crypter_r, key);
 	chunk_free(&key);
 	
@@ -1567,12 +1576,12 @@ static status_t derive_keys(private_ike_sa_t *this,
 	
 	key_size = this->prf_auth_i->get_key_size(this->prf_auth_i);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(SIG_DBG_IKE, "Sk_pi secret %B", &key);
+	DBG4(DBG_IKE, "Sk_pi secret %B", &key);
 	this->prf_auth_i->set_key(this->prf_auth_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
-	DBG4(SIG_DBG_IKE, "Sk_pr secret %B", &key);
+	DBG4(DBG_IKE, "Sk_pr secret %B", &key);
 	this->prf_auth_r->set_key(this->prf_auth_r, key);
 	chunk_free(&key);
 	
@@ -1580,7 +1589,6 @@ static status_t derive_keys(private_ike_sa_t *this,
 	prf_plus->destroy(prf_plus);
 	
 	return SUCCESS;
-	
 }
 
 /**
@@ -1738,13 +1746,13 @@ static status_t rekey(private_ike_sa_t *this)
 {
 	rekey_ike_sa_t *rekey_ike_sa;
 	
-	DBG1(SIG_DBG_IKE, "rekeying IKE_SA between %H[%D]..%H[%D]",
-					  this->my_host, this->my_id,
-					  this->other_host, this->other_id);
+	DBG1(DBG_IKE, "rekeying IKE_SA between %H[%D]..%H[%D]",
+		 this->my_host, this->my_id, this->other_host, this->other_id);
 	
 	if (this->state != IKE_ESTABLISHED)
 	{
-		SIG(SIG_IKE_FAILED, "unable to rekey IKE_SA in state %N",
+		SIG(IKE_REKEY_START, "rekeying IKE_SA");
+		SIG(IKE_REKEY_FAILED, "unable to rekey IKE_SA in state %N",
 			ike_sa_state_names, this->state);
 		return FAILED;
 	}
@@ -1791,6 +1799,12 @@ static status_t delete_(private_ike_sa_t *this)
 	switch (this->state)
 	{
 		case IKE_CONNECTING:
+		{
+			/* this may happen if a half open IKE_SA gets closed after a
+			 * timeout. We signal here UP_FAILED to complete the SIG schema */
+			SIG(IKE_UP_FAILED, "half open IKE_SA deleted after timeout");
+			return DESTROY_ME;
+		}
 		case IKE_ESTABLISHED:
 		{
 			delete_ike_sa_t *delete_ike_sa;
@@ -1807,6 +1821,9 @@ static status_t delete_(private_ike_sa_t *this)
 		case IKE_DELETING:
 		default:
 		{
+			SIG(IKE_DOWN_START, "closing IKE_SA");
+			SIG(IKE_DOWN_SUCCESS, "IKE_SA closed between %H[%D]...%H[%D]",
+				this->my_host, this->my_id, this->other_host, this->other_id);
 			return DESTROY_ME;
 		}
 	}
@@ -1823,7 +1840,7 @@ static u_int32_t get_next_message_id (private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.is_natt_enabled.
  */
-static bool is_natt_enabled (private_ike_sa_t *this)
+static bool is_natt_enabled(private_ike_sa_t *this)
 {
 	return this->nat_here || this->nat_there;
 }
@@ -1831,18 +1848,18 @@ static bool is_natt_enabled (private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.enable_natt.
  */
-static void enable_natt (private_ike_sa_t *this, bool local)
+static void enable_natt(private_ike_sa_t *this, bool local)
 {
 	if (local)
 	{
-		DBG1(SIG_DBG_IKE, "local host is behind NAT, using NAT-T, "
+		DBG1(DBG_IKE, "local host is behind NAT, using NAT-T, "
 			"scheduled keep alives");
 		this->nat_here = TRUE;
 		send_keepalive(this);
 	}
 	else
 	{
-		DBG1(SIG_DBG_IKE, "remote host is behind NAT, using NAT-T");
+		DBG1(DBG_IKE, "remote host is behind NAT, using NAT-T");
 		this->nat_there = TRUE;
 	}
 }
@@ -1905,9 +1922,6 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->child_prf);
 	DESTROY_IF(this->prf_auth_i);
 	DESTROY_IF(this->prf_auth_r);
-
-	DBG1(SIG_DBG_IKE, "IKE_SA deleted between %H[%D]...%H[%D]",
-		 this->my_host, this->my_id, this->other_host, this->other_id);
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -1997,7 +2011,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->rekeying_transaction = NULL;
 	this->state = IKE_CREATED;
 	this->message_id_out = 0;
-	/* set to NOW, as when we rekey an existing IKE_SA no message is exchanged */
+	/* set to NOW, as when we rekey an existing IKE_SA no message is exchanged
+	 * and inbound therefore uninitialized */
 	this->time.inbound = this->time.outbound = time(NULL);
 	this->time.established = 0;
 	this->time.rekey = 0;

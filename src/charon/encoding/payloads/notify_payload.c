@@ -196,13 +196,13 @@ static status_t verify(private_notify_payload_t *this)
 		case PROTO_ESP:
 			if (this->spi.len != 4)
 			{
-				DBG1(SIG_DBG_ENC, "Invalid SPI size for %N", 
+				DBG1(DBG_ENC, "Invalid SPI size for %N", 
 					 protocol_id_names, this->protocol_id);
 				return FAILED;
 			}
 			break;
 		default:
-			DBG1(SIG_DBG_ENC, "Unknown protocol (%d)", this->protocol_id);
+			DBG1(DBG_ENC, "Unknown protocol (%d)", this->protocol_id);
 			return FAILED;
 	}
 	
@@ -229,7 +229,7 @@ static status_t verify(private_notify_payload_t *this)
 				case MODP_8192_BIT:
 					break;
 				default:
-					DBG1(SIG_DBG_ENC, "Bad DH group (%d)", dh_group);
+					DBG1(DBG_ENC, "Bad DH group (%d)", dh_group);
 					return FAILED;
 			}
 			break;
@@ -239,7 +239,7 @@ static status_t verify(private_notify_payload_t *this)
 		{
 			if (this->notification_data.len != HASH_SIZE_SHA1)
 			{
-				DBG1(SIG_DBG_ENC, "invalid %N notify length",
+				DBG1(DBG_ENC, "invalid %N notify length",
 					 notify_type_names, this->notify_type);
 				return FAILED;
 			}
@@ -251,7 +251,7 @@ static status_t verify(private_notify_payload_t *this)
 		{
 			if (this->notification_data.len != 0)
 			{
-				DBG1(SIG_DBG_ENC, "invalid %N notify",
+				DBG1(DBG_ENC, "invalid %N notify",
 					 notify_type_names, this->notify_type);
 				return FAILED;
 			}

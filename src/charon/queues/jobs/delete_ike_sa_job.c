@@ -67,7 +67,7 @@ static status_t execute(private_delete_ike_sa_job_t *this)
 		if (charon->ike_sa_manager->delete(charon->ike_sa_manager, 
 			this->ike_sa_id) != SUCCESS)
 		{
-			DBG2(SIG_DBG_JOB, "IKE SA didn't exist anymore");
+			DBG2(DBG_JOB, "IKE SA didn't exist anymore");
 		}
 		return DESTROY_ME;
 	}
@@ -91,7 +91,7 @@ static status_t execute(private_delete_ike_sa_job_t *this)
 			default:
 			{
 				/* IKE_SA is half open and gets destroyed */
-				DBG1(SIG_DBG_JOB, "deleting half open IKE_SA after timeout");
+				DBG1(DBG_JOB, "deleting half open IKE_SA after timeout");
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 				return DESTROY_ME;
 			}

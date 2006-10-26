@@ -61,17 +61,17 @@ static void send_packets(private_sender_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
-	DBG1(SIG_DBG_NET, "sender thread running, thread_ID: %06u",
+	DBG1(DBG_NET, "sender thread running, thread_ID: %06u",
 		 (int)pthread_self());
 
 	while (TRUE)
 	{
 		current_packet = charon->send_queue->get(charon->send_queue);
-		DBG2(SIG_DBG_NET, "got a packet, sending it");
+		DBG2(DBG_NET, "got a packet, sending it");
 		status = charon->socket->send(charon->socket, current_packet);
 		if (status != SUCCESS)
 		{
-			DBG1(SIG_DBG_NET, "sending packet failed");
+			DBG1(DBG_NET, "sending packet failed");
 		}
 		current_packet->destroy(current_packet);
 	}

@@ -158,7 +158,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 	{
 		if (current->ike_sa_id->equals(current->ike_sa_id, ike_sa_id))
 		{
-			DBG2(SIG_DBG_MGR,  "found entry by both SPIs");
+			DBG2(DBG_MGR,  "found entry by both SPIs");
 			*entry = current;
 			status = SUCCESS;
 			break;
@@ -172,7 +172,7 @@ static status_t get_entry_by_id(private_ike_sa_manager_t *this, ike_sa_id_t *ike
 				(current->ike_sa_id->is_initiator(ike_sa_id) ==
 						  ike_sa_id->is_initiator(current->ike_sa_id)))
 			{
-				DBG2(SIG_DBG_MGR, "found entry by initiator SPI");
+				DBG2(DBG_MGR, "found entry by initiator SPI");
 				*entry = current;
 				status = SUCCESS;
 				break;
@@ -204,7 +204,7 @@ static status_t get_entry_by_sa(private_ike_sa_manager_t *this, ike_sa_t *ike_sa
 		/* only pointers are compared */
 		if (current->ike_sa == ike_sa)
 		{
-			DBG2(SIG_DBG_MGR, "found entry by pointer");
+			DBG2(DBG_MGR, "found entry by pointer");
 			*entry = current;
 			status = SUCCESS;
 			break;
@@ -244,7 +244,7 @@ static status_t delete_entry(private_ike_sa_manager_t *this, entry_t *entry)
 				pthread_cond_wait(&(entry->condvar), &(this->mutex));
 			}
 			
-			DBG2(SIG_DBG_MGR,  "found entry by pointer, deleting it");
+			DBG2(DBG_MGR,  "found entry by pointer, deleting it");
 			iterator->remove(iterator);
 			entry_destroy(entry);
 			status = SUCCESS;
@@ -345,7 +345,7 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 			found_other_id->matches(found_other_id, other_id, &wc))
 		{
 			/* looks good, we take this one */
-			DBG2(SIG_DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
+			DBG2(DBG_MGR, "found an existing IKE_SA for %H[%D]...%H[%D]",
 				 my_host, other_host, my_id, other_id);
 			entry->checked_out = TRUE;
 			ike_sa = entry->ike_sa;
@@ -365,13 +365,13 @@ static ike_sa_t* checkout_by_id(private_ike_sa_manager_t *this,
 		
 		/* create entry */
 		new_entry = entry_create(new_ike_sa_id);
-		DBG2(SIG_DBG_MGR, "created IKE_SA: %J", new_ike_sa_id);
+		DBG2(DBG_MGR, "created IKE_SA: %J", new_ike_sa_id);
 		new_ike_sa_id->destroy(new_ike_sa_id);
 		
 		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
 		
 		/* check ike_sa out */
-		DBG2(SIG_DBG_MGR, "new IKE_SA created for IDs [%D]...[%D]", my_id, other_id);
+		DBG2(DBG_MGR, "new IKE_SA created for IDs [%D]...[%D]", my_id, other_id);
 		new_entry->checked_out = TRUE;
 		ike_sa = new_entry->ike_sa;
 	}
@@ -390,9 +390,9 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	bool original_initiator;
 	ike_sa_t *ike_sa = NULL;
 	
-	DBG2(SIG_DBG_MGR, "checkout IKE_SA: %J", ike_sa_id);
+	DBG2(DBG_MGR, "checkout IKE_SA: %J", ike_sa_id);
 	
-	DBG2(SIG_DBG_MGR,  "%d IKE_SAs in manager",
+	DBG2(DBG_MGR,  "%d IKE_SAs in manager",
 		 this->ike_sa_list->get_count(this->ike_sa_list));
 	
 	/* each access is locked */
@@ -414,19 +414,19 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		{
 			if (wait_for_entry(this, entry))
 			{
-				DBG2(SIG_DBG_MGR, "IKE_SA successfully checked out");
+				DBG2(DBG_MGR, "IKE_SA successfully checked out");
 				/* ok, this IKE_SA is finally ours */
 				entry->checked_out = TRUE;
 				ike_sa = entry->ike_sa;
 			}
 			else
 			{
-				DBG2(SIG_DBG_MGR, "IKE_SA found, but not allowed to check it out");
+				DBG2(DBG_MGR, "IKE_SA found, but not allowed to check it out");
 			}
 		}
 		else
 		{
-			DBG2(SIG_DBG_MGR, "IKE_SA not stored in list");
+			DBG2(DBG_MGR, "IKE_SA not stored in list");
 			/* looks like there is no such IKE_SA, better luck next time... */
 		}
 	}
@@ -454,7 +454,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
 		
 		/* check ike_sa out */
-		DBG2(SIG_DBG_MGR,  "IKE_SA added to list of known IKE_SAs");
+		DBG2(DBG_MGR,  "IKE_SA added to list of known IKE_SAs");
 		new_entry->checked_out = TRUE;
 		ike_sa = new_entry->ike_sa;
 	}
@@ -466,7 +466,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 		ike_sa_id->set_initiator_spi(ike_sa_id, get_next_spi(this));
 		/* create entry */
 		new_entry = entry_create(ike_sa_id);
-		DBG2(SIG_DBG_MGR, "created IKE_SA: %J", ike_sa_id);
+		DBG2(DBG_MGR, "created IKE_SA: %J", ike_sa_id);
 			
 		this->ike_sa_list->insert_last(this->ike_sa_list, new_entry);
 		
@@ -477,7 +477,7 @@ static ike_sa_t* checkout(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id
 	else
 	{
 		/* responder set, initiator not: here is something seriously wrong! */
-		DBG2(SIG_DBG_MGR, "invalid IKE_SA SPIs");
+		DBG2(DBG_MGR, "invalid IKE_SA SPIs");
 	}
 	
 	pthread_mutex_unlock(&(this->mutex));
@@ -556,7 +556,7 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
 	
-	DBG2(SIG_DBG_MGR, "checkin IKE_SA: %J", ike_sa_id);
+	DBG2(DBG_MGR, "checkin IKE_SA: %J", ike_sa_id);
 	
 	pthread_mutex_lock(&(this->mutex));
 
@@ -567,18 +567,18 @@ static status_t checkin(private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
 		entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa->get_id(ike_sa));
 		/* signal waiting threads */
 		entry->checked_out = FALSE;
-		DBG2(SIG_DBG_MGR, "check-in of IKE_SA successful.");
+		DBG2(DBG_MGR, "check-in of IKE_SA successful.");
 		pthread_cond_signal(&(entry->condvar));
 	 	retval = SUCCESS;
 	}
 	else
 	{
-		DBG2(SIG_DBG_MGR, "tried to check in nonexisting IKE_SA");
+		DBG2(DBG_MGR, "tried to check in nonexisting IKE_SA");
 		/* this SA is no more, this REALLY should not happen */
 		retval = NOT_FOUND;
 	}
 	
-	DBG2(SIG_DBG_MGR, "%d IKE_SAs in manager now",
+	DBG2(DBG_MGR, "%d IKE_SAs in manager now",
 		 this->ike_sa_list->get_count(this->ike_sa_list));
 	pthread_mutex_unlock(&(this->mutex));
 	
@@ -602,7 +602,7 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 	ike_sa_id_t *ike_sa_id;
 	
 	ike_sa_id = ike_sa->get_id(ike_sa);
-	DBG2(SIG_DBG_MGR, "checkin and destroy IKE_SA: %J", ike_sa_id);
+	DBG2(DBG_MGR, "checkin and destroy IKE_SA: %J", ike_sa_id);
 
 	pthread_mutex_lock(&(this->mutex));
 
@@ -613,12 +613,12 @@ static status_t checkin_and_destroy(private_ike_sa_manager_t *this, ike_sa_t *ik
 		
 		delete_entry(this, entry);
 		
-		DBG2(SIG_DBG_MGR, "check-in and destroy of IKE_SA successful");
+		DBG2(DBG_MGR, "check-in and destroy of IKE_SA successful");
 		retval = SUCCESS;
 	}
 	else
 	{
-		DBG2(SIG_DBG_MGR, "tried to check-in and delete nonexisting IKE_SA");
+		DBG2(DBG_MGR, "tried to check-in and delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}
 	
@@ -640,7 +640,7 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 	entry_t *entry;
 	status_t retval;
 	
-	DBG2(SIG_DBG_MGR, "delete IKE_SA: %J", ike_sa_id);
+	DBG2(DBG_MGR, "delete IKE_SA: %J", ike_sa_id);
 	
 	pthread_mutex_lock(&(this->mutex));
 	
@@ -651,7 +651,7 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 		 */
 		if (entry->ike_sa->delete(entry->ike_sa) == SUCCESS)
 		{
-			DBG2(SIG_DBG_MGR, "initiated delete for IKE_SA");
+			DBG2(DBG_MGR, "initiated delete for IKE_SA");
 		}
 		/* but if the IKE SA is not in a state where the deletion is 
 		 * negotiated with the other peer, we can destroy the IKE SA on our own. 
@@ -664,7 +664,7 @@ static status_t delete_(private_ike_sa_manager_t *this, ike_sa_id_t *ike_sa_id)
 	}
 	else
 	{
-		DBG2(SIG_DBG_MGR, "tried to delete nonexisting IKE_SA");
+		DBG2(DBG_MGR, "tried to delete nonexisting IKE_SA");
 		retval = NOT_FOUND;
 	}
 
@@ -802,9 +802,9 @@ static void destroy(private_ike_sa_manager_t *this)
 	entry_t *entry;
 	
 	pthread_mutex_lock(&(this->mutex));
-	DBG2(SIG_DBG_MGR, "going to destroy IKE_SA manager and all managed IKE_SA's");
+	DBG2(DBG_MGR, "going to destroy IKE_SA manager and all managed IKE_SA's");
 	/* Step 1: drive out all waiting threads  */
-	DBG2(SIG_DBG_MGR, "set driveout flags for all stored IKE_SA's");
+	DBG2(DBG_MGR, "set driveout flags for all stored IKE_SA's");
 	iterator = list->create_iterator(list, TRUE);
 	while (iterator->iterate(iterator, (void**)&entry))
 	{
@@ -812,7 +812,7 @@ static void destroy(private_ike_sa_manager_t *this)
 		entry->driveout_new_threads = TRUE;
 		entry->driveout_waiting_threads = TRUE;	
 	}
-	DBG2(SIG_DBG_MGR, "wait for all threads to leave IKE_SA's");
+	DBG2(DBG_MGR, "wait for all threads to leave IKE_SA's");
 	/* Step 2: wait until all are gone */
 	iterator->reset(iterator);
 	while (iterator->iterate(iterator, (void**)&entry))
@@ -825,7 +825,7 @@ static void destroy(private_ike_sa_manager_t *this)
 			pthread_cond_wait(&(entry->condvar), &(this->mutex));
 		}
 	}
-	DBG2(SIG_DBG_MGR, "delete all IKE_SA's");
+	DBG2(DBG_MGR, "delete all IKE_SA's");
 	/* Step 3: initiate deletion of all IKE_SAs */
 	iterator->reset(iterator);
 	while (iterator->iterate(iterator, (void**)&entry))
@@ -834,7 +834,7 @@ static void destroy(private_ike_sa_manager_t *this)
 	}
 	iterator->destroy(iterator);
 	
-	DBG2(SIG_DBG_MGR, "destroy all entries");
+	DBG2(DBG_MGR, "destroy all entries");
 	/* Step 4: destroy all entries */
 	list->destroy_function(list, (void*)entry_destroy);
 	pthread_mutex_unlock(&(this->mutex));

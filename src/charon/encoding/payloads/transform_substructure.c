@@ -125,7 +125,7 @@ static status_t verify(private_transform_substructure_t *this)
 	if ((this->next_payload != NO_PAYLOAD) && (this->next_payload != 3))
 	{
 		/* must be 0 or 3 */
-		DBG1(SIG_DBG_ENC, "inconsistent next payload");
+		DBG1(DBG_ENC, "inconsistent next payload");
 		return FAILED;
 	}
 
@@ -141,7 +141,7 @@ static status_t verify(private_transform_substructure_t *this)
 			break;
 		default:
 		{
-			DBG1(SIG_DBG_ENC, "invalid transform type: %d", this->transform_type);
+			DBG1(DBG_ENC, "invalid transform type: %d", this->transform_type);
 			return FAILED;
 		}
 	}
@@ -152,7 +152,7 @@ static status_t verify(private_transform_substructure_t *this)
 		status = current_attributes->verify(current_attributes);
 		if (status != SUCCESS)
 		{
-			DBG1(SIG_DBG_ENC, "TRANSFORM_ATTRIBUTE verification failed");
+			DBG1(DBG_ENC, "TRANSFORM_ATTRIBUTE verification failed");
 		}
 	}
 	iterator->destroy(iterator);

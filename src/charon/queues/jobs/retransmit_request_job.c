@@ -65,7 +65,7 @@ static status_t execute(private_retransmit_request_job_t *this)
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->ike_sa_id);
 	if (ike_sa == NULL)
 	{
-		DBG2(SIG_DBG_JOB, "IKE SA could not be checked out. Already deleted?");
+		DBG2(DBG_JOB, "IKE SA could not be checked out. Already deleted?");
 		return DESTROY_ME;
 	}
 	

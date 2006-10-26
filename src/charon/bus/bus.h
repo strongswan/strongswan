@@ -32,67 +32,18 @@
 typedef enum signal_t signal_t;
 
 /**
- * @brief signals ommited by the daemon.
+ * @brief signals emitted by the daemon.
  *
  * Signaling is for different purporses. First, it allows debugging via
  * "debugging signal messages", sencondly, it allows to follow certain
  * mechanisms currently going on in the daemon. As we are multithreaded, 
- * and a multiple messages are involved, it's not possible to follow
+ * and of multiple transactions are involved, it's not possible to follow
  * one connection setup without further infrastructure. These infrastructure
- * is provided by the bus and the signals the whole daemon ommits to the bus.
+ * is provided by the bus and the signals the daemon emits to the bus.
  *
- * @par Schema 1: Signals involved in IKE_SA/CHILD_SA initiation
- *
- * In the initiation of a IKE- or CHILD_SA is triggered by three possible
- * sources: User request, a request from the other peer, or a request
- * triggered by the kernel.
- * Once the user requests initiation, the SIG_INITIATE signal is ommited.
- * This signal contains the IKE_SA that got created. Any further signals
- * have the same IKE_SA and are therefore easy to trace.
- * If the kernel initiates, a SIG_ACQUIRE is sent over the bus.
- * If a new IKE_SA is needed, it is set up. If it succeeds, a
- * SIG_IKE_ESTABLISHED is ommitted. If the peer didn't accept our DH
- * group, the initiation fails. A SIG_DH_INVALID is sent over the bus. It still
- * contains the the old IKE_SA. Shortly afterwards, a SIG_DH_RETRY is ommited.
- * It contains the NEW IKE_SA. This mechanism allows us to trace the setup even
- * beyond a INVALID_KE_PAYLOUD error.
- * If the setup fails, SIG_IKE_ESTABLISH_FAILED is sent.
- * After a successful establishment of the IKE_SA, or if an already established
- * IKE_SA is reused, the child establishment begins. If it is set up with
- * the ike_auth transaction, the SIG_CHILD_ESTABLISHED signal is ommited
- * directly after the SIG_IKE_ESTABLISHED signal, as both are set up
- * simultaneously. The child setup may fail (in a ike_auth, or in a 
- * create_child_sa exchange), if so, the SIG_CHID_ESTABLISH_FAILED signal
- * is raised.
- *
- * @verbatim
-
-          "ipsec up"  "peer msg"  "kernel acquire"
-                |         |          |
-                V         |          V
-            SIG_INITIATE  | SIG_ACQUIRE
-                       \  | /
-                        \ |/______________________________________________
-                         \/________________________________               \
-                         /\                           \    \              |
-                        |  |                          |    |              |
-                        V  V                          |    V              |
-      SIG_IKE_ESTABLISHED  SIG_IKE_ESTABLISH_FALIED   |  SIG_DH_INVALID   |
-                        \                |            |    |              |
-                         \               X            |    V              |
-                          \___________________________/  SIG_DH_RETRY     |
-                          /\                               \______________/
-                         |  |
-                         V  V
-     SIG_CHILD_ESTABLISHED  SIG_CHILD_ESTABLISH_FAILED
-                                          |
-                                          X
-   @endverbatim
- * Other scenarios are much simpler. Termination is just indicated with
- * a simple SIG_CHILD_TERMINATED and/or SIG_IKE_TERMINATED signal. There
- * are other signals as SIG_CHILD_ROUTED or SIG_CHILD_UNROUTED. Rekeying is
- * also trivial (SIG_IKE_REKEYED/SIG_CHILD_REKEYED), but may contain
- * SIG_DH_INVALID...
+ * There are different scenarios to follow these signals, but all have
+ * the same scheme. First, a START signal is emitted to indicate the daemon
+ * has started to 
  *
  * @ingroup bus
  */
@@ -100,56 +51,69 @@ enum signal_t {
 	/** pseudo signal, representing any other signal */
 	SIG_ANY,
 	
-	/** debugging messages printed from daemon main loop */
-	SIG_DBG_DMN,
-	/** debugging message printed from IKE_SA_MANAGER */
-	SIG_DBG_MGR,
-	/** debugging message printed from an IKE_SA */
-	SIG_DBG_IKE,
-	/** debugging message printed from a CHILD_SA */
-	SIG_DBG_CHD,
-	/** debugging message printed from job processing */
-	SIG_DBG_JOB,
-	/** debugging message printed from configuration backends */
-	SIG_DBG_CFG,
-	/** debugging message printed from kernel interface */
-	SIG_DBG_KNL,
-	/** debugging message printed from networking */
-	SIG_DBG_NET,
-	/** debugging message printed from message encoding/decoding */
-	SIG_DBG_ENC,
-	/** debugging message printed from libstrongswan via logging hook */
-	SIG_DBG_LIB,
+	/** debugging message from daemon main loop */
+	DBG_DMN,
+	/** debugging message from IKE_SA_MANAGER */
+	DBG_MGR,
+	/** debugging message from an IKE_SA */
+	DBG_IKE,
+	/** debugging message from a CHILD_SA */
+	DBG_CHD,
+	/** debugging message from job processing */
+	DBG_JOB,
+	/** debugging message from configuration backends */
+	DBG_CFG,
+	/** debugging message from kernel interface */
+	DBG_KNL,
+	/** debugging message from networking */
+	DBG_NET,
+	/** debugging message from message encoding/decoding */
+	DBG_ENC,
+	/** debugging message from libstrongswan via logging hook */
+	DBG_LIB,
 	
 	/** number of debug signals */
-	SIG_DBG_MAX,
+	DBG_MAX,
 	
-	/** initiation started on user request */
-	SIG_INITIATE,
-	/** acquiring on kernel request */
-	SIG_ACQUIRE,
+	/** signals for IKE_SA establishment */
+	IKE_UP_START,
+	IKE_UP_SUCCESS,
+	IKE_UP_FAILED,
 	
-	/** an IKE_SA has been established */
-	SIG_IKE_UP,
-	/** an IKE_SA has been closed as requested */
-	SIG_IKE_DOWN,
-	/** an IKE_SA got deleted due an error */
-	SIG_IKE_FAILED,
-	/** an IKE_SA has been rekeyed */
-	SIG_IKE_REKEY,
+	/** signals for IKE_SA delete */
+	IKE_DOWN_START,
+	IKE_DOWN_SUCCESS,
+	IKE_DOWN_FAILED,
 	
-	/** a CHILD_SA has been established */
-	SIG_CHILD_UP,
-	/** a CHILD_SA has been closed as requested */
-	SIG_CHILD_DOWN,
-	/** a CHILD_SA got deleted due an error */
-	SIG_CHILD_FAILED,
-	/** a CHILD_SA has been rekeyed */
-	SIG_CHILD_REKEY,
-	/** a CHILD_SA has been routed */
-	SIG_CHILD_ROUTE,
-	/** a CHILD_SA has been unrouted */
-	SIG_CHILD_UNROUTE,
+	/** signals for IKE_SA rekeying */
+	IKE_REKEY_START,
+	IKE_REKEY_SUCCESS,
+	IKE_REKEY_FAILED,
+	
+	/** signals for CHILD_SA establishment */
+	CHILD_UP_START,
+	CHILD_UP_SUCCESS,
+	CHILD_UP_FAILED,
+	
+	/** signals for CHILD_SA delete */
+	CHILD_DOWN_START,
+	CHILD_DOWN_SUCCESS,
+	CHILD_DOWN_FAILED,
+	
+	/** signals for CHILD_SA rekeying */
+	CHILD_REKEY_START,
+	CHILD_REKEY_SUCCESS,
+	CHILD_REKEY_FAILED,
+	
+	/** signals for CHILD_SA routing */
+	CHILD_ROUTE_START,
+	CHILD_ROUTE_SUCCESS,
+	CHILD_ROUTE_FAILED,
+	
+	/** signals for CHILD_SA routing */
+	CHILD_UNROUTE_START,
+	CHILD_UNROUTE_SUCCESS,
+	CHILD_UNROUTE_FAILED,
 	
 	SIG_MAX
 };
@@ -171,7 +135,7 @@ enum level_t {
 	LEVEL_2 = 2,
 	LEVEL_3 = 3,
 	LEVEL_4 = 4,
-	/** absolutely silent, no signal is ommited with this level */
+	/** absolutely silent, no signal is emitted with this level */
 	LEVEL_SILENT = -1,
 	/** alias for numberical levels */
 	LEVEL_AUDIT = LEVEL_0,
@@ -210,9 +174,9 @@ enum level_t {
  * type 0. This allows filtering of singals by their type.
  *
  * @param signal	signal to get the type from
- * @return			type of the signal, between 0..(SIG_DBG_MAX-1)
+ * @return			type of the signal, between 0..(DBG_MAX-1)
  */
-#define SIG_TYPE(sig) (sig > SIG_DBG_MAX ? SIG_ANY : sig)
+#define SIG_TYPE(sig) (sig > DBG_MAX ? SIG_ANY : sig)
 
 
 typedef struct bus_listener_t bus_listener_t;
@@ -269,7 +233,7 @@ struct bus_t {
 	 * @brief Register a listener to the bus.
 	 *
 	 * A registered listener receives all signals which are sent to the bus.
-	 * The listener is passive; the thread which ommited the signal
+	 * The listener is passive; the thread which emitted the signal
 	 * processes the listener routine.
 	 *
 	 * @param this		bus
@@ -283,17 +247,17 @@ struct bus_t {
 	 * As we are fully multithreaded, we must provide a mechanism
 	 * for active threads to listen to the bus. With the listen() method,
 	 * a thread waits until a signal occurs, and then processes it.
-	 * To prevent the listen() calling thread to miss signals ommited while
+	 * To prevent the listen() calling thread to miss signals emitted while
 	 * it processes a signal, registration is required. This is done through
 	 * the set_listen_state() method, see below.
 	 *
 	 * @param this		bus
 	 * @param level		verbosity level of the signal
-	 * @param thread	receives thread number ommited the signal
+	 * @param thread	receives thread number emitted the signal
 	 * @param ike_sa	receives the IKE_SA involved in the signal, or NULL
 	 * @param format	receives the format string supplied with the signal
 	 * @param va_list	receives the variable argument list for format
-	 * @return			the ommited signal type
+	 * @return			the emitted signal type
 	 */
 	signal_t (*listen) (bus_t *this, level_t* level, int *thread,
 						ike_sa_t **ike_sa, char** format, va_list* args);
@@ -303,11 +267,11 @@ struct bus_t {
 	 *
 	 * To prevent message loss for active listeners using listen(), threads
 	 * must register themself to the bus before starting to listen(). When
-	 * a signal occurs, the ommiter waits until all threads with listen_state
+	 * a signal occurs, the emitter waits until all threads with listen_state
 	 * TRUE are waiting in the listen() method to process the signal.
 	 * It is important that a thread with liste_state TRUE calls listen()
 	 * periodically, or sets it's listening state to FALSE; otherwise
-	 * all signal omitting threads get blocked on the bus.
+	 * all signal emitting threads get blocked on the bus.
 	 *
 	 * @param this		bus
 	 * @param active	TRUE to set to listening

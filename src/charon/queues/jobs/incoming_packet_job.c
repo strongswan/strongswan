@@ -87,7 +87,7 @@ static void send_notify_response(private_incoming_packet_job_t *this,
 		response->destroy(response);
 		return;
 	}
-	DBG1(SIG_DBG_NET, "sending %N notify", notify_type_names, type);
+	DBG1(DBG_NET, "sending %N notify", notify_type_names, type);
 	charon->send_queue->add(charon->send_queue, packet);
 	response->destroy(response);
 	return;
@@ -107,12 +107,12 @@ static status_t execute(private_incoming_packet_job_t *this)
 	message = message_create_from_packet(this->packet->clone(this->packet));
 	src = message->get_source(message);
 	dst = message->get_destination(message);
-	DBG1(SIG_DBG_NET, "received packet: from %#H to %#H", src, dst);
+	DBG1(DBG_NET, "received packet: from %#H to %#H", src, dst);
 	
 	status = message->parse_header(message);
 	if (status != SUCCESS)
 	{
-		DBG1(SIG_DBG_NET, "received message with invalid IKE header, ignored");
+		DBG1(DBG_NET, "received message with invalid IKE header, ignored");
 		message->destroy(message);
 		return DESTROY_ME;
 	}
@@ -120,7 +120,7 @@ static status_t execute(private_incoming_packet_job_t *this)
 	if ((message->get_major_version(message) != IKE_MAJOR_VERSION) ||
 		(message->get_minor_version(message) != IKE_MINOR_VERSION))
 	{
-		DBG1(SIG_DBG_NET,
+		DBG1(DBG_NET,
 			 "received a packet with IKE version %d.%d, not supported",
 			  message->get_major_version(message),
 			  message->get_minor_version(message));
@@ -138,7 +138,7 @@ static status_t execute(private_incoming_packet_job_t *this)
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, ike_sa_id);
 	if (ike_sa == NULL)
 	{
-		DBG1(SIG_DBG_NET, "received packet for IKE_SA: %J, but no such IKE_SA",
+		DBG1(DBG_NET, "received packet for IKE_SA: %J, but no such IKE_SA",
 			 ike_sa_id);
 		if (message->get_request(message))
 		{

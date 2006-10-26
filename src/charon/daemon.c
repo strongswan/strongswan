@@ -82,7 +82,7 @@ static void dbg_bus(int level, char *fmt, ...)
 	va_list args;
 	
 	va_start(args, fmt);
-	charon->bus->vsignal(charon->bus, SIG_DBG_LIB, level, fmt, args);
+	charon->bus->vsignal(charon->bus, DBG_LIB, level, fmt, args);
 	va_end(args);
 }
 
@@ -120,27 +120,27 @@ static void run(private_daemon_t *this)
 		error = sigwait(&(this->signal_set), &signal_number);
 		if(error)
 		{
-			DBG1(SIG_DBG_DMN, "error %d while waiting for a signal", error);
+			DBG1(DBG_DMN, "error %d while waiting for a signal", error);
 			return;
 		}
 		switch (signal_number)
 		{
 			case SIGHUP:
 			{
-				DBG1(SIG_DBG_DMN, "signal of type SIGHUP received. Ignored");
+				DBG1(DBG_DMN, "signal of type SIGHUP received. Ignored");
 				break;
 			}
 			case SIGINT:
 			{
-				DBG1(SIG_DBG_DMN, "signal of type SIGINT received. Shutting down");
+				DBG1(DBG_DMN, "signal of type SIGINT received. Shutting down");
 				return;
 			}
 			case SIGTERM:
-				DBG1(SIG_DBG_DMN, "signal of type SIGTERM received. Shutting down");
+				DBG1(DBG_DMN, "signal of type SIGTERM received. Shutting down");
 				return;
 			default:
 			{
-				DBG1(SIG_DBG_DMN, "unknown signal %d received. Ignored", signal_number);
+				DBG1(DBG_DMN, "unknown signal %d received. Ignored", signal_number);
 				break;
 			}
 		}
@@ -197,7 +197,7 @@ static void destroy(private_daemon_t *this)
 static void kill_daemon(private_daemon_t *this, char *reason)
 {
 	/* we send SIGTERM, so the daemon can cleanly shut down */
-	DBG1(SIG_DBG_DMN, "killing daemon: %s", reason);
+	DBG1(DBG_DMN, "killing daemon: %s", reason);
 	if (this->main_thread_id == pthread_self())
 	{
 		/* initialization failed, terminate daemon */
@@ -207,7 +207,7 @@ static void kill_daemon(private_daemon_t *this, char *reason)
 	}
 	else
 	{
-		DBG1(SIG_DBG_DMN, "sending SIGTERM to ourself");
+		DBG1(DBG_DMN, "sending SIGTERM to ourself");
 		raise(SIGTERM);
 		/* thread must die, since he produced a ciritcal failure and can't continue */
 		pthread_exit(NULL);
@@ -239,7 +239,7 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 	dbg = dbg_bus;
 	
 	/* apply loglevels */
-	for (signal = 0; signal < SIG_DBG_MAX; signal++)
+	for (signal = 0; signal < DBG_MAX; signal++)
 	{
 		if (syslog)
 		{
@@ -253,7 +253,7 @@ static void initialize(private_daemon_t *this, bool strict, bool syslog,
 		}
 	}
 	
-	DBG1(SIG_DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
+	DBG1(DBG_DMN, "starting charon (strongSwan Version %s)", VERSION);
 	
 	this->public.configuration = configuration_create();
 	this->public.socket = socket_create(IKEV2_UDP_PORT, IKEV2_NATT_PORT);
@@ -293,15 +293,15 @@ void signal_handler(int signal)
 	size = backtrace(array, 20);
 	strings = backtrace_symbols(array, size);
 
-	DBG1(SIG_DBG_DMN, "thread %u received %s. Dumping %d frames from stack:",
+	DBG1(DBG_DMN, "thread %u received %s. Dumping %d frames from stack:",
 		 signal == SIGSEGV ? "SIGSEGV" : "SIGILL", pthread_self(), size);
 
 	for (i = 0; i < size; i++)
 	{
-		DBG1(SIG_DBG_DMN, "    %s", strings[i]);
+		DBG1(DBG_DMN, "    %s", strings[i]);
 	}
 	free (strings);
-	DBG1(SIG_DBG_DMN, "killing ourself hard after SIGSEGV");
+	DBG1(DBG_DMN, "killing ourself hard after SIGSEGV");
 	raise(SIGKILL);
 }
 
@@ -392,11 +392,11 @@ int main(int argc, char *argv[])
 	struct stat stb;
 	linked_list_t *list;
 	host_t *host;
-	level_t levels[SIG_DBG_MAX];
+	level_t levels[DBG_MAX];
 	int signal;
 	
 	/* use CTRL loglevel for default */
-	for (signal = 0; signal < SIG_DBG_MAX; signal++)
+	for (signal = 0; signal < DBG_MAX; signal++)
 	{
 		levels[signal] = LEVEL_CTRL;
 	}
@@ -409,16 +409,17 @@ int main(int argc, char *argv[])
 			{ "version", no_argument, NULL, 'v' },
 			{ "use-syslog", no_argument, NULL, 'l' },
 			{ "strictcrlpolicy", no_argument, NULL, 'r' },
-			{ "debug-dmn", required_argument, &signal, SIG_DBG_DMN },
-			{ "debug-mgr", required_argument, &signal, SIG_DBG_MGR },
-			{ "debug-ike", required_argument, &signal, SIG_DBG_IKE },
-			{ "debug-chd", required_argument, &signal, SIG_DBG_CHD },
-			{ "debug-job", required_argument, &signal, SIG_DBG_JOB },
-			{ "debug-cfg", required_argument, &signal, SIG_DBG_CFG },
-			{ "debug-knl", required_argument, &signal, SIG_DBG_KNL },
-			{ "debug-net", required_argument, &signal, SIG_DBG_NET },
-			{ "debug-enc", required_argument, &signal, SIG_DBG_ENC },
-			{ "debug-lib", required_argument, &signal, SIG_DBG_LIB },
+			/* TODO: handle "debug-all" */
+			{ "debug-dmn", required_argument, &signal, DBG_DMN },
+			{ "debug-mgr", required_argument, &signal, DBG_MGR },
+			{ "debug-ike", required_argument, &signal, DBG_IKE },
+			{ "debug-chd", required_argument, &signal, DBG_CHD },
+			{ "debug-job", required_argument, &signal, DBG_JOB },
+			{ "debug-cfg", required_argument, &signal, DBG_CFG },
+			{ "debug-knl", required_argument, &signal, DBG_KNL },
+			{ "debug-net", required_argument, &signal, DBG_NET },
+			{ "debug-enc", required_argument, &signal, DBG_ENC },
+			{ "debug-lib", required_argument, &signal, DBG_LIB },
 			{ 0,0,0,0 }
 		};
 		
@@ -459,7 +460,7 @@ int main(int argc, char *argv[])
 	/* check/setup PID file */
 	if (stat(PID_FILE, &stb) == 0)
 	{
-		DBG1(SIG_DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
+		DBG1(DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
 		destroy(private_charon);
 		exit(-1);
 	}
@@ -471,10 +472,10 @@ int main(int argc, char *argv[])
 	}
 	/* log socket info */
 	list = charon->socket->create_local_address_list(charon->socket);
-	DBG1(SIG_DBG_NET, "listening on %d addresses:", list->get_count(list));
+	DBG1(DBG_NET, "listening on %d addresses:", list->get_count(list));
 	while (list->remove_first(list, (void**)&host) == SUCCESS)
 	{
-		DBG1(SIG_DBG_NET, "  %H", host);
+		DBG1(DBG_NET, "  %H", host);
 		host->destroy(host);
 	}
 	list->destroy(list);

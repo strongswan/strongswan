@@ -75,7 +75,7 @@ static status_t execute(private_initiate_job_t *this)
 	this->policy->get_ref(this->policy);
 	if (ike_sa->initiate(ike_sa, this->connection, this->policy) != SUCCESS)
 	{
-		DBG1(SIG_DBG_JOB, "initiation failed, going to delete IKE_SA");
+		DBG1(DBG_JOB, "initiation failed, going to delete IKE_SA");
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 		return DESTROY_ME;
 	}

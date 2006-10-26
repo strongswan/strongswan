@@ -58,16 +58,16 @@ static void get_events(private_scheduler_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	DBG1(SIG_DBG_JOB, "scheduler thread running, thread_ID: %06u", 
+	DBG1(DBG_JOB, "scheduler thread running, thread_ID: %06u", 
 		 (int)pthread_self());
 
 	while (TRUE)
 	{
-		DBG2(SIG_DBG_JOB, "waiting for next event...");
+		DBG2(DBG_JOB, "waiting for next event...");
 		/* get a job, this block until one is available */
 		current_job = charon->event_queue->get(charon->event_queue);
 		/* queue the job in the job queue, workers will eat them */
-		DBG2(SIG_DBG_JOB, "got event, adding job %N to job-queue",
+		DBG2(DBG_JOB, "got event, adding job %N to job-queue",
 			 job_type_names, current_job->get_type(current_job));
 		charon->job_queue->add(charon->job_queue, current_job);
 	}

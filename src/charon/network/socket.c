@@ -152,7 +152,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		FD_SET(this->recv6, &rfds);
 	}
 	
-	DBG2(SIG_DBG_NET, "waiting for data on raw sockets");
+	DBG2(DBG_NET, "waiting for data on raw sockets");
 	
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
 	if (select(max(this->recv4, this->recv6) + 1, &rfds, NULL, NULL, NULL) <= 0)
@@ -172,15 +172,15 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		bytes_read = recv(this->recv4, buffer, MAX_PACKET, 0);
 		if (bytes_read < 0)
 		{
-			DBG1(SIG_DBG_NET, "error reading from IPv4 socket: %m");
+			DBG1(DBG_NET, "error reading from IPv4 socket: %m");
 			return FAILED;
 		}
-		DBG3(SIG_DBG_NET, "received IPv4 packet %b", buffer, bytes_read);
+		DBG3(DBG_NET, "received IPv4 packet %b", buffer, bytes_read);
 		
 		/* read source/dest from raw IP/UDP header */
 		if (bytes_read < IP_LEN + UDP_LEN + MARKER_LEN)
 		{
-			DBG1(SIG_DBG_NET, "received IPv4 packet too short (%d bytes)",
+			DBG1(DBG_NET, "received IPv4 packet too short (%d bytes)",
 				 bytes_read);
 			return FAILED;
 		}
@@ -198,7 +198,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		pkt = packet_create();
 		pkt->set_source(pkt, source);
 		pkt->set_destination(pkt, dest);
-		DBG2(SIG_DBG_NET, "received packet: from %#H to %#H", source, dest);
+		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = IP_LEN + UDP_LEN;
 		/* remove non esp marker */	
 		if (dest->get_port(dest) == this->natt_port)
@@ -234,14 +234,14 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		bytes_read = recvmsg(this->recv6, &msg, 0);
 		if (bytes_read < 0)
 		{
-			DBG1(SIG_DBG_NET, "error reading from IPv6 socket: %m");
+			DBG1(DBG_NET, "error reading from IPv6 socket: %m");
 			return FAILED;
 		}
-		DBG3(SIG_DBG_NET, "received IPv6 packet %b", buffer, bytes_read);
+		DBG3(DBG_NET, "received IPv6 packet %b", buffer, bytes_read);
 		
 		if (bytes_read < IP_LEN + UDP_LEN + MARKER_LEN)
 		{
-			DBG3(SIG_DBG_NET, "received IPv6 packet too short (%d bytes)",
+			DBG3(DBG_NET, "received IPv6 packet too short (%d bytes)",
 				 bytes_read);
 			return FAILED;
 		}
@@ -252,7 +252,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		{
 			if (cmsgptr->cmsg_len == 0)
 			{
-				DBG1(SIG_DBG_NET, "error reading IPv6 ancillary data");
+				DBG1(DBG_NET, "error reading IPv6 ancillary data");
 				return FAILED;
 			}	
 			if (cmsgptr->cmsg_level == SOL_IPV6 &&
@@ -273,7 +273,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		/* ancillary data missing? */
 		if (dest == NULL)
 		{
-			DBG1(SIG_DBG_NET, "error reading IPv6 packet header");
+			DBG1(DBG_NET, "error reading IPv6 packet header");
 			return FAILED;
 		}
 		
@@ -282,7 +282,7 @@ static status_t receiver(private_socket_t *this, packet_t **packet)
 		pkt = packet_create();
 		pkt->set_source(pkt, source);
 		pkt->set_destination(pkt, dest);
-		DBG2(SIG_DBG_NET, "received packet: from %#H to %#H", source, dest);
+		DBG2(DBG_NET, "received packet: from %#H to %#H", source, dest);
 		data_offset = UDP_LEN;
 		/* remove non esp marker */	
 		if (dest->get_port(dest) == this->natt_port)
@@ -320,7 +320,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	dst = packet->get_destination(packet);
 	data = packet->get_data(packet);
 
-	DBG2(SIG_DBG_NET, "sending packet: from %#H to %#H", src, dst);
+	DBG2(DBG_NET, "sending packet: from %#H to %#H", src, dst);
 	
 	/* send data */
 	sport = src->get_port(src);
@@ -352,7 +352,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 			/* add non esp marker to packet */
 			if (data.len > MAX_PACKET - MARKER_LEN)
 			{
-				DBG1(SIG_DBG_NET, "unable to send packet: it's too big (%d bytes)",
+				DBG1(DBG_NET, "unable to send packet: it's too big (%d bytes)",
 					 data.len);
 				return FAILED;
 			}
@@ -366,7 +366,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 	}
 	else
 	{
-		DBG1(SIG_DBG_NET, "unable to locate a send socket for port %d", sport);
+		DBG1(DBG_NET, "unable to locate a send socket for port %d", sport);
 		return FAILED;
 	}
 	
@@ -375,7 +375,7 @@ status_t sender(private_socket_t *this, packet_t *packet)
 
 	if (bytes_sent != data.len)
 	{
-		DBG1(SIG_DBG_NET, "error writing to socket: %m");
+		DBG1(DBG_NET, "error writing to socket: %m");
 		return FAILED;
 	}
 	return SUCCESS;
@@ -533,13 +533,13 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	skt = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	if (skt < 0)
 	{
-		DBG1(SIG_DBG_NET, "could not open send socket: %m");
+		DBG1(DBG_NET, "could not open send socket: %m");
 		return 0;
 	}
 	
 	if (setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
 	{
-		DBG1(SIG_DBG_NET, "unable to set SO_REUSEADDR on send socket: %m");
+		DBG1(DBG_NET, "unable to set SO_REUSEADDR on send socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -555,7 +555,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	
 	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
-		DBG1(SIG_DBG_NET, "unable to set IPSEC_POLICY on send socket: %m");
+		DBG1(DBG_NET, "unable to set IPSEC_POLICY on send socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -565,7 +565,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	policy.sadb_x_policy_dir = IPSEC_DIR_INBOUND;
 	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
-		DBG1(SIG_DBG_NET, "unable to set IPSEC_POLICY on send socket: %m");
+		DBG1(DBG_NET, "unable to set IPSEC_POLICY on send socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -573,7 +573,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 	/* bind the send socket */
 	if (bind(skt, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
-		DBG1(SIG_DBG_NET, "unable to bind send socket: %m");
+		DBG1(DBG_NET, "unable to bind send socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -583,7 +583,7 @@ static int open_send_socket(private_socket_t *this, int family, u_int16_t port)
 		/* enable UDP decapsulation globally, only for one socket needed */
 		if (setsockopt(skt, SOL_UDP, UDP_ENCAP, &type, sizeof(type)) < 0)
 		{
-			DBG1(SIG_DBG_NET, "unable to set UDP_ENCAP: %m; NAT-T may fail");
+			DBG1(DBG_NET, "unable to set UDP_ENCAP: %m; NAT-T may fail");
 		}
 	}
 	
@@ -664,14 +664,14 @@ static int open_recv_socket(private_socket_t *this, int family)
 	skt = socket(family, SOCK_RAW, IPPROTO_UDP);
 	if (skt < 0)
 	{
-		DBG1(SIG_DBG_NET, "unable to create raw socket: %m");
+		DBG1(DBG_NET, "unable to create raw socket: %m");
 		return 0;
 	}
 	
 	if (setsockopt(skt, SOL_SOCKET, SO_ATTACH_FILTER,
 				   &ikev2_filter, sizeof(ikev2_filter)) < 0)
 	{
-		DBG1(SIG_DBG_NET, "unable to attach IKEv2 filter to raw socket: %m");
+		DBG1(DBG_NET, "unable to attach IKEv2 filter to raw socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -681,7 +681,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 		 * 2 or 50 depending on kernel header version */
 		setsockopt(skt, sol, IPV6_2292PKTINFO, &on, sizeof(on)) < 0)
 	{
-		DBG1(SIG_DBG_NET, "unable to set IPV6_PKTINFO on raw socket: %m");
+		DBG1(DBG_NET, "unable to set IPV6_PKTINFO on raw socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -697,7 +697,7 @@ static int open_recv_socket(private_socket_t *this, int family)
 	
 	if (setsockopt(skt, sol, ipsec_policy, &policy, sizeof(policy)) < 0)
 	{
-		DBG1(SIG_DBG_NET, "unable to set IPSEC_POLICY on raw socket: %m");
+		DBG1(DBG_NET, "unable to set IPSEC_POLICY on raw socket: %m");
 		close(skt);
 		return 0;
 	}
@@ -763,14 +763,14 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 	this->recv4 = open_recv_socket(this, AF_INET);
 	if (this->recv4 == 0)
 	{
-		DBG1(SIG_DBG_NET, "could not open IPv4 receive socket, IPv4 disabled");
+		DBG1(DBG_NET, "could not open IPv4 receive socket, IPv4 disabled");
 	}
 	else
 	{
 		this->send4 = open_send_socket(this, AF_INET, this->port);
 		if (this->send4 == 0)
 		{
-			DBG1(SIG_DBG_NET, "could not open IPv4 send socket, IPv4 disabled");
+			DBG1(DBG_NET, "could not open IPv4 send socket, IPv4 disabled");
 			close(this->recv4);
 		}
 		else
@@ -778,7 +778,7 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 			this->send4_natt = open_send_socket(this, AF_INET, this->natt_port);
 			if (this->send4_natt == 0)
 			{
-				DBG1(SIG_DBG_NET, "could not open IPv4 NAT-T send socket");
+				DBG1(DBG_NET, "could not open IPv4 NAT-T send socket");
 			}
 		}
 	}
@@ -786,14 +786,14 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 	this->recv6 = open_recv_socket(this, AF_INET6);
 	if (this->recv6 == 0)
 	{
-		DBG1(SIG_DBG_NET, "could not open IPv6 receive socket, IPv6 disabled");
+		DBG1(DBG_NET, "could not open IPv6 receive socket, IPv6 disabled");
 	}
 	else
 	{
 		this->send6 = open_send_socket(this, AF_INET6, this->port);
 		if (this->send6 == 0)
 		{
-			DBG1(SIG_DBG_NET, "could not open IPv6 send socket, IPv6 disabled");
+			DBG1(DBG_NET, "could not open IPv6 send socket, IPv6 disabled");
 			close(this->recv6);
 		}
 		else
@@ -801,14 +801,14 @@ socket_t *socket_create(u_int16_t port, u_int16_t natt_port)
 			this->send6_natt = open_send_socket(this, AF_INET6, this->natt_port);
 			if (this->send6_natt == 0)
 			{
-				DBG1(SIG_DBG_NET, "could not open IPv6 NAT-T send socket");
+				DBG1(DBG_NET, "could not open IPv6 NAT-T send socket");
 			}
 		}
 	}
 	
 	if (!(this->send4 || this->send6) || !(this->recv4 || this->recv6))
 	{
-		DBG1(SIG_DBG_NET, "could not create any sockets");
+		DBG1(DBG_NET, "could not create any sockets");
 		destroy(this);
 		charon->kill(charon, "socket initialization failed");
 	}

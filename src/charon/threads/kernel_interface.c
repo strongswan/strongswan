@@ -357,12 +357,12 @@ static void receive_messages(private_kernel_interface_t *this)
 			}
 			if (reqid == 0)
 			{
-				DBG1(SIG_DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
+				DBG1(DBG_KNL, "received a XFRM_MSG_ACQUIRE, but no reqid found");
 			}
 			else
 			{
-				DBG2(SIG_DBG_KNL, "received a XFRM_MSG_ACQUIRE");
-				DBG1(SIG_DBG_KNL, "creating acquire job for CHILD_SA with reqid %d",
+				DBG2(DBG_KNL, "received a XFRM_MSG_ACQUIRE");
+				DBG1(DBG_KNL, "creating acquire job for CHILD_SA with reqid %d",
 								  reqid);
 				job = (job_t*)acquire_job_create(reqid);
 				charon->job_queue->add(charon->job_queue, job);
@@ -381,8 +381,8 @@ static void receive_messages(private_kernel_interface_t *this)
 			spi = expire->state.id.spi;
 			reqid = expire->state.reqid;
 			
-			DBG2(SIG_DBG_KNL, "received a XFRM_MSG_EXPIRE");
-			DBG1(SIG_DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
+			DBG2(DBG_KNL, "received a XFRM_MSG_EXPIRE");
+			DBG1(DBG_KNL, "creating %s job for %N CHILD_SA 0x%x (reqid %d)",
 							  expire->hard ? "delete" : "rekey",
 							  protocol_id_names, protocol, ntohl(spi),
 							  reqid);
@@ -447,7 +447,7 @@ static status_t get_spi(private_kernel_interface_t *this,
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
-	DBG2(SIG_DBG_KNL, "getting spi");
+	DBG2(DBG_KNL, "getting spi");
 	
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -466,29 +466,29 @@ static status_t get_spi(private_kernel_interface_t *this,
 	
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->nlmsg_type == NLMSG_ERROR)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_ALLOCSPI got an error: %s",
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_ALLOCSPI got an error: %s",
 						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
 	else if (response->nlmsg_type != XFRM_MSG_NEWSA)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_ALLOCSPI got a unknown reply");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_ALLOCSPI got a unknown reply");
 		status = FAILED;
 	}
 	else if (response->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_usersa_info)))
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_ALLOCSPI got an invalid reply");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_ALLOCSPI got an invalid reply");
 		status = FAILED;
 	}
 	else
 	{
 		*spi = ((struct xfrm_usersa_info*)NLMSG_DATA(response))->id.spi;
-		DBG2(SIG_DBG_KNL, "SPI is 0x%x", *spi);
+		DBG2(DBG_KNL, "SPI is 0x%x", *spi);
 	}
 	free(response);
 	
@@ -516,7 +516,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
-	DBG2(SIG_DBG_KNL, "adding SA");
+	DBG2(DBG_KNL, "adding SA");
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -551,11 +551,11 @@ static status_t add_sa(private_kernel_interface_t *this,
 		alg_name = lookup_algorithm(encryption_algs, enc_alg, &key_size);
 		if (alg_name == NULL)
 		{
-			DBG1(SIG_DBG_KNL, "algorithm %N not supported by kernel!",
+			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 				 encryption_algorithm_names, enc_alg->algorithm);
 			return FAILED;
 		}
-		DBG2(SIG_DBG_KNL, "  using encryption algorithm %N with key size %d",
+		DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 			 encryption_algorithm_names, enc_alg->algorithm, key_size);
 		
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + key_size);
@@ -579,11 +579,11 @@ static status_t add_sa(private_kernel_interface_t *this,
 		alg_name = lookup_algorithm(integrity_algs, int_alg, &key_size);
 		if (alg_name == NULL)
 		{
-			DBG1(SIG_DBG_KNL, "algorithm %N not supported by kernel!", 
+			DBG1(DBG_KNL, "algorithm %N not supported by kernel!", 
 				 integrity_algorithm_names, int_alg->algorithm);
 			return FAILED;
 		}
-		DBG2(SIG_DBG_KNL, "  using integrity algorithm %N with key size %d",
+		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
 			 integrity_algorithm_names, int_alg->algorithm, key_size);
 		
 		rthdr->rta_len = RTA_LENGTH(sizeof(struct xfrm_algo) + key_size);
@@ -634,17 +634,17 @@ static status_t add_sa(private_kernel_interface_t *this,
 
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_NEWSA not acknowledged");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_NEWSA not acknowledged");
 		status = FAILED;
 	}
 	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_NEWSA got an error: %s",
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_NEWSA got an error: %s",
 			 strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
@@ -671,7 +671,7 @@ static status_t update_sa(
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
-	DBG2(SIG_DBG_KNL, "getting SA");
+	DBG2(DBG_KNL, "getting SA");
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -686,30 +686,30 @@ static status_t update_sa(
 	
 	if (send_message(this, hdr, &update) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		return FAILED;
 	}
 	else if (update->nlmsg_type == NLMSG_ERROR)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_GETSA got an error: %s",
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_GETSA got an error: %s",
 			 strerror(-((struct nlmsgerr*)NLMSG_DATA(update))->error));
 		free(update);
 		return FAILED;
 	}
 	else if (update->nlmsg_type != XFRM_MSG_NEWSA)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_GETSA got a unknown reply");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_GETSA got a unknown reply");
 		free(update);
 		return FAILED;
 	}
 	else if (update->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_usersa_info)))
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_GETSA got an invalid reply");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_GETSA got an invalid reply");
 		free(update);
 		return FAILED;
 	}
 	
-	DBG2(SIG_DBG_KNL, "updating SA");
+	DBG2(DBG_KNL, "updating SA");
 	update->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;	
 	update->nlmsg_type = XFRM_MSG_UPDSA;
 	
@@ -721,7 +721,7 @@ static status_t update_sa(
 
 	if (dst_changes & HOST_DIFF_ADDR)
 	{
-		DBG2(SIG_DBG_KNL, "destination address changed! replacing SA");	
+		DBG2(DBG_KNL, "destination address changed! replacing SA");	
 		
 		update->nlmsg_type = XFRM_MSG_NEWSA;
 		host2xfrm(new_dst, &sa->id.daddr);
@@ -746,24 +746,24 @@ static status_t update_sa(
 	
 	if (send_message(this, update, &response) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		free(update);
 		return FAILED;
 	}
 	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_XXXSA not acknowledged");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_XXXSA not acknowledged");
 		status = FAILED;
 	}
 	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_XXXSA got an error: %s",
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_XXXSA got an error: %s",
 			 strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
 	else if (dst_changes & HOST_DIFF_ADDR)
 	{
-		DBG2(SIG_DBG_KNL, "deleting old SA");
+		DBG2(DBG_KNL, "deleting old SA");
 		status = this->public.del_sa(&this->public, dst, spi, protocol);
 	}
 	
@@ -784,7 +784,7 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	struct xfrm_usersa_id *sa_id;
 	struct xfrm_usersa_info *sa_info;
 	
-	DBG2(SIG_DBG_KNL, "querying SA");
+	DBG2(DBG_KNL, "querying SA");
 	memset(&request, 0, sizeof(request));
 	
 	hdr = (struct nlmsghdr*)request;
@@ -800,18 +800,18 @@ static status_t query_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->nlmsg_type != XFRM_MSG_NEWSA)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_GETSA not acknowledged");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_GETSA not acknowledged");
 		free(response);
 		return FAILED;
 	}
 	else if (response->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_usersa_info)))
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_GETSA got an invalid reply");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_GETSA got an invalid reply");
 		free(response);
 		return FAILED;
 	}
@@ -837,7 +837,7 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
-	DBG2(SIG_DBG_KNL, "deleting SA");
+	DBG2(DBG_KNL, "deleting SA");
 	
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
@@ -852,17 +852,17 @@ static status_t del_sa(private_kernel_interface_t *this, host_t *dst,
 	
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_DELSA not acknowledged");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_DELSA not acknowledged");
 		status = FAILED;
 	}
 	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_DELSA got an error: %s",
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_DELSA got an error: %s",
 						  strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
@@ -1000,7 +1000,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 			if (!update)
 			{
 				current->refcount++;
-				DBG2(SIG_DBG_KNL, "policy already exists, increasing refcount");
+				DBG2(DBG_KNL, "policy already exists, increasing refcount");
 				if (!high_prio)
 				{
 					/* if added policy is for a ROUTED child_sa, do not
@@ -1022,7 +1022,7 @@ static status_t add_policy(private_kernel_interface_t *this,
 		policy->refcount = 1;
 	}
 	
-	DBG2(SIG_DBG_KNL, "adding policy");
+	DBG2(DBG_KNL, "adding policy");
 	
 	memset(&request, 0, sizeof(request));
 	hdr = (struct nlmsghdr*)request;
@@ -1076,17 +1076,17 @@ static status_t add_policy(private_kernel_interface_t *this,
 	
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_UPDPOLICY not acknowledged");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_UPDPOLICY not acknowledged");
 		status = FAILED;
 	}
 	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_UPDPOLICY got an error: %s",
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_UPDPOLICY got an error: %s",
 			 strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}
@@ -1112,7 +1112,7 @@ static status_t query_policy(private_kernel_interface_t *this,
 	memset(&request, 0, sizeof(request));
 	status_t status = SUCCESS;
 	
-	DBG2(SIG_DBG_KNL, "querying policy");
+	DBG2(DBG_KNL, "querying policy");
 
 	hdr = (struct nlmsghdr*)request;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
@@ -1125,25 +1125,25 @@ static status_t query_policy(private_kernel_interface_t *this,
 
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->nlmsg_type == NLMSG_ERROR)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_GETPOLICY got an error: %s",
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_GETPOLICY got an error: %s",
 			 strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		free(response);
 		return FAILED;
 	}
 	else if (response->nlmsg_type != XFRM_MSG_NEWPOLICY)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_GETPOLICY got an unknown reply");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_GETPOLICY got an unknown reply");
 		free(response);
 		return FAILED;
 	}
 	else if (response->nlmsg_len < NLMSG_LENGTH(sizeof(struct xfrm_userpolicy_info)))
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_GETPOLICY got an invalid reply");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_GETPOLICY got an invalid reply");
 		free(response);
 		return FAILED;
 	}
@@ -1172,7 +1172,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 	iterator_t *iterator;
 	status_t status = SUCCESS;
 	
-	DBG2(SIG_DBG_KNL, "deleting policy");
+	DBG2(DBG_KNL, "deleting policy");
 	
 	/* create a policy */
 	memset(&policy, 0, sizeof(kernel_policy_t));
@@ -1191,7 +1191,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 			if (--to_delete->refcount > 0)
 			{
 				/* is used by more SAs, keep in kernel */
-				DBG2(SIG_DBG_KNL, "is used by other SAs, not removed");
+				DBG2(DBG_KNL, "is used by other SAs, not removed");
 				iterator->destroy(iterator);
 				pthread_mutex_unlock(&this->pol_mutex);
 				return SUCCESS;
@@ -1205,7 +1205,7 @@ static status_t del_policy(private_kernel_interface_t *this,
 	pthread_mutex_unlock(&this->pol_mutex);
 	if (!to_delete)
 	{
-		DBG1(SIG_DBG_KNL, "no such policy found");
+		DBG1(DBG_KNL, "no such policy found");
 		return NOT_FOUND;
 	}
 	
@@ -1224,17 +1224,17 @@ static status_t del_policy(private_kernel_interface_t *this,
 	
 	if (send_message(this, hdr, &response) != SUCCESS)
 	{
-		DBG1(SIG_DBG_KNL, "netlink communication failed");
+		DBG1(DBG_KNL, "netlink communication failed");
 		return FAILED;
 	}
 	else if (response->nlmsg_type != NLMSG_ERROR)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_DELPOLICY not acknowledged");
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_DELPOLICY not acknowledged");
 		status = FAILED;
 	}
 	else if (((struct nlmsgerr*)NLMSG_DATA(response))->error)
 	{
-		DBG1(SIG_DBG_KNL, "netlink request XFRM_MSG_DELPOLICY got an error: %s",
+		DBG1(DBG_KNL, "netlink request XFRM_MSG_DELPOLICY got an error: %s",
 			 strerror(-((struct nlmsgerr*)NLMSG_DATA(response))->error));
 		status = FAILED;
 	}

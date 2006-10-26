@@ -133,7 +133,7 @@ static x509_t* load_end_certificate(const char *filename, identification_t **idp
 
 		if (ugh != NULL)	
 		{
-			DBG1(SIG_DBG_CFG, "warning: certificate %s", ugh);
+			DBG1(DBG_CFG, "warning: certificate %s", ugh);
 		}
 		if (!id->equals(id, subject) && !cert->equals_subjectAltName(cert, id))
 		{
@@ -178,27 +178,27 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	pop_string(msg, &msg->add_conn.algorithms.ike);
 	pop_string(msg, &msg->add_conn.algorithms.esp);
 	
-	DBG1(SIG_DBG_CFG, "received stroke: add connection '%s'", msg->add_conn.name);
+	DBG1(DBG_CFG, "received stroke: add connection '%s'", msg->add_conn.name);
 	
-	DBG2(SIG_DBG_CFG, "conn %s", msg->add_conn.name);
-	DBG2(SIG_DBG_CFG, "  right=%s", msg->add_conn.me.address);
-	DBG2(SIG_DBG_CFG, "  left=%s", msg->add_conn.other.address);
-	DBG2(SIG_DBG_CFG, "  rightsubnet=%s", msg->add_conn.me.subnet);
-	DBG2(SIG_DBG_CFG, "  leftsubnet=%s", msg->add_conn.other.subnet);
-	DBG2(SIG_DBG_CFG, "  rightid=%s", msg->add_conn.me.id);
-	DBG2(SIG_DBG_CFG, "  leftid=%s", msg->add_conn.other.id);
-	DBG2(SIG_DBG_CFG, "  rightcert=%s", msg->add_conn.me.cert);
-	DBG2(SIG_DBG_CFG, "  leftcert=%s", msg->add_conn.other.cert);
-	DBG2(SIG_DBG_CFG, "  rightca=%s", msg->add_conn.me.ca);
-	DBG2(SIG_DBG_CFG, "  leftca=%s", msg->add_conn.other.ca);
-	DBG2(SIG_DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
-	DBG2(SIG_DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
+	DBG2(DBG_CFG, "conn %s", msg->add_conn.name);
+	DBG2(DBG_CFG, "  right=%s", msg->add_conn.me.address);
+	DBG2(DBG_CFG, "  left=%s", msg->add_conn.other.address);
+	DBG2(DBG_CFG, "  rightsubnet=%s", msg->add_conn.me.subnet);
+	DBG2(DBG_CFG, "  leftsubnet=%s", msg->add_conn.other.subnet);
+	DBG2(DBG_CFG, "  rightid=%s", msg->add_conn.me.id);
+	DBG2(DBG_CFG, "  leftid=%s", msg->add_conn.other.id);
+	DBG2(DBG_CFG, "  rightcert=%s", msg->add_conn.me.cert);
+	DBG2(DBG_CFG, "  leftcert=%s", msg->add_conn.other.cert);
+	DBG2(DBG_CFG, "  rightca=%s", msg->add_conn.me.ca);
+	DBG2(DBG_CFG, "  leftca=%s", msg->add_conn.other.ca);
+	DBG2(DBG_CFG, "  ike=%s", msg->add_conn.algorithms.ike);
+	DBG2(DBG_CFG, "  esp=%s", msg->add_conn.algorithms.esp);
 	
 	my_host = msg->add_conn.me.address?
 			  host_create_from_string(msg->add_conn.me.address, IKE_PORT) : NULL;
 	if (my_host == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "invalid host: %s\n", msg->add_conn.me.address);
+		DBG1(DBG_CFG, "invalid host: %s\n", msg->add_conn.me.address);
 		return;
 	}
 
@@ -206,7 +206,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			host_create_from_string(msg->add_conn.other.address, IKE_PORT) : NULL;
 	if (other_host == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "invalid host: %s\n", msg->add_conn.other.address);
+		DBG1(DBG_CFG, "invalid host: %s\n", msg->add_conn.other.address);
 		my_host->destroy(my_host);
 		return;
 	}
@@ -216,7 +216,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 		stroke_end_t tmp_end;
 		host_t *tmp_host;
 
-		DBG2(SIG_DBG_CFG, "left is other host, swapping ends\n");
+		DBG2(DBG_CFG, "left is other host, swapping ends\n");
 
 		tmp_host = my_host;
 		my_host = other_host;
@@ -228,7 +228,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	else if (!charon->socket->is_local_address(charon->socket, my_host, NULL))
 	{
-		DBG1(SIG_DBG_CFG, "left nor right host is our side, aborting\n");
+		DBG1(DBG_CFG, "left nor right host is our side, aborting\n");
 		goto destroy_hosts;
 	}
 
@@ -236,7 +236,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 						msg->add_conn.me.id : msg->add_conn.me.address);
 	if (my_id == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "invalid ID: %s\n", msg->add_conn.me.id);
+		DBG1(DBG_CFG, "invalid ID: %s\n", msg->add_conn.me.id);
 		goto destroy_hosts;
 	}
 
@@ -244,7 +244,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 						msg->add_conn.other.id : msg->add_conn.other.address);
 	if (other_id == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "invalid ID: %s\n", msg->add_conn.other.id);
+		DBG1(DBG_CFG, "invalid ID: %s\n", msg->add_conn.other.id);
 		my_id->destroy(my_id);
 		goto destroy_hosts;
 	}
@@ -253,7 +253,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					msg->add_conn.me.subnet : msg->add_conn.me.address, IKE_PORT);
 	if (my_subnet == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "invalid subnet: %s\n", msg->add_conn.me.subnet);
+		DBG1(DBG_CFG, "invalid subnet: %s\n", msg->add_conn.me.subnet);
 		goto destroy_ids;
 	}
 	
@@ -261,7 +261,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 					msg->add_conn.other.subnet : msg->add_conn.other.address, IKE_PORT);
 	if (other_subnet == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "invalid subnet: %s\n", msg->add_conn.me.subnet);
+		DBG1(DBG_CFG, "invalid subnet: %s\n", msg->add_conn.me.subnet);
 		my_subnet->destroy(my_subnet);
 		goto destroy_ids;
 	}
@@ -336,9 +336,9 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	{
 		other_ca = identification_create_from_string("%any");
 	}
-	DBG2(SIG_DBG_CFG, "  my ca:   '%D'", my_ca);
-	DBG2(SIG_DBG_CFG, "  other ca:'%D'", other_ca);
-	DBG2(SIG_DBG_CFG, "  updown: '%s'", msg->add_conn.me.updown);
+	DBG2(DBG_CFG, "  my ca:   '%D'", my_ca);
+	DBG2(DBG_CFG, "  other ca:'%D'", other_ca);
+	DBG2(DBG_CFG, "  updown: '%s'", msg->add_conn.me.updown);
 
 	connection = connection_create(msg->add_conn.name,
 								   msg->add_conn.ikev2,
@@ -366,7 +366,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			proposal = proposal_create_from_string(PROTO_IKE, proposal_string);
 			if (proposal == NULL)
 			{
-				DBG1(SIG_DBG_CFG, "invalid IKE proposal string: %s", proposal_string);
+				DBG1(DBG_CFG, "invalid IKE proposal string: %s", proposal_string);
 				my_id->destroy(my_id);
 				other_id->destroy(other_id);
 				my_ts->destroy(my_ts);
@@ -416,7 +416,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 			proposal = proposal_create_from_string(PROTO_ESP, proposal_string);
 			if (proposal == NULL)
 			{
-				DBG1(SIG_DBG_CFG, "invalid ESP proposal string: %s", proposal_string);
+				DBG1(DBG_CFG, "invalid ESP proposal string: %s", proposal_string);
 				policy->destroy(policy);
 				connection->destroy(connection);
 				return;
@@ -437,7 +437,7 @@ static void stroke_add_conn(private_stroke_t *this, stroke_msg_t *msg)
 	
 	/* add to global connection list */
 	charon->connections->add_connection(charon->connections, connection);
-	DBG1(SIG_DBG_CFG, "added connection '%s': %H[%D]...%H[%D]",
+	DBG1(DBG_CFG, "added connection '%s': %H[%D]...%H[%D]",
 		 msg->add_conn.name, my_host, my_id, other_host, other_id);
 	/* add to global policy list */
 	charon->policies->add_policy(charon->policies, policy);
@@ -463,7 +463,7 @@ static void stroke_del_conn(private_stroke_t *this, stroke_msg_t *msg)
 	status_t status;
 	
 	pop_string(msg, &(msg->del_conn.name));
-	DBG1(SIG_DBG_CFG, "received stroke: delete '%s'", msg->del_conn.name);
+	DBG1(DBG_CFG, "received stroke: delete '%s'", msg->del_conn.name);
 	
 	status = charon->connections->delete_connection(charon->connections, 
 													msg->del_conn.name);
@@ -490,7 +490,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	signal_t signal;
 	
 	pop_string(msg, &(msg->initiate.name));
-	DBG1(SIG_DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
+	DBG1(DBG_CFG, "received stroke: initiate '%s'", msg->initiate.name);
 	
 	connection = charon->connections->get_connection_by_name(charon->connections,
 															 msg->initiate.name);
@@ -518,10 +518,6 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		}
 		connection->destroy(connection);
 		return;
-	}
-	if (msg->output_verbosity >= 0)
-	{
-		fprintf(this->out, "initiating connection '%s'\n", msg->initiate.name);
 	}
 	
 	job = initiate_job_create(connection, policy);
@@ -552,17 +548,16 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		/* TODO: Handle INVALID_KE_PAYLOAD signal (ike_sa switch) */
 		switch (signal)
 		{
-			case SIG_IKE_UP:
-			case SIG_IKE_FAILED:
-			case SIG_CHILD_UP:
-			case SIG_CHILD_FAILED:
+			case CHILD_UP_SUCCESS:
+			case CHILD_UP_FAILED:
 				if (ike_sa == init_ike_sa)
 				{
 					charon->bus->set_listen_state(charon->bus, FALSE);
 					return;
 				}
 				continue;
-			case SIG_INITIATE:
+			case CHILD_UP_START:
+			case IKE_UP_START:
 				if (init_ike_sa == NULL)
 				{
 					init_ike_sa = ike_sa;
@@ -584,7 +579,7 @@ static void stroke_route(private_stroke_t *this, stroke_msg_t *msg, bool route)
 	policy_t *policy;
 	
 	pop_string(msg, &(msg->route.name));
-	DBG1(SIG_DBG_CFG, "received stroke: %s '%s'",
+	DBG1(DBG_CFG, "received stroke: %s '%s'",
 		 route ? "route" : "unroute", msg->route.name);
 	
 	/* we wouldn't need a connection, but we only want to route policies
@@ -622,7 +617,7 @@ static void stroke_route(private_stroke_t *this, stroke_msg_t *msg, bool route)
 static void stroke_terminate(private_stroke_t *this, stroke_msg_t *msg)
 {
 	pop_string(msg, &(msg->terminate.name));
-	DBG1(SIG_DBG_CFG, "received stroke: terminate '%s'", msg->terminate.name);
+	DBG1(DBG_CFG, "received stroke: terminate '%s'", msg->terminate.name);
 	
 	charon->ike_sa_manager->delete_by_name(charon->ike_sa_manager, msg->terminate.name);
 }
@@ -843,15 +838,15 @@ static void stroke_reread(private_stroke_t *this, stroke_msg_t *msg)
 signal_t get_signal_from_logtype(char *type)
 {
 	if      (strcasecmp(type, "any") == 0) return SIG_ANY;
-	else if (strcasecmp(type, "mgr") == 0) return SIG_DBG_MGR;
-	else if (strcasecmp(type, "ike") == 0) return SIG_DBG_IKE;
-	else if (strcasecmp(type, "chd") == 0) return SIG_DBG_CHD;
-	else if (strcasecmp(type, "job") == 0) return SIG_DBG_JOB;
-	else if (strcasecmp(type, "cfg") == 0) return SIG_DBG_CFG;
-	else if (strcasecmp(type, "knl") == 0) return SIG_DBG_KNL;
-	else if (strcasecmp(type, "net") == 0) return SIG_DBG_NET;
-	else if (strcasecmp(type, "enc") == 0) return SIG_DBG_ENC;
-	else if (strcasecmp(type, "lib") == 0) return SIG_DBG_LIB;
+	else if (strcasecmp(type, "mgr") == 0) return DBG_MGR;
+	else if (strcasecmp(type, "ike") == 0) return DBG_IKE;
+	else if (strcasecmp(type, "chd") == 0) return DBG_CHD;
+	else if (strcasecmp(type, "job") == 0) return DBG_JOB;
+	else if (strcasecmp(type, "cfg") == 0) return DBG_CFG;
+	else if (strcasecmp(type, "knl") == 0) return DBG_KNL;
+	else if (strcasecmp(type, "net") == 0) return DBG_NET;
+	else if (strcasecmp(type, "enc") == 0) return DBG_ENC;
+	else if (strcasecmp(type, "lib") == 0) return DBG_LIB;
 	else return -1;
 }
 
@@ -863,7 +858,7 @@ static void stroke_loglevel(private_stroke_t *this, stroke_msg_t *msg)
 	signal_t signal;
 	
 	pop_string(msg, &(msg->loglevel.type));
-	DBG1(SIG_DBG_CFG, "received stroke: loglevel %d for %s",
+	DBG1(DBG_CFG, "received stroke: loglevel %d for %s",
 		 msg->loglevel.level, msg->loglevel.type);
 	
 	signal = get_signal_from_logtype(msg->loglevel.type);
@@ -902,7 +897,7 @@ static void stroke_receive(private_stroke_t *this)
 		
 		if (strokefd < 0)
 		{
-			DBG1(SIG_DBG_CFG, "accepting stroke connection failed: %m");
+			DBG1(DBG_CFG, "accepting stroke connection failed: %m");
 			continue;
 		}
 		
@@ -910,7 +905,7 @@ static void stroke_receive(private_stroke_t *this)
 		bytes_read = recv(strokefd, &msg_length, sizeof(msg_length), MSG_PEEK);
 		if (bytes_read != sizeof(msg_length))
 		{
-			DBG1(SIG_DBG_CFG, "reading lenght of stroke message failed");
+			DBG1(DBG_CFG, "reading lenght of stroke message failed");
 			close(strokefd);
 			continue;
 		}
@@ -920,7 +915,7 @@ static void stroke_receive(private_stroke_t *this)
 		bytes_read = recv(strokefd, msg, msg_length, 0);
 		if (bytes_read != msg_length)
 		{
-			DBG1(SIG_DBG_CFG, "reading stroke message failed: %m");
+			DBG1(DBG_CFG, "reading stroke message failed: %m");
 			close(strokefd);
 			continue;
 		}
@@ -928,13 +923,13 @@ static void stroke_receive(private_stroke_t *this)
 		this->out = fdopen(dup(strokefd), "w");
 		if (this->out == NULL)
 		{
-			DBG1(SIG_DBG_CFG, "opening stroke output channel failed: %m");
+			DBG1(DBG_CFG, "opening stroke output channel failed: %m");
 			close(strokefd);
 			free(msg);
 			continue;
 		}
 		
-		DBG3(SIG_DBG_CFG, "stroke message %b", (void*)msg, msg_length);
+		DBG3(DBG_CFG, "stroke message %b", (void*)msg, msg_length);
 		
 		switch (msg->type)
 		{
@@ -972,7 +967,7 @@ static void stroke_receive(private_stroke_t *this)
 				stroke_reread(this, msg);
 				break;
 			default:
-				DBG1(SIG_DBG_CFG, "received unknown stroke");
+				DBG1(DBG_CFG, "received unknown stroke");
 		}
 		fclose(this->out);
 		close(strokefd);
@@ -1008,7 +1003,7 @@ stroke_t *stroke_create()
 	this->socket = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (this->socket == -1)
 	{
-		DBG1(SIG_DBG_CFG, "could not create whack socket");
+		DBG1(DBG_CFG, "could not create whack socket");
 		free(this);
 		return NULL;
 	}
@@ -1016,7 +1011,7 @@ stroke_t *stroke_create()
 	old = umask(~S_IRWXU);
 	if (bind(this->socket, (struct sockaddr *)&socket_addr, sizeof(socket_addr)) < 0)
 	{
-		DBG1(SIG_DBG_CFG, "could not bind stroke socket: %m");
+		DBG1(DBG_CFG, "could not bind stroke socket: %m");
 		close(this->socket);
 		free(this);
 		return NULL;
@@ -1025,7 +1020,7 @@ stroke_t *stroke_create()
 	
 	if (listen(this->socket, 0) < 0)
 	{
-		DBG1(SIG_DBG_CFG, "could not listen on stroke socket: %m");
+		DBG1(DBG_CFG, "could not listen on stroke socket: %m");
 		close(this->socket);
 		unlink(socket_addr.sun_path);
 		free(this);
@@ -1035,7 +1030,7 @@ stroke_t *stroke_create()
 	/* start a thread reading from the socket */
 	if (pthread_create(&(this->assigned_thread), NULL, (void*(*)(void*))stroke_receive, this) != 0)
 	{
-		DBG1(SIG_DBG_CFG, "Could not spawn stroke thread");
+		DBG1(DBG_CFG, "could not spawn stroke thread");
 		close(this->socket);
 		unlink(socket_addr.sun_path);
 		free(this);

@@ -62,20 +62,20 @@ static void receive_packets(private_receiver_t * this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	DBG1(SIG_DBG_NET, "receiver thread running, thread_ID: %06u", 
+	DBG1(DBG_NET, "receiver thread running, thread_ID: %06u", 
 		 (int)pthread_self());
 	
 	while (TRUE)
 	{
 		while (charon->socket->receive(charon->socket,&current_packet) == SUCCESS)
 		{
-			DBG2(SIG_DBG_NET, "creating job from packet");
+			DBG2(DBG_NET, "creating job from packet");
 			current_job = (job_t *) incoming_packet_job_create(current_packet);
 			
 			charon->job_queue->add(charon->job_queue,current_job);
 		}
 		/* bad bad, TODO: rebuild the socket ? */
-		DBG1(SIG_DBG_NET, "receiving from socket failed!");
+		DBG1(DBG_NET, "receiving from socket failed!");
 	}
 }
 

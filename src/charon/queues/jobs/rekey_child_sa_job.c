@@ -71,7 +71,7 @@ static status_t execute(private_rekey_child_sa_job_t *this)
 													   this->reqid);
 	if (ike_sa == NULL)
 	{
-		DBG2(SIG_DBG_JOB, "CHILD_SA with reqid %d not found for rekeying",
+		DBG2(DBG_JOB, "CHILD_SA with reqid %d not found for rekeying",
 			 this->reqid);
 		return DESTROY_ME;
 	}

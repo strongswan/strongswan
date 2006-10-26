@@ -123,14 +123,14 @@ static status_t verify(private_sa_payload_t *this)
 		{
 			if (first)
 			{
-				DBG1(SIG_DBG_ENC, "first proposal is not proposal #1");
+				DBG1(DBG_ENC, "first proposal is not proposal #1");
 				status = FAILED;
 				break;
 			}
 			
 			if (current_number != (expected_number + 1))
 			{
-				DBG1(SIG_DBG_ENC, "proposal number is %d, excepted %d or %d",
+				DBG1(DBG_ENC, "proposal number is %d, excepted %d or %d",
 					 current_number, expected_number, expected_number + 1);
 				status = FAILED;
 				break;
@@ -139,7 +139,7 @@ static status_t verify(private_sa_payload_t *this)
 		else if (current_number < expected_number)
 		{
 			/* must not be smaller then proceeding one */
-			DBG1(SIG_DBG_ENC, "proposal number smaller than that of previous proposal");
+			DBG1(DBG_ENC, "proposal number smaller than that of previous proposal");
 			status = FAILED;
 			break;
 		}
@@ -147,7 +147,7 @@ static status_t verify(private_sa_payload_t *this)
 		status = current_proposal->payload_interface.verify(&(current_proposal->payload_interface));
 		if (status != SUCCESS)
 		{
-			DBG1(SIG_DBG_ENC, "PROPOSAL_SUBSTRUCTURE verification failed");
+			DBG1(DBG_ENC, "PROPOSAL_SUBSTRUCTURE verification failed");
 			break;
 		}
 		first = FALSE;

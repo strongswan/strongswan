@@ -223,7 +223,7 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 	traffic_selector_t *supplied_ts, *stored_ts, *selected_ts;
 	linked_list_t *selected = linked_list_create();
 	
-	DBG2(SIG_DBG_CFG, "selecting traffic selectors");
+	DBG2(DBG_CFG, "selecting traffic selectors");
 	
 	stored_iter = stored->create_iterator(stored, TRUE);
 	supplied_iter = supplied->create_iterator(supplied, TRUE);
@@ -240,7 +240,7 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 		/* iterate over all supplied traffic selectors */
 		while (supplied_iter->iterate(supplied_iter, (void**)&supplied_ts))
 		{
-			DBG2(SIG_DBG_CFG, "stored %R <=> %R received",
+			DBG2(DBG_CFG, "stored %R <=> %R received",
 				 stored_ts, supplied_ts);
 			
 			selected_ts = stored_ts->get_subset(stored_ts, supplied_ts);
@@ -249,7 +249,7 @@ static linked_list_t *select_traffic_selectors(private_policy_t *this,
 				/* got a match, add to list */
 				selected->insert_last(selected, (void*)selected_ts);
 				
-				DBG2(SIG_DBG_CFG, "found traffic selector for %s: %R", 
+				DBG2(DBG_CFG, "found traffic selector for %s: %R", 
 					 stored == this->my_ts ? "us" : "other", selected_ts);
 			}
 		}

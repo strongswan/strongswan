@@ -291,7 +291,7 @@ static void generate(private_encryption_payload_t *this)
 	else
 	{
 		/* no paylads? */
-		DBG2(SIG_DBG_ENC, "generating contained payloads, but none available");
+		DBG2(DBG_ENC, "generating contained payloads, but none available");
 		free(this->decrypted.ptr);
 		this->decrypted = CHUNK_INITIALIZER;
 		iterator->destroy(iterator);
@@ -318,7 +318,7 @@ static void generate(private_encryption_payload_t *this)
 	
 	generator->write_to_chunk(generator, &(this->decrypted));
 	generator->destroy(generator);
-	DBG2(SIG_DBG_ENC, "successfully generated content in encryption payload");
+	DBG2(DBG_ENC, "successfully generated content in encryption payload");
 }
 
 /**
@@ -333,7 +333,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	
 	if (this->signer == NULL || this->crypter == NULL)
 	{
-		DBG1(SIG_DBG_ENC, "could not encrypt, signer/crypter not set");
+		DBG1(DBG_ENC, "could not encrypt, signer/crypter not set");
 		return INVALID_STATE;
 	}
 	
@@ -343,8 +343,8 @@ static status_t encrypt(private_encryption_payload_t *this)
 	/* build payload chunk */
 	generate(this);
 	
-	DBG2(SIG_DBG_ENC, "encrypting payloads");
-	DBG3(SIG_DBG_ENC, "data to encrypt %B", &this->decrypted);
+	DBG2(DBG_ENC, "encrypting payloads");
+	DBG3(DBG_ENC, "data to encrypt %B", &this->decrypted);
 	
 	/* build padding */
 	block_size = this->crypter->get_block_size(this->crypter);
@@ -375,7 +375,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 		return status;
 	}
 	
-	DBG3(SIG_DBG_ENC, "data before encryption with padding %B", &to_crypt);
+	DBG3(DBG_ENC, "data before encryption with padding %B", &to_crypt);
 	
 	/* encrypt to_crypt chunk */
 	free(this->encrypted.ptr);
@@ -384,11 +384,11 @@ static status_t encrypt(private_encryption_payload_t *this)
 	free(to_crypt.ptr);
 	if (status != SUCCESS)
 	{
-		DBG2(SIG_DBG_ENC, "encryption failed");
+		DBG2(DBG_ENC, "encryption failed");
 		free(iv.ptr);
 		return status;
 	}
-	DBG3(SIG_DBG_ENC, "data after encryption %B", &result);
+	DBG3(DBG_ENC, "data after encryption %B", &result);
 	
 	/* build encrypted result with iv and signature */
 	this->encrypted.len = iv.len + result.len + this->signer->get_block_size(this->signer);
@@ -401,7 +401,7 @@ static status_t encrypt(private_encryption_payload_t *this)
 	
 	free(result.ptr);
 	free(iv.ptr);
-	DBG3(SIG_DBG_ENC, "data after encryption with IV and (invalid) signature %B",
+	DBG3(DBG_ENC, "data after encryption with IV and (invalid) signature %B",
 		 &this->encrypted);
 	
 	return SUCCESS;
@@ -435,7 +435,7 @@ static status_t parse(private_encryption_payload_t *this)
 		status = current_payload->verify(current_payload);
 		if (status != SUCCESS)
 		{
-			DBG1(SIG_DBG_ENC, "%N verification failed",
+			DBG1(DBG_ENC, "%N verification failed",
 				 payload_type_names, current_payload->get_type(current_payload));
 			current_payload->destroy(current_payload);
 			parser->destroy(parser);
@@ -448,7 +448,7 @@ static status_t parse(private_encryption_payload_t *this)
 		this->payloads->insert_last(this->payloads,current_payload);
 	}
 	parser->destroy(parser);
-	DBG2(SIG_DBG_ENC, "succesfully parsed content of encryption payload");
+	DBG2(DBG_ENC, "succesfully parsed content of encryption payload");
 	return SUCCESS;
 }
 
@@ -461,13 +461,13 @@ static status_t decrypt(private_encryption_payload_t *this)
 	u_int8_t padding_length;
 	status_t status;
 	
-	DBG2(SIG_DBG_ENC, "decrypting encryption payload");
-	DBG3(SIG_DBG_ENC, "data before decryption with IV and (invalid) signature %B",
+	DBG2(DBG_ENC, "decrypting encryption payload");
+	DBG3(DBG_ENC, "data before decryption with IV and (invalid) signature %B",
 		 &this->encrypted);
 	
 	if (this->signer == NULL || this->crypter == NULL)
 	{
-		DBG1(SIG_DBG_ENC, "could not decrypt, no crypter/signer set");
+		DBG1(DBG_ENC, "could not decrypt, no crypter/signer set");
 		return INVALID_STATE;
 	}
 	
@@ -485,22 +485,22 @@ static status_t decrypt(private_encryption_payload_t *this)
 	 */
 	if (concatenated.len < iv.len)
 	{
-		DBG1(SIG_DBG_ENC, "could not decrypt, invalid input");
+		DBG1(DBG_ENC, "could not decrypt, invalid input");
 		return FAILED;
 	}
 	
 	/* free previus data, if any */
 	free(this->decrypted.ptr);
 	
-	DBG3(SIG_DBG_ENC, "data before decryption %B", &concatenated);
+	DBG3(DBG_ENC, "data before decryption %B", &concatenated);
 	
 	status = this->crypter->decrypt(this->crypter, concatenated, iv, &(this->decrypted));
 	if (status != SUCCESS)
 	{
-		DBG1(SIG_DBG_ENC, "could not decrypt, decryption failed");
+		DBG1(DBG_ENC, "could not decrypt, decryption failed");
 		return FAILED;
 	}
-	DBG3(SIG_DBG_ENC, "data after decryption with padding %B", &this->decrypted);
+	DBG3(DBG_ENC, "data after decryption with padding %B", &this->decrypted);
 	
 	
 	/* get padding length, sits just bevore signature */
@@ -512,15 +512,15 @@ static status_t decrypt(private_encryption_payload_t *this)
 	/* check size again */
 	if (padding_length > concatenated.len || this->decrypted.len < 0)
 	{
-		DBG1(SIG_DBG_ENC, "decryption failed, invalid padding length found. Invalid key?");
+		DBG1(DBG_ENC, "decryption failed, invalid padding length found. Invalid key?");
 		/* decryption failed :-/ */
 		return FAILED;
 	}
 	
 	/* free padding */
 	this->decrypted.ptr = realloc(this->decrypted.ptr, this->decrypted.len);
-	DBG3(SIG_DBG_ENC, "data after decryption without padding %B", &this->decrypted);
-	DBG2(SIG_DBG_ENC, "decryption successful, trying to parse content");
+	DBG3(DBG_ENC, "data after decryption without padding %B", &this->decrypted);
+	DBG2(DBG_ENC, "decryption successful, trying to parse content");
 	return parse(this);
 }
 
@@ -543,14 +543,14 @@ static status_t build_signature(private_encryption_payload_t *this, chunk_t data
 	
 	if (this->signer == NULL)
 	{
-		DBG1(SIG_DBG_ENC, "unable to build signature, no signer set");
+		DBG1(DBG_ENC, "unable to build signature, no signer set");
 		return INVALID_STATE;
 	}
 	
 	sig.len = this->signer->get_block_size(this->signer);
 	data_without_sig.len -= sig.len;
 	sig.ptr = data.ptr + data_without_sig.len;
-	DBG2(SIG_DBG_ENC, "building signature");
+	DBG2(DBG_ENC, "building signature");
 	this->signer->get_signature(this->signer, data_without_sig, sig.ptr);
 	return SUCCESS;
 }
@@ -565,14 +565,14 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 	
 	if (this->signer == NULL)
 	{
-		DBG1(SIG_DBG_ENC, "unable to verify signature, no signer set");
+		DBG1(DBG_ENC, "unable to verify signature, no signer set");
 		return INVALID_STATE;
 	}
 	/* find signature in data chunk */
 	sig.len = this->signer->get_block_size(this->signer);
 	if (data.len <= sig.len)
 	{
-		DBG1(SIG_DBG_ENC, "unable to verify signature, invalid input");
+		DBG1(DBG_ENC, "unable to verify signature, invalid input");
 		return FAILED;
 	}
 	sig.ptr = data.ptr + data.len - sig.len;
@@ -584,11 +584,11 @@ static status_t verify_signature(private_encryption_payload_t *this, chunk_t dat
 	
 	if (!valid)
 	{
-		DBG1(SIG_DBG_ENC, "signature verification failed");
+		DBG1(DBG_ENC, "signature verification failed");
 		return FAILED;
 	}
 	
-	DBG2(SIG_DBG_ENC, "signature verification successful");
+	DBG2(DBG_ENC, "signature verification successful");
 	return SUCCESS;
 }
 

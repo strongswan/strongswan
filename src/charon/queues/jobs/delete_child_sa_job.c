@@ -72,7 +72,7 @@ static status_t execute(private_delete_child_sa_job_t *this)
 													   this->reqid);
 	if (ike_sa == NULL)
 	{
-		DBG1(SIG_DBG_JOB, "CHILD_SA with reqid %d not found for delete",
+		DBG1(DBG_JOB, "CHILD_SA with reqid %d not found for delete",
 			 this->reqid);
 		return DESTROY_ME;
 	}

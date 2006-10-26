@@ -70,11 +70,12 @@ static void process_jobs(private_thread_pool_t *this)
 	/* cancellation disabled by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	
-	DBG1(SIG_DBG_JOB, "worker thread running, thread_ID: %06u",
+	DBG1(DBG_JOB, "worker thread running, thread_ID: %06u",
 		 (int)pthread_self());
 	
 	while (TRUE)
 	{
+		/* TODO: should be atomic, but is not mission critical */
 		this->idle_threads++;
 		job = charon->job_queue->get(charon->job_queue);
 		this->idle_threads--;
@@ -113,7 +114,7 @@ static void destroy(private_thread_pool_t *this)
 	/* flag thread for termination */
 	for (current = 0; current < this->pool_size; current++)
 	{
-		DBG1(SIG_DBG_JOB, "cancelling worker thread #%d", current+1);
+		DBG1(DBG_JOB, "cancelling worker thread #%d", current+1);
 		pthread_cancel(this->threads[current]);
 	}
 	
@@ -121,11 +122,11 @@ static void destroy(private_thread_pool_t *this)
 	for (current = 0; current < this->pool_size; current++) {
 		if (pthread_join(this->threads[current], NULL) == 0)
 		{
-			DBG1(SIG_DBG_JOB, "worker thread #%d terminated", current+1);
+			DBG1(DBG_JOB, "worker thread #%d terminated", current+1);
 		}
 		else
 		{
-			DBG1(SIG_DBG_JOB, "could not terminate worker thread #%d", current+1);
+			DBG1(DBG_JOB, "could not terminate worker thread #%d", current+1);
 		}
 	}
 	
@@ -158,7 +159,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 		if (pthread_create(&(this->threads[current]), NULL,
 						   (void*(*)(void*))process_jobs, this) == 0)
 		{
-			DBG1(SIG_DBG_JOB, "created worker thread #%d", current+1);
+			DBG1(DBG_JOB, "created worker thread #%d", current+1);
 		}
 		else
 		{
@@ -170,7 +171,7 @@ thread_pool_t *thread_pool_create(size_t pool_size)
 				charon->kill(charon, "could not create any worker threads");
 			}
 			/* not all threads could be created, but at least one :-/ */
-			DBG1(SIG_DBG_JOB, "could only create %d from requested %d threads!",
+			DBG1(DBG_JOB, "could only create %d from requested %d threads!",
 				 current, pool_size);
 			this->pool_size = current;
 			break;

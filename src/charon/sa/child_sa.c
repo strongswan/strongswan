@@ -327,7 +327,7 @@ static void updown(private_child_sa_t *this, bool up)
 
 		if (shell == NULL)
 		{
-			DBG1(SIG_DBG_CHD, "could not execute updown script '%s'", this->script);
+			DBG1(DBG_CHD, "could not execute updown script '%s'", this->script);
 			return;
 		}
 		
@@ -339,7 +339,7 @@ static void updown(private_child_sa_t *this, bool up)
 			{
 				if (ferror(shell))
 				{
-					DBG1(SIG_DBG_CHD, "error reading output from updown script");
+					DBG1(DBG_CHD, "error reading output from updown script");
 					return;
 				}
 				else
@@ -354,7 +354,7 @@ static void updown(private_child_sa_t *this, bool up)
 				{	/* trim trailing '\n' */
 					e[-1] = '\0';
 				}
-				DBG1(SIG_DBG_CHD, "updown: %s", resp);
+				DBG1(DBG_CHD, "updown: %s", resp);
 			}
 		}
 		pclose(shell);
@@ -489,13 +489,13 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 		dst = this->other.addr;
 	}
 	
-	DBG2(SIG_DBG_CHD, "adding %s %N SA", mine ? "inbound" : "outbound",
+	DBG2(DBG_CHD, "adding %s %N SA", mine ? "inbound" : "outbound",
 		 protocol_id_names, this->protocol);
 	
 	/* select encryption algo */
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_algo))
 	{
-		DBG2(SIG_DBG_CHD, "  using %N for encryption",
+		DBG2(DBG_CHD, "  using %N for encryption",
 			 encryption_algorithm_names, enc_algo->algorithm);
 	}
 	else
@@ -506,7 +506,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	/* select integrity algo */
 	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_algo))
 	{
-		DBG2(SIG_DBG_CHD, "  using %N for integrity",
+		DBG2(DBG_CHD, "  using %N for integrity",
 			 integrity_algorithm_names, int_algo->algorithm);
 	}
 	else
@@ -528,7 +528,7 @@ static status_t install(private_child_sa_t *this, proposal_t *proposal, prf_plus
 	
 	
 	/* send SA down to the kernel */
-	DBG2(SIG_DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
+	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), src, dst);
 	status = charon->kernel_interface->add_sa(charon->kernel_interface,
 											  src, dst,
 											  spi, this->protocol,
@@ -621,7 +621,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			
 			if (my_ts->get_type(my_ts) != other_ts->get_type(other_ts))
 			{
-				DBG2(SIG_DBG_CHD,
+				DBG2(DBG_CHD,
 					 "CHILD_SA policy uses two different IP families, ignored");
 				continue;
 			}
@@ -630,7 +630,7 @@ static status_t add_policies(private_child_sa_t *this, linked_list_t *my_ts_list
 			if (my_ts->get_protocol(my_ts) != other_ts->get_protocol(other_ts) &&
 				my_ts->get_protocol(my_ts) && other_ts->get_protocol(other_ts))
 			{
-				DBG2(SIG_DBG_CHD,
+				DBG2(DBG_CHD,
 					 "CHILD_SA policy uses two different protocols, ignored");
 				continue;
 			}
@@ -908,7 +908,7 @@ static status_t update_sa_hosts(private_child_sa_t *this, host_t *new_me, host_t
 		spi = this->me.spi;
 	}
 	
-	DBG2(SIG_DBG_CHD, "updating %N SA 0x%x, from %#H..#H to %#H..%#H",
+	DBG2(DBG_CHD, "updating %N SA 0x%x, from %#H..#H to %#H..%#H",
 		 protocol_id_names, this->protocol, ntohl(spi), src, dst, new_src, new_dst);
 	
 	status = charon->kernel_interface->update_sa(charon->kernel_interface,

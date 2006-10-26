@@ -155,7 +155,7 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	/* check message type */
 	if (request->get_exchange_type(request) != INFORMATIONAL)
 	{
-		DBG1(SIG_DBG_IKE, "INFORMATIONAL response of invalid type, deleting IKE_SA");
+		DBG1(DBG_IKE, "INFORMATIONAL response of invalid type, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -172,7 +172,7 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 			}
 			default:
 			{
-				DBG1(SIG_DBG_IKE, "ignoring payload %N",
+				DBG1(DBG_IKE, "ignoring payload %N",
 					 payload_type_names, payload->get_type(payload));
 				break;
 			}
@@ -183,12 +183,12 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	if (delete_request && 
 		delete_request->get_protocol_id(delete_request) == PROTO_IKE)
 	{
-		DBG1(SIG_DBG_IKE, "DELETE request for IKE_SA received, deleting IKE_SA");
+		DBG1(DBG_IKE, "DELETE request for IKE_SA received, deleting IKE_SA");
 	}
 	else
 	{
 		/* should not happen, as we preparsed this at transaction construction */
-		DBG1(SIG_DBG_IKE, "received a weird DELETE request for IKE_SA, deleting anyway");
+		DBG1(DBG_IKE, "received a weird DELETE request for IKE_SA, deleting anyway");
 	}
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
@@ -210,7 +210,7 @@ static status_t conclude(private_delete_ike_sa_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != INFORMATIONAL)
 	{
-		DBG1(SIG_DBG_IKE, "INFORMATIONAL response of invalid type, deleting IKE_SA");
+		DBG1(DBG_IKE, "INFORMATIONAL response of invalid type, deleting IKE_SA");
 		return DESTROY_ME;
 	}
 	/* this is only an acknowledge. We can't do anything here, but delete

@@ -130,11 +130,11 @@ static chunk_t build_shared_key_signature(private_authenticator_t *this,
 	this->prf->get_bytes(this->prf, key_pad, key_buffer);
 	this->prf->set_key(this->prf, key);
 	this->prf->allocate_bytes(this->prf, octets, &auth_data);
-	DBG3(SIG_DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') %B", &octets);
-	DBG3(SIG_DBG_IKE, "secret %B", &secret);
-	DBG3(SIG_DBG_IKE, "keypad %B", &key_pad);
-	DBG3(SIG_DBG_IKE, "prf(secret, keypad) %B", &key);
-	DBG3(SIG_DBG_IKE, "AUTH = prf(prf(secret, keypad), octets) %B", &auth_data);
+	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') %B", &octets);
+	DBG3(DBG_IKE, "secret %B", &secret);
+	DBG3(DBG_IKE, "keypad %B", &key_pad);
+	DBG3(DBG_IKE, "prf(secret, keypad) %B", &key);
+	DBG3(DBG_IKE, "AUTH = prf(prf(secret, keypad), octets) %B", &auth_data);
 	chunk_free(&octets);
 
 	return auth_data;
@@ -168,7 +168,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 														 &shared_key);
 			if (status != SUCCESS)
 			{
-				DBG1(SIG_DBG_IKE, "no shared key found for '%D' - '%D'",
+				DBG1(DBG_IKE, "no shared key found for '%D' - '%D'",
 					 my_id, other_id);
 				chunk_free(&shared_key);
 				break;
@@ -195,7 +195,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 
 			if (public_key == NULL)
 			{
-				DBG1(SIG_DBG_IKE, "no RSA public key found for '%D'", other_id);
+				DBG1(DBG_IKE, "no RSA public key found for '%D'", other_id);
 				status = NOT_FOUND;
 				break;
 			}
@@ -215,7 +215,7 @@ static status_t verify_auth_data (private_authenticator_t *this,
 	
 	if (status == SUCCESS)
 	{
-		DBG1(SIG_DBG_IKE, "authentication of '%D' with %N successful",
+		DBG1(DBG_IKE, "authentication of '%D' with %N successful",
 			 other_id, auth_method_names, auth_method);
 	}
 	
@@ -233,7 +233,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 								   identification_t *other_id,
 								   bool initiator)
 {
-	DBG1(SIG_DBG_IKE, "authentication of '%D' with %N (myself)",
+	DBG1(DBG_IKE, "authentication of '%D' with %N (myself)",
 		 my_id, auth_method_names, this->auth_method);
 
 	switch (this->auth_method)
@@ -250,7 +250,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 
 			if (status != SUCCESS)
 			{
-				DBG1(SIG_DBG_IKE, "no shared key found for '%D' - '%D'",
+				DBG1(DBG_IKE, "no shared key found for '%D' - '%D'",
 					 my_id, other_id);
 				return status;	
 			}
@@ -276,28 +276,28 @@ static status_t compute_auth_data (private_authenticator_t *this,
 			rsa_public_key_t  *my_pubkey;
 			rsa_private_key_t *my_key;
 
-			DBG2(SIG_DBG_IKE, "looking for RSA public key belonging to '%D'",
+			DBG2(DBG_IKE, "looking for RSA public key belonging to '%D'",
 							  my_id);
 
 			my_pubkey = charon->credentials->get_rsa_public_key(charon->credentials, my_id);
 			if (my_pubkey == NULL)
 			{
-				DBG1(SIG_DBG_IKE, "no RSA public key found for '%D'", my_id);
+				DBG1(DBG_IKE, "no RSA public key found for '%D'", my_id);
 				return NOT_FOUND;
 			}
-			DBG2(SIG_DBG_IKE, "matching RSA public key found");
+			DBG2(DBG_IKE, "matching RSA public key found");
 			
 			chunk = my_pubkey->get_keyid(my_pubkey);
-			DBG2(SIG_DBG_IKE, "looking for RSA private key with keyid %#B", &chunk);
+			DBG2(DBG_IKE, "looking for RSA private key with keyid %#B", &chunk);
 
 			my_key = charon->credentials->get_rsa_private_key(charon->credentials, my_pubkey);
 			if (my_key == NULL)
 			{
-				DBG1(SIG_DBG_IKE, "no RSA private key found with for %D with keyid %#B",
+				DBG1(DBG_IKE, "no RSA private key found with for %D with keyid %#B",
 					 my_id, &chunk);
 				return NOT_FOUND;
 			}
-			DBG2(SIG_DBG_IKE, "matching RSA private key found");
+			DBG2(DBG_IKE, "matching RSA private key found");
 
 			octets = build_tbs_octets(this, last_sent_packet, other_nonce,
 									  my_id, initiator);
@@ -310,7 +310,7 @@ static status_t compute_auth_data (private_authenticator_t *this,
 				my_key->destroy(my_key);
 				return status;
 			}
-			DBG2(SIG_DBG_IKE, "successfully signed with RSA private key");
+			DBG2(DBG_IKE, "successfully signed with RSA private key");
 			
 			*auth_payload = auth_payload_create();
 			(*auth_payload)->set_auth_method(*auth_payload, RSA_DIGITAL_SIGNATURE);

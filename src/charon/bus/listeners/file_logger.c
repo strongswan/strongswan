@@ -46,7 +46,7 @@ struct private_file_logger_t {
 	/**
 	 * Maximum level to log
 	 */
-	level_t levels[SIG_DBG_MAX];
+	level_t levels[DBG_MAX];
 };
 
 
@@ -86,7 +86,7 @@ static void set_level(private_file_logger_t *this, signal_t signal, level_t leve
 	if (signal == SIG_ANY)
 	{
 		int i;
-		for (i = 0; i < SIG_DBG_MAX; i++)
+		for (i = 0; i < DBG_MAX; i++)
 		{
 			this->levels[i] = level;
 		}

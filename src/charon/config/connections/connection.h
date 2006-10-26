@@ -36,7 +36,7 @@ typedef enum cert_policy_t cert_policy_t;
 /**
  * Certificate sending policy. This is also used for certificate
  * requests when using this definition for the other peer. If
- * it is CERT_NEVER_SEND, a certreq is ommited, otherwise its
+ * it is CERT_NEVER_SEND, a certreq is omitted, otherwise its
  * included.
  *
  * @ingroup config
@@ -173,7 +173,7 @@ struct connection_t {
 	 *
 	 * A certificate request contains serials of our trusted CA certificates.
 	 * This flag says if such a request is sent on connection setup to
-	 * the peer. It should be ommited when CERT_SEND_NEVER, sended otherwise.
+	 * the peer. It should be omitted when CERT_SEND_NEVER, sended otherwise.
 	 *
 	 * @param this		calling object
 	 * @return			certificate request sending policy

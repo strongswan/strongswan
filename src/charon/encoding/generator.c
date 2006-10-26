@@ -306,7 +306,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				break;
 
 			default:
-			DBG1(SIG_DBG_ENC, "U_INT Type %N is not supported",
+			DBG1(DBG_ENC, "U_INT Type %N is not supported",
 				 encoding_type_names, int_type);
 
 			return;
@@ -314,7 +314,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 	/* U_INT Types of multiple then 8 bits must be aligned */
 	if (((number_of_bits % 8) == 0) && (this->current_bit != 0))
 	{
-		DBG1(SIG_DBG_ENC, "U_INT Type %N is not 8 Bit aligned",
+		DBG1(DBG_ENC, "U_INT Type %N is not 8 Bit aligned",
 			 encoding_type_names, int_type);
 		/* current bit has to be zero for values multiple of 8 bits */
 		return;
@@ -335,7 +335,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				u_int8_t low_val = *(this->out_position) & 0x0F;
 				/* highval is set, low_val is not changed */
 				*(this->out_position) = high_val | low_val;
-				DBG3(SIG_DBG_ENC, "   => %d", *(this->out_position));
+				DBG3(DBG_ENC, "   => %d", *(this->out_position));
 				/* write position is not changed, just bit position is moved */
 				this->current_bit = 4;
 			}
@@ -346,14 +346,14 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 				/* lowval of current byte in buffer has to be set to the new value*/
 				u_int low_val = *((u_int8_t *)(this->data_struct + offset)) & 0x0F;
 				*(this->out_position) = high_val | low_val;
-				DBG3(SIG_DBG_ENC, "   => %d", *(this->out_position));
+				DBG3(DBG_ENC, "   => %d", *(this->out_position));
 				this->out_position++;
 				this->current_bit = 0;
 
 			}
 			else
 			{
-				DBG1(SIG_DBG_ENC, "U_INT_4 Type is not 4 Bit aligned");
+				DBG1(DBG_ENC, "U_INT_4 Type is not 4 Bit aligned");
 				/* 4 Bit integers must have a 4 bit alignment */
 				return;
 			};
@@ -364,7 +364,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 		{
 			/* 8 bit values are written as they are */
 			*this->out_position = *((u_int8_t *)(this->data_struct + offset));
-			DBG3(SIG_DBG_ENC, "   => %d", *(this->out_position));
+			DBG3(DBG_ENC, "   => %d", *(this->out_position));
 			this->out_position++;
 			break;
 
@@ -374,7 +374,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			/* attribute type must not change first bit uf current byte ! */
 			if (this->current_bit != 1)
 			{
-				DBG1(SIG_DBG_ENC, "ATTRIBUTE FORMAT flag is not set");
+				DBG1(DBG_ENC, "ATTRIBUTE FORMAT flag is not set");
 				/* first bit has to be set! */
 				return;
 			}
@@ -386,7 +386,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			int16_val = int16_val & 0xFF7F;
 			
 			int16_val = int16_val | attribute_format_flag;
-			DBG3(SIG_DBG_ENC, "   => %d", int16_val);
+			DBG3(DBG_ENC, "   => %d", int16_val);
 			/* write bytes to buffer (set bit is overwritten)*/				
 			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 			this->current_bit = 0;
@@ -397,14 +397,14 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 		case CONFIGURATION_ATTRIBUTE_LENGTH:
 		{
 			u_int16_t int16_val = htons(*((u_int16_t*)(this->data_struct + offset)));
-			DBG3(SIG_DBG_ENC, "   => %b", (void*)&int16_val, sizeof(int16_val));
+			DBG3(DBG_ENC, "   => %b", (void*)&int16_val, sizeof(int16_val));
 			this->write_bytes_to_buffer(this,&int16_val,sizeof(u_int16_t));
 			break;
 		}
 		case U_INT_32:
 		{
 			u_int32_t int32_val = htonl(*((u_int32_t*)(this->data_struct + offset)));
-			DBG3(SIG_DBG_ENC, "   => %b", (void*)&int32_val, sizeof(int32_val));
+			DBG3(DBG_ENC, "   => %b", (void*)&int32_val, sizeof(int32_val));
 			this->write_bytes_to_buffer(this,&int32_val,sizeof(u_int32_t));
 			break;
 		}
@@ -413,7 +413,7 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 			/* 64 bit integers are written as two 32 bit integers */
 			u_int32_t int32_val_low = htonl(*((u_int32_t*)(this->data_struct + offset)));
 			u_int32_t int32_val_high = htonl(*((u_int32_t*)(this->data_struct + offset) + 1));
-			DBG3(SIG_DBG_ENC, "   => %b %b",
+			DBG3(DBG_ENC, "   => %b %b",
 				 (void*)&int32_val_low, sizeof(int32_val_low),
 				 (void*)&int32_val_high, sizeof(int32_val_high));
 			/* TODO add support for big endian machines */
@@ -426,12 +426,12 @@ static void generate_u_int_type (private_generator_t *this,encoding_type_t int_t
 		{
 			/* 64 bit are written as they come :-) */
 			this->write_bytes_to_buffer(this,(this->data_struct + offset),sizeof(u_int64_t));
-			DBG3(SIG_DBG_ENC, "   => %b", (void*)(this->data_struct + offset), sizeof(u_int64_t));
+			DBG3(DBG_ENC, "   => %b", (void*)(this->data_struct + offset), sizeof(u_int64_t));
 			break;
 		}
 		default:
 		{
-			DBG1(SIG_DBG_ENC, "U_INT Type %N is not supported",
+			DBG1(DBG_ENC, "U_INT Type %N is not supported",
 				 encoding_type_names, int_type);
 			return;
 		}
@@ -446,7 +446,7 @@ static void generate_reserved_field(private_generator_t *this,int bits)
 	/* only one bit or 8 bit fields are supported */
 	if ((bits != 1) && (bits != 8))
 	{
-		DBG1(SIG_DBG_ENC, "reserved field of %d bits cannot be generated", bits);
+		DBG1(DBG_ENC, "reserved field of %d bits cannot be generated", bits);
 		return ;
 	}
 	/* make sure enough space is available in buffer */
@@ -476,7 +476,7 @@ static void generate_reserved_field(private_generator_t *this,int bits)
 		/* one byte processing*/
 		if (this->current_bit > 0)
 		{
-			DBG1(SIG_DBG_ENC, "reserved field cannot be written cause "
+			DBG1(DBG_ENC, "reserved field cannot be written cause "
 				 "alignement of current bit is %d", this->current_bit);
 			return;
 		}
@@ -511,7 +511,7 @@ static void generate_flag (private_generator_t *this,u_int32_t offset)
 	*(this->out_position) = *(this->out_position) | flag;
 	
 	
-	DBG3(SIG_DBG_ENC, "   => %d", *(this->out_position));
+	DBG3(DBG_ENC, "   => %d", *(this->out_position));
 
 	this->current_bit++;
 	if (this->current_bit >= 8)
@@ -528,14 +528,14 @@ static void generate_from_chunk (private_generator_t *this,u_int32_t offset)
 {
 	if (this->current_bit != 0)
 	{
-		DBG1(SIG_DBG_ENC, "can not generate a chunk at Bitpos %d", this->current_bit);
+		DBG1(DBG_ENC, "can not generate a chunk at Bitpos %d", this->current_bit);
 		return ;
 	}
 	
 	/* position in buffer */
 	chunk_t *attribute_value = (chunk_t *)(this->data_struct + offset);
 	
-	DBG3(SIG_DBG_ENC, "   => %B", attribute_value);
+	DBG3(DBG_ENC, "   => %B", attribute_value);
 	
 	/* use write_bytes_to_buffer function to do the job */
 	this->write_bytes_to_buffer(this,attribute_value->ptr,attribute_value->len);
@@ -553,7 +553,7 @@ static void make_space_available (private_generator_t *this, size_t bits)
 		size_t new_buffer_size = old_buffer_size + GENERATOR_DATA_BUFFER_INCREASE_VALUE;
 		size_t out_position_offset = ((this->out_position) - (this->buffer));
 
-		DBG2(SIG_DBG_ENC, "increased gen buffer from %d to %d byte", 
+		DBG2(DBG_ENC, "increased gen buffer from %d to %d byte", 
 			 old_buffer_size, new_buffer_size);
 		
 		/* Reallocate space for new buffer */
@@ -628,7 +628,7 @@ static void write_to_chunk (private_generator_t *this,chunk_t *data)
 	memcpy(data->ptr,this->buffer,data_length);
 	data->len = data_length;
 	
-	DBG3(SIG_DBG_ENC, "generated data of this generator %B", data);
+	DBG3(DBG_ENC, "generated data of this generator %B", data);
 }
 
 /**
@@ -650,7 +650,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 	
 	payload_start = this->out_position;
 	
-	DBG2(SIG_DBG_ENC, "generating payload of type %N",
+	DBG2(DBG_ENC, "generating payload of type %N",
 		 payload_type_names, payload_type);
 	
 	/* each payload has its own encoding rules */
@@ -658,7 +658,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 
 	for (i = 0; i < rule_count;i++)
 	{
-		DBG2(SIG_DBG_ENC, "  generating rule %d %N",
+		DBG2(DBG_ENC, "  generating rule %d %N",
 			 i, encoding_type_names, rules[i].type);
 		switch (rules[i].type)
 		{
@@ -949,7 +949,7 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 			{
 				if (this->attribute_format == FALSE)
 				{
-					DBG2(SIG_DBG_ENC, "attribute value has not fixed size");
+					DBG2(DBG_ENC, "attribute value has not fixed size");
 					/* the attribute value is generated */
 					this->generate_from_chunk(this,rules[i].offset);
 				}
@@ -995,14 +995,14 @@ static void generate_payload (private_generator_t *this,payload_t *payload)
 				break;
 			}
 			default:
-				DBG1(SIG_DBG_ENC, "field type %N is not supported",
+				DBG1(DBG_ENC, "field type %N is not supported",
 					 encoding_type_names, rules[i].type);
 				return;
 		}
 	}
-	DBG2(SIG_DBG_ENC, "generating %N payload finished",
+	DBG2(DBG_ENC, "generating %N payload finished",
 		 payload_type_names, payload_type);
-	DBG3(SIG_DBG_ENC, "generated data for this payload %b",
+	DBG3(DBG_ENC, "generated data for this payload %b",
 		 payload_start, this->out_position-payload_start);
 }
 

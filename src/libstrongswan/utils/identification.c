@@ -213,6 +213,38 @@ void hex_str(chunk_t bin, chunk_t *str)
 }
 
 /**
+ * Remove any malicious characters from a chunk. We are very restrictive, but
+ * whe use these strings only to present it to the user.
+ */
+static chunk_t sanitize_chunk(chunk_t chunk)
+{
+	char *pos;
+	chunk_t clone = chunk_clone(chunk);
+	
+	for (pos = clone.ptr; pos < (char*)(clone.ptr + clone.len); pos++)
+	{
+		switch (*pos)
+		{
+			case 'a' ... 'z':
+			case 'A' ... 'Z':
+			case '0' ... '9':
+			case '-':
+			case '_':
+			case '.':
+			case '=':
+			case ':':
+			case '/':
+			case '@':
+			case '\0':
+				break;
+			default:
+				*pos = '?';
+		}
+	}
+	return clone;
+}
+
+/**
  * Pointer is set to the first RDN in a DN
  */
 static status_t init_rdn(chunk_t dn, chunk_t *rdn, chunk_t *attribute, bool *next)
@@ -340,7 +372,7 @@ static status_t get_next_rdn(chunk_t *rdn, chunk_t * attribute, chunk_t *oid, ch
  */
 static status_t dntoa(chunk_t dn, chunk_t *str)
 {
-	chunk_t rdn, oid, attribute, value;
+	chunk_t rdn, oid, attribute, value, proper;
 	asn1_t type;
 	int oid_code;
 	bool next;
@@ -378,7 +410,9 @@ static status_t dntoa(chunk_t dn, chunk_t *str)
 			update_chunk(str, snprintf(str->ptr,str->len,"%s", oid_names[oid_code].name));
 		}
 		/* print value */
-		update_chunk(str, snprintf(str->ptr,str->len,"=%.*s", (int)value.len,value.ptr));
+		proper = sanitize_chunk(value);
+		update_chunk(str, snprintf(str->ptr,str->len,"=%.*s", (int)proper.len, proper.ptr));
+		chunk_free(&proper);
 	}
 	return SUCCESS;
 }
@@ -806,7 +840,8 @@ static int print(FILE *stream, const struct printf_info *info,
 {
 	private_identification_t *this = *((private_identification_t**)(args[0]));
 	char buf[BUF_LEN];
-	chunk_t buf_chunk = chunk_from_buf(buf);
+	chunk_t proper, buf_chunk = chunk_from_buf(buf);
+	int written;
 	
 	if (this == NULL)
 	{
@@ -838,20 +873,37 @@ static int print(FILE *stream, const struct printf_info *info,
 				return fprintf(stream, "%s", buf);
 			}
 		case ID_FQDN:
-			return fprintf(stream, "@%.*s", this->encoded.len, this->encoded.ptr);
+		{
+			proper = sanitize_chunk(this->encoded);
+			written = fprintf(stream, "@%.*s", proper.len, proper.ptr);
+			chunk_free(&proper);
+			return written;
+		}
 		case ID_RFC822_ADDR:
-			return fprintf(stream, "%.*s", this->encoded.len, this->encoded.ptr);
+		{
+			proper = sanitize_chunk(this->encoded);
+			written = fprintf(stream, "%.*s", proper.len, proper.ptr);
+			chunk_free(&proper);
+			return written;
+		}
 		case ID_DER_ASN1_DN:
+		{
 			snprintf(buf, sizeof(buf), "%.*s", this->encoded.len, this->encoded.ptr);
 			/* TODO: whats returned on failure?*/
 			dntoa(this->encoded, &buf_chunk);
 			return fprintf(stream, "%s", buf);
+		}
 		case ID_DER_ASN1_GN:
 			return fprintf(stream, "(ASN.1 general Name");
 		case ID_KEY_ID:
 			return fprintf(stream, "(KEY_ID)");
 		case ID_DER_ASN1_GN_URI:
-			return fprintf(stream, "%.*s", this->encoded.len, this->encoded.ptr);
+		{
+			proper = sanitize_chunk(this->encoded);
+			written = fprintf(stream, "%.*s", proper.len, proper.ptr);
+			chunk_free(&proper);
+			return written;
+		}
 		default:
 			return fprintf(stream, "(unknown ID type: %d)", this->type);
 	}

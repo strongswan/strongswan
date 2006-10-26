@@ -263,7 +263,7 @@ static void set_listen_state(private_bus_t *this, bool active)
 	else
 	{
 		listener->state = UNREGISTERED;
-		/* say hello to signal omitter; we are finished processing the signal */
+		/* say hello to signal emitter; we are finished processing the signal */
 		pthread_cond_signal(&listener->cond);
 	}
 	

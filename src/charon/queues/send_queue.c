@@ -107,7 +107,7 @@ static void add(private_send_queue_t *this, packet_t *packet)
 	
 	src = packet->get_source(packet);
 	dst = packet->get_destination(packet);
-	DBG1(SIG_DBG_NET, "sending packet: from %#H to %#H", src, dst);
+	DBG1(DBG_NET, "sending packet: from %#H to %#H", src, dst);
 	
 	pthread_mutex_lock(&this->mutex);
 	this->list->insert_last(this->list, packet);

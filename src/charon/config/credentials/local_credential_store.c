@@ -256,19 +256,19 @@ static rsa_public_key_t *get_trusted_public_key(private_local_credential_store_t
 	ugh = cert->is_valid(cert, NULL);
 	if (ugh != NULL)
 	{
-		DBG1(SIG_DBG_CFG, "certificate %s", ugh);
+		DBG1(DBG_CFG, "certificate %s", ugh);
 		return NULL;
 	}
 
 	status = cert->get_status(cert);
 	if (status == CERT_REVOKED || status == CERT_UNTRUSTED || (this->strict && status != CERT_GOOD))
 	{
-		DBG1(SIG_DBG_CFG, "certificate status: %N", cert_status_names, status);
+		DBG1(DBG_CFG, "certificate status: %N", cert_status_names, status);
 		return NULL;
 	}
 	if (status == CERT_GOOD && cert->get_until(cert) < time(NULL))
 	{
-		DBG1(SIG_DBG_CFG, "certificate is good but crl is stale");
+		DBG1(DBG_CFG, "certificate is good but crl is stale");
 		return NULL;
 	}
 
@@ -379,20 +379,20 @@ static cert_status_t verify_by_crl(private_local_credential_store_t* this, const
 	crl = get_crl(this, issuer_cert);
 	if (crl == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "crl not found");
+		DBG1(DBG_CFG, "crl not found");
 		goto err;
 	}
-	DBG2(SIG_DBG_CFG, "crl found");
+	DBG2(DBG_CFG, "crl found");
 	
 	issuer_public_key = issuer_cert->get_public_key(issuer_cert);
 	valid_signature = crl->verify(crl, issuer_public_key);
 
 	if (!valid_signature)
 	{
-		DBG1(SIG_DBG_CFG, "crl signature is invalid");
+		DBG1(DBG_CFG, "crl signature is invalid");
 		goto err;
 	}
-	DBG2(SIG_DBG_CFG, "crl signature is valid");
+	DBG2(DBG_CFG, "crl signature is valid");
 
 	crl->get_status(crl, certinfo);
 
@@ -447,7 +447,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 	*found = (cert_copy != NULL);
 	if (*found)
 	{
-		DBG2(SIG_DBG_CFG,
+		DBG2(DBG_CFG,
 			 "end entitity certificate is already in credential store");
 	}
 
@@ -461,39 +461,39 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		identification_t *subject = cert->get_subject(cert);
 		identification_t *issuer  = cert->get_issuer(cert);
 
-		DBG2(SIG_DBG_CFG, "subject: '%D'", subject);
-		DBG2(SIG_DBG_CFG, "issuer:  '%D'", issuer);
+		DBG2(DBG_CFG, "subject: '%D'", subject);
+		DBG2(DBG_CFG, "issuer:  '%D'", issuer);
 
 		ugh = cert->is_valid(cert, &until);
 		if (ugh != NULL)
 		{
-			DBG1(SIG_DBG_CFG, "certificate %s", ugh);
+			DBG1(DBG_CFG, "certificate %s", ugh);
 			return FALSE;
 		}
-		DBG2(SIG_DBG_CFG, "certificate is valid");
+		DBG2(DBG_CFG, "certificate is valid");
 
 		issuer_cert = get_issuer_certificate(this, cert);
 		if (issuer_cert == NULL)
 		{
-			DBG1(SIG_DBG_CFG, "issuer certificate not found");
+			DBG1(DBG_CFG, "issuer certificate not found");
 			return FALSE;
 		}
-		DBG2(SIG_DBG_CFG, "issuer certificate found");
+		DBG2(DBG_CFG, "issuer certificate found");
 
 		issuer_public_key = issuer_cert->get_public_key(issuer_cert);
 		valid_signature = cert->verify(cert, issuer_public_key);
 
 		if (!valid_signature)
 		{
-			DBG1(SIG_DBG_CFG, "certificate signature is invalid");
+			DBG1(DBG_CFG, "certificate signature is invalid");
 			return FALSE;
 		}
-		DBG2(SIG_DBG_CFG, "certificate signature is valid");
+		DBG2(DBG_CFG, "certificate signature is valid");
 
 		/* check if cert is a self-signed root ca */
 		if (pathlen > 0 && cert->is_self_signed(cert))
 		{
-			DBG2(SIG_DBG_CFG, "reached self-signed root ca");
+			DBG2(DBG_CFG, "reached self-signed root ca");
 
 			/* set the definite status and trust interval of the end entity certificate */
 			end_cert->set_until(end_cert, until);
@@ -533,10 +533,10 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 					/* if status information is stale */
 					if (this->strict && nextUpdate < time(NULL))
 					{
-						DBG2(SIG_DBG_CFG, "certificate is good but status is stale");
+						DBG2(DBG_CFG, "certificate is good but status is stale");
 						return FALSE;
 					}
-					DBG2(SIG_DBG_CFG, "certificate is good");
+					DBG2(DBG_CFG, "certificate is good");
 
 					/* with strict crl policy the public key must have the same
 					 * lifetime as the validity of the ocsp status or crl lifetime
@@ -547,7 +547,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 				case CERT_REVOKED:
 					{
 						time_t revocationTime = certinfo->get_revocationTime(certinfo);
-						DBG1(SIG_DBG_CFG,
+						DBG1(DBG_CFG,
 							 "certificate was revoked on %T, reason: %N",
 							 revocationTime, crl_reason_names,
 							 certinfo->get_revocationReason(certinfo));
@@ -574,7 +574,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 				case CERT_UNKNOWN:
 				case CERT_UNDEFINED:
 				default:
-					DBG2(SIG_DBG_CFG, "certificate status unknown");
+					DBG2(DBG_CFG, "certificate status unknown");
 					if (this->strict)
 					{
 						/* update status of end certificate in the credential store */
@@ -591,7 +591,7 @@ static bool verify(private_local_credential_store_t *this, x509_t *cert, bool *f
 		/* go up one step in the trust chain */
 		cert = issuer_cert;
 	}
-	DBG1(SIG_DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
+	DBG1(DBG_CFG, "maximum ca path length of %d levels exceeded", MAX_CA_PATH_LEN);
 	return FALSE;
 }
 
@@ -664,12 +664,12 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 	DIR* dir;
 	x509_t *cert;
 	
-	DBG1(SIG_DBG_CFG, "loading ca certificates from '%s/'", CA_CERTIFICATE_DIR);
+	DBG1(DBG_CFG, "loading ca certificates from '%s/'", CA_CERTIFICATE_DIR);
 
 	dir = opendir(CA_CERTIFICATE_DIR);
 	if (dir == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "error opening ca certs directory %s'", CA_CERTIFICATE_DIR);
+		DBG1(DBG_CFG, "error opening ca certs directory %s'", CA_CERTIFICATE_DIR);
 		return;
 	}
 
@@ -693,7 +693,7 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 
 				if (ugh != NULL)
 				{
-					DBG1(SIG_DBG_CFG, "warning: ca certificate %s", ugh);
+					DBG1(DBG_CFG, "warning: ca certificate %s", ugh);
 				}
 				if (cert->is_ca(cert))
 				{
@@ -701,7 +701,7 @@ static void load_ca_certificates(private_local_credential_store_t *this)
 				}
 				else
 				{
-					DBG1(SIG_DBG_CFG, "  CA basic constraints flag not set, cert discarded");
+					DBG1(DBG_CFG, "  CA basic constraints flag not set, cert discarded");
 					cert->destroy(cert);
 				}
 			}
@@ -734,13 +734,13 @@ static crl_t* add_crl(linked_list_t *crls, crl_t *crl)
 				{
 					old_crl->destroy(old_crl);
 				}
-				DBG2(SIG_DBG_CFG, "  thisUpdate is newer - existing crl replaced");
+				DBG2(DBG_CFG, "  thisUpdate is newer - existing crl replaced");
 			}
 			else
 			{
 				crl->destroy(crl);
 				crl = current_crl;
-				DBG2(SIG_DBG_CFG, "  thisUpdate is not newer - existing crl retained");
+				DBG2(DBG_CFG, "  thisUpdate is not newer - existing crl retained");
 			}
 			break;
 		}
@@ -750,7 +750,7 @@ static crl_t* add_crl(linked_list_t *crls, crl_t *crl)
 	if (!found)
 	{
 		crls->insert_last(crls, (void*)crl);
-		DBG2(SIG_DBG_CFG, "  crl added");
+		DBG2(DBG_CFG, "  crl added");
 	}
 	return crl;
 }
@@ -765,12 +765,12 @@ static void load_crls(private_local_credential_store_t *this)
 	DIR* dir;
 	crl_t *crl;
 	
-	DBG1(SIG_DBG_CFG, "loading crls from '%s/'", CRL_DIR);
+	DBG1(DBG_CFG, "loading crls from '%s/'", CRL_DIR);
 
 	dir = opendir(CRL_DIR);
 	if (dir == NULL)
 	{
-		DBG1(SIG_DBG_CFG, "error opening crl directory %s'", CRL_DIR);
+		DBG1(DBG_CFG, "error opening crl directory %s'", CRL_DIR);
 		return;
 	}
 
@@ -794,7 +794,7 @@ static void load_crls(private_local_credential_store_t *this)
 
 				if (ugh != NULL)	
 				{
-					DBG1(SIG_DBG_CFG, "warning: crl %s", ugh);
+					DBG1(DBG_CFG, "warning: crl %s", ugh);
 				}
 				pthread_mutex_lock(&(this->crls_mutex));
 				crl = add_crl(this->crls, crl);
@@ -874,7 +874,7 @@ static void load_secrets(private_local_credential_store_t *this)
 		int line_nr = 0;
     	chunk_t chunk, src, line;
 
-		DBG1(SIG_DBG_CFG, "loading secrets from \"%s\"", SECRETS_FILE);
+		DBG1(DBG_CFG, "loading secrets from \"%s\"", SECRETS_FILE);
 
 		fseek(fd, 0, SEEK_END);
 		chunk.len = ftell(fd);
@@ -897,7 +897,7 @@ static void load_secrets(private_local_credential_store_t *this)
 			}
 			if (!extract_token(&ids, ':', &line))
 			{
-				DBG1(SIG_DBG_CFG, "line %d: missing ':' separator", line_nr);
+				DBG1(DBG_CFG, "line %d: missing ':' separator", line_nr);
 				goto error;
 			}
 			/* NULL terminate the ids string by replacing the : separator */
@@ -905,7 +905,7 @@ static void load_secrets(private_local_credential_store_t *this)
 
 			if (!eat_whitespace(&line) || !extract_token(&token, ' ', &line))
 			{
-				DBG1(SIG_DBG_CFG, "line %d: missing token", line_nr);
+				DBG1(DBG_CFG, "line %d: missing token", line_nr);
 				goto error;
 			}
 			if (match("RSA", &token))
@@ -923,12 +923,12 @@ static void load_secrets(private_local_credential_store_t *this)
 
 				if (ugh != NULL)
 				{
-					DBG1(SIG_DBG_CFG, "line %d: %s", line_nr, ugh);
+					DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
 					goto error;
 				}
 				if (filename.len == 0)
 				{
-					DBG1(SIG_DBG_CFG, "line %d: empty filename", line_nr);
+					DBG1(DBG_CFG, "line %d: empty filename", line_nr);
 					goto error;
 				}
 				if (*filename.ptr == '/')
@@ -949,7 +949,7 @@ static void load_secrets(private_local_credential_store_t *this)
 					ugh = extract_secret(&secret, &line);
 					if (ugh != NULL)
 					{
-						DBG1(SIG_DBG_CFG, "line %d: malformed passphrase: %s", line_nr, ugh);
+						DBG1(DBG_CFG, "line %d: malformed passphrase: %s", line_nr, ugh);
 						goto error;
 					}
 					if (secret.len > 0)
@@ -971,20 +971,20 @@ static void load_secrets(private_local_credential_store_t *this)
 				err_t ugh = extract_secret(&secret, &line);
 				if (ugh != NULL)
 				{
-					DBG1(SIG_DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
+					DBG1(DBG_CFG, "line %d: malformed secret: %s", line_nr, ugh);
 					goto error;
 				}
 
 				if (ids.len > 0)
 				{
-					DBG1(SIG_DBG_CFG, "  loading shared key for %s", ids.ptr);
+					DBG1(DBG_CFG, "  loading shared key for %s", ids.ptr);
 				}
 				else
 				{
-					DBG1(SIG_DBG_CFG, "  loading shared key for %%any");
+					DBG1(DBG_CFG, "  loading shared key for %%any");
 				}
 
-				DBG4(SIG_DBG_CFG, "  secret:", secret);
+				DBG4(DBG_CFG, "  secret:", secret);
 
 				shared_key = shared_key_create(secret);
 				if (shared_key)
@@ -999,7 +999,7 @@ static void load_secrets(private_local_credential_store_t *this)
 					ugh = extract_value(&id, &ids);
 					if (ugh != NULL)
 					{
-						DBG1(SIG_DBG_CFG, "line %d: %s", line_nr, ugh);
+						DBG1(DBG_CFG, "line %d: %s", line_nr, ugh);
 						goto error;
 					}
 					if (id.len == 0)
@@ -1013,7 +1013,7 @@ static void load_secrets(private_local_credential_store_t *this)
 					peer_id = identification_create_from_string(id.ptr);
 					if (peer_id == NULL)
 					{
-						DBG1(SIG_DBG_CFG, "line %d: malformed ID: %s", line_nr, id.ptr);
+						DBG1(DBG_CFG, "line %d: malformed ID: %s", line_nr, id.ptr);
 						goto error;
 					}
 					
@@ -1031,7 +1031,7 @@ static void load_secrets(private_local_credential_store_t *this)
 			}
 			else
 			{
-				DBG1(SIG_DBG_CFG, "line %d: token must be either "
+				DBG1(DBG_CFG, "line %d: token must be either "
 					 "RSA, PSK, or PIN", line_nr, token.len);
 				goto error;
 			}
@@ -1041,7 +1041,7 @@ error:
 	}
 	else
 	{
-		DBG1(SIG_DBG_CFG, "could not open file '%s'", SECRETS_FILE);
+		DBG1(DBG_CFG, "could not open file '%s'", SECRETS_FILE);
 	}
 }
 

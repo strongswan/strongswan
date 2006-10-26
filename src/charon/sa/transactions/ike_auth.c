@@ -240,7 +240,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		}
 		else
 		{
-			DBG1(SIG_DBG_IKE, "could not find my certificate, certificate payload omitted");
+			DBG1(DBG_IKE, "could not find my certificate, certificate payload omitted");
 		}
 	}
 	
@@ -271,7 +271,8 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{
-			SIG(SIG_IKE_FAILED, "could not generate AUTH data, deleting IKE_SA");
+			SIG(IKE_UP_FAILED, "could not generate AUTH data, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			return DESTROY_ME;
 		}
 		request->add_payload(request, (payload_t*)auth_payload);
@@ -295,7 +296,8 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 		if (this->child_sa->alloc(this->child_sa, proposal_list) != SUCCESS)
 		{
-			SIG(SIG_IKE_FAILED, "could not install CHILD_SA, deleting IKE_SA");
+			SIG(IKE_UP_FAILED, "could not install CHILD_SA, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			return DESTROY_ME;
 		}
 		sa_payload = sa_payload_create_from_proposal_list(proposal_list);
@@ -337,26 +339,26 @@ static status_t process_notifies(private_ike_auth_t *this, notify_payload_t *not
 {
 	notify_type_t notify_type = notify_payload->get_notify_type(notify_payload);
 	
-	DBG2(SIG_DBG_IKE, "process notify type %N", notify_type_names, notify_type);
+	DBG2(DBG_IKE, "process notify type %N", notify_type_names, notify_type);
 	
 	switch (notify_type)
 	{
 		/* these notifies are not critical. no child_sa is built, but IKE stays alive */
 		case SINGLE_PAIR_REQUIRED:
 		{
-			DBG1(SIG_DBG_IKE, "received a SINGLE_PAIR_REQUIRED notify");
+			SIG(CHILD_UP_FAILED, "received a SINGLE_PAIR_REQUIRED notify");
 			this->build_child = FALSE;
 			return SUCCESS;
 		}
 		case TS_UNACCEPTABLE:
 		{
-			DBG1(SIG_DBG_IKE, "received TS_UNACCEPTABLE notify");
+			SIG(CHILD_UP_FAILED, "received TS_UNACCEPTABLE notify");
 			this->build_child = FALSE;
 			return SUCCESS;
 		}
 		case NO_PROPOSAL_CHOSEN:
 		{
-			DBG1(SIG_DBG_IKE, "received NO_PROPOSAL_CHOSEN notify");
+			SIG(CHILD_UP_FAILED, "received NO_PROPOSAL_CHOSEN notify");
 			this->build_child = FALSE;
 			return SUCCESS;
 		}
@@ -364,13 +366,13 @@ static status_t process_notifies(private_ike_auth_t *this, notify_payload_t *not
 		{
 			if (notify_type < 16383)
 			{
-				SIG(SIG_IKE_FAILED, "received %N notify error, deleting IKE_SA",
+				SIG(IKE_UP_FAILED, "received %N notify error, deleting IKE_SA",
 					notify_type_names, notify_type);
 				return DESTROY_ME;	
 			}
 			else
 			{
-				DBG1(SIG_DBG_IKE, "received %N notify, ignored",
+				DBG1(DBG_IKE, "received %N notify, ignored",
 					 notify_type_names, notify_type);
 				return SUCCESS;
 			}
@@ -414,7 +416,7 @@ static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_pa
 	encoding = cert_payload->get_cert_encoding(cert_payload);
 	if (encoding != CERT_X509_SIGNATURE)
 	{
-		DBG1(SIG_DBG_IKE, "certificate payload %N not supported, ignored",
+		DBG1(DBG_IKE, "certificate payload %N not supported, ignored",
 			 cert_encoding_names, encoding);
 		return;
 	}
@@ -423,7 +425,7 @@ static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_pa
 	{
 		if (charon->credentials->verify(charon->credentials, cert, &found))
 		{
-			DBG2(SIG_DBG_IKE, "received end entity certificate is trusted, added to store");
+			DBG2(DBG_IKE, "received end entity certificate is trusted, added to store");
 			if (!found)
 			{
 				charon->credentials->add_end_certificate(charon->credentials, cert);
@@ -435,13 +437,13 @@ static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_pa
 		}
 		else
 		{
-			DBG1(SIG_DBG_IKE, "received end entity certificate is not trusted, discarded");
+			DBG1(DBG_IKE, "received end entity certificate is not trusted, discarded");
 			cert->destroy(cert);
 		}
 	}
 	else
 	{
-		DBG1(SIG_DBG_IKE, "parsing of received certificate failed, discarded");
+		DBG1(DBG_IKE, "parsing of received certificate failed, discarded");
 	}
 }
 
@@ -521,6 +523,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		return SUCCESS;
 	}
 	
+	SIG(CHILD_UP_START, "setting up CHILD_SA along with IKE_AUTH");
+	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
 	this->message_id = request->get_message_id(request);
@@ -539,7 +543,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	/* check message type */
 	if (request->get_exchange_type(request) != IKE_AUTH)
 	{
-		SIG(SIG_IKE_FAILED, "IKE_AUTH response of invalid type, deleting IKE_SA");
+		SIG(IKE_UP_FAILED, "IKE_AUTH response of invalid type, deleting IKE_SA");
+		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -582,13 +587,14 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 				if (status == DESTROY_ME)
 				{
 					payloads->destroy(payloads);
+					SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 					return DESTROY_ME;
 				}
 				break;
 			}
 			default:
 			{
-				DBG1(SIG_DBG_IKE, "ignoring %N payload",
+				DBG1(DBG_IKE, "ignoring %N payload",
 					 payload_type_names, payload->get_type(payload));
 				break;
 			}
@@ -600,7 +606,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	if (!(idi_request && auth_request && sa_request && tsi_request && tsr_request))
 	{
 		build_notify(INVALID_SYNTAX, response, TRUE);
-		SIG(SIG_IKE_FAILED, "request message incomplete, deleting IKE_SA");
+		SIG(IKE_UP_FAILED, "request message incomplete, deleting IKE_SA");
+		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -638,8 +645,9 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		 * traffic selectors. Then we would create a IKE_SA without a CHILD_SA. */
 		if (this->policy == NULL)
 		{
-			SIG(SIG_IKE_FAILED, "no acceptable policy for IDs %D - %D found, "
+			SIG(IKE_UP_FAILED, "no acceptable policy for IDs %D - %D found, "
 				"deleting IKE_SA", my_id, other_id);
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			my_id->destroy(my_id);
 			other_id->destroy(other_id);
 			build_notify(AUTHENTICATION_FAILED, response, TRUE);
@@ -670,7 +678,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		}
 		else
 		{
-			DBG1(SIG_DBG_IKE, "could not find my certificate, cert payload omitted");
+			DBG1(DBG_IKE, "could not find my certificate, cert payload omitted");
 		}
 	}
 	
@@ -695,7 +703,8 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 												 TRUE);
 		if (status != SUCCESS)
 		{
-			SIG(SIG_IKE_FAILED, "authentication failed, deleting IKE_SA");
+			SIG(IKE_UP_FAILED, "authentication failed, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			build_notify(AUTHENTICATION_FAILED, response, TRUE);
 			authenticator->destroy(authenticator);
 			return DESTROY_ME;
@@ -709,12 +718,16 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{
-			SIG(SIG_IKE_FAILED, "authentication data generation failed, deleting IKE_SA");
+			SIG(IKE_UP_FAILED, "authentication data generation failed, deleting IKE_SA");
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			build_notify(AUTHENTICATION_FAILED, response, TRUE);
 			return DESTROY_ME;
 		}
 		response->add_payload(response, (payload_t*)auth_response);
 	}
+	
+	SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...%H[%D]",
+		this->ike_sa->get_name(this->ike_sa), me, my_id, other, other_id);
 	
 	{	/* process SA payload */
 		linked_list_t *proposal_list;
@@ -728,22 +741,22 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		
 		/* get proposals from request, and select one with ours */
 		proposal_list = sa_request->get_proposals(sa_request);
-		DBG2(SIG_DBG_IKE, "selecting proposals:");
+		DBG2(DBG_IKE, "selecting proposals:");
 		this->proposal = this->policy->select_proposal(this->policy, proposal_list);
 		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
 
 		/* do we have a proposal? */
 		if (this->proposal == NULL)
 		{
-			SIG(SIG_CHILD_FAILED, "CHILD_SA proposals unacceptable, no CHILD_SA created");
-			DBG1(SIG_DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
+			SIG(CHILD_UP_FAILED, "CHILD_SA proposals unacceptable, no CHILD_SA created");
+			DBG1(DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
 			build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
 		}
 		/* do we have traffic selectors? */
 		else if (this->tsi->get_count(this->tsi) == 0 || this->tsr->get_count(this->tsr) == 0)
 		{
-			SIG(SIG_CHILD_FAILED, "CHILD_SA traffic selectors unacceptable, no CHILD_SA created");
-			DBG1(SIG_DBG_IKE, "adding TS_UNACCEPTABLE notify to response");
+			SIG(CHILD_UP_FAILED, "CHILD_SA traffic selectors unacceptable, no CHILD_SA created");
+			DBG1(DBG_IKE, "adding TS_UNACCEPTABLE notify to response");
 			build_notify(TS_UNACCEPTABLE, response, FALSE);
 		}
 		else
@@ -760,15 +773,15 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 			this->child_sa->set_name(this->child_sa, this->policy->get_name(this->policy));
 			if (install_child_sa(this, FALSE) != SUCCESS)
 			{
-				SIG(SIG_IKE_FAILED, "installing CHILD_SA failed, no CHILD_SA created");
-				DBG1(SIG_DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
+				SIG(CHILD_UP_FAILED, "installing CHILD_SA failed, no CHILD_SA created");
+				DBG1(DBG_IKE, "adding NO_PROPOSAL_CHOSEN notify to response");
 				build_notify(NO_PROPOSAL_CHOSEN, response, FALSE);
 			}
 			else
 			{
 				/* add proposal to sa payload */
 				sa_response->add_proposal(sa_response, this->proposal);
-				SIG(SIG_CHILD_UP, "CHILD_SA created");
+				SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
 			}
 		}
 		response->add_payload(response, (payload_t*)sa_response);
@@ -794,7 +807,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	iterator_t *payloads;
 	payload_t *payload;
 	host_t *me, *other;
-	identification_t *other_id;
+	identification_t *other_id, *my_id;
 	ts_payload_t *tsi_payload = NULL;
 	ts_payload_t *tsr_payload = NULL;
 	id_payload_t *idr_payload = NULL;
@@ -806,7 +819,8 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != IKE_AUTH)
 	{
-		SIG(SIG_IKE_FAILED, "IKE_AUTH response of invalid type, deleting IKE_SA");
+		SIG(IKE_UP_FAILED, "IKE_AUTH response of invalid type, deleting IKE_SA");
+		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -843,11 +857,12 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 				if (status == FAILED)
 				{
 					payloads->destroy(payloads);
-					/* we return SUCCESS, returned FAILED means do next transaction */
+					/* we return SUCCESS, as transaction completet */
 					return SUCCESS;
 				}
 				if (status == DESTROY_ME)
 				{
+					SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 					payloads->destroy(payloads);
 					return status;
 				}
@@ -855,7 +870,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 			}
 			default:
 			{
-				DBG1(SIG_DBG_IKE, "ignoring payload %N",
+				DBG1(DBG_IKE, "ignoring payload %N",
 					 payload_type_names, payload->get_type(payload));
 				break;
 			}
@@ -865,7 +880,8 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	
 	if (!(idr_payload && auth_payload && sa_payload && tsi_payload && tsr_payload))
 	{
-		SIG(SIG_IKE_FAILED, "response message incomplete, deleting IKE_SA");
+		SIG(IKE_UP_FAILED, "response message incomplete, deleting IKE_SA");
+		SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 		return DESTROY_ME;
 	}
 	
@@ -879,8 +895,9 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		if (!other_id->matches(other_id, configured_other_id, &wildcards))
 		{
 			other_id->destroy(other_id);
-			SIG(SIG_IKE_FAILED, "other peer uses unacceptable ID (%D, excepted "
+			SIG(IKE_UP_FAILED, "other peer uses unacceptable ID (%D, excepted "
 				"%D), deleting IKE_SA", other_id, configured_other_id);
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			return DESTROY_ME;
 		}
 		/* update other ID. It was already set, but may contain wildcards */
@@ -895,7 +912,6 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	{	/* authenticate peer */
 		authenticator_t *authenticator;
 		auth_method_t auth_method;
-		identification_t *my_id;
 		status_t status;
 		
 		auth_method = this->policy->get_auth_method(this->policy);
@@ -912,11 +928,15 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{
-			SIG(SIG_IKE_FAILED, "authentication of '%D' with %N failed, "
-				"deleting IKE_SA", other_id, auth_method_names, auth_method);
+			SIG(IKE_UP_FAILED, "authentication of '%D' with %N failed, "
+					"deleting IKE_SA", other_id, auth_method_names, auth_method);
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			return DESTROY_ME;	
 		}
 	}
+	
+	SIG(IKE_UP_SUCCESS, "IKE_SA '%s' established between %H[%D]...%H[%D]",
+		this->ike_sa->get_name(this->ike_sa), me, my_id, other, other_id);
 	
 	{	/* process traffic selectors for us */
 		linked_list_t *ts_received = tsi_payload->get_traffic_selectors(tsi_payload);
@@ -944,17 +964,19 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 			this->tsr->get_count(this->tsr) == 0 ||
 			!this->build_child)
 		{
-			SIG(SIG_CHILD_FAILED, "CHILD_SA negotiation failed, no CHILD_SA built");
+			SIG(CHILD_UP_FAILED, "CHILD_SA negotiation failed, no CHILD_SA built");
 		}
 		else
 		{
 			if (install_child_sa(this, TRUE) != SUCCESS)
 			{
-				SIG(SIG_CHILD_FAILED, "installing CHILD_SA failed, no CHILD_SA built");
+				SIG(CHILD_UP_FAILED, "installing CHILD_SA failed, no CHILD_SA built");
+				/* TODO: we should send a DELETE for that CHILD to stay
+				 * synchronous with the peer */
 			}
 			else
 			{
-				SIG(SIG_CHILD_UP, "CHILD_SA created");
+				SIG(CHILD_UP_SUCCESS, "CHILD_SA created");
 			}
 		}
 	}
