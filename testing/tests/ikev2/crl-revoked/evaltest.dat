@@ -1,6 +1,6 @@
-moon::cat /var/log/auth.log::certificate was revoked::YES
-moon::cat /var/log/auth.log::end entity certificate is not trusted::YES
-carol::cat /var/log/auth.log::AUTHENTICATION_FAILED::YES
+moon::cat /var/log/daemon.log::certificate was revoked::YES
+moon::cat /var/log/daemon.log::end entity certificate is not trusted::YES
+carol::cat /var/log/daemon.log::AUTHENTICATION_FAILED::YES
 moon::ipsec listcrls:: ok::YES
 moon::ipsec status::rw.*ESTABLISHED::NO
 carol::ipsec status::home.*ESTABLISHED::NO

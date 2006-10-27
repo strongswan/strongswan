@@ -53,12 +53,12 @@ fi
 
 
 ##########################################################################
-# clear the auth.log where IKE messages are logged
+# clear auth.log and daemon.log where IKE messages are logged
 #
 
 for host in $IPSECHOSTS
 do
     eval HOSTLOGIN="root@`echo $HOSTNAMEIPV4 | sed -n -e "s/^.*${host},//gp" | awk -F, '{ print $1 }' | awk '{ print $1 }'`"
-    ssh $HOSTLOGIN 'rm -f /var/log/auth.log; \
+    ssh $HOSTLOGIN 'rm -f /var/log/auth.log /var/log/daemon.log; \
 		    kill -SIGHUP `cat /var/run/syslogd.pid`' > /dev/null 2>&1
 done
