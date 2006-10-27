@@ -228,6 +228,7 @@ static chunk_t sanitize_chunk(chunk_t chunk)
 			case 'a' ... 'z':
 			case 'A' ... 'Z':
 			case '0' ... '9':
+			case ' ':
 			case '-':
 			case '_':
 			case '.':
