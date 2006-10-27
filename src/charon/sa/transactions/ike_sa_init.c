@@ -369,17 +369,27 @@ static status_t get_request(private_ike_sa_init_t *this, message_t **result)
 		linked_list_t *list;
 		host_t *host;
 		
-		/* N(NAT_DETECTION_SOURCE_IP)+ */
-		list = charon->socket->create_local_address_list(charon->socket);
-		while (list->remove_first(list, (void**)&host) == SUCCESS)
+		/* N(NAT_DETECTION_SOURCE_IP)+
+		 * we include only one notify if our address is defined, but all
+		 * possible if not */
+		host = this->connection->get_my_host(this->connection);
+		if (host->is_anyaddr(host))
 		{
-			/* TODO: should we only include NAT payloads for addresses
-			 * of used address family? */
+			/* TODO: we could get the src address from netlink */
+			list = charon->socket->create_local_address_list(charon->socket);
+			while (list->remove_first(list, (void**)&host) == SUCCESS)
+			{
+				notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
+				host->destroy(host);
+				request->add_payload(request, (payload_t*)notify);
+			}
+			list->destroy(list);
+		}
+		else
+		{
 			notify = build_natd_payload(this, NAT_DETECTION_SOURCE_IP, host);
-			host->destroy(host);
 			request->add_payload(request, (payload_t*)notify);
 		}
-		list->destroy(list);
 		
 		/* N(NAT_DETECTION_DESTINATION_IP) */
 		notify = build_natd_payload(this, NAT_DETECTION_DESTINATION_IP, other);
