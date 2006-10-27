@@ -30,6 +30,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "stroke_interface.h"
 
@@ -507,7 +508,7 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 		connection->destroy(connection);
 		return;
 	}
-		
+	
 	policy = charon->policies->get_policy_by_name(charon->policies, 
 												  msg->initiate.name);
 	if (policy == NULL)
@@ -521,6 +522,14 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 	}
 	
 	job = initiate_job_create(connection, policy);
+	/*
+	if (msg->output_verbosity < 0)
+	{
+	TODO: detach immediately if verbosity is SILENT. Local credential store
+	is not threadsave yet, so this would cause crashes!!
+		charon->job_queue->add(charon->job_queue, (job_t*)job);
+		return;
+}*/
 	
 	charon->bus->set_listen_state(charon->bus, TRUE);
 	charon->job_queue->add(charon->job_queue, (job_t*)job);
@@ -541,11 +550,11 @@ static void stroke_initiate(private_stroke_t *this, stroke_msg_t *msg)
 				fprintf(this->out, "\n") < 0 ||
 				fflush(this->out))
 			{
+				charon->bus->set_listen_state(charon->bus, FALSE);
 				break;
 			}
 		}
 		
-		/* TODO: Handle INVALID_KE_PAYLOAD signal (ike_sa switch) */
 		switch (signal)
 		{
 			case CHILD_UP_SUCCESS:
@@ -884,6 +893,10 @@ static void stroke_receive(private_stroke_t *this)
 	ssize_t bytes_read;
 	int strokefd;
 	int oldstate;
+	
+	/* ignore sigpipe. writing over the pipe back to the console
+	 * only fails if SIGPIPE is ignored. */
+	signal(SIGPIPE, SIG_IGN);
 	
 	/* disable cancellation by default */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);

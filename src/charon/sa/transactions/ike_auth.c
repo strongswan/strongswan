@@ -995,8 +995,14 @@ static void destroy(private_ike_auth_t *this)
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->policy);
 	DESTROY_IF(this->connection);
-	this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
-	this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
+	if (this->tsi)
+	{
+		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
+	}
+	if (this->tsr)
+	{
+		this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
+	}
 	chunk_free(&this->nonce_i);
 	chunk_free(&this->nonce_r);
 	chunk_free(&this->init_request);

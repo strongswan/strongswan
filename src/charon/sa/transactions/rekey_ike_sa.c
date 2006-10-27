@@ -757,9 +757,10 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 	
 	if (switchto_new_sa(this, TRUE) != SUCCESS)
 	{
-		/* this should not happen. But if, we destroy both SAs */
+		/* this should not happen. But if, we destroy the new SAs */
+		this->new_sa->set_state(this->new_sa, IKE_REKEYING);
 		*next = (transaction_t*)delete_ike_sa_create(this->new_sa);
-		return DESTROY_ME;
+		return FAILED;
 	}
 	
 	/* IKE_SA successfully created. If the other peer initiated rekeying
@@ -800,7 +801,12 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 			/* the other has won, he gets our children */
 			other_trans->new_sa->adopt_children(other_trans->new_sa, this->ike_sa);
 			/* we have lost simlutaneous rekeying, delete the SA we just have created */
-			this->new_sa->delete(this->new_sa);
+			this->new_sa->set_state(this->new_sa, IKE_REKEYING);
+			*next = (transaction_t*)delete_ike_sa_create(this->new_sa);
+		}
+		else
+		{
+			other_trans->new_sa->set_state(other_trans->new_sa, IKE_REKEYING);
 		}
 		/* other trans' SA is still not checked in, so do it now. It's SA will get
 		 * deleted by remote peer. */
@@ -811,8 +817,8 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 	if (!this->lost)
 	{
 		/* we have won. delete old IKE_SA, and migrate all children */
-		*next = (transaction_t*)delete_ike_sa_create(this->ike_sa);
 		this->new_sa->adopt_children(this->new_sa, this->ike_sa);
+		*next = (transaction_t*)delete_ike_sa_create(this->ike_sa);
 	}
 	
 	charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);

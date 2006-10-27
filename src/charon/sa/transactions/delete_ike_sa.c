@@ -56,6 +56,11 @@ struct private_delete_ike_sa_t {
 	 * Times we did send the request
 	 */
 	u_int32_t requested;
+	
+	/**
+	 * is the IKE_SA redundant and gets deleted without further notification?
+	 */
+	bool redundant;
 };
 
 /**
@@ -92,6 +97,12 @@ static status_t get_request(private_delete_ike_sa_t *this, message_t **result)
 	
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
+	this->redundant = this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING;
+	
+	if (!this->redundant)
+	{
+		SIG(IKE_DOWN_START, "deleting IKE_SA");
+	}
 	
 	/* build the request */
 	request = message_create();
@@ -140,6 +151,12 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
 	this->message_id = request->get_message_id(request);
+	this->redundant = this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING;
+	
+	if (!this->redundant)
+	{
+		SIG(IKE_DOWN_START, "deleting IKE_SA");
+	}
 	
 	/* set up response */
 	response = message_create();
@@ -155,7 +172,10 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 	/* check message type */
 	if (request->get_exchange_type(request) != INFORMATIONAL)
 	{
-		DBG1(DBG_IKE, "INFORMATIONAL response of invalid type, deleting IKE_SA");
+		if (!this->redundant)
+		{
+			SIG(IKE_DOWN_FAILED, "INFORMATIONAL response of invalid type, deleting IKE_SA");
+		}
 		return DESTROY_ME;
 	}
 	
@@ -197,6 +217,10 @@ static status_t get_response(private_delete_ike_sa_t *this, message_t *request,
 		return SUCCESS;
 	}
 	this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
+	if (!this->redundant)
+	{
+		SIG(IKE_DOWN_SUCCESS, "IKE_SA deleted on request");
+	}
 	return DESTROY_ME;
 }
 
@@ -210,11 +234,18 @@ static status_t conclude(private_delete_ike_sa_t *this, message_t *response,
 	/* check message type */
 	if (response->get_exchange_type(response) != INFORMATIONAL)
 	{
-		DBG1(DBG_IKE, "INFORMATIONAL response of invalid type, deleting IKE_SA");
+		if (!this->redundant)
+		{
+			SIG(IKE_DOWN_FAILED, "INFORMATIONAL response of invalid type, deleting IKE_SA");
+		}
 		return DESTROY_ME;
 	}
 	/* this is only an acknowledge. We can't do anything here, but delete
 	 * the IKE_SA. */
+	if (!this->redundant)
+	{
+		SIG(IKE_DOWN_SUCCESS, "IKE_SA deleted");
+	}
 	return DESTROY_ME;
 }
 
@@ -247,6 +278,7 @@ delete_ike_sa_t *delete_ike_sa_create(ike_sa_t *ike_sa)
 	this->message_id = 0;
 	this->message = NULL;
 	this->requested = 0;
+	this->redundant = FALSE;
 	
 	return &this->public;
 }
