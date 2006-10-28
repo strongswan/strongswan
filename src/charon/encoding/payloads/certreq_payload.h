@@ -122,5 +122,14 @@ struct certreq_payload_t {
  */
 certreq_payload_t *certreq_payload_create(void);
 
+/**
+ * @brief Creates a certreq_payload_t object from a X.509 CA certificate.
+ * 
+ * @param cert				X.509 CA certificate
+ * @return					certreq_payload_t object
+ * 
+ * @ingroup payloads
+ */
+certreq_payload_t *certreq_payload_create_from_x509(x509_t *cert);
 
 #endif /* CERTREQ_PAYLOAD_H_ */
