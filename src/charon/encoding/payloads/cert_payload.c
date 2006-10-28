@@ -251,21 +251,21 @@ cert_payload_t *cert_payload_create()
 	private_cert_payload_t *this = malloc_thing(private_cert_payload_t);
 
 	/* interface functions */
-	this->public.payload_interface.verify = (status_t (*) (payload_t *))verify;
-	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t *, encoding_rule_t **, size_t *) ) get_encoding_rules;
-	this->public.payload_interface.get_length = (size_t (*) (payload_t *)) get_length;
-	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t *)) get_next_type;
-	this->public.payload_interface.set_next_type = (void (*) (payload_t *,payload_type_t)) set_next_type;
-	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t *)) get_payload_type;
-	this->public.payload_interface.destroy = (void (*) (payload_t *))destroy;
+	this->public.payload_interface.verify = (status_t (*) (payload_t*))verify;
+	this->public.payload_interface.get_encoding_rules = (void (*) (payload_t*,encoding_rule_t**, size_t*))get_encoding_rules;
+	this->public.payload_interface.get_length = (size_t (*) (payload_t*))get_length;
+	this->public.payload_interface.get_next_type = (payload_type_t (*) (payload_t*))get_next_type;
+	this->public.payload_interface.set_next_type = (void (*) (payload_t*,payload_type_t))set_next_type;
+	this->public.payload_interface.get_type = (payload_type_t (*) (payload_t*))get_payload_type;
+	this->public.payload_interface.destroy = (void (*) (payload_t*))destroy;
 	
 	/* public functions */
-	this->public.destroy = (void (*) (cert_payload_t *)) destroy;
-	this->public.set_cert_encoding = (void (*) (cert_payload_t *,cert_encoding_t)) set_cert_encoding;
-	this->public.get_cert_encoding = (cert_encoding_t (*) (cert_payload_t *)) get_cert_encoding;
-	this->public.set_data = (void (*) (cert_payload_t *,chunk_t)) set_data;
-	this->public.get_data_clone = (chunk_t (*) (cert_payload_t *)) get_data_clone;
-	this->public.get_data = (chunk_t (*) (cert_payload_t *)) get_data;
+	this->public.destroy = (void (*) (cert_payload_t*))destroy;
+	this->public.set_cert_encoding = (void (*) (cert_payload_t*,cert_encoding_t))set_cert_encoding;
+	this->public.get_cert_encoding = (cert_encoding_t (*) (cert_payload_t*))get_cert_encoding;
+	this->public.set_data = (void (*) (cert_payload_t*,chunk_t))set_data;
+	this->public.get_data_clone = (chunk_t (*) (cert_payload_t*))get_data_clone;
+	this->public.get_data = (chunk_t (*) (cert_payload_t*))get_data;
 	
 	/* private variables */
 	this->critical = FALSE;
