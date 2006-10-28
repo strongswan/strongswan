@@ -209,18 +209,19 @@ static status_t get_shared_key(private_local_credential_store_t *this,
  * Implementation of credential_store_t.get_certificate.
  */
 static x509_t* get_certificate(private_local_credential_store_t *this,
-							   identification_t * id)
+							   identification_t *id)
 {
-	x509_t *found = NULL, *cert;
+	x509_t *found = NULL;
+	x509_t *current_cert;
 
 	iterator_t *iterator = this->certs->create_iterator(this->certs, TRUE);
 
-	while (iterator->iterate(iterator, (void**)&cert))
+	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
-		if (id->equals(id, cert->get_subject(cert)) ||
-			cert->equals_subjectAltName(cert, id))
+		if (id->equals(id, current_cert->get_subject(current_cert)) ||
+			current_cert->equals_subjectAltName(current_cert, id))
 		{
-			found = cert;
+			found = current_cert;
 			break;
 		}
 	}
@@ -320,25 +321,48 @@ static bool has_rsa_private_key(private_local_credential_store_t *this, rsa_publ
 }
 
 /**
+ * Implementation of credential_store_t.get_ca_certificate.
+ */
+static x509_t* get_ca_certificate(private_local_credential_store_t *this,
+								  identification_t *id)
+{
+	x509_t *found = NULL;
+	x509_t *current_cert;
+
+	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+	while (iterator->iterate(iterator, (void**)&current_cert))
+	{
+		if (id->equals(id, current_cert->get_subject(current_cert)))
+		{
+			found = current_cert;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	return found;
+}
+/**
  * Implementation of credential_store_t.get_issuer_certificate.
  */
 static x509_t* get_issuer_certificate(private_local_credential_store_t *this,
 									  const x509_t *cert)
 {
-	x509_t *issuer_cert = NULL, *current_cert;;
+	x509_t *found = NULL;
+	x509_t *current_cert;
 
 	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
 	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
 		if (cert->is_issuer(cert, current_cert))
 		{
-			issuer_cert = current_cert;
+			found = current_cert;
 			break;
 		}
 	}
 	iterator->destroy(iterator);
 
-	return issuer_cert;
+	return found;
 }
 
 /**
@@ -1071,6 +1095,8 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.has_rsa_private_key = (bool (*) (credential_store_t*,rsa_public_key_t*))has_rsa_private_key;
 	this->public.credential_store.get_trusted_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_trusted_public_key;
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
+	this->public.credential_store.get_ca_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_ca_certificate;
+	this->public.credential_store.get_issuer_certificate = (x509_t* (*) (credential_store_t*,const x509_t*))get_issuer_certificate;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
 	this->public.credential_store.add_ca_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_ca_certificate;

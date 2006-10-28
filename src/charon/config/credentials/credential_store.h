@@ -101,10 +101,28 @@ struct credential_store_t {
 	 * @brief Returns the certificate of a specific ID.
 	 * 
 	 * @param this					calling object
-	 * @param id					identification_t object identifiying the key.
+	 * @param id					identification_t object identifiying the cert.
 	 * @return						certificate, or NULL if not found
 	 */
 	x509_t* (*get_certificate) (credential_store_t *this, identification_t *id);
+	
+	/**
+	 * @brief Returns the ca certificate of a specific subject distinguished name.
+	 * 
+	 * @param this					calling object
+	 * @param id					identification_t object identifiying the cacert.
+	 * @return						certificate, or NULL if not found
+	 */
+	x509_t* (*get_ca_certificate) (credential_store_t *this, identification_t *id);
+	
+	/**
+	 * @brief Returns the ca certificate of a specific subject distinguished name.
+	 * 
+	 * @param this					calling object
+	 * @param id					certificate for which issuer cert is required
+	 * @return						certificate, or NULL if not found
+	 */
+	x509_t* (*get_issuer_certificate) (credential_store_t *this, const x509_t* cert);
 	
 	/**
 	 * @brief Verify an X.509 certificate up to trust anchor including revocation checks
