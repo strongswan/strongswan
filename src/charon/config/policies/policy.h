@@ -117,7 +117,7 @@ struct policy_t {
 	char *(*get_name) (policy_t *this);
 	
 	/**
-	 * @brief Get own id to use for identification.
+	 * @brief Get own id.
 	 * 
 	 * Returned object is not getting cloned.
 	 * 
@@ -127,7 +127,7 @@ struct policy_t {
 	identification_t *(*get_my_id) (policy_t *this);
 	
 	/**
-	 * @brief Get id of communication partner.
+	 * @brief Get peer id.
 	 *
 	 * Returned object is not getting cloned.
 	 * 
@@ -136,6 +136,26 @@ struct policy_t {
 	 */
 	identification_t *(*get_other_id) (policy_t *this);
 	
+	/**
+	 * @brief Get own ca.
+	 *
+	 * Returned object is not getting cloned.
+	 * 
+	 * @param this			calling object
+	 * @return				own ca
+	 */
+	identification_t *(*get_my_ca) (policy_t *this);
+
+	/**
+	 * @brief Get peer ca.
+	 *
+	 * Returned object is not getting cloned.
+	 * 
+	 * @param this			calling object
+	 * @return				other ca
+	 */
+	identification_t *(*get_other_ca) (policy_t *this);
+
 	/**
 	 * @brief Get the authentication method to use.
 	 * 
