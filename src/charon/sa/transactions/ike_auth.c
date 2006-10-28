@@ -221,8 +221,25 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		request->add_payload(request, (payload_t*)my_id_payload);
 	}
 	
-	{	/* TODO: build certreq payload */
-		
+	/* build certificate request payload */
+	if (this->connection->get_certreq_policy(this->connection) != CERT_NEVER_SEND)
+	{
+		certreq_payload_t *certreq_payload;
+
+		identification_t *other_ca = this->policy->get_other_ca(this->policy);
+
+		if (other_ca->get_type(other_ca) == ID_ANY)
+		{
+
+		}
+		else
+		{
+			x509_t *cacert = charon->credentials->get_ca_certificate(charon->credentials, other_ca);
+
+			DBG2(DBG_IKE, "certreq with ca: '%D'", other_ca);
+			certreq_payload = certreq_payload_create_from_x509(cacert);
+			request->add_payload(request, (payload_t*)certreq_payload);
+		}
 	}
 	
 	/* build certificate payload. TODO: Handle certreq from init_ike_sa. */
