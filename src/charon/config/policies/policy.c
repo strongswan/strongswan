@@ -164,6 +164,22 @@ static identification_t *get_other_id(private_policy_t *this)
 }
 
 /**
+ * Implementation of policy_t.get_my_ca
+ */
+static identification_t *get_my_ca(private_policy_t *this)
+{
+	return this->my_ca;
+}
+
+/**
+ * Implementation of policy_t.get_other_ca
+ */
+static identification_t *get_other_ca(private_policy_t *this)
+{
+	return this->other_ca;
+}
+
+/**
  * Implementation of connection_t.auth_method_t.
  */
 static auth_method_t get_auth_method(private_policy_t *this)
@@ -474,6 +490,8 @@ policy_t *policy_create(char *name, identification_t *my_id, identification_t *o
 	this->public.get_name = (char* (*) (policy_t*))get_name;
 	this->public.get_my_id = (identification_t* (*) (policy_t*))get_my_id;
 	this->public.get_other_id = (identification_t* (*) (policy_t*))get_other_id;
+	this->public.get_my_ca = (identification_t* (*) (policy_t*))get_my_ca;
+	this->public.get_other_ca = (identification_t* (*) (policy_t*))get_other_ca;
 	this->public.get_auth_method = (auth_method_t (*) (policy_t*)) get_auth_method;
 	this->public.get_my_traffic_selectors = (linked_list_t* (*) (policy_t*,host_t*))get_my_traffic_selectors;
 	this->public.get_other_traffic_selectors = (linked_list_t* (*) (policy_t*,host_t*))get_other_traffic_selectors;
