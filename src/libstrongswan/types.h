@@ -223,12 +223,6 @@ bool chunk_equals(chunk_t a, chunk_t b);
 bool chunk_equals_or_null(chunk_t a, chunk_t b);
 
 /**
- * Print a chunk in hexadecimal form
- * with each byte separated by a colon
- */
-void chunk_to_hex(char *buf, size_t buflen, chunk_t chunk);
-
-/**
  * Clone a data to a newly allocated buffer
  */
 void *clalloc(void *pointer, size_t size);
