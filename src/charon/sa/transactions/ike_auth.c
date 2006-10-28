@@ -225,19 +225,14 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	if (this->connection->get_certreq_policy(this->connection) != CERT_NEVER_SEND)
 	{
 		certreq_payload_t *certreq_payload;
-
 		identification_t *other_ca = this->policy->get_other_ca(this->policy);
 
-		if (other_ca->get_type(other_ca) == ID_ANY)
-		{
+		certreq_payload = (other_ca->get_type(other_ca) == ID_ANY)
+			? certreq_payload_create_from_cacerts()
+			: certreq_payload_create_from_cacert(other_ca);
 
-		}
-		else
+		if (certreq_payload != NULL)
 		{
-			x509_t *cacert = charon->credentials->get_ca_certificate(charon->credentials, other_ca);
-
-			DBG2(DBG_IKE, "certreq with ca: '%D'", other_ca);
-			certreq_payload = certreq_payload_create_from_x509(cacert);
 			request->add_payload(request, (payload_t*)certreq_payload);
 		}
 	}
@@ -422,9 +417,46 @@ static void build_notify(notify_type_t type, message_t *message, bool flush_mess
 }
 
 /**
+ * Import certificate requests from a certreq payload
+ */
+static void import_certificate_request(certreq_payload_t *certreq_payload)
+{
+	chunk_t keyids;
+	cert_encoding_t encoding = certreq_payload->get_cert_encoding(certreq_payload);
+
+	if (encoding != CERT_X509_SIGNATURE)
+	{
+		DBG1(DBG_IKE, "certreq payload %N not supported, ignored",
+			 cert_encoding_names, encoding);
+		return;
+	}
+
+	keyids = certreq_payload->get_data(certreq_payload);
+
+	while (keyids.len >= HASH_SIZE_SHA1)
+	{
+		chunk_t keyid = { keyids.ptr, HASH_SIZE_SHA1};
+		x509_t *cacert = charon->credentials->get_ca_certificate_by_keyid(charon->credentials, keyid);
+
+		if (cacert)
+		{
+			DBG1(DBG_IKE, "request for certificate issued by ca '%D'", cacert->get_subject(cacert));
+			DBG2(DBG_IKE, "  with keyid %#B", &keyid);
+		}
+		else
+		{
+			DBG1(DBG_IKE, "request for certificate issued by unknown ca");
+			DBG1(DBG_IKE, "  with keyid %#B", &keyid);
+		}
+		keyids.ptr += HASH_SIZE_SHA1;
+		keyids.len -= HASH_SIZE_SHA1;
+	}
+}
+
+/**
  * Import a certificate from a cert payload
  */
-static void import_certificate(private_ike_auth_t *this, cert_payload_t *cert_payload)
+static void import_certificate(cert_payload_t *cert_payload)
 {
 	bool found;
 	x509_t *cert;
@@ -527,6 +559,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 	id_payload_t *idi_request = NULL;
 	id_payload_t *idr_request = NULL;
 	auth_payload_t *auth_request = NULL;
+	certreq_payload_t *certreq_request = NULL;
 	cert_payload_t *cert_request = NULL;
 	sa_payload_t *sa_request = NULL;
 	ts_payload_t *tsi_request = NULL;
@@ -579,6 +612,9 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 				break;
 			case AUTHENTICATION:
 				auth_request = (auth_payload_t*)payload;
+				break;
+			case CERTIFICATE_REQUEST:
+				certreq_request = (certreq_payload_t*)payload;
 				break;
 			case CERTIFICATE:
 				cert_request = (cert_payload_t*)payload;
@@ -699,9 +735,14 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		}
 	}
 	
+	if (certreq_request)
+	{	/* process certificate request payload */
+		import_certificate_request(certreq_request);
+	}
+
 	if (cert_request)
 	{	/* process certificate payload */
-		import_certificate(this, cert_request);
+		import_certificate(cert_request);
 	}
 	
 	{	/* process auth payload */
@@ -923,7 +964,7 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 	
 	if (cert_payload)
 	{	/* process cert payload */
-		import_certificate(this, cert_payload);
+		import_certificate(cert_payload);
 	}
 	
 	{	/* authenticate peer */

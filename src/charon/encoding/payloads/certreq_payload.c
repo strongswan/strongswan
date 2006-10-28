@@ -22,6 +22,10 @@
  */
 
 #include <stddef.h>
+#include <string.h>
+
+#include <daemon.h>
+#include <crypto/hashers/hasher.h>
 
 #include "certreq_payload.h"
 
@@ -262,12 +266,56 @@ certreq_payload_t *certreq_payload_create()
 /*
  * Described in header
  */
-certreq_payload_t *certreq_payload_create_from_x509(x509_t *cert)
+certreq_payload_t *certreq_payload_create_from_cacert(identification_t *id)
 {
+	x509_t *cacert = charon->credentials->get_ca_certificate(charon->credentials, id);
+	rsa_public_key_t *pubkey = cacert->get_public_key(cacert);
+	chunk_t keyid = pubkey->get_keyid(pubkey);
+
 	certreq_payload_t *this = certreq_payload_create();
-	rsa_public_key_t *pubkey = cert->get_public_key(cert);
+
+	DBG1(DBG_IKE, "request certificate issued by '%D'", id);
+	DBG2(DBG_IKE, "  with keyid %#B", &keyid);
 
 	this->set_cert_encoding(this, CERT_X509_SIGNATURE);
-	this->set_data(this, pubkey->get_keyid(pubkey));
+	this->set_data(this, keyid);
+	return this;
+}
+
+/*
+ * Described in header
+ */
+certreq_payload_t *certreq_payload_create_from_cacerts(void)
+{
+	certreq_payload_t *this;
+	chunk_t keyids;
+	u_char *pos;
+	x509_t *cacert;
+
+	iterator_t *iterator = charon->credentials->create_cacert_iterator(charon->credentials);
+	int count = iterator->get_count(iterator);
+
+	if (count == 0)
+		return NULL;
+
+	this = certreq_payload_create();
+	keyids = chunk_alloc(count * HASH_SIZE_SHA1);
+	pos = keyids.ptr;
+
+	while (iterator->iterate(iterator, (void**)&cacert))
+	{
+		rsa_public_key_t *pubkey = cacert->get_public_key(cacert);
+		chunk_t keyid = pubkey->get_keyid(pubkey);
+
+		DBG1(DBG_IKE, "request certificate issued by '%D'", cacert->get_subject(cacert));
+		DBG2(DBG_IKE, "  with keyid %#B", &keyid);
+		memcpy(pos, keyid.ptr, keyid.len);
+		pos += HASH_SIZE_SHA1;
+	}
+	iterator->destroy(iterator);
+
+	this->set_cert_encoding(this, CERT_X509_SIGNATURE);
+	this->set_data(this, keyids);
+	free(keyids.ptr);
 	return this;
 }

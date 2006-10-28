@@ -116,6 +116,15 @@ struct credential_store_t {
 	x509_t* (*get_ca_certificate) (credential_store_t *this, identification_t *id);
 	
 	/**
+	 * @brief Returns the ca certificate of a specific keyID.
+	 * 
+	 * @param this					calling object
+	 * @param keyid					identification_t object identifiying the cacert.
+	 * @return						certificate, or NULL if not found
+	 */
+	x509_t* (*get_ca_certificate_by_keyid) (credential_store_t *this, chunk_t keyid);
+	
+	/**
 	 * @brief Returns the ca certificate of a specific subject distinguished name.
 	 * 
 	 * @param this					calling object

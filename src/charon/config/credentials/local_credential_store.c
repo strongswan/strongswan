@@ -330,6 +330,7 @@ static x509_t* get_ca_certificate(private_local_credential_store_t *this,
 	x509_t *current_cert;
 
 	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+
 	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
 		if (id->equals(id, current_cert->get_subject(current_cert)))
@@ -342,6 +343,33 @@ static x509_t* get_ca_certificate(private_local_credential_store_t *this,
 
 	return found;
 }
+
+/**
+ * Implementation of credential_store_t.get_ca_certificate_by_keyid.
+ */
+static x509_t* get_ca_certificate_by_keyid(private_local_credential_store_t *this,
+										   chunk_t keyid)
+{
+	x509_t *found = NULL;
+	x509_t *current_cert;
+
+	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+
+	while (iterator->iterate(iterator, (void**)&current_cert))
+	{
+		rsa_public_key_t *pubkey = current_cert->get_public_key(current_cert);
+
+		if (chunk_equals(keyid, pubkey->get_keyid(pubkey)))
+		{
+			found = current_cert;
+			break;
+		}
+	}
+	iterator->destroy(iterator);
+
+	return found;
+}
+
 /**
  * Implementation of credential_store_t.get_issuer_certificate.
  */
@@ -352,6 +380,7 @@ static x509_t* get_issuer_certificate(private_local_credential_store_t *this,
 	x509_t *current_cert;
 
 	iterator_t *iterator = this->ca_certs->create_iterator(this->ca_certs, TRUE);
+
 	while (iterator->iterate(iterator, (void**)&current_cert))
 	{
 		if (cert->is_issuer(cert, current_cert))
@@ -1096,6 +1125,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.get_trusted_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_trusted_public_key;
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
 	this->public.credential_store.get_ca_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_ca_certificate;
+	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,identification_t*))get_ca_certificate_by_keyid;
 	this->public.credential_store.get_issuer_certificate = (x509_t* (*) (credential_store_t*,const x509_t*))get_issuer_certificate;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;
