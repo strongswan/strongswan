@@ -41,18 +41,14 @@ ENUM(signal_names, SIG_ANY, SIG_MAX,
 	/** should not get printed */
 	"SIG_DBG_MAX",
 	/** all level0 signals are AUDIT signals */
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
-	"AUD",
+	"AUD", "AUD", "AUD",
+	"AUD", "AUD", "AUD",
+	"AUD", "AUD", "AUD",
+	"AUD", "AUD", "AUD",
+	"AUD", "AUD", "AUD",
+	"AUD", "AUD", "AUD",
+	"AUD", "AUD", "AUD",
+	"AUD", "AUD", "AUD",
 	/** should not get printed */
 	"SIG_MAX",
 );
@@ -237,11 +233,11 @@ static signal_t listen_(private_bus_t *this, level_t *level, int *thread,
 	pthread_mutex_unlock(&this->mutex);
 	
 	/* return signal values */
-	*level = listener->level;
+	*level  = listener->level;
 	*thread = listener->thread;
 	*ike_sa = listener->ike_sa;
 	*format = listener->format;
-	*args = listener->args;
+	*args   = listener->args;
 	
 	return listener->signal;
 }
