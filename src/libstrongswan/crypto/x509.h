@@ -61,7 +61,7 @@ struct x509_t {
 	 * @param until				time until public key is trusted
 	 */
 	void (*set_until) (x509_t *this, time_t until);
-		
+
 	/**
 	 * @brief Get trusted public key life.
 	 * 
@@ -69,7 +69,7 @@ struct x509_t {
 	 * @return					time until public key is trusted
 	 */
 	time_t (*get_until) (const x509_t *this);
-		
+
 	/**
 	 * @brief Set the certificate status
 	 * 
@@ -77,7 +77,7 @@ struct x509_t {
 	 * @param status			certificate status
 	 */
 	void (*set_status) (x509_t *this, cert_status_t status);
-	
+
 	/**
 	 * @brief Get the certificate status
 	 * 
@@ -85,7 +85,7 @@ struct x509_t {
 	 * @return					certificate status
 	 */
 	cert_status_t (*get_status) (const x509_t *this);
-	
+
 	/**
 	 * @brief Get the DER-encoded X.509 certificate body
 	 * 
@@ -111,13 +111,13 @@ struct x509_t {
 	chunk_t (*get_serialNumber) (const x509_t *this);
 		
 	/**
-	 * @brief Get serial number from the certificate.
+	 * @brief Get subjectKeyID from the certificate.
 	 * 
 	 * @param this				calling object
 	 * @return					subjectKeyID
 	 */
 	chunk_t (*get_subjectKeyID) (const x509_t *this);
-		
+
 	/**
 	 * @brief Get the certificate issuer's ID.
 	 * 
@@ -128,9 +128,9 @@ struct x509_t {
 	 * @return					issuers ID
 	 */
 	identification_t *(*get_issuer) (const x509_t *this);
-		
+
 	/**
-	 * @brief Get the subjects ID.
+	 * @brief Get the subjectDistinguisheName.
 	 * 
 	 * The resulting ID is always a identification_t
 	 * of type ID_DER_ASN1_DN. 
@@ -139,7 +139,7 @@ struct x509_t {
 	 * @return					subjects ID
 	 */
 	identification_t *(*get_subject) (const x509_t *this);
-	
+
 	/**
 	 * @brief Check if a certificate is trustworthy
 	 * 
@@ -147,7 +147,7 @@ struct x509_t {
 	 * @param signer		signer's RSA public key
 	 */
 	bool (*verify) (const x509_t *this, const rsa_public_key_t *signer);
-	
+
 	/**
 	 * @brief Compare two certificates.
 	 * 
@@ -158,7 +158,7 @@ struct x509_t {
 	 * @return				TRUE if signature is equal
 	 */
 	bool (*equals) (const x509_t *this, const x509_t *that);
-	
+
 	/**
 	 * @brief Checks if the certificate contains a subjectAltName equal to id.
 	 * 
@@ -185,7 +185,7 @@ struct x509_t {
 	 * @return				NULL if the certificate is valid
 	 */
 	err_t (*is_valid) (const x509_t *this, time_t *until);
-	
+
 	/**
 	 * @brief Returns the CA basic constraints flag
 	 * 
@@ -193,7 +193,7 @@ struct x509_t {
 	 * @return				TRUE if the CA flag is set
 	 */
 	bool (*is_ca) (const x509_t *this);
-	
+
 	/**
 	 * @brief Checks if the certificate is self-signed (subject equals issuer)
 	 * 
