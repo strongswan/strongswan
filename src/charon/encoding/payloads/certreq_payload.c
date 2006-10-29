@@ -274,7 +274,7 @@ certreq_payload_t *certreq_payload_create_from_cacert(identification_t *id)
 
 	certreq_payload_t *this = certreq_payload_create();
 
-	DBG1(DBG_IKE, "request certificate issued by '%D'", id);
+	DBG2(DBG_IKE, "requesting certificate issued by '%D'", id);
 	DBG2(DBG_IKE, "  with keyid %#B", &keyid);
 
 	this->set_cert_encoding(this, CERT_X509_SIGNATURE);
@@ -307,7 +307,7 @@ certreq_payload_t *certreq_payload_create_from_cacerts(void)
 		rsa_public_key_t *pubkey = cacert->get_public_key(cacert);
 		chunk_t keyid = pubkey->get_keyid(pubkey);
 
-		DBG1(DBG_IKE, "request certificate issued by '%D'", cacert->get_subject(cacert));
+		DBG2(DBG_IKE, "requesting certificate issued by '%D'", cacert->get_subject(cacert));
 		DBG2(DBG_IKE, "  with keyid %#B", &keyid);
 		memcpy(pos, keyid.ptr, keyid.len);
 		pos += HASH_SIZE_SHA1;
