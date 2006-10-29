@@ -439,15 +439,11 @@ static void import_certificate_request(certreq_payload_t *certreq_payload)
 		x509_t *cacert = charon->credentials->get_ca_certificate_by_keyid(charon->credentials, keyid);
 
 		if (cacert)
-		{
-			DBG1(DBG_IKE, "request for certificate issued by ca '%D'", cacert->get_subject(cacert));
-			DBG2(DBG_IKE, "  with keyid %#B", &keyid);
-		}
+			DBG2(DBG_IKE, "request for certificate issued by ca '%D'", cacert->get_subject(cacert));
 		else
-		{
-			DBG1(DBG_IKE, "request for certificate issued by unknown ca");
-			DBG1(DBG_IKE, "  with keyid %#B", &keyid);
-		}
+			DBG2(DBG_IKE, "request for certificate issued by unknown ca");
+		DBG2(DBG_IKE, "  with keyid %#B", &keyid);
+
 		keyids.ptr += HASH_SIZE_SHA1;
 		keyids.len -= HASH_SIZE_SHA1;
 	}
@@ -676,6 +672,11 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		}
 	}
 	
+	if (certreq_request)
+	{	/* process certificate request payload */
+		import_certificate_request(certreq_request);
+	}
+
 	{	/* get a policy and process traffic selectors */
 		linked_list_t *my_ts, *other_ts;
 		
@@ -735,11 +736,6 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		}
 	}
 	
-	if (certreq_request)
-	{	/* process certificate request payload */
-		import_certificate_request(certreq_request);
-	}
-
 	if (cert_request)
 	{	/* process certificate payload */
 		import_certificate(cert_request);
