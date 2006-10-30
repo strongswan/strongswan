@@ -928,8 +928,14 @@ static void destroy(private_create_child_sa_t *this)
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->policy);
-	this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
-	this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
+	if (this->tsi)
+	{
+		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
+	}
+	if (this->tsr)
+	{
+		this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
+	}
 	chunk_free(&this->nonce_i);
 	chunk_free(&this->nonce_r);
 	chunk_free(&this->nonce_s);
