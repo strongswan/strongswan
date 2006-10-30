@@ -24,10 +24,10 @@
 #ifndef JOB_QUEUE_H_
 #define JOB_QUEUE_H_
 
+typedef struct job_queue_t job_queue_t;
+
 #include <types.h>
 #include <queues/jobs/job.h>
-
-typedef struct job_queue_t job_queue_t;
 
 /**
  * @brief The job queue stores jobs, which will be processed by the thread_pool_t.

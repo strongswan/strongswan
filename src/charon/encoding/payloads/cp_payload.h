@@ -24,6 +24,9 @@
 #ifndef CP_PAYLOAD_H_
 #define CP_PAYLOAD_H_
 
+typedef enum config_type_t config_type_t;
+typedef struct cp_payload_t cp_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/configuration_attribute.h>
@@ -36,12 +39,9 @@
  */
 #define CP_PAYLOAD_HEADER_LENGTH 8
 
-
-typedef enum config_type_t config_type_t;
-
 /**
  * Config Type of an Configuration Payload.
- * 
+ *
  * @ingroup payloads
  */
 enum config_type_t {
@@ -57,9 +57,6 @@ enum config_type_t {
  * @ingroup payloads
  */
 extern enum_name_t *config_type_names;
-
-
-typedef struct cp_payload_t cp_payload_t;
 
 /**
  * @brief Class representing an IKEv2-CP Payload.

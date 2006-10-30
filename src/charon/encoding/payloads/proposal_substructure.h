@@ -24,6 +24,8 @@
 #ifndef PROPOSAL_SUBSTRUCTURE_H_
 #define PROPOSAL_SUBSTRUCTURE_H_
 
+typedef struct proposal_substructure_t proposal_substructure_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_substructure.h>
@@ -37,9 +39,6 @@
  * @ingroup payloads
  */
 #define PROPOSAL_SUBSTRUCTURE_HEADER_LENGTH 8
-
-
-typedef struct proposal_substructure_t proposal_substructure_t;
 
 /**
  * @brief Class representing an IKEv2-PROPOSAL SUBSTRUCTURE.

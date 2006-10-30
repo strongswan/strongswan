@@ -1125,7 +1125,7 @@ local_credential_store_t * local_credential_store_create(bool strict)
 	this->public.credential_store.get_trusted_public_key = (rsa_public_key_t*(*)(credential_store_t*,identification_t*))get_trusted_public_key;
 	this->public.credential_store.get_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_certificate;
 	this->public.credential_store.get_ca_certificate = (x509_t* (*) (credential_store_t*,identification_t*))get_ca_certificate;
-	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,identification_t*))get_ca_certificate_by_keyid;
+	this->public.credential_store.get_ca_certificate_by_keyid = (x509_t* (*) (credential_store_t*,chunk_t))get_ca_certificate_by_keyid;
 	this->public.credential_store.get_issuer_certificate = (x509_t* (*) (credential_store_t*,const x509_t*))get_issuer_certificate;
 	this->public.credential_store.verify = (bool (*) (credential_store_t*,x509_t*,bool*))verify;
 	this->public.credential_store.add_end_certificate = (x509_t* (*) (credential_store_t*,x509_t*))add_end_certificate;

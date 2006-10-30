@@ -21,8 +21,11 @@ sa/transactions/delete_child_sa.h sa/transactions/delete_child_sa.c \
 sa/transactions/dead_peer_detection.h sa/transactions/dead_peer_detection.c \
 sa/transactions/delete_ike_sa.h sa/transactions/delete_ike_sa.c \
 sa/transactions/rekey_ike_sa.h sa/transactions/rekey_ike_sa.c \
+sa/authenticators/authenticator.h sa/authenticators/authenticator.c \
+sa/authenticators/rsa_authenticator.h sa/authenticators/rsa_authenticator.c \
+sa/authenticators/psk_authenticator.h sa/authenticators/psk_authenticator.c \
 sa/child_sa.c sa/child_sa.h sa/ike_sa.c sa/ike_sa.h sa/ike_sa_manager.c sa/ike_sa_manager.h \
-sa/ike_sa_id.c sa/ike_sa_id.h sa/authenticator.c sa/authenticator.h encoding/payloads/encryption_payload.c \
+sa/ike_sa_id.c sa/ike_sa_id.h encoding/payloads/encryption_payload.c \
 encoding/payloads/cert_payload.c encoding/payloads/payload.h encoding/payloads/traffic_selector_substructure.c \
 encoding/payloads/configuration_attribute.h encoding/payloads/proposal_substructure.h \
 encoding/payloads/transform_attribute.c encoding/payloads/transform_attribute.h \

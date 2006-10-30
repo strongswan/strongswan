@@ -24,22 +24,21 @@
 #ifndef INCOMING_PACKET_JOB_H_
 #define INCOMING_PACKET_JOB_H_
 
+typedef struct incoming_packet_job_t incoming_packet_job_t;
+
 #include <types.h>
 #include <network/packet.h>
 #include <queues/jobs/job.h>
 
-
-typedef struct incoming_packet_job_t incoming_packet_job_t;
-
 /**
  * @brief Class representing an INCOMING_PACKET Job.
- * 
+ *
  * An incoming pack job is created from the receiver, which has
  * read a packet to process from the socket.
- * 
+ *
  * @b Constructors:
  * - incoming_packet_job_create()
- * 
+ *
  * @ingroup jobs
  */
 struct incoming_packet_job_t {

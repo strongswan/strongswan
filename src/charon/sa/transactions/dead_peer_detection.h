@@ -24,11 +24,10 @@
 #ifndef DEAD_PEER_DETECTION_H_
 #define DEAD_PEER_DETECTION_H_
 
+typedef struct dead_peer_detection_t dead_peer_detection_t;
+
 #include <sa/ike_sa.h>
 #include <sa/transactions/transaction.h>
-
-
-typedef struct dead_peer_detection_t dead_peer_detection_t;
 
 /**
  * @brief A transaction used to detect dead peers.

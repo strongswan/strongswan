@@ -23,12 +23,12 @@
 #ifndef REKEY_IKE_SA_H
 #define REKEY_IKE_SA_H
 
+typedef struct rekey_ike_sa_t rekey_ike_sa_t;
+
 #include <sa/ike_sa.h>
 #include <sa/transactions/transaction.h>
 #include <crypto/diffie_hellman.h>
 
-
-typedef struct rekey_ike_sa_t rekey_ike_sa_t;
 
 /**
  * @brief A transaction to rekey an established IKE_SA

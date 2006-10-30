@@ -24,19 +24,20 @@
 #ifndef PAYLOAD_H_
 #define PAYLOAD_H_
 
+typedef enum payload_type_t payload_type_t;
+typedef struct payload_t payload_t;
+
 #include <types.h>
 #include <definitions.h>
 #include <encoding/payloads/encodings.h>
 
 
-typedef enum payload_type_t payload_type_t;
-
 /**
  * @brief Payload-Types of a IKEv2-Message.
- * 
+ *
  * Header and substructures are also defined as 
  * payload types with values from PRIVATE USE space.
- * 
+ *
  * @ingroup payloads
  */
 enum payload_type_t{
@@ -193,9 +194,6 @@ extern enum_name_t *payload_type_names;
  * enum names for payload_type_t in a short form.
  */
 extern enum_name_t *payload_type_short_names;
-
-
-typedef struct payload_t payload_t;
 
 /**
  * @brief Generic interface for all payload types (incl.header and substructures).

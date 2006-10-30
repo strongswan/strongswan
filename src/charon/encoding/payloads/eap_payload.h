@@ -24,6 +24,8 @@
 #ifndef EAP_PAYLOAD_H_
 #define EAP_PAYLOAD_H_
 
+typedef struct eap_payload_t eap_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 
@@ -34,19 +36,16 @@
  */
 #define EAP_PAYLOAD_HEADER_LENGTH 4
 
-
-typedef struct eap_payload_t eap_payload_t;
-
 /**
  * @brief Class representing an IKEv2 EAP payload.
- * 
+ *
  * The EAP payload format is described in RFC section 3.16.
  * 
  * @b Constructors:
  * - eap_payload_create()
- * 
+ *
  * @todo Implement functionality for this payload
- * 
+ *
  * @ingroup payloads
  */
 struct eap_payload_t {

@@ -22,13 +22,12 @@
 #ifndef SEND_KEEPALIVE_JOB_H_
 #define SEND_KEEPALIVE_JOB_H_
 
+typedef struct send_keepalive_job_t send_keepalive_job_t;
+
 #include <types.h>
 #include <queues/jobs/job.h>
 #include <config/connections/connection.h>
 #include <sa/ike_sa_id.h>
-
-
-typedef struct send_keepalive_job_t send_keepalive_job_t;
 
 /**
  * @brief Class representing a SEND_KEEPALIVE Job.

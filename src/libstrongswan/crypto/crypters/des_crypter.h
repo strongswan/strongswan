@@ -23,10 +23,10 @@
 #ifndef DES_CRYPTER_H_
 #define DES_CRYPTER_H_
 
+typedef struct des_crypter_t des_crypter_t;
+
 #include <crypto/crypters/crypter.h>
 
-
-typedef struct des_crypter_t des_crypter_t;
 
 /**
  * @brief Class implementing the DES and 3DES encryption algorithms.

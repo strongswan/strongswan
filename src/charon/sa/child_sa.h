@@ -25,10 +25,14 @@
 #ifndef CHILD_SA_H_
 #define CHILD_SA_H_
 
+typedef enum child_sa_state_t child_sa_state_t;
+typedef struct child_sa_t child_sa_t;
+
 #include <types.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <config/proposal.h>
+#include <sa/transactions/transaction.h>
 
 /**
  * Where we should start with reqid enumeration
@@ -39,8 +43,6 @@
  * Printf() specifier for child_sa_t
  */
 #define CHILD_SA_PRINTF_SPEC 'P'
-
-typedef enum child_sa_state_t child_sa_state_t;
 
 /**
  * @brief States of a CHILD_SA
@@ -77,8 +79,6 @@ enum child_sa_state_t {
  * enum strings for child_sa_state_t.
  */
 extern enum_name_t *child_sa_state_names;
-
-typedef struct child_sa_t child_sa_t;
 
 /**
  * @brief Represents an IPsec SAs between two hosts.
@@ -266,22 +266,17 @@ struct child_sa_t {
 	 * such situations to handle them cleanly. A rekeying transaction
 	 * registers itself to the CHILD_SA, and checks later if another
 	 * transaction is in progress of a rekey.
-	 * 
-	 * @todo Fix include problematics to allow inclusion of 
-	 * the create_child_sa_t transaction.
 	 *
 	 * @param this 		calling object
 	 */	
-	void (*set_rekeying_transaction) (child_sa_t *this, void *transaction);
+	void (*set_rekeying_transaction) (child_sa_t *this, transaction_t *transaction);
 	
 	/**
 	 * @brief Get the transaction which rekeys this CHILD_SA.
 	 *
-	 * @see set_rekeying_transactoin().
-	 *
 	 * @param this 		calling object
 	 */	
-	void* (*get_rekeying_transaction) (child_sa_t *this);
+	transaction_t* (*get_rekeying_transaction) (child_sa_t *this);
 	
 	/**
 	 * @brief Destroys a child_sa.

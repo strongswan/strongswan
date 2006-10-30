@@ -25,6 +25,8 @@
 #ifndef DAEMON_H_
 #define DAEMON_H_
 
+typedef struct daemon_t daemon_t;
+
 #include <threads/sender.h>
 #include <threads/receiver.h>
 #include <threads/scheduler.h>
@@ -272,14 +274,11 @@
  */
 #define SECRETS_FILE CONFIG_DIR "/ipsec.secrets"
 
-
-typedef struct daemon_t daemon_t;
-
 /**
  * @brief Main class of daemon, contains some globals.
- * 
+ *
  * @ingroup charon
- */ 
+ */
 struct daemon_t {
 	/**
 	 * A socket_t instance.

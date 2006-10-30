@@ -28,18 +28,18 @@ typedef struct iterator_t iterator_t;
 
 /**
  * @brief Iterator interface, allows iteration over collections.
- * 
+ *
  * iterator_t defines an interface for iterating over collections.
  * It allows searching, deleting, updating and inserting.
- * 
+ *
  * Thanks to JMP for iterator lessons :-)
- * 
+ *
  * @b Constructors:
  * - via linked_list_t.create_iterator, or
  * - any other class which supports the iterator_t interface
- * 
+ *
  * @see linked_list_t
- * 
+ *
  * @ingroup utils 
  */
 struct iterator_t {

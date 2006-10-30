@@ -23,12 +23,11 @@
 #ifndef CREATE_CHILD_SA_H_
 #define CREATE_CHILD_SA_H_
 
+typedef struct create_child_sa_t create_child_sa_t;
+
+#include <sa/transactions/transaction.h>
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
-#include <sa/transactions/transaction.h>
-
-
-typedef struct create_child_sa_t create_child_sa_t;
 
 /**
  * @brief A transaction to create a new or rekey an existing CHILD_SA.

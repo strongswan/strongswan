@@ -23,11 +23,10 @@
 #ifndef ACQUIRE_JOB_H_
 #define ACQUIRE_JOB_H_
 
+typedef struct acquire_job_t acquire_job_t;
+
 #include <types.h>
 #include <queues/jobs/job.h>
-
-
-typedef struct acquire_job_t acquire_job_t;
 
 /**
  * @brief Class representing an ACQUIRE Job.

@@ -24,6 +24,9 @@
 #ifndef CONNECTION_H_
 #define CONNECTION_H_
 
+typedef enum cert_policy_t cert_policy_t;
+typedef struct connection_t connection_t;
+
 #include <types.h>
 #include <utils/host.h>
 #include <utils/linked_list.h>
@@ -31,7 +34,6 @@
 #include <config/proposal.h>
 #include <crypto/diffie_hellman.h>
 
-typedef enum cert_policy_t cert_policy_t;
 
 /**
  * Certificate sending policy. This is also used for certificate
@@ -60,16 +62,12 @@ enum cert_policy_t {
  */
 extern enum_name_t *cert_policy_names;
 
-
-typedef struct connection_t connection_t;
-
 /**
  * @brief A connection_t defines the rules to set up an IKE_SA.
  *
- *
  * @b Constructors:
  *  - connection_create()
- * 
+ *
  * @ingroup config
  */
 struct connection_t {

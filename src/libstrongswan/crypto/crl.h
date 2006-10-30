@@ -23,6 +23,8 @@
 #ifndef CRL_H_
 #define CRL_H_
 
+typedef struct crl_t crl_t;
+
 #include <types.h>
 #include <definitions.h>
 #include <crypto/rsa/rsa_public_key.h>
@@ -36,8 +38,6 @@
  * are printed in UTC.
  */
 #define CRL_PRINTF_SPEC 'U'
-
-typedef struct crl_t crl_t;
 
 /**
  * @brief X.509 certificate revocation list

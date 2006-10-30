@@ -23,13 +23,12 @@
 #ifndef INITIATE_IKE_SA_JOB_H_
 #define INITIATE_IKE_SA_JOB_H_
 
+typedef struct initiate_job_t initiate_job_t;
+
 #include <types.h>
 #include <queues/jobs/job.h>
 #include <config/connections/connection.h>
 #include <config/policies/policy.h>
-
-
-typedef struct initiate_job_t initiate_job_t;
 
 /**
  * @brief Class representing an INITIATE_IKE_SA Job.

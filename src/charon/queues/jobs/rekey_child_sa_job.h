@@ -23,22 +23,21 @@
 #ifndef REKEY_CHILD_SA_JOB_H_
 #define REKEY_CHILD_SA_JOB_H_
 
+typedef struct rekey_child_sa_job_t rekey_child_sa_job_t;
+
 #include <types.h>
 #include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
 #include <config/proposal.h>
 
-
-typedef struct rekey_child_sa_job_t rekey_child_sa_job_t;
-
 /**
  * @brief Class representing an REKEY_CHILD_SA Job.
- * 
+ *
  * This job initiates the rekeying of a CHILD SA.
- * 
+ *
  * @b Constructors:
  *  - rekey_child_sa_job_create()
- * 
+ *
  * @ingroup jobs
  */
 struct rekey_child_sa_job_t {

@@ -24,11 +24,11 @@
 #ifndef DELETE_CHILD_SA_H_
 #define DELETE_CHILD_SA_H_
 
+typedef struct delete_child_sa_t delete_child_sa_t;
+
 #include <sa/ike_sa.h>
 #include <sa/transactions/transaction.h>
 
-
-typedef struct delete_child_sa_t delete_child_sa_t;
 
 /**
  * @brief A transaction used to delete a CHILD_SA.

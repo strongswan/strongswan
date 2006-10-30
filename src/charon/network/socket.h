@@ -25,24 +25,21 @@
 #ifndef SOCKET_H_
 #define SOCKET_H_
 
+typedef struct socket_t socket_t;
 
 #include <types.h>
 #include <network/packet.h>
 #include <utils/host.h>
 #include <utils/linked_list.h>
 
-
 /**
  * @brief Maximum size of a packet.
- * 
+ *
  * 3000 Bytes should be sufficient, see IKEv2 RFC.
- * 
+ *
  * @ingroup network
  */
 #define MAX_PACKET 3000
-
-
-typedef struct socket_t socket_t;
 
 /**
  * @brief Abstraction of all sockets (IPv6/IPv6 send/receive).

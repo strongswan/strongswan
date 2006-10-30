@@ -33,7 +33,7 @@
 #include <encoding/payloads/certreq_payload.h>
 #include <encoding/payloads/auth_payload.h>
 #include <encoding/payloads/ts_payload.h>
-#include <sa/authenticator.h>
+#include <sa/authenticators/authenticator.h>
 #include <sa/child_sa.h>
 
 
@@ -238,7 +238,7 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 	}
 	
 	/* build certificate payload. TODO: Handle certreq from init_ike_sa. */
-	if (this->policy->get_auth_method(this->policy) == RSA_DIGITAL_SIGNATURE
+	if (this->policy->get_auth_method(this->policy) == AUTH_RSA
 	&&  this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
 	{
 		cert_payload_t *cert_payload;
@@ -273,13 +273,15 @@ static status_t get_request(private_ike_auth_t *this, message_t **result)
 		
 		auth_method = this->policy->get_auth_method(this->policy);
 		authenticator = authenticator_create(this->ike_sa, auth_method);
-		status = authenticator->compute_auth_data(authenticator,
-												  &auth_payload,
-												  this->init_request,
-												  this->nonce_r,
-												  my_id,
-												  other_id,
-												  TRUE);
+		if (authenticator == NULL)
+		{
+			SIG(IKE_UP_FAILED, "auth method %N not supported, deleting IKE_SA",
+			    auth_method_names, auth_method);
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			return DESTROY_ME;
+		}
+		status = authenticator->build(authenticator, this->init_request,
+									  this->nonce_r, &auth_payload);
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{
@@ -718,7 +720,7 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		response->add_payload(response, (payload_t*)idr_response);
 	}
 	
-	if (this->policy->get_auth_method(this->policy) == RSA_DIGITAL_SIGNATURE
+	if (this->policy->get_auth_method(this->policy) == AUTH_RSA
 	&&  this->connection->get_cert_policy(this->connection) != CERT_NEVER_SEND)
 	{	/* build certificate payload */
 		x509_t *cert;
@@ -747,28 +749,37 @@ static status_t get_response(private_ike_auth_t *this, message_t *request,
 		auth_method_t auth_method;
 		status_t status;
 		
-		auth_method = this->policy->get_auth_method(this->policy);
+		auth_method = auth_request->get_auth_method(auth_request);
 		authenticator = authenticator_create(this->ike_sa, auth_method);
-		status = authenticator->verify_auth_data(authenticator, auth_request,
-												 this->init_request,
-												 this->nonce_r,
-												 my_id,
-												 other_id,
-												 TRUE);
+		if (authenticator == NULL)
+		{
+			SIG(IKE_UP_FAILED, "auth method %N not supported, deleting IKE_SA",
+				auth_method_names, auth_method);
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			return DESTROY_ME;
+		}
+		status = authenticator->verify(authenticator, this->init_request,
+									   this->nonce_r, auth_request);
+		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{
 			SIG(IKE_UP_FAILED, "authentication failed, deleting IKE_SA");
 			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
 			build_notify(AUTHENTICATION_FAILED, response, TRUE);
-			authenticator->destroy(authenticator);
 			return DESTROY_ME;
 		}
-		status = authenticator->compute_auth_data(authenticator, &auth_response,
-												  this->init_response,
-												  this->nonce_i,
-												  my_id,
-												  other_id,
-												  FALSE);
+		
+		auth_method = this->policy->get_auth_method(this->policy);
+		authenticator = authenticator_create(this->ike_sa, auth_method);
+		if (authenticator == NULL)
+		{
+			SIG(IKE_UP_FAILED, "auth method %N not supported, deleting IKE_SA",
+				auth_method_names, auth_method);
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			return DESTROY_ME;
+		}
+		status = authenticator->build(authenticator, this->init_response,
+									  this->nonce_i, &auth_response);
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{
@@ -968,17 +979,18 @@ static status_t conclude(private_ike_auth_t *this, message_t *response,
 		auth_method_t auth_method;
 		status_t status;
 		
-		auth_method = this->policy->get_auth_method(this->policy);
-		authenticator = authenticator_create(this->ike_sa, auth_method);
 		my_id = this->policy->get_my_id(this->policy);
-
-		status = authenticator->verify_auth_data(authenticator,
-												 auth_payload,
-												 this->init_response,
-												 this->nonce_i,
-												 my_id,
-												 other_id,
-												 FALSE);
+		auth_method = auth_payload->get_auth_method(auth_payload);
+		authenticator = authenticator_create(this->ike_sa, auth_method);
+		if (authenticator == NULL)
+		{
+			SIG(IKE_UP_FAILED, "auth method %N not supported, deleting IKE_SA",
+				auth_method_names, auth_method);
+			SIG(CHILD_UP_FAILED, "initiating CHILD_SA failed, unable to create IKE_SA");
+			return DESTROY_ME;
+		}
+		status = authenticator->verify(authenticator, this->init_response,
+									   this->nonce_i, auth_payload);
 		authenticator->destroy(authenticator);
 		if (status != SUCCESS)
 		{

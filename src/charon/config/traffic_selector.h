@@ -24,6 +24,9 @@
 #ifndef TRAFFIC_SELECTOR_H_
 #define TRAFFIC_SELECTOR_H_
 
+typedef enum ts_type_t ts_type_t;
+typedef struct traffic_selector_t traffic_selector_t;
+
 #include <types.h>
 #include <utils/host.h>
 
@@ -31,8 +34,6 @@
  * printf() specifier for tRaffic selectors
  */
 #define TRAFFIC_SELECTOR_PRINTF_SPEC 'R'
-
-typedef enum ts_type_t ts_type_t;
 
 /**
  * Traffic selector types.
@@ -65,21 +66,18 @@ enum ts_type_t {
  */
 extern enum_name_t *ts_type_name;
 
-
-typedef struct traffic_selector_t traffic_selector_t;
-
 /**
  * @brief Object representing a traffic selector entry.
- * 
+ *
  * A traffic selector defines an range of addresses
  * and a range of ports. IPv6 is not fully supported yet.
- * 
+ *
  * @b Constructors:
  * - traffic_selector_create_from_bytes()
  * - traffic_selector_create_from_string()
- * 
+ *
  * @todo Add IPv6 support
- * 
+ *
  * @ingroup config
  */
 struct traffic_selector_t {

@@ -24,8 +24,9 @@
 #ifndef RANDOMIZER_H_
 #define RANDOMIZER_H_
 
-#include <types.h>
+typedef struct randomizer_t randomizer_t;
 
+#include <types.h>
 
 #ifndef DEV_RANDOM
 /**
@@ -40,8 +41,6 @@
  */
 # define DEV_URANDOM "/dev/urandom"
 #endif
-
-typedef struct randomizer_t randomizer_t;
 
 /**
  * @brief Class used to get random and pseudo random values.

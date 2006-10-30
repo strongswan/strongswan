@@ -24,22 +24,21 @@
 #ifndef THREAD_POOL_H_
 #define THREAD_POOL_H_
 
+typedef struct thread_pool_t thread_pool_t;
+
 #include <stdlib.h>
 
 #include <types.h>
 
-
-typedef struct thread_pool_t thread_pool_t;
-
 /**
  * @brief A thread_pool consists of a pool of threads processing jobs from the job queue.
- * 
+ *
  * Current implementation uses as many threads as specified in constructor.
  * A more improved version would dynamically increase thread count if necessary.
- * 
+ *
  * @b Constructors:
  *  - thread_pool_create()
- * 
+ *
  * @todo Add support for dynamic thread handling
  * 
  * @ingroup threads

@@ -24,15 +24,15 @@
 #ifndef JOB_H_
 #define JOB_H_
 
+typedef enum job_type_t job_type_t;
+typedef struct job_t job_t;
+
 #include <types.h>
 #include <definitions.h>
 
-
-typedef enum job_type_t job_type_t;
-
 /**
  * @brief Definition of the various job types.
- * 
+ *
  * @ingroup jobs
  */
 enum job_type_t {
@@ -121,8 +121,6 @@ enum job_type_t {
  */
 extern enum_name_t *job_type_names;
 
-
-typedef struct job_t job_t;
 
 /**
  * @brief Job-Interface as it is stored in the job queue.

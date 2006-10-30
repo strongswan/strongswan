@@ -24,23 +24,22 @@
 #ifndef RESEND_MESSAGE_JOB_H_
 #define RESEND_MESSAGE_JOB_H_
 
+typedef struct retransmit_request_job_t retransmit_request_job_t;
+
 #include <types.h>
 #include <queues/jobs/job.h>
 #include <sa/ike_sa_id.h>
 
-
-typedef struct retransmit_request_job_t retransmit_request_job_t;
-
 /**
  * @brief Class representing an RETRANSMIT_REQUEST Job.
- * 
+ *
  * This job is scheduled every time a request is sent over the
  * wire. If the response to the request is not received at schedule
  * time, the retransmission will be initiated.
- * 
+ *
  * @b Constructors:
  * - retransmit_request_job_create()
- * 
+ *
  * @ingroup jobs
  */
 struct retransmit_request_job_t {

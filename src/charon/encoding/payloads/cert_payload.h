@@ -24,6 +24,9 @@
 #ifndef CERT_PAYLOAD_H_
 #define CERT_PAYLOAD_H_
 
+typedef enum cert_encoding_t cert_encoding_t;
+typedef struct cert_payload_t cert_payload_t;
+
 #include <types.h>
 #include <crypto/x509.h>
 #include <encoding/payloads/payload.h>
@@ -35,12 +38,9 @@
  */
 #define CERT_PAYLOAD_HEADER_LENGTH 5
 
-
-typedef enum cert_encoding_t cert_encoding_t;
-
 /**
  * @brief Certificate encoding, as described in IKEv2 RFC section 3.6
- * 
+ *
  * @ingroup payloads
  */
 enum cert_encoding_t {
@@ -66,11 +66,9 @@ enum cert_encoding_t {
  */
 extern enum_name_t *cert_encoding_names;
 
-typedef struct cert_payload_t cert_payload_t;
-
 /**
  * @brief Class representing an IKEv2 CERT payload.
- * 
+ *
  * The CERT payload format is described in RFC section 3.6.
  * This is just a dummy implementation to fullfill the standards
  * requirements. A full implementation would offer setters/getters
@@ -78,9 +76,9 @@ typedef struct cert_payload_t cert_payload_t;
  * 
  * @b Constructors:
  * - cert_payload_create()
- * 
+ *
  * @todo Implement setters/getters for the different certificate encodings.
- * 
+ *
  * @ingroup payloads
  */
 struct cert_payload_t {

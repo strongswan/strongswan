@@ -23,12 +23,11 @@
 #ifndef CONNECTION_STORE_H_
 #define CONNECTION_STORE_H_
 
+typedef struct connection_store_t connection_store_t;
+
 #include <types.h>
 #include <config/connections/connection.h>
 #include <utils/iterator.h>
-
-
-typedef struct connection_store_t connection_store_t;
 
 /**
  * @brief The interface for a store of connection_t's.

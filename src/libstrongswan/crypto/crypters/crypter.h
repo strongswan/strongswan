@@ -24,18 +24,19 @@
 #ifndef CRYPTER_H_
 #define CRYPTER_H_
 
-#include <types.h>
-
 typedef enum encryption_algorithm_t encryption_algorithm_t;
+typedef struct crypter_t crypter_t;
+
+#include <types.h>
 
 /**
  * @brief Encryption algorithm, as in IKEv2 RFC 3.3.2.
- * 
+ *
  * Currently only the following algorithms are implemented:
  * - ENCR_AES_CBC
  * - ENCR_DES
  * - ENCR_3DES
- * 
+ *
  * @ingroup crypters
  */
 enum encryption_algorithm_t {
@@ -62,15 +63,12 @@ enum encryption_algorithm_t {
  */
 extern enum_name_t *encryption_algorithm_names;
 
-
-typedef struct crypter_t crypter_t;
-
 /**
  * @brief Generic interface for symmetric encryption algorithms.
- * 
+ *
  * @b Constructors:
  *  - crypter_create()
- * 
+ *
  * @ingroup crypters
  */
 struct crypter_t {

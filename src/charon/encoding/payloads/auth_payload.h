@@ -21,13 +21,14 @@
  * for more details.
  */
 
-
 #ifndef AUTH_PAYLOAD_H_
 #define AUTH_PAYLOAD_H_
 
+typedef struct auth_payload_t auth_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
-#include <config/policies/policy.h>
+#include <sa/authenticators/authenticator.h>
 
 /**
  * Length of a auth payload without the auth data in bytes.
@@ -36,17 +37,14 @@
  */
 #define AUTH_PAYLOAD_HEADER_LENGTH 8
 
-
-typedef struct auth_payload_t auth_payload_t;
-
 /**
  * @brief Class representing an IKEv2 AUTH payload.
- * 
+ *
  * The AUTH payload format is described in RFC section 3.8.
- * 
+ *
  * @b Constructors:
  * - auth_payload_create()
- * 
+ *
  * @ingroup payloads
  */
 struct auth_payload_t {

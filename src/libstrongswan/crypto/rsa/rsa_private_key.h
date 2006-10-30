@@ -24,26 +24,25 @@
 #ifndef RSA_PRIVATE_KEY_H_
 #define RSA_PRIVATE_KEY_H_
 
+typedef struct rsa_private_key_t rsa_private_key_t;
+
 #include <types.h>
 #include <definitions.h>
 #include <crypto/rsa/rsa_public_key.h>
 #include <crypto/hashers/hasher.h>
 
-
-typedef struct rsa_private_key_t rsa_private_key_t;
-
 /**
  * @brief RSA private key with associated functions.
- * 
+ *
  * Currently only supports signing using EMSA encoding.
- * 
+ *
  * @b Constructors:
  *  - rsa_private_key_create()
  *  - rsa_private_key_create_from_chunk()
  *  - rsa_private_key_create_from_file()
  * 
  * @see rsa_public_key_t
- * 
+ *
  * @todo Implement get_key(), save_key(), get_public_key()
  *
  * @ingroup rsa

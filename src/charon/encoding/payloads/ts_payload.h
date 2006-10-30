@@ -25,6 +25,8 @@
 #ifndef TS_PAYLOAD_H_
 #define TS_PAYLOAD_H_
 
+typedef struct ts_payload_t ts_payload_t;
+
 #include <types.h>
 #include <utils/linked_list.h>
 #include <config/traffic_selector.h>
@@ -39,17 +41,15 @@
 #define TS_PAYLOAD_HEADER_LENGTH 8
 
 
-typedef struct ts_payload_t ts_payload_t;
-
 /**
  * @brief Class representing an IKEv2 TS payload.
- * 
+ *
  * The TS payload format is described in RFC section 3.13.
- * 
+ *
  * @b Constructors:
  * - ts_payload_create()
  * - ts_payload_create_from_traffic_selectors()
- * 
+ *
  * @ingroup payloads
  */
 struct ts_payload_t {

@@ -25,6 +25,8 @@
 #ifndef TRAFFIC_SELECTOR_SUBSTRUCTURE_H_
 #define TRAFFIC_SELECTOR_SUBSTRUCTURE_H_
 
+typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <utils/host.h>
@@ -36,8 +38,6 @@
  * @ingroup payloads
  */
 #define TRAFFIC_SELECTOR_HEADER_LENGTH 8
-
-typedef struct traffic_selector_substructure_t traffic_selector_substructure_t;
 
 /**
  * @brief Class representing an IKEv2 TRAFFIC SELECTOR.

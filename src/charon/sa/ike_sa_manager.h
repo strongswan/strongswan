@@ -24,10 +24,10 @@
 #ifndef IKE_SA_MANAGER_H_
 #define IKE_SA_MANAGER_H_
 
+typedef struct ike_sa_manager_t ike_sa_manager_t;
+
 #include <types.h>
 #include <sa/ike_sa.h>
-
-typedef struct ike_sa_manager_t ike_sa_manager_t;
 
 /**
  * @brief The IKE_SA-Manager is responsible for managing all initiated and responded IKE_SA's.

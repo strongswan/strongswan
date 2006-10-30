@@ -23,27 +23,26 @@
 #ifndef HMAC_H_
 #define HMAC_H_
 
+typedef struct hmac_t hmac_t;
+
 #include <crypto/hashers/hasher.h>
 #include <definitions.h>
 
-
-typedef struct hmac_t hmac_t;
-
 /**
  * @brief Message authentication using hash functions.
- * 
+ *
  * This class implements the message authenticaion algorithm
  * described in RFC2104. It uses a hash function, wich must
  * be implemented as a hasher_t class.
- * 
+ *
  * See http://www.faqs.org/rfcs/rfc2104.html for RFC.
  * @see 	
  * 			- hasher_t
  * 			- prf_hmac_t
- * 
+ *
  * @b Constructors:
  *  - hmac_create()
- * 
+ *
  * @ingroup transforms
  */
 struct hmac_t {

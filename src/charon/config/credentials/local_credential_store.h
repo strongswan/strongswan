@@ -23,12 +23,12 @@
 #ifndef LOCAL_CREDENTIAL_H_
 #define LOCAL_CREDENTIAL_H_
 
+typedef struct local_credential_store_t local_credential_store_t;
+
 #include <types.h>
 #include <daemon.h>
 #include <config/credentials/credential_store.h>
 
-
-typedef struct local_credential_store_t local_credential_store_t;
 
 /**
  * @brief A credential_store_t implementation using simple credentail lists.

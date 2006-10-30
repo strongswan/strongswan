@@ -24,10 +24,9 @@
 #ifndef RECEIVER_H_
 #define RECEIVER_H_
 
-#include <types.h>
-
-
 typedef struct receiver_t receiver_t;
+
+#include <types.h>
 
 /**
  * @brief Receives packets from the socket and adds them to the job queue.

@@ -24,10 +24,9 @@
 #ifndef SHA1_HASHER_H_
 #define SHA1_HASHER_H_
 
-#include <crypto/hashers/hasher.h>
-
-
 typedef struct sha1_hasher_t sha1_hasher_t;
+
+#include <crypto/hashers/hasher.h>
 
 /**
  * @brief Implementation of hasher_t interface using the

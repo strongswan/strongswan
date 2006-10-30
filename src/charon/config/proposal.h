@@ -23,6 +23,12 @@
 #ifndef PROPOSAL_H_
 #define PROPOSAL_H_
 
+typedef enum protocol_id_t protocol_id_t;
+typedef enum transform_type_t transform_type_t;
+typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
+typedef struct algorithm_t algorithm_t;
+typedef struct proposal_t proposal_t;
+
 #include <types.h>
 #include <utils/identification.h>
 #include <utils/linked_list.h>
@@ -32,12 +38,9 @@
 #include <crypto/diffie_hellman.h>
 #include <config/traffic_selector.h>
 
-
-typedef enum protocol_id_t protocol_id_t;
-
 /**
  * Protocol ID of a proposal.
- * 
+ *
  * @ingroup config
  */
 enum protocol_id_t {
@@ -55,11 +58,9 @@ enum protocol_id_t {
 extern enum_name_t *protocol_id_names;
 
 
-typedef enum transform_type_t transform_type_t;
-
 /**
  * Type of a transform, as in IKEv2 RFC 3.3.2.
- * 
+ *
  * @ingroup config
  */
 enum transform_type_t {
@@ -79,11 +80,9 @@ enum transform_type_t {
 extern enum_name_t *transform_type_names;
 
 
-typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
-
-/** 
+/**
  * Extended sequence numbers, as in IKEv2 RFC 3.3.2.
- * 
+ *
  * @ingroup config
  */
 enum extended_sequence_numbers_t {
@@ -99,7 +98,6 @@ enum extended_sequence_numbers_t {
 extern enum_name_t *extended_sequence_numbers_names;
 
 
-typedef struct algorithm_t algorithm_t;
 
 /**
  * Struct used to store different kinds of algorithms. The internal
@@ -116,8 +114,6 @@ struct algorithm_t {
 	 */
 	u_int16_t key_size;
 };
-
-typedef struct proposal_t proposal_t;
 
 /**
  * @brief Stores a set of algorithms used for an SA.

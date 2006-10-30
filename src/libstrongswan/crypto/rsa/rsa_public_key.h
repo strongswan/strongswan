@@ -24,13 +24,12 @@
 #ifndef RSA_PUBLIC_KEY_H_
 #define RSA_PUBLIC_KEY_H_
 
+typedef struct rsa_public_key_t rsa_public_key_t;
+
 #include <gmp.h>
 
 #include <types.h>
 #include <definitions.h>
-
-
-typedef struct rsa_public_key_t rsa_public_key_t;
 
 /**
  * @brief RSA public key with associated functions.

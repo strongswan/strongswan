@@ -22,20 +22,19 @@
 #ifndef ROUTE_JOB_H_
 #define ROUTE_JOB_H_
 
+typedef struct route_job_t route_job_t;
+
 #include <types.h>
 #include <queues/jobs/job.h>
 #include <config/policies/policy.h>
 #include <config/connections/connection.h>
 
-
-typedef struct route_job_t route_job_t;
-
 /**
  * @brief Class representing an ROUTE Job.
- * 
+ *
  * @b Constructors:
  * - route_job_create()
- * 
+ *
  * @ingroup jobs
  */
 struct route_job_t {

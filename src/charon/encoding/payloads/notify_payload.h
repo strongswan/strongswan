@@ -26,6 +26,9 @@
 #ifndef NOTIFY_PAYLOAD_H_
 #define NOTIFY_PAYLOAD_H_
 
+typedef enum notify_type_t notify_type_t;
+typedef struct notify_payload_t notify_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
@@ -38,14 +41,11 @@
  */
 #define NOTIFY_PAYLOAD_HEADER_LENGTH 8
 
-typedef enum notify_type_t notify_type_t;
-
-
-/** 
+/**
  * @brief Notify message types.
- * 
+ *
  * See IKEv2 RFC 3.10.1.
- * 
+ *
  * @ingroup payloads
  */
 enum notify_type_t {
@@ -97,8 +97,6 @@ enum notify_type_t {
  */
 extern enum_name_t *notify_type_names;
 
-
-typedef struct notify_payload_t notify_payload_t;
 
 /**
  * @brief Class representing an IKEv2-Notify Payload.

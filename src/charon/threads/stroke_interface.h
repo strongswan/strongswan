@@ -23,8 +23,6 @@
 #ifndef STROKE_INTERFACE_H_
 #define STROKE_INTERFACE_H_
 
-
-
 typedef struct stroke_t stroke_t;
 
 /**

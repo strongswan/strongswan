@@ -24,31 +24,29 @@
 #ifndef DELETE_PAYLOAD_H_
 #define DELETE_PAYLOAD_H_
 
+typedef struct delete_payload_t delete_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
 
 /**
  * Length of a delete payload without the SPI in bytes.
- * 
+ *
  * @ingroup payloads
  */
 #define DELETE_PAYLOAD_HEADER_LENGTH 8
 
-
-
-typedef struct delete_payload_t delete_payload_t;
-
 /**
  * @brief Class representing an IKEv2 DELETE payload.
- * 
+ *
  * The DELETE payload format is described in RFC section 3.11.
- * 
+ *
  * @b Constructors:
  * - delete_payload_create()
- * 
+ *
  * @todo Implement better setter/getters
- * 
+ *
  * @ingroup payloads
  */
 struct delete_payload_t {

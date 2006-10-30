@@ -151,7 +151,7 @@ struct private_child_sa_t {
 	/**
 	 * transaction which is rekeying this CHILD_SA
 	 */
-	void *rekeying_transaction;
+	transaction_t *rekeying_transaction;
 
 	/**
 	 * Updown script
@@ -696,7 +696,7 @@ static linked_list_t *get_other_traffic_selectors(private_child_sa_t *this)
 /**
  * Implementation of child_sa_t.set_rekeying_transaction.
  */
-static void set_rekeying_transaction(private_child_sa_t *this, void *transaction)
+static void set_rekeying_transaction(private_child_sa_t *this, transaction_t *transaction)
 {
 	this->rekeying_transaction = transaction;
 }
@@ -704,7 +704,7 @@ static void set_rekeying_transaction(private_child_sa_t *this, void *transaction
 /**
  * Implementation of child_sa_t.get_rekeying_transaction.
  */
-static void* get_rekeying_transaction(private_child_sa_t *this)
+static transaction_t* get_rekeying_transaction(private_child_sa_t *this)
 {
 	return this->rekeying_transaction;
 }
@@ -1104,8 +1104,8 @@ child_sa_t * child_sa_create(u_int32_t rekey, host_t *me, host_t* other,
 	this->public.get_my_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_my_traffic_selectors;
 	this->public.get_other_traffic_selectors = (linked_list_t*(*)(child_sa_t*))get_other_traffic_selectors;
 	this->public.get_use_time = (status_t (*)(child_sa_t*,bool,time_t*))get_use_time;
-	this->public.set_rekeying_transaction = (void (*)(child_sa_t*,void*))set_rekeying_transaction;
-	this->public.get_rekeying_transaction = (void* (*)(child_sa_t*))get_rekeying_transaction;
+	this->public.set_rekeying_transaction = (void (*)(child_sa_t*,transaction_t*))set_rekeying_transaction;
+	this->public.get_rekeying_transaction = (transaction_t* (*)(child_sa_t*))get_rekeying_transaction;
 	this->public.set_state = (void(*)(child_sa_t*,child_sa_state_t))set_state;
 	this->public.get_state = (child_sa_state_t(*)(child_sa_t*))get_state;
 	this->public.destroy = (void(*)(child_sa_t*))destroy;

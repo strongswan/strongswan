@@ -25,11 +25,13 @@
 #ifndef KERNEL_INTERFACE_H_
 #define KERNEL_INTERFACE_H_
 
+typedef struct natt_conf_t natt_conf_t;
+typedef enum policy_dir_t policy_dir_t;
+typedef struct kernel_interface_t kernel_interface_t;
+
 #include <utils/host.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
-
-typedef struct natt_conf_t natt_conf_t;
 
 /**
  * Configuration for NAT-T
@@ -40,8 +42,6 @@ struct natt_conf_t {
 	/** dest port to use for UDP-encapsulated packets */
 	u_int16_t dport;
 };
-
-typedef enum policy_dir_t policy_dir_t;
 
 /**
  * Direction of a policy. These are equal to those
@@ -56,8 +56,6 @@ enum policy_dir_t {
 	/** Policy for forwarded traffic */
 	POLICY_FWD = 2,
 };
-
-typedef struct kernel_interface_t kernel_interface_t;
 
 /**
  * @brief Interface to the kernel.

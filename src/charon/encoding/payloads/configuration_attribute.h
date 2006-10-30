@@ -24,9 +24,11 @@
 #ifndef CONFIGURATION_ATTRIBUTE_H_
 #define CONFIGURATION_ATTRIBUTE_H_
 
+typedef enum configuration_attribute_type_t configuration_attribute_type_t;
+typedef struct configuration_attribute_t configuration_attribute_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
-
 
 
 /**
@@ -35,9 +37,6 @@
  * @ingroup payloads
  */
 #define CONFIGURATION_ATTRIBUTE_HEADER_LENGTH 4
-
-
-typedef enum configuration_attribute_type_t configuration_attribute_type_t;
 
 /**
  * Type of the attribute, as in IKEv2 RFC 3.15.1.
@@ -67,8 +66,6 @@ enum configuration_attribute_type_t {
  * @ingroup payloads
  */
 extern enum_name_t *configuration_attribute_type_names;
-
-typedef struct configuration_attribute_t configuration_attribute_t;
 
 /**
  * @brief Class representing an IKEv2-CONFIGURATION Attribute.

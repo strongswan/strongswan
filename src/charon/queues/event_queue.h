@@ -24,12 +24,12 @@
 #ifndef EVENT_QUEUE_H_
 #define EVENT_QUEUE_H_
 
+typedef struct event_queue_t event_queue_t;
+
 #include <sys/time.h>
 
 #include <types.h>
 #include <queues/jobs/job.h>
-
-typedef struct event_queue_t event_queue_t;
 
 /**
  * @brief Event-Queue used to store timed events.

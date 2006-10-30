@@ -24,6 +24,8 @@
 #ifndef UNKNOWN_PAYLOAD_H_
 #define UNKNOWN_PAYLOAD_H_
 
+typedef struct unknown_payload_t unknown_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 
@@ -34,19 +36,16 @@
  */
 #define UNKNOWN_PAYLOAD_HEADER_LENGTH 4
 
-
-typedef struct unknown_payload_t unknown_payload_t;
-
 /**
  * @brief Payload which can't be processed further.
- * 
+ *
  * When the parser finds an unknown payload, he builds an instance of
  * this class. This allows further processing of this payload, such as
  * a check for the critical bit in the header.
- * 
+ *
  * @b Constructors:
  * - unknown_payload_create()
- * 
+ *
  * @ingroup payloads
  */
 struct unknown_payload_t {

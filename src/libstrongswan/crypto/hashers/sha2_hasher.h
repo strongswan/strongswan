@@ -23,21 +23,20 @@
 #ifndef SHA2_HASHER_H_
 #define SHA2_HASHER_H_
 
-#include <crypto/hashers/hasher.h>
-
-
 typedef struct sha2_hasher_t sha2_hasher_t;
+
+#include <crypto/hashers/hasher.h>
 
 /**
  * @brief Implementation of hasher_t interface using the SHA2 algorithms.
- * 
+ *
  * SHA2 is an other name for the SHA-256, SHA-384 and SHA-512 variants of
  * the SHA hash algorithm.
- * 
+ *
  * @b Constructors:
  * - hasher_create() using HASH_SHA256, HASH_SHA384 or HASH_SHA512 as algorithm
  * - sha2_hasher_create()
- * 
+ *
  * @see hasher_t
  * 
  * @ingroup hashers

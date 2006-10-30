@@ -19,17 +19,17 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #ifndef DELETE_CHILD_SA_JOB_H_
 #define DELETE_CHILD_SA_JOB_H_
+
+typedef struct delete_child_sa_job_t delete_child_sa_job_t;
 
 #include <types.h>
 #include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
 #include <config/proposal.h>
 
-
-typedef struct delete_child_sa_job_t delete_child_sa_job_t;
 
 /**
  * @brief Class representing an DELETE_CHILD_SA Job.

@@ -24,19 +24,18 @@
 #ifndef LINKED_LIST_H_
 #define LINKED_LIST_H_
 
+typedef struct linked_list_t linked_list_t;
+
 #include <pthread.h>
 
 #include <types.h>
 #include <utils/iterator.h>
 
-
-typedef struct linked_list_t linked_list_t;
-
 /**
  * @brief Class implementing a double linked list.
  *
  * General purpose linked list. This list is not synchronized.
- * 
+ *
  * @b Costructors:
  * - linked_list_create()
  *

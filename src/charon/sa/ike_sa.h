@@ -25,11 +25,15 @@
 #ifndef IKE_SA_H_
 #define IKE_SA_H_
 
+typedef enum ike_sa_state_t ike_sa_state_t;
+typedef struct ike_sa_t ike_sa_t;
+
 #include <types.h>
 #include <encoding/message.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <sa/ike_sa_id.h>
 #include <sa/child_sa.h>
+#include <sa/transactions/transaction.h>
 #include <config/configuration.h>
 #include <utils/randomizer.h>
 #include <crypto/prfs/prf.h>
@@ -39,10 +43,7 @@
 #include <config/policies/policy.h>
 #include <config/proposal.h>
 
-
 #define IKE_SA_PRINTF_SPEC 'K'
-
-typedef enum ike_sa_state_t ike_sa_state_t;
 
 /**
  * @brief State of an IKE_SA.
@@ -115,9 +116,6 @@ enum ike_sa_state_t {
  * enum names for ike_sa_state_t.
  */
 extern enum_name_t *ike_sa_state_names;
-
-
-typedef struct ike_sa_t ike_sa_t;
 
 /**
  * @brief Class ike_sa_t representing an IKE_SA.
@@ -444,20 +442,20 @@ struct ike_sa_t {
 	prf_t *(*get_child_prf) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the prf used for authentication of initiator.
+	 * @brief Get the prf to build outgoing authentication data.
 	 * 
 	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
-	prf_t *(*get_prf_auth_i) (ike_sa_t *this);
+	prf_t *(*get_auth_build) (ike_sa_t *this);
 	
 	/**
-	 * @brief Get the prf used for authentication of responder.
+	 * @brief Get the prf to verify incoming authentication data.
 	 * 
 	 * @param this 			calling object
 	 * @return				pointer to prf_t object
 	 */
-	prf_t *(*get_prf_auth_r) (ike_sa_t *this);
+	prf_t *(*get_auth_verify) (ike_sa_t *this);
 	
 	/**
 	 * @brief Associates a child SA to this IKE SA
@@ -567,13 +565,11 @@ struct ike_sa_t {
 
 	/**
 	 * @brief Get the transaction which rekeys this IKE_SA.
-	 * 
-	 * @todo Fix include for rekey_ike_sa.h
 	 *
 	 * @param this 			calling object
 	 * @return				rekey_ike_sa_t transaction or NULL
 	 */
-	void* (*get_rekeying_transaction) (ike_sa_t *this);
+	transaction_t* (*get_rekeying_transaction) (ike_sa_t *this);
 
 	/**
 	 * @brief Set the transaction which rekeys this IKE_SA.
@@ -581,7 +577,7 @@ struct ike_sa_t {
 	 * @param this 			calling object
 	 * @param rekey			rekey_ike_sa_t transaction or NULL
 	 */
-	void (*set_rekeying_transaction) (ike_sa_t *this, void *rekey);
+	void (*set_rekeying_transaction) (ike_sa_t *this, transaction_t *rekey);
 
 	/**
 	 * @brief Move all children from other IKE_SA to this IKE_SA.

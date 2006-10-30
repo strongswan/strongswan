@@ -24,11 +24,10 @@
 #ifndef DELETE_IKE_SA_H_
 #define DELETE_IKE_SA_H_
 
+typedef struct delete_ike_sa_t delete_ike_sa_t;
+
 #include <sa/ike_sa.h>
 #include <sa/transactions/transaction.h>
-
-
-typedef struct delete_ike_sa_t delete_ike_sa_t;
 
 /**
  * @brief A transaction used to delete the IKE_SA.

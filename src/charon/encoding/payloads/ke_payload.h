@@ -24,6 +24,8 @@
 #ifndef KE_PAYLOAD_H_
 #define KE_PAYLOAD_H_
 
+typedef struct ke_payload_t ke_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_substructure.h>
@@ -37,17 +39,14 @@
  */
 #define KE_PAYLOAD_HEADER_LENGTH 8
 
-
-typedef struct ke_payload_t ke_payload_t;
-
 /**
  * @brief Class representing an IKEv2-KE Payload.
- * 
+ *
  * The KE Payload format is described in RFC section 3.4.
- * 
+ *
  * @b Constructors:
  * - ke_payload_create()
- * 
+ *
  * @ingroup payloads
  */
 struct ke_payload_t {

@@ -24,6 +24,8 @@
 #ifndef CREDENTIAL_STORE_H_
 #define CREDENTIAL_STORE_H_
 
+typedef struct credential_store_t credential_store_t;
+
 #include <types.h>
 #include <crypto/x509.h>
 #include <crypto/rsa/rsa_private_key.h>
@@ -31,14 +33,12 @@
 #include <utils/identification.h>
 
 
-typedef struct credential_store_t credential_store_t;
-
 /**
  * @brief The interface for a credential_store backend.
- * 
+ *
  * @b Constructors:
- * 	- stroke_create()
- * 
+ *  - stroke_create()
+ *
  * @ingroup config
  */
 struct credential_store_t { 

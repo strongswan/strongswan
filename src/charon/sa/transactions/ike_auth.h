@@ -24,11 +24,10 @@
 #ifndef IKE_AUTH_H_
 #define IKE_AUTH_H_
 
+typedef struct ike_auth_t ike_auth_t;
+
 #include <sa/ike_sa.h>
 #include <sa/transactions/transaction.h>
-
-
-typedef struct ike_auth_t ike_auth_t;
 
 /**
  * @brief A transaction for the second message exchange to authenticate an IKE_SA.

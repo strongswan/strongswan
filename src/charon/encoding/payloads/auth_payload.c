@@ -70,7 +70,6 @@ struct private_auth_payload_t {
  * 
  * The defined offsets are the positions in a object of type 
  * private_auth_payload_t.
- * 
  */
 encoding_rule_t auth_payload_encodings[] = {
  	/* 1 Byte next payload type, stored in the field next_payload */
@@ -78,23 +77,23 @@ encoding_rule_t auth_payload_encodings[] = {
 	/* the critical bit */
 	{ FLAG,				offsetof(private_auth_payload_t, critical) 		},
  	/* 7 Bit reserved bits, nowhere stored */
-	{ RESERVED_BIT,	0 													},
-	{ RESERVED_BIT,	0 													},
-	{ RESERVED_BIT,	0 													},
-	{ RESERVED_BIT,	0 													},
-	{ RESERVED_BIT,	0 													},
-	{ RESERVED_BIT,	0 													},
-	{ RESERVED_BIT,	0 													},
+	{ RESERVED_BIT,		0 												},
+	{ RESERVED_BIT,		0 												},
+	{ RESERVED_BIT,		0 												},
+	{ RESERVED_BIT,		0 												},
+	{ RESERVED_BIT,		0 												},
+	{ RESERVED_BIT,		0 												},
+	{ RESERVED_BIT,		0 												},
 	/* Length of the whole payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_auth_payload_t, payload_length)},
  	/* 1 Byte AUTH type*/
 	{ U_INT_8,			offsetof(private_auth_payload_t, auth_method)	},
 	/* 3 reserved bytes */
-	{ RESERVED_BYTE,	0 													},
-	{ RESERVED_BYTE,	0 													},
-	{ RESERVED_BYTE,	0 													},
+	{ RESERVED_BYTE,	0 												},
+	{ RESERVED_BYTE,	0 												},
+	{ RESERVED_BYTE,	0 												},
 	/* some auth data bytes, length is defined in PAYLOAD_LENGTH */
-	{ AUTH_DATA,			offsetof(private_auth_payload_t, auth_data) 		}
+	{ AUTH_DATA,		offsetof(private_auth_payload_t, auth_data) 	}
 };
 
 /*
@@ -116,8 +115,8 @@ encoding_rule_t auth_payload_encodings[] = {
  */
 static status_t verify(private_auth_payload_t *this)
 {
-	if ((this->auth_method == 0) ||
-		((this->auth_method >= 4) && (this->auth_method <= 200)))
+	if (this->auth_method == 0 ||
+		(this->auth_method >= 4 && this->auth_method <= 200))
 	{
 		/* reserved IDs */
 		return FAILED;

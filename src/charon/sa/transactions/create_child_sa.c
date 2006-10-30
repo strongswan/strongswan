@@ -337,7 +337,8 @@ static status_t get_request(private_create_child_sa_t *this, message_t **result)
 		request->add_payload(request, (payload_t*)notify);
 		
 		/* register us as rekeying to detect multiple rekeying */
-		this->rekeyed_sa->set_rekeying_transaction(this->rekeyed_sa, &this->public);
+		this->rekeyed_sa->set_rekeying_transaction(this->rekeyed_sa,
+												   &this->public.transaction);
 	}
 	
 	this->message_id = this->ike_sa->get_next_message_id(this->ike_sa);
@@ -718,7 +719,8 @@ static status_t get_response(private_create_child_sa_t *this, message_t *request
 	{
 		private_create_child_sa_t *other;
 		
-		other = this->rekeyed_sa->get_rekeying_transaction(this->rekeyed_sa);
+		other = (private_create_child_sa_t*)
+			this->rekeyed_sa->get_rekeying_transaction(this->rekeyed_sa);
 		if (other)
 		{
 			/* store our lower nonce in the simultaneus transaction, it 

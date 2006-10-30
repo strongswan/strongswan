@@ -20,23 +20,21 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
- 
+
 #ifndef PACKET_H_
 #define PACKET_H_
 
+typedef struct packet_t packet_t;
 
 #include <types.h>
 #include <utils/host.h>
 
-
-typedef struct packet_t packet_t;
-
 /**
  * @brief Abstraction of an UDP-Packet, contains data, sender and receiver.
- * 
+ *
  * @b Constructors:
  * - packet_create()
- * 
+ *
  * @ingroup network
  */
 struct packet_t {

@@ -24,10 +24,11 @@
 #ifndef SIGNER_H_
 #define SIGNER_H_
 
+typedef enum integrity_algorithm_t integrity_algorithm_t;
+typedef struct signer_t signer_t;
+
 #include <types.h>
 #include <definitions.h>
-
-typedef enum integrity_algorithm_t integrity_algorithm_t;
 
 /**
  * @brief Integrity algorithm, as in IKEv2 RFC 3.3.2.
@@ -54,18 +55,15 @@ enum integrity_algorithm_t {
  */
 extern enum_name_t *integrity_algorithm_names;
 
-
-typedef struct signer_t signer_t;
-
 /**
  * @brief Generig interface for a symmetric signature algorithm.
- * 
+ *
  * @b Constructors:
  *  - signer_create()
  *  - hmac_signer_create()
- * 
+ *
  * @todo Implement more integrity algorithms
- * 
+ *
  * @ingroup signers
  */
 struct signer_t {

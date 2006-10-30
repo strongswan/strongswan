@@ -24,48 +24,15 @@
 #ifndef POLICY_H_
 #define POLICY_H_
 
+typedef enum dpd_action_t dpd_action_t;
+typedef struct policy_t policy_t;
+
 #include <types.h>
 #include <utils/identification.h>
 #include <config/traffic_selector.h>
 #include <config/proposal.h>
+#include <sa/authenticators/authenticator.h>
 
-typedef enum auth_method_t auth_method_t;
-
-/**
- * AUTH Method to use.
- * 
- * @ingroup config
- */
-enum auth_method_t {
-	/**
-	 * Computed as specified in section 2.15 of RFC using 
-	 * an RSA private key over a PKCS#1 padded hash.
-	 */
-	RSA_DIGITAL_SIGNATURE = 1,
-	
-	/** 
-	 * Computed as specified in section 2.15 of RFC using the 
-	 * shared key associated with the identity in the ID payload 
-	 * and the negotiated prf function
-	 */
-	SHARED_KEY_MESSAGE_INTEGRITY_CODE = 2,
-	
-	/**
-	 * Computed as specified in section 2.15 of RFC using a 
-	 * DSS private key over a SHA-1 hash.
-	 */
-	DSS_DIGITAL_SIGNATURE = 3,
-};
-
-/**
- * enum names for auth_method_t.
- *
- * @ingroup config
- */
-extern enum_name_t *auth_method_names;
-
-
-typedef enum dpd_action_t dpd_action_t;
 
 /**
  * @brief Actions to take when a peer does not respond (dead peer detected).
@@ -90,18 +57,15 @@ enum dpd_action_t {
  */
 extern enum_name_t *dpd_action_names;
 
-
-typedef struct policy_t policy_t;
-
 /**
  * @brief A policy_t defines the policies to apply to CHILD_SAs.
- * 
+ *
  * The given two IDs identify a policy. These rules define how
  * child SAs may be set up and which traffic may be IPsec'ed.
- * 
+ *
  * @b Constructors:
  *   - policy_create()
- * 
+ *
  * @ingroup config
  */
 struct policy_t {

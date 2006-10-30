@@ -25,15 +25,16 @@
 #ifndef IDENTIFICATION_H_
 #define IDENTIFICATION_H_
 
-#include "types.h"
+typedef enum id_type_t id_type_t;
+typedef struct identification_t identification_t;
+
+#include <types.h>
 
 #define MAX_WILDCARDS     14
 /**
  * printf() specifier to print a identification.
  */
 #define IDENTIFICATION_PRINTF_SPEC 'D'
-
-typedef enum id_type_t id_type_t;
 
 /**
  * @brief ID Types in a ID payload.
@@ -119,8 +120,6 @@ enum id_type_t {
  * enum names for id_type_t.
  */
 extern enum_name_t *id_type_names;
-
-typedef struct identification_t identification_t;
 
 /**
  * @brief Generic identification, such as used in ID payload.

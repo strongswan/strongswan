@@ -25,6 +25,8 @@
 #ifndef MESSAGE_H_
 #define MESSAGE_H_
 
+typedef struct message_t message_t;
+
 #include <types.h>
 #include <sa/ike_sa_id.h>
 #include <network/packet.h>
@@ -38,9 +40,6 @@
  * printf() specifier for message
  */
 #define MESSAGE_PRINTF_SPEC 'M'
-
-
-typedef struct message_t message_t;
 
 /**
  * @brief This class is used to represent an IKEv2-Message.

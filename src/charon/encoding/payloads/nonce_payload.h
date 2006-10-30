@@ -24,6 +24,8 @@
 #ifndef NONCE_PAYLOAD_H_
 #define NONCE_PAYLOAD_H_
 
+typedef struct nonce_payload_t nonce_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 
@@ -42,8 +44,6 @@
  * @ingroup payloads
  */
 #define NONCE_PAYLOAD_HEADER_LENGTH 4
-
-typedef struct nonce_payload_t nonce_payload_t;
 
 /**
  * Object representing an IKEv2 Nonce payload.

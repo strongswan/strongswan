@@ -31,13 +31,6 @@
 #include <utils/linked_list.h>
 #include <utils/identification.h>
 
-ENUM(auth_method_names, RSA_DIGITAL_SIGNATURE, DSS_DIGITAL_SIGNATURE,
-	"RSA signature",
-	"pre-shared key",
-	"DSS signature"
-);
-
-
 ENUM(dpd_action_names, DPD_NONE, DPD_RESTART,
 	"DPD_NONE",
 	"DPD_CLEAR",

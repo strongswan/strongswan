@@ -23,11 +23,10 @@
 #ifndef LOCAL_CONNECTION_H_
 #define LOCAL_CONNECTION_H_
 
+typedef struct local_connection_store_t local_connection_store_t;
+
 #include <types.h>
 #include <config/connections/connection_store.h>
-
-
-typedef struct local_connection_store_t local_connection_store_t;
 
 /**
  * @brief A connection_store_t implementation using a simple connection list.

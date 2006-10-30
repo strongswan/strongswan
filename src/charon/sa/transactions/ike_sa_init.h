@@ -24,11 +24,10 @@
 #ifndef IKE_SA_INIT_H_
 #define IKE_SA_INIT_H_
 
+typedef struct ike_sa_init_t ike_sa_init_t;
+
 #include <sa/ike_sa.h>
 #include <sa/transactions/transaction.h>
-
-
-typedef struct ike_sa_init_t ike_sa_init_t;
 
 /**
  * @brief A transaction for the first message exchange to set up an IKE_SA.

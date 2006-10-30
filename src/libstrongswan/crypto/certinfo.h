@@ -23,26 +23,30 @@
 #ifndef CERTINFO_H_
 #define CERTINFO_H_
 
+typedef enum cert_status_t cert_status_t;
+typedef enum crl_reason_t crl_reason_t;
+typedef struct certinfo_t certinfo_t;
+
 #include <types.h>
 #include <definitions.h>
 
 /**
  * RFC 2560 OCSP - certificate status
  */
-typedef enum {
+enum cert_status_t {
 	CERT_GOOD = 		0,
 	CERT_REVOKED = 		1,
 	CERT_UNKNOWN = 		2,
 	CERT_UNDEFINED =	3,
 	CERT_UNTRUSTED =	4  /* private use */
-} cert_status_t;
+};
 
 extern enum_name_t *cert_status_names;
 
 /**
  * RFC 2459 CRL reason codes
  */
-typedef enum {
+enum crl_reason_t {
     REASON_UNSPECIFIED =			0,
     REASON_KEY_COMPROMISE = 		1,
     REASON_CA_COMPROMISE = 			2,
@@ -51,16 +55,13 @@ typedef enum {
     REASON_CESSATION_OF_OPERATON =	5,
     REASON_CERTIFICATE_HOLD =		6,
     REASON_REMOVE_FROM_CRL =		8
-} crl_reason_t;
+};
 
 extern enum_name_t *crl_reason_names;
 
-typedef struct certinfo_t certinfo_t;
-
 /**
  * @brief X.509 certificate status information
- * 
- * 
+ *
  * @ingroup transforms
  */
 struct certinfo_t {

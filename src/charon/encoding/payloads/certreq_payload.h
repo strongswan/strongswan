@@ -24,6 +24,8 @@
 #ifndef CERTREQ_PAYLOAD_H_
 #define CERTREQ_PAYLOAD_H_
 
+typedef struct certreq_payload_t certreq_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/cert_payload.h>
@@ -36,21 +38,19 @@
 #define CERTREQ_PAYLOAD_HEADER_LENGTH 5
 
 
-typedef struct certreq_payload_t certreq_payload_t;
-
 /**
  * @brief Class representing an IKEv2 CERTREQ payload.
- * 
+ *
  * The CERTREQ payload format is described in RFC section 3.7.
  * This is just a dummy implementation to fullfill the standards
  * requirements. A full implementation would offer setters/getters
  * for the different encoding types.
- * 
+ *
  * @b Constructors:
  * - certreq_payload_create()
- * 
+ *
  * @todo Implement payload functionality.
- * 
+ *
  * @ingroup payloads
  */
 struct certreq_payload_t {

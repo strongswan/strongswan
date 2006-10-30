@@ -23,12 +23,11 @@
 #ifndef REKEY_IKE_SA_JOB_H_
 #define REKEY_IKE_SA_JOB_H_
 
+typedef struct rekey_ike_sa_job_t rekey_ike_sa_job_t;
+
 #include <types.h>
 #include <sa/ike_sa_id.h>
 #include <queues/jobs/job.h>
-
-
-typedef struct rekey_ike_sa_job_t rekey_ike_sa_job_t;
 
 /**
  * @brief Class representing an REKEY_IKE_SA Job.

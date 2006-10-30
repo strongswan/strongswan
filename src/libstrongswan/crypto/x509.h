@@ -23,6 +23,8 @@
 #ifndef X509_H_
 #define X509_H_
 
+typedef struct x509_t x509_t;
+
 #include <types.h>
 #include <definitions.h>
 #include <crypto/rsa/rsa_public_key.h>
@@ -36,8 +38,6 @@
  * are printed in UTC.
  */
 #define X509_PRINTF_SPEC 'Q'
-
-typedef struct x509_t x509_t;
 
 /**
  * @brief X.509 certificate.

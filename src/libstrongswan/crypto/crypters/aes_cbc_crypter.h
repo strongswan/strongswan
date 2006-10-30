@@ -25,17 +25,16 @@
 #ifndef AES_CBC_CRYPTER_H_
 #define AES_CBC_CRYPTER_H_
 
-#include <crypto/crypters/crypter.h>
-
-
 typedef struct aes_cbc_crypter_t aes_cbc_crypter_t;
+
+#include <crypto/crypters/crypter.h>
 
 /**
  * @brief Class implementing the AES symmetric encryption algorithm.
- * 
+ *
  * @b Constructors:
  *  - aes_cbc_crypter_create()
- * 
+ *
  * @ingroup crypters
  */
 struct aes_cbc_crypter_t {

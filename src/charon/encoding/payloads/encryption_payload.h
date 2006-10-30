@@ -23,6 +23,8 @@
 #ifndef ENCRYPTION_PAYLOAD_H_
 #define ENCRYPTION_PAYLOAD_H_
 
+typedef struct encryption_payload_t encryption_payload_t;
+
 #include <types.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
@@ -37,11 +39,9 @@
 #define ENCRYPTION_PAYLOAD_HEADER_LENGTH 4
 
 
-typedef struct encryption_payload_t encryption_payload_t;
-
-/** 
+/**
  * @brief The encryption payload as described in RFC section 3.14.
- * 
+ *
  * Before any crypt/decrypt/sign/verify operation can occur, 
  * the transforms must be set. After that, a parsed encryption payload
  * can be decrypted, which also will parse the contained payloads.
@@ -51,10 +51,10 @@ typedef struct encryption_payload_t encryption_payload_t;
  * must be builded after generation of all payloads and the encryption
  * of the encryption payload.
  * Signature verificatin is done before decryption.
- * 
+ *
  * @b Constructors:
  * - encryption_payload_create()
- * 
+ *
  * @ingroup payloads
  */
 struct encryption_payload_t {

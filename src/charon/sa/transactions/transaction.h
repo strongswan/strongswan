@@ -23,14 +23,11 @@
 #ifndef TRANSACTION_H_
 #define TRANSACTION_H_
 
-
 typedef struct transaction_t transaction_t;
 
 #include <types.h>
 #include <encoding/message.h>
 #include <sa/ike_sa.h>
-
-
 
 /**
  * @brief This interface represents a transaction an established IKE_SA can do.

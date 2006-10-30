@@ -25,6 +25,9 @@
 #ifndef HOST_H_
 #define HOST_H_
 
+typedef enum host_diff_t host_diff_t;
+typedef struct host_t host_t;
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -35,15 +38,12 @@
 
 #include <types.h>
 
-
 /**
  * printf() specifier to print a host.
  * The specifier option '#' does include the port number, e.g.:
  * printf("my host is %#H\n", my_host);
  */
 #define HOST_PRINTF_SPEC 'H'
-
-typedef enum host_diff_t host_diff_t;
 
 /**
  * Differences between two hosts. They differ in
@@ -54,8 +54,6 @@ enum host_diff_t {
 	HOST_DIFF_ADDR = 1,
 	HOST_DIFF_PORT = 2,
 };
-
-typedef struct host_t host_t;
 
 /**
  * @brief Representates a Host

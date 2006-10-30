@@ -24,6 +24,9 @@
 #ifndef IKE_HEADER_H_
 #define IKE_HEADER_H_
 
+typedef enum exchange_type_t exchange_type_t;
+typedef struct ike_header_t ike_header_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 
@@ -54,8 +57,6 @@
  * @ingroup payloads
  */
 #define IKE_HEADER_LENGTH 28
-
-typedef enum exchange_type_t exchange_type_t;
 
 /**
  * @brief Different types of IKE-Exchanges.
@@ -98,9 +99,6 @@ enum exchange_type_t{
  * @ingroup payloads
  */
 extern enum_name_t *exchange_type_names;
-
-
-typedef struct ike_header_t ike_header_t;
 
 /**
  * @brief An object of this type represents an IKEv2 header and is used to 

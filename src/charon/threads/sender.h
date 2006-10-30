@@ -24,9 +24,9 @@
 #ifndef SENDER_H_
 #define SENDER_H_
 
-#include <types.h>
-
 typedef struct sender_t sender_t;
+
+#include <types.h>
 
 /**
  * @brief Thread responsible for sending packets over the socket.

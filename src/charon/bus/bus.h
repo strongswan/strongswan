@@ -23,13 +23,16 @@
 #ifndef BUS_H_
 #define BUS_H_
 
+typedef enum signal_t signal_t;
+typedef enum level_t level_t;
+typedef struct bus_listener_t bus_listener_t;
+typedef struct bus_t bus_t;
+
 #include <stdarg.h>
 
 #include <sa/ike_sa.h>
 #include <sa/child_sa.h>
 
-
-typedef enum signal_t signal_t;
 
 /**
  * @brief signals emitted by the daemon.
@@ -123,8 +126,6 @@ enum signal_t {
  */
 extern enum_name_t *signal_names;
 
-typedef enum level_t level_t;
-
 /**
  * Signal levels used to control output verbosity.
  */
@@ -179,8 +180,6 @@ enum level_t {
 #define SIG_TYPE(sig) (sig > DBG_MAX ? SIG_ANY : sig)
 
 
-typedef struct bus_listener_t bus_listener_t;
-
 /**
  * @brief Interface for registering at the signal bus.
  *
@@ -212,9 +211,6 @@ struct bus_listener_t {
 	void (*signal) (bus_listener_t *this, signal_t signal, level_t level,
 					int thread, ike_sa_t *ike_sa, char* format, va_list args);
 };
-
-
-typedef struct bus_t bus_t;
 
 /**
  * @brief Signal bus which sends signals to registered listeners.

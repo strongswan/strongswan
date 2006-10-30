@@ -24,21 +24,21 @@
 #ifndef SCHEDULER_H_
 #define SCHEDULER_H_
 
-#include <types.h>
-
 typedef struct scheduler_t scheduler_t;
+
+#include <types.h>
 
 /**
  * @brief The scheduler thread is responsible for timed events.
- * 
+ *
  * The scheduler thread takes out jobs from the event-queue and adds them
  * to the job-queue.
- * 
+ *
  * Starts a thread which does the work, since event-queue is blocking.
- * 
+ *
  * @b Constructors:
  *  - scheduler_create()
- * 
+ *
  * @ingroup threads
  */
 struct scheduler_t { 	

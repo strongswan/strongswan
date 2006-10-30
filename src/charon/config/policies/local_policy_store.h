@@ -23,11 +23,11 @@
 #ifndef LOCAL_POLICY_STORE_H_
 #define LOCAL_POLICY_STORE_H_
 
+typedef struct local_policy_store_t local_policy_store_t;
+
 #include <types.h>
 #include <config/policies/policy_store.h>
 
-
-typedef struct local_policy_store_t local_policy_store_t;
 
 /**
  * @brief A policy_store_t implementation using a simple policy lists.

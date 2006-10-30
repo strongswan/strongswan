@@ -161,10 +161,10 @@ static int get_thread_number(private_bus_t *this)
 {
 	static int current_num = 0, stored_num;
 	
-	stored_num = (int)pthread_getspecific(this->thread_id);
+	stored_num = (int)(intptr_t)pthread_getspecific(this->thread_id);
 	if (stored_num == 0)
 	{	/* first call of current thread */
-		pthread_setspecific(this->thread_id, (void*)++current_num);
+		pthread_setspecific(this->thread_id, (void*)(intptr_t)++current_num);
 		return current_num;
 	}
 	else
@@ -237,7 +237,8 @@ static signal_t listen_(private_bus_t *this, level_t *level, int *thread,
 	*thread = listener->thread;
 	*ike_sa = listener->ike_sa;
 	*format = listener->format;
-	*args   = listener->args;
+	va_copy(*args, listener->args);
+	va_end(listener->args);
 	
 	return listener->signal;
 }
@@ -285,7 +286,7 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 	bus_listener_t *listener;
 	active_listener_t *active_listener;
 	ike_sa_t *ike_sa;
-	int thread;
+	long thread;
 	
 	ike_sa = pthread_getspecific(this->thread_sa);
 	thread = get_thread_number(this);
@@ -336,7 +337,6 @@ static void vsignal(private_bus_t *this, signal_t signal, level_t level,
 		{
 			pthread_cond_wait(&active_listener->cond, &this->mutex);
 		}
-		va_end(active_listener->args);
 	}
 	iterator->destroy(iterator);
 	

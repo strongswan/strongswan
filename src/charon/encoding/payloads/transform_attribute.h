@@ -24,11 +24,12 @@
 #ifndef TRANSFORM_ATTRIBUTE_H_
 #define TRANSFORM_ATTRIBUTE_H_
 
+typedef enum transform_attribute_type_t transform_attribute_type_t;
+typedef struct transform_attribute_t transform_attribute_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 
-
-typedef enum transform_attribute_type_t transform_attribute_type_t;
 
 /**
  * Type of the attribute, as in IKEv2 RFC 3.3.5.
@@ -46,8 +47,6 @@ enum transform_attribute_type_t {
  * @ingroup payloads
  */
 extern enum_name_t *transform_attribute_type_names;
-
-typedef struct transform_attribute_t transform_attribute_t;
 
 /**
  * @brief Class representing an IKEv2- TRANSFORM Attribute.

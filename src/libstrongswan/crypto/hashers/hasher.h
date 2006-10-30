@@ -24,15 +24,14 @@
 #ifndef HASHER_H_
 #define HASHER_H_
 
+typedef enum hash_algorithm_t hash_algorithm_t;
+typedef struct hasher_t hasher_t;
 
 #include <types.h>
 
-
-typedef enum hash_algorithm_t hash_algorithm_t;
-
 /**
  * @brief Algorithms to use for hashing.
- * 
+ *
  * Currently only the following algorithms are implemented:
  * - HASH_MD5
  * - HASH_SHA1
@@ -69,8 +68,6 @@ enum hash_algorithm_t {
  */
 extern enum_name_t *hash_algorithm_names;
 
-
-typedef struct hasher_t hasher_t;
 
 /**
  * @brief Generic interface for all hash functions.

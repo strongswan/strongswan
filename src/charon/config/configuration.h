@@ -23,10 +23,9 @@
 #ifndef CONFIGURATION_H_
 #define CONFIGURATION_H_
 
-#include <types.h>
-
-
 typedef struct configuration_t configuration_t;
+
+#include <types.h>
 
 /**
  * @brief The interface for various daemon related configs.

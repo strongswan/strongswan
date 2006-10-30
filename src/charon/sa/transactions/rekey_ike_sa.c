@@ -270,7 +270,7 @@ static status_t get_request(private_rekey_ike_sa_t *this, message_t **result)
 	
 	/* register us as rekeying to detect multiple rekeying */
 	this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
-	this->ike_sa->set_rekeying_transaction(this->ike_sa, &this->public);
+	this->ike_sa->set_rekeying_transaction(this->ike_sa, &this->public.transaction);
 	
 	return SUCCESS;
 }
@@ -623,7 +623,8 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 	{
 		private_rekey_ike_sa_t *other;
 		
-		other = this->ike_sa->get_rekeying_transaction(this->ike_sa);
+		other = (private_rekey_ike_sa_t*)
+						this->ike_sa->get_rekeying_transaction(this->ike_sa);
 		if (other)
 		{
 			/* store our lower nonce in the simultaneus transaction, we 
@@ -641,7 +642,7 @@ static status_t get_response(private_rekey_ike_sa_t *this, message_t *request,
 				other->nonce_s = chunk_clone(this->nonce_r);
 			}
 			/* overwrite "other" in IKE_SA, allows "other" to access "this" */
-			this->ike_sa->set_rekeying_transaction(this->ike_sa, &this->public);
+			this->ike_sa->set_rekeying_transaction(this->ike_sa, &this->public.transaction);
 		}
 		else
 		{
@@ -768,7 +769,8 @@ static status_t conclude(private_rekey_ike_sa_t *this, message_t *response,
 	 * of the SA. If it changed, we are not alone. Then we must compare the nonces.
 	 * If no simultaneous rekeying is going on, we just initiate the delete of
 	 * the superseded SA. */
-	other_trans = this->ike_sa->get_rekeying_transaction(this->ike_sa);
+	other_trans = (private_rekey_ike_sa_t*)
+						this->ike_sa->get_rekeying_transaction(this->ike_sa);
 	this->ike_sa->set_rekeying_transaction(this->ike_sa, NULL);
 	
 	if (this->nonce_s.ptr)

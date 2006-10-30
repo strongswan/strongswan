@@ -24,6 +24,8 @@
 #ifndef VENDOR_ID_PAYLOAD_H_
 #define VENDOR_ID_PAYLOAD_H_
 
+typedef struct vendor_id_payload_t vendor_id_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 
@@ -35,16 +37,14 @@
 #define VENDOR_ID_PAYLOAD_HEADER_LENGTH 4
 
 
-typedef struct vendor_id_payload_t vendor_id_payload_t;
-
 /**
  * @brief Class representing an IKEv2 VENDOR ID payload.
- * 
+ *
  * The VENDOR ID payload format is described in RFC section 3.12.
- * 
+ *
  * @b Constructors:
  * - vendor_id_payload_create()
- * 
+ *
  * @ingroup payloads
  */
 struct vendor_id_payload_t {

@@ -24,11 +24,12 @@
 #ifndef ENCODINGS_H_
 #define ENCODINGS_H_
 
+typedef enum encoding_type_t encoding_type_t;
+typedef struct encoding_rule_t encoding_rule_t;
+
+
 #include <types.h>
 #include <definitions.h>
-
-
-typedef enum encoding_type_t encoding_type_t;
 
 /**
  * @brief All different kinds of encoding types. 
@@ -36,12 +37,12 @@ typedef enum encoding_type_t encoding_type_t;
  * Each field of an IKEv2-Message (in header or payload) 
  * which has to be parsed or generated differently has its own
  * type defined here.
- * 
+ *
  * Header is parsed like a payload and gets its one payload_id 
  * from PRIVATE USE space. Also the substructures 
  * of specific payload types get their own payload_id 
  * from PRIVATE_USE space. See IKEv2-Draft for more informations.
- * 
+ *
  * @ingroup payloads
  */
 enum encoding_type_t {
@@ -504,9 +505,6 @@ enum encoding_type_t {
  * @ingroup payloads
  */
 extern enum_name_t *encoding_type_names;
-
-
-typedef struct encoding_rule_t encoding_rule_t;
 
 /**
  * An encoding rule is a mapping of a specific encoding type to 

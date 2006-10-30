@@ -25,6 +25,8 @@
 #ifndef ID_PAYLOAD_H_
 #define ID_PAYLOAD_H_
 
+typedef struct id_payload_t id_payload_t;
+
 #include <types.h>
 #include <utils/identification.h>
 #include <encoding/payloads/payload.h>
@@ -36,18 +38,15 @@
  */
 #define ID_PAYLOAD_HEADER_LENGTH 8
 
-
-typedef struct id_payload_t id_payload_t;
-
 /**
  * Object representing an IKEv2 ID payload.
- * 
+ *
  * The ID payload format is described in RFC section 3.5.
- * 
+ *
  * @b Constructors:
  * - id_payload_create_from_identification()
  * - id_payload_create()
- * 
+ *
  * @ingroup payloads
  */
 struct id_payload_t {

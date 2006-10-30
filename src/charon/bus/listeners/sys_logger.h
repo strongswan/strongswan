@@ -23,19 +23,18 @@
 #ifndef SYS_LOGGER_H_
 #define SYS_LOGGER_H_
 
+typedef struct sys_logger_t sys_logger_t;
+
 #include <syslog.h>
 
 #include <bus/bus.h>
 
-
-typedef struct sys_logger_t sys_logger_t;
-
 /**
  * @brief Logger for syslog which implements bus_listener_t.
- * 
+ *
  * @b Constructors:
  *  - sys_logger_create()
- * 
+ *
  * @ingroup listeners
  */
 struct sys_logger_t {

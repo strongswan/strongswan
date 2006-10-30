@@ -149,14 +149,14 @@ struct private_ike_sa_t {
 	prf_t *child_prf;
 	
 	/**
-	 * PRF, with key set to pi_key, used for authentication
+	 * PRF to build outging authentication data
 	 */
-	prf_t *prf_auth_i;
+	prf_t *auth_build;
 
 	/**
-	 * PRF, with key set to pr_key, used for authentication
+	 * PRF to verify incoming authentication data
 	 */
-	prf_t *prf_auth_r;
+	prf_t *auth_verify;
 	
 	/**
 	 * NAT hasher.
@@ -231,7 +231,7 @@ struct private_ike_sa_t {
 	/**
 	 * Transaction which rekeys this IKE_SA, used do detect simultaneus rekeying
 	 */
-	rekey_ike_sa_t *rekeying_transaction;
+	transaction_t *rekeying_transaction;
 };
 
 /**
@@ -1357,19 +1357,19 @@ static prf_t *get_child_prf(private_ike_sa_t *this)
 }
 
 /**
- * Implementation of ike_sa_t.get_prf_auth_i.
+ * Implementation of ike_sa_t.get_auth_bild
  */
-static prf_t *get_prf_auth_i(private_ike_sa_t *this)
+static prf_t *get_auth_build(private_ike_sa_t *this)
 {
-	return this->prf_auth_i;
+	return this->auth_build;
 }
 
 /**
- * Implementation of ike_sa_t.get_prf_auth_r.
+ * Implementation of ike_sa_t.get_auth_verify
  */
-static prf_t *get_prf_auth_r(private_ike_sa_t *this)
+static prf_t *get_auth_verify(private_ike_sa_t *this)
 {
-	return this->prf_auth_r;
+	return this->auth_verify;
 }
 
 /**
@@ -1428,6 +1428,7 @@ static status_t derive_keys(private_ike_sa_t *this,
 	size_t key_size;
 	crypter_t *crypter_i, *crypter_r;
 	signer_t *signer_i, *signer_r;
+	prf_t *prf_i, *prf_r;
 	u_int8_t spi_i_buf[sizeof(u_int64_t)], spi_r_buf[sizeof(u_int64_t)];
 	chunk_t spi_i = chunk_from_buf(spi_i_buf);
 	chunk_t spi_r = chunk_from_buf(spi_r_buf);
@@ -1571,19 +1572,30 @@ static status_t derive_keys(private_ike_sa_t *this,
 	
 	/* SK_pi/SK_pr used for authentication => prf_auth_i, prf_auth_r */	
 	proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &algo);
-	this->prf_auth_i = prf_create(algo->algorithm);
-	this->prf_auth_r = prf_create(algo->algorithm);
+	prf_i = prf_create(algo->algorithm);
+	prf_r = prf_create(algo->algorithm);
 	
-	key_size = this->prf_auth_i->get_key_size(this->prf_auth_i);
+	key_size = prf_i->get_key_size(prf_i);
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_pi secret %B", &key);
-	this->prf_auth_i->set_key(this->prf_auth_i, key);
+	prf_i->set_key(prf_i, key);
 	chunk_free(&key);
 	
 	prf_plus->allocate_bytes(prf_plus, key_size, &key);
 	DBG4(DBG_IKE, "Sk_pr secret %B", &key);
-	this->prf_auth_r->set_key(this->prf_auth_r, key);
+	prf_r->set_key(prf_r, key);
 	chunk_free(&key);
+	
+	if (initiator)
+	{
+		this->auth_verify = prf_r;
+		this->auth_build = prf_i;
+	}
+	else
+	{
+		this->auth_verify = prf_i;
+		this->auth_build = prf_r;
+	}
 	
 	/* all done, prf_plus not needed anymore */
 	prf_plus->destroy(prf_plus);
@@ -1764,7 +1776,7 @@ static status_t rekey(private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.get_rekeying_transaction.
  */
-static rekey_ike_sa_t* get_rekeying_transaction(private_ike_sa_t *this)
+static transaction_t* get_rekeying_transaction(private_ike_sa_t *this)
 {
 	return this->rekeying_transaction;
 }
@@ -1772,7 +1784,7 @@ static rekey_ike_sa_t* get_rekeying_transaction(private_ike_sa_t *this)
 /**
  * Implementation of ike_sa_t.set_rekeying_transaction.
  */
-static void set_rekeying_transaction(private_ike_sa_t *this, rekey_ike_sa_t *rekey)
+static void set_rekeying_transaction(private_ike_sa_t *this, transaction_t *rekey)
 {
 	this->rekeying_transaction = rekey;
 }
@@ -1920,8 +1932,8 @@ static void destroy(private_ike_sa_t *this)
 	DESTROY_IF(this->signer_out);
 	DESTROY_IF(this->prf);
 	DESTROY_IF(this->child_prf);
-	DESTROY_IF(this->prf_auth_i);
-	DESTROY_IF(this->prf_auth_r);
+	DESTROY_IF(this->auth_verify);
+	DESTROY_IF(this->auth_build);
 	
 	DESTROY_IF(this->my_host);
 	DESTROY_IF(this->other_host);
@@ -1967,8 +1979,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.send_keepalive = (void (*)(ike_sa_t*)) send_keepalive;
 	this->public.get_prf = (prf_t *(*) (ike_sa_t *)) get_prf;
 	this->public.get_child_prf = (prf_t *(*) (ike_sa_t *)) get_child_prf;
-	this->public.get_prf_auth_i = (prf_t *(*) (ike_sa_t *)) get_prf_auth_i;
-	this->public.get_prf_auth_r = (prf_t *(*) (ike_sa_t *)) get_prf_auth_r;
+	this->public.get_auth_verify = (prf_t *(*) (ike_sa_t *)) get_auth_verify;
+	this->public.get_auth_build = (prf_t *(*) (ike_sa_t *)) get_auth_build;
 	this->public.derive_keys = (status_t (*) (ike_sa_t *,proposal_t*,diffie_hellman_t*,chunk_t,chunk_t,bool,prf_t*,prf_t*)) derive_keys;
 	this->public.add_child_sa = (void (*) (ike_sa_t*,child_sa_t*)) add_child_sa;
 	this->public.has_child_sa = (bool(*)(ike_sa_t*,u_int32_t)) has_child_sa;
@@ -1982,8 +1994,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->public.set_lifetimes = (void(*)(ike_sa_t*,u_int32_t,u_int32_t))set_lifetimes;
 	this->public.apply_connection = (void(*)(ike_sa_t*,connection_t*))apply_connection;
 	this->public.rekey = (status_t(*)(ike_sa_t*))rekey;
-	this->public.get_rekeying_transaction = (void*(*)(ike_sa_t*))get_rekeying_transaction;
-	this->public.set_rekeying_transaction = (void(*)(ike_sa_t*,void*))set_rekeying_transaction;
+	this->public.get_rekeying_transaction = (transaction_t*(*)(ike_sa_t*))get_rekeying_transaction;
+	this->public.set_rekeying_transaction = (void(*)(ike_sa_t*,transaction_t*))set_rekeying_transaction;
 	this->public.adopt_children = (void(*)(ike_sa_t*,ike_sa_t*))adopt_children;
 	
 	/* initialize private fields */
@@ -1999,8 +2011,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id)
 	this->signer_in = NULL;
 	this->signer_out = NULL;
 	this->prf = NULL;
-	this->prf_auth_i = NULL;
-	this->prf_auth_r = NULL;
+	this->auth_verify = NULL;
+	this->auth_build = NULL;
  	this->child_prf = NULL;
 	this->nat_here = FALSE;
 	this->nat_there = FALSE;

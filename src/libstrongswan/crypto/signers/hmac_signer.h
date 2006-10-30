@@ -24,10 +24,10 @@
 #ifndef HMAC_SIGNER_H_
 #define HMAC_SIGNER_H_
 
+typedef struct hmac_signer_t hmac_signer_t;
+
 #include <crypto/signers/signer.h>
 #include <crypto/hashers/hasher.h>
-
-typedef struct hmac_signer_t hmac_signer_t;
 
 /**
  * @brief Implementation of signer_t interface using the

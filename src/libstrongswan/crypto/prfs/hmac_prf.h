@@ -24,11 +24,11 @@
 #ifndef PRF_HMAC_H_
 #define PRF_HMAC_H_
 
+typedef struct hmac_prf_t hmac_prf_t;
+
 #include <types.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/hashers/hasher.h>
-
-typedef struct hmac_prf_t hmac_prf_t;
 
 /**
  * @brief Implementation of prf_t interface using the

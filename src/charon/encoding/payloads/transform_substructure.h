@@ -24,6 +24,8 @@
 #ifndef TRANSFORM_SUBSTRUCTURE_H_
 #define TRANSFORM_SUBSTRUCTURE_H_
 
+typedef struct transform_substructure_t transform_substructure_t;
+
 #include <types.h>
 #include <definitions.h>
 #include <encoding/payloads/payload.h>
@@ -50,8 +52,6 @@
  */
 #define TRANSFORM_SUBSTRUCTURE_HEADER_LENGTH 8
 
-
-typedef struct transform_substructure_t transform_substructure_t;
 
 /**
  * @brief Class representing an IKEv2- TRANSFORM SUBSTRUCTURE.

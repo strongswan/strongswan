@@ -24,11 +24,10 @@
 #ifndef SEND_QUEUE_H_
 #define SEND_QUEUE_H_
 
+typedef struct send_queue_t send_queue_t;
+
 #include <types.h>
 #include <network/packet.h>
-
-
-typedef struct send_queue_t send_queue_t;
 
 /**
  * @brief The send queue stores packet for the sender_t instance.

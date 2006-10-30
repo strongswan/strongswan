@@ -23,12 +23,12 @@
 #ifndef POLICY_STORE_H_
 #define POLICY_STORE_H_
 
+typedef struct policy_store_t policy_store_t;
+
 #include <types.h>
 #include <config/policies/policy.h>
 #include <utils/linked_list.h>
 
-
-typedef struct policy_store_t policy_store_t;
 
 /**
  * @brief The interface for a store of policy_t's.

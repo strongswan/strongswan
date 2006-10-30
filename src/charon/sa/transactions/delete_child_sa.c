@@ -180,7 +180,7 @@ static status_t process_delete(private_delete_child_sa_t *this, delete_payload_t
 			DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI 0x%x, deleting",
 				 protocol_id_names, protocol, ntohl(spi));
 			
-			rekey = child_sa->get_rekeying_transaction(child_sa);
+			rekey = (create_child_sa_t*)child_sa->get_rekeying_transaction(child_sa);
 			if (rekey)
 			{
 				/* we have received a delete for an SA which we are still rekeying.

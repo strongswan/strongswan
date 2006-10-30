@@ -24,9 +24,10 @@
 #ifndef PRF_H_
 #define PRF_H_
 
-#include <types.h>
-
 typedef enum pseudo_random_function_t pseudo_random_function_t;
+typedef struct prf_t prf_t;
+
+#include <types.h>
 
 /**
  * @brief Pseudo random function, as in IKEv2 RFC 3.3.2.
@@ -51,9 +52,6 @@ enum pseudo_random_function_t {
  * enum name for encryption_algorithm_t.
  */
 extern enum_name_t *pseudo_random_function_names;
-
-
-typedef struct prf_t prf_t;
 
 /**
  * @brief Generic interface for pseudo-random-functions.

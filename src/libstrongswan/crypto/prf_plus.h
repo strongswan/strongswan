@@ -24,11 +24,9 @@
 #ifndef PRF_PLUS_H_
 #define PRF_PLUS_H_
 
+typedef struct prf_plus_t prf_plus_t;
 
 #include <crypto/prfs/prf.h>
-
-
-typedef struct prf_plus_t prf_plus_t;
 
 /**
  * @brief Implementation of the prf+ function described in IKEv2 RFC.

@@ -24,23 +24,22 @@
 #ifndef PARSER_H_
 #define PARSER_H_
 
+typedef struct parser_t parser_t;
+
 #include <types.h>
 #include <encoding/payloads/encodings.h>
 #include <encoding/payloads/payload.h>
 
-
-typedef struct parser_t parser_t;
-
 /**
  * @brief A parser_t class to parse IKEv2 payloads.
- * 
+ *
  * A parser is used for parsing one chunk of data. Multiple
  * payloads can be parsed out of the chunk using parse_payload.
  * The parser remains the state until destroyed.
- * 
+ *
  * @b Constructors:
  * - parser_create()
- * 
+ *
  * @ingroup encoding
  */
 struct parser_t {

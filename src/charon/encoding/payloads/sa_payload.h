@@ -24,6 +24,8 @@
 #ifndef SA_PAYLOAD_H_
 #define SA_PAYLOAD_H_
 
+typedef struct sa_payload_t sa_payload_t;
+
 #include <types.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/proposal_substructure.h>
@@ -36,20 +38,18 @@
  */
 #define SA_PAYLOAD_HEADER_LENGTH 4
 
-typedef struct sa_payload_t sa_payload_t;
-
 /**
  * @brief Class representing an IKEv2-SA Payload.
- * 
+ *
  * The SA Payload format is described in RFC section 3.3.
- * 
+ *
  * @b Constructors:
  * - sa_payload_create()
  * - sa_payload_create_from_ike_proposals()
  * - sa_payload_create_from_proposal()
- * 
+ *
  * @todo Add support of algorithms without specified keylength in get_proposals and get_ike_proposals.
- * 
+ *
  * @ingroup payloads
  */
 struct sa_payload_t {

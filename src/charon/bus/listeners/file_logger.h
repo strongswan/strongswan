@@ -23,17 +23,16 @@
 #ifndef FILE_LOGGER_H_
 #define FILE_LOGGER_H_
 
-#include <bus/bus.h>
-
-
 typedef struct file_logger_t file_logger_t;
+
+#include <bus/bus.h>
 
 /**
  * @brief Logger to files which implements bus_listener_t.
- * 
+ *
  * @b Constructors:
  *  - file_logger_create()
- * 
+ *
  * @ingroup listeners
  */
 struct file_logger_t {

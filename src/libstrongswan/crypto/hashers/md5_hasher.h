@@ -24,21 +24,20 @@
 #ifndef MD5_HASHER_H_
 #define MD5_HASHER_H_
 
-#include <crypto/hashers/hasher.h>
-
-
 typedef struct md5_hasher_t md5_hasher_t;
+
+#include <crypto/hashers/hasher.h>
 
 /**
  * @brief Implementation of hasher_t interface using the
  * MD5 algorithm.
- * 
+ *
  * @b Constructors:
  * - hasher_create() using HASH_MD5 as algorithm
  * - md5_hasher_create()
- * 
+ *
  * @see hasher_t
- * 
+ *
  * @ingroup hashers
  */
 struct md5_hasher_t {

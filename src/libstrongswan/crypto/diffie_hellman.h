@@ -24,18 +24,18 @@
 #ifndef DIFFIE_HELLMAN_H_
 #define DIFFIE_HELLMAN_H_
 
+typedef enum diffie_hellman_group_t diffie_hellman_group_t;
+typedef struct diffie_hellman_t diffie_hellman_t;
+
 #include <types.h>
 
-
-typedef enum diffie_hellman_group_t diffie_hellman_group_t;
-
-/** 
+/**
  * @brief Diffie-Hellman group.
- * 
+ *
  * The modulus (or group) to use for a Diffie-Hellman calculation.
- * 
+ *
  * See IKEv2 RFC 3.3.2 and RFC 3526.
- * 
+ *
  * @ingroup transforms
  */
 enum diffie_hellman_group_t {
@@ -54,9 +54,6 @@ enum diffie_hellman_group_t {
  * enum name for diffie_hellman_group_t.
  */
 extern enum_name_t *diffie_hellman_group_names;
-
-
-typedef struct diffie_hellman_t diffie_hellman_t;
 
 /**
  * @brief Implementation of the widely used Diffie-Hellman algorithm.
