@@ -225,18 +225,19 @@ static chunk_t sanitize_chunk(chunk_t chunk)
 	{
 		switch (*pos)
 		{
-			case 'a' ... 'z':
-			case 'A' ... 'Z':
-			case '0' ... '9':
-			case ' ':
-			case '-':
-			case '_':
-			case '.':
-			case '=':
-			case ':':
-			case '/':
-			case '@':
 			case '\0':
+			case ' ':
+			case '*':
+			case '-':
+			case '.':
+			case '/':
+			case '0' ... '9':
+			case ':':
+			case '=':
+			case '@':
+			case 'A' ... 'Z':
+			case '_':
+			case 'a' ... 'z':
 				break;
 			default:
 				*pos = '?';
