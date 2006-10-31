@@ -34,7 +34,7 @@ typedef struct rsa_authenticator_t rsa_authenticator_t;
  *  - rsa_authenticator_create()
  *  - authenticator_create() using auth_method AUTH_RSA
  *
- * @ingroup authenticator
+ * @ingroup authenticators
  */
 struct rsa_authenticator_t {
 
@@ -50,7 +50,7 @@ struct rsa_authenticator_t {
  * @param ike_sa		associated ike_sa
  * @return				rsa_authenticator_t object
  *
- * @ingroup authenticator
+ * @ingroup authenticators
  */
 rsa_authenticator_t *rsa_authenticator_create(ike_sa_t *ike_sa);
 

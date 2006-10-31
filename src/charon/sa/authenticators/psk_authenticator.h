@@ -34,7 +34,7 @@ typedef struct psk_authenticator_t psk_authenticator_t;
  *  - psk_authenticator_create()
  *  - authenticator_create() using auth_method AUTH_PSK
  *
- * @ingroup authenticator
+ * @ingroup authenticators
  */
 struct psk_authenticator_t {
 
@@ -50,7 +50,7 @@ struct psk_authenticator_t {
  * @param ike_sa		associated ike_sa
  * @return				psk_authenticator_t object
  *
- * @ingroup authenticator
+ * @ingroup authenticators
  */
 psk_authenticator_t *psk_authenticator_create(ike_sa_t *ike_sa);
 

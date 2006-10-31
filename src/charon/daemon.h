@@ -172,6 +172,14 @@ typedef struct daemon_t daemon_t;
  */
 
 /**
+ * @defgroup authenticators authenticators
+ *
+ * Authenticator classes to prove identity of peer.
+ *
+ * @ingroup sa
+ */
+
+/**
  * @defgroup threads threads
  *
  * Threaded classes, which will do their job alone.

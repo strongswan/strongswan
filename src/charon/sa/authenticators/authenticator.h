@@ -34,7 +34,7 @@ typedef struct authenticator_t authenticator_t;
 /**
  * Method to use for authentication.
  *
- * @ingroup authenticator
+ * @ingroup authenticators
  */
 enum auth_method_t {
 	/**
@@ -66,7 +66,7 @@ enum auth_method_t {
 /**
  * enum names for auth_method_t.
  *
- * @ingroup authenticator
+ * @ingroup authenticators
  */
 extern enum_name_t *auth_method_names;
 
@@ -80,7 +80,7 @@ extern enum_name_t *auth_method_names;
  * @b Constructors:
  *  - authenticator_create()
  *
- * @ingroup authenticator
+ * @ingroup authenticators
  */
 struct authenticator_t {
 
@@ -132,7 +132,7 @@ struct authenticator_t {
  *
  * @return				authenticator_t object
  *
- * @ingroup sa
+ * @ingroup authenticators
  */
 authenticator_t *authenticator_create(ike_sa_t *ike_sa, auth_method_t auth_method);
 
