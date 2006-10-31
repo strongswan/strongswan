@@ -509,7 +509,7 @@ static status_t add_sa(private_kernel_interface_t *this,
 	unsigned char request[BUFFER_SIZE];
 	struct nlmsghdr *response;
 	char *alg_name;
-	size_t key_size;
+	u_int key_size;
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	
