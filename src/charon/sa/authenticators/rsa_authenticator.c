@@ -123,7 +123,7 @@ static status_t build(private_rsa_authenticator_t *this, chunk_t ike_sa_init,
 	identification_t *my_id;
 
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
-	DBG1(DBG_IKE, "authentication of '%D' with %N (myself)",
+	DBG1(DBG_IKE, "authentication of '%D' (myself) with %N",
 		 my_id, auth_method_names, AUTH_RSA);
 	DBG2(DBG_IKE, "looking for RSA public key belonging to '%D'", my_id);
 
